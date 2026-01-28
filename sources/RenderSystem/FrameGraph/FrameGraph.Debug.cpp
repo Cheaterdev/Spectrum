@@ -52,6 +52,14 @@ public:
 	Events::prop_helper * helper =nullptr;
 
 	image::ptr rendered_image;
+
+
+	   vec2 start_pos;
+        vec2 prev_pos;
+       
+		bool dragging = false;
+		float2 offset;
+		float img_scale  =1;
 public:
 	ResourceDebugger(FrameGraph::Graph& _graph) :graph(_graph)
 	{
@@ -106,6 +114,19 @@ public:
 				helper = info->process_debug_resource.register_handler(this, [this, info](FrameGraph::Pass* pass, FrameGraph::FrameContext* context) {
 					if (pass_name == pass->name)
 					{
+						uint2 debug_size = int2::max({64,64},rendered_image->get_render_bounds().size);
+
+
+						if (!rendered_image->texture.texture || uint2(rendered_image->texture.texture->get_desc().as_texture().Dimensions.xy) !=debug_size)
+						{
+							HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { debug_size }, 1, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
+							auto texture = std::make_shared<Texture>(desc, TextureLayout::SHADER_RESOURCE);
+							rendered_image->texture.texture = std::make_shared<Texture>(desc);			
+						}
+
+
+
+						
 						auto list = context->get_list();
 						auto &compute = list->get_compute();
 						if (info->resource->get_desc().is_texture())
@@ -122,6 +143,11 @@ public:
 							{			
 								Slots::FrameGraph_Debug_Texture2D tex2d;
 								 tex2d.GetSource() = *static_cast<HAL::Texture2DView*>(info->view.get());
+								      tex2d.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions.xy;
+								   tex2d.GetOffset() = offset;
+								   	    tex2d.GetScale() = img_scale;
+
+
 								compute.set(tex2d);
 							}
 
@@ -139,14 +165,64 @@ public:
 
 	}
 
-	void on_bounds_changed(const rect& r) override
-	{
-		base::on_bounds_changed(r);
 
-		HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { r.size }, 1, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
-		auto texture = std::make_shared<Texture>(desc, TextureLayout::SHADER_RESOURCE);
-		rendered_image->texture.texture = std::make_shared<Texture>(desc);
-	}
+	   virtual bool on_mouse_move(vec2 pos) override
+        {
+            if (pressed && !dragging && (pos - start_pos).length() > 5)
+            {
+                dragging = true;
+                prev_pos = pos;
+                set_movable(true);
+            }
+
+            if (dragging)
+            {
+
+				offset+= pos-prev_pos;
+                //owner->moving(speed);
+                prev_pos = pos;
+            }
+
+            return dragging;
+        }
+
+
+	   virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override
+        {
+            if (button == mouse_button::RIGHT)
+            {
+                pressed = action == mouse_action::DOWN;
+                start_pos = pos;
+
+                if (!pressed)
+                {
+                    dragging = false;
+                    set_movable(false);
+                }
+            }
+
+            return false;
+        }
+
+
+        virtual bool on_wheel(mouse_wheel type, float value, vec2 wheel_pos) override
+        {
+     float prev_scale = img_scale;
+  
+
+//	 img_scale =value>0?2.0f:1.0f; 
+		img_scale *= 1 + value / 10.0f;
+		img_scale = Math::clamp(img_scale, 0.1f, 10.0f);
+
+		vec2 mp = wheel_pos-rendered_image->get_render_bounds().pos;
+		offset = img_scale / prev_scale * (offset - mp) + mp;
+
+
+            return true;
+        };
+
+
+
 private:
 
 	list_box::ptr passes_list;

@@ -13,22 +13,26 @@ export namespace Table
 	struct FrameGraph_Debug_Texture2D
 	{
 		static constexpr SlotID ID = SlotID::FrameGraph_Debug_Texture2D;
+		uint2 sourceSize;
 		float2 scale;
 		float2 offset;
 		HLSL::Texture2D<float4> source;
 		HLSL::Texture2D<float4>& GetSource() { return source; }
+		uint2& GetSourceSize() { return sourceSize; }
 		float2& GetScale() { return scale; }
 		float2& GetOffset() { return offset; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
+			compiler.compile(sourceSize);
 			compiler.compile(scale);
 			compiler.compile(offset);
 			compiler.compile(source);
 		}
 		struct Compiled
 		{
+			uint2 sourceSize; // uint2
 			float2 scale; // float2
 			float2 offset; // float2
 			uint source; // Texture2D<float4>

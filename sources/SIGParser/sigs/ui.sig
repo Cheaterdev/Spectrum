@@ -133,6 +133,7 @@ struct FrameGraph_Debug_Common
 struct FrameGraph_Debug_Texture2D
 {
 	Texture2D<float4> source;
+	uint2 sourceSize;
 	float2 scale;
 	float2 offset;
 }

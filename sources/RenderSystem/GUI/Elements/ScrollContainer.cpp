@@ -46,7 +46,7 @@ class mover : public GUI::base
         mover(GUI::Elements::scroll_container* owner)
         {
             this->owner = owner;
-            thinkable = true;
+          //  thinkable = true;
         }
 
         virtual bool on_mouse_move(vec2 pos) override
