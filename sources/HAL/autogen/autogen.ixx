@@ -164,6 +164,8 @@ export import :Autogen.Slots.FrameGraph_Debug_Common;
 export import :Autogen.Tables.FrameGraph_Debug_Common;
 export import :Autogen.Slots.FrameGraph_Debug_Texture2D;
 export import :Autogen.Tables.FrameGraph_Debug_Texture2D;
+export import :Autogen.Slots.FrameGraph_Debug_Texture3D;
+export import :Autogen.Tables.FrameGraph_Debug_Texture3D;
 export import :Autogen.Tables.VoxelTilingParams;
 export import :Autogen.Slots.VoxelInfo;
 export import :Autogen.Tables.VoxelInfo;
@@ -232,6 +234,8 @@ export	{
 	#include "pso\MipMapping.h"
 	#include "pso\SS_Shadow.h"
 	#include "pso\FrameGraph_Debug_Texture2D.h"
+	#include "pso\FrameGraph_Debug_Texture3D.h"
+	#include "pso\FrameGraph_Debug_NotImplemented.h"
 	#include "pso\Lighting.h"
 	#include "pso\VoxelDownsample.h"
 	#include "pso\VoxelCopy.h"
@@ -348,6 +352,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "LineRender") return SlotID::LineRender;
 	if(slot_name == "FrameGraph_Debug_Common") return SlotID::FrameGraph_Debug_Common;
 	if(slot_name == "FrameGraph_Debug_Texture2D") return SlotID::FrameGraph_Debug_Texture2D;
+	if(slot_name == "FrameGraph_Debug_Texture3D") return SlotID::FrameGraph_Debug_Texture3D;
 	if(slot_name == "VoxelInfo") return SlotID::VoxelInfo;
 	if(slot_name == "Voxelization") return SlotID::Voxelization;
 	if(slot_name == "VoxelScreen") return SlotID::VoxelScreen;
@@ -433,6 +438,7 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::LineRender) return Slots::LineRender::Slot::ID;
 	if(id == SlotID::FrameGraph_Debug_Common) return Slots::FrameGraph_Debug_Common::Slot::ID;
 	if(id == SlotID::FrameGraph_Debug_Texture2D) return Slots::FrameGraph_Debug_Texture2D::Slot::ID;
+	if(id == SlotID::FrameGraph_Debug_Texture3D) return Slots::FrameGraph_Debug_Texture3D::Slot::ID;
 	if(id == SlotID::VoxelInfo) return Slots::VoxelInfo::Slot::ID;
 	if(id == SlotID::Voxelization) return Slots::Voxelization::Slot::ID;
 	if(id == SlotID::VoxelScreen) return Slots::VoxelScreen::Slot::ID;
@@ -518,6 +524,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::LineRender) return "LineRender";
 	if(id == SlotID::FrameGraph_Debug_Common) return "FrameGraph_Debug_Common";
 	if(id == SlotID::FrameGraph_Debug_Texture2D) return "FrameGraph_Debug_Texture2D";
+	if(id == SlotID::FrameGraph_Debug_Texture3D) return "FrameGraph_Debug_Texture3D";
 	if(id == SlotID::VoxelInfo) return "VoxelInfo";
 	if(id == SlotID::Voxelization) return "Voxelization";
 	if(id == SlotID::VoxelScreen) return "VoxelScreen";

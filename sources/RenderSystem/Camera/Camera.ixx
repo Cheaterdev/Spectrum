@@ -280,3 +280,39 @@ export class first_person_camera : public camera
             //     update();
         }
 };
+
+
+export class third_person_camera : public camera
+{
+        vec2 angles;
+    float zoom = 5;
+    public:
+        void input(float2 delta)
+        {
+            angles += 2.0f * delta;
+            angles.y = Math::clamp(angles.y, -Math::m_pi_2 + Math::eps2, Math::m_pi_2 - Math::eps2);
+
+
+        }
+
+     void input(float value)
+        {
+
+            zoom = Math::clamp(zoom*(1+value), 0.1f, 10.0f);
+
+        }
+        void frame_move(float dt)
+        {
+          
+            vec3 direction;
+            direction.x = Math::sin(angles.x) * Math::cos(angles.y);
+            direction.z = Math::cos(angles.x) *  Math::cos(angles.y);
+            direction.y = Math::sin(angles.y);
+            vec3 up(0, 1, 0);
+            vec3 right = vec3::cross(up, direction).normalize();
+            up = vec3::cross(direction, right).normalize();
+            position = direction*zoom;
+            target = float3(0,0,0);
+            //     update();
+        }
+};

@@ -108,7 +108,7 @@ float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 
 
 	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(dir), angle * 8);
 	float sampleWeight = saturate(max_accum - accum.w) / max_accum;
-	accum.xyz += sky * pow(sampleWeight, 3);
+	accum.xyz += sky * pow(sampleWeight, 8);
 
 
 	dist *= length(voxel_size);

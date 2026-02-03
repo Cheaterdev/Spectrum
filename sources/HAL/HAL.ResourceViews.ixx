@@ -698,7 +698,7 @@ export
 			}
 			void init(GPUEntityStorageInterface& frame)
 			{
-				offset = desc.offset;
+				offset = uint(desc.offset);
 				uint64 size = desc.size;
 
 				if (desc.counted == counterType::SELF )
@@ -786,11 +786,9 @@ export
 			}
 			Handle get_uav_clear() { return rwRAW; }
 
-			void write(UINT64 offset, T* data, UINT64 count)
+			void write(UINT64 offset, const T* data, UINT64 count)
 			{
-				int t=0;
-				memcpy(resource->buffer_data + offset, static_cast<void*>(&t), sizeof(int));
-//				memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
+				memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
 			}
 
 

@@ -40,6 +40,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::MipMapping>(device, pso[PSO::MipMapping]));
 	tasks.emplace_back(PSOBase::create<PSOS::SS_Shadow>(device, pso[PSO::SS_Shadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_Texture2D>(device, pso[PSO::FrameGraph_Debug_Texture2D]));
+	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_Texture3D>(device, pso[PSO::FrameGraph_Debug_Texture3D]));
+	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_NotImplemented>(device, pso[PSO::FrameGraph_Debug_NotImplemented]));
 	tasks.emplace_back(PSOBase::create<PSOS::Lighting>(device, pso[PSO::Lighting]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDownsample>(device, pso[PSO::VoxelDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelCopy>(device, pso[PSO::VoxelCopy]));
@@ -92,19 +94,19 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 
 
 
-decltype(PSOS::DenoiserShadow_Filter::Pass) PSOS::DenoiserShadow_Filter::Pass;
-decltype(PSOS::RCAS::cas) PSOS::RCAS::cas;
-decltype(PSOS::GatherPipeline::CheckFrustum) PSOS::GatherPipeline::CheckFrustum;
-decltype(PSOS::GatherBoxes::CheckFrustum) PSOS::GatherBoxes::CheckFrustum;
-decltype(PSOS::InitDispatch::CheckFrustum) PSOS::InitDispatch::CheckFrustum;
-decltype(PSOS::GatherMeshes::Invisible) PSOS::GatherMeshes::Invisible;
-decltype(PSOS::MipMapping::NonPowerOfTwo) PSOS::MipMapping::NonPowerOfTwo;
-decltype(PSOS::MipMapping::Gamma) PSOS::MipMapping::Gamma;
-decltype(PSOS::Lighting::SecondBounce) PSOS::Lighting::SecondBounce;
-decltype(PSOS::VoxelDownsample::Count) PSOS::VoxelDownsample::Count;
-decltype(PSOS::VoxelIndirectFilter::Blur) PSOS::VoxelIndirectFilter::Blur;
-decltype(PSOS::VoxelIndirectFilter::Reflection) PSOS::VoxelIndirectFilter::Reflection;
-decltype(PSOS::FontRender::Format) PSOS::FontRender::Format;
-decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;
-decltype(PSOS::Voxelization::Dynamic) PSOS::Voxelization::Dynamic;
-decltype(PSOS::CubemapENV::Level) PSOS::CubemapENV::Level;
+//decltype(PSOS::DenoiserShadow_Filter::Pass) PSOS::DenoiserShadow_Filter::Pass;
+//decltype(PSOS::RCAS::cas) PSOS::RCAS::cas;
+//decltype(PSOS::GatherPipeline::CheckFrustum) PSOS::GatherPipeline::CheckFrustum;
+//decltype(PSOS::GatherBoxes::CheckFrustum) PSOS::GatherBoxes::CheckFrustum;
+//decltype(PSOS::InitDispatch::CheckFrustum) PSOS::InitDispatch::CheckFrustum;
+//decltype(PSOS::GatherMeshes::Invisible) PSOS::GatherMeshes::Invisible;
+//decltype(PSOS::MipMapping::NonPowerOfTwo) PSOS::MipMapping::NonPowerOfTwo;
+//decltype(PSOS::MipMapping::Gamma) PSOS::MipMapping::Gamma;
+//decltype(PSOS::Lighting::SecondBounce) PSOS::Lighting::SecondBounce;
+//decltype(PSOS::VoxelDownsample::Count) PSOS::VoxelDownsample::Count;
+//decltype(PSOS::VoxelIndirectFilter::Blur) PSOS::VoxelIndirectFilter::Blur;
+//decltype(PSOS::VoxelIndirectFilter::Reflection) PSOS::VoxelIndirectFilter::Reflection;
+//decltype(PSOS::FontRender::Format) PSOS::FontRender::Format;
+//decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;
+//decltype(PSOS::Voxelization::Dynamic) PSOS::Voxelization::Dynamic;
+//decltype(PSOS::CubemapENV::Level) PSOS::CubemapENV::Level;

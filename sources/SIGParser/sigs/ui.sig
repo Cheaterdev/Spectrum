@@ -147,4 +147,32 @@ ComputePSO FrameGraph_Debug_Texture2D
 }
 
 
+[Bind = DefaultLayout::Instance1]
+struct FrameGraph_Debug_Texture3D
+{
+	Texture3D<float4> source;
+	uint3 sourceSize;
+
+	Camera camera;
+}
+
+ComputePSO FrameGraph_Debug_Texture3D
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = framegraph/draw_texture_3d;
+}
+
+
+
+
+
+ComputePSO FrameGraph_Debug_NotImplemented
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = framegraph/draw_not_implemented;
+}
 

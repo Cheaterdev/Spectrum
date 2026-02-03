@@ -9,15 +9,16 @@ import :MeshRenderer;
 import :ReflectionDenoiser;
 
 
- class GBufferDownsampler;
+class GBufferDownsampler;
 import HAL;
 
 using namespace HAL;
+
 export class Texture3DMultiTiles
 {
 	HAL::update_tiling_info tilings_info;
-public:
 
+public:
 	HAL::Texture::ptr tex_dynamic;
 	HAL::Texture::ptr tex_static;
 
@@ -34,26 +35,27 @@ public:
 
 	void set(HAL::ResourceDesc desc)
 	{
-
-		desc.Flags|=ResFlags::Virtual|ResFlags::DisableStateTracking;
+		desc.Flags |= ResFlags::Virtual | ResFlags::DisableStateTracking;
 		tex_dynamic.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
 		tex_static.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
 
 		tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
 
-			  tex_dynamic->resource->set_name("tex_dynamic");
+		tex_dynamic->resource->set_name("tex_dynamic");
 
-					  tex_dynamic->resource->set_name("tex_static");
-				 		  tex_dynamic->resource->set_name("tex_result");
+		tex_dynamic->resource->set_name("tex_static");
+		tex_dynamic->resource->set_name("tex_result");
 
-		tex_dynamic->resource->get_tiled_manager().on_load = [this](ivec4 pos) {
+		tex_dynamic->resource->get_tiled_manager().on_load = [this](ivec4 pos)
+		{
 			auto heap_pos = tex_dynamic->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;
 			heap_pos.handle = ResourceHandle();
 			tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos.xyz, heap_pos);
 		};
 
 
-		tex_dynamic->resource->get_tiled_manager().on_zero = [this](ivec4 pos) {
+		tex_dynamic->resource->get_tiled_manager().on_zero = [this](ivec4 pos)
+		{
 			if (tex_static->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
 				auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;
@@ -67,26 +69,23 @@ public:
 		};
 
 
-		tex_static->resource->get_tiled_manager().on_load = [this](ivec4 pos) {
-
+		tex_static->resource->get_tiled_manager().on_load = [this](ivec4 pos)
+		{
 			if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
 				auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;
 				heap_pos.handle = ResourceHandle();
 				tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos.xyz, heap_pos);
 			}
-
 		};
 
-		tex_static->resource->get_tiled_manager().on_zero = [this](ivec4 pos) {
-
+		tex_static->resource->get_tiled_manager().on_zero = [this](ivec4 pos)
+		{
 			if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
 				tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos.xyz, 0);
 			}
-
 		};
-
 	}
 
 
@@ -99,7 +98,6 @@ public:
 		//	flush(list);
 	}
 };
-
 
 
 export class Texture3DRefTiles
@@ -122,12 +120,11 @@ public:
 
 	void set(HAL::ResourceDesc desc)
 	{
-			desc.Flags|=ResFlags::Virtual|ResFlags::DisableStateTracking;
-	tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
+		desc.Flags |= ResFlags::Virtual | ResFlags::DisableStateTracking;
+		tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
 
 		static_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
 		dynamic_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
-
 	}
 
 
@@ -182,7 +179,6 @@ public:
 	}
 
 
-
 	void zero_tiles(HAL::CommandList& list)
 	{
 		tilings_info.tiles.clear();
@@ -198,10 +194,9 @@ public:
 using namespace FrameGraph;
 
 
-export class VoxelGI :public Events::prop_handler, public FrameGraph::GraphGenerator, VariableContext
+export class VoxelGI : public Events::prop_handler, public FrameGraph::GraphGenerator, VariableContext
 {
 public:
-
 	enum class VISUALIZE_TYPE :int
 	{
 		FULL = 0,
@@ -209,10 +204,9 @@ public:
 		REFLECTION = 2,
 		VOXEL = 3
 	};
+
 	float3 min;
 	float3 size;
-
-
 
 private:
 	std::shared_ptr<GBufferDownsampler> downsampler;
@@ -235,7 +229,7 @@ private:
 
 	std::future<visibility_update> vis_update;
 
-	struct EyeData :public prop_handler
+	struct EyeData : public prop_handler
 	{
 		HAL::Texture::ptr downsampled_reflection;
 		HAL::Texture::ptr current_gi_texture;
@@ -245,6 +239,7 @@ private:
 	};
 
 	bool recreate_static = false;
+
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
 
@@ -257,16 +252,16 @@ public:
 	Texture3DMultiTiles normal;
 	Texture3DRefTiles tex_lighting;
 
-	Variable<bool> voxelize_scene = { true, "voxelize_scene", this };
-	Variable<bool> light_scene = { true, "light_scene", this };
-	Variable<bool> clear_scene = { true, "clear_scene",this };
+	Variable<bool> voxelize_scene = {true, "voxelize_scene", this};
+	Variable<bool> light_scene = {true, "light_scene", this};
+	Variable<bool> clear_scene = {true, "clear_scene", this};
 
-	Variable<bool> use_rtx = { true, "use_rtx", this };
-	Variable<bool> multiple_bounces = { true, "multiple_bounces", this };
+	Variable<bool> use_rtx = {true, "use_rtx", this};
+	Variable<bool> multiple_bounces = {true, "multiple_bounces", this};
 
 
-	Variable<bool> denoiser = { true, "denoiser", this };
-	Variable<bool> reflecton = { true, "reflecton", this };
+	Variable<bool> denoiser = {true, "denoiser", this};
+	Variable<bool> reflecton = {true, "reflecton", this};
 
 
 	void resize(ivec2 size);
@@ -282,10 +277,9 @@ public:
 	void screen_reflection(Graph& graph);
 
 
-	virtual void generate(Graph& graph) override;
+	void generate(Graph& graph) override;
 	virtual void voxelize(Graph& graph);
 	virtual void debug(Graph& graph);
 	void generate_pre(Graph& graph);
-	 void generate_light(Graph& graph);
-
+	void generate_light(Graph& graph);
 };

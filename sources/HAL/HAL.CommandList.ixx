@@ -370,7 +370,7 @@ export{
 				return read_buffer(view.resource.get(), view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), count * sizeof(HAL::StructuredBufferView<T>::UnderlyingType),
 					[f](std::span<std::byte> memory)
 					{
-						uint read = memory.size();
+						uint read = uint(memory.size());
 						auto data = reinterpret_cast<T*>(memory.data());
 
 

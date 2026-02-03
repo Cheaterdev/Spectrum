@@ -50,7 +50,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {%- set pso =  parsed.compute_pso[v] -%}
 {%- for vd in pso.defines -%}
 {%- set d =  pso.defines[vd] %}
-decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
+//decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
 {%- endfor -%}
 {%- endfor -%}
 
@@ -58,7 +58,7 @@ decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
 {%- set pso =  parsed.graphics_pso[v] -%}
 {%- for vd in pso.defines -%}
 {%- set d =  pso.defines[vd] %}
-decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
+//decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
 {%- endfor -%}
 {%- endfor -%}
 
@@ -67,6 +67,6 @@ decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
 {%- set pso =  parsed.workgraph_pso[v] -%}
 {%- for vd in pso.defines -%}
 {%- set d =  pso.defines[vd] %}
-decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
+// decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
 {%- endfor -%}
 {%- endfor -%}

@@ -121,7 +121,7 @@ float4 trace(float4 start_color, float3 view, float3 origin, float3 dir, float3 
 
 	float3 sky = get_sky(normal, angle);
 	float sampleWeight = saturate(max_accum - accum.w * SCALER) / max_accum;
-	accum.xyz += sky * pow(sampleWeight, 1);
+	//accum.xyz += sky * pow(sampleWeight, 24);
 
 	return accum;// / saturate(accum.w);
 }

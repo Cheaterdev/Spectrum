@@ -1,0 +1,41 @@
+export module HAL:Autogen.Tables.FrameGraph_Debug_Texture3D;
+
+import Core;
+import :SIG;
+import :Types;
+import :HLSL;
+import :Enums;
+import <HAL.h>;
+import :Autogen.Tables.Camera;
+export namespace Table
+{
+	#pragma pack(push, 1)
+
+	struct FrameGraph_Debug_Texture3D
+	{
+		static constexpr SlotID ID = SlotID::FrameGraph_Debug_Texture3D;
+		uint3 sourceSize;
+		HLSL::Texture3D<float4> source;
+		Camera camera;
+		HLSL::Texture3D<float4>& GetSource() { return source; }
+		uint3& GetSourceSize() { return sourceSize; }
+		Camera& GetCamera() { return camera; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+		template<class Compiler>
+		void compile(Compiler& compiler) const
+		{
+			compiler.compile(sourceSize);
+			compiler.compile(source);
+			compiler.compile(camera);
+		}
+		struct Compiled
+		{
+			uint3 sourceSize; // uint3
+			uint source; // Texture3D<float4>
+			Camera::Compiled camera; // Camera
+		};
+
+	};
+	#pragma pack(pop)
+}
+

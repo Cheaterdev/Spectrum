@@ -1075,12 +1075,12 @@ namespace FrameGraph
 					bool compatible_next = IsCompatible(next_list_type, transition_best_type);
 					bool compatible_prev = IsCompatible(prev_list_type, transition_best_type);
 
-					if (compatible_next && compatible_prev)
+					/*if (compatible_next && compatible_prev)	 // TODO: for split transitions check not only layout - it may be incompatible with operation
 					{
 						// do a split transition
 						info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
 					}
-					else if (compatible_next)
+					else */if (compatible_next)
 					{
 						// next pass should rewrite its first state
 						info.resource->get_state_manager().prepare_state(next_cmd.get(), prev_gpu_state);			  // add sync&access info

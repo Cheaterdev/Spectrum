@@ -53,7 +53,7 @@ public:
 
 	image::ptr rendered_image;
 
-
+	 third_person_camera camera_3d;
 	   vec2 start_pos;
         vec2 prev_pos;
        
@@ -139,17 +139,45 @@ public:
 							}
 
 
-							compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
-							{			
-								Slots::FrameGraph_Debug_Texture2D tex2d;
-								 tex2d.GetSource() = *static_cast<HAL::Texture2DView*>(info->view.get());
-								      tex2d.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions.xy;
-								   tex2d.GetOffset() = offset;
-								   	    tex2d.GetScale() = img_scale;
+
+							 if (auto source = dynamic_cast<HAL::Texture2DView*>(info->view.get()))
+							 {
+								 compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
+
+								 Slots::FrameGraph_Debug_Texture2D tex2d;
+								 tex2d.GetSource() = *source;
+								 tex2d.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions.xy;
+								 tex2d.GetOffset() = offset;
+								 tex2d.GetScale() = img_scale;
+
+								 compute.set(tex2d);
+							 } 	 else if (auto source = dynamic_cast<HAL::Texture3DView*>(info->view.get()))
+							 {
+								 compute.set_pipeline<PSOS::FrameGraph_Debug_Texture3D>();
 
 
-								compute.set(tex2d);
-							}
+								 mat4x4 view;
+								 mat4x4 proj;
+								 camera_3d.set_projection_params(Math::pi / 4, float(debug_size.x) / debug_size.y, 1, 1500);
+
+								 camera_3d.frame_move(0.1f);
+									 camera_3d.update();
+	
+								 Slots::FrameGraph_Debug_Texture3D tex3d;
+								 tex3d.GetSource() = *source;
+								 tex3d.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions;
+								 tex3d.GetCamera() = camera_3d.camera_cb.current;
+
+								 compute.set(tex3d);
+							 } 
+							 
+							 else
+							 {
+							  compute.set_pipeline<PSOS::FrameGraph_Debug_NotImplemented>();
+
+
+							 }
+
 
 						   compute.dispatch(uint3(rendered_image->texture.texture->get_desc().as_texture().Dimensions.xy,1));
 						//	MipMapGenerator::get().copy_texture_2d_slow(list->get_graphics(), rendered_image->texture.texture, );
@@ -174,15 +202,15 @@ public:
                 prev_pos = pos;
                 set_movable(true);
             }
-
+			
             if (dragging)
             {
-
+				  camera_3d.input((pos-prev_pos)/1000.0f);
 				offset+= pos-prev_pos;
                 //owner->moving(speed);
                 prev_pos = pos;
             }
-
+			
             return dragging;
         }
 
@@ -209,7 +237,7 @@ public:
         {
      float prev_scale = img_scale;
   
-
+		     camera_3d.input(value/100);
 //	 img_scale =value>0?2.0f:1.0f; 
 		img_scale *= 1 + value / 10.0f;
 		img_scale = Math::clamp(img_scale, 0.1f, 10.0f);

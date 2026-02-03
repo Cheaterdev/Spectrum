@@ -23,6 +23,6 @@ void CS(uint2 dispatch_thread_id : SV_DispatchThreadID)
     
     float2 tc = (float2(utc)) / GetFrameGraph_Debug_Texture2D().GetSourceSize();
     
-    GetFrameGraph_Debug_Common().GetTarget()[dispatch_thread_id] = float4(GetFrameGraph_Debug_Texture2D().GetSource()[utc].xyz, 1);
+    GetFrameGraph_Debug_Common().GetTarget()[dispatch_thread_id] = float4(pow(GetFrameGraph_Debug_Texture2D().GetSource()[utc].xyz, 1.0 / 2.2), 1);
 
 }

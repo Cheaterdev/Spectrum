@@ -256,7 +256,7 @@ namespace HAL
 			shaderReflection->GetDesc(&shaderDesc);
 			f.name = entry_point;
 								  f.wname = convert(f.name);
-			for (int i = 0; i < shaderDesc.ConstantBuffers; i++)
+			for (uint i = 0; i < shaderDesc.ConstantBuffers; i++)
 			{
 				ID3D12ShaderReflectionConstantBuffer* cb = shaderReflection->GetConstantBufferByIndex(i);
 				D3D12_SHADER_BUFFER_DESC shaderBufferDesc{};
@@ -287,7 +287,7 @@ namespace HAL
 			libraryReflection->GetDesc(&shaderDesc);
 				
 
-				for (int i = 0; i < shaderDesc.FunctionCount; i++)
+				for (uint i = 0; i < shaderDesc.FunctionCount; i++)
 			{
 				ID3D12FunctionReflection* f = libraryReflection->GetFunctionByIndex(i);
 				D3D12_FUNCTION_DESC functionDesc{};
@@ -300,7 +300,7 @@ namespace HAL
 							  rf.wname = convert(rf.name);
 
 
-											 	for (int i = 0; i < functionDesc.ConstantBuffers; i++)
+											 	for (uint i = 0; i < functionDesc.ConstantBuffers; i++)
 			{
 				ID3D12ShaderReflectionConstantBuffer* cb = f->GetConstantBufferByIndex(i);
 				D3D12_SHADER_BUFFER_DESC shaderBufferDesc{};

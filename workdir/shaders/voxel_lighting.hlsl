@@ -38,14 +38,14 @@ float get_shadow(float3 wpos)
 	pos_l /= pos_l.w;
 	float2 light_tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 
-	float shadow = GetVoxelLighting().GetPssmGlobal().GetLight_buffer().SampleLevel(linearSampler, light_tc, 0) > pos_l.z;
+	float shadow = GetVoxelLighting().GetPssmGlobal().GetLight_buffer().SampleLevel(linearSampler, light_tc, 0) < pos_l.z;
 	return shadow;
 }
 
 float4 get_sky(float3 dir, float level)
 {
-	level *= 256;
-	return tex_cube.SampleLevel(linearSampler, dir, level);
+	level *= 8;
+	return tex_cube.SampleLevel(linearSampler, dir,3);
 }
 
 float4 get_voxel(float3 pos, float level)
@@ -84,7 +84,7 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 	{
 		float sampleDiameter = max(minDiameter, angle * dist);
 
-		float sampleLOD = log2(sampleDiameter * minVoxelDiameterInv);
+		float sampleLOD = 1+log2(sampleDiameter * minVoxelDiameterInv);
 		samplePos = origin + dir * dist;
 		float4 sampleValue = get_voxel(samplePos, sampleLOD);
 		float sampleWeight = (1 - accum.w);
@@ -95,8 +95,8 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 	//	accum.xyz *= angle_coeff;
 
 	float4 sky = get_sky(dir, angle);
-	float sampleWeight = saturate(1 - accum.w);
-	accum += sky * pow(sampleWeight, 1);
+	float sampleWeight = saturate(1 - 18*accum.w);
+	//accum += sky * pow(sampleWeight, 1);
 
 	return accum;
 
@@ -107,15 +107,15 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 float4 get_direction(float3 pos, float3 normal, float3 dir, float k, float a)
 {
 
-	return trace(pos, dir, normal, a);// *pow(dot(normal, dir), 1);
+    return trace(pos + normal/100, dir, normal, a); // *pow(dot(normal, dir), 1);
 }
 float4 getGI(float3 Pos, float3 Normal)
 {
-	float a = 0.8;
+	float a = 0.4;
 
 	float4 Color = 0;
 	float t = 1;
-	float k = 0;
+	float k = 1;
 	float3 right = t * normalize(cross(Normal, float3(0, 1, 0.001)));
 	float3 tangent = t * normalize(cross(right, Normal));
 
@@ -123,7 +123,7 @@ float4 getGI(float3 Pos, float3 Normal)
 	return Color;
 
 
-/*	Color += get_direction(Pos, Normal, normalize(Normal + right), k, a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
+	Color += get_direction(Pos, Normal, normalize(Normal + right), k, a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
 	Color += get_direction(Pos, Normal, normalize(Normal - right), k, a);//trace(Pos + k*normalize(Normal - right), normalize(Normal - right), a);
 	Color += get_direction(Pos, Normal, normalize(Normal + tangent), k, a);//trace(Pos + k*normalize(Normal + tangent), normalize(Normal + tangent), a);
 	Color += get_direction(Pos, Normal, normalize(Normal - tangent), k, a);//trace(Pos + k*normalize(Normal - tangent), normalize(Normal - tangent), a);
@@ -134,7 +134,7 @@ float4 getGI(float3 Pos, float3 Normal)
 																				   //  Color /= 3.14f;
 																				   //Color *= getAO(Pos-0*Normal, Normal);
 	return  Color / 8;
-	*/
+	
 }
 
 
@@ -175,7 +175,7 @@ void CS(
 	float3 pos = index * voxel_size / dims + voxel_min + oneVoxelSize * normals ;
 
 	float shadow = saturate(dot(normals, dir)) * get_shadow(pos);
-	float3 lighting = 1 * albedo.xyz * gi.xyz + 1*albedo.xyz * shadow;
+    float3 lighting = 1 * albedo.xyz * gi.xyz + 4 * albedo.xyz* shadow;
 
 	output[index] = float4(lighting, 1);
 }

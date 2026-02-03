@@ -99,7 +99,7 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 
 			D3D12CreateDevice(
 				desc.adapter->native_adapter.Get(),
-				D3D_FEATURE_LEVEL_12_1,
+				D3D_FEATURE_LEVEL_12_2,
 				IID_PPV_ARGS(&native_device)
 			);
 
