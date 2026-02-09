@@ -26,6 +26,14 @@ export namespace Table
 		}
 		using Compiled = BoxInfo;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(node_offset);
+			ar& NVP(mesh_id);
+		}
+
 	};
 	#pragma pack(pop)
 }

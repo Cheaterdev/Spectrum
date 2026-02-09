@@ -35,10 +35,21 @@ export
 			ptr = t.get_offset();
 		}
 
+			SERIALIZE()
+		{
+			 ar& NVP(ptr);
+		}
 	};
-	class DrawIndexedArguments : public D3D12_DRAW_INDEXED_ARGUMENTS
+	class DrawIndexedArguments// : public D3D12_DRAW_INDEXED_ARGUMENTS
 	{
 	public:
+
+		 UINT IndexCountPerInstance;
+    UINT InstanceCount;
+    UINT StartIndexLocation;
+    INT BaseVertexLocation;
+    UINT StartInstanceLocation;
+
 		static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
 		{
 			D3D12_INDIRECT_ARGUMENT_DESC desc;
@@ -54,11 +65,13 @@ export
 	private:
 		SERIALIZE()
 		{
+
 			ar& NVP(IndexCountPerInstance);
 			ar& NVP(InstanceCount);
 			ar& NVP(StartIndexLocation);
 			ar& NVP(BaseVertexLocation);
 			ar& NVP(StartInstanceLocation);
+
 		}
 
 	};

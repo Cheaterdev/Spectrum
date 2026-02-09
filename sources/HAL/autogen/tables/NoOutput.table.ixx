@@ -20,6 +20,12 @@ export namespace Table
 		}
 		using Compiled = NoOutput;
 
+
+		private:
+		SERIALIZE()
+		{
+		}
+
 	};
 	#pragma pack(pop)
 }

@@ -26,6 +26,14 @@ export namespace Table
 		}
 		using Compiled = RayCone;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(width);
+			ar& NVP(angle);
+		}
+
 	};
 	#pragma pack(pop)
 }

@@ -36,7 +36,27 @@ export namespace Table
 			float2 scale; // float2
 			float2 offset; // float2
 			uint source; // Texture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(sourceSize);
+				ar& NVP(scale);
+				ar& NVP(offset);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(sourceSize);
+			ar& NVP(scale);
+			ar& NVP(offset);
+		}
 
 	};
 	#pragma pack(pop)

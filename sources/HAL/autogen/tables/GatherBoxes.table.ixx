@@ -29,7 +29,21 @@ export namespace Table
 		{
 			uint culledMeshes; // AppendStructuredBuffer<BoxInfo>
 			uint visibleMeshes; // AppendStructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

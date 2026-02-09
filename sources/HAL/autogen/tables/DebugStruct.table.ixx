@@ -23,6 +23,13 @@ export namespace Table
 		}
 		using Compiled = DebugStruct;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(v);
+		}
+
 	};
 	#pragma pack(pop)
 }

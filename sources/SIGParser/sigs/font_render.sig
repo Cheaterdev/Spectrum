@@ -43,7 +43,7 @@ GraphicsPSO FontRender
 
 	[type = Format]
 	[PS]
-	define Format = { ALL_RT_FORMATS };
+	define Format = { ALL_RT_BLENDING_FORMATS };
 
 	rtv = { Format };
 

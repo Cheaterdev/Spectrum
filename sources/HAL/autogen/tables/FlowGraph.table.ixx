@@ -29,6 +29,15 @@ export namespace Table
 		}
 		using Compiled = FlowGraph;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(size);
+			ar& NVP(offset_size);
+			ar& NVP(inv_pixel);
+		}
+
 	};
 	#pragma pack(pop)
 }

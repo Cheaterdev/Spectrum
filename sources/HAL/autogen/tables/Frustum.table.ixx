@@ -23,6 +23,13 @@ export namespace Table
 		}
 		using Compiled = Frustum;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(planes);
+		}
+
 	};
 	#pragma pack(pop)
 }

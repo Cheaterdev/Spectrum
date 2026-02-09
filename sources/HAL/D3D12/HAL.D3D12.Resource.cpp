@@ -170,7 +170,7 @@ namespace HAL
 					&resourceDesc,
 					layout,
 					pass_value,
-					castable_formats.size(), castable_formats.data(),
+					uint(castable_formats.size()), castable_formats.data(),
 					IID_PPV_ARGS(&native_resource)));
 			}
 			else
@@ -188,7 +188,7 @@ namespace HAL
 					layout,
 					pass_value,
 					nullptr,
-					castable_formats.size(), castable_formats.data(),
+					uint(castable_formats.size()), castable_formats.data(),
 					IID_PPV_ARGS(&native_resource)));
 			}
 			   	auto prev_flags = THIS->desc.Flags;

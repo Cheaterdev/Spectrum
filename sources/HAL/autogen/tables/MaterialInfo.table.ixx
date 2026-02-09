@@ -30,6 +30,13 @@ export namespace Table
 		}
 
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(data);
+		}
+
 	};
 	#pragma pack(pop)
 }

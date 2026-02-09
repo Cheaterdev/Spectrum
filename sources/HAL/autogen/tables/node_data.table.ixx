@@ -33,6 +33,16 @@ export namespace Table
 		}
 		using Compiled = node_data;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(node_global_matrix);
+			ar& NVP(node_global_matrix_prev);
+			ar& NVP(node_inverse_matrix);
+			ar& NVP(aabb);
+		}
+
 	};
 	#pragma pack(pop)
 }

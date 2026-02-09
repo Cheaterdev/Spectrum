@@ -3,7 +3,7 @@
 import <HAL.h>;
 import <stl/core.h>;
 
-import <d3d12/d3d12_includes.h>;
+import d3d12; 
 import wrl;
 import Core;
 
@@ -100,3 +100,4 @@ CD3DX12_RESOURCE_DESC1  to_native(const ResourceDesc& desc)
 
 	return CD3DX12_RESOURCE_DESC1 ::Buffer(0, to_native(desc.Flags));
 }
+

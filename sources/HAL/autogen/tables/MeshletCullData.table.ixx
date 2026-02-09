@@ -29,6 +29,7 @@ export namespace Table
 		}
 		using Compiled = MeshletCullData;
 
+
 		private:
 		SERIALIZE()
 		{
@@ -36,6 +37,7 @@ export namespace Table
 			ar& NVP(NormalCone);
 			ar& NVP(ApexOffset);
 		}
+
 	};
 	#pragma pack(pop)
 }

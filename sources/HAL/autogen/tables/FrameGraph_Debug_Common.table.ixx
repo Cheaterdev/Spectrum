@@ -36,7 +36,27 @@ export namespace Table
 			float3 minColor; // float3
 			float3 maxColor; // float3
 			uint target; // RWTexture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(targetSize);
+				ar& NVP(minColor);
+				ar& NVP(maxColor);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(targetSize);
+			ar& NVP(minColor);
+			ar& NVP(maxColor);
+		}
 
 	};
 	#pragma pack(pop)

@@ -1066,39 +1066,38 @@ namespace FrameGraph
 
 					HAL::SubResourcesGPU next_gpu_state;
 					next_gpu_state.subres.resize(resource->get_state_manager().get_subres_count());
-					next_gpu_state.set_cpu_state(next_cpu_state);
+					next_gpu_state.set_cpu_state_first(next_cpu_state);
 
 
-					auto transition_best_type = Merge(prev_gpu_state.get_best_list_type(), next_gpu_state.get_best_list_type());
+					auto transition_best_type_layout = Merge(prev_gpu_state.get_best_list_type(), next_gpu_state.get_best_list_type());
 
+
+					bool compatible_next_layout = IsCompatible(next_list_type, transition_best_type_layout);
+					bool compatible_prev_layout = IsCompatible(prev_list_type, transition_best_type_layout);
+  					
+	   			   auto transition_best_type = Merge(prev_cpu_state.get_best_list_type_last(), next_cpu_state.get_best_list_type_first());
 
 					bool compatible_next = IsCompatible(next_list_type, transition_best_type);
 					bool compatible_prev = IsCompatible(prev_list_type, transition_best_type);
 
-					/*if (compatible_next && compatible_prev)	 // TODO: for split transitions check not only layout - it may be incompatible with operation
+					  // 	
+					//info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
+					if (compatible_next && compatible_prev)	
 					{
 						// do a split transition
 						info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
 					}
-					else */if (compatible_next)
+					else if (compatible_next_layout)
 					{
 						// next pass should rewrite its first state
 						info.resource->get_state_manager().prepare_state(next_cmd.get(), prev_gpu_state);			  // add sync&access info
 					}
-					else
+					else if (compatible_prev_layout)
 					{
-						assert(compatible_prev);
-
-						// prev pass should rewrite its last state
-						HAL::SubResourcesGPU next_gpu_state;
-						next_gpu_state.subres.resize(resource->get_state_manager().get_subres_count());
-						next_gpu_state.set_cpu_state_first(next_cpu_state);
-
-						auto next_best_type = next_gpu_state.get_best_list_type();
-						assert(IsCompatible(prev_list_type, next_best_type));
 
 						info.resource->get_state_manager().prepare_after_state(prev_cmd.get(), next_gpu_state);		 // add sync&access infoZ
-					}
+					}else
+						assert(false);
 
 
 
@@ -1347,7 +1346,8 @@ namespace FrameGraph
 
 					if (info->is_new)
 					{
-						info->creation_state = info->last_state = info->resource->get_state_manager().copy_gpu();
+						info->creation_state =info->last_state = info->resource->get_state_manager().copy_gpu();
+						info->last_state = TextureLayout::UNDEFINED;
 						info->view = nullptr;
 						info->resource->set_name(info->name);
 

@@ -29,7 +29,23 @@ export namespace Table
 		{
 			uint4 pip_ids[2]; // uint4
 			uint commands[8]; // AppendStructuredBuffer<CommandData>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(pip_ids);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(pip_ids);
+		}
 
 	};
 	#pragma pack(pop)

@@ -26,6 +26,14 @@ export namespace Table
 		}
 		using Compiled = FontRenderingConstants;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(TransformMatrix);
+			ar& NVP(ClipRect);
+		}
+
 	};
 	#pragma pack(pop)
 }

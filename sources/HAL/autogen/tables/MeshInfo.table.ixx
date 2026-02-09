@@ -32,6 +32,16 @@ export namespace Table
 		}
 		using Compiled = MeshInfo;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(vertex_offset_local);
+			ar& NVP(meshlet_offset_local);
+			ar& NVP(node_offset);
+			ar& NVP(meshlet_count);
+		}
+
 	};
 	#pragma pack(pop)
 }

@@ -26,6 +26,14 @@ export namespace Table
 		}
 		using Compiled = AABB;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(min);
+			ar& NVP(max);
+		}
+
 	};
 	#pragma pack(pop)
 }

@@ -32,7 +32,23 @@ export namespace Table
 			int2 BufferDimensions; // int2
 			uint t2d_hitMaskResults; // Texture2D<uint>
 			uint rwsb_shadowMask; // RWStructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(BufferDimensions);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(BufferDimensions);
+		}
 
 	};
 	#pragma pack(pop)

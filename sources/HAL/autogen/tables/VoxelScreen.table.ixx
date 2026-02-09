@@ -45,7 +45,23 @@ export namespace Table
 			uint prev_frames; // Texture2D<float>
 			uint prev_depth; // Texture2D<float>
 			GBuffer::Compiled gbuffer; // GBuffer
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(gbuffer);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(gbuffer);
+		}
 
 	};
 	#pragma pack(pop)

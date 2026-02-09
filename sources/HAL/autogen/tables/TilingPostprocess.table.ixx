@@ -24,6 +24,13 @@ export namespace Table
 		}
 		using Compiled = TilingPostprocess;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(tiling);
+		}
+
 	};
 	#pragma pack(pop)
 }

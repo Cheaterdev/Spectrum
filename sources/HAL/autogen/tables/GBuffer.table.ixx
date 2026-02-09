@@ -40,7 +40,21 @@ export namespace Table
 			uint specular; // RenderTarget<float4>
 			uint motion; // RenderTarget<float2>
 			uint depth; // DepthStencil<float>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

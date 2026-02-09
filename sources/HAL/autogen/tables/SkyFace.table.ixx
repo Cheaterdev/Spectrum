@@ -23,6 +23,13 @@ export namespace Table
 		}
 		using Compiled = SkyFace;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(face);
+		}
+
 	};
 	#pragma pack(pop)
 }

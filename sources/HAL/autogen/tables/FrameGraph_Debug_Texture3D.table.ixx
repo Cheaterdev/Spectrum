@@ -33,7 +33,25 @@ export namespace Table
 			uint3 sourceSize; // uint3
 			uint source; // Texture3D<float4>
 			Camera::Compiled camera; // Camera
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(sourceSize);
+				ar& NVP(camera);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(sourceSize);
+			ar& NVP(camera);
+		}
 
 	};
 	#pragma pack(pop)

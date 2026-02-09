@@ -340,11 +340,11 @@ export {
 		{
 			auto& rec = records[id];
 
-						uint beg = rec.Slot_Compiler.s.str().size();
+						uint beg = uint(rec.Slot_Compiler.s.str().size());
 			rec.Slot_Compiler.context = context;
 			elem.compile_table(rec.Slot_Compiler);
 
-						uint end = rec.Slot_Compiler.s.str().size();
+						uint end = uint(rec.Slot_Compiler.s.str().size());
 			++rec.count;
 			rec.stride = sizeof(Table);
 			assert(end - beg == sizeof(Table));
@@ -386,7 +386,7 @@ export {
 			auto res = context->place_data(sizeof(D3D12_MULTI_NODE_GPU_INPUT), 256);
 
 			D3D12_MULTI_NODE_GPU_INPUT& t = *reinterpret_cast<D3D12_MULTI_NODE_GPU_INPUT*>(res.get_cpu_data());
-			t.NumNodeInputs = records.size();
+			t.NumNodeInputs = uint(records.size());
 
 			t.NodeInputs.StartAddress = to_native(id_rec_data);
 

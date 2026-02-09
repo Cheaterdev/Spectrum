@@ -330,7 +330,9 @@ export{
 
 			void update_buffer(HAL::Resource* resource, uint64 offset, const char* data, uint64 size);
 			void update_buffer(HAL::Resource::ptr resource, uint64 offset, const char* data, uint64 size);
-			std::future<bool> read_buffer(HAL::Resource* resource, unsigned int offset, UINT64 size, std::function<void(std::span<std::byte>)>);
+		public:
+			// todo: make it better
+			std::future<bool> read_buffer(HAL::Resource* resource, uint64 offset, UINT64 size, std::function<void(std::span<std::byte>)>);
 	
 		public:
 			void copy_resource(HAL::Resource* dest, HAL::Resource* source);
@@ -365,7 +367,7 @@ export{
 
 				
 			template<class T>
-			std::future<bool> read(HAL::StructuredBufferView<T>& view, unsigned int offset, UINT64 count, std::function<void(std::span<T>)> f)
+			std::future<bool> read(HAL::StructuredBufferView<T>& view, uint64 offset, UINT64 count, std::function<void(std::span<T>)> f)
 			{
 				return read_buffer(view.resource.get(), view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), count * sizeof(HAL::StructuredBufferView<T>::UnderlyingType),
 					[f](std::span<std::byte> memory)
@@ -385,7 +387,7 @@ export{
 				return read_buffer(view.counter_view.resource.get(), view.counter_view.offset , sizeof(unsigned int),
 					[f](std::span<std::byte> memory)
 					{
-						uint read = memory.size();
+						uint64 read = memory.size();
 						auto data = reinterpret_cast<unsigned int*>(memory.data());
 
 

@@ -28,7 +28,21 @@ export namespace Table
 		{
 			uint tex0; // Texture2D<float>
 			uint positions; // Buffer<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

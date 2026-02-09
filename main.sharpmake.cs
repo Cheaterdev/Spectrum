@@ -14,7 +14,6 @@ namespace Spectrum
 
     public class CustomTarget : ITarget
     {
-
         public Platform Platform; 
         public DevEnv DevEnv;
         public Optimization Optimization;
@@ -75,7 +74,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 
             conf.AdditionalCompilerOptions.Add("/bigobj");
- conf.AdditionalCompilerOptions.Add("/dxifcInlineFunctions-");
+            conf.AdditionalCompilerOptions.Add("/dxifcInlineFunctions-");
 
             conf.Defines.Add("_MBCS");
 			conf.Defines.Add("BOOST_NO_USER_CONFIG");
@@ -87,12 +86,13 @@ namespace Spectrum
             conf.Defines.Add("_CRT_SECURE_NO_WARNINGS");
             conf.Defines.Add("NOMINMAX");
             conf.Defines.Add("_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING");
+            conf.Defines.Add("_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING");
        
 			conf.Defines.Add("WIN32_LEAN_AND_MEAN");
             conf.Defines.Add("SPECTRUM_ENABLE_EXEPTIONS");
             conf.Defines.Add("CEREAL_THREAD_SAFE");
             conf.Defines.Add("USE_PIX");
-          conf.Defines.Add("WIN32_LEAN_AND_MEAN");
+            conf.Defines.Add("WIN32_LEAN_AND_MEAN");
          
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106", "4494")); //module reference issues
 
@@ -204,9 +204,13 @@ namespace Spectrum
 
             // fix: dstorage vcpkg issue -> copy manually
             conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dstoragecore.dll");
-           conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxcompiler.dll");
-         conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxil.dll");
-         
+            conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxcompiler.dll");
+            conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxil.dll");
+
+            conf.Defines.Add("ANTLR4CPP_STATIC");
+
+            conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("5260")); // adding inline to header units
+
         }
     }
 	
@@ -293,7 +297,7 @@ namespace Spectrum
 
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\sources\SIGParser";
-            conf.Defines.Add("ANTLR4CPP_STATIC");
+
             conf.AddPublicDependency<Core>(target);	
         }
     }

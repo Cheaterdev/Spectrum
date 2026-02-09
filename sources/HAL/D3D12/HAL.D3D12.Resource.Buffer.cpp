@@ -1,7 +1,7 @@
 module HAL:Resource.Buffer;
 
 import <HAL.h>;
-import <d3d12/d3d12_includes.h>;
+
 import wrl;
 
 import d3d12;

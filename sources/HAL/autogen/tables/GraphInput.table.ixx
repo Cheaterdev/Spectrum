@@ -32,6 +32,16 @@ export namespace Table
 		}
 		using Compiled = GraphInput;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(dispatch_grid);
+			ar& NVP(unused);
+			ar& NVP(WaveOffset);
+			ar& NVP(unused2);
+		}
+
 	};
 	#pragma pack(pop)
 }

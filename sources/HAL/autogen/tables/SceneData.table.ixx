@@ -44,7 +44,21 @@ export namespace Table
 			uint materials; // StructuredBuffer<MaterialCommandData>
 			uint raytraceInstanceInfo; // StructuredBuffer<RaytraceInstanceInfo>
 			uint scene; // RaytracingAccelerationStructure
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

@@ -20,7 +20,7 @@ float3 get_PBR(float3 SpecularColor, float3 ReflectionColor, float3 N, float3 V,
 	V *= -1;
 	float NoV = dot(N, V);
 	//return NoV<0;
-//	float3 R = 2 * dot(V, N) * N - V;
+//	float3 R = 2 * dot(V, N) * N - V; 
 //	float3 PrefilteredColor = PrefilterEnvMap(Roughness, R);
 	float2 EnvBRDF = IntegrateBRDF(Roughness, Metallic, NoV);
 	return     ReflectionColor * (Metallic * SpecularColor * EnvBRDF.x + EnvBRDF.y);

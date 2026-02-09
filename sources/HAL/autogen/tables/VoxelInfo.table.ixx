@@ -32,6 +32,16 @@ export namespace Table
 		}
 		using Compiled = VoxelInfo;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(min);
+			ar& NVP(size);
+			ar& NVP(voxels_per_tile);
+			ar& NVP(voxel_tiles_count);
+		}
+
 	};
 	#pragma pack(pop)
 }

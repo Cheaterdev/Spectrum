@@ -32,7 +32,21 @@ export namespace Table
 			uint color; // Texture2D<float4>
 			uint frames; // Texture2D<float>
 			uint target; // RWTexture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

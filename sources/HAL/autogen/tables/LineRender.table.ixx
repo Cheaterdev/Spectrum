@@ -25,7 +25,21 @@ export namespace Table
 		struct Compiled
 		{
 			uint vb; // StructuredBuffer<VSLine>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

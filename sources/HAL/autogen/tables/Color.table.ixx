@@ -23,6 +23,13 @@ export namespace Table
 		}
 		using Compiled = Color;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(color);
+		}
+
 	};
 	#pragma pack(pop)
 }

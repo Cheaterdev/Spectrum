@@ -224,6 +224,50 @@ export
 				}
 			}
 
+			CommandListType get_best_list_type_last()
+			{
+				CommandListType type = CommandListType::COPY;
+
+				for (auto& cpu : subres)
+				{
+
+
+					if (!cpu.used)
+					{
+						continue;
+					}
+
+					auto state = cpu.last_usage->wanted_state;
+
+
+					type = Merge(type, state.get_best_cmd_type());
+				}
+
+
+				return type;
+			}
+			  CommandListType get_best_list_type_first()
+			{
+				CommandListType type = CommandListType::COPY;
+
+				for (auto& cpu : subres)
+				{
+
+
+					if (!cpu.used)
+					{
+						continue;
+					}
+
+					auto state = cpu.first_usage->wanted_state;
+
+
+					type = Merge(type, state.get_best_cmd_type());
+				}
+
+
+				return type;
+			}
 			const ResourceListStateCPU& get_subres_state(UINT id) const
 			{
 				return subres[id];
@@ -281,6 +325,13 @@ export
 			}
 
 
+			void operator = (const TextureLayout& layout)
+			{
+				for (auto& s : subres)
+				{
+					s.layout = layout;
+				}
+			}
 
 			CommandListType get_best_list_type()
 			{

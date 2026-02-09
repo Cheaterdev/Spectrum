@@ -60,7 +60,21 @@ export namespace Table
 			uint g_out_radiance; // RWTexture2D<float4>
 			uint g_out_variance; // RWTexture2D<float>
 			uint g_out_sample_count; // RWTexture2D<float>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

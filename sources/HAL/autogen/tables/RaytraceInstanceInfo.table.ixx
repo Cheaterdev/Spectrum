@@ -29,7 +29,21 @@ export namespace Table
 		{
 			uint vertexes; // StructuredBuffer<mesh_vertex_input>
 			uint indices; // StructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

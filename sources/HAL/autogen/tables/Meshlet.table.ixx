@@ -32,6 +32,16 @@ export namespace Table
 		}
 		using Compiled = Meshlet;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(vertexCount);
+			ar& NVP(vertexOffset);
+			ar& NVP(primitiveCount);
+			ar& NVP(primitiveOffset);
+		}
+
 	};
 	#pragma pack(pop)
 }

@@ -1144,5 +1144,13 @@ extern "C" HRESULT STDMETHODCALLTYPE FW1CreateFactory(
 
 typedef HRESULT(STDMETHODCALLTYPE* PFN_FW1CREATEFACTORY)(UINT32 Version, IFW1Factory** ppFactory);
 
+namespace cereal
+{
 
+	template<class Archive>
+	void serialize(Archive& ar, FW1_GLYPHCOORDS& g)
+	{
+		
+	}
+}
 #endif// IncludeGuard__FW1_FW1FontWrapper_h

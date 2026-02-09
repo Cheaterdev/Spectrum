@@ -32,6 +32,16 @@ export namespace Table
 		}
 		using Compiled = vertex_input;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(pos);
+			ar& NVP(tc);
+			ar& NVP(mulColor);
+			ar& NVP(addColor);
+		}
+
 	};
 	#pragma pack(pop)
 }

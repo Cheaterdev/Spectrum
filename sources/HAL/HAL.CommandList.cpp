@@ -747,7 +747,7 @@ gpu_timer.start(list);
 		return result->get_future();
 	}
 
-	std::future<bool> CopyContext::read_buffer(Resource* resource, unsigned int offset, UINT64 size,
+	std::future<bool> CopyContext::read_buffer(Resource* resource, uint64 offset, uint64 size,
 	                                           std::function<void(std::span<std::byte>)> f)
 	{
 		auto result = std::make_shared<std::promise<bool>>();

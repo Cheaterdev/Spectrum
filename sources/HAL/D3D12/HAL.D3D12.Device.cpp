@@ -165,6 +165,13 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 			}
 
 
+
+//			ComPtr<ID3D12DSRDeviceFactory> pDSRDeviceFactory;
+//ComPtr<IDSRDevice> pDSRDevice;
+//D3D12GetInterface(CLSID_D3D12DSRDeviceFactory, IID_PPV_ARGS(&pDSRDeviceFactory));
+//pDSRDeviceFactory->CreateDSRDevice(native_device, 1, IID_PPV_ARGS(&pDSRDevice));
+
+
 			//const uint32_t aftermathFlags =
 			//	GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
 			//	GFSDK_Aftermath_FeatureFlags_EnableResourceTracking |    // Enable tracking of resources.

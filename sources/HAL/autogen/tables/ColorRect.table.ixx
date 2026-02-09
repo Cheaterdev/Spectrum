@@ -26,6 +26,14 @@ export namespace Table
 		}
 		using Compiled = ColorRect;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(pos);
+			ar& NVP(color);
+		}
+
 	};
 	#pragma pack(pop)
 }

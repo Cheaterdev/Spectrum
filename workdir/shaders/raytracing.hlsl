@@ -20,7 +20,7 @@
 #include "autogen/tables/RayPayload.h"
 #include "autogen/tables/ShadowPayload.h"
 #include "autogen/VoxelScreen.h"
-#include "autogen/VoxelInfo.h"
+#include "autogen/VoxelInfo.h" 
 
 
 #include "autogen/VoxelOutput.h"

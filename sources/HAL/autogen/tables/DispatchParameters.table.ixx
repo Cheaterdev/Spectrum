@@ -92,7 +92,53 @@ export namespace Table
 			float2 InvDepthTextureSize; // float2
 			uint DepthTexture; // Texture2D<float>
 			uint OutputTexture; // RWTexture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(SurfaceThickness);
+				ar& NVP(BilinearThreshold);
+				ar& NVP(ShadowContrast);
+				ar& NVP(IgnoreEdgePixels);
+				ar& NVP(UsePrecisionOffset);
+				ar& NVP(BilinearSamplingOffsetMode);
+				ar& NVP(DebugOutputEdgeMask);
+				ar& NVP(DebugOutputThreadIndex);
+				ar& NVP(DebugOutputWaveIndex);
+				ar& NVP(DepthBounds);
+				ar& NVP(UseEarlyOut);
+				ar& NVP(LightCoordinate);
+				ar& NVP(WaveOffset);
+				ar& NVP(FarDepthValue);
+				ar& NVP(NearDepthValue);
+				ar& NVP(InvDepthTextureSize);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(SurfaceThickness);
+			ar& NVP(BilinearThreshold);
+			ar& NVP(ShadowContrast);
+			ar& NVP(IgnoreEdgePixels);
+			ar& NVP(UsePrecisionOffset);
+			ar& NVP(BilinearSamplingOffsetMode);
+			ar& NVP(DebugOutputEdgeMask);
+			ar& NVP(DebugOutputThreadIndex);
+			ar& NVP(DebugOutputWaveIndex);
+			ar& NVP(DepthBounds);
+			ar& NVP(UseEarlyOut);
+			ar& NVP(LightCoordinate);
+			ar& NVP(WaveOffset);
+			ar& NVP(FarDepthValue);
+			ar& NVP(NearDepthValue);
+			ar& NVP(InvDepthTextureSize);
+		}
 
 	};
 	#pragma pack(pop)

@@ -7,7 +7,6 @@ import cereal.json;
 #include "Parsed.h"
 #include "Parsing.h"
 
-
 static const std::string cpp_path = "../../sources/HAL/autogen";
 static const std::string hlsl_path = "../../workdir/shaders/autogen";
 

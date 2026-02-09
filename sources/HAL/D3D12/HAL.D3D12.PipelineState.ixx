@@ -46,7 +46,7 @@ export namespace HAL
 
 		public:
 			D3D12_PROGRAM_IDENTIFIER id;
-			uint buffer_size;
+			uint64 buffer_size;
 		};
 	}
 }

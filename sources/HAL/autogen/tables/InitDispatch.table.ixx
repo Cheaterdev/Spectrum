@@ -28,7 +28,21 @@ export namespace Table
 		{
 			uint counter; // RWStructuredBuffer<uint>
 			uint dispatch_data; // RWStructuredBuffer<DispatchArguments>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

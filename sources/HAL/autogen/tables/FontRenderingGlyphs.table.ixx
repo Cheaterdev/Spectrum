@@ -25,7 +25,21 @@ export namespace Table
 		struct Compiled
 		{
 			uint data; // StructuredBuffer<Glyph>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

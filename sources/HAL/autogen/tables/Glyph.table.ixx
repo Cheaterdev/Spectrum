@@ -29,6 +29,15 @@ export namespace Table
 		}
 		using Compiled = Glyph;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(pos);
+			ar& NVP(index);
+			ar& NVP(color);
+		}
+
 	};
 	#pragma pack(pop)
 }

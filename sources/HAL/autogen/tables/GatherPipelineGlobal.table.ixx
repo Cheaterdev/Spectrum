@@ -28,7 +28,21 @@ export namespace Table
 		{
 			uint meshes_count; // StructuredBuffer<uint>
 			uint commands; // Buffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

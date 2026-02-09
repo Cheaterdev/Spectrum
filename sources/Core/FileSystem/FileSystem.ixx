@@ -167,33 +167,105 @@ std::string native_file_provider::load_all(file* info)
 
 void native_file_provider::on_change(const std::filesystem::path& path, std::function<void()> f)
 {
-    auto s2 = path.parent_path().generic_wstring();
-    thread_pool::get().enqueue([s2, f]()
-        {
-            while (thread_pool::is_good())
-            {
-                auto handle = FindFirstChangeNotificationW(
-                    s2.c_str(),                       // directory to watch
-                    false,                          // watch the subtree
-                    FILE_NOTIFY_CHANGE_LAST_WRITE);  // watch dir name changes
+	// this function is completely written by copilot
 
-                if (handle == INVALID_HANDLE_VALUE)
-                {
-                    std::this_thread::sleep_for(2000_ms);
-                    continue;
-                }
 
-                while (thread_pool::is_good() && WAIT_OBJECT_0 == WaitForSingleObject(handle, 200))
-                {
-                    // wait while os make file accessable
-                    std::this_thread::sleep_for(100_ms);
-                    f();
-                    break;
-                }
-            }
+	// New implementation: poll the target (file or directory) last-write times with debounce,
+	// invoke `f()` only when the observed file's timestamp changes, and add basic error handling.
 
-//            Log::get() << "on_change ended" << Log::endl;
-        });
+	auto watch_path = path;
+	bool is_dir = false;
+	std::filesystem::path monitored_parent;
+	std::filesystem::path monitored_filename;
+
+	std::error_code ec;
+	if (std::filesystem::is_directory(watch_path, ec) && !ec)
+	{
+		is_dir = true;
+		monitored_parent = watch_path;
+	}
+	else
+	{
+		monitored_parent = watch_path.parent_path();
+		monitored_filename = watch_path.filename();
+	}
+
+	// initialize last write time
+	std::filesystem::file_time_type last_time = std::filesystem::file_time_type::min();
+	if (!is_dir && !monitored_parent.empty())
+	{
+		auto full = monitored_parent / monitored_filename;
+		std::error_code ec2;
+		last_time = std::filesystem::last_write_time(full, ec2);
+		if (ec2)
+			last_time = std::filesystem::file_time_type::min();
+	}
+
+	// Use thread pool to run a lightweight polling watcher.
+	thread_pool::get().enqueue([monitored_parent, monitored_filename, is_dir, f, last_time]() 
+	{
+		using namespace std::chrono;
+		using namespace std::chrono_literals;
+
+		std::filesystem::file_time_type local_last = last_time;
+		std::error_code ec_inner;
+
+		while (thread_pool::is_good())
+		{
+			try
+			{
+				if (is_dir)
+				{
+					// For directory watches: scan entries and detect any file modification.
+					for (auto& entry : std::filesystem::directory_iterator(monitored_parent, ec_inner))
+					{
+						if (ec_inner)
+							break;
+
+						if (!entry.is_regular_file())
+							continue;
+
+						std::error_code ec_time;
+						auto t = std::filesystem::last_write_time(entry.path(), ec_time);
+						if (ec_time)
+							continue;
+
+						if (t != local_last)
+						{
+							local_last = t;
+							std::this_thread::sleep_for(100ms); // debounce / allow file to become accessible
+							try { f(); } catch (...) { Log::get() << Log::LEVEL_ERROR << "on_change callback threw" << Log::endl; }
+							// after detecting one change, break to avoid multiple callbacks in the same loop
+							break;
+						}
+					}
+				}
+				else
+				{
+					// For single-file watches: poll that file only.
+					auto full = monitored_parent / monitored_filename;
+					std::error_code ec_time;
+					auto t = std::filesystem::last_write_time(full, ec_time);
+					if (!ec_time && t != local_last)
+					{
+						local_last = t;
+						std::this_thread::sleep_for(100ms); // debounce
+						try { f(); } catch (...) { Log::get() << Log::LEVEL_ERROR << "on_change callback threw" << Log::endl; }
+					}
+				}
+			}
+			catch (const std::exception& ex)
+			{
+				Log::get() << Log::LEVEL_ERROR << "on_change exception: " << ex.what() << Log::endl;
+			}
+			catch (...)
+			{
+				Log::get() << Log::LEVEL_ERROR << "on_change unknown exception" << Log::endl;
+			}
+
+			std::this_thread::sleep_for(200ms); // polling interval
+		}
+	});
 }
 
 

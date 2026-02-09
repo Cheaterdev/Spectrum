@@ -27,6 +27,14 @@ export namespace Table
 		}
 		using Compiled = Triangle;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(v);
+			ar& NVP(lod);
+		}
+
 	};
 	#pragma pack(pop)
 }

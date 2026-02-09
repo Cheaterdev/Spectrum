@@ -40,7 +40,23 @@ export namespace Table
 			uint ranking_tile_buffer; // Buffer<uint>
 			uint scrambling_tile_buffer; // Buffer<uint>
 			uint blue_noise_texture; // RWTexture2D<float2>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(frame_index);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(frame_index);
+		}
 
 	};
 	#pragma pack(pop)

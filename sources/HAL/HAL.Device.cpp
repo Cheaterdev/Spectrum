@@ -68,6 +68,10 @@ namespace HAL
 
 		if(!result) result = any_result;
 
+		if (!result)
+		{
+			Log::get().crash_error("Cant find proper device");
+		}
 		result->init_managers();
 		return result;
 	}

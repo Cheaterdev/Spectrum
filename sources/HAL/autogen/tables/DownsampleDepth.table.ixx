@@ -28,7 +28,21 @@ export namespace Table
 		{
 			uint srcTex; // Texture2D<float>
 			uint targetTex; // RWTexture2D<float>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

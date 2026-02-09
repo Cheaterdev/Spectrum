@@ -28,7 +28,21 @@ export namespace Table
 		{
 			uint visibility; // Texture3D<uint>
 			uint visible_tiles; // AppendStructuredBuffer<uint4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

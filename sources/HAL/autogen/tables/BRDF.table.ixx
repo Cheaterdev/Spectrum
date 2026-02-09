@@ -24,7 +24,21 @@ export namespace Table
 		struct Compiled
 		{
 			uint output; // RWTexture3D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

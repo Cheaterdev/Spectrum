@@ -32,6 +32,7 @@ export namespace Table
 		}
 		using Compiled = mesh_vertex_input;
 
+
 		private:
 		SERIALIZE()
 		{
@@ -40,6 +41,7 @@ export namespace Table
 			ar& NVP(tc);
 			ar& NVP(tangent);
 		}
+
 	};
 	#pragma pack(pop)
 }

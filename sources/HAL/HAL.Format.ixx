@@ -157,6 +157,9 @@ export namespace HAL
 
 		bool is_shader_visible() const;
 		bool is_srgb() const;
+
+
+		bool is_blendable() const;
 		Format to_typeless() const;
 
 		Format to_dsv() const;

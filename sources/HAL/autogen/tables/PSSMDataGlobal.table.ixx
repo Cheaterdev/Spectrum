@@ -29,7 +29,21 @@ export namespace Table
 		{
 			uint light_buffer; // Texture2D<float>
 			uint light_camera; // StructuredBuffer<Camera>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

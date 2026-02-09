@@ -33,7 +33,21 @@ export namespace Table
 			uint vertices; // StructuredBuffer<float4>
 			uint input_meshes; // StructuredBuffer<BoxInfo>
 			uint visible_meshes; // RWStructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

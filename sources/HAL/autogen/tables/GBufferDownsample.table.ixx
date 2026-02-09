@@ -28,7 +28,21 @@ export namespace Table
 		{
 			uint normals; // Texture2D<float4>
 			uint depth; // Texture2D<float>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

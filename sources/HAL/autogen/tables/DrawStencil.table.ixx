@@ -24,7 +24,21 @@ export namespace Table
 		struct Compiled
 		{
 			uint vertices; // StructuredBuffer<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

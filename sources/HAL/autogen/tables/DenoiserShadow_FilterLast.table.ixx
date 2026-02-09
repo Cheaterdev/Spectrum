@@ -28,7 +28,21 @@ export namespace Table
 		{
 			uint rqt2d_input; // Texture2D<float16_t2>
 			uint rwt2d_output; // RWTexture2D<unorm float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

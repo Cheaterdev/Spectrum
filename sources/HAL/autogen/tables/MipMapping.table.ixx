@@ -40,7 +40,27 @@ export namespace Table
 			float2 TexelSize; // float2
 			uint SrcMip; // Texture2D<float4>
 			uint OutMip[4]; // RWTexture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(SrcMipLevel);
+				ar& NVP(NumMipLevels);
+				ar& NVP(TexelSize);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(SrcMipLevel);
+			ar& NVP(NumMipLevels);
+			ar& NVP(TexelSize);
+		}
 
 	};
 	#pragma pack(pop)

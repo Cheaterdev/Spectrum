@@ -33,7 +33,23 @@ export namespace Table
 			uint source; // Texture2D<float4>
 			uint target; // RWTexture2D<float4>
 			FSRConstants::Compiled constants; // FSRConstants
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(constants);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(constants);
+		}
 
 	};
 	#pragma pack(pop)

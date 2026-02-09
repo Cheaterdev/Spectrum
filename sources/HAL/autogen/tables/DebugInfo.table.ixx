@@ -25,7 +25,21 @@ export namespace Table
 		struct Compiled
 		{
 			uint debug; // RWStructuredBuffer<DebugStruct>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

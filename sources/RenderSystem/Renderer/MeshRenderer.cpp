@@ -389,7 +389,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	
 		draw_boxes_first = HAL::StructuredBufferView<DrawIndexedArguments>(1);
 
-		DrawIndexedArguments args;
+		D3D12_DRAW_INDEXED_ARGUMENTS args;
 
 		args.BaseVertexLocation = 0;
 		args.IndexCountPerInstance = (UINT)data.size();

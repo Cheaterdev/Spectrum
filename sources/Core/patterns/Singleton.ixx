@@ -85,13 +85,8 @@ export template <typename T>
 
         static void reset()
         {
-         //   if (memory.size())
-        //    {
-	            instance = nullptr;
-
-             //   ptr= nullptr;
-          //  }
-                
+            ptr = nullptr;
+        	instance = nullptr;
         }
 
         template<typename G = T>
@@ -102,7 +97,7 @@ export template <typename T>
 
         static bool is_good()
         {
-            return instance.get();
+            return ptr;
         }
 };
 

@@ -33,7 +33,23 @@ export namespace Table
 			uint SrcMip; // Texture3D<float4>
 			uint OutMips[3]; // RWTexture3D<float4>
 			VoxelTilingParams::Compiled params; // VoxelTilingParams
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(params);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(params);
+		}
 
 	};
 	#pragma pack(pop)

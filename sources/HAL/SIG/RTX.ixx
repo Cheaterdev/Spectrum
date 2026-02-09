@@ -37,6 +37,12 @@ struct SelectLocal<T>
 		struct raygen_type
 	{
 		HAL::shader_identifier id;
+
+	private:
+		SERIALIZE()
+		{
+			
+		}
 	};
 
 	template < typename... >

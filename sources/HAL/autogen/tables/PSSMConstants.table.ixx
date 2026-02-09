@@ -26,6 +26,14 @@ export namespace Table
 		}
 		using Compiled = PSSMConstants;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(level);
+			ar& NVP(time);
+		}
+
 	};
 	#pragma pack(pop)
 }

@@ -29,7 +29,23 @@ export namespace Table
 		{
 			uint light_mask; // Texture2D<float>
 			GBuffer::Compiled gbuffer; // GBuffer
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(gbuffer);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(gbuffer);
+		}
 
 	};
 	#pragma pack(pop)

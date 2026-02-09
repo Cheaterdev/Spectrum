@@ -314,7 +314,7 @@ using namespace HAL;
 		{
 
 			using View = HAL::FormattedBufferView<T, format>;
-			uint count;
+			uint64 count;
 
 			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
 			{
@@ -339,7 +339,7 @@ using namespace HAL;
 		{
 
 			using View = HAL::StructuredBufferView<T>;
-			uint count;
+			uint64 count;
 			bool counted;
 			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
 			{
@@ -350,7 +350,7 @@ using namespace HAL;
 					flags |= HAL::ResFlags::UnorderedAccess;
 				}
 
-				uint size = count * sizeof(Underlying<T>);
+				uint64 size = count * sizeof(Underlying<T>);
 
 				if (counted)
 				{

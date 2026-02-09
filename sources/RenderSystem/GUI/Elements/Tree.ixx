@@ -257,7 +257,7 @@ export namespace GUI
 
                     elem->event_on_remove.register_handler(this, [this]()
                         {
-                            run_on_ui([this]() {  remove_from_parent(); });
+//                            run_on_ui([this]() {  remove_from_parent(); });
                         });
 
                 }

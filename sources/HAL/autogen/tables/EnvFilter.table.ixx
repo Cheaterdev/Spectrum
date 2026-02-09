@@ -29,6 +29,15 @@ export namespace Table
 		}
 		using Compiled = EnvFilter;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(face);
+			ar& NVP(scaler);
+			ar& NVP(size);
+		}
+
 	};
 	#pragma pack(pop)
 }

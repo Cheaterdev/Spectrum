@@ -26,6 +26,14 @@ export namespace Table
 		}
 		using Compiled = MeshInstance;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(vertex_offset);
+			ar& NVP(index_offset);
+		}
+
 	};
 	#pragma pack(pop)
 }

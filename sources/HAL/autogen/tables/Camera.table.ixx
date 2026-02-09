@@ -54,6 +54,23 @@ export namespace Table
 		}
 		using Compiled = Camera;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(view);
+			ar& NVP(proj);
+			ar& NVP(viewProj);
+			ar& NVP(invView);
+			ar& NVP(invProj);
+			ar& NVP(invViewProj);
+			ar& NVP(reprojectionProj);
+			ar& NVP(position);
+			ar& NVP(direction);
+			ar& NVP(jitter);
+			ar& NVP(frustum);
+		}
+
 	};
 	#pragma pack(pop)
 }

@@ -50,7 +50,25 @@ export namespace Table
 			uint output; // RWTexture3D<float4>
 			PSSMDataGlobal::Compiled pssmGlobal; // PSSMDataGlobal
 			VoxelTilingParams::Compiled params; // VoxelTilingParams
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(pssmGlobal);
+				ar& NVP(params);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(pssmGlobal);
+			ar& NVP(params);
+		}
 
 	};
 	#pragma pack(pop)

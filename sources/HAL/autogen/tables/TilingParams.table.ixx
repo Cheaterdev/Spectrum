@@ -24,7 +24,21 @@ export namespace Table
 		struct Compiled
 		{
 			uint tiles; // StructuredBuffer<uint2>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

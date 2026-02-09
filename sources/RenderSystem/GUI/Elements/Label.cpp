@@ -166,7 +166,7 @@ namespace GUI
 			//						   command_list->transition(cache.texture->resource, );
 			geomerty->clear();
 
-
+				  /*
 			std::map<std::string, rgba8> tokens;
 			tokens["{"] = rgba8(120, 120, 255, 255);
 			tokens["}"] = rgba8(120, 120, 255, 255);
@@ -257,21 +257,21 @@ for (const auto& token : parsed) {
 	if (override_color)
 		c = _color;
 
-
+				   
 		geomerty->add(command_list, convert(token.get_fragment()), font, font_size.get(), l, c, magnet_text);
 
 		res << token.get_fragment();
 
-		l.left = font->measure(res.str(), font_size.get() /** scaled*/, magnet_text).x;
+		l.left = font->measure(res.str(), font_size.get() /** scaled/, magnet_text).x;
 	//html << token.get_fragment();
 	//if (token.is_match()) html << "</i>";
 }
 //html << "</p></body></html>";
 //std::cout << html.str();
 			//text.get().fi
-
+								 /*/
 			//command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
-		//   geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
+		   geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
 		
 			{
 				RT::SingleColor rt;

@@ -24,7 +24,21 @@ export namespace Table
 		struct Compiled
 		{
 			uint viewBuffer; // RWStructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

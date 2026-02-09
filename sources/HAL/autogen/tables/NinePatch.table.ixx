@@ -29,7 +29,21 @@ export namespace Table
 		{
 			uint vb; // StructuredBuffer<vertex_input>
 			uint textures; // Texture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

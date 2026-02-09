@@ -23,6 +23,13 @@ export namespace Table
 		}
 		using Compiled = ShadowPayload;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(hit);
+		}
+
 	};
 	#pragma pack(pop)
 }

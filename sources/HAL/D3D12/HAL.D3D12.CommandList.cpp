@@ -1,9 +1,6 @@
-﻿module;
+﻿module HAL:API.CommandList;	
 import <HAL.h>;
 import <d3d12/d3d12_includes.h>;
-#include <pix3.h>
-module HAL:API.CommandList;	
-
 
 import Core;
 import :Device;
@@ -176,7 +173,7 @@ namespace HAL
 		void CommandList::set_index_buffer(HAL::Views::IndexBuffer index)
 		{
 			D3D12_INDEX_BUFFER_VIEW native;
-			native.SizeInBytes = index.Resource ? index.SizeInBytes : 0;
+			native.SizeInBytes = index.Resource ? uint(index.SizeInBytes) : 0u;
 			native.Format = ::to_native(index.Format);
 			native.BufferLocation = index.Resource ? to_native(index.Resource->get_resource_address().offset(index.OffsetInBytes)) : 0;// index.Resource ? static_cast<HAL::Resource*>(index.Resource)->get_resource_address() + index.OffsetInBytes : 0;
 			m_commandList->IASetIndexBuffer(&native);
@@ -507,7 +504,7 @@ namespace HAL
 				D3D12_BARRIER_GROUP group;
 
 				group.Type = D3D12_BARRIER_TYPE::D3D12_BARRIER_TYPE_BUFFER;
-				group.NumBarriers = buffers.size();
+				group.NumBarriers = uint(buffers.size());
 				group.pBufferBarriers = buffers.data();
 
 				native.emplace_back(group);
@@ -519,7 +516,7 @@ namespace HAL
 				D3D12_BARRIER_GROUP group;
 
 				group.Type = D3D12_BARRIER_TYPE::D3D12_BARRIER_TYPE_TEXTURE;
-				group.NumBarriers = textures.size();
+				group.NumBarriers = uint(textures.size());
 				group.pTextureBarriers = textures.data();
 
 				native.emplace_back(group);

@@ -37,7 +37,21 @@ export namespace Table
 			uint visible_boxes; // StructuredBuffer<uint>
 			uint visibleMeshes; // AppendStructuredBuffer<uint>
 			uint invisibleMeshes; // AppendStructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

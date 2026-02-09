@@ -47,7 +47,21 @@ export namespace Table
 			uint meshletCullData; // StructuredBuffer<MeshletCullData>
 			uint unique_indices; // StructuredBuffer<uint>
 			uint primitive_indices; // StructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

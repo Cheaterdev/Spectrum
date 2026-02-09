@@ -23,6 +23,13 @@ export namespace Table
 		}
 		using Compiled = Instance;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(instanceId);
+		}
+
 	};
 	#pragma pack(pop)
 }

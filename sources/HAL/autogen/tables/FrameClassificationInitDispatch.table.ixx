@@ -36,7 +36,21 @@ export namespace Table
 			uint low_counter; // StructuredBuffer<uint>
 			uint hi_dispatch_data; // RWStructuredBuffer<DispatchArguments>
 			uint low_dispatch_data; // RWStructuredBuffer<DispatchArguments>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

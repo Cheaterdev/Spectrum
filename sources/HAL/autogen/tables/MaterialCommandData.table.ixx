@@ -26,6 +26,14 @@ export namespace Table
 		}
 		using Compiled = MaterialCommandData;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(material_cb);
+			ar& NVP(pipeline_id);
+		}
+
 	};
 	#pragma pack(pop)
 }

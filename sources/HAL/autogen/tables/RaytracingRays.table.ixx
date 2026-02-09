@@ -33,7 +33,25 @@ export namespace Table
 			float pixelAngle; // float
 			uint output; // RWTexture2D<float4>
 			GBuffer::Compiled gbuffer; // GBuffer
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(gbuffer);
+				ar& NVP(pixelAngle);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(gbuffer);
+			ar& NVP(pixelAngle);
+		}
 
 	};
 	#pragma pack(pop)

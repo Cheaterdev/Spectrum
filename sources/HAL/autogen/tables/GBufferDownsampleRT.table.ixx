@@ -28,7 +28,21 @@ export namespace Table
 		{
 			uint depth; // RenderTarget<float>
 			uint color; // RenderTarget<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

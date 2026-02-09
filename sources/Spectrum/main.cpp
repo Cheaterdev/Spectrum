@@ -139,7 +139,7 @@ public:
 	ShadowDenoiser shadow_denoiser;
 	BlueNoise blue_noise;
 	VoxelGI::ptr voxel_gi;
-	std::string debug_view;
+	
 
 	triangle_drawer() : VariableContext(L"triangle_drawer")
 	{
@@ -187,38 +187,7 @@ public:
 		props->height_size = GUI::size_type::MATCH_CHILDREN;
 		base::add_child(props);
 
-		{
-			auto combo = std::make_shared<GUI::Elements::combo_box>();
-
-			combo->size = {200, 25};
-			combo->on_click = [this](GUI::Elements::button::ptr butt)
-			{
-				GUI::Elements::combo_box::ptr combo = butt->get_ptr<GUI::Elements::combo_box>();
-				combo->remove_items();
-
-
-				combo->add_item("Normal")->on_click = [this](GUI::Elements::menu_list_element::ptr)
-				{
-					debug_view = "";
-				};
-
-
-				for (auto& e : last_graph->builder.alloc_resources)
-				{
-					if (e.second.d3ddesc.is_buffer()) continue;
-
-					std::string str = e.first;
-					combo->add_item(str)->on_click = [this, str](GUI::Elements::menu_list_element::ptr)
-					{
-						debug_view = str;
-					};
-				}
-			};
-
-
-			props->add_child(combo);
-		}
-
+	
 
 		GUI::Elements::circle_selector::ptr circle(new GUI::Elements::circle_selector);
 		circle->docking = GUI::dock::FILL;
@@ -647,7 +616,7 @@ public:
 
 					                             compute.set_program(work_pso.get(),
 					                                                 backingBuffer->get_resource_address(),
-					                                                 work_pso->buffer_size,
+					                                                 uint(work_pso->buffer_size),
 					                                                 data.WorkGraphBuffer.is_new());
 
 					                             graph.set_slot(SlotID::VoxelInfo, compute);
@@ -844,8 +813,6 @@ public:
 	void use(TaskBuilder& builder) override
 	{
 		std::string res_tex = "ResultTexture";
-		if (!debug_view.empty())
-			res_tex = debug_view;
 
 		debug_tex = Handlers::Texture(res_tex);
 		if (builder.exists(debug_tex))
@@ -1099,8 +1066,8 @@ public:
 			{
 			};
 			std::map<ResourceAllocInfo*, ::FlowGraph::parameter::ptr> resource_stages;
-			std::map<Pass*, uint> pass_positions;
-			std::map<CommandListType, uint> list_positions;
+			std::map<Pass*, float> pass_positions;
+			std::map<CommandListType, float> list_positions;
 
 
 			for (auto& res : graph.builder.alloc_resources)
@@ -1133,7 +1100,7 @@ public:
 					node->color = float4(1, 1, 0, 1);
 				}
 
-				uint my_pos = list_positions[pass_type];
+				float my_pos = list_positions[pass_type];
 
 				for (auto& sync_pass : pass->sync_state.values)
 				{

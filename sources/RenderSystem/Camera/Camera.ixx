@@ -298,7 +298,7 @@ export class third_person_camera : public camera
      void input(float value)
         {
 
-            zoom = Math::clamp(zoom*(1+value), 0.1f, 10.0f);
+            zoom = Math::clamp(zoom*(1-value), 0.1f, 10.0f);
 
         }
         void frame_move(float dt)

@@ -35,6 +35,17 @@ export namespace Table
 		}
 		using Compiled = FSRConstants;
 
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(Const0);
+			ar& NVP(Const1);
+			ar& NVP(Const2);
+			ar& NVP(Const3);
+			ar& NVP(Sample);
+		}
+
 	};
 	#pragma pack(pop)
 }

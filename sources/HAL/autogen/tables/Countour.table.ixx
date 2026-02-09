@@ -28,7 +28,23 @@ export namespace Table
 		{
 			float4 color; // float4
 			uint tex; // Texture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(color);
+			}
+
+
 		};
+
+
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(color);
+		}
 
 	};
 	#pragma pack(pop)
