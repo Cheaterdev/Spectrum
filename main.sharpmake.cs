@@ -26,6 +26,8 @@ namespace Spectrum
     {
         public Common() : base(typeof(CustomTarget))
         {
+            
+           
             SourceFilesExtensions.Add(".sig");
             SourceFilesExtensions.Add(".hlsl");
 			SourceFilesExtensions.Add(".ixx");
@@ -39,7 +41,7 @@ namespace Spectrum
             AddTargets(new CustomTarget
             {
                 Platform = Platform.win64,
-                DevEnv = DevEnv.vs2022,
+                DevEnv = DevEnv.vs2026,
                 Optimization = Optimization.Release,
                 Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });
@@ -56,11 +58,14 @@ namespace Spectrum
         [Configure]
         public virtual void ConfigureAll(Configuration conf, CustomTarget target)
         {
+             conf.Output = Configuration.OutputType.Utility;
+
+
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
 
             conf.IncludePaths.Add(SourceRootPath);
-		//	conf.ExportAdditionalLibrariesEvenForStaticLib = true;
+			//conf.ExportAdditionalLibrariesEvenForStaticLib = true;
 			conf.PrecompSourceExcludeExtension.Add(".ixx");
 
             conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.Latest);
@@ -146,6 +151,14 @@ namespace Spectrum
         {
             RootPath = @"[project.SharpmakeCsPath]\projects\[project.Name]";
         }
+
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+
+            conf.Output = Configuration.OutputType.Exe;
+        }
+
     }
 
 
@@ -351,7 +364,7 @@ namespace Spectrum
             AddTargets(new CustomTarget
             {
                 Platform = Platform.win64,
-                DevEnv = DevEnv.vs2022,
+                DevEnv = DevEnv.vs2026,
                 Optimization =  Optimization.Release,
                 Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });
