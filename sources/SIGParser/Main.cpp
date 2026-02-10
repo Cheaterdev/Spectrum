@@ -263,6 +263,16 @@ int main()
 			                 ArgInfo{"a"}, ArgInfo{"b"}, ArgInfo{"c"}
 		                 ));
 
+
+
+		global.AddGlobal("get_offset", jinja2::MakeCallable(
+			                 [&](const GenericList& offsets, const int& i)
+			                 {
+				                 return offsets.GetAccessor()->GetIndexer()->GetItemByIndex(i);
+			                 },
+			                
+			                 ArgInfo{"offsets"}, ArgInfo{"i"}
+		                 ));
 		global.GetSettings().extensions.Do = true;
 
 

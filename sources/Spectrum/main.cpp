@@ -878,9 +878,11 @@ class GraphRender : public Window, public GUI::user_interface
 
 	std::shared_ptr<Graphics::OVRContext> vr_context = std::make_shared<Graphics::OVRContext>();
 	std::future<void> task_future;
+	std::future<void> task_end;
+	   	std::promise<void> promise_end;
 
 	Graph graph;
-
+	bool alive = true;
 	count_meter fps;
 
 	GUI::Elements::label::ptr label_fps;
@@ -996,13 +998,17 @@ public:
 		}
 
 
-		if (Application::get().is_alive())
+		if (alive)
 		{
-			auto ptr = get_ptr();
-			task_future = thread_pool::get().enqueue([ptr, this]()
+			
+			task_future = thread_pool::get().enqueue([this]()
 			{
 				render();
 			});
+		}else
+		{
+
+			promise_end.set_value();
 		}
 	}
 
@@ -1024,13 +1030,13 @@ public:
 			create_graph(graph);
 
 
-			auto ptr = get_ptr();
+	//		auto ptr = get_ptr();
 			//	if(false)
 			graph.add_pass<pass_data>(L"PROFILER", [](pass_data& data, TaskBuilder& builder)
 			                          {
 				                          builder.need(data.swapchain,
 				                                       ResourceFlags::Required | ResourceFlags::RenderTarget);
-			                          }, [this, ptr](pass_data& data, FrameContext& context)
+			                          }, [this](pass_data& data, FrameContext& context)
 			                          {
 			                          }, PassFlags::Required);
 		}
@@ -1173,6 +1179,7 @@ public:
 
 	GraphRender()
 	{
+		task_end = promise_end.get_future();
 		//scale = 1.25f;
 		Window::input_handler = this;
 		HAL::swap_chain_desc desc;
@@ -1370,10 +1377,22 @@ public:
 
 	~GraphRender() override
 	{
-		if (task_future.valid())
-			task_future.wait();
+		
 	}
 
+
+	void stop()
+	{
+			
+		alive=false;
+		task_end.wait();
+
+		 	while (Events::Runner::has_tasks()) 
+            {
+                PROFILE(L"process_tasks");          
+                Events::Runner::process_tasks();
+            }
+	}
 	void on_resize(vec2 size) override
 	{
 		new_size = vec2::max(size, vec2{64, 64});
@@ -1450,9 +1469,10 @@ protected:
 	{
 		shutdown(); // really need this?
 
+		main_window->stop();
 		main_window = nullptr;
 
-		std::this_thread::sleep_for(100_ms);
+	//	std::this_thread::sleep_for(100_ms);
 		scheduler::reset();
 		//
 
@@ -1476,10 +1496,15 @@ protected:
 		AssetRenderer::reset();
 		TextureAssetRenderer::reset();
 		AssetManager::reset();
+		   materials::PipelineManager::reset();
+		universal_nodes_manager::reset();
 
-
+		universal_mesh_instance_manager::reset();
+		//	universal_mesh_info_part_manager::get().prepare(command_list);
+		universal_material_info_part_manager::reset();
+		universal_rtx_manager::reset();
 		//HAL::PipelineLibrary::reset();
-
+		 GUI::NinePatch::index_buffer =StructuredBufferView<unsigned int>();
 
 		HAL::Device::reset();
 		//   HAL::Device::reset();

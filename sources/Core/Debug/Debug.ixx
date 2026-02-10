@@ -19,9 +19,9 @@ export
 	class LeakDetectorInstance;
 	class LeakDetector : public Singleton<LeakDetector>
 	{
-		std::set<LeakDetectorInstance*> instances;
+		std::mutex m;
 		std::set<long> breaks;
-		std::map<std::string, int> name_counters;
+		std::map<std::string, std::set<LeakDetectorInstance*>> name_counters;
 		long alloc_number = 0;
 	public:
 
@@ -36,11 +36,13 @@ export
 
 		virtual ~LeakDetector();
 
+
+		void print(std::string);
 	};
 	class LeakDetectorInstance
 	{
 		friend class LeakDetector;
-		std::string stack;
+		Exceptions::stack_trace stack;
 		std::string name;
 		long alloc_number = -1;
 		LeakDetectorInstance() {}
@@ -63,7 +65,7 @@ export
 
 		LeakDetectorInstance(std::string name)
 		{
-			//         stack = get_stack_trace(true);
+			 stack = Exceptions::get_stack_trace();
 			this->name = name;
 			LeakDetector::get().add(this);
 		}
@@ -177,8 +179,8 @@ export
 #ifdef LEAK_TEST_ENABLE
 void LeakDetector::add(LeakDetectorInstance* e)
 {
-	instances.insert(e);
-	name_counters[e->name]++;
+	std::lock_guard<std::mutex> g(m);
+	name_counters[e->name].insert(e);
 
 	if (breaks.count(alloc_number) > 0)
 		assert(false);
@@ -188,32 +190,39 @@ void LeakDetector::add(LeakDetectorInstance* e)
 
 void LeakDetector::remove(LeakDetectorInstance* e)
 {
-	name_counters[e->name]--;
-	instances.erase(e);
+	std::lock_guard<std::mutex> g(m);
+	name_counters[e->name].erase(e);
+
+}
+
+void LeakDetector::print(std::string name)
+{
+	std::lock_guard<std::mutex> g(m);
+		 auto&list =name_counters[name];
+			 Log::get() << "LEAKS COUNT: " << name << " " << list.size() << Log::endl;
+
+		for (auto e : list)
+		{
+			 Log::get() << "LEAKS" << e->alloc_number<< " " <<  e->stack<< Log::endl;
+	}
 }
 
 LeakDetector::~LeakDetector()
 {
-	Log::get() << "LEAKS COUNT: " << instances.size() << Log::endl;
-	OutputDebugStringA(("LEAKS COUNT: " + std::to_string(instances.size()) + "\n").c_str());
-	OutputDebugStringA("\n");
-
-	for (auto&& i : instances)
+	std::lock_guard<std::mutex> g(m);
+	for (auto& [name, list] : name_counters)
 	{
-		OutputDebugStringA("\n");
-		OutputDebugStringA(("-------------LEAK:" + std::to_string(i->alloc_number) + " \n" + i->stack + "\n").c_str());
+
+		if (list.empty()) continue;
+		Log::get() << "LEAKS COUNT: " << name << " " << list.size() << Log::endl;
+
+		for (auto e : list)
+		{
+			 Log::get() << "LEAKS" << e->alloc_number<< " " <<  e->stack<< Log::endl;
+		}
 	}
 
-	OutputDebugStringA("\n");
-	OutputDebugStringA(("SUMMARY: " + std::to_string(instances.size()) + "\n").c_str());
 
-	for (auto&& i : name_counters)
-	{
-		if (i.second == 0) continue;
-
-		OutputDebugStringA("\n");
-		OutputDebugStringA((i.first + ": " + std::to_string(i.second) + "\n").c_str());
-	}
 }
 
 

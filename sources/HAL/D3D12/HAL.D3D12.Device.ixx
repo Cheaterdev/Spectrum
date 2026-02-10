@@ -34,7 +34,7 @@ export namespace HAL
 		   std::map<ResourceDesc,ResourceAllocationInfo> alloc_info; 
 		protected:
 			void init(DeviceDesc& desc);
-			virtual ~Device() = default;
+			virtual ~Device();
 
 
 		public:

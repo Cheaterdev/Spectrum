@@ -4,6 +4,7 @@ import :Utils;
 import :Log;
 import :Singleton;
 import :Scheduler;
+	   import :Application;
 
 import <stl/filesystem.h>;
 import <stl/memory.h>;
@@ -210,7 +211,7 @@ void native_file_provider::on_change(const std::filesystem::path& path, std::fun
 		std::filesystem::file_time_type local_last = last_time;
 		std::error_code ec_inner;
 
-		while (thread_pool::is_good())
+		while (Application::is_good())
 		{
 			try
 			{

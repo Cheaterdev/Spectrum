@@ -13,6 +13,8 @@ namespace HAL
 	{
 		signal_and_wait();
 		stop = true;
+
+		lists = {};
 	}
 
 	Queue::~Queue()

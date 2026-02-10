@@ -10,13 +10,14 @@ export namespace GUI
 		using Vertex = Table::vertex_input;
 		
 
-		static HAL::IndexBuffer index_buffer;
+	
 		std::vector<Vertex> vertexes;
 
 		std::vector<HLSL::Texture2D<float4>> textures_handles;
 
 		HAL::PipelineState::ptr current_state;
 	public:
+			static HAL::IndexBuffer index_buffer;
 		int counter = 0;
 		using ptr = s_ptr<NinePatch>;
 		NinePatch();

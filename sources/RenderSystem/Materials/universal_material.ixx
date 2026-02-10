@@ -87,7 +87,7 @@ export namespace materials
 		PSOS::GBufferDraw::ptr gbuffer;
 		PSOS::Voxelization::ptr voxelization;
 		PSOS::DepthDraw::ptr depth_draw;
-
+		LEAK_TEST(PipelinePasses);
 	public:
 		using ptr = std::shared_ptr<PipelinePasses>;
 		PipelinePasses() = default;

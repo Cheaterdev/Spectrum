@@ -154,7 +154,7 @@ namespace HAL
 	}
 	DirectStorageQueue::~DirectStorageQueue()
 	{
-
+				executor.stop_and_wait();
 	}
 
 	void DirectStorageQueue::flush()

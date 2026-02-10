@@ -3,7 +3,7 @@ import d3d12;
 import wrl;
 import Core;
 import :Types;
-
+	import <Core_defs.h>;
 export namespace HAL
 {
 	
@@ -25,7 +25,7 @@ export namespace HAL
 
 		class PipelineStateBase
 		{
-
+			 		LEAK_TEST(PipelineStateBase);
 		public:
 			virtual ~PipelineStateBase() = default;
 		

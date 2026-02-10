@@ -220,7 +220,7 @@ namespace Spectrum
             conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxcompiler.dll");
             conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxil.dll");
 
-            conf.Defines.Add("ANTLR4CPP_STATIC");
+         //   
 
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("5260")); // adding inline to header units
 
@@ -242,6 +242,8 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 			conf.AddPublicDependency<Modules>(target);	
+            conf.Defines.Add("LEAK_TEST_ENABLE");
+            
         }
     }
 
