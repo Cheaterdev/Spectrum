@@ -903,29 +903,6 @@ public:
 		Application::get().shutdown();
 	}
 
-	void render2()
-	{
-		if (swap_chain) swap_chain->resize(new_size);
-		swap_chain->wait_for_free();
-
-		auto command_list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
-		command_list->begin();
-		{
-			RT::SingleColor rt;
-			rt.GetColor() = swap_chain->get_current_frame()->texture_2d().renderTarget;
-			command_list->get_graphics().set_rtv(rt, RTOptions::ClearColor);
-		}
-		//	command_list->get_graphics().clear_rtv(swap_chain->get_current_frame()->texture_2d().renderTarget, float4(1, 0, 0, 1));
-
-		command_list->transition_present(swap_chain->get_current_frame()->resource.get());
-
-		command_list->end();
-		auto fence = command_list->execute();
-
-
-		swap_chain->present(fence);
-	}
-
 	virtual void render()
 	{
 		PROFILE(L"render");
@@ -1440,17 +1417,6 @@ protected:
 		AssetManager::create();
 		EVENT("WindowRender");
 
-		//	auto ps = HAL::pixel_shader::get_resource({ "test.hlsl", "PS", 0,{}, false });
-		//	auto cs = HAL::compute_shader::get_resource({ "test.hlsl", "CS", 0,{}, false });
-
-#ifdef OCULUS_SUPPORT
-		//ovr = std::make_shared<OVRRender>();
-#endif
-
-		//auto texture = HAL::Texture::get_resource(HAL::texure_header("textures/mzd.jpg", true));
-		auto texture = std::make_shared<HAL::TextureResource>(
-			HAL::ResourceDesc::Tex2D(HAL::Format::A8_UNORM, uint2(512, 512), 1, 0), HeapType::DEFAULT);
-
 		//	main_window = std::make_shared<WindowRender>();
 		main_window = std::make_shared<GraphRender>();
 
@@ -1580,39 +1546,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	CoInitialize(NULL);
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
-
-	//entry->SetCompressionStream();
-	//	archive->WriteToStream();
-	//    FlowGraph::FlowSystem::get().register_node<FlowGraph::graph>("empty graph");
-	//   FlowGraph::FlowSystem::get().register_node<test_node>("test_node");
-	// FlowGraph::FlowSystem::get().register_node<start_test_node>("start_test_node");
-	// FlowGraph::FlowSystem::get().register_node<test_graph>("ololol");
-	//   FlowGraph::FlowSystem::get().register_node<TextureNode>("TextureNode");
-	FlowGraph::FlowSystem::get().register_node<PowerNode>("PowerNode");
-	FlowGraph::FlowSystem::get().register_node<SumNode>("SumNode");
-	FlowGraph::FlowSystem::get().register_node<MulNode>("MulNode");
-	FlowGraph::FlowSystem::get().register_node<SpecToMetNode>("SpecToMetNode");
-
-
-	FlowGraph::FlowSystem::get().register_node("Scalar", []()-> ScalarNode::ptr
-	{
-		auto res = std::make_shared<ScalarNode>(1.0f);
-		res->name = "Scalar";
-		return res;
-	});
-
-
-	FlowGraph::FlowSystem::get().register_node("ZeroColor", []()-> VectorNode::ptr
-	{
-		auto res = std::make_shared<VectorNode>(float4{0, 0, 0, 0});
-		res->name = "ZeroColor";
-		return res;
-	});
-
-
-	//	FlowGraph::FlowSystem::get().register_node<ResultNode>("Material");
-	//	FlowGraph::FlowSystem::get().register_node<MaterialGraph>("MaterialGraph");
-	FlowGraph::FlowSystem::get().register_node<MaterialFunction>("MaterialFunction");
 	FlowGraph::FlowSystem::get().register_node("file", []()-> FlowGraph::graph::ptr
 	{
 		auto f = FileSystem::get().get_file(to_path("graph.flg"));
@@ -1625,19 +1558,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 
 	auto result_code = 0;
 	SetupDebug();
-	auto a = []()
-	{
-		if constexpr (false)
-		{
-			v.foo();
-		}
-	};
-
-	a();
-
-	Log::get() << v << Log::endl;
-	Log::get() << D3D12_AUTO_BREADCRUMB_OP_ATOMICCOPYBUFFERUINT << Log::endl;
-
 
 	EVENT("start");
 	Application::create<RenderApplication>();

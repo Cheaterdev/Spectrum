@@ -361,7 +361,10 @@ export
 			std::string name;
 			vec2 pos = vec2(10, 10);
 			vec2 size = vec2(10, 10);
-
+			   
+     	static ptr create_default() {
+			return std::make_shared<window>();
+		}
 
 			graph* get_graph()
 			{

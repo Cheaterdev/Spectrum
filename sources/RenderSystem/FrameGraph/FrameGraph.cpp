@@ -923,7 +923,7 @@ namespace FrameGraph
 
 			if (info.heap_type != HAL::HeapType::DEFAULT) continue;
 
-
+			   bool nb = info.name == "PSSM_Depths";
 			auto pass_checker = [&](Pass* pass) {
 				auto commandList = pass->context.list;
 				if (!commandList)

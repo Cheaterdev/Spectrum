@@ -44,7 +44,7 @@ export namespace FlowGraph
                 d.name = name;
                 d.create_func = [name]()->::FlowGraph::window::ptr
                 {
-                    auto res = ::FlowGraph::window::ptr(new T());
+                    auto res = T::create_default();
                     res->name = name;
                     return res; };
                 creators.push_back(d);

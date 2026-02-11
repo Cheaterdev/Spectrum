@@ -190,6 +190,20 @@ class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
 typedef MaterialTNode<::FlowGraph::Node> MaterialNode;
 typedef MaterialTNode<::FlowGraph::graph> MaterialGraphNode;
 
+    
+
+	template<class T>
+class MaterialNodeRegister
+{
+public:
+    MaterialNodeRegister(std::string name)
+    {
+        FlowGraph::FlowSystem::get().register_node<T>(name);
+	}
+
+};
+#define REGISTER_MATERIAL_NODE(TYPE) static MaterialNodeRegister<TYPE> _reg_##TYPE(#TYPE);
+
 class MaterialFunction;
 
 
@@ -372,6 +386,11 @@ class MaterialFunction : public MaterialGraphNode
     public:
         std::string func_name;
         MaterialFunction();
+
+     
+		static ptr create_default() {
+			return std::shared_ptr<MaterialFunction>(new MaterialFunction());
+		}
         virtual ~MaterialFunction();
         shader_parameter add_value(const ShaderParamType& type, std::string s);
 
@@ -505,11 +524,14 @@ class PowerNode : public MaterialNode
 
         FlowGraph::input::ptr i_vec, i_power;
         FlowGraph::output::ptr o_value;
+     PowerNode();
     public:
         using ptr = s_ptr<PowerNode>;
 
-        PowerNode();
-
+       
+		static ptr create_default() {
+			return std::shared_ptr<PowerNode>(new PowerNode());
+		}
         void operator()(MaterialContext*) override;
     private:
         SERIALIZE()
@@ -533,7 +555,9 @@ class VectorNode : public MaterialNode
         using ptr = s_ptr<VectorNode>;
 
         VectorNode(vec4 value);
-
+             	static ptr create_default() {
+			return std::make_shared<VectorNode>(vec4(1,1,1,1));
+		}
         void operator()(MaterialContext* c) override;
 
         virtual GUI::base::ptr create_editor_window()override;
@@ -546,8 +570,7 @@ class VectorNode : public MaterialNode
         }
 
 };
-
-
+        
 class ScalarNode : public MaterialNode
 {
         FlowGraph::output::ptr o_value;
@@ -558,7 +581,9 @@ class ScalarNode : public MaterialNode
         using ptr = s_ptr<ScalarNode>;
 
         ScalarNode(float value);
-
+               	static ptr create_default() {
+			return std::make_shared<ScalarNode>(1.0f);
+		}
         void operator()(MaterialContext* c) override;
 
         virtual GUI::base::ptr create_editor_window()override;
@@ -571,7 +596,6 @@ class ScalarNode : public MaterialNode
         }
 
 };
-
 class SumNode : public MaterialNode
 {
         FlowGraph::input::ptr i_vec, i_power;
@@ -580,7 +604,9 @@ class SumNode : public MaterialNode
         using ptr = s_ptr<SumNode>;
 
         SumNode();
-
+             	static ptr create_default() {
+			return std::make_shared<SumNode>();
+		}
         void operator()(MaterialContext*);
     private:
         SERIALIZE()
@@ -593,7 +619,6 @@ class SumNode : public MaterialNode
 
 };
 
-
 class MulNode : public MaterialNode
 {
         FlowGraph::input::ptr i_vec, i_power;
@@ -602,7 +627,9 @@ class MulNode : public MaterialNode
         using ptr = s_ptr<MulNode>;
 
         MulNode();
-
+                              	static ptr create_default() {
+			return std::make_shared<MulNode>();
+		}
         void operator()(MaterialContext* c) override;
     private:
         SERIALIZE()
@@ -614,6 +641,7 @@ class MulNode : public MaterialNode
         }
 
 };
+                    
 template <class T>
 void MaterialTNode<T>::operator()(::FlowGraph::GraphContext* c)
 {
@@ -651,6 +679,10 @@ public:
 		outputs.metallic = register_output(/*ShaderParams::get().FLOAT1,*/ "metallic");
 
 	}
+
+     	static ptr create_default() {
+			return std::make_shared<SpecToMetNode>();
+		}
 
 	void operator()(MaterialContext* c) override
 	{
@@ -692,9 +724,7 @@ private:
 		ar& NVP(outputs.metallic);
 	}
 
-};
-
-
+};                                    
 class TiledTextureNode : public MaterialNode, public AssetHolder
 {
 
@@ -738,8 +768,22 @@ class TiledTextureNode : public MaterialNode, public AssetHolder
         }
 
 };
-
+       
 }
+
+                                                                              
+      REGISTER_MATERIAL_NODE(SumNode);
+                  
+     REGISTER_MATERIAL_NODE(ScalarNode);
+                REGISTER_MATERIAL_NODE(VectorNode);
+
+       REGISTER_MATERIAL_NODE(MulNode);
+
+      REGISTER_MATERIAL_NODE(SpecToMetNode);
+
+    REGISTER_MATERIAL_NODE(PowerNode);
+ REGISTER_MATERIAL_NODE(MaterialFunction);
+   //     REGISTER_MATERIAL_NODE(TiledTextureNode);
 // REGISTER_TYPE(ScalarNode);
 // REGISTER_TYPE(MulNode);
 // REGISTER_TYPE(SumNode);
