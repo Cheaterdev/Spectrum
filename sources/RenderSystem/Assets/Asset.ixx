@@ -85,9 +85,6 @@ class AssetReference : public AssetReferenceBase
 {
 
 		friend class AssetHolder;
-	
-		LEAK_TEST(AssetReference)
-
 	public:
 		AssetReference(AssetHolder* owner,std::shared_ptr<T> asset = nullptr):AssetReferenceBase(owner)
 		{
@@ -171,7 +168,6 @@ class AssetHolder : public SharedObject<AssetHolder>
 		friend class AssetReferenceBase;
 		std::mutex m;
 		std::set<AssetReferenceBase*> assets;
-		LEAK_TEST(AssetHolder)
 			void register_reference(AssetReferenceBase* r);
 
 		void unregister_reference(AssetReferenceBase* r);
@@ -205,8 +201,6 @@ class Asset : public SharedObject<Asset>, public AssetHolder, public EditObject,
 		friend class AssetHolder;
 		friend class AssetReferenceBase;
 	protected:
-		LEAK_TEST(Asset)
-
 		std::wstring name;
 		std::mutex m;
 		std::set<AssetReferenceBase*> references;
@@ -285,9 +279,6 @@ class folder_item;
 
 class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 {
-		LEAK_TEST(AssetStorage)
-
-
 		friend class Asset;
 		friend class AssetManager;
 
@@ -408,8 +399,6 @@ class folder_item : public ::tree<folder_item, my_unique_vector<std::shared_ptr<
 		std::vector<AssetStorage::ptr> assets;
 		std::mutex m;
 
-		LEAK_TEST(folder_item)
-
 	public:
 
 		folder_item(std::filesystem::path name)
@@ -438,8 +427,6 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 		std::mutex m;
 		std::vector<std::function<void()>> funcs;
 		folder_item::ptr tree_folders;
-
-		LEAK_TEST(AssetManager)
 
 			void add_func(std::function<void()> f);
 

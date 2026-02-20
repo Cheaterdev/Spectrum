@@ -36,7 +36,10 @@ export namespace Table
 		}
 		using Compiled = RayPayload;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::RayPayload";
+		}
 		private:
 		SERIALIZE()
 		{

@@ -26,7 +26,10 @@ export namespace Table
 		}
 		using Compiled = AABB;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::AABB";
+		}
 		private:
 		SERIALIZE()
 		{

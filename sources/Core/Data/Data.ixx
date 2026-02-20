@@ -101,7 +101,6 @@ export
 		std::unique_ptr<var_base> typed;
 
 	public:
-		//      LEAK_TEST
 		MyVariant() = default;
 		MyVariant(const MyVariant& r);
 		virtual ~MyVariant();

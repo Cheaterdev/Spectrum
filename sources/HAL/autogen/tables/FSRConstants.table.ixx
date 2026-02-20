@@ -35,7 +35,10 @@ export namespace Table
 		}
 		using Compiled = FSRConstants;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::FSRConstants";
+		}
 		private:
 		SERIALIZE()
 		{

@@ -32,7 +32,10 @@ export namespace Table
 		}
 		using Compiled = MeshInfo;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::MeshInfo";
+		}
 		private:
 		SERIALIZE()
 		{

@@ -26,7 +26,10 @@ export namespace Table
 		}
 		using Compiled = ColorRect;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::ColorRect";
+		}
 		private:
 		SERIALIZE()
 		{

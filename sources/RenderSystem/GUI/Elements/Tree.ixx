@@ -10,13 +10,13 @@ export namespace GUI
 
     namespace Elements
     {
-        template<class TreeNode>
+        template<class TreeNode, class creator>
         class tree_element;
 
-        template<class TreeNode>
+        template<class TreeNode, class creator>
         class tree;
 
-        template<class TreeNode>
+        template<class TreeNode, class creator>
         class line;
 
 
@@ -45,13 +45,13 @@ export namespace GUI
 
             void draw(Context& c, bool selected);
     	};
-    	template<class TreeNode>
+    	template<class TreeNode, class Creator>
         class line : public line_base
         {
               
 
             public:
-                GUI::Elements::tree_element<TreeNode>* owner;
+                GUI::Elements::tree_element<TreeNode, Creator>* owner;
 
            
                 void draw(Context& c)
@@ -76,13 +76,13 @@ export namespace GUI
                     if (!is_tree)
                         return false;
 
-                    auto elem = dynamic_cast<line<TreeNode>*>(p->element.lock().get());
+                    auto elem = dynamic_cast<line<TreeNode, Creator>*>(p->element.lock().get());
                     return !owner->node->is_parent(elem->owner->node);
                 }
 
                 bool on_drop(GUI::drag_n_drop_package::ptr p, vec2)
                 {
-                    auto elem = dynamic_cast<line<TreeNode>*>(p->element.lock().get());
+                    auto elem = dynamic_cast<line<TreeNode, Creator>*>(p->element.lock().get());
               //      owner->node->add_child(elem->owner->node);
                     assert(false);
                     return true;
@@ -97,12 +97,12 @@ export namespace GUI
                 {
                     if (button == mouse_button::LEFT)
                         if (action == mouse_action::DOWN)
-                            owner->main_tree.lock()->on_select_internal(owner->get_ptr<tree_element<TreeNode>>());
+                            owner->main_tree.lock()->on_select_internal(owner->get_ptr<tree_element<TreeNode,Creator>>());
 
                     return true;
                 }
 
-                line(GUI::Elements::tree_element<TreeNode>* owner)
+                line(GUI::Elements::tree_element<TreeNode,Creator>* owner)
                 {
                     this->owner = owner;
                     docking = GUI::dock::TOP;
@@ -118,13 +118,14 @@ export namespace GUI
         template<class TreeNode>
         class tree_creator
         {
+            using Creator = tree_creator<TreeNode>;
         public:
             using ptr = s_ptr<tree_creator<TreeNode>>;
 
 
-           virtual void init_element(tree_element<TreeNode>* tree, TreeNode* elem)
+           virtual void init_element(tree_element<TreeNode, Creator>* tree, TreeNode* elem)
             {
-                base::ptr l(new line<TreeNode>(tree));
+                base::ptr l(new line<TreeNode,Creator>(tree));
 
                 base::ptr space(new base);
 
@@ -181,19 +182,19 @@ export namespace GUI
 
         };
 
-    	template<class TreeNode>
+    	template<class TreeNode, class Creator =   tree_creator<TreeNode> >
         class tree_element : public base
         {
-                friend class GUI::Elements::tree<TreeNode>;
+                friend class GUI::Elements::tree<TreeNode, Creator>;
                 friend class toogle_icon;
-                friend class line<TreeNode>;
+                friend class line<TreeNode,Creator>;
 
-                using creator_type = typename tree_creator<TreeNode>::ptr;
+                using creator_type = typename Creator::ptr;
                 //  label::ptr label_text;
                 //   image::ptr icon;
            //     image::ptr open_icon;
                 other_all::ptr other;
-		        w_ptr<GUI::Elements::tree<TreeNode>> main_tree;
+		        w_ptr<GUI::Elements::tree<TreeNode, Creator>> main_tree;
                 creator_type creator;
 
             public:
@@ -223,9 +224,9 @@ export namespace GUI
                 }
 
 
-                GUI::Elements::tree_element<TreeNode>::ptr add_tree(creator_type creator, TreeNode* elem)
+                GUI::Elements::tree_element<TreeNode,Creator>::ptr add_tree(creator_type creator, TreeNode* elem)
                 {
-                    tree_element<TreeNode>::ptr res(new tree_element<TreeNode>(creator, elem));
+                    tree_element<TreeNode,Creator>::ptr res(new tree_element<TreeNode,Creator>(creator, elem));
                     other->add_child(res);
                     res->main_tree = main_tree;
                     return res;
@@ -272,16 +273,16 @@ export namespace GUI
         };
 
 
-        template<class TreeNode>
+        template<class TreeNode, class Creator =   tree_creator<TreeNode>>
         class tree : public scroll_container
         {
                 friend class tree_element<TreeNode>;
                 friend class toogle_icon;
-                friend class line<TreeNode>;
-                w_ptr<tree_element<TreeNode>> selected_item ;
-                using creator_type = typename tree_creator<TreeNode>::ptr;
+                friend class line<TreeNode,Creator>;
+                w_ptr<tree_element<TreeNode,Creator>> selected_item ;
+                using creator_ptr_type = typename Creator::ptr;
 
-                using elemet_type = typename tree_element<TreeNode>::ptr;
+                using elemet_type = typename tree_element<TreeNode,Creator>::ptr;
                 void on_select_internal(elemet_type elem)
                 {
                     auto prev = selected_item.lock();
@@ -296,7 +297,7 @@ export namespace GUI
 
                      on_select(elem->node);
                 }
-                creator_type creator;
+                creator_ptr_type creator;
 
 
 
@@ -334,13 +335,13 @@ export namespace GUI
 
                 elemet_type add_tree(TreeNode* elem)
                 {
-                    elemet_type res(new tree_element<TreeNode>(creator, elem));
+                    elemet_type res(new tree_element<TreeNode,Creator>(creator, elem));
                     contents->add_child(res);
-                    res->main_tree = get_ptr<GUI::Elements::tree<TreeNode>>();
+                    res->main_tree = get_ptr<GUI::Elements::tree<TreeNode, Creator>>();
                     return res;
                 }
 
-               tree(creator_type creator = std::make_shared<tree_creator<TreeNode>>())
+               tree(creator_ptr_type creator = std::make_shared<Creator>())
         		{
                     contents->size = { 20, 00 };
                     contents->width_size = size_type::MATCH_PARENT;

@@ -23,8 +23,6 @@ export{
 	protected:
 		HAL::Texture::ptr texture;
 
-		//  LEAK_TEST(TextureAsset)
-
 	public:
 
 

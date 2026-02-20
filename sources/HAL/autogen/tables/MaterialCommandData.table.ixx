@@ -26,7 +26,10 @@ export namespace Table
 		}
 		using Compiled = MaterialCommandData;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::MaterialCommandData";
+		}
 		private:
 		SERIALIZE()
 		{

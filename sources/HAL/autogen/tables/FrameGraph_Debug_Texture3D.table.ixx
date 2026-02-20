@@ -45,7 +45,10 @@ export namespace Table
 
 		};
 
-
+		static std::string get_typename()
+		{
+			return "Tables::FrameGraph_Debug_Texture3D";
+		}
 		private:
 		SERIALIZE()
 		{

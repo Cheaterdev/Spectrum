@@ -4,6 +4,7 @@ import <stl/core.h>;
 import <stl/threading.h>;
 import :Singleton;
 import :Log;
+ import :Tree;
 
 export
 {
@@ -12,89 +13,100 @@ export
 	{
 		static constexpr bool Debug = true;
 		static constexpr bool Release = false;
-
-	};
-
 #ifdef LEAK_TEST_ENABLE
-	class LeakDetectorInstance;
-	class LeakDetector : public Singleton<LeakDetector>
-	{
-		std::mutex m;
-		std::set<long> breaks;
-		std::map<std::string, std::set<LeakDetectorInstance*>> name_counters;
-		long alloc_number = 0;
-	public:
-
-		void add(LeakDetectorInstance* e);
-
-		void remove(LeakDetectorInstance* e);
-
-		void break_on(long i)
-		{
-			breaks.insert(i);
-		}
-
-		virtual ~LeakDetector();
-
-
-		void print(std::string);
-	};
-	class LeakDetectorInstance
-	{
-		friend class LeakDetector;
-		Exceptions::stack_trace stack;
-		std::string name;
-		long alloc_number = -1;
-		LeakDetectorInstance() {}
-	public:
-		LeakDetectorInstance& operator = (const LeakDetectorInstance& r)
-		{
-			this->stack = r.stack;
-			this->name = r.name;
-			LeakDetector::get().add(this);
-			return *this;
-		}
-
-		LeakDetectorInstance(const LeakDetectorInstance& r)
-		{
-			stack = r.stack;
-			this->name = r.name;
-			LeakDetector::get().add(this);
-		}
-
-
-		LeakDetectorInstance(std::string name)
-		{
-			 stack = Exceptions::get_stack_trace();
-			this->name = name;
-			LeakDetector::get().add(this);
-		}
-
-		virtual ~LeakDetectorInstance()
-		{
-			LeakDetector::get().remove(this);
-		}
-	};
-
-
-
+		static constexpr bool ObjectTracking = true;
+#else
+		static constexpr bool ObjectTracking = false;
 #endif
+	};
+
+	using ObjectTypeID = uint64;
 
 	class Object
 	{
-
-		std::string name;
-	
+		std::string object_name;
+		Exceptions::stack_trace creation_stack;
+	protected:
+		Object()
+		{
+			creation_stack = Exceptions::get_stack_trace();
+		}
 	public:
-			bool debug = false;
+		bool debug = false;
 		virtual void set_name(std::string_view str)
 		{
-			name = str;
+			object_name = str;
 		}
 
-
-	
+		std::string_view get_name() const { return object_name; }
+		Exceptions::stack_trace get_creation_stack() const { return creation_stack; }
 	};
+
+
+	class ObjectTracker
+	{
+		std::string name;
+		std::mutex m;
+		std::set<Object*> objects;
+
+	public:
+		static bool alive;
+		ObjectTracker(std::string_view name) :name(name)
+		{
+			Log::get() << "ObjectTracker created: " << name << Log::endl;
+
+		}
+		~ObjectTracker()
+		{
+			alive = false;
+			std::lock_guard<std::mutex> g(m);
+			for (auto& o : objects)
+			{
+				Log::get() << "LEAKED OBJECT (" << name << "): '" << o->get_name() << "' stacktrace \n" << o->get_creation_stack() << Log::endl;
+			}
+		}
+		void track(Object* object)
+		{
+			std::lock_guard<std::mutex> g(m);
+			objects.insert(object);
+		}
+
+		void untrack(Object* object)
+		{
+			std::lock_guard<std::mutex> g(m);
+			objects.erase(object);
+		}
+	};
+
+	template<class T>
+	class TypedObject : public Object
+	{
+		static ObjectTracker tracker;
+		//constexpr static int _id{};
+		//static constexpr ObjectTypeID TypeID = ObjectTypeID(&_id);
+	protected:
+		TypedObject()
+		{
+			if constexpr (BuildOptions::ObjectTracking)
+			{
+				if (ObjectTracker::alive)
+					tracker.track(this);
+			}
+
+		}
+		~TypedObject() {
+			if constexpr (BuildOptions::ObjectTracking)
+			{
+				if (ObjectTracker::alive)
+					tracker.untrack(this);
+			}
+		}
+	public:
+		static std::string_view get_type_name() { return typeid(T).name(); }
+	};
+
+
+
 
 	template<class T>
 	class Counter;
@@ -171,60 +183,14 @@ export
 	};
 
 
-}
+	
 
-
-
-
-#ifdef LEAK_TEST_ENABLE
-void LeakDetector::add(LeakDetectorInstance* e)
-{
-	std::lock_guard<std::mutex> g(m);
-	name_counters[e->name].insert(e);
-
-	if (breaks.count(alloc_number) > 0)
-		assert(false);
-
-	e->alloc_number = alloc_number++;
-}
-
-void LeakDetector::remove(LeakDetectorInstance* e)
-{
-	std::lock_guard<std::mutex> g(m);
-	name_counters[e->name].erase(e);
-
-}
-
-void LeakDetector::print(std::string name)
-{
-	std::lock_guard<std::mutex> g(m);
-		 auto&list =name_counters[name];
-			 Log::get() << "LEAKS COUNT: " << name << " " << list.size() << Log::endl;
-
-		for (auto e : list)
-		{
-			 Log::get() << "LEAKS" << e->alloc_number<< " " <<  e->stack<< Log::endl;
-	}
-}
-
-LeakDetector::~LeakDetector()
-{
-	std::lock_guard<std::mutex> g(m);
-	for (auto& [name, list] : name_counters)
-	{
-
-		if (list.empty()) continue;
-		Log::get() << "LEAKS COUNT: " << name << " " << list.size() << Log::endl;
-
-		for (auto e : list)
-		{
-			 Log::get() << "LEAKS" << e->alloc_number<< " " <<  e->stack<< Log::endl;
-		}
-	}
 
 
 }
 
 
+template<class T>
+ObjectTracker TypedObject<T>::tracker(TypedObject<T>::get_type_name());
 
-#endif
+bool		ObjectTracker::alive = true;

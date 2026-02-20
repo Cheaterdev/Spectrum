@@ -76,6 +76,7 @@ export
 			{
 			}
 
+			virtual member_item::ptr describe(void* data) {return nullptr;}
 			SERIALIZE()
 			{
 				ar & NVP(resource);
@@ -90,7 +91,8 @@ export
 			using BufferView::BufferView;
 
 		   virtual uint get_element_size() const =0;
-		   virtual std::string to_json(void* data) const =0;
+		   		   virtual 	uint64 get_count() const=0;
+	
 		};
 		class TextureView : public ResourceView
 		{
@@ -109,6 +111,12 @@ export
 			TextureView(const TextureResource::ptr& _resource) : resource(_resource)
 			{
 			}
+
+
+			virtual member_item::ptr describe() {
+				return nullptr;
+			}
+
 
 			SERIALIZE()
 			{
@@ -726,12 +734,16 @@ export
 			{
 				return sizeof(UnderlyingType);
 			}
-		   virtual std::string to_json(void* data) const override
-			{
-				const UnderlyingType* elem = static_cast<UnderlyingType*>(data);
 
-			   return Serializer::to_json(*elem);
+
+
+
+				 member_item::ptr describe(void* data) override {
+				return ObjectTreeSerializer::describe(*static_cast<T*>(data));
 			}
+
+
+		   
 
 
 			uint get_data_offset() const
@@ -758,7 +770,7 @@ export
 				return resource;
 			}
 
-			uint64 get_count() const
+			uint64 get_count()  const	 override
 			{
 				return desc.size / sizeof(UnderlyingType);
 			}

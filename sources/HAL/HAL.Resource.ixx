@@ -134,7 +134,7 @@ export{
 	{
 
 
-		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>, public TrackedObject, public API::Resource
+		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>, public TrackedObject, public API::Resource, public TypedObject<Resource>
 		{
 					protected:
 						bool serialize_from_derived = false;

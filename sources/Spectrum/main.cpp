@@ -11,6 +11,7 @@ import FrameGraph;
 import FrameGraphDebug;
 
 #include "bend_sss_cpu.h"
+
 using namespace FrameGraph;
 
 using namespace HAL;
@@ -22,6 +23,7 @@ _declspec(dllexport) extern const unsigned int D3D12SDKVersion = 618;
 extern "C" {
 _declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
 }
+
 
 class tick_timer
 {
@@ -868,6 +870,304 @@ public:
 		return img;
 	}
 };
+namespace GUI
+{
+	  /*
+class Table:public GUI::Elements::scroll_container
+{
+		base::ptr top_row;
+		base::ptr left_column;
+		base::ptr unused;
+		base::ptr content;
+		Elements::resizer::ptr dragger;
+		class TopLeft:public GUI::base
+		{	
+			Elements::resizer::ptr dragger_right;
+			Elements::resizer::ptr dragger_bottom;
+			base* left_column;
+		public:
+			using ptr = std::shared_ptr<TopLeft>;
+			TopLeft(base* table , base* left_column)  :left_column(left_column)
+			{
+				draw_helper = true;
+				docking = dock::LEFT;
+				size = { 32, 32 };
+				minimal_size  = {32,32};
+				
+	
+				dragger_right.reset(new Elements::resizer());
+				dragger_right->docking = dock::RIGHT;
+				dragger_right->height_size = size_type::MATCH_PARENT;
+				dragger_right->dir = Elements::direction::RIGHT;
+				dragger_right->draw_helper = true;
+				dragger_right->y_type = pos_y_type::TOP;
+				dragger_right->height_sticks = table;
+				dragger_right->target = this;
+
+
+				dragger_bottom.reset(new Elements::resizer());
+				dragger_bottom->docking = dock::BOTTOM;
+				dragger_bottom->width_size = size_type::MATCH_PARENT;
+				dragger_bottom->dir = Elements::direction::BOTTOM;
+				dragger_bottom->draw_helper = true;
+				dragger_bottom->x_type = pos_x_type::LEFT;
+				dragger_bottom->width_sticks = table;
+				dragger_bottom->target = this;
+
+					table->register_listener(dragger_right.get());
+						table->register_listener(dragger_bottom.get());
+			add_child(dragger_right);
+			add_child(dragger_bottom);
+
+			clickable = false;
+			clip_child = false;
+			}
+
+			void on_bounds_changed(const rect& r) override
+			{
+				base::on_bounds_changed(r);
+				left_column->size = r.w;
+			}
+		};
+public:
+
+	class Header
+	{
+	public:
+		Elements::label::ptr header;
+		Elements::resizer::ptr dragger;
+		Header(const std::string& name, bool top, base* table)
+		{
+			header = std::make_shared<Elements::label>();
+			header->text = name;
+			if (top)
+			{
+				header->docking = dock::LEFT;
+				header->width_size = size_type::MATCH_CHILDREN;
+				header->height_size = size_type::MATCH_PARENT;
+				header->minimal_size.x = 100;
+			}
+			else
+			{
+				header->docking = dock::TOP;
+				header->height_size = size_type::MATCH_CHILDREN;
+				header->width_size = size_type::MATCH_PARENT;
+				header->minimal_size.y = 24;
+			}
+
+			header->padding = { 4,4,4,4 };
+				header->draw_helper = true;
+
+			dragger.reset(new Elements::resizer());
+			if (top)
+			{
+				dragger->docking = dock::LEFT;
+				dragger->height_size = size_type::MATCH_PARENT;
+				dragger->dir = Elements::direction::RIGHT;
+				dragger->draw_helper = true;
+				dragger->y_type = pos_y_type::TOP;
+				dragger->height_sticks = table;
+			}
+			else
+			{
+				dragger->docking = dock::TOP;
+				dragger->width_size = size_type::MATCH_PARENT;
+				dragger->dir = Elements::direction::BOTTOM;
+				dragger->draw_helper = true;
+				dragger->x_type = pos_x_type::LEFT;
+				dragger->width_sticks = table;
+				
+			}
+
+			table->register_listener(dragger.get());
+			dragger->target = header.get();
+		///	dragger->add_child(dragger);
+		}
+	};
+			  */ 
+
+
+
+class Table:public GUI::Elements::scroll_container
+{
+		base::ptr top_row;
+		base::ptr left_column;
+
+	
+		
+public:
+
+	class Header :public Elements::label
+	{
+	Table* table;
+
+	public:	  
+		using ptr = std::shared_ptr<Header>;
+	//	Elements::label::ptr header;
+		Elements::resizer::ptr dragger;
+		Header(const std::string& name, bool top, Table* table):table(table)
+		{
+
+		//	header = std::make_shared<Elements::label>();
+		text = name;
+			if (top)
+			{
+				docking = dock::LEFT;
+				width_size = size_type::FIXED;
+				height_size = size_type::FIXED;
+				minimal_size.x = 100;
+				   size={32,24};
+				   y_type = pos_y_type::TOP;
+			}
+			else
+			{
+				docking = dock::TOP;
+				height_size = size_type::FIXED;
+				width_size = size_type::FIXED;
+				minimal_size.y = 24;
+			    size={32,24};
+				x_type = pos_x_type::LEFT;
+			}
+
+			padding = { 4,4,4,4 };
+				draw_helper = true;
+
+			dragger.reset(new Elements::resizer());
+			if (top)
+			{
+				dragger->docking = dock::LEFT;
+				//dragger->height_size = size_type::MATCH_PARENT;
+				dragger->dir = Elements::direction::RIGHT;
+				dragger->draw_helper = true;
+				dragger->y_type = pos_y_type::TOP;
+			//	dragger->height_sticks = table;
+			}
+			else
+			{
+				dragger->docking = dock::TOP;
+			//	dragger->width_size = size_type::MATCH_PARENT;
+				dragger->dir = Elements::direction::BOTTOM;
+				dragger->draw_helper = true;
+				dragger->x_type = pos_x_type::LEFT;
+				//dragger->width_sticks = table;
+				
+			}
+
+			///table->register_listener(dragger.get());
+			dragger->target = this;	 
+		///	dragger->add_child(dragger);
+		}
+
+		  virtual void on_bounds_changed(const rect& r)   override
+			{
+			
+
+			  base::on_bounds_changed(r);
+				  table->recalculate();
+			}
+	};
+	
+
+	std::list<Header::ptr> columns;
+   	std::list<Header::ptr> rows;
+
+	using ptr = std::shared_ptr<Table>;
+		  base::ptr layer2;
+		  	base::ptr layer3;
+
+
+			void recalculate()
+			{
+			
+		auto top_left = columns.front()->get_render_bounds();
+			  auto left_top = rows.front()->get_render_bounds();
+
+			 for (auto && c : rows)
+				 c->size = { top_left.w, c->size.get().y };
+
+
+			  for (auto && c : columns)
+				 c->size = {  c->size.get().x,left_top.h };
+			
+			}
+
+			
+	Table()
+	{
+		base::ptr layer1 = std::make_shared<base>();
+		layer1->docking = dock::FILL;
+				layer1->clickable = false;
+		add_child(layer1);
+				 
+
+		layer2 = std::make_shared<base>();
+		layer2->docking = dock::NONE;
+		layer2->size = { 0,0 };
+		layer2->width_size = size_type::MATCH_PARENT;
+		layer2->height_size = size_type::MATCH_CHILDREN;
+		layer2->clickable = false;
+		//layer2->draw_helper = true;
+		add_child(layer2);
+
+		layer3 = std::make_shared<base>();
+		layer3->docking = dock::NONE;
+		layer3->size = { 0,0 };
+		layer3->width_size = size_type::MATCH_CHILDREN;
+		layer3->height_size = size_type::MATCH_PARENT;
+		layer3->clickable = false;
+		layer3->draw_helper = true;
+		add_child(layer3);
+
+			  AddRow("")	;
+			  AddColumn("");
+
+		//	InitTest();
+	}
+
+	void AddColumn(const std::string& name)
+	{
+		columns.emplace_back(std::make_shared<Header>(name, true, this));
+		layer3->add_child(columns.back());
+	   layer3->add_child(columns.back()->dragger);
+
+	}
+
+	void AddRow(std::string name)
+	{
+	 
+		rows.emplace_back(std::make_shared<Header>(name, false, this));
+		layer2->add_child(rows.back());
+	   layer2->add_child(rows.back()->dragger);
+		/*base::ptr row(new base);
+		row->docking = dock::TOP;
+		content->add_child(row);
+		for (size_t i = 0; i < values.size() && i < columns.size(); i++)
+		{
+			Elements::label::ptr cell(new Elements::label);
+			cell->text = values[i];
+			cell->docking = dock::LEFT;
+			cell->width_size = size_type::MATCH_CHILDREN;
+			cell->minimal_size.x = 100;
+			row->add_child(cell);
+		}  */
+	}
+
+	void InitTest()
+	{ 
+
+		::Table::Camera cam;
+
+		AddColumn("Name");
+		AddColumn("Time");
+		AddColumn("Count");	
+
+			    for(int i=0;i<20;i++)
+		AddRow(std::to_string(i));
+	
+	}
+	
+};
+}
 
 class GraphRender : public Window, public GUI::user_interface
 {
@@ -900,6 +1200,7 @@ class GraphRender : public Window, public GUI::user_interface
 public:
 	void on_destroy() override
 	{
+
 		Application::get().shutdown();
 	}
 
@@ -1205,12 +1506,22 @@ public:
 			}
 
 			{
-				auto text = std::make_shared<GUI::Elements::MultiLineLabel>();
-				auto f = FileSystem::get().get_file(to_path(L"main.cpp"))->load_all();
+			//	auto text = std::make_shared<GUI::Elements::MultiLineLabel>();
+			////	auto f = FileSystem::get().get_file(to_path(L"main.cpp"))->load_all();
 
 
-				text->text = f;
-				d->get_tabs()->add_page("text", text);
+				//text->text = f;
+				///d->get_tabs()->add_page("text", text);
+			}
+
+
+			{
+			auto tree = std::make_shared<GUI::Elements::tree<member_item,object_tree_creator>>();
+			////	auto f = FileSystem::get().get_file(to_path(L"main.cpp"))->load_all();
+				    Table::Camera cam={};
+			   tree->init(ObjectTreeSerializer::describe(cam).get());
+				//text->text = f;
+				d->get_tabs()->add_page("table", tree);
 			}
 			/*{
 			EVENT("Start Drawer");
@@ -1462,7 +1773,7 @@ protected:
 		AssetRenderer::reset();
 		TextureAssetRenderer::reset();
 		AssetManager::reset();
-		   materials::PipelineManager::reset();
+		materials::PipelineManager::reset();
 		universal_nodes_manager::reset();
 
 		universal_mesh_instance_manager::reset();
@@ -1537,6 +1848,7 @@ struct test
 
 #include <shellscalingapi.h>
 
+
 int APIENTRY WinMain(_In_ HINSTANCE hinst,
                      _In_opt_ HINSTANCE,
                      _In_ LPTSTR,
@@ -1545,7 +1857,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	setlocale(LC_ALL, "");
 	CoInitialize(NULL);
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-
+			   	std::vector<int> vec ={1,2,3,4,5};
+				 int2 tt{1,3};
+				std::vector<int2> vec2 ={{1,2}, {3,4}};
 	FlowGraph::FlowSystem::get().register_node("file", []()-> FlowGraph::graph::ptr
 	{
 		auto f = FileSystem::get().get_file(to_path("graph.flg"));

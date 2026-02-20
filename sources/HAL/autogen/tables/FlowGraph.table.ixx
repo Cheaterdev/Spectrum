@@ -29,7 +29,10 @@ export namespace Table
 		}
 		using Compiled = FlowGraph;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::FlowGraph";
+		}
 		private:
 		SERIALIZE()
 		{

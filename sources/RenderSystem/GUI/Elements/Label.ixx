@@ -88,7 +88,7 @@ export namespace GUI
 
                 property<std::string> text;
                 property<float> font_size;
-                rgba8 color;
+                float4 color;
                 label();
                 virtual	~label()
                 {

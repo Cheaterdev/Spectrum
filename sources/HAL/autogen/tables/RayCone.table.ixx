@@ -26,7 +26,10 @@ export namespace Table
 		}
 		using Compiled = RayCone;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::RayCone";
+		}
 		private:
 		SERIALIZE()
 		{

@@ -20,7 +20,7 @@ export namespace HAL
 	class GPUTimeProfiler;
 	class GPUEntityStorageInterface;
 	class CommandAllocator;
-	class Device : public Singleton<Device>, public API::Device
+	class Device : public Singleton<Device>, public API::Device, public TypedObject<Device>
 	{
 		friend class API::Device;
 		friend class Singleton<Device>;

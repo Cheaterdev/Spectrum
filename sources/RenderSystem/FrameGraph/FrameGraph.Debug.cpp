@@ -31,12 +31,15 @@ public:
 	}
 };
 			*/
-		  bool replace(std::string& str, const std::string& from, const std::string& to) {
-    size_t start_pos = str.find(from);
-    if(start_pos == std::string::npos)
-        return false;
-    str.replace(start_pos, from.length(), to);
-    return true;
+
+
+
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+	size_t start_pos = str.find(from);
+	if (start_pos == std::string::npos)
+		return false;
+	str.replace(start_pos, from.length(), to);
+	return true;
 }
 
 class Texture2DDebugger :public GUI::base
@@ -59,7 +62,7 @@ public:
 	Events::prop_helper* helper = nullptr;
 
 	image::ptr rendered_image;
-	 label::ptr rendered_text;
+	MultiLineLabel::ptr rendered_text;
 	third_person_camera camera_3d;
 	vec2 start_pos;
 	vec2 prev_pos;
@@ -67,6 +70,9 @@ public:
 	bool dragging = false;
 	float2 offset;
 	float img_scale = 1;
+
+	bool buffer_inited = false;
+	GUI::Elements::tree<member_item,object_tree_creator>::ptr buffer_info;
 public:
 	ResourceDebugger(FrameGraph::Graph& _graph) :graph(_graph)
 	{
@@ -90,14 +96,16 @@ public:
 		//	rendered_image->size={256,256};
 		add_child(rendered_image);
 
-		 rendered_text	= std::make_shared<label>();
-		rendered_text->docking = GUI::dock::FILL;
+		buffer_info = std::make_shared<GUI::Elements::tree<member_item,object_tree_creator>>();
+		buffer_info->docking = GUI::dock::FILL;
+//		rendered_text->font_size = 10;
 		//	rendered_image->size={256,256};
-		add_child(rendered_text);
+		add_child(buffer_info);
 
-		rendered_text->text="HELLO";
 
-		rendered_text->magnet_text = FW1_LEFT | FW1_TOP;
+	///	rendered_text->text = "HELLO";
+
+	//	rendered_text->magnet_text = FW1_LEFT | FW1_TOP;
 		for (auto& [name, infov] : graph.builder.alloc_resources)
 		{
 			auto info = &infov;
@@ -122,6 +130,7 @@ public:
 					passes_list->add_item(convert(name))->on_select = [this, name](list_element::ptr) {
 
 						pass_name = name;
+						 buffer_inited = false;
 						};
 				}
 
@@ -150,6 +159,8 @@ public:
 
 						if (info->resource->get_desc().is_texture())
 						{
+							rendered_image->visible = true;
+							buffer_info->visible = false;
 							{
 								Slots::FrameGraph_Debug_Common common;
 								common.GetTarget() = rendered_image->texture.texture->texture_2d().rwTexture2D;
@@ -162,14 +173,15 @@ public:
 							if (auto source = dynamic_cast<HAL::Texture2DView*>(info->view.get()))
 							{
 								compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
+								{
+									Slots::FrameGraph_Debug_Texture2D tex2d;
+									tex2d.GetSource() = *source;
+									tex2d.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions.xy;
+									tex2d.GetOffset() = offset;
+									tex2d.GetScale() = img_scale;
 
-								Slots::FrameGraph_Debug_Texture2D tex2d;
-								tex2d.GetSource() = *source;
-								tex2d.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions.xy;
-								tex2d.GetOffset() = offset;
-								tex2d.GetScale() = img_scale;
-
-								compute.set(tex2d);
+									compute.set(tex2d);
+								}
 							}
 							else if (auto source = dynamic_cast<HAL::Texture3DView*>(info->view.get()))
 							{
@@ -182,48 +194,65 @@ public:
 
 								camera_3d.frame_move(0.1f);
 								camera_3d.update();
+								{
+									Slots::FrameGraph_Debug_Texture3D tex3d;
+									tex3d.GetSource() = *source;
+									tex3d.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions;
+									tex3d.GetCamera() = camera_3d.camera_cb.current;
 
-								Slots::FrameGraph_Debug_Texture3D tex3d;
-								tex3d.GetSource() = *source;
-								tex3d.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions;
-								tex3d.GetCamera() = camera_3d.camera_cb.current;
-
-								compute.set(tex3d);
+									compute.set(tex3d);
+								}
 							}
 
 							else
 							{
 								compute.set_pipeline<PSOS::FrameGraph_Debug_NotImplemented>();
-
-
 							}
 
 
 							compute.dispatch(uint3(rendered_image->texture.texture->get_desc().as_texture().Dimensions.xy, 1));
 							//	MipMapGenerator::get().copy_texture_2d_slow(list->get_graphics(), rendered_image->texture.texture, );
-						} else
+						}
+						else
 						{
 
-						 if (auto source = dynamic_cast<HAL::StructuredBufferViewBase*>(info->view.get()))
-						 {
+							if (auto source = dynamic_cast<HAL::StructuredBufferViewBase*>(info->view.get()))
+							{
 
-							copy.read_buffer(source->resource.get(), 0, source->get_element_size(),
-									[this, source](std::span<std::byte> memory)
-									{
+								size_t elements_count = source->get_count();
 
-										std::string str =  source->to_json(memory.data());
-										 replace(str, "\n", "\n\r");
-										run_on_ui([this,str]()
+								if (buffer_inited == false)
+									copy.read_buffer(source->resource.get(), 0, elements_count * source->get_element_size(),
+										[this, source, elements_count](std::span<std::byte> memory)
 										{
-										      rendered_text->text =str;
+											buffer_inited = true;
+
+
+											run_on_ui([this]()
+												{
+													buffer_info->contents->remove_all();
+													//buffer_info->init(tree.get());
+												});
+
+											for (auto i = 0; i < elements_count; i++)
+											{
+												auto tree = source->describe(memory.data() + i * source->get_element_size());
+												//	replace(str, "\n", "\n\r");
+												run_on_ui([this, tree]()
+													{
+														//	buffer_info->contents->remove_all();
+														buffer_info->init(tree.get());
+													});
+
+											}
+
 
 										});
-										
-								 });
-
-						 }
-						 else
-							assert(false);
+								rendered_image->visible = false;
+								buffer_info->visible = true;
+							}
+							else
+								assert(false);
 
 						}
 					}

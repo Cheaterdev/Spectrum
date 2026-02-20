@@ -32,7 +32,10 @@ export namespace Table
 		}
 		using Compiled = Meshlet;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::Meshlet";
+		}
 		private:
 		SERIALIZE()
 		{

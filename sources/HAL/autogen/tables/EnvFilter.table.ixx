@@ -29,7 +29,10 @@ export namespace Table
 		}
 		using Compiled = EnvFilter;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::EnvFilter";
+		}
 		private:
 		SERIALIZE()
 		{

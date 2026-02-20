@@ -13,7 +13,6 @@ export namespace HAL
 	{
 		class Heap
 		{
-			LEAK_TEST(Heap);
 		protected:
 			GPUAddressPtr gpu_address = 0;
 			std::byte* cpu_address = nullptr;

@@ -74,7 +74,10 @@ export namespace Table
 		}
 		using Compiled = DenoiserReflectionCommon;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::DenoiserReflectionCommon";
+		}
 		private:
 		SERIALIZE()
 		{

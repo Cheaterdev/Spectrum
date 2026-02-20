@@ -189,7 +189,7 @@ export namespace HAL
 		virtual	void on_change() = 0;
 	};
 
-	class PipelineState : public PipelineStateBase
+	class PipelineState : public PipelineStateBase, public TypedObject<PipelineState>
 	{
 		friend class PipelineStateCache;
 
@@ -346,7 +346,7 @@ export namespace HAL
 
 	};
 
-	class StateObject :public PipelineStateBase, public  API::StateObject
+	class StateObject :public PipelineStateBase, public  API::StateObject, public TypedObject<StateObject>
 	{
 
 

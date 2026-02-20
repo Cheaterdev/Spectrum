@@ -23,7 +23,10 @@ export namespace Table
 		}
 		using Compiled = SkyFace;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::SkyFace";
+		}
 		private:
 		SERIALIZE()
 		{

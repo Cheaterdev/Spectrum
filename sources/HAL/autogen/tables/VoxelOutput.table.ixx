@@ -46,7 +46,10 @@ export namespace Table
 
 		};
 
-
+		static std::string get_typename()
+		{
+			return "Tables::VoxelOutput";
+		}
 		private:
 		SERIALIZE()
 		{

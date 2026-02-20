@@ -19,11 +19,6 @@
 #define THREAD_CHECKER 
 #define ASSERT_SINGLETHREAD 
 #endif
-#ifdef LEAK_TEST_ENABLE
-#define LEAK_TEST(x) LeakDetectorInstance ___leak_tester = LeakDetectorInstance(#x);
-#else
-#define LEAK_TEST(x) 
-#endif
 
 #ifdef DEV
 #define THREAD_SCOPE(x) volatile ThreadScope SPECTRUM_UNIQUE_NAME(ThreadType::x)

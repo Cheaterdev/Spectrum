@@ -26,7 +26,10 @@ export namespace Table
 		}
 		using Compiled = BoxInfo;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::BoxInfo";
+		}
 		private:
 		SERIALIZE()
 		{

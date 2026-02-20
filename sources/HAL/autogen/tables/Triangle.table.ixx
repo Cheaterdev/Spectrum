@@ -27,7 +27,10 @@ export namespace Table
 		}
 		using Compiled = Triangle;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::Triangle";
+		}
 		private:
 		SERIALIZE()
 		{

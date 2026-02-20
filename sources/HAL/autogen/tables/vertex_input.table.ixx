@@ -32,7 +32,10 @@ export namespace Table
 		}
 		using Compiled = vertex_input;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::vertex_input";
+		}
 		private:
 		SERIALIZE()
 		{

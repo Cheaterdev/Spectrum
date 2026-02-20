@@ -87,7 +87,6 @@ export namespace materials
 		PSOS::GBufferDraw::ptr gbuffer;
 		PSOS::Voxelization::ptr voxelization;
 		PSOS::DepthDraw::ptr depth_draw;
-		LEAK_TEST(PipelinePasses);
 	public:
 		using ptr = std::shared_ptr<PipelinePasses>;
 		PipelinePasses() = default;
@@ -177,7 +176,7 @@ export namespace materials
 		}
 	};
 
-	class PipelineManager :public Singleton<PipelineManager>
+	class PipelineManager :public Singleton<PipelineManager>, TypedObject<PipelineManager>
 	{
 		std::map<unsigned int, Pipeline::ptr> pipelines;
 		std::mutex m;
@@ -219,7 +218,6 @@ export namespace materials
 
 	class universal_material : public MaterialAsset, ::FlowGraph::graph_listener, public MainRTX::material
 	{
-		LEAK_TEST(universal_material)
 			/*----------------------------------------------------------*/
 			virtual	void on_register(::FlowGraph::window*)override;
 		virtual	void on_remove(::FlowGraph::window*)override;

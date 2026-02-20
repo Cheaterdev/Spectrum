@@ -278,8 +278,53 @@ namespace GUI
     bool base::on_mouse_move(vec2 pos)
     {
         return true;
-    }
+	}
 
+	void base::update_childs_layout(sizer& my, float scale)
+	{
+		for (auto&& c : childs)
+			if (c->docking == dock::NONE) c->update_layout(my, result_scale * this->scale);
+
+		for (auto&& c : childs)
+			if (c->docking != dock::FILL && c->docking != dock::NONE && c->docking != dock::PARENT) my = c->update_layout(my, result_scale * this->scale);
+
+		for (auto&& c : childs)
+			if (c->docking == dock::FILL && c->docking != dock::NONE && c->docking != dock::PARENT) c->update_layout(my, result_scale * this->scale);
+	}
+
+	void base::update_childs_layout_after(sizer& r, float scale)
+	{
+		for (auto&& c : childs)
+			if (c->docking == dock::PARENT) c->update_layout(r, result_scale * this->scale);
+
+	}
+                                void base::register_listener(base* listener)
+                                {
+									listeners.insert(listener);
+                                }
+
+			void base::unregister_listener(base* listener)
+            {
+				listeners.erase(listener);
+			}
+
+  void base::on_base_change(base* b)
+  {
+               
+	  vec2 new_size = scaled_size.get();
+
+	  if (width_size == size_type::MATCH_PARENT)
+		  if (width_sticks == b)
+			  new_size.x = width_sticks->get_render_bounds().w;
+
+
+	  if (height_size == size_type::MATCH_PARENT)
+		  if (height_sticks == b)
+			  new_size.y = height_sticks->get_render_bounds().h;
+
+
+	  size = new_size;
+  }
     sizer base::update_layout(sizer o_r, float scale)
     {
         if (!visible.get()) return o_r;
@@ -307,11 +352,11 @@ namespace GUI
             if (parent)
             {
                 if (docking.get() == dock::TOP || docking.get() == dock::BOTTOM || docking.get() == dock::FILL)
-                    if (parent->width_size == size_type::MATCH_CHILDREN)
+                    if (width_sticks==nullptr&&parent->width_size == size_type::MATCH_CHILDREN)
                         r.right = r.left + std::max(all_size.x, r.right - r.left);
 
                 if (docking.get() == dock::LEFT || docking.get() == dock::RIGHT || docking.get() == dock::FILL)
-                    if (parent->height_size == size_type::MATCH_CHILDREN)
+                    if (height_sticks==nullptr&&parent->height_size == size_type::MATCH_CHILDREN)
                         r.bottom = r.top + std::max(all_size.y, r.bottom - r.top);
             }
 
@@ -371,14 +416,7 @@ namespace GUI
 
             need_update_layout = false;
 
-            for (auto && c : childs)
-                if (c->docking == dock::NONE) c->update_layout(my, result_scale * this->scale);
-
-            for (auto && c : childs)
-                if (c->docking != dock::FILL && c->docking != dock::NONE && c->docking != dock::PARENT) my = c->update_layout(my, result_scale * this->scale);
-
-            for (auto && c : childs)
-                if (c->docking == dock::FILL && c->docking != dock::NONE && c->docking != dock::PARENT) c->update_layout(my, result_scale * this->scale);
+            update_childs_layout(my,  result_scale * this->scale);
 
             vec2 new_size = size.get();
 
@@ -392,8 +430,10 @@ namespace GUI
                     for (auto && c : childs)
                     {
                         if (!c->visible.get()) continue;
-
+                        if (c->width_sticks) continue;
                         if (c->width_size == size_type::MATCH_PARENT) continue;
+                             if (c->docking == dock::FILL)
+                                 continue;
 
                         if (c->width_size == size_type::SQUARE && c->height_size == size_type::SQUARE) continue;
 
@@ -432,9 +472,10 @@ namespace GUI
                     for (auto && c : childs)
                     {
                         if (!c->visible.get()) continue;
-
+                        if (c->height_sticks) continue;
                         if (c->height_size == size_type::MATCH_PARENT) continue;
-
+                                           if (c->docking == dock::FILL)
+                                 continue;
                         if (c->height_size == size_type::SQUARE && c->width_size == size_type::SQUARE) continue;
 						
 						float current_min = c->get_render_bounds().y - padding->top * scale - c->margin->top * scale;
@@ -475,8 +516,7 @@ namespace GUI
             scaled_size = new_size; ///scale;
             max_iterations--;
 
-            for (auto && c : childs)
-                if (c->docking == dock::PARENT) c->update_layout(orig_my, result_scale * this->scale);
+             update_childs_layout_after(orig_my,  result_scale * this->scale);
 
             //	hack_layout();
             if (max_iterations == 0) break;
@@ -613,6 +653,9 @@ namespace GUI
 
         for (auto c : childs)
             c->on_parent_size_changed(r2);
+
+		for (auto l : listeners)
+            l->on_base_change(this);
     }
 
     void base::set_movable(bool value)
@@ -787,9 +830,16 @@ namespace GUI
         vec2 new_size = scaled_size.get();
 
         if (width_size == size_type::MATCH_PARENT)
+            if(width_sticks)
+                      new_size.x = width_sticks->get_render_bounds().w;
+            else
+
             new_size.x = r.w;
 
         if (height_size == size_type::MATCH_PARENT)
+              if(height_sticks)
+                      new_size.y = height_sticks->get_render_bounds().h;
+            else
             new_size.y = r.h;
 
         size = new_size;

@@ -45,7 +45,10 @@ export namespace Table
 
 		};
 
-
+		static std::string get_typename()
+		{
+			return "Tables::RaytracingRays";
+		}
 		private:
 		SERIALIZE()
 		{

@@ -303,6 +303,7 @@ namespace GUI
 
             user_interface* user_ui = nullptr;
             sizer_long parent_sizer;
+			std::set<base*> listeners;
             virtual std::vector<ptr> find_control(vec2 at, bool click_only);
 
             virtual bool test_local_visible();
@@ -333,6 +334,8 @@ namespace GUI
             void run_on_ui(std::function<void()> f);
         public:
 			virtual sizer update_layout(sizer r, float scale);
+            virtual void update_childs_layout(sizer& r, float scale);
+              virtual void update_childs_layout_after(sizer &r, float scale);
 
 
             float scale = 1;
@@ -424,8 +427,12 @@ namespace GUI
 			property<vec2> scaled_size;
 
             vec2 minimal_size; //todo: property?
-            size_type width_size = size_type::NONE;
+
+            base* width_sticks = nullptr;
+            base* height_sticks = nullptr;
+
             size_type height_size = size_type::NONE;
+            size_type width_size = size_type::NONE;
             pos_x_type x_type = pos_x_type::CENTER;
             pos_y_type y_type = pos_y_type::CENTER;
             vec2 childs_size;
@@ -464,6 +471,9 @@ namespace GUI
 
             virtual void to_front();
 
+            void register_listener(base* listener);
+			void unregister_listener(base* listener);
+            virtual void on_base_change(base*);
             /*
             bool mouse_action_event(mouse_action action, mouse_button button, vec2 pos)
             {

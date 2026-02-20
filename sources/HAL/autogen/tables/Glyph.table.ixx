@@ -29,7 +29,10 @@ export namespace Table
 		}
 		using Compiled = Glyph;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::Glyph";
+		}
 		private:
 		SERIALIZE()
 		{

@@ -128,7 +128,10 @@ export namespace Table
 		}
 {%-endif-%}
 
-
+		static std::string get_typename()
+		{
+			return "Tables::{{table.name}}";
+		}
 		private:
 		SERIALIZE()
 		{

@@ -26,7 +26,10 @@ export namespace Table
 		}
 		using Compiled = VSLine;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::VSLine";
+		}
 		private:
 		SERIALIZE()
 		{

@@ -129,7 +129,6 @@ export
 
 		struct parameter : public SharedObject<parameter>
 		{
-			// LEAK_TEST
 			MyVariant value;
 			MyVariant default_value;
 

@@ -25,7 +25,6 @@ export namespace HAL
 
 		class PipelineStateBase
 		{
-			 		LEAK_TEST(PipelineStateBase);
 		public:
 			virtual ~PipelineStateBase() = default;
 		

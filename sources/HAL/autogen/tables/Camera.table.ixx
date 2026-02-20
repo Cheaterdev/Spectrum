@@ -54,7 +54,10 @@ export namespace Table
 		}
 		using Compiled = Camera;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::Camera";
+		}
 		private:
 		SERIALIZE()
 		{

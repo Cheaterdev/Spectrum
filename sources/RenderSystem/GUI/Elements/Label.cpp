@@ -54,7 +54,7 @@ namespace GUI
 
 		void label::draw(Context& c)
 		{
-
+			  base::draw(c);
 			PROFILE(L"label");
 
 			rect p = render_bounds.get();
@@ -98,7 +98,7 @@ namespace GUI
 			color = float4(1, 1, 1, 1);
 			geomerty.reset(new Fonts::FontGeometry());
 			geomerty_shadow.reset(new Fonts::FontGeometry());
-			font_size = 18;
+			font_size = 16;
 			text_size = font->measure("", font_size.get() /** scaled*/, magnet_text)+ vec2(2, 2);
 			text_size.x = std::ceil(text_size.x);
 			text_size.y = std::ceil(text_size.y);
@@ -311,6 +311,8 @@ for (const auto& token : parsed) {
 			
 		void MultiLineLabel::on_text_changed(const std::string& str)
 		{
+
+			contents->remove_all();
 			const std::string delim = "\n";
 
     for (const auto word : std::views::split(str, delim))

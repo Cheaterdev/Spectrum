@@ -29,7 +29,10 @@ export namespace Table
 		}
 		using Compiled = MeshletCullData;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::MeshletCullData";
+		}
 		private:
 		SERIALIZE()
 		{

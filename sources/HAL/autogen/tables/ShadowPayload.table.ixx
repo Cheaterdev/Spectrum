@@ -23,7 +23,10 @@ export namespace Table
 		}
 		using Compiled = ShadowPayload;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::ShadowPayload";
+		}
 		private:
 		SERIALIZE()
 		{

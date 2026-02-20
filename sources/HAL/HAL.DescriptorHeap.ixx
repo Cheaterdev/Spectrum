@@ -29,7 +29,7 @@ export
 			void for_each_subres(std::function<void(const std::shared_ptr<Resource>&, UINT)> f) const;
 		};
 
-		class DescriptorHeap : public SharedObject<DescriptorHeap>, public API::DescriptorHeap
+		class DescriptorHeap : public SharedObject<DescriptorHeap>, public API::DescriptorHeap, public TypedObject<DescriptorHeap>
 		{
 			friend struct Handle;
 			std::vector<ResourceInfo> resources;

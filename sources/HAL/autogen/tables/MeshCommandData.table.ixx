@@ -37,7 +37,10 @@ export namespace Table
 		}
 		using Compiled = MeshCommandData;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::MeshCommandData";
+		}
 		private:
 		SERIALIZE()
 		{

@@ -34,7 +34,10 @@ export namespace Table
 
 		};
 
-
+		static std::string get_typename()
+		{
+			return "Tables::SMAA_Blend";
+		}
 		private:
 		SERIALIZE()
 		{

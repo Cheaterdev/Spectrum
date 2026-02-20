@@ -40,7 +40,10 @@ export namespace Table
 
 		};
 
-
+		static std::string get_typename()
+		{
+			return "Tables::VoxelZero";
+		}
 		private:
 		SERIALIZE()
 		{

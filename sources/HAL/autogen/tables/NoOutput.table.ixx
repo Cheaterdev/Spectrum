@@ -20,7 +20,10 @@ export namespace Table
 		}
 		using Compiled = NoOutput;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::NoOutput";
+		}
 		private:
 		SERIALIZE()
 		{

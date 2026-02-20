@@ -79,7 +79,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 
             conf.AdditionalCompilerOptions.Add("/bigobj");
-            conf.AdditionalCompilerOptions.Add("/dxifcInlineFunctions-");
+         //   conf.AdditionalCompilerOptions.Add("/dxifcInlineFunctions-");
 
             conf.Defines.Add("_MBCS");
 			conf.Defines.Add("BOOST_NO_USER_CONFIG");
@@ -93,7 +93,6 @@ namespace Spectrum
             conf.Defines.Add("_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING");
             conf.Defines.Add("_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING");
        
-			conf.Defines.Add("WIN32_LEAN_AND_MEAN");
             conf.Defines.Add("SPECTRUM_ENABLE_EXEPTIONS");
             conf.Defines.Add("CEREAL_THREAD_SAFE");
             conf.Defines.Add("USE_PIX");
@@ -160,8 +159,6 @@ namespace Spectrum
         }
 
     }
-
-
 
     [Sharpmake.Generate]
     public class Aftermath : Library
@@ -283,9 +280,6 @@ namespace Spectrum
         public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
-
-        // conf.IsBlobbed = true;
-        
             conf.AddPublicDependency<HAL>(target);
         }
     }
@@ -338,11 +332,10 @@ namespace Spectrum
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
 
-            conf.AddPublicDependency<HAL>(target);
+
             conf.AddPublicDependency<RenderSystem>(target);
         }
     }
-
 
     [Sharpmake.Generate]
     public class Resources : Common
@@ -354,7 +347,6 @@ namespace Spectrum
         }
 
     }
-
 
 
     [Sharpmake.Generate]

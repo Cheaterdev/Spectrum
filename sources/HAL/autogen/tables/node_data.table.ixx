@@ -33,7 +33,10 @@ export namespace Table
 		}
 		using Compiled = node_data;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::node_data";
+		}
 		private:
 		SERIALIZE()
 		{

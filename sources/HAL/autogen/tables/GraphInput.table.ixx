@@ -32,7 +32,10 @@ export namespace Table
 		}
 		using Compiled = GraphInput;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::GraphInput";
+		}
 		private:
 		SERIALIZE()
 		{

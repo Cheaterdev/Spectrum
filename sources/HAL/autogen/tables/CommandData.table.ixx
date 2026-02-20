@@ -39,7 +39,10 @@ export namespace Table
 		{
 			processor.template process<Slots::MeshInfo, Slots::MeshInstanceInfo, Slots::MaterialInfo, DispatchMeshArguments>();
 		}
-
+		static std::string get_typename()
+		{
+			return "Tables::CommandData";
+		}
 		private:
 		SERIALIZE()
 		{

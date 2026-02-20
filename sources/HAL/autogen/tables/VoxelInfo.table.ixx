@@ -32,7 +32,10 @@ export namespace Table
 		}
 		using Compiled = VoxelInfo;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::VoxelInfo";
+		}
 		private:
 		SERIALIZE()
 		{

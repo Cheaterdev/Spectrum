@@ -26,7 +26,10 @@ export namespace Table
 		}
 		using Compiled = MeshInstance;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::MeshInstance";
+		}
 		private:
 		SERIALIZE()
 		{

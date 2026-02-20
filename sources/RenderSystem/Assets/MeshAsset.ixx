@@ -156,8 +156,6 @@ export{
 
 	class MeshAsset : public Asset
 	{
-		LEAK_TEST(MeshAsset)
-
 			MeshAsset();
 		std::shared_ptr<MeshAssetInstance> preview_mesh;
 	public:
@@ -253,9 +251,6 @@ export{
 
 
 		friend class stencil_renderer;
-
-
-		LEAK_TEST(MeshAssetInstance)
 
 			Slots::MeshInstanceInfo::Compiled mesh_instance_info;
 		std::mutex m;

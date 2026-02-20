@@ -13,7 +13,7 @@ export namespace HAL
 		uint64 gpu_time;
 		uint64 frequency;
 	};
-	class Queue: public API::Queue
+	class Queue: public API::Queue	, public TypedObject<Queue>
 	{
 		friend class API::Queue;
 		std::wstring name;

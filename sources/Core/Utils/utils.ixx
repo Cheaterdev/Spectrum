@@ -86,6 +86,43 @@ export
 	using binary = std::vector<std::byte>;
 
 
+
+	template <typename T> concept arithmetic = std::is_arithmetic_v<T>;// && !std::is_enum_v<T>;
+
+	template <typename T>
+	concept has_pretty_typename = requires()
+	{
+		std::remove_cvref_t<T>::get_typename();
+	};
+
+	template <typename T>
+	concept is_span = requires()
+	{
+		typename std::remove_cvref_t<T>::value_type;
+		std::remove_cvref_t<T>::extent;
+		//	 std::remove_cvref_t<T>::value_type;
+	};
+
+
+	template <typename T>
+	std::string get_typename()
+	{
+		return  typeid(std::remove_cvref_t<T>).name();
+	}
+	template <has_pretty_typename T>
+	std::string get_typename()
+	{
+		return   std::remove_cvref_t<T>::get_typename();
+	}
+
+	template <is_span T>
+	std::string get_typename()
+	{
+		return   get_typename<typename std::remove_cvref_t<T>::value_type>() + "[" + std::to_string(std::remove_cvref_t<T>::extent) + "]";
+	}
+
+
+
 	template<class T> concept EnumType = std::is_enum_v<T>;
 
 	template<EnumType Enum>

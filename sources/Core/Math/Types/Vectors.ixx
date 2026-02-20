@@ -491,6 +491,15 @@ export
 		std::array<T, Count> values;
 
 		vector_data_t() {}
+
+
+		static std::string get_typename()
+		{
+			static const std::string name = std::string(typeid(T).name()) + std::to_string(Count);
+
+			return name;
+		}
+
 	};
 
 
@@ -512,6 +521,15 @@ export
 			};
 		};
 		vector_data_t() {}
+
+		
+		static std::string get_typename()
+		{
+			static const std::string name = std::string(typeid(T).name()) + std::to_string(2);
+
+			return name;
+		}
+
 	};
 
 
@@ -546,6 +564,15 @@ export
 		};
 
 		vector_data_t() {}
+
+		
+		static std::string get_typename()
+		{
+			static const std::string name = std::string(typeid(T).name()) + std::to_string(3);
+
+			return name;
+		}
+
 	};
 
 
@@ -588,6 +615,15 @@ export
 			};
 		};
 		vector_data_t() {}
+
+		
+		static std::string get_typename()
+		{
+			static const std::string name = std::string(typeid(T).name()) + std::to_string(4);
+
+			return name;
+		}
+
 	};
 
 
@@ -626,6 +662,13 @@ export
 		};
 
 		box_t() {}
+
+		
+		static std::string get_typename()
+		{
+			return "box";
+		}
+
 	};
 
 	template<typename T>
@@ -658,6 +701,11 @@ export
 		{
 
 		}
+
+		static std::string get_typename()
+		{
+			return "rect";
+		}
 	};
 
 	template<typename T >
@@ -687,6 +735,11 @@ export
 		};
 
 		margin_t() {}
+
+		static std::string get_typename()
+		{
+			return "margin";
+		}
 	};
 
 

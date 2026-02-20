@@ -23,7 +23,10 @@ export namespace Table
 		}
 		using Compiled = DebugStruct;
 
-
+		static std::string get_typename()
+		{
+			return "Tables::DebugStruct";
+		}
 		private:
 		SERIALIZE()
 		{

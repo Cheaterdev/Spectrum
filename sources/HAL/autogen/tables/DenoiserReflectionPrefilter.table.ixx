@@ -70,7 +70,10 @@ export namespace Table
 
 		};
 
-
+		static std::string get_typename()
+		{
+			return "Tables::DenoiserReflectionPrefilter";
+		}
 		private:
 		SERIALIZE()
 		{

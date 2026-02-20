@@ -409,8 +409,6 @@ class MaterialFunction : public MaterialGraphNode
 
 class MaterialGraph : public MaterialFunction
 {
-        LEAK_TEST(MaterialGraph)
-
         FlowGraph::input::ptr position;
         FlowGraph::input::ptr texcoord;
 
@@ -469,8 +467,6 @@ class MaterialGraph : public MaterialFunction
 
 class TextureNode : public MaterialNode, public AssetHolder
 {
-        LEAK_TEST(TextureNode)
-
         FlowGraph::input::ptr i_tc;
         FlowGraph::output::ptr o_vec4, o_r, o_g, o_b, o_a;
      
@@ -519,9 +515,6 @@ class TextureNode : public MaterialNode, public AssetHolder
 
 class PowerNode : public MaterialNode
 {
-
-        LEAK_TEST(PowerNode)
-
         FlowGraph::input::ptr i_vec, i_power;
         FlowGraph::output::ptr o_value;
      PowerNode();

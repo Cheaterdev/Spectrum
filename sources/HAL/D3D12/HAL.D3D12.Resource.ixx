@@ -25,11 +25,10 @@ export namespace HAL
 	{
 		
 	
-	class Resource:public Object
+	class Resource
 	{
 		GPUAddressPtr address;
 	public:
-		LEAK_TEST(Resource);
 		using ptr = std::shared_ptr<Resource>;
 		void init(Device& device, const ResourceDesc& desc, const PlacementAddress& address, TextureLayout initialLayout = TextureLayout::UNDEFINED);
 		void init(D3D::Resource  resource,TextureLayout layout);
