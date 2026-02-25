@@ -1036,7 +1036,7 @@ public:
 			if (top)
 			{
 				dragger->docking = dock::LEFT;
-				//dragger->height_size = size_type::MATCH_PARENT;
+				dragger->height_size = size_type::MATCH_PARENT;
 				dragger->dir = Elements::direction::RIGHT;
 				dragger->draw_helper = true;
 				dragger->y_type = pos_y_type::TOP;
@@ -1045,7 +1045,7 @@ public:
 			else
 			{
 				dragger->docking = dock::TOP;
-			//	dragger->width_size = size_type::MATCH_PARENT;
+				dragger->width_size = size_type::MATCH_PARENT;
 				dragger->dir = Elements::direction::BOTTOM;
 				dragger->draw_helper = true;
 				dragger->x_type = pos_x_type::LEFT;
@@ -1116,6 +1116,7 @@ public:
 		layer3->height_size = size_type::MATCH_PARENT;
 		layer3->clickable = false;
 		layer3->draw_helper = true;
+		layer3->debug =true;
 		add_child(layer3);
 
 			  AddRow("")	;
@@ -1333,10 +1334,7 @@ public:
 				//	dock->get_tabs()->add_page("Profiler", t);
 
 				//	GUI::Elements::Debug::TimeGraph::ptr t2(new GUI::Elements::Debug::TimeGraph());
-				run_on_ui([this]()
-				{
-					docker->get_tabs()->add_page("GraphDebug", FrameGraphDebug::create_debug_layout(graph));
-				});
+				
 
 
 				//docker->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
@@ -1514,24 +1512,14 @@ public:
 				///d->get_tabs()->add_page("text", text);
 			}
 
-
+			  
 			{
-			auto tree = std::make_shared<GUI::Elements::tree<member_item,object_tree_creator>>();
-			////	auto f = FileSystem::get().get_file(to_path(L"main.cpp"))->load_all();
-				    Table::Camera cam={};
-			   tree->init(ObjectTreeSerializer::describe(cam).get());
+				auto table = std::make_shared<GUI::Table>();
+				table->InitTest();
 				//text->text = f;
-				d->get_tabs()->add_page("table", tree);
+				d->get_tabs()->add_page("table", table);
 			}
-			/*{
-			EVENT("Start Drawer");
-			drawer2.reset(new triangle_drawer());
-			drawer2->docking = GUI::dock::FILL;
-
-			d->get_tabs()->add_page("Game2", drawer2);
-			EVENT("End Drawer");
-		}*/
-
+		
 
 			{
 				GUI::Elements::list_box::ptr l(new GUI::Elements::list_box());
@@ -1628,6 +1616,14 @@ public:
 					{
 						on_destroy();
 					};
+
+					edit->add_item("Debug Graph")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
+						{
+							
+					docker->get_tabs()->add_page("GraphDebug", FrameGraphDebug::create_debug_layout(graph));
+
+						} ;
+
 					auto add = edit->add_item("Add smth")->get_menu();
 					add->add_item("Mesh");
 					add->add_item("Material");

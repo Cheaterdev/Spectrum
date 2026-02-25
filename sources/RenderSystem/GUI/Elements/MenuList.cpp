@@ -29,7 +29,7 @@ GUI::Elements::menu_list::menu_list(bool vertical)
 
         filled->width_size = size_type::MATCH_CHILDREN;
         filled->height_size = size_type::MATCH_CHILDREN;
-
+          filled->docking= dock::NONE;
         auto_size = true;
         filled->clip_to_parent = ParentClip::HEIGHT;
 

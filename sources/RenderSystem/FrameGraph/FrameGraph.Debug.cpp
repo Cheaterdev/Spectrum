@@ -226,27 +226,13 @@ public:
 										[this, source, elements_count](std::span<std::byte> memory)
 										{
 											buffer_inited = true;
+											auto tree = source->describe(memory.data() , memory.size());								
 
-
-											run_on_ui([this]()
+											run_on_ui([this,tree]()
 												{
 													buffer_info->contents->remove_all();
-													//buffer_info->init(tree.get());
+													buffer_info->init(tree.get());
 												});
-
-											for (auto i = 0; i < elements_count; i++)
-											{
-												auto tree = source->describe(memory.data() + i * source->get_element_size());
-												//	replace(str, "\n", "\n\r");
-												run_on_ui([this, tree]()
-													{
-														//	buffer_info->contents->remove_all();
-														buffer_info->init(tree.get());
-													});
-
-											}
-
-
 										});
 								rendered_image->visible = false;
 								buffer_info->visible = true;

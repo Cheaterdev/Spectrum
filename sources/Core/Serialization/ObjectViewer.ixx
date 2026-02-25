@@ -69,7 +69,7 @@ export
 			cereal::OutputArchive<ObjectTreeSerializer>(this)
 		{
 
-			root = std::make_shared<member_item>(convert(get_typename<T>()));
+			root = std::make_shared<member_item>(convert(get_typename(value)));
 			current = root;
 
 			(*this)(value);
@@ -85,6 +85,7 @@ export
 		}
 
 
+		
 		template<class T, std::size_t C>
 		void save(const std::array<T, C>& t)
 		{
@@ -98,11 +99,11 @@ export
 			save_array(std::span(t));
 		}
 
-		template<class T, std::size_t size>
-		void save_array(std::span<const T, size> t)
+		template<is_span T>
+		void save_array(const T &t)
 		{
 			if (!current->child_ignored)
-				current->type = convert(get_typename<std::span<const T, size>>());
+				current->type = convert(get_typename(t));
 
 			member_item::ptr prev = current;
 
@@ -112,7 +113,7 @@ export
 
 				current->add_child(member);
 
-				member->type = convert(get_typename<T>());
+				member->type = convert(get_typename<T::value_type>());
 
 				current = member;
 				if constexpr (can_save<ObjectTreeSerializer, T>)
@@ -131,11 +132,22 @@ export
 					if (!item->get_childs().empty())
 					{
 						name += L"{ ";
+
+						bool is_long = false;
 						for (auto& c : item->get_childs())
 						{
 							name += c->get_name() + L"; ";
+							if(name.size()<64)
 							self(c);
+							else
+							{	is_long = true;
+							break;
+							}
 						}
+
+						if(is_long)	  {
+							name.resize(64);
+						name+=L"...";}
 						name += L"}";
 					}
 					};
@@ -253,14 +265,14 @@ export
 		{
 			archive.save(m);
 		}
-		/*
-		 template<class T, unsigned int C>
+		
+		 template<is_span T>
 	void serialize(ObjectTreeSerializer& archive,
-		const std::array<T,C>&  m)
+		const T&  m)
 	{
-		archive.save(m);
+		archive.save_array(m);
 	}
-				*/
+				
 		void serialize(ObjectTreeSerializer& archive,
 			std::string& m)
 		{

@@ -104,7 +104,7 @@ export
 	};
 
 
-	template <typename T>
+		template <typename T>
 	std::string get_typename()
 	{
 		return  typeid(std::remove_cvref_t<T>).name();
@@ -118,7 +118,25 @@ export
 	template <is_span T>
 	std::string get_typename()
 	{
-		return   get_typename<typename std::remove_cvref_t<T>::value_type>() + "[" + std::to_string(std::remove_cvref_t<T>::extent) + "]";
+		return   get_typename<typename std::remove_cvref_t<T>::value_type>() + "[" + std::to_string(T::extent) + "]";
+	}
+
+
+	template <typename T>
+	std::string get_typename(const T&t)
+	{
+		return  typeid(std::remove_cvref_t<T>).name();
+	}
+	template <has_pretty_typename T>
+	std::string get_typename(const T&t)
+	{
+		return   std::remove_cvref_t<T>::get_typename();
+	}
+
+	template <is_span T>
+	std::string get_typename(const T &t)
+	{
+		return   get_typename<typename std::remove_cvref_t<T>::value_type>() + "[" + std::to_string(t.size()) + "]";
 	}
 
 

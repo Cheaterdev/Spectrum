@@ -429,6 +429,7 @@ namespace GUI
 
                     for (auto && c : childs)
                     {
+                        auto ch=c.get();
                         if (!c->visible.get()) continue;
                         if (c->width_sticks) continue;
                         if (c->width_size == size_type::MATCH_PARENT) continue;
@@ -471,6 +472,7 @@ namespace GUI
 
                     for (auto && c : childs)
                     {
+                           auto ch=c.get();
                         if (!c->visible.get()) continue;
                         if (c->height_sticks) continue;
                         if (c->height_size == size_type::MATCH_PARENT) continue;

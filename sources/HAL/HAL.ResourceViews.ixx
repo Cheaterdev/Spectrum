@@ -76,7 +76,7 @@ export
 			{
 			}
 
-			virtual member_item::ptr describe(void* data) {return nullptr;}
+			virtual member_item::ptr describe(void* data, uint64 size) {return nullptr;}
 			SERIALIZE()
 			{
 				ar & NVP(resource);
@@ -738,8 +738,10 @@ export
 
 
 
-				 member_item::ptr describe(void* data) override {
-				return ObjectTreeSerializer::describe(*static_cast<T*>(data));
+				 member_item::ptr describe(void* data, uint64 size) override {
+
+
+				return ObjectTreeSerializer::describe(std::span(static_cast<T*>(data), size/get_element_size()));
 			}
 
 

@@ -281,7 +281,7 @@ namespace GUI
             using Context = GUIInfo;
             using ptr = s_ptr<base>;
             using wptr = w_ptr<base>;
-            
+             bool debug=false;
         protected:
 
             using guard = std::lock_guard<std::mutex>;
@@ -293,7 +293,7 @@ namespace GUI
             virtual void think(float dt);;
             drag_n_drop_package::ptr package;
             bool need_update_layout = false;
-
+            
 
             property<rect> render_bounds;
 			rect local_bounds;

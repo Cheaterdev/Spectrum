@@ -97,21 +97,36 @@ export namespace GUI
                     label::ptr e(new label());
                     e->text = elem;
                     e->magnet_text = FW1_TEXT_FLAG::FW1_LEFT | FW1_TEXT_FLAG::FW1_VCENTER | FW1_TEXT_FLAG::FW1_NOWORDWRAP;
-                    e->docking = dock::FILL;
+                    e->docking = dock::NONE;
+                  //   e->y_type = pos_y_type::CENTER;
+                  //   e->height_size = size_type::FIXED;
+
                     typename T::ptr l_e(new T(!vertical));
                     l_e->docking = vertical ? dock::TOP : dock::LEFT;
                     l_e->text = elem;
 
+                    if(vertical)
+                    {
+                         l_e->width_size=size_type::MATCH_PARENT_CHILDREN; 
+                    }   
+                    else
+                    {
+                     l_e->width_size=size_type::MATCH_CHILDREN; 
+                    
+                    }
+
+                     l_e->height_size=size_type::MATCH_CHILDREN;
+
                     if (draw_icon)
                     {
                         l_e->padding = { 30, 3, 30, 3 };
-                        l_e->size = e->size.get() + vec2(60, 6);
+                   //     l_e->size = e->size.get() + vec2(60, 6);
                     }
 
                     else
                     {
                         l_e->padding = { 3, 3, 3, 3 };
-                        l_e->size = e->size.get() + vec2(6, 6);
+                      //  l_e->size = e->size.get() + vec2(6, 6);
                     }
 
                     l_e->add_child(e);

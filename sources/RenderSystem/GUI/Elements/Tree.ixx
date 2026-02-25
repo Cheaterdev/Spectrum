@@ -240,7 +240,7 @@ export namespace GUI
                     size = { 100, 0 };
                     x_type = pos_x_type::LEFT;
                     docking = dock::TOP;
-                    creator->init_element(this, elem);
+          
                     other.reset(new other_all());
                     other->docking = dock::TOP;
                     other->height_size = size_type::MATCH_CHILDREN;
@@ -248,9 +248,10 @@ export namespace GUI
                     other->x_type = pos_x_type::LEFT;
                     other->padding = { 0, 2, 0, 2 };
                     other->on_empty = [this]() {on_empty();};
+                  
+
+                    creator->init_element(this, elem);  
                     add_child(other);
-
-
                     elem->event_on_add_child.register_handler(this, [this](base_tree* child)
                     {
                             init(this->creator, static_cast<TreeNode*>(child));
