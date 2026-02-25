@@ -43,7 +43,7 @@ namespace PSOS
 			Format.Apply(mpso, key);
 
 			mpso.rtv_formats = { Format.get_value(mpso, key) };	
-			mpso.blend = { HAL::Blends::AlphaBlend };
+			mpso.blend = {  };
 
 			mpso.topology =HAL::PrimitiveTopologyType::POINT;
 			mpso.enable_depth =false;

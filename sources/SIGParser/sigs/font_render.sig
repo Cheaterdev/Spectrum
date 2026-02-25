@@ -48,5 +48,5 @@ GraphicsPSO FontRender
 	rtv = { Format };
 
 	enable_depth = false;
-		blend = { AlphaBlend };
+	#	blend = { AlphaBlend };
 }
