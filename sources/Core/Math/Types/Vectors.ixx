@@ -613,7 +613,10 @@ export
 				Vector<vector_data_t<T, 2>>  xy;
 				Vector<vector_data_t<T, 2>>  zw;
 			};
+
+			
 		};
+
 		vector_data_t() {}
 
 		

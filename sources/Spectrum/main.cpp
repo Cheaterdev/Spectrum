@@ -1273,7 +1273,7 @@ public:
 				graph.reset();
 			}
 
-			swap_chain->present(fence);
+			swap_chain->present();
 		}
 
 
@@ -1853,9 +1853,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	setlocale(LC_ALL, "");
 	CoInitialize(NULL);
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-			   	std::vector<int> vec ={1,2,3,4,5};
-				 int2 tt{1,3};
-				std::vector<int2> vec2 ={{1,2}, {3,4}};
+
 	FlowGraph::FlowSystem::get().register_node("file", []()-> FlowGraph::graph::ptr
 	{
 		auto f = FileSystem::get().get_file(to_path("graph.flg"));

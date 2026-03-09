@@ -51,6 +51,10 @@ export
 
 	 	std::optional<ResourceState> merge_state(const ResourceState& source, const ResourceState& need)
 		{
+
+		//	if (need.layout == TextureLayout::COMMON &&source.layout!=TextureLayout::COMMON)
+			//	return std::nullopt;
+			
 			if (source == ResourceStates::UNKNOWN) 
 				return std::nullopt;
 		
@@ -75,12 +79,15 @@ export
 		{
 			if (source == TextureLayout::NONE) return need;
 			if (source == need) return need;
+			if (source == TextureLayout::UNDEFINED) 
+				return need;
+
 
 			static const TextureLayout LAYOUT_WRITE = TextureLayout::UNORDERED_ACCESS | TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::RENDER_TARGET | TextureLayout::COPY_DEST;
 			if (check(source & LAYOUT_WRITE) || check(need & LAYOUT_WRITE))
 				return std::nullopt;
 
-			return source | need;
+				return source | need;
 		}
 
 		enum class BarrierFlags : UINT
@@ -463,7 +470,9 @@ export
 			bool is_used(Transitions* list) const;
 		
 
+#ifdef PRETRANSITIONS_FIX
 			CommandListType process_transitions(Barriers& target, Transitions* list) const;
+#endif
 
 			void transition(Transitions* list, ResourceState state, unsigned int subres) const;
 

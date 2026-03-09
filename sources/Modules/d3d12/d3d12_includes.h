@@ -12,7 +12,7 @@
 #undef OPAQUE
 
 
-#include <pix3.h>
+//#include <pix3.h>
 
 #include <dxgidebug.h>
 

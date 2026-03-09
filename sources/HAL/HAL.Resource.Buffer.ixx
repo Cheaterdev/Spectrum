@@ -62,7 +62,7 @@ export{
 
 				if constexpr (Archive::is_loading::value)
 				{
-					_init(desc, HeapType::DEFAULT, TextureLayout::COPY_QUEUE);
+					_init(desc, HeapType::DEFAULT, TextureLayout::UNDEFINED);
 					GPUBinaryData<true> binary;
 					ar& NVP(binary);
 					Resource::write(binary);

@@ -109,6 +109,7 @@ namespace HAL
 
 
 
+#ifdef PRETRANSITIONS_FIX
 	CommandListType ResourceStateManager::process_transitions(Barriers& target, Transitions* list) const
 	{
 		CommandListType cmd_type = CommandListType::COPY;
@@ -163,7 +164,7 @@ namespace HAL
 
 		return cmd_type;
 	}
-
+#endif
 
 	void ResourceStateManager::transition(Transitions* list, ResourceState state, unsigned int s) const
 	{
@@ -220,7 +221,7 @@ namespace HAL
 			{
 				auto last_state = subres_cpu.last_usage->wanted_state;
 
-				if(last_state!=state)
+			//	if(last_state!=state)
 				{
 					auto merged_state = merge_state(last_state, state);
 					if (merged_state)

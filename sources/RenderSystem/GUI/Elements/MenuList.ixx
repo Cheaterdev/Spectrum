@@ -85,9 +85,9 @@ export namespace GUI
                 filled->width_size = size_type::MATCH_PARENT_CHILDREN;
                 filled->height_size = size_type::MATCH_CHILDREN;
 
-                auto_size = true;
+             //   auto_size = true;
                 filled->clip_to_parent = ParentClip::HEIGHT;
-
+                filled->docking = dock::NONE;
                 filled->x_type = pos_x_type::LEFT;
                 if (hor) base::remove_child(hor);
         	}

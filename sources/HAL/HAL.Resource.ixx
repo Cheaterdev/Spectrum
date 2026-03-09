@@ -154,6 +154,7 @@ export{
 		public:
 			FenceWaiter load_waiter;
 			bool debug=false;
+			bool debug_transitions = false;
 			bool is_ready() const
 			{
 				return load_waiter.is_completed();
@@ -232,6 +233,8 @@ export{
 
 			SERIALIZE()
 			{
+				assert(!check(desc.Flags & ResFlags::DisableStateTracking));
+
 				assert(serialize_from_derived);
 				ar& NVP(desc);
 

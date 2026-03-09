@@ -136,10 +136,11 @@ namespace HAL
 		std::list<TransitionCommandList::ptr> transition_lists;
 			for (auto& list : lists)
 			{
-			
-				//auto transition_list = (list)->fix_pretransitions();
-			//	  assert(!transition_list);
-				/*if (transition_list)
+
+#ifdef PRETRANSITIONS_FIX
+				auto transition_list = (list)->fix_pretransitions();
+				  assert(!transition_list);
+				if (transition_list)
 				{
 					transition_lists.emplace_back(transition_list);
 					PROFILE(L"execute_transitions");
@@ -160,7 +161,8 @@ namespace HAL
 					}
 
 				}
-				else		  */
+				else		  
+#endif
 				{
 					PROFILE(L"execute_simple");
 					API::Queue::execute(&list->compiler.get_list());	 

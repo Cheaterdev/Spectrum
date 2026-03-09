@@ -28,7 +28,7 @@ export namespace HAL
 		using ptr = std::shared_ptr<SwapChain>;
 
 		SwapChain(Device& device, swap_chain_desc c_desc);
-		void present(FenceWaiter event_time);
+		void present();
 		UINT m_frameIndex;
 		FenceWaiter get_fence();
 				 

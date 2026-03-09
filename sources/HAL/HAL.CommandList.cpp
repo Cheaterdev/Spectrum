@@ -722,11 +722,7 @@ gpu_timer.start(list);
 	                                            std::function<void(std::span<std::byte>, texture_layout)> f)
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
-
-		//	if (base.type != CommandListType::COPY)
 		base.transition(resource, ResourceStates::COPY_SOURCE);
-		//else
-		//		base.transition(resource, ResourceState::COMMON);
 
 		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource);
 		auto info = base.read_data(layout.size, layout.alignment, static_cast<uint>(base.get_type()));
@@ -905,7 +901,7 @@ gpu_timer.start(list);
 						auto prev_point = prev_usage ? prev_usage->point : nullptr;
 						 if(prev_point)prev_point=prev_point->next_point;
 
-						bool can_split =true;// usage.point->cmd_list!=prev_usage->point->cmd_list;//usage.debug;
+						bool can_split =false;// usage.point->cmd_list!=prev_usage->point->cmd_list;//usage.debug;
 
 						if(!point.start /*&& !usage.debug*/) can_split = false; // can split only between work i.e. only from start
 						if(prev_point==&point)	   can_split = false; // can't split if it's needed right now
@@ -915,6 +911,10 @@ gpu_timer.start(list);
 
 					//	if(usage.next_usage&& usage.point->cmd_list==usage.next_usage->point->cmd_list)
 						 assert(!(usage.next_usage&&usage.wanted_state.operation==BarrierSync::NONE));
+
+						if (usage.resource->debug_transitions)
+							Log::get() << "TRANSITION" << prev_state << " " << usage.wanted_state << "subres: " << usage.subres << Log::endl;
+					
 
 						if (can_split)
 						{
@@ -933,8 +933,7 @@ gpu_timer.start(list);
 								sync_state,
 								usage.wanted_state,
 								usage.subres, flags);
-
-
+	
 						}
 						else
 						{
@@ -942,6 +941,7 @@ gpu_timer.start(list);
 								prev_state,
 								usage.wanted_state,
 								usage.subres, flags);
+
 						}
 
 
@@ -967,6 +967,9 @@ gpu_timer.start(list);
 
 						auto end_point = subres_cpu.last_usage->point->next_point;
 
+
+						if (resource->debug_transitions)
+							Log::get() << "TRANSITION" << subres_cpu.last_usage->wanted_state << " " << target << "subres: " << subres << Log::endl;
 
 
 						end_point->transitions.transition(resource,
@@ -1110,70 +1113,7 @@ gpu_timer.start(list);
 			}
 
 
-	//void Transitions::create_transition_point(bool end)
-	//{
-	//	auto prev_point = transition_points.empty() ? nullptr : &transition_points.back();
-	//	auto point = &transition_points.emplace_back(type);
-
-	//	if (prev_point) prev_point->next_point = point;
-	//	point->prev_point = prev_point;
-
-	//	point->start = !end;
-
-	//	if (end)
-	//	{
-	//		assert(point->prev_point->start);
-	//	}
-	//	compiler.func([point, this](API::Private::CommandListTranslator<API::Private::CommandListCompiler>& list)
-	//		{
-	//			HAL::Barriers  transitions(type);
-
-	//			for (auto uav : point->uav_transitions)
-	//			{
-	//				transitions.uav(uav);
-	//			}
-
-	//			for (auto& uav : point->aliasing)
-	//			{
-	//				transitions.alias(nullptr, uav);
-	//			}
-
-	//			for (auto& transition : point->transitions)
-	//			{
-	//				auto prev_transition = transition.prev_transition;
-
-	//				if (!prev_transition) continue;
-
-	//				if (prev_transition->wanted_state == transition.wanted_state) continue;
-
-	//				//					assert(!point->start);
-	//				transitions.transition(transition.resource,
-	//					prev_transition->wanted_state,
-	//					transition.wanted_state,
-	//					transition.subres, transition.flags);
-	//			}
-
-	//			auto& native_transitions = transitions.get_native();
-	//			if (!native_transitions.empty())
-	//			{
-
-	//				assert(false);
-	//				//list->ResourceBarrier((UINT)native_transitions.size(), native_transitions.data());
-	//			}
-
-	///*			{
-
-	//				auto& native_transitions = point->compiled_transitions.get_native();
-	//				if (!native_transitions.empty())
-	//				{
-	//					list->ResourceBarrier((UINT)native_transitions.size(), native_transitions.data());
-	//				}
-	//			}*/
-
-	//		});
-	//}
-
-
+#ifdef PRETRANSITIONS_FIX
 	std::shared_ptr<TransitionCommandList> Transitions::fix_pretransitions()
 	{
 		PROFILE(L"fix_pretransitions");
@@ -1207,30 +1147,8 @@ gpu_timer.start(list);
 		}
 		return nullptr;
 	}
+#endif
 
-	//void Transitions::merge_transition(Transitions* to, Resource* resource)
-	//{
-
-
-	//	if (resource->get_state_manager().transition(this, to))
-	//	{
-	//		track_object(*resource);
-	//		use_resource(resource);
-	//	}
-	//}
-	/*void Transitions::prepare_transitions(Transitions* to, bool all)
-	{
-		for (auto& resource : to->used_resources)
-		{																										     
-			bool is_new = !resource->get_state_manager().is_used(this);
-			if ((all && is_new) || (!all && !is_new))
-				if (resource->get_state_manager().transition(this, to))
-				{
-					track_object(*resource);
-					use_resource(resource);
-				}
-		}
-	}*/
 
 
 	void Transitions::transition(const Resource::ptr& resource, ResourceState to, UINT subres)

@@ -114,7 +114,10 @@ export{
 			void alias_begin(HAL::Resource*);
 			void alias_end(HAL::Resource*);
 
+
+#ifdef PRETRANSITIONS_FIX
 			std::shared_ptr<TransitionCommandList> fix_pretransitions();
+#endif
 
 			void transition_present(const HAL::Resource* resource_ptr);
 

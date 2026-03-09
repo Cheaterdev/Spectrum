@@ -998,7 +998,7 @@ namespace GUI
                      
 
 			auto command_list = (HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list());
-			command_list->begin();
+			command_list->begin(L"pre_draw");
             for (auto& e : pre_draw_infos)
 			{
 				e->pre_draw(command_list);

@@ -46,7 +46,7 @@ export{
 				{
 					
 					_init(desc, HeapType::DEFAULT, TextureLayout::COPY_QUEUE);
-					
+					set_name("TextureResource::deserializing ");
 
 						load_subresources.resize(desc.as_texture().Subresources());
 						for (uint i = 0; i < desc.as_texture().Subresources(); i++)
@@ -64,7 +64,6 @@ export{
 				}
 				else
 				{
-
 					
 						for (uint i = 0; i < desc.as_texture().Subresources(); i++)
 						{

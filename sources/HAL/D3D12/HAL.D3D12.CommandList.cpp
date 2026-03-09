@@ -300,12 +300,12 @@ namespace HAL
 
 		void CommandList::start_event(std::wstring_view str)
 		{
-			if constexpr (HAL::Debug::RunForPix) PIXBeginEvent(m_commandList.Get(), 0, str.data());
+			//if constexpr (HAL::Debug::RunForPix) PIXBeginEvent(m_commandList.Get(), 0, str.data());
 		}
 
 		void CommandList::end_event()
 		{
-			if constexpr (HAL::Debug::RunForPix) PIXEndEvent(m_commandList.Get());
+		//	if constexpr (HAL::Debug::RunForPix) PIXEndEvent(m_commandList.Get());
 		}
 
 		void CommandList::build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom)
@@ -488,6 +488,12 @@ namespace HAL
 									
 					
 					textures.emplace_back(barrier);
+
+					if (e.resource->debug_transitions)
+					{
+
+						Log::get() << "d3d12 trans " << barrier.SyncBefore << barrier.SyncAfter << barrier.AccessBefore << barrier.AccessAfter << barrier.LayoutBefore << barrier.LayoutAfter << Log::endl;
+					}
 				}
 
 

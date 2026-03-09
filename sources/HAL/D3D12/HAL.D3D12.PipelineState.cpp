@@ -322,6 +322,8 @@ namespace HAL
 
 		if (desc.type == StateObjectType::WorkGraph)
 		{
+			if (!desc.global_root->get_device().get_properties().work_graph) return;
+
 			// Add a workgraph subobject
 			auto graph = raytracingPipeline.CreateSubobject<CD3DX12_WORK_GRAPH_SUBOBJECT>();
 			graph->SetProgramName(workGraphName.c_str());
@@ -336,6 +338,7 @@ namespace HAL
 			// rootNodeDispatchGridSizeOverride->DispatchGrid(40,40, 1);
 		}
 
+		
 
 		TEST(desc.global_root->get_device(),
 			desc.global_root->get_device().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&

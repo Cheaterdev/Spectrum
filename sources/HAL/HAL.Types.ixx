@@ -270,6 +270,16 @@ struct ResourceState
 	//	assert(layout == state.layout);
 	//	return *this;
 	//}
+
+private:
+	SERIALIZE()
+	{
+		ar& NVP(operation);
+		ar& NVP(access);
+		ar& NVP(layout);
+	}
+
+
 };
 //ResourceState operator | (ResourceState a, ResourceState b);
 //

@@ -198,11 +198,11 @@ namespace Spectrum
 			conf.ExportAdditionalLibrariesEvenForStaticLib = false;
 
             { // PIX
-				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\PIX\Include\WinPixEventRuntime", 66);
-                conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64\WinPixEventRuntime.dll");
+			//	conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\PIX\Include\WinPixEventRuntime", 66);
+            //    conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64\WinPixEventRuntime.dll");
 			
-			    conf.LibraryFiles.Add("WinPixEventRuntime.lib");
-                conf.LibraryPaths.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64", 66);
+	//		    conf.LibraryFiles.Add("WinPixEventRuntime.lib");
+           //     conf.LibraryPaths.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64", 66);
 			}
 
 

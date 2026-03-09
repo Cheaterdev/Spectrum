@@ -161,7 +161,7 @@ namespace HAL
 			properties.full_bindless = supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6;
 			properties.mesh_shader = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER::D3D12_MESH_SHADER_TIER_1;
 			properties.direct_gpu_upload_heap = options16.GPUUploadHeapSupported;
-
+			properties.work_graph = options21.WorkGraphsTier != D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED;
 
 			if constexpr (HAL::Debug::ValidationErrors)
 			{

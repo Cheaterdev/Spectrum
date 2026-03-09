@@ -135,6 +135,9 @@ namespace FW1FontWrapper
 		HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(HAL::Format::R8_UNORM, { m_sheetWidth, m_sheetHeight }, 1, m_mipLevelCount);
 		m_pTexture.reset(new HAL::Texture(desc));
 		m_pCoordBuffer = HAL::StructuredBufferView<FW1_GLYPHCOORDS>(m_maxGlyphCount);
+
+	//	m_pTexture->resource->debug_transitions = true;
+		m_pTexture->resource->set_name("CFW1GlyphSheet::m_pTexture");
 		return S_OK;
 	}
 
