@@ -901,7 +901,7 @@ gpu_timer.start(list);
 						auto prev_point = prev_usage ? prev_usage->point : nullptr;
 						 if(prev_point)prev_point=prev_point->next_point;
 
-						bool can_split =false;// usage.point->cmd_list!=prev_usage->point->cmd_list;//usage.debug;
+						bool can_split = true;// usage.point->cmd_list!=prev_usage->point->cmd_list;//usage.debug;
 
 						if(!point.start /*&& !usage.debug*/) can_split = false; // can split only between work i.e. only from start
 						if(prev_point==&point)	   can_split = false; // can't split if it's needed right now

@@ -23,7 +23,7 @@ void FSR::generate(Graph& graph)
 
 	};
 
-	graph.pass<SkyData>(L"FSR", [this, &graph](SkyData& data, TaskBuilder& builder)
+	graph.add_pass<SkyData>(L"FSR", [this, &graph](SkyData& data, TaskBuilder& builder)
 		{
 		auto& frame = graph.get_context<ViewportInfo>();
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);

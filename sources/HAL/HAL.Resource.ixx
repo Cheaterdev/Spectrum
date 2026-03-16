@@ -233,14 +233,22 @@ export{
 
 			SERIALIZE()
 			{
-				assert(!check(desc.Flags & ResFlags::DisableStateTracking));
 
+				desc.Flags &= ~ResFlags::DisableStateTracking;
+				if (check(desc.Flags & ResFlags::DisableStateTracking))
+				{
+					assert(false);
+					Log::get() << "AlARMA!!" << Log::endl;
+				}
+	assert(!check(desc.Flags & ResFlags::DisableStateTracking));
+			
 				assert(serialize_from_derived);
 				ar& NVP(desc);
+				assert(!check(desc.Flags & ResFlags::DisableStateTracking));
 
 			}
 		};
-
+			
 
 
 

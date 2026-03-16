@@ -381,13 +381,15 @@ namespace FrameGraph
 		std::function<void(ResourceAllocInfo&, int)> process_resource;
 
 		process_resource = [&, this](ResourceAllocInfo& info, UINT pass_id) {
+
+		//	if (info.enabled) return;
 			info.enabled = true;
 
 			for (auto& s : info.states)
 			{
 				if (s.write)
 				{
-
+					
 					auto& pass = s.passes.front();
 
 					if (pass->enabled) continue;
@@ -1294,8 +1296,11 @@ namespace FrameGraph
 					{
 						PROFILE(L"placed");
 						res.resource = HAL::create_resource(info->d3ddesc, info->alloc_ptr);
-						//						 	res.resource->debug = info->name=="ResultTexture"; // TODO: move everywhere		
-//res.resource->debug_transitions = info->name=="GBuffer_Normals"; // TODO: move everywhere		
+						//						 	res.resource->debug = info->name=="ResultTexture"; // TODO: move everywhere
+
+
+	//					if (debug)
+//res.resource->debug_transitions = info->name=="PSSM_Depths"; // TODO: move everywhere		
 
 
 						res.resource->set_name(info->name);

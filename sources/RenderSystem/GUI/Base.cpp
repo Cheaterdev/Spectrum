@@ -1052,6 +1052,8 @@ L"UI RENDER_14",
             graph.add_pass<pass_data>(pass_names[t++], [this](pass_data& data, TaskBuilder& builder) {
 			builder.need(data.o_texture, ResourceFlags::RenderTarget);
             use_graph(builder);
+
+            return true;
 			 }, [this,&graph, start, end](pass_data& data, FrameContext& context) {
               
 				 auto command_list = context.get_list();

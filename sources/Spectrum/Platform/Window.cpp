@@ -91,7 +91,8 @@ void Window::on_paint()
 {
 }
 void  Window::on_resize(vec2 size)
-{}
+{
+}
 LRESULT Window::MsgProc(MSG msg)
 {
     switch (msg.message)

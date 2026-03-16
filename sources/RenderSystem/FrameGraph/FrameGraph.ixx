@@ -169,7 +169,7 @@ using namespace HAL;
 		bool is_dynamic() const { return !check(flags&ResourceFlags::Static);}
 
 
-		bool enabled = true;
+		bool enabled = false;
 
 		bool is_new = false;
 		bool resource_just_created = true;
@@ -573,7 +573,7 @@ using namespace HAL;
 
 		StaticCompiledGPUData global_frame;
 		
-
+		bool debug = false;
 		Pass* current_pass = nullptr;
 		void begin(Pass* pass);
 
@@ -712,7 +712,7 @@ using namespace HAL;
 		UINT id = 0;
 		UINT call_id;
 		int dependency_level;
-		bool enabled = true;
+		bool enabled = false;
 		bool renderable = true;
 		PassFlags flags;
 		std::wstring_view name;
@@ -869,7 +869,7 @@ using namespace HAL;
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class Pass>
-		void internal_pass(std::wstring_view name, typename Pass::setup_func_type s, typename Pass::render_func_type r, PassFlags flags = PassFlags::General)
+		void internal_pass(std::wstring_view name, auto s, auto r, PassFlags flags = PassFlags::General)
 		{
 			PROFILE(name);
 
@@ -892,12 +892,12 @@ using namespace HAL;
 
 
 		template<class T>
-		void pass(std::wstring_view name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+		void add_pass(std::wstring_view name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 		{
 			internal_pass<TypedPass<T>>(name, s, r, flags);
 		}
 
-		template<class T>
+		/*template<class T>
 		void add_pass(std::wstring_view name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 		{
 			typename TypedPass<T>::setup_func_type f = [s](auto& t, auto& b) {s(t, b); return true; };
@@ -912,7 +912,7 @@ using namespace HAL;
 			typename TypedPass<T>::setup_func_type f = [s](auto& t, auto& b) {s(t, b); return true; };
 
 			internal_pass<TypedPass<T>>(name, f, r, flags);
-		}
+		}*/
 
 
 		void add_slot_generator(std::function<void(Graph&)> f)

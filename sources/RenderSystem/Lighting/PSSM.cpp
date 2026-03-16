@@ -72,6 +72,8 @@ PSSM::PSSM()
 	graph.add_pass<PSSMDataGlobal>(L"PSSM_Global", [this, &graph](PSSMDataGlobal& data, TaskBuilder& builder) {
 		builder.create(data.global_depth, { ivec3(1024, 1024,0), HAL::Format::R32_TYPELESS, 1 ,1 }, ResourceFlags::DepthStencil);
 		builder.create(data.global_camera, { 1 }, ResourceFlags::GenCPU);
+
+		return true;
 		}, [this, &graph, cam, points_all](PSSMDataGlobal& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
@@ -193,24 +195,37 @@ void PSSM::generate(Graph& graph)
 
 		Handlers::Texture H(RTXDebug);
 	};
-
+	/*
 	graph.add_pass<PSSMData>(L"PSSM_TexGenerator", [this, &graph](PSSMData& data, TaskBuilder& builder) {
-		builder.create(data.PSSM_Depths, { ivec3(size,0), HAL::Format::R32_TYPELESS,renders_size ,1 }, ResourceFlags::DepthStencil);
-		builder.create(data.PSSM_Cameras, { renders_size }, ResourceFlags::GenCPU);
+	
+		return false;
 		}, [](PSSMData& data, FrameContext& _context) {});
 
-
+	*/
 
 	auto position = get_position();
 	for (int i = 0; i < renders_size; i++)
 	{
 		zfar = cam->z_near + (exp(float(i + 1))) * scaler;
 
+		static const wchar_t*passes[]={L"PSSM_Cascade_0",L"PSSM_Cascade_1" ,L"PSSM_Cascade_2" ,L"PSSM_Cascade_3" ,L"PSSM_Cascade_4" ,L"PSSM_Cascade_5" };
 
+		graph.add_pass<PSSMData>(passes[i], [this, &graph,i](PSSMData& data, TaskBuilder& builder) {
+			if (i == 0)
+			{
+				builder.create(data.PSSM_Depths, { ivec3(size,0), HAL::Format::R32_TYPELESS,renders_size ,1 }, ResourceFlags::DepthStencil);
+				builder.create(data.PSSM_Cameras, { renders_size }, ResourceFlags::GenCPU);
 
-		graph.add_pass<PSSMData>(L"PSSM_Cascade_" , [this, &graph](PSSMData& data, TaskBuilder& builder) {
-			builder.need(data.PSSM_Cameras, ResourceFlags::None);
-			builder.need(data.PSSM_Depths, ResourceFlags::DepthStencil);
+			}
+			else
+			{
+
+				builder.need(data.PSSM_Cameras, ResourceFlags::GenCPU);
+				builder.need(data.PSSM_Depths, ResourceFlags::DepthStencil);
+			}
+
+		
+			return true;
 			}, [this, &graph, i, znear, zfar, cam, points_all, position](PSSMData& data, FrameContext& _context) {
 
 				auto& command_list = _context.get_list();
@@ -296,7 +311,7 @@ void PSSM::generate(Graph& graph)
 		data.gbuffer.need(builder);
 		builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);
 		builder.need(data.PSSM_Cameras, ResourceFlags::None);
-
+		return true;
 		}, [this, &graph](PSSMData& data, FrameContext& _context) {
 
 			GBuffer gbuffer = data.gbuffer.actualize(_context);
@@ -377,6 +392,8 @@ void PSSM::generate(Graph& graph)
 			builder.need(data.LightMask, ResourceFlags::PixelRead);
 
 		}
+
+		return true;
 		}, [this, &graph](PSSMData& data, FrameContext& _context) {
 
 			GBuffer gbuffer = data.gbuffer.actualize(_context);

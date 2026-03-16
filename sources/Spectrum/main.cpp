@@ -397,6 +397,8 @@ public:
 		                          {
 			                          auto& frame = graph.get_context<ViewportInfo>();
 			                          builder.create(data.scene, {1}, ResourceFlags::UnorderedAccess);
+
+									  return true;
 		                          }, [this, &graph](SceneData& data, FrameContext& _context)
 		                          {
 			                          auto& command_list = _context.get_list();
@@ -496,6 +498,8 @@ public:
 				                            builder.create(data.GBuffer_SpecularPrev, {
 					                                           ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1
 				                                           }, ResourceFlags::Static);
+
+											return true;
 			                            }, [this, &graph](GBufferData& data, FrameContext& _context)
 			                            {
 				                            auto& command_list = _context.get_list();
@@ -601,6 +605,8 @@ public:
 					                                            ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 					                             builder.create(data.WorkGraphBuffer, {work_pso->buffer_size},
 					                                            ResourceFlags::UnorderedAccess);
+
+												 return true;
 				                             }, [this, &graph](RTXDebugData& data, FrameContext& context)
 				                             {
 					                             auto& compute = context.get_list()->get_compute();
@@ -707,7 +713,7 @@ public:
 		{
 			Handlers::Texture H(ResultTexture);
 		};
-		graph.pass<no>(L"no", [this, &graph](no& data, TaskBuilder& builder) -> bool
+		graph.add_pass<no>(L"no", [this, &graph](no& data, TaskBuilder& builder) -> bool
 		               {
 			               auto& frame = graph.get_context<ViewportInfo>();
 			               builder.create(data.ResultTexture,
@@ -758,6 +764,8 @@ public:
 
 				                         builder.need(data.GBuffer_DepthPrev, ResourceFlags::CopyDest);
 				                         builder.need(data.GBuffer_DepthMips, ResourceFlags::CopySource);
+
+										 return true;
 			                         }, [](CopyPrev& data, FrameContext& _context)
 			                         {
 				                         auto& copy = _context.get_list()->get_copy();
@@ -872,302 +880,8 @@ public:
 };
 namespace GUI
 {
-	  /*
-class Table:public GUI::Elements::scroll_container
-{
-		base::ptr top_row;
-		base::ptr left_column;
-		base::ptr unused;
-		base::ptr content;
-		Elements::resizer::ptr dragger;
-		class TopLeft:public GUI::base
-		{	
-			Elements::resizer::ptr dragger_right;
-			Elements::resizer::ptr dragger_bottom;
-			base* left_column;
-		public:
-			using ptr = std::shared_ptr<TopLeft>;
-			TopLeft(base* table , base* left_column)  :left_column(left_column)
-			{
-				draw_helper = true;
-				docking = dock::LEFT;
-				size = { 32, 32 };
-				minimal_size  = {32,32};
-				
-	
-				dragger_right.reset(new Elements::resizer());
-				dragger_right->docking = dock::RIGHT;
-				dragger_right->height_size = size_type::MATCH_PARENT;
-				dragger_right->dir = Elements::direction::RIGHT;
-				dragger_right->draw_helper = true;
-				dragger_right->y_type = pos_y_type::TOP;
-				dragger_right->height_sticks = table;
-				dragger_right->target = this;
-
-
-				dragger_bottom.reset(new Elements::resizer());
-				dragger_bottom->docking = dock::BOTTOM;
-				dragger_bottom->width_size = size_type::MATCH_PARENT;
-				dragger_bottom->dir = Elements::direction::BOTTOM;
-				dragger_bottom->draw_helper = true;
-				dragger_bottom->x_type = pos_x_type::LEFT;
-				dragger_bottom->width_sticks = table;
-				dragger_bottom->target = this;
-
-					table->register_listener(dragger_right.get());
-						table->register_listener(dragger_bottom.get());
-			add_child(dragger_right);
-			add_child(dragger_bottom);
-
-			clickable = false;
-			clip_child = false;
-			}
-
-			void on_bounds_changed(const rect& r) override
-			{
-				base::on_bounds_changed(r);
-				left_column->size = r.w;
-			}
-		};
-public:
-
-	class Header
-	{
-	public:
-		Elements::label::ptr header;
-		Elements::resizer::ptr dragger;
-		Header(const std::string& name, bool top, base* table)
-		{
-			header = std::make_shared<Elements::label>();
-			header->text = name;
-			if (top)
-			{
-				header->docking = dock::LEFT;
-				header->width_size = size_type::MATCH_CHILDREN;
-				header->height_size = size_type::MATCH_PARENT;
-				header->minimal_size.x = 100;
-			}
-			else
-			{
-				header->docking = dock::TOP;
-				header->height_size = size_type::MATCH_CHILDREN;
-				header->width_size = size_type::MATCH_PARENT;
-				header->minimal_size.y = 24;
-			}
-
-			header->padding = { 4,4,4,4 };
-				header->draw_helper = true;
-
-			dragger.reset(new Elements::resizer());
-			if (top)
-			{
-				dragger->docking = dock::LEFT;
-				dragger->height_size = size_type::MATCH_PARENT;
-				dragger->dir = Elements::direction::RIGHT;
-				dragger->draw_helper = true;
-				dragger->y_type = pos_y_type::TOP;
-				dragger->height_sticks = table;
-			}
-			else
-			{
-				dragger->docking = dock::TOP;
-				dragger->width_size = size_type::MATCH_PARENT;
-				dragger->dir = Elements::direction::BOTTOM;
-				dragger->draw_helper = true;
-				dragger->x_type = pos_x_type::LEFT;
-				dragger->width_sticks = table;
-				
-			}
-
-			table->register_listener(dragger.get());
-			dragger->target = header.get();
-		///	dragger->add_child(dragger);
-		}
-	};
-			  */ 
-
-
-
-class Table:public GUI::Elements::scroll_container
-{
-		base::ptr top_row;
-		base::ptr left_column;
-
-	
-		
-public:
-
-	class Header :public Elements::label
-	{
-	Table* table;
-
-	public:	  
-		using ptr = std::shared_ptr<Header>;
-	//	Elements::label::ptr header;
-		Elements::resizer::ptr dragger;
-		Header(const std::string& name, bool top, Table* table):table(table)
-		{
-
-		//	header = std::make_shared<Elements::label>();
-		text = name;
-			if (top)
-			{
-				docking = dock::LEFT;
-				width_size = size_type::FIXED;
-				height_size = size_type::FIXED;
-				minimal_size.x = 100;
-				   size={32,24};
-				   y_type = pos_y_type::TOP;
-			}
-			else
-			{
-				docking = dock::TOP;
-				height_size = size_type::FIXED;
-				width_size = size_type::FIXED;
-				minimal_size.y = 24;
-			    size={32,24};
-				x_type = pos_x_type::LEFT;
-			}
-
-			padding = { 4,4,4,4 };
-				draw_helper = true;
-
-			dragger.reset(new Elements::resizer());
-			if (top)
-			{
-				dragger->docking = dock::LEFT;
-				dragger->height_size = size_type::MATCH_PARENT;
-				dragger->dir = Elements::direction::RIGHT;
-				dragger->draw_helper = true;
-				dragger->y_type = pos_y_type::TOP;
-			//	dragger->height_sticks = table;
-			}
-			else
-			{
-				dragger->docking = dock::TOP;
-				dragger->width_size = size_type::MATCH_PARENT;
-				dragger->dir = Elements::direction::BOTTOM;
-				dragger->draw_helper = true;
-				dragger->x_type = pos_x_type::LEFT;
-				//dragger->width_sticks = table;
-				
-			}
-
-			///table->register_listener(dragger.get());
-			dragger->target = this;	 
-		///	dragger->add_child(dragger);
-		}
-
-		  virtual void on_bounds_changed(const rect& r)   override
-			{
-			
-
-			  base::on_bounds_changed(r);
-				  table->recalculate();
-			}
-	};
 	
 
-	std::list<Header::ptr> columns;
-   	std::list<Header::ptr> rows;
-
-	using ptr = std::shared_ptr<Table>;
-		  base::ptr layer2;
-		  	base::ptr layer3;
-
-
-			void recalculate()
-			{
-			
-		auto top_left = columns.front()->get_render_bounds();
-			  auto left_top = rows.front()->get_render_bounds();
-
-			 for (auto && c : rows)
-				 c->size = { top_left.w, c->size.get().y };
-
-
-			  for (auto && c : columns)
-				 c->size = {  c->size.get().x,left_top.h };
-			
-			}
-
-			
-	Table()
-	{
-		base::ptr layer1 = std::make_shared<base>();
-		layer1->docking = dock::FILL;
-				layer1->clickable = false;
-		add_child(layer1);
-				 
-
-		layer2 = std::make_shared<base>();
-		layer2->docking = dock::NONE;
-		layer2->size = { 0,0 };
-		layer2->width_size = size_type::MATCH_PARENT;
-		layer2->height_size = size_type::MATCH_CHILDREN;
-		layer2->clickable = false;
-		//layer2->draw_helper = true;
-		add_child(layer2);
-
-		layer3 = std::make_shared<base>();
-		layer3->docking = dock::NONE;
-		layer3->size = { 0,0 };
-		layer3->width_size = size_type::MATCH_CHILDREN;
-		layer3->height_size = size_type::MATCH_PARENT;
-		layer3->clickable = false;
-		layer3->draw_helper = true;
-		layer3->debug =true;
-		add_child(layer3);
-
-			  AddRow("")	;
-			  AddColumn("");
-
-		//	InitTest();
-	}
-
-	void AddColumn(const std::string& name)
-	{
-		columns.emplace_back(std::make_shared<Header>(name, true, this));
-		layer3->add_child(columns.back());
-	   layer3->add_child(columns.back()->dragger);
-
-	}
-
-	void AddRow(std::string name)
-	{
-	 
-		rows.emplace_back(std::make_shared<Header>(name, false, this));
-		layer2->add_child(rows.back());
-	   layer2->add_child(rows.back()->dragger);
-		/*base::ptr row(new base);
-		row->docking = dock::TOP;
-		content->add_child(row);
-		for (size_t i = 0; i < values.size() && i < columns.size(); i++)
-		{
-			Elements::label::ptr cell(new Elements::label);
-			cell->text = values[i];
-			cell->docking = dock::LEFT;
-			cell->width_size = size_type::MATCH_CHILDREN;
-			cell->minimal_size.x = 100;
-			row->add_child(cell);
-		}  */
-	}
-
-	void InitTest()
-	{ 
-
-		::Table::Camera cam;
-
-		AddColumn("Name");
-		AddColumn("Time");
-		AddColumn("Count");	
-
-			    for(int i=0;i<20;i++)
-		AddRow(std::to_string(i));
-	
-	}
-	
-};
 }
 
 class GraphRender : public Window, public GUI::user_interface
@@ -1183,7 +897,7 @@ class GraphRender : public Window, public GUI::user_interface
 	   	std::promise<void> promise_end;
 
 	Graph graph;
-	bool alive = true;
+	bool alive = false;
 	count_meter fps;
 
 	GUI::Elements::label::ptr label_fps;
@@ -1315,6 +1029,8 @@ public:
 			                          {
 				                          builder.need(data.swapchain,
 				                                       ResourceFlags::Required | ResourceFlags::RenderTarget);
+
+										  return false;
 			                          }, [this](pass_data& data, FrameContext& context)
 			                          {
 			                          }, PassFlags::Required);
@@ -1455,7 +1171,7 @@ public:
 
 	GraphRender()
 	{
-		task_end = promise_end.get_future();
+	
 		//scale = 1.25f;
 		Window::input_handler = this;
 		HAL::swap_chain_desc desc;
@@ -1514,7 +1230,7 @@ public:
 
 			  
 			{
-				auto table = std::make_shared<GUI::Table>();
+				auto table = std::make_shared<GUI::Elements::Table>();
 				table->InitTest();
 				//text->text = f;
 				d->get_tabs()->add_page("table", table);
@@ -1677,9 +1393,35 @@ public:
                 Events::Runner::process_tasks();
             }
 	}
+
+	void start()
+	{
+		promise_end = {};
+		task_end = promise_end.get_future();
+	alive = true;
+		//task_future = thread_pool::get().enqueue([this]()
+		//	{
+				render();
+		//	});
+	
+	}
 	void on_resize(vec2 size) override
 	{
-		new_size = vec2::max(size, vec2{64, 64});
+			new_size = vec2::max(size, vec2{ 64, 64 });
+			
+			/*bool was_alive = alive;
+		if (was_alive) stop();
+	
+		//Sleep(10);
+		if (was_alive)
+		{
+			
+			start();
+			HAL::Device::get().get_queue(CommandListType::DIRECT)->signal_and_wait();
+			HAL::Device::get().get_queue(CommandListType::COMPUTE)->signal_and_wait();
+			HAL::Device::get().get_queue(CommandListType::COPY)->signal_and_wait();
+	}*/
+
 	}
 
 
@@ -1726,15 +1468,8 @@ protected:
 
 		//	main_window = std::make_shared<WindowRender>();
 		main_window = std::make_shared<GraphRender>();
+		main_window->start();
 
-		concurrency::create_task([this]()
-		{
-			if (main_window)main_window->render();
-
-#ifdef OCULUS_SUPPORT
-			if (ovr)ovr->render();
-#endif
-		});
 		EVENT("good");
 	}
 

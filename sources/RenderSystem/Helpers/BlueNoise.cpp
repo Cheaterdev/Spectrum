@@ -86,6 +86,7 @@ void BlueNoise::generate(FrameGraph::Graph& graph)
 
 	graph.add_pass<BlueNoiseData>(L"BlueNoise", [this, &graph](auto& data, auto& builder) {
 		builder.create(data.BlueNoise, { ivec3(128, 128, 0),  HAL::Format::R8G8_UNORM, 1 ,1 }, ResourceFlags::UnorderedAccess|ResourceFlags::Static);
+		return true;
 		}, [this, &graph](auto& data, auto& _context) {
 			auto& list = *_context.get_list();
 			auto& compute = list.get_compute();

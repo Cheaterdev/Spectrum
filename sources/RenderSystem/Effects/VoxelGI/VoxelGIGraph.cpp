@@ -33,7 +33,7 @@ public:
 			data.gbuffer.need(builder, true, true);
 			data.gbuffer.create_temp_color(size, builder);
 
-
+			return true;
 			}, [this, &graph](DownsampleData& data, FrameContext& _context) {
 
 				auto& command_list = _context.get_list();
@@ -386,7 +386,7 @@ void VoxelGI::debug(Graph& graph)
 		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
 
 		data.gbuffer.need(builder);
-
+		return true;
 		}, [this, &graph](VoxelDebugData& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
@@ -497,7 +497,7 @@ void VoxelGI::screen(Graph& graph)
 		builder.create(data.VoxelScreen_low_data, { count, true }, ResourceFlags::UnorderedAccess);
 		builder.create(data.VoxelScreen_hi_data, { count, true }, ResourceFlags::UnorderedAccess);
 
-
+		return true;
 		}, [this, &graph](Screen& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
@@ -681,7 +681,7 @@ void VoxelGI::screen(Graph& graph)
 
 		builder.need(data.VoxelScreen_low_data);
 		builder.need(data.VoxelScreen_hi_data);
-
+		return true;
 		}, [this, &graph](Screen& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
@@ -825,7 +825,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 
 					builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
-
+					return true;
 
 		}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
 
@@ -940,7 +940,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 		data.gbuffer.need(builder, false);
 		builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
-
+		return true;
 			}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
 
 				auto& command_list = _context.get_list();
@@ -1126,7 +1126,7 @@ void VoxelGI::voxelize(Graph& graph)
 
 		builder.need(data.VoxelAlbedoDynamic, ResourceFlags::UnorderedAccess);
 		builder.need(data.VoxelNormalDynamic, ResourceFlags::UnorderedAccess);
-
+		return true;
 		}, [this, &graph](Voxelize& data, FrameContext& _context) {
 			auto& command_list = _context.get_list();
 			auto& cam = graph.get_context<CameraInfo>();
@@ -1192,7 +1192,7 @@ void VoxelGI::lighting(Graph& graph)
 		builder.need(data.VoxelAlbedoDynamic, ResourceFlags::ComputeRead);
 		builder.need(data.VoxelNormalDynamic, ResourceFlags::ComputeRead);
 
-
+		return true;
 		}, [this, &graph](auto& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
@@ -1266,7 +1266,7 @@ void VoxelGI::mipmapping(Graph& graph)
 	graph.add_pass<Mipmapping>(L"Mipmapping", [this](Mipmapping& data, TaskBuilder& builder) {
 
 		builder.need(data.VoxelLighted, ResourceFlags::UnorderedAccess);
-
+		return true;
 		}, [this, &graph](Mipmapping& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();

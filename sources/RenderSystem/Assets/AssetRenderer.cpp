@@ -61,7 +61,7 @@ public:
 				Handlers::Texture H(GBuffer_HiZ_UAV);
 			};
 
-			graph.add_pass<GBufferData>(L"GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) {
+			graph.add_pass<GBufferData>(L"GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) ->bool{
 				data.gbuffer.create(size, builder);
 				//	data.gbuffer.create_mips(size, builder);
 				//	data.gbuffer.create_quality(size, builder);
@@ -69,7 +69,7 @@ public:
 
 				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 0), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
 				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 0), HAL::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
-
+				return true;
 				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
@@ -144,8 +144,10 @@ public:
 		{
 			Handlers::Texture H(ResultTexture);
 		};
-		graph.add_pass<no>(L"mip", [this, &graph](no& data, TaskBuilder& builder) {
+		graph.add_pass<no>(L"mip", [this, &graph](no& data, TaskBuilder& builder) ->bool {
 			builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
+
+			return true;
 			}, [](no& data, FrameContext& _context) {
 
 
@@ -230,6 +232,7 @@ void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
 	skyinfo.sunDir = float3(1, 1, 1).normalize();
 
 	graph.builder.pass_texture("ResultTexture", result, {}, ResourceFlags::Required);
+	graph.builder.debug = true;
 	vp.frame_size = result->get_size().xy;
 	sceneinfo.scene = scene.get();
 	sceneinfo.renderer = scene_renderer.get();

@@ -369,6 +369,8 @@ void stencil_renderer::generate(Graph& graph)
 			builder.create(data.depth_tex, { { 1,1,0 }, HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
 			builder.create(data.id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
 			builder.create(data.axis_id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
+
+			return true;
 			}, [this, &graph](Data& data, FrameContext& _context) {
 
 				auto& list = *_context.get_list();
@@ -564,7 +566,7 @@ void stencil_renderer::generate_after(Graph& graph)
 
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 			builder.create(data.Stencil_color_tex, { ivec3(frame.frame_size,0), HAL::Format::R8_SNORM,1 ,1 }, ResourceFlags::RenderTarget);
-
+			return true;
 			}, [this, &graph](Data& data, FrameContext& _context) {
 
 

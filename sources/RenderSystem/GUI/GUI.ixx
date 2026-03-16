@@ -27,6 +27,7 @@ export import :ScrollContainer;
 export import :StatusBar;
 export import :TabControl;
 export import :Tree;
+export import :Table;
 export import :ValueBox;
 export import :Window;
 
