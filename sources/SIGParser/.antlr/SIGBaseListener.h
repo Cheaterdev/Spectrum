@@ -202,6 +202,21 @@ public:
   virtual void enterRtx_raygen_definition(SIGParser::Rtx_raygen_definitionContext * /*ctx*/) override { }
   virtual void exitRtx_raygen_definition(SIGParser::Rtx_raygen_definitionContext * /*ctx*/) override { }
 
+  virtual void enterView_declaration(SIGParser::View_declarationContext * /*ctx*/) override { }
+  virtual void exitView_declaration(SIGParser::View_declarationContext * /*ctx*/) override { }
+
+  virtual void enterView_stat(SIGParser::View_statContext * /*ctx*/) override { }
+  virtual void exitView_stat(SIGParser::View_statContext * /*ctx*/) override { }
+
+  virtual void enterView_block(SIGParser::View_blockContext * /*ctx*/) override { }
+  virtual void exitView_block(SIGParser::View_blockContext * /*ctx*/) override { }
+
+  virtual void enterView_definition(SIGParser::View_definitionContext * /*ctx*/) override { }
+  virtual void exitView_definition(SIGParser::View_definitionContext * /*ctx*/) override { }
+
+  virtual void enterPass_definition(SIGParser::Pass_definitionContext * /*ctx*/) override { }
+  virtual void exitPass_definition(SIGParser::Pass_definitionContext * /*ctx*/) override { }
+
   virtual void enterShader_type(SIGParser::Shader_typeContext * /*ctx*/) override { }
   virtual void exitShader_type(SIGParser::Shader_typeContext * /*ctx*/) override { }
 

@@ -12,6 +12,9 @@ using namespace FrameGraph;
 
 import Graphics;
 
+			
+#include <FrameGraph/autogen/pass/stencil_renderer_before.h>
+		#include <FrameGraph/autogen/pass/stencil_renderer_after.h>
 
 using namespace HAL;
 void stencil_renderer::select_current()
@@ -355,23 +358,14 @@ void stencil_renderer::generate(Graph& graph)
 
 
 	{
-		struct Data
-		{
-			Handlers::Texture depth_tex = "Stencil::depth_tex";
-
-			Handlers::StructuredBuffer<UINT> H(id_buffer);
-			Handlers::StructuredBuffer<UINT> H(axis_id_buffer);
-
-		};
-
-		graph.add_pass<Data>(L"stencil_renderer::before", [this, &graph](Data& data, TaskBuilder& builder) {
+		graph.add_library_pass<Passes::stencil_renderer_before>( [this, &graph](auto& data, TaskBuilder& builder) {
 
 			builder.create(data.depth_tex, { { 1,1,0 }, HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
 			builder.create(data.id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
 			builder.create(data.axis_id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
 
 			return true;
-			}, [this, &graph](Data& data, FrameContext& _context) {
+			}, [this, &graph](auto& data, FrameContext& _context) {
 
 				auto& list = *_context.get_list();
 
@@ -554,20 +548,14 @@ void stencil_renderer::generate_after(Graph& graph)
 
 
 	{
-		struct Data
-		{
-			Handlers::Texture H(ResultTexture);
-			Handlers::Texture H(Stencil_color_tex);
-		};
-
-		graph.add_pass<Data>(L"stencil_renderer::after", [this, &graph](Data& data, TaskBuilder& builder) {
+		graph.add_library_pass<Passes::stencil_renderer_after>([this, &graph](auto& data, TaskBuilder& builder) {
 
 			auto& frame = graph.get_context<ViewportInfo>();
 
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 			builder.create(data.Stencil_color_tex, { ivec3(frame.frame_size,0), HAL::Format::R8_SNORM,1 ,1 }, ResourceFlags::RenderTarget);
 			return true;
-			}, [this, &graph](Data& data, FrameContext& _context) {
+			}, [this, &graph](auto& data, FrameContext& _context) {
 
 
 				auto& list = *_context.get_list();

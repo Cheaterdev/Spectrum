@@ -118,7 +118,6 @@ struct have_type	: public virtual parsed_type
 		ar& NVP(value_type);
 		ar& NVP(pointer);
 		ar& NVP(bindless);
-		ar& NVP(value_type);
 		ar& NVP(type);
 
 		/// todo
@@ -578,6 +577,43 @@ struct param_holder
 	}
 };
 
+
+struct View_Param : public have_options, public have_type, public virtual parsed_type, public have_name
+{
+
+
+	SERIALIZE()
+	{
+		SAVE_PARENT_MERGED(have_options);
+		SAVE_PARENT_MERGED(have_type);
+		SAVE_PARENT_MERGED(have_name);
+	}
+};
+
+struct View:public inherited, public have_options, public have_name
+{
+	std::list<View_Param> params;
+	SERIALIZE()
+	{
+
+		SAVE_PARENT_MERGED(inherited);
+		SAVE_PARENT_MERGED(have_name);
+		SAVE_PARENT_MERGED(have_options);
+
+
+		ar& NVP(params);
+	}
+};
+
+struct Pass:public View
+{
+
+	SERIALIZE()
+	{
+		SAVE_PARENT_MERGED(View);
+	}
+};
+
 struct PSO : public inherited, public have_options, public have_name, public shader_holder, public root_holder
 {
 	my_container<Define> defines;
@@ -769,6 +805,10 @@ struct Parsed : public parsed_type
 	my_container<RaytracePass> raytrace_pass;
 	my_container<RaytraceGen> raytrace_gen;
 
+
+	my_container<View> views;
+	my_container<Pass> passes;
+
 	Layout* find_layout(std::string name);
 	Table* find_table(std::string name);
 	RaytracePSO* find_rtx(std::string name);
@@ -786,6 +826,8 @@ struct Parsed : public parsed_type
 		raytrace_pso.merge(r.raytrace_pso);
 		raytrace_pass.merge(r.raytrace_pass);
 		raytrace_gen.merge(r.raytrace_gen);
+		views.merge(r.views);
+		passes.merge(r.passes);
 	}
 
 
@@ -800,5 +842,8 @@ struct Parsed : public parsed_type
 		ar& NVP(raytrace_pass);
 		ar& NVP(raytrace_pso);
 		ar& NVP(raytrace_gen);
+
+		ar& NVP(views);
+		ar& NVP(passes);
 	}
 };

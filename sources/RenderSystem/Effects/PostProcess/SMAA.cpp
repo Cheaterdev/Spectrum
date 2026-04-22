@@ -4,7 +4,8 @@ import <RenderSystem.h>;
 import :FrameGraphContext;
 
 import HAL;
-
+			
+#include <FrameGraph/autogen/pass/SMAA.h>
 using namespace FrameGraph;
 
 
@@ -42,7 +43,7 @@ void SMAA::generate(Graph& graph)
 		Handlers::Texture ResultTextureNew = ResultTexture;
 	};
 
-	graph.add_pass<SMAAData>(L"SMAA", [this, &graph](SMAAData& data, TaskBuilder& builder)->bool {
+	graph.add_library_pass<Passes::SMAA>( [this, &graph](Passes::SMAA::Context& data, TaskBuilder& builder)->bool {
 		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 
 		auto& frame = graph.get_context<ViewportInfo>();
@@ -52,7 +53,7 @@ void SMAA::generate(Graph& graph)
 		builder.recreate(data.ResultTextureNew, ResourceFlags::RenderTarget);
 
 		return true;
-		}, [this, &graph](SMAAData& data, FrameContext& _context) {
+		}, [this, &graph](Passes::SMAA::Context& data, FrameContext& _context) {
 			auto& list = *_context.get_list();
 
 			auto& graphics = list.get_graphics();

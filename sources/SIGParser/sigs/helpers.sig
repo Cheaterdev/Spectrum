@@ -23,3 +23,9 @@ struct SingleColorDepth
 	RenderTarget<float4> color;
 	DepthStencil<float> depth;
 }
+
+
+PassNode ResultCreation
+{
+	Texture ResultTexture;
+}

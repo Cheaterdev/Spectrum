@@ -30,7 +30,7 @@ public:
 
 		graph.add_pass<DownsampleData>(L"GBufferDownsampler", [this, size](DownsampleData& data, TaskBuilder& builder) {
 
-			data.gbuffer.need(builder, true, true);
+			data.gbuffer.need(builder, data.gbuffer, true, true);
 			data.gbuffer.create_temp_color(size, builder);
 
 			return true;
@@ -38,7 +38,7 @@ public:
 
 				auto& command_list = _context.get_list();
 				auto tempColor = *data.gbuffer.GBuffer_TempColor;
-				auto gbuffer = data.gbuffer.actualize(_context);
+				auto gbuffer = data.gbuffer.actualize(data.gbuffer);
 				auto& graphics = command_list->get_graphics();
 
 				graphics.set_signature(Layouts::DefaultLayout);
@@ -385,7 +385,7 @@ void VoxelGI::debug(Graph& graph)
 		builder.create(data.VoxelDebug, { ivec3(size,0),  HAL::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::RenderTarget);
 		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
 
-		data.gbuffer.need(builder);
+		data.gbuffer.need(builder, data.gbuffer);
 		return true;
 		}, [this, &graph](VoxelDebugData& data, FrameContext& _context) {
 
@@ -397,7 +397,7 @@ void VoxelGI::debug(Graph& graph)
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
 			auto target_tex = *data.VoxelDebug;
-			auto gbuffer = data.gbuffer.actualize(_context);
+			auto gbuffer = data.gbuffer.actualize(data.gbuffer);
 
 			context->current_time = 0;
 			//		context->sky_dir = lighting->tex_lighting.pssm.get_position();
@@ -479,7 +479,7 @@ void VoxelGI::screen(Graph& graph)
 	graph.add_pass<Screen>(L"VoxelScreen", [this, size](Screen& data, TaskBuilder& builder) {
 
 
-		data.gbuffer.need(builder, false);
+		data.gbuffer.need(builder, data.gbuffer, false);
 		builder.create(data.VoxelFramesCount, { ivec3(size.x, size.y,0),  HAL::Format::R16_FLOAT, 1 ,1 }, ResourceFlags::UnorderedAccess);
 		builder.create(data.VoxelIndirectNoise, { ivec3(size.x, size.y,0), HAL::Format::R16G16B16A16_FLOAT,1 ,0 }, ResourceFlags::UnorderedAccess);
 		builder.create(data.VoxelIndirectFiltered, { ivec3(size.x, size.y,0), HAL::Format::R16G16B16A16_FLOAT , 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
@@ -503,7 +503,7 @@ void VoxelGI::screen(Graph& graph)
 			auto& command_list = _context.get_list();
 
 			bool use_rtx = HAL::Device::get().is_rtx_supported() && this->use_rtx;
-			auto gbuffer = data.gbuffer.actualize(_context);
+			auto gbuffer = data.gbuffer.actualize(data.gbuffer);
 			auto sky_cubemap_filtered = *data.sky_cubemap_filtered;
 			auto noisy_output = *data.VoxelIndirectNoise;
 			auto gi_filtered = *data.VoxelIndirectFiltered;
@@ -669,7 +669,7 @@ void VoxelGI::screen(Graph& graph)
 
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 
-		data.gbuffer.need(builder, false);
+		data.gbuffer.need(builder, data.gbuffer, false);
 		builder.need(data.VoxelIndirectFiltered, ResourceFlags::UnorderedAccess);
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 		builder.need(data.VoxelFramesCount, ResourceFlags::UnorderedAccess);
@@ -688,7 +688,7 @@ void VoxelGI::screen(Graph& graph)
 
 
 			auto target_tex = *(data.ResultTexture);
-			auto gbuffer = data.gbuffer.actualize(_context);
+			auto gbuffer = data.gbuffer.actualize(data.gbuffer);
 			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
 			auto noisy_output = *(data.VoxelIndirectNoise);
 			auto frames_count = *(data.VoxelFramesCount);
@@ -820,7 +820,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 		builder.create(data.noise_dir_pdf, { ivec3(size.x, size.y,0),  HAL::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess);
 			builder.need(data.BlueNoise, ResourceFlags::ComputeRead);
 
-		data.gbuffer.need(builder, false);
+		data.gbuffer.need(builder, data.gbuffer);
 		//	data.downsampled_reflection = builder.create("downsampled_reflection", ivec2(size.x / 2, size.y / 2), 1, HAL::Format::R11G11B10_FLOAT, ResourceFlags::RenderTarget);
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 
@@ -834,7 +834,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
 			//auto target_tex = *(data.ResultTexture);
-			auto gbuffer = data.gbuffer.actualize(_context);
+			auto gbuffer = data.gbuffer.actualize(data.gbuffer);
 			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
 			auto noisy_output = *(data.VoxelReflectionNoise);
 			auto dir_and_pdf = *(data.noise_dir_pdf);
@@ -938,7 +938,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 
-		data.gbuffer.need(builder, false);
+		data.gbuffer.need(builder, data.gbuffer, false);
 		builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
 		return true;
 			}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
@@ -948,7 +948,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 				auto& sceneinfo = graph.get_context<SceneInfo>();
 
 				auto target_tex = *(data.ResultTexture);
-				auto gbuffer = data.gbuffer.actualize(_context);
+				auto gbuffer = data.gbuffer.actualize(data.gbuffer);
 		
 				auto size = target_tex.get_size();
 

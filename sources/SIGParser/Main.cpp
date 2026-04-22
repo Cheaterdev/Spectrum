@@ -10,6 +10,10 @@ import cereal.json;
 static const std::string cpp_path = "../../sources/HAL/autogen";
 static const std::string hlsl_path = "../../workdir/shaders/autogen";
 
+
+static const std::string cpp_path_render = "../../sources/RenderSystem/FrameGraph/autogen";
+
+
 using namespace jinja2;
 
 void iterate_files(std::filesystem::path path, std::function<void(std::filesystem::path)> f)
@@ -364,10 +368,23 @@ int main()
 			my_stream(cpp_path + "/rtx", pso.name + ".h") << cpp_templates.generate2(L"rtx_pso", "pso", pso);
 		}
 
+
+		for (auto& pass : parsed.passes)
+		{
+			my_stream(cpp_path_render + "/pass", pass.name + ".h") << cpp_templates.generate2(L"pass", "pass", pass);
+		}
+	for (auto& view : parsed.views)
+		{
+			my_stream(cpp_path_render + "/pass", view.name + ".h") << cpp_templates.generate2(L"pass_view", "view", view);
+		}
+
+
 		// includes
 		my_stream(cpp_path, "autogen.ixx") << cpp_templates.generate(L"autogen");
 		my_stream(cpp_path, "enums.ixx") << cpp_templates.generate(L"enums");
 		my_stream(cpp_path, "pso.cpp") << cpp_templates.generate(L"psos");
+
+		my_stream(cpp_path_render, "enums.h") << cpp_templates.generate(L"pass_enums");
 	}
 	catch (std::exception& e)
 	{

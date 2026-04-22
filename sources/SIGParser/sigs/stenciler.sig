@@ -136,3 +136,16 @@ GraphicsPSO StencilerLast
 	blend = { Additive };
 }
 
+PassNode stencil_renderer_before
+{
+	Texture depth_tex;
+
+	StructuredBuffer<UINT> id_buffer;
+	StructuredBuffer<UINT> axis_id_buffer;
+}
+
+PassNode stencil_renderer_after
+{
+	Texture ResultTexture;
+	Texture Stencil_color_tex;
+}

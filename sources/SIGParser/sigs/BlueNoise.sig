@@ -18,3 +18,8 @@ ComputePSO BlueNoise
 	[Enable16bits]
 	compute = blue_noise;
 }
+
+PassNode BlueNoise
+{
+	Texture BlueNoise;
+}

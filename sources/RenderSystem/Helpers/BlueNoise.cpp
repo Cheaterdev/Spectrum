@@ -9,7 +9,8 @@ namespace _1spp
 {
 #include "samplerCPP/samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.h"
 }
-
+						 
+#include <FrameGraph/autogen/pass/BlueNoise.h>
 struct
 {
 	std::span<std::int32_t> sobolBuffer;
@@ -79,12 +80,9 @@ BlueNoise::BlueNoise()
 
 void BlueNoise::generate(FrameGraph::Graph& graph)
 {
-	struct BlueNoiseData
-	{
-		Handlers::Texture H(BlueNoise);
-	};
 
-	graph.add_pass<BlueNoiseData>(L"BlueNoise", [this, &graph](auto& data, auto& builder) {
+
+	graph.add_library_pass<Passes::BlueNoise>([this, &graph](auto& data, auto& builder) {
 		builder.create(data.BlueNoise, { ivec3(128, 128, 0),  HAL::Format::R8G8_UNORM, 1 ,1 }, ResourceFlags::UnorderedAccess|ResourceFlags::Static);
 		return true;
 		}, [this, &graph](auto& data, auto& _context) {

@@ -3,7 +3,10 @@ import <RenderSystem.h>;
 import :FrameGraphContext;
 import :MipMapGenerator;
 import HAL;
-
+#include <FrameGraph/autogen/pass/Sky.h>
+#include <FrameGraph/autogen/pass/CubeSky.h>
+#include <FrameGraph/autogen/pass/CubeMapDownsample.h>
+#include <FrameGraph/autogen/pass/CubeMapEnviromentProcessor.h>
 
 using namespace FrameGraph;
 
@@ -37,20 +40,12 @@ SkyRender::SkyRender()
 
 void SkyRender::generate_sky(Graph& graph)
 {
-
-	struct SkyData
-	{
-		Handlers::Texture H(GBuffer_Depth);
-		Handlers::Texture H(ResultTexture);
-
-	};
-
-	graph.add_pass<SkyData>(L"Sky", [this, &graph](SkyData& data, TaskBuilder& builder) ->bool{
+	graph.add_library_pass<Passes::Sky>([this, &graph](auto& data, TaskBuilder& builder) ->bool {
 		builder.need(data.GBuffer_Depth, ResourceFlags::PixelRead);
 		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 
 		return true;
-		}, [this, &graph](SkyData& data, FrameContext& _context) {
+		}, [this, &graph](auto& data, FrameContext& _context) {
 			auto& list = *_context.get_list();
 
 			auto& graphics = list.get_graphics();
@@ -59,11 +54,11 @@ void SkyRender::generate_sky(Graph& graph)
 			graphics.set_pipeline<PSOS::Sky>();
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
-				{
+			{
 				RT::SingleColor rt;
-				rt.GetColor() =data.ResultTexture->renderTarget;
+				rt.GetColor() = data.ResultTexture->renderTarget;
 				graphics.set_rtv(rt);
-				}
+			}
 
 			{
 				Slots::SkyData skydata;
@@ -85,7 +80,7 @@ void SkyRender::generate_sky(Graph& graph)
 			graphics.draw(4);
 
 
-		});
+			});
 }
 
 void SkyRender::generate(Graph& graph)
@@ -96,10 +91,10 @@ void SkyRender::generate(Graph& graph)
 		Handlers::Cube H(sky_cubemap);
 	};
 
-	graph.add_pass<SkyData>(L"CubeSky", [this, &graph](SkyData& data, TaskBuilder& builder) {
+	graph.add_library_pass<Passes::CubeSky>([this, &graph](auto& data, TaskBuilder& builder) {
 		auto& sky = graph.get_context<SkyInfo>();
 
-		builder.create(data.sky_cubemap, { ivec3(256, 256, 0), HAL::Format::R11G11B10_FLOAT, 1 , 0}, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Static);
+		builder.create(data.sky_cubemap, { ivec3(256, 256, 0), HAL::Format::R11G11B10_FLOAT, 1 , 0 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Static);
 		bool changed = ((sky.sunDir - dir).length() > 0.001);
 
 		if (changed)
@@ -110,7 +105,7 @@ void SkyRender::generate(Graph& graph)
 		}
 
 		return changed;
-		}, [this, &graph](SkyData& data, FrameContext& _context) {
+		}, [this, &graph](auto& data, FrameContext& _context) {
 
 
 
@@ -161,22 +156,22 @@ void SkyRender::generate(Graph& graph)
 
 					graphics.set(skyFace);
 
-						{
-				RT::SingleColor rt;
-				rt.GetColor() =face.renderTarget;
-				graphics.set_rtv(rt);
-				}
+					{
+						RT::SingleColor rt;
+						rt.GetColor() = face.renderTarget;
+						graphics.set_rtv(rt);
+					}
 
 					graphics.draw(4);
 				}
 			}
 
 
-		});
+			});
 
 
 
-	CubeMapEnviromentProcessor::get().generate(graph);
+		CubeMapEnviromentProcessor::get().generate(graph);
 
 }
 
@@ -189,41 +184,25 @@ CubeMapEnviromentProcessor::CubeMapEnviromentProcessor()
 void CubeMapEnviromentProcessor::generate(Graph& graph)
 {
 
-	struct EnvData
-	{
-		Handlers::Cube H(sky_cubemap);
-		Handlers::Cube H(sky_cubemap_filtered);
-		Handlers::Cube H(sky_cubemap_filtered_diffuse);
-	};
 
-	graph.add_pass<EnvData>(L"CubeMapDownsample", [this, &graph](EnvData& data, TaskBuilder& builder) {
+	graph.add_library_pass<Passes::CubeMapDownsample>([this, &graph](auto& data, TaskBuilder& builder) {
 		builder.need(data.sky_cubemap, ResourceFlags::UnorderedAccess);
-		if (data.sky_cubemap.is_changed())
-		{
-			return true;
-		}
-		return false;
-		}, [this, &graph](EnvData& data, FrameContext& _context) {
+		return data.sky_cubemap.is_changed();
+		}, [this, &graph](auto& data, FrameContext& _context) {
 			auto& list = *_context.get_list();
 			MipMapGenerator::get().generate_cube(list.get_compute(), *data.sky_cubemap);
-		}, PassFlags::Compute
+			}, PassFlags::Compute
 			);
 
 
-	graph.add_pass<EnvData>(L"CubeMapEnviromentProcessor", [this, &graph](EnvData& data, TaskBuilder& builder) {
+	graph.add_library_pass<Passes::CubeMapEnviromentProcessor>([this, &graph](auto& data, TaskBuilder& builder) {
 		builder.need(data.sky_cubemap, ResourceFlags::PixelRead);
 
 		builder.create(data.sky_cubemap_filtered, { ivec3(64, 64,0),  HAL::Format::R11G11B10_FLOAT,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
 		builder.create(data.sky_cubemap_filtered_diffuse, { ivec3(64, 64,0),  HAL::Format::R11G11B10_FLOAT,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
 
-		if (data.sky_cubemap.is_changed())
-		{
-
-			return true;
-		}
-
-		return false;
-		}, [this, &graph](EnvData& data, FrameContext& _context) {
+		return data.sky_cubemap.is_changed();
+		}, [this, &graph](auto& data, FrameContext& _context) {
 
 
 			auto& list = *_context.get_list();
@@ -292,10 +271,10 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 					graphics.set_viewport(face.get_viewport());
 					graphics.set_scissor(face.get_scissor());
 				}
-						{
-				RT::SingleColor rt;
-				rt.GetColor() =face.renderTarget;
-				graphics.set_rtv(rt);
+				{
+					RT::SingleColor rt;
+					rt.GetColor() = face.renderTarget;
+					graphics.set_rtv(rt);
 				}
 
 				Slots::EnvFilter filter;
@@ -308,7 +287,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 				graphics.draw(4);
 
 			}
-		});
+			});
 
 
 

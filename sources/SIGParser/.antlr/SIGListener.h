@@ -200,6 +200,21 @@ public:
   virtual void enterRtx_raygen_definition(SIGParser::Rtx_raygen_definitionContext *ctx) = 0;
   virtual void exitRtx_raygen_definition(SIGParser::Rtx_raygen_definitionContext *ctx) = 0;
 
+  virtual void enterView_declaration(SIGParser::View_declarationContext *ctx) = 0;
+  virtual void exitView_declaration(SIGParser::View_declarationContext *ctx) = 0;
+
+  virtual void enterView_stat(SIGParser::View_statContext *ctx) = 0;
+  virtual void exitView_stat(SIGParser::View_statContext *ctx) = 0;
+
+  virtual void enterView_block(SIGParser::View_blockContext *ctx) = 0;
+  virtual void exitView_block(SIGParser::View_blockContext *ctx) = 0;
+
+  virtual void enterView_definition(SIGParser::View_definitionContext *ctx) = 0;
+  virtual void exitView_definition(SIGParser::View_definitionContext *ctx) = 0;
+
+  virtual void enterPass_definition(SIGParser::Pass_definitionContext *ctx) = 0;
+  virtual void exitPass_definition(SIGParser::Pass_definitionContext *ctx) = 0;
+
   virtual void enterShader_type(SIGParser::Shader_typeContext *ctx) = 0;
   virtual void exitShader_type(SIGParser::Shader_typeContext *ctx) = 0;
 

@@ -309,6 +309,31 @@ using namespace HAL;
 			}
 		};
 
+		struct ByteBufferDesc
+		{
+
+			using View = HAL::ByteBufferView;
+			uint64 count;
+
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
+			{
+				HAL::ResFlags flags = HAL::ResFlags::ShaderResource;
+
+				if (check(resflags & ResourceFlags::UnorderedAccess))
+				{
+					flags |= HAL::ResFlags::UnorderedAccess;
+				}
+				return HAL::ResourceDesc::Buffer(count, flags);
+			}
+
+
+			ByteBufferViewDesc as_view(ResourceFlags resflags)
+			{
+				return {0,count};
+			}
+		};
+
+
 		template<class T, HAL::Format::Formats format>
 		struct FormattedDesc
 		{
@@ -535,6 +560,7 @@ using namespace HAL;
 		template<class T, HAL::Format::Formats format>
 		using FormattedBuffer = UniversalHandler<FormattedDesc<T, format>>;
 
+		using ByteAdressBuffer = UniversalHandler<ByteBufferDesc>;
 
 		template<class T>
 		using StructuredBuffer = UniversalHandler<StructuredDesc<T>>;
@@ -565,11 +591,14 @@ using namespace HAL;
 		std::map<std::string, ResourceAllocInfo> alloc_resources;
 
 		std::set<ResourceAllocInfo*> passed_resources;
-			std::list<std::shared_ptr<Pass>> required_passes;
+		std::list<std::shared_ptr<Pass>> passes;
+		std::list<std::shared_ptr<Pass>> required_passes;
 		std::list<Pass*> enabled_passes;
 		MemoryAllocatorType allocator;
 		HAL::FrameResourceManager frames;
 		HAL::FrameResources::ptr current_frame;
+
+		std::map<uint, Pass*> id_to_pass;
 
 		StaticCompiledGPUData global_frame;
 		
@@ -862,8 +891,7 @@ using namespace HAL;
 	{	
 	public:
 
-		std::list<std::shared_ptr<Pass>> passes;
-
+	
 	
 		Variable<bool> optimize = { true, "optimize", this };
 
@@ -873,12 +901,12 @@ using namespace HAL;
 		{
 			PROFILE(name);
 
-			passes.push_back(std::make_shared<Pass>((UINT)passes.size(), name, s, r));
-			passes.back()->flags = flags;
+			builder.passes.push_back(std::make_shared<Pass>((UINT)builder.passes.size(), name, s, r));
+			builder.passes.back()->flags = flags;
 
 			if (check(flags & PassFlags::Required))
 			{
-				builder.required_passes.push_back(passes.back());
+				builder.required_passes.push_back(builder.passes.back());
 			}
 		}
 
@@ -896,6 +924,15 @@ using namespace HAL;
 		{
 			internal_pass<TypedPass<T>>(name, s, r, flags);
 		}
+
+
+		template<class T>
+		void add_library_pass(typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
+		{
+			internal_pass<TypedPass<T::Context>>(T::Name, s, r, flags);
+		}
+
+
 
 		/*template<class T>
 		void add_pass(std::wstring_view name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)

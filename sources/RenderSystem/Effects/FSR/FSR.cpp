@@ -4,7 +4,8 @@ import <RenderSystem.h>;
 import :FrameGraphContext;
 
 import HAL;
-
+							 
+#include <FrameGraph/autogen/pass/FSR.h>
 // CAS
 #define A_CPU
 #include "ffx_a.h"
@@ -14,25 +15,17 @@ using namespace FrameGraph;
 
 void FSR::generate(Graph& graph)
 {
-	struct SkyData
-	{
-		Handlers::Texture H(ResultTexture);
-		Handlers::Texture ResultTextureUpscaled = ResultTexture;
 
-		Handlers::Texture H(FSRTemp);
-
-	};
-
-	graph.add_pass<SkyData>(L"FSR", [this, &graph](SkyData& data, TaskBuilder& builder)
+	graph.add_library_pass<Passes::FSR>( [this, &graph](Passes::FSR::Context& data, TaskBuilder& builder)
 		{
 		auto& frame = graph.get_context<ViewportInfo>();
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-			builder.recreate(data.ResultTextureUpscaled, { uint3(frame.upscale_size,0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ::ResourceFlags::UnorderedAccess);
+			builder.recreate(data.ResultTextureNew, { uint3(frame.upscale_size,0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ::ResourceFlags::UnorderedAccess);
 			builder.create(data.FSRTemp, { uint3(frame.upscale_size,0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ::ResourceFlags::UnorderedAccess);
 
 
 			return true;
-		}, [this, &graph](SkyData& data, FrameContext& _context)
+		}, [this, &graph](Passes::FSR::Context& data, FrameContext& _context)
 		{
 			auto& list = *_context.get_list();
 			auto& compute = list.get_compute();
@@ -63,7 +56,7 @@ void FSR::generate(Graph& graph)
 					auto& constants = fsr.GetConstants();
 					FsrRcasCon(reinterpret_cast<AU1*>(&constants.GetConst0()), 0.5);
 					fsr.GetSource() = data.FSRTemp->texture2D;
-					fsr.GetTarget() = data.ResultTextureUpscaled->rwTexture2D;
+					fsr.GetTarget() = data.ResultTextureNew->rwTexture2D;
 
 					compute.set(fsr);
 				}

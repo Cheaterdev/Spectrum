@@ -1,0 +1,55 @@
+
+import FrameGraph;
+import Core;
+import HAL;
+
+import <HAL.h>;
+
+{% for v in pass.params -%}
+{%- set t =  parsed.tables[v.type] -%}
+{%- if t is undefined -%}{%-else-%}
+#include "{{v.type}}.h"
+{%-endif-%}	
+{% endfor -%}
+
+
+using namespace FrameGraph;
+
+namespace Passes
+{
+
+class {{pass.name}} 
+{
+public:
+	struct Context
+	{
+{% for v in pass.params -%}
+{%- set t =  parsed.tables[v.type] -%}
+{%- if t is undefined -%}
+{%-if parsed.tables[v.template_arg] is defined -%}
+		Handlers::{{v.type | replace("<", "<Table::")}} H({{v.name}});
+{%else%}
+		Handlers::{{v.type}} H({{v.name}});
+{%endif%}
+{%-else-%}
+		{{v.type}} {{v.name}};
+{%-endif-%}	
+{%- if v.options.Recreate is defined %}
+		Handlers::{{v.type}} {{v.options.Recreate.value_atom.expr}} = {{v.name}};
+{%- endif %}
+{% endfor -%}
+	};
+
+
+	static inline const wchar_t* Name = L"{{pass.name}}";
+//	static constexpr PassID ID = PassID::{{pass.name}};
+
+
+	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
+	
+	setup_func_type setup_func;
+	render_func_type render_func;
+};
+
+}

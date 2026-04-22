@@ -9,6 +9,13 @@ import ppl;
 import Core;
 import FrameGraph;
 import FrameGraphDebug;
+												
+#include <FrameGraph/autogen/pass/Profiler.h>
+#include <FrameGraph/autogen/pass/PreScene.h>
+#include <FrameGraph/autogen/pass/ResultCreation.h>
+ #include <FrameGraph/autogen/pass/RTXPass.h>
+	   #include <FrameGraph/autogen/pass/CopyPrev.h>
+	 	   #include <FrameGraph/autogen/pass/Scene.h>
 
 #include "bend_sss_cpu.h"
 
@@ -23,7 +30,6 @@ _declspec(dllexport) extern const unsigned int D3D12SDKVersion = 618;
 extern "C" {
 _declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
 }
-
 
 class tick_timer
 {
@@ -387,32 +393,29 @@ public:
 		}
 
 
-		struct SceneData
-		{
-			Handlers::StructuredBuffer<uint> H(scene);
-		};
 
 
-		graph.add_pass<SceneData>(L"pre_scene", [this, &graph](SceneData& data, TaskBuilder& builder)
-		                          {
-			                          auto& frame = graph.get_context<ViewportInfo>();
-			                          builder.create(data.scene, {1}, ResourceFlags::UnorderedAccess);
 
-									  return true;
-		                          }, [this, &graph](SceneData& data, FrameContext& _context)
-		                          {
-			                          auto& command_list = _context.get_list();
+		graph.add_library_pass<Passes::PreScene>([this, &graph](Passes::PreScene::Context& data, TaskBuilder& builder)
+		                                         {
+			                                         auto& frame = graph.get_context<ViewportInfo>();
+			                                         builder.create(data.scene, { 1 }, ResourceFlags::UnorderedAccess);
 
-			                          SceneFrameManager::get().prepare(command_list, *scene);
+			                                         return true;
+		                                         }, [this, &graph](Passes::PreScene::Context& data, FrameContext& _context)
+		                                         {
+			                                         auto& command_list = _context.get_list();
 
-			                          if (HAL::Device::get().is_rtx_supported())
-			                          {
-				                          scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(),
-				                                                        scene->raytrace->buffer.get_resource_address(),
-				                                                        false);
-				                          RTX::get().prepare(command_list);
-			                          }
-		                          });
+			                                         SceneFrameManager::get().prepare(command_list, *scene);
+
+			                                         if (HAL::Device::get().is_rtx_supported())
+			                                         {
+				                                         scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(),
+				                                                                       scene->raytrace->buffer.get_resource_address(),
+				                                                                       false);
+				                                         RTX::get().prepare(command_list);
+			                                         }
+		                                         });
 
 
 		{
@@ -443,37 +446,7 @@ public:
 
 
 		{
-			/*graph.add_pass<GBufferData>("GBUFFER", [this, &graph](GBufferData& data, TaskBuilder& builder) {
-
-				auto size = graph.frame_size;
-				data.gbuffer.create(size, builder);
-				data.gbuffer.create_mips(size, builder);
-				data.gbuffer.create_quality(size, builder);
-
-			//	builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
-			//	builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), HAL::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
-
-				}, [this, &graph](GBufferData& data, FrameContext& _context) {
-
-				});*/
-
-
-			struct GBufferData
-			{
-				GBufferViewDesc gbuffer;
-
-				Handlers::Texture H(GBuffer_HiZ);
-				Handlers::Texture H(GBuffer_HiZ_UAV);
-
-
-				Handlers::Texture H(GBuffer_DepthPrev);
-				Handlers::Texture H(GBuffer_NormalsPrev);
-				Handlers::Texture H(GBuffer_SpecularPrev);
-
-				Handlers::StructuredBuffer<uint> H(scene);
-			};
-
-			graph.add_pass<GBufferData>(L"SCENE", [this, &graph](GBufferData& data, TaskBuilder& builder)
+			graph.add_library_pass<Passes::Scene>( [this, &graph](auto& data, TaskBuilder& builder)
 			                            {
 				                            auto& frame = graph.get_context<ViewportInfo>();
 
@@ -481,26 +454,26 @@ public:
 
 				                            builder.need(data.scene, ResourceFlags::PixelRead);
 
-				                            data.gbuffer.create(size, builder);
-				                            data.gbuffer.create_mips(size, builder);
-				                            data.gbuffer.create_quality(size, builder);
-
-				                            builder.create(data.GBuffer_HiZ,
+				                           GBufferViewDesc::create(size,data.gbuffer, builder);
+				                          GBufferViewDesc::create_mips(size,data.gbuffer, builder);
+				                          GBufferViewDesc::create_quality(size,data.gbuffer, builder);
+																										 
+				                            builder.create(data.gbuffer.GBuffer_HiZ,
 				                                           {ivec3(size / 8, 1), HAL::Format::R32_TYPELESS, 1},
 				                                           ResourceFlags::DepthStencil);
-				                            builder.create(data.GBuffer_HiZ_UAV,
+				                            builder.create(data.gbuffer.GBuffer_HiZ_UAV,
 				                                           {ivec3(size / 8, 1), HAL::Format::R32_FLOAT, 1},
 				                                           ResourceFlags::UnorderedAccess);
 
-				                            builder.create(data.GBuffer_NormalsPrev, {
+				                            builder.create(data.gbuffer.GBuffer_NormalsPrev, {
 					                                           ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1
 				                                           }, ResourceFlags::Static);
-				                            builder.create(data.GBuffer_SpecularPrev, {
+				                            builder.create(data.gbuffer.GBuffer_SpecularPrev, {
 					                                           ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1
 				                                           }, ResourceFlags::Static);
 
 											return true;
-			                            }, [this, &graph](GBufferData& data, FrameContext& _context)
+			                            }, [this, &graph](auto& data, FrameContext& _context)
 			                            {
 				                            auto& command_list = _context.get_list();
 
@@ -525,9 +498,9 @@ public:
 				                            //				gpu_meshes_renderer_static->update(context);
 				                            //			gpu_meshes_renderer_dynamic->update(context);
 
-				                            GBuffer gbuffer = data.gbuffer.actualize(_context);
-				                            gbuffer.HalfBuffer.hiZ_depth = *(data.GBuffer_HiZ);
-				                            gbuffer.HalfBuffer.hiZ_depth_uav = *(data.GBuffer_HiZ_UAV);
+				                            GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+				                            gbuffer.HalfBuffer.hiZ_depth = *(data.gbuffer.GBuffer_HiZ);
+				                            gbuffer.HalfBuffer.hiZ_depth_uav = *(data.gbuffer.GBuffer_HiZ_UAV);
 
 				                            {
 					                            command_list->clear_uav(
@@ -578,20 +551,14 @@ public:
 		}
 
 		{
-			struct RTXDebugData
-			{
-				GBufferViewDesc gbuffer;
-
-				Handlers::Texture H(RTXDebug);
-				Handlers::FormattedBuffer<char, HAL::Format::R8_UINT> H(WorkGraphBuffer);
-			};
+	
 
 			//WTF Compilation issue
 			auto t = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
 
 			//		if (HAL::Device::get().is_rtx_supported())
 			{
-				graph.add_pass<RTXDebugData>(L"RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder)
+				graph.add_library_pass<Passes::RTXPass>([this, &graph](auto& data, TaskBuilder& builder)
 				                             {
 					                             auto& frame = graph.get_context<ViewportInfo>();
 
@@ -599,7 +566,19 @@ public:
 					                             auto work_pso = HAL::Device::get().get_engine_pso_holder().GetPSO<
 						                             PSOS::WorkGR>();
 					                             auto size = frame.frame_size;
-					                             data.gbuffer.need(builder, false);
+
+					builder.need( data.gbuffer.GBuffer_Albedo, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(data.gbuffer.GBuffer_Normals, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(data.gbuffer.GBuffer_Depth, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(data.gbuffer.GBuffer_Specular, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(data.gbuffer.GBuffer_Speed, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+
+			builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+		//	if (need_quality) builder.need(GBuffer_Quality, ResourceFlags::DSRead);
+			builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::None);
+
+
+					                          //   data.gbuffer.need(builder, false);
 					                             builder.create(data.RTXDebug,
 					                                            {ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1},
 					                                            ResourceFlags::UnorderedAccess | ResourceFlags::Static);
@@ -607,7 +586,7 @@ public:
 					                                            ResourceFlags::UnorderedAccess);
 
 												 return true;
-				                             }, [this, &graph](RTXDebugData& data, FrameContext& context)
+				                             }, [this, &graph](auto& data, FrameContext& context)
 				                             {
 					                             auto& compute = context.get_list()->get_compute();
 					                             auto& copy = context.get_list()->get_copy();
@@ -631,6 +610,17 @@ public:
 					                             graph.set_slot(SlotID::FrameInfo, compute);
 					                             graph.set_slot(SlotID::SceneData, compute);
 
+														   
+													GBuffer gbuffer;
+
+			gbuffer.albedo = *data.gbuffer.GBuffer_Albedo;
+			gbuffer.normals = *data.gbuffer.GBuffer_Normals;
+			gbuffer.depth = *data.gbuffer.GBuffer_Depth;
+			gbuffer.specular = *data.gbuffer.GBuffer_Specular;
+			gbuffer.speed = *data.gbuffer.GBuffer_Speed;
+
+
+			gbuffer.depth_prev_mips = *data.gbuffer.GBuffer_DepthPrev;
 
 					                             {
 						                             Slots::Raytracing rtx;
@@ -638,8 +628,7 @@ public:
 						                             compute.set(rtx);
 					                             }
 					                             {
-						                             auto gbuffer = data.gbuffer.actualize(context);
-
+						                   
 						                             Slots::VoxelScreen voxelScreen;
 						                             gbuffer.SetTable(voxelScreen.GetGbuffer());
 						                             voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
@@ -661,7 +650,9 @@ public:
 					                             //  compute.set_pipeline<PSOS::SS_Shadow>();
 
 
-					                             auto gbuffer = data.gbuffer.actualize(context);
+
+
+					                             //auto gbuffer = data.gbuffer.actualize(context);
 
 					                             Slots::DispatchParameters dispatchParameters;
 					                             dispatchParameters.GetDepthTexture() = gbuffer.depth.texture2D;
@@ -709,11 +700,7 @@ public:
 			}
 		}
 
-		struct no
-		{
-			Handlers::Texture H(ResultTexture);
-		};
-		graph.add_pass<no>(L"no", [this, &graph](no& data, TaskBuilder& builder) -> bool
+		graph.add_library_pass<Passes::ResultCreation>([this, &graph](auto& data, TaskBuilder& builder) -> bool
 		               {
 			               auto& frame = graph.get_context<ViewportInfo>();
 			               builder.create(data.ResultTexture,
@@ -721,7 +708,7 @@ public:
 			                              ResourceFlags::RenderTarget);
 
 			               return false;
-		               }, [](no& data, FrameContext& _context)
+		               }, [](auto& data, FrameContext& _context)
 		               {
 		               });
 
@@ -741,41 +728,30 @@ public:
 			fsr.generate(graph);
 
 		{
-			struct CopyPrev
-			{
-				Handlers::Texture H(ResultTexture);
-				Handlers::Texture H(GBuffer_NormalsPrev);
-				Handlers::Texture H(GBuffer_SpecularPrev);
 
-				Handlers::Texture H(GBuffer_Normals);
-				Handlers::Texture H(GBuffer_Specular);
-
-				Handlers::Texture H(GBuffer_DepthPrev);
-				Handlers::Texture H(GBuffer_DepthMips);
-			};
-			graph.add_pass<CopyPrev>(L"CopyPrev", [this, &graph](CopyPrev& data, TaskBuilder& builder)
+			graph.add_library_pass<Passes::CopyPrev>( [this, &graph](auto& data, TaskBuilder& builder)
 			                         {
 				                         auto& frame = graph.get_context<ViewportInfo>();
-				                         builder.need(data.GBuffer_NormalsPrev, ResourceFlags::CopyDest);
-				                         builder.need(data.GBuffer_SpecularPrev, ResourceFlags::CopyDest);
+				                         builder.need(data.gbuffer.GBuffer_NormalsPrev, ResourceFlags::CopyDest);
+				                         builder.need(data.gbuffer.GBuffer_SpecularPrev, ResourceFlags::CopyDest);
 
-				                         builder.need(data.GBuffer_Normals, ResourceFlags::CopySource);
-				                         builder.need(data.GBuffer_Specular, ResourceFlags::CopySource);
+				                         builder.need(data.gbuffer.GBuffer_Normals, ResourceFlags::CopySource);
+				                         builder.need(data.gbuffer.GBuffer_Specular, ResourceFlags::CopySource);
 
-				                         builder.need(data.GBuffer_DepthPrev, ResourceFlags::CopyDest);
-				                         builder.need(data.GBuffer_DepthMips, ResourceFlags::CopySource);
+				                         builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::CopyDest);
+				                         builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::CopySource);
 
 										 return true;
-			                         }, [](CopyPrev& data, FrameContext& _context)
+			                         }, [](auto& data, FrameContext& _context)
 			                         {
 				                         auto& copy = _context.get_list()->get_copy();
 
-				                         copy.copy_resource(data.GBuffer_NormalsPrev->resource,
-				                                            data.GBuffer_Normals->resource);
-				                         copy.copy_resource(data.GBuffer_SpecularPrev->resource,
-				                                            data.GBuffer_Specular->resource);
-				                         copy.copy_texture(data.GBuffer_DepthPrev->resource, 0,
-				                                           data.GBuffer_DepthMips->resource, 0);
+				                         copy.copy_resource(data.gbuffer.GBuffer_NormalsPrev->resource,
+				                                            data.gbuffer.GBuffer_Normals->resource);
+				                         copy.copy_resource(data.gbuffer.GBuffer_SpecularPrev->resource,
+				                                            data.gbuffer.GBuffer_Specular->resource);
+				                         copy.copy_texture(data.gbuffer.GBuffer_DepthPrev->resource, 0,
+				                                           data.gbuffer.GBuffer_DepthMips->resource, 0);
 			                         }, PassFlags::Compute);
 		}
 		struct debug_data
@@ -1008,12 +984,6 @@ public:
 
 	void setup_graph()
 	{
-		struct pass_data
-		{
-			Handlers::Texture H(swapchain);
-		};
-
-
 		graph.start_new_frame();
 		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame(), swap_chain->get_fence());
 
@@ -1022,18 +992,14 @@ public:
 			PROFILE(L"create_graph");
 			create_graph(graph);
 
-
-	//		auto ptr = get_ptr();
-			//	if(false)
-			graph.add_pass<pass_data>(L"PROFILER", [](pass_data& data, TaskBuilder& builder)
-			                          {
-				                          builder.need(data.swapchain,
-				                                       ResourceFlags::Required | ResourceFlags::RenderTarget);
-
-										  return false;
-			                          }, [this](pass_data& data, FrameContext& context)
-			                          {
-			                          }, PassFlags::Required);
+			graph.add_library_pass<Passes::Profiler>([](auto& data, TaskBuilder& builder)
+				{
+					builder.need(data.swapchain,
+						ResourceFlags::Required | ResourceFlags::RenderTarget);
+					return false;
+				}, [this](auto& data, FrameContext& context)
+					{
+					}, PassFlags::Required);
 		}
 
 		graph.setup();

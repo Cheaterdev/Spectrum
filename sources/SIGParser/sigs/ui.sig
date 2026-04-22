@@ -176,3 +176,9 @@ ComputePSO FrameGraph_Debug_NotImplemented
 	compute = framegraph/draw_not_implemented;
 }
 
+
+PassNode UI_Render
+{
+	Texture swapchain;
+}
+

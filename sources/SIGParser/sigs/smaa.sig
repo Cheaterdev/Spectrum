@@ -67,3 +67,13 @@ GraphicsPSO Blending
 
 	rtv = { R16G16B16A16_FLOAT };
 }
+
+
+PassNode SMAA
+{
+	[Recreate = ResultTextureNew]
+	Texture ResultTexture;
+
+	Texture SMAA_edges;
+	Texture SMAA_blend;
+}

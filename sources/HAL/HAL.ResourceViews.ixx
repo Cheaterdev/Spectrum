@@ -619,16 +619,22 @@ export
 			CubeView create_mip(UINT mip, GPUEntityStorageInterface& frame);
 		};
 
+			struct ByteBufferViewDesc
+			{
+				uint64 offset;
+		 		uint64 size;
+		
+			};
 		class ByteBufferView : public BufferView
 		{
 		public:
+			using Desc = ByteBufferViewDesc;
 			HLSL::ByteAddressBuffer byteBuffer;
 			HLSL::RWByteAddressBuffer rwbyteBuffer;
 
 			ByteBufferView() = default;
 
-			ByteBufferView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, UINT offset = 0,
-			               UINT64 size = 0) : BufferView(std::static_pointer_cast<Buffer>(resource))
+			ByteBufferView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, ByteBufferViewDesc viewdesc) : BufferView(std::static_pointer_cast<Buffer>(resource))
 			{
 				auto hlsl = frame.alloc_descriptor(2, DescriptorHeapIndex{
 					                                   HAL::DescriptorHeapType::CBV_SRV_UAV,
@@ -642,12 +648,12 @@ export
 
 				if (check(get_desc().Flags & HAL::ResFlags::ShaderResource))
 				{
-					byteBuffer.create(resource, offset, size);
+					byteBuffer.create(resource, viewdesc.offset, viewdesc.size);
 				}
 
 				if (check(get_desc().Flags & HAL::ResFlags::UnorderedAccess))
 				{
-					rwbyteBuffer.create(resource, offset, size);
+					rwbyteBuffer.create(resource, viewdesc.offset, viewdesc.size);
 				}
 			}
 

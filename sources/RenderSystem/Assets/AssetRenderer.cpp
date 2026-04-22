@@ -1,6 +1,8 @@
 
 module  Graphics:AssetRenderer;
 import <RenderSystem.h>;
+					#include <FrameGraph/autogen/pass/AssetMip.h>
+				   		#include <FrameGraph/autogen/pass/AssetGBuffer.h>
 
 import HAL;
 import :MeshRenderer;
@@ -51,26 +53,15 @@ public:
 		auto size = frame.frame_size;
 
 		{
+   			graph.add_library_pass<Passes::AssetGBuffer>([this, size](auto& data, TaskBuilder& builder) ->bool{
+				GBufferViewDesc::create(size, data.gbuffer,builder);
 
 
-			struct GBufferData
-			{
-				GBufferViewDesc gbuffer;
 
-				Handlers::Texture H(GBuffer_HiZ);
-				Handlers::Texture H(GBuffer_HiZ_UAV);
-			};
-
-			graph.add_pass<GBufferData>(L"GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) ->bool{
-				data.gbuffer.create(size, builder);
-				//	data.gbuffer.create_mips(size, builder);
-				//	data.gbuffer.create_quality(size, builder);
-
-
-				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 0), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
-				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 0), HAL::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+				builder.create(data.gbuffer.GBuffer_HiZ, { ivec3(size / 8, 0), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+				builder.create(data.gbuffer.GBuffer_HiZ_UAV, { ivec3(size / 8, 0), HAL::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 				return true;
-				}, [this, &graph](GBufferData& data, FrameContext& _context) {
+				}, [this, &graph](auto& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
 					auto& frame = graph.get_context<ViewportInfo>();
@@ -89,9 +80,9 @@ public:
 
 					context->cam = cam.cam;
 
-					GBuffer gbuffer = data.gbuffer.actualize(_context);
-					gbuffer.HalfBuffer.hiZ_depth = *data.GBuffer_HiZ;
-					gbuffer.HalfBuffer.hiZ_depth_uav = *data.GBuffer_HiZ_UAV;
+					GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+					gbuffer.HalfBuffer.hiZ_depth = *data.gbuffer.GBuffer_HiZ;
+					gbuffer.HalfBuffer.hiZ_depth_uav = *data.gbuffer.GBuffer_HiZ_UAV;
 
 					{
 						RT::GBuffer rtv;
@@ -140,19 +131,12 @@ public:
 		sky.generate(graph);
 		sky.generate_sky(graph);
 
-		struct no
-		{
-			Handlers::Texture H(ResultTexture);
-		};
-		graph.add_pass<no>(L"mip", [this, &graph](no& data, TaskBuilder& builder) ->bool {
+		graph.add_library_pass<Passes::AssetMip>([this, &graph](auto& data, TaskBuilder& builder) ->bool {
 			builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
-
 			return true;
-			}, [](no& data, FrameContext& _context) {
-
-
+			}, [](auto& data, FrameContext& _context) {
 				MipMapGenerator::get().generate(_context.get_list()->get_compute(), *data.ResultTexture);
-			});
+				});
 
 
 		graph.add_slot_generator([this](Graph& graph) {
@@ -186,8 +170,7 @@ public:
 			graph.register_slot_setter(scene.scene->compiledScene);
 			});
 
-		//		graph.add_pass([])
-	}
+		}
 
 };
 

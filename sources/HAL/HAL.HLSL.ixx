@@ -517,18 +517,18 @@ namespace HLSL
 	void ByteAddressBuffer::create(const Resource::ptr& resource, uint64 offset, uint64 size)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
-		if (size == 0) size = static_cast<uint>(buffer_desc.SizeInBytes / 4);
+		if (size == 0) size = static_cast<uint>(buffer_desc.SizeInBytes);
 
-		HAL::Views::ShaderResource desc = { resource, Format::R32_TYPELESS, HAL::Views::ShaderResource::Buffer {(uint)offset, (uint)size, 0, true} };
+		HAL::Views::ShaderResource desc = { resource, Format::R32_TYPELESS, HAL::Views::ShaderResource::Buffer {(uint)offset/4, (uint)size/4, 0, true} };
 		Handle::operator=(desc);
 	}
 
 	void RWByteAddressBuffer::create(const Resource::ptr& resource, uint64 offset, uint64 size)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
-		if (size == 0) size = static_cast<uint64>(buffer_desc.SizeInBytes / 4);
+		if (size == 0) size = static_cast<uint64>(buffer_desc.SizeInBytes);
 
-		HAL::Views::UnorderedAccess desc = { resource, Format::R32_TYPELESS, HAL::Views::UnorderedAccess::Buffer {(uint)offset, (uint)size, 0, true, 0, nullptr} };
+		HAL::Views::UnorderedAccess desc = { resource, Format::R32_TYPELESS, HAL::Views::UnorderedAccess::Buffer {(uint)offset/4, (uint)size/4, 0, true, 0, nullptr} };
 		Handle::operator=(desc);
 	}
 

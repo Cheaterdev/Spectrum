@@ -42,3 +42,12 @@ ComputePSO RCAS
 	[CS]
 	define cas;
 }
+
+
+PassNode FSR
+{
+	[Recreate = ResultTextureNew]
+	Texture ResultTexture;
+
+	Texture FSRTemp;
+}

@@ -235,6 +235,18 @@ public:
 		setup_list(get_elem<have_values>().values);
 	}
 
+	GENERATE(View_definition)
+	{
+		setup_map(get_elem<Parsed>().views);
+	}
+	GENERATE(Pass_definition)
+	{
+		setup_map(get_elem<Parsed>().passes);
+	}
+	GENERATE(View_declaration)
+	{
+		setup_list(get_elem<View>().params);
+	}
 
 	void enterName_id(SIGParser::Name_idContext* ctx) override
 	{

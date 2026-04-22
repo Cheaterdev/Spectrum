@@ -80,6 +80,13 @@ public:
 		width_size = GUI::size_type::MATCH_PARENT;
 		height_size = GUI::size_type::MATCH_PARENT;
 
+
+		auto table  = std::make_shared<GUI::Elements::Table>();
+		table->docking = GUI::dock::LEFT;
+		table->size = { 256,256 };
+		add_child(table);
+
+
 		auto resource_selector = std::make_shared<combo_box>();
 		resource_selector->docking = GUI::dock::TOP;
 		add_child(resource_selector);
@@ -101,6 +108,22 @@ public:
 //		rendered_text->font_size = 10;
 		//	rendered_image->size={256,256};
 		add_child(buffer_info);
+
+
+
+		for (auto& pass : graph.builder.passes)
+		{
+
+			table->AddColumn(convert(pass->name));
+		}
+
+
+
+		for (auto& [name, infov] : graph.builder.alloc_resources)
+		{
+
+			table->AddRow(name);
+		}
 
 
 	///	rendered_text->text = "HELLO";

@@ -354,7 +354,7 @@ namespace FrameGraph
 
 		PROFILE(L"Graphsetup");
 
-		for (auto& pass : passes)
+		for (auto& pass : builder.passes)
 		{
 
 			PROFILE(L"one_pass_setup");
@@ -409,7 +409,7 @@ namespace FrameGraph
 		for (auto& res : builder.alloc_resources)
 		{
 			if (check(res.second.flags & ResourceFlags::Required))
-				process_resource(res.second, (int)passes.size());
+				process_resource(res.second, (int)builder.passes.size());
 		}
 
 
@@ -422,7 +422,7 @@ namespace FrameGraph
 			}
 		}
 
-		for (auto pass : passes)
+		for (auto pass : builder.passes)
 		{
 			if (!pass->active()) continue;
 			auto pass_ptr = pass.get();
@@ -776,7 +776,7 @@ namespace FrameGraph
 			pass->wait();
 		}
 
-		passes.clear();
+		builder.passes.clear();
 		builder.required_passes.clear();
 		builder.enabled_passes.clear();
 		builder.reset();
