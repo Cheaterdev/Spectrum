@@ -23,16 +23,16 @@ public:
 		Handlers::StructuredBuffer<Table::Camera> H(global_camera);
 
 
-		Handlers::Texture H(VoxelLighted);
+		Handlers::Texture3D H(VoxelLighted);
 
 
-		Handlers::Texture H(VoxelAlbedo);
+		Handlers::Texture3D H(VoxelAlbedo);
 
 
-		Handlers::Texture H(VoxelNormal);
+		Handlers::Texture3D H(VoxelNormal);
 
 
-		Handlers::Texture H(sky_cubemap_filtered);
+		Handlers::TextureCube H(sky_cubemap_filtered);
 
 
 		Handlers::Texture H(VoxelAlbedoStatic);

@@ -568,7 +568,7 @@ using namespace HAL;
 		using Texture = UniversalHandler<TextureDesc>;
 
 
-		using Cube = UniversalHandler<CubeDesc>;
+		using TextureCube = UniversalHandler<CubeDesc>;
 		using Texture3D = UniversalHandler<Texture3DDesc>;
 
 	};

@@ -104,20 +104,20 @@ PassNode Sky
 
 PassNode CubeSky
 {
-	Cube sky_cubemap;
+	TextureCube sky_cubemap;
 }
 
 
 PassNode CubeMapDownsample
 {
-	Cube sky_cubemap;
-	Cube sky_cubemap_filtered;
-	Cube sky_cubemap_filtered_diffuse;
+	TextureCube sky_cubemap;
+	TextureCube sky_cubemap_filtered;
+	TextureCube sky_cubemap_filtered_diffuse;
 }
 
 PassNode CubeMapEnviromentProcessor
 {
-	Cube sky_cubemap;
-	Cube sky_cubemap_filtered;
-	Cube sky_cubemap_filtered_diffuse;
+	TextureCube sky_cubemap;
+	TextureCube sky_cubemap_filtered;
+	TextureCube sky_cubemap_filtered_diffuse;
 }

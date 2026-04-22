@@ -18,13 +18,13 @@ public:
 	struct Context
 	{
 
-		Handlers::Cube H(sky_cubemap);
+		Handlers::TextureCube H(sky_cubemap);
 
 
-		Handlers::Cube H(sky_cubemap_filtered);
+		Handlers::TextureCube H(sky_cubemap_filtered);
 
 
-		Handlers::Cube H(sky_cubemap_filtered_diffuse);
+		Handlers::TextureCube H(sky_cubemap_filtered_diffuse);
 
 	};
 

@@ -7,6 +7,8 @@ import windows;
 import HAL;
 import FrameGraph;
 
+#include <FrameGraph/autogen/pass/UI_Render.h>
+
 using namespace FrameGraph;
 static const LPCTSTR cursors[] =
 {
@@ -1012,53 +1014,24 @@ namespace GUI
 
         }
 
-         struct pass_data
-         {
-             Handlers::Texture o_texture = "swapchain";
-         };
-
-
-         static std::wstring_view pass_names[] =
-         {
-           L"UI RENDER_0",
-           L"UI RENDER_1",
-L"UI RENDER_2",
-L"UI RENDER_3",
-L"UI RENDER_4",
-L"UI RENDER_5",
-L"UI RENDER_6",
-L"UI RENDER_7",
-L"UI RENDER_8",
-L"UI RENDER_9",
-L"UI RENDER_10",
-L"UI RENDER_11",
-L"UI RENDER_12",
-L"UI RENDER_13",
-L"UI RENDER_14",
- L"UI RENDER_15",
-
-         
-         
-         };
       //   return;
          uint per_thread =  std::max(64u, ((uint)draw_infos.size() + 7) / 8);
 
          uint start = 0; uint end = 0;
-         uint t = 0;
         while(start< draw_infos.size())
         {
             end = std::min(start + per_thread, (uint)draw_infos.size());
 
-            graph.add_pass<pass_data>(pass_names[t++], [this](pass_data& data, TaskBuilder& builder) {
-			builder.need(data.o_texture, ResourceFlags::RenderTarget);
+            graph.add_library_pass<Passes::UI_Render>([this](auto& data, TaskBuilder& builder) {
+			builder.need(data.swapchain, ResourceFlags::RenderTarget);
             use_graph(builder);
 
             return true;
-			 }, [this,&graph, start, end](pass_data& data, FrameContext& context) {
-              
+			 }, [this,&graph, start, end](auto& data, FrameContext& context) {
+
 				 auto command_list = context.get_list();
 
-				auto texture = (*data.o_texture);
+				auto texture = (*data.swapchain);
 
                 {
 				RT::SingleColor rt;

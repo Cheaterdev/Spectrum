@@ -88,7 +88,7 @@ void SkyRender::generate(Graph& graph)
 
 	struct SkyData
 	{
-		Handlers::Cube H(sky_cubemap);
+		Handlers::TextureCube H(sky_cubemap);
 	};
 
 	graph.add_library_pass<Passes::CubeSky>([this, &graph](auto& data, TaskBuilder& builder) {

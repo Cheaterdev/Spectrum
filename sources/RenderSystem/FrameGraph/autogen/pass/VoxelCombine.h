@@ -31,11 +31,13 @@ public:
 		Handlers::Texture H(VoxelIndirectFiltered);
 
 
-		Handlers::Texture H(sky_cubemap_filtered);
+		Handlers::TextureCube H(sky_cubemap_filtered);
 
-		Handlers::StructuredBuffer<Table::DispatchArguments> H(VoxelScreen_hi);
 
-		Handlers::StructuredBuffer<Table::DispatchArguments> H(VoxelScreen_low);
+		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_hi);
+
+
+		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_low);
 
 
 		Handlers::StructuredBuffer<uint2> H(VoxelScreen_low_data);

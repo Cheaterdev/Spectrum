@@ -771,7 +771,7 @@ public:
 			//// hack zone
 			auto sky = graph.builder.get("sky_cubemap_filtered");
 			if (sky && sky->resource)
-				frameInfo.GetSky() = *sky->get_handler<Handlers::Cube>();
+				frameInfo.GetSky() = *sky->get_handler<Handlers::TextureCube>();
 
 			/////////
 			frameInfo.GetSunDir().xyz = skyinfo.sunDir;

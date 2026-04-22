@@ -18,7 +18,7 @@ public:
 	struct Context
 	{
 
-		Handlers::Cube H(sky_cubemap);
+		Handlers::TextureCube H(sky_cubemap);
 
 	};
 

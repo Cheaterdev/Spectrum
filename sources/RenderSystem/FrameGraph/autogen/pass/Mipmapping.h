@@ -18,7 +18,7 @@ public:
 	struct Context
 	{
 
-		Handlers::Texture H(VoxelLighted);
+		Handlers::Texture3D H(VoxelLighted);
 
 	};
 

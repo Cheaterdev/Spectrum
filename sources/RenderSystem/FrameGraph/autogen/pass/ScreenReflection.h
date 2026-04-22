@@ -25,17 +25,19 @@ public:
 		Handlers::Texture H(noise_dir_pdf);
 
 
-		Handlers::Texture H(sky_cubemap_filtered);
+		Handlers::TextureCube H(sky_cubemap_filtered);
 
 
 		Handlers::Texture H(BlueNoise);
 
 
-		Handlers::Texture H(VoxelLighted);
+		Handlers::Texture3D H(VoxelLighted);
 
-		Handlers::StructuredBuffer<Table::DispatchArguments> H(VoxelScreen_hi);
 
-		Handlers::StructuredBuffer<Table::DispatchArguments> H(VoxelScreen_low);
+		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_hi);
+
+
+		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_low);
 
 
 		Handlers::StructuredBuffer<uint2> H(VoxelScreen_low_data);

@@ -22,7 +22,7 @@ public:
 		Handlers::Texture H(VoxelDebug);
 
 
-		Handlers::Texture H(VoxelLighted);
+		Handlers::Texture3D H(VoxelLighted);
 
 	};
 
