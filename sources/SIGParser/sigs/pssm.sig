@@ -116,6 +116,7 @@ PassView GBuffer
 	Texture GBuffer_HiZ_UAV;
 }
 
+[Multiple = 6]
 PassNode PSSM_Cascade
 {
 	Texture PSSM_Depths;

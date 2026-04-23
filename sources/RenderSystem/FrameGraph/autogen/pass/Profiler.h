@@ -24,6 +24,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"Profiler";
+
 //	static constexpr PassID ID = PassID::Profiler;
 
 

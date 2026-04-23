@@ -24,6 +24,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"ResultCreation";
+
 //	static constexpr PassID ID = PassID::ResultCreation;
 
 

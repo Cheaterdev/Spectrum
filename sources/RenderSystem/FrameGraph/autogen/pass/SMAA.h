@@ -31,6 +31,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"SMAA";
+
 //	static constexpr PassID ID = PassID::SMAA;
 
 

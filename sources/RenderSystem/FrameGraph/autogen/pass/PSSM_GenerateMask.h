@@ -30,6 +30,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"PSSM_GenerateMask";
+
 //	static constexpr PassID ID = PassID::PSSM_GenerateMask;
 
 

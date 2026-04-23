@@ -1018,11 +1018,12 @@ namespace GUI
          uint per_thread =  std::max(64u, ((uint)draw_infos.size() + 7) / 8);
 
          uint start = 0; uint end = 0;
+         uint t = 0;
         while(start< draw_infos.size())
         {
             end = std::min(start + per_thread, (uint)draw_infos.size());
 
-            graph.add_library_pass<Passes::UI_Render>([this](auto& data, TaskBuilder& builder) {
+            graph.add_library_pass<Passes::UI_Render>(Passes::UI_Render::Names[t++], [this](auto& data, TaskBuilder& builder) {
 			builder.need(data.swapchain, ResourceFlags::RenderTarget);
             use_graph(builder);
 

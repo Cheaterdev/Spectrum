@@ -26,6 +26,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"PSSM_Global";
+
 //	static constexpr PassID ID = PassID::PSSM_Global;
 
 

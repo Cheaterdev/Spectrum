@@ -12,7 +12,7 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class PSSM_Cascade 
+class PSSM_Cascade
 {
 public:
 	struct Context
@@ -26,12 +26,23 @@ public:
 
 
 	static inline const wchar_t* Name = L"PSSM_Cascade";
+
+	static constexpr uint32_t MaxCount = 6;
+	static inline const wchar_t* Names[MaxCount] = {
+		L"PSSM_Cascade_0",
+		L"PSSM_Cascade_1",
+		L"PSSM_Cascade_2",
+		L"PSSM_Cascade_3",
+		L"PSSM_Cascade_4",
+		L"PSSM_Cascade_5",
+	};
+
 //	static constexpr PassID ID = PassID::PSSM_Cascade;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
-	
+
 	setup_func_type setup_func;
 	render_func_type render_func;
 };

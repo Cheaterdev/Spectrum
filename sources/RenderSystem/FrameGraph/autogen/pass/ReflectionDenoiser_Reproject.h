@@ -66,6 +66,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"ReflectionDenoiser_Reproject";
+
 //	static constexpr PassID ID = PassID::ReflectionDenoiser_Reproject;
 
 

@@ -30,6 +30,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"CubeMapEnviromentProcessor";
+
 //	static constexpr PassID ID = PassID::CubeMapEnviromentProcessor;
 
 

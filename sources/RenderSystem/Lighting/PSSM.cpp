@@ -3,6 +3,7 @@ import <RenderSystem.h>;
 				 	   #include <FrameGraph/autogen/pass/PSSM_Global.h>
 							    #include <FrameGraph/autogen/pass/PSSM_GenerateMask.h>
 									      #include <FrameGraph/autogen/pass/PSSM_Combine.h>
+#include <FrameGraph/autogen/pass/PSSM_Cascade.h>
 import :PSSM;
 import :BRDF;
 import :EngineAssets;
@@ -162,26 +163,12 @@ void PSSM::generate(Graph& graph)
 
 
 
-	struct PSSMData
-	{
-		GBufferViewDesc gbuffer;
-
-		Handlers::Texture H(LightMask);
-		Handlers::Texture H(PSSM_Depths);
-		Handlers::Texture H(ResultTexture);
-		Handlers::StructuredBuffer<Table::Camera> H(PSSM_Cameras);
-
-		Handlers::Texture H(RTXDebug);
-	};
-
 	auto position = get_position();
 	for (int i = 0; i < renders_size; i++)
 	{
 		zfar = cam->z_near + (exp(float(i + 1))) * scaler;
 
-		static const wchar_t*passes[]={L"PSSM_Cascade_0",L"PSSM_Cascade_1" ,L"PSSM_Cascade_2" ,L"PSSM_Cascade_3" ,L"PSSM_Cascade_4" ,L"PSSM_Cascade_5" };
-
-		graph.add_pass<PSSMData>(passes[i], [this, &graph,i](PSSMData& data, TaskBuilder& builder) {
+		graph.add_library_pass<Passes::PSSM_Cascade>(Passes::PSSM_Cascade::Names[i], [this, &graph,i](auto& data, TaskBuilder& builder) {
 			if (i == 0)
 			{
 				builder.create(data.PSSM_Depths, { ivec3(size,0), HAL::Format::R32_TYPELESS,renders_size ,1 }, ResourceFlags::DepthStencil);
@@ -197,7 +184,7 @@ void PSSM::generate(Graph& graph)
 
 		
 			return true;
-			}, [this, &graph, i, znear, zfar, cam, points_all, position](PSSMData& data, FrameContext& _context) {
+			}, [this, &graph, i, znear, zfar, cam, points_all, position](auto& data, FrameContext& _context) {
 
 				auto& command_list = _context.get_list();
 				auto& graphics = command_list->get_graphics();

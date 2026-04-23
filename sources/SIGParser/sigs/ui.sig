@@ -177,6 +177,7 @@ ComputePSO FrameGraph_Debug_NotImplemented
 }
 
 
+[Multiple = 16]
 PassNode UI_Render
 {
 	Texture swapchain;

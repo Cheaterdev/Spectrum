@@ -49,6 +49,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"VoxelCombine";
+
 //	static constexpr PassID ID = PassID::VoxelCombine;
 
 

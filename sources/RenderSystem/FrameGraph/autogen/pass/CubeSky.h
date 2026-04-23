@@ -24,6 +24,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"CubeSky";
+
 //	static constexpr PassID ID = PassID::CubeSky;
 
 

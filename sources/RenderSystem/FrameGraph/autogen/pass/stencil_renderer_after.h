@@ -27,6 +27,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"stencil_renderer_after";
+
 //	static constexpr PassID ID = PassID::stencil_renderer_after;
 
 

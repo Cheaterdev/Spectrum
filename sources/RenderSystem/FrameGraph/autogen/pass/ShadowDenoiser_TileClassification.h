@@ -51,6 +51,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"ShadowDenoiser_TileClassification";
+
 //	static constexpr PassID ID = PassID::ShadowDenoiser_TileClassification;
 
 

@@ -25,6 +25,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"Scene";
+
 //	static constexpr PassID ID = PassID::Scene;
 
 

@@ -50,6 +50,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"Lighting";
+
 //	static constexpr PassID ID = PassID::Lighting;
 
 

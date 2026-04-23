@@ -28,6 +28,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"FSR";
+
 //	static constexpr PassID ID = PassID::FSR;
 
 

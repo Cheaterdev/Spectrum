@@ -27,6 +27,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"Sky";
+
 //	static constexpr PassID ID = PassID::Sky;
 
 

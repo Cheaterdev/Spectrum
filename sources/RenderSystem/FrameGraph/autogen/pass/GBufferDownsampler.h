@@ -22,6 +22,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"GBufferDownsampler";
+
 //	static constexpr PassID ID = PassID::GBufferDownsampler;
 
 

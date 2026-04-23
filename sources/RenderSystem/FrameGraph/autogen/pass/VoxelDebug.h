@@ -28,6 +28,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"VoxelDebug";
+
 //	static constexpr PassID ID = PassID::VoxelDebug;
 
 

@@ -49,6 +49,7 @@ public:
 
 
 	static inline const wchar_t* Name = L"ScreenReflection";
+
 //	static constexpr PassID ID = PassID::ScreenReflection;
 
 

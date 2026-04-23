@@ -42,6 +42,12 @@ public:
 
 
 	static inline const wchar_t* Name = L"{{pass.name}}";
+{% if pass.options.Multiple is defined %}
+	static constexpr uint32_t MaxCount = {{pass.options.Multiple.value_atom.expr}};
+	static inline const wchar_t* Names[MaxCount] = {
+{% for i in range(pass.options.Multiple.value_atom.expr | int) %}		L"{{pass.name}}_{{i}}",
+{% endfor %}	};
+{% endif %}
 //	static constexpr PassID ID = PassID::{{pass.name}};
 
 
