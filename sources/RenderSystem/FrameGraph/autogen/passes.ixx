@@ -1,0 +1,84 @@
+export module FrameGraph:Passes;
+
+import :Base;
+import Core;
+import HAL;
+import <HAL.h>;
+export import "../defines.h";
+
+
+#include "pass/AssetGBuffer.h"
+#include "pass/AssetMip.h"
+#include "pass/BlueNoise.h"
+#include "pass/ReflectionDenoiser_Reproject.h"
+#include "pass/ShadowDenoiser_Prepare.h"
+#include "pass/ShadowDenoiser_TileClassification.h"
+#include "pass/ShadowDenoiser_Filter.h"
+#include "pass/FSR.h"
+#include "pass/ResultCreation.h"
+#include "pass/PSSM_Cascade.h"
+#include "pass/PSSM_GenerateMask.h"
+#include "pass/PSSM_Combine.h"
+#include "pass/PSSM_Global.h"
+#include "pass/RTXPass.h"
+#include "pass/PreScene.h"
+#include "pass/Profiler.h"
+#include "pass/CopyPrev.h"
+#include "pass/Scene.h"
+#include "pass/Sky.h"
+#include "pass/CubeSky.h"
+#include "pass/CubeMapDownsample.h"
+#include "pass/CubeMapEnviromentProcessor.h"
+#include "pass/SMAA.h"
+#include "pass/stencil_renderer_before.h"
+#include "pass/stencil_renderer_after.h"
+#include "pass/UI_Render.h"
+#include "pass/GBufferDownsampler.h"
+#include "pass/VoxelDebug.h"
+#include "pass/VoxelScreen.h"
+#include "pass/VoxelCombine.h"
+#include "pass/ScreenReflection.h"
+#include "pass/ReflCombine.h"
+#include "pass/Voxelize.h"
+#include "pass/Lighting.h"
+#include "pass/Mipmapping.h"
+#include "pass/GBuffer.h"
+
+export namespace Passes
+{
+	using ::Passes::AssetGBuffer;
+	using ::Passes::AssetMip;
+	using ::Passes::BlueNoise;
+	using ::Passes::ReflectionDenoiser_Reproject;
+	using ::Passes::ShadowDenoiser_Prepare;
+	using ::Passes::ShadowDenoiser_TileClassification;
+	using ::Passes::ShadowDenoiser_Filter;
+	using ::Passes::FSR;
+	using ::Passes::ResultCreation;
+	using ::Passes::PSSM_Cascade;
+	using ::Passes::PSSM_GenerateMask;
+	using ::Passes::PSSM_Combine;
+	using ::Passes::PSSM_Global;
+	using ::Passes::RTXPass;
+	using ::Passes::PreScene;
+	using ::Passes::Profiler;
+	using ::Passes::CopyPrev;
+	using ::Passes::Scene;
+	using ::Passes::Sky;
+	using ::Passes::CubeSky;
+	using ::Passes::CubeMapDownsample;
+	using ::Passes::CubeMapEnviromentProcessor;
+	using ::Passes::SMAA;
+	using ::Passes::stencil_renderer_before;
+	using ::Passes::stencil_renderer_after;
+	using ::Passes::UI_Render;
+	using ::Passes::GBufferDownsampler;
+	using ::Passes::VoxelDebug;
+	using ::Passes::VoxelScreen;
+	using ::Passes::VoxelCombine;
+	using ::Passes::ScreenReflection;
+	using ::Passes::ReflCombine;
+	using ::Passes::Voxelize;
+	using ::Passes::Lighting;
+	using ::Passes::Mipmapping;
+	using ::Passes::GBuffer;}

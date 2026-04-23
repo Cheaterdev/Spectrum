@@ -385,6 +385,7 @@ int main()
 		my_stream(cpp_path, "pso.cpp") << cpp_templates.generate(L"psos");
 
 		my_stream(cpp_path_render, "enums.h") << cpp_templates.generate(L"pass_enums");
+		my_stream(cpp_path_render, "passes.ixx") << cpp_templates.generate(L"passes");
 	}
 	catch (std::exception& e)
 	{

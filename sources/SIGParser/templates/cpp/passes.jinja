@@ -1,0 +1,24 @@
+export module FrameGraph:Passes;
+
+import :Base;
+import Core;
+import HAL;
+import <HAL.h>;
+export import "../defines.h";
+
+{% for pass in parsed.passes %}
+#include "pass/{{pass.name}}.h"
+{%- endfor %}
+{%- for view in parsed.views %}
+#include "pass/{{view.name}}.h"
+{%- endfor %}
+
+export namespace Passes
+{
+{%- for pass in parsed.passes %}
+	using ::Passes::{{pass.name}};
+{%- endfor %}
+{%- for view in parsed.views %}
+	using ::Passes::{{view.name}};
+{%- endfor -%}
+}

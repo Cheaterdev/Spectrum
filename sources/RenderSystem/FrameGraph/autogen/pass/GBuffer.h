@@ -1,11 +1,5 @@
 #pragma once
 
-import FrameGraph;
-import Core;
-import HAL;
-
-import <HAL.h>;
-
 
 using namespace FrameGraph;
 
@@ -27,6 +21,4 @@ namespace Passes
 		Handlers::Texture H(GBuffer_HiZ);
 		Handlers::Texture H(GBuffer_HiZ_UAV);
 	};
-
-
 }

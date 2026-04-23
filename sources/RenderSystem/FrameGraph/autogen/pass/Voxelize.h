@@ -1,12 +1,4 @@
 
-import FrameGraph;
-import Core;
-import HAL;
-
-import <HAL.h>;
-
-
-
 using namespace FrameGraph;
 
 namespace Passes

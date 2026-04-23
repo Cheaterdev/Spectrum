@@ -1,11 +1,5 @@
 #pragma once
 
-import FrameGraph;
-import Core;
-import HAL;
-
-import <HAL.h>;
-
 {% for v in pass.params -%}
 {%- set t =  parsed.tables[v.type] -%}
 {%- if t is undefined -%}{%-else-%}
@@ -29,6 +23,4 @@ namespace Passes
 
 {% endfor -%}
 	};
-
-
 }
