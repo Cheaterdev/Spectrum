@@ -4,8 +4,7 @@ import <RenderSystem.h>;
 import :FrameGraphContext;
 
 import HAL;
-							 
-#include <FrameGraph/autogen/pass/FSR.h>
+
 // CAS
 #define A_CPU
 #include "ffx_a.h"

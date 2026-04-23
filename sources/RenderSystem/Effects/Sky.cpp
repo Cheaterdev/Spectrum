@@ -3,10 +3,6 @@ import <RenderSystem.h>;
 import :FrameGraphContext;
 import :MipMapGenerator;
 import HAL;
-#include <FrameGraph/autogen/pass/Sky.h>
-#include <FrameGraph/autogen/pass/CubeSky.h>
-#include <FrameGraph/autogen/pass/CubeMapDownsample.h>
-#include <FrameGraph/autogen/pass/CubeMapEnviromentProcessor.h>
 
 using namespace FrameGraph;
 

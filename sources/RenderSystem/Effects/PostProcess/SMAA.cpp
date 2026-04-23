@@ -4,8 +4,7 @@ import <RenderSystem.h>;
 import :FrameGraphContext;
 
 import HAL;
-			
-#include <FrameGraph/autogen/pass/SMAA.h>
+
 using namespace FrameGraph;
 
 

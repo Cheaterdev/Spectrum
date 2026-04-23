@@ -7,7 +7,6 @@ import windows;
 import HAL;
 import FrameGraph;
 
-#include <FrameGraph/autogen/pass/UI_Render.h>
 
 using namespace FrameGraph;
 static const LPCTSTR cursors[] =

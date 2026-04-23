@@ -12,9 +12,6 @@ using namespace FrameGraph;
 
 import Graphics;
 
-			
-#include <FrameGraph/autogen/pass/stencil_renderer_before.h>
-		#include <FrameGraph/autogen/pass/stencil_renderer_after.h>
 
 using namespace HAL;
 void stencil_renderer::select_current()

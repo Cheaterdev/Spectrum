@@ -5,15 +5,6 @@ import Graphics;
 import HAL;
 import Core;
 
-#include <FrameGraph/autogen/pass/GBufferDownsampler.h>
-#include <FrameGraph/autogen/pass/VoxelDebug.h>
-#include <FrameGraph/autogen/pass/VoxelScreen.h>
-#include <FrameGraph/autogen/pass/VoxelCombine.h>
-#include <FrameGraph/autogen/pass/ScreenReflection.h>
-#include <FrameGraph/autogen/pass/ReflCombine.h>
-#include <FrameGraph/autogen/pass/Voxelize.h>
-#include <FrameGraph/autogen/pass/Lighting.h>
-#include <FrameGraph/autogen/pass/Mipmapping.h>
 
 
 using namespace FrameGraph;

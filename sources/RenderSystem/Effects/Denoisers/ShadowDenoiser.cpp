@@ -5,9 +5,6 @@ import :FrameGraphContext;
 import :MipMapGenerator;
 import HAL;
 
-#include <FrameGraph/autogen/pass/ShadowDenoiser_Prepare.h>
-#include <FrameGraph/autogen/pass/ShadowDenoiser_TileClassification.h>
-#include <FrameGraph/autogen/pass/ShadowDenoiser_Filter.h>
 
 
 using namespace FrameGraph;

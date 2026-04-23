@@ -9,8 +9,7 @@ namespace _1spp
 {
 #include "samplerCPP/samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.h"
 }
-						 
-#include <FrameGraph/autogen/pass/BlueNoise.h>
+
 struct
 {
 	std::span<std::int32_t> sobolBuffer;

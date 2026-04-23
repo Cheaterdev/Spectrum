@@ -1,8 +1,6 @@
 
 module  Graphics:AssetRenderer;
 import <RenderSystem.h>;
-					#include <FrameGraph/autogen/pass/AssetMip.h>
-				   		#include <FrameGraph/autogen/pass/AssetGBuffer.h>
 
 import HAL;
 import :MeshRenderer;

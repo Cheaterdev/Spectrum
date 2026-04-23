@@ -6,7 +6,6 @@ import :FrameGraphContext;
 import :MipMapGenerator;
 import HAL;
 
-#include <FrameGraph/autogen/pass/ReflectionDenoiser_Reproject.h>
 
 
 using namespace FrameGraph;

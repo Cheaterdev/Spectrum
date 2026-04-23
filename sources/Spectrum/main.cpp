@@ -10,12 +10,6 @@ import Core;
 import FrameGraph;
 import FrameGraphDebug;
 												
-#include <FrameGraph/autogen/pass/Profiler.h>
-#include <FrameGraph/autogen/pass/PreScene.h>
-#include <FrameGraph/autogen/pass/ResultCreation.h>
- #include <FrameGraph/autogen/pass/RTXPass.h>
-	   #include <FrameGraph/autogen/pass/CopyPrev.h>
-	 	   #include <FrameGraph/autogen/pass/Scene.h>
 
 #include "bend_sss_cpu.h"
 

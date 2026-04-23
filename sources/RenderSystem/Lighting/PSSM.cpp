@@ -1,9 +1,6 @@
 module Graphics:PSSM;
 import <RenderSystem.h>;
-				 	   #include <FrameGraph/autogen/pass/PSSM_Global.h>
-							    #include <FrameGraph/autogen/pass/PSSM_GenerateMask.h>
-									      #include <FrameGraph/autogen/pass/PSSM_Combine.h>
-#include <FrameGraph/autogen/pass/PSSM_Cascade.h>
+
 import :PSSM;
 import :BRDF;
 import :EngineAssets;
