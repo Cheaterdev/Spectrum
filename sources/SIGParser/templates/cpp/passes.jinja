@@ -12,6 +12,9 @@ export import "../defines.h";
 {%- for view in parsed.views %}
 #include "pass/{{view.name}}.h"
 {%- endfor %}
+{%- for pipeline in parsed.pipelines %}
+#include "pass/{{pipeline.name}}.pipeline.h"
+{%- endfor %}
 
 export namespace Passes
 {
@@ -22,3 +25,13 @@ export namespace Passes
 	using ::Passes::{{view.name}};
 {%- endfor -%}
 }
+
+{%- if parsed.pipelines %}
+
+export namespace Pipelines
+{
+{%- for pipeline in parsed.pipelines %}
+	using ::Pipelines::{{pipeline.name}};
+{%- endfor %}
+}
+{%- endif %}

@@ -248,6 +248,15 @@ public:
 		setup_list(get_elem<View>().params);
 	}
 
+	GENERATE(Pipeline_definition)
+	{
+		setup_map(get_elem<Parsed>().pipelines);
+	}
+	GENERATE(Pipeline_stat)
+	{
+		setup_map(get_elem<Pipeline>().entries);
+	}
+
 	void enterName_id(SIGParser::Name_idContext* ctx) override
 	{
 		auto& elem = get_elem<have_name>();

@@ -23,9 +23,10 @@ public:
     OBRACE = 54, CBRACE = 55, OSBRACE = 56, CSBRACE = 57, TRUE = 58, FALSE = 59, 
     LOG = 60, LAYOUT = 61, STRUCT = 62, COMPUTE_PSO = 63, GRAPHICS_PSO = 64, 
     RAYTRACE_PSO = 65, WORKGRAPH_PSO = 66, RAYTRACE_RAYGEN = 67, RAYTRACE_PASS = 68, 
-    PASS = 69, VIEW = 70, SLOT = 71, RT = 72, RTV = 73, DSV = 74, ROOTSIG = 75, 
-    ID = 76, INT_SCALAR = 77, FLOAT_SCALAR = 78, STRING = 79, COMMENT = 80, 
-    SPACE = 81, POINTER = 82, INSERT_START = 83, INSERT_END = 84, INSERT_BLOCK = 85
+    PASS = 69, VIEW = 70, PIPELINE = 71, SLOT = 72, RT = 73, RTV = 74, DSV = 75, 
+    ROOTSIG = 76, ID = 77, INT_SCALAR = 78, FLOAT_SCALAR = 79, STRING = 80, 
+    COMMENT = 81, SPACE = 82, POINTER = 83, INSERT_START = 84, INSERT_END = 85, 
+    INSERT_BLOCK = 86
   };
 
   enum {
@@ -49,7 +50,8 @@ public:
     RuleRtx_pass_block = 57, RuleRtx_pass_definition = 58, RuleRtx_raygen_stat = 59, 
     RuleRtx_raygen_block = 60, RuleRtx_raygen_definition = 61, RuleView_declaration = 62, 
     RuleView_stat = 63, RuleView_block = 64, RuleView_definition = 65, RulePass_definition = 66, 
-    RuleShader_type = 67, RulePso_param_id = 68, RuleBool_type = 69
+    RulePipeline_stat = 67, RulePipeline_block = 68, RulePipeline_definition = 69, 
+    RuleShader_type = 70, RulePso_param_id = 71, RuleBool_type = 72
   };
 
   explicit SIGParser(antlr4::TokenStream *input);
@@ -136,6 +138,9 @@ public:
   class View_blockContext;
   class View_definitionContext;
   class Pass_definitionContext;
+  class Pipeline_statContext;
+  class Pipeline_blockContext;
+  class Pipeline_definitionContext;
   class Shader_typeContext;
   class Pso_param_idContext;
   class Bool_typeContext; 
@@ -167,6 +172,8 @@ public:
     Pass_definitionContext* pass_definition(size_t i);
     std::vector<View_definitionContext *> view_definition();
     View_definitionContext* view_definition(size_t i);
+    std::vector<Pipeline_definitionContext *> pipeline_definition();
+    Pipeline_definitionContext* pipeline_definition(size_t i);
     std::vector<antlr4::tree::TerminalNode *> COMMENT();
     antlr4::tree::TerminalNode* COMMENT(size_t i);
 
@@ -1212,6 +1219,52 @@ public:
   };
 
   Pass_definitionContext* pass_definition();
+
+  class  Pipeline_statContext : public antlr4::ParserRuleContext {
+  public:
+    Pipeline_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *SCOL();
+    antlr4::tree::TerminalNode *COMMENT();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Pipeline_statContext* pipeline_stat();
+
+  class  Pipeline_blockContext : public antlr4::ParserRuleContext {
+  public:
+    Pipeline_blockContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<Pipeline_statContext *> pipeline_stat();
+    Pipeline_statContext* pipeline_stat(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Pipeline_blockContext* pipeline_block();
+
+  class  Pipeline_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Pipeline_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *PIPELINE();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *OBRACE();
+    Pipeline_blockContext *pipeline_block();
+    antlr4::tree::TerminalNode *CBRACE();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Pipeline_definitionContext* pipeline_definition();
 
   class  Shader_typeContext : public antlr4::ParserRuleContext {
   public:

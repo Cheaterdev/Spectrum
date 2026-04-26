@@ -789,6 +789,25 @@ struct Table : public inherited, have_options, have_name, have_hlsl
 };
 
 
+struct PipelineEntry : public have_name
+{
+	SERIALIZE()
+	{
+		SAVE_PARENT_MERGED(have_name);
+	}
+};
+
+struct Pipeline : public have_name
+{
+	my_container<PipelineEntry> entries;
+
+	SERIALIZE()
+	{
+		SAVE_PARENT_MERGED(have_name);
+		ar& NVP(entries);
+	}
+};
+
 struct Parsed : public parsed_type
 {
 	my_container<Layout> layouts;
@@ -808,6 +827,7 @@ struct Parsed : public parsed_type
 
 	my_container<View> views;
 	my_container<Pass> passes;
+	my_container<Pipeline> pipelines;
 
 	Layout* find_layout(std::string name);
 	Table* find_table(std::string name);
@@ -828,6 +848,7 @@ struct Parsed : public parsed_type
 		raytrace_gen.merge(r.raytrace_gen);
 		views.merge(r.views);
 		passes.merge(r.passes);
+		pipelines.merge(r.pipelines);
 	}
 
 
@@ -845,5 +866,6 @@ struct Parsed : public parsed_type
 
 		ar& NVP(views);
 		ar& NVP(passes);
+		ar& NVP(pipelines);
 	}
 };

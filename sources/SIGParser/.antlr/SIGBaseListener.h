@@ -217,6 +217,15 @@ public:
   virtual void enterPass_definition(SIGParser::Pass_definitionContext * /*ctx*/) override { }
   virtual void exitPass_definition(SIGParser::Pass_definitionContext * /*ctx*/) override { }
 
+  virtual void enterPipeline_stat(SIGParser::Pipeline_statContext * /*ctx*/) override { }
+  virtual void exitPipeline_stat(SIGParser::Pipeline_statContext * /*ctx*/) override { }
+
+  virtual void enterPipeline_block(SIGParser::Pipeline_blockContext * /*ctx*/) override { }
+  virtual void exitPipeline_block(SIGParser::Pipeline_blockContext * /*ctx*/) override { }
+
+  virtual void enterPipeline_definition(SIGParser::Pipeline_definitionContext * /*ctx*/) override { }
+  virtual void exitPipeline_definition(SIGParser::Pipeline_definitionContext * /*ctx*/) override { }
+
   virtual void enterShader_type(SIGParser::Shader_typeContext * /*ctx*/) override { }
   virtual void exitShader_type(SIGParser::Shader_typeContext * /*ctx*/) override { }
 

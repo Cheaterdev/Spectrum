@@ -373,9 +373,13 @@ int main()
 		{
 			my_stream(cpp_path_render + "/pass", pass.name + ".h") << cpp_templates.generate2(L"pass", "pass", pass);
 		}
-	for (auto& view : parsed.views)
+		for (auto& view : parsed.views)
 		{
 			my_stream(cpp_path_render + "/pass", view.name + ".h") << cpp_templates.generate2(L"pass_view", "view", view);
+		}
+		for (auto& pipeline : parsed.pipelines)
+		{
+			my_stream(cpp_path_render + "/pass", pipeline.name + ".pipeline.h") << cpp_templates.generate2(L"pipeline", "pipeline", pipeline);
 		}
 
 

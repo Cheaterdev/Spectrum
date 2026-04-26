@@ -215,6 +215,15 @@ public:
   virtual void enterPass_definition(SIGParser::Pass_definitionContext *ctx) = 0;
   virtual void exitPass_definition(SIGParser::Pass_definitionContext *ctx) = 0;
 
+  virtual void enterPipeline_stat(SIGParser::Pipeline_statContext *ctx) = 0;
+  virtual void exitPipeline_stat(SIGParser::Pipeline_statContext *ctx) = 0;
+
+  virtual void enterPipeline_block(SIGParser::Pipeline_blockContext *ctx) = 0;
+  virtual void exitPipeline_block(SIGParser::Pipeline_blockContext *ctx) = 0;
+
+  virtual void enterPipeline_definition(SIGParser::Pipeline_definitionContext *ctx) = 0;
+  virtual void exitPipeline_definition(SIGParser::Pipeline_definitionContext *ctx) = 0;
+
   virtual void enterShader_type(SIGParser::Shader_typeContext *ctx) = 0;
   virtual void exitShader_type(SIGParser::Shader_typeContext *ctx) = 0;
 

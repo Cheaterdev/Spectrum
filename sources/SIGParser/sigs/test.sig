@@ -7,3 +7,56 @@ struct Test
 	Texture2D<float4> tex[];
 	StructuredBuffer<MeshInstanceInfo> instances[];
 }
+
+
+Pipeline MainPipeline
+{
+	# scene prep
+	PreScene;
+	BlueNoise;
+
+	# voxel pre (generate_pre)
+	Voxelize;
+
+	# shadow (generate_global)
+	PSSM_Global;
+	PSSM_Cascade;
+
+	# sky setup (sky.generate)
+	CubeSky;
+	CubeMapDownsample;
+	CubeMapEnviromentProcessor;
+
+	# voxel lighting (generate_light)
+	Lighting;
+	Mipmapping;
+
+	# main gbuffer + rtx
+	Scene;
+	RTXPass;
+
+	# result target
+	ResultCreation;
+
+	# shadow composition (pssm.generate)
+	PSSM_GenerateMask;
+	PSSM_Combine;
+
+	# voxel screen (voxel_gi.generate)
+	VoxelScreen;
+	VoxelCombine;
+	ScreenReflection;
+	ReflectionDenoiser_Reproject;
+	ReflCombine;
+	VoxelDebug;
+
+	# sky + post
+	Sky;
+	stencil_renderer_after;
+	SMAA;
+	FSR;
+
+	# frame end
+	CopyPrev;
+	Profiler;
+}

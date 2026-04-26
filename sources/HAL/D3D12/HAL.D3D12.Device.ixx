@@ -58,6 +58,8 @@ export namespace HAL
 			}
 			D3D::Device get_native_device();
 
+			HRESULT get_device_removed_reason() const { return native_device->GetDeviceRemovedReason(); }
+
 			ResourceAllocationInfo get_alloc_info(const ResourceDesc& desc);
 			uint Subresources(const ResourceDesc& desc) const
 			{
@@ -127,7 +129,7 @@ namespace HAL
 
 				 	Log::get().crash_error(hr, line);
 
-			hr = 	native_device->GetDeviceRemovedReason();
+			hr = 	get_device_removed_reason();
 				__debugbreak();
 				assert(false);
 			}

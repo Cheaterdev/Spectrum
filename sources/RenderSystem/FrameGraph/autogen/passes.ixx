@@ -43,6 +43,7 @@ export import "../defines.h";
 #include "pass/Lighting.h"
 #include "pass/Mipmapping.h"
 #include "pass/GBuffer.h"
+#include "pass/MainPipeline.pipeline.h"
 
 export namespace Passes
 {
@@ -82,3 +83,8 @@ export namespace Passes
 	using ::Passes::Lighting;
 	using ::Passes::Mipmapping;
 	using ::Passes::GBuffer;}
+
+export namespace Pipelines
+{
+	using ::Pipelines::MainPipeline;
+}

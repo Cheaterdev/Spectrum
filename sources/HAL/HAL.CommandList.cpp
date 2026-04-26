@@ -680,7 +680,7 @@ gpu_timer.start(list);
 
 		list->update_texture(resource, offset, box, sub_resource, info, layout);
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
 		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
 
@@ -705,7 +705,7 @@ gpu_timer.start(list);
 		list->read_texture(resource, offset, box, sub_resource, info, layout);
 
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, layout]()
 		{
@@ -730,7 +730,7 @@ gpu_timer.start(list);
 		                   layout);
 
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, layout]()
 		{
@@ -762,7 +762,7 @@ gpu_timer.start(list);
 		auto info = base.read_data(size, GPUEntityStorageInterface::DEFAULT_ALIGN, static_cast<uint>(base.get_type()));
 		list->copy_buffer(info.resource, info.resource_offset, resource, offset, size);
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
 		base.on_execute_funcs.push_back([result, info, f, size]()
 		{
 			f({reinterpret_cast<std::byte*>(info.get_cpu_data()), size});
@@ -791,7 +791,7 @@ gpu_timer.start(list);
 		//list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_dx(), info.resource_offset);
 		assert(false);
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, size]()
 		{
@@ -1254,7 +1254,7 @@ gpu_timer.start(list);
 
 		list->copy_texture(dest, dest_subres, source, source_subres);
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
 		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
 
@@ -1270,7 +1270,7 @@ gpu_timer.start(list);
 		}
 		list->copy_texture(to, to_pos, from, from_pos, size);
 		if constexpr (Debug::CheckErrors)
-			TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
+			TEST(Device::get(), Device::get().get_device_removed_reason());
 		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
 
