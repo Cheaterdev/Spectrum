@@ -139,11 +139,12 @@ public:
 	SkyRender sky;
 	FSR fsr;
 	ShadowDenoiser shadow_denoiser;
+	Pipelines::MainPipeline pipeline;
 	BlueNoise blue_noise;
 	VoxelGI::ptr voxel_gi;
 	
 
-	triangle_drawer() : VariableContext(L"triangle_drawer")
+	triangle_drawer() : VariableContext(L"triangle_drawer"), blue_noise(pipeline)
 	{
 		texture.mul_color = {1, 1, 1, 0};
 		texture.add_color = {0, 0, 0, 1};
@@ -414,7 +415,7 @@ public:
 
 		{
 			PROFILE(L"graph");
-			blue_noise.generate(graph);
+			pipeline.add_passes(graph);
 		}
 
 		if (enable_gi)
