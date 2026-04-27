@@ -126,8 +126,8 @@ public:
 
 
 		pssm.generate(graph);
-		sky.generate(graph);
-		sky.generate_sky(graph);
+		//sky.generate(graph);
+	//	sky.generate_sky(graph);
 
 		graph.add_library_pass<Passes::AssetMip>([this, &graph](auto& data, TaskBuilder& builder) ->bool {
 			builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);

@@ -71,6 +71,58 @@ struct PassDefault<Passes::CopyPrev>
 };
 
 
+// ---- CubeMapDownsample -------------------------------------------------
+// Generates mipmaps for the sky cubemap.
+// setup/render are defined out-of-line in Graphics:Sky (Sky.cpp).
+
+template<>
+struct PassDefault<Passes::CubeMapDownsample>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	static bool setup(Passes::CubeMapDownsample::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::CubeMapDownsample::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+// ---- CubeMapEnviromentProcessor ----------------------------------------
+// Filters the sky cubemap into specular and diffuse IBL targets.
+// setup/render are defined out-of-line in Graphics:Sky (Sky.cpp).
+
+template<>
+struct PassDefault<Passes::CubeMapEnviromentProcessor>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+
+	static bool setup(Passes::CubeMapEnviromentProcessor::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::CubeMapEnviromentProcessor::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+// ---- Profiler ----------------------------------------------------------
+// Ensures the swapchain texture is retained as a required render target.
+// Render is intentionally empty — the pass exists only for the resource
+// dependency it declares.
+
+template<>
+struct PassDefault<Passes::Profiler>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;
+
+	static bool setup(Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder)
+	{
+		builder.need(data.swapchain,
+		             FrameGraph::ResourceFlags::Required | FrameGraph::ResourceFlags::RenderTarget);
+		return false;
+	}
+
+	static void render(Passes::Profiler::Context&, FrameGraph::FrameContext&) {}
+};
+
+
 // ---- FSR ---------------------------------------------------------------
 // AMD FidelityFX Super Resolution upscaling pass.
 // setup/render are defined out-of-line in Graphics:FSR (FSR.cpp) because

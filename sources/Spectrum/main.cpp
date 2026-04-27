@@ -9,7 +9,7 @@ import ppl;
 import Core;
 import FrameGraph;
 import FrameGraphDebug;
-												
+
 
 #include "bend_sss_cpu.h"
 
@@ -18,11 +18,11 @@ using namespace FrameGraph;
 using namespace HAL;
 
 extern "C" {
-_declspec(dllexport) extern const unsigned int D3D12SDKVersion = 618;
+	_declspec(dllexport) extern const unsigned int D3D12SDKVersion = 618;
 }
 
 extern "C" {
-_declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
+	_declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
 }
 
 class tick_timer
@@ -80,8 +80,7 @@ class GraphDebugRender : public GUI::Elements::FlowGraph::canvas
 {
 public:
 	void generate(Graph& graph)
-	{
-	}
+	{}
 };
 
 class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext, public GraphUsage
@@ -101,8 +100,7 @@ class triangle_drawer : public GUI::Elements::image, public GraphGenerator, Vari
 
 
 		EyeData(HAL::RootSignature::ptr sig)
-		{
-		}
+		{}
 	};
 
 	std::vector<EyeData::ptr> eyes;
@@ -113,10 +111,10 @@ public:
 	//	PostProcessGraph::ptr render_graph;
 
 
-	Variable<bool> enable_gi = {true, "GI", this};
-	Variable<bool> enable_fsr = {true, "FSR", this};
-	Variable<bool> downsampled = {true, "downsampled", this};
-	Variable<bool> enable_denoiser = {true, "denoiser", this};
+	Variable<bool> enable_gi = { true, "GI", this };
+	Variable<bool> enable_fsr = { true, "FSR", this };
+	Variable<bool> downsampled = { true, "downsampled", this };
+	Variable<bool> enable_denoiser = { true, "denoiser", this };
 
 	//Variable<bool> debug_draw = Variable<bool>(false, "debug_draw",this);
 	//	VoxelGI::ptr voxel_renderer;
@@ -136,19 +134,19 @@ public:
 	std::shared_ptr<Graphics::OVRContext> vr_context = std::make_shared<Graphics::OVRContext>();
 	PSSM pssm;
 	SMAA smaa{ pipeline };
-	SkyRender sky;
+	SkyRender sky{ pipeline };
 	ShadowDenoiser shadow_denoiser;
 	Pipelines::MainPipeline pipeline;
 	BlueNoise blue_noise;
 	std::optional<PreSceneSystem> pre_scene_system;
 	std::optional<SceneSystem>    scene_system;
 	VoxelGI::ptr voxel_gi;
-	
+
 
 	triangle_drawer() : VariableContext(L"triangle_drawer"), blue_noise(pipeline)
 	{
-		texture.mul_color = {1, 1, 1, 0};
-		texture.add_color = {0, 0, 0, 1};
+		texture.mul_color = { 1, 1, 1, 0 };
+		texture.add_color = { 0, 0, 0, 1 };
 
 
 		auto t = CounterManager::get().start_count<triangle_drawer>();
@@ -193,7 +191,7 @@ public:
 		props->height_size = GUI::size_type::MATCH_CHILDREN;
 		base::add_child(props);
 
-	
+
 
 		GUI::Elements::circle_selector::ptr circle(new GUI::Elements::circle_selector);
 		circle->docking = GUI::dock::FILL;
@@ -205,48 +203,48 @@ public:
 		//	lighting = std::make_shared<LightingNode>();
 
 		circle->on_change.register_handler(this, [this](const float2& value)
-		{
-			float2 v = value;
-			float3 dir = {0.001 + v.x, sqrt(1.001 - v.length_squared()), -v.y};
-			pssm.set_position(dir);
-		});
+			{
+				float2 v = value;
+				float3 dir = { 0.001 + v.x, sqrt(1.001 - v.length_squared()), -v.y };
+				pssm.set_position(dir);
+			});
 
-		circle->set_value({1, 0});
+		circle->set_value({ 1, 0 });
 
 
 		MeshAsset::ptr asset_ptr = EngineAssets::material_tester.get_asset();
 
 
 		auto make_material = [](float3 color, float roughness, float metallic)
-		{
-			MaterialGraph::ptr graph(new MaterialGraph);
-
-
 			{
-				auto value_node = std::make_shared<VectorNode>(vec4(color, 1));
-				graph->register_node(value_node);
-				value_node->get_output(0)->link(graph->get_base_color());
-			}
+				MaterialGraph::ptr graph(new MaterialGraph);
 
 
-			{
-				auto value_node = std::make_shared<ScalarNode>(roughness);
-				graph->register_node(value_node);
-				value_node->get_output(0)->link(graph->get_roughness());
-			}
-
-			{
-				auto value_node = std::make_shared<ScalarNode>(metallic);
-				graph->register_node(value_node);
-				value_node->get_output(0)->link(graph->get_mettalic());
-			}
+				{
+					auto value_node = std::make_shared<VectorNode>(vec4(color, 1));
+					graph->register_node(value_node);
+					value_node->get_output(0)->link(graph->get_base_color());
+				}
 
 
-			auto m = (new materials::universal_material(graph));
-			//m->generate_material();
-			m->register_new();
-			return m->get_ptr<MaterialAsset>();
-		};
+				{
+					auto value_node = std::make_shared<ScalarNode>(roughness);
+					graph->register_node(value_node);
+					value_node->get_output(0)->link(graph->get_roughness());
+				}
+
+				{
+					auto value_node = std::make_shared<ScalarNode>(metallic);
+					graph->register_node(value_node);
+					value_node->get_output(0)->link(graph->get_mettalic());
+				}
+
+
+				auto m = (new materials::universal_material(graph));
+				//m->generate_material();
+				m->register_new();
+				return m->get_ptr<MaterialAsset>();
+			};
 
 
 		//	auto base_mat = make_material({ 1,1,1 }, 1, 0);
@@ -330,12 +328,10 @@ public:
 
 
 	void draw_eye(HAL::CommandList::ptr _list, float dt, EyeData& data, HAL::Texture::ptr target)
-	{
-	}
+	{}
 
 	void update_texture(HAL::CommandList::ptr list, float dt, const std::shared_ptr<Graphics::OVRContext>& vr)
-	{
-	}
+	{}
 
 	Graph* last_graph = nullptr;
 	tick_timer my_timer;
@@ -375,19 +371,19 @@ public:
 
 		vp.upscale_size = size;
 
-		sceneinfo.scene    = scene;
+		sceneinfo.scene = scene;
 		sceneinfo.renderer = gpu_scene_renderer;
 		caminfo.cam = &cam;
 		timeinfo.time = (float)my_timer.tick();
 		timeinfo.totalTime += timeinfo.time;
 		skyinfo.sunDir = pssm.get_position();
-		cam.update({0, 0});
+		cam.update({ 0, 0 });
 
 
 		for (int i = 0; i < eyes.size(); i++)
 		{
 			eyes[i]->cam = cam;
-			eyes[i]->cam.update({0, 0});
+			eyes[i]->cam.update({ 0, 0 });
 		}
 
 
@@ -398,7 +394,7 @@ public:
 			PROFILE(L"graph");
 			pipeline.add_passes(graph);
 		}
-
+	   /*
 		if (enable_gi)
 		{
 			PROFILE(L"generate_pre");
@@ -410,10 +406,6 @@ public:
 			PROFILE(L"pssm");
 			pssm.generate_global(graph);
 		}
-		{
-			PROFILE(L"sky");
-			sky.generate(graph);
-		}
 		if (enable_gi)
 		{
 			PROFILE(L"generate_light");
@@ -423,152 +415,152 @@ public:
 
 
 		{
-	
+
 
 			//WTF Compilation issue
-			auto t = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
+			//auto t = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
 
 			//		if (HAL::Device::get().is_rtx_supported())
 			{
 				graph.add_library_pass<Passes::RTXPass>([this, &graph](auto& data, TaskBuilder& builder)
-				                             {
-					                             auto& frame = graph.get_context<ViewportInfo>();
+					{
+						auto& frame = graph.get_context<ViewportInfo>();
 
 
-					                             auto work_pso = HAL::Device::get().get_engine_pso_holder().GetPSO<
-						                             PSOS::WorkGR>();
-					                             auto size = frame.frame_size;
+						auto work_pso = HAL::Device::get().get_engine_pso_holder().GetPSO<
+							PSOS::WorkGR>();
+						auto size = frame.frame_size;
 
-					builder.need( data.gbuffer.GBuffer_Albedo, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(data.gbuffer.GBuffer_Normals, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(data.gbuffer.GBuffer_Depth, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(data.gbuffer.GBuffer_Specular, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(data.gbuffer.GBuffer_Speed, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+						builder.need(data.gbuffer.GBuffer_Albedo, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+						builder.need(data.gbuffer.GBuffer_Normals, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+						builder.need(data.gbuffer.GBuffer_Depth, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+						builder.need(data.gbuffer.GBuffer_Specular, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+						builder.need(data.gbuffer.GBuffer_Speed, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
 
-			builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-		//	if (need_quality) builder.need(GBuffer_Quality, ResourceFlags::DSRead);
-			builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::None);
-
-
-					                          //   data.gbuffer.need(builder, false);
-					                             builder.create(data.RTXDebug,
-					                                            {ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1},
-					                                            ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-					                             builder.create(data.WorkGraphBuffer, {work_pso->buffer_size},
-					                                            ResourceFlags::UnorderedAccess);
-
-												 return true;
-				                             }, [this, &graph](auto& data, FrameContext& context)
-				                             {
-					                             auto& compute = context.get_list()->get_compute();
-					                             auto& copy = context.get_list()->get_copy();
-
-					                             if (data.RTXDebug.is_new())
-					                             {
-						                             context.get_list()->clear_uav(
-							                             data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
-					                             }
-					                             auto& backingBuffer = data.WorkGraphBuffer->resource;
-
-					                             auto work_pso = Device::get().get_engine_pso_holder().GetPSO<
-						                             PSOS::WorkGR>();
-
-					                             compute.set_program(work_pso.get(),
-					                                                 backingBuffer->get_resource_address(),
-					                                                 uint(work_pso->buffer_size),
-					                                                 data.WorkGraphBuffer.is_new());
-
-					                             graph.set_slot(SlotID::VoxelInfo, compute);
-					                             graph.set_slot(SlotID::FrameInfo, compute);
-					                             graph.set_slot(SlotID::SceneData, compute);
-
-														   
-													GBuffer gbuffer;
-
-			gbuffer.albedo = *data.gbuffer.GBuffer_Albedo;
-			gbuffer.normals = *data.gbuffer.GBuffer_Normals;
-			gbuffer.depth = *data.gbuffer.GBuffer_Depth;
-			gbuffer.specular = *data.gbuffer.GBuffer_Specular;
-			gbuffer.speed = *data.gbuffer.GBuffer_Speed;
+						builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+						//	if (need_quality) builder.need(GBuffer_Quality, ResourceFlags::DSRead);
+						builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::None);
 
 
-			gbuffer.depth_prev_mips = *data.gbuffer.GBuffer_DepthPrev;
+						//   data.gbuffer.need(builder, false);
+						builder.create(data.RTXDebug,
+							{ ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
+							ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+						builder.create(data.WorkGraphBuffer, { work_pso->buffer_size },
+							ResourceFlags::UnorderedAccess);
 
-					                             {
-						                             Slots::Raytracing rtx;
-						                             rtx.GetScene() = scene->raytrace_scene->raytracing_handle;
-						                             compute.set(rtx);
-					                             }
-					                             {
-						                   
-						                             Slots::VoxelScreen voxelScreen;
-						                             gbuffer.SetTable(voxelScreen.GetGbuffer());
-						                             voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
-						                             //		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
-						                             compute.set(voxelScreen);
-					                             }
+						return true;
+					}, [this, &graph](auto& data, FrameContext& context)
+						{
+							auto& compute = context.get_list()->get_compute();
+							auto& copy = context.get_list()->get_copy();
 
-					                             auto light = float4(pssm.get_position().normalized(), 0) * cam.
-						                             get_view_proj();
+							if (data.RTXDebug.is_new())
+							{
+								context.get_list()->clear_uav(
+									data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
+							}
+							auto& backingBuffer = data.WorkGraphBuffer->resource;
 
-					                             Bend::DispatchList res = Bend::BuildDispatchList(
-						                             {
-							                             light.x, light.y,
-							                             light.z, light.w
-						                             }, {data.RTXDebug->get_size().x, data.RTXDebug->get_size().y},
-						                             {0, 0}, {
-							                             data.RTXDebug->get_size().x, data.RTXDebug->get_size().y
-						                             }, false, 64);
-					                             //  compute.set_pipeline<PSOS::SS_Shadow>();
+							auto work_pso = Device::get().get_engine_pso_holder().GetPSO<
+								PSOS::WorkGR>();
 
+							compute.set_program(work_pso.get(),
+								backingBuffer->get_resource_address(),
+								uint(work_pso->buffer_size),
+								data.WorkGraphBuffer.is_new());
 
-
-
-					                             //auto gbuffer = data.gbuffer.actualize(context);
-
-					                             Slots::DispatchParameters dispatchParameters;
-					                             dispatchParameters.GetDepthTexture() = gbuffer.depth.texture2D;
-					                             dispatchParameters.GetOutputTexture() = data.RTXDebug->rwTexture2D;
-					                             dispatchParameters.GetLightCoordinate() = float4(
-						                             res.LightCoordinate_Shader[0],
-						                             res.LightCoordinate_Shader[1],
-						                             res.LightCoordinate_Shader[2],
-						                             res.LightCoordinate_Shader[3]);
+							graph.set_slot(SlotID::VoxelInfo, compute);
+							graph.set_slot(SlotID::FrameInfo, compute);
+							graph.set_slot(SlotID::SceneData, compute);
 
 
-					                             dispatchParameters.FarDepthValue = 0;
-					                             dispatchParameters.NearDepthValue = 1;
-					                             dispatchParameters.InvDepthTextureSize = float2(
-						                             1.0f / data.RTXDebug->get_size().x,
-						                             1.0f / data.RTXDebug->get_size().y);
+							GBuffer gbuffer;
 
-					                             //			  dispatchParameters.DebugOutputThreadIndex = true;
-					                             compute.set(dispatchParameters);
-
-
-					                             auto ep = create_entry(compute);
-					                             for (auto i = 0; i < res.DispatchCount; i++)
-					                             {
-						                             auto& e = res.Dispatch[i];
-						                             {
-							                             Slots::GraphInput input;
-							                             input.GetDispatch_grid() = vec3(
-								                             e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
-							                             input.GetWaveOffset() = int2(
-								                             e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
-							                             ep.add(0, input);
-						                             }
-					                             }
-					                             if (res.DispatchCount)
-						                             compute.dispatch_graph(ep.compile());
+							gbuffer.albedo = *data.gbuffer.GBuffer_Albedo;
+							gbuffer.normals = *data.gbuffer.GBuffer_Normals;
+							gbuffer.depth = *data.gbuffer.GBuffer_Depth;
+							gbuffer.specular = *data.gbuffer.GBuffer_Specular;
+							gbuffer.speed = *data.gbuffer.GBuffer_Speed;
 
 
-					                             //}
-					                             //	RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
-				                             }, PassFlags::Compute);
+							gbuffer.depth_prev_mips = *data.gbuffer.GBuffer_DepthPrev;
 
-				//if(enable_denoiser)
-				//shadow_denoiser.generate(graph);
+							{
+								Slots::Raytracing rtx;
+								rtx.GetScene() = scene->raytrace_scene->raytracing_handle;
+								compute.set(rtx);
+							}
+							{
+
+								Slots::VoxelScreen voxelScreen;
+								gbuffer.SetTable(voxelScreen.GetGbuffer());
+								voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
+								//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
+								compute.set(voxelScreen);
+							}
+
+							auto light = float4(pssm.get_position().normalized(), 0) * cam.
+								get_view_proj();
+
+							Bend::DispatchList res = Bend::BuildDispatchList(
+								{
+									light.x, light.y,
+									light.z, light.w
+								}, { data.RTXDebug->get_size().x, data.RTXDebug->get_size().y },
+													 { 0, 0 }, {
+														 data.RTXDebug->get_size().x, data.RTXDebug->get_size().y
+													 }, false, 64);
+													 //  compute.set_pipeline<PSOS::SS_Shadow>();
+
+
+
+
+													 //auto gbuffer = data.gbuffer.actualize(context);
+
+													 Slots::DispatchParameters dispatchParameters;
+													 dispatchParameters.GetDepthTexture() = gbuffer.depth.texture2D;
+													 dispatchParameters.GetOutputTexture() = data.RTXDebug->rwTexture2D;
+													 dispatchParameters.GetLightCoordinate() = float4(
+														 res.LightCoordinate_Shader[0],
+														 res.LightCoordinate_Shader[1],
+														 res.LightCoordinate_Shader[2],
+														 res.LightCoordinate_Shader[3]);
+
+
+													 dispatchParameters.FarDepthValue = 0;
+													 dispatchParameters.NearDepthValue = 1;
+													 dispatchParameters.InvDepthTextureSize = float2(
+														 1.0f / data.RTXDebug->get_size().x,
+														 1.0f / data.RTXDebug->get_size().y);
+
+													 //			  dispatchParameters.DebugOutputThreadIndex = true;
+													 compute.set(dispatchParameters);
+
+
+													 auto ep = create_entry(compute);
+													 for (auto i = 0; i < res.DispatchCount; i++)
+													 {
+														 auto& e = res.Dispatch[i];
+														 {
+															 Slots::GraphInput input;
+															 input.GetDispatch_grid() = vec3(
+																 e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
+															 input.GetWaveOffset() = int2(
+																 e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
+															 ep.add(0, input);
+														 }
+													 }
+													 if (res.DispatchCount)
+														 compute.dispatch_graph(ep.compile());
+
+
+													 //}
+													 //	RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
+						}, PassFlags::Compute);
+
+					//if(enable_denoiser)
+					//shadow_denoiser.generate(graph);
 			}
 		}
 
@@ -580,49 +572,48 @@ public:
 		if (enable_gi) voxel_gi->generate(graph);
 
 
-		sky.generate_sky(graph);
 
 		stenciler->generate_after(graph);
 
-
+									*/
 		struct debug_data
 		{
 			Handlers::Texture debug_tex;
 		};
 
 		graph.add_slot_generator([this](Graph& graph)
-		{
-			PROFILE(L"FrameInfo");
-			auto& time = graph.get_context<TimeInfo>();
-			auto& skyinfo = graph.get_context<SkyInfo>();
-			auto& cam = graph.get_context<CameraInfo>();
+			{
+				PROFILE(L"FrameInfo");
+				auto& time = graph.get_context<TimeInfo>();
+				auto& skyinfo = graph.get_context<SkyInfo>();
+				auto& cam = graph.get_context<CameraInfo>();
 
 
-			Slots::FrameInfo frameInfo;
-			//// hack zone
-			auto sky = graph.builder.get("sky_cubemap_filtered");
-			if (sky && sky->resource)
-				frameInfo.GetSky() = *sky->get_handler<Handlers::TextureCube>();
+				Slots::FrameInfo frameInfo;
+				//// hack zone
+				auto sky = graph.builder.get("sky_cubemap_filtered");
+				if (sky && sky->resource)
+					frameInfo.GetSky() = *sky->get_handler<Handlers::TextureCube>();
 
-			/////////
-			frameInfo.GetSunDir().xyz = skyinfo.sunDir;
-			frameInfo.GetTime() = {time.time, time.totalTime, 0, 0};
+				/////////
+				frameInfo.GetSunDir().xyz = skyinfo.sunDir;
+				frameInfo.GetTime() = { time.time, time.totalTime, 0, 0 };
 
 
-			frameInfo.GetCamera() = cam.cam->camera_cb.current;
-			frameInfo.GetPrevCamera() = cam.cam->camera_cb.prev;
+				frameInfo.GetCamera() = cam.cam->camera_cb.current;
+				frameInfo.GetPrevCamera() = cam.cam->camera_cb.prev;
 
-			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d();
-			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d();
+				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d();
+				frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d();
 
-			auto compiled = frameInfo.compile(*graph.builder.current_frame);
-			graph.register_slot_setter(compiled);
-		});
+				auto compiled = frameInfo.compile(*graph.builder.current_frame);
+				graph.register_slot_setter(compiled);
+			});
 
 		graph.add_slot_generator([this](Graph& graph)
-		{
-			graph.register_slot_setter(scene->compiledScene);
-		});
+			{
+				graph.register_slot_setter(scene->compiledScene);
+			});
 	}
 
 	Handlers::Texture debug_tex;
@@ -657,8 +648,7 @@ UINT64 frame_counter = 0;
 
 
 class FrameFlowGraph : public ::FlowGraph::graph
-{
-};
+{};
 
 class PassNode : public::FlowGraph::Node, public GUI::Elements::FlowGraph::VisualGraph
 {
@@ -667,19 +657,17 @@ class PassNode : public::FlowGraph::Node, public GUI::Elements::FlowGraph::Visua
 
 public:
 	PassNode(Graph& graph, std::wstring_view pass_name) : graph(graph), pass_name(pass_name)
-	{
-	}
+	{}
 
 	void operator()(::FlowGraph::GraphContext*) override
-	{
-	}
+	{}
 
 	GUI::base::ptr create_editor_window() override
 	{
 		GUI::Elements::image::ptr img(new GUI::Elements::image);
 		img->texture = Skin::get().Shadow;
 		img->padding = img->texture.padding;
-		img->size = {256, 256};
+		img->size = { 256, 256 };
 		img->width_size = GUI::size_type::FIXED;
 		img->height_size = GUI::size_type::FIXED;
 		return img;
@@ -687,7 +675,7 @@ public:
 };
 namespace GUI
 {
-	
+
 
 }
 
@@ -701,7 +689,7 @@ class GraphRender : public Window, public GUI::user_interface
 	std::shared_ptr<Graphics::OVRContext> vr_context = std::make_shared<Graphics::OVRContext>();
 	std::future<void> task_future;
 	std::future<void> task_end;
-	   	std::promise<void> promise_end;
+	std::promise<void> promise_end;
 
 	Graph graph;
 	bool alive = false;
@@ -800,12 +788,13 @@ public:
 
 		if (alive)
 		{
-			
+
 			task_future = thread_pool::get().enqueue([this]()
-			{
-				render();
-			});
-		}else
+				{
+					render();
+				});
+		}
+		else
 		{
 
 			promise_end.set_value();
@@ -822,15 +811,6 @@ public:
 		{
 			PROFILE(L"create_graph");
 			create_graph(graph);
-
-			graph.add_library_pass<Passes::Profiler>([](auto& data, TaskBuilder& builder)
-				{
-					builder.need(data.swapchain,
-						ResourceFlags::Required | ResourceFlags::RenderTarget);
-					return false;
-				}, [this](auto& data, FrameContext& context)
-					{
-					}, PassFlags::Required);
 		}
 
 		graph.setup();
@@ -847,7 +827,7 @@ public:
 				//	dock->get_tabs()->add_page("Profiler", t);
 
 				//	GUI::Elements::Debug::TimeGraph::ptr t2(new GUI::Elements::Debug::TimeGraph());
-				
+
 
 
 				//docker->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
@@ -858,8 +838,7 @@ public:
 			frameFlowGraph->clear();
 
 			struct res_stage
-			{
-			};
+			{};
 			std::map<ResourceAllocInfo*, ::FlowGraph::parameter::ptr> resource_stages;
 			std::map<Pass*, float> pass_positions;
 			std::map<CommandListType, float> list_positions;
@@ -883,8 +862,8 @@ public:
 				node->name = convert(std::wstring(pass->name)) + " " + std::to_string(pass->id);
 
 				CommandListType pass_type = check(pass->flags & PassFlags::Compute)
-					                            ? CommandListType::COMPUTE
-					                            : CommandListType::DIRECT;
+					? CommandListType::COMPUTE
+					: CommandListType::DIRECT;
 				if (!pass->enabled)
 				{
 					node->color = float4(1, 0, 0, 1);
@@ -903,7 +882,7 @@ public:
 					my_pos = std::max(my_pos, pass_positions[const_cast<Pass*>(sync_pass)]);
 				}
 
-				node->pos = {my_pos + 800, check(pass->flags & PassFlags::Compute) * 500};
+				node->pos = { my_pos + 800, check(pass->flags & PassFlags::Compute) * 500 };
 
 
 				pass_positions[pass] = node->pos.x;
@@ -959,8 +938,8 @@ public:
 					}
 				}
 			}
-			frameFlowGraph->pos_in = {-800, 0};
-			frameFlowGraph->pos_out = {offset + 800, 0};
+			frameFlowGraph->pos_in = { -800, 0 };
+			frameFlowGraph->pos_out = { offset + 800, 0 };
 		}
 	}
 
@@ -968,7 +947,7 @@ public:
 
 	GraphRender()
 	{
-	
+
 		//scale = 1.25f;
 		Window::input_handler = this;
 		HAL::swap_chain_desc desc;
@@ -979,12 +958,12 @@ public:
 		swap_chain = std::make_shared<HAL::SwapChain>(HAL::Device::get(), desc);
 
 		set_capture = [this](bool v)
-		{
-			if (v)
-				SetCapture(get_hwnd());
-			else
-				ReleaseCapture();
-		};
+			{
+				if (v)
+					SetCapture(get_hwnd());
+				else
+					ReleaseCapture();
+			};
 
 		on_resize(get_size());
 
@@ -1017,27 +996,27 @@ public:
 			}
 
 			{
-			//	auto text = std::make_shared<GUI::Elements::MultiLineLabel>();
-			////	auto f = FileSystem::get().get_file(to_path(L"main.cpp"))->load_all();
+				//	auto text = std::make_shared<GUI::Elements::MultiLineLabel>();
+				////	auto f = FileSystem::get().get_file(to_path(L"main.cpp"))->load_all();
 
 
-				//text->text = f;
-				///d->get_tabs()->add_page("text", text);
+					//text->text = f;
+					///d->get_tabs()->add_page("text", text);
 			}
 
-			  
+
 			{
 				auto table = std::make_shared<GUI::Elements::Table>();
 				table->InitTest();
 				//text->text = f;
 				d->get_tabs()->add_page("table", table);
 			}
-		
+
 
 			{
 				GUI::Elements::list_box::ptr l(new GUI::Elements::list_box());
 				auto dock = d->get_dock(GUI::dock::BOTTOM);
-				dock->size = {100, 100};
+				dock->size = { 100, 100 };
 				area->add_child(d);
 				dock->get_tabs()->add_page("TaskViewer", std::make_shared<GUI::Elements::Debug::TaskViewer>());
 
@@ -1046,7 +1025,7 @@ public:
 
 
 					auto folders = std::make_shared<GUI::Elements::tree<VariableContext>>();
-					folders->size = {200, 150};
+					folders->size = { 200, 150 };
 					folders->docking = GUI::dock::LEFT;
 
 					auto table = std::make_shared<GUI::base>();
@@ -1056,15 +1035,15 @@ public:
 					b->add_child(table);
 
 					folders->on_select = [this, table](VariableContext* elem)
-					{
-						table->remove_all();
-
-						for (auto v : elem->variables)
 						{
-							auto property = GUI::Elements::create_property(*v);
-							table->add_child(property);
-						}
-					};
+							table->remove_all();
+
+							for (auto v : elem->variables)
+							{
+								auto property = GUI::Elements::create_property(*v);
+								table->add_child(property);
+							}
+						};
 
 					folders->init(&VariableContext::get());
 
@@ -1097,45 +1076,45 @@ public:
 					auto edit = menu->add_item("Edit")->get_menu();
 					auto help = menu->add_item("Help"); // ->get_menu();
 					file->add_item("New")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-					{
-						add_task([this]()
 						{
-							drawer->scene->remove_all();
-						});
-					};
-					file->add_item("Open")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-					{
-						add_task([this]()
-						{
-							try
-							{
-								auto f = FileSystem::get().get_file(to_path(L"scene.dat"))->load_all();
-								Serializer::deserialize(f, *drawer->scene);
-							}
-							catch (std::exception e)
-							{
-								message_box("error", "cant open", [](bool)
+							add_task([this]()
 								{
+									drawer->scene->remove_all();
 								});
-							}
-						});
-					};
+						};
+					file->add_item("Open")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
+						{
+							add_task([this]()
+								{
+									try
+									{
+										auto f = FileSystem::get().get_file(to_path(L"scene.dat"))->load_all();
+										Serializer::deserialize(f, *drawer->scene);
+									}
+									catch (std::exception e)
+									{
+										message_box("error", "cant open", [](bool)
+											{
+											});
+									}
+								});
+						};
 					file->add_item("Save")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-					{
-						auto data = Serializer::serialize(*drawer->scene);
-						FileSystem::get().save_data(to_path(L"scene.dat"), data);
-					};
+						{
+							auto data = Serializer::serialize(*drawer->scene);
+							FileSystem::get().save_data(to_path(L"scene.dat"), data);
+						};
 					file->add_item("Quit")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-					{
-						on_destroy();
-					};
+						{
+							on_destroy();
+						};
 
 					edit->add_item("Debug Graph")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 						{
-							
-					docker->get_tabs()->add_page("GraphDebug", FrameGraphDebug::create_debug_layout(graph));
 
-						} ;
+							docker->get_tabs()->add_page("GraphDebug", FrameGraphDebug::create_debug_layout(graph));
+
+						};
 
 					auto add = edit->add_item("Add smth")->get_menu();
 					add->add_item("Mesh");
@@ -1155,7 +1134,7 @@ public:
 
 					bar->add_child(instance_info);
 					instance_info->docking = GUI::dock::RIGHT;
-					label_tiles->margin = {20, 0, 0, 0};
+					label_tiles->margin = { 20, 0, 0, 0 };
 					add_child(bar);
 				}
 
@@ -1165,7 +1144,7 @@ public:
 					auto dock = d->get_dock(GUI::dock::RIGHT);
 					GUI::Elements::asset_explorer::ptr cont(new GUI::Elements::asset_explorer());
 					dock->get_tabs()->add_page("Asset Explorer", cont);
-					dock->size = {400, 400};
+					dock->size = { 400, 400 };
 					EVENT("End Asset Explorer");
 				}
 			}
@@ -1174,50 +1153,50 @@ public:
 
 	~GraphRender() override
 	{
-		
+
 	}
 
 
 	void stop()
 	{
-			
-		alive=false;
+
+		alive = false;
 		task_end.wait();
 
-		 	while (Events::Runner::has_tasks()) 
-            {
-                PROFILE(L"process_tasks");          
-                Events::Runner::process_tasks();
-            }
+		while (Events::Runner::has_tasks())
+		{
+			PROFILE(L"process_tasks");
+			Events::Runner::process_tasks();
+		}
 	}
 
 	void start()
 	{
 		promise_end = {};
 		task_end = promise_end.get_future();
-	alive = true;
+		alive = true;
 		//task_future = thread_pool::get().enqueue([this]()
 		//	{
-				render();
+		render();
 		//	});
-	
+
 	}
 	void on_resize(vec2 size) override
 	{
-			new_size = vec2::max(size, vec2{ 64, 64 });
-			
-			/*bool was_alive = alive;
-		if (was_alive) stop();
-	
-		//Sleep(10);
-		if (was_alive)
-		{
-			
-			start();
-			HAL::Device::get().get_queue(CommandListType::DIRECT)->signal_and_wait();
-			HAL::Device::get().get_queue(CommandListType::COMPUTE)->signal_and_wait();
-			HAL::Device::get().get_queue(CommandListType::COPY)->signal_and_wait();
-	}*/
+		new_size = vec2::max(size, vec2{ 64, 64 });
+
+		/*bool was_alive = alive;
+	if (was_alive) stop();
+
+	//Sleep(10);
+	if (was_alive)
+	{
+
+		start();
+		HAL::Device::get().get_queue(CommandListType::DIRECT)->signal_and_wait();
+		HAL::Device::get().get_queue(CommandListType::COMPUTE)->signal_and_wait();
+		HAL::Device::get().get_queue(CommandListType::COPY)->signal_and_wait();
+}*/
 
 	}
 
@@ -1277,7 +1256,7 @@ protected:
 		main_window->stop();
 		main_window = nullptr;
 
-	//	std::this_thread::sleep_for(100_ms);
+		//	std::this_thread::sleep_for(100_ms);
 		scheduler::reset();
 		//
 
@@ -1309,7 +1288,7 @@ protected:
 		universal_material_info_part_manager::reset();
 		universal_rtx_manager::reset();
 		//HAL::PipelineLibrary::reset();
-		 GUI::NinePatch::index_buffer =StructuredBufferView<unsigned int>();
+		GUI::NinePatch::index_buffer = StructuredBufferView<unsigned int>();
 
 		HAL::Device::reset();
 		//   HAL::Device::reset();
@@ -1325,7 +1304,7 @@ protected:
 	}
 
 	std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath,
-	                                   const std::string& Extension) override
+		const std::string& Extension) override
 	{
 		return Window::file_open(Name, StartPath, Extension);
 	}
@@ -1352,7 +1331,7 @@ struct test
 {
 	D3D12_AUTO_BREADCRUMB_OP op = D3D12_AUTO_BREADCRUMB_OP_BUILDRAYTRACINGACCELERATIONSTRUCTURE;
 	std::string str = "wtf";
-	vec4 data = {1, 2, 3, 4};
+	vec4 data = { 1, 2, 3, 4 };
 
 	std::vector<vec2> vec;
 
@@ -1365,12 +1344,11 @@ struct test
 
 	template <class T = void>
 	void foo() requires(false)
-	{
-	}
+	{}
 
 	SERIALIZE()
 	{
-		ar & NVP(op) & NVP(str) & NVP(data) & NVP(vec);
+		ar& NVP(op)& NVP(str)& NVP(data)& NVP(vec);
 	}
 } v;
 
@@ -1378,23 +1356,23 @@ struct test
 
 
 int APIENTRY WinMain(_In_ HINSTANCE hinst,
-                     _In_opt_ HINSTANCE,
-                     _In_ LPTSTR,
-                     _In_ int)
+	_In_opt_ HINSTANCE,
+	_In_ LPTSTR,
+	_In_ int)
 {
 	setlocale(LC_ALL, "");
 	CoInitialize(NULL);
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
 	FlowGraph::FlowSystem::get().register_node("file", []()-> FlowGraph::graph::ptr
-	{
-		auto f = FileSystem::get().get_file(to_path("graph.flg"));
+		{
+			auto f = FileSystem::get().get_file(to_path("graph.flg"));
 
-		if (f)
-			return Serializer::deserialize<FlowGraph::graph>(f->load_all());
+			if (f)
+				return Serializer::deserialize<FlowGraph::graph>(f->load_all());
 
-		return nullptr;
-	});
+			return nullptr;
+		});
 
 	auto result_code = 0;
 	SetupDebug();
