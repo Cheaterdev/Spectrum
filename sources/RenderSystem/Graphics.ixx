@@ -19,6 +19,7 @@ export import :Context;
 
 export import :SceneObject;
 export import :Scene;
+export import :PreSceneSystem;
 
 export import :MipMapGenerator;
 

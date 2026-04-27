@@ -1,3 +1,4 @@
+#pragma once
 
 using namespace FrameGraph;
 
@@ -42,9 +43,12 @@ public:
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
-	
-	setup_func_type setup_func;
-	render_func_type render_func;
+
+
+	std::array<setup_func_type, MaxCount> setup_funcs;
+	std::array<render_func_type, MaxCount> render_funcs;
+
+	FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
 };
 
 }

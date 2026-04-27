@@ -21,9 +21,6 @@ export namespace Passes
 {%- for pass in parsed.passes %}
 	using ::Passes::{{pass.name}};
 {%- endfor %}
-{%- for view in parsed.views %}
-	using ::Passes::{{view.name}};
-{%- endfor -%}
 }
 
 {%- if parsed.pipelines %}

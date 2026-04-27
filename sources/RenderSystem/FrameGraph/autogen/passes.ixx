@@ -82,7 +82,7 @@ export namespace Passes
 	using ::Passes::Voxelize;
 	using ::Passes::Lighting;
 	using ::Passes::Mipmapping;
-	using ::Passes::GBuffer;}
+}
 
 export namespace Pipelines
 {

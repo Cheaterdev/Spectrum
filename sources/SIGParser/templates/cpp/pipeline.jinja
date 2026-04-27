@@ -11,20 +11,24 @@ class {{pipeline.name}}
 {
 public:
 {% for entry in pipeline.entries %}
+{%- if parsed.passes[entry.name] is defined %}
 	Passes::{{entry.name}} {{lowerize(entry.name)}};
+{%- endif %}
 {%- endfor %}
 
 	void add_passes(FrameGraph::Graph& graph)
 	{
 {% for entry in pipeline.entries %}
 {%- set pass_def = parsed.passes[entry.name] %}
-{%- if pass_def is defined and pass_def.options.Multiple is defined %}
+{%- if pass_def is defined %}
+{%- if pass_def.options.Multiple is defined %}
 		for (uint32_t i = 0; i < Passes::{{entry.name}}::MaxCount; ++i)
 			if ({{lowerize(entry.name)}}.setup_funcs[i])
 				graph.add_library_pass<Passes::{{entry.name}}>(Passes::{{entry.name}}::Names[i], {{lowerize(entry.name)}}.setup_funcs[i], {{lowerize(entry.name)}}.render_funcs[i], {{lowerize(entry.name)}}.flags);
 {%- else %}
 		if ({{lowerize(entry.name)}}.setup_func)
 			graph.add_library_pass<Passes::{{entry.name}}>({{lowerize(entry.name)}}.setup_func, {{lowerize(entry.name)}}.render_func, {{lowerize(entry.name)}}.flags);
+{%- endif %}
 {%- endif %}
 {%- endfor %}
 	}

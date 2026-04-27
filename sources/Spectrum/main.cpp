@@ -141,6 +141,7 @@ public:
 	ShadowDenoiser shadow_denoiser;
 	Pipelines::MainPipeline pipeline;
 	BlueNoise blue_noise;
+	std::optional<PreSceneSystem> pre_scene_system;
 	VoxelGI::ptr voxel_gi;
 	
 
@@ -156,6 +157,7 @@ public:
 
 		scene.reset(new Scene());
 		scene->name = L"Scene";
+		pre_scene_system.emplace(pipeline, scene);
 
 		scene_renderer = std::make_shared<main_renderer>();
 		scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
@@ -389,28 +391,6 @@ public:
 
 
 
-
-
-		graph.add_library_pass<Passes::PreScene>([this, &graph](Passes::PreScene::Context& data, TaskBuilder& builder)
-		                                         {
-			                                         auto& frame = graph.get_context<ViewportInfo>();
-			                                         builder.create(data.scene, { 1 }, ResourceFlags::UnorderedAccess);
-
-			                                         return true;
-		                                         }, [this, &graph](Passes::PreScene::Context& data, FrameContext& _context)
-		                                         {
-			                                         auto& command_list = _context.get_list();
-
-			                                         SceneFrameManager::get().prepare(command_list, *scene);
-
-			                                         if (HAL::Device::get().is_rtx_supported())
-			                                         {
-				                                         scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(),
-				                                                                       scene->raytrace->buffer.get_resource_address(),
-				                                                                       false);
-				                                         RTX::get().prepare(command_list);
-			                                         }
-		                                         });
 
 
 		{
