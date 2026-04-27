@@ -98,12 +98,13 @@ PassNode PreScene
 
 
 
+[Static]
 PassNode Profiler
 {
 	Texture swapchain;
 }
 
-
+[Static]
 PassNode CopyPrev
 {
 	GBuffer gbuffer;

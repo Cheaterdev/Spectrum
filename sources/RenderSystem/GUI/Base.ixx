@@ -574,6 +574,7 @@ namespace GUI
 
             my_unique_vector<FrameGraph::GraphGenerator*> frame_generators;
             my_unique_vector<FrameGraph::GraphUsage*> frame_usage;
+            Passes::UI_Render ui_render;
             cursor_style cursor = cursor_style::ARROW;
          
         public:

@@ -1014,86 +1014,78 @@ namespace GUI
         }
 
       //   return;
-         uint per_thread =  std::max(64u, ((uint)draw_infos.size() + 7) / 8);
+         uint per_thread = std::max(64u, ((uint)draw_infos.size() + 7) / 8);
+
+         // Clear all slots so unused ones don't carry over from the previous frame.
+         for (auto& f : ui_render.setup_funcs) f = nullptr;
+         for (auto& f : ui_render.render_funcs) f = nullptr;
 
          uint start = 0; uint end = 0;
          uint t = 0;
-        while(start< draw_infos.size())
-        {
-            end = std::min(start + per_thread, (uint)draw_infos.size());
+         while (start < draw_infos.size() && t < Passes::UI_Render::MaxCount)
+         {
+             end = std::min(start + per_thread, (uint)draw_infos.size());
+             uint slot = t++;
 
-            graph.add_library_pass<Passes::UI_Render>(Passes::UI_Render::Names[t++], [this](auto& data, TaskBuilder& builder) {
-			builder.need(data.swapchain, ResourceFlags::RenderTarget);
-            use_graph(builder);
+             ui_render.setup_funcs[slot] = [this](auto& data, TaskBuilder& builder)
+             {
+                 builder.need(data.swapchain, ResourceFlags::RenderTarget);
+                 use_graph(builder);
+                 return true;
+             };
 
-            return true;
-			 }, [this,&graph, start, end](auto& data, FrameContext& context) {
+             ui_render.render_funcs[slot] = [this, start, end](auto& data, FrameContext& context)
+             {
+                 auto command_list = context.get_list();
+                 auto texture = (*data.swapchain);
 
-				 auto command_list = context.get_list();
-
-				auto texture = (*data.swapchain);
-
-                {
-				RT::SingleColor rt;
-				rt.GetColor() =texture.renderTarget;
-				command_list->get_graphics().set_rtv(rt);
-				}
+                 {
+                     RT::SingleColor rt;
+                     rt.GetColor() = texture.renderTarget;
+                     command_list->get_graphics().set_rtv(rt);
+                 }
 
                  Renderer renderer;
-
                  GUIInfo c;
-                 c.renderer = &renderer;
+                 c.renderer     = &renderer;
                  c.command_list = command_list;
-                 c.delta_time = dt;
+                 c.delta_time   = dt;
 
-                 sizer scissors = {};
-
-				 {
+                 {
                      PROFILE_GPU(L"draw");
-			
-                     
-                     
-                    for(uint i=start;i<end;i++)
-                    {
-                        auto& e=draw_infos[i];
+                     for (uint i = start; i < end; i++)
+                     {
+                         auto& e = draw_infos[i];
+                         if (c.scissors != e.scissors)
+                         {
+                             renderer.flush(c);
+                             command_list->get_graphics().set_scissors(e.scissors);
+                         }
+                         c.scale       = e.scale;
+                         c.ui_clipping = e.clip;
+                         c.offset      = e.offset;
+                         c.scissors    = e.scissors;
+                         c.window_size = scaled_size.get();
 
-                        if (c.scissors != e.scissors)
-                        {
-                            renderer.flush(c);
-                            command_list->get_graphics().set_scissors(e.scissors);
+                         if (e.before)
+                             e.elem->draw(c);
+                         else
+                             e.elem->draw_after(c);
+                     }
+                     renderer.flush(c);
+                 }
+             };
 
-                        }
-                        c.scale = e.scale;
-                        c.ui_clipping = e.clip;
-                        c.offset = e.offset;
-                        c.scissors = e.scissors;
-                        c.window_size = scaled_size.get();
+             start = end;
+         }
 
-                       
-                        if(e.before)
-                        {
-                            e.elem->draw(c);
-                        }
-                        else
-                        {
-                            e.elem->draw_after(c);
-                        }
-                    }          
-					 	
-
-
-					
-				 	renderer.flush(c);
-		
-				 }
-                		                              
-	
-			 });
+         // Register all active UI passes with the graph.
+         for (uint32_t i = 0; i < Passes::UI_Render::MaxCount; ++i)
+             if (ui_render.setup_funcs[i])
+                 graph.add_library_pass<Passes::UI_Render>(Passes::UI_Render::Names[i],
+                     ui_render.setup_funcs[i], ui_render.render_funcs[i], ui_render.flags);
 
 
-            start = end ;
-        }
-		 
 
      }
 

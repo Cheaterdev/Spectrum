@@ -108,6 +108,7 @@ PassNode CubeSky
 }
 
 
+[Static]
 PassNode CubeMapDownsample
 {
 	TextureCube sky_cubemap;
@@ -115,6 +116,7 @@ PassNode CubeMapDownsample
 	TextureCube sky_cubemap_filtered_diffuse;
 }
 
+[Static]
 PassNode CubeMapEnviromentProcessor
 {
 	TextureCube sky_cubemap;

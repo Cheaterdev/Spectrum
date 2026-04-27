@@ -25,6 +25,7 @@ struct SingleColorDepth
 }
 
 
+[Static]
 PassNode ResultCreation
 {
 	Texture ResultTexture;

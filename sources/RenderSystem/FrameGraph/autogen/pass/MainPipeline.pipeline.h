@@ -26,6 +26,7 @@
 #include "FSR.h"
 #include "CopyPrev.h"
 #include "Profiler.h"
+#include "../pass_defaults.h"
 
 using namespace FrameGraph;
 
@@ -42,13 +43,10 @@ public:
 	Passes::PSSM_Global pSSM_Global;
 	Passes::PSSM_Cascade pSSM_Cascade;
 	Passes::CubeSky cubeSky;
-	Passes::CubeMapDownsample cubeMapDownsample;
-	Passes::CubeMapEnviromentProcessor cubeMapEnviromentProcessor;
 	Passes::Lighting lighting;
 	Passes::Mipmapping mipmapping;
 	Passes::Scene scene;
 	Passes::RTXPass rTXPass;
-	Passes::ResultCreation resultCreation;
 	Passes::PSSM_GenerateMask pSSM_GenerateMask;
 	Passes::PSSM_Combine pSSM_Combine;
 	Passes::VoxelScreen voxelScreen;
@@ -60,9 +58,6 @@ public:
 	Passes::Sky sky;
 	Passes::stencil_renderer_after stencil_renderer_after;
 	Passes::SMAA sMAA;
-	Passes::FSR fSR;
-	Passes::CopyPrev copyPrev;
-	Passes::Profiler profiler;
 
 	void add_passes(FrameGraph::Graph& graph)
 	{
@@ -80,10 +75,8 @@ public:
 				graph.add_library_pass<Passes::PSSM_Cascade>(Passes::PSSM_Cascade::Names[i], pSSM_Cascade.setup_funcs[i], pSSM_Cascade.render_funcs[i], pSSM_Cascade.flags);
 		if (cubeSky.setup_func)
 			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, cubeSky.flags);
-		if (cubeMapDownsample.setup_func)
-			graph.add_library_pass<Passes::CubeMapDownsample>(cubeMapDownsample.setup_func, cubeMapDownsample.render_func, cubeMapDownsample.flags);
-		if (cubeMapEnviromentProcessor.setup_func)
-			graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(cubeMapEnviromentProcessor.setup_func, cubeMapEnviromentProcessor.render_func, cubeMapEnviromentProcessor.flags);
+		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, PassDefault<Passes::CubeMapDownsample>::flags);
+		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, PassDefault<Passes::CubeMapEnviromentProcessor>::flags);
 		if (lighting.setup_func)
 			graph.add_library_pass<Passes::Lighting>(lighting.setup_func, lighting.render_func, lighting.flags);
 		if (mipmapping.setup_func)
@@ -92,8 +85,7 @@ public:
 			graph.add_library_pass<Passes::Scene>(scene.setup_func, scene.render_func, scene.flags);
 		if (rTXPass.setup_func)
 			graph.add_library_pass<Passes::RTXPass>(rTXPass.setup_func, rTXPass.render_func, rTXPass.flags);
-		if (resultCreation.setup_func)
-			graph.add_library_pass<Passes::ResultCreation>(resultCreation.setup_func, resultCreation.render_func, resultCreation.flags);
+		graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, PassDefault<Passes::ResultCreation>::flags);
 		if (pSSM_GenerateMask.setup_func)
 			graph.add_library_pass<Passes::PSSM_GenerateMask>(pSSM_GenerateMask.setup_func, pSSM_GenerateMask.render_func, pSSM_GenerateMask.flags);
 		if (pSSM_Combine.setup_func)
@@ -116,12 +108,9 @@ public:
 			graph.add_library_pass<Passes::stencil_renderer_after>(stencil_renderer_after.setup_func, stencil_renderer_after.render_func, stencil_renderer_after.flags);
 		if (sMAA.setup_func)
 			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, sMAA.flags);
-		if (fSR.setup_func)
-			graph.add_library_pass<Passes::FSR>(fSR.setup_func, fSR.render_func, fSR.flags);
-		if (copyPrev.setup_func)
-			graph.add_library_pass<Passes::CopyPrev>(copyPrev.setup_func, copyPrev.render_func, copyPrev.flags);
-		if (profiler.setup_func)
-			graph.add_library_pass<Passes::Profiler>(profiler.setup_func, profiler.render_func, profiler.flags);
+		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, PassDefault<Passes::FSR>::flags);
+		graph.add_library_pass<Passes::CopyPrev>(PassDefault<Passes::CopyPrev>::setup, PassDefault<Passes::CopyPrev>::render, PassDefault<Passes::CopyPrev>::flags);
+		graph.add_library_pass<Passes::Profiler>(PassDefault<Passes::Profiler>::setup, PassDefault<Passes::Profiler>::render, PassDefault<Passes::Profiler>::flags);
 	}
 };
 

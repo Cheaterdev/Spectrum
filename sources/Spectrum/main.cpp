@@ -13,9 +13,79 @@ import FrameGraphDebug;
 
 #include "bend_sss_cpu.h"
 
+// FSR math headers required by PassDefault<Passes::FSR>
+#define A_CPU
+#include "../RenderSystem/Effects/FSR/ffx_a.h"
+#include "../RenderSystem/Effects/FSR/ffx_fsr1.h"
+
+#include "../RenderSystem/FrameGraph/autogen/pass_defaults.h"
+
 using namespace FrameGraph;
 
 using namespace HAL;
+
+
+// ============================================================
+// PassDefault implementations
+// ============================================================
+
+// ---- ResultCreation ------------------------------------------------
+
+bool PassDefault<Passes::ResultCreation>::setup(
+	Passes::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	auto& frame = builder.graph->get_context<ViewportInfo>();
+	builder.create(data.ResultTexture,
+		{ uint3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
+		FrameGraph::ResourceFlags::RenderTarget);
+	return false;
+}
+
+void PassDefault<Passes::ResultCreation>::render(
+	Passes::ResultCreation::Context&, FrameGraph::FrameContext&) {}
+
+
+// ---- CopyPrev ------------------------------------------------------
+
+bool PassDefault<Passes::CopyPrev>::setup(
+	Passes::CopyPrev::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	builder.need(data.gbuffer.GBuffer_NormalsPrev,  FrameGraph::ResourceFlags::CopyDest);
+	builder.need(data.gbuffer.GBuffer_SpecularPrev, FrameGraph::ResourceFlags::CopyDest);
+	builder.need(data.gbuffer.GBuffer_Normals,      FrameGraph::ResourceFlags::CopySource);
+	builder.need(data.gbuffer.GBuffer_Specular,     FrameGraph::ResourceFlags::CopySource);
+	builder.need(data.gbuffer.GBuffer_DepthPrev,    FrameGraph::ResourceFlags::CopyDest);
+	builder.need(data.gbuffer.GBuffer_DepthMips,    FrameGraph::ResourceFlags::CopySource);
+	return true;
+}
+
+void PassDefault<Passes::CopyPrev>::render(
+	Passes::CopyPrev::Context& data, FrameGraph::FrameContext& context)
+{
+	auto& copy = context.get_list()->get_copy();
+
+	copy.copy_resource(data.gbuffer.GBuffer_NormalsPrev->resource,
+	                   data.gbuffer.GBuffer_Normals->resource);
+	copy.copy_resource(data.gbuffer.GBuffer_SpecularPrev->resource,
+	                   data.gbuffer.GBuffer_Specular->resource);
+	copy.copy_texture(data.gbuffer.GBuffer_DepthPrev->resource, 0,
+	                  data.gbuffer.GBuffer_DepthMips->resource, 0);
+}
+
+
+// ---- Profiler ------------------------------------------------------
+
+bool PassDefault<Passes::Profiler>::setup(
+	Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	builder.need(data.swapchain,
+	             FrameGraph::ResourceFlags::Required | FrameGraph::ResourceFlags::RenderTarget);
+	return false;
+}
+
+void PassDefault<Passes::Profiler>::render(
+	Passes::Profiler::Context&, FrameGraph::FrameContext&) {}
+
 
 extern "C" {
 	_declspec(dllexport) extern const unsigned int D3D12SDKVersion = 618;
@@ -85,6 +155,7 @@ public:
 
 class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext, public GraphUsage
 {
+		Pipelines::MainPipeline pipeline;
 	main_renderer::ptr scene_renderer;
 	main_renderer::ptr gpu_scene_renderer;
 	stencil_renderer::ptr stenciler;
@@ -133,17 +204,17 @@ public:
 
 	std::shared_ptr<Graphics::OVRContext> vr_context = std::make_shared<Graphics::OVRContext>();
 	PSSM pssm;
-	SMAA smaa{ pipeline };
-	SkyRender sky{ pipeline };
+	SkyRender sky;
 	ShadowDenoiser shadow_denoiser;
-	Pipelines::MainPipeline pipeline;
+
 	BlueNoise blue_noise;
 	std::optional<PreSceneSystem> pre_scene_system;
 	std::optional<SceneSystem>    scene_system;
 	VoxelGI::ptr voxel_gi;
+		SMAA smaa;
+	
 
-
-	triangle_drawer() : VariableContext(L"triangle_drawer"), blue_noise(pipeline)
+		triangle_drawer() : VariableContext(L"triangle_drawer"), pipeline(), blue_noise(pipeline), smaa(pipeline), sky(pipeline)
 	{
 		texture.mul_color = { 1, 1, 1, 0 };
 		texture.add_color = { 0, 0, 0, 1 };
@@ -576,6 +647,8 @@ public:
 		stenciler->generate_after(graph);
 
 									*/
+
+
 		struct debug_data
 		{
 			Handlers::Texture debug_tex;
