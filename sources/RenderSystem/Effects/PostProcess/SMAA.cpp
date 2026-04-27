@@ -5,9 +5,6 @@ import :FrameGraphContext;
 
 import HAL;
 
-using namespace FrameGraph;
-
-
 #define STRINGIFY(x) #x
 #define PPCAT_NX(A, B) A ## B
 
@@ -18,108 +15,12 @@ using namespace FrameGraph;
 
 namespace EngineAssets
 {
-
 	SMAA_TEXTURE(AreaTex);
 	SMAA_TEXTURE(SearchTex);
-
 }
+
 SMAA::SMAA()
 {
-	area_tex = EngineAssets::AreaTex.get_asset()->get_texture();
+	area_tex   = EngineAssets::AreaTex.get_asset()->get_texture();
 	search_tex = EngineAssets::SearchTex.get_asset()->get_texture();
-
 }
-
-void SMAA::generate(Graph& graph)
-{
-
-	struct SMAAData
-	{
-		Handlers::Texture H(ResultTexture);
-		Handlers::Texture H(SMAA_edges);
-		Handlers::Texture H(SMAA_blend);
-
-		Handlers::Texture ResultTextureNew = ResultTexture;
-	};
-
-	graph.add_library_pass<Passes::SMAA>( [this, &graph](Passes::SMAA::Context& data, TaskBuilder& builder)->bool {
-		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-
-		auto& frame = graph.get_context<ViewportInfo>();
-		builder.create(data.SMAA_edges, { ivec3(frame.frame_size, 0), HAL::Format::R8G8_UNORM,1 ,1 }, ResourceFlags::RenderTarget);
-		builder.create(data.SMAA_blend, { ivec3(frame.frame_size, 0),  HAL::Format::R8G8B8A8_UNORM,1 ,1 }, ResourceFlags::RenderTarget);
-
-		builder.recreate(data.ResultTextureNew, ResourceFlags::RenderTarget);
-
-		return true;
-		}, [this, &graph](Passes::SMAA::Context& data, FrameContext& _context) {
-			auto& list = *_context.get_list();
-
-			auto& graphics = list.get_graphics();
-
-			auto& frame = graph.get_context<ViewportInfo>();
-
-			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-
-			ivec2 size = frame.frame_size;
-
-			graphics.set_pipeline<PSOS::EdgeDetect>();
-
-
-			{
-				RT::SingleColor rt;
-				rt.GetColor() = data.SMAA_edges->renderTarget;
-				graphics.set_rtv(rt,HAL::RTOptions::Default| HAL::RTOptions::ClearAll);
-			}
-
-		//	graphics.get_base().clear_rtv(data.SMAA_edges->renderTarget);
-		//	graphics.get_base().clear_rtv(data.SMAA_blend->renderTarget);
-
-			{
-				Slots::SMAA_Global slot_global;
-				slot_global.GetColorTex() = data.ResultTexture->texture2D;
-				slot_global.GetSubsampleIndices() = float4(0, 0, 0, 0);
-				slot_global.GetSMAA_RT_METRICS() = float4(1.0f / size.x, 1.0f / size.y, size);
-				graphics.set(slot_global);
-			}
-
-			graphics.draw(4);
-			
-			graphics.set_pipeline<PSOS::BlendWeight>();
-
-			{
-				RT::SingleColor rt;
-				rt.GetColor() = data.SMAA_blend->renderTarget;
-				graphics.set_rtv(rt,HAL::RTOptions::Default| HAL::RTOptions::ClearAll);
-			}
-
-			{
-				Slots::SMAA_Weights slot_edges;
-				slot_edges.GetSearchTex() = search_tex->texture_2d().texture2D;
-				slot_edges.GetAreaTex() = area_tex->texture_2d().texture2D;
-				slot_edges.GetEdgesTex() = data.SMAA_edges->texture2D;
-				graphics.set(slot_edges);
-			}
-
-			graphics.draw(4);
-
-			
-
-			graphics.set_pipeline<PSOS::Blending>();
-
-			{
-				RT::SingleColor rt;
-				rt.GetColor() = data.ResultTextureNew->renderTarget;
-				graphics.set_rtv(rt);
-			}
-			{
-				Slots::SMAA_Blend slot_blend;
-				slot_blend.GetBlendTex() = data.SMAA_blend->texture2D;
-				graphics.set(slot_blend);
-			}
-
-			graphics.draw(4);
-
-		});
-}
-

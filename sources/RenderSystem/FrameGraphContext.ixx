@@ -6,7 +6,15 @@ import :Scene;
 
 export
 {
-
+										// Viewport dimensions set once per frame before graph setup.
+	// Lives here (not in Graphics:FrameGraphContext) so it is visible
+	// inside FrameGraph:Passes and pass_defaults.h without creating
+	// circular module dependencies.
+	struct ViewportInfo
+	{
+		ivec2 frame_size;
+		ivec2 upscale_size;
+	};
 
 	struct TimeInfo
 	{
@@ -20,8 +28,8 @@ export
 	};
 	struct SceneInfo
 	{
-		main_renderer* renderer;
-		Scene* scene;
+		main_renderer::ptr renderer;
+		Scene::ptr         scene;
 	};
 
 	struct CameraInfo
@@ -29,9 +37,4 @@ export
 		camera* cam;
 	};
 
-	struct ViewportInfo
-	{
-		ivec2 frame_size;
-		ivec2 upscale_size;
-	};
 }

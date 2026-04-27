@@ -1078,7 +1078,7 @@ void VoxelGI::voxelize(Graph& graph)
 			auto renderer = sceneinfo.renderer;
 			context->begin();
 
-			voxelize(context, renderer, graph);
+			voxelize(context, renderer.get(), graph);
 		});
 }
 

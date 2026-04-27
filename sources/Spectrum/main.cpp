@@ -135,13 +135,13 @@ public:
 
 	std::shared_ptr<Graphics::OVRContext> vr_context = std::make_shared<Graphics::OVRContext>();
 	PSSM pssm;
-	SMAA smaa;
+	SMAA smaa{ pipeline };
 	SkyRender sky;
-	FSR fsr;
 	ShadowDenoiser shadow_denoiser;
 	Pipelines::MainPipeline pipeline;
 	BlueNoise blue_noise;
 	std::optional<PreSceneSystem> pre_scene_system;
+	std::optional<SceneSystem>    scene_system;
 	VoxelGI::ptr voxel_gi;
 	
 
@@ -158,6 +158,7 @@ public:
 		scene.reset(new Scene());
 		scene->name = L"Scene";
 		pre_scene_system.emplace(pipeline, scene);
+		scene_system.emplace(pipeline, vr_context);
 
 		scene_renderer = std::make_shared<main_renderer>();
 		scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
@@ -374,8 +375,8 @@ public:
 
 		vp.upscale_size = size;
 
-		sceneinfo.scene = scene.get();
-		sceneinfo.renderer = gpu_scene_renderer.get();
+		sceneinfo.scene    = scene;
+		sceneinfo.renderer = gpu_scene_renderer;
 		caminfo.cam = &cam;
 		timeinfo.time = (float)my_timer.tick();
 		timeinfo.totalTime += timeinfo.time;
@@ -420,110 +421,6 @@ public:
 		}
 
 
-		{
-			graph.add_library_pass<Passes::Scene>( [this, &graph](auto& data, TaskBuilder& builder)
-			                            {
-				                            auto& frame = graph.get_context<ViewportInfo>();
-
-				                            auto size = frame.frame_size;
-
-				                            builder.need(data.scene, ResourceFlags::PixelRead);
-
-				                           GBufferViewDesc::create(size,data.gbuffer, builder);
-				                          GBufferViewDesc::create_mips(size,data.gbuffer, builder);
-				                          GBufferViewDesc::create_quality(size,data.gbuffer, builder);
-																										 
-				                            builder.create(data.gbuffer.GBuffer_HiZ,
-				                                           {ivec3(size / 8, 1), HAL::Format::R32_TYPELESS, 1},
-				                                           ResourceFlags::DepthStencil);
-				                            builder.create(data.gbuffer.GBuffer_HiZ_UAV,
-				                                           {ivec3(size / 8, 1), HAL::Format::R32_FLOAT, 1},
-				                                           ResourceFlags::UnorderedAccess);
-
-				                            builder.create(data.gbuffer.GBuffer_NormalsPrev, {
-					                                           ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1
-				                                           }, ResourceFlags::Static);
-				                            builder.create(data.gbuffer.GBuffer_SpecularPrev, {
-					                                           ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1
-				                                           }, ResourceFlags::Static);
-
-											return true;
-			                            }, [this, &graph](auto& data, FrameContext& _context)
-			                            {
-				                            auto& command_list = _context.get_list();
-
-				                            //std::this_thread::sleep_for(1ms);
-				                            //	gpu_scene_renderer->render(context_gbuffer, scene);
-				                            MeshRenderContext::ptr context(new MeshRenderContext());
-
-				                            //	   if (data.RTXDebug.is_new())
-
-				                            context->current_time = time;
-				                            //		context->sky_dir = lighting->lighting.pssm.get_position();
-				                            context->priority = TaskPriority::HIGH;
-				                            context->list = command_list;
-				                            context->eye_context = vr_context;
-
-				                            context->cam = &eyes[0]->cam;
-
-				                            command_list->get_graphics().set_signature(Layouts::DefaultLayout);
-				                            command_list->get_compute().set_signature(Layouts::DefaultLayout);
-
-
-				                            //				gpu_meshes_renderer_static->update(context);
-				                            //			gpu_meshes_renderer_dynamic->update(context);
-
-				                            GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
-				                            gbuffer.HalfBuffer.hiZ_depth = *(data.gbuffer.GBuffer_HiZ);
-				                            gbuffer.HalfBuffer.hiZ_depth_uav = *(data.gbuffer.GBuffer_HiZ_UAV);
-
-				                            {
-					                            command_list->clear_uav(
-						                            gbuffer.depth_mips.rwTexture2D, vec4(0, 0, 0, 0));
-				                            }
-
-
-				                            {
-					                            RT::GBuffer rtv;
-					                            rtv.GetAlbedo() = gbuffer.albedo.renderTarget;
-					                            rtv.GetNormals() = gbuffer.normals.renderTarget;
-					                            rtv.GetSpecular() = gbuffer.specular.renderTarget;
-
-					                            rtv.GetMotion() = gbuffer.speed.renderTarget;
-					                            rtv.GetDepth() = gbuffer.depth.depthStencil;
-					                            gbuffer.compiled = rtv.compile(*command_list);
-				                            }
-
-				                            {
-					                            RT::DepthOnly rtv;
-
-					                            rtv.GetDepth() = gbuffer.HalfBuffer.hiZ_depth.depthStencil;
-
-					                            gbuffer.HalfBuffer.compiled = rtv.compile(*command_list);
-				                            }
-
-
-				                            context->g_buffer = &gbuffer;
-
-				                            context->list->get_graphics().set_rtv(
-					                            gbuffer.compiled, RTOptions::Default | RTOptions::ClearAll);
-
-
-				                            graph.set_slot(SlotID::FrameInfo, command_list->get_graphics());
-				                            graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
-
-				                            gpu_scene_renderer->render(context, scene);
-
-				                            //	stenciler->render(context, scene);
-				                            {
-					                            command_list->get_copy().copy_texture(
-						                            gbuffer.depth_mips.resource->get_ptr(), 0,
-						                            gbuffer.depth.resource->get_ptr(), 0);
-				                            }
-
-				                            //	
-			                            });
-		}
 
 		{
 	
@@ -675,17 +572,6 @@ public:
 			}
 		}
 
-		graph.add_library_pass<Passes::ResultCreation>([this, &graph](auto& data, TaskBuilder& builder) -> bool
-		               {
-			               auto& frame = graph.get_context<ViewportInfo>();
-			               builder.create(data.ResultTexture,
-			                              {uint3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1},
-			                              ResourceFlags::RenderTarget);
-
-			               return false;
-		               }, [](auto& data, FrameContext& _context)
-		               {
-		               });
 
 
 		pssm.generate(graph);
@@ -698,37 +584,7 @@ public:
 
 		stenciler->generate_after(graph);
 
-		smaa.generate(graph);
-		if (downsampled && enable_fsr)
-			fsr.generate(graph);
 
-		{
-
-			graph.add_library_pass<Passes::CopyPrev>( [this, &graph](auto& data, TaskBuilder& builder)
-			                         {
-				                         auto& frame = graph.get_context<ViewportInfo>();
-				                         builder.need(data.gbuffer.GBuffer_NormalsPrev, ResourceFlags::CopyDest);
-				                         builder.need(data.gbuffer.GBuffer_SpecularPrev, ResourceFlags::CopyDest);
-
-				                         builder.need(data.gbuffer.GBuffer_Normals, ResourceFlags::CopySource);
-				                         builder.need(data.gbuffer.GBuffer_Specular, ResourceFlags::CopySource);
-
-				                         builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::CopyDest);
-				                         builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::CopySource);
-
-										 return true;
-			                         }, [](auto& data, FrameContext& _context)
-			                         {
-				                         auto& copy = _context.get_list()->get_copy();
-
-				                         copy.copy_resource(data.gbuffer.GBuffer_NormalsPrev->resource,
-				                                            data.gbuffer.GBuffer_Normals->resource);
-				                         copy.copy_resource(data.gbuffer.GBuffer_SpecularPrev->resource,
-				                                            data.gbuffer.GBuffer_Specular->resource);
-				                         copy.copy_texture(data.gbuffer.GBuffer_DepthPrev->resource, 0,
-				                                           data.gbuffer.GBuffer_DepthMips->resource, 0);
-			                         }, PassFlags::Compute);
-		}
 		struct debug_data
 		{
 			Handlers::Texture debug_tex;

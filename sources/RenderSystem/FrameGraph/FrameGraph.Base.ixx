@@ -7,8 +7,7 @@ import <HAL.h>;
 using namespace HAL;
  export namespace FrameGraph
 {
-
-
+	class Graph;
 
 
 	enum class ResourceType :int {
@@ -603,6 +602,7 @@ using namespace HAL;
 		
 		bool debug = false;
 		Pass* current_pass = nullptr;
+		Graph* graph = nullptr;
 		void begin(Pass* pass);
 
 		void end(Pass* pass);
@@ -913,6 +913,7 @@ using namespace HAL;
 
 		Graph() :VariableContext(L"Graph")
 		{
+			builder.graph = this;
 		}
 		TaskBuilder builder;
 
@@ -972,6 +973,8 @@ using namespace HAL;
 		void reset();
 
 	};
+
+
 
 	class GraphGenerator
 	{

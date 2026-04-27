@@ -1,6 +1,7 @@
 {% for entry in pipeline.entries %}
 #include "{{entry.name}}.h"
 {%- endfor %}
+#include "../pass_defaults.h"
 
 using namespace FrameGraph;
 
@@ -28,6 +29,8 @@ public:
 {%- else %}
 		if ({{lowerize(entry.name)}}.setup_func)
 			graph.add_library_pass<Passes::{{entry.name}}>({{lowerize(entry.name)}}.setup_func, {{lowerize(entry.name)}}.render_func, {{lowerize(entry.name)}}.flags);
+		else if constexpr (PassDefault<Passes::{{entry.name}}>::enabled)
+			graph.add_library_pass<Passes::{{entry.name}}>(PassDefault<Passes::{{entry.name}}>::setup, PassDefault<Passes::{{entry.name}}>::render, PassDefault<Passes::{{entry.name}}>::flags);
 {%- endif %}
 {%- endif %}
 {%- endfor %}

@@ -6,7 +6,7 @@ import :Asset;
 import FrameGraph;
 
 
-export class BlueNoise : public FrameGraph::GraphGenerator
+export class BlueNoise
 {
 	HAL::Buffer::ptr buffer;
 	HAL::StructuredBufferView<int32_t> sobol_buffer_view;
@@ -52,7 +52,4 @@ public:
 			compute.dispatch(data.BlueNoise->get_size());
 		};
 	}
-
-	// Kept for GraphGenerator backward compatibility.
-	virtual void generate(FrameGraph::Graph& graph) override;
 };

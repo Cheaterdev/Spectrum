@@ -7,13 +7,11 @@ import :MeshAsset;
 import FrameGraph;
 
 
-export class PreSceneSystem : public FrameGraph::GraphGenerator
+export class PreSceneSystem
 {
 	Scene::ptr scene;
 
 public:
-	// Template constructor: wires setup/render funcs onto the preScene pass
-	// of any pipeline that exposes a 'preScene' member of type Passes::PreScene.
 	template<typename TPipeline>
 	explicit PreSceneSystem(TPipeline& pipeline, Scene::ptr _scene) : scene(std::move(_scene))
 	{
@@ -39,7 +37,4 @@ public:
 			}
 		};
 	}
-
-	// Kept for GraphGenerator backward compatibility.
-	virtual void generate(FrameGraph::Graph& graph) override;
 };

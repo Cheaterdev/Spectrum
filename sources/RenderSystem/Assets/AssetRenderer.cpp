@@ -215,8 +215,8 @@ void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
 	graph.builder.pass_texture("ResultTexture", result, {}, ResourceFlags::Required);
 	graph.builder.debug = true;
 	vp.frame_size = result->get_size().xy;
-	sceneinfo.scene = scene.get();
-	sceneinfo.renderer = scene_renderer.get();
+	sceneinfo.scene = scene;
+	sceneinfo.renderer = scene_renderer;
 	caminfo.cam = &cam;
 
 	rendering->render(graph);
