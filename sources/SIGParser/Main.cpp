@@ -382,6 +382,7 @@ int main()
 			my_stream(cpp_path_render + "/pass", pipeline.name + ".pipeline.h") << cpp_templates.generate2(L"pipeline", "pipeline", pipeline);
 		}
 
+		my_stream(cpp_path_render, "pass_defaults.h") << cpp_templates.generate(L"pass_defaults");
 
 		// includes
 		my_stream(cpp_path, "autogen.ixx") << cpp_templates.generate(L"autogen");

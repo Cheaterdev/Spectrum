@@ -83,8 +83,6 @@ public:
 			graph.add_library_pass<Passes::Lighting>(lighting.setup_func, lighting.render_func, lighting.flags);
 		if (mipmapping.setup_func)
 			graph.add_library_pass<Passes::Mipmapping>(mipmapping.setup_func, mipmapping.render_func, mipmapping.flags);
-		if (stencil_renderer_before.setup_func)
-			graph.add_library_pass<Passes::stencil_renderer_before>(stencil_renderer_before.setup_func, stencil_renderer_before.render_func, stencil_renderer_before.flags);
 		if (scene.setup_func)
 			graph.add_library_pass<Passes::Scene>(scene.setup_func, scene.render_func, scene.flags);
 		if (rTXPass.setup_func)
@@ -108,6 +106,8 @@ public:
 			graph.add_library_pass<Passes::VoxelDebug>(voxelDebug.setup_func, voxelDebug.render_func, voxelDebug.flags);
 		if (sky.setup_func)
 			graph.add_library_pass<Passes::Sky>(sky.setup_func, sky.render_func, sky.flags);
+		if (stencil_renderer_before.setup_func)
+			graph.add_library_pass<Passes::stencil_renderer_before>(stencil_renderer_before.setup_func, stencil_renderer_before.render_func, stencil_renderer_before.flags);
 		if (stencil_renderer_after.setup_func)
 			graph.add_library_pass<Passes::stencil_renderer_after>(stencil_renderer_after.setup_func, stencil_renderer_after.render_func, stencil_renderer_after.flags);
 		if (sMAA.setup_func)

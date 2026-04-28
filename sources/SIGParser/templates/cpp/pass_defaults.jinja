@@ -1,0 +1,40 @@
+#pragma once
+
+// AUTO-GENERATED — do not edit by hand.
+// Regenerate by running SIGParser.
+// Source: passes marked [Static] in *.sig files.
+//
+// PassDefault<T> provides the setup/render implementations for passes whose
+// logic is fully self-contained (no external wiring needed).  Bodies are
+// defined out-of-line in main.cpp.
+
+extern "C++"
+{
+
+template<typename TPass>
+struct PassDefault
+{
+	static constexpr bool enabled = false;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+};
+
+{% for pass_name in parsed.passes -%}
+{%- set pass_def = parsed.passes[pass_name] -%}
+{%- if pass_def.options.Static is defined %}
+template<>
+struct PassDefault<Passes::{{pass_name}}>
+{
+	static constexpr bool enabled = true;
+{%- if pass_def.options.Flags is defined %}
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::{{pass_def.options.Flags.value_atom.expr}};
+{%- else %}
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+{%- endif %}
+
+	static bool setup(Passes::{{pass_name}}::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::{{pass_name}}::Context& data, FrameGraph::FrameContext& context);
+};
+
+{% endif -%}
+{%- endfor %}
+}

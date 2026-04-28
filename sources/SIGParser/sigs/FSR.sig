@@ -45,6 +45,7 @@ ComputePSO RCAS
 
 
 [Static]
+[Flags = Compute]
 PassNode FSR
 {
 	[Recreate = ResultTextureNew]

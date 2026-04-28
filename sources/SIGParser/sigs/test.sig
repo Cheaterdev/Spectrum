@@ -52,6 +52,7 @@ Pipeline MainPipeline
 
 	# sky + post
 	Sky;
+	stencil_renderer_before;
 	stencil_renderer_after;
 	SMAA;
 	FSR;

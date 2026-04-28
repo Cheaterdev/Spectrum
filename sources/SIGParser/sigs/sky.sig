@@ -109,6 +109,7 @@ PassNode CubeSky
 
 
 [Static]
+[Flags = Compute]
 PassNode CubeMapDownsample
 {
 	TextureCube sky_cubemap;
