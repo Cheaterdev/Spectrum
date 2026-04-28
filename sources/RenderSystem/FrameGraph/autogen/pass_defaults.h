@@ -85,4 +85,15 @@ struct PassDefault<Passes::CubeMapEnviromentProcessor>
 };
 
 
+template<>
+struct PassDefault<Passes::UI_Render>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+
+	static bool setup(Passes::UI_Render::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::UI_Render::Context& data, FrameGraph::FrameContext& context);
+};
+
+
 }

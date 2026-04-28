@@ -933,9 +933,9 @@ using namespace HAL;
 		}
 
 		template<class T>
-		void add_library_pass(const wchar_t* name, typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
+		void add_library_pass(uint32_t index, typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
 		{
-			internal_pass<TypedPass<T::Context>>(name, s, r, flags);
+			internal_pass<TypedPass<T::Context>>(T::Names[index], s, r, flags);
 		}
 
 

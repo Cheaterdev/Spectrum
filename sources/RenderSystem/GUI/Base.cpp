@@ -7,6 +7,8 @@ import windows;
 import HAL;
 import FrameGraph;
 
+#include "../FrameGraph/autogen/pass_defaults.h"
+
 
 using namespace FrameGraph;
 static const LPCTSTR cursors[] =
@@ -971,6 +973,7 @@ namespace GUI
     }
 
 
+
      void user_interface::create_graph(Graph& graph)
      {
         GUIInfo c;
@@ -989,112 +992,23 @@ namespace GUI
         auto& ui_ctx = graph.get_context<UIContext>();
         ui_ctx.draw_infos = std::move(draw_infos);
 
-      //
-         process_graph(graph);
+        ui_ctx.setup_counter = 0;
 
+        ui_ctx.dt          = dt;
+        ui_ctx.scaled_size = scaled_size.get();
+        ui_ctx.result_texture_handler = Handlers::Texture("ResultTexture");
 
-        if(pre_draw_infos.size())
+        process_graph(graph);
+
+        if (pre_draw_infos.size())
         {
-            struct no
-            {
-           
-            };
-                     
-
-			auto command_list = (HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list());
-			command_list->begin(L"pre_draw");
+            auto command_list = HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+            command_list->begin(L"pre_draw");
             for (auto& e : pre_draw_infos)
-			{
-				e->pre_draw(command_list);
-			}
-
-			command_list->end();
-                    auto fence = command_list->execute();
-
-
-
-
+                e->pre_draw(command_list);
+            command_list->end();
+            command_list->execute();
         }
-
-      //   return;
-         uint per_thread = std::max(64u, ((uint)ui_ctx.draw_infos.size() + 7) / 8);
-
-         // Clear all slots so unused ones don't carry over from the previous frame.
-         for (auto& f : ui_render.setup_funcs) f = nullptr;
-         for (auto& f : ui_render.render_funcs) f = nullptr;
-
-         uint start = 0; uint end = 0;
-         uint t = 0;
-         while (start < ui_ctx.draw_infos.size() && t < Passes::UI_Render::MaxCount)
-         {
-             end = std::min(start + per_thread, (uint)ui_ctx.draw_infos.size());
-             uint slot = t++;
-
-             ui_render.setup_funcs[slot] = [this](auto& data, TaskBuilder& builder)
-             {
-                 builder.need(data.swapchain, ResourceFlags::RenderTarget);
-                 result_texture_handler = Handlers::Texture("ResultTexture");
-                 if (builder.exists(result_texture_handler))
-                     builder.need(result_texture_handler, ResourceFlags::PixelRead);
-                 return true;
-             };
-
-             ui_render.render_funcs[slot] = [this, start, end](auto& data, FrameContext& context)
-             {
-                 auto command_list = context.get_list();
-                 auto texture = (*data.swapchain);
-                 auto& draw_infos = context.graph->get_context<UIContext>().draw_infos;
-
-                 {
-                     RT::SingleColor rt;
-                     rt.GetColor() = texture.renderTarget;
-                     command_list->get_graphics().set_rtv(rt);
-                 }
-
-                 Renderer renderer;
-                 GUIInfo c;
-                 c.renderer             = &renderer;
-                 c.command_list         = command_list;
-                 c.delta_time           = dt;
-                 if (result_texture_handler)
-                     c.result_texture_srv = result_texture_handler->texture2D;
-
-                 {
-                     PROFILE_GPU(L"draw");
-                     for (uint i = start; i < end; i++)
-                     {
-                         auto& e = draw_infos[i];
-                         if (c.scissors != e.scissors)
-                         {
-                             renderer.flush(c);
-                             command_list->get_graphics().set_scissors(e.scissors);
-                         }
-                         c.scale       = e.scale;
-                         c.ui_clipping = e.clip;
-                         c.offset      = e.offset;
-                         c.scissors    = e.scissors;
-                         c.window_size = scaled_size.get();
-
-                         if (e.before)
-                             e.elem->draw(c);
-                         else
-                             e.elem->draw_after(c);
-                     }
-                     renderer.flush(c);
-                 }
-             };
-
-             start = end;
-         }
-
-         // Register all active UI passes with the graph.
-         for (uint32_t i = 0; i < Passes::UI_Render::MaxCount; ++i)
-             if (ui_render.setup_funcs[i])
-                 graph.add_library_pass<Passes::UI_Render>(Passes::UI_Render::Names[i],
-                     ui_render.setup_funcs[i], ui_render.render_funcs[i], ui_render.flags);
-
-
-
      }
 
      
@@ -1578,4 +1492,87 @@ namespace GUI
         }
     }
 
+}
+
+
+
+
+// ============================================================
+// PassDefault<Passes::UI_Render>
+// ============================================================
+
+static uint32_t ui_per_thread(uint32_t size)
+{
+    return std::max(64u, (size + 7) / 8);
+}
+
+bool PassDefault<Passes::UI_Render>::setup(
+    Passes::UI_Render::Context& data, FrameGraph::TaskBuilder& builder)
+{
+    auto& ui_ctx = builder.graph->get_context<GUI::UIContext>();
+    const uint32_t size       = (uint32_t)ui_ctx.draw_infos.size();
+    const uint32_t per_thread = ui_per_thread(size);
+    const uint32_t slot       = ui_ctx.setup_counter++;
+    if (slot * per_thread >= size)
+        return false;
+    builder.need(data.swapchain, ResourceFlags::RenderTarget);
+    if (builder.exists(ui_ctx.result_texture_handler))
+        builder.need(ui_ctx.result_texture_handler, ResourceFlags::PixelRead);
+    return true;
+}
+
+void PassDefault<Passes::UI_Render>::render(
+    Passes::UI_Render::Context& data, FrameGraph::FrameContext& context)
+{
+    auto& ui_ctx = context.graph->get_context<GUI::UIContext>();
+
+    // Derive slot index from the pass name ("UI_Render_N").
+    auto name = context.pass->name;
+    uint32_t slot = (uint32_t)std::wcstoul(name.data() + name.rfind(L'_') + 1, nullptr, 10);
+
+    const uint32_t size       = (uint32_t)ui_ctx.draw_infos.size();
+    const uint32_t per_thread = ui_per_thread(size);
+    const uint32_t start      = slot * per_thread;
+    const uint32_t end        = std::min(start + per_thread, size);
+
+    auto command_list = context.get_list();
+    auto texture = (*data.swapchain);
+
+    {
+        RT::SingleColor rt;
+        rt.GetColor() = texture.renderTarget;
+        command_list->get_graphics().set_rtv(rt);
+    }
+
+    Renderer renderer;
+    GUIInfo c;
+    c.renderer   = &renderer;
+    c.command_list = command_list;
+    c.delta_time = ui_ctx.dt;
+    if (ui_ctx.result_texture_handler)
+        c.result_texture_srv = ui_ctx.result_texture_handler->texture2D;
+
+    {
+        PROFILE_GPU(L"draw");
+        for (uint32_t i = start; i < end; i++)
+        {
+            auto& e = ui_ctx.draw_infos[i];
+            if (c.scissors != e.scissors)
+            {
+                renderer.flush(c);
+                command_list->get_graphics().set_scissors(e.scissors);
+            }
+            c.scale       = e.scale;
+            c.ui_clipping = e.clip;
+            c.offset      = e.offset;
+            c.scissors    = e.scissors;
+            c.window_size = ui_ctx.scaled_size;
+
+            if (e.before)
+                e.elem->draw(c);
+            else
+                e.elem->draw_after(c);
+        }
+        renderer.flush(c);
+    }
 }

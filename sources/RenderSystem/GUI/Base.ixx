@@ -312,8 +312,7 @@ namespace GUI
             virtual void draw_recursive(Context&, base* = nullptr);
 
             virtual void pre_draw(HAL::CommandList::ptr list){}; // override;;
-            virtual void draw(Context&); // override;;
-            virtual void draw_after(Context&);;
+           
 
 
      
@@ -334,6 +333,9 @@ namespace GUI
             	}*/
             void run_on_ui(std::function<void()> f);
         public:
+
+         virtual void draw(Context&); // override;;
+            virtual void draw_after(Context&);;
 			virtual sizer update_layout(sizer r, float scale);
             virtual void update_childs_layout(sizer& r, float scale);
               virtual void update_childs_layout_after(sizer &r, float scale);
@@ -547,6 +549,11 @@ namespace GUI
     struct UIContext
     {
         std::vector<draw_info> draw_infos;
+        uint32_t setup_counter = 0; // incremented per slot during graph setup; reset each frame
+
+        float dt = 0;
+        vec2  scaled_size;
+        FrameGraph::Handlers::Texture result_texture_handler;
     };
 
     class user_interface : public base, public InputHandler, public Events::Runner
@@ -579,8 +586,6 @@ namespace GUI
             bool is_updating_layout = false;
 
             my_unique_vector<FrameGraph::GraphGenerator*> frame_generators;
-            FrameGraph::Handlers::Texture result_texture_handler;
-            Passes::UI_Render ui_render;
             cursor_style cursor = cursor_style::ARROW;
          
         public:

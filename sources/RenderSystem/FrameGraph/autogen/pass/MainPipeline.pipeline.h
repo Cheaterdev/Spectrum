@@ -27,6 +27,7 @@
 #include "FSR.h"
 #include "CopyPrev.h"
 #include "Profiler.h"
+#include "UI_Render.h"
 #include "../pass_defaults.h"
 
 using namespace FrameGraph;
@@ -74,7 +75,7 @@ public:
 			graph.add_library_pass<Passes::PSSM_Global>(pSSM_Global.setup_func, pSSM_Global.render_func, pSSM_Global.flags);
 		for (uint32_t i = 0; i < Passes::PSSM_Cascade::MaxCount; ++i)
 			if (pSSM_Cascade.setup_funcs[i])
-				graph.add_library_pass<Passes::PSSM_Cascade>(Passes::PSSM_Cascade::Names[i], pSSM_Cascade.setup_funcs[i], pSSM_Cascade.render_funcs[i], pSSM_Cascade.flags);
+				graph.add_library_pass<Passes::PSSM_Cascade>(i, pSSM_Cascade.setup_funcs[i], pSSM_Cascade.render_funcs[i], pSSM_Cascade.flags);
 		if (cubeSky.setup_func)
 			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, cubeSky.flags);
 		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, PassDefault<Passes::CubeMapDownsample>::flags);
@@ -115,6 +116,8 @@ public:
 		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, PassDefault<Passes::FSR>::flags);
 		graph.add_library_pass<Passes::CopyPrev>(PassDefault<Passes::CopyPrev>::setup, PassDefault<Passes::CopyPrev>::render, PassDefault<Passes::CopyPrev>::flags);
 		graph.add_library_pass<Passes::Profiler>(PassDefault<Passes::Profiler>::setup, PassDefault<Passes::Profiler>::render, PassDefault<Passes::Profiler>::flags);
+		for (uint32_t i = 0; i < Passes::UI_Render::MaxCount; ++i)
+			graph.add_library_pass<Passes::UI_Render>(i, PassDefault<Passes::UI_Render>::setup, PassDefault<Passes::UI_Render>::render, PassDefault<Passes::UI_Render>::flags);
 	}
 };
 
