@@ -986,7 +986,10 @@ namespace GUI
         draw_recursive(c);
         drag.draw(c);
 
-      //  
+        auto& ui_ctx = graph.get_context<UIContext>();
+        ui_ctx.draw_infos = std::move(draw_infos);
+
+      //
          process_graph(graph);
 
 
@@ -1014,7 +1017,7 @@ namespace GUI
         }
 
       //   return;
-         uint per_thread = std::max(64u, ((uint)draw_infos.size() + 7) / 8);
+         uint per_thread = std::max(64u, ((uint)ui_ctx.draw_infos.size() + 7) / 8);
 
          // Clear all slots so unused ones don't carry over from the previous frame.
          for (auto& f : ui_render.setup_funcs) f = nullptr;
@@ -1022,15 +1025,17 @@ namespace GUI
 
          uint start = 0; uint end = 0;
          uint t = 0;
-         while (start < draw_infos.size() && t < Passes::UI_Render::MaxCount)
+         while (start < ui_ctx.draw_infos.size() && t < Passes::UI_Render::MaxCount)
          {
-             end = std::min(start + per_thread, (uint)draw_infos.size());
+             end = std::min(start + per_thread, (uint)ui_ctx.draw_infos.size());
              uint slot = t++;
 
              ui_render.setup_funcs[slot] = [this](auto& data, TaskBuilder& builder)
              {
                  builder.need(data.swapchain, ResourceFlags::RenderTarget);
-                 use_graph(builder);
+                 result_texture_handler = Handlers::Texture("ResultTexture");
+                 if (builder.exists(result_texture_handler))
+                     builder.need(result_texture_handler, ResourceFlags::PixelRead);
                  return true;
              };
 
@@ -1038,6 +1043,7 @@ namespace GUI
              {
                  auto command_list = context.get_list();
                  auto texture = (*data.swapchain);
+                 auto& draw_infos = context.graph->get_context<UIContext>().draw_infos;
 
                  {
                      RT::SingleColor rt;
@@ -1047,9 +1053,11 @@ namespace GUI
 
                  Renderer renderer;
                  GUIInfo c;
-                 c.renderer     = &renderer;
-                 c.command_list = command_list;
-                 c.delta_time   = dt;
+                 c.renderer             = &renderer;
+                 c.command_list         = command_list;
+                 c.delta_time           = dt;
+                 if (result_texture_handler)
+                     c.result_texture_srv = result_texture_handler->texture2D;
 
                  {
                      PROFILE_GPU(L"draw");
@@ -1268,11 +1276,6 @@ namespace GUI
 		auto frame_gen = dynamic_cast<GraphGenerator*>(object);
 		if (frame_gen)
 			frame_generators.erase(frame_gen);
-
-
-        	auto usage = dynamic_cast<GraphUsage*>(object);
-		if (usage)
-			frame_usage.erase(usage);
     }
 
     void user_interface::add_base(base* object)
@@ -1281,10 +1284,6 @@ namespace GUI
         auto frame_gen = dynamic_cast<GraphGenerator*>(object);
         if (frame_gen)
             frame_generators.insert(frame_gen);
-
-       	auto usage = dynamic_cast<GraphUsage*>(object);
-		if (usage)
-            frame_usage.insert(usage);
     }
 	void user_interface::key_action_event_internal(long key)
 	{

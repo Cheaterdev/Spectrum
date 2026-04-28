@@ -983,11 +983,4 @@ using namespace HAL;
 	};
 
 
-
-	class GraphUsage
-	{
-	public:
-		virtual void use(TaskBuilder& builder) = 0;
-	};
-
 }

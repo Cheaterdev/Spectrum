@@ -153,7 +153,7 @@ public:
 	{}
 };
 
-class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext, public GraphUsage
+class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext
 {
 		Pipelines::MainPipeline pipeline;
 	main_renderer::ptr scene_renderer;
@@ -610,20 +610,9 @@ public:
 			});
 	}
 
-	Handlers::Texture debug_tex;
-
-	void use(TaskBuilder& builder) override
-	{
-		std::string res_tex = "ResultTexture";
-
-		debug_tex = Handlers::Texture(res_tex);
-		if (builder.exists(debug_tex))
-			builder.need(debug_tex, ResourceFlags::PixelRead);
-	}
-
 	void draw(base::Context& t) override
 	{
-		if (debug_tex) texture.srv = debug_tex->texture2D;
+		if (t.result_texture_srv) texture.srv = t.result_texture_srv;
 		image::draw(t);
 		texture.srv = Handle();
 	}

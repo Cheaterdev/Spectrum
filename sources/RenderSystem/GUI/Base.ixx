@@ -24,6 +24,7 @@ export
         float delta_time;
         vec2 window_size;
         float scale = 1;
+        HAL::Handle result_texture_srv;
 
         GUIInfo() = default;
         GUIInfo(HAL::CommandList::ptr list) : command_list(list)
@@ -543,6 +544,11 @@ namespace GUI
         bool before;
     };
 
+    struct UIContext
+    {
+        std::vector<draw_info> draw_infos;
+    };
+
     class user_interface : public base, public InputHandler, public Events::Runner
     {
             friend class base;
@@ -573,7 +579,7 @@ namespace GUI
             bool is_updating_layout = false;
 
             my_unique_vector<FrameGraph::GraphGenerator*> frame_generators;
-            my_unique_vector<FrameGraph::GraphUsage*> frame_usage;
+            FrameGraph::Handlers::Texture result_texture_handler;
             Passes::UI_Render ui_render;
             cursor_style cursor = cursor_style::ARROW;
          
@@ -635,16 +641,6 @@ namespace GUI
 
 
 
-            void use_graph(FrameGraph::TaskBuilder& builder)
-            {
-
-                 for (auto& gen : frame_usage)
-                {
-                    gen->use(builder);
-                }
-
-
-            }
             std::shared_future<bool> message_box(std::string title, std::string text, std::function<void(bool)> f);
 
             virtual void on_size_changed(const vec2& r) override;
