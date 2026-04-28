@@ -47,7 +47,6 @@ public:
 	Passes::CubeSky cubeSky;
 	Passes::Lighting lighting;
 	Passes::Mipmapping mipmapping;
-	Passes::RTXPass rTXPass;
 	Passes::PSSM_GenerateMask pSSM_GenerateMask;
 	Passes::PSSM_Combine pSSM_Combine;
 	Passes::VoxelScreen voxelScreen;
@@ -83,8 +82,7 @@ public:
 		if (mipmapping.setup_func)
 			graph.add_library_pass<Passes::Mipmapping>(mipmapping.setup_func, mipmapping.render_func, mipmapping.flags);
 		graph.add_library_pass<Passes::Scene>(PassDefault<Passes::Scene>::setup, PassDefault<Passes::Scene>::render, PassDefault<Passes::Scene>::flags);
-		if (rTXPass.setup_func)
-			graph.add_library_pass<Passes::RTXPass>(rTXPass.setup_func, rTXPass.render_func, rTXPass.flags);
+		graph.add_library_pass<Passes::RTXPass>(PassDefault<Passes::RTXPass>::setup, PassDefault<Passes::RTXPass>::render, PassDefault<Passes::RTXPass>::flags);
 		graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, PassDefault<Passes::ResultCreation>::flags);
 		if (pSSM_GenerateMask.setup_func)
 			graph.add_library_pass<Passes::PSSM_GenerateMask>(pSSM_GenerateMask.setup_func, pSSM_GenerateMask.render_func, pSSM_GenerateMask.flags);

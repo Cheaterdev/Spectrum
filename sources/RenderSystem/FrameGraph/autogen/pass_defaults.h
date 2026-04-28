@@ -97,6 +97,17 @@ struct PassDefault<Passes::PreScene>
 
 
 template<>
+struct PassDefault<Passes::RTXPass>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	static bool setup(Passes::RTXPass::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::RTXPass::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::Scene>
 {
 	static constexpr bool enabled = true;

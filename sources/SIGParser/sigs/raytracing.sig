@@ -179,6 +179,8 @@ RaytracePass ColorPass
 
 
 
+[Static]
+[Flags = Compute]
 PassNode RTXPass
 {
 	GBuffer gbuffer;
