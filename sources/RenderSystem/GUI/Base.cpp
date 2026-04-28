@@ -1503,7 +1503,12 @@ namespace GUI
 
 static uint32_t ui_per_thread(uint32_t size)
 {
-    return std::max(64u, (size + 7) / 8);
+	constexpr uint32_t max_threads = Passes::UI_Render::MaxCount;
+	constexpr uint32_t min_per_thread = 64;
+	const uint32_t per_thread = (size + max_threads - 1) / max_threads;
+	const uint32_t clamped_per_thread = std::max(min_per_thread, per_thread);
+
+    return std::max(clamped_per_thread, (size + 7) / 8);
 }
 
 bool PassDefault<Passes::UI_Render>::setup(
@@ -1526,9 +1531,7 @@ void PassDefault<Passes::UI_Render>::render(
 {
     auto& ui_ctx = context.graph->get_context<GUI::UIContext>();
 
-    // Derive slot index from the pass name ("UI_Render_N").
-    auto name = context.pass->name;
-    uint32_t slot = (uint32_t)std::wcstoul(name.data() + name.rfind(L'_') + 1, nullptr, 10);
+    uint32_t slot = context.pass->GetPassIndex();
 
     const uint32_t size       = (uint32_t)ui_ctx.draw_infos.size();
     const uint32_t per_thread = ui_per_thread(size);

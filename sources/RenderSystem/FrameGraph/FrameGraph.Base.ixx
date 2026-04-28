@@ -744,6 +744,9 @@ using namespace HAL;
 		bool renderable = true;
 		PassFlags flags;
 		std::wstring_view name;
+		uint32_t pass_index = 0;
+
+		uint32_t GetPassIndex() const { return pass_index; }
 		UsedResources used;
 		FrameContext context;
 
@@ -896,12 +899,13 @@ using namespace HAL;
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class Pass>
-		void internal_pass(std::wstring_view name, auto s, auto r, PassFlags flags = PassFlags::General)
+		void internal_pass(std::wstring_view name, auto s, auto r, PassFlags flags = PassFlags::General, uint32_t index = 0)
 		{
 			PROFILE(name);
 
 			builder.passes.push_back(std::make_shared<Pass>((UINT)builder.passes.size(), name, s, r));
 			builder.passes.back()->flags = flags;
+			builder.passes.back()->pass_index = index;
 
 			if (check(flags & PassFlags::Required))
 			{
@@ -935,7 +939,7 @@ using namespace HAL;
 		template<class T>
 		void add_library_pass(uint32_t index, typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
 		{
-			internal_pass<TypedPass<T::Context>>(T::Names[index], s, r, flags);
+			internal_pass<TypedPass<T::Context>>(T::Names[index], s, r, flags, index);
 		}
 
 
