@@ -21,6 +21,7 @@
 #include "ReflCombine.h"
 #include "VoxelDebug.h"
 #include "Sky.h"
+#include "stencil_renderer_before.h"
 #include "stencil_renderer_after.h"
 #include "SMAA.h"
 #include "FSR.h"
@@ -56,6 +57,7 @@ public:
 	Passes::ReflCombine reflCombine;
 	Passes::VoxelDebug voxelDebug;
 	Passes::Sky sky;
+	Passes::stencil_renderer_before stencil_renderer_before;
 	Passes::stencil_renderer_after stencil_renderer_after;
 	Passes::SMAA sMAA;
 
@@ -81,6 +83,8 @@ public:
 			graph.add_library_pass<Passes::Lighting>(lighting.setup_func, lighting.render_func, lighting.flags);
 		if (mipmapping.setup_func)
 			graph.add_library_pass<Passes::Mipmapping>(mipmapping.setup_func, mipmapping.render_func, mipmapping.flags);
+		if (stencil_renderer_before.setup_func)
+			graph.add_library_pass<Passes::stencil_renderer_before>(stencil_renderer_before.setup_func, stencil_renderer_before.render_func, stencil_renderer_before.flags);
 		if (scene.setup_func)
 			graph.add_library_pass<Passes::Scene>(scene.setup_func, scene.render_func, scene.flags);
 		if (rTXPass.setup_func)

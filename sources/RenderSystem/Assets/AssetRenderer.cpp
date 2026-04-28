@@ -125,7 +125,7 @@ public:
 
 
 
-		pssm.generate(graph);
+	//	pssm.generate(graph);
 		//sky.generate(graph);
 	//	sky.generate_sky(graph);
 

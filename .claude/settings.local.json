@@ -4,7 +4,8 @@
       "Bash(xargs wc *)",
       "Bash(xargs grep *)",
       "Bash(find \"C:\\\\github\\\\Spectrum\\\\sources\\\\SIGParser\\\\templates\" -name \"*.jinja\" -exec wc -l {} +)",
-      "Bash(grep -E \"\\(ixx|cpp\\)$\")"
+      "Bash(grep -E \"\\(ixx|cpp\\)$\")",
+      "Bash(python3 -c ' *)"
     ]
   }
 }

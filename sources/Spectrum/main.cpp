@@ -214,7 +214,7 @@ public:
 		SMAA smaa;
 	
 
-		triangle_drawer() : VariableContext(L"triangle_drawer"), pipeline(), blue_noise(pipeline), smaa(pipeline), sky(pipeline)
+		triangle_drawer() : VariableContext(L"triangle_drawer"), pipeline(), blue_noise(pipeline), smaa(pipeline), sky(pipeline), pssm(pipeline)
 	{
 		texture.mul_color = { 1, 1, 1, 0 };
 		texture.add_color = { 0, 0, 0, 1 };
@@ -244,10 +244,113 @@ public:
 
 		cam.position = vec3(0, 0, 0);
 
-		stenciler.reset(new stencil_renderer());
+		stenciler.reset(new stencil_renderer(pipeline));
 		stenciler->player_cam = &cam;
 		stenciler->scene = scene;
 		base::add_child(stenciler);
+
+		// ---- RTXPass --------------------------------------------------------
+		pipeline.rTXPass.flags = PassFlags::Compute;
+
+		pipeline.rTXPass.setup_func = [this](auto& data, TaskBuilder& builder) -> bool
+		{
+			auto& frame    = builder.graph->get_context<ViewportInfo>();
+			auto  work_pso = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
+			auto  size     = frame.frame_size;
+
+			builder.need(data.gbuffer.GBuffer_Albedo,   ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+			builder.need(data.gbuffer.GBuffer_Normals,  ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+			builder.need(data.gbuffer.GBuffer_Depth,    ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+			builder.need(data.gbuffer.GBuffer_Specular, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+			builder.need(data.gbuffer.GBuffer_Speed,    ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+			builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+			builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::None);
+
+			builder.create(data.RTXDebug,
+				{ ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
+				ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+			builder.create(data.WorkGraphBuffer, { work_pso->buffer_size },
+				ResourceFlags::UnorderedAccess);
+
+			return true;
+		};
+
+		pipeline.rTXPass.render_func = [this](auto& data, FrameGraph::FrameContext& context)
+		{
+			auto& compute = context.get_list()->get_compute();
+			auto& copy    = context.get_list()->get_copy();
+
+			if (data.RTXDebug.is_new())
+				context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
+
+			auto& backingBuffer = data.WorkGraphBuffer->resource;
+			auto  work_pso = Device::get().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
+
+			compute.set_program(work_pso.get(),
+				backingBuffer->get_resource_address(),
+				uint(work_pso->buffer_size),
+				data.WorkGraphBuffer.is_new());
+
+			context.graph->set_slot(SlotID::VoxelInfo,  compute);
+			context.graph->set_slot(SlotID::FrameInfo,  compute);
+			context.graph->set_slot(SlotID::SceneData,  compute);
+
+			GBuffer gbuffer;
+			gbuffer.albedo         = *data.gbuffer.GBuffer_Albedo;
+			gbuffer.normals        = *data.gbuffer.GBuffer_Normals;
+			gbuffer.depth          = *data.gbuffer.GBuffer_Depth;
+			gbuffer.specular       = *data.gbuffer.GBuffer_Specular;
+			gbuffer.speed          = *data.gbuffer.GBuffer_Speed;
+			gbuffer.depth_prev_mips = *data.gbuffer.GBuffer_DepthPrev;
+
+			{
+				Slots::Raytracing rtx;
+				rtx.GetScene() = scene->raytrace_scene->raytracing_handle;
+				compute.set(rtx);
+			}
+			{
+				Slots::VoxelScreen voxelScreen;
+				gbuffer.SetTable(voxelScreen.GetGbuffer());
+				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
+				compute.set(voxelScreen);
+			}
+
+			auto light = float4(pssm.get_position().normalized(), 0) * cam.get_view_proj();
+
+			Bend::DispatchList res = Bend::BuildDispatchList(
+				{ light.x, light.y, light.z, light.w },
+				{ data.RTXDebug->get_size().x, data.RTXDebug->get_size().y },
+				{ 0, 0 },
+				{ data.RTXDebug->get_size().x, data.RTXDebug->get_size().y },
+				false, 64);
+
+			Slots::DispatchParameters dispatchParameters;
+			dispatchParameters.GetDepthTexture()   = gbuffer.depth.texture2D;
+			dispatchParameters.GetOutputTexture()  = data.RTXDebug->rwTexture2D;
+			dispatchParameters.GetLightCoordinate() = float4(
+				res.LightCoordinate_Shader[0], res.LightCoordinate_Shader[1],
+				res.LightCoordinate_Shader[2], res.LightCoordinate_Shader[3]);
+			dispatchParameters.FarDepthValue        = 0;
+			dispatchParameters.NearDepthValue       = 1;
+			dispatchParameters.InvDepthTextureSize  = float2(
+				1.0f / data.RTXDebug->get_size().x,
+				1.0f / data.RTXDebug->get_size().y);
+			compute.set(dispatchParameters);
+
+			auto ep = create_entry(compute);
+			for (auto i = 0; i < res.DispatchCount; i++)
+			{
+				auto& e = res.Dispatch[i];
+				{
+					Slots::GraphInput input;
+					input.GetDispatch_grid() = vec3(e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
+					input.GetWaveOffset()    = int2(e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
+					ep.add(0, input);
+				}
+			}
+			if (res.DispatchCount)
+				compute.dispatch_graph(ep.compile());
+		};
 
 		info.reset(new GUI::Elements::label);
 		info->docking = GUI::dock::TOP;
@@ -465,188 +568,32 @@ public:
 			PROFILE(L"graph");
 			pipeline.add_passes(graph);
 		}
-	   /*
+	   
 		if (enable_gi)
 		{
 			PROFILE(L"generate_pre");
 			voxel_gi->generate_pre(graph);
 		}
-
-
-		{
-			PROFILE(L"pssm");
-			pssm.generate_global(graph);
-		}
+			 
 		if (enable_gi)
 		{
 			PROFILE(L"generate_light");
 			voxel_gi->generate_light(graph);
 		}
-
-
-
-		{
-
-
-			//WTF Compilation issue
-			//auto t = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
-
-			//		if (HAL::Device::get().is_rtx_supported())
-			{
-				graph.add_library_pass<Passes::RTXPass>([this, &graph](auto& data, TaskBuilder& builder)
-					{
-						auto& frame = graph.get_context<ViewportInfo>();
-
-
-						auto work_pso = HAL::Device::get().get_engine_pso_holder().GetPSO<
-							PSOS::WorkGR>();
-						auto size = frame.frame_size;
-
-						builder.need(data.gbuffer.GBuffer_Albedo, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
-						builder.need(data.gbuffer.GBuffer_Normals, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
-						builder.need(data.gbuffer.GBuffer_Depth, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
-						builder.need(data.gbuffer.GBuffer_Specular, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
-						builder.need(data.gbuffer.GBuffer_Speed, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
-
-						builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
-						//	if (need_quality) builder.need(GBuffer_Quality, ResourceFlags::DSRead);
-						builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::None);
-
-
-						//   data.gbuffer.need(builder, false);
-						builder.create(data.RTXDebug,
-							{ ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
-							ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-						builder.create(data.WorkGraphBuffer, { work_pso->buffer_size },
-							ResourceFlags::UnorderedAccess);
-
-						return true;
-					}, [this, &graph](auto& data, FrameContext& context)
-						{
-							auto& compute = context.get_list()->get_compute();
-							auto& copy = context.get_list()->get_copy();
-
-							if (data.RTXDebug.is_new())
-							{
-								context.get_list()->clear_uav(
-									data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
-							}
-							auto& backingBuffer = data.WorkGraphBuffer->resource;
-
-							auto work_pso = Device::get().get_engine_pso_holder().GetPSO<
-								PSOS::WorkGR>();
-
-							compute.set_program(work_pso.get(),
-								backingBuffer->get_resource_address(),
-								uint(work_pso->buffer_size),
-								data.WorkGraphBuffer.is_new());
-
-							graph.set_slot(SlotID::VoxelInfo, compute);
-							graph.set_slot(SlotID::FrameInfo, compute);
-							graph.set_slot(SlotID::SceneData, compute);
-
-
-							GBuffer gbuffer;
-
-							gbuffer.albedo = *data.gbuffer.GBuffer_Albedo;
-							gbuffer.normals = *data.gbuffer.GBuffer_Normals;
-							gbuffer.depth = *data.gbuffer.GBuffer_Depth;
-							gbuffer.specular = *data.gbuffer.GBuffer_Specular;
-							gbuffer.speed = *data.gbuffer.GBuffer_Speed;
-
-
-							gbuffer.depth_prev_mips = *data.gbuffer.GBuffer_DepthPrev;
-
-							{
-								Slots::Raytracing rtx;
-								rtx.GetScene() = scene->raytrace_scene->raytracing_handle;
-								compute.set(rtx);
-							}
-							{
-
-								Slots::VoxelScreen voxelScreen;
-								gbuffer.SetTable(voxelScreen.GetGbuffer());
-								voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
-								//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
-								compute.set(voxelScreen);
-							}
-
-							auto light = float4(pssm.get_position().normalized(), 0) * cam.
-								get_view_proj();
-
-							Bend::DispatchList res = Bend::BuildDispatchList(
-								{
-									light.x, light.y,
-									light.z, light.w
-								}, { data.RTXDebug->get_size().x, data.RTXDebug->get_size().y },
-													 { 0, 0 }, {
-														 data.RTXDebug->get_size().x, data.RTXDebug->get_size().y
-													 }, false, 64);
-													 //  compute.set_pipeline<PSOS::SS_Shadow>();
+				 
 
 
 
 
-													 //auto gbuffer = data.gbuffer.actualize(context);
-
-													 Slots::DispatchParameters dispatchParameters;
-													 dispatchParameters.GetDepthTexture() = gbuffer.depth.texture2D;
-													 dispatchParameters.GetOutputTexture() = data.RTXDebug->rwTexture2D;
-													 dispatchParameters.GetLightCoordinate() = float4(
-														 res.LightCoordinate_Shader[0],
-														 res.LightCoordinate_Shader[1],
-														 res.LightCoordinate_Shader[2],
-														 res.LightCoordinate_Shader[3]);
-
-
-													 dispatchParameters.FarDepthValue = 0;
-													 dispatchParameters.NearDepthValue = 1;
-													 dispatchParameters.InvDepthTextureSize = float2(
-														 1.0f / data.RTXDebug->get_size().x,
-														 1.0f / data.RTXDebug->get_size().y);
-
-													 //			  dispatchParameters.DebugOutputThreadIndex = true;
-													 compute.set(dispatchParameters);
-
-
-													 auto ep = create_entry(compute);
-													 for (auto i = 0; i < res.DispatchCount; i++)
-													 {
-														 auto& e = res.Dispatch[i];
-														 {
-															 Slots::GraphInput input;
-															 input.GetDispatch_grid() = vec3(
-																 e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
-															 input.GetWaveOffset() = int2(
-																 e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
-															 ep.add(0, input);
-														 }
-													 }
-													 if (res.DispatchCount)
-														 compute.dispatch_graph(ep.compile());
-
-
-													 //}
-													 //	RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
-						}, PassFlags::Compute);
-
-					//if(enable_denoiser)
-					//shadow_denoiser.generate(graph);
-			}
-		}
-
-
-
-		pssm.generate(graph);
-
+										   
+   
 		// remove on intel
 		if (enable_gi) voxel_gi->generate(graph);
 
+												 
 
 
-		stenciler->generate_after(graph);
-
-									*/
+									
 
 
 		struct debug_data

@@ -276,7 +276,7 @@ void ShadowRaygenShader()
 			RayDesc ray;
 			ray.Origin = pos;
 			ray.Direction = dir;
-			ray.TMin = 0.1;
+			ray.TMin = 0.001;
 			ray.TMax = 10000.0;
 			ShadowPass(raytracing.GetScene(), ray, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, payload_shadow);
 
