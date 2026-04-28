@@ -54,6 +54,14 @@ namespace FrameGraph
 		}
 		//	assert(pass->prev_passes.empty());
 
+		for (auto p:related)
+		{
+			if (p==pass)
+			{
+				assert(0);
+			   Application::get().shutdown() ;
+			}
+		}
 		pass->prev_passes.insert(related.begin(), related.end());
 		related_read.insert(pass);
 

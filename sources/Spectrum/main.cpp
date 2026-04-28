@@ -466,7 +466,7 @@ public:
 
 		eyes.emplace_back(new EyeData(nullptr));
 
-		voxel_gi = std::make_shared<VoxelGI>(scene);
+		voxel_gi = std::make_shared<VoxelGI>(pipeline,scene);
 	}
 
 	float scale_speed = 0;
@@ -562,38 +562,12 @@ public:
 
 
 
-
+			 voxel_gi->pass_data(graph.builder);
 
 		{
 			PROFILE(L"graph");
 			pipeline.add_passes(graph);
 		}
-	   
-		if (enable_gi)
-		{
-			PROFILE(L"generate_pre");
-			voxel_gi->generate_pre(graph);
-		}
-			 
-		if (enable_gi)
-		{
-			PROFILE(L"generate_light");
-			voxel_gi->generate_light(graph);
-		}
-				 
-
-
-
-
-										   
-   
-		// remove on intel
-		if (enable_gi) voxel_gi->generate(graph);
-
-												 
-
-
-									
 
 
 		struct debug_data
