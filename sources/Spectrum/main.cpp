@@ -182,10 +182,10 @@ public:
 	//	PostProcessGraph::ptr render_graph;
 
 
-	Variable<bool> enable_gi = { true, "GI", this };
-	Variable<bool> enable_fsr = { true, "FSR", this };
+	//Variable<bool> enable_gi = { true, "GI", this };
+	//Variable<bool> enable_fsr = { true, "FSR", this };
 	Variable<bool> downsampled = { true, "downsampled", this };
-	Variable<bool> enable_denoiser = { true, "denoiser", this };
+	//Variable<bool> enable_denoiser = { true, "denoiser", this };
 
 	//Variable<bool> debug_draw = Variable<bool>(false, "debug_draw",this);
 	//	VoxelGI::ptr voxel_renderer;
@@ -208,7 +208,6 @@ public:
 	ShadowDenoiser shadow_denoiser;
 
 	BlueNoise blue_noise;
-	std::optional<PreSceneSystem> pre_scene_system;
 	std::optional<SceneSystem>    scene_system;
 	VoxelGI::ptr voxel_gi;
 		SMAA smaa;
@@ -226,8 +225,8 @@ public:
 
 		scene.reset(new Scene());
 		scene->name = L"Scene";
-		pre_scene_system.emplace(pipeline, scene);
-		scene_system.emplace(pipeline, vr_context);
+
+		scene_system.emplace(pipeline);
 
 		scene_renderer = std::make_shared<main_renderer>();
 		scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
@@ -500,13 +499,6 @@ public:
 		cam.frame_move(dt);
 	}
 
-
-	void draw_eye(HAL::CommandList::ptr _list, float dt, EyeData& data, HAL::Texture::ptr target)
-	{}
-
-	void update_texture(HAL::CommandList::ptr list, float dt, const std::shared_ptr<Graphics::OVRContext>& vr)
-	{}
-
 	Graph* last_graph = nullptr;
 	tick_timer my_timer;
 	ResourceAllocInfo* debug_tex_handle = nullptr;
@@ -561,19 +553,13 @@ public:
 		}
 
 
-
-			 voxel_gi->pass_data(graph.builder);
+		voxel_gi->pass_data(graph.builder);
 
 		{
 			PROFILE(L"graph");
 			pipeline.add_passes(graph);
 		}
 
-
-		struct debug_data
-		{
-			Handlers::Texture debug_tex;
-		};
 
 		graph.add_slot_generator([this](Graph& graph)
 			{

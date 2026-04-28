@@ -91,6 +91,7 @@ GraphicsPSO Voxelization
 
 
 
+[Static]
 PassNode PreScene
 {
 	StructuredBuffer<uint> scene;
@@ -112,6 +113,7 @@ PassNode CopyPrev
 	GBuffer gbuffer;
 }
 
+[Static]
 PassNode Scene
 {
 	GBuffer gbuffer;

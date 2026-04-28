@@ -1,40 +1,37 @@
-export module Graphics:PreSceneSystem;
+export  module Graphics:PreSceneSystem;
 
 import <RenderSystem.h>;
 import :Scene;
 import :RTX;
 import :MeshAsset;
+import :FrameGraphContext;
 import FrameGraph;
 
+#include "../FrameGraph/autogen/pass_defaults.h"
 
-export class PreSceneSystem
+using namespace FrameGraph;
+
+bool PassDefault<Passes::PreScene>::setup(
+    Passes::PreScene::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	Scene::ptr scene;
+    builder.create(data.scene, { 1 }, ResourceFlags::UnorderedAccess);
+    return true;
+}
 
-public:
-	template<typename TPipeline>
-	explicit PreSceneSystem(TPipeline& pipeline, Scene::ptr _scene) : scene(std::move(_scene))
-	{
-		pipeline.preScene.setup_func = [](auto& data, FrameGraph::TaskBuilder& builder) -> bool
-		{
-			builder.create(data.scene, { 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
-			return true;
-		};
+void PassDefault<Passes::PreScene>::render(
+    Passes::PreScene::Context& data, FrameGraph::FrameContext& context)
+{
+    auto& command_list = context.get_list();
+    auto& scene = *context.graph->get_context<SceneInfo>().scene;
 
-		pipeline.preScene.render_func = [this](auto& data, FrameGraph::FrameContext& context)
-		{
-			auto& command_list = context.get_list();
+    SceneFrameManager::get().prepare(command_list, scene);
 
-			SceneFrameManager::get().prepare(command_list, *scene);
-
-			if (HAL::Device::get().is_rtx_supported())
-			{
-				scene->raytrace_scene->update(command_list,
-					(UINT)scene->raytrace->max_size(),
-					scene->raytrace->buffer.get_resource_address(),
-					false);
-				RTX::get().prepare(command_list);
-			}
-		};
-	}
-};
+    if (HAL::Device::get().is_rtx_supported())
+    {
+        scene.raytrace_scene->update(command_list,
+            (UINT)scene.raytrace->max_size(),
+            scene.raytrace->buffer.get_resource_address(),
+            false);
+        RTX::get().prepare(command_list);
+    }
+}

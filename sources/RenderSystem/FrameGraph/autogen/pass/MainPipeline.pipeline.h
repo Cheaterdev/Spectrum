@@ -1,5 +1,6 @@
 
 #include "PreScene.h"
+
 #include "BlueNoise.h"
 #include "Voxelize.h"
 #include "PSSM_Global.h"
@@ -39,7 +40,6 @@ class MainPipeline
 {
 public:
 
-	Passes::PreScene preScene;
 	Passes::BlueNoise blueNoise;
 	Passes::Voxelize voxelize;
 	Passes::PSSM_Global pSSM_Global;
@@ -47,7 +47,6 @@ public:
 	Passes::CubeSky cubeSky;
 	Passes::Lighting lighting;
 	Passes::Mipmapping mipmapping;
-	Passes::Scene scene;
 	Passes::RTXPass rTXPass;
 	Passes::PSSM_GenerateMask pSSM_GenerateMask;
 	Passes::PSSM_Combine pSSM_Combine;
@@ -65,8 +64,7 @@ public:
 	void add_passes(FrameGraph::Graph& graph)
 	{
 
-		if (preScene.setup_func)
-			graph.add_library_pass<Passes::PreScene>(preScene.setup_func, preScene.render_func, preScene.flags);
+		graph.add_library_pass<Passes::PreScene>(PassDefault<Passes::PreScene>::setup, PassDefault<Passes::PreScene>::render, PassDefault<Passes::PreScene>::flags);
 		if (blueNoise.setup_func)
 			graph.add_library_pass<Passes::BlueNoise>(blueNoise.setup_func, blueNoise.render_func, blueNoise.flags);
 		if (voxelize.setup_func)
@@ -84,8 +82,7 @@ public:
 			graph.add_library_pass<Passes::Lighting>(lighting.setup_func, lighting.render_func, lighting.flags);
 		if (mipmapping.setup_func)
 			graph.add_library_pass<Passes::Mipmapping>(mipmapping.setup_func, mipmapping.render_func, mipmapping.flags);
-		if (scene.setup_func)
-			graph.add_library_pass<Passes::Scene>(scene.setup_func, scene.render_func, scene.flags);
+		graph.add_library_pass<Passes::Scene>(PassDefault<Passes::Scene>::setup, PassDefault<Passes::Scene>::render, PassDefault<Passes::Scene>::flags);
 		if (rTXPass.setup_func)
 			graph.add_library_pass<Passes::RTXPass>(rTXPass.setup_func, rTXPass.render_func, rTXPass.flags);
 		graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, PassDefault<Passes::ResultCreation>::flags);
