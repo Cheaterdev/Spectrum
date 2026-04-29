@@ -3,8 +3,26 @@ export module FrameGraph:Base;
 import Core;
 import HAL;
 import <HAL.h>;
+#include "autogen/PipelineBase.h"
 
 using namespace HAL;
+
+
+namespace Pipelines
+{
+
+class PipelineBase
+{
+public:
+	virtual ~PipelineBase() = default;
+	virtual std::span<const wchar_t* const> GetUsedPassNamesList() const = 0;
+	virtual std::span<const wchar_t* const> GetUsedResourcesList() const = 0;
+};
+
+}
+
+
+
  export namespace FrameGraph
 {
 	class Graph;
@@ -700,6 +718,14 @@ using namespace HAL;
 
 
 
+		Pass* get_pass(std::wstring_view name) const;
+
+		Pass* get_pass(uint id)	const
+		{
+			auto it = id_to_pass.find(id);
+			return it != id_to_pass.end() ? it->second : nullptr;
+		}
+
 		ResourceAllocInfo* get(std::string name)
 		{
 			if (resources_names.count(name) == 0) return nullptr;
@@ -893,7 +919,7 @@ using namespace HAL;
 	{	
 	public:
 
-	
+		Events::Event<const Graph&> on_compile;
 	
 		Variable<bool> optimize = { true, "optimize", this };
 
@@ -920,6 +946,13 @@ using namespace HAL;
 			builder.graph = this;
 		}
 		TaskBuilder builder;
+
+		void set_pipeline(Pipelines::PipelineBase* p) { current_pipeline = p; }
+		Pipelines::PipelineBase* get_pipeline() const { return current_pipeline; }
+
+	private:
+		Pipelines::PipelineBase* current_pipeline = nullptr;
+	public:
 
 
 

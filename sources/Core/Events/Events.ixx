@@ -89,17 +89,17 @@ export namespace Events
 		std::function<void(T...)> func;
 
 					
-		template<class ...Args> 
-		void run(Args...args)
+		void run(T...args)
 		{
-			   if (runner)
-					{
-						runner->run([args...,this]() {
-							func(args...);
-						});
-					}else
-				   func(args...);
-		}	   
+			if (runner)
+			{
+				runner->run([f = func, captured = std::tuple<T...>(args...)]() {
+					std::apply(f, captured);
+				});
+			}
+			else
+				func(args...);
+		}
 
 	};
 
@@ -220,15 +220,15 @@ export namespace Events
 		}
 
 
-		template<class ...Args>
-		void operator()(Args...args)
+	//	template<class ...Args>
+		void operator()(T...args)
 		{
 
 			std::lock_guard<std::mutex> g(m);
 
 
 				for (auto& p : i_helpers)			
-					p->run(args...);
+					p->run(std::forward<T>(args)...);
 		
 		}
 

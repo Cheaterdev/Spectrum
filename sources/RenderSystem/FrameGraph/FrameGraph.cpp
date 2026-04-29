@@ -131,6 +131,14 @@ namespace FrameGraph
 
 	}
 
+	Pass* TaskBuilder::get_pass(std::wstring_view name)		 const
+	{
+		for (auto& p : passes)
+			if (p->name == name)
+				return p.get();
+		return nullptr;
+	}
+
 	void TaskBuilder::begin(Pass* pass)
 	{
 		current_pass = pass;
@@ -689,6 +697,9 @@ namespace FrameGraph
 		builder.process_transitions();
 		builder.process_fences();
 		builder.compile_lists();
+
+
+		on_compile(*this);
 	}
 
 

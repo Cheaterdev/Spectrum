@@ -6,6 +6,8 @@
 
 using namespace FrameGraph;
 
+{%- set all_resources = get_pipeline_resources(pipeline.name) -%}
+
 namespace Pipelines
 {
 
@@ -39,8 +41,21 @@ public:
 		return pass_names;
 	}
 
+	static inline const wchar_t* const resource_names[] = {
+{%- for name in all_resources %}
+		L"{{name}}",
+{%- endfor %}
+	};
+	static constexpr uint32_t resource_count = std::size(resource_names);
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return resource_names;
+	}
+
 	void add_passes(FrameGraph::Graph& graph)
 	{
+		graph.set_pipeline(this);
 {% for entry in pipeline.entries %}
 {%- set pass_def = parsed.passes[entry.name] %}
 {%- if pass_def is defined %}

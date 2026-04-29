@@ -32,7 +32,6 @@
 #include "../PipelineBase.h"
 
 using namespace FrameGraph;
-
 namespace Pipelines
 {
 
@@ -118,8 +117,78 @@ public:
 		return pass_names;
 	}
 
+	static inline const wchar_t* const resource_names[] = {
+		L"scene",
+		L"BlueNoise",
+		L"VoxelAlbedo",
+		L"VoxelNormal",
+		L"VoxelAlbedoStatic",
+		L"VoxelNormalStatic",
+		L"VoxelAlbedoDynamic",
+		L"VoxelNormalDynamic",
+		L"global_depth",
+		L"global_camera",
+		L"PSSM_Depths",
+		L"PSSM_Cameras",
+		L"sky_cubemap",
+		L"sky_cubemap_filtered",
+		L"sky_cubemap_filtered_diffuse",
+		L"VoxelLighted",
+		L"GBuffer_Albedo",
+		L"GBuffer_Normals",
+		L"GBuffer_Depth",
+		L"GBuffer_Specular",
+		L"GBuffer_Speed",
+		L"GBuffer_DepthMips",
+		L"GBuffer_Quality",
+		L"GBuffer_TempColor",
+		L"GBuffer_NormalsPrev",
+		L"GBuffer_SpecularPrev",
+		L"GBuffer_DepthPrev",
+		L"GBuffer_HiZ",
+		L"GBuffer_HiZ_UAV",
+		L"RTXDebug",
+		L"WorkGraphBuffer",
+		L"ResultTexture",
+		L"LightMask",
+		L"VoxelFramesCount",
+		L"VoxelIndirectNoise",
+		L"VoxelIndirectFiltered",
+		L"VoxelScreen_hi",
+		L"VoxelScreen_low",
+		L"VoxelScreen_low_data",
+		L"VoxelScreen_hi_data",
+		L"VoxelReflectionNoise",
+		L"noise_dir_pdf",
+		L"ReflectionDenoiser_RadiancePrev",
+		L"ReflectionDenoiser_AverageRadiance",
+		L"ReflectionDenoiser_AverageRadiancePrev",
+		L"ReflectionDenoiser_Variance",
+		L"ReflectionDenoiser_VariancePrev",
+		L"ReflectionDenoiser_SampleCount",
+		L"ReflectionDenoiser_SampleCountPrev",
+		L"ReflectionDenoiser_ReprojectedRadiance",
+		L"VoxelDebug",
+		L"depth_tex",
+		L"id_buffer",
+		L"axis_id_buffer",
+		L"Stencil_color_tex",
+		L"ResultTextureNew",
+		L"SMAA_edges",
+		L"SMAA_blend",
+		L"FSRTemp",
+		L"swapchain",
+	};
+	static constexpr uint32_t resource_count = std::size(resource_names);
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return resource_names;
+	}
+
 	void add_passes(FrameGraph::Graph& graph)
 	{
+		graph.set_pipeline(this);
 
 		graph.add_library_pass<Passes::PreScene>(PassDefault<Passes::PreScene>::setup, PassDefault<Passes::PreScene>::render, PassDefault<Passes::PreScene>::flags);
 		if (blueNoise.setup_func)

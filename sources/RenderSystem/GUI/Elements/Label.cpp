@@ -118,7 +118,7 @@ namespace GUI
 		void label::recalculate(Context& c)
 		{
 
-			if (!need_recalculate && ((w == ivec2(render_bounds->size / scaled) || (magnet_text & FW1_NOWORDWRAP))))
+			if (!need_recalculate && ((w == ivec2(render_bounds->size / scaled) /*|| (magnet_text & FW1_NOWORDWRAP)*/)))
 			{
 				w = ivec2(render_bounds->size / scaled);
 				return;

@@ -58,24 +58,24 @@ namespace GUI
                     item->magnet_text = FW1_TEXT_FLAG::FW1_LEFT | FW1_TEXT_FLAG::FW1_VCENTER;
 
                     if (block->get_level_internal() == log_level_internal::level_error)
-                        item->color = rgba8(200, 0, 0, 255);
+                        item->color = float4(200, 0, 0, 255)/float4(255,255,255,255);
 
                     if (block->get_level_internal() == log_level_internal::level_debug)
-                        item->color = rgba8(0, 100, 0, 255);
+                        item->color = float4(0, 100, 0, 255)/float4(255,255,255,255);
 
                     if (block->get_level_internal() == log_level_internal::level_warning)
-                        item->color = rgba8(150, 150, 0, 255);
+                        item->color = float4(150, 150, 0, 255)/float4(255,255,255,255);
 
                     if (block->get_level_internal() == log_level_internal::level_none)
-                        item->color = rgba8(200, 200, 200, 255);
+                        item->color = float4(200, 200, 200, 255)/float4(255,255,255,255);
 
                     if (block->get_level_internal() == log_level_internal::level_info)
-                        item->color = rgba8(0, 0, 200, 255);
+                        item->color = float4(0, 0, 200, 255)/float4(255,255,255,255);
 
                     std::lock_guard<std::mutex> g(m);
                     add.emplace_back(item);
                 });
-            }
+            }                                                                                           
         }
     }
 

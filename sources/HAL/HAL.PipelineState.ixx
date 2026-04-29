@@ -367,7 +367,7 @@ export namespace HAL
 		const StateObjectDesc desc;
 		using ptr = std::shared_ptr<StateObject>;
 
-		Events::Event<void> event_change;
+		Events::Event<> event_change;
 		StateObject(StateObjectDesc& desc) :desc(desc)
 		{
 

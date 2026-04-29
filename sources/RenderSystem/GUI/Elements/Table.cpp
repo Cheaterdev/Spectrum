@@ -132,6 +132,7 @@ namespace GUI
 
         void Table::AddColumn(const std::string& name)
         {
+               cells.resize(cells.size() + rows.size(), nullptr);
             columns.emplace_back(std::make_shared<Header>(name, true, this));
             layer3->add_child(columns.back());
             layer3->add_child(columns.back()->dragger);

@@ -7,8 +7,8 @@ export class base_tree
 {
 
 public:
-	Events::Event<void> event_on_add;
-	Events::Event<void> event_on_remove;
+	Events::Event<> event_on_add;
+	Events::Event<> event_on_remove;
 	Events::Event<base_tree*> event_on_add_child;
 	Events::Event<base_tree*> event_on_remove_child;
 

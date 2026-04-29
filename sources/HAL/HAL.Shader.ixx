@@ -147,7 +147,7 @@ export
 					CompiledShader blob;
 		
 			UsedSlots slots_usage;
-			Events::Event<void> on_change;
+			Events::Event<> on_change;
 			const unsigned int& get_hash() const
 			{
 				return hash;
