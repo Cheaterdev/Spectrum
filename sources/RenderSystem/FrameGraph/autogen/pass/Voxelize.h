@@ -1,15 +1,16 @@
 #pragma once
+#include "../PassNodeBase.h"
 
 using namespace FrameGraph;
-
 namespace Passes
 {
 
-class Voxelize 
+class Voxelize : public PassNodeBase
 {
 public:
 	struct Context
 	{
+
 
 		Handlers::Texture H(VoxelAlbedo);
 
@@ -28,8 +29,16 @@ public:
 
 		Handlers::Texture H(VoxelNormalDynamic);
 
+		static inline const wchar_t* const resource_names[] = {		L"VoxelAlbedo",		L"VoxelNormal",		L"VoxelAlbedoStatic",		L"VoxelNormalStatic",		L"VoxelAlbedoDynamic",		L"VoxelNormalDynamic",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
 
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
 
 	static inline const wchar_t* Name = L"Voxelize";
 

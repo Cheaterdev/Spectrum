@@ -1,15 +1,16 @@
 #pragma once
+#include "../PassNodeBase.h"
 
 using namespace FrameGraph;
-
 namespace Passes
 {
 
-class Lighting 
+class Lighting : public PassNodeBase
 {
 public:
 	struct Context
 	{
+
 
 		Handlers::Texture H(global_depth);
 
@@ -39,8 +40,16 @@ public:
 
 		Handlers::Texture H(VoxelNormalDynamic);
 
+		static inline const wchar_t* const resource_names[] = {		L"global_depth",		L"global_camera",		L"VoxelLighted",		L"VoxelAlbedo",		L"VoxelNormal",		L"sky_cubemap_filtered",		L"VoxelAlbedoStatic",		L"VoxelNormalStatic",		L"VoxelAlbedoDynamic",		L"VoxelNormalDynamic",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
 
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
 
 	static inline const wchar_t* Name = L"Lighting";
 

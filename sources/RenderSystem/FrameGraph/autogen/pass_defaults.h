@@ -42,6 +42,28 @@ struct PassDefault<Passes::ResultCreation>
 
 
 template<>
+struct PassDefault<Passes::RTXPass>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	static bool setup(Passes::RTXPass::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::RTXPass::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::PreScene>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+
+	static bool setup(Passes::PreScene::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::PreScene::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::Profiler>
 {
 	static constexpr bool enabled = true;
@@ -64,6 +86,17 @@ struct PassDefault<Passes::CopyPrev>
 
 
 template<>
+struct PassDefault<Passes::Scene>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+
+	static bool setup(Passes::Scene::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Scene::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::CubeMapDownsample>
 {
 	static constexpr bool enabled = true;
@@ -82,39 +115,6 @@ struct PassDefault<Passes::CubeMapEnviromentProcessor>
 
 	static bool setup(Passes::CubeMapEnviromentProcessor::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::CubeMapEnviromentProcessor::Context& data, FrameGraph::FrameContext& context);
-};
-
-
-template<>
-struct PassDefault<Passes::PreScene>
-{
-	static constexpr bool enabled = true;
-	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-
-	static bool setup(Passes::PreScene::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::PreScene::Context& data, FrameGraph::FrameContext& context);
-};
-
-
-template<>
-struct PassDefault<Passes::RTXPass>
-{
-	static constexpr bool enabled = true;
-	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
-	static bool setup(Passes::RTXPass::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::RTXPass::Context& data, FrameGraph::FrameContext& context);
-};
-
-
-template<>
-struct PassDefault<Passes::Scene>
-{
-	static constexpr bool enabled = true;
-	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-
-	static bool setup(Passes::Scene::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::Scene::Context& data, FrameGraph::FrameContext& context);
 };
 
 

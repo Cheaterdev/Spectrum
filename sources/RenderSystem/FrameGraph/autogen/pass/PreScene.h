@@ -1,20 +1,29 @@
 #pragma once
+#include "../PassNodeBase.h"
 
 using namespace FrameGraph;
-
 namespace Passes
 {
 
-class PreScene 
+class PreScene : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
+
 		Handlers::StructuredBuffer<uint> H(scene);
 
+		static inline const wchar_t* const resource_names[] = {		L"scene",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
 
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
 
 	static inline const wchar_t* Name = L"PreScene";
 

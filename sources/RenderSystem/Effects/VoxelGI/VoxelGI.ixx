@@ -15,7 +15,7 @@ import FrameGraph;
 import HAL;
 #include "profiling/macros.h"
 
-class GBufferDownsampler;
+//class GBufferDownsampler;
 
 using namespace HAL;
 using namespace FrameGraph;
@@ -214,7 +214,7 @@ public:
 	float3 size;
 
 private:
-	std::shared_ptr<GBufferDownsampler> downsampler;
+//	std::shared_ptr<GBufferDownsampler> downsampler;
 
 	VisibilityBufferUniversal::ptr visibility;
 	ReflectionDenoiser reflection_denoiser;
@@ -274,16 +274,16 @@ public:
 
 	void pass_data( FrameGraph::TaskBuilder& builder)
 	{
-			 	// Always register external textures with the frame graph
-			builder.pass_texture("VoxelAlbedo",        albedo.tex_result);
-			builder.pass_texture("VoxelNormal",        normal.tex_result);
-			builder.pass_texture("VoxelLighted",       tex_lighting.tex_result);
-			builder.pass_texture("VoxelAlbedoStatic",  albedo.tex_static);
+			// Always register external textures with the frame graph
+		builder.pass_texture("VoxelAlbedo",        albedo.tex_result);
+		builder.pass_texture("VoxelNormal",        normal.tex_result);
+		builder.pass_texture("VoxelLighted",       tex_lighting.tex_result);
+		builder.pass_texture("VoxelAlbedoStatic",  albedo.tex_static);
 		builder.pass_texture("VoxelNormalStatic",  normal.tex_static);
-			builder.pass_texture("VoxelAlbedoDynamic", albedo.tex_dynamic);
-			builder.pass_texture("VoxelNormalDynamic", normal.tex_dynamic);
-
+		builder.pass_texture("VoxelAlbedoDynamic", albedo.tex_dynamic);
+		builder.pass_texture("VoxelNormalDynamic", normal.tex_dynamic);
 	}
+
 	void resize(ivec2 size);
 	void start_new(HAL::CommandList& list);
 

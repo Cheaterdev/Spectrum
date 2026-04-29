@@ -1,15 +1,16 @@
 #pragma once
+#include "../PassNodeBase.h"
 
 using namespace FrameGraph;
-
 namespace Passes
 {
 
-class SMAA 
+class SMAA : public PassNodeBase
 {
 public:
 	struct Context
 	{
+
 
 		Handlers::Texture H(ResultTexture);
 
@@ -20,8 +21,17 @@ public:
 
 		Handlers::Texture H(SMAA_blend);
 
+		static inline const wchar_t* const resource_names[] = {		L"ResultTexture",
+		L"ResultTextureNew",		L"SMAA_edges",		L"SMAA_blend",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
 
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
 
 	static inline const wchar_t* Name = L"SMAA";
 

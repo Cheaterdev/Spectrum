@@ -1,22 +1,31 @@
 #pragma once
+#include "../PassNodeBase.h"
 
 using namespace FrameGraph;
-
 namespace Passes
 {
 
-class PSSM_Cascade 
+class PSSM_Cascade : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
+
 		Handlers::Texture H(PSSM_Depths);
 
 		Handlers::StructuredBuffer<Table::Camera> H(PSSM_Cameras);
 
+		static inline const wchar_t* const resource_names[] = {		L"PSSM_Depths",		L"PSSM_Cameras",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
 
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
 
 	static inline const wchar_t* Name = L"PSSM_Cascade";
 

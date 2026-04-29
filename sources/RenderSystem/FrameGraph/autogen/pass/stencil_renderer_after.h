@@ -1,23 +1,32 @@
 #pragma once
+#include "../PassNodeBase.h"
 
 using namespace FrameGraph;
-
 namespace Passes
 {
 
-class stencil_renderer_after 
+class stencil_renderer_after : public PassNodeBase
 {
 public:
 	struct Context
 	{
+
 
 		Handlers::Texture H(ResultTexture);
 
 
 		Handlers::Texture H(Stencil_color_tex);
 
+		static inline const wchar_t* const resource_names[] = {		L"ResultTexture",		L"Stencil_color_tex",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
 
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
 
 	static inline const wchar_t* Name = L"stencil_renderer_after";
 

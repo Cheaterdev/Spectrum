@@ -145,14 +145,6 @@ public:
 	}
 };
 
-
-class GraphDebugRender : public GUI::Elements::FlowGraph::canvas
-{
-public:
-	void generate(Graph& graph)
-	{}
-};
-
 class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext
 {
 		Pipelines::MainPipeline pipeline;
@@ -174,7 +166,6 @@ class triangle_drawer : public GUI::Elements::image, public GraphGenerator, Vari
 		{}
 	};
 
-	std::vector<EyeData::ptr> eyes;
 	first_person_camera cam;
 
 public:
@@ -194,15 +185,10 @@ public:
 
 	mesh_renderer::ptr meshes_renderer;
 
-	//	gpu_cached_renderer::ptr gpu_meshes_renderer_static;
-	//	gpu_cached_renderer::ptr gpu_meshes_renderer_dynamic;
-
 	Scene::ptr scene;
-	HAL::QueryHeap::ptr query_heap;
 	float draw_time;
 	MeshAssetInstance::ptr instance;
 
-	std::shared_ptr<Graphics::OVRContext> vr_context = std::make_shared<Graphics::OVRContext>();
 	PSSM pssm;
 	SkyRender sky;
 	ShadowDenoiser shadow_denoiser;
@@ -358,7 +344,6 @@ public:
 			}
 		}
 
-		eyes.emplace_back(new EyeData(nullptr));
 
 		voxel_gi = std::make_shared<VoxelGI>(pipeline,scene);
 	}
@@ -402,10 +387,6 @@ public:
 	{
 		PROFILE(L"triangle_drawer");
 		last_graph = &graph;
-		vr_context->eyes.resize(1);
-		vr_context->eyes[0].dir = quat();
-
-		vr_context->eyes[0].offset = vec3(0, 0, 0);
 
 		ivec2 size = ivec2::max(ivec2(get_render_bounds().size), ivec2(64, 64));
 		struct pass_data
@@ -439,13 +420,6 @@ public:
 		timeinfo.totalTime += timeinfo.time;
 		skyinfo.sunDir = pssm.get_position();
 		cam.update({ 0, 0 });
-
-
-		for (int i = 0; i < eyes.size(); i++)
-		{
-			eyes[i]->cam = cam;
-			eyes[i]->cam.update({ 0, 0 });
-		}
 
 
 		voxel_gi->pass_data(graph.builder);
@@ -550,7 +524,6 @@ class GraphRender : public Window, public GUI::user_interface
 	tick_timer main_timer;
 	ivec2 new_size;
 
-	std::shared_ptr<Graphics::OVRContext> vr_context = std::make_shared<Graphics::OVRContext>();
 	std::future<void> task_future;
 	std::future<void> task_end;
 	std::promise<void> promise_end;

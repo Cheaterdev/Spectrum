@@ -2,13 +2,14 @@
 #include "{{entry.name}}.h"
 {%- endfor %}
 #include "../pass_defaults.h"
+#include "../PipelineBase.h"
 
 using namespace FrameGraph;
 
 namespace Pipelines
 {
 
-class {{pipeline.name}}
+class {{pipeline.name}} : public PipelineBase
 {
 public:
 {% for entry in pipeline.entries %}
@@ -17,6 +18,26 @@ public:
 	Passes::{{entry.name}} {{lowerize(entry.name)}};
 {%- endif %}
 {%- endfor %}
+
+	static inline const wchar_t* const pass_names[] = {
+{%- for entry in pipeline.entries %}
+{%- set pass_def = parsed.passes[entry.name] %}
+{%- if pass_def is defined and pass_def.options.Multiple is defined %}
+{%- set count = pass_def.options.Multiple.value_atom.expr | int %}
+{%- for i in range(count) %}
+		Passes::{{entry.name}}::Names[{{i}}],
+{%- endfor %}
+{%- else %}
+		Passes::{{entry.name}}::Name,
+{%- endif %}
+{%- endfor %}
+	};
+	static constexpr uint32_t pass_count = std::size(pass_names);
+
+	std::span<const wchar_t* const> GetUsedPassNamesList() const override
+	{
+		return pass_names;
+	}
 
 	void add_passes(FrameGraph::Graph& graph)
 	{

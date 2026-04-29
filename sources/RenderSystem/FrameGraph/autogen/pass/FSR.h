@@ -1,15 +1,16 @@
 #pragma once
+#include "../PassNodeBase.h"
 
 using namespace FrameGraph;
-
 namespace Passes
 {
 
-class FSR 
+class FSR : public PassNodeBase
 {
 public:
 	struct Context
 	{
+
 
 		Handlers::Texture H(ResultTexture);
 
@@ -17,8 +18,17 @@ public:
 
 		Handlers::Texture H(FSRTemp);
 
+		static inline const wchar_t* const resource_names[] = {		L"ResultTexture",
+		L"ResultTextureNew",		L"FSRTemp",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
 
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
 
 	static inline const wchar_t* Name = L"FSR";
 

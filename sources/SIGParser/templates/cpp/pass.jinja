@@ -1,21 +1,37 @@
 #pragma once
+#include "../PassNodeBase.h"
 {% for v in pass.params -%}
 {%- set t =  parsed.tables[v.type] -%}
 {%- if t is undefined -%}{%-else-%}
 #include "{{v.type}}.h"
-{%-endif-%}	
+{%-endif-%}
 {% endfor -%}
 
 using namespace FrameGraph;
 
+{%- macro collect_resource_names(params) -%}
+{%- for v in params -%}
+{%- set view = parsed.views[v.type] -%}
+{%- if view is defined -%}
+{{ collect_resource_names(view.params) -}}
+{%- else -%}
+		L"{{v.name}}",
+{%- if v.options.Recreate is defined %}
+		L"{{v.options.Recreate.value_atom.expr}}",
+{%- endif %}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
 namespace Passes
 {
 
-class {{pass.name}} 
+class {{pass.name}} : public PassNodeBase
 {
 public:
 	struct Context
 	{
+
 {% for v in pass.params -%}
 {%- set t =  parsed.tables[v.type] -%}
 {%- if t is undefined -%}
@@ -26,13 +42,22 @@ public:
 {%endif%}
 {%-else-%}
 		{{v.type}} {{v.name}};
-{%-endif-%}	
+{%-endif-%}
 {%- if v.options.Recreate is defined %}
 		Handlers::{{v.type}} {{v.options.Recreate.value_atom.expr}} = {{v.name}};
 {%- endif %}
 {% endfor -%}
+		static inline const wchar_t* const resource_names[] = {
+{{- collect_resource_names(pass.params) }}
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
 
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
 
 	static inline const wchar_t* Name = L"{{pass.name}}";
 {% if pass.options.Multiple is defined %}

@@ -1,20 +1,29 @@
 #pragma once
+#include "../PassNodeBase.h"
 
 using namespace FrameGraph;
-
 namespace Passes
 {
 
-class CubeSky 
+class CubeSky : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
+
 		Handlers::TextureCube H(sky_cubemap);
 
+		static inline const wchar_t* const resource_names[] = {		L"sky_cubemap",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
 
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
 
 	static inline const wchar_t* Name = L"CubeSky";
 

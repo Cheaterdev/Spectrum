@@ -1,23 +1,32 @@
 #pragma once
+#include "../PassNodeBase.h"
 
 using namespace FrameGraph;
-
 namespace Passes
 {
 
-class ShadowDenoiser_Prepare 
+class ShadowDenoiser_Prepare : public PassNodeBase
 {
 public:
 	struct Context
 	{
+
 
 		Handlers::Texture H(RTXDebug);
 
 
 		Handlers::StructuredBuffer<uint> H(ShadowDenoiser_TileBuffer);
 
+		static inline const wchar_t* const resource_names[] = {		L"RTXDebug",		L"ShadowDenoiser_TileBuffer",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
 
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
 
 	static inline const wchar_t* Name = L"ShadowDenoiser_Prepare";
 

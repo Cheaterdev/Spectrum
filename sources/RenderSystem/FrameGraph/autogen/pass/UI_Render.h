@@ -1,20 +1,29 @@
 #pragma once
+#include "../PassNodeBase.h"
 
 using namespace FrameGraph;
-
 namespace Passes
 {
 
-class UI_Render 
+class UI_Render : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
+
 		Handlers::Texture H(swapchain);
 
+		static inline const wchar_t* const resource_names[] = {		L"swapchain",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
 
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
 
 	static inline const wchar_t* Name = L"UI_Render";
 

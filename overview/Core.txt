@@ -1,0 +1,471 @@
+CORE MODULE — TECHNICAL REFERENCE
+================================================================================
+
+
+OVERVIEW
+--------
+"Core" is a C++20 module (Core.ixx re-exports all partitions) providing the
+engine's foundational infrastructure: singletons, events, math, threading,
+file I/O, serialization, memory, profiling, and misc utilities. Almost every
+other module imports Core.
+
+
+================================================================================
+  SINGLETON
+================================================================================
+
+template<class T> class Singleton
+
+  - Static members: T* ptr, shared_ptr<T> instance, mutex create_mutex.
+  - T& get()          — returns *ptr, asserts existence.
+  - T* create()       — thread-safe first-time construction (double-checked
+                        locking). Supports HasCreationFunc concept for custom
+                        factory.
+  - bool is_good()    — non-crashing existence check.
+  - void reset()      — destroy the instance.
+
+Used everywhere. Derive with: class Foo : public Singleton<Foo> { ... };
+
+
+================================================================================
+  EVENT SYSTEM
+================================================================================
+
+template<class ...T> class Event
+
+  - register_handler(prop_handler* owner, func) -> prop_t_helper*
+      Stores a callback. Automatically unregistered when owner dies.
+  - operator()(args...)
+      Fires all registered callbacks. Mutex-protected.
+  - default_state callback
+      Called immediately for new listeners (for late-join initialisation).
+  - Optional Runner* for async dispatch.
+
+template<class T> class prop : public prop_handler
+
+  Reactive value wrapper.
+  - operator=(T)            — set value, fire change event.
+  - register_change(owner, func)  — subscribe to changes.
+  - operator const T() / get()    — read current value.
+  - Mutex-protected internally.
+
+class prop_handler
+  Base class for anything that owns event registrations. Destruction
+  automatically cleans up all its handlers.
+
+
+================================================================================
+  TASK SYSTEM
+================================================================================
+
+class Task
+  - wstring name, prop<float> percent, bool active.
+  - Represents a long-running operation with progress.
+
+class TaskInfoManager : Singleton<TaskInfoManager>
+  - create_task(name) -> shared_ptr<Task>
+  - Events: on_start_task, on_end_task, on_change_task.
+
+
+================================================================================
+  LOGGING
+================================================================================
+
+class Log : Singleton<Log>
+  - Usage: Log::get() << Log::LEVEL_ERROR << "msg" << Log::endl;
+  - Levels: LEVEL_NONE, ERROR, WARNING, INFO, DEBUG, ALL.
+  - Event on_log fires for every LogBlock.
+  - Pluggable loggers: FileTXTLogger, VSOutputLogger, ConsoleLogger,
+    ClassLogger<T> (per-type level filter).
+
+
+================================================================================
+  DEBUG / TRACKING
+================================================================================
+
+struct BuildOptions
+  - Debug = true (always)
+  - ObjectTracking = true when LEAK_TEST_ENABLE is defined.
+
+class Object
+  - string object_name, stack_trace creation_stack.
+
+class ObjectTracker
+  - Tracks TypedObject<T> instances; logs leaks (with stacks) on shutdown.
+
+template<class T> class Counter<T>
+  - Scoped execution timer. Aggregated via CounterManager.
+  - Usage: auto t = CounterManager::get().start_count<MyClass>("label");
+
+
+================================================================================
+  THREADING
+================================================================================
+
+SetThreadName(...)    — names a thread for debugger display.
+
+ThreadScope / ThreadType
+  - Thread-local ThreadType (NONE, GRAPHICS, GUI).
+  - ThreadScope RAII sets type, restores on destruction.
+  - check_type() asserts correct thread.
+
+Thread::Lockable      — guard = lock_guard<mutex>
+Thread::Free          — guard = thread_tester (debug no-lock)
+
+SpinLock              — atomic_flag spin loop.
+
+class SingleThreadExecutor
+  - PPL-based agent; processes std::function<void()> from an unbounded_buffer.
+  - stop_and_wait() drains queue before exiting.
+
+class SingleThreadExecutorBatched : SingleThreadExecutor
+  - add(f) batches functions (default batch 8); flush() dispatches one batch.
+
+class thread_pool : Singleton<thread_pool>
+  - Wraps BS::thread_pool.
+  - enqueue(f) -> future<result>
+
+class scheduler : Singleton<scheduler>
+  - Time-ordered task queue, dedicated scheduler thread + condition_variable.
+  - enqueue_now(f, args...)         — immediate dispatch to thread_pool.
+  - enqueue(f, time_point, args...) — delayed dispatch.
+
+enum class TaskPriority : int { LOW, NORMAL, HIGH }
+
+
+================================================================================
+  FILE SYSTEM
+================================================================================
+
+struct file
+  - filesystem::path file_name, file_time_type edit_time, file_provider* provider.
+  - load_all() -> string
+  - get_new_stream() -> shared_ptr<istream>
+
+class file_provider (pure virtual)
+  - load_all, get_file, create_stream, save_data, iterate, iterate_dirs, on_change.
+
+class native_file_provider : file_provider
+  - Windows I/O implementation.
+  - on_change: polling via thread_pool with debounce (~100-200ms).
+
+class FileSystem : Singleton<FileSystem>
+  - register_provider(provider)
+  - get_file(path) -> file::ptr
+  - save_data(path, string) -> bool
+  - iterate(path, callback, recursive)
+  - template get_provider<T>() -> shared_ptr<T>
+
+class resource_file_depender
+  - Tracks set of (path, mtime) pairs.
+  - add_depend(file), need_update() -> bool, clear(), depends_on(string).
+  - Serializable for persistent caching.
+
+class FileDataStorage
+  - Multi-partition binary file.
+  - put<T>(partition, data), get<T>(partition, target), has(partition).
+  - Header stores offsets; footer stores header offset.
+  - Uses cereal with UniversalContext adapter.
+  - start_save() / save() lifecycle.
+
+template<class R, class H> class resource_manager : Singleton<...>
+  - get_resource(header) -> shared_ptr<R>   (cached; shared_future for race-free
+    concurrent creation)
+  - reload_all(), depends_on(string), reload_resource().
+  - Pluggable loaders via loader<R, H, Context> with static function registry.
+
+
+================================================================================
+  MATH
+================================================================================
+
+--- Constants ---
+pi, e, radToDeg, degToRad, eps2..eps12.
+clamp<T>, saturate<T>, AlignUp/AlignDown/DivideByMultiple.
+
+--- Vectors ---
+template<typename T, int N> struct vector_data_t
+  Union layout: values[], and named fields x/y/z/w, plus sub-vector aliases
+  (xy, xyz).
+
+template<typename T> class Vector : public T
+  Operators: ==, <=>, +, -, *, /, +=, -=, *=, /=  (element-wise).
+  Methods: normalize(), length(), dot(), cross() (3D), abs(), min(), max(),
+           clamp(), normalized().
+  Static: min, max, clamp, dot, cross, higher, lower, higher_eq, lower_eq.
+  Concept: IsVectorType — requires .values and ::N.
+
+Type aliases:
+  vec2/vec3/vec4         float vectors
+  ivec2/ivec3/ivec4      int vectors
+  uint2/uint3/uint4      uint vectors
+  float4x4 = mat4x4
+  rgb8, rgba8            byte colour vectors
+  box, rect, sizer       specialised rect/margin vectors
+
+template<class V, class T, size_t N> class grid
+  Multidimensional array indexed by vector or enum.
+
+--- Quaternion ---
+class quat : vec4
+  Constructors: (x,y,z,w), (axis, angle), (vec3), (vec4).
+  norm(), magnitude(), conjugate(), inverse(), identity().
+  operator*(quat) — Hamilton product.
+  rotate(vec3) — apply rotation.
+  to_axis_angle(vec3&, float&).
+
+--- Matrix ---
+template<int N, int M, class T> class matrix_data_t
+  Row-major; union of rows[] and flat elems[].
+
+template<class M> class matrix : M
+  +, -, *, +=, -=, *=, ZeroMatrix(), raw(), GetRow(), GetColumn(),
+  operator(), operator[].
+
+mat4x4 = matrix<matrix_data_4x4_t<float>>  (named a11..a44 fields)
+
+Vector * matrix: promotes 3D vec to vec4, multiplies, divides by w.
+
+--- Primitives ---
+class Primitive (abstract)
+  get_type(), get_volume(), combine(), apply_transform(), get_min/max(), clone().
+
+class AABB : Primitive
+  min/max corners; construct from another Primitive or from a functor over N points.
+
+class Frustum, Sphere — similar geometric primitives.
+
+
+================================================================================
+  PATTERNS
+================================================================================
+
+--- IdGenerator ---
+template<class LockPolicy = Thread::Lockable> class IdGenerator
+  - get() -> int    reuses from free list or increments counter.
+  - put(int)        returns id to free list.
+
+--- MyVariant ---
+class MyVariant
+  Type-erased value container.
+  - operator=(T), create<T>(args...), get<T>() -> T&, try_get<T>() -> T*.
+  - exists(), clear(), clone().
+
+--- Cache ---
+template<class I, class V> class Cache
+  - operator[](key) — lazy creation via stored create_func; handles races.
+
+--- Pool ---
+template<class V> class Pool
+  - get() — reuse or create; put(v) — return.
+
+--- Void ---
+template<class T> class Void
+  - Lazily-created shared_ptr. operator bool(), get(), operator->().
+
+--- SharedObject / SharedObjectBase ---
+class SharedObject<T> : enable_shared_from_this
+  - get_ptr<M>() — returns shared_ptr<M> via shared_from_this.
+
+--- EditObject / EditContainer ---
+EditObject: changed flag, mark_changed(), on_save(), save().
+EditContainer: tracks set of EditObjects; save_all(prompt).
+
+--- StateContext / ObjectState ---
+class StateContext    — carries local_id + global_id; owned by ContextGenerator.
+class ObjectState<T>  — per-context state array (128 fast slots + map overflow).
+                        get_state(context) -> T&.
+
+--- Trackable ---
+template<class T> class Trackable : ObjectState<TrackedObjectState>
+  Tracks whether a resource has been "used" in the current context.
+  get_tracked() -> shared_ptr<T>.
+
+--- Holdable / UniversalContext ---
+class Holder
+  - Type-keyed map (type_index -> MyVariant).
+  - get_or_create<T>() -> T&
+  - get_or_null<T>() -> T*
+  - clone()
+
+class UniversalContext
+  - Wraps Holder.
+  - get_context<T>() -> T&   (used by Graph::get_context<T>())
+  - clone()
+
+--- VariableContext / Variable ---
+class VariableContext : tree<VariableContext, set<VariableContext*>>, Singleton<>
+  Named node in a context tree; owns a set of VariableBase*.
+
+template<class T> class Variable : VariableBase
+  - operator T() — read.
+  - operator=(T) — write + notify.
+  - Registers with owning VariableContext.
+
+--- my_unique_vector ---
+template<class T> class my_unique_vector : vector<T>
+  - insert(elem) — push_back (no uniqueness check despite the name; used for
+    pointer sets where identity uniqueness is caller-managed).
+  - erase(elem)  — find and erase by value.
+
+
+================================================================================
+  TREE
+================================================================================
+
+class base_tree
+  - Events: event_on_add, event_on_remove, event_on_add_child,
+            event_on_remove_child.
+  - Virtual: on_add, on_remove, added_child, removed_child, get_name.
+
+template<class T, class ChildHolder, class ...Mixins>
+class tree : base_tree, Mixins...
+  - childs / real_childs: the ChildHolder (e.g. vector, set, list).
+  - add_child(ptr), remove_child(ptr), remove_from_parent(), remove_all().
+  - get_child(i), get_child_count(), get_childs().
+  - get_parent(), get_root<T>().
+  - iterate(func<bool(T*)>) — recursive walk, returns false to stop.
+  - calculate_depth().
+
+
+================================================================================
+  FLOW GRAPH
+================================================================================
+
+Node-based data-flow execution system.
+
+class parameter     — typed data port; holds value, linked parameters.
+class input/output  — directional parameter subtypes.
+class connection    — link between output->input.
+class Node          — graph node with registered inputs/outputs; virtual execute().
+class graph         — owns a set of Nodes and Connections.
+class GraphContext  — execution state for one graph evaluation.
+template<class T> class GraphNode<T> — typed node wrapper.
+
+parameter API: put(v), get<T>(), has_value(), link(param), unlink(param),
+               send_next().
+Node API: register_input<T>(name), register_output<T>(name).
+
+
+================================================================================
+  SERIALIZATION
+================================================================================
+
+Uses cereal under the hood (binary + JSON archives).
+
+class Serializer
+  - serialize<T>(obj, compress) -> string
+  - serialize_simple<T>(obj) -> string
+  - to_json<T>(obj) -> string
+  - deserialize<T>(string) -> shared_ptr<T>
+  - deserialize(string, T&)
+  - clone<T>(obj) -> shared_ptr<T>
+  - get_stream(string/istream) -> serialization_istream
+
+  serialize for: Guid, filesystem::path, chrono::time_point.
+
+class Hasher
+  - hash(string_view) -> string    (string hash)
+  - hash<T>(obj) -> string         (serializes obj then hashes)
+
+template<class T> class BinaryData
+  - Lazy deserialise wrapper. get() -> shared_ptr<T>; on_create callback.
+
+DataPacker namespace
+  - pack(string) -> compressed string    (zlib)
+  - unpack(string) -> decompressed string
+  - load_all(istream) -> string
+
+
+================================================================================
+  PROFILING
+================================================================================
+
+class Profiler : Singleton<Profiler>
+  - start(name) -> Timer   (RAII; fires on_cpu_timer_start/end events)
+  - enabled flag.
+
+class Timer (move-only RAII)
+  - get_block() -> TimedBlock&
+
+class TimedBlock : SharedObject<TimedBlock>
+  - id, name, level, parent, CPUCounter.
+
+class ScopedCounter
+  - Logs elapsed wall time on destruction.
+
+
+================================================================================
+  ALLOCATORS
+================================================================================
+
+struct MemoryInfo { offset, size, reset_id, internal_data* }
+
+class Allocator (abstract)
+  - Allocate<T>(size, align) -> AllocatorHandle
+  - TryAllocate(size, align) -> optional<Handle>
+  - Free(handle), isEmpty(), Reset()
+  - get_max_usage(), get_size()
+
+class CommonAllocator : Allocator
+  - Free-list with block merging (set<block> free_blocks).
+
+class LinearAllocator : Allocator
+  - Bump allocator; Free() is no-op; Reset() rewinds offset.
+
+template<class T> class TypedHandle
+  - get_offset(), get_size(), aquire() -> span<T>
+
+template<class T, class AllocatorType>
+class DataAllocator : AllocatorType, DataProvider<T>
+  - Allocate(count) -> Handle, Free(Handle)
+
+
+================================================================================
+  UTILITIES
+================================================================================
+
+Type concepts:
+  NonString, Enum, Scalar, Printable, NonFundamental, has_pretty_typename.
+
+Enum bitwise operators provided globally:
+  operator|, &, |=, ~, ^, and bool check() for flag testing.
+
+String helpers:
+  convert(string_view) -> wstring, convert(wstring_view) -> string.
+  to_lower(string_view/wstring_view).
+
+Literal operators:
+  1_t, 1_kb, 1_mb, 1_gb  (size_t byte sizes)
+  1_ms, 1.0_ms            (chrono::milliseconds)
+
+Aliases:
+  s_ptr<T> = shared_ptr<T>
+  w_ptr<T> = weak_ptr<T>
+  binary   = vector<byte>
+
+get_typename<T>() -> string   (uses T::get_typename() or type_name mangling)
+
+template<class T> struct Member { T& get(); }
+template<class ...Args> class GenerateMembers  — variadic member tuple.
+
+template<class E, class T, size_t N> class enum_array : array<T,N>
+  operator[](E) -> T&   (enum-indexed array)
+
+
+================================================================================
+  EXTERNAL DEPENDENCIES
+================================================================================
+
+cereal       — binary + JSON serialization archives
+zlib         — compression in DataPacker
+magic_enum   — compile-time enum utilities (enum_count, enum_name, etc.)
+crossguid    — cross-platform GUID
+BS::thread_pool  — work-stealing thread pool
+PPL (concurrency::) — agent, unbounded_buffer (Windows)
+Windows API  — console, thread naming, file watching
+
+STL header sets pulled via: stl/core.h, stl/memory.h, stl/threading.h,
+stl/filesystem.h, windows/windows.h (project-internal aggregating headers).
+
+================================================================================

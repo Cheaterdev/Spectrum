@@ -1,6 +1,5 @@
 
 #include "PreScene.h"
-
 #include "BlueNoise.h"
 #include "Voxelize.h"
 #include "PSSM_Global.h"
@@ -30,13 +29,14 @@
 #include "Profiler.h"
 #include "UI_Render.h"
 #include "../pass_defaults.h"
+#include "../PipelineBase.h"
 
 using namespace FrameGraph;
 
 namespace Pipelines
 {
 
-class MainPipeline
+class MainPipeline : public PipelineBase
 {
 public:
 
@@ -59,6 +59,64 @@ public:
 	Passes::stencil_renderer_before stencil_renderer_before;
 	Passes::stencil_renderer_after stencil_renderer_after;
 	Passes::SMAA sMAA;
+
+	static inline const wchar_t* const pass_names[] = {
+		Passes::PreScene::Name,
+		Passes::BlueNoise::Name,
+		Passes::Voxelize::Name,
+		Passes::PSSM_Global::Name,
+		Passes::PSSM_Cascade::Names[0],
+		Passes::PSSM_Cascade::Names[1],
+		Passes::PSSM_Cascade::Names[2],
+		Passes::PSSM_Cascade::Names[3],
+		Passes::PSSM_Cascade::Names[4],
+		Passes::PSSM_Cascade::Names[5],
+		Passes::CubeSky::Name,
+		Passes::CubeMapDownsample::Name,
+		Passes::CubeMapEnviromentProcessor::Name,
+		Passes::Lighting::Name,
+		Passes::Mipmapping::Name,
+		Passes::Scene::Name,
+		Passes::RTXPass::Name,
+		Passes::ResultCreation::Name,
+		Passes::PSSM_GenerateMask::Name,
+		Passes::PSSM_Combine::Name,
+		Passes::VoxelScreen::Name,
+		Passes::VoxelCombine::Name,
+		Passes::ScreenReflection::Name,
+		Passes::ReflectionDenoiser_Reproject::Name,
+		Passes::ReflCombine::Name,
+		Passes::VoxelDebug::Name,
+		Passes::Sky::Name,
+		Passes::stencil_renderer_before::Name,
+		Passes::stencil_renderer_after::Name,
+		Passes::SMAA::Name,
+		Passes::FSR::Name,
+		Passes::CopyPrev::Name,
+		Passes::Profiler::Name,
+		Passes::UI_Render::Names[0],
+		Passes::UI_Render::Names[1],
+		Passes::UI_Render::Names[2],
+		Passes::UI_Render::Names[3],
+		Passes::UI_Render::Names[4],
+		Passes::UI_Render::Names[5],
+		Passes::UI_Render::Names[6],
+		Passes::UI_Render::Names[7],
+		Passes::UI_Render::Names[8],
+		Passes::UI_Render::Names[9],
+		Passes::UI_Render::Names[10],
+		Passes::UI_Render::Names[11],
+		Passes::UI_Render::Names[12],
+		Passes::UI_Render::Names[13],
+		Passes::UI_Render::Names[14],
+		Passes::UI_Render::Names[15],
+	};
+	static constexpr uint32_t pass_count = std::size(pass_names);
+
+	std::span<const wchar_t* const> GetUsedPassNamesList() const override
+	{
+		return pass_names;
+	}
 
 	void add_passes(FrameGraph::Graph& graph)
 	{
