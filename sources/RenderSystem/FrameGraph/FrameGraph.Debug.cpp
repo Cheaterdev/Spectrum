@@ -98,7 +98,13 @@ public:
 
 			auto dock = docker->get_dock(GUI::dock::BOTTOM);
 				dock->size = { 256, 256 };
-		dock->get_tabs()->add_page("Pipeline",table);
+		dock->get_tabs()->add_page("Pipeline", table);
+
+		{
+			auto timeline = FrameGraphDebug::create_timeline_layout(_graph);
+			timeline->docking = GUI::dock::FILL;
+			dock->get_tabs()->add_page("Timeline", timeline);
+		}
 
 		//add_child(table);
 
@@ -185,8 +191,7 @@ public:
 
 
 
-
-	///	rendered_text->text = "HELLO";
+	/*///	TEMPRORALY NOT USED - USE THIS ONLY TO GENERATE RESOURCE PREVIEW AFTER EACH PASS
 
 	//	rendered_text->magnet_text = FW1_LEFT | FW1_TOP;
 		for (auto& [name, infov] : graph.builder.alloc_resources)
@@ -329,7 +334,7 @@ public:
 					});
 
 				};
-		}
+		}*/
 
 
 
