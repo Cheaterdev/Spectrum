@@ -112,3 +112,4 @@ export namespace HAL
 //module:private;
 
 REGISTER_TYPE(HAL::texture_data);
+CEREAL_FORCE_REGISTER(HAL::texture_data);

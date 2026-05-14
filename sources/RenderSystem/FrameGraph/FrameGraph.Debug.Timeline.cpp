@@ -10,7 +10,7 @@ import <HAL.h>;
 
 using namespace GUI::Elements;
 
-class FrameGraphTimelineCanvas : public GUI::base
+class FrameGraphTimelineCanvas : public dock_base
 {
     // -----------------------------------------------------------------------
     //  Layout constants
@@ -24,6 +24,7 @@ class FrameGraphTimelineCanvas : public GUI::base
     static constexpr float CELL_H     = 64.0f;
     static constexpr float PAD        = 3.0f;
     static constexpr float LABEL_FONT = 10.0f;
+    static constexpr float ICON_W     = 18.0f;  // resource-type icon size in left column
 
     // -----------------------------------------------------------------------
     //  Data model
@@ -65,14 +66,12 @@ class FrameGraphTimelineCanvas : public GUI::base
     // -----------------------------------------------------------------------
     //  View state
     // -----------------------------------------------------------------------
-    vec2  m_offset       = { 0.0f, 0.0f };
-    float m_zoom         = 1.0f;
-    bool  m_dragging     = false;
-    vec2  m_drag_start;
-    vec2  m_offset_at_drag;
+    vec2  m_offset = { 0.0f, 0.0f };
+    float m_zoom   = 1.0f;
 
-    // Shared camera for all 3D texture previews in this timeline.
-    third_person_camera m_camera_3d;
+    // Selection state — updated on thumbnail click.
+    UINT m_sel_call_id = std::numeric_limits<UINT>::max();
+    int  m_sel_ri      = -1;
 
     // -----------------------------------------------------------------------
     //  scroll_container with no scrollbars and no built-in drag.
@@ -119,6 +118,114 @@ class FrameGraphTimelineCanvas : public GUI::base
     };
 
     // -----------------------------------------------------------------------
+    //  Center fill pane — draws lane/row backgrounds and owns pan/zoom input.
+    //  Contains m_grid_scroll (FILL) and m_left_scroll (LEFT).
+    // -----------------------------------------------------------------------
+    struct center_pane : GUI::base
+    {
+        using ptr = std::shared_ptr<center_pane>;
+        FrameGraphTimelineCanvas& owner;
+
+        bool m_dragging      = false;
+        vec2 m_drag_start;
+        vec2 m_offset_at_drag;
+
+        explicit center_pane(FrameGraphTimelineCanvas& o) : owner(o)
+        {
+            docking     = GUI::dock::FILL;
+            width_size  = GUI::size_type::NONE;
+            height_size = GUI::size_type::NONE;
+            clickable   = true;
+        }
+
+        virtual void draw(Context& c) override
+        {
+            if (!owner.m_ready) { base::draw(c); return; }
+
+            const rect  b  = get_render_bounds();
+            const float bx = b.x, by = b.y, bw = b.w, bh = b.h;
+            const float oy = by + owner.m_offset.y;
+
+            owner.dr(c, C_DIRECT_LANE,  bx, oy,                       bw, LANE_H);
+            owner.dr(c, C_COMPUTE_LANE, bx, oy + LANE_H,              bw, LANE_H);
+            owner.dr(c, C_SEPARATOR,    bx, oy + LANE_COUNT * LANE_H, bw, 2.0f);
+
+            for (int ri = 0; ri < (int)owner.m_resources.size(); ri++)
+            {
+                float ry = oy + LANE_COUNT * LANE_H + 6.0f + ri * ROW_H;
+                if (ry + ROW_H < by || ry > by + bh) continue;
+                owner.dr(c, (ri & 1) ? C_ROW_ODD : C_ROW_EVEN, bx + LABEL_W, ry, bw - LABEL_W, ROW_H);
+            }
+
+            owner.dr(c, C_LABEL_BG, bx, oy,          LABEL_W, LANE_H);
+            owner.dr(c, C_LABEL_BG, bx, oy + LANE_H, LABEL_W, LANE_H);
+            for (int ri = 0; ri < (int)owner.m_resources.size(); ri++)
+            {
+                float ry = oy + LANE_COUNT * LANE_H + 6.0f + ri * ROW_H;
+                if (ry + ROW_H < by || ry > by + bh) continue;
+                owner.dr(c, (ri & 1) ? C_ROW_ODD : C_ROW_EVEN, bx, ry, LABEL_W, ROW_H);
+            }
+            owner.dr(c, C_SEPARATOR, bx + LABEL_W - 1.0f, by, 1.0f, bh);
+
+            if (owner.m_sel_ri >= 0 && owner.m_sel_ri < (int)owner.m_resources.size())
+            {
+                float ry = oy + LANE_COUNT * LANE_H + 6.0f + owner.m_sel_ri * ROW_H;
+                owner.dr(c, C_SEL_RESOURCE, bx, ry, bw, ROW_H);
+            }
+
+            base::draw(c);
+        }
+
+        virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override
+        {
+            if (button == mouse_button::RIGHT)
+            {
+                pressed = (action == mouse_action::DOWN);
+                if (pressed)
+                {
+                    m_drag_start     = pos;
+                    m_offset_at_drag = owner.m_offset;
+                    m_dragging       = false;
+                }
+                else
+                {
+                    m_dragging = false;
+                    set_movable(false);
+                }
+            }
+            return false;
+        }
+
+        virtual bool on_mouse_move(vec2 pos) override
+        {
+            if (pressed && !m_dragging && (pos - m_drag_start).length() > 3.0f)
+            {
+                m_dragging = true;
+                set_movable(true);
+            }
+            if (m_dragging)
+            {
+                owner.m_offset = m_offset_at_drag + (pos - m_drag_start);
+                owner.apply_pan();
+            }
+            return m_dragging;
+        }
+
+        virtual bool on_wheel(mouse_wheel type, float value, vec2 wheel_pos) override
+        {
+            float prev_zoom   = owner.m_zoom;
+            owner.m_zoom     *= 1.0f + value / 10.0f;
+            owner.m_zoom      = Math::clamp(owner.m_zoom, 0.05f, 20.0f);
+            float cx          = get_render_bounds().x;
+            float pivot       = wheel_pos.x - cx - LABEL_W - owner.m_offset.x;
+            owner.m_offset.x  = wheel_pos.x - cx - LABEL_W - pivot * (owner.m_zoom / prev_zoom);
+            owner.apply_zoom();
+            owner.apply_pan();
+            return true;
+        }
+    };
+
+    // -----------------------------------------------------------------------
     //  Image widget with an on_click callback.
     // -----------------------------------------------------------------------
     struct preview_image : image
@@ -147,22 +254,39 @@ class FrameGraphTimelineCanvas : public GUI::base
     {
         using ptr = std::shared_ptr<ResourcePreviewContent>;
 
-        image::ptr                     m_img;
-        FrameGraph::ResourceAllocInfo* m_alloc     = nullptr;
-        UINT                           m_call_id   = 0;
-        Events::prop_helper*           m_handler   = nullptr;
-        bool                           m_fit_done  = false;
+        image::ptr                                                 m_img;
+        GUI::Elements::tree<member_item, object_tree_creator>::ptr m_buffer_tree;
+        label::ptr                                                 m_type_lbl;
+        label::ptr                                                 m_dim_lbl;
+        FrameGraph::ResourceAllocInfo*                             m_alloc   = nullptr;
+        UINT                                                       m_call_id = 0;
+        Events::prop_helper*                                       m_handler = nullptr;
 
+        // Texture produced on the render thread; handed to m_img via run_on_ui.
+        std::shared_ptr<Texture> m_current_tex;
+
+        // Render-thread-only flags (one render thread per call_id, no atomic needed).
+        bool m_fit_done      = false;
+        bool m_buffer_inited = false;
+
+        // Cached image widget size: UI thread writes, render thread reads.
+        // Plain int is naturally atomic on x86 for word-sized stores/loads.
+        volatile int m_view_w = 64;
+        volatile int m_view_h = 64;
+
+        // Pan/zoom/camera state — written from UI thread, read from render thread.
+        // All access must hold m_state_mutex.
+        mutable Thread::Lockable::mutex m_state_mutex;
         float2              m_pan   = { 0.0f, 0.0f };
         float               m_scale = 1.0f;
         third_person_camera m_cam_3d;
 
-        bool  m_pressed  = false;
-        bool  m_dragging = false;
-        vec2  m_start;
+        bool  m_dragging   = false;
+        vec2  m_drag_start;
         vec2  m_prev;
 
-        ResourcePreviewContent(FrameGraph::ResourceAllocInfo* alloc, UINT call_id)
+        ResourcePreviewContent(FrameGraph::ResourceAllocInfo* alloc, UINT call_id,
+                               const std::string& pass_name)
             : m_alloc(alloc), m_call_id(call_id)
         {
             docking     = GUI::dock::FILL;
@@ -170,78 +294,191 @@ class FrameGraphTimelineCanvas : public GUI::base
             height_size = GUI::size_type::MATCH_PARENT;
             clickable   = true;
 
+            // Docker layout: preview fills the main area, info panel at the bottom.
+            // clickable=false lets mouse events fall through to ResourcePreviewContent.
+            auto docker       = std::make_shared<GUI::Elements::dock_base>();
+            docker->docking   = GUI::dock::FILL;
+            docker->clickable = false;
+            add_child(docker);
+
             m_img              = std::make_shared<image>();
             m_img->docking     = GUI::dock::FILL;
-            m_img->width_size  = GUI::size_type::MATCH_PARENT;
-            m_img->height_size = GUI::size_type::MATCH_PARENT;
+            m_img->width_size  = GUI::size_type::NONE;
+            m_img->height_size = GUI::size_type::NONE;
             m_img->clickable   = false;
-            add_child(m_img);
+            docker->add_child(m_img);
+
+            m_buffer_tree          = std::make_shared<GUI::Elements::tree<member_item, object_tree_creator>>();
+            m_buffer_tree->docking = GUI::dock::FILL;
+            m_buffer_tree->visible = false;
+            docker->add_child(m_buffer_tree);
+
+            // Bottom dock — resource / pass information.
+            auto bottom_dock  = docker->get_dock(GUI::dock::BOTTOM);
+            bottom_dock->size = { 0.0f, 90.0f };
+
+            auto info_panel     = std::make_shared<GUI::base>();
+            info_panel->docking = GUI::dock::FILL;
+
+            float info_y = 4.0f;
+            auto add_row = [&](const std::string& text) -> label::ptr
+            {
+                auto lbl         = std::make_shared<label>();
+                lbl->text        = text;
+                lbl->font_size   = 10.0f;
+                lbl->docking     = GUI::dock::NONE;
+                lbl->width_size  = GUI::size_type::MATCH_PARENT;
+                lbl->height_size = GUI::size_type::FIXED;
+                lbl->size        = { 0.0f, 18.0f };
+                lbl->pos         = { 6.0f, info_y };
+                info_panel->add_child(lbl);
+                info_y += 18.0f;
+                return lbl;
+            };
+
+            add_row("Resource: " + (alloc ? alloc->name : "?"));
+            add_row("Pass:     " + pass_name + "  (#" + std::to_string(call_id) + ")");
+            m_type_lbl = add_row("Type:     ...");
+            m_dim_lbl  = add_row("Size:     ...");
+
+            bottom_dock->get_tabs()->add_page("Info", info_panel);
 
             m_handler = alloc->process_debug_resource.register_handler(this,
                 [this](FrameGraph::Pass* pass, FrameGraph::FrameContext* context)
                 {
                     if (pass->call_id != m_call_id) return;
-                    if (!m_alloc->resource->get_desc().is_texture()) return;
 
-                    uint2 SZ = uint2(int2::max({ 64, 64 }, m_img->get_render_bounds().size));
-
-                    if (!m_img->texture.texture ||
-                        uint2(m_img->texture.texture->get_desc().as_texture().Dimensions.xy) != SZ)
+                    if (m_alloc->resource->get_desc().is_texture())
                     {
-                        HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(
-                            HAL::Format::R8G8B8A8_UNORM, { SZ }, 1, 1,
-                            HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
-                        m_img->texture.texture = std::make_shared<Texture>(desc);
+                        // Read view size cached by update_layout on the UI thread.
+                        uint2 SZ = { (UINT)m_view_w, (UINT)m_view_h };
 
-                        // Fit-to-window on first texture creation.
-                        if (!m_fit_done)
+                        // Create / resize render target — render-thread-owned via m_current_tex.
+                        bool need_new = !m_current_tex ||
+                            uint2(m_current_tex->get_desc().as_texture().Dimensions.xy) != SZ;
+                        if (need_new)
                         {
-                            m_fit_done    = true;
-                            auto   d      = m_alloc->resource->get_desc().as_texture().Dimensions;
-                            float2 src    = { float(d.x), float(d.y) };
-                            float2 dst    = float2(SZ);
-                            float  fit    = std::min(dst.x / src.x, dst.y / src.y);
-                            m_scale       = fit;
-                            m_pan         = (dst - src * fit) * 0.5f;
+                            HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(
+                                HAL::Format::R8G8B8A8_UNORM, { SZ }, 1, 1,
+                                HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
+                            m_current_tex = std::make_shared<Texture>(desc);
+
+                            if (!m_fit_done)
+                            {
+                                m_fit_done = true;
+                                auto   d   = m_alloc->resource->get_desc().as_texture().Dimensions;
+                                float2 src = { float(d.x), float(d.y) };
+                                float2 dst = float2(SZ);
+                                float  fit = std::min(dst.x / src.x, dst.y / src.y);
+                                {
+                                    Thread::Lockable::guard lk(m_state_mutex);
+                                    m_scale = fit;
+                                    m_pan   = (dst - src * fit) * 0.5f;
+                                }
+
+                                bool is_3d    = (d.z > 1);
+                                std::string t = is_3d ? "Texture3D" : "Texture2D";
+                                std::string s = std::to_string(d.x) + "x" + std::to_string(d.y)
+                                              + (is_3d ? "x" + std::to_string(d.z) : "");
+                                run_on_ui([this, t, s]()
+                                {
+                                    m_type_lbl->text = "Type:     " + t;
+                                    m_dim_lbl->text  = "Size:     " + s;
+                                });
+                            }
+
+                            // Hand the new texture to the image widget on the UI thread.
+                            auto tex = m_current_tex;
+                            run_on_ui([this, tex]()
+                            {
+                                m_img->texture.texture = tex;
+                                m_img->visible         = true;
+                                m_buffer_tree->visible = false;
+                            });
                         }
-                    }
 
-                    auto& compute = context->get_list()->get_compute();
-                    {
-                        Slots::FrameGraph_Debug_Common common;
-                        common.GetTarget()     = m_img->texture.texture->texture_2d().rwTexture2D;
-                        common.GetTargetSize() = SZ;
-                        compute.set(common);
-                    }
+                        if (!m_current_tex) return;
 
-                    if (auto* src = dynamic_cast<HAL::Texture2DView*>(m_alloc->view.get()))
-                    {
-                        compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
-                        Slots::FrameGraph_Debug_Texture2D tex2d;
-                        tex2d.GetSource()     = *src;
-                        tex2d.GetSourceSize() = m_alloc->resource->get_desc().as_texture().Dimensions.xy;
-                        tex2d.GetOffset()     = m_pan;
-                        tex2d.GetScale()      = m_scale;
-                        compute.set(tex2d);
-                    }
-                    else if (auto* src = dynamic_cast<HAL::Texture3DView*>(m_alloc->view.get()))
-                    {
-                        compute.set_pipeline<PSOS::FrameGraph_Debug_Texture3D>();
-                        m_cam_3d.set_projection_params(Math::pi / 4,
-                            float(SZ.x) / float(SZ.y), 1.0f, 1500.0f);
-                        m_cam_3d.frame_move(0.1f);
-                        m_cam_3d.update();
-                        Slots::FrameGraph_Debug_Texture3D tex3d;
-                        tex3d.GetSource()     = *src;
-                        tex3d.GetSourceSize() = m_alloc->resource->get_desc().as_texture().Dimensions;
-                        tex3d.GetCamera()     = m_cam_3d.camera_cb.current;
-                        compute.set(tex3d);
+                        auto& compute = context->get_list()->get_compute();
+                        {
+                            Slots::FrameGraph_Debug_Common common;
+                            common.GetTarget()     = m_current_tex->texture_2d().rwTexture2D;
+                            common.GetTargetSize() = SZ;
+                            compute.set(common);
+                        }
+
+                        if (auto* src = dynamic_cast<HAL::Texture2DView*>(m_alloc->view.get()))
+                        {
+                            float2 snap_pan;
+                            float  snap_scale;
+                            {
+                                Thread::Lockable::guard lk(m_state_mutex);
+                                snap_pan   = m_pan;
+                                snap_scale = m_scale;
+                            }
+                            compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
+                            Slots::FrameGraph_Debug_Texture2D tex2d;
+                            tex2d.GetSource()     = *src;
+                            tex2d.GetSourceSize() = m_alloc->resource->get_desc().as_texture().Dimensions.xy;
+                            tex2d.GetOffset()     = snap_pan;
+                            tex2d.GetScale()      = snap_scale;
+                            compute.set(tex2d);
+                        }
+                        else if (auto* src = dynamic_cast<HAL::Texture3DView*>(m_alloc->view.get()))
+                        {
+                            auto snap_cam_cb = [&]() {
+                                Thread::Lockable::guard lk(m_state_mutex);
+                                m_cam_3d.set_projection_params(Math::pi / 4,
+                                    float(SZ.x) / float(SZ.y), 1.0f, 1500.0f);
+                                m_cam_3d.frame_move(0.1f);
+                                m_cam_3d.update();
+                                return m_cam_3d.camera_cb.current;
+                            }();
+                            compute.set_pipeline<PSOS::FrameGraph_Debug_Texture3D>();
+                            Slots::FrameGraph_Debug_Texture3D tex3d;
+                            tex3d.GetSource()     = *src;
+                            tex3d.GetSourceSize() = m_alloc->resource->get_desc().as_texture().Dimensions;
+                            tex3d.GetCamera()     = snap_cam_cb;
+                            compute.set(tex3d);
+                        }
+                        else
+                        {
+                            compute.set_pipeline<PSOS::FrameGraph_Debug_NotImplemented>();
+                        }
+                        compute.dispatch(uint3(SZ, 1));
                     }
                     else
                     {
-                        compute.set_pipeline<PSOS::FrameGraph_Debug_NotImplemented>();
+                        if (auto* src = dynamic_cast<HAL::StructuredBufferViewBase*>(m_alloc->view.get()))
+                        {
+                            if (!m_buffer_inited)
+                            {
+                                m_buffer_inited      = true;
+                                size_t count     = src->get_count();
+                                size_t elem_size = src->get_element_size();
+                                context->get_list()->get_copy().read_buffer(
+                                    src->resource.get(), 0, count * elem_size,
+                                    [this, src, count, elem_size](std::span<std::byte> memory)
+                                    {
+                                        auto tree_data = src->describe(memory.data(), memory.size());
+                                        run_on_ui([this, tree_data, count, elem_size]()
+                                        {
+                                            m_type_lbl->text = "Type:     Buffer";
+                                            m_dim_lbl->text  = "Size:     "
+                                                + std::to_string(count) + " x "
+                                                + std::to_string(elem_size) + "B";
+                                            m_buffer_tree->contents->remove_all();
+                                            m_buffer_tree->init(tree_data.get());
+                                        });
+                                    });
+                                run_on_ui([this]()
+                                {
+                                    m_img->visible         = false;
+                                    m_buffer_tree->visible = true;
+                                });
+                            }
+                        }
                     }
-                    compute.dispatch(uint3(SZ, 1));
                 });
         }
 
@@ -254,16 +491,16 @@ class FrameGraphTimelineCanvas : public GUI::base
         {
             if (button == mouse_button::RIGHT)
             {
-                m_pressed = (action == mouse_action::DOWN);
-                m_start   = pos;
-                if (!m_pressed) { m_dragging = false; set_movable(false); }
+                pressed      = (action == mouse_action::DOWN);
+                m_drag_start = pos;
+                if (!pressed) { m_dragging = false; set_movable(false); }
             }
             return false;
         }
 
         virtual bool on_mouse_move(vec2 pos) override
         {
-            if (m_pressed && !m_dragging && (pos - m_start).length() > 3.0f)
+            if (pressed && !m_dragging && (pos - m_drag_start).length() > 3.0f)
             {
                 m_dragging = true;
                 m_prev     = pos;
@@ -272,31 +509,48 @@ class FrameGraphTimelineCanvas : public GUI::base
             if (m_dragging)
             {
                 vec2 delta = pos - m_prev;
-                m_pan     += float2(delta);
-                m_cam_3d.input(float2(delta) / 1000.0f);
-                m_prev     = pos;
+                {
+                    Thread::Lockable::guard lk(m_state_mutex);
+                    m_pan    += float2(delta);
+                    m_cam_3d.input(float2(delta) / 1000.0f);
+                }
+                m_prev = pos;
             }
             return m_dragging;
         }
 
         virtual bool on_wheel(mouse_wheel type, float value, vec2 wpos) override
         {
-            float prev = m_scale;
-            m_cam_3d.input(value / 100.0f);
-            m_scale *= 1.0f + value / 10.0f;
-            m_scale  = Math::clamp(m_scale, 0.01f, 50.0f);
-            vec2 pivot = wpos - get_render_bounds().pos;
-            m_pan = m_scale / prev * (m_pan - float2(pivot)) + float2(pivot);
+            vec2 pivot = wpos - m_img->get_render_bounds().pos;
+            {
+                Thread::Lockable::guard lk(m_state_mutex);
+                float prev = m_scale;
+                m_cam_3d.input(value / 100.0f);
+                m_scale *= 1.0f + value / 10.0f;
+                m_scale  = Math::clamp(m_scale, 0.01f, 50.0f);
+                m_pan    = m_scale / prev * (m_pan - float2(pivot)) + float2(pivot);
+            }
             return true;
+        }
+
+        virtual ::sizer update_layout(::sizer r, float scale) override
+        {
+            ::sizer result = base::update_layout(r, scale);
+            const rect rb = m_img->get_render_bounds();
+            m_view_w = std::max(64, (int)rb.w);
+            m_view_h = std::max(64, (int)rb.h);
+            return result;
         }
     };
 
     // -----------------------------------------------------------------------
     //  Widget containers
     // -----------------------------------------------------------------------
+    center_pane::ptr     m_center;
     timeline_scroll::ptr m_grid_scroll;
     timeline_scroll::ptr m_left_scroll;
     grid_canvas::ptr     m_grid_canvas;
+    GUI::base::ptr       m_preview_panel;
 
     // -----------------------------------------------------------------------
     //  Labels / images
@@ -304,6 +558,7 @@ class FrameGraphTimelineCanvas : public GUI::base
     label::ptr              m_lbl_direct;
     label::ptr              m_lbl_compute;
     std::vector<label::ptr> m_resource_labels;
+    std::vector<image::ptr> m_resource_icons;   // one per resource row, parallel to m_resource_labels
 
     struct PassLabel
     {
@@ -335,6 +590,8 @@ class FrameGraphTimelineCanvas : public GUI::base
     static const float4 C_LIFETIME;
     static const float4 C_TEXT_BRIGHT;
     static const float4 C_TEXT_DIM;
+    static const float4 C_SEL_PASS;
+    static const float4 C_SEL_RESOURCE;
 
     // -----------------------------------------------------------------------
     //  Helpers
@@ -370,24 +627,28 @@ public:
         width_size  = GUI::size_type::MATCH_PARENT;
         height_size = GUI::size_type::MATCH_PARENT;
 
-        // Grid scroll covers the full area; m_left_scroll overlays the left column.
+        // center_pane is the fill child of this dock_base; it owns draw + input.
+        m_center = std::make_shared<center_pane>(*this);
+        add_child(m_center);
+
+        // Grid scroll fills the center pane.
         m_grid_scroll              = std::make_shared<timeline_scroll>();
         m_grid_scroll->docking     = GUI::dock::FILL;
         m_grid_scroll->width_size  = GUI::size_type::NONE;
         m_grid_scroll->height_size = GUI::size_type::NONE;
-        add_child(m_grid_scroll);
+        m_center->add_child(m_grid_scroll);
 
         // Grid canvas — first child so labels/images render on top.
         m_grid_canvas = std::make_shared<grid_canvas>(*this);
         m_grid_scroll->add_child(m_grid_canvas);
 
-        // Left-column scroll — fixed width, overlays the left LABEL_W pixels.
+        // Left-column scroll — fixed width, docked left inside center.
         m_left_scroll              = std::make_shared<timeline_scroll>();
         m_left_scroll->docking     = GUI::dock::LEFT;
         m_left_scroll->width_size  = GUI::size_type::FIXED;
         m_left_scroll->height_size = GUI::size_type::NONE;
         m_left_scroll->size        = { LABEL_W, 0.0f };
-        add_child(m_left_scroll);
+        m_center->add_child(m_left_scroll);
 
         // Lane labels at fixed positions in left-column contents.
         m_lbl_direct  = make_label(LABEL_W - 8.0f, LANE_H - 6.0f, "DIRECT",  C_TEXT_BRIGHT, LABEL_FONT);
@@ -396,6 +657,16 @@ public:
         m_lbl_compute->pos = { 4.0f, LANE_H + (LANE_H - 14.0f) * 0.5f };
         m_left_scroll->add_child(m_lbl_direct);
         m_left_scroll->add_child(m_lbl_compute);
+
+        // Right dock on this (dock_base) — permanent preview panel.
+        auto right_dock  = get_dock(GUI::dock::RIGHT);
+        right_dock->size = { 400.0f, 0.0f };
+
+        m_preview_panel              = std::make_shared<GUI::base>();
+        m_preview_panel->docking     = GUI::dock::FILL;
+        m_preview_panel->width_size  = GUI::size_type::MATCH_PARENT;
+        m_preview_panel->height_size = GUI::size_type::MATCH_PARENT;
+        right_dock->get_tabs()->add_page("Preview", m_preview_panel);
 
         graph.on_compile.register_handler(this,
             [this](const FrameGraph::Graph& cg) { rebuild(cg); });
@@ -472,16 +743,41 @@ private:
             m_resources.push_back(std::move(tr));
         }
 
-        // Resource-name labels in left column.
-        for (auto& lbl : m_resource_labels) m_left_scroll->remove_child(lbl);
+        // Resource-name labels + type icons in left column.
+        for (auto& lbl  : m_resource_labels) m_left_scroll->remove_child(lbl);
+        for (auto& icon : m_resource_icons)  m_left_scroll->remove_child(icon);
         m_resource_labels.clear();
+        m_resource_icons.clear();
 
         for (int ri = 0; ri < (int)m_resources.size(); ri++)
         {
-            float ly = LANE_COUNT * LANE_H + 6.0f + ri * ROW_H + (ROW_H - 14.0f) * 0.5f;
-            auto lbl = make_label(LABEL_W - 8.0f, ROW_H - 4.0f,
-                                  m_resources[ri].name, C_TEXT_BRIGHT, LABEL_FONT);
-            lbl->pos = { 4.0f, ly };
+            float row_top = LANE_COUNT * LANE_H + 6.0f + ri * ROW_H;
+
+            // Small resource-type indicator icon.
+            auto icon            = std::make_shared<image>();
+            icon->docking        = GUI::dock::NONE;
+            icon->width_size     = GUI::size_type::FIXED;
+            icon->height_size    = GUI::size_type::FIXED;
+            icon->size           = { ICON_W, ICON_W };
+            icon->pos            = { 4.0f, row_top + (ROW_H - ICON_W) * 0.5f };
+            icon->clip_to_parent = GUI::ParentClip::ALL;
+            icon->clickable      = false;
+			icon->texture.texture = Skin::get().DefaultEditBox.Normal.texture;
+
+            // TODO: set icon->texture.texture to an appropriate loaded texture, e.g.:
+            //   Texture2D  -> load_icon("path/to/texture2d.png")
+            //   Texture3D  -> load_icon("path/to/texture3d.png")
+            //   Buffer     -> load_icon("path/to/buffer.png")
+            // Icons are assigned later via run_on_ui once the resource type is known.
+            m_left_scroll->add_child(icon);
+            m_resource_icons.push_back(icon);
+
+            // Resource name label — indented past the icon.
+            float ly  = row_top + (ROW_H - 14.0f) * 0.5f;
+            float lx  = 4.0f + ICON_W + 4.0f;
+            auto lbl  = make_label(LABEL_W - lx - 4.0f, ROW_H - 4.0f,
+                                   m_resources[ri].name, C_TEXT_BRIGHT, LABEL_FONT);
+            lbl->pos  = { lx, ly };
             m_left_scroll->add_child(lbl);
             m_resource_labels.push_back(lbl);
         }
@@ -502,17 +798,21 @@ private:
                 img->pos         = { 0.0f, cy };
 
                 img->on_click = [this,
-                                  res_name  = m_resources[ri].name,
+                                  ri        = ri,
                                   cid       = cell.call_id,
                                   alloc     = cell.alloc,
                                   passes_ptr]()
                 {
-                    auto wnd = std::make_shared<GUI::Elements::window>();
-                    wnd->set_title(res_name);
-                    wnd->pos  = { 100.0f, 80.0f };
-                    wnd->size = { 560.0f, 460.0f };
-                    wnd->add_child(std::make_shared<ResourcePreviewContent>(alloc, cid));
-                    user_ui->add_child(wnd);
+                    m_sel_call_id = cid;
+                    m_sel_ri      = ri;
+
+                    std::string pass_name_str;
+                    for (auto& p : *passes_ptr)
+                        if (p.call_id == cid) { pass_name_str = to_str(p.name); break; }
+
+                    m_preview_panel->remove_all();
+                    m_preview_panel->add_child(
+                        std::make_shared<ResourcePreviewContent>(alloc, cid, pass_name_str));
                 };
 
                 m_grid_scroll->add_child(img);
@@ -521,35 +821,62 @@ private:
         }
 
         // process_debug_resource handlers.
-        for (auto& tr : m_resources)
-            for (auto& cell : tr.cells)
+        for (int ri = 0; ri < (int)m_resources.size(); ri++)
+            for (auto& cell : m_resources[ri].cells)
             {
                 if (!cell.preview || !cell.alloc) continue;
                 auto  img             = cell.preview;
                 UINT  capture_call_id = cell.call_id;
                 auto* info            = cell.alloc;
+                auto  icon_img        = m_resource_icons[ri];
 
-                auto* cam = &m_camera_3d;
+                // Per-cell camera (not shared) and render-thread-local texture holder.
+                auto cam       = std::make_shared<third_person_camera>();
+                auto thumb_tex = std::make_shared<std::shared_ptr<Texture>>();
                 cell.debug_handler = info->process_debug_resource.register_handler(this,
-                    [img, capture_call_id, info, cam](FrameGraph::Pass* pass, FrameGraph::FrameContext* context)
+                    [this, img, capture_call_id, info, cam, thumb_tex, icon_img,
+                     icon_done = false]
+                    (FrameGraph::Pass* pass, FrameGraph::FrameContext* context) mutable
                     {
                         if (pass->call_id != capture_call_id) return;
+
+                        // Detect and display the resource type icon once per handler instance.
+                        // Multiple cells for the same resource row each have their own bool,
+                        // so the icon may be assigned more than once — that is idempotent.
+                        if (!icon_done)
+                        {
+                            icon_done         = true;
+                            const bool is_tex = info->resource->get_desc().is_texture();
+                            const bool is_3d  = is_tex &&
+                                info->resource->get_desc().as_texture().Dimensions.z > 1;
+                            run_on_ui([icon_img, is_tex, is_3d]()
+                            {
+                                // TODO: assign icon_img->texture.texture to the appropriate icon:
+                                // if      (is_3d)  icon_img->texture.texture = /* load("path/to/texture3d_icon.png") */;
+                                // else if (is_tex) icon_img->texture.texture = /* load("path/to/texture2d_icon.png") */;
+                                // else             icon_img->texture.texture = /* load("path/to/buffer_icon.png") */;
+                                (void)icon_img; (void)is_tex; (void)is_3d;
+                            });
+                        }
+
                         if (!info->resource->get_desc().is_texture()) return;
 
                         const uint2 PREVIEW_SIZE = { 128, 64 };
 
-                        if (!img->texture.texture)
+                        if (!*thumb_tex)
                         {
                             HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(
                                 HAL::Format::R8G8B8A8_UNORM, { PREVIEW_SIZE }, 1, 1,
                                 HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
-                            img->texture.texture = std::make_shared<Texture>(desc);
+                            *thumb_tex = std::make_shared<Texture>(desc);
+                            auto t = *thumb_tex;
+                            run_on_ui([img, t]() { img->texture.texture = t; });
                         }
 
                         auto& compute = context->get_list()->get_compute();
                         {
                             Slots::FrameGraph_Debug_Common common;
-                            common.GetTarget()     = img->texture.texture->texture_2d().rwTexture2D;
+                            common.GetTarget()     = (*thumb_tex)->texture_2d().rwTexture2D;
                             common.GetTargetSize() = PREVIEW_SIZE;
                             compute.set(common);
                         }
@@ -695,6 +1022,10 @@ private:
         const rect  b  = canvas.get_render_bounds();
         const float bx = b.x, by = b.y, bh = b.h;
 
+        // Selected pass column highlight (drawn first, behind everything).
+        if (m_sel_call_id != std::numeric_limits<UINT>::max())
+            dr(c, C_SEL_PASS, dep_x(m_sel_call_id, bx), by, col_w(), bh);
+
         // vertical grid lines
         for (UINT cid = 0; cid <= m_max_call_id + 1; cid++)
             dr(c, C_GRID, dep_x(cid, bx), by, 1.0f, bh);
@@ -778,102 +1109,6 @@ private:
         }
     }
 
-public:
-    // -----------------------------------------------------------------------
-    //  draw() — viewport-fixed elements only.
-    //  Scrolled grid content is drawn by grid_canvas via base::draw().
-    // -----------------------------------------------------------------------
-    virtual void draw(Context& c) override
-    {
-        if (!m_ready) return;
-
-        const rect  b   = get_render_bounds();
-        const float bx  = b.x, by = b.y, bw = b.w, bh = b.h;
-        const float oy  = by + m_offset.y;  // scroll-adjusted Y origin
-
-        // queue lane backgrounds (full viewport width)
-        dr(c, C_DIRECT_LANE,  bx, oy,                        bw, LANE_H);
-        dr(c, C_COMPUTE_LANE, bx, oy + LANE_H,               bw, LANE_H);
-        dr(c, C_SEPARATOR,    bx, oy + LANE_COUNT * LANE_H,  bw, 2.0f);
-
-        // resource row alternating backgrounds (full viewport width)
-        for (int ri = 0; ri < (int)m_resources.size(); ri++)
-        {
-            float ry = oy + LANE_COUNT * LANE_H + 6.0f + ri * ROW_H;
-            if (ry + ROW_H < by || ry > by + bh) continue;
-            dr(c, (ri & 1) ? C_ROW_ODD : C_ROW_EVEN, bx + LABEL_W, ry, bw - LABEL_W, ROW_H);
-        }
-
-        // left label-column overlay — drawn before base::draw() so label text
-        // from m_left_scroll renders on top of these backgrounds.
-        dr(c, C_LABEL_BG, bx, oy,          LABEL_W, LANE_H);
-        dr(c, C_LABEL_BG, bx, oy + LANE_H, LABEL_W, LANE_H);
-        for (int ri = 0; ri < (int)m_resources.size(); ri++)
-        {
-            float ry = oy + LANE_COUNT * LANE_H + 6.0f + ri * ROW_H;
-            if (ry + ROW_H < by || ry > by + bh) continue;
-            dr(c, (ri & 1) ? C_ROW_ODD : C_ROW_EVEN, bx, ry, LABEL_W, ROW_H);
-        }
-        dr(c, C_SEPARATOR, bx + LABEL_W - 1.0f, by, 1.0f, bh);
-
-        // Draws children: m_grid_scroll (grid_canvas → images → pass labels)
-        //                 then m_left_scroll (lane/resource name labels).
-        base::draw(c);
-    }
-
-    // -----------------------------------------------------------------------
-    //  Input
-    // -----------------------------------------------------------------------
-    virtual bool on_mouse_action(mouse_action action, mouse_button button,
-                                 vec2 pos) override
-    {
-        if (button == mouse_button::RIGHT)
-        {
-            pressed = (action == mouse_action::DOWN);
-            if (pressed)
-            {
-                m_drag_start     = pos;
-                m_offset_at_drag = m_offset;
-                m_dragging       = false;
-            }
-            else
-            {
-                m_dragging = false;
-                set_movable(false);
-            }
-        }
-        return false;
-    }
-
-    virtual bool on_mouse_move(vec2 pos) override
-    {
-        if (pressed && !m_dragging && (pos - m_drag_start).length() > 3.0f)
-        {
-            m_dragging = true;
-            set_movable(true);
-        }
-        if (m_dragging)
-        {
-            m_offset = m_offset_at_drag + (pos - m_drag_start);
-            apply_pan();
-        }
-        return m_dragging;
-    }
-
-    virtual bool on_wheel(mouse_wheel type, float value, vec2 wheel_pos) override
-    {
-        float prev_zoom = m_zoom;
-        m_zoom *= 1.0f + value / 10.0f;
-        m_zoom  = Math::clamp(m_zoom, 0.05f, 20.0f);
-
-        float cx    = get_render_bounds().x;
-        float pivot = wheel_pos.x - cx - LABEL_W - m_offset.x;
-        m_offset.x  = wheel_pos.x - cx - LABEL_W - pivot * (m_zoom / prev_zoom);
-
-        apply_zoom();
-        apply_pan();
-        return true;
-    }
 };
 
 // ---------------------------------------------------------------------------
@@ -898,6 +1133,8 @@ const float4 FrameGraphTimelineCanvas::C_SEPARATOR    = { 0.32f, 0.32f, 0.38f, 1
 const float4 FrameGraphTimelineCanvas::C_LIFETIME     = { 0.55f, 0.55f, 0.60f, 0.6f };
 const float4 FrameGraphTimelineCanvas::C_TEXT_BRIGHT  = { 0.90f, 0.90f, 0.92f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_TEXT_DIM     = { 0.55f, 0.55f, 0.58f, 1.0f };
+const float4 FrameGraphTimelineCanvas::C_SEL_PASS     = { 1.00f, 0.82f, 0.16f, 0.20f };
+const float4 FrameGraphTimelineCanvas::C_SEL_RESOURCE = { 1.00f, 0.82f, 0.16f, 0.12f };
 
 // ---------------------------------------------------------------------------
 //  Factory

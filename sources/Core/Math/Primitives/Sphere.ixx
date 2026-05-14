@@ -63,6 +63,7 @@ private:
 
 
 REGISTER_TYPE(Sphere)
+CEREAL_FORCE_REGISTER(Sphere);
 
 Sphere::Sphere(vec3 pos, float radius)
 {

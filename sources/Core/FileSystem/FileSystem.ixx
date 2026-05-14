@@ -6,9 +6,9 @@ import :Singleton;
 import :Scheduler;
 	   import :Application;
 
-import <stl/filesystem.h>;
-import <stl/memory.h>;
-import <windows/windows.h>;
+import stl.filesystem;
+import stl.memory;
+import windows;
 import :serialization;
 
 export
@@ -150,7 +150,7 @@ std::string native_file_provider::load_all(file* info)
     if (!file.is_open())
     {
         char data[256];
-        strerror_s(data, 256, errno);
+        strerror_s(data, 256, current_errno());
         Log::get() << "No file found: " << info->file_name << " " << data << Log::endl;
         return result;
     }

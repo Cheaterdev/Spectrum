@@ -13,7 +13,10 @@
       "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\AssetExplorer.cpp' -Pattern 'class AssetExplorer|user_interface|user_ui' -Context 3 | head -50\")",
       "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\AssetExplorer.cpp' -Pattern 'class AssetExplorer|struct AssetExplorer' -Context 15 | head -40\")",
       "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\AssetExplorer.cpp' -Pattern 'class asset_item|struct asset_item' -Context 5\")",
-      "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\AssetExplorer.cpp' -Pattern '^class|^struct' | head -20\")"
+      "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\AssetExplorer.cpp' -Pattern '^class|^struct' | head -20\")",
+      "Bash(dir /b)",
+      "Bash(grep -rn \"^export module Graphics;$\\\\|^export module GUI;$\" \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\" --include=\"*.ixx\")",
+      "Bash(Remove-Item \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\TextureAsset.cereal.cpp\")"
     ]
   }
 }

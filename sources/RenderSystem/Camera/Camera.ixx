@@ -284,7 +284,7 @@ export class first_person_camera : public camera
 
 export class third_person_camera : public camera
 {
-        vec2 angles;
+    vec2 angles ={0,0};
     float zoom = 5;
     public:
         void input(float2 delta)

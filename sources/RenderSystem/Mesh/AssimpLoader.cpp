@@ -1,8 +1,8 @@
 
-import Core;
-import <RenderSystem.h>;
-
-#include "Simplifyer/Simplifyer.h"
+module;
+// Global module fragment: pure legacy headers with no import statements.
+// Assimp headers textually include STL (<memory> etc.) here, before the module
+// system activates, so they never conflict with the stl.core header unit IFC.
 #include <assimp\Importer.hpp>
 #include <assimp\postprocess.h>
 #include <assimp\scene.h>
@@ -12,16 +12,16 @@ import <RenderSystem.h>;
 #include <assimp\IOStream.hpp>
 #include <assimp\IOSystem.hpp>
 
-#include "Mesh/MeshletGeneration.h"
-
-
+module Graphics;
+// Module system is now active. Import modules first, then include headers
+// that themselves contain import statements (their imports become no-ops).
+import Core;
+import HAL;
 import GUI;
-//#include "GUI/Elements/ValueBox.h"
-//#include "GUI/Elements/ScrollContainer.h"
-//#include "GUI/Elements/CheckBoxText.h"
-//#include "GUI/Elements/Window.h"
-
 import Graphics;
+
+#include "Simplifyer/Simplifyer.h"
+#include "Mesh/MeshletGeneration.h"
 
 struct MeshLoadingSettings
 {

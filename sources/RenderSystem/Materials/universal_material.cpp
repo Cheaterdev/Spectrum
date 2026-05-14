@@ -19,11 +19,15 @@ void removeme() // TODO: VS issue - make dummy unused func to compile entire cpp
 	auto res = Serializer::deserialize<std::string>("");
 }
 
-
-
 REGISTER_TYPE(materials::universal_material);
 REGISTER_TYPE(materials::PipelinePasses);
 REGISTER_TYPE(materials::PipelineSimple);
+CEREAL_FORCE_REGISTER(materials::universal_material);
+CEREAL_FORCE_REGISTER(materials::PipelinePasses);
+CEREAL_FORCE_REGISTER(materials::PipelineSimple);
+
+
+
 
 
 DynamicData generate_data(std::vector<Uniform::ptr>& un)

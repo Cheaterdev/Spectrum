@@ -52,6 +52,7 @@ private:
 
 
 REGISTER_TYPE(Frustum)
+CEREAL_FORCE_REGISTER(Frustum);
 
 vec3 Frustum::get_min()
 {

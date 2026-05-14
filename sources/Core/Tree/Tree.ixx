@@ -147,6 +147,12 @@ virtual 	int calculate_depth()
 		real_childs.clear();
 	}
 
+		bool has_parent()	 const
+	{
+
+		return !!parent;
+	}
+
 	element_type get_parent()
 	{
 		if (parent)

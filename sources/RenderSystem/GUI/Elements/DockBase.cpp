@@ -142,7 +142,7 @@ GUI::Elements::dock_base::ptr GUI::Elements::dock_base::get_dock(dock d)
 		add_child(res);
 	}
 
-	if (!res->get_parent())
+	if (!res->has_parent())
 		add_child(res);
 
 	return res;
@@ -158,7 +158,7 @@ GUI::Elements::tab_control::ptr GUI::Elements::dock_base::get_tabs()
 		add_child(tabs);
 	}
 
-	if (!tabs->get_parent())
+	if (!tabs->has_parent())
 		add_child(tabs);
 
 	return tabs;

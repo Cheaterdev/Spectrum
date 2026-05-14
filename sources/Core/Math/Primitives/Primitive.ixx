@@ -41,6 +41,7 @@ private:
 
 
 REGISTER_TYPE(Primitive)
+CEREAL_FORCE_REGISTER(Primitive);
 
 const primitive_types Primitive::get_type() const
 {

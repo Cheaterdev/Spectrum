@@ -94,7 +94,11 @@ namespace Spectrum
             conf.Defines.Add("_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING");
        
             conf.Defines.Add("SPECTRUM_ENABLE_EXEPTIONS");
-            conf.Defines.Add("CEREAL_THREAD_SAFE");
+            // CEREAL_THREAD_SAFE removed: it makes cereal include <mutex> which in MSVC 14.51+
+            // transitively pulls <stop_token> into _cereal.h's header unit IFC.
+            // That causes C1116 when any TU imports both cereal and a threading header unit.
+            // cereal's internal polymorphic registry (what this flag protects) is populated
+            // during single-threaded static init, so removing it is safe.
             conf.Defines.Add("USE_PIX");
             conf.Defines.Add("WIN32_LEAN_AND_MEAN");
          

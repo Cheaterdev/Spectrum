@@ -5,7 +5,14 @@ import Core;
 import :MipMapGenerator;
 
 
+// ODR-use anchor: Asset.cpp's force-linker calls this to pull TextureAsset.cpp.obj into
+// the link, which ensures the CEREAL_FORCE_REGISTER anonymous-namespace initialiser below runs.
+namespace cereal { namespace detail {
+    void dynamic_init_dummy_TextureAsset() {}
+} }
+
 REGISTER_TYPE(TextureAsset);
+CEREAL_FORCE_REGISTER(TextureAsset);
 
 TextureAssetRenderer::TextureAssetRenderer()
 {

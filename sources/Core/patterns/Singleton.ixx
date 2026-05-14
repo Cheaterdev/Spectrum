@@ -20,14 +20,12 @@ template<class T> concept HasCreationFunc =
 export template <typename T>
  class Singleton
 {
-        static T* ptr;
-        static std::vector<char> memory;
-        static std::shared_ptr<T> instance;
+        inline static T* ptr = nullptr;
+        inline static std::vector<char> memory;
+        inline static std::shared_ptr<T> instance;
+        inline static std::mutex create_mutex;
+        inline static bool first = true;
 
-        static std::mutex create_mutex;
-
-      static bool first;
-      
         friend class SingletonAccessor<T>;
 
     protected:
@@ -101,18 +99,6 @@ export template <typename T>
         }
 };
 
-
-template <typename T>
-std::shared_ptr<T>  Singleton<T>::instance;
-template <typename T>
-T*  Singleton<T>::ptr = nullptr;
-
-template <typename T>
-std::vector<char> Singleton<T>::memory;
-template <typename T>
-std::mutex Singleton<T>::create_mutex;
-template <typename T>
-bool Singleton<T>::first = true;
 
 template <class T>
 std::shared_ptr<T> SingletonAccessor<T>::get_native()
