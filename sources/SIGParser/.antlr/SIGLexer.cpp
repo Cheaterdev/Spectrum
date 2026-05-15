@@ -45,7 +45,7 @@ struct SIGLexerStaticData final {
 SIGLexerStaticData *siglexerLexerStaticData = nullptr;
 
 void siglexerLexerInitialize() {
-  assert(siglexerLexerStaticData == nullptr);
+  ASSERT(siglexerLexerStaticData == nullptr);
   auto staticData = std::make_unique<SIGLexerStaticData>(
     std::vector<std::string>{
       "T__0", "T__1", "T__2", "T__3", "T__4", "T__5", "T__6", "T__7", "T__8", 

@@ -1,10 +1,10 @@
-// CFW1GlyphAtlas.cpp
+﻿// CFW1GlyphAtlas.cpp
 
 
 
 #include "CFW1GlyphAtlas.h"
 
-#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
+#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = nullptr; } }
 
 
 namespace FW1FontWrapper {
@@ -69,7 +69,7 @@ HRESULT CFW1GlyphAtlas::initGlyphAtlas(
 	
 	// Default glyph
 	BYTE glyph0Pixels[256];
-	FillMemory(glyph0Pixels, 256, 0xff);
+	memset(glyph0Pixels, 0xff, 256);
 	
 	FW1_GLYPHMETRICS glyph0Metrics;
 	glyph0Metrics.OffsetX = 0.0f;

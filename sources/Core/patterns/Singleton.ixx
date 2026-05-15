@@ -1,8 +1,9 @@
 export module Core:Singleton;
 
-import <stl/memory.h>;
-import <stl/core.h>;
-import <stl/threading.h>;
+import <Core_defs.h>;
+import stl.memory;
+import stl.core;
+import stl.threading;
 
 // Use this class only if you really need shared_ptr of singleton's instance.
 // "With Great Power Comes Great Responsibility" (c)
@@ -50,7 +51,7 @@ export template <typename T>
 
                 if (instance) return instance.get();
 
-                assert(first);
+                ASSERT(first);
                 first = false;
                 if constexpr(HasCreationFunc<T>)
                 {

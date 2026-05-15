@@ -208,7 +208,7 @@ gpu_timer.start(list);
 		Eventer::end();
 		proxy->resolve_timers([&, this](const QueryType& type, uint64 from, uint64 to, QueryHeap::ptr heap)
 			{
-				assert(from == 0);
+				ASSERT(from == 0);
 				resolve_times(heap.get(), static_cast<uint>(to), [heap](std::span<UINT64> data)
 					{
 						std::copy(data.begin(), data.end(), heap->read_back_data.begin());
@@ -415,7 +415,7 @@ gpu_timer.start(list);
 			std::visit(overloaded{
 				           [&](const HAL::Views::RenderTarget::Buffer& Buffer)
 				           {
-					           assert(false);
+					           ASSERT(false);
 				           },
 				           [&](const HAL::Views::RenderTarget::Texture1D& Texture1D)
 				           {
@@ -439,15 +439,15 @@ gpu_timer.start(list);
 				           },
 				           [&](const HAL::Views::RenderTarget::Texture2DMS& Texture2DMS)
 				           {
-					           assert(false);
+					           ASSERT(false);
 				           },
 				           [&](const HAL::Views::RenderTarget::Texture2DMSArray& Texture2DMSArray)
 				           {
-					           assert(false);
+					           ASSERT(false);
 				           },
 				           [&](auto other)
 				           {
-					           assert(false);
+					           ASSERT(false);
 				           }
 			           }, view.View);
 		}
@@ -474,15 +474,15 @@ gpu_timer.start(list);
 				           },
 				           [&](const HAL::Views::DepthStencil::Texture2DMS& Texture2DMS)
 				           {
-					           assert(false);
+					           ASSERT(false);
 				           },
 				           [&](const HAL::Views::DepthStencil::Texture2DMSArray& Texture2DMSArray)
 				           {
-					           assert(false);
+					           ASSERT(false);
 				           },
 				           [&](auto other)
 				           {
-					           assert(false);
+					           ASSERT(false);
 				           }
 			           }, view.View);
 		}
@@ -523,7 +523,7 @@ gpu_timer.start(list);
 	//			auto& i = rt.get_resource_info();
 	//			auto rtv = std::get<HAL::Views::RenderTarget>(i.view);
 	//			auto dsv = std::get<HAL::Views::DepthStencil>(h.get_resource_info().view);
-	//			assert(rtv.Resource->get_desc().as_texture().Dimensions == dsv.Resource->get_desc().as_texture().Dimensions);
+	//			ASSERT(rtv.Resource->get_desc().as_texture().Dimensions == dsv.Resource->get_desc().as_texture().Dimensions);
 	//		}
 	//		get_base().transition(h.get_resource_info());
 	//	}
@@ -618,7 +618,7 @@ gpu_timer.start(list);
 		base.transition(resource, ResourceStates::COPY_DEST);
 
 		auto info = base.place_data(size);
-		memcpy(info.get_cpu_data(), data, size);
+		std::memcpy(info.get_cpu_data(), data, size);
 		list->copy_buffer(resource, offset, info.resource, info.resource_offset, size);
 		base.post_command<false, false>(*this, BarrierSync::COPY);;
 	}
@@ -645,7 +645,7 @@ gpu_timer.start(list);
 			{
 				auto pDestSlice = info.get_cpu_data();
 				auto pSrcSlice = reinterpret_cast<const std::byte*>(data);
-				memcpy(pDestSlice,
+				std::memcpy(pDestSlice,
 				       pSrcSlice,
 				       layout.size);
 			}
@@ -656,7 +656,7 @@ gpu_timer.start(list);
 				{
 					auto pDestSlice = info.get_cpu_data() + layout.slice_stride * z;
 					const std::byte* pSrcSlice = reinterpret_cast<const std::byte*>(data) + slice_stride * z;
-					memcpy(pDestSlice,
+					std::memcpy(pDestSlice,
 					       pSrcSlice,
 					       slice_stride);
 				}
@@ -671,7 +671,7 @@ gpu_timer.start(list);
 
 				for (UINT y = 0; y < layout.rows_count; ++y)
 				{
-					memcpy(pDestSlice + layout.row_stride * y,
+					std::memcpy(pDestSlice + layout.row_stride * y,
 					       pSrcSlice + row_stride * y,
 					       row_stride);
 				}
@@ -789,7 +789,7 @@ gpu_timer.start(list);
 		auto info = base.read_data(size, GPUEntityStorageInterface::DEFAULT_ALIGN, static_cast<uint>(base.get_type()));
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
 		//list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_dx(), info.resource_offset);
-		assert(false);
+		ASSERT(false);
 		if constexpr (Debug::CheckErrors)
 			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
 		auto result = std::make_shared<std::promise<bool>>();
@@ -865,11 +865,11 @@ gpu_timer.start(list);
 					{
 						auto prev_usage = usage.prev_usage;
 
-					//	assert(!usage.debug);
+					//	ASSERT(!usage.debug);
 						if(!prev_usage) 
 						{
 							bool is_automatic =  check(usage.resource->get_desc().Flags &HAL::ResFlags::DisableStateTracking);
-				//			assert(!);
+				//			ASSERT(!);
 
 							if(!is_automatic&usage.resource->get_desc().is_texture())							
 							non_tracked_resources.insert(usage.resource);
@@ -884,15 +884,15 @@ gpu_timer.start(list);
 
 						if (prev_state == usage.wanted_state) continue;
 
-						assert(prev_state.is_valid(usage.resource->get_type()));
-						assert(usage.wanted_state.is_valid(usage.resource->get_type()));
+						ASSERT(prev_state.is_valid(usage.resource->get_type()));
+						ASSERT(usage.wanted_state.is_valid(usage.resource->get_type()));
 
 
 						auto a = prev_state.get_best_cmd_type();
 						auto b = usage.wanted_state.get_best_cmd_type();
 
-						assert(IsCompatible(type, a));
-						assert(IsCompatible(type, b));
+						ASSERT(IsCompatible(type, a));
+						ASSERT(IsCompatible(type, b));
 						BarrierFlags flags = BarrierFlags::NONE;
 
 						if (prev_state==ResourceStates::UNKNOWN)
@@ -910,7 +910,7 @@ gpu_timer.start(list);
 
 
 					//	if(usage.next_usage&& usage.point->cmd_list==usage.next_usage->point->cmd_list)
-						 assert(!(usage.next_usage&&usage.wanted_state.operation==BarrierSync::NONE));
+						 ASSERT(!(usage.next_usage&&usage.wanted_state.operation==BarrierSync::NONE));
 
 						if (usage.resource->debug_transitions)
 							Log::get() << "TRANSITION" << prev_state << " " << usage.wanted_state << "subres: " << usage.subres << Log::endl;
@@ -918,7 +918,7 @@ gpu_timer.start(list);
 
 						if (can_split)
 						{
-							assert(prev_point->start);
+							ASSERT(prev_point->start);
 							auto sync_state = usage.wanted_state;
 
 							sync_state.operation = BarrierSync::SPLIT;
@@ -958,7 +958,7 @@ gpu_timer.start(list);
 					auto transition_one = [&](UINT subres) {
 
 						auto& subres_cpu = cpu_state.get_subres_state(subres);
-						assert(subres_cpu.used);
+						ASSERT(subres_cpu.used);
 
 
 
@@ -992,8 +992,8 @@ gpu_timer.start(list);
 				if (type == HAL::TransitionType::LAST) point = &usage_points.back();
 				if (type == HAL::TransitionType::ZERO) point = &usage_points.front();
 
-				 //assert(!point->start);
-				//if (type == TransitionType::LAST) 			assert(!point->start);
+				 //ASSERT(!point->start);
+				//if (type == TransitionType::LAST) 			ASSERT(!point->start);
 				HAL::ResourceUsage& usage = point->usages.emplace_back();
 
 				usage.resource = const_cast<HAL::Resource*>(resource);
@@ -1041,7 +1041,7 @@ gpu_timer.start(list);
 				}
 				else 	if (std::holds_alternative<HAL::Views::UnorderedAccess>(info.view))
 				{
-					//assert( operation != BarrierSync::NONE);
+					//ASSERT( operation != BarrierSync::NONE);
 
 					if (type == CommandListType::DIRECT)
 					{
@@ -1079,7 +1079,7 @@ gpu_timer.start(list);
 					target_state = { operation, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED };  //TODO BarrierSync::ALL
 
 				}
-				else assert(false);
+				else ASSERT(false);
 
 
 				//if(GetAsyncKeyState('4'))
@@ -1339,7 +1339,7 @@ gpu_timer.start(list);
 	void ComputeContext::dispatch2(ivec2 a, ivec2 b)
 	{
 		PROFILE_GPU(L"Dispatch");
-		 assert(false);
+		 ASSERT(false);
 		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 	//list->dispatch({x, y, z});
 		base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
@@ -1422,7 +1422,7 @@ gpu_timer.start(list);
 
 	void Eventer::begin(std::wstring_view name)
 	{
-		assert(!started);
+		ASSERT(!started);
 		started = true;
 		this->name = name;
 		thread_current = this;
@@ -1432,7 +1432,7 @@ gpu_timer.start(list);
 
 		if (type != CommandListType::COPY && name.size())
 		{
-			assert(!timer);
+			ASSERT(!timer);
 			timer.reset(new Timer(start(name)));
 		}
 		else		  
@@ -1479,8 +1479,8 @@ gpu_timer.start(list);
 	void GraphicsContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer,
 	                                       UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
-		assert(command_buffer);
-		//	assert(dynamic_cast<PipelineState*>(get_base().current_pipeline));
+		ASSERT(command_buffer);
+		//	ASSERT(dynamic_cast<PipelineState*>(get_base().current_pipeline));
 		PROFILE_GPU(L"execute_indirect");
 
 		bool graphics = dynamic_cast<PipelineState*>(get_base().current_pipeline);
@@ -1514,11 +1514,11 @@ gpu_timer.start(list);
 	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer,
 	                                      UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
-		assert(command_buffer);
+		ASSERT(command_buffer);
 		PROFILE_GPU(L"execute_indirect");
 		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 
-		assert(command_buffer);
+		ASSERT(command_buffer);
 
 		if (command_buffer) get_base().transition(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceStates::INDIRECT_ARGUMENT);
@@ -1742,7 +1742,7 @@ gpu_timer.start(list);
 	void TransitionCommandList::create_transition_list(FrameResources& frame, const HAL::Barriers& transitions)
 	{
 
-		assert(false);
+		ASSERT(false);
 		HAL::Device::get().context_generator.generate(this);
 
 		set_proxy(frame.get_storage());
@@ -1759,7 +1759,7 @@ gpu_timer.start(list);
 
 		proxy->resolve_timers([&, this](const QueryType& type, uint64 from, uint64 to, QueryHeap::ptr heap)
 		{
-			assert(from == 0);
+			ASSERT(from == 0);
 			resolve_times(heap.get(), static_cast<uint>(to), [heap](std::span<UINT64> data)
 			{
 				std::copy(data.begin(), data.end(), heap->read_back_data.begin());

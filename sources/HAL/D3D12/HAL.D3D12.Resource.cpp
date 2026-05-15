@@ -37,7 +37,7 @@ HAL::ResourceDesc extract(D3D::Resource resource)
 		}
 	}
 
-	assert(false);
+	ASSERT(false);
 
 	return HAL::ResourceDesc::Buffer(0);
 }
@@ -90,7 +90,7 @@ namespace HAL
 				//	castable_formats.emplace_back(to_native(texture_desc.Format.to_dsv()));
 
 
-				assert((texture_desc.is1D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE1D)
+				ASSERT((texture_desc.is1D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE1D)
 					|| (texture_desc.is2D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D)
 					|| (texture_desc.is3D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE3D)
 				);
@@ -288,7 +288,7 @@ namespace HAL
 
 	void Resource::set_name(std::string name)
 	{
-		assert(name.size()>0);
+		ASSERT(name.size()>0);
 		this->name = name;
 		get_dx()->SetName(convert(name).c_str());
 

@@ -1,9 +1,12 @@
-// CFW1Factory.h
+﻿// CFW1Factory.h
 
 #ifndef IncludeGuard__FW1_CFW1Factory
 #define IncludeGuard__FW1_CFW1Factory
 
+#include <Core_defs.h>
 #include "FW1FontWrapper/Source/FW1FontWrapper.h"
+
+import stl.core;
 
 namespace FW1FontWrapper {
 
@@ -12,7 +15,7 @@ namespace FW1FontWrapper {
 class CFW1Factory : public IFW1Factory {
 	public:
 		// IUnknown
-		virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject);
+		virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void **ppvObject);
 		virtual ULONG STDMETHODCALLTYPE AddRef();
 		virtual ULONG STDMETHODCALLTYPE Release();
 		
@@ -105,7 +108,7 @@ class CFW1Factory : public IFW1Factory {
 	
 	// Internal data
 	private:
-		ULONG						m_cRefCount;
+		std::atomic<unsigned long>	m_cRefCount;
 		
 		std::wstring				m_lastError;
 		CRITICAL_SECTION			m_errorStringCriticalSection;

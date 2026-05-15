@@ -1,10 +1,10 @@
 export module Core:Log;
 import <Core_defs.h>;
 import :Data;
-import <stl/threading.h>;
-import <stl/core.h>;
-import <stl/memory.h>;
-import <windows/windows.h>;
+import stl.threading;
+import stl.core;
+import stl.memory;
+import windows;
 import :Singleton;
 
 import :Events;
@@ -486,6 +486,6 @@ void ConsoleLogger::on_log(const LogBlock& log)
 		SetConsoleTextAttribute(hConsole, color);
 		// Print message
 		auto str = log.get_string() + "\n";
-		WriteConsoleA(hConsole, str.c_str(), static_cast<DWORD>(str.length()), NULL, NULL);
+		WriteConsoleA(hConsole, str.c_str(), static_cast<DWORD>(str.length()), nullptr, nullptr);
 	}
 }

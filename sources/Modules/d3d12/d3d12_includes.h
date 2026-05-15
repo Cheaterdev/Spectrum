@@ -5,7 +5,7 @@
 #include <directx\d3dx12.h>
 #include <directx\dxgiformat.h>
 
-
+ #include <DWrite.h>
 #include <dxgi1_6.h>
 #include <DirectXTex.h>
 #include <dstorage.h>

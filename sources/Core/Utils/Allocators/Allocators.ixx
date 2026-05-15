@@ -4,8 +4,8 @@ import <Core_defs.h>;
 import :Debug;
 import :Utils;
 import :Math;
-import <stl/core.h>;
-import <stl/threading.h>;
+import stl.core;
+import stl.threading;
 
 
 
@@ -83,7 +83,7 @@ export
 			if (res)
 				return *res;
 
-			assert(false);
+			ASSERT(false);
 
 			return AllocatorHanle();
 		}
@@ -200,7 +200,7 @@ export
 		}
 		void Free(Handle& handle)
 		{
-			//		assert(false);
+			//		ASSERT(false);
 		}
 		uint64 get_size()const override
 		{
@@ -211,7 +211,7 @@ export
 
 			uint64 my_offset = Math::roundUp(offset, align);
 
-			//assert(offset % align == 0);
+			//ASSERT(offset % align == 0);
 			if (my_offset + size > this->end_region)
 			{
 				return std::nullopt;
@@ -221,7 +221,7 @@ export
 			offset = my_offset + size;
 			Handle h(MemoryInfo(my_offset, size, 0), this);
 
-			assert(h.get_offset()+size<=this->end_region);
+			ASSERT(h.get_offset()+size<=this->end_region);
 			return h;
 		}
 
@@ -263,7 +263,7 @@ export
 	//		if (res)
 	//			return *res;
 
-	//		assert(false);
+	//		ASSERT(false);
 
 	//		return Handle();
 	//	}
@@ -274,8 +274,8 @@ export
 	//	}
 	//	std::optional<Handle> TryAllocate(uint64 size, uint64 align = 1)override final
 	//	{
-	//		assert(align == 1);
-	//		assert(size == 1);
+	//		ASSERT(align == 1);
+	//		ASSERT(size == 1);
 
 	//		offset = Math::AlignUp(offset, align);
 
@@ -290,8 +290,8 @@ export
 	//		if (!handle)
 	//			return;
 
-	//		assert(handle.get_owner() == this);
-	//		assert(offset > 0);
+	//		ASSERT(handle.get_owner() == this);
+	//		ASSERT(offset > 0);
 
 	//		if (offset > 1)
 	//		{
@@ -348,7 +348,7 @@ export
 		TypedHandle() = default;
 		TypedHandle(AllocatorHanle& handle, DataProvider<T>* provider) : handle(handle), provider(provider)
 		{
-			//assert(handle.get_size());
+			//ASSERT(handle.get_size());
 		}
 		operator bool()
 		{

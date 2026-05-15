@@ -1,10 +1,10 @@
-// CFW1StateSaver.cpp
+﻿// CFW1StateSaver.cpp
 
 
 
 #include "CFW1StateSaver.h"
 
-#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
+#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = nullptr; } }
 
 
 namespace FW1FontWrapper {

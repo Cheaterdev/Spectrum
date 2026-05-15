@@ -6,7 +6,7 @@ export import :Math.Quaternion;
 export import :Math.Matrices;
 
 import <Core_defs.h>;
-import <stl/memory.h>;
+import stl.memory;
 import :serialization;
 
 export class Plane

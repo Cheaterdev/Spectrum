@@ -1,7 +1,8 @@
 export module Core:Debug;
 
-import <stl/core.h>;
-import <stl/threading.h>;
+import <Core_defs.h>;
+import stl.core;
+import stl.threading;
 import :Singleton;
 import :Log;
  import :Tree;
@@ -171,14 +172,14 @@ export
 		{
 			auto id = std::this_thread::get_id();
 			auto prev = v.exchange(id);
-			assert(prev == std::thread::id());
+			ASSERT(prev == std::thread::id());
 		}
 
 		~Checker()
 		{
 			auto id = std::this_thread::get_id();
 			auto prev = v.exchange(std::thread::id());
-			assert(prev == id);
+			ASSERT(prev == id);
 		}
 	};
 

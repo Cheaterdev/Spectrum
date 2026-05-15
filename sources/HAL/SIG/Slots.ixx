@@ -1,4 +1,4 @@
-export module HAL:Slots;
+﻿export module HAL:Slots;
 import <HAL.h>;
 import :ResourceViews;
 import :Concepts;
@@ -182,7 +182,7 @@ export {
 
 		const HLSL::ConstantBuffer<Table>& compiled() const
 		{
-			assert(const_buffer.is_valid());
+			ASSERT(const_buffer.is_valid());
 			return const_buffer;
 		}
 	};
@@ -274,7 +274,7 @@ export {
 
 					auto slot_id = get_slot(name.string());
 
-					assert(slot_id);
+					ASSERT(slot_id);
 					slots_usage.insert(slot_id.value());
 
 				}
@@ -347,7 +347,7 @@ export {
 						uint end = uint(rec.Slot_Compiler.s.str().size());
 			++rec.count;
 			rec.stride = sizeof(Table);
-			assert(end - beg == sizeof(Table));
+			ASSERT(end - beg == sizeof(Table));
 
 		}
 
@@ -374,7 +374,7 @@ export {
 				auto binary = id_records.Slot_Compiler.s.str();
 				auto gpu_binary = context->place_data(binary.size(), 256);
 
-				memcpy(gpu_binary.get_cpu_data(), binary.data(), binary.size());
+				std::memcpy(gpu_binary.get_cpu_data(), binary.data(), binary.size());
 				input.Records.StartAddress = to_native(gpu_binary);
 				input.Records.StrideInBytes = id_records.stride;
 
@@ -391,7 +391,7 @@ export {
 			t.NodeInputs.StartAddress = to_native(id_rec_data);
 
 			t.NodeInputs.StrideInBytes = sizeof(D3D12_NODE_GPU_INPUT);
-			//	memcpy(info2.get_cpu_data(), &t, sizeof(t));
+			//	std::memcpy(info2.get_cpu_data(), &t, sizeof(t));
 
 
 
@@ -403,7 +403,7 @@ export {
 			//	t.NumRecords = 1;
 			//	t.Records.StartAddress = compiled.const_buffer.address;
 			//	t.Records.StrideInBytes = sizeof(input);
-			//	memcpy(info2.get_cpu_data(), &t, sizeof(t));
+			//	std::memcpy(info2.get_cpu_data(), &t, sizeof(t));
 			//}
 
 
@@ -419,7 +419,7 @@ export {
 
 			//	t.NodeInputs.StrideInBytes = sizeof(D3D12_NODE_GPU_INPUT);
 
-			//	memcpy(info3.get_cpu_data(), &t, sizeof(t));
+			//	std::memcpy(info3.get_cpu_data(), &t, sizeof(t));
 			//}
 			return res;
 		}

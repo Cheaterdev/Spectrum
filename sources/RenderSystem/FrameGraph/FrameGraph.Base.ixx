@@ -694,7 +694,7 @@ public:
 		template<class T>
 		void need(T& result, ResourceFlags flags = ResourceFlags::None)
 		{
-			assert(exists(result));
+			ASSERT(exists(result));
 			std::string& name = resources_names[result.name];
 			ResourceAllocInfo& info = alloc_resources[name];
 			T& handler = info.get_handler<T>();
@@ -908,7 +908,7 @@ public:
 
 		void set_slot(SlotID id, HAL::SignatureDataSetter& setter)
 		{
-		//	assert(slot_setters.contains(id));
+		//	ASSERT(slot_setters.contains(id));
 			slot_setters[id](setter);
 		}
 

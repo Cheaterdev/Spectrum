@@ -1,4 +1,4 @@
-export module HAL:PipelineState;
+﻿export module HAL:PipelineState;
 import <HAL.h>;
 import Core;
 import :Types;
@@ -356,7 +356,7 @@ export namespace HAL
 		{
 			HAL::shader_identifier result;
 
-			memcpy(result.data(), data, result.size());
+			std::memcpy(result.data(), data, result.size());
 
 			return result;
 		}

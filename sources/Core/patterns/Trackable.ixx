@@ -1,6 +1,6 @@
 export module Core:Trackable;
 import :Data;
-import <stl/core.h>;
+import stl.core;
 
 import :StateContext;
 export

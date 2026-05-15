@@ -141,7 +141,7 @@ public:
 	GENERATE(Rt_ds_declaration)
 	{
 		auto& owner = get_elem<RenderTarget>().dsv;
-		assert(!owner);
+		ASSERT(!owner);
 		owner = DSV();
 
 		setup_elem(*owner);

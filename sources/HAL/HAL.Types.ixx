@@ -267,7 +267,7 @@ struct ResourceState
 	//	operation |= state.operation;
 	//	access |= state.access;
 
-	//	assert(layout == state.layout);
+	//	ASSERT(layout == state.layout);
 	//	return *this;
 	//}
 
@@ -290,7 +290,7 @@ private:
 //	//other.access = EnumOps::OR(a.access,b.access);
 //	//other.layout = a.layout;
 //	//test t = test::A | test::B;
-//	//assert(a.layout == b.layout);
+//	//ASSERT(a.layout == b.layout);
 //	return ResourceState(a.get_operation() | b.get_operation(), a.get_access() | b.get_access(), a.get_layout());
 //}
 

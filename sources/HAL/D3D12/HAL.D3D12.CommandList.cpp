@@ -1,4 +1,4 @@
-﻿module HAL:API.CommandList;	
+module HAL:API.CommandList;	
 import <HAL.h>;
 import <d3d12/d3d12_includes.h>;
 
@@ -81,7 +81,7 @@ namespace HAL
 				if (uav.Resource->get_desc().is_buffer())
 				{
 					auto buffer = std::get<HAL::Views::UnorderedAccess::Buffer>(uav.View);
-					assert(buffer.StructureByteStride == 0);
+					ASSERT(buffer.StructureByteStride == 0);
 				}
 			}
 
@@ -242,8 +242,8 @@ namespace HAL
 				auto source_size = source->get_size();
 				auto dest_size = dest->get_size();
 
-				assert(dest_offset + size <= dest_size);
-				assert(source_offset + size <= source_size);
+				ASSERT(dest_offset + size <= dest_size);
+				ASSERT(source_offset + size <= source_size);
 
 			}
 			m_commandList->CopyBufferRegion(dest->get_dx(), dest_offset, source->get_dx(), source_offset, size);
@@ -365,8 +365,8 @@ namespace HAL
 			auto buffer_desc = address.resource->get_desc().as_buffer();
 			auto size = box.z * box.y * layout.row_stride;
 
-			assert(address.resource_offset + size <= buffer_desc.SizeInBytes);
-			assert(box.z > 0);
+			ASSERT(address.resource_offset + size <= buffer_desc.SizeInBytes);
+			ASSERT(box.z > 0);
 			CD3DX12_TEXTURE_COPY_LOCATION Dst(resource->get_dx(), sub_resource);
 			CD3DX12_TEXTURE_COPY_LOCATION Src;
 			Src.pResource = address.resource->get_dx();
@@ -599,7 +599,7 @@ namespace HAL
 											native_flags));
 				},
 				[&](auto other) {
-					assert(false);
+					ASSERT(false);
 				}
 						}, e);
 

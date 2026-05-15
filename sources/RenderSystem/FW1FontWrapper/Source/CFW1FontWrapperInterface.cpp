@@ -1,6 +1,4 @@
-// CFW1FontWrapperInterface.cpp
-
-import <RenderSystem.h>;
+﻿// CFW1FontWrapperInterface.cpp
 
 
 #include "CFW1FontWrapper.h"
@@ -13,12 +11,12 @@ namespace FW1FontWrapper
 
 
 // Query interface
-    HRESULT STDMETHODCALLTYPE CFW1FontWrapper::QueryInterface(REFIID riid, void** ppvObject)
+    HRESULT STDMETHODCALLTYPE CFW1FontWrapper::QueryInterface(const IID& riid, void** ppvObject)
     {
-        if (ppvObject == NULL)
+        if (ppvObject == nullptr)
             return E_INVALIDARG;
 
-        if (IsEqualIID(riid, __uuidof(IFW1FontWrapper)))
+        if ((riid == __uuidof(IFW1FontWrapper)))
         {
             *ppvObject = static_cast<IFW1FontWrapper*>(this);
             AddRef();
@@ -32,7 +30,7 @@ namespace FW1FontWrapper
 // Get the factory that created this object
     HRESULT STDMETHODCALLTYPE CFW1FontWrapper::GetFactory(IFW1Factory** ppFactory)
     {
-        if (ppFactory == NULL)
+        if (ppFactory == nullptr)
             return E_INVALIDARG;
 
         m_pFW1Factory->AddRef();
@@ -43,7 +41,7 @@ namespace FW1FontWrapper
 // Get DWrite factory
     HRESULT STDMETHODCALLTYPE CFW1FontWrapper::GetDWriteFactory(IDWriteFactory** ppDWriteFactory)
     {
-        if (ppDWriteFactory == NULL)
+        if (ppDWriteFactory == nullptr)
             return E_INVALIDARG;
 
         m_pDWriteFactory->AddRef();
@@ -55,7 +53,7 @@ namespace FW1FontWrapper
 // Get glyph atlas
     HRESULT STDMETHODCALLTYPE CFW1FontWrapper::GetGlyphAtlas(IFW1GlyphAtlas** ppGlyphAtlas)
     {
-        if (ppGlyphAtlas == NULL)
+        if (ppGlyphAtlas == nullptr)
             return E_INVALIDARG;
 
         m_pGlyphAtlas->AddRef();
@@ -67,7 +65,7 @@ namespace FW1FontWrapper
 // Get glyph provider
     HRESULT STDMETHODCALLTYPE CFW1FontWrapper::GetGlyphProvider(IFW1GlyphProvider** ppGlyphProvider)
     {
-        if (ppGlyphProvider == NULL)
+        if (ppGlyphProvider == nullptr)
             return E_INVALIDARG;
 
         m_pGlyphProvider->AddRef();
@@ -79,7 +77,7 @@ namespace FW1FontWrapper
 // Get render states
     HRESULT STDMETHODCALLTYPE CFW1FontWrapper::GetRenderStates(IFW1GlyphRenderStates** ppRenderStates)
     {
-        if (ppRenderStates == NULL)
+        if (ppRenderStates == nullptr)
             return E_INVALIDARG;
 
         m_pGlyphRenderStates->AddRef();
@@ -91,7 +89,7 @@ namespace FW1FontWrapper
 // Get vertex drawer
     HRESULT STDMETHODCALLTYPE CFW1FontWrapper::GetVertexDrawer(IFW1GlyphVertexDrawer** ppVertexDrawer)
     {
-        if (ppVertexDrawer == NULL)
+        if (ppVertexDrawer == nullptr)
             return E_INVALIDARG;
 
         m_pGlyphVertexDrawer->AddRef();
@@ -110,7 +108,7 @@ namespace FW1FontWrapper
         UINT Flags
     )
     {
-        DrawTextLayout(list, pTextLayout, OriginX, OriginY, Color, NULL, NULL, Flags);
+        DrawTextLayout(list, pTextLayout, OriginX, OriginY, Color, nullptr, nullptr, Flags);
     }
 
 
@@ -126,7 +124,7 @@ namespace FW1FontWrapper
         UINT Flags
     )
     {
-        IFW1TextGeometry* pTextGeometry = NULL;
+        IFW1TextGeometry* pTextGeometry = nullptr;
 
         // If needed, get a text geometry to store vertices in
         if ((Flags & FW1_ANALYZEONLY) == 0 && (Flags & FW1_CACHEONLY) == 0)
@@ -141,7 +139,7 @@ namespace FW1FontWrapper
 
             LeaveCriticalSection(&m_textGeometriesCriticalSection);
 
-            if (pTextGeometry == NULL)
+            if (pTextGeometry == nullptr)
             {
                 IFW1TextGeometry* pNewTextGeometry;
                 HRESULT hResult = m_pFW1Factory->CreateTextGeometry(&pNewTextGeometry);
@@ -153,7 +151,7 @@ namespace FW1FontWrapper
                     pTextGeometry = pNewTextGeometry;
             }
 
-            if (pTextGeometry != NULL)
+            if (pTextGeometry != nullptr)
                 pTextGeometry->Clear();
         }
 
@@ -163,7 +161,7 @@ namespace FW1FontWrapper
         if ((Flags & FW1_ANALYZEONLY) == 0 && (Flags & FW1_CACHEONLY) == 0)
             DrawGeometry(list, pTextGeometry, pClipRect, pTransformMatrix, Flags);
 
-        if (pTextGeometry != NULL)
+        if (pTextGeometry != nullptr)
         {
             // Keep the text geometry for future use
             EnterCriticalSection(&m_textGeometriesCriticalSection);
@@ -187,7 +185,7 @@ namespace FW1FontWrapper
         FW1_RECTF rect;
         rect.Left = rect.Right = X;
         rect.Top = rect.Bottom = Y;
-        DrawString(list, pszString, NULL, FontSize, &rect, Color, NULL, NULL, Flags | FW1_NOWORDWRAP);
+        DrawString(list, pszString, nullptr, FontSize, &rect, Color, nullptr, nullptr, Flags | FW1_NOWORDWRAP);
     }
 
 
@@ -206,7 +204,7 @@ namespace FW1FontWrapper
         FW1_RECTF rect;
         rect.Left = rect.Right = X;
         rect.Top = rect.Bottom = Y;
-        DrawString(list, pszString, pszFontFamily, FontSize, &rect, Color, NULL, NULL, Flags | FW1_NOWORDWRAP);
+        DrawString(list, pszString, pszFontFamily, FontSize, &rect, Color, nullptr, nullptr, Flags | FW1_NOWORDWRAP);
     }
 
 
@@ -225,7 +223,7 @@ namespace FW1FontWrapper
     {
         IDWriteTextLayout* pTextLayout = createTextLayout(pszString, pszFontFamily, FontSize, pLayoutRect, Flags);
 
-        if (pTextLayout != NULL)
+        if (pTextLayout != nullptr)
         {
             // Draw
             DrawTextLayout(
@@ -255,7 +253,7 @@ namespace FW1FontWrapper
         FW1_RECTF stringRect = {pLayoutRect->Left, pLayoutRect->Top, pLayoutRect->Right-pLayoutRect->Left, pLayoutRect->Bottom-pLayoutRect->Top};
         IDWriteTextLayout* pTextLayout = createTextLayout(pszString, pszFontFamily, FontSize, pLayoutRect, Flags);
 
-        if (pTextLayout != NULL)
+        if (pTextLayout != nullptr)
         {
             // Get measurements
             DWRITE_TEXT_METRICS overhangMetrics;
@@ -290,7 +288,7 @@ namespace FW1FontWrapper
     {
         IDWriteTextLayout* pTextLayout = createTextLayout(pszString, pszFontFamily, FontSize, pLayoutRect, Flags);
 
-        if (pTextLayout != NULL)
+        if (pTextLayout != nullptr)
         {
             AnalyzeTextLayout(
                 list,
@@ -318,7 +316,7 @@ namespace FW1FontWrapper
     )
     {
         // Get a text renderer
-        IFW1TextRenderer* pTextRenderer = NULL;
+        IFW1TextRenderer* pTextRenderer = nullptr;
         EnterCriticalSection(&m_textRenderersCriticalSection);
 
         if (!m_textRenderers.empty())
@@ -329,7 +327,7 @@ namespace FW1FontWrapper
 
         LeaveCriticalSection(&m_textRenderersCriticalSection);
 
-        if (pTextRenderer == NULL)
+        if (pTextRenderer == nullptr)
         {
             IFW1TextRenderer* pNewTextRenderer;
             HRESULT hResult = m_pFW1Factory->CreateTextRenderer(m_pGlyphProvider, &pNewTextRenderer);
@@ -342,7 +340,7 @@ namespace FW1FontWrapper
         }
 
         // Create geometry
-        if (pTextRenderer != NULL)
+        if (pTextRenderer != nullptr)
         {
             HRESULT hResult = pTextRenderer->DrawTextLayout(pTextLayout, OriginX, OriginY, Color, Flags, pTextGeometry);
 
@@ -386,8 +384,7 @@ namespace FW1FontWrapper
                 m_pGlyphRenderStates->UpdateShaderConstants(list, pClipRect, pTransformMatrix);
 
             // Draw glyphs
-            UINT temp = m_pGlyphVertexDrawer->DrawVertices(list, m_pGlyphAtlas, &vertexData, Flags, 0xffffffff);
-            UNUSED(temp);
+            [[maybe_unused]] UINT temp = m_pGlyphVertexDrawer->DrawVertices(list, m_pGlyphAtlas, &vertexData, Flags, 0xffffffff);
         }
     }
 

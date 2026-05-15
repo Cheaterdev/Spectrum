@@ -13,7 +13,7 @@ namespace FrameGraph
 	{
 		PROFILE(L"add_pass");
 
-		assert(pass);
+		ASSERT(pass);
 		bool is_writer = check(flags & WRITEABLE_FLAGS);
 
 		bool was_swap = false;
@@ -52,13 +52,13 @@ namespace FrameGraph
 			related.insert(related_read.begin(), related_read.end());
 			related_read.clear();
 		}
-		//	assert(pass->prev_passes.empty());
+		//	ASSERT(pass->prev_passes.empty());
 
 		for (auto p:related)
 		{
 			if (p==pass)
 			{
-				assert(0);
+				ASSERT(0);
 			   Application::get().shutdown() ;
 			}
 		}
@@ -206,7 +206,7 @@ namespace FrameGraph
 			info.creation_state = info.last_state = info.resource->get_state_manager().copy_gpu();
 		}
 		else
-			assert(false);
+			ASSERT(false);
 	}
 
 	void TaskBuilder::reset()
@@ -861,7 +861,7 @@ namespace FrameGraph
 
 					if (!queued_state[list_type].is_in_sync(sync_pass, true))
 					{
-						assert(other_type != list_type);
+						ASSERT(other_type != list_type);
 						const_cast<Pass*>(sync_pass)->put_fence = true;
 						queued_state[list_type].max(sync_pass);
 					}
@@ -1013,7 +1013,7 @@ namespace FrameGraph
 
 					continue;
 				}
-				assert(state.passes.size() == 1);
+				ASSERT(state.passes.size() == 1);
 				auto pass = state.passes.front();
 				auto commandList = pass->context.list;
 				if (!commandList) continue;
@@ -1036,7 +1036,7 @@ namespace FrameGraph
 					auto prev_state = info.states[i - 1];
 					auto best_type = prev_state.merged_read_state.get_best_list_type();
 					//		its in 99% read to write compatible on all queues
-					assert(IsCompatible(list_type, best_type));
+					ASSERT(IsCompatible(list_type, best_type));
 					info.resource->get_state_manager().prepare_state(commandList.get(), prev_state.merged_read_state);
 				}
 
@@ -1047,7 +1047,7 @@ namespace FrameGraph
 					auto next_state = info.states[i + 1];
 					auto best_type = next_state.merged_read_state.get_best_list_type();
 					//		its in 99% write to read compatible on all queues
-					assert(IsCompatible(list_type, best_type));
+					ASSERT(IsCompatible(list_type, best_type));
 					info.resource->get_state_manager().prepare_after_state(commandList.get(), next_state.merged_read_state);
 				}
 
@@ -1065,7 +1065,7 @@ namespace FrameGraph
 					auto next_cmd = next_pass->context.list;
 					if (!prev_cmd || !next_cmd)
 					{
-						assert(false); // no write requested with no commandlist
+						ASSERT(false); // no write requested with no commandlist
 						continue;
 					}
 
@@ -1074,8 +1074,8 @@ namespace FrameGraph
 
 
 					// TODO: try removing this write state if not used
-					assert(prev_cpu_state.used);
-					assert(next_cpu_state.used);
+					ASSERT(prev_cpu_state.used);
+					ASSERT(next_cpu_state.used);
 
 					HAL::CommandListType next_list_type = next_pass->get_type();
 					HAL::CommandListType prev_list_type = prev_pass->get_type();
@@ -1118,7 +1118,7 @@ namespace FrameGraph
 
 						info.resource->get_state_manager().prepare_after_state(prev_cmd.get(), next_gpu_state);		 // add sync&access infoZ
 					}else
-						assert(false);
+						ASSERT(false);
 
 
 
@@ -1200,8 +1200,8 @@ namespace FrameGraph
 
 
 			// if the resource is temp, first pass should create it -> write
-			assert(info->states[0].passes.size() == 1);
-			assert(info->states[0].write);
+			ASSERT(info->states[0].passes.size() == 1);
+			ASSERT(info->states[0].write);
 
 
 			Pass* best_creation_pass = info->states.front().passes.front();

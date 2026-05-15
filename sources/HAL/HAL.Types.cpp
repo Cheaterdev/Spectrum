@@ -19,7 +19,7 @@ namespace HAL
 		access |= state.access;
 		layout |= state.layout;
 
-		//assert(layout == state.layout);
+		//ASSERT(layout == state.layout);
 		return *this;
 	}
 
@@ -38,7 +38,7 @@ namespace HAL
 		access &= state.access;
 		layout &= state.layout;
 
-		//assert(layout == state.layout);
+		//ASSERT(layout == state.layout);
 		return *this;
 	}
 	bool ResourceState::has_write_bits() const

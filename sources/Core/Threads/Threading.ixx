@@ -1,9 +1,10 @@
 export module Core:Threading;
 
-import <stl/threading.h>;
-import <stl/core.h>;
-import <stl/memory.h>;
-import <windows/windows.h>;
+import <Core_defs.h>;
+
+import stl.threading;
+import stl.core;
+import stl.memory;
 
 import windows;
 
@@ -22,7 +23,7 @@ export
 {
 
 
-void SetThreadName(uint32_t dwThreadID, const char* threadName);
+void SetThreadName(DWORD dwThreadID, const char* threadName);
 void SetThreadName(std::string threadName);
 void SetThreadName(std::thread* thread, const char* threadName);
 
@@ -34,13 +35,13 @@ struct thread_tester
 	{
 		auto prev = id.exchange(std::this_thread::get_id());
 
-		assert(prev == std::thread::id());
+		ASSERT(prev == std::thread::id());
 	}
 
 	~thread_tester()
 	{
 		auto prev = id.exchange(std::thread::id());
-		assert(prev == std::this_thread::get_id());
+		ASSERT(prev == std::this_thread::get_id());
 	}
 };
 
@@ -89,7 +90,7 @@ virtual ~ThreadScope()
 
 	static void check_type(ThreadType type)
 	{
-		assert(thread_type == type);
+		ASSERT(thread_type == type);
 	}
 };
 
@@ -112,7 +113,7 @@ public:
 	SpinLock(const SpinLock&) {}
 	void operator=(const SpinLock&) {}
 private:
-	std::atomic_flag lck = ATOMIC_FLAG_INIT;
+	std::atomic_flag lck = {};
 };
 
 
@@ -122,7 +123,7 @@ private:
 
 
 
-void SetThreadName(uint32_t dwThreadID, const char* threadName)
+void SetThreadName(DWORD dwThreadID, const char* threadName)
 {
 	// DWORD dwThreadID = ::GetThreadId( static_cast<HANDLE>( t.native_handle() ) );
 	THREADNAME_INFO info;
@@ -136,7 +137,7 @@ void SetThreadName(uint32_t dwThreadID, const char* threadName)
 		RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
 	}
 
-	__except (EXCEPTION_EXECUTE_HANDLER)
+	__except (1)
 	{
 	}
 }

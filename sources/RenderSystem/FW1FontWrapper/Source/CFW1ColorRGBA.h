@@ -1,4 +1,4 @@
-// CFW1ColorRGBA.h
+﻿// CFW1ColorRGBA.h
 
 #ifndef IncludeGuard__FW1_CFW1ColorRGBA
 #define IncludeGuard__FW1_CFW1ColorRGBA
@@ -13,7 +13,7 @@ namespace FW1FontWrapper {
 class CFW1ColorRGBA : public CFW1Object<IFW1ColorRGBA> {
 	public:
 		// IUnknown
-		virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject);
+		virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void **ppvObject);
 		
 		// IFW1Color32
 		virtual void STDMETHODCALLTYPE SetColor(float4 color);

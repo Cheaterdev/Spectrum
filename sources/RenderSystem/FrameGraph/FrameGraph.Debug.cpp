@@ -326,7 +326,7 @@ public:
 								buffer_info->visible = true;
 							}
 							else
-								assert(false);
+								ASSERT(false);
 
 						}
 					}

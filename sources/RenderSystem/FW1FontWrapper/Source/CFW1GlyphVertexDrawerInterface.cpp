@@ -1,4 +1,4 @@
-// CFW1GlyphVertexDrawerInterface.cpp
+﻿// CFW1GlyphVertexDrawerInterface.cpp
 
 
 
@@ -10,12 +10,12 @@ namespace FW1FontWrapper
 
 
 	// Query interface
-	HRESULT STDMETHODCALLTYPE CFW1GlyphVertexDrawer::QueryInterface(REFIID riid, void** ppvObject)
+	HRESULT STDMETHODCALLTYPE CFW1GlyphVertexDrawer::QueryInterface(const IID& riid, void** ppvObject)
 	{
-		if (ppvObject == NULL)
+		if (ppvObject == nullptr)
 			return E_INVALIDARG;
 
-		if (IsEqualIID(riid, __uuidof(IFW1GlyphVertexDrawer)))
+		if ((riid == __uuidof(IFW1GlyphVertexDrawer)))
 		{
 			*ppvObject = static_cast<IFW1GlyphVertexDrawer*>(this);
 			AddRef();

@@ -1,4 +1,4 @@
-// CFW1TextRenderer.h
+﻿// CFW1TextRenderer.h
 
 #ifndef IncludeGuard__FW1_CFW1TextRenderer
 #define IncludeGuard__FW1_CFW1TextRenderer
@@ -13,7 +13,7 @@ namespace FW1FontWrapper {
 class CFW1TextRenderer : public CFW1Object<IFW1TextRenderer> {
 	public:
 		// IUnknown
-		virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject);
+		virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void **ppvObject);
 		
 		// IFW1DWriteTextRenderer
 		virtual HRESULT STDMETHODCALLTYPE GetGlyphProvider(IFW1GlyphProvider **ppGlyphProvider);
@@ -95,7 +95,7 @@ class CFW1TextRenderer : public CFW1Object<IFW1TextRenderer> {
 	private:
 		class CDWriteTextRendererProxy : public IDWriteTextRenderer {
 			public:
-				virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject) {
+				virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void **ppvObject) {
 					return m_realObject->QueryInterface(riid, ppvObject);
 				}
 				virtual ULONG STDMETHODCALLTYPE AddRef() {

@@ -5,17 +5,8 @@
 
 
 #define NOMINMAX
-#include <D3D11.h>
-#include <D3DCompiler.h>
-#include <DWrite.h>
-#include <intrin.h>
-#include <string>
-#include <vector>
-#include <map>
-#include <stack>
-#include <cfloat>
-#include <cmath>
-#include <algorithm>
+import windows;
+import stl.core;
 
 #include "FW1CompileSettings.h"
 #include "FW1FontWrapper.h"

@@ -1,4 +1,4 @@
-// CFW1GlyphRenderStates.h
+﻿// CFW1GlyphRenderStates.h
 
 #ifndef IncludeGuard__FW1_CFW1GlyphRenderStates
 #define IncludeGuard__FW1_CFW1GlyphRenderStates
@@ -15,15 +15,15 @@ namespace FW1FontWrapper
     {
         public:
             // IUnknown
-            virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject);
+            virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void** ppvObject);
 
-            virtual void STDMETHODCALLTYPE SetStates(HAL::CommandList::ptr& list, UINT Flags);
+            virtual void STDMETHODCALLTYPE SetStates(HAL::CommandList::ptr& list, unsigned int Flags);
             virtual void STDMETHODCALLTYPE UpdateShaderConstants(
                 HAL::CommandList::ptr& list,
                 const FW1_RECTF* pClipRect,
-                const FLOAT* pTransformMatrix
+                const float* pTransformMatrix
             );
-            virtual BOOL STDMETHODCALLTYPE HasGeometryShader();
+            virtual int STDMETHODCALLTYPE HasGeometryShader();
 
             // Public functions
         public:
@@ -39,8 +39,8 @@ namespace FW1FontWrapper
         private:
             struct ShaderConstants
             {
-                FLOAT					TransformMatrix[16];
-                FLOAT					ClipRect[4];
+                float					TransformMatrix[16];
+                float					ClipRect[4];
             };
 
             // Internal functions

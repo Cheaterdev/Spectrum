@@ -1,12 +1,13 @@
 export module Core:ListAllocator;
 
+import <Core_defs.h>;
 
 import :Debug;
 import :Utils;
 import :Math;
 import :Allocators;
-import <stl/core.h>;
-import <stl/threading.h>;
+import stl.core;
+import stl.threading;
 
 
 
@@ -120,7 +121,7 @@ export
 				pre.size = aligned_offset - pre.offset;
 				auto inserted = blocks.insert(pre);
 
-				assert(inserted.first);
+				ASSERT(inserted.first);
 
 				inserted_prev = &inserted.second;
 			}
@@ -139,7 +140,7 @@ export
 
 				auto inserted = blocks.insert(after);
 
-				assert(inserted.first);
+				ASSERT(inserted.first);
 
 				inserted_next = &inserted.second;
 			}
@@ -168,7 +169,7 @@ export
 			{
 				auto inserted = blocks.insert(used_block);
 
-				assert(inserted.first);
+				ASSERT(inserted.first);
 
 				inserted_center = &inserted.second;
 			}

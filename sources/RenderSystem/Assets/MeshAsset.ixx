@@ -9,7 +9,7 @@ import GUI;
 import HAL;
 
 
-import <stl/core.h>;
+import stl.core;
 export{
 	class MeshAssetInstance;
 

@@ -139,7 +139,7 @@ namespace HAL
 
 #ifdef PRETRANSITIONS_FIX
 				auto transition_list = (list)->fix_pretransitions();
-				  assert(!transition_list);
+				  ASSERT(!transition_list);
 				if (transition_list)
 				{
 					transition_lists.emplace_back(transition_list);
@@ -223,7 +223,7 @@ namespace HAL
 	  
 	FenceWaiter Queue::signal(Fence& fence, UINT64 value)
 	{
-		assert(false);
+		ASSERT(false);
 		std::unique_lock<std::mutex> lock(submit_mutex);
 		gpu_execute_thread.enqueue([this, fence, value]() mutable{
 			std::unique_lock<std::mutex> lock(queue_mutex);

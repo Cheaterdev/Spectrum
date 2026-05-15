@@ -1,7 +1,7 @@
 export module HAL:Utils;
 
 import <HAL.h>;
-import <stl/core.h>;
+import stl.core;
 
 import <d3d12/d3d12_includes.h>;
 import wrl;
@@ -570,7 +570,7 @@ export Format from_native(DXGI_FORMAT format)
 
 
 
-	assert(false);
+	ASSERT(false);
 	return Format::UNKNOWN;
 }
 
@@ -653,7 +653,7 @@ export D3D12_BARRIER_LAYOUT to_native(TextureLayout layout)
 	if (layout == TextureLayout::COPY_DEST) return D3D12_BARRIER_LAYOUT_COPY_DEST;
 
 
-	assert(false);
+	ASSERT(false);
 	return D3D12_BARRIER_LAYOUT_UNDEFINED;
 }
 
@@ -691,7 +691,7 @@ export D3D12_BARRIER_SYNC  to_native(BarrierSync flags)
 
 	if (check(flags & BarrierSync::SPLIT))
 	{
-		assert(flags == BarrierSync::SPLIT);
+		ASSERT(flags == BarrierSync::SPLIT);
 		result = D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_SPLIT;
 	}
 
@@ -816,14 +816,14 @@ export D3D_PRIMITIVE_TOPOLOGY to_native(HAL::PrimitiveTopologyType topology, HAL
 	{
 	case HAL::PrimitiveTopologyType::POINT:
 	{
-		assert(feedType == HAL::PrimitiveTopologyFeed::LIST);
-		assert(!adjusted);
-		assert(controlpoints == 0);
+		ASSERT(feedType == HAL::PrimitiveTopologyFeed::LIST);
+		ASSERT(!adjusted);
+		ASSERT(controlpoints == 0);
 		return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
 	}
 	case HAL::PrimitiveTopologyType::LINE:
 	{
-		assert(controlpoints == 0);
+		ASSERT(controlpoints == 0);
 		switch (feedType)
 		{
 		case HAL::PrimitiveTopologyFeed::LIST:
@@ -840,7 +840,7 @@ export D3D_PRIMITIVE_TOPOLOGY to_native(HAL::PrimitiveTopologyType topology, HAL
 	}
 	case HAL::PrimitiveTopologyType::TRIANGLE:
 	{
-		assert(controlpoints == 0);
+		ASSERT(controlpoints == 0);
 		switch (feedType)
 		{
 		case HAL::PrimitiveTopologyFeed::LIST:
@@ -856,11 +856,11 @@ export D3D_PRIMITIVE_TOPOLOGY to_native(HAL::PrimitiveTopologyType topology, HAL
 	}
 	case HAL::PrimitiveTopologyType::PATCH:
 	{
-		assert(controlpoints >= 1 && controlpoints <= 32);
+		ASSERT(controlpoints >= 1 && controlpoints <= 32);
 		return D3D_PRIMITIVE_TOPOLOGY(uint(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST) - 1 + controlpoints);
 	}
 	}
-	assert(false);
+	ASSERT(false);
 	return D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 }
 

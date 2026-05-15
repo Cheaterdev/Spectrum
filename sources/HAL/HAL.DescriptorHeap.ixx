@@ -141,7 +141,7 @@ export
 
 			bool is_valid() const
 			{
-				return storage && (offset != UINT_MAX);
+				return storage && (offset != std::numeric_limits<uint>::max());
 			}
 
 			operator bool() const;
@@ -161,13 +161,13 @@ export
 			uint get_count() const
 			{
 				if (!storage) return 0;
-				assert(offset == 0);
+				ASSERT(offset == 0);
 				return storage->get_count();
 			}
 
 			void operator=(const Handle& r)
 			{
-				//				assert(r.heap);
+				//				ASSERT(r.heap);
 				storage = r.storage;
 				offset = r.offset;
 			}
@@ -176,8 +176,8 @@ export
 			D3D12_GPU_DESCRIPTOR_HANDLE get_gpu()const;
 			Handle operator[](uint i) const
 			{
-				assert(offset == 0);
-				assert(i<storage->get_count());
+				ASSERT(offset == 0);
+				ASSERT(i<storage->get_count());
 
 				return Handle( storage ,i);
 			}
@@ -192,7 +192,7 @@ export
 			}
 		protected:
 			std::shared_ptr<DescriptorHeapStorage> storage;
-			UINT offset = UINT_MAX;
+			UINT offset = std::numeric_limits<uint>::max();
 		};
 
 		namespace internal // TODO oops, exported
@@ -209,8 +209,8 @@ export
 		
 			TypedHandle operator[](uint i) const
 			{
-				assert(offset == 0);
-				assert(i < storage->get_count());
+				ASSERT(offset == 0);
+				ASSERT(i < storage->get_count());
 
 				return TypedHandle(storage, i);
 			}
@@ -274,7 +274,7 @@ export
 					else
 						return gpu_sampler;
 				}
-				assert(index.type != DescriptorHeapType::CBV_SRV_UAV);
+				ASSERT(index.type != DescriptorHeapType::CBV_SRV_UAV);
 				return std::make_shared<HAL::DescriptorHeap>(device, static_cast<uint>(size), index.type, index.flags);
 			}
 

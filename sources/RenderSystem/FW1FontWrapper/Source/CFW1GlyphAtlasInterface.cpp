@@ -1,4 +1,4 @@
-// CFW1GlyphAtlasInterface.cpp
+﻿// CFW1GlyphAtlasInterface.cpp
 
 
 
@@ -10,12 +10,12 @@ namespace FW1FontWrapper
 
 
 // Query interface
-    HRESULT STDMETHODCALLTYPE CFW1GlyphAtlas::QueryInterface(REFIID riid, void** ppvObject)
+    HRESULT STDMETHODCALLTYPE CFW1GlyphAtlas::QueryInterface(const IID& riid, void** ppvObject)
     {
-        if (ppvObject == NULL)
+        if (ppvObject == nullptr)
             return E_INVALIDARG;
 
-        if (IsEqualIID(riid, __uuidof(IFW1GlyphAtlas)))
+        if ((riid == __uuidof(IFW1GlyphAtlas)))
         {
             *ppvObject = static_cast<IFW1GlyphAtlas*>(this);
             AddRef();
@@ -51,7 +51,7 @@ namespace FW1FontWrapper
 // Get sheet
     HRESULT STDMETHODCALLTYPE CFW1GlyphAtlas::GetSheet(UINT SheetIndex, IFW1GlyphSheet** ppGlyphSheet)
     {
-        if (ppGlyphSheet == NULL)
+        if (ppGlyphSheet == nullptr)
             return E_INVALIDARG;
 
         if (SheetIndex < m_sheetCount)
@@ -60,7 +60,7 @@ namespace FW1FontWrapper
             return S_OK;
         }
 
-        *ppGlyphSheet = NULL;
+        *ppGlyphSheet = nullptr;
         return E_INVALIDARG;
     }
 
@@ -142,7 +142,7 @@ namespace FW1FontWrapper
 // Insert glyph sheets
     UINT STDMETHODCALLTYPE CFW1GlyphAtlas::InsertSheet(IFW1GlyphSheet* pGlyphSheet)
     {
-        if (pGlyphSheet == NULL)
+        if (pGlyphSheet == nullptr)
             return 0xffffffff;
 
         UINT sheetIndex = 0xffffffff;
@@ -153,8 +153,7 @@ namespace FW1FontWrapper
             pGlyphSheet->AddRef();
             sheetIndex = m_sheetCount;
             m_glyphSheets[sheetIndex] = pGlyphSheet;
-            _WriteBarrier();
-            MemoryBarrier();
+            std::atomic_thread_fence(std::memory_order_seq_cst);
             ++m_sheetCount;
             // Restrict the number of open sheets
             UINT numActiveSheets = 4;

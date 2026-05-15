@@ -1,4 +1,4 @@
-// CFW1GlyphSheet.h
+﻿// CFW1GlyphSheet.h
 
 #ifndef IncludeGuard__FW1_CFW1GlyphSheet
 #define IncludeGuard__FW1_CFW1GlyphSheet
@@ -16,7 +16,7 @@ namespace FW1FontWrapper
 	{
 	public:
 		// IUnknown
-		virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject);
+		virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void** ppvObject);
 
 		// IFW1GlyphSheet
 		virtual void STDMETHODCALLTYPE GetDesc(FW1_GLYPHSHEETDESC* pDesc);

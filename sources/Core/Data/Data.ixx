@@ -1,9 +1,9 @@
-export module Core:Data;
+﻿export module Core:Data;
 
 import <Core_defs.h>;
 import :serialization;
 
-import <stl/core.h>;
+import stl.core;
 import :Utils;
 import :Exceptions;
 
@@ -158,7 +158,7 @@ export
 			if (var)
 				return var->value;
 
-			assert(false);
+			ASSERT(false);
 			throw Exceptions::Exception("wrong cast type");
 		}
 
@@ -385,7 +385,7 @@ namespace DataPacker
 		compress((unsigned char *)packed.data() + sizeof(unsigned long), &T, (unsigned char *)unpacked.data(), (unsigned long)unpacked.size());
 		packed.resize(T + sizeof(unsigned long));
 		T = (unsigned long)unpacked.size();
-		memcpy((void*)packed.data(), &T, sizeof(T));
+		std::memcpy((void*)packed.data(), &T, sizeof(T));
 		return std::move(packed);
 	}
 
@@ -408,7 +408,7 @@ namespace DataPacker
 		result.resize(size);
 		s.seekg(0, std::ios::beg);
 		s.read(const_cast<char*>(result.data()), result.size());
-		//memcpy(reinterpret_cast<char*>(result.data()),s.)
+		//std::memcpy(reinterpret_cast<char*>(result.data()),s.)
 		return std::move(result);
 	}
 

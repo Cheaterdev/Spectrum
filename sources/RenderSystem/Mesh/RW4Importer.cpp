@@ -1,4 +1,4 @@
-#ifdef OLOLO
+﻿#ifdef OLOLO
 
 #include <assimp\Importer.hpp>
 #include <assimp\importerdesc.h>
@@ -127,12 +127,12 @@ namespace Assimp
 				mesh->mVertices = new aiVector3D[rw4_mesh.poses.size()];
 				mesh->mNumVertices = (uint)rw4_mesh.poses.size();
 				mesh->mMaterialIndex = rw4_mesh.mat_id;
-				memcpy(mesh->mVertices, rw4_mesh.poses.data(), rw4_mesh.poses.size()*sizeof(vec3));
+				std::memcpy(mesh->mVertices, rw4_mesh.poses.data(), rw4_mesh.poses.size()*sizeof(vec3));
 
 
 				if (rw4_mesh.normals.size()) {
 					mesh->mNormals = new aiVector3D[rw4_mesh.normals.size()];
-					memcpy(mesh->mNormals, rw4_mesh.normals.data(), rw4_mesh.normals.size() * sizeof(vec3));
+					std::memcpy(mesh->mNormals, rw4_mesh.normals.data(), rw4_mesh.normals.size() * sizeof(vec3));
 				}
 
 				if (rw4_mesh.tcs.size()) {
@@ -140,7 +140,7 @@ namespace Assimp
 					
 					mesh->mTextureCoords[0] = new aiVector3D[rw4_mesh.tcs.size()];
 						
-				memcpy(mesh->mTextureCoords[0], rw4_mesh.tcs.data(), rw4_mesh.tcs.size() * sizeof(vec3));
+				std::memcpy(mesh->mTextureCoords[0], rw4_mesh.tcs.data(), rw4_mesh.tcs.size() * sizeof(vec3));
 				}
 
 
@@ -256,7 +256,7 @@ namespace Assimp
 		//	lastCreated->mNumMeshes = 0;
 		//	mCurNode->addChildren(1, &child);
 			//lastCreatedOffsetNode = lastCreated;
-			//assert(obj.scale==1);
+			//ASSERT(obj.scale==1);
 			
 
 			{
@@ -370,7 +370,7 @@ namespace Assimp
 
 
 
-				//	assert(mesh->render_type== RAW4_RENDER_TRIANGLES);
+				//	ASSERT(mesh->render_type== RAW4_RENDER_TRIANGLES);
 				raw4_buffer* ib = context.GetBuffer(mesh->indices);
 				uint16_t* ics = (uint16_t*)((uint8_t*)ib + ib->offset);
 

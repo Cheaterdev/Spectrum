@@ -1,24 +1,16 @@
-
-module;
-// Global module fragment: pure legacy headers with no import statements.
-// Assimp headers textually include STL (<memory> etc.) here, before the module
-// system activates, so they never conflict with the stl.core header unit IFC.
-#include <assimp\Importer.hpp>
-#include <assimp\postprocess.h>
-#include <assimp\scene.h>
-#include <assimp\DefaultLogger.hpp>
-#include <assimp\LogStream.hpp>
-#include <assimp\ProgressHandler.hpp>
-#include <assimp\IOStream.hpp>
-#include <assimp\IOSystem.hpp>
+﻿module;
+// Assimp macros don't propagate through the named module boundary — redefine them here.
+#define AI_SUCCESS              aiReturn_SUCCESS
+#define AI_MATKEY_COLOR_DIFFUSE "$clr.diffuse", 0, 0
+#define AI_MATKEY_SHININESS     "$mat.shininess", 0, 0
+#define AI_MATKEY_REFLECTIVITY  "$mat.reflectivity", 0, 0
 
 module Graphics;
-// Module system is now active. Import modules first, then include headers
-// that themselves contain import statements (their imports become no-ops).
 import Core;
 import HAL;
 import GUI;
 import Graphics;
+import assimp;
 
 #include "Simplifyer/Simplifyer.h"
 #include "Mesh/MeshletGeneration.h"
@@ -175,7 +167,7 @@ class MyIOStream : public Assimp::IOStream
         size_t Read(void* pvBuffer, size_t pSize, size_t pCount)
         {
             size_t count = std::min(data.size() - pos, pSize*pCount);
-            memcpy(pvBuffer, data.data() + pos, count);
+            std::memcpy(pvBuffer, data.data() + pos, count);
             pos += pSize*pCount;
             return count;
         }
@@ -673,7 +665,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
             //obj.local_matrix.identity();
 			//obj.mesh_matrix.identity();
 
-            memcpy(&obj.local_matrix, node->mTransformation[0], sizeof(obj.local_matrix));
+            std::memcpy(&obj.local_matrix, node->mTransformation[0], sizeof(obj.local_matrix));
             obj.local_matrix.transpose();
 
             if (parent)

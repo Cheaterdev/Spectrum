@@ -1,4 +1,4 @@
-// CFW1GlyphVertexDrawer.h
+﻿// CFW1GlyphVertexDrawer.h
 
 #ifndef IncludeGuard__FW1_CFW1GlyphVertexDrawer
 #define IncludeGuard__FW1_CFW1GlyphVertexDrawer
@@ -16,7 +16,7 @@ namespace FW1FontWrapper
     {
         public:
             // IUnknown
-            virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject);
+            virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void** ppvObject);
 
 
             virtual UINT STDMETHODCALLTYPE DrawVertices(

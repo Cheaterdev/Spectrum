@@ -1,9 +1,9 @@
-
+﻿
+#include <Core_defs.h>
 import Core;
-import <RenderSystem.h>;
 #include "MeshletGeneration.h"
 
-import <windows/windows.h>;
+import windows;
 import Graphics;
 namespace _internal
 {
@@ -152,8 +152,8 @@ bool AddToMeshlet(uint maxVerts, uint maxPrims, InlineMeshlet<T>& meshlet, T(&tr
 template <typename T>
 bool IsMeshletFull(uint maxVerts, uint maxPrims, const InlineMeshlet<T>& meshlet)
 {
-    assert(meshlet.UniqueVertexIndices.size() <= maxVerts);
-    assert(meshlet.PrimitiveIndices.size() <= maxPrims);
+    ASSERT(meshlet.UniqueVertexIndices.size() <= maxVerts);
+    ASSERT(meshlet.PrimitiveIndices.size() <= maxPrims);
 
     return meshlet.UniqueVertexIndices.size() == maxVerts
         || meshlet.PrimitiveIndices.size() == maxPrims;
@@ -214,9 +214,9 @@ void _internal::Meshletize(
             indices[index * 3 + 2],
         };
 
-        assert(tri[0] < vertexCount);
-        assert(tri[1] < vertexCount);
-        assert(tri[2] < vertexCount);
+        ASSERT(tri[0] < vertexCount);
+        ASSERT(tri[1] < vertexCount);
+        ASSERT(tri[2] < vertexCount);
 
         // Try to add triangle to meshlet
         if (AddToMeshlet(maxVerts, maxPrims, *curr, tri))
@@ -269,7 +269,7 @@ void _internal::Meshletize(
                 if (candidateCheck.count(adj[i]))
                     continue;
 
-                candidates.push_back(std::make_pair(adj[i], FLT_MAX));
+                candidates.push_back(std::make_pair(adj[i], std::numeric_limits<float>::max()));
                 candidateCheck.insert(adj[i]);
             }
 
@@ -285,9 +285,9 @@ void _internal::Meshletize(
                     indices[candidate * 3 + 2],
                 };
 
-                assert(triIndices[0] < vertexCount);
-                assert(triIndices[1] < vertexCount);
-                assert(triIndices[2] < vertexCount);
+                ASSERT(triIndices[0] < vertexCount);
+                ASSERT(triIndices[1] < vertexCount);
+                ASSERT(triIndices[2] < vertexCount);
 
                 vec3 triVerts[3] =
                 {
@@ -639,7 +639,7 @@ void _internal::BuildAdjacencyList(
 
 float4 MinimumBoundingSphere(float3* points, uint32_t count)
 {
-    assert(points != nullptr && count != 0);
+    ASSERT(points != nullptr && count != 0);
 
     // Find the min & max points indices along each axis.
     uint32_t minAxis[3] = { 0, 0, 0 };
@@ -717,13 +717,11 @@ inline float3 QuantizeUNorm(float3 value)
 static const DWORD CNORM_WIND_CW = 1;
 
 HRESULT ComputeCullData(
-    const float3* positions, uint32_t vertexCount,
+    const float3* positions, [[maybe_unused]] uint32_t vertexCount,
     InlineMeshlet<uint>& meshlet,
     DWORD flags
 )
 {
-    UNREFERENCED_PARAMETER(vertexCount);
-
     float3 vertices[256];
     float3 normals[256];
 
@@ -736,7 +734,7 @@ HRESULT ComputeCullData(
         {
             uint32_t vIndex = m.UniqueVertexIndices[i];
 
-            assert(vIndex < vertexCount);
+            ASSERT(vIndex < vertexCount);
             vertices[i] = positions[vIndex];
         }
 
@@ -787,7 +785,7 @@ HRESULT ComputeCullData(
             cone[1] = 127;
             cone[2] = 127;
             cone[3] = 255;
-            return S_OK;
+            return 0;
         }
 
         // Find the point on center-t*axis ray that lies in negative half-space of all triangles
@@ -823,7 +821,7 @@ HRESULT ComputeCullData(
             float dn = vec3::dot(axis, n);
 
             // dn should be larger than mindp cutoff above
-            assert(dn > 0.0f);
+            ASSERT(dn > 0.0f);
             float t = dc / dn;
 
             maxt = (t > maxt) ? t : maxt;
@@ -834,7 +832,7 @@ HRESULT ComputeCullData(
 
         // cos(a) for normal cone is minDot; we need to add 90 degrees on both sides and invert the cone
         // which gives us -cos(a+90) = -(-sin(a)) = sin(a) = sqrt(1 - cos^2(a))
-        float coneCutoff = sqrtf(1 - minDot * minDot);
+        float coneCutoff = std::sqrt(1 - minDot * minDot);
 
         // 3. Quantize to uint8
         float3 quantized = QuantizeSNorm(axis);
@@ -852,5 +850,5 @@ HRESULT ComputeCullData(
         cone[3] = (uint8_t)quantized.x;
     
 
-    return S_OK;
+    return 0;
 }

@@ -1,4 +1,4 @@
-export module Core:ObjectViewer;
+﻿export module Core:ObjectViewer;
 import <Core_defs.h>;
 export import :serialization;
 using serialization_exception = cereal::Exception;
@@ -248,7 +248,7 @@ export
 		void serialize(ObjectTreeSerializer& archive,
 			cereal::NameValuePair<T>& m)
 		{
-			if (strcmp(m.name, "cereal_class_version") == 0) return;
+			if (std::strcmp(m.name, "cereal_class_version") == 0) return;
 			archive.save(m);
 
 		}

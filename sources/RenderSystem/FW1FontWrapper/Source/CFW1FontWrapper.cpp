@@ -1,10 +1,10 @@
-// CFW1FontWrapper.cpp
+﻿// CFW1FontWrapper.cpp
 
 
 
 #include "CFW1FontWrapper.h"
 
-#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
+#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = nullptr; } }
 
 
 namespace FW1FontWrapper
@@ -14,16 +14,16 @@ namespace FW1FontWrapper
 // Construct
     CFW1FontWrapper::CFW1FontWrapper() :
         m_featureLevel(D3D_FEATURE_LEVEL_9_1),
-        m_pDWriteFactory(NULL),
+        m_pDWriteFactory(nullptr),
 
-        m_pGlyphAtlas(NULL),
-        m_pGlyphProvider(NULL),
+        m_pGlyphAtlas(nullptr),
+        m_pGlyphProvider(nullptr),
 
-        m_pGlyphRenderStates(NULL),
-        m_pGlyphVertexDrawer(NULL),
+        m_pGlyphRenderStates(nullptr),
+        m_pGlyphVertexDrawer(nullptr),
 
         m_defaultTextInited(false),
-        m_pDefaultTextFormat(NULL)
+        m_pDefaultTextFormat(nullptr)
     {
         InitializeCriticalSection(&m_textRenderersCriticalSection);
         InitializeCriticalSection(&m_textGeometriesCriticalSection);
@@ -75,11 +75,11 @@ namespace FW1FontWrapper
             return hResult;
 
         if (
-            pGlyphAtlas == NULL ||
-            pGlyphProvider == NULL ||
-            pGlyphVertexDrawer == NULL ||
-            pGlyphRenderStates == NULL ||
-            pDWriteFactory == NULL
+            pGlyphAtlas == nullptr ||
+            pGlyphProvider == nullptr ||
+            pGlyphVertexDrawer == nullptr ||
+            pGlyphRenderStates == nullptr ||
+            pDWriteFactory == nullptr
         )
             return E_INVALIDARG;
 
@@ -96,17 +96,17 @@ namespace FW1FontWrapper
         m_pGlyphVertexDrawer = pGlyphVertexDrawer;
 
         // Create default text format for strings, if provided
-        if (pDefaultFontParams->pszFontFamily != NULL && pDefaultFontParams->pszFontFamily[0] != 0)
+        if (pDefaultFontParams->pszFontFamily != nullptr && pDefaultFontParams->pszFontFamily[0] != 0)
         {
             IDWriteTextFormat* pTextFormat;
             hResult = m_pDWriteFactory->CreateTextFormat(
                           pDefaultFontParams->pszFontFamily,
-                          NULL,
+                          nullptr,
                           pDefaultFontParams->FontWeight,
                           pDefaultFontParams->FontStyle,
                           pDefaultFontParams->FontStretch,
                           32.0f,
-                          (pDefaultFontParams->pszLocale != NULL) ? pDefaultFontParams->pszLocale : L"",
+                          (pDefaultFontParams->pszLocale != nullptr) ? pDefaultFontParams->pszLocale : L"",
                           &pTextFormat
                       );
 
@@ -157,7 +157,7 @@ namespace FW1FontWrapper
                 DWRITE_TEXT_RANGE allText = {0, stringLength};
                 pTextLayout->SetFontSize(fontSize, allText);
 
-                if (pszFontFamily != NULL)
+                if (pszFontFamily != nullptr)
                     pTextLayout->SetFontFamilyName(pszFontFamily, allText);
 
                 if ((flags & FW1_NOWORDWRAP) != 0)
@@ -177,7 +177,7 @@ namespace FW1FontWrapper
             }
         }
 
-        return NULL;
+        return nullptr;
     }
 
 

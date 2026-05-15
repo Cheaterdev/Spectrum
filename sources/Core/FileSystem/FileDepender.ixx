@@ -6,8 +6,8 @@ import :Log;
 import :Singleton;
 import :Scheduler;
 
-import <stl/filesystem.h>;
-import <stl/memory.h>;
+import stl.filesystem;
+import stl.memory;
 import windows;
 
 import :serialization;

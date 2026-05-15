@@ -6,8 +6,8 @@ import :Utils;
 import :Log;
 import :Singleton;
 
-import <stl/filesystem.h>;
-import <stl/memory.h>;
+import stl.filesystem;
+import stl.memory;
 import :FileSystem;
 import :FileDepender;
 import :FileDataStorage;

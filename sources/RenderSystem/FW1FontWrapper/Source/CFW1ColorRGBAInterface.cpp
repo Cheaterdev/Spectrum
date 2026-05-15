@@ -1,4 +1,4 @@
-// CFW1ColorRGBAInterface.cpp
+﻿// CFW1ColorRGBAInterface.cpp
 
 
 
@@ -9,11 +9,11 @@ namespace FW1FontWrapper {
 
 
 // Query interface
-HRESULT STDMETHODCALLTYPE CFW1ColorRGBA::QueryInterface(REFIID riid, void **ppvObject) {
-	if(ppvObject == NULL)
+HRESULT STDMETHODCALLTYPE CFW1ColorRGBA::QueryInterface(const IID& riid, void **ppvObject) {
+	if(ppvObject == nullptr)
 		return E_INVALIDARG;
 	
-	if(IsEqualIID(riid, __uuidof(IFW1ColorRGBA))) {
+	if((riid == __uuidof(IFW1ColorRGBA))) {
 		*ppvObject = static_cast<IFW1ColorRGBA*>(this);
 		AddRef();
 		return S_OK;

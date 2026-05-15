@@ -263,7 +263,7 @@ namespace HAL
 			return 8;
 
 		default:
-			assert(FALSE); // unhandled format
+			ASSERT(FALSE); // unhandled format
 			return 0;
 		}
 	}

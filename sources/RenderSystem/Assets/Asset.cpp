@@ -251,7 +251,7 @@ AssetReferenceBase::~AssetReferenceBase()
 void Asset::add_reference(AssetReferenceBase* ref)
 {
 	m.lock();
-	//	assert(ref->owner==this);
+	//	ASSERT(ref->owner==this);
 	references.insert(ref);
 	m.unlock();
 }

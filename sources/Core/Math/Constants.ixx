@@ -1,6 +1,7 @@
-export module Core:Math.Constants;
-import <stl/core.h>;
-import <stl/core.h>;
+﻿export module Core:Math.Constants;
+import <Core_defs.h>;
+import stl.core;
+import stl.core;
 
 export
 {
@@ -41,22 +42,22 @@ export
 
 		inline float sin(const float angle)
 		{
-			return sinf(angle);
+			return std::sin(angle);
 		}
 
 		inline float cos(const float angle)
 		{
-			return cosf(angle);
+			return std::cos(angle);
 		}
 
 		inline float asin(const float angle)
 		{
-			return asinf(angle);
+			return std::asin(angle);
 		}
 
 		inline float acos(const float angle)
 		{
-			return acosf(angle);
+			return std::acos(angle);
 		}
 
 
@@ -85,7 +86,7 @@ export
 
 		template <typename T> __forceinline T AlignUp(T value, size_t alignment)
 		{
-			assert((alignment & (alignment - 1)) == 0);
+			ASSERT((alignment & (alignment - 1)) == 0);
 			return AlignUpWithMask(value, alignment - 1);
 		}
 

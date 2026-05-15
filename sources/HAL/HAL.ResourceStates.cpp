@@ -15,7 +15,7 @@ namespace HAL
 				auto prev = last_usage->prev_usage;
 				if(prev)
 				{
-//					assert(!(prev->wanted_state.operation==BarrierSync::NONE) );
+//					ASSERT(!(prev->wanted_state.operation==BarrierSync::NONE) );
 				
 				}
 			}
@@ -30,7 +30,7 @@ namespace HAL
 			if (native.back().Type == native[j].Type)
 				if (native.back().ResourceUsage.pResource == native[j].ResourceUsage.pResource)
 					if (native.back().ResourceUsage.Subresource == native[j].ResourceUsage.Subresource)
-						assert(false);
+						ASSERT(false);
 		}
 
 #endif
@@ -51,13 +51,13 @@ namespace HAL
 
 	void Barriers::transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres, BarrierFlags flags)
 	{
-		assert(resource);
+		ASSERT(resource);
 
-		assert(IsFullySupport(type, before));
-		assert(IsFullySupport(type, after));
+		ASSERT(IsFullySupport(type, before));
+		ASSERT(IsFullySupport(type, after));
 
 		if (check(after.access & (BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE | BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ)))
-			assert(check(resource->get_desc().Flags & ResFlags::Raytracing));
+			ASSERT(check(resource->get_desc().Flags & ResFlags::Raytracing));
 
 		barriers.emplace_back(Barrier{ const_cast<Resource*>(resource) ,before ,after ,subres ,flags });//
 
@@ -84,10 +84,10 @@ namespace HAL
 			if (merged)
 				my_state.first_usage->wanted_state.layout = *merged;
 			else
-				assert(false);
+				ASSERT(false);
 
 			 my_state.check_valid(nullptr);
-			assert(my_state.first_usage == my_state.last_usage);
+			ASSERT(my_state.first_usage == my_state.last_usage);
 		}
 	}
 
@@ -115,7 +115,7 @@ namespace HAL
 		CommandListType cmd_type = CommandListType::COPY;
 		if (!resource) return cmd_type;
 
-		assert(!check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
+		ASSERT(!check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
 
 		if (resource->get_desc().is_buffer())
 			return cmd_type;
@@ -149,7 +149,7 @@ namespace HAL
 					//	to.layout = first_state.layout;
 
 
-						//assert(! first_state.layout!=);
+						//ASSERT(! first_state.layout!=);
 					target.transition(resource, from, first_state, i);
 
 					cmd_type = Merge(cmd_type, from.get_best_cmd_type());
@@ -169,7 +169,7 @@ namespace HAL
 	void ResourceStateManager::transition(Transitions* list, ResourceState state, unsigned int s) const
 	{
 		if (check(state.access & (BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE | BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ)))
-			assert(check(resource->get_desc().Flags & ResFlags::Raytracing));
+			ASSERT(check(resource->get_desc().Flags & ResFlags::Raytracing));
 
 
 
@@ -187,7 +187,7 @@ namespace HAL
 
 			}
 		}
-		assert(state.is_valid(resource->get_type()));
+		ASSERT(state.is_valid(resource->get_type()));
 		auto transition_one = [&](UINT subres) {
 
 			auto& subres_cpu = cpu_state.get_subres_state(subres);
@@ -252,7 +252,7 @@ namespace HAL
 		if (resource->get_desc().is_buffer())
 			return;
 
-	   assert(check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
+	   ASSERT(check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
 
 		//return ;
 		auto& cpu_state = get_state((from));
@@ -267,7 +267,7 @@ namespace HAL
 
 			if (!cpu.used)	return;
 
-			//	assert (IsFullySupport((from)->get_type(), gpu.state));
+			//	ASSERT(IsFullySupport((from)->get_type(), gpu.state));
 
 			auto first_usage = cpu_state.get_first_usage(i);
 
@@ -275,9 +275,9 @@ namespace HAL
 			auto merged = merge_layout(gpu.layout, first_usage->wanted_state.layout);
 			if (merged)
 				first_usage->wanted_state.layout = *merged;
-			assert(first_usage->wanted_state.valid_begin());
+			ASSERT(first_usage->wanted_state.valid_begin());
 
-			assert(first_usage->wanted_state.valid_begin());
+			ASSERT(first_usage->wanted_state.valid_begin());
 
 			 cpu.check_valid(resource);
 			};
@@ -291,7 +291,7 @@ namespace HAL
 
 			if (!cpu.used) return;
 
-			//assert (IsFullySupport((from)->get_type(), gpu.state));
+			//ASSERT(IsFullySupport((from)->get_type(), gpu.state));
 
 			auto first_usage = cpu_state.get_first_usage(i);
 
@@ -348,7 +348,7 @@ namespace HAL
 		if (resource->get_desc().is_buffer())
 			return;
 
-	   assert(check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
+	   ASSERT(check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
 
 		//return ;
 		auto& cpu_state = get_state((from));
@@ -363,7 +363,7 @@ namespace HAL
 
 			if (!cpu.used)	return;
 
-			//	assert (IsFullySupport((from)->get_type(), gpu.state));
+			//	ASSERT(IsFullySupport((from)->get_type(), gpu.state));
 
 			auto first_usage = cpu_state.get_first_usage(i);
 
@@ -371,9 +371,9 @@ namespace HAL
 			auto merged = merge_layout(gpu.layout, first_usage->wanted_state.layout);
 			if (merged)
 				first_usage->wanted_state.layout = *merged;
-			assert(first_usage->wanted_state.valid_begin());
+			ASSERT(first_usage->wanted_state.valid_begin());
 
-			assert(first_usage->wanted_state.valid_begin());
+			ASSERT(first_usage->wanted_state.valid_begin());
 
 			 cpu.check_valid(resource);
 			};
@@ -400,7 +400,7 @@ namespace HAL
 				return;
 			}
 
-			//assert (IsFullySupport((from)->get_type(), gpu.state));
+			//ASSERT(IsFullySupport((from)->get_type(), gpu.state));
 
 			auto first_usage = cpu_state.get_first_usage(i);
 
@@ -457,7 +457,7 @@ namespace HAL
 		if (resource->get_desc().is_buffer())
 			return;
 			
-		assert(check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
+		ASSERT(check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
 
 		auto& cpu_state = get_state((from));
 
@@ -505,7 +505,7 @@ namespace HAL
 		if (resource->get_desc().is_buffer())
 			return;
 
-		assert(check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
+		ASSERT(check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
 
 		auto& prev_state = get_state((from));
 		auto& next_state = get_state((to));
@@ -515,8 +515,8 @@ namespace HAL
 				auto last_usage = prev_state.get_last_usage(i);
 				auto first_usage = next_state.get_first_usage(i);
 
-				assert(!first_usage->prev_usage);
-				assert(last_usage->point->cmd_list != first_usage->point->cmd_list);
+				ASSERT(!first_usage->prev_usage);
+				ASSERT(last_usage->point->cmd_list != first_usage->point->cmd_list);
 
 				if (first_usage->wanted_state != last_usage->wanted_state)
 				{

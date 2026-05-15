@@ -1,4 +1,4 @@
-//*********************************************************
+﻿//*********************************************************
 //
 // Copyright (c) Microsoft. All rights reserved.
 // This code is licensed under the MIT License (MIT).
@@ -50,9 +50,9 @@ protected:
     // Only basic functions used to avoid requiring additional headers.
     m_createFn2 = nullptr;
     char fnName2[128];
-    size_t s = strlen(fnName);
+    size_t s = std::strlen(fnName);
     if (s < sizeof(fnName2) - 2) {
-      memcpy(fnName2, fnName, s);
+      std::memcpy(fnName2, fnName, s);
       fnName2[s] = '2';
       fnName2[s + 1] = '\0';
       m_createFn2 = (DxcCreateInstance2Proc)GetProcAddress(m_dll, fnName2);

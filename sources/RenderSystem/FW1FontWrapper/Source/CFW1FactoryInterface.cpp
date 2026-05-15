@@ -1,4 +1,4 @@
-// CFW1FactoryInterface.cpp
+﻿// CFW1FactoryInterface.cpp
 
 
 
@@ -20,39 +20,39 @@ namespace FW1FontWrapper {
 
 
 // Query interface
-HRESULT STDMETHODCALLTYPE CFW1Factory::QueryInterface(REFIID riid, void **ppvObject) {
-	if(ppvObject == NULL)
+HRESULT STDMETHODCALLTYPE CFW1Factory::QueryInterface(const IID& riid, void **ppvObject) {
+	if(ppvObject == nullptr)
 		return E_INVALIDARG;
 	
-	if(IsEqualIID(riid, __uuidof(IUnknown))) {
+	if((riid == __uuidof(IUnknown))) {
 		*ppvObject = static_cast<IUnknown*>(this);
 		AddRef();
 		return S_OK;
 	}
-	else if(IsEqualIID(riid, __uuidof(IFW1Factory))) {
+	else if((riid == __uuidof(IFW1Factory))) {
 		*ppvObject = static_cast<IFW1Factory*>(this);
 		AddRef();
 		return S_OK;
 	}
 	
-	*ppvObject = NULL;
+	*ppvObject = nullptr;
 	return E_NOINTERFACE;
 }
 
 
 // Add reference
 ULONG STDMETHODCALLTYPE CFW1Factory::AddRef() {
-	return static_cast<ULONG>(InterlockedIncrement(reinterpret_cast<LONG*>(&m_cRefCount)));
+	return ++m_cRefCount;
 }
 
 
 // Release
 ULONG STDMETHODCALLTYPE CFW1Factory::Release() {
-	ULONG newCount = static_cast<ULONG>(InterlockedDecrement(reinterpret_cast<LONG*>(&m_cRefCount)));
-	
+	ULONG newCount = --m_cRefCount;
+
 	if(newCount == 0)
 		delete this;
-	
+
 	return newCount;
 }
 
@@ -63,16 +63,16 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateFontWrapper(
 	IFW1FontWrapper **ppFontWrapper
 ) {
 	FW1_FONTWRAPPERCREATEPARAMS createParams;
-	ZeroMemory(&createParams, sizeof(createParams));
+	memset(&createParams, 0, sizeof(createParams));
 	
 	createParams.GlyphSheetWidth = 512;
 	createParams.GlyphSheetHeight = 512;
 	createParams.MaxGlyphCountPerSheet = 2048;
 	createParams.SheetMipLevels = 1;
-	createParams.AnisotropicFiltering = FALSE;
+	createParams.AnisotropicFiltering = false;
 	createParams.MaxGlyphWidth = 384;
 	createParams.MaxGlyphHeight = 384;
-	createParams.DisableGeometryShader = FALSE;
+	createParams.DisableGeometryShader = false;
 	createParams.VertexBufferSize = 0;
 	createParams.DefaultFontParams.pszFontFamily = pszFontFamily;
 	createParams.DefaultFontParams.FontWeight = DWRITE_FONT_WEIGHT_NORMAL;
@@ -80,7 +80,7 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateFontWrapper(
 	createParams.DefaultFontParams.FontStretch = DWRITE_FONT_STRETCH_NORMAL;
 	createParams.DefaultFontParams.pszLocale = L"";
 	
-	return CreateFontWrapper(NULL, &createParams, ppFontWrapper);
+	return CreateFontWrapper(nullptr, &createParams, ppFontWrapper);
 }
 
 
@@ -90,13 +90,13 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateFontWrapper(
 	const FW1_FONTWRAPPERCREATEPARAMS *pCreateParams,
 	IFW1FontWrapper **ppFontWrapper
 ) {
-	if(pCreateParams == NULL || ppFontWrapper == NULL)
+	if(pCreateParams == nullptr || ppFontWrapper == nullptr)
 		return E_INVALIDARG;
 	
 	HRESULT hResult;
 	
 	// If no DWrite factory is provided, attempt to create one
-	if(pDWriteFactory == NULL)
+	if(pDWriteFactory == nullptr)
 		hResult = createDWriteFactory(&pDWriteFactory);
 	else {
 		pDWriteFactory->AddRef();
@@ -108,7 +108,7 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateFontWrapper(
 		// Get system font collection
 		IDWriteFontCollection *pFontCollection;
 		
-		hResult = pDWriteFactory->GetSystemFontCollection(&pFontCollection, FALSE);
+		hResult = pDWriteFactory->GetSystemFontCollection(&pFontCollection, false);
 		if(FAILED(hResult)) {
 			setErrorString(L"GetSystemFontCollection failed");
 		}
@@ -119,8 +119,8 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateFontWrapper(
 			hResult = CreateGlyphAtlas(
 				pCreateParams->GlyphSheetWidth,
 				pCreateParams->GlyphSheetHeight,
-				(pCreateParams->DisableGeometryShader == FALSE) ? TRUE : FALSE,
-				TRUE,
+				(pCreateParams->DisableGeometryShader == false) ? true : false,
+				true,
 				pCreateParams->MaxGlyphCountPerSheet,
 				pCreateParams->SheetMipLevels,
 				4096,
@@ -217,7 +217,7 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateFontWrapper(
 	const FW1_DWRITEFONTPARAMS *pDefaultFontParams,
 	IFW1FontWrapper **ppFontWrapper
 ) {
-	if(ppFontWrapper == NULL)
+	if(ppFontWrapper == nullptr)
 		return E_INVALIDARG;
 	
 	CFW1FontWrapper *pFontWrapper = new CFW1FontWrapper;
@@ -249,7 +249,7 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateGlyphVertexDrawer(
 	UINT VertexBufferSize,
 	IFW1GlyphVertexDrawer **ppGlyphVertexDrawer
 ) {
-	if(ppGlyphVertexDrawer == NULL)
+	if(ppGlyphVertexDrawer == nullptr)
 		return E_INVALIDARG;
 	
 	CFW1GlyphVertexDrawer *pGlyphVertexDrawer = new CFW1GlyphVertexDrawer;
@@ -277,14 +277,14 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateGlyphRenderStates(
 	BOOL AnisotropicFiltering,
 	IFW1GlyphRenderStates **ppGlyphRenderStates
 ) {
-	if(ppGlyphRenderStates == NULL)
+	if(ppGlyphRenderStates == nullptr)
 		return E_INVALIDARG;
 	
 	CFW1GlyphRenderStates *pGlyphRenderStates = new CFW1GlyphRenderStates;
 	HRESULT hResult = pGlyphRenderStates->initRenderResources(
 		this,
-		(DisableGeometryShader == FALSE),
-		(AnisotropicFiltering != FALSE)
+		(DisableGeometryShader == false),
+		(AnisotropicFiltering != false)
 	);
 	if(FAILED(hResult)) {
 		pGlyphRenderStates->Release();
@@ -305,7 +305,7 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateTextRenderer(
 	IFW1GlyphProvider *pGlyphProvider,
 	IFW1TextRenderer **ppTextRenderer
 ) {
-	if(ppTextRenderer == NULL)
+	if(ppTextRenderer == nullptr)
 		return E_INVALIDARG;
 	
 	CFW1TextRenderer *pTextRenderer = new CFW1TextRenderer;
@@ -328,7 +328,7 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateTextRenderer(
 HRESULT STDMETHODCALLTYPE CFW1Factory::CreateTextGeometry(
 	IFW1TextGeometry **ppTextGeometry
 ) {
-	if(ppTextGeometry == NULL)
+	if(ppTextGeometry == nullptr)
 		return E_INVALIDARG;
 	
 	CFW1TextGeometry *pTextGeometry = new CFW1TextGeometry;
@@ -356,7 +356,7 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateGlyphProvider(
 	UINT MaxGlyphHeight,
 	IFW1GlyphProvider **ppGlyphProvider
 ) {
-	if(ppGlyphProvider == NULL)
+	if(ppGlyphProvider == nullptr)
 		return E_INVALIDARG;
 	
 	CFW1GlyphProvider *pGlyphProvider = new CFW1GlyphProvider;
@@ -389,7 +389,7 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateDWriteRenderTarget(
 	UINT RenderTargetHeight,
 	IFW1DWriteRenderTarget **ppRenderTarget
 ) {
-	if(ppRenderTarget == NULL)
+	if(ppRenderTarget == nullptr)
 		return E_INVALIDARG;
 	
 	CFW1DWriteRenderTarget *pRenderTarget = new CFW1DWriteRenderTarget;
@@ -419,7 +419,7 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateGlyphAtlas(
 	UINT MaxGlyphSheetCount,
 	IFW1GlyphAtlas **ppGlyphAtlas
 ) {
-	if(ppGlyphAtlas == NULL)
+	if(ppGlyphAtlas == nullptr)
 		return E_INVALIDARG;
 	
 	CFW1GlyphAtlas *pGlyphAtlas = new CFW1GlyphAtlas;
@@ -427,8 +427,8 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateGlyphAtlas(
 		this,
 		GlyphSheetWidth,
 		GlyphSheetHeight,
-		(HardwareCoordBuffer != FALSE),
-		(AllowOversizedGlyph != FALSE),
+		(HardwareCoordBuffer != false),
+		(AllowOversizedGlyph != false),
 		MaxGlyphCountPerSheet,
 		MipLevels,
 		MaxGlyphSheetCount
@@ -457,7 +457,7 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateGlyphSheet(
 	UINT MipLevels,
 	IFW1GlyphSheet **ppGlyphSheet
 ) {
-	if(ppGlyphSheet == NULL)
+	if(ppGlyphSheet == nullptr)
 		return E_INVALIDARG;
 	
 	CFW1GlyphSheet *pGlyphSheet = new CFW1GlyphSheet;
@@ -465,8 +465,8 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateGlyphSheet(
 		this,
 		GlyphSheetWidth,
 		GlyphSheetHeight,
-		(HardwareCoordBuffer != FALSE),
-		(AllowOversizedGlyph != FALSE),
+		(HardwareCoordBuffer != false),
+		(AllowOversizedGlyph != false),
 		MaxGlyphCount,
 		MipLevels
 	);
@@ -486,7 +486,7 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateGlyphSheet(
 
 // Create color
 HRESULT STDMETHODCALLTYPE CFW1Factory::CreateColor(float4 Color, IFW1ColorRGBA **ppColor) {
-	if(ppColor == NULL)
+	if(ppColor == nullptr)
 		return E_INVALIDARG;
 	
 	CFW1ColorRGBA *pColor = new CFW1ColorRGBA;

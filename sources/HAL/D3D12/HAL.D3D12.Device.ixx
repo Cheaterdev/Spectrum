@@ -131,7 +131,7 @@ namespace HAL
 
 			hr = 	get_device_removed_reason();
 				__debugbreak();
-				assert(false);
+				ASSERT(false);
 			}
 
 		}

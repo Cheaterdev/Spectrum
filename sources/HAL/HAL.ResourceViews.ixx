@@ -1,4 +1,4 @@
-export module HAL:ResourceViews;
+﻿export module HAL:ResourceViews;
 import <HAL.h>;
 import :Types;
 import :HLSL;
@@ -190,7 +190,7 @@ export
 
 			void write(UINT64 offset, T* data, UINT64 count)
 			{
-				memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
+				std::memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
 			}
 
 			ResourceAddress get_resource_address(uint offset = 0) const
@@ -273,7 +273,7 @@ export
 						//	else if (desc.is3D())
 						//		texture3D.create(resource, view_desc.MipSlice, view_desc.MipLevels);
 					else
-						assert(false);
+						ASSERT(false);
 				}
 
 				if (check(get_desc().Flags & HAL::ResFlags::UnorderedAccess))
@@ -283,7 +283,7 @@ export
 						//	else if (desc.is3D())
 						//		rwTexture3D.create(resource, view_desc.MipSlice);
 					else
-						assert(false);
+						ASSERT(false);
 				}
 
 				if (check(get_desc().Flags & HAL::ResFlags::RenderTarget))
@@ -419,7 +419,7 @@ export
 					                                   HAL::DescriptorHeapFlags::ShaderVisible
 				                                   });
 
-				assert(desc.is3D());
+				ASSERT(desc.is3D());
 
 
 				uint offset = 0;
@@ -532,13 +532,13 @@ export
 					                                   HAL::DescriptorHeapType::CBV_SRV_UAV,
 					                                   HAL::DescriptorHeapFlags::ShaderVisible
 				                                   });
-				assert(desc.is2D());
+				ASSERT(desc.is2D());
 				textureCube = HLSL::TextureCube<>(hlsl[0]);
 
 
 				if (check(get_desc().Flags & HAL::ResFlags::ShaderResource))
 				{
-					assert(desc.is2D());
+					ASSERT(desc.is2D());
 					textureCube.create(resource, view_desc.MipSlice, view_desc.MipLevels,
 					                   view_desc.FirstArraySlice / 6);
 				}
@@ -660,7 +660,7 @@ export
 			template <class T>
 			void write(UINT64 offset, T* data, UINT64 count)
 			{
-				memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
+				std::memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
 			}
 		};
 
@@ -847,7 +847,7 @@ export
 			                     StructuredBufferViewDesc _desc) :
 				StructuredBufferViewBase(std::static_pointer_cast<Buffer>(resource)), desc(_desc)
 			{
-				assert(std::dynamic_pointer_cast<Buffer>(resource));
+				ASSERT(std::dynamic_pointer_cast<Buffer>(resource));
 				init(frame);
 			}
 
@@ -855,7 +855,7 @@ export
 			StructuredBufferView(const Resource::ptr& resource, GPUEntityStorageInterface& frame) : StructuredBufferViewBase(
 				std::static_pointer_cast<Buffer>(resource))
 			{
-				assert(std::dynamic_pointer_cast<Buffer>(resource));
+				ASSERT(std::dynamic_pointer_cast<Buffer>(resource));
 				auto& res_desc = get_desc().as_buffer();
 
 				desc.offset = 0;
@@ -895,7 +895,7 @@ export
 
 			void write(UINT64 offset, const T* data, UINT64 count)
 			{
-				memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
+				std::memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
 			}
 
 

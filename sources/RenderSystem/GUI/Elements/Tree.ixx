@@ -84,7 +84,7 @@ export namespace GUI
                 {
                     auto elem = dynamic_cast<line<TreeNode, Creator>*>(p->element.lock().get());
               //      owner->node->add_child(elem->owner->node);
-                    assert(false);
+                    ASSERT(false);
                     return true;
                 }
 

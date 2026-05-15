@@ -1,4 +1,4 @@
-// CFW1GlyphSheetInterface.cpp
+﻿// CFW1GlyphSheetInterface.cpp
 
 
 
@@ -13,12 +13,12 @@ namespace FW1FontWrapper
 
 
 	// Query interface
-	HRESULT STDMETHODCALLTYPE CFW1GlyphSheet::QueryInterface(REFIID riid, void** ppvObject)
+	HRESULT STDMETHODCALLTYPE CFW1GlyphSheet::QueryInterface(const IID& riid, void** ppvObject)
 	{
-		if (ppvObject == NULL)
+		if (ppvObject == nullptr)
 			return E_INVALIDARG;
 
-		if (IsEqualIID(riid, __uuidof(IFW1GlyphSheet)))
+		if ((riid == __uuidof(IFW1GlyphSheet)))
 		{
 			*ppvObject = static_cast<IFW1GlyphSheet*>(this);
 			AddRef();
@@ -170,8 +170,7 @@ namespace FW1FontWrapper
 			m_dirtyRect.bottom = std::min(std::max(m_dirtyRect.bottom, positionY + height + m_alignWidth), m_sheetHeight);
 		}
 
-		_WriteBarrier();
-		MemoryBarrier();
+		std::atomic_thread_fence(std::memory_order_seq_cst);
 		++m_glyphCount;
 		++m_updatedGlyphCount;
 		return glyphIndex;
@@ -221,7 +220,7 @@ namespace FW1FontWrapper
 				{
 					UINT8* srcMem = m_textureData;
 					D3D12_BOX dstBox;
-					ZeroMemory(&dstBox, sizeof(dstBox));
+					memset(&dstBox, 0, sizeof(dstBox));
 					dstBox.left = dirtyRect.left;
 					dstBox.right = dirtyRect.right;
 					dstBox.top = dirtyRect.top;

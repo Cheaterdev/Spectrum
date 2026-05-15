@@ -1,4 +1,4 @@
-module HAL:TextureData;
+﻿module HAL:TextureData;
 
 import Core;
 import <HAL.h>;
@@ -106,10 +106,10 @@ namespace HAL
 				/*if (index >= nimages)
 				return E_FAIL;*/
 				const DirectX::Image& img = image.GetImages()[index];
-				assert(idx < (metadata.mipLevels* metadata.arraySize));
+				ASSERT(idx < (metadata.mipLevels* metadata.arraySize));
 				int  a = 0;
 				size_t m = level;
-				memcpy(tex_data->array[a]->mips[m]->data.data(), img.pixels, tex_data->array[a]->mips[m]->data.size());
+				std::memcpy(tex_data->array[a]->mips[m]->data.data(), img.pixels, tex_data->array[a]->mips[m]->data.size());
 				tex_data->array[a]->mips[m]->width_stride = static_cast<UINT>(img.rowPitch);
 				tex_data->array[a]->mips[m]->slice_stride = static_cast<UINT>(img.slicePitch);
 				/*             sub_data[idx].pData = img.pixels;
@@ -145,10 +145,10 @@ namespace HAL
 					if (!img.pixels)
 						return nullptr;
 
-					assert(idx < (metadata.mipLevels* metadata.arraySize));
+					ASSERT(idx < (metadata.mipLevels* metadata.arraySize));
 					size_t  a = item;
 					size_t m = level;
-					memcpy(tex_data->array[a]->mips[m]->data.data(), img.pixels, tex_data->array[a]->mips[m]->data.size());
+					std::memcpy(tex_data->array[a]->mips[m]->data.data(), img.pixels, tex_data->array[a]->mips[m]->data.size());
 					tex_data->array[a]->mips[m]->width_stride = static_cast<UINT>(img.rowPitch);
 					tex_data->array[a]->mips[m]->slice_stride = static_cast<UINT>(img.slicePitch);
 					/*   sub_data[idx].pData = img.pixels;
@@ -189,7 +189,7 @@ namespace HAL
 				img.slicePitch = orig->array[i]->mips[j]->slice_stride;
 				img.pixels = reinterpret_cast<uint8_t*>(orig->array[i]->mips[j]->data.data());
 			}
-		//assert(false);
+		//ASSERT(false);
 		  if (FAILED(DirectX::Compress( images.data(), images.size(), metadata, DXGI_FORMAT_BC7_UNORM_SRGB, DirectX::TEX_COMPRESS_FLAGS::TEX_COMPRESS_DEFAULT|DirectX::TEX_COMPRESS_FLAGS::TEX_COMPRESS_PARALLEL, 1, compressed)))
 		return nullptr;
 
@@ -242,7 +242,7 @@ namespace HAL
 				res = true;
 				metadata.mipLevels -= 2;
 
-				assert(false);
+				ASSERT(false);
 				// if (FAILED(DirectX::Compress(DX11::Device::get().get_native_device(), image1.GetImages(), image1.GetImageCount() - 2, metadata, DXGI_FORMAT_BC7_UNORM_SRGB, 1, 1, compressed)))
 				res = false;
 

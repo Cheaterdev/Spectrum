@@ -1,6 +1,4 @@
 
-import Core;
-import <RenderSystem.h>;
 #include "Raw4Loader.h"
 
 //-----------------------------------------------------------------------------

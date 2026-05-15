@@ -310,7 +310,7 @@ namespace GUI
 				//	for(auto &timer:b->gpu_timers)
 					{
 						auto my_id = data.gpu_block_id.fetch_add(1);
-						assert(my_id < 4096 * 256);
+						ASSERT(my_id < 4096 * 256);
 						auto& data = this->data.gpu_blocks[my_id];
 
 						//data.block = p.first;
@@ -348,7 +348,7 @@ namespace GUI
 					if (ended) return;
 	
 					auto my_id = data.block_id.fetch_add(1);
-					assert(my_id < 4096*128);
+					ASSERT(my_id < 4096*128);
 					auto &data = this->data.blocks[my_id];
 
 						data.name = block->get_name();

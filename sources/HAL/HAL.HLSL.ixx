@@ -508,7 +508,7 @@ namespace HLSL
 	void RaytracingAccelerationStructure::create(const Resource::ptr& resource)
 	{
 
-		assert(check(resource->get_desc().Flags&ResFlags::Raytracing));
+		ASSERT(check(resource->get_desc().Flags&ResFlags::Raytracing));
 
 		HAL::Views::ShaderResource desc = { resource, HAL::Format::UNKNOWN, HAL::Views::ShaderResource::Raytracing {0} };
 		Handle::operator=(desc);

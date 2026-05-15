@@ -57,7 +57,7 @@ export namespace HAL
 			if(!other.fence) return;
 
 			if(fence)
-			assert(fence==other.fence);
+			ASSERT(fence==other.fence);
 			else
 			{
 				fence = other.fence;

@@ -1,4 +1,4 @@
-// FW1FontWrapper.cpp
+﻿// FW1FontWrapper.cpp
 
 
 
@@ -24,7 +24,7 @@ extern "C" HRESULT STDMETHODCALLTYPE FW1CreateFactory(UINT32 Version, IFW1Factor
 	if(Version != FW1_VERSION)
 		return E_FAIL;
 	
-	if(ppFactory == NULL)
+	if(ppFactory == nullptr)
 		return E_INVALIDARG;
 	
 	FW1FontWrapper::CFW1Factory *pFactory = new FW1FontWrapper::CFW1Factory;

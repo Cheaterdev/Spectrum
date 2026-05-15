@@ -8,7 +8,7 @@ using PSOState = HAL::ComputePipelineState; \
 using SimplePSO = SimpleComputePSO; \
 static const PSO ID = PSO::name;\
 std::map<Keys, PSOState::ptr> psos = {}; \
-PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {assert(psos[key.GetKey()]); return psos[key.GetKey()];}; \
+PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {ASSERT(psos[key.GetKey()]); return psos[key.GetKey()];}; \
 name(HAL::Device&device, std::function<void(SimplePSO&, Keys&)> modifier = nullptr) \
 { \
 	PSOBase::shuffle_pairs<name>([&](Keys& key) \
@@ -26,7 +26,7 @@ using PSOState = HAL::PipelineState; \
 using SimplePSO = SimpleGraphicsPSO; \
 static const PSO ID = PSO::name;\
 std::map<Keys, PSOState::ptr> psos = {}; \
-PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {assert(psos[key.GetKey()]); return psos[key.GetKey()];}; \
+PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {ASSERT(psos[key.GetKey()]); return psos[key.GetKey()];}; \
 name(HAL::Device&device, std::function<void(SimplePSO&, Keys&)> modifier = nullptr) \
 { \
 	PSOBase::shuffle_pairs<name>([&](Keys& key)\
@@ -44,7 +44,7 @@ using PSOState = HAL::StateObject; \
 using SimplePSO = SimpleWorkgraphPSO; \
 static const PSO ID = PSO::name;\
 std::map<Keys, PSOState::ptr> psos = {}; \
-PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {assert(psos[key.GetKey()]); return psos[key.GetKey()];}; \
+PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {ASSERT(psos[key.GetKey()]); return psos[key.GetKey()];}; \
 name(HAL::Device&device, std::function<void(SimplePSO&, Keys&)> modifier = nullptr) \
 { \
 	PSOBase::shuffle_pairs<name>([&](Keys& key)\

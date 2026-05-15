@@ -1,7 +1,7 @@
-export module cereal;
+﻿export module cereal;
 
 export import "_cereal.h";
-export import <stl/core.h>;
+export import stl.core;
 
 //export cereal::detail::msb_32bit;
 
@@ -121,7 +121,7 @@ export
 	void serialize(simple_log_archive& archive,
 		cereal::NameValuePair<T>& m)
 	{
-		if (strcmp(m.name, "cereal_class_version") == 0) return;
+		if (std::strcmp(m.name, "cereal_class_version") == 0) return;
 		archive.save(m);
 
 	}

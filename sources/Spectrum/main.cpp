@@ -1062,7 +1062,7 @@ protected:
 	RenderApplication()
 	{
 		THREAD_SCOPE(GUI);
-		//	assert(ppp.inited);
+		//	ASSERT(ppp.inited);
 		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
 
 		EVENT("Device");
@@ -1197,7 +1197,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	_In_ LPTSTR,
 	_In_ int)
 {
-	setlocale(LC_ALL, "");
+//	setlocale(LC_ALL, "");
 	CoInitialize(NULL);
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 

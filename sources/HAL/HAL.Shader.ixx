@@ -187,7 +187,7 @@ export
 				result->hash = crc32(result->blob);
 				result->slots_usage = result->blob.functions.front().slots_usage;
 
-			//	assert(!result->slots_usage.empty());
+			//	ASSERT(!result->slots_usage.empty());
 				return result;
 			}
 

@@ -1,10 +1,10 @@
-// CFW1GlyphSheet.cpp
+﻿// CFW1GlyphSheet.cpp
 
 
 
 #include "CFW1GlyphSheet.h"
 
-#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
+#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = nullptr; } }
 
 
 namespace FW1FontWrapper
@@ -25,7 +25,7 @@ namespace FW1FontWrapper
 		m_mipLevelCount(0),
 		m_alignWidth(0),
 
-		m_pTexture(NULL),
+		m_pTexture(nullptr),
 		
 		m_closed(false),
 		m_static(false),
@@ -34,7 +34,7 @@ namespace FW1FontWrapper
 
 		m_updatedGlyphCount(0)
 	{
-		ZeroMemory(&m_dirtyRect, sizeof(m_dirtyRect));
+		memset(&m_dirtyRect, 0, sizeof(m_dirtyRect));
 		InitializeCriticalSection(&m_sheetCriticalSection);
 		InitializeCriticalSection(&m_flushCriticalSection);
 	}
@@ -115,7 +115,7 @@ namespace FW1FontWrapper
 		}
 
 		m_textureData = new UINT8[textureSize];
-		ZeroMemory(m_textureData, textureSize);
+		memset(m_textureData, 0, textureSize);
 		m_glyphCoords = new FW1_GLYPHCOORDS[m_maxGlyphCount];
 		m_heightRange = new HeightRange(m_sheetWidth / m_alignWidth);
 		// Device texture/coord-buffer
@@ -147,7 +147,7 @@ namespace FW1FontWrapper
 	CFW1GlyphSheet::HeightRange::HeightRange(UINT totalWidth) : m_totalWidth(totalWidth)
 	{
 		m_heights = new UINT[m_totalWidth];
-		ZeroMemory(m_heights, m_totalWidth * sizeof(UINT));
+		memset(m_heights, 0, m_totalWidth * sizeof(UINT));
 	}
 
 	CFW1GlyphSheet::HeightRange::~HeightRange()

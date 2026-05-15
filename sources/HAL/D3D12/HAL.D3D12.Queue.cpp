@@ -212,8 +212,8 @@ namespace HAL
 		request.Source.File.Size = static_cast<uint>(srequest.size);
 		request.UncompressedSize = static_cast<uint>(srequest.uncompressed_size);
 
-		assert(request.Source.File.Size == srequest.size);
-		assert(request.UncompressedSize == srequest.uncompressed_size);
+		ASSERT(request.Source.File.Size == srequest.size);
+		ASSERT(request.UncompressedSize == srequest.uncompressed_size);
 
 		std::visit(overloaded{
 					[&](const StorageRequest::Buffer& buffer) {
@@ -243,10 +243,10 @@ namespace HAL
 
 
 								auto l = HAL::Device::get().get_texture_layout(srequest.resource->get_desc(), texture.subresource);
-								assert(l.size==srequest.uncompressed_size);
+								ASSERT(l.size==srequest.uncompressed_size);
 							},
 							[&](auto other) {
-								assert(false);
+								ASSERT(false);
 							}
 			}, srequest.operation);
 

@@ -240,7 +240,7 @@ namespace HAL
 			}
 			if (native_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
 			{
-				assert(native_desc.SampleDesc.Count > 0);
+				ASSERT(native_desc.SampleDesc.Count > 0);
 			}
 
 
@@ -252,7 +252,7 @@ namespace HAL
 				native_desc.Alignment = 0;
 				info = native_device->GetResourceAllocationInfo2(0, 1, &native_desc, &info2);
 			}
-			assert(info.SizeInBytes!=UINT64_MAX);
+			ASSERT(info.SizeInBytes!=UINT64_MAX);
 
 
 			native_desc.Alignment = info.Alignment;
@@ -295,7 +295,7 @@ namespace HAL
 				TEST(*this, native_device->GetDeviceRemovedReason());
 
 			alloc_info[desc] = result;
-			assert(result.size != UINT64_MAX);
+			ASSERT(result.size != UINT64_MAX);
 			return result;
 		}
 	}

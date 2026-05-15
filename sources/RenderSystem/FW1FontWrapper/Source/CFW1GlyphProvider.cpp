@@ -1,10 +1,10 @@
-// CFW1GlyphProvider.cpp
+﻿// CFW1GlyphProvider.cpp
 
 
 
 #include "CFW1GlyphProvider.h"
 
-#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
+#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = nullptr; } }
 
 
 namespace FW1FontWrapper
@@ -13,13 +13,13 @@ namespace FW1FontWrapper
 
 // Construct
     CFW1GlyphProvider::CFW1GlyphProvider() :
-        m_pGlyphAtlas(NULL),
+        m_pGlyphAtlas(nullptr),
 
-        m_pDWriteFactory(NULL),
+        m_pDWriteFactory(nullptr),
         m_maxGlyphWidth(0),
         m_maxGlyphHeight(0),
 
-        m_pFontCollection(NULL)
+        m_pFontCollection(nullptr)
     {
         InitializeCriticalSection(&m_renderTargetsCriticalSection);
         InitializeCriticalSection(&m_glyphMapsCriticalSection);
@@ -74,7 +74,7 @@ namespace FW1FontWrapper
         if (FAILED(hResult))
             return hResult;
 
-        if (pGlyphAtlas == NULL || pDWriteFactory == NULL || pFontCollection == NULL)
+        if (pGlyphAtlas == nullptr || pDWriteFactory == nullptr || pFontCollection == nullptr)
             return E_INVALIDARG;
 
         pGlyphAtlas->AddRef();
@@ -124,7 +124,7 @@ namespace FW1FontWrapper
 
             if (uniqueName.size() > 0)
             {
-                IDWriteFontFace* pOldFontFace = NULL;
+                IDWriteFontFace* pOldFontFace = nullptr;
                 pFontFace->AddRef();
                 EnterCriticalSection(&m_fontsCriticalSection);
 
@@ -263,7 +263,7 @@ namespace FW1FontWrapper
     {
         UINT glyphAtlasId = 0xffffffff;
         // Get a render target
-        IFW1DWriteRenderTarget* pRenderTarget = NULL;
+        IFW1DWriteRenderTarget* pRenderTarget = nullptr;
         EnterCriticalSection(&m_renderTargetsCriticalSection);
 
         if (!m_glyphRenderTargets.empty())
@@ -274,7 +274,7 @@ namespace FW1FontWrapper
 
         LeaveCriticalSection(&m_renderTargetsCriticalSection);
 
-        if (pRenderTarget == NULL)
+        if (pRenderTarget == nullptr)
         {
             IFW1DWriteRenderTarget* pNewRenderTarget;
             HRESULT hResult = m_pFW1Factory->CreateDWriteRenderTarget(
@@ -291,7 +291,7 @@ namespace FW1FontWrapper
                 pRenderTarget = pNewRenderTarget;
         }
 
-        if (pRenderTarget != NULL)
+        if (pRenderTarget != nullptr)
         {
             // Draw the glyph image
             DWRITE_RENDERING_MODE renderingMode = DWRITE_RENDERING_MODE_DEFAULT;

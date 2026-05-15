@@ -55,7 +55,7 @@ export
 
 
 			virtual	std::span<T> aquire(size_t offset, size_t size) override {
-				assert(false);
+				ASSERT(false);
 				return {};
 			}
 

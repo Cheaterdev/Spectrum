@@ -1,4 +1,4 @@
-// CFW1GlyphVertexDrawer.cpp
+﻿// CFW1GlyphVertexDrawer.cpp
 
 
 
@@ -6,7 +6,7 @@
 
 //import HAL;
 
-#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
+#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = nullptr; } }
 
 namespace FW1FontWrapper
 {

@@ -1,4 +1,4 @@
-export module Core:Math.Vectors;
+п»їexport module Core:Math.Vectors;
 
 import :Math.Constants;
 import :serialization;
@@ -71,14 +71,14 @@ export
 		template<int i>
 		constexpr void set_internal()
 		{
-			//static_assert(i == T::N);
+			//static_ASSERT(i == T::N);
 		}
 
 	public:
 
 		Vector()
 		{
-			memset(T::values.data(), 0, sizeof(Format) * T::N);
+			std::memset(T::values.data(), 0, sizeof(Format) * T::N);
 		}
 			bool   operator==(const  Vector& r)  const {
 				for (int t : std::ranges::views::iota(0, N))
@@ -906,16 +906,16 @@ vec3 closest_point_on_line(const vec3& a, const vec3& b, const vec3& p)
 	vec3 V = b - a;
 	float d = V.length();
 	V.normalize();
-	float t = vec3::dot(V, c);		// скалярное произведение векторов
+	float t = vec3::dot(V, c);		// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
-	// проверка на выход за границы отрезка
+	// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	if (t < 0.0f)
 		return a;
 
 	if (t > d)
 		return b;
 
-	// Вернем точку между a и b
+	// пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ a пїЅ b
 	V *= t;
 	return (a + V);
 }

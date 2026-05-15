@@ -1,4 +1,4 @@
-// CFW1FontWrapper.h
+﻿// CFW1FontWrapper.h
 
 #ifndef IncludeGuard__FW1_CFW1FontWrapper
 #define IncludeGuard__FW1_CFW1FontWrapper
@@ -15,7 +15,7 @@ namespace FW1FontWrapper
     {
         public:
             // IUnknown
-            virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject);
+            virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void** ppvObject);
 
             // IFW1FontWrapper
             virtual HRESULT STDMETHODCALLTYPE GetFactory(IFW1Factory** ppFactory);

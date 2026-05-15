@@ -1,6 +1,4 @@
-// CFW1GlyphProviderInterface.cpp
-
-import <RenderSystem.h>;
+﻿// CFW1GlyphProviderInterface.cpp
 
 
 #include "CFW1GlyphProvider.h"
@@ -10,11 +8,11 @@ namespace FW1FontWrapper {
 
 
 // Query interface
-HRESULT STDMETHODCALLTYPE CFW1GlyphProvider::QueryInterface(REFIID riid, void **ppvObject) {
-	if(ppvObject == NULL)
+HRESULT STDMETHODCALLTYPE CFW1GlyphProvider::QueryInterface(const IID& riid, void **ppvObject) {
+	if(ppvObject == nullptr)
 		return E_INVALIDARG;
 	
-	if(IsEqualIID(riid, __uuidof(IFW1GlyphProvider))) {
+	if((riid == __uuidof(IFW1GlyphProvider))) {
 		*ppvObject = static_cast<IFW1GlyphProvider*>(this);
 		AddRef();
 		return S_OK;
@@ -26,7 +24,7 @@ HRESULT STDMETHODCALLTYPE CFW1GlyphProvider::QueryInterface(REFIID riid, void **
 
 // Get glyph atlas
 HRESULT STDMETHODCALLTYPE CFW1GlyphProvider::GetGlyphAtlas(IFW1GlyphAtlas **ppGlyphAtlas) {
-	if(ppGlyphAtlas == NULL)
+	if(ppGlyphAtlas == nullptr)
 		return E_INVALIDARG;
 	
 	m_pGlyphAtlas->AddRef();
@@ -38,7 +36,7 @@ HRESULT STDMETHODCALLTYPE CFW1GlyphProvider::GetGlyphAtlas(IFW1GlyphAtlas **ppGl
 
 // Get DWrite factory
 HRESULT STDMETHODCALLTYPE CFW1GlyphProvider::GetDWriteFactory(IDWriteFactory **ppDWriteFactory) {
-	if(ppDWriteFactory == NULL)
+	if(ppDWriteFactory == nullptr)
 		return E_INVALIDARG;
 	
 	m_pDWriteFactory->AddRef();
@@ -50,7 +48,7 @@ HRESULT STDMETHODCALLTYPE CFW1GlyphProvider::GetDWriteFactory(IDWriteFactory **p
 
 // Get DWrite font collection
 HRESULT STDMETHODCALLTYPE CFW1GlyphProvider::GetDWriteFontCollection(IDWriteFontCollection **ppFontCollection) {
-	if(ppFontCollection == NULL)
+	if(ppFontCollection == nullptr)
 		return E_INVALIDARG;
 	
 	m_pFontCollection->AddRef();
@@ -111,8 +109,7 @@ const void* STDMETHODCALLTYPE CFW1GlyphProvider::GetGlyphMapFromFont(
 			delete newGlyphMap;
 		}
 		else {
-			UINT glyphAtlasId = insertNewGlyph(newGlyphMap, 0, pFontFace);
-			UNUSED(glyphAtlasId);
+			[[maybe_unused]] UINT glyphAtlasId = insertNewGlyph(newGlyphMap, 0, pFontFace);
 		}
 	}
 	

@@ -1,6 +1,6 @@
 export module Core:Holdable;
 import :Data;
-import <stl/core.h>;
+import stl.core;
 
 export
 {

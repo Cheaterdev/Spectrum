@@ -1,10 +1,10 @@
-// CFW1TextRenderer.cpp
+﻿// CFW1TextRenderer.cpp
 
 
 
 #include "CFW1TextRenderer.h"
 
-#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
+#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = nullptr; } }
 
 
 namespace FW1FontWrapper {
@@ -12,13 +12,13 @@ namespace FW1FontWrapper {
 
 // Construct
 CFW1TextRenderer::CFW1TextRenderer() :
-	m_pGlyphProvider(NULL),
+	m_pGlyphProvider(nullptr),
 	
 	m_currentFlags(0),
 	m_currentColor(1.0f),
 	
 	m_cachedGlyphMap(0),
-	m_pCachedGlyphMapFontFace(NULL),
+	m_pCachedGlyphMapFontFace(nullptr),
 	m_cachedGlyphMapFontSize(0),
 	
 	m_pDWriteTextRendererProxy(0)
@@ -43,7 +43,7 @@ HRESULT CFW1TextRenderer::initTextRenderer(
 	if(FAILED(hResult))
 		return hResult;
 	
-	if(pGlyphProvider == NULL)
+	if(pGlyphProvider == nullptr)
 		return E_INVALIDARG;
 	
 	pGlyphProvider->AddRef();

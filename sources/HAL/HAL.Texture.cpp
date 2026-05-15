@@ -105,7 +105,7 @@ namespace HAL
 						for (unsigned int z = 0; z < data.array[a]->mips[m]->depth; z++)
 						{
 							for (unsigned int w = 0; w < data.array[a]->mips[m]->num_rows; w++)
-								memcpy(data.array[a]->mips[m]->data.data() + w * data.array[a]->mips[m]->width_stride + z * data.array[a]->mips[m]->slice_stride
+								std::memcpy(data.array[a]->mips[m]->data.data() + w * data.array[a]->mips[m]->width_stride + z * data.array[a]->mips[m]->slice_stride
 									, memory.data() + w * layout.row_stride + z * layout.slice_stride,
 									data.array[a]->mips[m]->width_stride);
 						}

@@ -1,10 +1,10 @@
-// CFW1DWriteRenderTarget.cpp
+﻿// CFW1DWriteRenderTarget.cpp
 
 
 
 #include "CFW1DWriteRenderTarget.h"
 
-#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
+#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = nullptr; } }
 
 
 namespace FW1FontWrapper {
@@ -12,9 +12,9 @@ namespace FW1FontWrapper {
 
 // Construct
 CFW1DWriteRenderTarget::CFW1DWriteRenderTarget() :
-	m_pRenderTarget(NULL),
-	m_hDC(NULL),
-	m_hBlackBrush(NULL),
+	m_pRenderTarget(nullptr),
+	m_hDC(nullptr),
+	m_hBlackBrush(nullptr),
 	m_bmWidthBytes(0),
 	m_bmBytesPixel(0),
 	m_renderTargetWidth(0),
@@ -25,7 +25,7 @@ CFW1DWriteRenderTarget::CFW1DWriteRenderTarget() :
 
 // Destruct
 CFW1DWriteRenderTarget::~CFW1DWriteRenderTarget() {
-	if(m_hBlackBrush != NULL)
+	if(m_hBlackBrush != nullptr)
 		DeleteObject(m_hBlackBrush);
 	
 	SAFE_RELEASE(m_pRenderTarget);
@@ -46,7 +46,7 @@ HRESULT CFW1DWriteRenderTarget::initRenderTarget(
 	if(FAILED(hResult))
 		return hResult;
 	
-	if(pDWriteFactory == NULL)
+	if(pDWriteFactory == nullptr)
 		return E_INVALIDARG;
 	
 	m_renderTargetWidth = 384;
@@ -77,7 +77,7 @@ HRESULT CFW1DWriteRenderTarget::createRenderTarget(IDWriteFactory *pDWriteFactor
 	else {
 		IDWriteBitmapRenderTarget *pRenderTarget;
 		hResult = pGDIInterop->CreateBitmapRenderTarget(
-			NULL,
+			nullptr,
 			m_renderTargetWidth,
 			m_renderTargetHeight,
 			&pRenderTarget
@@ -90,27 +90,27 @@ HRESULT CFW1DWriteRenderTarget::createRenderTarget(IDWriteFactory *pDWriteFactor
 			hResult = S_OK;
 			
 			HDC hDC = pRenderTarget->GetMemoryDC();
-			if(hDC == NULL) {
+			if(hDC == nullptr) {
 				m_lastError = L"Failed to get render target DC";
 				hResult = E_FAIL;
 			}
 			else {
-				HBRUSH hBrush = CreateSolidBrush(RGB(0, 0, 0));
-				if(hBrush == NULL) {
+				HBRUSH hBrush = CreateSolidBrush(0UL);
+				if(hBrush == nullptr) {
 					m_lastError = L"Failed to create brush";
 					hResult = E_FAIL;
 				}
 				else {
-					HBITMAP hBitmap = static_cast<HBITMAP>(GetCurrentObject(hDC, OBJ_BITMAP));
-					if(hBitmap == NULL) {
+					HBITMAP hBitmap = static_cast<HBITMAP>(GetCurrentObject(hDC, 7 /*OBJ_BITMAP*/));
+					if(hBitmap == nullptr) {
 						m_lastError = L"GetCurrentObject failed";
 						hResult = E_FAIL;
 					}
 					else {
 						DIBSECTION dib;
-						int iResult = GetObject(hBitmap, sizeof(dib), &dib);
+						int iResult = GetObjectW(hBitmap, sizeof(dib), &dib);
 						if(iResult < sizeof(dib)) {
-							m_lastError = L"GetObject failed";
+							m_lastError = L"GetObjectW failed";
 							hResult = E_FAIL;
 						}
 						else {

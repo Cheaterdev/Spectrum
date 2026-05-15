@@ -44,7 +44,7 @@ export{
 			void track_object(T& obj)
 			{
 				auto& state = obj.ObjectState<TrackedObjectState>::get_state(this);
-				assert(!state.alias_ended);
+				ASSERT(!state.alias_ended);
 				if (!state.used)
 				{
 					state.used = true;
@@ -506,7 +506,7 @@ export{
 				stop_using(Compiled::Slot::ID);
 				auto& table = tables[Compiled::Slot::ID];
 				table.slot_id = Compiled::ID;
-				//	assert(!table.dirty);
+				//	ASSERT(!table.dirty);
 				table.dirty = true;
 
 				table.const_buffer = compiled.const_buffer;

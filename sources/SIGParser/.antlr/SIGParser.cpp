@@ -40,7 +40,7 @@ struct SIGParserStaticData final {
 SIGParserStaticData *sigParserStaticData = nullptr;
 
 void sigParserInitialize() {
-  assert(sigParserStaticData == nullptr);
+  ASSERT(sigParserStaticData == nullptr);
   auto staticData = std::make_unique<SIGParserStaticData>(
     std::vector<std::string>{
       "parse", "bind_option", "options_assign", "option", "option_block", 

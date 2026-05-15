@@ -1,4 +1,4 @@
-module GUI:Table;
+﻿module GUI:Table;
 
 import GUI;
 import :Renderer;
@@ -168,7 +168,7 @@ namespace GUI
 
                 for (uint j = 0;j < 3;j++)
                 {
-                    uint r = rand() % 3;
+                    uint r = std::rand() % 3;
 
                     if (r == 0) {
                         auto label = std::make_shared<Elements::label>();

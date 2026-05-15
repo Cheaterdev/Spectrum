@@ -71,7 +71,7 @@ export
 
 			auto res = source | need;
 
-			//assert(res.is_valid());
+			//ASSERT(res.is_valid());
 			return res;
 		}
 

@@ -1,4 +1,4 @@
-export module GUI:ScrollContainer;
+﻿export module GUI:ScrollContainer;
 import :Base;
 import :ScrollBar;
 
@@ -47,7 +47,7 @@ export namespace GUI
 				if (speed.length() > 0.3f)
 				{
 						moving(100 * speed*dt);	
-						speed *= expf(-20 * dt);
+						speed *= std::exp(-20 * dt);
 			
 				}
 			}

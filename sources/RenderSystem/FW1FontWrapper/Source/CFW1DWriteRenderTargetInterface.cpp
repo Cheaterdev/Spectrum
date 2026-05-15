@@ -1,4 +1,4 @@
-// CFW1DWriteRenderTargetInterface.cpp
+﻿// CFW1DWriteRenderTargetInterface.cpp
 
 
 
@@ -9,11 +9,11 @@ namespace FW1FontWrapper {
 
 
 // Query interface
-HRESULT STDMETHODCALLTYPE CFW1DWriteRenderTarget::QueryInterface(REFIID riid, void **ppvObject) {
-	if(ppvObject == NULL)
+HRESULT STDMETHODCALLTYPE CFW1DWriteRenderTarget::QueryInterface(const IID& riid, void **ppvObject) {
+	if(ppvObject == nullptr)
 		return E_INVALIDARG;
 	
-	if(IsEqualIID(riid, __uuidof(IFW1DWriteRenderTarget))) {
+	if((riid == __uuidof(IFW1DWriteRenderTarget))) {
 		*ppvObject = static_cast<IFW1DWriteRenderTarget*>(this);
 		AddRef();
 		return S_OK;
@@ -38,7 +38,7 @@ HRESULT STDMETHODCALLTYPE CFW1DWriteRenderTarget::DrawGlyphTemp(
 	
 	// Glyph metrics
 	DWRITE_GLYPH_METRICS glyphMetrics;
-	HRESULT hResult = pFontFace->GetDesignGlyphMetrics(&GlyphIndex, 1, &glyphMetrics, FALSE);
+	HRESULT hResult = pFontFace->GetDesignGlyphMetrics(&GlyphIndex, 1, &glyphMetrics, false);
 	if(FAILED(hResult))
 		return hResult;
 	
@@ -51,7 +51,7 @@ HRESULT STDMETHODCALLTYPE CFW1DWriteRenderTarget::DrawGlyphTemp(
 	DWRITE_GLYPH_OFFSET glyphOffset = {0.0f, 0.0f};
 	
 	DWRITE_GLYPH_RUN glyphRun;
-	ZeroMemory(&glyphRun, sizeof(glyphRun));
+	memset(&glyphRun, 0, sizeof(glyphRun));
 	glyphRun.fontFace = pFontFace;
 	glyphRun.fontEmSize = FontSize;
 	glyphRun.glyphCount = 1;
@@ -82,7 +82,7 @@ HRESULT STDMETHODCALLTYPE CFW1DWriteRenderTarget::DrawGlyphTemp(
 		MeasuringMode,
 		&glyphRun,
 		pRenderingParams,
-		RGB(255, 255, 255),
+		0x00FFFFFFul,
 		&rect
 	);
 	if(FAILED(hResult))

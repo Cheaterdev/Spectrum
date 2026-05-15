@@ -33,7 +33,7 @@ namespace HAL
 		int t = 0;
 		task = list->get_copy().read_buffer(this, 0, get_size(), [&](std::span<std::byte> memory)
 			{
-				assert(memory.size());
+				ASSERT(memory.size());
 				data.assign(memory.begin(), memory.end());
 				t = 1;
 			});
@@ -43,8 +43,8 @@ namespace HAL
 		list->execute();
 		task.wait();
 
-		assert(t == 1);
-		assert(data.size() > 0);
+		ASSERT(t == 1);
+		ASSERT(data.size() > 0);
 		return data;
 	}
 
@@ -52,7 +52,7 @@ namespace HAL
 	{
 		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
 		{
-			assert(buffer_data == nullptr);
+			ASSERT(buffer_data == nullptr);
 			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
 		}
 

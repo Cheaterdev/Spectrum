@@ -7,7 +7,7 @@ import :Math.Quaternion;
 import :Math.Matrices;
 import :Math.Primitive;
 
-import <stl/memory.h>;
+import stl.memory;
 import :serialization;
 
 import :Math.AABB;

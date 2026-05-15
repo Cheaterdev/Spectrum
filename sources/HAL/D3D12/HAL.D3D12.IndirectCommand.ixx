@@ -54,7 +54,7 @@ export namespace HAL
 			commandSignatureDesc.NumArgumentDescs = _countof(argumentDescs);
 			commandSignatureDesc.ByteStride = total_size; //(0 + ... + sizeof(Underlying<Args>));
 
-			//	assert(commandSignatureDesc.ByteStride == size);
+			//	ASSERT(commandSignatureDesc.ByteStride == size);
 			TEST(device,
 			     device.native_device->CreateCommandSignature(&commandSignatureDesc, layout ? layout->get_native().Get()
 				     : nullptr, IID_PPV_ARGS(&command_signature)));
