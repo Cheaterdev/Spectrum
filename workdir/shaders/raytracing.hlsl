@@ -266,7 +266,7 @@ void ShadowRaygenShader()
 	{
 
 		float hit_rate = 0;
-		int samples = 1;// payload2.recursion < 2 ? 3 : 1;
+		int samples = 16;// payload2.recursion < 2 ? 3 : 1;
 		for (int i = 0; i < samples; i++)
 		{
 			float3 dir = GetRandomDir(tc, frame.GetSunDir(), 0.02, frame.GetTime() + float(i) / 10);
@@ -276,7 +276,7 @@ void ShadowRaygenShader()
 			RayDesc ray;
 			ray.Origin = pos;
 			ray.Direction = dir;
-			ray.TMin = 0.001;
+			ray.TMin = 0.1;
 			ray.TMax = 10000.0;
 			ShadowPass(raytracing.GetScene(), ray, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, payload_shadow);
 

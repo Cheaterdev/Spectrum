@@ -35,7 +35,8 @@ class FrameGraphTimelineCanvas : public dock_base
         UINT                 call_id   = 0;
         HAL::CommandListType queue     = HAL::CommandListType::DIRECT;
         bool                 put_fence = false;
-        FrameGraph::Pass*    wait_pass = nullptr;
+        // Cross-queue deps resolved at rebuild time — no raw pointers.
+        std::vector<std::pair<HAL::CommandListType, UINT>> cross_queue_deps;
     };
 
     struct ResourceCell
@@ -69,9 +70,10 @@ class FrameGraphTimelineCanvas : public dock_base
     vec2  m_offset = { 0.0f, 0.0f };
     float m_zoom   = 1.0f;
 
-    // Selection state — updated on thumbnail click.
-    UINT m_sel_call_id = std::numeric_limits<UINT>::max();
-    int  m_sel_ri      = -1;
+    // Selection state — updated on thumbnail/pass click.
+    UINT m_sel_call_id      = std::numeric_limits<UINT>::max();
+    std::vector<UINT> m_sel_wait_call_ids;
+    int  m_sel_ri           = -1;
 
     // -----------------------------------------------------------------------
     //  scroll_container with no scrollbars and no built-in drag.
@@ -213,13 +215,7 @@ class FrameGraphTimelineCanvas : public dock_base
 
         virtual bool on_wheel(mouse_wheel type, float value, vec2 wheel_pos) override
         {
-            float prev_zoom   = owner.m_zoom;
-            owner.m_zoom     *= 1.0f + value / 10.0f;
-            owner.m_zoom      = Math::clamp(owner.m_zoom, 0.05f, 20.0f);
-            float cx          = get_render_bounds().x;
-            float pivot       = wheel_pos.x - cx - LABEL_W - owner.m_offset.x;
-            owner.m_offset.x  = wheel_pos.x - cx - LABEL_W - pivot * (owner.m_zoom / prev_zoom);
-            owner.apply_zoom();
+            owner.m_offset.y += value * 60.0f;
             owner.apply_pan();
             return true;
         }
@@ -243,6 +239,88 @@ class FrameGraphTimelineCanvas : public dock_base
                 return true;
             }
             return image::on_mouse_action(action, button, pos);
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    //  Transparent clickable overlay for a pass block.
+    // -----------------------------------------------------------------------
+    struct pass_button : GUI::base
+    {
+        using ptr = std::shared_ptr<pass_button>;
+        std::function<void()> on_click;
+
+        pass_button()
+        {
+            clickable   = true;
+            docking     = GUI::dock::NONE;
+            width_size  = GUI::size_type::FIXED;
+            height_size = GUI::size_type::FIXED;
+        }
+
+        virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override
+        {
+            if (button == mouse_button::LEFT && action == mouse_action::DOWN && on_click)
+            {
+                on_click();
+                return true;
+            }
+            return base::on_mouse_action(action, button, pos);
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    //  Info panel shown in the preview dock when a pass is clicked.
+    // -----------------------------------------------------------------------
+    struct PassInfoContent : GUI::base
+    {
+        using ptr = std::shared_ptr<PassInfoContent>;
+
+        PassInfoContent(const PassInfo& info, const std::vector<PassInfo>& all_passes)
+        {
+            docking     = GUI::dock::FILL;
+            width_size  = GUI::size_type::MATCH_PARENT;
+            height_size = GUI::size_type::MATCH_PARENT;
+
+            float y = 8.0f;
+            auto add_row = [&](const std::string& text)
+            {
+                auto lbl         = std::make_shared<label>();
+                lbl->text        = text;
+                lbl->font_size   = 11.0f;
+                lbl->docking     = GUI::dock::NONE;
+                lbl->width_size  = GUI::size_type::MATCH_PARENT;
+                lbl->height_size = GUI::size_type::FIXED;
+                lbl->size        = { 0.0f, 20.0f };
+                lbl->pos         = { 8.0f, y };
+                add_child(lbl);
+                y += 20.0f;
+            };
+
+            add_row("Pass:   " + to_str(info.name));
+            add_row("Queue:  " + std::string(
+                info.queue == HAL::CommandListType::DIRECT ? "Direct" : "Compute"));
+            add_row("ID:     #" + std::to_string(info.call_id));
+            add_row(std::string("Fence:  ") + (info.put_fence ? "yes" : "no"));
+
+            auto queue_name = [](HAL::CommandListType t) -> const char* {
+                switch (t) {
+                    case HAL::CommandListType::DIRECT:  return "Direct";
+                    case HAL::CommandListType::COMPUTE: return "Compute";
+                    case HAL::CommandListType::COPY:    return "Copy";
+                    default:                            return "?";
+                }
+            };
+            for (auto& [type, dep_id] : info.cross_queue_deps)
+            {
+                std::string dep_str = "#" + std::to_string(dep_id);
+                for (auto& p : all_passes)
+                    if (p.call_id == dep_id)
+                        { dep_str = to_str(p.name) + "  (#" + std::to_string(dep_id) + ")"; break; }
+                add_row(std::string("Sync ") + queue_name(type) + ":  " + dep_str);
+            }
+            if (info.cross_queue_deps.empty())
+                add_row("Sync:   \xe2\x80\x94");  // em dash
         }
     };
 
@@ -376,10 +454,13 @@ class FrameGraphTimelineCanvas : public dock_base
                                     m_pan   = (dst - src * fit) * 0.5f;
                                 }
 
-                                bool is_3d    = (d.z > 1);
-                                std::string t = is_3d ? "Texture3D" : "Texture2D";
+                                const bool is_cube = !!dynamic_cast<HAL::CubeView*>(m_alloc->view.get());
+                                const bool is_3d   = !is_cube && (d.z > 1);
+                                std::string t = is_cube ? "TextureCube"
+                                              : is_3d   ? "Texture3D" : "Texture2D";
                                 std::string s = std::to_string(d.x) + "x" + std::to_string(d.y)
-                                              + (is_3d ? "x" + std::to_string(d.z) : "");
+                                              + (is_cube ? "x6"
+                                              : is_3d   ? "x" + std::to_string(d.z) : "");
                                 run_on_ui([this, t, s]()
                                 {
                                     m_type_lbl->text = "Type:     " + t;
@@ -441,6 +522,10 @@ class FrameGraphTimelineCanvas : public dock_base
                             tex3d.GetCamera()     = snap_cam_cb;
                             compute.set(tex3d);
                         }
+                        else if (dynamic_cast<HAL::CubeView*>(m_alloc->view.get()))
+                        {
+                            compute.set_pipeline<PSOS::FrameGraph_Debug_NotImplemented>();
+                        }
                         else
                         {
                             compute.set_pipeline<PSOS::FrameGraph_Debug_NotImplemented>();
@@ -477,6 +562,72 @@ class FrameGraphTimelineCanvas : public dock_base
                                     m_buffer_tree->visible = true;
                                 });
                             }
+                        }
+                        else if (auto* src = dynamic_cast<HAL::ByteBufferView*>(m_alloc->view.get()))
+                        {
+                            if (!m_buffer_inited)
+                            {
+                                m_buffer_inited  = true;
+                                uint64 sz = src->get_desc().as_buffer().SizeInBytes;
+                                run_on_ui([this, sz]()
+                                {
+                                    m_type_lbl->text       = "Type:     ByteBuffer";
+                                    m_dim_lbl->text        = "Size:     " + std::to_string(sz) + "B";
+                                    m_img->visible         = false;
+                                    m_buffer_tree->visible = false;
+                                });
+                            }
+                        }
+                        else if (auto* src = dynamic_cast<HAL::CounterView*>(m_alloc->view.get()))
+                        {
+                            if (!m_buffer_inited)
+                            {
+                                m_buffer_inited  = true;
+                                run_on_ui([this]()
+                                {
+                                    m_type_lbl->text       = "Type:     Counter";
+                                    m_dim_lbl->text        = "Size:     1 x 4B";
+                                    m_img->visible         = false;
+                                    m_buffer_tree->visible = false;
+                                });
+                            }
+                        }
+                        else if (auto* src = dynamic_cast<HAL::RTXSceneView*>(m_alloc->view.get()))
+                        {
+                            if (!m_buffer_inited)
+                            {
+                                m_buffer_inited  = true;
+                                run_on_ui([this]()
+                                {
+                                    m_type_lbl->text       = "Type:     RTX Scene";
+                                    m_dim_lbl->text        = "Size:     (BVH)";
+                                    m_img->visible         = false;
+                                    m_buffer_tree->visible = false;
+                                });
+                            }
+                        }
+                        else if (auto* src = dynamic_cast<HAL::BufferView*>(m_alloc->view.get()))
+                        {
+                            // FormattedBufferView<T,F> — template, no common non-template base
+                            if (!m_buffer_inited)
+                            {
+                                m_buffer_inited  = true;
+                                uint64 sz = src->get_desc().as_buffer().SizeInBytes;
+                                run_on_ui([this, sz]()
+                                {
+                                    m_type_lbl->text       = "Type:     FormattedBuffer";
+                                    m_dim_lbl->text        = "Size:     " + std::to_string(sz) + "B";
+                                    m_img->visible         = false;
+                                    m_buffer_tree->visible = false;
+                                });
+                            }
+                        }
+                        else
+                        {
+                            run_on_ui([this]()
+                            {
+                                m_type_lbl->text = "Type:     (unhandled view type)";
+                            });
                         }
                     }
                 });
@@ -563,6 +714,7 @@ class FrameGraphTimelineCanvas : public dock_base
     struct PassLabel
     {
         label::ptr           lbl;
+        pass_button::ptr     btn;
         UINT                 call_id;
         HAL::CommandListType queue;
     };
@@ -592,6 +744,7 @@ class FrameGraphTimelineCanvas : public dock_base
     static const float4 C_TEXT_DIM;
     static const float4 C_SEL_PASS;
     static const float4 C_SEL_RESOURCE;
+    static const float4 C_SEL_WAIT_PASS;
 
     // -----------------------------------------------------------------------
     //  Helpers
@@ -699,7 +852,18 @@ private:
             info.call_id   = pass->call_id;
             info.queue     = pass->get_type();
             info.put_fence = pass->put_fence;
-            info.wait_pass = pass->wait_pass;
+            static const HAL::CommandListType all_types[] = {
+                HAL::CommandListType::DIRECT,
+                HAL::CommandListType::COMPUTE,
+                HAL::CommandListType::COPY,
+            };
+            for (auto type : all_types)
+            {
+                if (type == pass->get_type()) continue;
+                const auto* dep = pass->sync_state.values[type];
+                if (!dep || dep->call_id == pass->call_id) continue;
+                info.cross_queue_deps.push_back({ type, dep->call_id });
+            }
             m_passes.push_back(info);
             if (pass->call_id > m_max_call_id)
                 m_max_call_id = pass->call_id;
@@ -918,7 +1082,11 @@ private:
             }
 
         // Pass-name labels in grid scroll (added last, render on top of images).
-        for (auto& pl : m_pass_labels) m_grid_scroll->remove_child(pl.lbl);
+        for (auto& pl : m_pass_labels)
+        {
+            m_grid_scroll->remove_child(pl.lbl);
+            m_grid_scroll->remove_child(pl.btn);
+        }
         m_pass_labels.clear();
 
         for (auto& pass : m_passes)
@@ -928,7 +1096,26 @@ private:
                                   to_str(pass.name), C_TEXT_BRIGHT, LABEL_FONT);
             lbl->pos = { 0.0f, py };
             m_grid_scroll->add_child(lbl);
-            m_pass_labels.push_back({ lbl, pass.call_id, pass.queue });
+
+            auto btn = std::make_shared<pass_button>();
+            btn->pos = { 0.0f, (pass.queue == HAL::CommandListType::COMPUTE ? LANE_H : 0.0f) + PAD };
+            m_grid_scroll->add_child(btn);
+
+            PassInfo captured = pass;
+            btn->on_click = [this, captured]()
+            {
+                m_sel_call_id = captured.call_id;
+                m_sel_ri      = -1;
+                m_sel_wait_call_ids.clear();
+                for (auto& [type, dep_id] : captured.cross_queue_deps)
+                    m_sel_wait_call_ids.push_back(dep_id);
+
+                m_preview_panel->remove_all();
+                m_preview_panel->add_child(
+                    std::make_shared<PassInfoContent>(captured, m_passes));
+            };
+
+            m_pass_labels.push_back({ lbl, btn, pass.call_id, pass.queue });
         }
 
         m_ready = true;
@@ -964,9 +1151,12 @@ private:
 
         for (auto& pl : m_pass_labels)
         {
-            float py = (pl.queue == HAL::CommandListType::COMPUTE ? LANE_H : 0.0f) + PAD + 2.0f;
-            pl.lbl->pos  = { LABEL_W + pl.call_id * cw + PAD + 2.0f, py };
+            float lane_off = (pl.queue == HAL::CommandListType::COMPUTE ? LANE_H : 0.0f);
+            float col_x    = LABEL_W + pl.call_id * cw;
+            pl.lbl->pos  = { col_x + PAD + 2.0f, lane_off + PAD + 2.0f };
             pl.lbl->size = { block_w, block_h };
+            pl.btn->pos  = { col_x + PAD, lane_off + PAD };
+            pl.btn->size = { cw - 2.0f * PAD, PASS_H - 2.0f * PAD };
         }
 
         for (int ri = 0; ri < (int)m_resources.size(); ri++)
@@ -1013,6 +1203,63 @@ private:
     }
 
     // -----------------------------------------------------------------------
+    //  Bezier spline batch — flushes pending rects and draws bezier curves
+    //  using the CanvasLines PSO.  Must be called AFTER all dr() calls.
+    // -----------------------------------------------------------------------
+    void draw_splines(Context& c,
+                      const std::vector<std::pair<float2, float2>>& curves,
+                      const float4& color)
+    {
+        if (curves.empty()) return;
+
+        vec2 screen_sz = user_ui->size.get();
+
+        c.renderer->flush(c);
+
+        Slots::FlowGraph graph_data;
+        graph_data.GetSize()        = vec4(float2(get_render_bounds().w, get_render_bounds().h), screen_sz);
+        graph_data.GetOffset_size() = { 0.0f, 0.0f, 1.0f, 0.0f };
+        graph_data.GetInv_pixel()   = vec2(1.0f, 1.0f) / screen_sz;
+        c.command_list->get_graphics().set(graph_data);
+
+        std::vector<::Table::VSLine> verts;
+        verts.reserve(curves.size() * 4);
+
+        for (auto& [from, to] : curves)
+        {
+            float2 p1 = from / screen_sz;
+            float2 p4 = to   / screen_sz;
+            float  mx = (p1.x + p4.x) * 0.5f;
+            float2 p2 = { mx, p1.y };
+            float2 p3 = { mx, p4.y };
+
+            verts.push_back({ p1, color });
+            verts.push_back({ p2, color });
+            verts.push_back({ p3, color });
+            verts.push_back({ p4, color });
+        }
+
+        c.command_list->get_graphics().set_pipeline<PSOS::CanvasLines>();
+        c.command_list->get_graphics().set_topology(
+            HAL::PrimitiveTopologyType::PATCH, HAL::PrimitiveTopologyFeed::LIST, false, 4);
+
+        auto data = c.command_list->place_data(sizeof(::Table::VSLine) * verts.size(),
+                                               sizeof(::Table::VSLine));
+        c.command_list->write<::Table::VSLine>(data, verts);
+
+        auto view = data.resource->create_view<HAL::StructuredBufferView<::Table::VSLine>>(
+            *c.command_list,
+            StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,
+                                      counterType::NONE });
+
+        Slots::LineRender linedata;
+        linedata.GetVb() = view;
+        c.command_list->get_graphics().set(linedata);
+
+        c.command_list->get_graphics().draw((int)verts.size(), 0);
+    }
+
+    // -----------------------------------------------------------------------
     //  draw_grid_content — called by grid_canvas::draw().
     //  canvas.get_render_bounds() reflects the scroll offset, so dep_x/lane_y/
     //  row_y return correct screen coordinates without manual m_offset.
@@ -1022,7 +1269,9 @@ private:
         const rect  b  = canvas.get_render_bounds();
         const float bx = b.x, by = b.y, bh = b.h;
 
-        // Selected pass column highlight (drawn first, behind everything).
+        // Selected and waited-for pass column highlights (drawn first, behind everything).
+        for (UINT wid : m_sel_wait_call_ids)
+            dr(c, C_SEL_WAIT_PASS, dep_x(wid, bx), by, col_w(), bh);
         if (m_sel_call_id != std::numeric_limits<UINT>::max())
             dr(c, C_SEL_PASS, dep_x(m_sel_call_id, bx), by, col_w(), bh);
 
@@ -1040,21 +1289,7 @@ private:
             dr(c, pc, px + PAD, py + PAD, col_w() - 2.0f * PAD, PASS_H - 2.0f * PAD);
 
             if (pass.put_fence)
-                dr(c, C_FENCE, px + col_w() - PAD - 1.5f, by, 3.0f, LANE_COUNT * LANE_H);
-        }
-
-        // cross-queue dependency connectors
-        for (auto& pass : m_passes)
-        {
-            if (!pass.wait_pass) continue;
-            float from_cx = dep_x(pass.wait_pass->call_id, bx) + col_w() * 0.5f;
-            float to_cx   = dep_x(pass.call_id,            bx) + col_w() * 0.5f;
-            float from_cy = lane_y(pass.wait_pass->get_type(), by) + LANE_H * 0.5f;
-            float to_cy   = lane_y(pass.queue,                 by) + LANE_H * 0.5f;
-            float min_x   = std::min(from_cx, to_cx);
-            dr(c, C_FENCE_LINK, min_x,      from_cy - 1.0f, std::abs(to_cx - from_cx), 2.0f);
-            float min_y = std::min(from_cy, to_cy);
-            dr(c, C_FENCE_LINK, to_cx - 1.0f, min_y, 2.0f, std::abs(to_cy - from_cy));
+                dr(c, C_FENCE, px + col_w() - PAD - 1.5f, lane_y(pass.queue, by), 3.0f, LANE_H);
         }
 
         // resource tracks
@@ -1107,6 +1342,24 @@ private:
                     dr(c, C_DELETED,  cx + PAD, cy, 5.0f, CELL_H);
             }
         }
+
+        // Cross-queue bezier connectors — drawn last so they appear on top.
+        if (m_sel_call_id != std::numeric_limits<UINT>::max())
+        {
+            std::vector<std::pair<float2, float2>> curves;
+            for (auto& pass : m_passes)
+            {
+                if (pass.call_id != m_sel_call_id) continue;
+                float to_cx = dep_x(pass.call_id, bx) + col_w() * 0.5f;
+                float to_cy = lane_y(pass.queue,   by) + LANE_H * 0.5f;
+                for (auto& [type, dep_id] : pass.cross_queue_deps)
+                    curves.push_back({ { dep_x(dep_id, bx) + col_w() * 0.5f,
+                                         lane_y(type,   by) + LANE_H * 0.5f },
+                                       { to_cx, to_cy } });
+                break;
+            }
+            draw_splines(c, curves, C_FENCE_LINK);
+        }
     }
 
 };
@@ -1133,8 +1386,9 @@ const float4 FrameGraphTimelineCanvas::C_SEPARATOR    = { 0.32f, 0.32f, 0.38f, 1
 const float4 FrameGraphTimelineCanvas::C_LIFETIME     = { 0.55f, 0.55f, 0.60f, 0.6f };
 const float4 FrameGraphTimelineCanvas::C_TEXT_BRIGHT  = { 0.90f, 0.90f, 0.92f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_TEXT_DIM     = { 0.55f, 0.55f, 0.58f, 1.0f };
-const float4 FrameGraphTimelineCanvas::C_SEL_PASS     = { 1.00f, 0.82f, 0.16f, 0.20f };
-const float4 FrameGraphTimelineCanvas::C_SEL_RESOURCE = { 1.00f, 0.82f, 0.16f, 0.12f };
+const float4 FrameGraphTimelineCanvas::C_SEL_PASS      = { 1.00f, 0.82f, 0.16f, 0.20f };
+const float4 FrameGraphTimelineCanvas::C_SEL_RESOURCE  = { 1.00f, 0.82f, 0.16f, 0.12f };
+const float4 FrameGraphTimelineCanvas::C_SEL_WAIT_PASS = { 0.40f, 0.72f, 1.00f, 0.15f };
 
 // ---------------------------------------------------------------------------
 //  Factory

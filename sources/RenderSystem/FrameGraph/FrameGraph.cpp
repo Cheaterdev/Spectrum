@@ -741,7 +741,7 @@ namespace FrameGraph
 
 						queued_lists[list_type].emplace_back(commandList);
 
-						//	if(pass->put_fence)		//////////////////////// ARGH!!!!
+							if(pass->put_fence)		//////////////////////// ARGH!!!!
 						{
 							pass->fence_end = HAL::Device::get().get_queue(list_type)->execute(queued_lists[list_type]);
 

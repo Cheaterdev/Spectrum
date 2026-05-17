@@ -842,13 +842,7 @@ public:
 			}
 
 
-			{
-				auto table = std::make_shared<GUI::Elements::Table>();
-				table->InitTest();
-				//text->text = f;
-				d->get_tabs()->add_page("table", table);
-			}
-
+	
 
 			{
 				GUI::Elements::list_box::ptr l(new GUI::Elements::list_box());

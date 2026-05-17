@@ -88,106 +88,14 @@ public:
 		width_size = GUI::size_type::MATCH_PARENT;
 		height_size = GUI::size_type::MATCH_PARENT;
 
-		docker = std::make_shared<GUI::Elements::dock_base>();
-		docker->docking = GUI::dock::FILL;
-	//	docker->draw_helper = true;
-		add_child(docker);
-
-
-		auto table  = std::make_shared<GUI::Elements::Table>();
-
-			auto dock = docker->get_dock(GUI::dock::BOTTOM);
-				dock->size = { 256, 256 };
-		dock->get_tabs()->add_page("Pipeline", table);
-
 		{
 			auto timeline = FrameGraphDebug::create_timeline_layout(_graph);
 			timeline->docking = GUI::dock::FILL;
-			dock->get_tabs()->add_page("Timeline", timeline);
+			add_child( timeline);
 		}
 
 		//add_child(table);
 
-
-		auto resource_selector = std::make_shared<combo_box>();
-		resource_selector->docking = GUI::dock::TOP;
-		docker->add_child(resource_selector);
-
-
-		passes_list = std::make_shared<list_box>();
-		passes_list->docking = GUI::dock::LEFT;
-		passes_list->size = { 256,256 };
-		docker->add_child(passes_list);
-
-
-		rendered_image = std::make_shared<image>();
-		rendered_image->docking = GUI::dock::FILL;
-		//	rendered_image->size={256,256};
-		docker->add_child(rendered_image);
-
-		buffer_info = std::make_shared<GUI::Elements::tree<member_item,object_tree_creator>>();
-		buffer_info->docking = GUI::dock::FILL;
-//		rendered_text->font_size = 10;
-		//	rendered_image->size={256,256};
-		docker->add_child(buffer_info);
-
-
-		for (auto& pass : graph.get_pipeline()->GetUsedPassNamesList()	)
-		{
-		
-
-
-		}
-
-
-
-		for (auto& name : graph.get_pipeline()->GetUsedResourcesList()	)
-		{
-
-			table->AddRow(convert(name));
-			resource_to_index[convert(name)] = resource_to_index.size() ;
-		}
-		graph.on_compile.register_handler(this, [this,table](const FrameGraph::Graph& graph) {
-
-			if (passes_inited)	   return;
-			passes_inited = true;
-
-			for (auto& real_pass : graph.builder.enabled_passes)
-			{
-				table->AddColumn(convert(real_pass->name));
-				pass_to_index[convert(real_pass->name)] = pass_to_index.size();
-
-			}
-
-
-			for (auto& real_pass : graph.builder.enabled_passes)
-			{
-
-				int pass_index = pass_to_index[convert(real_pass->name)];
-				if (real_pass)
-				for (auto& [info,flags] : real_pass->used.resource_flags)
-				{
-					int resource_index = resource_to_index[info->name];
-
-					if (check(flags&FrameGraph::WRITEABLE_FLAGS))
-					{
-						button::ptr property = std::make_shared<button>();
-						property->get_label()->text = "WRITE";
-			//		property->draw_helper = true;
-					table->SetCell({  pass_index,resource_index }, property);
-					}
-					else
-					{
-
-						base::ptr property = std::make_shared<base>();
-					property->draw_helper = true;
-					table->SetCell({  pass_index,resource_index }, property);
-					}
-				}
-				//	
-				//	graph.builder.passes[]
-			}
-			});
 
 
 

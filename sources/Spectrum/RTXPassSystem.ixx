@@ -62,13 +62,8 @@ void PassDefault<Passes::RTXPass>::render(
     context.graph->set_slot(SlotID::FrameInfo,  compute);
     context.graph->set_slot(SlotID::SceneData,  compute);
 
-    GBuffer gbuffer;
-    gbuffer.albedo          = *data.gbuffer.GBuffer_Albedo;
-    gbuffer.normals         = *data.gbuffer.GBuffer_Normals;
-    gbuffer.depth           = *data.gbuffer.GBuffer_Depth;
-    gbuffer.specular        = *data.gbuffer.GBuffer_Specular;
-    gbuffer.speed           = *data.gbuffer.GBuffer_Speed;
-    gbuffer.depth_prev_mips = *data.gbuffer.GBuffer_DepthPrev;
+    GBuffer gbuffer=GBufferViewDesc::actualize(data.gbuffer);
+
 
     {
         Slots::Raytracing rtx;
