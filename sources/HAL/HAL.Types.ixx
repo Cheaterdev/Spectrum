@@ -257,6 +257,7 @@ struct ResourceState
 
 	CommandListType get_best_cmd_type() const;
 	bool has_write_bits() const;
+			 bool has_copy_bits() const;
 
 	bool is_no_access() const;
 	bool is_valid(ResourceType) const;
@@ -589,7 +590,8 @@ extern const  ResourceState UNKNOWN ;
 		Virtual = 1 << 7,
 		Swapchain = 1<<8,
 		WriteInitialized = 1<<9,
-		DisableStateTracking = 1<<10
+		DisableStateTracking = 1<<10,
+		Immutable            = 1<<11   // upload once (CopyDest → read), no further transitions
 	};
 
 	struct TextureDesc

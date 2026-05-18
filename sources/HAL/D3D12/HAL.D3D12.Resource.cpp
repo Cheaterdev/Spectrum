@@ -288,6 +288,7 @@ namespace HAL
 
 	void Resource::set_name(std::string name)
 	{
+		if(!this->name.empty()&&name.empty())	return;
 		ASSERT(name.size()>0);
 		this->name = name;
 		get_dx()->SetName(convert(name).c_str());

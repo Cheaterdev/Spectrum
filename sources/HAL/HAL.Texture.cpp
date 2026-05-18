@@ -134,6 +134,7 @@ namespace HAL
 		else
 			desc = HAL::ResourceDesc::Tex2D(data.format, { data.width, data.height }, data.array_size, data.mip_maps);
 
+		desc.Flags |= HAL::ResFlags::Immutable;
 		resource = std::make_shared<HAL::TextureResource>(desc,  desc.is_virtual()?HeapType::RESERVED:HeapType::DEFAULT, TextureLayout::COPY_DEST);
 	
 		auto list = (HAL::Device::get().get_upload_list());
@@ -199,6 +200,7 @@ namespace HAL
 			desc = HAL::ResourceDesc::Tex3D(tex_data->format, { tex_data->width, tex_data->height, tex_data->depth }, tex_data->mip_maps);
 		else
 			desc = HAL::ResourceDesc::Tex2D(tex_data->format, { tex_data->width, tex_data->height }, tex_data->array_size, tex_data->mip_maps);
+		desc.Flags |= HAL::ResFlags::Immutable;
 		auto texture = std::make_shared<Texture>(desc,  TextureLayout::COPY_DEST);
 
 

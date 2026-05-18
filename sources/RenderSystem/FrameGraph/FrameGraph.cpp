@@ -1132,12 +1132,12 @@ namespace FrameGraph
 
 					  // 	
 					//info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
-					if (compatible_next && compatible_prev)	
+				/*	if (compatible_next && compatible_prev)	
 					{
 						// do a split transition
 						info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
 					}
-					else if (compatible_next_layout)
+					else*/ if (compatible_next_layout)
 					{
 						// next pass should rewrite its first state
 						info.resource->get_state_manager().prepare_state(next_cmd.get(), prev_gpu_state);			  // add sync&access info
@@ -1348,7 +1348,7 @@ namespace FrameGraph
 
 
 	//					if (debug)
-//res.resource->debug_transitions = info->name=="PSSM_Depths"; // TODO: move everywhere		
+//res.resource->debug_transitions = info->name=="RTXDebug"; // TODO: move everywhere		
 
 
 						res.resource->set_name(info->name);

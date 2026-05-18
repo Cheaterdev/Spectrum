@@ -29,7 +29,6 @@
 #include "Profiler.h"
 #include "UI_Render.h"
 #include "../pass_defaults.h"
-#include "../PipelineBase.h"
 
 using namespace FrameGraph;
 namespace Pipelines

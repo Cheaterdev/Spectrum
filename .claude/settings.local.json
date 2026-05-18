@@ -19,7 +19,9 @@
       "Bash(Remove-Item \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\TextureAsset.cereal.cpp\")",
       "Bash(cd /d \"C:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\")",
       "Bash(powershell -Command ' *)",
-      "Bash(grep -rn \"memcpy\\\\|memset\\\\|memmove\\\\|memcmp\\\\|strlen\\\\|strcmp\\\\|strncmp\\\\|sprintf\\\\|snprintf\\\\|printf\\\\|fprintf\" --include=\"*.ixx\" --include=\"*.cpp\" --include=\"*.h\" --include=\"*.hpp\" ! -path \"./3rdparty/*\" ! -path \"./Modules/*\")"
+      "Bash(grep -rn \"memcpy\\\\|memset\\\\|memmove\\\\|memcmp\\\\|strlen\\\\|strcmp\\\\|strncmp\\\\|sprintf\\\\|snprintf\\\\|printf\\\\|fprintf\" --include=\"*.ixx\" --include=\"*.cpp\" --include=\"*.h\" --include=\"*.hpp\" ! -path \"./3rdparty/*\" ! -path \"./Modules/*\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

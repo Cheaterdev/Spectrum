@@ -54,7 +54,15 @@ namespace HAL
 		return false;
 	}
 
+		 bool ResourceState::has_copy_bits() const
+	{
 
+		static const TextureLayout LAYOUT_DIRECT = TextureLayout::COPY_DEST;
+		if (check(layout & LAYOUT_DIRECT))
+			return true;
+
+		return false;
+	}
 	CommandListType get_best_cmd_type(TextureLayout layout)
 	{
 		//if(layout==TextureLayout::COPY_QUEUE) return CommandListType::COPY;

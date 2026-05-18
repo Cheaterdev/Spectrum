@@ -3,7 +3,6 @@ export module FrameGraph:Base;
 import Core;
 import HAL;
 import <HAL.h>;
-#include "autogen/PipelineBase.h"
 
 using namespace HAL;
 
