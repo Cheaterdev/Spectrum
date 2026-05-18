@@ -290,6 +290,8 @@ public:
 
 	virtual bool on_wheel(mouse_wheel type, float value, vec2 wheel_pos) override
 	{
+
+		if(!rendered_image)	   return false;
 		float prev_scale = img_scale;
 
 		camera_3d.input(value / 100);

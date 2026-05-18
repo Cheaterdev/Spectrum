@@ -76,9 +76,10 @@ export
 
 	public:
 
-		Vector()
+		constexpr Vector()
 		{
-			std::memset(T::values.data(), 0, sizeof(Format) * T::N);
+			for (int i = 0; i < T::N; i++)
+				T::values[i] = Format{};
 		}
 			bool   operator==(const  Vector& r)  const {
 				for (int t : std::ranges::views::iota(0, N))
@@ -99,9 +100,9 @@ export
 			return std::strong_ordering::equal;
 			//return values<=>r.values;
 			}
-		Vector(const Format &t)
+		constexpr Vector(const Format &t)
 		{
-		for (auto&v:values)
+			for (auto& v : values)
 				v = t;
 		}
 
@@ -490,7 +491,7 @@ export
 
 		std::array<T, Count> values;
 
-		vector_data_t() {}
+		constexpr vector_data_t() : values{} {}
 
 
 		static std::string get_typename()
@@ -520,7 +521,7 @@ export
 				T x, y;
 			};
 		};
-		vector_data_t() {}
+		constexpr vector_data_t() : values{} {}
 
 		
 		static std::string get_typename()
@@ -563,7 +564,7 @@ export
 			};
 		};
 
-		vector_data_t() {}
+		constexpr vector_data_t() : values{} {}
 
 		
 		static std::string get_typename()
@@ -617,9 +618,9 @@ export
 			
 		};
 
-		vector_data_t() {}
+		constexpr vector_data_t() : values{} {}
 
-		
+
 		static std::string get_typename()
 		{
 			static const std::string name = std::string(typeid(T).name()) + std::to_string(4);

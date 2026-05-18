@@ -228,6 +228,7 @@ namespace FrameGraph
 			info->used_end.reset();
 		}
 		passed_resources.clear();
+		external_pass.reset();
 		//resources.clear();
 	}
 
@@ -612,6 +613,34 @@ namespace FrameGraph
 			pass->sync_state_with_self.max(pass);
 		}
 
+		// Inject a fake pass that owns passed and static resources as their creator.
+		// Added after call_id/sync-state assignment so it doesn't disturb scheduling;
+		// call_id=0 places it before all real passes in the timeline.
+		{
+			auto ext = std::make_shared<ExternalPass>();
+			ext->call_id = 0;
+
+			for (auto* alloc : builder.passed_resources)
+			{
+				ext->used.resources.insert(alloc);
+				ext->used.resource_flags[alloc] = ResourceFlags::RenderTarget;
+				ext->used.resource_creations.insert(alloc);
+			}
+
+			for (auto& [name, alloc] : builder.alloc_resources)
+			{
+				if (!alloc.is_static()) continue;
+				ext->used.resources.insert(&alloc);
+				ext->used.resource_flags[&alloc] = ResourceFlags::RenderTarget;
+				ext->used.resource_creations.insert(&alloc);
+			}
+
+			if (!ext->used.resources.empty())
+			{
+				builder.external_pass = ext;
+				builder.enabled_passes.push_front(ext.get());
+			}
+		}
 
 		for (auto& pair : builder.alloc_resources)
 		{

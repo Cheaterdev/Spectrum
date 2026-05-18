@@ -607,6 +607,7 @@ public:
 		std::map<std::string, ResourceAllocInfo> alloc_resources;
 
 		std::set<ResourceAllocInfo*> passed_resources;
+		std::shared_ptr<Pass>         external_pass;   // fake creator pass for passed_resources
 		std::list<std::shared_ptr<Pass>> passes;
 		std::list<std::shared_ptr<Pass>> required_passes;
 		std::list<Pass*> enabled_passes;
@@ -872,6 +873,37 @@ public:
 		}
 	};
 
+
+
+	// Fake pass that appears as the creator of resources passed in from outside the graph.
+	// Submits an empty command list so FrameContext::end() fires process_debug_resource
+	// for each passed resource, enabling thumbnail capture in the timeline debugger.
+	struct ExternalPass : public Pass
+	{
+		inline static const std::wstring s_name = L"[External]";
+
+		ExternalPass()
+		{
+			name   = s_name;
+			id     = std::numeric_limits<UINT>::max();
+			enabled    = true;
+			renderable = true;
+			flags  = PassFlags::General;
+		}
+
+		virtual bool setup(TaskBuilder&) override { return true; }
+
+		virtual void render(Graph* graph, HAL::FrameResources::ptr& frame) override
+		{
+			render_task = thread_pool::get().enqueue([this, &frame, graph]()
+			{
+				context.begin(graph, this, frame);
+				// No GPU work — context.end() fires process_debug_resource for each
+				// write-flagged passed resource, which triggers thumbnail capture.
+				context.end();
+			});
+		}
+	};
 
 
 	//struct CreationContext

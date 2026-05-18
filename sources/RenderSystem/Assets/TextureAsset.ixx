@@ -50,6 +50,8 @@ export{
 
 			ar& NVP(texture);
 
+			texture->resource->set_name(convert(name));
+
 			if (!texture)
 				texture = HAL::Texture::null;
 		}

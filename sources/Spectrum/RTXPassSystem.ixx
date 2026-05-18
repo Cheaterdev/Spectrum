@@ -31,7 +31,7 @@ bool PassDefault<Passes::RTXPass>::setup(
 
     builder.create(data.RTXDebug,
         { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
-        ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+        ResourceFlags::UnorderedAccess);
     builder.create(data.WorkGraphBuffer, { work_pso->buffer_size },
         ResourceFlags::UnorderedAccess);
 

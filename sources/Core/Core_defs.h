@@ -8,14 +8,12 @@
 import stl.core;
 import stl.memory;
 
-#include <cstdio>
-
 namespace Core {
     [[noreturn]] inline void assert_fail(const char* expr, const char* file, int line) noexcept
     {
        //OutputDebugString("Assertion failed: (%s)\n  %s:%d\n", expr, file, line);
-        __debugbreak();
-        for (;;) {}
+    //    __debugbreak();
+   //     for (;;) {}
     }
 }
 

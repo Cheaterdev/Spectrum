@@ -47,6 +47,7 @@ class FrameGraphTimelineCanvas : public dock_base
         bool  is_created  = false;
         bool  is_deleted  = false;
         image::ptr                     preview;
+        std::shared_ptr<Texture>       thumb_tex;
         FrameGraph::ResourceAllocInfo* alloc         = nullptr;
         Events::prop_helper*           debug_handler = nullptr;
     };
@@ -54,6 +55,8 @@ class FrameGraphTimelineCanvas : public dock_base
     struct ResourceTrack
     {
         std::string               name;
+        bool                      is_static = false;
+        bool                      is_passed = false;
         std::vector<ResourceCell> cells;
     };
 
@@ -875,7 +878,9 @@ private:
             for (auto& [alloc, flags] : pass->used.resource_flags)
             {
                 auto& tr = track_map[alloc->name];
-                tr.name  = alloc->name;
+                tr.name      = alloc->name;
+                tr.is_static = alloc->is_static();
+                tr.is_passed = alloc->passed;
 
                 ResourceCell cell;
                 cell.call_id    = pass->call_id;
@@ -946,14 +951,43 @@ private:
             m_resource_labels.push_back(lbl);
         }
 
-        // Write-cell preview images (added to grid scroll AFTER grid_canvas).
+        // Preview images for all cells — read cells reuse the last write's alloc+call_id.
         auto* passes_ptr = &m_passes;
         for (int ri = 0; ri < (int)m_resources.size(); ri++)
         {
             float cy = LANE_COUNT * LANE_H + 6.0f + ri * ROW_H + (ROW_H - CELL_H) * 0.5f;
+
+            FrameGraph::ResourceAllocInfo* last_write_alloc      = nullptr;
+            UINT                           last_write_call_id    = 0;
+            std::shared_ptr<Texture>       last_write_thumb_tex;
+
             for (auto& cell : m_resources[ri].cells)
             {
-                if (!cell.is_write) continue;
+                if (cell.is_write)
+                {
+                    last_write_alloc   = cell.alloc;
+                    last_write_call_id = cell.call_id;
+
+                    if (!cell.is_deleted && cell.alloc->resource->get_desc().is_texture())
+                    {
+                        static constexpr uint2 PREVIEW_SIZE = { 128, 64 };
+                        HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(
+                            HAL::Format::R8G8B8A8_UNORM, { PREVIEW_SIZE }, 1, 1,
+                            HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
+                        last_write_thumb_tex = std::make_shared<Texture>(desc);
+                        cell.thumb_tex       = last_write_thumb_tex;
+                    }
+                    else
+                    {
+                        last_write_thumb_tex = nullptr;
+                    }
+                }
+
+                // Skip read cells that have no prior write in this track.
+                if (!cell.is_write && !last_write_alloc) continue;
+                // Resource is being freed at this pass — data is garbage, skip preview.
+                if (cell.is_deleted) continue;
+
                 auto img         = std::make_shared<preview_image>();
                 img->docking     = GUI::dock::NONE;
                 img->width_size  = GUI::size_type::FIXED;
@@ -961,10 +995,22 @@ private:
                 img->size        = { 0.0f, CELL_H };
                 img->pos         = { 0.0f, cy };
 
+                if (last_write_thumb_tex)
+                {
+                    img->texture.texture = last_write_thumb_tex;
+                    if (!cell.is_write)
+                        img->texture.mul_color = { 1.0f, 1.0f, 1.0f, 0.7f };
+                }
+
+                // Read cells open the preview from the last write pass.
+                FrameGraph::ResourceAllocInfo* src_alloc   = cell.is_write ? cell.alloc      : last_write_alloc;
+                UINT                           src_call_id = cell.is_write ? cell.call_id    : last_write_call_id;
+
                 img->on_click = [this,
-                                  ri        = ri,
-                                  cid       = cell.call_id,
-                                  alloc     = cell.alloc,
+                                  ri         = ri,
+                                  cid        = cell.call_id,
+                                  src_cid    = src_call_id,
+                                  alloc      = src_alloc,
                                   passes_ptr]()
                 {
                     m_sel_call_id = cid;
@@ -972,11 +1018,11 @@ private:
 
                     std::string pass_name_str;
                     for (auto& p : *passes_ptr)
-                        if (p.call_id == cid) { pass_name_str = to_str(p.name); break; }
+                        if (p.call_id == src_cid) { pass_name_str = to_str(p.name); break; }
 
                     m_preview_panel->remove_all();
                     m_preview_panel->add_child(
-                        std::make_shared<ResourcePreviewContent>(alloc, cid, pass_name_str));
+                        std::make_shared<ResourcePreviewContent>(alloc, src_cid, pass_name_str));
                 };
 
                 m_grid_scroll->add_child(img);
@@ -984,29 +1030,29 @@ private:
             }
         }
 
-        // process_debug_resource handlers.
+        // process_debug_resource handlers — write cells only.
+        // Read cells already received thumb_tex at construction time.
         for (int ri = 0; ri < (int)m_resources.size(); ri++)
-            for (auto& cell : m_resources[ri].cells)
+        {
+            auto& tr       = m_resources[ri];
+            auto  icon_img = m_resource_icons[ri];
+
+            for (auto& cell : tr.cells)
             {
-                if (!cell.preview || !cell.alloc) continue;
-                auto  img             = cell.preview;
+                if (!cell.preview || !cell.alloc || !cell.is_write || !cell.thumb_tex) continue;
+
                 UINT  capture_call_id = cell.call_id;
                 auto* info            = cell.alloc;
-                auto  icon_img        = m_resource_icons[ri];
+                auto  thumb_tex       = cell.thumb_tex;
 
-                // Per-cell camera (not shared) and render-thread-local texture holder.
-                auto cam       = std::make_shared<third_person_camera>();
-                auto thumb_tex = std::make_shared<std::shared_ptr<Texture>>();
+                auto cam = std::make_shared<third_person_camera>();
                 cell.debug_handler = info->process_debug_resource.register_handler(this,
-                    [this, img, capture_call_id, info, cam, thumb_tex, icon_img,
+                    [this, capture_call_id, info, cam, thumb_tex, icon_img,
                      icon_done = false]
                     (FrameGraph::Pass* pass, FrameGraph::FrameContext* context) mutable
                     {
                         if (pass->call_id != capture_call_id) return;
 
-                        // Detect and display the resource type icon once per handler instance.
-                        // Multiple cells for the same resource row each have their own bool,
-                        // so the icon may be assigned more than once — that is idempotent.
                         if (!icon_done)
                         {
                             icon_done         = true;
@@ -1015,32 +1061,17 @@ private:
                                 info->resource->get_desc().as_texture().Dimensions.z > 1;
                             run_on_ui([icon_img, is_tex, is_3d]()
                             {
-                                // TODO: assign icon_img->texture.texture to the appropriate icon:
-                                // if      (is_3d)  icon_img->texture.texture = /* load("path/to/texture3d_icon.png") */;
-                                // else if (is_tex) icon_img->texture.texture = /* load("path/to/texture2d_icon.png") */;
-                                // else             icon_img->texture.texture = /* load("path/to/buffer_icon.png") */;
+                                // TODO: assign icon_img->texture.texture to the appropriate icon.
                                 (void)icon_img; (void)is_tex; (void)is_3d;
                             });
                         }
 
-                        if (!info->resource->get_desc().is_texture()) return;
-
-                        const uint2 PREVIEW_SIZE = { 128, 64 };
-
-                        if (!*thumb_tex)
-                        {
-                            HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(
-                                HAL::Format::R8G8B8A8_UNORM, { PREVIEW_SIZE }, 1, 1,
-                                HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
-                            *thumb_tex = std::make_shared<Texture>(desc);
-                            auto t = *thumb_tex;
-                            run_on_ui([img, t]() { img->texture.texture = t; });
-                        }
+                        static constexpr uint2 PREVIEW_SIZE = { 128, 64 };
 
                         auto& compute = context->get_list()->get_compute();
                         {
                             Slots::FrameGraph_Debug_Common common;
-                            common.GetTarget()     = (*thumb_tex)->texture_2d().rwTexture2D;
+                            common.GetTarget()     = thumb_tex->texture_2d().rwTexture2D;
                             common.GetTargetSize() = PREVIEW_SIZE;
                             compute.set(common);
                         }
@@ -1080,6 +1111,7 @@ private:
                         compute.dispatch(uint3(PREVIEW_SIZE, 1));
                     });
             }
+        }
 
         // Pass-name labels in grid scroll (added last, render on top of images).
         for (auto& pl : m_pass_labels)
@@ -1303,6 +1335,7 @@ private:
             {
                 constexpr UINT NONE = std::numeric_limits<UINT>::max();
                 UINT id_start   = NONE;
+                UINT id_last    = NONE;
                 UINT id_deleted = NONE;
 
                 for (auto& cell : tr.cells)
@@ -1311,16 +1344,26 @@ private:
                     if (!del_only) {
                         if (id_start == NONE) id_start = cell.call_id;
                         if (cell.is_created && cell.call_id < id_start) id_start = cell.call_id;
+                        id_last = cell.call_id;
                     }
                     if (cell.is_deleted) id_deleted = cell.call_id;
                 }
 
                 if (id_start != NONE)
                 {
-                    float lx  = dep_x(id_start, bx) + col_w() * 0.5f;
-                    float rx  = lx;
-                    if (id_deleted != NONE && id_deleted > id_start)
-                        rx = dep_x(id_deleted, bx) + PAD + 2.5f;
+                    float lx, rx;
+                    if (tr.is_static || tr.is_passed)
+                    {
+                        lx = dep_x(0, bx);
+                        rx = dep_x(m_max_call_id, bx) + col_w();
+                    }
+                    else
+                    {
+                        lx = dep_x(id_start,  bx) + col_w() * 0.5f;
+                        rx = dep_x(id_last,   bx) + col_w() * 0.5f;
+                        if (id_deleted != NONE && id_deleted > id_start)
+                            rx = std::max(rx, dep_x(id_deleted, bx) + PAD + 2.5f);
+                    }
                     float mid = cy + CELL_H * 0.5f;
                     if (rx > lx)
                         dr(c, C_LIFETIME, lx, mid - 1.0f, rx - lx, 2.0f);

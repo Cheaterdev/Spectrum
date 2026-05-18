@@ -100,6 +100,7 @@ export
 				else
 				{
 					init();
+					resource->set_name(header.name.string());
 				}
 			}
 		};
