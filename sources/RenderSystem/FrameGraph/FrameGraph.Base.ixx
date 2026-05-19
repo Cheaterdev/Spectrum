@@ -214,7 +214,8 @@ public:
 
 		std::shared_ptr<ResourceHandler> handler;
 	
-		bool passed = false;
+		bool passed      = false;
+		bool non_deleted = false;
 		HAL::FenceWaiter fence;
 		size_t frame_id;
 

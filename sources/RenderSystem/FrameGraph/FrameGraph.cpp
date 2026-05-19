@@ -1275,7 +1275,10 @@ namespace FrameGraph
 				}
 
 				if (!best_deletion_pass)
+				{
+					info->non_deleted = true;
 					non_deleted.insert(info);
+				}
 
 			}
 		}

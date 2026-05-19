@@ -47,16 +47,19 @@ class FrameGraphTimelineCanvas : public dock_base
         bool  is_created  = false;
         bool  is_deleted  = false;
         image::ptr                     preview;
+        label::ptr                     state_lbl;
         std::shared_ptr<Texture>       thumb_tex;
         FrameGraph::ResourceAllocInfo* alloc         = nullptr;
         Events::prop_helper*           debug_handler = nullptr;
+        std::string                    state_str;
     };
 
     struct ResourceTrack
     {
         std::string               name;
-        bool                      is_static = false;
-        bool                      is_passed = false;
+        bool                      is_static      = false;
+        bool                      is_passed      = false;
+        bool                      is_non_deleted = false;
         std::vector<ResourceCell> cells;
     };
 
@@ -912,6 +915,39 @@ class FrameGraphTimelineCanvas : public dock_base
     // -----------------------------------------------------------------------
     //  Helpers
     // -----------------------------------------------------------------------
+    static std::string resource_flags_to_str(FrameGraph::ResourceFlags flags)
+    {
+        using RF = FrameGraph::ResourceFlags;
+        std::string s;
+        auto add = [&](RF f, const char* name){ if (check(flags & f)){ if (!s.empty()) s += '|'; s += name; } };
+        add(RF::RenderTarget,    "RT");
+        add(RF::DepthStencil,    "DS");
+        add(RF::UnorderedAccess, "UAV");
+        add(RF::CopyDest,        "DST");
+        add(RF::GenCPU,          "CPU");
+        add(RF::PixelRead,       "PSR");
+        add(RF::ComputeRead,     "CSR");
+        add(RF::DSRead,          "DS_R");
+        add(RF::CopySource,      "SRC");
+        add(RF::ReadCPU,         "CPU");
+        return s;
+    }
+
+    static std::string layout_to_str(HAL::TextureLayout layout)
+    {
+        using TL = HAL::TextureLayout;
+        auto has = [&](TL f){ return (static_cast<uint32_t>(layout) & static_cast<uint32_t>(f)) != 0; };
+        if (!static_cast<uint32_t>(layout)) return "";
+        std::string s;
+        auto add = [&](TL f, const char* name){ if (has(f)){ if (!s.empty()) s += '|'; s += name; } };
+        add(TL::SHADER_RESOURCE,    "SRV");
+        add(TL::COPY_SOURCE,        "SRC");
+        add(TL::DEPTH_STENCIL_READ, "DS_R");
+        add(TL::COPY_QUEUE,         "CQ");
+        add(TL::PRESENT,            "PRESENT");
+        return s;
+    }
+
     static label::ptr make_label(float w, float h, const std::string& text,
                                  float4 color, float font_size)
     {
@@ -995,6 +1031,7 @@ private:
             for (auto& cell : tr.cells)
             {
                 if (cell.preview)       m_scroll->remove_child(cell.preview);
+                if (cell.state_lbl)     m_scroll->remove_child(cell.state_lbl);
                 if (cell.debug_handler) cell.debug_handler->unregister();
             }
 
@@ -1042,6 +1079,8 @@ private:
                 cell.is_created = (pass->used.resource_creations.count(alloc) > 0);
                 cell.is_deleted = (pass->used.resource_deletions_after.count(alloc) > 0);
                 cell.alloc      = alloc;
+                cell.state_str = resource_flags_to_str(flags);
+              
                 tr.cells.push_back(cell);
             }
 
@@ -1063,6 +1102,9 @@ private:
             for (size_t i = 1; i < tr.cells.size(); ++i)
                 if (tr.cells[i].is_write != tr.cells[i - 1].is_write)
                     tr.cells[i].has_barrier = true;
+            for (auto& cell : tr.cells)
+                if (cell.alloc && cell.alloc->non_deleted)
+                    { tr.is_non_deleted = true; break; }
             m_resources.push_back(std::move(tr));
         }
 
@@ -1181,6 +1223,21 @@ private:
 
                 m_scroll->add_child(img);
                 cell.preview = img;
+            }
+        }
+
+        // Read-state labels.
+        for (int ri = 0; ri < (int)m_resources.size(); ri++)
+        {
+            float cy = LANE_COUNT * LANE_H + 6.0f + ri * ROW_H + (ROW_H - CELL_H) * 0.5f;
+            for (auto& cell : m_resources[ri].cells)
+            {
+                if (cell.state_str.empty()) continue;
+                auto lbl = make_label(0.0f, CELL_H, cell.state_str, C_TEXT_BRIGHT, LABEL_FONT);
+                lbl->magnet_text = FW1_CENTER | FW1_BOTTOM | FW1_NOWORDWRAP;
+                lbl->pos = { 0.0f, cy };
+                m_scroll->add_child(lbl);
+                cell.state_lbl = lbl;
             }
         }
 
@@ -1360,9 +1417,17 @@ private:
             float cy = LANE_COUNT * LANE_H + 6.0f + ri * ROW_H + (ROW_H - CELL_H) * 0.5f;
             for (auto& cell : m_resources[ri].cells)
             {
-                if (!cell.preview) continue;
-                cell.preview->pos  = { LABEL_W + cell.call_id * cw + PAD, cy };
-                cell.preview->size = { cell_cw, CELL_H };
+                float cx = LABEL_W + cell.call_id * cw + PAD;
+                if (cell.preview)
+                {
+                    cell.preview->pos  = { cx, cy };
+                    cell.preview->size = { cell_cw, CELL_H };
+                }
+                if (cell.state_lbl)
+                {
+                    cell.state_lbl->pos  = { cx, cy };
+                    cell.state_lbl->size = { cell_cw, CELL_H };
+                }
             }
         }
     }
@@ -1514,10 +1579,14 @@ private:
                         rx = dep_x(id_last,   bx) + col_w() * 0.5f;
                         if (id_deleted != NONE && id_deleted > id_start)
                             rx = std::max(rx, dep_x(id_deleted, bx) + PAD + 2.5f);
+                        if (tr.is_non_deleted)
+                            rx = dep_x(m_max_call_id, bx) + col_w();
                     }
                     float mid = cy + CELL_H * 0.5f;
                     if (rx > lx)
                         dr(c, C_LIFETIME, lx, mid - 1.0f, rx - lx, 2.0f);
+                    if (tr.is_non_deleted)
+                        dr(c, C_DELETED, rx - 5.0f, cy, 5.0f, CELL_H);
                 }
             }
 

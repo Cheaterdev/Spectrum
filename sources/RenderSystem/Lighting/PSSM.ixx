@@ -248,7 +248,7 @@ public:
 		{
 			GBufferViewDesc::need(builder, data.gbuffer);
 			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::RenderTarget);
-			builder.need(data.PSSM_Cameras,  FrameGraph::ResourceFlags::None);
+			builder.need(data.PSSM_Cameras,  FrameGraph::ResourceFlags::PixelRead);
 
 			if (builder.exists(data.RTXDebug))
 				builder.need(data.RTXDebug,  FrameGraph::ResourceFlags::PixelRead);

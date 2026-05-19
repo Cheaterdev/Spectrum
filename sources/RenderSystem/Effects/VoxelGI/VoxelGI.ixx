@@ -687,8 +687,8 @@ public:
 			builder.need(data.VoxelIndirectNoise,    ResourceFlags::ComputeRead);
 			builder.need(data.VoxelScreen_hi,        ResourceFlags::ComputeRead);
 			builder.need(data.VoxelScreen_low,       ResourceFlags::ComputeRead);
-			builder.need(data.VoxelScreen_low_data);
-			builder.need(data.VoxelScreen_hi_data);
+			builder.need(data.VoxelScreen_low_data,  ResourceFlags::ComputeRead);
+			builder.need(data.VoxelScreen_hi_data,   ResourceFlags::ComputeRead);
 			return true;
 		};
 
