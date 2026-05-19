@@ -30,12 +30,12 @@ export namespace GUI
 
 			void remove_child(base::ptr obj) override;
 
-			void resized();
+			virtual void resized();
 
 			virtual sizer update_layout(sizer r, float scale) override;
 
 		
-			void moving(vec2 pos);
+			virtual void moving(vec2 pos);
 
 
 			virtual	bool on_wheel(mouse_wheel type, float value, vec2 pos) override;

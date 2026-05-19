@@ -70,7 +70,6 @@ class FrameGraphTimelineCanvas : public dock_base
     // -----------------------------------------------------------------------
     //  View state
     // -----------------------------------------------------------------------
-    vec2  m_offset = { 0.0f, 0.0f };
     float m_zoom   = 1.0f;
 
     // Selection state — updated on thumbnail/pass click.
@@ -81,75 +80,39 @@ class FrameGraphTimelineCanvas : public dock_base
     // -----------------------------------------------------------------------
     //  scroll_container with no scrollbars and no built-in drag.
     // -----------------------------------------------------------------------
-    struct timeline_scroll : scroll_container
+    //  Main scroll area — draws lane/row backgrounds, owns pan/zoom input,
+    //  and is itself the scroll container that holds all content children.
+    // -----------------------------------------------------------------------
+    struct content_scroll : scroll_container
     {
-        using ptr = std::shared_ptr<timeline_scroll>;
-        timeline_scroll()
-        {
-            vert->visible        = false;
-            hor->visible         = false;
-            over_filled->visible = false;
-            allow_overflow       = true;
-            clickable            = false;
-            contents->width_size  = GUI::size_type::FIXED;
-            contents->height_size = GUI::size_type::FIXED;
-        }
-    };
-
-    // -----------------------------------------------------------------------
-    //  Inner canvas drawn inside m_grid_scroll.
-    //  Added as the FIRST child of m_grid_scroll so that labels and preview
-    //  images (added later in rebuild) render on top.
-    // -----------------------------------------------------------------------
-    struct grid_canvas : GUI::base
-    {
-        using ptr = std::shared_ptr<grid_canvas>;
-        FrameGraphTimelineCanvas& owner;
-
-        explicit grid_canvas(FrameGraphTimelineCanvas& o) : owner(o)
-        {
-            docking        = GUI::dock::NONE;
-            width_size     = GUI::size_type::FIXED;
-            height_size    = GUI::size_type::FIXED;
-            clip_to_parent = GUI::ParentClip::ALL;
-            clickable      = false;
-        }
-
-        virtual void draw(Context& c) override
-        {
-            if (!owner.m_ready) return;
-            owner.draw_grid_content(c, *this);
-        }
-    };
-
-    // -----------------------------------------------------------------------
-    //  Center fill pane — draws lane/row backgrounds and owns pan/zoom input.
-    //  Contains m_grid_scroll (FILL) and m_left_scroll (LEFT).
-    // -----------------------------------------------------------------------
-    struct center_pane : GUI::base
-    {
-        using ptr = std::shared_ptr<center_pane>;
+        using ptr = std::shared_ptr<content_scroll>;
         FrameGraphTimelineCanvas& owner;
 
         bool m_dragging      = false;
         vec2 m_drag_start;
         vec2 m_offset_at_drag;
 
-        explicit center_pane(FrameGraphTimelineCanvas& o) : owner(o)
+        explicit content_scroll(FrameGraphTimelineCanvas& o) : owner(o)
         {
-            docking     = GUI::dock::FILL;
-            width_size  = GUI::size_type::NONE;
-            height_size = GUI::size_type::NONE;
-            clickable   = true;
+            docking               = GUI::dock::FILL;
+            width_size            = GUI::size_type::NONE;
+            height_size           = GUI::size_type::NONE;
+            clickable             = true;
+            vert->visible         = false;
+            hor->visible          = false;
+            over_filled->visible  = false;
+            allow_overflow        = true;
+            contents->width_size  = GUI::size_type::FIXED;
+            contents->height_size = GUI::size_type::FIXED;
         }
 
         virtual void draw(Context& c) override
         {
-            if (!owner.m_ready) { base::draw(c); return; }
+            if (!owner.m_ready) { scroll_container::draw(c); return; }
 
             const rect  b  = get_render_bounds();
             const float bx = b.x, by = b.y, bw = b.w, bh = b.h;
-            const float oy = by + owner.m_offset.y;
+            const float oy = by + contents->pos->y;
 
             owner.dr(c, C_DIRECT_LANE,  bx, oy,                       bw, LANE_H);
             owner.dr(c, C_COMPUTE_LANE, bx, oy + LANE_H,              bw, LANE_H);
@@ -178,7 +141,19 @@ class FrameGraphTimelineCanvas : public dock_base
                 owner.dr(c, C_SEL_RESOURCE, bx, ry, bw, ROW_H);
             }
 
-            base::draw(c);
+            scroll_container::draw(c);
+        }
+
+        virtual void resized() override
+        {
+            scroll_container::resized();
+            owner.apply_pan();
+        }
+
+        virtual void moving(vec2 pos) override
+        {
+            scroll_container::moving(pos);
+            owner.apply_pan();
         }
 
         virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override
@@ -189,7 +164,7 @@ class FrameGraphTimelineCanvas : public dock_base
                 if (pressed)
                 {
                     m_drag_start     = pos;
-                    m_offset_at_drag = owner.m_offset;
+                    m_offset_at_drag = contents->pos.get();
                     m_dragging       = false;
                 }
                 else
@@ -210,7 +185,7 @@ class FrameGraphTimelineCanvas : public dock_base
             }
             if (m_dragging)
             {
-                owner.m_offset = m_offset_at_drag + (pos - m_drag_start);
+                contents->pos = m_offset_at_drag + (pos - m_drag_start);
                 owner.apply_pan();
             }
             return m_dragging;
@@ -218,9 +193,33 @@ class FrameGraphTimelineCanvas : public dock_base
 
         virtual bool on_wheel(mouse_wheel type, float value, vec2 wheel_pos) override
         {
-            owner.m_offset.y += value * 60.0f;
-            owner.apply_pan();
+            moving({ 0.0f, value * 60.0f });
             return true;
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    //  Inner canvas drawn inside m_scroll.
+    //  Added as the FIRST child so that labels and preview images render on top.
+    // -----------------------------------------------------------------------
+    struct grid_canvas : GUI::base
+    {
+        using ptr = std::shared_ptr<grid_canvas>;
+        FrameGraphTimelineCanvas& owner;
+
+        explicit grid_canvas(FrameGraphTimelineCanvas& o) : owner(o)
+        {
+            docking        = GUI::dock::NONE;
+            width_size     = GUI::size_type::FIXED;
+            height_size    = GUI::size_type::FIXED;
+            clip_to_parent = GUI::ParentClip::ALL;
+            clickable      = false;
+        }
+
+        virtual void draw(Context& c) override
+        {
+            if (!owner.m_ready) return;
+            owner.draw_grid_content(c, *this);
         }
     };
 
@@ -700,9 +699,8 @@ class FrameGraphTimelineCanvas : public dock_base
     // -----------------------------------------------------------------------
     //  Widget containers
     // -----------------------------------------------------------------------
-    center_pane::ptr     m_center;
-    timeline_scroll::ptr m_grid_scroll;
-    timeline_scroll::ptr m_left_scroll;
+    content_scroll::ptr  m_scroll;
+    GUI::base::ptr       m_left_panel;
     grid_canvas::ptr     m_grid_canvas;
     GUI::base::ptr       m_preview_panel;
 
@@ -783,36 +781,32 @@ public:
         width_size  = GUI::size_type::MATCH_PARENT;
         height_size = GUI::size_type::MATCH_PARENT;
 
-        // center_pane is the fill child of this dock_base; it owns draw + input.
-        m_center = std::make_shared<center_pane>(*this);
-        add_child(m_center);
-
-        // Grid scroll fills the center pane.
-        m_grid_scroll              = std::make_shared<timeline_scroll>();
-        m_grid_scroll->docking     = GUI::dock::FILL;
-        m_grid_scroll->width_size  = GUI::size_type::NONE;
-        m_grid_scroll->height_size = GUI::size_type::NONE;
-        m_center->add_child(m_grid_scroll);
+        m_scroll = std::make_shared<content_scroll>(*this);
 
         // Grid canvas — first child so labels/images render on top.
         m_grid_canvas = std::make_shared<grid_canvas>(*this);
-        m_grid_scroll->add_child(m_grid_canvas);
+        m_scroll->add_child(m_grid_canvas);
 
-        // Left-column scroll — fixed width, docked left inside center.
-        m_left_scroll              = std::make_shared<timeline_scroll>();
-        m_left_scroll->docking     = GUI::dock::LEFT;
-        m_left_scroll->width_size  = GUI::size_type::FIXED;
-        m_left_scroll->height_size = GUI::size_type::NONE;
-        m_left_scroll->size        = { LABEL_W, 0.0f };
-        m_center->add_child(m_left_scroll);
+        // Left panel — simple base inside the scroll contents.
+        // Vertical movement is automatic (parent contents scrolls).
+        // Horizontal position is kept pinned via apply_pan().
+        m_left_panel                 = std::make_shared<GUI::base>();
+        m_left_panel->docking        = GUI::dock::NONE;
+        m_left_panel->width_size     = GUI::size_type::FIXED;
+        m_left_panel->height_size    = GUI::size_type::FIXED;
+        m_left_panel->size           = { LABEL_W, 0.0f };
+        m_left_panel->pos            = { 0.0f, 0.0f };
+        m_left_panel->clickable      = false;
+        m_left_panel->clip_to_parent = GUI::ParentClip::ALL;
+        m_scroll->add_child(m_left_panel);
 
-        // Lane labels at fixed positions in left-column contents.
+        // Lane labels at fixed positions in left panel.
         m_lbl_direct  = make_label(LABEL_W - 8.0f, LANE_H - 6.0f, "DIRECT",  C_TEXT_BRIGHT, LABEL_FONT);
         m_lbl_compute = make_label(LABEL_W - 8.0f, LANE_H - 6.0f, "COMPUTE", C_TEXT_BRIGHT, LABEL_FONT);
         m_lbl_direct->pos  = { 4.0f, (LANE_H - 14.0f) * 0.5f };
         m_lbl_compute->pos = { 4.0f, LANE_H + (LANE_H - 14.0f) * 0.5f };
-        m_left_scroll->add_child(m_lbl_direct);
-        m_left_scroll->add_child(m_lbl_compute);
+        m_left_panel->add_child(m_lbl_direct);
+        m_left_panel->add_child(m_lbl_compute);
 
         // Right dock on this (dock_base) — permanent preview panel.
         auto right_dock  = get_dock(GUI::dock::RIGHT);
@@ -840,7 +834,7 @@ private:
         for (auto& tr : m_resources)
             for (auto& cell : tr.cells)
             {
-                if (cell.preview)       m_grid_scroll->remove_child(cell.preview);
+                if (cell.preview)       m_scroll->remove_child(cell.preview);
                 if (cell.debug_handler) cell.debug_handler->unregister();
             }
 
@@ -913,8 +907,8 @@ private:
         }
 
         // Resource-name labels + type icons in left column.
-        for (auto& lbl  : m_resource_labels) m_left_scroll->remove_child(lbl);
-        for (auto& icon : m_resource_icons)  m_left_scroll->remove_child(icon);
+        for (auto& lbl  : m_resource_labels) m_left_panel->remove_child(lbl);
+        for (auto& icon : m_resource_icons)  m_left_panel->remove_child(icon);
         m_resource_labels.clear();
         m_resource_icons.clear();
 
@@ -938,7 +932,7 @@ private:
             //   Texture3D  -> load_icon("path/to/texture3d.png")
             //   Buffer     -> load_icon("path/to/buffer.png")
             // Icons are assigned later via run_on_ui once the resource type is known.
-            m_left_scroll->add_child(icon);
+            m_left_panel->add_child(icon);
             m_resource_icons.push_back(icon);
 
             // Resource name label — indented past the icon.
@@ -947,7 +941,7 @@ private:
             auto lbl  = make_label(LABEL_W - lx - 4.0f, ROW_H - 4.0f,
                                    m_resources[ri].name, C_TEXT_BRIGHT, LABEL_FONT);
             lbl->pos  = { lx, ly };
-            m_left_scroll->add_child(lbl);
+            m_left_panel->add_child(lbl);
             m_resource_labels.push_back(lbl);
         }
 
@@ -1025,7 +1019,7 @@ private:
                         std::make_shared<ResourcePreviewContent>(alloc, src_cid, pass_name_str));
                 };
 
-                m_grid_scroll->add_child(img);
+                m_scroll->add_child(img);
                 cell.preview = img;
             }
         }
@@ -1116,8 +1110,8 @@ private:
         // Pass-name labels in grid scroll (added last, render on top of images).
         for (auto& pl : m_pass_labels)
         {
-            m_grid_scroll->remove_child(pl.lbl);
-            m_grid_scroll->remove_child(pl.btn);
+            m_scroll->remove_child(pl.lbl);
+            m_scroll->remove_child(pl.btn);
         }
         m_pass_labels.clear();
 
@@ -1127,11 +1121,11 @@ private:
             auto lbl = make_label(0.0f, PASS_H - 2.0f * PAD - 4.0f,
                                   to_str(pass.name), C_TEXT_BRIGHT, LABEL_FONT);
             lbl->pos = { 0.0f, py };
-            m_grid_scroll->add_child(lbl);
+            m_scroll->add_child(lbl);
 
             auto btn = std::make_shared<pass_button>();
             btn->pos = { 0.0f, (pass.queue == HAL::CommandListType::COMPUTE ? LANE_H : 0.0f) + PAD };
-            m_grid_scroll->add_child(btn);
+            m_scroll->add_child(btn);
 
             PassInfo captured = pass;
             btn->on_click = [this, captured]()
@@ -1153,6 +1147,8 @@ private:
         m_ready = true;
         apply_zoom();
         apply_pan();
+
+        run_on_ui([this](){add_child(m_scroll);});
     }
 
     // -----------------------------------------------------------------------
@@ -1160,8 +1156,7 @@ private:
     // -----------------------------------------------------------------------
     void apply_pan()
     {
-        m_left_scroll->contents->pos = { 0.0f, m_offset.y };
-        m_grid_scroll->contents->pos = m_offset;
+        m_left_panel->pos = { -m_scroll->contents->pos->x, 0.0f };
     }
 
     // -----------------------------------------------------------------------
@@ -1173,8 +1168,8 @@ private:
         float content_h = LANE_COUNT * LANE_H + 6.0f + (float)m_resources.size() * ROW_H;
         float content_w = LABEL_W + (m_max_call_id + 2) * cw;
 
-        m_left_scroll->contents->size = { LABEL_W, content_h };
-        m_grid_scroll->contents->size = { content_w, content_h };
+        m_left_panel->size = { LABEL_W, content_h };
+        m_scroll->contents->size = { content_w, content_h };
         m_grid_canvas->size           = { content_w, content_h };
 
         float block_w = cw - 2.0f * PAD - 4.0f;
