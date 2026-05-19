@@ -490,8 +490,8 @@ namespace HAL
 		auto nonCached = creator.get_desc();
 
 
-		/*	static std::mutex m;
-			std::lock_guard<std::mutex> g(m);*/
+			static std::mutex m;
+			std::lock_guard<std::mutex> g(m);
 		if (!cache.empty())
 		{
 			D3D12_CACHED_PIPELINE_STATE cached;

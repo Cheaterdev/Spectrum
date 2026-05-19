@@ -101,7 +101,6 @@ class FrameGraphTimelineCanvas : public dock_base
             vert->visible         = false;
             hor->visible          = false;
             over_filled->visible  = false;
-            allow_overflow        = true;
             contents->width_size  = GUI::size_type::FIXED;
             contents->height_size = GUI::size_type::FIXED;
         }
@@ -114,10 +113,7 @@ class FrameGraphTimelineCanvas : public dock_base
             const float bx = b.x, by = b.y, bw = b.w, bh = b.h;
             const float oy = by + contents->pos->y;
 
-            owner.dr(c, C_DIRECT_LANE,  bx, oy,                       bw, LANE_H);
-            owner.dr(c, C_COMPUTE_LANE, bx, oy + LANE_H,              bw, LANE_H);
-            owner.dr(c, C_SEPARATOR,    bx, oy + LANE_COUNT * LANE_H, bw, 2.0f);
-
+            // Row backgrounds — content area only (overlay panels cover frozen strips)
             for (int ri = 0; ri < (int)owner.m_resources.size(); ri++)
             {
                 float ry = oy + LANE_COUNT * LANE_H + 6.0f + ri * ROW_H;
@@ -125,20 +121,10 @@ class FrameGraphTimelineCanvas : public dock_base
                 owner.dr(c, (ri & 1) ? C_ROW_ODD : C_ROW_EVEN, bx + LABEL_W, ry, bw - LABEL_W, ROW_H);
             }
 
-            owner.dr(c, C_LABEL_BG, bx, oy,          LABEL_W, LANE_H);
-            owner.dr(c, C_LABEL_BG, bx, oy + LANE_H, LABEL_W, LANE_H);
-            for (int ri = 0; ri < (int)owner.m_resources.size(); ri++)
-            {
-                float ry = oy + LANE_COUNT * LANE_H + 6.0f + ri * ROW_H;
-                if (ry + ROW_H < by || ry > by + bh) continue;
-                owner.dr(c, (ri & 1) ? C_ROW_ODD : C_ROW_EVEN, bx, ry, LABEL_W, ROW_H);
-            }
-            owner.dr(c, C_SEPARATOR, bx + LABEL_W - 1.0f, by, 1.0f, bh);
-
             if (owner.m_sel_ri >= 0 && owner.m_sel_ri < (int)owner.m_resources.size())
             {
                 float ry = oy + LANE_COUNT * LANE_H + 6.0f + owner.m_sel_ri * ROW_H;
-                owner.dr(c, C_SEL_RESOURCE, bx, ry, bw, ROW_H);
+                owner.dr(c, C_SEL_RESOURCE, bx + LABEL_W, ry, bw - LABEL_W, ROW_H);
             }
 
             scroll_container::draw(c);
@@ -148,6 +134,31 @@ class FrameGraphTimelineCanvas : public dock_base
         {
             scroll_container::resized();
             owner.apply_pan();
+        }
+
+        // Scissor rects need correct render_bounds, which base::update_layout sets
+        // AFTER calling resized(). Override update_layout so we set scissors once
+        // the full layout pass has completed and render_bounds is valid.
+        virtual ::sizer update_layout(::sizer r, float scale) override
+        {
+            ::sizer result = scroll_container::update_layout(r, scale);
+            if (!owner.m_top_panel || !owner.m_left_panel) return result;
+
+            const rect fb = filled->get_render_bounds();
+            filled->child_scissor = rect{
+                fb.x + LABEL_W,
+                fb.y + LANE_COUNT * LANE_H,
+                fb.w - LABEL_W,
+                fb.h - LANE_COUNT * LANE_H
+            };
+            const rect sb = get_render_bounds();
+            rect top_clip { sb.x + LABEL_W, sb.y,                    sb.w - LABEL_W, LANE_COUNT * LANE_H };
+            rect left_clip{ sb.x,           sb.y + LANE_COUNT * LANE_H, LABEL_W,     sb.h - LANE_COUNT * LANE_H };
+            owner.m_top_panel->self_scissor  = top_clip;
+            owner.m_top_panel->child_scissor = top_clip;
+            owner.m_left_panel->self_scissor  = left_clip;
+            owner.m_left_panel->child_scissor = left_clip;
+            return result;
         }
 
         virtual void moving(vec2 pos) override
@@ -185,7 +196,9 @@ class FrameGraphTimelineCanvas : public dock_base
             }
             if (m_dragging)
             {
-                contents->pos = m_offset_at_drag + (pos - m_drag_start);
+                vec2 p = m_offset_at_drag + (pos - m_drag_start);
+                contents->pos = vec2::min(vec2(0, 0),
+                    vec2::max(p, -contents->scaled_size.get() + vec2(filled->get_render_bounds().size)));
                 owner.apply_pan();
             }
             return m_dragging;
@@ -195,6 +208,11 @@ class FrameGraphTimelineCanvas : public dock_base
         {
             moving({ 0.0f, value * 60.0f });
             return true;
+        }
+
+        void add_overlay(GUI::base::ptr obj)
+        {
+            GUI::base::add_child(obj);
         }
     };
 
@@ -212,7 +230,7 @@ class FrameGraphTimelineCanvas : public dock_base
             docking        = GUI::dock::NONE;
             width_size     = GUI::size_type::FIXED;
             height_size    = GUI::size_type::FIXED;
-            clip_to_parent = GUI::ParentClip::ALL;
+            clamp_to_parent = GUI::ParentClamp::ALL;
             clickable      = false;
         }
 
@@ -220,6 +238,148 @@ class FrameGraphTimelineCanvas : public dock_base
         {
             if (!owner.m_ready) return;
             owner.draw_grid_content(c, *this);
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    //  Corner overlay — top-left intersection, never scrolls.
+    //  Draws lane-colour backgrounds for the label-column area and holds
+    //  the DIRECT / COMPUTE queue name labels.
+    // -----------------------------------------------------------------------
+    struct corner_overlay : GUI::base
+    {
+        using ptr = std::shared_ptr<corner_overlay>;
+        FrameGraphTimelineCanvas& owner;
+
+        explicit corner_overlay(FrameGraphTimelineCanvas& o) : owner(o)
+        {
+            docking        = GUI::dock::NONE;
+            width_size     = GUI::size_type::FIXED;
+            height_size    = GUI::size_type::FIXED;
+            size           = { LABEL_W, LANE_COUNT * LANE_H };
+            pos            = { 0.0f, 0.0f };
+            clickable      = false;
+            clamp_to_parent = GUI::ParentClamp::ALL;
+        }
+
+        virtual void draw(Context& c) override
+        {
+            const rect b = get_render_bounds();
+            owner.dr(c, C_DIRECT_LANE,  b.x, b.y,          LABEL_W, LANE_H);
+            owner.dr(c, C_COMPUTE_LANE, b.x, b.y + LANE_H, LABEL_W, LANE_H);
+            base::draw(c);
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    //  Left-panel overlay — follows Y scroll, pinned at X = 0.
+    //  Draws resource-row label-column backgrounds and holds the name labels.
+    // -----------------------------------------------------------------------
+    struct left_panel_overlay : GUI::base
+    {
+        using ptr = std::shared_ptr<left_panel_overlay>;
+        FrameGraphTimelineCanvas& owner;
+
+        explicit left_panel_overlay(FrameGraphTimelineCanvas& o) : owner(o)
+        {
+            docking        = GUI::dock::NONE;
+            width_size     = GUI::size_type::FIXED;
+            height_size    = GUI::size_type::FIXED;
+            size           = { LABEL_W, 0.0f };
+            clickable      = false;
+            clamp_to_parent = GUI::ParentClamp::NONE;
+        }
+
+        virtual void draw(Context& c) override
+        {
+            if (!owner.m_ready) { base::draw(c); return; }
+            const rect b  = get_render_bounds();
+            const rect sb = owner.m_scroll->get_render_bounds();
+            for (int ri = 0; ri < (int)owner.m_resources.size(); ri++)
+            {
+                float ry = b.y + LANE_COUNT * LANE_H + 6.0f + ri * ROW_H;
+                if (ry + ROW_H < sb.y || ry > sb.y + sb.h) continue;
+                owner.dr(c, (ri & 1) ? C_ROW_ODD : C_ROW_EVEN, sb.x, ry, LABEL_W, ROW_H);
+            }
+            owner.dr(c, C_SEPARATOR, sb.x + LABEL_W - 1.0f, sb.y, 1.0f, sb.h);
+            base::draw(c);
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    //  Top-panel overlay — follows X scroll, pinned at Y = 0.
+    //  Draws lane-colour backgrounds for the content area and holds pass labels.
+    // -----------------------------------------------------------------------
+    struct top_panel_overlay : GUI::base
+    {
+        using ptr = std::shared_ptr<top_panel_overlay>;
+        FrameGraphTimelineCanvas& owner;
+
+        explicit top_panel_overlay(FrameGraphTimelineCanvas& o) : owner(o)
+        {
+            docking        = GUI::dock::NONE;
+            width_size     = GUI::size_type::FIXED;
+            height_size    = GUI::size_type::FIXED;
+            size           = { 0.0f, LANE_COUNT * LANE_H };
+            clickable      = false;
+            clamp_to_parent = GUI::ParentClamp::NONE;
+        }
+
+        virtual void draw(Context& c) override
+        {
+            if (!owner.m_ready) { base::draw(c); return; }
+            const rect  sb = owner.m_scroll->get_render_bounds();
+            const float cx = sb.x + LABEL_W;
+            const float cw = sb.w - LABEL_W;
+
+            owner.dr(c, C_DIRECT_LANE,  cx, sb.y,                              cw, LANE_H);
+            owner.dr(c, C_COMPUTE_LANE, cx, sb.y + LANE_H,                     cw, LANE_H);
+            owner.dr(c, C_SEPARATOR,    cx, sb.y + LANE_COUNT * LANE_H - 2.0f, cw, 2.0f);
+
+            // Selection highlights — same columns as in the grid, clipped to lane height.
+            const float bx = sb.x + owner.m_scroll->contents->pos->x;
+            const float lane_h = LANE_COUNT * LANE_H;
+            for (UINT wid : owner.m_sel_wait_call_ids)
+                owner.dr(c, C_SEL_WAIT_PASS, owner.dep_x(wid, bx), sb.y, owner.col_w(), lane_h);
+            if (owner.m_sel_call_id != std::numeric_limits<UINT>::max())
+                owner.dr(c, C_SEL_PASS, owner.dep_x(owner.m_sel_call_id, bx), sb.y, owner.col_w(), lane_h);
+
+            // Pass blocks — X follows content scroll, Y is fixed to viewport top.
+            for (auto& pass : owner.m_passes)
+            {
+                float px = owner.dep_x(pass.call_id, bx);
+                float py = (pass.queue == HAL::CommandListType::COMPUTE)
+                           ? sb.y + LANE_H : sb.y;
+                const float4& pc = (pass.queue == HAL::CommandListType::DIRECT)
+                                   ? C_PASS_DIRECT : C_PASS_COMPUTE;
+                owner.dr(c, pc, px + PAD, py + PAD, owner.col_w() - 2.0f * PAD, PASS_H - 2.0f * PAD);
+                if (pass.put_fence)
+                    owner.dr(c, C_FENCE, px + owner.col_w() - PAD - 1.5f, py, 3.0f, LANE_H);
+                if (!pass.cross_queue_deps.empty())
+                    owner.dr(c, C_FENCE, px + PAD, py, 3.0f, LANE_H);
+            }
+
+            // Cross-queue bezier connectors — all passes.
+            {
+                std::vector<std::pair<float2, float2>> curves;
+                for (auto& pass : owner.m_passes)
+                {
+                    if (pass.cross_queue_deps.empty()) continue;
+                    float to_cx = owner.dep_x(pass.call_id, bx) + PAD;
+                    float to_cy = ((pass.queue == HAL::CommandListType::COMPUTE)
+                                   ? sb.y + LANE_H : sb.y) + LANE_H * 0.5f;
+                    for (auto& [type, dep_id] : pass.cross_queue_deps)
+                    {
+                        float from_cx = owner.dep_x(dep_id, bx) + owner.col_w() - PAD - 1.5f;
+                        float from_cy = ((type == HAL::CommandListType::COMPUTE)
+                                         ? sb.y + LANE_H : sb.y) + LANE_H * 0.5f;
+                        curves.push_back({ { from_cx, from_cy }, { to_cx, to_cy } });
+                    }
+                }
+                owner.draw_splines(c, curves, C_FENCE_LINK);
+            }
+
+            base::draw(c);
         }
     };
 
@@ -699,10 +859,12 @@ class FrameGraphTimelineCanvas : public dock_base
     // -----------------------------------------------------------------------
     //  Widget containers
     // -----------------------------------------------------------------------
-    content_scroll::ptr  m_scroll;
-    GUI::base::ptr       m_left_panel;
-    grid_canvas::ptr     m_grid_canvas;
-    GUI::base::ptr       m_preview_panel;
+    content_scroll::ptr      m_scroll;
+    left_panel_overlay::ptr  m_left_panel;
+    top_panel_overlay::ptr   m_top_panel;
+    corner_overlay::ptr      m_corner;
+    grid_canvas::ptr         m_grid_canvas;
+    GUI::base::ptr           m_preview_panel;
 
     // -----------------------------------------------------------------------
     //  Labels / images
@@ -761,7 +923,7 @@ class FrameGraphTimelineCanvas : public dock_base
         lbl->width_size  = GUI::size_type::FIXED;
         lbl->height_size = GUI::size_type::FIXED;
         lbl->size        = { w, h };
-        lbl->clip_to_parent = GUI::ParentClip::ALL;
+        lbl->clamp_to_parent = GUI::ParentClamp::ALL;
         return lbl;
     }
 
@@ -783,30 +945,28 @@ public:
 
         m_scroll = std::make_shared<content_scroll>(*this);
 
-        // Grid canvas — first child so labels/images render on top.
+        // Grid canvas — first child inside contents (labels/images render on top).
         m_grid_canvas = std::make_shared<grid_canvas>(*this);
         m_scroll->add_child(m_grid_canvas);
 
-        // Left panel — simple base inside the scroll contents.
-        // Vertical movement is automatic (parent contents scrolls).
-        // Horizontal position is kept pinned via apply_pan().
-        m_left_panel                 = std::make_shared<GUI::base>();
-        m_left_panel->docking        = GUI::dock::NONE;
-        m_left_panel->width_size     = GUI::size_type::FIXED;
-        m_left_panel->height_size    = GUI::size_type::FIXED;
-        m_left_panel->size           = { LABEL_W, 0.0f };
-        m_left_panel->pos            = { 0.0f, 0.0f };
-        m_left_panel->clickable      = false;
-        m_left_panel->clip_to_parent = GUI::ParentClip::ALL;
-        m_scroll->add_child(m_left_panel);
-
-        // Lane labels at fixed positions in left panel.
+        // Overlay panels — drawn on top of contents via base::add_child.
+        // Corner: top-left intersection, never scrolls.
+        m_corner = std::make_shared<corner_overlay>(*this);
         m_lbl_direct  = make_label(LABEL_W - 8.0f, LANE_H - 6.0f, "DIRECT",  C_TEXT_BRIGHT, LABEL_FONT);
         m_lbl_compute = make_label(LABEL_W - 8.0f, LANE_H - 6.0f, "COMPUTE", C_TEXT_BRIGHT, LABEL_FONT);
         m_lbl_direct->pos  = { 4.0f, (LANE_H - 14.0f) * 0.5f };
         m_lbl_compute->pos = { 4.0f, LANE_H + (LANE_H - 14.0f) * 0.5f };
-        m_left_panel->add_child(m_lbl_direct);
-        m_left_panel->add_child(m_lbl_compute);
+        m_corner->add_child(m_lbl_direct);
+        m_corner->add_child(m_lbl_compute);
+        m_scroll->add_overlay(m_corner);
+
+        // Left panel: pinned at X=0, follows Y scroll.
+        m_left_panel = std::make_shared<left_panel_overlay>(*this);
+        m_scroll->add_overlay(m_left_panel);
+
+        // Top panel: follows X scroll, pinned at Y=0.
+        m_top_panel = std::make_shared<top_panel_overlay>(*this);
+        m_scroll->add_overlay(m_top_panel);
 
         // Right dock on this (dock_base) — permanent preview panel.
         auto right_dock  = get_dock(GUI::dock::RIGHT);
@@ -923,7 +1083,7 @@ private:
             icon->height_size    = GUI::size_type::FIXED;
             icon->size           = { ICON_W, ICON_W };
             icon->pos            = { 4.0f, row_top + (ROW_H - ICON_W) * 0.5f };
-            icon->clip_to_parent = GUI::ParentClip::ALL;
+            icon->clamp_to_parent = GUI::ParentClamp::ALL;
             icon->clickable      = false;
 			icon->texture.texture = Skin::get().DefaultEditBox.Normal.texture;
 
@@ -1107,11 +1267,11 @@ private:
             }
         }
 
-        // Pass-name labels in grid scroll (added last, render on top of images).
+        // Pass-name labels in top-panel overlay (render on top of lane backgrounds).
         for (auto& pl : m_pass_labels)
         {
-            m_scroll->remove_child(pl.lbl);
-            m_scroll->remove_child(pl.btn);
+            m_top_panel->remove_child(pl.lbl);
+            m_top_panel->remove_child(pl.btn);
         }
         m_pass_labels.clear();
 
@@ -1121,11 +1281,11 @@ private:
             auto lbl = make_label(0.0f, PASS_H - 2.0f * PAD - 4.0f,
                                   to_str(pass.name), C_TEXT_BRIGHT, LABEL_FONT);
             lbl->pos = { 0.0f, py };
-            m_scroll->add_child(lbl);
+            m_top_panel->add_child(lbl);
 
             auto btn = std::make_shared<pass_button>();
             btn->pos = { 0.0f, (pass.queue == HAL::CommandListType::COMPUTE ? LANE_H : 0.0f) + PAD };
-            m_scroll->add_child(btn);
+            m_top_panel->add_child(btn);
 
             PassInfo captured = pass;
             btn->on_click = [this, captured]()
@@ -1146,9 +1306,12 @@ private:
 
         m_ready = true;
         apply_zoom();
-        apply_pan();
 
-        run_on_ui([this](){add_child(m_scroll);});
+        run_on_ui([this]()
+        {
+            add_child(m_scroll);
+            apply_pan();
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -1156,7 +1319,12 @@ private:
     // -----------------------------------------------------------------------
     void apply_pan()
     {
-        m_left_panel->pos = { -m_scroll->contents->pos->x, 0.0f };
+        const vec2 cp     = m_scroll->contents->pos.get();
+        // Panels are direct children of content_scroll (not contents), so their pos
+        // is relative to the scroll container viewport — no counter-offset needed.
+        m_left_panel->pos = { 0.0f, cp.y  };   // pin X=0, follow Y
+        m_top_panel->pos  = { cp.x, 0.0f  };   // follow X, pin Y=0
+        m_corner->pos     = { 0.0f, 0.0f  };   // always top-left
     }
 
     // -----------------------------------------------------------------------
@@ -1168,9 +1336,10 @@ private:
         float content_h = LANE_COUNT * LANE_H + 6.0f + (float)m_resources.size() * ROW_H;
         float content_w = LABEL_W + (m_max_call_id + 2) * cw;
 
-        m_left_panel->size = { LABEL_W, content_h };
+        m_left_panel->size       = { LABEL_W, content_h };
+        m_top_panel->size        = { content_w, LANE_COUNT * LANE_H };
         m_scroll->contents->size = { content_w, content_h };
-        m_grid_canvas->size           = { content_w, content_h };
+        m_grid_canvas->size      = { content_w, content_h };
 
         float block_w = cw - 2.0f * PAD - 4.0f;
         float block_h = PASS_H - 2.0f * PAD - 4.0f;
@@ -1257,8 +1426,8 @@ private:
             float2 p1 = from / screen_sz;
             float2 p4 = to   / screen_sz;
             float  mx = (p1.x + p4.x) * 0.5f;
-            float2 p2 = { mx, p1.y };
-            float2 p3 = { mx, p4.y };
+            float2 p2 = { p1.x+50.0f/ screen_sz.x, p1.y };
+            float2 p3 = {  p4.x-50.0f/ screen_sz.x, p4.y };
 
             verts.push_back({ p1, color });
             verts.push_back({ p2, color });
@@ -1305,19 +1474,6 @@ private:
         // vertical grid lines
         for (UINT cid = 0; cid <= m_max_call_id + 1; cid++)
             dr(c, C_GRID, dep_x(cid, bx), by, 1.0f, bh);
-
-        // pass blocks
-        for (auto& pass : m_passes)
-        {
-            float px = dep_x(pass.call_id, bx);
-            float py = lane_y(pass.queue, by);
-            const float4& pc = (pass.queue == HAL::CommandListType::DIRECT)
-                                 ? C_PASS_DIRECT : C_PASS_COMPUTE;
-            dr(c, pc, px + PAD, py + PAD, col_w() - 2.0f * PAD, PASS_H - 2.0f * PAD);
-
-            if (pass.put_fence)
-                dr(c, C_FENCE, px + col_w() - PAD - 1.5f, lane_y(pass.queue, by), 3.0f, LANE_H);
-        }
 
         // resource tracks
         for (int ri = 0; ri < (int)m_resources.size(); ri++)
@@ -1374,30 +1530,13 @@ private:
                     dr(c, cell.is_write ? C_WRITE : C_READ, cx + PAD, cy, cw, CELL_H);
                 if (cell.has_barrier)
                     dr(c, C_BARRIER,  cx + PAD - 2.5f, cy - 2.0f, 3.0f, CELL_H + 4.0f);
-                if (cell.is_created)
+                if (cell.is_created && cell.call_id != 0)
                     dr(c, C_CREATED,  cx + PAD, cy, 5.0f, CELL_H);
                 if (cell.is_deleted)
                     dr(c, C_DELETED,  cx + PAD, cy, 5.0f, CELL_H);
             }
         }
 
-        // Cross-queue bezier connectors — drawn last so they appear on top.
-        if (m_sel_call_id != std::numeric_limits<UINT>::max())
-        {
-            std::vector<std::pair<float2, float2>> curves;
-            for (auto& pass : m_passes)
-            {
-                if (pass.call_id != m_sel_call_id) continue;
-                float to_cx = dep_x(pass.call_id, bx) + col_w() * 0.5f;
-                float to_cy = lane_y(pass.queue,   by) + LANE_H * 0.5f;
-                for (auto& [type, dep_id] : pass.cross_queue_deps)
-                    curves.push_back({ { dep_x(dep_id, bx) + col_w() * 0.5f,
-                                         lane_y(type,   by) + LANE_H * 0.5f },
-                                       { to_cx, to_cy } });
-                break;
-            }
-            draw_splines(c, curves, C_FENCE_LINK);
-        }
     }
 
 };
@@ -1415,7 +1554,7 @@ const float4 FrameGraphTimelineCanvas::C_BARRIER      = { 0.95f, 0.82f, 0.08f, 1
 const float4 FrameGraphTimelineCanvas::C_CREATED      = { 0.18f, 0.84f, 0.18f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_DELETED      = { 1.00f, 1.00f, 1.00f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_FENCE        = { 0.95f, 0.72f, 0.06f, 1.0f };
-const float4 FrameGraphTimelineCanvas::C_FENCE_LINK   = { 0.95f, 0.72f, 0.06f, 0.6f };
+const float4 FrameGraphTimelineCanvas::C_FENCE_LINK   = { 0.95f, 0.72f, 0.06f, 0.9f };
 const float4 FrameGraphTimelineCanvas::C_LABEL_BG     = { 0.07f, 0.07f, 0.09f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_ROW_EVEN     = { 0.12f, 0.12f, 0.14f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_ROW_ODD      = { 0.09f, 0.09f, 0.11f, 1.0f };

@@ -155,20 +155,20 @@ namespace GUI
             if (y_type == pos_y_type::CENTER)
                 res.pos.y = r.pos.y + ((r.size.y - res.size.y) / 2);
 
-            if (clip_to_parent != ParentClip::NONE && parent)
+            if (clamp_to_parent != ParentClamp::NONE && parent)
             {
                 //float2 size = float2(res.size);
                 //float2 pos = float2(res.pos);
                 float2 size = float2::min(float2(res.size), float2(parent->get_render_bounds().size) - float2(parent->padding->left + parent->padding->right, parent->padding->top + parent->padding->bottom) * result_scale);
                 float2 pos = float2::max(float2(parent->get_render_bounds().pos) + float2(parent->padding->left, parent->padding->top) * result_scale, float2(res.pos));
             	pos = float2::min(pos, float2(parent->get_render_bounds().pos) + float2(parent->get_render_bounds().size) - size - float2(parent->padding->right, parent->padding->bottom) * result_scale);
-            	
-                if (check(clip_to_parent & ParentClip::WIDTH)) {
+
+                if (check(clamp_to_parent & ParentClamp::WIDTH)) {
                     res.pos.x = pos.x;
                     res.size.x = size.x;
                 }
 
-                if (check(clip_to_parent & ParentClip::HEIGHT)) {
+                if (check(clamp_to_parent & ParentClamp::HEIGHT)) {
                     res.pos.y = pos.y;
                     res.size.y = size.y;
                 }
@@ -752,10 +752,14 @@ namespace GUI
 
         c.scale = result_scale;
 
+        sizer_long entry_scissors = c.scissors;
+        if (self_scissor.has_value())
+            entry_scissors = intersect(entry_scissors, math::convert(*self_scissor));
+
         if (visibility)
 		{
            on_pre_render(c);
-            user_ui->draw_infos.emplace_back(c.ui_clipping, c.scissors,c.scale,this,c.offset,true);
+            user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale,this,c.offset,true);
 		//	rec_c.execute([this](Context &c) {
 		//		draw(c);
 		//	});
@@ -765,7 +769,8 @@ namespace GUI
         if (clip_child && !visibility)
             return;
 
-        sizer orig = c.ui_clipping;
+        sizer orig            = c.ui_clipping;
+        sizer_long orig_scissors = c.scissors;
         sizer s;
         s.left = c.offset.x + render_bounds->x + padding->left * result_scale;
         s.top = c.offset.y + render_bounds->y + padding->top * result_scale;
@@ -780,22 +785,30 @@ namespace GUI
                 c.ui_clipping = s;
         }
 
+        if (child_scissor.has_value())
+        {
+            sizer cs = math::convert(*child_scissor);
+            c.ui_clipping = intersect(c.ui_clipping, cs);
+            c.scissors    = intersect(c.scissors, cs);
+        }
+
         if (!clip_child || c.ui_clipping.left < c.ui_clipping.right)
             if (!clip_child || c.ui_clipping.top < c.ui_clipping.bottom)
             {
-       
+
                 for (auto& child : childs)
                     if (child->visible.get())
                         child->draw_recursive(c, this);
             }
 
         c.ui_clipping = orig;
+        c.scissors    = orig_scissors;
 		c.scale = result_scale;
 
 
     //    if (visibility)
     //        draw_after(c);
-        user_ui->draw_infos.emplace_back(c.ui_clipping, c.scissors,c.scale, this, c.offset, false);
+        user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale, this, c.offset, false);
 
 		/*rec_c.execute([this](Context &c) {
 			draw_after(c);

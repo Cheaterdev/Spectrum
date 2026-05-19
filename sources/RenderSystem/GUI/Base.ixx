@@ -136,7 +136,7 @@ namespace GUI
     };
 
 
-    enum class ParentClip
+    enum class ParentClamp
         :int
     {
         NONE = 0, WIDTH = 1, HEIGHT = 2, ALL = 3
@@ -440,7 +440,9 @@ namespace GUI
             pos_y_type y_type = pos_y_type::CENTER;
             vec2 childs_size;
 
-            ParentClip clip_to_parent = ParentClip::NONE;
+            ParentClamp clamp_to_parent = ParentClamp::NONE;
+            std::optional<rect> child_scissor;
+            std::optional<rect> self_scissor;
             /*	protected:
             	int get_max_z*/
 

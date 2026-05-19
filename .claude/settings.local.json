@@ -22,7 +22,8 @@
       "Bash(grep -rn \"memcpy\\\\|memset\\\\|memmove\\\\|memcmp\\\\|strlen\\\\|strcmp\\\\|strncmp\\\\|sprintf\\\\|snprintf\\\\|printf\\\\|fprintf\" --include=\"*.ixx\" --include=\"*.cpp\" --include=\"*.h\" --include=\"*.hpp\" ! -path \"./3rdparty/*\" ! -path \"./Modules/*\")",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\" -Directory)",
       "Bash(Select-Object Name)",
-      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\GUI\" -Name)"
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\GUI\" -Name)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\GUI\\\\\" -Recurse | Select-Object FullName)"
     ]
   }
 }

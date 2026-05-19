@@ -48,7 +48,7 @@ GUI::Elements::combo_box::combo_box()
     padding = { 5, 2, 30, 2  };
     skin = Skin::get().DefaultComboBox;
 
-  //  menu->clip_to_parent = true;
+  //  menu->clamp_to_parent = true;
     /*add_item("item 1");
     add_item("item 2");
     add_item("item 3");*/
