@@ -57,7 +57,7 @@ public:
 	std::array<setup_func_type, MaxCount> setup_funcs;
 	std::array<render_func_type, MaxCount> render_funcs;
 
-	FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
 };
 
 }

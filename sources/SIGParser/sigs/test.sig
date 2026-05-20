@@ -19,6 +19,7 @@ Pipeline MainPipeline
 	Voxelize;
 
 	# shadow (generate_global)
+	Scene;
 	PSSM_Global;
 	PSSM_Cascade;
 
@@ -28,12 +29,12 @@ Pipeline MainPipeline
 	CubeMapEnviromentProcessor;
 
 	# voxel lighting (generate_light)
+	
+	RTXPass;
 	Lighting;
 	Mipmapping;
 
 	# main gbuffer + rtx
-	Scene;
-	RTXPass;
 
 	# result target
 	ResultCreation;

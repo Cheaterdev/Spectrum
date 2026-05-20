@@ -19,6 +19,7 @@ ComputePSO BlueNoise
 	compute = blue_noise;
 }
 
+[Compute]
 PassNode BlueNoise
 {
 	Texture BlueNoise;

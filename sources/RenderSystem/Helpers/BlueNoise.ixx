@@ -25,8 +25,6 @@ public:
 	template<typename TPipeline>
 	explicit BlueNoise(TPipeline& pipeline) : BlueNoise()
 	{
-		pipeline.blueNoise.flags = FrameGraph::PassFlags::Compute;
-
 		pipeline.blueNoise.setup_func = [this](auto& data, FrameGraph::TaskBuilder& builder) -> bool
 		{
 			builder.create(data.BlueNoise,

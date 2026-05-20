@@ -2,15 +2,15 @@
 #include "PreScene.h"
 #include "BlueNoise.h"
 #include "Voxelize.h"
+#include "Scene.h"
 #include "PSSM_Global.h"
 #include "PSSM_Cascade.h"
 #include "CubeSky.h"
 #include "CubeMapDownsample.h"
 #include "CubeMapEnviromentProcessor.h"
+#include "RTXPass.h"
 #include "Lighting.h"
 #include "Mipmapping.h"
-#include "Scene.h"
-#include "RTXPass.h"
 #include "ResultCreation.h"
 #include "PSSM_GenerateMask.h"
 #include "PSSM_Combine.h"
@@ -62,6 +62,7 @@ public:
 		Passes::PreScene::Name,
 		Passes::BlueNoise::Name,
 		Passes::Voxelize::Name,
+		Passes::Scene::Name,
 		Passes::PSSM_Global::Name,
 		Passes::PSSM_Cascade::Names[0],
 		Passes::PSSM_Cascade::Names[1],
@@ -72,10 +73,9 @@ public:
 		Passes::CubeSky::Name,
 		Passes::CubeMapDownsample::Name,
 		Passes::CubeMapEnviromentProcessor::Name,
+		Passes::RTXPass::Name,
 		Passes::Lighting::Name,
 		Passes::Mipmapping::Name,
-		Passes::Scene::Name,
-		Passes::RTXPass::Name,
 		Passes::ResultCreation::Name,
 		Passes::PSSM_GenerateMask::Name,
 		Passes::PSSM_Combine::Name,
@@ -125,14 +125,6 @@ public:
 		L"VoxelNormalStatic",
 		L"VoxelAlbedoDynamic",
 		L"VoxelNormalDynamic",
-		L"global_depth",
-		L"global_camera",
-		L"PSSM_Depths",
-		L"PSSM_Cameras",
-		L"sky_cubemap",
-		L"sky_cubemap_filtered",
-		L"sky_cubemap_filtered_diffuse",
-		L"VoxelLighted",
 		L"GBuffer_Albedo",
 		L"GBuffer_Normals",
 		L"GBuffer_Depth",
@@ -146,8 +138,16 @@ public:
 		L"GBuffer_DepthPrev",
 		L"GBuffer_HiZ",
 		L"GBuffer_HiZ_UAV",
+		L"global_depth",
+		L"global_camera",
+		L"PSSM_Depths",
+		L"PSSM_Cameras",
+		L"sky_cubemap",
+		L"sky_cubemap_filtered",
+		L"sky_cubemap_filtered_diffuse",
 		L"RTXDebug",
 		L"WorkGraphBuffer",
+		L"VoxelLighted",
 		L"ResultTexture",
 		L"LightMask",
 		L"VoxelFramesCount",
@@ -194,6 +194,7 @@ public:
 			graph.add_library_pass<Passes::BlueNoise>(blueNoise.setup_func, blueNoise.render_func, blueNoise.flags);
 		if (voxelize.setup_func)
 			graph.add_library_pass<Passes::Voxelize>(voxelize.setup_func, voxelize.render_func, voxelize.flags);
+		graph.add_library_pass<Passes::Scene>(PassDefault<Passes::Scene>::setup, PassDefault<Passes::Scene>::render, PassDefault<Passes::Scene>::flags);
 		if (pSSM_Global.setup_func)
 			graph.add_library_pass<Passes::PSSM_Global>(pSSM_Global.setup_func, pSSM_Global.render_func, pSSM_Global.flags);
 		for (uint32_t i = 0; i < Passes::PSSM_Cascade::MaxCount; ++i)
@@ -203,12 +204,11 @@ public:
 			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, cubeSky.flags);
 		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, PassDefault<Passes::CubeMapDownsample>::flags);
 		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, PassDefault<Passes::CubeMapEnviromentProcessor>::flags);
+		graph.add_library_pass<Passes::RTXPass>(PassDefault<Passes::RTXPass>::setup, PassDefault<Passes::RTXPass>::render, PassDefault<Passes::RTXPass>::flags);
 		if (lighting.setup_func)
 			graph.add_library_pass<Passes::Lighting>(lighting.setup_func, lighting.render_func, lighting.flags);
 		if (mipmapping.setup_func)
 			graph.add_library_pass<Passes::Mipmapping>(mipmapping.setup_func, mipmapping.render_func, mipmapping.flags);
-		graph.add_library_pass<Passes::Scene>(PassDefault<Passes::Scene>::setup, PassDefault<Passes::Scene>::render, PassDefault<Passes::Scene>::flags);
-		graph.add_library_pass<Passes::RTXPass>(PassDefault<Passes::RTXPass>::setup, PassDefault<Passes::RTXPass>::render, PassDefault<Passes::RTXPass>::flags);
 		graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, PassDefault<Passes::ResultCreation>::flags);
 		if (pSSM_GenerateMask.setup_func)
 			graph.add_library_pass<Passes::PSSM_GenerateMask>(pSSM_GenerateMask.setup_func, pSSM_GenerateMask.render_func, pSSM_GenerateMask.flags);

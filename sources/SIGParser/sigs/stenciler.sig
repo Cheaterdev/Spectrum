@@ -136,6 +136,7 @@ GraphicsPSO StencilerLast
 	blend = { Additive };
 }
 
+[Required]
 PassNode stencil_renderer_before
 {
 	Texture depth_tex;

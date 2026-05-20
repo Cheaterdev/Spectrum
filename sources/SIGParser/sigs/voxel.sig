@@ -476,6 +476,7 @@ PassNode VoxelDebug
 	Texture3D VoxelLighted;
 }
 
+[Compute]
 PassNode VoxelScreen
 {
 	GBuffer gbuffer;
@@ -492,6 +493,7 @@ PassNode VoxelScreen
 	StructuredBuffer<uint2> VoxelScreen_hi_data;
 }
 
+[Compute]
 PassNode VoxelCombine
 {
 	GBuffer gbuffer;
@@ -506,6 +508,7 @@ PassNode VoxelCombine
 	StructuredBuffer<uint2> VoxelScreen_hi_data;
 }
 
+[Compute]
 PassNode ScreenReflection
 {
 	GBuffer gbuffer;
@@ -520,6 +523,7 @@ PassNode ScreenReflection
 	StructuredBuffer<uint2> VoxelScreen_hi_data;
 }
 
+[Compute]
 PassNode ReflCombine
 {
 	GBuffer gbuffer;
@@ -537,6 +541,7 @@ PassNode Voxelize
 	Texture VoxelNormalDynamic;
 }
 
+[Compute]
 PassNode Lighting
 {
 	Texture global_depth;
@@ -551,6 +556,7 @@ PassNode Lighting
 	Texture VoxelNormalDynamic;
 }
 
+[Compute]
 PassNode Mipmapping
 {
 	Texture3D VoxelLighted;

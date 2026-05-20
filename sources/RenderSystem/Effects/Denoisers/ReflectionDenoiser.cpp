@@ -223,7 +223,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 				copy.copy_resource(data.ReflectionDenoiser_AverageRadiancePrev->resource, data.ReflectionDenoiser_AverageRadiance->resource);
 
 
-			}, PassFlags::Compute);
+			});
 
 
 	}

@@ -59,8 +59,6 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
         template<typename TPipeline>
         explicit stencil_renderer(TPipeline& pipeline) : stencil_renderer()
         {
-            pipeline.stencil_renderer_before.flags = FrameGraph::PassFlags::Required;
-
             pipeline.stencil_renderer_before.setup_func = [this](auto& data, FrameGraph::TaskBuilder& builder) -> bool
             {
                 process_tasks();

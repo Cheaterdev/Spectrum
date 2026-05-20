@@ -314,8 +314,7 @@ struct ValueAtom : public have_expr, have_owner, have_name		 ,have_values
 		SAVE_PARENT_MERGED(have_expr);
 		SAVE_PARENT_MERGED(have_owner);
 		SAVE_PARENT_MERGED(have_name);
-
-		//ar& NVP(value_atom);
+		SAVE_PARENT_MERGED(have_values);
 	}
 };
 struct option : public have_name

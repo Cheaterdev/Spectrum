@@ -367,7 +367,6 @@ public:
 
 		// ---- Lighting -------------------------------------------------------
 
-		pipeline.lighting.flags       = PassFlags::Compute;
 		pipeline.lighting.setup_func  = [this](auto& data, FrameGraph::TaskBuilder& builder) -> bool
 		{
 			light_counter = (light_counter + 1) % 5;
@@ -437,7 +436,6 @@ public:
 
 		// ---- Mipmapping -----------------------------------------------------
 
-		pipeline.mipmapping.flags       = PassFlags::Compute;
 		pipeline.mipmapping.setup_func  = [this](auto& data, FrameGraph::TaskBuilder& builder) -> bool
 		{
 			if (!light_scene) return false;
@@ -522,7 +520,6 @@ public:
 
 		// ---- VoxelScreen ----------------------------------------------------
 
-		pipeline.voxelScreen.flags       = PassFlags::Compute;
 		pipeline.voxelScreen.setup_func  = [this](auto& data, FrameGraph::TaskBuilder& builder) -> bool
 		{
 			auto& frame = builder.graph->get_context<ViewportInfo>();
@@ -676,7 +673,6 @@ public:
 
 		// ---- VoxelCombine ---------------------------------------------------
 
-		pipeline.voxelCombine.flags       = PassFlags::Compute;
 		pipeline.voxelCombine.setup_func  = [this](auto& data, FrameGraph::TaskBuilder& builder) -> bool
 		{
 			builder.need(data.ResultTexture,        ResourceFlags::UnorderedAccess);
@@ -753,7 +749,6 @@ public:
 
 		// ---- ScreenReflection -----------------------------------------------
 
-		pipeline.screenReflection.flags       = PassFlags::Compute;
 		pipeline.screenReflection.setup_func  = [this](auto& data, FrameGraph::TaskBuilder& builder) -> bool
 		{
 			if (!reflecton) return false;
@@ -825,7 +820,6 @@ public:
 
 		// ---- ReflectionDenoiser_Reproject -----------------------------------
 
-		pipeline.reflectionDenoiser_Reproject.flags      = PassFlags::Compute;
 		pipeline.reflectionDenoiser_Reproject.setup_func =
 			[this](auto& data, FrameGraph::TaskBuilder& builder) -> bool
 		{
@@ -977,7 +971,6 @@ public:
 
 		// ---- ReflCombine ----------------------------------------------------
 
-		pipeline.reflCombine.flags       = PassFlags::Compute;
 		pipeline.reflCombine.setup_func  = [this](auto& data, FrameGraph::TaskBuilder& builder) -> bool
 		{
 			if (!reflecton) return false;

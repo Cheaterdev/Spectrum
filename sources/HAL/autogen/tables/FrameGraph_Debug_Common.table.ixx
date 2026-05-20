@@ -41,7 +41,7 @@ export namespace Table
 			uint selectedMip; // uint
 			uint target; // RWTexture2D<float4>
 
-
+			
 			private:
 			SERIALIZE()
 			{
@@ -64,6 +64,7 @@ export namespace Table
 			ar& NVP(targetSize);
 			ar& NVP(minColor);
 			ar& NVP(maxColor);
+			ar& NVP(selectedMip);
 		}
 
 	};

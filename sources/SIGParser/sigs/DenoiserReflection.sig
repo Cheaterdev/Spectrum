@@ -114,6 +114,7 @@ ComputePSO DenoiserReflectionResolve
 }
 
 
+[Compute]
 PassNode ReflectionDenoiser_Reproject
 {
 	Texture GBuffer_DepthPrev;

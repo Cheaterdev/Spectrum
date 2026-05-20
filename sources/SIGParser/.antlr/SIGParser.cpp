@@ -1,5 +1,5 @@
 
-// Generated from SIG.g4 by ANTLR 4.11.1
+// Generated from c:/Users/Bohdan/Documents/GitHub/Spectrum/sources/SIGParser/SIG.g4 by ANTLR 4.13.1
 
 
 #include "SIGListener.h"
@@ -37,10 +37,19 @@ struct SIGParserStaticData final {
 };
 
 ::antlr4::internal::OnceFlag sigParserOnceFlag;
+#if ANTLR4_USE_THREAD_LOCAL_CACHE
+static thread_local
+#endif
 SIGParserStaticData *sigParserStaticData = nullptr;
 
 void sigParserInitialize() {
-  ASSERT(sigParserStaticData == nullptr);
+#if ANTLR4_USE_THREAD_LOCAL_CACHE
+  if (sigParserStaticData != nullptr) {
+    return;
+  }
+#else
+  assert(sigParserStaticData == nullptr);
+#endif
   auto staticData = std::make_unique<SIGParserStaticData>(
     std::vector<std::string>{
       "parse", "bind_option", "options_assign", "option", "option_block", 
@@ -511,8 +520,8 @@ SIGParser::ParseContext* SIGParser::parse() {
     setState(161);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while ((((_la - 56) & ~ 0x3fULL) == 0) &&
-      ((1ULL << (_la - 56)) & 33751009) != 0) {
+    while (((((_la - 56) & ~ 0x3fULL) == 0) &&
+      ((1ULL << (_la - 56)) & 33751009) != 0)) {
       setState(159);
       _errHandler->sync(this);
       switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 0, _ctx)) {
@@ -2180,8 +2189,8 @@ SIGParser::Function_idContext* SIGParser::function_id() {
     _errHandler->sync(this);
 
     _la = _input->LA(1);
-    if ((((_la - 58) & ~ 0x3fULL) == 0) &&
-      ((1ULL << (_la - 58)) & 3670019) != 0) {
+    if (((((_la - 58) & ~ 0x3fULL) == 0) &&
+      ((1ULL << (_la - 58)) & 3670019) != 0)) {
       setState(303);
       value_id_ignore();
     }
@@ -3073,8 +3082,8 @@ SIGParser::Table_blockContext* SIGParser::table_block() {
     setState(380);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while ((((_la - 56) & ~ 0x3fULL) == 0) &&
-      ((1ULL << (_la - 56)) & 1109393409) != 0) {
+    while (((((_la - 56) & ~ 0x3fULL) == 0) &&
+      ((1ULL << (_la - 56)) & 1109393409) != 0)) {
       setState(377);
       table_stat();
       setState(382);
@@ -3466,8 +3475,8 @@ SIGParser::Rt_blockContext* SIGParser::rt_block() {
     setState(414);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while ((((_la - 75) & ~ 0x3fULL) == 0) &&
-      ((1ULL << (_la - 75)) & 69) != 0) {
+    while (((((_la - 75) & ~ 0x3fULL) == 0) &&
+      ((1ULL << (_la - 75)) & 69) != 0)) {
       setState(411);
       rt_stat();
       setState(416);
@@ -4004,8 +4013,8 @@ SIGParser::Compute_pso_blockContext* SIGParser::compute_pso_block() {
     setState(461);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 72057594038976272) != 0 || _la == SIGParser::ROOTSIG
+    while ((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 72057594038976272) != 0) || _la == SIGParser::ROOTSIG
 
     || _la == SIGParser::COMMENT) {
       setState(458);
@@ -4292,8 +4301,8 @@ SIGParser::Graphics_pso_blockContext* SIGParser::graphics_pso_block() {
     setState(485);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 72057662757404528) != 0 || _la == SIGParser::ROOTSIG
+    while ((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 72057662757404528) != 0) || _la == SIGParser::ROOTSIG
 
     || _la == SIGParser::COMMENT) {
       setState(482);
@@ -4800,8 +4809,8 @@ SIGParser::Workgraph_pso_blockContext* SIGParser::workgraph_pso_block() {
     setState(531);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 72057594038976272) != 0 || _la == SIGParser::ROOTSIG
+    while ((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 72057594038976272) != 0) || _la == SIGParser::ROOTSIG
 
     || _la == SIGParser::COMMENT) {
       setState(528);
@@ -5044,8 +5053,8 @@ SIGParser::Rtx_pass_blockContext* SIGParser::rtx_pass_block() {
     setState(551);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 72057662757404416) != 0 || _la == SIGParser::COMMENT) {
+    while ((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 72057662757404416) != 0) || _la == SIGParser::COMMENT) {
       setState(548);
       rtx_pass_stat();
       setState(553);
@@ -5308,8 +5317,8 @@ SIGParser::Rtx_raygen_blockContext* SIGParser::rtx_raygen_block() {
     setState(576);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 72057594038976256) != 0 || _la == SIGParser::COMMENT) {
+    while ((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 72057594038976256) != 0) || _la == SIGParser::COMMENT) {
       setState(573);
       rtx_raygen_stat();
       setState(578);
@@ -5647,8 +5656,8 @@ SIGParser::View_blockContext* SIGParser::view_block() {
     setState(611);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while ((((_la - 56) & ~ 0x3fULL) == 0) &&
-      ((1ULL << (_la - 56)) & 35651585) != 0) {
+    while (((((_la - 56) & ~ 0x3fULL) == 0) &&
+      ((1ULL << (_la - 56)) & 35651585) != 0)) {
       setState(608);
       view_stat();
       setState(613);
@@ -6152,8 +6161,8 @@ SIGParser::Shader_typeContext* SIGParser::shader_type() {
     enterOuterAlt(_localctx, 1);
     setState(662);
     _la = _input->LA(1);
-    if (!(((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 1048320) != 0)) {
+    if (!((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 1048320) != 0))) {
     _errHandler->recoverInline(this);
     }
     else {
@@ -6210,8 +6219,8 @@ SIGParser::Pso_param_idContext* SIGParser::pso_param_id() {
     enterOuterAlt(_localctx, 1);
     setState(664);
     _la = _input->LA(1);
-    if (!(((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 68718428160) != 0)) {
+    if (!((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 68718428160) != 0))) {
     _errHandler->recoverInline(this);
     }
     else {
@@ -6297,5 +6306,9 @@ SIGParser::Bool_typeContext* SIGParser::bool_type() {
 }
 
 void SIGParser::initialize() {
+#if ANTLR4_USE_THREAD_LOCAL_CACHE
+  sigParserInitialize();
+#else
   ::antlr4::internal::call_once(sigParserOnceFlag, sigParserInitialize);
+#endif
 }

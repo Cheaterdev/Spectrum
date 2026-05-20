@@ -35,7 +35,7 @@ public:
 	setup_func_type setup_func;
 	render_func_type render_func;
 
-	FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
 };
 
 }

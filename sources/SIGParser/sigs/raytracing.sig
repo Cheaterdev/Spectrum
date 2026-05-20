@@ -180,7 +180,7 @@ RaytracePass ColorPass
 
 
 [Static]
-[Flags = Compute]
+[Compute]
 PassNode RTXPass
 {
 	GBuffer gbuffer;

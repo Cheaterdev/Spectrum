@@ -1,5 +1,5 @@
 
-// Generated from SIG.g4 by ANTLR 4.11.1
+// Generated from c:/Users/Bohdan/Documents/GitHub/Spectrum/sources/SIGParser/SIG.g4 by ANTLR 4.13.1
 
 
 #include "SIGLexer.h"
@@ -42,10 +42,19 @@ struct SIGLexerStaticData final {
 };
 
 ::antlr4::internal::OnceFlag siglexerLexerOnceFlag;
+#if ANTLR4_USE_THREAD_LOCAL_CACHE
+static thread_local
+#endif
 SIGLexerStaticData *siglexerLexerStaticData = nullptr;
 
 void siglexerLexerInitialize() {
-  ASSERT(siglexerLexerStaticData == nullptr);
+#if ANTLR4_USE_THREAD_LOCAL_CACHE
+  if (siglexerLexerStaticData != nullptr) {
+    return;
+  }
+#else
+  assert(siglexerLexerStaticData == nullptr);
+#endif
   auto staticData = std::make_unique<SIGLexerStaticData>(
     std::vector<std::string>{
       "T__0", "T__1", "T__2", "T__3", "T__4", "T__5", "T__6", "T__7", "T__8", 
@@ -403,5 +412,9 @@ const atn::ATN& SIGLexer::getATN() const {
 
 
 void SIGLexer::initialize() {
+#if ANTLR4_USE_THREAD_LOCAL_CACHE
+  siglexerLexerInitialize();
+#else
   ::antlr4::internal::call_once(siglexerLexerOnceFlag, siglexerLexerInitialize);
+#endif
 }

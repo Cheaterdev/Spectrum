@@ -25,8 +25,11 @@ template<>
 struct PassDefault<Passes::{{pass_name}}>
 {
 	static constexpr bool enabled = true;
-{%- if pass_def.options.Flags is defined %}
-	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::{{pass_def.options.Flags.value_atom.expr}};
+{%- set parts = create_list('parts') -%}
+{%- if pass_def.options.Compute  is defined -%}{%- do myappend('parts', "FrameGraph::PassFlags::Compute")  -%}{%- endif -%}
+{%- if pass_def.options.Required is defined -%}{%- do  myappend('parts', "FrameGraph::PassFlags::Required") -%}{%- endif -%}
+{%- if get_list('parts') | length > 0 %}
+	static constexpr FrameGraph::PassFlags flags = {{ get_list('parts') | join(" | ") }};
 {%- else %}
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
 {%- endif %}

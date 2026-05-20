@@ -4,3 +4,4 @@ import <Core_defs.h>;
 #undef TRUE
 #undef FALSE
 #undef EOF
+#define assert(x) ASSERT(x)

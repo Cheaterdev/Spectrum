@@ -79,7 +79,14 @@ public:
 	setup_func_type setup_func;
 	render_func_type render_func;
 {% endif %}
-	FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+{%- set parts = create_list('parts') -%}
+{%- if pass.options.Compute  is defined -%}{%- do myappend("parts", "FrameGraph::PassFlags::Compute")  -%}{%- endif -%}
+{%- if pass.options.Required is defined -%}{%- do myappend('parts', "FrameGraph::PassFlags::Required") -%}{%- endif -%}
+{%- if get_list('parts') | length > 0 %}
+	const FrameGraph::PassFlags flags = {{ get_list('parts') | join(" | ") }};
+{%- else %}
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+{%- endif %}
 };
 
 }
