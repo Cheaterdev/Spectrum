@@ -35,6 +35,7 @@ class FrameGraphTimelineCanvas : public dock_base
         UINT                 call_id   = 0;
         HAL::CommandListType queue     = HAL::CommandListType::DIRECT;
         bool                 put_fence = false;
+        bool                 disabled  = false;
         // Cross-queue deps resolved at rebuild time — no raw pointers.
         std::vector<std::pair<HAL::CommandListType, UINT>> cross_queue_deps;
     };
@@ -46,6 +47,7 @@ class FrameGraphTimelineCanvas : public dock_base
         bool  has_barrier = false;
         bool  is_created  = false;
         bool  is_deleted  = false;
+        bool  disabled    = false;
         image::ptr                     preview;
         label::ptr                     state_lbl;
         std::shared_ptr<Texture>       thumb_tex;
@@ -355,13 +357,17 @@ class FrameGraphTimelineCanvas : public dock_base
                 float px = owner.dep_x(pass.call_id, bx);
                 float py = (pass.queue == HAL::CommandListType::COMPUTE)
                            ? sb.y + LANE_H : sb.y;
-                const float4& pc = (pass.queue == HAL::CommandListType::DIRECT)
+                const float4& pc = pass.disabled ? C_PASS_DISABLED
+                                   : (pass.queue == HAL::CommandListType::DIRECT)
                                    ? C_PASS_DIRECT : C_PASS_COMPUTE;
                 owner.dr(c, pc, px + PAD, py + PAD, owner.col_w() - 2.0f * PAD, PASS_H - 2.0f * PAD);
-                if (pass.put_fence)
-                    owner.dr(c, C_FENCE, px + owner.col_w() - PAD - 1.5f, py, 3.0f, LANE_H);
-                if (!pass.cross_queue_deps.empty())
-                    owner.dr(c, C_FENCE, px + PAD, py, 3.0f, LANE_H);
+                if (!pass.disabled)
+                {
+                    if (pass.put_fence)
+                        owner.dr(c, C_FENCE, px + owner.col_w() - PAD - 1.5f, py, 3.0f, LANE_H);
+                    if (!pass.cross_queue_deps.empty())
+                        owner.dr(c, C_FENCE, px + PAD, py, 3.0f, LANE_H);
+                }
             }
 
             // Cross-queue bezier connectors — all passes.
@@ -369,7 +375,7 @@ class FrameGraphTimelineCanvas : public dock_base
                 std::vector<std::pair<float2, float2>> curves;
                 for (auto& pass : owner.m_passes)
                 {
-                    if (pass.cross_queue_deps.empty()) continue;
+                    if (pass.disabled || pass.cross_queue_deps.empty()) continue;
                     float to_cx = owner.dep_x(pass.call_id, bx) + PAD;
                     float to_cy = ((pass.queue == HAL::CommandListType::COMPUTE)
                                    ? sb.y + LANE_H : sb.y) + LANE_H * 0.5f;
@@ -465,6 +471,7 @@ class FrameGraphTimelineCanvas : public dock_base
             };
 
             add_row("Pass:   " + to_str(info.name));
+            if (info.disabled) { add_row("Status: DISABLED"); return; }
             add_row("Queue:  " + std::string(
                 info.queue == HAL::CommandListType::DIRECT ? "Direct" : "Compute"));
             add_row("ID:     #" + std::to_string(info.call_id));
@@ -948,8 +955,11 @@ class FrameGraphTimelineCanvas : public dock_base
     static const float4 C_COMPUTE_LANE;
     static const float4 C_PASS_DIRECT;
     static const float4 C_PASS_COMPUTE;
+    static const float4 C_PASS_DISABLED;
     static const float4 C_WRITE;
     static const float4 C_READ;
+    static const float4 C_WRITE_DISABLED;
+    static const float4 C_READ_DISABLED;
     static const float4 C_BARRIER;
     static const float4 C_CREATED;
     static const float4 C_DELETED;
@@ -1118,6 +1128,25 @@ private:
                 m_max_call_id = pass->call_id;
         }
 
+        // Disabled passes — synthetic call_ids placed after the enabled section.
+        std::unordered_map<const FrameGraph::Pass*, UINT> disabled_col;
+        {
+            UINT next_col = m_max_call_id + 2;
+            for (auto& sp : g.builder.passes)
+            {
+                if (sp->enabled) continue;
+                PassInfo info;
+                info.name     = sp->name;
+                info.call_id  = next_col;
+                info.queue    = sp->get_type();
+                info.disabled = true;
+                disabled_col[sp.get()] = next_col;
+                m_passes.push_back(info);
+                if (next_col > m_max_call_id) m_max_call_id = next_col;
+                ++next_col;
+            }
+        }
+
         std::map<std::string, ResourceTrack> track_map;
         for (auto* pass : g.builder.enabled_passes)
         {
@@ -1152,10 +1181,34 @@ private:
                 tr.cells.push_back(cell);
             }
         }
+
+        // Disabled pass resource cells — muted, no thumbnails.
+        for (auto& sp : g.builder.passes)
+        {
+            if (sp->enabled) continue;
+            auto it = disabled_col.find(sp.get());
+            if (it == disabled_col.end()) continue;
+            UINT col = it->second;
+            for (auto& [alloc, flags] : sp->used.resource_flags)
+            {
+                auto& tr    = track_map[alloc->name];
+                tr.name     = alloc->name;
+                tr.is_static = alloc->is_static();
+                tr.is_passed = alloc->passed;
+                ResourceCell cell;
+                cell.call_id  = col;
+                cell.is_write = check(flags & FrameGraph::WRITEABLE_FLAGS);
+                cell.alloc    = alloc;
+                cell.disabled = true;
+                tr.cells.push_back(cell);
+            }
+        }
+
         for (auto& [name, tr] : track_map)
         {
             for (size_t i = 1; i < tr.cells.size(); ++i)
-                if (tr.cells[i].is_write != tr.cells[i - 1].is_write)
+                if (!tr.cells[i].disabled && !tr.cells[i - 1].disabled &&
+                    tr.cells[i].is_write != tr.cells[i - 1].is_write)
                     tr.cells[i].has_barrier = true;
             for (auto& cell : tr.cells)
                 if (cell.alloc && cell.alloc->non_deleted)
@@ -1200,6 +1253,38 @@ private:
             lbl->pos  = { lx, ly };
             m_left_panel->add_child(lbl);
             m_resource_labels.push_back(lbl);
+
+            // Resource type label — bottom-right corner of the left-panel row.
+            std::string type_str;
+            for (auto& cell : m_resources[ri].cells)
+            {
+                if (!cell.alloc || !cell.alloc->resource) continue;
+                auto& desc = cell.alloc->resource->get_desc();
+                if (desc.is_texture())
+                {
+                    if (cell.alloc->view && dynamic_cast<HAL::CubeView*>(cell.alloc->view.get()))
+                        type_str = "Cube";
+                    else
+                        type_str = (desc.as_texture().Dimensions.z > 1) ? "3D" : "2D";
+                }
+                else if (cell.alloc->view)
+                {
+                    if      (dynamic_cast<HAL::StructuredBufferViewBase*>(cell.alloc->view.get())) type_str = "Struct";
+                    else if (dynamic_cast<HAL::ByteBufferView*>(cell.alloc->view.get()))           type_str = "Byte";
+                    else if (dynamic_cast<HAL::CounterView*>(cell.alloc->view.get()))              type_str = "Counter";
+                    else if (dynamic_cast<HAL::RTXSceneView*>(cell.alloc->view.get()))             type_str = "BVH";
+                    else                                                                            type_str = "Buffer";
+                }
+                break;
+            }
+            if (!type_str.empty())
+            {
+                auto tlbl            = make_label(LABEL_W - 4.0f, 14.0f, type_str, C_TEXT_DIM, 9.0f);
+                tlbl->pos            = { 2.0f, row_top + ROW_H - 15.0f };
+                tlbl->magnet_text    = FW1_RIGHT | FW1_VCENTER | FW1_NOWORDWRAP;
+                m_left_panel->add_child(tlbl);
+                m_resource_labels.push_back(tlbl);
+            }
         }
 
         // Preview images for all cells — read cells reuse the last write's alloc+call_id.
@@ -1214,12 +1299,14 @@ private:
 
             for (auto& cell : m_resources[ri].cells)
             {
+                if (cell.disabled) continue;
+
                 if (cell.is_write)
                 {
                     last_write_alloc   = cell.alloc;
                     last_write_call_id = cell.call_id;
 
-                    if (!cell.is_deleted && cell.alloc->resource->get_desc().is_texture())
+                    if (!cell.is_deleted && cell.alloc->resource && cell.alloc->resource->get_desc().is_texture())
                     {
                         const bool is_cube = cell.alloc->view &&
                             !!dynamic_cast<HAL::CubeView*>(cell.alloc->view.get());
@@ -1403,7 +1490,7 @@ private:
         {
             float py = (pass.queue == HAL::CommandListType::COMPUTE ? LANE_H : 0.0f) + PAD + 2.0f;
             auto lbl = make_label(0.0f, PASS_H - 2.0f * PAD - 4.0f,
-                                  to_str(pass.name), C_TEXT_BRIGHT, LABEL_FONT);
+                                  to_str(pass.name), pass.disabled ? C_TEXT_DIM : C_TEXT_BRIGHT, LABEL_FONT);
             lbl->pos = { 0.0f, py };
             m_top_panel->add_child(lbl);
 
@@ -1623,6 +1710,7 @@ private:
 
                 for (auto& cell : tr.cells)
                 {
+                    if (cell.disabled) continue;
                     const bool del_only = cell.is_deleted && !cell.is_write && !cell.is_created;
                     if (!del_only) {
                         if (id_start == NONE) id_start = cell.call_id;
@@ -1663,13 +1751,21 @@ private:
                 float cw  = col_w() - 2.0f * PAD;
                 const bool deletion_only = cell.is_deleted && !cell.is_write && !cell.is_created;
                 if (!deletion_only)
-                    dr(c, cell.is_write ? C_WRITE : C_READ, cx + PAD, cy, cw, CELL_H);
-                if (cell.has_barrier)
-                    dr(c, C_BARRIER,  cx + PAD - 2.5f, cy - 2.0f, 3.0f, CELL_H + 4.0f);
-                if (cell.is_created && cell.call_id != 0)
-                    dr(c, C_CREATED,  cx + PAD, cy, 5.0f, CELL_H);
-                if (cell.is_deleted)
-                    dr(c, C_DELETED,  cx + PAD, cy, 5.0f, CELL_H);
+                {
+                    const float4& cc = cell.disabled
+                        ? (cell.is_write ? C_WRITE_DISABLED : C_READ_DISABLED)
+                        : (cell.is_write ? C_WRITE : C_READ);
+                    dr(c, cc, cx + PAD, cy, cw, CELL_H);
+                }
+                if (!cell.disabled)
+                {
+                    if (cell.has_barrier)
+                        dr(c, C_BARRIER, cx + PAD - 2.5f, cy - 2.0f, 3.0f, CELL_H + 4.0f);
+                    if (cell.is_created && cell.call_id != 0)
+                        dr(c, C_CREATED, cx + PAD, cy, 5.0f, CELL_H);
+                    if (cell.is_deleted)
+                        dr(c, C_DELETED, cx + PAD, cy, 5.0f, CELL_H);
+                }
             }
         }
 
@@ -1682,10 +1778,13 @@ private:
 // ---------------------------------------------------------------------------
 const float4 FrameGraphTimelineCanvas::C_DIRECT_LANE  = { 0.13f, 0.13f, 0.22f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_COMPUTE_LANE = { 0.09f, 0.16f, 0.16f, 1.0f };
-const float4 FrameGraphTimelineCanvas::C_PASS_DIRECT  = { 0.28f, 0.50f, 0.82f, 1.0f };
-const float4 FrameGraphTimelineCanvas::C_PASS_COMPUTE = { 0.20f, 0.68f, 0.46f, 1.0f };
-const float4 FrameGraphTimelineCanvas::C_WRITE        = { 0.78f, 0.28f, 0.16f, 1.0f };
-const float4 FrameGraphTimelineCanvas::C_READ         = { 0.20f, 0.50f, 0.80f, 1.0f };
+const float4 FrameGraphTimelineCanvas::C_PASS_DIRECT    = { 0.28f, 0.50f, 0.82f, 1.0f };
+const float4 FrameGraphTimelineCanvas::C_PASS_COMPUTE   = { 0.20f, 0.68f, 0.46f, 1.0f };
+const float4 FrameGraphTimelineCanvas::C_PASS_DISABLED  = { 0.26f, 0.26f, 0.30f, 1.0f };
+const float4 FrameGraphTimelineCanvas::C_WRITE          = { 0.78f, 0.28f, 0.16f, 1.0f };
+const float4 FrameGraphTimelineCanvas::C_READ           = { 0.20f, 0.50f, 0.80f, 1.0f };
+const float4 FrameGraphTimelineCanvas::C_WRITE_DISABLED = { 0.38f, 0.18f, 0.12f, 0.7f };
+const float4 FrameGraphTimelineCanvas::C_READ_DISABLED  = { 0.12f, 0.26f, 0.40f, 0.7f };
 const float4 FrameGraphTimelineCanvas::C_BARRIER      = { 0.95f, 0.82f, 0.08f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_CREATED      = { 0.18f, 0.84f, 0.18f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_DELETED      = { 1.00f, 1.00f, 1.00f, 1.0f };
