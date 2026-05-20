@@ -262,7 +262,7 @@ namespace GUI
         if (button == mouse_button::LEFT)
             pressed = action == mouse_action::DOWN;
 
-        return true;
+        return pressed;
     }
 
     bool base::on_wheel(mouse_wheel type, float value, vec2 pos)

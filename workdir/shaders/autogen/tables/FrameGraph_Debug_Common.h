@@ -5,9 +5,11 @@ struct FrameGraph_Debug_Common
 	uint2 targetSize; // uint2
 	float3 minColor; // float3
 	float3 maxColor; // float3
+	uint selectedMip; // uint
 	uint target; // RWTexture2D<float4>
 	uint2 GetTargetSize() { return targetSize; }
 	float3 GetMinColor() { return minColor; }
 	float3 GetMaxColor() { return maxColor; }
+	uint GetSelectedMip() { return selectedMip; }
 	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
 };

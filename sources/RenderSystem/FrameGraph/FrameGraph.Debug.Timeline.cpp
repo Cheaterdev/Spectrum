@@ -154,9 +154,11 @@ class FrameGraphTimelineCanvas : public dock_base
                 fb.w - LABEL_W,
                 fb.h - LANE_COUNT * LANE_H
             };
-            const rect sb = get_render_bounds();
-            rect top_clip { sb.x + LABEL_W, sb.y,                    sb.w - LABEL_W, LANE_COUNT * LANE_H };
-            rect left_clip{ sb.x,           sb.y + LANE_COUNT * LANE_H, LABEL_W,     sb.h - LANE_COUNT * LANE_H };
+            const rect sb     = get_render_bounds();
+            const float vert_w = (vert && vert->visible) ? vert->size->x : 0.0f;
+            const float hor_h  = (hor  && hor->visible)  ? hor->size->y  : 0.0f;
+            rect top_clip { sb.x + LABEL_W, sb.y,                       sb.w - LABEL_W - vert_w, LANE_COUNT * LANE_H };
+            rect left_clip{ sb.x,           sb.y + LANE_COUNT * LANE_H, LABEL_W,                 sb.h - LANE_COUNT * LANE_H - hor_h };
             owner.m_top_panel->self_scissor  = top_clip;
             owner.m_top_panel->child_scissor = top_clip;
             owner.m_left_panel->self_scissor  = left_clip;
@@ -517,6 +519,11 @@ class FrameGraphTimelineCanvas : public dock_base
         volatile int m_view_w = 64;
         volatile int m_view_h = 64;
 
+        // Selected mip level: written from UI thread (combobox), read from render thread.
+        volatile int m_sel_mip = 0;
+
+        combo_box::ptr m_mip_combo;
+
         // Pan/zoom/camera state — written from UI thread, read from render thread.
         // All access must hold m_state_mutex.
         mutable Thread::Lockable::mutex m_state_mutex;
@@ -543,6 +550,35 @@ class FrameGraphTimelineCanvas : public dock_base
             docker->docking   = GUI::dock::FILL;
             docker->clickable = false;
             add_child(docker);
+
+            // Status bar — mip selector
+            {
+                auto bar              = std::make_shared<GUI::base>();
+                bar->docking          = GUI::dock::TOP;
+                bar->height_size      = GUI::size_type::FIXED;
+                bar->size             = { 0.0f, 26.0f };
+
+                auto mip_lbl          = std::make_shared<label>();
+                mip_lbl->text         = "Mip:";
+                mip_lbl->font_size    = 10.0f;
+                mip_lbl->docking      = GUI::dock::NONE;
+                mip_lbl->width_size   = GUI::size_type::FIXED;
+                mip_lbl->height_size  = GUI::size_type::FIXED;
+                mip_lbl->size         = { 28.0f, 16.0f };
+                mip_lbl->pos          = { 4.0f, 5.0f };
+                bar->add_child(mip_lbl);
+
+                m_mip_combo           = std::make_shared<combo_box>();
+                m_mip_combo->docking  = GUI::dock::NONE;
+                m_mip_combo->width_size  = GUI::size_type::FIXED;
+                m_mip_combo->height_size = GUI::size_type::FIXED;
+                m_mip_combo->size     = { 84.0f, 20.0f };
+                m_mip_combo->pos      = { 34.0f, 3.0f };
+                m_mip_combo->visible = false;
+                bar->add_child(m_mip_combo);
+
+                docker->add_child(bar);
+            }
 
             m_img              = std::make_shared<image>();
             m_img->docking     = GUI::dock::FILL;
@@ -631,6 +667,20 @@ class FrameGraphTimelineCanvas : public dock_base
                                     m_type_lbl->text = "Type:     " + t;
                                     m_dim_lbl->text  = "Size:     " + s;
                                 });
+
+                                UINT mip_count = m_alloc->resource->get_desc().as_texture().MipLevels;
+                                run_on_ui([this, mip_count]()
+                                {
+                                    m_mip_combo->remove_items();
+                                    for (UINT i = 0; i < mip_count; ++i)
+                                    {
+                                        auto item = m_mip_combo->add_item("Mip " + std::to_string(i));
+                                        item->on_select = [this, i]() { m_sel_mip = (int)i; };
+                                    }
+                                    if (mip_count > 0)
+                                        m_mip_combo->get_label()->text = "Mip 0";
+                                    m_mip_combo->visible = (mip_count > 1);
+                                });
                             }
 
                             // Hand the new texture to the image widget on the UI thread.
@@ -648,8 +698,9 @@ class FrameGraphTimelineCanvas : public dock_base
                         auto& compute = context->get_list()->get_compute();
                         {
                             Slots::FrameGraph_Debug_Common common;
-                            common.GetTarget()     = m_current_tex->texture_2d().rwTexture2D;
-                            common.GetTargetSize() = SZ;
+                            common.GetTarget()       = m_current_tex->texture_2d().rwTexture2D;
+                            common.GetTargetSize()   = SZ;
+                            common.GetSelectedMip()  = (UINT)m_sel_mip;
                             compute.set(common);
                         }
 
@@ -687,9 +738,13 @@ class FrameGraphTimelineCanvas : public dock_base
                             tex3d.GetCamera()     = snap_cam_cb;
                             compute.set(tex3d);
                         }
-                        else if (dynamic_cast<HAL::CubeView*>(m_alloc->view.get()))
+                        else if (auto* src = dynamic_cast<HAL::CubeView*>(m_alloc->view.get()))
                         {
-                            compute.set_pipeline<PSOS::FrameGraph_Debug_NotImplemented>();
+                            compute.set_pipeline<PSOS::FrameGraph_Debug_TextureCube>();
+                            Slots::FrameGraph_Debug_TextureCube cube;
+                            cube.GetSource()     = src->textureCube;
+                            cube.GetSourceSize() = m_alloc->resource->get_desc().as_texture().Dimensions.xy;
+                            compute.set(cube);
                         }
                         else
                         {
@@ -1166,9 +1221,12 @@ private:
 
                     if (!cell.is_deleted && cell.alloc->resource->get_desc().is_texture())
                     {
-                        static constexpr uint2 PREVIEW_SIZE = { 128, 64 };
+                        const bool is_cube = cell.alloc->view &&
+                            !!dynamic_cast<HAL::CubeView*>(cell.alloc->view.get());
+                        // 3x2 face grid → 42x42 per face; 2D uses 128x64.
+                        const uint2 thumb_dim = is_cube ? uint2{ 126, 84 } : uint2{ 128, 64 };
                         HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(
-                            HAL::Format::R8G8B8A8_UNORM, { PREVIEW_SIZE }, 1, 1,
+                            HAL::Format::R8G8B8A8_UNORM, { thumb_dim }, 1, 1,
                             HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
                         last_write_thumb_tex = std::make_shared<Texture>(desc);
                         cell.thumb_tex       = last_write_thumb_tex;
@@ -1277,13 +1335,14 @@ private:
                             });
                         }
 
-                        static constexpr uint2 PREVIEW_SIZE = { 128, 64 };
+                        uint2 preview_size = uint2(thumb_tex->get_desc().as_texture().Dimensions.xy);
 
                         auto& compute = context->get_list()->get_compute();
                         {
                             Slots::FrameGraph_Debug_Common common;
-                            common.GetTarget()     = thumb_tex->texture_2d().rwTexture2D;
-                            common.GetTargetSize() = PREVIEW_SIZE;
+                            common.GetTarget()      = thumb_tex->texture_2d().rwTexture2D;
+                            common.GetTargetSize()  = preview_size;
+                            common.GetSelectedMip() = 0;
                             compute.set(common);
                         }
 
@@ -1293,7 +1352,7 @@ private:
                             Slots::FrameGraph_Debug_Texture2D tex2d;
                             uint2  src_dim   = info->resource->get_desc().as_texture().Dimensions.xy;
                             float2 src_size  = float2(src_dim);
-                            float2 dst_size  = float2(PREVIEW_SIZE);
+                            float2 dst_size  = float2(preview_size);
                             float  fit_scale = std::min(dst_size.x / src_size.x, dst_size.y / src_size.y);
                             float2 offset    = (dst_size - src_size * fit_scale) * 0.5f;
                             tex2d.GetSource()     = *source;
@@ -1306,7 +1365,7 @@ private:
                         {
                             compute.set_pipeline<PSOS::FrameGraph_Debug_Texture3D>();
                             cam->set_projection_params(Math::pi / 4,
-                                float(PREVIEW_SIZE.x) / float(PREVIEW_SIZE.y), 1.0f, 1500.0f);
+                                float(preview_size.x) / float(preview_size.y), 1.0f, 1500.0f);
                             cam->frame_move(0.1f);
                             cam->update();
                             Slots::FrameGraph_Debug_Texture3D tex3d;
@@ -1315,11 +1374,19 @@ private:
                             tex3d.GetCamera()     = cam->camera_cb.current;
                             compute.set(tex3d);
                         }
+                        else if (auto* source = dynamic_cast<HAL::CubeView*>(info->view.get()))
+                        {
+                            compute.set_pipeline<PSOS::FrameGraph_Debug_TextureCube>();
+                            Slots::FrameGraph_Debug_TextureCube cube;
+                            cube.GetSource()     = source->textureCube;
+                            cube.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions.xy;
+                            compute.set(cube);
+                        }
                         else
                         {
                             compute.set_pipeline<PSOS::FrameGraph_Debug_NotImplemented>();
                         }
-                        compute.dispatch(uint3(PREVIEW_SIZE, 1));
+                        compute.dispatch(uint3(preview_size, 1));
                     });
             }
         }

@@ -127,6 +127,7 @@ struct FrameGraph_Debug_Common
 	uint2 targetSize;
 	float3 minColor;
 	float3 maxColor;
+	uint selectedMip;
 }
 
 [Bind = DefaultLayout::Instance1]
@@ -165,6 +166,20 @@ ComputePSO FrameGraph_Debug_Texture3D
 }
 
 
+[Bind = DefaultLayout::Instance1]
+struct FrameGraph_Debug_TextureCube
+{
+	TextureCube<float4> source;
+	uint2 sourceSize;
+}
+
+ComputePSO FrameGraph_Debug_TextureCube
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = framegraph/draw_texture_cube;
+}
 
 
 

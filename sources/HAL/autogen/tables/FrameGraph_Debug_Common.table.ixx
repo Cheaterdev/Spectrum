@@ -16,11 +16,13 @@ export namespace Table
 		uint2 targetSize;
 		float3 minColor;
 		float3 maxColor;
+		uint selectedMip;
 		HLSL::RWTexture2D<float4> target;
 		HLSL::RWTexture2D<float4>& GetTarget() { return target; }
 		uint2& GetTargetSize() { return targetSize; }
 		float3& GetMinColor() { return minColor; }
 		float3& GetMaxColor() { return maxColor; }
+		uint& GetSelectedMip() { return selectedMip; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -28,6 +30,7 @@ export namespace Table
 			compiler.compile(targetSize);
 			compiler.compile(minColor);
 			compiler.compile(maxColor);
+			compiler.compile(selectedMip);
 			compiler.compile(target);
 		}
 		struct Compiled
@@ -35,15 +38,17 @@ export namespace Table
 			uint2 targetSize; // uint2
 			float3 minColor; // float3
 			float3 maxColor; // float3
+			uint selectedMip; // uint
 			uint target; // RWTexture2D<float4>
 
-			
+
 			private:
 			SERIALIZE()
 			{
 				ar& NVP(targetSize);
 				ar& NVP(minColor);
 				ar& NVP(maxColor);
+				ar& NVP(selectedMip);
 			}
 
 

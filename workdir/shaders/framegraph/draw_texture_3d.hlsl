@@ -54,7 +54,7 @@ void CS(uint2 dispatch_thread_id : SV_DispatchThreadID)
     {
         float3 cur_pos = lerp(cube_pos_start, cube_pos_end, float(i) / iters);
     
-            float4 val = GetFrameGraph_Debug_Texture3D().GetSource().SampleLevel(linearSampler, cur_pos+0.5, 0);
+            float4 val = GetFrameGraph_Debug_Texture3D().GetSource().SampleLevel(linearSampler, cur_pos+0.5, GetFrameGraph_Debug_Common().GetSelectedMip());
             
         float w = 1 - res.a;
             
