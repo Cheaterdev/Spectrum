@@ -34,8 +34,9 @@ class FrameGraphTimelineCanvas : public dock_base
         std::wstring         name;
         UINT                 call_id   = 0;
         HAL::CommandListType queue     = HAL::CommandListType::DIRECT;
-        bool                 put_fence = false;
-        bool                 disabled  = false;
+        bool                 put_fence  = false;
+        bool                 disabled   = false;
+        bool                 runs_alone = false;
         // Cross-queue deps resolved at rebuild time — no raw pointers.
         std::vector<std::pair<HAL::CommandListType, UINT>> cross_queue_deps;
     };
@@ -368,6 +369,9 @@ class FrameGraphTimelineCanvas : public dock_base
                 owner.dr(c, pc, px + PAD, py + PAD, owner.col_w() - 2.0f * PAD, PASS_H - 2.0f * PAD);
                 if (!pass.disabled)
                 {
+                    if (pass.runs_alone)
+                        owner.dr(c, C_RUNS_ALONE, px + PAD, py + PASS_H - PAD - 3.0f,
+                                 owner.col_w() - 2.0f * PAD, 3.0f);
                     if (pass.put_fence)
                         owner.dr(c, C_FENCE, px + owner.col_w() - PAD - 1.5f, py, 3.0f, LANE_H);
                     if (!pass.cross_queue_deps.empty())
@@ -1082,6 +1086,7 @@ class FrameGraphTimelineCanvas : public dock_base
     static const float4 C_PASS_DIRECT;
     static const float4 C_PASS_COMPUTE;
     static const float4 C_PASS_DISABLED;
+    static const float4 C_RUNS_ALONE;
     static const float4 C_WRITE;
     static const float4 C_READ;
     static const float4 C_WRITE_DISABLED;
@@ -1275,6 +1280,40 @@ private:
                 if (next_col > m_max_call_id) m_max_call_id = next_col;
                 ++next_col;
             }
+        }
+
+        // Compute runs_alone: enabled passes with no concurrent pass on any other queue.
+        for (auto& pass : m_passes)
+        {
+            if (pass.disabled) continue;
+            // lo = the last other-queue call_id that any same-queue pass at <= this call_id
+            // waited on. We accumulate across all predecessors so that passes with no deps
+            // of their own still inherit the fence established by an earlier pass.
+            UINT lo = 0;
+            for (auto& other : m_passes)
+            {
+                if (other.disabled || other.queue != pass.queue || other.call_id > pass.call_id) continue;
+                for (auto& [dep_queue, dep_id] : other.cross_queue_deps)
+                    lo = std::max(lo, dep_id);
+            }
+            // hi = call_id of the first other-queue pass that waits on this queue at >= pass.call_id.
+            UINT hi = m_max_call_id + 1;
+            for (auto& other : m_passes)
+            {
+                if (other.disabled || other.queue == pass.queue) continue;
+                for (auto& [dep_queue, dep_id] : other.cross_queue_deps)
+                    if (dep_queue == pass.queue && dep_id >= pass.call_id)
+                        hi = std::min(hi, other.call_id);
+            }
+            // If no other-queue pass has call_id strictly inside (lo, hi), this pass runs alone.
+            bool has_concurrent = false;
+            for (auto& other : m_passes)
+            {
+                if (other.disabled || other.queue == pass.queue) continue;
+                if (other.call_id > lo && other.call_id < hi)
+                    { has_concurrent = true; break; }
+            }
+            pass.runs_alone = !has_concurrent;
         }
 
         std::map<std::string, ResourceTrack> track_map;
@@ -1911,6 +1950,7 @@ const float4 FrameGraphTimelineCanvas::C_COMPUTE_LANE = { 0.09f, 0.16f, 0.16f, 1
 const float4 FrameGraphTimelineCanvas::C_PASS_DIRECT    = { 0.28f, 0.50f, 0.82f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_PASS_COMPUTE   = { 0.20f, 0.68f, 0.46f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_PASS_DISABLED  = { 0.26f, 0.26f, 0.30f, 1.0f };
+const float4 FrameGraphTimelineCanvas::C_RUNS_ALONE     = { 1.00f, 0.40f, 0.08f, 0.95f };
 const float4 FrameGraphTimelineCanvas::C_WRITE          = { 0.78f, 0.28f, 0.16f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_READ           = { 0.20f, 0.50f, 0.80f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_WRITE_DISABLED = { 0.38f, 0.18f, 0.12f, 0.7f };
