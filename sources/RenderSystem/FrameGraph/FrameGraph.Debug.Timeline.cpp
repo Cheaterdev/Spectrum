@@ -165,6 +165,11 @@ class FrameGraphTimelineCanvas : public dock_base
             owner.m_top_panel->child_scissor = top_clip;
             owner.m_left_panel->self_scissor  = left_clip;
             owner.m_left_panel->child_scissor = left_clip;
+           /* if (owner.m_minimap)
+            {
+                owner.m_minimap->pos  = { 0.0f, sb.h - minimap_overlay::H };
+                owner.m_minimap->size = { sb.w,  minimap_overlay::H };
+            }      */
             return result;
         }
 
@@ -391,6 +396,126 @@ class FrameGraphTimelineCanvas : public dock_base
             }
 
             base::draw(c);
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    //  Minimap — scaled-down overview of the full timeline for navigation.
+    // -----------------------------------------------------------------------
+    struct minimap_overlay : GUI::base
+    {
+        using ptr = std::shared_ptr<minimap_overlay>;
+        FrameGraphTimelineCanvas& owner;
+
+        static constexpr float H = 72.0f;
+        bool m_dragging = false;
+
+        explicit minimap_overlay(FrameGraphTimelineCanvas& o) : owner(o)
+        {
+            docking         = GUI::dock::FILL;
+            width_size      = GUI::size_type::FIXED;
+            height_size     = GUI::size_type::FIXED;
+            x_type = GUI::pos_x_type::RIGHT;
+                y_type = GUI::pos_y_type::BOTTOM;
+                margin = {16,16,16,16};          
+                size = {256,256};
+                clickable       = true;
+            clamp_to_parent = GUI::ParentClamp::NONE;
+        }
+
+        void get_scale(const rect& b, float& sx, float& sy) const
+        {
+            float cw = LABEL_W + (owner.m_max_call_id + 2) * owner.col_w();
+            float ch = LANE_COUNT * LANE_H + 6.0f + (float)owner.m_resources.size() * ROW_H;
+            sx = (cw > 0.0f) ? b.w / cw : 1.0f;
+            sy = (ch > 0.0f) ? b.h / ch : 1.0f;
+        }
+
+        virtual void draw(Context& c) override
+        {
+            if (!owner.m_ready) return;
+            const rect b = get_render_bounds();
+            float sx, sy;
+            get_scale(b, sx, sy);
+
+            owner.dr(c, { 0.04f, 0.04f, 0.06f, 0.90f }, b.x, b.y, b.w, b.h);
+
+            for (auto& pass : owner.m_passes)
+            {
+                float lane_off = (pass.queue == HAL::CommandListType::COMPUTE ? LANE_H : 0.0f);
+                float px = b.x + (LABEL_W + pass.call_id * owner.col_w() + PAD) * sx;
+                float pw = std::max(1.0f, (owner.col_w() - 2.0f * PAD) * sx);
+                float py = b.y + (lane_off + PAD) * sy;
+                float ph = std::max(1.0f, (PASS_H - 2.0f * PAD) * sy);
+                const float4& pc = pass.disabled ? C_PASS_DISABLED
+                    : (pass.queue == HAL::CommandListType::DIRECT) ? C_PASS_DIRECT : C_PASS_COMPUTE;
+                owner.dr(c, pc, px, py, pw, ph);
+            }
+
+            for (int ri = 0; ri < (int)owner.m_resources.size(); ri++)
+            {
+                float cy = b.y + (LANE_COUNT * LANE_H + 6.0f + ri * ROW_H + (ROW_H - CELL_H) * 0.5f) * sy;
+                float ch = std::max(1.5f, CELL_H * sy);
+                for (auto& cell : owner.m_resources[ri].cells)
+                {
+                    float cx = b.x + (LABEL_W + cell.call_id * owner.col_w() + PAD) * sx;
+                    float cw = std::max(1.5f, (owner.col_w() - 2.0f * PAD) * sx);
+                    const float4& cc = cell.disabled
+                        ? (cell.is_write ? C_WRITE_DISABLED : C_READ_DISABLED)
+                        : (cell.is_write ? C_WRITE : C_READ);
+                    owner.dr(c, cc, cx, cy, cw, ch);
+                }
+            }
+
+            // Viewport indicator
+            const vec2 cp = owner.m_scroll->contents->pos.get();
+            const rect vp = owner.m_scroll->filled->get_render_bounds();
+            float vx = b.x + (-cp.x) * sx;
+            float vy = b.y + (-cp.y) * sy;
+            float vw = std::max(2.0f, vp.w * sx);
+            float vh = std::max(2.0f, vp.h * sy);
+            owner.dr(c, { 1.0f, 1.0f, 1.0f, 0.10f }, vx,      vy,      vw, vh);
+            owner.dr(c, { 1.0f, 1.0f, 1.0f, 0.65f }, vx,      vy,      vw, 1.0f);
+            owner.dr(c, { 1.0f, 1.0f, 1.0f, 0.65f }, vx,      vy+vh-1, vw, 1.0f);
+            owner.dr(c, { 1.0f, 1.0f, 1.0f, 0.65f }, vx,      vy,      1.0f, vh);
+            owner.dr(c, { 1.0f, 1.0f, 1.0f, 0.65f }, vx+vw-1, vy,      1.0f, vh);
+        }
+
+        void navigate(vec2 mouse_pos)
+        {
+            const rect b = get_render_bounds();
+            float sx, sy;
+            get_scale(b, sx, sy);
+            if (sx <= 0.0f || sy <= 0.0f) return;
+
+            const rect vp = owner.m_scroll->filled->get_render_bounds();
+            float cx = (mouse_pos.x - b.x) / sx - vp.w * 0.5f;
+            float cy = (mouse_pos.y - b.y) / sy - vp.h * 0.5f;
+
+            float cw = LABEL_W + (owner.m_max_call_id + 2) * owner.col_w();
+            float ch = LANE_COUNT * LANE_H + 6.0f + (float)owner.m_resources.size() * ROW_H;
+            owner.m_scroll->contents->pos = vec2(
+                Math::clamp(-cx, std::min(0.0f, -(cw - vp.w)), 0.0f),
+                Math::clamp(-cy, std::min(0.0f, -(ch - vp.h)), 0.0f)
+            );
+            owner.apply_pan();
+        }
+
+        virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override
+        {
+            if (button == mouse_button::LEFT)
+            {
+                m_dragging = (action == mouse_action::DOWN);
+                if (m_dragging) navigate(pos);
+                else m_dragging = false;
+            }
+            return true;
+        }
+
+        virtual bool on_mouse_move(vec2 pos) override
+        {
+            if (m_dragging) navigate(pos);
+            return m_dragging;
         }
     };
 
@@ -929,6 +1054,7 @@ class FrameGraphTimelineCanvas : public dock_base
     top_panel_overlay::ptr   m_top_panel;
     corner_overlay::ptr      m_corner;
     grid_canvas::ptr         m_grid_canvas;
+    minimap_overlay::ptr     m_minimap;
     GUI::base::ptr           m_preview_panel;
 
     // -----------------------------------------------------------------------
@@ -1068,6 +1194,10 @@ public:
         // Top panel: follows X scroll, pinned at Y=0.
         m_top_panel = std::make_shared<top_panel_overlay>(*this);
         m_scroll->add_overlay(m_top_panel);
+
+        // Minimap — fixed at the bottom of the scroll viewport.
+        m_minimap = std::make_shared<minimap_overlay>(*this);
+        m_scroll->add_overlay(m_minimap);
 
         // Right dock on this (dock_base) — permanent preview panel.
         auto right_dock  = get_dock(GUI::dock::RIGHT);

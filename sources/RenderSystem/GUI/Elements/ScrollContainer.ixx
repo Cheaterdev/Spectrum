@@ -10,7 +10,7 @@ export namespace GUI
 
 		class scroll_container : public base
 		{
-		protected:
+		public:
 			GUI::Elements::scroll_bar::ptr vert;
 			GUI::Elements::scroll_bar::ptr hor;
 			GUI::base::ptr filled;
