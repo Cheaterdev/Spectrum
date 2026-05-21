@@ -300,6 +300,11 @@ export{
 			ComputeContext& get_compute();
 			CopyContext& get_copy();
 
+			const std::vector<CommandRecord>& get_debug_records() const
+			{
+				return compiler.get_debug_records();
+			}
+
 			void discard(HAL::Resource* resource);
 
 			CommandList(CommandListType);

@@ -17,12 +17,51 @@ import :CommandAllocator;
 
 export namespace HAL
 {
+	enum class CommandType : uint8_t
+	{
+		Transition,
+		Draw, DrawIndexed, DispatchMesh,
+		Dispatch, DispatchGraph, DispatchRays,
+		CopyResource, CopyBuffer, CopyTexture, UpdateTexture, ReadTexture,
+		BuildRAS,
+		SetPipeline, SetRTV, SetTopology, SetIndexBuffer,
+		SetScissor, SetViewport,
+		ClearRTV, ClearUAV, ClearDepth, ClearStencil, ClearDepthStencil,
+		SetGraphicsSignature, SetComputeSignature,
+		GraphicsSetConstBuffer, ComputeSetConstBuffer,
+		GraphicsSetConstant, ComputeSetConstant,
+		ExecuteIndirect, SetProgram,
+		InsertTime, ResolveTime,
+		StartEvent, EndEvent,
+		SetDescriptorHeaps, SetStencilRef, Discard,
+		Func,
+	};
+
+	struct CommandRecord
+	{
+		// Per-resource detail stored for Transition records after snapshot.
+		struct BarrierDetail
+		{
+			std::string        resource_name;
+			HAL::ResourceState before;
+			HAL::ResourceState after;
+			uint               subres = 0;
+			HAL::BarrierFlags  flags  = HAL::BarrierFlags::NONE;
+		};
+
+		CommandType  type          = CommandType::Func;
+		std::string  description;
+		UsagePoint*  barrier_point = nullptr; // non-null only until snapshot
+		std::vector<BarrierDetail> barrier_details; // non-empty only for Transition records
+	};
+
 	class DelayedCommandList
 	{
 		bool compiled = false;
 		API::CommandList list;
 		std::wstring name;
 		std::vector<std::function<void(API::CommandList&)>> tasks;
+		std::vector<CommandRecord> debug_records;
 	public:
 		inline const API::CommandList& get_list() const { return list; }
 		void create(CommandListType type);
@@ -77,8 +116,13 @@ export namespace HAL
 		void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout);
 		void read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout);
 
+		void func_barrier(UsagePoint* point);
+		const std::vector<CommandRecord>& get_debug_records() const { return debug_records; }
+
 		template<class Hit, class Miss, class Raygen>
 		void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer) {
+			debug_records.push_back({CommandType::DispatchRays,
+				"DispatchRays " + std::to_string(size.x) + "x" + std::to_string(size.y)});
 			tasks.emplace_back([=](API::CommandList& list) {
 				list.dispatch_rays(sizeof(Hit), sizeof(Miss), sizeof(Raygen), size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
 				});

@@ -39,6 +39,8 @@ class FrameGraphTimelineCanvas : public dock_base
         bool                 runs_alone = false;
         // Cross-queue deps resolved at rebuild time — no raw pointers.
         std::vector<std::pair<HAL::CommandListType, UINT>> cross_queue_deps;
+        // Copied from Pass::debug_commands during rebuild(); barrier_point == nullptr.
+        std::vector<HAL::CommandRecord> debug_commands;
     };
 
     struct ResourceCell
@@ -419,12 +421,12 @@ class FrameGraphTimelineCanvas : public dock_base
             docking         = GUI::dock::FILL;
             width_size      = GUI::size_type::FIXED;
             height_size     = GUI::size_type::FIXED;
-            x_type = GUI::pos_x_type::RIGHT;
-                y_type = GUI::pos_y_type::BOTTOM;
-                margin = {16,16,16,16};          
-                size = {256,256};
-                clickable       = true;
-            clamp_to_parent = GUI::ParentClamp::NONE;
+			x_type = GUI::pos_x_type::RIGHT;
+			y_type = GUI::pos_y_type::BOTTOM;
+			margin = { 16,16,16,16 };
+			size = { 256,256 };
+			clickable = true;
+			clamp_to_parent = GUI::ParentClamp::NONE;
         }
 
         void get_scale(const rect& b, float& sx, float& sy) const
@@ -584,29 +586,50 @@ class FrameGraphTimelineCanvas : public dock_base
             width_size  = GUI::size_type::MATCH_PARENT;
             height_size = GUI::size_type::MATCH_PARENT;
 
+            auto scr          = std::make_shared<scroll_container>();
+            scr->docking      = GUI::dock::FILL;
+            scr->width_size   = GUI::size_type::MATCH_PARENT;
+            scr->height_size  = GUI::size_type::MATCH_PARENT;
+            scr->hor->visible = false;
+            scr->contents->width_size  = GUI::size_type::MATCH_PARENT;
+            scr->contents->height_size = GUI::size_type::FIXED;
+
             float y = 8.0f;
-            auto add_row = [&](const std::string& text)
+            const float4 col_bright = { 0.90f, 0.90f, 0.92f, 1.0f };
+            const float4 col_dim    = { 0.55f, 0.55f, 0.58f, 1.0f };
+
+            auto add_row = [&](const std::string& text,
+                               float4 color = { 0.90f, 0.90f, 0.92f, 1.0f })
             {
                 auto lbl         = std::make_shared<label>();
                 lbl->text        = text;
+                lbl->color       = color;
                 lbl->font_size   = 11.0f;
                 lbl->docking     = GUI::dock::NONE;
                 lbl->width_size  = GUI::size_type::MATCH_PARENT;
                 lbl->height_size = GUI::size_type::FIXED;
                 lbl->size        = { 0.0f, 20.0f };
                 lbl->pos         = { 8.0f, y };
-                add_child(lbl);
+                scr->contents->add_child(lbl);
                 y += 20.0f;
             };
 
             add_row("Pass:   " + to_str(info.name));
-            if (info.disabled) { add_row("Status: DISABLED"); return; }
+            if (info.disabled)
+            {
+                add_row("Status: DISABLED", col_dim);
+                scr->contents->size = { 0.0f, y + 8.0f };
+                add_child(scr);
+                return;
+            }
+
             add_row("Queue:  " + std::string(
                 info.queue == HAL::CommandListType::DIRECT ? "Direct" : "Compute"));
             add_row("ID:     #" + std::to_string(info.call_id));
             add_row(std::string("Fence:  ") + (info.put_fence ? "yes" : "no"));
 
-            auto queue_name = [](HAL::CommandListType t) -> const char* {
+            auto queue_name = [](HAL::CommandListType t) -> const char*
+            {
                 switch (t) {
                     case HAL::CommandListType::DIRECT:  return "Direct";
                     case HAL::CommandListType::COMPUTE: return "Compute";
@@ -623,7 +646,166 @@ class FrameGraphTimelineCanvas : public dock_base
                 add_row(std::string("Sync ") + queue_name(type) + ":  " + dep_str);
             }
             if (info.cross_queue_deps.empty())
-                add_row("Sync:   \xe2\x80\x94");  // em dash
+                add_row("Sync:   none");
+
+            if (!info.debug_commands.empty())
+            {
+                y += 6.0f;
+                add_row("-- Commands (" +
+                        std::to_string(info.debug_commands.size()) + ")", col_dim);
+                y += 2.0f;
+
+                auto cmd_color = [](HAL::CommandType t) -> float4
+                {
+                    using CT = HAL::CommandType;
+                    switch (t)
+                    {
+                        case CT::Transition:
+                            return { 0.90f, 0.65f, 0.20f, 1.0f };
+                        case CT::Draw: case CT::DrawIndexed:
+                        case CT::DispatchMesh: case CT::ExecuteIndirect:
+                            return { 0.40f, 0.82f, 0.40f, 1.0f };
+                        case CT::Dispatch: case CT::DispatchGraph: case CT::DispatchRays:
+                            return { 0.30f, 0.72f, 0.92f, 1.0f };
+                        case CT::CopyResource: case CT::CopyBuffer: case CT::CopyTexture:
+                        case CT::UpdateTexture: case CT::ReadTexture: case CT::BuildRAS:
+                            return { 0.30f, 0.78f, 0.68f, 1.0f };
+                        case CT::ClearRTV: case CT::ClearUAV:
+                        case CT::ClearDepth: case CT::ClearStencil: case CT::ClearDepthStencil:
+                            return { 0.75f, 0.42f, 0.85f, 1.0f };
+                        case CT::StartEvent: case CT::EndEvent:
+                            return { 0.90f, 0.90f, 0.92f, 1.0f };
+                        default:
+                            return { 0.55f, 0.55f, 0.58f, 1.0f };
+                    }
+                };
+
+                for (auto& cmd : info.debug_commands)
+                {
+                    std::string text = cmd.description.empty() ? "(unknown)" : cmd.description;
+                    if (cmd.type == HAL::CommandType::Transition)
+                        text = "Barrier  " + text;
+                    add_row(text, cmd_color(cmd.type));
+                }
+            }
+
+            scr->contents->size = { 0.0f, y + 8.0f };
+            add_child(scr);
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    //  Barrier-occurrence list shown when a resource cell is clicked.
+    // -----------------------------------------------------------------------
+    struct ResourceBarrierContent : GUI::base
+    {
+        using ptr = std::shared_ptr<ResourceBarrierContent>;
+
+        ResourceBarrierContent(const ResourceTrack& track,
+                                const std::vector<PassInfo>& passes,
+                                UINT clicked_call_id)
+        {
+            docking     = GUI::dock::FILL;
+            width_size  = GUI::size_type::MATCH_PARENT;
+            height_size = GUI::size_type::MATCH_PARENT;
+
+            auto scr          = std::make_shared<scroll_container>();
+            scr->docking      = GUI::dock::FILL;
+            scr->width_size   = GUI::size_type::MATCH_PARENT;
+            scr->height_size  = GUI::size_type::MATCH_PARENT;
+            scr->hor->visible = false;
+            scr->contents->width_size  = GUI::size_type::MATCH_PARENT;
+            scr->contents->height_size = GUI::size_type::FIXED;
+
+            float y = 8.0f;
+            const float4 col_bright  = { 0.90f, 0.90f, 0.92f, 1.0f };
+            const float4 col_dim     = { 0.55f, 0.55f, 0.58f, 1.0f };
+            const float4 col_barrier = { 0.90f, 0.65f, 0.20f, 1.0f };
+            const float4 col_sel     = { 1.00f, 1.00f, 0.50f, 1.0f };
+
+            auto add_row = [&](const std::string& text, float indent,
+                               float4 color = { 0.90f, 0.90f, 0.92f, 1.0f })
+            {
+                auto lbl         = std::make_shared<label>();
+                lbl->text        = text;
+                lbl->color       = color;
+                lbl->font_size   = 11.0f;
+                lbl->docking     = GUI::dock::NONE;
+                lbl->width_size  = GUI::size_type::MATCH_PARENT;
+                lbl->height_size = GUI::size_type::FIXED;
+                lbl->size        = { 0.0f, 18.0f };
+                lbl->pos         = { 8.0f + indent, y };
+                scr->contents->add_child(lbl);
+                y += 18.0f;
+            };
+
+            add_row("Resource: " + track.name, 0.0f);
+            y += 4.0f;
+            add_row("-- Transitions --", 0.0f, col_dim);
+            y += 2.0f;
+
+            // Scan every pass's debug_commands for Transition records that
+            // contain a BarrierDetail for this resource.
+            bool any = false;
+            for (auto& pass : passes)
+            {
+                if (pass.disabled) continue;
+
+                bool pass_printed = false;
+                for (auto& cmd : pass.debug_commands)
+                {
+                    if (cmd.type != HAL::CommandType::Transition) continue;
+                    for (auto& bd : cmd.barrier_details)
+                    {
+                        if (bd.resource_name != track.name) continue;
+
+                        // Print pass header once per pass.
+                        if (!pass_printed)
+                        {
+                            pass_printed = true;
+                            y += 4.0f;
+                            float4 hcol = (pass.call_id == clicked_call_id)
+                                        ? col_sel : col_bright;
+                            add_row(to_str(pass.name), 0.0f, hcol);
+                        }
+
+                        // Subresource annotation.
+                        std::string sub_str;
+                        if (bd.subres != HAL::ALL_SUBRESOURCES)
+                            sub_str = "  sub=" + std::to_string(bd.subres);
+
+                        // Split-barrier annotation.
+                        std::string flag_str;
+                        using BF = HAL::BarrierFlags;
+                        auto bf = static_cast<uint>(bd.flags);
+                        if      ((bf & static_cast<uint>(BF::BEGIN)) && !(bf & static_cast<uint>(BF::END)))
+                            flag_str = "  [begin]";
+                        else if ((bf & static_cast<uint>(BF::END))   && !(bf & static_cast<uint>(BF::BEGIN)))
+                            flag_str = "  [end]";
+                        else if (bf & static_cast<uint>(BF::DISCARD))
+                            flag_str = "  [discard]";
+
+                        add_row("Sync:   " + barrier_sync_str(bd.before.operation) +
+                                "  ->  "   + barrier_sync_str(bd.after.operation) +
+                                sub_str + flag_str,
+                                12.0f, col_barrier);
+                        add_row("Access: " + barrier_access_str(bd.before.access) +
+                                "  ->  "   + barrier_access_str(bd.after.access),
+                                12.0f, col_dim);
+                        add_row("Layout: " + barrier_layout_str(bd.before.layout) +
+                                "  ->  "   + barrier_layout_str(bd.after.layout),
+                                12.0f, col_dim);
+
+                        any = true;
+                    }
+                }
+            }
+
+            if (!any)
+                add_row("(no transitions recorded)", 0.0f, col_dim);
+
+            scr->contents->size = { 0.0f, y + 8.0f };
+            add_child(scr);
         }
     };
 
@@ -1060,6 +1242,7 @@ class FrameGraphTimelineCanvas : public dock_base
     grid_canvas::ptr         m_grid_canvas;
     minimap_overlay::ptr     m_minimap;
     GUI::base::ptr           m_preview_panel;
+    GUI::base::ptr           m_barriers_panel;
 
     // -----------------------------------------------------------------------
     //  Labels / images
@@ -1144,6 +1327,79 @@ class FrameGraphTimelineCanvas : public dock_base
         return s;
     }
 
+    static std::string barrier_sync_str(HAL::BarrierSync s)
+    {
+        using BS = HAL::BarrierSync;
+        if (s == BS::NONE) return "NONE";
+        auto u   = static_cast<uint>(s);
+        auto has = [&](BS f) { return (u & static_cast<uint>(f)) != 0; };
+        // Check composite aliases first.
+        if (u == static_cast<uint>(BS::ALL_DIRECT))  return "ALL_DIRECT";
+        if (u == static_cast<uint>(BS::ALL_COMPUTE)) return "ALL_COMPUTE";
+        if (u == static_cast<uint>(BS::ALL_SHADING)) return "ALL_SHADING";
+        if (u == static_cast<uint>(BS::DRAW))        return "DRAW";
+        std::string r;
+        auto add = [&](BS f, const char* name){ if (has(f)){ if (!r.empty()) r += '|'; r += name; } };
+        add(BS::INDEX_INPUT,      "IDX");
+        add(BS::VERTEX_SHADING,   "VS");
+        add(BS::PIXEL_SHADING,    "PS");
+        add(BS::DEPTH_STENCIL,    "DS");
+        add(BS::RENDER_TARGET,    "RT");
+        add(BS::COMPUTE_SHADING,  "CS");
+        add(BS::RAYTRACING,       "RAY");
+        add(BS::COPY,             "COPY");
+        add(BS::EXECUTE_INDIRECT, "IND");
+        add(BS::CLEAR_UNORDERED_ACCESS_VIEW, "CLEAR_UAV");
+        add(BS::BUILD_RAYTRACING_ACCELERATION_STRUCTURE, "BVH");
+        add(BS::COPY_RAYTRACING_ACCELERATION_STRUCTURE,  "BVH_COPY");
+        add(BS::SPLIT,            "SPLIT");
+        return r.empty() ? "?" : r;
+    }
+
+    static std::string barrier_access_str(HAL::BarrierAccess a)
+    {
+        using BA = HAL::BarrierAccess;
+        if (static_cast<uint>(a) == 0)                               return "COMMON";
+        if (static_cast<uint>(a) == static_cast<uint>(BA::NO_ACCESS)) return "NONE";
+        auto has = [&](BA f) { return (static_cast<uint>(a) & static_cast<uint>(f)) != 0; };
+        std::string r;
+        auto add = [&](BA f, const char* name){ if (has(f)){ if (!r.empty()) r += '|'; r += name; } };
+        add(BA::VERTEX_BUFFER,    "VBV");
+        add(BA::CONSTANT_BUFFER,  "CBV");
+        add(BA::INDEX_BUFFER,     "IBV");
+        add(BA::RENDER_TARGET,    "RTV");
+        add(BA::UNORDERED_ACCESS, "UAV");
+        add(BA::DEPTH_STENCIL_WRITE, "DSV-W");
+        add(BA::DEPTH_STENCIL_READ,  "DSV-R");
+        add(BA::SHADER_RESOURCE,  "SRV");
+        add(BA::INDIRECT_ARGUMENT,"IND");
+        add(BA::COPY_DEST,        "CPY-D");
+        add(BA::COPY_SOURCE,      "CPY-S");
+        add(BA::RAYTRACING_ACCELERATION_STRUCTURE_READ,  "BVH-R");
+        add(BA::RAYTRACING_ACCELERATION_STRUCTURE_WRITE, "BVH-W");
+        return r.empty() ? "?" : r;
+    }
+
+    static std::string barrier_layout_str(HAL::TextureLayout l)
+    {
+        using TL = HAL::TextureLayout;
+        if (l == TL::UNDEFINED) return "UNDEF";
+        if (l == TL::NONE)      return "NONE";
+        auto has = [&](TL f) { return (static_cast<uint32_t>(l) & static_cast<uint32_t>(f)) != 0; };
+        std::string r;
+        auto add = [&](TL f, const char* name){ if (has(f)){ if (!r.empty()) r += '|'; r += name; } };
+        add(TL::PRESENT,             "PRESENT");
+        add(TL::RENDER_TARGET,       "RTV");
+        add(TL::UNORDERED_ACCESS,    "UAV");
+        add(TL::DEPTH_STENCIL_WRITE, "DSV-W");
+        add(TL::DEPTH_STENCIL_READ,  "DSV-R");
+        add(TL::SHADER_RESOURCE,     "SRV");
+        add(TL::COPY_SOURCE,         "CPY-S");
+        add(TL::COPY_DEST,           "CPY-D");
+        add(TL::COPY_QUEUE,          "CQ");
+        return r.empty() ? "?" : r;
+    }
+
     static label::ptr make_label(float w, float h, const std::string& text,
                                  float4 color, float font_size)
     {
@@ -1214,6 +1470,12 @@ public:
         m_preview_panel->height_size = GUI::size_type::MATCH_PARENT;
         right_dock->get_tabs()->add_page("Preview", m_preview_panel);
 
+        m_barriers_panel              = std::make_shared<GUI::base>();
+        m_barriers_panel->docking     = GUI::dock::FILL;
+        m_barriers_panel->width_size  = GUI::size_type::MATCH_PARENT;
+        m_barriers_panel->height_size = GUI::size_type::MATCH_PARENT;
+        right_dock->get_tabs()->add_page("Transitions", m_barriers_panel);
+
         graph.on_compile.register_handler(this,
             [this](const FrameGraph::Graph& cg) { rebuild(cg); });
     }
@@ -1242,10 +1504,11 @@ private:
         for (auto* pass : g.builder.enabled_passes)
         {
             PassInfo info;
-            info.name      = pass->name;
-            info.call_id   = pass->call_id;
-            info.queue     = pass->get_type();
-            info.put_fence = pass->put_fence;
+            info.name           = pass->name;
+            info.call_id        = pass->call_id;
+            info.queue          = pass->get_type();
+            info.put_fence      = pass->put_fence;
+            info.debug_commands = pass->debug_commands;
             static const HAL::CommandListType all_types[] = {
                 HAL::CommandListType::DIRECT,
                 HAL::CommandListType::COMPUTE,
@@ -1533,6 +1796,10 @@ private:
                     m_preview_panel->remove_all();
                     m_preview_panel->add_child(
                         std::make_shared<ResourcePreviewContent>(alloc, src_cid, pass_name_str));
+
+                    m_barriers_panel->remove_all();
+                    m_barriers_panel->add_child(
+                        std::make_shared<ResourceBarrierContent>(m_resources[ri], m_passes, cid));
                 };
 
                 m_scroll->add_child(img);

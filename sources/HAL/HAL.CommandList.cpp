@@ -844,10 +844,7 @@ gpu_timer.start(list);
 				point->start = !end;
 				point->index = static_cast<uint>(usage_points.size());
 				point->operation = 	  operation;
-				compiler.func([point](auto& list)
-					{
-						list.transitions(point->transitions);
-					});
+				compiler.func_barrier(point);
 
 			///	poin.transition_type = prev_point?
 			}

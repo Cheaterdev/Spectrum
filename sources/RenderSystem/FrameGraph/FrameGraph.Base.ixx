@@ -786,7 +786,11 @@ public:
 
 		std::set<Pass*> next_passes;
 		std::future<void> render_task;
-		 std::future<void> compile_task;
+		std::future<void> compile_task;
+
+		// Populated after compile_lists(); available during on_compile.
+		// Transition records have barrier_point == nullptr (resolved into description).
+		std::vector<HAL::CommandRecord> debug_commands;
 
 		HAL::FenceWaiter fence_end;
 

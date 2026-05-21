@@ -37,6 +37,7 @@ export import :FrameManager;
 //export import :API;
 export import :PipelineState;
 export import :CommandList;
+export import :CommandListRecorder;
 
 
 export import :Raytracing;
