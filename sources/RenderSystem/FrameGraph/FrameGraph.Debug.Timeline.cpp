@@ -65,6 +65,7 @@ class FrameGraphTimelineCanvas : public dock_base
         bool                      is_static      = false;
         bool                      is_passed      = false;
         bool                      is_non_deleted = false;
+        bool                      has_mismatch   = false; // barrier before/after continuity error
         std::vector<ResourceCell> cells;
     };
 
@@ -744,65 +745,139 @@ class FrameGraphTimelineCanvas : public dock_base
             add_row("-- Transitions --", 0.0f, col_dim);
             y += 2.0f;
 
-            // Scan every pass's debug_commands for Transition records that
-            // contain a BarrierDetail for this resource.
-            bool any = false;
+            // Collect all barriers for this resource in pass order, then validate.
+            struct BarrierEntry
+            {
+                const PassInfo*                              pass   = nullptr;
+                const HAL::CommandRecord::BarrierDetail*     detail = nullptr;
+                bool                                         mismatch = false;
+            };
+            std::vector<BarrierEntry> entries;
+
+            // Passes are already in call_id order (enabled first, disabled appended later).
             for (auto& pass : passes)
             {
                 if (pass.disabled) continue;
-
-                bool pass_printed = false;
                 for (auto& cmd : pass.debug_commands)
                 {
                     if (cmd.type != HAL::CommandType::Transition) continue;
                     for (auto& bd : cmd.barrier_details)
-                    {
-                        if (bd.resource_name != track.name) continue;
-
-                        // Print pass header once per pass.
-                        if (!pass_printed)
-                        {
-                            pass_printed = true;
-                            y += 4.0f;
-                            float4 hcol = (pass.call_id == clicked_call_id)
-                                        ? col_sel : col_bright;
-                            add_row(to_str(pass.name), 0.0f, hcol);
-                        }
-
-                        // Subresource annotation.
-                        std::string sub_str;
-                        if (bd.subres != HAL::ALL_SUBRESOURCES)
-                            sub_str = "  sub=" + std::to_string(bd.subres);
-
-                        // Split-barrier annotation.
-                        std::string flag_str;
-                        using BF = HAL::BarrierFlags;
-                        auto bf = static_cast<uint>(bd.flags);
-                        if      ((bf & static_cast<uint>(BF::BEGIN)) && !(bf & static_cast<uint>(BF::END)))
-                            flag_str = "  [begin]";
-                        else if ((bf & static_cast<uint>(BF::END))   && !(bf & static_cast<uint>(BF::BEGIN)))
-                            flag_str = "  [end]";
-                        else if (bf & static_cast<uint>(BF::DISCARD))
-                            flag_str = "  [discard]";
-
-                        add_row("Sync:   " + barrier_sync_str(bd.before.operation) +
-                                "  ->  "   + barrier_sync_str(bd.after.operation) +
-                                sub_str + flag_str,
-                                12.0f, col_barrier);
-                        add_row("Access: " + barrier_access_str(bd.before.access) +
-                                "  ->  "   + barrier_access_str(bd.after.access),
-                                12.0f, col_dim);
-                        add_row("Layout: " + barrier_layout_str(bd.before.layout) +
-                                "  ->  "   + barrier_layout_str(bd.after.layout),
-                                12.0f, col_dim);
-
-                        any = true;
-                    }
+                        if (bd.resource_name == track.name)
+                            entries.push_back({ &pass, &bd });
                 }
             }
 
-            if (!any)
+            // Validate per-subresource continuity and cross-frame state.
+            // No ALL_SUBRESOURCES slot — the engine always emits individual barriers.
+            {
+                const bool is_persistent = track.is_static || track.is_passed;
+
+                std::unordered_map<uint, HAL::ResourceState> sub_state;
+                std::unordered_map<uint, size_t>             first_idx; // subres -> first entry index
+
+                for (size_t i = 0; i < entries.size(); ++i)
+                {
+                    auto&       e           = entries[i];
+                    const auto& bd          = *e.detail;
+                    const uint  sr          = bd.subres;
+                    const bool  has_discard = (static_cast<uint>(bd.flags) &
+                                               static_cast<uint>(HAL::BarrierFlags::DISCARD)) != 0;
+
+                    const bool is_first = (first_idx.find(sr) == first_idx.end());
+                    if (is_first)
+                        first_idx[sr] = i;
+
+                    if (is_first)
+                    {
+                        if (is_persistent)
+                        {
+                            // Persistent: must DISCARD or declare a real before-layout.
+                            // Only layout is validated — sync/access are not tracked state.
+                            if (!has_discard &&
+                                bd.before.layout == HAL::TextureLayout::UNDEFINED)
+                                e.mismatch = true;
+                        }
+                        else
+                        {
+                            // Non-persistent: first barrier must always begin with
+                            // UNDEFINED layout and carry the DISCARD flag.
+                            if (!has_discard ||
+                                bd.before.layout != HAL::TextureLayout::UNDEFINED)
+                                e.mismatch = true;
+                        }
+                    }
+                    else
+                    {
+                        // Non-first occurrence: only layout must carry over — sync/access
+                        // in "before" describe synchronization scope, not previous state.
+                        auto it = sub_state.find(sr);
+                        if (it != sub_state.end())
+                        {
+                            if (bd.before.layout != it->second.layout)
+                                e.mismatch = true;
+                        }
+                    }
+
+                    sub_state[sr] = bd.after;
+                }
+
+            }
+
+            const float4 col_err     = C_MISMATCH;
+            const float4 col_err_dim = { 0.80f, 0.40f, 0.35f, 1.0f };
+
+            if (entries.empty())
+            {
                 add_row("(no transitions recorded)", 0.0f, col_dim);
+            }
+            else
+            {
+                const PassInfo* last_pass = nullptr;
+                for (auto& e : entries)
+                {
+                    // Print pass header whenever the pass changes.
+                    if (e.pass != last_pass)
+                    {
+                        last_pass = e.pass;
+                        y += 4.0f;
+                        float4 hcol = e.mismatch                           ? col_err
+                                    : (e.pass->call_id == clicked_call_id) ? col_sel
+                                                                            : col_bright;
+                        add_row(to_str(e.pass->name), 0.0f, hcol);
+                    }
+
+                    const auto& bd = *e.detail;
+
+                    // Subresource / split-barrier annotations on the Sync line.
+                    std::string sub_str;
+                    if (bd.subres != HAL::ALL_SUBRESOURCES)
+                        sub_str = "  sub=" + std::to_string(bd.subres);
+
+                    std::string flag_str;
+                    using BF = HAL::BarrierFlags;
+                    auto bf = static_cast<uint>(bd.flags);
+                    if      ((bf & static_cast<uint>(BF::BEGIN)) && !(bf & static_cast<uint>(BF::END)))
+                        flag_str = "  [begin]";
+                    else if ((bf & static_cast<uint>(BF::END))   && !(bf & static_cast<uint>(BF::BEGIN)))
+                        flag_str = "  [end]";
+                    else if (bf & static_cast<uint>(BF::DISCARD))
+                        flag_str = "  [discard]";
+
+                    float4 sc = e.mismatch ? col_err     : col_barrier;
+                    float4 dc = e.mismatch ? col_err_dim : col_dim;
+
+                    add_row("Sync:   " + barrier_sync_str(bd.before.operation) +
+                            "  ->  "   + barrier_sync_str(bd.after.operation) +
+                            sub_str + flag_str,
+                            12.0f, sc);
+                    add_row("Access: " + barrier_access_str(bd.before.access) +
+                            "  ->  "   + barrier_access_str(bd.after.access),
+                            12.0f, dc);
+                    add_row("Layout: " + barrier_layout_str(bd.before.layout) +
+                            "  ->  "   + barrier_layout_str(bd.after.layout),
+                            12.0f, dc);
+                }
+            }
 
             scr->contents->size = { 0.0f, y + 8.0f };
             add_child(scr);
@@ -1290,6 +1365,7 @@ class FrameGraphTimelineCanvas : public dock_base
     static const float4 C_SEL_PASS;
     static const float4 C_SEL_RESOURCE;
     static const float4 C_SEL_WAIT_PASS;
+    static const float4 C_MISMATCH;
 
     // -----------------------------------------------------------------------
     //  Helpers
@@ -1648,6 +1724,92 @@ private:
             m_resources.push_back(std::move(tr));
         }
 
+        // Validate barrier before/after continuity for every resource track.
+        {
+            std::vector<const PassInfo*> sorted;
+            sorted.reserve(m_passes.size());
+            for (auto& p : m_passes)
+                if (!p.disabled) sorted.push_back(&p);
+            std::sort(sorted.begin(), sorted.end(),
+                      [](const PassInfo* a, const PassInfo* b){ return a->call_id < b->call_id; });
+
+            for (auto& tr : m_resources)
+            {
+                // Per-subresource last-known after-state. No ALL_SUBRESOURCES key —
+                // their system always emits individual per-subresource barriers.
+                std::unordered_map<uint, HAL::ResourceState> sub_state;
+
+                const bool is_persistent = tr.is_static || tr.is_passed;
+
+                // First-occurrence info per subresource, for the cross-frame check.
+                struct FirstOcc { HAL::BarrierAccess access; HAL::TextureLayout layout; bool has_discard; };
+                std::unordered_map<uint, FirstOcc> first_occ;
+
+                for (auto* pass : sorted)
+                {
+                    if (tr.has_mismatch) break;
+                    for (auto& cmd : pass->debug_commands)
+                    {
+                        if (tr.has_mismatch) break;
+                        if (cmd.type != HAL::CommandType::Transition) continue;
+                        for (auto& bd : cmd.barrier_details)
+                        {
+                            if (bd.resource_name != tr.name) continue;
+
+                            auto bf = static_cast<uint>(bd.flags);
+                            bool has_discard = (bf & static_cast<uint>(HAL::BarrierFlags::DISCARD)) != 0;
+
+                            bool is_first = !first_occ.count(bd.subres);
+                            if (is_first)
+                            {
+                                first_occ[bd.subres] = { bd.before.access, bd.before.layout, has_discard };
+
+                                if (is_persistent)
+                                {
+                                    // Persistent: must DISCARD or declare a real before-layout.
+                                    // Only layout is validated — sync/access are not tracked state.
+                                    // UNDEFINED without DISCARD means D3D12 will validate against
+                                    // its tracked layout from the previous frame and error.
+                                    if (!has_discard &&
+                                        bd.before.layout == HAL::TextureLayout::UNDEFINED)
+                                    {
+                                        tr.has_mismatch = true;
+                                        break;
+                                    }
+                                }
+                                else
+                                {
+                                    // Non-persistent: first barrier must always begin with
+                                    // UNDEFINED layout and carry the DISCARD flag.
+                                    if (!has_discard ||
+                                        bd.before.layout != HAL::TextureLayout::UNDEFINED)
+                                    {
+                                        tr.has_mismatch = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Continuity: only layout must carry over between passes.
+                                // Sync/access in "before" describe synchronization scope,
+                                // not the resource's previous tracked state.
+                                auto it = sub_state.find(bd.subres);
+                                if (it != sub_state.end() &&
+                                    bd.before.layout != it->second.layout)
+                                {
+                                    tr.has_mismatch = true;
+                                    break;
+                                }
+                            }
+                            sub_state[bd.subres] = bd.after;
+                        }
+                    }
+                }
+
+            }
+        }
+
         // Resource-name labels + type icons in left column.
         for (auto& lbl  : m_resource_labels) m_left_panel->remove_child(lbl);
         for (auto& icon : m_resource_icons)  m_left_panel->remove_child(icon);
@@ -1681,7 +1843,9 @@ private:
             float ly  = row_top + (ROW_H - 14.0f) * 0.5f;
             float lx  = 4.0f + ICON_W + 4.0f;
             auto lbl  = make_label(LABEL_W - lx - 4.0f, ROW_H - 4.0f,
-                                   m_resources[ri].name, C_TEXT_BRIGHT, LABEL_FONT);
+                                   m_resources[ri].name,
+                                   m_resources[ri].has_mismatch ? C_MISMATCH : C_TEXT_BRIGHT,
+                                   LABEL_FONT);
             lbl->pos  = { lx, ly };
             m_left_panel->add_child(lbl);
             m_resource_labels.push_back(lbl);
@@ -2137,6 +2301,10 @@ private:
             float ry = row_y(ri, by);
             float cy = ry + (ROW_H - CELL_H) * 0.5f;
 
+            // Mismatch indicator: red stripe at the top of this resource row.
+            if (tr.has_mismatch)
+                dr(c, C_MISMATCH, bx, ry, b.w, 2.0f);
+
             // lifetime spine
             {
                 constexpr UINT NONE = std::numeric_limits<UINT>::max();
@@ -2238,6 +2406,7 @@ const float4 FrameGraphTimelineCanvas::C_TEXT_DIM     = { 0.55f, 0.55f, 0.58f, 1
 const float4 FrameGraphTimelineCanvas::C_SEL_PASS      = { 1.00f, 0.82f, 0.16f, 0.20f };
 const float4 FrameGraphTimelineCanvas::C_SEL_RESOURCE  = { 1.00f, 0.82f, 0.16f, 0.12f };
 const float4 FrameGraphTimelineCanvas::C_SEL_WAIT_PASS = { 0.40f, 0.72f, 1.00f, 0.15f };
+const float4 FrameGraphTimelineCanvas::C_MISMATCH      = { 0.95f, 0.20f, 0.15f, 1.0f };
 
 // ---------------------------------------------------------------------------
 //  Factory
