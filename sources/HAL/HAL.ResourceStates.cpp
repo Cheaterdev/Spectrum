@@ -52,6 +52,8 @@ namespace HAL
 		if (source == need) return need;
 		if (source == TextureLayout::UNDEFINED) return need;
 
+		if (need == TextureLayout::UNDEFINED) return need;		  // for alias end
+
 		static const TextureLayout LAYOUT_WRITE = TextureLayout::UNORDERED_ACCESS | TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::RENDER_TARGET | TextureLayout::COPY_DEST;
 		if (check(source & LAYOUT_WRITE) || check(need & LAYOUT_WRITE))
 			return std::nullopt;
@@ -142,11 +144,12 @@ namespace HAL
 		if (resource && check(resource->get_desc().Flags & ResFlags::DisableStateTracking)) return;
 
 		auto usage = last_usage;
-		auto prev = last_usage->prev_usage;
-		if (prev)
-		{
-//			ASSERT(!(prev->wanted_state.operation==BarrierSync::NONE) );
-		}
+		auto prev_usage = last_usage->prev_usage;
+
+		if(prev_usage && prev_usage->prev_usage && prev_usage->wanted_state!=ResourceStates::UNKNOWN)
+			ASSERT( prev_usage->wanted_state.operation!=BarrierSync::NONE);
+
+
 	}
 
 	ResourceUsage* ResourceListStateCPU::add_usage(ResourceUsage* usage)
@@ -525,16 +528,16 @@ namespace HAL
 
 
 	// optimization sector
-	void ResourceStateManager::prepare_state(Transitions* from, const SubResourcesGPU& gpu_state) const
+	void ResourceStateManager::prepare_state(Transitions* next_list, const SubResourcesGPU& gpu_state) const
 	{
 		if (resource->get_desc().is_buffer())
 			return;
 
 		ASSERT(check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
 
-		auto& cpu_state = get_state((from));
+		auto& cpu_state = get_state((next_list));
 
-		if (!cpu_state.used) return;
+		//if (!cpu_state.used) return;
 
 		bool updated = false;
 
@@ -549,30 +552,27 @@ namespace HAL
 			auto merged = merge_layout(gpu.layout, first_usage->wanted_state.layout);
 			if (merged)
 				first_usage->wanted_state.layout = *merged;
-			ASSERT(first_usage->wanted_state.valid_begin());
-			ASSERT(first_usage->wanted_state.valid_begin());
+	//		ASSERT(first_usage->wanted_state.valid_begin());
+		//	ASSERT(first_usage->wanted_state.valid_begin());
 
 			cpu.check_valid(resource);
 		};
 
 		auto transition_one = [&](UINT i) {
 			auto& gpu = gpu_state.get_subres_state(i);
-			auto& cpu = cpu_state.get_subres_state(i);
-
-			if (!cpu.used) return;
+			auto& cpu = cpu_state.get_subres_state(i);				
 
 			auto first_usage = cpu_state.get_first_usage(i);
-			auto first_state = first_usage->wanted_state;
-
-			if (gpu.layout != first_state.layout)
+		
+			if (!cpu.used || gpu.layout != first_usage->wanted_state.layout)
 			{
 				auto target = ResourceStates::NO_ACCESS;
 				target.layout = gpu.layout;
 
-				auto point = (from)->add_usage((resource), i, target, TransitionType::ZERO);
+				auto point = (next_list)->add_usage((resource), i, target, TransitionType::ZERO);
 				cpu.set_zero_transition(point);
 				updated = true;
-
+					cpu.used = true;
 				cpu.check_valid(resource);
 			}
 		};
@@ -582,8 +582,8 @@ namespace HAL
 
 		if (updated)
 		{
-			(from)->track_object(*(const_cast<Resource*>(resource)));
-			(from)->use_resource((resource));
+			(next_list)->track_object(*(const_cast<Resource*>(resource)));
+			(next_list)->use_resource((resource));
 		}
 	}
 

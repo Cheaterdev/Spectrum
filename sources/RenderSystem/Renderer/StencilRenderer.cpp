@@ -264,11 +264,8 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 
 stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 {
-
-
 	docking = GUI::dock::PARENT;
 	clickable = true;
-
 
 	cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
 	axis_intersect_cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
@@ -276,9 +273,7 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	axis = EngineAssets::axis.get_asset()->create_instance();
 
 	debug_scene = std::make_shared<Scene>();
-
 	debug_scene->add_child(axis);
-
 
 	std::vector<unsigned int> data = { 3, 1, 0,
 	2, 1, 3,
@@ -294,28 +289,283 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	7, 4, 6,
 	};
 
-
-
 	std::vector<vec4> verts(8);
-	vec3 v0(-0.5, -0.5, 0.5);
-	vec3 v1(0.5, 0.5, 0.5);
-	verts[0] = vec4(-1.0f, 1.0f, -1.0f, 0);
-	verts[1] = vec4(1.0f, 1.0f, -1.0f, 0);
-	verts[2] = vec4(1.0f, 1.0f, 1.0f, 0);
-	verts[3] = vec4(-1.0f, 1.0f, 1.0f, 0);
+	verts[0] = vec4(-1.0f,  1.0f, -1.0f, 0);
+	verts[1] = vec4( 1.0f,  1.0f, -1.0f, 0);
+	verts[2] = vec4( 1.0f,  1.0f,  1.0f, 0);
+	verts[3] = vec4(-1.0f,  1.0f,  1.0f, 0);
 	verts[4] = vec4(-1.0f, -1.0f, -1.0f, 0);
-	verts[5] = vec4(1.0f, -1.0f, -1.0f, 0);
-	verts[6] = vec4(1.0f, -1.0f, 1.0f, 0);
-	verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
+	verts[5] = vec4( 1.0f, -1.0f, -1.0f, 0);
+	verts[6] = vec4( 1.0f, -1.0f,  1.0f, 0);
+	verts[7] = vec4(-1.0f, -1.0f,  1.0f, 0);
 	index_buffer = Helpers::make_buffer<unsigned int>(data);
 
 	vertex_buffer = HAL::StructuredBufferView<vec4>(8);
 
+	auto list = HAL::Device::get().get_upload_list();
+	list->get_copy().update(vertex_buffer, 0, verts);
+	list->execute_and_wait();
 
-			auto list = (HAL::Device::get().get_upload_list());
+	// ---- Pass function members -----------------------------------------------
 
-		list->get_copy().update(vertex_buffer, 0, verts);
+	m_before_setup = [this](Passes::stencil_renderer_before::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		process_tasks();
+		debug_scene->update_transforms();
 
-			list->execute_and_wait();
+		auto& caminfo = builder.graph->get_context<CameraInfo>();
+		cam = *caminfo.cam;
+		cam.set_projection_params(0.01f, 1.f, 0.1f, 10000.f);
+		cam.target = cam.position + direction;
+		cam.update();
 
+		axis_cam = *caminfo.cam;
+		vec3 dir = caminfo.cam->target - caminfo.cam->position;
+		dir.normalize();
+		axis_cam.set_projection_params(1, 1000);
+		axis_cam.position -= center_pos;
+		axis_cam.position.normalize();
+		axis_cam.position *= 200;
+		axis_cam.target = axis_cam.position + dir;
+		axis_cam.update();
+
+		axis_intersect_cam = axis_cam;
+		axis_intersect_cam.set_projection_params(1, 1000);
+		axis_intersect_cam.target = axis_intersect_cam.position + direction;
+		axis_intersect_cam.update();
+
+		builder.create(data.depth_tex,      { { 1,1,0 }, HAL::Format::R32_TYPELESS, 1 }, FrameGraph::ResourceFlags::DepthStencil);
+		builder.create(data.id_buffer,      { 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+		builder.create(data.axis_id_buffer, { 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_before_render = [this](Passes::stencil_renderer_before::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& list     = *context.get_list();
+		auto& graphics = list.get_graphics();
+		auto& compute  = list.get_compute();
+		auto& copy     = list.get_copy();
+
+		auto obj = context.graph->get_context<SceneInfo>().scene;
+
+		RT::DepthOnly::Compiled rtv;
+		{
+			RT::DepthOnly rt;
+			rt.GetDepth() = data.depth_tex->depthStencil;
+			rtv = rt.compile(list);
+		}
+
+		std::vector<std::pair<MeshAssetInstance::ptr, int>> current;
+		auto mesh_func = [&](MeshAssetInstance* l)
+		{
+			for (unsigned int i = 0; i < l->rendering.size(); i++)
+			{
+				auto& m = l->rendering[i];
+				if (intersect(cam, m.primitive_global.get()) == INTERSECT_TYPE::FULL_OUT)
+					continue;
+				current.emplace_back(l->get_ptr<MeshAssetInstance>(), i);
+				graphics.set(m.compiled_mesh_info);
+				graphics.set(m.mesh_instance_info);
+				{
+					Slots::Instance instance;
+					instance.GetInstanceId() = (UINT)current.size();
+					graphics.set(instance);
+				}
+				graphics.dispatch_mesh(m.dispatch_mesh_arguments);
+			}
+		};
+
+		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+		graphics.set_pipeline<PSOS::DrawStencil>();
+		graphics.set(scene->compiledScene);
+
+		compute.clear(*data.id_buffer);
+		compute.clear(*data.axis_id_buffer);
+
+		{
+			Slots::FrameInfo frameInfo;
+			frameInfo.GetCamera() = cam.camera_cb.current;
+			graphics.set(frameInfo);
+		}
+		{
+			Slots::PickerBuffer buffer;
+			buffer.GetViewBuffer() = *data.id_buffer;
+			graphics.set(buffer);
+		}
+
+		graphics.set_rtv(rtv, RTOptions::Default | RTOptions::ClearDepth);
+
+		obj->iterate([&](scene_object* node)
+		{
+			auto render_object = dynamic_cast<Graphics::renderable*>(node);
+			if (render_object)
+				mesh_func(dynamic_cast<MeshAssetInstance*>(render_object));
+			return true;
+		});
+
+		graphics.set_rtv(rtv, RTOptions::ClearDepth);
+
+		{
+			Slots::FrameInfo frameInfo;
+			frameInfo.GetCamera() = axis_intersect_cam.camera_cb.current;
+			graphics.set(frameInfo);
+		}
+		{
+			Slots::PickerBuffer buffer;
+			buffer.GetViewBuffer() = *data.axis_id_buffer;
+			graphics.set(buffer);
+		}
+
+		axis->iterate([&](scene_object* node)
+		{
+			auto render_object = dynamic_cast<Graphics::renderable*>(node);
+			if (render_object)
+			{
+				auto l = dynamic_cast<MeshAssetInstance*>(render_object);
+				for (unsigned int i = 0; i < (UINT)l->rendering.size(); i++)
+				{
+					auto& m = l->rendering[i];
+					graphics.set(m.compiled_mesh_info);
+					graphics.set(m.mesh_instance_info);
+					{
+						Slots::Instance instance;
+						instance.GetInstanceId() = i + 1;
+						graphics.set(instance);
+					}
+					graphics.dispatch_mesh(m.dispatch_mesh_arguments);
+				}
+			}
+			return true;
+		});
+
+		copy.read<uint>(*data.id_buffer, 0, 1, [current, this](std::span<uint> memory)
+		{
+			auto result = *memory.data() - 1;
+			run([result, this, current]()
+			{
+				mouse_on_object.first = nullptr;
+				if (result < current.size())
+					mouse_on_object = current[result];
+			});
+		});
+
+		copy.read<uint>(*data.axis_id_buffer, 0, 1, [this](std::span<uint> memory)
+		{
+			auto result = *memory.data() - 1;
+			run([this, result]() { mouse_on_axis = result; });
+		});
+	};
+
+	m_after_setup = [this](Passes::stencil_renderer_after::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		if (selected.empty())
+			return false;
+		auto& frame = builder.graph->get_context<ViewportInfo>();
+		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::RenderTarget);
+		builder.create(data.Stencil_color_tex,
+			{ ivec3(frame.frame_size, 0), HAL::Format::R8_SNORM, 1, 1 },
+			FrameGraph::ResourceFlags::RenderTarget);
+		return true;
+	};
+
+	m_after_render = [this](Passes::stencil_renderer_after::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& list     = *context.get_list();
+		auto& graphics = list.get_graphics();
+
+		graphics.set_signature(Layouts::DefaultLayout);
+		graphics.set(scene->compiledScene);
+
+		{
+			RT::SingleColor rt;
+			rt.GetColor() = data.Stencil_color_tex->renderTarget;
+			graphics.set_rtv(rt, RTOptions::Default | RTOptions::ClearAll);
+		}
+
+		graphics.set_pipeline<PSOS::DrawSelected>();
+		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+
+		context.graph->set_slot(SlotID::FrameInfo, graphics);
+
+		for (auto& sel : selected)
+		{
+			auto& m = sel.first->rendering[sel.second];
+			graphics.set(m.compiled_mesh_info);
+			graphics.set(m.mesh_instance_info);
+			graphics.dispatch_mesh(m.dispatch_mesh_arguments);
+		}
+
+		// apply color mask
+		{
+			graphics.set_pipeline<PSOS::StencilerLast>();
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+			{
+				Slots::Countour contour;
+				contour.GetColor() = { 1, 0.5f, 0, 1 };
+				contour.GetTex()   = *data.Stencil_color_tex;
+				graphics.set(contour);
+			}
+			graphics.set_viewport(data.ResultTexture->get_viewport());
+			graphics.set_scissor(data.ResultTexture->get_scissor());
+			{
+				RT::SingleColor rt;
+				rt.GetColor() = data.ResultTexture->renderTarget;
+				graphics.set_rtv(rt);
+			}
+			graphics.draw(4);
+		}
+
+		{
+			RT::SingleColor rt;
+			rt.GetColor() = data.ResultTexture->renderTarget;
+			graphics.set_rtv(rt);
+		}
+
+		if (draw_aabb)
+		{
+			graphics.set_pipeline<PSOS::DrawBox>();
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+			graphics.set_index_buffer(index_buffer.get_index_buffer_view());
+			{
+				Slots::DrawStencil draw;
+				draw.GetVertices() = vertex_buffer;
+				graphics.set(draw);
+			}
+			for (auto& sel : selected)
+			{
+				auto& m = sel.first->rendering[sel.second];
+				graphics.set(m.compiled_mesh_info);
+				graphics.set(m.mesh_instance_info);
+				graphics.draw_indexed(36, 0, 0);
+			}
+		}
+
+		// draw axis
+		{
+			graphics.set_index_buffer(HAL::Views::IndexBuffer());
+			{
+				Slots::FrameInfo frameInfo;
+				frameInfo.GetCamera() = axis_cam.camera_cb.current;
+				graphics.set(frameInfo);
+			}
+			graphics.set_pipeline<PSOS::DrawAxis>();
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+
+			int i = 0;
+			for (auto& m : axis->rendering)
+			{
+				float lighted = (mouse_on_axis == i) * 0.7f;
+				{
+					Slots::Color color;
+					color.GetColor() = { i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted, 1 };
+					graphics.set(color);
+				}
+				graphics.set(m.compiled_mesh_info);
+				graphics.set(m.mesh_instance_info);
+				graphics.dispatch_mesh(m.dispatch_mesh_arguments);
+				i++;
+			}
+		}
+	};
 }

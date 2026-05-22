@@ -13,41 +13,23 @@ export class BlueNoise
 	HAL::StructuredBufferView<int32_t> ranking_buffer_view;
 	HAL::StructuredBufferView<int32_t> scrambling_buffer_view;
 
+	Passes::BlueNoise::setup_func_type  m_bluenoise_setup;
+	Passes::BlueNoise::render_func_type m_bluenoise_render;
+
 public:
-	// Default constructor: uploads the blue-noise LUT tables to GPU memory.
+	// Default constructor: uploads the blue-noise LUT tables to GPU memory and
+	// initialises the setup/render function members.
 	// Defined in BlueNoise.cpp so the large sampler headers stay out of the
 	// module interface.
 	BlueNoise();
 
 	// Template constructor: wires setup/render funcs onto the matching pass
 	// in any pipeline that exposes a 'blueNoise' member of type Passes::BlueNoise.
-	// Delegates to BlueNoise() first so the GPU buffers are always ready.
+	// Delegates to BlueNoise() so the GPU buffers and function members are ready.
 	template<typename TPipeline>
 	explicit BlueNoise(TPipeline& pipeline) : BlueNoise()
 	{
-		pipeline.blueNoise.setup_func = [this](auto& data, FrameGraph::TaskBuilder& builder) -> bool
-		{
-			builder.create(data.BlueNoise,
-				{ ivec3(128, 128, 0), HAL::Format::R8G8_UNORM, 1, 1 },
-				FrameGraph::ResourceFlags::UnorderedAccess);
-			return true;
-		};
-
-		pipeline.blueNoise.render_func = [this](auto& data, FrameGraph::FrameContext& context)
-		{
-			auto& compute = context.get_list()->get_compute();
-			compute.set_pipeline<PSOS::BlueNoise>();
-
-			static uint index = 0;
-			Slots::BlueNoise blue_data;
-			blue_data.GetFrame_index()            = index++;
-			blue_data.GetSobol_buffer()           = HLSL::Buffer<uint>(sobol_buffer_view.structuredBuffer);
-			blue_data.GetRanking_tile_buffer()    = HLSL::Buffer<uint>(ranking_buffer_view.structuredBuffer);
-			blue_data.GetScrambling_tile_buffer() = HLSL::Buffer<uint>(scrambling_buffer_view.structuredBuffer);
-			blue_data.GetBlue_noise_texture()     = data.BlueNoise->rwTexture2D;
-			compute.set(blue_data);
-
-			compute.dispatch(data.BlueNoise->get_size());
-		};
+		pipeline.blueNoise.setup_func  = m_bluenoise_setup;
+		pipeline.blueNoise.render_func = m_bluenoise_render;
 	}
 };

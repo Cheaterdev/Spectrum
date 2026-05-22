@@ -19,7 +19,7 @@ namespace GUI
 			center->clickable = false;
 
 			center->texture = Skin::get().DefaultCircleSelector.Inner;
-//			texture = Skin::get().DefaultCircleSelector.Main;
+			texture = Skin::get().DefaultCircleSelector.Main;
 			add_child(center);
 			clickable = true;
 			//catch_clicks = true;

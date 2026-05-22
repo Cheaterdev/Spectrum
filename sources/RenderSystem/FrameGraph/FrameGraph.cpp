@@ -1207,6 +1207,41 @@ namespace FrameGraph
 
 
 		}
+
+
+		for (auto& pass : enabled_passes)
+		{
+			auto commandList = pass->context.list;
+			if (!commandList) continue;
+			
+			for(auto info:pass->used.resource_deletions_before)
+			{
+
+			if(info->states.empty())continue;
+				auto& last_state = info->states.back();
+				if(last_state.write)
+				{
+						auto prev_pass = last_state.passes.front();
+						 	auto prev_cmd = prev_pass->context.list;
+								auto& prev_cpu_state = info->resource->get_state_manager().get_cpu_state(prev_cmd.get());
+				
+
+								   	HAL::SubResourcesGPU prev_gpu_state;
+					prev_gpu_state.subres.resize(info->resource->get_state_manager().get_subres_count());
+					prev_gpu_state.set_cpu_state(prev_cpu_state);
+
+					info->resource->get_state_manager().prepare_state(commandList.get(), prev_gpu_state);
+				}else
+				{
+					info->resource->get_state_manager().prepare_state(commandList.get(), last_state.merged_read_state);
+	
+				}
+			//	
+
+
+		
+			}
+		}
 	}
 	void TaskBuilder::create_resources()
 	{

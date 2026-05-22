@@ -44,7 +44,7 @@ export{
 			void track_object(T& obj)
 			{
 				auto& state = obj.ObjectState<TrackedObjectState>::get_state(this);
-				ASSERT(!state.alias_ended);
+//				ASSERT(!state.alias_ended);
 				if (!state.used)
 				{
 					state.used = true;

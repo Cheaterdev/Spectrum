@@ -881,6 +881,12 @@ gpu_timer.start(list);
 
 						if (prev_state == usage.wanted_state) continue;
 
+
+						if (prev_state!=ResourceStates::UNKNOWN && usage.prev_usage->prev_usage)
+						{
+							  ASSERT(prev_state.operation!=BarrierSync::NONE);
+
+						}
 						ASSERT(prev_state.is_valid(usage.resource->get_type()));
 						ASSERT(usage.wanted_state.is_valid(usage.resource->get_type()));
 
@@ -912,6 +918,7 @@ gpu_timer.start(list);
 						if (usage.resource->debug_transitions)
 							Log::get() << "TRANSITION" << prev_state << " " << usage.wanted_state << "subres: " << usage.subres << Log::endl;
 					
+						  				HAL::Debug::BarrierBreakpoints::check_usage(usage.resource->name, usage.subres, usage.wanted_state);
 
 						if (can_split)
 						{
@@ -998,6 +1005,9 @@ gpu_timer.start(list);
 				usage.wanted_state = state;
 
 				HAL::Debug::BarrierBreakpoints::check_usage(resource->name, subres, state);
+
+				if(usage.prev_usage && usage.prev_usage->wanted_state!=ResourceStates::UNKNOWN)
+			ASSERT( usage.prev_usage->wanted_state.operation!=BarrierSync::NONE);
 
 				usage.point = point;
 				return &usage;

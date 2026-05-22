@@ -65,4 +65,31 @@ BlueNoise::BlueNoise()
 	list->get_copy().update(scrambling_buffer_view, 0, g_blueNoiseSamplerState.scramblingTileBuffer);
 
 	list->execute_and_wait();
+
+	// ---- Pass function members ------------------------------------------------
+
+	m_bluenoise_setup = [this](Passes::BlueNoise::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		builder.create(data.BlueNoise,
+			{ ivec3(128, 128, 0), HAL::Format::R8G8_UNORM, 1, 1 },
+			FrameGraph::ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_bluenoise_render = [this](Passes::BlueNoise::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& compute = context.get_list()->get_compute();
+		compute.set_pipeline<PSOS::BlueNoise>();
+
+		static uint index = 0;
+		Slots::BlueNoise blue_data;
+		blue_data.GetFrame_index()            = index++;
+		blue_data.GetSobol_buffer()           = HLSL::Buffer<uint>(sobol_buffer_view.structuredBuffer);
+		blue_data.GetRanking_tile_buffer()    = HLSL::Buffer<uint>(ranking_buffer_view.structuredBuffer);
+		blue_data.GetScrambling_tile_buffer() = HLSL::Buffer<uint>(scrambling_buffer_view.structuredBuffer);
+		blue_data.GetBlue_noise_texture()     = data.BlueNoise->rwTexture2D;
+		compute.set(blue_data);
+
+		compute.dispatch(data.BlueNoise->get_size());
+	};
 }

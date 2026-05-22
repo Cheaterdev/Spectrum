@@ -315,7 +315,9 @@ namespace HAL
 				  	PROFILE(L"Queue::execute");
 			queued.emplace_back(list->get_native().Get());
 
-			
+
+			// My framegraph system pushes Sync&Access barrier as NONE at the end of the pass so its not possible to use it later, need to redesign it
+				   flush();
 		}
 
 		void Queue::flush()
