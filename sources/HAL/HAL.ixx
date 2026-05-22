@@ -56,6 +56,7 @@ export import :Autogen;
 
 export import :API.IndirectCommand;
 
+	export import :Debug;
 
 export namespace HAL
 {

@@ -29,6 +29,10 @@ namespace HAL
 		debug_records.push_back({CommandType::Transition, {}, point});
 		tasks.emplace_back([point](API::CommandList& list)
 		{
+			for (const auto& b : point->transitions.get_barriers())
+				HAL::Debug::BarrierBreakpoints::check_barrier(
+					b.resource ? std::string_view{b.resource->name} : std::string_view{},
+					b.subres, b.before, b.after);
 			list.transitions(point->transitions);
 		});
 	}

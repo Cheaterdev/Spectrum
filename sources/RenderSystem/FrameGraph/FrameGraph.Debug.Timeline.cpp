@@ -548,6 +548,27 @@ class FrameGraphTimelineCanvas : public dock_base
     };
 
     // -----------------------------------------------------------------------
+    //  Label widget with an on_click callback.
+    // -----------------------------------------------------------------------
+    struct clickable_label : label
+    {
+        using ptr = std::shared_ptr<clickable_label>;
+        std::function<void()> on_click;
+
+        clickable_label() { clickable = true; }
+
+        virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override
+        {
+            if (button == mouse_button::LEFT && action == mouse_action::DOWN && on_click)
+            {
+                on_click();
+                return true;
+            }
+            return label::on_mouse_action(action, button, pos);
+        }
+    };
+
+    // -----------------------------------------------------------------------
     //  Transparent clickable overlay for a pass block.
     // -----------------------------------------------------------------------
     struct pass_button : GUI::base
@@ -723,11 +744,13 @@ class FrameGraphTimelineCanvas : public dock_base
             const float4 col_dim     = { 0.55f, 0.55f, 0.58f, 1.0f };
             const float4 col_barrier = { 0.90f, 0.65f, 0.20f, 1.0f };
             const float4 col_sel     = { 1.00f, 1.00f, 0.50f, 1.0f };
+            const float4 col_break   = { 1.00f, 0.40f, 0.10f, 1.0f }; // active breakpoint
 
+            // Returns a clickable_label so callers can wire up on_click handlers.
             auto add_row = [&](const std::string& text, float indent,
-                               float4 color = { 0.90f, 0.90f, 0.92f, 1.0f })
+                               float4 color = { 0.90f, 0.90f, 0.92f, 1.0f }) -> clickable_label::ptr
             {
-                auto lbl         = std::make_shared<label>();
+                auto lbl         = std::make_shared<clickable_label>();
                 lbl->text        = text;
                 lbl->color       = color;
                 lbl->font_size   = 11.0f;
@@ -738,6 +761,7 @@ class FrameGraphTimelineCanvas : public dock_base
                 lbl->pos         = { 8.0f + indent, y };
                 scr->contents->add_child(lbl);
                 y += 18.0f;
+                return lbl;
             };
 
             add_row("Resource: " + track.name, 0.0f);
@@ -863,13 +887,34 @@ class FrameGraphTimelineCanvas : public dock_base
                     else if (bf & static_cast<uint>(BF::DISCARD))
                         flag_str = "  [discard]";
 
-                    float4 sc = e.mismatch ? col_err     : col_barrier;
+                    const HAL::Debug::BreakKey bp_key{ bd.resource_name, bd.subres, bd.before, bd.after };
+                    const bool bp_on  = HAL::Debug::BarrierBreakpoints::has(bp_key);
+                    float4 sc = e.mismatch ? col_err : (bp_on ? col_break : col_barrier);
                     float4 dc = e.mismatch ? col_err_dim : col_dim;
 
-                    add_row("Sync:   " + barrier_sync_str(bd.before.operation) +
-                            "  ->  "   + barrier_sync_str(bd.after.operation) +
-                            sub_str + flag_str,
-                            12.0f, sc);
+                    // The Sync line is clickable — toggles a GPU-side __debugbreak() that
+                    // fires only when this exact before->after transition is executed.
+                    const std::string sync_base =
+                        "Sync:   " + barrier_sync_str(bd.before.operation) +
+                        "  ->  "   + barrier_sync_str(bd.after.operation) +
+                        sub_str + flag_str;
+                    const std::string bp_prefix = bp_on ? "[*] " : "    ";
+
+                    auto sync_lbl        = add_row(bp_prefix + sync_base, 12.0f, sc);
+                    sync_lbl->clickable  = true;
+
+                    const bool is_err = e.mismatch;
+                    sync_lbl->on_click = [lbl      = sync_lbl,
+                                          bp_key, sync_base, is_err,
+                                          c_ok = col_barrier, c_bp = col_break]
+                                         () mutable
+                    {
+                        bool now_active = HAL::Debug::BarrierBreakpoints::toggle(bp_key);
+                        lbl->text  = (now_active ? "[*] " : "    ") + sync_base;
+                        if (!is_err)
+                            lbl->color = now_active ? c_bp : c_ok;
+                    };
+
                     add_row("Access: " + barrier_access_str(bd.before.access) +
                             "  ->  "   + barrier_access_str(bd.after.access),
                             12.0f, dc);
