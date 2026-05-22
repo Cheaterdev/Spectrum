@@ -953,28 +953,31 @@ namespace FrameGraph
 
 			// Snapshot debug records now: compile_transitions has filled barrier data,
 			// compile() has run. Resolve Transition descriptions so no raw pointers survive.
-			auto records = commandList->get_debug_records();
-			for (auto& rec : records)
+			if constexpr (BuildOptions::Dev)
 			{
-				if (rec.type == HAL::CommandType::Transition && rec.barrier_point)
+				auto records = commandList->get_debug_records();
+				for (auto& rec : records)
 				{
-					const auto& barriers = rec.barrier_point->transitions.get_barriers();
-					rec.description = "Barriers: " + std::to_string(barriers.size());
-					rec.barrier_details.reserve(barriers.size());
-					for (const auto& b : barriers)
+					if (rec.type == HAL::CommandType::Transition && rec.barrier_point)
 					{
-						HAL::CommandRecord::BarrierDetail detail;
-						detail.resource_name = b.resource ? b.resource->name : "?";
-						detail.before        = b.before;
-						detail.after         = b.after;
-						detail.subres        = b.subres;
-						detail.flags         = b.flags;
-						rec.barrier_details.push_back(std::move(detail));
+						const auto& barriers = rec.barrier_point->transitions.get_barriers();
+						rec.description = "Barriers: " + std::to_string(barriers.size());
+						rec.barrier_details.reserve(barriers.size());
+						for (const auto& b : barriers)
+						{
+							HAL::CommandRecord::BarrierDetail detail;
+							detail.resource_name = b.resource ? b.resource->name : "?";
+							detail.before        = b.before;
+							detail.after         = b.after;
+							detail.subres        = b.subres;
+							detail.flags         = b.flags;
+							rec.barrier_details.push_back(std::move(detail));
+						}
+						rec.barrier_point = nullptr;
 					}
-					rec.barrier_point = nullptr;
 				}
+				pass->debug_commands = std::move(records);
 			}
-			pass->debug_commands = std::move(records);
 		}
 	}
 

@@ -57,11 +57,32 @@ export namespace HAL
 
 	class DelayedCommandList
 	{
+		// Dev builds: full recording vector (24 bytes).
+		// Non-Dev builds: zero-size no-op sink — [[no_unique_address]] guarantees no storage cost.
+		struct DevRecorder
+		{
+			std::vector<CommandRecord> records;
+			void push_back(CommandRecord r)              { records.push_back(std::move(r)); }
+			void clear()                                 { records.clear(); }
+			const std::vector<CommandRecord>& get() const { return records; }
+		};
+		struct NullRecorder
+		{
+			void push_back(CommandRecord) noexcept {}
+			void clear()                 noexcept {}
+			const std::vector<CommandRecord>& get() const
+			{
+				static const std::vector<CommandRecord> s_empty;
+				return s_empty;
+			}
+		};
+
 		bool compiled = false;
 		API::CommandList list;
 		std::wstring name;
 		std::vector<std::function<void(API::CommandList&)>> tasks;
-		std::vector<CommandRecord> debug_records;
+		[[no_unique_address]]
+		std::conditional_t<BuildOptions::Dev, DevRecorder, NullRecorder> debug_recorder;
 	public:
 		inline const API::CommandList& get_list() const { return list; }
 		void create(CommandListType type);
@@ -117,12 +138,13 @@ export namespace HAL
 		void read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout);
 
 		void func_barrier(UsagePoint* point);
-		const std::vector<CommandRecord>& get_debug_records() const { return debug_records; }
+		const std::vector<CommandRecord>& get_debug_records() const { return debug_recorder.get(); }
 
 		template<class Hit, class Miss, class Raygen>
 		void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer) {
-			debug_records.push_back({CommandType::DispatchRays,
-				"DispatchRays " + std::to_string(size.x) + "x" + std::to_string(size.y)});
+			if constexpr (BuildOptions::Dev)
+				debug_recorder.push_back({CommandType::DispatchRays,
+					"DispatchRays " + std::to_string(size.x) + "x" + std::to_string(size.y)});
 			tasks.emplace_back([=](API::CommandList& list) {
 				list.dispatch_rays(sizeof(Hit), sizeof(Miss), sizeof(Raygen), size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
 				});

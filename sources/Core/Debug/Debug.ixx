@@ -19,6 +19,12 @@ export
 #else
 		static constexpr bool ObjectTracking = false;
 #endif
+
+#ifdef DEV
+		static constexpr bool Dev = true;
+#else
+		static constexpr bool Dev = false;
+#endif
 	};
 
 	using ObjectTypeID = uint64;

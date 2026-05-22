@@ -670,7 +670,12 @@ class FrameGraphTimelineCanvas : public dock_base
             if (info.cross_queue_deps.empty())
                 add_row("Sync:   none");
 
-            if (!info.debug_commands.empty())
+            if constexpr (!BuildOptions::Dev)
+            {
+                y += 6.0f;
+                add_row("-- Commands (Dev=false, not recorded)", col_dim);
+            }
+            else if (!info.debug_commands.empty())
             {
                 y += 6.0f;
                 add_row("-- Commands (" +
@@ -852,7 +857,10 @@ class FrameGraphTimelineCanvas : public dock_base
 
             if (entries.empty())
             {
-                add_row("(no transitions recorded)", 0.0f, col_dim);
+                if constexpr (!BuildOptions::Dev)
+                    add_row("(Dev=false, transitions not recorded)", 0.0f, col_dim);
+                else
+                    add_row("(no transitions recorded)", 0.0f, col_dim);
             }
             else
             {
