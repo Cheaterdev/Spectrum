@@ -27,6 +27,26 @@ export import :Autogen.Tables.{{t.name}};
 {%endif-%}
 {%endfor -%}
 
+{%- for v in parsed.compute_pso -%}
+{%- set t =  parsed.compute_pso[v] -%}
+export import :Autogen.PSO.{{t.name}};
+{% endfor -%}
+
+{%- for v in parsed.graphics_pso -%}
+{%- set t =  parsed.graphics_pso[v] -%}
+export import :Autogen.PSO.{{t.name}};
+{% endfor -%}
+
+{%- for v in parsed.workgraph_pso -%}
+{%- set t =  parsed.workgraph_pso[v] -%}
+export import :Autogen.PSO.{{t.name}};
+{% endfor -%}
+
+{%- for v in parsed.raytrace_pso -%}
+{%- set t =  parsed.raytrace_pso[v] -%}
+export import :Autogen.RTX.{{t.name}};
+{% endfor -%}
+
 export	{
 {% for v in parsed.tables -%}
 {%- set t =  parsed.tables[v] -%}
@@ -40,36 +60,13 @@ export	{
 	#include "rt\{{t.name}}.h"
 {% endfor -%}
 
-
-{%- for v in parsed.compute_pso -%}
-{%- set t =  parsed.compute_pso[v] -%}
-	#include "pso\{{t.name}}.h"
-{% endfor -%}
-
-{%- for v in parsed.graphics_pso -%}
-{%- set t =  parsed.graphics_pso[v] -%}
-	#include "pso\{{t.name}}.h"
-{% endfor -%}
-
-
-{%- for v in parsed.workgraph_pso -%}
-{%- set t =  parsed.workgraph_pso[v] -%}
-	#include "pso\{{t.name}}.h"
-{% endfor -%}
-
-
-{%- for v in parsed.raytrace_pso -%}
-{%- set t =  parsed.raytrace_pso[v] -%}
-	#include "rtx\{{t.name}}.h"
-{% endfor -%}
-
 	std::optional<SlotID> get_slot(std::string_view slot_name);
 	uint get_table_index(SlotID id);
 	std::string get_slot_name(SlotID id);
 }
 
 std::optional<SlotID> get_slot(std::string_view slot_name)
-{		
+{
 {% for v in parsed.tables -%}
 {%- set t =  parsed.tables[v] -%}
 {% if t.slot is defined -%}
@@ -80,7 +77,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 }
 
 uint get_table_index(SlotID id)
-{		
+{
 {% for v in parsed.tables -%}
 {%- set t =  parsed.tables[v] -%}
 {% if t.slot is defined -%}
@@ -91,7 +88,7 @@ uint get_table_index(SlotID id)
 }
 
 std::string get_slot_name(SlotID id)
-{		
+{
 {% for v in parsed.tables -%}
 {%- set t =  parsed.tables[v] -%}
 {% if t.slot is defined -%}

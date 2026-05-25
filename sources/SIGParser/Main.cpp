@@ -375,19 +375,28 @@ int main()
 		}
 
 		// PSO
+		auto remove_old_pso_h = [&](const std::string& name)
+		{
+			std::filesystem::remove(cpp_path + "/pso/" + name + ".h");
+			std::filesystem::remove(cpp_path + "/pso/" + name + ".ixx");
+		};
+
 		for (auto& pso : parsed.compute_pso)
 		{
-			my_stream(cpp_path + "/pso", pso.name + ".h") << cpp_templates.generate2(L"pso", "pso", pso);
+			my_stream(cpp_path + "/pso", pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
+			remove_old_pso_h(pso.name);
 		}
 
 		for (auto& pso : parsed.graphics_pso)
 		{
-			my_stream(cpp_path + "/pso", pso.name + ".h") << cpp_templates.generate2(L"pso", "pso", pso);
+			my_stream(cpp_path + "/pso", pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
+			remove_old_pso_h(pso.name);
 		}
-		   
+
 		for (auto& pso : parsed.workgraph_pso)
 		{
-			my_stream(cpp_path + "/pso", pso.name + ".h") << cpp_templates.generate2(L"pso", "pso", pso);
+			my_stream(cpp_path + "/pso", pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
+			remove_old_pso_h(pso.name);
 		}
 
 		// RTX
@@ -411,7 +420,30 @@ int main()
 
 		for (auto& pso : parsed.raytrace_pso)
 		{
-			my_stream(cpp_path + "/rtx", pso.name + ".h") << cpp_templates.generate2(L"rtx_pso", "pso", pso);
+			// collect unique payload tables and local slots needed by this PSO's passes
+			ValuesList payload_tables, local_slots;
+			std::set<std::string> seen_payload, seen_local;
+			for (auto& pass : pso.passes)
+			{
+				auto* payload = pass.find_param("payload");
+				if (payload && seen_payload.insert(payload->expr).second)
+					payload_tables.emplace_back(payload->expr);
+
+				auto* local = pass.find_param("local");
+				if (local && seen_local.insert(local->expr).second)
+					local_slots.emplace_back(local->expr);
+			}
+
+			auto dp = make_map(pso);
+			ValuesMap params = {
+				{ "pso",            Reflect(dp)     },
+				{ "payload_tables", payload_tables  },
+				{ "local_slots",    local_slots     },
+			};
+
+			my_stream(cpp_path + "/rtx", pso.name + ".rtx.ixx") << cpp_templates.generate(L"rtx_pso", params);
+			std::filesystem::remove(cpp_path + "/rtx/" + pso.name + ".h");
+			std::filesystem::remove(cpp_path + "/rtx/" + pso.name + ".ixx");
 		}
 
 

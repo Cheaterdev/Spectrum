@@ -212,6 +212,76 @@ export import :Autogen.Slots.WorkGraphTest;
 export import :Autogen.Tables.WorkGraphTest;
 export import :Autogen.Slots.GraphInput;
 export import :Autogen.Tables.GraphInput;
+export import :Autogen.PSO.BlueNoise;
+export import :Autogen.PSO.BRDF;
+export import :Autogen.PSO.DenoiserReflectionReproject;
+export import :Autogen.PSO.DenoiserReflectionPrefilter;
+export import :Autogen.PSO.DenoiserReflectionResolve;
+export import :Autogen.PSO.DenoiserShadow_Prepare;
+export import :Autogen.PSO.DenoiserShadow_TileClassification;
+export import :Autogen.PSO.DenoiserShadow_Filter;
+export import :Autogen.PSO.FSR;
+export import :Autogen.PSO.RCAS;
+export import :Autogen.PSO.GatherPipeline;
+export import :Autogen.PSO.GatherBoxes;
+export import :Autogen.PSO.InitDispatch;
+export import :Autogen.PSO.GatherMeshes;
+export import :Autogen.PSO.DownsampleDepth;
+export import :Autogen.PSO.MipMapping;
+export import :Autogen.PSO.SS_Shadow;
+export import :Autogen.PSO.FrameGraph_Debug_Texture2D;
+export import :Autogen.PSO.FrameGraph_Debug_Texture2DArray;
+export import :Autogen.PSO.FrameGraph_Debug_Texture3D;
+export import :Autogen.PSO.FrameGraph_Debug_TextureCube;
+export import :Autogen.PSO.FrameGraph_Debug_NotImplemented;
+export import :Autogen.PSO.Lighting;
+export import :Autogen.PSO.VoxelDownsample;
+export import :Autogen.PSO.VoxelCopy;
+export import :Autogen.PSO.VoxelZero;
+export import :Autogen.PSO.VoxelVisibility;
+export import :Autogen.PSO.VoxelIndirectFilter;
+export import :Autogen.PSO.VoxelIndirectLow;
+export import :Autogen.PSO.DenoiserHistoryFix;
+export import :Autogen.PSO.FrameClassification;
+export import :Autogen.PSO.FrameClassificationInitDispatch;
+export import :Autogen.PSO.ReflectionCombine;
+export import :Autogen.PSO.FontRender;
+export import :Autogen.PSO.RenderBoxes;
+export import :Autogen.PSO.RenderToDS;
+export import :Autogen.PSO.QualityColor;
+export import :Autogen.PSO.QualityToStencil;
+export import :Autogen.PSO.QualityToStencilREfl;
+export import :Autogen.PSO.CopyTexture;
+export import :Autogen.PSO.PSSMMask;
+export import :Autogen.PSO.PSSMApply;
+export import :Autogen.PSO.GBufferDownsample;
+export import :Autogen.PSO.GBufferDraw;
+export import :Autogen.PSO.DepthDraw;
+export import :Autogen.PSO.Voxelization;
+export import :Autogen.PSO.Sky;
+export import :Autogen.PSO.SkyCube;
+export import :Autogen.PSO.CubemapENV;
+export import :Autogen.PSO.CubemapENVDiffuse;
+export import :Autogen.PSO.EdgeDetect;
+export import :Autogen.PSO.BlendWeight;
+export import :Autogen.PSO.Blending;
+export import :Autogen.PSO.DrawStencil;
+export import :Autogen.PSO.DrawSelected;
+export import :Autogen.PSO.DrawBox;
+export import :Autogen.PSO.DrawAxis;
+export import :Autogen.PSO.StencilerLast;
+export import :Autogen.PSO.NinePatch;
+export import :Autogen.PSO.SimpleRect;
+export import :Autogen.PSO.CanvasBack;
+export import :Autogen.PSO.CanvasLines;
+export import :Autogen.PSO.VoxelReflectionHi;
+export import :Autogen.PSO.VoxelReflectionUpsample;
+export import :Autogen.PSO.VoxelIndirectHi;
+export import :Autogen.PSO.VoxelIndirectUpsample;
+export import :Autogen.PSO.VoxelDebug;
+export import :Autogen.PSO.DenoiserDownsample;
+export import :Autogen.PSO.WorkGR;
+export import :Autogen.RTX.MainRTX;
 
 export	{
 	#include "rt\SingleColor.h"
@@ -220,76 +290,6 @@ export	{
 	#include "rt\SingleColorDepth.h"
 	#include "rt\GBufferDownsampleRT.h"
 	#include "rt\GBuffer.h"
-	#include "pso\BlueNoise.h"
-	#include "pso\BRDF.h"
-	#include "pso\DenoiserReflectionReproject.h"
-	#include "pso\DenoiserReflectionPrefilter.h"
-	#include "pso\DenoiserReflectionResolve.h"
-	#include "pso\DenoiserShadow_Prepare.h"
-	#include "pso\DenoiserShadow_TileClassification.h"
-	#include "pso\DenoiserShadow_Filter.h"
-	#include "pso\FSR.h"
-	#include "pso\RCAS.h"
-	#include "pso\GatherPipeline.h"
-	#include "pso\GatherBoxes.h"
-	#include "pso\InitDispatch.h"
-	#include "pso\GatherMeshes.h"
-	#include "pso\DownsampleDepth.h"
-	#include "pso\MipMapping.h"
-	#include "pso\SS_Shadow.h"
-	#include "pso\FrameGraph_Debug_Texture2D.h"
-	#include "pso\FrameGraph_Debug_Texture2DArray.h"
-	#include "pso\FrameGraph_Debug_Texture3D.h"
-	#include "pso\FrameGraph_Debug_TextureCube.h"
-	#include "pso\FrameGraph_Debug_NotImplemented.h"
-	#include "pso\Lighting.h"
-	#include "pso\VoxelDownsample.h"
-	#include "pso\VoxelCopy.h"
-	#include "pso\VoxelZero.h"
-	#include "pso\VoxelVisibility.h"
-	#include "pso\VoxelIndirectFilter.h"
-	#include "pso\VoxelIndirectLow.h"
-	#include "pso\DenoiserHistoryFix.h"
-	#include "pso\FrameClassification.h"
-	#include "pso\FrameClassificationInitDispatch.h"
-	#include "pso\ReflectionCombine.h"
-	#include "pso\FontRender.h"
-	#include "pso\RenderBoxes.h"
-	#include "pso\RenderToDS.h"
-	#include "pso\QualityColor.h"
-	#include "pso\QualityToStencil.h"
-	#include "pso\QualityToStencilREfl.h"
-	#include "pso\CopyTexture.h"
-	#include "pso\PSSMMask.h"
-	#include "pso\PSSMApply.h"
-	#include "pso\GBufferDownsample.h"
-	#include "pso\GBufferDraw.h"
-	#include "pso\DepthDraw.h"
-	#include "pso\Voxelization.h"
-	#include "pso\Sky.h"
-	#include "pso\SkyCube.h"
-	#include "pso\CubemapENV.h"
-	#include "pso\CubemapENVDiffuse.h"
-	#include "pso\EdgeDetect.h"
-	#include "pso\BlendWeight.h"
-	#include "pso\Blending.h"
-	#include "pso\DrawStencil.h"
-	#include "pso\DrawSelected.h"
-	#include "pso\DrawBox.h"
-	#include "pso\DrawAxis.h"
-	#include "pso\StencilerLast.h"
-	#include "pso\NinePatch.h"
-	#include "pso\SimpleRect.h"
-	#include "pso\CanvasBack.h"
-	#include "pso\CanvasLines.h"
-	#include "pso\VoxelReflectionHi.h"
-	#include "pso\VoxelReflectionUpsample.h"
-	#include "pso\VoxelIndirectHi.h"
-	#include "pso\VoxelIndirectUpsample.h"
-	#include "pso\VoxelDebug.h"
-	#include "pso\DenoiserDownsample.h"
-	#include "pso\WorkGR.h"
-	#include "rtx\MainRTX.h"
 
 	std::optional<SlotID> get_slot(std::string_view slot_name);
 	uint get_table_index(SlotID id);
@@ -297,7 +297,7 @@ export	{
 }
 
 std::optional<SlotID> get_slot(std::string_view slot_name)
-{		
+{
 	if(slot_name == "TextureRenderer") return SlotID::TextureRenderer;
 	if(slot_name == "BlueNoise") return SlotID::BlueNoise;
 	if(slot_name == "BRDF") return SlotID::BRDF;
@@ -385,7 +385,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 }
 
 uint get_table_index(SlotID id)
-{		
+{
 	if(id == SlotID::TextureRenderer) return Slots::TextureRenderer::Slot::ID;
 	if(id == SlotID::BlueNoise) return Slots::BlueNoise::Slot::ID;
 	if(id == SlotID::BRDF) return Slots::BRDF::Slot::ID;
@@ -473,7 +473,7 @@ uint get_table_index(SlotID id)
 }
 
 std::string get_slot_name(SlotID id)
-{		
+{
 	if(id == SlotID::TextureRenderer) return "TextureRenderer";
 	if(id == SlotID::BlueNoise) return "BlueNoise";
 	if(id == SlotID::BRDF) return "BRDF";

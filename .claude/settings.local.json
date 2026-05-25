@@ -23,7 +23,9 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\" -Directory)",
       "Bash(Select-Object Name)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\GUI\" -Name)",
-      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\GUI\\\\\" -Recurse | Select-Object FullName)"
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\GUI\\\\\" -Recurse | Select-Object FullName)",
+      "Bash(generate_sigs.bat)",
+      "Bash(cmd /c \"C:\\\\github\\\\Spectrum\\\\generate_project.bat\")"
     ]
   }
 }
