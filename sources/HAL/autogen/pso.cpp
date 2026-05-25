@@ -40,6 +40,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::MipMapping>(device, pso[PSO::MipMapping]));
 	tasks.emplace_back(PSOBase::create<PSOS::SS_Shadow>(device, pso[PSO::SS_Shadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_Texture2D>(device, pso[PSO::FrameGraph_Debug_Texture2D]));
+	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_Texture2DArray>(device, pso[PSO::FrameGraph_Debug_Texture2DArray]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_Texture3D>(device, pso[PSO::FrameGraph_Debug_Texture3D]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_TextureCube>(device, pso[PSO::FrameGraph_Debug_TextureCube]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_NotImplemented>(device, pso[PSO::FrameGraph_Debug_NotImplemented]));

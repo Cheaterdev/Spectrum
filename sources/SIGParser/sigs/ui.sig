@@ -128,6 +128,7 @@ struct FrameGraph_Debug_Common
 	float3 minColor;
 	float3 maxColor;
 	uint selectedMip;
+	uint selectedArrayIndex;
 }
 
 [Bind = DefaultLayout::Instance1]
@@ -145,6 +146,23 @@ ComputePSO FrameGraph_Debug_Texture2D
 
 	[EntryPoint = CS]
 	compute = framegraph/draw_texture_2d;
+}
+
+[Bind = DefaultLayout::Instance1]
+struct FrameGraph_Debug_Texture2DArray
+{
+	Texture2DArray<float4> source;
+	uint2 sourceSize;
+	float2 scale;
+	float2 offset;
+}
+
+ComputePSO FrameGraph_Debug_Texture2DArray
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = framegraph/draw_texture_2d_array;
 }
 
 

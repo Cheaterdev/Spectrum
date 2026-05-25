@@ -966,9 +966,12 @@ class FrameGraphTimelineCanvas : public dock_base
         volatile int m_view_h = 64;
 
         // Selected mip level: written from UI thread (combobox), read from render thread.
-        volatile int m_sel_mip = 0;
+        volatile int m_sel_mip   = 0;
+        // Selected array index: written from UI thread (combobox), read from render thread.
+        volatile int m_sel_array = 0;
 
         combo_box::ptr m_mip_combo;
+        combo_box::ptr m_array_combo;
 
         // Pan/zoom/camera state — written from UI thread, read from render thread.
         // All access must hold m_state_mutex.
@@ -1020,8 +1023,27 @@ class FrameGraphTimelineCanvas : public dock_base
                 m_mip_combo->height_size = GUI::size_type::FIXED;
                 m_mip_combo->size     = { 84.0f, 20.0f };
                 m_mip_combo->pos      = { 34.0f, 3.0f };
-                m_mip_combo->visible = false;
+                m_mip_combo->visible  = false;
                 bar->add_child(m_mip_combo);
+
+                auto arr_lbl          = std::make_shared<label>();
+                arr_lbl->text         = "Array:";
+                arr_lbl->font_size    = 10.0f;
+                arr_lbl->docking      = GUI::dock::NONE;
+                arr_lbl->width_size   = GUI::size_type::FIXED;
+                arr_lbl->height_size  = GUI::size_type::FIXED;
+                arr_lbl->size         = { 36.0f, 16.0f };
+                arr_lbl->pos          = { 124.0f, 5.0f };
+                bar->add_child(arr_lbl);
+
+                m_array_combo           = std::make_shared<combo_box>();
+                m_array_combo->docking  = GUI::dock::NONE;
+                m_array_combo->width_size  = GUI::size_type::FIXED;
+                m_array_combo->height_size = GUI::size_type::FIXED;
+                m_array_combo->size     = { 84.0f, 20.0f };
+                m_array_combo->pos      = { 162.0f, 3.0f };
+                m_array_combo->visible  = false;
+                bar->add_child(m_array_combo);
 
                 docker->add_child(bar);
             }
@@ -1114,7 +1136,8 @@ class FrameGraphTimelineCanvas : public dock_base
                                     m_dim_lbl->text  = "Size:     " + s;
                                 });
 
-                                UINT mip_count = m_alloc->resource->get_desc().as_texture().MipLevels;
+                                UINT mip_count   = m_alloc->resource->get_desc().as_texture().MipLevels;
+                                UINT array_count = m_alloc->resource->get_desc().as_texture().ArraySize;
                                 run_on_ui([this, mip_count]()
                                 {
                                     m_mip_combo->remove_items();
@@ -1126,6 +1149,18 @@ class FrameGraphTimelineCanvas : public dock_base
                                     if (mip_count > 0)
                                         m_mip_combo->get_label()->text = "Mip 0";
                                     m_mip_combo->visible = (mip_count > 1);
+                                });
+                                run_on_ui([this, array_count]()
+                                {
+                                    m_array_combo->remove_items();
+                                    for (UINT i = 0; i < array_count; ++i)
+                                    {
+                                        auto item = m_array_combo->add_item("Array " + std::to_string(i));
+                                        item->on_select = [this, i]() { m_sel_array = (int)i; };
+                                    }
+                                    if (array_count > 0)
+                                        m_array_combo->get_label()->text = "Array 0";
+                                    m_array_combo->visible = (array_count > 1);
                                 });
                             }
 
@@ -1144,9 +1179,10 @@ class FrameGraphTimelineCanvas : public dock_base
                         auto& compute = context->get_list()->get_compute();
                         {
                             Slots::FrameGraph_Debug_Common common;
-                            common.GetTarget()       = m_current_tex->texture_2d().rwTexture2D;
-                            common.GetTargetSize()   = SZ;
-                            common.GetSelectedMip()  = (UINT)m_sel_mip;
+                            common.GetTarget()             = m_current_tex->texture_2d().rwTexture2D;
+                            common.GetTargetSize()         = SZ;
+                            common.GetSelectedMip()        = (UINT)m_sel_mip;
+                            common.GetSelectedArrayIndex() = (UINT)m_sel_array;
                             compute.set(common);
                         }
 
@@ -1159,13 +1195,27 @@ class FrameGraphTimelineCanvas : public dock_base
                                 snap_pan   = m_pan;
                                 snap_scale = m_scale;
                             }
-                            compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
-                            Slots::FrameGraph_Debug_Texture2D tex2d;
-                            tex2d.GetSource()     = *src;
-                            tex2d.GetSourceSize() = m_alloc->resource->get_desc().as_texture().Dimensions.xy;
-                            tex2d.GetOffset()     = snap_pan;
-                            tex2d.GetScale()      = snap_scale;
-                            compute.set(tex2d);
+                            UINT array_size = m_alloc->resource->get_desc().as_texture().ArraySize;
+                            if (array_size > 1)
+                            {
+                                compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2DArray>();
+                                Slots::FrameGraph_Debug_Texture2DArray tex2darr;
+                                tex2darr.GetSource()     = *src;
+                                tex2darr.GetSourceSize() = m_alloc->resource->get_desc().as_texture().Dimensions.xy;
+                                tex2darr.GetOffset()     = snap_pan;
+                                tex2darr.GetScale()      = snap_scale;
+                                compute.set(tex2darr);
+                            }
+                            else
+                            {
+                                compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
+                                Slots::FrameGraph_Debug_Texture2D tex2d;
+                                tex2d.GetSource()     = *src;
+                                tex2d.GetSourceSize() = m_alloc->resource->get_desc().as_texture().Dimensions.xy;
+                                tex2d.GetOffset()     = snap_pan;
+                                tex2d.GetScale()      = snap_scale;
+                                compute.set(tex2d);
+                            }
                         }
                         else if (auto* src = dynamic_cast<HAL::Texture3DView*>(m_alloc->view.get()))
                         {

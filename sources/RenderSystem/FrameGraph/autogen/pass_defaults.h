@@ -100,7 +100,7 @@ template<>
 struct PassDefault<Passes::CubeMapDownsample>
 {
 	static constexpr bool enabled = true;
-	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
 
 	static bool setup(Passes::CubeMapDownsample::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::CubeMapDownsample::Context& data, FrameGraph::FrameContext& context);

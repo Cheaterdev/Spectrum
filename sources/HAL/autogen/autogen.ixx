@@ -164,6 +164,8 @@ export import :Autogen.Slots.FrameGraph_Debug_Common;
 export import :Autogen.Tables.FrameGraph_Debug_Common;
 export import :Autogen.Slots.FrameGraph_Debug_Texture2D;
 export import :Autogen.Tables.FrameGraph_Debug_Texture2D;
+export import :Autogen.Slots.FrameGraph_Debug_Texture2DArray;
+export import :Autogen.Tables.FrameGraph_Debug_Texture2DArray;
 export import :Autogen.Slots.FrameGraph_Debug_Texture3D;
 export import :Autogen.Tables.FrameGraph_Debug_Texture3D;
 export import :Autogen.Slots.FrameGraph_Debug_TextureCube;
@@ -236,6 +238,7 @@ export	{
 	#include "pso\MipMapping.h"
 	#include "pso\SS_Shadow.h"
 	#include "pso\FrameGraph_Debug_Texture2D.h"
+	#include "pso\FrameGraph_Debug_Texture2DArray.h"
 	#include "pso\FrameGraph_Debug_Texture3D.h"
 	#include "pso\FrameGraph_Debug_TextureCube.h"
 	#include "pso\FrameGraph_Debug_NotImplemented.h"
@@ -355,6 +358,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "LineRender") return SlotID::LineRender;
 	if(slot_name == "FrameGraph_Debug_Common") return SlotID::FrameGraph_Debug_Common;
 	if(slot_name == "FrameGraph_Debug_Texture2D") return SlotID::FrameGraph_Debug_Texture2D;
+	if(slot_name == "FrameGraph_Debug_Texture2DArray") return SlotID::FrameGraph_Debug_Texture2DArray;
 	if(slot_name == "FrameGraph_Debug_Texture3D") return SlotID::FrameGraph_Debug_Texture3D;
 	if(slot_name == "FrameGraph_Debug_TextureCube") return SlotID::FrameGraph_Debug_TextureCube;
 	if(slot_name == "VoxelInfo") return SlotID::VoxelInfo;
@@ -442,6 +446,7 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::LineRender) return Slots::LineRender::Slot::ID;
 	if(id == SlotID::FrameGraph_Debug_Common) return Slots::FrameGraph_Debug_Common::Slot::ID;
 	if(id == SlotID::FrameGraph_Debug_Texture2D) return Slots::FrameGraph_Debug_Texture2D::Slot::ID;
+	if(id == SlotID::FrameGraph_Debug_Texture2DArray) return Slots::FrameGraph_Debug_Texture2DArray::Slot::ID;
 	if(id == SlotID::FrameGraph_Debug_Texture3D) return Slots::FrameGraph_Debug_Texture3D::Slot::ID;
 	if(id == SlotID::FrameGraph_Debug_TextureCube) return Slots::FrameGraph_Debug_TextureCube::Slot::ID;
 	if(id == SlotID::VoxelInfo) return Slots::VoxelInfo::Slot::ID;
@@ -529,6 +534,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::LineRender) return "LineRender";
 	if(id == SlotID::FrameGraph_Debug_Common) return "FrameGraph_Debug_Common";
 	if(id == SlotID::FrameGraph_Debug_Texture2D) return "FrameGraph_Debug_Texture2D";
+	if(id == SlotID::FrameGraph_Debug_Texture2DArray) return "FrameGraph_Debug_Texture2DArray";
 	if(id == SlotID::FrameGraph_Debug_Texture3D) return "FrameGraph_Debug_Texture3D";
 	if(id == SlotID::FrameGraph_Debug_TextureCube) return "FrameGraph_Debug_TextureCube";
 	if(id == SlotID::VoxelInfo) return "VoxelInfo";
