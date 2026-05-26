@@ -361,7 +361,9 @@ int main()
 			if (table.find_option("RenderTarget"))
 			{
 				my_stream(hlsl_path + "/rt", table.name + ".h") << hlsl_templates.generate2(L"rt", "rt", table);
-				my_stream(cpp_path + "/rt", table.name + ".h") << cpp_templates.generate2(L"rt", "rt", table);
+				my_stream(cpp_path + "/rt", table.name + ".rt.ixx") << cpp_templates.generate2(L"rt", "rt", table);
+				std::filesystem::remove(cpp_path + "/rt/" + table.name + ".h");
+				std::filesystem::remove(cpp_path + "/rt/" + table.name + ".ixx");
 			}
 		}
 
@@ -464,6 +466,7 @@ int main()
 
 		// includes
 		my_stream(cpp_path, "autogen.ixx") << cpp_templates.generate(L"autogen");
+		my_stream(cpp_path, "autogen.cpp") << cpp_templates.generate(L"autogen_impl");
 		my_stream(cpp_path, "enums.ixx") << cpp_templates.generate(L"enums");
 		my_stream(cpp_path, "pso.cpp") << cpp_templates.generate(L"psos");
 

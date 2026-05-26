@@ -1,4 +1,4 @@
-﻿module Graphics:Materials.UniversalMaterial;
+module Graphics:Materials.UniversalMaterial;
 import <RenderSystem.h>;
 
 
@@ -9,9 +9,7 @@ import :RTX;
 //import FrameGraph;
 import HAL;
 import Core;
-import windows;
 
-static IdGenerator ids;
 using namespace HAL;
 
 void removeme() // TODO: VS issue - make dummy unused func to compile entire cpp =[
@@ -26,9 +24,113 @@ CEREAL_FORCE_REGISTER(materials::universal_material);
 CEREAL_FORCE_REGISTER(materials::PipelinePasses);
 CEREAL_FORCE_REGISTER(materials::PipelineSimple);
 
+																						 
+// ---------------------------------------------------------------------------
+// PipelinePasses
+// ---------------------------------------------------------------------------
+
+materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context) :Pipeline(id)
+{
+	depth_draw = std::make_shared<PSOS::DepthDraw>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::DepthDraw::Keys& )
+	{
+		target.name += std::to_string(id);
+		target.pixel = { pixel, "PS", HAL::ShaderOptions::None,context->get_pixel_result().macros, true };
+
+		if (!tess.empty()) {
+			target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
+			target.domain = { tess, "DS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
+			target.topology = HAL::PrimitiveTopologyType::PATCH;
+		}
+		else
+		{
+			target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
+		}
+	});
+
+	gbuffer = std::make_shared<PSOS::GBufferDraw>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::GBufferDraw::Keys& )
+	{
+		target.name += std::to_string(id);
+		target.pixel = { pixel, "PS", HAL::ShaderOptions::None,context->get_pixel_result().macros, true };
+
+		if (!tess.empty()) {
+			target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
+			target.domain ={ tess, "DS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
+			target.topology = HAL::PrimitiveTopologyType::PATCH;
+		}
+		else
+		{
+			target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
+		}
+	});
+
+	voxelization = std::make_shared<PSOS::Voxelization>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::Voxelization::Keys& )
+	{
+		target.name += std::to_string(id);
+		target.pixel = { pixel, "PS_VOXEL", HAL::ShaderOptions::None ,context->get_pixel_result().macros, true };
+
+		if (!tess.empty()) {
+			target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
+			target.domain = { tess, "DS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
+			target.topology = HAL::PrimitiveTopologyType::PATCH;
+		}
+		else
+		{
+			target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
+		}
+	});
+
+	raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , HAL::ShaderOptions::None, context->hit_shader.macros, true });
+}
+
+void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics)
+{
+	if (render_type == RENDER_TYPE::DEPTH)
+		graphics.set_pipeline(depth_draw->GetPSO());
+	else
+		if (render_type == RENDER_TYPE::PIXEL)
+			graphics.set_pipeline(gbuffer->GetPSO());
+		else
+		{
+			graphics.set_pipeline(voxelization->GetPSO(PSOS::Voxelization::Dynamic.Use(type == MESH_TYPE::DYNAMIC)));
+		}
+}
 
 
+// ---------------------------------------------------------------------------
+// PipelineManager
+// ---------------------------------------------------------------------------
 
+materials::Pipeline::ptr materials::PipelineManager::get_pipeline(Pipeline::ptr orig)
+{
+	std::lock_guard<std::mutex> g(m);
+
+	auto& pip = pipelines[orig->hash];
+	if (!pip)
+		pip = orig;
+
+	return pip;
+}
+
+materials::Pipeline::ptr materials::PipelineManager::get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context)
+{
+	std::lock_guard<std::mutex> g(m);
+	auto hash = crc32(pixel + tess);
+	auto&& pip = pipelines[hash];
+
+	if (!pip)
+	{
+		auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), pixel,tess,voxel,raytracing,context);
+		pipeline->hash = hash;
+		pip = pipeline;
+	}
+
+	return pip;
+}
+
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 DynamicData generate_data(std::vector<Uniform::ptr>& un)
 {
@@ -79,7 +181,9 @@ DynamicData generate_data(std::vector<Uniform::ptr>& un)
 }
 
 
-
+// ---------------------------------------------------------------------------
+// universal_material — heavy rendering logic
+// ---------------------------------------------------------------------------
 
 void materials::universal_material::update()
 {
@@ -134,13 +238,6 @@ void materials::universal_material::update()
 
 }
 
-size_t  materials::universal_material::get_id()
-{
-
-	return  pipeline->get_id(); ///TODO: change for graph id
-}
-
-
 void materials::universal_material::compile()
 {
 	start_changing_contents();
@@ -159,7 +256,7 @@ void materials::universal_material::compile()
 			texture_srvs[i] = tex->get_texture()->texture_2d().texture2D;
 		texture_feedbacks[i] = tex->get_texture()->texture_2d().feedback;
 		}
-			
+
 		else
 			texture_srvs[i] = EngineAssets::missing_texture.get_asset()->get_texture()->texture_2d().texture2D;
 	}
@@ -204,12 +301,6 @@ void materials::universal_material::compile()
 	RTX::get().rtx.init_material(this);
 	end_changing_contents();
 }
-
-void materials::universal_material::on_graph_changed()
-{
-	need_regenerate_material = true;
-}
-
 
 void materials::universal_material::generate_texture_handles()
 {
@@ -264,8 +355,8 @@ void materials::universal_material::generate_material()
 		{
 			textures.emplace_back(register_asset(t->asset->get_ptr<TextureAsset>()));
 		}
-		
-		
+
+
 		compile();
 	}
 
@@ -276,12 +367,6 @@ void materials::universal_material::generate_material()
 
 	on_change();
 }
-
-MaterialGraph::ptr materials::universal_material::get_graph()
-{
-	return  graph.get();
-}
-
 
 materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this), include_file_raytacing(this)
 {
@@ -303,72 +388,6 @@ void materials::universal_material::update_rtx()
 
 
 
-}
-
-void materials::universal_material::test()
-{
-	graph.test();
-}
-
-
-materials::universal_material::universal_material() : include_file(this), include_file_raytacing(this)
-{
-
-	wshader_name = std::wstring(L"material_") + std::to_wstring(ids.get());
-	graph.on_create = [this](MaterialGraph::ptr g)
-	{
-		g->add_listener(this, false);
-		on_graph_changed();
-	};
-}
-
-void materials::universal_material::on_asset_change(std::shared_ptr<Asset> asset)
-{
-	if (asset == *include_file || asset == *include_file_raytacing)
-		on_graph_changed();
-
-	if (asset->get_type() == Asset_Type::TEXTURE)
-		on_graph_changed();
-}
-
-void materials::universal_material::on_unlink(::FlowGraph::parameter*, ::FlowGraph::parameter*)
-{
-	on_graph_changed();
-}
-
-void materials::universal_material::on_link(::FlowGraph::parameter*, ::FlowGraph::parameter*)
-{
-	on_graph_changed();
-}
-
-void materials::universal_material::on_remove_output(::FlowGraph::parameter*)
-{
-	on_graph_changed();
-}
-
-void materials::universal_material::on_add_output(::FlowGraph::parameter*)
-{
-	on_graph_changed();
-}
-
-void materials::universal_material::on_remove_input(::FlowGraph::parameter*)
-{
-	on_graph_changed();
-}
-
-void materials::universal_material::on_add_input(::FlowGraph::parameter*)
-{
-	on_graph_changed();
-}
-
-void materials::universal_material::on_remove(::FlowGraph::window*)
-{
-	on_graph_changed();
-}
-
-void materials::universal_material::on_register(::FlowGraph::window*)
-{
-	on_graph_changed();
 }
 
 D3D_PRIMITIVE_TOPOLOGY materials::render_pass::get_topology()

@@ -1,7 +1,13 @@
-#pragma once
+export module HAL:Autogen.RT.SingleColor;
 
-namespace RT
-{	
+import Core;
+import :RT;
+import :SIG;
+import :HLSL;
+import :Types;
+import <HAL.h>;
+export namespace RT
+{
 	#pragma pack(push, 1)
 	struct _SingleColor
 	{

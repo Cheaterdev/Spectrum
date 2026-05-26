@@ -1,4 +1,18 @@
-#pragma once
+export module HAL:Autogen.RT.{{rt.name}};
+
+import Core;
+import :RT;
+import :SIG;
+import :HLSL;
+import :Types;
+import <HAL.h>;
+
+{%- for v in rt.used_rts -%}
+{%- set t = parsed.rts[v] -%}
+{%- if t.options["shader_only"] is undefined %}
+import :Autogen.RT.{{t.name}};
+{%- endif %}
+{%- endfor %}
 
 {%- macro compile_func(type) -%}
 {%- for v in (rt.values|unique|selectattr('value_type','==', type)) %}
@@ -6,15 +20,8 @@
 {%- endfor -%}
 {%- endmacro -%}
 
-{% for v in rt.used_rts -%}
-{%- set t =  parsed.rts[v] -%}
-{%if t.options["shader_only"] is undefined -%}
-	#include "{{t.name}}.h"
-{%endif -%}
-{% endfor -%}
-
-namespace RT
-{	
+export namespace RT
+{
 	#pragma pack(push, 1)
 	struct _{{rt.name}}
 	{

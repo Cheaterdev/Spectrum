@@ -90,79 +90,11 @@ export namespace materials
 	public:
 		using ptr = std::shared_ptr<PipelinePasses>;
 		PipelinePasses() = default;
-		PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context) :Pipeline(id)
-		{
-			//render_pass& pass = passes[PASS_TYPE::DEFERRED];
-			
-			depth_draw = std::make_shared<PSOS::DepthDraw>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::DepthDraw::Keys& )
-			{
-				target.name += std::to_string(id);
-				target.pixel = { pixel, "PS", HAL::ShaderOptions::None,context->get_pixel_result().macros, true };
-
-				if (!tess.empty()) {
-					target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
-					target.domain = { tess, "DS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
-				
-					target.topology = HAL::PrimitiveTopologyType::PATCH;
-				}
-				else
-				{
-					target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
-				}
-			});
-
-			gbuffer = std::make_shared<PSOS::GBufferDraw>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::GBufferDraw::Keys& )
-			{
-
-				target.name += std::to_string(id);
-				target.pixel = { pixel, "PS", HAL::ShaderOptions::None,context->get_pixel_result().macros, true };
-
-				if (!tess.empty()) {
-					target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
-					target.domain ={ tess, "DS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
-				
-					target.topology = HAL::PrimitiveTopologyType::PATCH;
-				}
-				else
-				{
-					target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
-				}
-			});
-
-			voxelization = std::make_shared<PSOS::Voxelization>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::Voxelization::Keys& )
-			{
-				target.name += std::to_string(id);
-				target.pixel = { pixel, "PS_VOXEL", HAL::ShaderOptions::None ,context->get_pixel_result().macros, true };
-
-				if (!tess.empty()) {
-					target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
-					target.domain = { tess, "DS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
-				
-					target.topology = HAL::PrimitiveTopologyType::PATCH;
-				}
-				else
-				{
-					target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
-				}
-			});
-
-			raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , HAL::ShaderOptions::None, context->hit_shader.macros, true });
-		}
+		PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context);
 
 		HAL::library_shader::ptr  raytrace_lib;
 
-		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override
-		{
-			if (render_type == RENDER_TYPE::DEPTH)
-				graphics.set_pipeline(depth_draw->GetPSO());
-			else
-				if (render_type == RENDER_TYPE::PIXEL)
-					graphics.set_pipeline(gbuffer->GetPSO());
-				else
-				{
-					graphics.set_pipeline(voxelization->GetPSO(PSOS::Voxelization::Dynamic.Use(type == MESH_TYPE::DYNAMIC)));
-				}
-		}
+		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override;
 	private:
 
 		SERIALIZE()
@@ -181,32 +113,8 @@ export namespace materials
 		std::map<unsigned int, Pipeline::ptr> pipelines;
 		std::mutex m;
 	public:
-		Pipeline::ptr get_pipeline(Pipeline::ptr orig)
-		{
-			std::lock_guard<std::mutex> g(m);
-
-			auto& pip = pipelines[orig->hash];
-			if (!pip)
-				pip = orig;
-
-			return pip;
-		}
-		Pipeline::ptr get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context)
-		{
-			std::lock_guard<std::mutex> g(m);
-			auto hash = crc32(pixel + tess);
-			auto&& pip = pipelines[hash];
-
-
-			if (!pip)
-			{
-				auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), pixel,tess,voxel,raytracing,context);
-				pipeline->hash = hash;
-				pip = pipeline;
-			}
-
-			return pip;
-		}
+		Pipeline::ptr get_pipeline(Pipeline::ptr orig);
+		Pipeline::ptr get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context);
 
 	};
 	
