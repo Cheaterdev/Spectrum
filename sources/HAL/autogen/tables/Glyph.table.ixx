@@ -29,6 +29,18 @@ export namespace Table
 		}
 		using Compiled = Glyph;
 
+		static std::string get_typename()
+		{
+			return "Tables::Glyph";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(pos);
+			ar& NVP(index);
+			ar& NVP(color);
+		}
+
 	};
 	#pragma pack(pop)
 }

@@ -34,9 +34,6 @@ export namespace GUI
                 using ptr = s_ptr<combo_box>;
                 using wptr = w_ptr<combo_box>;
 
-                using ptr = s_ptr<combo_box>;
-                using wptr = w_ptr<combo_box>;
-
                 combo_box();
                 Skin::ComboBox skin;
 

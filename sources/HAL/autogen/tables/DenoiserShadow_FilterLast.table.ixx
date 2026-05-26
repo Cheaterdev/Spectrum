@@ -28,7 +28,24 @@ export namespace Table
 		{
 			uint rqt2d_input; // Texture2D<float16_t2>
 			uint rwt2d_output; // RWTexture2D<unorm float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::DenoiserShadow_FilterLast";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

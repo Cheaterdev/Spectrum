@@ -1,0 +1,32 @@
+export module HAL:Autogen.RT.GBufferDownsampleRT;
+
+import Core;
+import :RT;
+import :SIG;
+import :HLSL;
+import :Types;
+import <HAL.h>;
+export namespace RT
+{
+	#pragma pack(push, 1)
+	struct _GBufferDownsampleRT
+	{
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
+		HLSL::RenderTarget<float> depth;
+		HLSL::RenderTarget<float4> color;
+		HLSL::RenderTarget<float>& GetDepth() { return depth; }
+		HLSL::RenderTarget<float4>& GetColor() { return color; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
+		{
+			compiler.compile(depth);
+			compiler.compile(color);
+		}
+	};
+	#pragma pack(pop)
+
+	struct GBufferDownsampleRT:public RTHolder<_GBufferDownsampleRT>
+	{
+		GBufferDownsampleRT() = default;
+	};
+}

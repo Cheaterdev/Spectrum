@@ -26,6 +26,17 @@ export namespace Table
 		}
 		using Compiled = RayCone;
 
+		static std::string get_typename()
+		{
+			return "Tables::RayCone";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(width);
+			ar& NVP(angle);
+		}
+
 	};
 	#pragma pack(pop)
 }

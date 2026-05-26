@@ -29,7 +29,24 @@ export namespace Table
 		{
 			uint culledMeshes; // AppendStructuredBuffer<BoxInfo>
 			uint visibleMeshes; // AppendStructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::GatherBoxes";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

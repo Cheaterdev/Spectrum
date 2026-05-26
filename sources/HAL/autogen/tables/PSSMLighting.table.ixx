@@ -29,7 +29,26 @@ export namespace Table
 		{
 			uint light_mask; // Texture2D<float>
 			GBuffer::Compiled gbuffer; // GBuffer
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(gbuffer);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::PSSMLighting";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(gbuffer);
+		}
 
 	};
 	#pragma pack(pop)

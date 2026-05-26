@@ -1,4 +1,4 @@
-// CFW1GlyphProvider.h
+﻿// CFW1GlyphProvider.h
 
 #ifndef IncludeGuard__FW1_CFW1GlyphProvider
 #define IncludeGuard__FW1_CFW1GlyphProvider
@@ -13,7 +13,7 @@ namespace FW1FontWrapper {
 class CFW1GlyphProvider : public CFW1Object<IFW1GlyphProvider> {
 	public:
 		// IUnknown
-		virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject);
+		virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void **ppvObject);
 		
 		// IFW1GlyphProvider
 		virtual HRESULT STDMETHODCALLTYPE GetGlyphAtlas(IFW1GlyphAtlas **ppGlyphAtlas);

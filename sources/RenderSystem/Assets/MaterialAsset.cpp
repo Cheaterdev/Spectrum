@@ -4,6 +4,7 @@ import <RenderSystem.h>;
 import :AssetRenderer;
 
 REGISTER_TYPE(MaterialAsset);
+CEREAL_FORCE_REGISTER(MaterialAsset);
 
 import Graphics;
 

@@ -66,8 +66,6 @@ export namespace materials
 // REGISTER_TYPE(materials::material);
 export class MaterialAsset : public Asset, public materials::material
 {
-        LEAK_TEST(MaterialAsset)
-
     public:
         using ptr = s_ptr<MaterialAsset>;
         using ref = AssetReference<MaterialAsset>;

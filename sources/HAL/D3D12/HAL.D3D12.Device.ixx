@@ -25,16 +25,17 @@ export namespace HAL
 		bool mesh_shader = false;
 		bool full_bindless = false;
 		bool direct_gpu_upload_heap = false;
+		bool work_graph = false;
 	};
 	namespace API
 	{
 
 		class Device
 		{
-
+		   std::map<ResourceDesc,ResourceAllocationInfo> alloc_info; 
 		protected:
 			void init(DeviceDesc& desc);
-			virtual ~Device() = default;
+			virtual ~Device();
 
 
 		public:
@@ -56,6 +57,8 @@ export namespace HAL
 
 			}
 			D3D::Device get_native_device();
+
+			HRESULT get_device_removed_reason() const { return native_device->GetDeviceRemovedReason(); }
 
 			ResourceAllocationInfo get_alloc_info(const ResourceDesc& desc);
 			uint Subresources(const ResourceDesc& desc) const
@@ -126,9 +129,9 @@ namespace HAL
 
 				 	Log::get().crash_error(hr, line);
 
-			hr = 	native_device->GetDeviceRemovedReason();
+			hr = 	get_device_removed_reason();
 				__debugbreak();
-				assert(false);
+				ASSERT(false);
 			}
 
 		}

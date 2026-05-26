@@ -1,4 +1,4 @@
-// CFW1TextGeometry.h
+﻿// CFW1TextGeometry.h
 
 #ifndef IncludeGuard__FW1_CFW1TextGeometry
 #define IncludeGuard__FW1_CFW1TextGeometry
@@ -13,7 +13,7 @@ namespace FW1FontWrapper {
 class CFW1TextGeometry : public CFW1Object<IFW1TextGeometry> {
 	public:
 		// IUnknown
-		virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject);
+		virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void **ppvObject);
 		
 		// IFW1TextGeometry
 		virtual void STDMETHODCALLTYPE Clear();

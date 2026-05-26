@@ -129,7 +129,6 @@ export
 
 		struct parameter : public SharedObject<parameter>
 		{
-			// LEAK_TEST
 			MyVariant value;
 			MyVariant default_value;
 
@@ -361,7 +360,10 @@ export
 			std::string name;
 			vec2 pos = vec2(10, 10);
 			vec2 size = vec2(10, 10);
-
+			   
+     	static ptr create_default() {
+			return std::make_shared<window>();
+		}
 
 			graph* get_graph()
 			{
@@ -818,3 +820,12 @@ REGISTER_TYPE(FlowGraph::graph_input);
 REGISTER_TYPE(FlowGraph::graph_output);
 REGISTER_TYPE(FlowGraph::parameter_type);
 REGISTER_TYPE(FlowGraph::strict_parameter);
+CEREAL_FORCE_REGISTER(FlowGraph::window);
+// FlowGraph::Node is abstract (pure virtual operator()) — no CEREAL_FORCE_REGISTER
+CEREAL_FORCE_REGISTER(FlowGraph::input);
+CEREAL_FORCE_REGISTER(FlowGraph::output);
+CEREAL_FORCE_REGISTER(FlowGraph::graph);
+CEREAL_FORCE_REGISTER(FlowGraph::graph_input);
+CEREAL_FORCE_REGISTER(FlowGraph::graph_output);
+// FlowGraph::parameter_type is abstract (pure virtual can_cast) — no CEREAL_FORCE_REGISTER
+CEREAL_FORCE_REGISTER(FlowGraph::strict_parameter);

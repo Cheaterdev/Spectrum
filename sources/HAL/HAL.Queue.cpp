@@ -13,6 +13,8 @@ namespace HAL
 	{
 		signal_and_wait();
 		stop = true;
+
+		lists = {};
 	}
 
 	Queue::~Queue()
@@ -134,10 +136,11 @@ namespace HAL
 		std::list<TransitionCommandList::ptr> transition_lists;
 			for (auto& list : lists)
 			{
-			
-				//auto transition_list = (list)->fix_pretransitions();
-			//	  assert(!transition_list);
-				/*if (transition_list)
+
+#ifdef PRETRANSITIONS_FIX
+				auto transition_list = (list)->fix_pretransitions();
+				  ASSERT(!transition_list);
+				if (transition_list)
 				{
 					transition_lists.emplace_back(transition_list);
 					PROFILE(L"execute_transitions");
@@ -158,7 +161,8 @@ namespace HAL
 					}
 
 				}
-				else		  */
+				else		  
+#endif
 				{
 					PROFILE(L"execute_simple");
 					API::Queue::execute(&list->compiler.get_list());	 
@@ -219,7 +223,7 @@ namespace HAL
 	  
 	FenceWaiter Queue::signal(Fence& fence, UINT64 value)
 	{
-		assert(false);
+		ASSERT(false);
 		std::unique_lock<std::mutex> lock(submit_mutex);
 		gpu_execute_thread.enqueue([this, fence, value]() mutable{
 			std::unique_lock<std::mutex> lock(queue_mutex);

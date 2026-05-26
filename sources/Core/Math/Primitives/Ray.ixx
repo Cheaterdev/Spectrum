@@ -9,7 +9,7 @@ import :Math.Primitive;
 
 import :Math.Plane;
 
-import <stl/memory.h>;
+import stl.memory;
 import :serialization;
 
 export class Ray

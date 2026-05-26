@@ -6,7 +6,7 @@ options
   }
 
 parse
- : (layout_definition|table_definition|rt_definition|workgraph_pso_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|COMMENT)* EOF
+ : (layout_definition|table_definition|rt_definition|workgraph_pso_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|pass_definition|view_definition|pipeline_definition|COMMENT)* EOF
  ;
 
 
@@ -202,6 +202,25 @@ rtx_raygen_definition: option_block*? RAYTRACE_RAYGEN name_id inherit? OBRACE rt
 
 
 
+view_declaration
+ :  option_block*? type_id name_id SCOL
+ ;
+
+
+
+view_stat
+ : view_declaration
+ | COMMENT
+ ;
+ view_block: view_stat*;
+ view_definition: option_block*? VIEW name_id inherit? OBRACE view_block CBRACE;
+ pass_definition: option_block*? PASS name_id inherit? OBRACE view_block CBRACE;
+
+pipeline_stat : name_id SCOL | COMMENT ;
+pipeline_block : pipeline_stat* ;
+pipeline_definition : PIPELINE name_id OBRACE pipeline_block CBRACE ;
+
+
 OR : '||';
 AND : '&&';
 EQ : '==';
@@ -241,6 +260,9 @@ WORKGRAPH_PSO: 'WorkgraphPSO';
 RAYTRACE_RAYGEN: 'RaytraceRaygen';
 RAYTRACE_PASS: 'RaytracePass';
 
+PASS: 'PassNode';
+VIEW: 'PassView';
+PIPELINE: 'Pipeline';
 
 SLOT: 'slot';
 RT: 'rt';

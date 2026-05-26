@@ -1,4 +1,4 @@
-// FW1FontWrapper.h
+﻿// FW1FontWrapper.h
 
 // v1.1, October 2011
 // Written by Erik Rufelt
@@ -6,8 +6,8 @@
 #ifndef IncludeGuard__FW1_FW1FontWrapper_h
 #define IncludeGuard__FW1_FW1FontWrapper_h
 
-//#include <D3D11.h>
-#include <DWrite.h>
+#include <Core_defs.h>
+import d3d12;
 import Core;
 import HAL;
 /// <summary>The current FW1 version.</summary>
@@ -96,28 +96,28 @@ enum FW1_TEXT_FLAG
 struct FW1_GLYPHCOORDS
 {
     /// <summary>The left texture coordinate.</summary>
-    FLOAT TexCoordLeft;
+    float TexCoordLeft;
 
     /// <summary>The top texture coordinate.</summary>
-    FLOAT TexCoordTop;
+    float TexCoordTop;
 
     /// <summary>The right texture coordinate.</summary>
-    FLOAT TexCoordRight;
+    float TexCoordRight;
 
     /// <summary>The bottom texture coordinate.</summary>
-    FLOAT TexCoordBottom;
+    float TexCoordBottom;
 
     /// <summary>The offset of the left edge of the glyph image, relative its offset in the text.</summary>
-    FLOAT PositionLeft;
+    float PositionLeft;
 
     /// <summary>The offset of the top edge of the glyph image, relative its offset in the text.</summary>
-    FLOAT PositionTop;
+    float PositionTop;
 
     /// <summary>The offset of the right edge of the glyph image, relative its offset in the text.</summary>
-    FLOAT PositionRight;
+    float PositionRight;
 
     /// <summary>The offset of the bottom edge of the glyph image, relative its offset in the text.</summary>
-    FLOAT PositionBottom;
+    float PositionBottom;
 };
 #pragma pack(pop)
 
@@ -126,16 +126,16 @@ struct FW1_GLYPHCOORDS
 struct FW1_GLYPHSHEETDESC
 {
     /// <summary>The number of glyphs currently stored in this sheet.</summary>
-    UINT GlyphCount;
+    unsigned int GlyphCount;
 
     /// <summary>The width of this sheet's texture, in pixels.</summary>
-    UINT Width;
+    unsigned int Width;
 
     /// <summary>The height of this sheet's texture, in pixels.</summary>
-    UINT Height;
+    unsigned int Height;
 
     /// <summary>The number of mip-levels for this sheet's texture.</summary>
-    UINT MipLevels;
+    unsigned int MipLevels;
 };
 
 /// <summary>Metrics for a glyph image.</summary>
@@ -143,16 +143,16 @@ struct FW1_GLYPHSHEETDESC
 struct FW1_GLYPHMETRICS
 {
     /// <summary>The horizontal offset from a glyph's position in text to the left edge of its image.</summary>
-    FLOAT OffsetX;
+    float OffsetX;
 
     /// <summary>The vertical offset form a glyph's position in text to the top edge of its image.</summary>
-    FLOAT OffsetY;
+    float OffsetY;
 
     /// <summary>The width of the glyph image, in pixels.</summary>
-    UINT Width;
+    unsigned int Width;
 
     /// <summary>The height of the glyph image, in pixels.</summary>
-    UINT Height;
+    unsigned int Height;
 };
 
 /// <summary>Image data for a glyph.</summary>
@@ -166,10 +166,10 @@ struct FW1_GLYPHIMAGEDATA
     const void* pGlyphPixels;
 
     /// <summary>The number of bytes in a row of the image data.</summary>
-    UINT RowPitch;
+    unsigned int RowPitch;
 
     /// <summary>The number of bytes between the start of one pixel and the next.</summary>
-    UINT PixelStride;
+    unsigned int PixelStride;
 };
 
 /// <summary>A vertex corresponding to a single glyph.</summary>
@@ -180,7 +180,7 @@ struct FW1_GLYPHVERTEX
     float2 pos;
 
     /// <summary>The index of the glyph.</summary>
-    UINT32 GlyphIndex;
+    uint32_t GlyphIndex;
 
     /// <summary>The color of the glyph, as 0xAaBbGgRr.</summary>
     float4 color;
@@ -191,14 +191,14 @@ struct FW1_GLYPHVERTEX
 struct FW1_VERTEXDATA
 {
     /// <summary>The number of sheets in the glyph-atlas that are used, starting with the first sheet in the atlas.</summary>
-    UINT SheetCount;
+    unsigned int SheetCount;
 
     /// <summary>An array of <i>SheetCount</i> unsigned integers, which specify the number of glyphs using each sheet.
     /// The sum of all counts is <i>TotalVertexCount</i>. Some counts may be zero.</summary>
-    const UINT* pVertexCounts;
+    const unsigned int* pVertexCounts;
 
     /// <summary>The total number of vertices.</summary>
-    UINT TotalVertexCount;
+    unsigned int TotalVertexCount;
 
     /// <summary>An array of <i>TotalVertexCount</i> vertices, sorted by sheet.</summary>
     const FW1_GLYPHVERTEX* pVertices;
@@ -209,30 +209,30 @@ struct FW1_VERTEXDATA
 struct FW1_RECTF
 {
     /// <summary>The X coordinate of the left edge of the rectangle.</summary>
-    FLOAT Left;
+    float Left;
 
     /// <summary>The Y coordinate of the top edge of the rectangle.</summary>
-    FLOAT Top;
+    float Top;
 
     /// <summary>The X coordinate of the right edge of the rectangle.</summary>
-    FLOAT Right;
+    float Right;
 
     /// <summary>The Y coordinate of the bottom edge of the rectangle.</summary>
-    FLOAT Bottom;
+    float Bottom;
 };
 
 /// <summary>Describes a single font. This structure is used in the FW1_FONTWRAPPERCREATEPARAMS structure.</summary>
-/// <remarks>If pszFontFamily is NULL when creating an IFW1FontWrapper object, no default font will be set up.
+/// <remarks>If pszFontFamily is nullptr when creating an IFW1FontWrapper object, no default font will be set up.
 /// This is perfectly valid when drawing text using one of the DrawTextLayout methods.
 /// However, the DrawString methods will silently fail if no default font is set up.<br/>
-/// If pszFontFamily is not NULL, the FontWeight, FontStyle and FontStretch members must be set to valid values according to the DirectWrite documentation.
+/// If pszFontFamily is not nullptr, the FontWeight, FontStyle and FontStretch members must be set to valid values according to the DirectWrite documentation.
 /// Zero is not a valid value for these.</remarks>
 struct FW1_DWRITEFONTPARAMS
 {
     /// <summary>The name of the font-family. Valid values include <i>Arial</i>, <i>Courier New</i>, etc. as long as the specified font is installed.
     /// Unavailable fonts will automatically fall back to a different font.
-    /// This member can be set to NULL, if no default font is desired when using the structure to create a font-wrapper.</summary>
-    LPCWSTR pszFontFamily;
+    /// This member can be set to nullptr, if no default font is desired when using the structure to create a font-wrapper.</summary>
+    const wchar_t* pszFontFamily;
 
     /// <summary>The font weight. See DirectWrite documentation.</summary>
     DWRITE_FONT_WEIGHT FontWeight;
@@ -243,8 +243,8 @@ struct FW1_DWRITEFONTPARAMS
     /// <summary>The font stretch. See DirectWrite documentation.</summary>
     DWRITE_FONT_STRETCH FontStretch;
 
-    /// <summary>The locale. NULL for default.</summary>
-    LPCWSTR pszLocale;
+    /// <summary>The locale. nullptr for default.</summary>
+    const wchar_t* pszLocale;
 };
 
 /// <summary>The FW1_FONTWRAPPERCREATEPARAMS is used with the IFW1Factory::CreateFontWrapper method, and describes settings for the created IFW1FontWrapper object.</summary>
@@ -252,45 +252,45 @@ struct FW1_DWRITEFONTPARAMS
 struct FW1_FONTWRAPPERCREATEPARAMS
 {
     /// <summary>The width of the glyph sheet textures to store glyph images in. 0 defaults to 512.</summary>
-    UINT GlyphSheetWidth;
+    unsigned int GlyphSheetWidth;
 
     /// <summary>The height of the glyph sheet textures to store glyph images in. 0 defaults to 512.</summary>
-    UINT GlyphSheetHeight;
+    unsigned int GlyphSheetHeight;
 
     /// <summary>The maximum number of glyphs per texture. A buffer of <i>MaxGlyphCountPerSheet * 32</i> bytes is preallocated for each sheet. 0 defaults to 2048.</summary>
-    UINT MaxGlyphCountPerSheet;
+    unsigned int MaxGlyphCountPerSheet;
 
     /// <summary>The number of mip-levels for the glyph sheet textures. 0 defaults to 1.</summary>
-    UINT SheetMipLevels;
+    unsigned int SheetMipLevels;
 
     /// <summary>If set to TRUE, the sampler-state is created with anisotropic filtering.</summary>
-    BOOL AnisotropicFiltering;
+    int AnisotropicFiltering;
 
     /// <summary>The maximum width of a single glyph.
     /// This value is used to decide how large the DirectWrite render target needs to be, which is used when drawing glyph images to put in the atlas.
     /// 0 defaults to 384.</summary>
-    UINT MaxGlyphWidth;
+    unsigned int MaxGlyphWidth;
 
     /// <summary>The maximum height of a single glyph.
     /// This value is used to decide how large the DirectWrite render target needs to be, which is used when drawing glyph images to put in the atlas.
     /// 0 defaults to 384.</summary>
-    UINT MaxGlyphHeight;
+    unsigned int MaxGlyphHeight;
 
     /// <summary>If set to TRUE, no geometry shader is used.</summary>
-    BOOL DisableGeometryShader;
+    int DisableGeometryShader;
 
     /// <summary>The size in bytes of the dynamic vertex buffer to upload glyph vertices to when drawing a string. 0 defaults to 4096 * 16.<br/>
     /// Each glyph vertex is either 16 or 20 bytes in size, and each glyph requires either 1 or 4 vertices depending on if the geometry shader is used.</summary>
-    UINT VertexBufferSize;
+    unsigned int VertexBufferSize;
 
     /// <summary>Description of the default font. See FW1_DWRITEFONTPARAMS.</summary>
     FW1_DWRITEFONTPARAMS DefaultFontParams;
 };
 
-interface IFW1Factory;
+struct IFW1Factory;
 /// <summary>All FW1 interfaces (except for IFW1Factory) inherits from IFW1Object.</summary>
 /// <remarks>Since all interfaces inhert from IFW1Object, the factory which created an object can always be queried with its GetFactory method.</remarks>
-MIDL_INTERFACE("8D3C3FB1-F2CC-4331-A623-031F74C06617") IFW1Object : public IUnknown
+struct __declspec(uuid("8D3C3FB1-F2CC-4331-A623-031F74C06617")) IFW1Object : public IUnknown
 {
 public:
     /// <summary>Get the factory that created an object.</summary>
@@ -298,12 +298,12 @@ public:
     /// <returns>Standard HRESULT error code.</returns>
     /// <param name="ppFactory">Address of a pointer to an IFW1Factory.</param>
     virtual HRESULT STDMETHODCALLTYPE GetFactory(
-        __out IFW1Factory** ppFactory
+        IFW1Factory** ppFactory
     ) = 0;
 };
 
 /// <summary>A sheet contains a texture with glyph images, and a coord-buffer with an FW1_GLYPHCOORDS entry for each glyph.</summary>
-MIDL_INTERFACE("60CAB266-C805-461d-82C0-392472EECEFA") IFW1GlyphSheet : public IFW1Object
+struct __declspec(uuid("60CAB266-C805-461d-82C0-392472EECEFA")) IFW1GlyphSheet : public IFW1Object
 {
 public:
 
@@ -313,7 +313,7 @@ public:
     /// <returns>Returns nothing.</returns>
     /// <param name="pDesc">Pointer to a sheet description.</param>
     virtual void STDMETHODCALLTYPE GetDesc(
-        __out FW1_GLYPHSHEETDESC* pDesc
+        FW1_GLYPHSHEETDESC* pDesc
     ) = 0;
 
     /// <summary>Get a sheet's coord-buffer, as an array of FW1_GLYPHCOORDS.</summary>
@@ -331,8 +331,8 @@ public:
     /// FW1_NOGEOMETRYSHADER: don't bind the coord buffer as a shader-resource for the geometry shader, even if it's available.
     /// </param>
     virtual HRESULT STDMETHODCALLTYPE BindSheet(
-        __in  HAL::CommandList::ptr & pContext,
-        __in UINT Flags
+         HAL::CommandList::ptr & pContext,
+        unsigned int Flags
     ) = 0;
 
     /// <summary>Insert a glyph into the sheet.</summary>
@@ -343,11 +343,11 @@ public:
     /// <param name="pGlyphData">A pointer to image data.</param>
     /// <param name="RowPitch">The number of bytes in a row of image data.</param>
     /// <param name="PixelStride">The number of bytes between successive pixels.</param>
-    virtual UINT STDMETHODCALLTYPE InsertGlyph(
-        __in const FW1_GLYPHMETRICS * pGlyphMetrics,
-        __in const void* pGlyphData,
-        __in UINT RowPitch,
-        __in UINT PixelStride
+    virtual unsigned int STDMETHODCALLTYPE InsertGlyph(
+        const FW1_GLYPHMETRICS * pGlyphMetrics,
+        const void* pGlyphData,
+        unsigned int RowPitch,
+        unsigned int PixelStride
     ) = 0;
 
     /// <summary>Close the sheet for additional glyphs.</summary>
@@ -363,25 +363,25 @@ public:
     /// <returns>No return value.</returns>
     /// <param name="pContext">The context to use when updating device resources.</param>
     virtual void STDMETHODCALLTYPE Flush(
-        __in  HAL::CommandList::ptr& pContext
+         HAL::CommandList::ptr& pContext
     ) = 0;
 };
 
 /// <summary>A glyph-atlas is a collection of glyph-sheets.</summary>
 /// <remarks></remarks>
-MIDL_INTERFACE("A31EB6A2-7458-4e24-82B3-945A95623B1F") IFW1GlyphAtlas : public IFW1Object
+struct __declspec(uuid("A31EB6A2-7458-4e24-82B3-945A95623B1F")) IFW1GlyphAtlas : public IFW1Object
 {
 
     /// <summary>Get the total number of glyphs in all the atlas' sheets.</summary>
     /// <remarks></remarks>
     /// <returns>The total number of glyphs in the atlas.</returns>
-    virtual UINT STDMETHODCALLTYPE GetTotalGlyphCount(
+    virtual unsigned int STDMETHODCALLTYPE GetTotalGlyphCount(
     ) = 0;
 
     /// <summary>Get the number of texture sheets in the atlas.</summary>
     /// <remarks></remarks>
     /// <returns>The number of sheets in the atlas.</returns>
-    virtual UINT STDMETHODCALLTYPE GetSheetCount(
+    virtual unsigned int STDMETHODCALLTYPE GetSheetCount(
     ) = 0;
 
     /// <summary>Get a pointer to an IFW1GlyphSheet in the atlas.</summary>
@@ -390,8 +390,8 @@ MIDL_INTERFACE("A31EB6A2-7458-4e24-82B3-945A95623B1F") IFW1GlyphAtlas : public I
     /// <param name="SheetIndex">The index of the sheet to be obtained.</param>
     /// <param name="ppGlyphSheet">Address of a pointer to an IFW1GlyphSheet.</param>
     virtual HRESULT STDMETHODCALLTYPE GetSheet(
-        __in UINT SheetIndex,
-        __out IFW1GlyphSheet** ppGlyphSheet
+        unsigned int SheetIndex,
+        IFW1GlyphSheet** ppGlyphSheet
     ) = 0;
 
     /// <summary>Get a pointer to a sheet's glyph-coord buffer.</summary>
@@ -399,7 +399,7 @@ MIDL_INTERFACE("A31EB6A2-7458-4e24-82B3-945A95623B1F") IFW1GlyphAtlas : public I
     /// <returns>If <i>SheetIndex</i> is valid, returns a pointer to a coord buffer. See IFW1GlyphSheet::GetGlyphCoords.</returns>
     /// <param name="SheetIndex">The index of the sheet which coord buffer is to be obtained.</param>
     virtual const FW1_GLYPHCOORDS * STDMETHODCALLTYPE GetGlyphCoords(
-        __in UINT SheetIndex
+        unsigned int SheetIndex
     ) = 0;
 
     /// <summary>Bind a sheet's shader resources on a device context.</summary>
@@ -409,9 +409,9 @@ MIDL_INTERFACE("A31EB6A2-7458-4e24-82B3-945A95623B1F") IFW1GlyphAtlas : public I
     /// <param name="SheetIndex">The index of the sheet to bind.</param>
     /// <param name="Flags">Flags that specify whether to set the geometry shader coord buffer. See IFW1GlyphSheet::BindSheet.</param>
     virtual HRESULT STDMETHODCALLTYPE BindSheet(
-        __in  HAL::CommandList::ptr & pContext,
-        __in UINT SheetIndex,
-        __in UINT Flags
+         HAL::CommandList::ptr & pContext,
+        unsigned int SheetIndex,
+        unsigned int Flags
     ) = 0;
 
     /// <summary>Insert a glyph into the atlas.</summary>
@@ -423,19 +423,19 @@ MIDL_INTERFACE("A31EB6A2-7458-4e24-82B3-945A95623B1F") IFW1GlyphAtlas : public I
     /// <param name="pGlyphData">A pointer to image data.</param>
     /// <param name="RowPitch">The number of bytes in a row of image data.</param>
     /// <param name="PixelStride">The number of bytes between successive pixels.</param>
-    virtual UINT STDMETHODCALLTYPE InsertGlyph(
-        __in const FW1_GLYPHMETRICS * pGlyphMetrics,
-        __in const void* pGlyphData,
-        __in UINT RowPitch,
-        __in UINT PixelStride
+    virtual unsigned int STDMETHODCALLTYPE InsertGlyph(
+        const FW1_GLYPHMETRICS * pGlyphMetrics,
+        const void* pGlyphData,
+        unsigned int RowPitch,
+        unsigned int PixelStride
     ) = 0;
 
     /// <summary>Insert a sheet into the atlas.</summary>
     /// <remarks>This method is used internally whenever new glyphs no longer fits in existing sheets. The atlas will hold a reference to the sheet for the remainder of its lifetime.</remarks>
     /// <returns>On success, eturns the index of the sheet in the atlas after insertion.<br/>If the method fails, 0xFFFFFFFF is returned.</returns>
     /// <param name="pGlyphSheet">A pointer ot the glyph sheet to insert.</param>
-    virtual UINT STDMETHODCALLTYPE InsertSheet(
-        __in IFW1GlyphSheet* pGlyphSheet
+    virtual unsigned int STDMETHODCALLTYPE InsertSheet(
+        IFW1GlyphSheet* pGlyphSheet
     ) = 0;
 
     /// <summary>Flush all new or internally updated sheets.</summary>
@@ -443,20 +443,20 @@ MIDL_INTERFACE("A31EB6A2-7458-4e24-82B3-945A95623B1F") IFW1GlyphAtlas : public I
     /// <returns>No return value.</returns>
     /// <param name="pContext">The context to use when updating device resources.</param>
     virtual void STDMETHODCALLTYPE Flush(
-        __in HAL::CommandList::ptr& pContext
+        HAL::CommandList::ptr& pContext
     ) = 0;
 };
 
 /// <summary>Collection of glyph-maps, mapping font/size/glyph information to an ID in a glyph atlas.</summary>
 /// <remarks>Whenever a glyph or glyphmap is queried from the glyph-provider, it will be dynamically inserted if it does not already exist.</remarks>
-MIDL_INTERFACE("F8360043-329D-4EC9-B0F8-ACB00FA77420") IFW1GlyphProvider : public IFW1Object
+struct __declspec(uuid("F8360043-329D-4EC9-B0F8-ACB00FA77420")) IFW1GlyphProvider : public IFW1Object
 {
     /// <summary>Get the IFW1GlyphAtlas this glyph-provider references.</summary>
     /// <remarks></remarks>
     /// <returns>Standard HRESULT error code.</returns>
     /// <param name="ppGlyphAtlas">Address of a pointer to an IFW1GlyphAtlas.</param>
     virtual HRESULT STDMETHODCALLTYPE GetGlyphAtlas(
-        __out IFW1GlyphAtlas** ppGlyphAtlas
+        IFW1GlyphAtlas** ppGlyphAtlas
     ) = 0;
 
     /// <summary>Get the DirectWrite factory a glyph-provider references.</summary>
@@ -464,7 +464,7 @@ MIDL_INTERFACE("F8360043-329D-4EC9-B0F8-ACB00FA77420") IFW1GlyphProvider : publi
     /// <returns>Standard HRESULT error code.</returns>
     /// <param name="ppDWriteFactory">Address of a pointer to an IDWriteFactory.</param>
     virtual HRESULT STDMETHODCALLTYPE GetDWriteFactory(
-        __out IDWriteFactory** ppDWriteFactory
+        IDWriteFactory** ppDWriteFactory
     ) = 0;
 
     /// <summary>Get the DirectWrite font-collection referenced by a glyph-provider.</summary>
@@ -475,7 +475,7 @@ MIDL_INTERFACE("F8360043-329D-4EC9-B0F8-ACB00FA77420") IFW1GlyphProvider : publi
     /// <returns>Standard HRESULT error code.</returns>
     /// <param name="ppFontCollection">Address of a pointer to an IDWriteFontCollection.</param>
     virtual HRESULT STDMETHODCALLTYPE GetDWriteFontCollection(
-        __out IDWriteFontCollection** ppFontCollection
+        IDWriteFontCollection** ppFontCollection
     ) = 0;
 
     /// <summary>Get a pointer identifying a glyph-map matching the specified font.</summary>
@@ -483,16 +483,16 @@ MIDL_INTERFACE("F8360043-329D-4EC9-B0F8-ACB00FA77420") IFW1GlyphProvider : publi
     /// The glyph-map returned from this method is not meaningful outside of the glyph provider internals, but is needed for subsequent calls to IFW1GlyphProvider::GetAtlasIdFromGlyphIndex.</remarks>
     /// <returns>A constant pointer identifying a glyph-map.
     /// This pointer should only be used in subsequent calls to IFW1GlyphProvider::GetAtlasIdFromGlyphIndex, and remains valid for the lifetime of the IFW1GlyphProvider.<br/>
-    /// A NULL pointer may be returned, if using the FW1_NONEWGLYPHS flag and a matching glyph-map does not exist.</returns>
+    /// A nullptr pointer may be returned, if using the FW1_NONEWGLYPHS flag and a matching glyph-map does not exist.</returns>
     /// <param name="pFontFace">A DirectWrite font face.</param>
     /// <param name="FontSize">The size of the font.</param>
     /// <param name="FontFlags">Can include zero or more of the following values, ORd together. Any additional values are ignored.<br/>
     /// FW1_ALIASED - No anti-aliasing is used when drawing the glyphs.<br/>
     /// FW1_NONEWGLYPHS - No new glyph-maps are created.</param>
     virtual const void* STDMETHODCALLTYPE GetGlyphMapFromFont(
-        __in IDWriteFontFace * pFontFace,
-        __in FLOAT FontSize,
-        __in UINT FontFlags
+        IDWriteFontFace * pFontFace,
+        float FontSize,
+        unsigned int FontFlags
     ) = 0;
 
     /// <summary>Get the ID of the specified glyph in the glyph-atlas.</summary>
@@ -501,23 +501,23 @@ MIDL_INTERFACE("F8360043-329D-4EC9-B0F8-ACB00FA77420") IFW1GlyphProvider : publi
     /// The ID is always <tt>((SheetIndex &lt;&lt; 16) | GlyphIndex)</tt>, where <i>SheetIndex</i> is the index of the sheet texture the glyph is placed in, and <i>GlyphIndex</i> is the index of the glyph in that sheet.<br/>
     /// If the specified glyph does not exist and can not be inserted on demand, the ID of a fallback glyph is returned.</returns>
     /// <param name="pGlyphMap">A pointer identifying a glyph-map, previously obtained using IFW1GlyphProvider::GetGlyphMapFromFont.
-    /// If this parameter is NULL, the ID of the last-resort fallback glyph is returned, which will be zero.</param>
+    /// If this parameter is nullptr, the ID of the last-resort fallback glyph is returned, which will be zero.</param>
     /// <param name="GlyphIndex">The index of the glyph in the DirectWrite font face.
     /// Glyph indices can be obtained from DirectWrite using IDWriteFontFace::GetGlyphIndices.</param>
     /// <param name="pFontFace">The DirectWrite font face that contains the glyph referenced by GlyphIndex.</param>
     /// <param name="FontFlags">Can include zero or more of the following values, ORd together. Any additional values are ignored.<br/>
     /// FW1_NONEWGLYPHS - No new glyphs are inserted.</param>
-    virtual UINT STDMETHODCALLTYPE GetAtlasIdFromGlyphIndex(
-        __in const void* pGlyphMap,
-        __in UINT16 GlyphIndex,
-        __in IDWriteFontFace * pFontFace,
-        __in UINT FontFlags
+    virtual unsigned int STDMETHODCALLTYPE GetAtlasIdFromGlyphIndex(
+        const void* pGlyphMap,
+        uint16_t GlyphIndex,
+        IDWriteFontFace * pFontFace,
+        unsigned int FontFlags
     ) = 0;
 };
 
 /// <summary>Container for a DirectWrite render-target, used to draw glyph images that are to be inserted in a glyph atlas.</summary>
 /// <remarks></remarks>
-MIDL_INTERFACE("A1EB4141-9A66-4097-A5B0-6FC84F8B162C") IFW1DWriteRenderTarget : public IFW1Object
+struct __declspec(uuid("A1EB4141-9A66-4097-A5B0-6FC84F8B162C")) IFW1DWriteRenderTarget : public IFW1Object
 {
     /// <summary>Draw a glyph-image.</summary>
     /// <remarks>The data returned in the FW1_GLYPHIMAGEDATA should only be read, and is valid until the next call to a method in the IFW1DWriteRenderTarget.<br/>
@@ -530,25 +530,25 @@ MIDL_INTERFACE("A1EB4141-9A66-4097-A5B0-6FC84F8B162C") IFW1DWriteRenderTarget : 
     /// <param name="MeasuringMode">The DirectWrite measuring mode. See DirectWrite documentation..</param>
     /// <param name="pOutData">A pointer to an FW1_GLYPHIMAGEDATA structure that will be filled in with the glyph image data on success.</param>
     virtual HRESULT STDMETHODCALLTYPE DrawGlyphTemp(
-        __in IDWriteFontFace * pFontFace,
-        __in UINT16 GlyphIndex,
-        __in FLOAT FontSize,
-        __in DWRITE_RENDERING_MODE RenderingMode,
-        __in DWRITE_MEASURING_MODE MeasuringMode,
-        __out FW1_GLYPHIMAGEDATA* pOutData
+        IDWriteFontFace * pFontFace,
+        uint16_t GlyphIndex,
+        float FontSize,
+        DWRITE_RENDERING_MODE RenderingMode,
+        DWRITE_MEASURING_MODE MeasuringMode,
+        FW1_GLYPHIMAGEDATA* pOutData
     ) = 0;
 };
 
 /// <summary>An RGBA color.</summary>
 /// <remarks>An IFW1ColorRGBA object can be set as the drawing effect for a range in an IDWriteTextLayout, to override the default color of the text.</remarks>
-MIDL_INTERFACE("A0EA03A0-441D-49BE-9D2C-4AE27BB7A327") IFW1ColorRGBA : public IFW1Object
+struct __declspec(uuid("A0EA03A0-441D-49BE-9D2C-4AE27BB7A327")) IFW1ColorRGBA : public IFW1Object
 {
     /// <summary>Set the color.</summary>
     /// <remarks></remarks>
     /// <returns>No return value.</returns>
     /// <param name="Color">The color to set, as 0xAaBbGgRr.</param>
     virtual void STDMETHODCALLTYPE SetColor(
-        __in float4 Color
+        float4 Color
     ) = 0;
 
     /// <summary>Get the color.</summary>
@@ -562,7 +562,7 @@ MIDL_INTERFACE("A0EA03A0-441D-49BE-9D2C-4AE27BB7A327") IFW1ColorRGBA : public IF
 /// <remarks>When rendering a string, a vertex is inserted into an IFW1TextGeometry object for each glyph.
 /// The vertices in an IFW1TextGeometry can be drawn by the IFW1FontWrapper::DrawGeometry method.<br/>
 /// A pointer to the actual vertices can be obtained with the IFW1TextGeometry::GetGlyphVerticesTemp method.</remarks>
-MIDL_INTERFACE("51E05736-6AFF-44A8-9745-77605C99E8F2") IFW1TextGeometry : public IFW1Object
+struct __declspec(uuid("51E05736-6AFF-44A8-9745-77605C99E8F2")) IFW1TextGeometry : public IFW1Object
 {
     /// <summary>Clear any vertices currently contained in the geometry object.</summary>
     /// <remarks>This method is not thread-safe.</remarks>
@@ -577,7 +577,7 @@ MIDL_INTERFACE("51E05736-6AFF-44A8-9745-77605C99E8F2") IFW1TextGeometry : public
     /// <returns>No return value.</returns>
     /// <param name="pVertex">Pointer to an FW1_GLYPHVERTEX structure describing the vertex.</param>
     virtual void STDMETHODCALLTYPE AddGlyphVertex(
-        __in const FW1_GLYPHVERTEX* pVertex
+        const FW1_GLYPHVERTEX* pVertex
     ) = 0;
 
     /// <summary>Get the vertices in the geometry, sorted by glyph sheet.</summary>
@@ -593,14 +593,14 @@ MIDL_INTERFACE("51E05736-6AFF-44A8-9745-77605C99E8F2") IFW1TextGeometry : public
 
 /// <summary>A text-renderer converts DirectWrite text layouts into glyph-vertices.</summary>
 /// <remarks></remarks>
-MIDL_INTERFACE("51E05736-6AFF-44A8-9745-77605C99E8F2") IFW1TextRenderer : public IFW1Object
+struct __declspec(uuid("51E05736-6AFF-44A8-9745-77605C99E8F2")) IFW1TextRenderer : public IFW1Object
 {
     /// <summary>Get the IFW1GlyphProvider used by a text-renderer.</summary>
     /// <remarks>The glyph provider is used internally to get the atlas IDs for any glyphs needed when drawing a text layout.</remarks>
     /// <returns>Standard HRESULT error code.</returns>
     /// <param name="ppGlyphProvider">Address of a pointer to an IFW1GlyphProvider.</param>
     virtual HRESULT STDMETHODCALLTYPE GetGlyphProvider(
-        __out IFW1GlyphProvider** ppGlyphProvider
+        IFW1GlyphProvider** ppGlyphProvider
     ) = 0;
 
     /// <summary>Convert a text layout to vertices.</summary>
@@ -619,18 +619,18 @@ MIDL_INTERFACE("51E05736-6AFF-44A8-9745-77605C99E8F2") IFW1TextRenderer : public
     /// </param>
     /// <param name="pTextGeometry">An IFW1TextGeometry object that the output vertices will be appended to.</param>
     virtual HRESULT STDMETHODCALLTYPE DrawTextLayout(
-        __in IDWriteTextLayout * pTextLayout,
-        __in FLOAT OriginX,
-        __in FLOAT OriginY,
-        __in float4 Color,
-        __in UINT Flags,
-        __in IFW1TextGeometry* pTextGeometry
+        IDWriteTextLayout * pTextLayout,
+        float OriginX,
+        float OriginY,
+        float4 Color,
+        unsigned int Flags,
+        IFW1TextGeometry* pTextGeometry
     ) = 0;
 };
 
 /// <summary>This interface contains all render states and shaders needed to draw glyphs.</summary>
 /// <remarks></remarks>
-MIDL_INTERFACE("906928B6-79D8-4b42-8CE4-DC7D7046F206") IFW1GlyphRenderStates : public IFW1Object
+struct __declspec(uuid("906928B6-79D8-4b42-8CE4-DC7D7046F206")) IFW1GlyphRenderStates : public IFW1Object
 {
 
     /// <summary>Set the internal states on a context.</summary>
@@ -642,8 +642,8 @@ MIDL_INTERFACE("906928B6-79D8-4b42-8CE4-DC7D7046F206") IFW1GlyphRenderStates : p
     /// FW1_CLIPRECT - Shaders will be set up to clip any drawn glyphs to the clip-rect set in IFW1GlyphRenderStates::UpdateShaderConstants.
     /// </param>
     virtual void STDMETHODCALLTYPE SetStates(
-        __in  HAL::CommandList::ptr&,
-        __in UINT Flags
+         HAL::CommandList::ptr&,
+        unsigned int Flags
     ) = 0;
 
     /// <summary>Update the internal constant buffer.</summary>
@@ -653,22 +653,22 @@ MIDL_INTERFACE("906928B6-79D8-4b42-8CE4-DC7D7046F206") IFW1GlyphRenderStates : p
     /// <param name="pClipRect">A pointer to a rectangle to clip drawn glyphs to.</param>
     /// <param name="pTransformMatrix">An array of 16 floats, representing a matrix which all glyph vertices will be multiplied with, in the geometry or vertex shader.</param>
     virtual void STDMETHODCALLTYPE UpdateShaderConstants(
-        __in  HAL::CommandList::ptr&,
-        __in const FW1_RECTF * pClipRect,
-        __in const FLOAT* pTransformMatrix
+         HAL::CommandList::ptr&,
+        const FW1_RECTF * pClipRect,
+        const float* pTransformMatrix
     ) = 0;
 
     /// <summary>Returns whether a geometry shader is available.</summary>
     /// <remarks>When an IFW1GlyphRenderStates object is created, it may attempt to create a geometry shader, depending on the parameters passed to IFW1Factory::CreateRenderStates.
     /// If a geometry shader is not created, either because of the specified parameters or because the device feature level does not support geometry shaders, this method will return FALSE.</remarks>
     /// <returns>Returns TRUE if a geometry shader is available, and otherwise returns FALSE.</returns>
-    virtual BOOL STDMETHODCALLTYPE HasGeometryShader(
+    virtual int STDMETHODCALLTYPE HasGeometryShader(
     ) = 0;
 };
 
 /// <summary>A container for a dynamic vertex and index buffer, used to draw glyph vertices.</summary>
 /// <remarks></remarks>
-MIDL_INTERFACE("E6CD7A32-5B59-463c-9B1B-D44074FF655B") IFW1GlyphVertexDrawer : public IFW1Object
+struct __declspec(uuid("E6CD7A32-5B59-463c-9B1B-D44074FF655B")) IFW1GlyphVertexDrawer : public IFW1Object
 {
 
 
@@ -686,19 +686,19 @@ MIDL_INTERFACE("E6CD7A32-5B59-463c-9B1B-D44074FF655B") IFW1GlyphVertexDrawer : p
     /// <param name="PreboundSheet">If a sheet in the atlas is known to already be correctly set on the device context, specify its index in the atlas with this parameter, to avoid redundant state changes.
     /// If no sheet is known to already be set, specify 0xFFFFFFFF, or another value greater than the number of sheets in the atlas.
     /// </param>
-    virtual UINT STDMETHODCALLTYPE DrawVertices(
-        __in HAL::CommandList::ptr & pContext,
-        __in IFW1GlyphAtlas * pGlyphAtlas,
-        __in const FW1_VERTEXDATA * pVertexData,
-        __in UINT Flags,
-        __in UINT PreboundSheet
+    virtual unsigned int STDMETHODCALLTYPE DrawVertices(
+        HAL::CommandList::ptr & pContext,
+        IFW1GlyphAtlas * pGlyphAtlas,
+        const FW1_VERTEXDATA * pVertexData,
+        unsigned int Flags,
+        unsigned int PreboundSheet
     ) = 0;
 };
 
 /// <summary>The IFW1FontWrapper interface is the main interface used to draw text.
 /// It holds references to all objects needed to format and convert text to vertices, as well as the D3D11 states and buffers needed to draw them.</summary>
 /// <remarks>Create a font-wrapper using IFW1Factory::CreateFontWrapper</remarks>
-MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public IFW1Object
+struct __declspec(uuid("83347A5C-B0B1-460e-A35C-427E8B85F9F4")) IFW1FontWrapper : public IFW1Object
 {
 
 
@@ -707,7 +707,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <returns>Standard HRESULT error code.</returns>
     /// <param name="ppDWriteFactory">Address of a pointer to an IDWriteFactory.</param>
     virtual HRESULT STDMETHODCALLTYPE GetDWriteFactory(
-        __out IDWriteFactory** ppDWriteFactory
+        IDWriteFactory** ppDWriteFactory
     ) = 0;
 
     /// <summary>Get the IFW1GlyphAtlas used to cache glyphs.</summary>
@@ -715,7 +715,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <returns>Standard HRESULT error code.</returns>
     /// <param name="ppGlyphAtlas">Address of a pointer to an IFW1GlyphAtlas.</param>
     virtual HRESULT STDMETHODCALLTYPE GetGlyphAtlas(
-        __out IFW1GlyphAtlas** ppGlyphAtlas
+        IFW1GlyphAtlas** ppGlyphAtlas
     ) = 0;
 
     /// <summary>Get the IFW1GlyphProvider used to map glyphs to atlas IDs.</summary>
@@ -723,7 +723,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <returns>Standard HRESULT error code.</returns>
     /// <param name="ppGlyphProvider">Address of a pointer to an IFW1GlyphProvider.</param>
     virtual HRESULT STDMETHODCALLTYPE GetGlyphProvider(
-        __out IFW1GlyphProvider** ppGlyphProvider
+        IFW1GlyphProvider** ppGlyphProvider
     ) = 0;
 
     /// <summary>Get the IFW1GlyphRenderStates containing the render states needed to draw glyphs.</summary>
@@ -731,7 +731,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <returns>Standard HRESULT error code.</returns>
     /// <param name="ppRenderStates">Address of a pointer to an IFW1GlyphRenderStates.</param>
     virtual HRESULT STDMETHODCALLTYPE GetRenderStates(
-        __out IFW1GlyphRenderStates** ppRenderStates
+        IFW1GlyphRenderStates** ppRenderStates
     ) = 0;
 
     /// <summary>Get the IFW1GlyphVertexDrawer used to draw glyph vertices.</summary>
@@ -739,12 +739,12 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <returns>Standard HRESULT error code.</returns>
     /// <param name="ppVertexDrawer">Address of a pointer to an IFW1GlyphVertexDrawer.</param>
     virtual HRESULT STDMETHODCALLTYPE GetVertexDrawer(
-        __out IFW1GlyphVertexDrawer** ppVertexDrawer
+        IFW1GlyphVertexDrawer** ppVertexDrawer
     ) = 0;
 
     /// <summary>Draw a DirectWrite text layout.</summary>
     /// <remarks>Consult the DirectWrite documentation for details on how to construct a text-layout.<br/>
-    /// The pContext parameter can be NULL only if the FW1_NOFLUSH and either the FW1_ANALYZEONLY or the FW1_CACHEONLY flags are specified.</remarks>
+    /// The pContext parameter can be nullptr only if the FW1_NOFLUSH and either the FW1_ANALYZEONLY or the FW1_CACHEONLY flags are specified.</remarks>
     /// <returns>No return value.</returns>
     /// <param name="pContext">The device context to draw on.</param>
     /// <param name="pTextLayout">The text layout to draw.</param>
@@ -753,62 +753,62 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="Color">The default color of the text, as 0xAaBbGgRr.</param>
     /// <param name="Flags">See FW1_TEXT_FLAG. The alignment and word-wrapping flags have no meaning when drawing a preconstructed text layout.</param>
     virtual void STDMETHODCALLTYPE DrawTextLayout(
-        __in  HAL::CommandList::ptr & pContext,
-        __in IDWriteTextLayout * pTextLayout,
-        __in FLOAT OriginX,
-        __in FLOAT OriginY,
-        __in float4 Color,
-        __in UINT Flags
+         HAL::CommandList::ptr & pContext,
+        IDWriteTextLayout * pTextLayout,
+        float OriginX,
+        float OriginY,
+        float4 Color,
+        unsigned int Flags
     ) = 0;
 
     /// <summary>Draw a DirectWrite text layout.</summary>
     /// <remarks>Consult the DirectWrite documentation for details on how to construct a text-layout.<br/>
-    /// The pContext parameter can be NULL only if the FW1_NOFLUSH and either the FW1_ANALYZEONLY or the FW1_CACHEONLY flags are specified.</remarks>
+    /// The pContext parameter can be nullptr only if the FW1_NOFLUSH and either the FW1_ANALYZEONLY or the FW1_CACHEONLY flags are specified.</remarks>
     /// <returns>No return value.</returns>
     /// <param name="pContext">The device context to draw on.</param>
     /// <param name="pTextLayout">The text layout to draw.</param>
     /// <param name="OriginX">The X origin of the text in the layout.</param>
     /// <param name="OriginY">The Y origin of the text in the layout.</param>
     /// <param name="Color">The default color of the text, as 0xAaBbGgRr.</param>
-    /// <param name="pClipRect">A pointer to a rectangle to clip the text to if also using the FW1_CLIPRECT flag, or NULL to not clip.</param>
+    /// <param name="pClipRect">A pointer to a rectangle to clip the text to if also using the FW1_CLIPRECT flag, or nullptr to not clip.</param>
     /// <param name="pTransformMatrix">An array of 16 floats, representing a matrix which the text will be transformed by.</param>
     /// <param name="Flags">See FW1_TEXT_FLAG. The alignment and word-wrapping flags have no meaning when drawing a preconstructed text layout.</param>
     virtual void STDMETHODCALLTYPE DrawTextLayout(
-        __in  HAL::CommandList::ptr & pContext,
-        __in IDWriteTextLayout * pTextLayout,
-        __in FLOAT OriginX,
-        __in FLOAT OriginY,
-        __in float4 Color,
-        __in const FW1_RECTF * pClipRect,
-        __in const FLOAT * pTransformMatrix,
-        __in UINT Flags
+         HAL::CommandList::ptr & pContext,
+        IDWriteTextLayout * pTextLayout,
+        float OriginX,
+        float OriginY,
+        float4 Color,
+        const FW1_RECTF * pClipRect,
+        const float * pTransformMatrix,
+        unsigned int Flags
     ) = 0;
 
     /// <summary>Draw a string.</summary>
-    /// <remarks>The pContext parameter can be NULL only if the FW1_NOFLUSH and either the FW1_ANALYZEONLY or the FW1_CACHEONLY flags are specified.</remarks>
+    /// <remarks>The pContext parameter can be nullptr only if the FW1_NOFLUSH and either the FW1_ANALYZEONLY or the FW1_CACHEONLY flags are specified.</remarks>
     /// <returns>No return value.</returns>
     /// <param name="pContext">The device context to draw on.</param>
-    /// <param name="pszString">The NULL-terminated string to draw.</param>
+    /// <param name="pszString">The nullptr-terminated string to draw.</param>
     /// <param name="FontSize">The size of the font.</param>
     /// <param name="X">The X origin of the text.</param>
     /// <param name="Y">The Y origin of the text .</param>
     /// <param name="Color">The color of the text, as 0xAaBbGgRr.</param>
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     virtual void STDMETHODCALLTYPE DrawString(
-        __in  HAL::CommandList::ptr & pContext,
-        __in const WCHAR * pszString,
-        __in FLOAT FontSize,
-        __in FLOAT X,
-        __in FLOAT Y,
-        __in float4 Color,
-        __in UINT Flags
+         HAL::CommandList::ptr & pContext,
+        const wchar_t * pszString,
+        float FontSize,
+        float X,
+        float Y,
+        float4 Color,
+        unsigned int Flags
     ) = 0;
 
     /// <summary>Draw a string.</summary>
-    /// <remarks>The pContext parameter can be NULL only if the FW1_NOFLUSH and either the FW1_ANALYZEONLY or the FW1_CACHEONLY flags are specified.</remarks>
+    /// <remarks>The pContext parameter can be nullptr only if the FW1_NOFLUSH and either the FW1_ANALYZEONLY or the FW1_CACHEONLY flags are specified.</remarks>
     /// <returns>No return value.</returns>
     /// <param name="pContext">The device context to draw on.</param>
-    /// <param name="pszString">The NULL-terminated string to draw.</param>
+    /// <param name="pszString">The nullptr-terminated string to draw.</param>
     /// <param name="pszFontFamily">The font family to use, such as Arial or Courier New.</param>
     /// <param name="FontSize">The size of the font.</param>
     /// <param name="X">The X origin of the text.</param>
@@ -816,62 +816,62 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="Color">The color of the text, as 0xAaBbGgRr.</param>
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     virtual void STDMETHODCALLTYPE DrawString(
-        __in  HAL::CommandList::ptr & pContext,
-        __in const WCHAR * pszString,
-        __in const WCHAR * pszFontFamily,
-        __in FLOAT FontSize,
-        __in FLOAT X,
-        __in FLOAT Y,
-        __in float4 Color,
-        __in UINT Flags
+         HAL::CommandList::ptr & pContext,
+        const wchar_t * pszString,
+        const wchar_t * pszFontFamily,
+        float FontSize,
+        float X,
+        float Y,
+        float4 Color,
+        unsigned int Flags
     ) = 0;
 
     /// <summary>Draw a string.</summary>
-    /// <remarks>The pContext parameter can be NULL only if the FW1_NOFLUSH and either the FW1_ANALYZEONLY or the FW1_CACHEONLY flags are specified.</remarks>
+    /// <remarks>The pContext parameter can be nullptr only if the FW1_NOFLUSH and either the FW1_ANALYZEONLY or the FW1_CACHEONLY flags are specified.</remarks>
     /// <returns>No return value.</returns>
     /// <param name="pContext">The device context to draw on.</param>
-    /// <param name="pszString">The NULL-terminated string to draw.</param>
+    /// <param name="pszString">The nullptr-terminated string to draw.</param>
     /// <param name="pszFontFamily">The font family to use, such as Arial or Courier New.</param>
     /// <param name="FontSize">The size of the font.</param>
     /// <param name="pLayoutRect">A pointer to a rectangle to format the text in.</param>
     /// <param name="Color">The color of the text, as 0xAaBbGgRr.</param>
-    /// <param name="pClipRect">A pointer to a rectangle to clip the text to if also using the FW1_CLIPRECT flag, or NULL to not clip.</param>
-    /// <param name="pTransformMatrix">An array of 16 floats, representing a matrix which the text will be transformed by, or NULL to draw in screen-space.</param>
+    /// <param name="pClipRect">A pointer to a rectangle to clip the text to if also using the FW1_CLIPRECT flag, or nullptr to not clip.</param>
+    /// <param name="pTransformMatrix">An array of 16 floats, representing a matrix which the text will be transformed by, or nullptr to draw in screen-space.</param>
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     virtual void STDMETHODCALLTYPE DrawString(
-        __in  HAL::CommandList::ptr & pContext,
-        __in const WCHAR * pszString,
-        __in const WCHAR * pszFontFamily,
-        __in FLOAT FontSize,
-        __in const FW1_RECTF * pLayoutRect,
-        __in float4 Color,
-        __in const FW1_RECTF * pClipRect,
-        __in const FLOAT * pTransformMatrix,
-        __in UINT Flags
+         HAL::CommandList::ptr & pContext,
+        const wchar_t * pszString,
+        const wchar_t * pszFontFamily,
+        float FontSize,
+        const FW1_RECTF * pLayoutRect,
+        float4 Color,
+        const FW1_RECTF * pClipRect,
+        const float * pTransformMatrix,
+        unsigned int Flags
     ) = 0;
 
     /// <summary>Measure a string.</summary>
     /// <remarks>This function uses the IDWriteTextLayout::GetOverhangMetrics to obtain the size of the string.</remarks>
     /// <returns>The smallest rectangle that completely contains the string if drawn with DrawString and the same parameters as used with MeasureString.</returns>
-    /// <param name="pszString">The NULL-terminated string to measure.</param>
+    /// <param name="pszString">The nullptr-terminated string to measure.</param>
     /// <param name="pszFontFamily">The font family to use, such as Arial or Courier New.</param>
     /// <param name="FontSize">The size of the font.</param>
     /// <param name="pLayoutRect">A pointer to a rectangle to format the text in.</param>
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     virtual FW1_RECTF STDMETHODCALLTYPE MeasureString(
-        __in const WCHAR * pszString,
-        __in const WCHAR * pszFontFamily,
-        __in FLOAT FontSize,
-        __in const FW1_RECTF * pLayoutRect,
-        __in UINT Flags
+        const wchar_t * pszString,
+        const wchar_t * pszFontFamily,
+        float FontSize,
+        const FW1_RECTF * pLayoutRect,
+        unsigned int Flags
     ) = 0;
 
     /// <summary>Analyze a string and generate geometry to draw it.</summary>
-    /// <remarks>pTextGeometry can be NULL if the FW1_ANALYZEONLY or FW1_CACHEONLY flags are specified, as no actual geometry will be generated.
-    /// pContext can be NULL if the FW1_NOFLUSH flag is used, as any new glyphs will not be flushed to the device buffers.</remarks>
+    /// <remarks>pTextGeometry can be nullptr if the FW1_ANALYZEONLY or FW1_CACHEONLY flags are specified, as no actual geometry will be generated.
+    /// pContext can be nullptr if the FW1_NOFLUSH flag is used, as any new glyphs will not be flushed to the device buffers.</remarks>
     /// <returns>No return value.</returns>
     /// <param name="pContext">A device context to use to update device buffers when new glyphs are added to the glyph-atlas.</param>
-    /// <param name="pszString">The NULL-terminated string to create geometry from.</param>
+    /// <param name="pszString">The nullptr-terminated string to create geometry from.</param>
     /// <param name="pszFontFamily">The font family to use, such as Arial or Courier New.</param>
     /// <param name="FontSize">The size of the font.</param>
     /// <param name="pLayoutRect">A pointer to a rectangle to format the text in.</param>
@@ -879,20 +879,20 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     /// <param name="pTextGeometry">An IFW1TextGeometry object that the output vertices will be appended to.</param>
     virtual void STDMETHODCALLTYPE AnalyzeString(
-        __in  HAL::CommandList::ptr & pContext,
-        __in const WCHAR * pszString,
-        __in const WCHAR * pszFontFamily,
-        __in FLOAT FontSize,
-        __in const FW1_RECTF * pLayoutRect,
-        __in float4 Color,
-        __in UINT Flags,
-        __in IFW1TextGeometry* pTextGeometry
+         HAL::CommandList::ptr & pContext,
+        const wchar_t * pszString,
+        const wchar_t * pszFontFamily,
+        float FontSize,
+        const FW1_RECTF * pLayoutRect,
+        float4 Color,
+        unsigned int Flags,
+        IFW1TextGeometry* pTextGeometry
     ) = 0;
 
     /// <summary>Analyze a text layout and generate geometry to draw it.</summary>
     /// <remarks>Consult the DirectWrite documentation for details on how to construct a text-layout.
-    /// pTextGeometry can be NULL if the FW1_ANALYZEONLY or FW1_CACHEONLY flags are specified, as no actual geometry will be generated.
-    /// pContext can be NULL if the FW1_NOFLUSH flag is used, as any new glyphs will not be flushed to the device buffers.</remarks>
+    /// pTextGeometry can be nullptr if the FW1_ANALYZEONLY or FW1_CACHEONLY flags are specified, as no actual geometry will be generated.
+    /// pContext can be nullptr if the FW1_NOFLUSH flag is used, as any new glyphs will not be flushed to the device buffers.</remarks>
     /// <returns>No return value.</returns>
     /// <param name="pContext">A device context to use to update device buffers when new glyphs are added to the glyph-atlas.</param>
     /// <param name="pTextLayout">The DirectWrite text layout to create geometry from.</param>
@@ -902,13 +902,13 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="Flags">See FW1_TEXT_FLAG. The alignment and word-wrapping flags have no meaning when using a preconstructed text layout.</param>
     /// <param name="pTextGeometry">An IFW1TextGeometry object that the output vertices will be appended to.</param>
     virtual void STDMETHODCALLTYPE AnalyzeTextLayout(
-        __in  HAL::CommandList::ptr & pContext,
-        __in IDWriteTextLayout * pTextLayout,
-        __in FLOAT OriginX,
-        __in FLOAT OriginY,
-        __in float4 Color,
-        __in UINT Flags,
-        __in IFW1TextGeometry* pTextGeometry
+         HAL::CommandList::ptr & pContext,
+        IDWriteTextLayout * pTextLayout,
+        float OriginX,
+        float OriginY,
+        float4 Color,
+        unsigned int Flags,
+        IFW1TextGeometry* pTextGeometry
     ) = 0;
 
     /// <summary>Draw geometry.</summary>
@@ -916,15 +916,15 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <returns>No return value.</returns>
     /// <param name="pContext">The device context to draw on.</param>
     /// <param name="pGeometry">The geometry to draw.</param>
-    /// <param name="pClipRect">A pointer to a rectangle to clip the text to if also using the FW1_CLIPRECT flag, or NULL to not clip. This rect is in text-space, and clipping is performed prior to any transformation.</param>
-    /// <param name="pTransformMatrix">An array of 16 floats, representing a matrix which the text will be transformed by, or NULL to draw in screen-space.</param>
+    /// <param name="pClipRect">A pointer to a rectangle to clip the text to if also using the FW1_CLIPRECT flag, or nullptr to not clip. This rect is in text-space, and clipping is performed prior to any transformation.</param>
+    /// <param name="pTransformMatrix">An array of 16 floats, representing a matrix which the text will be transformed by, or nullptr to draw in screen-space.</param>
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     virtual void STDMETHODCALLTYPE DrawGeometry(
-        __in  HAL::CommandList::ptr & pContext,
-        __in IFW1TextGeometry * pGeometry,
-        __in const FW1_RECTF * pClipRect,
-        __in const FLOAT * pTransformMatrix,
-        __in UINT Flags
+         HAL::CommandList::ptr & pContext,
+        IFW1TextGeometry * pGeometry,
+        const FW1_RECTF * pClipRect,
+        const float * pTransformMatrix,
+        unsigned int Flags
     ) = 0;
 
     /// <summary>Flush any new glyphs to GPU resources.</summary>
@@ -933,7 +933,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <returns>No return value.</returns>
     /// <param name="pContext">The device context to use to update device resources.</param>
     virtual void STDMETHODCALLTYPE Flush(
-        __in  HAL::CommandList::ptr& pContext
+         HAL::CommandList::ptr& pContext
     ) = 0;
 };
 
@@ -946,7 +946,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
 /// If an object in turn creates new objects, it uses the same factory that created the object itself.
 /// For example, a glyph-atlas will ask the factory that created it to create new glyph-sheets as glyphs are added to the atlas.
 /// </remarks>
-MIDL_INTERFACE("8004DB2B-B5F9-4420-A6A2-E17E15E4C336") IFW1Factory : public IUnknown
+struct __declspec(uuid("8004DB2B-B5F9-4420-A6A2-E17E15E4C336")) IFW1Factory : public IUnknown
 {
 public:
     /// <summary>Create an IFW1FontWrapper object with default settings.</summary>
@@ -958,8 +958,8 @@ public:
     /// Font-fallback will automatically choose a different font if the specified one is not available.</param>
     /// <param name="ppFontWrapper">Address of a pointer to a font-wrapper (See IFW1FontWrapper).</param>
     virtual HRESULT STDMETHODCALLTYPE CreateFontWrapper(
-        __in LPCWSTR pszFontFamily,
-        __out IFW1FontWrapper** ppFontWrapper
+        const wchar_t* pszFontFamily,
+        IFW1FontWrapper** ppFontWrapper
     ) = 0;
 
     /// <summary>Create an IFW1FontWrapper object.</summary>
@@ -969,9 +969,9 @@ public:
     /// <param name="pCreateParams">Pointer to an FW1_FONTWRAPPERCREATEPARAMS structure that describes the settings for the new font-wrapper.</param>
     /// <param name="ppFontWrapper">Address of a pointer to a font-wrapper (See IFW1FontWrapper).</param>
     virtual HRESULT STDMETHODCALLTYPE CreateFontWrapper(
-        __in IDWriteFactory * pDWriteFactory,
-        __in const FW1_FONTWRAPPERCREATEPARAMS * pCreateParams,
-        __out IFW1FontWrapper** ppFontWrapper
+        IDWriteFactory * pDWriteFactory,
+        const FW1_FONTWRAPPERCREATEPARAMS * pCreateParams,
+        IFW1FontWrapper** ppFontWrapper
     ) = 0;
 
     /// <summary>Create an IFW1FontWrapper object.</summary>
@@ -984,16 +984,16 @@ public:
     /// <param name="pGlyphRenderStates">An IFW1GlyphRenderStates that handles all needed context states when drawing glyphs.</param>
     /// <param name="pDWriteFactory">An IDWriteFactory that is used to create render-targets to draw glyphs with.</param>
     /// <param name="pDefaultFontParams">Pointer to an FW1_DWRITEFONTPARAMS that describes the default font.
-    /// Can be NULL if only drawing preconstructed DirectWrite text layouts.</param>
+    /// Can be nullptr if only drawing preconstructed DirectWrite text layouts.</param>
     /// <param name="ppFontWrapper">Address of a pointer to a font-wrapper (See IFW1FontWrapper).</param>
     virtual HRESULT STDMETHODCALLTYPE CreateFontWrapper(
-        __in IFW1GlyphAtlas * pGlyphAtlas,
-        __in IFW1GlyphProvider * pGlyphProvider,
-        __in IFW1GlyphVertexDrawer * pGlyphVertexDrawer,
-        __in IFW1GlyphRenderStates * pGlyphRenderStates,
-        __in IDWriteFactory * pDWriteFactory,
-        __in const FW1_DWRITEFONTPARAMS * pDefaultFontParams,
-        __out IFW1FontWrapper** ppFontWrapper
+        IFW1GlyphAtlas * pGlyphAtlas,
+        IFW1GlyphProvider * pGlyphProvider,
+        IFW1GlyphVertexDrawer * pGlyphVertexDrawer,
+        IFW1GlyphRenderStates * pGlyphRenderStates,
+        IDWriteFactory * pDWriteFactory,
+        const FW1_DWRITEFONTPARAMS * pDefaultFontParams,
+        IFW1FontWrapper** ppFontWrapper
     ) = 0;
 
     /// <summary>Create an IFW1GlyphVertexDrawer object.</summary>
@@ -1003,8 +1003,8 @@ public:
     /// <param name="VertexBufferSize">The size in bytes of the dynamic vertex buffer. An index buffer will be created with a matching size.</param>
     /// <param name="ppGlyphVertexDrawer">Address of a pointer to a glyph-vertex drawer (See IFW1GlyphVertexDrawer).</param>
     virtual HRESULT STDMETHODCALLTYPE CreateGlyphVertexDrawer(
-        __in UINT VertexBufferSize,
-        __out IFW1GlyphVertexDrawer** ppGlyphVertexDrawer
+        unsigned int VertexBufferSize,
+        IFW1GlyphVertexDrawer** ppGlyphVertexDrawer
     ) = 0;
 
     /// <summary>Create an IFW1GlyphRenderStates object.</summary>
@@ -1015,9 +1015,9 @@ public:
     /// <param name="AnisotropicFiltering">If TRUE, a sampler state enabling anisotropic filtering will be created.</param>
     /// <param name="ppGlyphRenderStates">Address of a pointer to a glyph render-states object (See IFW1GlyphRenderStates).</param>
     virtual HRESULT STDMETHODCALLTYPE CreateGlyphRenderStates(
-        __in BOOL DisableGeometryShader,
-        __in BOOL AnisotropicFiltering,
-        __out IFW1GlyphRenderStates** ppGlyphRenderStates
+        int DisableGeometryShader,
+        int AnisotropicFiltering,
+        IFW1GlyphRenderStates** ppGlyphRenderStates
     ) = 0;
 
     /// <summary>Create an IFW1TextRenderer object.</summary>
@@ -1026,8 +1026,8 @@ public:
     /// <param name="pGlyphProvider">The IFW1GlyphProvider that provides glyph-information for the text-renderer.</param>
     /// <param name="ppTextRenderer">Address of a pointer to a IFW1TextRenderer.</param>
     virtual HRESULT STDMETHODCALLTYPE CreateTextRenderer(
-        __in IFW1GlyphProvider * pGlyphProvider,
-        __out IFW1TextRenderer** ppTextRenderer
+        IFW1GlyphProvider * pGlyphProvider,
+        IFW1TextRenderer** ppTextRenderer
     ) = 0;
 
     /// <summary>Create an IFW1TextGeometry object.</summary>
@@ -1035,7 +1035,7 @@ public:
     /// <returns>Standard HRESULT error code.</returns>
     /// <param name="ppTextGeometry">Address of a pointer to an IFW1TextGeometry.</param>
     virtual HRESULT STDMETHODCALLTYPE CreateTextGeometry(
-        __out IFW1TextGeometry** ppTextGeometry
+        IFW1TextGeometry** ppTextGeometry
     ) = 0;
 
     /// <summary>Create an IFW1GlyphProvider object.</summary>
@@ -1048,12 +1048,12 @@ public:
     /// <param name="MaxGlyphHeight">The maximum height of a single glyph.</param>
     /// <param name="ppGlyphProvider">Address of a pointer to an IFW1GlyphProvider.</param>
     virtual HRESULT STDMETHODCALLTYPE CreateGlyphProvider(
-        __in IFW1GlyphAtlas * pGlyphAtlas,
-        __in IDWriteFactory * pDWriteFactory,
-        __in IDWriteFontCollection * pFontCollection,
-        __in UINT MaxGlyphWidth,
-        __in UINT MaxGlyphHeight,
-        __out IFW1GlyphProvider** ppGlyphProvider
+        IFW1GlyphAtlas * pGlyphAtlas,
+        IDWriteFactory * pDWriteFactory,
+        IDWriteFontCollection * pFontCollection,
+        unsigned int MaxGlyphWidth,
+        unsigned int MaxGlyphHeight,
+        IFW1GlyphProvider** ppGlyphProvider
     ) = 0;
 
     /// <summary>Create an IFW1DWriteRenderTarget object.</summary>
@@ -1064,10 +1064,10 @@ public:
     /// <param name="RenderTargetHeight">The height of the render target.</param>
     /// <param name="ppRenderTarget">Address of a pointer to an IFW1DWriteRenderTarget.</param>
     virtual HRESULT STDMETHODCALLTYPE CreateDWriteRenderTarget(
-        __in IDWriteFactory * pDWriteFactory,
-        __in UINT RenderTargetWidth,
-        __in UINT RenderTargetHeight,
-        __out IFW1DWriteRenderTarget** ppRenderTarget
+        IDWriteFactory * pDWriteFactory,
+        unsigned int RenderTargetWidth,
+        unsigned int RenderTargetHeight,
+        IFW1DWriteRenderTarget** ppRenderTarget
     ) = 0;
 
     /// <summary>Create an IFW1GlyphAtlas object.</summary>
@@ -1083,14 +1083,14 @@ public:
     /// <param name="MaxGlyphSheetCount">The maximum number of sheet textures.</param>
     /// <param name="ppGlyphAtlas">Address of a pointer to an IFW1GlyphAtlas.</param>
     virtual HRESULT STDMETHODCALLTYPE CreateGlyphAtlas(
-        __in UINT GlyphSheetWidth,
-        __in UINT GlyphSheetHeight,
-        __in BOOL HardwareCoordBuffer,
-        __in BOOL AllowOversizedGlyph,
-        __in UINT MaxGlyphCountPerSheet,
-        __in UINT MipLevels,
-        __in UINT MaxGlyphSheetCount,
-        __out IFW1GlyphAtlas** ppGlyphAtlas
+        unsigned int GlyphSheetWidth,
+        unsigned int GlyphSheetHeight,
+        int HardwareCoordBuffer,
+        int AllowOversizedGlyph,
+        unsigned int MaxGlyphCountPerSheet,
+        unsigned int MipLevels,
+        unsigned int MaxGlyphSheetCount,
+        IFW1GlyphAtlas** ppGlyphAtlas
     ) = 0;
 
     /// <summary>Create an IFW1GlyphSheet object.</summary>
@@ -1105,13 +1105,13 @@ public:
     /// <param name="MipLevels">The number of mip levels for the texture.</param>
     /// <param name="ppGlyphSheet">Address of a pointer to an IFW1GlyphSheet.</param>
     virtual HRESULT STDMETHODCALLTYPE CreateGlyphSheet(
-        __in UINT GlyphSheetWidth,
-        __in UINT GlyphSheetHeight,
-        __in BOOL HardwareCoordBuffer,
-        __in BOOL AllowOversizedGlyph,
-        __in UINT MaxGlyphCount,
-        __in UINT MipLevels,
-        __out IFW1GlyphSheet** ppGlyphSheet
+        unsigned int GlyphSheetWidth,
+        unsigned int GlyphSheetHeight,
+        int HardwareCoordBuffer,
+        int AllowOversizedGlyph,
+        unsigned int MaxGlyphCount,
+        unsigned int MipLevels,
+        IFW1GlyphSheet** ppGlyphSheet
     ) = 0;
 
     /// <summary>Create an IFW1ColorRGBA object.</summary>
@@ -1120,15 +1120,15 @@ public:
     /// <param name="Color">The initial color, as 0xAaBbGgRr.</param>
     /// <param name="ppColor">Address of a pointer to an IFW1ColorRGBA.</param>
     virtual HRESULT STDMETHODCALLTYPE CreateColor(
-        __in float4 Color,
-        __out IFW1ColorRGBA** ppColor
+        float4 Color,
+        IFW1ColorRGBA** ppColor
     ) = 0;
 };
 
 #ifdef FW1_COMPILETODLL
 extern "C" __declspec(dllexport) HRESULT STDMETHODCALLTYPE FW1CreateFactory(
-    __in UINT32 Version,
-    __out IFW1Factory** ppFactory
+    uint32_t Version,
+    IFW1Factory** ppFactory
 );
 #else
 /// <summary>The FW1CreateFactory method creates an IFWFactory object, that can subsequently be used to create any and all FW1 objects.</summary>
@@ -1137,12 +1137,20 @@ extern "C" __declspec(dllexport) HRESULT STDMETHODCALLTYPE FW1CreateFactory(
 /// <param name="Version">Set to FW1_VERSION. Is used to make sure the header matches the library version.</param>
 /// <param name="ppFactory">Address of a pointer to an IFW1Factory.</param>
 extern "C" HRESULT STDMETHODCALLTYPE FW1CreateFactory(
-    __in UINT32 Version,
-    __out IFW1Factory** ppFactory
+    uint32_t Version,
+    IFW1Factory** ppFactory
 );
 #endif
 
-typedef HRESULT(STDMETHODCALLTYPE* PFN_FW1CREATEFACTORY)(UINT32 Version, IFW1Factory** ppFactory);
+typedef HRESULT(STDMETHODCALLTYPE* PFN_FW1CREATEFACTORY)(uint32_t Version, IFW1Factory** ppFactory);
 
+namespace cereal
+{
 
+	template<class Archive>
+	void serialize(Archive& ar, FW1_GLYPHCOORDS& g)
+	{
+		
+	}
+}
 #endif// IncludeGuard__FW1_FW1FontWrapper_h

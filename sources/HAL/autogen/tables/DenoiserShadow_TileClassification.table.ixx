@@ -92,7 +92,40 @@ export namespace Table
 			uint rwsb_tileMetaData; // RWStructuredBuffer<uint>
 			uint rwt2d_reprojectionResults; // RWTexture2D<float2>
 			uint rwt2d_momentsBuffer; // RWTexture2D<float3>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(Eye);
+				ar& NVP(FirstFrame);
+				ar& NVP(BufferDimensions);
+				ar& NVP(InvBufferDimensions);
+				ar& NVP(ProjectionInverse);
+				ar& NVP(ReprojectionMatrix);
+				ar& NVP(ViewProjectionInverse);
+				ar& NVP(DepthSimilaritySigma);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::DenoiserShadow_TileClassification";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(Eye);
+			ar& NVP(FirstFrame);
+			ar& NVP(BufferDimensions);
+			ar& NVP(InvBufferDimensions);
+			ar& NVP(ProjectionInverse);
+			ar& NVP(ReprojectionMatrix);
+			ar& NVP(ViewProjectionInverse);
+			ar& NVP(DepthSimilaritySigma);
+		}
 
 	};
 	#pragma pack(pop)

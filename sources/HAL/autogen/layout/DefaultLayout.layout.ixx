@@ -21,7 +21,7 @@ export struct DefaultLayout: public FrameLayout
 	struct Instance1
 	{
 		static const uint ID = 5;
-		static const uint CB = 4;
+		static const uint CB = 17;
 		static const uint CB_ID = 16;
 		static const uint SRV = 12;
 		static const uint SRV_ID = 18;

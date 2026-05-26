@@ -32,7 +32,26 @@ export namespace Table
 			int2 BufferDimensions; // int2
 			uint t2d_hitMaskResults; // Texture2D<uint>
 			uint rwsb_shadowMask; // RWStructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(BufferDimensions);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::DenoiserShadow_Prepare";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(BufferDimensions);
+		}
 
 	};
 	#pragma pack(pop)

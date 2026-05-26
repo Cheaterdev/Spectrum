@@ -1,0 +1,69 @@
+#pragma once
+#include "../PassNodeBase.h"
+
+using namespace FrameGraph;
+namespace Passes
+{
+
+class Lighting : public PassNodeBase
+{
+public:
+	struct Context
+	{
+
+
+		Handlers::Texture H(global_depth);
+
+		Handlers::StructuredBuffer<Table::Camera> H(global_camera);
+
+
+		Handlers::Texture3D H(VoxelLighted);
+
+
+		Handlers::Texture3D H(VoxelAlbedo);
+
+
+		Handlers::Texture3D H(VoxelNormal);
+
+
+		Handlers::TextureCube H(sky_cubemap_filtered);
+
+
+		Handlers::Texture H(VoxelAlbedoStatic);
+
+
+		Handlers::Texture H(VoxelNormalStatic);
+
+
+		Handlers::Texture H(VoxelAlbedoDynamic);
+
+
+		Handlers::Texture H(VoxelNormalDynamic);
+
+		static inline const wchar_t* const resource_names[] = {		L"global_depth",		L"global_camera",		L"VoxelLighted",		L"VoxelAlbedo",		L"VoxelNormal",		L"sky_cubemap_filtered",		L"VoxelAlbedoStatic",		L"VoxelNormalStatic",		L"VoxelAlbedoDynamic",		L"VoxelNormalDynamic",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
+	};
+
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
+
+	static inline const wchar_t* Name = L"Lighting";
+
+//	static constexpr PassID ID = PassID::Lighting;
+
+
+	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
+
+
+	setup_func_type setup_func;
+	render_func_type render_func;
+
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+};
+
+}

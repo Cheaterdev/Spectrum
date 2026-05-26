@@ -24,7 +24,24 @@ export namespace Table
 		struct Compiled
 		{
 			uint viewBuffer; // RWStructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::PickerBuffer";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

@@ -1,0 +1,17 @@
+#pragma once
+#include "sig_hlsl.hlsl"
+struct FrameGraph_Debug_Common
+{
+	uint2 targetSize; // uint2
+	float3 minColor; // float3
+	float3 maxColor; // float3
+	uint selectedMip; // uint
+	uint selectedArrayIndex; // uint
+	uint target; // RWTexture2D<float4>
+	uint2 GetTargetSize() { return targetSize; }
+	float3 GetMinColor() { return minColor; }
+	float3 GetMaxColor() { return maxColor; }
+	uint GetSelectedMip() { return selectedMip; }
+	uint GetSelectedArrayIndex() { return selectedArrayIndex; }
+	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
+};

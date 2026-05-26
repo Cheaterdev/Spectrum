@@ -8,8 +8,8 @@ import :Scheduler;
 import :FileSystem;
 import :Holdable;
 
-import <stl/filesystem.h>;
-import <stl/memory.h>;
+import stl.filesystem;
+import stl.memory;
 import windows;
 
 import :Serializer;

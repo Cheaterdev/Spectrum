@@ -1,5 +1,5 @@
 
-// Generated from SIG.g4 by ANTLR 4.11.1
+// Generated from c:/Users/Bohdan/Documents/GitHub/Spectrum/sources/SIGParser/SIG.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -23,9 +23,10 @@ public:
     OBRACE = 54, CBRACE = 55, OSBRACE = 56, CSBRACE = 57, TRUE = 58, FALSE = 59, 
     LOG = 60, LAYOUT = 61, STRUCT = 62, COMPUTE_PSO = 63, GRAPHICS_PSO = 64, 
     RAYTRACE_PSO = 65, WORKGRAPH_PSO = 66, RAYTRACE_RAYGEN = 67, RAYTRACE_PASS = 68, 
-    SLOT = 69, RT = 70, RTV = 71, DSV = 72, ROOTSIG = 73, ID = 74, INT_SCALAR = 75, 
-    FLOAT_SCALAR = 76, STRING = 77, COMMENT = 78, SPACE = 79, POINTER = 80, 
-    INSERT_START = 81, INSERT_END = 82, INSERT_BLOCK = 83
+    PASS = 69, VIEW = 70, PIPELINE = 71, SLOT = 72, RT = 73, RTV = 74, DSV = 75, 
+    ROOTSIG = 76, ID = 77, INT_SCALAR = 78, FLOAT_SCALAR = 79, STRING = 80, 
+    COMMENT = 81, SPACE = 82, POINTER = 83, INSERT_START = 84, INSERT_END = 85, 
+    INSERT_BLOCK = 86
   };
 
   explicit SIGLexer(antlr4::CharStream *input);

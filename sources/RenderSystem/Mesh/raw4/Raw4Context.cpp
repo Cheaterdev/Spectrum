@@ -1,4 +1,4 @@
-
+﻿
 #include "Raw4Context.h"
 #include <stdlib.h>
 #include <string.h>
@@ -60,7 +60,7 @@ const raw4_value* Raw4Context::GetValue(const raw4_block_values* values, const c
 	{
 		const char* name = GetString(values->values[i].name);
 
-		if(strcmp(name, vname) == 0) return values->values + i;
+		if(std::strcmp(name, vname) == 0) return values->values + i;
 	}
 
 	return nullptr;

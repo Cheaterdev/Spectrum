@@ -28,7 +28,26 @@ export namespace Table
 		{
 			uint4 voxels_per_tile; // uint4
 			uint tiles; // StructuredBuffer<int3>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(voxels_per_tile);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::VoxelTilingParams";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(voxels_per_tile);
+		}
 
 	};
 	#pragma pack(pop)

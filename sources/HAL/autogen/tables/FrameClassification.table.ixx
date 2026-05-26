@@ -32,7 +32,24 @@ export namespace Table
 			uint frames; // Texture2D<float>
 			uint hi; // AppendStructuredBuffer<uint2>
 			uint low; // AppendStructuredBuffer<uint2>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::FrameClassification";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

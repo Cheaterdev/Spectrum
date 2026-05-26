@@ -57,7 +57,7 @@ namespace HAL
 				request.operation = StorageRequest::Texture{texture.subresource,texture.count};
 			},
 			[&](auto other) {
-				assert(false);
+				ASSERT(false);
 			}
 			}, data.desc);
 

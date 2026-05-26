@@ -36,7 +36,24 @@ export namespace Table
 			uint low_counter; // StructuredBuffer<uint>
 			uint hi_dispatch_data; // RWStructuredBuffer<DispatchArguments>
 			uint low_dispatch_data; // RWStructuredBuffer<DispatchArguments>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::FrameClassificationInitDispatch";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

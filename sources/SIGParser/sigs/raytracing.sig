@@ -176,3 +176,14 @@ RaytracePass ColorPass
 	local = MaterialInfo;
 	per_material = true;
 }
+
+
+
+[Static]
+[Compute]
+PassNode RTXPass
+{
+	GBuffer gbuffer;
+	Texture RTXDebug;
+	ByteAdressBuffer WorkGraphBuffer;
+}

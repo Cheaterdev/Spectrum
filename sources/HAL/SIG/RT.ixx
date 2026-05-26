@@ -30,7 +30,7 @@ public:
 	template<HAL::HandleClass T>
 	void compile(const T& handle)
 	{
-		assert(handle.is_valid());
+		ASSERT(handle.is_valid());
 
 		if (handle.get_storage()->can_free())
 			descriptors.insert(handle.get_storage());
@@ -42,7 +42,7 @@ public:
 		else if constexpr (T::TYPE == HAL::HandleType::DSV)
 			dsv = (&handle);
 		else
-			assert(false);
+			ASSERT(false);
 	}
 
 	template<HAL::HandleClass T, uint N>

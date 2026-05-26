@@ -1,0 +1,48 @@
+#pragma once
+#include "../PassNodeBase.h"
+
+using namespace FrameGraph;
+namespace Passes
+{
+
+class FSR : public PassNodeBase
+{
+public:
+	struct Context
+	{
+
+
+		Handlers::Texture H(ResultTexture);
+
+		Handlers::Texture ResultTextureNew = ResultTexture;
+
+		Handlers::Texture H(FSRTemp);
+
+		static inline const wchar_t* const resource_names[] = {		L"ResultTexture",
+		L"ResultTextureNew",		L"FSRTemp",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
+	};
+
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
+
+	static inline const wchar_t* Name = L"FSR";
+
+//	static constexpr PassID ID = PassID::FSR;
+
+
+	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
+
+
+	setup_func_type setup_func;
+	render_func_type render_func;
+
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+};
+
+}

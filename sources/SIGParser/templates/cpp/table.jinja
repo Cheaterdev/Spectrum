@@ -97,6 +97,19 @@ export namespace Table
 			{{-compile_func2(ValueType.UAV)}}
 			{{-compile_func2(ValueType.SMP)}}
 			{{-compile_func2(ValueType.STRUCT)}}
+
+			
+			private:
+			SERIALIZE()
+			{
+			{%- for v in table.values -%}
+			{%- if v.value_type == ValueType.CB or v.value_type== ValueType.STRUCT %}
+				ar& NVP({{v.name}});
+			{%-endif-%}
+			{%- endfor %}
+			}
+
+
 		};
 {%-else-%}
 		using Compiled = {{table.name}};
@@ -115,7 +128,10 @@ export namespace Table
 		}
 {%-endif-%}
 
-{%if table.options.serialize is defined-%}
+		static std::string get_typename()
+		{
+			return "Tables::{{table.name}}";
+		}
 		private:
 		SERIALIZE()
 		{
@@ -125,7 +141,7 @@ export namespace Table
 {%-endif-%}
 {%- endfor %}
 		}
-{%endif-%}
+
 	};
 	#pragma pack(pop)
 }

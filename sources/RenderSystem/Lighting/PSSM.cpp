@@ -31,404 +31,285 @@ void PSSM::set_position(float3 p)
 PSSM::PSSM()
 {
 	position = float3(200, 400, 200);
-}
 
-	void PSSM::generate_global(Graph& graph)
+	// ---- Global shadow map ---------------------------------------------------
+
+	m_global_setup = [this](Passes::PSSM_Global::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-	
-	 auto& sceneinfo = graph.get_context<SceneInfo>();
-	auto& caminfo = graph.get_context<CameraInfo>();
+		auto& sceneinfo = builder.graph->get_context<SceneInfo>();
+		auto& caminfo   = builder.graph->get_context<CameraInfo>();
 
-	   
-	auto scene = sceneinfo.scene;
-	auto min = scene->get_min();
-	auto max = scene->get_max();
-	auto cam = caminfo.cam;
+		auto scene = sceneinfo.scene;
+		auto cam   = caminfo.cam;
 
+		scaler = cam->z_far / (exp((float)renders_size));
 
-	auto points_all = cam->get_points(min, max);
-	float one_pixel_size = (max - min).max_element() / size.x;
-	float3 center = (max + min) / 2;
-	const float clearColor[] = { 0, 0, 0, 0 };
-
-	scaler = cam->z_far / (exp((float)renders_size));
-
-	static float t = 0;
-
-
-	float znear = cam->z_near;
-	float zfar = 10;
-
-
-	
-	   
-
-	struct PSSMDataGlobal
-	{
-		Handlers::Texture H(global_depth);
-		Handlers::StructuredBuffer<Table::Camera> H(global_camera);
+		builder.create(data.global_depth,  { ivec3(1024, 1024, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil);
+		builder.create(data.global_camera, { 1 },                                                      FrameGraph::ResourceFlags::GenCPU);
+		return true;
 	};
 
-	graph.add_pass<PSSMDataGlobal>(L"PSSM_Global", [this, &graph](PSSMDataGlobal& data, TaskBuilder& builder) {
-		builder.create(data.global_depth, { ivec3(1024, 1024,0), HAL::Format::R32_TYPELESS, 1 ,1 }, ResourceFlags::DepthStencil);
-		builder.create(data.global_camera, { 1 }, ResourceFlags::GenCPU);
-		}, [this, &graph, cam, points_all](PSSMDataGlobal& data, FrameContext& _context) {
+	m_global_render = [this](Passes::PSSM_Global::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& command_list = context.get_list();
+		auto& graphics     = command_list->get_graphics();
+		auto& compute      = command_list->get_compute();
 
-			auto& command_list = _context.get_list();
+		auto& sceneinfo = context.graph->get_context<SceneInfo>();
+		auto& caminfo   = context.graph->get_context<CameraInfo>();
 
-			auto& graphics = command_list->get_graphics();
-			auto& compute = command_list->get_compute();
+		auto scene      = sceneinfo.scene;
+		auto cam        = caminfo.cam;
+		auto min        = scene->get_min();
+		auto max        = scene->get_max();
+		auto points_all = cam->get_points(min, max);
 
-			auto& sceneinfo = graph.get_context<SceneInfo>();
+		camera light_cam;
+		light_cam.set_projection_params(0, 1, 0, 1, 1, 1000);
+		light_cam.position = get_position();
+		light_cam.up = (float3(0.01, 1, 0.023)).normalize();
+		light_cam.update();
 
+		auto bounds_all = points_all.get_bounds_in(light_cam.get_view());
 
+		MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
+		mesh_ctx->priority    = TaskPriority::HIGH;
+		mesh_ctx->list        = command_list;
+		mesh_ctx->cam         = &light_cam;
+		mesh_ctx->render_type = RENDER_TYPE::DEPTH;
+
+		auto renderer = sceneinfo.renderer;
+
+		box bounds = points_all.get_bounds_in(light_cam.get_view());
+		light_cam.set_projection_params(
+			bounds.left - 1, bounds.right + 1,
+			bounds.top  - 1, bounds.bottom + 1,
+			std::min(bounds_all.znear - 10, bounds.znear), bounds.zfar);
+		light_cam.update();
+
+		data.global_camera->write(0, &light_cam.camera_cb.current, 1);
+
+		{
+			RT::DepthOnly rt;
+			rt.GetDepth() = data.global_depth->depthStencil;
+			command_list->get_graphics().set_rtv(rt, RTOptions::Default | RTOptions::ClearDepth);
+		}
+
+		{
+			Slots::FrameInfo frameInfo;
+			frameInfo.GetBrdf()   = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+			frameInfo.GetCamera() = light_cam.camera_cb.current;
+			graphics.set(frameInfo);
+			compute.set(frameInfo);
+		}
+
+		renderer->render(mesh_ctx, scene->get_ptr<Scene>());
+	};
+
+	// ---- Cascade shadow maps -------------------------------------------------
+
+	for (int i = 0; i < renders_size; i++)
+	{
+		m_cascade_setup[i] = [this, i](Passes::PSSM_Cascade::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+		{
+			if (i == 0)
+			{
+				builder.create(data.PSSM_Depths,  { ivec3(size, 0), HAL::Format::R32_TYPELESS, renders_size, 1 }, FrameGraph::ResourceFlags::DepthStencil);
+				builder.create(data.PSSM_Cameras, { renders_size },                                               FrameGraph::ResourceFlags::GenCPU);
+			}
+			else
+			{
+				builder.need(data.PSSM_Cameras, FrameGraph::ResourceFlags::GenCPU);
+				builder.need(data.PSSM_Depths,  FrameGraph::ResourceFlags::DepthStencil);
+			}
+			return true;
+		};
+
+		m_cascade_render[i] = [this, i](Passes::PSSM_Cascade::Context& data, FrameGraph::FrameContext& context)
+		{
+			auto& command_list = context.get_list();
+			auto& graphics     = command_list->get_graphics();
+			auto& compute      = command_list->get_compute();
+
+			auto& sceneinfo = context.graph->get_context<SceneInfo>();
+			auto& caminfo   = context.graph->get_context<CameraInfo>();
+			auto  cam       = caminfo.cam;
 
 			graphics.set_signature(Layouts::DefaultLayout);
 			compute.set_signature(Layouts::DefaultLayout);
 
 			camera light_cam;
-
 			light_cam.set_projection_params(0, 1, 0, 1, 1, 1000);
 			light_cam.position = get_position();
 			light_cam.up = (float3(0.01, 1, 0.023)).normalize();
 			light_cam.update();
 
-
+			auto scene      = sceneinfo.scene;
+			auto min        = scene->get_min();
+			auto max        = scene->get_max();
+			auto points_all = cam->get_points(min, max);
 			auto bounds_all = points_all.get_bounds_in(light_cam.get_view());
 
+			float znear = (i == 0) ? cam->z_near : cam->z_near + exp((float)i)       * scaler;
+			float zfar  =            cam->z_near + exp((float)(i + 1)) * scaler;
 
+			if (i == 0)	// small hack to enable aliasing of entire resource
+			{
+				command_list->transition((*data.PSSM_Depths).resource, ResourceStates::DEPTH_STENCIL);
+			}
 
-			MeshRenderContext::ptr context(new MeshRenderContext());
+			MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
+			mesh_ctx->priority = TaskPriority::HIGH;
+			mesh_ctx->list     = command_list;
+			mesh_ctx->cam      = &light_cam;
 
-			context->priority = TaskPriority::HIGH;
-			context->list = command_list;
-			context->cam = &light_cam;
-			context->render_type = RENDER_TYPE::DEPTH;
+			auto depth_tex = data.PSSM_Depths->create_2d_slice(i, *command_list);
+			auto renderer  = sceneinfo.renderer;
 
-			auto scene = sceneinfo.scene;
-			auto renderer = sceneinfo.renderer;
-
-
-			box bounds = points_all.get_bounds_in(light_cam.get_view());
-			light_cam.set_projection_params(bounds.left - 1, bounds.right + 1, bounds.top - 1, bounds.bottom + 1, std::min(bounds_all.znear - 10, bounds.znear), bounds.zfar);
-
+			auto points = cam->get_points(znear, zfar);
+			box  bounds = points.get_bounds_in(light_cam.get_view());
+			light_cam.set_projection_params(
+				bounds.left - 1, bounds.right + 1,
+				bounds.top  - 1, bounds.bottom + 1,
+				std::min(bounds_all.znear - 10, bounds.znear), bounds.zfar);
 			light_cam.update();
 
-			//	auto ptr = reinterpret_cast<camera::shader_params*>(shadow_cameras->get_data() )+ i;// *sizeof(camera::shader_params), (i + 1) * sizeof(camera::shader_params));
-			//	*ptr = light_cam.get_const_buffer().data().current;
-
-			data.global_camera->write(0, &light_cam.camera_cb.current, 1);
-
-			//context->overrided_pipeline = mat->get_pipeline();
-			//context->use_materials = false;
-			//context->pipeline.blend.render_target[0].enabled = false;
-			//context->pipeline.rasterizer.cull_mode = CullMode::Front;
+			data.PSSM_Cameras->write(i * sizeof(camera::shader_params),
+				reinterpret_cast<Table::Camera*>(&light_cam.camera_cb.current), 1);
 
 			{
 				RT::DepthOnly rt;
-				rt.GetDepth() = data.global_depth->depthStencil;
-				auto compiled = command_list->get_graphics().set_rtv(rt, RTOptions::Default |  RTOptions::ClearDepth);
+				rt.GetDepth() = depth_tex.depthStencil;
+				command_list->get_graphics().set_rtv(rt, RTOptions::Default | RTOptions::ClearDepth);
 			}
-
 
 			{
 				Slots::FrameInfo frameInfo;
-
-				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
-				auto& camera = frameInfo.GetCamera();
-				//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
-				camera = light_cam.camera_cb.current;
+				frameInfo.GetBrdf()   = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+				frameInfo.GetCamera() = light_cam.camera_cb.current;
 				graphics.set(frameInfo);
 				compute.set(frameInfo);
 			}
 
-			renderer->render(context, scene->get_ptr<Scene>());
-
-
-		});
-
-	
-	
+			mesh_ctx->render_type = RENDER_TYPE::DEPTH;
+			renderer->render(mesh_ctx, scene->get_ptr<Scene>());
+		};
 	}
 
+	// ---- Generate light mask -------------------------------------------------
 
-void PSSM::generate(Graph& graph)
-{
-
-	auto& sceneinfo = graph.get_context<SceneInfo>();
-	auto& caminfo = graph.get_context<CameraInfo>();
-
-
-	auto scene = sceneinfo.scene;
-	auto min = scene->get_min();
-	auto max = scene->get_max();
-	auto cam = caminfo.cam;
-
-
-	auto points_all = cam->get_points(min, max);
-	float one_pixel_size = (max - min).max_element() / size.x;
-	float3 center = (max + min) / 2;
-	const float clearColor[] = { 0, 0, 0, 0 };
-
-	scaler = cam->z_far / (exp((float)renders_size));
-
-	static float t = 0;
-
-
-	float znear = cam->z_near;
-	float zfar = 10;
-
-
-
-
-
-	struct PSSMData
+	m_mask_setup = [this](Passes::PSSM_GenerateMask::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		GBufferViewDesc gbuffer;
-
-		Handlers::Texture H(LightMask);
-		Handlers::Texture H(PSSM_Depths);
-		Handlers::Texture H(ResultTexture);
-		Handlers::StructuredBuffer<Table::Camera> H(PSSM_Cameras);
-
-		Handlers::Texture H(RTXDebug);
+		auto& frame = builder.graph->get_context<ViewportInfo>();
+		builder.create(data.LightMask, { ivec3(frame.frame_size, 0), HAL::Format::R8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
+		GBufferViewDesc::need(builder, data.gbuffer);
+		builder.need(data.PSSM_Depths,  FrameGraph::ResourceFlags::PixelRead);
+		builder.need(data.PSSM_Cameras, FrameGraph::ResourceFlags::None);
+		return true;
 	};
 
-	graph.add_pass<PSSMData>(L"PSSM_TexGenerator", [this, &graph](PSSMData& data, TaskBuilder& builder) {
-		builder.create(data.PSSM_Depths, { ivec3(size,0), HAL::Format::R32_TYPELESS,renders_size ,1 }, ResourceFlags::DepthStencil);
-		builder.create(data.PSSM_Cameras, { renders_size }, ResourceFlags::GenCPU);
-		}, [](PSSMData& data, FrameContext& _context) {});
-
-
-
-	auto position = get_position();
-	for (int i = 0; i < renders_size; i++)
+	m_mask_render = [this](Passes::PSSM_GenerateMask::Context& data, FrameGraph::FrameContext& context)
 	{
-		zfar = cam->z_near + (exp(float(i + 1))) * scaler;
+		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
 
+		auto& list     = *context.get_list();
+		auto& graphics = list.get_graphics();
+		auto& compute  = list.get_compute();
 
+		context.graph->set_slot(SlotID::FrameInfo, graphics);
+		context.graph->set_slot(SlotID::FrameInfo, compute);
 
-		graph.add_pass<PSSMData>(L"PSSM_Cascade_" , [this, &graph](PSSMData& data, TaskBuilder& builder) {
-			builder.need(data.PSSM_Cameras, ResourceFlags::None);
-			builder.need(data.PSSM_Depths, ResourceFlags::DepthStencil);
-			}, [this, &graph, i, znear, zfar, cam, points_all, position](PSSMData& data, FrameContext& _context) {
+		{
+			Slots::PSSMLighting lighting;
+			gbuffer.SetTable(lighting.GetGbuffer());
+			graphics.set(lighting);
+		}
 
-				auto& command_list = _context.get_list();
-				auto& graphics = command_list->get_graphics();
-				auto& compute = command_list->get_compute();
+		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+		graphics.set_viewport(data.LightMask->get_viewport());
+		graphics.set_scissor(data.LightMask->get_scissor());
 
-				auto& sceneinfo = graph.get_context<SceneInfo>();
+		{
+			RT::SingleColor rt;
+			rt.GetColor() = data.LightMask->renderTarget;
+			graphics.set_rtv(rt);
+		}
 
-				graphics.set_signature(Layouts::DefaultLayout);
-				compute.set_signature(Layouts::DefaultLayout);
+		graphics.set_pipeline<PSOS::PSSMMask>();
 
-				camera light_cam;
+		{
+			Slots::PSSMData pssmdata;
+			pssmdata.GetLight_buffer()  = data.PSSM_Depths->texture2DArray;
+			pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
+			graphics.set(pssmdata);
+		}
 
-				light_cam.set_projection_params(0, 1, 0, 1, 1, 1000);
-				light_cam.position = get_position();
-				light_cam.up = (float3(0.01, 1, 0.023)).normalize();
-				light_cam.update();
-
-
-				auto bounds_all = points_all.get_bounds_in(light_cam.get_view());
-
-
-
-				MeshRenderContext::ptr context(new MeshRenderContext());
-
-				context->priority = TaskPriority::HIGH;
-				context->list = command_list;
-				context->cam = &light_cam;
-
-				auto depth_tex = data.PSSM_Depths->create_2d_slice(i, *command_list);
-				//	auto shadow_cameras = _context.get_buffer(data.shadow_cameras);
-
-				auto scene = sceneinfo.scene;
-				auto renderer = sceneinfo.renderer;
-
-
-
-
-
-				auto points = cam->get_points(znear, zfar);
-
-
-				box bounds = points.get_bounds_in(light_cam.get_view());
-				light_cam.set_projection_params(bounds.left - 1, bounds.right + 1, bounds.top - 1, bounds.bottom + 1, std::min(bounds_all.znear - 10, bounds.znear), bounds.zfar);
-
-				light_cam.update();
-
-				//	auto ptr = reinterpret_cast<camera::shader_params*>(shadow_cameras->get_data() )+ i;// *sizeof(camera::shader_params), (i + 1) * sizeof(camera::shader_params));
-				//	*ptr = light_cam.get_const_buffer().data().current;
-
-				data.PSSM_Cameras->write(i * sizeof(camera::shader_params), reinterpret_cast<Table::Camera*>(&light_cam.camera_cb.current), 1);
-
-				{
-					RT::DepthOnly rt;
-					rt.GetDepth() = depth_tex.depthStencil;
-					command_list->get_graphics().set_rtv(rt, RTOptions::Default | RTOptions::ClearDepth);
-				}
-
-				{
-					Slots::FrameInfo frameInfo;
-
-					frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
-					auto& camera = frameInfo.GetCamera();
-					//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
-					camera = light_cam.camera_cb.current;
-					graphics.set(frameInfo);
-					compute.set(frameInfo);
-				}
-				context->render_type = RENDER_TYPE::DEPTH;
-
-				renderer->render(context, scene->get_ptr<Scene>());
-			}
-			);
-		znear = zfar;
-	}
-
-
-	// relight pass
-	graph.add_pass<PSSMData>(L"PSSM_GenerateMask", [this, &graph](PSSMData& data, TaskBuilder& builder) {
-		auto& frame = graph.get_context<ViewportInfo>();
-
-		builder.create(data.LightMask, { ivec3(frame.frame_size,0), HAL::Format::R8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-		data.gbuffer.need(builder);
-		builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);
-		builder.need(data.PSSM_Cameras, ResourceFlags::None);
-
-		}, [this, &graph](PSSMData& data, FrameContext& _context) {
-
-			GBuffer gbuffer = data.gbuffer.actualize(_context);
-
-			auto& list = *_context.get_list();
-
-			auto& graphics = list.get_graphics();
-			auto& compute = list.get_compute();
-
-			//list.set_my_heap();// set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_csu());
-			graphics.set_signature(Layouts::DefaultLayout);
-			compute.set_signature(Layouts::DefaultLayout);
-
-			graph.set_slot(SlotID::FrameInfo, graphics);
-			graph.set_slot(SlotID::FrameInfo, compute);
-
+		for (int i = renders_size - 1; i >= 0; i--)
+		{
 			{
-				Slots::PSSMLighting lighting;
-
-				gbuffer.SetTable(lighting.GetGbuffer());
-
-				//lighting.GetLight_mask() = screen_light_mask.get_srv();
-
-				graphics.set(lighting);
+				Slots::PSSMConstants constants;
+				constants.GetLevel() = i;
+				constants.GetTime()  = 0;
+				graphics.set(constants);
 			}
+			graphics.draw(4);
+		}
+	};
 
-			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+	// ---- Combine lighting ----------------------------------------------------
 
-
-			graphics.set_viewport(data.LightMask->get_viewport());
-			graphics.set_scissor(data.LightMask->get_scissor());
-			{
-				RT::SingleColor rt;
-				rt.GetColor() = data.LightMask->renderTarget;
-				graphics.set_rtv(rt);
-			}
-			graphics.set_pipeline<PSOS::PSSMMask>();
-
-
-			{
-				Slots::PSSMData pssmdata;
-				pssmdata.GetLight_buffer() = data.PSSM_Depths->texture2DArray;
-				pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
-				graphics.set(pssmdata);
-			}
-
-			for (int i = renders_size - 1; i >= 0; i--) //rangeees
-			{
-				//		PROFILE_GPU((std::wstring(L"renders") + std::to_wstring(i)).c_str());
-				{
-					Slots::PSSMConstants constants;
-					constants.GetLevel() = i;
-					constants.GetTime() = 0;
-					graphics.set(constants);
-				}
-				graphics.draw(4);
-			}
-
-		});
-
-
-	// relight pass
-	graph.add_pass<PSSMData>(L"PSSM_Combine", [this, &graph](PSSMData& data, TaskBuilder& builder) {
-
-		data.gbuffer.need(builder);
-
-		//  builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);
-		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-		builder.need(data.PSSM_Cameras, ResourceFlags::None);
+	m_combine_setup = [this](Passes::PSSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		GBufferViewDesc::need(builder, data.gbuffer);
+		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::RenderTarget);
+		builder.need(data.PSSM_Cameras,  FrameGraph::ResourceFlags::PixelRead);
 
 		if (builder.exists(data.RTXDebug))
-		{
-
-			builder.need(data.RTXDebug, ResourceFlags::PixelRead);
-		}
+			builder.need(data.RTXDebug,  FrameGraph::ResourceFlags::PixelRead);
 		else
+			builder.need(data.LightMask, FrameGraph::ResourceFlags::PixelRead);
+
+		return true;
+	};
+
+	m_combine_render = [this](Passes::PSSM_Combine::Context& data, FrameGraph::FrameContext& context)
+	{
+		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+
+		auto& list     = *context.get_list();
+		auto& graphics = list.get_graphics();
+		auto& compute  = list.get_compute();
+
+		context.graph->set_slot(SlotID::FrameInfo, graphics);
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+
+		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+		graphics.set_viewport(data.ResultTexture->get_viewport());
+		graphics.set_scissor(data.ResultTexture->get_scissor());
+
 		{
-			builder.need(data.LightMask, ResourceFlags::PixelRead);
-
+			Slots::PSSMData pssmdata;
+			pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
+			graphics.set(pssmdata);
 		}
-		}, [this, &graph](PSSMData& data, FrameContext& _context) {
 
-			GBuffer gbuffer = data.gbuffer.actualize(_context);
+		{
+			Slots::PSSMLighting lighting;
+			gbuffer.SetTable(lighting.GetGbuffer());
+			if (data.RTXDebug)
+				lighting.GetLight_mask() = data.RTXDebug->texture2D;
+			else
+				lighting.GetLight_mask() = data.LightMask->texture2D;
+			graphics.set(lighting);
+		}
 
-			auto& list = *_context.get_list();
+		{
+			RT::SingleColor rt;
+			rt.GetColor() = data.ResultTexture->renderTarget;
+			graphics.set_rtv(rt);
+		}
 
-			auto& graphics = list.get_graphics();
-			auto& compute = list.get_compute();
-
-			//list.set_my_heap();// set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_csu());
-			graphics.set_signature(Layouts::DefaultLayout);
-			compute.set_signature(Layouts::DefaultLayout);
-
-			graph.set_slot(SlotID::FrameInfo, graphics);
-			graph.set_slot(SlotID::FrameInfo, compute);
-
-
-			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-
-			graphics.set_viewport(data.ResultTexture->get_viewport());
-			graphics.set_scissor(data.ResultTexture->get_scissor());
-
-			{
-				Slots::PSSMData pssmdata;
-				//	pssmdata.GetLight_buffer() = data.PSSM_Depths->texture2DArray;
-				pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
-				graphics.set(pssmdata);
-			}
-
-			{
-				Slots::PSSMLighting lighting;
-
-				gbuffer.SetTable(lighting.GetGbuffer());
-
-				if (data.RTXDebug)
-					lighting.GetLight_mask() = data.RTXDebug->texture2D;//data.LightMask->texture2D;
-				else
-					lighting.GetLight_mask() = data.LightMask->texture2D;
-
-				graphics.set(lighting);
-			}
-
-			{
-				RT::SingleColor rt;
-				rt.GetColor() = data.ResultTexture->renderTarget;
-				graphics.set_rtv(rt);
-			}
-
-			graphics.set_pipeline<PSOS::PSSMApply>();
-
-			graphics.draw(4);
-
-		});
-
+		graphics.set_pipeline<PSOS::PSSMApply>();
+		graphics.draw(4);
+	};
 }

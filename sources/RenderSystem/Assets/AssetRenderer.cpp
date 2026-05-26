@@ -51,26 +51,15 @@ public:
 		auto size = frame.frame_size;
 
 		{
+   			graph.add_library_pass<Passes::AssetGBuffer>([this, size](auto& data, TaskBuilder& builder) ->bool{
+				GBufferViewDesc::create(size, data.gbuffer,builder);
 
 
-			struct GBufferData
-			{
-				GBufferViewDesc gbuffer;
 
-				Handlers::Texture H(GBuffer_HiZ);
-				Handlers::Texture H(GBuffer_HiZ_UAV);
-			};
-
-			graph.add_pass<GBufferData>(L"GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) {
-				data.gbuffer.create(size, builder);
-				//	data.gbuffer.create_mips(size, builder);
-				//	data.gbuffer.create_quality(size, builder);
-
-
-				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 0), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
-				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 0), HAL::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
-
-				}, [this, &graph](GBufferData& data, FrameContext& _context) {
+				builder.create(data.gbuffer.GBuffer_HiZ, { ivec3(size / 8, 0), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+				builder.create(data.gbuffer.GBuffer_HiZ_UAV, { ivec3(size / 8, 0), HAL::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+				return true;
+				}, [this, &graph](auto& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
 					auto& frame = graph.get_context<ViewportInfo>();
@@ -89,9 +78,9 @@ public:
 
 					context->cam = cam.cam;
 
-					GBuffer gbuffer = data.gbuffer.actualize(_context);
-					gbuffer.HalfBuffer.hiZ_depth = *data.GBuffer_HiZ;
-					gbuffer.HalfBuffer.hiZ_depth_uav = *data.GBuffer_HiZ_UAV;
+					GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+					gbuffer.HalfBuffer.hiZ_depth = *data.gbuffer.GBuffer_HiZ;
+					gbuffer.HalfBuffer.hiZ_depth_uav = *data.gbuffer.GBuffer_HiZ_UAV;
 
 					{
 						RT::GBuffer rtv;
@@ -136,21 +125,16 @@ public:
 
 
 
-		pssm.generate(graph);
-		sky.generate(graph);
-		sky.generate_sky(graph);
+	//	pssm.generate(graph);
+		//sky.generate(graph);
+	//	sky.generate_sky(graph);
 
-		struct no
-		{
-			Handlers::Texture H(ResultTexture);
-		};
-		graph.add_pass<no>(L"mip", [this, &graph](no& data, TaskBuilder& builder) {
+		graph.add_library_pass<Passes::AssetMip>([this, &graph](auto& data, TaskBuilder& builder) ->bool {
 			builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
-			}, [](no& data, FrameContext& _context) {
-
-
+			return true;
+			}, [](auto& data, FrameContext& _context) {
 				MipMapGenerator::get().generate(_context.get_list()->get_compute(), *data.ResultTexture);
-			});
+				});
 
 
 		graph.add_slot_generator([this](Graph& graph) {
@@ -162,7 +146,7 @@ public:
 			//// hack zone
 			auto sky = graph.builder.get("sky_cubemap_filtered");
 			if (sky && sky->resource)
-				frameInfo.GetSky() = sky->get_handler<Handlers::Cube>()->textureCube;
+				frameInfo.GetSky() = sky->get_handler<Handlers::TextureCube>()->textureCube;
 			/////////
 			frameInfo.GetSunDir().xyz = skyinfo.sunDir;
 			frameInfo.GetTime() = { time.time ,time.totalTime,0,0 };
@@ -184,8 +168,7 @@ public:
 			graph.register_slot_setter(scene.scene->compiledScene);
 			});
 
-		//		graph.add_pass([])
-	}
+		}
 
 };
 
@@ -230,9 +213,10 @@ void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
 	skyinfo.sunDir = float3(1, 1, 1).normalize();
 
 	graph.builder.pass_texture("ResultTexture", result, {}, ResourceFlags::Required);
+	graph.builder.debug = true;
 	vp.frame_size = result->get_size().xy;
-	sceneinfo.scene = scene.get();
-	sceneinfo.renderer = scene_renderer.get();
+	sceneinfo.scene = scene;
+	sceneinfo.renderer = scene_renderer;
 	caminfo.cam = &cam;
 
 	rendering->render(graph);

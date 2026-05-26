@@ -29,7 +29,24 @@ export namespace Table
 		{
 			uint vertexes; // StructuredBuffer<mesh_vertex_input>
 			uint indices; // StructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::RaytraceInstanceInfo";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

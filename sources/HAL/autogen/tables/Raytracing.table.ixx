@@ -24,7 +24,24 @@ export namespace Table
 		struct Compiled
 		{
 			uint scene; // RaytracingAccelerationStructure
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::Raytracing";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

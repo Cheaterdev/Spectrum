@@ -41,6 +41,48 @@ namespace HAL
 		}
 	}
 
+
+	bool Format::is_blendable() const
+	{
+		switch (native_format)
+		{
+		case R32G32B32A32_FLOAT:
+		case R32G32B32_FLOAT:
+		case R16G16B16A16_FLOAT:
+		case R16G16B16A16_UNORM:
+		case R16G16B16A16_SNORM:
+		case R32G32_FLOAT:
+		case R10G10B10A2_UNORM:
+		case R11G11B10_FLOAT:
+		case R8G8B8A8_UNORM:
+		case R8G8B8A8_UNORM_SRGB:
+		case R8G8B8A8_SNORM:
+		case R16G16_FLOAT:
+		case R16G16_UNORM:
+		case R16G16_SNORM:
+		case R32_FLOAT:
+		case R8G8_UNORM:
+		case R8G8_SNORM:
+		case R16_FLOAT:
+		case R16_UNORM:
+		case R16_SNORM:
+		case R8_UNORM:
+		case R8_SNORM:
+		case A8_UNORM:
+		case R8G8_B8G8_UNORM:
+		case G8R8_G8B8_UNORM:
+		case B5G6R5_UNORM:
+		case B5G5R5A1_UNORM:
+		case B8G8R8A8_UNORM:
+		case B8G8R8X8_UNORM:
+		case B8G8R8A8_UNORM_SRGB:
+		case B8G8R8X8_UNORM_SRGB:
+			return true;
+
+		default:
+			return false;
+		}
+	}
 	Format  Format::to_dsv() const
 	{
 		switch (native_format)
@@ -221,7 +263,7 @@ namespace HAL
 			return 8;
 
 		default:
-			assert(FALSE); // unhandled format
+			ASSERT(FALSE); // unhandled format
 			return 0;
 		}
 	}
@@ -321,7 +363,7 @@ namespace HAL
 		}
 
 		numBytes = rowBytes * numRows;
-			return { numBytes,rowBytes,numRows };
+		return { numBytes,rowBytes,numRows };
 	}
 
 

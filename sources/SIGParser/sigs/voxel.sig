@@ -462,3 +462,102 @@ ComputePSO ReflectionCombine
 	[EntryPoint = CS]
 	compute = reflection_combine;
 }
+
+
+PassNode GBufferDownsampler
+{
+	GBuffer gbuffer;
+}
+
+PassNode VoxelDebug
+{
+	GBuffer gbuffer;
+	Texture VoxelDebug;
+	Texture3D VoxelLighted;
+}
+
+[Compute]
+PassNode VoxelScreen
+{
+	GBuffer gbuffer;
+	Texture ResultTexture;
+	Texture3D VoxelLighted;
+	Texture VoxelFramesCount;
+	Texture VoxelIndirectNoise;
+	Texture VoxelIndirectFiltered;
+	TextureCube sky_cubemap_filtered;
+	Texture BlueNoise;
+	StructuredBuffer<DispatchArguments> VoxelScreen_hi;
+	StructuredBuffer<DispatchArguments> VoxelScreen_low;
+	StructuredBuffer<uint2> VoxelScreen_low_data;
+	StructuredBuffer<uint2> VoxelScreen_hi_data;
+}
+
+[Compute]
+PassNode VoxelCombine
+{
+	GBuffer gbuffer;
+	Texture ResultTexture;
+	Texture VoxelFramesCount;
+	Texture VoxelIndirectNoise;
+	Texture VoxelIndirectFiltered;
+	TextureCube sky_cubemap_filtered;
+	StructuredBuffer<DispatchArguments> VoxelScreen_hi;
+	StructuredBuffer<DispatchArguments> VoxelScreen_low;
+	StructuredBuffer<uint2> VoxelScreen_low_data;
+	StructuredBuffer<uint2> VoxelScreen_hi_data;
+}
+
+[Compute]
+PassNode ScreenReflection
+{
+	GBuffer gbuffer;
+	Texture VoxelReflectionNoise;
+	Texture noise_dir_pdf;
+	TextureCube sky_cubemap_filtered;
+	Texture BlueNoise;
+	Texture3D VoxelLighted;
+	StructuredBuffer<DispatchArguments> VoxelScreen_hi;
+	StructuredBuffer<DispatchArguments> VoxelScreen_low;
+	StructuredBuffer<uint2> VoxelScreen_low_data;
+	StructuredBuffer<uint2> VoxelScreen_hi_data;
+}
+
+[Compute]
+PassNode ReflCombine
+{
+	GBuffer gbuffer;
+	Texture ResultTexture;
+	Texture VoxelReflectionNoise;
+}
+
+PassNode Voxelize
+{
+	Texture VoxelAlbedo;
+	Texture VoxelNormal;
+	Texture VoxelAlbedoStatic;
+	Texture VoxelNormalStatic;
+	Texture VoxelAlbedoDynamic;
+	Texture VoxelNormalDynamic;
+}
+
+[Compute]
+PassNode Lighting
+{
+	Texture global_depth;
+	StructuredBuffer<Camera> global_camera;
+	Texture3D VoxelLighted;
+	Texture3D VoxelAlbedo;
+	Texture3D VoxelNormal;
+	TextureCube sky_cubemap_filtered;
+	Texture VoxelAlbedoStatic;
+	Texture VoxelNormalStatic;
+	Texture VoxelAlbedoDynamic;
+	Texture VoxelNormalDynamic;
+}
+
+[Compute]
+PassNode Mipmapping
+{
+	Texture3D VoxelLighted;
+}

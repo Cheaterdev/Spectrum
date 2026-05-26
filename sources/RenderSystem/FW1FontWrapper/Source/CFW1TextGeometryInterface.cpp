@@ -1,4 +1,4 @@
-// CFW1TextGeometryInterface.cpp
+﻿// CFW1TextGeometryInterface.cpp
 
 
 
@@ -9,11 +9,11 @@ namespace FW1FontWrapper {
 
 
 // Query interface
-HRESULT STDMETHODCALLTYPE CFW1TextGeometry::QueryInterface(REFIID riid, void **ppvObject) {
-	if(ppvObject == NULL)
+HRESULT STDMETHODCALLTYPE CFW1TextGeometry::QueryInterface(const IID& riid, void **ppvObject) {
+	if(ppvObject == nullptr)
 		return E_INVALIDARG;
 	
-	if(IsEqualIID(riid, __uuidof(IFW1TextGeometry))) {
+	if((riid == __uuidof(IFW1TextGeometry))) {
 		*ppvObject = static_cast<IFW1TextGeometry*>(this);
 		AddRef();
 		return S_OK;

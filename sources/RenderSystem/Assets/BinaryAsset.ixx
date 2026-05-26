@@ -11,7 +11,6 @@ export class BinaryAsset : public Asset
 
 		std::shared_ptr<bool> tester;
         BinaryAsset();
-        LEAK_TEST(BinaryAsset)
     public:
 
         virtual ~BinaryAsset()

@@ -23,8 +23,6 @@ export{
 	protected:
 		HAL::Texture::ptr texture;
 
-		//  LEAK_TEST(TextureAsset)
-
 	public:
 
 
@@ -51,6 +49,8 @@ export{
 				texture = nullptr;
 
 			ar& NVP(texture);
+
+			texture->resource->set_name(convert(name));
 
 			if (!texture)
 				texture = HAL::Texture::null;

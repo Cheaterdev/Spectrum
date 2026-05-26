@@ -74,6 +74,33 @@ export namespace Table
 		}
 		using Compiled = DenoiserReflectionCommon;
 
+		static std::string get_typename()
+		{
+			return "Tables::DenoiserReflectionCommon";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(g_inv_view_proj);
+			ar& NVP(g_proj);
+			ar& NVP(g_inv_proj);
+			ar& NVP(g_view);
+			ar& NVP(g_inv_view);
+			ar& NVP(g_prev_view_proj);
+			ar& NVP(g_buffer_dimensions);
+			ar& NVP(g_inv_buffer_dimensions);
+			ar& NVP(g_temporal_stability_factor);
+			ar& NVP(g_depth_buffer_thickness);
+			ar& NVP(g_roughness_threshold);
+			ar& NVP(g_temporal_variance_threshold);
+			ar& NVP(g_frame_index);
+			ar& NVP(g_max_traversal_intersections);
+			ar& NVP(g_min_traversal_occupancy);
+			ar& NVP(g_most_detailed_mip);
+			ar& NVP(g_samples_per_quad);
+			ar& NVP(g_temporal_variance_guided_tracing_enabled);
+		}
+
 	};
 	#pragma pack(pop)
 }

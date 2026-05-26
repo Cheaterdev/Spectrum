@@ -24,7 +24,24 @@ export namespace Table
 		struct Compiled
 		{
 			uint srcTex; // Texture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::CopyTexture";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

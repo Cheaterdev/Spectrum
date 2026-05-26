@@ -1,0 +1,245 @@
+
+#include "PreScene.h"
+#include "BlueNoise.h"
+#include "Voxelize.h"
+#include "Scene.h"
+#include "PSSM_Global.h"
+#include "PSSM_Cascade.h"
+#include "CubeSky.h"
+#include "CubeMapDownsample.h"
+#include "CubeMapEnviromentProcessor.h"
+#include "RTXPass.h"
+#include "Lighting.h"
+#include "Mipmapping.h"
+#include "ResultCreation.h"
+#include "PSSM_GenerateMask.h"
+#include "PSSM_Combine.h"
+#include "VoxelScreen.h"
+#include "VoxelCombine.h"
+#include "ScreenReflection.h"
+#include "ReflectionDenoiser_Reproject.h"
+#include "ReflCombine.h"
+#include "VoxelDebug.h"
+#include "Sky.h"
+#include "stencil_renderer_before.h"
+#include "stencil_renderer_after.h"
+#include "SMAA.h"
+#include "FSR.h"
+#include "CopyPrev.h"
+#include "Profiler.h"
+#include "UI_Render.h"
+#include "../pass_defaults.h"
+
+using namespace FrameGraph;
+namespace Pipelines
+{
+
+class MainPipeline : public PipelineBase
+{
+public:
+
+	Passes::BlueNoise blueNoise;
+	Passes::Voxelize voxelize;
+	Passes::PSSM_Global pSSM_Global;
+	Passes::PSSM_Cascade pSSM_Cascade;
+	Passes::CubeSky cubeSky;
+	Passes::Lighting lighting;
+	Passes::Mipmapping mipmapping;
+	Passes::PSSM_GenerateMask pSSM_GenerateMask;
+	Passes::PSSM_Combine pSSM_Combine;
+	Passes::VoxelScreen voxelScreen;
+	Passes::VoxelCombine voxelCombine;
+	Passes::ScreenReflection screenReflection;
+	Passes::ReflectionDenoiser_Reproject reflectionDenoiser_Reproject;
+	Passes::ReflCombine reflCombine;
+	Passes::VoxelDebug voxelDebug;
+	Passes::Sky sky;
+	Passes::stencil_renderer_before stencil_renderer_before;
+	Passes::stencil_renderer_after stencil_renderer_after;
+	Passes::SMAA sMAA;
+
+	static inline const wchar_t* const pass_names[] = {
+		Passes::PreScene::Name,
+		Passes::BlueNoise::Name,
+		Passes::Voxelize::Name,
+		Passes::Scene::Name,
+		Passes::PSSM_Global::Name,
+		Passes::PSSM_Cascade::Names[0],
+		Passes::PSSM_Cascade::Names[1],
+		Passes::PSSM_Cascade::Names[2],
+		Passes::PSSM_Cascade::Names[3],
+		Passes::PSSM_Cascade::Names[4],
+		Passes::PSSM_Cascade::Names[5],
+		Passes::CubeSky::Name,
+		Passes::CubeMapDownsample::Name,
+		Passes::CubeMapEnviromentProcessor::Name,
+		Passes::RTXPass::Name,
+		Passes::Lighting::Name,
+		Passes::Mipmapping::Name,
+		Passes::ResultCreation::Name,
+		Passes::PSSM_GenerateMask::Name,
+		Passes::PSSM_Combine::Name,
+		Passes::VoxelScreen::Name,
+		Passes::VoxelCombine::Name,
+		Passes::ScreenReflection::Name,
+		Passes::ReflectionDenoiser_Reproject::Name,
+		Passes::ReflCombine::Name,
+		Passes::VoxelDebug::Name,
+		Passes::Sky::Name,
+		Passes::stencil_renderer_before::Name,
+		Passes::stencil_renderer_after::Name,
+		Passes::SMAA::Name,
+		Passes::FSR::Name,
+		Passes::CopyPrev::Name,
+		Passes::Profiler::Name,
+		Passes::UI_Render::Names[0],
+		Passes::UI_Render::Names[1],
+		Passes::UI_Render::Names[2],
+		Passes::UI_Render::Names[3],
+		Passes::UI_Render::Names[4],
+		Passes::UI_Render::Names[5],
+		Passes::UI_Render::Names[6],
+		Passes::UI_Render::Names[7],
+		Passes::UI_Render::Names[8],
+		Passes::UI_Render::Names[9],
+		Passes::UI_Render::Names[10],
+		Passes::UI_Render::Names[11],
+		Passes::UI_Render::Names[12],
+		Passes::UI_Render::Names[13],
+		Passes::UI_Render::Names[14],
+		Passes::UI_Render::Names[15],
+	};
+	static constexpr uint32_t pass_count = std::size(pass_names);
+
+	std::span<const wchar_t* const> GetUsedPassNamesList() const override
+	{
+		return pass_names;
+	}
+
+	static inline const wchar_t* const resource_names[] = {
+		L"scene",
+		L"BlueNoise",
+		L"VoxelAlbedo",
+		L"VoxelNormal",
+		L"VoxelAlbedoStatic",
+		L"VoxelNormalStatic",
+		L"VoxelAlbedoDynamic",
+		L"VoxelNormalDynamic",
+		L"GBuffer_Albedo",
+		L"GBuffer_Normals",
+		L"GBuffer_Depth",
+		L"GBuffer_Specular",
+		L"GBuffer_Speed",
+		L"GBuffer_DepthMips",
+		L"GBuffer_Quality",
+		L"GBuffer_TempColor",
+		L"GBuffer_NormalsPrev",
+		L"GBuffer_SpecularPrev",
+		L"GBuffer_DepthPrev",
+		L"GBuffer_HiZ",
+		L"GBuffer_HiZ_UAV",
+		L"global_depth",
+		L"global_camera",
+		L"PSSM_Depths",
+		L"PSSM_Cameras",
+		L"sky_cubemap",
+		L"sky_cubemap_filtered",
+		L"sky_cubemap_filtered_diffuse",
+		L"RTXDebug",
+		L"WorkGraphBuffer",
+		L"VoxelLighted",
+		L"ResultTexture",
+		L"LightMask",
+		L"VoxelFramesCount",
+		L"VoxelIndirectNoise",
+		L"VoxelIndirectFiltered",
+		L"VoxelScreen_hi",
+		L"VoxelScreen_low",
+		L"VoxelScreen_low_data",
+		L"VoxelScreen_hi_data",
+		L"VoxelReflectionNoise",
+		L"noise_dir_pdf",
+		L"ReflectionDenoiser_RadiancePrev",
+		L"ReflectionDenoiser_AverageRadiance",
+		L"ReflectionDenoiser_AverageRadiancePrev",
+		L"ReflectionDenoiser_Variance",
+		L"ReflectionDenoiser_VariancePrev",
+		L"ReflectionDenoiser_SampleCount",
+		L"ReflectionDenoiser_SampleCountPrev",
+		L"ReflectionDenoiser_ReprojectedRadiance",
+		L"VoxelDebug",
+		L"depth_tex",
+		L"id_buffer",
+		L"axis_id_buffer",
+		L"Stencil_color_tex",
+		L"ResultTextureNew",
+		L"SMAA_edges",
+		L"SMAA_blend",
+		L"FSRTemp",
+		L"swapchain",
+	};
+	static constexpr uint32_t resource_count = std::size(resource_names);
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return resource_names;
+	}
+
+	void add_passes(FrameGraph::Graph& graph)
+	{
+		graph.set_pipeline(this);
+
+		graph.add_library_pass<Passes::PreScene>(PassDefault<Passes::PreScene>::setup, PassDefault<Passes::PreScene>::render, PassDefault<Passes::PreScene>::flags);
+		if (blueNoise.setup_func)
+			graph.add_library_pass<Passes::BlueNoise>(blueNoise.setup_func, blueNoise.render_func, blueNoise.flags);
+		if (voxelize.setup_func)
+			graph.add_library_pass<Passes::Voxelize>(voxelize.setup_func, voxelize.render_func, voxelize.flags);
+		graph.add_library_pass<Passes::Scene>(PassDefault<Passes::Scene>::setup, PassDefault<Passes::Scene>::render, PassDefault<Passes::Scene>::flags);
+		if (pSSM_Global.setup_func)
+			graph.add_library_pass<Passes::PSSM_Global>(pSSM_Global.setup_func, pSSM_Global.render_func, pSSM_Global.flags);
+		for (uint32_t i = 0; i < Passes::PSSM_Cascade::MaxCount; ++i)
+			if (pSSM_Cascade.setup_funcs[i])
+				graph.add_library_pass<Passes::PSSM_Cascade>(i, pSSM_Cascade.setup_funcs[i], pSSM_Cascade.render_funcs[i], pSSM_Cascade.flags);
+		if (cubeSky.setup_func)
+			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, cubeSky.flags);
+		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, PassDefault<Passes::CubeMapDownsample>::flags);
+		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, PassDefault<Passes::CubeMapEnviromentProcessor>::flags);
+		graph.add_library_pass<Passes::RTXPass>(PassDefault<Passes::RTXPass>::setup, PassDefault<Passes::RTXPass>::render, PassDefault<Passes::RTXPass>::flags);
+		if (lighting.setup_func)
+			graph.add_library_pass<Passes::Lighting>(lighting.setup_func, lighting.render_func, lighting.flags);
+		if (mipmapping.setup_func)
+			graph.add_library_pass<Passes::Mipmapping>(mipmapping.setup_func, mipmapping.render_func, mipmapping.flags);
+		graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, PassDefault<Passes::ResultCreation>::flags);
+		if (pSSM_GenerateMask.setup_func)
+			graph.add_library_pass<Passes::PSSM_GenerateMask>(pSSM_GenerateMask.setup_func, pSSM_GenerateMask.render_func, pSSM_GenerateMask.flags);
+		if (pSSM_Combine.setup_func)
+			graph.add_library_pass<Passes::PSSM_Combine>(pSSM_Combine.setup_func, pSSM_Combine.render_func, pSSM_Combine.flags);
+		if (voxelScreen.setup_func)
+			graph.add_library_pass<Passes::VoxelScreen>(voxelScreen.setup_func, voxelScreen.render_func, voxelScreen.flags);
+		if (voxelCombine.setup_func)
+			graph.add_library_pass<Passes::VoxelCombine>(voxelCombine.setup_func, voxelCombine.render_func, voxelCombine.flags);
+		if (screenReflection.setup_func)
+			graph.add_library_pass<Passes::ScreenReflection>(screenReflection.setup_func, screenReflection.render_func, screenReflection.flags);
+		if (reflectionDenoiser_Reproject.setup_func)
+			graph.add_library_pass<Passes::ReflectionDenoiser_Reproject>(reflectionDenoiser_Reproject.setup_func, reflectionDenoiser_Reproject.render_func, reflectionDenoiser_Reproject.flags);
+		if (reflCombine.setup_func)
+			graph.add_library_pass<Passes::ReflCombine>(reflCombine.setup_func, reflCombine.render_func, reflCombine.flags);
+		if (voxelDebug.setup_func)
+			graph.add_library_pass<Passes::VoxelDebug>(voxelDebug.setup_func, voxelDebug.render_func, voxelDebug.flags);
+		if (sky.setup_func)
+			graph.add_library_pass<Passes::Sky>(sky.setup_func, sky.render_func, sky.flags);
+		if (stencil_renderer_before.setup_func)
+			graph.add_library_pass<Passes::stencil_renderer_before>(stencil_renderer_before.setup_func, stencil_renderer_before.render_func, stencil_renderer_before.flags);
+		if (stencil_renderer_after.setup_func)
+			graph.add_library_pass<Passes::stencil_renderer_after>(stencil_renderer_after.setup_func, stencil_renderer_after.render_func, stencil_renderer_after.flags);
+		if (sMAA.setup_func)
+			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, sMAA.flags);
+		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, PassDefault<Passes::FSR>::flags);
+		graph.add_library_pass<Passes::CopyPrev>(PassDefault<Passes::CopyPrev>::setup, PassDefault<Passes::CopyPrev>::render, PassDefault<Passes::CopyPrev>::flags);
+		graph.add_library_pass<Passes::Profiler>(PassDefault<Passes::Profiler>::setup, PassDefault<Passes::Profiler>::render, PassDefault<Passes::Profiler>::flags);
+		for (uint32_t i = 0; i < Passes::UI_Render::MaxCount; ++i)
+			graph.add_library_pass<Passes::UI_Render>(i, PassDefault<Passes::UI_Render>::setup, PassDefault<Passes::UI_Render>::render, PassDefault<Passes::UI_Render>::flags);
+	}
+};
+
+}

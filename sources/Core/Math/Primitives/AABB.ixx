@@ -7,8 +7,8 @@ import :Math.Quaternion;
 import :Math.Matrices;
 import :Math.Primitive;
 
-import <stl/memory.h>;
-import <stl/core.h>;
+import stl.memory;
+import stl.core;
 import :serialization;
 
 export
@@ -44,6 +44,7 @@ export
 }
 
 REGISTER_TYPE(AABB)
+CEREAL_FORCE_REGISTER(AABB);
 
 
 

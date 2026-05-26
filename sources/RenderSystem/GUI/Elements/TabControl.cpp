@@ -58,7 +58,7 @@ namespace GUI
         {
             drag_n_drop_copy = false;
             click_style = click_styles::IMMEDIATELY;
-            clip_to_parent = ParentClip::ALL;
+            clamp_to_parent = ParentClamp::ALL;
             size = { 50, 50 };
             width_size = size_type::MATCH_CHILDREN;
             get_label()->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
@@ -230,11 +230,11 @@ namespace GUI
                 old_owner->remove_button(but);
 
             but->owner = get_ptr<tab_control>();
-            but->on_click = [this](button::ptr but)
+            but->on_click.register_handler(this,[this](button::ptr but)
             {
                 tab_button::ptr tab_but = std::static_pointer_cast<tab_button>(but);
                 show_page(tab_but);
-            };
+            });
             strip->add_child(but);
             but->page->visible = false;
             //    if (!cur_page)
@@ -247,6 +247,9 @@ namespace GUI
         }
 		inline void tab_control::remove_button(tab_button::ptr b)
 		{
+
+            b->on_click.unregister(this);
+
 			strip->remove_child(b);
 			strip->recalculate_tabs();
 			strip->set_update_layout();

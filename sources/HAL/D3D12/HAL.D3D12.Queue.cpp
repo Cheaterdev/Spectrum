@@ -137,7 +137,7 @@ namespace HAL
 
 		TEST(device, DStorageGetFactory(IID_PPV_ARGS(&factory)));
 		if constexpr (Debug::CheckErrors)    factory->SetDebugFlags(DSTORAGE_DEBUG_BREAK_ON_ERROR | DSTORAGE_DEBUG_SHOW_ERRORS);
-		factory->SetStagingBufferSize(256 * 1024 * 1024);
+		factory->SetStagingBufferSize(32 * 1024 * 1024);
 
 
 		// Create a DirectStorage queue which will be used to load data into a
@@ -154,7 +154,7 @@ namespace HAL
 	}
 	DirectStorageQueue::~DirectStorageQueue()
 	{
-
+				executor.stop_and_wait();
 	}
 
 	void DirectStorageQueue::flush()
@@ -212,8 +212,8 @@ namespace HAL
 		request.Source.File.Size = static_cast<uint>(srequest.size);
 		request.UncompressedSize = static_cast<uint>(srequest.uncompressed_size);
 
-		assert(request.Source.File.Size == srequest.size);
-		assert(request.UncompressedSize == srequest.uncompressed_size);
+		ASSERT(request.Source.File.Size == srequest.size);
+		ASSERT(request.UncompressedSize == srequest.uncompressed_size);
 
 		std::visit(overloaded{
 					[&](const StorageRequest::Buffer& buffer) {
@@ -243,10 +243,10 @@ namespace HAL
 
 
 								auto l = HAL::Device::get().get_texture_layout(srequest.resource->get_desc(), texture.subresource);
-								assert(l.size==srequest.uncompressed_size);
+								ASSERT(l.size==srequest.uncompressed_size);
 							},
 							[&](auto other) {
-								assert(false);
+								ASSERT(false);
 							}
 			}, srequest.operation);
 
@@ -315,7 +315,9 @@ namespace HAL
 				  	PROFILE(L"Queue::execute");
 			queued.emplace_back(list->get_native().Get());
 
-			
+
+			// My framegraph system pushes Sync&Access barrier as NONE at the end of the pass so its not possible to use it later, need to redesign it
+				   flush();
 		}
 
 		void Queue::flush()
@@ -323,7 +325,7 @@ namespace HAL
 				  	PROFILE(L"Queue::flush");
 			if (!queued.empty())
 			{
-				native->ExecuteCommandLists(queued.size(), queued.data());
+				native->ExecuteCommandLists(uint(queued.size()), queued.data());
 
 				  	PROFILE(L"Queue::clear");
 				queued.clear();

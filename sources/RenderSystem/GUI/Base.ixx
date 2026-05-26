@@ -24,6 +24,7 @@ export
         float delta_time;
         vec2 window_size;
         float scale = 1;
+        HAL::Handle result_texture_srv;
 
         GUIInfo() = default;
         GUIInfo(HAL::CommandList::ptr list) : command_list(list)
@@ -135,7 +136,7 @@ namespace GUI
     };
 
 
-    enum class ParentClip
+    enum class ParentClamp
         :int
     {
         NONE = 0, WIDTH = 1, HEIGHT = 2, ALL = 3
@@ -281,7 +282,7 @@ namespace GUI
             using Context = GUIInfo;
             using ptr = s_ptr<base>;
             using wptr = w_ptr<base>;
-            
+             bool debug=false;
         protected:
 
             using guard = std::lock_guard<std::mutex>;
@@ -293,7 +294,7 @@ namespace GUI
             virtual void think(float dt);;
             drag_n_drop_package::ptr package;
             bool need_update_layout = false;
-
+            
 
             property<rect> render_bounds;
 			rect local_bounds;
@@ -303,6 +304,7 @@ namespace GUI
 
             user_interface* user_ui = nullptr;
             sizer_long parent_sizer;
+			std::set<base*> listeners;
             virtual std::vector<ptr> find_control(vec2 at, bool click_only);
 
             virtual bool test_local_visible();
@@ -310,8 +312,7 @@ namespace GUI
             virtual void draw_recursive(Context&, base* = nullptr);
 
             virtual void pre_draw(HAL::CommandList::ptr list){}; // override;;
-            virtual void draw(Context&); // override;;
-            virtual void draw_after(Context&);;
+           
 
 
      
@@ -332,7 +333,12 @@ namespace GUI
             	}*/
             void run_on_ui(std::function<void()> f);
         public:
+
+         virtual void draw(Context&); // override;;
+            virtual void draw_after(Context&);;
 			virtual sizer update_layout(sizer r, float scale);
+            virtual void update_childs_layout(sizer& r, float scale);
+              virtual void update_childs_layout_after(sizer &r, float scale);
 
 
             float scale = 1;
@@ -424,13 +430,19 @@ namespace GUI
 			property<vec2> scaled_size;
 
             vec2 minimal_size; //todo: property?
-            size_type width_size = size_type::NONE;
+
+            base* width_sticks = nullptr;
+            base* height_sticks = nullptr;
+
             size_type height_size = size_type::NONE;
+            size_type width_size = size_type::NONE;
             pos_x_type x_type = pos_x_type::CENTER;
             pos_y_type y_type = pos_y_type::CENTER;
             vec2 childs_size;
 
-            ParentClip clip_to_parent = ParentClip::NONE;
+            ParentClamp clamp_to_parent = ParentClamp::NONE;
+            std::optional<rect> child_scissor;
+            std::optional<rect> self_scissor;
             /*	protected:
             	int get_max_z*/
 
@@ -464,6 +476,9 @@ namespace GUI
 
             virtual void to_front();
 
+            void register_listener(base* listener);
+			void unregister_listener(base* listener);
+            virtual void on_base_change(base*);
             /*
             bool mouse_action_event(mouse_action action, mouse_button button, vec2 pos)
             {
@@ -533,6 +548,16 @@ namespace GUI
         bool before;
     };
 
+    struct UIContext
+    {
+        std::vector<draw_info> draw_infos;
+        uint32_t setup_counter = 0; // incremented per slot during graph setup; reset each frame
+
+        float dt = 0;
+        vec2  scaled_size;
+        FrameGraph::Handlers::Texture result_texture_handler;
+    };
+
     class user_interface : public base, public InputHandler, public Events::Runner
     {
             friend class base;
@@ -563,7 +588,6 @@ namespace GUI
             bool is_updating_layout = false;
 
             my_unique_vector<FrameGraph::GraphGenerator*> frame_generators;
-            my_unique_vector<FrameGraph::GraphUsage*> frame_usage;
             cursor_style cursor = cursor_style::ARROW;
          
         public:
@@ -624,16 +648,6 @@ namespace GUI
 
 
 
-            void use_graph(FrameGraph::TaskBuilder& builder)
-            {
-
-                 for (auto& gen : frame_usage)
-                {
-                    gen->use(builder);
-                }
-
-
-            }
             std::shared_future<bool> message_box(std::string title, std::string text, std::function<void(bool)> f);
 
             virtual void on_size_changed(const vec2& r) override;

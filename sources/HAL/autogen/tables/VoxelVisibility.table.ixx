@@ -28,7 +28,24 @@ export namespace Table
 		{
 			uint visibility; // Texture3D<uint>
 			uint visible_tiles; // AppendStructuredBuffer<uint4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::VoxelVisibility";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

@@ -44,7 +44,7 @@ export{
 			void track_object(T& obj)
 			{
 				auto& state = obj.ObjectState<TrackedObjectState>::get_state(this);
-				assert(!state.alias_ended);
+//				ASSERT(!state.alias_ended);
 				if (!state.used)
 				{
 					state.used = true;
@@ -114,7 +114,10 @@ export{
 			void alias_begin(HAL::Resource*);
 			void alias_end(HAL::Resource*);
 
+
+#ifdef PRETRANSITIONS_FIX
 			std::shared_ptr<TransitionCommandList> fix_pretransitions();
+#endif
 
 			void transition_present(const HAL::Resource* resource_ptr);
 
@@ -297,6 +300,11 @@ export{
 			ComputeContext& get_compute();
 			CopyContext& get_copy();
 
+			const std::vector<CommandRecord>& get_debug_records() const
+			{
+				return compiler.get_debug_records();
+			}
+
 			void discard(HAL::Resource* resource);
 
 			CommandList(CommandListType);
@@ -330,7 +338,9 @@ export{
 
 			void update_buffer(HAL::Resource* resource, uint64 offset, const char* data, uint64 size);
 			void update_buffer(HAL::Resource::ptr resource, uint64 offset, const char* data, uint64 size);
-			std::future<bool> read_buffer(HAL::Resource* resource, unsigned int offset, UINT64 size, std::function<void(std::span<std::byte>)>);
+		public:
+			// todo: make it better
+			std::future<bool> read_buffer(HAL::Resource* resource, uint64 offset, UINT64 size, std::function<void(std::span<std::byte>)>);
 	
 		public:
 			void copy_resource(HAL::Resource* dest, HAL::Resource* source);
@@ -365,12 +375,12 @@ export{
 
 				
 			template<class T>
-			std::future<bool> read(HAL::StructuredBufferView<T>& view, unsigned int offset, UINT64 count, std::function<void(std::span<T>)> f)
+			std::future<bool> read(HAL::StructuredBufferView<T>& view, uint64 offset, UINT64 count, std::function<void(std::span<T>)> f)
 			{
 				return read_buffer(view.resource.get(), view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), count * sizeof(HAL::StructuredBufferView<T>::UnderlyingType),
 					[f](std::span<std::byte> memory)
 					{
-						uint read = memory.size();
+						uint read = uint(memory.size());
 						auto data = reinterpret_cast<T*>(memory.data());
 
 
@@ -385,7 +395,7 @@ export{
 				return read_buffer(view.counter_view.resource.get(), view.counter_view.offset , sizeof(unsigned int),
 					[f](std::span<std::byte> memory)
 					{
-						uint read = memory.size();
+						uint64 read = memory.size();
 						auto data = reinterpret_cast<unsigned int*>(memory.data());
 
 
@@ -501,7 +511,7 @@ export{
 				stop_using(Compiled::Slot::ID);
 				auto& table = tables[Compiled::Slot::ID];
 				table.slot_id = Compiled::ID;
-				//	assert(!table.dirty);
+				//	ASSERT(!table.dirty);
 				table.dirty = true;
 
 				table.const_buffer = compiled.const_buffer;

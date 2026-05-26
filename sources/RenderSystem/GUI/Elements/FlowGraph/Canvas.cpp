@@ -1,4 +1,4 @@
-module GUI:FlowGraph.Canvas;
+﻿module GUI:FlowGraph.Canvas;
 import <RenderSystem.h>;
 import <windows/windows.h>;
 
@@ -426,7 +426,7 @@ void GUI::Elements::FlowGraph::canvas::think(float dt)
 	if (abs(scale_speed) > 0.03f)
 	{
 		float pscale = contents->scale;
-		scale_speed *= expf(-20 * dt);
+		scale_speed *= std::exp(-20 * dt);
 		//	contents->scale += pos.y / 10;
 		contents->scale *= 1 + scale_speed / 10.0f;
 		contents->scale = Math::clamp(contents->scale, 0.1f, 1.0f);
@@ -461,7 +461,7 @@ GUI::Elements::FlowGraph::canvas::canvas(manager* main_manager)
 	selection->clickable = false;
 	contents->add_child(selection);
 	comments.reset(new base());
-	comments->clip_to_parent = ParentClip::NONE;
+	comments->clamp_to_parent = ParentClamp::NONE;
 	comments->clickable = false;
 	comments->clip_child = false;
 	comments->docking = dock::FILL;

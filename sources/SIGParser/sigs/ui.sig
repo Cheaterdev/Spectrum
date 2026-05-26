@@ -118,3 +118,102 @@ GraphicsPSO CanvasLines
 	rtv = { R8G8B8A8_UNORM };
 	blend = { AlphaBlend };
 }
+
+
+[Bind = DefaultLayout::Instance0]
+struct FrameGraph_Debug_Common
+{
+	RWTexture2D<float4> target;
+	uint2 targetSize;
+	float3 minColor;
+	float3 maxColor;
+	uint selectedMip;
+	uint selectedArrayIndex;
+}
+
+[Bind = DefaultLayout::Instance1]
+struct FrameGraph_Debug_Texture2D
+{
+	Texture2D<float4> source;
+	uint2 sourceSize;
+	float2 scale;
+	float2 offset;
+}
+
+ComputePSO FrameGraph_Debug_Texture2D
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = framegraph/draw_texture_2d;
+}
+
+[Bind = DefaultLayout::Instance1]
+struct FrameGraph_Debug_Texture2DArray
+{
+	Texture2DArray<float4> source;
+	uint2 sourceSize;
+	float2 scale;
+	float2 offset;
+}
+
+ComputePSO FrameGraph_Debug_Texture2DArray
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = framegraph/draw_texture_2d_array;
+}
+
+
+[Bind = DefaultLayout::Instance1]
+struct FrameGraph_Debug_Texture3D
+{
+	Texture3D<float4> source;
+	uint3 sourceSize;
+
+	Camera camera;
+}
+
+ComputePSO FrameGraph_Debug_Texture3D
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = framegraph/draw_texture_3d;
+}
+
+
+[Bind = DefaultLayout::Instance1]
+struct FrameGraph_Debug_TextureCube
+{
+	TextureCube<float4> source;
+	uint2 sourceSize;
+}
+
+ComputePSO FrameGraph_Debug_TextureCube
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = framegraph/draw_texture_cube;
+}
+
+
+
+ComputePSO FrameGraph_Debug_NotImplemented
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = framegraph/draw_not_implemented;
+}
+
+
+[Static]
+[Multiple = 16]
+PassNode UI_Render
+{
+	Texture swapchain;
+}
+

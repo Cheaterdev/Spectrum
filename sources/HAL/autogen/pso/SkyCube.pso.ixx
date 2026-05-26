@@ -1,0 +1,54 @@
+export module HAL:Autogen.PSO.SkyCube;
+
+import Core;
+import :PSO;
+import :Enums;
+import :Types;
+import <HAL.h>;
+
+export namespace PSOS
+{
+	struct SkyCube: public PSOBase
+	{
+		struct Keys {
+			GEN_DEF_COMP(Keys);
+		private:
+			SERIALIZE()
+			{
+			}
+		};
+
+		GEN_GRAPHICS_PSO(SkyCube)
+
+
+		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+		{
+
+
+			SimplePSO mpso("SkyCube");
+			if(f) f(mpso,key);
+
+			mpso.root_signature = Layouts::DefaultLayout;
+
+			mpso.vertex.file_name = "shaders/sky.hlsl";
+			mpso.vertex.entry_point = "VS_Cube";
+			mpso.vertex.flags = HAL::ShaderOptions::None;
+			
+			mpso.pixel.file_name = "shaders/sky.hlsl";
+			mpso.pixel.entry_point = "PS_Cube";
+			mpso.pixel.flags = HAL::ShaderOptions::None;
+			
+
+			mpso.rtv_formats = { HAL::Format::R11G11B10_FLOAT };	
+			mpso.blend = {  };
+
+			return mpso;
+		}
+
+		private:
+		SERIALIZE()
+		{
+			ar&NVP(wrap(psos));
+		}
+	};
+}

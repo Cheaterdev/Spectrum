@@ -29,7 +29,26 @@ export namespace Table
 		{
 			uint volume; // Texture3D<float4>
 			GBuffer::Compiled gbuffer; // GBuffer
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(gbuffer);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::VoxelDebug";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(gbuffer);
+		}
 
 	};
 	#pragma pack(pop)

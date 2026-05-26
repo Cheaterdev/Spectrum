@@ -26,6 +26,17 @@ export namespace Table
 		}
 		using Compiled = FontRenderingConstants;
 
+		static std::string get_typename()
+		{
+			return "Tables::FontRenderingConstants";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(TransformMatrix);
+			ar& NVP(ClipRect);
+		}
+
 	};
 	#pragma pack(pop)
 }

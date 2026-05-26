@@ -2,7 +2,7 @@ export module Core:Tasks;
 
 import :Events;
 import :Singleton;
-import <stl/core.h>;
+import stl.core;
 
 export class Task
 {

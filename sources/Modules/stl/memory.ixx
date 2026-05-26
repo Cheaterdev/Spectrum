@@ -1,2 +1,2 @@
 export module stl.memory;
-export import <stl\memory.h>;
+export import stl.core;

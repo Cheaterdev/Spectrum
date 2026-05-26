@@ -49,7 +49,32 @@ export namespace Table
 			uint sky; // TextureCube<float4>
 			Camera::Compiled camera; // Camera
 			Camera::Compiled prevCamera; // Camera
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(time);
+				ar& NVP(camera);
+				ar& NVP(prevCamera);
+				ar& NVP(sunDir);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::FrameInfo";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(time);
+			ar& NVP(camera);
+			ar& NVP(prevCamera);
+			ar& NVP(sunDir);
+		}
 
 	};
 	#pragma pack(pop)

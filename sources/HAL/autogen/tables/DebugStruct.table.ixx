@@ -23,6 +23,16 @@ export namespace Table
 		}
 		using Compiled = DebugStruct;
 
+		static std::string get_typename()
+		{
+			return "Tables::DebugStruct";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(v);
+		}
+
 	};
 	#pragma pack(pop)
 }

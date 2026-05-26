@@ -1,4 +1,4 @@
-export module Core:Math.Vectors;
+п»їexport module Core:Math.Vectors;
 
 import :Math.Constants;
 import :serialization;
@@ -71,14 +71,15 @@ export
 		template<int i>
 		constexpr void set_internal()
 		{
-			//static_assert(i == T::N);
+			//static_ASSERT(i == T::N);
 		}
 
 	public:
 
-		Vector()
+		constexpr Vector()
 		{
-			memset(T::values.data(), 0, sizeof(Format) * T::N);
+			for (int i = 0; i < T::N; i++)
+				T::values[i] = Format{};
 		}
 			bool   operator==(const  Vector& r)  const {
 				for (int t : std::ranges::views::iota(0, N))
@@ -99,9 +100,9 @@ export
 			return std::strong_ordering::equal;
 			//return values<=>r.values;
 			}
-		Vector(const Format &t)
+		constexpr Vector(const Format &t)
 		{
-		for (auto&v:values)
+			for (auto& v : values)
 				v = t;
 		}
 
@@ -490,7 +491,16 @@ export
 
 		std::array<T, Count> values;
 
-		vector_data_t() {}
+		constexpr vector_data_t() : values{} {}
+
+
+		static std::string get_typename()
+		{
+			static const std::string name = std::string(typeid(T).name()) + std::to_string(Count);
+
+			return name;
+		}
+
 	};
 
 
@@ -511,7 +521,16 @@ export
 				T x, y;
 			};
 		};
-		vector_data_t() {}
+		constexpr vector_data_t() : values{} {}
+
+		
+		static std::string get_typename()
+		{
+			static const std::string name = std::string(typeid(T).name()) + std::to_string(2);
+
+			return name;
+		}
+
 	};
 
 
@@ -545,7 +564,16 @@ export
 			};
 		};
 
-		vector_data_t() {}
+		constexpr vector_data_t() : values{} {}
+
+		
+		static std::string get_typename()
+		{
+			static const std::string name = std::string(typeid(T).name()) + std::to_string(3);
+
+			return name;
+		}
+
 	};
 
 
@@ -586,8 +614,20 @@ export
 				Vector<vector_data_t<T, 2>>  xy;
 				Vector<vector_data_t<T, 2>>  zw;
 			};
+
+			
 		};
-		vector_data_t() {}
+
+		constexpr vector_data_t() : values{} {}
+
+
+		static std::string get_typename()
+		{
+			static const std::string name = std::string(typeid(T).name()) + std::to_string(4);
+
+			return name;
+		}
+
 	};
 
 
@@ -626,6 +666,13 @@ export
 		};
 
 		box_t() {}
+
+		
+		static std::string get_typename()
+		{
+			return "box";
+		}
+
 	};
 
 	template<typename T>
@@ -658,6 +705,11 @@ export
 		{
 
 		}
+
+		static std::string get_typename()
+		{
+			return "rect";
+		}
 	};
 
 	template<typename T >
@@ -687,6 +739,11 @@ export
 		};
 
 		margin_t() {}
+
+		static std::string get_typename()
+		{
+			return "margin";
+		}
 	};
 
 
@@ -850,16 +907,16 @@ vec3 closest_point_on_line(const vec3& a, const vec3& b, const vec3& p)
 	vec3 V = b - a;
 	float d = V.length();
 	V.normalize();
-	float t = vec3::dot(V, c);		// скалярное произведение векторов
+	float t = vec3::dot(V, c);		// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
-	// проверка на выход за границы отрезка
+	// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	if (t < 0.0f)
 		return a;
 
 	if (t > d)
 		return b;
 
-	// Вернем точку между a и b
+	// пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ a пїЅ b
 	V *= t;
 	return (a + V);
 }

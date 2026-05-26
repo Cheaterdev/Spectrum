@@ -29,7 +29,24 @@ export namespace Table
 		{
 			uint vb; // StructuredBuffer<vertex_input>
 			uint textures; // Texture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::NinePatch";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

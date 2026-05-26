@@ -92,3 +92,57 @@ GraphicsPSO GBufferDownsample
 
 	rtv = { R32_FLOAT, R8G8B8A8_UNORM };
 }
+
+
+PassView GBuffer
+{
+	Texture GBuffer_Albedo;
+	Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	Texture GBuffer_Specular;
+
+	Texture GBuffer_Speed;
+	Texture GBuffer_DepthMips;
+
+
+	Texture GBuffer_Quality;
+	Texture GBuffer_TempColor;
+
+	Texture GBuffer_NormalsPrev;
+	Texture GBuffer_SpecularPrev;
+	Texture GBuffer_DepthPrev;
+
+	Texture GBuffer_HiZ;
+	Texture GBuffer_HiZ_UAV;
+}
+
+[Multiple = 6]
+PassNode PSSM_Cascade
+{
+	Texture PSSM_Depths;
+	StructuredBuffer<Camera> PSSM_Cameras;
+}
+
+PassNode PSSM_GenerateMask
+{
+	Texture PSSM_Depths;
+	StructuredBuffer<Camera> PSSM_Cameras;
+
+	GBuffer gbuffer;
+	Texture LightMask;
+}
+
+PassNode PSSM_Combine
+{
+	StructuredBuffer<Camera> PSSM_Cameras;
+	GBuffer gbuffer;
+	Texture LightMask;
+	Texture RTXDebug;	
+	Texture ResultTexture;
+}
+
+PassNode PSSM_Global
+{
+	Texture global_depth;
+	StructuredBuffer<Camera> global_camera;
+}

@@ -1,0 +1,41 @@
+#pragma once
+#include "../PassNodeBase.h"
+#include "GBuffer.h"
+using namespace FrameGraph;
+namespace Passes
+{
+
+class CopyPrev : public PassNodeBase
+{
+public:
+	struct Context
+	{
+
+		GBuffer gbuffer;
+		static inline const wchar_t* const resource_names[] = {		L"GBuffer_Albedo",		L"GBuffer_Normals",		L"GBuffer_Depth",		L"GBuffer_Specular",		L"GBuffer_Speed",		L"GBuffer_DepthMips",		L"GBuffer_Quality",		L"GBuffer_TempColor",		L"GBuffer_NormalsPrev",		L"GBuffer_SpecularPrev",		L"GBuffer_DepthPrev",		L"GBuffer_HiZ",		L"GBuffer_HiZ_UAV",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
+	};
+
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
+
+	static inline const wchar_t* Name = L"CopyPrev";
+
+//	static constexpr PassID ID = PassID::CopyPrev;
+
+
+	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
+
+
+	setup_func_type setup_func;
+	render_func_type render_func;
+
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+};
+
+}

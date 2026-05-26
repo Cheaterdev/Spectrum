@@ -23,6 +23,16 @@ export namespace Table
 		}
 		using Compiled = SkyFace;
 
+		static std::string get_typename()
+		{
+			return "Tables::SkyFace";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(face);
+		}
+
 	};
 	#pragma pack(pop)
 }

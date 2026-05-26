@@ -1,5 +1,4 @@
-set VS_TYPE=latest
-call Sharpmake/bootstrap.bat
-call install_agility_sdk.bat
+git submodule sync
+git submodule update Sharpmake
+dotnet build ./Sharpmake/Sharpmake.sln --artifacts-path ./Sharpmake/output /p:Configuration=Release /p:Platform="Any CPU"
 call generate_project.bat
-vcpkg integrate install

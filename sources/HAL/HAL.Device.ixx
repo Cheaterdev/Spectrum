@@ -20,7 +20,7 @@ export namespace HAL
 	class GPUTimeProfiler;
 	class GPUEntityStorageInterface;
 	class CommandAllocator;
-	class Device : public Singleton<Device>, public API::Device
+	class Device : public Singleton<Device>, public API::Device, public TypedObject<Device>
 	{
 		friend class API::Device;
 		friend class Singleton<Device>;
@@ -70,18 +70,18 @@ export namespace HAL
 
 		mutable bool alive = true;
 
-		FrameResourceManager& get_frame_manager();
-		HeapFactory& get_heap_factory();
-		StaticCompiledGPUData& get_static_gpu_data();
+		FrameResourceManager& get_frame_manager() const;
+		HeapFactory& get_heap_factory() const;
+		StaticCompiledGPUData& get_static_gpu_data() const;
 
-		PipelineStateCache& get_pipeline_state_cache();
-		EnginePSOHolder& get_engine_pso_holder();
+		PipelineStateCache& get_pipeline_state_cache() const;
+		EnginePSOHolder& get_engine_pso_holder() const;
 
-		QueryHeapFactory& get_query_heap_factory();
-		DescriptorHeapFactory& get_descriptor_heap_factory();
+		QueryHeapFactory& get_query_heap_factory() const;
+		DescriptorHeapFactory& get_descriptor_heap_factory() const;
 
 
-		DirectStorageQueue& get_ds_queue();
+		DirectStorageQueue& get_ds_queue() const;
 
 		texture_layout get_texture_layout(const ResourceDesc& desc, UINT sub_resource, ivec3 box);
 

@@ -14,17 +14,17 @@ static const VoxelInfo voxel_info = GetVoxelInfo();
 
 void calc(inout float4 color)
 {
-	color.rgb/= color.w + 1;
+	//color.rgb/= color.w + 1;
 	//color.w = saturate(color.w/4);
 
-	//color /= 6;
+    color /= 8;
 	//todo: investigate negative values
 	color = max(0, color);
 }
 
 void add_color(inout float4 result, float4 c)
 {
-	result += float4(c.rgb* c.w,c.w);
+	result += float4(c.rgb,c.w);
 }
 
 groupshared float4 data[4*4*4];

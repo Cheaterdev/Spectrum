@@ -50,7 +50,7 @@ namespace HAL
 		//);
 	}
 
-	void SwapChain::present(FenceWaiter event_time)
+	void SwapChain::present()
 	{
 		//uint index = m_frameIndex;
 

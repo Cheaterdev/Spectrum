@@ -21,7 +21,7 @@ GUI::Elements::menu_list::menu_list(bool vertical)
     else
     {
 
-     //   size = { 100, 300 };
+       // max_size = { 0, 300 };
         width_size = size_type::MATCH_CHILDREN;
         height_size = size_type::MATCH_CHILDREN;
         contents->width_size = size_type::MATCH_CHILDREN;
@@ -29,9 +29,9 @@ GUI::Elements::menu_list::menu_list(bool vertical)
 
         filled->width_size = size_type::MATCH_CHILDREN;
         filled->height_size = size_type::MATCH_CHILDREN;
-
+          filled->docking= dock::NONE;
         auto_size = true;
-        filled->clip_to_parent = ParentClip::HEIGHT;
+        filled->clamp_to_parent = ParentClamp::HEIGHT;
 
         filled->x_type = pos_x_type::LEFT;
         if (hor) base::remove_child(hor);
@@ -39,7 +39,7 @@ GUI::Elements::menu_list::menu_list(bool vertical)
       //  contents->docking = GUI::dock::NONE;
     }
 	
-    clip_to_parent = ParentClip::ALL;
+    clamp_to_parent = ParentClamp::ALL;
     // size = { padding->left + padding->right, padding->top + padding->bottom };
 }
 

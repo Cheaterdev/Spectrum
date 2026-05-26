@@ -32,6 +32,19 @@ export namespace Table
 		}
 		using Compiled = VoxelInfo;
 
+		static std::string get_typename()
+		{
+			return "Tables::VoxelInfo";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(min);
+			ar& NVP(size);
+			ar& NVP(voxels_per_tile);
+			ar& NVP(voxel_tiles_count);
+		}
+
 	};
 	#pragma pack(pop)
 }

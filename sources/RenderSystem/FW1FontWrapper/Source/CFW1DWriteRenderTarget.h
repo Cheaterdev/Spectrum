@@ -1,4 +1,4 @@
-// CFW1DWriteRenderTarget.h
+﻿// CFW1DWriteRenderTarget.h
 
 #ifndef IncludeGuard__FW1_CFW1DWriteRenderTarget
 #define IncludeGuard__FW1_CFW1DWriteRenderTarget
@@ -13,7 +13,7 @@ namespace FW1FontWrapper {
 class CFW1DWriteRenderTarget : public CFW1Object<IFW1DWriteRenderTarget> {
 	public:
 		// IUnknown
-		virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject);
+		virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void **ppvObject);
 		
 		// IFW1DWriteRenderTarget
 		virtual HRESULT STDMETHODCALLTYPE DrawGlyphTemp(
@@ -67,7 +67,7 @@ class CFW1DWriteRenderTarget : public CFW1Object<IFW1DWriteRenderTarget> {
 		IDWriteBitmapRenderTarget	*m_pRenderTarget;
 		HDC							m_hDC;
 		HBRUSH						m_hBlackBrush;
-		LPVOID						m_bmBits;
+		void*						m_bmBits;
 		UINT						m_bmWidthBytes;
 		UINT						m_bmBytesPixel;
 		UINT						m_renderTargetWidth;

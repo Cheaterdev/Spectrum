@@ -98,3 +98,34 @@ ComputePSO DenoiserShadow_Filter
 	[CS]
 	define Pass = {0,1,2};
 }
+
+
+PassNode ShadowDenoiser_Prepare
+{
+	Texture RTXDebug;
+	StructuredBuffer<uint> ShadowDenoiser_TileBuffer;
+}
+
+PassNode ShadowDenoiser_TileClassification
+{
+	StructuredBuffer<uint> ShadowDenoiser_TileBuffer;
+	Texture GBuffer_DepthPrev;
+	Texture GBuffer_Depth;
+	Texture GBuffer_Normals;
+	Texture GBuffer_Speed;
+	StructuredBuffer<uint> ShadowDenoiser_TileMetaBuffer;
+	Texture ShadowDenoiser_Moments;
+	Texture ShadowDenoiser_MomentsPrev;
+	Texture ShadowDenoiser_Scratch;
+	Texture ShadowDenoiser_Scratch2;
+}
+
+PassNode ShadowDenoiser_Filter
+{
+	StructuredBuffer<uint> ShadowDenoiser_TileMetaBuffer;
+	Texture RTXDebug;
+	Texture GBuffer_Depth;
+	Texture GBuffer_Normals;
+	Texture ShadowDenoiser_Scratch;
+	Texture ShadowDenoiser_Scratch2;
+}

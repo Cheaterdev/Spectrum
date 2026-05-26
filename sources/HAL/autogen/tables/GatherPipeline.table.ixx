@@ -29,7 +29,26 @@ export namespace Table
 		{
 			uint4 pip_ids[2]; // uint4
 			uint commands[8]; // AppendStructuredBuffer<CommandData>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(pip_ids);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::GatherPipeline";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(pip_ids);
+		}
 
 	};
 	#pragma pack(pop)

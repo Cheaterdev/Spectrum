@@ -28,7 +28,24 @@ export namespace Table
 		{
 			uint depth; // RenderTarget<float>
 			uint color; // RenderTarget<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::GBufferDownsampleRT";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

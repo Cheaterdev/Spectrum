@@ -48,7 +48,32 @@ export namespace Table
 			uint t2d_DepthBuffer; // Texture2D<float>
 			uint t2d_NormalBuffer; // Texture2D<float16_t3>
 			uint sb_tileMetaData; // StructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(ProjectionInverse);
+				ar& NVP(BufferDimensions);
+				ar& NVP(InvBufferDimensions);
+				ar& NVP(DepthSimilaritySigma);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::DenoiserShadow_Filter";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(ProjectionInverse);
+			ar& NVP(BufferDimensions);
+			ar& NVP(InvBufferDimensions);
+			ar& NVP(DepthSimilaritySigma);
+		}
 
 	};
 	#pragma pack(pop)

@@ -7,9 +7,12 @@ import cereal.json;
 #include "Parsed.h"
 #include "Parsing.h"
 
-
 static const std::string cpp_path = "../../sources/HAL/autogen";
 static const std::string hlsl_path = "../../workdir/shaders/autogen";
+
+
+static const std::string cpp_path_render = "../../sources/RenderSystem/FrameGraph/autogen";
+
 
 using namespace jinja2;
 
@@ -264,6 +267,62 @@ int main()
 			                 ArgInfo{"a"}, ArgInfo{"b"}, ArgInfo{"c"}
 		                 ));
 
+
+
+		global.AddGlobal("get_offset", jinja2::MakeCallable(
+			                 [&](const GenericList& offsets, const int& i)
+			                 {
+				                 return offsets.GetAccessor()->GetIndexer()->GetItemByIndex(i);
+			                 },
+			                
+			                 ArgInfo{"offsets"}, ArgInfo{"i"}
+		                 ));
+		global.AddGlobal("get_pipeline_resources", jinja2::MakeCallable(
+			[&](const std::string& pipeline_name) -> ValuesList
+			{
+				Pipeline* pipeline_ptr = parsed.pipelines.find(pipeline_name);
+				if (!pipeline_ptr) return {};
+
+				std::set<std::string> seen;
+				ValuesList result;
+
+				std::function<void(const std::list<View_Param>&)> collect;
+				collect = [&](const std::list<View_Param>& params)
+				{
+					for (const auto& p : params)
+					{
+						View* view = parsed.views.find(p.class_no_template);
+						if (view)
+						{
+							collect(view->params);
+						}
+						else
+						{
+							if (seen.insert(p.name).second)
+								result.emplace_back(p.name);
+
+							const option* recreate = p.find_option("Recreate");
+							if (recreate)
+							{
+								if (seen.insert(recreate->value_atom.expr).second)
+									result.emplace_back(recreate->value_atom.expr);
+							}
+						}
+					}
+				};
+
+				for (const auto& entry : pipeline_ptr->entries)
+				{
+					Pass* pass = parsed.passes.find(entry.name);
+					if (pass)
+						collect(pass->params);
+				}
+
+				return result;
+			},
+			ArgInfo{"pipeline_name"}
+		));
+
 		global.GetSettings().extensions.Do = true;
 
 
@@ -302,7 +361,9 @@ int main()
 			if (table.find_option("RenderTarget"))
 			{
 				my_stream(hlsl_path + "/rt", table.name + ".h") << hlsl_templates.generate2(L"rt", "rt", table);
-				my_stream(cpp_path + "/rt", table.name + ".h") << cpp_templates.generate2(L"rt", "rt", table);
+				my_stream(cpp_path + "/rt", table.name + ".rt.ixx") << cpp_templates.generate2(L"rt", "rt", table);
+				std::filesystem::remove(cpp_path + "/rt/" + table.name + ".h");
+				std::filesystem::remove(cpp_path + "/rt/" + table.name + ".ixx");
 			}
 		}
 
@@ -316,19 +377,28 @@ int main()
 		}
 
 		// PSO
+		auto remove_old_pso_h = [&](const std::string& name)
+		{
+			std::filesystem::remove(cpp_path + "/pso/" + name + ".h");
+			std::filesystem::remove(cpp_path + "/pso/" + name + ".ixx");
+		};
+
 		for (auto& pso : parsed.compute_pso)
 		{
-			my_stream(cpp_path + "/pso", pso.name + ".h") << cpp_templates.generate2(L"pso", "pso", pso);
+			my_stream(cpp_path + "/pso", pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
+			remove_old_pso_h(pso.name);
 		}
 
 		for (auto& pso : parsed.graphics_pso)
 		{
-			my_stream(cpp_path + "/pso", pso.name + ".h") << cpp_templates.generate2(L"pso", "pso", pso);
+			my_stream(cpp_path + "/pso", pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
+			remove_old_pso_h(pso.name);
 		}
-		   
+
 		for (auto& pso : parsed.workgraph_pso)
 		{
-			my_stream(cpp_path + "/pso", pso.name + ".h") << cpp_templates.generate2(L"pso", "pso", pso);
+			my_stream(cpp_path + "/pso", pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
+			remove_old_pso_h(pso.name);
 		}
 
 		// RTX
@@ -352,13 +422,56 @@ int main()
 
 		for (auto& pso : parsed.raytrace_pso)
 		{
-			my_stream(cpp_path + "/rtx", pso.name + ".h") << cpp_templates.generate2(L"rtx_pso", "pso", pso);
+			// collect unique payload tables and local slots needed by this PSO's passes
+			ValuesList payload_tables, local_slots;
+			std::set<std::string> seen_payload, seen_local;
+			for (auto& pass : pso.passes)
+			{
+				auto* payload = pass.find_param("payload");
+				if (payload && seen_payload.insert(payload->expr).second)
+					payload_tables.emplace_back(payload->expr);
+
+				auto* local = pass.find_param("local");
+				if (local && seen_local.insert(local->expr).second)
+					local_slots.emplace_back(local->expr);
+			}
+
+			auto dp = make_map(pso);
+			ValuesMap params = {
+				{ "pso",            Reflect(dp)     },
+				{ "payload_tables", payload_tables  },
+				{ "local_slots",    local_slots     },
+			};
+
+			my_stream(cpp_path + "/rtx", pso.name + ".rtx.ixx") << cpp_templates.generate(L"rtx_pso", params);
+			std::filesystem::remove(cpp_path + "/rtx/" + pso.name + ".h");
+			std::filesystem::remove(cpp_path + "/rtx/" + pso.name + ".ixx");
 		}
+
+
+		for (auto& pass : parsed.passes)
+		{
+			my_stream(cpp_path_render + "/pass", pass.name + ".h") << cpp_templates.generate2(L"pass", "pass", pass);
+		}
+		for (auto& view : parsed.views)
+		{
+			my_stream(cpp_path_render + "/pass", view.name + ".h") << cpp_templates.generate2(L"pass_view", "view", view);
+		}
+		for (auto& pipeline : parsed.pipelines)
+		{
+			my_stream(cpp_path_render + "/pass", pipeline.name + ".pipeline.h") << cpp_templates.generate2(L"pipeline", "pipeline", pipeline);
+		}
+
+		my_stream(cpp_path_render, "pass_defaults.h") << cpp_templates.generate(L"pass_defaults");
 
 		// includes
 		my_stream(cpp_path, "autogen.ixx") << cpp_templates.generate(L"autogen");
+		my_stream(cpp_path, "autogen.cpp") << cpp_templates.generate(L"autogen_impl");
 		my_stream(cpp_path, "enums.ixx") << cpp_templates.generate(L"enums");
 		my_stream(cpp_path, "pso.cpp") << cpp_templates.generate(L"psos");
+
+		my_stream(cpp_path_render, "enums.h") << cpp_templates.generate(L"pass_enums");
+		my_stream(cpp_path_render, "passes.ixx") << cpp_templates.generate(L"passes");
 	}
 	catch (std::exception& e)
 	{

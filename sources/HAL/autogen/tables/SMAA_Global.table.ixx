@@ -32,7 +32,28 @@ export namespace Table
 			float4 subsampleIndices; // float4
 			float4 SMAA_RT_METRICS; // float4
 			uint colorTex; // Texture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(subsampleIndices);
+				ar& NVP(SMAA_RT_METRICS);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::SMAA_Global";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(subsampleIndices);
+			ar& NVP(SMAA_RT_METRICS);
+		}
 
 	};
 	#pragma pack(pop)

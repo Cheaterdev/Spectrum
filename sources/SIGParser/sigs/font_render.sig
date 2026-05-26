@@ -43,10 +43,10 @@ GraphicsPSO FontRender
 
 	[type = Format]
 	[PS]
-	define Format = { ALL_RT_FORMATS };
+	define Format = { ALL_RT_BLENDING_FORMATS };
 
 	rtv = { Format };
 
 	enable_depth = false;
-		blend = { AlphaBlend };
+	#	blend = { AlphaBlend };
 }

@@ -1,7 +1,7 @@
 module HAL:Types;
 namespace HAL
 {
-	
+
 
 
 
@@ -19,11 +19,11 @@ namespace HAL
 		access |= state.access;
 		layout |= state.layout;
 
-		//assert(layout == state.layout);
+		//ASSERT(layout == state.layout);
 		return *this;
 	}
 
-	
+
 	ResourceState ResourceState::operator &(const ResourceState& state)const
 	{
 		ResourceState other = *this;
@@ -38,26 +38,34 @@ namespace HAL
 		access &= state.access;
 		layout &= state.layout;
 
-		//assert(layout == state.layout);
+		//ASSERT(layout == state.layout);
 		return *this;
 	}
 	bool ResourceState::has_write_bits() const
 	{
 
-		static const BarrierAccess ACCESS_WRITE = BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::RENDER_TARGET | BarrierAccess::UNORDERED_ACCESS| BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE;
-		if(check(access&ACCESS_WRITE)) return true;
+		static const BarrierAccess ACCESS_WRITE = BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::RENDER_TARGET | BarrierAccess::UNORDERED_ACCESS | BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE;
+		if (check(access & ACCESS_WRITE)) return true;
 
-			static const TextureLayout LAYOUT_DIRECT = TextureLayout::UNORDERED_ACCESS |TextureLayout::DEPTH_STENCIL_WRITE |TextureLayout::RENDER_TARGET |TextureLayout::COPY_DEST  ;
-	if(check(layout&LAYOUT_DIRECT)) 
-		return true;
+		static const TextureLayout LAYOUT_DIRECT = TextureLayout::UNORDERED_ACCESS | TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::RENDER_TARGET | TextureLayout::COPY_DEST;
+		if (check(layout & LAYOUT_DIRECT))
+			return true;
 
 		return false;
 	}
 
-	
+		 bool ResourceState::has_copy_bits() const
+	{
+
+		static const TextureLayout LAYOUT_DIRECT = TextureLayout::COPY_DEST;
+		if (check(layout & LAYOUT_DIRECT))
+			return true;
+
+		return false;
+	}
 	CommandListType get_best_cmd_type(TextureLayout layout)
 	{
-	if(layout==TextureLayout::COPY_QUEUE) return CommandListType::COPY;
+		//if(layout==TextureLayout::COPY_QUEUE) return CommandListType::COPY;
 
 
 		static const TextureLayout LAYOUT_DIRECT = TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::RENDER_TARGET;
@@ -65,7 +73,7 @@ namespace HAL
 			return CommandListType::DIRECT;
 
 
-		
+
 		return CommandListType::COMPUTE;
 
 	}
@@ -73,13 +81,13 @@ namespace HAL
 	{
 
 
-		if (*this==ResourceStates::NO_ACCESS)
-		return CommandListType::COPY;
+		if (*this == ResourceStates::NO_ACCESS)
+			return CommandListType::COPY;
 
 		const   ResourceState COPY_SOURCE_2 = { BarrierSync::COPY, BarrierAccess::COPY_SOURCE, TextureLayout::COPY_QUEUE };
 		const   ResourceState COPY_DEST_2 = { BarrierSync::COPY, BarrierAccess::COPY_DEST, TextureLayout::COPY_QUEUE };
 
-		if (*this==COPY_SOURCE_2||*this==COPY_DEST_2)
+		if (*this == COPY_SOURCE_2 || *this == COPY_DEST_2)
 			return CommandListType::COPY;
 
 
@@ -108,17 +116,17 @@ namespace HAL
 	{
 		if (check(operation & BarrierSync::NONE))
 		{
-			
-		 return true;
+
+			return true;
 
 		}
-		
+
 
 
 		if (check(access & BarrierAccess::NO_ACCESS))
 		{
 
-			 return true;
+			return true;
 
 		}
 
@@ -135,45 +143,45 @@ namespace HAL
 			if (!is_read && !is_write)	 return false;
 
 		}
-		
+
 
 
 		if (check(access & BarrierAccess::SHADER_RESOURCE))
 		{
 
-			if ((layout!=TextureLayout::NONE&&layout!=TextureLayout::UNDEFINED)&&!check(layout & TextureLayout::SHADER_RESOURCE))	 return false;
+			if ((layout != TextureLayout::NONE && layout != TextureLayout::UNDEFINED) && !check(layout & TextureLayout::SHADER_RESOURCE))	 return false;
 
 		}
 		if (check(access & BarrierAccess::UNORDERED_ACCESS))
 		{
 
-			if ((layout!=TextureLayout::NONE&&layout!=TextureLayout::UNDEFINED)&&!check(layout & TextureLayout::UNORDERED_ACCESS))	 return false;
+			if ((layout != TextureLayout::NONE && layout != TextureLayout::UNDEFINED) && !check(layout & TextureLayout::UNORDERED_ACCESS))	 return false;
 
 		}
 
-	/*	if (check(access & BarrierAccess::SHADER_RESOURCE))
-		{
+		/*	if (check(access & BarrierAccess::SHADER_RESOURCE))
+			{
 
-			if (layout!=TextureLayout::NONE&&!check(layout & TextureLayout::SHADER_RESOURCE))	 return false;
+				if (layout!=TextureLayout::NONE&&!check(layout & TextureLayout::SHADER_RESOURCE))	 return false;
 
-		}			   */
+			}			   */
 
 
 		return true;
 	}
-				 	bool ResourceState::valid_begin() const
-					{
-					
-							  if(check(layout & TextureLayout::PRESENT)) return true;
-						if(operation== BarrierSync::NONE) return false;
-								if(access== BarrierAccess::NO_ACCESS) return false;
+	bool ResourceState::valid_begin() const
+	{
 
-								
-							  if(check(layout & TextureLayout::NONE)) return false;
-return true;
-					
-					
-					}
+		if (check(layout & TextureLayout::PRESENT)) return true;
+		if (operation == BarrierSync::NONE) return false;
+		if (access == BarrierAccess::NO_ACCESS) return false;
+
+
+		if (check(layout & TextureLayout::NONE)) return false;
+		return true;
+
+
+	}
 
 	ResourceState::ResourceState(BarrierSync s, BarrierAccess a, TextureLayout l) : operation(s), access(a), layout(l)
 	{
@@ -182,11 +190,12 @@ return true;
 	namespace ResourceStates {
 
 		const  ResourceState INDEX_BUFFER = { BarrierSync::INDEX_INPUT, BarrierAccess::INDEX_BUFFER, TextureLayout::UNDEFINED };
+
 		const   ResourceState COPY_SOURCE = { BarrierSync::COPY, BarrierAccess::COPY_SOURCE, TextureLayout::COPY_SOURCE };
 		const   ResourceState COPY_DEST = { BarrierSync::COPY, BarrierAccess::COPY_DEST, TextureLayout::COPY_DEST };
 
 		const  ResourceState SHADER_RESOURCE = { BarrierSync::ALL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
-//		const  ResourceState NON_PIXEL_SHADER_RESOURCE = { BarrierSync::NON_PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
+
 		const  ResourceState UNORDERED_ACCESS = { BarrierSync::ALL_SHADING, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNORDERED_ACCESS };
 		const  ResourceState RAYTRACING_STRUCTURE = { BarrierSync::RAYTRACING, BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ, TextureLayout::UNDEFINED };
 
@@ -196,11 +205,12 @@ return true;
 		const  ResourceState RENDER_TARGET = { BarrierSync::RENDER_TARGET, BarrierAccess::RENDER_TARGET, TextureLayout::RENDER_TARGET };
 		const  ResourceState DEPTH_STENCIL = { BarrierSync::DEPTH_STENCIL, BarrierAccess::DEPTH_STENCIL_WRITE /*| BarrierAccess::DEPTH_STENCIL_READ*/,TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::DEPTH_STENCIL_READ };
 
-	//	const  ResourceState CONSTANT_BUFFER = { BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED };
 		const  ResourceState NO_ACCESS = { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::UNDEFINED };
+		const  ResourceState UNKNOWN = { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::UNDEFINED };
 
-//		const  ResourceState WRITE_STATES = UNORDERED_ACCESS | RAYTRACING_STRUCTURE_WRITE | RENDER_TARGET | DEPTH_STENCIL ;
-const  ResourceState UNKNOWN = { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::UNDEFINED };
+
+		//const   ResourceState COMMON = { BarrierSync::COPY, BarrierAccess::COPY_DEST, TextureLayout::COMMON };
+
 
 	}
 }

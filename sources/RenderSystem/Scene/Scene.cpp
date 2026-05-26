@@ -73,6 +73,8 @@ bool Scene::init_ras(HAL::CommandList::ptr& list)
 
 void Scene::update(HAL::FrameResources& frame)
 {
+
+	  	PROFILE(L"Scene::update");
 	mats.clear();
 	pipelines.clear();
 

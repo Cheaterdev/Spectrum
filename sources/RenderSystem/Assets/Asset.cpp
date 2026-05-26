@@ -8,6 +8,19 @@ using namespace concurrency;
 import <RenderSystem.h>;
 import <windows/windows.h>;
 REGISTER_TYPE(Asset);
+CEREAL_FORCE_REGISTER(Asset);
+
+// Manual CEREAL_FORCE_DYNAMIC_INIT — ODR-uses TextureAsset.cpp's dummy, pulling that TU into the link
+namespace cereal { namespace detail { void dynamic_init_dummy_TextureAsset(); } }
+namespace {
+    struct _TextureAssetForceLinker {
+        _TextureAssetForceLinker() {
+            OutputDebugStringA("[CEREAL] TextureAsset: force_init running, calling dummy\n");
+            ::cereal::detail::dynamic_init_dummy_TextureAsset();
+        }
+    } _textureAssetForceLinkerInstance;
+}
+
 AssetManager::AssetManager()
 {
 	has_worker = false;
@@ -238,7 +251,7 @@ AssetReferenceBase::~AssetReferenceBase()
 void Asset::add_reference(AssetReferenceBase* ref)
 {
 	m.lock();
-	//	assert(ref->owner==this);
+	//	ASSERT(ref->owner==this);
 	references.insert(ref);
 	m.unlock();
 }

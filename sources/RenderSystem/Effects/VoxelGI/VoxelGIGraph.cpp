@@ -6,6 +6,7 @@ import HAL;
 import Core;
 
 
+
 using namespace FrameGraph;
 using namespace HAL;
 
@@ -19,26 +20,21 @@ public:
 
 	void generate(Graph& graph)
 	{
-
-		struct DownsampleData
-		{
-			GBufferViewDesc gbuffer;
-		};
 		auto& frame = graph.get_context<ViewportInfo>();
 
 		auto size = frame.frame_size;
 
-		graph.add_pass<DownsampleData>(L"GBufferDownsampler", [this, size](DownsampleData& data, TaskBuilder& builder) {
+		graph.add_library_pass<Passes::GBufferDownsampler>([this, size](auto& data, TaskBuilder& builder) {
 
-			data.gbuffer.need(builder, true, true);
-			data.gbuffer.create_temp_color(size, builder);
+			GBufferViewDesc::need(builder, data.gbuffer, true);
+			builder.create(data.gbuffer.GBuffer_TempColor, { ivec3(size,0), HAL::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 
-
-			}, [this, &graph](DownsampleData& data, FrameContext& _context) {
+			return true;
+			}, [this, &graph](auto& data, FrameContext& _context) {
 
 				auto& command_list = _context.get_list();
 				auto tempColor = *data.gbuffer.GBuffer_TempColor;
-				auto gbuffer = data.gbuffer.actualize(_context);
+				GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
 				auto& graphics = command_list->get_graphics();
 
 				graphics.set_signature(Layouts::DefaultLayout);
@@ -177,6 +173,771 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 
 	}
 
+	// ---- Voxelize -------------------------------------------------------
+
+	m_voxelize_setup = [this](Passes::Voxelize::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		// Update voxel bounds and info
+		Slots::VoxelInfo& voxel_info = this->scene->voxel_info;
+		min  = this->scene->get_min() - float3(1, 1, 1);
+		size = this->scene->get_max() + float3(1, 1, 1) - this->scene->get_min();
+
+		if (all_scene_regen_counter > 0)
+			all_scene_regen_counter--;
+
+		static bool prev = false;
+		bool cur = !!GetAsyncKeyState('P');
+		if (!cur && prev)
+			need_start_new = true;
+		prev = cur;
+
+		if (need_start_new)
+			all_scene_regen_counter = 3;
+
+		voxel_info.GetMin().xyz  = min;
+		voxel_info.GetSize().xyz = size;
+		voxel_info.GetSize().x = voxel_info.GetSize().y = voxel_info.GetSize().z =
+			std::max(200.0f, voxel_info.GetSize().max_element());
+		voxel_info.GetVoxel_tiles_count().xyz =
+			tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count(0);
+		voxel_info.GetVoxels_per_tile().xyz =
+			tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
+
+		this->scene->voxels_compiled =
+			this->scene->voxel_info.compile(*builder.graph->builder.current_frame);
+		builder.graph->register_slot_setter(this->scene->voxels_compiled);
+
+		if (!voxelize_scene) return false;
+
+		builder.need(data.VoxelAlbedo,        ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelNormal,        ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelAlbedoStatic,  ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelNormalStatic,  ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelAlbedoDynamic, ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelNormalDynamic, ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_voxelize_render = [this](Passes::Voxelize::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& command_list = context.get_list();
+		auto& cam          = context.graph->get_context<CameraInfo>();
+		auto& sceneinfo    = context.graph->get_context<SceneInfo>();
+
+		if (need_start_new)
+		{
+			start_new(*command_list);
+			need_start_new = false;
+		}
+
+		MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
+		mesh_ctx->current_time = 0;
+		mesh_ctx->priority     = TaskPriority::HIGH;
+		mesh_ctx->list         = command_list;
+		mesh_ctx->cam          = cam.cam;
+
+		auto scene    = sceneinfo.scene;
+		auto renderer = sceneinfo.renderer;
+		mesh_ctx->begin();
+
+		voxelize(mesh_ctx, renderer.get(), *context.graph);
+	};
+
+	// ---- Lighting -------------------------------------------------------
+
+	m_lighting_setup = [this](Passes::Lighting::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		light_counter = (light_counter + 1) % 5;
+		if (!light_scene) return false;
+
+		builder.need(data.global_depth,          ResourceFlags::ComputeRead);
+		builder.need(data.global_camera,         ResourceFlags::ComputeRead);
+		builder.need(data.sky_cubemap_filtered,  ResourceFlags::PixelRead);
+		builder.need(data.VoxelLighted,          ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelAlbedo,           ResourceFlags::ComputeRead);
+		builder.need(data.VoxelNormal,           ResourceFlags::ComputeRead);
+		builder.need(data.VoxelAlbedoStatic,     ResourceFlags::ComputeRead);
+		builder.need(data.VoxelNormalStatic,     ResourceFlags::ComputeRead);
+		builder.need(data.VoxelAlbedoDynamic,    ResourceFlags::ComputeRead);
+		builder.need(data.VoxelNormalDynamic,    ResourceFlags::ComputeRead);
+		return true;
+	};
+
+	m_lighting_render = [this](Passes::Lighting::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& command_list = context.get_list();
+		auto  sky_cubemap_filtered = *data.sky_cubemap_filtered;
+		auto& cam = context.graph->get_context<CameraInfo>();
+
+		MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
+		mesh_ctx->current_time = 0;
+		mesh_ctx->priority     = TaskPriority::HIGH;
+		mesh_ctx->list         = command_list;
+		mesh_ctx->cam          = cam.cam;
+
+		auto& list    = *mesh_ctx->list;
+		auto& compute = mesh_ctx->list->get_compute();
+
+		compute.set_pipeline<PSOS::Lighting>(
+			PSOS::Lighting::SecondBounce.Use((all_scene_regen_counter == 0) && multiple_bounces));
+
+		Slots::VoxelLighting ligthing;
+		{
+			ligthing.GetAlbedo()  = albedo.tex_result->texture_3d().texture3D;
+			ligthing.GetNormals() = normal.tex_result->texture_3d().texture3D;
+			ligthing.GetOutput()  = tex_lighting.tex_result->texture_3d().mips[0].rwTexture3D;
+			ligthing.GetTex_cube() = sky_cubemap_filtered.textureCube;
+
+			HAL::Texture3DViewDesc subres;
+			subres.MipLevels = tex_lighting.tex_result->get_desc().as_texture().MipLevels - 1;
+			subres.MipSlice  = 1;
+			ligthing.GetLower() =
+				tex_lighting.tex_result->resource->create_view<Texture3DView>(list, subres).texture3D;
+
+			auto& params = ligthing.GetParams();
+			params.GetTiles() = gpu_tiles_buffer[0]->buffer;
+			params.GetVoxels_per_tile().xyz =
+				tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
+
+			auto& pssm = ligthing.GetPssmGlobal();
+			pssm.GetLight_buffer() = data.global_depth->texture2D;
+			auto buffer_view = data.global_camera->resource->create_view<
+				HAL::StructuredBufferView<Table::Camera>>(list);
+			pssm.GetLight_camera() = buffer_view;
+
+			compute.set(ligthing);
+		}
+
+		context.graph->set_slot(SlotID::VoxelInfo, compute);
+		compute.exec_indirect(gpu_tiles_buffer[0]->dispatch_buffer, 1);
+	};
+
+	// ---- Mipmapping -----------------------------------------------------
+
+	m_mipmapping_setup = [this](Passes::Mipmapping::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		if (!light_scene) return false;
+		builder.need(data.VoxelLighted, ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_mipmapping_render = [this](Passes::Mipmapping::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& command_list = context.get_list();
+		auto  voxel_lighted = *data.VoxelLighted;
+		auto& cam = context.graph->get_context<CameraInfo>();
+
+		MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
+		mesh_ctx->current_time = 0;
+		mesh_ctx->priority     = TaskPriority::HIGH;
+		mesh_ctx->list         = command_list;
+		mesh_ctx->cam          = cam.cam;
+
+		auto& list    = *mesh_ctx->list;
+		auto& compute = mesh_ctx->list->get_compute();
+
+		compute.set_signature(Layouts::DefaultLayout);
+		context.graph->set_slot(SlotID::VoxelInfo, compute);
+
+		compute.set_pipeline<PSOS::VoxelZero>();
+		{
+			PROFILE_GPU(L"ZERO");
+			for (uint i = 1; i < tex_lighting.tex_result->get_desc().as_texture().MipLevels; i++)
+			{
+				if (i >= gpu_tiles_buffer.size() || !gpu_tiles_buffer[i])
+				{
+					list.clear_uav(tex_lighting.tex_result->texture_3d().mips[i].rwTexture3D,
+						vec4(0, 0, 0, 0));
+					continue;
+				}
+
+				{
+					Slots::VoxelZero utils;
+					utils.GetTarget() = tex_lighting.tex_result->texture_3d().mips[i].rwTexture3D;
+					auto& params = utils.GetParams();
+					params.GetTiles() = gpu_tiles_buffer[i]->buffer;
+					params.GetVoxels_per_tile().xyz =
+						tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
+					compute.set(utils);
+				}
+
+				compute.exec_indirect(gpu_tiles_buffer[i]->dispatch_buffer, 1);
+			}
+		}
+
+		{
+			PROFILE_GPU(L"EXEC");
+			unsigned int mip_count = 1;
+			while (mip_count < tex_lighting.tex_result->get_desc().as_texture().MipLevels)
+			{
+				if (!gpu_tiles_buffer[mip_count]) break;
+				unsigned int current_mips = std::min(
+					3u, tex_lighting.tex_result->get_desc().as_texture().MipLevels - mip_count);
+				compute.set_pipeline<PSOS::VoxelDownsample>(
+					PSOS::VoxelDownsample::Count(current_mips));
+
+				{
+					Slots::VoxelMipMap mipmapping;
+					mipmapping.GetSrcMip() =
+						tex_lighting.tex_result->texture_3d().mips[mip_count - 1].texture3D;
+					for (unsigned int i = 0; i < current_mips; i++)
+						mipmapping.GetOutMips()[i] =
+							tex_lighting.tex_result->texture_3d().mips[mip_count + i].rwTexture3D;
+					auto& params = mipmapping.GetParams();
+					params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer;
+					params.GetVoxels_per_tile().xyz =
+						tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
+					compute.set(mipmapping);
+				}
+				PROFILE_GPU((std::wstring(L"mip_") + std::to_wstring(mip_count)).c_str());
+				compute.exec_indirect(gpu_tiles_buffer[mip_count]->dispatch_buffer, 1);
+				mip_count += current_mips;
+			}
+		}
+	};
+
+	// ---- VoxelScreen ----------------------------------------------------
+
+	m_voxelscreen_setup = [this](Passes::VoxelScreen::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		auto& frame = builder.graph->get_context<ViewportInfo>();
+		auto  sz    = frame.frame_size;
+		UINT  count = 2 * Math::DivideByMultiple(sz.x, 32) * Math::DivideByMultiple(sz.y, 32);
+
+		GBufferViewDesc::need(builder, data.gbuffer);
+		builder.create(data.VoxelFramesCount,
+			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelIndirectNoise,
+			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelIndirectFiltered,
+			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
+			ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
+		builder.need(data.VoxelLighted,         ResourceFlags::ComputeRead);
+		builder.need(data.BlueNoise,            ResourceFlags::ComputeRead);
+
+		builder.create(data.VoxelScreen_hi,  { 1u, false }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelScreen_low, { 1u, false }, ResourceFlags::UnorderedAccess);
+
+		builder.create(data.VoxelScreen_low_data, { count, true }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelScreen_hi_data,  { count, true }, ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_voxelscreen_render = [this](Passes::VoxelScreen::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& command_list = context.get_list();
+
+		bool use_rtx_flag = HAL::Device::get().is_rtx_supported() && (bool)use_rtx;
+		GBuffer gbuffer                = GBufferViewDesc::actualize(data.gbuffer);
+		auto    sky_cubemap_filtered   = *data.sky_cubemap_filtered;
+		auto    noisy_output           = *data.VoxelIndirectNoise;
+		auto    gi_filtered            = *data.VoxelIndirectFiltered;
+		auto    frames_count           = *data.VoxelFramesCount;
+		auto    sz                     = noisy_output.get_size();
+
+		auto& sceneinfo = context.graph->get_context<SceneInfo>();
+
+		if (data.VoxelIndirectFiltered.is_new())
+		{
+			command_list->clear_uav(gi_filtered.rwTexture2D,   vec4(0, 0, 0, 0));
+			command_list->clear_uav(noisy_output.rwTexture2D,  vec4(0, 0, 0, 0));
+			command_list->clear_uav(frames_count.rwTexture2D,  vec4(0, 0, 0, 0));
+		}
+
+		auto& compute = command_list->get_compute();
+
+		if (use_rtx_flag)
+			command_list->get_compute().set_signature(RTX::get().rtx.m_root_sig);
+		else
+			compute.set_signature(Layouts::DefaultLayout);
+
+		context.graph->set_slot(SlotID::FrameInfo,  compute);
+		context.graph->set_slot(SlotID::VoxelInfo,  compute);
+		context.graph->set_slot(SlotID::SceneData,  compute);
+
+		{
+			Slots::VoxelScreen voxelScreen;
+			gbuffer.SetTable(voxelScreen.GetGbuffer());
+			voxelScreen.GetVoxels()     = tex_lighting.tex_result->texture_3d().texture3D;
+			voxelScreen.GetTex_cube()   = sky_cubemap_filtered.textureCube;
+			voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
+			voxelScreen.GetPrev_gi()    = gi_filtered.texture2D;
+			compute.set(voxelScreen);
+		}
+
+		{
+			Slots::VoxelOutput output;
+			output.GetFrames()    = frames_count.rwTexture2D;
+			output.GetNoise()     = noisy_output.rwTexture2D;
+			output.GetBlueNoise() = data.BlueNoise->texture2D;
+			compute.set(output);
+		}
+
+		if (use_rtx_flag)
+			RTX::get().render<Indirect>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
+		else
+		{
+			PROFILE_GPU(L"noise");
+			compute.set_pipeline<PSOS::VoxelIndirectLow>();
+			compute.dispatch(sz);
+		}
+
+		compute.set_signature(Layouts::DefaultLayout);
+		{
+			compute.set_pipeline<PSOS::FrameClassification>();
+
+			PROFILE_GPU(L"classification");
+			compute.clear_counter(*data.VoxelScreen_hi_data);
+			compute.clear_counter(*data.VoxelScreen_low_data);
+
+			{
+				Slots::FrameClassification frame_classification;
+				frame_classification.GetFrames() = frames_count.texture2D;
+				frame_classification.GetHi()     = data.VoxelScreen_hi_data->appendStructuredBuffer;
+				frame_classification.GetLow()    = data.VoxelScreen_low_data->appendStructuredBuffer;
+				compute.set(frame_classification);
+			}
+
+			uint2 tiles_count = uint2(Math::DivideByMultiple(sz.x, 32), Math::DivideByMultiple(sz.y, 32));
+			compute.dispatch(tiles_count);
+		}
+		{
+			PROFILE_GPU(L"init_dispatch");
+			Slots::FrameClassificationInitDispatch init;
+			init.GetHi_counter()        = data.VoxelScreen_hi_data->counter_view;
+			init.GetLow_counter()       = data.VoxelScreen_low_data->counter_view;
+			init.GetHi_dispatch_data()  = data.VoxelScreen_hi->rwStructuredBuffer;
+			init.GetLow_dispatch_data() = data.VoxelScreen_low->rwStructuredBuffer;
+			compute.set(init);
+			compute.set_pipeline<PSOS::FrameClassificationInitDispatch>();
+			compute.dispatch(1, 1, 1);
+		}
+
+		{
+			PROFILE_GPU(L"mipmaps");
+			MipMapGenerator::get().generate(compute, noisy_output);
+		}
+
+		if (denoiser)
+		{
+			PROFILE_GPU(L"history");
+			compute.set_pipeline<PSOS::DenoiserHistoryFix>();
+			{
+				Slots::DenoiserHistoryFix denoiser_history;
+				HAL::TextureViewDesc subres;
+				subres.ArraySize       = 1;
+				subres.FirstArraySlice = 0;
+				subres.MipLevels       = noisy_output.resource->get_desc().as_texture().MipLevels - 1;
+				subres.MipSlice        = 1;
+				denoiser_history.GetColor() =
+					noisy_output.resource->create_view<Texture2DView>(*command_list, subres).texture2D;
+				subres.MipLevels = 1;
+				denoiser_history.GetFrames()  = frames_count.texture2D;
+				denoiser_history.GetTarget()  = noisy_output.rwTexture2D;
+				compute.set(denoiser_history);
+			}
+
+			{
+				Slots::TilingPostprocess tilingPostprocess;
+				tilingPostprocess.GetTiling().GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
+				compute.set(tilingPostprocess);
+			}
+			compute.exec_indirect(*data.VoxelScreen_hi, 1);
+		}
+
+		gi_index = 1 - gi_index;
+	};
+
+	// ---- VoxelCombine ---------------------------------------------------
+
+	m_voxelcombine_setup = [this](Passes::VoxelCombine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		builder.need(data.ResultTexture,         ResourceFlags::UnorderedAccess);
+		GBufferViewDesc::need(builder, data.gbuffer);
+		builder.need(data.VoxelIndirectFiltered, ResourceFlags::UnorderedAccess);
+		builder.need(data.sky_cubemap_filtered,  ResourceFlags::PixelRead);
+		builder.need(data.VoxelFramesCount,      ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelIndirectNoise,    ResourceFlags::ComputeRead);
+		builder.need(data.VoxelScreen_hi,        ResourceFlags::ComputeRead);
+		builder.need(data.VoxelScreen_low,       ResourceFlags::ComputeRead);
+		builder.need(data.VoxelScreen_low_data,  ResourceFlags::ComputeRead);
+		builder.need(data.VoxelScreen_hi_data,   ResourceFlags::ComputeRead);
+		return true;
+	};
+
+	m_voxelcombine_render = [this](Passes::VoxelCombine::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& command_list = context.get_list();
+
+		auto  target_tex          = *data.ResultTexture;
+		GBuffer gbuffer           = GBufferViewDesc::actualize(data.gbuffer);
+		auto  sky_cubemap_filtered = *data.sky_cubemap_filtered;
+		auto  noisy_output        = *data.VoxelIndirectNoise;
+		auto  frames_count        = *data.VoxelFramesCount;
+		auto  gi_filtered         = *data.VoxelIndirectFiltered;
+		auto  sz                  = target_tex.get_size();
+
+		auto& compute = command_list->get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+
+		{
+			Slots::VoxelScreen voxelScreen;
+			gbuffer.SetTable(voxelScreen.GetGbuffer());
+			voxelScreen.GetVoxels()     = tex_lighting.tex_result->texture_3d().texture3D;
+			voxelScreen.GetTex_cube()   = sky_cubemap_filtered.textureCube;
+			voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
+			voxelScreen.GetPrev_gi()    = gi_filtered.texture2D;
+			compute.set(voxelScreen);
+		}
+		context.graph->set_slot(SlotID::VoxelInfo, compute);
+
+		{
+			Slots::VoxelBlur voxelBlur;
+			voxelBlur.GetNoisy_output()  = noisy_output.texture2D;
+			voxelBlur.GetPrev_result()   = frames_count.texture2D;
+			voxelBlur.GetScreen_result() = target_tex.rwTexture2D;
+			voxelBlur.GetGi_result()     = gi_filtered.rwTexture2D;
+			compute.set(voxelBlur);
+		}
+
+		{
+			PROFILE_GPU(L"blur");
+			compute.set_pipeline<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Blur());
+			{
+				Slots::TilingPostprocess tp;
+				tp.GetTiling().GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
+				compute.set(tp);
+			}
+			compute.exec_indirect(*data.VoxelScreen_hi, 1);
+		}
+
+		{
+			PROFILE_GPU(L"blur2");
+			compute.set_pipeline<PSOS::VoxelIndirectFilter>();
+			{
+				Slots::TilingPostprocess tp;
+				tp.GetTiling().GetTiles() = data.VoxelScreen_low_data->structuredBuffer;
+				compute.set(tp);
+			}
+			compute.exec_indirect(*data.VoxelScreen_low, 1);
+		}
+	};
+
+	// ---- ScreenReflection -----------------------------------------------
+
+	m_screenreflection_setup = [this](Passes::ScreenReflection::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		if (!reflecton) return false;
+
+		auto& frame = builder.graph->get_context<ViewportInfo>();
+		auto  sz    = frame.frame_size;
+
+		builder.create(data.VoxelReflectionNoise,
+			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.noise_dir_pdf,
+			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+		builder.need(data.BlueNoise,            ResourceFlags::ComputeRead);
+		GBufferViewDesc::need(builder, data.gbuffer);
+		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
+		builder.need(data.VoxelLighted,         ResourceFlags::ComputeRead);
+		return true;
+	};
+
+	m_screenreflection_render = [this](Passes::ScreenReflection::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& command_list = context.get_list();
+
+		MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
+		GBuffer gbuffer           = GBufferViewDesc::actualize(data.gbuffer);
+		auto sky_cubemap_filtered = *data.sky_cubemap_filtered;
+		auto noisy_output         = *data.VoxelReflectionNoise;
+		auto dir_and_pdf          = *data.noise_dir_pdf;
+
+		auto& caminfo   = context.graph->get_context<CameraInfo>();
+		auto& sceneinfo = context.graph->get_context<SceneInfo>();
+
+		mesh_ctx->current_time = 0;
+		mesh_ctx->priority     = TaskPriority::HIGH;
+		mesh_ctx->list         = command_list;
+		mesh_ctx->cam          = caminfo.cam;
+
+		auto scene = sceneinfo.scene;
+		mesh_ctx->begin();
+
+		auto& compute = mesh_ctx->list->get_compute();
+
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+		context.graph->set_slot(SlotID::SceneData, compute);
+
+		{
+			Slots::VoxelScreen voxelScreen;
+			gbuffer.SetTable(voxelScreen.GetGbuffer());
+			voxelScreen.GetVoxels()   = tex_lighting.tex_result->texture_3d().texture3D;
+			voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
+			compute.set(voxelScreen);
+		}
+
+		context.graph->set_slot(SlotID::VoxelInfo, compute);
+
+		if (use_rtx)
+		{
+			{
+				Slots::VoxelOutput output;
+				output.GetNoise()     = noisy_output.rwTexture2D;
+				output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
+				output.GetBlueNoise() = data.BlueNoise->texture2D;
+				compute.set(output);
+			}
+			RTX::get().render<Reflection>(compute, scene->raytrace_scene, noisy_output.get_size());
+		}
+
+		refl_index = 1 - refl_index;
+	};
+
+	// ---- ReflectionDenoiser_Reproject -----------------------------------
+
+	m_refldenoisereproject_setup = [this](Passes::ReflectionDenoiser_Reproject::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		if (!reflecton) return false;
+
+		auto& frame      = builder.graph->get_context<ViewportInfo>();
+		auto  sz         = frame.frame_size;
+		uint2 small_size = uint2(
+			(sz.x + 7) / 8,
+			(sz.y + 7) / 8);
+
+		builder.need(data.GBuffer_DepthPrev,    ResourceFlags::ComputeRead);
+		builder.need(data.GBuffer_NormalsPrev,  ResourceFlags::ComputeRead);
+		builder.need(data.GBuffer_Depth,        ResourceFlags::ComputeRead);
+		builder.need(data.GBuffer_Normals,      ResourceFlags::ComputeRead);
+		builder.need(data.GBuffer_Speed,        ResourceFlags::ComputeRead);
+		builder.need(data.BlueNoise,            ResourceFlags::ComputeRead);
+		builder.need(data.VoxelReflectionNoise, ResourceFlags::UnorderedAccess);
+
+		builder.create(data.ReflectionDenoiser_RadiancePrev,
+			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
+			ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		builder.create(data.ReflectionDenoiser_AverageRadiance,
+			{ ivec3(small_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
+			ResourceFlags::UnorderedAccess);
+		builder.create(data.ReflectionDenoiser_AverageRadiancePrev,
+			{ ivec3(small_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
+			ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		builder.create(data.ReflectionDenoiser_Variance,
+			{ ivec3(sz, 0), HAL::Format::R16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.ReflectionDenoiser_VariancePrev,
+			{ ivec3(sz, 0), HAL::Format::R16_FLOAT, 1, 1 },
+			ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		builder.create(data.ReflectionDenoiser_SampleCount,
+			{ ivec3(sz, 0), HAL::Format::R16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.ReflectionDenoiser_SampleCountPrev,
+			{ ivec3(sz, 0), HAL::Format::R16_FLOAT, 1, 1 },
+			ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		builder.create(data.ReflectionDenoiser_ReprojectedRadiance,
+			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_refldenoisereproject_render = [this](Passes::ReflectionDenoiser_Reproject::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& list    = *context.get_list();
+		auto& compute = list.get_compute();
+		auto& copy    = context.get_list()->get_copy();
+		auto& cam     = context.graph->get_context<CameraInfo>();
+		auto  sz      = context.graph->get_context<ViewportInfo>().frame_size;
+
+		if (data.ReflectionDenoiser_RadiancePrev.is_new())
+		{
+			list.clear_uav(data.ReflectionDenoiser_RadiancePrev->rwTexture2D,        vec4(0, 0, 0, 0));
+			list.clear_uav(data.ReflectionDenoiser_AverageRadiance->rwTexture2D,     vec4(0, 0, 0, 0));
+			list.clear_uav(data.ReflectionDenoiser_AverageRadiancePrev->rwTexture2D, vec4(0, 0, 0, 0));
+			list.clear_uav(data.ReflectionDenoiser_Variance->rwTexture2D,            vec4(0, 0, 0, 0));
+			list.clear_uav(data.ReflectionDenoiser_VariancePrev->rwTexture2D,        vec4(0, 0, 0, 0));
+			list.clear_uav(data.ReflectionDenoiser_SampleCount->rwTexture2D,         vec4(0, 0, 0, 0));
+			list.clear_uav(data.ReflectionDenoiser_SampleCountPrev->rwTexture2D,     vec4(0, 0, 0, 0));
+			list.clear_uav(data.ReflectionDenoiser_ReprojectedRadiance->rwTexture2D, vec4(0, 0, 0, 0));
+		}
+
+		{
+			Slots::DenoiserReflectionCommon common;
+			common.g_buffer_dimensions     = sz;
+			common.g_inv_buffer_dimensions = float2(1.0f, 1.0f) / float2(sz);
+			common.g_view                  = cam.cam->camera_cb.current.GetView();
+			common.g_inv_view              = cam.cam->camera_cb.current.GetInvView();
+			common.g_prev_view_proj        = cam.cam->camera_cb.prev.GetViewProj();
+			common.g_inv_proj              = cam.cam->camera_cb.current.GetInvProj();
+			common.g_proj                  = cam.cam->camera_cb.current.GetProj();
+			common.g_inv_view_proj         = cam.cam->camera_cb.current.GetInvViewProj();
+			common.g_temporal_stability_factor          = 0.7f;
+			common.g_depth_buffer_thickness             = 0.015f;
+			common.g_roughness_threshold                = 0.2f;
+			common.g_temporal_variance_threshold        = 0;
+			common.g_frame_index                        = 100;
+			common.g_most_detailed_mip                  = 0;
+			common.g_samples_per_quad                   = 1;
+			common.g_temporal_variance_guided_tracing_enabled = true;
+			compute.set(common);
+		}
+
+		{
+			compute.set_pipeline<PSOS::DenoiserReflectionReproject>();
+			Slots::DenoiserReflectionReproject reproject;
+			reproject.g_depth_buffer             = data.GBuffer_Depth->texture2D;
+			reproject.g_normal                   = data.GBuffer_Normals->texture2D;
+			reproject.g_depth_buffer_history     = data.GBuffer_DepthPrev->texture2D;
+			reproject.g_normal_history           = data.GBuffer_NormalsPrev->texture2D;
+			reproject.g_in_radiance              = data.VoxelReflectionNoise->texture2D;
+			reproject.g_radiance_history         = data.ReflectionDenoiser_RadiancePrev->texture2D;
+			reproject.g_motion_vector            = data.GBuffer_Speed->texture2D;
+			reproject.g_average_radiance_history = data.ReflectionDenoiser_AverageRadiancePrev->texture2D;
+			reproject.g_variance_history         = data.ReflectionDenoiser_VariancePrev->texture2D;
+			reproject.g_sample_count_history     = data.ReflectionDenoiser_SampleCountPrev->texture2D;
+			reproject.g_blue_noise_texture       = data.BlueNoise->texture2D;
+			reproject.g_out_reprojected_radiance = data.ReflectionDenoiser_ReprojectedRadiance->rwTexture2D;
+			reproject.g_out_average_radiance     = data.ReflectionDenoiser_AverageRadiance->rwTexture2D;
+			reproject.g_out_variance             = data.ReflectionDenoiser_Variance->rwTexture2D;
+			reproject.g_out_sample_count         = data.ReflectionDenoiser_SampleCount->rwTexture2D;
+			compute.set(reproject);
+			compute.dispatch(uint3(sz, 1));
+		}
+
+		{
+			compute.set_pipeline<PSOS::DenoiserReflectionPrefilter>();
+			Slots::DenoiserReflectionPrefilter prefilter;
+			prefilter.g_depth_buffer     = data.GBuffer_Depth->texture2D;
+			prefilter.g_normal           = data.GBuffer_Normals->texture2D;
+			prefilter.g_average_radiance = data.ReflectionDenoiser_AverageRadiance->texture2D;
+			prefilter.g_in_radiance      = data.VoxelReflectionNoise->texture2D;
+			prefilter.g_in_variance      = data.ReflectionDenoiser_Variance->texture2D;
+			prefilter.g_in_sample_count  = data.ReflectionDenoiser_SampleCount->texture2D;
+			prefilter.g_out_radiance     = data.ReflectionDenoiser_RadiancePrev->rwTexture2D;
+			prefilter.g_out_sample_count = data.ReflectionDenoiser_SampleCountPrev->rwTexture2D;
+			prefilter.g_out_variance     = data.ReflectionDenoiser_VariancePrev->rwTexture2D;
+			compute.set(prefilter);
+			compute.dispatch(uint3(sz, 1));
+		}
+
+		{
+			compute.set_pipeline<PSOS::DenoiserReflectionResolve>();
+			Slots::DenoiserReflectionResolve resolve;
+			resolve.g_normal                  = data.GBuffer_Normals->texture2D;
+			resolve.g_average_radiance        = data.ReflectionDenoiser_AverageRadiance->texture2D;
+			resolve.g_in_radiance             = data.VoxelReflectionNoise->texture2D;
+			resolve.g_in_reprojected_radiance = data.ReflectionDenoiser_ReprojectedRadiance->texture2D;
+			resolve.g_in_variance             = data.ReflectionDenoiser_VariancePrev->texture2D;
+			resolve.g_in_sample_count         = data.ReflectionDenoiser_SampleCountPrev->texture2D;
+			resolve.g_out_radiance            = data.VoxelReflectionNoise->rwTexture2D;
+			resolve.g_out_sample_count        = data.ReflectionDenoiser_SampleCount->rwTexture2D;
+			resolve.g_out_variance            = data.ReflectionDenoiser_Variance->rwTexture2D;
+			compute.set(resolve);
+			compute.dispatch(uint3(sz, 1));
+		}
+
+		copy.copy_resource(data.ReflectionDenoiser_SampleCountPrev->resource,
+		                   data.ReflectionDenoiser_SampleCount->resource);
+		copy.copy_resource(data.ReflectionDenoiser_VariancePrev->resource,
+		                   data.ReflectionDenoiser_Variance->resource);
+		copy.copy_resource(data.ReflectionDenoiser_RadiancePrev->resource,
+		                   data.VoxelReflectionNoise->resource);
+		copy.copy_resource(data.ReflectionDenoiser_AverageRadiancePrev->resource,
+		                   data.ReflectionDenoiser_AverageRadiance->resource);
+	};
+
+	// ---- ReflCombine ----------------------------------------------------
+
+	m_reflcombine_setup = [this](Passes::ReflCombine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		if (!reflecton) return false;
+
+		builder.need(data.ResultTexture,        ResourceFlags::UnorderedAccess);
+		GBufferViewDesc::need(builder, data.gbuffer);
+		builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
+		return true;
+	};
+
+	m_reflcombine_render = [this](Passes::ReflCombine::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& command_list = context.get_list();
+		auto  target_tex   = *data.ResultTexture;
+		GBuffer gbuffer    = GBufferViewDesc::actualize(data.gbuffer);
+		auto  sz           = target_tex.get_size();
+		auto& compute      = command_list->get_compute();
+
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+		context.graph->set_slot(SlotID::SceneData, compute);
+
+		compute.set_pipeline<PSOS::ReflectionCombine>();
+
+		{
+			Slots::ReflectionCombine combine;
+			gbuffer.SetTable(combine.GetGbuffer());
+			combine.GetReflection() = data.VoxelReflectionNoise->texture2D;
+			combine.GetTarget()     = data.ResultTexture->rwTexture2D;
+			compute.set(combine);
+		}
+
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+		compute.dispatch(sz);
+	};
+
+	// ---- VoxelDebug -----------------------------------------------------
+
+	m_voxeldebug_setup = [this](Passes::VoxelDebug::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		auto& frame = builder.graph->get_context<ViewportInfo>();
+		auto  sz    = frame.frame_size;
+
+		builder.create(data.VoxelDebug,
+			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::RenderTarget);
+		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
+		GBufferViewDesc::need(builder, data.gbuffer);
+		return true;
+	};
+
+	m_voxeldebug_render = [this](Passes::VoxelDebug::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& command_list = context.get_list();
+		auto  voxel_lighted = *data.VoxelLighted;
+		auto& caminfo   = context.graph->get_context<CameraInfo>();
+		auto& sceneinfo = context.graph->get_context<SceneInfo>();
+
+		MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
+		auto  target_tex = *data.VoxelDebug;
+		GBuffer gbuffer  = GBufferViewDesc::actualize(data.gbuffer);
+
+		mesh_ctx->current_time = 0;
+		mesh_ctx->priority     = TaskPriority::HIGH;
+		mesh_ctx->list         = command_list;
+		mesh_ctx->cam          = caminfo.cam;
+		mesh_ctx->begin();
+
+		auto& graphics = mesh_ctx->list->get_graphics();
+
+		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+		graphics.set_viewport(target_tex.get_viewport());
+		graphics.set_scissor(target_tex.get_scissor());
+
+		{
+			RT::SingleColor rt;
+			rt.GetColor() = target_tex.renderTarget;
+			graphics.set_rtv(rt);
+		}
+
+		graphics.set_pipeline<PSOS::VoxelDebug>();
+		context.graph->set_slot(SlotID::VoxelInfo, graphics);
+		context.graph->set_slot(SlotID::FrameInfo, graphics);
+
+		{
+			Slots::VoxelDebug debug;
+			debug.GetVolume() = voxel_lighted.texture3D;
+			gbuffer.SetTable(debug.GetGbuffer());
+			graphics.set(debug);
+		}
+		graphics.draw(4);
+	};
+
 	init_states();
 
 }
@@ -271,8 +1032,6 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 	PROFILE_GPU(L"voxelizing");
 
-	//list.clear_uav(tiled_volume_albedo_dynamic, tiled_volume_albedo_dynamic->texture_3d().get_static_uav());
-
 	if (clear_scene && all_scene_regen_counter)
 	{
 		PROFILE_GPU(L"clear");
@@ -284,7 +1043,6 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 		albedo_tiles->update(context->list);
 		compute.set_pipeline<PSOS::VoxelCopy>();
-		//scene->voxels_compiled.set(compute);
 		graph.set_slot(SlotID::VoxelInfo, compute);
 		{
 
@@ -362,1093 +1120,5 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 		if (b)
 			b->update(context->list);
 
-
-}
-
-
-
-void VoxelGI::debug(Graph& graph)
-{
-	struct VoxelDebugData
-	{
-		GBufferViewDesc gbuffer;
-		Handlers::Texture H(VoxelDebug);
-		Handlers::Texture3D H(VoxelLighted);
-
-	};
-	auto& frame = graph.get_context<ViewportInfo>();
-
-	auto size = frame.frame_size;
-
-	graph.add_pass<VoxelDebugData>(L"VoxelDebug", [this, size](VoxelDebugData& data, TaskBuilder& builder) {
-
-		builder.create(data.VoxelDebug, { ivec3(size,0),  HAL::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::RenderTarget);
-		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
-
-		data.gbuffer.need(builder);
-
-		}, [this, &graph](VoxelDebugData& data, FrameContext& _context) {
-
-			auto& command_list = _context.get_list();
-
-			auto voxel_lighted = *data.VoxelLighted;
-			auto& caminfo = graph.get_context<CameraInfo>();
-			auto& sceneinfo = graph.get_context<SceneInfo>();
-
-			MeshRenderContext::ptr context(new MeshRenderContext());
-			auto target_tex = *data.VoxelDebug;
-			auto gbuffer = data.gbuffer.actualize(_context);
-
-			context->current_time = 0;
-			//		context->sky_dir = lighting->tex_lighting.pssm.get_position();
-			context->priority = TaskPriority::HIGH;
-			context->list = command_list;
-			//	context->eye_context = vr_context;
-
-			context->cam = caminfo.cam;
-
-			auto scene = sceneinfo.scene;
-			auto renderer = sceneinfo.renderer;
-			context->begin();
-
-			auto& graphics = context->list->get_graphics();
-
-			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-
-			graphics.set_viewport(target_tex.get_viewport());
-			graphics.set_scissor(target_tex.get_scissor());
-
-						{
-				RT::SingleColor rt;
-				rt.GetColor() =target_tex.renderTarget;
-				graphics.set_rtv(rt);
-				}
-
-
-			graphics.set_pipeline<PSOS::VoxelDebug>();
-
-			graph.set_slot(SlotID::VoxelInfo, graphics);
-			graph.set_slot(SlotID::FrameInfo, graphics);
-
-			//scene->voxels_compiled.set(graphics);
-
-			{
-				Slots::VoxelDebug debug;
-				debug.GetVolume() = voxel_lighted.texture3D;
-				gbuffer.SetTable(debug.GetGbuffer());
-				graphics.set(debug);
-
-			}
-			graphics.draw(4);
-
-			//screen_reflection(context, scene);
-		});
-}
-
-
-
-void VoxelGI::screen(Graph& graph)
-{
-	struct Screen
-	{
-		GBufferViewDesc gbuffer;
-		Handlers::Texture H(ResultTexture);
-
-		Handlers::Texture3D H(VoxelLighted);
-		Handlers::Texture H(VoxelFramesCount);
-		Handlers::Texture H(VoxelIndirectNoise);
-		Handlers::Texture H(VoxelIndirectFiltered);
-
-		Handlers::Cube H(sky_cubemap_filtered);
-
-				Handlers::Texture H(BlueNoise);
-
-		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_hi);
-		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_low);
-
-
-		Handlers::StructuredBuffer<uint2> H(VoxelScreen_low_data);
-		Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
-
-	};
-	auto& frame = graph.get_context<ViewportInfo>();
-
-	auto size = frame.frame_size;
-	int count = 2 * Math::DivideByMultiple(size.x, 32) * Math::DivideByMultiple(size.y, 32);
-
-	graph.add_pass<Screen>(L"VoxelScreen", [this, size](Screen& data, TaskBuilder& builder) {
-
-
-		data.gbuffer.need(builder, false);
-		builder.create(data.VoxelFramesCount, { ivec3(size.x, size.y,0),  HAL::Format::R16_FLOAT, 1 ,1 }, ResourceFlags::UnorderedAccess);
-		builder.create(data.VoxelIndirectNoise, { ivec3(size.x, size.y,0), HAL::Format::R16G16B16A16_FLOAT,1 ,0 }, ResourceFlags::UnorderedAccess);
-		builder.create(data.VoxelIndirectFiltered, { ivec3(size.x, size.y,0), HAL::Format::R16G16B16A16_FLOAT , 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
-		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
-		builder.need(data.BlueNoise, ResourceFlags::ComputeRead);
-
-		builder.create(data.VoxelScreen_hi, { 1u, false }, ResourceFlags::UnorderedAccess);
-		builder.create(data.VoxelScreen_low, { 1u, false }, ResourceFlags::UnorderedAccess);
-
-
-		UINT count = 2 * Math::DivideByMultiple(size.x, 32) * Math::DivideByMultiple(size.y, 32);
-
-
-		builder.create(data.VoxelScreen_low_data, { count, true }, ResourceFlags::UnorderedAccess);
-		builder.create(data.VoxelScreen_hi_data, { count, true }, ResourceFlags::UnorderedAccess);
-
-
-		}, [this, &graph](Screen& data, FrameContext& _context) {
-
-			auto& command_list = _context.get_list();
-
-			bool use_rtx = HAL::Device::get().is_rtx_supported() && this->use_rtx;
-			auto gbuffer = data.gbuffer.actualize(_context);
-			auto sky_cubemap_filtered = *data.sky_cubemap_filtered;
-			auto noisy_output = *data.VoxelIndirectNoise;
-			auto gi_filtered = *data.VoxelIndirectFiltered;
-			auto frames_count = *data.VoxelFramesCount;
-
-			auto size = noisy_output.get_size();
-
-			auto& sceneinfo = graph.get_context<SceneInfo>();
-
-
-			if (data.VoxelIndirectFiltered.is_new())
-			{
-				command_list->clear_uav(gi_filtered.rwTexture2D, vec4(0, 0, 0, 0));
-				command_list->clear_uav(noisy_output.rwTexture2D, vec4(0, 0, 0, 0));
-				command_list->clear_uav(frames_count.rwTexture2D, vec4(0, 0, 0, 0));
-
-			}
-
-
-			auto scene = sceneinfo.scene;
-			auto renderer = sceneinfo.renderer;
-
-			auto& compute = command_list->get_compute();
-
-			//	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-			if (use_rtx)
-
-				command_list->get_compute().set_signature(RTX::get().rtx.m_root_sig);
-			else
-				compute.set_signature(Layouts::DefaultLayout);
-
-
-
-			graph.set_slot(SlotID::FrameInfo, compute);
-			graph.set_slot(SlotID::VoxelInfo, compute);
-			graph.set_slot(SlotID::SceneData, compute);
-
-
-			{
-				Slots::VoxelScreen voxelScreen;
-				gbuffer.SetTable(voxelScreen.GetGbuffer());
-				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d().texture3D;
-				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
-				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
-				voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
-
-				compute.set(voxelScreen);
-			}
-
-			//scene->voxels_compiled.set(compute);
-			//	scene->voxels_compiled.set(compute);
-
-
-			{
-				Slots::VoxelOutput output;
-
-				output.GetFrames() = frames_count.rwTexture2D;
-				output.GetNoise() = noisy_output.rwTexture2D;				
-				output.GetBlueNoise() =data.BlueNoise->texture2D;
-				compute.set(output);
-			}
-
-
-			if (use_rtx)
-			{
-				RTX::get().render<Indirect>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
-			}
-			else
-			{
-				PROFILE_GPU(L"noise");
-				compute.set_pipeline<PSOS::VoxelIndirectLow>();
-				compute.dispatch(size);
-			}
-
-
-			compute.set_signature(Layouts::DefaultLayout);
-			{
-				PROFILE_GPU(L"classification");
-
-				compute.clear_counter(*data.VoxelScreen_hi_data);
-				compute.clear_counter(*data.VoxelScreen_low_data);
-
-				{
-					Slots::FrameClassification frame_classification;
-
-					frame_classification.GetFrames() = frames_count.texture2D;
-					frame_classification.GetHi() = data.VoxelScreen_hi_data->appendStructuredBuffer;
-					frame_classification.GetLow() = data.VoxelScreen_low_data->appendStructuredBuffer;
-
-					compute.set(frame_classification);
-				}
-
-				compute.set_pipeline<PSOS::FrameClassification>();
-				//compute.dispatch(uint2( Math::DivideByMultiple(size.x, 32) , Math::DivideByMultiple(size.y, 32)));
-
-				uint2 tiles_count = uint2(Math::DivideByMultiple(size.x, 32), Math::DivideByMultiple(size.y, 32));
-				compute.dispatch(tiles_count);
-			}
-			{
-				PROFILE_GPU(L"init_dispatch");
-
-				{
-					Slots::FrameClassificationInitDispatch frame_classification_init;
-					frame_classification_init.GetHi_counter() = data.VoxelScreen_hi_data->counter_view;
-					frame_classification_init.GetLow_counter() = data.VoxelScreen_low_data->counter_view;
-
-					frame_classification_init.GetHi_dispatch_data() = data.VoxelScreen_hi->rwStructuredBuffer;
-					frame_classification_init.GetLow_dispatch_data() = data.VoxelScreen_low->rwStructuredBuffer;
-
-					compute.set(frame_classification_init);
-				}
-				compute.set_pipeline<PSOS::FrameClassificationInitDispatch>();
-				compute.dispatch(1, 1, 1);
-			}
-
-			{
-				PROFILE_GPU(L"mipmaps");
-				MipMapGenerator::get().generate(compute, noisy_output);
-			}
-
-			if (denoiser)
-			{
-				PROFILE_GPU(L"history");
-				compute.set_pipeline<PSOS::DenoiserHistoryFix>();
-				{
-					Slots::DenoiserHistoryFix denoiser_history;
-					HAL::TextureViewDesc subres;
-
-					subres.ArraySize = 1;
-					subres.FirstArraySlice = 0;
-					subres.MipLevels = noisy_output.resource->get_desc().as_texture().MipLevels - 1;
-					subres.MipSlice = 1;
-
-					denoiser_history.GetColor() = noisy_output.resource->create_view<Texture2DView>(*command_list, subres).texture2D;
-
-					subres.MipLevels = 1;
-					denoiser_history.GetFrames() = frames_count.texture2D;
-					denoiser_history.GetTarget() = noisy_output.rwTexture2D;
-					compute.set(denoiser_history);
-				}
-
-				{
-					Slots::TilingPostprocess tilingPostprocess;
-					auto& tiling = tilingPostprocess.GetTiling();
-					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
-					compute.set(tilingPostprocess);
-				}
-
-				//	compute.dispatch(frames_count.get_size());
-
-				compute.exec_indirect(*data.VoxelScreen_hi,1);
-			}
-
-
-
-
-		}, PassFlags::Compute);
-
-
-
-
-	graph.add_pass<Screen>(L"VoxelCombine", [this, size](Screen& data, TaskBuilder& builder) {
-
-		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
-
-		data.gbuffer.need(builder, false);
-		builder.need(data.VoxelIndirectFiltered, ResourceFlags::UnorderedAccess);
-		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
-		builder.need(data.VoxelFramesCount, ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelIndirectNoise, ResourceFlags::ComputeRead);
-
-		builder.need(data.VoxelScreen_hi, ResourceFlags::ComputeRead);
-		builder.need(data.VoxelScreen_low, ResourceFlags::ComputeRead);
-
-
-		builder.need(data.VoxelScreen_low_data);
-		builder.need(data.VoxelScreen_hi_data);
-
-		}, [this, &graph](Screen& data, FrameContext& _context) {
-
-			auto& command_list = _context.get_list();
-
-
-			auto target_tex = *(data.ResultTexture);
-			auto gbuffer = data.gbuffer.actualize(_context);
-			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
-			auto noisy_output = *(data.VoxelIndirectNoise);
-			auto frames_count = *(data.VoxelFramesCount);
-
-			auto gi_filtered = *(data.VoxelIndirectFiltered);
-
-			auto& sceneinfo = graph.get_context<SceneInfo>();
-
-
-			auto size = target_tex.get_size();
-
-			auto scene = sceneinfo.scene;
-			auto renderer = sceneinfo.renderer;
-
-			auto& compute = command_list->get_compute();
-
-			//	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-			compute.set_signature(Layouts::DefaultLayout);
-
-			graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
-
-
-			{
-				Slots::VoxelScreen voxelScreen;
-				gbuffer.SetTable(voxelScreen.GetGbuffer());
-				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d().texture3D;
-				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
-				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
-				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
-				voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
-				//	voxelScreen.set(graphics);
-				compute.set(voxelScreen);
-			}
-
-			//	scene->voxels_compiled.set(compute);
-				//	scene->voxels_compiled.set(compute);
-			graph.set_slot(SlotID::VoxelInfo, compute);
-
-
-			{
-				Slots::VoxelBlur voxelBlur;
-
-				voxelBlur.GetNoisy_output() = noisy_output.texture2D;
-				voxelBlur.GetPrev_result() = frames_count.texture2D;
-
-				voxelBlur.GetScreen_result() = target_tex.rwTexture2D;
-				voxelBlur.GetGi_result() = gi_filtered.rwTexture2D;
-
-
-
-				compute.set(voxelBlur);
-			}
-
-			{
-				PROFILE_GPU(L"blur");
-				compute.set_pipeline<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Blur());
-
-				{
-					Slots::TilingPostprocess tilingPostprocess;
-					auto& tiling = tilingPostprocess.GetTiling();
-					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
-					compute.set(tilingPostprocess);
-				}
-
-				compute.exec_indirect(*data.VoxelScreen_hi, 1);
-			}
-
-			{
-				PROFILE_GPU(L"blur2");
-				compute.set_pipeline<PSOS::VoxelIndirectFilter>();
-
-				{
-					Slots::TilingPostprocess tilingPostprocess;
-					auto& tiling = tilingPostprocess.GetTiling();
-					tiling.GetTiles() = data.VoxelScreen_low_data->structuredBuffer;
-					compute.set(tilingPostprocess);
-				}
-
-
-				compute.exec_indirect(*data.VoxelScreen_low,1);
-			}
-
-
-		}, PassFlags::Compute);
-
-
-
-	gi_index = 1 - gi_index;
-
-}
-
-
-
-void VoxelGI::screen_reflection(Graph& graph)
-{
-	struct ScreenReflection
-	{
-		GBufferViewDesc gbuffer;
-
-		Handlers::Texture H(VoxelReflectionNoise);
-		//Handlers::Texture H(VoxelReflectionFiltered);
-
-		Handlers::Cube H(sky_cubemap_filtered);
-
-		Handlers::Texture H(noise_dir_pdf);
-		Handlers::Texture H(prev_gi_temp);
-
-		Handlers::Texture H(ResultTexture);
-
-			Handlers::Texture H(BlueNoise);
-
-		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_hi);
-		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_low);
-
-		Handlers::StructuredBuffer<uint2> H(VoxelScreen_low_data);
-		Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
-
-			Handlers::Texture3D H(VoxelLighted);
-
-	};
-	auto& frame = graph.get_context<ViewportInfo>();
-
-	auto size = frame.frame_size;
-
-	graph.add_pass<ScreenReflection>(L"ScreenReflection", [this, size](ScreenReflection& data, TaskBuilder& builder) {
-
-		//builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-		builder.create(data.VoxelReflectionNoise, { ivec3(size.x, size.y,0),  HAL::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::UnorderedAccess);
-		builder.create(data.noise_dir_pdf, { ivec3(size.x, size.y,0),  HAL::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess);
-			builder.need(data.BlueNoise, ResourceFlags::ComputeRead);
-
-		data.gbuffer.need(builder, false);
-		//	data.downsampled_reflection = builder.create("downsampled_reflection", ivec2(size.x / 2, size.y / 2), 1, HAL::Format::R11G11B10_FLOAT, ResourceFlags::RenderTarget);
-		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
-
-					builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
-
-
-		}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
-
-			auto& command_list = _context.get_list();
-
-
-			MeshRenderContext::ptr context(new MeshRenderContext());
-			//auto target_tex = *(data.ResultTexture);
-			auto gbuffer = data.gbuffer.actualize(_context);
-			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
-			auto noisy_output = *(data.VoxelReflectionNoise);
-			auto dir_and_pdf = *(data.noise_dir_pdf);
-			//	auto gi_filtered = *(data.gi_filtered);
-
-			//	HAL::Texture2DView downsampled_reflection = *(data.downsampled_reflection);
-
-			auto& caminfo = graph.get_context<CameraInfo>();
-			auto& sceneinfo = graph.get_context<SceneInfo>();
-
-
-			context->current_time = 0;
-			context->priority = TaskPriority::HIGH;
-			context->list = command_list;
-
-			context->cam = caminfo.cam;
-
-			auto scene = sceneinfo.scene;
-			auto renderer = sceneinfo.renderer;
-			context->begin();
-
-			//auto& graphics = context->list->get_graphics();
-			auto& compute = context->list->get_compute();
-
-
-			
-			//graphics.set_signature(Layouts::DefaultLayout);
-
-			{
-
-				graph.set_slot(SlotID::FrameInfo, compute);
-		//		graph.set_slot(SlotID::FrameInfo, graphics);
-				graph.set_slot(SlotID::SceneData, compute);
-		//		graph.set_slot(SlotID::SceneData, graphics);
-			}
-
-
-			{
-				Slots::VoxelScreen voxelScreen;
-				gbuffer.SetTable(voxelScreen.GetGbuffer());
-				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d().texture3D;
-				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
-				//		voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
-			//	voxelScreen.set(graphics);
-				compute.set(voxelScreen);
-			}
-
-			//	scene->voxels_compiled.set(graphics);
-			//	scene->voxels_compiled.set(compute);
-
-			graph.set_slot(SlotID::VoxelInfo, compute);
-		//	graph.set_slot(SlotID::VoxelInfo, graphics);
-
-
-
-			if (use_rtx)
-			{
-				{
-					Slots::VoxelOutput output;
-
-					//	output.GetFrames() = gi_filtered.rwTexture2D;
-					output.GetNoise() = noisy_output.rwTexture2D;
-					output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
-
-				output.GetBlueNoise() =data.BlueNoise->texture2D;
-
-
-					compute.set(output);
-				}
-
-
-				RTX::get().render<Reflection>(compute, scene->raytrace_scene, noisy_output.get_size());
-
-				//		command_list->get_copy().copy_resource(gi_filtered.resource, noisy_output.resource);
-			}
-			//else
-			//{
-			//	graphics.set_viewport(target_tex.get_viewport());
-			//	graphics.set_scissor(target_tex.get_scissor());
-
-			//	{
-			//		RT::SingleColorDepth rt;
-			//		rt.GetColor() = target_tex.renderTarget;
-			//		rt.GetDepth() = gbuffer.quality.depthStencil;
-
-			//		rt.set(graphics);
-			//	}
-
-			//	PROFILE_GPU(L"full");
-			//	graphics.set_stencil_ref(2);
-			//	graphics.set_pipeline<PSOS::VoxelReflectionHi>();
-			//	graphics.draw(4);
-			//}
-
-		}, PassFlags::Compute);
-
-		reflection_denoiser.generate(graph);
-
-
-				graph.add_pass<ScreenReflection>(L"ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
-
-		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
-
-		data.gbuffer.need(builder, false);
-		builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
-
-			}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
-
-				auto& command_list = _context.get_list();
-
-				auto& sceneinfo = graph.get_context<SceneInfo>();
-
-				auto target_tex = *(data.ResultTexture);
-				auto gbuffer = data.gbuffer.actualize(_context);
-		
-				auto size = target_tex.get_size();
-
-				auto& compute = command_list->get_compute();
-						graph.set_slot(SlotID::FrameInfo, compute);
-				graph.set_slot(SlotID::SceneData, compute);
-			
-					compute.set_pipeline<PSOS::ReflectionCombine>();
-			
-				{
-					Slots::ReflectionCombine combine;
-					gbuffer.SetTable(combine.GetGbuffer());
-					combine.GetReflection() = data.VoxelReflectionNoise->texture2D;
-					combine.GetTarget() = data.ResultTexture->rwTexture2D;
-
-					compute.set(combine);
-				}
-
-				
-				graph.set_slot(SlotID::FrameInfo, compute);
-
-				compute.dispatch(size);
-				
-
-
-			}, PassFlags::Compute);
-	 
-	// 
-	//if (HAL::Device::get().is_rtx_supported() && this->use_rtx)
-	//	graph.add_pass<ScreenReflection>("ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
-
-	//	builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
-
-	//	data.gbuffer.need(builder, false);
-	////	builder.create(data.VoxelReflectionFiltered, { ivec3(size.x, size.y,0),  HAL::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-	//	builder.create(data.prev_gi_temp, { ivec3(size.x, size.y,0), HAL::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::RenderTarget);
-
-
-	//	builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
-
-	//	builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
-
-	//	builder.need(data.noise_dir_pdf, ResourceFlags::ComputeRead);
-
-
-	//	builder.need(data.VoxelScreen_hi, ResourceFlags::ComputeRead);
-	//	builder.need(data.VoxelScreen_low, ResourceFlags::ComputeRead);
-	//	builder.need(data.VoxelScreen_low_data, ResourceFlags::ComputeRead);
-	//	builder.need(data.VoxelScreen_hi_data, ResourceFlags::ComputeRead);
-
-	//		}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
-
-	//			auto& command_list = _context.get_list();
-
-	//			auto& sceneinfo = graph.get_context<SceneInfo>();
-
-	//			auto target_tex = *(data.ResultTexture);
-	//			auto gbuffer = data.gbuffer.actualize(_context);
-	//			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
-	//			auto noisy_output = *(data.VoxelReflectionNoise);
-	//			//	auto frames_count = *(data.frames_count);
-	//			auto dir_and_pdf = *(data.noise_dir_pdf);
-
-	//			auto cur_gi = *(data.VoxelReflectionFiltered);
-
-	//			auto prev_gi = *(data.prev_gi_temp);
-
-	//			if (data.VoxelReflectionFiltered.is_new())
-	//			{
-	//				command_list->clear_uav(cur_gi.rwTexture2D, vec4(0, 0, 0, 0));
-	//			}
-
-	//			command_list->get_copy().copy_resource(prev_gi.resource, cur_gi.resource);
-
-	//			auto size = target_tex.get_size();
-
-	//			auto scene = sceneinfo.scene;
-	//			auto renderer = sceneinfo.renderer;
-
-	//			auto& compute = command_list->get_compute();
-
-	//			//	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-	//			compute.set_signature(Layouts::DefaultLayout);
-
-
-	//			{
-	//				Slots::VoxelScreen voxelScreen;
-	//				gbuffer.SetTable(voxelScreen.GetGbuffer());
-	//				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d().texture3D;
-	//				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
-	//				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
-	//				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
-	//				voxelScreen.GetPrev_gi() = prev_gi.texture2D;
-	//				//	voxelScreen.set(graphics);
-	//				voxelScreen.set(compute);
-	//			}
-
-	//			//	scene->voxels_compiled.set(compute);
-	//				//	scene->voxels_compiled.set(compute);
-	//			graph.set_slot(SlotID::VoxelInfo, compute);
-	//			graph.set_slot(SlotID::FrameInfo, compute);
-
-	//			{
-	//				Slots::VoxelBlur voxelBlur;
-
-	//				voxelBlur.GetNoisy_output() = noisy_output.texture2D;
-	//				voxelBlur.GetPrev_result() = prev_gi.texture2D;
-
-	//				voxelBlur.GetScreen_result() = target_tex.rwTexture2D;
-	//				voxelBlur.GetGi_result() = cur_gi.rwTexture2D;
-	//				voxelBlur.GetHit_and_pdf() = dir_and_pdf.texture2D;
-
-	//				voxelBlur.set(compute);
-	//			}
-	//			{
-	//				PROFILE_GPU(L"blur");
-	//				compute.set_pipeline<PSOS::VoxelIndirectFilter>(/*PSOS::VoxelIndirectFilter::Blur() |*/ PSOS::VoxelIndirectFilter::Reflection());
-
-
-	//				{
-	//					Slots::TilingPostprocess tilingPostprocess;
-	//					auto& tiling = tilingPostprocess.GetTiling();
-	//					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
-	//					tilingPostprocess.set(compute);
-	//				}
-
-
-	//				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
-	//			}
-
-	//			{
-	//				PROFILE_GPU(L"blur2");
-	//				compute.set_pipeline<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Reflection());
-
-	//				{
-	//					Slots::TilingPostprocess tilingPostprocess;
-	//					auto& tiling = tilingPostprocess.GetTiling();
-	//					tiling.GetTiles() = data.VoxelScreen_low_data->structuredBuffer;
-	//					tilingPostprocess.set(compute);
-	//				}
-
-	//				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource.get());
-	//			}
-
-
-	//		}, PassFlags::Compute);
-
-	refl_index = 1 - refl_index;
-}
-
-
-void VoxelGI::voxelize(Graph& graph)
-{
-	struct Voxelize
-	{
-		Handlers::Texture H(VoxelAlbedo);
-		Handlers::Texture H(VoxelNormal);
-
-
-		Handlers::Texture H(VoxelAlbedoStatic);
-		Handlers::Texture H(VoxelNormalStatic);
-
-		Handlers::Texture H(VoxelAlbedoDynamic);
-		Handlers::Texture H(VoxelNormalDynamic);
-	};
-
-	graph.add_pass<Voxelize>(L"voxelize", [this](Voxelize& data, TaskBuilder& builder) {
-
-
-		builder.need(data.VoxelAlbedo, ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelNormal, ResourceFlags::UnorderedAccess);
-
-		builder.need(data.VoxelAlbedoStatic, ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelNormalStatic, ResourceFlags::UnorderedAccess);
-
-		builder.need(data.VoxelAlbedoDynamic, ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelNormalDynamic, ResourceFlags::UnorderedAccess);
-
-		}, [this, &graph](Voxelize& data, FrameContext& _context) {
-			auto& command_list = _context.get_list();
-			auto& cam = graph.get_context<CameraInfo>();
-			auto& sceneinfo = graph.get_context<SceneInfo>();
-
-			if (need_start_new)
-			{
-				start_new(*command_list);
-				need_start_new = false;
-			}
-
-
-			MeshRenderContext::ptr context(new MeshRenderContext());
-			context->current_time = 0;
-			context->priority = TaskPriority::HIGH;
-			context->list = command_list;
-			context->cam = cam.cam;
-
-			auto scene = sceneinfo.scene;
-			auto renderer = sceneinfo.renderer;
-			context->begin();
-
-			voxelize(context, renderer, graph);
-		});
-}
-
-void VoxelGI::lighting(Graph& graph)
-{
-
-
-	struct Lighting
-	{
-		Handlers::Texture H(global_depth);
-		Handlers::StructuredBuffer<Table::Camera> H(global_camera);
-		Handlers::Texture3D H(VoxelLighted);
-		Handlers::Texture3D H(VoxelAlbedo);
-		Handlers::Texture3D H(VoxelNormal);
-		Handlers::Cube H(sky_cubemap_filtered);
-
-			Handlers::Texture H(VoxelAlbedoStatic);
-		Handlers::Texture H(VoxelNormalStatic);
-
-		Handlers::Texture H(VoxelAlbedoDynamic);
-		Handlers::Texture H(VoxelNormalDynamic);
-	};
-
-
-	graph.add_pass<Lighting>(L"Lighting", [this](Lighting& data, TaskBuilder& builder) {
-
-		builder.need(data.global_depth, ResourceFlags::ComputeRead);
-		builder.need(data.global_camera, ResourceFlags::ComputeRead);
-		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
-
-
-		builder.need(data.VoxelLighted, ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelAlbedo, ResourceFlags::ComputeRead);
-		builder.need(data.VoxelNormal, ResourceFlags::ComputeRead);
-
-
-				builder.need(data.VoxelAlbedoStatic, ResourceFlags::ComputeRead);
-		builder.need(data.VoxelNormalStatic, ResourceFlags::ComputeRead);
-
-		builder.need(data.VoxelAlbedoDynamic, ResourceFlags::ComputeRead);
-		builder.need(data.VoxelNormalDynamic, ResourceFlags::ComputeRead);
-
-
-		}, [this, &graph](auto& data, FrameContext& _context) {
-
-			auto& command_list = _context.get_list();
-
-			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
-
-			auto& cam = graph.get_context<CameraInfo>();
-
-			MeshRenderContext::ptr context(new MeshRenderContext());
-			context->current_time = 0;
-			context->priority = TaskPriority::HIGH;
-			context->list = command_list;
-			context->cam = cam.cam;
-
-
-
-			auto& list = *context->list;
-			auto& compute = context->list->get_compute();
-
-			compute.set_pipeline<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use((all_scene_regen_counter == 0) && multiple_bounces));
-
-			Slots::VoxelLighting ligthing;
-			{
-
-				ligthing.GetAlbedo() = albedo.tex_result->texture_3d().texture3D;
-				ligthing.GetNormals() = normal.tex_result->texture_3d().texture3D;
-				ligthing.GetOutput() = tex_lighting.tex_result->texture_3d().mips[0].rwTexture3D;
-				ligthing.GetTex_cube() = sky_cubemap_filtered.textureCube;
-				HAL::Texture3DViewDesc subres;
-
-
-				subres.MipLevels = tex_lighting.tex_result->get_desc().as_texture().MipLevels - 1;
-				subres.MipSlice = 1;
-
-				ligthing.GetLower() = tex_lighting.tex_result->resource->create_view<Texture3DView>(list, subres).texture3D;
-
-
-				auto& params = ligthing.GetParams();
-				params.GetTiles() = gpu_tiles_buffer[0]->buffer;
-				params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
-
-				auto& pssm = ligthing.GetPssmGlobal();
-
-				pssm.GetLight_buffer() = data.global_depth->texture2D;
-
-				auto buffer_view = data.global_camera->resource->create_view<HAL::StructuredBufferView<Table::Camera>>(list);
-
-				pssm.GetLight_camera() = buffer_view;
-
-
-				compute.set(ligthing);
-
-			}
-			//graph.scene->voxels_compiled.set(compute);
-			graph.set_slot(SlotID::VoxelInfo, compute);
-
-			compute.exec_indirect(gpu_tiles_buffer[0]->dispatch_buffer, 1);
-
-		}, PassFlags::Compute);
-
-}
-
-
-void VoxelGI::mipmapping(Graph& graph)
-{
-	struct Mipmapping
-	{
-		Handlers::Texture3D H(VoxelLighted);
-	};
-
-	graph.add_pass<Mipmapping>(L"Mipmapping", [this](Mipmapping& data, TaskBuilder& builder) {
-
-		builder.need(data.VoxelLighted, ResourceFlags::UnorderedAccess);
-
-		}, [this, &graph](Mipmapping& data, FrameContext& _context) {
-
-			auto& command_list = _context.get_list();
-
-			auto voxel_lighted = *(data.VoxelLighted);
-			auto& cam = graph.get_context<CameraInfo>();
-
-			MeshRenderContext::ptr context(new MeshRenderContext());
-
-			context->current_time = 0;
-			//		context->sky_dir = lighting->tex_lighting.pssm.get_position();
-			context->priority = TaskPriority::HIGH;
-			context->list = command_list;
-			//	context->eye_context = vr_context;
-
-			context->cam = cam.cam;
-
-
-
-			auto& list = *context->list;
-			auto& compute = context->list->get_compute();
-
-
-
-
-
-
-
-			compute.set_signature(Layouts::DefaultLayout);
-
-
-			//graph.scene->voxels_compiled.set(compute);
-			graph.set_slot(SlotID::VoxelInfo, compute);
-
-
-			compute.set_pipeline<PSOS::VoxelZero>();
-			{
-				PROFILE_GPU(L"ZERO");
-				for (uint i = 1; i < tex_lighting.tex_result->get_desc().as_texture().MipLevels; i++)
-				{
-					if (i >= gpu_tiles_buffer.size() || !gpu_tiles_buffer[i])
-					{
-						list.clear_uav(tex_lighting.tex_result->texture_3d().mips[i].rwTexture3D, vec4(0, 0, 0, 0));
-						continue;
-					}
-
-					{
-						Slots::VoxelZero utils;
-						utils.GetTarget() = tex_lighting.tex_result->texture_3d().mips[i].rwTexture3D;
-
-						auto& params = utils.GetParams();
-						params.GetTiles() = gpu_tiles_buffer[i]->buffer;
-						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
-
-						compute.set(utils);
-					}
-
-					compute.exec_indirect(gpu_tiles_buffer[i]->dispatch_buffer,	1);
-
-				}
-			}
-
-			{
-				PROFILE_GPU(L"EXEC");
-				unsigned int mip_count = 1;
-
-				while (mip_count < tex_lighting.tex_result->get_desc().as_texture().MipLevels)
-				{
-
-					if (!gpu_tiles_buffer[mip_count]) break;
-					unsigned int current_mips = std::min(3u, tex_lighting.tex_result->get_desc().as_texture().MipLevels - mip_count);
-					compute.set_pipeline<PSOS::VoxelDownsample>(PSOS::VoxelDownsample::Count(current_mips));
-
-					{
-
-
-						Slots::VoxelMipMap mipmapping;
-						mipmapping.GetSrcMip() = tex_lighting.tex_result->texture_3d().mips[mip_count - 1].texture3D;
-
-						for (unsigned int i = 0; i < current_mips; i++)
-						{
-							mipmapping.GetOutMips()[i] = tex_lighting.tex_result->texture_3d().mips[mip_count + i].rwTexture3D;
-							//	list.clear_uav(tex_lighting.tex_result, tex_lighting.tex_result->texture_3d().rwTexture3D[mip_count + i], vec4(0, 0, 0, 0));
-						}
-
-						auto& params = mipmapping.GetParams();
-						params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer;
-						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
-
-						compute.set(mipmapping);
-					}
-					PROFILE_GPU(std::wstring(L"mip_") + std::to_wstring(mip_count));
-					compute.exec_indirect( gpu_tiles_buffer[mip_count]->dispatch_buffer, 1);
-
-					mip_count += current_mips;
-				}
-			}
-		}, PassFlags::Compute);
-
-}
-
-void VoxelGI::generate_pre(Graph& graph)
-{
-		graph.builder.pass_texture("VoxelAlbedo", albedo.tex_result);
-	graph.builder.pass_texture("VoxelNormal", normal.tex_result);
-	graph.builder.pass_texture("VoxelLighted", tex_lighting.tex_result);
-
-
-	graph.builder.pass_texture("VoxelAlbedoStatic", albedo.tex_static);
-	graph.builder.pass_texture("VoxelNormalStatic", normal.tex_static);
-
-	graph.builder.pass_texture("VoxelAlbedoDynamic", albedo.tex_dynamic);
-	graph.builder.pass_texture("VoxelNormalDynamic", normal.tex_dynamic);
-
-	Slots::VoxelInfo& voxel_info = scene->voxel_info;
-
-	//if (all_scene_regen_counter)
-	{
-		min = scene->get_min() - float3(1, 1, 1);
-		size = scene->get_max() + float3(1, 1, 1) - scene->get_min();
-	}
-
-	if (all_scene_regen_counter > 0)
-		all_scene_regen_counter--;
-
-
-	static bool prev = 0;
-	bool cur = !!GetAsyncKeyState('P');
-
-	if (!cur && prev)
-	{
-		need_start_new = true;
-	}
-
-	prev = cur;
-
-	if (need_start_new)
-		all_scene_regen_counter = 3;
-
-	voxel_info.GetMin().xyz = min;
-	voxel_info.GetSize().xyz = size;
-	voxel_info.GetSize().x = voxel_info.GetSize().y = voxel_info.GetSize().z = std::max(200.0f, voxel_info.GetSize().max_element());
-
-	voxel_info.GetVoxel_tiles_count().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count(0);
-	voxel_info.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
-
-	scene->voxels_compiled = scene->voxel_info.compile(*graph.builder.current_frame);
-
-	graph.register_slot_setter(scene->voxels_compiled);
-
-	  	if (voxelize_scene) voxelize(graph);
-
-
-
-
-}
-
-	  
-void VoxelGI::generate_light(Graph& graph)
-{
-
-			
-	light_counter = (light_counter + 1) % 5;
-
-	if (light_scene/* && light_counter == 0 || all_scene_regen_counter > 0*/)
-	{
-		//if (gpu_tiles_buffer[0]->size())
-		{
-			lighting(graph);
-			mipmapping(graph);
-		}
-	}
-
-}
-void VoxelGI::generate(Graph& graph)
-{
-
-	screen(graph);
-
-	if (reflecton)
-		screen_reflection(graph);
-
-	debug(graph);
 
 }

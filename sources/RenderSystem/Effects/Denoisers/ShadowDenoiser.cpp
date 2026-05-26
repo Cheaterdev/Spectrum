@@ -6,6 +6,7 @@ import :MipMapGenerator;
 import HAL;
 
 
+
 using namespace FrameGraph;
 using namespace HAL;
 
@@ -41,18 +42,12 @@ void ShadowDenoiser::generate(Graph& graph)
 	//size/=2;
 
 	{
-		struct ShadowDenoiser_PrepareData
-		{
-			Handlers::Texture H(RTXDebug);
-			Handlers::StructuredBuffer<uint32_t> H(ShadowDenoiser_TileBuffer);
-		};
-
-		graph.pass<ShadowDenoiser_PrepareData>(L"ShadowDenoiser_Prepare", [this, &graph, tileCount](ShadowDenoiser_PrepareData& data, TaskBuilder& builder) {
+		graph.add_library_pass<Passes::ShadowDenoiser_Prepare>([this, &graph, tileCount](auto& data, TaskBuilder& builder) {
 			builder.need(data.RTXDebug, ResourceFlags::ComputeRead);
 			builder.create(data.ShadowDenoiser_TileBuffer, { tileCount }, ResourceFlags::UnorderedAccess);
 
 			return true;
-			}, [this, &graph, size](ShadowDenoiser_PrepareData& data, FrameContext& _context) {
+			}, [this, &graph, size](auto& data, FrameContext& _context) {
 				auto& list = *_context.get_list();
 				auto& compute = list.get_compute();
 
@@ -72,23 +67,7 @@ void ShadowDenoiser::generate(Graph& graph)
 
 
 	{
-		struct ShadowDenoiser_TileClassificationData
-		{
-			Handlers::StructuredBuffer<uint32_t> H(ShadowDenoiser_TileBuffer);
-			Handlers::Texture H(GBuffer_DepthPrev);
-			Handlers::Texture H(GBuffer_Depth);
-			Handlers::Texture H(GBuffer_Normals);
-			Handlers::Texture H(GBuffer_Speed);
-
-
-			Handlers::StructuredBuffer<uint32_t> H(ShadowDenoiser_TileMetaBuffer);
-			Handlers::Texture H(ShadowDenoiser_Moments);
-			Handlers::Texture H(ShadowDenoiser_MomentsPrev);
-			Handlers::Texture H(ShadowDenoiser_Scratch);
-			Handlers::Texture H(ShadowDenoiser_Scratch2);
-		};
-
-		graph.pass<ShadowDenoiser_TileClassificationData>(L"ShadowDenoiser_TileClassification", [this, &graph, tileCount, size](ShadowDenoiser_TileClassificationData& data, TaskBuilder& builder) {
+		graph.add_library_pass<Passes::ShadowDenoiser_TileClassification>([this, &graph, tileCount, size](auto& data, TaskBuilder& builder) {
 			builder.need(data.ShadowDenoiser_TileBuffer, ResourceFlags::ComputeRead);
 			builder.need(data.GBuffer_DepthPrev, ResourceFlags::ComputeRead);
 			builder.need(data.GBuffer_Depth, ResourceFlags::ComputeRead);
@@ -102,7 +81,7 @@ void ShadowDenoiser::generate(Graph& graph)
 			builder.create(data.ShadowDenoiser_Scratch2, { ivec3(size, 0), HAL::Format::R16G16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess );
 
 			return true;
-			}, [this, &graph, size](ShadowDenoiser_TileClassificationData& data, FrameContext& _context) {
+			}, [this, &graph, size](auto& data, FrameContext& _context) {
 				auto& list = *_context.get_list();
 
 				auto& compute = list.get_compute();
@@ -162,17 +141,7 @@ void ShadowDenoiser::generate(Graph& graph)
 			}/*, PassFlags::Compute*/);
 	}
 	{
-		struct ShadowDenoiser_FilterData
-		{
-			Handlers::StructuredBuffer<uint32_t> H(ShadowDenoiser_TileMetaBuffer);
-			Handlers::Texture H(RTXDebug);
-			Handlers::Texture H(GBuffer_Depth);
-			Handlers::Texture H(GBuffer_Normals);
-			Handlers::Texture H(ShadowDenoiser_Scratch);
-			Handlers::Texture H(ShadowDenoiser_Scratch2);
-		};
-
-		graph.pass<ShadowDenoiser_FilterData>(L"ShadowDenoiser_Filter", [this, &graph, tileCount, size](ShadowDenoiser_FilterData& data, TaskBuilder& builder) {
+		graph.add_library_pass<Passes::ShadowDenoiser_Filter>([this, &graph, tileCount, size](auto& data, TaskBuilder& builder) {
 		//	builder.need(data.ShadowDenoiser_TileBuffer, ResourceFlags::ComputeRead);
 			builder.need(data.RTXDebug, ResourceFlags::UnorderedAccess);
 			builder.need(data.GBuffer_Depth, ResourceFlags::ComputeRead);
@@ -183,7 +152,7 @@ void ShadowDenoiser::generate(Graph& graph)
 			builder.need(data.ShadowDenoiser_Scratch2,ResourceFlags::UnorderedAccess);
 
 			return true;
-			}, [this, &graph,size](ShadowDenoiser_FilterData& data, FrameContext& _context) {
+			}, [this, &graph,size](auto& data, FrameContext& _context) {
 				auto& list = *_context.get_list();
 
 				auto& compute = list.get_compute();

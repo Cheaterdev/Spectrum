@@ -1,6 +1,4 @@
-// CFW1TextRendererInterface.cpp
-import <RenderSystem.h>;
-
+﻿// CFW1TextRendererInterface.cpp
 
 
 #include "CFW1TextRenderer.h"
@@ -10,21 +8,21 @@ namespace FW1FontWrapper {
 
 
 // Query interface
-HRESULT STDMETHODCALLTYPE CFW1TextRenderer::QueryInterface(REFIID riid, void **ppvObject) {
-	if(ppvObject == NULL)
+HRESULT STDMETHODCALLTYPE CFW1TextRenderer::QueryInterface(const IID& riid, void **ppvObject) {
+	if(ppvObject == nullptr)
 		return E_INVALIDARG;
 	
-	if(IsEqualIID(riid, __uuidof(IDWritePixelSnapping))) {
+	if((riid == __uuidof(IDWritePixelSnapping))) {
 		*ppvObject = static_cast<IDWritePixelSnapping*>(m_pDWriteTextRendererProxy);
 		AddRef();
 		return S_OK;
 	}
-	else if(IsEqualIID(riid, __uuidof(IDWriteTextRenderer))) {
+	else if((riid == __uuidof(IDWriteTextRenderer))) {
 		*ppvObject = static_cast<IDWriteTextRenderer*>(m_pDWriteTextRendererProxy);
 		AddRef();
 		return S_OK;
 	}
-	else if(IsEqualIID(riid, __uuidof(IFW1TextRenderer))) {
+	else if((riid == __uuidof(IFW1TextRenderer))) {
 		*ppvObject = static_cast<IFW1TextRenderer*>(this);
 		AddRef();
 		return S_OK;
@@ -36,12 +34,11 @@ HRESULT STDMETHODCALLTYPE CFW1TextRenderer::QueryInterface(REFIID riid, void **p
 
 // IDWritePixelSnapping method
 HRESULT CFW1TextRenderer::IsPixelSnappingDisabled(
-	void *clientDrawingContext,
+	[[maybe_unused]] void *clientDrawingContext,
 	BOOL *isDisabled
 ) {
-	UNUSED(clientDrawingContext);
 	
-	*isDisabled = FALSE;
+	*isDisabled = false;
 	
 	return S_OK;
 }
@@ -49,10 +46,9 @@ HRESULT CFW1TextRenderer::IsPixelSnappingDisabled(
 
 // IDWritePixelSnapping method
 HRESULT CFW1TextRenderer::GetCurrentTransform(
-	void *clientDrawingContext,
+	[[maybe_unused]] void *clientDrawingContext,
 	DWRITE_MATRIX *transform
 ) {
-	UNUSED(clientDrawingContext);
 	
 	transform->dx = 0.0f;
 	transform->dy = 0.0f;
@@ -66,8 +62,7 @@ HRESULT CFW1TextRenderer::GetCurrentTransform(
 
 
 // IDWritePixelSnapping method
-HRESULT CFW1TextRenderer::GetPixelsPerDip(void *clientDrawingContext, FLOAT *pixelsPerDip) {
-	UNUSED(clientDrawingContext);
+HRESULT CFW1TextRenderer::GetPixelsPerDip([[maybe_unused]] void *clientDrawingContext, FLOAT *pixelsPerDip) {
 	
 	*pixelsPerDip = 96.0f;
 	
@@ -81,13 +76,11 @@ HRESULT CFW1TextRenderer::DrawGlyphRun(
 	void *clientDrawingContext,
 	FLOAT baselineOriginX,
 	FLOAT baselineOriginY,
-	DWRITE_MEASURING_MODE measuringMode,
+	[[maybe_unused]] DWRITE_MEASURING_MODE measuringMode,
 	const DWRITE_GLYPH_RUN *glyphRun,
-	const DWRITE_GLYPH_RUN_DESCRIPTION *glyphRunDescription,
+	[[maybe_unused]] const DWRITE_GLYPH_RUN_DESCRIPTION *glyphRunDescription,
 	IUnknown *clientDrawingEffect
 ) {
-	UNUSED(glyphRunDescription);
-	UNUSED(measuringMode);
 	
 	const UINT flags = m_currentFlags;
 	
@@ -129,7 +122,7 @@ HRESULT CFW1TextRenderer::DrawGlyphRun(
 		float positionX = floor(baselineOriginX + 0.5f);
 		
 		// Optional drawing effect
-		if(clientDrawingEffect != NULL) {
+		if(clientDrawingEffect != nullptr) {
 			IFW1ColorRGBA *pColor;
 			HRESULT hResult = clientDrawingEffect->QueryInterface(&pColor);
 			if(SUCCEEDED(hResult)) {
@@ -140,7 +133,7 @@ HRESULT CFW1TextRenderer::DrawGlyphRun(
 		
 		// Add a vertex for each glyph in the run
 		IFW1TextGeometry *pTextGeometry = static_cast<IFW1TextGeometry*>(clientDrawingContext);
-		if(pTextGeometry != NULL) {
+		if(pTextGeometry != nullptr) {
 			for(UINT i=0; i < glyphRun->glyphCount; ++i) {
 				glyphVertex.GlyphIndex = m_pGlyphProvider->GetAtlasIdFromGlyphIndex(
 					glyphMap,
@@ -167,17 +160,12 @@ HRESULT CFW1TextRenderer::DrawGlyphRun(
 
 // IDWriteTextRenderer method
 HRESULT CFW1TextRenderer::DrawUnderline(
-	void *clientDrawingContext,
-	FLOAT baselineOriginX,
-	FLOAT baselineOriginY,
-	const DWRITE_UNDERLINE *underline,
-	IUnknown *clientDrawingEffect
+	[[maybe_unused]] void *clientDrawingContext,
+	[[maybe_unused]] FLOAT baselineOriginX,
+	[[maybe_unused]] FLOAT baselineOriginY,
+	[[maybe_unused]] const DWRITE_UNDERLINE *underline,
+	[[maybe_unused]] IUnknown *clientDrawingEffect
 ) {
-	UNUSED(clientDrawingContext);
-	UNUSED(baselineOriginX);
-	UNUSED(baselineOriginY);
-	UNUSED(underline);
-	UNUSED(clientDrawingEffect);
 	
 	return E_NOTIMPL;
 }
@@ -185,17 +173,12 @@ HRESULT CFW1TextRenderer::DrawUnderline(
 
 // IDWriteTextRenderer method
 HRESULT CFW1TextRenderer::DrawStrikethrough(
-	void *clientDrawingContext,
-	FLOAT baselineOriginX,
-	FLOAT baselineOriginY,
-	const DWRITE_STRIKETHROUGH *strikethrough,
-	IUnknown *clientDrawingEffect
+	[[maybe_unused]] void *clientDrawingContext,
+	[[maybe_unused]] FLOAT baselineOriginX,
+	[[maybe_unused]] FLOAT baselineOriginY,
+	[[maybe_unused]] const DWRITE_STRIKETHROUGH *strikethrough,
+	[[maybe_unused]] IUnknown *clientDrawingEffect
 ) {
-	UNUSED(clientDrawingContext);
-	UNUSED(baselineOriginX);
-	UNUSED(baselineOriginY);
-	UNUSED(strikethrough);
-	UNUSED(clientDrawingEffect);
 	
 	return E_NOTIMPL;
 }
@@ -203,21 +186,14 @@ HRESULT CFW1TextRenderer::DrawStrikethrough(
 
 // IDWriteTextRenderer method
 HRESULT CFW1TextRenderer::DrawInlineObject(
-	void *clientDrawingContext,
-	FLOAT originX,
-	FLOAT originY,
-	IDWriteInlineObject *inlineObject,
-	BOOL isSideways,
-	BOOL isRightToLeft,
-	IUnknown *clientDrawingEffect
+	[[maybe_unused]] void *clientDrawingContext,
+	[[maybe_unused]] FLOAT originX,
+	[[maybe_unused]] FLOAT originY,
+	[[maybe_unused]] IDWriteInlineObject *inlineObject,
+	[[maybe_unused]] BOOL isSideways,
+	[[maybe_unused]] BOOL isRightToLeft,
+	[[maybe_unused]] IUnknown *clientDrawingEffect
 ) {
-	UNUSED(clientDrawingContext);
-	UNUSED(originX);
-	UNUSED(originY);
-	UNUSED(inlineObject);
-	UNUSED(isSideways);
-	UNUSED(isRightToLeft);
-	UNUSED(clientDrawingEffect);
 	
 	return E_NOTIMPL;
 }
@@ -225,7 +201,7 @@ HRESULT CFW1TextRenderer::DrawInlineObject(
 
 // Get glyph provider
 HRESULT STDMETHODCALLTYPE CFW1TextRenderer::GetGlyphProvider(IFW1GlyphProvider **ppGlyphProvider) {
-	if(ppGlyphProvider == NULL)
+	if(ppGlyphProvider == nullptr)
 		return E_INVALIDARG;
 	
 	m_pGlyphProvider->AddRef();
@@ -248,7 +224,7 @@ HRESULT STDMETHODCALLTYPE CFW1TextRenderer::DrawTextLayout(
 	m_currentColor = Color;
 	
 	m_cachedGlyphMap = 0;
-	m_pCachedGlyphMapFontFace = NULL;
+	m_pCachedGlyphMapFontFace = nullptr;
 	m_cachedGlyphMapFontSize = 0.0f;
 	
 	return pTextLayout->Draw(pTextGeometry, m_pDWriteTextRendererProxy, OriginX, OriginY);

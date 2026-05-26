@@ -1,5 +1,5 @@
 
-// Generated from SIG.g4 by ANTLR 4.11.1
+// Generated from c:/Users/Bohdan/Documents/GitHub/Spectrum/sources/SIGParser/SIG.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -23,9 +23,10 @@ public:
     OBRACE = 54, CBRACE = 55, OSBRACE = 56, CSBRACE = 57, TRUE = 58, FALSE = 59, 
     LOG = 60, LAYOUT = 61, STRUCT = 62, COMPUTE_PSO = 63, GRAPHICS_PSO = 64, 
     RAYTRACE_PSO = 65, WORKGRAPH_PSO = 66, RAYTRACE_RAYGEN = 67, RAYTRACE_PASS = 68, 
-    SLOT = 69, RT = 70, RTV = 71, DSV = 72, ROOTSIG = 73, ID = 74, INT_SCALAR = 75, 
-    FLOAT_SCALAR = 76, STRING = 77, COMMENT = 78, SPACE = 79, POINTER = 80, 
-    INSERT_START = 81, INSERT_END = 82, INSERT_BLOCK = 83
+    PASS = 69, VIEW = 70, PIPELINE = 71, SLOT = 72, RT = 73, RTV = 74, DSV = 75, 
+    ROOTSIG = 76, ID = 77, INT_SCALAR = 78, FLOAT_SCALAR = 79, STRING = 80, 
+    COMMENT = 81, SPACE = 82, POINTER = 83, INSERT_START = 84, INSERT_END = 85, 
+    INSERT_BLOCK = 86
   };
 
   enum {
@@ -47,8 +48,10 @@ public:
     RuleRtx_pso_block = 51, RuleRtx_pso_definition = 52, RuleWorkgraph_pso_stat = 53, 
     RuleWorkgraph_pso_block = 54, RuleWorkgraph_pso_definition = 55, RuleRtx_pass_stat = 56, 
     RuleRtx_pass_block = 57, RuleRtx_pass_definition = 58, RuleRtx_raygen_stat = 59, 
-    RuleRtx_raygen_block = 60, RuleRtx_raygen_definition = 61, RuleShader_type = 62, 
-    RulePso_param_id = 63, RuleBool_type = 64
+    RuleRtx_raygen_block = 60, RuleRtx_raygen_definition = 61, RuleView_declaration = 62, 
+    RuleView_stat = 63, RuleView_block = 64, RuleView_definition = 65, RulePass_definition = 66, 
+    RulePipeline_stat = 67, RulePipeline_block = 68, RulePipeline_definition = 69, 
+    RuleShader_type = 70, RulePso_param_id = 71, RuleBool_type = 72
   };
 
   explicit SIGParser(antlr4::TokenStream *input);
@@ -130,6 +133,14 @@ public:
   class Rtx_raygen_statContext;
   class Rtx_raygen_blockContext;
   class Rtx_raygen_definitionContext;
+  class View_declarationContext;
+  class View_statContext;
+  class View_blockContext;
+  class View_definitionContext;
+  class Pass_definitionContext;
+  class Pipeline_statContext;
+  class Pipeline_blockContext;
+  class Pipeline_definitionContext;
   class Shader_typeContext;
   class Pso_param_idContext;
   class Bool_typeContext; 
@@ -157,6 +168,12 @@ public:
     Rtx_pass_definitionContext* rtx_pass_definition(size_t i);
     std::vector<Rtx_raygen_definitionContext *> rtx_raygen_definition();
     Rtx_raygen_definitionContext* rtx_raygen_definition(size_t i);
+    std::vector<Pass_definitionContext *> pass_definition();
+    Pass_definitionContext* pass_definition(size_t i);
+    std::vector<View_definitionContext *> view_definition();
+    View_definitionContext* view_definition(size_t i);
+    std::vector<Pipeline_definitionContext *> pipeline_definition();
+    Pipeline_definitionContext* pipeline_definition(size_t i);
     std::vector<antlr4::tree::TerminalNode *> COMMENT();
     antlr4::tree::TerminalNode* COMMENT(size_t i);
 
@@ -1117,6 +1134,137 @@ public:
   };
 
   Rtx_raygen_definitionContext* rtx_raygen_definition();
+
+  class  View_declarationContext : public antlr4::ParserRuleContext {
+  public:
+    View_declarationContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Type_idContext *type_id();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *SCOL();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  View_declarationContext* view_declaration();
+
+  class  View_statContext : public antlr4::ParserRuleContext {
+  public:
+    View_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    View_declarationContext *view_declaration();
+    antlr4::tree::TerminalNode *COMMENT();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  View_statContext* view_stat();
+
+  class  View_blockContext : public antlr4::ParserRuleContext {
+  public:
+    View_blockContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<View_statContext *> view_stat();
+    View_statContext* view_stat(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  View_blockContext* view_block();
+
+  class  View_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    View_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *VIEW();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *OBRACE();
+    View_blockContext *view_block();
+    antlr4::tree::TerminalNode *CBRACE();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
+    InheritContext *inherit();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  View_definitionContext* view_definition();
+
+  class  Pass_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Pass_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *PASS();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *OBRACE();
+    View_blockContext *view_block();
+    antlr4::tree::TerminalNode *CBRACE();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
+    InheritContext *inherit();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Pass_definitionContext* pass_definition();
+
+  class  Pipeline_statContext : public antlr4::ParserRuleContext {
+  public:
+    Pipeline_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *SCOL();
+    antlr4::tree::TerminalNode *COMMENT();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Pipeline_statContext* pipeline_stat();
+
+  class  Pipeline_blockContext : public antlr4::ParserRuleContext {
+  public:
+    Pipeline_blockContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<Pipeline_statContext *> pipeline_stat();
+    Pipeline_statContext* pipeline_stat(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Pipeline_blockContext* pipeline_block();
+
+  class  Pipeline_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Pipeline_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *PIPELINE();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *OBRACE();
+    Pipeline_blockContext *pipeline_block();
+    antlr4::tree::TerminalNode *CBRACE();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Pipeline_definitionContext* pipeline_definition();
 
   class  Shader_typeContext : public antlr4::ParserRuleContext {
   public:

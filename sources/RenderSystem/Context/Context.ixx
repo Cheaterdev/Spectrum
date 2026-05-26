@@ -174,26 +174,25 @@ export{
 
 
 	public:
-
-		void create(ivec2 size, TaskBuilder& builder)
+		static void create(ivec2 size,auto &context, TaskBuilder& builder)
 		{
-			builder.create(GBuffer_Albedo, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-			builder.create(GBuffer_Normals, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-			builder.create(GBuffer_Depth, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::DepthStencil);
-			builder.create(GBuffer_Specular, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-			builder.create(GBuffer_Speed, { ivec3(size,0), HAL::Format::R16G16_FLOAT,1, 1 }, ResourceFlags::RenderTarget);
+			builder.create(context.GBuffer_Albedo, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+			builder.create(context.GBuffer_Normals, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+			builder.create(context.GBuffer_Depth, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::DepthStencil);
+			builder.create(context.GBuffer_Specular, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+			builder.create(context.GBuffer_Speed, { ivec3(size,0), HAL::Format::R16G16_FLOAT,1, 1 }, ResourceFlags::RenderTarget);
 
 
-			builder.create(GBuffer_DepthMips, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 },ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Static);
-			builder.create(GBuffer_DepthPrev, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::Static);
+			builder.create(context.GBuffer_DepthMips, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 },ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Static);
+			builder.create(context.GBuffer_DepthPrev, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::Static);
 		}
 
-		void create_quality(ivec2 size, TaskBuilder& builder)
+		static void create_quality(ivec2 size, auto &context, TaskBuilder& builder)
 		{
-			builder.create(GBuffer_Quality, { ivec3(size,0), HAL::Format::D24_UNORM_S8_UINT,1,1 }, ResourceFlags::DepthStencil);
+			builder.create(context.GBuffer_Quality, { ivec3(size,0), HAL::Format::D24_UNORM_S8_UINT,1,1 }, ResourceFlags::DepthStencil);
 		}
 
-		void create_mips(ivec2 size, TaskBuilder& builder)
+		static void create_mips(ivec2 size, auto &context,  TaskBuilder& builder)
 		{
 
 		}
@@ -204,38 +203,37 @@ export{
 			return builder.create(GBuffer_TempColor, { ivec3(size,0), HAL::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 		}
 
-		void need(TaskBuilder& builder, bool need_quality = false, bool need_mips = false)
+		static void need(TaskBuilder& builder,auto &context, bool need_quality = false, bool need_mips = false)
 		{
-			builder.need(GBuffer_Albedo, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(GBuffer_Normals, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(GBuffer_Depth, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(GBuffer_Specular, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(GBuffer_Speed, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(context.GBuffer_Albedo, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(context.GBuffer_Normals, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(context.GBuffer_Depth, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(context.GBuffer_Specular, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(context.GBuffer_Speed, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
 
-			builder.need(GBuffer_DepthPrev, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			if (need_quality) builder.need(GBuffer_Quality, ResourceFlags::DSRead);
-			builder.need(GBuffer_DepthMips, ResourceFlags::None);
+			builder.need(context.GBuffer_DepthPrev, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			if (need_quality) builder.need(context.GBuffer_Quality, ResourceFlags::DSRead);
+			builder.need(context.GBuffer_DepthMips, ResourceFlags::None);
 
 		}
 
 
 
 
-		GBuffer actualize(FrameContext& context)
+		static GBuffer actualize(auto& context)
 		{
 			GBuffer result;
 
-			result.albedo = *GBuffer_Albedo;
-			result.normals = *GBuffer_Normals;
-			result.depth = *GBuffer_Depth;
-			result.specular = *GBuffer_Specular;
-			result.speed = *GBuffer_Speed;
+			result.albedo = *context.GBuffer_Albedo;
+			result.normals = *context.GBuffer_Normals;
+			result.depth = *context.GBuffer_Depth;
+			result.specular = *context.GBuffer_Specular;
+			result.speed = *context.GBuffer_Speed;
 
+			result.depth_prev_mips = *context.GBuffer_DepthPrev;
 
-			result.depth_prev_mips = *GBuffer_DepthPrev;
-
-			if (GBuffer_Quality)	result.quality = *GBuffer_Quality;
-			if (GBuffer_DepthMips)	result.depth_mips = *GBuffer_DepthMips;
+			if (context.GBuffer_Quality)	result.quality = *context.GBuffer_Quality;
+			if (context.GBuffer_DepthMips)	result.depth_mips = *context.GBuffer_DepthMips;
 
 
 				

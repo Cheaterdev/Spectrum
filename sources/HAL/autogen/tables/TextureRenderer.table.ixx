@@ -24,7 +24,24 @@ export namespace Table
 		struct Compiled
 		{
 			uint texture; // Texture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::TextureRenderer";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

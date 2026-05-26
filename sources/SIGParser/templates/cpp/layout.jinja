@@ -25,7 +25,7 @@ export struct {{layout.name}}
 		{%- set name = get_name_for(loop.index0)|upper -%}
 
 		static const uint {{name}} = {{count}};
-		static const uint {{name}}_ID = {{slot.ids[loop.index0]}};
+		static const uint {{name}}_ID = {{get_offset(slot.ids,loop.index0)}};
 	{%- endif -%}
 	{%- endfor %}
 		static inline const std::vector<uint> tables = { {{slot.ids|unique|select('>',-1) |map('string')|join(', ')}} };

@@ -37,7 +37,24 @@ export namespace Table
 			uint visible_boxes; // StructuredBuffer<uint>
 			uint visibleMeshes; // AppendStructuredBuffer<uint>
 			uint invisibleMeshes; // AppendStructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::GatherMeshesBoxes";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

@@ -1,10 +1,10 @@
-// CFW1GlyphRenderStates.cpp
+﻿// CFW1GlyphRenderStates.cpp
 
 
 
 #include "CFW1GlyphRenderStates.h"
 
-#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
+#define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = nullptr; } }
 
 
 namespace FW1FontWrapper

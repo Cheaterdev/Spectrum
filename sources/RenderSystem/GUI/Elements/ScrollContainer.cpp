@@ -46,7 +46,7 @@ class mover : public GUI::base
         mover(GUI::Elements::scroll_container* owner)
         {
             this->owner = owner;
-            thinkable = true;
+          //  thinkable = true;
         }
 
         virtual bool on_mouse_move(vec2 pos) override
@@ -148,7 +148,7 @@ GUI::Elements::scroll_container::scroll_container()
     contents.reset(new c_contents(this));
     contents->docking = GUI::dock::NONE;
     contents->size = { 00, 00 };
-    contents->clip_to_parent = ParentClip::NONE;
+    contents->clamp_to_parent = ParentClamp::NONE;
     contents->width_size = size_type::MATCH_CHILDREN;
     contents->height_size = size_type::MATCH_CHILDREN;
     filled->add_child(contents);

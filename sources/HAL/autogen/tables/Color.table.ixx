@@ -23,6 +23,16 @@ export namespace Table
 		}
 		using Compiled = Color;
 
+		static std::string get_typename()
+		{
+			return "Tables::Color";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(color);
+		}
+
 	};
 	#pragma pack(pop)
 }

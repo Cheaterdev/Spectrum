@@ -257,6 +257,7 @@ struct ResourceState
 
 	CommandListType get_best_cmd_type() const;
 	bool has_write_bits() const;
+			 bool has_copy_bits() const;
 
 	bool is_no_access() const;
 	bool is_valid(ResourceType) const;
@@ -267,9 +268,19 @@ struct ResourceState
 	//	operation |= state.operation;
 	//	access |= state.access;
 
-	//	assert(layout == state.layout);
+	//	ASSERT(layout == state.layout);
 	//	return *this;
 	//}
+
+private:
+	SERIALIZE()
+	{
+		ar& NVP(operation);
+		ar& NVP(access);
+		ar& NVP(layout);
+	}
+
+
 };
 //ResourceState operator | (ResourceState a, ResourceState b);
 //
@@ -280,7 +291,7 @@ struct ResourceState
 //	//other.access = EnumOps::OR(a.access,b.access);
 //	//other.layout = a.layout;
 //	//test t = test::A | test::B;
-//	//assert(a.layout == b.layout);
+//	//ASSERT(a.layout == b.layout);
 //	return ResourceState(a.get_operation() | b.get_operation(), a.get_access() | b.get_access(), a.get_layout());
 //}
 
@@ -579,7 +590,8 @@ extern const  ResourceState UNKNOWN ;
 		Virtual = 1 << 7,
 		Swapchain = 1<<8,
 		WriteInitialized = 1<<9,
-		DisableStateTracking = 1<<10
+		DisableStateTracking = 1<<10,
+		Immutable            = 1<<11   // upload once (CopyDest → read), no further transitions
 	};
 
 	struct TextureDesc

@@ -21,6 +21,12 @@ export namespace GUI
                     using ptr = s_ptr<OutputWindow>;
 
                     OutputWindow();
+
+                ~OutputWindow()
+                {
+
+                    Log::get()<<"DELETING"<<Log::endl;
+                }
             };
         }
     }

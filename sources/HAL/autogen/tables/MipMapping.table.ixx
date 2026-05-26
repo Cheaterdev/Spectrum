@@ -40,7 +40,30 @@ export namespace Table
 			float2 TexelSize; // float2
 			uint SrcMip; // Texture2D<float4>
 			uint OutMip[4]; // RWTexture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(SrcMipLevel);
+				ar& NVP(NumMipLevels);
+				ar& NVP(TexelSize);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::MipMapping";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(SrcMipLevel);
+			ar& NVP(NumMipLevels);
+			ar& NVP(TexelSize);
+		}
 
 	};
 	#pragma pack(pop)

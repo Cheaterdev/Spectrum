@@ -1,7 +1,7 @@
 export module HAL:Utils;
 
 import <HAL.h>;
-import <stl/core.h>;
+import stl.core;
 
 import <d3d12/d3d12_includes.h>;
 import wrl;
@@ -345,7 +345,7 @@ export D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS to_native(RaytracingB
 {
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS result = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
 
-	if(check(flags& RaytracingBuildFlags::ALLOW_UPDATE))result|= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+	if (check(flags & RaytracingBuildFlags::ALLOW_UPDATE))result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
 	if (check(flags & RaytracingBuildFlags::ALLOW_COMPACTION))result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;
 	if (check(flags & RaytracingBuildFlags::PREFER_FAST_TRACE))result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
 	if (check(flags & RaytracingBuildFlags::PREFER_FAST_BUILD))result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
@@ -570,7 +570,7 @@ export Format from_native(DXGI_FORMAT format)
 
 
 
-	assert(false);
+	ASSERT(false);
 	return Format::UNKNOWN;
 }
 
@@ -638,7 +638,7 @@ export D3D12_BARRIER_LAYOUT to_native(TextureLayout layout)
 	if (check(layout & TextureLayout::COPY_QUEUE)) return  D3D12_BARRIER_LAYOUT_COMMON;
 
 	TextureLayout GEN_READ = TextureLayout::SHADER_RESOURCE | TextureLayout::COPY_SOURCE;
-	
+
 	if ((layout & GEN_READ) == GEN_READ) return D3D12_BARRIER_LAYOUT_GENERIC_READ;
 	if (check(layout & TextureLayout::DEPTH_STENCIL_WRITE)) return D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE;
 
@@ -653,7 +653,7 @@ export D3D12_BARRIER_LAYOUT to_native(TextureLayout layout)
 	if (layout == TextureLayout::COPY_DEST) return D3D12_BARRIER_LAYOUT_COPY_DEST;
 
 
-	assert(false);
+	ASSERT(false);
 	return D3D12_BARRIER_LAYOUT_UNDEFINED;
 }
 
@@ -663,12 +663,12 @@ export D3D12_BARRIER_LAYOUT to_native(TextureLayout layout)
 export D3D12_BARRIER_SYNC  to_native(BarrierSync flags)
 {
 
-	D3D12_BARRIER_SYNC result = D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_NONE;	
+	D3D12_BARRIER_SYNC result = D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_NONE;
 	//if (check(flags & BarrierSync::ALL)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_ALL;
 	if ((flags & BarrierSync::ALL_SHADING) == BarrierSync::ALL_SHADING) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_ALL_SHADING;
 	if ((flags & BarrierSync::NON_PIXEL_SHADING) == BarrierSync::NON_PIXEL_SHADING) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_NON_PIXEL_SHADING;
 	if ((flags & BarrierSync::DRAW) == BarrierSync::DRAW) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_DRAW;
-	
+
 	if (check(flags & BarrierSync::NONE)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_NONE;
 	if (check(flags & BarrierSync::INDEX_INPUT)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_INDEX_INPUT;
 	if (check(flags & BarrierSync::VERTEX_SHADING)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_VERTEX_SHADING;
@@ -691,10 +691,10 @@ export D3D12_BARRIER_SYNC  to_native(BarrierSync flags)
 
 	if (check(flags & BarrierSync::SPLIT))
 	{
-		assert(flags == BarrierSync::SPLIT);
+		ASSERT(flags == BarrierSync::SPLIT);
 		result = D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_SPLIT;
 	}
-		
+
 
 	return result;
 }
@@ -763,7 +763,7 @@ export D3D12_RESOURCE_FLAGS to_native(const ResFlags& flags)
 		result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 	}
 
-		
+
 	return result;
 }
 
@@ -816,14 +816,14 @@ export D3D_PRIMITIVE_TOPOLOGY to_native(HAL::PrimitiveTopologyType topology, HAL
 	{
 	case HAL::PrimitiveTopologyType::POINT:
 	{
-		assert(feedType == HAL::PrimitiveTopologyFeed::LIST);
-		assert(!adjusted);
-		assert(controlpoints == 0);
+		ASSERT(feedType == HAL::PrimitiveTopologyFeed::LIST);
+		ASSERT(!adjusted);
+		ASSERT(controlpoints == 0);
 		return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
 	}
 	case HAL::PrimitiveTopologyType::LINE:
 	{
-		assert(controlpoints == 0);
+		ASSERT(controlpoints == 0);
 		switch (feedType)
 		{
 		case HAL::PrimitiveTopologyFeed::LIST:
@@ -840,7 +840,7 @@ export D3D_PRIMITIVE_TOPOLOGY to_native(HAL::PrimitiveTopologyType topology, HAL
 	}
 	case HAL::PrimitiveTopologyType::TRIANGLE:
 	{
-		assert(controlpoints == 0);
+		ASSERT(controlpoints == 0);
 		switch (feedType)
 		{
 		case HAL::PrimitiveTopologyFeed::LIST:
@@ -856,11 +856,11 @@ export D3D_PRIMITIVE_TOPOLOGY to_native(HAL::PrimitiveTopologyType topology, HAL
 	}
 	case HAL::PrimitiveTopologyType::PATCH:
 	{
-		assert(controlpoints >= 1 && controlpoints <= 32);
+		ASSERT(controlpoints >= 1 && controlpoints <= 32);
 		return D3D_PRIMITIVE_TOPOLOGY(uint(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST) - 1 + controlpoints);
 	}
 	}
-	assert(false);
+	ASSERT(false);
 	return D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 }
 
@@ -901,31 +901,31 @@ export D3D12_RAYTRACING_GEOMETRY_FLAGS   to_native(GeometryFlags flags)
 	return natives[static_cast<uint>(flags)];
 }
 
-export struct RaytracingDescNative:public D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS
+export struct RaytracingDescNative :public D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS
 {
 	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> descs;
 
-	
+
 };
 
 
-export RaytracingDescNative to_native(const RaytracingBuildDescBottomInputs &inputs)
+export RaytracingDescNative to_native(const RaytracingBuildDescBottomInputs& inputs)
 {
 	RaytracingDescNative result;
 	auto add_geometry = [&](const GeometryDesc& i)
-	{
-		D3D12_RAYTRACING_GEOMETRY_DESC geom;
-		geom.Flags = to_native(i.Flags);
-		geom.Type = to_native(i.Type);
-		geom.Triangles.IndexBuffer = ::to_native(i.IndexBuffer);
-		geom.Triangles.IndexCount = i.IndexCount;
-		geom.Triangles.IndexFormat = ::to_native(i.IndexFormat);
-		geom.Triangles.VertexBuffer.StartAddress = ::to_native(i.VertexBuffer);
-		geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
-		geom.Triangles.VertexFormat = ::to_native(i.VertexFormat);
-		geom.Triangles.Transform3x4 = ::to_native(i.Transform3x4);
-		result.descs.emplace_back(geom);
-	};
+		{
+			D3D12_RAYTRACING_GEOMETRY_DESC geom;
+			geom.Flags = to_native(i.Flags);
+			geom.Type = to_native(i.Type);
+			geom.Triangles.IndexBuffer = ::to_native(i.IndexBuffer);
+			geom.Triangles.IndexCount = i.IndexCount;
+			geom.Triangles.IndexFormat = ::to_native(i.IndexFormat);
+			geom.Triangles.VertexBuffer.StartAddress = ::to_native(i.VertexBuffer);
+			geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
+			geom.Triangles.VertexFormat = ::to_native(i.VertexFormat);
+			geom.Triangles.Transform3x4 = ::to_native(i.Transform3x4);
+			result.descs.emplace_back(geom);
+		};
 
 	for (auto& e : inputs.geometry)
 	{
@@ -958,6 +958,31 @@ export CD3DX12_RESOURCE_DESC  to_native_1(const ResourceDesc& desc);
 export CD3DX12_RESOURCE_DESC1  to_native(const ResourceDesc& desc);
 export namespace cereal
 {
+
+	template<class Archive>
+	void serialize(Archive& ar, D3D12_DISPATCH_ARGUMENTS& g)
+	{
+		ar& NVPG(ThreadGroupCountX);
+		ar& NVPG(ThreadGroupCountY);
+		ar& NVPG(ThreadGroupCountZ);
+	}
+
+
+	  	template<class Archive>
+	void serialize(Archive& ar, D3D12_RAYTRACING_INSTANCE_DESC& g)
+	{
+		
+	}
+		     	template<class Archive>
+	void serialize(Archive& ar, D3D12_DRAW_INDEXED_ARGUMENTS& g)
+	{
+		ar& NVPG(IndexCountPerInstance);
+			ar& NVPG(InstanceCount);
+			ar& NVPG(StartIndexLocation);
+			ar& NVPG(BaseVertexLocation);
+			ar& NVPG(StartInstanceLocation);
+	}
+
 	template<class Archive>
 	void serialize(Archive& ar, D3D12_DEPTH_STENCILOP_DESC& g, const unsigned int)
 	{

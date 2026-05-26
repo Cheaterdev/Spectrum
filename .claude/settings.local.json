@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs wc *)",
+      "Bash(xargs grep *)",
+      "Bash(find \"C:\\\\github\\\\Spectrum\\\\sources\\\\SIGParser\\\\templates\" -name \"*.jinja\" -exec wc -l {} +)",
+      "Bash(grep -E \"\\(ixx|cpp\\)$\")",
+      "Bash(python3 -c ' *)",
+      "Bash(grep -E \"\\\\.\\(h|hpp|cpp\\)$\")",
+      "Bash(grep -i \"\\\\.ixx$\")",
+      "Bash(cd /c)",
+      "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\GUI\\\\Base.cpp' -Pattern 'get_user_ui|user_interface\\\\*' | head -20\")",
+      "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\AssetExplorer.cpp' -Pattern 'class AssetExplorer|user_interface|user_ui' -Context 3 | head -50\")",
+      "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\AssetExplorer.cpp' -Pattern 'class AssetExplorer|struct AssetExplorer' -Context 15 | head -40\")",
+      "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\AssetExplorer.cpp' -Pattern 'class asset_item|struct asset_item' -Context 5\")",
+      "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\AssetExplorer.cpp' -Pattern '^class|^struct' | head -20\")",
+      "Bash(dir /b)",
+      "Bash(grep -rn \"^export module Graphics;$\\\\|^export module GUI;$\" \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\" --include=\"*.ixx\")",
+      "Bash(Remove-Item \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\Assets\\\\TextureAsset.cereal.cpp\")",
+      "Bash(cd /d \"C:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\")",
+      "Bash(powershell -Command ' *)",
+      "Bash(grep -rn \"memcpy\\\\|memset\\\\|memmove\\\\|memcmp\\\\|strlen\\\\|strcmp\\\\|strncmp\\\\|sprintf\\\\|snprintf\\\\|printf\\\\|fprintf\" --include=\"*.ixx\" --include=\"*.cpp\" --include=\"*.h\" --include=\"*.hpp\" ! -path \"./3rdparty/*\" ! -path \"./Modules/*\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\GUI\" -Name)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\GUI\\\\\" -Recurse | Select-Object FullName)",
+      "Bash(generate_sigs.bat)",
+      "Bash(cmd /c \"C:\\\\github\\\\Spectrum\\\\generate_project.bat\")"
+    ]
+  }
+}

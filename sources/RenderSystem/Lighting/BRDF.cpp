@@ -7,6 +7,7 @@ import :Asset;
 
 
 REGISTER_TYPE(BRDF);
+CEREAL_FORCE_REGISTER(BRDF);
 import HAL;
 
 

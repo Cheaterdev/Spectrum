@@ -24,7 +24,24 @@ export namespace Table
 		struct Compiled
 		{
 			uint tiles; // StructuredBuffer<uint2>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::TilingParams";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

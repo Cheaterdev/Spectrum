@@ -29,7 +29,26 @@ export namespace Table
 		{
 			uint Target; // RWTexture3D<float4>
 			VoxelTilingParams::Compiled params; // VoxelTilingParams
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(params);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::VoxelZero";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(params);
+		}
 
 	};
 	#pragma pack(pop)

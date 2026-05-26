@@ -32,7 +32,24 @@ export namespace Table
 			uint areaTex; // Texture2D<float4>
 			uint searchTex; // Texture2D<float4>
 			uint edgesTex; // Texture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::SMAA_Weights";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

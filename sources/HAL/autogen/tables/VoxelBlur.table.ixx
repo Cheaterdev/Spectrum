@@ -40,7 +40,24 @@ export namespace Table
 			uint prev_result; // Texture2D<float4>
 			uint screen_result; // RWTexture2D<float4>
 			uint gi_result; // RWTexture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::VoxelBlur";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

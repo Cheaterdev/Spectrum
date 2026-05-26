@@ -1,0 +1,85 @@
+#pragma once
+#include "../PassNodeBase.h"
+
+using namespace FrameGraph;
+namespace Passes
+{
+
+class ReflectionDenoiser_Reproject : public PassNodeBase
+{
+public:
+	struct Context
+	{
+
+
+		Handlers::Texture H(GBuffer_DepthPrev);
+
+
+		Handlers::Texture H(GBuffer_NormalsPrev);
+
+
+		Handlers::Texture H(GBuffer_Depth);
+
+
+		Handlers::Texture H(GBuffer_Normals);
+
+
+		Handlers::Texture H(GBuffer_Speed);
+
+
+		Handlers::Texture H(VoxelReflectionNoise);
+
+
+		Handlers::Texture H(ReflectionDenoiser_RadiancePrev);
+
+
+		Handlers::Texture H(ReflectionDenoiser_AverageRadiance);
+
+
+		Handlers::Texture H(ReflectionDenoiser_AverageRadiancePrev);
+
+
+		Handlers::Texture H(ReflectionDenoiser_Variance);
+
+
+		Handlers::Texture H(ReflectionDenoiser_VariancePrev);
+
+
+		Handlers::Texture H(ReflectionDenoiser_SampleCount);
+
+
+		Handlers::Texture H(ReflectionDenoiser_SampleCountPrev);
+
+
+		Handlers::Texture H(ReflectionDenoiser_ReprojectedRadiance);
+
+
+		Handlers::Texture H(BlueNoise);
+
+		static inline const wchar_t* const resource_names[] = {		L"GBuffer_DepthPrev",		L"GBuffer_NormalsPrev",		L"GBuffer_Depth",		L"GBuffer_Normals",		L"GBuffer_Speed",		L"VoxelReflectionNoise",		L"ReflectionDenoiser_RadiancePrev",		L"ReflectionDenoiser_AverageRadiance",		L"ReflectionDenoiser_AverageRadiancePrev",		L"ReflectionDenoiser_Variance",		L"ReflectionDenoiser_VariancePrev",		L"ReflectionDenoiser_SampleCount",		L"ReflectionDenoiser_SampleCountPrev",		L"ReflectionDenoiser_ReprojectedRadiance",		L"BlueNoise",
+		};
+		static constexpr uint32_t resource_count = std::size(resource_names);
+	};
+
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return Context::resource_names;
+	}
+
+	static inline const wchar_t* Name = L"ReflectionDenoiser_Reproject";
+
+//	static constexpr PassID ID = PassID::ReflectionDenoiser_Reproject;
+
+
+	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
+
+
+	setup_func_type setup_func;
+	render_func_type render_func;
+
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+};
+
+}

@@ -25,7 +25,24 @@ export namespace Table
 		struct Compiled
 		{
 			uint vb; // StructuredBuffer<VSLine>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::LineRender";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

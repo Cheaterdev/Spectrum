@@ -84,7 +84,24 @@ export namespace Table
 			uint g_out_average_radiance; // RWTexture2D<float3>
 			uint g_out_variance; // RWTexture2D<float>
 			uint g_out_sample_count; // RWTexture2D<float>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::DenoiserReflectionReproject";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

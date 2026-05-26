@@ -1,0 +1,35 @@
+module HAL;
+import HAL;
+
+std::optional<SlotID> get_slot(std::string_view slot_name)
+{
+{% for v in parsed.tables -%}
+{%- set t =  parsed.tables[v] -%}
+{% if t.slot is defined -%}
+	if(slot_name == "{{t.name}}") return SlotID::{{t.name}};
+{% endif -%}
+{% endfor -%}
+	return std::nullopt;
+}
+
+uint get_table_index(SlotID id)
+{
+{% for v in parsed.tables -%}
+{%- set t =  parsed.tables[v] -%}
+{% if t.slot is defined -%}
+	if(id == SlotID::{{t.name}}) return Slots::{{t.name}}::Slot::ID;
+{% endif -%}
+{% endfor -%}
+	return -1;
+}
+
+std::string get_slot_name(SlotID id)
+{
+{% for v in parsed.tables -%}
+{%- set t =  parsed.tables[v] -%}
+{% if t.slot is defined -%}
+	if(id == SlotID::{{t.name}}) return "{{t.name}}";
+{% endif -%}
+{% endfor -%}
+	return "UNKNOWN";
+}

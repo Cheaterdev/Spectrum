@@ -1,14 +1,14 @@
 export module Core:Tree;
 export import :Singleton;
 export import :Events;
-export import <stl/core.h>;
+export import stl.core;
 export import :Data;
 export class base_tree
 {
 
 public:
-	Events::Event<void> event_on_add;
-	Events::Event<void> event_on_remove;
+	Events::Event<> event_on_add;
+	Events::Event<> event_on_remove;
 	Events::Event<base_tree*> event_on_add_child;
 	Events::Event<base_tree*> event_on_remove_child;
 
@@ -145,6 +145,12 @@ virtual 	int calculate_depth()
 
 		childs.clear();
 		real_childs.clear();
+	}
+
+		bool has_parent()	 const
+	{
+
+		return !!parent;
 	}
 
 	element_type get_parent()

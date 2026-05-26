@@ -24,6 +24,16 @@ export namespace Table
 		}
 		using Compiled = TilingPostprocess;
 
+		static std::string get_typename()
+		{
+			return "Tables::TilingPostprocess";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(tiling);
+		}
+
 	};
 	#pragma pack(pop)
 }

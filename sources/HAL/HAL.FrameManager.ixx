@@ -1,4 +1,4 @@
-export module HAL:FrameManager;
+﻿export module HAL:FrameManager;
 import <HAL.h>;
 import Core;
 import :Types;
@@ -86,7 +86,7 @@ namespace HAL {
 
 		void write(UploadInfo& info, size_t offset, void* data, size_t size)
 		{
-			if (size > 0) memcpy(info.get_cpu_data() + offset, data, size);
+			if (size > 0) std::memcpy(info.get_cpu_data() + offset, data, size);
 		}
 
 		template<class T>
@@ -221,17 +221,17 @@ namespace HAL {
 
 		ResourceHandle alloc_memory(size_t size, size_t alignment, HeapIndex options) override
 		{
-			assert(proxy);
+			ASSERT(proxy);
 			return proxy->alloc_memory(size, alignment, options);
 		}
 		QueryHandle alloc_query(uint size, QueryType options)override
 		{
-			assert(proxy);
+			ASSERT(proxy);
 			return proxy->alloc_query(size, options);
 		}
 		Handle  alloc_base_descriptor(uint size, DescriptorHeapIndex options)override
 		{
-			assert(proxy);
+			ASSERT(proxy);
 			return proxy->alloc_base_descriptor(size, options);
 		}
 
@@ -250,7 +250,7 @@ namespace HAL {
 
 		void resolve_timers(std::function<void(const QueryType&, uint64, uint64, QueryHeap::ptr) > f) override
 		{
-			assert(proxy);
+			ASSERT(proxy);
 			proxy->resolve_timers(f);
 
 		}

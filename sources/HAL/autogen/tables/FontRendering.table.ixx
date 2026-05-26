@@ -28,7 +28,24 @@ export namespace Table
 		{
 			uint tex0; // Texture2D<float>
 			uint positions; // Buffer<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::FontRendering";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

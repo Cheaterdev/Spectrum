@@ -64,6 +64,8 @@ bool GUI::Elements::resizer::on_mouse_move(vec2 pos)
         {
             pBounds.x = orig_pos.x + orig_size.x - real_target->minimal_size.x;
         }
+
+        real_target->width_size = size_type::FIXED;
     }
 
     if (static_cast<int>(dir)& static_cast<int>(direction::TOP))
@@ -75,16 +77,21 @@ bool GUI::Elements::resizer::on_mouse_move(vec2 pos)
         {
             pBounds.y = orig_pos.y + orig_size.y - real_target->minimal_size.y;
         }
+
+           real_target->height_size = size_type::FIXED;
     }
 
     if (static_cast<int>(dir)& static_cast<int>(direction::RIGHT))
     {
         pBounds.w = std::max(real_target->minimal_size.x, orig_size.x + delta.x);
+
+           real_target->width_size = size_type::FIXED;
     }
 
     if (static_cast<int>(dir)& static_cast<int>(direction::BOTTOM))
     {
         pBounds.h = std::max(real_target->minimal_size.y, orig_size.y + delta.y);
+         real_target->height_size = size_type::FIXED;
     }
 
     real_target->pos = vec2(pBounds.pos);

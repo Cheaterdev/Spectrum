@@ -1,0 +1,25 @@
+#ifndef SLOT_5
+	#define SLOT_5
+#else
+	#error Slot 5 is already used
+#endif
+
+#include "layout/DefaultLayout.h"
+#include "tables/FrameGraph_Debug_Texture3D.h"
+
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+
+ConstantBuffer< CB > pass_FrameGraph_Debug_Texture3D: register( b2, space5);
+
+ConstantBuffer<FrameGraph_Debug_Texture3D> CreateFrameGraph_Debug_Texture3D()
+{
+	return ResourceDescriptorHeap[pass_FrameGraph_Debug_Texture3D.offset];
+}
+			
+#ifndef NO_GLOBAL
+static const FrameGraph_Debug_Texture3D frameGraph_Debug_Texture3D_global = CreateFrameGraph_Debug_Texture3D();
+const FrameGraph_Debug_Texture3D GetFrameGraph_Debug_Texture3D(){ return frameGraph_Debug_Texture3D_global; }
+#endif

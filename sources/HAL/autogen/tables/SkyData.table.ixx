@@ -40,7 +40,26 @@ export namespace Table
 			uint transmittance; // Texture2D<float4>
 			uint inscatter; // Texture3D<float4>
 			uint irradiance; // Texture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(sunDir);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::SkyData";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(sunDir);
+		}
 
 	};
 	#pragma pack(pop)

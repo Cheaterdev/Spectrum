@@ -26,6 +26,17 @@ export namespace Table
 		}
 		using Compiled = PSSMConstants;
 
+		static std::string get_typename()
+		{
+			return "Tables::PSSMConstants";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(level);
+			ar& NVP(time);
+		}
+
 	};
 	#pragma pack(pop)
 }

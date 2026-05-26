@@ -6,7 +6,7 @@ export import :Math.Quaternion;
 export import :Math.Matrices;
 
 import <Core_defs.h>;
-import <stl/memory.h>;
+import stl.memory;
 import :serialization;
 
 export enum class primitive_types
@@ -41,6 +41,7 @@ private:
 
 
 REGISTER_TYPE(Primitive)
+CEREAL_FORCE_REGISTER(Primitive);
 
 const primitive_types Primitive::get_type() const
 {

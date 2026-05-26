@@ -7,14 +7,13 @@ namespace Spectrum
     [Fragment, Flags]
     public enum Mode
     {
-        Dev = 1,
+        Debug = 1,
         Profile = 2,
         Retail = 4
     }
 
     public class CustomTarget : ITarget
     {
-
         public Platform Platform; 
         public DevEnv DevEnv;
         public Optimization Optimization;
@@ -27,6 +26,8 @@ namespace Spectrum
     {
         public Common() : base(typeof(CustomTarget))
         {
+            
+           
             SourceFilesExtensions.Add(".sig");
             SourceFilesExtensions.Add(".hlsl");
 			SourceFilesExtensions.Add(".ixx");
@@ -40,9 +41,9 @@ namespace Spectrum
             AddTargets(new CustomTarget
             {
                 Platform = Platform.win64,
-                DevEnv = DevEnv.vs2022,
+                DevEnv = DevEnv.vs2026,
                 Optimization = Optimization.Release,
-                Mode = Mode.Dev | Mode.Profile | Mode.Retail
+                Mode = Mode.Debug | Mode.Profile | Mode.Retail
             });
 
             CustomProperties.Add("VcpkgEnabled", "true");
@@ -57,11 +58,14 @@ namespace Spectrum
         [Configure]
         public virtual void ConfigureAll(Configuration conf, CustomTarget target)
         {
+             conf.Output = Configuration.OutputType.Utility;
+
+
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
 
             conf.IncludePaths.Add(SourceRootPath);
-		//	conf.ExportAdditionalLibrariesEvenForStaticLib = true;
+			//conf.ExportAdditionalLibrariesEvenForStaticLib = true;
 			conf.PrecompSourceExcludeExtension.Add(".ixx");
 
             conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.Latest);
@@ -75,7 +79,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 
             conf.AdditionalCompilerOptions.Add("/bigobj");
- conf.AdditionalCompilerOptions.Add("/dxifcInlineFunctions-");
+         //   conf.AdditionalCompilerOptions.Add("/dxifcInlineFunctions-");
 
             conf.Defines.Add("_MBCS");
 			conf.Defines.Add("BOOST_NO_USER_CONFIG");
@@ -87,16 +91,20 @@ namespace Spectrum
             conf.Defines.Add("_CRT_SECURE_NO_WARNINGS");
             conf.Defines.Add("NOMINMAX");
             conf.Defines.Add("_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING");
+            conf.Defines.Add("_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING");
        
-			conf.Defines.Add("WIN32_LEAN_AND_MEAN");
             conf.Defines.Add("SPECTRUM_ENABLE_EXEPTIONS");
-            conf.Defines.Add("CEREAL_THREAD_SAFE");
+            // CEREAL_THREAD_SAFE removed: it makes cereal include <mutex> which in MSVC 14.51+
+            // transitively pulls <stop_token> into _cereal.h's header unit IFC.
+            // That causes C1116 when any TU imports both cereal and a threading header unit.
+            // cereal's internal polymorphic registry (what this flag protects) is populated
+            // during single-threaded static init, so removing it is safe.
             conf.Defines.Add("USE_PIX");
-          conf.Defines.Add("WIN32_LEAN_AND_MEAN");
+            conf.Defines.Add("WIN32_LEAN_AND_MEAN");
          
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106", "4494")); //module reference issues
 
-            if (target.Mode == Mode.Dev)
+            if (target.Mode == Mode.Debug)
             {
                 conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);
                 conf.Options.Add(Options.Vc.Compiler.Inline.Disable);
@@ -146,9 +154,15 @@ namespace Spectrum
         {
             RootPath = @"[project.SharpmakeCsPath]\projects\[project.Name]";
         }
+
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+
+            conf.Output = Configuration.OutputType.Exe;
+        }
+
     }
-
-
 
     [Sharpmake.Generate]
     public class Aftermath : Library
@@ -188,11 +202,11 @@ namespace Spectrum
 			conf.ExportAdditionalLibrariesEvenForStaticLib = false;
 
             { // PIX
-				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\PIX\Include\WinPixEventRuntime", 66);
-                conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64\WinPixEventRuntime.dll");
+			//	conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\PIX\Include\WinPixEventRuntime", 66);
+            //    conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64\WinPixEventRuntime.dll");
 			
-			    conf.LibraryFiles.Add("WinPixEventRuntime.lib");
-                conf.LibraryPaths.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64", 66);
+	//		    conf.LibraryFiles.Add("WinPixEventRuntime.lib");
+           //     conf.LibraryPaths.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64", 66);
 			}
 
 
@@ -204,9 +218,13 @@ namespace Spectrum
 
             // fix: dstorage vcpkg issue -> copy manually
             conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dstoragecore.dll");
-           conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxcompiler.dll");
-         conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxil.dll");
-         
+            conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxcompiler.dll");
+            conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxil.dll");
+
+         //   
+
+            conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("5260")); // adding inline to header units
+
         }
     }
 	
@@ -225,6 +243,8 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 			conf.AddPublicDependency<Modules>(target);	
+            conf.Defines.Add("LEAK_TEST_ENABLE");
+            
         }
     }
 
@@ -264,9 +284,6 @@ namespace Spectrum
         public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
-
-        // conf.IsBlobbed = true;
-        
             conf.AddPublicDependency<HAL>(target);
         }
     }
@@ -293,7 +310,7 @@ namespace Spectrum
 
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\sources\SIGParser";
-            conf.Defines.Add("ANTLR4CPP_STATIC");
+
             conf.AddPublicDependency<Core>(target);	
         }
     }
@@ -319,11 +336,10 @@ namespace Spectrum
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
 
-            conf.AddPublicDependency<HAL>(target);
+
             conf.AddPublicDependency<RenderSystem>(target);
         }
     }
-
 
     [Sharpmake.Generate]
     public class Resources : Common
@@ -337,7 +353,6 @@ namespace Spectrum
     }
 
 
-
     [Sharpmake.Generate]
     public class SpectrumSolution : Solution
     {
@@ -347,9 +362,9 @@ namespace Spectrum
             AddTargets(new CustomTarget
             {
                 Platform = Platform.win64,
-                DevEnv = DevEnv.vs2022,
+                DevEnv = DevEnv.vs2026,
                 Optimization =  Optimization.Release,
-                Mode = Mode.Dev | Mode.Profile | Mode.Retail
+                Mode = Mode.Debug | Mode.Profile | Mode.Retail
             });
         }
 
@@ -371,7 +386,7 @@ namespace Spectrum
 			
             switch (target.Mode)
             {
-                case Mode.Dev: platformName += "Dev"; break;
+                case Mode.Debug: platformName += "Debug"; break;
                 case Mode.Retail: platformName += "Retail"; break;
                 case Mode.Profile: platformName += "Profile"; break;
                 default:

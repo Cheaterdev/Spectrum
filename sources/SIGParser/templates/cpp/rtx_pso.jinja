@@ -1,18 +1,32 @@
-#pragma once
+export module HAL:Autogen.RTX.{{pso.name}};
 
-{%- for e in pso.gens %}
-#include "{{e.name}}.h"
+import Core;
+import :RTX;
+import :Enums;
+import :Types;
+import <HAL.h>;
+
+{%- for t in payload_tables %}
+import :Autogen.Tables.{{t}};
 {%- endfor %}
-
-{%- for e in pso.passes %}
-#include "{{e.name}}.h"
+{%- for s in local_slots %}
+import :Autogen.Slots.{{s}};
 {%- endfor %}
 
 {%- set gens = pso.gens|list| map(attribute='name') | join(', ') -%}
 {%- set passes = pso.passes|list| map(attribute='name') | join(', ') -%}
+
+export {
+{%- for e in pso.gens %}
+#include "{{e.name}}.h"
+{%- endfor %}
+{%- for e in pso.passes %}
+#include "{{e.name}}.h"
+{%- endfor %}
 
 struct {{ pso.name }}: public RTXPSO<{{ pso.name }}, Typelist<{{ passes }}>, Typelist<{{ gens }}>>
 {
 	static const constexpr Layouts global_sig = Layouts::{{pso.root_sig.name}};
 	static const constexpr uint MaxTraceRecursionDepth = 2;
 };
+}

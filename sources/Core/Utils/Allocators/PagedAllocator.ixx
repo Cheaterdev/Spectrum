@@ -1,11 +1,14 @@
 export module Core:PagedAllocators;
 
+import <Core_defs.h>;
 
 import :Allocators;
 import :Utils;
 import :Math;
-import <stl/core.h>;
-import <stl/threading.h>;
+
+import stl.core;
+import stl.threading;
+
 
 template<class T>
 concept isCollectable = requires
@@ -114,7 +117,7 @@ export namespace Allocators
 		HeapPage(std::shared_ptr<HeapPageType> heap, HeapAllocatorInterface<HeapPageType>& owner, AllocatorHanle handle) : owner(owner), heap(heap), inner_heap_page_handle(handle)
 		{
 
-			//	assert(allocator->get_size()==handle.get_size());
+			//	ASSERT(allocator->get_size()==handle.get_size());
 			offset = inner_heap_page_handle.get_offset();
 		}
 		virtual ~HeapPage() = default;
@@ -168,6 +171,7 @@ export namespace Allocators
 
 		void GarbageCollect()
 		{
+
 			if constexpr (isCollectable<Context>)
 			{
 				typename AllocationPolicy::LockPolicy::guard g(m);
@@ -268,7 +272,7 @@ export namespace Allocators
 				if (handle)
 				{
 
-					assert(handle->get_offset() + size <= page->get_offset() + page->get_size());
+					ASSERT(handle->get_offset() + size <= page->get_offset() + page->get_size());
 					return { *handle, page };
 				}
 			}
@@ -279,7 +283,7 @@ export namespace Allocators
 			page->allocator.reset(new typename AllocationPolicy::AllocatorType(page->inner_heap_page_handle.get_offset(), page->inner_heap_page_handle.get_offset() + pagesize));
 			all_pages.insert(page);
 			auto handle = page->allocator->Allocate(size, alignment);
-			assert(handle.get_offset() + size <= page->get_offset() + page->get_size());
+			ASSERT(handle.get_offset() + size <= page->get_offset() + page->get_size());
 			return { handle, page };
 
 		}
@@ -294,7 +298,7 @@ export namespace Allocators
 			//uint t = heap.use_count();
 			if (del_heaps && page->allocator->isEmpty())
 			{
-				//				assert(all_pages.count(page) == 1);
+				//				ASSERT(all_pages.count(page) == 1);
 				all_pages.erase(page);
 				factory.Free(creation_info, page);
 			}
@@ -348,7 +352,7 @@ export namespace Allocators
 		}
 		HeapHandle<typename Context::HeapPageType> alloc(size_t size, size_t alignment, typename Context::HeapMemoryOptions options)
 		{
-			assert(size > 0);
+			ASSERT(size > 0);
 			typename AllocationPolicy::LockPolicy::guard g(m);
 			auto& creator = creators[options];
 
@@ -358,9 +362,9 @@ export namespace Allocators
 			}
 
 			auto res = creator->alloc(size, alignment);
-			assert(res.get_offset() % alignment == 0);
+			ASSERT(res.get_offset() % alignment == 0);
 
-			assert(res.get_offset() + size <= res.get_heap()->get_size());
+			ASSERT(res.get_offset() + size <= res.get_heap()->get_size());
 			return res;
 		}
 

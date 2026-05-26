@@ -41,7 +41,7 @@ namespace HAL {
 	{
 
 		descriptor_size = device.get_descriptor_size(type);
-		//	assert(m_GPUHeap);
+		//	ASSERT(m_GPUHeap);
 
 		resources.resize(num);
 	}
@@ -84,7 +84,7 @@ namespace HAL {
 			}
 			},
 			[&](auto other) {
-				assert(false);
+				ASSERT(false);
 			}
 			}, view.View);
 	}
@@ -99,10 +99,10 @@ namespace HAL {
 			if (Buffer.CounterResource) f(Buffer.CounterResource, ALL_SUBRESOURCES);
 			},
 			[&](const HAL::Views::UnorderedAccess::Texture1D& Texture1D) {
-	assert(false);
+	ASSERT(false);
 			},
 			[&](const HAL::Views::UnorderedAccess::Texture1DArray& Texture1DArray) {
-	assert(false);
+	ASSERT(false);
 			},
 			[&](const HAL::Views::UnorderedAccess::Texture2D& Texture2D) {
 					auto& desc = view.Resource->get_desc().as_texture();
@@ -149,7 +149,7 @@ if (desc.MipLevels == 1 && desc.is2D())
 			}
 			},
 			[&](auto other) {
-				assert(false);
+				ASSERT(false);
 			}
 			}, view.View);
 
@@ -162,10 +162,10 @@ if (desc.MipLevels == 1 && desc.is2D())
 	{
 		std::visit(overloaded{
 		[&](const HAL::Views::DepthStencil::Texture1D& Texture1D) {
-	assert(false);
+	ASSERT(false);
 		},
 		[&](const HAL::Views::DepthStencil::Texture1DArray& Texture1DArray) {
-	assert(false);
+	ASSERT(false);
 		},
 		[&](const HAL::Views::DepthStencil::Texture2D& Texture2D) {
 auto& desc = view.Resource->get_desc().as_texture();
@@ -185,13 +185,13 @@ auto& desc = view.Resource->get_desc().as_texture();
 			}
 		},
 		[&](const HAL::Views::DepthStencil::Texture2DMS& Texture2DMS) {
-	assert(false);
+	ASSERT(false);
 		},
 		[&](const HAL::Views::DepthStencil::Texture2DMSArray& Texture2DMSArray) {
-	assert(false);
+	ASSERT(false);
 		},
 		[&](auto other) {
-			assert(false);
+			ASSERT(false);
 		}
 			}, view.View);
 
@@ -205,10 +205,10 @@ auto& desc = view.Resource->get_desc().as_texture();
 			f(view.Resource, ALL_SUBRESOURCES);
 		},
 		[&](const HAL::Views::ShaderResource::Texture1D& Texture1D) {
-	assert(false);
+	ASSERT(false);
 		},
 		[&](const HAL::Views::ShaderResource::Texture1DArray& Texture1DArray) {
-	assert(false);
+	ASSERT(false);
 		},
 		[&](const HAL::Views::ShaderResource::Texture2D& Texture2D) {
 				auto& desc = view.Resource->get_desc().as_texture();
@@ -260,10 +260,10 @@ auto& desc = view.Resource->get_desc().as_texture();
 			}
 		},
 		[&](const HAL::Views::ShaderResource::Texture2DMS& Texture2DMS) {
-assert(false);
+ASSERT(false);
 		},
 		[&](const HAL::Views::ShaderResource::Texture2DMSArray& Texture2DMSArray) {
-assert(false);
+ASSERT(false);
 		},
 		[&](const HAL::Views::ShaderResource::Cube& Cube) {
 				auto& desc = view.Resource->get_desc().as_texture();
@@ -283,13 +283,13 @@ assert(false);
 			}
 		},
 		[&](const HAL::Views::ShaderResource::CubeArray& CubeArray) {
-assert(false);
+ASSERT(false);
 		},
 		[&](const HAL::Views::ShaderResource::Raytracing& Raytracing) {
 f(view.Resource, ALL_SUBRESOURCES);
 		},
 		[&](auto other) {
-			assert(false);
+			ASSERT(false);
 		}
 			}, view.View);
 
@@ -315,7 +315,7 @@ f(view.Resource, ALL_SUBRESOURCES);
 			f(ConstantBuffer.Resource, ALL_SUBRESOURCES);
 		},
 		[&](auto other) {
-			assert(false);
+			ASSERT(false);
 		}
 			}, view);
 	}

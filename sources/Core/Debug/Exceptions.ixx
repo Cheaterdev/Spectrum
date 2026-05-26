@@ -1,10 +1,11 @@
 export module Core:Exceptions;
 
 //#include <boost/stacktrace.hpp>
-import <stl/core.h>;
+import stl.core;
+//import <stacktrace>;
 export namespace Exceptions
 {
-	using stack_trace = int;// boost::stacktrace::stacktrace;
+	using stack_trace = int;//std::stacktrace;// boost::stacktrace::stacktrace;
 
 	class Exception : public std::exception
 	{
@@ -33,7 +34,7 @@ namespace Exceptions
 
 	stack_trace get_stack_trace()
 	{
-		return 0;// boost::stacktrace::stacktrace();
+		return  1;//std::stacktrace::current();
 	}
 }
 

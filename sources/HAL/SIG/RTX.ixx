@@ -37,6 +37,12 @@ struct SelectLocal<T>
 		struct raygen_type
 	{
 		HAL::shader_identifier id;
+
+	private:
+		SERIALIZE()
+		{
+			
+		}
 	};
 
 	template < typename... >
@@ -64,7 +70,7 @@ struct SelectLocal<T>
 		struct material
 		{
 			std::wstring wshader_name;
-			Events::Event<void> on_change;
+			Events::Event<> on_change;
 			uint local_addr;
 			//D3D12_GPU_VIRTUAL_ADDRESS local_addr_ids;
 

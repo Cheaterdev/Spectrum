@@ -25,7 +25,7 @@ namespace HAL
 
 	std::shared_ptr<CommandList> Device::get_upload_list()
 	{
-		auto list = (queues[CommandListType::COPY]->get_free_list());
+		auto list = (queues[CommandListType::DIRECT]->get_free_list());
 		list->begin(L"UploadList");
 		return list;
 	}
@@ -68,6 +68,10 @@ namespace HAL
 
 		if(!result) result = any_result;
 
+		if (!result)
+		{
+			Log::get().crash_error("Cant find proper device");
+		}
 		result->init_managers();
 		return result;
 	}
@@ -84,6 +88,8 @@ namespace HAL
 		for (auto type : magic_enum::enum_values<CommandListType>())
 			queues[type] = std::make_shared<HAL::Queue>(type, this);
 
+
+		//auto another_direct = std::make_shared<HAL::Queue>(CommandListType::DIRECT, this);
 		ds_queue = std::make_unique<DirectStorageQueue>(*this);
 		rtx = !Debug::RunForPix && get_properties().rtx;
 
@@ -112,39 +118,42 @@ namespace HAL
 
 
 	}
-	FrameResourceManager& Device::get_frame_manager()
+	FrameResourceManager& Device::get_frame_manager() const
 	{
 		return *frame_manager;
 	}
 
-	HeapFactory& Device::get_heap_factory()
+	HeapFactory& Device::get_heap_factory() const
 	{
 		return *heap_factory;
 	}
 
 
-	StaticCompiledGPUData& Device::get_static_gpu_data() {
+	StaticCompiledGPUData& Device::get_static_gpu_data() const
+	{
 		return *static_gpu_data;
 	}
 
-	PipelineStateCache& Device::get_pipeline_state_cache() {
+	PipelineStateCache& Device::get_pipeline_state_cache() const
+	{
 		return *pipeline_state_cache;
 	}
-	EnginePSOHolder& Device::get_engine_pso_holder() {
+	EnginePSOHolder& Device::get_engine_pso_holder() const
+	{
 		return *engine_pso_holder;
 	}
 
-	QueryHeapFactory& Device::get_query_heap_factory()
+	QueryHeapFactory& Device::get_query_heap_factory() const
 	{
 		return *query_heap_factory;
 
 	}
-	DescriptorHeapFactory& Device::get_descriptor_heap_factory()
+	DescriptorHeapFactory& Device::get_descriptor_heap_factory() const
 	{
 		return *descriptor_heap_factory;
 	}
 
-	DirectStorageQueue& Device::get_ds_queue()
+	DirectStorageQueue& Device::get_ds_queue() const
 	{
 		return *ds_queue;
 	}

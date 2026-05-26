@@ -1,0 +1,710 @@
+RENDERSYSTEM MODULE — TECHNICAL REFERENCE
+================================================================================
+C++20 module "Graphics". Deferred/forward hybrid renderer built on the
+FrameGraph task-graph architecture. Covers: assets, materials, scene, camera,
+mesh rendering, effects, GUI, tiled textures, font, and the full pass pipeline.
+
+
+================================================================================
+  ASSET MANAGEMENT
+================================================================================
+
+AssetManager  (Singleton)
+  Central asset registry and lifecycle manager.
+  - add_func(function<void()>)        queue thread-safe operation (mutex m)
+  - add_preview(Asset::ptr)           async preview generation via thread_pool
+  - reload_resources()                reload all known assets
+  - get_storage(Guid) -> AssetStorage::ptr
+  - add_listener / remove_listener    AssetListener observer pattern
+  - tact()                            flush queued operations
+  - save(EditObject*)                 async persistence
+  Members:
+    folder_item::ptr tree_folders     hierarchical folder tree
+    map<Guid, AssetStorage::ptr> assets
+    vector<function<void()>> funcs    guarded by mutex m
+
+Asset  (abstract base)
+  - save(), mark_changed(), mark_contents_changed()
+  - update_preview(HAL::Texture::ptr)  virtual; override for thumbnail
+  - try_register()                     self-register with AssetManager
+  - register_new(wstring, Guid) -> AssetStorage::ptr
+  - get_id() -> Guid, get_name() -> wstring
+  - start_changing_contents() / end_changing_contents()  batch guard
+  Members:
+    AssetStorage* holder
+    wstring name
+    set<AssetReferenceBase*> references   dependency tracking
+    bool changing_state
+
+AssetStorage
+  Lazy-loading wrapper with persistence.
+  - AssetStorage(file::ptr)           load from archive (deferred)
+  - AssetStorage(Asset::ptr)          wrap new in-memory asset
+  - load_asset() -> future<Asset::ptr>  async; resolves dependencies
+  - get_asset() -> Asset::ptr          sync (blocks if not loaded)
+  - get_asset(callback)               async callback form
+  - is_loaded() -> bool
+  - save()                            serialize to FileDataStorage
+                                      (partitions: header, editor, asset)
+  - static try_load(file::ptr) -> AssetStorage::ptr
+  - update_preview(), need_update_preview() -> bool
+  Members:
+    Asset::ptr asset
+    lazy<Header> header               id, name, type, references
+    lazy<Editor> editor               preview texture + metadata
+    filesystem::path file_path
+    folder_item* folder
+    mutex archive_mutex, m
+
+AssetReferenceBase
+  Intrusive reference for dependency tracking.
+  - init()    register with owner and asset
+  - destroy() unregister
+  Members: Asset* base_asset, AssetHolder* owner
+
+folder_item
+  File system tree node.
+  - add_asset(AssetStorage::ptr)
+  - iterate_assets(function<void(AssetStorage::ptr)>)
+  - get_folder(filesystem::path) -> folder_item::ptr  recursive
+  - get_name() -> wstring
+
+Asset specialisations:
+  TextureAsset    2D/3D textures; GPU mipmap generation; lazy DDS load
+  MeshAsset       vertex/index GPU buffers; LOD chains; raytracing AS init;
+                  meshlet generation; multi-material submeshes
+  MaterialAsset   material definition; update_preview renders sphere preview
+  BinaryAsset     generic binary blob; used for engine fonts/misc
+
+
+================================================================================
+  MATERIAL SYSTEM
+================================================================================
+
+materials::universal_material
+  Unified material supporting all render paths (raster + RTX).
+  - update()                compile if dirty flags set
+                              → generate_material() if needs_regenerate
+                              → rebuild pixel_data from ps_uniforms
+                              → compile() to update GPU buffer + handlers
+  - generate_material()     compile shader graph → Pipeline
+  - compile()               setup texture SRV array, initialise handlers
+  - get_id() -> size_t      pipeline ID (deduplication key)
+  - update_rtx()            push material data to raytracing records
+  - mark_contents_changed() propagate to dependent assets
+  Members:
+    materials::Pipeline::ptr pipeline
+    vector<Uniform::ptr> ps_uniforms
+    vector<TextureAsset::ptr> textures
+    DynamicData pixel_data
+    universal_material_info material_info   GPU-side record
+    compiled_material_info                  pre-allocated GPU offset
+    size_t local_addr                       offset in universal material buffer
+    bool need_regenerate_material, need_update_uniforms, need_update_compiled
+    vector<void*> handlers                  event subscriptions
+
+materials::Pipeline
+  Compiled shader permutation set.
+  - get_id() -> size_t      unique identifier
+
+Uniform
+  Single shader parameter.
+  - ShaderParamType type:   FLOAT1, FLOAT2, FLOAT3, FLOAT4
+  - union { float, vec2, vec3, vec4 } value
+
+ShaderMaterial
+  Advanced material with custom shader compilation.
+  Re-exports UniversalMaterial interface.
+
+
+================================================================================
+  SCENE GRAPH
+================================================================================
+
+Scene
+  Central container for all renderable objects.
+  Constructor:
+    - creates static_objects, dynamic_objects sets
+    - allocates mesh_infos virtual GPU buffer (1M entries)
+    - creates raytrace_scene if RTX supported
+    - registers element add/remove event handlers
+  - update(HAL::FrameResources&)
+      gathers materials from all MeshAssetInstances
+      compiles SceneData slot (node transforms, materials)
+      builds indirect command ID lists for STATIC/DYNAMIC/ALL
+      triggers material updates
+  - init_ras(HAL::CommandList::ptr&) -> bool   init raytracing structures
+  - remove_all()
+  Members:
+    set<MeshAssetInstance*> static_objects, dynamic_objects
+    shared_ptr<virtual_gpu_buffer<Table::MeshCommandData>> mesh_infos
+    shared_ptr<virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>> raytrace
+    shared_ptr<RaytracingAccelerationStructure> raytrace_scene
+    set<materials::universal_material*> mats
+    map<size_t, materials::Pipeline::ptr> pipelines
+    my_unique_vector<UINT> command_ids[3]    per MESH_TYPE
+    Slots::SceneData::Compiled compiledScene
+    Slots::GatherPipelineGlobal::Compiled compiledGather[3]
+  Events:
+    on_element_add(scene_object*), on_element_remove()
+
+scene_object
+  Base node for all scene entities.
+  - update_transforms() -> bool    local → global matrix propagation
+  - find_by_name(wstring) -> ptr   recursive search
+  - on_add(parent*), on_remove()   registration hooks
+  - apply_transform(mat4x4)        virtual
+  - calculate_childs(list)         virtual layout callback
+  - iterate(function<bool(scene_object*)>)   DFS
+  Members:
+    mat4x4 local_transform, global_transform
+    scene_object* parent
+    vector<scene_object::ptr> childs
+    Scene* scene
+
+MeshAssetInstance  : scene_object
+  - MeshAsset::ptr mesh_asset
+  - MESH_TYPE type                 STATIC or DYNAMIC
+  - vector<RenderingData> rendering   material per submesh
+  - init_ras()                     raytracing support
+
+
+================================================================================
+  CAMERA
+================================================================================
+
+camera
+  View-projection with TAA jitter and temporal reprojection.
+  - update(float2 jitter_offset)
+      recalculates view, proj, view_proj, inv_view_proj
+      computes frustum planes
+      stores previous frame matrices for reprojection
+  Members:
+    vec3 position, target, offset
+    mat4x4 view_mat, proj_mat, view_proj_mat, inv_view_proj_mat
+    CameraParams params            GPU buffer struct containing:
+      viewProj, view, proj, position, direction
+      invViewProj, invProj, invView
+      reprojectionProj, jitter
+      frustum[6]                   plane equations
+    DoubleBuffer<CameraParams> camera_cb
+
+
+================================================================================
+  PER-FRAME GRAPH CONTEXTS  (FrameGraphContext.ixx)
+================================================================================
+
+All structs live in the graph's UniversalContext, accessible via
+  graph.get_context<T>() / builder.graph->get_context<T>()
+
+ViewportInfo  { ivec2 frame_size; ivec2 upscale_size; }
+TimeInfo      { float time; float totalTime; }
+SkyInfo       { float3 sunDir; }               sun direction, normalised
+SceneInfo     { main_renderer::ptr renderer; Scene::ptr scene; }
+CameraInfo    { camera* cam; }
+UIContext     { vector<draw_info> draw_infos;
+                uint32_t setup_counter;        incremented by each UI slot setup
+                float dt;
+                vec2 scaled_size;
+                Handlers::Texture result_texture_handler; }
+
+
+================================================================================
+  FRAMEGRAPH
+================================================================================
+
+Pass  (base)
+  Abstract render/compute task node.
+  - active() -> bool
+  - get_type() -> HAL::CommandListType
+  - uint32_t pass_index, GetPassIndex()   slot index for multi-instance passes
+  Members:
+    wstring name
+    PassFlags flags                  General | Compute | Required
+    set<Pass*> prev_passes, next_passes
+
+PassFlags enum: General, Compute, Required
+
+Graph
+  Main FrameGraph manager.
+  - add_library_pass<T>(setup, render, flags)         single-slot pass
+  - add_library_pass<T>(index, setup, render, flags)  indexed slot; stamps
+                                                       pass->pass_index = index
+                                                       resolves T::Names[index]
+  - get_context<T>() -> T&     type-keyed UniversalContext store
+  - set_slot(SlotID, context)  bind slot data
+
+TaskBuilder
+  Resource declaration during setup phase.
+  - create(handler, desc, flags)   allocate GPU resource
+  - need(handler, flags)           declare read dependency
+  - exists(handler) -> bool        check resource exists this frame
+  - pass_texture()                 import external texture
+  - reset()
+  Members:
+    Pass* current_pass
+    Graph* graph
+    set<ResourceInfo*> passed_resources
+
+FrameContext
+  Per-pass execution context during render phase.
+  - get_list() -> HAL::CommandList::ptr&   lazy-allocate command list
+  - begin(), end()                         lifecycle; handles state transitions
+  Members:
+    Pass* pass
+    HAL::FrameResources* frame
+    Graph* graph
+    HAL::CommandList::ptr list
+
+ResourceAllocInfo
+  Tracks per-resource read/write history for barrier scheduling.
+  - add_pass(Pass*, ResourceFlags)   register pass using resource
+  - remove_inactive()                prune disabled passes
+  - reset()
+  Members:
+    vector<ResourceRWState> states
+    set<Pass*> related, related_read
+
+ResourceRWState
+  Single R/W phase: bool write, vector<Pass*> passes/graphics/compute,
+  Pass* from / to.
+
+Handlers  (resource handle types)
+  Handlers::Texture          2D GPU resource handle
+  Handlers::Texture3D        3D GPU resource handle
+  Handlers::Buffer           GPU buffer handle
+  All support: create(desc, flags), need(flags), is_changed() -> bool
+
+PassDefault<T>  (traits struct; declared in pass_defaults.h, bodies handwritten)
+  template<> struct PassDefault<Passes::Foo> {
+    static constexpr bool enabled = true;
+    static constexpr PassFlags flags = ...;
+    static bool setup(Passes::Foo::Context&, TaskBuilder&);
+    static void render(Passes::Foo::Context&, FrameContext&);
+  };
+  setup() returns false to cull pass. render() only called if setup returned true.
+  All state via graph contexts; no captured instance state.
+
+
+================================================================================
+  MAIN PIPELINE  (Pipelines::MainPipeline)
+================================================================================
+
+Defined in test.sig. Execution order:
+
+  [Static]  PreScene                  TLAS update + RTX::prepare
+            BlueNoise                 supply blue noise textures
+            Voxelize                  voxel scene rasterisation
+            PSSM_Global               global shadow camera setup
+            PSSM_Cascade[4]           per-cascade shadow map rendering
+            CubeSky                   render sky to cube face
+  [Static]  CubeMapDownsample         cube mip generation (when sky changes)
+  [Static]  CubeMapEnviromentProcessor specular + diffuse IBL filtering
+            Lighting                  deferred light accumulation
+            Mipmapping                MipMapGenerator pass
+  [Static]  Scene                     GBuffer rasterisation via MeshRenderer
+  [Static,C] RTXPass                  work-graph ray traced shadows
+  [Static]  ResultCreation            allocate R16G16B16A16 result texture
+            PSSM_GenerateMask         shadow mask generation
+            PSSM_Combine              combine cascades
+            VoxelScreen               screen-space voxel GI lookup
+            VoxelCombine              blend voxel GI into lighting
+            ScreenReflection          SSR ray marching
+            ReflectionDenoiser_Reproject reprojection filter
+            ReflCombine               compose reflections
+            VoxelDebug                optional voxel visualisation
+            Sky                       sky composite
+            stencil_renderer_before   GUI stencil (before UI)
+            stencil_renderer_after    GUI stencil (after UI)
+            SMAA                      subpixel morphological AA
+  [Static,C] FSR                      AMD FidelityFX upscaling
+  [Static,C] CopyPrev                 copy normals/specular/depth → prev buffers
+  [Static,R] Profiler                 GPU timing
+  [Static,M] UI_Render[16]            UI draw batches (up to 16 slots)
+
+  [Static]   = uses PassDefault<>; no pipeline member
+  [C]        = PassFlags::Compute
+  [R]        = PassFlags::Required
+  [M]        = Multiple=16
+
+
+================================================================================
+  MESH RENDERING
+================================================================================
+
+mesh_renderer
+  Two-stage GPU occlusion culling + dispatch pipeline.
+  render(MeshRenderContext::ptr, Scene::ptr):
+    Stage 1 (coarse): init_dispatch → generate_boxes → draw_boxes →
+                      gather_rendered_boxes → HiZ downsampling
+    Stage 2 (fine):   render_meshes with surviving instances
+  - init_dispatch()           reset indirect counter
+  - generate_boxes()          compute AABBs on GPU
+  - draw_boxes()              rasterise AABBs into occlusion buffer
+  - gather_rendered_boxes()   read back GPU culling results
+  - render_meshes()           execute final mesh indirect dispatch
+  Members:
+    HAL::StructuredBufferView<IndirectDispatch> dispatch_buffer
+    commands_buffer[8]        per-pipeline indirect command buffers
+    commands_boxes, visible_boxes, meshes_ids, meshes_invisible_ids
+    uint32_t instances_count
+    bool use_gpu_occlusion
+
+MeshRenderContext
+  Per-pass rendering parameters.
+  - HAL::CommandList::ptr list
+  - GBuffer* g_buffer          deferred render target
+  - camera* cam
+  - size_t current_time
+  - TaskPriority priority
+
+main_renderer
+  Coordinator; owns a list of sub-renderers (e.g. mesh_renderer).
+  - register_renderer(shared_ptr<sub>)
+  - render(MeshRenderContext::ptr, Scene::ptr)
+
+GBuffer  (resource group)
+  All GBuffer textures referenced together.
+  albedo, normals, specular, speed (motion), depth, depth_mips,
+  depth_prev_mips, HalfBuffer (hiZ_depth, hiZ_depth_uav),
+  compiled (RT::GBuffer), HalfBuffer.compiled (RT::DepthOnly).
+
+GBufferViewDesc
+  - static create(size, data, builder)         standard GBuffer
+  - static create_mips(size, data, builder)    mip chain
+  - static create_quality(size, data, builder) quality color
+  - static actualize(data) -> GBuffer          materialise handles into GBuffer
+
+
+================================================================================
+  LIGHTING
+================================================================================
+
+PSSM  (Parallel Split Shadow Maps)
+  Cascaded directional shadow mapping.
+  - get_position() -> float3
+  - set_position(float3)          guarded by pos_mutex
+  Members:
+    float3 position               light direction / position
+    mutex pos_mutex
+
+BRDF
+  PBR material parameters integrated with UniversalMaterial.
+
+Occluder
+  - is_inside(Frustum&) -> bool   frustum visibility test
+  Members:
+    Primitive* primitive           local bounding volume
+    Primitive* primitive_global    world-space bounds
+
+
+================================================================================
+  EFFECTS
+================================================================================
+
+--- Sky (Graphics:Sky) ---
+SkyRender
+  Members: HAL::Texture::ptr transmittance, irradiance, inscatter
+  Drives CubeSky, CubeMapDownsample, CubeMapEnviromentProcessor passes.
+  CubeMapDownsample:          generate cube mip chain when sky changes
+  CubeMapEnviromentProcessor: filter into specular IBL (6 faces × mips)
+                              + single diffuse irradiance texture
+
+--- VoxelGI (Graphics:VoxelGI) ---
+VoxelGI
+  Constructor:
+    creates 512³ albedo, normal (R8G8B8A8), lighting (R16G16B16A16_FLOAT)
+    initialises TileDynamicGenerator for on-demand sparse allocation
+    creates VisibilityBuffer for GPU tile readback
+  Members:
+    TiledTextureWrapper albedo, normal, tex_lighting
+    vector<GPUTilesBuffer::ptr> gpu_tiles_buffer
+    VisibilityBufferUniversal::ptr visibility
+    Scene::ptr scene
+
+--- RTX (Graphics:RTX) ---
+RTX  (Singleton)
+  - prepare(HAL::CommandList::ptr&)   update acceleration structures
+  Member: RaytracingAccelerationStructure rtx (wraps MainRTX PSO)
+
+--- Denoisers ---
+ReflectionDenoiser  (Graphics:ReflectionDenoiser)
+  Reprojection-based reflection filter.
+  Driven by ReflectionDenoiser_Reproject pass.
+
+ShadowDenoiser  (Graphics:ShadowDenoiser)
+  Tile-classified shadow filter.
+  Passes: ShadowDenoiser_Prepare, _Filter, _TileClassification.
+
+--- SMAA (Graphics:SMAA) ---
+  Subpixel Morphological Anti-Aliasing.
+  Wires pipeline.sMAA setup/render.
+
+--- FSR (Graphics:FSR) ---
+  AMD FidelityFX Super Resolution upscaling (Static pass, Compute).
+  PassDefault<Passes::FSR> implemented in FSR effect module.
+
+--- MipMapGenerator (Graphics:MipMapGenerator) ---
+  GPU mipchain generation.
+  - generate_cube(ComputeContext&, CubeView)      6-face cube mips
+  - generate(ComputeContext&, Texture2DView)       2D mip chain
+                                                  8×8 workgroups;
+                                                  handles NPOT dims
+  - downsample_depth()                             hierarchical Z
+  - generate_quality()                             quality color from GBuffer
+  PSOs: MipMapping, DownsampleDepth, QualityColor
+
+--- BlueNoise (Graphics:BlueNoise) ---
+  128×128 pre-baked noise textures for spatiotemporal dithering.
+  Variants: 1/2/4/8/16/32/64/128/256 spp.
+
+
+================================================================================
+  TILED TEXTURE SUBSYSTEM
+================================================================================
+
+VisibilityBuffer
+  Tracks which 3D tiles are visible this frame.
+  - VisibilityBuffer(uint3 sizes)
+  - update(HAL::CommandList::ptr&) -> future<visibility_update>
+      GPU compute marks visible tiles → async readback with counter
+  Members:
+    HAL::Texture::ptr buffer             3D texture, R8_UINT per tile
+    HAL::StructuredBufferView<uint4> load_tiles_buffer
+
+VisibilityBufferUniversal  : VisibilityBuffer
+  - process_tile_readback(uint3 pos, char level)   tile management callback
+
+TileDynamicGenerator
+  On-demand sparse tile allocation for 3D textures.
+
+GPUTilesBuffer  (Graphics:GPUTilesBuffer)
+  GPU-side tile list.
+  - insert(uint3), erase(uint3)
+  Callbacks: on_load, on_zero
+
+
+================================================================================
+  STENCIL RENDERER
+================================================================================
+
+stencil_renderer
+  GUI-driven stencil masking before and after UI compositing.
+  - player_cam = &cam         reference to active camera
+  - scene = scene             reference to scene for bounds
+  Drives stencil_renderer_before and stencil_renderer_after passes.
+
+
+================================================================================
+  GUI SUBSYSTEM
+================================================================================
+
+GUI::base
+  Universal UI component base.
+  Constructor: initialises render_bounds, size, pos, docking, visible,
+               margin, padding, scaled_size with change callbacks.
+  - on_add(base* parent)        register with user_ui, thinking list, drag
+  - on_remove()
+  - draw(Context&)              virtual render
+  Layout virtuals: on_bounds_changed, on_local_size_changed, on_pos_changed
+  Members:
+    UserInterface* user_ui
+    vec2 size, scaled_size, pos
+    rect render_bounds
+    vector<base::ptr> childs
+    dock docking
+    size_type width_size, height_size
+    pos_x_type x_type; pos_y_type y_type
+    bool visible, clickable, clip_child, thinkable, drag_listener
+    vec4 margin, padding
+    vec2 minimal_size
+    float result_scale
+
+GUI::Elements  (component library)
+  Window            top-level container with title bar
+  Button            clickable; on_click event
+  CheckBox / CheckBoxText   toggle
+  EditText          text input with validation
+  ValueBox          numeric slider
+  ComboBox          dropdown
+  ListBox, Tree, Table    multi-item containers
+  Dragger, Resizer, Resizable   interaction helpers
+  ScrollContainer, ScrollBar    scrollable regions
+  Image, Label, ColoredRect     display primitives
+  MenuList, OptionBox           menus
+  StatusBar, TabControl         layout utilities
+  DockBase                      docking management
+  circle_selector               radial value input (used for sun direction)
+  FlowGraph::canvas             node graph visual editor
+
+user_interface  (GUI manager)
+  - create_graph(Graph&, ...)    populate UIContext; register UI_Render passes
+  - process_graph(Graph&)
+  - add_base / remove_base       manage GUI tree root elements
+  Members:
+    vector<draw_info> draw_infos  per-frame draw list (consumed by UIContext)
+
+UIContext  (graph context; see FrameGraphContext section above)
+  PassDefault<Passes::UI_Render> reads this to distribute work across 16 slots.
+  Slot k handles draw_infos[ k*per_thread .. min((k+1)*per_thread, size) )
+  where per_thread = max(64, (size+7)/8).
+  setup uses setup_counter (incremented per slot); render uses GetPassIndex().
+
+draw_info
+  Single GUI draw call record consumed by UI_Render render function.
+
+GUIInfo
+  - HAL::Handle result_texture_srv    SRV of ResultTexture for reading in GUI
+
+GUI::Renderer
+  Renders draw_info list to swapchain via NinePatch PSO.
+
+GUI::Skin
+  Theme/style management (colours, fonts, border widths).
+
+
+================================================================================
+  FONT / TEXT
+================================================================================
+
+Font  (in TextSystem module)
+  DirectWrite wrapper via FW1FontWrapper.
+  - draw(CommandList::ptr, wstring, size, vec2, color, flags)
+  - draw(CommandList::ptr, wstring, size, sizer area, color, flags)
+  - draw(CommandList::ptr, wstring, size, sizer area, sizer clip, color, flags)
+  - measure(string, size, flags) -> vec2   text extents
+  Members:
+    IFW1FontWrapper* native_font
+    string font_name
+    IFW1RenderStates* pRenderStates
+
+FontSystem  (Singleton)
+  - get_font(string) -> Font::ptr   lazy creation + cache
+
+
+================================================================================
+  MESH IMPORT
+================================================================================
+
+MeshData
+  CPU-side mesh representation.
+  - static init_default_loaders() -> bool   register Assimp + raw4
+  - calculate_size()
+
+Assimp Loader
+  FBX / GLTF / OBJ / etc. import.
+  MyIOStream / MyIOSystem   Assimp adapters over FileSystem
+  MyProgressHandler         progress callbacks
+  LoadingWindow             GUI import dialog:
+    scale, deduplicate materials, texture selection map
+
+MeshLoadingSettings
+  float scale, bool materials_remove,
+  map<filesystem::path, AssetStorage::ptr> load_textures
+
+Raw4 format
+  Custom binary mesh format.
+  Raw4Context (deserialisation state), Raw4Loader, raw4 (spec)
+
+MeshletGeneration
+  Encodes meshes into ~64-triangle clusters for GPU mesh shader dispatch.
+
+BaseImporter  (abstract)
+  Interface for all format importers.
+
+
+================================================================================
+  ASSET EXPLORER
+================================================================================
+
+AssetExplorer  (Graphics:AssetExplorer)
+  GUI panel for browsing and selecting assets.
+  Integrates with AssetManager folder tree.
+  Supports drag-and-drop asset assignment.
+
+
+================================================================================
+  ENGINE ASSETS
+================================================================================
+
+EngineAssets  (Graphics:EngineAssets)
+  Pre-loaded engine resources (singletons):
+  - material_tester    demo sphere material
+  - default textures, meshes, fonts
+
+
+================================================================================
+  ASSET RENDERER
+================================================================================
+
+AssetRenderer  (Graphics:AssetRenderer)
+  Offscreen renderer for asset preview thumbnails.
+  - render(Asset::ptr) -> HAL::Texture::ptr
+
+
+================================================================================
+  CONTEXT / SLOT IDS
+================================================================================
+
+SlotID  (Context.ixx)
+  Enum of named GPU slot bindings:
+    FrameInfo, SceneData, VoxelInfo, ...
+  Used with Graph::set_slot(SlotID, context).
+
+Layouts  (Context.ixx)
+  - DefaultLayout    primary root signature
+  - NoneLayout       null/empty root signature
+
+
+================================================================================
+  SCENEFRAMEMANAGER
+================================================================================
+
+SceneFrameManager  (Singleton)
+  - prepare(CommandList&, Scene&)
+      uploads per-frame scene data to GPU:
+      node transforms, mesh command data, material records
+      triggers scene->update()
+
+
+================================================================================
+  EXECUTION FLOW SUMMARY
+================================================================================
+
+1. Frame start
+     MainPipeline::add_passes(graph) — register all passes (static inline,
+     dynamic via setup/render func members)
+
+2. Graph setup phase  (for each registered pass in order)
+     Pass::setup(Context&, TaskBuilder&)
+       — declare resources (create / need)
+       — return false to cull pass
+     Resources allocated; barriers computed from ResourceAllocInfo R/W graph
+
+3. Scene update  (inside PassDefault<PreScene>::render)
+     Scene::update() — compile SceneData, command ID lists, material GPU data
+     TLAS update (raytrace_scene->update) if RTX supported
+     RTX::get().prepare()
+
+4. Render phase  (for each surviving pass in dependency order)
+     Pass::render(Context&, FrameContext&)
+       — record into CommandList via ComputeContext / GraphicsContext
+       — resource states auto-transitioned by FrameContext lifecycle
+
+5. Mesh pass  (PassDefault<Passes::Scene>::render)
+     MeshRenderer two-stage occlusion:
+       init_dispatch → generate_boxes → draw_boxes →
+       gather_rendered_boxes → render_meshes → HiZ
+
+6. Effects sequence  (subsequent passes)
+     Lighting → VoxelGI → Sky → RTXPass → ShadowDenoiser →
+     ScreenReflection → ReflectionDenoiser → FSR → SMAA
+
+7. UI  (stencil_renderer_before → UI_Render[0..N] → stencil_renderer_after)
+     draw_infos batched from UIContext; each slot renders a contiguous range
+
+8. Frame end
+     CopyPrev — copy temporal buffers
+     Profiler — resolve GPU timestamps
+
+================================================================================

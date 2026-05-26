@@ -1,9 +1,9 @@
  module HAL:Utils;
  import :Resource;
 import <HAL.h>;
-import <stl/core.h>;
+import stl.core;
 
-import <d3d12/d3d12_includes.h>;
+import d3d12; 
 import wrl;
 import Core;
 
@@ -36,15 +36,15 @@ CD3DX12_RESOURCE_DESC  to_native_1(const ResourceDesc& desc)
 
 		if (texture_desc.is3D())
 		{
-			assert(texture_desc.ArraySize == 1);
+			ASSERT(texture_desc.ArraySize == 1);
 			return  CD3DX12_RESOURCE_DESC::Tex3D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.Dimensions.z, texture_desc.MipLevels, to_native(desc.Flags));
 		}
 	}else if (desc.is_feedback())
 	{
-			assert(false);
+			ASSERT(false);
 
 	}
-	assert(false);
+	ASSERT(false);
 
 	return CD3DX12_RESOURCE_DESC::Buffer(0, to_native(desc.Flags));
 }
@@ -74,7 +74,7 @@ CD3DX12_RESOURCE_DESC1  to_native(const ResourceDesc& desc)
 
 		if (texture_desc.is3D())
 		{
-			assert(texture_desc.ArraySize == 1);
+			ASSERT(texture_desc.ArraySize == 1);
 			return  CD3DX12_RESOURCE_DESC1 ::Tex3D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.Dimensions.z, texture_desc.MipLevels, to_native(desc.Flags));
 		}
 	}else if (desc.is_feedback())
@@ -96,7 +96,8 @@ CD3DX12_RESOURCE_DESC1  to_native(const ResourceDesc& desc)
 
 		return result;
 	}
-	assert(false);
+	ASSERT(false);
 
 	return CD3DX12_RESOURCE_DESC1 ::Buffer(0, to_native(desc.Flags));
 }
+

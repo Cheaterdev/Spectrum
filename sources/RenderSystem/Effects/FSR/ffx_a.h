@@ -1,4 +1,4 @@
-//==============================================================================================================================
+﻿//==============================================================================================================================
 //
 //                                               [A] SHADER PORTABILITY 1.20210629
 //
@@ -253,22 +253,22 @@
 //==============================================================================================================================
  #ifdef A_GCC
   A_STATIC AD1 AAbsD1(AD1 a){return __builtin_fabs(a);}
-  A_STATIC AF1 AAbsF1(AF1 a){return __builtin_fabsf(a);}
+  A_STATIC AF1 AAbsF1(AF1 a){return __builtin_std::abs(a);}
   A_STATIC AU1 AAbsSU1(AU1 a){return AU1_(__builtin_abs(ASU1_(a)));}
   A_STATIC AL1 AAbsSL1(AL1 a){return AL1_(__builtin_llabs(ASL1_(a)));}
  #else
   A_STATIC AD1 AAbsD1(AD1 a){return fabs(a);}
-  A_STATIC AF1 AAbsF1(AF1 a){return fabsf(a);}
+  A_STATIC AF1 AAbsF1(AF1 a){return std::abs(a);}
   A_STATIC AU1 AAbsSU1(AU1 a){return AU1_(abs(ASU1_(a)));}
   A_STATIC AL1 AAbsSL1(AL1 a){return AL1_(labs((long)ASL1_(a)));}
  #endif
 //------------------------------------------------------------------------------------------------------------------------------
  #ifdef A_GCC
   A_STATIC AD1 ACosD1(AD1 a){return __builtin_cos(a);}
-  A_STATIC AF1 ACosF1(AF1 a){return __builtin_cosf(a);}
+  A_STATIC AF1 ACosF1(AF1 a){return __builtin_std::cos(a);}
  #else
   A_STATIC AD1 ACosD1(AD1 a){return cos(a);}
-  A_STATIC AF1 ACosF1(AF1 a){return cosf(a);}
+  A_STATIC AF1 ACosF1(AF1 a){return std::cos(a);}
  #endif
 //------------------------------------------------------------------------------------------------------------------------------
  A_STATIC AD1 ADotD2(inAD2 a,inAD2 b){return a[0]*b[0]+a[1]*b[1];}
@@ -288,10 +288,10 @@
 //------------------------------------------------------------------------------------------------------------------------------
  #ifdef A_GCC
   A_STATIC AD1 AFloorD1(AD1 a){return __builtin_floor(a);}
-  A_STATIC AF1 AFloorF1(AF1 a){return __builtin_floorf(a);}
+  A_STATIC AF1 AFloorF1(AF1 a){return __builtin_std::floor(a);}
  #else
   A_STATIC AD1 AFloorD1(AD1 a){return floor(a);}
-  A_STATIC AF1 AFloorF1(AF1 a){return floorf(a);}
+  A_STATIC AF1 AFloorF1(AF1 a){return std::floor(a);}
  #endif
 //------------------------------------------------------------------------------------------------------------------------------
  A_STATIC AD1 ALerpD1(AD1 a,AD1 b,AD1 c){return b*c+(-a*c+a);}
@@ -330,18 +330,18 @@
 //------------------------------------------------------------------------------------------------------------------------------
  #ifdef A_GCC
   A_STATIC AD1 ASinD1(AD1 a){return __builtin_sin(a);}
-  A_STATIC AF1 ASinF1(AF1 a){return __builtin_sinf(a);}
+  A_STATIC AF1 ASinF1(AF1 a){return __builtin_std::sin(a);}
  #else
   A_STATIC AD1 ASinD1(AD1 a){return sin(a);}
-  A_STATIC AF1 ASinF1(AF1 a){return sinf(a);}
+  A_STATIC AF1 ASinF1(AF1 a){return std::sin(a);}
  #endif
 //------------------------------------------------------------------------------------------------------------------------------
  #ifdef A_GCC
   A_STATIC AD1 ASqrtD1(AD1 a){return __builtin_sqrt(a);}
-  A_STATIC AF1 ASqrtF1(AF1 a){return __builtin_sqrtf(a);}
+  A_STATIC AF1 ASqrtF1(AF1 a){return __builtin_std::sqrt(a);}
  #else
   A_STATIC AD1 ASqrtD1(AD1 a){return sqrt(a);}
-  A_STATIC AF1 ASqrtF1(AF1 a){return sqrtf(a);}
+  A_STATIC AF1 ASqrtF1(AF1 a){return std::sqrt(a);}
  #endif
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

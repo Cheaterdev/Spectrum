@@ -25,7 +25,24 @@ export namespace Table
 		struct Compiled
 		{
 			uint debug; // RWStructuredBuffer<DebugStruct>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::DebugInfo";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

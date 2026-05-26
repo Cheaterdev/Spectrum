@@ -9,8 +9,9 @@ import HAL;
 using namespace HAL;
 
 REGISTER_TYPE(MeshAsset);
-
- REGISTER_TYPE(MeshAssetInstance);
+REGISTER_TYPE(MeshAssetInstance);
+CEREAL_FORCE_REGISTER(MeshAsset);
+CEREAL_FORCE_REGISTER(MeshAssetInstance);
 bool MeshData::init_default_loaders()
 {
 	add_loader(load_assimp);
@@ -28,7 +29,7 @@ void MeshData::calculate_size()
 		if (r->mesh_id != -1)
 		{
 			auto p = meshes[r->mesh_id].primitive;
-			assert(p);
+			ASSERT(p);
 			/*	if (primitive)
 			((AABB*)childs_occluder.primitive.get())->set(primitive.get());
 			else
@@ -176,7 +177,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	auto meshlet_cull_handle = allocator.Allocate<Table::MeshletCullData>(meshlet_cull.size());
 
 
-	buffer = std::make_shared<HAL::Buffer>(HAL::ResourceDesc::Buffer(allocator.get_max_usage()), HAL::HeapType::DEFAULT);
+	buffer = std::make_shared<HAL::Buffer>(HAL::ResourceDesc::Buffer(allocator.get_max_usage(), HAL::ResFlags::ShaderResource | HAL::ResFlags::Immutable), HAL::HeapType::DEFAULT);
 
 
 
@@ -677,7 +678,7 @@ void MeshAssetInstance::update_nodes()
 			info.mesh_instance_info = mesh_instance_info;
 			info.ras = mesh_asset->meshes[m].ras;
 
-			//assert(info.ras);
+			//ASSERT(info.ras);
 
 			info.node_id = static_cast<UINT>(instance_handle.get_offset() + nodes.size() - 1);
 			auto& my_instance = gpu_instances[static_cast<UINT>(nodes.size()) - 1];

@@ -23,6 +23,16 @@ export namespace Table
 		}
 		using Compiled = Instance;
 
+		static std::string get_typename()
+		{
+			return "Tables::Instance";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(instanceId);
+		}
+
 	};
 	#pragma pack(pop)
 }

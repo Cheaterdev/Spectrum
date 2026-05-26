@@ -25,7 +25,24 @@ export namespace Table
 		struct Compiled
 		{
 			uint data; // StructuredBuffer<Glyph>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::FontRenderingGlyphs";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

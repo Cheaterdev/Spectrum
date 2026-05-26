@@ -8,7 +8,8 @@ export namespace GUI
 {
 
     namespace Elements
-    {
+    {        
+         class list_box;
         class list_element : public base
         {
 
@@ -17,8 +18,10 @@ export namespace GUI
                 using wptr = w_ptr<list_element>;
                 std::function<void(list_element::ptr)> on_select;
                 bool selected = false;
+                list_box* owner;
 
 
+                list_element(list_box* owner);
                 virtual void draw(Context& c) override;
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
@@ -34,6 +37,8 @@ export namespace GUI
 
 
             public:
+
+                void clear_items();
                 //	class renderer;
                 //friend class renderer;
                 using ptr = s_ptr<list_box>;
@@ -42,9 +47,11 @@ export namespace GUI
                 //		bool draw_background;
                 list_box();
 
-                label::ptr add_item(std::string elem);
+                list_element::ptr add_item(std::string elem);
                 virtual void draw(Context& c) override;
 
+                  void on_select(list_element*);               
+             
                 /*	virtual void on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
 
                 	virtual void on_bounds_changed(const rect &r) override;

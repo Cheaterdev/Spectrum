@@ -23,6 +23,16 @@ export namespace Table
 		}
 		using Compiled = Frustum;
 
+		static std::string get_typename()
+		{
+			return "Tables::Frustum";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(planes);
+		}
+
 	};
 	#pragma pack(pop)
 }

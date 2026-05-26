@@ -32,6 +32,19 @@ export namespace Table
 		}
 		using Compiled = GraphInput;
 
+		static std::string get_typename()
+		{
+			return "Tables::GraphInput";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(dispatch_grid);
+			ar& NVP(unused);
+			ar& NVP(WaveOffset);
+			ar& NVP(unused2);
+		}
+
 	};
 	#pragma pack(pop)
 }

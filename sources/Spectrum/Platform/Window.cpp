@@ -1,4 +1,4 @@
-#include "Window.h"
+﻿#include "Window.h"
 
 
 import windows;
@@ -91,7 +91,8 @@ void Window::on_paint()
 {
 }
 void  Window::on_resize(vec2 size)
-{}
+{
+}
 LRESULT Window::MsgProc(MSG msg)
 {
     switch (msg.message)
@@ -251,8 +252,8 @@ std::vector<std::string> Window::file_open(const std::string& Name, const std::s
 	std::string returnstring;
 	char FilterBuffer[512];
 	{
-		memset(FilterBuffer, 0, sizeof(FilterBuffer));
-		memcpy(FilterBuffer, Extension.c_str(), std::min(Extension.size(), 512_t));
+		std::memset(FilterBuffer, 0, sizeof(FilterBuffer));
+		std::memcpy(FilterBuffer, Extension.c_str(), std::min(Extension.size(), 512_t));
 
 		for (int i = 0; i < 512; i++)
 		{

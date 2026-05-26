@@ -1,8 +1,9 @@
 export module Core:Singleton;
 
-import <stl/memory.h>;
-import <stl/core.h>;
-import <stl/threading.h>;
+import <Core_defs.h>;
+import stl.memory;
+import stl.core;
+import stl.threading;
 
 // Use this class only if you really need shared_ptr of singleton's instance.
 // "With Great Power Comes Great Responsibility" (c)
@@ -20,14 +21,12 @@ template<class T> concept HasCreationFunc =
 export template <typename T>
  class Singleton
 {
-        static T* ptr;
-        static std::vector<char> memory;
-        static std::shared_ptr<T> instance;
+        inline static T* ptr = nullptr;
+        inline static std::vector<char> memory;
+        inline static std::shared_ptr<T> instance;
+        inline static std::mutex create_mutex;
+        inline static bool first = true;
 
-        static std::mutex create_mutex;
-
-      static bool first;
-      
         friend class SingletonAccessor<T>;
 
     protected:
@@ -52,7 +51,7 @@ export template <typename T>
 
                 if (instance) return instance.get();
 
-                assert(first);
+                ASSERT(first);
                 first = false;
                 if constexpr(HasCreationFunc<T>)
                 {
@@ -85,13 +84,8 @@ export template <typename T>
 
         static void reset()
         {
-         //   if (memory.size())
-        //    {
-	            instance = nullptr;
-
-             //   ptr= nullptr;
-          //  }
-                
+            ptr = nullptr;
+        	instance = nullptr;
         }
 
         template<typename G = T>
@@ -102,22 +96,10 @@ export template <typename T>
 
         static bool is_good()
         {
-            return instance.get();
+            return ptr;
         }
 };
 
-
-template <typename T>
-std::shared_ptr<T>  Singleton<T>::instance;
-template <typename T>
-T*  Singleton<T>::ptr = nullptr;
-
-template <typename T>
-std::vector<char> Singleton<T>::memory;
-template <typename T>
-std::mutex Singleton<T>::create_mutex;
-template <typename T>
-bool Singleton<T>::first = true;
 
 template <class T>
 std::shared_ptr<T> SingletonAccessor<T>::get_native()

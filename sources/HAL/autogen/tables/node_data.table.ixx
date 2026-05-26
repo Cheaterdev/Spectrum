@@ -33,6 +33,19 @@ export namespace Table
 		}
 		using Compiled = node_data;
 
+		static std::string get_typename()
+		{
+			return "Tables::node_data";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(node_global_matrix);
+			ar& NVP(node_global_matrix_prev);
+			ar& NVP(node_inverse_matrix);
+			ar& NVP(aabb);
+		}
+
 	};
 	#pragma pack(pop)
 }

@@ -1,0 +1,11 @@
+export module assimp;
+export import "assimp/Importer.hpp";
+export import "assimp/importerdesc.h";
+export import "assimp/postprocess.h";
+export import "assimp/scene.h";
+export import "assimp/DefaultLogger.hpp";
+export import "assimp/LogStream.hpp";
+export import "assimp/ProgressHandler.hpp";
+export import "assimp/IOStream.hpp";
+export import "assimp/IOSystem.hpp";
+export import "assimp/types.h";

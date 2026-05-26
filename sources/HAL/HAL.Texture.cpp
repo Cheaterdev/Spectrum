@@ -105,7 +105,7 @@ namespace HAL
 						for (unsigned int z = 0; z < data.array[a]->mips[m]->depth; z++)
 						{
 							for (unsigned int w = 0; w < data.array[a]->mips[m]->num_rows; w++)
-								memcpy(data.array[a]->mips[m]->data.data() + w * data.array[a]->mips[m]->width_stride + z * data.array[a]->mips[m]->slice_stride
+								std::memcpy(data.array[a]->mips[m]->data.data() + w * data.array[a]->mips[m]->width_stride + z * data.array[a]->mips[m]->slice_stride
 									, memory.data() + w * layout.row_stride + z * layout.slice_stride,
 									data.array[a]->mips[m]->width_stride);
 						}
@@ -134,6 +134,7 @@ namespace HAL
 		else
 			desc = HAL::ResourceDesc::Tex2D(data.format, { data.width, data.height }, data.array_size, data.mip_maps);
 
+		desc.Flags |= HAL::ResFlags::Immutable;
 		resource = std::make_shared<HAL::TextureResource>(desc,  desc.is_virtual()?HeapType::RESERVED:HeapType::DEFAULT, TextureLayout::COPY_DEST);
 	
 		auto list = (HAL::Device::get().get_upload_list());
@@ -199,6 +200,7 @@ namespace HAL
 			desc = HAL::ResourceDesc::Tex3D(tex_data->format, { tex_data->width, tex_data->height, tex_data->depth }, tex_data->mip_maps);
 		else
 			desc = HAL::ResourceDesc::Tex2D(tex_data->format, { tex_data->width, tex_data->height }, tex_data->array_size, tex_data->mip_maps);
+		desc.Flags |= HAL::ResFlags::Immutable;
 		auto texture = std::make_shared<Texture>(desc,  TextureLayout::COPY_DEST);
 
 

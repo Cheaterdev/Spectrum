@@ -18,6 +18,7 @@ export namespace GUI
             base* target;
             bool allow_x = true;
             bool allow_y = true;
+            bool draw_color = false;
             dragger();
             using ptr = s_ptr<dragger>;
             using wptr = w_ptr<dragger>;
@@ -28,6 +29,8 @@ export namespace GUI
             virtual bool on_mouse_move(vec2 pos) override;
 
             virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
+            
+            virtual void draw(Context& c)	 override;
 
         };
     }

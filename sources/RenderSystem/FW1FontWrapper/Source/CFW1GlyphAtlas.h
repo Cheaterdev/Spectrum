@@ -1,4 +1,4 @@
-// CFW1GlyphAtlas.h
+﻿// CFW1GlyphAtlas.h
 
 #ifndef IncludeGuard__FW1_CFW1GlyphAtlas
 #define IncludeGuard__FW1_CFW1GlyphAtlas
@@ -15,7 +15,7 @@ namespace FW1FontWrapper
             // Interface
         public:
             // IUnknown
-            virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject);
+            virtual HRESULT STDMETHODCALLTYPE QueryInterface(const IID& riid, void** ppvObject);
 
 
             virtual UINT STDMETHODCALLTYPE GetTotalGlyphCount();

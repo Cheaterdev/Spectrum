@@ -92,3 +92,35 @@ GraphicsPSO CubemapENVDiffuse
 
 	rtv = { R11G11B10_FLOAT };
 }
+
+
+
+PassNode Sky
+{
+	Texture GBuffer_Depth;
+	Texture ResultTexture;
+}
+
+
+PassNode CubeSky
+{
+	TextureCube sky_cubemap;
+}
+
+
+[Static]
+[Compute]
+PassNode CubeMapDownsample
+{
+	TextureCube sky_cubemap;
+	TextureCube sky_cubemap_filtered;
+	TextureCube sky_cubemap_filtered_diffuse;
+}
+
+[Static]
+PassNode CubeMapEnviromentProcessor
+{
+	TextureCube sky_cubemap;
+	TextureCube sky_cubemap_filtered;
+	TextureCube sky_cubemap_filtered_diffuse;
+}

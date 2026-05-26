@@ -39,6 +39,19 @@ export namespace Table
 		{
 			processor.template process<Slots::MeshInfo, Slots::MeshInstanceInfo, Slots::MaterialInfo, DispatchMeshArguments>();
 		}
+		static std::string get_typename()
+		{
+			return "Tables::CommandData";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(mesh_cb);
+			ar& NVP(meshinstance_cb);
+			ar& NVP(material_cb);
+			ar& NVP(draw_commands);
+		}
+
 	};
 	#pragma pack(pop)
 }

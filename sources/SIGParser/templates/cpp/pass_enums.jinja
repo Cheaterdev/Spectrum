@@ -1,0 +1,30 @@
+export module FrameGraphAutogen:Passes.{{pass.name}};
+
+import FrameGraph;
+import Core;
+import :SIG;
+import :Types;
+import :HLSL;
+import :Enums;
+import <HAL.h>;
+
+export
+{
+	enum class PassID
+	{
+		{{parsed.passes|list| map(attribute='name') | join(',\n		')}}
+	};
+
+	struct Library
+	{
+	
+	{% for v in parsed.passes -%}
+{%- set t =  parsed.passes[v] -%}
+		Library::{{t.name}} {{t.name}};
+{%endfor -%}
+	
+	};
+
+
+	static Library Passes;
+}

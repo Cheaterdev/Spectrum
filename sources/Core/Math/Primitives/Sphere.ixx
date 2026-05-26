@@ -7,7 +7,7 @@ export import :Math.Quaternion;
 export import :Math.Matrices;
 export import :Math.Primitive;
 
-import <stl/memory.h>;
+import stl.memory;
 import :serialization;
 
 export class Sphere : public Primitive
@@ -63,6 +63,7 @@ private:
 
 
 REGISTER_TYPE(Sphere)
+CEREAL_FORCE_REGISTER(Sphere);
 
 Sphere::Sphere(vec3 pos, float radius)
 {

@@ -26,6 +26,17 @@ export namespace Table
 		}
 		using Compiled = BoxInfo;
 
+		static std::string get_typename()
+		{
+			return "Tables::BoxInfo";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(node_offset);
+			ar& NVP(mesh_id);
+		}
+
 	};
 	#pragma pack(pop)
 }

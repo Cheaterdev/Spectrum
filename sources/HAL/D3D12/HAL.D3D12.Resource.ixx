@@ -12,7 +12,7 @@ import :Heap;
 
 import :Format;
 
-
+	   import <Core_defs.h>;
 export namespace HAL
 {
 	struct PlacementAddress
@@ -25,7 +25,7 @@ export namespace HAL
 	{
 		
 	
-	class Resource:public Object
+	class Resource
 	{
 		GPUAddressPtr address;
 	public:

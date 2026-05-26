@@ -9,7 +9,9 @@ void removeme2() // TODO: VS issue - make dummy unused func to compile entire cp
 {
 	auto res = Serializer::deserialize<std::string>("");
 }
+
 REGISTER_TYPE(BinaryAsset);
+CEREAL_FORCE_REGISTER(BinaryAsset);
 
 Asset_Type BinaryAsset::get_type()
 {

@@ -27,6 +27,7 @@ export import :ScrollContainer;
 export import :StatusBar;
 export import :TabControl;
 export import :Tree;
+export import :Table;
 export import :ValueBox;
 export import :Window;
 
@@ -35,6 +36,7 @@ export import  :Debug.OutputWindow;
 export import  :Debug.TaskViewer;
 export import  :Debug.TimerGraph;
 export import  :Debug.TimerWatcher;
+export import  :Debug.ObjectViewer;
 
 export import :FlowGraph.Canvas;
 export import :FlowGraph.Comment;

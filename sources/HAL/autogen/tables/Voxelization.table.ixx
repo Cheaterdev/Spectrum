@@ -37,7 +37,26 @@ export namespace Table
 			uint normals; // RWTexture3D<float4>
 			uint visibility; // RWTexture3D<uint>
 			VoxelInfo::Compiled info; // VoxelInfo
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(info);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::Voxelization";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(info);
+		}
 
 	};
 	#pragma pack(pop)

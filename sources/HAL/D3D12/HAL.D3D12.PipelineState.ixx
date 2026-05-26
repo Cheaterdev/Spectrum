@@ -3,7 +3,7 @@ import d3d12;
 import wrl;
 import Core;
 import :Types;
-
+	import <Core_defs.h>;
 export namespace HAL
 {
 	
@@ -16,18 +16,23 @@ export namespace HAL
 		public:
 			ComPtr<ID3D12PipelineState> m_pipelineState;
 			ComPtr<ID3D12StateObject> m_StateObject;
+
+			ComPtr<ID3D12PipelineState> get_native();
+			ComPtr<ID3D12StateObject> get_native_state();
 		};
 
 
 
 		class PipelineStateBase
 		{
-
 		public:
-			ComPtr<ID3D12PipelineState> get_native();
-			ComPtr<ID3D12StateObject> get_native_state();
-
+			virtual ~PipelineStateBase() = default;
+		
 			std::string get_cache();
+
+		/*	 std::shared_ptr<TrackedPipeline> get_tracked();*/
+				ComPtr<ID3D12PipelineState> get_native();
+			ComPtr<ID3D12StateObject> get_native_state();
 		};
 
 
@@ -40,7 +45,7 @@ export namespace HAL
 
 		public:
 			D3D12_PROGRAM_IDENTIFIER id;
-			uint buffer_size;
+			uint64 buffer_size;
 		};
 	}
 }

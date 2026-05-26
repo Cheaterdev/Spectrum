@@ -40,7 +40,24 @@ export namespace Table
 			uint specular; // RenderTarget<float4>
 			uint motion; // RenderTarget<float2>
 			uint depth; // DepthStencil<float>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::GBuffer";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

@@ -28,7 +28,24 @@ export namespace Table
 		{
 			uint meshes_count; // StructuredBuffer<uint>
 			uint commands; // Buffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::GatherPipelineGlobal";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

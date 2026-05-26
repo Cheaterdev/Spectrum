@@ -24,7 +24,24 @@ export namespace Table
 		struct Compiled
 		{
 			uint depth; // DepthStencil<float>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::DepthOnly";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

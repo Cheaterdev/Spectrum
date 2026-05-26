@@ -7,6 +7,7 @@ import :MipMapGenerator;
 import HAL;
 
 
+
 using namespace FrameGraph;
 using namespace HAL;
 namespace
@@ -31,35 +32,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 	auto size = frame.frame_size;
 	uint2 small_size = float2(DivRoundUp(size.x, 8), DivRoundUp(size.y, 8));
 	{
-		struct ReflectionDenoiser_ReprojectData
-		{
-			Handlers::Texture H(GBuffer_DepthPrev);
-			Handlers::Texture H(GBuffer_NormalsPrev);
-			//Handlers::Texture H(GBuffer_SpecularPrev);
-
-			Handlers::Texture H(GBuffer_Depth);
-			Handlers::Texture H(GBuffer_Normals);
-			//	Handlers::Texture H(GBuffer_Specular);
-
-			Handlers::Texture H(GBuffer_Speed);
-
-			Handlers::Texture H(VoxelReflectionNoise);
-			Handlers::Texture H(ReflectionDenoiser_RadiancePrev);
-
-			Handlers::Texture H(ReflectionDenoiser_AverageRadiance);
-			Handlers::Texture H(ReflectionDenoiser_AverageRadiancePrev);
-
-			Handlers::Texture H(ReflectionDenoiser_Variance);
-			Handlers::Texture H(ReflectionDenoiser_VariancePrev);
-
-			Handlers::Texture H(ReflectionDenoiser_SampleCount);
-			Handlers::Texture H(ReflectionDenoiser_SampleCountPrev);
-
-			Handlers::Texture H(ReflectionDenoiser_ReprojectedRadiance);
-				Handlers::Texture H(BlueNoise);
-		};
-
-		graph.pass<ReflectionDenoiser_ReprojectData>(L"ReflectionDenoiser_Reproject", [this, &graph, size, small_size](ReflectionDenoiser_ReprojectData& data, TaskBuilder& builder) {
+		graph.add_library_pass<Passes::ReflectionDenoiser_Reproject>([this, &graph, size, small_size](auto& data, TaskBuilder& builder) {
 			builder.need(data.GBuffer_DepthPrev, ResourceFlags::ComputeRead);
 			builder.need(data.GBuffer_NormalsPrev, ResourceFlags::ComputeRead);
 			//	builder.need(data.GBuffer_SpecularPrev, ResourceFlags::ComputeRead);
@@ -87,7 +60,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 
 
 			return true;
-			}, [this, &graph, size](ReflectionDenoiser_ReprojectData& data, FrameContext& _context) {
+			}, [this, &graph, size](auto& data, FrameContext& _context) {
 				auto& list = *_context.get_list();
 				auto& compute = list.get_compute();
 				auto& cam = graph.get_context<CameraInfo>();
@@ -250,7 +223,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 				copy.copy_resource(data.ReflectionDenoiser_AverageRadiancePrev->resource, data.ReflectionDenoiser_AverageRadiance->resource);
 
 
-			}, PassFlags::Compute);
+			});
 
 
 	}

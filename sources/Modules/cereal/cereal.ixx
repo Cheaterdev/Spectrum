@@ -1,7 +1,7 @@
-export module cereal;
+﻿export module cereal;
 
 export import "_cereal.h";
-export import <stl/core.h>;
+export import stl.core;
 
 //export cereal::detail::msb_32bit;
 
@@ -38,11 +38,24 @@ export
 		unsigned int m_depth;
 		unsigned int t_depth;
 		bool serial = false;
+		bool first = true;	
+		bool equal = false;
+		void new_line()
+		{
+			if (first){
+				first = false;
+				return;
+			}
+			  m_os << std::endl;
+			for (unsigned int i = 0; i < m_depth; ++i)
+				m_os << "        ";
+		}
 	public:
 
 		template<Enum T>
 		void save(const T& t)
 		{
+				if(!serial&&!equal) new_line();
 			if (serial)	m_os << ", ";
 			m_os << magic_enum::enum_name(t);
 			serial = true;
@@ -53,6 +66,7 @@ export
 		template<arithmetic  T>
 		void save(const T& t)
 		{
+			if(!serial&&!equal) new_line();
 			if (serial)	m_os << ", ";
 			m_os << t;
 			serial = true;
@@ -62,6 +76,7 @@ export
 
 		void save(const std::string& t)
 		{
+			if(!serial&&!equal) new_line();
 			if (serial)	m_os << ", ";
 			m_os << "\"" << t << "\"";
 			serial = true;
@@ -106,7 +121,7 @@ export
 	void serialize(simple_log_archive& archive,
 		cereal::NameValuePair<T>& m)
 	{
-		if (strcmp(m.name, "cereal_class_version") == 0) return;
+		if (std::strcmp(m.name, "cereal_class_version") == 0) return;
 		archive.save(m);
 
 	}
@@ -141,15 +156,20 @@ export
 	void simple_log_archive::save(const cereal::NameValuePair<T>& t)
 	{
 		// indent according to object depth
-		for (unsigned int i = 0; i < m_depth; ++i)
-			m_os << ' ';
+		 	new_line();
+
+
+
 		if (serial)	m_os << ", ";
 		if constexpr (can_save<simple_log_archive, T>)
 		{
+
 			m_os << t.name << " = ";
 			serial = false;
+			equal = true;
 			save(t.value);
-			m_os << std::endl;
+						 equal = false;
+		//	new_line();
 		}
 		else
 		{
@@ -158,16 +178,20 @@ export
 			if (type_name.rfind("class std::variant", 0) == 0)
 				type_name = "std::variant<...>";
 
-			m_os << t.name << " = " << type_name << "{" << std::endl;
+			m_os << t.name << " = " << type_name;	new_line();
+			m_os << "{" ;
 			m_depth++;
+		//	new_line();
+			
 
+		
 			serial = false;
 			(*this)(t.value);
 			m_depth--;
 
-			for (unsigned int i = 0; i < m_depth; ++i)
-				m_os << ' ';
-			m_os << "}" << std::endl;
+			new_line();
+			m_os << "}";	
+		
 		}
 		serial = true;
 	}

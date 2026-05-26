@@ -26,6 +26,17 @@ export namespace Table
 		}
 		using Compiled = MaterialCommandData;
 
+		static std::string get_typename()
+		{
+			return "Tables::MaterialCommandData";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(material_cb);
+			ar& NVP(pipeline_id);
+		}
+
 	};
 	#pragma pack(pop)
 }

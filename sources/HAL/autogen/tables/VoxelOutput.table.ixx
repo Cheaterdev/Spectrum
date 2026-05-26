@@ -36,7 +36,24 @@ export namespace Table
 			uint noise; // RWTexture2D<float4>
 			uint frames; // RWTexture2D<float>
 			uint DirAndPdf; // RWTexture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::VoxelOutput";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

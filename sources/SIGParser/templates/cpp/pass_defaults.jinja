@@ -1,0 +1,43 @@
+#pragma once
+
+// AUTO-GENERATED — do not edit by hand.
+// Regenerate by running SIGParser.
+// Source: passes marked [Static] in *.sig files.
+//
+// PassDefault<T> provides the setup/render implementations for passes whose
+// logic is fully self-contained (no external wiring needed).  Bodies are
+// defined out-of-line in main.cpp.
+
+extern "C++"
+{
+
+template<typename TPass>
+struct PassDefault
+{
+	static constexpr bool enabled = false;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+};
+
+{% for pass_name in parsed.passes -%}
+{%- set pass_def = parsed.passes[pass_name] -%}
+{%- if pass_def.options.Static is defined %}
+template<>
+struct PassDefault<Passes::{{pass_name}}>
+{
+	static constexpr bool enabled = true;
+{%- set parts = create_list('parts') -%}
+{%- if pass_def.options.Compute  is defined -%}{%- do myappend('parts', "FrameGraph::PassFlags::Compute")  -%}{%- endif -%}
+{%- if pass_def.options.Required is defined -%}{%- do  myappend('parts', "FrameGraph::PassFlags::Required") -%}{%- endif -%}
+{%- if get_list('parts') | length > 0 %}
+	static constexpr FrameGraph::PassFlags flags = {{ get_list('parts') | join(" | ") }};
+{%- else %}
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+{%- endif %}
+
+	static bool setup(Passes::{{pass_name}}::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::{{pass_name}}::Context& data, FrameGraph::FrameContext& context);
+};
+
+{% endif -%}
+{%- endfor %}
+}

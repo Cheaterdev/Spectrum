@@ -1,4 +1,4 @@
-export module GUI:ScrollContainer;
+﻿export module GUI:ScrollContainer;
 import :Base;
 import :ScrollBar;
 
@@ -10,7 +10,7 @@ export namespace GUI
 
 		class scroll_container : public base
 		{
-		protected:
+		public:
 			GUI::Elements::scroll_bar::ptr vert;
 			GUI::Elements::scroll_bar::ptr hor;
 			GUI::base::ptr filled;
@@ -30,12 +30,12 @@ export namespace GUI
 
 			void remove_child(base::ptr obj) override;
 
-			void resized();
+			virtual void resized();
 
 			virtual sizer update_layout(sizer r, float scale) override;
 
 		
-			void moving(vec2 pos);
+			virtual void moving(vec2 pos);
 
 
 			virtual	bool on_wheel(mouse_wheel type, float value, vec2 pos) override;
@@ -47,7 +47,7 @@ export namespace GUI
 				if (speed.length() > 0.3f)
 				{
 						moving(100 * speed*dt);	
-						speed *= expf(-20 * dt);
+						speed *= std::exp(-20 * dt);
 			
 				}
 			}

@@ -1,6 +1,12 @@
-#pragma once
+export module HAL:Autogen.PSO.{{pso.name}};
 
-namespace PSOS
+import Core;
+import :PSO;
+import :Enums;
+import :Types;
+import <HAL.h>;
+
+export namespace PSOS
 {
 	struct {{pso.name}}: public PSOBase
 	{

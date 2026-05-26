@@ -1,0 +1,14 @@
+#pragma once
+import stl.core;
+
+namespace Passes
+{
+
+class PassNodeBase
+{
+public:
+	virtual ~PassNodeBase() = default;
+	virtual std::span<const wchar_t* const> GetUsedResourcesList() const = 0;
+};
+
+}

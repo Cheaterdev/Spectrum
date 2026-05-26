@@ -456,7 +456,8 @@ namespace GUI
 			GUI::Elements::button::ptr save_all_but(new GUI::Elements::button());
 			save_all_but->get_label()->text = "SAVE";
 			save_all_but->height_size = size_type::MATCH_PARENT;
-			save_all_but->width_size = size_type::MATCH_CHILDREN;
+			save_all_but->width_size = size_type::FIXED;
+			save_all_but->size={44,2};
 			stat_bar->add_child(save_all_but);
 			save_all_but->on_click = [this](button::ptr but)
 			{

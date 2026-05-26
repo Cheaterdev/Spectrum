@@ -17,12 +17,72 @@ import :CommandAllocator;
 
 export namespace HAL
 {
+	enum class CommandType : uint8_t
+	{
+		Transition,
+		Draw, DrawIndexed, DispatchMesh,
+		Dispatch, DispatchGraph, DispatchRays,
+		CopyResource, CopyBuffer, CopyTexture, UpdateTexture, ReadTexture,
+		BuildRAS,
+		SetPipeline, SetRTV, SetTopology, SetIndexBuffer,
+		SetScissor, SetViewport,
+		ClearRTV, ClearUAV, ClearDepth, ClearStencil, ClearDepthStencil,
+		SetGraphicsSignature, SetComputeSignature,
+		GraphicsSetConstBuffer, ComputeSetConstBuffer,
+		GraphicsSetConstant, ComputeSetConstant,
+		ExecuteIndirect, SetProgram,
+		InsertTime, ResolveTime,
+		StartEvent, EndEvent,
+		SetDescriptorHeaps, SetStencilRef, Discard,
+		Func,
+	};
+
+	struct CommandRecord
+	{
+		// Per-resource detail stored for Transition records after snapshot.
+		struct BarrierDetail
+		{
+			std::string        resource_name;
+			HAL::ResourceState before;
+			HAL::ResourceState after;
+			uint               subres = 0;
+			HAL::BarrierFlags  flags  = HAL::BarrierFlags::NONE;
+		};
+
+		CommandType  type          = CommandType::Func;
+		std::string  description;
+		UsagePoint*  barrier_point = nullptr; // non-null only until snapshot
+		std::vector<BarrierDetail> barrier_details; // non-empty only for Transition records
+	};
+
 	class DelayedCommandList
 	{
+		// Dev builds: full recording vector (24 bytes).
+		// Non-Dev builds: zero-size no-op sink — [[no_unique_address]] guarantees no storage cost.
+		struct DevRecorder
+		{
+			std::vector<CommandRecord> records;
+			void push_back(CommandRecord r)              { records.push_back(std::move(r)); }
+			void clear()                                 { records.clear(); }
+			const std::vector<CommandRecord>& get() const { return records; }
+		};
+		struct NullRecorder
+		{
+			void push_back(CommandRecord) noexcept {}
+			void clear()                 noexcept {}
+			const std::vector<CommandRecord>& get() const
+			{
+				static const std::vector<CommandRecord> s_empty;
+				return s_empty;
+			}
+		};
+
 		bool compiled = false;
 		API::CommandList list;
 		std::wstring name;
 		std::vector<std::function<void(API::CommandList&)>> tasks;
+		[[no_unique_address]]
+		std::conditional_t<BuildOptions::Dev, DevRecorder, NullRecorder> debug_recorder;
 	public:
 		inline const API::CommandList& get_list() const { return list; }
 		void create(CommandListType type);
@@ -77,8 +137,14 @@ export namespace HAL
 		void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout);
 		void read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout);
 
+		void func_barrier(UsagePoint* point);
+		const std::vector<CommandRecord>& get_debug_records() const { return debug_recorder.get(); }
+
 		template<class Hit, class Miss, class Raygen>
 		void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer) {
+			if constexpr (BuildOptions::Dev)
+				debug_recorder.push_back({CommandType::DispatchRays,
+					"DispatchRays " + std::to_string(size.x) + "x" + std::to_string(size.y)});
 			tasks.emplace_back([=](API::CommandList& list) {
 				list.dispatch_rays(sizeof(Hit), sizeof(Miss), sizeof(Raygen), size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
 				});

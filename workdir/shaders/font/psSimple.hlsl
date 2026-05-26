@@ -24,8 +24,8 @@ type PS(PSIn Input) : SV_Target
 //   return float4(Input.TexCoord, 0, 1);
  //    return 1;
 
-//  if (a == 0.0f)
-//       discard;
+  if (a == 0.0f)
+       discard;
 
 
 return result;

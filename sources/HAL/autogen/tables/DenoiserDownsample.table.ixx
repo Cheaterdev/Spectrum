@@ -28,7 +28,24 @@ export namespace Table
 		{
 			uint color; // Texture2D<float4>
 			uint depth; // Texture2D<float>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::DenoiserDownsample";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

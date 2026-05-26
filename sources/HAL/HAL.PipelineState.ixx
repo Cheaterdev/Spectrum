@@ -1,4 +1,4 @@
-export module HAL:PipelineState;
+﻿export module HAL:PipelineState;
 import <HAL.h>;
 import Core;
 import :Types;
@@ -189,7 +189,7 @@ export namespace HAL
 		virtual	void on_change() = 0;
 	};
 
-	class PipelineState : public PipelineStateBase
+	class PipelineState : public PipelineStateBase, public TypedObject<PipelineState>
 	{
 		friend class PipelineStateCache;
 
@@ -346,7 +346,7 @@ export namespace HAL
 
 	};
 
-	class StateObject :public PipelineStateBase, public  API::StateObject
+	class StateObject :public PipelineStateBase, public  API::StateObject, public TypedObject<StateObject>
 	{
 
 
@@ -356,7 +356,7 @@ export namespace HAL
 		{
 			HAL::shader_identifier result;
 
-			memcpy(result.data(), data, result.size());
+			std::memcpy(result.data(), data, result.size());
 
 			return result;
 		}
@@ -367,7 +367,7 @@ export namespace HAL
 		const StateObjectDesc desc;
 		using ptr = std::shared_ptr<StateObject>;
 
-		Events::Event<void> event_change;
+		Events::Event<> event_change;
 		StateObject(StateObjectDesc& desc) :desc(desc)
 		{
 

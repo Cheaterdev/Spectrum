@@ -1,8 +1,6 @@
-// CFW1GlyphRenderStatesInterface.cpp
+﻿// CFW1GlyphRenderStatesInterface.cpp
 
-import <RenderSystem.h>;
-
-
+#include <Core_defs.h>
 #include "CFW1GlyphRenderStates.h"
 
 namespace FW1FontWrapper
@@ -10,12 +8,12 @@ namespace FW1FontWrapper
 
 
 // Query interface
-    HRESULT STDMETHODCALLTYPE CFW1GlyphRenderStates::QueryInterface(REFIID riid, void** ppvObject)
+    HRESULT STDMETHODCALLTYPE CFW1GlyphRenderStates::QueryInterface(const IID& riid, void** ppvObject)
     {
-        if (ppvObject == NULL)
+        if (ppvObject == nullptr)
             return E_INVALIDARG;
 
-        if (IsEqualIID(riid, __uuidof(IFW1GlyphRenderStates)))
+        if ((riid == __uuidof(IFW1GlyphRenderStates)))
         {
             *ppvObject = static_cast<IFW1GlyphRenderStates*>(this);
             AddRef();
@@ -27,10 +25,10 @@ namespace FW1FontWrapper
 
 
 // Set render states for glyph drawing
-    void STDMETHODCALLTYPE CFW1GlyphRenderStates::SetStates(HAL::CommandList::ptr& list, UINT Flags)
+    void STDMETHODCALLTYPE CFW1GlyphRenderStates::SetStates(HAL::CommandList::ptr& list, unsigned int Flags)
     {
         auto formats = list->get_graphics().get_formats();
-        assert(formats.size()==1);
+        ASSERT(formats.size()==1);
         list->get_graphics().set_pipeline<PSOS::FontRender>(PSOS::FontRender::Format(formats[0]));
         list->get_graphics().set_topology(HAL::PrimitiveTopologyType::POINT, HAL::PrimitiveTopologyFeed::LIST);
     }
@@ -40,21 +38,21 @@ namespace FW1FontWrapper
     void STDMETHODCALLTYPE CFW1GlyphRenderStates::UpdateShaderConstants(
         HAL::CommandList::ptr& list,
         const FW1_RECTF* pClipRect,
-        const FLOAT* pTransformMatrix
+        const float* pTransformMatrix
     )
     {
         // Shader constants
         ShaderConstants constants;
-        ZeroMemory(&constants, sizeof(constants));
+        memset(&constants, 0, sizeof(constants));
 
         // Transform matrix
-        if (pTransformMatrix != NULL)
-            CopyMemory(constants.TransformMatrix, pTransformMatrix, 16 * sizeof(FLOAT));
+        if (pTransformMatrix != nullptr)
+            memcpy(constants.TransformMatrix, pTransformMatrix, 16 * sizeof(float));
         else
         {
             // Get viewport size for orthographic transform
-            FLOAT w = 512.0f;
-            FLOAT h = 512.0f;
+            float w = 512.0f;
+            float h = 512.0f;
             auto vps = list->get_graphics().get_viewports();
 
             if (vps.size())
@@ -75,7 +73,7 @@ namespace FW1FontWrapper
         }
 
         // Clip rect
-        if (pClipRect != NULL)
+        if (pClipRect != nullptr)
         {
             constants.ClipRect[0] = -pClipRect->Left;
             constants.ClipRect[1] = -pClipRect->Top;
@@ -85,15 +83,15 @@ namespace FW1FontWrapper
 
         else
         {
-            constants.ClipRect[0] = FLT_MAX;
-            constants.ClipRect[1] = FLT_MAX;
-            constants.ClipRect[2] = FLT_MAX;
-            constants.ClipRect[3] = FLT_MAX;
+            constants.ClipRect[0] = std::numeric_limits<float>::max();
+            constants.ClipRect[1] = std::numeric_limits<float>::max();
+            constants.ClipRect[2] = std::numeric_limits<float>::max();
+            constants.ClipRect[3] = std::numeric_limits<float>::max();
         }
 
         Slots::FontRenderingConstants gpu_constants;
 
-        CopyMemory(&gpu_constants, &constants, sizeof(ShaderConstants));
+        memcpy(&gpu_constants, &constants, sizeof(ShaderConstants));
         list->get_graphics().set(gpu_constants);
 
 	//	list->get_graphics().get_shader_data<FontSig>().geometry.set_raw(constants);
@@ -102,9 +100,9 @@ namespace FW1FontWrapper
 
 
 // Check for geometry shader
-    BOOL STDMETHODCALLTYPE CFW1GlyphRenderStates::HasGeometryShader()
+    int STDMETHODCALLTYPE CFW1GlyphRenderStates::HasGeometryShader()
     {
-        return (m_hasGeometryShader ? TRUE : FALSE);
+        return m_hasGeometryShader ? 1 : 0;
     }
 
 

@@ -20,7 +20,7 @@
 #include "autogen/tables/RayPayload.h"
 #include "autogen/tables/ShadowPayload.h"
 #include "autogen/VoxelScreen.h"
-#include "autogen/VoxelInfo.h"
+#include "autogen/VoxelInfo.h" 
 
 
 #include "autogen/VoxelOutput.h"
@@ -108,7 +108,7 @@ float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 
 
 	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(dir), angle * 8);
 	float sampleWeight = saturate(max_accum - accum.w) / max_accum;
-	accum.xyz += sky * pow(sampleWeight, 3);
+	accum.xyz += sky * pow(sampleWeight, 8);
 
 
 	dist *= length(voxel_size);
@@ -266,7 +266,7 @@ void ShadowRaygenShader()
 	{
 
 		float hit_rate = 0;
-		int samples = 1;// payload2.recursion < 2 ? 3 : 1;
+		int samples = 16;// payload2.recursion < 2 ? 3 : 1;
 		for (int i = 0; i < samples; i++)
 		{
 			float3 dir = GetRandomDir(tc, frame.GetSunDir(), 0.02, frame.GetTime() + float(i) / 10);

@@ -30,6 +30,16 @@ export namespace Table
 		}
 
 
+		static std::string get_typename()
+		{
+			return "Tables::MaterialInfo";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(data);
+		}
+
 	};
 	#pragma pack(pop)
 }

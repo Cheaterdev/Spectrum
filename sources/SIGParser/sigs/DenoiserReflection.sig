@@ -112,3 +112,24 @@ ComputePSO DenoiserReflectionResolve
 	[Enable16bits]
 	compute = denoiser/reflection_resolve;
 }
+
+
+[Compute]
+PassNode ReflectionDenoiser_Reproject
+{
+	Texture GBuffer_DepthPrev;
+	Texture GBuffer_NormalsPrev;
+	Texture GBuffer_Depth;
+	Texture GBuffer_Normals;
+	Texture GBuffer_Speed;
+	Texture VoxelReflectionNoise;
+	Texture ReflectionDenoiser_RadiancePrev;
+	Texture ReflectionDenoiser_AverageRadiance;
+	Texture ReflectionDenoiser_AverageRadiancePrev;
+	Texture ReflectionDenoiser_Variance;
+	Texture ReflectionDenoiser_VariancePrev;
+	Texture ReflectionDenoiser_SampleCount;
+	Texture ReflectionDenoiser_SampleCountPrev;
+	Texture ReflectionDenoiser_ReprojectedRadiance;
+	Texture BlueNoise;
+}

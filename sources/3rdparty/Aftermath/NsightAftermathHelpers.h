@@ -1,4 +1,4 @@
-//*********************************************************
+﻿//*********************************************************
 //
 // Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
 // 
@@ -97,7 +97,7 @@ inline bool operator<(const GFSDK_Aftermath_ShaderInstructionsHash& lhs, const G
 // Helper for comparing GFSDK_Aftermath_ShaderDebugName.
 inline bool operator<(const GFSDK_Aftermath_ShaderDebugName& lhs, const GFSDK_Aftermath_ShaderDebugName& rhs)
 {
-    return strncmp(lhs.name, rhs.name, sizeof(lhs.name)) < 0;
+    return std::strncmp(lhs.name, rhs.name, sizeof(lhs.name)) < 0;
 }
 
 //*********************************************************

@@ -26,6 +26,17 @@ export namespace Table
 		}
 		using Compiled = MeshInstance;
 
+		static std::string get_typename()
+		{
+			return "Tables::MeshInstance";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(vertex_offset);
+			ar& NVP(index_offset);
+		}
+
 	};
 	#pragma pack(pop)
 }

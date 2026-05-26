@@ -33,7 +33,24 @@ export namespace Table
 			uint vertices; // StructuredBuffer<float4>
 			uint input_meshes; // StructuredBuffer<BoxInfo>
 			uint visible_meshes; // RWStructuredBuffer<uint>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::DrawBoxes";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

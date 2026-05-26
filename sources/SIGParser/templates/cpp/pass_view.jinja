@@ -1,0 +1,26 @@
+#pragma once
+
+{% for v in pass.params -%}
+{%- set t =  parsed.tables[v.type] -%}
+{%- if t is undefined -%}{%-else-%}
+#include "{{v.type}}.h"
+{%-endif-%}	
+{% endfor -%}
+
+using namespace FrameGraph;
+
+namespace Passes
+{
+	struct {{view.name}} 
+	{
+{% for v in view.params -%}
+{%- set t =  parsed.tables[v.type] -%}
+{%- if t is undefined -%}
+		Handlers::{{v.type}} H({{v.name}});
+{%-else-%}
+		{{v.type}} {{v.name}};
+{%-endif-%}	
+
+{% endfor -%}
+	};
+}

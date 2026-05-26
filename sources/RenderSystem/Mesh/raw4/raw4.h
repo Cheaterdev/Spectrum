@@ -5,14 +5,6 @@ import Core;
 
 //------------------------------------------------------------------------------
 
-// Required vec3
-//#include "stdtypes.h"
-
-// Required AABB
-//#include "gtypes.h"
-
-// Required uint32_t, uint16_t, uint8_t types.
-#include <stdint.h>
 
 #pragma warning(disable:4200)
 /*******************************************************************************

@@ -134,7 +134,7 @@ export{
 	{
 
 
-		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>, public TrackedObject, public API::Resource
+		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>, public TrackedObject, public API::Resource, public TypedObject<Resource>
 		{
 					protected:
 						bool serialize_from_derived = false;
@@ -154,6 +154,7 @@ export{
 		public:
 			FenceWaiter load_waiter;
 			bool debug=false;
+			bool debug_transitions = false;
 			bool is_ready() const
 			{
 				return load_waiter.is_completed();
@@ -232,12 +233,22 @@ export{
 
 			SERIALIZE()
 			{
-				assert(serialize_from_derived);
+
+				desc.Flags &= ~ResFlags::DisableStateTracking;
+				if (check(desc.Flags & ResFlags::DisableStateTracking))
+				{
+					ASSERT(false);
+					Log::get() << "AlARMA!!" << Log::endl;
+				}
+	ASSERT(!check(desc.Flags & ResFlags::DisableStateTracking));
+			
+				ASSERT(serialize_from_derived);
 				ar& NVP(desc);
+				ASSERT(!check(desc.Flags & ResFlags::DisableStateTracking));
 
 			}
 		};
-
+			
 
 
 

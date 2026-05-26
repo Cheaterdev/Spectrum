@@ -1,7 +1,7 @@
 export module Core:Math.Matrices;
 
 import <Core_defs.h>;
-import <stl/core.h>;
+import stl.core;
 import :Math.Quaternion;
 import :Math.Vectors;
 import :Math.Constants;
@@ -161,8 +161,14 @@ export {
 
 #include "matrix4_functions.h"
 
-
+	  using matrix_type::get_typename;
 	private:
+
+			SERIALIZE_PRETTY()
+		{
+			ar& NP("elems", matrix_type::rows);
+		}
+
 		SERIALIZE()
 		{
 			ar& NP("elems", matrix_type::elems);
@@ -216,6 +222,15 @@ export {
 		};
 
 		matrix_data_t() {};
+
+		
+static std::string get_typename()	
+{
+	 static const std::string name = "mat" + std::to_string(N) + "x" +std::to_string(M);
+
+	return name;
+}
+
 	};
 
 	template<typename data_type>
@@ -247,6 +262,14 @@ export {
 				std::array<Format, N* M> elems;
 			};
 		};
+
+		
+static std::string get_typename()	
+{
+	 static const std::string name = "mat" + std::to_string(N) + "x" +std::to_string(M);
+
+	return name;
+}
 	};
 
 

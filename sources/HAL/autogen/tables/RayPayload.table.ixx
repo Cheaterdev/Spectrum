@@ -36,6 +36,20 @@ export namespace Table
 		}
 		using Compiled = RayPayload;
 
+		static std::string get_typename()
+		{
+			return "Tables::RayPayload";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(cone);
+			ar& NVP(color);
+			ar& NVP(dir);
+			ar& NVP(recursion);
+			ar& NVP(dist);
+		}
+
 	};
 	#pragma pack(pop)
 }

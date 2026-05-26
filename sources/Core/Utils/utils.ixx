@@ -1,8 +1,8 @@
 export module Core:Utils;
 
 export import "utils/utils_macros.h";
-export import <stl/core.h>;
-export import <stl/filesystem.h>;
+export import stl.core;
+export import stl.filesystem;
 
 export import magic_enum;
 import crossguid;
@@ -84,6 +84,61 @@ export
 	template<class T> using w_ptr = std::weak_ptr<T>;
 
 	using binary = std::vector<std::byte>;
+
+
+
+	template <typename T> concept arithmetic = std::is_arithmetic_v<T>;// && !std::is_enum_v<T>;
+
+	template <typename T>
+	concept has_pretty_typename = requires()
+	{
+		std::remove_cvref_t<T>::get_typename();
+	};
+
+	template <typename T>
+	concept is_span = requires()
+	{
+		typename std::remove_cvref_t<T>::value_type;
+		std::remove_cvref_t<T>::extent;
+		//	 std::remove_cvref_t<T>::value_type;
+	};
+
+
+		template <typename T>
+	std::string get_typename()
+	{
+		return  typeid(std::remove_cvref_t<T>).name();
+	}
+	template <has_pretty_typename T>
+	std::string get_typename()
+	{
+		return   std::remove_cvref_t<T>::get_typename();
+	}
+
+	template <is_span T>
+	std::string get_typename()
+	{
+		return   get_typename<typename std::remove_cvref_t<T>::value_type>() + "[" + std::to_string(T::extent) + "]";
+	}
+
+
+	template <typename T>
+	std::string get_typename(const T&t)
+	{
+		return  typeid(std::remove_cvref_t<T>).name();
+	}
+	template <has_pretty_typename T>
+	std::string get_typename(const T&t)
+	{
+		return   std::remove_cvref_t<T>::get_typename();
+	}
+
+	template <is_span T>
+	std::string get_typename(const T &t)
+	{
+		return   get_typename<typename std::remove_cvref_t<T>::value_type>() + "[" + std::to_string(t.size()) + "]";
+	}
+
 
 
 	template<class T> concept EnumType = std::is_enum_v<T>;

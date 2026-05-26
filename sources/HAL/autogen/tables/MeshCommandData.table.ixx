@@ -37,6 +37,20 @@ export namespace Table
 		}
 		using Compiled = MeshCommandData;
 
+		static std::string get_typename()
+		{
+			return "Tables::MeshCommandData";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(material_id);
+			ar& NVP(node_offset);
+			ar& NVP(mesh_cb);
+			ar& NVP(meshinstance_cb);
+			ar& NVP(draw_commands);
+		}
+
 	};
 	#pragma pack(pop)
 }

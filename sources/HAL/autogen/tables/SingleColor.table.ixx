@@ -24,7 +24,24 @@ export namespace Table
 		struct Compiled
 		{
 			uint color; // RenderTarget<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::SingleColor";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

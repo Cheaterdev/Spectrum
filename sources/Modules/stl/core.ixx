@@ -1,9 +1,7 @@
-export module stl.core;
-export import <stl\core.h>;
+module;
+#include <cerrno>
 
-//
-//export using namespace std::ranges;
-//
-//
-//export namespace view = std::ranges::views;
-//
+export module stl.core;
+export import "core.h";
+
+export inline int current_errno() noexcept { return errno; }

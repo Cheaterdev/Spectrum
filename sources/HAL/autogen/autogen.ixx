@@ -160,6 +160,16 @@ export import :Autogen.Tables.FlowGraph;
 export import :Autogen.Tables.VSLine;
 export import :Autogen.Slots.LineRender;
 export import :Autogen.Tables.LineRender;
+export import :Autogen.Slots.FrameGraph_Debug_Common;
+export import :Autogen.Tables.FrameGraph_Debug_Common;
+export import :Autogen.Slots.FrameGraph_Debug_Texture2D;
+export import :Autogen.Tables.FrameGraph_Debug_Texture2D;
+export import :Autogen.Slots.FrameGraph_Debug_Texture2DArray;
+export import :Autogen.Tables.FrameGraph_Debug_Texture2DArray;
+export import :Autogen.Slots.FrameGraph_Debug_Texture3D;
+export import :Autogen.Tables.FrameGraph_Debug_Texture3D;
+export import :Autogen.Slots.FrameGraph_Debug_TextureCube;
+export import :Autogen.Tables.FrameGraph_Debug_TextureCube;
 export import :Autogen.Tables.VoxelTilingParams;
 export import :Autogen.Slots.VoxelInfo;
 export import :Autogen.Tables.VoxelInfo;
@@ -202,330 +212,85 @@ export import :Autogen.Slots.WorkGraphTest;
 export import :Autogen.Tables.WorkGraphTest;
 export import :Autogen.Slots.GraphInput;
 export import :Autogen.Tables.GraphInput;
+export import :Autogen.PSO.BlueNoise;
+export import :Autogen.PSO.BRDF;
+export import :Autogen.PSO.DenoiserReflectionReproject;
+export import :Autogen.PSO.DenoiserReflectionPrefilter;
+export import :Autogen.PSO.DenoiserReflectionResolve;
+export import :Autogen.PSO.DenoiserShadow_Prepare;
+export import :Autogen.PSO.DenoiserShadow_TileClassification;
+export import :Autogen.PSO.DenoiserShadow_Filter;
+export import :Autogen.PSO.FSR;
+export import :Autogen.PSO.RCAS;
+export import :Autogen.PSO.GatherPipeline;
+export import :Autogen.PSO.GatherBoxes;
+export import :Autogen.PSO.InitDispatch;
+export import :Autogen.PSO.GatherMeshes;
+export import :Autogen.PSO.DownsampleDepth;
+export import :Autogen.PSO.MipMapping;
+export import :Autogen.PSO.SS_Shadow;
+export import :Autogen.PSO.FrameGraph_Debug_Texture2D;
+export import :Autogen.PSO.FrameGraph_Debug_Texture2DArray;
+export import :Autogen.PSO.FrameGraph_Debug_Texture3D;
+export import :Autogen.PSO.FrameGraph_Debug_TextureCube;
+export import :Autogen.PSO.FrameGraph_Debug_NotImplemented;
+export import :Autogen.PSO.Lighting;
+export import :Autogen.PSO.VoxelDownsample;
+export import :Autogen.PSO.VoxelCopy;
+export import :Autogen.PSO.VoxelZero;
+export import :Autogen.PSO.VoxelVisibility;
+export import :Autogen.PSO.VoxelIndirectFilter;
+export import :Autogen.PSO.VoxelIndirectLow;
+export import :Autogen.PSO.DenoiserHistoryFix;
+export import :Autogen.PSO.FrameClassification;
+export import :Autogen.PSO.FrameClassificationInitDispatch;
+export import :Autogen.PSO.ReflectionCombine;
+export import :Autogen.PSO.FontRender;
+export import :Autogen.PSO.RenderBoxes;
+export import :Autogen.PSO.RenderToDS;
+export import :Autogen.PSO.QualityColor;
+export import :Autogen.PSO.QualityToStencil;
+export import :Autogen.PSO.QualityToStencilREfl;
+export import :Autogen.PSO.CopyTexture;
+export import :Autogen.PSO.PSSMMask;
+export import :Autogen.PSO.PSSMApply;
+export import :Autogen.PSO.GBufferDownsample;
+export import :Autogen.PSO.GBufferDraw;
+export import :Autogen.PSO.DepthDraw;
+export import :Autogen.PSO.Voxelization;
+export import :Autogen.PSO.Sky;
+export import :Autogen.PSO.SkyCube;
+export import :Autogen.PSO.CubemapENV;
+export import :Autogen.PSO.CubemapENVDiffuse;
+export import :Autogen.PSO.EdgeDetect;
+export import :Autogen.PSO.BlendWeight;
+export import :Autogen.PSO.Blending;
+export import :Autogen.PSO.DrawStencil;
+export import :Autogen.PSO.DrawSelected;
+export import :Autogen.PSO.DrawBox;
+export import :Autogen.PSO.DrawAxis;
+export import :Autogen.PSO.StencilerLast;
+export import :Autogen.PSO.NinePatch;
+export import :Autogen.PSO.SimpleRect;
+export import :Autogen.PSO.CanvasBack;
+export import :Autogen.PSO.CanvasLines;
+export import :Autogen.PSO.VoxelReflectionHi;
+export import :Autogen.PSO.VoxelReflectionUpsample;
+export import :Autogen.PSO.VoxelIndirectHi;
+export import :Autogen.PSO.VoxelIndirectUpsample;
+export import :Autogen.PSO.VoxelDebug;
+export import :Autogen.PSO.DenoiserDownsample;
+export import :Autogen.PSO.WorkGR;
+export import :Autogen.RTX.MainRTX;
 
-export	{
-	#include "rt\SingleColor.h"
-	#include "rt\NoOutput.h"
-	#include "rt\DepthOnly.h"
-	#include "rt\SingleColorDepth.h"
-	#include "rt\GBufferDownsampleRT.h"
-	#include "rt\GBuffer.h"
-	#include "pso\BlueNoise.h"
-	#include "pso\BRDF.h"
-	#include "pso\DenoiserReflectionReproject.h"
-	#include "pso\DenoiserReflectionPrefilter.h"
-	#include "pso\DenoiserReflectionResolve.h"
-	#include "pso\DenoiserShadow_Prepare.h"
-	#include "pso\DenoiserShadow_TileClassification.h"
-	#include "pso\DenoiserShadow_Filter.h"
-	#include "pso\FSR.h"
-	#include "pso\RCAS.h"
-	#include "pso\GatherPipeline.h"
-	#include "pso\GatherBoxes.h"
-	#include "pso\InitDispatch.h"
-	#include "pso\GatherMeshes.h"
-	#include "pso\DownsampleDepth.h"
-	#include "pso\MipMapping.h"
-	#include "pso\SS_Shadow.h"
-	#include "pso\Lighting.h"
-	#include "pso\VoxelDownsample.h"
-	#include "pso\VoxelCopy.h"
-	#include "pso\VoxelZero.h"
-	#include "pso\VoxelVisibility.h"
-	#include "pso\VoxelIndirectFilter.h"
-	#include "pso\VoxelIndirectLow.h"
-	#include "pso\DenoiserHistoryFix.h"
-	#include "pso\FrameClassification.h"
-	#include "pso\FrameClassificationInitDispatch.h"
-	#include "pso\ReflectionCombine.h"
-	#include "pso\FontRender.h"
-	#include "pso\RenderBoxes.h"
-	#include "pso\RenderToDS.h"
-	#include "pso\QualityColor.h"
-	#include "pso\QualityToStencil.h"
-	#include "pso\QualityToStencilREfl.h"
-	#include "pso\CopyTexture.h"
-	#include "pso\PSSMMask.h"
-	#include "pso\PSSMApply.h"
-	#include "pso\GBufferDownsample.h"
-	#include "pso\GBufferDraw.h"
-	#include "pso\DepthDraw.h"
-	#include "pso\Voxelization.h"
-	#include "pso\Sky.h"
-	#include "pso\SkyCube.h"
-	#include "pso\CubemapENV.h"
-	#include "pso\CubemapENVDiffuse.h"
-	#include "pso\EdgeDetect.h"
-	#include "pso\BlendWeight.h"
-	#include "pso\Blending.h"
-	#include "pso\DrawStencil.h"
-	#include "pso\DrawSelected.h"
-	#include "pso\DrawBox.h"
-	#include "pso\DrawAxis.h"
-	#include "pso\StencilerLast.h"
-	#include "pso\NinePatch.h"
-	#include "pso\SimpleRect.h"
-	#include "pso\CanvasBack.h"
-	#include "pso\CanvasLines.h"
-	#include "pso\VoxelReflectionHi.h"
-	#include "pso\VoxelReflectionUpsample.h"
-	#include "pso\VoxelIndirectHi.h"
-	#include "pso\VoxelIndirectUpsample.h"
-	#include "pso\VoxelDebug.h"
-	#include "pso\DenoiserDownsample.h"
-	#include "pso\WorkGR.h"
-	#include "rtx\MainRTX.h"
-
+export import :Autogen.RT.SingleColor;
+export import :Autogen.RT.NoOutput;
+export import :Autogen.RT.DepthOnly;
+export import :Autogen.RT.SingleColorDepth;
+export import :Autogen.RT.GBufferDownsampleRT;
+export import :Autogen.RT.GBuffer;
+export {
 	std::optional<SlotID> get_slot(std::string_view slot_name);
 	uint get_table_index(SlotID id);
 	std::string get_slot_name(SlotID id);
-}
-
-std::optional<SlotID> get_slot(std::string_view slot_name)
-{		
-	if(slot_name == "TextureRenderer") return SlotID::TextureRenderer;
-	if(slot_name == "BlueNoise") return SlotID::BlueNoise;
-	if(slot_name == "BRDF") return SlotID::BRDF;
-	if(slot_name == "DebugInfo") return SlotID::DebugInfo;
-	if(slot_name == "DenoiserReflectionCommon") return SlotID::DenoiserReflectionCommon;
-	if(slot_name == "DenoiserReflectionReproject") return SlotID::DenoiserReflectionReproject;
-	if(slot_name == "DenoiserReflectionPrefilter") return SlotID::DenoiserReflectionPrefilter;
-	if(slot_name == "DenoiserReflectionResolve") return SlotID::DenoiserReflectionResolve;
-	if(slot_name == "DenoiserShadow_Prepare") return SlotID::DenoiserShadow_Prepare;
-	if(slot_name == "DenoiserShadow_TileClassification") return SlotID::DenoiserShadow_TileClassification;
-	if(slot_name == "DenoiserShadow_Filter") return SlotID::DenoiserShadow_Filter;
-	if(slot_name == "DenoiserShadow_FilterLocal") return SlotID::DenoiserShadow_FilterLocal;
-	if(slot_name == "DenoiserShadow_FilterLast") return SlotID::DenoiserShadow_FilterLast;
-	if(slot_name == "FontRendering") return SlotID::FontRendering;
-	if(slot_name == "FontRenderingConstants") return SlotID::FontRenderingConstants;
-	if(slot_name == "FontRenderingGlyphs") return SlotID::FontRenderingGlyphs;
-	if(slot_name == "FrameInfo") return SlotID::FrameInfo;
-	if(slot_name == "FSR") return SlotID::FSR;
-	if(slot_name == "MaterialInfo") return SlotID::MaterialInfo;
-	if(slot_name == "MeshInstanceInfo") return SlotID::MeshInstanceInfo;
-	if(slot_name == "MeshInfo") return SlotID::MeshInfo;
-	if(slot_name == "GatherPipelineGlobal") return SlotID::GatherPipelineGlobal;
-	if(slot_name == "GatherPipeline") return SlotID::GatherPipeline;
-	if(slot_name == "GatherBoxes") return SlotID::GatherBoxes;
-	if(slot_name == "DrawBoxes") return SlotID::DrawBoxes;
-	if(slot_name == "InitDispatch") return SlotID::InitDispatch;
-	if(slot_name == "GatherMeshesBoxes") return SlotID::GatherMeshesBoxes;
-	if(slot_name == "MipMapping") return SlotID::MipMapping;
-	if(slot_name == "CopyTexture") return SlotID::CopyTexture;
-	if(slot_name == "DownsampleDepth") return SlotID::DownsampleDepth;
-	if(slot_name == "GBufferDownsample") return SlotID::GBufferDownsample;
-	if(slot_name == "GBufferQuality") return SlotID::GBufferQuality;
-	if(slot_name == "PSSMConstants") return SlotID::PSSMConstants;
-	if(slot_name == "PSSMData") return SlotID::PSSMData;
-	if(slot_name == "PSSMDataGlobal") return SlotID::PSSMDataGlobal;
-	if(slot_name == "PSSMLighting") return SlotID::PSSMLighting;
-	if(slot_name == "RaytracingRays") return SlotID::RaytracingRays;
-	if(slot_name == "Raytracing") return SlotID::Raytracing;
-	if(slot_name == "SceneData") return SlotID::SceneData;
-	if(slot_name == "GBuffer") return SlotID::GBuffer;
-	if(slot_name == "SkyData") return SlotID::SkyData;
-	if(slot_name == "SkyFace") return SlotID::SkyFace;
-	if(slot_name == "EnvFilter") return SlotID::EnvFilter;
-	if(slot_name == "EnvSource") return SlotID::EnvSource;
-	if(slot_name == "SMAA_Global") return SlotID::SMAA_Global;
-	if(slot_name == "SMAA_Weights") return SlotID::SMAA_Weights;
-	if(slot_name == "SMAA_Blend") return SlotID::SMAA_Blend;
-	if(slot_name == "DispatchParameters") return SlotID::DispatchParameters;
-	if(slot_name == "Countour") return SlotID::Countour;
-	if(slot_name == "DrawStencil") return SlotID::DrawStencil;
-	if(slot_name == "PickerBuffer") return SlotID::PickerBuffer;
-	if(slot_name == "Instance") return SlotID::Instance;
-	if(slot_name == "Color") return SlotID::Color;
-	if(slot_name == "Test") return SlotID::Test;
-	if(slot_name == "NinePatch") return SlotID::NinePatch;
-	if(slot_name == "ColorRect") return SlotID::ColorRect;
-	if(slot_name == "FlowGraph") return SlotID::FlowGraph;
-	if(slot_name == "LineRender") return SlotID::LineRender;
-	if(slot_name == "VoxelInfo") return SlotID::VoxelInfo;
-	if(slot_name == "Voxelization") return SlotID::Voxelization;
-	if(slot_name == "VoxelScreen") return SlotID::VoxelScreen;
-	if(slot_name == "VoxelOutput") return SlotID::VoxelOutput;
-	if(slot_name == "VoxelBlur") return SlotID::VoxelBlur;
-	if(slot_name == "VoxelUpscale") return SlotID::VoxelUpscale;
-	if(slot_name == "VoxelVisibility") return SlotID::VoxelVisibility;
-	if(slot_name == "VoxelMipMap") return SlotID::VoxelMipMap;
-	if(slot_name == "VoxelCopy") return SlotID::VoxelCopy;
-	if(slot_name == "VoxelZero") return SlotID::VoxelZero;
-	if(slot_name == "VoxelLighting") return SlotID::VoxelLighting;
-	if(slot_name == "VoxelDebug") return SlotID::VoxelDebug;
-	if(slot_name == "DenoiserDownsample") return SlotID::DenoiserDownsample;
-	if(slot_name == "DenoiserHistoryFix") return SlotID::DenoiserHistoryFix;
-	if(slot_name == "TilingPostprocess") return SlotID::TilingPostprocess;
-	if(slot_name == "FrameClassification") return SlotID::FrameClassification;
-	if(slot_name == "FrameClassificationInitDispatch") return SlotID::FrameClassificationInitDispatch;
-	if(slot_name == "ReflectionCombine") return SlotID::ReflectionCombine;
-	if(slot_name == "WorkGraphTest") return SlotID::WorkGraphTest;
-	if(slot_name == "GraphInput") return SlotID::GraphInput;
-	return std::nullopt;
-}
-
-uint get_table_index(SlotID id)
-{		
-	if(id == SlotID::TextureRenderer) return Slots::TextureRenderer::Slot::ID;
-	if(id == SlotID::BlueNoise) return Slots::BlueNoise::Slot::ID;
-	if(id == SlotID::BRDF) return Slots::BRDF::Slot::ID;
-	if(id == SlotID::DebugInfo) return Slots::DebugInfo::Slot::ID;
-	if(id == SlotID::DenoiserReflectionCommon) return Slots::DenoiserReflectionCommon::Slot::ID;
-	if(id == SlotID::DenoiserReflectionReproject) return Slots::DenoiserReflectionReproject::Slot::ID;
-	if(id == SlotID::DenoiserReflectionPrefilter) return Slots::DenoiserReflectionPrefilter::Slot::ID;
-	if(id == SlotID::DenoiserReflectionResolve) return Slots::DenoiserReflectionResolve::Slot::ID;
-	if(id == SlotID::DenoiserShadow_Prepare) return Slots::DenoiserShadow_Prepare::Slot::ID;
-	if(id == SlotID::DenoiserShadow_TileClassification) return Slots::DenoiserShadow_TileClassification::Slot::ID;
-	if(id == SlotID::DenoiserShadow_Filter) return Slots::DenoiserShadow_Filter::Slot::ID;
-	if(id == SlotID::DenoiserShadow_FilterLocal) return Slots::DenoiserShadow_FilterLocal::Slot::ID;
-	if(id == SlotID::DenoiserShadow_FilterLast) return Slots::DenoiserShadow_FilterLast::Slot::ID;
-	if(id == SlotID::FontRendering) return Slots::FontRendering::Slot::ID;
-	if(id == SlotID::FontRenderingConstants) return Slots::FontRenderingConstants::Slot::ID;
-	if(id == SlotID::FontRenderingGlyphs) return Slots::FontRenderingGlyphs::Slot::ID;
-	if(id == SlotID::FrameInfo) return Slots::FrameInfo::Slot::ID;
-	if(id == SlotID::FSR) return Slots::FSR::Slot::ID;
-	if(id == SlotID::MaterialInfo) return Slots::MaterialInfo::Slot::ID;
-	if(id == SlotID::MeshInstanceInfo) return Slots::MeshInstanceInfo::Slot::ID;
-	if(id == SlotID::MeshInfo) return Slots::MeshInfo::Slot::ID;
-	if(id == SlotID::GatherPipelineGlobal) return Slots::GatherPipelineGlobal::Slot::ID;
-	if(id == SlotID::GatherPipeline) return Slots::GatherPipeline::Slot::ID;
-	if(id == SlotID::GatherBoxes) return Slots::GatherBoxes::Slot::ID;
-	if(id == SlotID::DrawBoxes) return Slots::DrawBoxes::Slot::ID;
-	if(id == SlotID::InitDispatch) return Slots::InitDispatch::Slot::ID;
-	if(id == SlotID::GatherMeshesBoxes) return Slots::GatherMeshesBoxes::Slot::ID;
-	if(id == SlotID::MipMapping) return Slots::MipMapping::Slot::ID;
-	if(id == SlotID::CopyTexture) return Slots::CopyTexture::Slot::ID;
-	if(id == SlotID::DownsampleDepth) return Slots::DownsampleDepth::Slot::ID;
-	if(id == SlotID::GBufferDownsample) return Slots::GBufferDownsample::Slot::ID;
-	if(id == SlotID::GBufferQuality) return Slots::GBufferQuality::Slot::ID;
-	if(id == SlotID::PSSMConstants) return Slots::PSSMConstants::Slot::ID;
-	if(id == SlotID::PSSMData) return Slots::PSSMData::Slot::ID;
-	if(id == SlotID::PSSMDataGlobal) return Slots::PSSMDataGlobal::Slot::ID;
-	if(id == SlotID::PSSMLighting) return Slots::PSSMLighting::Slot::ID;
-	if(id == SlotID::RaytracingRays) return Slots::RaytracingRays::Slot::ID;
-	if(id == SlotID::Raytracing) return Slots::Raytracing::Slot::ID;
-	if(id == SlotID::SceneData) return Slots::SceneData::Slot::ID;
-	if(id == SlotID::GBuffer) return Slots::GBuffer::Slot::ID;
-	if(id == SlotID::SkyData) return Slots::SkyData::Slot::ID;
-	if(id == SlotID::SkyFace) return Slots::SkyFace::Slot::ID;
-	if(id == SlotID::EnvFilter) return Slots::EnvFilter::Slot::ID;
-	if(id == SlotID::EnvSource) return Slots::EnvSource::Slot::ID;
-	if(id == SlotID::SMAA_Global) return Slots::SMAA_Global::Slot::ID;
-	if(id == SlotID::SMAA_Weights) return Slots::SMAA_Weights::Slot::ID;
-	if(id == SlotID::SMAA_Blend) return Slots::SMAA_Blend::Slot::ID;
-	if(id == SlotID::DispatchParameters) return Slots::DispatchParameters::Slot::ID;
-	if(id == SlotID::Countour) return Slots::Countour::Slot::ID;
-	if(id == SlotID::DrawStencil) return Slots::DrawStencil::Slot::ID;
-	if(id == SlotID::PickerBuffer) return Slots::PickerBuffer::Slot::ID;
-	if(id == SlotID::Instance) return Slots::Instance::Slot::ID;
-	if(id == SlotID::Color) return Slots::Color::Slot::ID;
-	if(id == SlotID::Test) return Slots::Test::Slot::ID;
-	if(id == SlotID::NinePatch) return Slots::NinePatch::Slot::ID;
-	if(id == SlotID::ColorRect) return Slots::ColorRect::Slot::ID;
-	if(id == SlotID::FlowGraph) return Slots::FlowGraph::Slot::ID;
-	if(id == SlotID::LineRender) return Slots::LineRender::Slot::ID;
-	if(id == SlotID::VoxelInfo) return Slots::VoxelInfo::Slot::ID;
-	if(id == SlotID::Voxelization) return Slots::Voxelization::Slot::ID;
-	if(id == SlotID::VoxelScreen) return Slots::VoxelScreen::Slot::ID;
-	if(id == SlotID::VoxelOutput) return Slots::VoxelOutput::Slot::ID;
-	if(id == SlotID::VoxelBlur) return Slots::VoxelBlur::Slot::ID;
-	if(id == SlotID::VoxelUpscale) return Slots::VoxelUpscale::Slot::ID;
-	if(id == SlotID::VoxelVisibility) return Slots::VoxelVisibility::Slot::ID;
-	if(id == SlotID::VoxelMipMap) return Slots::VoxelMipMap::Slot::ID;
-	if(id == SlotID::VoxelCopy) return Slots::VoxelCopy::Slot::ID;
-	if(id == SlotID::VoxelZero) return Slots::VoxelZero::Slot::ID;
-	if(id == SlotID::VoxelLighting) return Slots::VoxelLighting::Slot::ID;
-	if(id == SlotID::VoxelDebug) return Slots::VoxelDebug::Slot::ID;
-	if(id == SlotID::DenoiserDownsample) return Slots::DenoiserDownsample::Slot::ID;
-	if(id == SlotID::DenoiserHistoryFix) return Slots::DenoiserHistoryFix::Slot::ID;
-	if(id == SlotID::TilingPostprocess) return Slots::TilingPostprocess::Slot::ID;
-	if(id == SlotID::FrameClassification) return Slots::FrameClassification::Slot::ID;
-	if(id == SlotID::FrameClassificationInitDispatch) return Slots::FrameClassificationInitDispatch::Slot::ID;
-	if(id == SlotID::ReflectionCombine) return Slots::ReflectionCombine::Slot::ID;
-	if(id == SlotID::WorkGraphTest) return Slots::WorkGraphTest::Slot::ID;
-	if(id == SlotID::GraphInput) return Slots::GraphInput::Slot::ID;
-	return -1;
-}
-
-std::string get_slot_name(SlotID id)
-{		
-	if(id == SlotID::TextureRenderer) return "TextureRenderer";
-	if(id == SlotID::BlueNoise) return "BlueNoise";
-	if(id == SlotID::BRDF) return "BRDF";
-	if(id == SlotID::DebugInfo) return "DebugInfo";
-	if(id == SlotID::DenoiserReflectionCommon) return "DenoiserReflectionCommon";
-	if(id == SlotID::DenoiserReflectionReproject) return "DenoiserReflectionReproject";
-	if(id == SlotID::DenoiserReflectionPrefilter) return "DenoiserReflectionPrefilter";
-	if(id == SlotID::DenoiserReflectionResolve) return "DenoiserReflectionResolve";
-	if(id == SlotID::DenoiserShadow_Prepare) return "DenoiserShadow_Prepare";
-	if(id == SlotID::DenoiserShadow_TileClassification) return "DenoiserShadow_TileClassification";
-	if(id == SlotID::DenoiserShadow_Filter) return "DenoiserShadow_Filter";
-	if(id == SlotID::DenoiserShadow_FilterLocal) return "DenoiserShadow_FilterLocal";
-	if(id == SlotID::DenoiserShadow_FilterLast) return "DenoiserShadow_FilterLast";
-	if(id == SlotID::FontRendering) return "FontRendering";
-	if(id == SlotID::FontRenderingConstants) return "FontRenderingConstants";
-	if(id == SlotID::FontRenderingGlyphs) return "FontRenderingGlyphs";
-	if(id == SlotID::FrameInfo) return "FrameInfo";
-	if(id == SlotID::FSR) return "FSR";
-	if(id == SlotID::MaterialInfo) return "MaterialInfo";
-	if(id == SlotID::MeshInstanceInfo) return "MeshInstanceInfo";
-	if(id == SlotID::MeshInfo) return "MeshInfo";
-	if(id == SlotID::GatherPipelineGlobal) return "GatherPipelineGlobal";
-	if(id == SlotID::GatherPipeline) return "GatherPipeline";
-	if(id == SlotID::GatherBoxes) return "GatherBoxes";
-	if(id == SlotID::DrawBoxes) return "DrawBoxes";
-	if(id == SlotID::InitDispatch) return "InitDispatch";
-	if(id == SlotID::GatherMeshesBoxes) return "GatherMeshesBoxes";
-	if(id == SlotID::MipMapping) return "MipMapping";
-	if(id == SlotID::CopyTexture) return "CopyTexture";
-	if(id == SlotID::DownsampleDepth) return "DownsampleDepth";
-	if(id == SlotID::GBufferDownsample) return "GBufferDownsample";
-	if(id == SlotID::GBufferQuality) return "GBufferQuality";
-	if(id == SlotID::PSSMConstants) return "PSSMConstants";
-	if(id == SlotID::PSSMData) return "PSSMData";
-	if(id == SlotID::PSSMDataGlobal) return "PSSMDataGlobal";
-	if(id == SlotID::PSSMLighting) return "PSSMLighting";
-	if(id == SlotID::RaytracingRays) return "RaytracingRays";
-	if(id == SlotID::Raytracing) return "Raytracing";
-	if(id == SlotID::SceneData) return "SceneData";
-	if(id == SlotID::GBuffer) return "GBuffer";
-	if(id == SlotID::SkyData) return "SkyData";
-	if(id == SlotID::SkyFace) return "SkyFace";
-	if(id == SlotID::EnvFilter) return "EnvFilter";
-	if(id == SlotID::EnvSource) return "EnvSource";
-	if(id == SlotID::SMAA_Global) return "SMAA_Global";
-	if(id == SlotID::SMAA_Weights) return "SMAA_Weights";
-	if(id == SlotID::SMAA_Blend) return "SMAA_Blend";
-	if(id == SlotID::DispatchParameters) return "DispatchParameters";
-	if(id == SlotID::Countour) return "Countour";
-	if(id == SlotID::DrawStencil) return "DrawStencil";
-	if(id == SlotID::PickerBuffer) return "PickerBuffer";
-	if(id == SlotID::Instance) return "Instance";
-	if(id == SlotID::Color) return "Color";
-	if(id == SlotID::Test) return "Test";
-	if(id == SlotID::NinePatch) return "NinePatch";
-	if(id == SlotID::ColorRect) return "ColorRect";
-	if(id == SlotID::FlowGraph) return "FlowGraph";
-	if(id == SlotID::LineRender) return "LineRender";
-	if(id == SlotID::VoxelInfo) return "VoxelInfo";
-	if(id == SlotID::Voxelization) return "Voxelization";
-	if(id == SlotID::VoxelScreen) return "VoxelScreen";
-	if(id == SlotID::VoxelOutput) return "VoxelOutput";
-	if(id == SlotID::VoxelBlur) return "VoxelBlur";
-	if(id == SlotID::VoxelUpscale) return "VoxelUpscale";
-	if(id == SlotID::VoxelVisibility) return "VoxelVisibility";
-	if(id == SlotID::VoxelMipMap) return "VoxelMipMap";
-	if(id == SlotID::VoxelCopy) return "VoxelCopy";
-	if(id == SlotID::VoxelZero) return "VoxelZero";
-	if(id == SlotID::VoxelLighting) return "VoxelLighting";
-	if(id == SlotID::VoxelDebug) return "VoxelDebug";
-	if(id == SlotID::DenoiserDownsample) return "DenoiserDownsample";
-	if(id == SlotID::DenoiserHistoryFix) return "DenoiserHistoryFix";
-	if(id == SlotID::TilingPostprocess) return "TilingPostprocess";
-	if(id == SlotID::FrameClassification) return "FrameClassification";
-	if(id == SlotID::FrameClassificationInitDispatch) return "FrameClassificationInitDispatch";
-	if(id == SlotID::ReflectionCombine) return "ReflectionCombine";
-	if(id == SlotID::WorkGraphTest) return "WorkGraphTest";
-	if(id == SlotID::GraphInput) return "GraphInput";
-	return "UNKNOWN";
 }

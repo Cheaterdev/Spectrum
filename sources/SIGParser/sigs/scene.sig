@@ -88,3 +88,34 @@ GraphicsPSO Voxelization
 	cull = None;	
 	conservative = true;
 }
+
+
+
+[Static]
+PassNode PreScene
+{
+	StructuredBuffer<uint> scene;
+}
+
+
+
+[Static]
+[Required]
+PassNode Profiler
+{
+	Texture swapchain;
+}
+
+[Static]
+[Compute]
+PassNode CopyPrev
+{
+	GBuffer gbuffer;
+}
+
+[Static]
+PassNode Scene
+{
+	GBuffer gbuffer;
+	StructuredBuffer<uint> scene;
+}

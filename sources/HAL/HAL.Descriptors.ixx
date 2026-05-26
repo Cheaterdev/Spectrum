@@ -566,7 +566,7 @@ export namespace HAL
 		struct IndexBuffer
 		{
 			Format Format;
-			uint	SizeInBytes =0;
+			uint64	SizeInBytes =0;
 			uint64 OffsetInBytes=0;
 			std::shared_ptr<Buffer> Resource = nullptr;
 		private:

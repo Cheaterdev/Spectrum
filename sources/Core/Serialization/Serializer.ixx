@@ -154,7 +154,25 @@ public:
 
 		return stream.str();
 	}
+		 	template<class T>
+	static std::string to_json(const T& object)
+	{
+		std::ostringstream stream(std::ios::out);
+		simple_log_archive oa(stream);
 
+		try
+		{
+			oa << object;
+		}
+
+		catch (const serialization_exception& e)
+		{
+			Log::get().crash_error("Serialization", e.what());
+			return "";
+		}
+
+		return stream.str();
+	}
 	template<class T>
 	static std::shared_ptr<T> deserialize(const std::string& data)
 	{

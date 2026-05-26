@@ -1,19 +1,17 @@
-module;
-   #include <Core_defs.h>
-	  #include "BS_thread_pool.hpp" // BS::thread_pool
-
 export module Core:Scheduler;
 
 import :Profiling;
 import :Threading;
 import :Singleton;
+import stl.core;
+import stl.threading;
 import ppl;
+
 using namespace concurrency;
-		using namespace std;
+using namespace std;
 
 
 export
-
 {
 
 enum class TaskPriority : int
@@ -25,47 +23,28 @@ enum class TaskPriority : int
 
 class thread_pool : public Singleton<thread_pool>
 {
-
-	friend class  Singleton<thread_pool>;
+	friend class Singleton<thread_pool>;
 
 public:
-
-	template<class F/*, class... Args*/>
-	auto enqueue(F&& f)
-		->std::future<typename std::invoke_result<F>::type>;
+	template<class F>
+	auto enqueue(F&& f) -> std::future<typename std::invoke_result<F>::type>
+	{
+		if (stop) throw std::exception("wtf");
+		using return_type = typename std::invoke_result<F>::type;
+		auto task = std::make_shared<std::packaged_task<return_type()>>(std::forward<F>(f));
+		auto fut = task->get_future();
+		submit_impl([task]() { (*task)(); });
+		return fut;
+	}
 
 private:
-	   BS::thread_pool pool; 
+	struct Impl;
+	std::unique_ptr<Impl> pimpl;
+	void submit_impl(std::function<void()> f);
 	explicit thread_pool();
-	virtual    ~thread_pool();
-
-	bool stop;
+	virtual ~thread_pool();
+	bool stop = false;
 };
-
-// the constructor just launches some amount of workers
-inline thread_pool::thread_pool()
-	: stop(false)
-{
-	
-}
-
-// add new work item to the pool
-template<class F/*, class... Args*/>
-auto thread_pool::enqueue(F&& f)
--> std::future<typename std::invoke_result<F>::type>
-{
-	if (stop) throw std::exception("wtf");
-
-		PROFILE(L"future");
-	
-	return  pool.submit_task(f);
-}
-
-// the destructor joins all threads
-inline thread_pool::~thread_pool()
-{
-	stop = true;
-}
 
 
 class scheduler : public Singleton<scheduler>
@@ -86,7 +65,6 @@ class scheduler : public Singleton<scheduler>
 	std::mutex queue_mutex;
 	std::list<scheduled_task> tasks;
 	std::thread main_thread;
-	// thread_pool& pool;
 	std::condition_variable condition;
 	bool alive;
 	scheduler()
@@ -112,7 +90,6 @@ class scheduler : public Singleton<scheduler>
 							return true;
 						}
 
-						// yeah! we have a task!
 						if (!tasks.empty())
 						{
 							start_time_local = tasks.front().start_time;
@@ -126,7 +103,6 @@ class scheduler : public Singleton<scheduler>
 						break;
 				}
 
-				//wait for timed task
 				std::unique_lock<std::mutex>locker(queue_mutex);
 				condition.wait_until(locker, start_time_local, [&]
 				{
@@ -136,7 +112,6 @@ class scheduler : public Singleton<scheduler>
 						return true;
 					}
 
-					// if new task was inserted and we need to reinitialize wait_until
 					if (tasks.size() && tasks.front().start_time < start_time_local)
 					{
 						start_time_local = tasks.front().start_time;
@@ -144,7 +119,6 @@ class scheduler : public Singleton<scheduler>
 						return true;
 					}
 
-					// if it's time to do our task(s)
 					while (tasks.size())
 						if (tasks.front().start_time <= std::chrono::steady_clock::now())
 						{
@@ -155,7 +129,6 @@ class scheduler : public Singleton<scheduler>
 							if (!need_wait)
 								start_time_local = tasks.front().start_time;
 						}
-
 						else
 							break;
 
@@ -179,24 +152,23 @@ class scheduler : public Singleton<scheduler>
 		thread_pool::reset();
 	}
 public:
-				  template<class F, class... Args>
+	template<class F, class... Args>
 	auto enqueue_now(F&& f, Args&& ... args)
 		->std::future<typename std::invoke_result<F>::type>
 	{
-			return  thread_pool::get().enqueue(f);
+		return thread_pool::get().enqueue(f);
 	}
 
 	template<class F, class... Args>
 	auto enqueue(F&& f, std::chrono::steady_clock::time_point time, Args&& ... args)
 		->std::future<typename std::invoke_result<F>::type>
 	{
-
 		if (time <= std::chrono::steady_clock::now())
-			return  thread_pool::get().enqueue(f);
+			return thread_pool::get().enqueue(f);
 
 		using return_type = typename std::invoke_result<F>::type;
 
-		auto task = std::make_shared< std::packaged_task<return_type()> >(
+		auto task = std::make_shared<std::packaged_task<return_type()>>(
 			std::bind(std::forward<F>(f), std::forward<Args>(args)...)
 			);
 
@@ -230,3 +202,31 @@ public:
 
 }
 
+
+//module : private;
+
+#include "BSPoolBridge.h"	
+struct thread_pool::Impl
+{
+	BSPoolHandle* handle;
+	Impl() : handle(BSPool_Create()) {}
+	~Impl() { BSPool_Destroy(handle); }
+};
+
+thread_pool::thread_pool() : pimpl(std::make_unique<Impl>()), stop(false) {}
+
+thread_pool::~thread_pool()
+{
+	stop = true;
+}
+
+void thread_pool::submit_impl(std::function<void()> f)
+{
+	struct Box { std::function<void()> fn; };
+	auto* box = new Box{ std::move(f) };
+	BSPool_Submit(pimpl->handle, box, [](void* ctx)
+	{
+		std::unique_ptr<Box> owned{ static_cast<Box*>(ctx) };
+		owned->fn();
+	});
+}

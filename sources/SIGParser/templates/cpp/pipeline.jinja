@@ -1,0 +1,79 @@
+{% for entry in pipeline.entries %}
+#include "{{entry.name}}.h"
+{%- endfor %}
+#include "../pass_defaults.h"
+
+using namespace FrameGraph;
+
+{%- set all_resources = get_pipeline_resources(pipeline.name) -%}
+
+namespace Pipelines
+{
+
+class {{pipeline.name}} : public PipelineBase
+{
+public:
+{% for entry in pipeline.entries %}
+{%- set pass_def = parsed.passes[entry.name] %}
+{%- if pass_def is defined and pass_def.options.Static is undefined %}
+	Passes::{{entry.name}} {{lowerize(entry.name)}};
+{%- endif %}
+{%- endfor %}
+
+	static inline const wchar_t* const pass_names[] = {
+{%- for entry in pipeline.entries %}
+{%- set pass_def = parsed.passes[entry.name] %}
+{%- if pass_def is defined and pass_def.options.Multiple is defined %}
+{%- set count = pass_def.options.Multiple.value_atom.expr | int %}
+{%- for i in range(count) %}
+		Passes::{{entry.name}}::Names[{{i}}],
+{%- endfor %}
+{%- else %}
+		Passes::{{entry.name}}::Name,
+{%- endif %}
+{%- endfor %}
+	};
+	static constexpr uint32_t pass_count = std::size(pass_names);
+
+	std::span<const wchar_t* const> GetUsedPassNamesList() const override
+	{
+		return pass_names;
+	}
+
+	static inline const wchar_t* const resource_names[] = {
+{%- for name in all_resources %}
+		L"{{name}}",
+{%- endfor %}
+	};
+	static constexpr uint32_t resource_count = std::size(resource_names);
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return resource_names;
+	}
+
+	void add_passes(FrameGraph::Graph& graph)
+	{
+		graph.set_pipeline(this);
+{% for entry in pipeline.entries %}
+{%- set pass_def = parsed.passes[entry.name] %}
+{%- if pass_def is defined %}
+{%- if pass_def.options.Static is defined and pass_def.options.Multiple is defined %}
+		for (uint32_t i = 0; i < Passes::{{entry.name}}::MaxCount; ++i)
+			graph.add_library_pass<Passes::{{entry.name}}>(i, PassDefault<Passes::{{entry.name}}>::setup, PassDefault<Passes::{{entry.name}}>::render, PassDefault<Passes::{{entry.name}}>::flags);
+{%- elif pass_def.options.Multiple is defined %}
+		for (uint32_t i = 0; i < Passes::{{entry.name}}::MaxCount; ++i)
+			if ({{lowerize(entry.name)}}.setup_funcs[i])
+				graph.add_library_pass<Passes::{{entry.name}}>(i, {{lowerize(entry.name)}}.setup_funcs[i], {{lowerize(entry.name)}}.render_funcs[i], {{lowerize(entry.name)}}.flags);
+{%- elif pass_def.options.Static is defined %}
+		graph.add_library_pass<Passes::{{entry.name}}>(PassDefault<Passes::{{entry.name}}>::setup, PassDefault<Passes::{{entry.name}}>::render, PassDefault<Passes::{{entry.name}}>::flags);
+{%- else %}
+		if ({{lowerize(entry.name)}}.setup_func)
+			graph.add_library_pass<Passes::{{entry.name}}>({{lowerize(entry.name)}}.setup_func, {{lowerize(entry.name)}}.render_func, {{lowerize(entry.name)}}.flags);
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+	}
+};
+
+}

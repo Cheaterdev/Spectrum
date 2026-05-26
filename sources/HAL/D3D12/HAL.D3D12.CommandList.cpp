@@ -1,8 +1,7 @@
-﻿module;
+module HAL:API.CommandList;	
 import <HAL.h>;
 import <d3d12/d3d12_includes.h>;
-#include <pix3.h>
-module HAL:API.CommandList;
+
 import Core;
 import :Device;
 import :CommandAllocator;
@@ -82,7 +81,7 @@ namespace HAL
 				if (uav.Resource->get_desc().is_buffer())
 				{
 					auto buffer = std::get<HAL::Views::UnorderedAccess::Buffer>(uav.View);
-					assert(buffer.StructureByteStride == 0);
+					ASSERT(buffer.StructureByteStride == 0);
 				}
 			}
 
@@ -174,7 +173,7 @@ namespace HAL
 		void CommandList::set_index_buffer(HAL::Views::IndexBuffer index)
 		{
 			D3D12_INDEX_BUFFER_VIEW native;
-			native.SizeInBytes = index.Resource ? index.SizeInBytes : 0;
+			native.SizeInBytes = index.Resource ? uint(index.SizeInBytes) : 0u;
 			native.Format = ::to_native(index.Format);
 			native.BufferLocation = index.Resource ? to_native(index.Resource->get_resource_address().offset(index.OffsetInBytes)) : 0;// index.Resource ? static_cast<HAL::Resource*>(index.Resource)->get_resource_address() + index.OffsetInBytes : 0;
 			m_commandList->IASetIndexBuffer(&native);
@@ -243,14 +242,14 @@ namespace HAL
 				auto source_size = source->get_size();
 				auto dest_size = dest->get_size();
 
-				assert(dest_offset + size <= dest_size);
-				assert(source_offset + size <= source_size);
+				ASSERT(dest_offset + size <= dest_size);
+				ASSERT(source_offset + size <= source_size);
 
 			}
 			m_commandList->CopyBufferRegion(dest->get_dx(), dest_offset, source->get_dx(), source_offset, size);
 		}
 
-		void CommandList::set_pipeline(PipelineStateBase* pipeline)
+		void CommandList::set_pipeline(std::shared_ptr<TrackedPipeline> pipeline)
 		{
 
 			auto pso = pipeline->get_native();
@@ -301,12 +300,12 @@ namespace HAL
 
 		void CommandList::start_event(std::wstring_view str)
 		{
-			if constexpr (HAL::Debug::RunForPix) PIXBeginEvent(m_commandList.Get(), 0, str.data());
+			//if constexpr (HAL::Debug::RunForPix) PIXBeginEvent(m_commandList.Get(), 0, str.data());
 		}
 
 		void CommandList::end_event()
 		{
-			if constexpr (HAL::Debug::RunForPix) PIXEndEvent(m_commandList.Get());
+		//	if constexpr (HAL::Debug::RunForPix) PIXEndEvent(m_commandList.Get());
 		}
 
 		void CommandList::build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom)
@@ -366,8 +365,8 @@ namespace HAL
 			auto buffer_desc = address.resource->get_desc().as_buffer();
 			auto size = box.z * box.y * layout.row_stride;
 
-			assert(address.resource_offset + size <= buffer_desc.SizeInBytes);
-			assert(box.z > 0);
+			ASSERT(address.resource_offset + size <= buffer_desc.SizeInBytes);
+			ASSERT(box.z > 0);
 			CD3DX12_TEXTURE_COPY_LOCATION Dst(resource->get_dx(), sub_resource);
 			CD3DX12_TEXTURE_COPY_LOCATION Src;
 			Src.pResource = address.resource->get_dx();
@@ -489,6 +488,12 @@ namespace HAL
 									
 					
 					textures.emplace_back(barrier);
+
+					if (e.resource->debug_transitions)
+					{
+
+						Log::get() << "d3d12 trans " << barrier.SyncBefore << ";" << barrier.SyncAfter << ";" << barrier.AccessBefore << " ---> " << barrier.AccessAfter << ";" << barrier.LayoutBefore << ";" << barrier.LayoutAfter << Log::endl;
+					}
 				}
 
 
@@ -505,7 +510,7 @@ namespace HAL
 				D3D12_BARRIER_GROUP group;
 
 				group.Type = D3D12_BARRIER_TYPE::D3D12_BARRIER_TYPE_BUFFER;
-				group.NumBarriers = buffers.size();
+				group.NumBarriers = uint(buffers.size());
 				group.pBufferBarriers = buffers.data();
 
 				native.emplace_back(group);
@@ -517,7 +522,7 @@ namespace HAL
 				D3D12_BARRIER_GROUP group;
 
 				group.Type = D3D12_BARRIER_TYPE::D3D12_BARRIER_TYPE_TEXTURE;
-				group.NumBarriers = textures.size();
+				group.NumBarriers = uint(textures.size());
 				group.pTextureBarriers = textures.data();
 
 				native.emplace_back(group);
@@ -594,7 +599,7 @@ namespace HAL
 											native_flags));
 				},
 				[&](auto other) {
-					assert(false);
+					ASSERT(false);
 				}
 						}, e);
 

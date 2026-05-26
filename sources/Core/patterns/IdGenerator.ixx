@@ -1,9 +1,10 @@
 export module Core:IdGenerator;
 
+import <Core_defs.h>;
 import :Threading;
 
-import <stl/threading.h>;
-import <stl/core.h>;
+import stl.threading;
+import stl.core;
 
 export
 {
@@ -38,7 +39,7 @@ export
 	{
 		typename LockPolicy::guard g(m);
 
-		assert(std::find(free.begin(), free.end(), i) == free.end());
+		ASSERT(std::find(free.begin(), free.end(), i) == free.end());
 		free.emplace_back(i);
 	}
 

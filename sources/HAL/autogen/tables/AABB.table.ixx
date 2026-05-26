@@ -26,6 +26,17 @@ export namespace Table
 		}
 		using Compiled = AABB;
 
+		static std::string get_typename()
+		{
+			return "Tables::AABB";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(min);
+			ar& NVP(max);
+		}
+
 	};
 	#pragma pack(pop)
 }

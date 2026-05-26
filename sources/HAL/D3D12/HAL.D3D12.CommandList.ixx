@@ -77,7 +77,7 @@ void dispatch_graph(ResourceAddress addr);
 			void set_viewports(std::vector<Viewport> viewports);
 			void copy_resource(HAL::Resource* dest, HAL::Resource* source);
 			void copy_buffer(HAL::Resource* dest, uint64 dest_offset, HAL::Resource* source, uint64 source_offset, uint64 size);
-			void set_pipeline(PipelineStateBase* pipeline);
+			void set_pipeline(std::shared_ptr<TrackedPipeline> pipeline);
 			void execute_indirect(const IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset);
 			void set_rtv(int c, RTVHandle rt, DSVHandle h);
 			void start_event(std::wstring_view str);

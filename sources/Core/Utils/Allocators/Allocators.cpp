@@ -5,8 +5,8 @@ import <Core_defs.h>;
 import :Debug;
 import :Utils;
 import :Math;
-import <stl/core.h>;
-import <stl/threading.h>;
+import stl.core;
+import stl.threading;
 
 
 
@@ -48,8 +48,8 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(uint64 size
 	auto make_free_block = [this](block& new_block)
 	{
 
-		assert(fences.find(new_block.begin)==fences.end());
-		assert(fences.find(new_block.end)==fences.end());
+		ASSERT(fences.find(new_block.begin)==fences.end());
+		ASSERT(fences.find(new_block.end)==fences.end());
 
 
 		if (new_block.begin <= new_block.end) {
@@ -79,12 +79,12 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(uint64 size
 
 
 				auto free_begin = fences.find(free_block.begin);
-				assert(free_begin != fences.end());
+				ASSERT(free_begin != fences.end());
 				fences.erase(free_begin);
 				if (free_block.end != free_block.begin)
 				{
 					auto free_end = fences.find(free_block.end);
-					assert(free_end != fences.end());
+					ASSERT(free_end != fences.end());
 					fences.erase(free_end);
 				}
 				free_blocks.erase(it);
@@ -106,12 +106,12 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(uint64 size
 
 				check();
 
-				assert(used_block.end < end_region);
+				ASSERT(used_block.end < end_region);
 
 				max_usage = std::max(max_usage, used_block.end + 1);
 
 				/*	if (max_usage < this->size / 2)
-						assert(!free_blocks.empty());*/
+						ASSERT(!free_blocks.empty());*/
 				return Handle(MemoryInfo(aligned_offset, size, reset_id), this);
 			}
 
@@ -187,9 +187,9 @@ void CommonAllocator::Free(Handle& handle)
 
 	if (handle.get_reset_id() != reset_id) return;
 
-	assert(handle.get_owner() == this);
-	assert(handle.get_reset_id() == reset_id);
-assert(handle.get_size()>0);
+	ASSERT(handle.get_owner() == this);
+	ASSERT(handle.get_reset_id() == reset_id);
+ASSERT(handle.get_size()>0);
 
 	
 
@@ -201,9 +201,9 @@ assert(handle.get_size()>0);
 #ifdef DEV
 	for(auto &b:free_blocks)
 	{
-		if(b.begin>=my_block.begin&&b.begin<=my_block.end) assert(false);
-		if(b.end>=my_block.begin&&b.end<=my_block.end) assert(false);
-		if(b.begin<my_block.begin&&b.end>my_block.end) assert(false);
+		if(b.begin>=my_block.begin&&b.begin<=my_block.end) ASSERT(false);
+		if(b.end>=my_block.begin&&b.end<=my_block.end) ASSERT(false);
+		if(b.begin<my_block.begin&&b.end>my_block.end) ASSERT(false);
 		
 	}
 #endif
@@ -214,16 +214,16 @@ assert(handle.get_size()>0);
 	my_block.end = merge_next(my_block.end);
 		check();
 		
-	assert(my_block.end >= my_block.begin);
+	ASSERT(my_block.end >= my_block.begin);
 	{
 		auto [elem, inserted] = free_blocks.insert(my_block);
 
-		assert(inserted);
+		ASSERT(inserted);
 		auto* block_ptr = &*elem;
 
 
 
-		assert(block_ptr->end >= block_ptr->begin);
+		ASSERT(block_ptr->end >= block_ptr->begin);
 		fences[my_block.begin] = block_ptr;
 		fences[my_block.end] = block_ptr;
 	}
@@ -241,7 +241,7 @@ void  CommonAllocator::check()
 	{
 		if(prev)
 		{
-			assert(prev==f.second);
+			ASSERT(prev==f.second);
 			prev=nullptr;
 		}
 		else
@@ -267,10 +267,10 @@ void  CommonAllocator::check()
 			}
 		}
 
-		assert(found);
+		ASSERT(found);
 
 
-		assert(f.first == f.second->begin || f.first == f.second->end);
+		ASSERT(f.first == f.second->begin || f.first == f.second->end);
 
 
 	}
@@ -278,8 +278,8 @@ void  CommonAllocator::check()
 
 	for (auto& f : free_blocks)
 	{
-		assert(fences[f.begin] == &f);
-		assert(fences[f.end] == &f);
+		ASSERT(fences[f.begin] == &f);
+		ASSERT(fences[f.end] == &f);
 	}
 		#endif
 }
@@ -310,7 +310,7 @@ bool AllocatorHanle::operator==(const AllocatorHanle& h) const
 
 AllocatorHanle::AllocatorHanle(const MemoryInfo& info, Allocator* owner) :info(info), owner(owner)
 {
-	//	assert(provider);
+	//	ASSERT(provider);
 }
 
 uint64 AllocatorHanle::get_offset() const

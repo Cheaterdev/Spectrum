@@ -97,7 +97,7 @@ struct KeyValue
 						break;
 					}
 
-				assert(find);
+				ASSERT(find);
 			}
 		}
 

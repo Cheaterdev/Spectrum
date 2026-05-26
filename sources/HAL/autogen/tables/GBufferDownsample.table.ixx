@@ -28,7 +28,24 @@ export namespace Table
 		{
 			uint normals; // Texture2D<float4>
 			uint depth; // Texture2D<float>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::GBufferDownsample";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

@@ -29,7 +29,24 @@ export namespace Table
 		{
 			uint light_buffer; // Texture2DArray<float>
 			uint light_cameras; // StructuredBuffer<Camera>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::PSSMData";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

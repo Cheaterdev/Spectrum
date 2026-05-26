@@ -29,6 +29,18 @@ export namespace Table
 		}
 		using Compiled = EnvFilter;
 
+		static std::string get_typename()
+		{
+			return "Tables::EnvFilter";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(face);
+			ar& NVP(scaler);
+			ar& NVP(size);
+		}
+
 	};
 	#pragma pack(pop)
 }

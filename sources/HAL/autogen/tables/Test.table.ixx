@@ -33,7 +33,26 @@ export namespace Table
 			float data[16]; // float
 			uint instances; // StructuredBuffer<MeshInstanceInfo>
 			uint tex; // Texture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(data);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::Test";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(data);
+		}
 
 	};
 	#pragma pack(pop)

@@ -76,7 +76,7 @@ namespace GUI
 			drag->allow_x = false;
 		}
 
-		drag->clip_to_parent = ParentClip::ALL;
+		drag->clamp_to_parent = ParentClamp::ALL;
 		drag_skin = Skin::get().DefaultButton;
 	}
 

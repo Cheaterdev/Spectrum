@@ -1,4 +1,4 @@
-module HAL:PipelineState;
+﻿module HAL:PipelineState;
 import <HAL.h>;
 import <d3d12/d3d12_includes.h>;
 
@@ -57,14 +57,14 @@ class PSOCreator
 	void request(UINT size)
 	{
 		data.resize(data.size() + size);
-		assert(data.size() >= (write_offset + size));
+		ASSERT(data.size() >= (write_offset + size));
 	}
 
 	template <class T>
 	void push_one(const T& elem)
 	{
 		request(sizeof(T));
-		memcpy(data.data() + write_offset, &elem, sizeof(T));
+		std::memcpy(data.data() + write_offset, &elem, sizeof(T));
 		write_offset += sizeof(T);
 	}
 
@@ -153,6 +153,24 @@ namespace HAL
 {
 	namespace API
 	{
+			/*std::shared_ptr<TrackedPipeline> PipelineStateBase::get_tracked()
+			{
+	auto THIS = static_cast<HAL::PipelineStateBase*>(this);
+	return 	   THIS->tracked_info;
+			}		   */
+		ComPtr<ID3D12PipelineState> TrackedPipeline::get_native()
+		{
+			return m_pipelineState;
+		}
+
+		ComPtr<ID3D12StateObject> TrackedPipeline::get_native_state()
+		{
+
+			return m_StateObject;
+		}
+
+
+
 		ComPtr<ID3D12PipelineState> PipelineStateBase::get_native()
 		{
 			auto THIS = static_cast<HAL::PipelineStateBase*>(this);
@@ -304,6 +322,8 @@ namespace HAL
 
 		if (desc.type == StateObjectType::WorkGraph)
 		{
+			if (!desc.global_root->get_device().get_properties().work_graph) return;
+
 			// Add a workgraph subobject
 			auto graph = raytracingPipeline.CreateSubobject<CD3DX12_WORK_GRAPH_SUBOBJECT>();
 			graph->SetProgramName(workGraphName.c_str());
@@ -318,12 +338,13 @@ namespace HAL
 			// rootNodeDispatchGridSizeOverride->DispatchGrid(40,40, 1);
 		}
 
+		
 
 		TEST(desc.global_root->get_device(),
 			desc.global_root->get_device().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&
 				tracked_info->m_StateObject)));
 		TEST(desc.global_root->get_device(), tracked_info->m_StateObject.As(&stateObjectProperties));
-		assert(stateObjectProperties);
+		ASSERT(stateObjectProperties);
 		event_change();
 
 
@@ -397,7 +418,7 @@ namespace HAL
 			slots.merge(desc.amplification->slots_usage);
 		}
 
-		assert(!slots.empty());
+		ASSERT(!slots.empty());
 		{
 			auto RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 			RasterizerState.CullMode = to_native(desc.rasterizer.cull_mode);
@@ -469,8 +490,8 @@ namespace HAL
 		auto nonCached = creator.get_desc();
 
 
-		/*	static std::mutex m;
-			std::lock_guard<std::mutex> g(m);*/
+			static std::mutex m;
+			std::lock_guard<std::mutex> g(m);
 		if (!cache.empty())
 		{
 			D3D12_CACHED_PIPELINE_STATE cached;
@@ -530,7 +551,7 @@ namespace HAL
 			psoDesc.CS = { desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size()) };
 			slots.merge(desc.shader->slots_usage);
 		}
-		assert(!slots.empty());
+		ASSERT(!slots.empty());
 
 		if (!cache.empty())
 		{
@@ -539,7 +560,7 @@ namespace HAL
 		}
 		else
 		{
-			//	assert(false);
+			//	ASSERT(false);
 		}
 
 		HRESULT hr = (root_signature->get_device().get_native_device()->CreateComputePipelineState(

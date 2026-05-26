@@ -1,7 +1,7 @@
 export module HAL:API.Heap;
 import d3d12;
 import Core;
-
+import <Core_defs.h>;
 import :Types;
 import :Sampler;
 import :Utils;

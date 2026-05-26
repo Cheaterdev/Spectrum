@@ -24,7 +24,24 @@ export namespace Table
 		struct Compiled
 		{
 			uint sourceTex; // TextureCube<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::EnvSource";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)

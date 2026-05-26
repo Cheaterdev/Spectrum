@@ -1,4 +1,4 @@
-import Core;
+﻿import Core;
 import <Core_defs.h>;
 import windows;
 
@@ -71,8 +71,8 @@ std::string get_cpp_for(Value v)
 		}
 	case ValueType::SRV:
 		{
-			if (arg.starts_with("DepthStencil")) arg.replace(0, strlen("DepthStencil"), "Texture2D");
-			if (arg.starts_with("RenderTarget"))arg.replace(0, strlen("RenderTarget"), "Texture2D");
+			if (arg.starts_with("DepthStencil")) arg.replace(0, std::strlen("DepthStencil"), "Texture2D");
+			if (arg.starts_with("RenderTarget"))arg.replace(0, std::strlen("RenderTarget"), "Texture2D");
 
 			/*	if (noarg)
 					OutputDebugString(L"WTF");*/
@@ -309,7 +309,7 @@ void Table::setup(Parsed* all)
 
 			if (v.value_type == ValueType::CB)
 			{
-				//assert(offset == 0);
+				//ASSERT(offset == 0);
 				offset += v.size;
 			}
 

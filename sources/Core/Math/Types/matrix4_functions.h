@@ -261,3 +261,5 @@ type& skew(quat& q) requires(matrix_type::N == 4 && matrix_type::M == 4)
 	matrix_type::a41 = q.y; matrix_type::a42 = -q.x; matrix_type::a43 = q.w; matrix_type::a44 = 1;
 	return *this;
 }
+
+

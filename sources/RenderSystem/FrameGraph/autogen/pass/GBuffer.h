@@ -1,0 +1,24 @@
+#pragma once
+
+
+using namespace FrameGraph;
+
+namespace Passes
+{
+	struct GBuffer 
+	{
+		Handlers::Texture H(GBuffer_Albedo);
+		Handlers::Texture H(GBuffer_Normals);
+		Handlers::Texture H(GBuffer_Depth);
+		Handlers::Texture H(GBuffer_Specular);
+		Handlers::Texture H(GBuffer_Speed);
+		Handlers::Texture H(GBuffer_DepthMips);
+		Handlers::Texture H(GBuffer_Quality);
+		Handlers::Texture H(GBuffer_TempColor);
+		Handlers::Texture H(GBuffer_NormalsPrev);
+		Handlers::Texture H(GBuffer_SpecularPrev);
+		Handlers::Texture H(GBuffer_DepthPrev);
+		Handlers::Texture H(GBuffer_HiZ);
+		Handlers::Texture H(GBuffer_HiZ_UAV);
+	};
+}

@@ -7,6 +7,9 @@ import windows;
 import HAL;
 import FrameGraph;
 
+#include "../FrameGraph/autogen/pass_defaults.h"
+
+
 using namespace FrameGraph;
 static const LPCTSTR cursors[] =
 {
@@ -152,20 +155,20 @@ namespace GUI
             if (y_type == pos_y_type::CENTER)
                 res.pos.y = r.pos.y + ((r.size.y - res.size.y) / 2);
 
-            if (clip_to_parent != ParentClip::NONE && parent)
+            if (clamp_to_parent != ParentClamp::NONE && parent)
             {
                 //float2 size = float2(res.size);
                 //float2 pos = float2(res.pos);
                 float2 size = float2::min(float2(res.size), float2(parent->get_render_bounds().size) - float2(parent->padding->left + parent->padding->right, parent->padding->top + parent->padding->bottom) * result_scale);
                 float2 pos = float2::max(float2(parent->get_render_bounds().pos) + float2(parent->padding->left, parent->padding->top) * result_scale, float2(res.pos));
             	pos = float2::min(pos, float2(parent->get_render_bounds().pos) + float2(parent->get_render_bounds().size) - size - float2(parent->padding->right, parent->padding->bottom) * result_scale);
-            	
-                if (check(clip_to_parent & ParentClip::WIDTH)) {
+
+                if (check(clamp_to_parent & ParentClamp::WIDTH)) {
                     res.pos.x = pos.x;
                     res.size.x = size.x;
                 }
 
-                if (check(clip_to_parent & ParentClip::HEIGHT)) {
+                if (check(clamp_to_parent & ParentClamp::HEIGHT)) {
                     res.pos.y = pos.y;
                     res.size.y = size.y;
                 }
@@ -259,7 +262,7 @@ namespace GUI
         if (button == mouse_button::LEFT)
             pressed = action == mouse_action::DOWN;
 
-        return true;
+        return pressed;
     }
 
     bool base::on_wheel(mouse_wheel type, float value, vec2 pos)
@@ -278,8 +281,53 @@ namespace GUI
     bool base::on_mouse_move(vec2 pos)
     {
         return true;
-    }
+	}
 
+	void base::update_childs_layout(sizer& my, float scale)
+	{
+		for (auto&& c : childs)
+			if (c->docking == dock::NONE) c->update_layout(my, result_scale * this->scale);
+
+		for (auto&& c : childs)
+			if (c->docking != dock::FILL && c->docking != dock::NONE && c->docking != dock::PARENT) my = c->update_layout(my, result_scale * this->scale);
+
+		for (auto&& c : childs)
+			if (c->docking == dock::FILL && c->docking != dock::NONE && c->docking != dock::PARENT) c->update_layout(my, result_scale * this->scale);
+	}
+
+	void base::update_childs_layout_after(sizer& r, float scale)
+	{
+		for (auto&& c : childs)
+			if (c->docking == dock::PARENT) c->update_layout(r, result_scale * this->scale);
+
+	}
+                                void base::register_listener(base* listener)
+                                {
+									listeners.insert(listener);
+                                }
+
+			void base::unregister_listener(base* listener)
+            {
+				listeners.erase(listener);
+			}
+
+  void base::on_base_change(base* b)
+  {
+               
+	  vec2 new_size = scaled_size.get();
+
+	  if (width_size == size_type::MATCH_PARENT)
+		  if (width_sticks == b)
+			  new_size.x = width_sticks->get_render_bounds().w;
+
+
+	  if (height_size == size_type::MATCH_PARENT)
+		  if (height_sticks == b)
+			  new_size.y = height_sticks->get_render_bounds().h;
+
+
+	  size = new_size;
+  }
     sizer base::update_layout(sizer o_r, float scale)
     {
         if (!visible.get()) return o_r;
@@ -307,11 +355,11 @@ namespace GUI
             if (parent)
             {
                 if (docking.get() == dock::TOP || docking.get() == dock::BOTTOM || docking.get() == dock::FILL)
-                    if (parent->width_size == size_type::MATCH_CHILDREN)
+                    if (width_sticks==nullptr&&parent->width_size == size_type::MATCH_CHILDREN)
                         r.right = r.left + std::max(all_size.x, r.right - r.left);
 
                 if (docking.get() == dock::LEFT || docking.get() == dock::RIGHT || docking.get() == dock::FILL)
-                    if (parent->height_size == size_type::MATCH_CHILDREN)
+                    if (height_sticks==nullptr&&parent->height_size == size_type::MATCH_CHILDREN)
                         r.bottom = r.top + std::max(all_size.y, r.bottom - r.top);
             }
 
@@ -371,14 +419,7 @@ namespace GUI
 
             need_update_layout = false;
 
-            for (auto && c : childs)
-                if (c->docking == dock::NONE) c->update_layout(my, result_scale * this->scale);
-
-            for (auto && c : childs)
-                if (c->docking != dock::FILL && c->docking != dock::NONE && c->docking != dock::PARENT) my = c->update_layout(my, result_scale * this->scale);
-
-            for (auto && c : childs)
-                if (c->docking == dock::FILL && c->docking != dock::NONE && c->docking != dock::PARENT) c->update_layout(my, result_scale * this->scale);
+            update_childs_layout(my,  result_scale * this->scale);
 
             vec2 new_size = size.get();
 
@@ -391,9 +432,12 @@ namespace GUI
 
                     for (auto && c : childs)
                     {
+                        auto ch=c.get();
                         if (!c->visible.get()) continue;
-
+                        if (c->width_sticks) continue;
                         if (c->width_size == size_type::MATCH_PARENT) continue;
+                             if (c->docking == dock::FILL)
+                                 continue;
 
                         if (c->width_size == size_type::SQUARE && c->height_size == size_type::SQUARE) continue;
 
@@ -431,10 +475,12 @@ namespace GUI
 
                     for (auto && c : childs)
                     {
+                           auto ch=c.get();
                         if (!c->visible.get()) continue;
-
+                        if (c->height_sticks) continue;
                         if (c->height_size == size_type::MATCH_PARENT) continue;
-
+                                           if (c->docking == dock::FILL)
+                                 continue;
                         if (c->height_size == size_type::SQUARE && c->width_size == size_type::SQUARE) continue;
 						
 						float current_min = c->get_render_bounds().y - padding->top * scale - c->margin->top * scale;
@@ -475,8 +521,7 @@ namespace GUI
             scaled_size = new_size; ///scale;
             max_iterations--;
 
-            for (auto && c : childs)
-                if (c->docking == dock::PARENT) c->update_layout(orig_my, result_scale * this->scale);
+             update_childs_layout_after(orig_my,  result_scale * this->scale);
 
             //	hack_layout();
             if (max_iterations == 0) break;
@@ -613,6 +658,9 @@ namespace GUI
 
         for (auto c : childs)
             c->on_parent_size_changed(r2);
+
+		for (auto l : listeners)
+            l->on_base_change(this);
     }
 
     void base::set_movable(bool value)
@@ -704,10 +752,14 @@ namespace GUI
 
         c.scale = result_scale;
 
+        sizer_long entry_scissors = c.scissors;
+        if (self_scissor.has_value())
+            entry_scissors = intersect(entry_scissors, math::convert(*self_scissor));
+
         if (visibility)
 		{
            on_pre_render(c);
-            user_ui->draw_infos.emplace_back(c.ui_clipping, c.scissors,c.scale,this,c.offset,true);
+            user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale,this,c.offset,true);
 		//	rec_c.execute([this](Context &c) {
 		//		draw(c);
 		//	});
@@ -717,7 +769,8 @@ namespace GUI
         if (clip_child && !visibility)
             return;
 
-        sizer orig = c.ui_clipping;
+        sizer orig            = c.ui_clipping;
+        sizer_long orig_scissors = c.scissors;
         sizer s;
         s.left = c.offset.x + render_bounds->x + padding->left * result_scale;
         s.top = c.offset.y + render_bounds->y + padding->top * result_scale;
@@ -732,22 +785,30 @@ namespace GUI
                 c.ui_clipping = s;
         }
 
+        if (child_scissor.has_value())
+        {
+            sizer cs = math::convert(*child_scissor);
+            c.ui_clipping = intersect(c.ui_clipping, cs);
+            c.scissors    = intersect(c.scissors, cs);
+        }
+
         if (!clip_child || c.ui_clipping.left < c.ui_clipping.right)
             if (!clip_child || c.ui_clipping.top < c.ui_clipping.bottom)
             {
-       
+
                 for (auto& child : childs)
                     if (child->visible.get())
                         child->draw_recursive(c, this);
             }
 
         c.ui_clipping = orig;
+        c.scissors    = orig_scissors;
 		c.scale = result_scale;
 
 
     //    if (visibility)
     //        draw_after(c);
-        user_ui->draw_infos.emplace_back(c.ui_clipping, c.scissors,c.scale, this, c.offset, false);
+        user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale, this, c.offset, false);
 
 		/*rec_c.execute([this](Context &c) {
 			draw_after(c);
@@ -787,9 +848,16 @@ namespace GUI
         vec2 new_size = scaled_size.get();
 
         if (width_size == size_type::MATCH_PARENT)
+            if(width_sticks)
+                      new_size.x = width_sticks->get_render_bounds().w;
+            else
+
             new_size.x = r.w;
 
         if (height_size == size_type::MATCH_PARENT)
+              if(height_sticks)
+                      new_size.y = height_sticks->get_render_bounds().h;
+            else
             new_size.y = r.h;
 
         size = new_size;
@@ -881,7 +949,7 @@ namespace GUI
 
      void user_interface::process_ui(float delta_time)
     {
-
+          	PROFILE(L"process_ui");
          dt = delta_time;
          THREAD_SCOPE(GUI);
 		 for (int i = 0; i < 3; i++)
@@ -890,13 +958,17 @@ namespace GUI
 			 release_interpret[i] = false;
 		 }
 
-    	while (Events::Runner::has_tasks()) Events::Runner::process_tasks();
-
+    	while (Events::Runner::has_tasks()) 
+            {
+                PROFILE(L"process_tasks");          
+                Events::Runner::process_tasks();
+            }
         
 
 
 		 auto&& g2 = lock();
 		 {
+             	PROFILE(L"thinking");
 		//	 auto timer = c.command_list->start(L"think");
 			 for (auto t : thinking)
 				 t->think(delta_time);
@@ -914,6 +986,7 @@ namespace GUI
     }
 
 
+
      void user_interface::create_graph(Graph& graph)
      {
         GUIInfo c;
@@ -929,118 +1002,26 @@ namespace GUI
         draw_recursive(c);
         drag.draw(c);
 
-      //  
-         process_graph(graph);
+        auto& ui_ctx = graph.get_context<UIContext>();
+        ui_ctx.draw_infos = std::move(draw_infos);
 
+        ui_ctx.setup_counter = 0;
 
-        if(pre_draw_infos.size())
+        ui_ctx.dt          = dt;
+        ui_ctx.scaled_size = scaled_size.get();
+        ui_ctx.result_texture_handler = Handlers::Texture("ResultTexture");
+
+        process_graph(graph);
+
+        if (pre_draw_infos.size())
         {
-            struct no
-            {
-           
-            };
-                     
-
-			auto command_list = (HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list());
-			command_list->begin();
+            auto command_list = HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+            command_list->begin(L"pre_draw");
             for (auto& e : pre_draw_infos)
-			{
-				e->pre_draw(command_list);
-			}
-
-			command_list->end();
-                    auto fence = command_list->execute();
-
-
-
-
+                e->pre_draw(command_list);
+            command_list->end();
+            command_list->execute();
         }
-
-         struct pass_data
-         {
-             Handlers::Texture o_texture = "swapchain";
-         };
-
-      //   return;
-         uint per_thread =  std::max(64u, ((uint)draw_infos.size() + 7) / 8);
-
-         uint start = 0; uint end = 0;
-         uint t = 0;
-        while(start< draw_infos.size())
-        {
-            end = std::min(start + per_thread, (uint)draw_infos.size());
-
-            graph.add_pass<pass_data>(L"UI RENDER_", [this](pass_data& data, TaskBuilder& builder) {
-			builder.need(data.o_texture, ResourceFlags::RenderTarget);
-            use_graph(builder);
-			 }, [this,&graph, start, end](pass_data& data, FrameContext& context) {
-              
-				 auto command_list = context.get_list();
-
-				auto texture = (*data.o_texture);
-
-                {
-				RT::SingleColor rt;
-				rt.GetColor() =texture.renderTarget;
-				command_list->get_graphics().set_rtv(rt);
-				}
-
-                 Renderer renderer;
-
-                 GUIInfo c;
-                 c.renderer = &renderer;
-                 c.command_list = command_list;
-                 c.delta_time = dt;
-
-                 sizer scissors = {};
-
-				 {
-                     PROFILE_GPU(L"draw");
-			
-                     
-                     
-                    for(uint i=start;i<end;i++)
-                    {
-                        auto& e=draw_infos[i];
-
-                        if (c.scissors != e.scissors)
-                        {
-                            renderer.flush(c);
-                            command_list->get_graphics().set_scissors(e.scissors);
-
-                        }
-                        c.scale = e.scale;
-                        c.ui_clipping = e.clip;
-                        c.offset = e.offset;
-                        c.scissors = e.scissors;
-                        c.window_size = scaled_size.get();
-
-                       
-                        if(e.before)
-                        {
-                            e.elem->draw(c);
-                        }
-                        else
-                        {
-                            e.elem->draw_after(c);
-                        }
-                    }          
-					 	
-
-
-					
-				 	renderer.flush(c);
-		
-				 }
-                		                              
-	
-			 });
-
-
-            start = end ;
-        }
-		 
-
      }
 
      
@@ -1222,11 +1203,6 @@ namespace GUI
 		auto frame_gen = dynamic_cast<GraphGenerator*>(object);
 		if (frame_gen)
 			frame_generators.erase(frame_gen);
-
-
-        	auto usage = dynamic_cast<GraphUsage*>(object);
-		if (usage)
-			frame_usage.erase(usage);
     }
 
     void user_interface::add_base(base* object)
@@ -1235,10 +1211,6 @@ namespace GUI
         auto frame_gen = dynamic_cast<GraphGenerator*>(object);
         if (frame_gen)
             frame_generators.insert(frame_gen);
-
-       	auto usage = dynamic_cast<GraphUsage*>(object);
-		if (usage)
-            frame_usage.insert(usage);
     }
 	void user_interface::key_action_event_internal(long key)
 	{
@@ -1533,4 +1505,90 @@ namespace GUI
         }
     }
 
+}
+
+
+
+
+// ============================================================
+// PassDefault<Passes::UI_Render>
+// ============================================================
+
+static uint32_t ui_per_thread(uint32_t size)
+{
+	constexpr uint32_t max_threads = Passes::UI_Render::MaxCount;
+	constexpr uint32_t min_per_thread = 64;
+	const uint32_t per_thread = (size + max_threads - 1) / max_threads;
+	const uint32_t clamped_per_thread = std::max(min_per_thread, per_thread);
+
+    return std::max(clamped_per_thread, (size + 7) / 8);
+}
+
+bool PassDefault<Passes::UI_Render>::setup(
+    Passes::UI_Render::Context& data, FrameGraph::TaskBuilder& builder)
+{
+    auto& ui_ctx = builder.graph->get_context<GUI::UIContext>();
+    const uint32_t size       = (uint32_t)ui_ctx.draw_infos.size();
+    const uint32_t per_thread = ui_per_thread(size);
+    const uint32_t slot       = ui_ctx.setup_counter++;
+    if (slot * per_thread >= size)
+        return false;
+    builder.need(data.swapchain, ResourceFlags::RenderTarget);
+    if (builder.exists(ui_ctx.result_texture_handler))
+        builder.need(ui_ctx.result_texture_handler, ResourceFlags::PixelRead);
+    return true;
+}
+
+void PassDefault<Passes::UI_Render>::render(
+    Passes::UI_Render::Context& data, FrameGraph::FrameContext& context)
+{
+    auto& ui_ctx = context.graph->get_context<GUI::UIContext>();
+
+    uint32_t slot = context.pass->GetPassIndex();
+
+    const uint32_t size       = (uint32_t)ui_ctx.draw_infos.size();
+    const uint32_t per_thread = ui_per_thread(size);
+    const uint32_t start      = slot * per_thread;
+    const uint32_t end        = std::min(start + per_thread, size);
+
+    auto command_list = context.get_list();
+    auto texture = (*data.swapchain);
+
+    {
+        RT::SingleColor rt;
+        rt.GetColor() = texture.renderTarget;
+        command_list->get_graphics().set_rtv(rt);
+    }
+
+    Renderer renderer;
+    GUIInfo c;
+    c.renderer   = &renderer;
+    c.command_list = command_list;
+    c.delta_time = ui_ctx.dt;
+    if (ui_ctx.result_texture_handler)
+        c.result_texture_srv = ui_ctx.result_texture_handler->texture2D;
+
+    {
+        PROFILE_GPU(L"draw");
+        for (uint32_t i = start; i < end; i++)
+        {
+            auto& e = ui_ctx.draw_infos[i];
+            if (c.scissors != e.scissors)
+            {
+                renderer.flush(c);
+                command_list->get_graphics().set_scissors(e.scissors);
+            }
+            c.scale       = e.scale;
+            c.ui_clipping = e.clip;
+            c.offset      = e.offset;
+            c.scissors    = e.scissors;
+            c.window_size = ui_ctx.scaled_size;
+
+            if (e.before)
+                e.elem->draw(c);
+            else
+                e.elem->draw_after(c);
+        }
+        renderer.flush(c);
+    }
 }

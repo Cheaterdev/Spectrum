@@ -101,3 +101,4 @@ export namespace Fonts
             vec2 get_pos(unsigned int index);
     };
 }
+

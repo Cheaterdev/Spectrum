@@ -43,9 +43,24 @@
 #include<system_error>
 
 #include <cstdint>
+#include <cerrno>
+#include <cstring>
 #include <fstream>  // linking issues
-#include <sstream> 
+#include <sstream>
 
 
 //#include <comdef.h>
 #include <cassert>
+
+// threading (formerly stl/threading.h — merged to keep a single header unit)
+#include <condition_variable>
+#include <future>
+#include <mutex>
+#include <thread>
+
+// filesystem (formerly stl/filesystem.h)
+#include <filesystem>
+
+// memory (formerly stl/memory.h)
+#include <memory>
+

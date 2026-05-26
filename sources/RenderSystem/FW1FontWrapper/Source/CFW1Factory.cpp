@@ -1,4 +1,4 @@
-// CFW1Factory.cpp
+﻿// CFW1Factory.cpp
 
 
 
@@ -32,22 +32,20 @@ HRESULT CFW1Factory::initFactory() {
 HRESULT CFW1Factory::createDWriteFactory(IDWriteFactory **ppDWriteFactory) {
 	HRESULT hResult = E_FAIL;
 	
-	typedef HRESULT (WINAPI * PFN_DWRITECREATEFACTORY)(__in DWRITE_FACTORY_TYPE factoryType, __in REFIID iid, __out IUnknown **factory);
-	PFN_DWRITECREATEFACTORY pfnDWriteCreateFactory = NULL;
+	typedef HRESULT (__stdcall * PFN_DWRITECREATEFACTORY)(DWRITE_FACTORY_TYPE factoryType, const IID& iid, IUnknown **factory);
+	PFN_DWRITECREATEFACTORY pfnDWriteCreateFactory = nullptr;
 	
 #ifdef FW1_DELAYLOAD_DWRITE_DLL
-	HMODULE hDWriteLib = LoadLibrary(TEXT("DWrite.dll"));
-	if(hDWriteLib == NULL) {
-		DWORD dwErr = GetLastError();
-		UNUSED(dwErr);
+	HMODULE hDWriteLib = LoadLibrary(L"DWrite.dll");
+	if(hDWriteLib == nullptr) {
+		[[maybe_unused]] DWORD dwErr = GetLastError();
 		setErrorString(L"Failed to load DWrite.dll");
 	}
 	else {
 		pfnDWriteCreateFactory =
 			reinterpret_cast<PFN_DWRITECREATEFACTORY>(GetProcAddress(hDWriteLib, "DWriteCreateFactory"));
-		if(pfnDWriteCreateFactory == NULL) {
-			DWORD dwErr = GetLastError();
-			dwErr;
+		if(pfnDWriteCreateFactory == nullptr) {
+			[[maybe_unused]] DWORD dwErr = GetLastError();
 			setErrorString(L"Failed to load DWriteCreateFactory");
 		}
 	}
@@ -55,7 +53,7 @@ HRESULT CFW1Factory::createDWriteFactory(IDWriteFactory **ppDWriteFactory) {
 	pfnDWriteCreateFactory = DWriteCreateFactory;
 #endif
 	
-	if(pfnDWriteCreateFactory != NULL) {
+	if(pfnDWriteCreateFactory != nullptr) {
 		IDWriteFactory *pDWriteFactory;
 		
 		hResult = pfnDWriteCreateFactory(

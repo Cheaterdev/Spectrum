@@ -28,7 +28,26 @@ export namespace Table
 		{
 			float4 color; // float4
 			uint tex; // Texture2D<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(color);
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::Countour";
+		}
+		private:
+		SERIALIZE()
+		{
+			ar& NVP(color);
+		}
 
 	};
 	#pragma pack(pop)

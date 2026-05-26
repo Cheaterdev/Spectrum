@@ -28,7 +28,24 @@ export namespace Table
 		{
 			uint color; // RenderTarget<float4>
 			uint depth; // DepthStencil<float>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
 		};
+
+		static std::string get_typename()
+		{
+			return "Tables::SingleColorDepth";
+		}
+		private:
+		SERIALIZE()
+		{
+		}
 
 	};
 	#pragma pack(pop)
