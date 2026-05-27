@@ -2,15 +2,13 @@ module Core:Application;
 
 Application::Application()
 {
-    alive = true;
-    tick_interval = 50_ms;
-    //  Engine::create();
+	alive = true;
+	tick_interval = 50_ms;
 }
 
 Application::~Application()
 {
-    alive = false;
-    //   Engine::reset();
+	alive = false;
 }
 
 void Application::on_tick()
@@ -19,14 +17,13 @@ void Application::on_tick()
 
 void Application::run()
 {
-    while (alive)
-    {
-        on_tick();
-        //  std::this_thread::sleep_for(tick_interval);
-    }
+	while (alive)
+	{
+		on_tick();
+	}
 }
 
 void Application::shutdown()
 {
-    alive = false;
+	alive = false;
 }

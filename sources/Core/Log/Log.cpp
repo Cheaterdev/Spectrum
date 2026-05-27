@@ -37,11 +37,6 @@ Log::Log()
 
 Log::~Log()
 {
-	//   m.lock();
-		// auto listeners_copy = listeners;
-	//   for (auto l : listeners_copy)
-		//     l->on_log_removed();
-		//  m.unlock();
 }
 
 Log& Log::operator<<(const LogBlock& log)
@@ -66,8 +61,6 @@ void Log::crash_error(HRESULT hr, std::string_view at /*= ""*/)
 {
 	std::string message = std::system_category().message(hr);
 	(*this) << LEVEL_ERROR << message << " at: " << at << endl;
-	//_com_error err(hr);
-	//crash_error((err.ErrorMessage()), at);
 }
 
 std::string LogBlock::get_string() const
@@ -122,12 +115,10 @@ LogListener::LogListener()
 
 LogListener::~LogListener()
 {
-	//on_log_removed();
 }
 
 FileTXTLogger::~FileTXTLogger()
 {
-	// on_log_removed();
 	if (log_file.is_open())
 		log_file.close();
 }
@@ -140,7 +131,6 @@ void FileTXTLogger::on_log(const LogBlock& log)
 
 FileTXTLogger::FileTXTLogger(std::string file_name /*= "log.txt"*/)
 {
-	//	DeleteFile(file_name.c_str());
 	log_file.open(file_name, std::ios::trunc);
 }
 
@@ -156,7 +146,6 @@ ConsoleLogger::ConsoleLogger()
 	if (!GetStdHandle(STD_OUTPUT_HANDLE))
 	{
 		AllocConsole();
-		//SetConsoleCtrlHandler(consoleSignalDispatcher, TRUE);
 		SetConsoleTitleW(L"Spectrum Console");
 	}
 }
@@ -165,8 +154,6 @@ ConsoleLogger::~ConsoleLogger()
 {
 	if (GetStdHandle(STD_OUTPUT_HANDLE))
 		FreeConsole();
-
-	//	on_log_removed();
 }
 
 void ConsoleLogger::on_log(const LogBlock& log)

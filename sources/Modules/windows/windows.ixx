@@ -1,6 +1,5 @@
-module;
-export import "windows.h";
 export module windows;
+export import "windows.h";
 
 // Foreground text color bits
 #undef FOREGROUND_BLUE

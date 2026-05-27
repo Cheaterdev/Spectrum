@@ -11,22 +11,18 @@ import windows;
 // ---- file -------------------------------------------------------------------
 
 file::file(file_provider* _provider, std::filesystem::path _file_name)
-    : provider(_provider), file_name(_file_name)
+	: provider(_provider), file_name(_file_name)
 {
 }
 
 std::shared_ptr<std::istream> file::get_new_stream()
 {
-	std::filesystem::path full_path(std::filesystem::current_path());
-//	Log::get() << "Current path is : " << full_path.generic_string() << Log::endl;
-
 	return provider->create_stream(file_name);
 }
 
 std::string file::load_all()
 {
-    //PROFILE(L"load_all");
-    return provider->load_all(this);
+	return provider->load_all(this);
 }
 
 // ---- FileSystem -------------------------------------------------------------
@@ -38,85 +34,73 @@ void FileSystem::register_provider(file_provider::ptr provider)
 
 std::shared_ptr<file> FileSystem::get_file(std::filesystem::path name)
 {
-    std::shared_ptr<file> result;
+	std::shared_ptr<file> result;
 
-    for (decltype(providers.size()) i = 0; i < providers.size(); i++)
-    {
-        result = providers[i]->get_file(name);
+	for (decltype(providers.size()) i = 0; i < providers.size(); i++)
+	{
+		result = providers[i]->get_file(name);
 
-        if (result)
-            break;
-    }
+		if (result)
+			break;
+	}
 
-    return result;
+	return result;
 }
 
 bool FileSystem::save_data(std::filesystem::path file_name, std::string data)
 {
-    for (auto& p : providers)
-    {
-        if (p->save_data(file_name, data))
-            return true;
-    }
+	for (auto& p : providers)
+	{
+		if (p->save_data(file_name, data))
+			return true;
+	}
 
-    return false;
+	return false;
 }
 
 void FileSystem::iterate(std::filesystem::path path, std::function<void(file::ptr)> f, bool recursive)
 {
-    for (auto& p : providers)
-        p->iterate(path, f, recursive);
+	for (auto& p : providers)
+		p->iterate(path, f, recursive);
 }
 
 void FileSystem::iterate_dirs(std::filesystem::path path, std::function<void(std::filesystem::path)> f, bool recursive)
 {
-    for (auto& p : providers)
-        p->iterate_dirs(path, f, recursive);
+	for (auto& p : providers)
+		p->iterate_dirs(path, f, recursive);
 }
 
 // ---- native_file_provider ---------------------------------------------------
 
 native_file_provider::~native_file_provider()
 {
-	int a;
-	a = 0;
 }
 
 std::string native_file_provider::load_all(file* info)
 {
-    std::string result;
+	std::string result;
 
-    std::filesystem::path file_path(info->file_name);
-    std::filesystem::path abs_path = std::filesystem::absolute(file_path);
+	std::filesystem::path file_path(info->file_name);
+	std::filesystem::path abs_path = std::filesystem::absolute(file_path);
 
-    std::ifstream file(abs_path.c_str(), std::ios::in | std::ios::binary);
+	std::ifstream file(abs_path.c_str(), std::ios::in | std::ios::binary);
 
+	if (!file.is_open())
+	{
+		char data[256];
+		strerror_s(data, 256, current_errno());
+		Log::get() << "No file found: " << info->file_name << " " << data << Log::endl;
+		return result;
+	}
 
-    try {
-        // file.open(abs_path.c_str(), std::ios::in | std::ios::binary);
-    }
-    catch (std::ios_base::failure& e) {
-        Log::get() << e.what() << Log::endl;
-        return result;
-    }
-
-    if (!file.is_open())
-    {
-        char data[256];
-        strerror_s(data, 256, current_errno());
-        Log::get() << "No file found: " << info->file_name << " " << data << Log::endl;
-        return result;
-    }
-
-    std::streampos current_position = file.tellg();
-    file.seekg(0, std::ios::end);
-    std::streampos ending_position = file.tellg();
-    file.seekg(current_position);
-    //    result.reset(new std::string());
-    result.resize(static_cast<size_t>(ending_position - current_position));
-    file.read(const_cast<char*>(result.data()), result.size());
-    file.close();
-    return result;
+	std::streampos current_position = file.tellg();
+	file.seekg(0, std::ios::end);
+	std::streampos ending_position = file.tellg();
+	file.seekg(current_position);
+	result.resize(static_cast<size_t>(ending_position - current_position));
+	file.read(const_cast<char*>(result.data()), result.size());
+	file.close();
+	return result;
 }
 
 void native_file_provider::on_change(const std::filesystem::path& path, std::function<void()> f)
@@ -218,139 +202,125 @@ void native_file_provider::on_change(const std::filesystem::path& path, std::fun
 	});
 }
 
-
 std::shared_ptr<file> native_file_provider::get_file(std::filesystem::path file_name)
 {
-    std::shared_ptr<file> result;
-    std::error_code ec;
+	std::shared_ptr<file> result;
+	std::error_code ec;
 
-    if (std::filesystem::exists(file_name, ec))
-    {
-        result.reset(new file(this, file_name));
-        result->edit_time = std::filesystem::last_write_time(file_name);
-    }
+	if (std::filesystem::exists(file_name, ec))
+	{
+		result.reset(new file(this, file_name));
+		result->edit_time = std::filesystem::last_write_time(file_name);
+	}
 
-    if (ec)
-        Log::get() << Log::LEVEL_ERROR << "file: " << file_name << " msg:" << ec.message() << Log::endl;
+	if (ec)
+		Log::get() << Log::LEVEL_ERROR << "file: " << file_name << " msg:" << ec.message() << Log::endl;
 
-    return result;
+	return result;
 }
 
 std::shared_ptr<std::istream> native_file_provider::create_stream(std::filesystem::path file_name)
 {
-    return std::shared_ptr<std::istream>(new std::ifstream(file_name.generic_wstring(), std::ios::binary), [](std::istream* str) {
-        //	Log::get() << "istream deleter" << Log::endl;
-        ((std::ifstream*)str)->close();
-        delete str;
-        });
+	return std::shared_ptr<std::istream>(new std::ifstream(file_name.generic_wstring(), std::ios::binary), [](std::istream* str) {
+		((std::ifstream*)str)->close();
+		delete str;
+	});
 }
-
 
 bool native_file_provider::save_data(std::filesystem::path file_name, std::string data)
 {
-    std::filesystem::path dir(file_name);
-    std::filesystem::path parent_dir = dir.parent_path();
+	std::filesystem::path dir(file_name);
+	std::filesystem::path parent_dir = dir.parent_path();
 
-    if (!parent_dir.empty())
-        if (std::filesystem::create_directories(parent_dir))
-            std::cout << "Success" << "\n";
+	if (!parent_dir.empty())
+		std::filesystem::create_directories(parent_dir);
 
-    std::ofstream file;
-    file.open(file_name.generic_wstring(), std::ios::out | std::ios::binary);
+	std::ofstream file;
+	file.open(file_name.generic_wstring(), std::ios::out | std::ios::binary);
 
-    if (!file.is_open())
-    {
-        Log::get() << Log::LEVEL_ERROR << "wtf" << Log::endl;
-        return false;
-    }
+	if (!file.is_open())
+	{
+		Log::get() << Log::LEVEL_ERROR << "wtf" << Log::endl;
+		return false;
+	}
 
-    file.write(data.data(), data.size());
-    file.close();
-    return true;
+	file.write(data.data(), data.size());
+	file.close();
+	return true;
 }
 
 void native_file_provider::iterate(std::filesystem::path path, std::function<void(file::ptr)> f, bool recursive)
 {
-    if (recursive)
-    {
-        using namespace std::filesystem;
-        std::error_code  ec;
-        recursive_directory_iterator dir(path, ec), end;
+	if (recursive)
+	{
+		using namespace std::filesystem;
+		std::error_code ec;
+		recursive_directory_iterator dir(path, ec), end;
 
-        if (!ec)
-            while (dir != end)
-            {
-                if (!is_directory(*dir))
-                    f(get_file(dir->path().wstring()));
+		if (!ec)
+			while (dir != end)
+			{
+				if (!is_directory(*dir))
+					f(get_file(dir->path().wstring()));
 
-                ++dir;
-            }
+				++dir;
+			}
+		else
+			Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
+	}
+	else
+	{
+		using namespace std::filesystem;
+		std::error_code ec;
+		directory_iterator dir(path, ec), end;
 
-        else
-            Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
-    }
+		if (!ec)
+			while (dir != end)
+			{
+				if (!is_directory(*dir))
+					f(get_file(dir->path().wstring()));
 
-    else
-    {
-        using namespace std::filesystem;
-        std::error_code  ec;
-        directory_iterator dir(path, ec), end;
-
-        if (!ec)
-            while (dir != end)
-            {
-                if (!is_directory(*dir))
-                    f(get_file(dir->path().wstring()));
-
-                ++dir;
-            }
-
-        else
-            Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
-    }
+				++dir;
+			}
+		else
+			Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
+	}
 }
-
 
 void native_file_provider::iterate_dirs(std::filesystem::path path, std::function<void(std::filesystem::path)> f, bool recursive)
 {
-    //////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////OPTIMIZE/////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////
-    if (recursive)
-    {
-        using namespace std::filesystem;
-        std::error_code  ec;
-        recursive_directory_iterator dir(path, ec), end;
+	if (recursive)
+	{
+		using namespace std::filesystem;
+		std::error_code ec;
+		recursive_directory_iterator dir(path, ec), end;
 
-        if (!ec)
-            while (dir != end)
-            {
-                if (is_directory(*dir))
-                    f(dir->path());
+		if (!ec)
+			while (dir != end)
+			{
+				if (is_directory(*dir))
+					f(dir->path());
 
-                ++dir;
-            }
+				++dir;
+			}
+		else
+			Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
+	}
+	else
+	{
+		using namespace std::filesystem;
+		std::error_code ec;
+		directory_iterator dir(path, ec), end;
 
-        else
-            Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
-    }
+		if (!ec)
+			while (dir != end)
+			{
+				if (is_directory(*dir))
+					f(dir->path().wstring());
 
-    else
-    {
-        using namespace std::filesystem;
-        std::error_code  ec;
-        directory_iterator dir(path, ec), end;
-
-        if (!ec)
-            while (dir != end)
-            {
-                if (is_directory(*dir))
-                    f(dir->path().wstring());
-
-                ++dir;
-            }
-
-        else
-            Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
-    }
+				++dir;
+			}
+		else
+			Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
+	}
 }

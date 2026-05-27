@@ -3,7 +3,7 @@ module Core:Exceptions;
 namespace Exceptions
 {
 
-	Exception::Exception(std::string_view wtf) : std::exception((std::string(wtf) + "\n At:" /* + boost::stacktrace::to_string(stack)*/).c_str())
+	Exception::Exception(std::string_view wtf) : std::exception((std::string(wtf) + "\n At:").c_str())
 	{
 	}
 
@@ -14,7 +14,7 @@ namespace Exceptions
 
 	stack_trace get_stack_trace()
 	{
-		return 1;//std::stacktrace::current();
+		return 1;
 	}
 
 }

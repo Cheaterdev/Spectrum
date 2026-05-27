@@ -24,8 +24,6 @@ export import :Scheduler;
 export import :Threading;
 export import :Tasks;
 export import :Exceptions;
-export import :Application;
-
 
 export import :Holdable;
 

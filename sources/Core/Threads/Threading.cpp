@@ -6,7 +6,6 @@ import windows;
 
 void SetThreadName(DWORD dwThreadID, const char* threadName)
 {
-	// DWORD dwThreadID = ::GetThreadId( static_cast<HANDLE>( t.native_handle() ) );
 	THREADNAME_INFO info;
 	info.dwType = 0x1000;
 	info.szName = threadName;

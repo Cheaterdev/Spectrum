@@ -145,7 +145,7 @@ namespace GUI
             layer2->add_child(rows.back());
             layer2->add_child(rows.back()->dragger);
 
-            return rows.size() - 1;
+            return uint(rows.size()) - 1;
         }
 
         void Table::SetCell(uint2 pos, base::ptr elem)

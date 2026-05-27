@@ -79,8 +79,7 @@ export
 		void save(const T& t)
 		{
 			current->value += L" = ";
-			//	if (!current->value.empty()) current->value += L", ";
-			current->value += std::to_wstring(t);// + L" ";
+			current->value += std::to_wstring(t);
 		}
 
 

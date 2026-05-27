@@ -4,7 +4,7 @@ import :Utils;
 import :Log;
 import :Singleton;
 import :Scheduler;
-	   import :Application;
+import :Application;
 
 import stl.filesystem;
 import stl.memory;
@@ -32,17 +32,7 @@ public:
 	virtual void iterate_dirs(std::filesystem::path, std::function<void(std::filesystem::path)> f, bool recursive) {};
 
 	virtual void on_change(const std::filesystem::path&, std::function<void()>) {};
-	// TODO:
-	/*
-	save_file
-	get_file_info
-
-	iterate all files|dirs
-
-	streaming?
-	*/
-	//  virtual file_info get_info(std::string) = 0;
-	//    virtual void save_file(const std::string &, const std::string &) = 0;
+	// TODO: save_file, get_file_info, iterate all files|dirs, streaming?
 };
 
 struct file
@@ -56,9 +46,6 @@ public:
 	std::filesystem::file_time_type edit_time;
 
 	file_provider* provider;
-
-private:
-	//	std::shared_ptr<istream> input_stream;
 };
 
 
@@ -68,7 +55,6 @@ class FileSystem : public Singleton<FileSystem>
 public:
 	void register_provider(file_provider::ptr provider);
 
-	//	virtual file::ptr get_file(std::wstring);
 	virtual file::ptr get_file(std::filesystem::path);
 	virtual bool save_data(std::filesystem::path file_name, std::string data);
 
@@ -87,8 +73,6 @@ public:
 	}
 	virtual void iterate(std::filesystem::path path, std::function<void(file::ptr)> f, bool recursive);
 	virtual void iterate_dirs(std::filesystem::path path, std::function<void(std::filesystem::path)> f, bool recursive);
-
-	//	virtual void save_file(const std::string &, const std::string &) = 0;
 };
 
 class native_file_provider : public file_provider

@@ -54,10 +54,6 @@ export
 		public:
 			T value;
 
-			/*	var_typed(const T& v) : var_base(typeid(T)), value(v)
-				{
-				}
-				*/
 			template<class ...Args>
 			var_typed(Args...args) : var_base(typeid(T)), value(args...)
 			{
@@ -115,26 +111,14 @@ export
 		{
 			typed.reset(new var_typed<T>(args...));
 		}
-		/*
-		template<class T>
-		void create()
-		{
-			typed.reset(new var_typed<T>());
-		}
-
-		*/
 		void operator = (MyVariant value);
 
 
-		//template<class T>
 		bool operator!=(const MyVariant& other) const
 		{
-			//var_typed<T>* var = dynamic_cast<var_typed<T>*>(typed.get());
 			if (!typed) return true;
 
 			return !typed->Equals(other.typed.get());
-
-			//	return true;
 		}
 		template<class T>
 		bool operator!=(const T& other) const
@@ -321,12 +305,6 @@ export
 
 			return object;
 		}
-		/*template<class T>
-		void get(T f)
-		{
-
-		}*/
-
 		T* operator->()
 		{
 			return get().get();

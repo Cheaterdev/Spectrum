@@ -8,7 +8,7 @@ import :Math;
 
 namespace FlowGraph
 {
-	void graph::remove_node(std::shared_ptr<window>node)
+	void graph::remove_node(std::shared_ptr<window> node)
 	{
 		node->on_remove();
 
@@ -20,53 +20,18 @@ namespace FlowGraph
 
 	void graph::clear()
 	{
-
-
 		for (auto window : windows)
-		{
 			window->on_remove();
-		}
 
 		for (auto node : nodes)
-		{
 			node->on_remove();
-		}
 
 		nodes.clear();
 		windows.clear();
 	}
 
-	/*input::ptr graph::register_input( std::string name)
-	{
-
-		graph_input::ptr i(new graph_input(this));
-		i->name = name;
-		//i->type = type;
-		input_parametres.push_back(i);
-
-		for (auto listener : listeners)
-			listener->on_add_input(i.get());
-
-		return i;
-	}
-
-	output::ptr graph::register_output( std::string name)
-	{
-
-		output::ptr p(new graph_output(this));
-	//	p->type = type;
-		p->name = name;
-		output_parametres.push_back(p);
-
-		for (auto listener : listeners)
-			listener->on_add_output(p.get());
-
-		return p;
-	}*/
-
 	graph::graph()
 	{
-		// owner = this;
 	}
 
 	graph::~graph()
@@ -136,17 +101,9 @@ namespace FlowGraph
 			node->add_listener(listener, true);
 	}
 
-
-
 	Node::~Node()
 	{
 		shutdown();
-		/*	for (auto o : output_parametres)
-				o->unlink_all();
-
-			for (auto i : input_parametres)
-				i->unlink_all();
-				*/
 	}
 
 	void Node::reset_for()
@@ -171,7 +128,6 @@ namespace FlowGraph
 		for (auto&& e : output_parametres)
 			e->shutdown();
 	}
-
 
 	bool Node::test_start()
 	{
@@ -225,22 +181,6 @@ namespace FlowGraph
 		window::on_remove();
 	}
 
-	/*
-	void Node::tell_connections()
-	{
-		if (g && g->listener)
-		{
-			for (auto o: output_parametres)
-			{
-			   for (auto i : o->output_connections)
-				{
-				   g->listener->on_link(this, o.get(), i->to->owner, i->to.get());
-				}
-			}
-		}
-	}
-	*/
-
 	void window::remove()
 	{
 		owner->remove_node(get_ptr());
@@ -253,46 +193,25 @@ namespace FlowGraph
 
 		owner = nullptr;
 	}
+
 	void Node::on_done(GraphContext*)
 	{
-
 		for (auto c : output_parametres)
 		{
 			if (!c->immediate_send_next)
 				c->send_next();
 		}
 	}
+
 	void Node::on_start(GraphContext*)
 	{
-
 	}
-	/*
-	input::ptr Node::register_input( std::string name)
-	{
-		for (auto i : input_parametres)
-		{
-			if (i->name == name)
-				return i;
-		}
-
-		input::ptr i(new input(this));
-		i->name = name;
-	//	i->type = type;
-		input_parametres.push_back(i);
-
-		for (auto listener : listeners)
-			listener->on_add_input(i.get());
-
-		return i;
-	}*/
-
-	//	output::ptr Node::register_output( std::string name /*= "unnamed parameter"*/)
-
 
 	void window::on_tell(graph_listener* listener)
 	{
 		listener->on_register(this);
 	}
+
 	void Node::on_tell(graph_listener* listener)
 	{
 		window::on_tell(listener);
@@ -334,22 +253,6 @@ namespace FlowGraph
 		return output_parametres[i];
 	}
 
-	/*
-	void Node::on_link(parameter* o, parameter* i)
-	{
-		if (g&&g->listener)
-		{
-			g->listener->on_link(this, o, i->owner, i);
-		}
-	}
-
-	void Node::on_unlink(parameter* o, parameter* i)
-	{
-		if (g&&g->listener)
-		{
-			g->listener->on_unlink(this, o, i->owner, i);
-		}
-	}*/
 	void graph::operator()(GraphContext* graph)
 	{
 		context = graph;
@@ -366,7 +269,6 @@ namespace FlowGraph
 		output_count++;
 
 		if (output_count == output_parametres.size())
-			//  if (output_count == connected_outputs)
 			on_finish();
 	}
 
@@ -379,9 +281,8 @@ namespace FlowGraph
 		context->add_task(node);
 	}
 
-	std::list<Node::ptr>  graph::on_drop(MyVariant value)
+	std::list<Node::ptr> graph::on_drop(MyVariant value)
 	{
-
 		return {};
 	}
 
@@ -412,10 +313,6 @@ namespace FlowGraph
 		for (auto listener : owner->listeners)
 			c->add_listener(listener);
 
-		/*inputs.insert(i);
-
-		owner->on_link(this, i.get());
-		i->input_elements.insert(this);*/
 		return true;
 	}
 
@@ -430,37 +327,16 @@ namespace FlowGraph
 		if (it != output_connections.end())
 			(*it)->unlink();
 
-		/*
-		i->input_elements.erase(this);
-		inputs.erase(it);
-
-		owner->on_unlink(this, i.get());
-		*/
 		return true;
 	}
 
 	output::~output()
 	{
-		//	unlink_all();
 	}
-	/*
-	void output::unlink_all()
-	{
-		for (auto i : inputs)
-		{
-			i->input_elements.erase(this);
-			owner->on_unlink(this, i.get());
-		}
-	}
-	*/
+
 	void output::on_put()
 	{
 		parameter::on_put();
-		/*for (auto i : output_connections)
-		{
-			i->pass(value);
-		}
-		*/
 		owner->on_output(this);
 	}
 
@@ -469,42 +345,6 @@ namespace FlowGraph
 		owner->remove_output(get_ptr<output>());
 	}
 
-	/*
-	void input::unlink_all()
-	{
-		auto t = get_ptr<input>();
-		auto t_copy = input_elements;
-		for (auto i : t_copy)
-		{
-			i->unlink(t);
-		}
-	}*/
-	/*
-	bool input::can_link(parameter* o)
-	{
-
-
-		if (o->owner == owner)
-			return false;
-
-		if (!owner->can_link(type,o->type))
-			return false;
-
-		if (!!dynamic_cast<output*>(o) && (owner->get_graph() == dynamic_cast<graph*>(o->owner)))
-		{
-			return false;
-		}
-		if (!!dynamic_cast<graph_input*>(o) && (owner->get_graph() != dynamic_cast<graph*>(o->owner)))
-		{
-			return false;
-		}
-
-		if (only_one_input)
-			return input_connections.empty();
-
-		return true;
-	}
-	*/
 	void input::on_put()
 	{
 		parameter::on_put();
@@ -529,10 +369,6 @@ namespace FlowGraph
 		for (auto listener : owner->get_listeners())
 			c->add_listener(listener);
 
-		/*inputs.insert(i);
-
-		owner->on_link(this, i.get());
-		i->input_elements.insert(this);*/
 		return true;
 	}
 
@@ -555,10 +391,9 @@ namespace FlowGraph
 		return true;
 	}
 
-
 	void parameter::unlink_input()
 	{
-		std::set< std::shared_ptr<connection>>  i_c = input_connections;
+		std::set<std::shared_ptr<connection>> i_c = input_connections;
 
 		for (auto c : i_c)
 			c->unlink();
@@ -566,7 +401,7 @@ namespace FlowGraph
 
 	void parameter::unlink_output()
 	{
-		std::set< std::shared_ptr<connection>>  o_c = output_connections;
+		std::set<std::shared_ptr<connection>> o_c = output_connections;
 
 		for (auto c : o_c)
 			c->unlink();
@@ -574,7 +409,6 @@ namespace FlowGraph
 
 	void parameter::set_enabled(bool value, bool force)
 	{
-		//   if ( force)
 		if (!value)
 		{
 			enabled = false;
@@ -585,11 +419,7 @@ namespace FlowGraph
 					enabled = true;
 					break;
 				}
-
-			//	if()
-			//enabled = value;
 		}
-
 		else
 			enabled = value;
 
@@ -608,7 +438,6 @@ namespace FlowGraph
 		if (value.exists())
 			for (auto c : output_connections)
 				c->pass(value);
-
 
 		if (can_output)
 			value = nullptr;
@@ -634,9 +463,6 @@ namespace FlowGraph
 
 	void connection::registrate(graph* g, parameter::ptr& from, parameter::ptr& to)
 	{
-		//bool res = from->owner->owner == to->owner->owner;
-		//if (!res)
-		//	return;
 		this->from = from;
 		this->to = to;
 		auto t = get_ptr();
@@ -653,7 +479,6 @@ namespace FlowGraph
 		from->output_connections.insert(t);
 		to->input_connections.insert(t);
 		this->g = g;
-		//	g->connections.insert(get_ptr());
 		tell();
 	}
 
@@ -664,11 +489,8 @@ namespace FlowGraph
 
 	void connection::set_enabled(bool value)
 	{
-		//  if (enabled == value)
-		//     return;
 		enabled = value;
 		from->set_enabled(enabled, false);
-		//to->set_enabled(enabled);
 	}
 
 	void connection::unlink()
@@ -693,7 +515,7 @@ namespace FlowGraph
 
 		if (!p) return false;
 
-		return p->owner->get_graph() == dynamic_cast<graph*>(owner);// || !!dynamic_cast<graph_input*>(o);
+		return p->owner->get_graph() == dynamic_cast<graph*>(owner);
 	}
 
 	graph_listener::~graph_listener()
@@ -703,9 +525,6 @@ namespace FlowGraph
 		for (auto o : c)
 			o->remove_listener(this);
 	}
-
-	//const data_types data_types::INT("int");
-	//const data_types data_types::STRING("string");
 
 	void GraphContext::run(Node* node)
 	{
@@ -721,30 +540,14 @@ namespace FlowGraph
 	{
 		run(node);
 	}
-	/*
-		data_types::data_types(std::string name)
-		{
-			this->name = name;
-		}
-
-		bool data_types::can_link(data_types * r)
-		{
-			return name == r->name;
-		}
-
-		std::string data_types::to_string() const
-		{
-			return name;
-		}*/
 
 	void graph::auto_layout()
 	{
-	
 		std::set<Node*> root_nodes;
-			std::map<Node*, int> depths;
-			int max_depth = 0;
-		
-		for (auto&n : nodes)
+		std::map<Node*, int> depths;
+		int max_depth = 0;
+
+		for (auto& n : nodes)
 		{
 			if (!n->has_inputs())
 			{
@@ -753,166 +556,54 @@ namespace FlowGraph
 			}
 		}
 
-
-		for(auto &p:input_parametres)
+		for (auto& p : input_parametres)
 		{
-		for (auto &c : p->output_connections)
-		{
-		auto n = c->to->owner;
-		root_nodes.insert(n);
+			for (auto& c : p->output_connections)
+			{
+				auto n = c->to->owner;
+				root_nodes.insert(n);
 				depths[n] = 0;
+			}
 		}
-		
-		}
 
-
-			root_nodes.insert(this);
-				depths[this] = 0;
-
-
+		root_nodes.insert(this);
+		depths[this] = 0;
 
 		std::function<void(Node*)> process_node;
 
 		process_node = [&](Node* node) {
-
 			int my_depth = depths[node];
 
 			max_depth = std::max(max_depth, my_depth);
-			for (auto &p : node->output_parametres)
+			for (auto& p : node->output_parametres)
 			{
-				for (auto &c : p->output_connections)
+				for (auto& c : p->output_connections)
 				{
 					auto other = c->to->owner;
+					auto&& other_depth = depths[other];
 
-					auto &&other_depth = depths[other];
-
-					if(other_depth<=my_depth)
+					if (other_depth <= my_depth)
 					{
-						other_depth = my_depth+1;
-
+						other_depth = my_depth + 1;
 						process_node(other);
 					}
 				}
-
-
 			}
-
-
 		};
 
+		for (auto& n : root_nodes)
+			process_node(n);
 
+		std::vector<int> node_map(max_depth + 1, 0);
 
-			for (auto&n : root_nodes)
-			{
-				process_node(n);
-
-			}
-
-			std::vector<int> node_map(max_depth+1,0);
-
-
-			for (auto &d : depths)
+		for (auto& d : depths)
 		{
-			d.first->pos = { d.second * 400,node_map[ d.second]*400};
-
-			node_map[ d.second]++;
+			d.first->pos = { d.second * 400, node_map[d.second] * 400 };
+			node_map[d.second]++;
 		}
 	}
-	/*
 
-	void graph::auto_layout()
-	{
-		std::map<Node*, int> depths;
-
-
-		std::function<void(Node*)> process_node;
-
-		int max_depth = 0;
-		process_node = [&process_node, &depths,&max_depth](Node* node) {
-
-			int my_depth = depths[node];
-
-			max_depth = std::max(max_depth, my_depth);
-			for (auto &p : node->output_parametres)
-			{
-				for (auto &c : p->output_connections)
-				{
-					auto &&other = depths[c->to->owner];
-
-
-					other = std::max(other, my_depth + 1);
-					process_node(c->to->owner);
-				}
-
-
-			}
-
-
-		};
-
-	auto 	process_graph= [&process_node, &depths](Node* node) {
-
-			int my_depth = depths[node];
-
-
-			for (auto &p : node->input_parametres)
-			{
-				for (auto &c : p->output_connections)
-				{
-					auto &&other = depths[c->to->owner];
-					if (other < my_depth + 1)
-					{
-						other = my_depth + 1;
-						process_node(c->to->owner);
-
-					}
-
-				}
-
-
-			}
-
-
-		};
-
-
-
-		depths[this] = 0;
-		process_graph(this);
-
-		for (auto&n : nodes)
-		{
-
-
-
-			if (!n->has_inputs())
-			{
-				depths[n.get()] = 1;
-				process_node(n.get());
-
-			}
-
-
-		}
-
-
-
-
-		std::vector<int> node_map(max_depth,0);
-
-		for (auto &d : depths)
-		{
-			node_map[d.second]++;
-
-		}
-
-		for (auto &d : depths)
-		{
-			d.first->pos = { d.second * 200,100*(node_map[d.second]--) };
-		}
-
-	}*/
-}
+} // namespace FlowGraph
 
 // ============================================================================
 // Extracted from FlowGraph.ixx — non-template in-class implementations
@@ -1050,7 +741,6 @@ unsigned int Node::get_id_with_links()
 	total << "OUT:";
 	for (auto p : output_parametres)
 	{
-		//if (p->())
 		total << p->owner->get_id() << "_";
 	}
 	return "undefined"_crc32;

@@ -6,7 +6,6 @@ export import stl.threading;
 export import stl.filesystem;
 
 export import crossguid;
-//export import simple_log_archive;
 
 import :Utils;
 
@@ -44,7 +43,6 @@ export
 				s = p.wstring();
 			ar& NP("string", s);
 
-			//BUG_ALERT;
 			if (Archive::is_loading::value)
 				p = s;
 		}

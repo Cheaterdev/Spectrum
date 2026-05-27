@@ -7,7 +7,6 @@ import :crc32;
 
 import :Data;
 import windows;
-//import boost.archives;
 
 template<class Archive>
 class SerializationArchive: public Archive
@@ -44,7 +43,6 @@ public:
 		{
 			this->data = data.substr(offset);
 			stream.reset(new std::istringstream(this->data, std::ios::binary | std::ios::in));
-			//stream->seekg(offset);
 			archive.reset(new iarchive(*stream));
 		}
 
@@ -232,8 +230,6 @@ public:
 	template<class T>
 	static void deserialize_simple(std::istream& data, T& obj)
 	{
-		//    if (data.size() < sizeof(unsigned long))
-//return;
 		try
 		{
 			get_stream(data) >> obj;

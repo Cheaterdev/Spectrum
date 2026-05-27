@@ -1,6 +1,5 @@
 export module Core:Math.Constants;
 import stl.core;
-import stl.core;
 
 export
 {

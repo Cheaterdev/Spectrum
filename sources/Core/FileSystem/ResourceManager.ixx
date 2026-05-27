@@ -31,9 +31,7 @@ class resource_manager_base : public Singleton<resource_manager_base<_resource, 
 	std::shared_ptr<_resource> get_resource(const _header& h, Args... args)
 	{
 		m.lock();
-		//	bool first = resources.find(h) == resources.end();
 		auto& resource = resources[h];
-		// std::shared_ptr<_resource> resource = resource_weak.lock();
 
 
 
@@ -47,7 +45,6 @@ class resource_manager_base : public Singleton<resource_manager_base<_resource, 
 
 			p.set_value(_concrete::create_new(h, args...));
 			Logger::get() << Log::LEVEL_DEBUG << typeid(_resource).name() << " created" << Log::endl;
-			//   resource_weak = resource;     
 		}
 		else
 			m.unlock();
@@ -115,7 +112,6 @@ public:
 			if constexpr (CanReload<_resource>)
 				*((_resource*)this) = *result;
 
-			//	swap(*static_cast<_resource*>(this), *result);
 			Logger::get() << Log::LEVEL_DEBUG << "reload is good with header " << NP(typeid(_header).name(), header) << Log::endl;
 		}
 
@@ -284,17 +280,6 @@ protected:
 	}
 };
 
-
-/*
-
-template<class _resource, class _header>
-class loader_provider
-{
-	static std::shared_ptr<_resource> operator()(const _header& header, resource_file_depender &used_files)
-	{
-		return std::shared_ptr<_resource>();
-	}
-};*/
 
 template<class _resource, class _header, class _context>
 class loader

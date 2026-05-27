@@ -13,7 +13,6 @@ import :serialization;
 
 export import cereal;
 
-//using simple_log_archive = cereal::JSONOutputArchive;
 export {
 
 	class LogBlock;

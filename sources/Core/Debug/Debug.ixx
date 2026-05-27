@@ -4,7 +4,7 @@ import stl.core;
 import stl.threading;
 import :Singleton;
 import :Log;
- import :Tree;
+import :Tree;
 
 export
 {
@@ -61,8 +61,6 @@ export
 	class TypedObject : public Object
 	{
 		static ObjectTracker tracker;
-		//constexpr static int _id{};
-		//static constexpr ObjectTypeID TypeID = ObjectTypeID(&_id);
 	protected:
 		TypedObject()
 		{
@@ -126,7 +124,6 @@ export
 		~Counter()
 		{
 			long count = static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start_time).count());
-			// Log::get() << "timer [" << typeid(T).name() << "] " << name << " :" << count << Log::endl;
 			time.fetch_add(count);
 		}
 
