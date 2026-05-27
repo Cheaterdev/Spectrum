@@ -240,15 +240,9 @@ class VariableBase
 	std::string name;
 
 public:
-	VariableBase(std::string name):name(name)
-	{
-		
-	}
+	VariableBase(std::string name);
 	virtual ~VariableBase() = default;
-	std::string get_name()
-	{
-		return name;
-	}
+	std::string get_name();
 };
 
 export class VariableContext:public tree<VariableContext, std::set<VariableContext*> >, public Singleton<VariableContext>
@@ -258,34 +252,16 @@ export class VariableContext:public tree<VariableContext, std::set<VariableConte
 
 	
 	
-	VariableContext():name(L"global") {};
+	VariableContext();
 protected:
-
-	VariableContext(std::wstring name) : name(name)
-	{
-		Singleton<VariableContext>::get().add_child(this);
-	}
-	
-	virtual ~VariableContext()
-	{
-		remove_from_parent();
-	}
+	VariableContext(std::wstring name);
+	virtual ~VariableContext();
 public:
+	std::wstring get_name() const override;
 
-	std::wstring get_name() const override
-	{
-		return name;
-	}
-	
 	std::set<VariableBase*> variables;
-	void add(VariableBase* v)
-	{
-		variables.insert(v);
-	}
-	void remove(VariableBase* v)
-	{
-		variables.erase(v);
-	}
+	void add(VariableBase* v);
+	void remove(VariableBase* v);
 };
 
 export template<class T>

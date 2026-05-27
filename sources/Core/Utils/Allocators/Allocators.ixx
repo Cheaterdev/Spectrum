@@ -179,56 +179,14 @@ export
 	public:
 		using Handle = AllocatorHanle;
 
-		LinearAllocator(uint64 size = std::numeric_limits<uint64>::max()) :size(size), start_region(0), end_region(size)
-		{
-			offset = start_region;
-		}
-		LinearAllocator(uint64 start_region, uint64 end_region) :size(end_region - start_region), start_region(start_region), end_region(end_region)
-		{
-			offset = start_region;
-		}
-		uint64 get_max_usage() const override
-		{
-			return offset;
-		}
-
-		bool isEmpty() const override
-		{	ASSERT_SINGLETHREAD
-
-			return offset == start_region;
-		}
-		void Free(Handle& handle)
-		{
-			//		ASSERT(false);
-		}
-		uint64 get_size()const override
-		{
-			return size;
-		}
-		std::optional<Handle> TryAllocate(uint64 size, uint64 align = 1)override final
-		{	ASSERT_SINGLETHREAD
-
-			uint64 my_offset = Math::roundUp(offset, align);
-
-			//ASSERT(offset % align == 0);
-			if (my_offset + size > this->end_region)
-			{
-				return std::nullopt;
-			}
-
-
-			offset = my_offset + size;
-			Handle h(MemoryInfo(my_offset, size, 0), this);
-
-			ASSERT(h.get_offset()+size<=this->end_region);
-			return h;
-		}
-
-		void Reset() override
-		{	ASSERT_SINGLETHREAD
-
-			offset = start_region;
-		}
+		LinearAllocator(uint64 size = std::numeric_limits<uint64>::max());
+		LinearAllocator(uint64 start_region, uint64 end_region);
+		uint64 get_max_usage() const override;
+		bool isEmpty() const override;
+		void Free(Handle& handle);
+		uint64 get_size() const override;
+		std::optional<Handle> TryAllocate(uint64 size, uint64 align = 1) override final;
+		void Reset() override;
 	};
 
 

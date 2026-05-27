@@ -67,14 +67,8 @@ export
 		return crc32_helper(v, c, 0xFFFFFFFF);
 	}
 
-	unsigned int crc32(const binary& s)
-	{
-		return crc32c::Crc32c((const uint8_t*)s.data(), s.size());
-	}
-
-	unsigned int crc32(std::string_view s) {
-		return crc32c::Crc32c(s);
-	}
+	unsigned int crc32(const binary& s);
+	unsigned int crc32(std::string_view s);
 
 	size_t HashIterate(size_t Next, size_t CurrentHash = 2166136261U)
 	{

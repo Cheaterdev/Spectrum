@@ -1,0 +1,37 @@
+module Core:Threading;
+
+import stl.threading;
+import stl.core;
+import windows;
+
+void SetThreadName(DWORD dwThreadID, const char* threadName)
+{
+	// DWORD dwThreadID = ::GetThreadId( static_cast<HANDLE>( t.native_handle() ) );
+	THREADNAME_INFO info;
+	info.dwType = 0x1000;
+	info.szName = threadName;
+	info.dwThreadID = dwThreadID;
+	info.dwFlags = 0;
+
+	__try
+	{
+		RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+	}
+
+	__except (1)
+	{
+	}
+}
+
+void SetThreadName(std::string threadName)
+{
+	SetThreadName(GetCurrentThreadId(), threadName.c_str());
+}
+
+void SetThreadName(std::thread* thread, const char* threadName)
+{
+	DWORD threadId = ::GetThreadId(static_cast<HANDLE>(thread->native_handle()));
+	SetThreadName(threadId, threadName);
+}
+
+thread_local ThreadType ThreadScope::thread_type = ThreadType::NONE;

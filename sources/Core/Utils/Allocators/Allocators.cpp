@@ -341,6 +341,57 @@ void AllocatorHanle::Free()
 {
 	if (owner) owner->Free(*this);
 }
+LinearAllocator::LinearAllocator(uint64 size) : size(size), start_region(0), end_region(size)
+{
+	offset = start_region;
+}
+
+LinearAllocator::LinearAllocator(uint64 start_region, uint64 end_region) : size(end_region - start_region), start_region(start_region), end_region(end_region)
+{
+	offset = start_region;
+}
+
+uint64 LinearAllocator::get_max_usage() const
+{
+	return offset;
+}
+
+bool LinearAllocator::isEmpty() const
+{
+	ASSERT_SINGLETHREAD
+	return offset == start_region;
+}
+
+void LinearAllocator::Free(Handle& /*handle*/)
+{
+	// no-op for linear allocator
+}
+
+uint64 LinearAllocator::get_size() const
+{
+	return size;
+}
+
+std::optional<LinearAllocator::Handle> LinearAllocator::TryAllocate(uint64 size, uint64 align)
+{
+	ASSERT_SINGLETHREAD
+	uint64 my_offset = Math::roundUp(offset, align);
+
+	if (my_offset + size > this->end_region)
+		return std::nullopt;
+
+	offset = my_offset + size;
+	Handle h(MemoryInfo(my_offset, size, 0), this);
+	ASSERT(h.get_offset() + size <= this->end_region);
+	return h;
+}
+
+void LinearAllocator::Reset()
+{
+	ASSERT_SINGLETHREAD
+	offset = start_region;
+}
+
 void AllocatorHanle::FreeAndClear()
 {
 	if (owner) owner->Free(*this);
