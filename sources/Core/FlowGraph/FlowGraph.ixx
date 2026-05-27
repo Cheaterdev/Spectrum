@@ -11,7 +11,7 @@ export
 
 	namespace FlowGraph
 	{
-	
+
 
 		struct parameter;
 
@@ -48,44 +48,16 @@ export
 
 		class listenable
 		{
-
-
 		protected:
 			std::set<graph_listener*> listeners;
 			virtual void on_tell(graph_listener* listener) = 0;
-			void tell()
-			{
-				for (auto listener : listeners)
-					on_tell(listener);
-			}
+			void tell();
 
 		public:
-			std::set<graph_listener*> get_listeners()
-			{
-				return listeners;
-			}
-			virtual void add_listener(graph_listener* listener, bool send_all = true)
-			{
-				listeners.insert(listener);
-				listener->owners.insert(this);
-
-				if (listener && send_all)
-					on_tell(listener);
-			}
-
-			virtual void remove_listener(graph_listener* listener)
-			{
-				listeners.erase(listener);
-				listener->owners.erase(this);
-			}
-			virtual ~listenable()
-			{
-				auto c = listeners;
-
-				for (auto listener : c)
-					remove_listener(listener);
-			}
-
+			std::set<graph_listener*> get_listeners();
+			virtual void add_listener(graph_listener* listener, bool send_all = true);
+			virtual void remove_listener(graph_listener* listener);
+			virtual ~listenable();
 		};
 
 
@@ -103,26 +75,18 @@ export
 
 		};
 
-		struct strict_parameter :public parameter_type
+		struct strict_parameter : public parameter_type
 		{
-
-
-			virtual bool can_cast(parameter_type* other) override
-			{
-				return true;
-			}
+			virtual bool can_cast(parameter_type* other) override;
 			virtual ~strict_parameter() = default;
 		private:
 			SERIALIZE()
 			{
 				SAVE_PARENT(parameter_type);
-
 			}
-
-
-
 		};
-		// concept to detect any derivered class from Resource
+
+		// concept to detect any derived class from Resource
 		template <class T>
 		concept class_parameter_type = std::is_base_of<parameter_type, T>::value;
 
@@ -137,16 +101,8 @@ export
 			bool can_input = false;
 			bool can_output = false;
 			bool enabled = true;
-			void shutdown()
-			{
-				input_connections.clear();
-				output_connections.clear();
-			}
-
-			void clear()
-			{
-				value.clear();
-			}
+			void shutdown();
+			void clear();
 
 			using ptr = std::shared_ptr<parameter>;
 
@@ -183,10 +139,7 @@ export
 				return default_value.get<T>();
 			}
 
-			bool has_value()
-			{
-				return value.exists();
-			}
+			bool has_value();
 			Node* owner;
 
 			std::set< std::shared_ptr<connection>> input_connections;
@@ -199,10 +152,7 @@ export
 			virtual void remove()
 			{
 			}
-			bool has_input()
-			{
-				return !input_connections.empty();
-			}
+			bool has_input();
 
 
 		public:
@@ -215,8 +165,6 @@ export
 			friend class input;
 			friend class connection;
 			friend class Node;
-
-			//        virtual bool unlink(parameter::ptr i) { return false; }
 
 			void unlink_input();
 			void unlink_output();
@@ -245,21 +193,13 @@ export
 			void registrate(graph* g, parameter::ptr& from, parameter::ptr& to);
 			void registrate(graph* g);
 
-			void pass(MyVariant value)
-			{
-				if (enabled)
-					to->put(value);
-			}
+			void pass(MyVariant value);
 
 			void set_enabled(bool value);
 			void unlink();
 
 			virtual void on_tell(graph_listener* listener) override;
-			~connection()
-			{
-				from = nullptr;
-				to = nullptr;
-			}
+			~connection();
 
 		private:
 			SERIALIZE()
@@ -287,14 +227,8 @@ export
 			friend class output;
 			friend class Node;
 		protected:
-
-
-			input(Node* owner)
-			{
-				this->owner = owner;
-				can_input = true;
-			}
-			input() {};
+			input(Node* owner);
+			input();
 
 			//   virtual bool can_link(parameter* o);
 			virtual void remove();
@@ -325,15 +259,8 @@ export
 			friend class graph;
 			friend class Node;
 		protected:
-
-			output(Node* owner)
-			{
-				this->owner = owner;
-				can_output = true;
-			}
-			output()
-			{
-			}
+			output(Node* owner);
+			output();
 
 		public:
 
@@ -359,16 +286,16 @@ export
 			std::string name;
 			vec2 pos = vec2(10, 10);
 			vec2 size = vec2(10, 10);
-			   
-     	static ptr create_default() {
-			return std::make_shared<window>();
-		}
+
+     		static ptr create_default() {
+				return std::make_shared<window>();
+			}
 
 			graph* get_graph()
 			{
 				return owner;
 			}
-			virtual~window() {};
+			virtual ~window() {};
 			virtual void on_add(graph* g);
 			virtual void on_remove();
 
@@ -430,35 +357,11 @@ export
 
 
 		public:
-			virtual unsigned int get_id()
-			{
-				return "undefined"_crc32;
-			}
+			virtual unsigned int get_id();
 
-			unsigned int get_graph_id()
-			{
-				return "undefined"_crc32;
-			}
+			unsigned int get_graph_id();
 
-			virtual unsigned int get_id_with_links()
-			{
-
-				std::stringstream total;
-
-				total << "IN:";
-				for (auto p : input_parametres)
-				{
-					if (p->has_input())
-						total << p->owner->get_id() << "_";
-				}
-				total << "OUT:";
-				for (auto p : output_parametres)
-				{
-					//if (p->())
-					total << p->owner->get_id() << "_";
-				}
-				return "undefined"_crc32;
-			}
+			virtual unsigned int get_id_with_links();
 
 			virtual void on_done(GraphContext*);
 			virtual void on_start(GraphContext*);
@@ -527,7 +430,7 @@ export
 
 			virtual ~Node();
 
-		
+
 		private:
 			SERIALIZE()
 			{
@@ -558,13 +461,10 @@ export
 		public:
 			using ptr = std::shared_ptr<graph_input>;
 			bool link(parameter::ptr i) override;
-			graph_input() { immediate_send_next = false; can_output = true; };
-			graph_input(Node* n) : input(n) { immediate_send_next = false; can_output = true; }
-
+			graph_input();
+			graph_input(Node* n);
 
 			bool can_link(parameter* o);
-
-
 
 		private:
 			SERIALIZE()
@@ -582,8 +482,8 @@ export
 		public:
 			using ptr = std::shared_ptr<graph_output>;
 
-			graph_output() { immediate_send_next = false; can_input = true; };
-			graph_output(Node* n) : output(n) { immediate_send_next = false; can_input = true; }
+			graph_output();
+			graph_output(Node* n);
 
 			virtual bool can_link(parameter* o);
 		private:
@@ -645,17 +545,9 @@ export
 			void remove_node(std::shared_ptr<window> node);
 
 			void clear();
-			//	input::ptr register_input(std::string name = "unnamed parameter");
-			//	output::ptr register_output(std::string name = "unnamed parameter");
 
 			template<class_parameter_type T = strict_parameter>   input::ptr register_input(std::string name, const T& param = T())
 			{
-				/*   for (auto i : input_parametres)
-				{
-				if (i->name == name)
-				return i;
-				}
-				*/
 				graph_input::ptr i(new graph_input(this));
 				i->name = name;
 				i->type = std::make_unique<T>(param);
@@ -669,12 +561,6 @@ export
 
 			template<class_parameter_type T = strict_parameter> output::ptr register_output(std::string name, const T& param = T())
 			{
-				/*    for (auto i : output_parametres)
-				{
-				if (i->name == name)
-				return i;
-				}
-				*/
 				output::ptr p(new graph_output(this));
 				p->type = std::make_unique<T>(param);
 				p->name = name;
@@ -691,53 +577,11 @@ export
 
 			virtual ~graph();
 
-			/*
-			size_t calculate_unique_id()
-			{
-				std::map<Node*, int> nodes_ids;
-
-				std::vector<Node*> node_vec;
-				for (auto& node : nodes)
-				{
-					node_vec.push_back(node.get());
-				}
-
-				std::sort(node_vec.begin(), node_vec.end(), [](Node* a, Node* b) {
-					if (a->get_id() == b->get_id())
-					{
-						return a->get_id_with_links() < b->get_id_with_links();
-					}
-
-					return (a->get_id() < b->get_id());
-					});
-
-
-				for (int i = 0; i < node_vec.size(); i++)
-				{
-					nodes_ids[node_vec[i]] = i;
-				}
-
-
-
-			}*/
-
 			virtual	void reset_for();
 			virtual void start(GraphContext* context);
 
 			virtual void add_listener(graph_listener* listener, bool) override;
 
-			/*
-					void on_tell(graph_listener* listener) override
-					{
-					//	listener->on_register(this);
-
-						for (auto &i : input_parametres)
-							listener->on_add_input(this, i.get());
-
-						for (auto& p : output_parametres)
-							listener->on_add_output(this, p.get());
-
-					}*/
 		private:
 			SERIALIZE()
 			{
@@ -770,7 +614,7 @@ export
 
 
 		template<class T>
-		class GraphNode :public Node
+		class GraphNode : public Node
 		{
 			virtual  void operator()(GraphContext* type) override
 			{

@@ -12,45 +12,25 @@ import :serialization;
 export class Sphere : public Primitive
 {
 public:
-	std::shared_ptr<Primitive>clone() override
-	{
-		return std::shared_ptr<Primitive>(new Sphere(*this));
-	};
+	std::shared_ptr<Primitive> clone() override;
 
-	const primitive_types get_type() const override
-	{
-		return primitive_types::sphere;
-	}
+	const primitive_types get_type() const override;
 
 	Sphere() = default;
 	Sphere(vec3 pos, float radius);
 
-	inline float get_volume() const override
-	{
-		const float cfVolume = 4.0f / 3.0f * Math::pi;
-		return cfVolume * radius * radius * radius;
-	}
+	float get_volume() const override;
 
 	float GetSurfaceArea() const;
 
 	vec3 pos;
 	float radius;
 
-	inline vec3 get_min() override
-	{
-		return pos - vec3(radius, radius, radius);
-	}
+	vec3 get_min() override;
 
-	inline vec3 get_max() override
-	{
-		return pos + vec3(radius, radius, radius);
-	}
+	vec3 get_max() override;
 
-	void apply_transform(Primitive::ptr p, mat4x4& m) override {
-
-		pos = static_cast<Sphere*>(p.get())->pos * m;
-		//scale is not supported now
-	};
+	void apply_transform(Primitive::ptr p, mat4x4& m) override;
 
 private:
 	SERIALIZE()
@@ -60,19 +40,4 @@ private:
 	}
 };
 
-
-REGISTER_TYPE(Sphere)
-CEREAL_FORCE_REGISTER(Sphere);
-
-Sphere::Sphere(vec3 pos, float radius)
-{
-	this->pos = pos;
-	this->radius = radius;
-}
-
-float Sphere::GetSurfaceArea() const
-{
-	const float cfArea = 4.0f * Math::pi;
-	return cfArea * radius * radius;
-}
 

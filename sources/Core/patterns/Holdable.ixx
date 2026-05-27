@@ -36,16 +36,7 @@ export
 		}
 
 
-		Holder clone()
-		{
-			Holder result;
-			for(const auto &[a,b]:objects)
-			{
-				result.objects[a] = b;
-			}
-
-			return result;
-		}
+		Holder clone();
 	};
 
 
@@ -65,11 +56,6 @@ export
 		}
 
 
-		UniversalContext clone()
-		{
-			UniversalContext result;
-			result.holder = holder.clone();
-			return result;
-		}
+		UniversalContext clone();
 	};
 }

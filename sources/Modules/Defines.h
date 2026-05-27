@@ -21,3 +21,15 @@
 #ifndef NTDDI_VERSION
 #  define NTDDI_VERSION NTDDI_WIN10_RS1
 #endif
+
+// ---- Windows SDK GUID operator== suppression ----------------------------
+// guiddef.h declares operator==(REFGUID, REFGUID) under this guard.  When
+// <windows.h> is imported as a C++20 header unit (e.g. via `import windows;`)
+// it already exports that operator with C++ linkage.  If guiddef.h is later
+// included again in a TU's GMF (e.g. via <agents.h> -> <concrt.h>), the
+// compiler sees a second declaration and raises C2732 (linkage contradiction).
+// Defining this token globally ensures the operator is only declared once,
+// via the header-unit path, regardless of include order.
+#ifndef _SYS_GUID_OPERATOR_EQ_
+#  define _SYS_GUID_OPERATOR_EQ_
+#endif

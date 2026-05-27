@@ -33,16 +33,10 @@ export
 		std::string object_name;
 		Exceptions::stack_trace creation_stack;
 	protected:
-		Object()
-		{
-			creation_stack = Exceptions::get_stack_trace();
-		}
+		Object();
 	public:
 		bool debug = false;
-		virtual void set_name(std::string_view str)
-		{
-			object_name = str;
-		}
+		virtual void set_name(std::string_view str);
 
 		std::string_view get_name() const { return object_name; }
 		Exceptions::stack_trace get_creation_stack() const { return creation_stack; }
@@ -57,31 +51,10 @@ export
 
 	public:
 		static bool alive;
-		ObjectTracker(std::string_view name) :name(name)
-		{
-			Log::get() << "ObjectTracker created: " << name << Log::endl;
-
-		}
-		~ObjectTracker()
-		{
-			alive = false;
-			std::lock_guard<std::mutex> g(m);
-			for (auto& o : objects)
-			{
-				Log::get() << "LEAKED OBJECT (" << name << "): '" << o->get_name() << "' stacktrace \n" << o->get_creation_stack() << Log::endl;
-			}
-		}
-		void track(Object* object)
-		{
-			std::lock_guard<std::mutex> g(m);
-			objects.insert(object);
-		}
-
-		void untrack(Object* object)
-		{
-			std::lock_guard<std::mutex> g(m);
-			objects.erase(object);
-		}
+		ObjectTracker(std::string_view name);
+		~ObjectTracker();
+		void track(Object* object);
+		void untrack(Object* object);
 	};
 
 	template<class T>
@@ -122,17 +95,14 @@ export
 	public:
 		std::vector<std::function<void()>> print_functions;
 
-		void print()
-		{
-			for (auto& f : print_functions)
-				f();
-		}
+		void print();
 
 		template<class T> Counter<T> start_count(std::string name = "")
 		{
 			return Counter<T>(name);
 		}
 	};
+
 	template<class T>
 	class Counter
 	{
@@ -173,23 +143,10 @@ export
 	{
 		std::atomic<std::thread::id>& v;
 	public:
-		Checker(std::atomic<std::thread::id>& c) :v(c)
-		{
-			auto id = std::this_thread::get_id();
-			auto prev = v.exchange(id);
-			ASSERT(prev == std::thread::id());
-		}
-
-		~Checker()
-		{
-			auto id = std::this_thread::get_id();
-			auto prev = v.exchange(std::thread::id());
-			ASSERT(prev == id);
-		}
+		Checker(std::atomic<std::thread::id>& c);
+		~Checker();
 	};
 
-
-	
 
 
 
@@ -198,5 +155,3 @@ export
 
 template<class T>
 ObjectTracker TypedObject<T>::tracker(TypedObject<T>::get_type_name());
-
-bool		ObjectTracker::alive = true;

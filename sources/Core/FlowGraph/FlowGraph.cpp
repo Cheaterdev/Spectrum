@@ -914,4 +914,174 @@ namespace FlowGraph
 	}*/
 }
 
+// ============================================================================
+// Extracted from FlowGraph.ixx — non-template in-class implementations
+// ============================================================================
 
+namespace FlowGraph
+{
+
+// ---- listenable -------------------------------------------------------------
+
+void listenable::tell()
+{
+	for (auto listener : listeners)
+		on_tell(listener);
+}
+
+std::set<graph_listener*> listenable::get_listeners()
+{
+	return listeners;
+}
+
+void listenable::add_listener(graph_listener* listener, bool send_all)
+{
+	listeners.insert(listener);
+	listener->owners.insert(this);
+
+	if (listener && send_all)
+		on_tell(listener);
+}
+
+void listenable::remove_listener(graph_listener* listener)
+{
+	listeners.erase(listener);
+	listener->owners.erase(this);
+}
+
+listenable::~listenable()
+{
+	auto c = listeners;
+
+	for (auto listener : c)
+		remove_listener(listener);
+}
+
+// ---- strict_parameter -------------------------------------------------------
+
+bool strict_parameter::can_cast(parameter_type* /*other*/)
+{
+	return true;
+}
+
+// ---- parameter --------------------------------------------------------------
+
+void parameter::shutdown()
+{
+	input_connections.clear();
+	output_connections.clear();
+}
+
+void parameter::clear()
+{
+	value.clear();
+}
+
+bool parameter::has_value()
+{
+	return value.exists();
+}
+
+bool parameter::has_input()
+{
+	return !input_connections.empty();
+}
+
+// ---- connection -------------------------------------------------------------
+
+void connection::pass(MyVariant value)
+{
+	if (enabled)
+		to->put(value);
+}
+
+connection::~connection()
+{
+	from = nullptr;
+	to = nullptr;
+}
+
+// ---- input ------------------------------------------------------------------
+
+input::input(Node* owner)
+{
+	this->owner = owner;
+	can_input = true;
+}
+
+input::input()
+{
+}
+
+// ---- output -----------------------------------------------------------------
+
+output::output(Node* owner)
+{
+	this->owner = owner;
+	can_output = true;
+}
+
+output::output()
+{
+}
+
+// ---- Node -------------------------------------------------------------------
+
+unsigned int Node::get_id()
+{
+	return "undefined"_crc32;
+}
+
+unsigned int Node::get_graph_id()
+{
+	return "undefined"_crc32;
+}
+
+unsigned int Node::get_id_with_links()
+{
+	std::stringstream total;
+
+	total << "IN:";
+	for (auto p : input_parametres)
+	{
+		if (p->has_input())
+			total << p->owner->get_id() << "_";
+	}
+	total << "OUT:";
+	for (auto p : output_parametres)
+	{
+		//if (p->())
+		total << p->owner->get_id() << "_";
+	}
+	return "undefined"_crc32;
+}
+
+// ---- graph_input ------------------------------------------------------------
+
+graph_input::graph_input()
+{
+	immediate_send_next = false;
+	can_output = true;
+}
+
+graph_input::graph_input(Node* n) : input(n)
+{
+	immediate_send_next = false;
+	can_output = true;
+}
+
+// ---- graph_output -----------------------------------------------------------
+
+graph_output::graph_output()
+{
+	immediate_send_next = false;
+	can_input = true;
+}
+
+graph_output::graph_output(Node* n) : output(n)
+{
+	immediate_send_next = false;
+	can_input = true;
+}
+
+} // namespace FlowGraph
