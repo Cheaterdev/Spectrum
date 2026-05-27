@@ -1,5 +1,4 @@
 module Core:Allocators;
-import <Core_defs.h>;
 
 
 import :Debug;

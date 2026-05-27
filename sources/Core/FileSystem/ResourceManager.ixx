@@ -1,5 +1,4 @@
 export module Core:ResourceManager;
-import <Core_defs.h>;
 import :Serializer;
 import :serialization;
 import :Utils;

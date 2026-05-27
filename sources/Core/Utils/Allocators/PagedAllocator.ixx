@@ -1,6 +1,5 @@
 export module Core:PagedAllocators;
 
-import <Core_defs.h>;
 
 import :Allocators;
 import :Utils;

@@ -1,6 +1,5 @@
-﻿export module Core:Data;
+export module Core:Data;
 
-import <Core_defs.h>;
 import :serialization;
 
 import stl.core;

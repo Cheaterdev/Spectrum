@@ -1,5 +1,4 @@
 export module Core:Events;
-import <Core_defs.h>;
 
 import :Math;
 import :Data;

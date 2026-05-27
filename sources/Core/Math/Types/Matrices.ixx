@@ -1,6 +1,5 @@
 export module Core:Math.Matrices;
 
-import <Core_defs.h>;
 import stl.core;
 import :Math.Quaternion;
 import :Math.Vectors;

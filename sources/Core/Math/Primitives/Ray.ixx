@@ -1,6 +1,5 @@
 export module Core:Math.Ray;
 
-import <Core_defs.h>;
 import :Math.Constants;
 import :Math.Vectors;
 import :Math.Quaternion;

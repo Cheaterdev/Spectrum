@@ -1,5 +1,4 @@
-﻿export module Core:Math.Constants;
-import <Core_defs.h>;
+export module Core:Math.Constants;
 import stl.core;
 import stl.core;
 

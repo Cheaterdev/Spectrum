@@ -1,6 +1,5 @@
 export module Core:FileDepender;
 
-import <Core_defs.h>;
 import :Utils;
 import :Log;
 import :Singleton;

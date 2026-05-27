@@ -1,34 +1,27 @@
 #pragma once
+// Macros formerly defined here have been migrated to Core/Defines.h.
+// The block below is active only when the Sharpmake-generated project has NOT
+// yet been regenerated (i.e. the forced include of Defines.h is not in effect).
+// After running generate_project.bat, SPECTRUM_DEFINES_INCLUDED is set by the
+// forced include and this entire block is skipped automatically.
+#ifndef SPECTRUM_DEFINES_INCLUDED
 
 #include "serialization/serialization_defines.h"
 #include "utils/utils_macros.h"
 #include "profiling/macros.h"
-#include <Utils/utils_macros.h>
 
-import stl.core;
-import stl.memory;
-
-namespace Core {
-    [[noreturn]] inline void assert_fail(const char* expr, const char* file, int line) noexcept
-    {
-       //OutputDebugString("Assertion failed: (%s)\n  %s:%d\n", expr, file, line);
-        __debugbreak();
-   //     for (;;) {}
-    }
-}
-
-#ifndef DEV
-#  define ASSERT(expr) ((void)0)
-#else
-#  define ASSERT(expr) \
-       ((!!(expr)) ? (void)0 : ::Core::assert_fail(#expr, __FILE__, __LINE__))
+#ifndef ASSERT
+#  ifndef DEV
+#    define ASSERT(expr) ((void)0)
+#  else
+#    define ASSERT(expr) \
+         ((!!(expr)) ? (void)0 : ::Core::assert_fail(#expr, __FILE__, __LINE__))
+#  endif
 #endif
 
 #ifndef STDMETHODCALLTYPE
 #  define STDMETHODCALLTYPE __stdcall
 #endif
-
-// COM HRESULT constants — defined without requiring windows.h macros
 #ifndef S_OK
 #  define S_OK 0L
 #endif
@@ -55,4 +48,21 @@ namespace Core {
 #endif
 #ifndef FALSE
 #  define FALSE 0
+#endif
+
+#endif // !SPECTRUM_DEFINES_INCLUDED
+
+import stl.core;
+import stl.memory;
+
+#ifndef CORE_ASSERT_FAIL_DEFINED
+#define CORE_ASSERT_FAIL_DEFINED
+namespace Core {
+    // Called by the ASSERT macro (defined in Core/Defines.h) on failure.
+    [[noreturn]] inline void assert_fail(const char* expr, const char* file, int line) noexcept
+    {
+        (void)expr; (void)file; (void)line;
+        __debugbreak();
+    }
+}
 #endif

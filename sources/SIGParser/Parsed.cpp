@@ -1,5 +1,4 @@
-﻿import Core;
-import <Core_defs.h>;
+import Core;
 import windows;
 
 #include "Parsed.h"

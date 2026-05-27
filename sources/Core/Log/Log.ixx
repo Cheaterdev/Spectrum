@@ -1,5 +1,4 @@
 export module Core:Log;
-import <Core_defs.h>;
 import :Data;
 import stl.threading;
 import stl.core;

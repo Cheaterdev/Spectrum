@@ -1,6 +1,5 @@
 export module Core:Singleton;
 
-import <Core_defs.h>;
 import stl.memory;
 import stl.core;
 import stl.threading;

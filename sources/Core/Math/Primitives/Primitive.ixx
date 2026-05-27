@@ -5,7 +5,6 @@ export import :Math.Vectors;
 export import :Math.Quaternion;
 export import :Math.Matrices;
 
-import <Core_defs.h>;
 import stl.memory;
 import :serialization;
 

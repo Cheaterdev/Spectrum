@@ -3,7 +3,6 @@ module;
 
 export module HAL:ResourceStates;
 
-import <Core_defs.h>;
 import Core;
 
 import :Types;

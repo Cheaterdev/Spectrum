@@ -1,5 +1,4 @@
-﻿export module Core:ObjectViewer;
-import <Core_defs.h>;
+export module Core:ObjectViewer;
 export import :serialization;
 using serialization_exception = cereal::Exception;
 import :Log;

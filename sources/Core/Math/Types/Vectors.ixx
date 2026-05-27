@@ -1,9 +1,8 @@
-﻿export module Core:Math.Vectors;
+export module Core:Math.Vectors;
 
 import :Math.Constants;
 import :serialization;
 
-import <Core_defs.h>;
 
 namespace internal
 {

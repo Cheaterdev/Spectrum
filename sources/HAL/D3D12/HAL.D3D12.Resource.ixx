@@ -12,7 +12,6 @@ import :Heap;
 
 import :Format;
 
-	   import <Core_defs.h>;
 export namespace HAL
 {
 	struct PlacementAddress

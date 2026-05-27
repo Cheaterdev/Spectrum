@@ -1,6 +1,5 @@
 export module Core:IdGenerator;
 
-import <Core_defs.h>;
 import :Threading;
 
 import stl.threading;

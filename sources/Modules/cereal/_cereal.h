@@ -1,4 +1,4 @@
-
+#pragma once
 // ---- MSVC module COMDAT-key workaround (must come first) --------------------
 // polymorphic_impl.hpp contains non-template inline functions (e.g.
 // PolymorphicCasters::lookup_if_exists) that call StaticObject<T>::getInstance()
@@ -60,7 +60,10 @@ namespace cereal {
 
 //#include <cereal/archives/json.hpp>
 
-#define CEREAL_FUTURE_EXPERIMENTAL
+// adapters.hpp requires CEREAL_FUTURE_EXPERIMENTAL (local to this wrapper).
+#ifndef CEREAL_FUTURE_EXPERIMENTAL
+#  define CEREAL_FUTURE_EXPERIMENTAL
+#endif
 #include <cereal/archives/adapters.hpp>
 
 #include <cereal/details/helpers.hpp>

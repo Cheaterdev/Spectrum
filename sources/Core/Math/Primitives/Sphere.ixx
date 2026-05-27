@@ -1,6 +1,5 @@
 export module Core:Math.Sphere;
 
-import <Core_defs.h>;
 export import :Math.Constants;
 export import :Math.Vectors;
 export import :Math.Quaternion;

@@ -1,6 +1,5 @@
 export module Core:Debug;
 
-import <Core_defs.h>;
 import stl.core;
 import stl.threading;
 import :Singleton;

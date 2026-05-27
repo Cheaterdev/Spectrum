@@ -1,7 +1,10 @@
-// nonstd lib uses std on cpp23+
-// jinja2cpp is compiled with c++14
-// force using nonstd version
-#define nsel_CONFIG_SELECT_EXPECTED 1
+#pragma once
+// jinja2cpp wrapper.
+// jinja2cpp is compiled against C++14; the nonstd expected<> ABI must be
+// selected before its headers are parsed into the IFC.
+#ifndef nsel_CONFIG_SELECT_EXPECTED
+#  define nsel_CONFIG_SELECT_EXPECTED 1
+#endif
 
 #include <jinja2cpp/template.h>
 #include <jinja2cpp/binding/rapid_json.h>

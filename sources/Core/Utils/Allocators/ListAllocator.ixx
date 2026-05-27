@@ -1,6 +1,5 @@
 export module Core:ListAllocator;
 
-import <Core_defs.h>;
 
 import :Debug;
 import :Utils;

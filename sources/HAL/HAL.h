@@ -1,4 +1,5 @@
-import <Core_defs.h>;
-import <Formats.h>;
-import <SIG/PSO_defines.h>;
-import <d3d12/macros.h>;
+#pragma once
+// HAL macro-aggregator header.
+// All macros formerly forwarded through this file are now injected via the
+// /FI forced-include of HAL/Defines.h.  This file is retained to satisfy
+// existing `import <HAL.h>` statements without breaking any code.

@@ -1,6 +1,5 @@
 export module Core:Threading;
 
-import <Core_defs.h>;
 
 import stl.threading;
 import stl.core;

@@ -1,5 +1,4 @@
 import Core;
-import <Core_defs.h>;
 import antlr4;
 #undef EOF
 #include ".antlr/SIGLexer.h"

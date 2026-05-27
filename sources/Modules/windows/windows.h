@@ -1,6 +1,5 @@
-#define NTDDI_VERSION NTDDI_WIN10_RS1
-//#include <WinSDKVer.h>
-//#include <SDKDDKVer.h>
+// NTDDI_VERSION is defined in Modules/Defines.h (force-included by the build
+// system) so it is already set before this header unit is compiled.
 
 #include <windows.h>
 #include <windowsx.h>

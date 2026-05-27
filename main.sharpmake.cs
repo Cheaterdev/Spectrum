@@ -65,6 +65,17 @@ namespace Spectrum
             conf.ProjectPath = @"[project.RootPath]";
 
             conf.IncludePaths.Add(SourceRootPath);
+            // Repository sources root — allows cross-project Defines.h chains
+            // (e.g. HAL/Defines.h can #include "Core/Defines.h").
+            conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\sources");
+
+            // Each subproject has a Defines.h at its root that chains upward
+            // through the dependency graph.  We use the full SourceRootPath so
+            // the forced include is always resolved correctly regardless of
+            // include-path ordering — especially for files in subdirectories
+            // (e.g. HAL/D3D12/*.cpp which couldn't find a plain "Defines.h").
+            conf.ForcedIncludes.Add(@"[project.SourceRootPath]\Defines.h");
+
 			//conf.ExportAdditionalLibrariesEvenForStaticLib = true;
 			conf.PrecompSourceExcludeExtension.Add(".ixx");
 
@@ -93,7 +104,7 @@ namespace Spectrum
             conf.Defines.Add("_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING");
             conf.Defines.Add("_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING");
        
-            conf.Defines.Add("SPECTRUM_ENABLE_EXEPTIONS");
+            conf.Defines.Add("SPECTRUM_ENABLE_EXCEPTIONS");  // fixed: was "EXEPTIONS"
             // CEREAL_THREAD_SAFE removed: it makes cereal include <mutex> which in MSVC 14.51+
             // transitively pulls <stop_token> into _cereal.h's header unit IFC.
             // That causes C1116 when any TU imports both cereal and a threading header unit.
@@ -163,7 +174,7 @@ namespace Spectrum
         }
 
     }
-
+/*
     [Sharpmake.Generate]
     public class Aftermath : Library
     {
@@ -177,12 +188,16 @@ namespace Spectrum
         public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
+            // Aftermath is third-party NVIDIA code with no custom Defines.h.
+            // Replace the base forced include with the bottom of the chain.
+            conf.ForcedIncludes.Remove(@"[project.SourceRootPath]\Defines.h");
+            conf.ForcedIncludes.Add(@"[project.SharpmakeCsPath]\sources\Modules\Defines.h");
             conf.LibraryFiles.Add(@"[project.SourceRootPath]\lib\x64\GFSDK_Aftermath_Lib.x64.lib");
             conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\lib\x64\GFSDK_Aftermath_Lib.x64.dll");
             conf.IncludePaths.Add(@"[project.SourceRootPath]/include");
         }
     }
-	
+	*/
 	
 [Sharpmake.Generate]
     public class Modules : Library
@@ -268,7 +283,7 @@ namespace Spectrum
             conf.LibraryFiles.Add("volatileaccessu.lib");
 
             conf.AddPublicDependency<Core>(target);	
-            conf.AddPrivateDependency<Aftermath>(target);
+            //conf.AddPrivateDependency<Aftermath>(target);
         }
     }
 
@@ -350,6 +365,13 @@ namespace Spectrum
             AssemblyName = "Resources";
         }
 
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+            // workdir has no Defines.h; redirect to the top of the chain.
+            conf.ForcedIncludes.Remove(@"[project.SourceRootPath]\Defines.h");
+            conf.ForcedIncludes.Add(@"[project.SharpmakeCsPath]\sources\Spectrum\Defines.h");
+        }
     }
 
 

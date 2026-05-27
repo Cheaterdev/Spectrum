@@ -1,6 +1,5 @@
 export module Core:FileDataStorage;
 
-import <Core_defs.h>;
 import :Utils;
 import :Log;
 import :Singleton;
