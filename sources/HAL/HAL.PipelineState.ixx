@@ -26,30 +26,9 @@ export namespace HAL
 		BlendState blend;
 		RasterizerState rasterizer;
 		RenderTargetState rtv;
-		PipelineStateDesc()
-		{
-			rtv.rtv_formats.emplace_back(Format::R8G8B8A8_UNORM);
-			rasterizer.cull_mode = CullMode::Back;
-			rasterizer.fill_mode = FillMode::Solid;
+		PipelineStateDesc();
 
-			topology = HAL::PrimitiveTopologyType::TRIANGLE;
-		}
-
-		bool is_memory()
-		{
-
-			if (vertex && vertex->get_header().file_name.empty()) return true;
-			if (pixel && pixel->get_header().file_name.empty()) return true;
-			if (geometry && geometry->get_header().file_name.empty()) return true;
-			if (hull && hull->get_header().file_name.empty()) return true;
-			if (domain && domain->get_header().file_name.empty()) return true;
-
-			if (mesh && mesh->get_header().file_name.empty()) return true;
-			if (amplification && amplification->get_header().file_name.empty()) return true;
-
-
-			return false;
-		}
+		bool is_memory();
 
 		bool operator==(const PipelineStateDesc& r) const = default;
 
@@ -95,75 +74,6 @@ export namespace HAL
 
 
 		}
-		/*	SERIALIZE_PRETTY()
-			{
-				ar& NVP(name);
-
-				ar& NVP(topology);
-				ar& NVP(blend);
-				ar& NVP(rasterizer);
-				ar& NVP(rtv);
-
-
-				if constexpr (Archive::is_saving::value)
-				{
-
-					auto sig = dynamic_cast<RootLayout*>(root_signature.get());
-					ar& NVP(sig->layout);
-					auto save_header = [&](auto& shader) {
-
-						bool has_header = !!shader;
-						ar& NVP(has_header);
-
-						if (has_header)
-							ar& NVP(shader->get_header());
-					};
-
-					save_header(pixel);
-					save_header(vertex);
-					save_header(geometry);
-					save_header(hull);
-					save_header(domain);
-
-					save_header(mesh);
-					save_header(amplification);
-
-				}
-				else
-				{
-					Layouts l;
-
-					ar& NVP(l);
-
-					root_signature = get_Signature(l);
-					auto load_header = [&]<class T>(std::shared_ptr<T>&shader) {
-
-						using Type = decltype(*shader.get());
-						bool has_header;
-						ar& NVP(has_header);
-
-						if (has_header)
-						{
-							HAL::shader_header header;
-							ar& NVP(header);
-
-							shader = Type::get_resource(header);
-						}
-
-					};
-
-
-
-					load_header(pixel);
-					load_header(vertex);
-					load_header(geometry);
-					load_header(hull);
-					load_header(domain);
-
-					load_header(mesh);
-					load_header(amplification);
-				}
-			}*/
 	};
 
 	class PipelineStateBase : public Trackable<API::TrackedPipeline>, public virtual Events::prop_handler, public API::PipelineStateBase
@@ -203,27 +113,6 @@ export namespace HAL
 
 
 		static ptr create(PipelineStateDesc& desc, std::string name);
-
-
-		/*private:
-			SERIALIZE()
-			{
-				if constexpr (Archive::is_saving::value)
-				{
-					ComPtr<ID3DBlob> blob;
-					tracked_info->m_pipelineState->GetCachedBlob(&blob);
-					std::string str((char*)blob->GetBufferPointer(), blob->GetBufferSize());
-
-
-					ar& NVP(str);
-				}
-
-				else
-				{
-					std::string str;
-					ar& NVP(str);
-				}
-			}*/
 	};
 
 
@@ -250,13 +139,7 @@ export namespace HAL
 		void on_change() override;
 
 		friend class PipelineStateCache;
-		explicit ComputePipelineState(const ComputePipelineStateDesc& _desc, std::string cache) : desc(_desc)
-		{
-
-			this->cache = cache;
-			on_change();
-			register_shader(desc.shader);
-		}
+		explicit ComputePipelineState(const ComputePipelineStateDesc& _desc, std::string cache);
 
 	public:
 		using ptr = s_ptr<ComputePipelineState>;
@@ -313,10 +196,7 @@ export namespace HAL
 		library_shader::ptr library;
 		std::map<std::wstring, std::wstring> exports;
 
-		void export_shader(std::wstring name, std::wstring as = L"")
-		{
-			exports[name] = as;
-		}
+		void export_shader(std::wstring name, std::wstring as = L"");
 
 	};
 
@@ -352,14 +232,7 @@ export namespace HAL
 
 		void on_change() override;
 
-		static HAL::shader_identifier identify(void* data)
-		{
-			HAL::shader_identifier result;
-
-			std::memcpy(result.data(), data, result.size());
-
-			return result;
-		}
+		static HAL::shader_identifier identify(void* data);
 
 
 	public:
@@ -368,25 +241,7 @@ export namespace HAL
 		using ptr = std::shared_ptr<StateObject>;
 
 		Events::Event<> event_change;
-		StateObject(StateObjectDesc& desc) :desc(desc)
-		{
-
-			for (auto& l : desc.libraries)
-			{
-				register_shader(l.library);
-			}
-
-			for (auto& c : desc.collections)
-			{
-				c->event_change.register_handler(this, [this]()
-					{
-						on_change();
-					});
-			}
-
-			on_change();
-
-		}
+		StateObject(StateObjectDesc& desc);
 
 		virtual ~StateObject() = default;
 		HAL::shader_identifier get_shader_id(std::wstring_view name);

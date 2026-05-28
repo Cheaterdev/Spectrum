@@ -208,32 +208,6 @@ export namespace HAL
 		NO_ACCESS = 0x80000000
 	};
 
-	//constexpr BarrierAccess operator |( BarrierAccess const& lhs,BarrierAccess const& rhs)
-	//{
-	//	using underlying = typename std::underlying_type<BarrierAccess>::type;
-	//	return static_cast<BarrierAccess> (
-	//		static_cast<underlying>(lhs) |
-	//		static_cast<underlying>(rhs)
-	//		);
-	//}
-
-	//constexpr BarrierSync operator |( BarrierSync const& lhs,BarrierSync const& rhs)
-	//{
-	//	using underlying = typename std::underlying_type<BarrierSync>::type;
-	//	return static_cast<BarrierSync> (
-	//		static_cast<underlying>(lhs) |
-	//		static_cast<underlying>(rhs)
-	//		);
-	//}
-	//
-	//constexpr TextureLayout operator |( TextureLayout const& lhs,TextureLayout const& rhs)
-	//{
-	//	using underlying = typename std::underlying_type<TextureLayout>::type;
-	//	return static_cast<TextureLayout> (
-	//		static_cast<underlying>(lhs) |
-	//		static_cast<underlying>(rhs)
-	//		);
-	//}
 struct ResourceState
 {
 	BarrierSync operation;//= BarrierSync::NONE;
@@ -263,14 +237,6 @@ struct ResourceState
 	bool is_valid(ResourceType) const;
 
 	bool valid_begin() const;
-	//{
-
-	//	operation |= state.operation;
-	//	access |= state.access;
-
-	//	ASSERT(layout == state.layout);
-	//	return *this;
-	//}
 
 private:
 	SERIALIZE()
@@ -282,18 +248,6 @@ private:
 
 
 };
-//ResourceState operator | (ResourceState a, ResourceState b);
-//
-//constexpr ResourceState operator | (ResourceState a, ResourceState b)
-//{
-//	//ResourceState other;
-//	//other.operation = EnumOps::OR(a.operation,b.operation);
-//	//other.access = EnumOps::OR(a.access,b.access);
-//	//other.layout = a.layout;
-//	//test t = test::A | test::B;
-//	//ASSERT(a.layout == b.layout);
-//	return ResourceState(a.get_operation() | b.get_operation(), a.get_access() | b.get_access(), a.get_layout());
-//}
 
 	namespace ResourceStates
 	{
@@ -303,7 +257,6 @@ private:
 		extern const   ResourceState COPY_DEST;// = { BarrierSync::COPY, BarrierAccess::COPY_DEST, TextureLayout::COPY_DEST };
 
 		extern const  ResourceState SHADER_RESOURCE;// = { BarrierSync::PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
-	//	extern const  ResourceState NON_PIXEL_SHADER_RESOURCE;// = { BarrierSync::NON_PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
 		extern const  ResourceState UNORDERED_ACCESS;// = { BarrierSync::ALL_SHADING, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNORDERED_ACCESS };
 		extern const  ResourceState RAYTRACING_STRUCTURE;// = { BarrierSync::RAYTRACING, BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ, TextureLayout::UNDEFINED };
 
@@ -313,27 +266,8 @@ private:
 		extern const  ResourceState RENDER_TARGET;// = {BarrierSync::RENDER_TARGET, BarrierAccess::RENDER_TARGET, TextureLayout::RENDER_TARGET};
 		extern const  ResourceState DEPTH_STENCIL ;//= {BarrierSync::DEPTH_STENCIL, BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::DEPTH_STENCIL_READ,TextureLayout::DEPTH_STENCIL_WRITE|TextureLayout::DEPTH_STENCIL_READ};
 
-	//	extern const  ResourceState CONSTANT_BUFFER ;//= {BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED};
-
-		extern const  ResourceState NO_ACCESS ;
-//extern const  ResourceState WRITE_STATES ;
-extern const  ResourceState UNKNOWN ;
-	/*	extern const  ResourceState INDEX_BUFFER = { BarrierSync::INDEX_INPUT, BarrierAccess::INDEX_BUFFER, TextureLayout::UNDEFINED };
-		extern const  ResourceState COPY_SOURCE = { BarrierSync::COPY, BarrierAccess::COPY_SOURCE, TextureLayout::COPY_SOURCE };
-		extern const  ResourceState COPY_DEST = { BarrierSync::COPY, BarrierAccess::COPY_DEST, TextureLayout::COPY_DEST };
-
-		extern const  ResourceState PIXEL_SHADER_RESOURCE = { BarrierSync::PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
-		extern const  ResourceState NON_PIXEL_SHADER_RESOURCE = { BarrierSync::NON_PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
-		extern const  ResourceState UNORDERED_ACCESS = { BarrierSync::ALL_SHADING, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNORDERED_ACCESS };
-		extern const  ResourceState RAYTRACING_STRUCTURE = { BarrierSync::RAYTRACING, BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ, TextureLayout::UNDEFINED };
-
-		inline  constexpr ResourceState RAYTRACING_STRUCTURE_WRITE = { BarrierSync::RAYTRACING, BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ|BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE, TextureLayout::UNDEFINED };
-		extern const  ResourceState INDIRECT_ARGUMENT = { BarrierSync::EXECUTE_INDIRECT, BarrierAccess::INDIRECT_ARGUMENT, TextureLayout::UNDEFINED };
-
-		extern const  ResourceState RENDER_TARGET = {BarrierSync::RENDER_TARGET, BarrierAccess::RENDER_TARGET, TextureLayout::RENDER_TARGET};
-		extern const  ResourceState DEPTH_STENCIL = {BarrierSync::DEPTH_STENCIL, BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::DEPTH_STENCIL_READ,TextureLayout::DEPTH_STENCIL_WRITE|TextureLayout::DEPTH_STENCIL_READ};
-
-		extern const  ResourceState CONSTANT_BUFFER = {BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED};*/
+		extern const  ResourceState NO_ACCESS;
+		extern const  ResourceState UNKNOWN;
 	}
 		
 	enum class HandleType : char
@@ -799,20 +733,7 @@ struct texture_layout
 		std::string value;
 		shader_macro() = default;
 		shader_macro(std::string name, std::string value = "1");	GEN_DEF_COMP(shader_macro)
-	
-		/*bool operator<(const shader_macro& r)const
-		{
-			if(name==r.name)
-				return value<r.value;
-			return name<r.name;
 
-		}
-		bool operator==(const shader_macro& r)const
-		{
-
-			return name==r.name && value==r.value;
-
-		}*/
 	private:
 		SERIALIZE()
 		{

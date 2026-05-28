@@ -60,10 +60,7 @@ export namespace HAL
 		std::shared_ptr<CommandList> get_free_list();
 		std::shared_ptr<TransitionCommandList> get_transition_list();
 		using ptr = std::shared_ptr<Queue>;
-		inline UINT64 get_frequency() const {
-			return frequency;
-				
-		}
+		UINT64 get_frequency() const;
 		ClockCalibrationInfo get_clock_time() const;
 
 		void stop_all();

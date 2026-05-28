@@ -166,4 +166,7 @@ namespace HAL
 	std::shared_ptr<CommandAllocator> Device::get_ca(CommandListType type) {
 		return command_allocators[type].get();
 	}
+
+	const HAL::DeviceProperties& Device::get_properties() const { return properties; }
+	bool Device::is_rtx_supported() { return rtx; }
 }

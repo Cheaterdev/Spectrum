@@ -84,11 +84,11 @@ export namespace HAL
 		[[no_unique_address]]
 		std::conditional_t<BuildOptions::Dev, DevRecorder, NullRecorder> debug_recorder;
 	public:
-		inline const API::CommandList& get_list() const { return list; }
+		const API::CommandList& get_list() const;
 		void create(CommandListType type);
 		void reset();
 
-		inline bool is_compiled() const { return compiled; }
+		bool is_compiled() const;
 
 		void compile(CommandAllocator& allocator);
 
@@ -138,7 +138,7 @@ export namespace HAL
 		void read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout);
 
 		void func_barrier(UsagePoint* point);
-		const std::vector<CommandRecord>& get_debug_records() const { return debug_recorder.get(); }
+		const std::vector<CommandRecord>& get_debug_records() const;
 
 		template<class Hit, class Miss, class Raygen>
 		void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer) {

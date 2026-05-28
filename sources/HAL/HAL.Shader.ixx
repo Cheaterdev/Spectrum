@@ -255,7 +255,7 @@ export
 		class pixel_shader : public Shader<pixel_shader>
 		{
 			friend class Shader<pixel_shader>;
-			void init(){}
+			void init();
 		public:
 
 			using ptr = shader_with_id<pixel_shader>;
@@ -267,7 +267,7 @@ export
 		class geometry_shader : public Shader<geometry_shader>
 		{
 			friend class Shader<geometry_shader>;
-			void init(){}
+			void init();
 
 		public:
 
@@ -285,7 +285,7 @@ export
 		class vertex_shader : public Shader<vertex_shader>
 		{
 			friend class Shader<vertex_shader>;
-			void init(){}
+			void init();
 
 		public:
 
@@ -301,7 +301,7 @@ export
 		class hull_shader : public Shader<hull_shader>
 		{
 			friend class Shader<hull_shader>;
-			void init(){}
+			void init();
 		public:
 			using ptr = shader_with_id<hull_shader>;
 			static const ptr null;
@@ -313,7 +313,7 @@ export
 		class domain_shader : public Shader<domain_shader>
 		{
 			friend class Shader<domain_shader>;
-			void init(){}
+			void init();
 		public:
 
 			using ptr = shader_with_id<domain_shader>;
@@ -324,7 +324,7 @@ export
 		class compute_shader : public Shader<compute_shader>
 		{
 			friend class Shader<compute_shader>;
-			void init(){}
+			void init();
 		public:
 
 			using ptr = shader_with_id<compute_shader>;
@@ -336,7 +336,7 @@ export
 		class mesh_shader : public Shader<mesh_shader>
 		{
 			friend class Shader<mesh_shader>;
-			void init(){}
+			void init();
 		public:
 
 			using ptr = shader_with_id<mesh_shader>;
@@ -347,7 +347,7 @@ export
 		class amplification_shader : public Shader<amplification_shader>
 		{
 			friend class Shader<amplification_shader>;
-			void init(){}
+			void init();
 		public:
 
 			using ptr = shader_with_id<amplification_shader>;

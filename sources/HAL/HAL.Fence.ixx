@@ -31,41 +31,10 @@ export namespace HAL
 		Fence* fence = nullptr;
 		Fence::CounterType value = 0;
 		HAL::CommandListType invoker;
-		operator bool()
-		{
-			return !!fence;
-		}
-		void wait() const
-		{
-			if (fence)
-			{
-				fence->wait(value);
-			}
-		}
-
-		bool is_completed() const
-		{
-				if (fence)
-			{
-				return fence->get_completed_value()>=(value);
-			}
-
-			return true;
-		}
-		void combine(const FenceWaiter& other)
-		{
-			if(!other.fence) return;
-
-			if(fence)
-			ASSERT(fence==other.fence);
-			else
-			{
-				fence = other.fence;
-				invoker = other.invoker;
-			}
-			if(fence)
-			value=std::max(value,other.value);
-		}
+		operator bool();
+		void wait() const;
+		bool is_completed() const;
+		void combine(const FenceWaiter& other);
 	};
 }
 

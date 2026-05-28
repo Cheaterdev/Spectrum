@@ -14,39 +14,20 @@ namespace HAL
 {
 	void GPUBlock::start(Eventer* list)
 	{
-		//auto l = static_cast<CommandList*>(list);
-
-	//	auto& timers = get_state(list);
-//timers.timers.emplace_back();
-
-	//	timers.timers.back().start(list);
-	// 
-gpu_timer.start(list); 
-		//		list->gpu_timers.emplace_back(std::make_pair<TimedBlock*, GPUTimer>(this, timer));
-
-		// todo: make block independent
-		//list->gpu_timers.back().second.start(list);
+		gpu_timer.start(list);
 	}
 
 	void GPUBlock::end(Eventer* list)
 	{
-		//auto l = static_cast<CommandList*>(list);
-
-	//	auto& timers = get_state(list);
-
-	///	if (timers.timers.size()) // maybe there was no start ?
 		gpu_timer.end(list);
 	}
 
 	GPUTimer::GPUTimer()
 	{
-		//id = device.get_time_manager().factory.alloc(2, 1, QueryType::Timestamp);
 	}
 
 	GPUTimer::~GPUTimer()
 	{
-		//id.Free();
-		//HAL::Device::get().get_time_manager().put_id(id);
 	}
 
 	void GPUTimer::start(Eventer* list)
@@ -92,7 +73,6 @@ gpu_timer.start(list);
 		if (type == CommandListType::DIRECT || type == CommandListType::COMPUTE)
 			compute.reset(new ComputeContext(*this));
 
-		//	if (type == CommandListType::DIRECT || type == CommandListType::COPY)
 		copy.reset(new CopyContext(*this));
 
 		if (type == CommandListType::DIRECT)
@@ -198,8 +178,6 @@ gpu_timer.start(list);
 
 	void CommandList::end()
 	{
-		//	create_transition_point(false);
-		//	id = -1;
 		current_pipeline = nullptr;
 
 		if (graphics) graphics->end();
@@ -223,8 +201,7 @@ gpu_timer.start(list);
 	}
 
 	void CommandList::discard(HAL::Resource* resource)
-	{		
-	//	compiler.discard(resource);
+	{
 	}
 
 
@@ -267,8 +244,6 @@ gpu_timer.start(list);
 
 	void Sendable::compile()
 	{
-		//	auto cmd = static_cast<CommandList*>(this);
-
 		if (active)
 			end();
 
@@ -285,8 +260,6 @@ gpu_timer.start(list);
 		if (!compiler.is_compiled())
 			Sendable::compile();
 
-		//execute_fence = std::promise<FenceWaiter>();
-		//execute_fence_result = execute_fence.get_future();
 		if (f)
 			on_execute_funcs.emplace_back(f);
 
@@ -312,7 +285,6 @@ gpu_timer.start(list);
 
 	void Eventer::resolve_times(QueryHeap* pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)> f)
 	{
-		//CommandList* list = static_cast<CommandList*>(this); // :(
 		auto info = read_data(NumQueries * sizeof(UINT64), GPUEntityStorageInterface::DEFAULT_ALIGN,
 		                      static_cast<uint>(type));
 
@@ -507,32 +479,6 @@ gpu_timer.start(list);
 		}
 	}
 
-	//void GraphicsContext::set_rtv(int c, RTVHandle rt, DSVHandle h)
-	//{
-
-
-	//	base.create_transition_point();
-	//	for (int i = 0; i < c; i++)
-	//	{
-	//		get_base().transition(rt[i].get_resource_info());
-	//	}
-
-	//	if (h.is_valid())
-	//	{
-	//		if (rt.is_valid()) {
-	//			auto& i = rt.get_resource_info();
-	//			auto rtv = std::get<HAL::Views::RenderTarget>(i.view);
-	//			auto dsv = std::get<HAL::Views::DepthStencil>(h.get_resource_info().view);
-	//			ASSERT(rtv.Resource->get_desc().as_texture().Dimensions == dsv.Resource->get_desc().as_texture().Dimensions);
-	//		}
-	//		get_base().transition(h.get_resource_info());
-	//	}
-	//	list->set_rtv(c, rt, h);
-
-	//	base.create_transition_point(false);
-	//}
-
-
 	void GraphicsContext::draw(UINT vertex_count, UINT vertex_offset, UINT instance_count, UINT instance_offset)
 	{
 		PROFILE_GPU(L"draw");
@@ -614,7 +560,6 @@ gpu_timer.start(list);
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		//	if (base.type != CommandListType::COPY)
 		base.transition(resource, ResourceStates::COPY_DEST);
 
 		auto info = base.place_data(size);
@@ -695,10 +640,7 @@ gpu_timer.start(list);
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		//	if (base.type != CommandListType::COPY)
 		base.transition(resource, ResourceStates::COPY_SOURCE);
-		//else
-		//		base.transition(resource, ResourceState::COMMON);
 
 		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.read_data(layout.size, layout.alignment, static_cast<uint>(base.get_type()));
@@ -785,10 +727,7 @@ gpu_timer.start(list);
 			return result->get_future();
 		}
 
-		//  auto size = resource->get_size();
 		auto info = base.read_data(size, GPUEntityStorageInterface::DEFAULT_ALIGN, static_cast<uint>(base.get_type()));
-		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
-		//list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_dx(), info.resource_offset);
 		ASSERT(false);
 		if constexpr (Debug::CheckErrors)
 			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
@@ -803,23 +742,15 @@ gpu_timer.start(list);
 
 	void CommandList::on_execute()
 	{
-		// Log::get() << "on_execute" << Log::endl;
 		for (auto&& t : on_execute_funcs)
 			t();
-
-		//	srv.reset();
-		//	smp.reset();
 
 		if (graphics) graphics->on_execute();
 		if (compute) compute->on_execute();
 
-
 		on_execute_funcs.clear();
 
 		Eventer::reset();
-
-
-		//GPUEntityStorage<LocalAllocationPolicy>::reset();
 
 		Transitions::on_execute();
 		frame_resources = nullptr;
@@ -839,7 +770,6 @@ gpu_timer.start(list);
 
 				if (prev_point) prev_point->next_point = point;
 				point->prev_point = prev_point;
-		//		 prev_point->next_point=  prev_point;
 				point->cmd_list = this;
 				point->start = !end;
 				point->index = static_cast<uint>(usage_points.size());
@@ -996,8 +926,6 @@ gpu_timer.start(list);
 				if (type == HAL::TransitionType::LAST) point = &usage_points.back();
 				if (type == HAL::TransitionType::ZERO) point = &usage_points.front();
 
-				 //ASSERT(!point->start);
-				//if (type == TransitionType::LAST) 			ASSERT(!point->start);
 				HAL::ResourceUsage& usage = point->usages.emplace_back();
 
 				usage.resource = const_cast<HAL::Resource*>(resource);
@@ -1091,19 +1019,6 @@ gpu_timer.start(list);
 				else ASSERT(false);
 
 
-				//if(GetAsyncKeyState('4'))
-				//{
-				//	if (type == CommandListType::DIRECT)
-				//	{
-				//		operation =BarrierSync::ALL_DIRECT;// operation = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
-				//	}
-
-				//	if (type == CommandListType::COMPUTE)
-				//	{
-				//		operation =BarrierSync::ALL_COMPUTE;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
-				//	}
-				//
-				//}
 				info.for_each_subres([&](const HAL::Resource::ptr& resource, UINT subres)
 					{
 						transition(resource.get(), target_state, subres);
@@ -1183,10 +1098,6 @@ gpu_timer.start(list);
 	{
 		if (!resource) return;
 
-		//if (type == CommandListType::COPY && (to == ResourceState::COPY_DEST || to == ResourceState::COPY_SOURCE))
-		//	to = ResourceState::COMMON;
-
-
 		track_object(*const_cast<Resource*>(resource));
 
 
@@ -1221,11 +1132,8 @@ gpu_timer.start(list);
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		//if (base.type != CommandListType::COPY)
-		{
-			base.transition(source, ResourceStates::COPY_SOURCE);
-			base.transition(dest, ResourceStates::COPY_DEST);
-		}
+		base.transition(source, ResourceStates::COPY_SOURCE);
+		base.transition(dest, ResourceStates::COPY_DEST);
 
 
 		list->copy_buffer(dest, s_dest, source, s_source, size);
@@ -1236,11 +1144,8 @@ gpu_timer.start(list);
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		//	if (base.type != CommandListType::COPY)
-		{
-			base.transition(source, ResourceStates::COPY_SOURCE);
-			base.transition(dest, ResourceStates::COPY_DEST);
-		}
+		base.transition(source, ResourceStates::COPY_SOURCE);
+		base.transition(dest, ResourceStates::COPY_DEST);
 		list->copy_resource(dest, source);
 		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
@@ -1255,11 +1160,8 @@ gpu_timer.start(list);
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		//if (base.type != CommandListType::COPY) 
-		{
-			base.transition(source, ResourceStates::COPY_SOURCE, source_subres);
-			base.transition(dest, ResourceStates::COPY_DEST, dest_subres);
-		}
+		base.transition(source, ResourceStates::COPY_SOURCE, source_subres);
+		base.transition(dest, ResourceStates::COPY_DEST, dest_subres);
 
 		list->copy_texture(dest, dest_subres, source, source_subres);
 		if constexpr (Debug::CheckErrors)
@@ -1272,11 +1174,8 @@ gpu_timer.start(list);
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		//if (base.type != CommandListType::COPY) 
-		{
-			base.transition(from, ResourceStates::COPY_SOURCE);
-			base.transition(to, ResourceStates::COPY_DEST);
-		}
+		base.transition(from, ResourceStates::COPY_SOURCE);
+		base.transition(to, ResourceStates::COPY_DEST);
 		list->copy_texture(to, to_pos, from, from_pos, size);
 		if constexpr (Debug::CheckErrors)
 			TEST(Device::get(), Device::get().get_device_removed_reason());
@@ -1348,9 +1247,8 @@ gpu_timer.start(list);
 	void ComputeContext::dispatch2(ivec2 a, ivec2 b)
 	{
 		PROFILE_GPU(L"Dispatch");
-		 ASSERT(false);
+		ASSERT(false);
 		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
-	//list->dispatch({x, y, z});
 		base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 	}
 
@@ -1371,18 +1269,7 @@ gpu_timer.start(list);
 
 	void Eventer::on_start(Timer* timer)
 	{
-
 		start_event(timer->get_block().get_name());
-
-		//for (auto& c : timer->get_block().get_childs())
-		//{
-		//	auto b = dynamic_cast<GPUBlock*>(c.get());
-		//	if (b)
-		//	{
-		//		//	b->gpu_counter.enabled = false;
-		//	}
-		//}
-		//		static_cast<GPUBlock*>(c.get())
 
 		auto b = static_cast<GPUBlock*>(&timer->get_block());
 		if (b)
@@ -1391,17 +1278,11 @@ gpu_timer.start(list);
 			b->start(this);
 		}
 
-
-		//	static_cast<GPUBlock&>(timer->get_block()).gpu_counter.timer.start(this);
-		//	timer->block.begin_timings(executed ? nullptr : this);
 		current = &timer->get_block();
 	}
 
 	void Eventer::on_end(Timer* timer)
 	{
-		//timer->get_block().end_timings(executed ? nullptr : this);
-		//	static_cast<GPUBlock&>(timer->get_block()).gpu_counter.timer.end(this);
-
 		auto b = static_cast<GPUBlock*>(&timer->get_block());
 		if (b)
 		{
@@ -1418,10 +1299,6 @@ gpu_timer.start(list);
 	{
 		for (auto& block : gpu_timers)
 		{
-		
-				
-	//		auto& timers = block->get_state(this);
-		//	for (auto& t : timers.timers)
 			Profiler::get().on_gpu_timer(std::make_pair<TimedBlock*, GPUTimerInterface*>(block.get(), &block->gpu_timer));
 		}
 		gpu_timers.clear();
@@ -1481,7 +1358,6 @@ gpu_timer.start(list);
 
 	void Eventer::set_marker(const wchar_t* label)
 	{
-		//::PIXSetMarker(m_commandList.Get(), 0, label);
 	}
 
 
@@ -1568,8 +1444,6 @@ gpu_timer.start(list);
 		base.transition(build_desc.ScratchAccelerationStructureData.resource, {
 			                BarrierSync::COMPUTE_SHADING, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNDEFINED
 		                });
-		//	commit_tables();
-
 		list->build_ras(build_desc, bottom);
 
 		base.post_command<false, false>(*this, BarrierSync::BUILD_RAYTRACING_ACCELERATION_STRUCTURE);
@@ -1592,7 +1466,6 @@ gpu_timer.start(list);
 			                BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED
 		                });
 
-		//commit_tables();
 		list->build_ras(build_desc, top);
 
 		base.post_command<false, false>(*this, BarrierSync::BUILD_RAYTRACING_ACCELERATION_STRUCTURE);
@@ -1606,17 +1479,15 @@ gpu_timer.start(list);
 	void Transitions::begin()
 	{
 		transition_count = 0;
-		//	create_zero_transition();
-		create_usage_point(BarrierSync::NONE,false);
+		create_usage_point(BarrierSync::NONE, false);
 	}
 
 	void Transitions::on_execute()
 	{
 		usage_points.clear();
 		used_resources.clear();
-		 need_check_transitions.clear();
-							transitions_compiled = false;
-		//transition_list = nullptr;
+		need_check_transitions.clear();
+		transitions_compiled = false;
 	}
 
 	void SignatureDataSetter::commit_tables(BarrierSync operation, UsedSlots* slots)
@@ -1686,25 +1557,6 @@ gpu_timer.start(list);
 			for (auto& s : diff)
 			{
 				auto i = get_table_index(s);
-
-				//	if(tables[i].slot_id == s);
-				//	stop_using(i);
-				//auto& slot = slots[slot_id];
-
-				//for (auto& id : used_tables)
-				//{
-
-				//	stop_using(id);
-				//	/*auto& table = tables[id].table;
-
-				//	for (UINT i = 0; i < (UINT)table.get_count(); ++i)
-				//	{
-				//		const auto& h = table[i];
-
-				//		base.stop_using(h.get_resource_info());
-
-				//	}*/
-				//}
 			}
 		}
 
@@ -1741,12 +1593,6 @@ gpu_timer.start(list);
 		return view.Format;
 	}
 
-
-	//const CompiledRT& CompiledRT::set(HAL::GraphicsContext& context, HAL::RTOptions options, float depth, uint stencil) const
-	//{
-	//	context.set_rtv(*this,options,depth, stencil);
-	//	return *this;
-	//}
 
 	void TransitionCommandList::create_transition_list(FrameResources& frame, const HAL::Barriers& transitions)
 	{
@@ -1794,4 +1640,177 @@ gpu_timer.start(list);
 		this->type = type;
 		compiler.create(type);
 	}
+
+
+	// Implementations moved from HAL.CommandList.ixx
+
+	void CommandListBase::free_tracked_objects()
+	{
+		tracked_resources.clear();
+		dstorage_fence = FenceWaiter();
+	}
+
+	CommandListType CommandListBase::get_type()
+	{
+		return type;
+	}
+
+	GPUBlock::GPUBlock(std::wstring_view name, TimedBlock* parent, Device& device)
+		: TimedBlock(name, parent), device(device)
+	{
+	}
+
+	Eventer::Eventer(Device& device)
+	{
+	}
+
+	SignatureDataSetter::SignatureDataSetter(CommandList& base) : base(base)
+	{
+		tables.resize(32); // !!!!!!!!!!!
+	}
+
+	void SignatureDataSetter::reset_tables()
+	{
+		root_sig = nullptr;
+		for (auto& table : tables)
+		{
+			table.const_buffer = CBVHandle();
+			table.resources.clear();
+			table.descriptors.clear();
+			table.dirty = false;
+		}
+	}
+
+	void SignatureDataSetter::reset()
+	{
+		used_slots.clear();
+		tables.clear();
+		tables.resize(32);
+	}
+
+	CommandList& SignatureDataSetter::get_base()
+	{
+		return base;
+	}
+
+	void SignatureDataSetter::set_signature(const RootSignature::ptr& signature)
+	{
+		if (root_sig == signature) return;
+
+		root_sig = signature;
+
+		auto& desc = signature->get_desc();
+
+		on_set_signature(signature);
+	}
+
+	void SignatureDataSetter::set_signature(Layouts layout)
+	{
+		set_signature(HAL::Device::get().get_engine_pso_holder().GetSignature(layout));
+	}
+
+	void SignatureDataSetter::set_cb(UINT index, const CBVHandle& cb, BarrierSync operation)
+	{
+		get_base().transition(cb.get_resource_info(), operation);
+		set_const_buffer(index, 0, cb.get_offset());
+	}
+
+	GraphicsContext::GraphicsContext(CommandList& base)
+		: SignatureDataSetter(base), list(base.get_native_list())
+	{
+	}
+
+	std::vector<HAL::Format> GraphicsContext::get_formats() const
+	{
+		return compiled_rt.get_formats();
+	}
+
+	CommandList& GraphicsContext::get_base()
+	{
+		return base;
+	}
+
+	void GraphicsContext::set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType, bool adjusted, uint controlpoints)
+	{
+		list->set_topology(topology, feedType, adjusted, controlpoints);
+	}
+
+	void GraphicsContext::set_stencil_ref(UINT ref)
+	{
+		list->set_stencil_ref(ref);
+	}
+
+	std::vector<Viewport> GraphicsContext::get_viewports()
+	{
+		return viewports;
+	}
+
+	void GraphicsContext::set_index_buffer(HAL::Views::IndexBuffer view)
+	{
+		index = view;
+	}
+
+	ComputeContext::ComputeContext(CommandList& base)
+		: SignatureDataSetter(base), list(base.get_native_list())
+	{
+	}
+
+	CommandList& ComputeContext::get_base()
+	{
+		return base;
+	}
+
+	CommandListType TransitionCommandList::get_type()
+	{
+		return type;
+	}
+
+	void TransitionCommandList::end()
+	{
+	}
+
+	void TransitionCommandList::on_execute()
+	{
+		for (auto&& t : on_execute_funcs)
+			t();
+
+		on_execute_funcs.clear();
+
+		Eventer::reset();
+
+		HAL::Device::get().context_generator.free(this);
+	}
+
+	void CommandList::update_tilings(HAL::update_tiling_info&& info)
+	{
+		tile_updates.emplace_back(std::move(info));
+		track_object(*(info.resource));
+	}
+
+	void CommandList::clear_uav(const UAVHandle& h, vec4 ClearColor)
+	{
+		create_usage_point(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
+		transition(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
+		compiler.clear_uav(h, ClearColor);
+		create_usage_point(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW, false);
+	}
+
+	const std::vector<CommandRecord>& CommandList::get_debug_records() const
+	{
+		return compiler.get_debug_records();
+	}
+
+	DelayedCommandList* CommandListBase::get_native_list()
+	{
+		return &compiler;
+	}
+
+	HAL::UsagePoint* Transitions::get_last_usage_point()
+	{
+		return &usage_points.back();
+	}
+
+	CopyContext::CopyContext(CommandList& base) : base(base), list(base.get_native_list()) {}
+
+	const API::CommandList& TransitionCommandList::get_compiled() const { return compiler.get_list(); }
 }

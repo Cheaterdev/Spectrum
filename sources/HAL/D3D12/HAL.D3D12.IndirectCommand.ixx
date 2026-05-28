@@ -10,10 +10,7 @@ export namespace HAL
 {
 	class IndirectCommand
 	{
-		IndirectCommand(D3D::CommandSignature command_signature, const UsedSlots& slots) : slots(slots),
-			command_signature(command_signature)
-		{
-		}
+		IndirectCommand(D3D::CommandSignature command_signature, const UsedSlots& slots);
 
 		template <class T>
 		static void process_one(UsedSlots& slots, uint& total_size)
@@ -32,9 +29,7 @@ export namespace HAL
 		// TODO: make private 
 		D3D::CommandSignature command_signature;
 
-		IndirectCommand()
-		{
-		}
+		IndirectCommand();
 
 		template <class... Args>
 		static IndirectCommand create_command(Device& device, RootSignature* layout = nullptr)

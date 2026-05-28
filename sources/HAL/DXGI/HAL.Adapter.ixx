@@ -18,38 +18,13 @@ export namespace HAL
 	public://///////////
 		DXGI::Adapter native_adapter;
 		DXGI_ADAPTER_DESC adapter_desc;
-		Adapter(DXGI::Adapter native_adapter) :native_adapter(native_adapter)
-		{
-			
-
-			native_adapter->GetDesc(&adapter_desc);
-			Log::get() << "// Adapter: " << adapter_desc.Description << Log::endl;
-
-
-			UINT ai = 0;
-			IDXGIOutput* pOutput;
-
-			while (native_adapter->EnumOutputs(ai, &pOutput) != DXGI_ERROR_NOT_FOUND)
-			{
-				DXGI_OUTPUT_DESC  oDesc;
-				pOutput->GetDesc(&oDesc);
-				++ai;
-
-				Log::get() << "// Output: " << oDesc.DeviceName << Log::endl;
-
-				pOutput->Release();
-			}
-
-
-		}
+		Adapter(DXGI::Adapter native_adapter);
 
 	public:
 		using ptr = std::shared_ptr<Adapter>;
 
 
-		const DXGI_ADAPTER_DESC& get_desc() const {
-			return adapter_desc;
-		}
+		const DXGI_ADAPTER_DESC& get_desc() const;
 	private:
 
 		friend class Adapters;
@@ -61,15 +36,10 @@ export namespace HAL
 		DXGI::Factory native_factory;
 
 		friend class Singleton<Adapters>;
-		Adapters()
-		{
-			CreateDXGIFactory2(0, IID_PPV_ARGS(&native_factory));
-		}
+		Adapters();
 	public:
 
-		DXGI::Factory get_factory() {
-			return native_factory;
-		}
+		DXGI::Factory get_factory();
 		void enumerate(auto f)
 		{
 			IDXGIAdapter4* padapter;

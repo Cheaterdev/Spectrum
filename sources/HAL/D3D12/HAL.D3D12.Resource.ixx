@@ -32,11 +32,7 @@ export namespace HAL
 		void init(Device& device, const ResourceDesc& desc, const PlacementAddress& address, TextureLayout initialLayout = TextureLayout::UNDEFINED);
 		void init(D3D::Resource  resource,TextureLayout layout);
 
-		GPUAddressPtr get_address()
-		{
-	
-			return address;
-		}
+		GPUAddressPtr get_address();
 	public:
 		D3D::Resource native_resource;
 

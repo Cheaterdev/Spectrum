@@ -1,6 +1,7 @@
 module HAL:PipelineState;
 import Core;
 import :Device;
+import :Shader;
 
 namespace HAL
 {
@@ -106,7 +107,59 @@ namespace HAL
 				return desc.root_signature->get_device().get_pipeline_state_cache().compute_cache[desc];
 			}
 
+	PipelineStateDesc::PipelineStateDesc()
+	{
+		rtv.rtv_formats.emplace_back(Format::R8G8B8A8_UNORM);
+		rasterizer.cull_mode = CullMode::Back;
+		rasterizer.fill_mode = FillMode::Solid;
+		topology = HAL::PrimitiveTopologyType::TRIANGLE;
+	}
 
+	bool PipelineStateDesc::is_memory()
+	{
+		if (vertex && vertex->get_header().file_name.empty()) return true;
+		if (pixel && pixel->get_header().file_name.empty()) return true;
+		if (geometry && geometry->get_header().file_name.empty()) return true;
+		if (hull && hull->get_header().file_name.empty()) return true;
+		if (domain && domain->get_header().file_name.empty()) return true;
+		if (mesh && mesh->get_header().file_name.empty()) return true;
+		if (amplification && amplification->get_header().file_name.empty()) return true;
+		return false;
+	}
 
+	ComputePipelineState::ComputePipelineState(const ComputePipelineStateDesc& _desc, std::string cache) : desc(_desc)
+	{
+		this->cache = cache;
+		on_change();
+		register_shader(desc.shader);
+	}
+
+	void LibraryObject::export_shader(std::wstring name, std::wstring as)
+	{
+		exports[name] = as;
+	}
+
+	HAL::shader_identifier StateObject::identify(void* data)
+	{
+		HAL::shader_identifier result;
+		std::memcpy(result.data(), data, result.size());
+		return result;
+	}
+
+	StateObject::StateObject(StateObjectDesc& _desc) : desc(_desc)
+	{
+		for (auto& l : desc.libraries)
+		{
+			register_shader(l.library);
+		}
+		for (auto& c : desc.collections)
+		{
+			c->event_change.register_handler(this, [this]()
+				{
+					on_change();
+				});
+		}
+		on_change();
+	}
 
 }

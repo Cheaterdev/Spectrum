@@ -60,13 +60,13 @@ export namespace HAL
 		void init_managers();
 		void stop_all();
 
-		const HAL::DeviceProperties& get_properties() const { return properties; }
+		const HAL::DeviceProperties& get_properties() const;
 		ContextGenerator context_generator;
 		std::shared_ptr<CommandList> get_upload_list();
 
 		std::shared_ptr<HAL::Queue>& get_queue(HAL::CommandListType type);
 
-		bool is_rtx_supported() { return rtx; }
+		bool is_rtx_supported();
 
 		mutable bool alive = true;
 

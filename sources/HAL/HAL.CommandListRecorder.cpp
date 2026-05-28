@@ -458,4 +458,8 @@ namespace HAL
 			list.read_texture(resource, offset, box, sub_resource, target, layout);
 			});
 	}
+
+	const API::CommandList& DelayedCommandList::get_list() const { return list; }
+	bool DelayedCommandList::is_compiled() const { return compiled; }
+	const std::vector<CommandRecord>& DelayedCommandList::get_debug_records() const { return debug_recorder.get(); }
 }

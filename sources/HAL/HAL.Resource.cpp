@@ -62,9 +62,54 @@ namespace HAL
 			}, data.desc);
 
 		load_waiter = Device::get().get_ds_queue().execute(request);
-		
+
 		Device::get().get_ds_queue().flush();
 		load_waiter.wait();
+	}
+
+	Resource::Resource() : state_manager(this), tiled_manager(this) {}
+
+	bool Resource::is_ready() const
+	{
+		return load_waiter.is_completed();
+	}
+
+	ResourceType Resource::get_type() const
+	{
+		if (desc.is_buffer())
+			return ResourceType::Buffer;
+
+		return ResourceType::Texture;
+	}
+
+	const ResourceDesc& Resource::get_desc() const
+	{
+		return desc;
+	}
+
+	ResourceStateManager& Resource::get_state_manager()
+	{
+		return state_manager;
+	}
+
+	TiledResourceManager& Resource::get_tiled_manager()
+	{
+		return tiled_manager;
+	}
+
+	std::shared_ptr<Resource> Resource::get_tracked()
+	{
+		return get_ptr<Resource>();
+	}
+
+	void Resource::disable_state_tracking()
+	{
+		desc.Flags |= ResFlags::DisableStateTracking;
+	}
+
+	HeapType Resource::get_heap_type() const
+	{
+		return heap_type;
 	}
 
 }

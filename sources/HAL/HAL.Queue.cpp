@@ -291,8 +291,10 @@ namespace HAL
 	   
 
 		void Queue::run(std::function<void()> f)
-		{				
+		{
 			std::unique_lock<std::mutex> lock(submit_mutex);
 			gpu_execute_thread.enqueue(f);
 		}
+
+	UINT64 Queue::get_frequency() const { return frequency; }
 }

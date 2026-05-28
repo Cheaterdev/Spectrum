@@ -22,7 +22,7 @@ export{
 
 	namespace HAL
 	{
-	
+
 		class CommandListBase : public StateContext, public GPUEntityStorageProxy
 		{
 		protected:
@@ -33,10 +33,7 @@ export{
 
 			std::list<TrackedObject::ptr> tracked_resources;
 			FenceWaiter dstorage_fence;
-			DelayedCommandList* get_native_list()
-			{
-				return &compiler;
-			}
+			DelayedCommandList* get_native_list();
 		public:
 			FrameResources::ptr frame_resources;
 			DelayedCommandList compiler;
@@ -44,7 +41,6 @@ export{
 			void track_object(T& obj)
 			{
 				auto& state = obj.ObjectState<TrackedObjectState>::get_state(this);
-//				ASSERT(!state.alias_ended);
 				if (!state.used)
 				{
 					state.used = true;
@@ -57,17 +53,10 @@ export{
 				}
 			}
 
-			void free_tracked_objects()
-			{
-				tracked_resources.clear();
-				dstorage_fence = FenceWaiter();
-			}
+			void free_tracked_objects();
 			virtual ~CommandListBase() = default;
 
-			CommandListType get_type()
-			{
-				return type;
-			}
+			CommandListType get_type();
 		};
 
 		class TransitionCommandList;
@@ -76,8 +65,6 @@ export{
 		class Transitions : public virtual CommandListBase
 		{
 			std::list<HAL::Resource*> used_resources;
-
-			//		std::shared_ptr<TransitionCommandList> transition_list;
 
 			friend class SignatureDataSetter;
 			friend class Sendable;
@@ -89,7 +76,7 @@ export{
 			std::list<HAL::UsagePoint> usage_points;
 			std::set<Resource*> need_check_transitions;
 			void create_usage_point(BarrierSync operation, bool end = true);
-		
+
 		public://temporarily to allow transition into read mode
 			void transition(const HAL::Resource* resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
 			void transition(const HAL::Resource::ptr& resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
@@ -100,13 +87,9 @@ export{
 			void free_resources();
 			 bool transitions_compiled = false;
 			UINT transition_count = 0;
-			//	UsagePoint* start_transition;
 			HAL::ResourceUsage* add_usage(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST);
 
-			inline HAL::UsagePoint* get_last_usage_point()
-			{
-				return &usage_points.back();
-			}
+			HAL::UsagePoint* get_last_usage_point();
 
 			void use_resource(const HAL::Resource* resource);
 		public:
@@ -121,15 +104,15 @@ export{
 
 			void transition_present(const HAL::Resource* resource_ptr);
 
-			void transition(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE)   ;
-			void stop_using(const ResourceInfo& info)	  ;
+			void transition(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE);
+			void stop_using(const ResourceInfo& info);
 		};
 
 
 
 		class GPUTimer :public GPUTimerInterface
 		{
-		public://		friend class GPUTimeManager;
+		public:
 
 			QueryHandle querys;
 
@@ -156,12 +139,12 @@ export{
 		{
 			Device& device;
 
-			
+
 		public:
 			using ptr = std::shared_ptr<GPUBlock>;
 					 GPUTimer gpu_timer;
 
-			GPUBlock(std::wstring_view name, TimedBlock* parent, Device& device) :TimedBlock(name, parent), device(device) {}
+			GPUBlock(std::wstring_view name, TimedBlock* parent, Device& device);
 			void start(Eventer* list);
 
 			void end(Eventer* list);
@@ -172,7 +155,7 @@ export{
 		{
 			friend class GPUBlock;
 			std::list< GPUBlock::ptr> gpu_timers;
-		
+
 			TimedBlock* current;
 			bool started = false;
 			virtual  void on_start(Timer* timer) override;
@@ -187,7 +170,7 @@ export{
 			void begin(std::wstring_view name);
 		public:
 			void end();
-			Eventer(Device& device) {}
+			Eventer(Device& device);
 			static thread_local Eventer* thread_current;
 
 			virtual Timer start(std::wstring_view name)override;
@@ -283,13 +266,7 @@ export{
 		public:
 			void end();
 
-			void update_tilings(HAL::update_tiling_info&& info)
-			{
-				tile_updates.emplace_back(std::move(info));
-
-				track_object(*(info.resource));
-			}
-
+			void update_tilings(HAL::update_tiling_info&& info);
 
 			void setup_debug(SignatureDataSetter*);
 			void print_debug();
@@ -300,10 +277,7 @@ export{
 			ComputeContext& get_compute();
 			CopyContext& get_copy();
 
-			const std::vector<CommandRecord>& get_debug_records() const
-			{
-				return compiler.get_debug_records();
-			}
+			const std::vector<CommandRecord>& get_debug_records() const;
 
 			void discard(HAL::Resource* resource);
 
@@ -312,13 +286,7 @@ export{
 			void begin(std::wstring_view name = L"");
 
 
-			void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
-			{
-				create_usage_point(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
-				transition(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
-				compiler.clear_uav(h, ClearColor);
-				create_usage_point(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW, false);
-			}
+			void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0));
 
 		};
 
@@ -331,7 +299,7 @@ export{
 			CommandList& base;
 			DelayedCommandList* list;
 
-			CopyContext(CommandList& base) :base(base), list(base.get_native_list()) {}
+			CopyContext(CommandList& base);
 			CopyContext(const CopyContext&) = delete;
 			CopyContext(CopyContext&&) = delete;
 
@@ -341,7 +309,7 @@ export{
 		public:
 			// todo: make it better
 			std::future<bool> read_buffer(HAL::Resource* resource, uint64 offset, UINT64 size, std::function<void(std::span<std::byte>)>);
-	
+
 		public:
 			void copy_resource(HAL::Resource* dest, HAL::Resource* source);
 			void copy_resource(const HAL::Resource::ptr& dest, const HAL::Resource::ptr& source);
@@ -356,7 +324,7 @@ export{
 
 			void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 
-		
+
 
 			std::future<bool> read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
 
@@ -373,7 +341,7 @@ export{
 
 			}
 
-				
+
 			template<class T>
 			std::future<bool> read(HAL::StructuredBufferView<T>& view, uint64 offset, UINT64 count, std::function<void(std::span<T>)> f)
 			{
@@ -388,7 +356,7 @@ export{
 					});
 
 			}
-			
+
 				template<class T>
 			std::future<bool> read_counter(HAL::StructuredBufferView<T>& view, std::function<void(uint)> f)
 			{
@@ -427,68 +395,28 @@ export{
 			UsedSlots used_slots;
 		protected:
 			CommandList& base;
-			SignatureDataSetter(CommandList& base) :base(base) {
-				tables.resize(32); // !!!!!!!!!!!
-			}
+			SignatureDataSetter(CommandList& base);
 
 
 			virtual void set_const_buffer(UINT i, UINT offset, UINT v) = 0;
 
 			void stop_using(uint id);
-			void reset_tables()
-			{
-				root_sig = nullptr;
-				for (auto& table : tables)
-				{
-					table.const_buffer = CBVHandle();
-					table.resources.clear();
-					table.descriptors.clear();
-					table.dirty = false;
-				}
-			}
-			//	public:
+			void reset_tables();
+
 			void commit_tables(BarrierSync operation, UsedSlots* slots = nullptr);
 			virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
 
-
-				void set_cb(UINT index, const CBVHandle& cb, BarrierSync operation)
-			{
-				get_base().transition(cb.get_resource_info(), operation);
-				set_const_buffer(index, 0, cb.get_offset());
-			}
-
+			void set_cb(UINT index, const CBVHandle& cb, BarrierSync operation);
 
 		public:
 
-			void reset()
-			{
-				used_slots.clear();
-				tables.clear();
-				tables.resize(32);
+			void reset();
 
-			}
-			CommandList& get_base() {
-				return base;
-			}
+			CommandList& get_base();
 
-			void set_signature(const RootSignature::ptr& signature)
-			{
-				if (root_sig == signature) return;
+			void set_signature(const RootSignature::ptr& signature);
 
-				root_sig = signature;
-
-				auto& desc = signature->get_desc();
-
-				on_set_signature(signature);
-			}
-
-
-			void set_signature(Layouts layout)
-			{
-				set_signature(HAL::Device::get().get_engine_pso_holder().GetSignature(layout));
-			}
-
-
+			void set_signature(Layouts layout);
 
 			void set_pipeline(std::shared_ptr<PipelineStateBase> pipeline);
 
@@ -498,7 +426,7 @@ export{
 				set_pipeline(Device::get().get_engine_pso_holder().GetPSO<T>(k));
 			}
 
-		
+
 
 			template<class T>void set(const T& compiled)
 			{
@@ -511,13 +439,11 @@ export{
 				stop_using(Compiled::Slot::ID);
 				auto& table = tables[Compiled::Slot::ID];
 				table.slot_id = Compiled::ID;
-				//	ASSERT(!table.dirty);
 				table.dirty = true;
 
 				table.const_buffer = compiled.const_buffer;
 				table.resources = compiled.resources;
 				table.descriptors = compiled.descriptors;
-				//	compiled.set_tables(*this);
 			}
 
 		};
@@ -546,8 +472,7 @@ export{
 
 			DelayedCommandList* list;
 
-			GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {
-			}
+			GraphicsContext(CommandList& base);
 			GraphicsContext(const GraphicsContext&) = delete;
 			GraphicsContext(GraphicsContext&&) = delete;
 
@@ -570,13 +495,10 @@ export{
 			void on_set_signature(const RootSignature::ptr&) override;
 
 			void validate();
-				void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
+			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
 
 		public:
-			std::vector<HAL::Format> get_formats() const
-			{
-				return compiled_rt.get_formats();
-			}
+			std::vector<HAL::Format> get_formats() const;
 
 			template<SIG_TYPES::RT RT>
 			CompiledRT set_rtv(const RT& rt, RTOptions options = RTOptions::Default, float depth = 0, uint stencil = 0)
@@ -591,18 +513,9 @@ export{
 
 			void set_rtv(const CompiledRT& rt, RTOptions options = RTOptions::Default, float depth = 0, uint stencil = 0);
 
-			CommandList& get_base()
-			{
-				return base;
-			}
+			CommandList& get_base();
 
-			void set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST, bool adjusted = false, uint controlpoints = 0)
-			{
-				list->set_topology(topology, feedType, adjusted, controlpoints);
-			}
-
-
-
+			void set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST, bool adjusted = false, uint controlpoints = 0);
 
 			void set_scissor(sizer_long rect);
 			void set_viewport(Viewport viewport);
@@ -612,32 +525,20 @@ export{
 
 			void dispatch_mesh(ivec3 v);
 			void dispatch_mesh(DispatchMeshArguments args);
-		
-			void set_stencil_ref(UINT ref)
-			{
-				list->set_stencil_ref(ref);
-			}
 
-			std::vector<Viewport> get_viewports()
-			{
-				return viewports;
-			}
+			void set_stencil_ref(UINT ref);
 
-			void set_index_buffer(HAL::Views::IndexBuffer view)
-			{
-				index = view;
+			std::vector<Viewport> get_viewports();
 
-			}
-
-
+			void set_index_buffer(HAL::Views::IndexBuffer view);
 
 			void draw(UINT vertex_count, UINT vertex_offset = 0, UINT instance_count = 1, UINT instance_offset = 0);
 			void draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count = 1, UINT instance_offset = 0);
-		
 
-			
+
+
 			template<IndirectCommandType T>
-			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0  )
+			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0)
 			{
 				execute_indirect(
 						Device::get().get_engine_pso_holder().GetCommand(T::CommandID),
@@ -654,7 +555,6 @@ export{
 
 
 
-
 		class ComputeContext : public SignatureDataSetter
 		{
 			friend class CommandList;
@@ -662,12 +562,11 @@ export{
 
 			DelayedCommandList* list;
 
-			ComputeContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {}
+			ComputeContext(CommandList& base);
 			ComputeContext(const ComputeContext&) = delete;
 			ComputeContext(ComputeContext&&) = delete;
 
 
-			//	std::shared_ptr<ComputePipelineState> current_compute_pipeline;
 			std::shared_ptr<RootSignature> current_compute_root_signature;
 
 			void begin();
@@ -684,11 +583,8 @@ export{
 
 		public:
 
-			CommandList& get_base()
-			{
-				return base;
-			}
-			
+			CommandList& get_base();
+
 			template<class T>
 			void clear(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
@@ -707,10 +603,9 @@ export{
 			void dispatch2(ivec2, ivec2 = ivec2(4, 4));
 
 
-				void dispatch_graph(ResourceAddress addr);
-				void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
+			void dispatch_graph(ResourceAddress addr);
+			void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
 
-			
 
 
 			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom);
@@ -732,7 +627,7 @@ export{
 
 
 			template<class T>
-			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0  )
+			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0)
 			{
 				execute_indirect(
 						Device::get().get_engine_pso_holder().GetCommand(T::CommandID),
@@ -753,39 +648,25 @@ export{
 
 		public:
 			using ptr = std::shared_ptr<TransitionCommandList>;
-			inline CommandListType get_type() { return type; }
+			CommandListType get_type();
 			TransitionCommandList(CommandListType type);
 			void create_transition_list(FrameResources& frame, const HAL::Barriers& transitions);
 
-			const API::CommandList& get_compiled() const { return compiler.get_list(); }
+			const API::CommandList& get_compiled() const;
 
-			void end() override {}
-			void on_execute()
-			{
-
-				for (auto&& t : on_execute_funcs)
-					t();
-
-				on_execute_funcs.clear();
-
-				Eventer::reset();
-
-
-				HAL::Device::get().context_generator.free(this);
-			}
-
-
+			void end() override;
+			void on_execute();
 		};
 	}
 
 	namespace Helpers
 	{
-	template<class T>
+		template<class T>
 			 auto make_buffer(std::span<T> v)
 			{
 				HAL::StructuredBufferView<T> buffer(v.size());
 
-	auto list = (HAL::Device::get().get_upload_list());
+		auto list = (HAL::Device::get().get_upload_list());
 			list->get_copy().update(buffer, 0, v);
 			list->execute_and_wait();
 

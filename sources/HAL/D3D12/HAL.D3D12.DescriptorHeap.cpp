@@ -11,6 +11,9 @@ import Core;
 namespace HAL
 {
 
+	Descriptor::Descriptor(DescriptorHeap& heap, uint offset) : heap(heap), offset(offset) {}
+
+
 
 	void Descriptor::place(const Views::ShaderResource& view)
 	{

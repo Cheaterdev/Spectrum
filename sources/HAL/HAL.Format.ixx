@@ -17,9 +17,7 @@ export namespace HAL
 
 	class Format
 	{
-		Format(NativeFormat native_format) :native_format(Formats(static_cast<uint>(native_format))) {
-
-		}
+		Format(NativeFormat native_format);
 	public:
 		enum Formats :uint
 		{
@@ -127,33 +125,17 @@ export namespace HAL
 
 		using EnumClass = Formats;
 
-		Format(Formats f) : native_format(f)
-		{
-
-		}
+		Format(Formats f);
 		Format() = default;
 
-		operator Formats()
-		{
-			return native_format;
-		}
+		operator Formats();
 		uint size() const;
 
-		bool operator==(const Formats& v) const
-		{
-
-			return native_format == v;
-		}
-		bool operator==(const Format& r) const	{
-
-			return native_format == r.native_format;
-		}
+		bool operator==(const Formats& v) const;
+		bool operator==(const Format& r) const;
 		std::strong_ordering operator<=>(const Format& r)  const = default;
 
-		uint get_native() const
-		{
-			return native_format;
-		}
+		uint get_native() const;
 
 		bool is_shader_visible() const;
 		bool is_srgb() const;
@@ -168,10 +150,7 @@ export namespace HAL
 
 		SurfaceInfo  surface_info(uint2 size)const;
 
-		std::string to_string()
-		{
-			return std::string(magic_enum::enum_name(native_format));
-		}
+		std::string to_string();
 	private:
 		Formats native_format = Formats::UNKNOWN;
 

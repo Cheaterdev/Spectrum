@@ -8,10 +8,9 @@ namespace HAL {
 	void TiledResourceManager::map_buffer_part(update_tiling_info& target, size_t offset, size_t size)
 	{
 		size_t begin = Math::AlignDown(offset, 64 * 1024) / (64 * 1024);
-		size_t end = Math::roundUp(offset + size, 64 * 1024) / (64 * 1024)-1;
+		size_t end = Math::roundUp(offset + size, 64 * 1024) / (64 * 1024) - 1;
 
 		load_tiles_internal(target, { begin,0,0 }, { end,0,0 }, 0, false);
-		//load_tiles(target, { begin,0,0 }, { end,0,0 });
 	}
 
 	void TiledResourceManager::load_tile(update_tiling_info& target, uint3 pos, uint subres, bool recursive)
@@ -345,6 +344,26 @@ namespace HAL {
 			}
 		}
 	}
-}
 
+
+	// Implementations moved from HAL.TiledMemoryManager.ixx
+
+	void update_tiling_info::add_tile(ResourceTile tile)
+	{
+		tiles[tile.heap_position.heap.get()].push_back(tile);
+	}
+
+	TiledResourceManager::TiledResourceManager(Resource* resource) : resource(resource) {}
+
+	bool TiledResourceManager::is_tiled() const
+	{
+		return !tiles.empty();
+	}
+
+	bool TiledResourceManager::is_mapped(uint3 pos, uint subres) const
+	{
+		return !!tiles[subres][pos].heap_position.heap;
+	}
+
+}
 

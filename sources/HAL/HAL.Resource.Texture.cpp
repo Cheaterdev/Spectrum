@@ -37,6 +37,31 @@ namespace HAL
 		return data;
 	}
 
+	void TextureResource::init() {}
+
+	TextureResource::TextureResource(const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value)
+		: Resource(desc, heap_type, initialLayout, clear_value)
+	{
+		init();
+	}
+
+	TextureResource::TextureResource(const ResourceDesc& desc, PlacementAddress handle)
+		: Resource(desc, handle)
+	{
+		init();
+	}
+
+	TextureResource::TextureResource(const ResourceDesc& desc, ResourceHandle handle, bool own)
+		: Resource(desc, handle, own)
+	{
+		init();
+	}
+
+	TextureResource::TextureResource(const D3D::Resource& resouce, TextureLayout initialLayout)
+		: Resource(resouce, initialLayout)
+	{
+		init();
+	}
 
 }
 

@@ -30,14 +30,8 @@ export namespace HAL
 		std::vector<UINT64> read_back_data;
 
 
-		std::shared_ptr<QueryHeap> get_tracked()
-		{
-			return get_ptr<QueryHeap>();
-		}
-		size_t get_size()
-		{
-			return desc.Count;
-		}
+		std::shared_ptr<QueryHeap> get_tracked();
+		size_t get_size();
 	};
 
 	struct QueryContext
@@ -55,17 +49,10 @@ export namespace HAL
 	class QueryHeapFactory :public Allocators::HeapFactory<QueryContext, GlobalAllocationPolicy>
 	{
 		Device& device;
-		virtual ptr_type make_heap(QueryType type, size_t size) override
-		{
-			QueryHeapDesc desc = { static_cast<uint>(size) , type };
-			return std::make_shared<HAL::QueryHeap>(device, desc);
-		}
+		virtual ptr_type make_heap(QueryType type, size_t size) override;
 
 	public:
-		QueryHeapFactory(Device& device) :device(device)
-		{
-
-		}
+		QueryHeapFactory(Device& device);
 
 	};
 	template<class AllocationPolicy>

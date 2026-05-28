@@ -56,9 +56,29 @@ namespace HAL
 			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
 		}
 
-		gpu_address = ResourceAddress{ this,0 };
-
+		gpu_address = ResourceAddress{ this, 0 };
 	}
+
+	Buffer::Buffer(const ResourceDesc& desc, HeapType heap_type)
+		: Resource(desc, heap_type, TextureLayout::UNDEFINED, vec4(0, 0, 0, 0))
+	{
+		init();
+	}
+
+	Buffer::Buffer(const ResourceDesc& desc, PlacementAddress handle)
+		: Resource(desc, handle)
+	{
+		init();
+	}
+
+	Buffer::Buffer(const ResourceDesc& desc, ResourceHandle handle, bool own)
+		: Resource(desc, handle, own)
+	{
+		init();
+	}
+
+	uint64 Buffer::get_size() const { return get_desc().as_buffer().SizeInBytes; }
+	ResourceAddress Buffer::get_resource_address() const { return gpu_address; }
 
 }
 

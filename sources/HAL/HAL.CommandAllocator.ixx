@@ -16,7 +16,7 @@ export{
 		public:
 			CommandAllocator(CommandListType type);
 			void reset();
-			CommandListType get_type() const { return type; }
+			CommandListType get_type() const;
 		};
 
 	}

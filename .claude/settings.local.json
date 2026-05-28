@@ -27,7 +27,12 @@
       "Bash(generate_sigs.bat)",
       "Bash(cmd /c \"C:\\\\github\\\\Spectrum\\\\generate_project.bat\")",
       "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\18\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\amd64\\\\MSBuild.exe\" \"C:\\\\github\\\\Spectrum\\\\projects\\\\core\\\\core.vcxproj\" /p:Configuration=vs2026_Release_Win64_Debug /p:Platform=x64 /m /nologo 2>&1)",
-      "Bash(cmd /c generate_project.bat)"
+      "Bash(cmd /c generate_project.bat)",
+      "Bash(grep -n \"sources\\\\\\\\\\\\\\\\HAL\\\\\\\\\\\\\\\\HAL\\\\.\" \"C:\\\\github\\\\Spectrum\\\\projects\\\\hal\\\\hal.vcxproj\")",
+      "Bash(grep -n \"sources/HAL/HAL\\\\.\\\\|sources\\\\\\\\\\\\\\\\HAL\\\\\\\\\\\\\\\\HAL\\\\.\" \"C:\\\\github\\\\Spectrum\\\\projects\\\\hal\\\\hal.vcxproj\")",
+      "Bash(git show *)",
+      "Read(//tmp/**)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\18\\\\Insiders\\\\MSBuild\\\\Current\\\\Bin\\\\amd64\\\\MSBuild.exe\" \"C:\\\\github\\\\Spectrum\\\\projects\\\\hal\\\\hal.vcxproj\" /p:Configuration=\"vs2026_Release_Win64_Debug\" /p:Platform=x64 /t:Build /m /v:minimal)"
     ]
   }
 }

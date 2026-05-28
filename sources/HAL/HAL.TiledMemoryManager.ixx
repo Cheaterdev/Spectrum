@@ -24,10 +24,7 @@ export
 			uint source_subres;
 			uint target_subres;
 
-			void add_tile(ResourceTile tile)
-			{
-				tiles[tile.heap_position.heap.get()].push_back(tile);
-			}
+			void add_tile(ResourceTile tile);
 		};
 
 		class TiledResourceManager
@@ -47,15 +44,14 @@ export
 
 		protected:
 			uint3 tile_shape;
-			//virtual	ComPtr<ID3D12Resource>& get_d3d_resource() = 0;
 			void load_tiles_internal(update_tiling_info& target, uint3 from, uint3 to, uint subres, bool recursive);
 
 			static void commit(update_tiling_info& info, CommandList* list);
 
-	
-		public:		TiledResourceManager(Resource* resource) :resource(resource) {}void init_tilings();
+		public:
+			TiledResourceManager(Resource* resource);
+			void init_tilings();
 
-			
 			HAL::HeapType tile_heap_type = HAL::HeapType::DEFAULT;
 			void load_tile(update_tiling_info& target, uint3 pos, uint subres, bool recursive);
 			void zero_tile(update_tiling_info& target, uint3 pos, uint subres);
@@ -63,10 +59,7 @@ export
 
 			void load_packed(update_tiling_info& target);
 
-			bool is_tiled() const
-			{
-			return !tiles.empty();
-			}
+			bool is_tiled() const;
 
 			uint3 get_tiles_count(int mip_level = 0);
 			uint3 get_tile_shape();
@@ -93,10 +86,7 @@ export
 			void zero_tiles(CommandList* list, std::list<uint3>& tiles);
 			void zero_tiles(CommandList& list);
 
-			inline bool is_mapped(uint3 pos, uint subres) const
-			{
-				return !!tiles[subres][pos].heap_position.heap;
-			}
+			bool is_mapped(uint3 pos, uint subres) const;
 
 			void copy_mappings(CommandList& list, uint3 target_pos, Resource* source, uint3 source_pos, uint3 size);
 

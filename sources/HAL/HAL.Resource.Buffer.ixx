@@ -30,26 +30,15 @@ export{
 			ResourceAddress gpu_address;
 			Buffer() = default;
 
-			Buffer(const ResourceDesc& desc, HeapType heap_type) : Resource(desc, heap_type, TextureLayout::UNDEFINED, vec4(0, 0, 0, 0)) {
-
-				init();
-
-			}
-			Buffer(const ResourceDesc& desc, PlacementAddress handle) : Resource(desc, handle) { init(); }
-			Buffer(const ResourceDesc& desc, ResourceHandle handle, bool own = false) : Resource(desc, handle, own) { init(); }
+			Buffer(const ResourceDesc& desc, HeapType heap_type);
+			Buffer(const ResourceDesc& desc, PlacementAddress handle);
+			Buffer(const ResourceDesc& desc, ResourceHandle handle, bool own = false);
 			// TODO:: works only for buffer now
-			uint64 get_size() const
-			{
-				return get_desc().as_buffer().SizeInBytes;// desc.BufferDesc.desc.get<BufferDesc>
-			}
+			uint64 get_size() const;
 
 			std::span<std::byte> cpu_data() const;
 
-
-			ResourceAddress get_resource_address() const
-			{
-				return gpu_address;
-			}
+			ResourceAddress get_resource_address() const;
 
 			virtual ~Buffer();
 		private:

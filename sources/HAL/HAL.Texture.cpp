@@ -209,5 +209,9 @@ namespace HAL
 		return texture;
 	}
 
+	const ResourceDesc& Texture::get_desc() const { return resource->get_desc(); }
+	Texture2DView& Texture::texture_2d() { return texture_2d_view; }
+	Texture3DView& Texture::texture_3d() { return texture_3d_view; }
+	CubeView& Texture::cube() { return cube_view; }
 
 }

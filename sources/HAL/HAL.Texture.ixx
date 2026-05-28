@@ -59,19 +59,16 @@ export
 
 			void init();
 		public:
-				const ResourceDesc& get_desc() const
-			{
-				return resource->get_desc();
-			}
-			 HAL::TextureResource::ptr resource;
+			const ResourceDesc& get_desc() const;
+			HAL::TextureResource::ptr resource;
 
-			  HAL::TextureResource::ptr feedback;
+			HAL::TextureResource::ptr feedback;
 			using ptr = s_ptr<Texture>;
 
 			ivec3 get_size(int mip = 0);
-		Texture2DView& texture_2d() { return texture_2d_view; }
-			Texture3DView& texture_3d() { return texture_3d_view; }
-			CubeView& cube() { return cube_view; }
+			Texture2DView& texture_2d();
+			Texture3DView& texture_3d();
+			CubeView& cube();
 
 			static ptr load_native(const texure_header& header, resource_file_depender& depender);
 

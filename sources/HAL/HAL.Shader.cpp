@@ -108,10 +108,13 @@ namespace HAL
 	}
 
 
-	void library_shader::init()
-	{
-
-	}
-
-
+	void library_shader::init() {}
+	void pixel_shader::init() {}
+	void geometry_shader::init() {}
+	void vertex_shader::init() {}
+	void hull_shader::init() {}
+	void domain_shader::init() {}
+	void compute_shader::init() {}
+	void mesh_shader::init() {}
+	void amplification_shader::init() {}
 }

@@ -14,10 +14,7 @@ export
 		{
 			std::variant<HAL::Views::Null, HAL::Views::DepthStencil, HAL::Views::UnorderedAccess, HAL::Views::ShaderResource, HAL::Views::RenderTarget, HAL::Views::ConstantBuffer> view = HAL::Views::Null();
 
-			bool is_valid() const
-			{
-				return view.index() != 0;
-			}
+			bool is_valid() const;
 			ResourceInfo() = default;
 
 			template<HAL::Views::ViewTemplate T>
@@ -45,10 +42,7 @@ export
 			{
 
 			}
-			ResourceInfo& get_resource_info(uint offset)
-			{
-				return resources[offset];
-			}
+			ResourceInfo& get_resource_info(uint offset);
 			uint get_size();
 
 		};
@@ -81,51 +75,15 @@ export
 
 			DescriptorHeapStorage() = default;
 
-			DescriptorHeapStorage(const  DescriptorHeapHandle &handle):handle(handle)
-			{
-				
-			}
-			~DescriptorHeapStorage()
-			{
-				if(handle.CanFree())
-				{
-					auto &heap = *get_heap();
+			DescriptorHeapStorage(const DescriptorHeapHandle& handle);
+			~DescriptorHeapStorage();
 
-					for(uint i=0;i<get_count();i++)
-					{
-						heap.get_resource_info(get_offset()+i) = HAL::Views::Null();
-					}
-					handle.Free();
-				}
-				
-			}
-
-			HAL::DescriptorHeap::ptr get_heap() const
-			{
-				return handle.get_heap();
-			}
-
-			bool is_valid() const
-			{
-				return handle;
-			}
-			uint get_offset() const
-			{
-				return static_cast<uint>(handle.get_offset());
-			}
-			uint get_count() const
-			{
-				return static_cast<uint>(handle.get_size());
-			}
-			
-			bool can_free() const
-			{
-				return handle.CanFree();
-			}
-				std::shared_ptr<DescriptorHeapStorage> get_tracked()
-			{
-				return get_ptr<DescriptorHeapStorage>();
-			}
+			HAL::DescriptorHeap::ptr get_heap() const;
+			bool is_valid() const;
+			uint get_offset() const;
+			uint get_count() const;
+			bool can_free() const;
+			std::shared_ptr<DescriptorHeapStorage> get_tracked();
 
 
 		};
@@ -136,60 +94,33 @@ export
 		{
 		
 			Handle() = default;
-			Handle(std::shared_ptr<DescriptorHeapStorage> storage,UINT offset):storage(storage),offset(offset){}
+			Handle(std::shared_ptr<DescriptorHeapStorage> storage, UINT offset);
 			ResourceInfo& get_resource_info() const;
 
-			bool is_valid() const
-			{
-				return storage && (offset != std::numeric_limits<uint>::max());
-			}
+			bool is_valid() const;
 
 			operator bool() const;
 
-
-			bool operator!=(const Handle& r)
-			{
-				if (offset != r.offset) return true;
-				return false;
-			}
+			bool operator!=(const Handle& r);
 
 			void place(const Handle& r) const;
 
 			template<HAL::Views::ViewTemplate T>
 			void operator=(const T& v);
 
-			uint get_count() const
-			{
-				if (!storage) return 0;
-				ASSERT(offset == 0);
-				return storage->get_count();
-			}
+			uint get_count() const;
 
-			void operator=(const Handle& r)
-			{
-				//				ASSERT(r.heap);
-				storage = r.storage;
-				offset = r.offset;
-			}
+			void operator=(const Handle& r);
+
 			D3D12_CPU_DESCRIPTOR_HANDLE get_cpu() const;
 
-			D3D12_GPU_DESCRIPTOR_HANDLE get_gpu()const;
-			Handle operator[](uint i) const
-			{
-				ASSERT(offset == 0);
-				ASSERT(i<storage->get_count());
+			D3D12_GPU_DESCRIPTOR_HANDLE get_gpu() const;
 
-				return Handle( storage ,i);
-			}
-			inline uint get_offset()const
-			{
-				return storage->get_offset() + offset;
-			}
+			Handle operator[](uint i) const;
 
-			std::shared_ptr<DescriptorHeapStorage> get_storage()const
-			{
-				return storage;
-			}
+			uint get_offset() const;
+
+			std::shared_ptr<DescriptorHeapStorage> get_storage() const;
 		protected:
 			std::shared_ptr<DescriptorHeapStorage> storage;
 			UINT offset = std::numeric_limits<uint>::max();
@@ -204,8 +135,7 @@ export
 
 			TypedHandle() = default;
 			TypedHandle(std::shared_ptr<DescriptorHeapStorage> storage, UINT offset) :Handle(storage, offset) {}
-			//TypedHandle(const TypedHandle& h) :Handle(h){}
-			TypedHandle(const Handle& h) :Handle(h){}
+			TypedHandle(const Handle& h) :Handle(h) {}
 		
 			TypedHandle operator[](uint i) const
 			{
@@ -230,21 +160,6 @@ export
 
 
 
-		D3D12_CPU_DESCRIPTOR_HANDLE Handle::get_cpu()const
-		{
-			auto& heap = *storage->get_heap();
-
-			return heap[get_offset()].get_cpu();
-		}
-
-		D3D12_GPU_DESCRIPTOR_HANDLE Handle::get_gpu()const
-		{
-			auto& heap = *storage->get_heap();
-
-			return heap[get_offset()].get_gpu();
-		}
-
-
 		template<HAL::Views::ViewTemplate T>
 		void Handle::operator=(const T& v)
 		{
@@ -265,35 +180,12 @@ export
 			ptr_type gpu_cbv_srv_uav;
 
 			Device& device;
-			virtual ptr_type make_heap(DescriptorHeapIndex index, size_t size) override
-			{
-				if(check(index.flags& DescriptorHeapFlags::ShaderVisible))
-				{
-					if(index.type== DescriptorHeapType::CBV_SRV_UAV)
-						return gpu_cbv_srv_uav;
-					else
-						return gpu_sampler;
-				}
-				ASSERT(index.type != DescriptorHeapType::CBV_SRV_UAV);
-				return std::make_shared<HAL::DescriptorHeap>(device, static_cast<uint>(size), index.type, index.flags);
-			}
+			virtual ptr_type make_heap(DescriptorHeapIndex index, size_t size) override;
 
 		public:
-			DescriptorHeapFactory(Device& device) :device(device)
-			{
-				gpu_sampler = std::make_shared<HAL::DescriptorHeap>(device, 2048, DescriptorHeapType::SAMPLER, DescriptorHeapFlags::ShaderVisible);
-				gpu_cbv_srv_uav = std::make_shared<HAL::DescriptorHeap>(device, 65536 * 8, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::ShaderVisible);
-
-			}
-			ptr_type get_sampler_heap()
-			{
-				return gpu_sampler;
-			}
-
-			ptr_type get_cbv_srv_uav_heap()
-			{
-				return gpu_cbv_srv_uav;
-			}
+			DescriptorHeapFactory(Device& device);
+			ptr_type get_sampler_heap();
+			ptr_type get_cbv_srv_uav_heap();
 		};
 		template<class AllocationPolicy>
 		class DescriptorHeapPageManager :public Allocators::HeapPageManager<DescriptorHeapContext, AllocationPolicy>

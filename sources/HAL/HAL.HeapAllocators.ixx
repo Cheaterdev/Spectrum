@@ -53,21 +53,13 @@ export namespace HAL
 	};
 
 
-	class HeapFactory:public Allocators::HeapFactory<ResourceContext, GlobalAllocationPolicy>
+	class HeapFactory :public Allocators::HeapFactory<ResourceContext, GlobalAllocationPolicy>
 	{
 		Device& device;
-		virtual ptr_type make_heap(HeapIndex index, size_t size) override
-		{
-			HeapDesc desc = { size , index.type, index.memory , HeapFlags::NONE};
-			return std::make_shared<HAL::Heap>(device,desc);
-		}
+		virtual ptr_type make_heap(HeapIndex index, size_t size) override;
 
 	public:
-		HeapFactory(Device& device) :device(device)
-				{
-					
-				}
-
+		HeapFactory(Device& device);
 	};
 	
 

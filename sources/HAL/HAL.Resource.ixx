@@ -155,45 +155,19 @@ export{
 			FenceWaiter load_waiter;
 			bool debug=false;
 			bool debug_transitions = false;
-			bool is_ready() const
-			{
-				return load_waiter.is_completed();
-			}
+			bool is_ready() const;
 
-			ResourceType get_type() const
-			{
-				if(desc.is_buffer())
-					return ResourceType::Buffer;
-
-
-				return ResourceType::Texture;
-			}
-			const ResourceDesc& get_desc() const
-			{
-				return desc;
-			}
+			ResourceType get_type() const;
+			const ResourceDesc& get_desc() const;
 			ResourceHandle alloc_handle;
-			ResourceStateManager& get_state_manager()
-			{
-				return state_manager;
-			}
+			ResourceStateManager& get_state_manager();
 
-			TiledResourceManager& get_tiled_manager()
-			{
-				return tiled_manager;
-			}
+			TiledResourceManager& get_tiled_manager();
 
-			std::shared_ptr<Resource> get_tracked()
-			{
-				return get_ptr<Resource>();
-			}
+			std::shared_ptr<Resource> get_tracked();
 
-			void disable_state_tracking()
-			{
-				desc.Flags|=ResFlags::DisableStateTracking;
-			}
+			void disable_state_tracking();
 			ResourceAllocationInfo alloc_info;
-			//	std::optional<FenceWaiter> load_fence;
 			std::string name;
 			void set_name(std::string name);
 
@@ -205,14 +179,11 @@ export{
 			Resource(const ResourceDesc& desc, PlacementAddress handle);
 
 			Resource(const ResourceDesc& desc, ResourceHandle handle, bool own = false);
-			Resource() :state_manager(this), tiled_manager(this) {};
-			public:
+			Resource();
+		public:
 			virtual ~Resource();
 
-			HeapType get_heap_type() const
-			{
-				return heap_type;
-			}
+			HeapType get_heap_type() const;
 
 
 

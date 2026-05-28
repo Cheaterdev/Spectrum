@@ -86,6 +86,82 @@ namespace HAL
 
 	namespace API
 	{
+		uint Device::get_descriptor_size(DescriptorHeapType type) const
+		{
+			return descriptor_sizes[type];
+		}
+
+		HRESULT Device::get_device_removed_reason() const
+		{
+			return native_device->GetDeviceRemovedReason();
+		}
+
+		uint Device::Subresources(const ResourceDesc& desc) const
+		{
+			if (desc.is_buffer())
+				return 1;
+
+			auto texture_desc = desc.as_texture();
+			uint count = D3D12GetFormatPlaneCount(native_device.Get(), ::to_native(texture_desc.Format));
+			return texture_desc.MipLevels * texture_desc.ArraySize * count;
+		}
+
+		void Device::dump_dred()
+		{
+			ComPtr<ID3D12DeviceRemovedExtendedData>  pDred;
+			TEST(*this, native_device->QueryInterface(IID_PPV_ARGS(&pDred)));
+
+			D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT DredAutoBreadcrumbsOutput = {};
+			D3D12_DRED_PAGE_FAULT_OUTPUT DredPageFaultOutput = {};
+			TEST(*this, pDred->GetAutoBreadcrumbsOutput(&DredAutoBreadcrumbsOutput));
+			TEST(*this, pDred->GetPageFaultAllocationOutput(&DredPageFaultOutput));
+
+			auto parse_node = [](const D3D12_AUTO_BREADCRUMB_NODE& node)
+			{
+				Log::get() << node << Log::endl;
+			};
+
+			auto node = DredAutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
+
+			while (node)
+			{
+				parse_node(*node);
+				node = node->pNext;
+			}
+		}
+
+		void Device::process_result(HRESULT hr, std::string_view line) const
+		{
+			if (FAILED(hr))
+			{
+				std::string message = std::system_category().message(hr);
+				Log::get().crash_error(hr, line);
+				hr = get_device_removed_reason();
+				__debugbreak();
+				ASSERT(false);
+			}
+		}
+
+		RaytracingPrebuildInfo Device::calculateBuffers(const RaytracingBuildDescBottomInputs& desc)
+		{
+			auto inputs = to_native(desc);
+
+			inputs.NumDescs = static_cast<UINT>(inputs.descs.size());
+			inputs.pGeometryDescs = inputs.descs.data();
+
+			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
+			native_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+			return { info.ResultDataMaxSizeInBytes, info.ScratchDataSizeInBytes, info.UpdateScratchDataSizeInBytes };
+		}
+
+		RaytracingPrebuildInfo Device::calculateBuffers(const RaytracingBuildDescTopInputs& desc)
+		{
+			auto inputs = to_native(desc);
+			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
+			native_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+			return { info.ResultDataMaxSizeInBytes, info.ScratchDataSizeInBytes, info.UpdateScratchDataSizeInBytes };
+		}
+
 		Device::~Device()
 		{
 			g_bufferCompression.Reset();

@@ -48,7 +48,7 @@ namespace HAL
 
 	namespace API
 	{
-
+		GPUAddressPtr Resource::get_address() { return address; }
 
 		void Resource::init(Device& device, const ResourceDesc& _desc, const PlacementAddress& address, TextureLayout initialLayout)
 		{

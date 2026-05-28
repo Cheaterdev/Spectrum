@@ -41,7 +41,6 @@ namespace HAL {
 	{
 
 		descriptor_size = device.get_descriptor_size(type);
-		//	ASSERT(m_GPUHeap);
 
 		resources.resize(num);
 	}
@@ -320,5 +319,110 @@ f(view.Resource, ALL_SUBRESOURCES);
 			}, view);
 	}
 
+	bool ResourceInfo::is_valid() const
+	{
+		return view.index() != 0;
+	}
+
+	ResourceInfo& DescriptorHeap::get_resource_info(uint offset)
+	{
+		return resources[offset];
+	}
+
+	DescriptorHeapStorage::DescriptorHeapStorage(const DescriptorHeapHandle& handle) : handle(handle) {}
+
+	DescriptorHeapStorage::~DescriptorHeapStorage()
+	{
+		if (handle.CanFree())
+		{
+			auto& heap = *get_heap();
+			for (uint i = 0; i < get_count(); i++)
+			{
+				heap.get_resource_info(get_offset() + i) = HAL::Views::Null();
+			}
+			handle.Free();
+		}
+	}
+
+	HAL::DescriptorHeap::ptr DescriptorHeapStorage::get_heap() const { return handle.get_heap(); }
+	bool DescriptorHeapStorage::is_valid() const { return !!handle; }
+	uint DescriptorHeapStorage::get_offset() const { return static_cast<uint>(handle.get_offset()); }
+	uint DescriptorHeapStorage::get_count() const { return static_cast<uint>(handle.get_size()); }
+	bool DescriptorHeapStorage::can_free() const { return handle.CanFree(); }
+	std::shared_ptr<DescriptorHeapStorage> DescriptorHeapStorage::get_tracked() { return get_ptr<DescriptorHeapStorage>(); }
+
+	Handle::Handle(std::shared_ptr<DescriptorHeapStorage> storage, UINT offset) : storage(storage), offset(offset) {}
+
+	bool Handle::is_valid() const
+	{
+		return storage && (offset != std::numeric_limits<uint>::max());
+	}
+
+	bool Handle::operator!=(const Handle& r)
+	{
+		if (offset != r.offset) return true;
+		return false;
+	}
+
+	uint Handle::get_count() const
+	{
+		if (!storage) return 0;
+		ASSERT(offset == 0);
+		return storage->get_count();
+	}
+
+	void Handle::operator=(const Handle& r)
+	{
+		storage = r.storage;
+		offset = r.offset;
+	}
+
+	Handle Handle::operator[](uint i) const
+	{
+		ASSERT(offset == 0);
+		ASSERT(i < storage->get_count());
+		return Handle(storage, i);
+	}
+
+	uint Handle::get_offset() const
+	{
+		return storage->get_offset() + offset;
+	}
+
+	std::shared_ptr<DescriptorHeapStorage> Handle::get_storage() const { return storage; }
+
+	D3D12_CPU_DESCRIPTOR_HANDLE Handle::get_cpu() const
+	{
+		auto& heap = *storage->get_heap();
+		return heap[get_offset()].get_cpu();
+	}
+
+	D3D12_GPU_DESCRIPTOR_HANDLE Handle::get_gpu() const
+	{
+		auto& heap = *storage->get_heap();
+		return heap[get_offset()].get_gpu();
+	}
+
+	DescriptorHeapFactory::ptr_type DescriptorHeapFactory::make_heap(DescriptorHeapIndex index, size_t size)
+	{
+		if (check(index.flags & DescriptorHeapFlags::ShaderVisible))
+		{
+			if (index.type == DescriptorHeapType::CBV_SRV_UAV)
+				return gpu_cbv_srv_uav;
+			else
+				return gpu_sampler;
+		}
+		ASSERT(index.type != DescriptorHeapType::CBV_SRV_UAV);
+		return std::make_shared<HAL::DescriptorHeap>(device, static_cast<uint>(size), index.type, index.flags);
+	}
+
+	DescriptorHeapFactory::DescriptorHeapFactory(Device& device) : device(device)
+	{
+		gpu_sampler = std::make_shared<HAL::DescriptorHeap>(device, 2048, DescriptorHeapType::SAMPLER, DescriptorHeapFlags::ShaderVisible);
+		gpu_cbv_srv_uav = std::make_shared<HAL::DescriptorHeap>(device, 65536 * 8, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::ShaderVisible);
+	}
+
+	DescriptorHeapFactory::ptr_type DescriptorHeapFactory::get_sampler_heap() { return gpu_sampler; }
+	DescriptorHeapFactory::ptr_type DescriptorHeapFactory::get_cbv_srv_uav_heap() { return gpu_cbv_srv_uav; }
 
 }

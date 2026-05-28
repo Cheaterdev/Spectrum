@@ -21,13 +21,7 @@ export namespace HAL
 		uint offset;
 		uint count;
 		uint space;
-		DescriptorTable(DescriptorRange _range,
-			ShaderVisibility _visibility,
-			uint _offset,
-			uint _count, uint space = 0) : range(_range), space(space), visibility(_visibility), offset(_offset), count(_count)
-		{
-		}
-
+		DescriptorTable(DescriptorRange _range, ShaderVisibility _visibility, uint _offset, uint _count, uint space = 0);
 		DescriptorTable() = default;
 	};
 
@@ -38,12 +32,7 @@ export namespace HAL
 		uint offset;
 		uint space;
 
-		DescriptorConstBuffer(uint _offset, ShaderVisibility _visibility = ShaderVisibility::ALL,
-			uint space = 0
-		) : visibility(_visibility), offset(_offset), space(space)
-		{
-		}
-
+		DescriptorConstBuffer(uint _offset, ShaderVisibility _visibility = ShaderVisibility::ALL, uint space = 0);
 		DescriptorConstBuffer() = default;
 	};
 
@@ -53,12 +42,7 @@ export namespace HAL
 		uint offset;
 		uint space;
 
-
-		DescriptorSRV(uint _offset, ShaderVisibility _visibility = ShaderVisibility::ALL,
-			uint space = 0) : visibility(_visibility), offset(_offset), space(space)
-		{
-		}
-
+		DescriptorSRV(uint _offset, ShaderVisibility _visibility = ShaderVisibility::ALL, uint space = 0);
 		DescriptorSRV() = default;
 	};
 
@@ -68,12 +52,7 @@ export namespace HAL
 		uint offset;
 		uint space;
 
-
-		DescriptorUAV(uint _offset, ShaderVisibility _visibility = ShaderVisibility::ALL,
-			uint space = 0) : visibility(_visibility), offset(_offset), space(space)
-		{
-		}
-
+		DescriptorUAV(uint _offset, ShaderVisibility _visibility = ShaderVisibility::ALL, uint space = 0);
 		DescriptorUAV() = default;
 	};
 
@@ -82,14 +61,9 @@ export namespace HAL
 		ShaderVisibility visibility;
 		uint count;
 		uint offset;
-			uint space;
+		uint space;
 
-		DescriptorConstants(uint offset, uint _count, ShaderVisibility _visibility = ShaderVisibility::ALL,
-			uint space = 0
-		) : offset(offset), visibility(_visibility), count(_count),space(space)
-		{
-		}
-
+		DescriptorConstants(uint offset, uint _count, ShaderVisibility _visibility = ShaderVisibility::ALL, uint space = 0);
 		DescriptorConstants() = default;
 	};
 
@@ -114,68 +88,23 @@ export namespace HAL
 		struct helper
 		{
 			ParameterType& v;
-
 			uint index;
 
+			void operator=(const DescriptorTable& table);
+			void operator=(const DescriptorConstBuffer& table);
+			void operator=(const DescriptorSRV& table);
+			void operator=(const DescriptorUAV& table);
+			void operator=(const DescriptorConstants& table);
 
-			void operator=(const DescriptorTable& table)
-			{
-				v = table;
-			}
-
-			void operator=(const DescriptorConstBuffer& table)
-			{
-				v = table;
-			}
-
-			void operator=(const DescriptorSRV& table)
-			{
-				v = table;
-			}
-
-			void operator=(const DescriptorUAV& table)
-			{
-				v = table;
-			}
-
-			void operator=(const DescriptorConstants& table)
-			{
-				v = table;
-			}
-
-			helper(uint index, ParameterType& v) : index(index), v(v)
-			{
-			}
-
-			helper(const helper& h) : index(h.index), v(h.v)
-			{
-			}
+			helper(uint index, ParameterType& v);
+			helper(const helper& h);
 		};
 
-		helper operator[](uint i)
-		{
-			return helper(i, parameters[i]);
-		}
-
-		void remove(uint i)
-		{
-			parameters.erase(i);
-		}
-
-		const std::map<Position, SamplerDesc>& samplers() const
-		{
-			return sampler_map;
-		}
-
-		void set_sampler(uint i, uint space, ShaderVisibility visibility, SamplerDesc desc)
-		{
-			sampler_map[{i, space}] = desc;
-		}
-
-		void set_type(RootSignatureType type)
-		{
-			this->type = type;
-		}
+		helper operator[](uint i);
+		void remove(uint i);
+		const std::map<Position, SamplerDesc>& samplers() const;
+		void set_sampler(uint i, uint space, ShaderVisibility visibility, SamplerDesc desc);
+		void set_type(RootSignatureType type);
 	public:
 		RootSignatureType type = RootSignatureType::Global;
 		std::map<int, ParameterType> parameters;
@@ -191,15 +120,8 @@ export namespace HAL
 		using ptr = std::shared_ptr<RootSignature>;
 		virtual~RootSignature() = default;
 		RootSignature(Device& device, const RootSignatureDesc& desc);
-		const RootSignatureDesc& get_desc() const
-		{
-			return desc;
-		}
-
-		Device& get_device()
-		{
-			return device;
-		}
+		const RootSignatureDesc& get_desc() const;
+		Device& get_device();
 	};
 
 
@@ -220,9 +142,7 @@ export namespace HAL
 	public:
 		using ptr = std::shared_ptr<RootLayout>;
 		const Layouts layout;
-		RootLayout(HAL::Device& device, const RootSignatureDesc& desc, Layouts layout) :RootSignature(device, desc), layout(layout)
-		{
-		}
+		RootLayout(HAL::Device& device, const RootSignatureDesc& desc, Layouts layout);
 
 		template< class ...A>
 		RootSignature::ptr create_global_signature() const

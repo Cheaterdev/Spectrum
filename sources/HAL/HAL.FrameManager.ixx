@@ -1,4 +1,4 @@
-﻿export module HAL:FrameManager;
+export module HAL:FrameManager;
 import <HAL.h>;
 import Core;
 import :Types;
@@ -67,10 +67,7 @@ namespace HAL {
 		UploadInfo aquire_data(UINT64 uploadBufferSize, HeapType heap_type, unsigned int alignment = DEFAULT_ALIGN, unsigned int offset = 0);
 	public:
 
-		UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN)
-		{
-			return aquire_data(uploadBufferSize, HeapType::UPLOAD, alignment);
-		}
+		UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
 
 		template<class ...Args>
 		UploadInfo place_raw(Args... args)
@@ -84,10 +81,7 @@ namespace HAL {
 			return info;
 		}
 
-		void write(UploadInfo& info, size_t offset, void* data, size_t size)
-		{
-			if (size > 0) std::memcpy(info.get_cpu_data() + offset, data, size);
-		}
+		void write(UploadInfo& info, size_t offset, void* data, size_t size);
 
 		template<class T>
 		void write(UploadInfo& info, const std::span<T>& arg)
@@ -118,21 +112,16 @@ namespace HAL {
 		{
 			write(info, offset, (void*)arg.data(), arg.size() * sizeof(T));
 			offset += arg.size() * sizeof(T);
-
 		}
+
 		template<class T>
 		void write(UploadInfo& info, size_t& offset, const T& arg)
 		{
 			write(info, offset, (void*)&arg, sizeof(T));
 			offset += sizeof(T);
 		}
-	public:
-		UploadInfo read_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN,unsigned int offset = 0)
-		{
-			return aquire_data(uploadBufferSize, HeapType::READBACK, alignment,offset);
-		}
 
-	public:
+		UploadInfo read_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN, unsigned int offset = 0);
 
 		TileHeapPosition create_tile(HeapType type, UINT count = 1);
 	};
@@ -214,26 +203,11 @@ namespace HAL {
 
 	public:
 
-		void set_proxy(std::shared_ptr<GPUEntityStorageInterface> proxy)
-		{
-			this->proxy = proxy;
-		}
+		void set_proxy(std::shared_ptr<GPUEntityStorageInterface> proxy);
 
-		ResourceHandle alloc_memory(size_t size, size_t alignment, HeapIndex options) override
-		{
-			ASSERT(proxy);
-			return proxy->alloc_memory(size, alignment, options);
-		}
-		QueryHandle alloc_query(uint size, QueryType options)override
-		{
-			ASSERT(proxy);
-			return proxy->alloc_query(size, options);
-		}
-		Handle  alloc_base_descriptor(uint size, DescriptorHeapIndex options)override
-		{
-			ASSERT(proxy);
-			return proxy->alloc_base_descriptor(size, options);
-		}
+		ResourceHandle alloc_memory(size_t size, size_t alignment, HeapIndex options) override;
+		QueryHandle alloc_query(uint size, QueryType options) override;
+		Handle alloc_base_descriptor(uint size, DescriptorHeapIndex options) override;
 
 		template <class Type = Handle>
 		Type alloc_descriptor(uint size, DescriptorHeapIndex options)
@@ -247,13 +221,7 @@ namespace HAL {
 			return alloc_base_descriptor(size, options);
 		}
 
-
-		void resolve_timers(std::function<void(const QueryType&, uint64, uint64, QueryHeap::ptr) > f) override
-		{
-			ASSERT(proxy);
-			proxy->resolve_timers(f);
-
-		}
+		void resolve_timers(std::function<void(const QueryType&, uint64, uint64, QueryHeap::ptr) > f) override;
 	};
 
 
@@ -263,7 +231,7 @@ namespace HAL {
 	public:
 		using GPUEntityStorage<GlobalAllocationPolicy>::place_raw;
 
-		StaticCompiledGPUData(Device& device) :device(device), GPUEntityStorage<GlobalAllocationPolicy>(device) {}
+		StaticCompiledGPUData(Device& device);
 	};
 
 	class FrameResources :public SharedObject<FrameResources>, public GPUEntityStorage<LocalAllocationPolicy>
@@ -275,67 +243,23 @@ namespace HAL {
 
 		Pool<std::shared_ptr<GPUEntityStorage<LocalAllocationPolicy>>> gpu_resources;
 
-
-
 		enum_array<CommandListType, Pool<std::shared_ptr<CommandAllocator>>> command_allocators;
 
 	public:
 		using ptr = std::shared_ptr<FrameResources>;
-		FrameResources(Device& device) : GPUEntityStorage<LocalAllocationPolicy>(device)
-		{
 
-			gpu_resources.create_func = [&device]() {
-				return std::make_shared<GPUEntityStorage<LocalAllocationPolicy>>(device);
+		FrameResources(Device& device);
+		~FrameResources();
 
-			};
-
-			for (auto type : magic_enum::enum_values<CommandListType>())
-			{
-				command_allocators[type].create_func = [type]() {
-					return Device::get().get_ca(type);
-
-				};
-			}
-		}
-		~FrameResources()
-		{
-			reset();
-
-			for (auto& e : gpu_resources.table)
-			{
-				e->reset();
-			}
-			for (auto type : magic_enum::enum_values<CommandListType>())
-				for (auto& e : command_allocators[type].table)
-				{
-					Device::get().free_ca(e);
-				}
-		}
-
-		std::uint64_t get_frame()
-		{
-			return frame_number;
-		}
+		std::uint64_t get_frame();
 
 		std::shared_ptr<CommandList> start_list(std::wstring_view name = L"", CommandListType type = CommandListType::DIRECT);
 
-		void free_storage(std::shared_ptr<GPUEntityStorageInterface> e)
-		{
-			gpu_resources.put(std::static_pointer_cast<GPUEntityStorage<LocalAllocationPolicy>>(e));
-		}
-
-		std::shared_ptr<GPUEntityStorageInterface> get_storage() {
-			return gpu_resources.get();
-		}
-
+		void free_storage(std::shared_ptr<GPUEntityStorageInterface> e);
+		std::shared_ptr<GPUEntityStorageInterface> get_storage();
 
 		void free_ca(std::shared_ptr<CommandAllocator> e);
-
-		std::shared_ptr<CommandAllocator> get_ca(CommandListType type) {
-			return command_allocators[type].get();
-		}
-
-
+		std::shared_ptr<CommandAllocator> get_ca(CommandListType type);
 	};
 
 	class FrameResourceManager
@@ -343,7 +267,7 @@ namespace HAL {
 		std::atomic_size_t frame_number = 0;
 		Device& device;
 	public:
-		FrameResourceManager(Device& device) :device(device) {}
+		FrameResourceManager(Device& device);
 		FrameResources::ptr begin_frame();
 	};
 

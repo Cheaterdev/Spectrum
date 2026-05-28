@@ -19,18 +19,17 @@ export{
 
 		class TextureResource: public Resource
 		{
-			void init(){};
+			void init();
 		//	std::vector<std::byte> read();
 		std::vector<std::byte> read(uint i);
 		public:
 			using ptr = std::shared_ptr<TextureResource>;
 			TextureResource() = default; // NULL texture
-			TextureResource(const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0)): Resource(desc, heap_type,initialLayout,clear_value) { init(); }
-		
-			TextureResource(const ResourceDesc& desc, PlacementAddress handle) : Resource(desc, handle) { init(); }
-			TextureResource(const ResourceDesc& desc, ResourceHandle handle, bool own = false) : Resource(desc, handle, own) { init(); }
-				TextureResource(const D3D::Resource& resouce, TextureLayout initialLayout): Resource(resouce, initialLayout) { init(); }
-			virtual~TextureResource() {}
+			TextureResource(const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
+			TextureResource(const ResourceDesc& desc, PlacementAddress handle);
+			TextureResource(const ResourceDesc& desc, ResourceHandle handle, bool own = false);
+			TextureResource(const D3D::Resource& resouce, TextureLayout initialLayout);
+			virtual ~TextureResource() {}
 		private:
 
 			std::vector<GPUBinaryData<true>> load_subresources; // TODO: make shared temp

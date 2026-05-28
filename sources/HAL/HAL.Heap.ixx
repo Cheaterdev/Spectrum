@@ -30,18 +30,12 @@ export namespace HAL
 
 		Heap(Device& device, const HeapDesc& desc);
 
-		HeapType get_type() { return desc.Type; }
+		HeapType get_type();
 		virtual ~Heap() = default;
 
 		std::span<std::byte> get_data();
-	size_t get_size()
-	{
-		return desc.Size;
-	}
-		std::shared_ptr<Buffer> as_buffer()
-		{
-			return buffer;
-		}
+		size_t get_size();
+		std::shared_ptr<Buffer> as_buffer();
 	};
 }
 
