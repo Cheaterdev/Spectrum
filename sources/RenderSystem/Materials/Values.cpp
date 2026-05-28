@@ -488,7 +488,6 @@ void MaterialFunction::add_function(std::string s)
 	text += std::string("\t") + s + ";\n";
 }
 REGISTER_TYPE(ScalarNode);
-
 REGISTER_TYPE(MulNode);
 REGISTER_TYPE(SumNode);
 REGISTER_TYPE(TextureNode);
@@ -497,7 +496,6 @@ REGISTER_TYPE(TiledTextureNode);
 REGISTER_TYPE(MaterialGraph);
 REGISTER_TYPE(SpecToMetNode);
 //REGISTER_TYPE(TextureSRVParams);
-
 REGISTER_TYPE(ShaderParamType);
 REGISTER_TYPE(VectorType);
 
@@ -511,6 +509,36 @@ CEREAL_FORCE_REGISTER(MaterialGraph);
 CEREAL_FORCE_REGISTER(SpecToMetNode);
 CEREAL_FORCE_REGISTER(ShaderParamType);
 CEREAL_FORCE_REGISTER(VectorType);
+
+// ---- Polymorphic relations ----
+// parameter_type subtypes (stored as unique_ptr<parameter_type> in parameter::type)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::parameter_type, ShaderParamType);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::parameter_type, VectorType);
+// Node subtypes (stored as shared_ptr<FlowGraph::Node> in graph::nodes)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::Node, MaterialNode);   // abstract; needed for transitive paths
+CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::Node, TextureNode);    // SAVE_PARENT(Node) in serialize
+CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::Node, SumNode);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::Node, MulNode);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialNode,      ScalarNode);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialNode,      VectorNode);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialNode,      SpecToMetNode);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialNode,      TiledTextureNode);
+// MaterialGraph chain (FlowGraph::graph→MaterialGraph, transitive Node→graph already in FlowGraph.cpp)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::graph, MaterialGraph);
+
+// Force-init casters at static-init time — shallower pairs first so BFS
+// builds transitive paths (e.g. Node→ScalarNode) in a single pass.
+CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::parameter_type, ShaderParamType);
+CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::parameter_type, VectorType);
+CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::Node,  MaterialNode);
+CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::Node,  TextureNode);
+CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::Node,  SumNode);
+CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::Node,  MulNode);
+CEREAL_FORCE_REGISTER_RELATION(MaterialNode,       ScalarNode);
+CEREAL_FORCE_REGISTER_RELATION(MaterialNode,       VectorNode);
+CEREAL_FORCE_REGISTER_RELATION(MaterialNode,       SpecToMetNode);
+CEREAL_FORCE_REGISTER_RELATION(MaterialNode,       TiledTextureNode);
+CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::graph, MaterialGraph);
 
 
 MaterialGraph::MaterialGraph()

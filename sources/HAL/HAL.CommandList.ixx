@@ -164,13 +164,14 @@ export{
 #ifdef DEV
 			Exceptions::stack_trace begin_stack;
 #endif
-
+			Device& device;
 
 			void reset();
 			void begin(std::wstring_view name);
 		public:
 			void end();
 			Eventer(Device& device);
+			Device& get_device() { return device; }
 			static thread_local Eventer* thread_current;
 
 			virtual Timer start(std::wstring_view name)override;
@@ -281,7 +282,7 @@ export{
 
 			void discard(HAL::Resource* resource);
 
-			CommandList(CommandListType);
+			CommandList(CommandListType, Device&);
 
 			void begin(std::wstring_view name = L"");
 
@@ -423,7 +424,7 @@ export{
 			template<class T>
 			void set_pipeline(KeyPair<typename T::Keys> k = KeyPair<typename T::Keys>())
 			{
-				set_pipeline(Device::get().get_engine_pso_holder().GetPSO<T>(k));
+				set_pipeline(base.get_device().get_engine_pso_holder().GetPSO<T>(k));
 			}
 
 
@@ -541,7 +542,7 @@ export{
 			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0)
 			{
 				execute_indirect(
-						Device::get().get_engine_pso_holder().GetCommand(T::CommandID),
+						base.get_device().get_engine_pso_holder().GetCommand(T::CommandID),
 						max_commands,
 						buffer.resource.get(),
 						buffer.get_data_offset_in_bytes(offset),
@@ -630,7 +631,7 @@ export{
 			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0)
 			{
 				execute_indirect(
-						Device::get().get_engine_pso_holder().GetCommand(T::CommandID),
+						base.get_device().get_engine_pso_holder().GetCommand(T::CommandID),
 						max_commands,
 						buffer.resource.get(),
 						buffer.get_data_offset_in_bytes(offset),
@@ -649,7 +650,7 @@ export{
 		public:
 			using ptr = std::shared_ptr<TransitionCommandList>;
 			CommandListType get_type();
-			TransitionCommandList(CommandListType type);
+			TransitionCommandList(CommandListType type, Device& device);
 			void create_transition_list(FrameResources& frame, const HAL::Barriers& transitions);
 
 			const API::CommandList& get_compiled() const;
@@ -662,11 +663,11 @@ export{
 	namespace Helpers
 	{
 		template<class T>
-			 auto make_buffer(std::span<T> v)
+			 auto make_buffer(HAL::Device& device, std::span<T> v)
 			{
-				HAL::StructuredBufferView<T> buffer(v.size());
+				HAL::StructuredBufferView<T> buffer(device, v.size());
 
-		auto list = (HAL::Device::get().get_upload_list());
+		auto list = (device.get_upload_list());
 			list->get_copy().update(buffer, 0, v);
 			list->execute_and_wait();
 

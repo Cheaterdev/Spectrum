@@ -57,7 +57,7 @@ namespace HAL
 				}
 			}
 
-			buffer.reset(new HAL::Buffer(/*device,*/ ResourceDesc::Buffer(desc.Size), PlacementAddress { this,0 }));
+			buffer.reset(new HAL::Buffer(device, ResourceDesc::Buffer(desc.Size), PlacementAddress { this,0 }));
 
 			if(native_desc.Properties.Type==D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_UPLOAD )
 			{

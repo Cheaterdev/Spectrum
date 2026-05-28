@@ -20,7 +20,7 @@ namespace HAL
 	{
 		std::vector<std::byte> data;
 
-		auto list = (HAL::Device::get().get_upload_list());
+		auto list = (get_device().get_upload_list());
 		std::future<bool> task;
 
 		//ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)>
@@ -39,26 +39,26 @@ namespace HAL
 
 	void TextureResource::init() {}
 
-	TextureResource::TextureResource(const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value)
-		: Resource(desc, heap_type, initialLayout, clear_value)
+	TextureResource::TextureResource(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value)
+		: Resource(device, desc, heap_type, initialLayout, clear_value)
 	{
 		init();
 	}
 
-	TextureResource::TextureResource(const ResourceDesc& desc, PlacementAddress handle)
-		: Resource(desc, handle)
+	TextureResource::TextureResource(Device& device, const ResourceDesc& desc, PlacementAddress handle)
+		: Resource(device, desc, handle)
 	{
 		init();
 	}
 
-	TextureResource::TextureResource(const ResourceDesc& desc, ResourceHandle handle, bool own)
-		: Resource(desc, handle, own)
+	TextureResource::TextureResource(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own)
+		: Resource(device, desc, handle, own)
 	{
 		init();
 	}
 
-	TextureResource::TextureResource(const D3D::Resource& resouce, TextureLayout initialLayout)
-		: Resource(resouce, initialLayout)
+	TextureResource::TextureResource(Device& device, const D3D::Resource& resouce, TextureLayout initialLayout)
+		: Resource(device, resouce, initialLayout)
 	{
 		init();
 	}

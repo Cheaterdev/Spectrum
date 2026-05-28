@@ -143,13 +143,13 @@ export
 
 				update_list.clear();
 			}
-			virtual_gpu_buffer(size_t max_size, counterType countType = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource) :Base(max_size)
+			virtual_gpu_buffer(Device& device, size_t max_size, counterType countType = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource) :Base(max_size)
 			{
 				if constexpr (use_virtual)
-					buffer = StructuredBufferView<Type>(uint(max_size), countType, flags, HeapType::RESERVED); // TODO uint size_t
+					buffer = StructuredBufferView<Type>(device, uint(max_size), countType, flags, HeapType::RESERVED); // TODO uint size_t
 
 				else
-					buffer = StructuredBufferView<Type>(std::min(256_mb, max_size), countType, flags, HeapType::DEFAULT);
+					buffer = StructuredBufferView<Type>(device, std::min(256_mb, max_size), countType, flags, HeapType::DEFAULT);
 
 			/*	if constexpr (use_virtual)
 				if(countType!= counterType::NONE)

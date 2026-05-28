@@ -45,6 +45,7 @@ export
 		{
 			friend class resource_manager<Texture, texure_header>;
 		protected:
+			Device* m_device = nullptr;
 
 			Texture();
 
@@ -71,16 +72,17 @@ export
 			CubeView& cube();
 
 			static ptr load_native(const texure_header& header, resource_file_depender& depender);
+			static ptr load_native(Device& device, const texure_header& header, resource_file_depender& depender);
 
 			bool is_rt();
 
 
 			static const ptr null;
 
-			Texture(D3D::Resource native, TextureLayout initialLayout);
-			Texture(HAL::ResourceDesc desc, TextureLayout initialLayout = TextureLayout::UNDEFINED);
+			Texture(Device& device, D3D::Resource native, TextureLayout initialLayout);
+			Texture(Device& device, HAL::ResourceDesc desc, TextureLayout initialLayout = TextureLayout::UNDEFINED);
 
-			static Texture::ptr create(HAL::texture_data::ptr& data);
+			static Texture::ptr create(Device& device, HAL::texture_data::ptr& data);
 
 			HAL::texture_data::ptr get_data() const;
 

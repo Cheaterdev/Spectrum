@@ -50,4 +50,6 @@ float Sphere::GetSurfaceArea() const
 }
 
 REGISTER_TYPE(Sphere)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Primitive, Sphere)
 CEREAL_FORCE_REGISTER(Sphere);
+CEREAL_FORCE_REGISTER_RELATION(Primitive, Sphere);

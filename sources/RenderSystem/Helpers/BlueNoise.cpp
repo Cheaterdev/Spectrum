@@ -33,7 +33,7 @@ BlueNoise::BlueNoise()
 	auto ranking_handle   = allocator.Allocate<std::int32_t>(g_blueNoiseSamplerState.rankingTileBuffer.size_bytes());
 	auto scrambling_handle = allocator.Allocate<std::int32_t>(g_blueNoiseSamplerState.scramblingTileBuffer.size_bytes());
 
-	buffer = std::make_shared<HAL::Buffer>(HAL::ResourceDesc::Buffer(allocator.get_max_usage()), HAL::HeapType::DEFAULT);
+	buffer = std::make_shared<HAL::Buffer>(HAL::Device::get(), HAL::ResourceDesc::Buffer(allocator.get_max_usage()), HAL::HeapType::DEFAULT);
 
 	sobol_buffer_view = buffer->create_view<HAL::StructuredBufferView<int32_t>>(
 		HAL::Device::get().get_static_gpu_data(),

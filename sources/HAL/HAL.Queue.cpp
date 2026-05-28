@@ -45,7 +45,7 @@ namespace HAL
 		}
 
 		std::shared_ptr<HAL::CommandList> res_ptr;
-		res_ptr.reset(new HAL::CommandList(type), del_func);
+		res_ptr.reset(new HAL::CommandList(type, device), del_func);
 		return res_ptr;
 	}
 
@@ -61,7 +61,7 @@ namespace HAL
 		}
 
 		std::shared_ptr<TransitionCommandList> res_ptr;
-		res_ptr.reset(new TransitionCommandList(type), del_transition);
+		res_ptr.reset(new TransitionCommandList(type, device), del_transition);
 		return res_ptr;
 	}
 
@@ -130,7 +130,7 @@ namespace HAL
 			API::Queue::gpu_wait(list->dstorage_fence);
 
 			if (list->dstorage_fence)
-				Device::get().get_ds_queue().flush();
+				device.get_ds_queue().flush();
 		}
 
 		std::list<TransitionCommandList::ptr> transition_lists;
@@ -153,7 +153,7 @@ namespace HAL
 					{
 						// Need to request other queue to make a proper transition.
 						// It's OK, but better to avoid this
-						auto queue = HAL::Device::get().get_queue(transition_list->get_type());
+						auto queue = device.get_queue(transition_list->get_type());
 						auto waiter = queue->run_transition_list(last_executed_fence, transition_list.get());
 
 						API::Queue::gpu_wait(waiter);
@@ -178,7 +178,7 @@ namespace HAL
 
 		  gpu_wait_thread.enqueue([lists, transition_lists, execution_fence, this]()
 			{
-				if (!HAL::Device::get().alive) return;
+				if (!device.alive) return;
 
 				PROFILE(L"on_execute wait");
 				execution_fence.wait();

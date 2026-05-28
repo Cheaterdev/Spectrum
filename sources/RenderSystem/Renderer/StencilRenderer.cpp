@@ -298,9 +298,9 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	verts[5] = vec4( 1.0f, -1.0f, -1.0f, 0);
 	verts[6] = vec4( 1.0f, -1.0f,  1.0f, 0);
 	verts[7] = vec4(-1.0f, -1.0f,  1.0f, 0);
-	index_buffer = Helpers::make_buffer<unsigned int>(data);
+	index_buffer = Helpers::make_buffer<unsigned int>(HAL::Device::get(), data);
 
-	vertex_buffer = HAL::StructuredBufferView<vec4>(8);
+	vertex_buffer = HAL::StructuredBufferView<vec4>(HAL::Device::get(), 8);
 
 	auto list = HAL::Device::get().get_upload_list();
 	list->get_copy().update(vertex_buffer, 0, verts);

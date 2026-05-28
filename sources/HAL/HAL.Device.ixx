@@ -5,6 +5,8 @@ import :API.Device;
 
 import :Types;
 
+
+export class EngineRootLayoutHolder;
 export class EnginePSOHolder;
 export namespace HAL
 {
@@ -42,6 +44,7 @@ export namespace HAL
 		std::unique_ptr<StaticCompiledGPUData> static_gpu_data;
 
 		std::unique_ptr<PipelineStateCache> pipeline_state_cache;
+		std::unique_ptr<EngineRootLayoutHolder> engine_root_layout_holder;
 		std::unique_ptr<EnginePSOHolder> engine_pso_holder;
 
 
@@ -75,6 +78,7 @@ export namespace HAL
 		StaticCompiledGPUData& get_static_gpu_data() const;
 
 		PipelineStateCache& get_pipeline_state_cache() const;
+		EngineRootLayoutHolder& get_engine_root_layout_holder() const;
 		EnginePSOHolder& get_engine_pso_holder() const;
 
 		QueryHeapFactory& get_query_heap_factory() const;

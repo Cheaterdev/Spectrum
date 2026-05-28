@@ -25,10 +25,10 @@ export{
 		public:
 			using ptr = std::shared_ptr<TextureResource>;
 			TextureResource() = default; // NULL texture
-			TextureResource(const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
-			TextureResource(const ResourceDesc& desc, PlacementAddress handle);
-			TextureResource(const ResourceDesc& desc, ResourceHandle handle, bool own = false);
-			TextureResource(const D3D::Resource& resouce, TextureLayout initialLayout);
+			TextureResource(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
+			TextureResource(Device& device, const ResourceDesc& desc, PlacementAddress handle);
+			TextureResource(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own = false);
+			TextureResource(Device& device, const D3D::Resource& resouce, TextureLayout initialLayout);
 			virtual ~TextureResource() {}
 		private:
 
@@ -43,8 +43,8 @@ export{
 			
 				if constexpr (Archive::is_loading::value)
 				{
-					
-					_init(desc, HeapType::DEFAULT, TextureLayout::COPY_QUEUE);
+					Device& device = Device::get();
+					_init(device, desc, HeapType::DEFAULT, TextureLayout::COPY_QUEUE);
 					set_name("TextureResource::deserializing ");
 
 						load_subresources.resize(desc.as_texture().Subresources());
@@ -68,7 +68,7 @@ export{
 						{
 							auto data = read(i);
 
-							GPUBinaryData<false> binary(GPUBinaryData<false>::Texture{ i,1 }, data);
+							GPUBinaryData<false> binary(GPUBinaryData<false>::Texture{ i,1 }, data, get_device());
 
 							ar& NVP(binary);
 						}

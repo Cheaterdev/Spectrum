@@ -29,9 +29,9 @@ public:
 		uint64 size;
 
 
-		save(std::span<std::byte> uncompressed)
+		save(std::span<std::byte> uncompressed, HAL::Device& device)
 		{
-			binary_data = HAL::Device::get().compress(uncompressed);
+			binary_data = device.compress(uncompressed);
 			size = binary_data.size();
 		}
 		SERIALIZE_PRETTY(){}
@@ -104,16 +104,16 @@ public:
 	uint64 uncompressed_size;
 
 	GPUBinaryData()  requires(is_load) = default;
-	GPUBinaryData(Buffer desc, std::span<std::byte> binary_data) requires(!is_load)
-		: desc(desc), operation(binary_data), uncompressed_size(binary_data.size_bytes())
+	GPUBinaryData(Buffer desc, std::span<std::byte> binary_data, HAL::Device& device) requires(!is_load)
+		: desc(desc), operation(binary_data, device), uncompressed_size(binary_data.size_bytes())
 	{
 
 
 	}
 
 
-	GPUBinaryData(Texture desc, std::span<std::byte> binary_data) requires(!is_load)
-		: desc(desc), operation(binary_data), uncompressed_size(binary_data.size_bytes())
+	GPUBinaryData(Texture desc, std::span<std::byte> binary_data, HAL::Device& device) requires(!is_load)
+		: desc(desc), operation(binary_data, device), uncompressed_size(binary_data.size_bytes())
 	{
 
 
@@ -142,16 +142,19 @@ export{
 			friend class API::Resource;
 			HeapType heap_type;
 			ResourceDesc desc;
-			
+			Device* m_device = nullptr;
+
 		protected:
 			ResourceStateManager state_manager;
 			TiledResourceManager tiled_manager;
-			void _init(const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
+			void _init(Device& device, const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
 
-		
+
 			void write(GPUBinaryData<true>&);
-	
+
 		public:
+			Device& get_device() const { ASSERT(m_device); return *m_device; }
+
 			FenceWaiter load_waiter;
 			bool debug=false;
 			bool debug_transitions = false;
@@ -174,11 +177,11 @@ export{
 
 			using ptr = std::shared_ptr<Resource>;
 	protected:
-			Resource(const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
-			Resource(const D3D::Resource& resouce, TextureLayout initialLayout);
-			Resource(const ResourceDesc& desc, PlacementAddress handle);
+			Resource(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
+			Resource(Device& device, const D3D::Resource& resouce, TextureLayout initialLayout);
+			Resource(Device& device, const ResourceDesc& desc, PlacementAddress handle);
 
-			Resource(const ResourceDesc& desc, ResourceHandle handle, bool own = false);
+			Resource(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own = false);
 			Resource();
 		public:
 			virtual ~Resource();
@@ -224,9 +227,9 @@ export{
 
 
 
-		 Resource::ptr create_resource(const HAL::ResourceDesc&desc, HeapType heap_type);
+		 Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, HeapType heap_type);
 
-		  Resource::ptr create_resource(const HAL::ResourceDesc&desc, ResourceHandle addr);
+		  Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, ResourceHandle addr);
 	}
 
 

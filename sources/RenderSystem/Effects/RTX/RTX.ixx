@@ -14,7 +14,7 @@ public:
 	using ptr = std::shared_ptr<RTX>;
 
 
-	MainRTX rtx;
+	MainRTX rtx{HAL::Device::get()};
 
 	void prepare(HAL::CommandList::ptr& list);
 

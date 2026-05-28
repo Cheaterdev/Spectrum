@@ -18,7 +18,7 @@ namespace HAL
 
 	void Buffer::write(std::vector<std::byte>& data)
 	{
-		auto list = (HAL::Device::get().get_upload_list());
+		auto list = (get_device().get_upload_list());
 		list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(data.data()), data.size());
 		list->end();
 		list->execute();
@@ -28,7 +28,7 @@ namespace HAL
 	{
 		std::vector<std::byte> data;
 
-		auto list = (HAL::Device::get().get_upload_list());
+		auto list = (get_device().get_upload_list());
 		std::future<bool> task;
 		int t = 0;
 		task = list->get_copy().read_buffer(this, 0, get_size(), [&](std::span<std::byte> memory)
@@ -59,20 +59,20 @@ namespace HAL
 		gpu_address = ResourceAddress{ this, 0 };
 	}
 
-	Buffer::Buffer(const ResourceDesc& desc, HeapType heap_type)
-		: Resource(desc, heap_type, TextureLayout::UNDEFINED, vec4(0, 0, 0, 0))
+	Buffer::Buffer(Device& device, const ResourceDesc& desc, HeapType heap_type)
+		: Resource(device, desc, heap_type, TextureLayout::UNDEFINED, vec4(0, 0, 0, 0))
 	{
 		init();
 	}
 
-	Buffer::Buffer(const ResourceDesc& desc, PlacementAddress handle)
-		: Resource(desc, handle)
+	Buffer::Buffer(Device& device, const ResourceDesc& desc, PlacementAddress handle)
+		: Resource(device, desc, handle)
 	{
 		init();
 	}
 
-	Buffer::Buffer(const ResourceDesc& desc, ResourceHandle handle, bool own)
-		: Resource(desc, handle, own)
+	Buffer::Buffer(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own)
+		: Resource(device, desc, handle, own)
 	{
 		init();
 	}

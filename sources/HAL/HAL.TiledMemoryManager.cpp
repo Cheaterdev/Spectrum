@@ -20,7 +20,7 @@ namespace HAL {
 
 		if (!tile.heap_position.heap)
 		{
-			tile.heap_position = Device::get().get_static_gpu_data().create_tile(tile_heap_type);
+			tile.heap_position = resource->get_device().get_static_gpu_data().create_tile(tile_heap_type);
 			target.add_tile(tile);
 			on_load(ivec4(pos, subres));
 			if (recursive)
@@ -105,7 +105,7 @@ namespace HAL {
 			(list)->update_tilings(std::move(info));
 		}
 		else
-			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			resource->get_device().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
 	void TiledResourceManager::zero_tiles(CommandList* list, uint3 from, uint3 to)
@@ -128,7 +128,7 @@ namespace HAL {
 			(list)->update_tilings(std::move(info));
 		}
 		else
-			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			resource->get_device().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
 
@@ -147,7 +147,7 @@ namespace HAL {
 			(list)->update_tilings(std::move(info));
 		}
 		else
-			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			resource->get_device().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 	void TiledResourceManager::zero_tiles(CommandList* list, std::list<uint3>& tiles_to_remove)
 	{
@@ -166,7 +166,7 @@ namespace HAL {
 			(list)->update_tilings(std::move(info));
 		}
 		else
-			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			resource->get_device().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 
 	}
 
@@ -235,7 +235,7 @@ namespace HAL {
 
 		auto desc = (resource)->get_desc();
 
-		HAL::Device::get().get_native_device()->GetResourceTiling((resource)->get_dx(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
+		resource->get_device().get_native_device()->GetResourceTiling((resource)->get_dx(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
 		packed_mip_count = mip_info.NumTilesForPackedMips;
 		packed_subresource_offset = mip_info.NumStandardMips;
 		unpacked_mip_count = mip_info.NumStandardMips;
@@ -298,7 +298,7 @@ namespace HAL {
 			auto& alloc_info = (resource)->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
-				packed_tiles.heap_position = Device::get().get_static_gpu_data().create_tile( HeapType::DEFAULT, packed_mip_count);
+				packed_tiles.heap_position = resource->get_device().get_static_gpu_data().create_tile( HeapType::DEFAULT, packed_mip_count);
 
 			info.add_tile(packed_tiles);
 
@@ -314,7 +314,7 @@ namespace HAL {
 			auto& alloc_info = (resource)->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
-				packed_tiles.heap_position = Device::get().get_static_gpu_data().create_tile( HeapType::DEFAULT, packed_mip_count);
+				packed_tiles.heap_position = resource->get_device().get_static_gpu_data().create_tile( HeapType::DEFAULT, packed_mip_count);
 
 			info.add_tile(packed_tiles);
 		}
@@ -328,7 +328,7 @@ namespace HAL {
 			(list)->update_tilings(std::move(info));
 		}
 		else
-			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			info.resource->get_device().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
 	void TiledResourceManager::on_tile_update(const update_tiling_info& info)

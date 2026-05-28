@@ -9,9 +9,15 @@ import HAL;
 using namespace HAL;
 
 REGISTER_TYPE(MeshAsset);
-REGISTER_TYPE(MeshAssetInstance);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Asset, MeshAsset);
+CEREAL_REGISTER_DYNAMIC_INIT(MeshAsset);
 CEREAL_FORCE_REGISTER(MeshAsset);
+CEREAL_FORCE_REGISTER_RELATION(Asset, MeshAsset);
+
+REGISTER_TYPE(MeshAssetInstance);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(scene_object, MeshAssetInstance);
 CEREAL_FORCE_REGISTER(MeshAssetInstance);
+CEREAL_FORCE_REGISTER_RELATION(scene_object, MeshAssetInstance);
 bool MeshData::init_default_loaders()
 {
 	add_loader(load_assimp);
@@ -85,7 +91,7 @@ void MeshAsset::init_gpu()
 			std::vector<GeometryDesc > descs;
 			descs.push_back(geometryDesc);
 
-			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(descs, list);
+			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(HAL::Device::get(), descs, list);
 			last=list->execute();
 
 			i++;
@@ -177,7 +183,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	auto meshlet_cull_handle = allocator.Allocate<Table::MeshletCullData>(meshlet_cull.size());
 
 
-	buffer = std::make_shared<HAL::Buffer>(HAL::ResourceDesc::Buffer(allocator.get_max_usage(), HAL::ResFlags::ShaderResource | HAL::ResFlags::Immutable), HAL::HeapType::DEFAULT);
+	buffer = std::make_shared<HAL::Buffer>(HAL::Device::get(), HAL::ResourceDesc::Buffer(allocator.get_max_usage(), HAL::ResFlags::ShaderResource | HAL::ResFlags::Immutable), HAL::HeapType::DEFAULT);
 
 
 
@@ -325,7 +331,7 @@ void MeshAsset::try_register()
 void MeshAsset::update_preview(HAL::Texture::ptr preview)
 {
 	if (!preview || !preview->is_rt())
-		preview.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+		preview.reset(new HAL::Texture(HAL::Device::get(), HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
 	if (!preview_mesh)
 		preview_mesh.reset(new MeshAssetInstance(get_ptr<MeshAsset>()));
@@ -742,19 +748,19 @@ MeshAssetInstance::mesh_asset_node::mesh_asset_node(MeshNode* node)
 	asset_node = node;
 }
 
-universal_rtx_manager::universal_rtx_manager() : HAL::virtual_gpu_buffer<Table::RaytraceInstanceInfo>(MAX_NODES_SIZE)
+universal_rtx_manager::universal_rtx_manager() : HAL::virtual_gpu_buffer<Table::RaytraceInstanceInfo>(HAL::Device::get(), MAX_NODES_SIZE)
 {
 }
 
-universal_mesh_instance_manager::universal_mesh_instance_manager() : HAL::virtual_gpu_buffer<Table::MeshInstanceInfo>(MAX_NODES_SIZE)
+universal_mesh_instance_manager::universal_mesh_instance_manager() : HAL::virtual_gpu_buffer<Table::MeshInstanceInfo>(HAL::Device::get(), MAX_NODES_SIZE)
 {
 }
 
-universal_nodes_manager::universal_nodes_manager() : HAL::virtual_gpu_buffer<Table::node_data>(MAX_NODES_SIZE)
+universal_nodes_manager::universal_nodes_manager() : HAL::virtual_gpu_buffer<Table::node_data>(HAL::Device::get(), MAX_NODES_SIZE)
 {
 }
 
-universal_material_info_part_manager::universal_material_info_part_manager() : HAL::virtual_gpu_buffer<Table::MaterialCommandData>(MAX_COMMANDS_SIZE)
+universal_material_info_part_manager::universal_material_info_part_manager() : HAL::virtual_gpu_buffer<Table::MaterialCommandData>(HAL::Device::get(), MAX_COMMANDS_SIZE)
 {
 }
 

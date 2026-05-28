@@ -569,7 +569,7 @@ public:
 		}
 
 		//void free_texture(ResourceHandler* handler);
-		void pass_texture(std::string name, HAL::Texture::ptr tex, HAL::FenceWaiter fence = {}, ResourceFlags flags = ResourceFlags::None);
+		void pass_texture(std::string name, HAL::TextureResource::ptr tex, HAL::FenceWaiter fence = {}, ResourceFlags flags = ResourceFlags::None);
 
 
 		void create_resources();

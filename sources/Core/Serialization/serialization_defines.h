@@ -64,6 +64,41 @@
 #  define REGISTER_TYPE(...)  CEREAL_REGISTER_TYPE(__VA_ARGS__)
 #endif
 
+// ---- Polymorphic base-derived caster registration ---
+// Mirrors cereal/types/polymorphic.hpp CEREAL_REGISTER_POLYMORPHIC_RELATION.
+// Redefined here so it is visible in C++20 module implementation units that
+// use `import` instead of `#include` and therefore cannot see cereal's own
+// header-only macro definitions.
+#ifndef CEREAL_REGISTER_POLYMORPHIC_RELATION
+#  define CEREAL_REGISTER_POLYMORPHIC_RELATION(Base, Derived)                  \
+       namespace cereal { namespace detail {                                    \
+       template <>                                                              \
+       struct PolymorphicRelation<Base, Derived> {                              \
+           static void bind() {                                                 \
+               RegisterPolymorphicCaster<Base, Derived>::bind();                \
+           }                                                                    \
+       };                                                                       \
+       } } /* end namespaces */
+#endif
+
+// ---- Force-initialize a polymorphic base→derived caster at static init time ---
+// CEREAL_REGISTER_POLYMORPHIC_RELATION only creates a template specialization;
+// nothing in cereal ever calls its bind().  The casters are normally registered
+// lazily through cereal::base_class<> in serialize(), but for *saving* the
+// downcast runs BEFORE serialize(), so the path must exist up-front.
+// Place this macro in the same .cpp as CEREAL_REGISTER_POLYMORPHIC_RELATION.
+// Order within a TU matters for building transitive paths: register the
+// shallower (closer-to-root) pair first so the BFS can extend it.
+#ifndef CEREAL_FORCE_REGISTER_RELATION
+#  define CEREAL_FORCE_REGISTER_RELATION(Base, Derived)                               \
+       namespace {                                                                      \
+           [[maybe_unused]] auto const & CEREAL_CONCAT(_freg_rel_, __COUNTER__) =      \
+               cereal::detail::StaticObject<                                            \
+                   cereal::detail::PolymorphicVirtualCaster<Base, Derived>              \
+               >::getInstance();                                                        \
+       }
+#endif
+
 // ---- CEREAL_FORCE_REGISTER ---
 // Forces cereal polymorphic binding-creator singletons to initialise in any
 // linked TU.  Place alongside REGISTER_TYPE in each type's .cpp.

@@ -16,6 +16,7 @@ export namespace HAL
 	class Queue: public API::Queue	, public TypedObject<Queue>
 	{
 		friend class API::Queue;
+		Device& device;
 		std::wstring name;
 
 		HAL::Fence commandListCounter;
@@ -54,7 +55,7 @@ export namespace HAL
 		void update_tile_mappings(const HAL::update_tiling_info& infos);
 
 	public:
-		Queue(HAL::CommandListType type, Device* device);
+		Queue(HAL::CommandListType type, Device& device);
 		~Queue();
 
 		std::shared_ptr<CommandList> get_free_list();
@@ -100,6 +101,7 @@ export namespace HAL
 	class DirectStorageQueue:public API::DirectStorageQueue
 
 	{
+			Device& device;
 			std::mutex queue_mutex;
 		UINT64 m_fenceValue = 0;
 			HAL::Fence requestCounter;

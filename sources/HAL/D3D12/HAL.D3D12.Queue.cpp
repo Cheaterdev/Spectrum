@@ -9,9 +9,9 @@ using namespace HAL;
 namespace HAL
 {
 
-	Queue::Queue(CommandListType type, Device* device) : commandListCounter(*device), type(type)
+	Queue::Queue(CommandListType type, Device& device) : commandListCounter(device), type(type), device(device)
 	{
-		API::Queue::construct(type, device);
+		API::Queue::construct(type, &device);
 		m_fenceValue = 0;
 		del_func = [this](CommandList* list)
 		{
@@ -128,7 +128,7 @@ namespace HAL
 		return { cpu_start,gpu_start, frequency };
 	}
 
-	DirectStorageQueue::DirectStorageQueue(Device& device) :requestCounter(device)
+	DirectStorageQueue::DirectStorageQueue(Device& device) : device(device), requestCounter(device)
 	{
 		DSTORAGE_CONFIGURATION config{};
 		config.DisableGpuDecompression = false;
@@ -242,7 +242,7 @@ namespace HAL
 
 
 
-								auto l = HAL::Device::get().get_texture_layout(srequest.resource->get_desc(), texture.subresource);
+								auto l = device.get_texture_layout(srequest.resource->get_desc(), texture.subresource);
 								ASSERT(l.size==srequest.uncompressed_size);
 							},
 							[&](auto other) {

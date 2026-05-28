@@ -3,7 +3,7 @@ export module HAL:SwapChain;
 import Core;
 import :Types;
 import :Format;
-import :Texture;
+import :Resource.Texture;
 import :Fence;
 import :API.SwapChain;
 import :Device;
@@ -18,7 +18,7 @@ export namespace HAL
 
 		struct Frame
 		{
-			std::shared_ptr<Texture> m_renderTarget;
+			std::shared_ptr<TextureResource> m_renderTarget;
 			FenceWaiter fence_event;
 		};
 
@@ -32,8 +32,8 @@ export namespace HAL
 		UINT m_frameIndex;
 		FenceWaiter get_fence();
 				 
-		const std::shared_ptr<Texture>& get_current_frame();
-		const std::shared_ptr<Texture>& get_prev_frame();
+		const std::shared_ptr<TextureResource>& get_current_frame();
+		const std::shared_ptr<TextureResource>& get_prev_frame();
 		void resize(ivec2 size);
 		void wait_for_free();
 	};

@@ -63,12 +63,11 @@ namespace HAL
 		return querys.get_heap()->read_back_data[querys.get_offset() + 1];
 	}
 
-	CommandList::CommandList(CommandListType type) : Eventer(Device::get())
-
+	CommandList::CommandList(CommandListType type, Device& device) : Eventer(device)
 	{
 		this->type = type;
 
-		compiler.create(type);
+		compiler.create(type, device);
 
 		if (type == CommandListType::DIRECT || type == CommandListType::COMPUTE)
 			compute.reset(new ComputeContext(*this));
@@ -81,7 +80,7 @@ namespace HAL
 		compiler.set_name(L"SpectrumCommandList");
 
 
-		debug_buffer = StructuredBufferView<Table::DebugStruct>(64, HAL::counterType::NONE,
+		debug_buffer = StructuredBufferView<Table::DebugStruct>(device, 64, HAL::counterType::NONE,
 			HAL::ResFlags::ShaderResource |
 			HAL::ResFlags::UnorderedAccess);
 	}
@@ -138,10 +137,10 @@ namespace HAL
 		begin_stack = Exceptions::get_stack_trace();
 #endif
 
-		HAL::Device::get().context_generator.generate(this);
+		device.context_generator.generate(this);
 		first_debug_log = true;
 
-		if (!frame_resources) frame_resources = Device::get().get_frame_manager().begin_frame();
+		if (!frame_resources) frame_resources = device.get_frame_manager().begin_frame();
 		auto proxy = frame_resources->get_storage();
 		set_proxy(proxy);
 
@@ -158,8 +157,8 @@ namespace HAL
 		if (type != CommandListType::COPY)
 		{
 			compiler.set_descriptor_heaps(
-				HAL::Device::get().get_descriptor_heap_factory().get_cbv_srv_uav_heap().get(),
-				HAL::Device::get().get_descriptor_heap_factory().get_sampler_heap().get()
+				device.get_descriptor_heap_factory().get_cbv_srv_uav_heap().get(),
+				device.get_descriptor_heap_factory().get_sampler_heap().get()
 			);
 
 			if (graphics)
@@ -266,7 +265,7 @@ namespace HAL
 
 		std::list<CommandList::ptr>	lists;
 		  lists.emplace_back(dynamic_cast<CommandList*>(this)->get_ptr());
-		auto fence = Device::get().get_queue(type)->execute(lists);
+		auto fence = dynamic_cast<CommandList*>(this)->get_device().get_queue(type)->execute(lists);
 
 		return fence;
 	}
@@ -581,7 +580,7 @@ namespace HAL
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
 		base.transition(resource, ResourceStates::COPY_DEST);
-		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource, box);
+		auto layout = base.get_device().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.place_data(layout.size, layout.alignment);
 
 		if (layout.row_stride == row_stride)
@@ -625,7 +624,7 @@ namespace HAL
 
 		list->update_texture(resource, offset, box, sub_resource, info, layout);
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
+			TEST(base.get_device(), base.get_device().get_device_removed_reason());
 		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
 
@@ -642,12 +641,12 @@ namespace HAL
 
 		base.transition(resource, ResourceStates::COPY_SOURCE);
 
-		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource, box);
+		auto layout = base.get_device().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.read_data(layout.size, layout.alignment, static_cast<uint>(base.get_type()));
 		list->read_texture(resource, offset, box, sub_resource, info, layout);
 
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
+			TEST(base.get_device(), base.get_device().get_device_removed_reason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, layout]()
 		{
@@ -666,13 +665,13 @@ namespace HAL
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 		base.transition(resource, ResourceStates::COPY_SOURCE);
 
-		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource);
+		auto layout = base.get_device().get_texture_layout(resource->get_desc(), sub_resource);
 		auto info = base.read_data(layout.size, layout.alignment, static_cast<uint>(base.get_type()));
 		list->read_texture(resource, 0, resource->get_desc().as_texture().get_size(sub_resource), sub_resource, info,
 		                   layout);
 
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
+			TEST(base.get_device(), base.get_device().get_device_removed_reason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, layout]()
 		{
@@ -704,7 +703,7 @@ namespace HAL
 		auto info = base.read_data(size, GPUEntityStorageInterface::DEFAULT_ALIGN, static_cast<uint>(base.get_type()));
 		list->copy_buffer(info.resource, info.resource_offset, resource, offset, size);
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
+			TEST(base.get_device(), base.get_device().get_device_removed_reason());
 		base.on_execute_funcs.push_back([result, info, f, size]()
 		{
 			f({reinterpret_cast<std::byte*>(info.get_cpu_data()), size});
@@ -730,7 +729,7 @@ namespace HAL
 		auto info = base.read_data(size, GPUEntityStorageInterface::DEFAULT_ALIGN, static_cast<uint>(base.get_type()));
 		ASSERT(false);
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
+			TEST(base.get_device(), base.get_device().get_device_removed_reason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, size]()
 		{
@@ -757,7 +756,7 @@ namespace HAL
 
 		free_tracked_objects();
 
-		HAL::Device::get().context_generator.free(this);
+		device.context_generator.free(this);
 	}
 
 
@@ -1064,7 +1063,7 @@ namespace HAL
 			auto cmd = static_cast<CommandList*>(this);
 
 
-			auto transition_list = (HAL::Device::get().get_queue(transition_type)->get_transition_list());
+			auto transition_list = (static_cast<CommandList*>(this)->get_device().get_queue(transition_type)->get_transition_list());
 			transition_list->compiler.set_name(L":Transitions");
 			transition_list->create_transition_list(*cmd->frame_resources, result);
 			return transition_list;
@@ -1165,7 +1164,7 @@ namespace HAL
 
 		list->copy_texture(dest, dest_subres, source, source_subres);
 		if constexpr (Debug::CheckErrors)
-			TEST(HAL::Device::get(), HAL::Device::get().get_device_removed_reason());
+			TEST(base.get_device(), base.get_device().get_device_removed_reason());
 		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
 
@@ -1178,7 +1177,7 @@ namespace HAL
 		base.transition(to, ResourceStates::COPY_DEST);
 		list->copy_texture(to, to_pos, from, from_pos, size);
 		if constexpr (Debug::CheckErrors)
-			TEST(Device::get(), Device::get().get_device_removed_reason());
+			TEST(base.get_device(), base.get_device().get_device_removed_reason());
 		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
 
@@ -1333,8 +1332,8 @@ namespace HAL
 	Timer Eventer::start(std::wstring_view name)
 	{
 		if (Profiler::get().enabled)
-			return Timer(std::make_shared<GPUBlock>(name,current, HAL::Device::get()), this);
-		else 
+			return Timer(std::make_shared<GPUBlock>(name, current, device), this);
+		else
 			return Timer(nullptr, nullptr);
 		//return std::move(Timer(nullptr,nullptr));
 	}
@@ -1598,7 +1597,7 @@ namespace HAL
 	{
 
 		ASSERT(false);
-		HAL::Device::get().context_generator.generate(this);
+		device.context_generator.generate(this);
 
 		set_proxy(frame.get_storage());
 
@@ -1635,10 +1634,10 @@ namespace HAL
 	}
 
 
-	TransitionCommandList::TransitionCommandList(CommandListType type) : Eventer(HAL::Device::get())
+	TransitionCommandList::TransitionCommandList(CommandListType type, Device& device) : Eventer(device)
 	{
 		this->type = type;
-		compiler.create(type);
+		compiler.create(type, device);
 	}
 
 
@@ -1660,7 +1659,7 @@ namespace HAL
 	{
 	}
 
-	Eventer::Eventer(Device& device)
+	Eventer::Eventer(Device& device) : device(device)
 	{
 	}
 
@@ -1706,7 +1705,7 @@ namespace HAL
 
 	void SignatureDataSetter::set_signature(Layouts layout)
 	{
-		set_signature(HAL::Device::get().get_engine_pso_holder().GetSignature(layout));
+		set_signature(base.get_device().get_engine_root_layout_holder().GetSignature(layout));
 	}
 
 	void SignatureDataSetter::set_cb(UINT index, const CBVHandle& cb, BarrierSync operation)
@@ -1778,7 +1777,7 @@ namespace HAL
 
 		Eventer::reset();
 
-		HAL::Device::get().context_generator.free(this);
+		device.context_generator.free(this);
 	}
 
 	void CommandList::update_tilings(HAL::update_tiling_info&& info)

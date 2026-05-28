@@ -94,16 +94,16 @@ namespace HAL {
 
 	// FrameResources
 
-	FrameResources::FrameResources(Device& device) : GPUEntityStorage<LocalAllocationPolicy>(device)
+	FrameResources::FrameResources(Device& device) : GPUEntityStorage<LocalAllocationPolicy>(device), device(device)
 	{
-		gpu_resources.create_func = [&device]() {
-			return std::make_shared<GPUEntityStorage<LocalAllocationPolicy>>(device);
+		gpu_resources.create_func = [this]() {
+			return std::make_shared<GPUEntityStorage<LocalAllocationPolicy>>(this->device);
 		};
 
 		for (auto type : magic_enum::enum_values<CommandListType>())
 		{
-			command_allocators[type].create_func = [type]() {
-				return Device::get().get_ca(type);
+			command_allocators[type].create_func = [this, type]() {
+				return this->device.get_ca(type);
 			};
 		}
 	}
@@ -119,7 +119,7 @@ namespace HAL {
 		for (auto type : magic_enum::enum_values<CommandListType>())
 			for (auto& e : command_allocators[type].table)
 			{
-				Device::get().free_ca(e);
+				device.free_ca(e);
 			}
 	}
 
@@ -150,7 +150,7 @@ namespace HAL {
 
 	std::shared_ptr<CommandList> FrameResources::start_list(std::wstring_view name, CommandListType type)
 	{
-		auto list = (HAL::Device::get().get_queue(type)->get_free_list());
+		auto list = (device.get_queue(type)->get_free_list());
 		list->frame_resources = get_ptr();
 		list->begin(name);
 
@@ -166,7 +166,7 @@ namespace HAL {
 
 	FrameResources::ptr FrameResourceManager::begin_frame()
 	{
-		auto result = std::make_shared<FrameResources>(HAL::Device::get());
+		auto result = std::make_shared<FrameResources>(device);
 
 		result->frame_number = frame_number++;
 

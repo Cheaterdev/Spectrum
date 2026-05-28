@@ -192,18 +192,18 @@ namespace HAL
 					IID_PPV_ARGS(&native_resource)));
 			}
 			   	auto prev_flags = THIS->desc.Flags;
-			init(native_resource, initialLayout);
+			init(native_resource, initialLayout, device);
 			THIS->desc.Flags |= 	prev_flags;
 		}
 
-		void Resource::init(D3D::Resource  resource, TextureLayout layout)
+		void Resource::init(D3D::Resource  resource, TextureLayout layout, Device& device)
 		{
 			auto THIS = static_cast<HAL::Resource*>(this);
-	
-		
+			THIS->m_device = static_cast<HAL::Device*>(&device);
+
 
 			THIS->desc = extract(native_resource);
-					
+
 			if(layout == TextureLayout::PRESENT)
 				THIS->desc.Flags |= ResFlags::Swapchain;
 
@@ -212,13 +212,13 @@ namespace HAL
 			else
 				this->address = 0;
 
-			THIS->state_manager.init_subres(HAL::Device::get().Subresources(THIS->get_desc()), layout);
+			THIS->state_manager.init_subres(device.Subresources(THIS->get_desc()), layout);
 
 
 			if (THIS->heap_type == HeapType::RESERVED)
 				THIS->tiled_manager.init_tilings();
 
-		
+
 		}
 	}
 
@@ -226,36 +226,38 @@ namespace HAL
 
 
 
-	void Resource::_init(const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value)
+	void Resource::_init(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value)
 	{
 		auto t = CounterManager::get().start_count<Resource>();
+		m_device = &device;
 
-		alloc_info = HAL::Device::get().get_alloc_info(desc);
+		alloc_info = device.get_alloc_info(desc);
 
 		PlacementAddress address = {};
 		if (heap_type != HAL::HeapType::RESERVED)
 		{
 			HeapIndex index = { HAL::MemoryType::COMMITED , heap_type };
 
-			alloc_handle = Device::get().get_static_gpu_data().alloc_memory(alloc_info.size, alloc_info.alignment, index);
+			alloc_handle = device.get_static_gpu_data().alloc_memory(alloc_info.size, alloc_info.alignment, index);
 			address = { alloc_handle.get_heap().get(),alloc_handle.get_offset() };
 		}
 
-		init(HAL::Device::get(), desc, address, initialLayout);
+		init(device, desc, address, initialLayout);
 	}
-	Resource::Resource(const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value) :state_manager(this), tiled_manager(this)
+	Resource::Resource(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value) :state_manager(this), tiled_manager(this)
 	{
-		_init(desc, heap_type, initialLayout, clear_value);
+		_init(device, desc, heap_type, initialLayout, clear_value);
 
 	}
 
-	Resource::Resource(const ResourceDesc& desc, ResourceHandle handle, bool own) :state_manager(this), tiled_manager(this)
+	Resource::Resource(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own) :state_manager(this), tiled_manager(this)
 	{
 		auto t = CounterManager::get().start_count<Resource>();
+		m_device = &device;
 
 		PlacementAddress address = { handle.get_heap().get(),handle.get_offset() };
 
-		init(HAL::Device::get(), desc, address,  TextureLayout::UNDEFINED);
+		init(device, desc, address,  TextureLayout::UNDEFINED);
 
 		if (own)
 		{
@@ -263,17 +265,19 @@ namespace HAL
 		}
 	}
 
-	Resource::Resource(const ResourceDesc& desc, PlacementAddress address) :state_manager(this), tiled_manager(this)
+	Resource::Resource(Device& device, const ResourceDesc& desc, PlacementAddress address) :state_manager(this), tiled_manager(this)
 	{
 		auto t = CounterManager::get().start_count<Resource>();
+		m_device = &device;
 
-		init(HAL::Device::get(), desc, address, TextureLayout::UNDEFINED);
+		init(device, desc, address, TextureLayout::UNDEFINED);
 	}
 
 
-	Resource::Resource(const D3D::Resource& resource, TextureLayout initialLayout) :state_manager(this), tiled_manager(this)
+	Resource::Resource(Device& device, const D3D::Resource& resource, TextureLayout initialLayout) :state_manager(this), tiled_manager(this)
 	{
 		native_resource = resource;
+		m_device = &device;
 
 		D3D12_HEAP_PROPERTIES HeapProperties;
 		D3D12_HEAP_FLAGS  HeapFlags;
@@ -281,8 +285,8 @@ namespace HAL
 
 		heap_type = from_native(HeapProperties.Type);
 
-		
-		init(native_resource, initialLayout);
+
+		init(native_resource, initialLayout, device);
 
 	}
 

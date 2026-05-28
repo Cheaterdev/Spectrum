@@ -18,11 +18,23 @@ void removeme() // TODO: VS issue - make dummy unused func to compile entire cpp
 }
 
 REGISTER_TYPE(materials::universal_material);
-REGISTER_TYPE(materials::PipelinePasses);
-REGISTER_TYPE(materials::PipelineSimple);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialAsset, materials::universal_material);
+CEREAL_REGISTER_DYNAMIC_INIT(universal_material);
 CEREAL_FORCE_REGISTER(materials::universal_material);
+// Register Asset→MaterialAsset first so the BFS in PolymorphicVirtualCaster
+// can immediately build the transitive path Asset→universal_material.
+CEREAL_FORCE_REGISTER_RELATION(Asset, MaterialAsset);
+CEREAL_FORCE_REGISTER_RELATION(MaterialAsset, materials::universal_material);
+
+REGISTER_TYPE(materials::PipelinePasses);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(materials::Pipeline, materials::PipelinePasses);
 CEREAL_FORCE_REGISTER(materials::PipelinePasses);
+CEREAL_FORCE_REGISTER_RELATION(materials::Pipeline, materials::PipelinePasses);
+
+REGISTER_TYPE(materials::PipelineSimple);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(materials::Pipeline, materials::PipelineSimple);
 CEREAL_FORCE_REGISTER(materials::PipelineSimple);
+CEREAL_FORCE_REGISTER_RELATION(materials::Pipeline, materials::PipelineSimple);
 
 																						 
 // ---------------------------------------------------------------------------

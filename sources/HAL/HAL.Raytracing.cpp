@@ -5,17 +5,17 @@ import :Device;
 using namespace HAL;
 
 
-HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vector<GeometryDesc> desc,
+HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(Device& device, std::vector<GeometryDesc> desc,
 	CommandList::ptr list)
 {
 	HAL::RaytracingBuildDescBottomInputs inputs;
 	inputs.Flags = RaytracingBuildFlags::PREFER_FAST_TRACE;
 	inputs.geometry = desc;
 
-	auto bottomLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
+	auto bottomLevelPrebuildInfo = device.calculateBuffers(inputs);
 
-	scratch_buffer = StructuredBufferView<std::byte>(bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
-	prev_buffer = StructuredBufferView<std::byte>(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
+	scratch_buffer = StructuredBufferView<std::byte>(device, bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
+	prev_buffer = StructuredBufferView<std::byte>(device, bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
 	cur_buffer = &prev_buffer;
 	HAL::RaytracingBuildDescStructure bottomLevelBuildDesc;
 	{
@@ -26,12 +26,12 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 	list->get_compute().build_ras(bottomLevelBuildDesc, inputs);
 }
 
-HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vector<InstanceDesc> instances)
+HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(Device& device, std::vector<InstanceDesc> instances)
 {
 
 
 
-	auto list = (Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
+	auto list = (device.get_queue(CommandListType::DIRECT)->get_free_list());
 	list->begin(L"RaytracingAccelerationStructure");
 
 
@@ -44,14 +44,14 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 		inputs.instances = list->place_raw(instances);
 	}
 
-	auto topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
+	auto topLevelPrebuildInfo = device.calculateBuffers(inputs);
 
 
-	currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource);
-	prevResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource);
+	currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(device, 1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource);
+	prevResource = std::make_shared<virtual_gpu_buffer<std::byte>>(device, 1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource);
 
 
-	scratchInfo = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 16, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource);
+	scratchInfo = std::make_shared<virtual_gpu_buffer<std::byte>>(device, 1024 * 1024 * 16, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource);
 	scratchInfo->reserve(*list, topLevelPrebuildInfo.ScratchDataSizeInBytes);
 	currentResource->reserve(*list, topLevelPrebuildInfo.ResultDataMaxSizeInBytes);
 
@@ -66,7 +66,7 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 
 	list->execute_and_wait();
 
-	handle_table = Device::get().get_static_gpu_data().alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
+	handle_table = device.get_static_gpu_data().alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
 	raytracing_handle = HLSL::RaytracingAccelerationStructure(handle_table[0]);
 	raytracing_handle.create(currentResource->buffer.resource);
@@ -97,7 +97,7 @@ void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT si
 	inputs.NumDescs = size;
 	inputs.instances = address;
 
-	auto topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
+	auto topLevelPrebuildInfo = currentResource->buffer.resource->get_device().calculateBuffers(inputs);
 
 	UINT64 max = topLevelPrebuildInfo.ScratchDataSizeInBytes;
 

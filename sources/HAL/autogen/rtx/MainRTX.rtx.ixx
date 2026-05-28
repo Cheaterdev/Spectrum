@@ -17,6 +17,7 @@ export {
 
 struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass>, Typelist<Shadow, Reflection, Indirect>>
 {
+	using RTXPSO::RTXPSO;
 	static const constexpr Layouts global_sig = Layouts::DefaultLayout;
 	static const constexpr uint MaxTraceRecursionDepth = 2;
 };

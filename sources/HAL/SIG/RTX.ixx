@@ -61,9 +61,10 @@ struct SelectLocal<T>
 		static const UINT MaxPayloadSizeInBytes = static_cast<UINT>(Templates::max(sizeof(Underlying<typename Passes::Payload>)...));
 		static const UINT MaxAttributeSizeInBytes = sizeof(float2);
 
+		HAL::Device* m_device = nullptr;
 		HAL::StateObject::ptr m_dxrStateObject;
-		HAL::RootSignature::ptr m_root_sig = HAL::Device::get().get_engine_pso_holder().GetSignature(T::global_sig)->create_global_signature<SelectLocal<Passes>::type...>();
-		HAL::RootSignature::ptr m_local_sig = create_local_signature<SelectLocal<Passes>::type...>(HAL::Device::get());
+		HAL::RootSignature::ptr m_root_sig;
+		HAL::RootSignature::ptr m_local_sig;
 
 		IdGenerator<Thread::Free> ids;
 		
@@ -255,14 +256,14 @@ struct SelectLocal<T>
 			(std::get<Passes>(passes).init_ids(m_dxrStateObject, miss_ids), ...);
 			(std::get<Raygens>(raygen).init_ids(m_dxrStateObject, raygen_ids), ...);
 
-			this->miss_ids = HAL::StructuredBufferView<HAL::shader_identifier>(miss_ids.size());
-			this->raygen_ids =HAL::StructuredBufferView<raygen_type>(raygen_ids.size());
+			this->miss_ids = HAL::StructuredBufferView<HAL::shader_identifier>(*m_device, miss_ids.size());
+			this->raygen_ids = HAL::StructuredBufferView<raygen_type>(*m_device, raygen_ids.size());
 
 			   this->miss_ids.resource->set_name("RTXPSO::miss_ids");
 			  	   this->raygen_ids.resource->set_name("RTXPSO::raygen_ids");
 
 
-			auto list = (HAL::Device::get().get_upload_list());
+			auto list = (m_device->get_upload_list());
 			list->get_copy().update(this->miss_ids, 0, miss_ids);
 			list->get_copy().update(this->raygen_ids, 0, raygen_ids);
 			list->execute_and_wait();
@@ -302,9 +303,12 @@ struct SelectLocal<T>
 
 		}
 
-		RTXPSO()
+		RTXPSO(HAL::Device& device)
 		{
-			hitgroup_ids = std::make_shared< HAL::virtual_gpu_buffer<hit_type>>(1024 * 1024);
+			m_device = &device;
+			m_root_sig = device.get_engine_root_layout_holder().GetSignature(T::global_sig)->create_global_signature<SelectLocal<Passes>::type...>();
+			m_local_sig = create_local_signature<SelectLocal<Passes>::type...>(device);
+			hitgroup_ids = std::make_shared< HAL::virtual_gpu_buffer<hit_type>>(device, 1024 * 1024);
 			init();
 		}
 

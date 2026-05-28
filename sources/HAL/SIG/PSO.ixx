@@ -1,18 +1,13 @@
 export module HAL:PSO;
 
+import ppl;			
 import Core;
-import :Concepts;
 import :PipelineState;
-
 import :RootSignature;
 import :API.IndirectCommand;
 
-import :Enums;
-
-import ppl;
 using namespace concurrency;
 
-import :Types;
 export
 {
 
@@ -414,25 +409,33 @@ public:
 	}
 };
 
+class EngineRootLayoutHolder
+{
+	enum_array<Layouts, HAL::RootLayout::ptr> signatures;
+
+public:
+	void init(HAL::Device& device);
+
+	HAL::RootLayout::ptr GetSignature(Layouts l)
+	{
+		return signatures[l];
+	}
+};
+
 class EnginePSOHolder
 {
 	using ptr = std::shared_ptr<PSOBase>;
 	enum_array<PSO, ptr> psos;
-	enum_array<Layouts, HAL::RootLayout::ptr> signatures;
 	enum_array<IndirectCommands, HAL::IndirectCommand> commands;
 
 public:
-	void init(HAL::Device&device);
+	void init(HAL::Device& device);
 
 	template<class T>
 	typename T::PSOState::ptr GetPSO(KeyPair<typename T::Keys> k = KeyPair<typename T::Keys>())
 	{
 		auto pso = static_cast<T*>(psos[T::ID].get());
 		return pso->GetPSO(k);
-	}
-	HAL::RootLayout::ptr GetSignature(Layouts l)
-	{
-		return signatures[l];
 	}
 
 	HAL::IndirectCommand& GetCommand(IndirectCommands command)
@@ -449,14 +452,14 @@ struct AutoGenPSO
 
 	AutoGenPSO()
 	{
-		desc.root_signature = get_Signature(T::layout);
+		desc.layout = T::layout;
 		desc.shader = HAL::compute_shader::get_resource(T::compute);
 	}
 
 
-	HAL::ComputePipelineState::ptr create_pso(PSO pso, std::string name)
+	HAL::ComputePipelineState::ptr create_pso(HAL::Device& device, PSO pso, std::string name)
 	{
-		return HAL::ComputePipelineState::create(desc, name);
+		return HAL::ComputePipelineState::create(device, desc, name);
 	}
 };
 

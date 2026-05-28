@@ -32,7 +32,7 @@ if(!index_buffer)
 				(*data++) = i * 4 + j + 5;
 			}
 
-		index_buffer =Helpers::make_buffer<unsigned int>(index_data);
+		index_buffer =Helpers::make_buffer<unsigned int>(HAL::Device::get(), index_data);
 }
 	}
 

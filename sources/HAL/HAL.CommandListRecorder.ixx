@@ -85,7 +85,7 @@ export namespace HAL
 		std::conditional_t<BuildOptions::Dev, DevRecorder, NullRecorder> debug_recorder;
 	public:
 		const API::CommandList& get_list() const;
-		void create(CommandListType type);
+		void create(CommandListType type, Device& device);
 		void reset();
 
 		bool is_compiled() const;

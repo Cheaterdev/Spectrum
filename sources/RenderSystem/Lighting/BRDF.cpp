@@ -7,7 +7,10 @@ import :Asset;
 
 
 REGISTER_TYPE(BRDF);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(TextureAsset, BRDF);
 CEREAL_FORCE_REGISTER(BRDF);
+// Asset→TextureAsset is already forced in TextureAsset.cpp; just add the next link.
+CEREAL_FORCE_REGISTER_RELATION(TextureAsset, BRDF);
 import HAL;
 
 
@@ -15,8 +18,8 @@ import HAL;
 void BRDF::create_new()
 {
 
-	texture.reset(new HAL::Texture(HAL::ResourceDesc::Tex3D(HAL::Format::R16G16B16A16_FLOAT, { 64, 64, 64 }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)));
-	HAL::CommandList::ptr list(new HAL::CommandList(HAL::CommandListType::DIRECT));
+	texture.reset(new HAL::Texture(HAL::Device::get(), HAL::ResourceDesc::Tex3D(HAL::Format::R16G16B16A16_FLOAT, { 64, 64, 64 }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)));
+	HAL::CommandList::ptr list(new HAL::CommandList(HAL::CommandListType::DIRECT, HAL::Device::get()));
 	list->begin(L"BRDF");
 
 

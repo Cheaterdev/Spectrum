@@ -77,7 +77,7 @@ namespace FW1FontWrapper
 			indices[i * 6 + 5] = static_cast<UINT16>(i * 4 + 2);
 		}
 
-		m_pIndexBuffer = Helpers::make_buffer<unsigned int>(indices);
+		m_pIndexBuffer = Helpers::make_buffer<unsigned int>(HAL::Device::get(), indices);
 		return S_OK;
 	}
 

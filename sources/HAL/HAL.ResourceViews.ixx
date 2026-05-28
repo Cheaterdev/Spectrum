@@ -513,11 +513,10 @@ export
 			}
 
 
-			StructuredBufferView(uint64 count, counterType counted = counterType::NONE,
+			StructuredBufferView(Device& device, uint64 count, counterType counted = counterType::NONE,
 			                     HAL::ResFlags flags = HAL::ResFlags::ShaderResource,
-			                     HAL::HeapType heap_type = HAL::HeapType::DEFAULT,
-			                     GPUEntityStorageInterface& frame = Device::get().get_static_gpu_data()) :
-				StructuredBufferViewBase(std::make_shared<HAL::Buffer>(
+			                     HAL::HeapType heap_type = HAL::HeapType::DEFAULT) :
+				StructuredBufferViewBase(std::make_shared<HAL::Buffer>(device,
 					HAL::ResourceDesc::Buffer(
 						count * sizeof(T) + (counted == counterType::SELF) * Math::roundUp(4, sizeof(Underlying<T>)),
 						flags), heap_type))
@@ -532,10 +531,10 @@ export
 
 				if (desc.counted == counterType::HELP_BUFFER)
 				{
-					counter_view.resource = std::make_shared<HAL::Buffer>(
+					counter_view.resource = std::make_shared<HAL::Buffer>(device,
 						HAL::ResourceDesc::Buffer(4, flags), HeapType::DEFAULT);
 				}
-				init(frame);
+				init(device.get_static_gpu_data());
 			}
 
 			Handle get_uav_clear() { return rwRAW; }
@@ -569,7 +568,8 @@ export
 
 				IF_LOAD()
 				{
-					init(HAL::Device::get().get_static_gpu_data());
+					if (resource)
+						init(resource->get_device().get_static_gpu_data());
 				}
 			}
 		};

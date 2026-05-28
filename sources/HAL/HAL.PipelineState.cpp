@@ -2,24 +2,26 @@ module HAL:PipelineState;
 import Core;
 import :Device;
 import :Shader;
+import :PSO;
 
 namespace HAL
 {
 
-	PipelineState::ptr PipelineState::create(PipelineStateDesc& desc, std::string name)
+	PipelineState::ptr PipelineState::create(Device& device, PipelineStateDesc& desc, std::string name)
 	{
-		return PipelineStateCache::get_cache(desc, name);
+		return device.get_pipeline_state_cache().get_cache(desc, name);
 	}
 
-	ComputePipelineState::ptr ComputePipelineState::create(ComputePipelineStateDesc& desc, std::string name)
+	ComputePipelineState::ptr ComputePipelineState::create(Device& device, ComputePipelineStateDesc& desc, std::string name)
 	{
-		return PipelineStateCache::get_cache(desc, name);
+		return device.get_pipeline_state_cache().get_cache(desc, name);
 	}
 
 
-	PipelineState::PipelineState(PipelineStateDesc _desc, std::string cache) : desc(_desc)
+	PipelineState::PipelineState(Device& device, PipelineStateDesc _desc, std::string cache) : desc(_desc)
 	{
 		this->cache = cache;
+		root_signature = device.get_engine_root_layout_holder().GetSignature(desc.layout);
 		on_change();
 		register_shader(desc.pixel);
 		register_shader(desc.vertex);
@@ -52,7 +54,7 @@ namespace HAL
 			}
 
 			//Log::get() << desc << Log::endl;
-			auto state = PipelineState::ptr(new PipelineState(desc, binary));
+			auto state = PipelineState::ptr(new PipelineState(this->device, desc, binary));
 
 			if (!desc.name.empty())
 			{
@@ -71,7 +73,7 @@ namespace HAL
 				}
 
 				//Log::get() << desc << Log::endl;
-				auto state = ComputePipelineState::ptr(new ComputePipelineState(desc, binary));
+				auto state = ComputePipelineState::ptr(new ComputePipelineState(this->device, desc, binary));
 
 				if (!desc.name.empty())
 				{
@@ -92,20 +94,17 @@ namespace HAL
 		storage.get("cache",binary_cache);
 	}
 
-			PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc& desc, std::string name)
-			{
+	PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc& desc, std::string name)
+	{
+		desc.name = name;
+		return cache[desc];
+	}
 
-				desc.name = name;
-
-				//	 return  PipelineState::ptr(new PipelineState(desc));
-				return desc.root_signature->get_device().get_pipeline_state_cache().cache[desc];
-			}
-
-			ComputePipelineState::ptr PipelineStateCache::get_cache(ComputePipelineStateDesc& desc, std::string name)
-			{
-				desc.name = name;
-				return desc.root_signature->get_device().get_pipeline_state_cache().compute_cache[desc];
-			}
+	ComputePipelineState::ptr PipelineStateCache::get_cache(ComputePipelineStateDesc& desc, std::string name)
+	{
+		desc.name = name;
+		return compute_cache[desc];
+	}
 
 	PipelineStateDesc::PipelineStateDesc()
 	{
@@ -127,9 +126,10 @@ namespace HAL
 		return false;
 	}
 
-	ComputePipelineState::ComputePipelineState(const ComputePipelineStateDesc& _desc, std::string cache) : desc(_desc)
+	ComputePipelineState::ComputePipelineState(Device& device, const ComputePipelineStateDesc& _desc, std::string cache) : desc(_desc)
 	{
 		this->cache = cache;
+		root_signature = device.get_engine_root_layout_holder().GetSignature(desc.layout);
 		on_change();
 		register_shader(desc.shader);
 	}

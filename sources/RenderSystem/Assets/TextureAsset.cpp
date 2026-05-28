@@ -5,14 +5,11 @@ import Core;
 import :MipMapGenerator;
 
 
-// ODR-use anchor: Asset.cpp's force-linker calls this to pull TextureAsset.cpp.obj into
-// the link, which ensures the CEREAL_FORCE_REGISTER anonymous-namespace initialiser below runs.
-namespace cereal { namespace detail {
-    void dynamic_init_dummy_TextureAsset() {}
-} }
-
 REGISTER_TYPE(TextureAsset);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Asset, TextureAsset);
+CEREAL_REGISTER_DYNAMIC_INIT(TextureAsset);
 CEREAL_FORCE_REGISTER(TextureAsset);
+CEREAL_FORCE_REGISTER_RELATION(Asset, TextureAsset);
 
 TextureAssetRenderer::TextureAssetRenderer()
 {
@@ -68,7 +65,7 @@ TextureAsset::TextureAsset()
 void TextureAsset::update_preview(HAL::Texture::ptr preview)
 {
 	if (!preview || !preview->is_rt())
-		preview.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+		preview.reset(new HAL::Texture(HAL::Device::get(), HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
 	auto list = (HAL::Device::get().get_frame_manager().begin_frame()->start_list(L"TextureAsset"));
 

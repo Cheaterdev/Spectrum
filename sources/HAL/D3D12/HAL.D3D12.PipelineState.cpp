@@ -372,13 +372,10 @@ namespace HAL
 	void PipelineState::on_change()
 	{
 		tracked_info.reset(new API::TrackedPipeline());
-		root_signature = desc.root_signature;
-
 
 		PSOCreator creator;
 
-
-		creator.include(desc.root_signature->get_native().Get());
+		creator.include(root_signature->get_native().Get());
 
 
 		slots.clear();
@@ -538,12 +535,10 @@ namespace HAL
 	{
 		tracked_info.reset(new API::TrackedPipeline());
 
-		root_signature = desc.root_signature;
-
 		D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 
-		if (desc.root_signature)
-			psoDesc.pRootSignature = desc.root_signature->get_native().Get();
+		if (root_signature)
+			psoDesc.pRootSignature = root_signature->get_native().Get();
 
 		slots.clear();
 		if (desc.shader)

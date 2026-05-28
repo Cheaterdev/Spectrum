@@ -9,17 +9,17 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>&);
 HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 {
 	HAL::ComputePipelineStateDesc desc;
-	desc.root_signature = device.get_engine_pso_holder().GetSignature(root_signature);
+	desc.layout = root_signature;
 	desc.shader = HAL::compute_shader::get_resource(compute);
 
-	return HAL::ComputePipelineState::create(desc, name);
+	return HAL::ComputePipelineState::create(device, desc, name);
 }
 
 HAL::StateObject::ptr SimpleWorkgraphPSO::create(HAL::Device& device)
 {
 	HAL::StateObjectDesc workgraph;
 	workgraph.type = StateObjectType::WorkGraph;
-	workgraph.global_root = device.get_engine_pso_holder().GetSignature(root_signature);
+	workgraph.global_root = device.get_engine_root_layout_holder().GetSignature(root_signature);
 
 	
 	{
@@ -35,7 +35,7 @@ HAL::StateObject::ptr SimpleWorkgraphPSO::create(HAL::Device& device)
 HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 {
 	HAL::PipelineStateDesc desc;
-	desc.root_signature = device.get_engine_pso_holder().GetSignature(root_signature);
+	desc.layout = root_signature;
 	if (!vertex.entry_point.empty())	desc.vertex = HAL::vertex_shader::get_resource(vertex);
 	if (!pixel.entry_point.empty())	desc.pixel = HAL::pixel_shader::get_resource(pixel);
 
@@ -67,13 +67,17 @@ HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 	desc.blend.render_target[i] = blend[i];
 
 	desc.blend.independ_blend = rtv_formats.size() == blend.size();
-	return HAL::PipelineState::create(desc, name);
+	return HAL::PipelineState::create(device, desc, name);
 }
 
-void EnginePSOHolder::init(HAL::Device&device)
+void EngineRootLayoutHolder::init(HAL::Device& device)
+{
+	init_signatures(device, signatures);
+}
+
+void EnginePSOHolder::init(HAL::Device& device)
 {
 	ScopedCounter counter("pso init");
-	init_signatures(device, signatures);
-	init_pso(device,psos);
+	init_pso(device, psos);
 	init_indirect_commands(device, commands);
 }

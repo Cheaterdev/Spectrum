@@ -149,10 +149,10 @@ namespace FrameGraph
 		current_pass = nullptr;
 	}
 
-	void TaskBuilder::pass_texture(std::string name, HAL::Texture::ptr tex, HAL::FenceWaiter fence, ResourceFlags flags)
+	void TaskBuilder::pass_texture(std::string name, HAL::TextureResource::ptr tex, HAL::FenceWaiter fence, ResourceFlags flags)
 	{
 
-		tex->resource->disable_state_tracking();
+		tex->disable_state_tracking();
 
 		auto tex_desc = tex->get_desc().as_texture();
 		if (tex_desc.is2D())
@@ -162,7 +162,7 @@ namespace FrameGraph
 			auto& info = *h.info;
 			info.passed = true;
 
-			info.resource = tex->resource;
+			info.resource = tex;
 			info.fence = fence;
 			info.d3ddesc = tex->get_desc();
 			passed_resources.insert(&info);
@@ -174,7 +174,7 @@ namespace FrameGraph
 			h.desc.size = tex->get_desc().as_texture().Dimensions;
 
 			info.name = name;
-			tex->resource->set_name(name);
+			tex->set_name(name);
 
 			h.init_view(info, *current_frame);
 
@@ -188,12 +188,12 @@ namespace FrameGraph
 			auto& info = *h.info;
 
 			info.name = name;
-			tex->resource->set_name(name);
+			tex->set_name(name);
 
 
 			info.passed = true;
 
-			info.resource = tex->resource;
+			info.resource = tex;
 			info.d3ddesc = tex->get_desc();
 			info.fence = fence;
 			passed_resources.insert(&info);
@@ -1408,7 +1408,7 @@ namespace FrameGraph
 					if (!res || res.resource->get_desc() != info->d3ddesc)
 					{
 						PROFILE(L"placed");
-						res.resource = HAL::create_resource(info->d3ddesc, info->alloc_ptr);
+						res.resource = HAL::create_resource(HAL::Device::get(), info->d3ddesc, info->alloc_ptr);
 						//						 	res.resource->debug = info->name=="ResultTexture"; // TODO: move everywhere
 
 
@@ -1440,19 +1440,19 @@ namespace FrameGraph
 					if (info->heap_type == HAL::HeapType::UPLOAD)
 					{
 						PROFILE(L"UPLOAD");
-						info->resource = HAL::create_resource(info->d3ddesc, info->heap_type);
+						info->resource = HAL::create_resource(HAL::Device::get(), info->d3ddesc, info->heap_type);
 						info->is_new = true;
 					}
 					else if (info->heap_type == HAL::HeapType::READBACK)
 					{
 						PROFILE(L"READBACK");
-						info->resource = HAL::create_resource(info->d3ddesc, info->heap_type);
+						info->resource = HAL::create_resource(HAL::Device::get(), info->d3ddesc, info->heap_type);
 						info->is_new = true;
 					}
 					else if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 					{
 						PROFILE(L"DEFAULT");
-						info->resource = HAL::create_resource(info->d3ddesc, info->heap_type);
+						info->resource = HAL::create_resource(HAL::Device::get(), info->d3ddesc, info->heap_type);
 						info->is_new = true;
 
 					}

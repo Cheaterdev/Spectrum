@@ -4,7 +4,12 @@ import <RenderSystem.h>;
 import :AssetRenderer;
 
 REGISTER_TYPE(MaterialAsset);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Asset, MaterialAsset);
+CEREAL_REGISTER_DYNAMIC_INIT(MaterialAsset);
 CEREAL_FORCE_REGISTER(MaterialAsset);
+CEREAL_FORCE_REGISTER_RELATION(Asset, MaterialAsset);
+
+CEREAL_FORCE_DYNAMIC_INIT(universal_material);
 
 import Graphics;
 

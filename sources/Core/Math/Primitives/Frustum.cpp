@@ -95,4 +95,6 @@ std::shared_ptr<Primitive> Frustum::clone()
 }
 
 REGISTER_TYPE(Frustum)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Primitive, Frustum)
 CEREAL_FORCE_REGISTER(Frustum);
+CEREAL_FORCE_REGISTER_RELATION(Primitive, Frustum);

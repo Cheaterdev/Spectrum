@@ -22,10 +22,10 @@ void Texture3DMultiTiles::flush(HAL::CommandList& list)
 void Texture3DMultiTiles::set(HAL::ResourceDesc desc)
 {
 	desc.Flags |= ResFlags::Virtual | ResFlags::DisableStateTracking;
-	tex_dynamic.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
-	tex_static.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
+	tex_dynamic.reset(new HAL::Texture(HAL::Device::get(), desc, TextureLayout::SHADER_RESOURCE));
+	tex_static.reset(new HAL::Texture(HAL::Device::get(), desc, TextureLayout::SHADER_RESOURCE));
 
-	tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
+	tex_result.reset(new HAL::Texture(HAL::Device::get(), desc, TextureLayout::SHADER_RESOURCE));
 
 	tex_dynamic->resource->set_name("tex_dynamic");
 
@@ -93,7 +93,7 @@ void Texture3DRefTiles::flush(HAL::CommandList& list)
 void Texture3DRefTiles::set(HAL::ResourceDesc desc)
 {
 	desc.Flags |= ResFlags::Virtual | ResFlags::DisableStateTracking;
-	tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
+	tex_result.reset(new HAL::Texture(HAL::Device::get(), desc, TextureLayout::SHADER_RESOURCE));
 
 	static_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
 	dynamic_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
@@ -165,13 +165,13 @@ void Texture3DRefTiles::zero_tiles(HAL::CommandList& list)
 void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
 {
 	// Always register external textures with the frame graph
-	builder.pass_texture("VoxelAlbedo",        albedo.tex_result);
-	builder.pass_texture("VoxelNormal",        normal.tex_result);
-	builder.pass_texture("VoxelLighted",       tex_lighting.tex_result);
-	builder.pass_texture("VoxelAlbedoStatic",  albedo.tex_static);
-	builder.pass_texture("VoxelNormalStatic",  normal.tex_static);
-	builder.pass_texture("VoxelAlbedoDynamic", albedo.tex_dynamic);
-	builder.pass_texture("VoxelNormalDynamic", normal.tex_dynamic);
+	builder.pass_texture("VoxelAlbedo",        albedo.tex_result->resource);
+	builder.pass_texture("VoxelNormal",        normal.tex_result->resource);
+	builder.pass_texture("VoxelLighted",       tex_lighting.tex_result->resource);
+	builder.pass_texture("VoxelAlbedoStatic",  albedo.tex_static->resource);
+	builder.pass_texture("VoxelNormalStatic",  normal.tex_static->resource);
+	builder.pass_texture("VoxelAlbedoDynamic", albedo.tex_dynamic->resource);
+	builder.pass_texture("VoxelNormalDynamic", normal.tex_dynamic->resource);
 }
 
 

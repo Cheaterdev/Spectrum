@@ -52,7 +52,7 @@ export namespace materials
 	};
 
 
-	class PipelineSimple :public Pipeline
+	class PipelineSimple : public Pipeline
 	{
 		pixel_shader::ptr pixel;
 	public:
@@ -71,7 +71,7 @@ export namespace materials
 		}
 
 	};
-	class PipelinePasses :public Pipeline
+	class PipelinePasses : public Pipeline
 	{
 		PSOS::GBufferDraw::ptr gbuffer;
 		PSOS::Voxelization::ptr voxelization;

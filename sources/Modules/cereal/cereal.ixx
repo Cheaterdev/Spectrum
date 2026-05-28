@@ -198,4 +198,17 @@ export
 
 	CEREAL_REGISTER_ARCHIVE(simple_log_archive)
 
+	// ---- Macro-free polymorphic caster registration ----
+	// Forces registration of a Base→Derived cast path in cereal's BFS table.
+	// Prefer CEREAL_REGISTER_POLYMORPHIC_RELATION + CEREAL_FORCE_REGISTER_RELATION
+	// in .cpp files for reliable static-init-time registration.
+	template<class Base, class Derived>
+	inline bool cereal_poly_link() noexcept
+	{
+		cereal::detail::StaticObject<
+			cereal::detail::PolymorphicVirtualCaster<Base, Derived>
+		>::getInstance();
+		return true;
+	}
+
 }

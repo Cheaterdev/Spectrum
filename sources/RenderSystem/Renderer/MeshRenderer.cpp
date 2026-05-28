@@ -340,12 +340,12 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 	UINT max_meshes = 1024 * 1024;
 
-	commands_boxes = std::make_shared<virtual_gpu_buffer<Table::BoxInfo>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
-	visible_boxes = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
-	meshes_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
-	meshes_invisible_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	commands_boxes = std::make_shared<virtual_gpu_buffer<Table::BoxInfo>>(HAL::Device::get(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	visible_boxes = std::make_shared<virtual_gpu_buffer<UINT>>(HAL::Device::get(), max_meshes, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	meshes_ids = std::make_shared<virtual_gpu_buffer<UINT>>(HAL::Device::get(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	meshes_invisible_ids = std::make_shared<virtual_gpu_buffer<UINT>>(HAL::Device::get(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	for (int i = 0; i < 8; i++)
-		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<Table::CommandData>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<Table::CommandData>>(HAL::Device::get(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 
 		auto list = (HAL::Device::get().get_upload_list());
 			
@@ -379,15 +379,15 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		verts[5] = vec4(1.0f, -1.0f, -1.0f, 0);
 		verts[6] = vec4(1.0f, -1.0f, 1.0f, 0);
 		verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
-		index_buffer = Helpers::make_buffer<unsigned int>(data);
+		index_buffer = Helpers::make_buffer<unsigned int>(HAL::Device::get(), data);
 
 		index_buffer.resource->set_name("mesh_renderer::index_buffer");
-		vertex_buffer = HAL::StructuredBufferView<vec4>(8);
+		vertex_buffer = HAL::StructuredBufferView<vec4>(HAL::Device::get(), 8);
 
 			vertex_buffer.resource->set_name("mesh_renderer::vertex_buffer");
 		list->get_copy().update(vertex_buffer, 0, verts);
-	
-		draw_boxes_first = HAL::StructuredBufferView<DrawIndexedArguments>(1);
+
+		draw_boxes_first = HAL::StructuredBufferView<DrawIndexedArguments>(HAL::Device::get(), 1);
 
 		D3D12_DRAW_INDEXED_ARGUMENTS args;
 
@@ -403,11 +403,11 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 
 	{
-		dispatch_buffer = HAL::StructuredBufferView<DispatchArguments>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		dispatch_buffer = HAL::StructuredBufferView<DispatchArguments>(HAL::Device::get(), 1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	}
 
 	{
-		dispatch_buffer111 = HAL::StructuredBufferView<DispatchArguments>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		dispatch_buffer111 = HAL::StructuredBufferView<DispatchArguments>(HAL::Device::get(), 1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 		DispatchArguments args;
 		args.ThreadGroupCountX = 1;
 		args.ThreadGroupCountY = 1;

@@ -40,10 +40,18 @@ export
 
 		template<class T>
 		void put(std::string partition, const T& data)
-		{
-			uint64 pos = ostream_ptr->tellp();
+		{			 			uint64 pos = ostream_ptr->tellp();
+			try
+			{
+				  
 			serialization_oarchive oa(*ostream_ptr);
 			oa << data;
+			}
+			catch (const std::exception &e)
+			{
+			 Log::get() << e.what()<<Log::endl;				
+			}
+
 
 			h.offsets[partition] = pos;
 		}

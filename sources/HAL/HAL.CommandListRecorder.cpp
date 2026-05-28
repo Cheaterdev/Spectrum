@@ -12,9 +12,9 @@ import HAL;
 
 namespace HAL
 {
-	void DelayedCommandList::create(CommandListType type)
+	void DelayedCommandList::create(CommandListType type, Device& device)
 	{
-		list.create(type);
+		list.create(type, device);
 		tasks.reserve(4096);
 	}
 

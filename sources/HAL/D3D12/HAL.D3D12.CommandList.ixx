@@ -20,12 +20,13 @@ export namespace HAL {
 		class CommandList
 		{
 
-			
+
 			void* debug_ptr = nullptr;
 			friend class HAL::Queue;
 			D3D::CommandList m_commandList;
 			D3D_PRIMITIVE_TOPOLOGY  native_topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 			CommandListType type;
+			Device* m_device = nullptr;
 		public:
 
 			D3D::CommandList get_native() const
@@ -33,7 +34,7 @@ export namespace HAL {
 				return m_commandList;
 			}
 
-			void create(CommandListType type);
+			void create(CommandListType type, Device& device);
 			void begin(CommandAllocator& allocator);
 			void end();
 

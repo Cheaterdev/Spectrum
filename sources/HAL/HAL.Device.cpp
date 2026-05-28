@@ -86,7 +86,7 @@ namespace HAL
 	void Device::init_managers()
 	{
 		for (auto type : magic_enum::enum_values<CommandListType>())
-			queues[type] = std::make_shared<HAL::Queue>(type, this);
+			queues[type] = std::make_shared<HAL::Queue>(type, *this);
 
 
 		//auto another_direct = std::make_shared<HAL::Queue>(CommandListType::DIRECT, this);
@@ -104,15 +104,16 @@ namespace HAL
 
 		pipeline_state_cache = std::make_unique<PipelineStateCache>(*this);
 
-		engine_pso_holder = std::make_unique<EnginePSOHolder>();
+		engine_root_layout_holder = std::make_unique<EngineRootLayoutHolder>();
+		engine_root_layout_holder->init(*this);
 
+		engine_pso_holder = std::make_unique<EnginePSOHolder>();
 		engine_pso_holder->init(*this);
 
 		for (auto type : magic_enum::enum_values<CommandListType>())
 		{
-			command_allocators[type].create_func = [type]() {
-				return std::make_shared<CommandAllocator>(type);
-
+			command_allocators[type].create_func = [this, type]() {
+				return std::make_shared<CommandAllocator>(*this, type);
 			};
 		}
 
@@ -138,6 +139,11 @@ namespace HAL
 	{
 		return *pipeline_state_cache;
 	}
+	EngineRootLayoutHolder& Device::get_engine_root_layout_holder() const
+	{
+		return *engine_root_layout_holder;
+	}
+
 	EnginePSOHolder& Device::get_engine_pso_holder() const
 	{
 		return *engine_pso_holder;

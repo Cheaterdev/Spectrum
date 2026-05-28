@@ -30,9 +30,9 @@ export{
 			ResourceAddress gpu_address;
 			Buffer() = default;
 
-			Buffer(const ResourceDesc& desc, HeapType heap_type);
-			Buffer(const ResourceDesc& desc, PlacementAddress handle);
-			Buffer(const ResourceDesc& desc, ResourceHandle handle, bool own = false);
+			Buffer(Device& device, const ResourceDesc& desc, HeapType heap_type);
+			Buffer(Device& device, const ResourceDesc& desc, PlacementAddress handle);
+			Buffer(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own = false);
 			// TODO:: works only for buffer now
 			uint64 get_size() const;
 
@@ -51,7 +51,8 @@ export{
 
 				if constexpr (Archive::is_loading::value)
 				{
-					_init(desc, HeapType::DEFAULT, TextureLayout::UNDEFINED);
+					Device& device = *cereal::get_user_data<UniversalContext>(ar).get_context<Device*>();
+					_init(device, desc, HeapType::DEFAULT, TextureLayout::UNDEFINED);
 					GPUBinaryData<true> binary;
 					ar& NVP(binary);
 					Resource::write(binary);
@@ -60,7 +61,7 @@ export{
 				else
 				{
 					auto data = read();
-					GPUBinaryData<false> binary(GPUBinaryData<false>::Buffer{ 0,desc.as_buffer().SizeInBytes }, data);
+					GPUBinaryData<false> binary(GPUBinaryData<false>::Buffer{ 0,desc.as_buffer().SizeInBytes }, data, get_device());
 					ar& NVP(binary);
 				}
 			}

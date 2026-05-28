@@ -794,3 +794,21 @@ CEREAL_FORCE_REGISTER(FlowGraph::graph_input);
 CEREAL_FORCE_REGISTER(FlowGraph::graph_output);
 // FlowGraph::parameter_type is abstract (pure virtual can_cast) — no CEREAL_FORCE_REGISTER
 CEREAL_FORCE_REGISTER(FlowGraph::strict_parameter);
+
+// Polymorphic cast paths — registered shallower-first so the BFS builds
+// transitive paths (e.g. parameter→graph_input) in a single pass.
+CEREAL_REGISTER_POLYMORPHIC_RELATION(FlowGraph::window,         FlowGraph::Node);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(FlowGraph::Node,           FlowGraph::graph);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(FlowGraph::parameter,      FlowGraph::input);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(FlowGraph::parameter,      FlowGraph::output);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(FlowGraph::input,          FlowGraph::graph_input);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(FlowGraph::output,         FlowGraph::graph_output);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(FlowGraph::parameter_type, FlowGraph::strict_parameter);
+
+CEREAL_FORCE_REGISTER_RELATION(FlowGraph::window,         FlowGraph::Node);
+CEREAL_FORCE_REGISTER_RELATION(FlowGraph::Node,           FlowGraph::graph);
+CEREAL_FORCE_REGISTER_RELATION(FlowGraph::parameter,      FlowGraph::input);
+CEREAL_FORCE_REGISTER_RELATION(FlowGraph::parameter,      FlowGraph::output);
+CEREAL_FORCE_REGISTER_RELATION(FlowGraph::input,          FlowGraph::graph_input);
+CEREAL_FORCE_REGISTER_RELATION(FlowGraph::output,         FlowGraph::graph_output);
+CEREAL_FORCE_REGISTER_RELATION(FlowGraph::parameter_type, FlowGraph::strict_parameter);

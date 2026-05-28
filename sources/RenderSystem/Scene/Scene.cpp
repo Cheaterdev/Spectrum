@@ -52,14 +52,14 @@ Scene::Scene()
 			dynamic_objects.erase(render_object);
 		});
 
-	mesh_infos = std::make_shared< virtual_gpu_buffer<Table::MeshCommandData>>(1024 * 1024);
-	raytrace = std::make_shared< virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>>(1024 * 1024);
+	mesh_infos = std::make_shared< virtual_gpu_buffer<Table::MeshCommandData>>(HAL::Device::get(), 1024 * 1024);
+	raytrace = std::make_shared< virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>>(HAL::Device::get(), 1024 * 1024);
 
 
 	if (HAL::Device::get().is_rtx_supported())
 	{
 		std::vector<InstanceDesc>  desc;
-		raytrace_scene = std::make_shared<RaytracingAccelerationStructure>(desc);
+		raytrace_scene = std::make_shared<RaytracingAccelerationStructure>(HAL::Device::get(), desc);
 	}
 }
 

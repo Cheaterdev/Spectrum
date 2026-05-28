@@ -23,8 +23,8 @@ namespace HAL
 		UINT NumRows;
 		UINT64 RowSizesInBytes;
 		D3D::ResourceDesc Desc = ::to_native(rdesc);
-		HAL::Device::get().get_native_device()->GetCopyableFootprints1(&Desc, sub_resource, 1, 0, &Layouts, &NumRows,
-		                                                               &RowSizesInBytes, &RequiredSize);
+		get_native_device()->GetCopyableFootprints1(&Desc, sub_resource, 1, 0, &Layouts, &NumRows,
+		                                            &RowSizesInBytes, &RequiredSize);
 
 		return {
 			RequiredSize, NumRows, Layouts.Footprint.RowPitch, static_cast<uint>(NumRows * Layouts.Footprint.RowPitch),
@@ -46,8 +46,8 @@ namespace HAL
 		UINT NumRows;
 		UINT64 RowSizesInBytes;
 		D3D::ResourceDesc Desc = ::to_native(rdesc);
-		HAL::Device::get().get_native_device()->GetCopyableFootprints1(&Desc, sub_resource, 1, 0, &Layouts, &NumRows,
-		                                                               &RowSizesInBytes, &RequiredSize);
+		get_native_device()->GetCopyableFootprints1(&Desc, sub_resource, 1, 0, &Layouts, &NumRows,
+		                                            &RowSizesInBytes, &RequiredSize);
 		UINT64 res_stride = Math::AlignUp(RowSizesInBytes, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 		UINT64 size = res_stride * rows_count * box.z;
 

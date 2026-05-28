@@ -2,6 +2,7 @@
 
 import Core;
 import :Types;
+import :Device;
 import :RootSignature;
 import :Shader;
 import :API.PipelineState;
@@ -11,7 +12,7 @@ export namespace HAL
 	struct PipelineStateDesc
 	{
 		std::string name;
-		RootSignature::ptr root_signature;
+		Layouts layout;
 		vertex_shader::ptr vertex;
 		pixel_shader::ptr pixel;
 		geometry_shader::ptr geometry;
@@ -38,23 +39,7 @@ export namespace HAL
 		SERIALIZE()
 		{
 			ar& NVP(name);
-
-			if constexpr (Archive::is_saving::value)
-			{
-
-				auto sig = dynamic_cast<RootLayout*>(root_signature.get());
-				ar& NVP(sig->layout);
-			}
-			else
-			{
-				Layouts l;
-
-				ar& NVP(l);
-
-				root_signature = HAL::Device::get().get_engine_pso_holder().GetSignature(l);
-
-			}
-
+			ar& NVP(layout);
 
 			ar& NVP(topology);
 			ar& NVP(blend);
@@ -103,7 +88,7 @@ export namespace HAL
 	{
 		friend class PipelineStateCache;
 
-		PipelineState(PipelineStateDesc _desc, std::string cache);
+		PipelineState(Device& device, PipelineStateDesc _desc, std::string cache);
 
 	public:
 		PipelineState() = default;
@@ -112,7 +97,7 @@ export namespace HAL
 		void on_change() override;
 
 
-		static ptr create(PipelineStateDesc& desc, std::string name);
+		static ptr create(Device& device, PipelineStateDesc& desc, std::string name);
 	};
 
 
@@ -123,13 +108,21 @@ export namespace HAL
 
 	struct ComputePipelineStateDesc
 	{
-		RootSignature::ptr root_signature;
+		Layouts layout;
 
 		compute_shader::ptr shader;
 
 		std::string name;
 		bool operator==(const ComputePipelineStateDesc& r) const = default;
 		std::strong_ordering  operator<=>(const  ComputePipelineStateDesc& r)  const = default;
+
+	private:
+		SERIALIZE()
+		{
+			ar& NVP(name);
+			ar& NVP(layout);
+			ar& NVP(shader);
+		}
 	};
 
 
@@ -139,7 +132,7 @@ export namespace HAL
 		void on_change() override;
 
 		friend class PipelineStateCache;
-		explicit ComputePipelineState(const ComputePipelineStateDesc& _desc, std::string cache);
+		explicit ComputePipelineState(Device& device, const ComputePipelineStateDesc& _desc, std::string cache);
 
 	public:
 		using ptr = s_ptr<ComputePipelineState>;
@@ -148,7 +141,7 @@ export namespace HAL
 
 
 
-		static ptr create(ComputePipelineStateDesc& desc, std::string name);
+		static ptr create(Device& device, ComputePipelineStateDesc& desc, std::string name);
 
 	};
 
@@ -168,8 +161,8 @@ export namespace HAL
 		PipelineStateCache(Device& device);
 		virtual ~PipelineStateCache();
 
-		static PipelineState::ptr get_cache(PipelineStateDesc& desc, std::string name = "");
-		static ComputePipelineState::ptr get_cache(ComputePipelineStateDesc& desc, std::string name = "");
+		PipelineState::ptr get_cache(PipelineStateDesc& desc, std::string name = "");
+		ComputePipelineState::ptr get_cache(ComputePipelineStateDesc& desc, std::string name = "");
 
 	};
 
@@ -262,7 +255,7 @@ export namespace HAL
 			{
 				HAL::PipelineStateDesc desc;
 				ar& NVP(desc);
-				pso = HAL::PipelineStateCache::get_cache(desc, desc.name);
+				pso = HAL::PipelineState::create(Device::get(), desc, desc.name);
 
 			}
 			else
@@ -298,7 +291,7 @@ export namespace HAL
 
 					ar& NVP(k);
 
-					pso[k] = HAL::PipelineStateCache::get_cache(desc, desc.name);
+					pso[k] = HAL::PipelineState::create(Device::get(), desc, desc.name);
 				}
 
 

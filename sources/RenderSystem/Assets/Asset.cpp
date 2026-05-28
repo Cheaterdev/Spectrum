@@ -10,16 +10,10 @@ import <windows/windows.h>;
 REGISTER_TYPE(Asset);
 CEREAL_FORCE_REGISTER(Asset);
 
-// Manual CEREAL_FORCE_DYNAMIC_INIT — ODR-uses TextureAsset.cpp's dummy, pulling that TU into the link
-namespace cereal { namespace detail { void dynamic_init_dummy_TextureAsset(); } }
-namespace {
-    struct _TextureAssetForceLinker {
-        _TextureAssetForceLinker() {
-            OutputDebugStringA("[CEREAL] TextureAsset: force_init running, calling dummy\n");
-            ::cereal::detail::dynamic_init_dummy_TextureAsset();
-        }
-    } _textureAssetForceLinkerInstance;
-}
+CEREAL_FORCE_DYNAMIC_INIT(TextureAsset);
+CEREAL_FORCE_DYNAMIC_INIT(MeshAsset);
+CEREAL_FORCE_DYNAMIC_INIT(MaterialAsset);
+CEREAL_FORCE_DYNAMIC_INIT(BinaryAsset);
 
 AssetManager::AssetManager()
 {
@@ -88,7 +82,7 @@ void AssetManager::add_preview(Asset::ptr asset)
 			if (!preview || !preview->is_rt())
 			{
 				HAL::Texture::ptr new_preview;
-				new_preview.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { 256, 256 }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+				new_preview.reset(new HAL::Texture(HAL::Device::get(), HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { 256, 256 }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 				asset->holder->editor->preview = new_preview;
 			}
 

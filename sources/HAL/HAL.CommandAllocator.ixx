@@ -12,9 +12,10 @@ export{
 
 		class CommandAllocator : public API::CommandAllocator
 		{
+			Device& device;
 			CommandListType type;
 		public:
-			CommandAllocator(CommandListType type);
+			CommandAllocator(Device& device, CommandListType type);
 			void reset();
 			CommandListType get_type() const;
 		};

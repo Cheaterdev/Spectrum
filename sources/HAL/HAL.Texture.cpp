@@ -10,10 +10,10 @@ namespace HAL
 	{
 		if (resource)
 		{
-
+			auto& frame = resource->get_device().get_static_gpu_data();
 			auto desc = get_desc().as_texture();
 			if (desc.ArraySize == 6)
-				cube_view = CubeView(resource, HAL::Device::get().get_static_gpu_data());
+				cube_view = CubeView(resource, frame);
 
 			/*		if (desc.ArraySize % 6 == 0)
 						array_cubemap_view = std::make_shared<CubemapArrayView>(this);*/
@@ -23,12 +23,12 @@ namespace HAL
 									array_2d_view = std::make_shared<Array2DView>(this);*/
 
 			if (desc.is3D())
-				texture_3d_view = Texture3DView(resource, HAL::Device::get().get_static_gpu_data());
+				texture_3d_view = Texture3DView(resource, frame);
 			else
-				texture_2d_view = Texture2DView(resource, HAL::Device::get().get_static_gpu_data());
+				texture_2d_view = Texture2DView(resource, frame);
 
 			if (desc.is2D()&&resource->get_tiled_manager().is_tiled())
-			feedback = std::make_shared<HAL::TextureResource>(ResourceDesc::Feedback(resource.get()), HeapType::DEFAULT);
+			feedback = std::make_shared<HAL::TextureResource>(resource->get_device(), ResourceDesc::Feedback(resource.get()), HeapType::DEFAULT);
 		}
 	}
 
@@ -61,20 +61,20 @@ namespace HAL
 		init();
 	}
 
-	Texture::Texture(D3D::Resource native, TextureLayout initialLayout) 
+	Texture::Texture(Device& device, D3D::Resource native, TextureLayout initialLayout)
 	{
-
-		resource = std::make_shared<HAL::TextureResource>(native, initialLayout);
+		m_device = &device;
+		resource = std::make_shared<HAL::TextureResource>(device, native, initialLayout);
 		//    resource.reset(new Resource(native));
 		resource->set_name("Texture");
 		//	resource->debug = true;
 		init();
 	}
-	Texture::Texture(HAL::ResourceDesc desc, TextureLayout initialLayout) 
+	Texture::Texture(Device& device, HAL::ResourceDesc desc, TextureLayout initialLayout)
 	{
+		m_device = &device;
 
-
-		resource = std::make_shared<HAL::TextureResource>(desc, desc.is_virtual()?HeapType::RESERVED:HeapType::DEFAULT,  initialLayout);
+		resource = std::make_shared<HAL::TextureResource>(device, desc, desc.is_virtual()?HeapType::RESERVED:HeapType::DEFAULT,  initialLayout);
 		init();
 	}
 
@@ -83,7 +83,7 @@ namespace HAL
 		auto desc = get_desc().as_texture();
 		//auto list = Device::get().get_upload_list();
 
-		auto list = (HAL::Device::get().get_queue(CommandListType::COPY)->get_free_list());
+		auto list = (resource->get_device().get_queue(CommandListType::COPY)->get_free_list());
 		list->begin(L"Texture Readback");
 
 		desc.Format = desc.Format.to_typeless();
@@ -135,9 +135,10 @@ namespace HAL
 			desc = HAL::ResourceDesc::Tex2D(data.format, { data.width, data.height }, data.array_size, data.mip_maps);
 
 		desc.Flags |= HAL::ResFlags::Immutable;
-		resource = std::make_shared<HAL::TextureResource>(desc,  desc.is_virtual()?HeapType::RESERVED:HeapType::DEFAULT, TextureLayout::COPY_DEST);
-	
-		auto list = (HAL::Device::get().get_upload_list());
+		ASSERT(m_device);
+		resource = std::make_shared<HAL::TextureResource>(*m_device, desc,  desc.is_virtual()?HeapType::RESERVED:HeapType::DEFAULT, TextureLayout::COPY_DEST);
+
+		auto list = (m_device->get_upload_list());
 
 		if (data.array_size * data.mip_maps)
 		{
@@ -164,10 +165,15 @@ namespace HAL
 		desc.MipLevels = data->mip_maps;
 		desc.Dimensions = uint3(data->width, data->height, 0);
 
-		return create(data/*, get_desc().is_virtual()?HeapType::RESERVED:HeapType::DEFAULT*/); //std::make_shared<Texture>(HAL::ResourceDesc{ desc, HAL::ResFlags::ShaderResource }, ResourceState::COMMON, HeapType::DEFAULT, data);
+		return create(resource->get_device(), data); //std::make_shared<Texture>(HAL::ResourceDesc{ desc, HAL::ResFlags::ShaderResource }, ResourceState::COMMON, HeapType::DEFAULT, data);
 	}
 
 	Texture::ptr Texture::load_native(const texure_header& header, resource_file_depender& depender)
+	{
+		return load_native(HAL::Device::get(), header, depender);
+	}
+
+	Texture::ptr Texture::load_native(Device& device, const texure_header& header, resource_file_depender& depender)
 	{
 		auto file = FileSystem::get().get_file(header.name);
 
@@ -181,18 +187,19 @@ namespace HAL
 			if (header.mips) flags |= texture_data::LoadFlags::GENERATE_MIPS;
 
 			auto tex_data = texture_data::load_texture(file, flags);
-		
+
 			if (!tex_data)
 				return nullptr;
 
 			//	auto data = texture_data::compress(tex_data);
 
-			return create(tex_data);
+			return create(device, tex_data);
 		}
 
 		return nullptr;
 	}
-	 Texture::ptr Texture::create(HAL::texture_data::ptr& tex_data)
+
+	 Texture::ptr Texture::create(Device& device, HAL::texture_data::ptr& tex_data)
 	{
 		HAL::ResourceDesc desc;
 
@@ -201,7 +208,7 @@ namespace HAL
 		else
 			desc = HAL::ResourceDesc::Tex2D(tex_data->format, { tex_data->width, tex_data->height }, tex_data->array_size, tex_data->mip_maps);
 		desc.Flags |= HAL::ResFlags::Immutable;
-		auto texture = std::make_shared<Texture>(desc,  TextureLayout::COPY_DEST);
+		auto texture = std::make_shared<Texture>(device, desc,  TextureLayout::COPY_DEST);
 
 
 		texture->upload_data(tex_data);

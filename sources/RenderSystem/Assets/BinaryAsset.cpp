@@ -11,7 +11,10 @@ void removeme2() // TODO: VS issue - make dummy unused func to compile entire cp
 }
 
 REGISTER_TYPE(BinaryAsset);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Asset, BinaryAsset);
+CEREAL_REGISTER_DYNAMIC_INIT(BinaryAsset);
 CEREAL_FORCE_REGISTER(BinaryAsset);
+CEREAL_FORCE_REGISTER_RELATION(Asset, BinaryAsset);
 
 Asset_Type BinaryAsset::get_type()
 {
@@ -81,7 +84,7 @@ BinaryAsset::~BinaryAsset()
 void BinaryAsset::update_preview(HAL::Texture::ptr preview)
 {
 	if (!preview || !preview->is_rt())
-		preview.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+		preview.reset(new HAL::Texture(HAL::Device::get(), HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
 	auto list = (HAL::Device::get().get_frame_manager().begin_frame()->start_list(L"BinaryAsset"));
 

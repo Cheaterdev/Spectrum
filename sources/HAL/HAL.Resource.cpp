@@ -18,21 +18,21 @@ import Core;
 
 namespace HAL
 {
-	Resource::ptr create_resource(const HAL::ResourceDesc& desc, ResourceHandle handle)
+	Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, ResourceHandle handle)
 	{
 		PROFILE(L"create_resource handle");
 
 		if (desc.is_buffer())
-			return std::make_shared<HAL::Buffer>(desc, handle);
-		return std::make_shared<TextureResource>(desc, handle);
+			return std::make_shared<HAL::Buffer>(device, desc, handle);
+		return std::make_shared<TextureResource>(device, desc, handle);
 	}
 
-	Resource::ptr create_resource(const HAL::ResourceDesc& desc, HeapType heap_type)
+	Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, HeapType heap_type)
 	{
 		PROFILE(L"create_resource heap_type");
 		if (desc.is_buffer())
-			return std::make_shared<HAL::Buffer>(desc, heap_type);
-		return std::make_shared<TextureResource>(desc, heap_type);
+			return std::make_shared<HAL::Buffer>(device, desc, heap_type);
+		return std::make_shared<TextureResource>(device, desc, heap_type);
 	}
 	std::mutex t;
 
@@ -61,9 +61,9 @@ namespace HAL
 			}
 			}, data.desc);
 
-		load_waiter = Device::get().get_ds_queue().execute(request);
+		load_waiter = get_device().get_ds_queue().execute(request);
 
-		Device::get().get_ds_queue().flush();
+		get_device().get_ds_queue().flush();
 		load_waiter.wait();
 	}
 

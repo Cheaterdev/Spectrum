@@ -238,6 +238,7 @@ namespace HAL {
 	{
 		friend class FrameResourceManager;
 
+		Device& device;
 		std::uint64_t frame_number = 0;
 		std::mutex m;
 
