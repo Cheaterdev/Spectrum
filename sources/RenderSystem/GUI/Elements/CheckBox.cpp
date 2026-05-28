@@ -64,5 +64,15 @@ namespace GUI
             if (on_check)
                 on_check(r);
         }
+
+        bool check_box::is_checked()
+        {
+            return checked.get();
+        }
+
+        void check_box::set_checked(bool value)
+        {
+            checked = value;
+        }
     }
 }

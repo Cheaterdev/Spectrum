@@ -24,15 +24,9 @@ export namespace GUI
                 virtual void on_bounds_changed(const rect& r) override;
                 bool allow_uncheck = true;
 
-                bool is_checked()
-                {
-                    return checked.get();
-                }
+                bool is_checked();
 
-                void set_checked(bool value)
-                {
-                    checked = value;
-                }
+                void set_checked(bool value);
                 using ptr = s_ptr<check_box>;
                 using wptr = w_ptr<check_box>;
                 std::function<void(bool)> on_check;

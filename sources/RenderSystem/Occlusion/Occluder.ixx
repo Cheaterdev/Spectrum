@@ -13,12 +13,7 @@ export class occluder
 
         virtual bool is_inside(const Frustum& f);
 
-		void set_primitive(Primitive::ptr primitive)
-		{
-			this->primitive = primitive;
-			if(primitive)
-			primitive_global = primitive->clone();
-		}
+		void set_primitive(Primitive::ptr primitive);
 		template<class T>
 		void calculate_childs(const T &container)
 		{
@@ -45,33 +40,11 @@ export class occluder
 				max = vec3::max(primitive_global->get_max(), max);
 			}
 		}
-		void apply_transform(mat4x4 & t)
-		{
-			if (primitive_global&&primitive)
-			{
-				primitive_global->apply_transform(primitive, t);
+		void apply_transform(mat4x4 & t);
 
+		vec3 get_min();
 
-				min = primitive_global->get_min();
-				max = primitive_global->get_max();
-				if (primitive_childs)
-				{
-					min = vec3::min(primitive_childs->get_min(), min);
-					max = vec3::max(primitive_childs->get_max(), max);
-				}
-
-			}
-		}
-
-		vec3 get_min()
-		{
-			return min;
-		}
-
-		vec3 get_max()
-		{
-			return max;
-		}
+		vec3 get_max();
 
 	
 		/*
@@ -98,14 +71,7 @@ export class occluder
 			return intersect(f, primitive.get(), global_transform);
 
 		}*/
-		bool is_childs_inside(const Frustum& f)
-		{
-			/*  if (!childs_occluder.primitive) return false;
-
-			return intersect(f, childs_occluder.primitive.get(), global_transform);*/
-
-			return false;
-		}
+		bool is_childs_inside(const Frustum& f);
 
 
     private:

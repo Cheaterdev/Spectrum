@@ -3,6 +3,33 @@ import :Renderer;
 
 namespace GUI
 {
+	void Elements::scroll_bar::set_sizes(float filled_size, float container_size, float container_pos)
+	{
+		float f = container_size;
+		float percent_size = std::min(1.0f, filled_size / f);
+		float _offset = -container_pos / (f /*- filled_size*/);
+
+		if (f < Math::eps10)
+		{
+			percent_size = 1;
+			_offset = 0;
+		}
+
+		if (type == scroll_type::HORIZONTAL)
+		{
+			drag->size = {render_bounds->w * percent_size, drag->size->y};
+			drag->pos = { render_bounds->w * _offset, drag->pos->y };
+		}
+
+		else
+		{
+			drag->size = { drag->size->x, render_bounds->h  * percent_size };
+			drag->pos = { drag->pos->x, render_bounds->h  * _offset };
+		}
+
+		visible = percent_size < 1;
+	}
+
 	void Elements::scroll_bar::draw(Context& c)
 	{
 		c.renderer->draw_color(c, float4(0, 0, 0, 0.5), get_render_bounds());

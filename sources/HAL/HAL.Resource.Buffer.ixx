@@ -1,5 +1,5 @@
 export module HAL:Resource.Buffer;
-import <HAL.h>;
+
 import :HeapAllocators;
 import :Device;
 import :API.Resource;

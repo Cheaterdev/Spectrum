@@ -862,3 +862,73 @@ bool ShaderParamType::can_cast(parameter_type* other)
 	return res;
 }
 REGISTER_TYPE(MaterialContext);
+
+bool ShaderParamType::operator==(const ShaderParamType& t) const
+{
+    return M == t.M && N == t.N;
+}
+
+int ShaderParamType::get_size()
+{
+    return M * N * sizeof(float);
+}
+
+bool VectorType::can_cast(parameter_type* other)
+{
+    VectorType* vtype = dynamic_cast<VectorType*>(other);
+
+    if (vtype) return true;
+
+    ShaderParamType* type = dynamic_cast<ShaderParamType*>(other);
+
+    if (type) return type->M == 1;
+
+    return false;
+}
+
+Uniform::_value::_value()
+{
+    raw_data[0] = 0;
+    raw_data[1] = 0;
+    raw_data[2] = 0;
+    raw_data[3] = 0;
+}
+
+Uniform::Uniform()
+{
+    name = "unknown";
+}
+
+TextureSRVParams::TextureSRVParams() : asset(nullptr), to_linear(false)
+{
+}
+
+TextureSRVParams::TextureSRVParams(Asset::ref&& asset, bool to_linear)
+    : asset(std::move(asset)), to_linear(to_linear)
+{
+}
+
+SpecToMetNode::SpecToMetNode()
+{
+    inputs.albedo   = register_input("albedo");
+    inputs.specular = register_input("specular");
+
+    outputs.albedo   = register_output("albedo");
+    outputs.metallic = register_output("metallic");
+}
+
+void SpecToMetNode::operator()(MaterialContext* c)
+{
+    auto mat_graph = static_cast<MaterialFunction*>(owner);
+
+    auto res1 = mat_graph->add_value(ShaderParams::get().FLOAT4);
+    auto res2 = mat_graph->add_value(ShaderParams::get().FLOAT1);
+
+    auto val1 = inputs.albedo->get<shader_parameter>();
+    auto val2 = inputs.specular->get<shader_parameter>();
+
+    mat_graph->add_function(std::string("spec_to_metallic(") + val1.name + "," + val2.name + "," + res1.name + "," + res2.name + ")");
+
+    outputs.albedo->put(res1);
+    outputs.metallic->put(res2);
+}

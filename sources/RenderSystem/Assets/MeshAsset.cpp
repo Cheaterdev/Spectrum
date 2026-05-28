@@ -714,6 +714,50 @@ void MeshAssetInstance::init_asset()
 }
 
 
+void MeshNode::iterate(std::function<bool(MeshNode*)> f)
+{
+	if (f(this))
+	{
+		for (auto& c : childs)
+			c.iterate(f);
+	}
+}
+
+void MeshAsset::shutdown()
+{
+	preview_mesh.reset();
+}
+
+MeshAsset::~MeshAsset()
+{
+	materials.clear();
+}
+
+void MeshAsset::reload_resource()
+{
+}
+
+MeshAssetInstance::mesh_asset_node::mesh_asset_node(MeshNode* node)
+{
+	asset_node = node;
+}
+
+universal_rtx_manager::universal_rtx_manager() : HAL::virtual_gpu_buffer<Table::RaytraceInstanceInfo>(MAX_NODES_SIZE)
+{
+}
+
+universal_mesh_instance_manager::universal_mesh_instance_manager() : HAL::virtual_gpu_buffer<Table::MeshInstanceInfo>(MAX_NODES_SIZE)
+{
+}
+
+universal_nodes_manager::universal_nodes_manager() : HAL::virtual_gpu_buffer<Table::node_data>(MAX_NODES_SIZE)
+{
+}
+
+universal_material_info_part_manager::universal_material_info_part_manager() : HAL::virtual_gpu_buffer<Table::MaterialCommandData>(MAX_COMMANDS_SIZE)
+{
+}
+
 void SceneFrameManager::prepare(HAL::CommandList::ptr& command_list, Scene& scene)
 {
 	auto timer = command_list->start(L"Upload data");

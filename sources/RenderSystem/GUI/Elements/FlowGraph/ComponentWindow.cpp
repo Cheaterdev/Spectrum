@@ -5,6 +5,48 @@ import :FlowGraph.Canvas;
 import :Renderer;
 
 
+GUI::base::ptr GUI::Elements::FlowGraph::VisualGraph::create_editor_window()
+{
+	return nullptr;
+}
+
+bool GUI::Elements::FlowGraph::selectable::test(vec2 at)
+{
+	return false;
+}
+
+bool GUI::Elements::FlowGraph::selectable::test(vec2 from, vec2 to)
+{
+	return false;
+}
+
+bool GUI::Elements::FlowGraph::selectable::test_full(vec2 from, vec2 to)
+{
+	return false;
+}
+
+void GUI::Elements::FlowGraph::component_window::on_child_touched(base::ptr child)
+{
+	if (child == title_bar)
+		on_touch();
+}
+
+bool GUI::Elements::FlowGraph::component_window::test(vec2 from, vec2 to)
+{
+	rect t = intersect(rect(from, to - from), rect(pos.get(), size.get()));
+	return t.size.x > 0 && t.size.y > 0;
+}
+
+bool GUI::Elements::FlowGraph::component_window::test(vec2 at)
+{
+	return at.x > pos->x && (at.x < pos->x + size->x) && at.y > pos->y && (at.y < pos->y + size->y);
+}
+
+bool GUI::Elements::FlowGraph::component_window::test_full(vec2 from, vec2 to)
+{
+	return (pos->x >= from.x && pos->x + size->x < to.x) && (pos->y >= from.y && pos->y + size->y < to.y);
+}
+
 void GUI::Elements::FlowGraph::component_window::draw(Context& c)
 {
 	auto texture = selected ? skin.Active : skin.Inactive;

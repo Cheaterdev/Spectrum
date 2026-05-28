@@ -2,7 +2,7 @@ export module FrameGraph:Base;
 
 import Core;
 import HAL;
-import <HAL.h>;
+
 
 using namespace HAL;
 
@@ -126,7 +126,7 @@ public:
 
 	public:
 		enum_array<CommandListType, const Pass*> values;
-		SyncState(){reset();}
+		SyncState();
 		void reset();
 		void set_synced(const Pass* pass);
 	
@@ -180,8 +180,8 @@ public:
 		SyncState used_end;
 
 
-		bool is_static() const { return check(flags&ResourceFlags::Static);}
-		bool is_dynamic() const { return !check(flags&ResourceFlags::Static);}
+		bool is_static() const;
+		bool is_dynamic() const;
 
 
 		bool enabled = false;
@@ -197,11 +197,7 @@ public:
 			HAL::Resource::ptr resource;
 			std::shared_ptr<HAL::ResourceView> view;
 
-			operator bool()
-			{
-			return !!resource;
-			
-			}
+			operator bool();
 		};
 
 		std::map<HAL::ResourceHandle,CompiledResource> resource_places;
@@ -331,22 +327,9 @@ public:
 			using View = HAL::ByteBufferView;
 			uint64 count;
 
-			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
-			{
-				HAL::ResFlags flags = HAL::ResFlags::ShaderResource;
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
 
-				if (check(resflags & ResourceFlags::UnorderedAccess))
-				{
-					flags |= HAL::ResFlags::UnorderedAccess;
-				}
-				return HAL::ResourceDesc::Buffer(count, flags);
-			}
-
-
-			ByteBufferViewDesc as_view(ResourceFlags resflags)
-			{
-				return {0,count};
-			}
+			ByteBufferViewDesc as_view(ResourceFlags resflags);
 		};
 
 
@@ -419,49 +402,9 @@ public:
 			UINT array_count;
 			UINT mip_count;
 
-			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
-			{
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
 
-				HAL::ResFlags flags = HAL::ResFlags::None;
-
-				if (check(resflags & ResourceFlags::RenderTarget))
-				{
-					flags |= HAL::ResFlags::RenderTarget;
-				}
-
-				if (check(resflags & ResourceFlags::DepthStencil))
-				{
-					flags |= HAL::ResFlags::DepthStencil;
-				}
-
-				if (check(resflags & ResourceFlags::UnorderedAccess))
-				{
-					flags |= HAL::ResFlags::UnorderedAccess;
-				}
-
-				if (format.is_shader_visible())
-					flags |= HAL::ResFlags::ShaderResource;
-
-				if (mip_count == 0) {
-					mip_count = 1;
-					auto tsize = size;
-
-					while (tsize.x != 1 && tsize.y != 1)
-					{
-						tsize /= 2;
-						mip_count++;
-					}
-
-				}
-
-				return HAL::ResourceDesc::Tex2D(format, size.xy, array_count, mip_count, flags);
-			}
-
-
-			HAL::TextureViewDesc as_view(ResourceFlags resflags)
-			{
-				return { 0, mip_count, 0, array_count };
-			}
+			HAL::TextureViewDesc as_view(ResourceFlags resflags);
 		};
 
 		struct Texture3DDesc
@@ -472,49 +415,9 @@ public:
 			HAL::Format format;
 			UINT mip_count;
 
-			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
-			{
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
 
-				HAL::ResFlags flags = HAL::ResFlags::None;
-
-				if (check(resflags & ResourceFlags::RenderTarget))
-				{
-					flags |= HAL::ResFlags::RenderTarget;
-				}
-
-				if (check(resflags & ResourceFlags::DepthStencil))
-				{
-					flags |= HAL::ResFlags::DepthStencil;
-				}
-
-				if (check(resflags & ResourceFlags::UnorderedAccess))
-				{
-					flags |= HAL::ResFlags::UnorderedAccess;
-				}
-
-				if (format.is_shader_visible())
-					flags |= HAL::ResFlags::ShaderResource;
-
-				if (mip_count == 0) {
-					mip_count = 1;
-					auto tsize = size;
-
-					while (tsize.x != 1 && tsize.y != 1 && tsize.z != 1)
-					{
-						tsize /= 2;
-						mip_count++;
-					}
-
-				}
-
-				return HAL::ResourceDesc::Tex3D(format, size, mip_count, flags);
-			}
-
-
-			HAL::Texture3DViewDesc as_view(ResourceFlags resflags)
-			{
-				return { 0, mip_count };
-			}
+			HAL::Texture3DViewDesc as_view(ResourceFlags resflags);
 		};
 
 
@@ -527,49 +430,9 @@ public:
 			UINT array_count;
 			UINT mip_count;
 
-			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
-			{
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
 
-				HAL::ResFlags flags = HAL::ResFlags::None;
-
-				if (check(resflags & ResourceFlags::RenderTarget))
-				{
-					flags |= HAL::ResFlags::RenderTarget;
-				}
-
-				if (check(resflags & ResourceFlags::DepthStencil))
-				{
-					flags |= HAL::ResFlags::DepthStencil;
-				}
-
-				if (check(resflags & ResourceFlags::UnorderedAccess))
-				{
-					flags |= HAL::ResFlags::UnorderedAccess;
-				}
-
-				if (format.is_shader_visible())
-					flags |= HAL::ResFlags::ShaderResource;
-
-				if (mip_count == 0) {
-					mip_count = 1;
-					auto tsize = size;
-
-					while (tsize.x != 1 && tsize.y != 1)
-					{
-						tsize /= 2;
-						mip_count++;
-					}
-
-				}
-
-				return HAL::ResourceDesc::Tex2D(format, size.xy, array_count * 6, mip_count, flags);
-			}
-
-
-			HAL::CubeViewDesc as_view(ResourceFlags resflags)
-			{
-				return { 0, mip_count, 0, array_count * 6 };
-			}
+			HAL::CubeViewDesc as_view(ResourceFlags resflags);
 		};
 
 
@@ -721,20 +584,9 @@ public:
 
 		Pass* get_pass(std::wstring_view name) const;
 
-		Pass* get_pass(uint id)	const
-		{
-			auto it = id_to_pass.find(id);
-			return it != id_to_pass.end() ? it->second : nullptr;
-		}
+		Pass* get_pass(uint id) const;
 
-		ResourceAllocInfo* get(std::string name)
-		{
-			if (resources_names.count(name) == 0) return nullptr;
-			name = resources_names[name];
-			ResourceAllocInfo& info = alloc_resources[name];
-			if (!info.enabled)return nullptr;;
-			return &info;
-		}
+		ResourceAllocInfo* get(std::string name);
 	};
 
 	  class Graph;
@@ -773,7 +625,7 @@ public:
 		std::wstring_view name;
 		uint32_t pass_index = 0;
 
-		uint32_t GetPassIndex() const { return pass_index; }
+		uint32_t GetPassIndex() const;
 		UsedResources used;
 		FrameContext context;
 
@@ -804,25 +656,14 @@ public:
 
 		virtual bool setup(TaskBuilder& builder) = 0;
 
-		HAL::CommandListType get_type() const
-		{
-			HAL::CommandListType type = HAL::CommandListType::DIRECT;
-
-			if (check(flags & PassFlags::Compute))
-				type = HAL::CommandListType::COMPUTE;
-
-			return type;
-		}
+		HAL::CommandListType get_type() const;
 		void compile(TaskBuilder& builder);
 
 		virtual void render(Graph*graph, HAL::FrameResources::ptr& frame) = 0;
 		void wait();
 		void execute();
 
-		bool active()
-		{
-			return enabled && renderable;
-		}
+		bool active();
 
 		// optimization
 		bool inserted = false;
@@ -886,27 +727,11 @@ public:
 	{
 		inline static const std::wstring s_name = L"[External]";
 
-		ExternalPass()
-		{
-			name   = s_name;
-			id     = std::numeric_limits<UINT>::max();
-			enabled    = true;
-			renderable = true;
-			flags  = PassFlags::General;
-		}
+		ExternalPass();
 
-		virtual bool setup(TaskBuilder&) override { return true; }
+		virtual bool setup(TaskBuilder&) override;
 
-		virtual void render(Graph* graph, HAL::FrameResources::ptr& frame) override
-		{
-			render_task = thread_pool::get().enqueue([this, &frame, graph]()
-			{
-				context.begin(graph, this, frame);
-				// No GPU work — context.end() fires process_debug_resource for each
-				// write-flagged passed resource, which triggers thumbnail capture.
-				context.end();
-			});
-		}
+		virtual void render(Graph* graph, HAL::FrameResources::ptr& frame) override;
 	};
 
 
@@ -942,11 +767,7 @@ public:
 			};
 		}
 
-		void set_slot(SlotID id, HAL::SignatureDataSetter& setter)
-		{
-		//	ASSERT(slot_setters.contains(id));
-			slot_setters[id](setter);
-		}
+		void set_slot(SlotID id, HAL::SignatureDataSetter& setter);
 
 	};
 
@@ -977,14 +798,11 @@ public:
 
 	public:
 
-		Graph() :VariableContext(L"Graph")
-		{
-			builder.graph = this;
-		}
+		Graph();
 		TaskBuilder builder;
 
-		void set_pipeline(Pipelines::PipelineBase* p) { current_pipeline = p; }
-		Pipelines::PipelineBase* get_pipeline() const { return current_pipeline; }
+		void set_pipeline(Pipelines::PipelineBase* p);
+		Pipelines::PipelineBase* get_pipeline() const;
 
 	private:
 		Pipelines::PipelineBase* current_pipeline = nullptr;

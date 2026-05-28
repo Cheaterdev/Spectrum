@@ -24,6 +24,12 @@ GUI::Elements::option_group::option_group()
 {
 }
 
+GUI::Elements::option_group::~option_group()
+{
+    for (auto c : all)
+        c->on_check_internal = nullptr;
+}
+
 void GUI::Elements::option_group::on_check(check_box::ptr obj)
 {
     for (auto c : all)

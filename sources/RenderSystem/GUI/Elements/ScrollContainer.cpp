@@ -179,3 +179,13 @@ bool GUI::Elements::scroll_container::on_wheel(mouse_wheel type, float value, ve
     speed.y += value * 20;
     return true;
 }
+
+void GUI::Elements::scroll_container::think(float dt)
+{
+    base::think(dt);
+    if (speed.length() > 0.3f)
+    {
+        moving(100 * speed * dt);
+        speed *= std::exp(-20 * dt);
+    }
+}

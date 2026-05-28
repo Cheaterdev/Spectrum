@@ -41,13 +41,7 @@ export namespace GUI
 				std::atomic_int block_id;
 
 				std::atomic_int gpu_block_id;
-				void reset()
-				{
-					block_id = 0;
-					gpu_block_id = 0;
-					blocks.resize(4096 * 128);
-					gpu_blocks.resize(4096 * 256);
-				}
+				void reset();
 			};
 			class GraphElement :public image
 			{

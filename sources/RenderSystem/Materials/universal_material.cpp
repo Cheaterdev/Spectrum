@@ -402,3 +402,43 @@ size_t materials::render_pass::get_pipeline_id()
 
 
 //CEREAL_REGISTER_DYNAMIC_INIT(myclasses)
+
+void materials::render_pass::init_pipeline_id()
+{
+	pipeline_id = 2166136261U;
+	pipeline_id = HashIterate(ps_shader ? ps_shader->id : 0, pipeline_id);
+	pipeline_id = HashIterate(ds_shader ? ds_shader->id : 0, pipeline_id);
+	pipeline_id = HashIterate(hs_shader ? hs_shader->id : 0, pipeline_id);
+}
+
+materials::PipelineSimple::PipelineSimple(UINT id, pixel_shader::ptr pixel) : Pipeline(id)
+{
+}
+
+void materials::PipelineSimple::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics)
+{
+	//	pipeline.pixel = pixel;
+}
+
+UINT materials::universal_material::get_material_id()
+{
+	return (UINT)info_handle.get_offset();
+}
+
+materials::Pipeline::ptr materials::universal_material::get_pipeline()
+{
+	return pipeline;
+}
+
+Slots::MaterialInfo& materials::universal_material::get_render_info()
+{
+	return material_info;
+}
+
+void materials::universal_material::set(MESH_TYPE type, MeshRenderContext::ptr&)
+{
+}
+
+void materials::universal_material::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics)
+{
+}

@@ -31,6 +31,11 @@ namespace GUI
         simple_rect.draw(c, color, r);
     }
 
+    void Renderer::start()
+    {
+        nine_patch.counter = 0;
+    }
+
     void Renderer::set(base::Context& c)
     {
     }

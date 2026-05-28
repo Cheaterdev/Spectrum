@@ -35,10 +35,7 @@ export namespace GUI
 
                 virtual void close_menus();
 
-                menu_list_element(bool on_strip)
-                {
-                    this->on_strip = on_strip;
-                }
+                menu_list_element(bool on_strip);
 
                 virtual void open_menu();
                 virtual void close_menu();
@@ -60,10 +57,7 @@ export namespace GUI
                 bool vertical;
 
 
-                virtual bool need_open_on_hover()
-                {
-                    return true;
-                }
+                virtual bool need_open_on_hover();
             public:
                 menu_list(bool vertical = true);
                 //	class renderer;
@@ -75,22 +69,7 @@ export namespace GUI
                 bool draw_icon = false;
 
 
-        	void make_fixed_width()
-        	{
-                width_size = size_type::MATCH_CHILDREN;
-                height_size = size_type::MATCH_CHILDREN;
-                contents->width_size = size_type::MATCH_PARENT_CHILDREN;
-                contents->height_size = size_type::MATCH_CHILDREN;
-
-                filled->width_size = size_type::MATCH_PARENT_CHILDREN;
-                filled->height_size = size_type::MATCH_CHILDREN;
-
-             //   auto_size = true;
-                filled->clamp_to_parent = ParentClamp::HEIGHT;
-                filled->docking = dock::NONE;
-                filled->x_type = pos_x_type::LEFT;
-                if (hor) base::remove_child(hor);
-        	}
+        	void make_fixed_width();
                 template<class T = menu_list_element>
                 typename T::ptr add_item(std::string elem)
                 {
@@ -153,50 +132,17 @@ export namespace GUI
                 }
 
                 virtual void draw(Context& c) override;
-                virtual bool is_menu_component()
-                {
-                    return true;
-                }
+                virtual bool is_menu_component();
 
-                virtual bool is_menu_open()
-                {
-                    for (auto c : elements)
-                    {
-                        if (c->is_menu_open())
-                            return true;
-                    }
+                virtual bool is_menu_open();
 
-                    return false;
-                }
+                bool is_self_open();
 
-                bool is_self_open()
-                {
-                    return get_parent() != nullptr;
-                }
+                void self_open(user_interface* ui);
 
-                void self_open(user_interface* ui)
-                {
-                    ui->add_child(get_ptr());
-                }
+                void self_close();
 
-                void self_close()
-                {
-                    remove_from_parent();
-                }
-                virtual void remove_all()
-                {
-                    contents->remove_all();
-                    elements.clear();
-
-                    if (!vertical)
-                    {
-                        docking = dock::TOP;
-                        size = { 25, 25 };
-                    }
-
-                    else
-                        size = { padding->left + padding->right, padding->top + padding->bottom };
-                }
+                virtual void remove_all();
 
                 virtual void close_menus() override;
 
@@ -216,16 +162,13 @@ export namespace GUI
         class menu_strip : public menu_list
         {
             public:
-                menu_strip() : menu_list(false) { draw_icon = false; };
+                menu_strip();
                 //	class renderer;
                 //friend class renderer;
                 using ptr = s_ptr<menu_list>;
                 using wptr = w_ptr<menu_list>;
 
-                virtual bool need_open_on_hover()
-                {
-                    return is_menu_open();
-                }
+                virtual bool need_open_on_hover() override;
 
         };
     }

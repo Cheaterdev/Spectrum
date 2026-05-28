@@ -1,5 +1,5 @@
 module HAL:HLSL;
-import <HAL.h>;
+
 import :Descriptors;
 import :DescriptorHeap;
 import :Resource;

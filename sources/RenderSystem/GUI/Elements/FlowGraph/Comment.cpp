@@ -4,6 +4,28 @@ import :FlowGraph.Canvas;
 import :Renderer;
 
 
+bool GUI::Elements::FlowGraph::comment::test(vec2 from, vec2 to)
+{
+    rect t = intersect(rect(from, to - from), rect(pos.get(), size.get()));
+    return t.size.x > 0 && t.size.y > 0;
+}
+
+bool GUI::Elements::FlowGraph::comment::test(vec2 at)
+{
+    return at.x > pos->x && (at.x < pos->x + size->x) && at.y > pos->y && (at.y < pos->y + size->y);
+}
+
+void GUI::Elements::FlowGraph::comment::on_child_touched(base::ptr child)
+{
+    if (child == title_bar)
+        on_touch();
+}
+
+bool GUI::Elements::FlowGraph::comment::test_full(vec2 from, vec2 to)
+{
+    return (pos->x >= from.x && pos->x + size->x < to.x) && (pos->y >= from.y && pos->y + size->y < to.y);
+}
+
 void GUI::Elements::FlowGraph::comment::draw(Context& c)
 {
    c.renderer->draw(c, Skin::get().FlowComment.Active, get_render_bounds());

@@ -1,5 +1,5 @@
 export module HAL:PSO;
-import <HAL.h>;
+
 import Core;
 import :Concepts;
 import :PipelineState;

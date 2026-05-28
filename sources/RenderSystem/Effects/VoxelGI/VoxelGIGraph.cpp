@@ -11,6 +11,170 @@ using namespace FrameGraph;
 using namespace HAL;
 
 
+// ---- Texture3DMultiTiles ----------------------------------------------------
+
+void Texture3DMultiTiles::flush(HAL::CommandList& list)
+{
+	tilings_info.resource = tex_result->resource.get();
+	list.update_tilings(std::move(tilings_info));
+}
+
+void Texture3DMultiTiles::set(HAL::ResourceDesc desc)
+{
+	desc.Flags |= ResFlags::Virtual | ResFlags::DisableStateTracking;
+	tex_dynamic.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
+	tex_static.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
+
+	tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
+
+	tex_dynamic->resource->set_name("tex_dynamic");
+
+	tex_dynamic->resource->set_name("tex_static");
+	tex_dynamic->resource->set_name("tex_result");
+
+	tex_dynamic->resource->get_tiled_manager().on_load = [this](ivec4 pos)
+	{
+		auto heap_pos = tex_dynamic->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;
+		heap_pos.handle = ResourceHandle();
+		tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos.xyz, heap_pos);
+	};
+
+	tex_dynamic->resource->get_tiled_manager().on_zero = [this](ivec4 pos)
+	{
+		if (tex_static->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
+		{
+			auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;
+			heap_pos.handle = ResourceHandle();
+			tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos.xyz, heap_pos);
+		}
+		else
+		{
+			tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos.xyz, 0);
+		}
+	};
+
+	tex_static->resource->get_tiled_manager().on_load = [this](ivec4 pos)
+	{
+		if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
+		{
+			auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;
+			heap_pos.handle = ResourceHandle();
+			tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos.xyz, heap_pos);
+		}
+	};
+
+	tex_static->resource->get_tiled_manager().on_zero = [this](ivec4 pos)
+	{
+		if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
+		{
+			tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos.xyz, 0);
+		}
+	};
+}
+
+void Texture3DMultiTiles::zero_tiles(HAL::CommandList& list)
+{
+	tex_dynamic->resource->get_tiled_manager().zero_tiles((list));
+	tex_static->resource->get_tiled_manager().zero_tiles((list));
+
+	tilings_info.tiles.clear();
+	//	flush(list);
+}
+
+
+// ---- Texture3DRefTiles ------------------------------------------------------
+
+void Texture3DRefTiles::flush(HAL::CommandList& list)
+{
+	tilings_info.resource = tex_result->resource.get();
+	list.update_tilings(std::move(tilings_info));
+}
+
+void Texture3DRefTiles::set(HAL::ResourceDesc desc)
+{
+	desc.Flags |= ResFlags::Virtual | ResFlags::DisableStateTracking;
+	tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
+
+	static_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
+	dynamic_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
+}
+
+void Texture3DRefTiles::load_static(std::list<uint3>& tiles)
+{
+	for (auto& pos : tiles)
+	{
+		static_tiles[pos] = true;
+
+		if (!dynamic_tiles[pos])
+		{
+			tex_result->resource->get_tiled_manager().load_tile(tilings_info, pos, 0, true);
+		}
+	}
+}
+
+void Texture3DRefTiles::zero_static(std::list<uint3>& tiles)
+{
+	for (auto& pos : tiles)
+	{
+		static_tiles[pos] = false;
+		if (!dynamic_tiles[pos])
+		{
+			tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos, 0);
+		}
+	}
+}
+
+void Texture3DRefTiles::load_dynamic(std::list<uint3>& tiles)
+{
+	for (auto& pos : tiles)
+	{
+		dynamic_tiles[pos] = true;
+
+		if (!static_tiles[pos])
+		{
+			tex_result->resource->get_tiled_manager().load_tile(tilings_info, pos, 0, true);
+		}
+	}
+}
+
+void Texture3DRefTiles::zero_dynamic(std::list<uint3>& tiles)
+{
+	for (auto& pos : tiles)
+	{
+		dynamic_tiles[pos] = false;
+		if (!static_tiles[pos])
+		{
+			tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos, 0);
+		}
+	}
+}
+
+void Texture3DRefTiles::zero_tiles(HAL::CommandList& list)
+{
+	tilings_info.tiles.clear();
+
+	tex_result->resource->get_tiled_manager().zero_tiles(list);
+
+	static_tiles.fill(false);
+	dynamic_tiles.fill(false);
+}
+
+
+// ---- VoxelGI::pass_data -----------------------------------------------------
+
+void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
+{
+	// Always register external textures with the frame graph
+	builder.pass_texture("VoxelAlbedo",        albedo.tex_result);
+	builder.pass_texture("VoxelNormal",        normal.tex_result);
+	builder.pass_texture("VoxelLighted",       tex_lighting.tex_result);
+	builder.pass_texture("VoxelAlbedoStatic",  albedo.tex_static);
+	builder.pass_texture("VoxelNormalStatic",  normal.tex_static);
+	builder.pass_texture("VoxelAlbedoDynamic", albedo.tex_dynamic);
+	builder.pass_texture("VoxelNormalDynamic", normal.tex_dynamic);
+}
+
+
 class GBufferDownsampler :public Events::prop_handler
 {
 

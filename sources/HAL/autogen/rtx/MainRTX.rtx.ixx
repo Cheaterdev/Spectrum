@@ -4,7 +4,7 @@ import Core;
 import :RTX;
 import :Enums;
 import :Types;
-import <HAL.h>;
+
 import :Autogen.Tables.ShadowPayload;
 import :Autogen.Tables.RayPayload;
 import :Autogen.Slots.MaterialInfo;

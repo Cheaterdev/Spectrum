@@ -22,11 +22,7 @@ export namespace GUI
 
                     OutputWindow();
 
-                ~OutputWindow()
-                {
-
-                    Log::get()<<"DELETING"<<Log::endl;
-                }
+                ~OutputWindow();
             };
         }
     }

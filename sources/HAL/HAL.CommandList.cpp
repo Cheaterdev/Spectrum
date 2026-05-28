@@ -1,5 +1,5 @@
 ﻿module HAL:CommandList;
-import <HAL.h>;
+
 
 import :Autogen;
 

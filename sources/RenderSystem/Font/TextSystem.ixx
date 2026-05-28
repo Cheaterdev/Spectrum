@@ -25,10 +25,7 @@ export namespace Fonts
             FW1_Font native_font;
             std::string font_name;
         public:
-            ~Font()
-            {
-                pRenderStates->Release();
-            }
+            ~Font();
             using ptr = s_ptr<Font>;
 
             //      static Font::ptr get_resource(const std::string& h);
@@ -44,11 +41,7 @@ export namespace Fonts
 
             vec2 measure(std::string str, float size, unsigned int flags = 0);
 
-            void set_states(HAL::CommandList::ptr& list)
-            {
-                // Set the default rendering states
-                pRenderStates->SetStates(list, 0);
-            }
+            void set_states(HAL::CommandList::ptr& list);
 
         private:
             static Font::ptr create_new(const std::string& header);
@@ -67,12 +60,7 @@ export namespace Fonts
             FW1_Factory  pFW1Factory;
             FontSystem();
 
-            FW1_TextGeometry create_geometry()
-            {
-                FW1_TextGeometry geometry;
-                pFW1Factory->CreateTextGeometry(&geometry);
-                return geometry;
-            }
+            FW1_TextGeometry create_geometry();
         public:
 
             Font::ptr get_font(std::string font_name);

@@ -11,6 +11,24 @@ import :Button;
 import HAL;
 
 using namespace HAL;
+
+namespace GUI
+{
+	namespace Elements
+	{
+		namespace Debug
+		{
+			void collected_data::reset()
+			{
+				block_id = 0;
+				gpu_block_id = 0;
+				blocks.resize(4096 * 128);
+				gpu_blocks.resize(4096 * 256);
+			}
+		}
+	}
+}
+
 namespace GUI
 {
 	namespace Elements

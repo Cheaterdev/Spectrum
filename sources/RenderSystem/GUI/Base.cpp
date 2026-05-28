@@ -1507,6 +1507,81 @@ namespace GUI
 
 }
 
+GUIInfo::GUIInfo(HAL::CommandList::ptr list) : command_list(list)
+{
+    delta_time = 0;
+}
+
+namespace GUI
+{
+    Texture::Texture()
+    {
+        margins = { 0, 0, 0, 0 };
+        padding = { 0, 0, 0, 0 };
+        tc = { 0, 0, 1, 1 };
+        mul_color = { 1,1,1,1 };
+        add_color = { 0,0,0,0 };
+    }
+
+    void Texture::operator=(const HAL::Texture::ptr& tex)
+    {
+        this->texture = tex;
+    }
+
+    ParameterHolder::~ParameterHolder()
+    {
+    }
+
+    void base::pre_draw(HAL::CommandList::ptr list)
+    {
+    }
+
+    void base::generate_container(base::ptr obj)
+    {
+        obj->add_child(get_ptr());
+    }
+
+    void base::on_pre_render(Context& context)
+    {
+    }
+
+    std::vector<base::ptr> drag_holder::find_control(vec2 at, bool click_only)
+    {
+        return std::vector<base::ptr>();
+    }
+
+    drag_holder::drag_holder()
+    {
+        docking = dock::NONE;
+        width_size = size_type::FIXED;
+        height_size = size_type::FIXED;
+    }
+
+    drag_n_drop::drag_n_drop(user_interface* ui) : user_ui(ui)
+    {
+        holder.reset(new drag_holder);
+        //  holder->visible = false;
+    }
+
+    user_interface::~user_interface()
+    {
+        remove_all();
+    }
+
+    void user_interface::add_task(std::function<void()> f)
+    {
+        Events::Runner::run(f);
+    }
+
+    void user_interface::process_graph(FrameGraph::Graph& graph)
+    {
+        for (auto& gen : frame_generators)
+        {
+            gen->generate(graph);
+        }
+    }
+}
+
 
 
 

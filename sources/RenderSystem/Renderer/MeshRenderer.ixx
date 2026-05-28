@@ -16,9 +16,7 @@ class renderer
 {
 
     public:
-        virtual ~renderer()
-        {
-        }
+        virtual ~renderer();
 
         using ptr = s_ptr<renderer>;
 
@@ -42,47 +40,16 @@ class main_renderer
         using ptr = s_ptr<main_renderer>;
 
 
-        void register_renderer(renderer::ptr r)
-        {
-            renderers.insert(r);
-        }
+        void register_renderer(renderer::ptr r);
 
         template<class T>
         void register_renderer(T r)
         {
             renderers.insert(std::static_pointer_cast<renderer>(r));
         }
-        void render(MeshRenderContext::ptr c, Scene::ptr obj)
-        {
-            /*  obj->iterate([&](scene_object * node)
-              {
-                  //  bool node_inside = node->is_node_inside(*c->cam);
-                  //    if (!node_inside)
-                  //        return false;
-                  Graphics::renderable* render_object = dynamic_cast<Graphics::renderable*>(node);
+        void render(MeshRenderContext::ptr c, Scene::ptr obj);
 
-                  if (render_object && node->is_inside(*c->cam))
-                  {
-                      for (auto && r : renderers)
-                      {
-                          if (r->add_object(render_object))
-                              break;
-                      }
-                  }
-
-                  return true;
-              });
-            */
-            for (auto && r : renderers)
-                r->render(c, obj);
-        }
-
-
-		void iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)>f)
-		{
-			for (auto && r : renderers)
-				r->iterate(mesh_type, f);
-		}
+		void iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)> f);
 };
 
 class mesh_renderer : public renderer, public Events::prop_handler, VariableContext
@@ -90,20 +57,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		TextureAsset::ptr best_fit_normals;
 
         //    MeshRenderContext::ptr mesh_render_context;
-        virtual bool add_object(Graphics::renderable* obj) override
-        {
-            auto instance = dynamic_cast<MeshAssetInstance*>(obj);
-            //   if (instance)
-            //    meshes.push_back(instance);
-            /*  if (node)
-                  nodes.push_back(node);
-              else
-              {
-                  shared_mesh_object* shared_mesh = dynamic_cast<shared_mesh_object*>(obj);
-                  instanced_meshes[shared_mesh->mesh].push_back(shared_mesh);
-              }*/
-            return true;
-        }
+        virtual bool add_object(Graphics::renderable* obj) override;
 
         virtual void render(MeshRenderContext::ptr mesh_render_context, Scene::ptr obj) override;
 

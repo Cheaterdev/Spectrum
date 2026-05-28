@@ -5,7 +5,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
-import <HAL.h>;
+
 import :Autogen.Tables.MeshInfo;
 import :Autogen.Tables.MeshInstanceInfo;
 export namespace Table

@@ -43,6 +43,11 @@ namespace GUI
                 c.renderer->draw_area(get_ptr(), c);
             }
 
+            OutputWindow::~OutputWindow()
+            {
+                Log::get()<<"DELETING"<<Log::endl;
+            }
+
             OutputWindow::OutputWindow()
             {
                 contents->width_size = size_type::MATCH_PARENT_CHILDREN;

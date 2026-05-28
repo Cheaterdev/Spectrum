@@ -29,13 +29,7 @@ export namespace GUI
                     ::FlowGraph::parameter* p;
                     base::wptr line;
                     bool can_delete = false;
-                    link_item()
-                    {
-                        drag_listener = true;
-                        set_package("link_item");
-                        skin = Skin::get().DefaultOptionBox;
-
-                    }
+                    link_item();
 
                     virtual bool need_drag_drop() override;
 
@@ -43,16 +37,7 @@ export namespace GUI
 
                     virtual bool on_drop(drag_n_drop_package::ptr, vec2) override;
 
-                    void update()
-                    {
-                        if (type == link_type::LINK_IN)
-                            inserted = !p->input_connections.empty();
-
-                        if (type == link_type::LINK_OUT)
-                            inserted = !p->output_connections.empty();
-
-                        set_checked(inserted);
-                    }
+                    void update();
 
                     virtual void on_dragdrop_start(drag_n_drop_package::ptr) override;
 
@@ -78,66 +63,12 @@ export namespace GUI
 
                 float phase = 0;
 
-                void set_selected(bool value)
-                {
-                    if (selected != value)
-                    {
-                        if (value)
-                            phase = 0;
+                void set_selected(bool value);
+                bool test(vec2 from, vec2 to) override;
 
-                        selected = value;
-                    }
-                }
-                bool test(vec2 from, vec2 to) override
-                {
-                    float len = abs(p4.x - p1.x);
+                bool test(vec2 p) override;
 
-                    for (int i = 0; i < len; i++)
-                    {
-                        float t = float(i) / len;
-                        float2 pos = pow(1.0f - t, 3.0f) * p1 + 3.0f * pow(1.0f - t, 2.0f) * t * p2 + 3.0f * (1.0f - t) * pow(t, 2.0f) * p3 + pow(t, 3.0f) * p4;
-
-                        if (pos.x > from.x && (pos.x < to.x) && pos.y > from.y && (pos.y < to.y))
-                            return true;
-                    }
-
-                    return false;
-                }
-
-                bool test(vec2 p) override
-                {
-                    float len = abs(p4.x - p1.x);
-
-                    for (int i = 0; i < len; i++)
-                    {
-                        float t = float(i) / len;
-                        float2 pos = pow(1.0f - t, 3.0f) * p1 + 3.0f * pow(1.0f - t, 2.0f) * t * p2 + 3.0f * (1.0f - t) * pow(t, 2.0f) * p3 + pow(t, 3.0f) * p4;
-                        float l = (pos - p).length();
-
-                        if (l < 10)
-                            return true;
-                    }
-
-                    return false;
-                }
-                void update(float dt)
-                {
-                    p1 = vec2(from->get_render_bounds().pos) + vec2(from->get_render_bounds().size) / 2;
-                    p4 = vec2(to->get_render_bounds().pos) + vec2(to->get_render_bounds().size) / 2;
-                    float d = abs(p1.x - p4.x);
-                    float delta = std::max(15.f, d) / 3;
-                    p2 = p1 + vec2(delta, 0);
-                    p3 = p4 - vec2(delta, 0);
-
-                    if (selected)
-                    {
-                        float l = 0.5f + 0.5f * sin(Math::m_2_pi * (phase += dt));
-                        color = vec4(50, 150, 200, 255) / 255.0f * l + (1 - l) * vec4(16, 46, 100, 255) / 255.0f;
-                    }
-
-                    else
-                        color = vec4(26, 96, 146, 255) / 255.0f;
-                }
+                void update(float dt);
             };
 
             class canvas : public scroll_container, public ::FlowGraph::graph_listener
@@ -171,10 +102,7 @@ export namespace GUI
                     canvas(manager* main_manager);
                     //virtual void set_skin(Renderer_ptr skin) override;
                     virtual void on_add(base* parent) override;
-                    virtual void on_remove()override
-                    {
-                        scroll_container::on_remove();
-                    }
+                    virtual void on_remove() override;
 
                     void init(::FlowGraph::graph* g);
 

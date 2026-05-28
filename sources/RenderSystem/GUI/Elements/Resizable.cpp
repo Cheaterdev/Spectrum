@@ -2,6 +2,16 @@ module GUI:Resizable;
 import :Renderer;
 
 
+void GUI::Elements::resizable::allow_resize(bool value)
+{
+	for (auto r : resizers)
+	{
+		if (!r) continue;
+
+		r->visible = value;
+	}
+}
+
 GUI::Elements::resizable::resizable()
 {
 	resizers[2].reset(new resizer());

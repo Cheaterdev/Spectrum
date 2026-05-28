@@ -2,6 +2,11 @@ module GUI:Window;
 import :Renderer;
 
 
+void GUI::Elements::window::set_title(std::string title)
+{
+	label_text->text = title;
+}
+
 void GUI::Elements::window::draw(Context& c)
 {
 	// skin->draw(this, c);

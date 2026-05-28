@@ -1,6 +1,6 @@
  module HAL:Utils;
  import :Resource;
-import <HAL.h>;
+
 import stl.core;
 
 import d3d12; 

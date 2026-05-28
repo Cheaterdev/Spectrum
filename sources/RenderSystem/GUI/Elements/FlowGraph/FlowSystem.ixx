@@ -23,17 +23,11 @@ export namespace FlowGraph
                 public:
                     std::string name;
 
-                    ::FlowGraph::window::ptr create()
-                    {
-                        return create_func();
-                    }
+                    ::FlowGraph::window::ptr create();
             };
 
             std::vector<desc> creators;
-            FlowSystem()
-            {
-                register_node<::FlowGraph::window>("comment");
-            }
+            FlowSystem();
         public:
 
 
@@ -64,9 +58,6 @@ export namespace FlowGraph
 
 
 
-            std::vector<desc>& get_all()
-            {
-                return creators;
-            }
+            std::vector<desc>& get_all();
     };
 }

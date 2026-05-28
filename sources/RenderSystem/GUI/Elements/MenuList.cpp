@@ -48,6 +48,89 @@ void GUI::Elements::menu_list::close_menus()
     if (vertical)self_close();
 }
 
+bool GUI::Elements::menu_list::need_open_on_hover()
+{
+    return true;
+}
+
+void GUI::Elements::menu_list::make_fixed_width()
+{
+    width_size = size_type::MATCH_CHILDREN;
+    height_size = size_type::MATCH_CHILDREN;
+    contents->width_size = size_type::MATCH_PARENT_CHILDREN;
+    contents->height_size = size_type::MATCH_CHILDREN;
+
+    filled->width_size = size_type::MATCH_PARENT_CHILDREN;
+    filled->height_size = size_type::MATCH_CHILDREN;
+
+ //   auto_size = true;
+    filled->clamp_to_parent = ParentClamp::HEIGHT;
+    filled->docking = dock::NONE;
+    filled->x_type = pos_x_type::LEFT;
+    if (hor) base::remove_child(hor);
+}
+
+bool GUI::Elements::menu_list::is_menu_component()
+{
+    return true;
+}
+
+bool GUI::Elements::menu_list::is_menu_open()
+{
+    for (auto c : elements)
+    {
+        if (c->is_menu_open())
+            return true;
+    }
+
+    return false;
+}
+
+bool GUI::Elements::menu_list::is_self_open()
+{
+    return get_parent() != nullptr;
+}
+
+void GUI::Elements::menu_list::self_open(user_interface* ui)
+{
+    ui->add_child(get_ptr());
+}
+
+void GUI::Elements::menu_list::self_close()
+{
+    remove_from_parent();
+}
+
+void GUI::Elements::menu_list::remove_all()
+{
+    contents->remove_all();
+    elements.clear();
+
+    if (!vertical)
+    {
+        docking = dock::TOP;
+        size = { 25, 25 };
+    }
+
+    else
+        size = { padding->left + padding->right, padding->top + padding->bottom };
+}
+
+GUI::Elements::menu_list_element::menu_list_element(bool on_strip)
+{
+    this->on_strip = on_strip;
+}
+
+GUI::Elements::menu_strip::menu_strip() : menu_list(false)
+{
+    draw_icon = false;
+}
+
+bool GUI::Elements::menu_strip::need_open_on_hover()
+{
+    return is_menu_open();
+}
+
 
 namespace GUI
 {

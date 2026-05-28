@@ -74,6 +74,10 @@ BinaryAsset::BinaryAsset()
 
 }
 
+BinaryAsset::~BinaryAsset()
+{
+}
+
 void BinaryAsset::update_preview(HAL::Texture::ptr preview)
 {
 	if (!preview || !preview->is_rt())

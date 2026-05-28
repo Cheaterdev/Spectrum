@@ -741,6 +741,70 @@ std::set<Guid> AssetHolder::get_reference_ids()
 	return r;
 }
 
+std::shared_ptr<FileDataStorage> AssetStorage::get_archive()
+{
+	std::lock_guard<std::mutex> g(stream_mutex);
+	if (!archive)
+		archive = std::make_shared<FileDataStorage>(file_path);
+	return archive;
+}
+
+std::set<Guid> AssetStorage::get_references()
+{
+	return header->references;
+}
+
+folder_item::folder_item(std::filesystem::path name)
+{
+	this->name = name;
+}
+
+Asset_Type Asset::get_type()
+{
+	return Asset_Type::UNKNOWN;
+}
+
+void Asset::shutdown()
+{
+}
+
+void Asset::reload_resource()
+{
+}
+
+void Asset::load(std::istream&& s)
+{
+}
+
+void Asset::save(std::ostream&& s)
+{
+}
+
+AssetHolder::~AssetHolder()
+{
+}
+
+AssetStorage::ptr AssetManager::find_storage_by_name(std::wstring name)
+{
+	for (auto& storage : assets)
+	{
+		if (storage.second->get_name() == name) return storage.second;
+	}
+	return nullptr;
+}
+
+std::map<Guid, AssetStorage::ptr> AssetManager::get_assets()
+{
+	return assets;
+}
+
+Guid AssetReferenceBase::get_id()
+{
+	if (base_asset)
+		return base_asset->get_id();
+	return Guid();
+}
+
 std::wstring  folder_item::get_name() const
 {
 	return name.generic_wstring();

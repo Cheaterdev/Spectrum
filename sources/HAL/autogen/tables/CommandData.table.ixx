@@ -5,7 +5,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
-import <HAL.h>;
+
 import :Autogen.Slots.MaterialInfo;
 import :Autogen.Slots.MeshInfo;
 import :Autogen.Slots.MeshInstanceInfo;

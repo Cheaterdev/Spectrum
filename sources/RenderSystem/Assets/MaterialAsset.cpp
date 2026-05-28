@@ -26,3 +26,38 @@ void MaterialAsset::update_preview(HAL::Texture::ptr preview)
     mark_changed();
 }
 
+namespace materials
+{
+
+Pipeline::Pipeline(uint id) : id(id)
+{
+}
+
+uint Pipeline::get_id()
+{
+    return id;
+}
+
+void material::set(MESH_TYPE type, MeshRenderContext::ptr&)
+{
+}
+
+void material::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics)
+{
+}
+
+void material::compile()
+{
+}
+
+void material::update()
+{
+}
+
+size_t material::get_pipeline_id()
+{
+    return pipeline_id;
+}
+
+}
+

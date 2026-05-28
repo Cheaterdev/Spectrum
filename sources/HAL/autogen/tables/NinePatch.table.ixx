@@ -5,7 +5,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
-import <HAL.h>;
+
 import :Autogen.Tables.vertex_input;
 export namespace Table
 {

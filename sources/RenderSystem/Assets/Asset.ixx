@@ -188,9 +188,7 @@ class AssetHolder : public SharedObject<AssetHolder>
 		SERIALIZE()
 		{
 		}
-		virtual ~AssetHolder()
-		{
-		}
+		virtual ~AssetHolder();
 
 };
 class AssetStorage;
@@ -204,7 +202,7 @@ class Asset : public SharedObject<Asset>, public AssetHolder, public EditObject,
 		std::wstring name;
 		std::mutex m;
 		std::set<AssetReferenceBase*> references;
-		virtual void shutdown() {}
+		virtual void shutdown();
 		AssetStorage* holder = nullptr;
 		std::set<std::wstring> additional_files;
 
@@ -240,10 +238,7 @@ public:
 		using ptr = s_ptr<Asset>;
 		using ref = AssetReference<Asset>;
 
-		virtual Asset_Type get_type()
-		 {
-			 return Asset_Type::UNKNOWN;
-		 }
+		virtual Asset_Type get_type();
 
 
 		virtual ~Asset();;
@@ -254,14 +249,10 @@ public:
 		virtual bool is_changed() override;
 		virtual void save() override;
 
-		virtual void reload_resource() {};
-		virtual void load(std::istream&& s)
-		{
-		}
+		virtual void reload_resource();
+		virtual void load(std::istream&& s);
 
-		virtual void save(std::ostream&& s)
-		{
-		}
+		virtual void save(std::ostream&& s);
 
 	private:
 		SERIALIZE()
@@ -325,26 +316,7 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 		std::shared_ptr<FileDataStorage> archive;
 
 		std::mutex stream_mutex;
-		std::shared_ptr<FileDataStorage> get_archive()
-		{
-			std::lock_guard<std::mutex> g(stream_mutex);
-			if (!archive)
-				archive = std::make_shared<FileDataStorage>(file_path);
-			//auto res = archive.lock();
-			//if (!res)
-			//{
-			//	std::lock_guard<std::mutex> g(stream_mutex);
-			//	res = archive.lock();
-			//	if (res) return res;
-		
-			//	res = std::make_shared<FileDataStorage>(file_path);
-
-			//	return res;
-
-			//}
-
-			return archive;
-		}
+		std::shared_ptr<FileDataStorage> get_archive();
 
 		folder_item* folder;
 
@@ -368,10 +340,7 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 		folder_item* get_folder();
 		static AssetStorage::ptr try_load(file::ptr f);
 
-		 std::set<Guid> get_references() 
-	{
-		return header->references;
-	}
+		 std::set<Guid> get_references();
 		const HAL::Texture::ptr& get_preview();
 
 		virtual void update_preview();
@@ -401,10 +370,7 @@ class folder_item : public ::tree<folder_item, my_unique_vector<std::shared_ptr<
 
 	public:
 
-		folder_item(std::filesystem::path name)
-		{
-			this->name = name;
-		}
+		folder_item(std::filesystem::path name);
 		using ptr = s_ptr<folder_item>;
 		virtual std::wstring get_name() const override;
 
@@ -484,17 +450,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 		}
 
 
-		typename AssetStorage::ptr find_storage_by_name(std::wstring name)
-		{
-			for (auto& storage : assets)
-			{
-			
-			if (storage.second->get_name() == name) return storage.second;
-
-			}
-
-			return nullptr;
-		}
+		typename AssetStorage::ptr find_storage_by_name(std::wstring name);
 
 
 		template <class T = Asset>
@@ -518,10 +474,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 
 		std::function<bool(std::string)> msg_box_func;
 
-		std::map<Guid, AssetStorage::ptr> get_assets()
-		{
-			return assets;
-		}
+		std::map<Guid, AssetStorage::ptr> get_assets();
 
 		template<class T>
 		AssetStorage::ptr add_asset(s_ptr<T> asset, std::wstring name = L"", Guid id = Guid())
@@ -556,13 +509,6 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 };
 
 //////////////////////////////////////////////////////////////////////////
-Guid AssetReferenceBase::get_id()
-		{
-			if (base_asset)
-				return base_asset->get_id();
-
-			return Guid();
-		}
 /*  AssetReference(AssetReference<T>&& other) : AssetReferenceBase(std::forward<AssetReferenceBase>(other))
 {
 asset = other.asset;

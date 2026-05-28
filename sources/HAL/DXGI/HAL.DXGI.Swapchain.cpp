@@ -5,7 +5,7 @@ module HAL:SwapChain;
 import:Device;
 import HAL;
 
-import <HAL.h>;
+
 import <d3d12/d3d12_includes.h>;
 #undef THIS
 namespace HAL

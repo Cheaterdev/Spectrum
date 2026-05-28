@@ -479,3 +479,30 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 }
 
+renderer::~renderer()
+{
+}
+
+void main_renderer::register_renderer(renderer::ptr r)
+{
+    renderers.insert(r);
+}
+
+void main_renderer::render(MeshRenderContext::ptr c, Scene::ptr obj)
+{
+    for (auto && r : renderers)
+        r->render(c, obj);
+}
+
+void main_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)> f)
+{
+    for (auto && r : renderers)
+        r->iterate(mesh_type, f);
+}
+
+bool mesh_renderer::add_object(Graphics::renderable* obj)
+{
+    auto instance = dynamic_cast<MeshAssetInstance*>(obj);
+    return true;
+}
+

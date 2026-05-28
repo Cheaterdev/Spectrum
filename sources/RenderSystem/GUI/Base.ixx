@@ -27,10 +27,7 @@ export
         HAL::Handle result_texture_srv;
 
         GUIInfo() = default;
-        GUIInfo(HAL::CommandList::ptr list) : command_list(list)
-        {
-            delta_time = 0;
-        }
+        GUIInfo(HAL::CommandList::ptr list);
     };
 enum class mouse_button : int
 {
@@ -166,9 +163,7 @@ namespace GUI
     class ParameterHolder
     {
         public:
-            virtual ~ParameterHolder()
-            {
-            }
+            virtual ~ParameterHolder();
 
             using ptr = ParameterHolder*;
             virtual void init_properties(Elements::ParameterWindow* wnd) = 0;
@@ -255,19 +250,9 @@ namespace GUI
         float4 mul_color;
         float4 add_color;
 		HAL::Handle srv;
-        Texture()
-        {
-            margins = { 0, 0, 0, 0 };
-            padding = { 0, 0, 0, 0 };
-            tc = { 0, 0, 1, 1 };
-            mul_color = { 1,1,1,1 };
-            add_color = { 0,0,0,0 };
-        }
+        Texture();
 
-        void operator=(const       HAL::Texture::ptr& texture)
-        {
-            this->texture = texture;
-        }
+        void operator=(const HAL::Texture::ptr& texture);
     };
 	
     class drag_n_drop;
@@ -311,7 +296,7 @@ namespace GUI
 
             virtual void draw_recursive(Context&, base* = nullptr);
 
-            virtual void pre_draw(HAL::CommandList::ptr list){}; // override;;
+            virtual void pre_draw(HAL::CommandList::ptr list); // override;;
            
 
 
@@ -381,10 +366,7 @@ namespace GUI
         public:
             virtual bool need_drag_drop();
             virtual void on_dragdrop_start(drag_n_drop_package::ptr);
-            virtual void generate_container(base::ptr obj)
-            {
-                obj->add_child(get_ptr());
-            }
+            virtual void generate_container(base::ptr obj);
 
             virtual void on_dragdrop_end();
 
@@ -405,7 +387,7 @@ namespace GUI
             virtual drag_n_drop_package::ptr get_package();
         public:
 
-            virtual void on_pre_render(Context&context){};
+            virtual void on_pre_render(Context& context);
             rect get_render_bounds();
 
             user_interface* get_user_ui();
@@ -489,20 +471,11 @@ namespace GUI
     class drag_holder : public base
     {
         protected:
-            virtual std::vector<base::ptr> find_control(vec2 at, bool click_only) override
-            {
-                return std::vector<base::ptr>();
-            }
-
+            virtual std::vector<base::ptr> find_control(vec2 at, bool click_only) override;
 
         public:
             using ptr = s_ptr<drag_holder>;
-            drag_holder()
-            {
-                docking = dock::NONE;
-                width_size = size_type::FIXED;
-                height_size = size_type::FIXED;
-            }
+            drag_holder();
     };
     class drag_n_drop
     {
@@ -515,11 +488,7 @@ namespace GUI
             user_interface* user_ui;
         public:
             drag_holder::ptr holder;
-            drag_n_drop(user_interface* ui): user_ui(ui)
-            {
-                holder.reset(new drag_holder);
-                //  holder->visible = false;
-            }
+            drag_n_drop(user_interface* ui);
             virtual ~drag_n_drop();
 
             std::set<base*> dragdrop;
@@ -601,10 +570,7 @@ namespace GUI
 
             std::function<void(bool)> set_capture;
             user_interface();
-            ~user_interface()
-            {
-                remove_all();
-            }
+            ~user_interface();
 
             void mouse_move_event_internal(vec2 pos);
             void mouse_action_event_internal(mouse_action action, mouse_button button, vec2 pos);
@@ -622,29 +588,9 @@ namespace GUI
 			virtual void process_ui(float dt);
 			virtual void create_graph(FrameGraph::Graph& graph);
 
-            void add_task(std::function<void()> f)
-            {
-                Events::Runner::run(f);
-            }
+            void add_task(std::function<void()> f);
 
-            void process_graph(FrameGraph::Graph & graph)
-            {
-//				std::lock_guard<std::mutex> g(m);
-                /*
-                auto f = [&](base* elem) {
-					  auto frame_gen = dynamic_cast<FrameGraphGenerator*>(elem);
-	                    if (frame_gen)
-                            frame_gen->generate(graph);
-
-                        return true;
-                };
-
-                iterate(f);*/
-              for (auto& gen : frame_generators)
-                {
-                    gen->generate(graph);
-                }
-            }
+            void process_graph(FrameGraph::Graph& graph);
 
 
 

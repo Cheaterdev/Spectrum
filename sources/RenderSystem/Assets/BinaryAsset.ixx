@@ -13,10 +13,7 @@ export class BinaryAsset : public Asset
         BinaryAsset();
     public:
 
-        virtual ~BinaryAsset()
-        {
-            //data.clear();
-        }
+        virtual ~BinaryAsset();
         using ptr = s_ptr<BinaryAsset>;
         using ref = AssetReference<BinaryAsset>;
 

@@ -12,12 +12,7 @@ export namespace GUI
             public:
                 using ptr = s_ptr<status_bar>;
                 using wptr = w_ptr<status_bar>;
-                status_bar()
-                {
-                    size = { 25, 25 };
-                    docking = dock::BOTTOM;
-                    skin = Skin::get().DefaultStatusBar;
-                }
+                status_bar();
                 Skin::StatusBar skin;
                 virtual void draw(Context&) override;
 

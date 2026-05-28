@@ -230,4 +230,22 @@ namespace Fonts
         geometry = FontSystem::get().create_geometry();
     }
 
+    Font::~Font()
+    {
+        pRenderStates->Release();
+    }
+
+    void Font::set_states(HAL::CommandList::ptr& list)
+    {
+        // Set the default rendering states
+        pRenderStates->SetStates(list, 0);
+    }
+
+    FW1_TextGeometry FontSystem::create_geometry()
+    {
+        FW1_TextGeometry geometry;
+        pFW1Factory->CreateTextGeometry(&geometry);
+        return geometry;
+    }
+
 }

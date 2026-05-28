@@ -1,6 +1,6 @@
 export module HAL:Format;
 export import "Formats.h";
-import <HAL.h>;
+
 import Core;
 
 export namespace HAL

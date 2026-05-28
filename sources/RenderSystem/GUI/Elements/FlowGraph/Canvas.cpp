@@ -10,6 +10,92 @@ import :ScrollContainer;
 import :Renderer;
 import Graphics;
 using namespace HAL;
+GUI::Elements::FlowGraph::link_item::link_item()
+{
+	drag_listener = true;
+	set_package("link_item");
+	skin = Skin::get().DefaultOptionBox;
+}
+
+void GUI::Elements::FlowGraph::link_item::update()
+{
+	if (type == link_type::LINK_IN)
+		inserted = !p->input_connections.empty();
+
+	if (type == link_type::LINK_OUT)
+		inserted = !p->output_connections.empty();
+
+	set_checked(inserted);
+}
+
+void GUI::Elements::FlowGraph::link_spline::set_selected(bool value)
+{
+	if (selected != value)
+	{
+		if (value)
+			phase = 0;
+
+		selected = value;
+	}
+}
+
+bool GUI::Elements::FlowGraph::link_spline::test(vec2 from, vec2 to)
+{
+	float len = abs(p4.x - p1.x);
+
+	for (int i = 0; i < len; i++)
+	{
+		float t = float(i) / len;
+		float2 pos = pow(1.0f - t, 3.0f) * p1 + 3.0f * pow(1.0f - t, 2.0f) * t * p2 + 3.0f * (1.0f - t) * pow(t, 2.0f) * p3 + pow(t, 3.0f) * p4;
+
+		if (pos.x > from.x && (pos.x < to.x) && pos.y > from.y && (pos.y < to.y))
+			return true;
+	}
+
+	return false;
+}
+
+bool GUI::Elements::FlowGraph::link_spline::test(vec2 p)
+{
+	float len = abs(p4.x - p1.x);
+
+	for (int i = 0; i < len; i++)
+	{
+		float t = float(i) / len;
+		float2 pos = pow(1.0f - t, 3.0f) * p1 + 3.0f * pow(1.0f - t, 2.0f) * t * p2 + 3.0f * (1.0f - t) * pow(t, 2.0f) * p3 + pow(t, 3.0f) * p4;
+		float l = (pos - p).length();
+
+		if (l < 10)
+			return true;
+	}
+
+	return false;
+}
+
+void GUI::Elements::FlowGraph::link_spline::update(float dt)
+{
+	p1 = vec2(from->get_render_bounds().pos) + vec2(from->get_render_bounds().size) / 2;
+	p4 = vec2(to->get_render_bounds().pos) + vec2(to->get_render_bounds().size) / 2;
+	float d = abs(p1.x - p4.x);
+	float delta = std::max(15.f, d) / 3;
+	p2 = p1 + vec2(delta, 0);
+	p3 = p4 - vec2(delta, 0);
+
+	if (selected)
+	{
+		float l = 0.5f + 0.5f * sin(Math::m_2_pi * (phase += dt));
+		color = vec4(50, 150, 200, 255) / 255.0f * l + (1 - l) * vec4(16, 46, 100, 255) / 255.0f;
+	}
+
+	else
+		color = vec4(26, 96, 146, 255) / 255.0f;
+}
+
+void GUI::Elements::FlowGraph::canvas::on_remove()
+{
+	scroll_container::on_remove();
+}
+
 void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 {
 	

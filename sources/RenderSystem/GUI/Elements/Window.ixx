@@ -31,10 +31,7 @@ export namespace GUI
                 using wptr = w_ptr<window>;
 
                 window();
-                virtual void set_title(std::string title)
-                {
-                    label_text->text = title;
-                }
+                virtual void set_title(std::string title);
                 virtual void draw(Context& c) override;
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;

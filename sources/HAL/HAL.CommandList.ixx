@@ -1,5 +1,5 @@
 export module HAL:CommandList;
-import <HAL.h>;
+
 import Core;
 import :Types;
 import :ResourceStates;

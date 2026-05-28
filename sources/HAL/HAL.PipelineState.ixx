@@ -1,5 +1,5 @@
 ﻿export module HAL:PipelineState;
-import <HAL.h>;
+
 import Core;
 import :Types;
 import :RootSignature;

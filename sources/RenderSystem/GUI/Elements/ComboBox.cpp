@@ -53,3 +53,29 @@ GUI::Elements::combo_box::combo_box()
     add_item("item 2");
     add_item("item 3");*/
 }
+
+GUI::Elements::combo_element::combo_element(bool on_strip) : menu_list_element(on_strip)
+{
+}
+
+void GUI::Elements::combo_element::select()
+{
+    if (on_click) on_click(get_ptr<menu_list_element>());
+}
+
+void GUI::Elements::combo_box::remove_items()
+{
+    menu->remove_all();
+}
+
+bool GUI::Elements::combo_box::is_menu_open()
+{
+    return menu->get_parent() != nullptr;
+}
+
+GUI::Elements::combo_element::ptr GUI::Elements::combo_box::add_item(std::string str)
+{
+    combo_element::ptr elem = menu->add_item<combo_element>(str);
+    elem->on_click = [this](menu_list_element::ptr elem) {get_label()->text = elem->text; static_cast<combo_element*>(elem.get())->on_select(); };
+    return elem;
+}

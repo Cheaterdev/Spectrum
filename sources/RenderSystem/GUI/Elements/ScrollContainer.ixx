@@ -41,16 +41,7 @@ export namespace GUI
 			virtual	bool on_wheel(mouse_wheel type, float value, vec2 pos) override;
 
 
-			virtual void think(float dt) override
-			{
-				base::think(dt);
-				if (speed.length() > 0.3f)
-				{
-						moving(100 * speed*dt);	
-						speed *= std::exp(-20 * dt);
-			
-				}
-			}
+			virtual void think(float dt) override;
 
 
 		};

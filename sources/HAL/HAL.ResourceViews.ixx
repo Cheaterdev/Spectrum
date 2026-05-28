@@ -1,5 +1,5 @@
 ﻿export module HAL:ResourceViews;
-import <HAL.h>;
+
 import :Types;
 import :HLSL;
 import :Device;

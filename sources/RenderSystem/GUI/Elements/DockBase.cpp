@@ -207,3 +207,25 @@ void GUI::Elements::dock_base::on_dock_changed(const dock& r)
 	base::on_dock_changed(r);
 	update_resizer();
 }
+
+void GUI::Elements::dock_base::update_resizer()
+{
+	if (docking == dock::FILL)
+	{
+		if (sizer)
+			sizer->remove_from_parent();
+
+		return;
+	}
+
+	if (!sizer)
+	{
+		sizer.reset(new resizer());
+		add_child(sizer);
+	}
+
+	sizer->dir = to_direction(invert(docking.get()));
+	//	sizer->size = { 2, 2 };
+	sizer->target = this;
+	sizer->docking = invert(docking.get());
+}

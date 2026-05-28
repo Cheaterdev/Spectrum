@@ -5,7 +5,7 @@ import :RT;
 import :SIG;
 import :HLSL;
 import :Types;
-import <HAL.h>;
+
 export namespace RT
 {
 	#pragma pack(push, 1)

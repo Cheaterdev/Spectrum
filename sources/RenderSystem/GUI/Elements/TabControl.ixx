@@ -23,22 +23,12 @@ export namespace GUI
                 w_ptr<tab_control> owner;
                 virtual void draw(Context& c) override;
 
-                bool is_current()
-                {
-                    return page->visible;
-                }
+                bool is_current();
                 tab_button();
 
-                virtual bool need_drag_drop()
-                {
-                    return true;
-                }
+                virtual bool need_drag_drop() override;
 
-                virtual void generate_container(base::ptr obj) override
-                {
-                    obj->add_child(get_ptr());
-                    obj->add_child(page);
-                }
+                virtual void generate_container(base::ptr obj) override;
 
             protected:
 
@@ -56,38 +46,9 @@ export namespace GUI
                 button::ptr all;
                 base::ptr strip;
                 tab_control* owner;
-                void recalculate_tabs()
-                {
-                    float width = all->size->x;
-                    menu->remove_all();
-
-                    if (current)
-                    {
-                        width += current->size->x;
-                        current->visible = true;
-                    }
-
-                    for (size_t i = 0; i < buttons.size(); i++)
-                    {
-                        if (buttons[i] != current)
-                            width += buttons[i]->size->x;
-
-                        buttons[i]->visible = width < render_bounds->w || buttons[i] == current;
-
-                        if (!buttons[i]->visible.get())
-                        {
-                            menu->add_item(buttons[i]->get_label()->text.get())->on_click = [this, i](menu_list_element::ptr) {buttons[i]->on_click(buttons[i]); };
-                        }
-                    }
-                }
+                void recalculate_tabs();
             public:
-                tab_button::ptr get_first_button()
-                {
-                    if (buttons.size())
-                        return buttons.front();
-
-                    return nullptr;
-                }
+                tab_button::ptr get_first_button();
 
                 friend class tab_control;
                 using ptr = s_ptr<tab_strip>;
@@ -101,11 +62,7 @@ export namespace GUI
 				virtual void draw_after(Context&) override;
 
                 virtual void on_bounds_changed(const rect& r) override;
-                virtual void close_menus()
-                {
-                    base::close_menus();
-                    menu->self_close();
-                }
+                virtual void close_menus() override;
 
                 virtual bool can_accept(drag_n_drop_package::ptr) override;
 

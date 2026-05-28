@@ -89,6 +89,16 @@ namespace GUI
 
 
 
+        label::ptr button::get_label()
+        {
+            return label_text;
+        }
+
+        image::ptr button::get_image()
+        {
+            return im;
+        }
+
     }
 
 }

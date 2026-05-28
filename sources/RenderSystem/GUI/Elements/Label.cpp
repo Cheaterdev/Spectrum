@@ -90,6 +90,11 @@ namespace GUI
 
 
 
+		label::~label()
+		{
+			font = nullptr;
+		}
+
 		label::label() : text(std::bind(&label::on_text_changed, this, std::placeholders::_1)), font_size(std::bind(&label::on_size_changed, this, std::placeholders::_1))
 		{
 			clickable = false;

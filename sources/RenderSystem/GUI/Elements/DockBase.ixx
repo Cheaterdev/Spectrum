@@ -47,27 +47,7 @@ export namespace GUI
                 virtual void remove_child(base::ptr obj) override;
 
 
-                void update_resizer()
-                {
-                    if (docking == dock::FILL)
-                    {
-                        if (sizer)
-                            sizer->remove_from_parent();
-
-                        return;
-                    }
-
-                    if (!sizer)
-                    {
-                        sizer.reset(new resizer());
-                        add_child(sizer);
-                    }
-
-                    sizer->dir = to_direction(invert(docking.get()));
-                    //	sizer->size = { 2, 2 };
-                    sizer->target = this;
-                    sizer->docking = invert(docking.get());
-                }
+                void update_resizer();
 
                 virtual void on_dock_changed(const dock& r) override;
 

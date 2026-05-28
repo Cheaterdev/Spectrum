@@ -106,14 +106,9 @@ export{
 		FrameGraph::SlotContext* slot_context = nullptr;
 		Slots::Voxelization::Compiled voxelization_compiled;
 		vec3 sky_dir;
-		MeshRenderContext()
-		{
-		
-		}
-		void begin()
-		{
-			draw_count = 0;
-		}
+		MeshRenderContext();
+
+		void begin();
 		
 
 	};
@@ -145,14 +140,7 @@ export{
 		}HalfBuffer;
 
 
-		void SetTable(Table::GBuffer& table)
-		{
-			table.GetAlbedo() = albedo.texture2D;
-			table.GetNormals() = normals.texture2D;
-			table.GetSpecular() = specular.texture2D;
-			table.GetDepth() = depth_mips.texture2D;
-			table.GetMotion() = speed.texture2D;
-		}
+		void SetTable(Table::GBuffer& table);
 
 
 	};

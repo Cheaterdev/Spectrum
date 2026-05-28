@@ -1,6 +1,31 @@
 import Graphics;
 import Core;
 import HAL;
+
+void scene_object::set_local_transform(mat4x4& transform)
+{
+    local_transform = transform;
+
+    update_layout();
+}
+
+void scene_object::update_layout()
+{
+    need_update_layout = true;
+    scene_object* p = parent;
+
+    while (p && !p->need_update_layout)
+    {
+        p->need_update_layout = true;
+        p = p->parent;
+    }
+}
+
+std::wstring scene_object::get_name() const
+{
+    return name;
+}
+
 scene_object::~scene_object()
 {
 }

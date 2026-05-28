@@ -74,10 +74,7 @@ export namespace GUI
 		void draw(base::Context& c, HAL::PipelineState::ptr state, rect r);
 		Renderer();
 
-		void start()
-		{
-			nine_patch.counter = 0;
-		}
+		void start();
 		void set(base::Context& c);
 	};
 }

@@ -17,16 +17,13 @@ export namespace materials
 	public:
 		using ptr = std::shared_ptr<Pipeline>;
         unsigned int hash;
-		Pipeline(uint id) :id(id)
-		{
-
-		}
+		Pipeline(uint id);
         Pipeline() = default;
         virtual ~Pipeline() = default;
-		
+
 		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) = 0;
 
-        uint get_id() { return id; }
+        uint get_id();
 	private:
 
         SERIALIZE()
@@ -44,16 +41,13 @@ export namespace materials
             size_t pipeline_id = 0;
         public:
             using ptr = s_ptr<material>;
-            virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) {};
-            virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) {};
+            virtual void set(MESH_TYPE type, MeshRenderContext::ptr&);
+            virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics);
             virtual ~material() = default;
-            virtual void compile() {};
-            virtual void update() {};
+            virtual void compile();
+            virtual void update();
 
-            size_t get_pipeline_id()
-            {
-                return pipeline_id;
-            }
+            size_t get_pipeline_id();
             SERIALIZE()
             {
                 ar& NVP(pipeline_id);

@@ -20,11 +20,7 @@ export namespace GUI
             public:
 
                 option_group();
-                ~option_group()
-                {
-                    for (auto c : all)
-                        c->on_check_internal = nullptr;
-                }
+                ~option_group();
                 check_box::ptr add_option(check_box::ptr obj);
 
                 check_box_text::ptr create_option(bool value = false);

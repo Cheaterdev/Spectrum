@@ -1,6 +1,6 @@
 module HAL:Resource.Buffer;
 
-import <HAL.h>;
+
 
 import wrl;
 

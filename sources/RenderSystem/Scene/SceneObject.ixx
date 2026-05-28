@@ -20,33 +20,15 @@ export class scene_object : public tree<scene_object, std::set<std::shared_ptr<s
 		//occluder childs_occluder;
 		mat4x4 local_transform;
 		bool resizes_parent = true;
-        void set_local_transform(mat4x4& transform)
-        {
-            local_transform = transform;
-        
-			update_layout();
-        }
-		void update_layout()
-		{
-			need_update_layout = true;
-			scene_object* p = parent;
+        void set_local_transform(mat4x4& transform);
 
-			while (p && !p->need_update_layout)
-			{
-				p->need_update_layout = true;
-				p = p->parent;
-			}
-
-		}
+		void update_layout();
         mat4x4 global_transform;
         using ptr = s_ptr<scene_object>;
         using wptr = w_ptr<scene_object>;
 		Scene *scene = nullptr;
     public:
-        virtual std::wstring get_name() const override
-        {
-            return name;
-        }
+        virtual std::wstring get_name() const override;
 
         scene_object();
         std::wstring name;

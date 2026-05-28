@@ -1,5 +1,5 @@
 module HAL:Resource;
-import <HAL.h>;
+
 import :HeapAllocators;
 import :API.Device;
 import :API.Resource;

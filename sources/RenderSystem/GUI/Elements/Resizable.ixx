@@ -17,16 +17,7 @@ export namespace GUI
 		
 			resizable();
 
-			void allow_resize(bool value)
-			{
-				for (auto r : resizers)
-				{
-					if (!r) continue;
-
-
-					r->visible = value;
-				}
-			}
+			void allow_resize(bool value);
 		};
 	}
 }

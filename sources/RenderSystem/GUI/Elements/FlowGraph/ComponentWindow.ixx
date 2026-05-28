@@ -22,25 +22,16 @@ export namespace GUI
                 float4 color = float4(31, 63, 85, 255) / 255.0f;;
 				friend class component_window;
 			protected:
-				virtual GUI::base::ptr create_editor_window() { return nullptr; }
+				virtual GUI::base::ptr create_editor_window();
 			};
 			class selectable
             {
                 public:
                     bool selected = false;
 
-                    virtual bool test(vec2 at)
-                    {
-                        return false;
-                    }
-                    virtual bool test(vec2 from, vec2 to)
-                    {
-                        return false;
-                    }
-                    virtual bool test_full(vec2 from, vec2 to)
-                    {
-                        return false;
-                    }
+                    virtual bool test(vec2 at);
+                    virtual bool test(vec2 from, vec2 to);
+                    virtual bool test_full(vec2 from, vec2 to);
             };
             class link_item;
             class canvas;
@@ -86,29 +77,14 @@ export namespace GUI
                     //	link_item::ptr remove_output(::FlowGraph::parameter*p);
 
                     virtual void on_touch() override;
-                    virtual void on_child_touched(base::ptr child)
-                    {
-                        if (child == title_bar)
-                            on_touch();
-                    }
+                    virtual void on_child_touched(base::ptr child) override;
 
                     virtual void on_pos_changed(const vec2& r) override;
-                    virtual bool test(vec2 from, vec2 to)
-                    {
-                        rect t = intersect(rect(from, to - from), rect(pos.get(), size.get()));
-                        return t.size.x > 0 && t.size.y > 0;
-                    }
+                    virtual bool test(vec2 from, vec2 to) override;
 
+                    virtual bool test(vec2 at) override;
 
-                    virtual bool test(vec2 at)
-                    {
-                        return at.x > pos->x && (at.x < pos->x + size->x) && at.y > pos->y && (at.y < pos->y + size->y);
-                    }
-
-                    virtual bool test_full(vec2 from, vec2 to)
-                    {
-                        return (pos->x >= from.x && pos->x + size->x < to.x) && (pos->y >= from.y && pos->y + size->y < to.y);
-                    }
+                    virtual bool test_full(vec2 from, vec2 to) override;
 
                     virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
 

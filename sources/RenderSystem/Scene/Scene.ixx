@@ -86,18 +86,7 @@ public:
     void update(HAL::FrameResources& frame);
 
 
-    void iterate_meshes(MESH_TYPE mesh_type, std::function<void(scene_object::ptr)> f)
-	{
-
-
-		if (mesh_type & MESH_TYPE::STATIC)
-			for (auto& instance : static_objects)
-				f(instance->get_ptr<scene_object>());
-
-		if (mesh_type & MESH_TYPE::DYNAMIC)
-			for (auto& instance : dynamic_objects)
-				f(instance->get_ptr<scene_object>());
-	}
+    void iterate_meshes(MESH_TYPE mesh_type, std::function<void(scene_object::ptr)> f);
 
 
    

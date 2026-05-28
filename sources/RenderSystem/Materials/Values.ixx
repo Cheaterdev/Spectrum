@@ -24,15 +24,9 @@ constexpr struct ShaderParamType:public ::FlowGraph::parameter_type
         
     }
     virtual ~ShaderParamType() = default;
-    bool operator==(const ShaderParamType& t) const
-    {
-        return M == t.M && N == t.N;
-    }
+    bool operator==(const ShaderParamType& t) const;
 
-    int get_size()
-    {
-        return M * N * sizeof(float);
-    }
+    int get_size();
 
 private:
     SERIALIZE()
@@ -52,20 +46,7 @@ public:
 
 	}
 
-	bool can_cast(parameter_type* other) override
-	{
-        VectorType* vtype = dynamic_cast<VectorType*>(other);
-
-        if (vtype) return true;
-
-
-		ShaderParamType* type = dynamic_cast<ShaderParamType*>(other);
-
-		if (type) return type->M ==1;
-
-        return false;
-
-	}
+	bool can_cast(parameter_type* other) override;
 
 
 private:
@@ -228,21 +209,11 @@ struct Uniform
 
 			int raw_data[4];
 		};
-		_value()
-		{
-			raw_data[0] = 0;
-			raw_data[1] = 0;
-			raw_data[2] = 0;
-			raw_data[3] = 0;
-
-		}
+		_value();
 	
 	} value;
 
-	Uniform()
-	{
-		name = "unknown";
-	}
+	Uniform();
 
 
     Events::Event<Uniform*> on_change;
@@ -266,12 +237,9 @@ struct TextureSRVParams
 	Events::prop<bool> to_linear;
 
 	
-	TextureSRVParams():asset(nullptr),to_linear(false)
-	{
-	}
+	TextureSRVParams();
 
-	TextureSRVParams(Asset::ref&& asset, bool to_linear) :asset(std::move(asset)), to_linear(to_linear)
-	{}
+	TextureSRVParams(Asset::ref&& asset, bool to_linear);
 private:
 
 
@@ -663,47 +631,13 @@ class SpecToMetNode : public MaterialNode
 public:
 	using ptr = s_ptr<SpecToMetNode>;
 
-	SpecToMetNode()
-	{
-		inputs.albedo = register_input(/*ShaderParams::get().FLOAT4, */"albedo");
-		inputs.specular = register_input(/*ShaderParams::get().FLOAT4, */"specular");
-
-		outputs.albedo = register_output(/*ShaderParams::get().FLOAT4,*/ "albedo");
-		outputs.metallic = register_output(/*ShaderParams::get().FLOAT1,*/ "metallic");
-
-	}
+	SpecToMetNode();
 
      	static ptr create_default() {
 			return std::make_shared<SpecToMetNode>();
 		}
 
-	void operator()(MaterialContext* c) override
-	{
-		auto mat_graph = static_cast<MaterialFunction*>(owner);
-	
-	auto res1 = 	mat_graph->add_value(ShaderParams::get().FLOAT4);
-
-	auto res2 = mat_graph->add_value(ShaderParams::get().FLOAT1);
-
-
-	auto val1 = inputs.albedo->get<shader_parameter>();
-	auto val2 = inputs.specular->get<shader_parameter>();
-
-
-	 mat_graph->add_function(std::string("spec_to_metallic(") + val1.name + "," + val2.name +","+ res1.name + "," + res2.name + ")");
-
-
-
-
-
-		outputs.albedo->put(res1);
-
-		outputs.metallic->put(res2);
-
-		
-
-
-	}
+	void operator()(MaterialContext* c) override;
 
 	//virtual GUI::base::ptr create_editor_window()override;
 private:

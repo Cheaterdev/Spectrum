@@ -42,15 +42,9 @@ export namespace GUI
 
                 virtual void on_bounds_changed(const rect& r) override;
 
-                label::ptr get_label()
-                {
-                    return label_text;
-                }
+                label::ptr get_label();
 
-                image::ptr get_image()
-                {
-                    return im;
-                }
+                image::ptr get_image();
 
         };
     }

@@ -90,10 +90,7 @@ export namespace GUI
                 property<float> font_size;
                 float4 color;
                 label();
-                virtual	~label()
-                {
-                    font = nullptr;
-                }
+                virtual	~label();
                 virtual void draw(Context& c) override;
 
                 unsigned int get_index(vec2 at);

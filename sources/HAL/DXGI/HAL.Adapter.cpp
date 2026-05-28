@@ -1,6 +1,6 @@
 module HAL:Adapter;
 import :Utils;
-import <HAL.h>;
+
 import <d3d12/d3d12_includes.h>;
 import Core;
 

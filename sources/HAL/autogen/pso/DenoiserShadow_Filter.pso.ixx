@@ -4,7 +4,7 @@ import Core;
 import :PSO;
 import :Enums;
 import :Types;
-import <HAL.h>;
+
 
 export namespace PSOS
 {

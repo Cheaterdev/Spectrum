@@ -6,7 +6,7 @@ import HAL;
 import GUI;
 import FrameGraph;
 import Graphics;
-import <HAL.h>;
+
 
 using namespace GUI::Elements;
 

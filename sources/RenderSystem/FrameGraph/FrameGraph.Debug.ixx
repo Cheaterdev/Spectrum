@@ -3,7 +3,7 @@ export module FrameGraphDebug;
 export import "defines.h";
 import Core;
 import HAL;
-import <HAL.h>;
+
 
 import GUI;			  
 import FrameGraph;

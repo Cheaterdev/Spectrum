@@ -9,6 +9,61 @@ namespace GUI
 
 
 
+        bool tab_button::is_current()
+        {
+            return page->visible;
+        }
+
+        bool tab_button::need_drag_drop()
+        {
+            return true;
+        }
+
+        void tab_button::generate_container(base::ptr obj)
+        {
+            obj->add_child(get_ptr());
+            obj->add_child(page);
+        }
+
+        void tab_strip::recalculate_tabs()
+        {
+            float width = all->size->x;
+            menu->remove_all();
+
+            if (current)
+            {
+                width += current->size->x;
+                current->visible = true;
+            }
+
+            for (size_t i = 0; i < buttons.size(); i++)
+            {
+                if (buttons[i] != current)
+                    width += buttons[i]->size->x;
+
+                buttons[i]->visible = width < render_bounds->w || buttons[i] == current;
+
+                if (!buttons[i]->visible.get())
+                {
+                    menu->add_item(buttons[i]->get_label()->text.get())->on_click = [this, i](menu_list_element::ptr) {buttons[i]->on_click(buttons[i]); };
+                }
+            }
+        }
+
+        tab_button::ptr tab_strip::get_first_button()
+        {
+            if (buttons.size())
+                return buttons.front();
+
+            return nullptr;
+        }
+
+        void tab_strip::close_menus()
+        {
+            base::close_menus();
+            menu->self_close();
+        }
+
         void tab_button::draw(Context& c)
         {
             if (is_current() || is_pressed())
@@ -99,7 +154,7 @@ namespace GUI
 			c.renderer->draw_color(c, float4(53, 114, 202,255)/255.0f, bounds);
 		}
 
-		inline tab_strip::tab_strip()
+		tab_strip::tab_strip()
 		{
 			padding = { 0, 0, 0, 3 };
 			size = { 25, 25 };
@@ -245,7 +300,7 @@ namespace GUI
             strip->recalculate_tabs();
             return but;
         }
-		inline void tab_control::remove_button(tab_button::ptr b)
+		void tab_control::remove_button(tab_button::ptr b)
 		{
 
             b->on_click.unregister(this);

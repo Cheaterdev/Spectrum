@@ -13,10 +13,7 @@ export namespace GUI
 
                 Texture texture;
                 virtual void draw(Context& c);
-                image()
-                {
-                    clickable = false;
-                }
+                image();
         };
 
 

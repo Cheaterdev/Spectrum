@@ -75,14 +75,7 @@ export{
 		unsigned int mesh_id = -1;
 		std::vector<MeshNode> childs;
 
-		virtual void iterate(std::function<bool(MeshNode*)> f)
-		{
-			if (f(this))
-			{
-				for (auto& c : childs)
-					c.iterate(f);
-			}
-		}
+		virtual void iterate(std::function<bool(MeshNode*)> f);
 
 	private:
 		SERIALIZE()
@@ -185,22 +178,16 @@ export{
 		MeshNode root_node;
 		std::vector<MeshNode*> nodes;
 
-		virtual void shutdown() override
-		{
-			preview_mesh.reset();
-		}
+		virtual void shutdown() override;
 		MeshAsset(std::wstring, AssetLoadingContext::ptr = nullptr);
-		virtual ~MeshAsset()
-		{
-			materials.clear();
-		}
+		virtual ~MeshAsset();
 		std::shared_ptr<MeshAssetInstance> create_instance();
 		virtual void try_register();
 
 		virtual Asset_Type get_type();
 		virtual void update_preview(HAL::Texture::ptr preview);
 		virtual AssetStorage::ptr  register_new(std::wstring name = L"", Guid g = Guid());
-		virtual void reload_resource() override { }
+		virtual void reload_resource() override;
 
 
 		void init_gpu();
@@ -277,10 +264,7 @@ export{
 		{
 			MeshNode* asset_node;
 			unsigned int global_index;
-			mesh_asset_node(MeshNode* node)
-			{
-				asset_node = node;
-			}
+			mesh_asset_node(MeshNode* node);
 		};
 
 
@@ -351,20 +335,14 @@ export{
 	{
 		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::RaytraceInstanceInfo);
 	public:
-		universal_rtx_manager() :HAL::virtual_gpu_buffer<Table::RaytraceInstanceInfo>(MAX_NODES_SIZE)
-		{
-
-		}
+		universal_rtx_manager();
 	};
 
 	class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public HAL::virtual_gpu_buffer<Table::MeshInstanceInfo>
 	{
 		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::MeshInstanceInfo);
 	public:
-		universal_mesh_instance_manager() :HAL::virtual_gpu_buffer<Table::MeshInstanceInfo>(MAX_NODES_SIZE)
-		{
-
-		}
+		universal_mesh_instance_manager();
 	};
 
 
@@ -372,10 +350,7 @@ export{
 	{
 		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::node_data);
 	public:
-		universal_nodes_manager() :HAL::virtual_gpu_buffer<Table::node_data>(MAX_NODES_SIZE)
-		{
-
-		}
+		universal_nodes_manager();
 	};
 
 
@@ -383,10 +358,7 @@ export{
 	{
 		static const size_t MAX_COMMANDS_SIZE = 100_mb / sizeof(Table::MaterialCommandData);
 	public:
-		universal_material_info_part_manager() :HAL::virtual_gpu_buffer<Table::MaterialCommandData>(MAX_COMMANDS_SIZE)
-		{
-
-		}
+		universal_material_info_part_manager();
 	};
 
 	class SceneFrameManager :public Singleton<SceneFrameManager>

@@ -19,13 +19,7 @@ export namespace materials
 		HAL::domain_shader::ptr ds_shader;
 		HAL::hull_shader::ptr hs_shader;
 
-		void init_pipeline_id()
-		{
-			pipeline_id = 2166136261U;
-			pipeline_id = HashIterate(ps_shader ? ps_shader->id : 0, pipeline_id);
-			pipeline_id = HashIterate(ds_shader ? ds_shader->id : 0, pipeline_id);
-			pipeline_id = HashIterate(hs_shader ? hs_shader->id : 0, pipeline_id);
-		}
+		void init_pipeline_id();
 
 
 		D3D_PRIMITIVE_TOPOLOGY get_topology();
@@ -63,15 +57,10 @@ export namespace materials
 		pixel_shader::ptr pixel;
 	public:
 		using ptr = std::shared_ptr<PipelineSimple>;
-		PipelineSimple(UINT id, pixel_shader::ptr pixel = nullptr) :Pipeline(id)
-		{
+		PipelineSimple(UINT id, pixel_shader::ptr pixel = nullptr);
+		PipelineSimple() = default;
 
-		}PipelineSimple() = default;
-
-		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override {
-
-		//	pipeline.pixel = pixel;
-		}
+		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override;
 
 	private:
 
@@ -188,29 +177,22 @@ export namespace materials
 
 		void update();
 
-		UINT get_material_id()
-		{
-			return (UINT)info_handle.get_offset();
-		}
+		UINT get_material_id();
 
-		Pipeline::ptr get_pipeline() {
-			return pipeline;
-		}
+		Pipeline::ptr get_pipeline();
 
 		size_t  get_id();
 
 		MaterialGraph::ptr get_graph();
 
-		Slots::MaterialInfo& get_render_info() {
-			return material_info;
-		}
+		Slots::MaterialInfo& get_render_info();
 
 
 		void on_graph_changed();
 		void generate_material();
 
-		virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override {}
-		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override {}
+		virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override;
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override;
 	private:
 		SERIALIZE() {
 			SAVE_PARENT(MaterialAsset);
