@@ -4,6 +4,7 @@ import <RenderSystem.h>;
 import :FrameGraphContext;
 import FrameGraph;
 import HAL;
+import :Texture;
 
 
 export class SkyRender

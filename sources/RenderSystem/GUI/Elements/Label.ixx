@@ -4,6 +4,8 @@ import :Base;
 import :ScrollContainer;
 
 import TextSystem;
+
+namespace HAL { class Texture; }  // forward-decl for cache_resource (defined in Graphics:Texture)
           
 
 extern "C" typedef struct FT_FaceRec_* FT_Face;
@@ -78,6 +80,7 @@ export namespace GUI
                 float scaled = 1;
 
 				GUI::Texture cache;
+				std::shared_ptr<HAL::Texture> cache_resource;  // owns the texture; cache.texture holds the view
                 virtual void on_pre_render(Context& context) override;
                 virtual void pre_draw(HAL::CommandList::ptr list) override;
             public:

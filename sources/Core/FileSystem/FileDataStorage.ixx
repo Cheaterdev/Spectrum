@@ -58,15 +58,21 @@ export
 
 		void start_save();
 
+		// base_context lets callers pre-populate the UniversalContext before the
+		// archive is opened (e.g. push Device*, RenderContext*, etc.).
+		// File-specific entries (fstream*, path) are always set here, overwriting
+		// any stale values the caller may have left in those slots.
 		template<class T>
-		bool get(std::string partition, T& target)
+		bool get(std::string partition, T& target, UniversalContext* base_context = nullptr)
 		{
 			std::fstream stream(path, std::ios::binary | std::ios::in);
 
 			if(!stream.is_open()) return false;
 
 			stream.seekg(h.offsets[partition], std::ios::beg);
-			UniversalContext context;
+
+			UniversalContext local;
+			UniversalContext& context = base_context ? *base_context : local;
 
 			context.get_context<std::fstream*>() = &stream;
 			context.get_context<std::filesystem::path>() = path;
@@ -80,10 +86,10 @@ export
 		}
 
 		template<class T>
-		T get(std::string partition)
+		T get(std::string partition, UniversalContext* base_context = nullptr)
 		{
 			T t;
-			get(partition, t);
+			get(partition, t, base_context);
 			return t;
 		}
 

@@ -20,7 +20,7 @@ namespace GUI
             silver_image->docking = GUI::dock::LEFT;
             silver_image->width_size = size_type::FIXED;
             silver_image->height_size = size_type::FIXED;
-            silver_image->size = silver_image->skin.Normal.texture->get_size().xy;
+            silver_image->size = silver_image->skin.Normal.texture.get_size();
             return silver_image;
         }
 
@@ -42,7 +42,7 @@ namespace GUI
             silver_image->docking = GUI::dock::RIGHT;
             silver_image->width_size = size_type::FIXED;
             silver_image->height_size = size_type::FIXED;
-            silver_image->size = silver_image->skin.Normal.texture->get_size().xy;
+            silver_image->size = silver_image->skin.Normal.texture.get_size();
             return silver_image;
         }
 

@@ -6,6 +6,7 @@
 #include "CFW1Object.h"
 
 import HAL;
+import Graphics;
 
 namespace FW1FontWrapper
 {

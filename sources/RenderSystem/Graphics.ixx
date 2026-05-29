@@ -1,5 +1,7 @@
 export module Graphics;
 
+export import :Texture;
+
 export import :TileDynamicGenerator;
 export import :GPUTilesBuffer;
 export import :VisibilityBuffer;

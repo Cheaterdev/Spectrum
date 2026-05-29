@@ -3,6 +3,7 @@ import <RenderSystem.h>;
 
 import Core;
 import HAL;
+import :Texture;
 
 import FrameGraph;
 

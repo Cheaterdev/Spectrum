@@ -620,7 +620,10 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 					auto t = CounterManager::get().start_count<AssetStorage>(convert(header->name));
 
 
-					asset = archive->get<Asset::ptr>("asset");
+					UniversalContext load_ctx;
+					if (HAL::Device::is_good())
+						load_ctx.get_context<HAL::Device*>() = &HAL::Device::get();
+					asset = archive->get<Asset::ptr>("asset", &load_ctx);
 
 					asset->holder = this;
 

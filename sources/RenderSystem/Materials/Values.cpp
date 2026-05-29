@@ -839,7 +839,7 @@ GUI::base::ptr TextureNode::create_editor_window()
 
 
 	auto asset = (texture_info->asset)->get_ptr<TextureAsset>();
-	img_inner->texture.srv = asset->get_texture()->texture_2d().texture2D;
+	img_inner->texture = asset->get_texture()->texture_2d();
 	img_inner->size = { 64, 64 };
 	img->add_child(img_inner);
 

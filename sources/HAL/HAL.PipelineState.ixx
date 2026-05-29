@@ -255,7 +255,11 @@ export namespace HAL
 			{
 				HAL::PipelineStateDesc desc;
 				ar& NVP(desc);
-				pso = HAL::PipelineState::create(Device::get(), desc, desc.name);
+				Device* _dev = nullptr;
+				if constexpr (requires { cereal::get_user_data<UniversalContext>(ar); })
+					_dev = cereal::get_user_data<UniversalContext>(ar).template get_context<Device*>();
+			//	if (!_dev) _dev = &Device::get();
+				pso = HAL::PipelineState::create(*_dev, desc, desc.name);
 
 			}
 			else
@@ -279,6 +283,9 @@ export namespace HAL
 		{
 			IF_LOAD()
 			{
+				Device* _dev = nullptr;
+				if constexpr (requires { cereal::get_user_data<UniversalContext>(ar); })
+					_dev = cereal::get_user_data<UniversalContext>(ar).template get_context<Device*>();
 
 				uint size;
 				ar& NVP(size);
@@ -291,7 +298,7 @@ export namespace HAL
 
 					ar& NVP(k);
 
-					pso[k] = HAL::PipelineState::create(Device::get(), desc, desc.name);
+					pso[k] = HAL::PipelineState::create(*_dev, desc, desc.name);
 				}
 
 

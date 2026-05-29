@@ -7,7 +7,7 @@ import :MaterialAsset;
 import GUI;
 
 import HAL;
-
+import :Texture;
 
 import stl.core;
 export{

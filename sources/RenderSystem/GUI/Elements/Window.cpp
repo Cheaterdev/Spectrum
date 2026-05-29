@@ -41,7 +41,7 @@ GUI::Elements::window::window() : GUI::Elements::resizable()
 	close_button->get_image()->docking = dock::FILL;
 	close_button->get_image()->height_size = size_type::FIXED;
 	close_button->get_image()->width_size = size_type::FIXED;
-	close_button->get_image()->size = { close_button->get_image()->texture.texture->get_desc().as_texture().Dimensions.x, close_button->get_image()->texture.texture->get_desc().as_texture().Dimensions.y };
+	close_button->get_image()->size = { close_button->get_image()->texture.texture.get_desc().as_texture().Dimensions.x, close_button->get_image()->texture.texture.get_desc().as_texture().Dimensions.y };
 	close_button->padding = { 5, 5, 5, 5 };
 	close_button->docking = dock::RIGHT;
 	close_button->on_click = [this](button::ptr)

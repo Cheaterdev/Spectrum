@@ -3,6 +3,7 @@ import <RenderSystem.h>;
 import :Asset;
 import Core;
 import HAL;
+import :Texture;
 
 export{
 

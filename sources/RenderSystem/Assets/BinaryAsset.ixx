@@ -1,6 +1,7 @@
 export module Graphics:BinaryAsset;
 import <RenderSystem.h>;
 import :Asset;
+import :Texture;
 
 
 export class BinaryAsset : public Asset

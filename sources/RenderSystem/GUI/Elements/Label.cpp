@@ -145,7 +145,7 @@ namespace GUI
 			w = vec2(render_bounds->size);
 			wptr _THIS = get_ptr<label>();
 
-			HAL::Texture::ptr new_preview = cache.texture;
+			HAL::Texture::ptr new_preview = cache_resource;
 			lay2.right = std::ceil(lay2.right);
 			lay2.bottom = std::ceil(lay2.bottom);
 
@@ -153,17 +153,16 @@ namespace GUI
 			if (lay2.bottom == 0) lay2.bottom = 1;
 
 			if (!isnan(lay2.right))
-				if (!cache.texture || cache.texture->get_desc().as_texture().Dimensions.x < lay2.right || cache.texture->get_desc().as_texture().Dimensions.y < lay2.bottom)
+				if (!cache_resource || cache_resource->get_desc().as_texture().Dimensions.x < lay2.right || cache_resource->get_desc().as_texture().Dimensions.y < lay2.bottom)
 				{
-					
-					cache.texture.reset(new HAL::Texture(HAL::Device::get(), HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { lay2.right, (UINT)lay2.bottom }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
-
-					cache.texture->resource->set_name("Label::cache");
+					cache_resource.reset(new HAL::Texture(HAL::Device::get(), HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { lay2.right, (UINT)lay2.bottom }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+					cache_resource->resource->set_name("Label::cache");
+					cache.texture = cache_resource->texture_2d();
 				}
 			//auto _command_list = c.command_list_label;// c.command_list->get_sub_list();
 			user_ui->pre_draw_infos.emplace_back(this);
 
-			cache.tc = vec4{ 0,0, lay2.right_bottom / vec2(cache.texture->get_desc().as_texture().Dimensions.x,cache.texture->get_desc().as_texture().Dimensions.y) };
+			cache.tc = vec4{ 0,0, lay2.right_bottom / vec2(cache_resource->get_desc().as_texture().Dimensions.x, cache_resource->get_desc().as_texture().Dimensions.y) };
 		}
 		void label::pre_draw(HAL::CommandList::ptr command_list)
 		{
@@ -275,18 +274,18 @@ for (const auto& token : parsed) {
 //std::cout << html.str();
 			//text.get().fi
 								 /*/
-			//command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
+			//command_list->clear_rtv(cache.texture.renderTarget);
 		   geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
 		
 			{
 				RT::SingleColor rt;
-				rt.GetColor() = cache.texture->texture_2d().renderTarget;
+				rt.GetColor() = cache.texture.renderTarget;
 				command_list->get_graphics().set_rtv(rt,RTOptions::Default| RTOptions::ClearAll);
 			}
 
 			PROFILE(L"label");
 			geomerty->draw(command_list, lay2, 0, { 0,0 });
-			MipMapGenerator::get().generate(command_list->get_compute(), cache.texture->texture_2d());
+			MipMapGenerator::get().generate(command_list->get_compute(), cache.texture);
 
 								//	   command_list->transition(cache.texture->resource, { HAL::BarrierSync::NONE, HAL::BarrierAccess::NO_ACCESS, HAL::TextureLayout::SHADER_RESOURCE });
 

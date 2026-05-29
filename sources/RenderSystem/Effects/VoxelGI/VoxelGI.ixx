@@ -14,6 +14,7 @@ import :FrameGraphContext;
 
 import FrameGraph;
 import HAL;
+import :Texture;
 #include "profiling/macros.h"
 
 //class GBufferDownsampler;

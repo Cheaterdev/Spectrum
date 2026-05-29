@@ -45,17 +45,11 @@ if(!index_buffer)
 		}
 
 		bool added = false;
-		if (item.srv)
+		if (item.texture.texture2D)
 		{
 			added = true;
-			textures_handles.emplace_back(item.srv);
+			textures_handles.emplace_back(item.texture.texture2D);
 		}
-		else
-			if (item.texture)
-			{
-				added = true;
-				textures_handles.emplace_back(item.texture->texture_2d().texture2D);
-			}
 
 		if (!added && current_state == HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::NinePatch>())
 		{
@@ -63,7 +57,7 @@ if(!index_buffer)
 		}
 		if(!added)
 		{
-			textures_handles.emplace_back(HAL::Texture::null->texture_2d().texture2D);
+			textures_handles.emplace_back(HAL::Texture2DView{}.texture2D);
 
 		}
 		current_state = pipeline_state;
@@ -80,17 +74,17 @@ if(!index_buffer)
 
 		if (item.texture)
 		{
-			tl = static_cast<float>(item.padding.left) / item.texture->get_desc().as_texture().Dimensions.x;
-			tt = static_cast<float>(item.padding.top) / item.texture->get_desc().as_texture().Dimensions.y;
-			tr = static_cast<float>(item.padding.right) / item.texture->get_desc().as_texture().Dimensions.x;
-			tb = static_cast<float>(item.padding.bottom) / item.texture->get_desc().as_texture().Dimensions.y;
+			tl = static_cast<float>(item.padding.left) / item.texture.get_desc().as_texture().Dimensions.x;
+			tt = static_cast<float>(item.padding.top) / item.texture.get_desc().as_texture().Dimensions.y;
+			tr = static_cast<float>(item.padding.right) / item.texture.get_desc().as_texture().Dimensions.x;
+			tb = static_cast<float>(item.padding.bottom) / item.texture.get_desc().as_texture().Dimensions.y;
 		}
 
 		sizer new_tc = item.tc;
 		if (item.tiled)
 		{
-			new_tc.right = r.w / item.texture->get_size().x;
-			new_tc.bottom = r.h / item.texture->get_size().y;
+			new_tc.right = r.w / item.texture.get_size().x;
+			new_tc.bottom = r.h / item.texture.get_size().y;
 
 		}
 

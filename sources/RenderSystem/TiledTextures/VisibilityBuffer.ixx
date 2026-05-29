@@ -2,6 +2,7 @@ export module Graphics:VisibilityBuffer;
 
 import Core;
 import HAL;
+import :Texture;
 export {
 
 	struct visibility_update

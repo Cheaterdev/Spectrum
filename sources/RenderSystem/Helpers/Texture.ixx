@@ -1,21 +1,13 @@
-export module HAL:Texture;
+export module Graphics:Texture;
 
 import Core;
-
-import :Resource;
-
-import :Resource.Texture;
-import :ResourceViews;
-import :TextureData;
-
-//using namespace HAL;
-
-import :Types;
+import HAL;
 
 export
 {
 	namespace HAL
 	{
+
 
 		struct texure_header
 		{
@@ -94,7 +86,7 @@ export
 				ar& NVP(resource);
 				if constexpr (Archive::is_saving::value)
 				{
-					
+
 				}
 				else
 				{

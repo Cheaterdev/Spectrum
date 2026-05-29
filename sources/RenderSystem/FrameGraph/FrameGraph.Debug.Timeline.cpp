@@ -1168,7 +1168,7 @@ class FrameGraphTimelineCanvas : public dock_base
                             auto tex = m_current_tex;
                             run_on_ui([this, tex]()
                             {
-                                m_img->texture.texture = tex;
+                                m_img->texture.texture = tex->texture_2d();
                                 m_img->visible         = true;
                                 m_buffer_tree->visible = false;
                             });
@@ -2037,7 +2037,7 @@ private:
 
                 if (last_write_thumb_tex)
                 {
-                    img->texture.texture = last_write_thumb_tex;
+                    img->texture.texture = last_write_thumb_tex->texture_2d();
                     if (!cell.is_write)
                         img->texture.mul_color = { 1.0f, 1.0f, 1.0f, 0.7f };
                 }

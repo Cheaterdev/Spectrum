@@ -4,6 +4,7 @@ import <RenderSystem.h>;
 import FrameGraph;
 import HAL;
 import :FrameGraphContext;
+import :Texture;
 
 export class SMAA
 {

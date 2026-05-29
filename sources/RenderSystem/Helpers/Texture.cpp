@@ -1,4 +1,4 @@
-﻿module HAL:Texture;
+module Graphics:Texture;
 
 import HAL;
 
@@ -65,9 +65,7 @@ namespace HAL
 	{
 		m_device = &device;
 		resource = std::make_shared<HAL::TextureResource>(device, native, initialLayout);
-		//    resource.reset(new Resource(native));
 		resource->set_name("Texture");
-		//	resource->debug = true;
 		init();
 	}
 	Texture::Texture(Device& device, HAL::ResourceDesc desc, TextureLayout initialLayout)
@@ -81,7 +79,6 @@ namespace HAL
 	texture_data::ptr Texture::get_data() const
 	{
 		auto desc = get_desc().as_texture();
-		//auto list = Device::get().get_upload_list();
 
 		auto list = (resource->get_device().get_queue(CommandListType::COPY)->get_free_list());
 		list->begin(L"Texture Readback");
@@ -89,7 +86,6 @@ namespace HAL
 		desc.Format = desc.Format.to_typeless();
 
 		auto dims = uint3::max(desc.Dimensions, uint3{ 1,1,1 });
-		//  auto res = list->read_texture(resource, ivec3(0, 0, 0), ivec3(desc.Width, desc.Height, 1), i);
 		texture_data::ptr p_data(new texture_data(desc.ArraySize, desc.MipLevels, dims.x, dims.y, dims.z, desc.Format));
 		auto& data = *p_data;
 		std::vector<std::future<bool>> tasks;
@@ -165,7 +161,7 @@ namespace HAL
 		desc.MipLevels = data->mip_maps;
 		desc.Dimensions = uint3(data->width, data->height, 0);
 
-		return create(resource->get_device(), data); //std::make_shared<Texture>(HAL::ResourceDesc{ desc, HAL::ResFlags::ShaderResource }, ResourceState::COMMON, HeapType::DEFAULT, data);
+		return create(resource->get_device(), data);
 	}
 
 	Texture::ptr Texture::load_native(const texure_header& header, resource_file_depender& depender)
@@ -190,8 +186,6 @@ namespace HAL
 
 			if (!tex_data)
 				return nullptr;
-
-			//	auto data = texture_data::compress(tex_data);
 
 			return create(device, tex_data);
 		}

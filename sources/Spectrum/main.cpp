@@ -467,9 +467,10 @@ public:
 
 	void draw(base::Context& t) override
 	{
-		if (t.result_texture_srv) texture.srv = t.result_texture_srv;
+		auto saved_srv = texture.texture.texture2D;
+		if (t.result_texture_srv) texture.texture.texture2D = t.result_texture_srv;
 		image::draw(t);
-		texture.srv = Handle();
+		texture.texture.texture2D = saved_srv;
 	}
 
 

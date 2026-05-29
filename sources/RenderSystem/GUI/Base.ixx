@@ -24,7 +24,7 @@ export
         float delta_time;
         vec2 window_size;
         float scale = 1;
-        HAL::Handle result_texture_srv;
+        HAL::Texture2DView result_texture_srv;
 
         GUIInfo() = default;
         GUIInfo(HAL::CommandList::ptr list);
@@ -241,7 +241,7 @@ namespace GUI
    
     struct Texture
     {
-        HAL::Texture::ptr texture;
+        HAL::Texture2DView texture;
         sizer margins;
         sizer padding;
         sizer tc;
@@ -249,10 +249,9 @@ namespace GUI
 
         float4 mul_color;
         float4 add_color;
-		HAL::Handle srv;
         Texture();
 
-        void operator=(const HAL::Texture::ptr& texture);
+        void operator=(const HAL::Texture2DView& texture);
     };
 	
     class drag_n_drop;

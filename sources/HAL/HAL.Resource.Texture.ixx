@@ -43,7 +43,11 @@ export{
 			
 				if constexpr (Archive::is_loading::value)
 				{
-					Device& device = Device::get();
+					Device* _dev = nullptr;
+					if constexpr (can_get_context<Archive>)
+						_dev = cereal::get_user_data<UniversalContext>(ar).template get_context<Device*>();
+		
+					Device& device = *_dev;
 					_init(device, desc, HeapType::DEFAULT, TextureLayout::COPY_QUEUE);
 					set_name("TextureResource::deserializing ");
 

@@ -1,6 +1,7 @@
 export module Graphics:AssetRenderer;
 import Core;
 import HAL;
+import :Texture;
  import :MeshRenderer;
  import :Sky;
 

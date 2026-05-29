@@ -44,7 +44,7 @@ namespace GUI
 				img_inner.reset(new GUI::Elements::image);
 
 
-				img_inner->texture.texture = asset_storage->get_preview();
+				img_inner->texture.texture = asset_storage->get_preview()->texture_2d();
 				img_inner->docking = GUI::dock::TOP;
 				img_inner->size = { 128, 128 };
 				img->add_child(img_inner);
@@ -258,9 +258,9 @@ namespace GUI
 			img->add_child(name);
 			set_package("asset");
 			auto i = im;
-			asset->on_preview.register_handler(this, [i](HAL::Texture::ptr preview)
+			asset->on_preview.register_handler(this, [i](const HAL::Texture::ptr& preview)
 				{
-					i->texture = preview;
+					i->texture = preview->texture_2d();
 				});
 		}
 

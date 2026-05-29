@@ -50,68 +50,68 @@ namespace EngineAssets
 
 Skin::Skin()
 {
-	DefaultButton.Normal.texture = EngineAssets::button.get_asset()->get_texture();
+	DefaultButton.Normal.texture = EngineAssets::button.get_asset()->get_texture()->texture_2d();
 	DefaultButton.Normal.padding = { 3, 3, 3, 3 };
-	DefaultButton.Hover.texture = EngineAssets::button_hover.get_asset()->get_texture();
+	DefaultButton.Hover.texture = EngineAssets::button_hover.get_asset()->get_texture()->texture_2d();
 	DefaultButton.Hover.padding = { 3, 3, 3, 3 };
-	DefaultButton.Pressed.texture = EngineAssets::button_pressed.get_asset()->get_texture();
+	DefaultButton.Pressed.texture = EngineAssets::button_pressed.get_asset()->get_texture()->texture_2d();
 	DefaultButton.Pressed.padding = { 3, 3, 3, 3 };
-	TabButton.Normal.texture = EngineAssets::tab_button_back.get_asset()->get_texture();
+	TabButton.Normal.texture = EngineAssets::tab_button_back.get_asset()->get_texture()->texture_2d();
 	TabButton.Normal.padding = { 3, 3, 3, 3 };
-	TabButton.Hover.texture = EngineAssets::tab_button_hover.get_asset()->get_texture();
+	TabButton.Hover.texture = EngineAssets::tab_button_hover.get_asset()->get_texture()->texture_2d();
 	TabButton.Hover.padding = { 3, 3, 3, 3 };
-	TabButton.Pressed.texture = EngineAssets::tab_button.get_asset()->get_texture();
+	TabButton.Pressed.texture = EngineAssets::tab_button.get_asset()->get_texture()->texture_2d();
 	TabButton.Pressed.padding = { 3, 3, 3, 3 };
-	DefaultTabStrip.Normal.texture = EngineAssets::tab_strip.get_asset()->get_texture();
+	DefaultTabStrip.Normal.texture = EngineAssets::tab_strip.get_asset()->get_texture()->texture_2d();
 	DefaultTabStrip.Normal.padding = { 0, 0, 0, 3 };
-	DefaultWindow.Active.texture = EngineAssets::window_active.get_asset()->get_texture();
+	DefaultWindow.Active.texture = EngineAssets::window_active.get_asset()->get_texture()->texture_2d();
 	DefaultWindow.Active.padding = { 11, 40, 13, 13 };
 	DefaultWindow.Active.margins = { 12, 11, 11, 10 };
-	DefaultComboBox.Normal.texture = EngineAssets::combo.get_asset()->get_texture();
+	DefaultComboBox.Normal.texture = EngineAssets::combo.get_asset()->get_texture()->texture_2d();
 	DefaultComboBox.Normal.padding = { 3, 3, 32, 3 };
-	DefaultComboBox.Hover.texture = EngineAssets::combo_hover.get_asset()->get_texture();
+	DefaultComboBox.Hover.texture = EngineAssets::combo_hover.get_asset()->get_texture()->texture_2d();
 	DefaultComboBox.Hover.padding = { 3, 3, 32, 3 };
-	DefaultComboBox.Pressed.texture = EngineAssets::combo_pressed.get_asset()->get_texture();
+	DefaultComboBox.Pressed.texture = EngineAssets::combo_pressed.get_asset()->get_texture()->texture_2d();
 	DefaultComboBox.Pressed.padding = { 3, 3, 32, 3 };
-	DefaultStatusBar.Normal.texture = EngineAssets::tab.get_asset()->get_texture();
-	DefaultCheckBox.Normal.texture = EngineAssets::check_normal.get_asset()->get_texture();
-	DefaultCheckBox.Checked.texture = EngineAssets::check_checked.get_asset()->get_texture();
-	DefaultOptionBox.Normal.texture = EngineAssets::option_normal.get_asset()->get_texture();
-	DefaultOptionBox.Checked.texture = EngineAssets::option_checked.get_asset()->get_texture();
-	FlowWindow.Active.texture = EngineAssets::flow_window_active.get_asset()->get_texture();
+	DefaultStatusBar.Normal.texture = EngineAssets::tab.get_asset()->get_texture()->texture_2d();
+	DefaultCheckBox.Normal.texture = EngineAssets::check_normal.get_asset()->get_texture()->texture_2d();
+	DefaultCheckBox.Checked.texture = EngineAssets::check_checked.get_asset()->get_texture()->texture_2d();
+	DefaultOptionBox.Normal.texture = EngineAssets::option_normal.get_asset()->get_texture()->texture_2d();
+	DefaultOptionBox.Checked.texture = EngineAssets::option_checked.get_asset()->get_texture()->texture_2d();
+	FlowWindow.Active.texture = EngineAssets::flow_window_active.get_asset()->get_texture()->texture_2d();
 	FlowWindow.Active.padding = { 11, 40, 13, 13 };
 	FlowWindow.Active.margins = { 12, 11, 11, 10 };
-	FlowWindow.Inactive.texture = EngineAssets::flow_window.get_asset()->get_texture();
+	FlowWindow.Inactive.texture = EngineAssets::flow_window.get_asset()->get_texture()->texture_2d();
 	FlowWindow.Inactive.padding = { 11, 40, 13, 13 };
 	FlowWindow.Inactive.margins = { 12, 11, 11, 10 };
-	FlowComment.Active.texture = EngineAssets::flow_comment.get_asset()->get_texture();
+	FlowComment.Active.texture = EngineAssets::flow_comment.get_asset()->get_texture()->texture_2d();
 	FlowComment.Active.padding = { 11, 40, 13, 13 };
 	FlowComment.Active.margins = { 12, 11, 11, 10 };
-	DefaultImagePanel.Normal.texture = EngineAssets::item_normal.get_asset()->get_texture();
+	DefaultImagePanel.Normal.texture = EngineAssets::item_normal.get_asset()->get_texture()->texture_2d();
 	DefaultImagePanel.Normal.padding = { 9, 9, 9, 9 };
 
-	DefaultImagePanel.Hover.texture = EngineAssets::item_hover.get_asset()->get_texture();
+	DefaultImagePanel.Hover.texture = EngineAssets::item_hover.get_asset()->get_texture()->texture_2d();
 	DefaultImagePanel.Hover.padding = { 9, 9, 9, 9 };
 
 
 
-	DefaultEditBox.Normal.texture = EngineAssets::edit.get_asset()->get_texture();
+	DefaultEditBox.Normal.texture = EngineAssets::edit.get_asset()->get_texture()->texture_2d();
 	DefaultEditBox.Normal.padding = { 14, 14, 14, 14 };
 
 
-	DefaultCircleSelector.Main.texture = EngineAssets::circle.get_asset()->get_texture();
-	DefaultCircleSelector.Inner.texture = EngineAssets::circle_inner.get_asset()->get_texture();
+	DefaultCircleSelector.Main.texture = EngineAssets::circle.get_asset()->get_texture()->texture_2d();
+	DefaultCircleSelector.Inner.texture = EngineAssets::circle_inner.get_asset()->get_texture()->texture_2d();
 
-	WindowCloseButton = EngineAssets::window_close.get_asset()->get_texture();
-	Background = EngineAssets::background.get_asset()->get_texture();
-	TreeOpened = EngineAssets::tree_opened.get_asset()->get_texture();
-	TreeClosed = EngineAssets::tree_closed.get_asset()->get_texture();
-	DebugBack = EngineAssets::item_hover.get_asset()->get_texture();
+	WindowCloseButton = EngineAssets::window_close.get_asset()->get_texture()->texture_2d();
+	Background = EngineAssets::background.get_asset()->get_texture()->texture_2d();
+	TreeOpened = EngineAssets::tree_opened.get_asset()->get_texture()->texture_2d();
+	TreeClosed = EngineAssets::tree_closed.get_asset()->get_texture()->texture_2d();
+	DebugBack = EngineAssets::item_hover.get_asset()->get_texture()->texture_2d();
 	DebugBack.padding = { 16,16,16,16 };
-	Down = EngineAssets::down.get_asset()->get_texture();
-	Virtual = EngineAssets::virtualtex.get_asset()->get_texture();
-	Shadow = EngineAssets::shadow.get_asset()->get_texture();
-	Fill = EngineAssets::back_fill.get_asset()->get_texture();
+	Down = EngineAssets::down.get_asset()->get_texture()->texture_2d();
+	Virtual = EngineAssets::virtualtex.get_asset()->get_texture()->texture_2d();
+	Shadow = EngineAssets::shadow.get_asset()->get_texture()->texture_2d();
+	Fill = EngineAssets::back_fill.get_asset()->get_texture()->texture_2d();
 	Edit.padding = { 5, 5, 5, 5 };
 	Virtual.padding = { 5, 5, 5, 5 };
 

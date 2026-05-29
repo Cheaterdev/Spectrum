@@ -1523,7 +1523,7 @@ namespace GUI
         add_color = { 0,0,0,0 };
     }
 
-    void Texture::operator=(const HAL::Texture::ptr& tex)
+    void Texture::operator=(const HAL::Texture2DView& tex)
     {
         this->texture = tex;
     }
@@ -1641,7 +1641,7 @@ void PassDefault<Passes::UI_Render>::render(
     c.command_list = command_list;
     c.delta_time = ui_ctx.dt;
     if (ui_ctx.result_texture_handler)
-        c.result_texture_srv = ui_ctx.result_texture_handler->texture2D;
+        c.result_texture_srv = *ui_ctx.result_texture_handler;
 
     {
         PROFILE_GPU(L"draw");

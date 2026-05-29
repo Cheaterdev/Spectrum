@@ -1,5 +1,6 @@
 export module Graphics:MipMapGenerator;
 import HAL;
+import :Texture;
 
 import :Camera;
 
