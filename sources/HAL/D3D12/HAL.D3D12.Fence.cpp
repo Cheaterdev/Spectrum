@@ -1,6 +1,11 @@
+module;
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>   // sets up architecture macros + CreateEventEx, WaitForSingleObject, CloseHandle, INFINITE, EVENT_ALL_ACCESS
+
 module HAL:Fence;
 
-import <d3d12/d3d12_includes.h>;
+import d3d12;
 import Core;
 
 #undef THIS

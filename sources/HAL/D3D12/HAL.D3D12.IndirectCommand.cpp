@@ -1,6 +1,6 @@
 module HAL:API.IndirectCommand;
 
-import <d3d12/d3d12_includes.h>;
+import d3d12;
 import :Types;
 import :Utils;
 import :RootSignature;

@@ -7,7 +7,6 @@ module HAL:Device;
 import :Debug;
 import :Utils;
 
-import <d3d12/d3d12_includes.h>;
 import d3d12;
 import Core;
 
@@ -323,12 +322,12 @@ namespace HAL
 			D3D12_RESOURCE_ALLOCATION_INFO1 info2;
 
 			auto info = native_device->GetResourceAllocationInfo2(0, 1, &native_desc, &info2);
-			if (info.SizeInBytes == UINT64_MAX)
+			if (info.SizeInBytes == std::numeric_limits<uint64_t>::max())
 			{
 				native_desc.Alignment = 0;
 				info = native_device->GetResourceAllocationInfo2(0, 1, &native_desc, &info2);
 			}
-			ASSERT(info.SizeInBytes!=UINT64_MAX);
+			ASSERT(info.SizeInBytes!=std::numeric_limits<uint64_t>::max());
 
 
 			native_desc.Alignment = info.Alignment;
@@ -371,7 +370,7 @@ namespace HAL
 				TEST(*this, native_device->GetDeviceRemovedReason());
 
 			alloc_info[desc] = result;
-			ASSERT(result.size != UINT64_MAX);
+			ASSERT(result.size != std::numeric_limits<uint64_t>::max());
 			return result;
 		}
 	}

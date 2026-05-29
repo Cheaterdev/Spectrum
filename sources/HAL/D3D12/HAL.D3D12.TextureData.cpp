@@ -2,7 +2,7 @@
 
 import Core;
 
-import <d3d12/d3d12_includes.h>;
+import d3d12;
 import :Utils;
 import :Types;
 import :Device;
@@ -209,9 +209,9 @@ namespace HAL
 			auto name = file->file_name;
 			std::wstring ext = name.extension().generic_wstring();
 
-			HRESULT hri = CoInitialize(NULL);
+			HRESULT hri = CoInitialize(nullptr);
 
-			HRESULT hr = NULL;
+			HRESULT hr = 0;
 			if (ext == L".tga")
 			{
 				hr = DirectX::LoadFromTGAMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), &metadata, orig_image);

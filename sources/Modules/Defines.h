@@ -33,3 +33,9 @@
 #ifndef _SYS_GUID_OPERATOR_EQ_
 #  define _SYS_GUID_OPERATOR_EQ_
 #endif
+
+// ---- D3D12 / COM helper macros ------------------------------------------
+// Brings in IID_PPV_ARGS, DXGI_ERROR_NOT_FOUND, _countof and similar SDK
+// macros that named modules cannot export.  Must come after NTDDI_VERSION
+// and _SYS_GUID_OPERATOR_EQ_ are set above.
+#include "d3d12/d3d12_macros.h"

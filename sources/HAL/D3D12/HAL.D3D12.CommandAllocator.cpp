@@ -2,7 +2,7 @@
 import Core;
 import HAL;
 
-import <d3d12/d3d12_includes.h>;
+import d3d12;
 namespace HAL
 {
 	CommandAllocator::CommandAllocator(Device& device, const CommandListType type) : device(device), type(type)
