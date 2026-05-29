@@ -71,7 +71,6 @@ export
 
 			static const ptr null;
 
-			Texture(Device& device, D3D::Resource native, TextureLayout initialLayout);
 			Texture(Device& device, HAL::ResourceDesc desc, TextureLayout initialLayout = TextureLayout::UNDEFINED);
 
 			static Texture::ptr create(Device& device, HAL::texture_data::ptr& data);

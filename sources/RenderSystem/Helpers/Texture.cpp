@@ -61,13 +61,6 @@ namespace HAL
 		init();
 	}
 
-	Texture::Texture(Device& device, D3D::Resource native, TextureLayout initialLayout)
-	{
-		m_device = &device;
-		resource = std::make_shared<HAL::TextureResource>(device, native, initialLayout);
-		resource->set_name("Texture");
-		init();
-	}
 	Texture::Texture(Device& device, HAL::ResourceDesc desc, TextureLayout initialLayout)
 	{
 		m_device = &device;
