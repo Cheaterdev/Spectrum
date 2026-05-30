@@ -1,6 +1,6 @@
 module Graphics:ShadowDenoiser;
 
-import <RenderSystem.h>;
+
 import :FrameGraphContext;
 import :MipMapGenerator;
 import HAL;

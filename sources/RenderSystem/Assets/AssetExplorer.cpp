@@ -260,6 +260,7 @@ namespace GUI
 			auto i = im;
 			asset->on_preview.register_handler(this, [i](const HAL::Texture::ptr& preview)
 				{
+							  if (preview)
 					i->texture = preview->texture_2d();
 				});
 		}

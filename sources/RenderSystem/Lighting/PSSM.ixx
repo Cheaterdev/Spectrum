@@ -1,5 +1,5 @@
 export module Graphics:PSSM;
-import <RenderSystem.h>;
+
 import :Materials.ShaderMaterial;
 import :Camera;
 import :Scene;

@@ -1,6 +1,6 @@
 module Graphics:SceneSystem;
 
-import <RenderSystem.h>;
+
 import :Context;
 import :MeshRenderer;
 import :FrameGraphContext;

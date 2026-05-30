@@ -1,6 +1,6 @@
 export module Graphics:BlueNoise;
 
-import <RenderSystem.h>;
+
 import :BinaryAsset;
 import :Asset;
 import FrameGraph;

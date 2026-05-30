@@ -11,7 +11,7 @@ namespace HAL
 	Heap::Heap(Device& device, const HeapDesc& desc):desc(desc)
 	{
 			D3D12_HEAP_DESC native_desc;
-			native_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+			native_desc.Alignment = D3D12::DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 			native_desc.Flags = ::to_native(desc.Flags);
 			native_desc.SizeInBytes = desc.Size;
 			native_desc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;

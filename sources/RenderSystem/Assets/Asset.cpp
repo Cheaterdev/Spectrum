@@ -1,12 +1,10 @@
 module Graphics:Asset;
 import Core;
 import ppl;
-
+import windows;
 using namespace concurrency;
 
 
-import <RenderSystem.h>;
-import <windows/windows.h>;
 REGISTER_TYPE(Asset);
 CEREAL_FORCE_REGISTER(Asset);
 
@@ -47,7 +45,7 @@ AssetManager::AssetManager()
 	}
 	msg_box_func = [](std::string str)
 	{
-		return MessageBoxA(0, str.c_str(), "message", MB_YESNO) == IDOK;
+		return MessageBoxA(0, str.c_str(), "message", Windows::MB_YESNO) == Windows::IDOK;
 	};
 }
 
@@ -400,14 +398,22 @@ AssetStorage::AssetStorage(file::ptr f)
 		std::lock_guard<std::mutex> g(archive_mutex);
 		auto archive = get_archive();
 
-		Header res = archive->get<Header>("header");
+			UniversalContext load_ctx;
+					if (HAL::Device::is_good())
+						load_ctx.get_context<HAL::Device*>() = &HAL::Device::get();
+	
+		Header res = archive->get<Header>("header", &load_ctx);
 		return res;
 	};
 	editor.create_func = [this]()->Editor
 	{
 		std::lock_guard<std::mutex> g(archive_mutex);
 		auto archive = get_archive();
-		auto res = archive->get<Editor>("editor");
+					UniversalContext load_ctx;
+					if (HAL::Device::is_good())
+						load_ctx.get_context<HAL::Device*>() = &HAL::Device::get();
+	
+		auto res = archive->get<Editor>("editor",&load_ctx);
 	
 		on_preview(res.preview);
 		return res;

@@ -1,11 +1,7 @@
-module;
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>   // sets up architecture macros + CreateEventEx, WaitForSingleObject, CloseHandle, INFINITE, EVENT_ALL_ACCESS
-
 module HAL:Fence;
 
 import d3d12;
+import windows;   // CreateEventEx, WaitForSingleObject, CloseHandle, INFINITE, EVENT_ALL_ACCESS
 import Core;
 
 #undef THIS
@@ -13,7 +9,7 @@ namespace HAL
 {
 	Event::Event()
 	{
-		m_fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
+		m_fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 	}
 
 	Event::~Event()

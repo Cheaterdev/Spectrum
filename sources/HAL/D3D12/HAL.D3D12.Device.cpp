@@ -27,7 +27,7 @@ namespace HAL
 
 		return {
 			RequiredSize, NumRows, Layouts.Footprint.RowPitch, static_cast<uint>(NumRows * Layouts.Footprint.RowPitch),
-			D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, from_native(Layouts.Footprint.Format)
+			D3D12::TEXTURE_DATA_PLACEMENT_ALIGNMENT, from_native(Layouts.Footprint.Format)
 		};
 	}
 
@@ -47,12 +47,12 @@ namespace HAL
 		D3D::ResourceDesc Desc = ::to_native(rdesc);
 		get_native_device()->GetCopyableFootprints1(&Desc, sub_resource, 1, 0, &Layouts, &NumRows,
 		                                            &RowSizesInBytes, &RequiredSize);
-		UINT64 res_stride = Math::AlignUp(RowSizesInBytes, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+		UINT64 res_stride = Math::AlignUp(RowSizesInBytes, D3D12::TEXTURE_DATA_PITCH_ALIGNMENT);
 		UINT64 size = res_stride * rows_count * box.z;
 
 		return {
 			size, rows_count, static_cast<uint>(res_stride), static_cast<uint>(res_stride * rows_count),
-			D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, from_native(Layouts.Footprint.Format)
+			D3D12::TEXTURE_DATA_PLACEMENT_ALIGNMENT, from_native(Layouts.Footprint.Format)
 		};
 	}
 
@@ -310,7 +310,7 @@ namespace HAL
 				if ((native_desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET |
 					D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) == 0)
 				{
-					native_desc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
+					native_desc.Alignment = D3D12::SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
 				}
 			}
 			if (native_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
@@ -334,13 +334,13 @@ namespace HAL
 
 
 			// TODO small alignment
-			/*	if (info.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
+			/*	if (info.Alignment != D3D12::SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
 				{
-					native_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+					native_desc.Alignment = D3D12::DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 					info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
 	
 	
-					if (info.Alignment != D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
+					if (info.Alignment != D3D12::DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
 					{
 						native_desc.Alignment = 0;
 						info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);

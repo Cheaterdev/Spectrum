@@ -1,5 +1,5 @@
 module Graphics:Scene;
-import <RenderSystem.h>;
+
 import :Materials.UniversalMaterial;
 import :MeshAsset;
 

@@ -1,6 +1,6 @@
 module Graphics:BinaryAsset;
 
-import <RenderSystem.h>;
+
 
 import :MipMapGenerator;
 import TextSystem;

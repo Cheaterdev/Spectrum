@@ -143,7 +143,7 @@ namespace HAL
 		// Create a DirectStorage queue which will be used to load data into a
 		// buffer on the GPU.
 		DSTORAGE_QUEUE_DESC queueDesc{};
-		queueDesc.Capacity = DSTORAGE_MAX_QUEUE_CAPACITY;
+		queueDesc.Capacity = DStorage::MAX_QUEUE_CAPACITY;
 		queueDesc.Priority = DSTORAGE_PRIORITY_NORMAL;
 		queueDesc.SourceType = DSTORAGE_REQUEST_SOURCE_FILE;
 		queueDesc.Device = device.get_native_device().Get();

@@ -4,7 +4,7 @@ import :Image;
 import Core;
 import :Tree;
 
-import <RenderSystem.h>;
+
 
 using namespace GUI;
 

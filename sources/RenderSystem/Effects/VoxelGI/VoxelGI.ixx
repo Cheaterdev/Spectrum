@@ -1,6 +1,4 @@
 export module Graphics:VoxelGI;
-import <RenderSystem.h>;
-
 import :PSSM;
 import :VisibilityBuffer;
 import :TileDynamicGenerator;
@@ -15,7 +13,6 @@ import :FrameGraphContext;
 import FrameGraph;
 import HAL;
 import :Texture;
-#include "profiling/macros.h"
 
 //class GBufferDownsampler;
 

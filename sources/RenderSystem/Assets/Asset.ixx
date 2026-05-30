@@ -3,7 +3,7 @@ export module Graphics:Asset;
 import HAL;
 import :Texture;
 import Core;
-import <RenderSystem.h>;
+
 
 export
 {

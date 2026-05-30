@@ -270,7 +270,7 @@ namespace HAL
 
 	uint Format::get_default_mapping() const
 	{
-		return D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		return D3D12::DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
 		switch (native_format)
 		{
@@ -281,7 +281,7 @@ namespace HAL
 			return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0;
 
 		default:
-			return D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			return D3D12::DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		}
 	}
 

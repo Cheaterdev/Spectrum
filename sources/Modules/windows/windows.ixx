@@ -32,3 +32,36 @@ export inline constexpr DWORD STD_ERROR_HANDLE  = DWORD(-12);
 // Invalid handle sentinel — pointer cast, so const not constexpr
 #undef INVALID_HANDLE_VALUE
 export inline HANDLE const INVALID_HANDLE_VALUE = HANDLE(LONG_PTR(-1));
+
+// Sync wait constant
+#undef INFINITE
+export inline constexpr DWORD INFINITE = 0xFFFFFFFFul;
+
+// Event access mask  (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3)
+#undef EVENT_ALL_ACCESS
+export inline constexpr DWORD EVENT_ALL_ACCESS = 0x001F0003ul;
+
+#undef MB_OK
+#undef MB_YESNO
+#undef IDOK
+#undef IDYES
+#undef IDNO
+
+export namespace Windows
+{
+	// MessageBox type flags
+	inline constexpr UINT MB_OK    = 0x00000000u;
+	inline constexpr UINT MB_YESNO = 0x00000004u;
+
+	// Dialog return values
+	inline constexpr int IDOK  = 1;
+	inline constexpr int IDYES = 6;
+	inline constexpr int IDNO  = 7;
+}
+
+// CreateEventEx is a macro alias for CreateEventExW/A — expose as a real function
+#undef CreateEventEx
+export inline HANDLE CreateEventEx(LPSECURITY_ATTRIBUTES attrs, LPCWSTR name, DWORD flags, DWORD access)
+{
+    return ::CreateEventExW(attrs, name, flags, access);
+}

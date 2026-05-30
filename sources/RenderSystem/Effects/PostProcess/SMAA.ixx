@@ -1,6 +1,6 @@
 export module Graphics:SMAA;
 
-import <RenderSystem.h>;
+
 import FrameGraph;
 import HAL;
 import :FrameGraphContext;

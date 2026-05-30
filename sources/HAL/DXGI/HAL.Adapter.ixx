@@ -45,7 +45,7 @@ export namespace HAL
 			IDXGIAdapter4* padapter;
 
 			uint i = 0;
-			while (native_factory->EnumAdapterByGpuPreference (i++, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&padapter)) != DXGI_ERROR_NOT_FOUND)
+			while (native_factory->EnumAdapterByGpuPreference (i++, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&padapter)) != DXGI::ERROR_NOT_FOUND)
 			{
 				DXGI::Adapter adapter;
 				adapter.Attach(padapter);

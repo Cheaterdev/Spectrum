@@ -6,6 +6,46 @@ import :Utils;
 import :RootSignature;
 import :Slots;
 
+namespace HAL
+{
+	// D3D12-layer conversions: argument types in SIG.ixx are API-independent,
+	// so the D3D12_INDIRECT_ARGUMENT_DESC mappings live here instead.
+
+	inline D3D12_INDIRECT_ARGUMENT_DESC create_indirect_for(DispatchArguments*)
+	{
+		D3D12_INDIRECT_ARGUMENT_DESC desc;
+		desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+		return desc;
+	}
+
+	inline D3D12_INDIRECT_ARGUMENT_DESC create_indirect_for(DispatchMeshArguments*)
+	{
+		D3D12_INDIRECT_ARGUMENT_DESC desc;
+		desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
+		return desc;
+	}
+
+	inline D3D12_INDIRECT_ARGUMENT_DESC create_indirect_for(DrawIndexedArguments*)
+	{
+		D3D12_INDIRECT_ARGUMENT_DESC desc;
+		desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+		return desc;
+	}
+
+	// Fallback for slot types that still carry their own create_indirect()
+	template<class T>
+	D3D12_INDIRECT_ARGUMENT_DESC create_indirect_for(T*)
+	{
+		return T::create_indirect();
+	}
+
+	template<class T>
+	D3D12_INDIRECT_ARGUMENT_DESC get_indirect_arg()
+	{
+		return create_indirect_for(static_cast<T*>(nullptr));
+	}
+}
+
 export namespace HAL
 {
 	class IndirectCommand
@@ -26,7 +66,7 @@ export namespace HAL
 
 	public:
 		UsedSlots slots;
-		// TODO: make private 
+		// TODO: make private
 		D3D::CommandSignature command_signature;
 
 		IndirectCommand();
@@ -37,7 +77,7 @@ export namespace HAL
 			D3D::CommandSignature command_signature;
 
 			D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[] = {
-				Args::create_indirect()...
+				get_indirect_arg<Args>()...
 			};
 
 			UsedSlots slots;

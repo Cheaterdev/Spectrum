@@ -1,5 +1,5 @@
 module Graphics:BlueNoise;
-import <RenderSystem.h>;
+
 
 import HAL;
 

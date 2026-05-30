@@ -21,7 +21,7 @@ export
 	}
 
 
-	using GPUAddress = D3D12_GPU_VIRTUAL_ADDRESS;
+	using GPUAddress = uint64_t;
 
 	template<class T>
 	class Pointer
@@ -40,23 +40,17 @@ export
 			 ar& NVP(ptr);
 		}
 	};
-	class DrawIndexedArguments// : public D3D12_DRAW_INDEXED_ARGUMENTS
+	class DrawIndexedArguments
 	{
 	public:
 
-		 UINT IndexCountPerInstance;
-    UINT InstanceCount;
-    UINT StartIndexLocation;
-    INT BaseVertexLocation;
-    UINT StartInstanceLocation;
+		UINT IndexCountPerInstance;
+		UINT InstanceCount;
+		UINT StartIndexLocation;
+		INT  BaseVertexLocation;
+		UINT StartInstanceLocation;
 
-		static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
-		{
-			D3D12_INDIRECT_ARGUMENT_DESC desc;
-			desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
-			return desc;
-		}
-		using Compiled = D3D12_DRAW_INDEXED_ARGUMENTS;
+		using Compiled = DrawIndexedArguments;
 		static const IndirectCommands CommandID = IndirectCommands::DrawIndexedArguments;
 
 		template<class Processor> static void for_each(Processor& processor) {
@@ -76,16 +70,14 @@ export
 
 	};
 
-	class DispatchMeshArguments : public D3D12_DISPATCH_MESH_ARGUMENTS
+	class DispatchMeshArguments
 	{
 	public:
-		static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
-		{
-			D3D12_INDIRECT_ARGUMENT_DESC desc;
-			desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
-			return desc;
-		}
-		using Compiled = D3D12_DISPATCH_MESH_ARGUMENTS;
+		UINT ThreadGroupCountX;
+		UINT ThreadGroupCountY;
+		UINT ThreadGroupCountZ;
+
+		using Compiled = DispatchMeshArguments;
 		static const IndirectCommands CommandID = IndirectCommands::DispatchMeshArguments;
 
 
@@ -105,21 +97,26 @@ export
 	};
 
 
-	class DispatchArguments : public D3D12_DISPATCH_ARGUMENTS
+	class DispatchArguments
 	{
 	public:
-		static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
-		{
-			D3D12_INDIRECT_ARGUMENT_DESC desc;
-			desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
-			return desc;
-		}
+		UINT ThreadGroupCountX;
+		UINT ThreadGroupCountY;
+		UINT ThreadGroupCountZ;
 
-		using Compiled = D3D12_DISPATCH_ARGUMENTS;
+		using Compiled = DispatchArguments;
 		static const IndirectCommands CommandID = IndirectCommands::DispatchArguments;
 
 		template<class Processor> static void for_each(Processor& processor) {
 			processor.template process<DispatchArguments>();
+		}
+
+	private:
+		SERIALIZE()
+		{
+			ar& NVP(ThreadGroupCountX);
+			ar& NVP(ThreadGroupCountY);
+			ar& NVP(ThreadGroupCountZ);
 		}
 	};
 

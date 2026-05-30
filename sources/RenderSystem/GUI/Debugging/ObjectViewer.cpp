@@ -1,5 +1,5 @@
 module GUI:Debug.ObjectViewer;
-import <RenderSystem.h>;
+
 
 import :Label;
 import :Button;

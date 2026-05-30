@@ -14,7 +14,7 @@ namespace HAL
 		UINT ai = 0;
 		IDXGIOutput* pOutput;
 
-		while (native_adapter->EnumOutputs(ai, &pOutput) != DXGI_ERROR_NOT_FOUND)
+		while (native_adapter->EnumOutputs(ai, &pOutput) != DXGI::ERROR_NOT_FOUND)
 		{
 			DXGI_OUTPUT_DESC oDesc;
 			pOutput->GetDesc(&oDesc);

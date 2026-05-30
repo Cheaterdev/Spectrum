@@ -11,7 +11,7 @@ import :Types;
 import :Sampler;
 using namespace HAL;
 
-static_assert(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES == 32);
+static_assert(D3D12::SHADER_IDENTIFIER_SIZE_IN_BYTES == 32);
 
 export namespace D3D
 {

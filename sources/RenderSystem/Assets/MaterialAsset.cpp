@@ -1,5 +1,5 @@
 module Graphics:MaterialAsset;
-import <RenderSystem.h>;
+
 
 import :AssetRenderer;
 

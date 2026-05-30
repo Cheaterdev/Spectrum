@@ -24,7 +24,7 @@ namespace HAL
 		D3D12_SHADER_RESOURCE_VIEW_DESC desc;
 
 		desc.Format = ::to_native(view.Format);
-		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;// view.Shader4ComponentMapping;
+		desc.Shader4ComponentMapping = D3D12::DEFAULT_SHADER_4_COMPONENT_MAPPING;// view.Shader4ComponentMapping;
 		auto native_resource = (view.Resource) ? (view.Resource)->native_resource.Get() : nullptr;
 
 

@@ -1,6 +1,6 @@
 module Graphics:MeshRenderer;
 
-import <RenderSystem.h>;
+
 import :EngineAssets;
 import :MipMapGenerator;
 
@@ -389,7 +389,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 		draw_boxes_first = HAL::StructuredBufferView<DrawIndexedArguments>(HAL::Device::get(), 1);
 
-		D3D12_DRAW_INDEXED_ARGUMENTS args;
+		DrawIndexedArguments args;
 
 		args.BaseVertexLocation = 0;
 		args.IndexCountPerInstance = (UINT)data.size();
@@ -397,7 +397,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		args.StartIndexLocation = 0;
 		args.StartInstanceLocation = 0;
 
-		list->get_copy().update(draw_boxes_first, 0, std::span{static_cast<D3D12_DRAW_INDEXED_ARGUMENTS*>(&args),1});
+		list->get_copy().update(draw_boxes_first, 0, std::span{&args, 1});
 	
 	}
 
@@ -413,7 +413,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		args.ThreadGroupCountY = 1;
 		args.ThreadGroupCountZ = 1;
 		
-		list->get_copy().update(dispatch_buffer111,0,std::span{static_cast<D3D12_DISPATCH_ARGUMENTS*>(&args),1});
+		list->get_copy().update(dispatch_buffer111, 0, std::span{&args, 1});
 	}
 	{
 		Slots::GatherPipelineGlobal gather;

@@ -1,6 +1,6 @@
 export module Graphics:RTXPassSystem;
 
-import <RenderSystem.h>;
+
 import :FrameGraphContext;
 import :Context;
 import :MeshRenderer;

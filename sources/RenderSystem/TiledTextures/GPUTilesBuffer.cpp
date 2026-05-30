@@ -56,7 +56,7 @@ void GPUTilesBuffer::update(HAL::CommandList::ptr list)
 		args.ThreadGroupCountY = shape.y / 4;
 		args.ThreadGroupCountZ = shape.z / 4;
 
-		list->get_copy().update(dispatch_buffer, 0, std::span{static_cast<D3D12_DISPATCH_ARGUMENTS*>(&args),1});
+		list->get_copy().update(dispatch_buffer, 0, std::span{&args, 1});
 	}
 	tiles_updated = false;
 }

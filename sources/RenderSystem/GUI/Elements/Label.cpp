@@ -3,7 +3,7 @@ module;
 #include  FT_FREETYPE_H
 
 module GUI:Label;
-import <RenderSystem.h>;
+
 
 import HAL;
 import GUI;

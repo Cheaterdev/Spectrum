@@ -1,5 +1,5 @@
 export module Graphics:MaterialAsset;
-import <RenderSystem.h>;
+
 
 import Core;
 import HAL;

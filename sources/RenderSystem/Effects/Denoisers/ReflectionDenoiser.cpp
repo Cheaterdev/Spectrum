@@ -1,6 +1,6 @@
 module Graphics:ReflectionDenoiser;
 
-import <RenderSystem.h>;
+
 
 import :FrameGraphContext;
 import :MipMapGenerator;

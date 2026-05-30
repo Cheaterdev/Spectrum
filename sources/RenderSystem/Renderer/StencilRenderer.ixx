@@ -1,5 +1,5 @@
 export module Graphics:StencilRenderer;
-import <RenderSystem.h>;
+
 import :Camera;
 import :MeshAsset;
 import :Scene;
