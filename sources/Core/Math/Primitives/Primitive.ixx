@@ -1,9 +1,9 @@
 export module Core:Math.Primitive;
 
-export import :Math.Constants;
-export import :Math.Vectors;
-export import :Math.Quaternion;
-export import :Math.Matrices;
+import :Math.Constants;
+import :Math.Vectors;
+import :Math.Quaternion;
+import :Math.Matrices;
 
 import stl.memory;
 import :serialization;

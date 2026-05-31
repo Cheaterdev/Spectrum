@@ -12,12 +12,20 @@ namespace Spectrum
         Retail = 4
     }
 
+    [Fragment, Flags]
+    public enum Backend
+    {
+        D3D12  = 1,
+        Vulkan = 2
+    }
+
     public class CustomTarget : ITarget
     {
         public Platform Platform;
         public DevEnv DevEnv;
         public Optimization Optimization;
         public Mode Mode;
+        public Backend Backend;
     }
 
     public static class Vcpkg
@@ -52,7 +60,8 @@ namespace Spectrum
                 Platform = Platform.win64,
                 DevEnv = DevEnv.vs2026,
                 Optimization = Optimization.Release,
-                Mode = Mode.Debug | Mode.Profile | Mode.Retail
+                Mode = Mode.Debug | Mode.Profile | Mode.Retail,
+                Backend = Backend.D3D12 | Backend.Vulkan
             });
 
             CustomProperties.Add("VcpkgEnabled", "true");
@@ -281,13 +290,31 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-            conf.LibraryFiles.Add("dxgi.lib");
-            conf.LibraryFiles.Add("d3d12.lib");
-            conf.LibraryFiles.Add("dxguid.lib");
-            conf.LibraryFiles.Add("volatileaccessu.lib");
+            if (target.Backend == Backend.D3D12)
+            {
+                // D3D12 backend: include D3D12/ and DXGI/ folders, exclude Vulkan/
+                conf.LibraryFiles.Add("dxgi.lib");
+                conf.LibraryFiles.Add("d3d12.lib");
+                conf.LibraryFiles.Add("dxguid.lib");
+                conf.LibraryFiles.Add("volatileaccessu.lib");
 
-            conf.AddPublicDependency<Core>(target);	
-            //conf.AddPrivateDependency<Aftermath>(target);
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\HAL\\Vulkan\\.*");
+
+                                conf.Defines.Add("HAL_BACKEND_D3D12");
+            }
+            else // Vulkan
+            {
+                // Vulkan backend: include Vulkan/ folder, exclude D3D12/ and DXGI/
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\HAL\\D3D12\\.*");
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\HAL\\DXGI\\.*");
+
+                conf.Defines.Add("HAL_BACKEND_VULKAN");
+            }
+
+            // DXC folder is always compiled — DXC emits SPIR-V for Vulkan too.
+            // (No exclusion needed for DXC.)
+
+            conf.AddPublicDependency<Core>(target);
         }
     }
 
@@ -414,7 +441,8 @@ namespace Spectrum
                 Platform = Platform.win64,
                 DevEnv = DevEnv.vs2026,
                 Optimization =  Optimization.Release,
-                Mode = Mode.Debug | Mode.Profile | Mode.Retail
+                Mode = Mode.Debug | Mode.Profile | Mode.Retail,
+                Backend = Backend.D3D12 | Backend.Vulkan
             });
         }
 
@@ -424,24 +452,24 @@ namespace Spectrum
             conf.SolutionFileName = "Spectrum";
             conf.SolutionPath = @"[solution.SharpmakeCsPath]\projects\";
             string platformName = string.Empty;
-/*
-			switch (target.Optimization)
-            {
-                case Optimization.Debug: platformName += "Debug "; break;
-                case Optimization.Release: platformName += "Release "; break;
-                default:
-                    throw new NotImplementedException();
-            }
-			*/
-			
+
             switch (target.Mode)
             {
-                case Mode.Debug: platformName += "Debug"; break;
-                case Mode.Retail: platformName += "Retail"; break;
+                case Mode.Debug:   platformName += "Debug";   break;
+                case Mode.Retail:  platformName += "Retail";  break;
                 case Mode.Profile: platformName += "Profile"; break;
                 default:
                     throw new NotImplementedException();
             }
+
+            switch (target.Backend)
+            {
+                case Backend.D3D12:  platformName += "-D3D12";  break;
+                case Backend.Vulkan: platformName += "-Vulkan"; break;
+                default:
+                    throw new NotImplementedException();
+            }
+
             conf.Name = platformName;
 
             conf.AddProject<Spectrum>(target);

@@ -6,7 +6,7 @@ import :DescriptorHeap;
 import :Enums;
 //import :Buffer;
 import :SIG;
-
+	import :Utils;
 struct placement_info
 {
 	uint offset;
@@ -242,7 +242,7 @@ export {
 
 			return compiled;
 		}
-
+				 #ifdef HAL_BACKEND_D3D12
 
 		static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
 		{
@@ -254,6 +254,7 @@ export {
 
 			return desc;
 		}
+#endif
 	};
 
 	class UsedSlots
@@ -354,7 +355,7 @@ export {
 
 		HAL::ResourceAddress compile() const
 		{
-								
+#ifdef HAL_BACKEND_D3D12						
 			if(records.empty())
 				return 	HAL::ResourceAddress{};
 
@@ -422,6 +423,10 @@ export {
 			//	std::memcpy(info3.get_cpu_data(), &t, sizeof(t));
 			//}
 			return res;
+#else
+
+		   	return 	HAL::ResourceAddress{};
+#endif
 		}
 	};
 								 template<class T>

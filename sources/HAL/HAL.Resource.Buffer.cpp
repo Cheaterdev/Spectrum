@@ -53,7 +53,7 @@ namespace HAL
 		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
 		{
 			ASSERT(buffer_data == nullptr);
-			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
+			buffer_data = static_cast<std::byte*>(get_cpu_mapping());
 		}
 
 		gpu_address = ResourceAddress{ this, 0 };

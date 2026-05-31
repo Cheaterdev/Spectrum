@@ -178,7 +178,7 @@ export{
 			using ptr = std::shared_ptr<Resource>;
 	protected:
 			Resource(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
-			Resource(Device& device, const D3D::Resource& resouce, TextureLayout initialLayout);
+			Resource(Device& device, const API::NativeImportHandle& handle, TextureLayout initialLayout);
 			Resource(Device& device, const ResourceDesc& desc, PlacementAddress handle);
 
 			Resource(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own = false);

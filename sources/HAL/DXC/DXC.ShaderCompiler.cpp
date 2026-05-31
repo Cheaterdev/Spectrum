@@ -3,8 +3,21 @@ module HAL:ShaderCompiler;
 import wrl;
 import Core;
 
-import d3d12;
+import windows;       // COM base types (IUnknown, INoMarshal), MessageBoxA, LPCWSTR
 import DXCompiler;
+
+// Shader reflection is the only D3D12-coupled part of compilation (it uses the
+// ID3D12ShaderReflection / ID3D12LibraryReflection interfaces).  It is split out
+// behind this seam so the common compile path stays backend-neutral:
+//   * D3D12  build: D3D12/HAL.D3D12.ShaderReflection.cpp  (real reflection)
+//   * Vulkan build: Vulkan/HAL.Vulkan.ShaderReflection.cpp (stub for now)
+// Both are implementation units of `module HAL:ShaderCompiler`, so this
+// declaration has module linkage and is visible to whichever one is compiled.
+namespace HAL
+{
+    void reflect_shader(IDxcUtils* library, const DxcBuffer& reflectionBuffer,
+                        const std::string& entry_point, CompiledShader& out);
+}
 
 #define DXC_MICROCOM_REF_FIELD(m_dwRef)                                        \
   volatile std::atomic_int m_dwRef = {0};
@@ -244,89 +257,10 @@ namespace HAL
 			.Size = reflectionBlob->GetBufferSize()
 		};
 
-
-		if (entry_point.size())
-		{
-
-			blob_str.functions.emplace_back();
-			auto& f = blob_str.functions.back();
-
-			ComPtr<ID3D12ShaderReflection> shaderReflection{};
-			library->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection));
-			D3D12_SHADER_DESC shaderDesc{};
-			shaderReflection->GetDesc(&shaderDesc);
-			f.name = entry_point;
-								  f.wname = convert(f.name);
-			for (uint i = 0; i < shaderDesc.ConstantBuffers; i++)
-			{
-				ID3D12ShaderReflectionConstantBuffer* cb = shaderReflection->GetConstantBufferByIndex(i);
-				D3D12_SHADER_BUFFER_DESC shaderBufferDesc{};
-				cb->GetDesc(&shaderBufferDesc);
-
-				std::string cb_name = shaderBufferDesc.Name;
-
-				if (cb_name.starts_with("pass_"))
-				{
-					cb_name = cb_name.substr(5);
-					auto slot_id = get_slot(cb_name);
-
-					if(slot_id)
-					f.slots.merge(slot_id.value());
-				}
-
-				//Log::get() << shaderBufferDesc.Name << Log::endl;
-
-			}
-
-		} else
-		{
-		   	ComPtr<ID3D12LibraryReflection> libraryReflection{};
-			auto hr3 = library->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&libraryReflection));
-
-
-			D3D12_LIBRARY_DESC shaderDesc{};
-			libraryReflection->GetDesc(&shaderDesc);
-				
-
-				for (uint i = 0; i < shaderDesc.FunctionCount; i++)
-			{
-				ID3D12FunctionReflection* f = libraryReflection->GetFunctionByIndex(i);
-				D3D12_FUNCTION_DESC functionDesc{};
-				f->GetDesc(&functionDesc);
-		//		Log::get() << "FUNCTION "<< functionDesc.Name << Log::endl;
-
-				blob_str.functions.emplace_back();
-					auto& rf = blob_str.functions.back();
-						 	  rf.name = functionDesc.Name ;
-							  rf.wname = convert(rf.name);
-
-
-											 	for (uint i = 0; i < functionDesc.ConstantBuffers; i++)
-			{
-				ID3D12ShaderReflectionConstantBuffer* cb = f->GetConstantBufferByIndex(i);
-				D3D12_SHADER_BUFFER_DESC shaderBufferDesc{};
-				cb->GetDesc(&shaderBufferDesc);
-
-						   	std::string cb_name = shaderBufferDesc.Name;
-
-			
-													if (cb_name.starts_with("pass_"))
-				{
-					cb_name = cb_name.substr(5);
-
-					auto slot_id = get_slot(cb_name);
-
-					rf.slots.merge(slot_id.value());
-				}
-			//	Log::get() << shaderBufferDesc.Name << Log::endl;
-
-			}
-			}
-
-
-		}
-
-
+		// Backend-specific: D3D12 uses ID3D12ShaderReflection to extract per-pass
+		// constant-buffer slot usage; Vulkan stubs this for now (Phase 4 will use
+		// SPIR-V reflection).  See reflect_shader() seam at top of this TU.
+		reflect_shader(library, reflectionBuffer, entry_point, blob_str);
 
 		return std::move(blob_str);
 
