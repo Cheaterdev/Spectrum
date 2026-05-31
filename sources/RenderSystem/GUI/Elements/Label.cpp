@@ -1,7 +1,3 @@
-module;
-#include <ft2build.h>
-#include  FT_FREETYPE_H
-
 module GUI:Label;
 
 
@@ -12,33 +8,6 @@ import Graphics;
 import aho_corasick;
 using namespace HAL;
 
-
-
-FreeTypeFont::FreeTypeFont()
-{
-	FT_Init_FreeType(&FtLib);
-
-	 FT_New_Face( FtLib,
-                     "arial.ttf",
-                     0,
-                     &face );
-
-	 FT_Set_Pixel_Sizes(
-          face,   /* handle to face object */
-          0,      /* pixel_width           */
-          16 );   /* pixel_height          */
-
-		  auto glyph_index = FT_Get_Char_Index( face, 'c' );
-
-		  auto load_flags = FT_LOAD_DEFAULT;
-	FT_Load_Glyph(
-          face,          /* handle to face object */
-          glyph_index,   /* glyph index           */
-          load_flags );  /* load flags, see below */
-
-
-	face->glyph->bitmap;
-}
 
 
 namespace GUI
@@ -107,7 +76,6 @@ namespace GUI
 			text_size = font->measure("", font_size.get() /** scaled*/, magnet_text)+ vec2(2, 2);
 			text_size.x = std::ceil(text_size.x);
 			text_size.y = std::ceil(text_size.y);
-			FreeTypeFont::get();
 		}
 
 		void label::on_text_changed(const std::string& str)

@@ -6,41 +6,6 @@ import :ScrollContainer;
 import TextSystem;
 
 namespace HAL { class Texture; }  // forward-decl for cache_resource (defined in Graphics:Texture)
-          
-
-extern "C" typedef struct FT_FaceRec_* FT_Face;
-extern "C" typedef struct FT_LibraryRec_* FT_Library;
-
-
-  class FreeTypeFont:public Singleton<FreeTypeFont>
-  {
-  	FT_Library FtLib;
-    FT_Face     face;  
-  public:
-      FreeTypeFont();
-
-
-  };
-struct Symbol
-{
-	GUI::Texture texture;
-    float4 color;
-
-    Symbol(char symbol)
-    {
-	    
-    }
-};
-
-struct TextLine
-{
-	std::vector<Symbol> symbols;
-};
-
-struct Text
-{
-	std::vector<TextLine> lines;
-};
 
 
 export namespace GUI

@@ -294,12 +294,19 @@ namespace Spectrum
         {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\RenderSystem";
             AssemblyName = "RenderSystem";
+
+            // Exclude the legacy FW1FontWrapper directory — replaced by FreeType
+            SourceFilesExcludeRegex.Add(@"FW1FontWrapper");
         }
 
         public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
             conf.AddPublicDependency<HAL>(target);
+
+            // FreeType — provided via vcpkg; add the include path explicitly so
+            // the module-purview #include in TextSystem.cpp resolves correctly.
+            conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\include");
         }
     }
 

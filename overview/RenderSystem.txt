@@ -568,15 +568,23 @@ GUI::Skin
 ================================================================================
 
 Font  (in TextSystem module)
-  DirectWrite wrapper via FW1FontWrapper.
+  FreeType-based platform-independent font renderer.
+  Rasterises glyphs into a shared R8_UNORM atlas texture (2048×2048).
+  Draws via the existing FontRender PSO (VS+GS+PS point-to-quad pipeline).
   - draw(CommandList::ptr, wstring, size, vec2, color, flags)
   - draw(CommandList::ptr, wstring, size, sizer area, color, flags)
   - draw(CommandList::ptr, wstring, size, sizer area, sizer clip, color, flags)
-  - measure(string, size, flags) -> vec2   text extents
+  - measure(string, size, flags) -> vec2   text extents (pure FreeType advance)
   Members:
-    IFW1FontWrapper* native_font
+    FT_Face face   (FreeType face; loaded from TTF/OTF file)
     string font_name
-    IFW1RenderStates* pRenderStates
+  Font files resolved via:
+    1. Direct path, 2. Working directory, 3. Platform system fonts directory
+
+FontAtlas  (internal singleton)
+  Shared 2048×2048 R8_UNORM glyph atlas + coord buffer for all fonts.
+  Row-based bin-packing; glyphs keyed by (face, char_code, pixel_size).
+  Flushed lazily per-frame via FontGeometry::draw / Font::draw.
 
 FontSystem  (Singleton)
   - get_font(string) -> Font::ptr   lazy creation + cache
