@@ -826,6 +826,7 @@ public:
 			auto d = std::make_shared<GUI::Elements::dock_base>();
 			docker = d;
 			d->docking = GUI::dock::FILL;
+#ifndef HAL_BACKEND_VULKAN
 			{
 				EVENT("Start Drawer");
 				drawer.reset(new triangle_drawer());
@@ -834,6 +835,7 @@ public:
 				d->get_tabs()->add_page("Game", drawer);
 				EVENT("End Drawer");
 			}
+#endif
 
 			{
 				//	auto text = std::make_shared<GUI::Elements::MultiLineLabel>();
@@ -913,6 +915,7 @@ public:
 						{
 							add_task([this]()
 								{
+									if (!drawer) return;
 									drawer->scene->remove_all();
 								});
 						};
@@ -920,6 +923,7 @@ public:
 						{
 							add_task([this]()
 								{
+									if (!drawer) return;
 									try
 									{
 										auto f = FileSystem::get().get_file(to_path(L"scene.dat"))->load_all();
@@ -935,6 +939,7 @@ public:
 						};
 					file->add_item("Save")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 						{
+							if (!drawer) return;
 							auto data = Serializer::serialize(*drawer->scene);
 							FileSystem::get().save_data(to_path(L"scene.dat"), data);
 						};
@@ -1072,7 +1077,9 @@ protected:
 			RTX::create();
 
 		EVENT("AssetManager");
+#ifndef HAL_BACKEND_VULKAN
 		AssetRenderer::create();
+#endif
 		AssetManager::create();
 		EVENT("WindowRender");
 
@@ -1111,8 +1118,10 @@ protected:
 		///    main_window2 = nullptr;
 		Fonts::FontSystem::reset();
 		RTX::reset();
+#ifndef HAL_BACKEND_VULKAN
 		AssetRenderer::reset();
 		TextureAssetRenderer::reset();
+#endif
 		AssetManager::reset();
 		materials::PipelineManager::reset();
 		universal_nodes_manager::reset();

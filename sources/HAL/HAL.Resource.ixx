@@ -140,7 +140,7 @@ export{
 						bool serialize_from_derived = false;
 		protected:
 			friend class API::Resource;
-			HeapType heap_type;
+			HeapType heap_type = HeapType::RESERVED; // safe sentinel; _init() always overwrites
 			ResourceDesc desc;
 			Device* m_device = nullptr;
 

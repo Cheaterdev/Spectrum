@@ -50,10 +50,9 @@ namespace HAL
 
         if (api_res.get_vk_image() != VK_NULL_HANDLE)
         {
-            // Texture SRV — use the import view if present (swapchain), else
-            // Phase 4 TODO: create per-mip VkImageView for regular textures.
-            VkImageView view = api_res.get_import_handle().image_view;
-            if (view == VK_NULL_HANDLE) return; // Phase 4: create view here
+            // get_vk_image_view() returns swapchain view or owned view (Phase 5).
+            VkImageView view = api_res.get_vk_image_view();
+            if (view == VK_NULL_HANDLE) return;
             img_info.imageView   = view;
             img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -91,7 +90,7 @@ namespace HAL
 
         if (api_res.get_vk_image() != VK_NULL_HANDLE)
         {
-            VkImageView view = api_res.get_import_handle().image_view;
+            VkImageView view = api_res.get_vk_image_view();
             if (view == VK_NULL_HANDLE) return;
             img_info.imageView   = view;
             img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;

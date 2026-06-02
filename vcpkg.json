@@ -19,10 +19,15 @@
      "bshoshany-thread-pool"
    
   ],
-  "builtin-baseline": "a76e5d9e1c62a23b9e92353e5e25d8c34cda2b74", 
+  "builtin-baseline": "a76e5d9e1c62a23b9e92353e5e25d8c34cda2b74",
   "overrides": [
-    { 
-        "name": "fmt", 
+    {
+        "name": "fmt",
         "version": "10.1.1"
-    }]
+    },
+    {
+        "name": "directx-dxc",
+        "version-date": "2026-02-20"
+    }
+  ]
 }

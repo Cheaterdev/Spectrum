@@ -1,81 +1,190 @@
-// VulkanTest — minimal clear-screen test for the Vulkan HAL backend.
-// No RenderSystem, no AssetManager, no Materials.
-// Creates a window, device, swapchain, then clears to blue every frame.
+// VulkanTest — Vulkan backend smoke-test with a live GUI.
+// Exercises the full UI stack (FrameGraph, GUI::user_interface, Skin, Font)
+// without any 3D rendering.  Acts as the reference app while 3D PSOs are being
+// brought up on Vulkan.
 
+import GUI;
+import Graphics;   // AssetManager, EngineAssets, Skin
+import FrameGraph;
 import HAL;
 import Core;
 
-import <windows/windows.h>;
+#include "Platform/Window.h"
 
-// ============================================================================
-//  Minimal Win32 window
-// ============================================================================
+// pass_defaults.h declares the PassDefault<T> specialisations (bodies are
+// out-of-line so each app provides its own implementations).
+// Profiler.h / UI_Render.h / UIPipeline are NOT re-included here — they are
+// already exported by `import FrameGraph;` and re-including them in this TU
+// would cause class-redefinition errors (module types vs. header types are
+// different entities from MSVC's perspective).
+#include "../RenderSystem/FrameGraph/autogen/pass_defaults.h"
+using namespace FrameGraph;
 
-class TestWindow : public HAL::hwnd_provider
+// ---- PassDefault bodies required by UIPipeline -----------------------------
+bool PassDefault<Passes::Profiler>::setup(
+    Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder)
 {
-    HWND m_hwnd = nullptr;
-    bool m_running = true;
-    ivec2 m_size;
+    builder.need(data.swapchain,
+        ResourceFlags::Required | ResourceFlags::RenderTarget);
+    return false;
+}
+void PassDefault<Passes::Profiler>::render(
+    Passes::Profiler::Context&, FrameGraph::FrameContext&) {}
 
-    static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
+// ============================================================================
+//  Helpers
+// ============================================================================
+
+class tick_timer
+{
+    std::chrono::time_point<std::chrono::system_clock> last_tick;
+public:
+    tick_timer() { last_tick = std::chrono::system_clock::now(); }
+    double tick()
     {
-        auto* w = reinterpret_cast<TestWindow*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-        if (msg == WM_DESTROY || msg == WM_CLOSE)
-        {
-            if (w) w->m_running = false;
-            PostQuitMessage(0);
-            return 0;
-        }
-        if (msg == WM_SIZE && w)
-            w->m_size = { LOWORD(lp), HIWORD(lp) };
-        return DefWindowProc(hwnd, msg, wp, lp);
+        auto now = std::chrono::system_clock::now();
+        std::chrono::duration<double> dt = now - last_tick;
+        last_tick = now;
+        return dt.count();
     }
+};
+
+class count_meter
+{
+    double time = 0;
+    tick_timer t;
+    unsigned int ticks = 0;
+    double average = 0;
+public:
+    bool tick()
+    {
+        time += t.tick();
+        ticks++;
+        if (time > 1.0)
+        {
+            average = ticks / time;
+            ticks = 0; time = 0;
+            return true;
+        }
+        return false;
+    }
+    float get() const { return (float)average; }
+};
+
+// ============================================================================
+//  VulkanTestApp — window + UI + frame-graph
+// ============================================================================
+
+class VulkanTestApp : public Window, public GUI::user_interface
+{
+    HAL::SwapChain::ptr       swap_chain;
+    FrameGraph::Graph         graph;
+    Pipelines::UIPipeline     pipeline;
+
+    tick_timer   frame_timer;
+    count_meter  fps_meter;
+    ivec2        new_size;
+
+    // UI widgets
+    GUI::Elements::label::ptr label_fps;
+    GUI::Elements::label::ptr label_backend;
 
 public:
-    explicit TestWindow(int w = 1280, int h = 720)
-        : m_size(w, h)
+    VulkanTestApp()
+        : Window({ 1280, 720 }, "Vulkan UI Test")
     {
-        WNDCLASSEXA wc{};
-        wc.cbSize        = sizeof(wc);
-        wc.style         = CS_HREDRAW | CS_VREDRAW;
-        wc.lpfnWndProc   = WndProc;
-        wc.hInstance     = GetModuleHandle(nullptr);
-        wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
-        wc.lpszClassName = "VulkanTestWnd";
-        RegisterClassExA(&wc);
+    	THREAD_SCOPE(GUI);
+	
+        Window::input_handler = this;
 
-        RECT r{ 0, 0, w, h };
-        AdjustWindowRect(&r, WS_OVERLAPPEDWINDOW, FALSE);
+        HAL::swap_chain_desc sc_desc;
+        sc_desc.window  = this;
+        sc_desc.format  = HAL::Format::B8G8R8A8_UNORM;
+        swap_chain = std::make_shared<HAL::SwapChain>(HAL::Device::get(), sc_desc);
 
-        m_hwnd = CreateWindowExA(
-            0, "VulkanTestWnd", "Vulkan Clear Screen Test",
-            WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-            CW_USEDEFAULT, CW_USEDEFAULT,
-            r.right - r.left, r.bottom - r.top,
-            nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
+        new_size = get_size();
+        GUI::user_interface::size = new_size;
 
-        SetWindowLongPtr(m_hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
-    }
+        // ---- Build UI tree --------------------------------------------------
 
-    ~TestWindow()
-    {
-        if (m_hwnd) DestroyWindow(m_hwnd);
-    }
-
-    HWND get_hwnd() const override { return m_hwnd; }
-    bool is_running() const { return m_running; }
-    ivec2 get_size() const { return m_size; }
-
-    bool pump_messages()
-    {
-        MSG msg{};
-        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+        // Background fill
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-            if (msg.message == WM_QUIT) return false;
+            auto back = std::make_shared<GUI::Elements::image>();
+            back->texture         = Skin::get().Fill;
+            back->texture.tiled   = true;
+            back->width_size      = GUI::size_type::MATCH_PARENT;
+            back->height_size     = GUI::size_type::MATCH_PARENT;
+            add_child(back);
         }
-        return m_running;
+
+        // Top info panel
+        {
+            auto panel = std::make_shared<GUI::base>();
+            panel->docking      = GUI::dock::TOP;
+            panel->height_size  = GUI::size_type::FIXED;
+            panel->size       = {0,40};
+
+            label_backend = std::make_shared<GUI::Elements::label>();
+            label_backend->text     = "Vulkan Backend — UI Test";
+            label_backend->docking  = GUI::dock::FILL;
+            panel->add_child(label_backend);
+            add_child(panel);
+        }
+
+        // Adapter info (filled after device is up)
+        {
+            auto& props = HAL::Device::get().get_properties();
+            label_backend->text = std::string("Vulkan — ") + (props.name);
+        }
+
+        // Status bar at bottom
+        {
+            auto bar = std::make_shared<GUI::Elements::status_bar>();
+            label_fps = std::make_shared<GUI::Elements::label>();
+            label_fps->text = "fps: --";
+            bar->add_child(label_fps);
+            add_child(bar);
+        }
+    }
+
+    // ---- Render one frame ---------------------------------------------------
+    void render()
+    {
+        swap_chain->resize(new_size);
+        swap_chain->wait_for_free();
+
+        if (fps_meter.tick())
+            label_fps->text = std::to_string((int)fps_meter.get()) + " fps  |  "
+                + std::to_string(HAL::Device::get().get_vram()) + " MB VRAM";
+
+        GUI::user_interface::size = new_size;
+        process_ui((float)frame_timer.tick());
+
+        graph.start_new_frame();
+        graph.builder.pass_texture("swapchain",
+            swap_chain->get_current_frame(), swap_chain->get_fence());
+
+        pipeline.add_passes(graph);
+        create_graph(graph);       // injects UI_Render pass slots
+
+        graph.setup();
+        graph.compile(swap_chain->m_frameIndex);
+        graph.render();
+        graph.commit_command_lists();
+        graph.reset();
+
+        swap_chain->present();
+    }
+
+    void on_resize(vec2 sz) override
+    {
+        new_size = vec2::max(sz, { 64, 64 });
+        GUI::user_interface::on_size_changed(new_size);
+    }
+
+    void on_destroy() override
+    {
+        Application::get().shutdown();
     }
 };
 
@@ -83,86 +192,52 @@ public:
 //  WinMain
 // ============================================================================
 
+extern "C" {
+    _declspec(dllexport) extern const unsigned int D3D12SDKVersion = 618;
+}
+extern "C" {
+    _declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
+}
+
 int APIENTRY WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
-    // ---- Logging ------------------------------------------------------------
-    Log::create();
-    VSOutputLogger::create();   // routes Log messages to the VS Output window
+    CoInitialize(nullptr);
 
-    // ---- Window -------------------------------------------------------------
-    TestWindow window(1280, 720);
+    // Logging
+    Log::create<WinErrorLogger>();
+    VSOutputLogger::create();
+    Log::get().set_logging_level(Log::LEVEL_ALL);
 
-    // ---- File system --------------------------------------------------------
     FileSystem::get().register_provider(std::make_shared<native_file_provider>());
 
-    // ---- HAL device ---------------------------------------------------------
+    // Device
     HAL::Device::create();
-    auto& device = HAL::Device::get();
 
-    // ---- Swapchain ----------------------------------------------------------
-    HAL::swap_chain_desc sc_desc;
-    sc_desc.window = &window;
-    sc_desc.format = HAL::Format::B8G8R8A8_UNORM;
-    auto swapchain = std::make_shared<HAL::SwapChain>(device, sc_desc);
+    // Asset manager — needed for Skin textures and font glyphs
+    AssetManager::create();
+          	Application::create<Application>();
+    // App window + UI
+    auto app = std::make_shared<VulkanTestApp>();
 
-    // ---- RTV descriptor slots -----------------------------------------------
-    // Allocate one slot per swapchain image (must be 1-element each: Handle
-    // asserts offset==0 when get_count() is called from set_rtv).
-    auto& gpu_data = device.get_static_gpu_data();
-    HAL::DescriptorHeapIndex rtv_index{ HAL::DescriptorHeapType::RTV,
-                                         HAL::DescriptorHeapFlags::None };
-    HAL::Handle rtv_slots[2] = {
-        gpu_data.alloc_descriptor<HAL::Handle>(1, rtv_index),
-        gpu_data.alloc_descriptor<HAL::Handle>(1, rtv_index),
-    };
-    HAL::RTVHandle rtvs[2];
-
-    auto& direct_queue = *device.get_queue(HAL::CommandListType::DIRECT);
-
-    // ---- Frame loop ---------------------------------------------------------
-    while (window.pump_messages())
+    // Message + render loop
+    bool running = true;
+    while (running)
     {
-        // wait_for_free() paces the CPU and the swapchain image is already
-        // acquired (done at the end of present(), just like D3D12).
-        swapchain->wait_for_free();
-
-        auto frame_rt = swapchain->get_current_frame();  // TextureResource::ptr
-        uint fi = swapchain->m_frameIndex;
-
-        // Refresh the RTV for this slot (backbuffer pointer may change on resize).
-        HAL::Views::RenderTarget rtv_view{
-            .Resource = frame_rt,
-            .Format   = HAL::Format::B8G8R8A8_UNORM,
-            .View     = HAL::Views::RenderTarget::Texture2D{ 0, 0 }
-        };
-        rtv_slots[fi % 2] = rtv_view;   // stores ResourceInfo in the slot
-        rtvs[fi % 2] = HAL::RTVHandle(rtv_slots[fi % 2]);
-
-        // ---- Record: set+clear RT (handles transitions internally), then present
-        auto list = direct_queue.get_free_list();
-        list->begin(L"ClearFrame");
-
-        // Build a minimal CompiledRT with just the swapchain RTV.
-        HAL::CompiledRT crt;
-        crt.table_rtv = rtvs[fi % 2];
-
-        // set_rtv with ClearColor transitions the resource, sets the handle,
-        // and clears to black.  We then transition to PRESENT afterwards.
-        list->get_graphics().set_rtv(crt,
-            HAL::RTOptions::Default | HAL::RTOptions::ClearColor);
-
-        list->end();
-        list->execute();
-
-        swapchain->present();
+        Window::process_messages();
+        if (!Application::is_good()) break;
+        app->render();
     }
 
-    // ---- Cleanup ------------------------------------------------------------
-    direct_queue.signal_and_wait();
-    device.get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
-    device.get_queue(HAL::CommandListType::COPY)->signal_and_wait();
-    device.stop_all();
+    // Cleanup
+    HAL::Device::get().stop_all();
+    Skin::reset();
+    Fonts::FontSystem::reset();
+    AssetManager::reset();
+    HAL::pixel_shader::reset_manager();
+    HAL::vertex_shader::reset_manager();
+    HAL::compute_shader::reset_manager();
     HAL::Device::reset();
 
+    CoUninitialize();
     return 0;
 }

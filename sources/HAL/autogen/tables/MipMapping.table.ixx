@@ -45,7 +45,13 @@ export namespace Table
 			uint NumMipLevels; // uint
 			float2 TexelSize; // float2
 			uint SrcMip; // Texture2D<float4>
-			uint OutMip[4]; // RWTexture2D<float4>
+			// Split from OutMip[4] — matches HLSL struct field names to avoid
+			// the DXC SPIR-V duplicate-OpTypeArray bug. Binary layout is
+			// identical (4 consecutive uints = 16 bytes either way).
+			uint OutMip_0; // RWTexture2D<float4>
+			uint OutMip_1; // RWTexture2D<float4>
+			uint OutMip_2; // RWTexture2D<float4>
+			uint OutMip_3; // RWTexture2D<float4>
 
 			
 			private:

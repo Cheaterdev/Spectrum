@@ -9,6 +9,7 @@ import :CommandAllocator;   // full definition needed: allocator.vk_command_pool
 import :RootSignature;      // API::RootSignature::get_vk_pipeline_layout()
 import :API.Device;         // API::Device::get_native_device()
 import :API.DescriptorHeap; // API::DescriptorHeap::get_vk_set()
+import :API.QueryHeap;      // API::QueryHeap::get_native()
 
 namespace HAL::API
 {
@@ -124,8 +125,10 @@ namespace HAL::API
                 ib.oldLayout           = to_native(b.before.layout);
                 ib.newLayout           = to_native(b.after.layout);
                 ib.image               = api_res.get_vk_image();
-                ib.subresourceRange    = {
-                    VK_IMAGE_ASPECT_COLOR_BIT,
+                bool is_depth = check(res->get_desc().Flags & ResFlags::DepthStencil);
+                ib.subresourceRange = {
+                    static_cast<VkImageAspectFlags>(
+                        is_depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT),
                     0, VK_REMAINING_MIP_LEVELS,
                     0, VK_REMAINING_ARRAY_LAYERS
                 };
@@ -189,9 +192,9 @@ namespace HAL::API
             if (!res) return { VK_NULL_HANDLE, {} };
             auto& api = static_cast<API::Resource&>(*res);
 
-            VkImageView view = api.get_import_handle().image_view;
-            // Phase 4: if view == VK_NULL_HANDLE, look up / create per-mip view
-            return { view, api.get_imported_extent() };
+            // get_vk_image_view() returns the swapchain view if present,
+            // otherwise the owned VkImageView created by Resource::init().
+            return { api.get_vk_image_view(), api.get_imported_extent() };
         };
 
         auto [cv, ce] = extract_view(rt, false);
@@ -582,15 +585,29 @@ namespace HAL::API
 
     // ---- Debug labels (VK_EXT_debug_utils) ----------------------------------
 
-    void CommandList::start_event(std::wstring_view /*name*/)
+    void CommandList::start_event(std::wstring_view name)
     {
-        // Phase 5: vkCmdBeginDebugUtilsLabelEXT (requires cached function ptr)
+        if (vk_cmd == VK_NULL_HANDLE) return;
+        auto* dev = static_cast<API::Device*>(m_device);
+        if (!dev) return;
+        auto fn = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(
+            vkGetDeviceProcAddr(dev->get_native_device(), "vkCmdBeginDebugUtilsLabelEXT"));
+        if (!fn) return;
+        // Narrow wstring → UTF-8 for Vulkan
+        std::string label(name.begin(), name.end());
+        VkDebugUtilsLabelEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        info.pLabelName = label.c_str();
+        fn(vk_cmd, &info);
     }
 
     void CommandList::end_event()
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
-        // Phase 5: vkCmdEndDebugUtilsLabelEXT
+        auto* dev = static_cast<API::Device*>(m_device);
+        if (!dev) return;
+        auto fn = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(
+            vkGetDeviceProcAddr(dev->get_native_device(), "vkCmdEndDebugUtilsLabelEXT"));
+        if (fn) fn(vk_cmd);
     }
 
     // ---- Indirect -----------------------------------------------------------
@@ -600,6 +617,26 @@ namespace HAL::API
     // ---- Misc ---------------------------------------------------------------
     void CommandList::set_name(std::wstring_view) {}
     void CommandList::discard(const HAL::Resource*) {}
-    void CommandList::insert_time(const QueryHandle&, uint) {}
-    void CommandList::resolve_times(const QueryHeap*, uint32_t, ResourceAddress) {}
+    void CommandList::insert_time(const QueryHandle& handle, uint index)
+    {
+        if (vk_cmd == VK_NULL_HANDLE) return;
+        auto* heap = handle.get_heap().get();
+        if (!heap) return;
+        auto& api_heap = static_cast<API::QueryHeap&>(*heap);
+        if (api_heap.get_native() == VK_NULL_HANDLE) return;
+        uint32_t slot = static_cast<uint32_t>(handle.get_offset() + index);
+        vkCmdWriteTimestamp2(vk_cmd,
+            VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+            api_heap.get_native(), slot);
+    }
+
+    void CommandList::resolve_times(const QueryHeap* heap, uint32_t count,
+                                     ResourceAddress dest)
+    {
+        // Phase 5: vkCmdCopyQueryPoolResults requires a VkBuffer handle,
+        // but ResourceAddress is a GPU virtual address.  The device-address →
+        // VkBuffer reverse-lookup is not yet implemented.  Leave as stub until
+        // that infrastructure is in place.
+        (void)heap; (void)count; (void)dest;
+    }
 }

@@ -29,12 +29,35 @@ namespace HAL
             THIS->m_device = static_cast<HAL::Device*>(&device);
             THIS->desc = _desc;
 
-            // Mirror D3D12: set heap_type from the placement heap so that
-            // Buffer::init() (HAL.Resource.Buffer.cpp) picks it up correctly.
+            // Resolve MipLevels=0 → full mip chain.
+            // D3D12 handles this natively inside CreateCommittedResource;
+            // Vulkan requires mipLevels >= 1 and we must compute the count
+            // ourselves before init_subres or vmaCreateImage sees the descriptor.
+            if (THIS->desc.is_texture())
+            {
+                auto& t = THIS->desc.as_texture();
+                if (t.MipLevels == 0)
+                {
+                    uint max_dim = std::max({ t.Dimensions.x,
+                                              t.is1D() ? 1u : t.Dimensions.y,
+                                              t.is3D() ? t.Dimensions.z : 1u });
+                    t.MipLevels = max_dim > 0u
+                        ? static_cast<uint>(std::floor(std::log2(
+                              static_cast<float>(max_dim)))) + 1u
+                        : 1u;
+                }
+            }
+
+            // heap_type priority:
+            //   1. If placement.heap is set, derive from that heap's type.
+            //   2. Otherwise, preserve what _init() already wrote.
+            //      _init(HeapType::DEFAULT) calls init() with a null placement
+            //      but has pre-set heap_type = DEFAULT; overwriting it to RESERVED
+            //      was the root bug — it caused every regular non-placed resource
+            //      to take the tiled/reserved early-return path with no VkBuffer/Image.
             if (placement.heap)
                 THIS->heap_type = placement.heap->get_type();
-            else
-                THIS->heap_type = HeapType::RESERVED;
+            // else: keep heap_type as set by caller (_init always pre-sets it)
 
             THIS->state_manager.init_subres(device.Subresources(THIS->get_desc()), initialLayout);
 
@@ -44,16 +67,26 @@ namespace HAL
                 return;
             }
 
-            // Placed resources (e.g. the buffer wrapper inside a Heap): the
-            // heap owns the VMA memory.  Derive CPU/GPU addresses from the heap
-            // rather than creating a separate VMA allocation.
+            // Placed resources — two cases:
+            //
+            // A) UPLOAD / READBACK heap: the heap owns a persistently-mapped VMA
+            //    buffer.  Derive cpu/gpu addresses from it (no separate allocation).
+            //
+            // B) DEFAULT heap: Vulkan has no D3D12-style placed resource without
+            //    VK_KHR_bind_memory2 / explicit memory management.  Fall through
+            //    to create a standalone VMA allocation instead.  The heap's memory
+            //    region is intentionally ignored — the HeapType drives VMA flags.
             if (placement.heap)
             {
                 auto* api_heap = static_cast<API::Heap*>(placement.heap);
                 if (api_heap->cpu_address)
+                {
+                    // Case A: CPU-visible heap (UPLOAD / READBACK).
                     mapped_data = api_heap->cpu_address + placement.offset;
-                address = api_heap->get_address() + placement.offset;
-                return;
+                    address     = api_heap->get_address() + placement.offset;
+                    return;
+                }
+                // Case B: DEFAULT heap — fall through to VMA allocation below.
             }
 
             VmaAllocator allocator = device.get_vma_allocator();
@@ -123,6 +156,28 @@ namespace HAL
                 vma_ci.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
                 vmaCreateImage(allocator, &ici, &vma_ci, &vk_image, &vma_alloc, nullptr);
+
+                if (vk_image != VK_NULL_HANDLE)
+                {
+                    // Store pixel dimensions so get_imported_extent() works for all images.
+                    imported_extent = { ici.extent.width, ici.extent.height };
+
+                    // Create a full-resource image view.
+                    bool is_depth = check(_desc.Flags & ResFlags::DepthStencil);
+                    VkImageViewCreateInfo ivci{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+                    ivci.image    = vk_image;
+                    ivci.viewType = tex.is3D()            ? VK_IMAGE_VIEW_TYPE_3D
+                                  : tex.is1D()            ? VK_IMAGE_VIEW_TYPE_1D
+                                  : tex.ArraySize > 1     ? VK_IMAGE_VIEW_TYPE_2D_ARRAY
+                                                          : VK_IMAGE_VIEW_TYPE_2D;
+                    ivci.format   = ici.format;
+                    ivci.subresourceRange.aspectMask     = is_depth
+                                                         ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                                         : VK_IMAGE_ASPECT_COLOR_BIT;
+                    ivci.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
+                    ivci.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+                    vkCreateImageView(device.get_native_device(), &ivci, nullptr, &vk_image_view);
+                }
             }
         }
 
@@ -208,6 +263,15 @@ namespace HAL
         if (vma_alloc)
         {
             auto& api_dev = static_cast<API::Device&>(*m_device);
+            VkDevice vk_dev = api_dev.get_native_device();
+
+            // Destroy the owned image view before destroying the image itself.
+            if (vk_image_view != VK_NULL_HANDLE && !import_handle.image)
+            {
+                vkDestroyImageView(vk_dev, vk_image_view, nullptr);
+                vk_image_view = VK_NULL_HANDLE;
+            }
+
             if (vk_buffer != VK_NULL_HANDLE)
                 vmaDestroyBuffer(api_dev.get_vma_allocator(), vk_buffer, vma_alloc);
             else if (vk_image != VK_NULL_HANDLE && !import_handle.image)

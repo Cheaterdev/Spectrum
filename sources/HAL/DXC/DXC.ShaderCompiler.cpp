@@ -207,7 +207,14 @@ namespace HAL
 
 		if (check(options & ShaderOptions::FP16))
 		{
-			compilationArguments.push_back(L"-enable-16bit-types");
+			// -enable-16bit-types causes DXC to emit native OpTypeImage %half in SPIR-V.
+			// Vulkan SPIRV spec (VUID-StandaloneSpirv-OpTypeImage-04656) requires image
+			// sampled types to be 32-bit — there is no extension that relaxes this.
+			// Skip the flag for SPIRV targets so half/min16float promote to float32.
+			bool is_spirv = std::any_of(compilationArguments.begin(), compilationArguments.end(),
+				[](const std::wstring& a) { return a == L"-spirv"; });
+			if (!is_spirv)
+				compilationArguments.push_back(L"-enable-16bit-types");
 		}
 
 		for (auto& m : defines)
@@ -249,7 +256,14 @@ namespace HAL
 			errorMsg += file_name + "\n";
 			errorMsg.append((infoLog));
 			Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
-			MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
+			// On SPIRV targets many DXC codegen bugs produce invalid SPIR-V that
+			// the integrated validator rejects. Show a blocking dialog only for
+			// DXIL builds; on Vulkan just log and return an empty shader so the
+			// PSO degrades silently rather than stalling startup with popups.
+			bool is_spirv = std::any_of(compilationArguments.begin(), compilationArguments.end(),
+				[](const std::wstring& a) { return a == L"-spirv"; });
+			if (!is_spirv)
+				MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
 			return {};
 		}
 		ComPtr<IDxcBlob> resultBlob;
@@ -259,7 +273,7 @@ namespace HAL
 		blob_str.blob.assign(static_cast<std::byte*>(resultBlob->GetBufferPointer()), static_cast<std::byte*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
 
 
-		ComPtr<IDxcBlob> reflectionBlob{};
+	/*omPtr<IDxcBlob> reflectionBlob{};
 		compiledShaderBuffer->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflectionBlob), nullptr);
 
 		const DxcBuffer reflectionBuffer
@@ -272,7 +286,7 @@ namespace HAL
 		// constant-buffer slot usage; Vulkan stubs this for now (Phase 4 will use
 		// SPIR-V reflection).  See reflect_shader() seam at top of this TU.
 		reflect_shader(library, reflectionBuffer, entry_point, blob_str);
-
+					*/
 		return std::move(blob_str);
 
 	}

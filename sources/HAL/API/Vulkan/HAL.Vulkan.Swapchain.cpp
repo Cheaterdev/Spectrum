@@ -31,6 +31,59 @@ namespace HAL
     static bool do_acquire(VkDevice, VkSwapchainKHR, VkSemaphore,
                            uint32_t& out_image, uint32_t& out_frame_index);
 
+    // ---- VkResult diagnostics -----------------------------------------------
+    static const char* vk_result_string(VkResult r)
+    {
+        switch (r)
+        {
+        case VK_SUCCESS:                        return "VK_SUCCESS";
+        case VK_NOT_READY:                      return "VK_NOT_READY";
+        case VK_TIMEOUT:                        return "VK_TIMEOUT";
+        case VK_SUBOPTIMAL_KHR:                 return "VK_SUBOPTIMAL_KHR";
+        case VK_ERROR_OUT_OF_HOST_MEMORY:       return "VK_ERROR_OUT_OF_HOST_MEMORY";
+        case VK_ERROR_OUT_OF_DEVICE_MEMORY:     return "VK_ERROR_OUT_OF_DEVICE_MEMORY";
+        case VK_ERROR_INITIALIZATION_FAILED:    return "VK_ERROR_INITIALIZATION_FAILED";
+        case VK_ERROR_DEVICE_LOST:              return "VK_ERROR_DEVICE_LOST";
+        case VK_ERROR_SURFACE_LOST_KHR:         return "VK_ERROR_SURFACE_LOST_KHR";
+        case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR: return "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";
+        case VK_ERROR_OUT_OF_DATE_KHR:          return "VK_ERROR_OUT_OF_DATE_KHR";
+        case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR: return "VK_ERROR_INCOMPATIBLE_DISPLAY_KHR";
+        case VK_ERROR_VALIDATION_FAILED_EXT:    return "VK_ERROR_VALIDATION_FAILED_EXT";
+        case VK_ERROR_INVALID_SHADER_NV:        return "VK_ERROR_INVALID_SHADER_NV";
+        case VK_ERROR_UNKNOWN:                  return "VK_ERROR_UNKNOWN";
+        default:                                return "<unknown VkResult>";
+        }
+    }
+
+    // Log a VkResult and dump the key swapchain create-info fields so the
+    // exact failure reason is always visible in the log.
+    static void log_swapchain_result(VkResult r,
+                                     const VkSwapchainCreateInfoKHR& ci,
+                                     const VkSurfaceCapabilitiesKHR& caps)
+    {
+        Log::get() << "[Vulkan swapchain] vkCreateSwapchainKHR → "
+                   << vk_result_string(r) << " (" << static_cast<int>(r) << ")"
+                   << Log::endl;
+        if (r == VK_SUCCESS) return;
+
+        Log::get() << "  extent            : "
+                   << ci.imageExtent.width << " x " << ci.imageExtent.height << Log::endl;
+        Log::get() << "  surface extent    : "
+                   << caps.currentExtent.width << " x " << caps.currentExtent.height
+                   << "  min=" << caps.minImageExtent.width << "x" << caps.minImageExtent.height
+                   << "  max=" << caps.maxImageExtent.width << "x" << caps.maxImageExtent.height
+                   << Log::endl;
+        Log::get() << "  minImageCount     : " << caps.minImageCount
+                   << "  maxImageCount="      << caps.maxImageCount
+                   << "  requested="          << ci.minImageCount << Log::endl;
+        Log::get() << "  supportedUsage    : 0x" << std::hex << caps.supportedUsageFlags
+                   << "  requested=0x"           << ci.imageUsage << std::dec << Log::endl;
+        Log::get() << "  supportedAlpha    : 0x" << std::hex << caps.supportedCompositeAlpha
+                   << "  requested=0x"           << ci.compositeAlpha << std::dec << Log::endl;
+        Log::get() << "  supportedTransform: 0x" << std::hex << caps.supportedTransforms
+                   << "  currentTransform=0x"    << caps.currentTransform << std::dec << Log::endl;
+    }
+
     SwapChain::SwapChain(Device& device, swap_chain_desc c_desc) : device(device)
     {
         auto& api_dev = static_cast<API::Device&>(device);
@@ -57,19 +110,38 @@ namespace HAL
         vkGetPhysicalDeviceSurfaceFormatsKHR(
             api_dev.vk_physical, vk_surface, &fmt_count, formats.data());
 
-        // Prefer B8G8R8A8_UNORM / SRGB_NONLINEAR; fall back to first available.
-        vk_format = formats[0].format;
+        // Pick the best available surface format.
+        // Priority: BGRA8_UNORM → RGBA8_UNORM → BGRA8_SRGB → RGBA8_SRGB → first.
+        // Always use whatever the driver reports as supported — never assume.
+        vk_format      = formats[0].format;
+        vk_color_space = formats[0].colorSpace;
         VkColorSpaceKHR color_space = formats[0].colorSpace;
-        for (auto& f : formats)
         {
-            if (f.format     == VK_FORMAT_B8G8R8A8_UNORM &&
-                f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            constexpr VkFormat preferred[] = {
+                VK_FORMAT_B8G8R8A8_UNORM,
+                VK_FORMAT_R8G8B8A8_UNORM,
+                VK_FORMAT_B8G8R8A8_SRGB,
+                VK_FORMAT_R8G8B8A8_SRGB,
+            };
+            bool found = false;
+            for (VkFormat want : preferred)
             {
-                vk_format   = f.format;
-                color_space = f.colorSpace;
-                break;
+                for (auto& f : formats)
+                {
+                    if (f.format == want &&
+                        f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+                    {
+                        vk_format      = f.format;
+                        vk_color_space = f.colorSpace;
+                        color_space    = f.colorSpace;
+                        found = true; break;
+                    }
+                }
+                if (found) break;
             }
         }
+        Log::get() << "[Vulkan swapchain] " << fmt_count << " surface formats available"
+                   << "; selected format=" << vk_format << Log::endl;
 
         // Present mode: prefer MAILBOX, fall back to FIFO (always available).
         uint32_t pm_count = 0;
@@ -88,14 +160,57 @@ namespace HAL
         if (caps.maxImageCount > 0)
             desired_images = std::min(desired_images, caps.maxImageCount);
 
-        RECT r{};
-        GetClientRect(c_desc.window->get_hwnd(), &r);
-        VkExtent2D extent{
-            std::clamp(static_cast<uint32_t>(r.right  - r.left),
-                       caps.minImageExtent.width,  caps.maxImageExtent.width),
-            std::clamp(static_cast<uint32_t>(r.bottom - r.top),
-                       caps.minImageExtent.height, caps.maxImageExtent.height)
-        };
+        // Extent: when currentExtent is not the "app chooses" sentinel
+        // (0xFFFFFFFF) the compositor dictates the size — use it directly.
+        // Otherwise fall back to GetClientRect, clamped to surface limits.
+        VkExtent2D extent{};
+        if (caps.currentExtent.width != UINT32_MAX &&
+            caps.currentExtent.height != UINT32_MAX)
+        {
+            extent = caps.currentExtent;
+        }
+        else
+        {
+            RECT r{};
+            GetClientRect(c_desc.window->get_hwnd(), &r);
+            extent = {
+                std::clamp(static_cast<uint32_t>(std::max(0L, r.right  - r.left)),
+                           caps.minImageExtent.width,  caps.maxImageExtent.width),
+                std::clamp(static_cast<uint32_t>(std::max(0L, r.bottom - r.top)),
+                           caps.minImageExtent.height, caps.maxImageExtent.height)
+            };
+        }
+
+        Log::get() << "[Vulkan swapchain] caps.currentExtent="
+                   << caps.currentExtent.width << "x" << caps.currentExtent.height
+                   << "  selected extent=" << extent.width << "x" << extent.height
+                   << "  minImage=" << caps.minImageCount
+                   << "  maxImage=" << caps.maxImageCount
+                   << Log::endl;
+
+        // If the extent is still 0 (window minimised / not yet shown), we
+        // cannot create a swapchain.  Pre-fill `frames` with dummy slots so
+        // wait_for_free() / get_current_frame() don't crash on empty access.
+        if (extent.width == 0 || extent.height == 0)
+        {
+            Log::get() << "[Vulkan swapchain] zero-size window — deferring "
+                          "swapchain creation; pre-allocating " << desired_images
+                       << " dummy frames" << Log::endl;
+            frames.resize(desired_images);   // FenceWaiter default-constructs to already-signalled
+            m_frameIndex = 0;
+            return;
+        }
+
+        // Pick a supported compositeAlpha; OPAQUE is most common but not universal.
+        VkCompositeAlphaFlagBitsKHR composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        for (auto flag : { VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+                           VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+                           VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+                           VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR })
+        {
+            if (caps.supportedCompositeAlpha & flag)
+            { composite_alpha = flag; break; }
+        }
 
         VkSwapchainCreateInfoKHR sc_ci{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
         sc_ci.surface          = vk_surface;
@@ -108,12 +223,16 @@ namespace HAL
                                   VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         sc_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         sc_ci.preTransform     = caps.currentTransform;
-        sc_ci.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        sc_ci.compositeAlpha   = composite_alpha;
         sc_ci.presentMode      = present_mode;
         sc_ci.clipped          = VK_TRUE;
 
         sc_extent = extent;  // store for on_change() and resize()
-        vkCreateSwapchainKHR(api_dev.vk_device, &sc_ci, nullptr, &vk_swapchain);
+        {
+            VkResult r = vkCreateSwapchainKHR(api_dev.vk_device, &sc_ci, nullptr, &vk_swapchain);
+            log_swapchain_result(r, sc_ci, caps);
+            if (r != VK_SUCCESS) return;
+        }
 
         // ---- Images + views -------------------------------------------------
         vkGetSwapchainImagesKHR(api_dev.vk_device, vk_swapchain, &image_count, nullptr);
@@ -285,21 +404,33 @@ namespace HAL
         sc_ci.surface          = vk_surface;
         sc_ci.minImageCount    = image_count;
         sc_ci.imageFormat      = vk_format;
-        sc_ci.imageColorSpace  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+        sc_ci.imageColorSpace  = vk_color_space;
         sc_ci.imageExtent      = extent;
         sc_ci.imageArrayLayers = 1;
         sc_ci.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                                   VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         sc_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         sc_ci.preTransform     = caps.currentTransform;
-        sc_ci.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        {
+            VkCompositeAlphaFlagBitsKHR ca = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+            for (auto f : { VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+                             VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+                             VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+                             VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR })
+                if (caps.supportedCompositeAlpha & f) { ca = f; break; }
+            sc_ci.compositeAlpha = ca;
+        }
         sc_ci.presentMode      = VK_PRESENT_MODE_FIFO_KHR;
         sc_ci.clipped          = VK_TRUE;
         sc_ci.oldSwapchain     = vk_swapchain;  // lets driver reuse resources
 
         sc_extent = extent;  // update stored extent
         VkSwapchainKHR new_swapchain = VK_NULL_HANDLE;
-        vkCreateSwapchainKHR(api_dev.vk_device, &sc_ci, nullptr, &new_swapchain);
+        {
+            VkResult r = vkCreateSwapchainKHR(api_dev.vk_device, &sc_ci, nullptr, &new_swapchain);
+            log_swapchain_result(r, sc_ci, caps);
+            if (r != VK_SUCCESS) return;
+        }
         vkDestroySwapchainKHR(api_dev.vk_device, vk_swapchain, nullptr);
         vk_swapchain = new_swapchain;
 

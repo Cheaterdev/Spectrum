@@ -13,9 +13,10 @@ export
             {
             protected:
                 VkSurfaceKHR   vk_surface   = VK_NULL_HANDLE;
-                VkSwapchainKHR vk_swapchain = VK_NULL_HANDLE;
-                VkFormat       vk_format    = VK_FORMAT_B8G8R8A8_UNORM;
-                VkExtent2D     sc_extent    = {};
+                VkSwapchainKHR  vk_swapchain   = VK_NULL_HANDLE;
+                VkFormat        vk_format      = VK_FORMAT_R8G8B8A8_UNORM;
+                VkColorSpaceKHR vk_color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+                VkExtent2D      sc_extent      = {};
                 uint32_t       image_count   = 0;
                 uint32_t       current_image = 0;  // index into swapchain_images[], set by vkAcquireNextImageKHR
 

@@ -43,7 +43,7 @@ CEREAL_FORCE_REGISTER_RELATION(materials::Pipeline, materials::PipelineSimple);
 
 materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context) :Pipeline(id)
 {
-	depth_draw = std::make_shared<PSOS::DepthDraw>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::DepthDraw::Keys& )
+	/*depth_draw = std::make_shared<PSOS::DepthDraw>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::DepthDraw::Keys& )
 	{
 		target.name += std::to_string(id);
 		target.pixel = { pixel, "PS", HAL::ShaderOptions::None,context->get_pixel_result().macros, true };
@@ -91,7 +91,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		}
 	});
 
-	raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , HAL::ShaderOptions::None, context->hit_shader.macros, true });
+	raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , HAL::ShaderOptions::None, context->hit_shader.macros, true });*/
 }
 
 void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics)
@@ -199,6 +199,9 @@ DynamicData generate_data(std::vector<Uniform::ptr>& un)
 
 void materials::universal_material::update()
 {
+#ifdef HAL_BACKEND_VULKAN
+	return; // material pipeline not active on Vulkan yet
+#endif
 	//std::lock_guard<std::mutex> g(m);
 	PROFILE(L"universal_material");
 	if (need_regenerate_material)
@@ -321,6 +324,12 @@ void materials::universal_material::generate_texture_handles()
 
 void materials::universal_material::generate_material()
 {
+#ifdef HAL_BACKEND_VULKAN
+	// Material PSO compilation requires the 3D pipeline (GBufferDraw, Voxelization,
+	// raytracing libs, etc.) which is not yet active on Vulkan. Skip generation
+	// silently — materials will be re-generated when the 3D pipeline is enabled.
+	return;
+#endif
 	//   std::lock_guard<std::mutex> g(m);
 	if (!context)
 		context.reset(new MaterialContext);

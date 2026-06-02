@@ -134,6 +134,65 @@ Audit checklist (per ixx file):
   `API::*` class unless it is a deliberate cross-backend accessor
   (e.g. `Queue::get_native()` used by `SwapChain::present()`).
 
+### Autogen / SIG codegen issues for SPIRV
+
+- **`float4[2]` array in `ColorRect` / `(float2[4])` reinterpret — `gui/rect.hlsl`**:
+  `ColorRect` originally had `float4 pos[2]`. Accessing it via `ResourceDescriptorHeap`
+  caused DXC to emit two `OpTypeArray` definitions with different IDs, crashing
+  `OpAccessChain`. Fixed by splitting into `float4 pos_a; float4 pos_b;` (same binary
+  layout) and replacing `(float2[4])GetColorRect().pos` with explicit swizzles in
+  `rect.hlsl`. **Note:** the SIG template (`templates/hlsl/table.jinja`) will
+  regenerate `float4 pos[2]` if `ui.sig` is re-parsed — the template needs the same
+  fix as `gather_pipeline` (emit individual fields instead of packed arrays, or use
+  scalar layout). The shader change in `rect.hlsl` must also be re-applied after
+  any regeneration.
+
+- **`(uint[8])uint4[2]` reinterpret cast — `gather_pipeline.hlsl`**:
+  `GatherPipeline.table.ixx` (and the HLSL it generates) stores pipeline IDs as
+  `uint4 pip_ids[2]` to avoid DX cbuffer padding (bare `uint[8]` in a cbuffer
+  is padded to 128 bytes under DX rules; `uint4[2]` stays 32 bytes). The shader
+  then reinterprets with `(uint[8])pipi.pip_ids` to get individual uint IDs.
+  DXC's SPIRV backend generates a broken `OpCompositeExtract` for this cast:
+  the result type is `uint4[2]` (the whole array) instead of `uint4` (one
+  element), which SPIRV validation rejects.
+  **No compiler flag can fix this — it is a DXC codegen bug on uint4[]-to-uint[]
+  array reinterpret casts.**
+  Proper fixes (pick one):
+  1. Compile the table as a `StructuredBuffer<GatherPipeline>` instead of
+     `ConstantBuffer<>` — structured buffers use tight packing so `uint[8]`
+     stays 32 bytes and no reinterpret cast is needed.
+  2. Change the Jinja table template (`templates/hlsl/table.jinja`) to emit a
+     flat `uint pip_ids[8]` **and** switch to scalar layout
+     (`-fvk-use-scalar-layout`) so the Vulkan GLSL/SPIRV packing matches.
+  3. Have the SIG emit an accessor helper `uint GetPip_ids_flat(int i)` that
+     expands to `pip_ids[i/4][i%4]` — avoids the cast entirely; shader just
+     needs to call the helper.
+
+---
+
+### Shader compilation — known workarounds
+
+- **FP16 image types suppressed for SPIRV** (`DXC.ShaderCompiler.cpp`):
+  `-enable-16bit-types` is intentionally skipped when compiling to SPIR-V.
+  Vulkan SPIRV spec (VUID-StandaloneSpirv-OpTypeImage-04656) requires image
+  sampled types to be 32-bit — `OpTypeImage %half` is rejected regardless of
+  extensions.  Without the flag, `half`/`min16float` in image declarations
+  silently promote to `float32`.  To keep `float16_tN` types available for arithmetic (groupshared memory,
+  function parameters, etc.) without triggering the image type issue,
+  `get_extra_compile_args` injects `-Dfloat16_t=float` / `-Dfloat16_t2=float2`
+  etc. so all 16-bit types silently become 32-bit aliases via the preprocessor.
+  **Proper fix:** audit shaders that use half-precision textures; for those that
+  genuinely need FP16 sampling, route them through a `float32` image + explicit
+  `f16tof32` / `f32tof16` in the shader body, or wait for
+  `VK_EXT_shader_float16_int8` image-fetch support to land in the SPIRV spec.
+
+- **`ResourceDescriptorHeap` requires DXC 1.9+** (`HAL.Vulkan.ShaderReflection.cpp`):
+  SM6.6 bindless heap access compiled via `-fvk-bind-resource-heap 0 0` /
+  `-fvk-bind-sampler-heap 0 1`.  These flags did not exist in DXC ≤ 1.8.2407;
+  the project was pinned to DXC `2026-02-20` (v1.9.2602) in `vcpkg.json`
+  overrides to unlock them.  If DXC is ever rolled back, bindless shaders will
+  fail with "HLSL object ResourceDescriptorHeap not yet supported with -spirv".
+
 ### Post-MVP
 - Tiled/sparse: `Vulkan/HAL.Vulkan.TiledMemoryManager.cpp` `init_tilings` +
   `Queue::update_tile_mappings` via `vkQueueBindSparse`.

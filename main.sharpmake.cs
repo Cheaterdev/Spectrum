@@ -332,9 +332,6 @@ namespace Spectrum
         {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\RenderSystem";
             AssemblyName = "RenderSystem";
-
-            // Exclude the legacy FW1FontWrapper directory — replaced by FreeType
-            SourceFilesExcludeRegex.Add(@"FW1FontWrapper");
         }
 
         public override void ConfigureAll(Configuration conf, CustomTarget target)
@@ -393,7 +390,11 @@ namespace Spectrum
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
 
+            // Window.h lives under sources/Spectrum/Platform — expose it to VulkanTest
+            conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\sources\Spectrum");
+
             conf.AddPublicDependency<HAL>(target);
+            conf.AddPublicDependency<RenderSystem>(target);
         }
     }
 

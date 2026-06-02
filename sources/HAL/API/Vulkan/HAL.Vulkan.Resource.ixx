@@ -43,9 +43,10 @@ export namespace HAL
 
         protected:
             // Vulkan resource handles — backend-internal.
-            VkBuffer      vk_buffer = VK_NULL_HANDLE;
-            VkImage       vk_image  = VK_NULL_HANDLE;
-            VmaAllocation vma_alloc = VK_NULL_HANDLE;
+            VkBuffer      vk_buffer    = VK_NULL_HANDLE;
+            VkImage       vk_image     = VK_NULL_HANDLE;
+            VkImageView   vk_image_view= VK_NULL_HANDLE; // owned (non-swapchain) images
+            VmaAllocation vma_alloc    = VK_NULL_HANDLE;
 
             // Persistent CPU mapping (UPLOAD / READBACK heaps).
             void* mapped_data = nullptr;
@@ -53,7 +54,7 @@ export namespace HAL
             // Externally-owned image handle (e.g. swapchain backbuffer).
             NativeImportHandle import_handle;
 
-            // Pixel dimensions for imported images.
+            // Pixel dimensions — set for both imported and owned images.
             VkExtent2D imported_extent = {};
 
         public:
@@ -73,9 +74,14 @@ export namespace HAL
 
             // ---- Backend accessors (Vulkan handles for sibling modules) ------
             // Cross-partition friends are unreliable in MSVC; expose via getters.
-            VkImage    get_vk_image()    const noexcept { return vk_image; }
-            VkBuffer   get_vk_buffer()   const noexcept { return vk_buffer; }
-            VkExtent2D get_imported_extent() const noexcept { return imported_extent; }
+            VkImage     get_vk_image()        const noexcept { return vk_image; }
+            VkBuffer    get_vk_buffer()       const noexcept { return vk_buffer; }
+            // Primary image view: swapchain view takes priority, owned view as fallback.
+            VkImageView get_vk_image_view()   const noexcept {
+                return import_handle.image_view != VK_NULL_HANDLE
+                     ? import_handle.image_view : vk_image_view;
+            }
+            VkExtent2D  get_imported_extent() const noexcept { return imported_extent; }
             const NativeImportHandle& get_import_handle() const noexcept { return import_handle; }
         };
     }

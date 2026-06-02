@@ -13,10 +13,23 @@ struct MipMapping
 	uint NumMipLevels; // uint
 	float2 TexelSize; // float2
 	uint SrcMip; // Texture2D<float4>
-	uint OutMip[4]; // RWTexture2D<float4>
+	// Split from uint OutMip[4] — fixed-size uint arrays in CBV structs accessed
+	// via ResourceDescriptorHeap cause DXC to emit duplicate OpTypeArray IDs in
+	// SPIR-V.  Four individual fields have identical binary layout (same 4×4=16 bytes)
+	// and avoid the array type entirely.  See REFACTOR_TODO.md for the root cause.
+	uint OutMip_0; // RWTexture2D<float4> [was OutMip[0]]
+	uint OutMip_1; // RWTexture2D<float4> [was OutMip[1]]
+	uint OutMip_2; // RWTexture2D<float4> [was OutMip[2]]
+	uint OutMip_3; // RWTexture2D<float4> [was OutMip[3]]
 	uint GetSrcMipLevel() { return SrcMipLevel; }
 	uint GetNumMipLevels() { return NumMipLevels; }
 	float2 GetTexelSize() { return TexelSize; }
-	RWTexture2D<float4> GetOutMip(int i) { return ResourceDescriptorHeap[OutMip[i]]; }
+	RWTexture2D<float4> GetOutMip(int i)
+	{
+		if (i == 0) return ResourceDescriptorHeap[OutMip_0];
+		if (i == 1) return ResourceDescriptorHeap[OutMip_1];
+		if (i == 2) return ResourceDescriptorHeap[OutMip_2];
+		              return ResourceDescriptorHeap[OutMip_3];
+	}
 	Texture2D<float4> GetSrcMip() { return ResourceDescriptorHeap[SrcMip]; }
 };
