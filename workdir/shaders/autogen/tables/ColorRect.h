@@ -9,15 +9,8 @@
 #include "sig_hlsl.hlsl"
 struct ColorRect
 {
-	// Split from float4 pos[2] — fixed-size arrays in CBV structs accessed via
-	// ResourceDescriptorHeap cause DXC to emit duplicate OpTypeArray type IDs in
-	// SPIR-V, triggering VUID-StandaloneSpirv-OpAccessChain.  Two named float4
-	// fields have identical binary layout (pos_a==pos[0], pos_b==pos[1]) and
-	// avoid the array type entirely.
-	float4 pos_a; // float4 (was pos[0])
-	float4 pos_b; // float4 (was pos[1])
+	float4 pos[2]; // float4
 	float4 color; // float4
-	float4 GetPos_a() { return pos_a; }
-	float4 GetPos_b() { return pos_b; }
+	float4 GetPos(int i) { return pos[i]; }
 	float4 GetColor() { return color; }
 };

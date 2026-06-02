@@ -9,6 +9,16 @@ struct Test
 }
 
 
+Pipeline UIPipeline
+{
+	# Minimal pipeline for UI-only rendering (Vulkan bootstrap, no 3D passes).
+	# Profiler keeps the swapchain alive as a required RT; UI_Render draws all
+	# registered GUI elements.  No ResultTexture, no GBuffer — swapchain is the
+	# direct render target.
+	Profiler;
+	UI_Render;
+}
+
 Pipeline MainPipeline
 {
 	# scene prep
