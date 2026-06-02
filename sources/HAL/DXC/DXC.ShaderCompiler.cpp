@@ -17,6 +17,11 @@ namespace HAL
 {
     void reflect_shader(IDxcUtils* library, const DxcBuffer& reflectionBuffer,
                         const std::string& entry_point, CompiledShader& out);
+
+    // Backend-specific extra DXC compilation flags.
+    // D3D12 backend: returns {} (no-op).
+    // Vulkan backend: returns { L"-spirv", L"-fvk-use-dx-layout", ... }.
+    std::vector<std::wstring> get_extra_compile_args(const std::string& target);
 }
 
 #define DXC_MICROCOM_REF_FIELD(m_dwRef)                                        \
@@ -193,6 +198,12 @@ namespace HAL
 
 		compilationArguments.emplace_back(L"-no-warnings");
 		compilationArguments.emplace_back(L"-O3");
+
+		// Backend-specific extra flags (e.g. "-spirv" for Vulkan).
+		// Defined in D3D12/HAL.D3D12.ShaderReflection.cpp (returns {})
+		// and Vulkan/HAL.Vulkan.ShaderReflection.cpp (returns SPIR-V flags).
+		for (auto& extra : get_extra_compile_args(target))
+			compilationArguments.push_back(extra);
 
 		if (check(options & ShaderOptions::FP16))
 		{

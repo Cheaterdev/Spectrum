@@ -79,4 +79,10 @@ namespace HAL
             }
         }
     }
+
+    // D3D12: no extra compile flags (produces DXIL, not SPIR-V).
+    std::vector<std::wstring> get_extra_compile_args(const std::string& /*target*/)
+    {
+        return {};
+    }
 }

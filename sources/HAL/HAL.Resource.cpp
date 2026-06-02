@@ -18,14 +18,11 @@ import Core;
 
 namespace HAL
 {
-	Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, ResourceHandle handle)
-	{
-		PROFILE(L"create_resource handle");
+	// NOTE: create_resource(Device&, ResourceDesc&, ResourceHandle) is intentionally
+	// NOT defined here.  It is an inline in HAL.Resource.ixx to avoid the MSVC
+	// $$_A/$$_B module-type-tag mismatch for template arguments (HeapHandle<HAL::Heap>).
+	// The inline forwards to _create_resource_placed_impl below.
 
-		if (desc.is_buffer())
-			return std::make_shared<HAL::Buffer>(device, desc, handle);
-		return std::make_shared<TextureResource>(device, desc, handle);
-	}
 
 	Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, HeapType heap_type)
 	{
@@ -112,6 +109,22 @@ namespace HAL
 		return heap_type;
 	}
 
-}
+	// ---- Forwarding helper for the ResourceHandle overload --------------------
+	// void* + size_t parameters carry no cross-partition template-argument type
+	// tags, so the symbol is identical from inside the module ($$_B context) and
+	// from external callers ($$_A context).
+	// Resource in the return type is from THIS partition — always [HAL], no mismatch.
+	Resource::ptr _create_resource_placed_impl(Device& device,
+	                                            const ResourceDesc& desc,
+	                                            void* heap_raw, size_t offset)
+	{
+		auto* heap = static_cast<Heap*>(heap_raw);
+		PlacementAddress placement{ heap, offset };
+		if (desc.is_buffer())
+			return std::make_shared<Buffer>(device, desc, placement);
+		return std::make_shared<TextureResource>(device, desc, placement);
+	}
+
+} // namespace HAL
 
 

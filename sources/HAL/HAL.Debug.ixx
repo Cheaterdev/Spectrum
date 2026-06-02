@@ -3,7 +3,6 @@ export module HAL:Debug;
 import Core;
 import :Types;
 
-		class CommandList;
 export namespace HAL
 {
 

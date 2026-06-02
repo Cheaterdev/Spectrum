@@ -7,7 +7,7 @@ import HAL;
 
 
 import d3d12;
-#undef THIS
+
 namespace HAL
 {
 	SwapChain::SwapChain(Device& device, swap_chain_desc c_desc) :device(device)

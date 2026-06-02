@@ -298,17 +298,24 @@ namespace Spectrum
                 conf.LibraryFiles.Add("dxguid.lib");
                 conf.LibraryFiles.Add("volatileaccessu.lib");
 
-                conf.SourceFilesBuildExcludeRegex.Add(@".*\\HAL\\Vulkan\\.*");
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\HAL\\API\\Vulkan\\.*");
 
-                                conf.Defines.Add("HAL_BACKEND_D3D12");
+                conf.Defines.Add("HAL_BACKEND_D3D12");
             }
             else // Vulkan
             {
                 // Vulkan backend: include Vulkan/ folder, exclude D3D12/ and DXGI/
-                conf.SourceFilesBuildExcludeRegex.Add(@".*\\HAL\\D3D12\\.*");
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\HAL\\API\\D3D12\\.*");
                 conf.SourceFilesBuildExcludeRegex.Add(@".*\\HAL\\DXGI\\.*");
 
                 conf.Defines.Add("HAL_BACKEND_VULKAN");
+
+                // vulkan-1.lib is generated from C:\Windows\System32\vulkan-1.dll
+                // (the Vulkan loader shipped with GPU drivers).  It lives next to
+                // the Vulkan module wrapper so the project is self-contained.
+                // If the Vulkan SDK is later installed, replace this with the SDK lib:
+                //   %VULKAN_SDK%\Lib\vulkan-1.lib
+                // conf.LibraryFiles.Add(@"[project.SharpmakeCsPath]\sources\Modules\vulkan\vulkan-1.lib");
             }
 
             // DXC folder is always compiled — DXC emits SPIR-V for Vulkan too.
@@ -364,6 +371,31 @@ namespace Spectrum
         }
     }
 
+
+    // Minimal Vulkan clear-screen test — depends only on HAL (no RenderSystem).
+    // Useful for validating the Vulkan backend without the full engine init path.
+    [Sharpmake.Generate]
+    public class VulkanTest : Application
+    {
+        public VulkanTest()
+        {
+            SourceRootPath = @"[project.SharpmakeCsPath]\sources\VulkanTest";
+            AssemblyName = "VulkanTest";
+        }
+
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+
+            conf.LibraryFiles.Add("Onecore.lib");
+            conf.LibraryFiles.Add("user32.lib");
+
+            conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
+            conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
+
+            conf.AddPublicDependency<HAL>(target);
+        }
+    }
 
     [Sharpmake.Generate]
     public class Spectrum : Application
@@ -473,6 +505,7 @@ namespace Spectrum
             conf.Name = platformName;
 
             conf.AddProject<Spectrum>(target);
+            conf.AddProject<VulkanTest>(target);
             conf.AddProject<SIGParser>(target);
             conf.AddProject<Test>(target);
             conf.AddProject<Resources>(target);

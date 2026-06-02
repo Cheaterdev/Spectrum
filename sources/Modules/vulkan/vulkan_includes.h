@@ -25,3 +25,13 @@
 // so undefining it here is safe.
 #undef VK_NULL_HANDLE
 export inline constexpr decltype(nullptr) VK_NULL_HANDLE = nullptr;
+
+// Sentinel values used in subresource ranges and buffer sizes.
+#undef VK_REMAINING_MIP_LEVELS
+export inline constexpr uint32_t VK_REMAINING_MIP_LEVELS   = (~0U);
+
+#undef VK_REMAINING_ARRAY_LAYERS
+export inline constexpr uint32_t VK_REMAINING_ARRAY_LAYERS = (~0U);
+
+#undef VK_WHOLE_SIZE
+export inline constexpr uint64_t VK_WHOLE_SIZE              = (~0ULL);
