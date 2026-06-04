@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_VoxelScreen: register( b2, space5);
+#ifdef __spirv__
+struct _CB_VoxelScreen { uint offset; };
+static _CB_VoxelScreen pass_VoxelScreen = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_VoxelScreen: register(b5, space5);
+#endif
 
 ConstantBuffer<VoxelScreen> CreateVoxelScreen()
 {

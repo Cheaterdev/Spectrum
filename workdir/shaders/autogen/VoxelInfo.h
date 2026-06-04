@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_VoxelInfo: register( b2, space4);
+#ifdef __spirv__
+struct _CB_VoxelInfo { uint offset; };
+static _CB_VoxelInfo pass_VoxelInfo = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_VoxelInfo: register(b4, space4);
+#endif
 
 ConstantBuffer<VoxelInfo> CreateVoxelInfo()
 {

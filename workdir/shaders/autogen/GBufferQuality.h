@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_GBufferQuality: register( b2, space6);
+#ifdef __spirv__
+struct _CB_GBufferQuality { uint offset; };
+static _CB_GBufferQuality pass_GBufferQuality = { _hal_push.s6 };
+#else
+ConstantBuffer<CB> pass_GBufferQuality: register(b6, space6);
+#endif
 
 ConstantBuffer<GBufferQuality> CreateGBufferQuality()
 {

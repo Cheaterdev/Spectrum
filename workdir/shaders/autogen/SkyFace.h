@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_SkyFace: register( b2, space5);
+#ifdef __spirv__
+struct _CB_SkyFace { uint offset; };
+static _CB_SkyFace pass_SkyFace = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_SkyFace: register(b5, space5);
+#endif
 
 ConstantBuffer<SkyFace> CreateSkyFace()
 {

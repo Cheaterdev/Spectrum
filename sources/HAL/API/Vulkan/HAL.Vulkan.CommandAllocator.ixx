@@ -14,7 +14,10 @@ export namespace HAL
             friend class CommandList;
 
         protected:
-            VkCommandPool vk_command_pool = VK_NULL_HANDLE;
+            VkCommandPool      vk_command_pool = VK_NULL_HANDLE;
+            // VkCommandPool is not thread-safe: all vkCmd* calls and pool operations
+            // (allocate / reset) on any buffer from this pool must be serialized.
+            mutable std::mutex pool_mutex;
 
         public:
             virtual ~CommandAllocator() = default;

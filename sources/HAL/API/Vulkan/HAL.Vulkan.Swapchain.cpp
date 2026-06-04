@@ -23,6 +23,27 @@ namespace
         vkCreateSemaphore(dev, &info, nullptr, &sem);
         return sem;
     }
+
+    // Record a one-time COLOR_ATTACHMENT_OPTIMAL → PRESENT_SRC_KHR barrier into cb
+    // for the given swapchain image.  The command buffer must already be in recording
+    // state.  Uses SIMULTANEOUS_USE_BIT so the same CB can be in-flight while we re-submit it.
+    void record_present_transition(VkCommandBuffer cb, VkImage image)
+    {
+        VkImageMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+        barrier.srcStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstStageMask  = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+        barrier.dstAccessMask = 0;
+        barrier.oldLayout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        barrier.newLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        barrier.image         = image;
+        barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+        VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+        dep.imageMemoryBarrierCount = 1;
+        dep.pImageMemoryBarriers    = &barrier;
+        vkCmdPipelineBarrier2(cb, &dep);
+    }
 }
 
 namespace HAL
@@ -112,7 +133,9 @@ namespace HAL
 
         // Pick the best available surface format.
         // Priority: BGRA8_UNORM → RGBA8_UNORM → BGRA8_SRGB → RGBA8_SRGB → first.
-        // Always use whatever the driver reports as supported — never assume.
+        // BGRA8_UNORM matches the D3D12/DXGI convention (DXGI promotes R8G8B8A8 to
+        // B8G8R8A8 anyway) and is the native Windows DWM format, so it is first.
+        // UI PSOs are compiled with B8G8R8A8_UNORM to match both backends.
         vk_format      = formats[0].format;
         vk_color_space = formats[0].colorSpace;
         VkColorSpaceKHR color_space = formats[0].colorSpace;
@@ -220,7 +243,8 @@ namespace HAL
         sc_ci.imageExtent      = extent;
         sc_ci.imageArrayLayers = 1;
         sc_ci.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT     |
+                                  VK_IMAGE_USAGE_SAMPLED_BIT;          // needed for SRV in descriptor heap
         sc_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         sc_ci.preTransform     = caps.currentTransform;
         sc_ci.compositeAlpha   = composite_alpha;
@@ -255,32 +279,41 @@ namespace HAL
             vkCreateImageView(api_dev.vk_device, &view_ci, nullptr, &swapchain_views[i]);
         }
 
-        // ---- Per-frame sync semaphores --------------------------------------
-        // One pair per image: acquire semaphore + render-done semaphore.
-        image_available.resize(image_count);
+        // ---- Sync semaphores ------------------------------------------------
+        // image_available: free-running ring of (image_count + 1) — see .ixx.
+        // render_finished: one per swapchain image (waited by vkQueuePresentKHR).
+        image_available.resize(image_count + 1);
         render_finished.resize(image_count);
-        for (uint32_t i = 0; i < image_count; ++i)
-        {
-            image_available[i] = make_semaphore(api_dev.vk_device);
-            render_finished[i] = make_semaphore(api_dev.vk_device);
-        }
+        for (auto& s : image_available) s = make_semaphore(api_dev.vk_device);
+        for (auto& s : render_finished) s = make_semaphore(api_dev.vk_device);
+        acquire_counter = 0;
 
         // ---- Wrap backbuffers as TextureResources ---------------------------
         frames.resize(image_count);
         m_frameIndex = 0;
         on_change();
 
+        // ---- Present-transition command buffers & semaphores ----------------
+        setup_present_commands(api_dev.vk_device, api_dev.get_queue_family(
+            static_cast<int>(CommandListType::DIRECT)));
+
         Log::get() << "Vulkan swapchain: " << image_count << " images, "
                    << extent.width << "x" << extent.height << Log::endl;
 
         // Pre-acquire the first image so m_frameIndex is valid before the
-        // first wait_for_free() + get_current_frame() calls.
+        // first wait_for_free() + get_current_frame() calls.  Use ring slot 0.
         do_acquire(api_dev.vk_device, vk_swapchain,
-                   image_available[0], current_image, m_frameIndex);
+                   image_available[acquire_counter % image_available.size()],
+                   current_image, m_frameIndex);
 
-        // Wire acquire/present semaphores for the first frame's execute().
+        // Wire the image-available wait semaphore into the first execute() call so the
+        // GPU waits for the presentation engine before writing to the swapchain image.
+        // render_finished is signalled explicitly in present() (not via pending_signal_sem)
+        // so it always fires after ALL render command lists — not just the first submit.
         auto& api_queue = static_cast<API::Queue&>(*device.get_queue(CommandListType::DIRECT));
-        api_queue.set_frame_semaphores(image_available[0], render_finished[0]);
+        api_queue.set_frame_semaphores(
+            image_available[acquire_counter % image_available.size()], VK_NULL_HANDLE);
+        ++acquire_counter;
     }
 
     void SwapChain::on_change()
@@ -295,6 +328,10 @@ namespace HAL
             handle.extent     = sc_extent;
 
             frames[i].m_renderTarget.reset(
+                // PRESENT: We explicitly transition all fresh swapchain images to
+                // PRESENT_SRC_KHR after creation (see init_swapchain_layouts below), so
+                // PRESENT is accurate here.  The frame graph will emit the correct
+                // PRESENT_SRC_KHR→COLOR_ATTACHMENT_OPTIMAL barrier on first render.
                 new TextureResource(device, handle, TextureLayout::PRESENT));
             frames[i].m_renderTarget->set_name(
                 std::string("swapchain_") + std::to_string(i));
@@ -320,53 +357,173 @@ namespace HAL
         return false;   // VK_ERROR_OUT_OF_DATE_KHR or worse
     }
 
+    // ---- Present-transition helpers (defined in HAL::API namespace) -----------
+} // namespace HAL
+namespace HAL::API
+{
+    void SwapChain::setup_present_commands(VkDevice vk_dev, uint32_t queue_family)
+    {
+        if (vk_dev == VK_NULL_HANDLE || image_count == 0) return;
+
+        // Pool (not pooled with the frame-graph pools — owned exclusively by present())
+        VkCommandPoolCreateInfo pool_ci{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+        pool_ci.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        pool_ci.queueFamilyIndex = queue_family;
+        vkCreateCommandPool(vk_dev, &pool_ci, nullptr, &present_pool);
+        if (present_pool == VK_NULL_HANDLE) return;
+
+        present_cbs.resize(image_count, VK_NULL_HANDLE);
+        present_sems.resize(image_count, VK_NULL_HANDLE);
+
+        VkCommandBufferAllocateInfo alloc_ci{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        alloc_ci.commandPool        = present_pool;
+        alloc_ci.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc_ci.commandBufferCount = image_count;
+        vkAllocateCommandBuffers(vk_dev, &alloc_ci, present_cbs.data());
+
+        // Allocate command buffers but do NOT pre-record them.
+        // They are reset and re-recorded fresh in present() each frame so the
+        // driver always associates the layout transition with the current
+        // vkAcquireNextImageKHR acquisition cycle.  SIMULTANEOUS_USE_BIT is
+        // intentionally omitted — we guarantee no re-submission before the
+        // previous frame's present has completed by waiting on render_finished.
+        for (uint32_t i = 0; i < image_count; ++i)
+            present_sems[i] = make_semaphore(vk_dev);
+    }
+
+    void SwapChain::teardown_present_commands(VkDevice vk_dev)
+    {
+        if (vk_dev == VK_NULL_HANDLE) return;
+        for (auto s : present_sems)
+            if (s) vkDestroySemaphore(vk_dev, s, nullptr);
+        present_sems.clear();
+        present_cbs.clear(); // freed with pool
+        if (present_pool) { vkDestroyCommandPool(vk_dev, present_pool, nullptr); present_pool = VK_NULL_HANDLE; }
+    }
+
+} // namespace HAL::API
+namespace HAL
+{
+    // ---- SwapChain::present() -----------------------------------------------
+
     void SwapChain::present()
     {
         auto& api_dev   = static_cast<API::Device&>(device);
         auto  gfx_queue = device.get_queue(CommandListType::DIRECT);
         auto& api_queue = static_cast<API::Queue&>(*gfx_queue);
 
-        // Present waits on render_finished semaphore signaled by this frame's execute().
-        VkSemaphore wait_sem = render_finished[current_image];
-        VkPresentInfoKHR pi{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-        pi.swapchainCount     = 1;
-        pi.pSwapchains        = &vk_swapchain;
-        pi.pImageIndices      = &current_image;
-        pi.waitSemaphoreCount = 1;
-        pi.pWaitSemaphores    = &wait_sem;
+        if (vk_swapchain == VK_NULL_HANDLE || image_available.empty())
+            return;   // zero-size / failed swapchain — nothing to present.
 
-        VkResult pr = vkQueuePresentKHR(gfx_queue->get_native(), &pi);
+        // Index of the image we are about to present (still identifies this frame's
+        // image; the acquire below updates current_image to the NEXT frame's image).
+        const uint32_t presented_image = current_image;
 
-        // CPU fence so wait_for_free() can pace the next frame.
-        frames[m_frameIndex].fence_event = gfx_queue->signal();
+        // ===================================================================
+        //  CRITICAL ORDERING.
+        //  HAL::Queue::execute() does NOT submit synchronously — it ENQUEUES the
+        //  render command buffers onto the queue's single gpu_execute_thread (a FIFO
+        //  worker).  If we called vkQueuePresentKHR / vkAcquireNextImageKHR here on
+        //  the *main* thread we would present and re-acquire BEFORE the render was
+        //  even submitted: the presentation engine shows an un-rendered (black) image,
+        //  and validation reports "image not acquired" / "semaphore not waited on".
+        //
+        //  So we enqueue the ENTIRE present sequence (signal render_finished, present,
+        //  acquire next, wire the next acquire-wait semaphore) onto that same FIFO via
+        //  run().  It therefore executes AFTER all render submits, exactly like the
+        //  D3D12 backend routes Present through queue->run().  Acquire and present run
+        //  on the same thread, satisfying the swapchain's external-sync requirement,
+        //  and pending_wait_sem is only ever touched on the worker thread (no race
+        //  with execute_internal).  A promise hands the freshly-acquired frame index
+        //  back to the main thread before present() returns, so the next frame's
+        //  get_current_frame()/compile() read a valid m_frameIndex.
+        // ===================================================================
+        const VkDevice vk_dev = api_dev.vk_device;
+        API::Queue*    q      = &api_queue;
+        auto idx_promise = std::make_shared<std::promise<void>>();
+        std::future<void> idx_future = idx_promise->get_future();
 
-        // Acquire the NEXT image now so that m_frameIndex is already correct
-        // when the caller calls wait_for_free() + get_current_frame() on the
-        // next iteration — identical to D3D12's GetCurrentBackBufferIndex().
-        uint32_t next_image = current_image;
-        uint32_t next_idx   = m_frameIndex;
-        uint32_t next_sem   = (m_frameIndex + 1) % image_count;
-        if (pr != VK_ERROR_OUT_OF_DATE_KHR &&
-            do_acquire(api_dev.vk_device, vk_swapchain,
-                       image_available[next_sem], next_image, next_idx))
+        gfx_queue->run([this, vk_dev, q, presented_image, idx_promise]()
         {
-            current_image = next_image;
-            m_frameIndex  = next_idx;
-            // Wire semaphores for the next frame's command buffer submission.
-            api_queue.set_frame_semaphores(image_available[next_sem],
-                                           render_finished[next_sem]);
-        }
-        else
-        {
-            // Out-of-date — caller's next resize() will rebuild the swapchain.
-            m_frameIndex = (m_frameIndex + 1) % image_count;
-        }
+            API::Queue& api_queue = *q;
+            // 1) Signal render_finished[presented] after all render CBs (same-thread
+            //    FIFO guarantees those submits already happened).
+            if (presented_image < static_cast<uint32_t>(render_finished.size()) &&
+                render_finished[presented_image] != VK_NULL_HANDLE)
+            {
+                VkSemaphoreSubmitInfo rf_sig{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
+                rf_sig.semaphore = render_finished[presented_image];
+                rf_sig.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+                VkSubmitInfo2 rf_submit{ VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
+                rf_submit.signalSemaphoreInfoCount = 1;
+                rf_submit.pSignalSemaphoreInfos    = &rf_sig;
+                api_queue.submit_raw(rf_submit);
+            }
+
+            // 2) Present, waiting on render_finished[presented].  The frame graph's
+            //    non_tracked_resources loop already left the image in PRESENT_SRC_KHR.
+            VkSemaphore      wait_sem = render_finished[presented_image];
+            uint32_t         img      = presented_image;
+            VkPresentInfoKHR pi{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+            pi.swapchainCount     = 1;
+            pi.pSwapchains        = &vk_swapchain;
+            pi.pImageIndices      = &img;
+            pi.waitSemaphoreCount = (wait_sem != VK_NULL_HANDLE) ? 1u : 0u;
+            pi.pWaitSemaphores    = (wait_sem != VK_NULL_HANDLE) ? &wait_sem : nullptr;
+            VkResult pr = api_queue.present(pi);
+
+            // 3) Re-assert initial_layout=PRESENT so next frame's compile_transitions
+            //    emits a fresh PRESENT→COLOR_ATTACHMENT barrier.
+            if (presented_image < static_cast<uint32_t>(frames.size()) &&
+                frames[presented_image].m_renderTarget)
+            {
+                frames[presented_image].m_renderTarget->get_state_manager()
+                    .init_subres(1, TextureLayout::PRESENT);
+            }
+
+            // 4) Acquire the NEXT image (free-running ring slot — NOT keyed by image
+            //    index) and wire its wait semaphore into the next render submit.
+            const uint32_t sem_idx = acquire_counter % image_available.size();
+            uint32_t next_image = current_image, next_idx = m_frameIndex;
+            if (pr != VK_ERROR_OUT_OF_DATE_KHR &&
+                do_acquire(vk_dev, vk_swapchain,
+                           image_available[sem_idx], next_image, next_idx))
+            {
+                current_image = next_image;
+                m_frameIndex  = next_idx;
+                api_queue.set_frame_semaphores(image_available[sem_idx], VK_NULL_HANDLE);
+                ++acquire_counter;
+            }
+            else
+            {
+                m_frameIndex = (m_frameIndex + 1) % image_count;
+            }
+
+            idx_promise->set_value();
+        });
+
+        // CPU fence so wait_for_free() can pace the next frame.  signal() enqueues on
+        // the same FIFO AFTER the present task, so the ordering is correct.
+        frames[presented_image].fence_event = gfx_queue->signal();
+
+        // Block until the worker task has presented + acquired the next image and
+        // updated m_frameIndex / current_image.  This is no more blocking than the
+        // previous synchronous do_acquire() (it waits on image availability), but now
+        // it also guarantees the render submit precedes the present on the GPU timeline.
+        idx_future.wait();
     }
 
     void SwapChain::resize(ivec2 size)
     {
         if (size.x < 64) size.x = 64;
         if (size.y < 64) size.y = 64;
+
+        // render() calls resize() every frame with the current window size.
+        // Skip the expensive teardown+recreate when nothing actually changed.
+        if (vk_swapchain != VK_NULL_HANDLE &&
+            static_cast<int>(sc_extent.width)  == size.x &&
+            static_cast<int>(sc_extent.height) == size.y)
+            return;
 
         auto& api_dev = static_cast<API::Device&>(device);
         if (api_dev.vk_device == VK_NULL_HANDLE) return;
@@ -376,14 +533,17 @@ namespace HAL
         device.get_queue(CommandListType::COMPUTE)->signal_and_wait();
         device.get_queue(CommandListType::COPY)->signal_and_wait();
 
-        // Destroy old views and semaphores.
+        // Destroy old views, semaphores, and present-transition resources.
+        teardown_present_commands(api_dev.vk_device);
         for (uint32_t i = 0; i < image_count; ++i)
         {
             frames[i].m_renderTarget = nullptr;
             vkDestroyImageView(api_dev.vk_device, swapchain_views[i], nullptr);
-            vkDestroySemaphore(api_dev.vk_device, image_available[i], nullptr);
             vkDestroySemaphore(api_dev.vk_device, render_finished[i],  nullptr);
         }
+        // image_available is the (image_count + 1) acquire ring — destroy all of it.
+        for (auto s : image_available)
+            if (s) vkDestroySemaphore(api_dev.vk_device, s, nullptr);
         swapchain_views.clear();
         swapchain_images.clear();
         image_available.clear();
@@ -408,7 +568,8 @@ namespace HAL
         sc_ci.imageExtent      = extent;
         sc_ci.imageArrayLayers = 1;
         sc_ci.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT     |
+                                  VK_IMAGE_USAGE_SAMPLED_BIT;          // needed for SRV in descriptor heap
         sc_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         sc_ci.preTransform     = caps.currentTransform;
         {
@@ -441,7 +602,7 @@ namespace HAL
             api_dev.vk_device, vk_swapchain, &image_count, swapchain_images.data());
 
         swapchain_views.resize(image_count);
-        image_available.resize(image_count);
+        image_available.resize(image_count + 1);
         render_finished.resize(image_count);
         for (uint32_t i = 0; i < image_count; ++i)
         {
@@ -456,12 +617,34 @@ namespace HAL
             view_ci.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
             vkCreateImageView(api_dev.vk_device, &view_ci, nullptr, &swapchain_views[i]);
 
-            image_available[i] = make_semaphore(api_dev.vk_device);
             render_finished[i] = make_semaphore(api_dev.vk_device);
         }
+        // Acquire ring is one larger than image_count (see .ixx).
+        for (auto& s : image_available) s = make_semaphore(api_dev.vk_device);
+        acquire_counter = 0;
 
         frames.resize(image_count);
         m_frameIndex = 0;
         on_change();
+
+        // Rebuild present-transition resources for the new images.
+        setup_present_commands(api_dev.vk_device,
+            api_dev.get_queue_family(static_cast<int>(CommandListType::DIRECT)));
+
+        // Null out the stale semaphore handles the queue is holding before we
+        // re-acquire, so a racing execute() sees VK_NULL_HANDLE rather than
+        // a destroyed semaphore.
+        auto& api_queue = static_cast<API::Queue&>(*device.get_queue(CommandListType::DIRECT));
+        api_queue.set_frame_semaphores(VK_NULL_HANDLE, VK_NULL_HANDLE);
+
+        // Re-acquire the first image post-resize using ring slot 0, then advance
+        // the counter so present() rotates through the rest of the ring.
+        do_acquire(api_dev.vk_device, vk_swapchain,
+                   image_available[acquire_counter % image_available.size()],
+                   current_image, m_frameIndex);
+        // Wire only the wait side; render_finished is signalled explicitly in present().
+        api_queue.set_frame_semaphores(
+            image_available[acquire_counter % image_available.size()], VK_NULL_HANDLE);
+        ++acquire_counter;
     }
 }

@@ -13,18 +13,20 @@ import Core;
 
 // Vulkan Phase 4 — real descriptor heap implementation.
 //
-// Descriptor model:
+// Descriptor model (binding numbers match DXC -fvk-b/t/u-shift flags):
 //   Set 0 (CBV_SRV_UAV) — 4 bindings sharing one VkDescriptorSet:
-//       binding 0: SAMPLED_IMAGE  (SRV textures, indexed by offset)
-//       binding 1: STORAGE_IMAGE  (UAV textures, indexed by offset)
-//       binding 2: UNIFORM_BUFFER (CBVs,          indexed by offset)
-//       binding 3: STORAGE_BUFFER (SRV/UAV buffers, indexed by offset)
+//       binding   0: UNIFORM_BUFFER (CBVs,          b-shift = 0)
+//       binding 128: SAMPLED_IMAGE  (SRV textures,  t-shift = 128)
+//       binding 256: STORAGE_IMAGE  (UAV textures,  u-shift = 256)
+//       binding 384: STORAGE_BUFFER (SRV/UAV bufs,  u-shift = 256 buffers)
 //   Set 1 (SAMPLER) — 1 binding:
-//       binding 0: SAMPLER        (indexed by offset)
+//       binding 0: SAMPLER          (-fvk-bind-sampler-heap 1 0)
 //   RTV / DSV — no VkDescriptorSet; handled by dynamic rendering.
 //
-// get_gpu() returns the descriptor slot offset so shaders can use it as a
-// bindless array index.  All bindings use UPDATE_AFTER_BIND + PARTIALLY_BOUND.
+// get_gpu() returns the raw descriptor slot offset as the bindless array index.
+// The offset is used directly as dstArrayElement; each binding has HEAP_MAX
+// elements so any flat heap position fits regardless of type.
+// All bindings use UPDATE_AFTER_BIND + PARTIALLY_BOUND.
 
 namespace HAL
 {
@@ -50,21 +52,31 @@ namespace HAL
 
         if (api_res.get_vk_image() != VK_NULL_HANDLE)
         {
-            // get_vk_image_view() returns swapchain view or owned view (Phase 5).
+            // SRV texture → binding 0 (MUTABLE → SAMPLED_IMAGE)
             VkImageView view = api_res.get_vk_image_view();
             if (view == VK_NULL_HANDLE) return;
             img_info.imageView   = view;
             img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            write.dstBinding     = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
             write.pImageInfo     = &img_info;
         }
         else if (api_res.get_vk_buffer() != VK_NULL_HANDLE)
         {
-            // Buffer SRV — binding 3 (STORAGE_BUFFER)
+            // Buffer SRV → binding 0 (MUTABLE → STORAGE_BUFFER).
+            // StructuredBuffers are sub-ranges (FirstElement..NumElements) of a shared
+            // buffer; honour the offset/size or the shader reads the wrong elements.
             buf_info.buffer = api_res.get_vk_buffer();
             buf_info.offset = 0;
             buf_info.range  = VK_WHOLE_SIZE;
-            write.dstBinding     = 3;
+            if (auto* b = std::get_if<Views::ShaderResource::Buffer>(&v.View))
+            {
+                const uint64_t stride = b->StructureByteStride ? b->StructureByteStride : 1u;
+                buf_info.offset = b->FirstElement * stride;
+                if (b->NumElements)
+                    buf_info.range = static_cast<VkDeviceSize>(b->NumElements) * stride;
+            }
+            write.dstBinding     = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.pBufferInfo    = &buf_info;
         }
@@ -90,20 +102,30 @@ namespace HAL
 
         if (api_res.get_vk_image() != VK_NULL_HANDLE)
         {
+            // UAV texture → binding 0 (MUTABLE → STORAGE_IMAGE)
             VkImageView view = api_res.get_vk_image_view();
             if (view == VK_NULL_HANDLE) return;
             img_info.imageView   = view;
             img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            write.dstBinding     = 1; // STORAGE_IMAGE
+            write.dstBinding     = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
             write.pImageInfo     = &img_info;
         }
         else if (api_res.get_vk_buffer() != VK_NULL_HANDLE)
         {
+            // UAV buffer → binding 0 (MUTABLE → STORAGE_BUFFER).  Honour the
+            // FirstElement/NumElements sub-range like the SRV path.
             buf_info.buffer = api_res.get_vk_buffer();
             buf_info.offset = 0;
             buf_info.range  = VK_WHOLE_SIZE;
-            write.dstBinding     = 3; // STORAGE_BUFFER
+            if (auto* b = std::get_if<Views::UnorderedAccess::Buffer>(&v.View))
+            {
+                const uint64_t stride = b->StructureByteStride ? b->StructureByteStride : 1u;
+                buf_info.offset = static_cast<VkDeviceSize>(b->FirstElement) * stride;
+                if (b->NumElements)
+                    buf_info.range = static_cast<VkDeviceSize>(b->NumElements) * stride;
+            }
+            write.dstBinding     = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.pBufferInfo    = &buf_info;
         }
@@ -120,14 +142,19 @@ namespace HAL
         auto& api_res = static_cast<const API::Resource&>(*v.Resource);
         if (api_res.get_vk_buffer() == VK_NULL_HANDLE) return;
 
+        // CRITICAL: constant buffers are sub-allocated inside larger shared buffers
+        // (DataHolder::compile → place_data with resource_offset).  The view carries
+        // OffsetInBytes/SizeInBytes; ignoring them (offset=0, range=WHOLE) points the
+        // descriptor at the START of the shared buffer instead of this CB's sub-region,
+        // so the shader reads the wrong bindless indices → garbage vertices → black UI.
         VkDescriptorBufferInfo buf_info{};
         buf_info.buffer = api_res.get_vk_buffer();
-        buf_info.offset = 0;
-        buf_info.range  = VK_WHOLE_SIZE;
+        buf_info.offset = v.OffsetInBytes;
+        buf_info.range  = v.SizeInBytes > 0 ? v.SizeInBytes : VK_WHOLE_SIZE;
 
         VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet          = api_heap.get_vk_set();
-        write.dstBinding      = 2; // UNIFORM_BUFFER
+        write.dstBinding      = 0; // MUTABLE → UNIFORM_BUFFER (CBV, b-shift = 0)
         write.dstArrayElement = offset;
         write.descriptorCount = 1;
         write.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -181,14 +208,14 @@ namespace HAL
             std::vector<VkDescriptorPoolSize> pool_sizes;
             if (is_sampler)
             {
-                pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLER,        d.Count });
+                pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLER,         d.Count });
             }
             else
             {
-                pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,  d.Count });
-                pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,  d.Count });
-                pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, d.Count });
-                pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, d.Count });
+                // Binding 0 is MUTABLE_EXT — one pool entry covers all resource types.
+                // Bindings 384-388: 5 inline static samplers (s0..s4), one per binding.
+                pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_MUTABLE_EXT, d.Count });
+                pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLER,     5u       });
             }
 
             VkDescriptorPoolCreateInfo pool_ci{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };

@@ -19,7 +19,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_{{table.name}}: register( b2, space{{slot.id}});
+#ifdef __spirv__
+struct _CB_{{table.name}} { uint offset; };
+static _CB_{{table.name}} pass_{{table.name}} = { _hal_push.s{{slot.id}} };
+#else
+ConstantBuffer<CB> pass_{{table.name}}: register(b{{slot.id}}, space{{slot.id}});
+#endif
 
 ConstantBuffer<{{table.name}}> Create{{table.name}}()
 {

@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_InitDispatch: register( b2, space5);
+#ifdef __spirv__
+struct _CB_InitDispatch { uint offset; };
+static _CB_InitDispatch pass_InitDispatch = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_InitDispatch: register(b5, space5);
+#endif
 
 ConstantBuffer<InitDispatch> CreateInitDispatch()
 {

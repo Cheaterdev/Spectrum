@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_ReflectionCombine: register( b2, space4);
+#ifdef __spirv__
+struct _CB_ReflectionCombine { uint offset; };
+static _CB_ReflectionCombine pass_ReflectionCombine = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_ReflectionCombine: register(b4, space4);
+#endif
 
 ConstantBuffer<ReflectionCombine> CreateReflectionCombine()
 {

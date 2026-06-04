@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_FSR: register( b2, space4);
+#ifdef __spirv__
+struct _CB_FSR { uint offset; };
+static _CB_FSR pass_FSR = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_FSR: register(b4, space4);
+#endif
 
 ConstantBuffer<FSR> CreateFSR()
 {

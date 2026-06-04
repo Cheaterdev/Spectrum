@@ -11,3 +11,14 @@ SamplerState pointClampSampler:register(s1);
 SamplerState linearClampSampler:register(s2);
 SamplerState anisoBordeSampler:register(s3);
 SamplerState pointBorderSampler:register(s4);
+
+// Single shared push-constant block (Vulkan SPIRV only).
+// Each slot header reads _hal_push.sN — one [[vk::push_constant]] declaration per shader.
+// DXC ignores [[vk::push_constant]] in the DXIL path; D3D12 uses ConstantBuffer registers.
+#ifdef __spirv__
+#ifndef HAL_PUSH_DEFINED
+#define HAL_PUSH_DEFINED
+struct _HALPush { uint s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15; };
+[[vk::push_constant]] ConstantBuffer<_HALPush> _hal_push;
+#endif
+#endif

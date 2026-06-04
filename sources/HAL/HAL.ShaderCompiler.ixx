@@ -29,11 +29,13 @@ export namespace HAL
 	{
 		std::vector<CompiledFunction> functions;
 		binary blob;
-		
+		std::string entry_point; // name passed to -E (e.g. "CS", "VS", "PS")
+
 		SERIALIZE()
 			{
 				ar& NVP(functions);
 				ar& NVP(blob);
+				ar& NVP(entry_point);
 			}
 	};
 

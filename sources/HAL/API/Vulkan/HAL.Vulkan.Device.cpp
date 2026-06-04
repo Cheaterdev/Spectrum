@@ -121,6 +121,12 @@ namespace HAL
                 VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
                 VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
                 VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+                // Required for ResourceDescriptorHeap: binding 0 must accept multiple
+                // descriptor types (SAMPLED_IMAGE, STORAGE_IMAGE, UNIFORM_BUFFER,
+                // STORAGE_BUFFER) simultaneously — exactly what mutable descriptors do.
+                VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
+                // Required by DXC SPIRV for 'discard' in pixel shaders.
+                VK_EXT_SHADER_DEMOTE_TO_HELPER_INVOCATION_EXTENSION_NAME,
             };
 
             uint32_t avail_count = 0;
@@ -164,9 +170,36 @@ namespace HAL
             di_features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
             di_features.pNext = &dr_features;
 
+            // Mutable descriptors: binding 0 can hold SAMPLED_IMAGE, STORAGE_IMAGE,
+            // UNIFORM_BUFFER, STORAGE_BUFFER simultaneously (needed for ResourceDescriptorHeap).
+            VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT mutable_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MUTABLE_DESCRIPTOR_TYPE_FEATURES_EXT };
+            mutable_features.mutableDescriptorType = VK_TRUE;
+            mutable_features.pNext = &di_features;
+
+            // DemoteToHelperInvocation: 'discard' in pixel shaders uses this capability.
+            VkPhysicalDeviceShaderDemoteToHelperInvocationFeatures demote_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DEMOTE_TO_HELPER_INVOCATION_FEATURES };
+            demote_features.shaderDemoteToHelperInvocation = VK_TRUE;
+            demote_features.pNext = &mutable_features;
+
+            // scalarBlockLayout: allows StructuredBuffers with strides not aligned to 16
+            // (e.g. Glyph stride=28, VSLine stride=24).
+            VkPhysicalDeviceScalarBlockLayoutFeatures scalar_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES };
+            scalar_features.scalarBlockLayout = VK_TRUE;
+            scalar_features.pNext = &demote_features;
+
+            // hostQueryReset: allows vkResetQueryPool() from the CPU without a command buffer.
+            // Used in QueryHeap constructor to bring queries to the "unavailable" initial state.
+            VkPhysicalDeviceHostQueryResetFeatures host_reset_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES };
+            host_reset_features.hostQueryReset = VK_TRUE;
+            host_reset_features.pNext = &scalar_features;
+
             VkPhysicalDeviceFeatures2 features2{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-            features2.pNext = &di_features;
+            features2.pNext = &host_reset_features;
             vkGetPhysicalDeviceFeatures2(vk_physical, &features2);
 
             // ---- Create logical device --------------------------------------
@@ -219,51 +252,85 @@ namespace HAL
                     vram += mem_props.memoryHeaps[i].size;
 
             // ---- Global bindless descriptor set layouts ---------------------
-            // Binding offsets MUST match the DXC SPIR-V shift flags in
-            // HAL.Vulkan.ShaderReflection.cpp:
-            //   t-registers (SRV)  → binding = register + 0
-            //   b-registers (CBV)  → binding = register + 128
-            //   u-registers (UAV)  → binding = register + 256
-            //   s-registers (SMP)  → set 1, binding = register (separate layout)
+            // DXC with -fvk-bind-resource-heap 0 0 maps the ENTIRE ResourceDescriptorHeap
+            // to Set 0, Binding 0 — regardless of resource type (SAMPLED_IMAGE,
+            // STORAGE_IMAGE, UNIFORM_BUFFER, STORAGE_BUFFER all land at binding 0).
+            // The b/t/u shifts (0/128/256) partition the element INDEX space:
+            //   b-registers (CBV)  → binding 0, elements [0,   127]  (b-shift = 0)
+            //   t-registers (SRV)  → binding 0, elements [128, 255]  (t-shift = 128)
+            //   u-registers (UAV)  → binding 0, elements [256, 383]  (u-shift = 256)
+            // Binding 384 = SAMPLER for inline s-register declarations (s-shift = 384).
+            //   s-registers (SMP)  → set 0, binding 384+register#    (s-shift = 384)
+            // SamplerDescriptorHeap → set 1, binding 0                (-fvk-bind-sampler-heap 1 0)
+            //
+            // Because binding 0 holds multiple descriptor types simultaneously,
+            // we use VK_EXT_mutable_descriptor_type (VK_DESCRIPTOR_TYPE_MUTABLE_EXT).
             {
-                constexpr uint32_t SRV_BASE  = 0;    constexpr uint32_t SRV_COUNT  = 128;
-                constexpr uint32_t CBV_BASE  = 128;  constexpr uint32_t CBV_COUNT  = 128;
-                constexpr uint32_t UAV_BASE  = 256;  constexpr uint32_t UAV_COUNT  = 128;
-                constexpr uint32_t SMP_BASE  = 384;  constexpr uint32_t SMP_COUNT  = 128;
+                constexpr uint32_t HEAP_MAX  = 65536 * 8; // matches DescriptorHeapFactory
+                constexpr uint32_t SMP_BASE  = 384;       // inline sampler binding (s-shift)
+                constexpr uint32_t SMP_COUNT = 128;       // max inline samplers
 
                 constexpr VkDescriptorBindingFlags bind_flags =
                     VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
                     VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
 
-                // ---- Set 0 layout: SRV + CBV + UAV -------------------------
-                // 4 bindings at offsets 0, 128, 256, 384 within the same set.
-                struct BindDef { uint32_t binding; VkDescriptorType type; uint32_t count; };
-                const BindDef defs[4] = {
-                    { SRV_BASE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,  SRV_COUNT },
-                    { CBV_BASE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, CBV_COUNT },
-                    { UAV_BASE, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, UAV_COUNT },
-                    { SMP_BASE, VK_DESCRIPTOR_TYPE_SAMPLER,        SMP_COUNT }, // inline sampler fallback
+                // Mutable descriptor type list for binding 0.
+                const VkDescriptorType mutable_types[] = {
+                    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                 };
+                VkMutableDescriptorTypeListEXT mutable_list{};
+                mutable_list.descriptorTypeCount = 4;
+                mutable_list.pDescriptorTypes    = mutable_types;
 
-                VkDescriptorSetLayoutBinding bindings[4]{};
-                VkDescriptorBindingFlags     bflags[4]{};
-                for (uint32_t bi = 0; bi < 4; ++bi)
+                // Bindings: 0 = mutable heap; 384..388 = inline static samplers s0..s4.
+                // Each s-register (s0..s4) maps to its own binding: sN → binding SMP_BASE+N.
+                // (With s-shift=384: s2 → binding 386, NOT element 2 of binding 384.)
+                constexpr uint32_t NUM_INLINE_SMP = 5; // s0..s4 in FrameLayout.h
+                constexpr uint32_t TOTAL_BINDINGS = 1 + NUM_INLINE_SMP; // mutable + 5 samplers
+
+                VkDescriptorSetLayoutBinding bindings[TOTAL_BINDINGS]{};
+                VkDescriptorBindingFlags     bflags[TOTAL_BINDINGS]{};
+
+                bindings[0].binding         = 0;
+                bindings[0].descriptorType  = VK_DESCRIPTOR_TYPE_MUTABLE_EXT;
+                bindings[0].descriptorCount = HEAP_MAX;
+                bindings[0].stageFlags      = VK_SHADER_STAGE_ALL;
+                bflags[0]                   = bind_flags;
+
+                for (uint32_t si = 0; si < NUM_INLINE_SMP; ++si)
                 {
-                    bindings[bi].binding         = defs[bi].binding;
-                    bindings[bi].descriptorType  = defs[bi].type;
-                    bindings[bi].descriptorCount = defs[bi].count;
-                    bindings[bi].stageFlags      = VK_SHADER_STAGE_ALL;
-                    bflags[bi]                   = bind_flags;
+                    bindings[1 + si].binding         = SMP_BASE + si; // 384, 385, 386, 387, 388
+                    bindings[1 + si].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
+                    bindings[1 + si].descriptorCount = 1;
+                    bindings[1 + si].stageFlags      = VK_SHADER_STAGE_ALL;
+                    bflags[1 + si]                   = bind_flags;
                 }
+
+                // Mutable type list: one entry per binding.
+                // Binding 0 = mutable; sampler bindings 384-388 = not mutable ({} list).
+                VkMutableDescriptorTypeListEXT mutable_lists[TOTAL_BINDINGS]{};
+                mutable_lists[0] = mutable_list; // binding 0
+                // mutable_lists[1..5] remain zero-initialised ({}) for sampler bindings
+
+                VkMutableDescriptorTypeCreateInfoEXT mutable_ci{
+                    VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT };
+                mutable_ci.mutableDescriptorTypeListCount = TOTAL_BINDINGS;
+                mutable_ci.pMutableDescriptorTypeLists    = mutable_lists;
 
                 VkDescriptorSetLayoutBindingFlagsCreateInfo ext_info{
                     VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
-                ext_info.bindingCount  = 4;
+                ext_info.bindingCount  = TOTAL_BINDINGS;
                 ext_info.pBindingFlags = bflags;
+
+                mutable_ci.pNext = nullptr;
+                ext_info.pNext   = &mutable_ci;
 
                 VkDescriptorSetLayoutCreateInfo layout_ci{
                     VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-                layout_ci.bindingCount = 4;
+                layout_ci.bindingCount = TOTAL_BINDINGS;
                 layout_ci.pBindings    = bindings;
                 layout_ci.flags        = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
                 layout_ci.pNext        = &ext_info;

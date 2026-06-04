@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_FrameInfo: register( b2, space0);
+#ifdef __spirv__
+struct _CB_FrameInfo { uint offset; };
+static _CB_FrameInfo pass_FrameInfo = { _hal_push.s0 };
+#else
+ConstantBuffer<CB> pass_FrameInfo: register(b0, space0);
+#endif
 
 ConstantBuffer<FrameInfo> CreateFrameInfo()
 {

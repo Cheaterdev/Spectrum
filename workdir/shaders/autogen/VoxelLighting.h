@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_VoxelLighting: register( b2, space5);
+#ifdef __spirv__
+struct _CB_VoxelLighting { uint offset; };
+static _CB_VoxelLighting pass_VoxelLighting = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_VoxelLighting: register(b5, space5);
+#endif
 
 ConstantBuffer<VoxelLighting> CreateVoxelLighting()
 {

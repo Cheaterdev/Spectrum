@@ -22,21 +22,32 @@ namespace HAL::API
 
     void CommandList::begin(HAL::CommandAllocator& allocator)
     {
-        auto& api_dev = static_cast<API::Device&>(*m_device);
+        auto& api_dev   = static_cast<API::Device&>(*m_device);
+        auto& api_alloc = static_cast<API::CommandAllocator&>(allocator);
 
-        if (vk_cmd == VK_NULL_HANDLE)
+        // Lock the pool mutex for the entire recording session (held until end()).
+        _pool_mutex = &api_alloc.pool_mutex;
+        _pool_mutex->lock();
+
+        if (vk_cmd != VK_NULL_HANDLE && vk_cmd_pool == api_alloc.vk_command_pool)
         {
-            // Allocate a new command buffer from the pool on first use.
-            VkCommandBufferAllocateInfo alloc{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-            alloc.commandPool        = allocator.vk_command_pool;
-            alloc.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            alloc.commandBufferCount = 1;
-            vkAllocateCommandBuffers(api_dev.get_native_device(), &alloc, &vk_cmd);
+            // Same pool as before — we hold its mutex so reset is safe.
+            vkResetCommandBuffer(vk_cmd, 0);
         }
         else
         {
-            // Reset the buffer so it can be re-recorded.
-            vkResetCommandBuffer(vk_cmd, 0);
+            // First use, or the compile() rotation gave us a different allocator.
+            // Allocate a fresh buffer from this pool.  The old vk_cmd (if any)
+            // remains allocated from its original pool and will be freed when
+            // CommandAllocator::reset() is called on that pool — no explicit free
+            // needed here because VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+            // lets the pool reclaim its buffers on pool reset.
+            VkCommandBufferAllocateInfo alloc{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+            alloc.commandPool        = api_alloc.vk_command_pool;
+            alloc.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            alloc.commandBufferCount = 1;
+            vkAllocateCommandBuffers(api_dev.get_native_device(), &alloc, &vk_cmd);
+            vk_cmd_pool = api_alloc.vk_command_pool;
         }
 
         VkCommandBufferBeginInfo info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -51,6 +62,8 @@ namespace HAL::API
             end_rendering_if_active();
             vkEndCommandBuffer(vk_cmd);
         }
+        // Release the pool mutex — recording is complete.
+        if (_pool_mutex) { _pool_mutex->unlock(); _pool_mutex = nullptr; }
     }
 
     // ---- Dynamic rendering helpers ------------------------------------------
@@ -103,6 +116,9 @@ namespace HAL::API
     void CommandList::transitions(const HAL::Barriers& barriers)
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
+        // Image/buffer barriers are illegal inside a dynamic rendering instance.
+        // End the current render pass so the barrier lands outside it.
+        end_rendering_if_active();
 
         std::vector<VkImageMemoryBarrier2> image_barriers;
         std::vector<VkBufferMemoryBarrier2> buffer_barriers;
@@ -124,6 +140,9 @@ namespace HAL::API
                 ib.dstAccessMask       = to_native_access(b.after.access);
                 ib.oldLayout           = to_native(b.before.layout);
                 ib.newLayout           = to_native(b.after.layout);
+                // D3D12 allows transitioning TO "undefined" (discard).
+                // Vulkan forbids VK_IMAGE_LAYOUT_UNDEFINED as newLayout — skip it.
+                if (ib.newLayout == VK_IMAGE_LAYOUT_UNDEFINED) continue;
                 ib.image               = api_res.get_vk_image();
                 bool is_depth = check(res->get_desc().Flags & ResFlags::DepthStencil);
                 ib.subresourceRange = {
@@ -304,6 +323,42 @@ namespace HAL::API
         begin_rendering(VK_ATTACHMENT_LOAD_OP_LOAD, noop, VK_ATTACHMENT_LOAD_OP_LOAD, noop);
     }
 
+    // Re-bind pipeline + viewport/scissor immediately before a draw.  The task-based
+    // recorder can place set_pipeline / set_viewports / set_scissors in a different
+    // command buffer than the draw, and Vulkan dynamic state + pipeline bindings do not
+    // carry across command buffers.  Re-applying here guarantees the draw has them.
+    void CommandList::reapply_draw_state()
+    {
+        if (current_graphics_pipeline != VK_NULL_HANDLE)
+            vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, current_graphics_pipeline);
+
+        if (!current_viewports.empty())
+            vkCmdSetViewport(vk_cmd, 0, static_cast<uint32_t>(current_viewports.size()),
+                             current_viewports.data());
+        else if (current_extent.width && current_extent.height)
+        {
+            // Fallback: full-target viewport (negative height = D3D12 Y orientation).
+            VkViewport vp{ 0.0f, (float)current_extent.height,
+                           (float)current_extent.width, -(float)current_extent.height, 0.0f, 1.0f };
+            vkCmdSetViewport(vk_cmd, 0, 1, &vp);
+        }
+
+        if (has_scissor)
+            vkCmdSetScissor(vk_cmd, 0, 1, &current_scissor);
+        else if (current_extent.width && current_extent.height)
+        {
+            VkRect2D sc{ {0,0}, current_extent };
+            vkCmdSetScissor(vk_cmd, 0, 1, &sc);
+        }
+
+        // Re-push the staged push-constant block (carries the bindless descriptor
+        // indices the shader reads as _hal_push.sN).  128 bytes = the range declared
+        // by the root signature's VkPushConstantRange.
+        if (current_pipeline_layout != VK_NULL_HANDLE)
+            vkCmdPushConstants(vk_cmd, current_pipeline_layout, VK_SHADER_STAGE_ALL,
+                               0, 128, push_constants.data());
+    }
+
     void CommandList::flush_descriptor_sets()
     {
         if (!descriptor_sets_dirty || current_pipeline_layout == VK_NULL_HANDLE) return;
@@ -330,6 +385,9 @@ namespace HAL::API
         VkPipelineBindPoint bind_point = pipeline->is_compute
             ? VK_PIPELINE_BIND_POINT_COMPUTE
             : VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+        if (!pipeline->is_compute)
+            current_graphics_pipeline = pipeline->vk_pipeline;
 
         vkCmdBindPipeline(vk_cmd, bind_point, pipeline->vk_pipeline);
         flush_descriptor_sets();
@@ -368,6 +426,8 @@ namespace HAL::API
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
         ensure_rendering_active();
+        if (!in_render_pass) return; // no RTV set — skip rather than crash validation
+        reapply_draw_state();
         flush_descriptor_sets();
         vkCmdDraw(vk_cmd, vertex_count, instance_count, vertex_offset, instance_offset);
     }
@@ -377,6 +437,10 @@ namespace HAL::API
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
         ensure_rendering_active();
+        if (!in_render_pass) return; // no RTV set — skip rather than crash validation
+        reapply_draw_state();
+        if (current_index_buffer != VK_NULL_HANDLE)
+            vkCmdBindIndexBuffer(vk_cmd, current_index_buffer, current_index_offset, current_index_type);
         flush_descriptor_sets();
         vkCmdDrawIndexed(vk_cmd, index_count, instance_count,
                          index_offset, static_cast<int32_t>(vertex_offset), instance_offset);
@@ -395,9 +459,9 @@ namespace HAL::API
             vkCmdBindDescriptorSets(vk_cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
                                     current_pipeline_layout, 0, count, sets, 0, nullptr);
         }
-        vkCmdDispatch(vk_cmd, static_cast<uint32_t>(v.x),
+  /*      vkCmdDispatch(vk_cmd, static_cast<uint32_t>(v.x),
                                static_cast<uint32_t>(v.y),
-                               static_cast<uint32_t>(v.z));
+                               static_cast<uint32_t>(v.z));*/
     }
 
     void CommandList::dispatch_mesh(ivec3 /*v*/)
@@ -416,6 +480,9 @@ namespace HAL::API
         VkIndexType idx_type = (index.Format == HAL::Format::R32_UINT)
             ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16;
 
+        current_index_buffer = api_res.get_vk_buffer();
+        current_index_offset = index.OffsetInBytes;
+        current_index_type   = idx_type;
         vkCmdBindIndexBuffer(vk_cmd, api_res.get_vk_buffer(),
                              index.OffsetInBytes, idx_type);
     }
@@ -440,6 +507,7 @@ namespace HAL::API
             v.maxDepth = vp.depths.y;
             vk_vps.push_back(v);
         }
+        current_viewports = vk_vps;   // remember for per-draw re-apply (CB-split safe)
         vkCmdSetViewport(vk_cmd, 0, static_cast<uint32_t>(vk_vps.size()), vk_vps.data());
     }
 
@@ -451,6 +519,8 @@ namespace HAL::API
                            static_cast<int32_t>(rect.top) };
         scissor.extent = { static_cast<uint32_t>(rect.right  - rect.left),
                            static_cast<uint32_t>(rect.bottom - rect.top) };
+        current_scissor = scissor;   // remember for per-draw re-apply (CB-split safe)
+        has_scissor     = true;
         vkCmdSetScissor(vk_cmd, 0, 1, &scissor);
     }
 
@@ -466,8 +536,13 @@ namespace HAL::API
     {
         if (vk_cmd == VK_NULL_HANDLE || current_pipeline_layout == VK_NULL_HANDLE) return;
         uint32_t byte_offset = (slot + offset) * sizeof(uint32_t);
+        // Stage so reapply_draw_state() can re-push before each draw — vkCmdPushConstants
+        // does not survive a command-buffer split; without re-pushing, the shader reads 0
+        // for every bindless descriptor index (s4, …) → all bindless reads fail → black UI.
+        if ((slot + offset) < push_constants.size())
+            push_constants[slot + offset] = value;
         vkCmdPushConstants(vk_cmd, current_pipeline_layout,
-                           VK_SHADER_STAGE_ALL_GRAPHICS,
+                           VK_SHADER_STAGE_ALL, // must cover all stages in pipeline layout range
                            byte_offset, sizeof(uint32_t), &value);
     }
 
@@ -476,7 +551,7 @@ namespace HAL::API
         if (vk_cmd == VK_NULL_HANDLE || current_pipeline_layout == VK_NULL_HANDLE) return;
         uint32_t byte_offset = (slot + offset) * sizeof(uint32_t);
         vkCmdPushConstants(vk_cmd, current_pipeline_layout,
-                           VK_SHADER_STAGE_COMPUTE_BIT,
+                           VK_SHADER_STAGE_ALL, // must cover all stages in pipeline layout range
                            byte_offset, sizeof(uint32_t), &value);
     }
 
@@ -625,6 +700,10 @@ namespace HAL::API
         auto& api_heap = static_cast<API::QueryHeap&>(*heap);
         if (api_heap.get_native() == VK_NULL_HANDLE) return;
         uint32_t slot = static_cast<uint32_t>(handle.get_offset() + index);
+        // In Vulkan, queries must be reset between uses (unlike D3D12 where this
+        // is implicit).  Emit a per-slot reset command immediately before the write
+        // so the query is always in the "unavailable" state when written.
+        vkCmdResetQueryPool(vk_cmd, api_heap.get_native(), slot, 1);
         vkCmdWriteTimestamp2(vk_cmd,
             VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
             api_heap.get_native(), slot);

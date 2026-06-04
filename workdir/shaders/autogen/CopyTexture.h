@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_CopyTexture: register( b2, space4);
+#ifdef __spirv__
+struct _CB_CopyTexture { uint offset; };
+static _CB_CopyTexture pass_CopyTexture = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_CopyTexture: register(b4, space4);
+#endif
 
 ConstantBuffer<CopyTexture> CreateCopyTexture()
 {

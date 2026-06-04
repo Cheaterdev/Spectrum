@@ -31,7 +31,7 @@ export namespace Table
 		uint& GetNumMipLevels() { return NumMipLevels; }
 		float2& GetTexelSize() { return TexelSize; }
 
-			HLSL::RWTexture2D<float4> GetOutMip(int i)
+			HLSL::RWTexture2D<float4>& GetOutMip(int i)
 	{
 		if (i == 0) return OutMip_0;
 		if (i == 1) return OutMip_1;

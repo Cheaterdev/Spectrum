@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_DenoiserReflectionReproject: register( b2, space5);
+#ifdef __spirv__
+struct _CB_DenoiserReflectionReproject { uint offset; };
+static _CB_DenoiserReflectionReproject pass_DenoiserReflectionReproject = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_DenoiserReflectionReproject: register(b5, space5);
+#endif
 
 ConstantBuffer<DenoiserReflectionReproject> CreateDenoiserReflectionReproject()
 {

@@ -23,8 +23,23 @@ export namespace HAL
             friend class HAL::Queue;
 
             VkCommandBuffer vk_cmd      = VK_NULL_HANDLE;
+            // The pool that allocated vk_cmd.  Tracked so begin() can detect when
+            // compile() rotates to a different CommandAllocator: in that case we must
+            // allocate a fresh buffer from the new pool rather than calling
+            // vkResetCommandBuffer on a buffer that belongs to a different pool —
+            // doing so would access the old pool without holding its mutex, which
+            // causes threading-validation errors when another thread uses that pool.
+            VkCommandPool   vk_cmd_pool = VK_NULL_HANDLE;
             CommandListType type;
             Device*         m_device    = nullptr;
+
+            // Pointer to the pool mutex; locked in begin(), unlocked in end().
+            // Raw pointer (not unique_lock) so CommandList stays copy-constructible —
+            // generic lambdas that take (auto list) copy the list by value, which would
+            // fail if CommandList had a non-copyable unique_lock member.
+            // The copy shares the pointer but never calls end(), so double-unlock cannot
+            // occur.  Only the canonical begin()/end() pair manages the lock.
+            std::mutex* _pool_mutex = nullptr;
 
             // Dynamic rendering state — populated by set_rtv(), consumed by draw calls.
             VkImageView current_color_view = VK_NULL_HANDLE;
@@ -35,6 +50,20 @@ export namespace HAL
             // Pipeline state
             VkPipelineLayout current_pipeline_layout = VK_NULL_HANDLE;
             bool             descriptor_sets_dirty   = false;
+            // Last bound graphics pipeline — re-bound before each draw because the
+            // recorder may split set_pipeline and the draw across command buffers.
+            VkPipeline       current_graphics_pipeline = VK_NULL_HANDLE;
+            // Last bound index buffer — re-bound before each indexed draw for the same reason.
+            VkBuffer         current_index_buffer = VK_NULL_HANDLE;
+            VkDeviceSize     current_index_offset = 0;
+            VkIndexType      current_index_type   = VK_INDEX_TYPE_UINT16;
+            // Last viewport(s) / scissor set by the engine.  Dynamic state does not
+            // survive a command-buffer split, so these are re-applied before every draw;
+            // without this the draw inherits an undefined/empty scissor and is fully
+            // clipped → nothing renders (the classic Vulkan "black screen" here).
+            std::vector<VkViewport> current_viewports;
+            VkRect2D                current_scissor   = {};
+            bool                    has_scissor       = false;
 
             // Bound descriptor heaps (set by set_descriptor_heaps())
             VkDescriptorSet  cbv_srv_uav_set = VK_NULL_HANDLE;
@@ -52,6 +81,7 @@ export namespace HAL
                                  VkAttachmentLoadOp depth_load, VkClearValue depth_clear);
             void ensure_rendering_active(); // lazily start render pass for draw calls
             void flush_descriptor_sets();  // bind pending descriptor sets
+            void reapply_draw_state();     // re-bind pipeline + viewport/scissor before a draw
 
         public:
             VkCommandBuffer get_native() const { return vk_cmd; }

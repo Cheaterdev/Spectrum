@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_VoxelUpscale: register( b2, space6);
+#ifdef __spirv__
+struct _CB_VoxelUpscale { uint offset; };
+static _CB_VoxelUpscale pass_VoxelUpscale = { _hal_push.s6 };
+#else
+ConstantBuffer<CB> pass_VoxelUpscale: register(b6, space6);
+#endif
 
 ConstantBuffer<VoxelUpscale> CreateVoxelUpscale()
 {

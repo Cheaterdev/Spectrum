@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_EnvFilter: register( b2, space5);
+#ifdef __spirv__
+struct _CB_EnvFilter { uint offset; };
+static _CB_EnvFilter pass_EnvFilter = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_EnvFilter: register(b5, space5);
+#endif
 
 ConstantBuffer<EnvFilter> CreateEnvFilter()
 {

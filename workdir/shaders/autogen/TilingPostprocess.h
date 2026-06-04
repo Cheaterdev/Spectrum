@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_TilingPostprocess: register( b2, space2);
+#ifdef __spirv__
+struct _CB_TilingPostprocess { uint offset; };
+static _CB_TilingPostprocess pass_TilingPostprocess = { _hal_push.s2 };
+#else
+ConstantBuffer<CB> pass_TilingPostprocess: register(b2, space2);
+#endif
 
 ConstantBuffer<TilingPostprocess> CreateTilingPostprocess()
 {

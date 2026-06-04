@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_RaytracingRays: register( b2, space6);
+#ifdef __spirv__
+struct _CB_RaytracingRays { uint offset; };
+static _CB_RaytracingRays pass_RaytracingRays = { _hal_push.s6 };
+#else
+ConstantBuffer<CB> pass_RaytracingRays: register(b6, space6);
+#endif
 
 ConstantBuffer<RaytracingRays> CreateRaytracingRays()
 {

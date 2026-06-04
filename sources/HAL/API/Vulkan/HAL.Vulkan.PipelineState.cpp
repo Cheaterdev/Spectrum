@@ -157,13 +157,15 @@ namespace HAL
 
         std::vector<VkPipelineShaderStageCreateInfo> stages;
         std::vector<VkShaderModule> modules_to_destroy;
-
         auto add_stage = [&](VkShaderStageFlagBits stage, auto& shader_ptr)
         {
             if (!shader_ptr) return;
             const auto& blob = shader_ptr->get_blob();
             if (blob.empty()) return;
-            auto si = make_stage(stage, blob);
+            // Use the entry point name from compilation (-E flag), e.g. "VS", "PS".
+            const auto& ep = shader_ptr->blob.entry_point;
+            const char* entry = ep.empty() ? "main" : ep.c_str();
+            auto si = make_stage(stage, blob, entry);
             if (si.module != VK_NULL_HANDLE)
             {
                 stages.push_back(si);
@@ -192,7 +194,14 @@ namespace HAL
             VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
         raster.polygonMode = to_vk_fill(desc.rasterizer.fill_mode);
         raster.cullMode    = to_vk_cull(desc.rasterizer.cull_mode);
-        raster.frontFace   = VK_FRONT_FACE_CLOCKWISE; // match D3D12 default
+        // We render with a NEGATIVE-height viewport (set_viewports() in the command
+        // list) to match D3D12's framebuffer Y orientation.  That Y-flip inverts the
+        // rasterizer's signed-area / winding computation, so D3D12's clockwise-front
+        // triangles end up counter-clockwise in Vulkan framebuffer space.  To keep the
+        // SAME triangles front-facing (and therefore NOT back-face-culled), the front
+        // face must be the OPPOSITE of D3D12's CW default: COUNTER_CLOCKWISE.
+        // Using CLOCKWISE here culled every back-cull PSO (e.g. NinePatch) → black UI.
+        raster.frontFace   = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         raster.lineWidth   = 1.0f;
 
         // Conservative rasterization (Phase 5: check extension availability)
@@ -289,12 +298,22 @@ namespace HAL
         rendering_ci.stencilAttachmentFormat = (desc.rtv.enable_stencil && desc.rtv.enable_depth)
             ? to_native(desc.rtv.ds_format) : VK_FORMAT_UNDEFINED;
 
+        // ---- Tessellation state (required when hull/domain shaders are present) ---
+        VkPipelineTessellationStateCreateInfo tess_ci{
+            VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO };
+        // Default to 3 control points (triangle patches).  The actual runtime
+        // value is supplied via set_topology(); for now most tessellated meshes
+        // use triangle patches.  TODO: store patch_control_points in PSO desc.
+        tess_ci.patchControlPoints = 3;
+        const bool has_tessellation = (desc.hull != nullptr) || (desc.domain != nullptr);
+
         // ---- Graphics pipeline ---------------------------------------------
         VkGraphicsPipelineCreateInfo gp_ci{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
         gp_ci.stageCount          = static_cast<uint32_t>(stages.size());
         gp_ci.pStages             = stages.data();
         gp_ci.pVertexInputState   = &vi;
         gp_ci.pInputAssemblyState = &ia;
+        gp_ci.pTessellationState  = has_tessellation ? &tess_ci : nullptr;
         gp_ci.pRasterizationState = &raster;
         gp_ci.pMultisampleState   = &ms;
         gp_ci.pDepthStencilState  = &ds;
@@ -340,6 +359,10 @@ namespace HAL
         const auto& blob = desc.shader->get_blob();
         if (blob.empty() || blob.size() % 4 != 0) return;
 
+        // Use the entry point name from compilation (-E flag), e.g. "CS".
+        const auto& ep = desc.shader->blob.entry_point;
+        std::string cs_entry = ep.empty() ? "main" : ep;
+
         VkShaderModuleCreateInfo module_ci{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
         module_ci.codeSize = blob.size();
         module_ci.pCode    = reinterpret_cast<const uint32_t*>(blob.data());
@@ -352,7 +375,7 @@ namespace HAL
         cp_ci.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         cp_ci.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
         cp_ci.stage.module = cs_module;
-        cp_ci.stage.pName  = "main";
+        cp_ci.stage.pName  = cs_entry.c_str();
         cp_ci.layout       = layout;
 
         VkPipeline pipeline = VK_NULL_HANDLE;

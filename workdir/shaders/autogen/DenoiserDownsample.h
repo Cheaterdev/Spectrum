@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_DenoiserDownsample: register( b2, space6);
+#ifdef __spirv__
+struct _CB_DenoiserDownsample { uint offset; };
+static _CB_DenoiserDownsample pass_DenoiserDownsample = { _hal_push.s6 };
+#else
+ConstantBuffer<CB> pass_DenoiserDownsample: register(b6, space6);
+#endif
 
 ConstantBuffer<DenoiserDownsample> CreateDenoiserDownsample()
 {

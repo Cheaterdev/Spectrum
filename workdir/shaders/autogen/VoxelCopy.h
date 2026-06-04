@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_VoxelCopy: register( b2, space5);
+#ifdef __spirv__
+struct _CB_VoxelCopy { uint offset; };
+static _CB_VoxelCopy pass_VoxelCopy = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_VoxelCopy: register(b5, space5);
+#endif
 
 ConstantBuffer<VoxelCopy> CreateVoxelCopy()
 {

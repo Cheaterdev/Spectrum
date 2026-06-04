@@ -55,6 +55,16 @@ export{
 				{
 					init_func(s);
 				}
+				// Also reset existing overflow-map entries (ids >= part_count).
+				// Without this, per-command-list CPU states with ids >= 128 retain
+				// stale used=true flags and dangling first_usage/last_usage pointers
+				// from the previous frame (usage_points.clear() frees them in
+				// on_execute).  Accessing those dangling pointers in compile_transitions
+				// is UB and prevents the correct PRESENT→COLOR_ATTACHMENT barrier from
+				// being emitted, causing the swapchain image to render black.
+				std::lock_guard<SpinLock> guard(states_lock);
+				for (auto& [k, v] : state_map)
+					init_func(v);
 			}
 		}
 	};

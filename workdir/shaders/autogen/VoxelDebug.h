@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_VoxelDebug: register( b2, space5);
+#ifdef __spirv__
+struct _CB_VoxelDebug { uint offset; };
+static _CB_VoxelDebug pass_VoxelDebug = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_VoxelDebug: register(b5, space5);
+#endif
 
 ConstantBuffer<VoxelDebug> CreateVoxelDebug()
 {

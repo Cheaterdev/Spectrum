@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_PSSMDataGlobal: register( b2, space5);
+#ifdef __spirv__
+struct _CB_PSSMDataGlobal { uint offset; };
+static _CB_PSSMDataGlobal pass_PSSMDataGlobal = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_PSSMDataGlobal: register(b5, space5);
+#endif
 
 ConstantBuffer<PSSMDataGlobal> CreatePSSMDataGlobal()
 {

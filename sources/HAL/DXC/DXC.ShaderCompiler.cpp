@@ -205,12 +205,14 @@ namespace HAL
 		for (auto& extra : get_extra_compile_args(target))
 			compilationArguments.push_back(extra);
 
-		if (check(options & ShaderOptions::FP16))
 		{
-			// -enable-16bit-types causes DXC to emit native OpTypeImage %half in SPIR-V.
-			// Vulkan SPIRV spec (VUID-StandaloneSpirv-OpTypeImage-04656) requires image
-			// sampled types to be 32-bit — there is no extension that relaxes this.
-			// Skip the flag for SPIRV targets so half/min16float promote to float32.
+			// -enable-16bit-types makes `half` a native 16-bit type in DXIL instead of a
+			// min-precision alias.  Without it, the DXIL validator rejects bitcast operations
+			// on `half` (e.g. in FFX denoiser shaders that use asuint(half)).
+			// For SPIRV targets we must NOT set this flag: DXC would emit native
+			// OpTypeImage %half which violates VUID-StandaloneSpirv-OpTypeImage-04656
+			// (sampled-image component type must be 32-bit).  The Vulkan shaders instead
+			// handle float16 via explicit #ifdef __spirv__ + float16_t aliases.
 			bool is_spirv = std::any_of(compilationArguments.begin(), compilationArguments.end(),
 				[](const std::wstring& a) { return a == L"-spirv"; });
 			if (!is_spirv)
@@ -287,6 +289,7 @@ namespace HAL
 		// SPIR-V reflection).  See reflect_shader() seam at top of this TU.
 		reflect_shader(library, reflectionBuffer, entry_point, blob_str);
 					*/
+		blob_str.entry_point = entry_point; // store so pipeline creation can use it
 		return std::move(blob_str);
 
 	}

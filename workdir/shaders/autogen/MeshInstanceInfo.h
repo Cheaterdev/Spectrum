@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_MeshInstanceInfo: register( b2, space6);
+#ifdef __spirv__
+struct _CB_MeshInstanceInfo { uint offset; };
+static _CB_MeshInstanceInfo pass_MeshInstanceInfo = { _hal_push.s6 };
+#else
+ConstantBuffer<CB> pass_MeshInstanceInfo: register(b6, space6);
+#endif
 
 ConstantBuffer<MeshInstanceInfo> CreateMeshInstanceInfo()
 {

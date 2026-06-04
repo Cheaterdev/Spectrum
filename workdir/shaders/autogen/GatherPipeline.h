@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_GatherPipeline: register( b2, space5);
+#ifdef __spirv__
+struct _CB_GatherPipeline { uint offset; };
+static _CB_GatherPipeline pass_GatherPipeline = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_GatherPipeline: register(b5, space5);
+#endif
 
 ConstantBuffer<GatherPipeline> CreateGatherPipeline()
 {

@@ -21,6 +21,9 @@ export namespace HAL
             VkSemaphore   pending_wait_sem   = VK_NULL_HANDLE;
             VkSemaphore   pending_signal_sem = VK_NULL_HANDLE;
 
+            // Protects all vkQueue* calls — VkQueue must be externally synchronized.
+            mutable std::mutex vk_queue_mutex;
+
             void execute(const API::CommandList* list);
             void flush();
             void signal(Fence& fence, Fence::CounterType value);
@@ -38,6 +41,23 @@ export namespace HAL
             {
                 pending_wait_sem   = wait;
                 pending_signal_sem = signal;
+            }
+
+            // Thread-safe present: takes the queue mutex so submit and present
+            // cannot race.  Returns the VkResult from vkQueuePresentKHR.
+            VkResult present(VkPresentInfoKHR& pi) noexcept
+            {
+                if (vk_queue == VK_NULL_HANDLE) return VK_ERROR_DEVICE_LOST;
+                std::lock_guard lock(vk_queue_mutex);
+                return vkQueuePresentKHR(vk_queue, &pi);
+            }
+
+            // Thread-safe raw submit used by SwapChain for its transition CB.
+            void submit_raw(VkSubmitInfo2& info) noexcept
+            {
+                if (vk_queue == VK_NULL_HANDLE) return;
+                std::lock_guard lock(vk_queue_mutex);
+                vkQueueSubmit2(vk_queue, 1, &info, VK_NULL_HANDLE);
             }
         };
 

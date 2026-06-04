@@ -72,7 +72,7 @@ if(!index_buffer)
 
 		float tl = 0, tt = 0, tr = 0, tb = 0;
 
-		if (item.texture)
+		if (item.texture.resource)
 		{
 			tl = static_cast<float>(item.padding.left) / item.texture.get_desc().as_texture().Dimensions.x;
 			tt = static_cast<float>(item.padding.top) / item.texture.get_desc().as_texture().Dimensions.y;
@@ -83,8 +83,8 @@ if(!index_buffer)
 		sizer new_tc = item.tc;
 		if (item.tiled)
 		{
-			new_tc.right = r.w / item.texture.get_size().x;
-			new_tc.bottom = r.h / item.texture.get_size().y;
+		//	new_tc.right = r.w / item.texture.get_size().x;
+		//	new_tc.bottom = r.h / item.texture.get_size().y;
 
 		}
 

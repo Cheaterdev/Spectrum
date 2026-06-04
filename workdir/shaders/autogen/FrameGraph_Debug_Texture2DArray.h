@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_FrameGraph_Debug_Texture2DArray: register( b2, space5);
+#ifdef __spirv__
+struct _CB_FrameGraph_Debug_Texture2DArray { uint offset; };
+static _CB_FrameGraph_Debug_Texture2DArray pass_FrameGraph_Debug_Texture2DArray = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_FrameGraph_Debug_Texture2DArray: register(b5, space5);
+#endif
 
 ConstantBuffer<FrameGraph_Debug_Texture2DArray> CreateFrameGraph_Debug_Texture2DArray()
 {

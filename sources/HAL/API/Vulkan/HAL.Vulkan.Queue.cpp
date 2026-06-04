@@ -108,6 +108,7 @@ namespace HAL
             submit.signalSemaphoreInfoCount  = sig_count;
             submit.pSignalSemaphoreInfos     = sig_count ? &sig_info  : nullptr;
 
+            std::lock_guard lock(vk_queue_mutex);
             vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE);
             // Note: no flush() — frame pacing is handled by timeline semaphores in signal().
         }
@@ -115,7 +116,10 @@ namespace HAL
         void Queue::flush()
         {
             if (vk_queue != VK_NULL_HANDLE)
+            {
+                std::lock_guard lock(vk_queue_mutex);
                 vkQueueWaitIdle(vk_queue);
+            }
         }
 
         void Queue::signal(Fence& fence, Fence::CounterType value)
@@ -132,6 +136,7 @@ namespace HAL
             submit.signalSemaphoreInfoCount = 1;
             submit.pSignalSemaphoreInfos    = &sem;
 
+            std::lock_guard lock(vk_queue_mutex);
             vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE);
         }
 
@@ -149,6 +154,7 @@ namespace HAL
             submit.waitSemaphoreInfoCount = 1;
             submit.pWaitSemaphoreInfos    = &sem;
 
+            std::lock_guard lock(vk_queue_mutex);
             vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE);
         }
 

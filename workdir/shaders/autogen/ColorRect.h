@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_ColorRect: register( b2, space4);
+#ifdef __spirv__
+struct _CB_ColorRect { uint offset; };
+static _CB_ColorRect pass_ColorRect = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_ColorRect: register(b4, space4);
+#endif
 
 ConstantBuffer<ColorRect> CreateColorRect()
 {

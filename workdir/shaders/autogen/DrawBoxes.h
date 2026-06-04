@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_DrawBoxes: register( b2, space5);
+#ifdef __spirv__
+struct _CB_DrawBoxes { uint offset; };
+static _CB_DrawBoxes pass_DrawBoxes = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_DrawBoxes: register(b5, space5);
+#endif
 
 ConstantBuffer<DrawBoxes> CreateDrawBoxes()
 {

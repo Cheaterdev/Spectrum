@@ -58,7 +58,7 @@ export namespace PSOS
 			mpso.hull.flags = HAL::ShaderOptions::None;
 			
 
-			mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM };	
+			mpso.rtv_formats = { HAL::Format::B8G8R8A8_UNORM };	
 			mpso.blend = { HAL::Blends::AlphaBlend };
 
 			mpso.enable_depth =false;

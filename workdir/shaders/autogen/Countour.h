@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_Countour: register( b2, space4);
+#ifdef __spirv__
+struct _CB_Countour { uint offset; };
+static _CB_Countour pass_Countour = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_Countour: register(b4, space4);
+#endif
 
 ConstantBuffer<Countour> CreateCountour()
 {

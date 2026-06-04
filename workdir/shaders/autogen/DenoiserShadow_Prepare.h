@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_DenoiserShadow_Prepare: register( b2, space4);
+#ifdef __spirv__
+struct _CB_DenoiserShadow_Prepare { uint offset; };
+static _CB_DenoiserShadow_Prepare pass_DenoiserShadow_Prepare = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_DenoiserShadow_Prepare: register(b4, space4);
+#endif
 
 ConstantBuffer<DenoiserShadow_Prepare> CreateDenoiserShadow_Prepare()
 {

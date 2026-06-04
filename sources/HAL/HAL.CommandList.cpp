@@ -1595,7 +1595,7 @@ namespace HAL
 
 	void TransitionCommandList::create_transition_list(FrameResources& frame, const HAL::Barriers& transitions)
 	{
-
+			   /*
 		ASSERT(false);
 		device.context_generator.generate(this);
 
@@ -1629,7 +1629,7 @@ namespace HAL
 		compiler.compile(*ca);
 		end();
 
-		frame.free_ca(ca);
+		frame.free_ca(ca);*/
 
 	}
 

@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_LineRender: register( b2, space4);
+#ifdef __spirv__
+struct _CB_LineRender { uint offset; };
+static _CB_LineRender pass_LineRender = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_LineRender: register(b4, space4);
+#endif
 
 ConstantBuffer<LineRender> CreateLineRender()
 {

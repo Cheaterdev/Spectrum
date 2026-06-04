@@ -32,12 +32,16 @@ namespace HAL
     // -fvk-u-shift 256 all        : UAVs start at binding 256
     // -fvk-s-shift 384 all        : Samplers start at binding 384
     // (Must match the VkDescriptorSetLayoutBinding layout in Device::init)
-    // -fvk-bind-resource-heap 0 0 : SM6.6 ResourceDescriptorHeap → set 0, binding 0
-    //                               matches: b0=SAMPLED_IMAGE, b1=STORAGE_IMAGE,
-    //                                        b2=UNIFORM_BUFFER, b3=STORAGE_BUFFER
-    // -fvk-bind-sampler-heap 0 1  : SM6.6 SamplerDescriptorHeap → set 1, binding 0
-    //                               matches: b0=SAMPLER
-    // (Requires DXC 1.9+; added alongside SM6.6 SPIRV bindless support)
+    // -fvk-bind-resource-heap 0 0 : SM6.6 ResourceDescriptorHeap → set 0, binding 0 (MUTABLE)
+    //                               All types (CBV/SRV/UAV/buffer) land at binding 0.
+    //                               Shifts partition the element index range, not the binding.
+    // -fvk-bind-sampler-heap 1 0  : SM6.6 SamplerDescriptorHeap → set 1, binding 0
+    //                               matches VkDescriptorSetLayout sampler_layout (set 1)
+    // Slot push constants: slot HLSL uses [[vk::push_constant]] ConstantBuffer<_CB_X>
+    //                      with member [[vk::offset(slot.id*4)]].  DXC places the member
+    //                      at byte slot.id*4 in the SPIRV push constant block, matching
+    //                      the HAL's vkCmdPushConstants offset = slot*4.
+    //                      [[vk::push_constant]] is silently ignored by the DXIL path.
     //
     // float16_tN aliases: -enable-16bit-types is intentionally suppressed for SPIRV
     // (Vulkan SPIRV spec requires image sampled types to be 32-bit).  Shaders that
@@ -55,7 +59,9 @@ namespace HAL
             L"-fvk-u-shift", L"256", L"all",
             L"-fvk-s-shift", L"384", L"all",
             L"-fvk-bind-resource-heap", L"0", L"0",
-            L"-fvk-bind-sampler-heap",  L"0", L"1",
+            L"-fvk-bind-sampler-heap",  L"1", L"0",
+            // Slot ConstantBuffers use [[vk::push_constant]] + [[vk::offset(slot*4)]] in HLSL.
+            // No -fvk-push-constant-space needed; the offset is encoded directly in the struct.
             // float16_t aliases — map 16-bit scalar/vector types to 32-bit
             // so shaders compile without -enable-16bit-types (blocked for SPIRV;
             // see DXC.ShaderCompiler.cpp).  Texture2D<float16_tN> → Texture2D<floatN>.

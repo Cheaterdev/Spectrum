@@ -45,6 +45,10 @@ namespace HAL
         ci.queryCount = desc.Count;
         vkCreateQueryPool(vk_dev, &ci, nullptr, &vk_query_pool);
 
+        // Vulkan requires all queries to be reset before first use.
+        if (vk_query_pool != VK_NULL_HANDLE)
+            vkResetQueryPool(vk_dev, vk_query_pool, 0, desc.Count);
+
         read_back_data.resize(desc.Count);
     }
 }
