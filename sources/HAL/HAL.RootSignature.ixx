@@ -2,15 +2,15 @@ export module HAL:RootSignature;
 
 import Core;
 
-export import :Types;
-export import :Sampler;
-export import :Utils;
+import :Utils;
+import :Types;
+import :Sampler;
 
 
-export import :API.RootSignature;
-export import :Device;
-export import :Enums;
-export import :Concepts;
+import :API.RootSignature;
+import :Device;
+import :Enums;
+import :Concepts;
 
 export namespace HAL
 {

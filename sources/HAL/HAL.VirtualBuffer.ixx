@@ -1,6 +1,6 @@
 export module HAL:VirtualBuffer;
 
-export import :Concepts;
+import :Concepts;
 import :Types;
 import :Debug;
 import :TiledMemoryManager;

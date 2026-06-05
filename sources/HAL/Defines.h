@@ -8,7 +8,7 @@
 #include "Core/Defines.h"
 
 // ---- D3D12 result checking --------------------------------------------------
-#include "D3D12/macros.h"
+#include "API/D3D12/macros.h"
 
 // ---- Render-target format lists (X-macro style) ----------------------------
 #include "Formats.h"

@@ -32,21 +32,35 @@ export
 			std::vector<ResourceInfo> resources;
 
 			UINT descriptor_size;
-			
+
 		public:
 			using ptr = std::shared_ptr<DescriptorHeap>;
 
 			DescriptorHeap(Device& device, uint num, DescriptorHeapType type, DescriptorHeapFlags flags = DescriptorHeapFlags::None);
 
-			virtual ~DescriptorHeap()
-			{
+			virtual ~DescriptorHeap() {}
 
-			}
 			ResourceInfo& get_resource_info(uint offset);
 			uint get_size();
-
 		};
 
+		class Descriptor : public API::Descriptor
+		{
+			DescriptorHeap& heap;
+			const uint offset;
+
+			Descriptor(DescriptorHeap& heap, uint offset);
+
+			friend class API::DescriptorHeap;
+		public:
+			void operator=(const Descriptor& r);
+
+			void place(const Views::ShaderResource& view);
+			void place(const Views::UnorderedAccess& view);
+			void place(const Views::RenderTarget& view);
+			void place(const Views::ConstantBuffer& view);
+			void place(const Views::DepthStencil& view);
+		};
 
 		struct DescriptorHeapIndex
 		{
