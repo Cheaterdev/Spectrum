@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bohdan\\\\Documents\\\\GitHub\\\\Spectrum\\\\sources\\\\RenderSystem\\\\GUI\" -Recurse -Filter \"*.h\")",
-      "Bash(Select-Object -First 30)"
-    ]
-  }
-}

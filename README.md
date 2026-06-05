@@ -1,4 +1,4 @@
-![img](https://ci.appveyor.com/api/projects/status/github/cheaterdev/spectrum)
+[![Build](https://github.com/Cheaterdev/Spectrum/actions/workflows/build.yml/badge.svg)](https://github.com/Cheaterdev/Spectrum/actions/workflows/build.yml)
 
 # Spectrum
 

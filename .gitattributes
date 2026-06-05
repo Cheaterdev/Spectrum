@@ -3,6 +3,14 @@
 ###############################################################################
 * text=auto
 
+# Language detection
+sources/**/*.h linguist-language=C++
+workdir/shaders/*.hlsl linguist-language=HLSL
+workdir/shaders/*.hlsli linguist-language=HLSL
+workdir/shaders/*.h linguist-language=HLSL
+Sharpmake/** linguist-vendored
+projects/** linguist-generated
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #
