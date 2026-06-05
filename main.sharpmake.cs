@@ -14,10 +14,19 @@ namespace Spectrum
 
     public class CustomTarget : ITarget
     {
-        public Platform Platform; 
+        public Platform Platform;
         public DevEnv DevEnv;
         public Optimization Optimization;
         public Mode Mode;
+    }
+
+    public static class Vcpkg
+    {
+        public const string Triplet = "x64-windows";
+        public const string InstalledRoot = @"[project.SharpmakeCsPath]\vcpkg_installed\" + Triplet;
+        public const string Bin = InstalledRoot + @"\" + Triplet + @"\bin";
+        public const string DebugBin = InstalledRoot + @"\" + Triplet + @"\debug\bin";
+        public const string Include = InstalledRoot + @"\" + Triplet + @"\include";
     }
 
 
@@ -48,8 +57,9 @@ namespace Spectrum
 
             CustomProperties.Add("VcpkgEnabled", "true");
             CustomProperties.Add("VcpkgEnableManifest", "true");
-			CustomProperties.Add("VcpkgTriplet", "x64-windows");
+			CustomProperties.Add("VcpkgTriplet", Vcpkg.Triplet);
 			CustomProperties.Add("VcpkgConfiguration", "Release");
+            CustomProperties.Add("VcpkgApplocalDeps", "true");
             CustomProperties.Add("ScanSourceForModuleDependencies", "true");
          //   BlobWorkFileCount = 8;
         //    GeneratableBlobCount  = 8;
@@ -171,6 +181,7 @@ namespace Spectrum
             base.ConfigureAll(conf, target);
 
             conf.Output = Configuration.OutputType.Exe;
+            conf.TargetPath = @"[project.SharpmakeCsPath]\bin\" + target.Mode.ToString();
         }
 
     }
@@ -219,24 +230,17 @@ namespace Spectrum
             { // PIX
 			//	conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\PIX\Include\WinPixEventRuntime", 66);
             //    conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64\WinPixEventRuntime.dll");
-			
+
 	//		    conf.LibraryFiles.Add("WinPixEventRuntime.lib");
            //     conf.LibraryPaths.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64", 66);
 			}
 
-
-            {
-                conf.TargetCopyFilesToSubDirectory.Add( new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\debug\bin\D3D12Core.dll","D3D12"));
-                conf.TargetCopyFilesToSubDirectory.Add( new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\debug\bin\d3d12SDKLayers.dll","D3D12"));
-            }
-
-
-            // fix: dstorage vcpkg issue -> copy manually
-            conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dstoragecore.dll");
-            conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxcompiler.dll");
-            conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxil.dll");
-
-         //   
+            // runtime-loaded DLLs not detected by VcpkgApplocalDeps
+            conf.TargetCopyFiles.Add(Vcpkg.Bin + @"\dstoragecore.dll");
+            conf.TargetCopyFiles.Add(Vcpkg.Bin + @"\dxcompiler.dll");
+            conf.TargetCopyFiles.Add(Vcpkg.Bin + @"\dxil.dll");
+            conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(Vcpkg.DebugBin + @"\D3D12Core.dll", "D3D12"));
+            conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(Vcpkg.DebugBin + @"\d3d12SDKLayers.dll", "D3D12"));
 
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("5260")); // adding inline to header units
 
@@ -303,10 +307,6 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
             conf.AddPublicDependency<HAL>(target);
-
-            // FreeType — provided via vcpkg; add the include path explicitly so
-            // the module-purview #include in TextSystem.cpp resolves correctly.
-            conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\include");
         }
     }
 

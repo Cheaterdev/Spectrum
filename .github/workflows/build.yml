@@ -1,0 +1,83 @@
+name: Build Spectrum
+
+on:
+  push:
+  pull_request:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore vcpkg installed packages
+      id: vcpkg-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ./vcpkg_installed
+        key: vcpkg-v2-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+        restore-keys: |
+          vcpkg-v2-${{ runner.os }}-
+
+    - name: Setup project
+      shell: cmd
+      run: setup.bat
+
+    - name: Generate Visual Studio projects
+      shell: cmd
+      run: generate_project.bat
+
+    - name: Install vcpkg dependencies
+      shell: cmd
+      run: vcpkg install --triplet x64-windows --x-install-root ./vcpkg_installed/x64-windows
+
+    - name: Save vcpkg installed packages
+      if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ./vcpkg_installed
+        key: vcpkg-v2-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+
+    - name: Integrate vcpkg with MSBuild
+      shell: cmd
+      run: vcpkg integrate install
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Debug vcpkg installed dir
+      shell: powershell
+      run: |
+        msbuild ./projects/modules/modules.vcxproj `
+          /p:Configuration=Retail /p:Platform=x64 `
+          /pp:preprocessed.xml
+        Select-String "_ZVcpkgCurrentInstalledDir" preprocessed.xml | Select-Object -First 5
+
+    - name: Build solution
+      run: msbuild ./projects/spectrum.sln /p:Configuration=Retail /p:Platform=x64 /m /v:minimal
+
+    - name: Copy build output to workdir
+      shell: powershell
+      run: |
+        Copy-Item -Path ./bin/Retail/* -Destination ./workdir/ -Recurse -Force
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: build-output
+        path: |
+          ./workdir/
+        retention-days: 7
