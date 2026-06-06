@@ -248,7 +248,7 @@ export namespace DStorage
     inline constexpr unsigned MAX_QUEUE_CAPACITY = DSTORAGE_MAX_QUEUE_CAPACITY;
 }
 
-export extern "C++" namespace DirectXTex
+export namespace DirectXTex
 {
     using TexMetadata        = ::DirectX::TexMetadata;
     using ScratchImage       = ::DirectX::ScratchImage;
@@ -258,12 +258,15 @@ export extern "C++" namespace DirectXTex
     using TEX_COMPRESS_FLAGS = ::DirectX::TEX_COMPRESS_FLAGS;
     using TEX_FILTER_FLAGS   = ::DirectX::TEX_FILTER_FLAGS;
     using TEX_DIMENSION      = ::DirectX::TEX_DIMENSION;
-    using ::DirectX::GetMetadataFromTGAFile;
-    using ::DirectX::GetMetadataFromWICFile;
-    using ::DirectX::LoadFromTGAMemory;
-    using ::DirectX::LoadFromDDSMemory;
-    using ::DirectX::LoadFromWICMemory;
-    using ::DirectX::GenerateMipMaps;
-    using ::DirectX::Compress;
-}
 
+    // -------------------------------------------------------------------------
+    // Free functions (implementations in directxtex.cpp)
+    // -------------------------------------------------------------------------
+	HRESULT GetMetadataFromTGAFile(const wchar_t* szFile, DirectX::TexMetadata& metadata) noexcept { return DirectX::GetMetadataFromTGAFile(szFile, metadata); }
+	HRESULT GetMetadataFromWICFile(const wchar_t* szFile, DirectX::WIC_FLAGS flags, DirectX::TexMetadata& metadata) noexcept { return DirectX::GetMetadataFromWICFile(szFile, flags, metadata); }
+	HRESULT LoadFromTGAMemory(const void* pSource, size_t size, DirectX::TexMetadata* metadata, DirectX::ScratchImage& image) noexcept { return DirectX::LoadFromTGAMemory(pSource, size, metadata, image); }
+	HRESULT LoadFromDDSMemory(const void* pSource, size_t size, DirectX::DDS_FLAGS flags, DirectX::TexMetadata* metadata, DirectX::ScratchImage& image) noexcept { return DirectX::LoadFromDDSMemory(pSource, size, flags, metadata, image); }
+	HRESULT LoadFromWICMemory(const void* pSource, size_t size, DirectX::WIC_FLAGS flags, DirectX::TexMetadata* metadata, DirectX::ScratchImage& image) noexcept { return DirectX::LoadFromWICMemory(pSource, size, flags, metadata, image); }
+	HRESULT GenerateMipMaps(const DirectX::Image* srcImages, size_t nimages, const DirectX::TexMetadata& metadata, DirectX::TEX_FILTER_FLAGS filter, size_t levels, DirectX::ScratchImage& mipChain) noexcept { return DirectX::GenerateMipMaps(srcImages, nimages, metadata, filter, levels, mipChain); }
+//	HRESULT Compress(const DirectX::Image* srcImages, size_t nimages, const DirectX::TexMetadata& metadata, DXGI_FORMAT format, DirectX::TEX_COMPRESS_FLAGS compress, float threshold, DirectX::ScratchImage& cImage) noexcept { return DirectX::Compress(srcImages, nimages, metadata, format, compress, threshold, cImage); }
+}

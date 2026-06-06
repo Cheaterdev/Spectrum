@@ -162,7 +162,7 @@ namespace HAL
         metadata.arraySize = orig->array_size;
         metadata.depth = orig->depth;
         metadata.format = to_native(orig->format);
-        metadata.dimension = DirectXTex::TEX_DIMENSION_TEXTURE2D;
+        metadata.dimension = DirectXTex::TEX_DIMENSION::TEX_DIMENSION_TEXTURE2D;
         metadata.mipLevels = orig->mip_maps - 2;
         metadata.miscFlags = 0;
         metadata.miscFlags2 = 0;
@@ -180,8 +180,8 @@ namespace HAL
                 img.pixels = reinterpret_cast<uint8_t*>(orig->array[i]->mips[j]->data.data());
             }
         //ASSERT(false);
-        if (FAILED(DirectXTex::Compress(images.data(), images.size(), metadata, DXGI_FORMAT_BC7_UNORM_SRGB, DirectXTex::TEX_COMPRESS_FLAGS::TEX_COMPRESS_DEFAULT | DirectXTex::TEX_COMPRESS_FLAGS::TEX_COMPRESS_PARALLEL, 1, compressed)))
-            return nullptr;
+      //  if (FAILED(DirectXTex::Compress(images.data(), images.size(), metadata,  to_native(Format::BC7_UNORM_SRGB), DirectXTex::TEX_COMPRESS_FLAGS::TEX_COMPRESS_DEFAULT | DirectXTex::TEX_COMPRESS_FLAGS::TEX_COMPRESS_PARALLEL, 1, compressed)))
+     //       return nullptr;
 
         return generate_tex_data(compressed);
     }
@@ -219,7 +219,7 @@ namespace HAL
             DirectXTex::ScratchImage mipChain;
             bool res = true;
 
-            if (!mips || FAILED(DirectXTex::GenerateMipMaps(orig_image.GetImages(), orig_image.GetImageCount(), orig_image.GetMetadata(), DirectXTex::TEX_FILTER_DEFAULT, 0, mipChain)))
+            if (!mips || FAILED(DirectXTex::GenerateMipMaps(orig_image.GetImages(), orig_image.GetImageCount(), orig_image.GetMetadata(), DirectXTex::TEX_FILTER_FLAGS::TEX_FILTER_DEFAULT, 0, mipChain)))
                 res = false;
 
             DirectXTex::ScratchImage& image1 = res ? mipChain : orig_image;
