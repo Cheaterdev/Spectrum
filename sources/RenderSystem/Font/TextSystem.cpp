@@ -191,7 +191,7 @@ public:
                 ivec3(static_cast<int>(m_dirty_l), static_cast<int>(m_dirty_t), 0),
                 ivec3(static_cast<int>(m_dirty_r - m_dirty_l),
                       static_cast<int>(m_dirty_b - m_dirty_t), 1),
-                D3D12CalcSubresource(0, 0, 0, 1, 1),
+                HAL::calc_subresource(0, 0, 0, 1, 1),
                 reinterpret_cast<const char*>(
                     m_cpu.data() + m_dirty_t * ATLAS_W + m_dirty_l),
                 static_cast<int>(ATLAS_W));

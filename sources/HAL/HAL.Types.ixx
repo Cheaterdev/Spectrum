@@ -939,4 +939,9 @@ PROCEDURAL
 		TRIANGLES,
 		PROCEDURAL
 	};
+
+	inline uint calc_subresource(uint mip_slice, uint array_slice, uint plane_slice, uint mip_levels, uint array_size)
+	{
+		return mip_slice + array_slice * mip_levels + plane_slice * mip_levels * array_size;
+	}
 }

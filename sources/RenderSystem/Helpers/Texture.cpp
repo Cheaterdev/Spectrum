@@ -86,7 +86,7 @@ namespace HAL
 		for (unsigned int a = 0; a < desc.ArraySize; a++)
 			for (unsigned int m = 0; m < desc.MipLevels; m++)
 			{
-				int i = D3D12CalcSubresource(m, a, 0, desc.MipLevels, desc.ArraySize);
+				int i = HAL::calc_subresource(m, a, 0, desc.MipLevels, desc.ArraySize);
 				tasks.emplace_back(list->get_copy().read_texture(resource, ivec3(0, 0, 0), { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, [desc, &data, a, m](std::span<std::byte> memory,texture_layout layout)
 					{
 						auto c = desc;

@@ -9,21 +9,21 @@ import d3d12;
 namespace HAL
 {
 
-    std::unique_ptr<DirectX::TexMetadata> get_metadata(std::shared_ptr<file> file)
+    std::unique_ptr<DirectXTex::TexMetadata> get_metadata(std::shared_ptr<file> file)
     {
         auto name = file->file_name.generic_wstring();
         auto ext = file->file_name.extension().generic_wstring();
         //  std::wstring ext = to_lower(name.substr(name.find_last_of(L".") + 1));
-        DirectX::TexMetadata metadata;
+        DirectXTex::TexMetadata metadata;
 
         if (ext == L"tga")
         {
-            if (SUCCEEDED(DirectX::GetMetadataFromTGAFile(name.c_str(), metadata)))
-                return std::make_unique<DirectX::TexMetadata>(metadata);
+            if (SUCCEEDED(DirectXTex::GetMetadataFromTGAFile(name.c_str(), metadata)))
+                return std::make_unique<DirectXTex::TexMetadata>(metadata);
         }
 
-        else if (SUCCEEDED(DirectX::GetMetadataFromWICFile(name.c_str(), DirectX::WIC_FLAGS::WIC_FLAGS_NONE, metadata)))
-            return std::make_unique<DirectX::TexMetadata>(metadata);
+        else if (SUCCEEDED(DirectXTex::GetMetadataFromWICFile(name.c_str(), DirectXTex::WIC_FLAGS::WIC_FLAGS_NONE, metadata)))
+            return std::make_unique<DirectXTex::TexMetadata>(metadata);
 
         return nullptr;
     }
@@ -78,9 +78,9 @@ namespace HAL
 namespace HAL
 {
 
-    texture_data::ptr generate_tex_data(DirectX::ScratchImage& image)
+    texture_data::ptr generate_tex_data(DirectXTex::ScratchImage& image)
     {
-        DirectX::TexMetadata metadata = image.GetMetadata();
+        DirectXTex::TexMetadata metadata = image.GetMetadata();
         texture_data::ptr tex_data;
 
         // Fill out subresource array
@@ -95,7 +95,7 @@ namespace HAL
                 size_t index = metadata.ComputeIndex(level, 0, 0);
                 /*if (index >= nimages)
                 return E_FAIL;*/
-                const DirectX::Image& img = image.GetImages()[index];
+                const DirectXTex::Image& img = image.GetImages()[index];
                 ASSERT(idx < (metadata.mipLevels* metadata.arraySize));
                 int  a = 0;
                 size_t m = level;
@@ -127,7 +127,7 @@ namespace HAL
                     if (index >= image.GetImageCount())
                         return nullptr;
 
-                    const DirectX::Image& img = image.GetImages()[index];
+                    const DirectXTex::Image& img = image.GetImages()[index];
 
                     if (img.format != metadata.format)
                         return nullptr;
@@ -150,23 +150,23 @@ namespace HAL
         }
 
         return tex_data;
-        //  DirectX::CreateTextureEx(Device::get().get_native_device(), mipChain.GetImages(), mipChain.GetImageCount(), mipChain.GetMetadata(), D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, header.force_srgb, (ID3D11Resource**)&native_texture);
+        //  DirectXTex::CreateTextureEx(Device::get().get_native_device(), mipChain.GetImages(), mipChain.GetImageCount(), mipChain.GetMetadata(), D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, header.force_srgb, (ID3D11Resource**)&native_texture);
     }
 
     texture_data::ptr texture_data::compress(texture_data::ptr orig)
     {
-        DirectX::ScratchImage compressed;
-        DirectX::TexMetadata metadata;
+        DirectXTex::ScratchImage compressed;
+        DirectXTex::TexMetadata metadata;
         metadata.width = orig->width;
         metadata.height = orig->height;
         metadata.arraySize = orig->array_size;
         metadata.depth = orig->depth;
         metadata.format = to_native(orig->format);
-        metadata.dimension = DirectX::TEX_DIMENSION_TEXTURE2D;
+        metadata.dimension = DirectXTex::TEX_DIMENSION_TEXTURE2D;
         metadata.mipLevels = orig->mip_maps - 2;
         metadata.miscFlags = 0;
         metadata.miscFlags2 = 0;
-        std::vector<DirectX::Image> images(metadata.mipLevels * metadata.arraySize);
+        std::vector<DirectXTex::Image> images(metadata.mipLevels * metadata.arraySize);
 
         for (unsigned int i = 0; i < orig->array.size(); i++)
             for (unsigned int j = 0; j < metadata.mipLevels; j++)
@@ -180,7 +180,7 @@ namespace HAL
                 img.pixels = reinterpret_cast<uint8_t*>(orig->array[i]->mips[j]->data.data());
             }
         //ASSERT(false);
-        if (FAILED(DirectX::Compress(images.data(), images.size(), metadata, DXGI_FORMAT_BC7_UNORM_SRGB, DirectX::TEX_COMPRESS_FLAGS::TEX_COMPRESS_DEFAULT | DirectX::TEX_COMPRESS_FLAGS::TEX_COMPRESS_PARALLEL, 1, compressed)))
+        if (FAILED(DirectXTex::Compress(images.data(), images.size(), metadata, DXGI_FORMAT_BC7_UNORM_SRGB, DirectXTex::TEX_COMPRESS_FLAGS::TEX_COMPRESS_DEFAULT | DirectXTex::TEX_COMPRESS_FLAGS::TEX_COMPRESS_PARALLEL, 1, compressed)))
             return nullptr;
 
         return generate_tex_data(compressed);
@@ -194,8 +194,8 @@ namespace HAL
         if (file)
         {
             auto&& data = file->load_all();
-            DirectX::TexMetadata metadata;
-            DirectX::ScratchImage orig_image;
+            DirectXTex::TexMetadata metadata;
+            DirectXTex::ScratchImage orig_image;
             auto name = file->file_name;
             std::wstring ext = name.extension().generic_wstring();
 
@@ -204,35 +204,35 @@ namespace HAL
             HRESULT hr = 0;
             if (ext == L".tga")
             {
-                hr = DirectX::LoadFromTGAMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), &metadata, orig_image);
+                hr = DirectXTex::LoadFromTGAMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), &metadata, orig_image);
             }
 
             else if (ext == L".dds")
             {
-                hr = DirectX::LoadFromDDSMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), DirectX::DDS_FLAGS::DDS_FLAGS_NONE, &metadata, orig_image);
+                hr = DirectXTex::LoadFromDDSMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), DirectXTex::DDS_FLAGS::DDS_FLAGS_NONE, &metadata, orig_image);
             }
 
-            else     hr = DirectX::LoadFromWICMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), DirectX::WIC_FLAGS::WIC_FLAGS_NONE, &metadata, orig_image);
+            else     hr = DirectXTex::LoadFromWICMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), DirectXTex::WIC_FLAGS::WIC_FLAGS_NONE, &metadata, orig_image);
 
             if (FAILED(hr))
                 return nullptr;
-            DirectX::ScratchImage mipChain;
+            DirectXTex::ScratchImage mipChain;
             bool res = true;
 
-            if (!mips || FAILED(DirectX::GenerateMipMaps(orig_image.GetImages(), orig_image.GetImageCount(), orig_image.GetMetadata(), DirectX::TEX_FILTER_DEFAULT, 0, mipChain)))
+            if (!mips || FAILED(DirectXTex::GenerateMipMaps(orig_image.GetImages(), orig_image.GetImageCount(), orig_image.GetMetadata(), DirectXTex::TEX_FILTER_DEFAULT, 0, mipChain)))
                 res = false;
 
-            DirectX::ScratchImage& image1 = res ? mipChain : orig_image;
+            DirectXTex::ScratchImage& image1 = res ? mipChain : orig_image;
             metadata = image1.GetMetadata();
 
             if (compress)
             {
-                DirectX::ScratchImage compressed;
+                DirectXTex::ScratchImage compressed;
                 res = true;
                 metadata.mipLevels -= 2;
 
                 ASSERT(false);
-                // if (FAILED(DirectX::Compress(DX11::Device::get().get_native_device(), image1.GetImages(), image1.GetImageCount() - 2, metadata, DXGI_FORMAT_BC7_UNORM_SRGB, 1, 1, compressed)))
+                // if (FAILED(DirectXTex::Compress(DX11::Device::get().get_native_device(), image1.GetImages(), image1.GetImageCount() - 2, metadata, DXGI_FORMAT_BC7_UNORM_SRGB, 1, 1, compressed)))
                 res = false;
 
                 return generate_tex_data(res ? compressed : image1);

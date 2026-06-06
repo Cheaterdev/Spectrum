@@ -3,6 +3,7 @@
 import :Format;
 
 import d3d12;
+import Core;
 
 namespace HAL
 {
@@ -139,7 +140,7 @@ namespace HAL
         }
     }
 
-    UINT Format::size()const
+    uint Format::size()const
     {
         switch (native_format)
         {
@@ -276,7 +277,7 @@ namespace HAL
         case DXGI_FORMAT_R32_FLOAT:
         case DXGI_FORMAT_R16_TYPELESS:
         case DXGI_FORMAT_R16_FLOAT:
-            return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0;
+            return D3D12::SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0;
 
         default:
             return D3D12::DEFAULT_SHADER_4_COMPONENT_MAPPING;
