@@ -148,7 +148,9 @@ export struct RaytracingDescNative :public D3D12_BUILD_RAYTRACING_ACCELERATION_S
 
 export RaytracingDescNative to_native(const RaytracingBuildDescBottomInputs& inputs);
 
-export D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  to_native(const RaytracingBuildDescTopInputs& inputs);
+export D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native(const RaytracingBuildDescTopInputs& inputs);
+
+export const D3D12_RAYTRACING_INSTANCE_DESC& to_native(const InstanceDesc& desc);
 
 export CD3DX12_RESOURCE_DESC  to_native_1(const ResourceDesc& desc);
 
@@ -165,10 +167,6 @@ export namespace cereal
         ar& NVPG(ThreadGroupCountZ);
     }*/
 
-    template<class Archive>
-    void serialize(Archive& ar, D3D12_RAYTRACING_INSTANCE_DESC& g)
-    {
-    }
    /*
     template<class Archive>
     void serialize(Archive& ar, D3D12_DRAW_INDEXED_ARGUMENTS& g)

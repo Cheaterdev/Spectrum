@@ -6,7 +6,7 @@ export import :Types;
 export import :Sampler;
 
 // TODO: Should be private
-export import :Utils;
+//export import :Utils;
 
 export import :Device;
 export import :Queue;

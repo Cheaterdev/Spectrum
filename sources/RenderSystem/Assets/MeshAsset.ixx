@@ -160,7 +160,7 @@ export{
 		HAL::Buffer::ptr buffer;
 
 
-		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
+		TypedHandle<HAL::InstanceDesc> ras_handle;
 
 
 		HAL::StructuredBufferView<Table::mesh_vertex_input>		vertex_buffer_view;
@@ -250,7 +250,7 @@ export{
 
 		TypedHandle<Table::MeshCommandData::Compiled> meshpart_handle;
 		TypedHandle<Table::RaytraceInstanceInfo::Compiled> instance_handle;
-		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
+		TypedHandle<HAL::InstanceDesc> ras_handle;
 
 		size_t nodes_count;
 		size_t rendering_count;

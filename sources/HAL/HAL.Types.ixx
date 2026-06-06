@@ -794,7 +794,7 @@ struct texture_layout
 		{
 			return { resource, resource_offset + offset };
 		}
-
+		GPUAddressPtr get_ptr() const;// { return resource ? (resource->get_address() + resource_offset) : 0;}
 		std::byte* get_cpu_data() const;
 	};
 
@@ -835,14 +835,34 @@ PROCEDURAL
 		HAL::ResourceAddress VertexBuffer;
 		uint64 VertexStrideInBytes;
 	};
+	enum class RaytracingInstanceFlags : uint
+	{
+		NONE                          = 0,
+		TRIANGLE_CULL_DISABLE         = 0x1,
+		TRIANGLE_FRONT_COUNTERCLOCKWISE = 0x2,
+		FORCE_OPAQUE                  = 0x4,
+		FORCE_NON_OPAQUE              = 0x8,
+	};
+
 	struct InstanceDesc
 	{
-		float Transform[3][4];
-		uint InstanceID : 24;
-		uint InstanceMask : 8;
-		uint InstanceContributionToHitGroupIndex : 24;
-		uint Flags : 8;
-		HAL::ResourceAddress AccelerationStructure;
+		mat3x4 transform;
+		uint instance_id   : 24;
+		uint mask          : 8;
+		uint hit_group_index : 24;
+		uint flags         : 8;
+		GPUAddressPtr acceleration_structure;
+
+		SERIALIZE()
+		{
+			ar& NVP(transform);
+
+			uint tmp_id = instance_id, tmp_mask = mask, tmp_hgi = hit_group_index, tmp_flags = flags;
+			ar& NP("instance_id", tmp_id) & NP("mask", tmp_mask) & NP("hit_group_index", tmp_hgi) & NP("flags", tmp_flags);
+			instance_id = tmp_id; mask = tmp_mask; hit_group_index = tmp_hgi; flags = tmp_flags;
+
+			ar& NVP(acceleration_structure);
+		}
 	};
 
 

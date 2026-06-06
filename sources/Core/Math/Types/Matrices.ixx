@@ -274,6 +274,7 @@ static std::string get_typename()
 
 	using mat4x4 = matrix<matrix_data_4x4_t<float>>;
 	using mat4x3 = matrix<matrix_data_t<3, 4, float>>;
+	using mat3x4 = matrix<matrix_data_t<4, 3, float>>;
 	using float4x4 = mat4x4;
 
 	template<typename VectorFormatIn, typename MatrixFormat>

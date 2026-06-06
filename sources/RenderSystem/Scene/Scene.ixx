@@ -64,7 +64,7 @@ public:
  
 	static const int MAX_COMMANDS_SIZE = 1024 * 1024 * 64;
     HAL::virtual_gpu_buffer<Table::MeshCommandData>::ptr mesh_infos;// (MAX_COMMANDS_SIZE)
-    HAL::virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>::ptr raytrace;// (MAX_COMMANDS_SIZE)
+    HAL::virtual_gpu_buffer<HAL::InstanceDesc>::ptr raytrace;
 
 	my_unique_vector<UINT> command_ids[10];
 

@@ -1,9 +1,11 @@
 module HAL:Types;
+
+import :Resource.Buffer;
 namespace HAL
 {
 
 
-
+		GPUAddressPtr ResourceAddress::get_ptr() const { return resource ? (resource->get_address() + resource_offset) : 0;}
 
 	ResourceState ResourceState::operator |(const ResourceState& state)const
 	{

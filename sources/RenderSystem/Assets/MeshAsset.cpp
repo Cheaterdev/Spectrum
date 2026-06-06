@@ -495,18 +495,16 @@ void MeshAssetInstance::update_rtx_instance()
 		{
 
 
-			D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
+			HAL::InstanceDesc instanceDesc = {};
 
-			for (int x = 0; x < 3; x++)
-				for (int y = 0; y < 4; y++)
-				{
-					instanceDesc.Transform[x][y] = global_transform.rows[y][x];
-				}
+			for (int r = 0; r < 3; r++)
+				for (int c = 0; c < 4; c++)
+					instanceDesc.transform.rows[r][c] = global_transform.rows[c][r];
 
-			instanceDesc.InstanceMask = 1;
-			instanceDesc.AccelerationStructure = to_native(info.ras->get_gpu_address());
-			instanceDesc.InstanceID = info.node_id;
-			instanceDesc.InstanceContributionToHitGroupIndex = RTX::get().rtx.get_index(static_cast<materials::universal_material*>(info.material));// ->info_rtx.get_offset();
+			instanceDesc.mask = 1;
+			instanceDesc.acceleration_structure = info.ras->get_gpu_address().get_ptr();
+			instanceDesc.instance_id = info.node_id;
+			instanceDesc.hit_group_index = RTX::get().rtx.get_index(static_cast<materials::universal_material*>(info.material));
 
 
 			ras[i] = instanceDesc;

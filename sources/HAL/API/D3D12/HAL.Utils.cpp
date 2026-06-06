@@ -877,6 +877,13 @@ RaytracingDescNative to_native(const RaytracingBuildDescBottomInputs& inputs)
     return std::move(result);
 }
 
+static_assert(sizeof(HAL::InstanceDesc) == sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
+
+const D3D12_RAYTRACING_INSTANCE_DESC& to_native(const InstanceDesc& desc)
+{
+    return reinterpret_cast<const D3D12_RAYTRACING_INSTANCE_DESC&>(desc);
+}
+
 D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native(const RaytracingBuildDescTopInputs& inputs)
 {
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS result;

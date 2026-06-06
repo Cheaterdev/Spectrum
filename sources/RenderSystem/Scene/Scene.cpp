@@ -53,7 +53,7 @@ Scene::Scene()
 		});
 
 	mesh_infos = std::make_shared< virtual_gpu_buffer<Table::MeshCommandData>>(HAL::Device::get(), 1024 * 1024);
-	raytrace = std::make_shared< virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>>(HAL::Device::get(), 1024 * 1024);
+	raytrace = std::make_shared<virtual_gpu_buffer<HAL::InstanceDesc>>(HAL::Device::get(), 1024 * 1024);
 
 
 	if (HAL::Device::get().is_rtx_supported())
