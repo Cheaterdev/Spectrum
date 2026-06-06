@@ -82,6 +82,11 @@ export
 
 			SERIALIZE()
 			{
+			if constexpr (!Archive::is_saving::value)
+				{
+				 cereal::get_user_data<UniversalContext>(ar).get_context<Device*>() = &HAL::Device::get();
+
+			}
 				ar& NVP(resource);
 				if constexpr (Archive::is_saving::value)
 				{

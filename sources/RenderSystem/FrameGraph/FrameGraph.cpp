@@ -361,7 +361,7 @@ namespace FrameGraph
 			PROFILE(L"begin_frame");
 
 			builder.current_frame = builder.frames.begin_frame();
-
+		   builder.resources_names.clear();
 
 		}
 	}

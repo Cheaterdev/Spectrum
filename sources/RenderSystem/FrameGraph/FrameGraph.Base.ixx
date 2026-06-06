@@ -625,6 +625,8 @@ public:
 		bool renderable = true;
 		PassFlags flags;
 		std::wstring_view name;
+
+
 		uint32_t pass_index = 0;
 
 		uint32_t GetPassIndex() const;
