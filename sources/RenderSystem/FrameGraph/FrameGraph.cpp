@@ -1653,7 +1653,7 @@ namespace FrameGraph
 			auto tsize = size;
 			while (tsize.x != 1 && tsize.y != 1)
 			{
-				tsize /= 2;
+				tsize = uint3::max(tsize/2, {1,1,1});
 				mip_count++;
 			}
 		}

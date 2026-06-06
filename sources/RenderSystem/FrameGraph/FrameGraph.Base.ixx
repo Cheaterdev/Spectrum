@@ -516,7 +516,8 @@ public:
 			resources_names[name] = new_name;
 			name = new_name;
 
-
+			if (check(old_info.flags&ResourceFlags::Required))
+				flags|=ResourceFlags::Required;
 			ResourceAllocInfo& info = alloc_resources[name];
 			T& handler = info.clone_handler<T>(old_info.handler);
 			init(info, name, flags);
@@ -537,7 +538,8 @@ public:
 			resources_names[name] = new_name;
 			name = new_name;
 
-
+						if (check(old_info.flags&ResourceFlags::Required))
+				flags|=ResourceFlags::Required;
 			ResourceAllocInfo& info = alloc_resources[name];
 			T& handler = info.create_handler<T>(desc);
 			init(info, name, flags);
@@ -551,8 +553,8 @@ public:
 		template<class T>
 		bool exists(T& result)
 		{
-			std::string& name = resources_names[result.name];
-			return !name.empty();
+		//	std::string& name = resources_names[result.name];
+			return resources_names.count(result.name);
 		}
 
 		template<class T>

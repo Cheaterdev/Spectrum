@@ -1,0 +1,139 @@
+
+#include "ResultCreation.h"
+#include "PreScene.h"
+#include "BlueNoise.h"
+#include "AssetGBuffer.h"
+#include "PSSM_Global.h"
+#include "PSSM_Cascade.h"
+#include "CubeSky.h"
+#include "CubeMapDownsample.h"
+#include "CubeMapEnviromentProcessor.h"
+#include "PSSM_GenerateMask.h"
+#include "PSSM_Combine.h"
+#include "Sky.h"
+#include "SMAA.h"
+#include "FSR.h"
+#include "AssetMip.h"
+#include "../pass_defaults.h"
+
+using namespace FrameGraph;
+namespace Pipelines
+{
+
+class AssetPipeline : public PipelineBase
+{
+public:
+
+	Passes::BlueNoise blueNoise;
+	Passes::AssetGBuffer assetGBuffer;
+	Passes::PSSM_Global pSSM_Global;
+	Passes::PSSM_Cascade pSSM_Cascade;
+	Passes::CubeSky cubeSky;
+	Passes::PSSM_GenerateMask pSSM_GenerateMask;
+	Passes::PSSM_Combine pSSM_Combine;
+	Passes::Sky sky;
+	Passes::SMAA sMAA;
+	Passes::AssetMip assetMip;
+
+	static inline const wchar_t* const pass_names[] = {
+		Passes::ResultCreation::Name,
+		Passes::PreScene::Name,
+		Passes::BlueNoise::Name,
+		Passes::AssetGBuffer::Name,
+		Passes::PSSM_Global::Name,
+		Passes::PSSM_Cascade::Names[0],
+		Passes::PSSM_Cascade::Names[1],
+		Passes::PSSM_Cascade::Names[2],
+		Passes::PSSM_Cascade::Names[3],
+		Passes::PSSM_Cascade::Names[4],
+		Passes::PSSM_Cascade::Names[5],
+		Passes::CubeSky::Name,
+		Passes::CubeMapDownsample::Name,
+		Passes::CubeMapEnviromentProcessor::Name,
+		Passes::PSSM_GenerateMask::Name,
+		Passes::PSSM_Combine::Name,
+		Passes::Sky::Name,
+		Passes::SMAA::Name,
+		Passes::FSR::Name,
+		Passes::AssetMip::Name,
+	};
+	static constexpr uint32_t pass_count = std::size(pass_names);
+
+	std::span<const wchar_t* const> GetUsedPassNamesList() const override
+	{
+		return pass_names;
+	}
+
+	static inline const wchar_t* const resource_names[] = {
+		L"ResultTexture",
+		L"scene",
+		L"BlueNoise",
+		L"GBuffer_Albedo",
+		L"GBuffer_Normals",
+		L"GBuffer_Depth",
+		L"GBuffer_Specular",
+		L"GBuffer_Speed",
+		L"GBuffer_DepthMips",
+		L"GBuffer_Quality",
+		L"GBuffer_TempColor",
+		L"GBuffer_NormalsPrev",
+		L"GBuffer_SpecularPrev",
+		L"GBuffer_DepthPrev",
+		L"GBuffer_HiZ",
+		L"GBuffer_HiZ_UAV",
+		L"global_depth",
+		L"global_camera",
+		L"PSSM_Depths",
+		L"PSSM_Cameras",
+		L"sky_cubemap",
+		L"sky_cubemap_filtered",
+		L"sky_cubemap_filtered_diffuse",
+		L"LightMask",
+		L"RTXDebug",
+		L"ResultTextureNew",
+		L"SMAA_edges",
+		L"SMAA_blend",
+		L"FSRTemp",
+		L"swapchain",
+	};
+	static constexpr uint32_t resource_count = std::size(resource_names);
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return resource_names;
+	}
+
+	void add_passes(FrameGraph::Graph& graph)
+	{
+		graph.set_pipeline(this);
+
+		graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, PassDefault<Passes::ResultCreation>::flags);
+		graph.add_library_pass<Passes::PreScene>(PassDefault<Passes::PreScene>::setup, PassDefault<Passes::PreScene>::render, PassDefault<Passes::PreScene>::flags);
+		if (blueNoise.setup_func)
+			graph.add_library_pass<Passes::BlueNoise>(blueNoise.setup_func, blueNoise.render_func, blueNoise.flags);
+		if (assetGBuffer.setup_func)
+			graph.add_library_pass<Passes::AssetGBuffer>(assetGBuffer.setup_func, assetGBuffer.render_func, assetGBuffer.flags);
+		if (pSSM_Global.setup_func)
+			graph.add_library_pass<Passes::PSSM_Global>(pSSM_Global.setup_func, pSSM_Global.render_func, pSSM_Global.flags);
+		for (uint32_t i = 0; i < Passes::PSSM_Cascade::MaxCount; ++i)
+			if (pSSM_Cascade.setup_funcs[i])
+				graph.add_library_pass<Passes::PSSM_Cascade>(i, pSSM_Cascade.setup_funcs[i], pSSM_Cascade.render_funcs[i], pSSM_Cascade.flags);
+		if (cubeSky.setup_func)
+			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, cubeSky.flags);
+		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, PassDefault<Passes::CubeMapDownsample>::flags);
+		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, PassDefault<Passes::CubeMapEnviromentProcessor>::flags);
+		if (pSSM_GenerateMask.setup_func)
+			graph.add_library_pass<Passes::PSSM_GenerateMask>(pSSM_GenerateMask.setup_func, pSSM_GenerateMask.render_func, pSSM_GenerateMask.flags);
+		if (pSSM_Combine.setup_func)
+			graph.add_library_pass<Passes::PSSM_Combine>(pSSM_Combine.setup_func, pSSM_Combine.render_func, pSSM_Combine.flags);
+		if (sky.setup_func)
+			graph.add_library_pass<Passes::Sky>(sky.setup_func, sky.render_func, sky.flags);
+		if (sMAA.setup_func)
+			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, sMAA.flags);
+		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, PassDefault<Passes::FSR>::flags);
+		if (assetMip.setup_func)
+			graph.add_library_pass<Passes::AssetMip>(assetMip.setup_func, assetMip.render_func, assetMip.flags);
+	}
+};
+
+}

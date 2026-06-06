@@ -217,3 +217,10 @@ PassNode UI_Render
 	Texture swapchain;
 }
 
+
+Pipeline UIPipeline
+{
+	Profiler;
+	UI_Render;
+}
+

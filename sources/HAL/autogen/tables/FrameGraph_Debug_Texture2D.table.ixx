@@ -5,7 +5,6 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
-
 export namespace Table
 {
 	#pragma pack(push, 1)

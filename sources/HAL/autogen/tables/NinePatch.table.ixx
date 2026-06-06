@@ -5,7 +5,6 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
-
 import :Autogen.Tables.vertex_input;
 export namespace Table
 {

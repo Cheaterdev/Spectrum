@@ -26,8 +26,6 @@
 #include "SMAA.h"
 #include "FSR.h"
 #include "CopyPrev.h"
-#include "Profiler.h"
-#include "UI_Render.h"
 #include "../pass_defaults.h"
 
 using namespace FrameGraph;
@@ -91,23 +89,6 @@ public:
 		Passes::SMAA::Name,
 		Passes::FSR::Name,
 		Passes::CopyPrev::Name,
-		Passes::Profiler::Name,
-		Passes::UI_Render::Names[0],
-		Passes::UI_Render::Names[1],
-		Passes::UI_Render::Names[2],
-		Passes::UI_Render::Names[3],
-		Passes::UI_Render::Names[4],
-		Passes::UI_Render::Names[5],
-		Passes::UI_Render::Names[6],
-		Passes::UI_Render::Names[7],
-		Passes::UI_Render::Names[8],
-		Passes::UI_Render::Names[9],
-		Passes::UI_Render::Names[10],
-		Passes::UI_Render::Names[11],
-		Passes::UI_Render::Names[12],
-		Passes::UI_Render::Names[13],
-		Passes::UI_Render::Names[14],
-		Passes::UI_Render::Names[15],
 	};
 	static constexpr uint32_t pass_count = std::size(pass_names);
 
@@ -176,7 +157,6 @@ public:
 		L"SMAA_edges",
 		L"SMAA_blend",
 		L"FSRTemp",
-		L"swapchain",
 	};
 	static constexpr uint32_t resource_count = std::size(resource_names);
 
@@ -236,9 +216,6 @@ public:
 			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, sMAA.flags);
 		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, PassDefault<Passes::FSR>::flags);
 		graph.add_library_pass<Passes::CopyPrev>(PassDefault<Passes::CopyPrev>::setup, PassDefault<Passes::CopyPrev>::render, PassDefault<Passes::CopyPrev>::flags);
-		graph.add_library_pass<Passes::Profiler>(PassDefault<Passes::Profiler>::setup, PassDefault<Passes::Profiler>::render, PassDefault<Passes::Profiler>::flags);
-		for (uint32_t i = 0; i < Passes::UI_Render::MaxCount; ++i)
-			graph.add_library_pass<Passes::UI_Render>(i, PassDefault<Passes::UI_Render>::setup, PassDefault<Passes::UI_Render>::render, PassDefault<Passes::UI_Render>::flags);
 	}
 };
 

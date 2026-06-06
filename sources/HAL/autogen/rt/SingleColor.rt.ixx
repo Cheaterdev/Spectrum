@@ -5,7 +5,6 @@ import :RT;
 import :SIG;
 import :HLSL;
 import :Types;
-
 export namespace RT
 {
 	#pragma pack(push, 1)

@@ -1,0 +1,61 @@
+
+#include "Profiler.h"
+#include "UI_Render.h"
+#include "../pass_defaults.h"
+
+using namespace FrameGraph;
+namespace Pipelines
+{
+
+class UIPipeline : public PipelineBase
+{
+public:
+
+
+	static inline const wchar_t* const pass_names[] = {
+		Passes::Profiler::Name,
+		Passes::UI_Render::Names[0],
+		Passes::UI_Render::Names[1],
+		Passes::UI_Render::Names[2],
+		Passes::UI_Render::Names[3],
+		Passes::UI_Render::Names[4],
+		Passes::UI_Render::Names[5],
+		Passes::UI_Render::Names[6],
+		Passes::UI_Render::Names[7],
+		Passes::UI_Render::Names[8],
+		Passes::UI_Render::Names[9],
+		Passes::UI_Render::Names[10],
+		Passes::UI_Render::Names[11],
+		Passes::UI_Render::Names[12],
+		Passes::UI_Render::Names[13],
+		Passes::UI_Render::Names[14],
+		Passes::UI_Render::Names[15],
+	};
+	static constexpr uint32_t pass_count = std::size(pass_names);
+
+	std::span<const wchar_t* const> GetUsedPassNamesList() const override
+	{
+		return pass_names;
+	}
+
+	static inline const wchar_t* const resource_names[] = {
+		L"swapchain",
+	};
+	static constexpr uint32_t resource_count = std::size(resource_names);
+
+	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	{
+		return resource_names;
+	}
+
+	void add_passes(FrameGraph::Graph& graph)
+	{
+		graph.set_pipeline(this);
+
+		graph.add_library_pass<Passes::Profiler>(PassDefault<Passes::Profiler>::setup, PassDefault<Passes::Profiler>::render, PassDefault<Passes::Profiler>::flags);
+		for (uint32_t i = 0; i < Passes::UI_Render::MaxCount; ++i)
+			graph.add_library_pass<Passes::UI_Render>(i, PassDefault<Passes::UI_Render>::setup, PassDefault<Passes::UI_Render>::render, PassDefault<Passes::UI_Render>::flags);
+	}
+};
+
+}

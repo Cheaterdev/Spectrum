@@ -14,6 +14,8 @@ export namespace GUI
                 Texture texture;
                 virtual void draw(Context& c);
                 image();
+
+            virtual ~image()= default;
         };
 
 

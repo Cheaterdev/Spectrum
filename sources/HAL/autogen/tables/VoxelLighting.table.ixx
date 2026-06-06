@@ -5,7 +5,6 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
-
 import :Autogen.Tables.PSSMDataGlobal;
 import :Autogen.Tables.VoxelTilingParams;
 export namespace Table

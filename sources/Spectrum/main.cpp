@@ -196,8 +196,13 @@ public:
 	BlueNoise blue_noise;
 	VoxelGI::ptr voxel_gi;
 		SMAA smaa;
-	
+		 ~triangle_drawer()
+		 {
+			 Device::get().get_queue(CommandListType::DIRECT)->signal_and_wait();
+			 Device::get().get_queue(CommandListType::COMPUTE)->signal_and_wait();
+	 Device::get().get_queue(CommandListType::COPY)->signal_and_wait();
 
+		 }
 		triangle_drawer() : VariableContext(L"triangle_drawer"), pipeline(), blue_noise(pipeline), smaa(pipeline), sky(pipeline), pssm(pipeline)
 	{
 		texture.mul_color = { 1, 1, 1, 0 };
@@ -544,7 +549,7 @@ class GraphRender : public Window, public GUI::user_interface
 
 
 	size_t graph_usage = 0;
-
+		Pipelines::UIPipeline pipeline;
 public:
 	void on_destroy() override
 	{
@@ -611,6 +616,14 @@ public:
 
 
 			setup_graph();
+
+			pipeline.add_passes(graph);
+
+
+			graph.setup();
+			graph.compile(swap_chain->m_frameIndex);
+
+
 			graph.render();
 
 
@@ -643,7 +656,7 @@ public:
 	void setup_graph()
 	{
 		graph.start_new_frame();
-		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame(), swap_chain->get_fence());
+		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame(), swap_chain->get_fence(), ResourceFlags::Required);
 
 
 		{
@@ -651,10 +664,7 @@ public:
 			create_graph(graph);
 		}
 
-		graph.setup();
-		graph.compile(swap_chain->m_frameIndex);
-
-
+	
 		static bool gen = false;
 
 		if (!gen && GetAsyncKeyState('N'))

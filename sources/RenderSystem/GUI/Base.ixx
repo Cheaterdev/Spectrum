@@ -450,7 +450,7 @@ namespace GUI
             virtual void on_margin_changed(const sizer& r);
         public:
             base();
-
+             virtual ~base() = default;
             vec2 to_global(vec2 p);
 
             vec2 to_local(vec2 p);

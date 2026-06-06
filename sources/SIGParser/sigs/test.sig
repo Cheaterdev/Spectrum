@@ -60,6 +60,5 @@ Pipeline MainPipeline
 
 	# frame end
 	CopyPrev;
-	Profiler;
-	UI_Render;
 }
+

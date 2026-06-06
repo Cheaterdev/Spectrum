@@ -1,6 +1,6 @@
 #pragma once
 #include "../PassNodeBase.h"
-
+#include "GBuffer.h"
 using namespace FrameGraph;
 namespace Passes
 {
@@ -11,10 +11,14 @@ public:
 	struct Context
 	{
 
+		GBuffer gbuffer;
 
 		Handlers::Texture H(ResultTexture);
 
-		static inline const wchar_t* const resource_names[] = {		L"ResultTexture",
+
+		Handlers::Texture H(swapchain);
+
+		static inline const wchar_t* const resource_names[] = {		L"GBuffer_Albedo",		L"GBuffer_Normals",		L"GBuffer_Depth",		L"GBuffer_Specular",		L"GBuffer_Speed",		L"GBuffer_DepthMips",		L"GBuffer_Quality",		L"GBuffer_TempColor",		L"GBuffer_NormalsPrev",		L"GBuffer_SpecularPrev",		L"GBuffer_DepthPrev",		L"GBuffer_HiZ",		L"GBuffer_HiZ_UAV",		L"ResultTexture",		L"swapchain",
 		};
 		static constexpr uint32_t resource_count = std::size(resource_names);
 	};

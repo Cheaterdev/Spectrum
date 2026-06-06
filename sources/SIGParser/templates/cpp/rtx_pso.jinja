@@ -26,6 +26,7 @@ export {
 
 struct {{ pso.name }}: public RTXPSO<{{ pso.name }}, Typelist<{{ passes }}>, Typelist<{{ gens }}>>
 {
+	using RTXPSO::RTXPSO;
 	static const constexpr Layouts global_sig = Layouts::{{pso.root_sig.name}};
 	static const constexpr uint MaxTraceRecursionDepth = 2;
 };

@@ -4,7 +4,6 @@ import Core;
 import :RTX;
 import :Enums;
 import :Types;
-
 import :Autogen.Tables.ShadowPayload;
 import :Autogen.Tables.RayPayload;
 import :Autogen.Slots.MaterialInfo;
