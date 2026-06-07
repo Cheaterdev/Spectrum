@@ -381,6 +381,22 @@ namespace Spectrum
         }
     }
 
+    [Sharpmake.Generate]
+    public class Test : Application
+    {
+        public Test()
+        {
+            SourceRootPath = @"[project.SharpmakeCsPath]\sources\Test";
+            AssemblyName = "SpectrumTest";
+        }
+
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+
+            conf.AddPublicDependency<RenderSystem>(target);
+        }
+    }
 
     [Sharpmake.Generate]
     public class SpectrumSolution : Solution
@@ -425,6 +441,7 @@ namespace Spectrum
 
             conf.AddProject<Spectrum>(target);
             conf.AddProject<SIGParser>(target);
+            conf.AddProject<Test>(target);
             conf.AddProject<Resources>(target);
         }
 
