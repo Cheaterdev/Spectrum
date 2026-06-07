@@ -4,4 +4,4 @@
 // Test framework and infrastructure for testing APIs.
 // Chains upward to Spectrum/Defines.h.
 // =============================================================================
-#include "Spectrum/Defines.h"
+#include "RenderSystem/Defines.h"
