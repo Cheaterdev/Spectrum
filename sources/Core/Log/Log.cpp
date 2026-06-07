@@ -139,6 +139,11 @@ void VSOutputLogger::on_log(const LogBlock& log)
 	OutputDebugStringA((log.get_string() + "\n").c_str());
 }
 
+void StdoutLogger::on_log(const LogBlock& log)
+{
+	std::cout << log.get_string() << '\n' << std::flush;
+}
+
 ConsoleLogger::ConsoleLogger()
 {
 	even = true;

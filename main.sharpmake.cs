@@ -394,6 +394,9 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
+            conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
+            conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
+
             conf.AddPublicDependency<RenderSystem>(target);
         }
     }

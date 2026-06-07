@@ -188,6 +188,7 @@ namespace HAL
             if (!native_device) return;
 
             THIS->adapter = desc.adapter;
+            THIS->properties.name = convert(std::wstring_view(desc.adapter->get_desc().Description));
 
             for (auto type : magic_enum::enum_values<DescriptorHeapType>())
             {
@@ -254,6 +255,9 @@ namespace HAL
                     d3dInfoQueue->AddStorageFilterEntries(&filter);
                 }
             }
+
+            DSTORAGE_CONFIGURATION ds_config{};
+            DStorageSetConfiguration(&ds_config);
 
             DStorageCreateCompressionCodec(
                 DSTORAGE_COMPRESSION_FORMAT_GDEFLATE,

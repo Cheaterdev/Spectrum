@@ -7,6 +7,7 @@ import Test.Threading;
 import Test.Events;
 import Test.FileSystem;
 import Test.Profiling;
+import Test.HAL;
 import Core;
 import windows;
 
@@ -15,6 +16,7 @@ void SetupLogging()
 	//Log::create<WinErrorLogger>();
 	FileTXTLogger::create();
 	VSOutputLogger::create();
+	StdoutLogger::create();
 	Log::get().set_logging_level(Log::LEVEL_ALL);
 }
 

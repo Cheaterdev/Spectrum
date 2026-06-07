@@ -25,3 +25,13 @@
 
 #define ASSERT_NE(expected, actual) \
 	Test::AssertNotEqual(expected, actual, __FILE__, __LINE__)
+
+#define SETUP_CATEGORY(category, ...) \
+	namespace { \
+		struct CONCAT_IMPL(SetupRegistrar_, __LINE__) { \
+			CONCAT_IMPL(SetupRegistrar_, __LINE__)() { \
+				Test::TestRegistry::Instance().RegisterSetup(#category, __VA_ARGS__); \
+			} \
+		}; \
+		static CONCAT_IMPL(SetupRegistrar_, __LINE__) CONCAT_IMPL(setup_reg_, __LINE__); \
+	}

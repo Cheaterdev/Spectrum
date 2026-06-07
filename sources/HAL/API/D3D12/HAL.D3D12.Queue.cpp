@@ -125,10 +125,6 @@ namespace HAL
 
     DirectStorageQueue::DirectStorageQueue(Device& device) : device(device), requestCounter(device)
     {
-        DSTORAGE_CONFIGURATION config{};
-        config.DisableGpuDecompression = false;
-        TEST(device, DStorageSetConfiguration(&config));
-
         TEST(device, DStorageGetFactory(IID_PPV_ARGS(&factory)));
         if constexpr (Debug::CheckErrors)
             factory->SetDebugFlags(DSTORAGE_DEBUG_BREAK_ON_ERROR | DSTORAGE_DEBUG_SHOW_ERRORS);

@@ -4,6 +4,8 @@ module;
 #include <vector>
 #include <functional>
 #include <sstream>
+#include <map>
+#include <set>
 
 export module Test.Framework;
 
@@ -35,6 +37,7 @@ export namespace Test
 	{
 	public:
 		using TestFunc = std::function<void()>;
+		using SetupFunc = std::function<void()>;
 
 		static TestRegistry& Instance()
 		{
@@ -47,15 +50,32 @@ export namespace Test
 			tests.push_back({category, name, func, file, line});
 		}
 
+		void RegisterSetup(const std::string& category, SetupFunc func)
+		{
+			setups[category] = std::move(func);
+		}
+
 		std::vector<TestResult> RunAll()
 		{
 			std::vector<TestResult> results;
+			std::set<std::string> ranSetups;
 
 			Log::get() << Log::LEVEL_INFO << "========== Starting Tests ==========" << Log::endl;
 			Log::get() << Log::LEVEL_INFO << "Running " << tests.size() << " test(s)..." << Log::endl;
 
 			for (const auto& test : tests)
 			{
+				if (!test.category.empty() && ranSetups.find(test.category) == ranSetups.end())
+				{
+					auto it = setups.find(test.category);
+					if (it != setups.end())
+					{
+						Log::get() << Log::LEVEL_INFO << "[SETUP] " << test.category << Log::endl;
+						it->second();
+					}
+					ranSetups.insert(test.category);
+				}
+
 				TestResult result;
 				result.category = test.category;
 				result.name = test.name;
@@ -135,6 +155,7 @@ export namespace Test
 		};
 
 		std::vector<Test> tests;
+		std::map<std::string, SetupFunc> setups;
 	};
 
 
