@@ -108,15 +108,14 @@ export namespace Test
 			for (const auto& [category, stats] : categoryStats)
 			{
 				std::string categoryName = category.empty() ? "Uncategorized" : category;
-				Log::get() << Log::LEVEL_INFO << categoryName << ": " << (stats.first + stats.second)
-					<< " total, " << stats.first << " passed";
+				std::stringstream ss;
+				ss << categoryName << ": " << (stats.first + stats.second) << " total, " << stats.first << " passed";
 				if (stats.second > 0)
-					Log::get() << Log::LEVEL_ERROR << ", " << stats.second << " failed" << Log::endl;
-				else
-					Log::get() << Log::LEVEL_INFO << Log::endl;
+					ss << ", " << stats.second << " failed";
+				Log::get() << Log::LEVEL_INFO << ss.str() << Log::endl;
 			}
 
-			Log::get() << Log::LEVEL_INFO << "\nTotal Tests: " << results.size() << Log::endl;
+			Log::get() << Log::LEVEL_INFO << "Total Tests: " << results.size() << Log::endl;
 			Log::get() << Log::LEVEL_INFO << "Passed: " << passed << Log::endl;
 			if (failed > 0)
 				Log::get() << Log::LEVEL_ERROR << "Failed: " << failed << Log::endl;
