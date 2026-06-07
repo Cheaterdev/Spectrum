@@ -9,7 +9,6 @@ import Test.FileSystem;
 import Test.Profiling;
 import Test.HAL;
 import Core;
-import windows;
 
 void SetupLogging()
 {
@@ -20,7 +19,7 @@ void SetupLogging()
 	Log::get().set_logging_level(Log::LEVEL_ALL);
 }
 
-int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+int main()
 {
 	SetupLogging();
 

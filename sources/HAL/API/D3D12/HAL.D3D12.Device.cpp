@@ -160,9 +160,10 @@ namespace HAL
 
             native_device.Reset();
 
-            IDXGIDebug* debugDev;
+            IDXGIDebug* debugDev = nullptr;
             HRESULT hr = DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debugDev));
-            hr = debugDev->ReportLiveObjects(DXGI::DEBUG_ALL, DXGI::DEBUG_RLO_ALL);
+            if (SUCCEEDED(hr) && debugDev)
+                debugDev->ReportLiveObjects(DXGI::DEBUG_ALL, DXGI::DEBUG_RLO_ALL);
         }
 
         size_t Device::get_vram()

@@ -95,8 +95,4 @@ jobs:
       working-directory: ./workdir
       run: |
         & ".\test.exe"
-        if ($LASTEXITCODE -ne 0) {
-          Write-Error "Tests failed with exit code $LASTEXITCODE"
-          exit $LASTEXITCODE
-        }
-        Write-Host "All tests passed!"
+        exit $LASTEXITCODE
