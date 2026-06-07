@@ -5,8 +5,8 @@ import windows;
 
 void SetupLogging()
 {
-	Log::create<WinErrorLogger>();
-	FileTXTLogger::create("test.log");
+	//Log::create<WinErrorLogger>();
+	FileTXTLogger::create();
 	VSOutputLogger::create();
 	Log::get().set_logging_level(Log::LEVEL_ALL);
 }

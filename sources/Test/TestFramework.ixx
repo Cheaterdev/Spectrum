@@ -40,8 +40,8 @@ export namespace Test
 		{
 			std::vector<TestResult> results;
 
-			Log::get() << Log::LEVEL_INFO << "========== Starting Tests ==========\n" << Log::endl;
-			Log::get() << Log::LEVEL_INFO << "Running " << tests.size() << " test(s)...\n" << Log::endl;
+			Log::get() << Log::LEVEL_INFO << "========== Starting Tests ==========" << Log::endl;
+			Log::get() << Log::LEVEL_INFO << "Running " << tests.size() << " test(s)..." << Log::endl;
 
 			for (const auto& test : tests)
 			{
@@ -50,20 +50,18 @@ export namespace Test
 				result.file = test.file;
 				result.line = test.line;
 
-				Log::get() << Log::LEVEL_INFO << "Running: " << result.name << Log::endl;
-
 				try
 				{
 					test.func();
 					result.passed = true;
-					Log::get() << Log::LEVEL_INFO << "  [PASS] " << result.name << Log::endl;
+					Log::get() << Log::LEVEL_INFO << "[PASS] " << result.name << Log::endl;
 				}
 				catch (const std::string& e)
 				{
 					result.passed = false;
 					result.errorMessage = e;
-					Log::get() << Log::LEVEL_ERROR << "  [FAIL] " << result.name << Log::endl;
-					Log::get() << Log::LEVEL_ERROR << "  Error: " << result.errorMessage << Log::endl;
+					Log::get() << Log::LEVEL_ERROR << "[FAIL] " << result.name << Log::endl;
+					Log::get() << Log::LEVEL_ERROR << "       " << result.errorMessage << Log::endl;
 				}
 
 				results.push_back(result);
@@ -83,14 +81,14 @@ export namespace Test
 					failed++;
 			}
 
-			Log::get() << Log::LEVEL_INFO << "\n========== Test Summary ==========\n" << Log::endl;
+			Log::get() << Log::LEVEL_INFO << "========== Test Summary ==========" << Log::endl;
 			Log::get() << Log::LEVEL_INFO << "Total Tests: " << results.size() << Log::endl;
 			Log::get() << Log::LEVEL_INFO << "Passed: " << passed << Log::endl;
 			if (failed > 0)
 				Log::get() << Log::LEVEL_ERROR << "Failed: " << failed << Log::endl;
 			else
 				Log::get() << Log::LEVEL_INFO << "Failed: " << failed << Log::endl;
-			Log::get() << Log::LEVEL_INFO << "=================================\n" << Log::endl;
+			Log::get() << Log::LEVEL_INFO << "==================================" << Log::endl;
 		}
 
 	private:
