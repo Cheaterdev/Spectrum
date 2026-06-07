@@ -27,6 +27,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	auto results = Test::TestRegistry::Instance().RunAll();
 	Test::TestRegistry::Instance().PrintResults(results);
 
-	return results.empty() || std::any_of(results.begin(), results.end(),
-		[](const Test::TestResult& r) { return !r.passed; }) ? 1 : 0;
+	bool any_failed = std::any_of(results.begin(), results.end(),
+		[](const Test::TestResult& r) { return !r.passed && !r.skipped; });
+	return (results.empty() || any_failed) ? 1 : 0;
 }
