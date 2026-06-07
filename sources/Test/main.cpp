@@ -3,8 +3,18 @@ import Test.Math;
 import Core;
 import windows;
 
+void SetupLogging()
+{
+	Log::create<WinErrorLogger>();
+	FileTXTLogger::create("test.log");
+	VSOutputLogger::create();
+	Log::get().set_logging_level(Log::LEVEL_ALL);
+}
+
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+	SetupLogging();
+
 	auto results = Test::TestRegistry::Instance().RunAll();
 	Test::TestRegistry::Instance().PrintResults(results);
 
