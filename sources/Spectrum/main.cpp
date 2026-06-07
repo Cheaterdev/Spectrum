@@ -1171,8 +1171,6 @@ void SetupDebug()
 
 struct test
 {
-	//D3D12_DRED_BREADCRUMB_CONTEXT c;
-	D3D12_AUTO_BREADCRUMB_OP op = D3D12_AUTO_BREADCRUMB_OP_BUILDRAYTRACINGACCELERATIONSTRUCTURE;
 	std::string str = "wtf";
 	vec4 data = { 1, 2, 3, 4 };
 
@@ -1191,7 +1189,7 @@ struct test
 
 	SERIALIZE()
 	{
-		ar& NVP(op)& NVP(str)& NVP(data)& NVP(vec);
+		ar&  NVP(str)& NVP(data)& NVP(vec);
 	}
 } v;
 
