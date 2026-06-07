@@ -13,26 +13,26 @@ export namespace Test
 	// quaternion tests
 	TEST(Core.quaternions, Creation)
 	{
-		quat q(1.0f, 0.0f, 0.0f, 0.0f);
-		ASSERT_EQ(q.w, 1.0f);
+		quat q(0.0f, 0.0f, 0.0f, 1.0f);
 		ASSERT_EQ(q.x, 0.0f);
 		ASSERT_EQ(q.y, 0.0f);
 		ASSERT_EQ(q.z, 0.0f);
+		ASSERT_EQ(q.w, 1.0f);
 	}
 
 	TEST(Core.quaternions, Conjugate)
 	{
 		quat q(1.0f, 2.0f, 3.0f, 4.0f);
 		quat conj = q.conjugate();
-		ASSERT_EQ(conj.w, 1.0f);
-		ASSERT_EQ(conj.x, -2.0f);
-		ASSERT_EQ(conj.y, -3.0f);
-		ASSERT_EQ(conj.z, -4.0f);
+		ASSERT_EQ(conj.x, -1.0f);
+		ASSERT_EQ(conj.y, -2.0f);
+		ASSERT_EQ(conj.z, -3.0f);
+		ASSERT_EQ(conj.w, 4.0f);
 	}
 
 	TEST(Core.quaternions, Identity)
 	{
-		quat identity(1.0f, 0.0f, 0.0f, 0.0f);
+		quat identity(0.0f, 0.0f, 0.0f, 1.0f);
 		quat q(0.5f, 0.5f, 0.5f, 0.5f);
 		quat result = identity * q;
 		ASSERT_TRUE(std::abs(result.w - q.w) < 0.0001f);

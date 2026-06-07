@@ -21,6 +21,16 @@ export namespace Test
 		int line = 0;
 	};
 
+	class TestFailure : public std::exception
+	{
+	public:
+		explicit TestFailure(const std::string& msg) : message(msg) {}
+		const char* what() const noexcept override { return message.c_str(); }
+
+	private:
+		std::string message;
+	};
+
 	class TestRegistry
 	{
 	public:
@@ -61,10 +71,10 @@ export namespace Test
 					result.passed = true;
 					Log::get() << Log::LEVEL_INFO << "[PASS] " << fullName << Log::endl;
 				}
-				catch (const std::string& e)
+				catch (const TestFailure& e)
 				{
 					result.passed = false;
-					result.errorMessage = e;
+					result.errorMessage = e.what();
 					Log::get() << Log::LEVEL_ERROR << "[FAIL] " << fullName << Log::endl;
 					Log::get() << Log::LEVEL_ERROR << "       " << result.errorMessage << Log::endl;
 				}
@@ -128,15 +138,6 @@ export namespace Test
 		std::vector<Test> tests;
 	};
 
-	class TestFailure : public std::exception
-	{
-	public:
-		explicit TestFailure(const std::string& msg) : message(msg) {}
-		const char* what() const noexcept override { return message.c_str(); }
-
-	private:
-		std::string message;
-	};
 
 	inline void AssertTrue(bool condition, const std::string& message, const std::string& file, int line)
 	{
