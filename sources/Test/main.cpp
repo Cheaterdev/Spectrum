@@ -1,6 +1,7 @@
 import Test.Framework;
 import Test.Math;
 import Test.Core;
+import Test.Math.Extended;
 import Core;
 import windows;
 
