@@ -1,5 +1,5 @@
 ﻿extern "C" {
-    _declspec(dllexport) extern const unsigned int D3D12SDKVersion = 618;
+    _declspec(dllexport) extern const unsigned int D3D12SDKVersion = 619;
 }
 
 extern "C" {

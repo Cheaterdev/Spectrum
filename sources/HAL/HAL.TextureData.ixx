@@ -104,6 +104,17 @@ export namespace HAL
 		static ptr load_texture(std::shared_ptr<file> file, int flags);
 		static ptr compress(ptr orig);
 
+		// Build from GPU readback data: strips row padding (layout.row_stride → width_stride)
+		static ptr from_readback(uint width, uint height, Format fmt,
+		                         std::span<const std::byte> gpu_data,
+		                         const texture_layout& layout);
+
+		// Encode mip[0] as PNG bytes (converts to R8G8B8A8_UNORM if needed)
+		std::vector<uint8_t> to_png() const;
+
+		// Decode PNG bytes into texture_data
+		static ptr from_png(const void* data, size_t size);
+
 	};
 
 

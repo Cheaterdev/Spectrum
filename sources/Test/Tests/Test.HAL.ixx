@@ -1,6 +1,7 @@
 ﻿export module Test.HAL;
 
 export import Test.Framework;
+export import Test.HAL.TextureUtils;
 
 import Core;
 import HAL;

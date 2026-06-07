@@ -134,7 +134,6 @@ namespace Spectrum
             }
             else
             {
-                conf.Options.Add(Options.Vc.Linker.LinkTimeCodeGeneration.UseLinkTimeCodeGeneration);
                 conf.Options.Add(Options.Vc.Compiler.Optimization.FullOptimization);
                 conf.Defines.Add("RETAIL");
                 conf.Defines.Remove("NDEBUG");
@@ -145,10 +144,6 @@ namespace Spectrum
                 conf.Defines.Add("PROFILING");
             }
 
-            if (target.Mode == Mode.Retail)
-            {
-                conf.AdditionalCompilerOptions.Add("/GL");
-            }
 
         }
 

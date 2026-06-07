@@ -87,14 +87,6 @@ void PassDefault<Passes::Profiler>::render(
 	Passes::Profiler::Context&, FrameGraph::FrameContext&) {}
 
 
-extern "C" {
-	_declspec(dllexport) extern const unsigned int D3D12SDKVersion = 618;
-}
-
-extern "C" {
-	_declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
-}
-
 class tick_timer
 {
 	std::chrono::time_point<std::chrono::system_clock> last_tick;

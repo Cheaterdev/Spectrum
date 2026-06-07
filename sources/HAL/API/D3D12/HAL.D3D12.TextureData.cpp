@@ -1,4 +1,5 @@
-﻿module HAL:TextureData;
+﻿
+module HAL:TextureData;
 
 import :Utils;
 import :Types;
@@ -184,6 +185,71 @@ namespace HAL
      //       return nullptr;
 
         return generate_tex_data(compressed);
+    }
+
+    texture_data::ptr texture_data::from_readback(uint width, uint height, Format fmt,
+                                                    std::span<const std::byte> gpu_data,
+                                                    const texture_layout& layout)
+    {
+        auto result = std::make_shared<texture_data>(1, 1, width, height, 1, fmt);
+        auto& mip = result->array[0]->mips[0];
+
+        uint row_bytes = mip->width_stride;
+        for (uint row = 0; row < mip->num_rows; ++row)
+        {
+            auto src = reinterpret_cast<const uint8_t*>(gpu_data.data()) + row * layout.row_stride;
+            auto dst = mip->data.data() + row * row_bytes;
+            std::memcpy(dst, src, row_bytes);
+        }
+        return result;
+    }
+
+    std::vector<uint8_t> texture_data::to_png() const
+    {
+        if (array.empty() || array[0]->mips.empty())
+            return {};
+
+        auto& mip_data = array[0]->mips[0];
+
+        DirectXTex::Image img;
+        img.width      = mip_data->width;
+        img.height     = mip_data->height;
+        img.format     = to_native(format);
+        img.rowPitch   = mip_data->width_stride;
+        img.slicePitch = mip_data->slice_stride;
+        img.pixels     = reinterpret_cast<uint8_t*>(const_cast<unsigned char*>(mip_data->data.data()));
+
+        const DirectXTex::Image* save_img = &img;
+        DirectXTex::ScratchImage converted;
+
+        CoInitialize(nullptr);
+
+        if (img.format != DXGI_FORMAT_R8G8B8A8_UNORM)
+        {
+			ASSERT(false);
+        }
+
+        DirectXTex::Blob blob;
+        if (FAILED(DirectXTex::SaveToWICMemory(*save_img, DirectXTex::WIC_FLAGS_NONE,
+	        GUID_ContainerFormatPng, blob)))
+            return {};
+
+        auto* bytes = static_cast<const uint8_t*>(blob.GetBufferPointer());
+        return std::vector<uint8_t>(bytes, bytes + blob.GetBufferSize());
+    }
+
+    texture_data::ptr texture_data::from_png(const void* data, size_t size)
+    {
+        CoInitialize(nullptr);
+
+        DirectXTex::TexMetadata metadata;
+        DirectXTex::ScratchImage image;
+        if (FAILED(DirectXTex::LoadFromWICMemory(
+                static_cast<const uint8_t*>(data), size,
+                DirectXTex::WIC_FLAGS_NONE, &metadata, image)))
+            return nullptr;
+
+        return generate_tex_data(image);
     }
 
     texture_data::ptr texture_data::load_texture(std::shared_ptr<file> file, int flags)

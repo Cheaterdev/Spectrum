@@ -36,6 +36,15 @@
 		static CONCAT_IMPL(SetupRegistrar_, __LINE__) CONCAT_IMPL(setup_reg_, __LINE__); \
 	}
 
+// Check a GPU texture against a saved PNG reference.
+// Saves the texture as the reference if none exists.
+// On mismatch: saves _actual.png and _diff.png under test_results/ and fails the test.
+#define ASSERT_TEXTURE(tex, name) \
+	Test::check_texture_reference(tex, name)
+
+#define ASSERT_TEXTURE_EX(tex, name, sub_resource, tolerance) \
+	Test::check_texture_reference(tex, name, sub_resource, tolerance)
+
 #define TEARDOWN_CATEGORY(category, ...) \
 	namespace { \
 		struct CONCAT_IMPL(TeardownRegistrar_, __LINE__) { \
