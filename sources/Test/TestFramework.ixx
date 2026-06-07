@@ -50,6 +50,8 @@ export namespace Test
 				result.file = test.file;
 				result.line = test.line;
 
+				Log::get() << Log::LEVEL_INFO << ">> Starting: " << result.name << Log::endl;
+
 				try
 				{
 					test.func();
