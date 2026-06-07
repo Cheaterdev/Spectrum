@@ -145,6 +145,11 @@ namespace Spectrum
                 conf.Defines.Add("PROFILING");
             }
 
+            if (target.Mode == Mode.Retail)
+            {
+                conf.AdditionalCompilerOptions.Add("/GL");
+            }
+
         }
 
 

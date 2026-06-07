@@ -18,6 +18,7 @@ export namespace Test
 		std::string category;
 		std::string name;
 		bool passed = false;
+		bool skipped = false;
 		std::string errorMessage;
 		std::string file;
 		int line = 0;
@@ -38,6 +39,7 @@ export namespace Test
 	public:
 		using TestFunc = std::function<void()>;
 		using SetupFunc = std::function<void()>;
+		using TeardownFunc = std::function<void()>;
 
 		static TestRegistry& Instance()
 		{
@@ -55,6 +57,16 @@ export namespace Test
 			setups[category] = std::move(func);
 		}
 
+		void RegisterTeardown(const std::string& category, TeardownFunc func)
+		{
+			teardowns[category] = std::move(func);
+		}
+
+		void SkipCategory(const std::string& category, const std::string& reason)
+		{
+			skipped_categories[category] = reason;
+		}
+
 		std::vector<TestResult> RunAll()
 		{
 			std::vector<TestResult> results;
@@ -63,8 +75,27 @@ export namespace Test
 			Log::get() << Log::LEVEL_INFO << "========== Starting Tests ==========" << Log::endl;
 			Log::get() << Log::LEVEL_INFO << "Running " << tests.size() << " test(s)..." << Log::endl;
 
+			auto runTeardown = [&](const std::string& category)
+			{
+				if (category.empty()) return;
+				auto it = teardowns.find(category);
+				if (it != teardowns.end())
+				{
+					Log::get() << Log::LEVEL_INFO << "[TEARDOWN] " << category << Log::endl;
+					it->second();
+				}
+			};
+
+			std::string currentCategory;
+
 			for (const auto& test : tests)
 			{
+				if (test.category != currentCategory)
+				{
+					runTeardown(currentCategory);
+					currentCategory = test.category;
+				}
+
 				if (!test.category.empty() && ranSetups.find(test.category) == ranSetups.end())
 				{
 					auto it = setups.find(test.category);
@@ -83,6 +114,18 @@ export namespace Test
 				result.line = test.line;
 
 				std::string fullName = result.category.empty() ? result.name : result.category + "::" + result.name;
+
+				auto skipIt = skipped_categories.find(test.category);
+				if (skipIt != skipped_categories.end())
+				{
+					result.skipped = true;
+					result.passed = true;
+					result.errorMessage = skipIt->second;
+					Log::get() << Log::LEVEL_INFO << "[SKIP] " << fullName << " (" << skipIt->second << ")" << Log::endl;
+					results.push_back(result);
+					continue;
+				}
+
 				Log::get() << Log::LEVEL_INFO << ">> Starting: " << fullName << Log::endl;
 
 				try
@@ -101,26 +144,37 @@ export namespace Test
 
 				results.push_back(result);
 			}
+
+			runTeardown(currentCategory);
+
 			return results;
 		}
 
 		void PrintResults(const std::vector<TestResult>& results)
 		{
-			int passed = 0, failed = 0;
-			std::map<std::string, std::pair<int, int>> categoryStats;
+			int passed = 0, failed = 0, skipped = 0;
+
+			struct CategoryStats { int passed = 0; int failed = 0; int skipped = 0; };
+			std::map<std::string, CategoryStats> categoryStats;
 
 			for (const auto& result : results)
 			{
-				if (result.passed)
-					passed++;
-				else
-					failed++;
-
 				auto& stats = categoryStats[result.category];
-				if (result.passed)
-					stats.first++;
+				if (result.skipped)
+				{
+					skipped++;
+					stats.skipped++;
+				}
+				else if (result.passed)
+				{
+					passed++;
+					stats.passed++;
+				}
 				else
-					stats.second++;
+				{
+					failed++;
+					stats.failed++;
+				}
 			}
 
 			Log::get() << Log::LEVEL_INFO << "========== Test Summary ==========" << Log::endl;
@@ -128,15 +182,20 @@ export namespace Test
 			for (const auto& [category, stats] : categoryStats)
 			{
 				std::string categoryName = category.empty() ? "Uncategorized" : category;
+				int total = stats.passed + stats.failed + stats.skipped;
 				std::stringstream ss;
-				ss << categoryName << ": " << (stats.first + stats.second) << " total, " << stats.first << " passed";
-				if (stats.second > 0)
-					ss << ", " << stats.second << " failed";
+				ss << categoryName << ": " << total << " total, " << stats.passed << " passed";
+				if (stats.skipped > 0)
+					ss << ", " << stats.skipped << " skipped";
+				if (stats.failed > 0)
+					ss << ", " << stats.failed << " failed";
 				Log::get() << Log::LEVEL_INFO << ss.str() << Log::endl;
 			}
 
 			Log::get() << Log::LEVEL_INFO << "Total Tests: " << results.size() << Log::endl;
 			Log::get() << Log::LEVEL_INFO << "Passed: " << passed << Log::endl;
+			if (skipped > 0)
+				Log::get() << Log::LEVEL_INFO << "Skipped: " << skipped << Log::endl;
 			if (failed > 0)
 				Log::get() << Log::LEVEL_ERROR << "Failed: " << failed << Log::endl;
 			else
@@ -156,6 +215,8 @@ export namespace Test
 
 		std::vector<Test> tests;
 		std::map<std::string, SetupFunc> setups;
+		std::map<std::string, TeardownFunc> teardowns;
+		std::map<std::string, std::string> skipped_categories;
 	};
 
 

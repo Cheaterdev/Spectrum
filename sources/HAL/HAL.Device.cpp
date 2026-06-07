@@ -72,6 +72,7 @@ namespace HAL
 		{
 			Log::get().crash_error("Cant find proper device");
 		}
+		else
 		result->init_managers();
 		return result;
 	}

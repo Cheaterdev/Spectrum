@@ -35,3 +35,13 @@
 		}; \
 		static CONCAT_IMPL(SetupRegistrar_, __LINE__) CONCAT_IMPL(setup_reg_, __LINE__); \
 	}
+
+#define TEARDOWN_CATEGORY(category, ...) \
+	namespace { \
+		struct CONCAT_IMPL(TeardownRegistrar_, __LINE__) { \
+			CONCAT_IMPL(TeardownRegistrar_, __LINE__)() { \
+				Test::TestRegistry::Instance().RegisterTeardown(#category, __VA_ARGS__); \
+			} \
+		}; \
+		static CONCAT_IMPL(TeardownRegistrar_, __LINE__) CONCAT_IMPL(teardown_reg_, __LINE__); \
+	}

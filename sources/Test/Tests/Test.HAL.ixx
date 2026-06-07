@@ -1,4 +1,4 @@
-export module Test.HAL;
+﻿export module Test.HAL;
 
 export import Test.Framework;
 
@@ -6,7 +6,13 @@ import Core;
 import HAL;
 
 SETUP_CATEGORY(Core.HAL, []() {
-	HAL::Device::create_singleton();
+	auto device = HAL::Device::create_singleton();
+	if (!device)
+		Test::TestRegistry::Instance().SkipCategory("Core.HAL", "no suitable GPU device found");
+});
+
+TEARDOWN_CATEGORY(Core.HAL, []() {
+	HAL::Device::reset();
 });
 
 export namespace Test
@@ -318,3 +324,4 @@ export namespace Test
 		ASSERT_TRUE(dst[SIZE - 1] == static_cast<std::byte>(0xAB));
 	}
 }
+
