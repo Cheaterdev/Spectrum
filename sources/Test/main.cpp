@@ -6,6 +6,7 @@ import Test.Serialization;
 import Test.Threading;
 import Test.Events;
 import Test.FileSystem;
+import Test.Profiling;
 import Core;
 import windows;
 
