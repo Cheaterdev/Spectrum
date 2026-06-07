@@ -74,23 +74,23 @@ export namespace Test
 	// Sphere tests
 	TEST(Core.Geometry, Sphere_Creation)
 	{
-		vec3 center(1.0f, 2.0f, 3.0f);
+		vec3 pos(1.0f, 2.0f, 3.0f);
 		float radius = 5.0f;
-		Sphere s(center, radius);
-		ASSERT_EQ(s.center.x, 1.0f);
+		Sphere s(pos, radius);
+		ASSERT_EQ(s.pos.x, 1.0f);
 		ASSERT_EQ(s.radius, 5.0f);
 	}
 
 	TEST(Core.Geometry, Sphere_ContainsPoint)
 	{
-		vec3 center(0.0f, 0.0f, 0.0f);
-		Sphere s(center, 5.0f);
+		vec3 pos(0.0f, 0.0f, 0.0f);
+		Sphere s(pos, 5.0f);
 
 		vec3 inside(3.0f, 0.0f, 0.0f);
 		vec3 outside(10.0f, 0.0f, 0.0f);
 
-		float distInside = (inside - s.center).length();
-		float distOutside = (outside - s.center).length();
+		float distInside = (inside - s.pos).length();
+		float distOutside = (outside - s.pos).length();
 
 		ASSERT_TRUE(distInside <= s.radius);
 		ASSERT_TRUE(distOutside > s.radius);
@@ -99,20 +99,20 @@ export namespace Test
 	// Ray tests
 	TEST(Core.Geometry, Ray_Creation)
 	{
-		vec3 origin(0.0f, 0.0f, 0.0f);
-		vec3 direction(1.0f, 0.0f, 0.0f);
-		Ray r(origin, direction);
-		ASSERT_EQ(r.origin.x, 0.0f);
-		ASSERT_EQ(r.direction.x, 1.0f);
+		vec3 pos(0.0f, 0.0f, 0.0f);
+		vec3 dir(1.0f, 0.0f, 0.0f);
+		Ray r(pos, dir);
+		ASSERT_EQ(r.pos.x, 0.0f);
+		ASSERT_EQ(r.dir.x, 1.0f);
 	}
 
 	TEST(Core.Geometry, Ray_PointAt)
 	{
-		vec3 origin(0.0f, 0.0f, 0.0f);
-		vec3 direction(1.0f, 0.0f, 0.0f);
-		Ray r(origin, direction);
+		vec3 pos(0.0f, 0.0f, 0.0f);
+		vec3 dir(1.0f, 0.0f, 0.0f);
+		Ray r(pos, dir);
 
-		vec3 point = r.origin + r.direction * 5.0f;
+		vec3 point = r.pos + r.dir * 5.0f;
 		ASSERT_EQ(point.x, 5.0f);
 		ASSERT_EQ(point.y, 0.0f);
 		ASSERT_EQ(point.z, 0.0f);
