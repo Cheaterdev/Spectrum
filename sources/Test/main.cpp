@@ -3,6 +3,7 @@ import Test.Math;
 import Test.Core;
 import Test.Math.Extended;
 import Test.Serialization;
+import Test.Threading;
 import Core;
 import windows;
 
