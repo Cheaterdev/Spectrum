@@ -1,7 +1,9 @@
+#include <windows.h>
+
 import TestFramework;
 import Core;
 
-int main()
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
 	auto results = Test::TestRegistry::Instance().RunAll();
 	Test::TestRegistry::Instance().PrintResults(results);

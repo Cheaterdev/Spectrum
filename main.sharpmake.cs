@@ -394,9 +394,6 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-            conf.Options.Remove(Options.Vc.Linker.SubSystem.Windows);
-            conf.Options.Add(Options.Vc.Linker.SubSystem.Console);
-
             conf.AddPublicDependency<RenderSystem>(target);
         }
     }
