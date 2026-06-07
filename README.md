@@ -1,4 +1,5 @@
 [![Build](https://github.com/Cheaterdev/Spectrum/actions/workflows/build.yml/badge.svg)](https://github.com/Cheaterdev/Spectrum/actions/workflows/build.yml)
+[![Tests](https://github.com/Cheaterdev/Spectrum/actions/workflows/test.yml/badge.svg)](https://github.com/Cheaterdev/Spectrum/actions/workflows/test.yml)
 
 # Spectrum
 
