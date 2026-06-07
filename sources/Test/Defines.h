@@ -6,11 +6,10 @@
 // =============================================================================
 #include "RenderSystem/Defines.h"
 
-
-#define TEST(name) \
-	void Test_##name(); \
-	Test::TestRegistrator registrator_##name(#name, Test_##name, __FILE__, __LINE__); \
-	void Test_##name()
+#define TEST(category, name) \
+	void Test_##category##_##name(); \
+	Test::TestRegistrator registrator_##category##_##name(#category, #name, Test_##category##_##name, __FILE__, __LINE__); \
+	void Test_##category##_##name()
 
 #define ASSERT_TRUE(condition) \
 	Test::AssertTrue(condition, #condition, __FILE__, __LINE__)
