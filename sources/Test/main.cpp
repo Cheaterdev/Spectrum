@@ -2,6 +2,7 @@ import Test.Framework;
 import Test.Math;
 import Test.Core;
 import Test.Math.Extended;
+import Test.Serialization;
 import Core;
 import windows;
 
