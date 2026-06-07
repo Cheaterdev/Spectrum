@@ -96,7 +96,7 @@ jobs:
       shell: powershell
       working-directory: ./workdir
       run: |
-        & ".\SpectrumTest.exe"
+        & ".\test.exe"
         if ($LASTEXITCODE -ne 0) {
           Write-Error "Tests failed with exit code $LASTEXITCODE"
           exit $LASTEXITCODE
