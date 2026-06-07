@@ -68,6 +68,17 @@ jobs:
     - name: Build solution
       run: msbuild ./projects/spectrum.sln /p:Configuration=Retail /p:Platform=x64 /m /v:minimal
 
+    - name: Run tests
+      shell: powershell
+      working-directory: ./bin/Retail
+      run: |
+        & ".\SpectrumTest.exe"
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "Tests failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
+        Write-Host "All tests passed!"
+
     - name: Copy build output to workdir
       shell: powershell
       run: |
