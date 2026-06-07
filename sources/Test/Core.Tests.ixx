@@ -36,7 +36,7 @@ export namespace Test
 	{
 		vec2 a(1.0f, 2.0f);
 		vec2 b(3.0f, 4.0f);
-		float result = a.dot(b);
+		float result = vec2::dot(a, b);
 		ASSERT_EQ(result, 11.0f);
 	}
 
@@ -63,7 +63,7 @@ export namespace Test
 	{
 		vec3 a(1.0f, 0.0f, 0.0f);
 		vec3 b(0.0f, 1.0f, 0.0f);
-		vec3 result = a.cross(b);
+		vec3 result = vec3::cross(a, b);
 		ASSERT_EQ(result.x, 0.0f);
 		ASSERT_EQ(result.y, 0.0f);
 		ASSERT_EQ(result.z, 1.0f);
@@ -73,7 +73,7 @@ export namespace Test
 	{
 		vec3 a(1.0f, 2.0f, 3.0f);
 		vec3 b(4.0f, 5.0f, 6.0f);
-		float result = a.dot(b);
+		float result = vec3::dot(a, b);
 		ASSERT_EQ(result, 32.0f);
 	}
 
@@ -108,31 +108,30 @@ export namespace Test
 	// Matrix tests
 	TEST(Matrix4x4_Identity)
 	{
-		mat4x4 m = mat4x4::identity();
-		ASSERT_EQ(m._11, 1.0f);
-		ASSERT_EQ(m._22, 1.0f);
-		ASSERT_EQ(m._33, 1.0f);
-		ASSERT_EQ(m._44, 1.0f);
-		ASSERT_EQ(m._12, 0.0f);
-		ASSERT_EQ(m._13, 0.0f);
+		mat4x4 m;
+		m.identity();
+		ASSERT_EQ(m.a11, 1.0f);
+		ASSERT_EQ(m.a22, 1.0f);
+		ASSERT_EQ(m.a33, 1.0f);
+		ASSERT_EQ(m.a44, 1.0f);
+		ASSERT_EQ(m.a12, 0.0f);
+		ASSERT_EQ(m.a13, 0.0f);
 	}
 
 	TEST(Matrix4x4_Translation)
 	{
-		vec3 translation(5.0f, 10.0f, 15.0f);
-		mat4x4 m = mat4x4::translation(translation);
-		ASSERT_EQ(m._41, 5.0f);
-		ASSERT_EQ(m._42, 10.0f);
-		ASSERT_EQ(m._43, 15.0f);
+		vec3 trans(5.0f, 10.0f, 15.0f);
+		mat4x4 m = translation(trans);
+		ASSERT_EQ(m.a41, 5.0f);
+		ASSERT_EQ(m.a42, 10.0f);
+		ASSERT_EQ(m.a43, 15.0f);
 	}
 
-	TEST(Matrix4x4_Scale)
+	TEST(Vector3_Normalize)
 	{
-		vec3 scale(2.0f, 3.0f, 4.0f);
-		mat4x4 m = mat4x4::scale(scale);
-		ASSERT_EQ(m._11, 2.0f);
-		ASSERT_EQ(m._22, 3.0f);
-		ASSERT_EQ(m._33, 4.0f);
-		ASSERT_EQ(m._44, 1.0f);
+		vec3 v(3.0f, 4.0f, 0.0f);
+		vec3 normalized = vec3::normalize(v);
+		float len = normalized.length();
+		ASSERT_TRUE(len > 0.99f && len < 1.01f);
 	}
 }
