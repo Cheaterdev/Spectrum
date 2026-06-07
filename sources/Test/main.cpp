@@ -5,6 +5,7 @@ import Test.Math.Extended;
 import Test.Serialization;
 import Test.Threading;
 import Test.Events;
+import Test.FileSystem;
 import Core;
 import windows;
 
