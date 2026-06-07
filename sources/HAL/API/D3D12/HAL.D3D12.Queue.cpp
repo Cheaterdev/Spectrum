@@ -5,7 +5,6 @@ import Core;
 import HAL;
 #undef THIS
 
-using namespace HAL;
 namespace HAL
 {
 
@@ -90,7 +89,6 @@ namespace HAL
 
         if (infos.source)
         {
-
             D3D12_TILED_RESOURCE_COORDINATE target;
             target.X = infos.pos.x;
             target.Y = infos.pos.y;
@@ -117,13 +115,12 @@ namespace HAL
 
     }
 
-    //    signal_and_wait_internal();
     ClockCalibrationInfo Queue::get_clock_time() const
     {
         UINT64 cpu_start;
         UINT64 gpu_start;
         native->GetClockCalibration(&gpu_start, &cpu_start);
-        return { cpu_start,gpu_start, frequency };
+        return { cpu_start, gpu_start, frequency };
     }
 
     DirectStorageQueue::DirectStorageQueue(Device& device) : device(device), requestCounter(device)
@@ -133,7 +130,8 @@ namespace HAL
         TEST(device, DStorageSetConfiguration(&config));
 
         TEST(device, DStorageGetFactory(IID_PPV_ARGS(&factory)));
-        if constexpr (Debug::CheckErrors)    factory->SetDebugFlags(DSTORAGE_DEBUG_BREAK_ON_ERROR | DSTORAGE_DEBUG_SHOW_ERRORS);
+        if constexpr (Debug::CheckErrors)
+            factory->SetDebugFlags(DSTORAGE_DEBUG_BREAK_ON_ERROR | DSTORAGE_DEBUG_SHOW_ERRORS);
         factory->SetStagingBufferSize(32 * 1024 * 1024);
 
         // Create a DirectStorage queue which will be used to load data into a
@@ -160,10 +158,11 @@ namespace HAL
 
         native->Submit();
     }
+
     void DirectStorageQueue::stop_all()
     {
-
     }
+
     HAL::FenceWaiter DirectStorageQueue::signal()
     {
         auto value = ++m_fenceValue;
@@ -177,6 +176,7 @@ namespace HAL
         flush();
         s.wait();
     }
+
     bool DirectStorageQueue::is_complete(UINT64 fence)
     {
         return requestCounter.get_completed_value() >= fence;
@@ -186,6 +186,7 @@ namespace HAL
     {
         return FenceWaiter{ &requestCounter, 0 };
     }
+
     HAL::FenceWaiter DirectStorageQueue::execute(StorageRequest srequest)
     {
         PROFILE(L"DirectStorageQueue::execute");
@@ -199,7 +200,6 @@ namespace HAL
         if (srequest.compressed)
         {
             request.Options.CompressionFormat = DSTORAGE_COMPRESSION_FORMAT_GDEFLATE;
-
         }
 
         request.Source.File.Source = file.Get();
@@ -211,35 +211,35 @@ namespace HAL
         ASSERT(request.UncompressedSize == srequest.uncompressed_size);
 
         std::visit(overloaded{
-                    [&](const StorageRequest::Buffer& buffer) {
-                        request.Options.DestinationType = DSTORAGE_REQUEST_DESTINATION_BUFFER;
-            request.Destination.Buffer.Resource = srequest.resource->get_dx();
-            request.Destination.Buffer.Offset = buffer.offset;
-            request.Destination.Buffer.Size = request.UncompressedSize;
-                    },
-                    [&](const StorageRequest::Texture& texture) {
-                        request.Options.DestinationType = DSTORAGE_REQUEST_DESTINATION_TEXTURE_REGION;
-                        //    request.Destination.MultipleSubresources.Resource = srequest.resource->get_dx();
-                        //request.Destination.MultipleSubresources.FirstSubresource = texture.subresource;
+            [&](const StorageRequest::Buffer& buffer)
+            {
+                request.Options.DestinationType        = DSTORAGE_REQUEST_DESTINATION_BUFFER;
+                request.Destination.Buffer.Resource    = srequest.resource->get_dx();
+                request.Destination.Buffer.Offset      = buffer.offset;
+                request.Destination.Buffer.Size        = request.UncompressedSize;
+            },
+            [&](const StorageRequest::Texture& texture)
+            {
+                request.Options.DestinationType               = DSTORAGE_REQUEST_DESTINATION_TEXTURE_REGION;
+                request.Destination.Texture.Resource          = srequest.resource->get_dx();
+                request.Destination.Texture.SubresourceIndex  = texture.subresource;
 
-                        request.Destination.Texture.Resource = srequest.resource->get_dx();
-                        request.Destination.Texture.SubresourceIndex = texture.subresource;
+                auto size = srequest.resource->get_desc().as_texture().get_size(texture.subresource);
+                D3D12_BOX destBox{};
+                destBox.right  = size.x;
+                destBox.bottom = size.y;
+                destBox.back   = size.z;
 
-                        auto size = srequest.resource->get_desc().as_texture().get_size(texture.subresource);
-                        D3D12_BOX destBox{};
-                        destBox.right = size.x;
-                        destBox.bottom = size.y;
-                        destBox.back = size.z;
+                request.Destination.Texture.Region = destBox;
 
-                        request.Destination.Texture.Region = destBox;
-
-                        auto l = device.get_texture_layout(srequest.resource->get_desc(), texture.subresource);
-                        ASSERT(l.size == srequest.uncompressed_size);
-                    },
-                            [&](auto other) {
-                                ASSERT(false);
-                            }
-            }, srequest.operation);
+                auto l = device.get_texture_layout(srequest.resource->get_desc(), texture.subresource);
+                ASSERT(l.size == srequest.uncompressed_size);
+            },
+            [&](auto other)
+            {
+                ASSERT(false);
+            }
+        }, srequest.operation);
 
         std::lock_guard<std::mutex> g(queue_mutex);
 
@@ -250,13 +250,7 @@ namespace HAL
         executor.enqueue([waiter, f = file]() {
             waiter.wait();
             f->Close();
-            });
-
-        //     native->Submit();
-        //        s.wait();
-
-    //    DSTORAGE_ERROR_RECORD errorRecord{};
-    //    native->RetrieveErrorRecord(&errorRecord);
+        });
 
         return waiter;
     }

@@ -19,17 +19,17 @@ HAL::ResourceDesc extract(D3D::Resource resource)
     {
         if (native_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D)
         {
-            return  HAL::ResourceDesc::Tex1D(from_native(native_desc.Format), { uint(native_desc.Width) }, native_desc.DepthOrArraySize, native_desc.MipLevels, from_native(native_desc.Flags));
+            return HAL::ResourceDesc::Tex1D(from_native(native_desc.Format), { uint(native_desc.Width) }, native_desc.DepthOrArraySize, native_desc.MipLevels, from_native(native_desc.Flags));
         }
 
         if (native_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
         {
-            return  HAL::ResourceDesc::Tex2D(from_native(native_desc.Format), { uint(native_desc.Width), native_desc.Height }, native_desc.DepthOrArraySize, native_desc.MipLevels, from_native(native_desc.Flags));
+            return HAL::ResourceDesc::Tex2D(from_native(native_desc.Format), { uint(native_desc.Width), native_desc.Height }, native_desc.DepthOrArraySize, native_desc.MipLevels, from_native(native_desc.Flags));
         }
 
         if (native_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D)
         {
-            return  HAL::ResourceDesc::Tex3D(from_native(native_desc.Format), { uint(native_desc.Width), native_desc.Height, native_desc.DepthOrArraySize }, native_desc.MipLevels, from_native(native_desc.Flags));
+            return HAL::ResourceDesc::Tex3D(from_native(native_desc.Format), { uint(native_desc.Width), native_desc.Height, native_desc.DepthOrArraySize }, native_desc.MipLevels, from_native(native_desc.Flags));
         }
     }
 
@@ -51,13 +51,12 @@ namespace HAL
             auto& desc = THIS->desc;
             auto& heap_type = THIS->heap_type;
 
-            if(address.heap)
-            heap_type = address.heap->get_type();
+            if (address.heap)
+                heap_type = address.heap->get_type();
             else
                 heap_type = HAL::HeapType::RESERVED;
             desc = _desc;
 
-            //        Log::get() << "creating resource " << _desc << Log::endl;
             auto resourceDesc = to_native(desc);
 
             ResourceAllocationInfo info = device.get_alloc_info(_desc);
@@ -128,9 +127,9 @@ namespace HAL
                         initialLayout = TextureLayout::COPY_DEST; // probably update from CPU or copy
                 }
 
-            if(check(_desc.Flags&ResFlags::DisableStateTracking))
+            if (check(_desc.Flags & ResFlags::DisableStateTracking))
             {
-                if(check(_desc.Flags&ResFlags::ShaderResource))
+                if (check(_desc.Flags & ResFlags::ShaderResource))
                     initialLayout = TextureLayout::SHADER_RESOURCE;// | TextureLayout::COPY_SOURCE;
                 else
                     initialLayout = TextureLayout::COPY_SOURCE;
@@ -157,7 +156,7 @@ namespace HAL
             }
             else
             {
-                        auto resourceDesc1 = to_native_1(desc);
+                auto resourceDesc1 = to_native_1(desc);
 
                 if (resourceDesc.Dimension != D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
                 {
@@ -175,17 +174,17 @@ namespace HAL
             }
             auto prev_flags = THIS->desc.Flags;
             init(native_resource, initialLayout, device);
-            THIS->desc.Flags |=     prev_flags;
+            THIS->desc.Flags |= prev_flags;
         }
 
-        void Resource::init(D3D::Resource  resource, TextureLayout layout, Device& device)
+        void Resource::init(D3D::Resource resource, TextureLayout layout, Device& device)
         {
             auto THIS = static_cast<HAL::Resource*>(this);
             THIS->m_device = static_cast<HAL::Device*>(&device);
 
             THIS->desc = extract(native_resource);
 
-            if(layout == TextureLayout::PRESENT)
+            if (layout == TextureLayout::PRESENT)
                 THIS->desc.Flags |= ResFlags::Swapchain;
 
             if (THIS->desc.is_buffer())
@@ -232,7 +231,7 @@ namespace HAL
 
         PlacementAddress address = { handle.get_heap().get(),handle.get_offset() };
 
-        init(device, desc, address,  TextureLayout::UNDEFINED);
+        init(device, desc, address, TextureLayout::UNDEFINED);
 
         if (own)
         {
@@ -265,8 +264,8 @@ namespace HAL
 
     void Resource::set_name(std::string name)
     {
-        if(!this->name.empty()&&name.empty())    return;
-        ASSERT(name.size()>0);
+        if (!this->name.empty() && name.empty()) return;
+        ASSERT(name.size() > 0);
         this->name = name;
         get_dx()->SetName(convert(name).c_str());
 

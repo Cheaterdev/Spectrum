@@ -1,4 +1,4 @@
-﻿module HAL:API.CommandList;
+module HAL:API.CommandList;
 
 import :Device;
 import :CommandAllocator;
@@ -40,37 +40,29 @@ namespace HAL
             D3D12_SET_PROGRAM_DESC desc = {};
             desc.Type = D3D12_PROGRAM_TYPE_WORK_GRAPH;
             desc.WorkGraph.ProgramIdentifier = obj->id;
-            desc.WorkGraph.Flags = D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE;
-            desc.WorkGraph.BackingMemory = { to_native(adress), size };
 
             // we need to initialise the backing memory only the first time we run the workgraph
             desc.WorkGraph.Flags = init ? D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE : D3D12_SET_WORK_GRAPH_FLAG_NONE;
+            desc.WorkGraph.BackingMemory = { to_native(adress), size };
 
-            // bing the workgraph program with the reference to the backing memory
+            // bind the workgraph program with the reference to the backing memory
             m_commandList->SetProgram(&desc);
-
         }
-        void CommandList::discard(const  HAL::Resource* resource)
+
+        void CommandList::discard(const HAL::Resource* resource)
         {
-            m_commandList-> DiscardResource(resource->native_resource.Get(),nullptr);
+            m_commandList->DiscardResource(resource->native_resource.Get(), nullptr);
         }
 
         void CommandList::dispatch_graph(ResourceAddress addr)
         {
-            // dispatch work graph
             D3D12_DISPATCH_GRAPH_DESC desc = {};
             desc.Mode = D3D12_DISPATCH_MODE_MULTI_NODE_GPU_INPUT;
-            desc.MultiNodeGPUInput= to_native(addr);
+            desc.MultiNodeGPUInput = to_native(addr);
 
-        /*     D3D12_DISPATCH_GRAPH_DESC desc = {};
-    desc.Mode = D3D12_DISPATCH_MODE_NODE_CPU_INPUT;
-    desc.NodeCPUInput = { };
-    desc.NodeCPUInput.EntrypointIndex = 0;
-    desc.NodeCPUInput.NumRecords = 1;*/
-
-    m_commandList->DispatchGraph(&desc);
-
+            m_commandList->DispatchGraph(&desc);
         }
+
         void CommandList::clear_uav(const UAVHandle& h, vec4 ClearColor)
         {
             auto v = h.get_resource_info().view;
@@ -126,7 +118,7 @@ namespace HAL
         void CommandList::set_name(std::wstring_view name)
         {
             m_commandList->SetName(name.data());
-        };
+        }
 
         void CommandList::set_descriptor_heaps(DescriptorHeap* cbv, DescriptorHeap* sampler)
         {
@@ -164,7 +156,6 @@ namespace HAL
 
         void CommandList::draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count, UINT instance_offset)
         {
-
             m_commandList->DrawIndexedInstanced(index_count, instance_count, index_offset, vertex_offset, instance_offset);
         }
 
@@ -173,7 +164,7 @@ namespace HAL
             D3D12_INDEX_BUFFER_VIEW native;
             native.SizeInBytes = index.Resource ? uint(index.SizeInBytes) : 0u;
             native.Format = ::to_native(index.Format);
-            native.BufferLocation = index.Resource ? to_native(index.Resource->get_resource_address().offset(index.OffsetInBytes)) : 0;// index.Resource ? static_cast<HAL::Resource*>(index.Resource)->get_resource_address() + index.OffsetInBytes : 0;
+            native.BufferLocation = index.Resource ? to_native(index.Resource->get_resource_address().offset(index.OffsetInBytes)) : 0;
             m_commandList->IASetIndexBuffer(&native);
         }
 
@@ -214,7 +205,6 @@ namespace HAL
 
         void CommandList::set_viewports(std::vector<Viewport> viewports)
         {
-
             std::vector<D3D12_VIEWPORT> vps(viewports.size());
 
             for (uint i = 0; i < vps.size(); i++)
@@ -231,33 +221,30 @@ namespace HAL
 
         void CommandList::copy_buffer(HAL::Resource* _dest, uint64 dest_offset, HAL::Resource* _source, uint64 source_offset, uint64 size)
         {
-
-            auto dest = static_cast<HAL::Buffer*>(_dest);
-
+            auto dest   = static_cast<HAL::Buffer*>(_dest);
             auto source = static_cast<HAL::Buffer*>(_source);
+
             if constexpr (Debug::CheckErrors)
             {
                 auto source_size = source->get_size();
-                auto dest_size = dest->get_size();
+                auto dest_size   = dest->get_size();
 
                 ASSERT(dest_offset + size <= dest_size);
                 ASSERT(source_offset + size <= source_size);
-
             }
             m_commandList->CopyBufferRegion(dest->get_dx(), dest_offset, source->get_dx(), source_offset, size);
         }
 
         void CommandList::set_pipeline(std::shared_ptr<TrackedPipeline> pipeline)
         {
-
             auto pso = pipeline->get_native();
-            if (pso)    m_commandList->SetPipelineState(pso.Get());
+            if (pso)
+                m_commandList->SetPipelineState(pso.Get());
             else
             {
                 auto state = pipeline->get_native_state();
                 m_commandList->SetPipelineState1(state.Get());
             }
-
         }
 
         void CommandList::execute_indirect(const IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
@@ -273,7 +260,6 @@ namespace HAL
 
         void CommandList::set_rtv(int c, RTVHandle rt, DSVHandle h)
         {
-
             CD3DX12_CPU_DESCRIPTOR_HANDLE rtv;
             CD3DX12_CPU_DESCRIPTOR_HANDLE dsv;
             CD3DX12_CPU_DESCRIPTOR_HANDLE* dsv_ptr = nullptr;
@@ -301,7 +287,7 @@ namespace HAL
 
         void CommandList::end_event()
         {
-        //    if constexpr (HAL::Debug::RunForPix) PIXEndEvent(m_commandList.Get());
+            //if constexpr (HAL::Debug::RunForPix) PIXEndEvent(m_commandList.Get());
         }
 
         void CommandList::build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom)
@@ -309,10 +295,9 @@ namespace HAL
             auto _bottom = to_native(bottom);
             D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
 
-            desc.DestAccelerationStructureData = to_native(build_desc.DestAccelerationStructureData);
-            desc.SourceAccelerationStructureData = to_native(build_desc.SourceAccelerationStructureData);
+            desc.DestAccelerationStructureData    = to_native(build_desc.DestAccelerationStructureData);
+            desc.SourceAccelerationStructureData  = to_native(build_desc.SourceAccelerationStructureData);
             desc.ScratchAccelerationStructureData = to_native(build_desc.ScratchAccelerationStructureData);
-
             desc.Inputs = _bottom;
 
             m_commandList->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
@@ -322,14 +307,12 @@ namespace HAL
         {
             D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
 
-            desc.DestAccelerationStructureData = to_native(build_desc.DestAccelerationStructureData);
-            desc.SourceAccelerationStructureData = to_native(build_desc.SourceAccelerationStructureData);
+            desc.DestAccelerationStructureData    = to_native(build_desc.DestAccelerationStructureData);
+            desc.SourceAccelerationStructureData  = to_native(build_desc.SourceAccelerationStructureData);
             desc.ScratchAccelerationStructureData = to_native(build_desc.ScratchAccelerationStructureData);
-
             desc.Inputs = to_native(top);
 
             m_commandList->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
-
         }
 
         void CommandList::copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres)
@@ -345,13 +328,12 @@ namespace HAL
             CD3DX12_TEXTURE_COPY_LOCATION Src(from->get_dx(), 0);
 
             D3D12_BOX box;
-            box.left = from_pos.x;
-            box.top = from_pos.y;
-            box.front = from_pos.z;
-
-            box.right = from_pos.x + size.x;
+            box.left   = from_pos.x;
+            box.top    = from_pos.y;
+            box.front  = from_pos.z;
+            box.right  = from_pos.x + size.x;
             box.bottom = from_pos.y + size.y;
-            box.back = from_pos.z + size.z;
+            box.back   = from_pos.z + size.z;
             m_commandList->CopyTextureRegion(&Dst, to_pos.x, to_pos.y, to_pos.z, &Src, &box);
         }
 
@@ -364,52 +346,51 @@ namespace HAL
             ASSERT(box.z > 0);
             CD3DX12_TEXTURE_COPY_LOCATION Dst(resource->get_dx(), sub_resource);
             CD3DX12_TEXTURE_COPY_LOCATION Src;
-            Src.pResource = address.resource->get_dx();
-            Src.Type = D3D12_TEXTURE_COPY_TYPE::D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-            Src.PlacedFootprint.Offset = address.resource_offset;
-            Src.PlacedFootprint.Footprint.Width = box.x;
-            Src.PlacedFootprint.Footprint.Height = box.y;
-            Src.PlacedFootprint.Footprint.Depth = box.z;
+            Src.pResource                         = address.resource->get_dx();
+            Src.Type                              = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            Src.PlacedFootprint.Offset            = address.resource_offset;
+            Src.PlacedFootprint.Footprint.Width   = box.x;
+            Src.PlacedFootprint.Footprint.Height  = box.y;
+            Src.PlacedFootprint.Footprint.Depth   = box.z;
             Src.PlacedFootprint.Footprint.RowPitch = layout.row_stride;
-            Src.PlacedFootprint.Footprint.Format = ::to_native(layout.format.to_srv());
+            Src.PlacedFootprint.Footprint.Format  = ::to_native(layout.format.to_srv());
             m_commandList->CopyTextureRegion(&Dst, offset.x, offset.y, offset.z, &Src, nullptr);
         }
 
-        void CommandList::read_texture(const  HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout)
+        void CommandList::read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout)
         {
             CD3DX12_TEXTURE_COPY_LOCATION source(resource->get_dx(), sub_resource);
             CD3DX12_TEXTURE_COPY_LOCATION dest;
             if (box.z == 0) box.z = 1;
             if (box.y == 0) box.y = 1;
 
-            dest.pResource = target.resource->get_dx();
-            dest.Type = D3D12_TEXTURE_COPY_TYPE::D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-            dest.PlacedFootprint.Offset = target.resource_offset;
-            dest.PlacedFootprint.Footprint.Width = box.x;
-            dest.PlacedFootprint.Footprint.Height = box.y;
-            dest.PlacedFootprint.Footprint.Depth = box.z;
+            dest.pResource                         = target.resource->get_dx();
+            dest.Type                              = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            dest.PlacedFootprint.Offset            = target.resource_offset;
+            dest.PlacedFootprint.Footprint.Width   = box.x;
+            dest.PlacedFootprint.Footprint.Height  = box.y;
+            dest.PlacedFootprint.Footprint.Depth   = box.z;
             dest.PlacedFootprint.Footprint.RowPitch = static_cast<UINT>(layout.row_stride);
-            dest.PlacedFootprint.Footprint.Format = ::to_native(layout.format.to_srv());
+            dest.PlacedFootprint.Footprint.Format  = ::to_native(layout.format.to_srv());
             m_commandList->CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
         }
 
         void CommandList::dispatch_rays(uint hit_size, uint miss_size, uint raygen_sige, ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
         {
             D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
-            // Since each shader table has only one shader record, the stride is same as the size.
-            dispatchDesc.HitGroupTable.StartAddress = to_native(hit_buffer);
-            dispatchDesc.HitGroupTable.SizeInBytes = hit_size * hit_count;
-            dispatchDesc.HitGroupTable.StrideInBytes = hit_size;
+            dispatchDesc.HitGroupTable.StartAddress   = to_native(hit_buffer);
+            dispatchDesc.HitGroupTable.SizeInBytes    = hit_size * hit_count;
+            dispatchDesc.HitGroupTable.StrideInBytes  = hit_size;
 
-            dispatchDesc.MissShaderTable.StartAddress = to_native(miss_buffer);
-            dispatchDesc.MissShaderTable.SizeInBytes = miss_size * miss_count;
+            dispatchDesc.MissShaderTable.StartAddress  = to_native(miss_buffer);
+            dispatchDesc.MissShaderTable.SizeInBytes   = miss_size * miss_count;
             dispatchDesc.MissShaderTable.StrideInBytes = miss_size;
 
             dispatchDesc.RayGenerationShaderRecord.StartAddress = to_native(raygen_buffer);
-            dispatchDesc.RayGenerationShaderRecord.SizeInBytes = raygen_sige;
-            dispatchDesc.Width = size.x;
+            dispatchDesc.RayGenerationShaderRecord.SizeInBytes  = raygen_sige;
+            dispatchDesc.Width  = size.x;
             dispatchDesc.Height = size.y;
-            dispatchDesc.Depth = 1;
+            dispatchDesc.Depth  = 1;
 
             m_commandList->DispatchRays(&dispatchDesc);
         }
@@ -417,27 +398,23 @@ namespace HAL
         void CommandList::transitions(const HAL::Barriers& _barriers)
         {
             auto& barriers = _barriers.get_barriers();
-        //    if (barriers.empty())return;
 
             std::vector<D3D12_TEXTURE_BARRIER> textures;
-            std::vector<D3D12_BUFFER_BARRIER> buffers;
-
-            std::vector<D3D12_GLOBAL_BARRIER> global;
+            std::vector<D3D12_BUFFER_BARRIER>  buffers;
 
             for (auto& e : barriers)
             {
-
                 if (e.resource->get_desc().is_buffer())
                 {
                     D3D12_BUFFER_BARRIER barrier;
 
-                    barrier.SyncBefore = to_native(e.before.get_operation());
-                    barrier.SyncAfter = to_native(e.after.get_operation());
+                    barrier.SyncBefore   = to_native(e.before.get_operation());
+                    barrier.SyncAfter    = to_native(e.after.get_operation());
                     barrier.AccessBefore = to_native(e.before.get_access());
-                    barrier.AccessAfter = to_native(e.after.get_access());
-                    barrier.pResource = e.resource->get_dx();
-                    barrier.Offset = 0;
-                    barrier.Size = e.resource->get_desc().as_buffer().SizeInBytes; // Must be UINT64_MAX or buffer size in bytes
+                    barrier.AccessAfter  = to_native(e.after.get_access());
+                    barrier.pResource    = e.resource->get_dx();
+                    barrier.Offset       = 0;
+                    barrier.Size         = e.resource->get_desc().as_buffer().SizeInBytes;
 
                     buffers.emplace_back(barrier);
                 }
@@ -446,37 +423,32 @@ namespace HAL
                 {
                     D3D12_TEXTURE_BARRIER barrier;
 
-                    barrier.SyncBefore = to_native(e.before.get_operation());
-                    barrier.SyncAfter = to_native(e.after.get_operation());
+                    barrier.SyncBefore   = to_native(e.before.get_operation());
+                    barrier.SyncAfter    = to_native(e.after.get_operation());
                     barrier.AccessBefore = to_native(e.before.get_access());
-                    barrier.AccessAfter = to_native(e.after.get_access());
+                    barrier.AccessAfter  = to_native(e.after.get_access());
                     barrier.LayoutBefore = to_native(e.before.get_layout());
-                    barrier.LayoutAfter = to_native(e.after.get_layout());
-
-                    barrier.pResource = e.resource->get_dx();
-                    //barrier.Offset = 0;
-                    //   barrier.Size = e.resource->get_desc().as_buffer().SizeInBytes; // Must be UINT64_MAX or buffer size in bytes
+                    barrier.LayoutAfter  = to_native(e.after.get_layout());
+                    barrier.pResource    = e.resource->get_dx();
 
                     barrier.Subresources.IndexOrFirstMipLevel = e.resource->get_desc().as_texture().get_mip(e.subres);
-                    barrier.Subresources.NumMipLevels = 1;
-                    barrier.Subresources.FirstArraySlice = e.resource->get_desc().as_texture().get_array(e.subres);
-                    barrier.Subresources.NumArraySlices = 1;
-                    barrier.Subresources.FirstPlane = e.resource->get_desc().as_texture().get_plane(e.subres);
-                    barrier.Subresources.NumPlanes = 1;
+                    barrier.Subresources.NumMipLevels         = 1;
+                    barrier.Subresources.FirstArraySlice      = e.resource->get_desc().as_texture().get_array(e.subres);
+                    barrier.Subresources.NumArraySlices       = 1;
+                    barrier.Subresources.FirstPlane           = e.resource->get_desc().as_texture().get_plane(e.subres);
+                    barrier.Subresources.NumPlanes            = 1;
 
                     barrier.Flags = D3D12_TEXTURE_BARRIER_FLAG_NONE;
-                    if (check(e.flags &BarrierFlags::DISCARD))
-                        barrier.Flags|= D3D12_TEXTURE_BARRIER_FLAG_DISCARD ;
+                    if (check(e.flags & BarrierFlags::DISCARD))
+                        barrier.Flags |= D3D12_TEXTURE_BARRIER_FLAG_DISCARD;
 
                     textures.emplace_back(barrier);
 
                     if (e.resource->debug_transitions)
                     {
-
                         Log::get() << "d3d12 trans " << barrier.SyncBefore << ";" << barrier.SyncAfter << ";" << barrier.AccessBefore << " ---> " << barrier.AccessAfter << ";" << barrier.LayoutBefore << ";" << barrier.LayoutAfter << Log::endl;
                     }
                 }
-
             }
 
             std::vector<D3D12_BARRIER_GROUP> native;
@@ -484,100 +456,23 @@ namespace HAL
             if (!buffers.empty())
             {
                 D3D12_BARRIER_GROUP group;
-
-                group.Type = D3D12_BARRIER_TYPE::D3D12_BARRIER_TYPE_BUFFER;
-                group.NumBarriers = uint(buffers.size());
+                group.Type            = D3D12_BARRIER_TYPE_BUFFER;
+                group.NumBarriers     = uint(buffers.size());
                 group.pBufferBarriers = buffers.data();
-
                 native.emplace_back(group);
             }
 
             if (!textures.empty())
             {
                 D3D12_BARRIER_GROUP group;
-
-                group.Type = D3D12_BARRIER_TYPE::D3D12_BARRIER_TYPE_TEXTURE;
-                group.NumBarriers = uint(textures.size());
+                group.Type             = D3D12_BARRIER_TYPE_TEXTURE;
+                group.NumBarriers      = uint(textures.size());
                 group.pTextureBarriers = textures.data();
-
                 native.emplace_back(group);
             }
-
-            /*            if (GetAsyncKeyState('8'))
-            {
-
-                    D3D12_GLOBAL_BARRIER barrier;
-
-                        barrier.SyncBefore =
-                        barrier.SyncAfter =
-                        D3D12_BARRIER_SYNC_ALL_SHADING |
-                        D3D12_BARRIER_SYNC_BUILD_RAYTRACING_ACCELERATION_STRUCTURE |
-                        D3D12_BARRIER_SYNC_COPY_RAYTRACING_ACCELERATION_STRUCTURE |
-                        D3D12_BARRIER_SYNC_EMIT_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO;
-
-                    barrier.AccessBefore =
-                        barrier.AccessAfter =
-                        D3D12_BARRIER_ACCESS_UNORDERED_ACCESS |
-                        D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_WRITE |
-                        D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_READ;
-
-                    global.emplace_back(barrier);
-
-                D3D12_BARRIER_GROUP group;
-
-                group.Type = D3D12_BARRIER_TYPE::D3D12_BARRIER_TYPE_GLOBAL;
-                group.NumBarriers = global.size();
-                group.pGlobalBarriers = global.data();
-
-                native.emplace_back(group);
-            }
-
-            */
-
-            /*auto& barriers = _barriers.get_barriers();
-            if (!barriers.empty())
-            {
-
-                std::vector<D3D12_RESOURCE_BARRIER> native(barriers.size());
-
-                for (uint i = 0; i < native.size(); i++)
-                {
-
-                    auto& e = barriers[i];
-                    std::visit(overloaded{
-                [&](const BarrierUAV& barrier) {
-                native[i] = (CD3DX12_RESOURCE_BARRIER::UAV((barrier.resource)->get_dx()));
-                },
-                [&](const BarrierAlias& barrier) {
-                    auto native_from = barrier.before ? (barrier.before)->get_dx() : nullptr;
-                    auto native_to = barrier.after ? (barrier.after)->get_dx() : nullptr;
-                    native[i] = (CD3DX12_RESOURCE_BARRIER::Aliasing(native_from, native_to));
-                },[&](const BarrierTransition& barrier) {
-                    D3D12_RESOURCE_BARRIER_FLAGS native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
-
-                                        if (barrier.flags == BarrierFlags::BEGIN) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
-                                        if (barrier.flags == BarrierFlags::END) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
-
-                                        native[i] = (CD3DX12_RESOURCE_BARRIER::Transition((barrier.resource)->get_dx(),
-                                            static_cast<D3D12_RESOURCE_STATES>(barrier.before),
-                                            static_cast<D3D12_RESOURCE_STATES>(barrier.after),
-                                            barrier.subres == ALL_SUBRESOURCES ? D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : barrier.subres,
-                                            native_flags));
-                },
-                [&](auto other) {
-                    ASSERT(false);
-                }
-                        }, e);
-
-                }*/
 
             if (!native.empty())
-            {
                 m_commandList->Barrier((UINT)native.size(), native.data());
-
-            }
-
-            //}
         }
     }
 }

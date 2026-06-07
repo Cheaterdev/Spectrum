@@ -34,36 +34,34 @@ export namespace HAL
 
     class DescriptorHeap;
     class Descriptor;
-    namespace API
-    {
+    namespace API {
 
-    class DescriptorHeap
-    {
-    public:// TODO
-        D3D::DescriptorHeap m_cpu_heap;
-        D3D::DescriptorHeap m_gpu_heap;
-
-        const DescriptorHeapDesc desc;
-        const Device& device;
-
-        CD3DX12_CPU_DESCRIPTOR_HANDLE  cpu_start;
-        CD3DX12_CPU_DESCRIPTOR_HANDLE  gpu_cpu_start;
-
-        CD3DX12_GPU_DESCRIPTOR_HANDLE  gpu_start;
-
-        uint handle_size;
-        friend class Descriptor;
-    public:
-        DescriptorHeap(Device& device, const DescriptorHeapDesc& desc);
-
-        HAL::Descriptor operator[](uint i);
-
-        auto get_dx() const
+        class DescriptorHeap
         {
-            if (m_gpu_heap)
-                return m_gpu_heap.Get();
-            return m_cpu_heap.Get();
-        }
-    };
+            friend class Descriptor;
+        public:
+            D3D::DescriptorHeap m_cpu_heap;
+            D3D::DescriptorHeap m_gpu_heap;
+
+            const DescriptorHeapDesc desc;
+            const Device& device;
+
+            CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_start;
+            CD3DX12_CPU_DESCRIPTOR_HANDLE gpu_cpu_start;
+            CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_start;
+
+            uint handle_size;
+
+            DescriptorHeap(Device& device, const DescriptorHeapDesc& desc);
+
+            HAL::Descriptor operator[](uint i);
+
+            auto get_dx() const
+            {
+                if (m_gpu_heap)
+                    return m_gpu_heap.Get();
+                return m_cpu_heap.Get();
+            }
+        };
     }
 }

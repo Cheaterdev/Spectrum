@@ -32,8 +32,8 @@ export namespace HAL {
             void end();
 
             operator bool() {
-            return !!m_commandList;
-        }
+                return !!m_commandList;
+            }
 
             void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
             void dispatch_graph(ResourceAddress addr);
@@ -49,7 +49,7 @@ export namespace HAL {
             void dispatch_rays(uint hit_size, uint miss_size, uint raygen_sige, ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer);
             void set_name(std::wstring_view name);
 
-            void discard(const  HAL::Resource* resource);
+            void discard(const HAL::Resource* resource);
 
             void set_descriptor_heaps(DescriptorHeap* cbv, DescriptorHeap* sampler);
             void insert_time(const QueryHandle& handle, uint offset);
@@ -78,8 +78,8 @@ export namespace HAL {
             void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top);
             void copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres);
             void copy_texture(const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& from, ivec3 from_pos, ivec3 size);
-            void update_texture( HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout);
-            void read_texture(const  HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout);
+            void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout);
+            void read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout);
             void transitions(const HAL::Barriers& _barriers);
         };
     }
