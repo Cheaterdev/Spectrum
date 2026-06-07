@@ -68,22 +68,37 @@ jobs:
     - name: Build solution
       run: msbuild ./projects/spectrum.sln /p:Configuration=Retail /p:Platform=x64 /m /v:minimal
 
-    - name: Upload bin/Retail for test workflow
-      uses: actions/upload-artifact@v4
-      with:
-        name: bin-retail
-        path: ./bin/Retail/
-        retention-days: 1
-
     - name: Copy build output to workdir
       shell: powershell
       run: |
         Copy-Item -Path ./bin/Retail/* -Destination ./workdir/ -Recurse -Force
 
-    - name: Upload workdir artifacts
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: build-output
         path: ./workdir/
         retention-days: 7
+
+  test:
+    runs-on: windows-2025-vs2026
+    needs: build
+
+    steps:
+    - name: Download build output
+      uses: actions/download-artifact@v4
+      with:
+        name: build-output
+        path: ./workdir
+
+    - name: Run tests
+      shell: powershell
+      working-directory: ./workdir
+      run: |
+        & ".\SpectrumTest.exe"
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "Tests failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
+        Write-Host "All tests passed!"
