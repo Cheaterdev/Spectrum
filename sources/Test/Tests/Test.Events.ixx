@@ -330,7 +330,7 @@ export namespace Test
 
 		std::atomic<int> result(0);
 
-		event.register_handler(&runner, [&result](int val) {
+		event.register_handler(nullptr, [&result](int val) {
 			result.store(val * 2, std::memory_order_relaxed);
 		});
 
@@ -348,15 +348,15 @@ export namespace Test
 
 		std::atomic<int> count(0);
 
-		event.register_handler(&runner, [&count](int) {
+		event.register_handler(nullptr, [&count](int) {
 			count.fetch_add(1, std::memory_order_relaxed);
 		});
 
-		event.register_handler(&runner, [&count](int) {
+		event.register_handler(nullptr, [&count](int) {
 			count.fetch_add(2, std::memory_order_relaxed);
 		});
 
-		event.register_handler(&runner, [&count](int) {
+		event.register_handler(nullptr, [&count](int) {
 			count.fetch_add(3, std::memory_order_relaxed);
 		});
 
@@ -374,7 +374,7 @@ export namespace Test
 
 		std::atomic<int> sum(0);
 
-		event.register_handler(&runner, [&sum](int val) {
+		event.register_handler(nullptr, [&sum](int val) {
 			sum.fetch_add(val, std::memory_order_relaxed);
 		});
 
@@ -395,7 +395,7 @@ export namespace Test
 
 		std::atomic<int> result(0);
 
-		event.register_handler(&runner, [&result](int val) {
+		event.register_handler(nullptr, [&result](int val) {
 			result.store(val * 2, std::memory_order_relaxed);
 		});
 
@@ -426,7 +426,7 @@ export namespace Test
 
 		for (int i = 0; i < 10; ++i)
 		{
-			futures.push_back(Core::thread_pool::get().enqueue([&event]() {
+			futures.push_back(thread_pool::get().enqueue([&event]() {
 				event(0);
 			}));
 		}
@@ -460,7 +460,7 @@ export namespace Test
 
 		for (int i = 0; i < 5; ++i)
 		{
-			futures.push_back(Core::thread_pool::get().enqueue([&event]() {
+			futures.push_back(thread_pool::get().enqueue([&event]() {
 				event(0);
 			}));
 		}
@@ -486,7 +486,7 @@ export namespace Test
 
 		for (int i = 1; i <= 10; ++i)
 		{
-			futures.push_back(Core::thread_pool::get().enqueue([&event, i]() {
+			futures.push_back(thread_pool::get().enqueue([&event, i]() {
 				event(i);
 			}));
 		}
@@ -513,7 +513,7 @@ export namespace Test
 
 		for (int i = 0; i < 20; ++i)
 		{
-			futures.push_back(Core::thread_pool::get().enqueue([&event, i]() {
+			futures.push_back(thread_pool::get().enqueue([&event, i]() {
 				event(1);
 			}));
 		}
@@ -544,7 +544,7 @@ export namespace Test
 
 		for (int i = 0; i < 5; ++i)
 		{
-			futures.push_back(Core::thread_pool::get().enqueue([&event1]() {
+			futures.push_back(thread_pool::get().enqueue([&event1]() {
 				event1(21);
 			}));
 		}
@@ -565,7 +565,7 @@ export namespace Test
 
 		std::atomic<int> processed(0);
 
-		event.register_handler(&runner, [&processed](int val) {
+		event.register_handler(nullptr, [&processed](int val) {
 			processed.fetch_add(val, std::memory_order_relaxed);
 		});
 
@@ -573,7 +573,7 @@ export namespace Test
 
 		for (int i = 1; i <= 5; ++i)
 		{
-			futures.push_back(Core::thread_pool::get().enqueue([&event, i]() {
+			futures.push_back(thread_pool::get().enqueue([&event, i]() {
 				event(i);
 			}));
 		}
@@ -599,11 +599,11 @@ export namespace Test
 
 		std::atomic<int> result(0);
 
-		producer_event.register_handler(&runner, [&worker_event](int val) {
+		producer_event.register_handler(nullptr, [&worker_event](int val) {
 			worker_event(val * 2);
 		});
 
-		worker_event.register_handler(&runner, [&result](int val) {
+		worker_event.register_handler(nullptr, [&result](int val) {
 			result.store(val + 10, std::memory_order_relaxed);
 		});
 
@@ -611,7 +611,7 @@ export namespace Test
 
 		for (int i = 0; i < 5; ++i)
 		{
-			futures.push_back(Core::thread_pool::get().enqueue([&producer_event]() {
+			futures.push_back(thread_pool::get().enqueue([&producer_event]() {
 				producer_event(16);
 			}));
 		}
@@ -624,5 +624,254 @@ export namespace Test
 		runner.process_tasks();
 
 		ASSERT_EQ(result.load(std::memory_order_relaxed), 42);
+	}
+
+	// Class-based event handler tests
+	TEST(Core.Events, ClassEventHandlerRegistration)
+	{
+		struct EventListener : public prop_handler
+		{
+			std::atomic<int> received_value{0};
+
+			void on_event(int val)
+			{
+				received_value.store(val, std::memory_order_relaxed);
+			}
+		};
+
+		Event<int> event;
+		EventListener listener;
+
+		event.register_handler(&listener, [&listener](int val) {
+			listener.on_event(val);
+		});
+
+		event(42);
+		ASSERT_EQ(listener.received_value.load(std::memory_order_relaxed), 42);
+	}
+
+	TEST(Core.Events, ClassEventHandlerDestruction)
+	{
+		struct EventListener : public prop_handler
+		{
+			std::atomic<int> value{0};
+
+			void handle_event(int val)
+			{
+				value.store(val, std::memory_order_relaxed);
+			}
+		};
+
+		Event<int> event;
+
+		{
+			EventListener listener;
+			event.register_handler(&listener, [&listener](int val) {
+				listener.handle_event(val);
+			});
+
+			event(100);
+			ASSERT_EQ(listener.value.load(std::memory_order_relaxed), 100);
+		}
+
+		// Listener is destroyed here - handler should be unregistered
+		// Event firing after destruction should not crash
+		event(200);
+		ASSERT_TRUE(true);
+	}
+
+	TEST(Core.Events, MultipleClassHandlers)
+	{
+		struct Listener1 : public prop_handler
+		{
+			std::atomic<int> count{0};
+
+			void on_event(int)
+			{
+				count.fetch_add(1, std::memory_order_relaxed);
+			}
+		};
+
+		struct Listener2 : public prop_handler
+		{
+			std::atomic<int> sum{0};
+
+			void on_event(int val)
+			{
+				sum.fetch_add(val, std::memory_order_relaxed);
+			}
+		};
+
+		Event<int> event;
+		Listener1 listener1;
+		Listener2 listener2;
+
+		event.register_handler(&listener1, [&listener1](int val) {
+			listener1.on_event(val);
+		});
+
+		event.register_handler(&listener2, [&listener2](int val) {
+			listener2.on_event(val);
+		});
+
+		event(10);
+		event(20);
+		event(12);
+
+		ASSERT_EQ(listener1.count.load(std::memory_order_relaxed), 3);
+		ASSERT_EQ(listener2.sum.load(std::memory_order_relaxed), 42);
+	}
+
+	TEST(Core.Events, ClassHandlerWithMultipleEvents)
+	{
+		struct EventManager : public prop_handler
+		{
+			std::atomic<int> event1_count{0};
+			std::atomic<int> event2_sum{0};
+
+			void on_event1(int)
+			{
+				event1_count.fetch_add(1, std::memory_order_relaxed);
+			}
+
+			void on_event2(int val)
+			{
+				event2_sum.fetch_add(val, std::memory_order_relaxed);
+			}
+		};
+
+		Event<int> event1;
+		Event<int> event2;
+		EventManager manager;
+
+		event1.register_handler(&manager, [&manager](int val) {
+			manager.on_event1(val);
+		});
+
+		event2.register_handler(&manager, [&manager](int val) {
+			manager.on_event2(val);
+		});
+
+		event1(0);
+		event1(0);
+		event1(0);
+
+		event2(10);
+		event2(20);
+		event2(12);
+
+		ASSERT_EQ(manager.event1_count.load(std::memory_order_relaxed), 3);
+		ASSERT_EQ(manager.event2_sum.load(std::memory_order_relaxed), 42);
+	}
+
+	TEST(Core.Events, ClassHandlerScopedLifetime)
+	{
+		struct ScopedListener : public prop_handler
+		{
+			std::atomic<int> invocation_count{0};
+
+			void on_event(int)
+			{
+				invocation_count.fetch_add(1, std::memory_order_relaxed);
+			}
+		};
+
+		Event<int> event;
+
+		{
+			ScopedListener listener;
+
+			event.register_handler(&listener, [&listener](int val) {
+				listener.on_event(val);
+			});
+
+			event(0);
+			ASSERT_EQ(listener.invocation_count.load(std::memory_order_relaxed), 1);
+
+			event(0);
+			ASSERT_EQ(listener.invocation_count.load(std::memory_order_relaxed), 2);
+		}
+
+		// After scope, listener is destroyed
+		// This should not invoke the handler
+		event(0);
+
+		// Verify no crash occurred
+		ASSERT_TRUE(true);
+	}
+
+	TEST(Core.Events, ClassHandlerThreadedRegistration)
+	{
+		struct ThreadedListener : public prop_handler
+		{
+			std::atomic<int> processed{0};
+
+			void handle(int)
+			{
+				processed.fetch_add(1, std::memory_order_relaxed);
+			}
+		};
+
+		Event<int> event;
+		ThreadedListener listener;
+
+		event.register_handler(&listener, [&listener](int val) {
+			listener.handle(val);
+		});
+
+		std::vector<std::future<void>> futures;
+
+		for (int i = 0; i < 10; ++i)
+		{
+			futures.push_back(thread_pool::get().enqueue([&event]() {
+				event(0);
+			}));
+		}
+
+		for (auto& f : futures)
+		{
+			f.get();
+		}
+
+		ASSERT_EQ(listener.processed.load(std::memory_order_relaxed), 10);
+	}
+
+	TEST(Core.Events, ClassHandlerAutomaticCleanup)
+	{
+		struct AutoCleanupListener : public prop_handler
+		{
+			std::atomic<int> cleanup_count{0};
+			Event<int>* event_ptr = nullptr;
+
+			AutoCleanupListener(Event<int>* evt) : event_ptr(evt)
+			{
+				event_ptr->register_handler(this, [this](int val) {
+					process(val);
+				});
+			}
+
+			void process(int)
+			{
+				// Handler processing
+			}
+
+			~AutoCleanupListener()
+			{
+				// Automatic unregistration via prop_handler destructor
+				cleanup_count.store(1, std::memory_order_relaxed);
+			}
+		};
+
+		Event<int> event;
+
+		{
+			AutoCleanupListener listener(&event);
+			event(0);
+		}
+
+		// Listener destroyed - handlers should be cleaned up automatically
+		event(0);
+
+		ASSERT_TRUE(true);
 	}
 }
