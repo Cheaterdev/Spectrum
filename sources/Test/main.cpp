@@ -4,6 +4,7 @@ import Test.Core;
 import Test.Math.Extended;
 import Test.Serialization;
 import Test.Threading;
+import Test.Events;
 import Core;
 import windows;
 
