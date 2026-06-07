@@ -3,10 +3,11 @@ module;
 #include <string>
 #include <vector>
 #include <functional>
-#include <iostream>
 #include <sstream>
 
 export module TestFramework;
+
+import Core;
 
 export namespace Test
 {
@@ -65,26 +66,26 @@ export namespace Test
 		{
 			int passed = 0, failed = 0;
 
-			std::cout << "\n========== Test Results ==========\n";
+			Log::get() << Log::LEVEL_INFO << "\n========== Test Results ==========\n" << Log::endl;
 			for (const auto& result : results)
 			{
 				if (result.passed)
 				{
-					std::cout << "[PASS] " << result.name << "\n";
+					Log::get() << Log::LEVEL_INFO << "[PASS] " << result.name << Log::endl;
 					passed++;
 				}
 				else
 				{
-					std::cout << "[FAIL] " << result.name << "\n";
-					std::cout << "       " << result.file << ":" << result.line << "\n";
-					std::cout << "       " << result.errorMessage << "\n";
+					Log::get() << Log::LEVEL_ERROR << "[FAIL] " << result.name << Log::endl;
+					Log::get() << Log::LEVEL_ERROR << "       " << result.file << ":" << result.line << Log::endl;
+					Log::get() << Log::LEVEL_ERROR << "       " << result.errorMessage << Log::endl;
 					failed++;
 				}
 			}
 
-			std::cout << "\n=================================\n";
-			std::cout << "Total: " << results.size() << " | Passed: " << passed << " | Failed: " << failed << "\n";
-			std::cout << "=================================\n\n";
+			Log::get() << Log::LEVEL_INFO << "\n=================================\n" << Log::endl;
+			Log::get() << Log::LEVEL_INFO << "Total: " << results.size() << " | Passed: " << passed << " | Failed: " << failed << Log::endl;
+			Log::get() << Log::LEVEL_INFO << "=================================\n\n" << Log::endl;
 		}
 
 	private:
@@ -161,19 +162,3 @@ export namespace Test
 	};
 }
 
-#define TEST(name) \
-	void Test_##name(); \
-	Test::TestRegistrator registrator_##name(#name, Test_##name, __FILE__, __LINE__); \
-	void Test_##name()
-
-#define ASSERT_TRUE(condition) \
-	Test::AssertTrue(condition, #condition, __FILE__, __LINE__)
-
-#define ASSERT_FALSE(condition) \
-	Test::AssertFalse(condition, #condition, __FILE__, __LINE__)
-
-#define ASSERT_EQ(expected, actual) \
-	Test::AssertEqual(expected, actual, __FILE__, __LINE__)
-
-#define ASSERT_NE(expected, actual) \
-	Test::AssertNotEqual(expected, actual, __FILE__, __LINE__)

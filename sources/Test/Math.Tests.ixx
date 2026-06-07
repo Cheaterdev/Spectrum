@@ -1,10 +1,8 @@
-module;
-
-#include <cmath>
-
 export module Test.Math;
 
-export import Test.Framework;
+export import TestFramework;
+
+import stl.core;
 
 export namespace Test
 {
