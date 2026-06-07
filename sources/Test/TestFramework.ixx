@@ -13,6 +13,7 @@ export namespace Test
 {
 	struct TestResult
 	{
+		std::string category;
 		std::string name;
 		bool passed = false;
 		std::string errorMessage;
@@ -31,9 +32,9 @@ export namespace Test
 			return instance;
 		}
 
-		void Register(const std::string& name, TestFunc func, const std::string& file, int line)
+		void Register(const std::string& category, const std::string& name, TestFunc func, const std::string& file, int line)
 		{
-			tests.push_back({name, func, file, line});
+			tests.push_back({category, name, func, file, line});
 		}
 
 		std::vector<TestResult> RunAll()
@@ -46,23 +47,25 @@ export namespace Test
 			for (const auto& test : tests)
 			{
 				TestResult result;
+				result.category = test.category;
 				result.name = test.name;
 				result.file = test.file;
 				result.line = test.line;
 
-				Log::get() << Log::LEVEL_INFO << ">> Starting: " << result.name << Log::endl;
+				std::string fullName = result.category.empty() ? result.name : result.category + "::" + result.name;
+				Log::get() << Log::LEVEL_INFO << ">> Starting: " << fullName << Log::endl;
 
 				try
 				{
 					test.func();
 					result.passed = true;
-					Log::get() << Log::LEVEL_INFO << "[PASS] " << result.name << Log::endl;
+					Log::get() << Log::LEVEL_INFO << "[PASS] " << fullName << Log::endl;
 				}
 				catch (const std::string& e)
 				{
 					result.passed = false;
 					result.errorMessage = e;
-					Log::get() << Log::LEVEL_ERROR << "[FAIL] " << result.name << Log::endl;
+					Log::get() << Log::LEVEL_ERROR << "[FAIL] " << fullName << Log::endl;
 					Log::get() << Log::LEVEL_ERROR << "       " << result.errorMessage << Log::endl;
 				}
 
@@ -74,6 +77,7 @@ export namespace Test
 		void PrintResults(const std::vector<TestResult>& results)
 		{
 			int passed = 0, failed = 0;
+			std::map<std::string, std::pair<int, int>> categoryStats;
 
 			for (const auto& result : results)
 			{
@@ -81,10 +85,28 @@ export namespace Test
 					passed++;
 				else
 					failed++;
+
+				auto& stats = categoryStats[result.category];
+				if (result.passed)
+					stats.first++;
+				else
+					stats.second++;
 			}
 
 			Log::get() << Log::LEVEL_INFO << "========== Test Summary ==========" << Log::endl;
-			Log::get() << Log::LEVEL_INFO << "Total Tests: " << results.size() << Log::endl;
+
+			for (const auto& [category, stats] : categoryStats)
+			{
+				std::string categoryName = category.empty() ? "Uncategorized" : category;
+				Log::get() << Log::LEVEL_INFO << categoryName << ": " << (stats.first + stats.second)
+					<< " total, " << stats.first << " passed";
+				if (stats.second > 0)
+					Log::get() << Log::LEVEL_ERROR << ", " << stats.second << " failed" << Log::endl;
+				else
+					Log::get() << Log::LEVEL_INFO << Log::endl;
+			}
+
+			Log::get() << Log::LEVEL_INFO << "\nTotal Tests: " << results.size() << Log::endl;
 			Log::get() << Log::LEVEL_INFO << "Passed: " << passed << Log::endl;
 			if (failed > 0)
 				Log::get() << Log::LEVEL_ERROR << "Failed: " << failed << Log::endl;
@@ -96,6 +118,7 @@ export namespace Test
 	private:
 		struct Test
 		{
+			std::string category;
 			std::string name;
 			TestFunc func;
 			std::string file;
@@ -160,10 +183,27 @@ export namespace Test
 	class TestRegistrator
 	{
 	public:
-		TestRegistrator(const std::string& name, TestRegistry::TestFunc func, const std::string& file, int line)
+		TestRegistrator(const std::string& category, const std::string& name, TestRegistry::TestFunc func, const std::string& file, int line)
 		{
-			TestRegistry::Instance().Register(name, func, file, line);
+			TestRegistry::Instance().Register(category, name, func, file, line);
 		}
 	};
 }
+
+#define TEST(category, name) \
+	void Test_##category##_##name(); \
+	Test::TestRegistrator registrator_##category##_##name(#category, #name, Test_##category##_##name, __FILE__, __LINE__); \
+	void Test_##category##_##name()
+
+#define ASSERT_TRUE(condition) \
+	Test::AssertTrue(condition, #condition, __FILE__, __LINE__)
+
+#define ASSERT_FALSE(condition) \
+	Test::AssertFalse(condition, #condition, __FILE__, __LINE__)
+
+#define ASSERT_EQ(expected, actual) \
+	Test::AssertEqual(expected, actual, __FILE__, __LINE__)
+
+#define ASSERT_NE(expected, actual) \
+	Test::AssertNotEqual(expected, actual, __FILE__, __LINE__)
 
