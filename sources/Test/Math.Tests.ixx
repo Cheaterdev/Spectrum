@@ -1,6 +1,6 @@
 export module Test.Math;
 
-export import TestFramework;
+export import Test.Framework;
 
 import stl.core;
 

@@ -5,7 +5,7 @@ module;
 #include <functional>
 #include <sstream>
 
-export module TestFramework;
+export module Test.Framework;
 
 import Core;
 
