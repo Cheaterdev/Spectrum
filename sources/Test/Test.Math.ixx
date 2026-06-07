@@ -1,6 +1,5 @@
 module;
 
-#include "Test/Defines.h"
 #include <cmath>
 
 export module Test.Math;

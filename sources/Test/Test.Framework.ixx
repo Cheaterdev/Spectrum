@@ -4,7 +4,6 @@ module;
 #include <vector>
 #include <functional>
 #include <sstream>
-#include "Test/Defines.h"
 
 export module Test.Framework;
 

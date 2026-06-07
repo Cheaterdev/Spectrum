@@ -1,7 +1,5 @@
 module;
 
-#include "Test/Defines.h"
-
 export module Test.Core;
 
 export import Test.Framework;
