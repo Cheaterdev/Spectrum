@@ -6,7 +6,7 @@ module;
 #include <iostream>
 #include <sstream>
 
-export module Test:Framework;
+export module TestFramework;
 
 export namespace Test
 {

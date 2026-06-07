@@ -1,4 +1,5 @@
-import Test.Framework;
+import TestFramework;
+import Core;
 
 int main()
 {
