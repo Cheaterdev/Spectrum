@@ -2,6 +2,7 @@
 
 export import Test.Framework;
 export import Test.HAL.TextureUtils;
+export import Test.HAL.Rendering;
 
 import Core;
 import HAL;
