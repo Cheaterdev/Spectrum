@@ -502,17 +502,14 @@ export{
 			std::vector<HAL::Format> get_formats() const;
 
 			template<SIG_TYPES::RT RT>
-			CompiledRT set_rtv(const RT& rt, RTOptions options = RTOptions::Default, float depth = 0, uint stencil = 0)
+			CompiledRT set_rtv(const RT& rt, RTOptions options = RTOptions::Default, float depth = 0, uint stencil = 0, vec4 clear_color = vec4(0, 0, 0, 0))
 			{
-
 				auto compiled = rt.compile(*this);
-
-				set_rtv(compiled, options, depth, stencil);
-
+				set_rtv(compiled, options, depth, stencil, clear_color);
 				return compiled;
 			}
 
-			void set_rtv(const CompiledRT& rt, RTOptions options = RTOptions::Default, float depth = 0, uint stencil = 0);
+			void set_rtv(const CompiledRT& rt, RTOptions options = RTOptions::Default, float depth = 0, uint stencil = 0, vec4 clear_color = vec4(0, 0, 0, 0));
 
 			CommandList& get_base();
 

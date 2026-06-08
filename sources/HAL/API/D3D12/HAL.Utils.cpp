@@ -734,14 +734,16 @@ D3D12_RESOURCE_FLAGS to_native(const ResFlags& flags)
 {
     D3D12_RESOURCE_FLAGS result = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
 
-    if (!check(flags & ResFlags::ShaderResource))
-        result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
     if (check(flags & ResFlags::UnorderedAccess))
         result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     if (check(flags & ResFlags::RenderTarget))
         result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     if (check(flags & ResFlags::DepthStencil))
+    {
         result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+        if (!check(flags & ResFlags::ShaderResource))
+            result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+    }
     if (check(flags & ResFlags::Raytracing))
         result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
