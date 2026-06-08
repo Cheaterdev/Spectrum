@@ -66,6 +66,75 @@ float4 PS() : SV_Target
 		ASSERT_TEXTURE(tex.get(), "triangle");
 	}
 
+	TEST(Core.HAL, RenderInstancing)
+	{
+		auto& device = HAL::Device::get();
+		constexpr uint WIDTH = 256, HEIGHT = 256;
+
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, {WIDTH, HEIGHT}, 1, 1,
+				HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		// 9 instances of a small triangle arranged in a 3×3 grid.
+		// SV_InstanceID drives position (column/row offset) and color.
+		static constexpr const char* kInstHLSL = R"hlsl(
+static const float2 kLocalPos[3] = {
+    float2(-0.12, -0.10),
+    float2( 0.12, -0.10),
+    float2( 0.00,  0.12),
+};
+static const float4 kColor[9] = {
+    float4(1,0,0,1),   float4(0,1,0,1),   float4(0,0,1,1),
+    float4(1,1,0,1),   float4(1,0,1,1),   float4(0,1,1,1),
+    float4(1,0.5,0,1), float4(0,0.5,1,1), float4(0.5,1,0,1),
+};
+struct VSOut { float4 pos : SV_Position; float4 col : COLOR0; };
+VSOut VS(uint vid : SV_VertexID, uint iid : SV_InstanceID)
+{
+    uint col = iid % 3;
+    uint row = iid / 3;
+    float2 offset = float2((float(col) - 1.0) * 0.62,
+                           (1.0 - float(row)) * 0.62);
+    VSOut o;
+    o.pos = float4(kLocalPos[vid] + offset, 0.0, 1.0);
+    o.col = kColor[iid];
+    return o;
+}
+float4 PS(VSOut i) : SV_Target { return i.col; }
+)hlsl";
+
+		SimpleGraphicsPSO mpso("TestInstancing");
+		mpso.root_signature = Layouts::NoneLayout;
+		mpso.vertex        = { kInstHLSL, "VS", HAL::ShaderOptions::None, {}, true };
+		mpso.pixel         = { kInstHLSL, "PS", HAL::ShaderOptions::None, {}, true };
+		mpso.rtv_formats   = { HAL::Format::R8G8B8A8_UNORM };
+		mpso.enable_depth  = false;
+		mpso.cull          = HAL::CullMode::None;
+		mpso.topology      = HAL::PrimitiveTopologyType::TRIANGLE;
+
+		auto pso = mpso.create(device);
+
+		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+		auto  list  = queue->get_free_list();
+		list->begin(L"RenderInstancing");
+
+		HAL::Texture2DView view(tex, *list);
+		HAL::CompiledRT compiled;
+		compiled.table_rtv = view.renderTarget;
+
+		auto& gfx = list->get_graphics();
+		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0, 0, 0, 1));
+
+		gfx.set_pipeline(pso);
+		gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE);
+		gfx.draw(3, 0, 9);  // 3 vertices per instance, 9 instances
+
+		list->execute_and_wait();
+
+		ASSERT_TEXTURE(tex.get(), "instancing");
+	}
+
 	TEST(Core.HAL, RenderCube)
 	{
 		auto& device = HAL::Device::get();
