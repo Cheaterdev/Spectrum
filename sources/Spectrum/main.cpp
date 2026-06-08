@@ -87,14 +87,6 @@ void PassDefault<Passes::Profiler>::render(
 	Passes::Profiler::Context&, FrameGraph::FrameContext&) {}
 
 
-extern "C" {
-	_declspec(dllexport) extern const unsigned int D3D12SDKVersion = 618;
-}
-
-extern "C" {
-	_declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
-}
-
 class tick_timer
 {
 	std::chrono::time_point<std::chrono::system_clock> last_tick;
@@ -1171,8 +1163,6 @@ void SetupDebug()
 
 struct test
 {
-	//D3D12_DRED_BREADCRUMB_CONTEXT c;
-	D3D12_AUTO_BREADCRUMB_OP op = D3D12_AUTO_BREADCRUMB_OP_BUILDRAYTRACINGACCELERATIONSTRUCTURE;
 	std::string str = "wtf";
 	vec4 data = { 1, 2, 3, 4 };
 
@@ -1191,7 +1181,7 @@ struct test
 
 	SERIALIZE()
 	{
-		ar& NVP(op)& NVP(str)& NVP(data)& NVP(vec);
+		ar&  NVP(str)& NVP(data)& NVP(vec);
 	}
 } v;
 

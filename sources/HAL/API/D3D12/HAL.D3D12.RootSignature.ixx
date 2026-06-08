@@ -12,7 +12,7 @@ export namespace HAL
         protected:
             D3D::RootSignature m_rootSignature;
         public:
-            virtual~RootSignature() = default;
+            virtual ~RootSignature() = default;
             D3D::RootSignature get_native();
         };
     }

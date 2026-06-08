@@ -7,17 +7,16 @@ import Core;
 
 export namespace HAL {
 
-    namespace API
-    {
+    namespace API {
 
-        class TrackedPipeline:public TrackedObject
+        class TrackedPipeline : public TrackedObject
         {
         public:
             ComPtr<ID3D12PipelineState> m_pipelineState;
-            ComPtr<ID3D12StateObject> m_StateObject;
+            ComPtr<ID3D12StateObject>   m_StateObject;
 
             ComPtr<ID3D12PipelineState> get_native();
-            ComPtr<ID3D12StateObject> get_native_state();
+            ComPtr<ID3D12StateObject>   get_native_state();
         };
 
         class PipelineStateBase
@@ -27,9 +26,8 @@ export namespace HAL {
 
             std::string get_cache();
 
-        /*     std::shared_ptr<TrackedPipeline> get_tracked();*/
-                ComPtr<ID3D12PipelineState> get_native();
-            ComPtr<ID3D12StateObject> get_native_state();
+            ComPtr<ID3D12PipelineState> get_native();
+            ComPtr<ID3D12StateObject>   get_native_state();
         };
 
         class StateObject

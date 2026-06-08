@@ -342,7 +342,7 @@ namespace HAL
 		}
 	}
 
-	void GraphicsContext::set_rtv(const CompiledRT& rt, RTOptions options, float depth, uint stencil)
+	void GraphicsContext::set_rtv(const CompiledRT& rt, RTOptions options, float depth, uint stencil, vec4 clear_color)
 	{
 		compiled_rt = rt;
 		const RTVHandle& table_rtv = rt.table_rtv;
@@ -367,7 +367,7 @@ namespace HAL
 		{
 			for (uint i = 0; i < table_rtv.get_count(); i++)
 			{
-				list->clear_rtv(table_rtv[i], float4(0, 0, 0, 0));
+				list->clear_rtv(table_rtv[i], clear_color);
 			}
 		}
 

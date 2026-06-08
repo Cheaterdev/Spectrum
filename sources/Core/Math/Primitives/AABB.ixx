@@ -18,10 +18,14 @@ export
 		vec3 min, max;
 
 		AABB() = default;
+		AABB(vec3 min, vec3 max) : min(min), max(max) {}
 		AABB(Primitive* other);
 		AABB(std::function<vec3(uint)> functor, unsigned int size);
 
 		void set(Primitive* other);
+
+		vec3 center() const { return (min + max) * 0.5f; }
+		vec3 size() const { return max - min; }
 
 		std::shared_ptr<Primitive> clone() override;
 		const primitive_types get_type() const override;

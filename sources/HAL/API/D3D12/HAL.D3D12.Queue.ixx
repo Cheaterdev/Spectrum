@@ -10,7 +10,6 @@ export namespace HAL
     {
         class Queue
         {
-
             std::vector<ID3D12CommandList*> queued;
         protected:
             D3D::CommandQueue native;

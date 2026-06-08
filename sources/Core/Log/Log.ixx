@@ -182,6 +182,14 @@ export {
 		void on_log(const LogBlock& log);
 	};
 
+	class StdoutLogger : public Singleton<StdoutLogger>, public LogListener
+	{
+		friend class Singleton<StdoutLogger>;
+		StdoutLogger() = default;
+		virtual ~StdoutLogger() = default;
+		void on_log(const LogBlock& log);
+	};
+
 	class ConsoleLogger : public Singleton<ConsoleLogger>, public LogListener
 	{
 		friend class Singleton<ConsoleLogger>;

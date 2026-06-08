@@ -12,10 +12,10 @@
     "crc32c",
     "cereal",
     "dstorage",
-    "directx-dxc",
     "jinja2cpp",
-     {"name" :"directx12-agility", "version>=":"1.618.1"},
-     {"name" :"directx-headers", "version>=":"1.616.0"},
+    {"name" :"directx-dxc", "version>=":"2026-02-20"},
+      {"name" :"directx12-agility", "version>=":"1.619.3"},
+     {"name" :"directx-headers", "version>=":"1.619.1"},
      "bshoshany-thread-pool"
    
   ],

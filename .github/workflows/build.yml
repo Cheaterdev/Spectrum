@@ -4,8 +4,6 @@ on:
   push:
   pull_request:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -78,6 +76,23 @@ jobs:
       if: always()
       with:
         name: build-output
-        path: |
-          ./workdir/
+        path: ./workdir/
         retention-days: 7
+
+  test:
+    runs-on: windows-2025-vs2026
+    needs: build
+
+    steps:
+    - name: Download build output
+      uses: actions/download-artifact@v4
+      with:
+        name: build-output
+        path: ./workdir
+
+    - name: Run tests
+      shell: powershell
+      working-directory: ./workdir
+      run: |
+        & ".\test.exe"
+        exit $LASTEXITCODE

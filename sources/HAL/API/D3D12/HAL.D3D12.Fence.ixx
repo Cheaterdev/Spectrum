@@ -7,16 +7,15 @@ export namespace HAL
     {
         class Fence
         {
-        public: /////////////
-            D3D::Fence m_fence;
         public:
+            D3D::Fence    m_fence;
             using CounterType = UINT64;
         };
 
         class Event
         {
-        public: //////////////
             friend class Fence;
+        public:
             HANDLE m_fenceEvent;
         };
 

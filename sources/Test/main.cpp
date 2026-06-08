@@ -1,24 +1,32 @@
-#include <windows.h>
-#include <vector>
+import Test.Framework;
+import Test.Math;
+import Test.Core;
+import Test.Math.Extended;
+import Test.Serialization;
+import Test.Threading;
+import Test.Events;
+import Test.FileSystem;
+import Test.Profiling;
+import Test.HAL;
+import Core;
 
-import testmodule;
-
-
-struct local_vec
+void SetupLogging()
 {
-	int x;
-	int y;
-};
+	//Log::create<WinErrorLogger>();
+	FileTXTLogger::create();
+	VSOutputLogger::create();
+	StdoutLogger::create();
+	Log::get().set_logging_level(Log::LEVEL_ALL);
+}
 
-int WinMain(HINSTANCE,
-	HINSTANCE,
-	LPTSTR,
-	int)
+int main()
 {
-	std::vector<int> data = { 1,2,3,4,5 };
+	SetupLogging();
 
-	std::vector<local_vec> data2 = { {1,2}, {3,4} };
-	std::vector<module_vec> data3 = { {1,2}, {3,4} };
+	auto results = Test::TestRegistry::Instance().RunAll();
+	Test::TestRegistry::Instance().PrintResults(results);
 
-	return 0;
+	bool any_failed = std::any_of(results.begin(), results.end(),
+		[](const Test::TestResult& r) { return !r.passed && !r.skipped; });
+	return (results.empty() || any_failed) ? 1 : 0;
 }

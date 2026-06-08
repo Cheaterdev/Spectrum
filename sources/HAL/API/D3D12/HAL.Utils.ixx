@@ -91,33 +91,6 @@ export D3D12_DESCRIPTOR_RANGE_TYPE to_native(DescriptorRange range);
 
 export D3D12_SHADER_VISIBILITY to_native(ShaderVisibility visibility);
 
-//
-//export D3D12_BARRIER_LAYOUT to_native(TextureLayout flags)
-//{
-//
-//    if (flags == TextureLayout::UNDEFINED) return  D3D12_BARRIER_LAYOUT_UNDEFINED;
-//
-//
-//    D3D12_BARRIER_LAYOUT result = D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_COMMON;
-//
-//
-//
-//
-//    if (check(flags & TextureLayout::COMMON)) result |= D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_COMMON;
-//    if (check(flags & TextureLayout::PRESENT)) result |= D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_PRESENT;
-//    if (check(flags & TextureLayout::RENDER_TARGET)) result |= D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_RENDER_TARGET;
-//    if (check(flags & TextureLayout::UNORDERED_ACCESS)) result |= D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
-//    if (check(flags & TextureLayout::DEPTH_STENCIL_WRITE)) result |= D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE;
-//    if (check(flags & TextureLayout::DEPTH_STENCIL_READ)) result |= D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
-//    if (check(flags & TextureLayout::SHADER_RESOURCE)) result |= D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
-//    if (check(flags & TextureLayout::COPY_DEST)) result |= D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_COPY_DEST;
-//    if (check(flags & TextureLayout::COPY_SOURCE)) result |= D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_COPY_SOURCE;
-//    if (check(flags & TextureLayout::RESOLVE_DEST)) result |= D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_RESOLVE_DEST;
-//    if (check(flags & TextureLayout::RESOLVE_SOURCE)) result |= D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_RESOLVE_SOURCE;
-//
-//    return result;
-//}
-
 export D3D12_BARRIER_LAYOUT to_native(TextureLayout layout);
 
 export D3D12_BARRIER_SYNC  to_native(BarrierSync flags);
@@ -140,7 +113,7 @@ export D3D12_RAYTRACING_GEOMETRY_TYPE   to_native(GeometryType type);
 
 export D3D12_RAYTRACING_GEOMETRY_FLAGS   to_native(GeometryFlags flags);
 
-export struct RaytracingDescNative :public D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS
+export struct RaytracingDescNative : public D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS
 {
     std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> descs;
 
@@ -158,59 +131,6 @@ export CD3DX12_RESOURCE_DESC1  to_native(const ResourceDesc& desc);
 
 export namespace cereal
 {
-     /*
-    template<class Archive>
-    void serialize(Archive& ar, D3D12_DISPATCH_ARGUMENTS& g)
-    {
-        ar& NVPG(ThreadGroupCountX);
-        ar& NVPG(ThreadGroupCountY);
-        ar& NVPG(ThreadGroupCountZ);
-    }*/
-
-   /*
-    template<class Archive>
-    void serialize(Archive& ar, D3D12_DRAW_INDEXED_ARGUMENTS& g)
-    {
-        ar& NVPG(IndexCountPerInstance);
-        ar& NVPG(InstanceCount);
-        ar& NVPG(StartIndexLocation);
-        ar& NVPG(BaseVertexLocation);
-        ar& NVPG(StartInstanceLocation);
-    }*/
-
-    template<class Archive>
-    void serialize(Archive& ar, D3D12_DEPTH_STENCILOP_DESC& g, const unsigned int)
-    {
-        //    ar & g.DefaultValue;
-        ar& NVPG(StencilDepthFailOp);
-        ar& NVPG(StencilFailOp);
-        ar& NVPG(StencilFunc);
-        ar& NVPG(StencilPassOp);
-    }
-
-    template<class Archive>
-    void serialize(Archive& ar, DXGI_SAMPLE_DESC& g, const unsigned int)
-    {
-        //    ar & g.DefaultValue;
-        ar& NVPG(Count);
-        ar& NVPG(Quality);
-    }
-
-    template<class Archive>
-    void serialize(Archive& ar, D3D::ResourceDesc& g, const unsigned int)
-    {
-        ar& NVPG(Dimension);
-        ar& NVPG(Alignment);
-        ar& NVPG(Width);
-        ar& NVPG(Height);
-        ar& NVPG(DepthOrArraySize);
-        ar& NVPG(MipLevels);
-        ar& NVPG(Format);
-        ar& NVPG(SampleDesc);
-        ar& NVPG(Layout);
-        ar& NVPG(Flags);
-    }
-
     template<class Archive>
     void serialize(Archive& ar, D3D12_AUTO_BREADCRUMB_NODE& g, const unsigned int)
     {

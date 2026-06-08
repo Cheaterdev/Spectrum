@@ -134,7 +134,6 @@ namespace Spectrum
             }
             else
             {
-                conf.Options.Add(Options.Vc.Linker.LinkTimeCodeGeneration.UseLinkTimeCodeGeneration);
                 conf.Options.Add(Options.Vc.Compiler.Optimization.FullOptimization);
                 conf.Defines.Add("RETAIL");
                 conf.Defines.Remove("NDEBUG");
@@ -144,6 +143,7 @@ namespace Spectrum
             {
                 conf.Defines.Add("PROFILING");
             }
+
 
         }
 
@@ -381,6 +381,27 @@ namespace Spectrum
         }
     }
 
+    [Sharpmake.Generate]
+    public class Test : Application
+    {
+        public Test()
+        {
+            SourceRootPath = @"[project.SharpmakeCsPath]\sources\Test";
+            AssemblyName = "SpectrumTest";
+        }
+
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+
+            conf.Options.Remove(Options.Vc.Linker.SubSystem.Windows);
+
+            conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
+            conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
+
+            conf.AddPublicDependency<RenderSystem>(target);
+        }
+    }
 
     [Sharpmake.Generate]
     public class SpectrumSolution : Solution
@@ -425,6 +446,7 @@ namespace Spectrum
 
             conf.AddProject<Spectrum>(target);
             conf.AddProject<SIGParser>(target);
+            conf.AddProject<Test>(target);
             conf.AddProject<Resources>(target);
         }
 

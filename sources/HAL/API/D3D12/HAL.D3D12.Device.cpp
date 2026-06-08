@@ -1,8 +1,5 @@
 ﻿module;
 
-//#include "GFSDK_Aftermath.h"
-//#include "NsightAftermathGpuCrashTracker.h"
-
 module HAL:Device;
 import :Debug;
 import :Utils;
@@ -60,8 +57,6 @@ namespace HAL
         std::vector<std::byte> dest;
         dest.assign(source.data(), source.data() + source.size());
 
-    //    Log::get() << "Can't compress now; unknown error in d3d12sdklayers.dll" << Log::endl;
-        //return dest;
         size_t maxSize = g_bufferCompression->CompressBufferBound(static_cast<uint32_t>(source.size()));
 
         dest.resize(maxSize);
@@ -105,7 +100,7 @@ namespace HAL
 
         void Device::dump_dred()
         {
-            ComPtr<ID3D12DeviceRemovedExtendedData>  pDred;
+            ComPtr<ID3D12DeviceRemovedExtendedData> pDred;
             TEST(*this, native_device->QueryInterface(IID_PPV_ARGS(&pDred)));
 
             D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT DredAutoBreadcrumbsOutput = {};
@@ -165,9 +160,10 @@ namespace HAL
 
             native_device.Reset();
 
-            IDXGIDebug* debugDev;
+            IDXGIDebug* debugDev = nullptr;
             HRESULT hr = DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debugDev));
-            hr = debugDev->ReportLiveObjects(DXGI::DEBUG_ALL, DXGI::DEBUG_RLO_ALL);
+            if (SUCCEEDED(hr) && debugDev)
+                debugDev->ReportLiveObjects(DXGI::DEBUG_ALL, DXGI::DEBUG_RLO_ALL);
         }
 
         size_t Device::get_vram()
@@ -193,6 +189,7 @@ namespace HAL
             if (!native_device) return;
 
             THIS->adapter = desc.adapter;
+            THIS->properties.name = convert(std::wstring_view(desc.adapter->get_desc().Description));
 
             for (auto type : magic_enum::enum_values<DescriptorHeapType>())
             {
@@ -205,7 +202,7 @@ namespace HAL
             D3D12_FEATURE_DATA_D3D12_OPTIONS12 options12 = {};
             D3D12_FEATURE_DATA_D3D12_OPTIONS16 options16 = {};
             D3D12_FEATURE_DATA_D3D12_OPTIONS21 options21 = {};
-            D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = {D3D_SHADER_MODEL_6_8};
+            D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_8 };
 
             TEST(*this,
                  native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS21, &options21, sizeof(
@@ -228,19 +225,17 @@ namespace HAL
                      sizeof(supportedShaderModel)));
 
             auto& properties = THIS->properties;
-            properties.rtx = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
-            properties.full_bindless = supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6;
-            properties.mesh_shader = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER::D3D12_MESH_SHADER_TIER_1;
+            properties.rtx                    = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
+            properties.full_bindless          = supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6;
+            properties.mesh_shader            = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1;
             properties.direct_gpu_upload_heap = options16.GPUUploadHeapSupported;
-            properties.work_graph = options21.WorkGraphsTier != D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED;
+            properties.work_graph             = options21.WorkGraphsTier != D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED;
 
             if constexpr (HAL::Debug::ValidationErrors)
             {
                 ComPtr<ID3D12InfoQueue> d3dInfoQueue;
                 if (SUCCEEDED(native_device.As(&d3dInfoQueue)))
                 {
-                    //    d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-                    //    d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
                     D3D12_MESSAGE_ID hide[] =
                     {
                         D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS,
@@ -262,20 +257,8 @@ namespace HAL
                 }
             }
 
-            //            ComPtr<ID3D12DSRDeviceFactory> pDSRDeviceFactory;
-            //ComPtr<IDSRDevice> pDSRDevice;
-            //D3D12GetInterface(CLSID_D3D12DSRDeviceFactory, IID_PPV_ARGS(&pDSRDeviceFactory));
-            //pDSRDeviceFactory->CreateDSRDevice(native_device, 1, IID_PPV_ARGS(&pDSRDevice));
-
-            //const uint32_t aftermathFlags =
-            //    GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
-            //    GFSDK_Aftermath_FeatureFlags_EnableResourceTracking |    // Enable tracking of resources.
-            //    GFSDK_Aftermath_FeatureFlags_CallStackCapturing;    // Generate debug information for shaders.
-
-            //auto afterres = GFSDK_Aftermath_DX12_Initialize(
-            //    GFSDK_Aftermath_Version_API,
-            //    aftermathFlags,
-            //    native_device.Get());
+            DSTORAGE_CONFIGURATION ds_config{};
+            DStorageSetConfiguration(&ds_config);
 
             DStorageCreateCompressionCodec(
                 DSTORAGE_COMPRESSION_FORMAT_GDEFLATE,
@@ -300,7 +283,7 @@ namespace HAL
             if (native_desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
             {
                 if ((native_desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET |
-                    D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) == 0)
+                                          D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) == 0)
                 {
                     native_desc.Alignment = D3D12::SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
                 }
@@ -318,23 +301,9 @@ namespace HAL
                 native_desc.Alignment = 0;
                 info = native_device->GetResourceAllocationInfo2(0, 1, &native_desc, &info2);
             }
-            ASSERT(info.SizeInBytes!=std::numeric_limits<uint64_t>::max());
+            ASSERT(info.SizeInBytes != std::numeric_limits<uint64_t>::max());
 
             native_desc.Alignment = info.Alignment;
-
-            // TODO small alignment
-            /*    if (info.Alignment != D3D12::SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
-                {
-                    native_desc.Alignment = D3D12::DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-                    info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
-
-                    if (info.Alignment != D3D12::DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
-                    {
-                        native_desc.Alignment = 0;
-                        info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
-                    }
-
-                }*/
 
             ResourceAllocationInfo result;
 
@@ -347,12 +316,14 @@ namespace HAL
                 result.flags |= HeapFlags::BUFFERS_ONLY;
             }
             else if (native_desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET |
-                D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
+                     D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
             {
                 result.flags |= HeapFlags::RTDS_ONLY;
             }
             else
+            {
                 result.flags |= HeapFlags::TEXTURES_ONLY;
+            }
             if constexpr (Debug::CheckErrors)
                 TEST(*this, native_device->GetDeviceRemovedReason());
 

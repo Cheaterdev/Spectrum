@@ -1,4 +1,4 @@
-﻿export module HAL:API.Device;
+export module HAL:API.Device;
 
 import :Types;
 import :Sampler;
@@ -19,14 +19,14 @@ export namespace HAL {
     struct DeviceProperties
     {
         std::string name;
-        bool rtx = false;
-        bool mesh_shader = false;
-        bool full_bindless = false;
+        bool rtx                    = false;
+        bool mesh_shader            = false;
+        bool full_bindless          = false;
         bool direct_gpu_upload_heap = false;
-        bool work_graph = false;
+        bool work_graph             = false;
     };
-    namespace API
-    {
+
+    namespace API {
 
         class Device
         {
@@ -39,15 +39,12 @@ export namespace HAL {
             using ptr = std::shared_ptr<Device>;
 
             ComPtr<IDStorageCompressionCodec> g_bufferCompression;
-
-        public:
-            D3D::Device native_device;
+            D3D::Device                       native_device;
             enum_array<DescriptorHeapType, uint> descriptor_sizes;
+
             void process_result(HRESULT hr, std::string_view line) const;
-        private:
-            void dump_dred();
-        public:
-            uint get_descriptor_size(DescriptorHeapType type) const;
+
+            uint        get_descriptor_size(DescriptorHeapType type) const;
             D3D::Device get_native_device();
 
             HRESULT get_device_removed_reason() const;
@@ -60,6 +57,8 @@ export namespace HAL {
             RaytracingPrebuildInfo calculateBuffers(const RaytracingBuildDescBottomInputs& desc);
             RaytracingPrebuildInfo calculateBuffers(const RaytracingBuildDescTopInputs& desc);
 
+        private:
+            void dump_dred();
         };
     }
 

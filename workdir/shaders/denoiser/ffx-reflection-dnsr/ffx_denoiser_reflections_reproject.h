@@ -332,7 +332,7 @@ void FFX_DNSR_Reflections_Reproject(int2 dispatch_thread_id, int2 group_thread_i
     // Initialize groupshared array for downsampling
     min16float weight = FFX_DNSR_Reflections_GetLuminanceWeight(radiance.xyz);
     radiance.xyz *= weight;
-    if (any(dispatch_thread_id >= screen_size) || any(isinf(radiance)) || any(isnan(radiance)) || weight > 1.0e3) {
+    if (any(dispatch_thread_id >= screen_size) || any(isinf((float3)radiance)) || any(isnan((float3)radiance)) || weight > 1.0e3) {
         radiance = (0.0).xxxx;
         weight   = 0.0;
     }
