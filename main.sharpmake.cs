@@ -251,6 +251,12 @@ namespace Spectrum
             conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(Vcpkg.DebugBin + @"\D3D12Core.dll", "D3D12"));
             conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(Vcpkg.DebugBin + @"\d3d12SDKLayers.dll", "D3D12"));
 
+            // Per-backend module wrappers: compile only the active backend's wrapper.
+            if (target.Backend == Backend.D3D12)
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\Modules\\vulkan\\.*");
+            else // Vulkan
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\Modules\\d3d12\\.*");
+
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("5260")); // adding inline to header units
 
         }

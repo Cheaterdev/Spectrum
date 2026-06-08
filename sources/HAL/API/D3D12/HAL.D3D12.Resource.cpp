@@ -45,6 +45,14 @@ namespace HAL
     {
         GPUAddressPtr Resource::get_address() { return address; }
 
+        void* Resource::get_cpu_mapping()
+        {
+            void* ptr = nullptr;
+            if (native_resource)
+                native_resource->Map(0, nullptr, &ptr);
+            return ptr;
+        }
+
         void Resource::init(Device& device, const ResourceDesc& _desc, const PlacementAddress& address, TextureLayout initialLayout)
         {
             auto THIS = static_cast<HAL::Resource*>(this);
@@ -173,12 +181,14 @@ namespace HAL
                     IID_PPV_ARGS(&native_resource)));
             }
             auto prev_flags = THIS->desc.Flags;
-            init(native_resource, initialLayout, device);
+            init(NativeImportHandle{ native_resource }, initialLayout, device);
             THIS->desc.Flags |= prev_flags;
         }
 
-        void Resource::init(D3D::Resource resource, TextureLayout layout, Device& device)
+        void Resource::init(const NativeImportHandle& handle, TextureLayout layout, Device& device)
         {
+            native_resource = handle.resource;
+
             auto THIS = static_cast<HAL::Resource*>(this);
             THIS->m_device = static_cast<HAL::Device*>(&device);
 
@@ -247,9 +257,9 @@ namespace HAL
         init(device, desc, address, TextureLayout::UNDEFINED);
     }
 
-    Resource::Resource(Device& device, const D3D::Resource& resource, TextureLayout initialLayout) :state_manager(this), tiled_manager(this)
+    Resource::Resource(Device& device, const API::NativeImportHandle& handle, TextureLayout initialLayout) :state_manager(this), tiled_manager(this)
     {
-        native_resource = resource;
+        native_resource = handle.resource;
         m_device = &device;
 
         D3D12_HEAP_PROPERTIES HeapProperties;
@@ -258,7 +268,7 @@ namespace HAL
 
         heap_type = from_native(HeapProperties.Type);
 
-        init(native_resource, initialLayout, device);
+        init(handle, initialLayout, device);
 
     }
 

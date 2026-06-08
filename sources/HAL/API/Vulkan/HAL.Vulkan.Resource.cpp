@@ -82,8 +82,14 @@ namespace HAL
                 if (api_heap->cpu_address)
                 {
                     // Case A: CPU-visible heap (UPLOAD / READBACK).
+                    // Share the heap's single VkBuffer; the slice is addressed via
+                    // resource_offset (placement.offset) at copy/descriptor time.
+                    // Without this, get_vk_buffer() is null for every placed staging
+                    // buffer / CBV / vertex-index buffer, so copies and descriptor
+                    // writes are silently skipped and the GPU reads zeroes.
                     mapped_data = api_heap->cpu_address + placement.offset;
                     address     = api_heap->get_address() + placement.offset;
+                    vk_buffer   = api_heap->get_vk_buffer();
                     return;
                 }
                 // Case B: DEFAULT heap — fall through to VMA allocation below.

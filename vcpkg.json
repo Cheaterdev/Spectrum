@@ -16,8 +16,10 @@
     {"name" :"directx-dxc", "version>=":"2026-02-20"},
       {"name" :"directx12-agility", "version>=":"1.619.3"},
      {"name" :"directx-headers", "version>=":"1.619.1"},
-     "bshoshany-thread-pool"
-   
+     "bshoshany-thread-pool",
+     "vulkan-headers",
+     "vulkan-loader",
+     "vulkan-memory-allocator"
   ],
   "builtin-baseline": "a76e5d9e1c62a23b9e92353e5e25d8c34cda2b74",
   "overrides": [

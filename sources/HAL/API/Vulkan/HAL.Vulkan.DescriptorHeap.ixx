@@ -13,6 +13,21 @@ export namespace HAL
     namespace API
     {
         class DescriptorHeap;
+
+        // Vulkan equivalent of D3D12's API::Descriptor base.  The shared
+        // HAL::Descriptor (HAL.DescriptorHeap.ixx) derives from this and the
+        // public HAL::Handle interface still exposes D3D12-style handles
+        // (stubbed in Vulkan builds); for Vulkan the handle value carries the
+        // bindless slot index.
+        class Descriptor
+        {
+        protected:
+            D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = {};
+            D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = {};
+        public:
+            D3D12_CPU_DESCRIPTOR_HANDLE get_cpu() const { return cpu_handle; }
+            D3D12_GPU_DESCRIPTOR_HANDLE get_gpu() const { return gpu_handle; }
+        };
     }
 
     struct DescriptorHeapDesc
@@ -23,32 +38,7 @@ export namespace HAL
     };
 
     class DescriptorHeap;
-
-    // Descriptor — Vulkan descriptor set entry.
-    // Keeps the same interface as the D3D12 version so HAL.DescriptorHeap.ixx
-    // compiles unchanged.  get_cpu() / get_gpu() return stub handles; real
-    // Vulkan descriptor management will be added in Phase 4.
-    class Descriptor
-    {
-        DescriptorHeap& heap;
-        const uint offset;
-
-        Descriptor(DescriptorHeap& heap, uint offset);
-
-        friend class API::DescriptorHeap;
-    public:
-        void operator=(const Descriptor& r);
-
-        void place(const Views::ShaderResource& view);
-        void place(const Views::UnorderedAccess& view);
-        void place(const Views::RenderTarget& view);
-        void place(const Views::ConstantBuffer& view);
-        void place(const Views::DepthStencil& view);
-
-        // Return stub handles (no D3D12 dependency in Vulkan builds)
-        D3D12_CPU_DESCRIPTOR_HANDLE get_cpu();
-        D3D12_GPU_DESCRIPTOR_HANDLE get_gpu();
-    };
+    class Descriptor;   // shared HAL::Descriptor (HAL.DescriptorHeap.ixx)
 
     namespace API
     {
@@ -65,12 +55,12 @@ export namespace HAL
 
             uint handle_size = 0;
 
-            friend class Descriptor;
+            friend class HAL::Descriptor;
         public:
             DescriptorHeap(Device& device, const DescriptorHeapDesc& desc);
             virtual ~DescriptorHeap();
 
-            Descriptor operator[](uint i);
+            HAL::Descriptor operator[](uint i);
 
             // Returns the backing VkDescriptorSet so CommandList can bind it.
             VkDescriptorSet get_vk_set() const noexcept { return vk_set; }

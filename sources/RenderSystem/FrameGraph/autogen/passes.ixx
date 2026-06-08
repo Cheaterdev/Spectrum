@@ -53,7 +53,6 @@ export import "../defines.h";
 #include "pass/AssetPipeline.pipeline.h"
 #include "pass/MainPipeline.pipeline.h"
 #include "pass/UIPipeline.pipeline.h"
-#include "pass/MainPipeline.pipeline.h"
 
 export namespace Passes
 {
@@ -99,5 +98,4 @@ export namespace Pipelines
 	using ::Pipelines::AssetPipeline;
 	using ::Pipelines::MainPipeline;
 	using ::Pipelines::UIPipeline;
-	using ::Pipelines::MainPipeline;
 }

@@ -55,7 +55,9 @@ float4 PS() : SV_Target
 		compiled.table_rtv = view.renderTarget;
 
 		auto& gfx = list->get_graphics();
-		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0, 0, 0, 1));
+		// Non-zero clear color so the test actually validates clearing — a black
+		// (zero) background is indistinguishable from zeroed/uninitialized memory.
+		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0.05f, 0.05f, 0.1f, 1.0f));
 
 		gfx.set_pipeline(pso);
 		gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE);
@@ -124,7 +126,9 @@ float4 PS(VSOut i) : SV_Target { return i.col; }
 		compiled.table_rtv = view.renderTarget;
 
 		auto& gfx = list->get_graphics();
-		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0, 0, 0, 1));
+		// Non-zero clear color so the test actually validates clearing — a black
+		// (zero) background is indistinguishable from zeroed/uninitialized memory.
+		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0.05f, 0.05f, 0.1f, 1.0f));
 
 		gfx.set_pipeline(pso);
 		gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE);

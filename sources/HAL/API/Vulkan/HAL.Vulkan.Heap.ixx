@@ -23,6 +23,10 @@ export namespace HAL
             virtual ~Heap();
             uint64_t get_address() const;
 
+            // The single VkBuffer backing a CPU-visible (UPLOAD/READBACK) heap.
+            // Placed resources share it and address their slice via resource_offset.
+            VkBuffer get_vk_buffer() const { return heap_vk_buffer; }
+
             // ---- Placement interface (public) --------------------------------
             // These are read by Resource::init(PlacementAddress) to derive the
             // CPU mapping and GPU address for placed resources (mirrors D3D12's

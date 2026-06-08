@@ -235,7 +235,7 @@ namespace HAL::API
         if (!rtv || !rtv->Resource) return;
 
         auto& api = static_cast<API::Resource&>(*rtv->Resource);
-        VkImageView view = api.get_import_handle().image_view;
+        VkImageView view = api.get_vk_image_view();
         if (view == VK_NULL_HANDLE) return;
 
         end_rendering_if_active();
@@ -280,7 +280,7 @@ namespace HAL::API
         if (!dv || !dv->Resource) return;
 
         auto& api = static_cast<API::Resource&>(*dv->Resource);
-        VkImageView view = api.get_import_handle().image_view;
+        VkImageView view = api.get_vk_image_view();
         if (view == VK_NULL_HANDLE) return;
 
         end_rendering_if_active();
@@ -311,7 +311,33 @@ namespace HAL::API
         if (d) clear_depth(dsv, fd);
     }
     void CommandList::clear_stencil(const DSVHandle& dsv, UINT8) {}
-    void CommandList::clear_uav(const UAVHandle&, vec4) {}
+    void CommandList::clear_uav(const UAVHandle& h, vec4 color)
+    {
+        if (vk_cmd == VK_NULL_HANDLE || !h.is_valid()) return;
+
+        auto& ri  = h.get_resource_info();
+        auto* uav = std::get_if<Views::UnorderedAccess>(&ri.view);
+        if (!uav || !uav->Resource) return;
+
+        auto& api = static_cast<API::Resource&>(*uav->Resource);
+        VkImage img = api.get_vk_image();
+        if (img == VK_NULL_HANDLE) return;
+
+        end_rendering_if_active();
+
+        VkClearColorValue cv{};
+        cv.float32[0] = color.x;
+        cv.float32[1] = color.y;
+        cv.float32[2] = color.z;
+        cv.float32[3] = color.w;
+
+        // UAV/storage images live in GENERAL layout (the HAL transitions to
+        // UNORDERED_ACCESS before this call).
+        VkImageSubresourceRange range{ VK_IMAGE_ASPECT_COLOR_BIT,
+                                       0, VK_REMAINING_MIP_LEVELS,
+                                       0, VK_REMAINING_ARRAY_LAYERS };
+        vkCmdClearColorImage(vk_cmd, img, VK_IMAGE_LAYOUT_GENERAL, &cv, 1, &range);
+    }
 
     // ---- Lazy render-pass start (for draw calls) ----------------------------
 
@@ -594,21 +620,67 @@ namespace HAL::API
                         dst_api.get_vk_buffer(), 1, &region);
     }
 
+    // Build a VkBufferImageCopy from the HAL texture_layout.  The staging buffer
+    // rows are 256-byte aligned (see Device::get_texture_layout), so bufferRowLength
+    // must be expressed in texels = row_stride / bytes-per-texel (NOT 0, which would
+    // assume tight packing and shear the image for non-aligned widths).
+    static VkBufferImageCopy make_buffer_image_copy(const HAL::Resource& resource,
+                                                    ivec3 offset, ivec3 box, UINT sub_resource,
+                                                    const ResourceAddress& address,
+                                                    const texture_layout& layout)
+    {
+        if (box.y == 0) box.y = 1;
+        if (box.z == 0) box.z = 1;
+
+        auto  sinfo = layout.format.surface_info({ (uint)box.x, (uint)box.y });
+        uint  bpt   = box.x ? (uint)(sinfo.rowBytes / box.x) : 4u; // bytes per texel
+        if (bpt == 0) bpt = 4u;
+
+        auto& tdesc = resource.get_desc().as_texture();
+        uint  mips  = tdesc.MipLevels ? tdesc.MipLevels : 1u;
+
+        VkBufferImageCopy region{};
+        region.bufferOffset      = address.resource_offset;
+        region.bufferRowLength   = (layout.row_stride / bpt);
+        region.bufferImageHeight = 0; // tight vertically: rows = imageExtent.height
+        region.imageSubresource  = { VK_IMAGE_ASPECT_COLOR_BIT,
+                                     sub_resource % mips, sub_resource / mips, 1 };
+        region.imageOffset       = { offset.x, offset.y, offset.z };
+        region.imageExtent       = { (uint32_t)box.x, (uint32_t)box.y, (uint32_t)box.z };
+        return region;
+    }
+
     void CommandList::update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box,
                                       UINT sub_resource, ResourceAddress address,
                                       texture_layout layout)
     {
-        if (!resource || vk_cmd == VK_NULL_HANDLE) return;
+        if (!resource || vk_cmd == VK_NULL_HANDLE || !address.resource) return;
         auto& dst = static_cast<API::Resource&>(*resource);
-        if (dst.get_vk_image() == VK_NULL_HANDLE) return;
+        auto& staging = static_cast<API::Resource&>(*address.resource);
+        if (dst.get_vk_image() == VK_NULL_HANDLE || staging.get_vk_buffer() == VK_NULL_HANDLE)
+            return;
 
-        // `address` is a GPU address to a staging buffer; we need the VkBuffer.
-        // Phase 5: look up staging buffer from the address.
-        // For now this is a stub — real implementation needs the staging buffer handle.
+        // The HAL transitions `resource` to COPY_DEST (→ TRANSFER_DST_OPTIMAL) before this call.
+        VkBufferImageCopy region = make_buffer_image_copy(*resource, offset, box, sub_resource, address, layout);
+        vkCmdCopyBufferToImage(vk_cmd, staging.get_vk_buffer(), dst.get_vk_image(),
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     }
 
-    void CommandList::read_texture(const HAL::Resource*, ivec3, ivec3, UINT,
-                                    ResourceAddress, texture_layout) {}
+    void CommandList::read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box,
+                                    UINT sub_resource, ResourceAddress target,
+                                    texture_layout layout)
+    {
+        if (!resource || vk_cmd == VK_NULL_HANDLE || !target.resource) return;
+        auto& src = static_cast<const API::Resource&>(*resource);
+        auto& staging = static_cast<API::Resource&>(*target.resource);
+        if (src.get_vk_image() == VK_NULL_HANDLE || staging.get_vk_buffer() == VK_NULL_HANDLE)
+            return;
+
+        // The HAL transitions `resource` to COPY_SOURCE (→ TRANSFER_SRC_OPTIMAL) before this call.
+        VkBufferImageCopy region = make_buffer_image_copy(*resource, offset, box, sub_resource, target, layout);
+        vkCmdCopyImageToBuffer(vk_cmd, src.get_vk_image(),
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging.get_vk_buffer(), 1, &region);
+    }
 
     void CommandList::copy_texture(const Resource::ptr& dest, int dest_sub,
                                     const Resource::ptr& source, int src_sub)

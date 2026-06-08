@@ -32,7 +32,14 @@ namespace HAL
 {
     // ---- Descriptor (slot within a heap) -----------------------------------
 
-    Descriptor::Descriptor(DescriptorHeap& heap, uint offset) : heap(heap), offset(offset) {}
+    Descriptor::Descriptor(DescriptorHeap& heap, uint offset) : heap(heap), offset(offset)
+    {
+        // Vulkan has no CPU/GPU descriptor handles; the bindless slot index is
+        // carried in the stub handle value so the shared HAL::Handle interface
+        // (get_cpu/get_gpu) keeps working unchanged.
+        cpu_handle = { static_cast<SIZE_T>(offset) };
+        gpu_handle = { static_cast<UINT64>(offset) };
+    }
 
     void Descriptor::place(const Views::ShaderResource& v)
     {
@@ -173,18 +180,6 @@ namespace HAL
         (void)r;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE Descriptor::get_cpu()
-    {
-        // Return the slot index as the cpu handle value (for resource info tracking).
-        return { static_cast<SIZE_T>(offset) };
-    }
-
-    D3D12_GPU_DESCRIPTOR_HANDLE Descriptor::get_gpu()
-    {
-        // Bindless index: the shader accesses heap[offset] in the descriptor array.
-        return { static_cast<UINT64>(offset) };
-    }
-
     uint DescriptorHeap::get_size() { return desc.Count; }
 
     namespace API
@@ -260,10 +255,10 @@ namespace HAL
                 vkDestroyDescriptorPool(vk_dev, vk_pool, nullptr);
         }
 
-        Descriptor DescriptorHeap::operator[](uint i)
+        HAL::Descriptor DescriptorHeap::operator[](uint i)
         {
             auto THIS = static_cast<HAL::DescriptorHeap*>(this);
-            return Descriptor{ *THIS, i };
+            return HAL::Descriptor{ *THIS, i };
         }
     }
 }
