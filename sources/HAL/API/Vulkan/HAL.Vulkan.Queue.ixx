@@ -9,12 +9,28 @@ export namespace HAL
 {
     namespace API
     {
+        class Device;
+
         class Queue
         {
         protected:
             VkQueue       vk_queue   = VK_NULL_HANDLE;
             VkDevice      vk_device  = VK_NULL_HANDLE;
             uint32_t      family_idx = std::numeric_limits<uint32_t>::max();
+            Device*       m_device   = nullptr;
+
+            // Transient command buffers used to flush the device's pending
+            // initial-layout transitions ahead of a real submit.  Small ring:
+            // flushes are rare (only submits right after resource creation) and
+            // the per-frame swapchain sync guarantees a ring slot has long
+            // retired before it comes around again.
+            VkCommandPool                  init_pool = VK_NULL_HANDLE;
+            std::array<VkCommandBuffer, 8> init_cbs{};
+            uint32_t                       init_cb_index = 0;
+
+            // Records pending init barriers (if any) into a ring CB and returns
+            // it, or VK_NULL_HANDLE when there is nothing to flush.
+            VkCommandBuffer flush_init_transitions();
 
             // Acquire / present semaphores consumed once on the next execute().
             // Set by SwapChain after vkAcquireNextImageKHR; cleared by execute().
@@ -31,7 +47,7 @@ export namespace HAL
             void construct(HAL::CommandListType type, Device* device);
 
         public:
-            virtual ~Queue() = default;
+            virtual ~Queue();
 
             VkQueue get_native() const;
 

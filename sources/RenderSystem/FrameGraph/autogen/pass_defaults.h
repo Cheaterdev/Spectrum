@@ -7,7 +7,7 @@
 //
 // PassDefault<T> provides the setup/render implementations for passes whose
 // logic is fully self-contained (no external wiring needed).  Bodies are
-// defined out-of-line in main.cpp.
+// defined out-of-line in RenderSystem/FrameGraph/PassDefaults.cpp.
 
 #pragma once
 

@@ -53,6 +53,9 @@ namespace HAL::API
         VkCommandBufferBeginInfo info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         vkBeginCommandBuffer(vk_cmd, &info);
+
+        // Fresh recording: clear any deferred PRESENT barriers from the previous frame.
+        deferred_present_barriers.clear();
     }
 
     void CommandList::end()
@@ -60,6 +63,20 @@ namespace HAL::API
         if (vk_cmd != VK_NULL_HANDLE)
         {
             end_rendering_if_active();
+
+            // Flush any deferred PRESENT_SRC_KHR barriers now — after all draws and
+            // after the render pass is closed.  See the comment in the ixx for why
+            // these are deferred rather than emitted at the FrameGraph's normal
+            // non_tracked_resources transition point.
+            if (!deferred_present_barriers.empty())
+            {
+                VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+                dep.imageMemoryBarrierCount = static_cast<uint32_t>(deferred_present_barriers.size());
+                dep.pImageMemoryBarriers    = deferred_present_barriers.data();
+                vkCmdPipelineBarrier2(vk_cmd, &dep);
+                deferred_present_barriers.clear();
+            }
+
             vkEndCommandBuffer(vk_cmd);
         }
         // Release the pool mutex — recording is complete.
@@ -151,7 +168,17 @@ namespace HAL::API
                     0, VK_REMAINING_MIP_LEVELS,
                     0, VK_REMAINING_ARRAY_LAYERS
                 };
-                image_barriers.push_back(ib);
+
+                // Defer PRESENT_SRC_KHR transitions to end() so they always fire
+                // after ALL draw calls.  The FrameGraph non_tracked_resources loop
+                // places this barrier right after set_rtv() (before draws), which
+                // would leave the swapchain in PRESENT_SRC_KHR when the draws run.
+                // D3D12 is immune (PRESENT==COMMON; implicit promotion back to RT).
+                // Vulkan is not → black output without this deferral.
+                if (ib.newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+                    deferred_present_barriers.push_back(ib);
+                else
+                    image_barriers.push_back(ib);
             }
             else
             {
@@ -310,7 +337,7 @@ namespace HAL::API
     {
         if (d) clear_depth(dsv, fd);
     }
-    void CommandList::clear_stencil(const DSVHandle& dsv, UINT8) {}
+    void CommandList::clear_stencil(const DSVHandle&, UINT8) { ASSERT(0); }
     void CommandList::clear_uav(const UAVHandle& h, vec4 color)
     {
         if (vk_cmd == VK_NULL_HANDLE || !h.is_valid()) return;
@@ -376,6 +403,9 @@ namespace HAL::API
             VkRect2D sc{ {0,0}, current_extent };
             vkCmdSetScissor(vk_cmd, 0, 1, &sc);
         }
+
+        // Re-set topology — dynamic topology state doesn't survive a CB split.
+        vkCmdSetPrimitiveTopology(vk_cmd, current_topology);
 
         // Re-push the staged push-constant block (carries the bindless descriptor
         // indices the shader reads as _hal_push.sN).  128 bytes = the range declared
@@ -450,6 +480,18 @@ namespace HAL::API
     void CommandList::draw(UINT vertex_count, UINT vertex_offset,
                             UINT instance_count, UINT instance_offset)
     {
+        // TEMP DIAGNOSTIC
+        static int dbg_draws = 0;
+        if (dbg_draws < 30)
+        {
+            ++dbg_draws;
+            Log::get() << "[VKDBG] draw vc=" << vertex_count
+                       << " cmd=" << (vk_cmd != VK_NULL_HANDLE)
+                       << " color_view=" << (current_color_view != VK_NULL_HANDLE)
+                       << " in_rp=" << in_render_pass
+                       << " extent=" << current_extent.width << "x" << current_extent.height
+                       << " pso=" << (current_graphics_pipeline != VK_NULL_HANDLE) << Log::endl;
+        }
         if (vk_cmd == VK_NULL_HANDLE) return;
         ensure_rendering_active();
         if (!in_render_pass) return; // no RTV set — skip rather than crash validation
@@ -461,6 +503,11 @@ namespace HAL::API
     void CommandList::draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset,
                                     UINT instance_count, UINT instance_offset)
     {
+        // TEMP DIAGNOSTIC
+        Log::get() << "[VKDBG] draw_indexed ic=" << index_count
+                   << " inst=" << instance_count
+                   << " extent=" << current_extent.width << "x" << current_extent.height
+                   << " pso=" << (current_graphics_pipeline != VK_NULL_HANDLE) << Log::endl;
         if (vk_cmd == VK_NULL_HANDLE) return;
         ensure_rendering_active();
         if (!in_render_pass) return; // no RTV set — skip rather than crash validation
@@ -485,14 +532,15 @@ namespace HAL::API
             vkCmdBindDescriptorSets(vk_cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
                                     current_pipeline_layout, 0, count, sets, 0, nullptr);
         }
-  /*      vkCmdDispatch(vk_cmd, static_cast<uint32_t>(v.x),
+        vkCmdDispatch(vk_cmd, static_cast<uint32_t>(v.x),
                                static_cast<uint32_t>(v.y),
-                               static_cast<uint32_t>(v.z));*/
+                               static_cast<uint32_t>(v.z));
     }
 
     void CommandList::dispatch_mesh(ivec3 /*v*/)
     {
         // VK_EXT_mesh_shader not yet requested — Phase 5.
+        ASSERT(0);
     }
 
     // ---- Index buffer ------------------------------------------------------
@@ -561,6 +609,12 @@ namespace HAL::API
     void CommandList::graphics_set_constant(UINT slot, UINT offset, UINT value)
     {
         if (vk_cmd == VK_NULL_HANDLE || current_pipeline_layout == VK_NULL_HANDLE) return;
+        // TEMP DIAG: trace NinePatch CBV slot being pushed
+        if (slot + offset == 4)
+        {
+            Log::get() << "[VKDBG] graphics_set_constant slot=4 value=" << value
+                       << " layout=" << (uint64_t)current_pipeline_layout << Log::endl;
+        }
         uint32_t byte_offset = (slot + offset) * sizeof(uint32_t);
         // Stage so reapply_draw_state() can re-push before each draw — vkCmdPushConstants
         // does not survive a command-buffer split; without re-pushing, the shader reads 0
@@ -582,8 +636,8 @@ namespace HAL::API
     }
 
     // Phase 5: push descriptors for inline CBV binding
-    void CommandList::graphics_set_const_buffer(UINT, const ResourceAddress&) {}
-    void CommandList::compute_set_const_buffer(UINT, const ResourceAddress&)  {}
+    void CommandList::graphics_set_const_buffer(UINT, const ResourceAddress&) { ASSERT(0); }
+    void CommandList::compute_set_const_buffer(UINT, const ResourceAddress&)  { ASSERT(0); }
 
     // ---- Copy operations ---------------------------------------------------
 
@@ -726,9 +780,33 @@ namespace HAL::API
             1, &region);
     }
 
-    // ---- Set topology (stored for potential dynamic topology) ---------------
-    void CommandList::set_topology(HAL::PrimitiveTopologyType, HAL::PrimitiveTopologyFeed,
-                                    bool, uint) {}
+    // ---- Set topology -------------------------------------------------------
+    // Vulkan 1.3 promotes VK_EXT_extended_dynamic_state to core, so
+    // VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY is always available.  Mirrors D3D12's
+    // IASetPrimitiveTopology: the PSO has a topology TYPE (TRIANGLE/LINE), while
+    // this call sets the actual LIST vs STRIP mode used by the draw.
+    void CommandList::set_topology(HAL::PrimitiveTopologyType t, HAL::PrimitiveTopologyFeed feed,
+                                    bool, uint)
+    {
+        using T = HAL::PrimitiveTopologyType;
+        using F = HAL::PrimitiveTopologyFeed;
+
+        VkPrimitiveTopology vk_topo;
+        if (t == T::POINT)
+            vk_topo = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+        else if (t == T::LINE)
+            vk_topo = (feed == F::STRIP) ? VK_PRIMITIVE_TOPOLOGY_LINE_STRIP
+                                         : VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        else if (t == T::PATCH)
+            vk_topo = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+        else
+            vk_topo = (feed == F::STRIP) ? VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP
+                                         : VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+        current_topology = vk_topo;
+        if (vk_cmd != VK_NULL_HANDLE)
+            vkCmdSetPrimitiveTopology(vk_cmd, vk_topo);
+    }
 
     // ---- Debug labels (VK_EXT_debug_utils) ----------------------------------
 
@@ -759,11 +837,19 @@ namespace HAL::API
 
     // ---- Indirect -----------------------------------------------------------
     void CommandList::execute_indirect(const IndirectCommand&, UINT, Resource*, UINT64,
-                                        Resource*, UINT64) {}
+                                        Resource*, UINT64) { ASSERT(0); }
 
     // ---- Misc ---------------------------------------------------------------
-    void CommandList::set_name(std::wstring_view) {}
-    void CommandList::discard(const HAL::Resource*) {}
+    void CommandList::set_name(std::wstring_view)
+    {
+        static bool warned = false;
+        if (!warned) { warned = true; Log::get() << Log::LEVEL_WARNING << "[Vulkan] CommandList::set_name not implemented" << Log::endl; }
+    }
+    void CommandList::discard(const HAL::Resource*)
+    {
+        static bool warned = false;
+        if (!warned) { warned = true; Log::get() << Log::LEVEL_WARNING << "[Vulkan] CommandList::discard not implemented" << Log::endl; }
+    }
     void CommandList::insert_time(const QueryHandle& handle, uint index)
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
@@ -784,10 +870,20 @@ namespace HAL::API
     void CommandList::resolve_times(const QueryHeap* heap, uint32_t count,
                                      ResourceAddress dest)
     {
-        // Phase 5: vkCmdCopyQueryPoolResults requires a VkBuffer handle,
-        // but ResourceAddress is a GPU virtual address.  The device-address →
-        // VkBuffer reverse-lookup is not yet implemented.  Leave as stub until
-        // that infrastructure is in place.
-        (void)heap; (void)count; (void)dest;
+        if (!heap || vk_cmd == VK_NULL_HANDLE || !dest.resource) return;
+
+        auto& api_heap = static_cast<const API::QueryHeap&>(*heap);
+        if (api_heap.get_native() == VK_NULL_HANDLE) return;
+
+        auto& dst_res = static_cast<API::Resource&>(*dest.resource);
+        if (dst_res.get_vk_buffer() == VK_NULL_HANDLE) return;
+
+        vkCmdCopyQueryPoolResults(vk_cmd,
+            api_heap.get_native(),
+            0, count,
+            dst_res.get_vk_buffer(),
+            dest.resource_offset,
+            sizeof(uint64_t),
+            VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
     }
 }

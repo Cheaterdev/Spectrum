@@ -297,6 +297,13 @@ namespace HAL
         setup_present_commands(api_dev.vk_device, api_dev.get_queue_family(
             static_cast<int>(CommandListType::DIRECT)));
 
+        // Transition all fresh images UNDEFINED → PRESENT_SRC_KHR so that
+        // on_change()'s TextureLayout::PRESENT assumption is valid on frame 0.
+        {
+            auto& aq = static_cast<API::Queue&>(*device.get_queue(CommandListType::DIRECT));
+            init_swapchain_layouts(api_dev.vk_device, aq.get_native());
+        }
+
         Log::get() << "Vulkan swapchain: " << image_count << " images, "
                    << extent.width << "x" << extent.height << Log::endl;
 
@@ -389,6 +396,122 @@ namespace HAL::API
         // previous frame's present has completed by waiting on render_finished.
         for (uint32_t i = 0; i < image_count; ++i)
             present_sems[i] = make_semaphore(vk_dev);
+    }
+
+    void SwapChain::init_swapchain_layouts(VkDevice vk_dev, VkQueue vk_queue)
+    {
+        // Transition every fresh swapchain image from UNDEFINED to PRESENT_SRC_KHR
+        // so that on_change()'s TextureLayout::PRESENT initial-state assumption holds
+        // on frame 0.
+        //
+        // The Vulkan spec forbids transitioning a presentable image that has not been
+        // acquired (VUID-vkCmdPipelineBarrier2-image-09373).  We therefore loop:
+        //   acquire → transition UNDEFINED→PRESENT_SRC_KHR → present back
+        // until every image index has been visited.  After this function returns all
+        // images are in PRESENT_SRC_KHR and owned by the presentation engine; the
+        // caller then does one final do_acquire() to claim the first rendering image.
+        if (vk_dev       == VK_NULL_HANDLE || vk_queue == VK_NULL_HANDLE ||
+            vk_swapchain == VK_NULL_HANDLE || image_count == 0 ||
+            present_pool == VK_NULL_HANDLE || present_cbs.size() < image_count)
+            return;
+
+        // Allocate one acquire-semaphore and one present-semaphore per iteration.
+        // Upper bound: visit each image at least once; allow 4× slack for MAILBOX mode
+        // where the presentation engine may return the same image several times before
+        // handing back the others.
+        const uint32_t max_iters = image_count * 4;
+        std::vector<VkSemaphore> acq_sems (max_iters, VK_NULL_HANDLE);
+        std::vector<VkSemaphore> pres_sems(max_iters, VK_NULL_HANDLE);
+        for (auto& s : acq_sems ) s = make_semaphore(vk_dev);
+        for (auto& s : pres_sems) s = make_semaphore(vk_dev);
+
+        std::vector<bool> done(image_count, false);
+        uint32_t          done_count = 0;
+
+        for (uint32_t iter = 0; iter < max_iters && done_count < image_count; ++iter)
+        {
+            VkSemaphore acq_sem  = acq_sems [iter];
+            VkSemaphore pres_sem = pres_sems[iter];
+
+            uint32_t img_idx = 0;
+            VkResult r = vkAcquireNextImageKHR(vk_dev, vk_swapchain,
+                                               UINT64_MAX, acq_sem,
+                                               VK_NULL_HANDLE, &img_idx);
+            if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR) break;
+
+            // Re-use the per-image present CB slot: reset and re-record.
+            // For a newly-seen image record UNDEFINED→PRESENT_SRC_KHR; for an
+            // already-done image record an empty CB (we still need to consume
+            // acq_sem before presenting).
+            VkCommandBuffer cb = present_cbs[img_idx];
+            vkResetCommandBuffer(cb, 0);
+            {
+                VkCommandBufferBeginInfo bi{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+                bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+                vkBeginCommandBuffer(cb, &bi);
+
+                if (!done[img_idx])
+                {
+                    VkImageMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+                    barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+                    barrier.srcAccessMask = 0;
+                    barrier.dstStageMask  = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+                    barrier.dstAccessMask = 0;
+                    barrier.oldLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
+                    barrier.newLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    barrier.image         = swapchain_images[img_idx];
+                    barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+                    VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+                    dep.imageMemoryBarrierCount = 1;
+                    dep.pImageMemoryBarriers    = &barrier;
+                    vkCmdPipelineBarrier2(cb, &dep);
+
+                    done[img_idx] = true;
+                    ++done_count;
+                }
+
+                vkEndCommandBuffer(cb);
+            }
+
+            // Submit: wait on the acquire semaphore, signal the present semaphore.
+            VkSemaphoreSubmitInfo wait_si{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
+            wait_si.semaphore = acq_sem;
+            wait_si.stageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+
+            VkSemaphoreSubmitInfo sig_si{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
+            sig_si.semaphore = pres_sem;
+            sig_si.stageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+
+            VkCommandBufferSubmitInfo cb_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };
+            cb_info.commandBuffer = cb;
+
+            VkSubmitInfo2 submit{ VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
+            submit.waitSemaphoreInfoCount   = 1;
+            submit.pWaitSemaphoreInfos      = &wait_si;
+            submit.commandBufferInfoCount   = 1;
+            submit.pCommandBufferInfos      = &cb_info;
+            submit.signalSemaphoreInfoCount = 1;
+            submit.pSignalSemaphoreInfos    = &sig_si;
+            vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE);
+
+            // Present the image back so the presentation engine can return it
+            // on the next acquire (necessary to cycle through all image indices).
+            VkPresentInfoKHR pi{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+            pi.waitSemaphoreCount = 1;
+            pi.pWaitSemaphores    = &pres_sem;
+            pi.swapchainCount     = 1;
+            pi.pSwapchains        = &vk_swapchain;
+            pi.pImageIndices      = &img_idx;
+            vkQueuePresentKHR(vk_queue, &pi);
+        }
+
+        // Synchronous flush: all presents above are now complete before we return.
+        vkQueueWaitIdle(vk_queue);
+
+        // Destroy the temporary semaphores (safe: all GPU work has finished).
+        for (auto s : acq_sems ) if (s) vkDestroySemaphore(vk_dev, s, nullptr);
+        for (auto s : pres_sems) if (s) vkDestroySemaphore(vk_dev, s, nullptr);
     }
 
     void SwapChain::teardown_present_commands(VkDevice vk_dev)
@@ -630,6 +753,12 @@ namespace HAL
         // Rebuild present-transition resources for the new images.
         setup_present_commands(api_dev.vk_device,
             api_dev.get_queue_family(static_cast<int>(CommandListType::DIRECT)));
+
+        // Transition fresh images UNDEFINED → PRESENT_SRC_KHR.
+        {
+            auto& aq = static_cast<API::Queue&>(*device.get_queue(CommandListType::DIRECT));
+            init_swapchain_layouts(api_dev.vk_device, aq.get_native());
+        }
 
         // Null out the stale semaphore handles the queue is holding before we
         // re-acquire, so a racing execute() sees VK_NULL_HANDLE rather than

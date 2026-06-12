@@ -102,6 +102,31 @@ VkFormat to_native(Format format)
     case Format::BC6H_SF16:             return VK_FORMAT_BC6H_SFLOAT_BLOCK;
     case Format::BC7_UNORM:             return VK_FORMAT_BC7_UNORM_BLOCK;
     case Format::BC7_UNORM_SRGB:        return VK_FORMAT_BC7_SRGB_BLOCK;
+    // ---- TYPELESS → concrete -------------------------------------------------
+    // Vulkan has no typeless formats; a typeless D3D12 resource maps to the
+    // natural typed format and is reinterpreted per-view (images that need it
+    // are created with VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT).
+    case Format::R32G32B32A32_TYPELESS: return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case Format::R32G32B32_TYPELESS:    return VK_FORMAT_R32G32B32_SFLOAT;
+    case Format::R16G16B16A16_TYPELESS: return VK_FORMAT_R16G16B16A16_SFLOAT;
+    case Format::R32G32_TYPELESS:       return VK_FORMAT_R32G32_SFLOAT;
+    case Format::R10G10B10A2_TYPELESS:  return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
+    case Format::R8G8B8A8_TYPELESS:     return VK_FORMAT_R8G8B8A8_UNORM;
+    case Format::B8G8R8A8_TYPELESS:     return VK_FORMAT_B8G8R8A8_UNORM;
+    case Format::R16G16_TYPELESS:       return VK_FORMAT_R16G16_SFLOAT;
+    case Format::R32_TYPELESS:          return VK_FORMAT_R32_SFLOAT;
+    case Format::R8G8_TYPELESS:         return VK_FORMAT_R8G8_UNORM;
+    case Format::R16_TYPELESS:          return VK_FORMAT_R16_SFLOAT;
+    case Format::R8_TYPELESS:           return VK_FORMAT_R8_UNORM;
+    case Format::R24G8_TYPELESS:        return VK_FORMAT_D24_UNORM_S8_UINT;
+    case Format::R32G8X24_TYPELESS:     return VK_FORMAT_D32_SFLOAT_S8_UINT;
+    case Format::BC1_TYPELESS:          return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+    case Format::BC2_TYPELESS:          return VK_FORMAT_BC2_UNORM_BLOCK;
+    case Format::BC3_TYPELESS:          return VK_FORMAT_BC3_UNORM_BLOCK;
+    case Format::BC4_TYPELESS:          return VK_FORMAT_BC4_UNORM_BLOCK;
+    case Format::BC5_TYPELESS:          return VK_FORMAT_BC5_UNORM_BLOCK;
+    case Format::BC6H_TYPELESS:         return VK_FORMAT_BC6H_UFLOAT_BLOCK;
+    case Format::BC7_TYPELESS:          return VK_FORMAT_BC7_UNORM_BLOCK;
     // ---- formats with no direct Vulkan equivalent ----------------------------
     // TYPELESS formats have no Vulkan analogue; callers should resolve to a
     // typed format before calling to_native().
@@ -210,7 +235,15 @@ VkImageLayout to_native(TextureLayout layout)
     case TextureLayout::UNORDERED_ACCESS:    return VK_IMAGE_LAYOUT_GENERAL;
     case TextureLayout::DEPTH_STENCIL_WRITE: return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     case TextureLayout::DEPTH_STENCIL_READ:  return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    case TextureLayout::SHADER_RESOURCE:     return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    // GENERAL instead of SHADER_READ_ONLY_OPTIMAL: D3D12 descriptors carry no
+    // embedded layout, so the same slot is validly used as both SRV and UAV
+    // without ever becoming "stale."  Vulkan's VkDescriptorImageInfo embeds a
+    // layout, causing Warning 529 when a bindless STORAGE_IMAGE slot still
+    // says GENERAL while the image has been transitioned back to
+    // SHADER_READ_ONLY.  By keeping ALL shader-accessible images in GENERAL we
+    // match D3D12 semantics: one stable layout for any shader access.
+    // (GENERAL is a valid layout for VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE per spec.)
+    case TextureLayout::SHADER_RESOURCE:     return VK_IMAGE_LAYOUT_GENERAL;
     case TextureLayout::COPY_SOURCE:         return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     case TextureLayout::COPY_DEST:           return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
    // case TextureLayout::RESOLVE_SOURCE:      return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -285,4 +318,84 @@ VkQueueFlagBits to_native_queue(CommandListType type)
     case CommandListType::COPY:    return VK_QUEUE_TRANSFER_BIT;
     default:                       return VK_QUEUE_GRAPHICS_BIT;
     }
+}
+
+// ============================================================================
+//  Sampler conversion helpers
+// ============================================================================
+
+VkFilter to_native_filter(Filter f)
+{
+    switch (f)
+    {
+    case Filter::POINT:       return VK_FILTER_NEAREST;
+    case Filter::ANISOTROPIC: return VK_FILTER_LINEAR;
+    default:                  return VK_FILTER_LINEAR;
+    }
+}
+
+VkSamplerMipmapMode to_native_mipmap(Filter f)
+{
+    return (f == Filter::POINT) ? VK_SAMPLER_MIPMAP_MODE_NEAREST
+                                : VK_SAMPLER_MIPMAP_MODE_LINEAR;
+}
+
+VkSamplerAddressMode to_native(TextureAddressMode mode)
+{
+    switch (mode)
+    {
+    case TextureAddressMode::WRAP:        return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    case TextureAddressMode::MIRROR:      return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    case TextureAddressMode::CLAMP:       return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    case TextureAddressMode::BORDER:      return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    case TextureAddressMode::MIRROR_ONCE: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+    default:                              return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    }
+}
+
+VkCompareOp to_native(ComparisonFunc func)
+{
+    switch (func)
+    {
+    case ComparisonFunc::NONE:          return VK_COMPARE_OP_ALWAYS;
+    case ComparisonFunc::NEVER:         return VK_COMPARE_OP_NEVER;
+    case ComparisonFunc::LESS:          return VK_COMPARE_OP_LESS;
+    case ComparisonFunc::EQUAL:         return VK_COMPARE_OP_EQUAL;
+    case ComparisonFunc::LESS_EQUAL:    return VK_COMPARE_OP_LESS_OR_EQUAL;
+    case ComparisonFunc::GREATER:       return VK_COMPARE_OP_GREATER;
+    case ComparisonFunc::NOT_EQUAL:     return VK_COMPARE_OP_NOT_EQUAL;
+    case ComparisonFunc::GREATER_EQUAL: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+    case ComparisonFunc::ALWAYS:        return VK_COMPARE_OP_ALWAYS;
+    default:                            return VK_COMPARE_OP_ALWAYS;
+    }
+}
+
+VkSamplerCreateInfo to_native_sampler_ci(const SamplerDesc& desc)
+{
+    VkSamplerCreateInfo ci{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    ci.magFilter    = to_native_filter(desc.MagFilter);
+    ci.minFilter    = to_native_filter(desc.MinFilter);
+    ci.mipmapMode   = to_native_mipmap(desc.MipFilter);
+    ci.addressModeU = to_native(desc.AddressU);
+    ci.addressModeV = to_native(desc.AddressV);
+    ci.addressModeW = to_native(desc.AddressW);
+    ci.mipLodBias   = desc.MipLODBias;
+    ci.anisotropyEnable = (desc.MinFilter == Filter::ANISOTROPIC ||
+                           desc.MagFilter == Filter::ANISOTROPIC) ? VK_TRUE : VK_FALSE;
+    ci.maxAnisotropy    = static_cast<float>(desc.MaxAnisotropy);
+    ci.compareEnable    = (desc.ComparisonFunc != ComparisonFunc::NONE) ? VK_TRUE : VK_FALSE;
+    ci.compareOp        = to_native(desc.ComparisonFunc);
+    ci.minLod           = desc.MinLOD;
+    ci.maxLod           = desc.MaxLOD;
+    // Border color: Vulkan only supports a fixed set.
+    // All HAL SamplerDesc border colors are (1,1,1,1) → opaque white.
+    const auto& bc = desc.BorderColor;
+    if (bc.x == 0.f && bc.y == 0.f && bc.z == 0.f && bc.w == 0.f)
+        ci.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+    else if (bc.x == 0.f && bc.y == 0.f && bc.z == 0.f)
+        ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+    else
+        ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    ci.unnormalizedCoordinates = VK_FALSE;
+    return ci;
 }

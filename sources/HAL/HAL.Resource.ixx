@@ -170,6 +170,7 @@ export{
 			std::shared_ptr<Resource> get_tracked();
 
 			void disable_state_tracking();
+			void enable_state_tracking();
 			ResourceAllocationInfo alloc_info;
 			std::string name;
 			void set_name(std::string name);

@@ -9,6 +9,13 @@ import Core;
 
 using namespace HAL;
 
+export namespace HAL
+{
+    // Backend identifier used to segregate per-backend caches (shaders, PSOs).
+    // Textures are backend-agnostic and stay in the cache root.
+    inline std::string get_backend_name() { return "d3d12"; }
+}
+
 static_assert(D3D12::SHADER_IDENTIFIER_SIZE_IN_BYTES == 32);
 
 export namespace D3D

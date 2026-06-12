@@ -56,6 +56,7 @@ namespace HAL
             auto& api_dev = *static_cast<API::Device*>(device);
             if (api_dev.get_native_device() == VK_NULL_HANDLE) return;
 
+            m_device   = &api_dev;
             family_idx = api_dev.get_queue_family(static_cast<int>(type));
             vk_device  = api_dev.get_native_device();
 
@@ -71,13 +72,72 @@ namespace HAL
                 THIS->frequency = static_cast<uint64_t>(1e9 / props.limits.timestampPeriod);
         }
 
+        Queue::~Queue()
+        {
+            if (init_pool != VK_NULL_HANDLE)
+                vkDestroyCommandPool(vk_device, init_pool, nullptr);
+        }
+
+        VkCommandBuffer Queue::flush_init_transitions()
+        {
+            if (!m_device) return VK_NULL_HANDLE;
+
+            auto barriers = m_device->take_pending_init_transitions();
+            if (barriers.empty()) return VK_NULL_HANDLE;
+
+            if (init_pool == VK_NULL_HANDLE)
+            {
+                VkCommandPoolCreateInfo pci{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+                pci.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+                                     | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+                pci.queueFamilyIndex = family_idx;
+                vkCreateCommandPool(vk_device, &pci, nullptr, &init_pool);
+
+                VkCommandBufferAllocateInfo cai{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+                cai.commandPool        = init_pool;
+                cai.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+                cai.commandBufferCount = static_cast<uint32_t>(init_cbs.size());
+                vkAllocateCommandBuffers(vk_device, &cai, init_cbs.data());
+            }
+
+            VkCommandBuffer cb = init_cbs[init_cb_index];
+            init_cb_index = (init_cb_index + 1) % static_cast<uint32_t>(init_cbs.size());
+
+            vkResetCommandBuffer(cb, 0);
+            VkCommandBufferBeginInfo bi{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+            bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            vkBeginCommandBuffer(cb, &bi);
+
+            VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+            dep.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size());
+            dep.pImageMemoryBarriers    = barriers.data();
+            vkCmdPipelineBarrier2(cb, &dep);
+
+            vkEndCommandBuffer(cb);
+            return cb;
+        }
+
         void Queue::execute(const API::CommandList* list)
         {
             if (vk_queue == VK_NULL_HANDLE || !list || list->get_native() == VK_NULL_HANDLE)
                 return;
 
-            VkCommandBufferSubmitInfo cmd_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };
+            // Flush pending initial-layout transitions ahead of the real work so
+            // fresh images actually rest in the layout the state manager assumes.
+            VkCommandBufferSubmitInfo cmd_infos[2]{};
+            uint32_t cmd_count = 0;
+
+            if (VkCommandBuffer init_cb = flush_init_transitions(); init_cb != VK_NULL_HANDLE)
+            {
+                cmd_infos[cmd_count] = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };
+                cmd_infos[cmd_count].commandBuffer = init_cb;
+                ++cmd_count;
+            }
+
+            VkCommandBufferSubmitInfo& cmd_info = cmd_infos[cmd_count];
+            cmd_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };
             cmd_info.commandBuffer = list->get_native();
+            ++cmd_count;
 
             // Consume pending acquire/present semaphores (set once per frame by SwapChain).
             VkSemaphoreSubmitInfo wait_info{}, sig_info{};
@@ -101,8 +161,8 @@ namespace HAL
             }
 
             VkSubmitInfo2 submit{ VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
-            submit.commandBufferInfoCount    = 1;
-            submit.pCommandBufferInfos       = &cmd_info;
+            submit.commandBufferInfoCount    = cmd_count;
+            submit.pCommandBufferInfos       = cmd_infos;
             submit.waitSemaphoreInfoCount    = wait_count;
             submit.pWaitSemaphoreInfos       = wait_count  ? &wait_info : nullptr;
             submit.signalSemaphoreInfoCount  = sig_count;

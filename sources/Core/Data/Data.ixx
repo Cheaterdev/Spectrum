@@ -177,6 +177,13 @@ export
 		{
 			return table.size();
 		}
+
+
+		void clear()
+		{			m.lock();
+				table.clear();
+				m.unlock();
+		}
 		Cache() = default;
 
 		Cache(std::function<V(const I&)> create_func) : create_func(create_func) {}

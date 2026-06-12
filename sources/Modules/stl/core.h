@@ -64,3 +64,4 @@
 // memory (formerly stl/memory.h)
 #include <memory>
 
+ #include <stacktrace>

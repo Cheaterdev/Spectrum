@@ -4,6 +4,7 @@ import :ShaderCompiler;
 import Core;
 import :Enums;
 import :Slots;
+import :Utils;   // get_backend_name() for per-backend shader cache
 std::optional<SlotID> get_slot(std::string_view slot_name);
 export
 {
@@ -143,6 +144,11 @@ export
 				this->id = shader_ids[blob_hash];
 			}
 		public:
+			// Per-backend shader cache: a SPIR-V (Vulkan) blob and a DXIL (D3D12)
+			// blob hash to the same source but must never share a cache slot.
+			// → cache/<backend>/<hash>.bin
+			static std::string cache_subfolder() { return get_backend_name(); }
+
 			static Cache<unsigned int, size_t> shader_ids;
 					CompiledShader blob;
 		

@@ -7,6 +7,7 @@ module HAL:Device;
 import :Debug;
 import :Utils;
 import :Impl;    // get_vk_instance()
+import :Sampler;
 
 import stl.core;
 import Core;
@@ -51,6 +52,40 @@ namespace HAL
 
     namespace API
     {
+        void Device::queue_initial_transition(VkImage image, VkImageLayout layout, VkImageAspectFlags aspect)
+        {
+            if (image == VK_NULL_HANDLE || layout == VK_IMAGE_LAYOUT_UNDEFINED) return;
+
+            VkImageMemoryBarrier2 b{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+            b.srcStageMask     = VK_PIPELINE_STAGE_2_NONE;
+            b.srcAccessMask    = 0;
+            b.dstStageMask     = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+            b.dstAccessMask    = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+            b.oldLayout        = VK_IMAGE_LAYOUT_UNDEFINED;
+            b.newLayout        = layout;
+            b.image            = image;
+            b.subresourceRange = { aspect, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
+
+            std::lock_guard lock(pending_init_mutex);
+            pending_init_barriers.push_back(b);
+        }
+
+        void Device::cancel_pending_init_transition(VkImage image)
+        {
+            if (image == VK_NULL_HANDLE) return;
+            std::lock_guard lock(pending_init_mutex);
+            auto& v = pending_init_barriers;
+            v.erase(std::remove_if(v.begin(), v.end(),
+                [image](const VkImageMemoryBarrier2& b) { return b.image == image; }),
+                v.end());
+        }
+
+        std::vector<VkImageMemoryBarrier2> Device::take_pending_init_transitions()
+        {
+            std::lock_guard lock(pending_init_mutex);
+            return std::move(pending_init_barriers);
+        }
+
         void Device::init(DeviceDesc& device_desc)
         {
             auto THIS = static_cast<HAL::Device*>(this);
@@ -227,6 +262,8 @@ namespace HAL
             p.rtx           = false;  // Phase: VK_KHR_ray_tracing_pipeline check
             p.mesh_shader   = false;  // Phase: VK_EXT_mesh_shader check
             p.work_graph    = false;  // no Vulkan equivalent yet
+            p.min_storage_buffer_offset_alignment =
+                static_cast<uint32_t>(props2.properties.limits.minStorageBufferOffsetAlignment);
             // full_bindless = true whenever the Vulkan device creates successfully.
             // The D3D12 version gates on shader model 6.6; on Vulkan, bindless is
             // always available once descriptor indexing features are enabled, so
@@ -361,12 +398,34 @@ namespace HAL
                 vkCreateDescriptorSetLayout(vk_device, &samp_ci, nullptr, &sampler_layout);
             }
 
+            // ---- Inline static samplers s0..s4 (FrameLayout.h) --------------
+            // These map to set 0, bindings 384-388 (s-shift = 384).
+            // The order must match FrameLayout.h:
+            //   s0=linearSampler, s1=pointClampSampler, s2=linearClampSampler,
+            //   s3=anisoBordeSampler, s4=pointBorderSampler
+            {
+                const SamplerDesc* descs[NUM_INLINE_SMP] = {
+                    &Samplers::SamplerLinearWrapDesc,
+                    &Samplers::SamplerPointClampDesc,
+                    &Samplers::SamplerLinearClampDesc,
+                    &Samplers::SamplerAnisoBorderDesc,
+                    &Samplers::SamplerPointBorderDesc,
+                };
+                for (uint32_t i = 0; i < NUM_INLINE_SMP; ++i)
+                {
+                    auto ci = to_native_sampler_ci(*descs[i]);
+                    vkCreateSampler(vk_device, &ci, nullptr, &inline_samplers[i]);
+                }
+            }
+
             Log::get() << "Vulkan device: " << p.name.c_str()
                        << "  VRAM: " << (vram / 1024 / 1024) << " MB" << Log::endl;
         }
 
         Device::~Device()
         {
+            for (uint32_t i = 0; i < NUM_INLINE_SMP; ++i)
+                if (inline_samplers[i]) vkDestroySampler(vk_device, inline_samplers[i], nullptr);
             if (cbv_srv_uav_layout) vkDestroyDescriptorSetLayout(vk_device, cbv_srv_uav_layout, nullptr);
             if (sampler_layout)     vkDestroyDescriptorSetLayout(vk_device, sampler_layout, nullptr);
             if (vma_allocator)      vmaDestroyAllocator(vma_allocator);
@@ -438,11 +497,31 @@ namespace HAL
                 ici.extent      = { t.Dimensions.x,
                                     t.is1D() ? 1u : t.Dimensions.y,
                                     t.is3D() ? t.Dimensions.z : 1u };
+                // MipLevels=0 means "full chain" (resolved the same way in
+                // Resource::init); vkGetDeviceImageMemoryRequirements requires >= 1.
                 ici.mipLevels   = t.MipLevels;
+                if (ici.mipLevels == 0)
+                {
+                    uint max_dim = std::max({ t.Dimensions.x,
+                                              t.is1D() ? 1u : t.Dimensions.y,
+                                              t.is3D() ? t.Dimensions.z : 1u });
+                    ici.mipLevels = max_dim > 0u
+                        ? static_cast<uint>(std::floor(std::log2(
+                              static_cast<float>(max_dim)))) + 1u
+                        : 1u;
+                }
                 ici.arrayLayers = t.ArraySize;
                 ici.samples     = VK_SAMPLE_COUNT_1_BIT;
+                // Keep in sync with Resource::init — requirements must be queried
+                // for the same usage the image is actually created with.
                 ici.usage       = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
-                                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+                                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+                if (check(desc.Flags & ResFlags::UnorderedAccess))
+                    ici.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+                if (check(desc.Flags & ResFlags::RenderTarget))
+                    ici.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+                if (check(desc.Flags & ResFlags::DepthStencil))
+                    ici.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
                 VkMemoryRequirements2 req{ VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
                 VkDeviceImageMemoryRequirements info{ VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS };

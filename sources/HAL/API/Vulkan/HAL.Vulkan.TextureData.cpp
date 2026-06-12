@@ -136,13 +136,21 @@ namespace HAL
         const UINT stride   = mip->width * 4;
         const UINT buf_size = stride * mip->height;
 
-        // Wrap the RGBA readback bytes in a WIC bitmap that is explicitly tagged
-        // RGBA, then WriteSource — WIC converts to whatever format the PNG frame
+        // Tag the source bitmap with the channel order the bytes actually have —
+        // BGRA textures (e.g. swapchain-format render targets) would otherwise
+        // come out with R and B swapped.
+        const WICPixelFormatGUID src_fmt =
+            (format == Format::B8G8R8A8_UNORM || format == Format::B8G8R8A8_UNORM_SRGB)
+                ? GUID_WICPixelFormat32bppBGRA
+                : GUID_WICPixelFormat32bppRGBA;
+
+        // Wrap the readback bytes in a WIC bitmap tagged with their real channel
+        // order, then WriteSource — WIC converts to whatever format the PNG frame
         // actually chose.  (WritePixels would blindly reinterpret the bytes as the
         // frame's native format, swapping R<->B when WIC falls back to BGRA.)
         ComPtr<IWICBitmap> bitmap;
         if (FAILED(factory->CreateBitmapFromMemory(mip->width, mip->height,
-                GUID_WICPixelFormat32bppRGBA, stride, buf_size,
+                src_fmt, stride, buf_size,
                 reinterpret_cast<BYTE*>(const_cast<unsigned char*>(mip->data.data())),
                 &bitmap)))
             return {};

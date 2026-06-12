@@ -36,6 +36,10 @@ export namespace HAL
         bool full_bindless         = false;
         bool direct_gpu_upload_heap = false;
         bool work_graph            = false;
+        // Vulkan: VkPhysicalDeviceLimits::minStorageBufferOffsetAlignment.
+        // D3D12: 1 (no alignment constraint on StructuredBuffer FirstElement).
+        // Used by callers to compute lcm(sizeof(T), this) for place_data alignment.
+        uint32_t min_storage_buffer_offset_alignment = 1;
     };
 
     namespace API
@@ -80,6 +84,22 @@ export namespace HAL
             VkDescriptorSetLayout cbv_srv_uav_layout = VK_NULL_HANDLE;
             VkDescriptorSetLayout sampler_layout     = VK_NULL_HANDLE;
 
+            // Inline static samplers s0..s4 (FrameLayout.h, binding 384+N in set 0).
+            // Created in init(); written into every CBV_SRV_UAV DescriptorHeap set.
+            static constexpr uint32_t NUM_INLINE_SMP = 5;
+            VkSampler inline_samplers[NUM_INLINE_SMP] = {};
+
+            // ---- Pending initial-layout transitions --------------------------
+            // D3D12 creates resources directly in their initial state; Vulkan
+            // images always start in UNDEFINED.  The HAL state manager assumes
+            // the D3D12 model (resources rest in their initial layout between
+            // command lists), so every freshly created VkImage queues a one-time
+            // UNDEFINED -> initial_layout barrier here.  The next Queue::execute
+            // flushes the batch in a small command buffer submitted ahead of the
+            // real work, making the state manager's assumption true.
+            std::mutex pending_init_mutex;
+            std::vector<VkImageMemoryBarrier2> pending_init_barriers;
+
         public:
             using ptr = std::shared_ptr<Device>;
 
@@ -101,6 +121,15 @@ export namespace HAL
             // Created once in init(); shared by DescriptorHeap and RootSignature.
             VkDescriptorSetLayout get_cbv_srv_uav_layout() const noexcept { return cbv_srv_uav_layout; }
             VkDescriptorSetLayout get_sampler_layout()     const noexcept { return sampler_layout; }
+            const VkSampler*      get_inline_samplers()    const noexcept { return inline_samplers; }
+
+            // Queue a one-time UNDEFINED -> layout transition for a new image.
+            // Flushed by the next Queue::execute on whichever queue submits first
+            // (cross-queue first use is safe: queues sharing a resource are
+            // already fence-synchronized by the FrameGraph).
+            void queue_initial_transition(VkImage image, VkImageLayout layout, VkImageAspectFlags aspect);
+            void cancel_pending_init_transition(VkImage image);
+            std::vector<VkImageMemoryBarrier2> take_pending_init_transitions();
 
             ResourceAllocationInfo get_alloc_info(const ResourceDesc& desc);
             uint   Subresources(const ResourceDesc& desc) const;

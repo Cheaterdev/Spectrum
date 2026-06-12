@@ -10,20 +10,17 @@ float texture_offset : TEXCOORD3;
 
 
 #include "../autogen/NinePatch.h"
-static const StructuredBuffer<vertex_input> vb = GetNinePatch().GetVb();
 
 #ifdef BUILD_FUNC_VS
 quad_output VS(uint index : SV_VERTEXID, uint instance : SV_INSTANCEID)
 {
-
-	vertex_input input = vb[16 * instance + index];
+    vertex_input v = GetNinePatch().GetVb()[index + instance * 16];
     quad_output Output;
-    Output.pos = float4(input.GetPos(), 0.999, 1);
-    Output.tc = input.GetTc();
-	Output.texture_offset = instance;// texture_offset[instance];
-    Output.mulColor = input.GetMulColor();
-    Output.addColor = input.GetAddColor();
-
+    Output.pos            = float4(v.pos, 0.5, 1);
+    Output.tc             = v.tc;
+    Output.mulColor       = v.mulColor;
+    Output.addColor       = v.addColor;
+    Output.texture_offset = (float)instance;
     return Output;
 }
 #endif
@@ -31,9 +28,9 @@ quad_output VS(uint index : SV_VERTEXID, uint instance : SV_INSTANCEID)
 #ifdef BUILD_FUNC_PS
 float4 PS(quad_output i) : SV_TARGET0
 {
-    float4 col = GetNinePatch().GetTextures(i.texture_offset).Sample(anisoBordeSampler , i.tc);
-    //col.xyz/=col.w;
-    return  i.addColor + i.mulColor *col;
+    Texture2D<float4> tex = GetNinePatch().GetTextures((int)i.texture_offset);
+    float4 color = tex.Sample(linearSampler, i.tc);
+    return color * i.mulColor + i.addColor;
 }
 #endif
 

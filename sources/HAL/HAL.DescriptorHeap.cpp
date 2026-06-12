@@ -355,7 +355,7 @@ f(view.Resource, ALL_SUBRESOURCES);
 
 	bool Handle::is_valid() const
 	{
-		return storage && (offset != std::numeric_limits<uint>::max());
+		return storage && (offset != std::numeric_limits<uint>::max()) && storage->get_heap() != nullptr;
 	}
 
 	bool Handle::operator!=(const Handle& r)

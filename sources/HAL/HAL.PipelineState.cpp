@@ -3,6 +3,7 @@ import Core;
 import :Device;
 import :Shader;
 import :PSO;
+import :Utils;   // get_backend_name() for per-backend PSO cache
 
 namespace HAL
 {
@@ -39,7 +40,7 @@ namespace HAL
 	{
 		std::lock_guard<std::mutex> g(m);
 
-		FileDataStorage storage(L"cache/pso.bin");
+		FileDataStorage storage(std::filesystem::path("cache") / get_backend_name() / "pso.bin");
 		storage.start_save();
 		storage.put("cache", binary_cache);
 		storage.save();
@@ -90,7 +91,7 @@ namespace HAL
 
 
 		
-		FileDataStorage storage(L"cache/pso.bin");
+		FileDataStorage storage(std::filesystem::path("cache") / get_backend_name() / "pso.bin");
 		storage.get("cache",binary_cache);
 	}
 

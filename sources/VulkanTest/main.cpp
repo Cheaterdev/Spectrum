@@ -20,17 +20,6 @@ import Core;
 #include "../RenderSystem/FrameGraph/autogen/pass_defaults.h"
 using namespace FrameGraph;
 
-// ---- PassDefault bodies required by UIPipeline -----------------------------
-bool PassDefault<Passes::Profiler>::setup(
-    Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder)
-{
-    builder.need(data.swapchain,
-        ResourceFlags::Required | ResourceFlags::RenderTarget);
-    return false;
-}
-void PassDefault<Passes::Profiler>::render(
-    Passes::Profiler::Context&, FrameGraph::FrameContext&) {}
-
 // ============================================================================
 //  Helpers
 // ============================================================================
@@ -88,6 +77,13 @@ class VulkanTestApp : public Window, public GUI::user_interface
     // UI widgets
     GUI::Elements::label::ptr label_fps;
     GUI::Elements::label::ptr label_backend;
+
+    // Off-screen render target.  The FrameGraph renders into this instead of
+    // the real swapchain so we can read it back without PRESENT-layout fights.
+    HAL::TextureResource::ptr render_tex;
+    ivec2                     render_tex_size{};
+
+    int frame_counter = 0;
 
 public:
     VulkanTestApp()
@@ -150,8 +146,27 @@ public:
     // ---- Render one frame ---------------------------------------------------
     void render()
     {
+        ++frame_counter;
+        if (frame_counter <= 5)
+            Log::get() << "[Render] frame " << frame_counter << Log::endl;
+
         swap_chain->resize(new_size);
         swap_chain->wait_for_free();
+
+        // (Re)create the off-screen render target when the window size changes.
+        if (!render_tex || render_tex_size != new_size)
+        {
+            HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+            render_tex_size = new_size;
+            render_tex = std::make_shared<HAL::TextureResource>(
+                HAL::Device::get(),
+                HAL::ResourceDesc::Tex2D(
+                    HAL::Format::B8G8R8A8_UNORM,
+                    uint2{ (uint)new_size.x, (uint)new_size.y }, 1, 1,
+                    HAL::ResFlags::RenderTarget),
+                HAL::HeapType::DEFAULT);
+            render_tex->set_name("render_tex");
+        }
 
         if (fps_meter.tick())
             label_fps->text = std::to_string((int)fps_meter.get()) + " fps  |  "
@@ -161,8 +176,10 @@ public:
         process_ui((float)frame_timer.tick());
 
         graph.start_new_frame();
-        graph.builder.pass_texture("swapchain",
-            swap_chain->get_current_frame(), swap_chain->get_fence());
+        // Render into our off-screen texture (passed as "swapchain" so the
+        // UI pipeline writes to it).  The real swapchain is still cycled via
+        // wait_for_free()/present() but won't have any rendered content.
+        graph.builder.pass_texture("swapchain", render_tex);
 
         pipeline.add_passes(graph);
         create_graph(graph);       // injects UI_Render pass slots
@@ -170,10 +187,62 @@ public:
         graph.setup();
         graph.compile(swap_chain->m_frameIndex);
         graph.render();
-        graph.commit_command_lists();
+        auto fence = graph.commit_command_lists();
+
+        // ---- One-shot debug screenshot ----------------------------------------
+        // Fires on the first rendered frame.  Reads render_tex (the off-screen
+        // target the FrameGraph rendered into) using HAL::texture_data::from_readback
+        // + to_png() — same pattern as Test.HAL.TextureUtils.
+        {
+            static int screenshot_countdown = 1;
+            if (screenshot_countdown > 0 && --screenshot_countdown == 0)
+            {
+                Log::get() << "[Screenshot] Starting readback on frame " << frame_counter << Log::endl;
+                fence.wait(); // ensure GPU finished all rendering
+                render_tex->enable_state_tracking();
+
+                const auto& tex_desc = render_tex->get_desc().as_texture();
+                const uint32_t    w   = tex_desc.Dimensions.x;
+                const uint32_t    h   = tex_desc.Dimensions.y ? tex_desc.Dimensions.y : 1;
+                const HAL::Format fmt = tex_desc.Format;
+
+                HAL::texture_data::ptr result;
+                auto ss_list = HAL::Device::get().get_upload_list();
+                auto fut = ss_list->get_copy().read_texture(
+                    render_tex.get(), 0,
+                    [&](std::span<std::byte> data, HAL::texture_layout layout)
+                    {
+                        result = HAL::texture_data::from_readback(w, h, fmt, data, layout);
+                    });
+                ss_list->execute_and_wait();
+                fut.wait();
+
+                if (result)
+                {
+                    auto png = result->to_png();
+                    if (!png.empty())
+                    {
+                        std::string png_str(reinterpret_cast<const char*>(png.data()), png.size());
+                        FileSystem::get().save_data("screenshot.png", png_str);
+                        Log::get() << "[Screenshot] Saved screenshot.png "
+                                   << w << "x" << h << Log::endl;
+                    }
+                    else
+                        Log::get() << "[Screenshot] to_png() returned empty" << Log::endl;
+                }
+                else
+                    Log::get() << "[Screenshot] from_readback() returned null" << Log::endl;
+            }
+        }
+        // -----------------------------------------------------------------------
+
         graph.reset();
 
+        if (frame_counter <= 5)
+            Log::get() << "[Render] calling present frame " << frame_counter << Log::endl;
         swap_chain->present();
+        if (frame_counter <= 5)
+            Log::get() << "[Render] present returned frame " << frame_counter << Log::endl;
     }
 
     void on_resize(vec2 sz) override
@@ -192,13 +261,6 @@ public:
 //  WinMain
 // ============================================================================
 
-extern "C" {
-    _declspec(dllexport) extern const unsigned int D3D12SDKVersion = 618;
-}
-extern "C" {
-    _declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
-}
-
 int APIENTRY WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
     CoInitialize(nullptr);
@@ -206,6 +268,7 @@ int APIENTRY WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     // Logging
     Log::create<WinErrorLogger>();
     VSOutputLogger::create();
+    FileTXTLogger::create();
     Log::get().set_logging_level(Log::LEVEL_ALL);
 
     FileSystem::get().register_provider(std::make_shared<native_file_provider>());

@@ -1,5 +1,7 @@
 export module Test.HAL.Rendering;
 
+#define TEST_MODULE_ID HALRendering
+
 export import Test.Framework;
 export import Test.HAL.TextureUtils;
 

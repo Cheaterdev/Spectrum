@@ -59,6 +59,44 @@ namespace HAL
                 THIS->heap_type = placement.heap->get_type();
             // else: keep heap_type as set by caller (_init always pre-sets it)
 
+            // Mirror D3D12's initialLayout defaulting logic: when the caller
+            // passes UNDEFINED (the default), derive the initial layout from
+            // the resource's usage flags so the CPU state manager starts in
+            // the correct layout and compile_transitions() generates valid
+            // oldLayout values in Vulkan barriers.
+            if (_desc.is_texture())
+            {
+                if (THIS->heap_type == HeapType::UPLOAD)
+                {
+                    initialLayout = TextureLayout::SHADER_RESOURCE | TextureLayout::COPY_SOURCE;
+                }
+                else if (THIS->heap_type == HeapType::READBACK)
+                {
+                    initialLayout = TextureLayout::COPY_DEST;
+                }
+                else if (initialLayout == TextureLayout::UNDEFINED)
+                {
+                    if (check(_desc.Flags & ResFlags::ShaderResource))
+                        initialLayout = TextureLayout::SHADER_RESOURCE;
+                    else if (check(_desc.Flags & ResFlags::UnorderedAccess))
+                        initialLayout = TextureLayout::UNORDERED_ACCESS;
+                    else if (check(_desc.Flags & ResFlags::DepthStencil))
+                        initialLayout = TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::DEPTH_STENCIL_READ;
+                    else if (check(_desc.Flags & ResFlags::RenderTarget))
+                        initialLayout = TextureLayout::RENDER_TARGET;
+                    else
+                        initialLayout = TextureLayout::COPY_DEST;
+                }
+
+                if (check(_desc.Flags & ResFlags::DisableStateTracking))
+                {
+                    if (check(_desc.Flags & ResFlags::ShaderResource))
+                        initialLayout = TextureLayout::SHADER_RESOURCE;
+                    else
+                        initialLayout = TextureLayout::COPY_SOURCE;
+                }
+            }
+
             THIS->state_manager.init_subres(device.Subresources(THIS->get_desc()), initialLayout);
 
             if (THIS->heap_type == HeapType::RESERVED)
@@ -138,7 +176,11 @@ namespace HAL
             }
             else if (_desc.is_texture())
             {
-                auto& tex = _desc.as_texture();
+                // Read from THIS->desc, not _desc: the MipLevels=0 → full-chain
+                // resolution above mutated the stored copy only.  vkCreateImage
+                // requires mipLevels >= 1, so using the raw parameter here made
+                // every MipLevels=0 texture silently fail creation.
+                auto& tex = THIS->desc.as_texture();
 
                 VkImageCreateInfo ici{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
                 ici.imageType   = tex.is3D() ? VK_IMAGE_TYPE_3D :
@@ -152,8 +194,14 @@ namespace HAL
                 ici.samples     = VK_SAMPLE_COUNT_1_BIT;
                 ici.tiling      = VK_IMAGE_TILING_OPTIMAL;
                 ici.usage       = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
-                                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+                                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
+                // STORAGE only on request — mirrors D3D12's ALLOW_UNORDERED_ACCESS.
+                // Forcing it on every image breaks formats without storage-image
+                // support (e.g. B8G8R8A8_UNORM on NVIDIA): vkCreateImage fails and
+                // the resource silently becomes a null no-op.
+                if (check(_desc.Flags & ResFlags::UnorderedAccess))
+                    ici.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
                 if (check(_desc.Flags & ResFlags::RenderTarget))
                     ici.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
                 if (check(_desc.Flags & ResFlags::DepthStencil))
@@ -161,7 +209,14 @@ namespace HAL
 
                 vma_ci.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
-                vmaCreateImage(allocator, &ici, &vma_ci, &vk_image, &vma_alloc, nullptr);
+                VkResult img_res = vmaCreateImage(allocator, &ici, &vma_ci, &vk_image, &vma_alloc, nullptr);
+                if (img_res != VK_SUCCESS)
+                    Log::get() << "[Vulkan] vmaCreateImage failed (" << static_cast<int>(img_res)
+                               << ") vk_format=" << static_cast<int>(ici.format)
+                               << " usage=" << static_cast<uint>(ici.usage)
+                               << " extent=" << ici.extent.width << "x" << ici.extent.height << "x" << ici.extent.depth
+                               << " mips=" << ici.mipLevels << " layers=" << ici.arrayLayers
+                               << " — resource will be a null no-op" << Log::endl;
 
                 if (vk_image != VK_NULL_HANDLE)
                 {
@@ -183,6 +238,13 @@ namespace HAL
                     ivci.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
                     ivci.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
                     vkCreateImageView(device.get_native_device(), &ivci, nullptr, &vk_image_view);
+
+                    // The state manager records `initialLayout` as the layout this
+                    // image rests in between command lists, but a fresh VkImage is
+                    // actually UNDEFINED.  Queue the one-time transition that makes
+                    // the assumption true (flushed before the next queue submit).
+                    device.queue_initial_transition(vk_image, to_native(initialLayout),
+                        is_depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT);
                 }
             }
         }
@@ -270,6 +332,11 @@ namespace HAL
         {
             auto& api_dev = static_cast<API::Device&>(*m_device);
             VkDevice vk_dev = api_dev.get_native_device();
+
+            // Cancel any pending UNDEFINED→initial transition queued at creation
+            // time — if the image is destroyed before Queue::execute() flushes the
+            // batch, the barrier would reference a freed handle and crash the driver.
+            api_dev.cancel_pending_init_transition(vk_image);
 
             // Destroy the owned image view before destroying the image itself.
             if (vk_image_view != VK_NULL_HANDLE && !import_handle.image)

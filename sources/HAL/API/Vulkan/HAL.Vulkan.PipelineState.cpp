@@ -278,9 +278,13 @@ namespace HAL
             VK_DYNAMIC_STATE_VIEWPORT,
             VK_DYNAMIC_STATE_SCISSOR,
             VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+            // Topology is set per-draw via set_topology() (mirrors D3D12's
+            // IASetPrimitiveTopology: PSO has topology TYPE, draw call sets LIST/STRIP).
+            // Promoted to Vulkan 1.3 core via VK_EXT_extended_dynamic_state.
+            VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY,
         };
         VkPipelineDynamicStateCreateInfo dyn_ci{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
-        dyn_ci.dynamicStateCount = 3;
+        dyn_ci.dynamicStateCount = 4;
         dyn_ci.pDynamicStates    = dyn_states;
 
         // ---- Dynamic rendering attachment formats ---------------------------

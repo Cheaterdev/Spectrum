@@ -64,6 +64,7 @@ export namespace HAL
             std::vector<VkViewport> current_viewports;
             VkRect2D                current_scissor   = {};
             bool                    has_scissor       = false;
+            VkPrimitiveTopology     current_topology  = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
             // Bound descriptor heaps (set by set_descriptor_heaps())
             VkDescriptorSet  cbv_srv_uav_set = VK_NULL_HANDLE;
@@ -71,6 +72,21 @@ export namespace HAL
 
             // Push constant staging (for graphics_set_constant / compute_set_constant)
             std::array<uint32_t, 32> push_constants = {};
+
+            // Deferred PRESENT_SRC_KHR transitions.
+            //
+            // The FrameGraph's non_tracked_resources loop places the swapchain's
+            // RENDER_TARGET→PRESENT barrier immediately after set_rtv() (at P_post,
+            // the next usage point), which fires BEFORE the draw calls.  On D3D12
+            // this is harmless because PRESENT==COMMON and COMMON is implicitly
+            // promoted back to RENDER_TARGET on use.  Vulkan has no such promotion:
+            // draws would see the image in PRESENT_SRC_KHR rather than
+            // COLOR_ATTACHMENT_OPTIMAL → black output.
+            //
+            // Fix: any barrier whose newLayout is PRESENT_SRC_KHR is held here and
+            // flushed at end(), after ALL draws, so the image stays in
+            // COLOR_ATTACHMENT_OPTIMAL throughout the render pass.
+            std::vector<VkImageMemoryBarrier2> deferred_present_barriers;
 
             // Start/end dynamic rendering.  begin_rendering uses LOAD_OP_LOAD so
             // that clear_rtv (which uses its own begin/end with CLEAR) is not

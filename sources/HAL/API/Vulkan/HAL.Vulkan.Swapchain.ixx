@@ -57,6 +57,11 @@ export
                 void setup_present_commands(VkDevice vk_dev, uint32_t queue_family);
                 void teardown_present_commands(VkDevice vk_dev);
 
+                // One-time submit: transition all fresh swapchain images
+                // UNDEFINED → PRESENT_SRC_KHR so on_change()'s TextureLayout::PRESENT
+                // initial-state assumption holds true from the very first frame.
+                void init_swapchain_layouts(VkDevice vk_dev, VkQueue vk_queue);
+
             public:
                 virtual ~SwapChain() = default;
             };

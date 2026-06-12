@@ -57,6 +57,7 @@ if(!index_buffer)
 		}
 		if(!added)
 		{
+			ASSERT(false && "NinePatch::draw: null texture2D handle — item.texture was never set (cache_resource not created?)");
 			textures_handles.emplace_back(HAL::Texture2DView{}.texture2D);
 
 		}
@@ -83,8 +84,8 @@ if(!index_buffer)
 		sizer new_tc = item.tc;
 		if (item.tiled)
 		{
-		//	new_tc.right = r.w / item.texture.get_size().x;
-		//	new_tc.bottom = r.h / item.texture.get_size().y;
+			new_tc.right = r.w / item.texture.get_size().x;
+			new_tc.bottom = r.h / item.texture.get_size().y;
 
 		}
 

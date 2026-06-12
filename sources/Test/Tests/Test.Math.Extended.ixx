@@ -4,6 +4,8 @@ module;
 
 export module Test.Math.Extended;
 
+#define TEST_MODULE_ID MathExtended
+
 export import Test.Framework;
 
 import Core;

@@ -801,7 +801,7 @@ namespace FrameGraph
 		for (auto& pair : builder.alloc_resources)
 		{
 			auto info = &pair.second;
-			if (!check(info->flags & ResourceFlags::Static))
+			if (!check(info->flags & ResourceFlags::Static)&&!info->passed)
 			{
 				info->resource = nullptr;
 				//		info->view = nullptr;

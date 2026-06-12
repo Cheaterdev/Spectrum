@@ -63,10 +63,15 @@ namespace HAL
             VkImageView view = api_res.get_vk_image_view();
             if (view == VK_NULL_HANDLE) return;
             img_info.imageView   = view;
-            img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            // GENERAL: matches to_native(SHADER_RESOURCE) = VK_IMAGE_LAYOUT_GENERAL so
+            // this SRV slot never disagrees with the UAV slot for the same image.
+            img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
             write.dstBinding     = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
             write.pImageInfo     = &img_info;
+            // TEMP DIAG
+            Log::get() << "[VKDBG] place SRV-img slot=" << offset
+                       << " view=" << (uint64_t)view << Log::endl;
         }
         else if (api_res.get_vk_buffer() != VK_NULL_HANDLE)
         {
@@ -83,6 +88,11 @@ namespace HAL
                 if (b->NumElements)
                     buf_info.range = static_cast<VkDeviceSize>(b->NumElements) * stride;
             }
+            // TEMP DIAG
+            Log::get() << "[VKDBG] place SRV-buf slot=" << offset
+                       << " buf=" << (uint64_t)buf_info.buffer
+                       << " off=" << buf_info.offset
+                       << " range=" << buf_info.range << Log::endl;
             write.dstBinding     = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.pBufferInfo    = &buf_info;
@@ -159,6 +169,12 @@ namespace HAL
         buf_info.offset = v.OffsetInBytes;
         buf_info.range  = v.SizeInBytes > 0 ? v.SizeInBytes : VK_WHOLE_SIZE;
 
+        // TEMP DIAG
+        Log::get() << "[VKDBG] place CBV slot=" << offset
+                   << " buf=" << (uint64_t)buf_info.buffer
+                   << " off=" << buf_info.offset
+                   << " range=" << buf_info.range << Log::endl;
+
         VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet          = api_heap.get_vk_set();
         write.dstBinding      = 0; // MUTABLE → UNIFORM_BUFFER (CBV, b-shift = 0)
@@ -175,9 +191,29 @@ namespace HAL
 
     void Descriptor::operator=(const Descriptor& r)
     {
-        // Copy-assign a slot: re-write whatever view is stored there.
-        // Phase 4: walk the ResourceInfo and call the appropriate place().
-        (void)r;
+        // Copy one descriptor slot to another.  For RTV/DSV heaps there are no
+        // Vulkan descriptor objects (dynamic rendering handles those) — the copy
+        // is a no-op here; HAL::Handle::place() already copies the ResourceInfo
+        // separately.  For CBV_SRV_UAV / SAMPLER heaps use vkCopyDescriptorSets.
+        auto& dst_api = static_cast<API::DescriptorHeap&>(heap);
+        auto& src_api = static_cast<API::DescriptorHeap&>(r.heap);
+
+        if (dst_api.desc.HeapType == DescriptorHeapType::RTV ||
+            dst_api.desc.HeapType == DescriptorHeapType::DSV)
+            return;
+
+        if (!dst_api.get_vk_set() || !src_api.get_vk_set()) return;
+
+        VkCopyDescriptorSet copy{ VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET };
+        copy.srcSet          = src_api.get_vk_set();
+        copy.srcBinding      = 0;
+        copy.srcArrayElement = r.offset;
+        copy.dstSet          = dst_api.get_vk_set();
+        copy.dstBinding      = 0;
+        copy.dstArrayElement = offset;
+        copy.descriptorCount = 1;
+
+        vkUpdateDescriptorSets(dst_api.device.get_native_device(), 0, nullptr, 1, &copy);
     }
 
     uint DescriptorHeap::get_size() { return desc.Count; }
@@ -246,6 +282,36 @@ namespace HAL
             // alloc_info.pNext = &var_info;   // reserved for per-heap variable layouts
 
             vkAllocateDescriptorSets(vk_dev, &alloc_info, &vk_set);
+
+            // ---- Populate inline static samplers (s0..s4, bindings 384-388) --
+            // These must be written once into every CBV_SRV_UAV set so that
+            // shaders using register(s0..s4) with s-shift=384 find valid samplers.
+            if (!is_sampler && vk_set != VK_NULL_HANDLE)
+            {
+                const VkSampler* smprs = dev.get_inline_samplers();
+                constexpr uint32_t SMP_BASE = 384;
+                constexpr uint32_t N        = 5; // s0..s4
+                VkDescriptorImageInfo img_infos[N];
+                VkWriteDescriptorSet  writes[N];
+                uint32_t write_count = 0;
+                for (uint32_t i = 0; i < N; ++i)
+                {
+                    if (!smprs[i]) continue;
+                    img_infos[write_count]        = {};
+                    img_infos[write_count].sampler = smprs[i];
+                    writes[write_count]                     = {};
+                    writes[write_count].sType               = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                    writes[write_count].dstSet              = vk_set;
+                    writes[write_count].dstBinding          = SMP_BASE + i;
+                    writes[write_count].dstArrayElement     = 0;
+                    writes[write_count].descriptorCount     = 1;
+                    writes[write_count].descriptorType      = VK_DESCRIPTOR_TYPE_SAMPLER;
+                    writes[write_count].pImageInfo          = &img_infos[write_count];
+                    ++write_count;
+                }
+                if (write_count)
+                    vkUpdateDescriptorSets(vk_dev, write_count, writes, 0, nullptr);
+            }
         }
 
         DescriptorHeap::~DescriptorHeap()

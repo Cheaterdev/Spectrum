@@ -9,10 +9,18 @@
 #define CONCAT(a, b) a##b
 #define CONCAT_IMPL(a, b) CONCAT(a, b)
 
+// Each test file must define TEST_MODULE_ID with a unique per-file token before
+// using TEST().  The generated function names become test_{MODULE}_{LINE}, which
+// are globally unique across all test modules.  Combined with `inline`, this
+// prevents LNK2005 errors when MSVC copies function bodies across import boundaries.
+//
+//   Example (at file scope, before any TEST use):
+//     #define TEST_MODULE_ID HALRendering
+
 #define TEST(category, name) \
-	void CONCAT_IMPL(test_, __LINE__)(); \
-	Test::TestRegistrator CONCAT_IMPL(registrator_, __LINE__)(#category, #name, CONCAT_IMPL(test_, __LINE__), __FILE__, __LINE__); \
-	void CONCAT_IMPL(test_, __LINE__)()
+	inline void CONCAT_IMPL(CONCAT_IMPL(test_, TEST_MODULE_ID), CONCAT_IMPL(_, __LINE__))(); \
+	inline ::Test::TestRegistrator CONCAT_IMPL(CONCAT_IMPL(registrator_, TEST_MODULE_ID), CONCAT_IMPL(_, __LINE__))(#category, #name, CONCAT_IMPL(CONCAT_IMPL(test_, TEST_MODULE_ID), CONCAT_IMPL(_, __LINE__)), __FILE__, __LINE__); \
+	inline void CONCAT_IMPL(CONCAT_IMPL(test_, TEST_MODULE_ID), CONCAT_IMPL(_, __LINE__))()
 
 #define ASSERT_TRUE(condition) \
 	Test::AssertTrue(condition, #condition, __FILE__, __LINE__)

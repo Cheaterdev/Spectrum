@@ -8,6 +8,13 @@ import :Types;
 import :Sampler;
 using namespace HAL;
 
+export namespace HAL
+{
+    // Backend identifier used to segregate per-backend caches (shaders, PSOs).
+    // Textures are backend-agnostic and stay in the cache root.
+    inline std::string get_backend_name() { return "vulkan"; }
+}
+
 // ============================================================================
 // Compatibility stubs for D3D12 types used in common HAL files.
 // In D3D12 builds, these come from d3d12.h/dxgi.h via the D3D12 Utils
@@ -207,6 +214,7 @@ export
     VkFilter             to_native_filter(Filter f);
     VkSamplerAddressMode to_native(TextureAddressMode mode);
     VkCompareOp          to_native(ComparisonFunc func);
+    VkSamplerCreateInfo  to_native_sampler_ci(const SamplerDesc& desc);
     VkPrimitiveTopology  to_native_topology(PrimitiveTopologyType t);
     VkCullModeFlagBits   to_native(CullMode mode);
     VkPolygonMode        to_native(FillMode mode);

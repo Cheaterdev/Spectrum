@@ -1,19 +1,32 @@
 ﻿export module Test.HAL;
 
+#define TEST_MODULE_ID HAL
+
 export import Test.Framework;
 export import Test.HAL.TextureUtils;
-export import Test.HAL.Rendering;
+import Test.HAL.Rendering;
+import Test.HAL.SIG;
+import Test.HAL.UI;
+import Test.GUI;
+import Test.FrameGraph;
 
 import Core;
 import HAL;
-
+import Graphics;
+import GUI;
+import TextSystem;
 SETUP_CATEGORY(Core.HAL, []() {
 	auto device = HAL::Device::create_singleton();
 	if (!device)
 		Test::TestRegistry::Instance().SkipCategory("Core.HAL", "no suitable GPU device found");
+	else
+		AssetManager::create();
 });
 
 TEARDOWN_CATEGORY(Core.HAL, []() {
+	Skin::reset();
+	Fonts::FontSystem::reset();
+	AssetManager::reset();
 	HAL::Device::reset();
 });
 
