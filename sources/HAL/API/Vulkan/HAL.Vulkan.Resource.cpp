@@ -321,7 +321,37 @@ namespace HAL
     {
         if (!this->name.empty() && name.empty()) return;
         this->name = name;
-        // Phase 1: vkSetDebugUtilsObjectNameEXT on vk_image / vk_buffer.
+
+        if (!m_device) return;
+        auto& api_dev = static_cast<API::Device&>(*m_device);
+        VkDevice vk_dev = api_dev.get_native_device();
+        if (vk_dev == VK_NULL_HANDLE) return;
+
+        auto fn = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
+            vkGetDeviceProcAddr(vk_dev, "vkSetDebugUtilsObjectNameEXT"));
+        if (!fn) return;
+
+        VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+        info.pObjectName = this->name.c_str();
+
+        if (vk_image != VK_NULL_HANDLE)
+        {
+            info.objectType   = VK_OBJECT_TYPE_IMAGE;
+            info.objectHandle = reinterpret_cast<uint64_t>(vk_image);
+            fn(vk_dev, &info);
+            if (vk_image_view != VK_NULL_HANDLE)
+            {
+                info.objectType   = VK_OBJECT_TYPE_IMAGE_VIEW;
+                info.objectHandle = reinterpret_cast<uint64_t>(vk_image_view);
+                fn(vk_dev, &info);
+            }
+        }
+        else if (vk_buffer != VK_NULL_HANDLE)
+        {
+            info.objectType   = VK_OBJECT_TYPE_BUFFER;
+            info.objectHandle = reinterpret_cast<uint64_t>(vk_buffer);
+            fn(vk_dev, &info);
+        }
     }
 
     Resource::~Resource()

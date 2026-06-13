@@ -14,13 +14,15 @@ float texture_offset : TEXCOORD3;
 #ifdef BUILD_FUNC_VS
 quad_output VS(uint index : SV_VERTEXID, uint instance : SV_INSTANCEID)
 {
-    vertex_input v = GetNinePatch().GetVb()[index + instance * 16];
+    // DIAGNOSTIC: hardcoded fullscreen triangle — bypasses all VB/bindless reads.
+    // If this produces visible output, the VB bindless read is the failure point.
+    float2 positions[3] = { float2(-1,-1), float2(3,-1), float2(-1,3) };
     quad_output Output;
-    Output.pos            = float4(v.pos, 0.5, 1);
-    Output.tc             = v.tc;
-    Output.mulColor       = v.mulColor;
-    Output.addColor       = v.addColor;
-    Output.texture_offset = (float)instance;
+    Output.pos            = float4(positions[index % 3], 0.5, 1);
+    Output.tc             = float2(0,0);
+    Output.mulColor       = float4(1,1,1,1);
+    Output.addColor       = float4(0,0,0,0);
+    Output.texture_offset = 0;
     return Output;
 }
 #endif
@@ -28,9 +30,8 @@ quad_output VS(uint index : SV_VERTEXID, uint instance : SV_INSTANCEID)
 #ifdef BUILD_FUNC_PS
 float4 PS(quad_output i) : SV_TARGET0
 {
-    Texture2D<float4> tex = GetNinePatch().GetTextures((int)i.texture_offset);
-    float4 color = tex.Sample(linearSampler, i.tc);
-    return color * i.mulColor + i.addColor;
+    // DIAGNOSTIC: return solid red to check if draw pipeline itself works
+    return float4(1, 0, 0, 1);
 }
 #endif
 

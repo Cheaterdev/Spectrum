@@ -19,11 +19,23 @@ void SetupLogging()
 	Log::get().set_logging_level(Log::LEVEL_ALL);
 }
 
-int main()
+int main(int argc, char** argv)
 {
 	SetupLogging();
 
-	auto results = Test::TestRegistry::Instance().RunAll();
+	std::string filter;
+	for (int i = 1; i < argc; ++i)
+	{
+		std::string arg(argv[i]);
+		if (arg.rfind("--filter=", 0) == 0)
+			filter = arg.substr(9);
+		else if ((arg == "--filter" || arg == "-k") && i + 1 < argc)
+			filter = argv[++i];
+		else if (arg[0] != '-')
+			filter = arg;
+	}
+
+	auto results = Test::TestRegistry::Instance().RunAll(filter);
 	Test::TestRegistry::Instance().PrintResults(results);
 
 	bool any_failed = std::any_of(results.begin(), results.end(),

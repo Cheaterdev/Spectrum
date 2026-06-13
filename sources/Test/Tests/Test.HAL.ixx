@@ -16,7 +16,8 @@ import Graphics;
 import GUI;
 import TextSystem;
 SETUP_CATEGORY(Core.HAL, []() {
-	auto device = HAL::Device::create_singleton();
+	auto device = HAL::Device::create();
+
 	if (!device)
 		Test::TestRegistry::Instance().SkipCategory("Core.HAL", "no suitable GPU device found");
 	else
@@ -24,9 +25,32 @@ SETUP_CATEGORY(Core.HAL, []() {
 });
 
 TEARDOWN_CATEGORY(Core.HAL, []() {
+	GUI::NinePatch::reset();
+	HAL::Device::get().stop_all();
 	Skin::reset();
+	HAL::Texture::reset_manager();
+	HAL::pixel_shader::reset_manager();
+	HAL::vertex_shader::reset_manager();
+	HAL::domain_shader::reset_manager();
+	HAL::hull_shader::reset_manager();
+	HAL::geometry_shader::reset_manager();
+	HAL::compute_shader::reset_manager();
+	GUI::Elements::FlowGraph::manager::reset();
+	Profiler::reset();
+	///    main_window2 = nullptr;
 	Fonts::FontSystem::reset();
+	RTX::reset();
+//#ifndef HAL_BACKEND_VULKAN
+	AssetRenderer::reset();
+	TextureAssetRenderer::reset();
+//#endif
 	AssetManager::reset();
+	materials::PipelineManager::reset();
+	universal_nodes_manager::reset();
+
+	universal_mesh_instance_manager::reset();
+	universal_material_info_part_manager::reset();
+	universal_rtx_manager::reset();
 	HAL::Device::reset();
 });
 

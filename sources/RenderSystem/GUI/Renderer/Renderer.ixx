@@ -25,6 +25,8 @@ export namespace GUI
 		void draw(base::Context& c, GUI::Texture& item, rect r);
 		void draw(base::Context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state);
 		void flush(base::Context& c);
+
+		static void reset();
 	};
 
 	class SimpleRect

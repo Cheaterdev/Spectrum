@@ -249,6 +249,8 @@ namespace HAL::API
         current_color_view = cv;
         current_depth_view = dv;
         current_extent     = (cv != VK_NULL_HANDLE) ? ce : de;
+        Log::get() << "[VKDBG] set_rtv cv=" << (cv != VK_NULL_HANDLE)
+                   << " extent=" << current_extent.width << "x" << current_extent.height << Log::endl;
     }
 
     // ---- Clear operations ---------------------------------------------------
@@ -371,7 +373,13 @@ namespace HAL::API
     void CommandList::ensure_rendering_active()
     {
         if (in_render_pass) return;
-        if (current_color_view == VK_NULL_HANDLE && current_depth_view == VK_NULL_HANDLE) return;
+        if (current_color_view == VK_NULL_HANDLE && current_depth_view == VK_NULL_HANDLE)
+        {
+            Log::get() << "[VKDBG] ensure_rendering_active: no color/depth view, cannot start RP" << Log::endl;
+            return;
+        }
+        Log::get() << "[VKDBG] ensure_rendering_active: starting RP cv=" << (uint64_t)current_color_view
+                   << " extent=" << current_extent.width << "x" << current_extent.height << Log::endl;
         VkClearValue noop{};
         begin_rendering(VK_ATTACHMENT_LOAD_OP_LOAD, noop, VK_ATTACHMENT_LOAD_OP_LOAD, noop);
     }
@@ -506,11 +514,18 @@ namespace HAL::API
         // TEMP DIAGNOSTIC
         Log::get() << "[VKDBG] draw_indexed ic=" << index_count
                    << " inst=" << instance_count
+                   << " color_view=" << (current_color_view != VK_NULL_HANDLE)
+                   << " in_rp_before=" << in_render_pass
                    << " extent=" << current_extent.width << "x" << current_extent.height
                    << " pso=" << (current_graphics_pipeline != VK_NULL_HANDLE) << Log::endl;
         if (vk_cmd == VK_NULL_HANDLE) return;
         ensure_rendering_active();
-        if (!in_render_pass) return; // no RTV set — skip rather than crash validation
+        Log::get() << "[VKDBG] draw_indexed in_rp_after=" << in_render_pass << Log::endl;
+        if (!in_render_pass)
+        {
+            Log::get() << "[VKDBG] draw_indexed SKIPPED — in_render_pass=false" << Log::endl;
+            return;
+        }
         reapply_draw_state();
         if (current_index_buffer != VK_NULL_HANDLE)
             vkCmdBindIndexBuffer(vk_cmd, current_index_buffer, current_index_offset, current_index_type);
@@ -840,10 +855,20 @@ namespace HAL::API
                                         Resource*, UINT64) { ASSERT(0); }
 
     // ---- Misc ---------------------------------------------------------------
-    void CommandList::set_name(std::wstring_view)
+    void CommandList::set_name(std::wstring_view name)
     {
-        static bool warned = false;
-        if (!warned) { warned = true; Log::get() << Log::LEVEL_WARNING << "[Vulkan] CommandList::set_name not implemented" << Log::endl; }
+        if (vk_cmd == VK_NULL_HANDLE) return;
+        auto* dev = static_cast<API::Device*>(m_device);
+        if (!dev) return;
+        auto fn = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
+            vkGetDeviceProcAddr(dev->get_native_device(), "vkSetDebugUtilsObjectNameEXT"));
+        if (!fn) return;
+        std::string label(name.begin(), name.end());
+        VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+        info.objectType   = VK_OBJECT_TYPE_COMMAND_BUFFER;
+        info.objectHandle = reinterpret_cast<uint64_t>(vk_cmd);
+        info.pObjectName  = label.c_str();
+        fn(dev->get_native_device(), &info);
     }
     void CommandList::discard(const HAL::Resource*)
     {

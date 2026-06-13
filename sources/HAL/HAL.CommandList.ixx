@@ -214,7 +214,7 @@ export{
 		class SignatureDataSetter;
 
 
-		class CommandList : public Transitions, public Eventer, public Sendable, public SharedObject<CommandList>
+		class CommandList : public Transitions, public Eventer, public Sendable, public SharedObject<CommandList>, public TypedObject<CommandList>
 		{
 
 		public:

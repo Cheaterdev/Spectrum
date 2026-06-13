@@ -15,9 +15,10 @@ export namespace HAL
         protected:
             // VMA allocation backing this heap — backend-internal, not part of
             // the common HAL contract.  Only HAL::Heap (derived class) touches these.
-            VmaAllocation  vma_allocation = VK_NULL_HANDLE;
-            VkDeviceMemory vk_memory      = VK_NULL_HANDLE;
-            VkBuffer       heap_vk_buffer = VK_NULL_HANDLE;
+            VmaAllocation  vma_allocation    = VK_NULL_HANDLE;
+            VkDeviceMemory vk_memory         = VK_NULL_HANDLE;
+            VkBuffer       heap_vk_buffer    = VK_NULL_HANDLE;
+            VmaAllocator   vma_allocator_ref = VK_NULL_HANDLE;
 
         public:
             virtual ~Heap();

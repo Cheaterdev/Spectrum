@@ -17,6 +17,15 @@ namespace HAL
     Event::~Event() {}
     void Event::wait() {}
 
+    Fence::~Fence()
+    {
+        if (timeline_semaphore != VK_NULL_HANDLE && device != VK_NULL_HANDLE)
+        {
+            vkDestroySemaphore(device, timeline_semaphore, nullptr);
+            timeline_semaphore = VK_NULL_HANDLE;
+        }
+    }
+
     Fence::Fence(Device& device_)
     {
         device = device_.get_native_device();

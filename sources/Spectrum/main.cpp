@@ -1126,14 +1126,9 @@ protected:
 		universal_nodes_manager::reset();
 
 		universal_mesh_instance_manager::reset();
-		//	universal_mesh_info_part_manager::get().prepare(command_list);
 		universal_material_info_part_manager::reset();
 		universal_rtx_manager::reset();
-		//HAL::PipelineLibrary::reset();
-		GUI::NinePatch::index_buffer = StructuredBufferView<unsigned int>();
-
 		HAL::Device::reset();
-		//   HAL::Device::reset();
 	}
 
 

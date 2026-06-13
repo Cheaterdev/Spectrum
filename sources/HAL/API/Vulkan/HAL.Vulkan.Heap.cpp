@@ -44,8 +44,9 @@ namespace HAL
 
             if (alloc_info.pMappedData)
             {
-                vma_allocation = alloc;
-                cpu_address    = static_cast<std::byte*>(alloc_info.pMappedData);
+                vma_allocation    = alloc;
+                vma_allocator_ref = api_dev.vma_allocator;
+                cpu_address       = static_cast<std::byte*>(alloc_info.pMappedData);
 
                 // Buffer device address for GPU-side access
                 VkBufferDeviceAddressInfo dai{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
@@ -83,16 +84,8 @@ namespace HAL
     {
         Heap::~Heap()
         {
-            // The VkBuffer and VmaAllocation are both freed by vmaDestroyBuffer.
-            // We stored the VkBuffer in HAL::Heap::heap_vk_buffer and the
-            // allocation in vma_allocation.
-            if (vma_allocation)
-            {
-                // Retrieve vma_allocator from the owning device — but at dtor
-                // time we don't have a device reference.  Walk the buffer instead.
-                // (Phase 1 TODO: store device ref in API::Heap for clean teardown.)
-                // For now the process exits cleanly and the driver reclaims memory.
-            }
+            if (vma_allocation && vma_allocator_ref)
+                vmaDestroyBuffer(vma_allocator_ref, heap_vk_buffer, vma_allocation);
         }
 
         GPUAddressPtr Heap::get_address() const { return gpu_address; }

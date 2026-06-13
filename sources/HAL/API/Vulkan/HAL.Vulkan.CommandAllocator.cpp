@@ -27,6 +27,15 @@ namespace HAL
         vkCreateCommandPool(api_dev.vk_device, &info, nullptr, &vk_command_pool);
     }
 
+    CommandAllocator::~CommandAllocator()
+    {
+        if (vk_command_pool == VK_NULL_HANDLE) return;
+        auto& api_dev = static_cast<API::Device&>(device);
+        if (api_dev.vk_device == VK_NULL_HANDLE) return;
+        vkDestroyCommandPool(api_dev.vk_device, vk_command_pool, nullptr);
+        vk_command_pool = VK_NULL_HANDLE;
+    }
+
     void CommandAllocator::reset()
     {
         if (vk_command_pool == VK_NULL_HANDLE) return;
