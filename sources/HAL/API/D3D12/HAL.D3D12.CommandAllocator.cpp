@@ -12,6 +12,8 @@ namespace HAL {
              device.get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator)));
     }
 
+    CommandAllocator::~CommandAllocator() {}
+
     void CommandAllocator::reset()
     {
         m_commandAllocator->Reset();

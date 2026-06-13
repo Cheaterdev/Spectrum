@@ -52,11 +52,12 @@ namespace HAL
 
 				const auto& props = device->get_properties();
 				
-				 if (std::wstring(adapter_desc.Description).find(L"RTX")==std::wstring::npos)	 return;
+				 if (std::wstring(adapter_desc.Description).find(L"RTX")==std::wstring::npos)	 return;	   // TODO: remove
+
 				if (result==nullptr && props.mesh_shader && props.full_bindless&&(std::wstring(adapter_desc.Description).find(L"Basic")==std::wstring::npos) )
 				{
 					
-					Log::get() << "Selecting adapter: " << adapter_desc.Description << Log::endl;
+				//	Log::get() << "Selecting adapter: " << adapter_desc.Description << Log::endl;
 					result = device;
 				}else if(props.full_bindless)
 				{
@@ -73,7 +74,12 @@ namespace HAL
 			Log::get().crash_error("Cant find proper device");
 		}
 		else
-		result->init_managers();
+		{
+
+			Log::get() << "Selected device : " << result->get_properties().name << Log::endl; 
+			result->init_managers();
+		}
+
 		return result;
 	}
 
