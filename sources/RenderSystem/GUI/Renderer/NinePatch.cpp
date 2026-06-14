@@ -301,7 +301,7 @@ if(!index_buffer)
 			           << Log::endl;
 
 		auto& graphics = c.command_list->get_graphics();
-	//	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 		graphics.set_index_buffer(index_buffer.get_index_buffer_view());
 		graphics.set_pipeline(current_state);
 

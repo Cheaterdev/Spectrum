@@ -14,11 +14,9 @@ struct DebugInfo
 	RWStructuredBuffer<DebugStruct> GetDebug() { return ResourceDescriptorHeap[debug]; }
 		void Log(uint id, uint4 v)
 		{
-			DebugStruct debug;
-
-            debug.v = v;
-
-            uav.debug[id] = debug;
+			DebugStruct entry;
+			entry.v = v;
+			GetDebug()[id] = entry;
 		}
 		
 	

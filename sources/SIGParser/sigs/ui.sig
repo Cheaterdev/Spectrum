@@ -43,6 +43,8 @@ GraphicsPSO NinePatch
 
 	rtv = { B8G8R8A8_UNORM };
 	blend = { AlphaBlend };
+
+	cull = None;
 }
 
 

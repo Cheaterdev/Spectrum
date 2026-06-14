@@ -9,6 +9,96 @@ import Core;
 import HAL;
 import GUI;
 import FrameGraph;
+import TextSystem;
+
+// -----------------------------------------------------------------------
+// Clipping/culling helpers shared by the NinePatch clip tests.
+//
+// Source: 32x32 with 8px corners (RED corners, GREEN h-edges,
+//         BLUE v-edges, WHITE center). Padding 8px on all sides.
+// Patch:  160x80 placed at (48,24) inside a 256x128 RT.
+//   Corner X boundaries in screen space: 48, 56, 200, 208
+//   Corner Y boundaries in screen space: 24, 32,  96, 104
+// -----------------------------------------------------------------------
+namespace
+{
+	std::shared_ptr<HAL::TextureResource> make_ninepatch_src(HAL::Device& device)
+	{
+		constexpr uint TEX_W = 32, TEX_H = 32, CORNER = 8;
+		auto src = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, {TEX_W, TEX_H}, 1, 1),
+			HAL::HeapType::DEFAULT);
+
+		std::vector<uint8_t> px(TEX_W * TEX_H * 4);
+		for (uint y = 0; y < TEX_H; ++y)
+			for (uint x = 0; x < TEX_W; ++x)
+			{
+				bool cx = (x < CORNER || x >= TEX_W - CORNER);
+				bool cy = (y < CORNER || y >= TEX_H - CORNER);
+				uint8_t r, g, b;
+				if      ( cx &&  cy) { r=255; g=0;   b=0;   }
+				else if (!cx &&  cy) { r=0;   g=255; b=0;   }
+				else if ( cx && !cy) { r=0;   g=0;   b=255; }
+				else                 { r=255; g=255; b=255; }
+				size_t i = ((size_t)y * TEX_W + x) * 4;
+				px[i]=r; px[i+1]=g; px[i+2]=b; px[i+3]=255;
+			}
+
+		auto upload = device.get_upload_list();
+		upload->get_copy().update_texture(src.get(), ivec3(0,0,0), ivec3(TEX_W,TEX_H,1), 0,
+			reinterpret_cast<const char*>(px.data()), TEX_W * 4);
+		upload->execute_and_wait();
+		return src;
+	}
+
+	std::shared_ptr<HAL::TextureResource> run_clip_test(
+		HAL::Device& device, sizer_long clip, const wchar_t* label)
+	{
+		constexpr uint RT_W = 256, RT_H = 128;
+		auto src = make_ninepatch_src(device);
+
+		auto rt = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {RT_W, RT_H}, 1, 1,
+				HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		auto list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(label);
+
+		HAL::Texture2DView src_view(src, *list);
+		HAL::Texture2DView rt_view(rt, *list);
+
+		HAL::CompiledRT compiled;
+		compiled.table_rtv = rt_view.renderTarget;
+		list->get_graphics().set_rtv(compiled,
+			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
+			vec4(0.05f, 0.05f, 0.1f, 1.0f));
+
+		sizer_long full_vp{ 0, 0, (long)RT_W, (long)RT_H };
+		list->get_graphics().set_scissors(full_vp);
+
+		GUIInfo c;
+		c.renderer     = nullptr;
+		c.command_list = list;
+		c.window_size  = vec2((float)RT_W, (float)RT_H);
+		c.offset       = vec2(0.0f, 0.0f);
+		c.ui_clipping  = clip;
+		c.scissors     = full_vp;
+		c.scale        = 1.0f;
+		c.delta_time   = 0.0f;
+
+		GUI::Texture item;
+		item         = src_view;
+		item.padding = sizer(8.0f, 8.0f, 8.0f, 8.0f);
+
+		GUI::NinePatch nine_patch;
+		nine_patch.draw(c, item, rect{ vec2(48.0f, 24.0f), vec2(160.0f, 80.0f) });
+		nine_patch.flush(c);
+
+		list->execute_and_wait();
+		return rt;
+	}
+}
 
 export namespace Test
 {
@@ -243,6 +333,87 @@ export namespace Test
 
 		list->execute_and_wait();
 		ASSERT_TEXTURE(tex.get(), "gui_element_three_bands");
+	}
+
+	// Single label "Hello Label" docked FILL in a 256x64 render target.
+	// Exercises the full label path: recalculate → pre_draw (glyph raster) →
+	// draw via UIContext.draw_infos loop.
+	TEST(Core.HAL, GUIElement_Label)
+	{
+		THREAD_SCOPE(GUI);
+
+		constexpr uint W = 256, H = 64;
+		auto& device = HAL::Device::get();
+
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {W, H}, 1, 1,
+				HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		GUI::user_interface ui;
+		ui.size = vec2((float)W, (float)H);
+
+		auto lbl = std::make_shared<GUI::Elements::label>();
+		lbl->text    = "Hello Label";
+		lbl->docking = GUI::dock::FILL;
+		ui.add_child(lbl);
+
+		ui.process_ui(0.0f);
+
+		FrameGraph::Graph graph;
+		ui.create_graph(graph);
+		device.get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+
+		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+		auto  list  = queue->get_free_list();
+		list->begin(L"GUIElement_Label");
+
+		HAL::Texture2DView view(tex, *list);
+		HAL::CompiledRT compiled_rt;
+		compiled_rt.table_rtv = view.renderTarget;
+		list->get_graphics().set_rtv(compiled_rt,
+			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
+			vec4(0.05f, 0.05f, 0.1f, 1.0f));
+
+		sizer_long full_vp{ 0, 0, (long)W, (long)H };
+		list->get_graphics().set_scissors(full_vp);
+
+		GUI::Renderer renderer;
+		GUIInfo c;
+		c.renderer     = &renderer;
+		c.command_list = list;
+		c.window_size  = vec2((float)W, (float)H);
+		c.offset       = vec2(0.0f, 0.0f);
+		c.ui_clipping  = full_vp;
+		c.scissors     = full_vp;
+		c.scale        = 1.0f;
+		c.delta_time   = 0.0f;
+
+		auto& ui_ctx = graph.get_context<GUI::UIContext>();
+		for (auto& e : ui_ctx.draw_infos)
+		{
+			if (c.scissors != e.scissors)
+			{
+				renderer.flush(c);
+				list->get_graphics().set_scissors(e.scissors);
+			}
+			c.scale       = e.scale;
+			c.ui_clipping = e.clip;
+			c.offset      = e.offset;
+			c.scissors    = e.scissors;
+			c.window_size = ui_ctx.scaled_size;
+
+			if (e.before)
+				e.elem->draw(c);
+			else
+				e.elem->draw_after(c);
+		}
+		renderer.flush(c);
+
+		list->execute_and_wait();
+
+		ASSERT_TEXTURE(Fonts::FontSystem::get_atlas_texture(), "font_atlas");
+		ASSERT_TEXTURE(tex.get(), "gui_element_label");
 	}
 
 	// Renders a realistic multi-widget UI into an 800x600 texture.
@@ -506,5 +677,87 @@ export namespace Test
 
 		list->execute_and_wait();
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_stretch");
+	}
+
+	// Each test clips the 160x80 patch at (48,24) from a different side,
+	// landing inside the 8px corner region to exercise the corner clipping path.
+
+	// Clip cuts 8px into the left corner (corner ends at x=56, clip starts at x=52).
+	TEST(Core.HAL, GUINinePatch_ClipLeft)
+	{
+		THREAD_SCOPE(GUI);
+		sizer_long clip{ 52, 0, 256, 128 };
+		auto rt = run_clip_test(HAL::Device::get(), clip, L"GUINinePatch_ClipLeft");
+		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_left");
+	}
+
+	// Clip cuts 8px into the right corner (corner starts at x=200, clip ends at x=204).
+	TEST(Core.HAL, GUINinePatch_ClipRight)
+	{
+		THREAD_SCOPE(GUI);
+		sizer_long clip{ 0, 0, 204, 128 };
+		auto rt = run_clip_test(HAL::Device::get(), clip, L"GUINinePatch_ClipRight");
+		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_right");
+	}
+
+	// Clip cuts 8px into the top corner (corner ends at y=32, clip starts at y=28).
+	TEST(Core.HAL, GUINinePatch_ClipTop)
+	{
+		THREAD_SCOPE(GUI);
+		sizer_long clip{ 0, 28, 256, 128 };
+		auto rt = run_clip_test(HAL::Device::get(), clip, L"GUINinePatch_ClipTop");
+		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_top");
+	}
+
+	// Clip cuts 8px into the bottom corner (corner starts at y=96, clip ends at y=100).
+	TEST(Core.HAL, GUINinePatch_ClipBottom)
+	{
+		THREAD_SCOPE(GUI);
+		sizer_long clip{ 0, 0, 256, 100 };
+		auto rt = run_clip_test(HAL::Device::get(), clip, L"GUINinePatch_ClipBottom");
+		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_bottom");
+	}
+
+	// All four sides clipped simultaneously — only the white center is visible.
+	TEST(Core.HAL, GUINinePatch_ClipCenter)
+	{
+		THREAD_SCOPE(GUI);
+		sizer_long clip{ 60, 36, 196, 92 };
+		auto rt = run_clip_test(HAL::Device::get(), clip, L"GUINinePatch_ClipCenter");
+		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_center");
+	}
+
+	// Raw Font::draw() directly on a command list — no label element, no FrameGraph.
+	// Exercises the draw_vertices path in isolation: glyph raster → atlas flush →
+	// vertex upload → point-list GS draw, all driven from the immediate Font API.
+	TEST(Core.HAL, FontDirect_Draw)
+	{
+		THREAD_SCOPE(GUI);
+
+		constexpr uint W = 256, H = 64;
+		auto& device = HAL::Device::get();
+
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {W, H}, 1, 1,
+				HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+		auto  list  = queue->get_free_list();
+		list->begin(L"FontDirect_Draw");
+
+		HAL::Texture2DView view(tex, *list);
+		HAL::CompiledRT compiled;
+		compiled.table_rtv = view.renderTarget;
+		list->get_graphics().set_rtv(compiled,
+			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
+			vec4(0.05f, 0.05f, 0.1f, 1.0f));
+
+		auto font = Fonts::FontSystem::get().get_font("Segoe UI Light");
+		font->draw(list, std::string("Hello Direct"), 20.0f, vec2(8.0f, 10.0f),
+			float4(1.0f, 1.0f, 1.0f, 1.0f));
+
+		list->execute_and_wait();
+		ASSERT_TEXTURE(tex.get(), "font_direct_draw");
 	}
 }

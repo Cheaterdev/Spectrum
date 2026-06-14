@@ -81,12 +81,14 @@ export namespace Fonts
 
         Cache<std::string, Font::ptr> fonts;
         FontAtlas* m_atlas = nullptr;
-        static FontAtlas& get_atlas();
+
         FontSystem();
         ~FontSystem();
 
     public:
         Font::ptr get_font(std::string font_name);
+        static FontAtlas& get_atlas();
+        static HAL::TextureResource* get_atlas_texture();
     };
 
     // -----------------------------------------------------------------------

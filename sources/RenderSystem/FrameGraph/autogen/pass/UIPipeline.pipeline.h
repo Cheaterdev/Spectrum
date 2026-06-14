@@ -5,7 +5,6 @@
 // Changes will be lost on next generation. Edit the .sig source files instead.
 // ============================================================================
 
-
 #include "Profiler.h"
 #include "UI_Render.h"
 #include "../pass_defaults.h"

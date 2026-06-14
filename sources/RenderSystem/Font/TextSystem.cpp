@@ -83,7 +83,9 @@ public:
         m_texture->resource->set_name("FontAtlas::texture");
 
         m_coord_buf =
-            HAL::StructuredBufferView<GlyphAtlasEntry>(HAL::Device::get(), MAX_GLYPHS);
+            HAL::StructuredBufferView<GlyphAtlasEntry>(HAL::Device::get(), MAX_GLYPHS,
+                HAL::counterType::NONE, HAL::ResFlags::ShaderResource,
+                HAL::HeapType::UPLOAD);
 
         m_cpu.resize(ATLAS_W * ATLAS_H, 0u);
         m_entries.reserve(MAX_GLYPHS);
@@ -187,6 +189,20 @@ public:
         std::lock_guard<std::mutex> lk(m_mtx);
         if (!m_dirty) return;
 
+        // On first upload, clear the entire GPU texture to zero so undefined
+        // texels outside the dirty rect don't produce garbage samples.
+        if (m_first_flush)
+        {
+            m_first_flush = false;
+            list->get_copy().update_texture(
+                m_texture->resource,
+                ivec3(0, 0, 0),
+                ivec3(static_cast<int>(ATLAS_W), static_cast<int>(ATLAS_H), 1),
+                HAL::calc_subresource(0, 0, 0, 1, 1),
+                reinterpret_cast<const char*>(m_cpu.data()),
+                static_cast<int>(ATLAS_W));
+        }
+
         // Upload dirty region of the atlas texture
         if (m_dirty_r > m_dirty_l && m_dirty_b > m_dirty_t)
         {
@@ -201,11 +217,20 @@ public:
                 static_cast<int>(ATLAS_W));
         }
 
-        // Upload updated coord buffer entries
+        // Write coord buffer entries directly into the UPLOAD-heap mapped memory.
+        // UPLOAD heap is always host-coherent; no copy command or barrier needed.
         if (!m_entries.empty())
         {
-            list->get_copy().update(m_coord_buf, 0,
-                std::span{m_entries.data(), m_entries.size()});
+            auto* dst = reinterpret_cast<GlyphAtlasEntry*>(m_coord_buf.resource->buffer_data);
+            auto idx = std::min<size_t>(7, m_entries.size() - 1);
+            Log::get() << "[FNTDBG] flush: writing " << m_entries.size() << " entries"
+                       << " mapped=" << (uint64_t)dst
+                       << " entry[" << idx << "]={tl=" << m_entries[idx].tex_left
+                       << " tt=" << m_entries[idx].tex_top
+                       << " pl=" << m_entries[idx].pos_left
+                       << " pt=" << m_entries[idx].pos_top << "}" << Log::endl;
+            if (dst)
+                std::memcpy(dst, m_entries.data(), m_entries.size() * sizeof(GlyphAtlasEntry));
         }
 
         // Reset dirty state
@@ -216,6 +241,8 @@ public:
         m_dirty_b = 0;
     }
 
+    HAL::TextureResource* get_texture_resource() const { return m_texture->resource.get(); }
+
     // Bind the atlas texture and coord buffer to the FontRendering slot
     void bind(HAL::CommandList::ptr& list)
     {
@@ -223,8 +250,8 @@ public:
         rendering.GetTex0() = m_texture->texture_2d().texture2D;
         rendering.GetPositions() =
             m_coord_buf.resource->create_view<
-                HAL::FormattedBufferView<float4, HAL::Format::R32G32B32A32_FLOAT>>(*list)
-            .buffer;
+                HAL::StructuredBufferView<float4>>(*list)
+            .structuredBuffer;
         list->get_graphics().set(rendering);
     }
 
@@ -244,6 +271,7 @@ private:
     uint32_t m_dirty_l = ATLAS_W, m_dirty_t = ATLAS_H;
     uint32_t m_dirty_r = 0,       m_dirty_b = 0;
     bool m_dirty = false;
+    bool m_first_flush = true;
 
     std::mutex m_mtx;
 };
@@ -472,6 +500,11 @@ static void draw_vertices(
         PSOS::FontRender::Format(formats[0]));
     list->get_graphics().set_topology(HAL::PrimitiveTopologyType::POINT,
                                       HAL::PrimitiveTopologyFeed::LIST);
+    {
+        auto pipeline = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::FontRender>(
+            PSOS::FontRender::Format(formats[0]));
+        if (pipeline) pipeline->debuggable = true;
+    }
 
     // 4. Shader constants (transform + clip rect)
     ShaderConstants sc{};
@@ -539,6 +572,12 @@ static void draw_vertices(
     list->get_graphics().set(glyphs_slot);
 
     // 6. Draw
+    Log::get() << "[FNTDBG] draw_vertices count=" << count
+               << " fmt=" << static_cast<int>(formats[0])
+               << " sc_x=" << sc.TransformMatrix[0]
+               << " sc_y=" << sc.TransformMatrix[5]
+               << " clip=" << sc.ClipRect[0] << "," << sc.ClipRect[1]
+                           << "," << sc.ClipRect[2] << "," << sc.ClipRect[3] << Log::endl;
     list->get_graphics().draw(count, 0);
 }
 
@@ -721,6 +760,11 @@ FontSystem::~FontSystem()
 FontAtlas& FontSystem::get_atlas()
 {
     return *FontSystem::get().m_atlas;
+}
+
+HAL::TextureResource* FontSystem::get_atlas_texture()
+{
+    return FontSystem::get_atlas().get_texture_resource();
 }
 
 Font::ptr FontSystem::get_font(std::string font_name)

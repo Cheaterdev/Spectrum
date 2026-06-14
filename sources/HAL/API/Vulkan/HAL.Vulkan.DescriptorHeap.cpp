@@ -88,6 +88,8 @@ namespace HAL
                 if (b->NumElements)
                     buf_info.range = static_cast<VkDeviceSize>(b->NumElements) * stride;
             }
+            else
+			ASSERT(0);
             // TEMP DIAG
             Log::get() << "[VKDBG] place SRV-buf slot=" << offset
                        << " buf=" << (uint64_t)buf_info.buffer

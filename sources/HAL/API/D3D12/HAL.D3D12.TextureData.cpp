@@ -7,6 +7,12 @@ import :Device;
 import Core;
 import d3d12;
 
+// Non-module bridge: DirectXTex calls that take DXGI_FORMAT can't be made
+// directly from module code (DXGI_FORMAT is module-attached via import d3d12).
+// These wrappers live in HAL.D3D12.DirectXTexBridge.cpp (a plain .cpp TU)
+// where the header-based DXGI_FORMAT matches DirectXTex's ABI.
+std::vector<uint8_t> hal_r8_to_png(const uint8_t* src, uint32_t width, uint32_t height);
+
 namespace HAL
 {
 
@@ -224,10 +230,8 @@ namespace HAL
 
         CoInitialize(nullptr);
 
-        if (img.format != DXGI_FORMAT_R8G8B8A8_UNORM)
-        {
-		//	ASSERT(false);
-        }
+        if (format == Format::R8_UNORM)
+            return hal_r8_to_png(img.pixels, (uint32_t)img.width, (uint32_t)img.height);
 
         DirectXTex::Blob blob;
         if (FAILED(DirectXTex::SaveToWICMemory(*save_img, DirectXTex::WIC_FLAGS_NONE,

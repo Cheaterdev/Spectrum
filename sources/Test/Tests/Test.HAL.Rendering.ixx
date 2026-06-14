@@ -8,6 +8,68 @@ export import Test.HAL.TextureUtils;
 import Core;
 import HAL;
 
+namespace {
+	// Left triangle  — CCW in NDC (signed area > 0) = front face = GREEN
+	// Right triangle — CW  in NDC (signed area < 0) = back  face = RED
+	// With BackCull:  only GREEN visible.
+	// With FrontCull: only RED  visible.
+	// With NoCull:    both visible.
+	static constexpr const char* kCullHLSL = R"hlsl(
+static const float2 kPos[6] = {
+    float2(-0.7,-0.5), float2(-0.1,-0.5), float2(-0.4, 0.5),  // CCW = front face
+    float2( 0.1,-0.5), float2( 0.4, 0.5), float2( 0.7,-0.5),  // CW  = back  face
+};
+static const float4 kColor[2] = {
+    float4(0.0,1.0,0.0,1.0),  // GREEN = front face
+    float4(1.0,0.0,0.0,1.0),  // RED   = back  face
+};
+struct VSOut { float4 pos : SV_Position; float4 col : COLOR0; };
+VSOut VS(uint vid : SV_VertexID)
+{
+    VSOut o;
+    o.pos = float4(kPos[vid], 0.0, 1.0);
+    o.col = kColor[vid / 3];
+    return o;
+}
+float4 PS(VSOut i) : SV_Target { return i.col; }
+)hlsl";
+
+	std::shared_ptr<HAL::TextureResource> run_cull_test(HAL::Device& device, HAL::CullMode mode, const wchar_t* label)
+	{
+		constexpr uint W = 256, H = 256;
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, {W, H}, 1, 1, HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		SimpleGraphicsPSO mpso("TestCull");
+		mpso.root_signature = Layouts::NoneLayout;
+		mpso.vertex        = { kCullHLSL, "VS", HAL::ShaderOptions::None, {}, true };
+		mpso.pixel         = { kCullHLSL, "PS", HAL::ShaderOptions::None, {}, true };
+		mpso.rtv_formats   = { HAL::Format::R8G8B8A8_UNORM };
+		mpso.enable_depth  = false;
+		mpso.cull          = mode;
+		mpso.topology      = HAL::PrimitiveTopologyType::TRIANGLE;
+		auto pso = mpso.create(device);
+
+		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+		auto  list  = queue->get_free_list();
+		list->begin(label);
+
+		HAL::Texture2DView view(tex, *list);
+		HAL::CompiledRT compiled;
+		compiled.table_rtv = view.renderTarget;
+
+		auto& gfx = list->get_graphics();
+		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0.05f, 0.05f, 0.1f, 1.0f));
+		gfx.set_pipeline(pso);
+		gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE);
+		gfx.draw(6);
+
+		list->execute_and_wait();
+		return tex;
+	}
+}
+
 export namespace Test
 {
 	TEST(Core.HAL, RenderTriangle)
@@ -252,5 +314,92 @@ float4 PS(VSOut i) : SV_Target { return i.col; }
 		list->execute_and_wait();
 
 		ASSERT_TEXTURE(color_tex.get(), "cube");
+	}
+
+	// Left = GREEN (CCW in NDC = front face), Right = RED (CW in NDC = back face).
+	// NoCull: both triangles visible.
+	TEST(Core.HAL, RenderCull_None)
+	{
+		auto rt = run_cull_test(HAL::Device::get(), HAL::CullMode::None, L"RenderCull_None");
+		ASSERT_TEXTURE(rt.get(), "cull_none");
+	}
+
+	// BackCull: back face (CW in NDC, RED right triangle) discarded — only GREEN left triangle visible.
+	TEST(Core.HAL, RenderCull_Back)
+	{
+		auto rt = run_cull_test(HAL::Device::get(), HAL::CullMode::Back, L"RenderCull_Back");
+		ASSERT_TEXTURE(rt.get(), "cull_back");
+	}
+
+	// FrontCull: front face (CCW in NDC, GREEN left triangle) discarded — only RED right triangle visible.
+	TEST(Core.HAL, RenderCull_Front)
+	{
+		auto rt = run_cull_test(HAL::Device::get(), HAL::CullMode::Front, L"RenderCull_Front");
+		ASSERT_TEXTURE(rt.get(), "cull_front");
+	}
+
+	// Geometry shader: VS emits one point at the origin; GS expands it into a
+	// full-screen orange triangle.  Verifies the GS stage is invoked and produces
+	// visible output — a regression target for geometry shader pipeline breakage.
+	TEST(Core.HAL, RenderGeometryShader)
+	{
+		auto& device = HAL::Device::get();
+		constexpr uint W = 256, H = 256;
+
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, {W, H}, 1, 1,
+				HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		static constexpr const char* kGsHLSL = R"hlsl(
+struct GSIn  { float4 pos : SV_Position; };
+struct GSOut { float4 pos : SV_Position; float4 col : COLOR0; };
+
+// VS: emit a single point — position is irrelevant, GS ignores it.
+GSIn VS() { GSIn o; o.pos = float4(0,0,0,1); return o; }
+
+// GS: one point in → one triangle out covering most of the screen.
+[maxvertexcount(3)]
+void GS(point GSIn input[1], inout TriangleStream<GSOut> stream)
+{
+    float4 orange = float4(1.0, 0.5, 0.0, 1.0);
+    GSOut v;
+    v.col = orange;
+    v.pos = float4(-0.9, -0.9, 0, 1); stream.Append(v);
+    v.pos = float4( 0.0,  0.9, 0, 1); stream.Append(v);
+    v.pos = float4( 0.9, -0.9, 0, 1); stream.Append(v);
+}
+
+float4 PS(GSOut i) : SV_Target { return i.col; }
+)hlsl";
+
+		SimpleGraphicsPSO mpso("TestGeometryShader");
+		mpso.root_signature = Layouts::NoneLayout;
+		mpso.vertex        = { kGsHLSL, "VS", HAL::ShaderOptions::None, {}, true };
+		mpso.geometry      = { kGsHLSL, "GS", HAL::ShaderOptions::None, {}, true };
+		mpso.pixel         = { kGsHLSL, "PS", HAL::ShaderOptions::None, {}, true };
+		mpso.rtv_formats   = { HAL::Format::R8G8B8A8_UNORM };
+		mpso.enable_depth  = false;
+		mpso.cull          = HAL::CullMode::None;
+		mpso.topology      = HAL::PrimitiveTopologyType::POINT;
+		auto pso = mpso.create(device);
+
+		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+		auto  list  = queue->get_free_list();
+		list->begin(L"RenderGeometryShader");
+
+		HAL::Texture2DView view(tex, *list);
+		HAL::CompiledRT compiled;
+		compiled.table_rtv = view.renderTarget;
+
+		auto& gfx = list->get_graphics();
+		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
+			vec4(0.05f, 0.05f, 0.1f, 1.0f));
+		gfx.set_pipeline(pso);
+		gfx.set_topology(HAL::PrimitiveTopologyType::POINT, HAL::PrimitiveTopologyFeed::LIST);
+		gfx.draw(1);  // one point → GS expands to one triangle
+
+		list->execute_and_wait();
+		ASSERT_TEXTURE(tex.get(), "geometry_shader");
 	}
 }

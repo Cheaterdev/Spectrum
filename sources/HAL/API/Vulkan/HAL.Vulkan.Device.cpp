@@ -232,9 +232,17 @@ namespace HAL
             host_reset_features.hostQueryReset = VK_TRUE;
             host_reset_features.pNext = &scalar_features;
 
+            // extendedDynamicState: required for vkCmdSetPrimitiveTopology (used by
+            // set_topology / reapply_draw_state). Promoted to Vulkan 1.3 core but still
+            // must be explicitly enabled in the device feature chain.
+            VkPhysicalDeviceExtendedDynamicStateFeaturesEXT eds_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT };
+            eds_features.extendedDynamicState = VK_TRUE;
+            eds_features.pNext = &host_reset_features;
+
             VkPhysicalDeviceFeatures2 features2{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-            features2.pNext = &host_reset_features;
+            features2.pNext = &eds_features;
             vkGetPhysicalDeviceFeatures2(vk_physical, &features2);
 
             // ---- Create logical device --------------------------------------

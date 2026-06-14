@@ -193,6 +193,11 @@ namespace HAL::API
                 bb.buffer        = api_res.get_vk_buffer();
                 bb.offset        = 0;
                 bb.size          = VK_WHOLE_SIZE;
+                Log::get() << "[VKDBG] buf-barrier buf=" << (uint64_t)bb.buffer
+                           << " srcStage=" << bb.srcStageMask
+                           << " srcAccess=" << bb.srcAccessMask
+                           << " dstStage=" << bb.dstStageMask
+                           << " dstAccess=" << bb.dstAccessMask << Log::endl;
                 buffer_barriers.push_back(bb);
             }
         }
@@ -451,7 +456,13 @@ namespace HAL::API
             : VK_PIPELINE_BIND_POINT_GRAPHICS;
 
         if (!pipeline->is_compute)
+        {
             current_graphics_pipeline = pipeline->vk_pipeline;
+            // Keep dynamic topology in sync with the PSO's declared topology so
+            // the spec requirement (same class) is always satisfied without
+            // requiring explicit set_topology calls at every draw site.
+      //      current_topology = pipeline->vk_topology;
+        }
 
         vkCmdBindPipeline(vk_cmd, bind_point, pipeline->vk_pipeline);
         flush_descriptor_sets();
@@ -685,6 +696,11 @@ namespace HAL::API
         region.srcOffset = src_offset;
         region.dstOffset = dest_offset;
         region.size      = size;
+        Log::get() << "[VKDBG] copy_buffer src=" << (uint64_t)src_api.get_vk_buffer()
+                   << " srcOff=" << src_offset
+                   << " dst=" << (uint64_t)dst_api.get_vk_buffer()
+                   << " dstOff=" << dest_offset
+                   << " size=" << size << Log::endl;
         vkCmdCopyBuffer(vk_cmd, src_api.get_vk_buffer(),
                         dst_api.get_vk_buffer(), 1, &region);
     }

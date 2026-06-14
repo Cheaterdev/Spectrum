@@ -3,7 +3,7 @@
 struct FontRendering
 {
 	Texture2D<float> tex0;
-	Buffer<float4> positions;
+	StructuredBuffer<float4> positions;
 }
 
 [Bind = DefaultLayout::Instance1]
@@ -48,5 +48,6 @@ GraphicsPSO FontRender
 	rtv = { Format };
 
 	enable_depth = false;
+	cull = None;
 	#	blend = { AlphaBlend };
 }

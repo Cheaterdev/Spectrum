@@ -180,6 +180,15 @@ namespace HAL
         add_stage(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, desc.domain);
         add_stage(VK_SHADER_STAGE_MESH_BIT_EXT, desc.mesh);
 
+        {
+            bool has_gs = desc.geometry && !desc.geometry->get_blob().empty();
+            Log::get() << "[PSDBG] PSO=" << name.c_str()
+                       << " stages=" << stages.size()
+                       << " gs_ptr=" << (desc.geometry != nullptr)
+                       << " gs_blob=" << (desc.geometry ? (int)desc.geometry->get_blob().size() : -1)
+                       << " gs_in_pipeline=" << has_gs << Log::endl;
+        }
+
         if (stages.empty()) return; // no compiled shaders yet
 
         // ---- Vertex input — vertex-pulling; no VS input attributes ---------
@@ -194,14 +203,12 @@ namespace HAL
             VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
         raster.polygonMode = to_vk_fill(desc.rasterizer.fill_mode);
         raster.cullMode    = to_vk_cull(desc.rasterizer.cull_mode);
-        // We render with a NEGATIVE-height viewport (set_viewports() in the command
-        // list) to match D3D12's framebuffer Y orientation.  That Y-flip inverts the
-        // rasterizer's signed-area / winding computation, so D3D12's clockwise-front
-        // triangles end up counter-clockwise in Vulkan framebuffer space.  To keep the
-        // SAME triangles front-facing (and therefore NOT back-face-culled), the front
-        // face must be the OPPOSITE of D3D12's CW default: COUNTER_CLOCKWISE.
-        // Using CLOCKWISE here culled every back-cull PSO (e.g. NinePatch) → black UI.
-        raster.frontFace   = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        // The negative-height viewport maps NDC Y-up to framebuffer Y-down, identical to
+        // D3D12's implicit viewport Y-flip.  Both APIs then compute winding via the same
+        // shoelace formula in Y-down space: positive area = CW = front-facing under D3D12's
+        // default (FrontCounterClockwise=FALSE).  VK_FRONT_FACE_CLOCKWISE also treats
+        // positive area as front-facing, so it is the correct match for D3D12 semantics.
+        raster.frontFace   = VK_FRONT_FACE_CLOCKWISE;
         raster.lineWidth   = 1.0f;
 
         // Conservative rasterization (Phase 5: check extension availability)
@@ -334,6 +341,7 @@ namespace HAL
         {
             tracked_info->vk_pipeline = pipeline;
             tracked_info->vk_device   = vk_dev;
+            tracked_info->vk_topology = ia.topology;
         }
         else
             Log::get() << Log::LEVEL_WARNING << "vkCreateGraphicsPipelines failed "

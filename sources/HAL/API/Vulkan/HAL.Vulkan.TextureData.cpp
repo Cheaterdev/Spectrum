@@ -97,9 +97,8 @@ namespace HAL
         return result;
     }
 
-    // Encode mip[0] as PNG bytes via WIC.  Source data is assumed to be
-    // R8G8B8A8_UNORM (the test harness renders/reads back in that format),
-    // matching GUID_WICPixelFormat32bppRGBA byte-for-byte.
+    // Encode mip[0] as PNG bytes via WIC.
+    // Supported formats: R8G8B8A8_UNORM, B8G8R8A8_UNORM/SRGB, R8_UNORM (grayscale).
     std::vector<uint8_t> texture_data::to_png() const
     {
         using Microsoft::WRL::ComPtr;
@@ -130,19 +129,30 @@ namespace HAL
         frame->Initialize(props.Get());
         frame->SetSize(mip->width, mip->height);
 
-        WICPixelFormatGUID fmt = GUID_WICPixelFormat32bppRGBA;
-        frame->SetPixelFormat(&fmt); // WIC may substitute its native (BGRA) format
+        // Pick the WIC pixel format that matches the raw byte layout of mip->data.
+        WICPixelFormatGUID src_fmt;
+        WICPixelFormatGUID dst_fmt;
+        if (format == Format::R8_UNORM)
+        {
+            src_fmt = GUID_WICPixelFormat8bppGray;
+            dst_fmt = GUID_WICPixelFormat8bppGray;
+        }
+        else if (format == Format::B8G8R8A8_UNORM || format == Format::B8G8R8A8_UNORM_SRGB)
+        {
+            src_fmt = GUID_WICPixelFormat32bppBGRA;
+            dst_fmt = GUID_WICPixelFormat32bppRGBA;
+        }
+        else
+        {
+            src_fmt = GUID_WICPixelFormat32bppRGBA;
+            dst_fmt = GUID_WICPixelFormat32bppRGBA;
+        }
 
-        const UINT stride   = mip->width * 4;
+        WICPixelFormatGUID fmt = dst_fmt;
+        frame->SetPixelFormat(&fmt);
+
+        const UINT stride   = mip->width_stride;
         const UINT buf_size = stride * mip->height;
-
-        // Tag the source bitmap with the channel order the bytes actually have —
-        // BGRA textures (e.g. swapchain-format render targets) would otherwise
-        // come out with R and B swapped.
-        const WICPixelFormatGUID src_fmt =
-            (format == Format::B8G8R8A8_UNORM || format == Format::B8G8R8A8_UNORM_SRGB)
-                ? GUID_WICPixelFormat32bppBGRA
-                : GUID_WICPixelFormat32bppRGBA;
 
         // Wrap the readback bytes in a WIC bitmap tagged with their real channel
         // order, then WriteSource — WIC converts to whatever format the PNG frame
