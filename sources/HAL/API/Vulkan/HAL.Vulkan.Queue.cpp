@@ -1,6 +1,7 @@
 module;
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
+#include <fstream>
 module HAL:API.Queue;
 
 import Core;
@@ -39,9 +40,59 @@ namespace HAL
     bool DirectStorageQueue::is_complete(UINT64 fence) { return requestCounter.get_completed_value() >= fence; }
     FenceWaiter DirectStorageQueue::get_waiter() { return FenceWaiter{ &requestCounter, 0 }; }
 
-    HAL::FenceWaiter DirectStorageQueue::execute(StorageRequest)
+    HAL::FenceWaiter DirectStorageQueue::execute(StorageRequest srequest)
     {
-        // Phase: Vulkan staging-buffer upload.
+        // Vulkan has no DirectStorage — read the cache file and upload via a
+        // staging-buffer command list.  The binary data was written by
+        // TextureResource::read(i) using get_texture_layout(desc, sub) (no-box
+        // version), which uses mip-0 dimensions for the row stride.  We must
+        // use the same function here so the source row stride matches what was
+        // stored in the cache.  update_texture() handles the mismatch between
+        // that stride and the 256-byte-aligned upload stride internally.
+
+        std::ifstream file(srequest.file, std::ios::binary);
+        if (!file.is_open())
+            return signal();
+
+        file.seekg(static_cast<std::streamoff>(srequest.file_offset), std::ios::beg);
+        std::vector<std::byte> data(srequest.size);
+        file.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(srequest.size));
+        if (!file)
+            return signal();
+
+        // Vulkan compress() is a no-op, so the file data is always uncompressed.
+        // (srequest.compressed will be false; nothing to decompress.)
+
+        auto list = device.get_upload_list();
+
+        std::visit(overloaded{
+            [&](const StorageRequest::Buffer&)
+            {
+                ASSERT(false); // buffer cache upload not yet implemented for Vulkan
+            },
+            [&](const StorageRequest::Texture& texture)
+            {
+                // row stride used during save: get_texture_layout without box
+                auto save_layout = device.get_texture_layout(
+                    srequest.resource->get_desc(), texture.subresource);
+                // mip dimensions for this subresource
+                auto mip_desc = srequest.resource->get_desc().as_texture();
+                auto mip      = mip_desc.get_mip(texture.subresource);
+                auto box      = ivec3(mip_desc.get_size(mip));
+
+                list->get_copy().update_texture(
+                    srequest.resource.get(),
+                    ivec3(0, 0, 0),
+                    box,
+                    texture.subresource,
+                    reinterpret_cast<const char*>(data.data()),
+                    save_layout.row_stride,
+                    0);
+            },
+            [](auto) { ASSERT(false); }
+        }, srequest.operation);
+
+        list->execute_and_wait();
         return signal();
     }
 
