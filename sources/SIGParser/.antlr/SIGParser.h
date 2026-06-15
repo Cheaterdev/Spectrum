@@ -1,5 +1,5 @@
 
-// Generated from c:/Users/Bohdan/Documents/GitHub/Spectrum/sources/SIGParser/SIG.g4 by ANTLR 4.13.1
+// Generated from SIG.g4 by ANTLR 4.11.1
 
 #pragma once
 
@@ -882,6 +882,8 @@ public:
     antlr4::tree::TerminalNode *OBRACE();
     Compute_pso_blockContext *compute_pso_block();
     antlr4::tree::TerminalNode *CBRACE();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
     InheritContext *inherit();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -1029,6 +1031,8 @@ public:
     antlr4::tree::TerminalNode *OBRACE();
     Workgraph_pso_blockContext *workgraph_pso_block();
     antlr4::tree::TerminalNode *CBRACE();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
     InheritContext *inherit();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;

@@ -193,7 +193,7 @@ struct GatherMeshesBoxes
 
 
 
-ComputePSO GatherPipeline
+[ExcludeVulkan] ComputePSO GatherPipeline
 {
 	root = DefaultLayout;
 
@@ -207,7 +207,7 @@ ComputePSO GatherPipeline
 
 
 
-ComputePSO GatherBoxes
+[ExcludeVulkan] ComputePSO GatherBoxes
 {
 	root = DefaultLayout;
 
@@ -219,7 +219,7 @@ ComputePSO GatherBoxes
 	define CheckFrustum;
 }
 
-ComputePSO InitDispatch
+[ExcludeVulkan] ComputePSO InitDispatch
 {
 	root = DefaultLayout;
 
@@ -232,7 +232,7 @@ ComputePSO InitDispatch
 }
 
 
-ComputePSO GatherMeshes
+[ExcludeVulkan] ComputePSO GatherMeshes
 {
 	root = DefaultLayout;
 
@@ -246,7 +246,7 @@ ComputePSO GatherMeshes
 
 
 
-GraphicsPSO RenderBoxes
+[ExcludeVulkan] GraphicsPSO RenderBoxes
 {
 	root = DefaultLayout;
 

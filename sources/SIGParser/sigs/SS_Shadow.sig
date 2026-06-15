@@ -71,7 +71,7 @@ struct DispatchParameters
 
 
 
-ComputePSO SS_Shadow
+[ExcludeVulkan] ComputePSO SS_Shadow
 {
 	root = DefaultLayout;
 

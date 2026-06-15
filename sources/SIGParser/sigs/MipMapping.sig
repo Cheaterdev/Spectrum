@@ -10,10 +10,7 @@ struct MipMapping
 	# ResourceDescriptorHeap cause DXC to emit duplicate OpTypeArray IDs in SPIR-V.
 	# Four individual fields have identical binary layout and avoid the issue.
 	# See REFACTOR_TODO.md for root cause and the proper template fix.
-	RWTexture2D<float4> OutMip_0;
-	RWTexture2D<float4> OutMip_1;
-	RWTexture2D<float4> OutMip_2;
-	RWTexture2D<float4> OutMip_3;
+	RWTexture2D<float4> OutMip[4];
 
 	Texture2D<float4> SrcMip;
 
@@ -36,7 +33,7 @@ struct DownsampleDepth
 
 
 
-ComputePSO DownsampleDepth
+[ExcludeVulkan] ComputePSO DownsampleDepth
 {
 	root = DefaultLayout;
 
@@ -65,7 +62,7 @@ ComputePSO MipMapping
 
 
 
-GraphicsPSO RenderToDS
+[ExcludeVulkan] GraphicsPSO RenderToDS
 {
 	root = DefaultLayout;
 
@@ -82,7 +79,7 @@ GraphicsPSO RenderToDS
 }
 
 
-GraphicsPSO QualityColor
+[ExcludeVulkan] GraphicsPSO QualityColor
 {
 	root = DefaultLayout;
 
@@ -98,7 +95,7 @@ GraphicsPSO QualityColor
 }
 
 
-GraphicsPSO QualityToStencil
+[ExcludeVulkan] GraphicsPSO QualityToStencil
 {
 	root = DefaultLayout;
 
@@ -123,7 +120,7 @@ GraphicsPSO QualityToStencil
 }
 
 #remove it
-GraphicsPSO QualityToStencilREfl
+[ExcludeVulkan] GraphicsPSO QualityToStencilREfl
 {
 	root = DefaultLayout;
 

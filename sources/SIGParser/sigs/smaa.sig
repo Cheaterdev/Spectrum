@@ -28,7 +28,7 @@ struct SMAA_Blend
 
 
 
-GraphicsPSO EdgeDetect
+[ExcludeVulkan] GraphicsPSO EdgeDetect
 {
 	root = DefaultLayout;
 
@@ -41,7 +41,7 @@ GraphicsPSO EdgeDetect
 	rtv = { R8G8_UNORM };
 }
 
-GraphicsPSO BlendWeight
+[ExcludeVulkan] GraphicsPSO BlendWeight
 {
 	root = DefaultLayout;
 
@@ -55,7 +55,7 @@ GraphicsPSO BlendWeight
 }
 
 
-GraphicsPSO Blending
+[ExcludeVulkan] GraphicsPSO Blending
 {
 	root = DefaultLayout;
 

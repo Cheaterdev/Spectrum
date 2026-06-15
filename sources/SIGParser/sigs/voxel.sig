@@ -147,7 +147,7 @@ struct VoxelDebug
 	Texture3D<float4> volume;
 }
 
-ComputePSO Lighting
+[ExcludeVulkan] ComputePSO Lighting
 {
 	root = DefaultLayout;
 
@@ -160,7 +160,7 @@ ComputePSO Lighting
 }
 
 
-ComputePSO VoxelDownsample
+[ExcludeVulkan] ComputePSO VoxelDownsample
 {
 	root = DefaultLayout;
 
@@ -174,7 +174,7 @@ ComputePSO VoxelDownsample
 
 
 
-ComputePSO VoxelCopy
+[ExcludeVulkan] ComputePSO VoxelCopy
 {
 	root = DefaultLayout;
 
@@ -183,7 +183,7 @@ ComputePSO VoxelCopy
 }
 
 
-ComputePSO VoxelZero
+[ExcludeVulkan] ComputePSO VoxelZero
 {
 	root = DefaultLayout;
 
@@ -191,7 +191,7 @@ ComputePSO VoxelZero
 	compute = voxel_zero;
 }
 
-ComputePSO VoxelVisibility
+[ExcludeVulkan] ComputePSO VoxelVisibility
 {
 	root = DefaultLayout;
 
@@ -199,7 +199,7 @@ ComputePSO VoxelVisibility
 	compute = voxel_visibility;
 }
 
-ComputePSO VoxelIndirectFilter
+[ExcludeVulkan] ComputePSO VoxelIndirectFilter
 {
 	root = DefaultLayout;
 
@@ -217,7 +217,7 @@ ComputePSO VoxelIndirectFilter
 
 }
 
-GraphicsPSO VoxelReflectionHi
+[ExcludeVulkan] GraphicsPSO VoxelReflectionHi
 {
 	root = DefaultLayout;
 
@@ -241,7 +241,7 @@ GraphicsPSO VoxelReflectionHi
 }
 
 
-GraphicsPSO VoxelReflectionUpsample
+[ExcludeVulkan] GraphicsPSO VoxelReflectionUpsample
 {
 	root = DefaultLayout;
 
@@ -265,7 +265,7 @@ GraphicsPSO VoxelReflectionUpsample
 }
 
 
-GraphicsPSO VoxelIndirectHi
+[ExcludeVulkan] GraphicsPSO VoxelIndirectHi
 {
 	root = DefaultLayout;
 
@@ -289,7 +289,7 @@ GraphicsPSO VoxelIndirectHi
 }
 
 
-ComputePSO VoxelIndirectLow
+[ExcludeVulkan] ComputePSO VoxelIndirectLow
 {
 	root = DefaultLayout;
 
@@ -299,7 +299,7 @@ ComputePSO VoxelIndirectLow
 
 
 
-GraphicsPSO VoxelIndirectUpsample
+[ExcludeVulkan] GraphicsPSO VoxelIndirectUpsample
 {
 	root = DefaultLayout;
 
@@ -323,7 +323,7 @@ GraphicsPSO VoxelIndirectUpsample
 }
 
 
-GraphicsPSO VoxelDebug
+[ExcludeVulkan] GraphicsPSO VoxelDebug
 {
 	root = DefaultLayout;
 
@@ -347,7 +347,7 @@ struct DenoiserDownsample
 }
 
 
-GraphicsPSO DenoiserDownsample
+[ExcludeVulkan] GraphicsPSO DenoiserDownsample
 {
 	root = DefaultLayout;
 
@@ -398,7 +398,7 @@ struct TilingPostprocess
 
 
 
-ComputePSO DenoiserHistoryFix
+[ExcludeVulkan] ComputePSO DenoiserHistoryFix
 {
 	root = DefaultLayout;
 
@@ -417,7 +417,7 @@ struct FrameClassification
 	AppendStructuredBuffer<uint2> low;
 }
 
-ComputePSO FrameClassification
+[ExcludeVulkan] ComputePSO FrameClassification
 {
 	root = DefaultLayout;
 
@@ -437,7 +437,7 @@ struct FrameClassificationInitDispatch
 }
 
 
-ComputePSO FrameClassificationInitDispatch
+[ExcludeVulkan] ComputePSO FrameClassificationInitDispatch
 {
 	root = DefaultLayout;
 
@@ -455,7 +455,7 @@ struct ReflectionCombine
 }
 
 
-ComputePSO ReflectionCombine
+[ExcludeVulkan] ComputePSO ReflectionCombine
 {
 	root = DefaultLayout;
 

@@ -6,7 +6,7 @@ struct BRDF
 }
 
 
-ComputePSO BRDF
+[ExcludeVulkan] ComputePSO BRDF
 {
 	root = DefaultLayout;
 

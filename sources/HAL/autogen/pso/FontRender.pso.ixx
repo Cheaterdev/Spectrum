@@ -59,7 +59,7 @@ export namespace PSOS
 
 			mpso.topology =HAL::PrimitiveTopologyType::POINT;
 			mpso.enable_depth =false;
-				mpso.cull =HAL::CullMode::None;
+			mpso.cull =HAL::CullMode::None;
 			return mpso;
 		}
 

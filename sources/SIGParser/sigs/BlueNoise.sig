@@ -10,7 +10,7 @@ struct BlueNoise
 }
 
 
-ComputePSO BlueNoise
+[ExcludeVulkan] ComputePSO BlueNoise
 {
 	root = DefaultLayout;
 

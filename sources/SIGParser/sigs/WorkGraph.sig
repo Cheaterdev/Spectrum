@@ -18,7 +18,7 @@ struct GraphInput
 }
 
 
-WorkgraphPSO WorkGR
+[ExcludeVulkan] WorkgraphPSO WorkGR
 {
 	root = DefaultLayout;
 

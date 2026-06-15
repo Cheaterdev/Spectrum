@@ -33,7 +33,7 @@ struct Color
 
 
 
-GraphicsPSO DrawStencil
+[ExcludeVulkan] GraphicsPSO DrawStencil
 {
 	root = DefaultLayout;
 
@@ -54,7 +54,7 @@ GraphicsPSO DrawStencil
 
 
 
-GraphicsPSO DrawSelected
+[ExcludeVulkan] GraphicsPSO DrawSelected
 {
 	root = DefaultLayout;
 
@@ -79,7 +79,7 @@ GraphicsPSO DrawSelected
 
 
 
-GraphicsPSO DrawBox
+[ExcludeVulkan] GraphicsPSO DrawBox
 {
 	root = DefaultLayout;
 
@@ -98,7 +98,7 @@ GraphicsPSO DrawBox
 
 
 
-GraphicsPSO DrawAxis
+[ExcludeVulkan] GraphicsPSO DrawAxis
 {
 	root = DefaultLayout;
 
@@ -119,7 +119,7 @@ GraphicsPSO DrawAxis
 }
 
 
-GraphicsPSO StencilerLast
+[ExcludeVulkan] GraphicsPSO StencilerLast
 {
 	root = DefaultLayout;
 

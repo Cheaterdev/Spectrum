@@ -258,14 +258,8 @@ namespace HAL
 			errorMsg += file_name + "\n";
 			errorMsg.append((infoLog));
 			Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
-			// On SPIRV targets many DXC codegen bugs produce invalid SPIR-V that
-			// the integrated validator rejects. Show a blocking dialog only for
-			// DXIL builds; on Vulkan just log and return an empty shader so the
-			// PSO degrades silently rather than stalling startup with popups.
-			bool is_spirv = std::any_of(compilationArguments.begin(), compilationArguments.end(),
-				[](const std::wstring& a) { return a == L"-spirv"; });
-			if (!is_spirv)
-				MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
+		
+			MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
 			return {};
 		}
 		ComPtr<IDxcBlob> resultBlob;

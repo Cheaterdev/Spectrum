@@ -22,20 +22,11 @@ export namespace Table
 		uint NumMipLevels;
 		float2 TexelSize;
 		HLSL::Texture2D<float4> SrcMip;
-		HLSL::RWTexture2D<float4> OutMip_0;
-		HLSL::RWTexture2D<float4> OutMip_1;
-		HLSL::RWTexture2D<float4> OutMip_2;
-		HLSL::RWTexture2D<float4> OutMip_3;
+		HLSL::RWTexture2D<float4> OutMip[4];
 		uint& GetSrcMipLevel() { return SrcMipLevel; }
 		uint& GetNumMipLevels() { return NumMipLevels; }
 		float2& GetTexelSize() { return TexelSize; }
-			HLSL::RWTexture2D<float4>& GetOutMip(int i)
-	{
-		if (i == 0) return OutMip_0;
-		if (i == 1) return OutMip_1;
-		if (i == 2) return OutMip_2;
-		              return OutMip_3;
-	}
+		HLSL::RWTexture2D<float4>* GetOutMip() { return OutMip; }
 		HLSL::Texture2D<float4>& GetSrcMip() { return SrcMip; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
@@ -45,10 +36,7 @@ export namespace Table
 			compiler.compile(NumMipLevels);
 			compiler.compile(TexelSize);
 			compiler.compile(SrcMip);
-			compiler.compile(OutMip_0);
-			compiler.compile(OutMip_1);
-			compiler.compile(OutMip_2);
-			compiler.compile(OutMip_3);
+			compiler.compile(OutMip);
 		}
 		struct Compiled
 		{
@@ -56,10 +44,7 @@ export namespace Table
 			uint NumMipLevels; // uint
 			float2 TexelSize; // float2
 			uint SrcMip; // Texture2D<float4>
-			uint OutMip_0; // RWTexture2D<float4>
-			uint OutMip_1; // RWTexture2D<float4>
-			uint OutMip_2; // RWTexture2D<float4>
-			uint OutMip_3; // RWTexture2D<float4>
+			uint OutMip[4]; // RWTexture2D<float4>
 
 			
 			private:
