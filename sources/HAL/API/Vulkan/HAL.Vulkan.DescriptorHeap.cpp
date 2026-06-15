@@ -121,8 +121,18 @@ namespace HAL
 
         if (api_res.get_vk_image() != VK_NULL_HANDLE)
         {
-            // UAV texture → binding 0 (MUTABLE → STORAGE_IMAGE)
-            VkImageView view = api_res.get_vk_image_view();
+            // UAV texture → binding 0 (MUTABLE → STORAGE_IMAGE).
+            // Vulkan requires levelCount=1 for STORAGE_IMAGE; use a per-mip view.
+            uint32_t mip_slice = 0, array_slice = 0;
+            std::visit(overloaded{
+                [&](const Views::UnorderedAccess::Texture2D& t)      { mip_slice = t.MipSlice; },
+                [&](const Views::UnorderedAccess::Texture2DArray& t) { mip_slice = t.MipSlice; array_slice = t.FirstArraySlice; },
+                [&](const Views::UnorderedAccess::Texture3D& t)      { mip_slice = t.MipSlice; },
+                [](auto&&) {}
+            }, v.View);
+
+            VkImageView view = api_res.get_vk_mip_view(
+                api_heap.device.get_native_device(), mip_slice, array_slice);
             if (view == VK_NULL_HANDLE) return;
             img_info.imageView   = view;
             img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;

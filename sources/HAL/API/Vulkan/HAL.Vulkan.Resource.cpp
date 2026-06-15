@@ -225,6 +225,9 @@ namespace HAL
 
                     // Create a full-resource image view.
                     bool is_depth = check(_desc.Flags & ResFlags::DepthStencil);
+                    vk_image_format = ici.format;
+                    vk_image_aspect = is_depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+
                     VkImageViewCreateInfo ivci{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
                     ivci.image    = vk_image;
                     ivci.viewType = tex.is3D()            ? VK_IMAGE_VIEW_TYPE_3D
@@ -232,9 +235,7 @@ namespace HAL
                                   : tex.ArraySize > 1     ? VK_IMAGE_VIEW_TYPE_2D_ARRAY
                                                           : VK_IMAGE_VIEW_TYPE_2D;
                     ivci.format   = ici.format;
-                    ivci.subresourceRange.aspectMask     = is_depth
-                                                         ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                                         : VK_IMAGE_ASPECT_COLOR_BIT;
+                    ivci.subresourceRange.aspectMask     = vk_image_aspect;
                     ivci.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
                     ivci.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
                     vkCreateImageView(device.get_native_device(), &ivci, nullptr, &vk_image_view);
@@ -354,6 +355,35 @@ namespace HAL
         }
     }
 
+    namespace API
+    {
+        VkImageView Resource::get_vk_mip_view(VkDevice vk_dev, uint32_t mip, uint32_t layer) const noexcept
+        {
+            if (vk_image == VK_NULL_HANDLE || vk_image_format == VK_FORMAT_UNDEFINED)
+                return VK_NULL_HANDLE;
+
+            uint32_t key = (layer << 16) | mip;
+            auto it = per_mip_views.find(key);
+            if (it != per_mip_views.end())
+                return it->second;
+
+            VkImageViewCreateInfo ivci{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+            ivci.image    = vk_image;
+            ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            ivci.format   = vk_image_format;
+            ivci.subresourceRange.aspectMask     = vk_image_aspect;
+            ivci.subresourceRange.baseMipLevel   = mip;
+            ivci.subresourceRange.levelCount     = 1;
+            ivci.subresourceRange.baseArrayLayer = layer;
+            ivci.subresourceRange.layerCount     = 1;
+
+            VkImageView v = VK_NULL_HANDLE;
+            vkCreateImageView(vk_dev, &ivci, nullptr, &v);
+            per_mip_views[key] = v;
+            return v;
+        }
+    }
+
     Resource::~Resource()
     {
         alloc_handle.Free();
@@ -367,6 +397,12 @@ namespace HAL
             // time — if the image is destroyed before Queue::execute() flushes the
             // batch, the barrier would reference a freed handle and crash the driver.
             api_dev.cancel_pending_init_transition(vk_image);
+
+            // Destroy per-mip UAV views before destroying the image.
+            for (auto& [key, view] : per_mip_views)
+                if (view != VK_NULL_HANDLE)
+                    vkDestroyImageView(vk_dev, view, nullptr);
+            per_mip_views.clear();
 
             // Destroy the owned image view before destroying the image itself.
             if (vk_image_view != VK_NULL_HANDLE && !import_handle.image)
