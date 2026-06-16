@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct FontRendering
 {
 	uint tex0; // Texture2D<float>

@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct GraphInput
 {
 	uint3 dispatch_grid: SV_DispatchGrid; // uint3

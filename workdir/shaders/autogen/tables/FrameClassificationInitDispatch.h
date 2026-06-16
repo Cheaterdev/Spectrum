@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "DispatchArguments.h"
-
-
-
 struct FrameClassificationInitDispatch
 {
 	uint hi_counter; // StructuredBuffer<uint>

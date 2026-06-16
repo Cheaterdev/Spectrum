@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "Camera.h"
-
-
-
 struct FrameGraph_Debug_Texture3D
 {
 	uint3 sourceSize; // uint3

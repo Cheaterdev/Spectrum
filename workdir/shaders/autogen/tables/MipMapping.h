@@ -6,29 +6,17 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct MipMapping
 {
 	uint SrcMipLevel; // uint
 	uint NumMipLevels; // uint
 	float2 TexelSize; // float2
 	uint SrcMip; // Texture2D<float4>
-	uint OutMip_0; // RWTexture2D<float4> [was OutMip[4]]
-	uint OutMip_1; // RWTexture2D<float4> [was OutMip[4]]
-	uint OutMip_2; // RWTexture2D<float4> [was OutMip[4]]
-	uint OutMip_3; // RWTexture2D<float4> [was OutMip[4]]
+	uint OutMip[4]; // RWTexture2D<float4>
 	uint GetSrcMipLevel() { return SrcMipLevel; }
 	uint GetNumMipLevels() { return NumMipLevels; }
 	float2 GetTexelSize() { return TexelSize; }
-	RWTexture2D<float4> GetOutMip(int i)
-	{
-		if (i == 0) return ResourceDescriptorHeap[OutMip_0];
-		if (i == 1) return ResourceDescriptorHeap[OutMip_1];
-		if (i == 2) return ResourceDescriptorHeap[OutMip_2];
-		              return ResourceDescriptorHeap[OutMip_3];
-	}
+	RWTexture2D<float4> GetOutMip(int i) { return ResourceDescriptorHeap[OutMip[i]]; }
 
 	Texture2D<float4> GetSrcMip() { return ResourceDescriptorHeap[SrcMip]; }
 };

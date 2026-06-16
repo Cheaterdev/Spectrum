@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "BoxInfo.h"
-
-
-
 struct GatherMeshesBoxes
 {
 	uint input_meshes; // StructuredBuffer<BoxInfo>

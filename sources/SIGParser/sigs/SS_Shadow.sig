@@ -18,16 +18,16 @@ struct DispatchParameters
 	float ShadowContrast = 4;				# A contrast boost is applied to the transition in/out of shadow.
 											# Recommended starting value: 2 or 4. Values >= 1 are valid.
 
-	bool IgnoreEdgePixels = false;			# If an edge is detected, the edge pixel will not contribute to the shadow.
+	uint IgnoreEdgePixels = false;			# If an edge is detected, the edge pixel will not contribute to the shadow.
 											# If a very flat surface is being lit and rendered at an grazing angles, the edge detect may incorrectly detect multiple 'edge' pixels along that flat surface.
 											# In these cases, the grazing angle of the light may subsequently produce aliasing artefacts in the shadow where these incorrect edges were detected.
 											# Setting this value to true would mean that those pixels would not cast a shadow, however it can also thin out otherwise valid shadows, especially on foliage edges.
 											# Recommended starting value: false, unless typical scenes have numerous large flat surfaces, in which case true.
 
-	bool UsePrecisionOffset = false;		# A small offset is applied to account for an imprecise depth buffer (recommend off)
+	uint UsePrecisionOffset = false;		# A small offset is applied to account for an imprecise depth buffer (recommend off)
 
 
-	bool BilinearSamplingOffsetMode = false;# There are two modes to compute bilinear samples for shadow depth:
+	uint BilinearSamplingOffsetMode = false;# There are two modes to compute bilinear samples for shadow depth:
 											# true = sampling points for pixels are offset to the wavefront shared ray, shadow depths and starting depths are the same. Can project more jagged/aliased shadow lines in some cases.
 											# false = sampling points for pixels are not offset and start from pixel centers. Shadow depths are biased based on depth gradient across the current pixel bilinear sample. Has more issues in back-face / grazing areas.
 											# Both modes have subtle visual differences, which may / may not exaggerate depth buffer aliasing that gets projected in to the shadow.
@@ -35,14 +35,14 @@ struct DispatchParameters
 											# Recommended starting value: false
 
 	# Debug views
-	bool DebugOutputEdgeMask = false;		# Use this to visualize edges, for tuning the 'BilinearThreshold' value.
-	bool DebugOutputThreadIndex = false;	# Debug output to visualize layout of compute threads
-	bool DebugOutputWaveIndex = false;		# Debug output to visualize layout of compute wavefronts, useful to sanity check the Light Coordinate is being computed correctly.
+	uint DebugOutputEdgeMask = false;		# Use this to visualize edges, for tuning the 'BilinearThreshold' value.
+	uint DebugOutputThreadIndex = false;	# Debug output to visualize layout of compute threads
+	uint DebugOutputWaveIndex = false;		# Debug output to visualize layout of compute wavefronts, useful to sanity check the Light Coordinate is being computed correctly.
 
 	# Culling / Early out:
 	float2 DepthBounds = float2(0,1);		# Depth Bounds (min, max) for the on-screen volume of the light. Typically (0,1) for directional lights. Only used when 'UseEarlyOut' is true.
 
-	bool UseEarlyOut = false;				# Set to true to early-out when depth values are not within [DepthBounds] - otherwise DepthBounds is unused
+	uint UseEarlyOut = false;				# Set to true to early-out when depth values are not within [DepthBounds] - otherwise DepthBounds is unused
 											# [Optionally customize the 'EarlyOutPixel()' function to perform your own early-out logic, e.g. skipping pixels that a shadow map indicates are already fully occluded]
 											# This can dramatically reduce cost when only a small portion of the pixels need a shadow term (e.g., cull out sky pixels), however it does have some overhead (~15%) in worst-case where nothing early-outs
 											# Note; Early-out is most efficient when WAVE_SIZE matches the hardware wavefront size - otherwise cross wave communication is required.
@@ -71,7 +71,7 @@ struct DispatchParameters
 
 
 
-[ExcludeVulkan] ComputePSO SS_Shadow
+ComputePSO SS_Shadow
 {
 	root = DefaultLayout;
 

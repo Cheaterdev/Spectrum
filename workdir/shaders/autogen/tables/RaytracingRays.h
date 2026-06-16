@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "GBuffer.h"
-
-
-
 struct RaytracingRays
 {
 	float pixelAngle; // float

@@ -4,11 +4,8 @@ struct quad_output
 float4 pos : SV_POSITION;
 };
 #include "../autogen/ColorRect.h"
-// Replaced (float2[4])GetColorRect().pos — the float4[2] array reinterpret cast
-// triggers a DXC SPIR-V codegen bug (duplicate OpTypeArray type IDs). Swizzle
-// access produces identical values without any array type in the HLSL struct.
 static const ColorRect _cr = GetColorRect();
-static const float2 pos[4] = { _cr.pos_0.xy, _cr.pos_0.zw, _cr.pos_1.xy, _cr.pos_1.zw };
+static const float2 pos[4] = { _cr.pos[0].xy, _cr.pos[0].zw, _cr.pos[1].xy, _cr.pos[1].zw };
 
 #ifdef BUILD_FUNC_VS
 quad_output VS(uint index : SV_VERTEXID)

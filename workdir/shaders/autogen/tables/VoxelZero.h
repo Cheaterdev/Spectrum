@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "VoxelTilingParams.h"
-
-
-
 struct VoxelZero
 {
 	uint Target; // RWTexture3D<float4>

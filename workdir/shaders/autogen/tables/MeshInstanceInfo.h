@@ -9,9 +9,6 @@
 #include "Meshlet.h"
 #include "MeshletCullData.h"
 #include "mesh_vertex_input.h"
-
-
-
 struct MeshInstanceInfo
 {
 	uint vertexes; // StructuredBuffer<mesh_vertex_input>

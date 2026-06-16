@@ -7,23 +7,13 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "VoxelTilingParams.h"
-
-
-
 struct VoxelMipMap
 {
 	uint SrcMip; // Texture3D<float4>
-	uint OutMips_0; // RWTexture3D<float4> [was OutMips[3]]
-	uint OutMips_1; // RWTexture3D<float4> [was OutMips[3]]
-	uint OutMips_2; // RWTexture3D<float4> [was OutMips[3]]
+	uint OutMips[3]; // RWTexture3D<float4>
 	VoxelTilingParams params; // VoxelTilingParams
 	VoxelTilingParams GetParams() { return params; }
-	RWTexture3D<float4> GetOutMips(int i)
-	{
-		if (i == 0) return ResourceDescriptorHeap[OutMips_0];
-		if (i == 1) return ResourceDescriptorHeap[OutMips_1];
-		              return ResourceDescriptorHeap[OutMips_2];
-	}
+	RWTexture3D<float4> GetOutMips(int i) { return ResourceDescriptorHeap[OutMips[i]]; }
 
 	Texture3D<float4> GetSrcMip() { return ResourceDescriptorHeap[SrcMip]; }
 };

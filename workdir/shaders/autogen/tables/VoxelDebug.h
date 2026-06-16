@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "GBuffer.h"
-
-
-
 struct VoxelDebug
 {
 	uint volume; // Texture3D<float4>

@@ -162,6 +162,10 @@ namespace HAL
                 VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
                 // Required by DXC SPIRV for 'discard' in pixel shaders.
                 VK_EXT_SHADER_DEMOTE_TO_HELPER_INVOCATION_EXTENSION_NAME,
+                // Optional: ddx/ddy in compute shaders.
+                VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME,
+                // Optional: mesh/task shaders.
+                VK_EXT_MESH_SHADER_EXTENSION_NAME,
             };
 
             uint32_t avail_count = 0;
@@ -176,6 +180,13 @@ namespace HAL
                     if (strcmp(ext.extensionName, wanted) == 0)
                     { device_extensions.push_back(wanted); break; }
             }
+
+            auto has_ext = [&](const char* name) {
+                return std::any_of(device_extensions.begin(), device_extensions.end(),
+                    [name](const char* e) { return strcmp(e, name) == 0; });
+            };
+            const bool has_mesh_shader    = has_ext(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+            const bool has_cs_derivatives = has_ext(VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME);
 
             // ---- Feature chain ----------------------------------------------
             VkPhysicalDeviceBufferDeviceAddressFeatures bda_features{
@@ -240,9 +251,32 @@ namespace HAL
             eds_features.extendedDynamicState = VK_TRUE;
             eds_features.pNext = &host_reset_features;
 
+            // Optional feature structs — only inserted into the chain if the
+            // extension is present.  Including structs for absent extensions in
+            // vkCreateDevice's pNext may trigger VK_ERROR_EXTENSION_NOT_PRESENT.
+            VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR cs_deriv_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_FEATURES_KHR };
+            cs_deriv_features.computeDerivativeGroupQuads  = VK_TRUE;
+            cs_deriv_features.computeDerivativeGroupLinear = VK_TRUE;
+
+            VkPhysicalDeviceMeshShaderFeaturesEXT mesh_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT };
+            mesh_features.meshShader = VK_TRUE;
+            mesh_features.taskShader = VK_TRUE;
+
+            void* feature_head = &eds_features;
+            if (has_cs_derivatives) {
+                cs_deriv_features.pNext = feature_head;
+                feature_head = &cs_deriv_features;
+            }
+            if (has_mesh_shader) {
+                mesh_features.pNext = feature_head;
+                feature_head = &mesh_features;
+            }
+
             VkPhysicalDeviceFeatures2 features2{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-            features2.pNext = &eds_features;
+            features2.pNext = feature_head;
             vkGetPhysicalDeviceFeatures2(vk_physical, &features2);
 
             // ---- Create logical device --------------------------------------
@@ -268,7 +302,7 @@ namespace HAL
             auto& p = THIS->properties;
             p.name = props2.properties.deviceName;
             p.rtx           = false;  // Phase: VK_KHR_ray_tracing_pipeline check
-            p.mesh_shader   = false;  // Phase: VK_EXT_mesh_shader check
+            p.mesh_shader   = has_mesh_shader && (mesh_features.meshShader == VK_TRUE);
             p.work_graph    = false;  // no Vulkan equivalent yet
             p.min_storage_buffer_offset_alignment =
                 static_cast<uint32_t>(props2.properties.limits.minStorageBufferOffsetAlignment);
@@ -334,31 +368,41 @@ namespace HAL
                 // Each s-register (s0..s4) maps to its own binding: sN → binding SMP_BASE+N.
                 // (With s-shift=384: s2 → binding 386, NOT element 2 of binding 384.)
                 constexpr uint32_t NUM_INLINE_SMP = 5; // s0..s4 in FrameLayout.h
-                constexpr uint32_t TOTAL_BINDINGS = 1 + NUM_INLINE_SMP; // mutable + 5 samplers
+                // mutable heap (0) + counter heap (2) + 5 inline samplers (384-388)
+                constexpr uint32_t TOTAL_BINDINGS = 2 + NUM_INLINE_SMP;
 
                 VkDescriptorSetLayoutBinding bindings[TOTAL_BINDINGS]{};
                 VkDescriptorBindingFlags     bflags[TOTAL_BINDINGS]{};
 
+                // Binding 0: mutable resource heap (CBV/SRV/UAV via ResourceDescriptorHeap)
                 bindings[0].binding         = 0;
                 bindings[0].descriptorType  = VK_DESCRIPTOR_TYPE_MUTABLE_EXT;
                 bindings[0].descriptorCount = HEAP_MAX;
                 bindings[0].stageFlags      = VK_SHADER_STAGE_ALL;
                 bflags[0]                   = bind_flags;
 
+                // Binding 2: counter heap — DXC SPIR-V places AppendStructuredBuffer
+                // hidden counters here by default (counter.var.ResourceDescriptorHeap).
+                bindings[1].binding         = 2;
+                bindings[1].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                bindings[1].descriptorCount = 1;
+                bindings[1].stageFlags      = VK_SHADER_STAGE_ALL;
+                bflags[1]                   = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+
                 for (uint32_t si = 0; si < NUM_INLINE_SMP; ++si)
                 {
-                    bindings[1 + si].binding         = SMP_BASE + si; // 384, 385, 386, 387, 388
-                    bindings[1 + si].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
-                    bindings[1 + si].descriptorCount = 1;
-                    bindings[1 + si].stageFlags      = VK_SHADER_STAGE_ALL;
-                    bflags[1 + si]                   = bind_flags;
+                    bindings[2 + si].binding         = SMP_BASE + si; // 384, 385, 386, 387, 388
+                    bindings[2 + si].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
+                    bindings[2 + si].descriptorCount = 1;
+                    bindings[2 + si].stageFlags      = VK_SHADER_STAGE_ALL;
+                    bflags[2 + si]                   = bind_flags;
                 }
 
                 // Mutable type list: one entry per binding.
-                // Binding 0 = mutable; sampler bindings 384-388 = not mutable ({} list).
+                // Binding 0 = mutable; binding 2 (counter) and 384-388 (samplers) = not mutable.
                 VkMutableDescriptorTypeListEXT mutable_lists[TOTAL_BINDINGS]{};
-                mutable_lists[0] = mutable_list; // binding 0
-                // mutable_lists[1..5] remain zero-initialised ({}) for sampler bindings
+                mutable_lists[0] = mutable_list; // binding 0 only
+                // mutable_lists[1..6] remain zero-initialised
 
                 VkMutableDescriptorTypeCreateInfoEXT mutable_ci{
                     VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT };

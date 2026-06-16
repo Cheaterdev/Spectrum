@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "GBuffer.h"
-
-
-
 struct WorkGraphTest
 {
 	uint output; // RWTexture2D<float4>

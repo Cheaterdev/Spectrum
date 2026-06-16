@@ -15,34 +15,12 @@
 
 
 
-{# -----------------------------------------------------------------------
-   Bounded fixed-size arrays (T name[N], N > 1) must be split into N
-   individual fields to avoid a DXC SPIRV codegen bug: when a struct
-   containing a fixed-size array is accessed via ResourceDescriptorHeap,
-   DXC emits two structurally-identical OpTypeArray type IDs with different
-   SPIRV IDs, causing VUID-StandaloneSpirv-OpAccessChain validation failure.
-   Unbounded (N==0) and single-element arrays are left as-is.
-   See REFACTOR_TODO.md for the root cause.
-   ----------------------------------------------------------------------- #}
-
 {%- macro declare_func(type) -%}
 {%- for v in (table.values|unique|selectattr('value_type','==', type)) -%}
 	{%- if (not v.pointer and (v.value_type == ValueType.CB or v.value_type == ValueType.STRUCT)) %}
-		{%- if v.as_array and v.array_count > 1 %}
-			{%- for i in range(v.array_count) %}
-	{{v.type}} {{v.name}}_{{i}}; // {{v.type}} [was {{v.name}}[{{v.array_count}}]]
-		{%- endfor %}
-		{%- else %}
 	{{v.type}} {{v.name}}{{v.array}}{{": SV_DispatchGrid" if v.options.DispatchSize }}; // {{v.type}}
-		{%- endif %}
 	{%-else %}
-		{%- if v.as_array and v.array_count > 1 and not v.bindless %}
-			{%- for i in range(v.array_count) %}
-	uint {{v.name}}_{{i}}; // {{v.type}} [was {{v.name}}[{{v.array_count}}]]
-		{%- endfor %}
-		{%- else %}
 	uint {{v.name}}{{v.array if not v.bindless }}; // {{v.type}}
-		{%- endif %}
 	{%-endif -%}
 {%- endfor -%}
 {%- endmacro -%}
@@ -58,13 +36,7 @@ struct {{"[raypayload]" if table.options.raypayload is defined}}{{table.name}}
 {%- for v in (table.values|unique|list) -%}
 {%- if v.value_type == ValueType.CB or v.value_type == ValueType.STRUCT %}
 	{%- if v.as_array and v.array_count > 1 %}
-	{{v.type if not v.pointer else "uint"}} Get{{v.name|camel}}(int i)
-	{
-		{%- for i in range(v.array_count - 1) %}
-		if (i == {{i}}) return {{v.name}}_{{i}};
-		{%- endfor %}
-		              return {{v.name}}_{{v.array_count - 1}};
-	}
+	{{v.type if not v.pointer else "uint"}} Get{{v.name|camel}}(int i) { return {{v.name}}[i]; }
 	{%- else %}
 	{%- if v.value_type == ValueType.STRUCT and not v.pointer and not v.as_array %}
 	{{v.type}} Get{{v.name|camel}}() { return {{v.name}}; }
@@ -86,13 +58,7 @@ struct {{"[raypayload]" if table.options.raypayload is defined}}{{table.name}}
 		return ResourceDescriptorHeap[id];
 	}
 {%elif v.as_array and v.array_count > 1 %}
-	{{type}} Get{{v.name|camel}}(int i)
-	{
-		{%- for i in range(v.array_count - 1) %}
-		if (i == {{i}}) return ResourceDescriptorHeap[{{v.name}}_{{i}}];
-		{%- endfor %}
-		              return ResourceDescriptorHeap[{{v.name}}_{{v.array_count - 1}}];
-	}
+	{{type}} Get{{v.name|camel}}(int i) { return ResourceDescriptorHeap[{{v.name}}[i]]; }
 {%else%}
 	{{type}} Get{{v.name|camel}}({{"int i" if v.as_array}}) { return ResourceDescriptorHeap[{{v.name}}{{"[i]" if v.as_array}}]; }
 {%-endif-%}

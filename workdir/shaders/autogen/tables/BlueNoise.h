@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct BlueNoise
 {
 	uint frame_index; // uint

@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct SMAA_Global
 {
 	float4 subsampleIndices; // float4

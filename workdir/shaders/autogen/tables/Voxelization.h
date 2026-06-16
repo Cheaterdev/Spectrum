@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "VoxelInfo.h"
-
-
-
 struct Voxelization
 {
 	uint albedo; // RWTexture3D<float4>

@@ -1,6 +1,5 @@
 #include "../autogen/FontRendering.h"
 #include "../autogen/FontRenderingConstants.h"
-#include "../autogen/DebugInfo.h"
 
 
 static const StructuredBuffer<float4> positions = GetFontRendering().GetPositions();
@@ -27,17 +26,6 @@ void GS(point GSIn Input[1], inout TriangleStream<GSOut> TriStream)
 	const uint glyphIndex = uint(Input[0].Position.z);
 	float4 texCoords = positions.Load(glyphIndex * 2);
 	float4 offsets = positions.Load(glyphIndex * 2 + 1);
-
-	{
-		RWStructuredBuffer<DebugStruct> dbg = GetDebugInfo().GetDebug();
-		DebugStruct e;
-		e.v = uint4(glyphIndex, asuint(basePosition.x), asuint(basePosition.y), 0xDEAD0001);
-		dbg[0] = e;
-		e.v = uint4(asuint(texCoords.x), asuint(texCoords.y), asuint(texCoords.z), asuint(texCoords.w));
-		dbg[1] = e;
-		e.v = uint4(asuint(offsets.x), asuint(offsets.y), asuint(offsets.z), asuint(offsets.w));
-		dbg[2] = e;
-	}
 
 	GSOut Output;
 	Output.GlyphColor = Input[0].GlyphColor;

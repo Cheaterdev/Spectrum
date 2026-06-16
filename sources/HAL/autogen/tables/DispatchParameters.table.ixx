@@ -21,14 +21,14 @@ export namespace Table
 		float SurfaceThickness = 0.005;
 		float BilinearThreshold = 0.02;
 		float ShadowContrast = 4;
-		bool IgnoreEdgePixels = false;
-		bool UsePrecisionOffset = false;
-		bool BilinearSamplingOffsetMode = false;
-		bool DebugOutputEdgeMask = false;
-		bool DebugOutputThreadIndex = false;
-		bool DebugOutputWaveIndex = false;
+		uint IgnoreEdgePixels = false;
+		uint UsePrecisionOffset = false;
+		uint BilinearSamplingOffsetMode = false;
+		uint DebugOutputEdgeMask = false;
+		uint DebugOutputThreadIndex = false;
+		uint DebugOutputWaveIndex = false;
 		float2 DepthBounds = float2(0,1);
-		bool UseEarlyOut = false;
+		uint UseEarlyOut = false;
 		float4 LightCoordinate;
 		int2 WaveOffset;
 		float FarDepthValue;
@@ -39,14 +39,14 @@ export namespace Table
 		float& GetSurfaceThickness() { return SurfaceThickness; }
 		float& GetBilinearThreshold() { return BilinearThreshold; }
 		float& GetShadowContrast() { return ShadowContrast; }
-		bool& GetIgnoreEdgePixels() { return IgnoreEdgePixels; }
-		bool& GetUsePrecisionOffset() { return UsePrecisionOffset; }
-		bool& GetBilinearSamplingOffsetMode() { return BilinearSamplingOffsetMode; }
-		bool& GetDebugOutputEdgeMask() { return DebugOutputEdgeMask; }
-		bool& GetDebugOutputThreadIndex() { return DebugOutputThreadIndex; }
-		bool& GetDebugOutputWaveIndex() { return DebugOutputWaveIndex; }
+		uint& GetIgnoreEdgePixels() { return IgnoreEdgePixels; }
+		uint& GetUsePrecisionOffset() { return UsePrecisionOffset; }
+		uint& GetBilinearSamplingOffsetMode() { return BilinearSamplingOffsetMode; }
+		uint& GetDebugOutputEdgeMask() { return DebugOutputEdgeMask; }
+		uint& GetDebugOutputThreadIndex() { return DebugOutputThreadIndex; }
+		uint& GetDebugOutputWaveIndex() { return DebugOutputWaveIndex; }
 		float2& GetDepthBounds() { return DepthBounds; }
-		bool& GetUseEarlyOut() { return UseEarlyOut; }
+		uint& GetUseEarlyOut() { return UseEarlyOut; }
 		float4& GetLightCoordinate() { return LightCoordinate; }
 		int2& GetWaveOffset() { return WaveOffset; }
 		float& GetFarDepthValue() { return FarDepthValue; }
@@ -82,14 +82,14 @@ export namespace Table
 			float SurfaceThickness; // float
 			float BilinearThreshold; // float
 			float ShadowContrast; // float
-			bool IgnoreEdgePixels; // bool
-			bool UsePrecisionOffset; // bool
-			bool BilinearSamplingOffsetMode; // bool
-			bool DebugOutputEdgeMask; // bool
-			bool DebugOutputThreadIndex; // bool
-			bool DebugOutputWaveIndex; // bool
+			uint IgnoreEdgePixels; // uint
+			uint UsePrecisionOffset; // uint
+			uint BilinearSamplingOffsetMode; // uint
+			uint DebugOutputEdgeMask; // uint
+			uint DebugOutputThreadIndex; // uint
+			uint DebugOutputWaveIndex; // uint
 			float2 DepthBounds; // float2
-			bool UseEarlyOut; // bool
+			uint UseEarlyOut; // uint
 			float4 LightCoordinate; // float4
 			int2 WaveOffset; // int2
 			float FarDepthValue; // float

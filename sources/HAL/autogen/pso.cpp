@@ -40,11 +40,13 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_Filter>(device, pso[PSO::DenoiserShadow_Filter]));
 	tasks.emplace_back(PSOBase::create<PSOS::FSR>(device, pso[PSO::FSR]));
 	tasks.emplace_back(PSOBase::create<PSOS::RCAS>(device, pso[PSO::RCAS]));
+	tasks.emplace_back(PSOBase::create<PSOS::GatherPipeline>(device, pso[PSO::GatherPipeline]));
 	tasks.emplace_back(PSOBase::create<PSOS::GatherBoxes>(device, pso[PSO::GatherBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::InitDispatch>(device, pso[PSO::InitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::GatherMeshes>(device, pso[PSO::GatherMeshes]));
 	tasks.emplace_back(PSOBase::create<PSOS::DownsampleDepth>(device, pso[PSO::DownsampleDepth]));
 	tasks.emplace_back(PSOBase::create<PSOS::MipMapping>(device, pso[PSO::MipMapping]));
+	tasks.emplace_back(PSOBase::create<PSOS::SS_Shadow>(device, pso[PSO::SS_Shadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_Texture2D>(device, pso[PSO::FrameGraph_Debug_Texture2D]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_Texture2DArray>(device, pso[PSO::FrameGraph_Debug_Texture2DArray]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_Texture3D>(device, pso[PSO::FrameGraph_Debug_Texture3D]));
@@ -92,24 +94,22 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::SimpleRect>(device, pso[PSO::SimpleRect]));
 	tasks.emplace_back(PSOBase::create<PSOS::CanvasBack>(device, pso[PSO::CanvasBack]));
 	tasks.emplace_back(PSOBase::create<PSOS::CanvasLines>(device, pso[PSO::CanvasLines]));
-	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(device, pso[PSO::DenoiserDownsample]));
-
-
-
-#ifndef HAL_BACKEND_VULKAN
-
-	tasks.emplace_back(PSOBase::create<PSOS::GatherPipeline>(device, pso[PSO::GatherPipeline]));
-	tasks.emplace_back(PSOBase::create<PSOS::SS_Shadow>(device, pso[PSO::SS_Shadow]));
-
-
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionHi>(device, pso[PSO::VoxelReflectionHi]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionUpsample>(device, pso[PSO::VoxelReflectionUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectHi>(device, pso[PSO::VoxelIndirectHi]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectUpsample>(device, pso[PSO::VoxelIndirectUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDebug>(device, pso[PSO::VoxelDebug]));
+	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(device, pso[PSO::DenoiserDownsample]));
 
 
+	
+#ifndef HAL_BACKEND_VULKAN
+
+
+				  
 	tasks.emplace_back(PSOBase::create<PSOS::WorkGR>(device, pso[PSO::WorkGR]));
+
+
 #endif // !HAL_BACKEND_VULKAN
 
 	when_all(begin(tasks), end(tasks)).wait();

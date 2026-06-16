@@ -6,24 +6,8 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct Frustum
 {
-	float4 planes_0; // float4 [was planes[6]]
-	float4 planes_1; // float4 [was planes[6]]
-	float4 planes_2; // float4 [was planes[6]]
-	float4 planes_3; // float4 [was planes[6]]
-	float4 planes_4; // float4 [was planes[6]]
-	float4 planes_5; // float4 [was planes[6]]
-	float4 GetPlanes(int i)
-	{
-		if (i == 0) return planes_0;
-		if (i == 1) return planes_1;
-		if (i == 2) return planes_2;
-		if (i == 3) return planes_3;
-		if (i == 4) return planes_4;
-		              return planes_5;
-	}
+	float4 planes[6]; // float4
+	float4 GetPlanes(int i) { return planes[i]; }
 };

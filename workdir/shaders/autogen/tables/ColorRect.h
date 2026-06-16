@@ -6,18 +6,10 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct ColorRect
 {
-	float4 pos_0; // float4 [was pos[2]]
-	float4 pos_1; // float4 [was pos[2]]
+	float4 pos[2]; // float4
 	float4 color; // float4
-	float4 GetPos(int i)
-	{
-		if (i == 0) return pos_0;
-		              return pos_1;
-	}
+	float4 GetPos(int i) { return pos[i]; }
 	float4 GetColor() { return color; }
 };

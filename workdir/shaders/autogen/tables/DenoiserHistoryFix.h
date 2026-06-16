@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct DenoiserHistoryFix
 {
 	uint color; // Texture2D<float4>

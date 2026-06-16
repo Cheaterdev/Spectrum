@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct DenoiserReflectionResolve
 {
 	uint g_normal; // Texture2D<float4>

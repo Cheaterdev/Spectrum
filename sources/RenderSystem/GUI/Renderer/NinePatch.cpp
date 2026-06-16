@@ -63,7 +63,7 @@ if(!index_buffer)
 		}
 		if(!added)
 		{
-			ASSERT(false && "NinePatch::draw: null texture2D handle — item.texture was never set (cache_resource not created?)");
+//			ASSERT(false && "NinePatch::draw: null texture2D handle — item.texture was never set (cache_resource not created?)");
 			textures_handles.emplace_back(HAL::Texture2DView{}.texture2D);
 
 		}

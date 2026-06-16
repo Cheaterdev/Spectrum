@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct MeshInfo
 {
 	uint vertex_offset_local; // uint

@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct GBufferDownsample
 {
 	uint normals; // Texture2D<float4>

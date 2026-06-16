@@ -8,9 +8,6 @@
 #include "sig_hlsl.hlsl"
 #include "PSSMDataGlobal.h"
 #include "VoxelTilingParams.h"
-
-
-
 struct VoxelLighting
 {
 	uint albedo; // Texture3D<float4>

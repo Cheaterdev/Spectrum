@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct FrameGraph_Debug_Common
 {
 	uint2 targetSize; // uint2

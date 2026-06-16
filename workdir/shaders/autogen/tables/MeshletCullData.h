@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct MeshletCullData
 {
 	float4 BoundingSphere; // float4

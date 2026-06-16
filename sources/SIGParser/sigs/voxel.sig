@@ -217,7 +217,7 @@ ComputePSO VoxelIndirectFilter
 
 }
 
-[ExcludeVulkan] GraphicsPSO VoxelReflectionHi
+GraphicsPSO VoxelReflectionHi
 {
 	root = DefaultLayout;
 
@@ -241,7 +241,7 @@ ComputePSO VoxelIndirectFilter
 }
 
 
-[ExcludeVulkan] GraphicsPSO VoxelReflectionUpsample
+GraphicsPSO VoxelReflectionUpsample
 {
 	root = DefaultLayout;
 
@@ -265,7 +265,7 @@ ComputePSO VoxelIndirectFilter
 }
 
 
-[ExcludeVulkan] GraphicsPSO VoxelIndirectHi
+GraphicsPSO VoxelIndirectHi
 {
 	root = DefaultLayout;
 
@@ -299,7 +299,7 @@ ComputePSO VoxelIndirectLow
 
 
 
-[ExcludeVulkan] GraphicsPSO VoxelIndirectUpsample
+GraphicsPSO VoxelIndirectUpsample
 {
 	root = DefaultLayout;
 
@@ -323,7 +323,7 @@ ComputePSO VoxelIndirectLow
 }
 
 
-[ExcludeVulkan] GraphicsPSO VoxelDebug
+GraphicsPSO VoxelDebug
 {
 	root = DefaultLayout;
 

@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "DebugStruct.h"
-
-
-
 struct DebugInfo
 {
 	uint debug; // RWStructuredBuffer<DebugStruct>

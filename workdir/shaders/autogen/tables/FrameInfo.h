@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "Camera.h"
-
-
-
 struct FrameInfo
 {
 	float4 time; // float4

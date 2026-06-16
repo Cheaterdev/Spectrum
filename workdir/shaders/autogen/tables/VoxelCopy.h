@@ -7,27 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "VoxelTilingParams.h"
-
-
-
 struct VoxelCopy
 {
-	uint Source_0; // Texture3D<float4> [was Source[2]]
-	uint Source_1; // Texture3D<float4> [was Source[2]]
-	uint Target_0; // RWTexture3D<float4> [was Target[2]]
-	uint Target_1; // RWTexture3D<float4> [was Target[2]]
+	uint Source[2]; // Texture3D<float4>
+	uint Target[2]; // RWTexture3D<float4>
 	VoxelTilingParams params; // VoxelTilingParams
 	VoxelTilingParams GetParams() { return params; }
-	RWTexture3D<float4> GetTarget(int i)
-	{
-		if (i == 0) return ResourceDescriptorHeap[Target_0];
-		              return ResourceDescriptorHeap[Target_1];
-	}
+	RWTexture3D<float4> GetTarget(int i) { return ResourceDescriptorHeap[Target[i]]; }
 
-	Texture3D<float4> GetSource(int i)
-	{
-		if (i == 0) return ResourceDescriptorHeap[Source_0];
-		              return ResourceDescriptorHeap[Source_1];
-	}
+	Texture3D<float4> GetSource(int i) { return ResourceDescriptorHeap[Source[i]]; }
 
 };

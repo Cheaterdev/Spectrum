@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct VoxelTilingParams
 {
 	uint4 voxels_per_tile; // uint4

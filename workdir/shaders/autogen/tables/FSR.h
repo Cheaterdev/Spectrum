@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "FSRConstants.h"
-
-
-
 struct FSR
 {
 	uint source; // Texture2D<float4>

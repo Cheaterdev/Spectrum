@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct VoxelVisibility
 {
 	uint visibility; // Texture3D<uint>

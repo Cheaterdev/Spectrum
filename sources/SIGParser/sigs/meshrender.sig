@@ -193,7 +193,7 @@ struct GatherMeshesBoxes
 
 
 
-[ExcludeVulkan] ComputePSO GatherPipeline
+ComputePSO GatherPipeline
 {
 	root = DefaultLayout;
 

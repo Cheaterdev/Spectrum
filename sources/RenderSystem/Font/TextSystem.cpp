@@ -496,7 +496,7 @@ static void draw_vertices(
     {
         auto pipeline = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::FontRender>(
             PSOS::FontRender::Format(formats[0]));
-        if (pipeline) pipeline->debuggable = true;
+
     }
 
     // 4. Shader constants (transform + clip rect)

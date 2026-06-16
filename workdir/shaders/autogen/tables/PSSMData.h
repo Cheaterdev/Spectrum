@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "Camera.h"
-
-
-
 struct PSSMData
 {
 	uint light_buffer; // Texture2DArray<float>

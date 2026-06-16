@@ -4,6 +4,10 @@
 #define AI_MATKEY_COLOR_DIFFUSE "$clr.diffuse", 0, 0
 #define AI_MATKEY_SHININESS     "$mat.shininess", 0, 0
 #define AI_MATKEY_REFLECTIVITY  "$mat.reflectivity", 0, 0
+// material.h defines aiGetMaterialFloat as static inline; static functions from
+// exported headers don't cross the module boundary into this TU, so include it
+// explicitly in the global module fragment to keep the definition reachable.
+#include <assimp/material.h>
 
 module Graphics;
 import Core;

@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "Frustum.h"
-
-
-
 struct Camera
 {
 	float4x4 view; // float4x4

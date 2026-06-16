@@ -9,9 +9,6 @@
 #include "DispatchMeshArguments.h"
 #include "MeshInfo.h"
 #include "MeshInstanceInfo.h"
-
-
-
 struct CommandData
 {
 	uint mesh_cb; // MeshInfo

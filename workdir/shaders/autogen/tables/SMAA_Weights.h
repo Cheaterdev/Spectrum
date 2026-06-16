@@ -6,9 +6,6 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct SMAA_Weights
 {
 	uint areaTex; // Texture2D<float4>

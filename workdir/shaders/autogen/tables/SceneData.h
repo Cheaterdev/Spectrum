@@ -10,9 +10,6 @@
 #include "MeshCommandData.h"
 #include "RaytraceInstanceInfo.h"
 #include "node_data.h"
-
-
-
 struct SceneData
 {
 	uint nodes; // StructuredBuffer<node_data>

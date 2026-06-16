@@ -6,22 +6,8 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-
-
-
 struct DrawIndexedArguments
 {
-	uint data_0; // uint [was data[5]]
-	uint data_1; // uint [was data[5]]
-	uint data_2; // uint [was data[5]]
-	uint data_3; // uint [was data[5]]
-	uint data_4; // uint [was data[5]]
-	uint GetData(int i)
-	{
-		if (i == 0) return data_0;
-		if (i == 1) return data_1;
-		if (i == 2) return data_2;
-		if (i == 3) return data_3;
-		              return data_4;
-	}
+	uint data[5]; // uint
+	uint GetData(int i) { return data[i]; }
 };

@@ -7,9 +7,6 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "vertex_input.h"
-
-
-
 struct NinePatch
 {
 	uint vb; // StructuredBuffer<vertex_input>

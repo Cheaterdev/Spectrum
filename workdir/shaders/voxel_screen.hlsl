@@ -220,16 +220,13 @@ GI_RESULT PS(quad_output i)
 		for (int y = -R; y <= R; y++)
 		{
 			float2 t_tc = i.tc + float2(x, y) / dims;
-
-
-			int2 offset = float2(x, y);
-
-			float t_raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, i.tc, 1, offset);
+			float2 t_tc_mip1 = i.tc + float2(x, y) * 2.0 / dims;
+			float t_raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, t_tc_mip1, 1);
 			float3 t_pos = depth_to_wpos(t_raw_z, t_tc, camera.GetInvViewProj());
-			float3 t_normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, i.tc, 1, offset).xyz * 2 - 1);
+			float3 t_normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, t_tc_mip1, 1).xyz * 2 - 1);
 
 
-			float4 t_gi = tex_downsampled.SampleLevel(pointClampSampler, i.tc, 0, offset);
+			float4 t_gi = tex_downsampled.SampleLevel(pointClampSampler, t_tc, 0);
 
 
 			float cur_w = saturate(1 - length(t_pos - pos));// 1.0 / (8 * length(t_pos - pos) + 0.1);
