@@ -31,6 +31,6 @@ ConstantBuffer<TilingPostprocess> CreateTilingPostprocess()
 }
 			
 #ifndef NO_GLOBAL
-static const TilingPostprocess tilingPostprocess_global = CreateTilingPostprocess();
-const TilingPostprocess GetTilingPostprocess(){ return tilingPostprocess_global; }
+static const ConstantBuffer<TilingPostprocess> tilingPostprocess_global = CreateTilingPostprocess();
+ConstantBuffer<TilingPostprocess> GetTilingPostprocess(){ return tilingPostprocess_global; }
 #endif

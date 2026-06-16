@@ -19,7 +19,7 @@ struct FSR
 
 
 
-[ExcludeVulkan] ComputePSO FSR
+ComputePSO FSR
 {
 	root = DefaultLayout;
 
@@ -30,7 +30,7 @@ struct FSR
 
 
 
-[ExcludeVulkan] ComputePSO RCAS
+ComputePSO RCAS
 {
 	root = DefaultLayout;
 

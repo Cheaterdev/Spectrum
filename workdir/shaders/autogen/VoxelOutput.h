@@ -31,6 +31,6 @@ ConstantBuffer<VoxelOutput> CreateVoxelOutput()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelOutput voxelOutput_global = CreateVoxelOutput();
-const VoxelOutput GetVoxelOutput(){ return voxelOutput_global; }
+static const ConstantBuffer<VoxelOutput> voxelOutput_global = CreateVoxelOutput();
+ConstantBuffer<VoxelOutput> GetVoxelOutput(){ return voxelOutput_global; }
 #endif

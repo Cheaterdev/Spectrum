@@ -31,6 +31,6 @@ ConstantBuffer<DenoiserShadow_FilterLast> CreateDenoiserShadow_FilterLast()
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserShadow_FilterLast denoiserShadow_FilterLast_global = CreateDenoiserShadow_FilterLast();
-const DenoiserShadow_FilterLast GetDenoiserShadow_FilterLast(){ return denoiserShadow_FilterLast_global; }
+static const ConstantBuffer<DenoiserShadow_FilterLast> denoiserShadow_FilterLast_global = CreateDenoiserShadow_FilterLast();
+ConstantBuffer<DenoiserShadow_FilterLast> GetDenoiserShadow_FilterLast(){ return denoiserShadow_FilterLast_global; }
 #endif

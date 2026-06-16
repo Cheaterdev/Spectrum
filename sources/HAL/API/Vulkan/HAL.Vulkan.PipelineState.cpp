@@ -180,15 +180,6 @@ namespace HAL
         add_stage(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, desc.domain);
         add_stage(VK_SHADER_STAGE_MESH_BIT_EXT, desc.mesh);
 
-        {
-            bool has_gs = desc.geometry && !desc.geometry->get_blob().empty();
-            Log::get() << "[PSDBG] PSO=" << name.c_str()
-                       << " stages=" << stages.size()
-                       << " gs_ptr=" << (desc.geometry != nullptr)
-                       << " gs_blob=" << (desc.geometry ? (int)desc.geometry->get_blob().size() : -1)
-                       << " gs_in_pipeline=" << has_gs << Log::endl;
-        }
-
         if (stages.empty()) return; // no compiled shaders yet
 
         // ---- Vertex input — vertex-pulling; no VS input attributes ---------

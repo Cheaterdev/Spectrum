@@ -31,6 +31,6 @@ ConstantBuffer<VoxelScreen> CreateVoxelScreen()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelScreen voxelScreen_global = CreateVoxelScreen();
-const VoxelScreen GetVoxelScreen(){ return voxelScreen_global; }
+static const ConstantBuffer<VoxelScreen> voxelScreen_global = CreateVoxelScreen();
+ConstantBuffer<VoxelScreen> GetVoxelScreen(){ return voxelScreen_global; }
 #endif

@@ -31,6 +31,6 @@ ConstantBuffer<DenoiserReflectionCommon> CreateDenoiserReflectionCommon()
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserReflectionCommon denoiserReflectionCommon_global = CreateDenoiserReflectionCommon();
-const DenoiserReflectionCommon GetDenoiserReflectionCommon(){ return denoiserReflectionCommon_global; }
+static const ConstantBuffer<DenoiserReflectionCommon> denoiserReflectionCommon_global = CreateDenoiserReflectionCommon();
+ConstantBuffer<DenoiserReflectionCommon> GetDenoiserReflectionCommon(){ return denoiserReflectionCommon_global; }
 #endif

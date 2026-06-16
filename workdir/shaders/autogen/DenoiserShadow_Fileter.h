@@ -20,6 +20,6 @@ ConstantBuffer<CB> pass_DenoiserShadow_Fileter: register(b4, space4);
 	return ResourceDescriptorHeap[pass_DenoiserShadow_Fileter.offset];
 }
 #ifndef NO_GLOBAL
-static const DenoiserShadow_Fileter denoiserShadow_Fileter_global = CreateDenoiserShadow_Fileter();
-const DenoiserShadow_Fileter GetDenoiserShadow_Fileter(){ return denoiserShadow_Fileter_global; }
+static const ConstantBuffer<DenoiserShadow_Fileter> denoiserShadow_Fileter_global = CreateDenoiserShadow_Fileter();
+ConstantBuffer<DenoiserShadow_Fileter> GetDenoiserShadow_Fileter(){ return denoiserShadow_Fileter_global; }
 #endif

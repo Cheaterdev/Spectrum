@@ -31,6 +31,6 @@ ConstantBuffer<TextureRenderer> CreateTextureRenderer()
 }
 			
 #ifndef NO_GLOBAL
-static const TextureRenderer textureRenderer_global = CreateTextureRenderer();
-const TextureRenderer GetTextureRenderer(){ return textureRenderer_global; }
+static const ConstantBuffer<TextureRenderer> textureRenderer_global = CreateTextureRenderer();
+ConstantBuffer<TextureRenderer> GetTextureRenderer(){ return textureRenderer_global; }
 #endif

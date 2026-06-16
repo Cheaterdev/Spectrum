@@ -31,6 +31,6 @@ ConstantBuffer<VoxelVisibility> CreateVoxelVisibility()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelVisibility voxelVisibility_global = CreateVoxelVisibility();
-const VoxelVisibility GetVoxelVisibility(){ return voxelVisibility_global; }
+static const ConstantBuffer<VoxelVisibility> voxelVisibility_global = CreateVoxelVisibility();
+ConstantBuffer<VoxelVisibility> GetVoxelVisibility(){ return voxelVisibility_global; }
 #endif

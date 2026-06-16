@@ -31,6 +31,6 @@ ConstantBuffer<FlowGraph> CreateFlowGraph()
 }
 			
 #ifndef NO_GLOBAL
-static const FlowGraph flowGraph_global = CreateFlowGraph();
-const FlowGraph GetFlowGraph(){ return flowGraph_global; }
+static const ConstantBuffer<FlowGraph> flowGraph_global = CreateFlowGraph();
+ConstantBuffer<FlowGraph> GetFlowGraph(){ return flowGraph_global; }
 #endif

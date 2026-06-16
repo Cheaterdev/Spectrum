@@ -31,6 +31,6 @@ ConstantBuffer<VoxelDebug> CreateVoxelDebug()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelDebug voxelDebug_global = CreateVoxelDebug();
-const VoxelDebug GetVoxelDebug(){ return voxelDebug_global; }
+static const ConstantBuffer<VoxelDebug> voxelDebug_global = CreateVoxelDebug();
+ConstantBuffer<VoxelDebug> GetVoxelDebug(){ return voxelDebug_global; }
 #endif

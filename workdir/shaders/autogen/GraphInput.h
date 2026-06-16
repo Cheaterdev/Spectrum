@@ -31,6 +31,6 @@ ConstantBuffer<GraphInput> CreateGraphInput()
 }
 			
 #ifndef NO_GLOBAL
-static const GraphInput graphInput_global = CreateGraphInput();
-const GraphInput GetGraphInput(){ return graphInput_global; }
+static const ConstantBuffer<GraphInput> graphInput_global = CreateGraphInput();
+ConstantBuffer<GraphInput> GetGraphInput(){ return graphInput_global; }
 #endif

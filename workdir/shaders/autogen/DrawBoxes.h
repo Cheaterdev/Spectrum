@@ -31,6 +31,6 @@ ConstantBuffer<DrawBoxes> CreateDrawBoxes()
 }
 			
 #ifndef NO_GLOBAL
-static const DrawBoxes drawBoxes_global = CreateDrawBoxes();
-const DrawBoxes GetDrawBoxes(){ return drawBoxes_global; }
+static const ConstantBuffer<DrawBoxes> drawBoxes_global = CreateDrawBoxes();
+ConstantBuffer<DrawBoxes> GetDrawBoxes(){ return drawBoxes_global; }
 #endif

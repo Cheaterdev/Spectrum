@@ -31,6 +31,6 @@ ConstantBuffer<Color> CreateColor()
 }
 			
 #ifndef NO_GLOBAL
-static const Color color_global = CreateColor();
-const Color GetColor(){ return color_global; }
+static const ConstantBuffer<Color> color_global = CreateColor();
+ConstantBuffer<Color> GetColor(){ return color_global; }
 #endif

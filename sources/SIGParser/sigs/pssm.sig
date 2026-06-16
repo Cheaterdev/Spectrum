@@ -45,7 +45,7 @@ struct PSSMLighting
 }
 
 
-[ExcludeVulkan] GraphicsPSO PSSMMask
+GraphicsPSO PSSMMask
 {
 	root = DefaultLayout;
 
@@ -58,7 +58,7 @@ struct PSSMLighting
 	rtv = { R8_UNORM };
 }
 
-[ExcludeVulkan] GraphicsPSO PSSMApply
+GraphicsPSO PSSMApply
 {
 	root = DefaultLayout;
 
@@ -80,7 +80,7 @@ struct GBufferDownsampleRT
 }
 
 
-[ExcludeVulkan] GraphicsPSO GBufferDownsample
+GraphicsPSO GBufferDownsample
 {
 	root = DefaultLayout;
 

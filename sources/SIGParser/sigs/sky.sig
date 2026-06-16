@@ -34,7 +34,7 @@ struct EnvSource
 }
 
 
-[ExcludeVulkan] GraphicsPSO Sky
+GraphicsPSO Sky
 {
 	root = DefaultLayout;
 
@@ -49,7 +49,7 @@ struct EnvSource
 }
 
 
-[ExcludeVulkan] GraphicsPSO SkyCube
+GraphicsPSO SkyCube
 {
 	root = DefaultLayout;
 
@@ -62,7 +62,7 @@ struct EnvSource
 	rtv = { R11G11B10_FLOAT };
 }
 
-[ExcludeVulkan] GraphicsPSO CubemapENV
+GraphicsPSO CubemapENV
 {
 	root = DefaultLayout;
 
@@ -80,7 +80,7 @@ struct EnvSource
 	rtv = { R11G11B10_FLOAT };
 }
 
-[ExcludeVulkan] GraphicsPSO CubemapENVDiffuse
+GraphicsPSO CubemapENVDiffuse
 {
 	root = DefaultLayout;
 

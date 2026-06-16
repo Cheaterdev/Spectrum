@@ -31,6 +31,6 @@ ConstantBuffer<VoxelInfo> CreateVoxelInfo()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelInfo voxelInfo_global = CreateVoxelInfo();
-const VoxelInfo GetVoxelInfo(){ return voxelInfo_global; }
+static const ConstantBuffer<VoxelInfo> voxelInfo_global = CreateVoxelInfo();
+ConstantBuffer<VoxelInfo> GetVoxelInfo(){ return voxelInfo_global; }
 #endif

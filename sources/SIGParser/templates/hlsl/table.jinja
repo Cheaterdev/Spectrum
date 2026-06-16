@@ -66,7 +66,11 @@ struct {{"[raypayload]" if table.options.raypayload is defined}}{{table.name}}
 		              return {{v.name}}_{{v.array_count - 1}};
 	}
 	{%- else %}
+	{%- if v.value_type == ValueType.STRUCT and not v.pointer and not v.as_array %}
+	{{v.type}} Get{{v.name|camel}}() { return {{v.name}}; }
+	{%- else %}
 	{{v.type if not v.pointer else "uint"}} Get{{v.name|camel}}({{"int i" if v.as_array}}) { return {{v.name}}{{"[i]" if v.as_array}}; }
+	{%- endif %}
 	{%- endif %}
 {%-endif-%}
 {%-endfor-%}

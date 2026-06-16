@@ -32,6 +32,6 @@ ConstantBuffer<{{table.name}}> Create{{table.name}}()
 }
 			
 #ifndef NO_GLOBAL
-static const {{table.name}} {{lowerize(table.name) }}_global = Create{{table.name}}();
-const {{table.name}} Get{{table.name|title}}(){ return {{lowerize(table.name)}}_global; }
+static const ConstantBuffer<{{table.name}}> {{lowerize(table.name) }}_global = Create{{table.name}}();
+ConstantBuffer<{{table.name}}> Get{{table.name|title}}(){ return {{lowerize(table.name)}}_global; }
 #endif

@@ -31,6 +31,6 @@ ConstantBuffer<GBufferDownsample> CreateGBufferDownsample()
 }
 			
 #ifndef NO_GLOBAL
-static const GBufferDownsample gBufferDownsample_global = CreateGBufferDownsample();
-const GBufferDownsample GetGBufferDownsample(){ return gBufferDownsample_global; }
+static const ConstantBuffer<GBufferDownsample> gBufferDownsample_global = CreateGBufferDownsample();
+ConstantBuffer<GBufferDownsample> GetGBufferDownsample(){ return gBufferDownsample_global; }
 #endif

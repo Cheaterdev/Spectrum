@@ -31,6 +31,6 @@ ConstantBuffer<FrameInfo> CreateFrameInfo()
 }
 			
 #ifndef NO_GLOBAL
-static const FrameInfo frameInfo_global = CreateFrameInfo();
-const FrameInfo GetFrameInfo(){ return frameInfo_global; }
+static const ConstantBuffer<FrameInfo> frameInfo_global = CreateFrameInfo();
+ConstantBuffer<FrameInfo> GetFrameInfo(){ return frameInfo_global; }
 #endif

@@ -86,7 +86,7 @@ struct DenoiserReflectionResolve
 	Buffer<uint> g_denoiser_tile_list;
 }
 
-[ExcludeVulkan] ComputePSO DenoiserReflectionReproject
+ComputePSO DenoiserReflectionReproject
 {
 	root = DefaultLayout;
 
@@ -95,7 +95,7 @@ struct DenoiserReflectionResolve
 }
 
 
-[ExcludeVulkan] ComputePSO DenoiserReflectionPrefilter
+ComputePSO DenoiserReflectionPrefilter
 {
 	root = DefaultLayout;
 
@@ -104,7 +104,7 @@ struct DenoiserReflectionResolve
 }
 
 
-[ExcludeVulkan] ComputePSO DenoiserReflectionResolve
+ComputePSO DenoiserReflectionResolve
 {
 	root = DefaultLayout;
 

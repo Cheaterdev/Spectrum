@@ -31,6 +31,6 @@ ConstantBuffer<BlueNoise> CreateBlueNoise()
 }
 			
 #ifndef NO_GLOBAL
-static const BlueNoise blueNoise_global = CreateBlueNoise();
-const BlueNoise GetBlueNoise(){ return blueNoise_global; }
+static const ConstantBuffer<BlueNoise> blueNoise_global = CreateBlueNoise();
+ConstantBuffer<BlueNoise> GetBlueNoise(){ return blueNoise_global; }
 #endif

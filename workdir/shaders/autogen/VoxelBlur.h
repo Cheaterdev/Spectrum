@@ -31,6 +31,6 @@ ConstantBuffer<VoxelBlur> CreateVoxelBlur()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelBlur voxelBlur_global = CreateVoxelBlur();
-const VoxelBlur GetVoxelBlur(){ return voxelBlur_global; }
+static const ConstantBuffer<VoxelBlur> voxelBlur_global = CreateVoxelBlur();
+ConstantBuffer<VoxelBlur> GetVoxelBlur(){ return voxelBlur_global; }
 #endif

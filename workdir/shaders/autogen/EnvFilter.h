@@ -31,6 +31,6 @@ ConstantBuffer<EnvFilter> CreateEnvFilter()
 }
 			
 #ifndef NO_GLOBAL
-static const EnvFilter envFilter_global = CreateEnvFilter();
-const EnvFilter GetEnvFilter(){ return envFilter_global; }
+static const ConstantBuffer<EnvFilter> envFilter_global = CreateEnvFilter();
+ConstantBuffer<EnvFilter> GetEnvFilter(){ return envFilter_global; }
 #endif

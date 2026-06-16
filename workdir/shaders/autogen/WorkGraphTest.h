@@ -31,6 +31,6 @@ ConstantBuffer<WorkGraphTest> CreateWorkGraphTest()
 }
 			
 #ifndef NO_GLOBAL
-static const WorkGraphTest workGraphTest_global = CreateWorkGraphTest();
-const WorkGraphTest GetWorkGraphTest(){ return workGraphTest_global; }
+static const ConstantBuffer<WorkGraphTest> workGraphTest_global = CreateWorkGraphTest();
+ConstantBuffer<WorkGraphTest> GetWorkGraphTest(){ return workGraphTest_global; }
 #endif

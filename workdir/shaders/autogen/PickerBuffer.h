@@ -31,6 +31,6 @@ ConstantBuffer<PickerBuffer> CreatePickerBuffer()
 }
 			
 #ifndef NO_GLOBAL
-static const PickerBuffer pickerBuffer_global = CreatePickerBuffer();
-const PickerBuffer GetPickerBuffer(){ return pickerBuffer_global; }
+static const ConstantBuffer<PickerBuffer> pickerBuffer_global = CreatePickerBuffer();
+ConstantBuffer<PickerBuffer> GetPickerBuffer(){ return pickerBuffer_global; }
 #endif

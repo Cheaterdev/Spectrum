@@ -31,6 +31,6 @@ ConstantBuffer<VoxelZero> CreateVoxelZero()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelZero voxelZero_global = CreateVoxelZero();
-const VoxelZero GetVoxelZero(){ return voxelZero_global; }
+static const ConstantBuffer<VoxelZero> voxelZero_global = CreateVoxelZero();
+ConstantBuffer<VoxelZero> GetVoxelZero(){ return voxelZero_global; }
 #endif

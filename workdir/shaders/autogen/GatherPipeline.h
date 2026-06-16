@@ -31,6 +31,6 @@ ConstantBuffer<GatherPipeline> CreateGatherPipeline()
 }
 			
 #ifndef NO_GLOBAL
-static const GatherPipeline gatherPipeline_global = CreateGatherPipeline();
-const GatherPipeline GetGatherPipeline(){ return gatherPipeline_global; }
+static const ConstantBuffer<GatherPipeline> gatherPipeline_global = CreateGatherPipeline();
+ConstantBuffer<GatherPipeline> GetGatherPipeline(){ return gatherPipeline_global; }
 #endif

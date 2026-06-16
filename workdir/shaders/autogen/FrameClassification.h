@@ -31,6 +31,6 @@ ConstantBuffer<FrameClassification> CreateFrameClassification()
 }
 			
 #ifndef NO_GLOBAL
-static const FrameClassification frameClassification_global = CreateFrameClassification();
-const FrameClassification GetFrameClassification(){ return frameClassification_global; }
+static const ConstantBuffer<FrameClassification> frameClassification_global = CreateFrameClassification();
+ConstantBuffer<FrameClassification> GetFrameClassification(){ return frameClassification_global; }
 #endif

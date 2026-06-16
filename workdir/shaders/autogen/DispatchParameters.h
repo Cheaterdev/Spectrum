@@ -31,6 +31,6 @@ ConstantBuffer<DispatchParameters> CreateDispatchParameters()
 }
 			
 #ifndef NO_GLOBAL
-static const DispatchParameters dispatchParameters_global = CreateDispatchParameters();
-const DispatchParameters GetDispatchParameters(){ return dispatchParameters_global; }
+static const ConstantBuffer<DispatchParameters> dispatchParameters_global = CreateDispatchParameters();
+ConstantBuffer<DispatchParameters> GetDispatchParameters(){ return dispatchParameters_global; }
 #endif

@@ -31,6 +31,6 @@ ConstantBuffer<DenoiserShadow_TileClassification> CreateDenoiserShadow_TileClass
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserShadow_TileClassification denoiserShadow_TileClassification_global = CreateDenoiserShadow_TileClassification();
-const DenoiserShadow_TileClassification GetDenoiserShadow_TileClassification(){ return denoiserShadow_TileClassification_global; }
+static const ConstantBuffer<DenoiserShadow_TileClassification> denoiserShadow_TileClassification_global = CreateDenoiserShadow_TileClassification();
+ConstantBuffer<DenoiserShadow_TileClassification> GetDenoiserShadow_TileClassification(){ return denoiserShadow_TileClassification_global; }
 #endif

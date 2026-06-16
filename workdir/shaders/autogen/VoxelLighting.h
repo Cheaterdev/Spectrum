@@ -31,6 +31,6 @@ ConstantBuffer<VoxelLighting> CreateVoxelLighting()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelLighting voxelLighting_global = CreateVoxelLighting();
-const VoxelLighting GetVoxelLighting(){ return voxelLighting_global; }
+static const ConstantBuffer<VoxelLighting> voxelLighting_global = CreateVoxelLighting();
+ConstantBuffer<VoxelLighting> GetVoxelLighting(){ return voxelLighting_global; }
 #endif

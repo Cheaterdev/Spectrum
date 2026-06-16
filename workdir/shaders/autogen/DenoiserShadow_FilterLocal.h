@@ -31,6 +31,6 @@ ConstantBuffer<DenoiserShadow_FilterLocal> CreateDenoiserShadow_FilterLocal()
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserShadow_FilterLocal denoiserShadow_FilterLocal_global = CreateDenoiserShadow_FilterLocal();
-const DenoiserShadow_FilterLocal GetDenoiserShadow_FilterLocal(){ return denoiserShadow_FilterLocal_global; }
+static const ConstantBuffer<DenoiserShadow_FilterLocal> denoiserShadow_FilterLocal_global = CreateDenoiserShadow_FilterLocal();
+ConstantBuffer<DenoiserShadow_FilterLocal> GetDenoiserShadow_FilterLocal(){ return denoiserShadow_FilterLocal_global; }
 #endif

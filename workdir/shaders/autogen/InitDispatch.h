@@ -31,6 +31,6 @@ ConstantBuffer<InitDispatch> CreateInitDispatch()
 }
 			
 #ifndef NO_GLOBAL
-static const InitDispatch initDispatch_global = CreateInitDispatch();
-const InitDispatch GetInitDispatch(){ return initDispatch_global; }
+static const ConstantBuffer<InitDispatch> initDispatch_global = CreateInitDispatch();
+ConstantBuffer<InitDispatch> GetInitDispatch(){ return initDispatch_global; }
 #endif

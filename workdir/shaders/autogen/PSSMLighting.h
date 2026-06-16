@@ -31,6 +31,6 @@ ConstantBuffer<PSSMLighting> CreatePSSMLighting()
 }
 			
 #ifndef NO_GLOBAL
-static const PSSMLighting pSSMLighting_global = CreatePSSMLighting();
-const PSSMLighting GetPSSMLighting(){ return pSSMLighting_global; }
+static const ConstantBuffer<PSSMLighting> pSSMLighting_global = CreatePSSMLighting();
+ConstantBuffer<PSSMLighting> GetPSSMLighting(){ return pSSMLighting_global; }
 #endif

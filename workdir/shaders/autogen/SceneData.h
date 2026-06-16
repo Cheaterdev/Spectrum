@@ -31,6 +31,6 @@ ConstantBuffer<SceneData> CreateSceneData()
 }
 			
 #ifndef NO_GLOBAL
-static const SceneData sceneData_global = CreateSceneData();
-const SceneData GetSceneData(){ return sceneData_global; }
+static const ConstantBuffer<SceneData> sceneData_global = CreateSceneData();
+ConstantBuffer<SceneData> GetSceneData(){ return sceneData_global; }
 #endif

@@ -31,6 +31,6 @@ ConstantBuffer<RaytracingRays> CreateRaytracingRays()
 }
 			
 #ifndef NO_GLOBAL
-static const RaytracingRays raytracingRays_global = CreateRaytracingRays();
-const RaytracingRays GetRaytracingRays(){ return raytracingRays_global; }
+static const ConstantBuffer<RaytracingRays> raytracingRays_global = CreateRaytracingRays();
+ConstantBuffer<RaytracingRays> GetRaytracingRays(){ return raytracingRays_global; }
 #endif

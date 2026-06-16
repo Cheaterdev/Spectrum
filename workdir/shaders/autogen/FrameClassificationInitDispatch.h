@@ -31,6 +31,6 @@ ConstantBuffer<FrameClassificationInitDispatch> CreateFrameClassificationInitDis
 }
 			
 #ifndef NO_GLOBAL
-static const FrameClassificationInitDispatch frameClassificationInitDispatch_global = CreateFrameClassificationInitDispatch();
-const FrameClassificationInitDispatch GetFrameClassificationInitDispatch(){ return frameClassificationInitDispatch_global; }
+static const ConstantBuffer<FrameClassificationInitDispatch> frameClassificationInitDispatch_global = CreateFrameClassificationInitDispatch();
+ConstantBuffer<FrameClassificationInitDispatch> GetFrameClassificationInitDispatch(){ return frameClassificationInitDispatch_global; }
 #endif

@@ -31,6 +31,6 @@ ConstantBuffer<SMAA_Global> CreateSMAA_Global()
 }
 			
 #ifndef NO_GLOBAL
-static const SMAA_Global sMAA_Global_global = CreateSMAA_Global();
-const SMAA_Global GetSMAA_Global(){ return sMAA_Global_global; }
+static const ConstantBuffer<SMAA_Global> sMAA_Global_global = CreateSMAA_Global();
+ConstantBuffer<SMAA_Global> GetSMAA_Global(){ return sMAA_Global_global; }
 #endif

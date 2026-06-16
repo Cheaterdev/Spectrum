@@ -31,6 +31,6 @@ ConstantBuffer<SkyFace> CreateSkyFace()
 }
 			
 #ifndef NO_GLOBAL
-static const SkyFace skyFace_global = CreateSkyFace();
-const SkyFace GetSkyFace(){ return skyFace_global; }
+static const ConstantBuffer<SkyFace> skyFace_global = CreateSkyFace();
+ConstantBuffer<SkyFace> GetSkyFace(){ return skyFace_global; }
 #endif

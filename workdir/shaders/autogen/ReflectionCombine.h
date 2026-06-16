@@ -31,6 +31,6 @@ ConstantBuffer<ReflectionCombine> CreateReflectionCombine()
 }
 			
 #ifndef NO_GLOBAL
-static const ReflectionCombine reflectionCombine_global = CreateReflectionCombine();
-const ReflectionCombine GetReflectionCombine(){ return reflectionCombine_global; }
+static const ConstantBuffer<ReflectionCombine> reflectionCombine_global = CreateReflectionCombine();
+ConstantBuffer<ReflectionCombine> GetReflectionCombine(){ return reflectionCombine_global; }
 #endif

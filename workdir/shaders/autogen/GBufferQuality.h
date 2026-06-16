@@ -31,6 +31,6 @@ ConstantBuffer<GBufferQuality> CreateGBufferQuality()
 }
 			
 #ifndef NO_GLOBAL
-static const GBufferQuality gBufferQuality_global = CreateGBufferQuality();
-const GBufferQuality GetGBufferQuality(){ return gBufferQuality_global; }
+static const ConstantBuffer<GBufferQuality> gBufferQuality_global = CreateGBufferQuality();
+ConstantBuffer<GBufferQuality> GetGBufferQuality(){ return gBufferQuality_global; }
 #endif

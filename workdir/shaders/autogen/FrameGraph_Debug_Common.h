@@ -31,6 +31,6 @@ ConstantBuffer<FrameGraph_Debug_Common> CreateFrameGraph_Debug_Common()
 }
 			
 #ifndef NO_GLOBAL
-static const FrameGraph_Debug_Common frameGraph_Debug_Common_global = CreateFrameGraph_Debug_Common();
-const FrameGraph_Debug_Common GetFrameGraph_Debug_Common(){ return frameGraph_Debug_Common_global; }
+static const ConstantBuffer<FrameGraph_Debug_Common> frameGraph_Debug_Common_global = CreateFrameGraph_Debug_Common();
+ConstantBuffer<FrameGraph_Debug_Common> GetFrameGraph_Debug_Common(){ return frameGraph_Debug_Common_global; }
 #endif

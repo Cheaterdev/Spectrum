@@ -32,11 +32,6 @@ namespace GUI
 			p.w = std::min(text_size.x, render_bounds->w);
 			p.h = std::min(text_size.y, render_bounds->h);
 
-			Log::get() << "[LBLDBG] draw: rb=(" << render_bounds->x << "," << render_bounds->y << "," << render_bounds->w << "," << render_bounds->h << ")"
-			           << " clip=(" << c.ui_clipping.left << "," << c.ui_clipping.top << "," << c.ui_clipping.right << "," << c.ui_clipping.bottom << ")"
-			           << " text_size=(" << text_size.x << "," << text_size.y << ")"
-			           << " cache_valid=" << (bool)cache.texture.texture2D << Log::endl;
-
 			if (c.ui_clipping.left < c.ui_clipping.right)
 				if (c.ui_clipping.top < c.ui_clipping.bottom)
 				{
@@ -49,12 +44,10 @@ namespace GUI
 					if ((magnet_text & FW1_VCENTER) && text_size.y < render_bounds->h)
 						p.y += (p.h - std::ceil(text_size.y)) / 2;
 					sizer intersected = intersect(math::convert(p), c.ui_clipping);
-					Log::get() << "[LBLDBG] intersected=(" << intersected.left << "," << intersected.top << "," << intersected.right << "," << intersected.bottom << ")" << Log::endl;
 					if ((intersected.top < intersected.bottom && intersected.left < intersected.right))
 					{
 					//	 if(GetAsyncKeyState('U'))
 						ASSERT(cache.texture.texture2D && "label::draw: cache texture not initialized — recalculate not called?");
-						Log::get() << "[LBLDBG] calling renderer->draw" << Log::endl;
 						c.renderer->draw(c, cache, p);
 					//	 else
 					//		 geomerty->draw(c.command_list, c.ui_clipping, 0, p.pos);

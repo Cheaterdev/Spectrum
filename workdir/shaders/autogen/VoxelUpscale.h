@@ -31,6 +31,6 @@ ConstantBuffer<VoxelUpscale> CreateVoxelUpscale()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelUpscale voxelUpscale_global = CreateVoxelUpscale();
-const VoxelUpscale GetVoxelUpscale(){ return voxelUpscale_global; }
+static const ConstantBuffer<VoxelUpscale> voxelUpscale_global = CreateVoxelUpscale();
+ConstantBuffer<VoxelUpscale> GetVoxelUpscale(){ return voxelUpscale_global; }
 #endif

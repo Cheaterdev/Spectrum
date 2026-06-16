@@ -31,6 +31,6 @@ ConstantBuffer<DenoiserHistoryFix> CreateDenoiserHistoryFix()
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserHistoryFix denoiserHistoryFix_global = CreateDenoiserHistoryFix();
-const DenoiserHistoryFix GetDenoiserHistoryFix(){ return denoiserHistoryFix_global; }
+static const ConstantBuffer<DenoiserHistoryFix> denoiserHistoryFix_global = CreateDenoiserHistoryFix();
+ConstantBuffer<DenoiserHistoryFix> GetDenoiserHistoryFix(){ return denoiserHistoryFix_global; }
 #endif

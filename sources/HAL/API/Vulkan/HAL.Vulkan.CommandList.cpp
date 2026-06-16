@@ -193,11 +193,6 @@ namespace HAL::API
                 bb.buffer        = api_res.get_vk_buffer();
                 bb.offset        = 0;
                 bb.size          = VK_WHOLE_SIZE;
-                Log::get() << "[VKDBG] buf-barrier buf=" << (uint64_t)bb.buffer
-                           << " srcStage=" << bb.srcStageMask
-                           << " srcAccess=" << bb.srcAccessMask
-                           << " dstStage=" << bb.dstStageMask
-                           << " dstAccess=" << bb.dstAccessMask << Log::endl;
                 buffer_barriers.push_back(bb);
             }
         }
@@ -254,8 +249,6 @@ namespace HAL::API
         current_color_view = cv;
         current_depth_view = dv;
         current_extent     = (cv != VK_NULL_HANDLE) ? ce : de;
-        Log::get() << "[VKDBG] set_rtv cv=" << (cv != VK_NULL_HANDLE)
-                   << " extent=" << current_extent.width << "x" << current_extent.height << Log::endl;
     }
 
     // ---- Clear operations ---------------------------------------------------
@@ -273,6 +266,24 @@ namespace HAL::API
         if (view == VK_NULL_HANDLE) return;
 
         end_rendering_if_active();
+
+        // Transition to COLOR_ATTACHMENT_OPTIMAL before the clear.  UNDEFINED as
+        // oldLayout is always valid; it matches LOAD_OP_CLEAR's "discard" semantics.
+        {
+            VkImageMemoryBarrier2 b{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+            b.srcStageMask  = VK_PIPELINE_STAGE_2_NONE;
+            b.srcAccessMask = 0;
+            b.dstStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+            b.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+            b.oldLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
+            b.newLayout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            b.image         = api.get_vk_image();
+            b.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
+            VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+            dep.imageMemoryBarrierCount = 1;
+            dep.pImageMemoryBarriers    = &b;
+            vkCmdPipelineBarrier2(vk_cmd, &dep);
+        }
 
         VkClearValue cv{};
         cv.color.float32[0] = color.x;
@@ -319,6 +330,23 @@ namespace HAL::API
 
         end_rendering_if_active();
 
+        // Transition to DEPTH_STENCIL_ATTACHMENT_OPTIMAL before the clear.
+        {
+            VkImageMemoryBarrier2 b{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+            b.srcStageMask  = VK_PIPELINE_STAGE_2_NONE;
+            b.srcAccessMask = 0;
+            b.dstStageMask  = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
+            b.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            b.oldLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
+            b.newLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            b.image         = api.get_vk_image();
+            b.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
+            VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+            dep.imageMemoryBarrierCount = 1;
+            dep.pImageMemoryBarriers    = &b;
+            vkCmdPipelineBarrier2(vk_cmd, &dep);
+        }
+
         VkClearValue cv;
         cv.depthStencil = { depth, 0 };
 
@@ -330,6 +358,11 @@ namespace HAL::API
         att.clearValue  = cv;
 
         VkExtent2D ext = api.get_imported_extent();
+        if (ext.width == 0 && dv->Resource->get_desc().is_texture())
+        {
+            auto& td = dv->Resource->get_desc().as_texture();
+            ext = { td.Dimensions.x, td.Dimensions.y };
+        }
 
         VkRenderingInfo rinfo{ VK_STRUCTURE_TYPE_RENDERING_INFO };
         rinfo.renderArea      = { {0, 0}, ext };
@@ -379,12 +412,7 @@ namespace HAL::API
     {
         if (in_render_pass) return;
         if (current_color_view == VK_NULL_HANDLE && current_depth_view == VK_NULL_HANDLE)
-        {
-            Log::get() << "[VKDBG] ensure_rendering_active: no color/depth view, cannot start RP" << Log::endl;
             return;
-        }
-        Log::get() << "[VKDBG] ensure_rendering_active: starting RP cv=" << (uint64_t)current_color_view
-                   << " extent=" << current_extent.width << "x" << current_extent.height << Log::endl;
         VkClearValue noop{};
         begin_rendering(VK_ATTACHMENT_LOAD_OP_LOAD, noop, VK_ATTACHMENT_LOAD_OP_LOAD, noop);
     }
@@ -499,18 +527,6 @@ namespace HAL::API
     void CommandList::draw(UINT vertex_count, UINT vertex_offset,
                             UINT instance_count, UINT instance_offset)
     {
-        // TEMP DIAGNOSTIC
-        static int dbg_draws = 0;
-        if (dbg_draws < 30)
-        {
-            ++dbg_draws;
-            Log::get() << "[VKDBG] draw vc=" << vertex_count
-                       << " cmd=" << (vk_cmd != VK_NULL_HANDLE)
-                       << " color_view=" << (current_color_view != VK_NULL_HANDLE)
-                       << " in_rp=" << in_render_pass
-                       << " extent=" << current_extent.width << "x" << current_extent.height
-                       << " pso=" << (current_graphics_pipeline != VK_NULL_HANDLE) << Log::endl;
-        }
         if (vk_cmd == VK_NULL_HANDLE) return;
         ensure_rendering_active();
         if (!in_render_pass) return; // no RTV set — skip rather than crash validation
@@ -522,21 +538,9 @@ namespace HAL::API
     void CommandList::draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset,
                                     UINT instance_count, UINT instance_offset)
     {
-        // TEMP DIAGNOSTIC
-        Log::get() << "[VKDBG] draw_indexed ic=" << index_count
-                   << " inst=" << instance_count
-                   << " color_view=" << (current_color_view != VK_NULL_HANDLE)
-                   << " in_rp_before=" << in_render_pass
-                   << " extent=" << current_extent.width << "x" << current_extent.height
-                   << " pso=" << (current_graphics_pipeline != VK_NULL_HANDLE) << Log::endl;
         if (vk_cmd == VK_NULL_HANDLE) return;
         ensure_rendering_active();
-        Log::get() << "[VKDBG] draw_indexed in_rp_after=" << in_render_pass << Log::endl;
-        if (!in_render_pass)
-        {
-            Log::get() << "[VKDBG] draw_indexed SKIPPED — in_render_pass=false" << Log::endl;
-            return;
-        }
+        if (!in_render_pass) return;
         reapply_draw_state();
         if (current_index_buffer != VK_NULL_HANDLE)
             vkCmdBindIndexBuffer(vk_cmd, current_index_buffer, current_index_offset, current_index_type);
@@ -635,12 +639,6 @@ namespace HAL::API
     void CommandList::graphics_set_constant(UINT slot, UINT offset, UINT value)
     {
         if (vk_cmd == VK_NULL_HANDLE || current_pipeline_layout == VK_NULL_HANDLE) return;
-        // TEMP DIAG: trace NinePatch CBV slot being pushed
-        if (slot + offset == 4)
-        {
-            Log::get() << "[VKDBG] graphics_set_constant slot=4 value=" << value
-                       << " layout=" << (uint64_t)current_pipeline_layout << Log::endl;
-        }
         uint32_t byte_offset = (slot + offset) * sizeof(uint32_t);
         // Stage so reapply_draw_state() can re-push before each draw — vkCmdPushConstants
         // does not survive a command-buffer split; without re-pushing, the shader reads 0
@@ -696,11 +694,6 @@ namespace HAL::API
         region.srcOffset = src_offset;
         region.dstOffset = dest_offset;
         region.size      = size;
-        Log::get() << "[VKDBG] copy_buffer src=" << (uint64_t)src_api.get_vk_buffer()
-                   << " srcOff=" << src_offset
-                   << " dst=" << (uint64_t)dst_api.get_vk_buffer()
-                   << " dstOff=" << dest_offset
-                   << " size=" << size << Log::endl;
         vkCmdCopyBuffer(vk_cmd, src_api.get_vk_buffer(),
                         dst_api.get_vk_buffer(), 1, &region);
     }

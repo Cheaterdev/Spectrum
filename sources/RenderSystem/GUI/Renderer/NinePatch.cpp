@@ -57,10 +57,6 @@ if(!index_buffer)
 			added = true;
 			textures_handles.emplace_back(item.texture.texture2D);
 		}
-		Log::get() << "[NPDBG] draw added=" << added
-		           << " tex2D_valid=" << item.texture.texture2D.is_valid()
-		           << " vtx=" << vertexes.size() << Log::endl;
-
 		if (!added && current_state == HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::NinePatch>())
 		{
 			return;
@@ -290,15 +286,6 @@ if(!index_buffer)
 	void NinePatch::flush(base::Context& c)
 	{
 		if (vertexes.empty()) return;
-
-		Log::get() << "[NPDBG] flush verts=" << vertexes.size()
-		           << " textures=" << textures_handles.size()
-		           << " pso=" << (current_state != nullptr)
-		           << " ib_res=" << (index_buffer.resource != nullptr) << Log::endl;
-		for (uint i = 0; i < textures_handles.size(); i++)
-			Log::get() << "[NPDBG]   tex[" << i << "] valid=" << textures_handles[i].is_valid()
-			           << " off=" << (textures_handles[i].is_valid() ? textures_handles[i].get_offset() : 0u)
-			           << Log::endl;
 
 		auto& graphics = c.command_list->get_graphics();
 		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);

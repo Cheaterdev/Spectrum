@@ -8,7 +8,7 @@ struct DenoiserShadow_Prepare
 	RWStructuredBuffer<uint> rwsb_shadowMask;
 }
 
-[ExcludeVulkan] ComputePSO DenoiserShadow_Prepare
+ComputePSO DenoiserShadow_Prepare
 {
 	root = DefaultLayout;
 
@@ -48,7 +48,7 @@ struct DenoiserShadow_TileClassification
 }
 
 
-[ExcludeVulkan] ComputePSO DenoiserShadow_TileClassification
+ComputePSO DenoiserShadow_TileClassification
 {
 	root = DefaultLayout;
 
@@ -87,7 +87,7 @@ struct DenoiserShadow_FilterLast
 	Texture2D<float16_t2>  rqt2d_input;
 	RWTexture2D<unorm float4>  rwt2d_output;
 }
-[ExcludeVulkan] ComputePSO DenoiserShadow_Filter
+ComputePSO DenoiserShadow_Filter
 {
 	root = DefaultLayout;
 

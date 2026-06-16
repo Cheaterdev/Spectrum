@@ -31,6 +31,6 @@ ConstantBuffer<DenoiserReflectionReproject> CreateDenoiserReflectionReproject()
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserReflectionReproject denoiserReflectionReproject_global = CreateDenoiserReflectionReproject();
-const DenoiserReflectionReproject GetDenoiserReflectionReproject(){ return denoiserReflectionReproject_global; }
+static const ConstantBuffer<DenoiserReflectionReproject> denoiserReflectionReproject_global = CreateDenoiserReflectionReproject();
+ConstantBuffer<DenoiserReflectionReproject> GetDenoiserReflectionReproject(){ return denoiserReflectionReproject_global; }
 #endif

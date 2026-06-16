@@ -31,6 +31,6 @@ ConstantBuffer<FontRendering> CreateFontRendering()
 }
 			
 #ifndef NO_GLOBAL
-static const FontRendering fontRendering_global = CreateFontRendering();
-const FontRendering GetFontRendering(){ return fontRendering_global; }
+static const ConstantBuffer<FontRendering> fontRendering_global = CreateFontRendering();
+ConstantBuffer<FontRendering> GetFontRendering(){ return fontRendering_global; }
 #endif

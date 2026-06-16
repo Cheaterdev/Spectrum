@@ -31,6 +31,6 @@ ConstantBuffer<FrameGraph_Debug_TextureCube> CreateFrameGraph_Debug_TextureCube(
 }
 			
 #ifndef NO_GLOBAL
-static const FrameGraph_Debug_TextureCube frameGraph_Debug_TextureCube_global = CreateFrameGraph_Debug_TextureCube();
-const FrameGraph_Debug_TextureCube GetFrameGraph_Debug_TextureCube(){ return frameGraph_Debug_TextureCube_global; }
+static const ConstantBuffer<FrameGraph_Debug_TextureCube> frameGraph_Debug_TextureCube_global = CreateFrameGraph_Debug_TextureCube();
+ConstantBuffer<FrameGraph_Debug_TextureCube> GetFrameGraph_Debug_TextureCube(){ return frameGraph_Debug_TextureCube_global; }
 #endif

@@ -31,6 +31,6 @@ ConstantBuffer<Test> CreateTest()
 }
 			
 #ifndef NO_GLOBAL
-static const Test test_global = CreateTest();
-const Test GetTest(){ return test_global; }
+static const ConstantBuffer<Test> test_global = CreateTest();
+ConstantBuffer<Test> GetTest(){ return test_global; }
 #endif

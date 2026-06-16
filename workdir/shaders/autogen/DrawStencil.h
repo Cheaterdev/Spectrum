@@ -31,6 +31,6 @@ ConstantBuffer<DrawStencil> CreateDrawStencil()
 }
 			
 #ifndef NO_GLOBAL
-static const DrawStencil drawStencil_global = CreateDrawStencil();
-const DrawStencil GetDrawStencil(){ return drawStencil_global; }
+static const ConstantBuffer<DrawStencil> drawStencil_global = CreateDrawStencil();
+ConstantBuffer<DrawStencil> GetDrawStencil(){ return drawStencil_global; }
 #endif

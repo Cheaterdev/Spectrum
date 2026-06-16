@@ -31,6 +31,6 @@ ConstantBuffer<FSR> CreateFSR()
 }
 			
 #ifndef NO_GLOBAL
-static const FSR fSR_global = CreateFSR();
-const FSR GetFSR(){ return fSR_global; }
+static const ConstantBuffer<FSR> fSR_global = CreateFSR();
+ConstantBuffer<FSR> GetFSR(){ return fSR_global; }
 #endif

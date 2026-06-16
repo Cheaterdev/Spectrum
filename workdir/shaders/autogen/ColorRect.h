@@ -31,6 +31,6 @@ ConstantBuffer<ColorRect> CreateColorRect()
 }
 			
 #ifndef NO_GLOBAL
-static const ColorRect colorRect_global = CreateColorRect();
-const ColorRect GetColorRect(){ return colorRect_global; }
+static const ConstantBuffer<ColorRect> colorRect_global = CreateColorRect();
+ConstantBuffer<ColorRect> GetColorRect(){ return colorRect_global; }
 #endif

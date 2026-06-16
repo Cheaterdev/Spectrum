@@ -31,6 +31,6 @@ ConstantBuffer<PSSMConstants> CreatePSSMConstants()
 }
 			
 #ifndef NO_GLOBAL
-static const PSSMConstants pSSMConstants_global = CreatePSSMConstants();
-const PSSMConstants GetPSSMConstants(){ return pSSMConstants_global; }
+static const ConstantBuffer<PSSMConstants> pSSMConstants_global = CreatePSSMConstants();
+ConstantBuffer<PSSMConstants> GetPSSMConstants(){ return pSSMConstants_global; }
 #endif

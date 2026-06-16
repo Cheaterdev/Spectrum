@@ -31,6 +31,6 @@ ConstantBuffer<DebugInfo> CreateDebugInfo()
 }
 			
 #ifndef NO_GLOBAL
-static const DebugInfo debugInfo_global = CreateDebugInfo();
-const DebugInfo GetDebugInfo(){ return debugInfo_global; }
+static const ConstantBuffer<DebugInfo> debugInfo_global = CreateDebugInfo();
+ConstantBuffer<DebugInfo> GetDebugInfo(){ return debugInfo_global; }
 #endif

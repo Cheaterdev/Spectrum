@@ -33,7 +33,7 @@ struct DownsampleDepth
 
 
 
-[ExcludeVulkan] ComputePSO DownsampleDepth
+ComputePSO DownsampleDepth
 {
 	root = DefaultLayout;
 
@@ -62,7 +62,7 @@ ComputePSO MipMapping
 
 
 
-[ExcludeVulkan] GraphicsPSO RenderToDS
+GraphicsPSO RenderToDS
 {
 	root = DefaultLayout;
 
@@ -79,7 +79,7 @@ ComputePSO MipMapping
 }
 
 
-[ExcludeVulkan] GraphicsPSO QualityColor
+GraphicsPSO QualityColor
 {
 	root = DefaultLayout;
 
@@ -95,7 +95,7 @@ ComputePSO MipMapping
 }
 
 
-[ExcludeVulkan] GraphicsPSO QualityToStencil
+GraphicsPSO QualityToStencil
 {
 	root = DefaultLayout;
 
@@ -120,7 +120,7 @@ ComputePSO MipMapping
 }
 
 #remove it
-[ExcludeVulkan] GraphicsPSO QualityToStencilREfl
+GraphicsPSO QualityToStencilREfl
 {
 	root = DefaultLayout;
 

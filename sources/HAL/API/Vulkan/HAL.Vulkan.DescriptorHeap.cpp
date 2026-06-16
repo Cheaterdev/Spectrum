@@ -69,9 +69,6 @@ namespace HAL
             write.dstBinding     = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
             write.pImageInfo     = &img_info;
-            // TEMP DIAG
-            Log::get() << "[VKDBG] place SRV-img slot=" << offset
-                       << " view=" << (uint64_t)view << Log::endl;
         }
         else if (api_res.get_vk_buffer() != VK_NULL_HANDLE)
         {
@@ -90,11 +87,6 @@ namespace HAL
             }
             else
 			ASSERT(0);
-            // TEMP DIAG
-            Log::get() << "[VKDBG] place SRV-buf slot=" << offset
-                       << " buf=" << (uint64_t)buf_info.buffer
-                       << " off=" << buf_info.offset
-                       << " range=" << buf_info.range << Log::endl;
             write.dstBinding     = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.pBufferInfo    = &buf_info;
@@ -180,12 +172,6 @@ namespace HAL
         buf_info.buffer = api_res.get_vk_buffer();
         buf_info.offset = v.OffsetInBytes;
         buf_info.range  = v.SizeInBytes > 0 ? v.SizeInBytes : VK_WHOLE_SIZE;
-
-        // TEMP DIAG
-        Log::get() << "[VKDBG] place CBV slot=" << offset
-                   << " buf=" << (uint64_t)buf_info.buffer
-                   << " off=" << buf_info.offset
-                   << " range=" << buf_info.range << Log::endl;
 
         VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet          = api_heap.get_vk_set();

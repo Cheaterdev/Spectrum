@@ -31,6 +31,6 @@ ConstantBuffer<MaterialInfo> CreateMaterialInfo()
 }
 			
 #ifndef NO_GLOBAL
-static const MaterialInfo materialInfo_global = CreateMaterialInfo();
-const MaterialInfo GetMaterialInfo(){ return materialInfo_global; }
+static const ConstantBuffer<MaterialInfo> materialInfo_global = CreateMaterialInfo();
+ConstantBuffer<MaterialInfo> GetMaterialInfo(){ return materialInfo_global; }
 #endif

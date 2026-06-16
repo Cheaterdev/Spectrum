@@ -31,6 +31,6 @@ ConstantBuffer<Instance> CreateInstance()
 }
 			
 #ifndef NO_GLOBAL
-static const Instance instance_global = CreateInstance();
-const Instance GetInstance(){ return instance_global; }
+static const ConstantBuffer<Instance> instance_global = CreateInstance();
+ConstantBuffer<Instance> GetInstance(){ return instance_global; }
 #endif

@@ -31,6 +31,6 @@ ConstantBuffer<SMAA_Weights> CreateSMAA_Weights()
 }
 			
 #ifndef NO_GLOBAL
-static const SMAA_Weights sMAA_Weights_global = CreateSMAA_Weights();
-const SMAA_Weights GetSMAA_Weights(){ return sMAA_Weights_global; }
+static const ConstantBuffer<SMAA_Weights> sMAA_Weights_global = CreateSMAA_Weights();
+ConstantBuffer<SMAA_Weights> GetSMAA_Weights(){ return sMAA_Weights_global; }
 #endif

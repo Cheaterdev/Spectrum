@@ -31,6 +31,6 @@ ConstantBuffer<VoxelCopy> CreateVoxelCopy()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelCopy voxelCopy_global = CreateVoxelCopy();
-const VoxelCopy GetVoxelCopy(){ return voxelCopy_global; }
+static const ConstantBuffer<VoxelCopy> voxelCopy_global = CreateVoxelCopy();
+ConstantBuffer<VoxelCopy> GetVoxelCopy(){ return voxelCopy_global; }
 #endif

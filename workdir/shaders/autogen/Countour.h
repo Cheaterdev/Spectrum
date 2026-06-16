@@ -31,6 +31,6 @@ ConstantBuffer<Countour> CreateCountour()
 }
 			
 #ifndef NO_GLOBAL
-static const Countour countour_global = CreateCountour();
-const Countour GetCountour(){ return countour_global; }
+static const ConstantBuffer<Countour> countour_global = CreateCountour();
+ConstantBuffer<Countour> GetCountour(){ return countour_global; }
 #endif

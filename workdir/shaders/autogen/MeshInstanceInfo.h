@@ -31,6 +31,6 @@ ConstantBuffer<MeshInstanceInfo> CreateMeshInstanceInfo()
 }
 			
 #ifndef NO_GLOBAL
-static const MeshInstanceInfo meshInstanceInfo_global = CreateMeshInstanceInfo();
-const MeshInstanceInfo GetMeshInstanceInfo(){ return meshInstanceInfo_global; }
+static const ConstantBuffer<MeshInstanceInfo> meshInstanceInfo_global = CreateMeshInstanceInfo();
+ConstantBuffer<MeshInstanceInfo> GetMeshInstanceInfo(){ return meshInstanceInfo_global; }
 #endif

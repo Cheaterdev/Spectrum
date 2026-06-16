@@ -13,7 +13,7 @@
     "cereal",
     "dstorage",
     "jinja2cpp",
-    {"name" :"directx-dxc", "version>=":"2026-02-20"},
+    {"name" :"directx-dxc", "version>=":"2026-05-27"},
       {"name" :"directx12-agility", "version>=":"1.619.3"},
      {"name" :"directx-headers", "version>=":"1.619.1"},
      "bshoshany-thread-pool",
@@ -21,7 +21,7 @@
      "vulkan-loader",
      "vulkan-memory-allocator"
   ],
-  "builtin-baseline": "a76e5d9e1c62a23b9e92353e5e25d8c34cda2b74",
+  "builtin-baseline": "2a5ea1e58fc6776ede8fd1470db0aea26ae320c4",
   "overrides": [
     {
         "name": "fmt",
@@ -29,7 +29,8 @@
     },
     {
         "name": "directx-dxc",
-        "version-date": "2026-02-20"
+        "version-date": "2026-05-27",
+        "port-version": 1
     }
   ]
 }

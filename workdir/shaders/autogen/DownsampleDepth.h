@@ -31,6 +31,6 @@ ConstantBuffer<DownsampleDepth> CreateDownsampleDepth()
 }
 			
 #ifndef NO_GLOBAL
-static const DownsampleDepth downsampleDepth_global = CreateDownsampleDepth();
-const DownsampleDepth GetDownsampleDepth(){ return downsampleDepth_global; }
+static const ConstantBuffer<DownsampleDepth> downsampleDepth_global = CreateDownsampleDepth();
+ConstantBuffer<DownsampleDepth> GetDownsampleDepth(){ return downsampleDepth_global; }
 #endif

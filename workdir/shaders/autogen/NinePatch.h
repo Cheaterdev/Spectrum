@@ -31,6 +31,6 @@ ConstantBuffer<NinePatch> CreateNinePatch()
 }
 			
 #ifndef NO_GLOBAL
-static const NinePatch ninePatch_global = CreateNinePatch();
-const NinePatch GetNinePatch(){ return ninePatch_global; }
+static const ConstantBuffer<NinePatch> ninePatch_global = CreateNinePatch();
+ConstantBuffer<NinePatch> GetNinePatch(){ return ninePatch_global; }
 #endif

@@ -31,6 +31,6 @@ ConstantBuffer<DenoiserReflectionPrefilter> CreateDenoiserReflectionPrefilter()
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserReflectionPrefilter denoiserReflectionPrefilter_global = CreateDenoiserReflectionPrefilter();
-const DenoiserReflectionPrefilter GetDenoiserReflectionPrefilter(){ return denoiserReflectionPrefilter_global; }
+static const ConstantBuffer<DenoiserReflectionPrefilter> denoiserReflectionPrefilter_global = CreateDenoiserReflectionPrefilter();
+ConstantBuffer<DenoiserReflectionPrefilter> GetDenoiserReflectionPrefilter(){ return denoiserReflectionPrefilter_global; }
 #endif

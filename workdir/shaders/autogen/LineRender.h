@@ -31,6 +31,6 @@ ConstantBuffer<LineRender> CreateLineRender()
 }
 			
 #ifndef NO_GLOBAL
-static const LineRender lineRender_global = CreateLineRender();
-const LineRender GetLineRender(){ return lineRender_global; }
+static const ConstantBuffer<LineRender> lineRender_global = CreateLineRender();
+ConstantBuffer<LineRender> GetLineRender(){ return lineRender_global; }
 #endif

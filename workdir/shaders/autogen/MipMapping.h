@@ -31,6 +31,6 @@ ConstantBuffer<MipMapping> CreateMipMapping()
 }
 			
 #ifndef NO_GLOBAL
-static const MipMapping mipMapping_global = CreateMipMapping();
-const MipMapping GetMipMapping(){ return mipMapping_global; }
+static const ConstantBuffer<MipMapping> mipMapping_global = CreateMipMapping();
+ConstantBuffer<MipMapping> GetMipMapping(){ return mipMapping_global; }
 #endif

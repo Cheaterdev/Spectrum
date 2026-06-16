@@ -31,6 +31,6 @@ ConstantBuffer<PSSMData> CreatePSSMData()
 }
 			
 #ifndef NO_GLOBAL
-static const PSSMData pSSMData_global = CreatePSSMData();
-const PSSMData GetPSSMData(){ return pSSMData_global; }
+static const ConstantBuffer<PSSMData> pSSMData_global = CreatePSSMData();
+ConstantBuffer<PSSMData> GetPSSMData(){ return pSSMData_global; }
 #endif

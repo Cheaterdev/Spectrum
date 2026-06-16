@@ -27,7 +27,7 @@ struct GBuffer
 
 
 [Base]
-[ExcludeVulkan] GraphicsPSO GBufferDraw
+GraphicsPSO GBufferDraw
 {
 	root = DefaultLayout;
 	
@@ -46,7 +46,7 @@ struct GBuffer
 
 
 [Base]
-[ExcludeVulkan] GraphicsPSO DepthDraw
+GraphicsPSO DepthDraw
 {
 	root = DefaultLayout;
 
@@ -68,7 +68,7 @@ struct GBuffer
 
 
 [Base]
-[ExcludeVulkan] GraphicsPSO Voxelization
+GraphicsPSO Voxelization
 {
 	root = DefaultLayout;
 	

@@ -31,6 +31,6 @@ ConstantBuffer<DenoiserShadow_Prepare> CreateDenoiserShadow_Prepare()
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserShadow_Prepare denoiserShadow_Prepare_global = CreateDenoiserShadow_Prepare();
-const DenoiserShadow_Prepare GetDenoiserShadow_Prepare(){ return denoiserShadow_Prepare_global; }
+static const ConstantBuffer<DenoiserShadow_Prepare> denoiserShadow_Prepare_global = CreateDenoiserShadow_Prepare();
+ConstantBuffer<DenoiserShadow_Prepare> GetDenoiserShadow_Prepare(){ return denoiserShadow_Prepare_global; }
 #endif

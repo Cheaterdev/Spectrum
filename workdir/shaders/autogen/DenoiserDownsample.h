@@ -31,6 +31,6 @@ ConstantBuffer<DenoiserDownsample> CreateDenoiserDownsample()
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserDownsample denoiserDownsample_global = CreateDenoiserDownsample();
-const DenoiserDownsample GetDenoiserDownsample(){ return denoiserDownsample_global; }
+static const ConstantBuffer<DenoiserDownsample> denoiserDownsample_global = CreateDenoiserDownsample();
+ConstantBuffer<DenoiserDownsample> GetDenoiserDownsample(){ return denoiserDownsample_global; }
 #endif

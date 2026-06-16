@@ -31,6 +31,6 @@ ConstantBuffer<CopyTexture> CreateCopyTexture()
 }
 			
 #ifndef NO_GLOBAL
-static const CopyTexture copyTexture_global = CreateCopyTexture();
-const CopyTexture GetCopyTexture(){ return copyTexture_global; }
+static const ConstantBuffer<CopyTexture> copyTexture_global = CreateCopyTexture();
+ConstantBuffer<CopyTexture> GetCopyTexture(){ return copyTexture_global; }
 #endif

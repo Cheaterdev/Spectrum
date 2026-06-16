@@ -31,6 +31,6 @@ ConstantBuffer<FrameGraph_Debug_Texture2DArray> CreateFrameGraph_Debug_Texture2D
 }
 			
 #ifndef NO_GLOBAL
-static const FrameGraph_Debug_Texture2DArray frameGraph_Debug_Texture2DArray_global = CreateFrameGraph_Debug_Texture2DArray();
-const FrameGraph_Debug_Texture2DArray GetFrameGraph_Debug_Texture2DArray(){ return frameGraph_Debug_Texture2DArray_global; }
+static const ConstantBuffer<FrameGraph_Debug_Texture2DArray> frameGraph_Debug_Texture2DArray_global = CreateFrameGraph_Debug_Texture2DArray();
+ConstantBuffer<FrameGraph_Debug_Texture2DArray> GetFrameGraph_Debug_Texture2DArray(){ return frameGraph_Debug_Texture2DArray_global; }
 #endif

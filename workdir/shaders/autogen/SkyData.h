@@ -31,6 +31,6 @@ ConstantBuffer<SkyData> CreateSkyData()
 }
 			
 #ifndef NO_GLOBAL
-static const SkyData skyData_global = CreateSkyData();
-const SkyData GetSkyData(){ return skyData_global; }
+static const ConstantBuffer<SkyData> skyData_global = CreateSkyData();
+ConstantBuffer<SkyData> GetSkyData(){ return skyData_global; }
 #endif

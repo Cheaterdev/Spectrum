@@ -31,6 +31,6 @@ ConstantBuffer<GBuffer> CreateGBuffer()
 }
 			
 #ifndef NO_GLOBAL
-static const GBuffer gBuffer_global = CreateGBuffer();
-const GBuffer GetGBuffer(){ return gBuffer_global; }
+static const ConstantBuffer<GBuffer> gBuffer_global = CreateGBuffer();
+ConstantBuffer<GBuffer> GetGBuffer(){ return gBuffer_global; }
 #endif

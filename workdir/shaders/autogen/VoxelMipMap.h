@@ -31,6 +31,6 @@ ConstantBuffer<VoxelMipMap> CreateVoxelMipMap()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelMipMap voxelMipMap_global = CreateVoxelMipMap();
-const VoxelMipMap GetVoxelMipMap(){ return voxelMipMap_global; }
+static const ConstantBuffer<VoxelMipMap> voxelMipMap_global = CreateVoxelMipMap();
+ConstantBuffer<VoxelMipMap> GetVoxelMipMap(){ return voxelMipMap_global; }
 #endif

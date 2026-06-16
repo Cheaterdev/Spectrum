@@ -31,6 +31,6 @@ ConstantBuffer<EnvSource> CreateEnvSource()
 }
 			
 #ifndef NO_GLOBAL
-static const EnvSource envSource_global = CreateEnvSource();
-const EnvSource GetEnvSource(){ return envSource_global; }
+static const ConstantBuffer<EnvSource> envSource_global = CreateEnvSource();
+ConstantBuffer<EnvSource> GetEnvSource(){ return envSource_global; }
 #endif

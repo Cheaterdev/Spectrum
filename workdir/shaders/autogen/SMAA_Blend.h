@@ -31,6 +31,6 @@ ConstantBuffer<SMAA_Blend> CreateSMAA_Blend()
 }
 			
 #ifndef NO_GLOBAL
-static const SMAA_Blend sMAA_Blend_global = CreateSMAA_Blend();
-const SMAA_Blend GetSMAA_Blend(){ return sMAA_Blend_global; }
+static const ConstantBuffer<SMAA_Blend> sMAA_Blend_global = CreateSMAA_Blend();
+ConstantBuffer<SMAA_Blend> GetSMAA_Blend(){ return sMAA_Blend_global; }
 #endif

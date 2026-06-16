@@ -222,13 +222,6 @@ public:
         if (!m_entries.empty())
         {
             auto* dst = reinterpret_cast<GlyphAtlasEntry*>(m_coord_buf.resource->buffer_data);
-            auto idx = std::min<size_t>(7, m_entries.size() - 1);
-            Log::get() << "[FNTDBG] flush: writing " << m_entries.size() << " entries"
-                       << " mapped=" << (uint64_t)dst
-                       << " entry[" << idx << "]={tl=" << m_entries[idx].tex_left
-                       << " tt=" << m_entries[idx].tex_top
-                       << " pl=" << m_entries[idx].pos_left
-                       << " pt=" << m_entries[idx].pos_top << "}" << Log::endl;
             if (dst)
                 std::memcpy(dst, m_entries.data(), m_entries.size() * sizeof(GlyphAtlasEntry));
         }
@@ -572,12 +565,6 @@ static void draw_vertices(
     list->get_graphics().set(glyphs_slot);
 
     // 6. Draw
-    Log::get() << "[FNTDBG] draw_vertices count=" << count
-               << " fmt=" << static_cast<int>(formats[0])
-               << " sc_x=" << sc.TransformMatrix[0]
-               << " sc_y=" << sc.TransformMatrix[5]
-               << " clip=" << sc.ClipRect[0] << "," << sc.ClipRect[1]
-                           << "," << sc.ClipRect[2] << "," << sc.ClipRect[3] << Log::endl;
     list->get_graphics().draw(count, 0);
 }
 

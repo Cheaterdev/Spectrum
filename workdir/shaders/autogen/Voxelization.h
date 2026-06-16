@@ -31,6 +31,6 @@ ConstantBuffer<Voxelization> CreateVoxelization()
 }
 			
 #ifndef NO_GLOBAL
-static const Voxelization voxelization_global = CreateVoxelization();
-const Voxelization GetVoxelization(){ return voxelization_global; }
+static const ConstantBuffer<Voxelization> voxelization_global = CreateVoxelization();
+ConstantBuffer<Voxelization> GetVoxelization(){ return voxelization_global; }
 #endif

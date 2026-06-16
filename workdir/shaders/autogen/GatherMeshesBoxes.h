@@ -31,6 +31,6 @@ ConstantBuffer<GatherMeshesBoxes> CreateGatherMeshesBoxes()
 }
 			
 #ifndef NO_GLOBAL
-static const GatherMeshesBoxes gatherMeshesBoxes_global = CreateGatherMeshesBoxes();
-const GatherMeshesBoxes GetGatherMeshesBoxes(){ return gatherMeshesBoxes_global; }
+static const ConstantBuffer<GatherMeshesBoxes> gatherMeshesBoxes_global = CreateGatherMeshesBoxes();
+ConstantBuffer<GatherMeshesBoxes> GetGatherMeshesBoxes(){ return gatherMeshesBoxes_global; }
 #endif

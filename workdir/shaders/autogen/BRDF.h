@@ -31,6 +31,6 @@ ConstantBuffer<BRDF> CreateBRDF()
 }
 			
 #ifndef NO_GLOBAL
-static const BRDF bRDF_global = CreateBRDF();
-const BRDF GetBRDF(){ return bRDF_global; }
+static const ConstantBuffer<BRDF> bRDF_global = CreateBRDF();
+ConstantBuffer<BRDF> GetBRDF(){ return bRDF_global; }
 #endif
