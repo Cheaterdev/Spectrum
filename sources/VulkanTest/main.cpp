@@ -210,34 +210,20 @@ int APIENTRY WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     Log::get().set_logging_level(Log::LEVEL_ALL);
 
     FileSystem::get().register_provider(std::make_shared<native_file_provider>());
+    GraphicsSystem::create();
 
-    // Device
-    HAL::Device::create();
-
-    // Asset manager — needed for Skin textures and font glyphs
-    AssetManager::create();
-          	Application::create<Application>();
-    // App window + UI
+    Application::create<Application>();
     auto app = std::make_shared<VulkanTestApp>();
 
-    // Message + render loop
-    bool running = true;
-    while (running)
+    while (true)
     {
         Window::process_messages();
         if (!Application::is_good()) break;
         app->render();
     }
 
-    // Cleanup
-    HAL::Device::get().stop_all();
-    Skin::reset();
-    Fonts::FontSystem::reset();
-    AssetManager::reset();
-    HAL::pixel_shader::reset_manager();
-    HAL::vertex_shader::reset_manager();
-    HAL::compute_shader::reset_manager();
-    HAL::Device::reset();
+    app = nullptr;
+    GraphicsSystem::reset();
 
     CoUninitialize();
     return 0;

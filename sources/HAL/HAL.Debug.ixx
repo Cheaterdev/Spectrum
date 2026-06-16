@@ -11,7 +11,7 @@ export namespace HAL
 		constexpr bool RunForPix = false;
 
 #ifdef DEV
-		constexpr bool GfxDebug = !RunForPix&&true;
+		constexpr bool GfxDebug = !RunForPix&&false;
 		constexpr bool ValidationErrors = !RunForPix&&true;
 		constexpr bool CheckErrors =  !RunForPix&&true;
 		constexpr bool DebugViews =  !RunForPix&&false;

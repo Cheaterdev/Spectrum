@@ -10,9 +10,6 @@ import Core;
 import FrameGraph;
 import FrameGraphDebug;
 
-
-#include "bend_sss_cpu.h"
-
 // FSR math headers required by PassDefault<Passes::FSR>
 #define A_CPU
 #include "../RenderSystem/Effects/FSR/ffx_a.h"
@@ -790,7 +787,7 @@ public:
 		//scale = 1.25f;
 		Window::input_handler = this;
 		HAL::swap_chain_desc desc;
-		desc.format = HAL::Format::R8G8B8A8_UNORM;
+		desc.format = HAL::Format::B8G8R8A8_UNORM;
 		desc.fullscreen = nullptr;
 		desc.stereo = false;
 		desc.window = this;
@@ -1063,72 +1060,19 @@ protected:
 	RenderApplication()
 	{
 		THREAD_SCOPE(GUI);
-		//	ASSERT(ppp.inited);
 		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
-
-		EVENT("Device");
-		HAL::Device::create();
-
-		EVENT("PSO");
-
-
-		if (Device::get().is_rtx_supported())
-			RTX::create();
-
-		EVENT("AssetManager");
-#ifndef HAL_BACKEND_VULKAN
-		AssetRenderer::create();
-#endif
-		AssetManager::create();
-		EVENT("WindowRender");
-
-		//	main_window = std::make_shared<WindowRender>();
+		GraphicsSystem::create();
 		main_window = std::make_shared<GraphRender>();
 		main_window->start();
-
-		EVENT("good");
 	}
 
 	~RenderApplication() override
 	{
-		shutdown(); // really need this?
-
+		shutdown();
 		main_window->stop();
 		main_window = nullptr;
-
-		//	std::this_thread::sleep_for(100_ms);
 		scheduler::reset();
-		//
-
-
-		//	
-		//   HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->stop_all();
-		HAL::Device::get().stop_all();
-		Skin::reset();
-		HAL::Texture::reset_manager();
-		HAL::pixel_shader::reset_manager();
-		HAL::vertex_shader::reset_manager();
-		HAL::domain_shader::reset_manager();
-		HAL::hull_shader::reset_manager();
-		HAL::geometry_shader::reset_manager();
-		HAL::compute_shader::reset_manager();
-		GUI::Elements::FlowGraph::manager::reset();
-		Profiler::reset();
-		///    main_window2 = nullptr;
-		Fonts::FontSystem::reset();
-		RTX::reset();
-#ifndef HAL_BACKEND_VULKAN
-		AssetRenderer::reset();
-		TextureAssetRenderer::reset();
-#endif
-		AssetManager::reset();
-		materials::PipelineManager::reset();
-		universal_nodes_manager::reset();
-
-		universal_mesh_instance_manager::reset();
-		universal_material_info_part_manager::reset();
-		universal_rtx_manager::reset();
-		HAL::Device::reset();
+		GraphicsSystem::reset();
 	}
 
 

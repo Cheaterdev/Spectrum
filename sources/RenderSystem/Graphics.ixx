@@ -44,3 +44,5 @@ export import :RTX;
 export import :ShadowDenoiser;
 export import :ReflectionDenoiser;
 export import :BlueNoise;
+
+export import :System;
