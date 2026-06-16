@@ -51,8 +51,6 @@ namespace HAL
 				auto device = std::make_shared<Device>(desc);
 
 				const auto& props = device->get_properties();
-				
-				 if (std::wstring(adapter_desc.Description).find(L"RTX")==std::wstring::npos)	 return;	   // TODO: remove
 
 				if (result==nullptr && props.mesh_shader && props.full_bindless&&(std::wstring(adapter_desc.Description).find(L"Basic")==std::wstring::npos) )
 				{
