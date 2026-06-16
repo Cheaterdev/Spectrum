@@ -1,4 +1,5 @@
-module GUI;
+﻿module GUI;
+import RenderSystem;
 
 
 import <windows/windows.h>;
@@ -1015,7 +1016,7 @@ namespace GUI
 
         if (pre_draw_infos.size())
         {
-            auto command_list = HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+            auto command_list = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
             command_list->begin(L"pre_draw");
             for (auto& e : pre_draw_infos)
                 e->pre_draw(command_list);

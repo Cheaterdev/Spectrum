@@ -1,4 +1,4 @@
-export module Test.HAL.Rendering;
+﻿export module Test.HAL.Rendering;
 
 #define TEST_MODULE_ID HALRendering
 
@@ -74,7 +74,7 @@ export namespace Test
 {
 	TEST(Core.HAL, RenderTriangle)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH  = 256;
 		constexpr uint HEIGHT = 256;
 
@@ -134,7 +134,7 @@ float4 PS() : SV_Target
 
 	TEST(Core.HAL, RenderInstancing)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH = 256, HEIGHT = 256;
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
@@ -205,7 +205,7 @@ float4 PS(VSOut i) : SV_Target { return i.col; }
 
 	TEST(Core.HAL, RenderCube)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH  = 256;
 		constexpr uint HEIGHT = 256;
 
@@ -320,21 +320,21 @@ float4 PS(VSOut i) : SV_Target { return i.col; }
 	// NoCull: both triangles visible.
 	TEST(Core.HAL, RenderCull_None)
 	{
-		auto rt = run_cull_test(HAL::Device::get(), HAL::CullMode::None, L"RenderCull_None");
+		auto rt = run_cull_test(RenderSystem::get().device(), HAL::CullMode::None, L"RenderCull_None");
 		ASSERT_TEXTURE(rt.get(), "cull_none");
 	}
 
 	// BackCull: back face (CW in NDC, RED right triangle) discarded — only GREEN left triangle visible.
 	TEST(Core.HAL, RenderCull_Back)
 	{
-		auto rt = run_cull_test(HAL::Device::get(), HAL::CullMode::Back, L"RenderCull_Back");
+		auto rt = run_cull_test(RenderSystem::get().device(), HAL::CullMode::Back, L"RenderCull_Back");
 		ASSERT_TEXTURE(rt.get(), "cull_back");
 	}
 
 	// FrontCull: front face (CCW in NDC, GREEN left triangle) discarded — only RED right triangle visible.
 	TEST(Core.HAL, RenderCull_Front)
 	{
-		auto rt = run_cull_test(HAL::Device::get(), HAL::CullMode::Front, L"RenderCull_Front");
+		auto rt = run_cull_test(RenderSystem::get().device(), HAL::CullMode::Front, L"RenderCull_Front");
 		ASSERT_TEXTURE(rt.get(), "cull_front");
 	}
 
@@ -343,7 +343,7 @@ float4 PS(VSOut i) : SV_Target { return i.col; }
 	// visible output — a regression target for geometry shader pipeline breakage.
 	TEST(Core.HAL, RenderGeometryShader)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint W = 256, H = 256;
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,

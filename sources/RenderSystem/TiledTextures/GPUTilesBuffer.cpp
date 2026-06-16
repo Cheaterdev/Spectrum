@@ -1,4 +1,5 @@
-module Graphics:GPUTilesBuffer;
+﻿module Graphics:GPUTilesBuffer;
+import RenderSystem;
 
 
 void GPUTilesBuffer::set_size(ivec3 size, ivec3 shape)
@@ -6,8 +7,8 @@ void GPUTilesBuffer::set_size(ivec3 size, ivec3 shape)
 	this->shape = shape;
 
 	tile_positions.resize(size, -1);
-	buffer = HAL::StructuredBufferView<ivec3>(HAL::Device::get(), size.x * size.y * size.z);
-	dispatch_buffer = HAL::StructuredBufferView<DispatchArguments>(HAL::Device::get(), 1, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	buffer = HAL::StructuredBufferView<ivec3>(RenderSystem::get().device(), size.x * size.y * size.z);
+	dispatch_buffer = HAL::StructuredBufferView<DispatchArguments>(RenderSystem::get().device(), 1, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 }
 
 void GPUTilesBuffer::clear()

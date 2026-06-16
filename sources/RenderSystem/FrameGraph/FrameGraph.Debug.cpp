@@ -1,4 +1,5 @@
-module FrameGraphDebug;
+﻿module FrameGraphDebug;
+import RenderSystem;
 
 import windows;
 import Core;
@@ -142,8 +143,8 @@ public:
 						if (!rendered_image->texture.texture || uint2(rendered_image->texture.texture->get_desc().as_texture().Dimensions.xy) != debug_size)
 						{
 							HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { debug_size }, 1, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
-							auto texture = std::make_shared<Texture>(HAL::Device::get(), desc, TextureLayout::SHADER_RESOURCE);
-							rendered_image->texture.texture = std::make_shared<Texture>(HAL::Device::get(), desc);
+							auto texture = std::make_shared<Texture>(RenderSystem::get().device(), desc, TextureLayout::SHADER_RESOURCE);
+							rendered_image->texture.texture = std::make_shared<Texture>(RenderSystem::get().device(), desc);
 						}
 
 

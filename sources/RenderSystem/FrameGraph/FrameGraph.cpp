@@ -1,4 +1,5 @@
-module FrameGraph;
+﻿module FrameGraph;
+import RenderSystem;
 import HAL;
 import Core;
 
@@ -126,7 +127,7 @@ namespace FrameGraph
 		}
 
 	}
-	TaskBuilder::TaskBuilder() : frames(Device::get()), allocator(HAL::Device::get().get_heap_factory(), false), global_frame(Device::get())
+	TaskBuilder::TaskBuilder() : frames(RenderSystem::get().device()), allocator(RenderSystem::get().device().get_heap_factory(), false), global_frame(RenderSystem::get().device())
 	{
 
 	}
@@ -760,10 +761,10 @@ namespace FrameGraph
 						{
 							if (!sync_pass) continue;
 
-							HAL::Device::get().get_queue(list_type)->execute(queued_lists[list_type]);
+							RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
 							queued_lists[list_type].clear();
 
-							HAL::Device::get().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
+							RenderSystem::get().device().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
 						}
 
 
@@ -772,7 +773,7 @@ namespace FrameGraph
 
 							if(pass->put_fence)		//////////////////////// ARGH!!!!
 						{
-							pass->fence_end = HAL::Device::get().get_queue(list_type)->execute(queued_lists[list_type]);
+							pass->fence_end = RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
 
 							queued_lists[list_type].clear();
 
@@ -790,7 +791,7 @@ namespace FrameGraph
 				for (auto& [type, lists] : queued_lists)
 				{
 					if (lists.empty()) continue;
-					result = HAL::Device::get().get_queue(type)->execute(lists);
+					result = RenderSystem::get().device().get_queue(type)->execute(lists);
 				}
 			
 
@@ -1360,7 +1361,7 @@ namespace FrameGraph
 				for (auto info : e.create)
 				{
 
-					auto creation_info = HAL::Device::get().get_alloc_info(info->d3ddesc);
+					auto creation_info = RenderSystem::get().device().get_alloc_info(info->d3ddesc);
 					HeapIndex index = { HAL::MemoryType::COMMITED , info->heap_type };
 
 					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, index);
@@ -1408,7 +1409,7 @@ namespace FrameGraph
 					if (!res || res.resource->get_desc() != info->d3ddesc)
 					{
 						PROFILE(L"placed");
-						res.resource = HAL::create_resource(HAL::Device::get(), info->d3ddesc, info->alloc_ptr);
+						res.resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->alloc_ptr);
 						//						 	res.resource->debug = info->name=="ResultTexture"; // TODO: move everywhere
 
 
@@ -1440,19 +1441,19 @@ namespace FrameGraph
 					if (info->heap_type == HAL::HeapType::UPLOAD)
 					{
 						PROFILE(L"UPLOAD");
-						info->resource = HAL::create_resource(HAL::Device::get(), info->d3ddesc, info->heap_type);
+						info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type);
 						info->is_new = true;
 					}
 					else if (info->heap_type == HAL::HeapType::READBACK)
 					{
 						PROFILE(L"READBACK");
-						info->resource = HAL::create_resource(HAL::Device::get(), info->d3ddesc, info->heap_type);
+						info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type);
 						info->is_new = true;
 					}
 					else if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 					{
 						PROFILE(L"DEFAULT");
-						info->resource = HAL::create_resource(HAL::Device::get(), info->d3ddesc, info->heap_type);
+						info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type);
 						info->is_new = true;
 
 					}

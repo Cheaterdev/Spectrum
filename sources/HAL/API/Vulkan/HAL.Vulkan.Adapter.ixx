@@ -28,6 +28,22 @@ export namespace HAL
         VkPhysicalDevice get_vk_physical() const { return vk_physical; }
     };
 
+    struct DeviceDesc
+    {
+        HAL::Adapter::ptr adapter;
+    };
+
+    struct DeviceProperties
+    {
+        std::string name;
+        bool rtx                    = false;
+        bool mesh_shader            = false;
+        bool full_bindless          = false;
+        bool direct_gpu_upload_heap = false;
+        bool work_graph             = false;
+        uint32_t min_storage_buffer_offset_alignment = 1;
+    };
+
     class Adapters : public Singleton<Adapters>
     {
         friend class Singleton<Adapters>;

@@ -1,4 +1,4 @@
-export module Test.FrameGraph;
+﻿export module Test.FrameGraph;
 
 #define TEST_MODULE_ID FG
 
@@ -26,7 +26,7 @@ export namespace Test
 	TEST(Core.HAL, FrameGraph_UIPipeline)
 	{
 		THREAD_SCOPE(GUI);
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint W = 512, H = 256;
 
 		auto rt = std::make_shared<HAL::TextureResource>(device,

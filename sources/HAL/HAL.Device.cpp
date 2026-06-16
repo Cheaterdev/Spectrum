@@ -35,52 +35,6 @@ namespace HAL
 		return queues[type];
 	}
 
-	std::shared_ptr<Device> Device::create_singleton()
-	{
-		HAL::init();
-
-		std::shared_ptr<Device> result,any_result;
-		HAL::Adapters::get().enumerate([&](HAL::Adapter::ptr adapter)
-			{
-
-				DXGI_ADAPTER_DESC adapter_desc = adapter->get_desc();
-				Log::get() << "adapter: " << adapter_desc.Description << Log::endl;
-
-				HAL::DeviceDesc desc;
-				desc.adapter = adapter;
-				auto device = std::make_shared<Device>(desc);
-
-				const auto& props = device->get_properties();
-
-				if (result==nullptr && props.mesh_shader && props.full_bindless&&(std::wstring(adapter_desc.Description).find(L"Basic")==std::wstring::npos) )
-				{
-					
-				//	Log::get() << "Selecting adapter: " << adapter_desc.Description << Log::endl;
-					result = device;
-				}else if(props.full_bindless)
-				{
-				
-				any_result=device;
-				
-				}
-			});
-
-		if(!result) result = any_result;
-
-		if (!result)
-		{
-			Log::get().crash_error("Cant find proper device");
-		}
-		else
-		{
-
-			Log::get() << "Selected device : " << result->get_properties().name << Log::endl; 
-			result->init_managers();
-		}
-
-		return result;
-	}
-
 	Device::Device(HAL::DeviceDesc desc)
 	{
 		init(desc);

@@ -1,5 +1,6 @@
-export module Graphics:Texture;
+﻿export module Graphics:Texture;
 
+import RenderSystem;
 import Core;
 import HAL;
 
@@ -84,7 +85,7 @@ export
 			{
 			if constexpr (!Archive::is_saving::value)
 				{
-				 cereal::get_user_data<UniversalContext>(ar).get_context<Device*>() = &HAL::Device::get();
+				 cereal::get_user_data<UniversalContext>(ar).get_context<Device*>() = &RenderSystem::get().device();
 
 			}
 				ar& NVP(resource);

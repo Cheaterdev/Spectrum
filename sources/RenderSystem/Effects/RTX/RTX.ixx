@@ -1,7 +1,8 @@
-export module Graphics:RTX;
+﻿export module Graphics:RTX;
 
 import :MeshAsset;
 
+import RenderSystem;
 import HAL;
 import Core;
 
@@ -14,7 +15,7 @@ public:
 	using ptr = std::shared_ptr<RTX>;
 
 
-	MainRTX rtx{HAL::Device::get()};
+	MainRTX rtx{RenderSystem::get().device()};
 
 	void prepare(HAL::CommandList::ptr& list);
 
@@ -30,7 +31,7 @@ public:
 	void render(HAL::ComputeContext& compute, HAL::RaytracingAccelerationStructure::ptr scene_as, ivec3 size)
 	{
 
-		if (!HAL::Device::get().is_rtx_supported()) return;
+		if (!RenderSystem::get().device().is_rtx_supported()) return;
 		
 		{
 			Slots::Raytracing rtx;

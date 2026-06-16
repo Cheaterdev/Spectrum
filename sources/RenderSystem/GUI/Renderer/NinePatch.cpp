@@ -1,3 +1,4 @@
+﻿import RenderSystem;
 
 import GUI;
 import HAL;
@@ -39,7 +40,7 @@ if(!index_buffer)
 				(*data++) = i * 4 + j + 5;
 			}
 
-		index_buffer =Helpers::make_buffer<unsigned int>(HAL::Device::get(), index_data);
+		index_buffer =Helpers::make_buffer<unsigned int>(RenderSystem::get().device(), index_data);
 }
 	}
 
@@ -57,7 +58,7 @@ if(!index_buffer)
 			added = true;
 			textures_handles.emplace_back(item.texture.texture2D);
 		}
-		if (!added && current_state == HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::NinePatch>())
+		if (!added && current_state == RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::NinePatch>())
 		{
 			return;
 		}
@@ -317,7 +318,7 @@ if(!index_buffer)
 
 	void NinePatch::draw(base::Context& c, GUI::Texture& item, rect r)
 	{
-		draw(c, item, r, HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::NinePatch>());
+		draw(c, item, r, RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::NinePatch>());
 	}
 
 	void NinePatch::draw(base::Context& c, HAL::PipelineState::ptr pipeline_state, rect r)

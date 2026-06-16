@@ -1,4 +1,5 @@
-module Graphics:Texture;
+﻿module Graphics:Texture;
+import RenderSystem;
 
 import HAL;
 
@@ -159,7 +160,7 @@ namespace HAL
 
 	Texture::ptr Texture::load_native(const texure_header& header, resource_file_depender& depender)
 	{
-		return load_native(HAL::Device::get(), header, depender);
+		return load_native(RenderSystem::get().device(), header, depender);
 	}
 
 	Texture::ptr Texture::load_native(Device& device, const texure_header& header, resource_file_depender& depender)

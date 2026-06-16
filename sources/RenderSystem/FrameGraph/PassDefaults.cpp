@@ -1,4 +1,5 @@
-module Graphics;
+﻿module Graphics;
+import RenderSystem;
 
 import :FrameGraphContext;
 import FrameGraph;
@@ -71,7 +72,7 @@ bool PassDefault<Passes::RTXPass>::setup(
     Passes::RTXPass::Context& data, FrameGraph::TaskBuilder& builder)
 {
     auto& frame    = builder.graph->get_context<ViewportInfo>();
-    auto  work_pso = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
+    auto  work_pso = RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
     auto  size     = frame.frame_size;
 
     builder.need(data.gbuffer.GBuffer_Albedo,   ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
@@ -104,7 +105,7 @@ void PassDefault<Passes::RTXPass>::render(
         context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
 
     auto& backingBuffer = data.WorkGraphBuffer->resource;
-    auto  work_pso = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
+    auto  work_pso = RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
 
     compute.set_program(work_pso.get(),
         backingBuffer->get_resource_address(),

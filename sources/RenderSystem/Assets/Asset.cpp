@@ -1,4 +1,5 @@
-module Graphics:Asset;
+﻿module Graphics:Asset;
+import RenderSystem;
 import Core;
 import ppl;
 import windows;
@@ -84,7 +85,7 @@ void AssetManager::add_preview(Asset::ptr asset)
 			if (!preview || !preview->is_rt())
 			{
 				HAL::Texture::ptr new_preview;
-				new_preview.reset(new HAL::Texture(HAL::Device::get(), HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { 256, 256 }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+				new_preview.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { 256, 256 }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 				asset->holder->editor->preview = new_preview;
 			}
 
@@ -403,8 +404,8 @@ AssetStorage::AssetStorage(file::ptr f)
 		auto archive = get_archive();
 
 			UniversalContext load_ctx;
-					if (HAL::Device::is_good())
-						load_ctx.get_context<HAL::Device*>() = &HAL::Device::get();
+					if (RenderSystem::is_good())
+						load_ctx.get_context<HAL::Device*>() = &RenderSystem::get().device();
 	
 		Header res = archive->get<Header>("header", &load_ctx);
 		return res;
@@ -414,8 +415,8 @@ AssetStorage::AssetStorage(file::ptr f)
 		std::lock_guard<std::mutex> g(archive_mutex);
 		auto archive = get_archive();
 					UniversalContext load_ctx;
-					if (HAL::Device::is_good())
-						load_ctx.get_context<HAL::Device*>() = &HAL::Device::get();
+					if (RenderSystem::is_good())
+						load_ctx.get_context<HAL::Device*>() = &RenderSystem::get().device();
 	
 		auto res = archive->get<Editor>("editor",&load_ctx);
 	
@@ -631,8 +632,8 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 
 
 					UniversalContext load_ctx;
-					if (HAL::Device::is_good())
-						load_ctx.get_context<HAL::Device*>() = &HAL::Device::get();
+					if (RenderSystem::is_good())
+						load_ctx.get_context<HAL::Device*>() = &RenderSystem::get().device();
 					asset = archive->get<Asset::ptr>("asset", &load_ctx);
 
 					asset->holder = this;

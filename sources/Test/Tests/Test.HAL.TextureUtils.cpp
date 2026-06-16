@@ -1,4 +1,5 @@
-module Test.HAL.TextureUtils;
+﻿module Test.HAL.TextureUtils;
+import RenderSystem;
 
 import HAL;
 import Core;
@@ -7,7 +8,7 @@ namespace Test
 {
 	HAL::texture_data::ptr readback_texture(HAL::TextureResource* tex, uint sub_resource)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		auto& tdesc  = tex->get_desc().as_texture();
 		uint  width  = tdesc.Dimensions.x;
 		uint  height = tdesc.Dimensions.y ? tdesc.Dimensions.y : 1;

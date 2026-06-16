@@ -1,4 +1,4 @@
-import Graphics;
+﻿import Graphics;
 import GUI;
 import HAL;
 
@@ -126,9 +126,9 @@ public:
 		SMAA smaa;
 		 ~triangle_drawer()
 		 {
-			 Device::get().get_queue(CommandListType::DIRECT)->signal_and_wait();
-			 Device::get().get_queue(CommandListType::COMPUTE)->signal_and_wait();
-	 Device::get().get_queue(CommandListType::COPY)->signal_and_wait();
+			 RenderSystem::get().device().get_queue(CommandListType::DIRECT)->signal_and_wait();
+			 RenderSystem::get().device().get_queue(CommandListType::COMPUTE)->signal_and_wait();
+	 RenderSystem::get().device().get_queue(CommandListType::COPY)->signal_and_wait();
 
 		 }
 		triangle_drawer() : VariableContext(L"triangle_drawer"), pipeline(), blue_noise(pipeline), smaa(pipeline), sky(pipeline), pssm(pipeline)
@@ -497,9 +497,9 @@ public:
 
 			if (GetAsyncKeyState('R'))
 			{
-				HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
-				//	HAL::Device::get().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
-				//	HAL::Device::get().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
+				RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+				//	RenderSystem::get().device().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
+				//	RenderSystem::get().device().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
 
 				//   AssetManager::get().reload_resources();
 				HAL::pixel_shader::reload_all();
@@ -520,7 +520,7 @@ public:
 				Log::get() << "[Render] frame " << frame_counter << Log::endl;
 			{
 				PROFILE(L"GarbageCollect");
-				Device::get().get_heap_factory().GarbageCollect();
+				RenderSystem::get().device().get_heap_factory().GarbageCollect();
 			}
 			GUI::user_interface::size = new_size;
 			if (fps.tick())
@@ -538,7 +538,7 @@ public:
 				size_t total_gpu = 0;
 
 
-				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(HAL::Device::get().get_vram()) + " "
+				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(RenderSystem::get().device().get_vram()) + " "
 					+ std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
 			}
 
@@ -791,7 +791,7 @@ public:
 		desc.fullscreen = nullptr;
 		desc.stereo = false;
 		desc.window = this;
-		swap_chain = std::make_shared<HAL::SwapChain>(HAL::Device::get(), desc);
+		swap_chain = std::make_shared<HAL::SwapChain>(RenderSystem::get().device(), desc);
 
 		set_capture = [this](bool v)
 			{
@@ -1028,9 +1028,9 @@ public:
 	{
 
 		start();
-		HAL::Device::get().get_queue(CommandListType::DIRECT)->signal_and_wait();
-		HAL::Device::get().get_queue(CommandListType::COMPUTE)->signal_and_wait();
-		HAL::Device::get().get_queue(CommandListType::COPY)->signal_and_wait();
+		RenderSystem::get().device().get_queue(CommandListType::DIRECT)->signal_and_wait();
+		RenderSystem::get().device().get_queue(CommandListType::COMPUTE)->signal_and_wait();
+		RenderSystem::get().device().get_queue(CommandListType::COPY)->signal_and_wait();
 }*/
 
 	}

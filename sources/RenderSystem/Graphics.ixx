@@ -1,5 +1,7 @@
 export module Graphics;
 
+export import RenderSystem;
+
 export import :Texture;
 
 export import :TileDynamicGenerator;

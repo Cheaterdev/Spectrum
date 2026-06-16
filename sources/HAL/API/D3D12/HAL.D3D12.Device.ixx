@@ -11,23 +11,6 @@ using namespace HAL;
 
 export namespace HAL {
 
-    struct DeviceDesc
-    {
-        HAL::Adapter::ptr adapter;
-    };
-
-    struct DeviceProperties
-    {
-        std::string name;
-        bool rtx                    = false;
-        bool mesh_shader            = false;
-        bool full_bindless          = false;
-        bool direct_gpu_upload_heap = false;
-        bool work_graph             = false;
-        // D3D12 has no alignment constraint on StructuredBuffer FirstElement offsets.
-        uint32_t min_storage_buffer_offset_alignment = 1;
-    };
-
     namespace API {
 
         class Device

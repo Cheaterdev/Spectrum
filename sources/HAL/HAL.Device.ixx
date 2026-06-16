@@ -22,10 +22,10 @@ export namespace HAL
 	class GPUTimeProfiler;
 	class GPUEntityStorageInterface;
 	class CommandAllocator;
-	class Device : public Singleton<Device>, public API::Device, public TypedObject<Device>
+	class Device : public API::Device, public TypedObject<Device>
 	{
 		friend class API::Device;
-		friend class Singleton<Device>;
+
 	private:
 
 		HAL::DeviceProperties properties;
@@ -56,9 +56,6 @@ export namespace HAL
 	public:
 		Device(HAL::DeviceDesc desc);
 		virtual ~Device();
-
-		static std::shared_ptr<Device> create_singleton();
-
 
 		void init_managers();
 		void stop_all();

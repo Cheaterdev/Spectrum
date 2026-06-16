@@ -1,4 +1,5 @@
-module Graphics:Materials.UniversalMaterial;
+﻿module Graphics:Materials.UniversalMaterial;
+import RenderSystem;
 
 
 
@@ -43,7 +44,7 @@ CEREAL_FORCE_REGISTER_RELATION(materials::Pipeline, materials::PipelineSimple);
 
 materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context) :Pipeline(id)
 {
-	depth_draw = std::make_shared<PSOS::DepthDraw>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::DepthDraw::Keys& )
+	depth_draw = std::make_shared<PSOS::DepthDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::DepthDraw::Keys& )
 	{
 		target.name += std::to_string(id);
 		target.pixel = { pixel, "PS", HAL::ShaderOptions::None,context->get_pixel_result().macros, true };
@@ -59,7 +60,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		}
 	});
 
-	gbuffer = std::make_shared<PSOS::GBufferDraw>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::GBufferDraw::Keys& )
+	gbuffer = std::make_shared<PSOS::GBufferDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::GBufferDraw::Keys& )
 	{
 		target.name += std::to_string(id);
 		target.pixel = { pixel, "PS", HAL::ShaderOptions::None,context->get_pixel_result().macros, true };
@@ -75,7 +76,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		}
 	});
 
-	voxelization = std::make_shared<PSOS::Voxelization>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::Voxelization::Keys& )
+	voxelization = std::make_shared<PSOS::Voxelization>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::Voxelization::Keys& )
 	{
 		target.name += std::to_string(id);
 		target.pixel = { pixel, "PS_VOXEL", HAL::ShaderOptions::None ,context->get_pixel_result().macros, true };
@@ -228,7 +229,7 @@ void materials::universal_material::update()
 	{
 		material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 		material_info.GetData() = pixel_data;
-		compiled_material_info = material_info.compile(HAL::Device::get().get_static_gpu_data());
+		compiled_material_info = material_info.compile(RenderSystem::get().device().get_static_gpu_data());
 		local_addr = compiled_material_info.compiled().get_offset();
 
 		//local_addr_ids = to_native(compiled_material_info.offsets_cb);
@@ -295,7 +296,7 @@ void materials::universal_material::compile()
 	generate(ps_uniforms);
 	material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 	material_info.GetData() = pixel_data;
-	compiled_material_info = material_info.compile(HAL::Device::get().get_static_gpu_data());
+	compiled_material_info = material_info.compile(RenderSystem::get().device().get_static_gpu_data());
 
 	local_addr = compiled_material_info.compiled().get_offset();
 	//local_addr_ids = to_native(compiled_material_info.offsets_cb);
@@ -404,7 +405,7 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 
 void materials::universal_material::update_rtx()
 {
-	if (!HAL::Device::get().is_rtx_supported()) return;
+	if (!RenderSystem::get().device().is_rtx_supported()) return;
 	RTX::get().rtx.update_material(this);
 
 

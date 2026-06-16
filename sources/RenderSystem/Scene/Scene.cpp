@@ -1,4 +1,5 @@
-module Graphics:Scene;
+﻿module Graphics:Scene;
+import RenderSystem;
 
 import :Materials.UniversalMaterial;
 import :MeshAsset;
@@ -52,14 +53,14 @@ Scene::Scene()
 			dynamic_objects.erase(render_object);
 		});
 
-	mesh_infos = std::make_shared< virtual_gpu_buffer<Table::MeshCommandData>>(HAL::Device::get(), 1024 * 1024);
-	raytrace = std::make_shared<virtual_gpu_buffer<HAL::InstanceDesc>>(HAL::Device::get(), 1024 * 1024);
+	mesh_infos = std::make_shared< virtual_gpu_buffer<Table::MeshCommandData>>(RenderSystem::get().device(), 1024 * 1024);
+	raytrace = std::make_shared<virtual_gpu_buffer<HAL::InstanceDesc>>(RenderSystem::get().device(), 1024 * 1024);
 
 
-	if (HAL::Device::get().is_rtx_supported())
+	if (RenderSystem::get().device().is_rtx_supported())
 	{
 		std::vector<InstanceDesc>  desc;
-		raytrace_scene = std::make_shared<RaytracingAccelerationStructure>(HAL::Device::get(), desc);
+		raytrace_scene = std::make_shared<RaytracingAccelerationStructure>(RenderSystem::get().device(), desc);
 	}
 }
 

@@ -1,4 +1,5 @@
-module Graphics:StencilRenderer;
+﻿module Graphics:StencilRenderer;
+import RenderSystem;
 
 import :EngineAssets;
 
@@ -298,11 +299,11 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	verts[5] = vec4( 1.0f, -1.0f, -1.0f, 0);
 	verts[6] = vec4( 1.0f, -1.0f,  1.0f, 0);
 	verts[7] = vec4(-1.0f, -1.0f,  1.0f, 0);
-	index_buffer = Helpers::make_buffer<unsigned int>(HAL::Device::get(), data);
+	index_buffer = Helpers::make_buffer<unsigned int>(RenderSystem::get().device(), data);
 
-	vertex_buffer = HAL::StructuredBufferView<vec4>(HAL::Device::get(), 8);
+	vertex_buffer = HAL::StructuredBufferView<vec4>(RenderSystem::get().device(), 8);
 
-	auto list = HAL::Device::get().get_upload_list();
+	auto list = RenderSystem::get().device().get_upload_list();
 	list->get_copy().update(vertex_buffer, 0, verts);
 	list->execute_and_wait();
 

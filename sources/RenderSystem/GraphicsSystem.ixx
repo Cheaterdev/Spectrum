@@ -1,36 +1,43 @@
 export module Graphics:System;
 
+import RenderSystem;
 import :RTX;
 import :AssetRenderer;
 import :TextureAsset;
 import :Asset;
 import :Materials.UniversalMaterial;
 import :MeshAsset;
-import HAL;
 import GUI;
 import Core;
 import TextSystem;
 
-// Owns the creation and destruction of all graphics singletons in the correct order.
-// Call GraphicsSystem::create() after logging/filesystem setup; call reset() before exit.
+// Manages the lifecycle of all graphics singletons in the correct order.
+// Calls RenderSystem::create() internally to create the device.
+// Returns nullptr from create() if no suitable GPU is found.
 export class GraphicsSystem : public Singleton<GraphicsSystem>
 {
     friend class Singleton<GraphicsSystem>;
 
-    GraphicsSystem()
+public:
+    static std::shared_ptr<GraphicsSystem> create_singleton()
     {
-        HAL::Device::create();
-        if (HAL::Device::get().is_rtx_supported())
+        if (!RenderSystem::create()) return nullptr;
+
+        if (RenderSystem::get().device().is_rtx_supported())
             RTX::create();
 #ifndef HAL_BACKEND_VULKAN
         AssetRenderer::create();
 #endif
         AssetManager::create();
+
+        return std::make_shared<GraphicsSystem>();
     }
+
+    GraphicsSystem() = default;
 
     ~GraphicsSystem() override
     {
-        HAL::Device::get().stop_all();
+        RenderSystem::get().device().stop_all();
         Skin::reset();
         HAL::Texture::reset_manager();
         HAL::pixel_shader::reset_manager();
@@ -51,6 +58,8 @@ export class GraphicsSystem : public Singleton<GraphicsSystem>
         universal_mesh_instance_manager::reset();
         universal_material_info_part_manager::reset();
         universal_rtx_manager::reset();
-        HAL::Device::reset();
+        RenderSystem::reset();
     }
+
+    static HAL::Device& device() { return RenderSystem::get().device(); }
 };

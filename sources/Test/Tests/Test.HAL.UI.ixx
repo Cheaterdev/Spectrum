@@ -1,4 +1,4 @@
-export module Test.HAL.UI;
+﻿export module Test.HAL.UI;
 
 #define TEST_MODULE_ID HALUI
 
@@ -16,7 +16,7 @@ export namespace Test
 	// Draw(4) with TRIANGLE_STRIP forms two triangles that cover the quad.
 	TEST(Core.HAL, UIRect_Solid)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH = 256, HEIGHT = 256;
 
 		// SimpleRect PSO requires B8G8R8A8_UNORM
@@ -59,7 +59,7 @@ export namespace Test
 	// Expected result: left half = pure blue, right half = (0.6, 0, 0.4, 1.0).
 	TEST(Core.HAL, UIRect_AlphaBlend)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH = 256, HEIGHT = 256;
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
@@ -111,7 +111,7 @@ export namespace Test
 	// that clip-space coordinates map to the correct screen regions.
 	TEST(Core.HAL, UIRect_Layout)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH = 256, HEIGHT = 256;
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,

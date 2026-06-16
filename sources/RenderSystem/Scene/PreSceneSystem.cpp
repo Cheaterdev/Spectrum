@@ -1,4 +1,5 @@
-module Graphics:PreSceneSystem;
+﻿module Graphics:PreSceneSystem;
+import RenderSystem;
 
 
 import :Scene;
@@ -24,7 +25,7 @@ void PassDefault<Passes::PreScene>::render(
 
     SceneFrameManager::get().prepare(command_list, scene);
 
-    if (HAL::Device::get().is_rtx_supported())
+    if (RenderSystem::get().device().is_rtx_supported())
     {
         scene.raytrace_scene->update(command_list,
             (UINT)scene.raytrace->max_size(),

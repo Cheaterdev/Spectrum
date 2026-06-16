@@ -1,4 +1,4 @@
-// VulkanTest — Vulkan backend smoke-test with a live GUI.
+﻿// VulkanTest — Vulkan backend smoke-test with a live GUI.
 // Exercises the full UI stack (FrameGraph, GUI::user_interface, Skin, Font)
 // without any 3D rendering.  Acts as the reference app while 3D PSOs are being
 // brought up on Vulkan.
@@ -91,7 +91,7 @@ public:
         HAL::swap_chain_desc sc_desc;
         sc_desc.window  = this;
         sc_desc.format  = HAL::Format::B8G8R8A8_UNORM;
-        swap_chain = std::make_shared<HAL::SwapChain>(HAL::Device::get(), sc_desc);
+        swap_chain = std::make_shared<HAL::SwapChain>(RenderSystem::get().device(), sc_desc);
 
         new_size = get_size();
         GUI::user_interface::size = new_size;
@@ -124,7 +124,7 @@ public:
 
         // Adapter info (filled after device is up)
         {
-            auto& props = HAL::Device::get().get_properties();
+            auto& props = RenderSystem::get().device().get_properties();
             label_backend->text = std::string("Vulkan: ") + (props.name);
         }
 
@@ -152,7 +152,7 @@ public:
 
         if (fps_meter.tick())
             label_fps->text = std::to_string((int)fps_meter.get()) + " fps  |  "
-                + std::to_string(HAL::Device::get().get_vram()) + " MB VRAM";
+                + std::to_string(RenderSystem::get().device().get_vram()) + " MB VRAM";
 
         GUI::user_interface::size = new_size;
         process_ui((float)frame_timer.tick());

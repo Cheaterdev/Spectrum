@@ -1,4 +1,5 @@
-module GUI:Label;
+﻿module GUI:Label;
+import RenderSystem;
 
 
 import HAL;
@@ -123,7 +124,7 @@ namespace GUI
 			if (!isnan(lay2.right))
 				if (!cache_resource || cache_resource->get_desc().as_texture().Dimensions.x < lay2.right || cache_resource->get_desc().as_texture().Dimensions.y < lay2.bottom)
 				{
-					cache_resource.reset(new HAL::Texture(HAL::Device::get(), HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { lay2.right, (UINT)lay2.bottom }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+					cache_resource.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { lay2.right, (UINT)lay2.bottom }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 					cache_resource->resource->set_name("Label::cache");
 					cache.texture = cache_resource->texture_2d();
 				}

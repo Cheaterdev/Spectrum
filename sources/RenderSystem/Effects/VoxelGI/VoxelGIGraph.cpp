@@ -1,4 +1,5 @@
-module Graphics:VoxelGI;
+﻿module Graphics:VoxelGI;
+import RenderSystem;
 
 
 import Graphics;
@@ -22,10 +23,10 @@ void Texture3DMultiTiles::flush(HAL::CommandList& list)
 void Texture3DMultiTiles::set(HAL::ResourceDesc desc)
 {
 	desc.Flags |= ResFlags::Virtual | ResFlags::DisableStateTracking;
-	tex_dynamic.reset(new HAL::Texture(HAL::Device::get(), desc, TextureLayout::SHADER_RESOURCE));
-	tex_static.reset(new HAL::Texture(HAL::Device::get(), desc, TextureLayout::SHADER_RESOURCE));
+	tex_dynamic.reset(new HAL::Texture(RenderSystem::get().device(), desc, TextureLayout::SHADER_RESOURCE));
+	tex_static.reset(new HAL::Texture(RenderSystem::get().device(), desc, TextureLayout::SHADER_RESOURCE));
 
-	tex_result.reset(new HAL::Texture(HAL::Device::get(), desc, TextureLayout::SHADER_RESOURCE));
+	tex_result.reset(new HAL::Texture(RenderSystem::get().device(), desc, TextureLayout::SHADER_RESOURCE));
 
 	tex_dynamic->resource->set_name("tex_dynamic");
 
@@ -93,7 +94,7 @@ void Texture3DRefTiles::flush(HAL::CommandList& list)
 void Texture3DRefTiles::set(HAL::ResourceDesc desc)
 {
 	desc.Flags |= ResFlags::Virtual | ResFlags::DisableStateTracking;
-	tex_result.reset(new HAL::Texture(HAL::Device::get(), desc, TextureLayout::SHADER_RESOURCE));
+	tex_result.reset(new HAL::Texture(RenderSystem::get().device(), desc, TextureLayout::SHADER_RESOURCE));
 
 	static_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
 	dynamic_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
@@ -592,7 +593,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 	{
 		auto& command_list = context.get_list();
 
-		bool use_rtx_flag = HAL::Device::get().is_rtx_supported() && (bool)use_rtx;
+		bool use_rtx_flag = RenderSystem::get().device().is_rtx_supported() && (bool)use_rtx;
 		GBuffer gbuffer                = GBufferViewDesc::actualize(data.gbuffer);
 		auto    sky_cubemap_filtered   = *data.sky_cubemap_filtered;
 		auto    noisy_output           = *data.VoxelIndirectNoise;

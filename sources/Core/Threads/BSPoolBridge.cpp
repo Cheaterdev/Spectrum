@@ -4,7 +4,7 @@
 
 struct BSPoolHandle
 {
-	BS::thread_pool pool;
+	BS::thread_pool<> pool;
 };
 
 BSPoolHandle* BSPool_Create()

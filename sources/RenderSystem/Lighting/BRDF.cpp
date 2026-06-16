@@ -1,4 +1,5 @@
-module Graphics:BRDF;
+﻿module Graphics:BRDF;
+import RenderSystem;
 
 
 import :TextureAsset;
@@ -18,8 +19,8 @@ import HAL;
 void BRDF::create_new()
 {
 
-	texture.reset(new HAL::Texture(HAL::Device::get(), HAL::ResourceDesc::Tex3D(HAL::Format::R16G16B16A16_FLOAT, { 64, 64, 64 }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)));
-	HAL::CommandList::ptr list(new HAL::CommandList(HAL::CommandListType::DIRECT, HAL::Device::get()));
+	texture.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex3D(HAL::Format::R16G16B16A16_FLOAT, { 64, 64, 64 }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)));
+	HAL::CommandList::ptr list(new HAL::CommandList(HAL::CommandListType::DIRECT, RenderSystem::get().device()));
 	list->begin(L"BRDF");
 
 

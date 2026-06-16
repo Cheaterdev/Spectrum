@@ -1,4 +1,4 @@
-export module Test.GUI;
+﻿export module Test.GUI;
 
 #define TEST_MODULE_ID GUI
 
@@ -161,7 +161,7 @@ export namespace Test
 	TEST(Core.HAL, GUIRenderer_DrawColor)
 	{
 			THREAD_SCOPE(GUI);
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH = 256, HEIGHT = 256;
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
@@ -210,7 +210,7 @@ export namespace Test
 	TEST(Core.HAL, GUIElement_ColoredRect)
 	{
 			THREAD_SCOPE(GUI);
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH = 256, HEIGHT = 256;
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
@@ -267,7 +267,7 @@ export namespace Test
 	TEST(Core.HAL, GUIElement_ThreeBands)
 	{
 			THREAD_SCOPE(GUI);
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH = 256, HEIGHT = 240;
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
@@ -343,7 +343,7 @@ export namespace Test
 		THREAD_SCOPE(GUI);
 
 		constexpr uint W = 256, H = 64;
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
 			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {W, H}, 1, 1,
@@ -426,7 +426,7 @@ export namespace Test
 		THREAD_SCOPE(GUI);
 
 		constexpr uint W = 800, H = 600;
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
 			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {W, H}, 1, 1,
@@ -592,7 +592,7 @@ export namespace Test
 	TEST(Core.HAL, GUINinePatch_Stretch)
 	{
 		THREAD_SCOPE(GUI);
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint RT_W = 256, RT_H = 128;
 		constexpr uint TEX_W = 32, TEX_H = 32;
 		constexpr uint CORNER = 8;
@@ -687,7 +687,7 @@ export namespace Test
 	{
 		THREAD_SCOPE(GUI);
 		sizer_long clip{ 52, 0, 256, 128 };
-		auto rt = run_clip_test(HAL::Device::get(), clip, L"GUINinePatch_ClipLeft");
+		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipLeft");
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_left");
 	}
 
@@ -696,7 +696,7 @@ export namespace Test
 	{
 		THREAD_SCOPE(GUI);
 		sizer_long clip{ 0, 0, 204, 128 };
-		auto rt = run_clip_test(HAL::Device::get(), clip, L"GUINinePatch_ClipRight");
+		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipRight");
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_right");
 	}
 
@@ -705,7 +705,7 @@ export namespace Test
 	{
 		THREAD_SCOPE(GUI);
 		sizer_long clip{ 0, 28, 256, 128 };
-		auto rt = run_clip_test(HAL::Device::get(), clip, L"GUINinePatch_ClipTop");
+		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipTop");
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_top");
 	}
 
@@ -714,7 +714,7 @@ export namespace Test
 	{
 		THREAD_SCOPE(GUI);
 		sizer_long clip{ 0, 0, 256, 100 };
-		auto rt = run_clip_test(HAL::Device::get(), clip, L"GUINinePatch_ClipBottom");
+		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipBottom");
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_bottom");
 	}
 
@@ -723,7 +723,7 @@ export namespace Test
 	{
 		THREAD_SCOPE(GUI);
 		sizer_long clip{ 60, 36, 196, 92 };
-		auto rt = run_clip_test(HAL::Device::get(), clip, L"GUINinePatch_ClipCenter");
+		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipCenter");
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_center");
 	}
 
@@ -735,7 +735,7 @@ export namespace Test
 		THREAD_SCOPE(GUI);
 
 		constexpr uint W = 256, H = 64;
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
 			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {W, H}, 1, 1,

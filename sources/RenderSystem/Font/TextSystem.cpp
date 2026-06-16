@@ -1,4 +1,4 @@
-// Global module fragment — FreeType headers must live here (before the module
+﻿// Global module fragment — FreeType headers must live here (before the module
 // declaration) so that the C macros they use are processed by the preprocessor
 // before C++20 module parsing begins.
 module;
@@ -7,6 +7,7 @@ module;
 #include FT_FREETYPE_H
 
 module TextSystem;
+import RenderSystem;
 
 import Core;
 import HAL;
@@ -79,11 +80,11 @@ public:
         HAL::ResourceDesc desc =
             HAL::ResourceDesc::Tex2D(HAL::Format::R8_UNORM,
                                      {ATLAS_W, ATLAS_H}, 1, 1);
-        m_texture.reset(new HAL::Texture(HAL::Device::get(), desc));
+        m_texture.reset(new HAL::Texture(RenderSystem::get().device(), desc));
         m_texture->resource->set_name("FontAtlas::texture");
 
         m_coord_buf =
-            HAL::StructuredBufferView<GlyphAtlasEntry>(HAL::Device::get(), MAX_GLYPHS,
+            HAL::StructuredBufferView<GlyphAtlasEntry>(RenderSystem::get().device(), MAX_GLYPHS,
                 HAL::counterType::NONE, HAL::ResFlags::ShaderResource,
                 HAL::HeapType::UPLOAD);
 
@@ -494,7 +495,7 @@ static void draw_vertices(
     list->get_graphics().set_topology(HAL::PrimitiveTopologyType::POINT,
                                       HAL::PrimitiveTopologyFeed::LIST);
     {
-        auto pipeline = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::FontRender>(
+        auto pipeline = RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::FontRender>(
             PSOS::FontRender::Format(formats[0]));
 
     }
@@ -548,7 +549,7 @@ static void draw_vertices(
     // is legal.  lcm(stride, device_limit) is the minimal safe alignment.
     uint32_t count = static_cast<uint32_t>(verts.size());
     const uint32_t stride_align = sizeof(Table::Glyph);
-    const uint32_t vk_align     = HAL::Device::get().get_properties().min_storage_buffer_offset_alignment;
+    const uint32_t vk_align     = RenderSystem::get().device().get_properties().min_storage_buffer_offset_alignment;
     const uint32_t buf_align    = std::lcm(stride_align, vk_align);
     auto placed = list->place_data(sizeof(Table::Glyph) * count, buf_align);
     list->write(placed, std::span{verts.data(), count});

@@ -1,4 +1,5 @@
-module FrameGraphDebug;
+﻿module FrameGraphDebug;
+import RenderSystem;
 
 import windows;
 import Core;
@@ -1108,7 +1109,7 @@ class FrameGraphTimelineCanvas : public dock_base
                             HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(
                                 HAL::Format::R8G8B8A8_UNORM, { SZ }, 1, 1,
                                 HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
-                            m_current_tex = std::make_shared<Texture>(HAL::Device::get(), desc);
+                            m_current_tex = std::make_shared<Texture>(RenderSystem::get().device(), desc);
 
                             if (!m_fit_done)
                             {
@@ -2014,7 +2015,7 @@ private:
                         HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(
                             HAL::Format::R8G8B8A8_UNORM, { thumb_dim }, 1, 1,
                             HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
-                        last_write_thumb_tex = std::make_shared<Texture>(HAL::Device::get(), desc);
+                        last_write_thumb_tex = std::make_shared<Texture>(RenderSystem::get().device(), desc);
                         cell.thumb_tex       = last_write_thumb_tex;
                     }
                     else

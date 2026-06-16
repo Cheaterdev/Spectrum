@@ -1,4 +1,5 @@
 ﻿module GUI:FlowGraph.Canvas;
+import RenderSystem;
 
 import <windows/windows.h>;
 
@@ -111,7 +112,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 	graph_data.GetInv_pixel() = vec2(1, 1) / user_ui->size.get();
 	c.command_list->get_graphics().set(graph_data);
 
-	c.renderer->draw(c, HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::CanvasBack>(), get_render_bounds());
+	c.renderer->draw(c, RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::CanvasBack>(), get_render_bounds());
 
 
 	if (linking.size())

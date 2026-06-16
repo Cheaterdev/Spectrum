@@ -1,5 +1,6 @@
-
+﻿
 module Graphics:VisibilityBuffer;
+import RenderSystem;
 
 
 import HAL;
@@ -8,10 +9,10 @@ VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 {
 	auto desc = HAL::ResourceDesc::Tex3D(HAL::Format::R8_UINT, { sizes.x, sizes.y, sizes.z }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess/*, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE*/);
 
-	buffer = std::make_shared<HAL::Texture>(HAL::Device::get(), desc);
+	buffer = std::make_shared<HAL::Texture>(RenderSystem::get().device(), desc);
 	buffer->resource->set_name("VisibilityBuffer::buffer");
 
-	load_tiles_buffer = HAL::StructuredBufferView<uint4>(HAL::Device::get(), sizes.x * sizes.y * sizes.z, HAL::counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	load_tiles_buffer = HAL::StructuredBufferView<uint4>(RenderSystem::get().device(), sizes.x * sizes.y * sizes.z, HAL::counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 }
 /*
 void VisibilityBuffer::wait_for_results()

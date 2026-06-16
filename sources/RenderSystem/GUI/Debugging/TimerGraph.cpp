@@ -1,4 +1,5 @@
-module GUI:Debug.TimerGraph;
+﻿module GUI:Debug.TimerGraph;
+import RenderSystem;
 
 
 import :Label;
@@ -298,9 +299,9 @@ namespace GUI
 						data.reset();
 						front->remove_all();
 
-						clock_info[CommandListType::DIRECT] = HAL::Device::get().get_queue(CommandListType::DIRECT)->get_clock_time();
-						clock_info[CommandListType::COMPUTE] = HAL::Device::get().get_queue(CommandListType::COMPUTE)->get_clock_time();
-						clock_info[CommandListType::COPY] = HAL::Device::get().get_queue(CommandListType::COPY)->get_clock_time();
+						clock_info[CommandListType::DIRECT] = RenderSystem::get().device().get_queue(CommandListType::DIRECT)->get_clock_time();
+						clock_info[CommandListType::COMPUTE] = RenderSystem::get().device().get_queue(CommandListType::COMPUTE)->get_clock_time();
+						clock_info[CommandListType::COPY] = RenderSystem::get().device().get_queue(CommandListType::COPY)->get_clock_time();
 						start = std::chrono::high_resolution_clock::now();
 
 						ended = false;

@@ -16,42 +16,13 @@ import Graphics;
 import GUI;
 import TextSystem;
 SETUP_CATEGORY(Core.HAL, []() {
-	auto device = HAL::Device::create();
-
-	if (!device)
+	if (!GraphicsSystem::create())
 		Test::TestRegistry::Instance().SkipCategory("Core.HAL", "no suitable GPU device found");
-	else
-		AssetManager::create();
 });
 
 TEARDOWN_CATEGORY(Core.HAL, []() {
 	GUI::NinePatch::reset();
-	HAL::Device::get().stop_all();
-	Skin::reset();
-	HAL::Texture::reset_manager();
-	HAL::pixel_shader::reset_manager();
-	HAL::vertex_shader::reset_manager();
-	HAL::domain_shader::reset_manager();
-	HAL::hull_shader::reset_manager();
-	HAL::geometry_shader::reset_manager();
-	HAL::compute_shader::reset_manager();
-	GUI::Elements::FlowGraph::manager::reset();
-	Profiler::reset();
-	///    main_window2 = nullptr;
-	Fonts::FontSystem::reset();
-	RTX::reset();
-//#ifndef HAL_BACKEND_VULKAN
-	AssetRenderer::reset();
-	TextureAssetRenderer::reset();
-//#endif
-	AssetManager::reset();
-	materials::PipelineManager::reset();
-	universal_nodes_manager::reset();
-
-	universal_mesh_instance_manager::reset();
-	universal_material_info_part_manager::reset();
-	universal_rtx_manager::reset();
-	HAL::Device::reset();
+	GraphicsSystem::reset();
 });
 
 export namespace Test
@@ -59,50 +30,50 @@ export namespace Test
 	// Device tests
 	TEST(Core.HAL, DeviceCreation)
 	{
-		ASSERT_TRUE(&HAL::Device::get() != nullptr);
+		ASSERT_TRUE(&RenderSystem::get().device() != nullptr);
 	}
 
 	TEST(Core.HAL, DeviceProperties)
 	{
-		const auto& props = HAL::Device::get().get_properties();
+		const auto& props = RenderSystem::get().device().get_properties();
 		ASSERT_TRUE(!props.name.empty());
 	}
 
 	TEST(Core.HAL, DeviceVRAM)
 	{
-		size_t vram = HAL::Device::get().get_vram();
+		size_t vram = RenderSystem::get().device().get_vram();
 		ASSERT_TRUE(vram > 0);
 	}
 
 	// Queue tests
 	TEST(Core.HAL, GetDirectQueue)
 	{
-		auto& queue = HAL::Device::get().get_queue(HAL::CommandListType::DIRECT);
+		auto& queue = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT);
 		ASSERT_TRUE(queue != nullptr);
 	}
 
 	TEST(Core.HAL, GetComputeQueue)
 	{
-		auto& queue = HAL::Device::get().get_queue(HAL::CommandListType::COMPUTE);
+		auto& queue = RenderSystem::get().device().get_queue(HAL::CommandListType::COMPUTE);
 		ASSERT_TRUE(queue != nullptr);
 	}
 
 	TEST(Core.HAL, GetCopyQueue)
 	{
-		auto& queue = HAL::Device::get().get_queue(HAL::CommandListType::COPY);
+		auto& queue = RenderSystem::get().device().get_queue(HAL::CommandListType::COPY);
 		ASSERT_TRUE(queue != nullptr);
 	}
 
 	TEST(Core.HAL, QueueSignalAndWait)
 	{
-		auto& queue = HAL::Device::get().get_queue(HAL::CommandListType::DIRECT);
+		auto& queue = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT);
 		queue->signal_and_wait();
 		ASSERT_TRUE(true);
 	}
 
 	TEST(Core.HAL, QueueSignal)
 	{
-		auto& queue = HAL::Device::get().get_queue(HAL::CommandListType::DIRECT);
+		auto& queue = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT);
 		auto waiter = queue->signal();
 		waiter.wait();
 		ASSERT_TRUE(true);
@@ -110,14 +81,14 @@ export namespace Test
 
 	TEST(Core.HAL, ComputeQueueSignalAndWait)
 	{
-		auto& queue = HAL::Device::get().get_queue(HAL::CommandListType::COMPUTE);
+		auto& queue = RenderSystem::get().device().get_queue(HAL::CommandListType::COMPUTE);
 		queue->signal_and_wait();
 		ASSERT_TRUE(true);
 	}
 
 	TEST(Core.HAL, CopyQueueSignalAndWait)
 	{
-		auto& queue = HAL::Device::get().get_queue(HAL::CommandListType::COPY);
+		auto& queue = RenderSystem::get().device().get_queue(HAL::CommandListType::COPY);
 		queue->signal_and_wait();
 		ASSERT_TRUE(true);
 	}
@@ -125,7 +96,7 @@ export namespace Test
 	// Buffer creation tests
 	TEST(Core.HAL, CreateUploadBuffer)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		auto buffer = std::make_shared<HAL::Buffer>(device,
 			HAL::ResourceDesc::Buffer(256, HAL::ResFlags::None),
 			HAL::HeapType::UPLOAD);
@@ -134,7 +105,7 @@ export namespace Test
 
 	TEST(Core.HAL, CreateDefaultBuffer)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		auto buffer = std::make_shared<HAL::Buffer>(device,
 			HAL::ResourceDesc::Buffer(256),
 			HAL::HeapType::DEFAULT);
@@ -143,7 +114,7 @@ export namespace Test
 
 	TEST(Core.HAL, CreateReadbackBuffer)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		auto buffer = std::make_shared<HAL::Buffer>(device,
 			HAL::ResourceDesc::Buffer(256, HAL::ResFlags::None),
 			HAL::HeapType::READBACK);
@@ -152,7 +123,7 @@ export namespace Test
 
 	TEST(Core.HAL, CreateLargeBuffer)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr size_t SIZE = 1024 * 1024; // 1 MB
 		auto buffer = std::make_shared<HAL::Buffer>(device,
 			HAL::ResourceDesc::Buffer(SIZE),
@@ -163,7 +134,7 @@ export namespace Test
 
 	TEST(Core.HAL, UploadBufferCPUAccess)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr size_t SIZE = 256;
 		auto buffer = std::make_shared<HAL::Buffer>(device,
 			HAL::ResourceDesc::Buffer(SIZE, HAL::ResFlags::None),
@@ -175,7 +146,7 @@ export namespace Test
 
 	TEST(Core.HAL, ReadbackBufferCPUAccess)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr size_t SIZE = 256;
 		auto buffer = std::make_shared<HAL::Buffer>(device,
 			HAL::ResourceDesc::Buffer(SIZE, HAL::ResFlags::None),
@@ -186,7 +157,7 @@ export namespace Test
 
 	TEST(Core.HAL, BufferHeapType)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		auto upload = std::make_shared<HAL::Buffer>(device,
 			HAL::ResourceDesc::Buffer(256, HAL::ResFlags::None),
 			HAL::HeapType::UPLOAD);
@@ -204,7 +175,7 @@ export namespace Test
 
 	TEST(Core.HAL, BufferResourceDesc)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr size_t SIZE = 512;
 		auto buffer = std::make_shared<HAL::Buffer>(device,
 			HAL::ResourceDesc::Buffer(SIZE),
@@ -216,7 +187,7 @@ export namespace Test
 	// Texture creation tests
 	TEST(Core.HAL, CreateTexture2D)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		auto tex = std::make_shared<HAL::TextureResource>(device,
 			HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, {64, 64}, 1, 1),
 			HAL::HeapType::DEFAULT);
@@ -225,7 +196,7 @@ export namespace Test
 
 	TEST(Core.HAL, CreateTexture2DUAV)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		auto tex = std::make_shared<HAL::TextureResource>(device,
 			HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, {64, 64}, 1, 1,
 				HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource),
@@ -235,7 +206,7 @@ export namespace Test
 
 	TEST(Core.HAL, TextureResourceDesc)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		auto tex = std::make_shared<HAL::TextureResource>(device,
 			HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, {128, 128}, 1, 1),
 			HAL::HeapType::DEFAULT);
@@ -249,7 +220,7 @@ export namespace Test
 	// Command list tests
 	TEST(Core.HAL, ExecuteEmptyDirectCommandList)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
 		auto list = queue->get_free_list();
 		list->begin(L"EmptyDirect");
@@ -259,7 +230,7 @@ export namespace Test
 
 	TEST(Core.HAL, ExecuteEmptyCopyCommandList)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		auto& queue = device.get_queue(HAL::CommandListType::COPY);
 		auto list = queue->get_free_list();
 		list->begin(L"EmptyCopy");
@@ -269,7 +240,7 @@ export namespace Test
 
 	TEST(Core.HAL, ExecuteMultipleCommandLists)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
 
 		for (int i = 0; i < 3; ++i)
@@ -284,7 +255,7 @@ export namespace Test
 	// Data upload/copy/readback round-trip
 	TEST(Core.HAL, WriteToUploadBuffer)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr size_t SIZE = 64;
 		auto buffer = std::make_shared<HAL::Buffer>(device,
 			HAL::ResourceDesc::Buffer(SIZE, HAL::ResFlags::None),
@@ -308,7 +279,7 @@ export namespace Test
 
 	TEST(Core.HAL, BufferCopyUploadToReadback)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr size_t SIZE = 256;
 
 		auto upload = std::make_shared<HAL::Buffer>(device,
@@ -341,7 +312,7 @@ export namespace Test
 
 	TEST(Core.HAL, UploadListHelperPattern)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr size_t SIZE = 128;
 
 		auto upload = std::make_shared<HAL::Buffer>(device,
@@ -366,7 +337,7 @@ export namespace Test
 	// Texture content tests
 	TEST(Core.HAL, RainbowTexture)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH  = 256;
 		constexpr uint HEIGHT = 64;
 
@@ -415,7 +386,7 @@ export namespace Test
 
 	TEST(Core.HAL, VerticalRainbowTexture)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH  = 64;
 		constexpr uint HEIGHT = 256;
 
@@ -468,7 +439,7 @@ export namespace Test
 
 	TEST(Core.HAL, LoadIconTexture)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 
 		auto file = FileSystem::get().get_file("resources/icon.jpg");
 		ASSERT_TRUE(file != nullptr);
@@ -496,7 +467,7 @@ export namespace Test
 	// Texture clear tests
 	TEST(Core.HAL, ClearTextureToColor)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH  = 64;
 		constexpr uint HEIGHT = 64;
 
@@ -525,7 +496,7 @@ export namespace Test
 
 	TEST(Core.HAL, ClearIgnoresScissor)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH  = 64;
 		constexpr uint HEIGHT = 64;
 
@@ -562,7 +533,7 @@ export namespace Test
 
 	TEST(Core.HAL, ClearTextureUAV)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH  = 64;
 		constexpr uint HEIGHT = 64;
 

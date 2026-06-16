@@ -1,4 +1,4 @@
-export module Test.HAL.SIG;
+﻿export module Test.HAL.SIG;
 
 #define TEST_MODULE_ID HALSIG
 
@@ -16,7 +16,7 @@ export namespace Test
 	// the render target, and compare the result against the golden image.
 	TEST(Core.HAL, SIGColor)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH = 64, HEIGHT = 64;
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
@@ -93,7 +93,7 @@ float4 PS() : SV_Target
 	// that loads each texel by pixel position, and compare the copy output.
 	TEST(Core.HAL, SIGCopyTexture)
 	{
-		auto& device = HAL::Device::get();
+		auto& device = RenderSystem::get().device();
 		constexpr uint WIDTH = 64, HEIGHT = 64;
 
 		// Source texture: ShaderResource (default flags), filled with solid orange.
