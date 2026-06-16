@@ -148,7 +148,7 @@ compute_pso_stat
  | COMMENT
  ;
 compute_pso_block: compute_pso_stat*;
-compute_pso_definition: COMPUTE_PSO name_id inherit? OBRACE compute_pso_block CBRACE;
+compute_pso_definition: option_block*? COMPUTE_PSO name_id inherit? OBRACE compute_pso_block CBRACE;
 
 
 graphics_pso_stat
@@ -180,7 +180,7 @@ workgraph_pso_stat
  | COMMENT
  ;
 workgraph_pso_block: workgraph_pso_stat*;
-workgraph_pso_definition: WORKGRAPH_PSO name_id inherit? OBRACE workgraph_pso_block CBRACE;
+workgraph_pso_definition: option_block*? WORKGRAPH_PSO name_id inherit? OBRACE workgraph_pso_block CBRACE;
 
 
 

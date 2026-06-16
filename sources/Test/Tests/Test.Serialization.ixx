@@ -1,5 +1,7 @@
 export module Test.Serialization;
 
+#define TEST_MODULE_ID Serialization
+
 import Test.Framework;
 
 import Core;

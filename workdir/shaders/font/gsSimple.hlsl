@@ -2,7 +2,7 @@
 #include "../autogen/FontRenderingConstants.h"
 
 
-static const Buffer<float4> positions = GetFontRendering().GetPositions();
+static const StructuredBuffer<float4> positions = GetFontRendering().GetPositions();
 static const float4x4  TransformMatrix = GetFontRenderingConstants().GetTransformMatrix();
 static const float4  ClipRect = GetFontRenderingConstants().GetClipRect();
 
@@ -26,6 +26,7 @@ void GS(point GSIn Input[1], inout TriangleStream<GSOut> TriStream)
 	const uint glyphIndex = uint(Input[0].Position.z);
 	float4 texCoords = positions.Load(glyphIndex * 2);
 	float4 offsets = positions.Load(glyphIndex * 2 + 1);
+
 	GSOut Output;
 	Output.GlyphColor = Input[0].GlyphColor;
 	float4 positions = basePosition.xyxy + offsets;

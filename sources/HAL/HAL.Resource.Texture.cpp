@@ -57,8 +57,8 @@ namespace HAL
 		init();
 	}
 
-	TextureResource::TextureResource(Device& device, const D3D::Resource& resouce, TextureLayout initialLayout)
-		: Resource(device, resouce, initialLayout)
+	TextureResource::TextureResource(Device& device, const API::NativeImportHandle& handle, TextureLayout initialLayout)
+		: Resource(device, handle, initialLayout)
 	{
 		init();
 	}

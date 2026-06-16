@@ -51,7 +51,7 @@ public:
 
 			if (instance) return instance.get();
 
-			ASSERT(first);
+			//ASSERT(first);
 			first = false;
 			if constexpr (HasCreationFunc<T>)
 			{

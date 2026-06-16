@@ -4,7 +4,7 @@ module HAL:Queue;
 import Core;
 
 import HAL;
-#undef THIS
+
 
 using namespace HAL;
 namespace HAL
@@ -22,6 +22,33 @@ namespace HAL
 		stop_all();
 	}
 
+
+	Queue::Queue(CommandListType type, Device& device) : commandListCounter(device), type(type), device(device)
+	{
+		API::Queue::construct(type, &device);
+		m_fenceValue = 0;
+		del_func = [this](CommandList* list)
+		{
+			if (stop)
+				delete list;
+			else
+			{
+				std::lock_guard<std::mutex> g(list_mutex);
+				lists.emplace(list, del_func);
+			}
+		};
+
+		del_transition = [this](TransitionCommandList* list)
+		{
+			if (stop)
+				delete list;
+			else
+			{
+				std::lock_guard<std::mutex> g(list_mutex);
+				transition_lists.emplace(list, del_transition);
+			}
+		};
+	}
 
 
 /*	FenceWaiter Queue::signal_internal()

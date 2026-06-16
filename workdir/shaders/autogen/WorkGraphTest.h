@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_WorkGraphTest: register( b2, space4);
+#ifdef __spirv__
+struct _CB_WorkGraphTest { uint offset; };
+static _CB_WorkGraphTest pass_WorkGraphTest = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_WorkGraphTest: register(b4, space4);
+#endif
 
 ConstantBuffer<WorkGraphTest> CreateWorkGraphTest()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<WorkGraphTest> CreateWorkGraphTest()
 }
 			
 #ifndef NO_GLOBAL
-static const WorkGraphTest workGraphTest_global = CreateWorkGraphTest();
-const WorkGraphTest GetWorkGraphTest(){ return workGraphTest_global; }
+static const ConstantBuffer<WorkGraphTest> workGraphTest_global = CreateWorkGraphTest();
+ConstantBuffer<WorkGraphTest> GetWorkGraphTest(){ return workGraphTest_global; }
 #endif

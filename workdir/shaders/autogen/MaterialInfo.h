@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_MaterialInfo: register( b2, space11);
+#ifdef __spirv__
+struct _CB_MaterialInfo { uint offset; };
+static _CB_MaterialInfo pass_MaterialInfo = { _hal_push.s11 };
+#else
+ConstantBuffer<CB> pass_MaterialInfo: register(b11, space11);
+#endif
 
 ConstantBuffer<MaterialInfo> CreateMaterialInfo()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<MaterialInfo> CreateMaterialInfo()
 }
 			
 #ifndef NO_GLOBAL
-static const MaterialInfo materialInfo_global = CreateMaterialInfo();
-const MaterialInfo GetMaterialInfo(){ return materialInfo_global; }
+static const ConstantBuffer<MaterialInfo> materialInfo_global = CreateMaterialInfo();
+ConstantBuffer<MaterialInfo> GetMaterialInfo(){ return materialInfo_global; }
 #endif

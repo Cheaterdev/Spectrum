@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_DenoiserShadow_TileClassification: register( b2, space4);
+#ifdef __spirv__
+struct _CB_DenoiserShadow_TileClassification { uint offset; };
+static _CB_DenoiserShadow_TileClassification pass_DenoiserShadow_TileClassification = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_DenoiserShadow_TileClassification: register(b4, space4);
+#endif
 
 ConstantBuffer<DenoiserShadow_TileClassification> CreateDenoiserShadow_TileClassification()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<DenoiserShadow_TileClassification> CreateDenoiserShadow_TileClass
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserShadow_TileClassification denoiserShadow_TileClassification_global = CreateDenoiserShadow_TileClassification();
-const DenoiserShadow_TileClassification GetDenoiserShadow_TileClassification(){ return denoiserShadow_TileClassification_global; }
+static const ConstantBuffer<DenoiserShadow_TileClassification> denoiserShadow_TileClassification_global = CreateDenoiserShadow_TileClassification();
+ConstantBuffer<DenoiserShadow_TileClassification> GetDenoiserShadow_TileClassification(){ return denoiserShadow_TileClassification_global; }
 #endif

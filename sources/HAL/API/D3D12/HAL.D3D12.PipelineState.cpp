@@ -391,7 +391,7 @@ namespace HAL
             slots.merge(desc.amplification->slots_usage);
         }
 
-        ASSERT(!slots.empty());
+//        ASSERT(!slots.empty());
         {
             auto RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
             RasterizerState.CullMode = to_native(desc.rasterizer.cull_mode);

@@ -25,67 +25,6 @@ using namespace FrameGraph;
 using namespace HAL;
 
 
-// ============================================================
-// PassDefault implementations
-// ============================================================
-
-// ---- ResultCreation ------------------------------------------------
-
-bool PassDefault<Passes::ResultCreation>::setup(
-	Passes::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder)
-{
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-	builder.create(data.ResultTexture,
-		{ uint3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
-		FrameGraph::ResourceFlags::RenderTarget);
-	return false;
-}
-
-void PassDefault<Passes::ResultCreation>::render(
-	Passes::ResultCreation::Context&, FrameGraph::FrameContext&) {}
-
-
-// ---- CopyPrev ------------------------------------------------------
-
-bool PassDefault<Passes::CopyPrev>::setup(
-	Passes::CopyPrev::Context& data, FrameGraph::TaskBuilder& builder)
-{
-	builder.need(data.gbuffer.GBuffer_NormalsPrev,  FrameGraph::ResourceFlags::CopyDest);
-	builder.need(data.gbuffer.GBuffer_SpecularPrev, FrameGraph::ResourceFlags::CopyDest);
-	builder.need(data.gbuffer.GBuffer_Normals,      FrameGraph::ResourceFlags::CopySource);
-	builder.need(data.gbuffer.GBuffer_Specular,     FrameGraph::ResourceFlags::CopySource);
-	builder.need(data.gbuffer.GBuffer_DepthPrev,    FrameGraph::ResourceFlags::CopyDest);
-	builder.need(data.gbuffer.GBuffer_DepthMips,    FrameGraph::ResourceFlags::CopySource);
-	return true;
-}
-
-void PassDefault<Passes::CopyPrev>::render(
-	Passes::CopyPrev::Context& data, FrameGraph::FrameContext& context)
-{
-	auto& copy = context.get_list()->get_copy();
-
-	copy.copy_resource(data.gbuffer.GBuffer_NormalsPrev->resource,
-	                   data.gbuffer.GBuffer_Normals->resource);
-	copy.copy_resource(data.gbuffer.GBuffer_SpecularPrev->resource,
-	                   data.gbuffer.GBuffer_Specular->resource);
-	copy.copy_texture(data.gbuffer.GBuffer_DepthPrev->resource, 0,
-	                  data.gbuffer.GBuffer_DepthMips->resource, 0);
-}
-
-
-// ---- Profiler ------------------------------------------------------
-
-bool PassDefault<Passes::Profiler>::setup(
-	Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder)
-{
-	builder.need(data.swapchain,
-	             FrameGraph::ResourceFlags::Required | FrameGraph::ResourceFlags::RenderTarget);
-	return false;
-}
-
-void PassDefault<Passes::Profiler>::render(
-	Passes::Profiler::Context&, FrameGraph::FrameContext&) {}
-
 
 class tick_timer
 {
@@ -515,6 +454,7 @@ namespace GUI
 
 }
 
+
 class GraphRender : public Window, public GUI::user_interface
 {
 	HAL::SwapChain::ptr swap_chain;
@@ -579,6 +519,8 @@ public:
 			}
 
 			Profiler::get().on_frame(frame_counter++);
+			if (frame_counter <= 5)
+				Log::get() << "[Render] frame " << frame_counter << Log::endl;
 			{
 				PROFILE(L"GarbageCollect");
 				Device::get().get_heap_factory().GarbageCollect();
@@ -620,12 +562,69 @@ public:
 
 
 			auto fence = graph.commit_command_lists();
+
+			// ---- One-shot debug screenshot ----------------------------------------
+			// Fires on the first rendered frame.  Uses HAL::texture_data::from_readback
+			// + to_png() (same pattern as Test.HAL.TextureUtils) to write screenshot.png
+			// in the working directory.  Lets us verify GPU pixel output independently
+			// of any swapchain-presentation issues.
+			{
+				static int screenshot_countdown = 1;
+				if (screenshot_countdown > 0 && --screenshot_countdown == 0)
+				{
+					Log::get() << "[Screenshot] Starting readback on frame " << frame_counter << Log::endl;
+					fence.wait(); // ensure GPU finished rendering + PRESENT transition
+
+					const auto& sc_res   = swap_chain->get_current_frame();
+					const auto& tex_desc = sc_res->get_desc().as_texture();
+					const uint32_t      w   = tex_desc.Dimensions.x;
+					const uint32_t      h   = tex_desc.Dimensions.y ? tex_desc.Dimensions.y : 1;
+					const HAL::Format   fmt = tex_desc.Format;
+
+					HAL::texture_data::ptr result;
+					auto ss_list = HAL::Device::get().get_upload_list();
+					auto fut = ss_list->get_copy().read_texture(
+						sc_res.get(), 0,
+						[&](std::span<std::byte> data, HAL::texture_layout layout)
+						{
+							result = HAL::texture_data::from_readback(w, h, fmt, data, layout);
+						});
+					// Restore swapchain to PRESENT layout so present() works correctly.
+					// On Vulkan this barrier is deferred to end() so it always fires
+					// after the copy regardless of recording order.
+					ss_list->transition_present(sc_res.get());
+					ss_list->execute_and_wait();
+					fut.wait();
+
+					if (result)
+					{
+						auto png = result->to_png();
+						if (!png.empty())
+						{
+							std::string png_str(reinterpret_cast<const char*>(png.data()), png.size());
+							FileSystem::get().save_data("screenshot.png", png_str);
+							Log::get() << "[Screenshot] Saved screenshot.png "
+							           << w << "x" << h << Log::endl;
+						}
+						else
+							Log::get() << "[Screenshot] to_png() returned empty" << Log::endl;
+					}
+					else
+						Log::get() << "[Screenshot] from_readback() returned null" << Log::endl;
+				}
+			}
+			// -----------------------------------------------------------------------
+
 			{
 				PROFILE(L"reset");
 				graph.reset();
 			}
 
+			if (frame_counter <= 5)
+				Log::get() << "[Render] calling present frame " << frame_counter << Log::endl;
 			swap_chain->present();
+			if (frame_counter <= 5)
+				Log::get() << "[Render] present returned frame " << frame_counter << Log::endl;
 		}
 
 
@@ -826,6 +825,7 @@ public:
 			auto d = std::make_shared<GUI::Elements::dock_base>();
 			docker = d;
 			d->docking = GUI::dock::FILL;
+#ifndef HAL_BACKEND_VULKAN
 			{
 				EVENT("Start Drawer");
 				drawer.reset(new triangle_drawer());
@@ -834,6 +834,7 @@ public:
 				d->get_tabs()->add_page("Game", drawer);
 				EVENT("End Drawer");
 			}
+#endif
 
 			{
 				//	auto text = std::make_shared<GUI::Elements::MultiLineLabel>();
@@ -913,6 +914,7 @@ public:
 						{
 							add_task([this]()
 								{
+									if (!drawer) return;
 									drawer->scene->remove_all();
 								});
 						};
@@ -920,6 +922,7 @@ public:
 						{
 							add_task([this]()
 								{
+									if (!drawer) return;
 									try
 									{
 										auto f = FileSystem::get().get_file(to_path(L"scene.dat"))->load_all();
@@ -935,6 +938,7 @@ public:
 						};
 					file->add_item("Save")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 						{
+							if (!drawer) return;
 							auto data = Serializer::serialize(*drawer->scene);
 							FileSystem::get().save_data(to_path(L"scene.dat"), data);
 						};
@@ -1072,7 +1076,9 @@ protected:
 			RTX::create();
 
 		EVENT("AssetManager");
+#ifndef HAL_BACKEND_VULKAN
 		AssetRenderer::create();
+#endif
 		AssetManager::create();
 		EVENT("WindowRender");
 
@@ -1111,21 +1117,18 @@ protected:
 		///    main_window2 = nullptr;
 		Fonts::FontSystem::reset();
 		RTX::reset();
+#ifndef HAL_BACKEND_VULKAN
 		AssetRenderer::reset();
 		TextureAssetRenderer::reset();
+#endif
 		AssetManager::reset();
 		materials::PipelineManager::reset();
 		universal_nodes_manager::reset();
 
 		universal_mesh_instance_manager::reset();
-		//	universal_mesh_info_part_manager::get().prepare(command_list);
 		universal_material_info_part_manager::reset();
 		universal_rtx_manager::reset();
-		//HAL::PipelineLibrary::reset();
-		GUI::NinePatch::index_buffer = StructuredBufferView<unsigned int>();
-
 		HAL::Device::reset();
-		//   HAL::Device::reset();
 	}
 
 

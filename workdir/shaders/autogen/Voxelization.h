@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_Voxelization: register( b2, space7);
+#ifdef __spirv__
+struct _CB_Voxelization { uint offset; };
+static _CB_Voxelization pass_Voxelization = { _hal_push.s7 };
+#else
+ConstantBuffer<CB> pass_Voxelization: register(b7, space7);
+#endif
 
 ConstantBuffer<Voxelization> CreateVoxelization()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<Voxelization> CreateVoxelization()
 }
 			
 #ifndef NO_GLOBAL
-static const Voxelization voxelization_global = CreateVoxelization();
-const Voxelization GetVoxelization(){ return voxelization_global; }
+static const ConstantBuffer<Voxelization> voxelization_global = CreateVoxelization();
+ConstantBuffer<Voxelization> GetVoxelization(){ return voxelization_global; }
 #endif

@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_Test: register( b2, space4);
+#ifdef __spirv__
+struct _CB_Test { uint offset; };
+static _CB_Test pass_Test = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_Test: register(b4, space4);
+#endif
 
 ConstantBuffer<Test> CreateTest()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<Test> CreateTest()
 }
 			
 #ifndef NO_GLOBAL
-static const Test test_global = CreateTest();
-const Test GetTest(){ return test_global; }
+static const ConstantBuffer<Test> test_global = CreateTest();
+ConstantBuffer<Test> GetTest(){ return test_global; }
 #endif

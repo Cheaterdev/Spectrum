@@ -5,7 +5,6 @@
 // Changes will be lost on next generation. Edit the .sig source files instead.
 // ============================================================================
 
-
 #include "PreScene.h"
 #include "BlueNoise.h"
 #include "Voxelize.h"

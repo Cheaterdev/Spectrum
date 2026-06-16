@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_FrameGraph_Debug_Common: register( b2, space4);
+#ifdef __spirv__
+struct _CB_FrameGraph_Debug_Common { uint offset; };
+static _CB_FrameGraph_Debug_Common pass_FrameGraph_Debug_Common = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_FrameGraph_Debug_Common: register(b4, space4);
+#endif
 
 ConstantBuffer<FrameGraph_Debug_Common> CreateFrameGraph_Debug_Common()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<FrameGraph_Debug_Common> CreateFrameGraph_Debug_Common()
 }
 			
 #ifndef NO_GLOBAL
-static const FrameGraph_Debug_Common frameGraph_Debug_Common_global = CreateFrameGraph_Debug_Common();
-const FrameGraph_Debug_Common GetFrameGraph_Debug_Common(){ return frameGraph_Debug_Common_global; }
+static const ConstantBuffer<FrameGraph_Debug_Common> frameGraph_Debug_Common_global = CreateFrameGraph_Debug_Common();
+ConstantBuffer<FrameGraph_Debug_Common> GetFrameGraph_Debug_Common(){ return frameGraph_Debug_Common_global; }
 #endif

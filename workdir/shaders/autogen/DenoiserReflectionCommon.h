@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_DenoiserReflectionCommon: register( b2, space4);
+#ifdef __spirv__
+struct _CB_DenoiserReflectionCommon { uint offset; };
+static _CB_DenoiserReflectionCommon pass_DenoiserReflectionCommon = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_DenoiserReflectionCommon: register(b4, space4);
+#endif
 
 ConstantBuffer<DenoiserReflectionCommon> CreateDenoiserReflectionCommon()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<DenoiserReflectionCommon> CreateDenoiserReflectionCommon()
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserReflectionCommon denoiserReflectionCommon_global = CreateDenoiserReflectionCommon();
-const DenoiserReflectionCommon GetDenoiserReflectionCommon(){ return denoiserReflectionCommon_global; }
+static const ConstantBuffer<DenoiserReflectionCommon> denoiserReflectionCommon_global = CreateDenoiserReflectionCommon();
+ConstantBuffer<DenoiserReflectionCommon> GetDenoiserReflectionCommon(){ return denoiserReflectionCommon_global; }
 #endif

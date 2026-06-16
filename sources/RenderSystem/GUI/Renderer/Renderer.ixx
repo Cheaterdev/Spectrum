@@ -17,7 +17,7 @@ export namespace GUI
 
 		HAL::PipelineState::ptr current_state;
 	public:
-			static HAL::IndexBuffer index_buffer;
+			 HAL::IndexBuffer index_buffer;
 		int counter = 0;
 		using ptr = s_ptr<NinePatch>;
 		NinePatch();
@@ -25,6 +25,8 @@ export namespace GUI
 		void draw(base::Context& c, GUI::Texture& item, rect r);
 		void draw(base::Context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state);
 		void flush(base::Context& c);
+
+		static void reset();
 	};
 
 	class SimpleRect

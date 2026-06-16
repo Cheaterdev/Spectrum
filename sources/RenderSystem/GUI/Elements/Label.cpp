@@ -47,7 +47,7 @@ namespace GUI
 					if ((intersected.top < intersected.bottom && intersected.left < intersected.right))
 					{
 					//	 if(GetAsyncKeyState('U'))
-
+						ASSERT(cache.texture.texture2D && "label::draw: cache texture not initialized — recalculate not called?");
 						c.renderer->draw(c, cache, p);
 					//	 else
 					//		 geomerty->draw(c.command_list, c.ui_clipping, 0, p.pos);

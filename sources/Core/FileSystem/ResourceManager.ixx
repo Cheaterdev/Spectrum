@@ -72,6 +72,11 @@ template<class T> concept CanReload =
 requires (T t, T t2) {
 	t = t2;
 };
+
+// Resources may opt into a cache subfolder via a static cache_subfolder().
+// Used to segregate backend-specific caches (shaders/PSOs → cache/<backend>/),
+// while backend-agnostic resources (textures) omit it and cache in the root.
+template<class T> concept HasCacheSubfolder = requires { T::cache_subfolder(); };
 template<class _resource, class _header>
 class resource_manager
 {
@@ -125,7 +130,7 @@ public:
 	}
 
 protected:
-	
+
 		SERIALIZE()
 		{
 			ar& NVP(header);
@@ -133,12 +138,22 @@ protected:
 		}
 	_header header;
 
+	// Cache directory for this resource type: "cache", optionally with a
+	// per-resource subfolder (e.g. backend name for shaders/PSOs).
+	static std::filesystem::path cache_directory()
+	{
+		std::filesystem::path dir("cache");
+		if constexpr (HasCacheSubfolder<_resource>)
+			dir /= _resource::cache_subfolder();
+		return dir;
+	}
+
 	static std::shared_ptr<_resource> create_new(const _header& header)
 	{
 		std::shared_ptr<_resource> result;
 		std::string header_hash = Hasher::hash(header)  + ".bin";
 
-		std::filesystem::path cache_dir ("cache");
+		std::filesystem::path cache_dir = cache_directory();
 
 
 	std::filesystem::path path = cache_dir / header_hash;
@@ -193,7 +208,7 @@ protected:
 		result->file_depends = file_depends;
 		result->header = header;
 		std::string header_hash = Hasher::hash(header)  + ".bin";
-		std::filesystem::path cache_dir ("cache");
+		std::filesystem::path cache_dir = cache_directory();
 		std::filesystem::path path = cache_dir / header_hash;
 		FileDataStorage storage(path);//Serializer::get_stream(file->load_all());
 

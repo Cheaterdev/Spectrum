@@ -4,6 +4,8 @@ module;
 
 export module Test.Math;
 
+#define TEST_MODULE_ID Math
+
 export import Test.Framework;
 
 import stl.core;

@@ -18,7 +18,7 @@ export
 		template<class T>
 		void process_one()
 		{
-			desc[T::ID] = HAL::DescriptorConstants(2, 1, HAL::ShaderVisibility::ALL, T::ID);
+			desc[T::ID] = HAL::DescriptorConstants(T::ID, 1, HAL::ShaderVisibility::ALL, T::ID); // b-register = slot.id for push constant offset alignment
 		}
 
 		template< class ...A>

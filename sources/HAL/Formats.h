@@ -8,9 +8,10 @@
     HAL::Format::R32G32B32A32_FLOAT,    \
     HAL::Format::R32G32B32A32_UINT,     \
     HAL::Format::R32G32B32A32_SINT,     \
-    HAL::Format::R32G32B32_FLOAT,       \
-    HAL::Format::R32G32B32_UINT,        \
-    HAL::Format::R32G32B32_SINT,        \
+    /* R32G32B32_* omitted: Vulkan COLOR_ATTACHMENT_BIT support is optional for 3-component R32 formats */ \
+    /*HAL::Format::R32G32B32_FLOAT,*/   \
+    /*HAL::Format::R32G32B32_UINT,*/    \
+    /*HAL::Format::R32G32B32_SINT,*/    \
     HAL::Format::R16G16B16A16_FLOAT,    \
     HAL::Format::R16G16B16A16_UNORM,    \
     HAL::Format::R16G16B16A16_UINT,     \
@@ -48,16 +49,19 @@
     HAL::Format::R8_UINT,               \
     HAL::Format::R8_SNORM,              \
     HAL::Format::R8_SINT,               \
-    HAL::Format::A8_UNORM,              \
+    /* A8_UNORM omitted: no VK_FORMAT_A8_UNORM in core Vulkan */ \
+    /*HAL::Format::A8_UNORM,*/          \
     /*HAL::Format::R1_UNORM,*/          \
-    HAL::Format::R8G8_B8G8_UNORM,       \
-    HAL::Format::G8R8_G8B8_UNORM,       \
+    /* R8G8_B8G8 / G8R8_G8B8 omitted: D3D12 subsampled YUV-packed formats, no Vulkan RT equivalent */ \
+    /*HAL::Format::R8G8_B8G8_UNORM,*/   \
+    /*HAL::Format::G8R8_G8B8_UNORM,*/   \
     HAL::Format::B5G6R5_UNORM,          \
     HAL::Format::B5G5R5A1_UNORM,        \
     HAL::Format::B8G8R8A8_UNORM,        \
-    HAL::Format::B8G8R8X8_UNORM,        \
-    HAL::Format::B8G8R8A8_UNORM_SRGB,   \
-    HAL::Format::B8G8R8X8_UNORM_SRGB
+    /* B8G8R8X8 omitted: no dedicated VkFormat; Vulkan uses B8G8R8A8 (no X/ignored-alpha variant) */ \
+    /*HAL::Format::B8G8R8X8_UNORM,*/    \
+    HAL::Format::B8G8R8A8_UNORM_SRGB    \
+    /*HAL::Format::B8G8R8X8_UNORM_SRGB*/
 #endif
 
 #ifndef ALL_RT_BLENDING_FORMATS
@@ -83,12 +87,14 @@
     HAL::Format::R16_SNORM,             \
     HAL::Format::R8_UNORM,              \
     HAL::Format::R8_SNORM,              \
-    HAL::Format::A8_UNORM,              \
+    /* A8_UNORM omitted: no VK_FORMAT_A8_UNORM in core Vulkan */ \
+    /*HAL::Format::A8_UNORM,*/          \
     /*HAL::Format::R1_UNORM,*/          \
     HAL::Format::B5G6R5_UNORM,          \
     HAL::Format::B5G5R5A1_UNORM,        \
     HAL::Format::B8G8R8A8_UNORM,        \
-    HAL::Format::B8G8R8X8_UNORM,        \
-    HAL::Format::B8G8R8A8_UNORM_SRGB,   \
-    HAL::Format::B8G8R8X8_UNORM_SRGB
+    /* B8G8R8X8 omitted: no dedicated VkFormat */ \
+    /*HAL::Format::B8G8R8X8_UNORM,*/    \
+    HAL::Format::B8G8R8A8_UNORM_SRGB    \
+    /*HAL::Format::B8G8R8X8_UNORM_SRGB*/
 #endif

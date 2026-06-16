@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_MeshInfo: register( b2, space5);
+#ifdef __spirv__
+struct _CB_MeshInfo { uint offset; };
+static _CB_MeshInfo pass_MeshInfo = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_MeshInfo: register(b5, space5);
+#endif
 
 ConstantBuffer<MeshInfo> CreateMeshInfo()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<MeshInfo> CreateMeshInfo()
 }
 			
 #ifndef NO_GLOBAL
-static const MeshInfo meshInfo_global = CreateMeshInfo();
-const MeshInfo GetMeshInfo(){ return meshInfo_global; }
+static const ConstantBuffer<MeshInfo> meshInfo_global = CreateMeshInfo();
+ConstantBuffer<MeshInfo> GetMeshInfo(){ return meshInfo_global; }
 #endif

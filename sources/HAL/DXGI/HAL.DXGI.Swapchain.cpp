@@ -7,7 +7,7 @@ import HAL;
 
 
 import d3d12;
-#undef THIS
+
 namespace HAL
 {
 	SwapChain::SwapChain(Device& device, swap_chain_desc c_desc) :device(device)
@@ -77,7 +77,7 @@ namespace HAL
 		{
 			D3D::Resource  render_target;
 			m_swapChain->GetBuffer(n, IID_PPV_ARGS(&render_target));
-			frames[n].m_renderTarget.reset(new TextureResource(device, render_target, TextureLayout::PRESENT));
+			frames[n].m_renderTarget.reset(new TextureResource(device, API::NativeImportHandle{render_target}, TextureLayout::PRESENT));
 			frames[n].m_renderTarget->set_name(std::string("swap_chain_") + std::to_string(n));
 			
 		}

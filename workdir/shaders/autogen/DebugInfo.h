@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_DebugInfo: register( b2, space3);
+#ifdef __spirv__
+struct _CB_DebugInfo { uint offset; };
+static _CB_DebugInfo pass_DebugInfo = { _hal_push.s3 };
+#else
+ConstantBuffer<CB> pass_DebugInfo: register(b3, space3);
+#endif
 
 ConstantBuffer<DebugInfo> CreateDebugInfo()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<DebugInfo> CreateDebugInfo()
 }
 			
 #ifndef NO_GLOBAL
-static const DebugInfo debugInfo_global = CreateDebugInfo();
-const DebugInfo GetDebugInfo(){ return debugInfo_global; }
+static const ConstantBuffer<DebugInfo> debugInfo_global = CreateDebugInfo();
+ConstantBuffer<DebugInfo> GetDebugInfo(){ return debugInfo_global; }
 #endif

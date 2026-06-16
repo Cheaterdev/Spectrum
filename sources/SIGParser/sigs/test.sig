@@ -8,7 +8,6 @@ struct Test
 	StructuredBuffer<MeshInstanceInfo> instances[];
 }
 
-
 Pipeline MainPipeline
 {
 	# scene prep

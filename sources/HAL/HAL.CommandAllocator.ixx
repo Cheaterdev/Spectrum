@@ -16,6 +16,7 @@ export{
 			CommandListType type;
 		public:
 			CommandAllocator(Device& device, CommandListType type);
+			~CommandAllocator();
 			void reset();
 			CommandListType get_type() const;
 		};

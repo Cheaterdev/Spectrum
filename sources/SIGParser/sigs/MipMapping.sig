@@ -6,6 +6,10 @@ struct MipMapping
     float2 TexelSize;
 	
 	
+	# Split from OutMip[4] — fixed-size arrays in CBV structs accessed via
+	# ResourceDescriptorHeap cause DXC to emit duplicate OpTypeArray IDs in SPIR-V.
+	# Four individual fields have identical binary layout and avoid the issue.
+	# See REFACTOR_TODO.md for root cause and the proper template fix.
 	RWTexture2D<float4> OutMip[4];
 
 	Texture2D<float4> SrcMip;

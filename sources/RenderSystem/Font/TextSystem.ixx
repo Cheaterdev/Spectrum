@@ -31,6 +31,8 @@ export enum FW1_TEXT_FLAG : unsigned int
     FW1_UNUSED            = 0xffffffff
 };
 
+namespace Fonts { class FontAtlas; }
+
 export namespace Fonts
 {
     class FontSystem;
@@ -78,10 +80,15 @@ export namespace Fonts
         friend class FontGeometry;
 
         Cache<std::string, Font::ptr> fonts;
+        FontAtlas* m_atlas = nullptr;
+
         FontSystem();
+        ~FontSystem();
 
     public:
         Font::ptr get_font(std::string font_name);
+        static FontAtlas& get_atlas();
+        static HAL::TextureResource* get_atlas_texture();
     };
 
     // -----------------------------------------------------------------------

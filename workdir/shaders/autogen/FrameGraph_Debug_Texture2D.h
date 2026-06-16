@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_FrameGraph_Debug_Texture2D: register( b2, space5);
+#ifdef __spirv__
+struct _CB_FrameGraph_Debug_Texture2D { uint offset; };
+static _CB_FrameGraph_Debug_Texture2D pass_FrameGraph_Debug_Texture2D = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_FrameGraph_Debug_Texture2D: register(b5, space5);
+#endif
 
 ConstantBuffer<FrameGraph_Debug_Texture2D> CreateFrameGraph_Debug_Texture2D()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<FrameGraph_Debug_Texture2D> CreateFrameGraph_Debug_Texture2D()
 }
 			
 #ifndef NO_GLOBAL
-static const FrameGraph_Debug_Texture2D frameGraph_Debug_Texture2D_global = CreateFrameGraph_Debug_Texture2D();
-const FrameGraph_Debug_Texture2D GetFrameGraph_Debug_Texture2D(){ return frameGraph_Debug_Texture2D_global; }
+static const ConstantBuffer<FrameGraph_Debug_Texture2D> frameGraph_Debug_Texture2D_global = CreateFrameGraph_Debug_Texture2D();
+ConstantBuffer<FrameGraph_Debug_Texture2D> GetFrameGraph_Debug_Texture2D(){ return frameGraph_Debug_Texture2D_global; }
 #endif

@@ -20,6 +20,7 @@ export namespace HAL
 	public:
 		using CounterType = API::Fence::CounterType;
 		Fence(Device& device);
+		~Fence();
 
 		void signal(CounterType value);
 		CounterType get_completed_value() const;

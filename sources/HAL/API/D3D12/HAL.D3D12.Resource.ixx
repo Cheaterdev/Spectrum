@@ -20,15 +20,28 @@ export namespace HAL
 
     namespace API {
 
+        // NativeImportHandle: wraps an externally-owned D3D12 resource
+        // (e.g. a swapchain back-buffer).  The Vulkan backend provides its own
+        // version of this struct in HAL.Vulkan.Resource.ixx.
+        struct NativeImportHandle
+        {
+            D3D::Resource resource;
+        };
+
         class Resource
         {
             GPUAddressPtr address;
         public:
             using ptr = std::shared_ptr<Resource>;
             void init(Device& device, const ResourceDesc& desc, const PlacementAddress& address, TextureLayout initialLayout = TextureLayout::UNDEFINED);
-            void init(D3D::Resource resource, TextureLayout layout, Device& device);
+
+            // Replaces the old D3D::Resource constructor; backend-neutral.
+            void init(const NativeImportHandle& handle, TextureLayout layout, Device& device);
 
             GPUAddressPtr get_address();
+
+            // CPU mapping for UPLOAD / READBACK heaps.
+            void* get_cpu_mapping();
 
             D3D::Resource native_resource;
 

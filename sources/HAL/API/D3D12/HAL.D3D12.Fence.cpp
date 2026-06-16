@@ -23,6 +23,8 @@ namespace HAL
         WaitForSingleObject(m_fenceEvent, INFINITE);
     }
 
+    Fence::~Fence() {}
+
     Fence::Fence(Device& device)
     {
         device.native_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence));

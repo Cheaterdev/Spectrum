@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_BlueNoise: register( b2, space4);
+#ifdef __spirv__
+struct _CB_BlueNoise { uint offset; };
+static _CB_BlueNoise pass_BlueNoise = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_BlueNoise: register(b4, space4);
+#endif
 
 ConstantBuffer<BlueNoise> CreateBlueNoise()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<BlueNoise> CreateBlueNoise()
 }
 			
 #ifndef NO_GLOBAL
-static const BlueNoise blueNoise_global = CreateBlueNoise();
-const BlueNoise GetBlueNoise(){ return blueNoise_global; }
+static const ConstantBuffer<BlueNoise> blueNoise_global = CreateBlueNoise();
+ConstantBuffer<BlueNoise> GetBlueNoise(){ return blueNoise_global; }
 #endif

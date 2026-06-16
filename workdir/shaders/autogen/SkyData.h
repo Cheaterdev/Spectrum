@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_SkyData: register( b2, space4);
+#ifdef __spirv__
+struct _CB_SkyData { uint offset; };
+static _CB_SkyData pass_SkyData = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_SkyData: register(b4, space4);
+#endif
 
 ConstantBuffer<SkyData> CreateSkyData()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<SkyData> CreateSkyData()
 }
 			
 #ifndef NO_GLOBAL
-static const SkyData skyData_global = CreateSkyData();
-const SkyData GetSkyData(){ return skyData_global; }
+static const ConstantBuffer<SkyData> skyData_global = CreateSkyData();
+ConstantBuffer<SkyData> GetSkyData(){ return skyData_global; }
 #endif

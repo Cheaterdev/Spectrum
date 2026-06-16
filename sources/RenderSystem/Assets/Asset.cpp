@@ -2,6 +2,8 @@ module Graphics:Asset;
 import Core;
 import ppl;
 import windows;
+
+import :AssetRenderer;
 using namespace concurrency;
 
 
@@ -70,6 +72,8 @@ void AssetManager::add_func(std::function<void()> f)
 
 void AssetManager::add_preview(Asset::ptr asset)
 {
+	if (!AssetRenderer::is_good()) return; // no preview renderer on Vulkan
+
 	std::lock_guard<std::mutex> g(update_preview_mutex);
 
 

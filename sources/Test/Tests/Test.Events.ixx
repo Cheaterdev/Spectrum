@@ -1,5 +1,7 @@
 export module Test.Events;
 
+#define TEST_MODULE_ID Events
+
 export import Test.Framework;
 
 import Core;

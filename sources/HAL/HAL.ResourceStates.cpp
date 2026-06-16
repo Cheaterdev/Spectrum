@@ -379,9 +379,16 @@ namespace HAL
 		for (auto& e : gpu_state.subres)
 			e.layout = layout;
 
+		// Reset every per-command-list CPU state so that set_cpu_state_first() on
+		// the next barrier-compilation pass sees "never used" and falls back to the
+		// GPU state we just reset above, rather than overwriting it with a stale
+		// layout from a previous frame (e.g. COLOR_ATTACHMENT_OPTIMAL after present).
 		states.set_init_func([count](SubResourcesCPU& state)
 			{
+				state.used = false;
 				state.subres.resize(count);
+				for (auto& e : state.subres)
+					e.used = false;   // prevents set_cpu_state_first from using stale layout
 			});
 	}
 

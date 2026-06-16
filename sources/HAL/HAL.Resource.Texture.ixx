@@ -28,7 +28,7 @@ export{
 			TextureResource(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
 			TextureResource(Device& device, const ResourceDesc& desc, PlacementAddress handle);
 			TextureResource(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own = false);
-			TextureResource(Device& device, const D3D::Resource& resouce, TextureLayout initialLayout);
+			TextureResource(Device& device, const API::NativeImportHandle& handle, TextureLayout initialLayout);
 			virtual ~TextureResource() {}
 		private:
 

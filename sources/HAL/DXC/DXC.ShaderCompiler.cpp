@@ -3,8 +3,26 @@ module HAL:ShaderCompiler;
 import wrl;
 import Core;
 
-import d3d12;
+import windows;       // COM base types (IUnknown, INoMarshal), MessageBoxA, LPCWSTR
 import DXCompiler;
+
+// Shader reflection is the only D3D12-coupled part of compilation (it uses the
+// ID3D12ShaderReflection / ID3D12LibraryReflection interfaces).  It is split out
+// behind this seam so the common compile path stays backend-neutral:
+//   * D3D12  build: D3D12/HAL.D3D12.ShaderReflection.cpp  (real reflection)
+//   * Vulkan build: Vulkan/HAL.Vulkan.ShaderReflection.cpp (stub for now)
+// Both are implementation units of `module HAL:ShaderCompiler`, so this
+// declaration has module linkage and is visible to whichever one is compiled.
+namespace HAL
+{
+    void reflect_shader(IDxcUtils* library, const DxcBuffer& reflectionBuffer,
+                        const std::string& entry_point, CompiledShader& out);
+
+    // Backend-specific extra DXC compilation flags.
+    // D3D12 backend: returns {} (no-op).
+    // Vulkan backend: returns { L"-spirv", L"-fvk-use-dx-layout", ... }.
+    std::vector<std::wstring> get_extra_compile_args(const std::string& target);
+}
 
 #define DXC_MICROCOM_REF_FIELD(m_dwRef)                                        \
   volatile std::atomic_int m_dwRef = {0};
@@ -181,9 +199,24 @@ namespace HAL
 		compilationArguments.emplace_back(L"-no-warnings");
 		compilationArguments.emplace_back(L"-O3");
 
-		if (check(options & ShaderOptions::FP16))
+		// Backend-specific extra flags (e.g. "-spirv" for Vulkan).
+		// Defined in D3D12/HAL.D3D12.ShaderReflection.cpp (returns {})
+		// and Vulkan/HAL.Vulkan.ShaderReflection.cpp (returns SPIR-V flags).
+		for (auto& extra : get_extra_compile_args(target))
+			compilationArguments.push_back(extra);
+
 		{
-			compilationArguments.push_back(L"-enable-16bit-types");
+			// -enable-16bit-types makes `half` a native 16-bit type in DXIL instead of a
+			// min-precision alias.  Without it, the DXIL validator rejects bitcast operations
+			// on `half` (e.g. in FFX denoiser shaders that use asuint(half)).
+			// For SPIRV targets we must NOT set this flag: DXC would emit native
+			// OpTypeImage %half which violates VUID-StandaloneSpirv-OpTypeImage-04656
+			// (sampled-image component type must be 32-bit).  The Vulkan shaders instead
+			// handle float16 via explicit #ifdef __spirv__ + float16_t aliases.
+			bool is_spirv = std::any_of(compilationArguments.begin(), compilationArguments.end(),
+				[](const std::wstring& a) { return a == L"-spirv"; });
+			if (!is_spirv)
+				compilationArguments.push_back(L"-enable-16bit-types");
 		}
 
 		for (auto& m : defines)
@@ -225,6 +258,7 @@ namespace HAL
 			errorMsg += file_name + "\n";
 			errorMsg.append((infoLog));
 			Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
+		
 			MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
 			return {};
 		}
@@ -235,7 +269,7 @@ namespace HAL
 		blob_str.blob.assign(static_cast<std::byte*>(resultBlob->GetBufferPointer()), static_cast<std::byte*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
 
 
-		ComPtr<IDxcBlob> reflectionBlob{};
+	/*omPtr<IDxcBlob> reflectionBlob{};
 		compiledShaderBuffer->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflectionBlob), nullptr);
 
 		const DxcBuffer reflectionBuffer
@@ -244,90 +278,12 @@ namespace HAL
 			.Size = reflectionBlob->GetBufferSize()
 		};
 
-
-		if (entry_point.size())
-		{
-
-			blob_str.functions.emplace_back();
-			auto& f = blob_str.functions.back();
-
-			ComPtr<ID3D12ShaderReflection> shaderReflection{};
-			library->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection));
-			D3D12_SHADER_DESC shaderDesc{};
-			shaderReflection->GetDesc(&shaderDesc);
-			f.name = entry_point;
-								  f.wname = convert(f.name);
-			for (uint i = 0; i < shaderDesc.ConstantBuffers; i++)
-			{
-				ID3D12ShaderReflectionConstantBuffer* cb = shaderReflection->GetConstantBufferByIndex(i);
-				D3D12_SHADER_BUFFER_DESC shaderBufferDesc{};
-				cb->GetDesc(&shaderBufferDesc);
-
-				std::string cb_name = shaderBufferDesc.Name;
-
-				if (cb_name.starts_with("pass_"))
-				{
-					cb_name = cb_name.substr(5);
-					auto slot_id = get_slot(cb_name);
-
-					if(slot_id)
-					f.slots.merge(slot_id.value());
-				}
-
-				//Log::get() << shaderBufferDesc.Name << Log::endl;
-
-			}
-
-		} else
-		{
-		   	ComPtr<ID3D12LibraryReflection> libraryReflection{};
-			auto hr3 = library->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&libraryReflection));
-
-
-			D3D12_LIBRARY_DESC shaderDesc{};
-			libraryReflection->GetDesc(&shaderDesc);
-				
-
-				for (uint i = 0; i < shaderDesc.FunctionCount; i++)
-			{
-				ID3D12FunctionReflection* f = libraryReflection->GetFunctionByIndex(i);
-				D3D12_FUNCTION_DESC functionDesc{};
-				f->GetDesc(&functionDesc);
-		//		Log::get() << "FUNCTION "<< functionDesc.Name << Log::endl;
-
-				blob_str.functions.emplace_back();
-					auto& rf = blob_str.functions.back();
-						 	  rf.name = functionDesc.Name ;
-							  rf.wname = convert(rf.name);
-
-
-											 	for (uint i = 0; i < functionDesc.ConstantBuffers; i++)
-			{
-				ID3D12ShaderReflectionConstantBuffer* cb = f->GetConstantBufferByIndex(i);
-				D3D12_SHADER_BUFFER_DESC shaderBufferDesc{};
-				cb->GetDesc(&shaderBufferDesc);
-
-						   	std::string cb_name = shaderBufferDesc.Name;
-
-			
-													if (cb_name.starts_with("pass_"))
-				{
-					cb_name = cb_name.substr(5);
-
-					auto slot_id = get_slot(cb_name);
-
-					rf.slots.merge(slot_id.value());
-				}
-			//	Log::get() << shaderBufferDesc.Name << Log::endl;
-
-			}
-			}
-
-
-		}
-
-
-
+		// Backend-specific: D3D12 uses ID3D12ShaderReflection to extract per-pass
+		// constant-buffer slot usage; Vulkan stubs this for now (Phase 4 will use
+		// SPIR-V reflection).  See reflect_shader() seam at top of this TU.
+		reflect_shader(library, reflectionBuffer, entry_point, blob_str);
+					*/
+		blob_str.entry_point = entry_point; // store so pipeline creation can use it
 		return std::move(blob_str);
 
 	}

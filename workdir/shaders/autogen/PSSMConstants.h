@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_PSSMConstants: register( b2, space4);
+#ifdef __spirv__
+struct _CB_PSSMConstants { uint offset; };
+static _CB_PSSMConstants pass_PSSMConstants = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_PSSMConstants: register(b4, space4);
+#endif
 
 ConstantBuffer<PSSMConstants> CreatePSSMConstants()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<PSSMConstants> CreatePSSMConstants()
 }
 			
 #ifndef NO_GLOBAL
-static const PSSMConstants pSSMConstants_global = CreatePSSMConstants();
-const PSSMConstants GetPSSMConstants(){ return pSSMConstants_global; }
+static const ConstantBuffer<PSSMConstants> pSSMConstants_global = CreatePSSMConstants();
+ConstantBuffer<PSSMConstants> GetPSSMConstants(){ return pSSMConstants_global; }
 #endif

@@ -1,5 +1,7 @@
 export module Test.FileSystem;
 
+#define TEST_MODULE_ID FileSystem
+
 export import Test.Framework;
 
 import Core;

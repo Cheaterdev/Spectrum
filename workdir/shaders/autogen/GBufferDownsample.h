@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_GBufferDownsample: register( b2, space6);
+#ifdef __spirv__
+struct _CB_GBufferDownsample { uint offset; };
+static _CB_GBufferDownsample pass_GBufferDownsample = { _hal_push.s6 };
+#else
+ConstantBuffer<CB> pass_GBufferDownsample: register(b6, space6);
+#endif
 
 ConstantBuffer<GBufferDownsample> CreateGBufferDownsample()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<GBufferDownsample> CreateGBufferDownsample()
 }
 			
 #ifndef NO_GLOBAL
-static const GBufferDownsample gBufferDownsample_global = CreateGBufferDownsample();
-const GBufferDownsample GetGBufferDownsample(){ return gBufferDownsample_global; }
+static const ConstantBuffer<GBufferDownsample> gBufferDownsample_global = CreateGBufferDownsample();
+ConstantBuffer<GBufferDownsample> GetGBufferDownsample(){ return gBufferDownsample_global; }
 #endif

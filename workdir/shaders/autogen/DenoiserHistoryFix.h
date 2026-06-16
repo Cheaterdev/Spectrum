@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_DenoiserHistoryFix: register( b2, space6);
+#ifdef __spirv__
+struct _CB_DenoiserHistoryFix { uint offset; };
+static _CB_DenoiserHistoryFix pass_DenoiserHistoryFix = { _hal_push.s6 };
+#else
+ConstantBuffer<CB> pass_DenoiserHistoryFix: register(b6, space6);
+#endif
 
 ConstantBuffer<DenoiserHistoryFix> CreateDenoiserHistoryFix()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<DenoiserHistoryFix> CreateDenoiserHistoryFix()
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserHistoryFix denoiserHistoryFix_global = CreateDenoiserHistoryFix();
-const DenoiserHistoryFix GetDenoiserHistoryFix(){ return denoiserHistoryFix_global; }
+static const ConstantBuffer<DenoiserHistoryFix> denoiserHistoryFix_global = CreateDenoiserHistoryFix();
+ConstantBuffer<DenoiserHistoryFix> GetDenoiserHistoryFix(){ return denoiserHistoryFix_global; }
 #endif

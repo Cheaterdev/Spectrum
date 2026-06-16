@@ -64,9 +64,13 @@ struct GlyphCacheKey
     }
 };
 
+} // anonymous namespace
+
 // ---------------------------------------------------------------------------
-//  FontAtlas  — single R8_UNORM texture + coord buffer shared by all fonts
+//  FontAtlas  — defined in namespace Fonts so it can be a FontSystem member
 // ---------------------------------------------------------------------------
+namespace Fonts {
+
 class FontAtlas
 {
 public:
@@ -79,7 +83,9 @@ public:
         m_texture->resource->set_name("FontAtlas::texture");
 
         m_coord_buf =
-            HAL::StructuredBufferView<GlyphAtlasEntry>(HAL::Device::get(), MAX_GLYPHS);
+            HAL::StructuredBufferView<GlyphAtlasEntry>(HAL::Device::get(), MAX_GLYPHS,
+                HAL::counterType::NONE, HAL::ResFlags::ShaderResource,
+                HAL::HeapType::UPLOAD);
 
         m_cpu.resize(ATLAS_W * ATLAS_H, 0u);
         m_entries.reserve(MAX_GLYPHS);
@@ -183,6 +189,20 @@ public:
         std::lock_guard<std::mutex> lk(m_mtx);
         if (!m_dirty) return;
 
+        // On first upload, clear the entire GPU texture to zero so undefined
+        // texels outside the dirty rect don't produce garbage samples.
+        if (m_first_flush)
+        {
+            m_first_flush = false;
+            list->get_copy().update_texture(
+                m_texture->resource,
+                ivec3(0, 0, 0),
+                ivec3(static_cast<int>(ATLAS_W), static_cast<int>(ATLAS_H), 1),
+                HAL::calc_subresource(0, 0, 0, 1, 1),
+                reinterpret_cast<const char*>(m_cpu.data()),
+                static_cast<int>(ATLAS_W));
+        }
+
         // Upload dirty region of the atlas texture
         if (m_dirty_r > m_dirty_l && m_dirty_b > m_dirty_t)
         {
@@ -197,11 +217,13 @@ public:
                 static_cast<int>(ATLAS_W));
         }
 
-        // Upload updated coord buffer entries
+        // Write coord buffer entries directly into the UPLOAD-heap mapped memory.
+        // UPLOAD heap is always host-coherent; no copy command or barrier needed.
         if (!m_entries.empty())
         {
-            list->get_copy().update(m_coord_buf, 0,
-                std::span{m_entries.data(), m_entries.size()});
+            auto* dst = reinterpret_cast<GlyphAtlasEntry*>(m_coord_buf.resource->buffer_data);
+            if (dst)
+                std::memcpy(dst, m_entries.data(), m_entries.size() * sizeof(GlyphAtlasEntry));
         }
 
         // Reset dirty state
@@ -212,6 +234,8 @@ public:
         m_dirty_b = 0;
     }
 
+    HAL::TextureResource* get_texture_resource() const { return m_texture->resource.get(); }
+
     // Bind the atlas texture and coord buffer to the FontRendering slot
     void bind(HAL::CommandList::ptr& list)
     {
@@ -219,8 +243,8 @@ public:
         rendering.GetTex0() = m_texture->texture_2d().texture2D;
         rendering.GetPositions() =
             m_coord_buf.resource->create_view<
-                HAL::FormattedBufferView<float4, HAL::Format::R32G32B32A32_FLOAT>>(*list)
-            .buffer;
+                HAL::StructuredBufferView<float4>>(*list)
+            .structuredBuffer;
         list->get_graphics().set(rendering);
     }
 
@@ -240,21 +264,21 @@ private:
     uint32_t m_dirty_l = ATLAS_W, m_dirty_t = ATLAS_H;
     uint32_t m_dirty_r = 0,       m_dirty_b = 0;
     bool m_dirty = false;
+    bool m_first_flush = true;
 
     std::mutex m_mtx;
 };
 
-// ---------------------------------------------------------------------------
-//  Module-level singletons (created lazily)
-// ---------------------------------------------------------------------------
-static FontAtlas*  s_atlas     = nullptr;
-static FT_Library  s_ft_lib    = nullptr;
+} // namespace Fonts
 
-static FontAtlas& get_atlas()
+namespace
 {
-    if (!s_atlas) s_atlas = new FontAtlas();
-    return *s_atlas;
-}
+    using Fonts::FontAtlas;
+
+// ---------------------------------------------------------------------------
+//  FreeType library singleton (created lazily, cleaned up by FontSystem dtor)
+// ---------------------------------------------------------------------------
+static FT_Library  s_ft_lib    = nullptr;
 
 static FT_Library get_ft_library()
 {
@@ -447,15 +471,14 @@ static_assert(sizeof(ShaderConstants) == sizeof(Table::FontRenderingConstants));
 //  draw_vertices  — uploads vertices and issues the draw call
 // ---------------------------------------------------------------------------
 static void draw_vertices(
-    HAL::CommandList::ptr&     list,
+    HAL::CommandList::ptr&       list,
     const std::vector<GlyphVtx>& verts,
-    const sizer*               clip_rect,
-    const float*               transform_matrix,
-    unsigned int               /*flags*/)
+    const sizer*                 clip_rect,
+    const float*                 transform_matrix,
+    unsigned int                 /*flags*/,
+    FontAtlas&                   atlas)
 {
     if (verts.empty()) return;
-
-    FontAtlas& atlas = get_atlas();
 
     // 1. Flush any newly rasterised glyphs to the GPU
     atlas.flush(list);
@@ -470,6 +493,11 @@ static void draw_vertices(
         PSOS::FontRender::Format(formats[0]));
     list->get_graphics().set_topology(HAL::PrimitiveTopologyType::POINT,
                                       HAL::PrimitiveTopologyFeed::LIST);
+    {
+        auto pipeline = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::FontRender>(
+            PSOS::FontRender::Format(formats[0]));
+
+    }
 
     // 4. Shader constants (transform + clip rect)
     ShaderConstants sc{};
@@ -515,8 +543,14 @@ static void draw_vertices(
     list->get_graphics().set(gpu_consts);
 
     // 5. Upload glyph vertex buffer (transient placement)
+    // Alignment must satisfy both the struct stride AND Vulkan's
+    // minStorageBufferOffsetAlignment so buf_info.offset in the Vulkan descriptor
+    // is legal.  lcm(stride, device_limit) is the minimal safe alignment.
     uint32_t count = static_cast<uint32_t>(verts.size());
-    auto placed = list->place_data(sizeof(Table::Glyph) * count, sizeof(Table::Glyph));
+    const uint32_t stride_align = sizeof(Table::Glyph);
+    const uint32_t vk_align     = HAL::Device::get().get_properties().min_storage_buffer_offset_alignment;
+    const uint32_t buf_align    = std::lcm(stride_align, vk_align);
+    auto placed = list->place_data(sizeof(Table::Glyph) * count, buf_align);
     list->write(placed, std::span{verts.data(), count});
 
     auto view = placed.resource->create_view<HAL::StructuredBufferView<Table::Glyph>>(
@@ -611,8 +645,9 @@ void Font::draw(HAL::CommandList::ptr& list,
 {
     if (!m_data || !m_data->face) return;
 
-    auto verts = layout_text(m_data->face, str, size, area, color, flags, get_atlas());
-    draw_vertices(list, verts, &clip_rect, nullptr, flags | FW1_CLIPRECT);
+    FontAtlas& atlas = FontSystem::get_atlas();
+    auto verts = layout_text(m_data->face, str, size, area, color, flags, atlas);
+    draw_vertices(list, verts, &clip_rect, nullptr, flags | FW1_CLIPRECT, atlas);
 }
 
 vec2 Font::measure(std::string str, float size, unsigned int flags)
@@ -675,6 +710,10 @@ void Font::set_states(HAL::CommandList::ptr& list)
 
 FontSystem::FontSystem()
 {
+    ASSERT(m_atlas == nullptr);
+    m_atlas = new FontAtlas();
+    ASSERT(m_atlas != nullptr);
+
     fonts.create_func = [](const std::string& name) -> Font::ptr
     {
         std::string path = resolve_font_path(name);
@@ -691,6 +730,28 @@ FontSystem::FontSystem()
 
         return font;
     };
+}
+
+FontSystem::~FontSystem()
+{
+    fonts.clear();
+    delete m_atlas;
+    m_atlas = nullptr;
+    if (s_ft_lib)
+    {
+        FT_Done_FreeType(s_ft_lib);
+        s_ft_lib = nullptr;
+    }
+}
+
+FontAtlas& FontSystem::get_atlas()
+{
+    return *FontSystem::get().m_atlas;
+}
+
+HAL::TextureResource* FontSystem::get_atlas_texture()
+{
+    return FontSystem::get_atlas().get_texture_resource();
 }
 
 Font::ptr FontSystem::get_font(std::string font_name)
@@ -738,7 +799,7 @@ void FontGeometry::set(HAL::CommandList::ptr& /*list*/,
     if (!font || !font->m_data || !font->m_data->face) return;
 
     m_impl->verts = layout_text(font->m_data->face, str, size,
-                                 area, color, flags, get_atlas());
+                                 area, color, flags, FontSystem::get_atlas());
 }
 
 sizer FontGeometry::add(HAL::CommandList::ptr& /*list*/,
@@ -753,7 +814,7 @@ sizer FontGeometry::add(HAL::CommandList::ptr& /*list*/,
     if (!font || !font->m_data || !font->m_data->face) return area;
 
     auto new_verts = layout_text(font->m_data->face, str, size,
-                                  area, color, flags, get_atlas());
+                                  area, color, flags, FontSystem::get_atlas());
     for (auto& v : new_verts)
         m_impl->verts.push_back(v);
 
@@ -790,7 +851,8 @@ void FontGeometry::draw(HAL::CommandList::ptr& list,
     mtx[10] =  1.f;
     mtx[15] =  1.f;
 
-    draw_vertices(list, m_impl->verts, &clip_rect, mtx, flags | FW1_CLIPRECT);
+    draw_vertices(list, m_impl->verts, &clip_rect, mtx, flags | FW1_CLIPRECT,
+                  FontSystem::get_atlas());
 }
 
 float FontGeometry::get_size()

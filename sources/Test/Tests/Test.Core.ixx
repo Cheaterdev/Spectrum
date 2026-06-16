@@ -2,6 +2,8 @@ module;
 
 export module Test.Core;
 
+#define TEST_MODULE_ID CoreTests
+
 export import Test.Framework;
 
 import Core;

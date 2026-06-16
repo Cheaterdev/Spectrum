@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_SMAA_Blend: register( b2, space5);
+#ifdef __spirv__
+struct _CB_SMAA_Blend { uint offset; };
+static _CB_SMAA_Blend pass_SMAA_Blend = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_SMAA_Blend: register(b5, space5);
+#endif
 
 ConstantBuffer<SMAA_Blend> CreateSMAA_Blend()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<SMAA_Blend> CreateSMAA_Blend()
 }
 			
 #ifndef NO_GLOBAL
-static const SMAA_Blend sMAA_Blend_global = CreateSMAA_Blend();
-const SMAA_Blend GetSMAA_Blend(){ return sMAA_Blend_global; }
+static const ConstantBuffer<SMAA_Blend> sMAA_Blend_global = CreateSMAA_Blend();
+ConstantBuffer<SMAA_Blend> GetSMAA_Blend(){ return sMAA_Blend_global; }
 #endif

@@ -48,7 +48,7 @@ struct DebugInfo
 
             debug.v = v;
 
-            uav.debug[id] = debug;
+            GetDebug()[id] = debug;
 		}
 		
 	}%

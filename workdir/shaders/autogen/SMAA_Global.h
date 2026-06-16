@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_SMAA_Global: register( b2, space4);
+#ifdef __spirv__
+struct _CB_SMAA_Global { uint offset; };
+static _CB_SMAA_Global pass_SMAA_Global = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_SMAA_Global: register(b4, space4);
+#endif
 
 ConstantBuffer<SMAA_Global> CreateSMAA_Global()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<SMAA_Global> CreateSMAA_Global()
 }
 			
 #ifndef NO_GLOBAL
-static const SMAA_Global sMAA_Global_global = CreateSMAA_Global();
-const SMAA_Global GetSMAA_Global(){ return sMAA_Global_global; }
+static const ConstantBuffer<SMAA_Global> sMAA_Global_global = CreateSMAA_Global();
+ConstantBuffer<SMAA_Global> GetSMAA_Global(){ return sMAA_Global_global; }
 #endif

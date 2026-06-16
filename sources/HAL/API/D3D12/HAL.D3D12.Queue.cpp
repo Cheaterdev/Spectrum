@@ -8,32 +8,10 @@ import HAL;
 namespace HAL
 {
 
-    Queue::Queue(CommandListType type, Device& device) : commandListCounter(device), type(type), device(device)
-    {
-        API::Queue::construct(type, &device);
-        m_fenceValue = 0;
-        del_func = [this](CommandList* list)
-        {
-            if (stop)
-                delete list;
-            else
-            {
-                std::lock_guard<std::mutex> g(list_mutex);
-                lists.emplace(list, del_func);
-            }
-        };
-
-        del_transition = [this](TransitionCommandList* list)
-        {
-            if (stop)
-                delete list;
-            else
-            {
-                std::lock_guard<std::mutex> g(list_mutex);
-                transition_lists.emplace(list, del_transition);
-            }
-        };
-    }
+    // NOTE: the shared HAL::Queue(CommandListType, Device&) constructor is
+    // defined in the backend-neutral sources/HAL/HAL.Queue.cpp (it just calls
+    // API::Queue::construct).  Do not redefine it here — doing so produces an
+    // LNK2005 duplicate-symbol error at executable link time.
 
     void Queue::update_tile_mappings(const update_tiling_info& infos)
     {

@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_DenoiserShadow_FilterLast: register( b2, space5);
+#ifdef __spirv__
+struct _CB_DenoiserShadow_FilterLast { uint offset; };
+static _CB_DenoiserShadow_FilterLast pass_DenoiserShadow_FilterLast = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_DenoiserShadow_FilterLast: register(b5, space5);
+#endif
 
 ConstantBuffer<DenoiserShadow_FilterLast> CreateDenoiserShadow_FilterLast()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<DenoiserShadow_FilterLast> CreateDenoiserShadow_FilterLast()
 }
 			
 #ifndef NO_GLOBAL
-static const DenoiserShadow_FilterLast denoiserShadow_FilterLast_global = CreateDenoiserShadow_FilterLast();
-const DenoiserShadow_FilterLast GetDenoiserShadow_FilterLast(){ return denoiserShadow_FilterLast_global; }
+static const ConstantBuffer<DenoiserShadow_FilterLast> denoiserShadow_FilterLast_global = CreateDenoiserShadow_FilterLast();
+ConstantBuffer<DenoiserShadow_FilterLast> GetDenoiserShadow_FilterLast(){ return denoiserShadow_FilterLast_global; }
 #endif

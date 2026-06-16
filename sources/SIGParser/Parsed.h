@@ -46,6 +46,7 @@ struct parsed_type
 struct have_name : public virtual parsed_type
 {
 	std::string name;
+	std::string source_file; // path of the .sig file that defined this item
 
 	~have_name() override = default;
 
@@ -53,6 +54,7 @@ struct have_name : public virtual parsed_type
 	SERIALIZE()
 	{
 		ar& NVP(name);
+		ar& NVP(source_file);
 	}
 };
 

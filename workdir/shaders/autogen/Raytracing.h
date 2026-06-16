@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_Raytracing: register( b2, space10);
+#ifdef __spirv__
+struct _CB_Raytracing { uint offset; };
+static _CB_Raytracing pass_Raytracing = { _hal_push.s10 };
+#else
+ConstantBuffer<CB> pass_Raytracing: register(b10, space10);
+#endif
 
 ConstantBuffer<Raytracing> CreateRaytracing()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<Raytracing> CreateRaytracing()
 }
 			
 #ifndef NO_GLOBAL
-static const Raytracing raytracing_global = CreateRaytracing();
-const Raytracing GetRaytracing(){ return raytracing_global; }
+static const ConstantBuffer<Raytracing> raytracing_global = CreateRaytracing();
+ConstantBuffer<Raytracing> GetRaytracing(){ return raytracing_global; }
 #endif

@@ -1,5 +1,7 @@
 export module Test.Threading;
 
+#define TEST_MODULE_ID Threading
+
 export import Test.Framework;
 
 import Core;

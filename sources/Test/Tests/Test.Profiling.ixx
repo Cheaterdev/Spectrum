@@ -1,5 +1,7 @@
 export module Test.Profiling;
 
+#define TEST_MODULE_ID Profiling
+
 export import Test.Framework;
 
 import Core;

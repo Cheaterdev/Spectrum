@@ -12,12 +12,20 @@ namespace Spectrum
         Retail = 4
     }
 
+    [Fragment, Flags]
+    public enum Backend
+    {
+        D3D12  = 1,
+        Vulkan = 2
+    }
+
     public class CustomTarget : ITarget
     {
         public Platform Platform;
         public DevEnv DevEnv;
         public Optimization Optimization;
         public Mode Mode;
+        public Backend Backend;
     }
 
     public static class Vcpkg
@@ -52,7 +60,8 @@ namespace Spectrum
                 Platform = Platform.win64,
                 DevEnv = DevEnv.vs2026,
                 Optimization = Optimization.Release,
-                Mode = Mode.Debug | Mode.Profile | Mode.Retail
+                Mode = Mode.Debug | Mode.Profile | Mode.Retail,
+                Backend = Backend.D3D12 | Backend.Vulkan
             });
 
             CustomProperties.Add("VcpkgEnabled", "true");
@@ -242,6 +251,12 @@ namespace Spectrum
             conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(Vcpkg.DebugBin + @"\D3D12Core.dll", "D3D12"));
             conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(Vcpkg.DebugBin + @"\d3d12SDKLayers.dll", "D3D12"));
 
+            // Per-backend module wrappers: compile only the active backend's wrapper.
+            if (target.Backend == Backend.D3D12)
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\Modules\\vulkan\\.*");
+            else // Vulkan
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\Modules\\d3d12\\.*");
+
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("5260")); // adding inline to header units
 
         }
@@ -281,13 +296,38 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-            conf.LibraryFiles.Add("dxgi.lib");
-            conf.LibraryFiles.Add("d3d12.lib");
-            conf.LibraryFiles.Add("dxguid.lib");
-            conf.LibraryFiles.Add("volatileaccessu.lib");
+            if (target.Backend == Backend.D3D12)
+            {
+                // D3D12 backend: include D3D12/ and DXGI/ folders, exclude Vulkan/
+                conf.LibraryFiles.Add("dxgi.lib");
+                conf.LibraryFiles.Add("d3d12.lib");
+                conf.LibraryFiles.Add("dxguid.lib");
+                conf.LibraryFiles.Add("volatileaccessu.lib");
 
-            conf.AddPublicDependency<Core>(target);	
-            //conf.AddPrivateDependency<Aftermath>(target);
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\HAL\\API\\Vulkan\\.*");
+
+                conf.Defines.Add("HAL_BACKEND_D3D12");
+            }
+            else // Vulkan
+            {
+                // Vulkan backend: include Vulkan/ folder, exclude D3D12/ and DXGI/
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\HAL\\API\\D3D12\\.*");
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\HAL\\DXGI\\.*");
+
+                conf.Defines.Add("HAL_BACKEND_VULKAN");
+
+                // vulkan-1.lib is generated from C:\Windows\System32\vulkan-1.dll
+                // (the Vulkan loader shipped with GPU drivers).  It lives next to
+                // the Vulkan module wrapper so the project is self-contained.
+                // If the Vulkan SDK is later installed, replace this with the SDK lib:
+                //   %VULKAN_SDK%\Lib\vulkan-1.lib
+                // conf.LibraryFiles.Add(@"[project.SharpmakeCsPath]\sources\Modules\vulkan\vulkan-1.lib");
+            }
+
+            // DXC folder is always compiled — DXC emits SPIR-V for Vulkan too.
+            // (No exclusion needed for DXC.)
+
+            conf.AddPublicDependency<Core>(target);
         }
     }
 
@@ -298,9 +338,6 @@ namespace Spectrum
         {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\RenderSystem";
             AssemblyName = "RenderSystem";
-
-            // Exclude the legacy FW1FontWrapper directory — replaced by FreeType
-            SourceFilesExcludeRegex.Add(@"FW1FontWrapper");
         }
 
         public override void ConfigureAll(Configuration conf, CustomTarget target)
@@ -337,6 +374,35 @@ namespace Spectrum
         }
     }
 
+
+    // Minimal Vulkan clear-screen test — depends only on HAL (no RenderSystem).
+    // Useful for validating the Vulkan backend without the full engine init path.
+    [Sharpmake.Generate]
+    public class VulkanTest : Application
+    {
+        public VulkanTest()
+        {
+            SourceRootPath = @"[project.SharpmakeCsPath]\sources\VulkanTest";
+            AssemblyName = "VulkanTest";
+        }
+
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+
+            conf.LibraryFiles.Add("Onecore.lib");
+            conf.LibraryFiles.Add("user32.lib");
+
+            conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
+            conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
+
+            // Window.h lives under sources/Spectrum/Platform — expose it to VulkanTest
+            conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\sources\Spectrum");
+
+            conf.AddPublicDependency<HAL>(target);
+            conf.AddPublicDependency<RenderSystem>(target);
+        }
+    }
 
     [Sharpmake.Generate]
     public class Spectrum : Application
@@ -414,7 +480,8 @@ namespace Spectrum
                 Platform = Platform.win64,
                 DevEnv = DevEnv.vs2026,
                 Optimization =  Optimization.Release,
-                Mode = Mode.Debug | Mode.Profile | Mode.Retail
+                Mode = Mode.Debug | Mode.Profile | Mode.Retail,
+                Backend = Backend.D3D12 | Backend.Vulkan
             });
         }
 
@@ -424,27 +491,28 @@ namespace Spectrum
             conf.SolutionFileName = "Spectrum";
             conf.SolutionPath = @"[solution.SharpmakeCsPath]\projects\";
             string platformName = string.Empty;
-/*
-			switch (target.Optimization)
-            {
-                case Optimization.Debug: platformName += "Debug "; break;
-                case Optimization.Release: platformName += "Release "; break;
-                default:
-                    throw new NotImplementedException();
-            }
-			*/
-			
+
             switch (target.Mode)
             {
-                case Mode.Debug: platformName += "Debug"; break;
-                case Mode.Retail: platformName += "Retail"; break;
+                case Mode.Debug:   platformName += "Debug";   break;
+                case Mode.Retail:  platformName += "Retail";  break;
                 case Mode.Profile: platformName += "Profile"; break;
                 default:
                     throw new NotImplementedException();
             }
+
+            switch (target.Backend)
+            {
+                case Backend.D3D12:  platformName += "-D3D12";  break;
+                case Backend.Vulkan: platformName += "-Vulkan"; break;
+                default:
+                    throw new NotImplementedException();
+            }
+
             conf.Name = platformName;
 
             conf.AddProject<Spectrum>(target);
+            conf.AddProject<VulkanTest>(target);
             conf.AddProject<SIGParser>(target);
             conf.AddProject<Test>(target);
             conf.AddProject<Resources>(target);

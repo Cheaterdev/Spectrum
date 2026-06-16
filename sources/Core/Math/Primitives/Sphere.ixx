@@ -1,10 +1,10 @@
 export module Core:Math.Sphere;
 
-export import :Math.Constants;
-export import :Math.Vectors;
-export import :Math.Quaternion;
-export import :Math.Matrices;
-export import :Math.Primitive;
+import :Math.Constants;
+import :Math.Vectors;
+import :Math.Quaternion;
+import :Math.Matrices;
+import :Math.Primitive;
 
 import stl.memory;
 import :serialization;

@@ -83,14 +83,21 @@ namespace Test
 		auto& diff_data = diff_td->array[0]->mips[0]->data;
 
 		size_t pixel_count = (size_t)actual_rgba->width * actual_rgba->height;
+		// Bytes per pixel may differ: e.g. actual is RGBA8 (4) but an old reference
+		// was saved as greyscale R8 (1). Use separate strides per side and compare
+		// only the channels present on both (capped at 3 to skip alpha).
+		size_t bpp_act = act_data.size() / pixel_count;
+		size_t bpp_ref = ref_data.size() / pixel_count;
+		size_t ch      = std::min({ bpp_act, bpp_ref, (size_t)3 });
+
 		for (size_t p = 0; p < pixel_count; ++p)
 		{
 			int max_diff = 0;
 			bool pixel_mismatch = false;
-			for (int c = 0; c < 3; ++c)
+			for (size_t c = 0; c < ch; ++c)
 			{
-				size_t i = p * 4 + c;
-				int d = std::abs((int)(uint8_t)act_data[i] - (int)(uint8_t)ref_data[i]);
+				int d = std::abs((int)(uint8_t)act_data[p * bpp_act + c]
+				               - (int)(uint8_t)ref_data[p * bpp_ref + c]);
 				if (d > max_diff) max_diff = d;
 				if (d > (int)tolerance)
 					pixel_mismatch = true;

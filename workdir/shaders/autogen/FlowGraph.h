@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_FlowGraph: register( b2, space5);
+#ifdef __spirv__
+struct _CB_FlowGraph { uint offset; };
+static _CB_FlowGraph pass_FlowGraph = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_FlowGraph: register(b5, space5);
+#endif
 
 ConstantBuffer<FlowGraph> CreateFlowGraph()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<FlowGraph> CreateFlowGraph()
 }
 			
 #ifndef NO_GLOBAL
-static const FlowGraph flowGraph_global = CreateFlowGraph();
-const FlowGraph GetFlowGraph(){ return flowGraph_global; }
+static const ConstantBuffer<FlowGraph> flowGraph_global = CreateFlowGraph();
+ConstantBuffer<FlowGraph> GetFlowGraph(){ return flowGraph_global; }
 #endif

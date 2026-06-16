@@ -4,10 +4,12 @@ on:
   push:
   pull_request:
 
-
 jobs:
   build:
     runs-on: windows-2025-vs2026
+    strategy:
+      matrix:
+        configuration: [Debug-D3D12, Debug-Vulkan]
 
     steps:
     - name: Checkout repository
@@ -59,40 +61,42 @@ jobs:
       shell: powershell
       run: |
         msbuild ./projects/modules/modules.vcxproj `
-          /p:Configuration=Retail /p:Platform=x64 `
+          /p:Configuration="${{ matrix.configuration }}" /p:Platform=x64 `
           /pp:preprocessed.xml
         Select-String "_ZVcpkgCurrentInstalledDir" preprocessed.xml | Select-Object -First 5
 
     - name: Build solution
-      run: msbuild ./projects/spectrum.sln /p:Configuration=Retail /p:Platform=x64 /m /v:minimal
+      run: msbuild ./projects/spectrum.sln /p:Configuration="${{ matrix.configuration }}" /p:Platform=x64 /m /v:minimal
 
-    - name: Copy build output to workdir
-      shell: powershell
-      run: |
-        Copy-Item -Path ./bin/Retail/* -Destination ./workdir/ -Recurse -Force
-
-    - name: Upload build artifacts
+    - name: Upload build output
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: build-output
-        path: ./workdir/
-        retention-days: 7
+        name: build-${{ matrix.configuration }}
+        path: ./bin/Debug/
+        retention-days: 1
 
   test:
     runs-on: windows-2025-vs2026
     needs: build
+    strategy:
+      matrix:
+        configuration: [Debug-D3D12, Debug-Vulkan]
 
     steps:
     - name: Download build output
       uses: actions/download-artifact@v4
       with:
-        name: build-output
-        path: ./workdir
+        name: build-${{ matrix.configuration }}
+        path: ./bin/Debug
 
     - name: Run tests
       shell: powershell
-      working-directory: ./workdir
+      working-directory: ./bin/Debug
       run: |
         & ".\test.exe"
-        exit $LASTEXITCODE
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "Tests failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
+        Write-Host "All tests passed!"

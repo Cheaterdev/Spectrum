@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_SceneData: register( b2, space1);
+#ifdef __spirv__
+struct _CB_SceneData { uint offset; };
+static _CB_SceneData pass_SceneData = { _hal_push.s1 };
+#else
+ConstantBuffer<CB> pass_SceneData: register(b1, space1);
+#endif
 
 ConstantBuffer<SceneData> CreateSceneData()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<SceneData> CreateSceneData()
 }
 			
 #ifndef NO_GLOBAL
-static const SceneData sceneData_global = CreateSceneData();
-const SceneData GetSceneData(){ return sceneData_global; }
+static const ConstantBuffer<SceneData> sceneData_global = CreateSceneData();
+ConstantBuffer<SceneData> GetSceneData(){ return sceneData_global; }
 #endif

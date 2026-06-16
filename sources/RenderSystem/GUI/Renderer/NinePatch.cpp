@@ -1,12 +1,19 @@
 
 import GUI;
 import HAL;
+ import Core;
 
 using namespace HAL;
 namespace GUI
 {
 
-	HAL::IndexBuffer NinePatch::index_buffer;
+	//HAL::IndexBuffer NinePatch::index_buffer;
+	void NinePatch::reset()
+	{
+
+		 //  index_buffer.resource = nullptr;
+
+	}
 	NinePatch::NinePatch()
 	{
 if(!index_buffer)
@@ -50,13 +57,13 @@ if(!index_buffer)
 			added = true;
 			textures_handles.emplace_back(item.texture.texture2D);
 		}
-
 		if (!added && current_state == HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::NinePatch>())
 		{
 			return;
 		}
 		if(!added)
 		{
+//			ASSERT(false && "NinePatch::draw: null texture2D handle — item.texture was never set (cache_resource not created?)");
 			textures_handles.emplace_back(HAL::Texture2DView{}.texture2D);
 
 		}
@@ -72,7 +79,7 @@ if(!index_buffer)
 
 		float tl = 0, tt = 0, tr = 0, tb = 0;
 
-		if (item.texture)
+		if (item.texture.resource)
 		{
 			tl = static_cast<float>(item.padding.left) / item.texture.get_desc().as_texture().Dimensions.x;
 			tt = static_cast<float>(item.padding.top) / item.texture.get_desc().as_texture().Dimensions.y;
@@ -279,7 +286,7 @@ if(!index_buffer)
 	void NinePatch::flush(base::Context& c)
 	{
 		if (vertexes.empty()) return;
-	
+
 		auto& graphics = c.command_list->get_graphics();
 		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 		graphics.set_index_buffer(index_buffer.get_index_buffer_view());

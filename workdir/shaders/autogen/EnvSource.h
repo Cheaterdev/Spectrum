@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_EnvSource: register( b2, space6);
+#ifdef __spirv__
+struct _CB_EnvSource { uint offset; };
+static _CB_EnvSource pass_EnvSource = { _hal_push.s6 };
+#else
+ConstantBuffer<CB> pass_EnvSource: register(b6, space6);
+#endif
 
 ConstantBuffer<EnvSource> CreateEnvSource()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<EnvSource> CreateEnvSource()
 }
 			
 #ifndef NO_GLOBAL
-static const EnvSource envSource_global = CreateEnvSource();
-const EnvSource GetEnvSource(){ return envSource_global; }
+static const ConstantBuffer<EnvSource> envSource_global = CreateEnvSource();
+ConstantBuffer<EnvSource> GetEnvSource(){ return envSource_global; }
 #endif

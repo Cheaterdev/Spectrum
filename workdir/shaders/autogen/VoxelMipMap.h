@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_VoxelMipMap: register( b2, space5);
+#ifdef __spirv__
+struct _CB_VoxelMipMap { uint offset; };
+static _CB_VoxelMipMap pass_VoxelMipMap = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_VoxelMipMap: register(b5, space5);
+#endif
 
 ConstantBuffer<VoxelMipMap> CreateVoxelMipMap()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<VoxelMipMap> CreateVoxelMipMap()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelMipMap voxelMipMap_global = CreateVoxelMipMap();
-const VoxelMipMap GetVoxelMipMap(){ return voxelMipMap_global; }
+static const ConstantBuffer<VoxelMipMap> voxelMipMap_global = CreateVoxelMipMap();
+ConstantBuffer<VoxelMipMap> GetVoxelMipMap(){ return voxelMipMap_global; }
 #endif

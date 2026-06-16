@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_PickerBuffer: register( b2, space4);
+#ifdef __spirv__
+struct _CB_PickerBuffer { uint offset; };
+static _CB_PickerBuffer pass_PickerBuffer = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_PickerBuffer: register(b4, space4);
+#endif
 
 ConstantBuffer<PickerBuffer> CreatePickerBuffer()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<PickerBuffer> CreatePickerBuffer()
 }
 			
 #ifndef NO_GLOBAL
-static const PickerBuffer pickerBuffer_global = CreatePickerBuffer();
-const PickerBuffer GetPickerBuffer(){ return pickerBuffer_global; }
+static const ConstantBuffer<PickerBuffer> pickerBuffer_global = CreatePickerBuffer();
+ConstantBuffer<PickerBuffer> GetPickerBuffer(){ return pickerBuffer_global; }
 #endif

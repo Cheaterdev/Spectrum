@@ -6,6 +6,8 @@ module;
 #include <sstream>
 #include <map>
 #include <set>
+#include <algorithm>
+#include <cctype>
 
 export module Test.Framework;
 
@@ -67,13 +69,27 @@ export namespace Test
 			skipped_categories[category] = reason;
 		}
 
-		std::vector<TestResult> RunAll()
+		std::vector<TestResult> RunAll(std::string_view filter = {})
 		{
 			std::vector<TestResult> results;
 			std::set<std::string> ranSetups;
 
+			auto matches = [&](const Test& t) -> bool {
+				if (filter.empty()) return true;
+				std::string full = t.category.empty() ? t.name : t.category + "::" + t.name;
+				std::string lf(filter), lful(full);
+				std::transform(lf.begin(),   lf.end(),   lf.begin(),   [](unsigned char c){ return std::tolower(c); });
+				std::transform(lful.begin(), lful.end(), lful.begin(), [](unsigned char c){ return std::tolower(c); });
+				return lful.find(lf) != std::string::npos;
+			};
+
+			auto matchCount = std::count_if(tests.begin(), tests.end(), matches);
+
 			Log::get() << Log::LEVEL_INFO << "========== Starting Tests ==========" << Log::endl;
-			Log::get() << Log::LEVEL_INFO << "Running " << tests.size() << " test(s)..." << Log::endl;
+			if (!filter.empty())
+				Log::get() << Log::LEVEL_INFO << "Filter: \"" << std::string(filter) << "\" (" << matchCount << " of " << tests.size() << " test(s) selected)" << Log::endl;
+			else
+				Log::get() << Log::LEVEL_INFO << "Running " << tests.size() << " test(s)..." << Log::endl;
 
 			auto runTeardown = [&](const std::string& category)
 			{
@@ -90,6 +106,8 @@ export namespace Test
 
 			for (const auto& test : tests)
 			{
+				if (!matches(test)) continue;
+
 				if (test.category != currentCategory)
 				{
 					runTeardown(currentCategory);

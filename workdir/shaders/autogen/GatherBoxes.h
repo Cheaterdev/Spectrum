@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_GatherBoxes: register( b2, space5);
+#ifdef __spirv__
+struct _CB_GatherBoxes { uint offset; };
+static _CB_GatherBoxes pass_GatherBoxes = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_GatherBoxes: register(b5, space5);
+#endif
 
 ConstantBuffer<GatherBoxes> CreateGatherBoxes()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<GatherBoxes> CreateGatherBoxes()
 }
 			
 #ifndef NO_GLOBAL
-static const GatherBoxes gatherBoxes_global = CreateGatherBoxes();
-const GatherBoxes GetGatherBoxes(){ return gatherBoxes_global; }
+static const ConstantBuffer<GatherBoxes> gatherBoxes_global = CreateGatherBoxes();
+ConstantBuffer<GatherBoxes> GetGatherBoxes(){ return gatherBoxes_global; }
 #endif

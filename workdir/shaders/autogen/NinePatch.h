@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_NinePatch: register( b2, space4);
+#ifdef __spirv__
+struct _CB_NinePatch { uint offset; };
+static _CB_NinePatch pass_NinePatch = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_NinePatch: register(b4, space4);
+#endif
 
 ConstantBuffer<NinePatch> CreateNinePatch()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<NinePatch> CreateNinePatch()
 }
 			
 #ifndef NO_GLOBAL
-static const NinePatch ninePatch_global = CreateNinePatch();
-const NinePatch GetNinePatch(){ return ninePatch_global; }
+static const ConstantBuffer<NinePatch> ninePatch_global = CreateNinePatch();
+ConstantBuffer<NinePatch> GetNinePatch(){ return ninePatch_global; }
 #endif

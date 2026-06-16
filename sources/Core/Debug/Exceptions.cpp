@@ -14,7 +14,7 @@ namespace Exceptions
 
 	stack_trace get_stack_trace()
 	{
-		return 1;
+		return std::stacktrace::current();
 	}
 
 }

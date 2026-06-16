@@ -1,0 +1,290 @@
+# Vulkan Backend — Clean-Refactor TODO
+
+This file records the work deferred while taking the **fast stub path** to get a
+compiling Vulkan backend (C++20 module partition swap, no `#ifdef`s). The goal
+of this document is so the "do it properly" pass can be done later without
+re-deriving the analysis.
+
+---
+
+## 0. Architecture recap
+
+`sources/HAL/D3D12/` and `sources/HAL/Vulkan/` both export the **same** module
+partition names (`HAL:API.Device`, `HAL:API.Resource`, `HAL:Device`,
+`HAL:Resource`, `HAL:Format`, …). Sharpmake compiles exactly one folder per
+build via `target.Backend` (see `main.sharpmake.cs`, `HAL::ConfigureAll`).
+Common files in `sources/HAL/*.cpp` compile in **both** backends and only call
+into the `HAL::API::*` seam.
+
+Partition ownership map (who defines what), discovered during scaffolding:
+
+| Partition | Common file (both) | D3D12-only file | Vulkan-only file |
+|---|---|---|---|
+| `HAL:Device` | `HAL.Device.cpp` (singleton/managers) | `D3D12/HAL.D3D12.Device.cpp` (API::Device + get_texture_layout/compress) | `Vulkan/HAL.Vulkan.Device.cpp` |
+| `HAL:Resource` | `HAL.Resource.cpp` (create_resource, getters) | `D3D12/HAL.D3D12.Resource.cpp` | `Vulkan/HAL.Vulkan.Resource.cpp` |
+| `HAL:Resource.Buffer` | `HAL.Resource.Buffer.cpp` (init/read/write/ctors) | `D3D12/...Resource.Buffer.cpp` (cpu_data, dtor, to_native addr) | `Vulkan/...Resource.Buffer.cpp` |
+| `HAL:DescriptorHeap` | `HAL.DescriptorHeap.cpp` (Handle/Storage/Factory) | `D3D12/...DescriptorHeap.cpp` (Descriptor::place, get_cpu/gpu) | `Vulkan/...DescriptorHeap.cpp` |
+| `HAL:Heap` | `HAL.Heap.cpp` (get_type/size/as_buffer) | `D3D12/...Heap.cpp` (ctor, API::Heap) | `Vulkan/...Heap.cpp` |
+| `HAL:Format` | `HAL.Format.cpp` (ctor/basic) | `D3D12/HAL.Format.cpp` (size, surface_info, …) | `Vulkan/HAL.Vulkan.Format.cpp` |
+| `HAL:Queue` | `HAL.Queue.cpp` (orchestration) | `D3D12/...Queue.cpp` (API::Queue, DirectStorageQueue, tile maps) | `Vulkan/...Queue.cpp` |
+| `HAL:CommandList` | `HAL.CommandList.cpp` + `HAL.CommandListRecorder.cpp` (ALL wrapper orchestration: GraphicsContext, ComputeContext, CopyContext, Transitions, Eventer, DelayedCommandList) | — | — |
+| `HAL:API.CommandList` | — | `D3D12/...CommandList.cpp` | `Vulkan/...CommandList.cpp` |
+| `HAL:PipelineState` | `HAL.PipelineState.cpp` (cache/desc) | `D3D12/...PipelineState.cpp` (on_change builders) | `Vulkan/...PipelineState.cpp` |
+| `HAL:TextureData` | — | `D3D12/...TextureData.cpp` | `Vulkan/...TextureData.cpp` |
+| `HAL:TiledMemoryManager` | `HAL.TiledMemoryManager.cpp` (tile logic) | `D3D12/...TiledMemoryManager.cpp` (init_tilings) | `Vulkan/...TiledMemoryManager.cpp` |
+| `HAL:SwapChain` | `HAL.Swapchain.cpp` (getters/wait) | `DXGI/HAL.DXGI.Swapchain.cpp` (ctor/present/resize) | `Vulkan/...Swapchain.cpp` |
+| `HAL:Adapter` | — | `DXGI/HAL.Adapter.cpp` | `Vulkan/...Adapter.cpp` |
+| `HAL:Utils` | — | `D3D12/HAL.Utils.cpp` | `Vulkan/HAL.Vulkan.Utils.cpp` |
+| `HAL:Impl` | — | `D3D12/HAL.Impl.cpp` | `Vulkan/HAL.Impl.cpp` |
+
+**Key takeaway:** the entire CommandList *wrapper* layer is already
+backend-agnostic — it records lambdas into `DelayedCommandList` and replays them
+against `API::CommandList`. So Vulkan only ever needs to implement the
+`API::CommandList` method bodies. No duplication of GraphicsContext/Transitions.
+
+---
+
+## 1. Stubs that still need real implementations (functional gaps)
+
+These compile but do nothing yet. Ordered by milestone.
+
+### Phase 1 — Device + adapter ✅ DONE
+- ✅ `vkCreateInstance` with optional `VK_LAYER_KHRONOS_validation` (probes
+  availability first — graceful fallback when SDK not installed)
+- ✅ `VK_EXT_debug_utils` messenger
+- ✅ `vkCreateDevice` with extension filtering against device capabilities
+- ✅ `vmaCreateAllocator`, `DeviceProperties` filled
+- ✅ Physical device enumeration via `Adapters::enumerate()`
+- ✅ `get_alloc_info`: real `vkGetDeviceBufferMemoryRequirements` /
+  `vkGetDeviceImageMemoryRequirements`
+
+### Phase 2 — Swapchain ✅ DONE
+- ✅ Win32 surface, swapchain, image views, format/present-mode selection
+- ✅ Backbuffer wrap via `NativeImportHandle{ image, view, format, extent }`
+- ✅ `NativeImportHandle` now also sets a proper `TextureDesc` on the resource
+  so `as_texture()` works in common code
+- ✅ Pre-acquire pattern: acquire at end of `present()` / constructor so
+  `wait_for_free()` + `get_current_frame()` work unchanged (mirrors D3D12)
+- ✅ `resize()` reconstructs swapchain at new extent
+
+### Phase 3 — Command + clear ✅ DONE
+- ✅ `begin`/`end` — real `VkCommandBuffer` allocation from pool
+- ✅ `transitions()` → `vkCmdPipelineBarrier2` (sync2)
+- ✅ `set_rtv` / `clear_rtv` / `clear_depth` via `vkCmdBeginRendering` +
+  clear load-op + `vkCmdEndRendering` (dynamic rendering)
+- ✅ `Queue::construct` — `vkGetDeviceQueue`
+- ✅ `Queue::execute` — `vkQueueSubmit2`
+- ✅ `Queue::flush` — `vkQueueWaitIdle`
+- ✅ `CommandAllocator` — `vkCreateCommandPool` / `vkResetCommandPool`
+- ✅ **VulkanTest project** — standalone minimal app, clears window to solid
+  colour each frame, validates the full acquire→record→present pipeline
+- ⚠️  Present sync: Phase 3 uses `vkQueueWaitIdle` instead of semaphores.
+  Phase 4 should wire `image_available` / `render_finished` through
+  `Queue::execute` for proper overlap.
+
+### Phase 1+ — Resources / memory ✅ DONE
+- ✅ `vmaCreateBuffer` / `vmaCreateImage` for standalone resources
+- ✅ `vkGetBufferDeviceAddress` for GPU-side buffer addresses
+- ✅ Heap VMA allocation with persistent CPU map for UPLOAD/READBACK
+- ✅ Placed-buffer pattern: `Resource::init(PlacementAddress)` derives
+  `heap_type` + `mapped_data` from the heap's `cpu_address`
+- ⏳ `QueryHeap`: `vkCreateQueryPool(TIMESTAMP)` — deferred to Phase 4
+
+### Phase 4 — Descriptors / pipelines / shaders
+
+### Phase 4 — Descriptors / pipelines / shaders
+- `Vulkan/HAL.Vulkan.DescriptorHeap.cpp`: `VkDescriptorPool` / sets;
+  `Descriptor::place(*)` writes; **bindless** via `VK_EXT_descriptor_indexing`.
+- `Vulkan/HAL.Vulkan.RootSignature.cpp`: `VkDescriptorSetLayout`(s) +
+  push constants → `vkCreatePipelineLayout`.
+- `Vulkan/HAL.Vulkan.PipelineState.cpp`: `vkCreateGraphicsPipelines` /
+  `vkCreateComputePipelines`; `VkPipelineCache` for `get_cache()`.
+- HLSL → SPIR-V: DXC already in the project; add `-spirv` path (the DXC/
+  folder compiles in **both** backends).
+- `Vulkan/HAL.Vulkan.IndirectCommand.cpp`: real indirect buffer layout +
+  `vkCmdDrawIndexedIndirect` / `vkCmdDispatchIndirect`.
+- `Vulkan/HAL.Vulkan.TextureData.cpp`: real image decode (DirectXTex decode is
+  API-agnostic and can be reused) + BC compression.
+
+### Phase 3.5 — API surface audit & visibility tightening
+The Vulkan `API::*` ixx files currently expose all Vulkan handles as `public`.
+They should be `protected` (accessible to the owning `HAL::*` class via
+inheritance) or `private` with `friend` declarations for the sibling API
+classes that legitimately need them. No new public methods should be added to
+the common `HAL::SwapChain` / `HAL::Queue` / etc. interfaces for Vulkan-only
+purposes.
+
+Audit checklist (per ixx file):
+- `HAL.Vulkan.Device.ixx` — `vk_instance`, `vk_physical`, `vk_device`,
+  `vma_allocator`, `queue_families` → `protected`; add `friend` for
+  `API::Resource`, `API::Heap`, `API::Queue`, `API::CommandAllocator`.
+- `HAL.Vulkan.Resource.ixx` — `vk_buffer`, `vk_image`, `vma_alloc`,
+  `mapped_data`, `import_handle`, `imported_extent` → `protected`; add
+  `friend API::CommandList`.
+- `HAL.Vulkan.Heap.ixx` — `vma_allocation`, `vk_memory`, `heap_vk_buffer`,
+  `cpu_address`, `gpu_address` → `protected`; `friend API::Resource`.
+- `HAL.Vulkan.CommandAllocator.ixx` — `vk_command_pool` → `protected`;
+  `friend API::CommandList`.
+- `HAL.Vulkan.Fence.ixx` — `timeline_semaphore`, `vk_fence` → `protected`;
+  `friend API::Queue`.
+- `HAL.Vulkan.Adapter.ixx` — `vk_physical` → `protected`; `friend API::Device`.
+- `HAL.Vulkan.Queue.ixx` — `vk_queue`, `vk_device` → `protected` (already);
+  verify no unnecessary public accessors.
+- Validate: no `Vk*` / `Vma*` type appears in a `public:` section of any
+  `API::*` class unless it is a deliberate cross-backend accessor
+  (e.g. `Queue::get_native()` used by `SwapChain::present()`).
+
+### Autogen / SIG codegen issues for SPIRV
+
+- **`float4[2]` array in `ColorRect` / `(float2[4])` reinterpret — `gui/rect.hlsl`**:
+  `ColorRect` originally had `float4 pos[2]`. Accessing it via `ResourceDescriptorHeap`
+  caused DXC to emit two `OpTypeArray` definitions with different IDs, crashing
+  `OpAccessChain`. Fixed by splitting into `float4 pos_a; float4 pos_b;` (same binary
+  layout) and replacing `(float2[4])GetColorRect().pos` with explicit swizzles in
+  `rect.hlsl`. **Note:** the SIG template (`templates/hlsl/table.jinja`) will
+  regenerate `float4 pos[2]` if `ui.sig` is re-parsed — the template needs the same
+  fix as `gather_pipeline` (emit individual fields instead of packed arrays, or use
+  scalar layout). The shader change in `rect.hlsl` must also be re-applied after
+  any regeneration.
+
+- **`(uint[8])uint4[2]` reinterpret cast — `gather_pipeline.hlsl`**:
+  `GatherPipeline.table.ixx` (and the HLSL it generates) stores pipeline IDs as
+  `uint4 pip_ids[2]` to avoid DX cbuffer padding (bare `uint[8]` in a cbuffer
+  is padded to 128 bytes under DX rules; `uint4[2]` stays 32 bytes). The shader
+  then reinterprets with `(uint[8])pipi.pip_ids` to get individual uint IDs.
+  DXC's SPIRV backend generates a broken `OpCompositeExtract` for this cast:
+  the result type is `uint4[2]` (the whole array) instead of `uint4` (one
+  element), which SPIRV validation rejects.
+  **No compiler flag can fix this — it is a DXC codegen bug on uint4[]-to-uint[]
+  array reinterpret casts.**
+  Proper fixes (pick one):
+  1. Compile the table as a `StructuredBuffer<GatherPipeline>` instead of
+     `ConstantBuffer<>` — structured buffers use tight packing so `uint[8]`
+     stays 32 bytes and no reinterpret cast is needed.
+  2. Change the Jinja table template (`templates/hlsl/table.jinja`) to emit a
+     flat `uint pip_ids[8]` **and** switch to scalar layout
+     (`-fvk-use-scalar-layout`) so the Vulkan GLSL/SPIRV packing matches.
+  3. Have the SIG emit an accessor helper `uint GetPip_ids_flat(int i)` that
+     expands to `pip_ids[i/4][i%4]` — avoids the cast entirely; shader just
+     needs to call the helper.
+
+---
+
+### Shader compilation — known workarounds
+
+- **FP16 image types suppressed for SPIRV** (`DXC.ShaderCompiler.cpp`):
+  `-enable-16bit-types` is intentionally skipped when compiling to SPIR-V.
+  Vulkan SPIRV spec (VUID-StandaloneSpirv-OpTypeImage-04656) requires image
+  sampled types to be 32-bit — `OpTypeImage %half` is rejected regardless of
+  extensions.  Without the flag, `half`/`min16float` in image declarations
+  silently promote to `float32`.  To keep `float16_tN` types available for arithmetic (groupshared memory,
+  function parameters, etc.) without triggering the image type issue,
+  `get_extra_compile_args` injects `-Dfloat16_t=float` / `-Dfloat16_t2=float2`
+  etc. so all 16-bit types silently become 32-bit aliases via the preprocessor.
+  **Proper fix:** audit shaders that use half-precision textures; for those that
+  genuinely need FP16 sampling, route them through a `float32` image + explicit
+  `f16tof32` / `f32tof16` in the shader body, or wait for
+  `VK_EXT_shader_float16_int8` image-fetch support to land in the SPIRV spec.
+
+- **`ResourceDescriptorHeap` requires DXC 1.9+** (`HAL.Vulkan.ShaderReflection.cpp`):
+  SM6.6 bindless heap access compiled via `-fvk-bind-resource-heap 0 0` /
+  `-fvk-bind-sampler-heap 0 1`.  These flags did not exist in DXC ≤ 1.8.2407;
+  the project was pinned to DXC `2026-02-20` (v1.9.2602) in `vcpkg.json`
+  overrides to unlock them.  If DXC is ever rolled back, bindless shaders will
+  fail with "HLSL object ResourceDescriptorHeap not yet supported with -spirv".
+
+### Post-MVP
+- Tiled/sparse: `Vulkan/HAL.Vulkan.TiledMemoryManager.cpp` `init_tilings` +
+  `Queue::update_tile_mappings` via `vkQueueBindSparse`.
+- Raytracing: `StateObject` / `dispatch_rays` / `build_ras` via
+  `VK_KHR_acceleration_structure` + `VK_KHR_ray_tracing_pipeline`.
+- Work graphs: no direct Vulkan equivalent — emulate or leave disabled.
+- DirectStorage streaming (`DirectStorageQueue::execute`): replace with a
+  Vulkan staging-buffer uploader (+ optional GDeflate).
+
+---
+
+## 2. Compatibility shims that should be removed in the clean version
+
+The fast path introduced D3D12-named stand-ins so common files compile
+unchanged. The *clean* refactor should replace these with backend-neutral
+names in the common headers and drop the shims.
+
+- `HAL.Vulkan.Utils.ixx` defines stubs for D3D12/DXGI types used in common code:
+  `D3D12_CPU_DESCRIPTOR_HANDLE`, `D3D12_GPU_DESCRIPTOR_HANDLE`,
+  `DXGI_ADAPTER_DESC`, `D3D12_DISPATCH_ARGUMENTS`, `D3D12_DRAW_INDEXED_ARGUMENTS`,
+  `D3D12_DISPATCH_MESH_ARGUMENTS`, `D3D12_PROGRAM_IDENTIFIER`,
+  `D3D12_INDIRECT_ARGUMENT_TYPE`, `D3D12_INDIRECT_ARGUMENT_DESC`,
+  `D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE`, `D3D12_NODE_GPU_INPUT`,
+  `D3D12_MULTI_NODE_GPU_INPUT`, `D3D12_RAYTRACING_INSTANCE_DESC`,
+  **`D3D_PRIMITIVE_TOPOLOGY`**.
+  - Source leaks to fix in **common** code so the shims can die:
+    - `HAL.DescriptorHeap.ixx` — `Handle::get_cpu()/get_gpu()` return
+      `D3D12_CPU/GPU_DESCRIPTOR_HANDLE`. Introduce a neutral
+      `HAL::DescriptorPointer { uint64 cpu; uint64 gpu; }` (or opaque) and
+      change the common signature; each backend fills it.
+    - `HAL.Device.cpp` — logs `adapter->get_desc().Description`. Introduce a
+      neutral `HAL::AdapterInfo { std::wstring name; uint vendor, device; size_t vram; }`
+      returned by `Adapter::get_info()`, and switch the log + the "Basic"
+      device-selection heuristic to it.
+    - `API::StateObject::id` is `D3D12_PROGRAM_IDENTIFIER` (work-graph only) —
+      gate behind a neutral type once work-graphs are abstracted.
+    - **`RenderSystem/Scene/Scene.ixx` and `MeshAsset.ixx`** use
+      `D3D12_RAYTRACING_INSTANCE_DESC` as a `virtual_gpu_buffer<T>` element type
+      and as a field type.  The proper fix is to introduce a backend-neutral
+      `HAL::RaytracingInstanceDesc` (identical binary layout to both the D3D12
+      struct and `VkAccelerationStructureInstanceKHR`) and use it everywhere.
+      The common `HAL::InstanceDesc` already exists in Types.ixx as a partial
+      mirror — unify them and migrate the RenderSystem.
+
+- `to_native(const ResourceAddress&)` is declared in `HAL.Vulkan.Utils.ixx`
+  and defined in `HAL.Vulkan.Resource.Buffer.cpp` to mirror the D3D12 global.
+  In the clean version, make `ResourceAddress::get_native()` (or similar) a
+  first-class HAL method instead of a free `to_native`.
+
+---
+
+## 3. Open design points
+
+- **Adapter/instance ownership.** D3D12 has a global `DXGI::Factory` in the
+  `Adapters` singleton that can enumerate before any device. Vulkan needs a
+  `VkInstance` first. Options: (a) `Adapters` creates its own lightweight
+  instance for enumeration; (b) Device creates the instance and pushes it to
+  `Adapters::set_instance()` before enumerating. Current scaffold leans toward
+  (b) but `Device::create_singleton()` (common) calls
+  `Adapters::get().enumerate()` *before* constructing a Device — so (a) is
+  probably required. **Resolve before Phase 1.**
+
+- **`HAL::init()`** (`HAL.Impl.cpp`): D3D12 enables the debug layer globally
+  before device creation; Vulkan validation is per-instance. The Vulkan
+  `init()` currently just creates the `Adapters` singleton. Decide where the
+  instance is born (ties into the point above).
+
+- **Backend-neutral barrier types already exist** (`BarrierSync`,
+  `BarrierAccess`, `TextureLayout`) and map cleanly to sync2 — no shim needed,
+  this is the clean seam to imitate elsewhere.
+
+---
+
+## 4. Build-system notes (`main.sharpmake.cs`)
+
+- `Backend` fragment added (`D3D12 | Vulkan`); solution configs are
+  `Debug-D3D12`, `Debug-Vulkan`, etc.
+- `HAL::ConfigureAll` excludes the other backend folder via
+  `SourceFilesBuildExcludeRegex`; DXC/ stays in both.
+- `Modules::ConfigureAll` excludes the other backend's module wrapper
+  (`Modules/d3d12/` vs `Modules/vulkan/`).
+- `vcpkg.json` adds `vulkan-memory-allocator` + `vulkan-headers`.
+- Vulkan build defines `HAL_BACKEND_VULKAN` (currently unused by source — keep
+  it ifdef-free; it exists only for tooling/diagnostics).
+
+---
+
+## 5. When doing the clean version
+
+1. Introduce the neutral types in §2 in the **common** headers.
+2. Update the handful of common call sites (DescriptorHeap handle, Device log).
+3. Delete the D3D12-named shims from both `HAL.Vulkan.Utils.ixx` and the D3D12
+   Utils (replace with the neutral types there too).
+4. Keep the partition-swap file layout — it is the correct long-term structure;
+   only the *contents* of the stubs change.

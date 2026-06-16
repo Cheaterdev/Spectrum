@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_VoxelBlur: register( b2, space6);
+#ifdef __spirv__
+struct _CB_VoxelBlur { uint offset; };
+static _CB_VoxelBlur pass_VoxelBlur = { _hal_push.s6 };
+#else
+ConstantBuffer<CB> pass_VoxelBlur: register(b6, space6);
+#endif
 
 ConstantBuffer<VoxelBlur> CreateVoxelBlur()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<VoxelBlur> CreateVoxelBlur()
 }
 			
 #ifndef NO_GLOBAL
-static const VoxelBlur voxelBlur_global = CreateVoxelBlur();
-const VoxelBlur GetVoxelBlur(){ return voxelBlur_global; }
+static const ConstantBuffer<VoxelBlur> voxelBlur_global = CreateVoxelBlur();
+ConstantBuffer<VoxelBlur> GetVoxelBlur(){ return voxelBlur_global; }
 #endif

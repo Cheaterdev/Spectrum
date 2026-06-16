@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_TextureRenderer: register( b2, space4);
+#ifdef __spirv__
+struct _CB_TextureRenderer { uint offset; };
+static _CB_TextureRenderer pass_TextureRenderer = { _hal_push.s4 };
+#else
+ConstantBuffer<CB> pass_TextureRenderer: register(b4, space4);
+#endif
 
 ConstantBuffer<TextureRenderer> CreateTextureRenderer()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<TextureRenderer> CreateTextureRenderer()
 }
 			
 #ifndef NO_GLOBAL
-static const TextureRenderer textureRenderer_global = CreateTextureRenderer();
-const TextureRenderer GetTextureRenderer(){ return textureRenderer_global; }
+static const ConstantBuffer<TextureRenderer> textureRenderer_global = CreateTextureRenderer();
+ConstantBuffer<TextureRenderer> GetTextureRenderer(){ return textureRenderer_global; }
 #endif

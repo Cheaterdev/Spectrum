@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_SMAA_Weights: register( b2, space5);
+#ifdef __spirv__
+struct _CB_SMAA_Weights { uint offset; };
+static _CB_SMAA_Weights pass_SMAA_Weights = { _hal_push.s5 };
+#else
+ConstantBuffer<CB> pass_SMAA_Weights: register(b5, space5);
+#endif
 
 ConstantBuffer<SMAA_Weights> CreateSMAA_Weights()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<SMAA_Weights> CreateSMAA_Weights()
 }
 			
 #ifndef NO_GLOBAL
-static const SMAA_Weights sMAA_Weights_global = CreateSMAA_Weights();
-const SMAA_Weights GetSMAA_Weights(){ return sMAA_Weights_global; }
+static const ConstantBuffer<SMAA_Weights> sMAA_Weights_global = CreateSMAA_Weights();
+ConstantBuffer<SMAA_Weights> GetSMAA_Weights(){ return sMAA_Weights_global; }
 #endif

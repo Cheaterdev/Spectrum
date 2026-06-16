@@ -18,7 +18,12 @@
 struct CB { uint offset; };
 #endif
 
-ConstantBuffer< CB > pass_FontRenderingGlyphs: register( b2, space6);
+#ifdef __spirv__
+struct _CB_FontRenderingGlyphs { uint offset; };
+static _CB_FontRenderingGlyphs pass_FontRenderingGlyphs = { _hal_push.s6 };
+#else
+ConstantBuffer<CB> pass_FontRenderingGlyphs: register(b6, space6);
+#endif
 
 ConstantBuffer<FontRenderingGlyphs> CreateFontRenderingGlyphs()
 {
@@ -26,6 +31,6 @@ ConstantBuffer<FontRenderingGlyphs> CreateFontRenderingGlyphs()
 }
 			
 #ifndef NO_GLOBAL
-static const FontRenderingGlyphs fontRenderingGlyphs_global = CreateFontRenderingGlyphs();
-const FontRenderingGlyphs GetFontRenderingGlyphs(){ return fontRenderingGlyphs_global; }
+static const ConstantBuffer<FontRenderingGlyphs> fontRenderingGlyphs_global = CreateFontRenderingGlyphs();
+ConstantBuffer<FontRenderingGlyphs> GetFontRenderingGlyphs(){ return fontRenderingGlyphs_global; }
 #endif

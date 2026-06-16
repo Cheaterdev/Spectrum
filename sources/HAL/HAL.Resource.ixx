@@ -140,7 +140,7 @@ export{
 						bool serialize_from_derived = false;
 		protected:
 			friend class API::Resource;
-			HeapType heap_type;
+			HeapType heap_type = HeapType::RESERVED; // safe sentinel; _init() always overwrites
 			ResourceDesc desc;
 			Device* m_device = nullptr;
 
@@ -170,6 +170,7 @@ export{
 			std::shared_ptr<Resource> get_tracked();
 
 			void disable_state_tracking();
+			void enable_state_tracking();
 			ResourceAllocationInfo alloc_info;
 			std::string name;
 			void set_name(std::string name);
@@ -178,7 +179,7 @@ export{
 			using ptr = std::shared_ptr<Resource>;
 	protected:
 			Resource(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
-			Resource(Device& device, const D3D::Resource& resouce, TextureLayout initialLayout);
+			Resource(Device& device, const API::NativeImportHandle& handle, TextureLayout initialLayout);
 			Resource(Device& device, const ResourceDesc& desc, PlacementAddress handle);
 
 			Resource(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own = false);
@@ -227,11 +228,36 @@ export{
 
 
 
-		 Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, HeapType heap_type);
+		Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, HeapType heap_type);
 
-		  Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, ResourceHandle addr);
+		// MSVC C++20 module $$_A/$$_B fix for the ResourceHandle overload.
+		//
+		// Problem: MSVC mangles cross-partition template arguments differently
+		// inside a module ($$_B / [!HAL]) vs outside via `import HAL;` ($$_A /
+		// [HAL]).  ResourceHandle = HeapHandle<HAL::Heap> has HAL::Heap from the
+		// :Heap partition, so the function defined in HAL.Resource.cpp (a module
+		// implementation unit) gets the $$_B mangling that FrameGraph never finds.
+		//
+		// Fix A: declare the real work as _create_resource_placed_impl with only
+		//   primitive/non-template parameters (void*, size_t) — no cross-partition
+		//   template arguments → symbol is stable from inside and outside the module.
+		// Fix B: make create_resource(ResourceHandle) inline here in the *interface*
+		//   unit.  Inline bodies are compiled in each caller's context, so
+		//   addr.get_heap().get() uses the caller's $$_A view of HAL::Heap.
+		//   The call to _create_resource_placed_impl uses only void*/size_t — no
+		//   mismatch.  And Resource in the return type is from THIS same partition
+		//   interface, so it's always [HAL] on both sides.
+		Resource::ptr _create_resource_placed_impl(Device& device,
+		                                            const ResourceDesc& desc,
+		                                            void* heap_raw, size_t offset);
+
+		inline Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, ResourceHandle addr)
+		{
+			return _create_resource_placed_impl(device, desc,
+				static_cast<void*>(addr.get_heap().get()),
+				addr.get_offset());
+		}
 	}
-
 
 }
 
