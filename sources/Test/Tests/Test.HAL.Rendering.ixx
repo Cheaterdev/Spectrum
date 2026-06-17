@@ -7,6 +7,7 @@ export import Test.HAL.TextureUtils;
 
 import Core;
 import HAL;
+import RenderSystem;
 
 namespace {
 	// Left triangle  — CCW in NDC (signed area > 0) = front face = GREEN

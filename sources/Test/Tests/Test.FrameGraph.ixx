@@ -7,6 +7,7 @@ export import Test.HAL.TextureUtils;
 
 import Core;
 import HAL;
+import RenderSystem;
 import GUI;
 import FrameGraph;
 
