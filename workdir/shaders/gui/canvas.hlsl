@@ -5,7 +5,7 @@ struct quad_output
     float4 mulColor:TEXCOORD0;
     float4 addColor:TEXCOORD1;
     float2 tc: TEXCOORD2;
-    float texture_offset : TEXCOORD3;
+    nointerpolation uint texture_offset : TEXCOORD3;
 };
 
 #ifdef BUILD_FUNC_PS

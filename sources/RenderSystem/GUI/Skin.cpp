@@ -112,6 +112,8 @@ Skin::Skin()
 	Virtual = EngineAssets::virtualtex.get_asset()->get_texture()->texture_2d();
 	Shadow = EngineAssets::shadow.get_asset()->get_texture()->texture_2d();
 	Fill = EngineAssets::back_fill.get_asset()->get_texture()->texture_2d();
+
+	Edit  = EngineAssets::back_fill.get_asset()->get_texture()->texture_2d();
 	Edit.padding = { 5, 5, 5, 5 };
 	Virtual.padding = { 5, 5, 5, 5 };
 

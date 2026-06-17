@@ -102,14 +102,15 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(device, pso[PSO::DenoiserDownsample]));
 
 
-	
+	if (device.get_properties().work_graph)
+	{
+	}
+
 #ifndef HAL_BACKEND_VULKAN
-
-
-				  
-	tasks.emplace_back(PSOBase::create<PSOS::WorkGR>(device, pso[PSO::WorkGR]));
-
-
+	if (device.get_properties().work_graph)
+	{
+		tasks.emplace_back(PSOBase::create<PSOS::WorkGR>(device, pso[PSO::WorkGR]));
+	}
 #endif // !HAL_BACKEND_VULKAN
 
 	when_all(begin(tasks), end(tasks)).wait();

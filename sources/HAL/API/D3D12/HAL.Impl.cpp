@@ -20,13 +20,13 @@ namespace HAL
         ComPtr<ID3D12Debug> debugController;
         ComPtr<ID3D12Debug1> spDebugController1;
 
-       /* if constexpr (Debug::CheckErrors)
+        if constexpr (Debug::CheckErrors)
             if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
             {
                 debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
                 debugController->EnableDebugLayer();
                 //    spDebugController1->SetEnableGPUBasedValidation(true);
-            }*/
+            }
 
     }
 

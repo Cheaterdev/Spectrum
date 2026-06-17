@@ -49,12 +49,15 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {%- endif %}
 {%- endfor %}
 
-{% for v in parsed.workgraph_pso -%}
-{%- set t = parsed.workgraph_pso[v] -%}
+	if (device.get_properties().work_graph)
+	{
+{%- for v in parsed.workgraph_pso %}
+{%- set t = parsed.workgraph_pso[v] %}
 {%- if t.options.ExcludeVulkan is undefined %}
-	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
+		tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
+	}
 
 #ifndef HAL_BACKEND_VULKAN
 {% for v in parsed.compute_pso -%}
@@ -71,12 +74,15 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {%- endif %}
 {%- endfor %}
 
-{% for v in parsed.workgraph_pso -%}
-{%- set t = parsed.workgraph_pso[v] -%}
+	if (device.get_properties().work_graph)
+	{
+{%- for v in parsed.workgraph_pso %}
+{%- set t = parsed.workgraph_pso[v] %}
 {%- if t.options.ExcludeVulkan is defined %}
-	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
+		tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
+	}
 #endif // !HAL_BACKEND_VULKAN
 
 	when_all(begin(tasks), end(tasks)).wait();

@@ -1633,7 +1633,10 @@ void PassDefault<Passes::UI_Render>::render(
     {
         RT::SingleColor rt;
         rt.GetColor() = texture.renderTarget;
-        command_list->get_graphics().set_rtv(rt);
+        const auto rt_options = (slot == 0)
+            ? HAL::RTOptions::Default | HAL::RTOptions::ClearColor
+            : HAL::RTOptions::Default;
+        command_list->get_graphics().set_rtv(rt, rt_options);
     }
 
     Renderer renderer;

@@ -71,6 +71,9 @@ void PassDefault<Passes::Profiler>::render(
 bool PassDefault<Passes::RTXPass>::setup(
     Passes::RTXPass::Context& data, FrameGraph::TaskBuilder& builder)
 {
+        if (!RenderSystem::get().device().get_properties().work_graph)
+            return false;
+
     auto& frame    = builder.graph->get_context<ViewportInfo>();
     auto  work_pso = RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
     auto  size     = frame.frame_size;

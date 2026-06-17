@@ -28,7 +28,7 @@ namespace HAL
                     ranges.emplace_back();
                     auto& range = ranges.back();
 
-                    range.Init(static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(table.range), table.count, table.offset, table.space, D3D12_DESCRIPTOR_RANGE_FLAGS::D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+                    range.Init(static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(table.range), table.count, table.offset, table.space, D3D12_DESCRIPTOR_RANGE_FLAGS::D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
                     param.InitAsDescriptorTable(1, &range, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
 
                 },

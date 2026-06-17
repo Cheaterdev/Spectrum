@@ -15,8 +15,8 @@ struct NinePatch
 	Texture2D<float4> GetTextures(int i)
 	{
 		StructuredBuffer<uint> indirection = ResourceDescriptorHeap[textures];
-		uint id = indirection.Load(i);
-		return ResourceDescriptorHeap[id];
+		uint id = indirection[NonUniformResourceIndex(i)];
+		return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
 	}
 
 };

@@ -54,8 +54,8 @@ struct {{"[raypayload]" if table.options.raypayload is defined}}{{table.name}}
 	{{type}} Get{{v.name|camel}}(int i)
 	{
 		StructuredBuffer<uint> indirection = ResourceDescriptorHeap[{{v.name}}];
-		uint id = indirection.Load(i);
-		return ResourceDescriptorHeap[id];
+		uint id = indirection[NonUniformResourceIndex(i)];
+		return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
 	}
 {%elif v.as_array and v.array_count > 1 %}
 	{{type}} Get{{v.name|camel}}(int i) { return ResourceDescriptorHeap[{{v.name}}[i]]; }
