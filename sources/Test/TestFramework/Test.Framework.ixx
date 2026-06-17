@@ -71,6 +71,11 @@ export namespace Test
 
 		std::vector<TestResult> RunAll(std::string_view filter = {})
 		{
+			std::sort(tests.begin(), tests.end(), [](const Test& a, const Test& b) {
+				if (a.category != b.category) return a.category < b.category;
+				return a.name < b.name;
+			});
+
 			std::vector<TestResult> results;
 			std::set<std::string> ranSetups;
 

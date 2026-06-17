@@ -21,7 +21,6 @@ SETUP_CATEGORY(Core.HAL, []() {
 });
 
 TEARDOWN_CATEGORY(Core.HAL, []() {
-	GUI::NinePatch::reset();
 	GraphicsSystem::reset();
 });
 

@@ -57,6 +57,8 @@ export namespace HAL
 		Device(HAL::DeviceDesc desc);
 		virtual ~Device();
 
+		static HAL::DeviceProperties probe(HAL::Adapter::ptr adapter);
+
 		void init_managers();
 		void stop_all();
 

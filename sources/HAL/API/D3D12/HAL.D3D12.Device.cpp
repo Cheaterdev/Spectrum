@@ -166,6 +166,43 @@ namespace HAL
                 debugDev->ReportLiveObjects(DXGI::DEBUG_ALL, DXGI::DEBUG_RLO_ALL);
         }
 
+    } // namespace API
+
+    HAL::DeviceProperties Device::probe(HAL::Adapter::ptr adapter)
+    {
+        HAL::DeviceProperties props;
+
+        ComPtr<ID3D12Device> tempDevice;
+        D3D12CreateDevice(adapter->native_adapter.Get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(&tempDevice));
+        if (!tempDevice)
+            return props;
+
+        props.name = convert(std::wstring_view(adapter->get_desc().Description));
+
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
+        D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7 = {};
+        D3D12_FEATURE_DATA_D3D12_OPTIONS16 options16 = {};
+        D3D12_FEATURE_DATA_D3D12_OPTIONS21 options21 = {};
+        D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_8 };
+
+        tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5));
+        tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &options7, sizeof(options7));
+        tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS16, &options16, sizeof(options16));
+        tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS21, &options21, sizeof(options21));
+        tempDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel));
+
+        props.rtx                    = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
+        props.mesh_shader            = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1;
+        props.full_bindless          = supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6;
+        props.direct_gpu_upload_heap = options16.GPUUploadHeapSupported;
+        props.work_graph             = options21.WorkGraphsTier != D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED;
+
+        return props;
+    }
+
+    namespace API
+    {
+
         size_t Device::get_vram()
         {
             auto THIS = static_cast<HAL::Device*>(this);

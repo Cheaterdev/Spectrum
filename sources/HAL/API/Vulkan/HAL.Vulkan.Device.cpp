@@ -48,6 +48,39 @@ namespace HAL
         return dest;
     }
 
+    HAL::DeviceProperties Device::probe(HAL::Adapter::ptr adapter)
+    {
+        HAL::DeviceProperties props;
+
+        VkPhysicalDevice vk_physical = adapter ? adapter->get_vk_physical() : VK_NULL_HANDLE;
+        if (vk_physical == VK_NULL_HANDLE)
+            return props;
+
+        VkPhysicalDeviceProperties2 phys_props{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+        vkGetPhysicalDeviceProperties2(vk_physical, &phys_props);
+        props.name = phys_props.properties.deviceName;
+        props.min_storage_buffer_offset_alignment =
+            static_cast<uint32_t>(phys_props.properties.limits.minStorageBufferOffsetAlignment);
+
+        uint32_t avail_count = 0;
+        vkEnumerateDeviceExtensionProperties(vk_physical, nullptr, &avail_count, nullptr);
+        std::vector<VkExtensionProperties> avail_exts(avail_count);
+        vkEnumerateDeviceExtensionProperties(vk_physical, nullptr, &avail_count, avail_exts.data());
+
+        auto has_ext = [&](const char* name) {
+            for (auto& ext : avail_exts)
+                if (strcmp(ext.extensionName, name) == 0) return true;
+            return false;
+        };
+
+        props.mesh_shader   = has_ext(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+        props.full_bindless = has_ext(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+        props.rtx           = false;
+        props.work_graph    = false;
+
+        return props;
+    }
+
     // ---- HAL::API::Device --------------------------------------------------
 
     namespace API
