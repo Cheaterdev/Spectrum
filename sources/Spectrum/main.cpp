@@ -10,13 +10,6 @@ import Core;
 import FrameGraph;
 import FrameGraphDebug;
 
-// FSR math headers required by PassDefault<Passes::FSR>
-#define A_CPU
-#include "../RenderSystem/Effects/FSR/ffx_a.h"
-#include "../RenderSystem/Effects/FSR/ffx_fsr1.h"
-
-#include "../RenderSystem/FrameGraph/autogen/pass_defaults.h"
-
 using namespace FrameGraph;
 
 using namespace HAL;
@@ -559,58 +552,6 @@ public:
 
 
 			auto fence = graph.commit_command_lists();
-
-			// ---- One-shot debug screenshot ----------------------------------------
-			// Fires on the first rendered frame.  Uses HAL::texture_data::from_readback
-			// + to_png() (same pattern as Test.HAL.TextureUtils) to write screenshot.png
-			// in the working directory.  Lets us verify GPU pixel output independently
-			// of any swapchain-presentation issues.
-			{
-				static int screenshot_countdown = 1;
-				if (screenshot_countdown > 0 && --screenshot_countdown == 0)
-				{
-					Log::get() << "[Screenshot] Starting readback on frame " << frame_counter << Log::endl;
-					fence.wait(); // ensure GPU finished rendering + PRESENT transition
-
-					const auto& sc_res   = swap_chain->get_current_frame();
-					const auto& tex_desc = sc_res->get_desc().as_texture();
-					const uint32_t      w   = tex_desc.Dimensions.x;
-					const uint32_t      h   = tex_desc.Dimensions.y ? tex_desc.Dimensions.y : 1;
-					const HAL::Format   fmt = tex_desc.Format;
-
-					HAL::texture_data::ptr result;
-					auto ss_list = HAL::Device::get().get_upload_list();
-					auto fut = ss_list->get_copy().read_texture(
-						sc_res.get(), 0,
-						[&](std::span<std::byte> data, HAL::texture_layout layout)
-						{
-							result = HAL::texture_data::from_readback(w, h, fmt, data, layout);
-						});
-					// Restore swapchain to PRESENT layout so present() works correctly.
-					// On Vulkan this barrier is deferred to end() so it always fires
-					// after the copy regardless of recording order.
-					ss_list->transition_present(sc_res.get());
-					ss_list->execute_and_wait();
-					fut.wait();
-
-					if (result)
-					{
-						auto png = result->to_png();
-						if (!png.empty())
-						{
-							std::string png_str(reinterpret_cast<const char*>(png.data()), png.size());
-							FileSystem::get().save_data("screenshot.png", png_str);
-							Log::get() << "[Screenshot] Saved screenshot.png "
-							           << w << "x" << h << Log::endl;
-						}
-						else
-							Log::get() << "[Screenshot] to_png() returned empty" << Log::endl;
-					}
-					else
-						Log::get() << "[Screenshot] from_readback() returned null" << Log::endl;
-				}
-			}
-			// -----------------------------------------------------------------------
 
 			{
 				PROFILE(L"reset");
