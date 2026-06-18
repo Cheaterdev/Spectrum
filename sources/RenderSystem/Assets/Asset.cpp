@@ -18,7 +18,7 @@ CEREAL_FORCE_DYNAMIC_INIT(BinaryAsset);
 
 AssetManager::AssetManager()
 {
-	has_worker = false;
+	//has_worker = false;
 
 	tree_folders.reset(new folder_item(std::wstring(L"All assets")));
 	std::function<void(std::filesystem::path, folder_item::ptr)> iter;
@@ -54,6 +54,7 @@ AssetManager::AssetManager()
 
 AssetManager::~AssetManager()
 {
+	preview_executor.stop_and_wait();
 	//  std::lock_guard<std::mutex> g(m);
 	tree_folders = nullptr;
 	/*  while (assets.size())
@@ -75,10 +76,7 @@ void AssetManager::add_preview(Asset::ptr asset)
 {
 	if (!AssetRenderer::is_good()) return; // no preview renderer on Vulkan
 
-	std::lock_guard<std::mutex> g(update_preview_mutex);
-
-
-	auto my_task = [this, asset]() {
+	preview_executor.enqueue([this, asset]() {
 		try {
 			auto& preview = asset->holder->get_preview();
 
@@ -90,50 +88,15 @@ void AssetManager::add_preview(Asset::ptr asset)
 			}
 
 			asset->update_preview(asset->holder->get_preview());
-			asset->holder->on_preview(asset->holder->get_preview());
+			RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
 		}
-		catch (const std::system_error& e) { Log::get() << Log::LEVEL_ERROR << e.what() << Log::endl; }
-	};
-
-	if (task_inited)
-		last_update_task = last_update_task.then(my_task);
-	else
-		last_update_task = create_task(my_task);
-
-	task_inited = true;
-	/*update_preview.push(a);
-
-	if (!has_worker)
-	{
-		has_worker = true;
-		auto& t = thread_pool::get().enqueue([this]()
-		{
-			while (true)
-			{
-				Asset::ptr asset;
-				{
-					std::lock_guard<std::mutex> g(update_preview_mutex);
-
-					if (update_preview.empty()) { has_worker = false; break; }
-
-					asset = update_preview.front();
-					update_preview.pop();
-				}
-				auto& preview = asset->holder->get_preview();
-
-				if (!preview || !preview->is_rt())
-				{
-					HAL::Texture::ptr new_preview;
-					new_preview.reset(new HAL::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, 256, 256, 1, 0, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
-					asset->holder->editor->preview = new_preview;
-				}
-
-				asset->update_preview(asset->holder->get_preview());
-				asset->holder->on_preview(asset->holder->get_preview());
-			}
+		catch (const std::exception& e) { Log::get() << Log::LEVEL_ERROR << e.what() << Log::endl; }
+		// Fire on_preview on the render thread so resource state tracking is coherent
+		auto preview = asset->holder->get_preview();
+		add_func([asset, preview]() {
+			asset->holder->on_preview(preview);
 		});
-		//  t.wait();
-	}*/
+	});
 }
 
 AssetStorage::ptr AssetManager::get_storage(Guid id)

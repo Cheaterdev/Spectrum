@@ -80,6 +80,7 @@ export namespace Fonts
         friend class FontGeometry;
 
         Cache<std::string, Font::ptr> fonts;
+        std::mutex m_fonts_mtx;
         FontAtlas* m_atlas = nullptr;
 
         FontSystem();

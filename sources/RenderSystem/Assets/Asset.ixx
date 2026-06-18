@@ -397,13 +397,8 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 
 			void add_func(std::function<void()> f);
 
-		std::mutex update_preview_mutex;
-		std::queue<Asset::ptr> update_preview;
-		std::atomic_bool has_worker;
-
 		void add_preview(Asset::ptr a);
-		concurrency::task<void> last_update_task;
-		bool task_inited = false;
+		SingleThreadExecutor preview_executor;
 	public:
 
 		using Singleton<AssetManager>::get;

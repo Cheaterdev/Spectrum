@@ -891,6 +891,8 @@ namespace HAL
 					auto transition_one = [&](UINT subres) {
 
 						auto& subres_cpu = cpu_state.get_subres_state(subres);
+
+						if (!subres_cpu.used) return;
 						ASSERT(subres_cpu.used);
 
 

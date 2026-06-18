@@ -536,6 +536,7 @@ public:
 			}
 
 
+			AssetManager::get().tact();
 			process_ui((float)main_timer.tick());
 
 

@@ -279,10 +279,12 @@ namespace
 // ---------------------------------------------------------------------------
 //  FreeType library singleton (created lazily, cleaned up by FontSystem dtor)
 // ---------------------------------------------------------------------------
-static FT_Library  s_ft_lib    = nullptr;
+static FT_Library  s_ft_lib     = nullptr;
+static std::mutex  s_ft_lib_mtx;
 
 static FT_Library get_ft_library()
 {
+    std::lock_guard<std::mutex> lk(s_ft_lib_mtx);
     if (!s_ft_lib) FT_Init_FreeType(&s_ft_lib);
     return s_ft_lib;
 }
@@ -580,7 +582,8 @@ namespace Fonts
 
 struct Font::FTData
 {
-    FT_Face face = nullptr;
+    FT_Face    face = nullptr;
+    std::mutex face_mtx;
 };
 
 // ============================================================================
@@ -647,7 +650,11 @@ void Font::draw(HAL::CommandList::ptr& list,
     if (!m_data || !m_data->face) return;
 
     FontAtlas& atlas = FontSystem::get_atlas();
-    auto verts = layout_text(m_data->face, str, size, area, color, flags, atlas);
+    std::vector<GlyphVtx> verts;
+    {
+        std::lock_guard<std::mutex> face_lk(m_data->face_mtx);
+        verts = layout_text(m_data->face, str, size, area, color, flags, atlas);
+    }
     draw_vertices(list, verts, &clip_rect, nullptr, flags | FW1_CLIPRECT, atlas);
 }
 
@@ -656,6 +663,7 @@ vec2 Font::measure(std::string str, float size, unsigned int flags)
     if (!m_data || !m_data->face || str.empty()) return {0.f, 0.f};
 
     std::wstring wstr = convert(str);
+    std::lock_guard<std::mutex> face_lk(m_data->face_mtx);
     FT_Face face = m_data->face;
     uint32_t px = static_cast<uint32_t>(std::ceil(size));
     FT_Set_Pixel_Sizes(face, 0, px);
@@ -757,6 +765,7 @@ HAL::TextureResource* FontSystem::get_atlas_texture()
 
 Font::ptr FontSystem::get_font(std::string font_name)
 {
+    std::lock_guard<std::mutex> lk(m_fonts_mtx);
     return fonts[font_name];
 }
 
@@ -799,6 +808,7 @@ void FontGeometry::set(HAL::CommandList::ptr& /*list*/,
 
     if (!font || !font->m_data || !font->m_data->face) return;
 
+    std::lock_guard<std::mutex> face_lk(font->m_data->face_mtx);
     m_impl->verts = layout_text(font->m_data->face, str, size,
                                  area, color, flags, FontSystem::get_atlas());
 }
@@ -814,8 +824,12 @@ sizer FontGeometry::add(HAL::CommandList::ptr& /*list*/,
 
     if (!font || !font->m_data || !font->m_data->face) return area;
 
-    auto new_verts = layout_text(font->m_data->face, str, size,
-                                  area, color, flags, FontSystem::get_atlas());
+    std::vector<GlyphVtx> new_verts;
+    {
+        std::lock_guard<std::mutex> face_lk(font->m_data->face_mtx);
+        new_verts = layout_text(font->m_data->face, str, size,
+                                area, color, flags, FontSystem::get_atlas());
+    }
     for (auto& v : new_verts)
         m_impl->verts.push_back(v);
 
