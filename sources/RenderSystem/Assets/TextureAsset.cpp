@@ -20,22 +20,7 @@ TextureAssetRenderer::~TextureAssetRenderer() {}
 
 void TextureAssetRenderer::render(TextureAsset* asset, HAL::Texture::ptr target, HAL::CommandList::ptr c)
 {
-	// DEBUG: GREEN = render entered with valid source
-	{
-		RT::SingleColor rt;
-		rt.GetColor() = target->texture_2d().renderTarget;
-		c->get_graphics().set_rtv(rt, RTOptions::ClearAll, 0, 0, vec4(0, 1, 0, 1));
-	}
-
 	if (!asset->get_texture()->texture_2d()) return;
-
-	// DEBUG: BLUE = source texture is valid, proceeding with copy
-	{
-		RT::SingleColor rt;
-		rt.GetColor() = target->texture_2d().renderTarget;
-		c->get_graphics().set_rtv(rt, RTOptions::ClearAll, 0, 0, vec4(0, 0, 1, 1));
-	}
-
 	MipMapGenerator::get().copy_texture_2d_slow(c->get_graphics(), target, asset->get_texture()->texture_2d());
 	MipMapGenerator::get().generate(c->get_compute(), target->texture_2d());
 }
@@ -84,13 +69,6 @@ void TextureAsset::update_preview(HAL::Texture::ptr preview)
 		preview.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
 	auto list = (RenderSystem::get().device().get_frame_manager().begin_frame()->start_list(L"TextureAsset"));
-
-	// DEBUG: RED = update_preview entered, before render
-	{
-		RT::SingleColor rt;
-		rt.GetColor() = preview->texture_2d().renderTarget;
-		list->get_graphics().set_rtv(rt, RTOptions::ClearAll, 0, 0, vec4(1, 0, 0, 1));
-	}
 
 	TextureAssetRenderer::get().render(this, preview, list);
 	list->execute();

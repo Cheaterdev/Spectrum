@@ -74,7 +74,7 @@ void AssetManager::add_func(std::function<void()> f)
 
 void AssetManager::add_preview(Asset::ptr asset)
 {
-	if (!AssetRenderer::is_good()) return; // no preview renderer on Vulkan
+//	if (!AssetRenderer::is_good()) return; // no preview renderer on Vulkan
 
 	preview_executor.enqueue([this, asset]() {
 		try {
