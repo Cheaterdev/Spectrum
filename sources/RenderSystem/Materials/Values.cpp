@@ -715,12 +715,16 @@ void VectorNode::operator()(MaterialContext* c)
 
 GUI::base::ptr VectorNode::create_editor_window()
 {
-	GUI::Elements::colored_rect::ptr img(new GUI::Elements::colored_rect);
-	img->color = uniform->value.f4_value;
-	img->size = { 64, 64 };
+	auto picker = std::make_shared<GUI::Elements::color_picker>();
+	picker->on_change.register_handler(nullptr, [this](float4 color) {
+		// color.x/y/z/w are R/G/B/A in [0,1]
+		uniform->value.f4_value = color;
+		uniform->on_change(uniform.get());
+		});
+	picker->set_color(uniform->value.f4_value); // start red
 
 
-	return img;
+	return picker;
 }
 
 ScalarNode::ScalarNode(float value)
@@ -752,6 +756,8 @@ GUI::base::ptr ScalarNode::create_editor_window()
 		b->info->text = std::to_string(uniform->value.f_value).substr(0, 4);
 		uniform->on_change(uniform.get());
 	};
+
+box->info->text = std::to_string(uniform->value.f_value).substr(0, 4);
 	return box;
 }
 

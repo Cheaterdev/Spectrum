@@ -18,7 +18,7 @@ struct NinePatch
 struct ColorRect
 {
 	float4 pos[2];
-	float4 color;
+	float4 color[4];
 }
 
 

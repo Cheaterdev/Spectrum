@@ -9,6 +9,7 @@ export import :CheckBox;
 export import :CheckBoxText;
 export import :CircleSelector;
 export import :ColoredRect;
+export import :ColorPicker;
 export import :ComboBox;
 export import :Container;
 export import :DockBase;

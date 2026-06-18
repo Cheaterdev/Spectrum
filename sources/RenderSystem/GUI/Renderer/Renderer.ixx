@@ -45,6 +45,8 @@ export namespace GUI
 
 
 		void draw(base::Context& c, float4 color, rect r);
+		// Per-vertex colors: top-left, bottom-left, top-right, bottom-right
+		void draw(base::Context& c, float4 tl, float4 bl, float4 tr, float4 br, rect r);
 	};
 
 	class Renderer
@@ -70,6 +72,8 @@ export namespace GUI
 		void draw_container(base::ptr obj, base::Context& c);
 		void draw_virtual(base::ptr obj, base::Context& c);
 		void draw_color(base::Context& c, float4 color, rect r);
+		// Horizontal gradient: left color to right color
+		void draw_color(base::Context& c, float4 left, float4 right, rect r);
 		void flush(base::Context& c);
 
 		void draw(base::Context& c, GUI::Texture& item, rect r);
