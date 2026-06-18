@@ -50,11 +50,14 @@ export{
 				texture = nullptr;
 
 			ar& NVP(texture);
-
-			texture->resource->set_name(convert(name));
-
+			 ar& NVP(name);
+			
 			if (!texture)
 				texture = HAL::Texture::null;
+
+			if constexpr (Archive::is_loading::value)
+			texture->resource->set_name(convert(name));
+
 		}
 
 	};

@@ -487,6 +487,19 @@ void MaterialFunction::add_function(std::string s)
 {
 	text += std::string("\t") + s + ";\n";
 }
+REGISTER_MATERIAL_NODE(ScalarNode);
+REGISTER_MATERIAL_NODE(MulNode);
+REGISTER_MATERIAL_NODE(SumNode);
+REGISTER_MATERIAL_NODE(TextureNode);
+REGISTER_MATERIAL_NODE(VectorNode);
+REGISTER_MATERIAL_NODE(TiledTextureNode);
+REGISTER_MATERIAL_NODE(MaterialGraph);
+REGISTER_MATERIAL_NODE(SpecToMetNode);
+
+
+
+
+
 REGISTER_TYPE(ScalarNode);
 REGISTER_TYPE(MulNode);
 REGISTER_TYPE(SumNode);

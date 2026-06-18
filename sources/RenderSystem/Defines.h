@@ -12,3 +12,5 @@
 // string representation.
 // ============================================================================
 #define H(x)  x = #x
+
+#define REGISTER_MATERIAL_NODE(TYPE) static MaterialNodeRegister<TYPE> _reg_##TYPE(#TYPE);

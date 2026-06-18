@@ -183,7 +183,7 @@ public:
 	}
 
 };
-#define REGISTER_MATERIAL_NODE(TYPE) static MaterialNodeRegister<TYPE> _reg_##TYPE(#TYPE);
+
 
 class MaterialFunction;
 
@@ -697,26 +697,3 @@ class TiledTextureNode : public MaterialNode, public AssetHolder
 };
        
 }
-
-                                                                              
-      REGISTER_MATERIAL_NODE(SumNode);
-                  
-     REGISTER_MATERIAL_NODE(ScalarNode);
-                REGISTER_MATERIAL_NODE(VectorNode);
-
-       REGISTER_MATERIAL_NODE(MulNode);
-
-      REGISTER_MATERIAL_NODE(SpecToMetNode);
-
-    REGISTER_MATERIAL_NODE(PowerNode);
- REGISTER_MATERIAL_NODE(MaterialFunction);
-   //     REGISTER_MATERIAL_NODE(TiledTextureNode);
-// REGISTER_TYPE(ScalarNode);
-// REGISTER_TYPE(MulNode);
-// REGISTER_TYPE(SumNode);
-// REGISTER_TYPE(TextureNode);
-// REGISTER_TYPE(VectorNode);
-// REGISTER_TYPE(TiledTextureNode);
-// REGISTER_TYPE(MaterialGraph);
-// REGISTER_TYPE(SpecToMetNode);
-//// REGISTER_TYPE(TextureSRVParams);
