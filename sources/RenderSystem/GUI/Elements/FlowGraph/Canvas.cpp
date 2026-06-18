@@ -40,37 +40,107 @@ void GUI::Elements::FlowGraph::link_spline::set_selected(bool value)
 	}
 }
 
-bool GUI::Elements::FlowGraph::link_spline::test(vec2 from, vec2 to)
+namespace
 {
-	float len = abs(p4.x - p1.x);
-
-	for (int i = 0; i < len; i++)
+	float2 cb_eval(float2 a, float2 b, float2 c, float2 d, float t)
 	{
-		float t = float(i) / len;
-		float2 pos = pow(1.0f - t, 3.0f) * p1 + 3.0f * pow(1.0f - t, 2.0f) * t * p2 + 3.0f * (1.0f - t) * pow(t, 2.0f) * p3 + pow(t, 3.0f) * p4;
-
-		if (pos.x > from.x && (pos.x < to.x) && pos.y > from.y && (pos.y < to.y))
-			return true;
+		float u = 1.0f - t;
+		return u*u*u*a + 3.0f*u*u*t*b + 3.0f*u*t*t*c + t*t*t*d;
 	}
 
-	return false;
+	float2 cb_deriv(float2 a, float2 b, float2 c, float2 d, float t)
+	{
+		float u = 1.0f - t;
+		return 3.0f*u*u*(b - a) + 6.0f*u*t*(c - b) + 3.0f*t*t*(d - c);
+	}
+
+	float2 cb_deriv2(float2 a, float2 b, float2 c, float2 d, float t)
+	{
+		return 6.0f*(1.0f - t)*(c - 2.0f*b + a) + 6.0f*t*(d - 2.0f*c + b);
+	}
+
+	float cb_dot(float2 a, float2 b) { return a.x*b.x + a.y*b.y; }
+
+	// Recursive de Casteljau rect intersection — curve ⊆ convex hull ⊆ AABB of control polygon
+	bool cb_vs_rect(float2 a, float2 b, float2 c, float2 d,
+	                float x0, float y0, float x1, float y1, int depth)
+	{
+		float2 mn = float2::min(float2::min(a, b), float2::min(c, d));
+		float2 mx = float2::max(float2::max(a, b), float2::max(c, d));
+
+		// Reject: control-polygon AABB entirely outside rect
+		if (mx.x < x0 || mn.x > x1 || mx.y < y0 || mn.y > y1)
+			return false;
+
+		// Accept: control-polygon AABB entirely inside rect
+		if (mn.x >= x0 && mx.x <= x1 && mn.y >= y0 && mx.y <= y1)
+			return true;
+
+		// At max depth the sub-curve AABB is tiny and still overlaps — treat as hit
+		if (depth >= 8)
+			return true;
+
+		// Split at t = 0.5 with de Casteljau
+		float2 ab   = (a + b) * 0.5f;
+		float2 bc   = (b + c) * 0.5f;
+		float2 cd   = (c + d) * 0.5f;
+		float2 abc  = (ab + bc) * 0.5f;
+		float2 bcd  = (bc + cd) * 0.5f;
+		float2 abcd = (abc + bcd) * 0.5f;
+
+		return cb_vs_rect(a, ab, abc, abcd, x0, y0, x1, y1, depth + 1) ||
+		       cb_vs_rect(abcd, bcd, cd, d, x0, y0, x1, y1, depth + 1);
+	}
+}
+
+bool GUI::Elements::FlowGraph::link_spline::test(vec2 from, vec2 to)
+{
+	return cb_vs_rect(p1, p2, p3, p4, from.x, from.y, to.x, to.y, 0);
 }
 
 bool GUI::Elements::FlowGraph::link_spline::test(vec2 p)
 {
-	float len = abs(p4.x - p1.x);
+	constexpr float THRESHOLD    = 10.0f;
+	constexpr float THRESHOLD_SQ = THRESHOLD * THRESHOLD;
 
-	for (int i = 0; i < len; i++)
+	// Quick reject using control-polygon AABB expanded by threshold
+	float2 mn = float2::min(float2::min(p1, p2), float2::min(p3, p4));
+	float2 mx = float2::max(float2::max(p1, p2), float2::max(p3, p4));
+	if (p.x < mn.x - THRESHOLD || p.x > mx.x + THRESHOLD ||
+	    p.y < mn.y - THRESHOLD || p.y > mx.y + THRESHOLD)
+		return false;
+
+	// Coarse scan: 10 uniform samples to find approximate closest t
+	float best_t   = 0.0f;
+	float best_dsq = std::numeric_limits<float>::max();
+	for (int i = 0; i <= 10; i++)
 	{
-		float t = float(i) / len;
-		float2 pos = pow(1.0f - t, 3.0f) * p1 + 3.0f * pow(1.0f - t, 2.0f) * t * p2 + 3.0f * (1.0f - t) * pow(t, 2.0f) * p3 + pow(t, 3.0f) * p4;
-		float l = (pos - p).length();
-
-		if (l < 10)
-			return true;
+		float t   = float(i) / 10.0f;
+		float2 bt = cb_eval(p1, p2, p3, p4, t);
+		float2 d  = bt - float2(p);
+		float dsq = cb_dot(d, d);
+		if (dsq < best_dsq) { best_dsq = dsq; best_t = t; }
 	}
 
-	return false;
+	// Newton refinement: minimise |B(t) - P|²
+	// derivative = (B(t)-P)·B'(t), second derivative = |B'(t)|² + (B(t)-P)·B''(t)
+	for (int iter = 0; iter < 4; iter++)
+	{
+		float2 bt  = cb_eval  (p1, p2, p3, p4, best_t);
+		float2 bd  = cb_deriv (p1, p2, p3, p4, best_t);
+		float2 bd2 = cb_deriv2(p1, p2, p3, p4, best_t);
+		float2 diff = bt - float2(p);
+
+		float num   = cb_dot(diff, bd);
+		float denom = cb_dot(bd, bd) + cb_dot(diff, bd2);
+		if (std::abs(denom) < 1e-6f) break;
+
+		best_t = Math::clamp(best_t - num / denom, 0.0f, 1.0f);
+	}
+
+	float2 closest = cb_eval(p1, p2, p3, p4, best_t);
+	float2 d = closest - float2(p);
+	return cb_dot(d, d) < THRESHOLD_SQ;
 }
 
 void GUI::Elements::FlowGraph::link_spline::update(float dt)
