@@ -107,8 +107,12 @@ void GUI::Elements::edit_text::process_keys()
 			}*/
 	}
 
+	bool changed = (label_text->text.get() != text);
 	label_text->text = text;
 	keys.clear();
+
+	if (changed)
+		on_change(text);
 }
 void GUI::Elements::edit_cursor::draw(Context& c)
 {

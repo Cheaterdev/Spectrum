@@ -46,6 +46,8 @@ export namespace GUI
                 using ptr = s_ptr<edit_text>;
                 using wptr = w_ptr<edit_text>;
 
+                Events::Event<std::string> on_change;
+
                 edit_text();
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;

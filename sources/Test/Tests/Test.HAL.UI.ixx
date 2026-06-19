@@ -39,7 +39,10 @@ export namespace Test
 		auto* p = rect_slot.GetPos();
 		p[0] = float4(-0.5f,  0.5f,  0.5f,  0.5f); // v0=TL, v1=TR
 		p[1] = float4(-0.5f, -0.5f,  0.5f, -0.5f); // v2=BL, v3=BR
-		rect_slot.GetColor() = float4(0.2f, 0.8f, 0.2f, 1.0f);
+		rect_slot.GetColor()[0] = float4(0.2f, 0.8f, 0.2f, 1.0f);
+ 		rect_slot.GetColor()[1] = float4(0.2f, 0.8f, 0.2f, 1.0f);
+		rect_slot.GetColor()[2] = float4(0.2f, 0.8f, 0.2f, 1.0f);
+		rect_slot.GetColor()[3] = float4(0.2f, 0.8f, 0.2f, 1.0f);
 
 		auto& gfx = list->get_graphics();
 		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0.05f, 0.05f, 0.1f, 1.0f));
