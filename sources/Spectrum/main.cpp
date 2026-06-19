@@ -464,6 +464,10 @@ class GraphRender : public Window, public GUI::user_interface
 	GUI::Elements::label::ptr label_tiles;
 	GUI::Elements::label::ptr instance_info;
 
+	GUI::Elements::stat_graph::ptr graph_fps;
+	GUI::Elements::stat_graph::ptr graph_frametime;
+	GUI::Elements::stat_graph::ptr graph_vram;
+
 	std::shared_ptr<triangle_drawer> drawer;
 	std::shared_ptr<triangle_drawer> drawer2;
 	std::shared_ptr<FrameFlowGraph> frameFlowGraph;
@@ -537,7 +541,15 @@ public:
 
 
 			AssetManager::get().tact();
-			process_ui((float)main_timer.tick());
+			float frame_dt = (float)main_timer.tick();
+			process_ui(frame_dt);
+
+			if (frame_dt > 0.0f)
+			{
+				if (graph_fps)       graph_fps->push(1.0f / frame_dt);
+				if (graph_frametime) graph_frametime->push(frame_dt * 1000.0f);
+				if (graph_vram)      graph_vram->push((float)RenderSystem::get().device().get_vram());
+			}
 
 
 			setup_graph();
@@ -840,6 +852,39 @@ public:
 					frameFlowGraph = std::make_shared<FrameFlowGraph>();
 
 					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
+				}
+
+				{
+					auto stats_panel = std::make_shared<GUI::base>();
+					stats_panel->docking      = GUI::dock::FILL;
+					stats_panel->width_size   = GUI::size_type::MATCH_PARENT;
+					stats_panel->height_size  = GUI::size_type::MATCH_PARENT;
+
+					graph_fps.reset(new GUI::Elements::stat_graph());
+					graph_fps->title    = "FPS";
+					graph_fps->capacity = 200;
+					graph_fps->size     = {0, 70};
+					stats_panel->add_child(graph_fps);
+
+					graph_frametime.reset(new GUI::Elements::stat_graph());
+					graph_frametime->title      = "Frame Time";
+					graph_frametime->unit       = "ms";
+					graph_frametime->capacity   = 200;
+					graph_frametime->size       = {0, 70};
+					graph_frametime->line_color = {0.95f, 0.70f, 0.20f, 1.00f};
+					graph_frametime->fill_color = {0.95f, 0.70f, 0.20f, 0.15f};
+					stats_panel->add_child(graph_frametime);
+
+					graph_vram.reset(new GUI::Elements::stat_graph());
+					graph_vram->title      = "VRAM";
+					graph_vram->capacity   = 200;
+					graph_vram->size       = {0, 70};
+					graph_vram->line_color = {0.90f, 0.30f, 0.30f, 1.00f};
+					graph_vram->fill_color = {0.90f, 0.30f, 0.30f, 0.15f};
+					stats_panel->add_child(graph_vram);
+
+					dock->get_tabs()->add_page("Stats", stats_panel);
+					dock->size = {100, 230};
 				}
 			}
 

@@ -33,6 +33,7 @@ namespace GUI
             docking     = dock::TOP;
             height_size = size_type::MATCH_CHILDREN;
             width_size  = size_type::MATCH_PARENT;
+            x_type      = pos_x_type::LEFT;
 
             // header row
             auto hdr = std::make_shared<section_header>();
@@ -44,7 +45,7 @@ namespace GUI
             arrow.reset(new toogle_icon());
             arrow->docking = dock::LEFT;
             arrow->margin  = {4, 0, 4, 0};
-            arrow->toogle(true);
+            arrow->toogle(false); // inverted: false = down arrow = expanded
             arrow->on_toogle = [this]() { toggle(); };
             header->add_child(arrow);
 
@@ -60,6 +61,7 @@ namespace GUI
             content->docking     = dock::TOP;
             content->height_size = size_type::MATCH_CHILDREN;
             content->width_size  = size_type::MATCH_PARENT;
+            content->x_type      = pos_x_type::LEFT;
             content->padding     = {8, 4, 4, 4};
             base::add_child(content);
         }
@@ -72,7 +74,7 @@ namespace GUI
         void collapsible_section::set_expanded(bool v)
         {
             content->visible = v;
-            arrow->toogle(v);
+            arrow->toogle(!v); // inverted: !v so false=expanded shows down arrow
             on_expanded_changed(v);
         }
 

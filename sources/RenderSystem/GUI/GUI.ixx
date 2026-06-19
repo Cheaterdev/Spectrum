@@ -30,6 +30,7 @@ export import :Resizer;
 export import :ScrollBar;
 export import :Separator;
 export import :ScrollContainer;
+export import :StatGraph;
 export import :StatusBar;
 export import :TabControl;
 export import :Tooltip;

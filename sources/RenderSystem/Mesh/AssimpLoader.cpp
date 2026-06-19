@@ -50,7 +50,7 @@ public:
 		docking     = GUI::dock::FILL;
 		width_size  = GUI::size_type::FIXED;
 		height_size = GUI::size_type::FIXED;
-		size        = {420, 420};
+		size        = {420, 200};
 
 		contents->width_size  = GUI::size_type::MATCH_PARENT;
 		contents->height_size = GUI::size_type::MATCH_PARENT;
@@ -106,6 +106,7 @@ public:
 		mats_row->docking = GUI::dock::TOP;
 		mats_row->x_type  = GUI::pos_x_type::LEFT;
 		mats_row->get_label()->text = "Remove duplicate materials";
+		mats_row->get_check()->size = {30, 16};
 		mats_row->get_check()->set_checked(settings.materials_remove);
 		mats_row->on_check = [this](bool v) { settings.materials_remove = v; };
 		import_section->content->add_child(mats_row);
