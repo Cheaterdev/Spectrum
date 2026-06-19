@@ -467,6 +467,8 @@ class GraphRender : public Window, public GUI::user_interface
 	GUI::Elements::stat_graph::ptr graph_fps;
 	GUI::Elements::stat_graph::ptr graph_frametime;
 	GUI::Elements::stat_graph::ptr graph_vram;
+	GUI::Elements::stat_graph::ptr graph_upload;
+	GUI::Elements::stat_graph::ptr graph_readback;
 
 	std::shared_ptr<triangle_drawer> drawer;
 	std::shared_ptr<triangle_drawer> drawer2;
@@ -546,9 +548,12 @@ public:
 
 			if (frame_dt > 0.0f)
 			{
+				auto& dev = RenderSystem::get().device();
 				if (graph_fps)       graph_fps->push(1.0f / frame_dt, frame_dt);
 				if (graph_frametime) graph_frametime->push(frame_dt * 1000.0f, frame_dt);
-				if (graph_vram)      graph_vram->push((float)RenderSystem::get().device().get_vram(), frame_dt);
+				if (graph_vram)      graph_vram->push((float)dev.get_vram(), frame_dt);
+				if (graph_upload)    graph_upload->push((float)dev.get_upload_heap(), frame_dt);
+				if (graph_readback)  graph_readback->push((float)dev.get_readback_heap(), frame_dt);
 			}
 
 
@@ -861,15 +866,17 @@ public:
 					stats_panel->height_size  = GUI::size_type::MATCH_PARENT;
 
 					graph_fps.reset(new GUI::Elements::stat_graph());
-					graph_fps->title = "FPS";
-					graph_fps->size  = {0, 70};
-					graph_fps->mode  = GUI::Elements::stat_graph::draw_mode::lines;
+					graph_fps->title     = "FPS";
+					graph_fps->size      = {0, 70};
+					graph_fps->min_range = 150.0f;
+					graph_fps->mode      = GUI::Elements::stat_graph::draw_mode::lines;
 					stats_panel->add_child(graph_fps);
 
 					graph_frametime.reset(new GUI::Elements::stat_graph());
 					graph_frametime->title      = "Frame Time";
 					graph_frametime->unit       = "ms";
 					graph_frametime->size       = {0, 70};
+					graph_frametime->min_range  = 20.0f;
 					graph_frametime->line_color = {0.95f, 0.70f, 0.20f, 1.00f};
 					graph_frametime->fill_color = {0.95f, 0.70f, 0.20f, 0.15f};
 					graph_frametime->mode       = GUI::Elements::stat_graph::draw_mode::lines;
@@ -878,10 +885,31 @@ public:
 					graph_vram.reset(new GUI::Elements::stat_graph());
 					graph_vram->title      = "VRAM";
 					graph_vram->size       = {0, 70};
+					graph_vram->min_range  = 100.0f;
 					graph_vram->line_color = {0.90f, 0.30f, 0.30f, 1.00f};
 					graph_vram->fill_color = {0.90f, 0.30f, 0.30f, 0.15f};
 					graph_vram->mode       = GUI::Elements::stat_graph::draw_mode::lines;
 					stats_panel->add_child(graph_vram);
+
+					graph_upload.reset(new GUI::Elements::stat_graph());
+					graph_upload->title      = "Upload Heap";
+					graph_upload->unit       = "MB";
+					graph_upload->size       = {0, 70};
+					graph_upload->min_range  = 50.0f;
+					graph_upload->line_color = {0.40f, 0.70f, 1.00f, 1.00f};
+					graph_upload->fill_color = {0.40f, 0.70f, 1.00f, 0.15f};
+					graph_upload->mode       = GUI::Elements::stat_graph::draw_mode::lines;
+					stats_panel->add_child(graph_upload);
+
+					graph_readback.reset(new GUI::Elements::stat_graph());
+					graph_readback->title      = "Readback Heap";
+					graph_readback->unit       = "MB";
+					graph_readback->size       = {0, 70};
+					graph_readback->min_range  = 50.0f;
+					graph_readback->line_color = {1.00f, 0.60f, 0.20f, 1.00f};
+					graph_readback->fill_color = {1.00f, 0.60f, 0.20f, 0.15f};
+					graph_readback->mode       = GUI::Elements::stat_graph::draw_mode::lines;
+					stats_panel->add_child(graph_readback);
 
 					dock->get_tabs()->add_page("Stats", stats_panel);
 					dock->size = {100, 230};

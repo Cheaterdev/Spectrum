@@ -55,11 +55,25 @@ export namespace HAL
 
 	class HeapFactory :public Allocators::HeapFactory<ResourceContext, GlobalAllocationPolicy>
 	{
+		using Base = Allocators::HeapFactory<ResourceContext, GlobalAllocationPolicy>;
+
 		Device& device;
 		virtual ptr_type make_heap(HeapIndex index, size_t size) override;
 
+		std::atomic<size_t> _upload_bytes   = 0;
+		std::atomic<size_t> _readback_bytes = 0;
+
+		void _add(HeapIndex index, size_t n) noexcept;
+		void _sub(HeapIndex index, size_t n) noexcept;
+
 	public:
 		HeapFactory(Device& device);
+
+		page_type AllocateHeap(HeapIndex index, size_t size, Allocators::HeapAllocatorInterface<HAL::Heap>& owner) override;
+		void      Free(HeapIndex index, page_type page) override;
+
+		size_t get_upload_bytes()   const { return _upload_bytes.load(std::memory_order_relaxed); }
+		size_t get_readback_bytes() const { return _readback_bytes.load(std::memory_order_relaxed); }
 	};
 	
 

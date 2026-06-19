@@ -41,6 +41,26 @@ namespace GUI
             header_label->color       = {0.9f, 0.9f, 0.9f, 0.85f};
             add_child(header_label);
 
+            auto make_legend_label = [this]() -> label::ptr {
+                auto l = label::ptr(new label());
+                l->docking     = dock::NONE;
+                l->x_type      = pos_x_type::LEFT;
+                l->y_type      = pos_y_type::TOP;
+                l->pos         = {0, 2};
+                l->width_size  = size_type::MATCH_PARENT;
+                l->height_size = size_type::FIXED;
+                l->size        = {0, 12};
+                l->magnet_text = FW1_RIGHT | FW1_VCENTER | FW1_NOWORDWRAP;
+                l->color       = {0.75f, 0.75f, 0.75f, 0.65f};
+                return l;
+            };
+
+            _max_label = make_legend_label();
+            add_child(_max_label);
+
+            _min_label = make_legend_label();
+            add_child(_min_label);
+
             draw_tex.mul_color = {1, 1, 1, 1};
             draw_tex.add_color = {0, 0, 0, 0};
         }
@@ -67,7 +87,7 @@ namespace GUI
             float half_data = (vmax - vmin) * 0.5f;
             float half_min  = std::max(std::abs(mid), std::abs(vmax)) * 0.05f;
             if (half_min < 1.0f) half_min = 1.0f;
-            float half = std::max(half_data, half_min);
+            float half = std::max({half_data, half_min, min_range * 0.5f});
             float pad  = half * 0.15f;
             vmin = mid - half - pad;
             vmax = mid + half + pad;
@@ -189,6 +209,8 @@ namespace GUI
         void stat_graph::update_label()
         {
             header_label->visible = show_stats;
+            _max_label->visible   = show_stats;
+            _min_label->visible   = show_stats;
             if (!show_stats) return;
 
             char buf[128];
@@ -205,14 +227,25 @@ namespace GUI
                     title.c_str(), cur, usp, u, avg, usp, u);
 
             header_label->text = buf;
+
+            // Legend: actual data min/max (not the padded display range)
+            snprintf(buf, sizeof(buf), "%.1f%s%s ", max_stored(), usp, u);
+            _max_label->text = buf;
+
+            snprintf(buf, sizeof(buf), "%.1f%s%s ", min_stored(), usp, u);
+            _min_label->text = buf;
         }
 
         // ── GPU rendering hooks ────────────────────────────────────────────────
 
         void stat_graph::on_pre_render(Context& c)
         {
-            if (count == 0) return;
+            // Keep min label pinned to the bottom edge
             auto bounds = get_render_bounds();
+            if (bounds.h > 14.0f)
+                _min_label->pos = {0, bounds.h - 14.0f};
+
+            if (count == 0) return;
             if (bounds.w < 4.0f || bounds.h < 4.0f) return;
             user_ui->pre_draw_infos.emplace_back(this);
         }

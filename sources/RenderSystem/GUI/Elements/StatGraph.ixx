@@ -26,6 +26,8 @@ export namespace GUI
             bool  _range_valid = false;
 
             label::ptr header_label;
+            label::ptr _max_label;
+            label::ptr _min_label;
             void update_label();
 
             float get_sample(size_t i) const;
@@ -57,6 +59,7 @@ export namespace GUI
 
             float sample_interval = 0.0f;
             float range_smooth    = 3.0f; // exp-decay speed toward target range; 0 = instant
+            float min_range       = 0.0f; // minimum span of the auto-scale display range
             draw_mode mode = draw_mode::cs;
 
             stat_graph();

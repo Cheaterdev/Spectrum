@@ -3,6 +3,7 @@
 module HAL:Device;
 import :Debug;
 import :Utils;
+import :HeapAllocators;
 
 import d3d12;
 import Core;
@@ -211,6 +212,18 @@ namespace HAL
             THIS->adapter->native_adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &videoMemoryInfo);
             size_t usedVRAM = videoMemoryInfo.CurrentUsage / 1024 / 1024;
             return usedVRAM;
+        }
+
+        size_t Device::get_upload_heap()
+        {
+            auto THIS = static_cast<HAL::Device*>(this);
+            return THIS->get_heap_factory().get_upload_bytes() / 1024 / 1024;
+        }
+
+        size_t Device::get_readback_heap()
+        {
+            auto THIS = static_cast<HAL::Device*>(this);
+            return THIS->get_heap_factory().get_readback_bytes() / 1024 / 1024;
         }
 
         void Device::init(DeviceDesc& desc)

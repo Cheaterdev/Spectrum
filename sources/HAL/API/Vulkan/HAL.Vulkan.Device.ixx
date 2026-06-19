@@ -115,6 +115,8 @@ export namespace HAL
             ResourceAllocationInfo get_alloc_info(const ResourceDesc& desc);
             uint   Subresources(const ResourceDesc& desc) const;
             size_t get_vram();
+            size_t get_upload_heap();
+            size_t get_readback_heap();
 
             RaytracingPrebuildInfo calculateBuffers(const RaytracingBuildDescBottomInputs& desc);
             RaytracingPrebuildInfo calculateBuffers(const RaytracingBuildDescTopInputs& desc);

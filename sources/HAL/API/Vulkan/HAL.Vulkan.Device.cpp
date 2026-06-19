@@ -8,6 +8,7 @@ import :Debug;
 import :Utils;
 import :Impl;    // get_vk_instance()
 import :Sampler;
+import :HeapAllocators;
 
 import stl.core;
 import Core;
@@ -545,6 +546,18 @@ namespace HAL
                 if (mem_props.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
                     total += mem_props.memoryHeaps[i].size;
             return total / 1024 / 1024;
+        }
+
+        size_t Device::get_upload_heap()
+        {
+            auto THIS = static_cast<HAL::Device*>(this);
+            return THIS->get_heap_factory().get_upload_bytes() / 1024 / 1024;
+        }
+
+        size_t Device::get_readback_heap()
+        {
+            auto THIS = static_cast<HAL::Device*>(this);
+            return THIS->get_heap_factory().get_readback_bytes() / 1024 / 1024;
         }
 
         ResourceAllocationInfo Device::get_alloc_info(const ResourceDesc& desc)
