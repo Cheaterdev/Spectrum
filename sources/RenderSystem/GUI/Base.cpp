@@ -1116,6 +1116,7 @@ namespace GUI
     {
     //    std::lock_guard<std::mutex> g(m);
         auto&& g2 = lock();
+        last_mouse_pos = pos;
         /*	if (movable)
         	{
 

@@ -424,6 +424,8 @@ namespace GUI
             ParentClamp clamp_to_parent = ParentClamp::NONE;
             std::optional<rect> child_scissor;
             std::optional<rect> self_scissor;
+
+            std::string tooltip;
             /*	protected:
             	int get_max_z*/
 
@@ -540,6 +542,7 @@ namespace GUI
             base::ptr back;
             base::wptr hovered;
             base::wptr mouse_focus;
+            vec2 last_mouse_pos;
 
             std::array<std::vector<base::ptr>, 3> pressed;
             std::vector<base::ptr> hovered_controls;
@@ -570,6 +573,9 @@ namespace GUI
             std::function<void(bool)> set_capture;
             user_interface();
             ~user_interface();
+
+            base::wptr get_hovered() const { return hovered; }
+            vec2       get_mouse_pos() const { return last_mouse_pos; }
 
             void mouse_move_event_internal(vec2 pos);
             void mouse_action_event_internal(mouse_action action, mouse_button button, vec2 pos);

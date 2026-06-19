@@ -5,6 +5,7 @@ export import :Renderer;
 export import :Skin;
 
 export import :Button;
+export import :CollapsibleSection;
 export import :CheckBox;
 export import :CheckBoxText;
 export import :CircleSelector;
@@ -31,6 +32,7 @@ export import :Separator;
 export import :ScrollContainer;
 export import :StatusBar;
 export import :TabControl;
+export import :Tooltip;
 export import :ToggleSwitch;
 export import :Tree;
 export import :Table;

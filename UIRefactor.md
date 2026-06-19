@@ -44,7 +44,7 @@ Replaces the int-only `ValueBox` pattern for float data.
 **Complexity:** low-medium  
 A `Button` that remembers pressed/unpressed state across clicks (latching). Fires `on_toggle(bool)`. Different from `CheckBox` in that it looks like a button.
 
-## 10. Collapsible Section / Accordion
+## ~~10. Collapsible Section / Accordion~~ ✓
 **Complexity:** medium  
 A header row (clickable label + arrow icon) that shows/hides a child container. Commonly used in property inspectors. Needs `MATCH_CHILDREN` height to collapse to zero.
 
@@ -52,7 +52,7 @@ A header row (clickable label + arrow icon) that shows/hides a child container. 
 **Complexity:** medium  
 Extend `ListBox` with shift-click range select and ctrl-click toggle. Expose `std::vector<int> selected_indices` and `on_selection_changed`.
 
-## 12. Tooltip
+## ~~12. Tooltip~~ ✓
 **Complexity:** medium  
 On hover (after a short delay), show a floating label near the cursor. Requires a timer in `think()`, a top-level overlay element, and a `std::string tooltip` field on `base` (or per-widget).
 
