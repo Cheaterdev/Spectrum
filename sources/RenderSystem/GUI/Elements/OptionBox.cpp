@@ -2,21 +2,20 @@ module GUI:OptionBox;
 import :Renderer;
 import :CheckBoxText;
 
-GUI::Elements::check_box_text::ptr GUI::Elements::option_group::create_option(bool value /*= false*/)
+GUI::Elements::check_box_text::ptr GUI::Elements::option_group::create_option(bool value)
 {
     check_box_text::ptr result(new check_box_text());
-    result->docking = dock::TOP;
+    result->docking = GUI::dock::TOP;
     result->get_check()->set_checked(value);
     add_option(result->get_check());
     return result;
 }
 
-GUI::Elements::check_box::ptr GUI::Elements::option_group::add_option(check_box::ptr obj)
+GUI::Elements::toggle_switch::ptr GUI::Elements::option_group::add_option(toggle_switch::ptr obj)
 {
     all.push_back(obj);
     obj->allow_uncheck = false;
-    obj->on_check_internal = [this, obj](bool value) {if (value)on_check(obj); };
-    obj->skin =  Skin::get().DefaultOptionBox;
+    obj->on_toggle = [this, obj](bool value) { if (value) on_check(obj); };
     return obj;
 }
 
@@ -26,13 +25,11 @@ GUI::Elements::option_group::option_group()
 
 GUI::Elements::option_group::~option_group()
 {
-    for (auto c : all)
-        c->on_check_internal = nullptr;
 }
 
-void GUI::Elements::option_group::on_check(check_box::ptr obj)
+void GUI::Elements::option_group::on_check(toggle_switch::ptr obj)
 {
-    for (auto c : all)
+    for (auto& c : all)
     {
         if (c != obj)
             c->set_checked(false);

@@ -15,13 +15,13 @@ export namespace GUI
                 using wptr = w_ptr<option_group>;
 
             protected:
-                std::vector<check_box::ptr> all;
-                void on_check(check_box::ptr obj);
+                std::vector<toggle_switch::ptr> all;
+                void on_check(toggle_switch::ptr obj);
             public:
 
                 option_group();
                 ~option_group();
-                check_box::ptr add_option(check_box::ptr obj);
+                toggle_switch::ptr add_option(toggle_switch::ptr obj);
 
                 check_box_text::ptr create_option(bool value = false);
 

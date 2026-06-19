@@ -31,6 +31,7 @@ export import :Separator;
 export import :ScrollContainer;
 export import :StatusBar;
 export import :TabControl;
+export import :ToggleSwitch;
 export import :Tree;
 export import :Table;
 export import :ValueBox;

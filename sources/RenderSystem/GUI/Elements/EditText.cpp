@@ -25,18 +25,24 @@ bool GUI::Elements::edit_text::on_mouse_action(mouse_action action, mouse_button
 
 GUI::Elements::edit_text::edit_text()
 {
-	text = "edit text";
+	text = "";
 	clickable = true;
 	cursor_pos = 0;
+
+	placeholder_label.reset(new label());
+	placeholder_label->text    = placeholder;
+	placeholder_label->color   = rgba8(120, 120, 120, 180);
+	placeholder_label->docking = dock::FILL;
+	placeholder_label->visible = true; // text starts empty, so placeholder is visible
+	add_child(placeholder_label);
+
 	label_text.reset(new label());
-	label_text->text = text;
-	label_text->color = rgba8(40, 40, 40, 255);
+	label_text->text    = text;
+	label_text->color   = rgba8(40, 40, 40, 255);
 	label_text->docking = dock::FILL;
 	add_child(label_text);
+
 	label_cursor.reset(new edit_cursor());
-	//label_text->text = text;
-	//	label_text->color = rgba8(40, 40, 40, 255);
-	//label_text->docking = dock::FILL;
 	add_child(label_cursor);
 	padding = { 5, 5, 5, 5 };
 }
@@ -96,8 +102,12 @@ void GUI::Elements::edit_text::process_keys()
 
 		else if (isprint(key))
 		{
-			text.insert(text.begin() + cursor_pos, char(key));
-			cursor_pos++;
+			char ch = char(key);
+			if (!filter || filter(ch))
+			{
+				text.insert(text.begin() + cursor_pos, ch);
+				cursor_pos++;
+			}
 		}
 
 		/*	else if (key == VK_RETURN)
@@ -109,6 +119,8 @@ void GUI::Elements::edit_text::process_keys()
 
 	bool changed = (label_text->text.get() != text);
 	label_text->text = text;
+	placeholder_label->text    = placeholder;
+	placeholder_label->visible = text.empty();
 	keys.clear();
 
 	if (changed)

@@ -34,6 +34,7 @@ export namespace GUI
                 void process_keys();
             protected:
                 label::ptr label_text;
+                label::ptr placeholder_label;
                 edit_cursor::ptr label_cursor;
 
                 unsigned int cursor_pos;
@@ -47,6 +48,10 @@ export namespace GUI
                 using wptr = w_ptr<edit_text>;
 
                 Events::Event<std::string> on_change;
+
+                std::string placeholder;
+
+                std::function<bool(char)> filter;
 
                 edit_text();
 

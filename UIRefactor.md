@@ -27,11 +27,11 @@ Extract `color_slider` from `ColorPicker` into a proper standalone widget with:
 - `std::function<void(float)> on_change`
 - Horizontal and vertical orientation
 
-## 6. EditText — placeholder text
+## ~~6. EditText — placeholder text~~ ✓
 **Complexity:** low  
 Draw a grayed-out hint string when `text` is empty and the widget is unfocused.
 
-## 7. EditText — input mask / validation
+## ~~7. EditText — input mask / validation~~ ✓
 **Complexity:** low-medium  
 `std::function<bool(char)> filter` called per keystroke; reject characters that don't pass. Enables numeric-only, hex-only, etc.
 
@@ -40,7 +40,7 @@ Draw a grayed-out hint string when `text` is empty and the widget is unfocused.
 Editable float value: `EditText` with numeric filter + scroll-wheel increment/decrement + configurable step, min, max.  
 Replaces the int-only `ValueBox` pattern for float data.
 
-## 9. Toggle Button
+## ~~9. Toggle Button~~ ✓ (implemented as toggle_switch — mobile-style pill with animated thumb)
 **Complexity:** low-medium  
 A `Button` that remembers pressed/unpressed state across clicks (latching). Fires `on_toggle(bool)`. Different from `CheckBox` in that it looks like a button.
 

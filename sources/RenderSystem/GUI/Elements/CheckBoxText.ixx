@@ -3,7 +3,7 @@ import :Image;
 import :Skin;
 import :HorizontalLayout;
 import :Label;
-import :CheckBox;
+import :ToggleSwitch;
 
 export namespace GUI
 {
@@ -12,12 +12,9 @@ export namespace GUI
 
 		class check_box_text : public layouts::horizontal
 		{
-			check_box::ptr check;
+			toggle_switch::ptr check;
 			label::ptr label_text;
 
-
-		protected:
-		//	virtual void on_check_changed(const bool &r);
 		public:
 			using ptr = s_ptr<check_box_text>;
 			using wptr = w_ptr<check_box_text>;
@@ -25,7 +22,7 @@ export namespace GUI
 			check_box_text();
 			check_box_text(Variable<bool>&);
 
-			check_box::ptr get_check();
+			toggle_switch::ptr get_check();
 			bool is_checked();
 			label::ptr get_label();
 		};
