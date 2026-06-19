@@ -29,126 +29,139 @@ struct MeshLoadingSettings
 class LoadingWindow : public GUI::Elements::window
 {
 	MeshLoadingSettings settings;
+
+	GUI::Elements::label::ptr scale_value_label;
+
+	void update_scale_label()
+	{
+		char buf[16];
+		snprintf(buf, sizeof(buf), "%.3f", settings.scale);
+		scale_value_label->text = buf;
+	}
+
 public:
 	std::promise<MeshLoadingSettings> result;
-	LoadingWindow(std::string_view name, MeshLoadingSettings & _settings):settings(_settings)
+
+	LoadingWindow(std::string_view name, MeshLoadingSettings& _settings) : settings(_settings)
 	{
+		auto short_name = std::filesystem::path(name).filename().string();
+		set_title("Import: " + short_name);
 
-		set_title(std::string("loading ") + std::string(name));
+		docking     = GUI::dock::FILL;
+		width_size  = GUI::size_type::FIXED;
+		height_size = GUI::size_type::FIXED;
+		size        = {420, 420};
 
-		docking = GUI::dock::FILL;
-		width_size = GUI::size_type::MATCH_CHILDREN;
-		height_size = GUI::size_type::MATCH_CHILDREN;
-	
-		contents->width_size = GUI::size_type::MATCH_CHILDREN;
-		contents->height_size = GUI::size_type::MATCH_CHILDREN;
+		contents->width_size  = GUI::size_type::MATCH_PARENT;
+		contents->height_size = GUI::size_type::MATCH_PARENT;
+		contents->padding     = {8, 8, 8, 8};
 
+		// ---- Import Settings section ----
+		auto import_section = std::make_shared<GUI::Elements::collapsible_section>("Import Settings");
+		add_child(import_section);
 
+		// Scale row: label | slider | value
+		auto scale_row = std::make_shared<GUI::base>();
+		scale_row->docking     = GUI::dock::TOP;
+		scale_row->height_size = GUI::size_type::FIXED;
+		scale_row->size        = {0, 22};
+		import_section->content->add_child(scale_row);
 
-		auto left_panel = std::make_shared<GUI::base>();
+		auto scale_lbl = std::make_shared<GUI::Elements::label>();
+		scale_lbl->text        = "Scale";
+		scale_lbl->docking     = GUI::dock::LEFT;
+		scale_lbl->width_size  = GUI::size_type::FIXED;
+		scale_lbl->size        = {60, 0};
+		scale_lbl->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
+		scale_row->add_child(scale_lbl);
 
-		left_panel->width_size = GUI::size_type::MATCH_CHILDREN;
-		left_panel->height_size = GUI::size_type::MATCH_CHILDREN;
-		left_panel->docking = GUI::dock::LEFT;
-		left_panel->y_type = GUI::pos_y_type::TOP;
+		scale_value_label = std::make_shared<GUI::Elements::label>();
+		scale_value_label->docking     = GUI::dock::RIGHT;
+		scale_value_label->width_size  = GUI::size_type::FIXED;
+		scale_value_label->size        = {44, 0};
+		scale_value_label->magnet_text = FW1_RIGHT | FW1_VCENTER | FW1_NOWORDWRAP;
+		scale_row->add_child(scale_value_label);
 
-		add_child(left_panel);
+		auto scale_slider = std::make_shared<GUI::Elements::float_slider>();
+		scale_slider->min        = 0.01f;
+		scale_slider->max        = 10.0f;
+		scale_slider->value      = settings.scale;
+		scale_slider->docking    = GUI::dock::FILL;
+		scale_slider->height_size = GUI::size_type::FIXED;
+		scale_slider->size       = {0, 14};
+		scale_slider->y_type     = GUI::pos_y_type::CENTER;
+		scale_row->add_child(scale_slider);
 
-
-
-
-		auto s = std::make_shared<GUI::Elements::value_box>();
-		s->min_value = 0;
-		s->max_value = 1000;
-		s->docking = GUI::dock::TOP;
-		s->x_type = GUI::pos_x_type::LEFT;
-
-		s->on_change = [this](int value, GUI::Elements::value_box * b)
+		update_scale_label();
+		scale_slider->on_change = [this](float v)
 		{
-			settings.scale = float(value) / 20;
-			//uniform->value.f_value = float(value) / 100;
-			b->info->text = std::to_string(settings.scale).substr(0, 4);
-			//uniform->on_change(uniform.get());
-	
+			settings.scale = v;
+			update_scale_label();
 		};
 
+		import_section->content->add_child(std::make_shared<GUI::Elements::separator>());
 
-		left_panel->add_child(s);
+		// Remove duplicate materials toggle
+		auto mats_row = std::make_shared<GUI::Elements::check_box_text>();
+		mats_row->docking = GUI::dock::TOP;
+		mats_row->x_type  = GUI::pos_x_type::LEFT;
+		mats_row->get_label()->text = "Remove duplicate materials";
+		mats_row->get_check()->set_checked(settings.materials_remove);
+		mats_row->on_check = [this](bool v) { settings.materials_remove = v; };
+		import_section->content->add_child(mats_row);
 
+		// ---- Textures section ----
+		if (!settings.load_textures.empty())
+		{
+			add_child(std::make_shared<GUI::Elements::separator>());
 
+			auto tex_section = std::make_shared<GUI::Elements::collapsible_section>("Textures");
+			add_child(tex_section);
 
-		auto c = std::make_shared<GUI::Elements::check_box_text>();
+			auto list = std::make_shared<GUI::Elements::scroll_container>();
+			list->docking     = GUI::dock::FILL;
+			list->height_size = GUI::size_type::FIXED;
+            list->size={160,160};
+			tex_section->content->add_child(list);
 
-		c->docking = GUI::dock::TOP;
+			for (auto& p : settings.load_textures)
+			{
+				if (!p.second) continue;
 
-		c->x_type = GUI::pos_x_type::LEFT;
+				auto item = std::make_shared<GUI::Elements::check_box_text>();
+				item->docking = GUI::dock::TOP;
+				item->x_type  = GUI::pos_x_type::LEFT;
+				item->get_label()->text = p.first.filename().generic_string();
+				item->get_check()->set_checked(true);
 
-		c->get_label()->text = "unique mats";
+				auto second_val = p.second;
+				auto first_val  = p.first;
+				item->on_check = [this, first_val, second_val](bool v)
+				{
+					settings.load_textures[first_val] = v ? second_val : nullptr;
+				};
+				list->add_child(item);
+			}
+		}
 
-		c->get_check()->set_checked(true);
-		c->on_check = [this](bool v) {
-			settings.materials_remove = v;
-		};
-		left_panel->add_child(c);
-
-
+		// ---- OK button ----
+		add_child(std::make_shared<GUI::Elements::separator>());
 
 		auto ok = std::make_shared<GUI::Elements::button>();
-		ok->docking = GUI::dock::TOP;
-
-		ok->width_size = GUI::size_type::FIXED;
+		ok->docking     = GUI::dock::TOP;
+		ok->width_size  = GUI::size_type::MATCH_PARENT;
 		ok->height_size = GUI::size_type::FIXED;
-		ok->size = { 80,25 };
-
-		ok->on_click = [this](GUI::Elements::button::ptr) {
-
-		//	prom->set_value(float(s->current_value) / 20);
-			result.set_value(settings);
-
-			//prom_materials->set_value(float(c->is_checked()) / 20);
-		remove_from_parent();
-
-
-		};
-
-		left_panel->add_child(ok);
-
-
-
-		auto list = std::make_shared<GUI::Elements::scroll_container>();
-
-		list->docking = GUI::dock::LEFT;
-		list->size = {200,200};
-
-		add_child(list);
-
-
-
-
-		for (auto &p : settings.load_textures)
+		ok->size        = {0, 30};
+		ok->margin      = {0, 6, 0, 0};
+		ok->get_label()->text = "Import";
+		ok->on_click = [this](GUI::Elements::button::ptr)
 		{
-			if (!p.second) continue;
-			auto item = std::make_shared<GUI::Elements::check_box_text>();
-
-			item->docking = GUI::dock::TOP;
-			item->x_type = GUI::pos_x_type::LEFT;
-			auto file_name = p.first.filename();
-
-			
-			item->get_label()->text = file_name.generic_string();
-
-			item->get_check()->set_checked(true);
-
-	//		auto & second = p.second;
-
-			auto second_val = p.second;
-			auto first_val = p.first;
-			item->on_check = [this,first_val, second_val](bool v) {
-				settings.load_textures[first_val] = v ? second_val : nullptr;
-			};
-			list->add_child(item);
-		}
-	}};
+			result.set_value(settings);
+			remove_from_parent();
+		};
+		add_child(ok);
+	}
+};
 // My own implementation of IOStream
 class MyIOStream : public Assimp::IOStream
 {
