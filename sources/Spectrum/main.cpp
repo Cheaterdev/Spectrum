@@ -546,9 +546,9 @@ public:
 
 			if (frame_dt > 0.0f)
 			{
-				if (graph_fps)       graph_fps->push(1.0f / frame_dt);
-				if (graph_frametime) graph_frametime->push(frame_dt * 1000.0f);
-				if (graph_vram)      graph_vram->push((float)RenderSystem::get().device().get_vram());
+				if (graph_fps)       graph_fps->push(1.0f / frame_dt, frame_dt);
+				if (graph_frametime) graph_frametime->push(frame_dt * 1000.0f, frame_dt);
+				if (graph_vram)      graph_vram->push((float)RenderSystem::get().device().get_vram(), frame_dt);
 			}
 
 
@@ -861,26 +861,26 @@ public:
 					stats_panel->height_size  = GUI::size_type::MATCH_PARENT;
 
 					graph_fps.reset(new GUI::Elements::stat_graph());
-					graph_fps->title    = "FPS";
-					graph_fps->capacity = 200;
-					graph_fps->size     = {0, 70};
+					graph_fps->title = "FPS";
+					graph_fps->size  = {0, 70};
+					graph_fps->mode  = GUI::Elements::stat_graph::draw_mode::lines;
 					stats_panel->add_child(graph_fps);
 
 					graph_frametime.reset(new GUI::Elements::stat_graph());
 					graph_frametime->title      = "Frame Time";
 					graph_frametime->unit       = "ms";
-					graph_frametime->capacity   = 200;
 					graph_frametime->size       = {0, 70};
 					graph_frametime->line_color = {0.95f, 0.70f, 0.20f, 1.00f};
 					graph_frametime->fill_color = {0.95f, 0.70f, 0.20f, 0.15f};
+					graph_frametime->mode       = GUI::Elements::stat_graph::draw_mode::lines;
 					stats_panel->add_child(graph_frametime);
 
 					graph_vram.reset(new GUI::Elements::stat_graph());
 					graph_vram->title      = "VRAM";
-					graph_vram->capacity   = 200;
 					graph_vram->size       = {0, 70};
 					graph_vram->line_color = {0.90f, 0.30f, 0.30f, 1.00f};
 					graph_vram->fill_color = {0.90f, 0.30f, 0.30f, 0.15f};
+					graph_vram->mode       = GUI::Elements::stat_graph::draw_mode::lines;
 					stats_panel->add_child(graph_vram);
 
 					dock->get_tabs()->add_page("Stats", stats_panel);

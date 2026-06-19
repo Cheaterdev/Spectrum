@@ -212,6 +212,70 @@ ComputePSO FrameGraph_Debug_NotImplemented
 }
 
 
+[Bind = DefaultLayout::Instance0]
+struct StatGraph
+{
+	uint  Count;
+	uint  Width;
+	uint  Height;
+	float Vmin;
+	float Vmax;
+
+	float4 LineColor;
+	float4 FillTop;
+	float4 FillBot;
+	float4 BgTop;
+	float4 BgBot;
+
+	StructuredBuffer<float> Samples;
+	RWTexture2D<float4>     Output;
+}
+
+ComputePSO StatGraph
+{
+	root = DefaultLayout;
+	[EntryPoint = CS]
+	compute = gui/stat_graph;
+}
+
+[Bind = DefaultLayout::Instance0]
+struct StatGraphLine
+{
+	uint  Count;
+	uint  Width;
+	uint  Height;
+	float Vmin;
+	float Vmax;
+
+	float4 LineColor;
+	float4 FillColor;
+	float4 BgTop;
+	float4 BgBot;
+
+	StructuredBuffer<float> Samples;
+}
+
+GraphicsPSO StatGraphLines
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = gui/stat_graph_lines;
+
+	[EntryPoint = GS]
+	geometry = gui/stat_graph_lines;
+
+	[EntryPoint = PS]
+	pixel = gui/stat_graph_lines;
+
+	rtv = { R8G8B8A8_UNORM };
+	blend = { AlphaBlend };
+	cull = None;
+	topology = LINE;
+	enable_depth = false;
+}
+
+
 [Static]
 [Multiple = 16]
 PassNode UI_Render

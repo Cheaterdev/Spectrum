@@ -16,15 +16,15 @@ struct Test
 	StructuredBuffer<MeshInstanceInfo> GetInstances(int i)
 	{
 		StructuredBuffer<uint> indirection = ResourceDescriptorHeap[instances];
-		uint id = indirection.Load(i);
-		return ResourceDescriptorHeap[id];
+		uint id = indirection[NonUniformResourceIndex(i)];
+		return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
 	}
 
 	Texture2D<float4> GetTex(int i)
 	{
 		StructuredBuffer<uint> indirection = ResourceDescriptorHeap[tex];
-		uint id = indirection.Load(i);
-		return ResourceDescriptorHeap[id];
+		uint id = indirection[NonUniformResourceIndex(i)];
+		return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
 	}
 
 };

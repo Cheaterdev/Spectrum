@@ -72,6 +72,8 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FrameGraph_Debug_Texture2DArray") return SlotID::FrameGraph_Debug_Texture2DArray;
 	if(slot_name == "FrameGraph_Debug_Texture3D") return SlotID::FrameGraph_Debug_Texture3D;
 	if(slot_name == "FrameGraph_Debug_TextureCube") return SlotID::FrameGraph_Debug_TextureCube;
+	if(slot_name == "StatGraph") return SlotID::StatGraph;
+	if(slot_name == "StatGraphLine") return SlotID::StatGraphLine;
 	if(slot_name == "VoxelInfo") return SlotID::VoxelInfo;
 	if(slot_name == "Voxelization") return SlotID::Voxelization;
 	if(slot_name == "VoxelScreen") return SlotID::VoxelScreen;
@@ -160,6 +162,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::FrameGraph_Debug_Texture2DArray) return Slots::FrameGraph_Debug_Texture2DArray::Slot::ID;
 	if(id == SlotID::FrameGraph_Debug_Texture3D) return Slots::FrameGraph_Debug_Texture3D::Slot::ID;
 	if(id == SlotID::FrameGraph_Debug_TextureCube) return Slots::FrameGraph_Debug_TextureCube::Slot::ID;
+	if(id == SlotID::StatGraph) return Slots::StatGraph::Slot::ID;
+	if(id == SlotID::StatGraphLine) return Slots::StatGraphLine::Slot::ID;
 	if(id == SlotID::VoxelInfo) return Slots::VoxelInfo::Slot::ID;
 	if(id == SlotID::Voxelization) return Slots::Voxelization::Slot::ID;
 	if(id == SlotID::VoxelScreen) return Slots::VoxelScreen::Slot::ID;
@@ -248,6 +252,8 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FrameGraph_Debug_Texture2DArray) return "FrameGraph_Debug_Texture2DArray";
 	if(id == SlotID::FrameGraph_Debug_Texture3D) return "FrameGraph_Debug_Texture3D";
 	if(id == SlotID::FrameGraph_Debug_TextureCube) return "FrameGraph_Debug_TextureCube";
+	if(id == SlotID::StatGraph) return "StatGraph";
+	if(id == SlotID::StatGraphLine) return "StatGraphLine";
 	if(id == SlotID::VoxelInfo) return "VoxelInfo";
 	if(id == SlotID::Voxelization) return "Voxelization";
 	if(id == SlotID::VoxelScreen) return "VoxelScreen";

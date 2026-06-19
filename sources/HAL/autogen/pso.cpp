@@ -52,6 +52,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_Texture3D>(device, pso[PSO::FrameGraph_Debug_Texture3D]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_TextureCube>(device, pso[PSO::FrameGraph_Debug_TextureCube]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_NotImplemented>(device, pso[PSO::FrameGraph_Debug_NotImplemented]));
+	tasks.emplace_back(PSOBase::create<PSOS::StatGraph>(device, pso[PSO::StatGraph]));
 	tasks.emplace_back(PSOBase::create<PSOS::Lighting>(device, pso[PSO::Lighting]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDownsample>(device, pso[PSO::VoxelDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelCopy>(device, pso[PSO::VoxelCopy]));
@@ -94,6 +95,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::SimpleRect>(device, pso[PSO::SimpleRect]));
 	tasks.emplace_back(PSOBase::create<PSOS::CanvasBack>(device, pso[PSO::CanvasBack]));
 	tasks.emplace_back(PSOBase::create<PSOS::CanvasLines>(device, pso[PSO::CanvasLines]));
+	tasks.emplace_back(PSOBase::create<PSOS::StatGraphLines>(device, pso[PSO::StatGraphLines]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionHi>(device, pso[PSO::VoxelReflectionHi]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionUpsample>(device, pso[PSO::VoxelReflectionUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectHi>(device, pso[PSO::VoxelIndirectHi]));
@@ -101,12 +103,15 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDebug>(device, pso[PSO::VoxelDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(device, pso[PSO::DenoiserDownsample]));
 
-
 	if (device.get_properties().work_graph)
 	{
 	}
 
 #ifndef HAL_BACKEND_VULKAN
+
+
+
+
 	if (device.get_properties().work_graph)
 	{
 		tasks.emplace_back(PSOBase::create<PSOS::WorkGR>(device, pso[PSO::WorkGR]));
