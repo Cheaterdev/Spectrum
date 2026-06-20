@@ -8,40 +8,35 @@ using namespace HAL;
 namespace GUI
 {
 
-	//HAL::IndexBuffer NinePatch::index_buffer;
+	HAL::IndexBuffer NinePatch::index_buffer;
+
 	void NinePatch::reset()
 	{
-
-		 //  index_buffer.resource = nullptr;
-
 	}
+
 	NinePatch::NinePatch()
 	{
-if(!index_buffer)
-{
-	static std::mutex m;
+		static std::mutex m;
+		static void* owner_device = nullptr;
 
-	std::lock_guard<std::mutex> g(m);
+		void* cur = &RenderSystem::get().device();
+		if (owner_device == cur && index_buffer) return;  // fast path — no lock after first init
 
-	if (index_buffer)
-		return;
+		std::lock_guard<std::mutex> g(m);
+		if (owner_device == cur && index_buffer) return;  // re-check under lock
+
+		index_buffer = {};  // release buffer from old device
 
 		std::vector<unsigned int> index_data(9 * 2 * 3);
-		auto data = index_data.data();
-
-		for (auto i = 0; i < 3; i++)
-			for (auto j = 0; j < 3; j++)
+		auto* data = index_data.data();
+		for (int i = 0; i < 3; i++)
+			for (int j = 0; j < 3; j++)
 			{
-				(*data++) = i * 4 + j;
-				(*data++) = i * 4 + j + 1;
-				(*data++) = i * 4 + j + 4;
-				(*data++) = i * 4 + j + 4;
-				(*data++) = i * 4 + j + 1;
-				(*data++) = i * 4 + j + 5;
+				*data++ = i*4+j;   *data++ = i*4+j+1; *data++ = i*4+j+4;
+				*data++ = i*4+j+4; *data++ = i*4+j+1; *data++ = i*4+j+5;
 			}
-
-		index_buffer =Helpers::make_buffer<unsigned int>(RenderSystem::get().device(), index_data);
-}
+		index_buffer = Helpers::make_buffer<unsigned int>(RenderSystem::get().device(), index_data);
+		owner_device = cur;
 	}
 
 	void NinePatch::draw(base::Context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state)

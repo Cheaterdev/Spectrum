@@ -43,16 +43,24 @@ export namespace GUI
 				std::atomic_int gpu_block_id;
 				void reset();
 			};
+			class solid_rect : public image
+			{
+			public:
+				using ptr = std::shared_ptr<solid_rect>;
+				float4 color = {1,1,1,1};
+				void draw(Context& c) override;
+			};
+
 			class GraphElement :public image
 			{
 			//	stack_trace trace;
 				std::wstring name;
 
-
+				float4 block_color;
 				base::ptr info;
 				double start_time;
 				double end_time;
-			
+
 			public:
 
 
@@ -60,6 +68,7 @@ export namespace GUI
 				GraphElement(block_data* block);
 				GraphElement(gpu_block_data* block);
 
+				void draw(Context& c) override;
 				void on_mouse_enter(vec2 pos) override;
 				bool on_mouse_move(vec2 pos)override;
 				void on_mouse_leave(vec2 pos) override;

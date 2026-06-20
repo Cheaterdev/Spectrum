@@ -997,11 +997,13 @@ namespace GUI
          c.scale = 1;
          c.delta_time = dt;
 
-
-         draw_infos.clear();
-         pre_draw_infos.clear();
-        draw_recursive(c);
-        drag.draw(c);
+        {
+            PROFILE(L"collect_draw_infos");
+            draw_infos.clear();
+            pre_draw_infos.clear();
+            draw_recursive(c);
+            drag.draw(c);
+        }
 
         auto& ui_ctx = graph.get_context<UIContext>();
         ui_ctx.draw_infos = std::move(draw_infos);
@@ -1012,10 +1014,14 @@ namespace GUI
         ui_ctx.scaled_size = scaled_size.get();
         ui_ctx.result_texture_handler = Handlers::Texture("ResultTexture");
 
-        process_graph(graph);
+        {
+            PROFILE(L"process_graph");
+            process_graph(graph);
+        }
 
         if (pre_draw_infos.size())
         {
+            PROFILE(L"pre_draw");
             auto command_list = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
             command_list->begin(L"pre_draw");
             for (auto& e : pre_draw_infos)
@@ -1632,6 +1638,7 @@ void PassDefault<Passes::UI_Render>::render(
     auto texture = (*data.swapchain);
 
     {
+        PROFILE(L"setup_rt");
         RT::SingleColor rt;
         rt.GetColor() = texture.renderTarget;
         const auto rt_options = (slot == 0)
@@ -1649,6 +1656,7 @@ void PassDefault<Passes::UI_Render>::render(
         c.result_texture_srv = *ui_ctx.result_texture_handler;
 
     {
+        PROFILE(L"draw_elements");
         PROFILE_GPU(L"draw");
         for (uint32_t i = start; i < end; i++)
         {
@@ -1669,6 +1677,10 @@ void PassDefault<Passes::UI_Render>::render(
             else
                 e.elem->draw_after(c);
         }
+    }
+
+    {
+        PROFILE(L"flush");
         renderer.flush(c);
     }
 }

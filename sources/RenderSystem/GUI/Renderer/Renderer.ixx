@@ -17,7 +17,7 @@ export namespace GUI
 
 		HAL::PipelineState::ptr current_state;
 	public:
-			 HAL::IndexBuffer index_buffer;
+		static HAL::IndexBuffer index_buffer;
 		int counter = 0;
 		using ptr = s_ptr<NinePatch>;
 		NinePatch();
