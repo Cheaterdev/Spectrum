@@ -126,6 +126,9 @@ namespace HAL {
 		TileHeapPosition create_tile(HeapType type, UINT count = 1);
 	};
 
+	template<class T>
+	concept IsGPUEntityStorageInterface = std::is_base_of_v<GPUEntityStorageInterface, T>;
+
 	template<class MemoryAllocationPolicy, class AllocationPolicy = MemoryAllocationPolicy>
 	struct GPUEntityStorage :
 		public GPUEntityStorageInterface,

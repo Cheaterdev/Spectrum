@@ -7,7 +7,7 @@ struct WorkGraphTest
 	RWTexture2D<float4> target;
 }
 
-[Bind = NoneLayout::None]
+[nobind]
 struct GraphInput
 {
 	[DispatchSize]
@@ -18,17 +18,40 @@ struct GraphInput
 }
 
 
+[nobind]
+struct TileRecord
+{
+	uint2 tileXY;
+}
+
+[Bind = DefaultLayout::WorkGREmulation]
+struct WorkGREmulation
+{
+	AppendStructuredBuffer<TileRecord> tileRecordAppend;
+	ConsumeStructuredBuffer<TileRecord> tileRecordConsume;
+	GraphInput graphInput;
+	uint yz_base;
+}
+
 [ExcludeVulkan] WorkgraphPSO WorkGR
 {
 	root = DefaultLayout;
 
-	shader = workgraph_test;		
+	shader = workgraph_test;
+
+	Node ClassifyPixels_Node
+	{
+		launch = broadcasting;
+		entry = true;
+		num_threads = { 64, 1, 1 };
+		max_dispatch_grid = { 256, 64, 64 };
+		input = GraphInput;
+		NodeOutput TileRecord Shadows_Node;
+	}
+
+	Node Shadows_Node
+	{
+		launch = thread;
+		input = TileRecord;
+	}
 }
-
-
-#[Bind = WorkGR]
-#EntryPoint WorkEP
-#{
-#	name = ClassifyPixels_Node;
-#	input = GraphInput;
-#

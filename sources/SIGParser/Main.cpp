@@ -417,6 +417,18 @@ int main()
 		{
 			my_stream(cpp_path + "/pso", pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
 			remove_old_pso_h(pso.name);
+			my_stream(hlsl_path + "/workgraph", pso.name + ".h") << hlsl_templates.generate2(L"workgraph_nodes", "pso", pso);
+
+			for (auto& node : pso.nodes)
+			{
+				auto dp = make_map(pso);
+				auto dn = make_map(node);
+				ValuesMap params = {
+					{"pso", Reflect(dp)},
+					{"node", Reflect(dn)},
+				};
+				my_stream(cpp_path + "/pso", pso.name + "_" + node.name + ".pso.ixx") << cpp_templates.generate(L"workgraph_node_pso", params);
+			}
 		}
 
 		// RTX

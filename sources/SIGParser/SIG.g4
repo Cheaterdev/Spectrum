@@ -173,10 +173,33 @@ rtx_pso_block: rtx_pso_stat*;
 rtx_pso_definition: RAYTRACE_PSO name_id inherit? OBRACE rtx_pso_block CBRACE;
 
 
+node_param_id:
+ 'launch'
+ | 'entry'
+ | 'num_threads'
+ | 'max_dispatch_grid'
+ | 'input'
+ ;
+
+node_param: node_param_id ASSIGN value_id SCOL;
+
+node_output_decl: NODE_OUTPUT type_id name_id SCOL;
+
+node_stat
+ : node_param
+ | node_output_decl
+ | COMMENT
+ ;
+
+node_block: node_stat*;
+
+node_definition: NODE name_id OBRACE node_block CBRACE;
+
 workgraph_pso_stat
  : root_sig
  | shader
  | define_declaration
+ | node_definition
  | COMMENT
  ;
 workgraph_pso_block: workgraph_pso_stat*;
@@ -257,6 +280,8 @@ COMPUTE_PSO: 'ComputePSO';
 GRAPHICS_PSO: 'GraphicsPSO';
 RAYTRACE_PSO: 'RaytracePSO';
 WORKGRAPH_PSO: 'WorkgraphPSO';
+NODE: 'Node';
+NODE_OUTPUT: 'NodeOutput';
 RAYTRACE_RAYGEN: 'RaytraceRaygen';
 RAYTRACE_PASS: 'RaytracePass';
 

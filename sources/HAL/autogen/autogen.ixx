@@ -220,8 +220,10 @@ export import :Autogen.Slots.ReflectionCombine;
 export import :Autogen.Tables.ReflectionCombine;
 export import :Autogen.Slots.WorkGraphTest;
 export import :Autogen.Tables.WorkGraphTest;
-export import :Autogen.Slots.GraphInput;
 export import :Autogen.Tables.GraphInput;
+export import :Autogen.Tables.TileRecord;
+export import :Autogen.Slots.WorkGREmulation;
+export import :Autogen.Tables.WorkGREmulation;
 export import :Autogen.PSO.BlueNoise;
 export import :Autogen.PSO.BRDF;
 export import :Autogen.PSO.DenoiserReflectionReproject;
@@ -293,6 +295,10 @@ export import :Autogen.PSO.VoxelIndirectUpsample;
 export import :Autogen.PSO.VoxelDebug;
 export import :Autogen.PSO.DenoiserDownsample;
 export import :Autogen.PSO.WorkGR;
+export import :Autogen.PSO.WorkGR_ClassifyPixels_Node;
+
+export import :Autogen.PSO.WorkGR_Shadows_Node;
+
 export import :Autogen.RTX.MainRTX;
 
 export import :Autogen.RT.SingleColor;

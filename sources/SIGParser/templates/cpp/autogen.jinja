@@ -46,6 +46,9 @@ export import :Autogen.PSO.{{t.name}};
 {%- for v in parsed.workgraph_pso -%}
 {%- set t =  parsed.workgraph_pso[v] -%}
 export import :Autogen.PSO.{{t.name}};
+{%- for node_name in t.nodes %}
+export import :Autogen.PSO.{{t.name}}_{{node_name}};
+{% endfor %}
 {% endfor -%}
 
 {%- for v in parsed.raytrace_pso -%}

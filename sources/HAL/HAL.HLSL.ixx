@@ -42,6 +42,11 @@ export
 			requires (T t) {
 			t.appendStructuredBuffer;
 		};
+
+		template<typename T> concept HasConsumeStructuredBuffer =
+			requires (T t) {
+			t.consumeStructuredBuffer;
+		};
 		template<typename T> concept HasByteAddressBuffer =
 			requires (T t) {
 			t.byteAddressBuffer;
@@ -137,6 +142,25 @@ export
 			{
 				this->operator=(h.appendStructuredBuffer);
 
+				return *this;
+			}
+
+			void create(const Resource::ptr& counter_resource, uint64 counter_offset, const Resource::ptr& resource, uint64 first_elem = 0, uint64 count = 0);
+		};
+
+		template<class T>
+		struct ConsumeStructuredBuffer : public UAVHandle
+		{
+			ConsumeStructuredBuffer() = default;
+			explicit ConsumeStructuredBuffer(const Handle& h) : UAVHandle(h)
+			{
+
+			}
+
+			template<HasConsumeStructuredBuffer H>
+			auto operator= (const H& h)
+			{
+				this->operator=(h.consumeStructuredBuffer);
 				return *this;
 			}
 
@@ -529,6 +553,13 @@ namespace HLSL
 
 	template<class T>
 	void AppendStructuredBuffer<T>::create(const Resource::ptr& counter_resource, uint64 counter_offset, const Resource::ptr& resource, uint64 first_elem, uint64 count)
+	{
+		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {(uint)first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, counter_offset, counter_resource} };
+		Handle::operator=(desc);
+	}
+
+	template<class T>
+	void ConsumeStructuredBuffer<T>::create(const Resource::ptr& counter_resource, uint64 counter_offset, const Resource::ptr& resource, uint64 first_elem, uint64 count)
 	{
 		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {(uint)first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, counter_offset, counter_resource} };
 		Handle::operator=(desc);

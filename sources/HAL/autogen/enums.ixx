@@ -97,7 +97,9 @@ export
 		VoxelIndirectUpsample,
 		VoxelDebug,
 		DenoiserDownsample,
-		WorkGR
+		WorkGR,
+		WorkGR_ClassifyPixels_Node,
+		WorkGR_Shadows_Node
 	};
 
 	enum class SlotID: unsigned int
@@ -219,6 +221,8 @@ export
 		FrameClassificationInitDispatch = "FrameClassificationInitDispatch"_crc32,
 		ReflectionCombine = "ReflectionCombine"_crc32,
 		WorkGraphTest = "WorkGraphTest"_crc32,
-		GraphInput = "GraphInput"_crc32
+		GraphInput = "GraphInput"_crc32,
+		TileRecord = "TileRecord"_crc32,
+		WorkGREmulation = "WorkGREmulation"_crc32
 	};
 }

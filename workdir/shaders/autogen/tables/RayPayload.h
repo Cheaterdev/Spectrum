@@ -8,8 +8,7 @@
 
 #include "RayCone.h"
 struct [raypayload] RayPayload
-{	
-	
+{
 	float4 color : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
 	float3 dir : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
 	uint recursion : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
@@ -17,7 +16,11 @@ struct [raypayload] RayPayload
 
 	RayCone cone;
 
-	
+	RayCone GetCone() { return cone; }
+	float4 GetColor() { return color; }
+	float3 GetDir() { return dir; }
+	uint GetRecursion() { return recursion; }
+	float GetDist() { return dist; }
 
 	RayPayload propagate(float surfaceSpreadAngle = 0, float hitT = 0)
 	{

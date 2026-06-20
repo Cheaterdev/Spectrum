@@ -14,7 +14,7 @@
 {%- for v in (table.values|unique|selectattr('value_type','==', type)|selectattr('bindless','==', False)) %}
 {%set read = v.options.read.value_atom.expr | replace("{", "(")| replace("}", ")") -%}
 {%-set write = v.options.write.value_atom.expr | replace("{", "(")| replace("}", ")") -%}
-	{{v.type}} {{v.name}}{{ " : read" + read if read }}{{ " : write" + write if write }};
+	{{v.type}} {{v.name}}{{": SV_DispatchGrid" if v.options.DispatchSize }}{{ " : read" + read if read }}{{ " : write" + write if write }};
 {%- endfor -%}
 
 
@@ -31,7 +31,21 @@
 {%- endmacro -%}
 
 struct{{" [raypayload]" if table.options.raypayload }} {{table.name}}
-{	
-	{{declare_func(ValueType.CB)}}
-	{{ table.hlsl }}
+{
+	{{-declare_func(ValueType.CB)}}
+
+{%- for v in (table.values|unique|list) -%}
+{%- if v.value_type == ValueType.CB or v.value_type == ValueType.STRUCT %}
+	{%- if v.as_array and v.array_count > 1 %}
+	{{v.type if not v.pointer else "uint"}} Get{{v.name|camel}}(int i) { return {{v.name}}[i]; }
+	{%- else %}
+	{%- if v.value_type == ValueType.STRUCT and not v.pointer and not v.as_array %}
+	{{v.type}} Get{{v.name|camel}}() { return {{v.name}}; }
+	{%- else %}
+	{{v.type if not v.pointer else "uint"}} Get{{v.name|camel}}({{"int i" if v.as_array}}) { return {{v.name}}{{"[i]" if v.as_array}}; }
+	{%- endif %}
+	{%- endif %}
+{%-endif-%}
+{%-endfor-%}
+	{{- table.hlsl }}
 };

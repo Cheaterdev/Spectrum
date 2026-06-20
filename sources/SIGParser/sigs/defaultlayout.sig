@@ -25,6 +25,8 @@ layout DefaultLayout: FrameLayout
 	slot Raytracing;
 
 	slot MaterialData;
+
+	slot WorkGREmulation;
 }
 
 struct DebugStruct

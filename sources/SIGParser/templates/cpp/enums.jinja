@@ -29,10 +29,17 @@ export
 
 	enum class PSO: int
 	{
-		{%- set a = parsed.compute_pso|list -%}
-		{%- set b = parsed.graphics_pso|list %}
-		{%- set c = parsed.workgraph_pso|list %}
-		{{ merge_lists3(a,b,c)  | join(',\n		')}}
+		{%- set _ = create_list('all_psos') -%}
+		{%- for v in parsed.compute_pso -%}{%- do myappend('all_psos', v) -%}{%- endfor -%}
+		{%- for v in parsed.graphics_pso -%}{%- do myappend('all_psos', v) -%}{%- endfor -%}
+		{%- for v in parsed.workgraph_pso -%}
+		{%- do myappend('all_psos', v) -%}
+		{%- set pso = parsed.workgraph_pso[v] -%}
+		{%- for node_name in pso.nodes -%}
+		{%- do myappend('all_psos', v + '_' + node_name) -%}
+		{%- endfor -%}
+		{%- endfor %}
+		{{ get_list('all_psos') | join(',\n		')}}
 	};
 
 	enum class SlotID: unsigned int

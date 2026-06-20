@@ -20,7 +20,7 @@ struct placement_info
 	}
 };
 std::optional<SlotID> get_slot(std::string_view slot_name);
-template<class Context>
+template<IsGPUEntityStorageInterface Context>
 class Slot_Compiler
 {
 	void pad()
@@ -165,6 +165,8 @@ public:
 		return compile(uint(t));
 	}
 };
+
+template<class T> concept IsSlot_Compiler = std::is_base_of_v<Slot_Compiler<typename T::Context>, T>;
 export {
 
 
@@ -199,20 +201,20 @@ export {
 
 		using Compiled = CompiledData<Table, Slot>;
 
-	template<class Compiler>
-		void compile_table(Compiler& compiler) const
+	template<IsSlot_Compiler Compiler>
+		void compile(Compiler& compiler) const
 	{
 				Table::compile(compiler);
 
 
 	}
-		template<class Context>
+		template<IsGPUEntityStorageInterface Context>
 		Compiled compile(Context& context) const  requires (std::is_base_of_v<GPUEntityStorageInterface,Context>)
 		{
 
 			Slot_Compiler<Context> Slot_Compiler;
 			Slot_Compiler.context = &context;
-			compile_table(Slot_Compiler);
+			Table::compile(Slot_Compiler);
 
 
 			Compiled compiled;
@@ -343,7 +345,7 @@ export {
 
 						uint beg = uint(rec.Slot_Compiler.s.str().size());
 			rec.Slot_Compiler.context = context;
-			elem.compile_table(rec.Slot_Compiler);
+			elem.compile(rec.Slot_Compiler);
 
 						uint end = uint(rec.Slot_Compiler.s.str().size());
 			++rec.count;

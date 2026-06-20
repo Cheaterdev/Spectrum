@@ -94,8 +94,18 @@ export struct DefaultLayout: public FrameLayout
 		static inline const std::vector<uint> tables = { 34, 36 };
 	};
 
+	struct WorkGREmulation
+	{
+		static const uint ID = 12;
+		static const uint CB = 4;
+		static const uint CB_ID = 37;
+		static const uint UAV = 2;
+		static const uint UAV_ID = 39;
+		static inline const std::vector<uint> tables = { 37, 39 };
+	};
+
 	template<class Processor> static void for_each(Processor& processor)
 	{
-		processor.template process<CameraData, SceneData, PassData, DebugInfo, Instance0, Instance1, Instance2, Instance3, Instance4, Instance5, Raytracing, MaterialData>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc });
+		processor.template process<CameraData, SceneData, PassData, DebugInfo, Instance0, Instance1, Instance2, Instance3, Instance4, Instance5, Raytracing, MaterialData, WorkGREmulation>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc });
 	}
 };

@@ -175,6 +175,24 @@ public:
   virtual void enterRtx_pso_definition(SIGParser::Rtx_pso_definitionContext * /*ctx*/) override { }
   virtual void exitRtx_pso_definition(SIGParser::Rtx_pso_definitionContext * /*ctx*/) override { }
 
+  virtual void enterNode_param_id(SIGParser::Node_param_idContext * /*ctx*/) override { }
+  virtual void exitNode_param_id(SIGParser::Node_param_idContext * /*ctx*/) override { }
+
+  virtual void enterNode_param(SIGParser::Node_paramContext * /*ctx*/) override { }
+  virtual void exitNode_param(SIGParser::Node_paramContext * /*ctx*/) override { }
+
+  virtual void enterNode_output_decl(SIGParser::Node_output_declContext * /*ctx*/) override { }
+  virtual void exitNode_output_decl(SIGParser::Node_output_declContext * /*ctx*/) override { }
+
+  virtual void enterNode_stat(SIGParser::Node_statContext * /*ctx*/) override { }
+  virtual void exitNode_stat(SIGParser::Node_statContext * /*ctx*/) override { }
+
+  virtual void enterNode_block(SIGParser::Node_blockContext * /*ctx*/) override { }
+  virtual void exitNode_block(SIGParser::Node_blockContext * /*ctx*/) override { }
+
+  virtual void enterNode_definition(SIGParser::Node_definitionContext * /*ctx*/) override { }
+  virtual void exitNode_definition(SIGParser::Node_definitionContext * /*ctx*/) override { }
+
   virtual void enterWorkgraph_pso_stat(SIGParser::Workgraph_pso_statContext * /*ctx*/) override { }
   virtual void exitWorkgraph_pso_stat(SIGParser::Workgraph_pso_statContext * /*ctx*/) override { }
 

@@ -1,1 +1,3 @@
-#pragma once
+#ifndef HAL_LAYOUT_NONE_H
+#define HAL_LAYOUT_NONE_H
+#endif // HAL_LAYOUT_NONE_H

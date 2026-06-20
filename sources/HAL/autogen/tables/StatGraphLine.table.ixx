@@ -97,6 +97,7 @@ export namespace Table
 			ar& NVP(Vmin);
 			ar& NVP(Vmax);
 			ar& NVP(LineColor);
+			ar& NVP(FillColor);
 			ar& NVP(BgTop);
 			ar& NVP(BgBot);
 		}

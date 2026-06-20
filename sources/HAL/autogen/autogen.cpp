@@ -93,7 +93,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FrameClassificationInitDispatch") return SlotID::FrameClassificationInitDispatch;
 	if(slot_name == "ReflectionCombine") return SlotID::ReflectionCombine;
 	if(slot_name == "WorkGraphTest") return SlotID::WorkGraphTest;
-	if(slot_name == "GraphInput") return SlotID::GraphInput;
+	if(slot_name == "WorkGREmulation") return SlotID::WorkGREmulation;
 	return std::nullopt;
 }
 
@@ -183,7 +183,7 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::FrameClassificationInitDispatch) return Slots::FrameClassificationInitDispatch::Slot::ID;
 	if(id == SlotID::ReflectionCombine) return Slots::ReflectionCombine::Slot::ID;
 	if(id == SlotID::WorkGraphTest) return Slots::WorkGraphTest::Slot::ID;
-	if(id == SlotID::GraphInput) return Slots::GraphInput::Slot::ID;
+	if(id == SlotID::WorkGREmulation) return Slots::WorkGREmulation::Slot::ID;
 	return -1;
 }
 
@@ -273,6 +273,6 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FrameClassificationInitDispatch) return "FrameClassificationInitDispatch";
 	if(id == SlotID::ReflectionCombine) return "ReflectionCombine";
 	if(id == SlotID::WorkGraphTest) return "WorkGraphTest";
-	if(id == SlotID::GraphInput) return "GraphInput";
+	if(id == SlotID::WorkGREmulation) return "WorkGREmulation";
 	return "UNKNOWN";
 }

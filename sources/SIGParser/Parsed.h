@@ -709,15 +709,36 @@ struct RaytracePSO : public PSO
 	}
 };
 			
+struct WorkgraphNodeOutput : public have_name, public have_type, public virtual parsed_type
+{
+	SERIALIZE()
+	{
+		SAVE_PARENT_MERGED(have_name);
+		SAVE_PARENT_MERGED(have_type);
+	}
+};
+
+struct WorkgraphNode : public have_name, public param_holder, public virtual parsed_type
+{
+	std::list<WorkgraphNodeOutput> outputs;
+
+	SERIALIZE()
+	{
+		SAVE_PARENT_MERGED(have_name);
+		SAVE_PARENT_MERGED(param_holder);
+		ar& NVP(outputs);
+	}
+};
+
 struct WorkgraphPSO : public PSO
 {
-	
+	my_container<WorkgraphNode> nodes;
 
 	SERIALIZE()
 	{
 		SAVE_PARENT_MERGED(PSO);
-
-			bool workgraph = true;
+		ar& NVP(nodes);
+		bool workgraph = true;
 		ar& NVP(workgraph);
 	}
 };

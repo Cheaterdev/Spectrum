@@ -121,6 +121,7 @@ void have_type::detect_type(have_options* options)
 
 	if (class_no_template.starts_with("RW")) value_type = ValueType::UAV;
 	if (class_no_template.starts_with("AppendStructuredBuffer")) value_type = ValueType::UAV;
+	if (class_no_template.starts_with("ConsumeStructuredBuffer")) value_type = ValueType::UAV;
 	if (class_no_template.starts_with("FeedbackTexture")) value_type = ValueType::UAV;
 
 	if (class_no_template.starts_with("bool")) value_type = ValueType::CB;

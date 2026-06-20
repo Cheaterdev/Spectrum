@@ -167,6 +167,21 @@ public:
 		setup_map(get_elem<Parsed>().workgraph_pso);
 	}
 
+	GENERATE(Node_definition)
+	{
+		setup_map(get_elem<WorkgraphPSO>().nodes);
+	}
+
+	GENERATE(Node_output_decl)
+	{
+		setup_list(get_elem<WorkgraphNode>().outputs);
+	}
+
+	GENERATE(Node_param)
+	{
+		setup_map(get_elem<param_holder>().params);
+	}
+
 
 	GENERATE(Rtx_pass_definition)
 	{
@@ -328,6 +343,15 @@ public:
 	}
 
 	void enterPso_param_id(SIGParser::Pso_param_idContext* ctx) override
+	{
+		auto& elem = get_elem<have_type>();
+		auto& options = get_elem<have_options>();
+
+		elem.class_no_template = ctx->children[0]->getText();
+		elem.detect_type(&options);
+	}
+
+	void enterNode_param_id(SIGParser::Node_param_idContext* ctx) override
 	{
 		auto& elem = get_elem<have_type>();
 		auto& options = get_elem<have_options>();

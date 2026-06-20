@@ -17,16 +17,17 @@ public:
     T__14 = 15, T__15 = 16, T__16 = 17, T__17 = 18, T__18 = 19, T__19 = 20, 
     T__20 = 21, T__21 = 22, T__22 = 23, T__23 = 24, T__24 = 25, T__25 = 26, 
     T__26 = 27, T__27 = 28, T__28 = 29, T__29 = 30, T__30 = 31, T__31 = 32, 
-    T__32 = 33, T__33 = 34, T__34 = 35, OR = 36, AND = 37, EQ = 38, NEQ = 39, 
-    GT = 40, LT = 41, GTEQ = 42, LTEQ = 43, PLUS = 44, MINUS = 45, DIV = 46, 
-    MOD = 47, POW = 48, NOT = 49, SCOL = 50, ASSIGN = 51, OPAR = 52, CPAR = 53, 
-    OBRACE = 54, CBRACE = 55, OSBRACE = 56, CSBRACE = 57, TRUE = 58, FALSE = 59, 
-    LOG = 60, LAYOUT = 61, STRUCT = 62, COMPUTE_PSO = 63, GRAPHICS_PSO = 64, 
-    RAYTRACE_PSO = 65, WORKGRAPH_PSO = 66, RAYTRACE_RAYGEN = 67, RAYTRACE_PASS = 68, 
-    PASS = 69, VIEW = 70, PIPELINE = 71, SLOT = 72, RT = 73, RTV = 74, DSV = 75, 
-    ROOTSIG = 76, ID = 77, INT_SCALAR = 78, FLOAT_SCALAR = 79, STRING = 80, 
-    COMMENT = 81, SPACE = 82, POINTER = 83, INSERT_START = 84, INSERT_END = 85, 
-    INSERT_BLOCK = 86
+    T__32 = 33, T__33 = 34, T__34 = 35, T__35 = 36, T__36 = 37, T__37 = 38, 
+    T__38 = 39, T__39 = 40, OR = 41, AND = 42, EQ = 43, NEQ = 44, GT = 45, 
+    LT = 46, GTEQ = 47, LTEQ = 48, PLUS = 49, MINUS = 50, DIV = 51, MOD = 52, 
+    POW = 53, NOT = 54, SCOL = 55, ASSIGN = 56, OPAR = 57, CPAR = 58, OBRACE = 59, 
+    CBRACE = 60, OSBRACE = 61, CSBRACE = 62, TRUE = 63, FALSE = 64, LOG = 65, 
+    LAYOUT = 66, STRUCT = 67, COMPUTE_PSO = 68, GRAPHICS_PSO = 69, RAYTRACE_PSO = 70, 
+    WORKGRAPH_PSO = 71, NODE = 72, NODE_OUTPUT = 73, RAYTRACE_RAYGEN = 74, 
+    RAYTRACE_PASS = 75, PASS = 76, VIEW = 77, PIPELINE = 78, SLOT = 79, 
+    RT = 80, RTV = 81, DSV = 82, ROOTSIG = 83, ID = 84, INT_SCALAR = 85, 
+    FLOAT_SCALAR = 86, STRING = 87, COMMENT = 88, SPACE = 89, POINTER = 90, 
+    INSERT_START = 91, INSERT_END = 92, INSERT_BLOCK = 93
   };
 
   enum {
@@ -45,13 +46,15 @@ public:
     RuleArray_value_ids = 41, RuleRoot_sig = 42, RuleShader = 43, RuleCompute_pso_stat = 44, 
     RuleCompute_pso_block = 45, RuleCompute_pso_definition = 46, RuleGraphics_pso_stat = 47, 
     RuleGraphics_pso_block = 48, RuleGraphics_pso_definition = 49, RuleRtx_pso_stat = 50, 
-    RuleRtx_pso_block = 51, RuleRtx_pso_definition = 52, RuleWorkgraph_pso_stat = 53, 
-    RuleWorkgraph_pso_block = 54, RuleWorkgraph_pso_definition = 55, RuleRtx_pass_stat = 56, 
-    RuleRtx_pass_block = 57, RuleRtx_pass_definition = 58, RuleRtx_raygen_stat = 59, 
-    RuleRtx_raygen_block = 60, RuleRtx_raygen_definition = 61, RuleView_declaration = 62, 
-    RuleView_stat = 63, RuleView_block = 64, RuleView_definition = 65, RulePass_definition = 66, 
-    RulePipeline_stat = 67, RulePipeline_block = 68, RulePipeline_definition = 69, 
-    RuleShader_type = 70, RulePso_param_id = 71, RuleBool_type = 72
+    RuleRtx_pso_block = 51, RuleRtx_pso_definition = 52, RuleNode_param_id = 53, 
+    RuleNode_param = 54, RuleNode_output_decl = 55, RuleNode_stat = 56, 
+    RuleNode_block = 57, RuleNode_definition = 58, RuleWorkgraph_pso_stat = 59, 
+    RuleWorkgraph_pso_block = 60, RuleWorkgraph_pso_definition = 61, RuleRtx_pass_stat = 62, 
+    RuleRtx_pass_block = 63, RuleRtx_pass_definition = 64, RuleRtx_raygen_stat = 65, 
+    RuleRtx_raygen_block = 66, RuleRtx_raygen_definition = 67, RuleView_declaration = 68, 
+    RuleView_stat = 69, RuleView_block = 70, RuleView_definition = 71, RulePass_definition = 72, 
+    RulePipeline_stat = 73, RulePipeline_block = 74, RulePipeline_definition = 75, 
+    RuleShader_type = 76, RulePso_param_id = 77, RuleBool_type = 78
   };
 
   explicit SIGParser(antlr4::TokenStream *input);
@@ -124,6 +127,12 @@ public:
   class Rtx_pso_statContext;
   class Rtx_pso_blockContext;
   class Rtx_pso_definitionContext;
+  class Node_param_idContext;
+  class Node_paramContext;
+  class Node_output_declContext;
+  class Node_statContext;
+  class Node_blockContext;
+  class Node_definitionContext;
   class Workgraph_pso_statContext;
   class Workgraph_pso_blockContext;
   class Workgraph_pso_definitionContext;
@@ -992,6 +1001,96 @@ public:
 
   Rtx_pso_definitionContext* rtx_pso_definition();
 
+  class  Node_param_idContext : public antlr4::ParserRuleContext {
+  public:
+    Node_param_idContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Node_param_idContext* node_param_id();
+
+  class  Node_paramContext : public antlr4::ParserRuleContext {
+  public:
+    Node_paramContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Node_param_idContext *node_param_id();
+    antlr4::tree::TerminalNode *ASSIGN();
+    Value_idContext *value_id();
+    antlr4::tree::TerminalNode *SCOL();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Node_paramContext* node_param();
+
+  class  Node_output_declContext : public antlr4::ParserRuleContext {
+  public:
+    Node_output_declContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *NODE_OUTPUT();
+    Type_idContext *type_id();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *SCOL();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Node_output_declContext* node_output_decl();
+
+  class  Node_statContext : public antlr4::ParserRuleContext {
+  public:
+    Node_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Node_paramContext *node_param();
+    Node_output_declContext *node_output_decl();
+    antlr4::tree::TerminalNode *COMMENT();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Node_statContext* node_stat();
+
+  class  Node_blockContext : public antlr4::ParserRuleContext {
+  public:
+    Node_blockContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<Node_statContext *> node_stat();
+    Node_statContext* node_stat(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Node_blockContext* node_block();
+
+  class  Node_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Node_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *NODE();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *OBRACE();
+    Node_blockContext *node_block();
+    antlr4::tree::TerminalNode *CBRACE();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Node_definitionContext* node_definition();
+
   class  Workgraph_pso_statContext : public antlr4::ParserRuleContext {
   public:
     Workgraph_pso_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
@@ -999,6 +1098,7 @@ public:
     Root_sigContext *root_sig();
     ShaderContext *shader();
     Define_declarationContext *define_declaration();
+    Node_definitionContext *node_definition();
     antlr4::tree::TerminalNode *COMMENT();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
