@@ -19,7 +19,10 @@
 // ============================================================
 // Emulation mode: compute shader stubs for WorkGraph nodes
 // ============================================================
-#include "../{{pso.name}}Emulation.h"
+// Per-node emulation slot headers
+{% for node_name in pso.nodes %}
+#include "../{{pso.name}}_{{node_name}}Emulation.h"
+{%- endfor %}
 
 // Broadcasting entry node input wrappers
 {% for node_name in pso.nodes %}
@@ -30,13 +33,13 @@
 #ifndef WG_EMUL_DISPATCH_INPUT_{{T}}
 #define WG_EMUL_DISPATCH_INPUT_{{T}}
 struct WGEmul_DispatchInput_{{T}} {
-    {{T}} Get() { return Get{{pso.name}}Emulation().Get{{T}}(); }
+    {{T}} Get() { return Create{{pso.name}}_{{node_name}}Emulation().Get{{T}}(); }
 };
 #endif
 {%- endif %}
 {%- endfor %}
 
-// Thread node input wrappers (via ConsumeStructuredBuffer in SIG emulation table)
+// Thread node input wrappers (consume from per-node slot)
 {% for node_name in pso.nodes %}
 {%- set node = pso.nodes[node_name] -%}
 {%- set launch = node.params.launch.expr if node.params.launch is defined else "" -%}
@@ -45,13 +48,13 @@ struct WGEmul_DispatchInput_{{T}} {
 #ifndef WG_EMUL_THREAD_INPUT_{{T}}
 #define WG_EMUL_THREAD_INPUT_{{T}}
 struct WGEmul_ThreadInput_{{T}} {
-    {{T}} Get() { return Get{{pso.name}}Emulation().Get{{T}}Consume().Consume(); }
+    {{T}} Get() { return Create{{pso.name}}_{{node_name}}Emulation().GetInput().Consume(); }
 };
 #endif
 {%- endif %}
 {%- endfor %}
 
-// Output record wrappers (write via AppendStructuredBuffer in SIG emulation table)
+// Output record wrappers (append via sender node's emulation slot)
 {% for node_name in pso.nodes %}
 {%- set node = pso.nodes[node_name] -%}
 {%- for output in node.outputs %}
@@ -61,7 +64,7 @@ struct WGEmul_ThreadInput_{{T}} {
 struct WGEmul_OutRecords_{{T}} {
     {{T}} _data;
     int _count;
-    void OutputComplete() { if (_count > 0) Get{{pso.name}}Emulation().Get{{T}}Append().Append(_data); }
+    void OutputComplete() { if (_count > 0) Create{{pso.name}}_{{node_name}}Emulation().Get{{output.name}}().Append(_data); }
 };
 #endif
 {%- endfor %}
@@ -74,7 +77,7 @@ struct WGEmul_OutRecords_{{T}} {
 #define WG_SET_RECORD(r, field, val) r._data.field = val
 #define WG_OUTPUT_COMPLETE(r) r.OutputComplete()
 
-// Node output parameter macros (emulation: empty - UAVs are globally bound)
+// Node output parameter macros (emulation: empty - outputs bound via node slot)
 {% for node_name in pso.nodes %}
 #define WG_NODE_OUTPUT_{{node_name}}
 {%- endfor %}
@@ -92,13 +95,19 @@ struct WGEmul_OutRecords_{{T}} {
 {%- endif %}
 {% endfor %}
 
-// Recover original 3D group ID from YZ-chunked dispatch
+// Recover original 3D group ID from YZ-chunked dispatch (entry broadcasting node only)
+{% for node_name in pso.nodes %}
+{%- set node = pso.nodes[node_name] -%}
+{%- set launch = node.params.launch.expr if node.params.launch is defined else "" -%}
+{%- if launch == "broadcasting" %}
 uint3 WG_GetGroupID(uint3 rawGroupID)
 {
-    uint yz_linear = Create{{pso.name}}Emulation().GetYZBase() + rawGroupID.y;
-    uint WY        = (uint)Create{{pso.name}}Emulation().GetGraphInput().GetDispatch_grid().y;
+    uint yz_linear = Create{{pso.name}}_{{node_name}}Emulation().GetYZBase() + rawGroupID.y;
+    uint WY        = (uint)Create{{pso.name}}_{{node_name}}Emulation().GetGraphInput().GetDispatch_grid().y;
     return uint3(rawGroupID.x, yz_linear % WY, yz_linear / WY);
 }
+{%- endif %}
+{%- endfor %}
 
 #else // !WORKGRAPH_EMULATION
 // ============================================================

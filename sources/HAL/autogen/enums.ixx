@@ -223,6 +223,7 @@ export
 		WorkGraphTest = "WorkGraphTest"_crc32,
 		GraphInput = "GraphInput"_crc32,
 		TileRecord = "TileRecord"_crc32,
-		WorkGREmulation = "WorkGREmulation"_crc32
+		WorkGR_ClassifyPixels_NodeEmulation = "WorkGR_ClassifyPixels_NodeEmulation"_crc32,
+		WorkGR_Shadows_NodeEmulation = "WorkGR_Shadows_NodeEmulation"_crc32
 	};
 }

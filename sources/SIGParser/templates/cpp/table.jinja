@@ -33,6 +33,9 @@ export namespace Table
 {
 	#pragma pack(push, 1)
 
+{%- if table.options.Template is defined %}
+	template<class {{table.options.Template.value_atom.expr}}>
+{%- endif %}
 	struct {{table.name}}
 	{
 		static constexpr SlotID ID = SlotID::{{table.name}};

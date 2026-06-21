@@ -25,6 +25,9 @@
 {%- endfor -%}
 {%- endmacro -%}
 
+{%- if table.options.Template is defined %}
+template<class {{table.options.Template.value_atom.expr}}>
+{%- endif %}
 struct {{"[raypayload]" if table.options.raypayload is defined}}{{table.name}}
 {
 	{{-declare_func(ValueType.CB)}}

@@ -24,13 +24,18 @@ struct TileRecord
 	uint2 tileXY;
 }
 
-[Bind = DefaultLayout::WorkGREmulation]
-struct WorkGREmulation
+[Bind = DefaultLayout::WorkGR_ClassifyPixels_NodeEmulation]
+struct WorkGR_ClassifyPixels_NodeEmulation
 {
-	AppendStructuredBuffer<TileRecord> tileRecordAppend;
-	ConsumeStructuredBuffer<TileRecord> tileRecordConsume;
 	GraphInput graphInput;
 	uint YZBase;
+	AppendStructuredBuffer<TileRecord> Shadows_Node;
+}
+
+[Bind = DefaultLayout::WorkGR_Shadows_NodeEmulation]
+struct WorkGR_Shadows_NodeEmulation
+{
+	ConsumeStructuredBuffer<TileRecord> input;
 }
 
 [ExcludeVulkan] WorkgraphPSO WorkGR

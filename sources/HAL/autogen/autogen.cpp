@@ -93,7 +93,8 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FrameClassificationInitDispatch") return SlotID::FrameClassificationInitDispatch;
 	if(slot_name == "ReflectionCombine") return SlotID::ReflectionCombine;
 	if(slot_name == "WorkGraphTest") return SlotID::WorkGraphTest;
-	if(slot_name == "WorkGREmulation") return SlotID::WorkGREmulation;
+	if(slot_name == "WorkGR_ClassifyPixels_NodeEmulation") return SlotID::WorkGR_ClassifyPixels_NodeEmulation;
+	if(slot_name == "WorkGR_Shadows_NodeEmulation") return SlotID::WorkGR_Shadows_NodeEmulation;
 	return std::nullopt;
 }
 
@@ -183,7 +184,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::FrameClassificationInitDispatch) return Slots::FrameClassificationInitDispatch::Slot::ID;
 	if(id == SlotID::ReflectionCombine) return Slots::ReflectionCombine::Slot::ID;
 	if(id == SlotID::WorkGraphTest) return Slots::WorkGraphTest::Slot::ID;
-	if(id == SlotID::WorkGREmulation) return Slots::WorkGREmulation::Slot::ID;
+	if(id == SlotID::WorkGR_ClassifyPixels_NodeEmulation) return Slots::WorkGR_ClassifyPixels_NodeEmulation::Slot::ID;
+	if(id == SlotID::WorkGR_Shadows_NodeEmulation) return Slots::WorkGR_Shadows_NodeEmulation::Slot::ID;
 	return -1;
 }
 
@@ -273,6 +275,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FrameClassificationInitDispatch) return "FrameClassificationInitDispatch";
 	if(id == SlotID::ReflectionCombine) return "ReflectionCombine";
 	if(id == SlotID::WorkGraphTest) return "WorkGraphTest";
-	if(id == SlotID::WorkGREmulation) return "WorkGREmulation";
+	if(id == SlotID::WorkGR_ClassifyPixels_NodeEmulation) return "WorkGR_ClassifyPixels_NodeEmulation";
+	if(id == SlotID::WorkGR_Shadows_NodeEmulation) return "WorkGR_Shadows_NodeEmulation";
 	return "UNKNOWN";
 }

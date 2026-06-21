@@ -14,11 +14,21 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
+{%- if table.options.Template is defined %}
+{%- set T = table.options.Template.value_atom.expr %}
+	template<class {{T}}>
+	struct {{table.name}} :public DataHolder<{{table.name}}<{{T}}>, SlotID::{{table.name}}, Table::{{table.name}}<{{T}}>, {{slot.layout}}::{{slot.name}}>
+	{
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+		{{table.name}}() = default;
+	};
+{%- else %}
 	struct {{table.name}} :public DataHolder<{{table.name}}, SlotID::{{table.name}}, Table::{{table.name}}, {{slot.layout}}::{{slot.name}}>
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		{{table.name}}() = default;
 	};
+{%- endif %}
 }

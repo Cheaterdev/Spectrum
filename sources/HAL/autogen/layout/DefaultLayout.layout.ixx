@@ -94,18 +94,28 @@ export struct DefaultLayout: public FrameLayout
 		static inline const std::vector<uint> tables = { 34, 36 };
 	};
 
-	struct WorkGREmulation
+	struct WorkGR_ClassifyPixels_NodeEmulation
 	{
 		static const uint ID = 12;
 		static const uint CB = 5;
 		static const uint CB_ID = 37;
-		static const uint UAV = 2;
+		static const uint UAV = 1;
 		static const uint UAV_ID = 39;
 		static inline const std::vector<uint> tables = { 37, 39 };
 	};
 
+	struct WorkGR_Shadows_NodeEmulation
+	{
+		static const uint ID = 13;
+		static const uint CB = 2;
+		static const uint CB_ID = 40;
+		static const uint UAV = 1;
+		static const uint UAV_ID = 42;
+		static inline const std::vector<uint> tables = { 40, 42 };
+	};
+
 	template<class Processor> static void for_each(Processor& processor)
 	{
-		processor.template process<CameraData, SceneData, PassData, DebugInfo, Instance0, Instance1, Instance2, Instance3, Instance4, Instance5, Raytracing, MaterialData, WorkGREmulation>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc });
+		processor.template process<CameraData, SceneData, PassData, DebugInfo, Instance0, Instance1, Instance2, Instance3, Instance4, Instance5, Raytracing, MaterialData, WorkGR_ClassifyPixels_NodeEmulation, WorkGR_Shadows_NodeEmulation>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc });
 	}
 };

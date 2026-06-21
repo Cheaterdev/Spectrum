@@ -60,7 +60,7 @@ NODE_Shadows_Node(
     ray.TMin = 0.1;
     ray.TMax = 100000;
 
-    RayQuery<RAY_FLAG_CULL_NON_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rayQuery;
+    RayQuery<RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rayQuery;
     rayQuery.TraceRayInline(raytracing.GetScene(), RAY_FLAG_NONE, 0xFF, ray);
     rayQuery.Proceed();
 

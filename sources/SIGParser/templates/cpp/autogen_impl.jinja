@@ -23,7 +23,11 @@ uint get_table_index(SlotID id)
 {% for v in parsed.tables -%}
 {%- set t =  parsed.tables[v] -%}
 {% if t.slot is defined -%}
+{%- if t.options.Template is defined %}
+	if(id == SlotID::{{t.name}}) return Slots::{{t.name}}<void>::Slot::ID;
+{%- else %}
 	if(id == SlotID::{{t.name}}) return Slots::{{t.name}}::Slot::ID;
+{%- endif %}
 {% endif -%}
 {% endfor -%}
 	return -1;

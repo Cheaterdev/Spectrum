@@ -26,12 +26,26 @@ static _CB_{{table.name}} pass_{{table.name}} = { _hal_push.s{{slot.id}} };
 ConstantBuffer<CB> pass_{{table.name}}: register(b{{slot.id}}, space{{slot.id}});
 #endif
 
+{%- if table.options.Template is defined %}
+{%- set T = table.options.Template.value_atom.expr %}
+template<class {{T}}>
+ConstantBuffer<{{table.name}}<{{T}}> > Create{{table.name}}()
+{
+	return ResourceDescriptorHeap[pass_{{table.name}}.offset];
+}
+
+#ifndef NO_GLOBAL
+template<class {{T}}>
+ConstantBuffer<{{table.name}}<{{T}}> > Get{{table.name|title}}() { return Create{{table.name}}<{{T}}>(); }
+#endif
+{%- else %}
 ConstantBuffer<{{table.name}}> Create{{table.name}}()
 {
 	return ResourceDescriptorHeap[pass_{{table.name}}.offset];
 }
-			
+
 #ifndef NO_GLOBAL
-static const ConstantBuffer<{{table.name}}> {{lowerize(table.name) }}_global = Create{{table.name}}();
-ConstantBuffer<{{table.name}}> Get{{table.name|title}}(){ return {{lowerize(table.name)}}_global; }
+static const ConstantBuffer<{{table.name}}> {{lowerize(table.name)}}_global = Create{{table.name}}();
+ConstantBuffer<{{table.name}}> Get{{table.name|title}}() { return {{lowerize(table.name)}}_global; }
 #endif
+{%- endif %}

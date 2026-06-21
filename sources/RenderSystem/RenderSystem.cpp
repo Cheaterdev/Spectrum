@@ -15,7 +15,7 @@ std::shared_ptr<HAL::Device> RenderSystem::select_adapter()
 
         const auto props = HAL::Device::probe(adapter);
 
-        if (std::wstring(desc.Description).find(L"AMD") == std::wstring::npos) return;
+         //if (std::wstring(desc.Description).find(L"AMD") == std::wstring::npos) return;
 
 
         if (!result && props.mesh_shader && props.full_bindless &&

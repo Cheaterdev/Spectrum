@@ -37,7 +37,7 @@ public:
 
     ~GraphicsSystem() override
     {
-        RenderSystem::get().device().stop_all();
+    	AssetRenderer::reset();
         Skin::reset();
         HAL::Texture::reset_manager();
         HAL::pixel_shader::reset_manager();
@@ -50,7 +50,6 @@ public:
         Profiler::reset();
         Fonts::FontSystem::reset();
         RTX::reset();
-        AssetRenderer::reset();
         TextureAssetRenderer::reset();
         AssetManager::reset();
         materials::PipelineManager::reset();
@@ -58,6 +57,7 @@ public:
         universal_mesh_instance_manager::reset();
         universal_material_info_part_manager::reset();
         universal_rtx_manager::reset();
+    	RenderSystem::get().device().stop_all();
         RenderSystem::reset();
     }
 

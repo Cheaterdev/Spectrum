@@ -377,6 +377,7 @@ export
 			HLSL::StructuredBuffer<T> structuredBuffer;
 			HLSL::RWStructuredBuffer<T> rwStructuredBuffer;
 			HLSL::AppendStructuredBuffer<T> appendStructuredBuffer;
+		  	HLSL::ConsumeStructuredBuffer<T> consumeStructuredBuffer;
 
 			StructuredBufferView() = default;
 			CounterView counter_view;
@@ -451,7 +452,7 @@ export
 					counter_view = counter_view.resource->create_view<CounterView>(frame, 0);
 				}
 
-				auto hlsl = frame.alloc_descriptor(5, DescriptorHeapIndex{
+				auto hlsl = frame.alloc_descriptor(6, DescriptorHeapIndex{
 					                                   HAL::DescriptorHeapType::CBV_SRV_UAV,
 					                                   HAL::DescriptorHeapFlags::ShaderVisible
 				                                   });
@@ -459,9 +460,9 @@ export
 				structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
 				rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);
 				appendStructuredBuffer = HLSL::AppendStructuredBuffer<T>(hlsl[2]);
+				consumeStructuredBuffer		  = HLSL::ConsumeStructuredBuffer<T>(hlsl[3]);
 
-
-				rwRAW = HLSL::RWBuffer<std::byte>(hlsl[3]);
+				rwRAW = HLSL::RWBuffer<std::byte>(hlsl[4]);
 
 				//		constBuffer = HLSL::ConstBuffer<T>(hlsl[4]);
 
@@ -483,9 +484,16 @@ export
 					rwRAW.create(resource, Format::R8_UINT, static_cast<UINT>(offset), static_cast<UINT>(size));
 
 					if (desc.counted != counterType::NONE)
-						appendStructuredBuffer.create(get_counter_buffer(), get_counter_offset(), resource,
+					{
+										appendStructuredBuffer.create(get_counter_buffer(), get_counter_offset(), resource,
 						                              static_cast<UINT>(offset / sizeof(Underlying<T>)),
 						                              static_cast<UINT>(size / sizeof(Underlying<T>)));
+
+						consumeStructuredBuffer.create(get_counter_buffer(), get_counter_offset(), resource,
+						                              static_cast<UINT>(offset / sizeof(Underlying<T>)),
+						                              static_cast<UINT>(size / sizeof(Underlying<T>)));
+					}
+		
 				}
 			}
 

@@ -8,40 +8,42 @@
 
 #include "../tables/GraphInput.h"
 #include "../tables/TileRecord.h"
-#include "../tables/TileRecord.h"
 
 #ifdef WORKGRAPH_EMULATION
 // ============================================================
 // Emulation mode: compute shader stubs for WorkGraph nodes
 // ============================================================
-#include "../WorkGREmulation.h"
+// Per-node emulation slot headers
+
+#include "../WorkGR_ClassifyPixels_NodeEmulation.h"
+#include "../WorkGR_Shadows_NodeEmulation.h"
 
 // Broadcasting entry node input wrappers
 
 #ifndef WG_EMUL_DISPATCH_INPUT_GraphInput
 #define WG_EMUL_DISPATCH_INPUT_GraphInput
 struct WGEmul_DispatchInput_GraphInput {
-    GraphInput Get() { return GetWorkGREmulation().GetGraphInput(); }
+    GraphInput Get() { return CreateWorkGR_ClassifyPixels_NodeEmulation().GetGraphInput(); }
 };
 #endif
 
-// Thread node input wrappers (via ConsumeStructuredBuffer in SIG emulation table)
+// Thread node input wrappers (consume from per-node slot)
 
 #ifndef WG_EMUL_THREAD_INPUT_TileRecord
 #define WG_EMUL_THREAD_INPUT_TileRecord
 struct WGEmul_ThreadInput_TileRecord {
-    TileRecord Get() { return GetWorkGREmulation().GetTileRecordConsume().Consume(); }
+    TileRecord Get() { return CreateWorkGR_Shadows_NodeEmulation().GetInput().Consume(); }
 };
 #endif
 
-// Output record wrappers (write via AppendStructuredBuffer in SIG emulation table)
+// Output record wrappers (append via sender node's emulation slot)
 
 #ifndef WG_EMUL_OUT_RECORDS_TileRecord
 #define WG_EMUL_OUT_RECORDS_TileRecord
 struct WGEmul_OutRecords_TileRecord {
     TileRecord _data;
     int _count;
-    void OutputComplete() { if (_count > 0) GetWorkGREmulation().GetTileRecordAppend().Append(_data); }
+    void OutputComplete() { if (_count > 0) CreateWorkGR_ClassifyPixels_NodeEmulation().GetShadows_Node().Append(_data); }
 };
 #endif
 
@@ -52,7 +54,7 @@ struct WGEmul_OutRecords_TileRecord {
 #define WG_SET_RECORD(r, field, val) r._data.field = val
 #define WG_OUTPUT_COMPLETE(r) r.OutputComplete()
 
-// Node output parameter macros (emulation: empty - UAVs are globally bound)
+// Node output parameter macros (emulation: empty - outputs bound via node slot)
 
 #define WG_NODE_OUTPUT_ClassifyPixels_Node
 #define WG_NODE_OUTPUT_Shadows_Node
@@ -64,11 +66,11 @@ struct WGEmul_OutRecords_TileRecord {
 #define NODE_Shadows_Node [numthreads(1,1,1)] void Shadows_Node
 
 
-// Recover original 3D group ID from YZ-chunked dispatch
+// Recover original 3D group ID from YZ-chunked dispatch (entry broadcasting node only)
 uint3 WG_GetGroupID(uint3 rawGroupID)
 {
-    uint yz_linear = CreateWorkGREmulation().GetYZBase() + rawGroupID.y;
-    uint WY        = (uint)CreateWorkGREmulation().GetGraphInput().GetDispatch_grid().y;
+    uint yz_linear = CreateWorkGR_ClassifyPixels_NodeEmulation().GetYZBase() + rawGroupID.y;
+    uint WY        = (uint)CreateWorkGR_ClassifyPixels_NodeEmulation().GetGraphInput().GetDispatch_grid().y;
     return uint3(rawGroupID.x, yz_linear % WY, yz_linear / WY);
 }
 
@@ -87,7 +89,8 @@ uint3 WG_GetGroupID(uint3 rawGroupID)
 // Node output parameter macros (native: NodeOutput parameters with MaxRecords)
 
 #define WG_NODE_OUTPUT_ClassifyPixels_Node , [MaxRecords(64)] NodeOutput<TileRecord> Shadows_Node
-#define WG_NODE_OUTPUT_Shadows_Node 
+
+#define WG_NODE_OUTPUT_Shadows_Node
 
 // Node function attribute macros (native: full WorkGraph attributes)
 #define NODE_ClassifyPixels_Node [Shader("node")][NodeLaunch("broadcasting")][NodeIsProgramEntry][NodeMaxDispatchGrid(256,64,64)][numthreads(64,1,1)] void ClassifyPixels_Node

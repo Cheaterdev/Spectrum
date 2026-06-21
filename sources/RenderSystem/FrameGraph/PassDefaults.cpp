@@ -201,15 +201,17 @@ void PassDefault<Passes::RTXPass>::render(
 
 				compute.clear_counter(tile_buf);
 
-				Slots::WorkGREmulation emul;
-				emul.GetTileRecordAppend()               = tile_buf.appendStructuredBuffer;
-				emul.tileRecordConsume                   = HLSL::ConsumeStructuredBuffer<Table::TileRecord>(tile_buf.appendStructuredBuffer);
-				emul.GetGraphInput().GetDispatch_grid()  = vec3(e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
-				emul.GetGraphInput().GetWaveOffset()     = int2(e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
-				emul.GetYZBase()                         = yz_base;
+				Slots::WorkGR_ClassifyPixels_NodeEmulation classifyEmul;
+				classifyEmul.GetGraphInput().GetDispatch_grid() = vec3(e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
+				classifyEmul.GetGraphInput().GetWaveOffset()    = int2(e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
+				classifyEmul.GetYZBase()                        = yz_base;
+				classifyEmul.GetShadows_Node()                  = tile_buf.appendStructuredBuffer;
+
+				Slots::WorkGR_Shadows_NodeEmulation shadowsEmul;
+				shadowsEmul.GetInput()  = tile_buf.consumeStructuredBuffer;
 
 				compute.set_pipeline<PSOS::WorkGR_ClassifyPixels_Node>();
-				compute.set(emul);
+				compute.set(classifyEmul);
 				compute.dispatch(e.WaveCount[0], yz_count, 1);
 
 				context.get_list()->get_copy().copy_buffer(
@@ -217,8 +219,12 @@ void PassDefault<Passes::RTXPass>::render(
 				    tile_buf.get_counter_buffer().get(), tile_buf.get_counter_offset(), 4);
 
 				compute.set_pipeline<PSOS::WorkGR_Shadows_Node>();
-				compute.set(emul);
+				compute.set(shadowsEmul);
 				compute.exec_indirect(disp_args, 1);
+
+			/*	context.get_list()->get_copy().read_counter(tile_buf, [](uint remaining) {
+					ASSERT(remaining == 0);
+				});*/
 			}
 		}
 	}

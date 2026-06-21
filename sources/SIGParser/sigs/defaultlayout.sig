@@ -26,7 +26,8 @@ layout DefaultLayout: FrameLayout
 
 	slot MaterialData;
 
-	slot WorkGREmulation;
+	slot WorkGR_ClassifyPixels_NodeEmulation;
+	slot WorkGR_Shadows_NodeEmulation;
 }
 
 struct DebugStruct

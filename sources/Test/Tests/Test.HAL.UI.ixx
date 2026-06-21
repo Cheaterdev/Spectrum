@@ -90,7 +90,10 @@ export namespace Test
 			auto* p = blue.GetPos();
 			p[0] = float4(-1.0f,  1.0f,  1.0f,  1.0f);
 			p[1] = float4(-1.0f, -1.0f,  1.0f, -1.0f);
-			blue.GetColor() = float4(0.0f, 0.0f, 1.0f, 1.0f);
+			blue.GetColor()[0] = float4(0.0f, 0.0f, 1.0f, 1.0f);
+			blue.GetColor()[1] = float4(0.0f, 0.0f, 1.0f, 1.0f);
+			blue.GetColor()[2] = float4(0.0f, 0.0f, 1.0f, 1.0f);
+			blue.GetColor()[3] = float4(0.0f, 0.0f, 1.0f, 1.0f);
 			gfx.set(blue);
 			gfx.draw(4);
 		}
@@ -101,7 +104,10 @@ export namespace Test
 			auto* p = red.GetPos();
 			p[0] = float4(0.0f,  1.0f,  1.0f,  1.0f);
 			p[1] = float4(0.0f, -1.0f,  1.0f, -1.0f);
-			red.GetColor() = float4(1.0f, 0.0f, 0.0f, 0.6f);
+			red.GetColor()[0] = float4(1.0f, 0.0f, 0.0f, 0.6f);
+			red.GetColor()[1] = float4(1.0f, 0.0f, 0.0f, 0.6f);
+			red.GetColor()[2] = float4(1.0f, 0.0f, 0.0f, 0.6f);
+			red.GetColor()[3] = float4(1.0f, 0.0f, 0.0f, 0.6f);
 			gfx.set(red);
 			gfx.draw(4);
 		}
@@ -142,7 +148,10 @@ export namespace Test
 			auto* p = r.GetPos();
 			p[0] = float4(-1.0f,  0.8f, -0.35f,  0.8f);
 			p[1] = float4(-1.0f, -0.8f, -0.35f, -0.8f);
-			r.GetColor() = float4(0.9f, 0.2f, 0.2f, 1.0f);
+			r.GetColor()[0] = float4(0.9f, 0.2f, 0.2f, 1.0f);		 
+			r.GetColor()[1] = float4(0.9f, 0.2f, 0.2f, 1.0f);
+			r.GetColor()[2] = float4(0.9f, 0.2f, 0.2f, 1.0f);
+			r.GetColor()[3] = float4(0.9f, 0.2f, 0.2f, 1.0f);
 			gfx.set(r); gfx.draw(4);
 		}
 
@@ -152,7 +161,10 @@ export namespace Test
 			auto* p = r.GetPos();
 			p[0] = float4(-0.3f,  0.8f,  0.3f,  0.8f);
 			p[1] = float4(-0.3f, -0.8f,  0.3f, -0.8f);
-			r.GetColor() = float4(0.2f, 0.9f, 0.2f, 1.0f);
+			r.GetColor()[0] = float4(0.2f, 0.9f, 0.2f, 1.0f);
+			r.GetColor()[1] = float4(0.2f, 0.9f, 0.2f, 1.0f);
+			r.GetColor()[2] = float4(0.2f, 0.9f, 0.2f, 1.0f);
+			r.GetColor()[3] = float4(0.2f, 0.9f, 0.2f, 1.0f);
 			gfx.set(r); gfx.draw(4);
 		}
 
@@ -162,7 +174,10 @@ export namespace Test
 			auto* p = r.GetPos();
 			p[0] = float4(0.35f,  0.8f,  1.0f,  0.8f);
 			p[1] = float4(0.35f, -0.8f,  1.0f, -0.8f);
-			r.GetColor() = float4(0.2f, 0.2f, 0.9f, 1.0f);
+			r.GetColor()[0] = float4(0.2f, 0.2f, 0.9f, 1.0f);
+			r.GetColor()[1] = float4(0.2f, 0.2f, 0.9f, 1.0f);
+			r.GetColor()[2] = float4(0.2f, 0.2f, 0.9f, 1.0f);
+			r.GetColor()[3] = float4(0.2f, 0.2f, 0.9f, 1.0f);
 			gfx.set(r); gfx.draw(4);
 		}
 
