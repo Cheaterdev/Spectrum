@@ -153,7 +153,7 @@ void PassDefault<Passes::RTXPass>::render(
 	    1.0f / data.RTXDebug->get_size().y);
 	compute.set(dispatchParameters);
 
-	if (RenderSystem::get().device().get_properties().work_graph && !GetAsyncKeyState('U'))
+	if (RenderSystem::get().device().get_properties().work_graph)
 	{
 		auto& backingBuffer = data.WorkGraphBuffer->resource;
 		auto  work_pso = RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();

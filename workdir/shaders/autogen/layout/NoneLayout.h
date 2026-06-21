@@ -6,7 +6,6 @@
 // ============================================================================
 #ifndef HAL_LAYOUT_NONELAYOUT_H
 #define HAL_LAYOUT_NONELAYOUT_H
-
 #ifdef __spirv__
 struct _HALPush {
     uint s0;  uint s1;  uint s2;  uint s3;

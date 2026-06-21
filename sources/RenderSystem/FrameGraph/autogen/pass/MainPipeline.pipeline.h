@@ -134,6 +134,8 @@ public:
 		L"sky_cubemap_filtered_diffuse",
 		L"RTXDebug",
 		L"WorkGraphBuffer",
+		L"EmulTileBuffer",
+		L"EmulDispatchArgs",
 		L"VoxelLighted",
 		L"ResultTexture",
 		L"LightMask",

@@ -30,7 +30,7 @@ struct WorkGREmulation
 	AppendStructuredBuffer<TileRecord> tileRecordAppend;
 	ConsumeStructuredBuffer<TileRecord> tileRecordConsume;
 	GraphInput graphInput;
-	uint yz_base;
+	uint YZBase;
 }
 
 [ExcludeVulkan] WorkgraphPSO WorkGR
@@ -46,6 +46,7 @@ struct WorkGREmulation
 		num_threads = { 64, 1, 1 };
 		max_dispatch_grid = { 256, 64, 64 };
 		input = GraphInput;
+		[MaxRecords = 64]
 		NodeOutput TileRecord Shadows_Node;
 	}
 

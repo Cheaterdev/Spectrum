@@ -20,36 +20,36 @@ export namespace Table
 	struct WorkGREmulation
 	{
 		static constexpr SlotID ID = SlotID::WorkGREmulation;
+		uint YZBase;
 		HLSL::AppendStructuredBuffer<TileRecord> tileRecordAppend;
 		HLSL::ConsumeStructuredBuffer<TileRecord> tileRecordConsume;
 		GraphInput graphInput;
-		uint yz_base;
 		HLSL::AppendStructuredBuffer<TileRecord>& GetTileRecordAppend() { return tileRecordAppend; }
 		HLSL::ConsumeStructuredBuffer<TileRecord>& GetTileRecordConsume() { return tileRecordConsume; }
+		uint& GetYZBase() { return YZBase; }
 		GraphInput& GetGraphInput() { return graphInput; }
-		uint& GetYZBase() { return yz_base; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
+			compiler.compile(YZBase);
 			compiler.compile(tileRecordAppend);
 			compiler.compile(tileRecordConsume);
 			compiler.compile(graphInput);
-			compiler.compile(yz_base);
 		}
 		struct Compiled
 		{
+			uint YZBase; // uint
 			uint tileRecordAppend; // AppendStructuredBuffer<TileRecord>
 			uint tileRecordConsume; // ConsumeStructuredBuffer<TileRecord>
 			GraphInput::Compiled graphInput; // GraphInput
-			uint yz_base; // uint
 
-
+			
 			private:
 			SERIALIZE()
 			{
 				ar& NVP(graphInput);
-				ar& NVP(yz_base);
+				ar& NVP(YZBase);
 			}
 
 
@@ -63,7 +63,7 @@ export namespace Table
 		SERIALIZE()
 		{
 			ar& NVP(graphInput);
-			ar& NVP(yz_base);
+			ar& NVP(YZBase);
 		}
 
 	};

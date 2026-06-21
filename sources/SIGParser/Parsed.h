@@ -709,12 +709,16 @@ struct RaytracePSO : public PSO
 	}
 };
 			
-struct WorkgraphNodeOutput : public have_name, public have_type, public virtual parsed_type
+struct WorkgraphNodeOutput : public have_name, public have_type, public have_options, public virtual parsed_type
 {
+	int max_records = 1;
+
 	SERIALIZE()
 	{
 		SAVE_PARENT_MERGED(have_name);
 		SAVE_PARENT_MERGED(have_type);
+		SAVE_PARENT_MERGED(have_options);
+		ar& NVP(max_records);
 	}
 };
 

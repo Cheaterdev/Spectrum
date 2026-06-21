@@ -6,7 +6,6 @@
 // ============================================================================
 #ifndef HAL_LAYOUT_DEFAULTLAYOUT_H
 #define HAL_LAYOUT_DEFAULTLAYOUT_H
-
 #include "FrameLayout.h"
 
 #endif // HAL_LAYOUT_DEFAULTLAYOUT_H

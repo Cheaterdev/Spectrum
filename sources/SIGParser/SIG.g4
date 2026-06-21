@@ -183,7 +183,7 @@ node_param_id:
 
 node_param: node_param_id ASSIGN value_id SCOL;
 
-node_output_decl: NODE_OUTPUT type_id name_id SCOL;
+node_output_decl: option_block*? NODE_OUTPUT type_id name_id SCOL;
 
 node_stat
  : node_param

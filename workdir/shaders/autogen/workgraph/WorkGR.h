@@ -21,7 +21,7 @@
 #ifndef WG_EMUL_DISPATCH_INPUT_GraphInput
 #define WG_EMUL_DISPATCH_INPUT_GraphInput
 struct WGEmul_DispatchInput_GraphInput {
-    GraphInput Get() { return CreateWorkGREmulation().GetGraphInput(); }
+    GraphInput Get() { return GetWorkGREmulation().GetGraphInput(); }
 };
 #endif
 
@@ -30,7 +30,7 @@ struct WGEmul_DispatchInput_GraphInput {
 #ifndef WG_EMUL_THREAD_INPUT_TileRecord
 #define WG_EMUL_THREAD_INPUT_TileRecord
 struct WGEmul_ThreadInput_TileRecord {
-    TileRecord Get() { return CreateWorkGREmulation().GetTileRecordConsume().Consume(); }
+    TileRecord Get() { return GetWorkGREmulation().GetTileRecordConsume().Consume(); }
 };
 #endif
 
@@ -41,7 +41,7 @@ struct WGEmul_ThreadInput_TileRecord {
 struct WGEmul_OutRecords_TileRecord {
     TileRecord _data;
     int _count;
-    void OutputComplete() { if (_count > 0) CreateWorkGREmulation().GetTileRecordAppend().Append(_data); }
+    void OutputComplete() { if (_count > 0) GetWorkGREmulation().GetTileRecordAppend().Append(_data); }
 };
 #endif
 
@@ -63,7 +63,8 @@ struct WGEmul_OutRecords_TileRecord {
 
 #define NODE_Shadows_Node [numthreads(1,1,1)] void Shadows_Node
 
-// Recover original 3D group ID from linearized YZ chunked dispatch
+
+// Recover original 3D group ID from YZ-chunked dispatch
 uint3 WG_GetGroupID(uint3 rawGroupID)
 {
     uint yz_linear = CreateWorkGREmulation().GetYZBase() + rawGroupID.y;
@@ -92,7 +93,8 @@ uint3 WG_GetGroupID(uint3 rawGroupID)
 #define NODE_ClassifyPixels_Node [Shader("node")][NodeLaunch("broadcasting")][NodeIsProgramEntry][NodeMaxDispatchGrid(256,64,64)][numthreads(64,1,1)] void ClassifyPixels_Node
 #define NODE_Shadows_Node [Shader("node")][NodeLaunch("thread")] void Shadows_Node
 
-// Native mode: no chunking needed, group ID is already correct
+
+// Native mode: group ID is already correct
 uint3 WG_GetGroupID(uint3 rawGroupID) { return rawGroupID; }
 
 #endif // WORKGRAPH_EMULATION

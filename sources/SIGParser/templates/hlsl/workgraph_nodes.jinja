@@ -92,6 +92,14 @@ struct WGEmul_OutRecords_{{T}} {
 {%- endif %}
 {% endfor %}
 
+// Recover original 3D group ID from YZ-chunked dispatch
+uint3 WG_GetGroupID(uint3 rawGroupID)
+{
+    uint yz_linear = Create{{pso.name}}Emulation().GetYZBase() + rawGroupID.y;
+    uint WY        = (uint)Create{{pso.name}}Emulation().GetGraphInput().GetDispatch_grid().y;
+    return uint3(rawGroupID.x, yz_linear % WY, yz_linear / WY);
+}
+
 #else // !WORKGRAPH_EMULATION
 // ============================================================
 // Native WorkGraph mode
@@ -108,7 +116,7 @@ struct WGEmul_OutRecords_{{T}} {
 {% for node_name in pso.nodes %}
 {%- set node = pso.nodes[node_name] -%}
 {%- if node.outputs %}
-#define WG_NODE_OUTPUT_{{node_name}} {% for output in node.outputs %}, {% for v in node.params.num_threads.values %}{% if loop.first %}[MaxRecords({{v.expr}})]{% endif %}{% endfor %} NodeOutput<{{output.class_no_template}}> {{output.name}}{% endfor %}
+#define WG_NODE_OUTPUT_{{node_name}} {% for output in node.outputs %}, [MaxRecords({{output.max_records}})] NodeOutput<{{output.class_no_template}}> {{output.name}}{% endfor %}
 
 {%- else %}
 #define WG_NODE_OUTPUT_{{node_name}}
@@ -124,5 +132,8 @@ struct WGEmul_OutRecords_{{T}} {
 {%- set has_threads = node.params.num_threads is defined -%}
 #define NODE_{{node_name}} [Shader("node")][NodeLaunch("{{launch}}")]{% if is_entry %}[NodeIsProgramEntry]{% endif %}{% if has_grid %}[NodeMaxDispatchGrid({% for v in node.params.max_dispatch_grid.values %}{{v.expr}}{% if not loop.last %},{% endif %}{% endfor %})]{% endif %}{% if has_threads %}[numthreads({% for v in node.params.num_threads.values %}{{v.expr}}{% if not loop.last %},{% endif %}{% endfor %})]{% endif %} void {{node_name}}
 {% endfor %}
+
+// Native mode: group ID is already correct
+uint3 WG_GetGroupID(uint3 rawGroupID) { return rawGroupID; }
 
 #endif // WORKGRAPH_EMULATION

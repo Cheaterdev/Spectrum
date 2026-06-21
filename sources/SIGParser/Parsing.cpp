@@ -172,9 +172,17 @@ public:
 		setup_map(get_elem<WorkgraphPSO>().nodes);
 	}
 
-	GENERATE(Node_output_decl)
+	ENTER(Node_output_decl)
 	{
 		setup_list(get_elem<WorkgraphNode>().outputs);
+	}
+
+	EXIT(Node_output_decl)
+	{
+		auto& output = get_elem<WorkgraphNodeOutput>();
+		if (auto* opt = output.find_option("MaxRecords"))
+			output.max_records = std::atoi(opt->value_atom.expr.c_str());
+		end_elem();
 	}
 
 	GENERATE(Node_param)

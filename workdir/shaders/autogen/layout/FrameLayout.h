@@ -6,7 +6,6 @@
 // ============================================================================
 #ifndef HAL_LAYOUT_FRAMELAYOUT_H
 #define HAL_LAYOUT_FRAMELAYOUT_H
-
 SamplerState linearSampler:register(s0);
 SamplerState pointClampSampler:register(s1);
 SamplerState linearClampSampler:register(s2);

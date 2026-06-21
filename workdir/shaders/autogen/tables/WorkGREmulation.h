@@ -10,12 +10,12 @@
 #include "TileRecord.h"
 struct WorkGREmulation
 {
+	uint YZBase; // uint
 	uint tileRecordAppend; // AppendStructuredBuffer<TileRecord>
 	uint tileRecordConsume; // ConsumeStructuredBuffer<TileRecord>
 	GraphInput graphInput; // GraphInput
-	uint yz_base; // uint
 	GraphInput GetGraphInput() { return graphInput; }
+	uint GetYZBase() { return YZBase; }
 	AppendStructuredBuffer<TileRecord> GetTileRecordAppend() { return ResourceDescriptorHeap[tileRecordAppend]; }
 	ConsumeStructuredBuffer<TileRecord> GetTileRecordConsume() { return ResourceDescriptorHeap[tileRecordConsume]; }
-	uint GetYZBase() { return yz_base; }
 };

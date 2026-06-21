@@ -97,7 +97,7 @@ export struct DefaultLayout: public FrameLayout
 	struct WorkGREmulation
 	{
 		static const uint ID = 12;
-		static const uint CB = 4;
+		static const uint CB = 5;
 		static const uint CB_ID = 37;
 		static const uint UAV = 2;
 		static const uint UAV_ID = 39;
