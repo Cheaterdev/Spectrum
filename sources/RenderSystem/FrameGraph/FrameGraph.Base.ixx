@@ -603,6 +603,8 @@ public:
 		void begin(Graph* graph,Pass* pass, HAL::FrameResources::ptr& frame);
 		void end();
 		void execute();
+
+		HAL::StructuredBufferView<DispatchArguments>& get_indirect_dispatch_args();
 	};
 
 
@@ -777,8 +779,12 @@ public:
 
 	
 	class Graph: public UniversalContext, public VariableContext, public SlotContext
-	{	
+	{
 	public:
+
+		// One persistent indirect-dispatch argument buffer per command list type.
+		// X is overwritten each frame via copy_buffer; Y and Z are initialized once to 1.
+		enum_array<HAL::CommandListType, HAL::StructuredBufferView<DispatchArguments>> indirect_dispatch_args;
 
 		Events::Event<const Graph&> on_compile;
 	

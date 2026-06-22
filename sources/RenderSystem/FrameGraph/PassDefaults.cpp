@@ -94,8 +94,9 @@ bool PassDefault<Passes::RTXPass>::setup(
 	}
 	else
 	{
-		builder.create(data.EmulTileBuffer,  { 256u * 256u, true }, ResourceFlags::UnorderedAccess);
-		builder.create(data.EmulDispatchArgs, { 1u, false },         ResourceFlags::UnorderedAccess);
+		// counter_pad(8) + tile_data(256*256 * sizeof(TileRecord))
+		constexpr uint64_t TILE_SECTION = 8u + 256u * 256u * sizeof(Table::TileRecord); // 524296
+		builder.create(data.WorkGraphBuffer, { TILE_SECTION }, ResourceFlags::UnorderedAccess);
 	}
 
 	return true;
@@ -156,12 +157,8 @@ void PassDefault<Passes::RTXPass>::render(
 	if (RenderSystem::get().device().get_properties().work_graph)
 	{
 		auto& backingBuffer = data.WorkGraphBuffer->resource;
-		auto  work_pso = RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
-
-		compute.set_program(work_pso.get(),
-		    backingBuffer->get_resource_address(),
-		    uint(work_pso->buffer_size),
-		    data.WorkGraphBuffer.is_new());
+	
+		compute.set_program<PSOS::WorkGR>(backingBuffer->get_resource_address(), data.WorkGraphBuffer.is_new());
 
 		auto ep = create_entry(compute);
 		for (auto i = 0; i < res.DispatchCount; i++)
@@ -177,14 +174,15 @@ void PassDefault<Passes::RTXPass>::render(
 	}
 	else
 	{
-		auto& tile_buf  = *data.EmulTileBuffer;
-		auto& disp_args = *data.EmulDispatchArgs;
+		// tile_buf: view into WorkGraphBuffer (stays UAV throughout).
+		// disp_args: separate resource — exec_indirect transitions it to INDIRECT_ARGUMENT
+		// independently, leaving WorkGraphBuffer in UAV for the Shadows_Node shader.
+		constexpr uint64_t TILE_SECTION = 8u + 256u * 256u * sizeof(Table::TileRecord); // 524296
 
-		if (data.EmulDispatchArgs.is_new())
-		{
-			DispatchArguments init_args{ 0, 1, 1 };
-			context.get_list()->get_copy().update(disp_args, 0, std::span{ &init_args, 1 });
-		}
+		auto tile_buf  = data.WorkGraphBuffer->resource->create_view<HAL::StructuredBufferView<Table::TileRecord>>(
+		    *context.frame,
+		    HAL::StructuredBufferViewDesc{ 0, TILE_SECTION, counterType::SELF });
+		auto& disp_args = context.get_indirect_dispatch_args();
 
 		// WaveCount[0] is always 64 (fixed wave size). Split YZ into chunks of 16
 		// so each chunk has at most 64*16*64 = 65536 threads = 65536 tiles.
@@ -192,8 +190,8 @@ void PassDefault<Passes::RTXPass>::render(
 
 		for (auto i = 0; i < res.DispatchCount; i++)
 		{
-			auto& e         = res.Dispatch[i];
-			int   total_yz  = e.WaveCount[1] * e.WaveCount[2];
+			auto& e        = res.Dispatch[i];
+			int   total_yz = e.WaveCount[1] * e.WaveCount[2];
 
 			for (int yz_base = 0; yz_base < total_yz; yz_base += MAX_YZ_CHUNK)
 			{
@@ -208,7 +206,7 @@ void PassDefault<Passes::RTXPass>::render(
 				classifyEmul.GetShadows_Node()                  = tile_buf.appendStructuredBuffer;
 
 				Slots::WorkGR_Shadows_NodeEmulation shadowsEmul;
-				shadowsEmul.GetInput()  = tile_buf.consumeStructuredBuffer;
+				shadowsEmul.GetInput() = tile_buf.consumeStructuredBuffer;
 
 				compute.set_pipeline<PSOS::WorkGR_ClassifyPixels_Node>();
 				compute.set(classifyEmul);
@@ -222,9 +220,9 @@ void PassDefault<Passes::RTXPass>::render(
 				compute.set(shadowsEmul);
 				compute.exec_indirect(disp_args, 1);
 
-			/*	context.get_list()->get_copy().read_counter(tile_buf, [](uint remaining) {
+				context.get_list()->get_copy().read_counter(tile_buf, [](uint remaining) {
 					ASSERT(remaining == 0);
-				});*/
+				});
 			}
 		}
 	}

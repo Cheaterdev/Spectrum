@@ -349,7 +349,7 @@ export{
 				return read_buffer(view.resource.get(), view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), count * sizeof(HAL::StructuredBufferView<T>::UnderlyingType),
 					[f](std::span<std::byte> memory)
 					{
-						uint read = uint(memory.size());
+						uint read = uint(memory.size())/sizeof(HAL::StructuredBufferView<T>::UnderlyingType);
 						auto data = reinterpret_cast<T*>(memory.data());
 
 
@@ -604,7 +604,17 @@ export{
 			void dispatch_graph(ResourceAddress addr);
 			void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
 
+				 template <class PSO>
+				void set_program(ResourceAddress buffer, bool init)
+				 {
 
+					auto  work_pso = get_base().device.get_engine_pso_holder().GetPSO<PSO>();
+
+					set_program(work_pso.get(),
+						buffer,
+						uint(work_pso->buffer_size),
+						init);
+				 }
 
 			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom);
 			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top);

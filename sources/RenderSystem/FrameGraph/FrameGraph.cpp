@@ -1769,9 +1769,24 @@ namespace FrameGraph
 		slot_setters[id](setter);
 	}
 
+	HAL::StructuredBufferView<DispatchArguments>& FrameContext::get_indirect_dispatch_args()
+	{
+		return graph->indirect_dispatch_args[pass->get_type()];
+	}
+
 	Graph::Graph() : VariableContext(L"Graph")
 	{
 		builder.graph = this;
+
+		auto& device = RenderSystem::get().device();
+		for (auto& buf : indirect_dispatch_args)
+			buf = HAL::StructuredBufferView<DispatchArguments>(device, 1);
+
+		DispatchArguments init{ 0, 1, 1 };
+		auto upload = device.get_upload_list();
+		for (auto& buf : indirect_dispatch_args)
+			upload->get_copy().update(buf, 0, std::span{ &init, 1 });
+		upload->execute_and_wait();
 	}
 
 	void Graph::set_pipeline(Pipelines::PipelineBase* p) { current_pipeline = p; }

@@ -27,7 +27,7 @@ NODE_ClassifyPixels_Node(
         else
         {
 
-       //     params.GetOutputTexture()[uint2(v.pixel_pos)] = 0.3;
+            params.GetOutputTexture()[uint2(v.pixel_pos)] = 0.3;
              WG_SET_RECORD(tileRecord, tileXY, uint2(v.pixel_pos));
         }
            

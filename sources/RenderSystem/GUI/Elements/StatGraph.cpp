@@ -266,7 +266,7 @@ namespace GUI
                 auto tex = std::make_shared<HAL::Texture>(device,
                     HAL::ResourceDesc::Tex2D(
                         HAL::Format::R8G8B8A8_UNORM,
-                        {(UINT)tex_size.x, (UINT)tex_size.y}, 1, 0,
+                        {(UINT)tex_size.x, (UINT)tex_size.y}, 1, 1,
                         HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess | HAL::ResFlags::RenderTarget));
                 tex->resource->set_name("stat_graph::output");
                 gpu->output_view  = tex->texture_2d();

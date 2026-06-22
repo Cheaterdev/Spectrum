@@ -186,6 +186,4 @@ PassNode RTXPass
 	GBuffer gbuffer;
 	Texture RTXDebug;
 	ByteAdressBuffer WorkGraphBuffer;
-	StructuredBuffer<TileRecord> EmulTileBuffer;
-	StructuredBuffer<DispatchArguments> EmulDispatchArgs;
 }
