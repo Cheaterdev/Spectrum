@@ -5,11 +5,84 @@ import :FrameGraphContext;
 import FrameGraph;
 import HAL;
 
+import Core;
 
 #include "bend_sss_cpu.h"
 using namespace FrameGraph;
 
-// ---- ResultCreation ---------------------------------------------------------
+// ── WorkGraph emulation — FlowGraph nodes ──────────────────────────────────
+
+using TileBufView = HAL::StructuredBufferView<Table::TileRecord>;
+constexpr uint64_t WG_TILE_SECTION = 8u + 256u * 256u * sizeof(Table::TileRecord); // 524296
+
+struct WGContext : FlowGraph::GraphContext
+{
+	FrameContext& frame_ctx;
+	ComputeContext& compute;
+	const Bend::DispatchData& entry;
+	int yz_base;
+	int yz_count;
+	Handlers::ByteAdressBuffer& wg_buffer;
+
+	WGContext(FrameContext& fc, ComputeContext& c, const Bend::DispatchData& e,
+	          int yzb, int yzc, Handlers::ByteAdressBuffer& buf)
+	    : frame_ctx(fc), compute(c), entry(e), yz_base(yzb), yz_count(yzc), wg_buffer(buf)
+	{}
+};
+
+struct ClassifyFlowNode : FlowGraph::GraphNode<WGContext>
+{
+	ClassifyFlowNode() { register_output("tiles"); }
+
+	void operator()(WGContext* ctx) override
+	{
+		auto tile_buf = ctx->wg_buffer->resource->create_view<TileBufView>(
+		    *ctx->frame_ctx.frame,
+		    HAL::StructuredBufferViewDesc{ 0, WG_TILE_SECTION, counterType::SELF });
+
+		ctx->compute.clear_counter(tile_buf);
+
+		Slots::WorkGR_ClassifyPixels_NodeEmulation slot;
+		slot.GetGraphInput().GetDispatch_grid() = vec3(ctx->entry.WaveCount[0], ctx->entry.WaveCount[1], ctx->entry.WaveCount[2]);
+		slot.GetGraphInput().GetWaveOffset()    = int2(ctx->entry.WaveOffset_Shader[0], ctx->entry.WaveOffset_Shader[1]);
+		slot.GetYZBase()                        = ctx->yz_base;
+		slot.GetShadows_Node()                  = tile_buf.appendStructuredBuffer;
+
+		ctx->compute.set_pipeline<PSOS::WorkGR_ClassifyPixels_Node>();
+		ctx->compute.set(slot);
+		ctx->compute.dispatch(ctx->entry.WaveCount[0], ctx->yz_count, 1);
+
+		get_output(0)->put(tile_buf);
+	}
+};
+
+struct ShadowsFlowNode : FlowGraph::GraphNode<WGContext>
+{
+	ShadowsFlowNode() { register_input("tiles"); }
+
+	void operator()(WGContext* ctx) override
+	{
+		auto tile_buf   = get_input(0)->get<TileBufView>();
+		auto& disp_args = ctx->frame_ctx.get_indirect_dispatch_args();
+
+		ctx->frame_ctx.get_list()->get_copy().copy_buffer(
+		    disp_args.resource.get(), 0,
+		    tile_buf.get_counter_buffer().get(), tile_buf.get_counter_offset(), 4);
+
+		Slots::WorkGR_Shadows_NodeEmulation slot;
+		slot.GetInput() = tile_buf.consumeStructuredBuffer;
+
+		ctx->compute.set_pipeline<PSOS::WorkGR_Shadows_Node>();
+		ctx->compute.set(slot);
+		ctx->compute.exec_indirect(disp_args, 1);
+
+		ctx->frame_ctx.get_list()->get_copy().read_counter(tile_buf, [](uint remaining) {
+			ASSERT(remaining == 0);
+		});
+	}
+};
+
+// ── ResultCreation -----------------------------------------------------------
 
 bool PassDefault<Passes::ResultCreation>::setup(
 	Passes::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder)
@@ -174,21 +247,22 @@ void PassDefault<Passes::RTXPass>::render(
 	}
 	else
 	{
-		// tile_buf: view into WorkGraphBuffer (stays UAV throughout).
-		// disp_args: separate resource — exec_indirect transitions it to INDIRECT_ARGUMENT
-		// independently, leaving WorkGraphBuffer in UAV for the Shadows_Node shader.
-		constexpr uint64_t TILE_SECTION = 8u + 256u * 256u * sizeof(Table::TileRecord); // 524296
+		// Build the emulation FlowGraph once per render call.
+		// graph::start() resets all parameter values on each call, so the same
+		// graph instance is safe to start() once per YZ chunk.
+		FlowGraph::graph wg_graph;
 
-		auto tile_buf  = data.WorkGraphBuffer->resource->create_view<HAL::StructuredBufferView<Table::TileRecord>>(
-		    *context.frame,
-		    HAL::StructuredBufferViewDesc{ 0, TILE_SECTION, counterType::SELF });
-		auto& disp_args = context.get_indirect_dispatch_args();
+		auto classify = std::make_shared<ClassifyFlowNode>();
+		auto shadows  = std::make_shared<ShadowsFlowNode>();
 
-		// WaveCount[0] is always 64 (fixed wave size). Split YZ into chunks of 16
-		// so each chunk has at most 64*16*64 = 65536 threads = 65536 tiles.
+		wg_graph.register_node(classify);
+		wg_graph.register_node(shadows);
+		classify->get_output(0)->link(shadows->get_input(0));
+
+		// WaveCount[0] is always 64 (fixed wave size). Split YZ into chunks of 16.
 		constexpr int MAX_YZ_CHUNK = 16;
 
-		for (auto i = 0; i < res.DispatchCount; i++)
+		for (int i = 0; i < res.DispatchCount; i++)
 		{
 			auto& e        = res.Dispatch[i];
 			int   total_yz = e.WaveCount[1] * e.WaveCount[2];
@@ -196,33 +270,8 @@ void PassDefault<Passes::RTXPass>::render(
 			for (int yz_base = 0; yz_base < total_yz; yz_base += MAX_YZ_CHUNK)
 			{
 				int yz_count = std::min(MAX_YZ_CHUNK, total_yz - yz_base);
-
-				compute.clear_counter(tile_buf);
-
-				Slots::WorkGR_ClassifyPixels_NodeEmulation classifyEmul;
-				classifyEmul.GetGraphInput().GetDispatch_grid() = vec3(e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
-				classifyEmul.GetGraphInput().GetWaveOffset()    = int2(e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
-				classifyEmul.GetYZBase()                        = yz_base;
-				classifyEmul.GetShadows_Node()                  = tile_buf.appendStructuredBuffer;
-
-				Slots::WorkGR_Shadows_NodeEmulation shadowsEmul;
-				shadowsEmul.GetInput() = tile_buf.consumeStructuredBuffer;
-
-				compute.set_pipeline<PSOS::WorkGR_ClassifyPixels_Node>();
-				compute.set(classifyEmul);
-				compute.dispatch(e.WaveCount[0], yz_count, 1);
-
-				context.get_list()->get_copy().copy_buffer(
-				    disp_args.resource.get(), 0,
-				    tile_buf.get_counter_buffer().get(), tile_buf.get_counter_offset(), 4);
-
-				compute.set_pipeline<PSOS::WorkGR_Shadows_Node>();
-				compute.set(shadowsEmul);
-				compute.exec_indirect(disp_args, 1);
-
-				context.get_list()->get_copy().read_counter(tile_buf, [](uint remaining) {
-					ASSERT(remaining == 0);
-				});
+				WGContext wg_ctx(context, compute, e, yz_base, yz_count, data.WorkGraphBuffer);
+				wg_graph.start(&wg_ctx);
 			}
 		}
 	}
