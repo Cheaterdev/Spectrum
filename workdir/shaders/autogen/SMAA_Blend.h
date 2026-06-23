@@ -24,13 +24,12 @@ static _CB_SMAA_Blend pass_SMAA_Blend = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_SMAA_Blend: register(b5, space5);
 #endif
-
 ConstantBuffer<SMAA_Blend> CreateSMAA_Blend()
 {
 	return ResourceDescriptorHeap[pass_SMAA_Blend.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<SMAA_Blend> sMAA_Blend_global = CreateSMAA_Blend();
-ConstantBuffer<SMAA_Blend> GetSMAA_Blend(){ return sMAA_Blend_global; }
+ConstantBuffer<SMAA_Blend> GetSMAA_Blend() { return sMAA_Blend_global; }
 #endif

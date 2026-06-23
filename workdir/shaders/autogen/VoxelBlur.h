@@ -24,13 +24,12 @@ static _CB_VoxelBlur pass_VoxelBlur = { _hal_push.s6 };
 #else
 ConstantBuffer<CB> pass_VoxelBlur: register(b6, space6);
 #endif
-
 ConstantBuffer<VoxelBlur> CreateVoxelBlur()
 {
 	return ResourceDescriptorHeap[pass_VoxelBlur.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<VoxelBlur> voxelBlur_global = CreateVoxelBlur();
-ConstantBuffer<VoxelBlur> GetVoxelBlur(){ return voxelBlur_global; }
+ConstantBuffer<VoxelBlur> GetVoxelBlur() { return voxelBlur_global; }
 #endif

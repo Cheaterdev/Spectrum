@@ -24,13 +24,12 @@ static _CB_VoxelVisibility pass_VoxelVisibility = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_VoxelVisibility: register(b5, space5);
 #endif
-
 ConstantBuffer<VoxelVisibility> CreateVoxelVisibility()
 {
 	return ResourceDescriptorHeap[pass_VoxelVisibility.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<VoxelVisibility> voxelVisibility_global = CreateVoxelVisibility();
-ConstantBuffer<VoxelVisibility> GetVoxelVisibility(){ return voxelVisibility_global; }
+ConstantBuffer<VoxelVisibility> GetVoxelVisibility() { return voxelVisibility_global; }
 #endif

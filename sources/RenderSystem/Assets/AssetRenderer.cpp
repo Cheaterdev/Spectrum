@@ -107,7 +107,36 @@ public:
 
         scene->update(*graph.builder.current_frame);
 
-        pipeline.add_passes(graph);
+        // Add passes manually so RTXPass is registered before PSSM_Combine.
+        // PSSM_Combine checks builder.exists(RTXDebug) at setup time; if RTXPass
+        // has already run its setup by then, it switches from rasterised PSSM
+        // shadows to ray-traced shadows automatically.
+        graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, PassDefault<Passes::ResultCreation>::flags);
+        graph.add_library_pass<Passes::PreScene>(PassDefault<Passes::PreScene>::setup, PassDefault<Passes::PreScene>::render, PassDefault<Passes::PreScene>::flags);
+        if (pipeline.assetGBuffer.setup_func)
+            graph.add_library_pass<Passes::AssetGBuffer>(pipeline.assetGBuffer.setup_func, pipeline.assetGBuffer.render_func, pipeline.assetGBuffer.flags);
+
+        if (RenderSystem::get().device().is_rtx_supported())
+            graph.add_library_pass<Passes::RTXPass>(PassDefault<Passes::RTXPass>::setup, PassDefault<Passes::RTXPass>::render, PassDefault<Passes::RTXPass>::flags);
+
+        if (pipeline.pSSM_Global.setup_func)
+            graph.add_library_pass<Passes::PSSM_Global>(pipeline.pSSM_Global.setup_func, pipeline.pSSM_Global.render_func, pipeline.pSSM_Global.flags);
+        for (uint32_t i = 0; i < Passes::PSSM_Cascade::MaxCount; ++i)
+            if (pipeline.pSSM_Cascade.setup_funcs[i])
+                graph.add_library_pass<Passes::PSSM_Cascade>(i, pipeline.pSSM_Cascade.setup_funcs[i], pipeline.pSSM_Cascade.render_funcs[i], pipeline.pSSM_Cascade.flags);
+        if (pipeline.cubeSky.setup_func)
+            graph.add_library_pass<Passes::CubeSky>(pipeline.cubeSky.setup_func, pipeline.cubeSky.render_func, pipeline.cubeSky.flags);
+        graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, PassDefault<Passes::CubeMapDownsample>::flags);
+        graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, PassDefault<Passes::CubeMapEnviromentProcessor>::flags);
+        if (pipeline.pSSM_GenerateMask.setup_func)
+            graph.add_library_pass<Passes::PSSM_GenerateMask>(pipeline.pSSM_GenerateMask.setup_func, pipeline.pSSM_GenerateMask.render_func, pipeline.pSSM_GenerateMask.flags);
+        if (pipeline.pSSM_Combine.setup_func)
+            graph.add_library_pass<Passes::PSSM_Combine>(pipeline.pSSM_Combine.setup_func, pipeline.pSSM_Combine.render_func, pipeline.pSSM_Combine.flags);
+        if (pipeline.sky.setup_func)
+            graph.add_library_pass<Passes::Sky>(pipeline.sky.setup_func, pipeline.sky.render_func, pipeline.sky.flags);
+        if (pipeline.sMAA.setup_func)
+            graph.add_library_pass<Passes::SMAA>(pipeline.sMAA.setup_func, pipeline.sMAA.render_func, pipeline.sMAA.flags);
+        graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, PassDefault<Passes::FSR>::flags);
 
         //	pssm.generate(graph);
         //	sky.generate(graph);

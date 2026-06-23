@@ -24,13 +24,12 @@ static _CB_FontRendering pass_FontRendering = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_FontRendering: register(b4, space4);
 #endif
-
 ConstantBuffer<FontRendering> CreateFontRendering()
 {
 	return ResourceDescriptorHeap[pass_FontRendering.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<FontRendering> fontRendering_global = CreateFontRendering();
-ConstantBuffer<FontRendering> GetFontRendering(){ return fontRendering_global; }
+ConstantBuffer<FontRendering> GetFontRendering() { return fontRendering_global; }
 #endif

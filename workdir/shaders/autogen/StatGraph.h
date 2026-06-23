@@ -24,13 +24,12 @@ static _CB_StatGraph pass_StatGraph = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_StatGraph: register(b4, space4);
 #endif
-
 ConstantBuffer<StatGraph> CreateStatGraph()
 {
 	return ResourceDescriptorHeap[pass_StatGraph.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<StatGraph> statGraph_global = CreateStatGraph();
-ConstantBuffer<StatGraph> GetStatGraph(){ return statGraph_global; }
+ConstantBuffer<StatGraph> GetStatGraph() { return statGraph_global; }
 #endif

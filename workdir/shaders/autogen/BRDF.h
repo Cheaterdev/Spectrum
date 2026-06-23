@@ -24,13 +24,12 @@ static _CB_BRDF pass_BRDF = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_BRDF: register(b4, space4);
 #endif
-
 ConstantBuffer<BRDF> CreateBRDF()
 {
 	return ResourceDescriptorHeap[pass_BRDF.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<BRDF> bRDF_global = CreateBRDF();
-ConstantBuffer<BRDF> GetBRDF(){ return bRDF_global; }
+ConstantBuffer<BRDF> GetBRDF() { return bRDF_global; }
 #endif

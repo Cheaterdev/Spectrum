@@ -15,7 +15,6 @@ import :Autogen.Tables.MeshInstanceInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct Test
 	{
 		static constexpr SlotID ID = SlotID::Test;

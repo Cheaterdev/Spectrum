@@ -24,13 +24,12 @@ static _CB_Test pass_Test = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_Test: register(b4, space4);
 #endif
-
 ConstantBuffer<Test> CreateTest()
 {
 	return ResourceDescriptorHeap[pass_Test.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<Test> test_global = CreateTest();
-ConstantBuffer<Test> GetTest(){ return test_global; }
+ConstantBuffer<Test> GetTest() { return test_global; }
 #endif

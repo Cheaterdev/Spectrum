@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct MeshInstanceInfo :public DataHolder<MeshInstanceInfo, SlotID::MeshInstanceInfo, Table::MeshInstanceInfo, DefaultLayout::Instance2>
 	{

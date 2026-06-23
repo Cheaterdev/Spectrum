@@ -15,7 +15,6 @@ import :Autogen.Tables.Frustum;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct Camera
 	{
 		static constexpr SlotID ID = SlotID::Camera;

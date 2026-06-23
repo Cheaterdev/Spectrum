@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct DenoiserShadow_FilterLocal :public DataHolder<DenoiserShadow_FilterLocal, SlotID::DenoiserShadow_FilterLocal, Table::DenoiserShadow_FilterLocal, DefaultLayout::Instance1>
 	{

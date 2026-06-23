@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct VoxelLighting :public DataHolder<VoxelLighting, SlotID::VoxelLighting, Table::VoxelLighting, DefaultLayout::Instance1>
 	{

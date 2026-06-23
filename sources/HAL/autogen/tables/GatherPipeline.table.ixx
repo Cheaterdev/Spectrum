@@ -15,7 +15,6 @@ import :Autogen.Tables.CommandData;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct GatherPipeline
 	{
 		static constexpr SlotID ID = SlotID::GatherPipeline;

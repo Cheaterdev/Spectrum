@@ -24,8 +24,12 @@ static _CB_WorkGR_Shadows_NodeEmulation pass_WorkGR_Shadows_NodeEmulation = { _h
 #else
 ConstantBuffer<CB> pass_WorkGR_Shadows_NodeEmulation: register(b13, space13);
 #endif
-
 ConstantBuffer<WorkGR_Shadows_NodeEmulation> CreateWorkGR_Shadows_NodeEmulation()
 {
 	return ResourceDescriptorHeap[pass_WorkGR_Shadows_NodeEmulation.offset];
 }
+
+#ifndef NO_GLOBAL
+static const ConstantBuffer<WorkGR_Shadows_NodeEmulation> workGR_Shadows_NodeEmulation_global = CreateWorkGR_Shadows_NodeEmulation();
+ConstantBuffer<WorkGR_Shadows_NodeEmulation> GetWorkGR_Shadows_NodeEmulation() { return workGR_Shadows_NodeEmulation_global; }
+#endif

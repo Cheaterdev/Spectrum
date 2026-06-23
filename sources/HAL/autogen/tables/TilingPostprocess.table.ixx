@@ -15,7 +15,6 @@ import :Autogen.Tables.TilingParams;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct TilingPostprocess
 	{
 		static constexpr SlotID ID = SlotID::TilingPostprocess;

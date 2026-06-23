@@ -24,13 +24,12 @@ static _CB_DownsampleDepth pass_DownsampleDepth = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_DownsampleDepth: register(b4, space4);
 #endif
-
 ConstantBuffer<DownsampleDepth> CreateDownsampleDepth()
 {
 	return ResourceDescriptorHeap[pass_DownsampleDepth.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DownsampleDepth> downsampleDepth_global = CreateDownsampleDepth();
-ConstantBuffer<DownsampleDepth> GetDownsampleDepth(){ return downsampleDepth_global; }
+ConstantBuffer<DownsampleDepth> GetDownsampleDepth() { return downsampleDepth_global; }
 #endif

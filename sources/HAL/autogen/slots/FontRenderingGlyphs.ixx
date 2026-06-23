@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct FontRenderingGlyphs :public DataHolder<FontRenderingGlyphs, SlotID::FontRenderingGlyphs, Table::FontRenderingGlyphs, DefaultLayout::Instance2>
 	{

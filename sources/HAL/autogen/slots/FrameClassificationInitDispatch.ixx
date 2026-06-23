@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct FrameClassificationInitDispatch :public DataHolder<FrameClassificationInitDispatch, SlotID::FrameClassificationInitDispatch, Table::FrameClassificationInitDispatch, DefaultLayout::Instance2>
 	{

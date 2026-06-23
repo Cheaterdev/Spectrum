@@ -24,13 +24,12 @@ static _CB_VoxelMipMap pass_VoxelMipMap = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_VoxelMipMap: register(b5, space5);
 #endif
-
 ConstantBuffer<VoxelMipMap> CreateVoxelMipMap()
 {
 	return ResourceDescriptorHeap[pass_VoxelMipMap.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<VoxelMipMap> voxelMipMap_global = CreateVoxelMipMap();
-ConstantBuffer<VoxelMipMap> GetVoxelMipMap(){ return voxelMipMap_global; }
+ConstantBuffer<VoxelMipMap> GetVoxelMipMap() { return voxelMipMap_global; }
 #endif

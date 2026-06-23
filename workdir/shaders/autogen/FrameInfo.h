@@ -24,13 +24,12 @@ static _CB_FrameInfo pass_FrameInfo = { _hal_push.s0 };
 #else
 ConstantBuffer<CB> pass_FrameInfo: register(b0, space0);
 #endif
-
 ConstantBuffer<FrameInfo> CreateFrameInfo()
 {
 	return ResourceDescriptorHeap[pass_FrameInfo.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<FrameInfo> frameInfo_global = CreateFrameInfo();
-ConstantBuffer<FrameInfo> GetFrameInfo(){ return frameInfo_global; }
+ConstantBuffer<FrameInfo> GetFrameInfo() { return frameInfo_global; }
 #endif

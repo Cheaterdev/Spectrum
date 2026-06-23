@@ -14,7 +14,6 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct DenoiserShadow_FilterLocal
 	{
 		static constexpr SlotID ID = SlotID::DenoiserShadow_FilterLocal;

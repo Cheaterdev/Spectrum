@@ -24,13 +24,12 @@ static _CB_NinePatch pass_NinePatch = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_NinePatch: register(b4, space4);
 #endif
-
 ConstantBuffer<NinePatch> CreateNinePatch()
 {
 	return ResourceDescriptorHeap[pass_NinePatch.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<NinePatch> ninePatch_global = CreateNinePatch();
-ConstantBuffer<NinePatch> GetNinePatch(){ return ninePatch_global; }
+ConstantBuffer<NinePatch> GetNinePatch() { return ninePatch_global; }
 #endif

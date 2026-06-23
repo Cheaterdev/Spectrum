@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct StatGraphLine :public DataHolder<StatGraphLine, SlotID::StatGraphLine, Table::StatGraphLine, DefaultLayout::Instance0>
 	{

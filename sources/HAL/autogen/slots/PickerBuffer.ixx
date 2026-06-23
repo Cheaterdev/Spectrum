@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct PickerBuffer :public DataHolder<PickerBuffer, SlotID::PickerBuffer, Table::PickerBuffer, DefaultLayout::Instance0>
 	{

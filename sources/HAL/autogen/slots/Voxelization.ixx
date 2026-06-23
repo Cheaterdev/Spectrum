@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct Voxelization :public DataHolder<Voxelization, SlotID::Voxelization, Table::Voxelization, DefaultLayout::Instance3>
 	{

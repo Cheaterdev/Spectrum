@@ -24,13 +24,12 @@ static _CB_MeshInfo pass_MeshInfo = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_MeshInfo: register(b5, space5);
 #endif
-
 ConstantBuffer<MeshInfo> CreateMeshInfo()
 {
 	return ResourceDescriptorHeap[pass_MeshInfo.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<MeshInfo> meshInfo_global = CreateMeshInfo();
-ConstantBuffer<MeshInfo> GetMeshInfo(){ return meshInfo_global; }
+ConstantBuffer<MeshInfo> GetMeshInfo() { return meshInfo_global; }
 #endif

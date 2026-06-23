@@ -24,13 +24,12 @@ static _CB_DenoiserShadow_Prepare pass_DenoiserShadow_Prepare = { _hal_push.s4 }
 #else
 ConstantBuffer<CB> pass_DenoiserShadow_Prepare: register(b4, space4);
 #endif
-
 ConstantBuffer<DenoiserShadow_Prepare> CreateDenoiserShadow_Prepare()
 {
 	return ResourceDescriptorHeap[pass_DenoiserShadow_Prepare.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DenoiserShadow_Prepare> denoiserShadow_Prepare_global = CreateDenoiserShadow_Prepare();
-ConstantBuffer<DenoiserShadow_Prepare> GetDenoiserShadow_Prepare(){ return denoiserShadow_Prepare_global; }
+ConstantBuffer<DenoiserShadow_Prepare> GetDenoiserShadow_Prepare() { return denoiserShadow_Prepare_global; }
 #endif

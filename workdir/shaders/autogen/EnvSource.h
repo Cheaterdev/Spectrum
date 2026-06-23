@@ -24,13 +24,12 @@ static _CB_EnvSource pass_EnvSource = { _hal_push.s6 };
 #else
 ConstantBuffer<CB> pass_EnvSource: register(b6, space6);
 #endif
-
 ConstantBuffer<EnvSource> CreateEnvSource()
 {
 	return ResourceDescriptorHeap[pass_EnvSource.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<EnvSource> envSource_global = CreateEnvSource();
-ConstantBuffer<EnvSource> GetEnvSource(){ return envSource_global; }
+ConstantBuffer<EnvSource> GetEnvSource() { return envSource_global; }
 #endif

@@ -14,7 +14,6 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct Countour
 	{
 		static constexpr SlotID ID = SlotID::Countour;

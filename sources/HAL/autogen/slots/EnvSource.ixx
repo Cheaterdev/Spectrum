@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct EnvSource :public DataHolder<EnvSource, SlotID::EnvSource, Table::EnvSource, DefaultLayout::Instance2>
 	{

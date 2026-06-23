@@ -24,13 +24,12 @@ static _CB_MaterialInfo pass_MaterialInfo = { _hal_push.s11 };
 #else
 ConstantBuffer<CB> pass_MaterialInfo: register(b11, space11);
 #endif
-
 ConstantBuffer<MaterialInfo> CreateMaterialInfo()
 {
 	return ResourceDescriptorHeap[pass_MaterialInfo.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<MaterialInfo> materialInfo_global = CreateMaterialInfo();
-ConstantBuffer<MaterialInfo> GetMaterialInfo(){ return materialInfo_global; }
+ConstantBuffer<MaterialInfo> GetMaterialInfo() { return materialInfo_global; }
 #endif

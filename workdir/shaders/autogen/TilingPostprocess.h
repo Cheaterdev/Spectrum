@@ -24,13 +24,12 @@ static _CB_TilingPostprocess pass_TilingPostprocess = { _hal_push.s2 };
 #else
 ConstantBuffer<CB> pass_TilingPostprocess: register(b2, space2);
 #endif
-
 ConstantBuffer<TilingPostprocess> CreateTilingPostprocess()
 {
 	return ResourceDescriptorHeap[pass_TilingPostprocess.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<TilingPostprocess> tilingPostprocess_global = CreateTilingPostprocess();
-ConstantBuffer<TilingPostprocess> GetTilingPostprocess(){ return tilingPostprocess_global; }
+ConstantBuffer<TilingPostprocess> GetTilingPostprocess() { return tilingPostprocess_global; }
 #endif

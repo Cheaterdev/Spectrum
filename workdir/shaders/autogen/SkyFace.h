@@ -24,13 +24,12 @@ static _CB_SkyFace pass_SkyFace = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_SkyFace: register(b5, space5);
 #endif
-
 ConstantBuffer<SkyFace> CreateSkyFace()
 {
 	return ResourceDescriptorHeap[pass_SkyFace.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<SkyFace> skyFace_global = CreateSkyFace();
-ConstantBuffer<SkyFace> GetSkyFace(){ return skyFace_global; }
+ConstantBuffer<SkyFace> GetSkyFace() { return skyFace_global; }
 #endif

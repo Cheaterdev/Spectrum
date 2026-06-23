@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct SMAA_Global :public DataHolder<SMAA_Global, SlotID::SMAA_Global, Table::SMAA_Global, DefaultLayout::Instance0>
 	{

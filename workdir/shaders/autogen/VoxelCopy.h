@@ -24,13 +24,12 @@ static _CB_VoxelCopy pass_VoxelCopy = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_VoxelCopy: register(b5, space5);
 #endif
-
 ConstantBuffer<VoxelCopy> CreateVoxelCopy()
 {
 	return ResourceDescriptorHeap[pass_VoxelCopy.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<VoxelCopy> voxelCopy_global = CreateVoxelCopy();
-ConstantBuffer<VoxelCopy> GetVoxelCopy(){ return voxelCopy_global; }
+ConstantBuffer<VoxelCopy> GetVoxelCopy() { return voxelCopy_global; }
 #endif

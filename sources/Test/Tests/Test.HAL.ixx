@@ -9,6 +9,7 @@ import Test.HAL.SIG;
 import Test.HAL.UI;
 import Test.GUI;
 import Test.FrameGraph;
+import Test.RTX;
 
 import Core;
 import HAL;

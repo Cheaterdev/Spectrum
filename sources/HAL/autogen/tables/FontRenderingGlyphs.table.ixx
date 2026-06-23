@@ -15,7 +15,6 @@ import :Autogen.Tables.Glyph;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct FontRenderingGlyphs
 	{
 		static constexpr SlotID ID = SlotID::FontRenderingGlyphs;

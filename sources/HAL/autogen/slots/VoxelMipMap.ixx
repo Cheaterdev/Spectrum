@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct VoxelMipMap :public DataHolder<VoxelMipMap, SlotID::VoxelMipMap, Table::VoxelMipMap, DefaultLayout::Instance1>
 	{

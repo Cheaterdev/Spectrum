@@ -24,13 +24,12 @@ static _CB_Voxelization pass_Voxelization = { _hal_push.s7 };
 #else
 ConstantBuffer<CB> pass_Voxelization: register(b7, space7);
 #endif
-
 ConstantBuffer<Voxelization> CreateVoxelization()
 {
 	return ResourceDescriptorHeap[pass_Voxelization.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<Voxelization> voxelization_global = CreateVoxelization();
-ConstantBuffer<Voxelization> GetVoxelization(){ return voxelization_global; }
+ConstantBuffer<Voxelization> GetVoxelization() { return voxelization_global; }
 #endif

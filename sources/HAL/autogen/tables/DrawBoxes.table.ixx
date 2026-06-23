@@ -15,7 +15,6 @@ import :Autogen.Tables.BoxInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct DrawBoxes
 	{
 		static constexpr SlotID ID = SlotID::DrawBoxes;

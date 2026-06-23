@@ -24,13 +24,12 @@ static _CB_FrameGraph_Debug_Texture2DArray pass_FrameGraph_Debug_Texture2DArray 
 #else
 ConstantBuffer<CB> pass_FrameGraph_Debug_Texture2DArray: register(b5, space5);
 #endif
-
 ConstantBuffer<FrameGraph_Debug_Texture2DArray> CreateFrameGraph_Debug_Texture2DArray()
 {
 	return ResourceDescriptorHeap[pass_FrameGraph_Debug_Texture2DArray.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<FrameGraph_Debug_Texture2DArray> frameGraph_Debug_Texture2DArray_global = CreateFrameGraph_Debug_Texture2DArray();
-ConstantBuffer<FrameGraph_Debug_Texture2DArray> GetFrameGraph_Debug_Texture2DArray(){ return frameGraph_Debug_Texture2DArray_global; }
+ConstantBuffer<FrameGraph_Debug_Texture2DArray> GetFrameGraph_Debug_Texture2DArray() { return frameGraph_Debug_Texture2DArray_global; }
 #endif

@@ -24,13 +24,12 @@ static _CB_WorkGraphTest pass_WorkGraphTest = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_WorkGraphTest: register(b4, space4);
 #endif
-
 ConstantBuffer<WorkGraphTest> CreateWorkGraphTest()
 {
 	return ResourceDescriptorHeap[pass_WorkGraphTest.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<WorkGraphTest> workGraphTest_global = CreateWorkGraphTest();
-ConstantBuffer<WorkGraphTest> GetWorkGraphTest(){ return workGraphTest_global; }
+ConstantBuffer<WorkGraphTest> GetWorkGraphTest() { return workGraphTest_global; }
 #endif

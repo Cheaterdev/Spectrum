@@ -18,7 +18,6 @@ import :Autogen.Tables.node_data;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct SceneData
 	{
 		static constexpr SlotID ID = SlotID::SceneData;

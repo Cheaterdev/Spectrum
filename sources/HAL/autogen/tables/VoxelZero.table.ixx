@@ -15,7 +15,6 @@ import :Autogen.Tables.VoxelTilingParams;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct VoxelZero
 	{
 		static constexpr SlotID ID = SlotID::VoxelZero;

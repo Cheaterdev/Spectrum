@@ -24,13 +24,12 @@ static _CB_TextureRenderer pass_TextureRenderer = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_TextureRenderer: register(b4, space4);
 #endif
-
 ConstantBuffer<TextureRenderer> CreateTextureRenderer()
 {
 	return ResourceDescriptorHeap[pass_TextureRenderer.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<TextureRenderer> textureRenderer_global = CreateTextureRenderer();
-ConstantBuffer<TextureRenderer> GetTextureRenderer(){ return textureRenderer_global; }
+ConstantBuffer<TextureRenderer> GetTextureRenderer() { return textureRenderer_global; }
 #endif

@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct GatherBoxes :public DataHolder<GatherBoxes, SlotID::GatherBoxes, Table::GatherBoxes, DefaultLayout::Instance1>
 	{

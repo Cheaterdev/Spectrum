@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct TilingPostprocess :public DataHolder<TilingPostprocess, SlotID::TilingPostprocess, Table::TilingPostprocess, FrameLayout::PassData>
 	{

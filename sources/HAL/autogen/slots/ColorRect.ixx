@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct ColorRect :public DataHolder<ColorRect, SlotID::ColorRect, Table::ColorRect, DefaultLayout::Instance0>
 	{

@@ -15,7 +15,6 @@ import :Autogen.Tables.VoxelInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct Voxelization
 	{
 		static constexpr SlotID ID = SlotID::Voxelization;

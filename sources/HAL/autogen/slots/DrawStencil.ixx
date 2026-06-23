@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct DrawStencil :public DataHolder<DrawStencil, SlotID::DrawStencil, Table::DrawStencil, DefaultLayout::Instance0>
 	{

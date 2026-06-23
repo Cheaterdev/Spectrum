@@ -17,7 +17,6 @@ import :Autogen.Tables.mesh_vertex_input;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct MeshInstanceInfo
 	{
 		static constexpr SlotID ID = SlotID::MeshInstanceInfo;

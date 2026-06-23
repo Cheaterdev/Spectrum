@@ -24,13 +24,12 @@ static _CB_PSSMLighting pass_PSSMLighting = { _hal_push.s6 };
 #else
 ConstantBuffer<CB> pass_PSSMLighting: register(b6, space6);
 #endif
-
 ConstantBuffer<PSSMLighting> CreatePSSMLighting()
 {
 	return ResourceDescriptorHeap[pass_PSSMLighting.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<PSSMLighting> pSSMLighting_global = CreatePSSMLighting();
-ConstantBuffer<PSSMLighting> GetPSSMLighting(){ return pSSMLighting_global; }
+ConstantBuffer<PSSMLighting> GetPSSMLighting() { return pSSMLighting_global; }
 #endif

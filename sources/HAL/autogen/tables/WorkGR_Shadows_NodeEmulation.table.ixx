@@ -12,11 +12,9 @@ import :Types;
 import :HLSL;
 import :Enums;
 import :Autogen.Tables.TileRecord;
-
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct WorkGR_Shadows_NodeEmulation
 	{
 		static constexpr SlotID ID = SlotID::WorkGR_Shadows_NodeEmulation;
@@ -32,10 +30,13 @@ export namespace Table
 		{
 			uint input; // ConsumeStructuredBuffer<TileRecord>
 
+			
 			private:
 			SERIALIZE()
 			{
 			}
+
+
 		};
 
 		static std::string get_typename()
@@ -46,6 +47,8 @@ export namespace Table
 		SERIALIZE()
 		{
 		}
+
 	};
 	#pragma pack(pop)
 }
+

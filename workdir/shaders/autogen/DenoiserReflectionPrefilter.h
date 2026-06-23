@@ -24,13 +24,12 @@ static _CB_DenoiserReflectionPrefilter pass_DenoiserReflectionPrefilter = { _hal
 #else
 ConstantBuffer<CB> pass_DenoiserReflectionPrefilter: register(b5, space5);
 #endif
-
 ConstantBuffer<DenoiserReflectionPrefilter> CreateDenoiserReflectionPrefilter()
 {
 	return ResourceDescriptorHeap[pass_DenoiserReflectionPrefilter.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DenoiserReflectionPrefilter> denoiserReflectionPrefilter_global = CreateDenoiserReflectionPrefilter();
-ConstantBuffer<DenoiserReflectionPrefilter> GetDenoiserReflectionPrefilter(){ return denoiserReflectionPrefilter_global; }
+ConstantBuffer<DenoiserReflectionPrefilter> GetDenoiserReflectionPrefilter() { return denoiserReflectionPrefilter_global; }
 #endif

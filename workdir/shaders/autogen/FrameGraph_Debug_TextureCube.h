@@ -24,13 +24,12 @@ static _CB_FrameGraph_Debug_TextureCube pass_FrameGraph_Debug_TextureCube = { _h
 #else
 ConstantBuffer<CB> pass_FrameGraph_Debug_TextureCube: register(b5, space5);
 #endif
-
 ConstantBuffer<FrameGraph_Debug_TextureCube> CreateFrameGraph_Debug_TextureCube()
 {
 	return ResourceDescriptorHeap[pass_FrameGraph_Debug_TextureCube.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<FrameGraph_Debug_TextureCube> frameGraph_Debug_TextureCube_global = CreateFrameGraph_Debug_TextureCube();
-ConstantBuffer<FrameGraph_Debug_TextureCube> GetFrameGraph_Debug_TextureCube(){ return frameGraph_Debug_TextureCube_global; }
+ConstantBuffer<FrameGraph_Debug_TextureCube> GetFrameGraph_Debug_TextureCube() { return frameGraph_Debug_TextureCube_global; }
 #endif

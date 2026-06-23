@@ -15,7 +15,6 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct PSSMLighting
 	{
 		static constexpr SlotID ID = SlotID::PSSMLighting;

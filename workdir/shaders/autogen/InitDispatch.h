@@ -24,13 +24,12 @@ static _CB_InitDispatch pass_InitDispatch = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_InitDispatch: register(b5, space5);
 #endif
-
 ConstantBuffer<InitDispatch> CreateInitDispatch()
 {
 	return ResourceDescriptorHeap[pass_InitDispatch.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<InitDispatch> initDispatch_global = CreateInitDispatch();
-ConstantBuffer<InitDispatch> GetInitDispatch(){ return initDispatch_global; }
+ConstantBuffer<InitDispatch> GetInitDispatch() { return initDispatch_global; }
 #endif

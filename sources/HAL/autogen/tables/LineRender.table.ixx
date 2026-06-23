@@ -15,7 +15,6 @@ import :Autogen.Tables.VSLine;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct LineRender
 	{
 		static constexpr SlotID ID = SlotID::LineRender;

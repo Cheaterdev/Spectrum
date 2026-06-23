@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct SkyFace :public DataHolder<SkyFace, SlotID::SkyFace, Table::SkyFace, DefaultLayout::Instance1>
 	{

@@ -24,13 +24,12 @@ static _CB_ReflectionCombine pass_ReflectionCombine = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_ReflectionCombine: register(b4, space4);
 #endif
-
 ConstantBuffer<ReflectionCombine> CreateReflectionCombine()
 {
 	return ResourceDescriptorHeap[pass_ReflectionCombine.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<ReflectionCombine> reflectionCombine_global = CreateReflectionCombine();
-ConstantBuffer<ReflectionCombine> GetReflectionCombine(){ return reflectionCombine_global; }
+ConstantBuffer<ReflectionCombine> GetReflectionCombine() { return reflectionCombine_global; }
 #endif

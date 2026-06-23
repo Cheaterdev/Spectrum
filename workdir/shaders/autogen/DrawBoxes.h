@@ -24,13 +24,12 @@ static _CB_DrawBoxes pass_DrawBoxes = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_DrawBoxes: register(b5, space5);
 #endif
-
 ConstantBuffer<DrawBoxes> CreateDrawBoxes()
 {
 	return ResourceDescriptorHeap[pass_DrawBoxes.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DrawBoxes> drawBoxes_global = CreateDrawBoxes();
-ConstantBuffer<DrawBoxes> GetDrawBoxes(){ return drawBoxes_global; }
+ConstantBuffer<DrawBoxes> GetDrawBoxes() { return drawBoxes_global; }
 #endif

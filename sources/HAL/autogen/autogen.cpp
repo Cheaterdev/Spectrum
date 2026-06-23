@@ -100,91 +100,177 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 
 uint get_table_index(SlotID id)
 {
+
 	if(id == SlotID::TextureRenderer) return Slots::TextureRenderer::Slot::ID;
+
 	if(id == SlotID::BlueNoise) return Slots::BlueNoise::Slot::ID;
+
 	if(id == SlotID::BRDF) return Slots::BRDF::Slot::ID;
+
 	if(id == SlotID::DebugInfo) return Slots::DebugInfo::Slot::ID;
+
 	if(id == SlotID::DenoiserReflectionCommon) return Slots::DenoiserReflectionCommon::Slot::ID;
+
 	if(id == SlotID::DenoiserReflectionReproject) return Slots::DenoiserReflectionReproject::Slot::ID;
+
 	if(id == SlotID::DenoiserReflectionPrefilter) return Slots::DenoiserReflectionPrefilter::Slot::ID;
+
 	if(id == SlotID::DenoiserReflectionResolve) return Slots::DenoiserReflectionResolve::Slot::ID;
+
 	if(id == SlotID::DenoiserShadow_Prepare) return Slots::DenoiserShadow_Prepare::Slot::ID;
+
 	if(id == SlotID::DenoiserShadow_TileClassification) return Slots::DenoiserShadow_TileClassification::Slot::ID;
+
 	if(id == SlotID::DenoiserShadow_Filter) return Slots::DenoiserShadow_Filter::Slot::ID;
+
 	if(id == SlotID::DenoiserShadow_FilterLocal) return Slots::DenoiserShadow_FilterLocal::Slot::ID;
+
 	if(id == SlotID::DenoiserShadow_FilterLast) return Slots::DenoiserShadow_FilterLast::Slot::ID;
+
 	if(id == SlotID::FontRendering) return Slots::FontRendering::Slot::ID;
+
 	if(id == SlotID::FontRenderingConstants) return Slots::FontRenderingConstants::Slot::ID;
+
 	if(id == SlotID::FontRenderingGlyphs) return Slots::FontRenderingGlyphs::Slot::ID;
+
 	if(id == SlotID::FrameInfo) return Slots::FrameInfo::Slot::ID;
+
 	if(id == SlotID::FSR) return Slots::FSR::Slot::ID;
+
 	if(id == SlotID::MaterialInfo) return Slots::MaterialInfo::Slot::ID;
+
 	if(id == SlotID::MeshInstanceInfo) return Slots::MeshInstanceInfo::Slot::ID;
+
 	if(id == SlotID::MeshInfo) return Slots::MeshInfo::Slot::ID;
+
 	if(id == SlotID::GatherPipelineGlobal) return Slots::GatherPipelineGlobal::Slot::ID;
+
 	if(id == SlotID::GatherPipeline) return Slots::GatherPipeline::Slot::ID;
+
 	if(id == SlotID::GatherBoxes) return Slots::GatherBoxes::Slot::ID;
+
 	if(id == SlotID::DrawBoxes) return Slots::DrawBoxes::Slot::ID;
+
 	if(id == SlotID::InitDispatch) return Slots::InitDispatch::Slot::ID;
+
 	if(id == SlotID::GatherMeshesBoxes) return Slots::GatherMeshesBoxes::Slot::ID;
+
 	if(id == SlotID::MipMapping) return Slots::MipMapping::Slot::ID;
+
 	if(id == SlotID::CopyTexture) return Slots::CopyTexture::Slot::ID;
+
 	if(id == SlotID::DownsampleDepth) return Slots::DownsampleDepth::Slot::ID;
+
 	if(id == SlotID::GBufferDownsample) return Slots::GBufferDownsample::Slot::ID;
+
 	if(id == SlotID::GBufferQuality) return Slots::GBufferQuality::Slot::ID;
+
 	if(id == SlotID::PSSMConstants) return Slots::PSSMConstants::Slot::ID;
+
 	if(id == SlotID::PSSMData) return Slots::PSSMData::Slot::ID;
+
 	if(id == SlotID::PSSMDataGlobal) return Slots::PSSMDataGlobal::Slot::ID;
+
 	if(id == SlotID::PSSMLighting) return Slots::PSSMLighting::Slot::ID;
+
 	if(id == SlotID::RaytracingRays) return Slots::RaytracingRays::Slot::ID;
+
 	if(id == SlotID::Raytracing) return Slots::Raytracing::Slot::ID;
+
 	if(id == SlotID::SceneData) return Slots::SceneData::Slot::ID;
+
 	if(id == SlotID::GBuffer) return Slots::GBuffer::Slot::ID;
+
 	if(id == SlotID::SkyData) return Slots::SkyData::Slot::ID;
+
 	if(id == SlotID::SkyFace) return Slots::SkyFace::Slot::ID;
+
 	if(id == SlotID::EnvFilter) return Slots::EnvFilter::Slot::ID;
+
 	if(id == SlotID::EnvSource) return Slots::EnvSource::Slot::ID;
+
 	if(id == SlotID::SMAA_Global) return Slots::SMAA_Global::Slot::ID;
+
 	if(id == SlotID::SMAA_Weights) return Slots::SMAA_Weights::Slot::ID;
+
 	if(id == SlotID::SMAA_Blend) return Slots::SMAA_Blend::Slot::ID;
+
 	if(id == SlotID::DispatchParameters) return Slots::DispatchParameters::Slot::ID;
+
 	if(id == SlotID::Countour) return Slots::Countour::Slot::ID;
+
 	if(id == SlotID::DrawStencil) return Slots::DrawStencil::Slot::ID;
+
 	if(id == SlotID::PickerBuffer) return Slots::PickerBuffer::Slot::ID;
+
 	if(id == SlotID::Instance) return Slots::Instance::Slot::ID;
+
 	if(id == SlotID::Color) return Slots::Color::Slot::ID;
+
 	if(id == SlotID::Test) return Slots::Test::Slot::ID;
+
 	if(id == SlotID::NinePatch) return Slots::NinePatch::Slot::ID;
+
 	if(id == SlotID::ColorRect) return Slots::ColorRect::Slot::ID;
+
 	if(id == SlotID::FlowGraph) return Slots::FlowGraph::Slot::ID;
+
 	if(id == SlotID::LineRender) return Slots::LineRender::Slot::ID;
+
 	if(id == SlotID::FrameGraph_Debug_Common) return Slots::FrameGraph_Debug_Common::Slot::ID;
+
 	if(id == SlotID::FrameGraph_Debug_Texture2D) return Slots::FrameGraph_Debug_Texture2D::Slot::ID;
+
 	if(id == SlotID::FrameGraph_Debug_Texture2DArray) return Slots::FrameGraph_Debug_Texture2DArray::Slot::ID;
+
 	if(id == SlotID::FrameGraph_Debug_Texture3D) return Slots::FrameGraph_Debug_Texture3D::Slot::ID;
+
 	if(id == SlotID::FrameGraph_Debug_TextureCube) return Slots::FrameGraph_Debug_TextureCube::Slot::ID;
+
 	if(id == SlotID::StatGraph) return Slots::StatGraph::Slot::ID;
+
 	if(id == SlotID::StatGraphLine) return Slots::StatGraphLine::Slot::ID;
+
 	if(id == SlotID::VoxelInfo) return Slots::VoxelInfo::Slot::ID;
+
 	if(id == SlotID::Voxelization) return Slots::Voxelization::Slot::ID;
+
 	if(id == SlotID::VoxelScreen) return Slots::VoxelScreen::Slot::ID;
+
 	if(id == SlotID::VoxelOutput) return Slots::VoxelOutput::Slot::ID;
+
 	if(id == SlotID::VoxelBlur) return Slots::VoxelBlur::Slot::ID;
+
 	if(id == SlotID::VoxelUpscale) return Slots::VoxelUpscale::Slot::ID;
+
 	if(id == SlotID::VoxelVisibility) return Slots::VoxelVisibility::Slot::ID;
+
 	if(id == SlotID::VoxelMipMap) return Slots::VoxelMipMap::Slot::ID;
+
 	if(id == SlotID::VoxelCopy) return Slots::VoxelCopy::Slot::ID;
+
 	if(id == SlotID::VoxelZero) return Slots::VoxelZero::Slot::ID;
+
 	if(id == SlotID::VoxelLighting) return Slots::VoxelLighting::Slot::ID;
+
 	if(id == SlotID::VoxelDebug) return Slots::VoxelDebug::Slot::ID;
+
 	if(id == SlotID::DenoiserDownsample) return Slots::DenoiserDownsample::Slot::ID;
+
 	if(id == SlotID::DenoiserHistoryFix) return Slots::DenoiserHistoryFix::Slot::ID;
+
 	if(id == SlotID::TilingPostprocess) return Slots::TilingPostprocess::Slot::ID;
+
 	if(id == SlotID::FrameClassification) return Slots::FrameClassification::Slot::ID;
+
 	if(id == SlotID::FrameClassificationInitDispatch) return Slots::FrameClassificationInitDispatch::Slot::ID;
+
 	if(id == SlotID::ReflectionCombine) return Slots::ReflectionCombine::Slot::ID;
+
 	if(id == SlotID::WorkGraphTest) return Slots::WorkGraphTest::Slot::ID;
+
 	if(id == SlotID::WorkGR_ClassifyPixels_NodeEmulation) return Slots::WorkGR_ClassifyPixels_NodeEmulation::Slot::ID;
+
 	if(id == SlotID::WorkGR_Shadows_NodeEmulation) return Slots::WorkGR_Shadows_NodeEmulation::Slot::ID;
 	return -1;
 }

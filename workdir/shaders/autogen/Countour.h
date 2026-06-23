@@ -24,13 +24,12 @@ static _CB_Countour pass_Countour = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_Countour: register(b4, space4);
 #endif
-
 ConstantBuffer<Countour> CreateCountour()
 {
 	return ResourceDescriptorHeap[pass_Countour.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<Countour> countour_global = CreateCountour();
-ConstantBuffer<Countour> GetCountour(){ return countour_global; }
+ConstantBuffer<Countour> GetCountour() { return countour_global; }
 #endif

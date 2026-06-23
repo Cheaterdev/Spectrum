@@ -24,13 +24,12 @@ static _CB_DenoiserShadow_FilterLast pass_DenoiserShadow_FilterLast = { _hal_pus
 #else
 ConstantBuffer<CB> pass_DenoiserShadow_FilterLast: register(b5, space5);
 #endif
-
 ConstantBuffer<DenoiserShadow_FilterLast> CreateDenoiserShadow_FilterLast()
 {
 	return ResourceDescriptorHeap[pass_DenoiserShadow_FilterLast.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DenoiserShadow_FilterLast> denoiserShadow_FilterLast_global = CreateDenoiserShadow_FilterLast();
-ConstantBuffer<DenoiserShadow_FilterLast> GetDenoiserShadow_FilterLast(){ return denoiserShadow_FilterLast_global; }
+ConstantBuffer<DenoiserShadow_FilterLast> GetDenoiserShadow_FilterLast() { return denoiserShadow_FilterLast_global; }
 #endif

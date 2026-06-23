@@ -24,13 +24,12 @@ static _CB_DenoiserShadow_Filter pass_DenoiserShadow_Filter = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_DenoiserShadow_Filter: register(b4, space4);
 #endif
-
 ConstantBuffer<DenoiserShadow_Filter> CreateDenoiserShadow_Filter()
 {
 	return ResourceDescriptorHeap[pass_DenoiserShadow_Filter.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DenoiserShadow_Filter> denoiserShadow_Filter_global = CreateDenoiserShadow_Filter();
-ConstantBuffer<DenoiserShadow_Filter> GetDenoiserShadow_Filter(){ return denoiserShadow_Filter_global; }
+ConstantBuffer<DenoiserShadow_Filter> GetDenoiserShadow_Filter() { return denoiserShadow_Filter_global; }
 #endif

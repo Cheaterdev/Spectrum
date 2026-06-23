@@ -15,7 +15,6 @@ import :Autogen.Tables.Camera;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct FrameGraph_Debug_Texture3D
 	{
 		static constexpr SlotID ID = SlotID::FrameGraph_Debug_Texture3D;

@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct TextureRenderer :public DataHolder<TextureRenderer, SlotID::TextureRenderer, Table::TextureRenderer, DefaultLayout::Instance0>
 	{

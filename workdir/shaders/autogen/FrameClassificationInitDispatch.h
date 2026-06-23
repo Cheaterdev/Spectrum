@@ -24,13 +24,12 @@ static _CB_FrameClassificationInitDispatch pass_FrameClassificationInitDispatch 
 #else
 ConstantBuffer<CB> pass_FrameClassificationInitDispatch: register(b6, space6);
 #endif
-
 ConstantBuffer<FrameClassificationInitDispatch> CreateFrameClassificationInitDispatch()
 {
 	return ResourceDescriptorHeap[pass_FrameClassificationInitDispatch.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<FrameClassificationInitDispatch> frameClassificationInitDispatch_global = CreateFrameClassificationInitDispatch();
-ConstantBuffer<FrameClassificationInitDispatch> GetFrameClassificationInitDispatch(){ return frameClassificationInitDispatch_global; }
+ConstantBuffer<FrameClassificationInitDispatch> GetFrameClassificationInitDispatch() { return frameClassificationInitDispatch_global; }
 #endif

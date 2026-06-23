@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct DenoiserHistoryFix :public DataHolder<DenoiserHistoryFix, SlotID::DenoiserHistoryFix, Table::DenoiserHistoryFix, DefaultLayout::Instance2>
 	{

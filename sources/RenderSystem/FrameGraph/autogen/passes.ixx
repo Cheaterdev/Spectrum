@@ -27,6 +27,7 @@ export import "../defines.h";
 #include "pass/PSSM_Combine.h"
 #include "pass/PSSM_Global.h"
 #include "pass/RTXPass.h"
+#include "pass/RTXColorPass.h"
 #include "pass/PreScene.h"
 #include "pass/Profiler.h"
 #include "pass/CopyPrev.h"
@@ -69,6 +70,7 @@ export namespace Passes
 	using ::Passes::PSSM_Combine;
 	using ::Passes::PSSM_Global;
 	using ::Passes::RTXPass;
+	using ::Passes::RTXColorPass;
 	using ::Passes::PreScene;
 	using ::Passes::Profiler;
 	using ::Passes::CopyPrev;

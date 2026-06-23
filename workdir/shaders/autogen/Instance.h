@@ -24,13 +24,12 @@ static _CB_Instance pass_Instance = { _hal_push.s7 };
 #else
 ConstantBuffer<CB> pass_Instance: register(b7, space7);
 #endif
-
 ConstantBuffer<Instance> CreateInstance()
 {
 	return ResourceDescriptorHeap[pass_Instance.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<Instance> instance_global = CreateInstance();
-ConstantBuffer<Instance> GetInstance(){ return instance_global; }
+ConstantBuffer<Instance> GetInstance() { return instance_global; }
 #endif

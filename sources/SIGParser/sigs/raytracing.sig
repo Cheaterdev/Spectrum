@@ -151,6 +151,13 @@ RaytraceRaygen Indirect
 }
 
 [Bind = MainRTX]
+RaytraceRaygen ColorRTX
+{
+	[EntryPoint = ColorRTXRaygenShader]
+	raygen = raytracing;
+}
+
+[Bind = MainRTX]
 RaytracePass ShadowPass
 {
 	[EntryPoint = ShadowMissShader]
@@ -186,4 +193,12 @@ PassNode RTXPass
 	GBuffer gbuffer;
 	Texture RTXDebug;
 	ByteAdressBuffer WorkGraphBuffer;
+}
+
+[Static]
+[Compute]
+PassNode RTXColorPass
+{
+	StructuredBuffer<uint> scene;
+	Texture ColorOutput;
 }

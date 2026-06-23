@@ -24,13 +24,12 @@ static _CB_PSSMData pass_PSSMData = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_PSSMData: register(b5, space5);
 #endif
-
 ConstantBuffer<PSSMData> CreatePSSMData()
 {
 	return ResourceDescriptorHeap[pass_PSSMData.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<PSSMData> pSSMData_global = CreatePSSMData();
-ConstantBuffer<PSSMData> GetPSSMData(){ return pSSMData_global; }
+ConstantBuffer<PSSMData> GetPSSMData() { return pSSMData_global; }
 #endif

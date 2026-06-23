@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct BRDF :public DataHolder<BRDF, SlotID::BRDF, Table::BRDF, DefaultLayout::Instance0>
 	{

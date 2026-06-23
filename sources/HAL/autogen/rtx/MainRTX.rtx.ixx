@@ -17,10 +17,11 @@ export {
 #include "Shadow.h"
 #include "Reflection.h"
 #include "Indirect.h"
+#include "ColorRTX.h"
 #include "ShadowPass.h"
 #include "ColorPass.h"
 
-struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass>, Typelist<Shadow, Reflection, Indirect>>
+struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass>, Typelist<Shadow, Reflection, Indirect, ColorRTX>>
 {
 	using RTXPSO::RTXPSO;
 	static const constexpr Layouts global_sig = Layouts::DefaultLayout;

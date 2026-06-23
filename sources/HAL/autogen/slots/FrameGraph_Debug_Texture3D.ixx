@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct FrameGraph_Debug_Texture3D :public DataHolder<FrameGraph_Debug_Texture3D, SlotID::FrameGraph_Debug_Texture3D, Table::FrameGraph_Debug_Texture3D, DefaultLayout::Instance1>
 	{

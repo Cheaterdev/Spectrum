@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct DenoiserShadow_TileClassification :public DataHolder<DenoiserShadow_TileClassification, SlotID::DenoiserShadow_TileClassification, Table::DenoiserShadow_TileClassification, DefaultLayout::Instance0>
 	{

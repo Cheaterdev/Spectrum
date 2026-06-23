@@ -24,13 +24,12 @@ static _CB_FSR pass_FSR = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_FSR: register(b4, space4);
 #endif
-
 ConstantBuffer<FSR> CreateFSR()
 {
 	return ResourceDescriptorHeap[pass_FSR.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<FSR> fSR_global = CreateFSR();
-ConstantBuffer<FSR> GetFSR(){ return fSR_global; }
+ConstantBuffer<FSR> GetFSR() { return fSR_global; }
 #endif

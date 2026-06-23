@@ -24,13 +24,12 @@ static _CB_VoxelScreen pass_VoxelScreen = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_VoxelScreen: register(b5, space5);
 #endif
-
 ConstantBuffer<VoxelScreen> CreateVoxelScreen()
 {
 	return ResourceDescriptorHeap[pass_VoxelScreen.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<VoxelScreen> voxelScreen_global = CreateVoxelScreen();
-ConstantBuffer<VoxelScreen> GetVoxelScreen(){ return voxelScreen_global; }
+ConstantBuffer<VoxelScreen> GetVoxelScreen() { return voxelScreen_global; }
 #endif

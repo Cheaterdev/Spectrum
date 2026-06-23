@@ -24,13 +24,12 @@ static _CB_FrameClassification pass_FrameClassification = { _hal_push.s6 };
 #else
 ConstantBuffer<CB> pass_FrameClassification: register(b6, space6);
 #endif
-
 ConstantBuffer<FrameClassification> CreateFrameClassification()
 {
 	return ResourceDescriptorHeap[pass_FrameClassification.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<FrameClassification> frameClassification_global = CreateFrameClassification();
-ConstantBuffer<FrameClassification> GetFrameClassification(){ return frameClassification_global; }
+ConstantBuffer<FrameClassification> GetFrameClassification() { return frameClassification_global; }
 #endif

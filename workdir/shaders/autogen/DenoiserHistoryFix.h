@@ -24,13 +24,12 @@ static _CB_DenoiserHistoryFix pass_DenoiserHistoryFix = { _hal_push.s6 };
 #else
 ConstantBuffer<CB> pass_DenoiserHistoryFix: register(b6, space6);
 #endif
-
 ConstantBuffer<DenoiserHistoryFix> CreateDenoiserHistoryFix()
 {
 	return ResourceDescriptorHeap[pass_DenoiserHistoryFix.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DenoiserHistoryFix> denoiserHistoryFix_global = CreateDenoiserHistoryFix();
-ConstantBuffer<DenoiserHistoryFix> GetDenoiserHistoryFix(){ return denoiserHistoryFix_global; }
+ConstantBuffer<DenoiserHistoryFix> GetDenoiserHistoryFix() { return denoiserHistoryFix_global; }
 #endif

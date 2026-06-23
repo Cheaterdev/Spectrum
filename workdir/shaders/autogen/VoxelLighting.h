@@ -24,13 +24,12 @@ static _CB_VoxelLighting pass_VoxelLighting = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_VoxelLighting: register(b5, space5);
 #endif
-
 ConstantBuffer<VoxelLighting> CreateVoxelLighting()
 {
 	return ResourceDescriptorHeap[pass_VoxelLighting.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<VoxelLighting> voxelLighting_global = CreateVoxelLighting();
-ConstantBuffer<VoxelLighting> GetVoxelLighting(){ return voxelLighting_global; }
+ConstantBuffer<VoxelLighting> GetVoxelLighting() { return voxelLighting_global; }
 #endif

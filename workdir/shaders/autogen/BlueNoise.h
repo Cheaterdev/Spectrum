@@ -24,13 +24,12 @@ static _CB_BlueNoise pass_BlueNoise = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_BlueNoise: register(b4, space4);
 #endif
-
 ConstantBuffer<BlueNoise> CreateBlueNoise()
 {
 	return ResourceDescriptorHeap[pass_BlueNoise.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<BlueNoise> blueNoise_global = CreateBlueNoise();
-ConstantBuffer<BlueNoise> GetBlueNoise(){ return blueNoise_global; }
+ConstantBuffer<BlueNoise> GetBlueNoise() { return blueNoise_global; }
 #endif

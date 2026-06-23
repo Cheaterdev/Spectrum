@@ -15,7 +15,6 @@ import :Autogen.Tables.Camera;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct PSSMDataGlobal
 	{
 		static constexpr SlotID ID = SlotID::PSSMDataGlobal;

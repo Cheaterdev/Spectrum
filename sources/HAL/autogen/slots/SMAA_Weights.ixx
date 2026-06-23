@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct SMAA_Weights :public DataHolder<SMAA_Weights, SlotID::SMAA_Weights, Table::SMAA_Weights, DefaultLayout::Instance1>
 	{

@@ -24,13 +24,12 @@ static _CB_VoxelZero pass_VoxelZero = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_VoxelZero: register(b5, space5);
 #endif
-
 ConstantBuffer<VoxelZero> CreateVoxelZero()
 {
 	return ResourceDescriptorHeap[pass_VoxelZero.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<VoxelZero> voxelZero_global = CreateVoxelZero();
-ConstantBuffer<VoxelZero> GetVoxelZero(){ return voxelZero_global; }
+ConstantBuffer<VoxelZero> GetVoxelZero() { return voxelZero_global; }
 #endif

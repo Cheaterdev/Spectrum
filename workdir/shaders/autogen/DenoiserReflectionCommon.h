@@ -24,13 +24,12 @@ static _CB_DenoiserReflectionCommon pass_DenoiserReflectionCommon = { _hal_push.
 #else
 ConstantBuffer<CB> pass_DenoiserReflectionCommon: register(b4, space4);
 #endif
-
 ConstantBuffer<DenoiserReflectionCommon> CreateDenoiserReflectionCommon()
 {
 	return ResourceDescriptorHeap[pass_DenoiserReflectionCommon.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DenoiserReflectionCommon> denoiserReflectionCommon_global = CreateDenoiserReflectionCommon();
-ConstantBuffer<DenoiserReflectionCommon> GetDenoiserReflectionCommon(){ return denoiserReflectionCommon_global; }
+ConstantBuffer<DenoiserReflectionCommon> GetDenoiserReflectionCommon() { return denoiserReflectionCommon_global; }
 #endif

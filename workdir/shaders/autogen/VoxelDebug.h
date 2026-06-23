@@ -24,13 +24,12 @@ static _CB_VoxelDebug pass_VoxelDebug = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_VoxelDebug: register(b5, space5);
 #endif
-
 ConstantBuffer<VoxelDebug> CreateVoxelDebug()
 {
 	return ResourceDescriptorHeap[pass_VoxelDebug.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<VoxelDebug> voxelDebug_global = CreateVoxelDebug();
-ConstantBuffer<VoxelDebug> GetVoxelDebug(){ return voxelDebug_global; }
+ConstantBuffer<VoxelDebug> GetVoxelDebug() { return voxelDebug_global; }
 #endif

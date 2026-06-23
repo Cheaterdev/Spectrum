@@ -24,13 +24,12 @@ static _CB_DebugInfo pass_DebugInfo = { _hal_push.s3 };
 #else
 ConstantBuffer<CB> pass_DebugInfo: register(b3, space3);
 #endif
-
 ConstantBuffer<DebugInfo> CreateDebugInfo()
 {
 	return ResourceDescriptorHeap[pass_DebugInfo.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DebugInfo> debugInfo_global = CreateDebugInfo();
-ConstantBuffer<DebugInfo> GetDebugInfo(){ return debugInfo_global; }
+ConstantBuffer<DebugInfo> GetDebugInfo() { return debugInfo_global; }
 #endif

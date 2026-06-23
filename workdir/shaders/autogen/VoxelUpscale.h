@@ -24,13 +24,12 @@ static _CB_VoxelUpscale pass_VoxelUpscale = { _hal_push.s6 };
 #else
 ConstantBuffer<CB> pass_VoxelUpscale: register(b6, space6);
 #endif
-
 ConstantBuffer<VoxelUpscale> CreateVoxelUpscale()
 {
 	return ResourceDescriptorHeap[pass_VoxelUpscale.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<VoxelUpscale> voxelUpscale_global = CreateVoxelUpscale();
-ConstantBuffer<VoxelUpscale> GetVoxelUpscale(){ return voxelUpscale_global; }
+ConstantBuffer<VoxelUpscale> GetVoxelUpscale() { return voxelUpscale_global; }
 #endif

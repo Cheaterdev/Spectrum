@@ -24,8 +24,12 @@ static _CB_WorkGR_ClassifyPixels_NodeEmulation pass_WorkGR_ClassifyPixels_NodeEm
 #else
 ConstantBuffer<CB> pass_WorkGR_ClassifyPixels_NodeEmulation: register(b12, space12);
 #endif
-
 ConstantBuffer<WorkGR_ClassifyPixels_NodeEmulation> CreateWorkGR_ClassifyPixels_NodeEmulation()
 {
 	return ResourceDescriptorHeap[pass_WorkGR_ClassifyPixels_NodeEmulation.offset];
 }
+
+#ifndef NO_GLOBAL
+static const ConstantBuffer<WorkGR_ClassifyPixels_NodeEmulation> workGR_ClassifyPixels_NodeEmulation_global = CreateWorkGR_ClassifyPixels_NodeEmulation();
+ConstantBuffer<WorkGR_ClassifyPixels_NodeEmulation> GetWorkGR_ClassifyPixels_NodeEmulation() { return workGR_ClassifyPixels_NodeEmulation_global; }
+#endif

@@ -24,13 +24,12 @@ static _CB_GBufferDownsample pass_GBufferDownsample = { _hal_push.s6 };
 #else
 ConstantBuffer<CB> pass_GBufferDownsample: register(b6, space6);
 #endif
-
 ConstantBuffer<GBufferDownsample> CreateGBufferDownsample()
 {
 	return ResourceDescriptorHeap[pass_GBufferDownsample.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<GBufferDownsample> gBufferDownsample_global = CreateGBufferDownsample();
-ConstantBuffer<GBufferDownsample> GetGBufferDownsample(){ return gBufferDownsample_global; }
+ConstantBuffer<GBufferDownsample> GetGBufferDownsample() { return gBufferDownsample_global; }
 #endif

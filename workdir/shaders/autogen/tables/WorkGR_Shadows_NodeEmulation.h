@@ -7,10 +7,8 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "TileRecord.h"
-
 struct WorkGR_Shadows_NodeEmulation
 {
 	uint input; // ConsumeStructuredBuffer<TileRecord>
-
 	ConsumeStructuredBuffer<TileRecord> GetInput() { return ResourceDescriptorHeap[input]; }
 };

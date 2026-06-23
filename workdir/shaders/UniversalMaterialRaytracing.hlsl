@@ -106,39 +106,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 
 	
-	float3 lightDir = frame.GetSunDir();
-//[raypayload]   RayPayload   payload2 = payload.propagate();
-
-	float shadow = 0;
-	//if (payload2.recursion <= 1)
-	//{
-
-
-	//	float hit_rate = 0;
-	//	int samples = 1;// payload2.recursion < 2 ? 3 : 1;
-	//	for (int i = 0; i < samples; i++)
-	//	{
-	//		float3 dir = GetRandomDir(t.v.tc, lightDir, 0, i);
-
-	//		ShadowPayload payload_shadow = { false };
-
-	//		RayDesc ray;
-	//		ray.Origin = t.v.pos;
-	//		ray.Direction = dir;
-	//		ray.TMin = 0.00001;
-	//		ray.TMax = 10000.0;
-	//		ShadowPass(raytracing.GetScene(), ray, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, payload_shadow);
-
-	//		if (payload_shadow.hit)
-	//			hit_rate += 1.0f;
- 
-	//	}
-	//	shadow = 1.0 - hit_rate / samples;
-	//}
-	float3 my_color = color * (shadow)*saturate(dot(t.v.normal, lightDir));
-
-
-
-    payload.color = 0;
-    payload.dist = 1;
+	// debug: visualize world-space normals — if sphere appears, TLAS + hit shader work
+	payload.color = float4(abs(t.v.normal), 1.0);
+	payload.dist  = RayTCurrent();
 }

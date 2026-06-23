@@ -15,7 +15,6 @@ import :Autogen.Tables.RayCone;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct RayPayload
 	{
 		static constexpr SlotID ID = SlotID::RayPayload;

@@ -24,13 +24,12 @@ static _CB_PSSMConstants pass_PSSMConstants = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_PSSMConstants: register(b4, space4);
 #endif
-
 ConstantBuffer<PSSMConstants> CreatePSSMConstants()
 {
 	return ResourceDescriptorHeap[pass_PSSMConstants.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<PSSMConstants> pSSMConstants_global = CreatePSSMConstants();
-ConstantBuffer<PSSMConstants> GetPSSMConstants(){ return pSSMConstants_global; }
+ConstantBuffer<PSSMConstants> GetPSSMConstants() { return pSSMConstants_global; }
 #endif

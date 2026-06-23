@@ -24,13 +24,12 @@ static _CB_PickerBuffer pass_PickerBuffer = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_PickerBuffer: register(b4, space4);
 #endif
-
 ConstantBuffer<PickerBuffer> CreatePickerBuffer()
 {
 	return ResourceDescriptorHeap[pass_PickerBuffer.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<PickerBuffer> pickerBuffer_global = CreatePickerBuffer();
-ConstantBuffer<PickerBuffer> GetPickerBuffer(){ return pickerBuffer_global; }
+ConstantBuffer<PickerBuffer> GetPickerBuffer() { return pickerBuffer_global; }
 #endif

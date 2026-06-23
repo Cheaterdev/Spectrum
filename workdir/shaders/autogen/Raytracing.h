@@ -24,13 +24,12 @@ static _CB_Raytracing pass_Raytracing = { _hal_push.s10 };
 #else
 ConstantBuffer<CB> pass_Raytracing: register(b10, space10);
 #endif
-
 ConstantBuffer<Raytracing> CreateRaytracing()
 {
 	return ResourceDescriptorHeap[pass_Raytracing.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<Raytracing> raytracing_global = CreateRaytracing();
-ConstantBuffer<Raytracing> GetRaytracing(){ return raytracing_global; }
+ConstantBuffer<Raytracing> GetRaytracing() { return raytracing_global; }
 #endif

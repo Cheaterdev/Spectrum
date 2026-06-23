@@ -24,13 +24,12 @@ static _CB_GatherPipelineGlobal pass_GatherPipelineGlobal = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_GatherPipelineGlobal: register(b4, space4);
 #endif
-
 ConstantBuffer<GatherPipelineGlobal> CreateGatherPipelineGlobal()
 {
 	return ResourceDescriptorHeap[pass_GatherPipelineGlobal.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<GatherPipelineGlobal> gatherPipelineGlobal_global = CreateGatherPipelineGlobal();
-ConstantBuffer<GatherPipelineGlobal> GetGatherPipelineGlobal(){ return gatherPipelineGlobal_global; }
+ConstantBuffer<GatherPipelineGlobal> GetGatherPipelineGlobal() { return gatherPipelineGlobal_global; }
 #endif

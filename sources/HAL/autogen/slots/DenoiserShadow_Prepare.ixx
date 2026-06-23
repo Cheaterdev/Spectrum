@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct DenoiserShadow_Prepare :public DataHolder<DenoiserShadow_Prepare, SlotID::DenoiserShadow_Prepare, Table::DenoiserShadow_Prepare, DefaultLayout::Instance0>
 	{

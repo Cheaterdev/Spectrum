@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct PSSMConstants :public DataHolder<PSSMConstants, SlotID::PSSMConstants, Table::PSSMConstants, DefaultLayout::Instance0>
 	{

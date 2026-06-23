@@ -557,8 +557,7 @@ void MyRaygenShaderReflection()
 void MyMissShader([raypayload]inout
 RayPayload payload)
 {
-	payload.color = 0;
-	// CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()), 3);
+	payload.color = float4(0.0, 0.1, 0.4, 1.0); // debug: sky blue — rays dispatched but missed
 	payload.dist = 100000;
 }
 
@@ -577,6 +576,35 @@ void ShadowMissShader([raypayload] inout
 ShadowPayload payload)
 {
 	payload.hit = false;
+}
+
+
+// Primary-ray color pass: one ray per pixel from the camera, color + shadow
+// from the material closest-hit shader.  Output goes to VoxelOutput.noise
+// (same UAV slot the other raygens use), so RaytracingRays is not needed.
+[shader("raygeneration")]
+void ColorRTXRaygenShader()
+{
+	uint2 itc = DispatchRaysIndex().xy;
+
+	const Raytracing    raytracing   = CreateRaytracing();
+	const FrameInfo     frame        = CreateFrameInfo();
+	const VoxelOutput   voxel_output = CreateVoxelOutput();
+
+	float3 origin, direction;
+	GenerateCameraRay(itc, frame.GetCamera(), origin, direction);
+
+	[raypayload] RayPayload payload;
+	payload.init();
+
+	RayDesc ray;
+	ray.Origin    = origin;
+	ray.Direction = direction;
+	ray.TMin      = 0.01;
+	ray.TMax      = 10000.0;
+	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload);
+
+	voxel_output.GetNoise()[itc] = payload.color;
 }
 
 #endif // RAYTRACING_HLSL

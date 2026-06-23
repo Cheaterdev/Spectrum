@@ -24,13 +24,12 @@ static _CB_CopyTexture pass_CopyTexture = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_CopyTexture: register(b4, space4);
 #endif
-
 ConstantBuffer<CopyTexture> CreateCopyTexture()
 {
 	return ResourceDescriptorHeap[pass_CopyTexture.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<CopyTexture> copyTexture_global = CreateCopyTexture();
-ConstantBuffer<CopyTexture> GetCopyTexture(){ return copyTexture_global; }
+ConstantBuffer<CopyTexture> GetCopyTexture() { return copyTexture_global; }
 #endif

@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct DispatchParameters :public DataHolder<DispatchParameters, SlotID::DispatchParameters, Table::DispatchParameters, DefaultLayout::Instance2>
 	{

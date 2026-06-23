@@ -24,13 +24,12 @@ static _CB_VoxelInfo pass_VoxelInfo = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_VoxelInfo: register(b4, space4);
 #endif
-
 ConstantBuffer<VoxelInfo> CreateVoxelInfo()
 {
 	return ResourceDescriptorHeap[pass_VoxelInfo.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<VoxelInfo> voxelInfo_global = CreateVoxelInfo();
-ConstantBuffer<VoxelInfo> GetVoxelInfo(){ return voxelInfo_global; }
+ConstantBuffer<VoxelInfo> GetVoxelInfo() { return voxelInfo_global; }
 #endif

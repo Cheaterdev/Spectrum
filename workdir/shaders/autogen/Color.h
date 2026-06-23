@@ -24,13 +24,12 @@ static _CB_Color pass_Color = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_Color: register(b4, space4);
 #endif
-
 ConstantBuffer<Color> CreateColor()
 {
 	return ResourceDescriptorHeap[pass_Color.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<Color> color_global = CreateColor();
-ConstantBuffer<Color> GetColor(){ return color_global; }
+ConstantBuffer<Color> GetColor() { return color_global; }
 #endif

@@ -24,13 +24,12 @@ static _CB_LineRender pass_LineRender = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_LineRender: register(b4, space4);
 #endif
-
 ConstantBuffer<LineRender> CreateLineRender()
 {
 	return ResourceDescriptorHeap[pass_LineRender.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<LineRender> lineRender_global = CreateLineRender();
-ConstantBuffer<LineRender> GetLineRender(){ return lineRender_global; }
+ConstantBuffer<LineRender> GetLineRender() { return lineRender_global; }
 #endif

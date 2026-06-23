@@ -24,13 +24,12 @@ static _CB_ColorRect pass_ColorRect = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_ColorRect: register(b4, space4);
 #endif
-
 ConstantBuffer<ColorRect> CreateColorRect()
 {
 	return ResourceDescriptorHeap[pass_ColorRect.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<ColorRect> colorRect_global = CreateColorRect();
-ConstantBuffer<ColorRect> GetColorRect(){ return colorRect_global; }
+ConstantBuffer<ColorRect> GetColorRect() { return colorRect_global; }
 #endif

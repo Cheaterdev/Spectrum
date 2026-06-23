@@ -32,6 +32,7 @@ export
 		PSSM_Combine,
 		PSSM_Global,
 		RTXPass,
+		RTXColorPass,
 		PreScene,
 		Profiler,
 		CopyPrev,
@@ -72,6 +73,7 @@ export
 		Library::PSSM_Combine PSSM_Combine;
 		Library::PSSM_Global PSSM_Global;
 		Library::RTXPass RTXPass;
+		Library::RTXColorPass RTXColorPass;
 		Library::PreScene PreScene;
 		Library::Profiler Profiler;
 		Library::CopyPrev CopyPrev;

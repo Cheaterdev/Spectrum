@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct RaytracingRays :public DataHolder<RaytracingRays, SlotID::RaytracingRays, Table::RaytracingRays, DefaultLayout::Instance2>
 	{

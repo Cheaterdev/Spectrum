@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct DenoiserReflectionPrefilter :public DataHolder<DenoiserReflectionPrefilter, SlotID::DenoiserReflectionPrefilter, Table::DenoiserReflectionPrefilter, DefaultLayout::Instance1>
 	{

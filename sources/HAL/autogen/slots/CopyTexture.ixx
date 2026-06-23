@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct CopyTexture :public DataHolder<CopyTexture, SlotID::CopyTexture, Table::CopyTexture, DefaultLayout::Instance0>
 	{

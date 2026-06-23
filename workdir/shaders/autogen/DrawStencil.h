@@ -24,13 +24,12 @@ static _CB_DrawStencil pass_DrawStencil = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_DrawStencil: register(b4, space4);
 #endif
-
 ConstantBuffer<DrawStencil> CreateDrawStencil()
 {
 	return ResourceDescriptorHeap[pass_DrawStencil.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DrawStencil> drawStencil_global = CreateDrawStencil();
-ConstantBuffer<DrawStencil> GetDrawStencil(){ return drawStencil_global; }
+ConstantBuffer<DrawStencil> GetDrawStencil() { return drawStencil_global; }
 #endif

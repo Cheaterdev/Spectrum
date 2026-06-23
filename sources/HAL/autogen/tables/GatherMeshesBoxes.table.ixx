@@ -15,7 +15,6 @@ import :Autogen.Tables.BoxInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct GatherMeshesBoxes
 	{
 		static constexpr SlotID ID = SlotID::GatherMeshesBoxes;

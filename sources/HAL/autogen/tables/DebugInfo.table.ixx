@@ -15,7 +15,6 @@ import :Autogen.Tables.DebugStruct;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct DebugInfo
 	{
 		static constexpr SlotID ID = SlotID::DebugInfo;

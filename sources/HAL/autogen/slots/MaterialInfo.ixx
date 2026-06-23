@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct MaterialInfo :public DataHolder<MaterialInfo, SlotID::MaterialInfo, Table::MaterialInfo, DefaultLayout::MaterialData>
 	{

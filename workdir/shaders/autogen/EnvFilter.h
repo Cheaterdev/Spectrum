@@ -24,13 +24,12 @@ static _CB_EnvFilter pass_EnvFilter = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_EnvFilter: register(b5, space5);
 #endif
-
 ConstantBuffer<EnvFilter> CreateEnvFilter()
 {
 	return ResourceDescriptorHeap[pass_EnvFilter.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<EnvFilter> envFilter_global = CreateEnvFilter();
-ConstantBuffer<EnvFilter> GetEnvFilter(){ return envFilter_global; }
+ConstantBuffer<EnvFilter> GetEnvFilter() { return envFilter_global; }
 #endif

@@ -24,13 +24,12 @@ static _CB_DenoiserShadow_TileClassification pass_DenoiserShadow_TileClassificat
 #else
 ConstantBuffer<CB> pass_DenoiserShadow_TileClassification: register(b4, space4);
 #endif
-
 ConstantBuffer<DenoiserShadow_TileClassification> CreateDenoiserShadow_TileClassification()
 {
 	return ResourceDescriptorHeap[pass_DenoiserShadow_TileClassification.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DenoiserShadow_TileClassification> denoiserShadow_TileClassification_global = CreateDenoiserShadow_TileClassification();
-ConstantBuffer<DenoiserShadow_TileClassification> GetDenoiserShadow_TileClassification(){ return denoiserShadow_TileClassification_global; }
+ConstantBuffer<DenoiserShadow_TileClassification> GetDenoiserShadow_TileClassification() { return denoiserShadow_TileClassification_global; }
 #endif

@@ -24,13 +24,12 @@ static _CB_VoxelOutput pass_VoxelOutput = { _hal_push.s6 };
 #else
 ConstantBuffer<CB> pass_VoxelOutput: register(b6, space6);
 #endif
-
 ConstantBuffer<VoxelOutput> CreateVoxelOutput()
 {
 	return ResourceDescriptorHeap[pass_VoxelOutput.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<VoxelOutput> voxelOutput_global = CreateVoxelOutput();
-ConstantBuffer<VoxelOutput> GetVoxelOutput(){ return voxelOutput_global; }
+ConstantBuffer<VoxelOutput> GetVoxelOutput() { return voxelOutput_global; }
 #endif

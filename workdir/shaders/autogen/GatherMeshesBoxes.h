@@ -24,13 +24,12 @@ static _CB_GatherMeshesBoxes pass_GatherMeshesBoxes = { _hal_push.s5 };
 #else
 ConstantBuffer<CB> pass_GatherMeshesBoxes: register(b5, space5);
 #endif
-
 ConstantBuffer<GatherMeshesBoxes> CreateGatherMeshesBoxes()
 {
 	return ResourceDescriptorHeap[pass_GatherMeshesBoxes.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<GatherMeshesBoxes> gatherMeshesBoxes_global = CreateGatherMeshesBoxes();
-ConstantBuffer<GatherMeshesBoxes> GetGatherMeshesBoxes(){ return gatherMeshesBoxes_global; }
+ConstantBuffer<GatherMeshesBoxes> GetGatherMeshesBoxes() { return gatherMeshesBoxes_global; }
 #endif

@@ -24,13 +24,12 @@ static _CB_GBufferQuality pass_GBufferQuality = { _hal_push.s6 };
 #else
 ConstantBuffer<CB> pass_GBufferQuality: register(b6, space6);
 #endif
-
 ConstantBuffer<GBufferQuality> CreateGBufferQuality()
 {
 	return ResourceDescriptorHeap[pass_GBufferQuality.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<GBufferQuality> gBufferQuality_global = CreateGBufferQuality();
-ConstantBuffer<GBufferQuality> GetGBufferQuality(){ return gBufferQuality_global; }
+ConstantBuffer<GBufferQuality> GetGBufferQuality() { return gBufferQuality_global; }
 #endif

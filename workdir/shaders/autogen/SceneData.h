@@ -24,13 +24,12 @@ static _CB_SceneData pass_SceneData = { _hal_push.s1 };
 #else
 ConstantBuffer<CB> pass_SceneData: register(b1, space1);
 #endif
-
 ConstantBuffer<SceneData> CreateSceneData()
 {
 	return ResourceDescriptorHeap[pass_SceneData.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<SceneData> sceneData_global = CreateSceneData();
-ConstantBuffer<SceneData> GetSceneData(){ return sceneData_global; }
+ConstantBuffer<SceneData> GetSceneData() { return sceneData_global; }
 #endif

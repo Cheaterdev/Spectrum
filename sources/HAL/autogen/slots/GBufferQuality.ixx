@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct GBufferQuality :public DataHolder<GBufferQuality, SlotID::GBufferQuality, Table::GBufferQuality, DefaultLayout::Instance2>
 	{

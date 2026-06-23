@@ -15,7 +15,6 @@ import :Autogen.Tables.FSRConstants;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct FSR
 	{
 		static constexpr SlotID ID = SlotID::FSR;

@@ -15,7 +15,6 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct WorkGraphTest
 	{
 		static constexpr SlotID ID = SlotID::WorkGraphTest;

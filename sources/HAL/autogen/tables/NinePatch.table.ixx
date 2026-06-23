@@ -15,7 +15,6 @@ import :Autogen.Tables.vertex_input;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct NinePatch
 	{
 		static constexpr SlotID ID = SlotID::NinePatch;

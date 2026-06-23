@@ -8,6 +8,7 @@
 
 #include "../tables/GraphInput.h"
 #include "../tables/TileRecord.h"
+#include "../tables/TileRecord.h"
 
 #ifdef WORKGRAPH_EMULATION
 // ============================================================
@@ -67,6 +68,7 @@ struct WGEmul_OutRecords_TileRecord {
 
 
 // Recover original 3D group ID from YZ-chunked dispatch (entry broadcasting node only)
+
 uint3 WG_GetGroupID(uint3 rawGroupID)
 {
     uint yz_linear = CreateWorkGR_ClassifyPixels_NodeEmulation().GetYZBase() + rawGroupID.y;
@@ -89,8 +91,7 @@ uint3 WG_GetGroupID(uint3 rawGroupID)
 // Node output parameter macros (native: NodeOutput parameters with MaxRecords)
 
 #define WG_NODE_OUTPUT_ClassifyPixels_Node , [MaxRecords(64)] NodeOutput<TileRecord> Shadows_Node
-
-#define WG_NODE_OUTPUT_Shadows_Node
+#define WG_NODE_OUTPUT_Shadows_Node 
 
 // Node function attribute macros (native: full WorkGraph attributes)
 #define NODE_ClassifyPixels_Node [Shader("node")][NodeLaunch("broadcasting")][NodeIsProgramEntry][NodeMaxDispatchGrid(256,64,64)][numthreads(64,1,1)] void ClassifyPixels_Node

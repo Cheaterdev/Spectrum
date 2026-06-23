@@ -15,7 +15,6 @@ import :Autogen.Tables.mesh_vertex_input;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct Triangle
 	{
 		static constexpr SlotID ID = SlotID::Triangle;

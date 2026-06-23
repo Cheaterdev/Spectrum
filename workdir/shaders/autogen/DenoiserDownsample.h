@@ -24,13 +24,12 @@ static _CB_DenoiserDownsample pass_DenoiserDownsample = { _hal_push.s6 };
 #else
 ConstantBuffer<CB> pass_DenoiserDownsample: register(b6, space6);
 #endif
-
 ConstantBuffer<DenoiserDownsample> CreateDenoiserDownsample()
 {
 	return ResourceDescriptorHeap[pass_DenoiserDownsample.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<DenoiserDownsample> denoiserDownsample_global = CreateDenoiserDownsample();
-ConstantBuffer<DenoiserDownsample> GetDenoiserDownsample(){ return denoiserDownsample_global; }
+ConstantBuffer<DenoiserDownsample> GetDenoiserDownsample() { return denoiserDownsample_global; }
 #endif

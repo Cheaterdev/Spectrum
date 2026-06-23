@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct ReflectionCombine :public DataHolder<ReflectionCombine, SlotID::ReflectionCombine, Table::ReflectionCombine, DefaultLayout::Instance0>
 	{

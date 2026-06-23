@@ -15,7 +15,6 @@ import :Autogen.Tables.AABB;
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct node_data
 	{
 		static constexpr SlotID ID = SlotID::node_data;

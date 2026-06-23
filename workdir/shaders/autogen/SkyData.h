@@ -24,13 +24,12 @@ static _CB_SkyData pass_SkyData = { _hal_push.s4 };
 #else
 ConstantBuffer<CB> pass_SkyData: register(b4, space4);
 #endif
-
 ConstantBuffer<SkyData> CreateSkyData()
 {
 	return ResourceDescriptorHeap[pass_SkyData.offset];
 }
-			
+
 #ifndef NO_GLOBAL
 static const ConstantBuffer<SkyData> skyData_global = CreateSkyData();
-ConstantBuffer<SkyData> GetSkyData(){ return skyData_global; }
+ConstantBuffer<SkyData> GetSkyData() { return skyData_global; }
 #endif

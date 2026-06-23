@@ -13,7 +13,7 @@ import :Types;
 import :Enums;
 import :Slots;
 
-export namespace Slots 
+export namespace Slots
 {
 	struct FrameInfo :public DataHolder<FrameInfo, SlotID::FrameInfo, Table::FrameInfo, FrameLayout::CameraData>
 	{

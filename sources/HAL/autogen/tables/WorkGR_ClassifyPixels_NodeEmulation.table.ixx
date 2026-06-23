@@ -13,11 +13,9 @@ import :HLSL;
 import :Enums;
 import :Autogen.Tables.GraphInput;
 import :Autogen.Tables.TileRecord;
-
 export namespace Table
 {
 	#pragma pack(push, 1)
-
 	struct WorkGR_ClassifyPixels_NodeEmulation
 	{
 		static constexpr SlotID ID = SlotID::WorkGR_ClassifyPixels_NodeEmulation;
@@ -41,12 +39,15 @@ export namespace Table
 			uint Shadows_Node; // AppendStructuredBuffer<TileRecord>
 			GraphInput::Compiled graphInput; // GraphInput
 
+			
 			private:
 			SERIALIZE()
 			{
 				ar& NVP(graphInput);
 				ar& NVP(YZBase);
 			}
+
+
 		};
 
 		static std::string get_typename()
@@ -59,6 +60,8 @@ export namespace Table
 			ar& NVP(graphInput);
 			ar& NVP(YZBase);
 		}
+
 	};
 	#pragma pack(pop)
 }
+
