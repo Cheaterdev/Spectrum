@@ -35,7 +35,7 @@ struct WorkGR_ClassifyPixels_NodeEmulation
 [Bind = DefaultLayout::WorkGR_Shadows_NodeEmulation]
 struct WorkGR_Shadows_NodeEmulation
 {
-	ConsumeStructuredBuffer<TileRecord> input;
+	ConsumeStructuredBuffer<TileRecord> tiles;
 }
 
 [ExcludeVulkan] WorkgraphPSO WorkGR

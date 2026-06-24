@@ -188,10 +188,10 @@ RaytracePass ColorPass
 
 [Static]
 [Compute]
-PassNode RTXPass
+PassNode RTXShadow
 {
 	GBuffer gbuffer;
-	Texture RTXDebug;
+	Texture ShadowMask;
 	ByteAdressBuffer WorkGraphBuffer;
 }
 

@@ -1414,7 +1414,7 @@ namespace FrameGraph
 
 
 	//					if (debug)
-//res.resource->debug_transitions = info->name=="RTXDebug"; // TODO: move everywhere		
+//res.resource->debug_transitions = info->name=="ShadowMask"; // TODO: move everywhere		
 
 
 						res.resource->set_name(info->name);

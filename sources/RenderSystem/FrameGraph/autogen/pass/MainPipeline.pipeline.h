@@ -14,7 +14,7 @@
 #include "CubeSky.h"
 #include "CubeMapDownsample.h"
 #include "CubeMapEnviromentProcessor.h"
-#include "RTXPass.h"
+#include "RTXShadow.h"
 #include "Lighting.h"
 #include "Mipmapping.h"
 #include "ResultCreation.h"
@@ -77,7 +77,7 @@ public:
 		Passes::CubeSky::Name,
 		Passes::CubeMapDownsample::Name,
 		Passes::CubeMapEnviromentProcessor::Name,
-		Passes::RTXPass::Name,
+		Passes::RTXShadow::Name,
 		Passes::Lighting::Name,
 		Passes::Mipmapping::Name,
 		Passes::ResultCreation::Name,
@@ -132,7 +132,7 @@ public:
 		L"sky_cubemap",
 		L"sky_cubemap_filtered",
 		L"sky_cubemap_filtered_diffuse",
-		L"RTXDebug",
+		L"ShadowMask",
 		L"WorkGraphBuffer",
 		L"VoxelLighted",
 		L"ResultTexture",
@@ -190,7 +190,7 @@ public:
 			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, cubeSky.flags);
 		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, PassDefault<Passes::CubeMapDownsample>::flags);
 		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, PassDefault<Passes::CubeMapEnviromentProcessor>::flags);
-		graph.add_library_pass<Passes::RTXPass>(PassDefault<Passes::RTXPass>::setup, PassDefault<Passes::RTXPass>::render, PassDefault<Passes::RTXPass>::flags);
+		graph.add_library_pass<Passes::RTXShadow>(PassDefault<Passes::RTXShadow>::setup, PassDefault<Passes::RTXShadow>::render, PassDefault<Passes::RTXShadow>::flags);
 		if (lighting.setup_func)
 			graph.add_library_pass<Passes::Lighting>(lighting.setup_func, lighting.render_func, lighting.flags);
 		if (mipmapping.setup_func)

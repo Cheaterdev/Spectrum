@@ -137,7 +137,7 @@ PassNode PSSM_Combine
 	StructuredBuffer<Camera> PSSM_Cameras;
 	GBuffer gbuffer;
 	Texture LightMask;
-	Texture RTXDebug;	
+	Texture ShadowMask;	
 	Texture ResultTexture;
 }
 

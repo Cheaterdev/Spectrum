@@ -70,7 +70,7 @@ struct ShadowsFlowNode : FlowGraph::GraphNode<WGContext>
 		    tile_buf.get_counter_buffer().get(), tile_buf.get_counter_offset(), 4);
 
 		Slots::WorkGR_Shadows_NodeEmulation slot;
-		slot.GetInput() = tile_buf.consumeStructuredBuffer;
+		slot.GetTiles() = tile_buf.consumeStructuredBuffer;
 
 		ctx->compute.set_pipeline<PSOS::WorkGR_Shadows_Node>();
 		ctx->compute.set(slot);
@@ -140,10 +140,10 @@ void PassDefault<Passes::Profiler>::render(
 	Passes::Profiler::Context&, FrameGraph::FrameContext&) {}
 
 
-// ---- RTXPass ----------------------------------------------------------------
+// ---- RTXShadow --------------------------------------------------------------
 
-bool PassDefault<Passes::RTXPass>::setup(
-    Passes::RTXPass::Context& data, FrameGraph::TaskBuilder& builder)
+bool PassDefault<Passes::RTXShadow>::setup(
+    Passes::RTXShadow::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	auto& frame = builder.graph->get_context<ViewportInfo>();
 	auto  size  = frame.frame_size;
@@ -156,7 +156,7 @@ bool PassDefault<Passes::RTXPass>::setup(
 	builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
 	builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::None);
 
-	builder.create(data.RTXDebug,
+	builder.create(data.ShadowMask,
 	    { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
 	    ResourceFlags::UnorderedAccess);
 
@@ -175,8 +175,8 @@ bool PassDefault<Passes::RTXPass>::setup(
 	return true;
 }
 
-void PassDefault<Passes::RTXPass>::render(
-    Passes::RTXPass::Context& data, FrameGraph::FrameContext& context)
+void PassDefault<Passes::RTXShadow>::render(
+    Passes::RTXShadow::Context& data, FrameGraph::FrameContext& context)
 {
 	auto& scene_ctx  = context.graph->get_context<SceneInfo>();
 	auto& camera_ctx = context.graph->get_context<CameraInfo>();
@@ -184,8 +184,8 @@ void PassDefault<Passes::RTXPass>::render(
 
 	auto& compute = context.get_list()->get_compute();
 
-	if (data.RTXDebug.is_new())
-		context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
+	if (data.ShadowMask.is_new())
+		context.get_list()->clear_uav(data.ShadowMask->rwTexture2D, vec4(0, 0, 0, 0));
 
 	//context.graph->set_slot(SlotID::VoxelInfo, compute);
 	context.graph->set_slot(SlotID::FrameInfo, compute);
@@ -209,22 +209,22 @@ void PassDefault<Passes::RTXPass>::render(
 
 	Bend::DispatchList res = Bend::BuildDispatchList(
 	    { light.x, light.y, light.z, light.w },
-	    { data.RTXDebug->get_size().x, data.RTXDebug->get_size().y },
+	    { data.ShadowMask->get_size().x, data.ShadowMask->get_size().y },
 	    { 0, 0 },
-	    { data.RTXDebug->get_size().x, data.RTXDebug->get_size().y },
+	    { data.ShadowMask->get_size().x, data.ShadowMask->get_size().y },
 	    false, 64);
 
 	Slots::DispatchParameters dispatchParameters;
 	dispatchParameters.GetDepthTexture()    = gbuffer.depth.texture2D;
-	dispatchParameters.GetOutputTexture()   = data.RTXDebug->rwTexture2D;
+	dispatchParameters.GetOutputTexture()   = data.ShadowMask->rwTexture2D;
 	dispatchParameters.GetLightCoordinate() = float4(
 	    res.LightCoordinate_Shader[0], res.LightCoordinate_Shader[1],
 	    res.LightCoordinate_Shader[2], res.LightCoordinate_Shader[3]);
 	dispatchParameters.FarDepthValue       = 0;
 	dispatchParameters.NearDepthValue      = 1;
 	dispatchParameters.InvDepthTextureSize = float2(
-	    1.0f / data.RTXDebug->get_size().x,
-	    1.0f / data.RTXDebug->get_size().y);
+	    1.0f / data.ShadowMask->get_size().x,
+	    1.0f / data.ShadowMask->get_size().y);
 	compute.set(dispatchParameters);
 
 	if (RenderSystem::get().device().get_properties().work_graph)

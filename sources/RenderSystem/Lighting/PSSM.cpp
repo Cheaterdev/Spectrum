@@ -264,8 +264,8 @@ PSSM::PSSM()
 		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::RenderTarget);
 		builder.need(data.PSSM_Cameras,  FrameGraph::ResourceFlags::PixelRead);
 
-		if (builder.exists(data.RTXDebug))
-			builder.need(data.RTXDebug,  FrameGraph::ResourceFlags::PixelRead);
+		if (builder.exists(data.ShadowMask))
+			builder.need(data.ShadowMask,  FrameGraph::ResourceFlags::PixelRead);
 		else
 			builder.need(data.LightMask, FrameGraph::ResourceFlags::PixelRead);
 
@@ -296,8 +296,8 @@ PSSM::PSSM()
 		{
 			Slots::PSSMLighting lighting;
 			gbuffer.SetTable(lighting.GetGbuffer());
-			if (data.RTXDebug)
-				lighting.GetLight_mask() = data.RTXDebug->texture2D;
+			if (data.ShadowMask)
+				lighting.GetLight_mask() = data.ShadowMask->texture2D;
 			else
 				lighting.GetLight_mask() = data.LightMask->texture2D;
 			graphics.set(lighting);

@@ -26,7 +26,7 @@ export import "../defines.h";
 #include "pass/PSSM_GenerateMask.h"
 #include "pass/PSSM_Combine.h"
 #include "pass/PSSM_Global.h"
-#include "pass/RTXPass.h"
+#include "pass/RTXShadow.h"
 #include "pass/RTXColorPass.h"
 #include "pass/PreScene.h"
 #include "pass/Profiler.h"
@@ -69,7 +69,7 @@ export namespace Passes
 	using ::Passes::PSSM_GenerateMask;
 	using ::Passes::PSSM_Combine;
 	using ::Passes::PSSM_Global;
-	using ::Passes::RTXPass;
+	using ::Passes::RTXShadow;
 	using ::Passes::RTXColorPass;
 	using ::Passes::PreScene;
 	using ::Passes::Profiler;

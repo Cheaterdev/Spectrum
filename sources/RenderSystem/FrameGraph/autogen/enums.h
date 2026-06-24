@@ -31,7 +31,7 @@ export
 		PSSM_GenerateMask,
 		PSSM_Combine,
 		PSSM_Global,
-		RTXPass,
+		RTXShadow,
 		RTXColorPass,
 		PreScene,
 		Profiler,
@@ -72,7 +72,7 @@ export
 		Library::PSSM_GenerateMask PSSM_GenerateMask;
 		Library::PSSM_Combine PSSM_Combine;
 		Library::PSSM_Global PSSM_Global;
-		Library::RTXPass RTXPass;
+		Library::RTXShadow RTXShadow;
 		Library::RTXColorPass RTXColorPass;
 		Library::PreScene PreScene;
 		Library::Profiler Profiler;

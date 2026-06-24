@@ -43,13 +43,13 @@ struct PassDefault<Passes::ResultCreation>
 
 
 template<>
-struct PassDefault<Passes::RTXPass>
+struct PassDefault<Passes::RTXShadow>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
 
-	static bool setup(Passes::RTXPass::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::RTXPass::Context& data, FrameGraph::FrameContext& context);
+	static bool setup(Passes::RTXShadow::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::RTXShadow::Context& data, FrameGraph::FrameContext& context);
 };
 
 

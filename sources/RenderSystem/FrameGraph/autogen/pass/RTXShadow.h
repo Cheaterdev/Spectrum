@@ -6,36 +6,25 @@
 // ============================================================================
 #pragma once
 #include "../PassNodeBase.h"
-
+#include "GBuffer.h"
 using namespace FrameGraph;
 namespace Passes
 {
 
-class ShadowDenoiser_Filter : public PassNodeBase
+class RTXShadow : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
-
-		Handlers::StructuredBuffer<uint> H(ShadowDenoiser_TileMetaBuffer);
-
+		GBuffer gbuffer;
 
 		Handlers::Texture H(ShadowMask);
 
 
-		Handlers::Texture H(GBuffer_Depth);
+		Handlers::ByteAdressBuffer H(WorkGraphBuffer);
 
-
-		Handlers::Texture H(GBuffer_Normals);
-
-
-		Handlers::Texture H(ShadowDenoiser_Scratch);
-
-
-		Handlers::Texture H(ShadowDenoiser_Scratch2);
-
-		static inline const wchar_t* const resource_names[] = {		L"ShadowDenoiser_TileMetaBuffer",		L"ShadowMask",		L"GBuffer_Depth",		L"GBuffer_Normals",		L"ShadowDenoiser_Scratch",		L"ShadowDenoiser_Scratch2",
+		static inline const wchar_t* const resource_names[] = {		L"GBuffer_Albedo",		L"GBuffer_Normals",		L"GBuffer_Depth",		L"GBuffer_Specular",		L"GBuffer_Speed",		L"GBuffer_DepthMips",		L"GBuffer_Quality",		L"GBuffer_TempColor",		L"GBuffer_NormalsPrev",		L"GBuffer_SpecularPrev",		L"GBuffer_DepthPrev",		L"GBuffer_HiZ",		L"GBuffer_HiZ_UAV",		L"ShadowMask",		L"WorkGraphBuffer",
 		};
 		static constexpr uint32_t resource_count = std::size(resource_names);
 	};
@@ -46,9 +35,9 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"ShadowDenoiser_Filter";
+	static inline const wchar_t* Name = L"RTXShadow";
 
-//	static constexpr PassID ID = PassID::ShadowDenoiser_Filter;
+//	static constexpr PassID ID = PassID::RTXShadow;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
@@ -58,7 +47,7 @@ public:
 	setup_func_type setup_func;
 	render_func_type render_func;
 
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
 };
 
 }

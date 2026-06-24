@@ -29,7 +29,7 @@ Pipeline MainPipeline
 
 	# voxel lighting (generate_light)
 	
-	RTXPass;
+	RTXShadow;
 	Lighting;
 	Mipmapping;
 

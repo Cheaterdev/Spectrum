@@ -18,12 +18,12 @@ public:
 	{
 
 
-		Handlers::Texture H(RTXDebug);
+		Handlers::Texture H(ShadowMask);
 
 
 		Handlers::StructuredBuffer<uint> H(ShadowDenoiser_TileBuffer);
 
-		static inline const wchar_t* const resource_names[] = {		L"RTXDebug",		L"ShadowDenoiser_TileBuffer",
+		static inline const wchar_t* const resource_names[] = {		L"ShadowMask",		L"ShadowDenoiser_TileBuffer",
 		};
 		static constexpr uint32_t resource_count = std::size(resource_names);
 	};

@@ -102,7 +102,7 @@ ComputePSO DenoiserShadow_Filter
 
 PassNode ShadowDenoiser_Prepare
 {
-	Texture RTXDebug;
+	Texture ShadowMask;
 	StructuredBuffer<uint> ShadowDenoiser_TileBuffer;
 }
 
@@ -123,7 +123,7 @@ PassNode ShadowDenoiser_TileClassification
 PassNode ShadowDenoiser_Filter
 {
 	StructuredBuffer<uint> ShadowDenoiser_TileMetaBuffer;
-	Texture RTXDebug;
+	Texture ShadowMask;
 	Texture GBuffer_Depth;
 	Texture GBuffer_Normals;
 	Texture ShadowDenoiser_Scratch;

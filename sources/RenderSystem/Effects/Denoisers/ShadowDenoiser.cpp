@@ -43,7 +43,7 @@ void ShadowDenoiser::generate(Graph& graph)
 
 	{
 		graph.add_library_pass<Passes::ShadowDenoiser_Prepare>([this, &graph, tileCount](auto& data, TaskBuilder& builder) {
-			builder.need(data.RTXDebug, ResourceFlags::ComputeRead);
+			builder.need(data.ShadowMask, ResourceFlags::ComputeRead);
 			builder.create(data.ShadowDenoiser_TileBuffer, { tileCount }, ResourceFlags::UnorderedAccess);
 
 			return true;
@@ -56,7 +56,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					Slots::DenoiserShadow_Prepare prepare_data;
 
 					prepare_data.GetBufferDimensions() = size;
-					prepare_data.GetT2d_hitMaskResults() = data.RTXDebug->texture2D;
+					prepare_data.GetT2d_hitMaskResults() = data.ShadowMask->texture2D;
 					prepare_data.GetRwsb_shadowMask() = data.ShadowDenoiser_TileBuffer->rwStructuredBuffer;
 					compute.set(prepare_data);
 				}
@@ -143,7 +143,7 @@ void ShadowDenoiser::generate(Graph& graph)
 	{
 		graph.add_library_pass<Passes::ShadowDenoiser_Filter>([this, &graph, tileCount, size](auto& data, TaskBuilder& builder) {
 		//	builder.need(data.ShadowDenoiser_TileBuffer, ResourceFlags::ComputeRead);
-			builder.need(data.RTXDebug, ResourceFlags::UnorderedAccess);
+			builder.need(data.ShadowMask, ResourceFlags::UnorderedAccess);
 			builder.need(data.GBuffer_Depth, ResourceFlags::ComputeRead);
 			builder.need(data.GBuffer_Normals, ResourceFlags::ComputeRead);
 
@@ -205,7 +205,7 @@ void ShadowDenoiser::generate(Graph& graph)
 
 					Slots::DenoiserShadow_FilterLast filter_data;
 					filter_data.GetRqt2d_input() = data.ShadowDenoiser_Scratch2->texture2D;
-					filter_data.GetRwt2d_output() = data.RTXDebug->rwTexture2D;
+					filter_data.GetRwt2d_output() = data.ShadowMask->rwTexture2D;
 					compute.set(filter_data);
 
 					compute.dispatch(uint3(size, 1));

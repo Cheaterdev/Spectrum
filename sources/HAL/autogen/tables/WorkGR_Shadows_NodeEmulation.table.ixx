@@ -18,17 +18,17 @@ export namespace Table
 	struct WorkGR_Shadows_NodeEmulation
 	{
 		static constexpr SlotID ID = SlotID::WorkGR_Shadows_NodeEmulation;
-		HLSL::ConsumeStructuredBuffer<TileRecord> input;
-		HLSL::ConsumeStructuredBuffer<TileRecord>& GetInput() { return input; }
+		HLSL::ConsumeStructuredBuffer<TileRecord> tiles;
+		HLSL::ConsumeStructuredBuffer<TileRecord>& GetTiles() { return tiles; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(input);
+			compiler.compile(tiles);
 		}
 		struct Compiled
 		{
-			uint input; // ConsumeStructuredBuffer<TileRecord>
+			uint tiles; // ConsumeStructuredBuffer<TileRecord>
 
 			
 			private:

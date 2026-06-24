@@ -95,7 +95,7 @@ public:
 		L"sky_cubemap_filtered",
 		L"sky_cubemap_filtered_diffuse",
 		L"LightMask",
-		L"RTXDebug",
+		L"ShadowMask",
 		L"ResultTextureNew",
 		L"SMAA_edges",
 		L"SMAA_blend",
