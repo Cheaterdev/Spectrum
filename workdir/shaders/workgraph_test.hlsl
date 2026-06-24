@@ -51,13 +51,15 @@ NODE_Shadows_Node(
     gbuffer.GetAlbedo().GetDimensions(dims.x, dims.y);
 
     float3 pos = depth_to_wpos(raw_z, float2(pixel_pos) / dims, camera.GetInvViewProj());
+    	float3 normal = normalize(gbuffer.GetNormals()[pixel_pos].xyz * 2 - 1);
+
 
     DispatchParameters params = CreateDispatchParameters();
 
     RayDesc ray;
-    ray.Origin = pos;
+    ray.Origin = pos + normal*0.001;
     ray.Direction = sunDir;
-    ray.TMin = 0.1;
+    ray.TMin = 0.2;
     ray.TMax = 100000;
 
     RayQuery<RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rayQuery;

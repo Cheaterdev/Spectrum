@@ -1323,7 +1323,7 @@ namespace FrameGraph
 			if (!best_deletion_pass)
 			{
 
-				for (auto pass : enabled_passes)
+			/*	for (auto pass : enabled_passes)
 				{
 					if (info->used_end.is_in_sync(pass->sync_state, false))
 					{
@@ -1336,7 +1336,7 @@ namespace FrameGraph
 						break;
 					}
 				}
-
+					   */
 				if (!best_deletion_pass)
 				{
 					info->non_deleted = true;

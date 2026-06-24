@@ -14,10 +14,11 @@ static const VoxelInfo voxel_info = GetVoxelInfo();
 
 void calc(inout float4 color)
 {
-	//color.rgb/= color.w + 1;
+//	color.rgb/= color.w ;//+ 1;
 	//color.w = saturate(color.w/4);
 
     color /= 8;
+	color.w=saturate(color.w*1.3f);
 	//todo: investigate negative values
 	color = max(0, color);
 }

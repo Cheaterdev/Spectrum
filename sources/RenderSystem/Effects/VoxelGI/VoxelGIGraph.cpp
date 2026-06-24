@@ -823,6 +823,9 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		auto& caminfo   = context.graph->get_context<CameraInfo>();
 		auto& sceneinfo = context.graph->get_context<SceneInfo>();
 
+		if (use_rtx)
+			command_list->get_compute().set_signature(RTX::get().rtx.m_root_sig);
+
 		mesh_ctx->current_time = 0;
 		mesh_ctx->priority     = TaskPriority::HIGH;
 		mesh_ctx->list         = command_list;
