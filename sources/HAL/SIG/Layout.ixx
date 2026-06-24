@@ -50,8 +50,11 @@ export
 	template<class T>
 	void process_one(HAL::RootSignatureDesc& desc)
 	{
-		if constexpr (HasSlot<T>)
-			desc[T::Slot::ID] = HAL::DescriptorConstants(2, 1, HAL::ShaderVisibility::ALL, T::Slot::ID);
+		desc[T::Slot::ID] = HAL::DescriptorConstants(T::Slot::ID, 1, HAL::ShaderVisibility::ALL, T::Slot::ID);
+	}
+	template<>
+	void process_one<int>(HAL::RootSignatureDesc& desc)
+	{
 	}
 
 	template< class ...A>

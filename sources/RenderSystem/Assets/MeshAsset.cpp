@@ -67,38 +67,31 @@ Asset_Type MeshAsset::get_type()
 void MeshAsset::init_gpu()
 {
 	FenceWaiter last;
-#undef OPAQUE
 	int i = 0;
 	if (RenderSystem::get().device().is_rtx_supported())
 		for (auto& mesh : meshes)
 		{
 			auto list = (RenderSystem::get().device().get_queue(CommandListType::DIRECT)->get_free_list());
 			list->begin(L"RTX");
-
 			auto mat = list->place_raw(nodes[mesh.node_index]->mesh_matrix);
-
 			GeometryDesc geometryDesc = {};
 			geometryDesc.Type = HAL::GeometryType::TRIANGLES;
-
 			geometryDesc.IndexBuffer = mesh.index_buffer_view.get_resource_address();
 			geometryDesc.IndexCount = static_cast<uint>(mesh.index_buffer_view.desc.size/sizeof(UINT));
 			geometryDesc.IndexFormat = Format::R32_UINT;
 			geometryDesc.Transform3x4 = mat;
 			geometryDesc.VertexFormat = Format::R32G32B32_FLOAT;
 			geometryDesc.VertexBuffer = mesh.vertex_buffer_view.get_resource_address();
+			geometryDesc.VertexCount = static_cast<uint>(mesh.vertex_buffer_view.desc.size / sizeof(Table::mesh_vertex_input));
 			geometryDesc.VertexStrideInBytes = sizeof(Table::mesh_vertex_input);
 			geometryDesc.Flags = HAL::GeometryFlags::OPAQUE;
-
 			std::vector<GeometryDesc > descs;
 			descs.push_back(geometryDesc);
-
 			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(RenderSystem::get().device(), descs, list);
 			last=list->execute();
-
 			i++;
 		}
 	last.wait();
-
 }
 MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 {
@@ -273,7 +266,6 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 					mesh.index_count * sizeof(UINT32),
 					counterType::NONE
 				});
-
 			compiled.meshet_view = buffer->create_view<HAL::StructuredBufferView<Table::Meshlet>>(
 				RenderSystem::get().device().get_static_gpu_data(),
 				StructuredBufferViewDesc{

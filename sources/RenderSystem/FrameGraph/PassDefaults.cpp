@@ -187,7 +187,7 @@ void PassDefault<Passes::RTXPass>::render(
 	if (data.RTXDebug.is_new())
 		context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
 
-	context.graph->set_slot(SlotID::VoxelInfo, compute);
+	//context.graph->set_slot(SlotID::VoxelInfo, compute);
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 	context.graph->set_slot(SlotID::SceneData, compute);
 
@@ -195,7 +195,7 @@ void PassDefault<Passes::RTXPass>::render(
 
 	{
 		Slots::Raytracing rtx;
-		rtx.GetScene() = scene_ctx.scene->raytrace_scene->raytracing_handle;
+		rtx.GetScene() = scene_ctx.scene->raytrace_scene->get_handle();
 		compute.set(rtx);
 	}
 	{

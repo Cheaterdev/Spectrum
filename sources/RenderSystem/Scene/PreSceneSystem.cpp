@@ -14,6 +14,13 @@ bool PassDefault<Passes::PreScene>::setup(
     Passes::PreScene::Context& data, FrameGraph::TaskBuilder& builder)
 {
     builder.create(data.scene, { 1 }, ResourceFlags::UnorderedAccess);
+
+    if (RenderSystem::get().device().is_rtx_supported())
+    {
+        auto& scene = *builder.graph->get_context<SceneInfo>().scene;
+        scene.raytrace_scene->new_frame();
+    }
+
     return true;
 }
 

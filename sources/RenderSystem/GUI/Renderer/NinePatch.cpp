@@ -8,7 +8,7 @@ using namespace HAL;
 namespace GUI
 {
 
-	HAL::IndexBuffer NinePatch::index_buffer;
+//	HAL::IndexBuffer NinePatch::index_buffer;
 
 	void NinePatch::reset()
 	{
@@ -19,13 +19,13 @@ namespace GUI
 		static std::mutex m;
 		static void* owner_device = nullptr;
 
-		void* cur = &RenderSystem::get().device();
-		if (owner_device == cur && index_buffer) return;  // fast path — no lock after first init
+		//void* cur = &RenderSystem::get().device();
+		//if (owner_device == cur && index_buffer) return;  // fast path — no lock after first init
 
-		std::lock_guard<std::mutex> g(m);
-		if (owner_device == cur && index_buffer) return;  // re-check under lock
+	//	std::lock_guard<std::mutex> g(m);
+		//if (owner_device == cur && index_buffer) return;  // re-check under lock
 
-		index_buffer = {};  // release buffer from old device
+	//	index_buffer = {};  // release buffer from old device
 
 		std::vector<unsigned int> index_data(9 * 2 * 3);
 		auto* data = index_data.data();
@@ -36,7 +36,7 @@ namespace GUI
 				*data++ = i*4+j+4; *data++ = i*4+j+1; *data++ = i*4+j+5;
 			}
 		index_buffer = Helpers::make_buffer<unsigned int>(RenderSystem::get().device(), index_data);
-		owner_device = cur;
+		//owner_device = cur;
 	}
 
 	void NinePatch::draw(base::Context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state)

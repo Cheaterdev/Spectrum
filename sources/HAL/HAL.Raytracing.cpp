@@ -66,10 +66,13 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(Device& de
 
 	list->execute_and_wait();
 
-	handle_table = device.get_static_gpu_data().alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
+	handle_table = device.get_static_gpu_data().alloc_descriptor(2, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
-	raytracing_handle = HLSL::RaytracingAccelerationStructure(handle_table[0]);
-	raytracing_handle.create(currentResource->buffer.resource);
+	raytracing_handles[0] = HLSL::RaytracingAccelerationStructure(handle_table[0]);
+	raytracing_handles[0].create(currentResource->buffer.resource);
+	raytracing_handles[1] = HLSL::RaytracingAccelerationStructure(handle_table[1]);
+	raytracing_handles[1].create(prevResource->buffer.resource);
+	current = 0;
 
 
 	scratch_buffer = scratchInfo->buffer;
@@ -124,12 +127,19 @@ void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT si
 
 	}
 	list->get_compute().build_ras(topLevelBuildDesc, inputs);
-
-
-	raytracing_handle.create(currentResource->buffer.resource);
 }
 
 HAL::ResourceAddress HAL::RaytracingAccelerationStructure::get_gpu_address() const
 {
 	return cur_buffer->get_resource_address();
+}
+
+void HAL::RaytracingAccelerationStructure::new_frame()
+{
+	current ^= 1;
+}
+
+HLSL::RaytracingAccelerationStructure HAL::RaytracingAccelerationStructure::get_handle() const
+{
+	return raytracing_handles[current];
 }

@@ -28,10 +28,10 @@ export
 			int current = 0;
 
 			Handle handle_table;
+			HLSL::RaytracingAccelerationStructure raytracing_handles[2];
 		public:
 			StructuredBufferView<std::byte> *cur_buffer;
 			using ptr = std::shared_ptr<RaytracingAccelerationStructure>;
-			HLSL::RaytracingAccelerationStructure raytracing_handle;
 
 			MaterialAsset* material;
 
@@ -42,9 +42,11 @@ export
 			RaytracingAccelerationStructure(Device& device, std::vector<HAL::InstanceDesc> instances);
 
 
+			void new_frame();
 			void update(CommandList::ptr list, UINT size, HAL::ResourceAddress address, bool need_rebuild);
 
 			HAL::ResourceAddress get_gpu_address() const;
+			HLSL::RaytracingAccelerationStructure get_handle() const;
 		};
 
 

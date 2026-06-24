@@ -75,7 +75,7 @@ void AssetManager::add_func(std::function<void()> f)
 void AssetManager::add_preview(Asset::ptr asset)
 {
 //	if (!AssetRenderer::is_good()) return; // no preview renderer on Vulkan
-  return;
+ 
 	preview_executor.enqueue([this, asset]() {
 		try {
 			auto& preview = asset->holder->get_preview();
@@ -488,6 +488,7 @@ const HAL::Texture::ptr& AssetStorage::get_preview()
 
 void AssetStorage::update_preview()
 {
+	if (Application::test_mode) return;
 	AssetManager::get().add_preview(get_asset());
 
 	//.add_func([this]() { get_asset()->update_preview(preview);});

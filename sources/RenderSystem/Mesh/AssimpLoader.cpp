@@ -624,9 +624,9 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 for (unsigned int f = 0; f < native_mesh->mNumFaces; f++)
                 {
                     auto& face = native_mesh->mFaces[f];
-                    indices[index_count + f * 3] = 0*vertex_count + (face.mIndices[0]);
-                    indices[index_count + f * 3 + 1] = 0*vertex_count + (face.mIndices[1]);
-                    indices[index_count + f * 3 + 2] = 0*vertex_count + (face.mIndices[2]);
+                    indices[index_count + f * 3] = face.mIndices[0];
+                    indices[index_count + f * 3 + 1] = face.mIndices[1];
+                    indices[index_count + f * 3 + 2] = face.mIndices[2];
                 }
 
 

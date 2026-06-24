@@ -555,7 +555,8 @@ public:
 				if (graph_upload)    graph_upload->push((float)dev.get_upload_heap(), frame_dt);
 				if (graph_readback)  graph_readback->push((float)dev.get_readback_heap(), frame_dt);
 			}
-
+			RTX::get().update();
+		
 
 			setup_graph();
 

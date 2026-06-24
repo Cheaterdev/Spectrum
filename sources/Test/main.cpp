@@ -21,6 +21,7 @@ void SetupLogging()
 
 int main(int argc, char** argv)
 {
+	Application::test_mode = true;
 	SetupLogging();
 
 	std::string filter;

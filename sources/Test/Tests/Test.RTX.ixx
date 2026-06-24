@@ -43,10 +43,12 @@ export namespace Test
 
 		// Scene: material_tester sphere with the custom material.
 		auto mesh_inst = std::make_shared<MeshAssetInstance>(EngineAssets::material_tester.get_asset());
+			auto plane_inst = std::make_shared<MeshAssetInstance>(EngineAssets::plane.get_asset());
 //		mesh_inst->override_material(1, mat);
 
 		auto scene = std::make_shared<Scene>();
 		scene->add_child(mesh_inst);
+		scene->add_child(plane_inst);
 
 
 		// Camera looking at the sphere from the same angle AssetRenderer uses.
@@ -71,9 +73,11 @@ export namespace Test
 			si.renderer = nullptr;
 		}
 		graph.get_context<CameraInfo>().cam = &cam;
-		graph.get_context<SkyInfo>().sunDir = float3(1, 1, 1).normalize();
+		graph.get_context<SkyInfo>().sunDir = float3(-1, 1, 1).normalize();
 		graph.get_context<TimeInfo>() = {};  // time = 0
 
+
+	
 		graph.start_new_frame();
 		scene->update_transforms();
 		scene->update(*graph.builder.current_frame);
@@ -98,44 +102,30 @@ export namespace Test
 			g.register_slot_setter(fi.compile(*g.builder.current_frame));
 		});
 
+
 		// SceneData slot: vertex/index buffers for hit shaders.
 		graph.add_slot_generator([](FrameGraph::Graph& g) {
 			g.register_slot_setter(g.get_context<SceneInfo>().scene->compiledScene);
 		});
 
-
-	auto command_list   = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
-			 command_list->begin(L"ololo");
-    SceneFrameManager::get().prepare(command_list, *scene);
-
-    if (RenderSystem::get().device().is_rtx_supported())
-    {
-        scene->raytrace_scene->update(command_list,
-            (UINT)scene->raytrace->max_size(),
-            scene->raytrace->buffer.get_resource_address(),
-            false);
-        RTX::get().prepare(command_list);
-    }
-		
-		command_list->execute_and_wait();
-
-
+		RTX::get().update();
+			  	
 		// Pass 1: build TLAS + prepare RTX hit-group table.
 		graph.add_library_pass<Passes::PreScene>(
 			PassDefault<Passes::PreScene>::setup,
 			PassDefault<Passes::PreScene>::render,
 			PassDefault<Passes::PreScene>::flags);
-
+				 
 		// Pass 2: primary-ray color pass — no GBuffer, writes to ColorOutput.
 		const ivec2 rtx_size {W, H};
 		graph.add_library_pass<Passes::RTXColorPass>(
 			[](auto& data, FrameGraph::TaskBuilder& builder) -> bool {
 				builder.need(data.ColorOutput, FrameGraph::ResourceFlags::UnorderedAccess);
-		//		builder.need(data.scene, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.need(data.scene, FrameGraph::ResourceFlags::UnorderedAccess);
 
 				return true;
 			},
-			[rtx_size](auto& data, FrameGraph::FrameContext& ctx) {
+			[&](auto& data, FrameGraph::FrameContext& ctx) {
 				auto& compute    = ctx.get_list()->get_compute();
 				auto& scene_info = ctx.graph->get_context<SceneInfo>();
 
@@ -153,18 +143,20 @@ export namespace Test
 				// Dispatch primary rays using ColorRTX raygen.
 				RTX::get().render<ColorRTX>(compute,
 					scene_info.scene->raytrace_scene, rtx_size);
-
 			},
 			FrameGraph::PassFlags::Compute);
 
 		graph.setup();
 		graph.compile(frame_idx++);
 		graph.render();
-		graph.commit_command_lists();
+
+		graph.commit_command_lists().wait();
+
+	
+
 		graph.reset();
-
-		mesh_inst->remove_from_parent();
-
+				   
+	
 		ASSERT_TEXTURE(output->resource.get(), "rtx_material_tester");
 	}
 }

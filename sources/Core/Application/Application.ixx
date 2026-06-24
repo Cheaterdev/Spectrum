@@ -22,6 +22,8 @@ export
 		void shutdown();
 		bool is_alive() const { return alive; }
 
+		static inline bool test_mode = false;
+
 		virtual std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension)
 		{
 			return std::vector<std::string>();

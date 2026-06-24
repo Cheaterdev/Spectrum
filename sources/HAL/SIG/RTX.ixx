@@ -286,8 +286,7 @@ struct SelectLocal<T>
 			}
 		}
 
-
-		void prepare(HAL::CommandList::ptr& list)
+		 void update()
 		{
 			if (need_recreate)
 			{
@@ -298,9 +297,11 @@ struct SelectLocal<T>
 				init();
 			}
 
-			hitgroup_ids->prepare(list);
-			//	hitgroup_ids->debug_print(*list);
+		}
 
+		void prepare(HAL::CommandList::ptr& list)
+		{
+			hitgroup_ids->prepare(list);
 		}
 
 		RTXPSO(HAL::Device& device)

@@ -862,6 +862,7 @@ RaytracingDescNative to_native(const RaytracingBuildDescBottomInputs& inputs)
         geom.Triangles.IndexFormat = ::to_native(i.IndexFormat);
         geom.Triangles.VertexBuffer.StartAddress = ::to_native(i.VertexBuffer);
         geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
+        geom.Triangles.VertexCount = i.VertexCount;
         geom.Triangles.VertexFormat = ::to_native(i.VertexFormat);
         geom.Triangles.Transform3x4 = ::to_native(i.Transform3x4);
         result.descs.emplace_back(geom);

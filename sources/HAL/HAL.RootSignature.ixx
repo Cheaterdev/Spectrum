@@ -135,8 +135,13 @@ export namespace HAL
 		template<class T>
 		void process_one_sig(RootSignatureDesc& desc) const
 		{
-			if constexpr (HasSlot<T>)
 				desc.remove(T::Slot::ID);
+		}
+
+		template<>
+		void process_one_sig<int>(RootSignatureDesc& desc) const
+		{
+		
 		}
 
 	public:

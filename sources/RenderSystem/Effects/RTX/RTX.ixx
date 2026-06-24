@@ -18,6 +18,7 @@ public:
 	MainRTX rtx{RenderSystem::get().device()};
 
 	void prepare(HAL::CommandList::ptr& list);
+   	void update();
 
 
 	template<class T>
@@ -35,7 +36,7 @@ public:
 		
 		{
 			Slots::Raytracing rtx;
-			rtx.GetScene() = scene_as->raytracing_handle;
+			rtx.GetScene() = scene_as->get_handle();
 			compute.set(rtx);
 		}
 
