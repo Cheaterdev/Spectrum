@@ -32,6 +32,93 @@ namespace GUI
 	{
 		namespace Debug
 		{
+			// ── left_column: fixed left overlay that pins row names ──────────────
+			// dock::PARENT → placed in update_childs_layout_after, so all rows have
+			// valid render_bounds by the time we sync label positions.
+			class left_column : public solid_rect
+			{
+				struct entry { label::ptr lbl; base::wptr row; };
+				std::vector<entry> entries;
+			public:
+				left_column()
+				{
+					color   = {0.07f, 0.07f, 0.09f, 0.95f};
+					docking = dock::PARENT;
+					margin  = {0, 30, 0, 0}; // 30px top = below toolbar
+					// width_size/height_size stay NONE so filter_func in render_bounds
+					// does NOT override the size we set in update_layout.
+				}
+
+				void add_entry(const std::wstring& text, base::ptr row, float4 text_color = {1,1,1,0.85f})
+				{
+					label::ptr lbl(new label);
+					lbl->docking     = dock::NONE;
+					lbl->x_type      = pos_x_type::LEFT;
+					lbl->y_type      = pos_y_type::TOP;
+					lbl->text        = convert(text);
+					lbl->color       = text_color;
+					lbl->width_size  = size_type::FIXED;
+					lbl->height_size = size_type::FIXED;
+					lbl->size        = {116, 18};
+					add_child(lbl);
+					entries.push_back({lbl, row});
+				}
+
+				void clear_entries()
+				{
+					remove_all();
+					entries.clear();
+				}
+
+				// Always re-sync: row render_bounds change on every scroll event.
+				sizer update_layout(sizer r, float scale) override
+				{
+					need_update_layout = true;
+					sizer remaining = base::update_layout(r, scale);
+					// Constrain width to 120px; height is driven by dock::PARENT margins.
+					rect rb = get_render_bounds();
+					render_bounds = rect{rb.pos, 120.0f, rb.size.y};
+					return remaining;
+				}
+
+				// Called during update_layout when need_update_layout is true.
+				// At this point all rows already have correct render_bounds (dock::PARENT
+				// guarantees we run after update_childs_layout_after of the parent).
+				void update_childs_layout(sizer& my, float scale) override
+				{
+					float my_top = get_render_bounds().pos.y;
+					for (auto& e : entries)
+					{
+						if (auto row = e.row.lock())
+						{
+							auto rb    = row->get_render_bounds();
+							e.lbl->pos  = {4.0f, rb.pos.y - my_top};
+							e.lbl->size = {112.0f, rb.size.y};
+						}
+					}
+					base::update_childs_layout(my, scale);
+				}
+			};
+
+			// ── Per-thread hue (HSV → RGB, dark, saturated) ───────────────────────
+			static float4 thread_hue_color(size_t thread_id)
+			{
+				float hue = std::fmod(float(thread_id - 1) * 0.618033f, 1.0f);
+				float s = 0.55f, v = 0.11f;
+				float hh = hue * 6.0f;
+				int   i  = int(hh) % 6;
+				float f  = hh - float(int(hh));
+				float p = v*(1-s), q = v*(1-s*f), t = v*(1-s*(1-f));
+				switch (i) {
+					case 0: return {v,t,p,1};
+					case 1: return {q,v,p,1};
+					case 2: return {p,v,t,1};
+					case 3: return {p,q,v,1};
+					case 4: return {t,p,v,1};
+					default: return {v,p,q,1};
+				}
+			}
+
 			// ── Color from name hash (HSV→RGB) ────────────────────────────────────
 			static float4 name_color(const std::wstring& name)
 			{
@@ -151,6 +238,9 @@ namespace GUI
 
 				run_on_ui([this, scaler]()
 				{
+					auto* col = static_cast<left_column*>(names_col.get());
+					col->clear_entries();
+
 					std::map<std::thread::id, size_t> thread_ids;
 
 					int blocks_size     = data.block_id;
@@ -186,10 +276,10 @@ namespace GUI
 						front->add_child(hdr);
 					};
 
-					auto add_lane = [&]() -> base::ptr
+					auto add_lane = [&](const std::wstring& lane_name = L"", float4 lane_color = {0.05f, 0.05f, 0.07f, 1.0f}) -> base::ptr
 					{
 						solid_rect::ptr row(new solid_rect());
-						row->color       = {0.05f, 0.05f, 0.07f, 1.0f};
+						row->color       = lane_color;
 						row->docking     = dock::TOP;
 						row->height_size = size_type::MATCH_CHILDREN;
 						row->width_size  = size_type::FIXED;
@@ -197,6 +287,8 @@ namespace GUI
 						row->size        = {total_width, 0};
 						row->padding     = {0, 2, 0, 2};
 						front->add_child(row);
+						if (!lane_name.empty())
+							col->add_entry(lane_name, row);
 						return row;
 					};
 
@@ -259,8 +351,11 @@ namespace GUI
 						add_section(L"CPU", {0.10f, 0.20f, 0.38f, 1.0f});
 
 						std::vector<base::ptr> thread_backs(thread_ids.size());
-						for (auto& e : thread_backs)
-							e = add_lane();
+						for (size_t ti = 0; ti < thread_backs.size(); ti++)
+						{
+							std::wstring tname = L"Thread " + std::to_wstring(ti + 1);
+							thread_backs[ti] = add_lane(tname, thread_hue_color(ti + 1));
+						}
 
 						for (int i = 0; i < blocks_size; i++)
 						{
@@ -275,7 +370,8 @@ namespace GUI
 					}
 
 					// ── GPU queues ────────────────────────────────────────────
-					const wchar_t* queue_names[3]  = {L"GPU · Direct", L"GPU · Compute", L"GPU · Copy"};
+					const wchar_t* queue_names[3]     = {L"GPU · Direct", L"GPU · Compute", L"GPU · Copy"};
+					const wchar_t* queue_lane_names[3] = {L"Direct",      L"Compute",       L"Copy"};
 					float4         queue_colors[3]  = {
 						{0.18f, 0.10f, 0.32f, 1.0f},
 						{0.08f, 0.22f, 0.16f, 1.0f},
@@ -291,7 +387,7 @@ namespace GUI
 						for (int q = 0; q < 3; q++)
 						{
 							add_section(queue_names[q], queue_colors[q]);
-							gpu_lanes[q] = add_lane();
+							gpu_lanes[q] = add_lane(queue_lane_names[q]);
 						}
 					}
 
@@ -349,6 +445,13 @@ namespace GUI
 				back->padding      = back->texture.padding;
 				scroll_container::add_child(back);
 				front = back;
+
+				// ── Fixed left names column (dock::PARENT overlay, non-scrolling) ──
+				{
+					auto col = std::make_shared<left_column>();
+					names_col = col;
+					base::add_child(col);
+				}
 
 				// ── Profiler hooks ─────────────────────────────────────────────
 				Profiler::get().on_frame.register_handler(this, [this](UINT64 frame)

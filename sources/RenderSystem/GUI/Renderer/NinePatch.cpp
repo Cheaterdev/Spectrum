@@ -7,11 +7,10 @@ import HAL;
 using namespace HAL;
 namespace GUI
 {
-
-//	HAL::IndexBuffer NinePatch::index_buffer;
-
+							 HAL::IndexBuffer NinePatch::index_buffer  ={};
 	void NinePatch::reset()
 	{
+		index_buffer = {};
 	}
 
 	NinePatch::NinePatch()
@@ -22,7 +21,9 @@ namespace GUI
 		//void* cur = &RenderSystem::get().device();
 		//if (owner_device == cur && index_buffer) return;  // fast path — no lock after first init
 
-	//	std::lock_guard<std::mutex> g(m);
+		std::lock_guard<std::mutex> g(m);
+		if (index_buffer)
+			return;
 		//if (owner_device == cur && index_buffer) return;  // re-check under lock
 
 	//	index_buffer = {};  // release buffer from old device

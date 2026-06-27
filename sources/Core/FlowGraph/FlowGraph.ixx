@@ -573,6 +573,7 @@ export
 			}
 
 			void auto_layout();
+			void place_node(Node* n);
 			graph();
 
 			virtual ~graph();

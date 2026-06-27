@@ -1371,15 +1371,16 @@ namespace HAL
 
 		bool graphics = dynamic_cast<PipelineState*>(get_base().current_pipeline);
 
-		if (graphics)
-			base.pre_command<false, true>(get_base().get_graphics(), BarrierSync::ALL_SHADING, &command_types.slots);
-		else
-			base.pre_command<true, false>(get_base().get_compute(), BarrierSync::COMPUTE_SHADING, &command_types.slots);
+		{ PROFILE(L"pre_command");
+		  if (graphics)
+			  base.pre_command<false, true>(get_base().get_graphics(), BarrierSync::ALL_SHADING, &command_types.slots);
+		  else
+			  base.pre_command<true, false>(get_base().get_compute(), BarrierSync::COMPUTE_SHADING, &command_types.slots); }
 
-		if (command_buffer) get_base().transition(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
-		if (counter_buffer) get_base().transition(counter_buffer, ResourceStates::INDIRECT_ARGUMENT);
-
-		get_base().transition(static_cast<HAL::Resource*>(index.Resource.get()), ResourceStates::INDEX_BUFFER);
+		{ PROFILE(L"transitions");
+		  if (command_buffer) get_base().transition(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
+		  if (counter_buffer) get_base().transition(counter_buffer, ResourceStates::INDIRECT_ARGUMENT);
+		  get_base().transition(static_cast<HAL::Resource*>(index.Resource.get()), ResourceStates::INDEX_BUFFER); }
 
 		list->set_index_buffer(index);
 
@@ -1391,10 +1392,11 @@ namespace HAL
 			counter_buffer,
 			counter_offset);
 
-		if (graphics)
-			base.post_command<false, true>(get_base().get_graphics(), BarrierSync::ALL_SHADING);
-		else
-			base.post_command<true, false>(get_base().get_compute(), BarrierSync::COMPUTE_SHADING);
+		{ PROFILE(L"post_command");
+		  if (graphics)
+			  base.post_command<false, true>(get_base().get_graphics(), BarrierSync::ALL_SHADING);
+		  else
+			  base.post_command<true, false>(get_base().get_compute(), BarrierSync::COMPUTE_SHADING); }
 	}
 
 	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer,
@@ -1402,12 +1404,13 @@ namespace HAL
 	{
 		ASSERT(command_buffer);
 		PROFILE_GPU(L"execute_indirect");
-		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 
-		ASSERT(command_buffer);
+		{ PROFILE(L"pre_command");
+		  base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING); }
 
-		if (command_buffer) get_base().transition(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
-		if (counter_buffer) get_base().transition(counter_buffer, ResourceStates::INDIRECT_ARGUMENT);
+		{ PROFILE(L"transitions");
+		  if (command_buffer) get_base().transition(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
+		  if (counter_buffer) get_base().transition(counter_buffer, ResourceStates::INDIRECT_ARGUMENT); }
 
 		list->execute_indirect(
 			command_types,
@@ -1417,7 +1420,8 @@ namespace HAL
 			counter_buffer,
 			counter_offset);
 
-		base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
+		{ PROFILE(L"post_command");
+		  base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING); }
 	}
 
 	void ComputeContext::build_ras(const HAL::RaytracingBuildDescStructure& build_desc,
@@ -1498,13 +1502,16 @@ namespace HAL
 		{
 			if (table.dirty)
 			{
-				for (auto& resource_info : table.resources)
-					get_base().transition(*resource_info, operation);
+				{ PROFILE(L"commit_tables/transitions");
+				  for (auto& resource_info : table.resources)
+					  get_base().transition(*resource_info, operation); }
 
-				for (auto& d : table.descriptors)
-					get_base().track_object(*d);
+				{ PROFILE(L"commit_tables/track_descriptors");
+				  for (auto& d : table.descriptors)
+					  get_base().track_object(*d); }
 
-				set_cb(id, table.const_buffer, operation);
+				{ PROFILE(L"commit_tables/set_cb");
+				  set_cb(id, table.const_buffer, operation); }
 
 				table.dirty = false;
 			}

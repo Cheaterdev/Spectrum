@@ -2,6 +2,7 @@ export module GUI:FlowGraph.Canvas;
 
 import :ScrollContainer;
 import :CheckBox;
+import :Button;
 import :FlowGraph.Comment;
 
 export namespace GUI
@@ -83,8 +84,9 @@ export namespace GUI
                     float scale_speed = 0;
                     vec2 wheel_pos;
 
-              
+
                     base::ptr selection;
+                    base::ptr toolbar;
 
                     base::ptr comments;
                     vec2 select_pos;

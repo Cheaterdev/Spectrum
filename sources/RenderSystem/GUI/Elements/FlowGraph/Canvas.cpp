@@ -9,6 +9,7 @@ import :FlowSystem;
 import :MenuList;
 import :ScrollContainer;
 import :Renderer;
+import :Skin;
 import Graphics;
 using namespace HAL;
 GUI::Elements::FlowGraph::link_item::link_item()
@@ -60,6 +61,21 @@ namespace
 	}
 
 	float cb_dot(float2 a, float2 b) { return a.x*b.x + a.y*b.y; }
+
+	class toolbar_panel : public GUI::base
+	{
+	public:
+		void draw(GUI::base::Context& c) override
+		{
+			GUI::Texture shadow = Skin::get().Shadow;
+			shadow.margins = { 12, 12, 12, 12 };
+			c.renderer->draw(c, shadow, get_render_bounds());
+
+			GUI::Texture bg = Skin::get().FlowWindow.Inactive;
+			bg.mul_color = float4(22, 28, 38, 255) / 255.0f;
+			c.renderer->draw(c, bg, get_render_bounds());
+		}
+	};
 
 	// Recursive de Casteljau rect intersection — curve ⊆ convex hull ⊆ AABB of control polygon
 	bool cb_vs_rect(float2 a, float2 b, float2 c, float2 d,
@@ -246,6 +262,9 @@ void GUI::Elements::FlowGraph::canvas::on_register(::FlowGraph::window* w)
 
 		if (!(node->get_graph() == g))
 			return;
+
+		if (node->pos == vec2(10, 10))
+			g->place_node(node);
 
 		auto elem = std::make_shared<GUI::Elements::FlowGraph::component_window>(this, node, window_type::NODE);
 		nodes[node] = (elem);
@@ -563,9 +582,14 @@ void GUI::Elements::FlowGraph::canvas::on_key_action(long key)
 
 	}
 
-	   if (key == VK_SPACE)
-		   g->auto_layout();
-	  //     FileSystem::get().save_data(L"graph.flg", Serializer::serialize(*g));
+	if (key == VK_SPACE)
+	{
+		g->auto_layout();
+		for (auto& [node, win] : nodes)
+			win->pos = node->pos;
+		graph_in->pos  = g->pos_in;
+		graph_out->pos = g->pos_out;
+	}
 }
 
 bool GUI::Elements::FlowGraph::canvas::on_wheel(mouse_wheel type, float value, vec2 pos)
@@ -623,8 +647,27 @@ GUI::Elements::FlowGraph::canvas::canvas(manager* main_manager)
 	comments->clip_child = false;
 	comments->docking = dock::FILL;
 	contents->add_child(comments);
-	//comments->to_front();
-	//  clip_child = true;
+
+	toolbar.reset(new toolbar_panel());
+	toolbar->docking = dock::NONE;
+	toolbar->pos = vec2(8, 8);
+	toolbar->height_size = size_type::MATCH_CHILDREN;
+	toolbar->width_size = size_type::MATCH_CHILDREN;
+	toolbar->padding = { 4, 4, 4, 4 };
+
+	auto rearrange_btn = std::make_shared<button>();
+	rearrange_btn->get_label()->text = "Rearrange";
+	rearrange_btn->docking = dock::TOP;
+	rearrange_btn->size = { 100, 26 };
+	rearrange_btn->on_click = [this](button::ptr) {
+		g->auto_layout();
+		for (auto& [node, win] : nodes)
+			win->pos = node->pos;
+		graph_in->pos  = g->pos_in;
+		graph_out->pos = g->pos_out;
+	};
+	toolbar->add_child(rearrange_btn);
+	base::add_child(toolbar);
 }
 
 bool GUI::Elements::FlowGraph::canvas::on_mouse_move(vec2 pos)
@@ -760,8 +803,11 @@ void GUI::Elements::FlowGraph::canvas::init(::FlowGraph::graph* g)
 	g->add_listener(this, true);
 	contents->pos = g->cam_pos;
 
-	
 	g->auto_layout();
+	for (auto& [node, win] : nodes)
+		win->pos = node->pos;
+	if (graph_in)  graph_in->pos  = g->pos_in;
+	if (graph_out) graph_out->pos = g->pos_out;
 }
 
 /*

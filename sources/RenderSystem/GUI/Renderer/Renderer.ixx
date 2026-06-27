@@ -8,16 +8,12 @@ export namespace GUI
 	class NinePatch
 	{
 		using Vertex = Table::vertex_input;
-		
 
-	
 		std::vector<Vertex> vertexes;
-
 		std::vector<HLSL::Texture2D<float4>> textures_handles;
-
 		HAL::PipelineState::ptr current_state;
 	public:
-		HAL::IndexBuffer index_buffer;
+		static HAL::IndexBuffer index_buffer;
 		int counter = 0;
 		using ptr = s_ptr<NinePatch>;
 		NinePatch();
@@ -51,7 +47,6 @@ export namespace GUI
 
 	class Renderer
 	{
-
 		NinePatch nine_patch;
 		SimpleRect simple_rect;
 
@@ -59,14 +54,9 @@ export namespace GUI
 		Texture virtual_tex;
 		Texture container_tex;
 
-
 	public:
-
-		//     HAL::RootSignature::ptr root_signature;
-
 		using ptr = s_ptr<Renderer>;
 		using wptr = w_ptr<Renderer>;
-
 
 		void draw_area(base::ptr obj, base::Context& c);
 		void draw_container(base::ptr obj, base::Context& c);

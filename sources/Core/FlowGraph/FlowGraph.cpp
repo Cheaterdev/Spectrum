@@ -543,64 +543,235 @@ namespace FlowGraph
 
 	void graph::auto_layout()
 	{
-		std::set<Node*> root_nodes;
-		std::map<Node*, int> depths;
-		int max_depth = 0;
-
+		// ── 1. Index nodes ────────────────────────────────────────────────────
+		std::vector<Node*> verts;
+		std::map<Node*, int> idx;
 		for (auto& n : nodes)
 		{
-			if (!n->has_inputs())
-			{
-				root_nodes.insert(n.get());
-				depths[n.get()] = 0;
-			}
+			idx[n.get()] = (int)verts.size();
+			verts.push_back(n.get());
 		}
+		const int N = (int)verts.size();
+		if (N == 0) return;
 
-		for (auto& p : input_parametres)
-		{
-			for (auto& c : p->output_connections)
-			{
-				auto n = c->to->owner;
-				root_nodes.insert(n);
-				depths[n] = 0;
-			}
-		}
+		// ── 2. Build adjacency lists ──────────────────────────────────────────
+		std::vector<std::vector<int>> succ(N), pred(N);
+		struct Edge { int from, to; bool back = false; connection::ptr conn; };
+		std::vector<Edge> edges;
 
-		root_nodes.insert(this);
-		depths[this] = 0;
-
-		std::function<void(Node*)> process_node;
-
-		process_node = [&](Node* node) {
-			int my_depth = depths[node];
-
-			max_depth = std::max(max_depth, my_depth);
-			for (auto& p : node->output_parametres)
-			{
+		for (int u = 0; u < N; ++u)
+			for (auto& p : verts[u]->output_parametres)
 				for (auto& c : p->output_connections)
 				{
-					auto other = c->to->owner;
-					auto&& other_depth = depths[other];
-
-					if (other_depth <= my_depth)
-					{
-						other_depth = my_depth + 1;
-						process_node(other);
-					}
+					auto it = idx.find(c->to->owner);
+					if (it == idx.end()) continue;
+					int v = it->second;
+					edges.push_back({u, v, false, c});
+					succ[u].push_back((int)edges.size() - 1);
+					pred[v].push_back((int)edges.size() - 1);
 				}
+
+		// ── 3. Back-edge detection (DFS) ─────────────────────────────────────
+		enum class S : uint8_t { UNVISITED, ON_STACK, DONE };
+		std::vector<S> state(N, S::UNVISITED);
+		std::function<void(int)> dfs = [&](int u)
+		{
+			state[u] = S::ON_STACK;
+			for (int ei : succ[u])
+			{
+				auto& e = edges[ei];
+				if      (state[e.to] == S::ON_STACK) e.back = true;
+				else if (state[e.to] == S::UNVISITED) dfs(e.to);
 			}
+			state[u] = S::DONE;
+		};
+		for (int i = 0; i < N; ++i)
+			if (state[i] == S::UNVISITED) dfs(i);
+
+		// ── 4. Layer assignment (Kahn BFS, longest path) ──────────────────────
+		std::vector<int> layer(N, 0), in_deg(N, 0);
+		for (auto& e : edges)
+			if (!e.back) in_deg[e.to]++;
+
+		std::queue<int> q;
+		for (int i = 0; i < N; ++i)
+			if (in_deg[i] == 0) q.push(i);
+
+		while (!q.empty())
+		{
+			int u = q.front(); q.pop();
+			for (int ei : succ[u])
+			{
+				auto& e = edges[ei];
+				if (e.back) continue;
+				layer[e.to] = std::max(layer[e.to], layer[u] + 1);
+				if (--in_deg[e.to] == 0) q.push(e.to);
+			}
+		}
+
+		const int max_layer = *std::max_element(layer.begin(), layer.end());
+
+		// ── 5. Group by layer, assign initial rank ────────────────────────────
+		std::vector<std::vector<int>> layers(max_layer + 1);
+		for (int i = 0; i < N; ++i)
+			layers[layer[i]].push_back(i);
+
+		std::vector<int> rank(N, 0);
+		for (auto& lyr : layers)
+			for (int r = 0; r < (int)lyr.size(); ++r)
+				rank[lyr[r]] = r;
+
+		// ── 6. Crossing minimisation (2 sweeps, port-aware barycenter) ──────────
+		// Port fraction: offset within [0,1) for which port of the neighbour
+		// node is connected, so two nodes linking different ports of the same
+		// neighbour get different barycenters and can be correctly ordered.
+		auto port_frac = [](parameter* p, bool use_inputs) -> float
+		{
+			auto* owner = p->owner;
+			if (use_inputs)
+			{
+				auto& v = owner->input_parametres;
+				int total = (int)v.size();
+				if (total <= 1) return 0.0f;
+				for (int i = 0; i < total; ++i)
+					if (v[i].get() == p) return (float)i / total;
+			}
+			else
+			{
+				auto& v = owner->output_parametres;
+				int total = (int)v.size();
+				if (total <= 1) return 0.0f;
+				for (int i = 0; i < total; ++i)
+					if (v[i].get() == p) return (float)i / total;
+			}
+			return 0.0f;
 		};
 
-		for (auto& n : root_nodes)
-			process_node(n);
-
-		std::vector<int> node_map(max_depth + 1, 0);
-
-		for (auto& d : depths)
+		auto barycenter = [&](int u, int neighbour_layer) -> float
 		{
-			d.first->pos = { d.second * 400, node_map[d.second] * 400 };
-			node_map[d.second]++;
+			float sum = 0; int cnt = 0;
+			for (int ei : succ[u])
+			{
+				auto& e = edges[ei];
+				if (!e.back && layer[e.to] == neighbour_layer)
+				{
+					float pf = e.conn ? port_frac(e.conn->to.get(), true) : 0.0f;
+					sum += rank[e.to] + pf;
+					++cnt;
+				}
+			}
+			for (int ei : pred[u])
+			{
+				auto& e = edges[ei];
+				if (!e.back && layer[e.from] == neighbour_layer)
+				{
+					float pf = e.conn ? port_frac(e.conn->from.get(), false) : 0.0f;
+					sum += rank[e.from] + pf;
+					++cnt;
+				}
+			}
+			return cnt ? sum / cnt : (float)rank[u];
+		};
+
+		for (int sweep = 0; sweep < 2; ++sweep)
+		{
+			for (int l = 1; l <= max_layer; ++l)
+			{
+				std::stable_sort(layers[l].begin(), layers[l].end(),
+					[&](int a, int b){ return barycenter(a, l-1) < barycenter(b, l-1); });
+				for (int r = 0; r < (int)layers[l].size(); ++r)
+					rank[layers[l][r]] = r;
+			}
+			for (int l = max_layer - 1; l >= 0; --l)
+			{
+				std::stable_sort(layers[l].begin(), layers[l].end(),
+					[&](int a, int b){ return barycenter(a, l+1) < barycenter(b, l+1); });
+				for (int r = 0; r < (int)layers[l].size(); ++r)
+					rank[layers[l][r]] = r;
+			}
 		}
+
+		// ── 7. Coordinate assignment ──────────────────────────────────────────
+		constexpr float X_SPACING = 350.0f;
+		constexpr float Y_SPACING = 150.0f;
+
+		for (int i = 0; i < N; ++i)
+			verts[i]->pos = vec2(layer[i] * X_SPACING, rank[i] * Y_SPACING);
+
+		// Y relaxation — nudge each node toward average neighbour y, preserving rank order
+		for (int iter = 0; iter < 3; ++iter)
+		{
+			std::vector<float> new_y(N);
+			for (int u = 0; u < N; ++u)
+			{
+				float sum = 0; int cnt = 0;
+				for (int ei : succ[u]) { if (!edges[ei].back) { sum += verts[edges[ei].to  ]->pos.y; ++cnt; } }
+				for (int ei : pred[u]) { if (!edges[ei].back) { sum += verts[edges[ei].from]->pos.y; ++cnt; } }
+				new_y[u] = cnt ? sum / cnt : verts[u]->pos.y;
+			}
+			for (auto& lyr : layers)
+			{
+				for (int r = 0; r < (int)lyr.size(); ++r)
+				{
+					int u = lyr[r];
+					float lo = r > 0                    ? verts[lyr[r-1]]->pos.y + Y_SPACING * 0.5f : -1e9f;
+					float hi = r < (int)lyr.size() - 1 ? verts[lyr[r+1]]->pos.y - Y_SPACING * 0.5f :  1e9f;
+					verts[u]->pos = vec2(verts[u]->pos.x, std::clamp(new_y[u], lo, hi));
+				}
+			}
+		}
+
+		// Position graph_in: layer -1, vertically centred on the nodes it feeds
+		{
+			float sum = 0; int cnt = 0;
+			for (auto& p : input_parametres)
+				for (auto& c : p->output_connections)
+				{
+					auto it = idx.find(c->to->owner);
+					if (it != idx.end()) { sum += verts[it->second]->pos.y; ++cnt; }
+				}
+			pos_in = vec2(-X_SPACING, cnt ? sum / cnt : 0.0f);
+		}
+
+		// Position graph_out: layer max+1, vertically centred on the nodes feeding it
+		{
+			float sum = 0; int cnt = 0;
+			for (auto& p : output_parametres)
+				for (auto& c : p->input_connections)
+				{
+					auto it = idx.find(c->from->owner);
+					if (it != idx.end()) { sum += verts[it->second]->pos.y; ++cnt; }
+				}
+			pos_out = vec2((max_layer + 1) * X_SPACING, cnt ? sum / cnt : 0.0f);
+		}
+	}
+
+	void graph::place_node(Node* n)
+	{
+		constexpr float X_SPACING = 350.0f;
+		constexpr float Y_SPACING = 150.0f;
+
+		// Layer = one past the deepest predecessor
+		int node_layer = 0;
+		for (auto& p : n->input_parametres)
+			for (auto& c : p->input_connections)
+			{
+				auto* pred = c->from->owner;
+				if (pred == this) continue;
+				int pred_layer = (int)std::round(pred->pos.x / X_SPACING);
+				node_layer = std::max(node_layer, pred_layer + 1);
+			}
+
+		// Count siblings already at this layer
+		int count = 0;
+		for (auto& other : nodes)
+		{
+			if (other.get() == n) continue;
+			if ((int)std::round(other->pos.x / X_SPACING) == node_layer)
+				++count;
+		}
+
+		n->pos = { node_layer * X_SPACING, count * Y_SPACING };
 	}
 
 } // namespace FlowGraph

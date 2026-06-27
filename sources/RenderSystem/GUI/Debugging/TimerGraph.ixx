@@ -93,6 +93,7 @@ export namespace GUI
 				collected_data data;
 
 				base::ptr front;
+				base::ptr names_col;
 				void build();
 				bool ended = false;
 				bool need_start = false;
