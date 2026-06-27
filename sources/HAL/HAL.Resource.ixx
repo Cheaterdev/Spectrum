@@ -156,8 +156,9 @@ export{
 			Device& get_device() const { ASSERT(m_device); return *m_device; }
 
 			FenceWaiter load_waiter;
-			bool debug=false;
+			bool debug = false;
 			bool debug_transitions = false;
+			bool frame_graph_managed = false;
 			bool is_ready() const;
 
 			ResourceType get_type() const;

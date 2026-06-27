@@ -31,7 +31,7 @@ export{
 			std::vector<std::function<void()>> on_execute_funcs;
 
 
-			std::list<TrackedObject::ptr> tracked_resources;
+			std::vector<TrackedObject::ptr> tracked_resources;
 			FenceWaiter dstorage_fence;
 			DelayedCommandList* get_native_list();
 		public:
@@ -64,7 +64,7 @@ export{
 
 		class Transitions : public virtual CommandListBase
 		{
-			std::list<HAL::Resource*> used_resources;
+			std::vector<HAL::Resource*> used_resources;
 
 			friend class SignatureDataSetter;
 			friend class Sendable;
@@ -73,7 +73,9 @@ export{
 		protected:
 			void begin();
 			void on_execute();
-			std::list<HAL::UsagePoint> usage_points;
+			std::deque<HAL::UsagePoint> usage_points;
+			std::deque<HAL::ResourceUsage> usage_pool;
+			size_t pool_used = 0;
 			std::set<Resource*> need_check_transitions;
 			void create_usage_point(BarrierSync operation, bool end = true);
 

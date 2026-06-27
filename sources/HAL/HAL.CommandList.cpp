@@ -787,8 +787,9 @@ namespace HAL
 
 				for (auto& point : usage_points)
 				{
-					for (auto& usage : point.usages)
+					for (auto* u : point.usages)
 					{
+						auto& usage = *u;
 						auto prev_usage = usage.prev_usage;
 
 					//	ASSERT(!usage.debug);
@@ -927,19 +928,28 @@ namespace HAL
 				if (type == HAL::TransitionType::LAST) point = &usage_points.back();
 				if (type == HAL::TransitionType::ZERO) point = &usage_points.front();
 
-				HAL::ResourceUsage& usage = point->usages.emplace_back();
+				HAL::ResourceUsage* usage_ptr;
+				if (pool_used < usage_pool.size())
+					usage_ptr = &usage_pool[pool_used];
+				else
+					usage_pool.emplace_back(), usage_ptr = &usage_pool.back();
+				pool_used++;
+
+				HAL::ResourceUsage& usage = *usage_ptr;
+				point->usages.push_back(usage_ptr);
 
 				usage.resource = const_cast<HAL::Resource*>(resource);
 				usage.subres = subres;
 				usage.wanted_state = state;
+				usage.prev_usage = nullptr;
+				usage.next_usage = nullptr;
+				usage.point = point;
+				usage.last_point = nullptr;
+				usage.debug = false;
 
 				HAL::Debug::BarrierBreakpoints::check_usage(resource->name, subres, state);
 
-				if(usage.prev_usage && usage.prev_usage->wanted_state!=ResourceStates::UNKNOWN)
-			ASSERT( usage.prev_usage->wanted_state.operation!=BarrierSync::NONE);
-
-				usage.point = point;
-				return &usage;
+				return usage_ptr;
 			}
 
 	
@@ -958,7 +968,6 @@ namespace HAL
 			void Transitions::transition(const ResourceInfo& info, BarrierSync operation )
 			{
 				if (!info.is_valid()) return;
-
 				ResourceState target_state;//= ResourceState::COMMON;
 
 
@@ -1019,10 +1028,27 @@ namespace HAL
 				}
 				else ASSERT(false);
 
+				auto resource= 		 info.get_resource();
 
-				info.for_each_subres([&](const HAL::Resource::ptr& resource, UINT subres)
+		
+		if (!resource->frame_graph_managed)
+			track_object(*const_cast<Resource*>(resource));
+
+		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
+		{
+			use_resource(resource);
+		}
+
+
+				info.for_each_subres([&](const HAL::Resource::ptr& , UINT subres)
 					{
-						transition(resource.get(), target_state, subres);
+
+						if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
+						{
+							use_resource(resource);
+							resource->get_state_manager().transition(this, target_state, subres);
+						}
+						//	transition(resource.get(), target_state, subres);
 					});
 			}
 
@@ -1099,8 +1125,8 @@ namespace HAL
 	{
 		if (!resource) return;
 
-		track_object(*const_cast<Resource*>(resource));
-
+		if (!resource->frame_graph_managed)
+			track_object(*const_cast<Resource*>(resource));
 
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
@@ -1484,11 +1510,15 @@ namespace HAL
 	void Transitions::begin()
 	{
 		transition_count = 0;
+		pool_used = 0;
+		tracked_resources.reserve(512);
+		used_resources.reserve(256);
 		create_usage_point(BarrierSync::NONE, false);
 	}
 
 	void Transitions::on_execute()
 	{
+		pool_used = 0;
 		usage_points.clear();
 		used_resources.clear();
 		need_check_transitions.clear();
@@ -1502,16 +1532,13 @@ namespace HAL
 		{
 			if (table.dirty)
 			{
-				{ PROFILE(L"commit_tables/transitions");
-				  for (auto& resource_info : table.resources)
-					  get_base().transition(*resource_info, operation); }
+				for (auto& resource_info : table.resources)
+					get_base().transition(*resource_info, operation);
 
-				{ PROFILE(L"commit_tables/track_descriptors");
-				  for (auto& d : table.descriptors)
-					  get_base().track_object(*d); }
+				for (auto& d : table.descriptors)
+					get_base().track_object(*d);
 
-				{ PROFILE(L"commit_tables/set_cb");
-				  set_cb(id, table.const_buffer, operation); }
+				set_cb(id, table.const_buffer, operation);
 
 				table.dirty = false;
 			}

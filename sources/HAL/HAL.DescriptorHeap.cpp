@@ -294,7 +294,31 @@ f(view.Resource, ALL_SUBRESOURCES);
 
 	}
 
+		 Resource*  ResourceInfo::get_resource() const
+	{
+			   Resource* result = nullptr;
+		std::visit(overloaded{
+		[&](const HAL::Views::ShaderResource& ShaderResource) {
+		result = ShaderResource.Resource.get();
+		},
+			[&](const HAL::Views::UnorderedAccess& UnorderedAccess) {
+			result = UnorderedAccess.Resource.get();
+		},
+			[&](const HAL::Views::RenderTarget& RenderTarget) {
+		result = RenderTarget.Resource.get();
+		},
+			[&](const HAL::Views::DepthStencil& DepthStencil) {
+	result = DepthStencil.Resource.get();
+		},[&](const HAL::Views::ConstantBuffer& ConstantBuffer) {
+		result = ConstantBuffer.Resource.get();
+		},
+		[&](auto other) {
+			ASSERT(false);
+		}
+			}, view);
 
+		return result;
+	}
 	void ResourceInfo::for_each_subres(std::function<void(const HAL::Resource::ptr&, UINT)> f) const
 	{
 

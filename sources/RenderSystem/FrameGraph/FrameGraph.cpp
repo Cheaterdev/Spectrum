@@ -1467,6 +1467,7 @@ namespace FrameGraph
 
 					if (info->is_new)
 					{
+						info->resource->frame_graph_managed = true;
 						info->creation_state =info->last_state = info->resource->get_state_manager().copy_gpu();
 						info->last_state = TextureLayout::UNDEFINED;
 						info->view = nullptr;

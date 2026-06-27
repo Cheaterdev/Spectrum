@@ -87,7 +87,7 @@ export
 		struct UsagePoint
 		{
 			uint index;
-			std::list<HAL::ResourceUsage> usages;
+			std::vector<HAL::ResourceUsage*> usages;
 			HAL::Barriers  transitions;
 			bool start = false;
 			UsagePoint* prev_point = nullptr;

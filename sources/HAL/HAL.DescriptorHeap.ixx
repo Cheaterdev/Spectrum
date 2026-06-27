@@ -23,6 +23,8 @@ export
 				view = v;
 			}
 
+
+		   Resource* get_resource() const;
 			void for_each_subres(std::function<void(const std::shared_ptr<Resource>&, UINT)> f) const;
 		};
 
@@ -177,6 +179,8 @@ export
 		template<HAL::Views::ViewTemplate T>
 		void Handle::operator=(const T& v)
 		{
+			  PROFILE(L"HLSL View");
+
 			auto &heap =* storage->get_heap();
 
 			heap[get_offset()].place(v);
