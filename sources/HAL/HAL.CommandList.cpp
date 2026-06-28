@@ -1362,8 +1362,7 @@ namespace HAL
 		if (Profiler::get().enabled)
 			return Timer(std::make_shared<GPUBlock>(name, current, device), this);
 		else
-			return Timer(nullptr, nullptr);
-		//return std::move(Timer(nullptr,nullptr));
+			return Timer();
 	}
 	
 	void Eventer::end()

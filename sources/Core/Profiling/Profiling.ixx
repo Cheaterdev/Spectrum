@@ -10,7 +10,6 @@ import :Math;
 import :Tree;
 import :shared_ptr;
 
-//#define PROFILING
 export
 {
 
@@ -20,8 +19,6 @@ class TimedRoot
 protected:
 	TimedRoot * parent = nullptr;
 	friend class Timer;
-
-
 
 	virtual  void start(Timer* timer)
 	{
@@ -36,12 +33,10 @@ protected:
 			parent->end(timer);
 	}
 
-
 	virtual  void on_start(Timer* timer) = 0;
 	virtual  void on_end(Timer* timer) = 0;
 
 public:
-
 	virtual Timer start(std::wstring_view name) = 0;
 };
 
@@ -54,7 +49,7 @@ public:
 	std::chrono::time_point<std::chrono::high_resolution_clock>  end_time;
 	std::chrono::duration<double> get_lapsed_time()
 	{
-	return end_time - start_time;
+		return end_time - start_time;
 	}
 };
 
@@ -67,30 +62,33 @@ class TimedBlock: public SharedObject<TimedBlock>
 
 public:
 	using ptr = std::shared_ptr<TimedBlock>;
-				int id;
+	int id = -1;
 	std::wstring_view get_name() const;
 	CPUCounter cpu_counter;
 	TimedBlock(std::wstring_view name, TimedBlock* parent);
-	 virtual ~TimedBlock() = default;
+	TimedBlock() = default;   // for thread-local pool allocation
+	virtual ~TimedBlock() = default;
 public:
 	std::wstring_view name;
-	uint level;
-	TimedBlock* parent;
+	uint level = 0;
+	TimedBlock* parent = nullptr;
 };
 
 
 class Timer
 {
 	friend class TimedRoot;
-	/*friend class HAL::Eventer;*/
 	friend class Profiler;
 
-	TimedBlock::ptr block;
-	TimedRoot* root;
+	TimedBlock::ptr owned_block;  // non-null only for heap-allocated blocks (Eventer/GPUBlock)
+	TimedBlock*     block;        // raw ptr; valid for both pool and heap blocks
+	TimedRoot*      root;
 public:
-	Timer(TimedBlock::ptr block, TimedRoot* root);
+	Timer();                                          // disabled / null timer
+	Timer(TimedBlock::ptr block, TimedRoot* root);   // heap path (Eventer)
+	Timer(TimedBlock* block, TimedRoot* root);        // pool path (Profiler)
 
-	Timer(Timer&& t);
+	Timer(Timer&& t) noexcept;
 	~Timer();
 	TimedBlock& get_block()
 	{
@@ -116,8 +114,8 @@ public:
 class Profiler : public Singleton<Profiler>,public TimedRoot
 {
 	std::mutex m;
-	//std::map<std::thread::id, TimedBlock*> blocks;
 	static thread_local TimedBlock* current_block;
+	static thread_local unsigned    pool_head;
 
 public:
 	Events::Event<TimedBlock*> on_cpu_timer_start;
@@ -125,23 +123,16 @@ public:
 	Events::Event<std::pair<TimedBlock*, GPUTimerInterface*>> on_gpu_timer;
 	Events::Event<std::uint64_t> on_frame;
 
-	Profiler() 
-	{
-	/*	HAL::GPUTimeManager::create();*/
-	}
+	Profiler() {}
 
 	bool enabled = true;
-
 
 	TimedBlock* get_current() const;
 	virtual Timer start(std::wstring_view name) override;
 
 private:
 	virtual void on_start(Timer* timer) override;
-
-
 	virtual void on_end(Timer* timer) override;
-
 };
 
 
