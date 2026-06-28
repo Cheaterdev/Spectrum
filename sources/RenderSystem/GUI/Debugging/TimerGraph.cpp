@@ -437,6 +437,74 @@ namespace GUI
 				btn_lbl->text    = "capture";
 				btn_start->add_child(btn_lbl);
 
+				// ── max_level controls ─────────────────────────────────────────
+				{
+					label::ptr lbl(new label());
+					lbl->docking     = dock::LEFT;
+					lbl->width_size  = size_type::FIXED;
+					lbl->height_size = size_type::FIXED;
+					lbl->size        = {60, 22};
+					lbl->text        = "  depth:";
+					lbl->color       = {0.6f, 0.6f, 0.6f, 1.0f};
+					toolbar->add_child(lbl);
+
+					// decrement
+					button::ptr btn_dec(new button);
+					btn_dec->docking     = dock::LEFT;
+					btn_dec->width_size  = size_type::FIXED;
+					btn_dec->height_size = size_type::FIXED;
+					btn_dec->size        = {22, 22};
+					btn_dec->on_click    = [this](button::ptr) {
+						auto& ml = Profiler::get().max_level;
+						if (ml > 1 && ml != std::numeric_limits<int>::max()) --ml;
+						max_level_lbl->text = ml == std::numeric_limits<int>::max() ? "∞" : std::to_string(ml);
+					};
+					label::ptr dec_lbl(new label()); dec_lbl->docking = dock::FILL; dec_lbl->text = "-";
+					btn_dec->add_child(dec_lbl);
+					toolbar->add_child(btn_dec);
+
+					// current value label
+					label::ptr val_lbl(new label());
+					val_lbl->docking     = dock::LEFT;
+					val_lbl->width_size  = size_type::FIXED;
+					val_lbl->height_size = size_type::FIXED;
+					val_lbl->size        = {24, 22};
+					val_lbl->text        = "∞";
+					val_lbl->color       = {1.0f, 1.0f, 1.0f, 1.0f};
+					toolbar->add_child(val_lbl);
+					max_level_lbl = val_lbl;
+
+					// increment
+					button::ptr btn_inc(new button);
+					btn_inc->docking     = dock::LEFT;
+					btn_inc->width_size  = size_type::FIXED;
+					btn_inc->height_size = size_type::FIXED;
+					btn_inc->size        = {22, 22};
+					btn_inc->on_click    = [this](button::ptr) {
+						auto& ml = Profiler::get().max_level;
+						if (ml == std::numeric_limits<int>::max()) ml = 1;
+						else ++ml;
+						max_level_lbl->text = std::to_string(ml);
+					};
+					label::ptr inc_lbl(new label()); inc_lbl->docking = dock::FILL; inc_lbl->text = "+";
+					btn_inc->add_child(inc_lbl);
+					toolbar->add_child(btn_inc);
+
+					// reset to ∞
+					button::ptr btn_inf(new button);
+					btn_inf->docking     = dock::LEFT;
+					btn_inf->width_size  = size_type::FIXED;
+					btn_inf->height_size = size_type::FIXED;
+					btn_inf->size        = {22, 22};
+					btn_inf->on_click    = [this](button::ptr) {
+						Profiler::get().max_level = std::numeric_limits<int>::max();
+						max_level_lbl->text = "∞";
+					};
+					label::ptr inf_lbl(new label()); inf_lbl->docking = dock::FILL; inf_lbl->text = "∞";
+					btn_inf->add_child(inf_lbl);
+					toolbar->add_child(btn_inf);
+				}
+
 				// ── Scrollable content ─────────────────────────────────────────
 				image::ptr back(new image());
 				back->height_size  = size_type::MATCH_CHILDREN;

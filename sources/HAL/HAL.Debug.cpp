@@ -27,6 +27,7 @@ namespace HAL::Debug
 
 		std::mutex                                     s_mutex;
 		std::unordered_set<BreakKey, BreakKeyHash>     s_breaks;
+		std::atomic<int>                               s_break_count{ 0 };
 	}
 
 	bool BarrierBreakpoints::toggle(const BreakKey& key)
@@ -36,9 +37,11 @@ namespace HAL::Debug
 		if (it != s_breaks.end())
 		{
 			s_breaks.erase(it);
+			s_break_count.fetch_sub(1, std::memory_order_relaxed);
 			return false;
 		}
 		s_breaks.insert(key);
+		s_break_count.fetch_add(1, std::memory_order_relaxed);
 		return true;
 	}
 
@@ -51,6 +54,7 @@ namespace HAL::Debug
 	void BarrierBreakpoints::check_barrier(std::string_view resource, uint subres,
 	                                        const ResourceState& before, const ResourceState& after)
 	{
+		if (s_break_count.load(std::memory_order_relaxed) == 0) return;
 		BreakKey key{ std::string(resource), subres, before, after };
 		if (has(key))
 			__debugbreak();
@@ -59,7 +63,7 @@ namespace HAL::Debug
 	void BarrierBreakpoints::check_usage(std::string_view resource, uint subres,
 	                                      const ResourceState& wanted)
 	{
-		// Linear scan — typically 0-2 active breakpoints, so O(n) is acceptable.
+		if (s_break_count.load(std::memory_order_relaxed) == 0) return;
 		std::lock_guard lock(s_mutex);
 		for (const auto& k : s_breaks)
 		{

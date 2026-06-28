@@ -1,6 +1,7 @@
 export module GUI:Debug.TimerGraph;
 import :ScrollContainer;
 import :Image;
+import :Label;
 import Core;
 export namespace GUI
 {
@@ -94,6 +95,7 @@ export namespace GUI
 
 				base::ptr front;
 				base::ptr names_col;
+				label::ptr max_level_lbl;
 				void build();
 				bool ended = true;
 				bool need_start = false;

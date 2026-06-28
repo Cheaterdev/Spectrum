@@ -17,7 +17,6 @@ export
 		class Transitions;
 
 
-		constexpr uint ALL_SUBRESOURCES = std::numeric_limits<uint>::max();
 
 		enum class TransitionType :int
 		{
@@ -108,7 +107,11 @@ export
 			ResourceState get_first_usage();
 			ResourceState get_usage();
 			void reset();
+#ifdef DEV
 			void check_valid(const Resource* resource);
+#else
+			void check_valid(const Resource*) {}
+#endif
 			ResourceUsage* add_usage(ResourceUsage* usage);
 			ResourceUsage* set_zero_transition(ResourceUsage* usage);
 		};

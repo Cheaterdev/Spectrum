@@ -149,6 +149,7 @@ public:
 	Profiler() {}
 
 	bool enabled = true;
+	int max_level = std::numeric_limits<int>::max();
 
 	TimedBlock* get_current() const;
 	virtual Timer start(LiteralWStr name) override;

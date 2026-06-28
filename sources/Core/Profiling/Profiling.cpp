@@ -68,6 +68,9 @@ Timer Profiler::start(LiteralWStr name)
 	if (!enabled)
 		return Timer();
 
+	if (current_block && current_block->level >= max_level)
+		return Timer();
+
 	auto& block  = s_block_pool[pool_head++ & (POOL_SIZE - 1)];
 	block.name   = name.ptr;
 	block.parent = current_block;

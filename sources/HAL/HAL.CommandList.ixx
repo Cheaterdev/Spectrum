@@ -388,7 +388,6 @@ export{
 				SlotID slot_id;
 				CBVHandle const_buffer;
 				std::vector<HAL::ResourceInfo*> resources;
-				std::set<std::shared_ptr<HAL::DescriptorHeapStorage>> descriptors;
 			};
 			std::vector<RowInfo> tables;
 
@@ -446,7 +445,8 @@ export{
 
 				table.const_buffer = compiled.const_buffer;
 				table.resources = compiled.resources;
-				table.descriptors = compiled.descriptors;
+				for (auto& d : compiled.descriptors)
+					get_base().track_object(*d);
 			}
 
 		};

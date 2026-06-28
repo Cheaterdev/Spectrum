@@ -9,6 +9,7 @@ export
 
 	namespace HAL
 	{
+			   		constexpr uint ALL_SUBRESOURCES = std::numeric_limits<uint>::max();
 
 		struct ResourceInfo
 		{

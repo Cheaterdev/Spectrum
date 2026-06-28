@@ -1,4 +1,4 @@
-module HAL:DescriptorHeap;
+﻿module HAL:DescriptorHeap;
 
 
 import HAL;
@@ -56,291 +56,130 @@ namespace HAL {
 		get_resource_info() = r.get_resource_info();
 	}
 
-	void for_each(const ResourceInfo* info, const HAL::Views::RenderTarget& view, std::function<void(const HAL::Resource::ptr&, UINT)> f)
-	{
 
-		std::visit(overloaded{
-			[&](const HAL::Views::RenderTarget::Texture2D& Texture2D) {
-				auto& desc = view.Resource->get_desc().as_texture();
-
-				if (desc.MipLevels == 1 && desc.is2D() == 1)
-			{
-				f(view.Resource, ALL_SUBRESOURCES);
-			}
-			else
-			{
-				UINT res = desc.CalcSubresource(Texture2D.MipSlice, 0, Texture2D.PlaneSlice);
-				f(view.Resource,  res);
-			}
-			},
-			[&](const HAL::Views::RenderTarget::Texture2DArray& Texture2DArray) {
-					auto& desc = view.Resource->get_desc().as_texture();
-
-			for (UINT array = Texture2DArray.FirstArraySlice; array < Texture2DArray.FirstArraySlice + Texture2DArray.ArraySize; array++)
-			{
-				UINT res = desc.CalcSubresource(Texture2DArray.MipSlice, array, Texture2DArray.PlaneSlice);
-				f(view.Resource, res);
-			}
-			},
-			[&](auto other) {
-				ASSERT(false);
-			}
-			}, view.View);
-	}
-
-	void for_each(const ResourceInfo* info, const HAL::Views::UnorderedAccess& view, std::function<void(const HAL::Resource::ptr&, UINT)> f)
-	{
-
-
-		std::visit(overloaded{
-			[&](const HAL::Views::UnorderedAccess::Buffer& Buffer) {
-				f(view.Resource, ALL_SUBRESOURCES);
-			if (Buffer.CounterResource) f(Buffer.CounterResource, ALL_SUBRESOURCES);
-			},
-			[&](const HAL::Views::UnorderedAccess::Texture1D& Texture1D) {
-	ASSERT(false);
-			},
-			[&](const HAL::Views::UnorderedAccess::Texture1DArray& Texture1DArray) {
-	ASSERT(false);
-			},
-			[&](const HAL::Views::UnorderedAccess::Texture2D& Texture2D) {
-					auto& desc = view.Resource->get_desc().as_texture();
-
-if (desc.MipLevels == 1 && desc.is2D())
-			{
-				f(view.Resource, ALL_SUBRESOURCES);
-			}
-			else
-			{
-				UINT res = desc.CalcSubresource(Texture2D.MipSlice, 0, Texture2D.PlaneSlice);
-				f(view.Resource,  res);
-			}
-			},
-			[&](const HAL::Views::UnorderedAccess::Texture2DArray& Texture2DArray) {
-					auto& desc = view.Resource->get_desc().as_texture();
-
-			if (desc.MipLevels == 1 && desc.is2D() && desc.ArraySize == 1)
-			{
-				f(view.Resource, ALL_SUBRESOURCES);
-			}
-			else
-			{
-
-				for (UINT array = Texture2DArray.FirstArraySlice; array < Texture2DArray.FirstArraySlice + Texture2DArray.ArraySize; array++)
-				{
-					UINT res = desc.CalcSubresource(Texture2DArray.MipSlice, array, Texture2DArray.PlaneSlice);
-					f(view.Resource, res);
-				}
-
-			}
-			},
-			[&](const HAL::Views::UnorderedAccess::Texture3D& Texture3D) {
-					auto& desc = view.Resource->get_desc().as_texture();
-
-				if (Texture3D.FirstWSlice == 0 && Texture3D.WSize == desc.Dimensions.z && desc.MipLevels == 1)
-			{
-				f(view.Resource, ALL_SUBRESOURCES);
-			}
-			else
-			{
-				UINT res = desc.CalcSubresource(Texture3D.MipSlice, 0, 0);
-				f(view.Resource,  res);
-			}
-			},
-			[&](auto other) {
-				ASSERT(false);
-			}
-			}, view.View);
-
-
-
-	}
-
-
-	void for_each(const ResourceInfo* info, const HAL::Views::DepthStencil& view, std::function<void(const HAL::Resource::ptr&, UINT)> f)
-	{
-		std::visit(overloaded{
-		[&](const HAL::Views::DepthStencil::Texture1D& Texture1D) {
-	ASSERT(false);
-		},
-		[&](const HAL::Views::DepthStencil::Texture1DArray& Texture1DArray) {
-	ASSERT(false);
-		},
-		[&](const HAL::Views::DepthStencil::Texture2D& Texture2D) {
-auto& desc = view.Resource->get_desc().as_texture();
-
-
-			UINT res = desc.CalcSubresource(Texture2D.MipSlice, 0, 0);
-			f(view.Resource, res);
-		},
-		[&](const HAL::Views::DepthStencil::Texture2DArray& Texture2DArray) {
-
-				auto& desc = view.Resource->get_desc().as_texture();
-
-			for (UINT array = Texture2DArray.FirstArraySlice; array < Texture2DArray.FirstArraySlice + Texture2DArray.ArraySize; array++)
-			{
-				UINT res = desc.CalcSubresource(Texture2DArray.MipSlice, array, 0);
-				f(view.Resource, res);
-			}
-		},
-		[&](const HAL::Views::DepthStencil::Texture2DMS& Texture2DMS) {
-	ASSERT(false);
-		},
-		[&](const HAL::Views::DepthStencil::Texture2DMSArray& Texture2DMSArray) {
-	ASSERT(false);
-		},
-		[&](auto other) {
-			ASSERT(false);
-		}
-			}, view.View);
-
-	}
-
-
-	void for_each(const ResourceInfo* info, const HAL::Views::ShaderResource& view, std::function<void(const HAL::Resource::ptr&, UINT)> f)
-	{
-		std::visit(overloaded{	
-		[&](const HAL::Views::ShaderResource::Buffer& Buffer) {
-			f(view.Resource, ALL_SUBRESOURCES);
-		},
-		[&](const HAL::Views::ShaderResource::Texture1D& Texture1D) {
-	ASSERT(false);
-		},
-		[&](const HAL::Views::ShaderResource::Texture1DArray& Texture1DArray) {
-	ASSERT(false);
-		},
-		[&](const HAL::Views::ShaderResource::Texture2D& Texture2D) {
-				auto& desc = view.Resource->get_desc().as_texture();
-
-			if (Texture2D.MipLevels == desc.MipLevels && Texture2D.MostDetailedMip == 0 && desc.is2D())
-			{
-				f(view.Resource, ALL_SUBRESOURCES);
-			}
-			else
-			{
-				for (auto mip = Texture2D.MostDetailedMip; mip < Texture2D.MostDetailedMip + Texture2D.MipLevels; mip++)
-				{
-					UINT res = desc.CalcSubresource(mip, 0, Texture2D.PlaneSlice);
-					f(view.Resource, res);
-				}
-			}
-		},
-		[&](const HAL::Views::ShaderResource::Texture2DArray& Texture2DArray) {
-				auto& desc = view.Resource->get_desc().as_texture();
-
-			if (Texture2DArray.MipLevels == desc.MipLevels && Texture2DArray.MostDetailedMip == 0 && Texture2DArray.FirstArraySlice == 0 && Texture2DArray.ArraySize == desc.ArraySize && desc.is2D())
-			{
-				f(view.Resource, ALL_SUBRESOURCES);
-			}
-			else
-			{
-				for (auto mip = Texture2DArray.MostDetailedMip; mip < Texture2DArray.MostDetailedMip + Texture2DArray.MipLevels; mip++)
-					for (auto array = Texture2DArray.FirstArraySlice; array < Texture2DArray.FirstArraySlice + Texture2DArray.ArraySize; array++)
-					{
-						UINT res = desc.CalcSubresource(mip, array, Texture2DArray.PlaneSlice);
-						f(view.Resource, res);
-					}
-			}
-		},
-		[&](const HAL::Views::ShaderResource::Texture3D& Texture3D) {
-				auto& desc = view.Resource->get_desc().as_texture();
-
-			if (Texture3D.MipLevels == desc.MipLevels && Texture3D.MostDetailedMip == 0)
-			{
-				f(view.Resource, ALL_SUBRESOURCES);
-			}
-			else
-			{
-				for (auto mip = Texture3D.MostDetailedMip; mip < Texture3D.MostDetailedMip + Texture3D.MipLevels; mip++)
-				{
-					UINT res = desc.CalcSubresource(mip, 0, 0);
-					f(view.Resource, res);
-				}
-			}
-		},
-		[&](const HAL::Views::ShaderResource::Texture2DMS& Texture2DMS) {
-ASSERT(false);
-		},
-		[&](const HAL::Views::ShaderResource::Texture2DMSArray& Texture2DMSArray) {
-ASSERT(false);
-		},
-		[&](const HAL::Views::ShaderResource::Cube& Cube) {
-				auto& desc = view.Resource->get_desc().as_texture();
-
-			if (Cube.MipLevels == desc.MipLevels && Cube.MostDetailedMip == 0)
-			{
-				f(view.Resource, ALL_SUBRESOURCES);
-			}
-			else
-			{
-				for (auto mip = Cube.MostDetailedMip; mip < Cube.MostDetailedMip + Cube.MipLevels; mip++)
-					for (auto array = 0; array < 6; array++)
-					{
-						UINT res = desc.CalcSubresource(mip, array, 0);
-						f(view.Resource, res);
-					}
-			}
-		},
-		[&](const HAL::Views::ShaderResource::CubeArray& CubeArray) {
-ASSERT(false);
-		},
-		[&](const HAL::Views::ShaderResource::Raytracing& Raytracing) {
-f(view.Resource, ALL_SUBRESOURCES);
-		},
-		[&](auto other) {
-			ASSERT(false);
-		}
-			}, view.View);
-
-	}
-
-		 Resource*  ResourceInfo::get_resource() const
-	{
-			   Resource* result = nullptr;
-		std::visit(overloaded{
-		[&](const HAL::Views::ShaderResource& ShaderResource) {
-		result = ShaderResource.Resource.get();
-		},
-			[&](const HAL::Views::UnorderedAccess& UnorderedAccess) {
-			result = UnorderedAccess.Resource.get();
-		},
-			[&](const HAL::Views::RenderTarget& RenderTarget) {
-		result = RenderTarget.Resource.get();
-		},
-			[&](const HAL::Views::DepthStencil& DepthStencil) {
-	result = DepthStencil.Resource.get();
-		},[&](const HAL::Views::ConstantBuffer& ConstantBuffer) {
-		result = ConstantBuffer.Resource.get();
-		},
-		[&](auto other) {
-			ASSERT(false);
-		}
-			}, view);
-
-		return result;
-	}
 	void ResourceInfo::for_each_subres(std::function<void(const HAL::Resource::ptr&, UINT)> f) const
 	{
-
 		std::visit(overloaded{
-		[&](const HAL::Views::ShaderResource& ShaderResource) {
-			for_each(this, ShaderResource, f);
-		},
-			[&](const HAL::Views::UnorderedAccess& UnorderedAccess) {
-			for_each(this,UnorderedAccess, f);
-		},
-			[&](const HAL::Views::RenderTarget& RenderTarget) {
-			for_each(this, RenderTarget, f);
-		},
-			[&](const HAL::Views::DepthStencil& DepthStencil) {
-			for_each(this,DepthStencil, f);
-		},[&](const HAL::Views::ConstantBuffer& ConstantBuffer) {
-			f(ConstantBuffer.Resource, ALL_SUBRESOURCES);
-		},
-		[&](auto other) {
-			ASSERT(false);
-		}
-			}, view);
+			[&](const HAL::Views::ShaderResource& v) {
+				std::visit(overloaded{
+					[&](const HAL::Views::ShaderResource::Buffer&) { f(v.Resource, ALL_SUBRESOURCES); },
+					[&](const HAL::Views::ShaderResource::Texture2D& t) {
+						auto& desc = v.Resource->get_desc().as_texture();
+						if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0 && desc.is2D())
+							f(v.Resource, ALL_SUBRESOURCES);
+						else
+							for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
+								f(v.Resource, desc.CalcSubresource(mip, 0, t.PlaneSlice));
+					},
+					[&](const HAL::Views::ShaderResource::Texture2DArray& t) {
+						auto& desc = v.Resource->get_desc().as_texture();
+						if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0 && t.FirstArraySlice == 0 && t.ArraySize == desc.ArraySize && desc.is2D())
+							f(v.Resource, ALL_SUBRESOURCES);
+						else
+							for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
+								for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
+									f(v.Resource, desc.CalcSubresource(mip, arr, t.PlaneSlice));
+					},
+					[&](const HAL::Views::ShaderResource::Texture3D& t) {
+						auto& desc = v.Resource->get_desc().as_texture();
+						if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0)
+							f(v.Resource, ALL_SUBRESOURCES);
+						else
+							for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
+								f(v.Resource, desc.CalcSubresource(mip, 0, 0));
+					},
+					[&](const HAL::Views::ShaderResource::Cube& t) {
+						auto& desc = v.Resource->get_desc().as_texture();
+						if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0)
+							f(v.Resource, ALL_SUBRESOURCES);
+						else
+							for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
+								for (auto arr = 0; arr < 6; arr++)
+									f(v.Resource, desc.CalcSubresource(mip, arr, 0));
+					},
+					[&](const HAL::Views::ShaderResource::Raytracing&) { f(v.Resource, ALL_SUBRESOURCES); },
+					[&](auto) { ASSERT(false); }
+				}, v.View);
+			},
+			[&](const HAL::Views::UnorderedAccess& v) {
+				std::visit(overloaded{
+					[&](const HAL::Views::UnorderedAccess::Buffer& b) {
+						f(v.Resource, ALL_SUBRESOURCES);
+						if (b.CounterResource) f(b.CounterResource, ALL_SUBRESOURCES);
+					},
+					[&](const HAL::Views::UnorderedAccess::Texture2D& t) {
+						auto& desc = v.Resource->get_desc().as_texture();
+						if (desc.MipLevels == 1 && desc.is2D())
+							f(v.Resource, ALL_SUBRESOURCES);
+						else
+							f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, t.PlaneSlice));
+					},
+					[&](const HAL::Views::UnorderedAccess::Texture2DArray& t) {
+						auto& desc = v.Resource->get_desc().as_texture();
+						if (desc.MipLevels == 1 && desc.is2D() && desc.ArraySize == 1)
+							f(v.Resource, ALL_SUBRESOURCES);
+						else
+							for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
+								f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, t.PlaneSlice));
+					},
+					[&](const HAL::Views::UnorderedAccess::Texture3D& t) {
+						auto& desc = v.Resource->get_desc().as_texture();
+						if (t.FirstWSlice == 0 && t.WSize == desc.Dimensions.z && desc.MipLevels == 1)
+							f(v.Resource, ALL_SUBRESOURCES);
+						else
+							f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, 0));
+					},
+					[&](auto) { ASSERT(false); }
+				}, v.View);
+			},
+			[&](const HAL::Views::RenderTarget& v) {
+				std::visit(overloaded{
+					[&](const HAL::Views::RenderTarget::Texture2D& t) {
+						auto& desc = v.Resource->get_desc().as_texture();
+						if (desc.MipLevels == 1 && desc.is2D() == 1)
+							f(v.Resource, ALL_SUBRESOURCES);
+						else
+							f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, t.PlaneSlice));
+					},
+					[&](const HAL::Views::RenderTarget::Texture2DArray& t) {
+						auto& desc = v.Resource->get_desc().as_texture();
+						for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
+							f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, t.PlaneSlice));
+					},
+					[&](auto) { ASSERT(false); }
+				}, v.View);
+			},
+			[&](const HAL::Views::DepthStencil& v) {
+				std::visit(overloaded{
+					[&](const HAL::Views::DepthStencil::Texture2D& t) {
+						auto& desc = v.Resource->get_desc().as_texture();
+						f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, 0));
+					},
+					[&](const HAL::Views::DepthStencil::Texture2DArray& t) {
+						auto& desc = v.Resource->get_desc().as_texture();
+						for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
+							f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, 0));
+					},
+					[&](auto) { ASSERT(false); }
+				}, v.View);
+			},
+			[&](const HAL::Views::ConstantBuffer& v) { f(v.Resource, ALL_SUBRESOURCES); },
+			[&](auto) { ASSERT(false); }
+		}, view);
+	}
+
+	Resource* ResourceInfo::get_resource() const
+	{
+		Resource* result = nullptr;
+		std::visit(overloaded{
+			[&](const HAL::Views::ShaderResource& v)   { result = v.Resource.get(); },
+			[&](const HAL::Views::UnorderedAccess& v)  { result = v.Resource.get(); },
+			[&](const HAL::Views::RenderTarget& v)     { result = v.Resource.get(); },
+			[&](const HAL::Views::DepthStencil& v)     { result = v.Resource.get(); },
+			[&](const HAL::Views::ConstantBuffer& v)   { result = v.Resource.get(); },
+			[&](auto) { ASSERT(false); }
+		}, view);
+		return result;
 	}
 
 	bool ResourceInfo::is_valid() const

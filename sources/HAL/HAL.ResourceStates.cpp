@@ -141,6 +141,7 @@ namespace HAL
 
 	void ResourceListStateCPU::check_valid(const Resource* resource)
 	{
+#ifdef DEV
 		if (resource && check(resource->get_desc().Flags & ResFlags::DisableStateTracking)) return;
 
 		auto usage = last_usage;
@@ -148,8 +149,7 @@ namespace HAL
 
 		if(prev_usage && prev_usage->prev_usage && prev_usage->wanted_state!=ResourceStates::UNKNOWN)
 			ASSERT( prev_usage->wanted_state.operation!=BarrierSync::NONE);
-
-
+#endif
 	}
 
 	ResourceUsage* ResourceListStateCPU::add_usage(ResourceUsage* usage)
@@ -488,11 +488,9 @@ namespace HAL
 					subres_cpu.first_usage = subres_cpu.last_usage = (list)->add_usage((resource), subres, target);
 
 					//	ASSERT(!(!check(subres_cpu.first_usage->resource->get_desc().Flags & ResFlags::DisableStateTracking) && subres_cpu.first_usage->wanted_state.access == ResourceStates::NO_ACCESS.access));
-	
-					{
-						auto transition = (list)->add_usage((resource), subres, state);
-						subres_cpu.add_usage(transition);
-					}
+
+					auto transition = (list)->add_usage((resource), subres, state);
+					subres_cpu.add_usage(transition);
 				}
 				else
 				{
@@ -505,21 +503,17 @@ namespace HAL
 
 			{
 				auto last_state = subres_cpu.last_usage->wanted_state;
-
+				auto merged_state = merge_state(last_state, state);
+				if (merged_state)
 				{
-					auto merged_state = merge_state(last_state, state);
-					if (merged_state)
-					{
-						subres_cpu.last_usage->wanted_state = *merged_state;
-					}
-					else
-					{
-						auto transition = (list)->add_usage((resource), subres, state);
-						subres_cpu.add_usage(transition);
-					}
-
-					subres_cpu.check_valid(resource);
+					subres_cpu.last_usage->wanted_state = *merged_state;
 				}
+				else
+				{
+					auto transition = (list)->add_usage((resource), subres, state);
+					subres_cpu.add_usage(transition);
+				}
+				subres_cpu.check_valid(resource);
 			}
 		};
 

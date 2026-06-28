@@ -8,6 +8,119 @@ import Core;
 
 import HAL;
 
+// File-local template — full HAL::Resource available here, no std::function overhead.
+template<typename F>
+static void visit_subres(const HAL::ResourceInfo& info, F&& f)
+{
+	std::visit(overloaded{
+		[&](const HAL::Views::ShaderResource& v) {
+			std::visit(overloaded{
+				[&](const HAL::Views::ShaderResource::Buffer&) { f(v.Resource, HAL::ALL_SUBRESOURCES); },
+				[&](const HAL::Views::ShaderResource::Texture2D& t) {
+					auto& desc = v.Resource->get_desc().as_texture();
+					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0 && desc.is2D())
+						f(v.Resource, HAL::ALL_SUBRESOURCES);
+					else
+						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
+							f(v.Resource, desc.CalcSubresource(mip, 0, t.PlaneSlice));
+				},
+				[&](const HAL::Views::ShaderResource::Texture2DArray& t) {
+					auto& desc = v.Resource->get_desc().as_texture();
+					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0 && t.FirstArraySlice == 0 && t.ArraySize == desc.ArraySize && desc.is2D())
+						f(v.Resource, HAL::ALL_SUBRESOURCES);
+					else
+						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
+							for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
+								f(v.Resource, desc.CalcSubresource(mip, arr, t.PlaneSlice));
+				},
+				[&](const HAL::Views::ShaderResource::Texture3D& t) {
+					auto& desc = v.Resource->get_desc().as_texture();
+					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0)
+						f(v.Resource, HAL::ALL_SUBRESOURCES);
+					else
+						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
+							f(v.Resource, desc.CalcSubresource(mip, 0, 0));
+				},
+				[&](const HAL::Views::ShaderResource::Cube& t) {
+					auto& desc = v.Resource->get_desc().as_texture();
+					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0)
+						f(v.Resource, HAL::ALL_SUBRESOURCES);
+					else
+						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
+							for (auto arr = 0; arr < 6; arr++)
+								f(v.Resource, desc.CalcSubresource(mip, arr, 0));
+				},
+				[&](const HAL::Views::ShaderResource::Raytracing&) { f(v.Resource, HAL::ALL_SUBRESOURCES); },
+				[&](auto) { ASSERT(false); }
+			}, v.View);
+		},
+		[&](const HAL::Views::UnorderedAccess& v) {
+			std::visit(overloaded{
+				[&](const HAL::Views::UnorderedAccess::Buffer& b) {
+					f(v.Resource, HAL::ALL_SUBRESOURCES);
+					if (b.CounterResource) f(b.CounterResource, HAL::ALL_SUBRESOURCES);
+				},
+				[&](const HAL::Views::UnorderedAccess::Texture2D& t) {
+					auto& desc = v.Resource->get_desc().as_texture();
+					if (desc.MipLevels == 1 && desc.is2D())
+						f(v.Resource, HAL::ALL_SUBRESOURCES);
+					else
+						f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, t.PlaneSlice));
+				},
+				[&](const HAL::Views::UnorderedAccess::Texture2DArray& t) {
+					auto& desc = v.Resource->get_desc().as_texture();
+					if (desc.MipLevels == 1 && desc.is2D() && desc.ArraySize == 1)
+						f(v.Resource, HAL::ALL_SUBRESOURCES);
+					else
+						for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
+							f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, t.PlaneSlice));
+				},
+				[&](const HAL::Views::UnorderedAccess::Texture3D& t) {
+					auto& desc = v.Resource->get_desc().as_texture();
+					if (t.FirstWSlice == 0 && t.WSize == desc.Dimensions.z && desc.MipLevels == 1)
+						f(v.Resource, HAL::ALL_SUBRESOURCES);
+					else
+						f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, 0));
+				},
+				[&](auto) { ASSERT(false); }
+			}, v.View);
+		},
+		[&](const HAL::Views::RenderTarget& v) {
+			std::visit(overloaded{
+				[&](const HAL::Views::RenderTarget::Texture2D& t) {
+					auto& desc = v.Resource->get_desc().as_texture();
+					if (desc.MipLevels == 1 && desc.is2D() == 1)
+						f(v.Resource, HAL::ALL_SUBRESOURCES);
+					else
+						f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, t.PlaneSlice));
+				},
+				[&](const HAL::Views::RenderTarget::Texture2DArray& t) {
+					auto& desc = v.Resource->get_desc().as_texture();
+					for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
+						f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, t.PlaneSlice));
+				},
+				[&](auto) { ASSERT(false); }
+			}, v.View);
+		},
+		[&](const HAL::Views::DepthStencil& v) {
+			std::visit(overloaded{
+				[&](const HAL::Views::DepthStencil::Texture2D& t) {
+					auto& desc = v.Resource->get_desc().as_texture();
+					f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, 0));
+				},
+				[&](const HAL::Views::DepthStencil::Texture2DArray& t) {
+					auto& desc = v.Resource->get_desc().as_texture();
+					for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
+						f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, 0));
+				},
+				[&](auto) { ASSERT(false); }
+			}, v.View);
+		},
+		[&](const HAL::Views::ConstantBuffer& v) { f(v.Resource, HAL::ALL_SUBRESOURCES); },
+		[&](auto) { ASSERT(false); }
+	}, info.view);
+}
+
 //using namespace HAL;
 namespace HAL
 
@@ -759,20 +872,11 @@ namespace HAL
 
 			{
 				PROFILE(L"create_usage_point");
-				UsagePoint* point;
-				{
-					PROFILE(L"emplace_back");
-					auto prev_point = usage_points.empty() ? nullptr : &usage_points.back();
-					point = &usage_points.emplace_back(type);
-					{ PROFILE(L"link"); if (prev_point) prev_point->next_point = point; }
-					{ PROFILE(L"fill"); point->prev_point = prev_point; point->cmd_list = this; point->start = !end; point->index = static_cast<uint>(usage_points.size()); point->operation = operation; }
-				}
-				{
-					PROFILE(L"func_barrier");
-					compiler.func_barrier(point);
-				}
-
-			///	poin.transition_type = prev_point?
+				auto prev_point = usage_points.empty() ? nullptr : &usage_points.back();
+				auto* point = &usage_points.emplace_back(type);
+				if (prev_point) prev_point->next_point = point;
+				point->prev_point = prev_point; point->cmd_list = this; point->start = !end; point->index = static_cast<uint>(usage_points.size()); point->operation = operation;
+				compiler.func_barrier(point);
 			}
 
 			void Transitions::compile_transitions()
@@ -1027,26 +1131,17 @@ namespace HAL
 
 				auto resource= 		 info.get_resource();
 
-		
 		if (!resource->frame_graph_managed)
 			track_object(*const_cast<Resource*>(resource));
 
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
 			use_resource(resource);
+			visit_subres(info, [&](const HAL::Resource::ptr&, UINT subres) {
+				use_resource(resource);
+				resource->get_state_manager().transition(this, target_state, subres);
+			});
 		}
-
-
-				info.for_each_subres([&](const HAL::Resource::ptr& , UINT subres)
-					{
-
-						if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
-						{
-							use_resource(resource);
-							resource->get_state_manager().transition(this, target_state, subres);
-						}
-						//	transition(resource.get(), target_state, subres);
-					});
 			}
 
 			void Transitions::stop_using(const ResourceInfo& info)
@@ -1054,10 +1149,9 @@ namespace HAL
 				if (!info.is_valid()) return;
 
 
-				info.for_each_subres([&](const HAL::Resource::ptr& resource, UINT subres)
-					{
-						const_cast<HAL::Resource*>(resource.get())->get_state_manager().stop_using(this, subres);
-					});
+				visit_subres(info, [&](const HAL::Resource::ptr& resource, UINT subres) {
+					const_cast<HAL::Resource*>(resource.get())->get_state_manager().stop_using(this, subres);
+				});
 			}
 
 
@@ -1530,13 +1624,15 @@ namespace HAL
 		{
 			if (table.dirty)
 			{
-				for (auto& resource_info : table.resources)
-					get_base().transition(*resource_info, operation);
-
-				for (auto& d : table.descriptors)
-					get_base().track_object(*d);
-
-				set_cb(id, table.const_buffer, operation);
+				{
+					PROFILE(L"transitions");
+					for (auto& resource_info : table.resources)
+						get_base().transition(*resource_info, operation);
+				}
+				{
+					PROFILE(L"set_cb");
+					set_cb(id, table.const_buffer, operation);
+				}
 
 				table.dirty = false;
 			}
@@ -1568,6 +1664,7 @@ namespace HAL
 
 	void SignatureDataSetter::stop_using(uint id)
 	{
+		PROFILE(L"stop_using");
 		auto& table = tables[id];
 
 		for (auto& res : table.resources)
@@ -1710,7 +1807,6 @@ namespace HAL
 		{
 			table.const_buffer = CBVHandle();
 			table.resources.clear();
-			table.descriptors.clear();
 			table.dirty = false;
 		}
 	}

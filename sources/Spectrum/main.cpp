@@ -1094,8 +1094,8 @@ protected:
 
 	void on_tick() override
 	{
-		if (GetAsyncKeyState(VK_ESCAPE))
-			shutdown();
+	//	if (GetAsyncKeyState(VK_ESCAPE))
+	//		shutdown();
 
 		Window::process_messages();
 	}
