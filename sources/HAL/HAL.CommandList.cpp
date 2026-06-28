@@ -109,7 +109,7 @@ namespace HAL
 					first_debug_log = false;
 				}
 
-				block << "DEBUG(" << name << "): " << pso_name << "\n";
+				block << "DEBUG(" << name.ptr << "): " << pso_name << "\n";
 				for (int i = 0; i < 3; i++)
 				{
 					block << "debug(" << i << "): " << result[i].v.x << " " << result[i].v.y << " " << result[i].v.z << " "
@@ -122,15 +122,10 @@ namespace HAL
 	}
 
 
-	void CommandList::begin(std::wstring_view name)
+	void CommandList::begin(LiteralWStr name)
 	{
 		active = true;
-		if (name.empty())
-		{
-			compiler.set_name(L"EmptyName");
-		}
-		else
-			compiler.set_name(name);
+		compiler.set_name(name.ptr);
 
 		compiler.reset();
 #ifdef DEV
@@ -763,17 +758,19 @@ namespace HAL
 		void Transitions::create_usage_point(BarrierSync operation, bool end)
 
 			{
-				auto prev_point = usage_points.empty() ? nullptr : &usage_points.back();
-				auto point = &usage_points.emplace_back(type);
-
-
-				if (prev_point) prev_point->next_point = point;
-				point->prev_point = prev_point;
-				point->cmd_list = this;
-				point->start = !end;
-				point->index = static_cast<uint>(usage_points.size());
-				point->operation = 	  operation;
-				compiler.func_barrier(point);
+				PROFILE(L"create_usage_point");
+				UsagePoint* point;
+				{
+					PROFILE(L"emplace_back");
+					auto prev_point = usage_points.empty() ? nullptr : &usage_points.back();
+					point = &usage_points.emplace_back(type);
+					{ PROFILE(L"link"); if (prev_point) prev_point->next_point = point; }
+					{ PROFILE(L"fill"); point->prev_point = prev_point; point->cmd_list = this; point->start = !end; point->index = static_cast<uint>(usage_points.size()); point->operation = operation; }
+				}
+				{
+					PROFILE(L"func_barrier");
+					compiler.func_barrier(point);
+				}
 
 			///	poin.transition_type = prev_point?
 			}
@@ -1248,7 +1245,7 @@ namespace HAL
 
 	void ComputeContext::dispatch(int x, int y, int z)
 	{
-		PROFILE_GPU(L"Dispatch");
+		PROFILE_GPU(L"dispatch");
 
 		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 		list->dispatch({x, y, z});
@@ -1333,7 +1330,7 @@ namespace HAL
 
 	
 
-	void Eventer::begin(std::wstring_view name)
+	void Eventer::begin(LiteralWStr name)
 	{
 		ASSERT(!started);
 		started = true;
@@ -1343,7 +1340,7 @@ namespace HAL
 
 		current = Profiler::get().get_current();
 
-		if (type != CommandListType::COPY && name.size())
+		if (type != CommandListType::COPY)
 		{
 			ASSERT(!timer);
 			timer.reset(new Timer(start(name)));
@@ -1357,13 +1354,14 @@ namespace HAL
 
 	}
 
-	Timer Eventer::start(std::wstring_view name)
+	Timer Eventer::start(LiteralWStr name)
 	{
 		if (Profiler::get().enabled)
 			return Timer(std::make_shared<GPUBlock>(name, current, device), this);
 		else
 			return Timer();
 	}
+
 	
 	void Eventer::end()
 	{
@@ -1526,6 +1524,7 @@ namespace HAL
 
 	void SignatureDataSetter::commit_tables(BarrierSync operation, UsedSlots* slots)
 	{
+		PROFILE(L"commit_tables");
 		uint id = 0;
 		for (auto& table : tables)
 		{
@@ -1689,10 +1688,11 @@ namespace HAL
 		return type;
 	}
 
-	GPUBlock::GPUBlock(std::wstring_view name, TimedBlock* parent, Device& device)
+	GPUBlock::GPUBlock(LiteralWStr name, TimedBlock* parent, Device& device)
 		: TimedBlock(name, parent), device(device)
 	{
 	}
+
 
 	Eventer::Eventer(Device& device) : device(device)
 	{

@@ -554,7 +554,13 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 						tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 					compute.set(mipmapping);
 				}
-				PROFILE_GPU((std::wstring(L"mip_") + std::to_wstring(mip_count)).c_str());
+				static constexpr LiteralWStr mip_names[] = {
+					L"mip_0",  L"mip_1",  L"mip_2",  L"mip_3",
+					L"mip_4",  L"mip_5",  L"mip_6",  L"mip_7",
+					L"mip_8",  L"mip_9",  L"mip_10", L"mip_11",
+					L"mip_12", L"mip_13", L"mip_14", L"mip_15",
+				};
+				PROFILE_GPU(mip_names[mip_count < 16 ? mip_count : 0]);
 				compute.exec_indirect(gpu_tiles_buffer[mip_count]->dispatch_buffer, 1);
 				mip_count += current_mips;
 			}

@@ -37,7 +37,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"stencil_renderer_before";
+	static constexpr LiteralWStr Name{L"stencil_renderer_before"};
 
 //	static constexpr PassID ID = PassID::stencil_renderer_before;
 

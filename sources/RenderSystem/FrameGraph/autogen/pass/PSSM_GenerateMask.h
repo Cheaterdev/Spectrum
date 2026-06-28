@@ -37,7 +37,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"PSSM_GenerateMask";
+	static constexpr LiteralWStr Name{L"PSSM_GenerateMask"};
 
 //	static constexpr PassID ID = PassID::PSSM_GenerateMask;
 

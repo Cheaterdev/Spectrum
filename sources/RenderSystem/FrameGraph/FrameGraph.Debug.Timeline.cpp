@@ -32,7 +32,7 @@ class FrameGraphTimelineCanvas : public dock_base
     // -----------------------------------------------------------------------
     struct PassInfo
     {
-        std::wstring         name;
+        LiteralWStr          name;
         UINT                 call_id   = 0;
         HAL::CommandListType queue     = HAL::CommandListType::DIRECT;
         bool                 put_fence  = false;
@@ -1595,13 +1595,13 @@ class FrameGraphTimelineCanvas : public dock_base
         return lbl;
     }
 
-    static std::string to_str(std::wstring_view ws)
+    static std::string to_str(const wchar_t* ws)
     {
         std::string s;
-        s.reserve(ws.size());
-        for (wchar_t c : ws) s.push_back(static_cast<char>(c));
+        for (; ws && *ws; ++ws) s.push_back(static_cast<char>(*ws));
         return s;
     }
+    static std::string to_str(LiteralWStr ws) { return to_str(ws.ptr); }
 
 public:
     using ptr = std::shared_ptr<FrameGraphTimelineCanvas>;

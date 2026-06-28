@@ -46,7 +46,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"ShadowDenoiser_Filter";
+	static constexpr LiteralWStr Name{L"ShadowDenoiser_Filter"};
 
 //	static constexpr PassID ID = PassID::ShadowDenoiser_Filter;
 

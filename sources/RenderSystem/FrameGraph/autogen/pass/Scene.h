@@ -32,7 +32,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"Scene";
+	static constexpr LiteralWStr Name{L"Scene"};
 
 //	static constexpr PassID ID = PassID::Scene;
 

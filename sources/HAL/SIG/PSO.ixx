@@ -403,7 +403,7 @@ public:
 	{
 		return create_task([&]()
 		{
-				PROFILE(convert(typeid(T).name()));
+		//		PROFILE(convert(typeid(T).name()));
 				target = std::make_shared<T>(device);
 		});
 	}

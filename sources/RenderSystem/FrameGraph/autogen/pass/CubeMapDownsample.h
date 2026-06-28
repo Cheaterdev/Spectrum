@@ -37,7 +37,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"CubeMapDownsample";
+	static constexpr LiteralWStr Name{L"CubeMapDownsample"};
 
 //	static constexpr PassID ID = PassID::CubeMapDownsample;
 

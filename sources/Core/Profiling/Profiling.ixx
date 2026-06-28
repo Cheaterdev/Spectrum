@@ -13,6 +13,17 @@ import :shared_ptr;
 export
 {
 
+// Compile-time wide string handle. Implicit constructor and _cs UDL both consteval,
+// so any non-literal argument is a hard compile error.
+struct LiteralWStr
+{
+	const wchar_t* ptr = nullptr;
+	consteval LiteralWStr(const wchar_t* p) noexcept : ptr(p) {}
+	LiteralWStr() = default;
+};
+
+consteval LiteralWStr operator""_cs(const wchar_t* s, size_t) noexcept { return {s}; }
+
 class Timer;
 class TimedRoot
 {
@@ -37,7 +48,7 @@ protected:
 	virtual  void on_end(Timer* timer) = 0;
 
 public:
-	virtual Timer start(std::wstring_view name) = 0;
+	virtual Timer start(LiteralWStr name) = 0;
 };
 
 
@@ -65,11 +76,11 @@ public:
 	int id = -1;
 	std::wstring_view get_name() const;
 	CPUCounter cpu_counter;
-	TimedBlock(std::wstring_view name, TimedBlock* parent);
+	TimedBlock(LiteralWStr name, TimedBlock* parent);
 	TimedBlock() = default;   // for thread-local pool allocation
 	virtual ~TimedBlock() = default;
 public:
-	std::wstring_view name;
+	const wchar_t* name = nullptr;
 	uint level = 0;
 	TimedBlock* parent = nullptr;
 };
@@ -111,24 +122,36 @@ public:
 	virtual ~GPUTimerInterface() = default;
 };
 
+// Lock-free listener interface for the CPU timer hot path.
+// At most one listener is supported; set/clear from any thread before/after recording.
+struct CPUTimerListener
+{
+	virtual void on_cpu_start(TimedBlock*) = 0;
+	virtual void on_cpu_end(TimedBlock*)   = 0;
+	virtual ~CPUTimerListener()            = default;
+};
+
 class Profiler : public Singleton<Profiler>,public TimedRoot
 {
 	std::mutex m;
 	static thread_local TimedBlock* current_block;
 	static thread_local unsigned    pool_head;
 
+	std::atomic<CPUTimerListener*> cpu_listener{nullptr};
+
 public:
-	Events::Event<TimedBlock*> on_cpu_timer_start;
-	Events::Event<TimedBlock*> on_cpu_timer_end;
+	// on_cpu_timer_start / on_cpu_timer_end replaced by set_cpu_listener (lock-free hot path)
 	Events::Event<std::pair<TimedBlock*, GPUTimerInterface*>> on_gpu_timer;
 	Events::Event<std::uint64_t> on_frame;
+
+	void set_cpu_listener(CPUTimerListener* l) { cpu_listener.store(l, std::memory_order_release); }
 
 	Profiler() {}
 
 	bool enabled = true;
 
 	TimedBlock* get_current() const;
-	virtual Timer start(std::wstring_view name) override;
+	virtual Timer start(LiteralWStr name) override;
 
 private:
 	virtual void on_start(Timer* timer) override;

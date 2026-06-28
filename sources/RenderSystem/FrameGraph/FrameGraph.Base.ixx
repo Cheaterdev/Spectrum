@@ -584,7 +584,7 @@ public:
 
 
 
-		Pass* get_pass(std::wstring_view name) const;
+		Pass* get_pass(LiteralWStr name) const;
 
 		Pass* get_pass(uint id) const;
 
@@ -626,7 +626,7 @@ public:
 		bool enabled = false;
 		bool renderable = true;
 		PassFlags flags;
-		std::wstring_view name;
+		LiteralWStr name{L""};
 
 
 		uint32_t pass_index = 0;
@@ -690,7 +690,7 @@ public:
 		setup_func_type setup_func;
 		render_func_type render_func;
 
-		TypedPass(int id, std::wstring_view name, setup_func_type s, render_func_type r)
+		TypedPass(int id, LiteralWStr name, setup_func_type s, render_func_type r)
 		{
 			this->id = id;
 			this->name = name;
@@ -731,7 +731,7 @@ public:
 	// for each passed resource, enabling thumbnail capture in the timeline debugger.
 	struct ExternalPass : public Pass
 	{
-		inline static const std::wstring s_name = L"[External]";
+		inline static const LiteralWStr s_name = L"[External]";
 
 		ExternalPass();
 
@@ -792,7 +792,7 @@ public:
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class Pass>
-		void internal_pass(std::wstring_view name, auto s, auto r, PassFlags flags = PassFlags::General, uint32_t index = 0)
+		void internal_pass(LiteralWStr name, auto s, auto r, PassFlags flags = PassFlags::General, uint32_t index = 0)
 		{
 			PROFILE(name);
 
@@ -821,7 +821,7 @@ public:
 
 
 		template<class T>
-		void add_pass(std::wstring_view name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+		void add_pass(LiteralWStr name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 		{
 			internal_pass<TypedPass<T>>(name, s, r, flags);
 		}
@@ -842,7 +842,7 @@ public:
 
 
 		/*template<class T>
-		void add_pass(std::wstring_view name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+		void add_pass(LiteralWStr name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 		{
 			typename TypedPass<T>::setup_func_type f = [s](auto& t, auto& b) {s(t, b); return true; };
 
@@ -851,7 +851,7 @@ public:
 
 
 		template<class T>
-		void add_pass2(std::wstring_view name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+		void add_pass2(LiteralWStr name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 		{
 			typename TypedPass<T>::setup_func_type f = [s](auto& t, auto& b) {s(t, b); return true; };
 

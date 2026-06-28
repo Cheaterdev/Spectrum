@@ -57,7 +57,7 @@ class ResourceDebugger :public GUI::base
 public:
 	using ptr = std::shared_ptr<ResourceDebugger>;
 	FrameGraph::Graph& graph;
-	std::wstring pass_name;
+	const wchar_t* pass_name = nullptr;
 	std::string resource_name;
 
 	Events::prop_helper* helper = nullptr;
@@ -124,9 +124,9 @@ public:
 					auto pass = s.passes.front();
 
 					auto name = pass->name;	 /// can be dada already
-					passes_list->add_item(convert(name))->on_select = [this, name](list_element::ptr) {
+					passes_list->add_item(convert(name.ptr))->on_select = [this, name](list_element::ptr) {
 
-						pass_name = name;
+						pass_name = name.ptr;
 						 buffer_inited = false;
 						};
 				}
@@ -135,7 +135,7 @@ public:
 
 
 				helper = info->process_debug_resource.register_handler(this, [this, info](FrameGraph::Pass* pass, FrameGraph::FrameContext* context) {
-					if (pass_name == pass->name)
+					if (pass_name == pass->name.ptr)
 					{
 						uint2 debug_size = int2::max({ 64,64 }, rendered_image->get_render_bounds().size);
 

@@ -33,16 +33,16 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"PSSM_Cascade";
+	static constexpr LiteralWStr Name{L"PSSM_Cascade"};
 
 	static constexpr uint32_t MaxCount = 6;
-	static inline const wchar_t* Names[MaxCount] = {
-		L"PSSM_Cascade_0",
-		L"PSSM_Cascade_1",
-		L"PSSM_Cascade_2",
-		L"PSSM_Cascade_3",
-		L"PSSM_Cascade_4",
-		L"PSSM_Cascade_5",
+	static constexpr LiteralWStr Names[MaxCount] = {
+		LiteralWStr{L"PSSM_Cascade_0"},
+		LiteralWStr{L"PSSM_Cascade_1"},
+		LiteralWStr{L"PSSM_Cascade_2"},
+		LiteralWStr{L"PSSM_Cascade_3"},
+		LiteralWStr{L"PSSM_Cascade_4"},
+		LiteralWStr{L"PSSM_Cascade_5"},
 	};
 
 //	static constexpr PassID ID = PassID::PSSM_Cascade;

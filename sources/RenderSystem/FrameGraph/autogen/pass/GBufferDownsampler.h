@@ -29,7 +29,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"GBufferDownsampler";
+	static constexpr LiteralWStr Name{L"GBufferDownsampler"};
 
 //	static constexpr PassID ID = PassID::GBufferDownsampler;
 

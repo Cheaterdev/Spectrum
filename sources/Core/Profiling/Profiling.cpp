@@ -47,11 +47,11 @@ Timer::~Timer()
 
 std::wstring_view TimedBlock::get_name() const
 {
-	return name;
+	return name ? std::wstring_view{name} : std::wstring_view{};
 }
 
-TimedBlock::TimedBlock(std::wstring_view name, TimedBlock* parent)
-	: name(name), parent(parent), level(parent ? parent->level + 1 : 0)
+TimedBlock::TimedBlock(LiteralWStr name, TimedBlock* parent)
+	: name(name.ptr), parent(parent), level(parent ? parent->level + 1 : 0)
 {
 }
 
@@ -63,13 +63,13 @@ TimedBlock* Profiler::get_current() const
 	return current_block;
 }
 
-Timer Profiler::start(std::wstring_view name)
+Timer Profiler::start(LiteralWStr name)
 {
 	if (!enabled)
 		return Timer();
 
 	auto& block  = s_block_pool[pool_head++ & (POOL_SIZE - 1)];
-	block.name   = name;
+	block.name   = name.ptr;
 	block.parent = current_block;
 	block.level  = current_block ? current_block->level + 1 : 0;
 	block.id     = -1;
@@ -80,14 +80,17 @@ void Profiler::on_start(Timer* timer)
 {
 	current_block = timer->block;
 	timer->block->cpu_counter.start_time = std::chrono::high_resolution_clock::now();
-	on_cpu_timer_start(timer->block);
+	if (auto* l = cpu_listener.load(std::memory_order_relaxed)) l->on_cpu_start(timer->block);
 }
 
 void Profiler::on_end(Timer* timer)
 {
-	current_block = timer->block->parent;
-	timer->block->cpu_counter.end_time = std::chrono::high_resolution_clock::now();
-	on_cpu_timer_end(timer->block);
+	auto* blk = timer->block;
+	if (blk >= s_block_pool.data() && blk < s_block_pool.data() + POOL_SIZE)
+		--pool_head;
+	current_block = blk->parent;
+	blk->cpu_counter.end_time = std::chrono::high_resolution_clock::now();
+	if (auto* l = cpu_listener.load(std::memory_order_relaxed)) l->on_cpu_end(blk);
 }
 
 

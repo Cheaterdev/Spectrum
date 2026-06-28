@@ -36,7 +36,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"FSR";
+	static constexpr LiteralWStr Name{L"FSR"};
 
 //	static constexpr PassID ID = PassID::FSR;
 

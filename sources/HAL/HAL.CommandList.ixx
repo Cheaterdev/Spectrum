@@ -27,7 +27,7 @@ export{
 		{
 		protected:
 			CommandListType type;
-			std::wstring_view name;
+			LiteralWStr name{L""};
 			std::vector<std::function<void()>> on_execute_funcs;
 
 
@@ -146,7 +146,7 @@ export{
 			using ptr = std::shared_ptr<GPUBlock>;
 					 GPUTimer gpu_timer;
 
-			GPUBlock(std::wstring_view name, TimedBlock* parent, Device& device);
+			GPUBlock(LiteralWStr name, TimedBlock* parent, Device& device);
 			void start(Eventer* list);
 
 			void end(Eventer* list);
@@ -169,14 +169,14 @@ export{
 			Device& device;
 
 			void reset();
-			void begin(std::wstring_view name);
+			void begin(LiteralWStr name);
 		public:
 			void end();
 			Eventer(Device& device);
 			Device& get_device() { return device; }
 			static thread_local Eventer* thread_current;
 
-			virtual Timer start(std::wstring_view name)override;
+			virtual Timer start(LiteralWStr name) override;
 
 			std::shared_ptr<Timer> timer;
 			// events
@@ -286,7 +286,7 @@ export{
 
 			CommandList(CommandListType, Device&);
 
-			void begin(std::wstring_view name = L"");
+			void begin(LiteralWStr name = L"");
 
 
 			void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0));

@@ -31,7 +31,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"BlueNoise";
+	static constexpr LiteralWStr Name{L"BlueNoise"};
 
 //	static constexpr PassID ID = PassID::BlueNoise;
 

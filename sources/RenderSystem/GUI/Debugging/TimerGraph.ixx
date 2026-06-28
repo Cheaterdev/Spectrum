@@ -76,7 +76,7 @@ export namespace GUI
 			};
 
 
-			class TimeGraph : public scroll_container
+			class TimeGraph : public scroll_container, public CPUTimerListener
 			{
 				std::chrono::time_point<std::chrono::high_resolution_clock>  start;
 				std::chrono::time_point<std::chrono::high_resolution_clock>  end;
@@ -95,7 +95,7 @@ export namespace GUI
 				base::ptr front;
 				base::ptr names_col;
 				void build();
-				bool ended = false;
+				bool ended = true;
 				bool need_start = false;
 
 				UINT64 started_frame;
@@ -106,7 +106,8 @@ export namespace GUI
 
 				TimeGraph();
 
-
+				void on_cpu_start(TimedBlock* block) override;
+				void on_cpu_end(TimedBlock* block)   override;
 			};
 		}
 	}

@@ -526,7 +526,7 @@ namespace HLSL
 		if (count == 0) count = static_cast<uint>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
 		HAL::Views::ShaderResource desc = { resource, Format::UNKNOWN, HAL::Views::ShaderResource::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false} };
-		Handle::operator=(desc);
+		Handle::operator=(std::move(desc));
 	}
 
 
@@ -536,7 +536,7 @@ namespace HLSL
 		auto buffer_desc = resource->get_desc().as_buffer();
 		address = resource->get_ptr<HAL::Buffer>()->get_address()+(offset);
 		HAL::Views::ConstantBuffer desc = { resource, offset, size };
-		Handle::operator=(desc);
+		Handle::operator=(std::move(desc));
 	}
 
 
@@ -547,7 +547,7 @@ namespace HLSL
 		if (count == 0) count = static_cast<uint>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
 		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {(uint)first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, 0, nullptr} };
-		Handle::operator=(desc);
+		Handle::operator=(std::move(desc));
 	}
 
 
@@ -555,14 +555,14 @@ namespace HLSL
 	void AppendStructuredBuffer<T>::create(const Resource::ptr& counter_resource, uint64 counter_offset, const Resource::ptr& resource, uint64 first_elem, uint64 count)
 	{
 		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {(uint)first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, counter_offset, counter_resource} };
-		Handle::operator=(desc);
+		Handle::operator=(std::move(desc));
 	}
 
 	template<class T>
 	void ConsumeStructuredBuffer<T>::create(const Resource::ptr& counter_resource, uint64 counter_offset, const Resource::ptr& resource, uint64 first_elem, uint64 count)
 	{
 		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {(uint)first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, counter_offset, counter_resource} };
-		Handle::operator=(desc);
+		Handle::operator=(std::move(desc));
 	}
 	template<class T>
 	void Buffer<T>::create(const Resource::ptr& resource, Format format, uint64 first_elem, uint64 count)
@@ -571,7 +571,7 @@ namespace HLSL
 		if (count == 0) count = static_cast<uint64>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
 		HAL::Views::ShaderResource desc = { resource, format, HAL::Views::ShaderResource::Buffer {(uint)first_elem, static_cast<uint>(count), 0, false} };
-		Handle::operator= (desc);
+		Handle::operator= (std::move(desc));
 	}
 
 
@@ -583,7 +583,7 @@ namespace HLSL
 
 
 		HAL::Views::UnorderedAccess desc = { resource, format, HAL::Views::UnorderedAccess::Buffer {(uint)first_elem, static_cast<uint>(count), 0, false, 0, nullptr} };
-		Handle::operator= (desc);
+		Handle::operator= (std::move(desc));
 	}
 
 
@@ -610,7 +610,7 @@ namespace HLSL
 						.ResourceMinLODClamp = 0
 					}
 			};
-			Handle::operator= (desc);
+			Handle::operator= (std::move(desc));
 		}
 		else
 		{
@@ -624,7 +624,7 @@ namespace HLSL
 						.ResourceMinLODClamp = 0
 					}
 			};
-			Handle::operator= (desc);
+			Handle::operator= (std::move(desc));
 		}
 	}
 
@@ -647,7 +647,7 @@ namespace HLSL
 					.PlaneSlice = 0
 				}
 			};
-			Handle::operator= (desc);
+			Handle::operator= (std::move(desc));
 		}
 		else
 		{
@@ -663,7 +663,7 @@ namespace HLSL
 						.PlaneSlice = 0
 					}
 			};
-			Handle::operator= (desc);
+			Handle::operator= (std::move(desc));
 		}
 	}
 
@@ -683,7 +683,7 @@ namespace HLSL
 						.ResourceMinLODClamp = 0
 					}
 		};
-		Handle::operator= (desc);
+		Handle::operator= (std::move(desc));
 	}
 
 
@@ -701,7 +701,7 @@ namespace HLSL
 						.PlaneSlice = 0
 					}
 		};
-		Handle::operator= (desc);
+		Handle::operator= (std::move(desc));
 	}
 
 	template<class T>
@@ -717,7 +717,7 @@ namespace HLSL
 							.ResourceMinLODClamp = 0
 						}
 		};
-		Handle::operator= (desc);
+		Handle::operator= (std::move(desc));
 	}
 
 	template<class T>
@@ -733,7 +733,7 @@ namespace HLSL
 							.WSize = resource->get_desc().as_texture().Dimensions.z >> uint(first_mip)
 						}
 		};
-		Handle::operator= (desc);
+		Handle::operator= (std::move(desc));
 	}
 
 	template<class T>
@@ -752,7 +752,7 @@ namespace HLSL
 				.ResourceMinLODClamp = 0
 			}
 			};
-			Handle::operator= (desc);
+			Handle::operator= (std::move(desc));
 
 		}
 		else
@@ -767,7 +767,7 @@ namespace HLSL
 					.ResourceMinLODClamp = 0
 				}
 			};
-			Handle::operator= (desc);
+			Handle::operator= (std::move(desc));
 
 		}
 	}
@@ -786,7 +786,7 @@ namespace HLSL
 					.PlaneSlice = 0
 				}
 		};
-		Handle::operator= (desc);
+		Handle::operator= (std::move(desc));
 	}
 
 
@@ -808,7 +808,7 @@ namespace HLSL
 			.PlaneSlice = 0
 		}
 		};
-		Handle::operator= (desc);
+		Handle::operator= (std::move(desc));
 
 
 	}
@@ -829,7 +829,7 @@ namespace HLSL
 				.MipSlice = first_mip
 			}
 		};
-		Handle::operator= (desc);
+		Handle::operator= (std::move(desc));
 	}
 
 
@@ -851,7 +851,7 @@ namespace HLSL
 				.ArraySize = 1,
 			}
 		};
-		Handle::operator= (desc);
+		Handle::operator= (std::move(desc));
 	}
 
 }

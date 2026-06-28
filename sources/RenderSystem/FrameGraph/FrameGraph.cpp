@@ -132,10 +132,10 @@ namespace FrameGraph
 
 	}
 
-	Pass* TaskBuilder::get_pass(std::wstring_view name)		 const
+	Pass* TaskBuilder::get_pass(LiteralWStr name)		 const
 	{
 		for (auto& p : passes)
-			if (p->name == name)
+			if (p->name.ptr == name.ptr)
 				return p.get();
 		return nullptr;
 	}

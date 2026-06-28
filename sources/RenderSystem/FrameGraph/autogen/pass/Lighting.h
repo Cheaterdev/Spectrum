@@ -57,7 +57,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"Lighting";
+	static constexpr LiteralWStr Name{L"Lighting"};
 
 //	static constexpr PassID ID = PassID::Lighting;
 

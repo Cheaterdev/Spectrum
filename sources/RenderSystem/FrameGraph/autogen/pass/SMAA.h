@@ -39,7 +39,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"SMAA";
+	static constexpr LiteralWStr Name{L"SMAA"};
 
 //	static constexpr PassID ID = PassID::SMAA;
 

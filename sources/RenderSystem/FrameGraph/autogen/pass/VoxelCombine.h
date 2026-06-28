@@ -56,7 +56,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"VoxelCombine";
+	static constexpr LiteralWStr Name{L"VoxelCombine"};
 
 //	static constexpr PassID ID = PassID::VoxelCombine;
 

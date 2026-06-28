@@ -429,7 +429,7 @@ namespace GUI
 				btn_start->width_size  = size_type::FIXED;
 				btn_start->height_size = size_type::FIXED;
 				btn_start->size        = {80, 22};
-				btn_start->on_click = [this](button::ptr) { need_start = true; };
+				btn_start->on_click = [this](button::ptr) { need_start = true; Profiler::get().set_cpu_listener(this);};
 				toolbar->add_child(btn_start);
 
 				label::ptr btn_lbl(new label());
@@ -492,26 +492,28 @@ namespace GUI
 					d.queue_type = timer.queue_type;
 				});
 
-				Profiler::get().on_cpu_timer_start.register_handler(this, [this](TimedBlock* block)
-				{
-					if (ended) return;
-					auto  my_id  = data.block_id.fetch_add(1);
-					ASSERT(my_id < 4096 * 128);
-					auto& d      = data.blocks[my_id];
-					d.name       = block->get_name();
-					d.depth      = block->level;
-					d.native_id  = std::this_thread::get_id();
-					block->id    = my_id;
-					d.start_time = block->cpu_counter.start_time;
-				});
-
-				Profiler::get().on_cpu_timer_end.register_handler(this, [this](TimedBlock* block)
-				{
-					if (ended) return;
-					if (block->id < 0 || block->id >= int(data.blocks.size())) return;
-					data.blocks[block->id].end_time = block->cpu_counter.end_time;
-				});
+				
 			}
 		}
 	}
+}
+
+void GUI::Elements::Debug::TimeGraph::on_cpu_start(TimedBlock* block)
+{
+	if (ended) return;
+	auto  my_id  = data.block_id.fetch_add(1);
+	ASSERT(my_id < 4096 * 128);
+	auto& d      = data.blocks[my_id];
+	d.name       = block->get_name();
+	d.depth      = block->level;
+	d.native_id  = std::this_thread::get_id();
+	block->id    = my_id;
+	d.start_time = block->cpu_counter.start_time;
+}
+
+void GUI::Elements::Debug::TimeGraph::on_cpu_end(TimedBlock* block)
+{
+	if (ended) return;
+	if (block->id < 0 || block->id >= int(data.blocks.size())) return;
+	data.blocks[block->id].end_time = block->cpu_counter.end_time;
 }

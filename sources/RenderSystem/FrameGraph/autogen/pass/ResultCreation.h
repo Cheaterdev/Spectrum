@@ -31,7 +31,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"ResultCreation";
+	static constexpr LiteralWStr Name{L"ResultCreation"};
 
 //	static constexpr PassID ID = PassID::ResultCreation;
 

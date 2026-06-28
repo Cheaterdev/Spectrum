@@ -31,26 +31,26 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"UI_Render";
+	static constexpr LiteralWStr Name{L"UI_Render"};
 
 	static constexpr uint32_t MaxCount = 16;
-	static inline const wchar_t* Names[MaxCount] = {
-		L"UI_Render_0",
-		L"UI_Render_1",
-		L"UI_Render_2",
-		L"UI_Render_3",
-		L"UI_Render_4",
-		L"UI_Render_5",
-		L"UI_Render_6",
-		L"UI_Render_7",
-		L"UI_Render_8",
-		L"UI_Render_9",
-		L"UI_Render_10",
-		L"UI_Render_11",
-		L"UI_Render_12",
-		L"UI_Render_13",
-		L"UI_Render_14",
-		L"UI_Render_15",
+	static constexpr LiteralWStr Names[MaxCount] = {
+		LiteralWStr{L"UI_Render_0"},
+		LiteralWStr{L"UI_Render_1"},
+		LiteralWStr{L"UI_Render_2"},
+		LiteralWStr{L"UI_Render_3"},
+		LiteralWStr{L"UI_Render_4"},
+		LiteralWStr{L"UI_Render_5"},
+		LiteralWStr{L"UI_Render_6"},
+		LiteralWStr{L"UI_Render_7"},
+		LiteralWStr{L"UI_Render_8"},
+		LiteralWStr{L"UI_Render_9"},
+		LiteralWStr{L"UI_Render_10"},
+		LiteralWStr{L"UI_Render_11"},
+		LiteralWStr{L"UI_Render_12"},
+		LiteralWStr{L"UI_Render_13"},
+		LiteralWStr{L"UI_Render_14"},
+		LiteralWStr{L"UI_Render_15"},
 	};
 
 //	static constexpr PassID ID = PassID::UI_Render;

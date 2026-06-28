@@ -35,7 +35,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"ReflCombine";
+	static constexpr LiteralWStr Name{L"ReflCombine"};
 
 //	static constexpr PassID ID = PassID::ReflCombine;
 

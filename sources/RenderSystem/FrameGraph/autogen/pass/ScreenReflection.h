@@ -56,7 +56,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"ScreenReflection";
+	static constexpr LiteralWStr Name{L"ScreenReflection"};
 
 //	static constexpr PassID ID = PassID::ScreenReflection;
 

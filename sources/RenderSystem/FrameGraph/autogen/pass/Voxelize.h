@@ -46,7 +46,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"Voxelize";
+	static constexpr LiteralWStr Name{L"Voxelize"};
 
 //	static constexpr PassID ID = PassID::Voxelize;
 

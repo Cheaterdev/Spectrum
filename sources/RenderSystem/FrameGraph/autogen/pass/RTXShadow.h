@@ -35,7 +35,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"RTXShadow";
+	static constexpr LiteralWStr Name{L"RTXShadow"};
 
 //	static constexpr PassID ID = PassID::RTXShadow;
 

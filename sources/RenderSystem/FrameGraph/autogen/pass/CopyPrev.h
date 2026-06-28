@@ -29,7 +29,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"CopyPrev";
+	static constexpr LiteralWStr Name{L"CopyPrev"};
 
 //	static constexpr PassID ID = PassID::CopyPrev;
 

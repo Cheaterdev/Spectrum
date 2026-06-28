@@ -18,10 +18,10 @@ export
 			ResourceInfo() = default;
 
 			template<HAL::Views::ViewTemplate T>
-			ResourceInfo(const T& v)
-			{
-				view = v;
-			}
+			ResourceInfo(const T& v) { view = v; }
+
+			template<HAL::Views::ViewTemplate T>
+			ResourceInfo(T&& v) { view = std::move(v); }
 
 
 		   Resource* get_resource() const;
@@ -124,6 +124,9 @@ export
 			template<HAL::Views::ViewTemplate T>
 			void operator=(const T& v);
 
+			template<HAL::Views::ViewTemplate T>
+			void operator=(T&& v);
+
 			uint get_count() const;
 
 			void operator=(const Handle& r);
@@ -179,13 +182,19 @@ export
 		template<HAL::Views::ViewTemplate T>
 		void Handle::operator=(const T& v)
 		{
-			  PROFILE(L"HLSL View");
-
-			auto &heap =* storage->get_heap();
-
+			PROFILE(L"HLSL View");
+			auto& heap = *storage->get_heap();
 			heap[get_offset()].place(v);
 			get_resource_info() = ResourceInfo(v);
+		}
 
+		template<HAL::Views::ViewTemplate T>
+		void Handle::operator=(T&& v)
+		{
+			PROFILE(L"HLSL View");
+			auto& heap = *storage->get_heap();
+			heap[get_offset()].place(v);                      // read before move
+			get_resource_info() = ResourceInfo(std::move(v)); // move shared_ptr into variant
 		}
 
 

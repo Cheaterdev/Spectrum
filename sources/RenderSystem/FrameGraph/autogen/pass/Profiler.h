@@ -31,7 +31,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"Profiler";
+	static constexpr LiteralWStr Name{L"Profiler"};
 
 //	static constexpr PassID ID = PassID::Profiler;
 

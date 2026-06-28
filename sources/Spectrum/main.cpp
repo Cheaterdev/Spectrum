@@ -654,8 +654,8 @@ public:
 				if (!pass->enabled)
 					continue;
 
-				auto node = std::make_shared<PassNode>(graph, pass->name);
-				node->name = convert(std::wstring(pass->name)) + " " + std::to_string(pass->id);
+				auto node = std::make_shared<PassNode>(graph, pass->name.ptr);
+				node->name = convert(std::wstring(pass->name.ptr)) + " " + std::to_string(pass->id);
 
 				CommandListType pass_type = check(pass->flags & PassFlags::Compute)
 					? CommandListType::COMPUTE

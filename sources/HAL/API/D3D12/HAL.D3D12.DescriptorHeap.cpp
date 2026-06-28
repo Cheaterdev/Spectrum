@@ -20,7 +20,9 @@ namespace HAL
 
     void Descriptor::place(const Views::ShaderResource& view)
     {
-        if constexpr (Debug::DebugViews)
+         PROFILE(L"place");
+
+    	if constexpr (Debug::DebugViews)
         {
             Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
         }
@@ -140,18 +142,21 @@ namespace HAL
         auto size = heap.device.get_descriptor_size(heap.desc.HeapType);
 
         {
+            	  PROFILE(L"CPU");
+
             auto h = heap.cpu_start;
             h.Offset(offset, size);
             heap.device.native_device->CreateShaderResourceView(native_resource, &desc, h);
-            if constexpr (Debug::CheckErrors)    TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+         //   if constexpr (Debug::CheckErrors)    TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
         }
 
         if (heap.m_gpu_heap)
         {
+             PROFILE(L"GPU");
             auto h = heap.gpu_cpu_start;
             h.Offset(offset, size);
             heap.device.native_device->CreateShaderResourceView(native_resource, &desc, h);
-            if constexpr (Debug::CheckErrors)    TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+          //  if constexpr (Debug::CheckErrors)    TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
         }
     }
 

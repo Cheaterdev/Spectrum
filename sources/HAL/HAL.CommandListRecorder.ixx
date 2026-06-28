@@ -77,10 +77,58 @@ export namespace HAL
 			}
 		};
 
+		// Typed command — trivial data stored inline (no heap, no type-erasure).
+		// Commands with shared_ptr captures (handles, signatures, …) use fn_pool.
+		struct Cmd
+		{
+			CommandType type;
+			uint32_t    fn_idx = 0; // index into fn_pool for fallback commands
+
+			union
+			{
+				UsagePoint*   barrier;
+
+				struct { UINT vc, vo, ic, io; }                               draw;
+				struct { UINT ic, ioff, vo, inst, io; }                       draw_indexed;
+				ivec3                                                          dispatch_args;   // Dispatch / DispatchMesh
+				ResourceAddress                                                dispatch_graph;  // DispatchGraph
+				struct { DescriptorHeap* cbv; DescriptorHeap* sampler; }      desc_heaps;
+				struct { UINT i, offset, value; }                              set_constant;    // Gfx/Cmp SetConstant
+				struct { UINT i; ResourceAddress addr; }                       set_cb;          // Gfx/Cmp SetConstBuffer
+				struct { Resource* dst; Resource* src; }                       copy_res;
+				const Resource*                                                discard_res;
+				UINT                                                           stencil_ref;
+				struct {
+					HAL::PrimitiveTopologyType topo;
+					HAL::PrimitiveTopologyFeed feed;
+					bool adjusted; uint cpoints;
+				}                                                              set_topology;
+				std::wstring_view                                              event_str;       // StartEvent
+				struct { const QueryHeap* heap; uint32_t count; ResourceAddress dest; } resolve;
+				struct { StateObject* obj; ResourceAddress buf; uint size; bool init; } set_program;
+
+				uint8_t _ensure_size[32]; // keeps union at least 32 bytes
+			};
+
+			Cmd() noexcept : type(CommandType::Func), fn_idx(0) {}
+		};
+		static_assert(sizeof(Cmd) <= 48);
+
+		template<class F>
+		void push_fn(CommandType type, F&& f)
+		{
+			Cmd cmd{};
+			cmd.type   = type;
+			cmd.fn_idx = static_cast<uint32_t>(fn_pool.size());
+			fn_pool.emplace_back(std::forward<F>(f));
+			tasks.push_back(cmd);
+		}
+
 		bool compiled = false;
 		API::CommandList list;
 		std::wstring name;
-		std::vector<std::function<void(API::CommandList&)>> tasks;
+		std::vector<Cmd> tasks;
+		std::vector<std::function<void(API::CommandList&)>> fn_pool; // shared_ptr captures
 		[[no_unique_address]]
 		std::conditional_t<BuildOptions::Dev, DevRecorder, NullRecorder> debug_recorder;
 	public:
@@ -145,9 +193,12 @@ export namespace HAL
 			if constexpr (BuildOptions::Dev)
 				debug_recorder.push_back({CommandType::DispatchRays,
 					"DispatchRays " + std::to_string(size.x) + "x" + std::to_string(size.y)});
-			tasks.emplace_back([=](API::CommandList& list) {
+			Cmd cmd; cmd.type = CommandType::DispatchRays;
+			cmd.fn_idx = static_cast<uint32_t>(fn_pool.size());
+			fn_pool.emplace_back([=](API::CommandList& list) {
 				list.dispatch_rays(sizeof(Hit), sizeof(Miss), sizeof(Raygen), size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
-				});
+			});
+			tasks.push_back(cmd);
 		}
 	};
 }

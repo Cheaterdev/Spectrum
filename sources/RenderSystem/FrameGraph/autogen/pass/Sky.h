@@ -34,7 +34,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"Sky";
+	static constexpr LiteralWStr Name{L"Sky"};
 
 //	static constexpr PassID ID = PassID::Sky;
 

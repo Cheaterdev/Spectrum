@@ -32,10 +32,10 @@ public:
 {%- if pass_def is defined and pass_def.options.Multiple is defined %}
 {%- set count = pass_def.options.Multiple.value_atom.expr | int %}
 {%- for i in range(count) %}
-		Passes::{{entry.name}}::Names[{{i}}],
+		Passes::{{entry.name}}::Names[{{i}}].ptr,
 {%- endfor %}
 {%- else %}
-		Passes::{{entry.name}}::Name,
+		Passes::{{entry.name}}::Name.ptr,
 {%- endif %}
 {%- endfor %}
 	};

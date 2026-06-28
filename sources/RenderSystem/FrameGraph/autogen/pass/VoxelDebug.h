@@ -35,7 +35,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"VoxelDebug";
+	static constexpr LiteralWStr Name{L"VoxelDebug"};
 
 //	static constexpr PassID ID = PassID::VoxelDebug;
 

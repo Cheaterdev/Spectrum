@@ -40,7 +40,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"PSSM_Combine";
+	static constexpr LiteralWStr Name{L"PSSM_Combine"};
 
 //	static constexpr PassID ID = PassID::PSSM_Combine;
 

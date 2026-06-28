@@ -33,7 +33,7 @@ public:
 		return Context::resource_names;
 	}
 
-	static inline const wchar_t* Name = L"PSSM_Global";
+	static constexpr LiteralWStr Name{L"PSSM_Global"};
 
 //	static constexpr PassID ID = PassID::PSSM_Global;
 

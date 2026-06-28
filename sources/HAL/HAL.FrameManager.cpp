@@ -148,7 +148,7 @@ namespace HAL {
 		return command_allocators[type].get();
 	}
 
-	std::shared_ptr<CommandList> FrameResources::start_list(std::wstring_view name, CommandListType type)
+	std::shared_ptr<CommandList> FrameResources::start_list(LiteralWStr name, CommandListType type)
 	{
 		auto list = (device.get_queue(type)->get_free_list());
 		list->frame_resources = get_ptr();
