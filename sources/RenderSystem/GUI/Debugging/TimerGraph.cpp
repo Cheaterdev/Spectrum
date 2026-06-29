@@ -227,17 +227,70 @@ namespace GUI
 				info = nullptr;
 			}
 
-			// ── TimeGraph::build ──────────────────────────────────────────────────
-
-			void TimeGraph::build()
+			// ── zoom_overlay: left-drag to select a time range to zoom into ─────
+			class zoom_overlay : public base
 			{
-				const float scaler = 500000.0f;
-				Profiler::get().enabled = false;
-				ended = true;
-				end   = std::chrono::high_resolution_clock::now();
-
-				run_on_ui([this, scaler]()
+				TimeGraph* owner;
+				bool  selecting = false;
+				float sel_x0    = 0;
+				float sel_x1    = 0;
+			public:
+				zoom_overlay(TimeGraph* o) : owner(o)
 				{
+					docking   = dock::FILL;
+					clickable = true;
+				}
+
+				bool on_mouse_action(mouse_action action, mouse_button btn, vec2 pos) override
+				{
+					if (btn != mouse_button::LEFT) return false;
+					if (action == mouse_action::DOWN)
+					{
+						selecting = true;
+						sel_x0 = sel_x1 = pos.x;
+						return true;
+					}
+					if (action == mouse_action::UP)
+					{
+						bool do_zoom = selecting && (sel_x1 - sel_x0) > 5.0f;
+						selecting = false;
+						if (do_zoom) owner->zoom_to_selection(sel_x0, sel_x1);
+						return true;
+					}
+					return false;
+				}
+
+				bool on_mouse_move(vec2 pos) override
+				{
+					if (selecting)
+					{
+						sel_x1 = pos.x;
+						return true;
+					}
+					return false;
+				}
+
+				void draw(Context& c) override
+				{
+					if (!selecting || (sel_x1 - sel_x0) < 2.0f) return;
+					rect b  = get_render_bounds();
+					float x0 = sel_x0, x1 = sel_x1;
+					c.renderer->draw_color(c, {0.3f, 0.6f, 1.0f, 0.15f}, {x0,        b.pos.y, x1 - x0, b.size.y});
+					c.renderer->draw_color(c, {0.4f, 0.7f, 1.0f, 0.8f},  {x0,        b.pos.y, 1.5f,    b.size.y});
+					c.renderer->draw_color(c, {0.4f, 0.7f, 1.0f, 0.8f},  {x1 - 1.5f, b.pos.y, 1.5f,    b.size.y});
+				}
+			};
+
+			// ── TimeGraph::rebuild_display ────────────────────────────────────────
+
+			void TimeGraph::rebuild_display()
+			{
+				float  scaler = build_scaler;
+				float  t0_px  = float(build_t0) * scaler;
+
+				run_on_ui([this, scaler, t0_px]()
+				{
+					front->remove_all();
 					auto* col = static_cast<left_column*>(names_col.get());
 					col->clear_entries();
 
@@ -254,7 +307,8 @@ namespace GUI
 						block.thread_id = thread_ids[block.native_id];
 					}
 
-					float total_width = scaler * float(std::chrono::duration<double>(end - start).count());
+					float frame_s     = float(std::chrono::duration<double>(end - start).count());
+					float total_width = scaler * frame_s;
 
 					// ── Helpers ────────────────────────────────────────────────
 					auto add_section = [&](const std::wstring& title, float4 bg)
@@ -312,34 +366,42 @@ namespace GUI
 						ruler->size        = {total_width, 20};
 						front->add_child(ruler);
 
-						float frame_ms = 1000.0f * float(std::chrono::duration<double>(end - start).count());
-						float tick_ms  = frame_ms > 30.0f ? 5.0f : (frame_ms > 8.0f ? 2.0f : 1.0f);
+						float frame_ms   = frame_s * 1000.0f;
+						float vw         = filled->get_render_bounds().w;
+						float visible_ms = (vw > 0 && scaler > 0) ? 1000.0f * vw / scaler : frame_ms;
+						float tick_ms;
+						if      (visible_ms > 30.0f) tick_ms = 5.0f;
+						else if (visible_ms >  8.0f) tick_ms = 2.0f;
+						else if (visible_ms >  2.0f) tick_ms = 1.0f;
+						else if (visible_ms >  0.5f) tick_ms = 0.25f;
+						else                         tick_ms = 0.05f;
 
 						for (float ms = 0; ms <= frame_ms + tick_ms * 0.5f; ms += tick_ms)
 						{
 							float px = scaler * ms / 1000.0f;
 
-							// tick line
 							base::ptr tick(new base());
 							tick->docking     = dock::NONE;
-							tick->x_type     = pos_x_type::LEFT;
-							tick->y_type     = pos_y_type::TOP;
+							tick->x_type      = pos_x_type::LEFT;
+							tick->y_type      = pos_y_type::TOP;
 							tick->pos         = {px, 0};
 							tick->width_size  = size_type::FIXED;
 							tick->height_size = size_type::FIXED;
 							tick->size        = {1, 8};
 							ruler->add_child(tick);
 
-							// tick label
 							label::ptr lbl(new label());
 							lbl->docking     = dock::NONE;
-							lbl->x_type     = pos_x_type::LEFT;
-							lbl->y_type     = pos_y_type::TOP;
+							lbl->x_type      = pos_x_type::LEFT;
+							lbl->y_type      = pos_y_type::TOP;
 							lbl->pos         = {px + 2, 8};
 							lbl->width_size  = size_type::FIXED;
 							lbl->height_size = size_type::FIXED;
 							lbl->size        = {60, 12};
-							lbl->text        = std::to_string(int(ms)) + "ms";
+							if (tick_ms < 1.0f)
+								lbl->text = std::to_string(ms).substr(0, 5) + "ms";
+							else
+								lbl->text = std::to_string(int(ms)) + "ms";
 							lbl->color       = {0.5f, 0.5f, 0.5f, 0.8f};
 							ruler->add_child(lbl);
 						}
@@ -370,9 +432,9 @@ namespace GUI
 					}
 
 					// ── GPU queues ────────────────────────────────────────────
-					const wchar_t* queue_names[3]     = {L"GPU · Direct", L"GPU · Compute", L"GPU · Copy"};
-					const wchar_t* queue_lane_names[3] = {L"Direct",      L"Compute",       L"Copy"};
-					float4         queue_colors[3]  = {
+					const wchar_t* queue_names[3]      = {L"GPU · Direct", L"GPU · Compute", L"GPU · Copy"};
+					const wchar_t* queue_lane_names[3] = {L"Direct",       L"Compute",       L"Copy"};
+					float4         queue_colors[3]     = {
 						{0.18f, 0.10f, 0.32f, 1.0f},
 						{0.08f, 0.22f, 0.16f, 1.0f},
 						{0.08f, 0.18f, 0.28f, 1.0f}
@@ -405,7 +467,75 @@ namespace GUI
 						obj->size = {std::max(w, 3.0f), 23};
 						gpu_lanes[int(block.queue_type)]->add_child(obj);
 					}
+
+					// Schedule scroll so the selection start appears just after the names column.
+					// pending_scroll_x is applied in resized() after children are laid out
+					// (so the clamping uses the correct new scaled_size, not the stale one).
+					// We subtract front->padding->left so that content x=0 (time=0) aligns
+					// with the same origin used in zoom_to_selection.
+					float names_w      = names_col ? names_col->get_render_bounds().w : 0.0f;
+					float padding_l    = float(front->padding->left);
+					pending_scroll_x   = names_w - padding_l - t0_px;
+					has_pending_scroll = true;
 				});
+			}
+
+			// ── TimeGraph::build ──────────────────────────────────────────────────
+
+			void TimeGraph::build()
+			{
+				Profiler::get().enabled = false;
+				ended = true;
+				end   = std::chrono::high_resolution_clock::now();
+				rebuild_display();
+			}
+
+			// ── TimeGraph::zoom_to_selection ──────────────────────────────────────
+
+			void TimeGraph::zoom_to_selection(float x0, float x1)
+			{
+				float names_w    = names_col ? names_col->get_render_bounds().w : 0.0f;
+				float eff_vw     = filled->get_render_bounds().w - names_w;
+				if (eff_vw <= 0) return;
+
+				// Use front's render_bounds directly — it already encodes the current
+				// scroll offset, so no manual pos/scroll arithmetic is needed.
+				float origin = front->get_render_bounds().x + float(front->padding->left);
+				double dt0 = double(x0 - origin) / build_scaler;
+				double dt1 = double(x1 - origin) / build_scaler;
+
+				if (dt1 - dt0 < 1e-9) return;
+
+				build_scaler = eff_vw / float(dt1 - dt0);
+				build_t0     = dt0;
+				rebuild_display();
+			}
+
+			// ── TimeGraph::zoom_reset ─────────────────────────────────────────────
+
+			void TimeGraph::zoom_reset()
+			{
+				build_scaler = 500000.0f;
+				build_t0     = 0.0;
+				rebuild_display();
+			}
+
+			// ── TimeGraph::resized ───────────────────────────────────────────────
+			// scroll_container::update_layout calls resized() BEFORE children are
+			// laid out, so scaled_size is stale and clamps the wrong range.
+			// A second resized() fires from c_contents::on_size_changed (after
+			// layout) with the correct scaled_size — that one does the real clamp.
+			// We write pending_scroll_x in the first call so the second call clamps
+			// the right value against the freshly-computed content width.
+
+			void TimeGraph::resized()
+			{
+				scroll_container::resized();
+				if (has_pending_scroll)
+				{
+					has_pending_scroll = false;
+					contents->pos = {pending_scroll_x, contents->pos->y};
+				}
 			}
 
 			// ── TimeGraph constructor ─────────────────────────────────────────────
@@ -430,12 +560,17 @@ namespace GUI
 				btn_start->height_size = size_type::FIXED;
 				btn_start->size        = {80, 22};
 				btn_start->on_click = [this](button::ptr) { need_start = true; Profiler::get().set_cpu_listener(this);};
+				btn_start->get_label()->text = "capture";
 				toolbar->add_child(btn_start);
 
-				label::ptr btn_lbl(new label());
-				btn_lbl->docking = dock::FILL;
-				btn_lbl->text    = "capture";
-				btn_start->add_child(btn_lbl);
+				button::ptr btn_zoom_out(new button);
+				btn_zoom_out->docking     = dock::LEFT;
+				btn_zoom_out->width_size  = size_type::FIXED;
+				btn_zoom_out->height_size = size_type::FIXED;
+				btn_zoom_out->size        = {80, 22};
+				btn_zoom_out->on_click    = [this](button::ptr) { zoom_reset(); };
+				btn_zoom_out->get_label()->text = "zoom out";
+				toolbar->add_child(btn_zoom_out);
 
 				// ── max_level controls ─────────────────────────────────────────
 				{
@@ -457,10 +592,9 @@ namespace GUI
 					btn_dec->on_click    = [this](button::ptr) {
 						auto& ml = Profiler::get().max_level;
 						if (ml > 1 && ml != std::numeric_limits<int>::max()) --ml;
-						max_level_lbl->text = ml == std::numeric_limits<int>::max() ? "∞" : std::to_string(ml);
+						max_level_lbl->text = ml == std::numeric_limits<int>::max() ? "inf" : std::to_string(ml);
 					};
-					label::ptr dec_lbl(new label()); dec_lbl->docking = dock::FILL; dec_lbl->text = "-";
-					btn_dec->add_child(dec_lbl);
+					btn_dec->get_label()->text = "-";
 					toolbar->add_child(btn_dec);
 
 					// current value label
@@ -469,7 +603,7 @@ namespace GUI
 					val_lbl->width_size  = size_type::FIXED;
 					val_lbl->height_size = size_type::FIXED;
 					val_lbl->size        = {24, 22};
-					val_lbl->text        = "∞";
+					val_lbl->text        = "inf";
 					val_lbl->color       = {1.0f, 1.0f, 1.0f, 1.0f};
 					toolbar->add_child(val_lbl);
 					max_level_lbl = val_lbl;
@@ -486,11 +620,10 @@ namespace GUI
 						else ++ml;
 						max_level_lbl->text = std::to_string(ml);
 					};
-					label::ptr inc_lbl(new label()); inc_lbl->docking = dock::FILL; inc_lbl->text = "+";
-					btn_inc->add_child(inc_lbl);
+					btn_inc->get_label()->text = "+";
 					toolbar->add_child(btn_inc);
 
-					// reset to ∞
+					// reset to inf
 					button::ptr btn_inf(new button);
 					btn_inf->docking     = dock::LEFT;
 					btn_inf->width_size  = size_type::FIXED;
@@ -498,10 +631,9 @@ namespace GUI
 					btn_inf->size        = {22, 22};
 					btn_inf->on_click    = [this](button::ptr) {
 						Profiler::get().max_level = std::numeric_limits<int>::max();
-						max_level_lbl->text = "∞";
+						max_level_lbl->text = "inf";
 					};
-					label::ptr inf_lbl(new label()); inf_lbl->docking = dock::FILL; inf_lbl->text = "∞";
-					btn_inf->add_child(inf_lbl);
+					btn_inf->get_label()->text = "inf";
 					toolbar->add_child(btn_inf);
 				}
 
@@ -519,6 +651,12 @@ namespace GUI
 					auto col = std::make_shared<left_column>();
 					names_col = col;
 					base::add_child(col);
+				}
+
+				// ── Zoom selection overlay (left-drag on the mover layer) ──────
+				{
+					auto zo = std::make_shared<zoom_overlay>(this);
+					over_filled->add_child(zo);
 				}
 
 				// ── Profiler hooks ─────────────────────────────────────────────

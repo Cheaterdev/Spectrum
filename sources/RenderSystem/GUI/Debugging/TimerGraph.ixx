@@ -96,7 +96,13 @@ export namespace GUI
 				base::ptr front;
 				base::ptr names_col;
 				label::ptr max_level_lbl;
+				float  build_scaler      = 500000.0f;
+				double build_t0          = 0.0;
+				float  pending_scroll_x  = 0.0f;
+				bool   has_pending_scroll = false;
 				void build();
+				void rebuild_display();
+				void resized() override;
 				bool ended = true;
 				bool need_start = false;
 
@@ -107,6 +113,9 @@ export namespace GUI
 			public:
 
 				TimeGraph();
+
+				void zoom_to_selection(float x0, float x1);
+				void zoom_reset();
 
 				void on_cpu_start(TimedBlock* block) override;
 				void on_cpu_end(TimedBlock* block)   override;
