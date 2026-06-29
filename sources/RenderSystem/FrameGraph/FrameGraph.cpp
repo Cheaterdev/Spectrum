@@ -916,19 +916,23 @@ namespace FrameGraph
 		PROFILE(L"compile");
 
 
+	  {
 
-		//	std::list<std::future<void>> tasks;
+			PROFILE(L"compile_transitions");
 		for (auto& pass : enabled_passes)
 		{
 			auto commandList = pass->context.list;
 			if (!commandList) continue;
 
-			commandList->compile_transitions();
+			
 		}
 
 
+		}
 
-		//	std::list<std::future<void>> tasks;
+	    {
+
+			PROFILE(L"compile_passes");
 		for (auto& pass : enabled_passes)
 		{
 			auto commandList = pass->context.list;
@@ -936,11 +940,12 @@ namespace FrameGraph
 
 			pass->compile_task = thread_pool::get().enqueue([commandList, pass]() {
 				PROFILE(pass->name);
-
+			   commandList->compile_transitions();
 				commandList->compile();
 				});
 
 		}
+	  }
 
 		for (auto& pass : enabled_passes)
 		{
@@ -1275,7 +1280,7 @@ namespace FrameGraph
 			info->handler->init(*info);
 			info->heap_type = HAL::HeapType::DEFAULT;
 
-			if (check(info->flags & ResourceFlags::GenCPU))
+			/*if (check(info->flags & ResourceFlags::GenCPU))
 			{
 				info->heap_type = HAL::HeapType::UPLOAD;
 			}
@@ -1284,10 +1289,10 @@ namespace FrameGraph
 			{
 				info->heap_type = HAL::HeapType::READBACK;
 			}
-
+					  */
 			if (check(info->flags & ResourceFlags::Static)) continue;
 
-			if (info->heap_type != HAL::HeapType::DEFAULT) continue;
+		//	
 
 
 
@@ -1303,6 +1308,10 @@ namespace FrameGraph
 			// create - easy
 			events[best_creation_pass->call_id].create.insert(info);
 			best_creation_pass->used.resource_creations.insert(info);
+
+
+			if (info->heap_type != HAL::HeapType::DEFAULT) continue;
+
 
 			// find last pass that uses the resource 
 			// TODO: pass end is not in sync with events
@@ -1323,7 +1332,7 @@ namespace FrameGraph
 			if (!best_deletion_pass)
 			{
 
-			/*	for (auto pass : enabled_passes)
+				for (auto pass : enabled_passes)
 				{
 					if (info->used_end.is_in_sync(pass->sync_state, false))
 					{
@@ -1336,7 +1345,7 @@ namespace FrameGraph
 						break;
 					}
 				}
-					   */
+					   
 				if (!best_deletion_pass)
 				{
 					info->non_deleted = true;
@@ -1438,10 +1447,16 @@ namespace FrameGraph
 				else
 				{
 
-					if (info->heap_type == HAL::HeapType::UPLOAD)
+				/*	if (info->heap_type == HAL::HeapType::UPLOAD)
 					{
 						PROFILE(L"UPLOAD");
-						info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type);
+
+							auto creation_info = RenderSystem::get().device().get_alloc_info(info->d3ddesc);
+
+						UploadInfo ui = current_frame->get_storage()->place_data(creation_info.size,creation_info.alignment);
+
+						info->resource = ui.resource->get_ptr();
+						info->offset_in_bytes = ui.resource_offset;
 						info->is_new = true;
 					}
 					else if (info->heap_type == HAL::HeapType::READBACK)
@@ -1450,7 +1465,9 @@ namespace FrameGraph
 						info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type);
 						info->is_new = true;
 					}
-					else if (!info->resource || info->resource->get_desc() != info->d3ddesc)
+					else
+						*/
+						if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 					{
 						PROFILE(L"DEFAULT");
 						info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type);
@@ -1632,9 +1649,9 @@ namespace FrameGraph
 		return HAL::ResourceDesc::Buffer(count, flags);
 	}
 
-	ByteBufferViewDesc Handlers::ByteBufferDesc::as_view(ResourceFlags resflags)
+	ByteBufferViewDesc Handlers::ByteBufferDesc::as_view(uint64 offset,ResourceFlags resflags)
 	{
-		return { 0, count };
+		return { offset, count };
 	}
 
 	HAL::ResourceDesc Handlers::TextureDesc::create_resource_desc(ResourceFlags resflags)
@@ -1662,7 +1679,7 @@ namespace FrameGraph
 		return HAL::ResourceDesc::Tex2D(format, size.xy, array_count, mip_count, flags);
 	}
 
-	HAL::TextureViewDesc Handlers::TextureDesc::as_view(ResourceFlags resflags)
+	HAL::TextureViewDesc Handlers::TextureDesc::as_view(uint64 offset,ResourceFlags resflags)
 	{
 		return { 0, mip_count, 0, array_count };
 	}
@@ -1692,7 +1709,7 @@ namespace FrameGraph
 		return HAL::ResourceDesc::Tex3D(format, size, mip_count, flags);
 	}
 
-	HAL::Texture3DViewDesc Handlers::Texture3DDesc::as_view(ResourceFlags resflags)
+	HAL::Texture3DViewDesc Handlers::Texture3DDesc::as_view(uint64 offset,ResourceFlags resflags)
 	{
 		return { 0, mip_count };
 	}
@@ -1722,7 +1739,7 @@ namespace FrameGraph
 		return HAL::ResourceDesc::Tex2D(format, size.xy, array_count * 6, mip_count, flags);
 	}
 
-	HAL::CubeViewDesc Handlers::CubeDesc::as_view(ResourceFlags resflags)
+	HAL::CubeViewDesc Handlers::CubeDesc::as_view(uint64 offset,ResourceFlags resflags)
 	{
 		return { 0, mip_count, 0, array_count * 6 };
 	}

@@ -45,7 +45,7 @@ PSSM::PSSM()
 		scaler = cam->z_far / (exp((float)renders_size));
 
 		builder.create(data.global_depth,  { ivec3(1024, 1024, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil);
-		builder.create(data.global_camera, { 1 },                                                      FrameGraph::ResourceFlags::GenCPU);
+		builder.create(data.global_camera, { 1 },                                                      FrameGraph::ResourceFlags::CopyDest);
 		return true;
 	};
 
@@ -87,8 +87,8 @@ PSSM::PSSM()
 			std::min(bounds_all.znear - 10, bounds.znear), bounds.zfar);
 		light_cam.update();
 
-		data.global_camera->write(0, &light_cam.camera_cb.current, 1);
-
+		 command_list->get_copy().update(*data.global_camera,0, std::span{&light_cam.camera_cb.current, 1});
+		
 		{
 			RT::DepthOnly rt;
 			rt.GetDepth() = data.global_depth->depthStencil;
@@ -115,11 +115,11 @@ PSSM::PSSM()
 			if (i == 0)
 			{
 				builder.create(data.PSSM_Depths,  { ivec3(size, 0), HAL::Format::R32_TYPELESS, renders_size, 1 }, FrameGraph::ResourceFlags::DepthStencil);
-				builder.create(data.PSSM_Cameras, { renders_size },                                               FrameGraph::ResourceFlags::GenCPU);
+				builder.create(data.PSSM_Cameras, { renders_size },                                               FrameGraph::ResourceFlags::CopyDest);
 			}
 			else
 			{
-				builder.need(data.PSSM_Cameras, FrameGraph::ResourceFlags::GenCPU);
+				builder.need(data.PSSM_Cameras, FrameGraph::ResourceFlags::CopyDest);
 				builder.need(data.PSSM_Depths,  FrameGraph::ResourceFlags::DepthStencil);
 			}
 			return true;
@@ -174,8 +174,13 @@ PSSM::PSSM()
 				std::min(bounds_all.znear - 10, bounds.znear), bounds.zfar);
 			light_cam.update();
 
-			data.PSSM_Cameras->write(i * sizeof(camera::shader_params),
-				reinterpret_cast<Table::Camera*>(&light_cam.camera_cb.current), 1);
+
+			 command_list->get_copy().update(*data.PSSM_Cameras, i, std::span{&light_cam.camera_cb.current, 1});
+
+
+
+			//data.PSSM_Cameras->write(i * sizeof(camera::shader_params),
+			//	reinterpret_cast<Table::Camera*>(&light_cam.camera_cb.current), 1);
 
 			{
 				RT::DepthOnly rt;

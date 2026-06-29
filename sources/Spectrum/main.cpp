@@ -490,10 +490,6 @@ public:
 		PROFILE(L"render");
 		if (swap_chain) swap_chain->resize(new_size);
 
-		swap_chain->wait_for_free();
-
-			PROFILE(L"CPU FRAME");
-	
 		{
 			std::lock_guard<std::mutex> g(m);
 
@@ -517,12 +513,15 @@ public:
 				HAL::Texture::reload_all();
 			}
 
-			Profiler::get().on_frame(frame_counter++);
-
+			auto f_gc = thread_pool::get().enqueue([]()
 			{
 				PROFILE(L"GarbageCollect");
 				RenderSystem::get().device().get_heap_factory().GarbageCollect();
-			}
+			});
+
+			Profiler::get().on_frame(frame_counter++);
+			
+
 			GUI::user_interface::size = new_size;
 			if (fps.tick())
 			{
@@ -543,27 +542,46 @@ public:
 					+ std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
 			}
 
-			 	{
-				PROFILE(L"AssetManager");
-			AssetManager::get().tact();
-			}
-
 			float frame_dt = (float)main_timer.tick();
-			process_ui(frame_dt);
 
-			if (frame_dt > 0.0f)
+			// fire independent work onto thread pool
+			auto f_asset = thread_pool::get().enqueue([]()
 			{
-					PROFILE(L"push_times");
+				PROFILE(L"AssetManager");
+				AssetManager::get().tact();
+			});
+
+			auto f_rtx = thread_pool::get().enqueue([]()
+			{
+				PROFILE(L"RTX update");
+				RTX::get().update();
+			});
+
+			auto f_times = thread_pool::get().enqueue([this, frame_dt]()
+			{
+				PROFILE(L"push_times");
 				auto& dev = RenderSystem::get().device();
 				if (graph_fps)       graph_fps->push(1.0f / frame_dt, frame_dt);
 				if (graph_frametime) graph_frametime->push(frame_dt * 1000.0f, frame_dt);
-				if (graph_vram)      graph_vram->push((float)dev.get_vram(), frame_dt);
+
+				static float vram_accum = 0.0f;
+				static size_t vram_cached = 0;
+				vram_accum += frame_dt;
+				if (vram_accum >= 1.0f) { vram_accum = 0.0f; vram_cached = dev.get_vram(); }
+				if (graph_vram)      graph_vram->push((float)vram_cached, frame_dt);
+
 				if (graph_upload)    graph_upload->push((float)dev.get_upload_heap(), frame_dt);
 				if (graph_readback)  graph_readback->push((float)dev.get_readback_heap(), frame_dt);
-			}
-			RTX::get().update();
-		
+			});
 
+			
+			// wait for all three before setup_graph
+			{ PROFILE(L"async_wait"); f_asset.wait(); f_rtx.wait(); f_times.wait();  f_gc.wait(); }
+		   	process_ui(frame_dt);
+
+			swap_chain->wait_for_free();
+
+			PROFILE(L"CPU FRAME");
 			setup_graph();
 
 			{

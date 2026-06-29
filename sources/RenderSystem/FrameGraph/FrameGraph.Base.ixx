@@ -47,8 +47,8 @@ public:
 		CopySource = (1 << 8),
 
 
-		GenCPU = (1 << 9),
-		ReadCPU = (1 << 10),
+	//	GenCPU = (1 << 9),
+	//	ReadCPU = (1 << 10),
 
 		Temporal = 0,
 		Static = (1 << 11),
@@ -57,7 +57,7 @@ public:
 		Changed = (1 << 13)
 	};
 
-	 constexpr ResourceFlags WRITEABLE_FLAGS =ResourceFlags::CopyDest |  ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
+	 constexpr ResourceFlags WRITEABLE_FLAGS =ResourceFlags::CopyDest |  ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil;// | ResourceFlags::GenCPU;
 
 	//struct BufferDesc
 	//{
@@ -203,6 +203,8 @@ public:
 		std::map<HAL::ResourceHandle,CompiledResource> resource_places;
 		
 		HAL::Resource::ptr resource;
+		uint64 offset_in_bytes;
+
 		std::shared_ptr<HAL::ResourceView> view;
 			HAL::SubResourcesGPU creation_state;
 
@@ -317,7 +319,7 @@ public:
 
 			virtual void init_view(ResourceAllocInfo& info,GPUEntityStorageInterface& frame) override
 			{
-				info.init_view<View>(frame, desc.as_view(info.flags));
+				info.init_view<View>(frame, desc.as_view(info.offset_in_bytes, info.flags));
 			}
 		};
 
@@ -329,7 +331,7 @@ public:
 
 			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
 
-			ByteBufferViewDesc as_view(ResourceFlags resflags);
+			ByteBufferViewDesc as_view(uint64 offset, ResourceFlags resflags);
 		};
 
 
@@ -352,9 +354,9 @@ public:
 			}
 
 
-			HAL::FormattedBufferViewDesc as_view(ResourceFlags resflags)
+			HAL::FormattedBufferViewDesc as_view(uint64 offset,ResourceFlags resflags)
 			{
-				return { 0, count * sizeof(Underlying<T>) };
+				return { offset, count * sizeof(Underlying<T>) };
 			}
 		};
 
@@ -386,9 +388,9 @@ public:
 			}
 
 
-			HAL::StructuredBufferViewDesc as_view(ResourceFlags resflags)
+			HAL::StructuredBufferViewDesc as_view(uint64 offset,ResourceFlags resflags)
 			{
-				return { 0, count * sizeof(Underlying<T>), counted?counterType::SELF:counterType::NONE };
+				return { offset, count * sizeof(Underlying<T>), counted?counterType::SELF:counterType::NONE };
 			}
 		};
 
@@ -404,7 +406,7 @@ public:
 
 			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
 
-			HAL::TextureViewDesc as_view(ResourceFlags resflags);
+			HAL::TextureViewDesc as_view(uint64 offset,ResourceFlags resflags);
 		};
 
 		struct Texture3DDesc
@@ -417,7 +419,7 @@ public:
 
 			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
 
-			HAL::Texture3DViewDesc as_view(ResourceFlags resflags);
+			HAL::Texture3DViewDesc as_view(uint64 offset,ResourceFlags resflags);
 		};
 
 
@@ -432,7 +434,7 @@ public:
 
 			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
 
-			HAL::CubeViewDesc as_view(ResourceFlags resflags);
+			HAL::CubeViewDesc as_view(uint64 offset,ResourceFlags resflags);
 		};
 
 

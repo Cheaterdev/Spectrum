@@ -1483,12 +1483,12 @@ class FrameGraphTimelineCanvas : public dock_base
         add(RF::DepthStencil,    "DS");
         add(RF::UnorderedAccess, "UAV");
         add(RF::CopyDest,        "DST");
-        add(RF::GenCPU,          "CPU");
+      //  add(RF::GenCPU,          "CPU");
         add(RF::PixelRead,       "PSR");
         add(RF::ComputeRead,     "CSR");
         add(RF::DSRead,          "DS_R");
         add(RF::CopySource,      "SRC");
-        add(RF::ReadCPU,         "CPU");
+    //    add(RF::ReadCPU,         "CPU");
         return s;
     }
 
