@@ -491,6 +491,9 @@ public:
 		if (swap_chain) swap_chain->resize(new_size);
 
 		swap_chain->wait_for_free();
+
+			PROFILE(L"CPU FRAME");
+	
 		{
 			std::lock_guard<std::mutex> g(m);
 
@@ -515,8 +518,7 @@ public:
 			}
 
 			Profiler::get().on_frame(frame_counter++);
-			if (frame_counter <= 5)
-				Log::get() << "[Render] frame " << frame_counter << Log::endl;
+
 			{
 				PROFILE(L"GarbageCollect");
 				RenderSystem::get().device().get_heap_factory().GarbageCollect();
@@ -541,13 +543,17 @@ public:
 					+ std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
 			}
 
-
+			 	{
+				PROFILE(L"AssetManager");
 			AssetManager::get().tact();
+			}
+
 			float frame_dt = (float)main_timer.tick();
 			process_ui(frame_dt);
 
 			if (frame_dt > 0.0f)
 			{
+					PROFILE(L"push_times");
 				auto& dev = RenderSystem::get().device();
 				if (graph_fps)       graph_fps->push(1.0f / frame_dt, frame_dt);
 				if (graph_frametime) graph_frametime->push(frame_dt * 1000.0f, frame_dt);
@@ -560,8 +566,12 @@ public:
 
 			setup_graph();
 
-			pipeline.add_passes(graph);
+			{
+				PROFILE(L"add_passes");
+				pipeline.add_passes(graph);
 
+			}
+			
 
 			graph.setup();
 			graph.compile(swap_chain->m_frameIndex);
@@ -603,6 +613,7 @@ public:
 
 	void setup_graph()
 	{
+		PROFILE(L"setup_graph");
 		graph.start_new_frame();
 		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame(), swap_chain->get_fence(), ResourceFlags::Required);
 

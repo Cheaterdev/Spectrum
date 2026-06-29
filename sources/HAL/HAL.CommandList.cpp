@@ -456,15 +456,12 @@ namespace HAL
 		const RTVHandle& table_rtv = rt.table_rtv;
 		const DSVHandle& table_dsv = rt.table_dsv;
 
+		{ PROFILE(L"pre_command"); base.pre_command<false, false>(*this, BarrierSync::DRAW); }
 
-		base.pre_command<false, false>(*this, BarrierSync::DRAW);
-
+		{ PROFILE(L"rt_transitions");
 		for (uint i = 0; i < table_rtv.get_count(); i++)
-		{
 			get_base().transition(table_rtv[i].get_resource_info());
-		}
 		if (table_dsv)
-		{
 			get_base().transition(table_dsv.get_resource_info());
 		}
 
@@ -474,16 +471,14 @@ namespace HAL
 		if (check(options & RTOptions::ClearColor))
 		{
 			for (uint i = 0; i < table_rtv.get_count(); i++)
-			{
 				list->clear_rtv(table_rtv[i], clear_color);
-			}
 		}
 
 		if (table_dsv && check(options & (RTOptions::ClearStencil | RTOptions::ClearDepth)))
 			list->clear_depth_stencil(table_dsv[0], check(options & RTOptions::ClearDepth),
 			                          check(options & RTOptions::ClearStencil), depth, stencil);
 
-		base.post_command<false, false>(*this, BarrierSync::DRAW);
+		{ PROFILE(L"post_command"); base.post_command<false, false>(*this, BarrierSync::DRAW); }
 		uint2 size;
 
 

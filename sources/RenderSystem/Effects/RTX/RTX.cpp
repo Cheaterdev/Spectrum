@@ -8,5 +8,6 @@ void RTX::prepare(HAL::CommandList::ptr& list)
 }
 			  	void RTX::update()
 {
+		PROFILE(L"RTX::update");
 	rtx.update();
 }

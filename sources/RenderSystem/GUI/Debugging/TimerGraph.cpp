@@ -252,7 +252,7 @@ namespace GUI
 					}
 					if (action == mouse_action::UP)
 					{
-						bool do_zoom = selecting && (sel_x1 - sel_x0) > 5.0f;
+						bool do_zoom = selecting && std::abs(sel_x1 - sel_x0) > 5.0f;
 						selecting = false;
 						if (do_zoom) owner->zoom_to_selection(sel_x0, sel_x1);
 						return true;
@@ -272,12 +272,17 @@ namespace GUI
 
 				void draw(Context& c) override
 				{
-					if (!selecting || (sel_x1 - sel_x0) < 2.0f) return;
-					rect b  = get_render_bounds();
-					float x0 = sel_x0, x1 = sel_x1;
-					c.renderer->draw_color(c, {0.3f, 0.6f, 1.0f, 0.15f}, {x0,        b.pos.y, x1 - x0, b.size.y});
-					c.renderer->draw_color(c, {0.4f, 0.7f, 1.0f, 0.8f},  {x0,        b.pos.y, 1.5f,    b.size.y});
-					c.renderer->draw_color(c, {0.4f, 0.7f, 1.0f, 0.8f},  {x1 - 1.5f, b.pos.y, 1.5f,    b.size.y});
+					if (!selecting || std::abs(sel_x1 - sel_x0) < 2.0f) return;
+					rect   b    = get_render_bounds();
+					float  lo   = std::min(sel_x0, sel_x1);
+					float  hi   = std::max(sel_x0, sel_x1);
+					float  w    = hi - lo;
+					bool   zout = sel_x1 < sel_x0;
+					float4 fill = zout ? float4{1.0f, 0.5f, 0.2f, 0.15f} : float4{0.3f, 0.6f, 1.0f, 0.15f};
+					float4 edge = zout ? float4{1.0f, 0.6f, 0.3f, 0.8f}  : float4{0.4f, 0.7f, 1.0f, 0.8f};
+					c.renderer->draw_color(c, fill, {lo,        b.pos.y, w,    b.size.y});
+					c.renderer->draw_color(c, edge, {lo,        b.pos.y, 1.5f, b.size.y});
+					c.renderer->draw_color(c, edge, {hi - 1.5f, b.pos.y, 1.5f, b.size.y});
 				}
 			};
 
@@ -498,16 +503,26 @@ namespace GUI
 				float eff_vw     = filled->get_render_bounds().w - names_w;
 				if (eff_vw <= 0) return;
 
-				// Use front's render_bounds directly — it already encodes the current
-				// scroll offset, so no manual pos/scroll arithmetic is needed.
 				float origin = front->get_render_bounds().x + float(front->padding->left);
-				double dt0 = double(x0 - origin) / build_scaler;
-				double dt1 = double(x1 - origin) / build_scaler;
 
-				if (dt1 - dt0 < 1e-9) return;
+				if (x1 > x0)
+				{
+					// zoom in: selected range fills viewport
+					double dt0 = double(x0 - origin) / build_scaler;
+					double dt1 = double(x1 - origin) / build_scaler;
+					if (dt1 - dt0 < 1e-9) return;
+					build_scaler = eff_vw / float(dt1 - dt0);
+					build_t0     = dt0;
+				}
+				else
+				{
+					// zoom out: drag_width maps inversely; center stays at viewport center
+					float  drag_px  = x0 - x1;
+					double center_t = double((x0 + x1) * 0.5f - origin) / build_scaler;
+					build_scaler    = build_scaler * drag_px / eff_vw;
+					build_t0        = center_t - double(eff_vw * 0.5f) / build_scaler;
+				}
 
-				build_scaler = eff_vw / float(dt1 - dt0);
-				build_t0     = dt0;
 				rebuild_display();
 			}
 
@@ -558,7 +573,7 @@ namespace GUI
 				btn_start->docking     = dock::LEFT;
 				btn_start->width_size  = size_type::FIXED;
 				btn_start->height_size = size_type::FIXED;
-				btn_start->size        = {80, 22};
+				btn_start->size        = {80, 26};
 				btn_start->on_click = [this](button::ptr) { need_start = true; Profiler::get().set_cpu_listener(this);};
 				btn_start->get_label()->text = "capture";
 				toolbar->add_child(btn_start);
@@ -567,7 +582,7 @@ namespace GUI
 				btn_zoom_out->docking     = dock::LEFT;
 				btn_zoom_out->width_size  = size_type::FIXED;
 				btn_zoom_out->height_size = size_type::FIXED;
-				btn_zoom_out->size        = {80, 22};
+				btn_zoom_out->size        = {80, 26};
 				btn_zoom_out->on_click    = [this](button::ptr) { zoom_reset(); };
 				btn_zoom_out->get_label()->text = "zoom out";
 				toolbar->add_child(btn_zoom_out);
@@ -578,7 +593,7 @@ namespace GUI
 					lbl->docking     = dock::LEFT;
 					lbl->width_size  = size_type::FIXED;
 					lbl->height_size = size_type::FIXED;
-					lbl->size        = {60, 22};
+					lbl->size        = {60, 26};
 					lbl->text        = "  depth:";
 					lbl->color       = {0.6f, 0.6f, 0.6f, 1.0f};
 					toolbar->add_child(lbl);
@@ -588,7 +603,7 @@ namespace GUI
 					btn_dec->docking     = dock::LEFT;
 					btn_dec->width_size  = size_type::FIXED;
 					btn_dec->height_size = size_type::FIXED;
-					btn_dec->size        = {22, 22};
+					btn_dec->size        = {22, 26};
 					btn_dec->on_click    = [this](button::ptr) {
 						auto& ml = Profiler::get().max_level;
 						if (ml > 1 && ml != std::numeric_limits<int>::max()) --ml;
@@ -602,7 +617,7 @@ namespace GUI
 					val_lbl->docking     = dock::LEFT;
 					val_lbl->width_size  = size_type::FIXED;
 					val_lbl->height_size = size_type::FIXED;
-					val_lbl->size        = {24, 22};
+					val_lbl->size        = {24, 26};
 					val_lbl->text        = "inf";
 					val_lbl->color       = {1.0f, 1.0f, 1.0f, 1.0f};
 					toolbar->add_child(val_lbl);
@@ -613,7 +628,7 @@ namespace GUI
 					btn_inc->docking     = dock::LEFT;
 					btn_inc->width_size  = size_type::FIXED;
 					btn_inc->height_size = size_type::FIXED;
-					btn_inc->size        = {22, 22};
+					btn_inc->size        = {22, 26};
 					btn_inc->on_click    = [this](button::ptr) {
 						auto& ml = Profiler::get().max_level;
 						if (ml == std::numeric_limits<int>::max()) ml = 1;
@@ -628,7 +643,7 @@ namespace GUI
 					btn_inf->docking     = dock::LEFT;
 					btn_inf->width_size  = size_type::FIXED;
 					btn_inf->height_size = size_type::FIXED;
-					btn_inf->size        = {22, 22};
+					btn_inf->size        = {22, 26};
 					btn_inf->on_click    = [this](button::ptr) {
 						Profiler::get().max_level = std::numeric_limits<int>::max();
 						max_level_lbl->text = "inf";
