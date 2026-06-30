@@ -134,12 +134,13 @@ struct CPUTimerListener
 class Profiler : public Singleton<Profiler>,public TimedRoot
 {
 	std::mutex m;
-	static thread_local TimedBlock* current_block;
 	static thread_local unsigned    pool_head;
 
 	std::atomic<CPUTimerListener*> cpu_listener{nullptr};
 
 public:
+	static thread_local TimedBlock* current_block;
+
 	// on_cpu_timer_start / on_cpu_timer_end replaced by set_cpu_listener (lock-free hot path)
 	Events::Event<std::pair<TimedBlock*, GPUTimerInterface*>> on_gpu_timer;
 	Events::Event<std::uint64_t> on_frame;

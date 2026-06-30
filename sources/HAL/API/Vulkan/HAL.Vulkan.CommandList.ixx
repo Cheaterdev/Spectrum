@@ -113,11 +113,11 @@ export namespace HAL
             void dispatch_graph(ResourceAddress addr) {}
 
             // --- Common recording API ---
-            void clear_uav(const UAVHandle& h, vec4 ClearColor);
-            void clear_rtv(const RTVHandle& h, vec4 ClearColor);
-            void clear_stencil(const DSVHandle& dsv, UINT8 stencil);
-            void clear_depth(const DSVHandle& dsv, float depth);
-            void clear_depth_stencil(const DSVHandle& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil);
+            void clear_uav(const Handles::UAV& h, vec4 ClearColor);
+            void clear_rtv(const Handles::RTV& h, vec4 ClearColor);
+            void clear_stencil(const Handles::DSV& dsv, UINT8 stencil);
+            void clear_depth(const Handles::DSV& dsv, float depth);
+            void clear_depth_stencil(const Handles::DSV& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil);
             void set_topology(HAL::PrimitiveTopologyType topology,
                               HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST,
                               bool adjusted = false, uint controlpoints = 0);
@@ -154,7 +154,7 @@ export namespace HAL
             void execute_indirect(const IndirectCommand& command_types, UINT max_commands,
                                   Resource* command_buffer, UINT64 command_offset,
                                   Resource* counter_buffer, UINT64 counter_offset);
-            void set_rtv(int c, RTVHandle rt, DSVHandle h);
+            void set_rtv(int c, Handles::RTV rt, Handles::DSV h);
             void start_event(std::wstring_view str);
             void end_event();
 

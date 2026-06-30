@@ -209,7 +209,7 @@ namespace HAL::API
 
     // ---- Render target management -------------------------------------------
 
-    void CommandList::set_rtv(int /*count*/, RTVHandle rt, DSVHandle dsv)
+    void CommandList::set_rtv(int /*count*/, Handles::RTV rt, Handles::DSV dsv)
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
         end_rendering_if_active();
@@ -253,7 +253,7 @@ namespace HAL::API
 
     // ---- Clear operations ---------------------------------------------------
 
-    void CommandList::clear_rtv(const RTVHandle& h, vec4 color)
+    void CommandList::clear_rtv(const Handles::RTV& h, vec4 color)
     {
         if (vk_cmd == VK_NULL_HANDLE || !h.is_valid()) return;
 
@@ -316,7 +316,7 @@ namespace HAL::API
         vkCmdEndRendering(vk_cmd);
     }
 
-    void CommandList::clear_depth(const DSVHandle& dsv, float depth)
+    void CommandList::clear_depth(const Handles::DSV& dsv, float depth)
     {
         if (vk_cmd == VK_NULL_HANDLE || !dsv.is_valid()) return;
 
@@ -373,12 +373,12 @@ namespace HAL::API
         vkCmdEndRendering(vk_cmd);
     }
 
-    void CommandList::clear_depth_stencil(const DSVHandle& dsv, bool d, bool s, float fd, UINT8 fs)
+    void CommandList::clear_depth_stencil(const Handles::DSV& dsv, bool d, bool s, float fd, UINT8 fs)
     {
         if (d) clear_depth(dsv, fd);
     }
-    void CommandList::clear_stencil(const DSVHandle&, UINT8) { ASSERT(0); }
-    void CommandList::clear_uav(const UAVHandle& h, vec4 color)
+    void CommandList::clear_stencil(const Handles::DSV&, UINT8) { ASSERT(0); }
+    void CommandList::clear_uav(const Handles::UAV& h, vec4 color)
     {
         if (vk_cmd == VK_NULL_HANDLE || !h.is_valid()) return;
 

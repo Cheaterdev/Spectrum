@@ -160,7 +160,7 @@ namespace HAL
 		push_fn(CommandType::Func, std::move(f));
 	}
 
-	void DelayedCommandList::clear_uav(const UAVHandle& h, vec4 ClearColor)
+	void DelayedCommandList::clear_uav(const Handles::UAV& h, vec4 ClearColor)
 	{
 		if constexpr (BuildOptions::Dev)
 			debug_recorder.push_back({CommandType::ClearUAV, "ClearUAV"});
@@ -169,7 +169,7 @@ namespace HAL
 		});
 	}
 
-	void DelayedCommandList::clear_rtv(const RTVHandle& h, vec4 ClearColor)
+	void DelayedCommandList::clear_rtv(const Handles::RTV& h, vec4 ClearColor)
 	{
 		if constexpr (BuildOptions::Dev)
 			debug_recorder.push_back({CommandType::ClearRTV, "ClearRTV"});
@@ -178,7 +178,7 @@ namespace HAL
 		});
 	}
 
-	void DelayedCommandList::clear_stencil(const DSVHandle& dsv, UINT8 stencil)
+	void DelayedCommandList::clear_stencil(const Handles::DSV& dsv, UINT8 stencil)
 	{
 		if constexpr (BuildOptions::Dev)
 			debug_recorder.push_back({CommandType::ClearStencil,
@@ -188,7 +188,7 @@ namespace HAL
 		});
 	}
 
-	void DelayedCommandList::clear_depth(const DSVHandle& dsv, float depth)
+	void DelayedCommandList::clear_depth(const Handles::DSV& dsv, float depth)
 	{
 		if constexpr (BuildOptions::Dev)
 			debug_recorder.push_back({CommandType::ClearDepth,
@@ -198,7 +198,7 @@ namespace HAL
 		});
 	}
 
-	void DelayedCommandList::clear_depth_stencil(const DSVHandle& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil)
+	void DelayedCommandList::clear_depth_stencil(const Handles::DSV& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil)
 	{
 		if constexpr (BuildOptions::Dev)
 			debug_recorder.push_back({CommandType::ClearDepthStencil,
@@ -445,7 +445,7 @@ namespace HAL
 		});
 	}
 
-	void DelayedCommandList::set_rtv(int c, RTVHandle rt, DSVHandle h)
+	void DelayedCommandList::set_rtv(int c, Handles::RTV rt, Handles::DSV h)
 	{
 		if constexpr (BuildOptions::Dev)
 			debug_recorder.push_back({CommandType::SetRTV, "SetRTV count=" + std::to_string(c)});

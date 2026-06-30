@@ -31,7 +31,7 @@ export namespace HAL
 	};
 
 
-	using ResourceHandle = Allocators::HeapHandle<HAL::Heap>;
+	using ResourceHandle = Allocators::PagedAllocation<HAL::Heap>;
 
 
 	struct TileHeapPosition
@@ -53,9 +53,9 @@ export namespace HAL
 	};
 
 
-	class HeapFactory :public Allocators::HeapFactory<ResourceContext, GlobalAllocationPolicy>
+	class HeapFactory :public Allocators::PageCache<ResourceContext, GlobalAllocationPolicy>
 	{
-		using Base = Allocators::HeapFactory<ResourceContext, GlobalAllocationPolicy>;
+		using Base = Allocators::PageCache<ResourceContext, GlobalAllocationPolicy>;
 
 		Device& device;
 		virtual ptr_type make_heap(HeapIndex index, size_t size) override;
@@ -69,7 +69,7 @@ export namespace HAL
 	public:
 		HeapFactory(Device& device);
 
-		page_type AllocateHeap(HeapIndex index, size_t size, Allocators::HeapAllocatorInterface<HAL::Heap>& owner) override;
+		page_type AllocatePage(HeapIndex index, size_t size, Allocators::PageOwnerInterface<HAL::Heap>& owner) override;
 		void      Free(HeapIndex index, page_type page) override;
 
 		size_t get_upload_bytes()   const { return _upload_bytes.load(std::memory_order_relaxed); }
@@ -85,15 +85,15 @@ export namespace HAL
 
 
 	template<class AllocationPolicy>
-	class GPUMemoryAllocator:public Allocators::HeapPageManager<ResourceContext, AllocationPolicy>
+	class GPUMemoryAllocator:public Allocators::PagedAllocator<ResourceContext, AllocationPolicy>
 	{
-		
+
 	public:
-		using Allocators::HeapPageManager<ResourceContext, AllocationPolicy>::alloc;
+		using Allocators::PagedAllocator<ResourceContext, AllocationPolicy>::alloc;
 
 		static constexpr uint DEFAULT_ALIGN = 256;
 
-		GPUMemoryAllocator(Device&device):Allocators::HeapPageManager<ResourceContext, AllocationPolicy>(device.get_heap_factory())
+		GPUMemoryAllocator(Device&device):Allocators::PagedAllocator<ResourceContext, AllocationPolicy>(device.get_heap_factory())
 		{
 			
 		}

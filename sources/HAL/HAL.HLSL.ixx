@@ -15,10 +15,10 @@ export
 {
 	namespace HLSL
 	{
-		struct RaytracingAccelerationStructure : public SRVHandle
+		struct RaytracingAccelerationStructure : public Handles::SRV
 		{
 			RaytracingAccelerationStructure() = default;
-			RaytracingAccelerationStructure(const Handle& h) : SRVHandle(h)
+			RaytracingAccelerationStructure(const Handle& h) : Handles::SRV(h)
 			{
 
 			}
@@ -65,12 +65,12 @@ export
 		};
 
 		template<class T>
-		struct StructuredBuffer : public SRVHandle
+		struct StructuredBuffer : public Handles::SRV
 		{
 			using ptr = int;
 
 			StructuredBuffer() = default;
-			explicit  StructuredBuffer(const Handle& h) : SRVHandle(h)
+			explicit  StructuredBuffer(const Handle& h) : Handles::SRV(h)
 			{
 
 			}
@@ -85,12 +85,12 @@ export
 		};
 
 		template<class T>
-		struct ConstantBuffer : public CBVHandle
+		struct ConstantBuffer : public Handles::CBV
 		{
 			using ptr = int;
 			GPUAddressPtr address;
 			ConstantBuffer() = default;
-			explicit  ConstantBuffer(const Handle& h) : CBVHandle(h)
+			explicit  ConstantBuffer(const Handle& h) : Handles::CBV(h)
 			{
 
 			}
@@ -107,10 +107,10 @@ export
 		};
 
 		template<class T>
-		struct RWStructuredBuffer : public UAVHandle
+		struct RWStructuredBuffer : public Handles::UAV
 		{
 			RWStructuredBuffer() = default;
-			explicit  RWStructuredBuffer(const Handle& h) : UAVHandle(h)
+			explicit  RWStructuredBuffer(const Handle& h) : Handles::UAV(h)
 			{
 
 			}
@@ -128,10 +128,10 @@ export
 		};
 
 		template<class T>
-		struct AppendStructuredBuffer : public UAVHandle
+		struct AppendStructuredBuffer : public Handles::UAV
 		{
 			AppendStructuredBuffer() = default;
-			explicit  AppendStructuredBuffer(const Handle& h) : UAVHandle(h)
+			explicit  AppendStructuredBuffer(const Handle& h) : Handles::UAV(h)
 			{
 
 			}
@@ -149,10 +149,10 @@ export
 		};
 
 		template<class T>
-		struct ConsumeStructuredBuffer : public UAVHandle
+		struct ConsumeStructuredBuffer : public Handles::UAV
 		{
 			ConsumeStructuredBuffer() = default;
-			explicit ConsumeStructuredBuffer(const Handle& h) : UAVHandle(h)
+			explicit ConsumeStructuredBuffer(const Handle& h) : Handles::UAV(h)
 			{
 
 			}
@@ -167,10 +167,10 @@ export
 			void create(const Resource::ptr& counter_resource, uint64 counter_offset, const Resource::ptr& resource, uint64 first_elem = 0, uint64 count = 0);
 		};
 
-		struct FeedbackTexture2DMip : public UAVHandle
+		struct FeedbackTexture2DMip : public Handles::UAV
 		{
 			FeedbackTexture2DMip() = default;
-			explicit FeedbackTexture2DMip(const Handle& h) : UAVHandle(h)
+			explicit FeedbackTexture2DMip(const Handle& h) : Handles::UAV(h)
 			{
 
 			}
@@ -181,10 +181,10 @@ export
 
 
 
-		struct ByteAddressBuffer : public SRVHandle
+		struct ByteAddressBuffer : public Handles::SRV
 		{
 			ByteAddressBuffer() = default;
-			explicit ByteAddressBuffer(const Handle& h) : SRVHandle(h)
+			explicit ByteAddressBuffer(const Handle& h) : Handles::SRV(h)
 			{
 
 			}
@@ -201,10 +201,10 @@ export
 		};
 
 
-		struct RWByteAddressBuffer : public UAVHandle
+		struct RWByteAddressBuffer : public Handles::UAV
 		{
 			RWByteAddressBuffer() = default;
-			explicit RWByteAddressBuffer(const Handle& h) : UAVHandle(h)
+			explicit RWByteAddressBuffer(const Handle& h) : Handles::UAV(h)
 			{
 
 			}
@@ -220,10 +220,10 @@ export
 		};
 
 		template<class T>
-		struct Buffer : public SRVHandle
+		struct Buffer : public Handles::SRV
 		{
 			Buffer() = default;
-			explicit  Buffer(const Handle& h) : SRVHandle(h)
+			explicit  Buffer(const Handle& h) : Handles::SRV(h)
 			{
 
 			}
@@ -232,10 +232,10 @@ export
 		};
 
 		template<class T>
-		struct RWBuffer : public UAVHandle
+		struct RWBuffer : public Handles::UAV
 		{
 			RWBuffer() = default;
-			explicit RWBuffer(const Handle& h) : UAVHandle(h)
+			explicit RWBuffer(const Handle& h) : Handles::UAV(h)
 			{
 
 			}
@@ -251,16 +251,16 @@ export
 
 
 		template<class T = float4>
-		struct Texture2D : public SRVHandle
+		struct Texture2D : public Handles::SRV
 		{
 			Texture2D() = default;
-			explicit Texture2D(const Handle& h) : SRVHandle(h)
+			explicit Texture2D(const Handle& h) : Handles::SRV(h)
 			{
 
 			}
 
 			template<class T2>
-			Texture2D(const Texture2D<T2>& h) : SRVHandle(h)
+			Texture2D(const Texture2D<T2>& h) : Handles::SRV(h)
 			{
 
 			}
@@ -285,17 +285,17 @@ export
 
 
 		template<class T = float4>
-		struct Texture2DArray : public SRVHandle
+		struct Texture2DArray : public Handles::SRV
 		{
 
 			Texture2DArray() = default;
-			explicit Texture2DArray(const Handle& h) : SRVHandle(h)
+			explicit Texture2DArray(const Handle& h) : Handles::SRV(h)
 			{
 
 			}
 
 			template<class T2>
-			Texture2DArray(const Texture2DArray<T2>& h) : SRVHandle(h)
+			Texture2DArray(const Texture2DArray<T2>& h) : Handles::SRV(h)
 			{
 
 			}
@@ -321,16 +321,16 @@ export
 
 
 		template<class T = float4>
-		struct Texture3D : public SRVHandle
+		struct Texture3D : public Handles::SRV
 		{
 			Texture3D() = default;
-			explicit Texture3D(const Handle& h) : SRVHandle(h)
+			explicit Texture3D(const Handle& h) : Handles::SRV(h)
 			{
 
 			}
 
 			template<class T2>
-			Texture3D(const Texture3D<T2>& h) : SRVHandle(h)
+			Texture3D(const Texture3D<T2>& h) : Handles::SRV(h)
 			{
 
 			}
@@ -355,17 +355,17 @@ export
 
 
 		template<class T = float4>
-		struct TextureCube : public SRVHandle
+		struct TextureCube : public Handles::SRV
 		{
 
 			TextureCube() = default;
-			explicit TextureCube(const Handle& h) : SRVHandle(h)
+			explicit TextureCube(const Handle& h) : Handles::SRV(h)
 			{
 
 			}
 
 			template<class T2>
-			TextureCube(const TextureCube<T2>& h) : SRVHandle(h)
+			TextureCube(const TextureCube<T2>& h) : Handles::SRV(h)
 			{
 
 			}
@@ -388,16 +388,16 @@ export
 		};
 
 		template<class T = float4>
-		struct RWTexture2D : public UAVHandle
+		struct RWTexture2D : public Handles::UAV
 		{
 			RWTexture2D() = default;
-			explicit RWTexture2D(const Handle& h) : UAVHandle(h)
+			explicit RWTexture2D(const Handle& h) : Handles::UAV(h)
 			{
 
 			}
 
 			template<class T2>
-			RWTexture2D(const RWTexture2D<T2>& h) : UAVHandle(h)
+			RWTexture2D(const RWTexture2D<T2>& h) : Handles::UAV(h)
 			{
 
 			}
@@ -419,10 +419,10 @@ export
 			t.rwTexture2DArray;
 		};
 		template<class T = float4>
-		struct RWTexture2DArray : public UAVHandle
+		struct RWTexture2DArray : public Handles::UAV
 		{
 			RWTexture2DArray() = default;
-			explicit RWTexture2DArray(const Handle& h) : UAVHandle(h)
+			explicit RWTexture2DArray(const Handle& h) : Handles::UAV(h)
 			{
 
 			}
@@ -449,15 +449,15 @@ export
 			t.rwTexture3D;
 		};
 		template<class T = float4>
-		struct RWTexture3D : public UAVHandle
+		struct RWTexture3D : public Handles::UAV
 		{
 			RWTexture3D() = default;
-			explicit RWTexture3D(const Handle& h) : UAVHandle(h)
+			explicit RWTexture3D(const Handle& h) : Handles::UAV(h)
 			{
 
 			}
 			template<class T2>
-			RWTexture3D(const RWTexture3D<T2>& h) : UAVHandle(h)
+			RWTexture3D(const RWTexture3D<T2>& h) : Handles::UAV(h)
 			{
 
 			}
@@ -473,17 +473,17 @@ export
 		};
 
 		template<class T = float4>
-		struct RenderTarget : public RTVHandle
+		struct RenderTarget : public Handles::RTV
 		{
 
 			RenderTarget() = default;
-			explicit RenderTarget(const Handle& h) : RTVHandle(h)
+			explicit RenderTarget(const Handle& h) : Handles::RTV(h)
 			{
 
 			}
 
 			template<class T2>
-			RenderTarget(const RenderTarget<T2>& h) : RTVHandle(h)
+			RenderTarget(const RenderTarget<T2>& h) : Handles::RTV(h)
 			{
 
 			}
@@ -494,16 +494,16 @@ export
 		};
 
 		template<class T = float>
-		struct DepthStencil : public DSVHandle
+		struct DepthStencil : public Handles::DSV
 		{
 			DepthStencil() = default;
-			explicit DepthStencil(const Handle& h) : DSVHandle(h)
+			explicit DepthStencil(const Handle& h) : Handles::DSV(h)
 			{
 
 			}
 
 			template<class T2>
-			DepthStencil(const RenderTarget<T2>& h) : DSVHandle(h)
+			DepthStencil(const RenderTarget<T2>& h) : Handles::DSV(h)
 			{
 
 			}

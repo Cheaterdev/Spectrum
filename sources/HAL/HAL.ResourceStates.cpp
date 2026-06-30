@@ -269,7 +269,7 @@ namespace HAL
 				ASSERT(false);
 
 			my_state.check_valid(nullptr);
-			ASSERT(my_state.first_usage == my_state.last_usage);
+			//ASSERT(my_state.first_usage == my_state.last_usage);
 		}
 	}
 

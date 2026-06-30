@@ -453,8 +453,8 @@ namespace HAL
 	void GraphicsContext::set_rtv(const CompiledRT& rt, RTOptions options, float depth, uint stencil, vec4 clear_color)
 	{
 		compiled_rt = rt;
-		const RTVHandle& table_rtv = rt.table_rtv;
-		const DSVHandle& table_dsv = rt.table_dsv;
+		const Handles::RTV& table_rtv = rt.table_rtv;
+		const Handles::DSV& table_dsv = rt.table_dsv;
 
 		{ PROFILE(L"pre_command"); base.pre_command<false, false>(*this, BarrierSync::DRAW); }
 
@@ -1800,7 +1800,7 @@ namespace HAL
 		root_sig = nullptr;
 		for (auto& table : tables)
 		{
-			table.const_buffer = CBVHandle();
+			table.const_buffer = Handles::CBV();
 			table.resources.clear();
 			table.dirty = false;
 		}
@@ -1834,7 +1834,7 @@ namespace HAL
 		set_signature(base.get_device().get_engine_root_layout_holder().GetSignature(layout));
 	}
 
-	void SignatureDataSetter::set_cb(UINT index, const CBVHandle& cb, BarrierSync operation)
+	void SignatureDataSetter::set_cb(UINT index, const Handles::CBV& cb, BarrierSync operation)
 	{
 		get_base().transition(cb.get_resource_info(), operation);
 		set_const_buffer(index, 0, cb.get_offset());
@@ -1912,7 +1912,7 @@ namespace HAL
 		track_object(*(info.resource));
 	}
 
-	void CommandList::clear_uav(const UAVHandle& h, vec4 ClearColor)
+	void CommandList::clear_uav(const Handles::UAV& h, vec4 ClearColor)
 	{
 		create_usage_point(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
 		transition(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);

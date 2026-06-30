@@ -20,7 +20,7 @@ namespace HAL
 {
 	// NOTE: create_resource(Device&, ResourceDesc&, ResourceHandle) is intentionally
 	// NOT defined here.  It is an inline in HAL.Resource.ixx to avoid the MSVC
-	// $$_A/$$_B module-type-tag mismatch for template arguments (HeapHandle<HAL::Heap>).
+	// $$_A/$$_B module-type-tag mismatch for template arguments (PagedAllocation<HAL::Heap>).
 	// The inline forwards to _create_resource_placed_impl below.
 
 

@@ -289,7 +289,7 @@ export{
 			void begin(LiteralWStr name = L"");
 
 
-			void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0));
+			void clear_uav(const Handles::UAV& h, vec4 ClearColor = vec4(0, 0, 0, 0));
 
 		};
 
@@ -386,7 +386,7 @@ export{
 				bool dirty = false;
 
 				SlotID slot_id;
-				CBVHandle const_buffer;
+				Handles::CBV const_buffer;
 				std::vector<HAL::ResourceInfo*> resources;
 			};
 			std::vector<RowInfo> tables;
@@ -408,7 +408,7 @@ export{
 			void commit_tables(BarrierSync operation, UsedSlots* slots = nullptr);
 			virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
 
-			void set_cb(UINT index, const CBVHandle& cb, BarrierSync operation);
+			void set_cb(UINT index, const Handles::CBV& cb, BarrierSync operation);
 
 		public:
 
@@ -460,8 +460,8 @@ export{
 			static constexpr SIG_TYPE_COMPILED TYPE = SIG_TYPE_COMPILED::RT;
 
 
-			HAL::RTVHandle table_rtv;
-			HAL::DSVHandle table_dsv;
+			HAL::Handles::RTV table_rtv;
+			HAL::Handles::DSV table_dsv;
 
 			std::vector<HAL::Format> get_formats() const;
 			HAL::Format get_depth_format() const;

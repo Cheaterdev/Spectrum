@@ -235,7 +235,7 @@ export{
 		//
 		// Problem: MSVC mangles cross-partition template arguments differently
 		// inside a module ($$_B / [!HAL]) vs outside via `import HAL;` ($$_A /
-		// [HAL]).  ResourceHandle = HeapHandle<HAL::Heap> has HAL::Heap from the
+		// [HAL]).  ResourceHandle = PagedAllocation<HAL::Heap> has HAL::Heap from the
 		// :Heap partition, so the function defined in HAL.Resource.cpp (a module
 		// implementation unit) gets the $$_B mangling that FrameGraph never finds.
 		//

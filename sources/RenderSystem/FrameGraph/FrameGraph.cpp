@@ -20,61 +20,28 @@ namespace FrameGraph
 
 		ASSERT(pass);
 		bool is_writer = check(flags & WRITEABLE_FLAGS);
+		bool needs_new_state = is_writer || states.empty() || states.back().write;
 
-		bool was_swap = false;
-
-		if (is_writer || states.empty())
+		if (needs_new_state)
 		{
-
-			ResourceRWState state;
-			state.write = is_writer;
-			states.emplace_back(std::move(state));
-			was_swap = true;
-			last_writer = static_cast<int>(states.size() - 1);
-		}
-		else
-		{
-			if (states.back().write)
-			{
-				ResourceRWState state;
-				state.write = false;
-				states.emplace_back(std::move(state));
-				was_swap = true;
-			}
+			states.push_back({ .write = is_writer });
+			if (is_writer)
+				last_writer = static_cast<int>(states.size() - 1);
+			related.insert(related_read.begin(), related_read.end());
+			related_read.clear();
 		}
 
 		ResourceRWState& state = states.back();
 		state.passes.emplace_back(pass);
-
-		if (check(pass->flags & PassFlags::Compute))
-			state.compute.emplace_back(pass);
-		else
-			state.graphics.emplace_back(pass);
-
-
-		if (was_swap)
-		{
-			related.insert(related_read.begin(), related_read.end());
-			related_read.clear();
-		}
-		//	ASSERT(pass->prev_passes.empty());
-
-		for (auto p:related)
-		{
-			if (p==pass)
-			{
-				ASSERT(0);
-			   Application::get().shutdown() ;
-			}
-		}
-		pass->prev_passes.insert(related.begin(), related.end());
-		related_read.insert(pass);
+		(check(pass->flags & PassFlags::Compute) ? state.compute : state.graphics).emplace_back(pass);
 
 		for (auto p : related)
 		{
+			ASSERT(p != pass);
 			p->next_passes.insert(pass);
-			//pass->sync_state.max(p);
 		}
+		pass->prev_passes.insert(related.begin(), related.end());
+		related_read.insert(pass);
 	}
 
 
@@ -392,9 +359,7 @@ namespace FrameGraph
 				info.enabled = false;
 			}
 
-		std::function<void(ResourceAllocInfo&, int)> process_resource;
-
-		process_resource = [&, this](ResourceAllocInfo& info, UINT pass_id) {
+		auto process_resource = [&](this auto&& self, ResourceAllocInfo& info, UINT pass_id) -> void {
 
 		//	if (info.enabled) return;
 			info.enabled = true;
@@ -403,7 +368,7 @@ namespace FrameGraph
 			{
 				if (s.write)
 				{
-					
+
 					auto& pass = s.passes.front();
 
 					if (pass->enabled) continue;
@@ -413,7 +378,7 @@ namespace FrameGraph
 
 					for (auto& info : pass->used.resources)
 					{
-						process_resource(*info, pass->id);
+						self(*info, pass->id);
 					}
 				}
 			}
@@ -460,7 +425,6 @@ namespace FrameGraph
 
 			{
 				PROFILE(L"sorting");
-
 
 				bool sorted = false;
 
@@ -511,28 +475,9 @@ namespace FrameGraph
 				}
 			}
 
-			/*	builder.enabled_passes.sort(
-					[](const Pass* a, const Pass* b)
-					{
-
-						if (a->dependency_level == b->dependency_level)
-						{
-							if (!check(a->flags & PassFlags::Compute) && !check(b->flags & PassFlags::Compute))
-							{
-								return a->compute_count > b->compute_count;
-							}
-
-							return check(a->flags & PassFlags::Compute) > check(b->flags & PassFlags::Compute);
-						}
-						return (a->dependency_level < b->dependency_level);
-					});
-						 */
-
 			std::list<Pass*> graphics;
 			std::list<Pass*> compute;
 			std::list<Pass*> new_enabled_passes;
-
-
 
 			for (auto pass : builder.enabled_passes)
 			{
@@ -542,30 +487,24 @@ namespace FrameGraph
 					graphics.emplace_back(pass);
 			}
 
-
-			std::function<void(Pass* pass)> insert_pass;
-
-			insert_pass = [&](Pass* pass) {
+			auto insert_pass = [&](this auto&& self, Pass* pass) -> void {
 				for (auto prev : pass->prev_passes)
 				{
-					if (!prev->inserted)	insert_pass(prev);
-
+					if (!prev->inserted) self(prev);
 				}
 				new_enabled_passes.emplace_back(pass);
 				pass->inserted = true;
-				};
+			};
 
 			for (auto pass : compute)
 			{
 				if (!pass->inserted) insert_pass(pass);
 			}
 
-
 			for (auto pass : graphics)
 			{
 				if (!pass->inserted) insert_pass(pass);
 			}
-
 
 			//builder.enabled_passes = new_enabled_passes;
 		}
@@ -1304,21 +1243,17 @@ namespace FrameGraph
 			if (info->heap_type != HAL::HeapType::DEFAULT) continue;
 
 
-			// find last pass that uses the resource 
-			// TODO: pass end is not in sync with events
-			// cant delete just in place - need to delete at first pass that is in sync with this one
-			// looks like this is improssble to wind such pass
-		/*	for (auto pass : info->states.back().passes)
+			bool alias_ended = false;
+			for (auto pass : info->states.back().passes)
 			{
 				if (info->used_end.is_in_sync(pass->sync_state_with_self))
 				{
-					best_deletion_pass = pass;
-					events[best_deletion_pass->call_id].free_after.insert(info);
-					best_deletion_pass->used.resource_deletions_after.insert(info);
+					pass->used.resource_deletions_after.insert(info);
+					alias_ended = true;
 					break;
 				}
 			}
-					  */
+					  
 					  // if no pass found - find any pass that is synced to the usage
 			if (!best_deletion_pass)
 			{
@@ -1329,6 +1264,8 @@ namespace FrameGraph
 					{
 						best_deletion_pass = pass;
 						events[best_deletion_pass->call_id].free_before.insert(info);
+
+						if (!alias_ended)
 						best_deletion_pass->used.resource_deletions_before.insert(info);
 
 						//	events[best_deletion_pass->call_id].free_after.insert(info);

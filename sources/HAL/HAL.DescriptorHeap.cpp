@@ -192,7 +192,7 @@ namespace HAL {
 		return resources[offset];
 	}
 
-	DescriptorHeapStorage::DescriptorHeapStorage(const DescriptorHeapHandle& handle) : handle(handle) {}
+	DescriptorHeapStorage::DescriptorHeapStorage(const DescriptorHeapAllocation& handle) : handle(handle) {}
 
 	DescriptorHeapStorage::~DescriptorHeapStorage()
 	{

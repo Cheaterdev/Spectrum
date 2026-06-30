@@ -35,7 +35,7 @@ VSOut VS(uint vid : SV_VertexID)
 float4 PS(VSOut i) : SV_Target { return i.col; }
 )hlsl";
 
-	std::shared_ptr<HAL::TextureResource> run_cull_test(HAL::Device& device, HAL::CullMode mode, const wchar_t* label)
+	std::shared_ptr<HAL::TextureResource> run_cull_test(HAL::Device& device, HAL::CullMode mode, LiteralWStr label)
 	{
 		constexpr uint W = 256, H = 256;
 		auto tex = std::make_shared<HAL::TextureResource>(device,
@@ -321,21 +321,21 @@ float4 PS(VSOut i) : SV_Target { return i.col; }
 	// NoCull: both triangles visible.
 	TEST(Core.HAL, RenderCull_None)
 	{
-		auto rt = run_cull_test(RenderSystem::get().device(), HAL::CullMode::None, L"RenderCull_None");
+		auto rt = run_cull_test(RenderSystem::get().device(), HAL::CullMode::None, L"RenderCull_None"_cs);
 		ASSERT_TEXTURE(rt.get(), "cull_none");
 	}
 
 	// BackCull: back face (CW in NDC, RED right triangle) discarded — only GREEN left triangle visible.
 	TEST(Core.HAL, RenderCull_Back)
 	{
-		auto rt = run_cull_test(RenderSystem::get().device(), HAL::CullMode::Back, L"RenderCull_Back");
+		auto rt = run_cull_test(RenderSystem::get().device(), HAL::CullMode::Back, L"RenderCull_Back"_cs);
 		ASSERT_TEXTURE(rt.get(), "cull_back");
 	}
 
 	// FrontCull: front face (CCW in NDC, GREEN left triangle) discarded — only RED right triangle visible.
 	TEST(Core.HAL, RenderCull_Front)
 	{
-		auto rt = run_cull_test(RenderSystem::get().device(), HAL::CullMode::Front, L"RenderCull_Front");
+		auto rt = run_cull_test(RenderSystem::get().device(), HAL::CullMode::Front, L"RenderCull_Front"_cs);
 		ASSERT_TEXTURE(rt.get(), "cull_front");
 	}
 

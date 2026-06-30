@@ -44,9 +44,9 @@ export namespace HAL
 
 
 
-	using QueryHandle = Allocators::HeapHandle<HAL::QueryHeap>;
+	using QueryHandle = Allocators::PagedAllocation<HAL::QueryHeap>;
 
-	class QueryHeapFactory :public Allocators::HeapFactory<QueryContext, GlobalAllocationPolicy>
+	class QueryHeapFactory :public Allocators::PageCache<QueryContext, GlobalAllocationPolicy>
 	{
 		Device& device;
 		virtual ptr_type make_heap(QueryType type, size_t size) override;
@@ -56,11 +56,11 @@ export namespace HAL
 
 	};
 	template<class AllocationPolicy>
-	class QueryHeapPageManager :public Allocators::HeapPageManager<QueryContext, AllocationPolicy>
+	class QueryHeapPageManager :public Allocators::PagedAllocator<QueryContext, AllocationPolicy>
 	{
 		Device& device;
 	public:
-		QueryHeapPageManager(Device& _device) :Allocators::HeapPageManager<QueryContext, AllocationPolicy>(_device.get_query_heap_factory()), device(_device) {}
+		QueryHeapPageManager(Device& _device) :Allocators::PagedAllocator<QueryContext, AllocationPolicy>(_device.get_query_heap_factory()), device(_device) {}
 
 
 	};

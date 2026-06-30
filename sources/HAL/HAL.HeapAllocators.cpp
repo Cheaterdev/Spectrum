@@ -23,9 +23,9 @@ namespace HAL
 		else if (index.type == HeapType::READBACK) _readback_bytes -= n;
 	}
 
-	HeapFactory::page_type HeapFactory::AllocateHeap(HeapIndex index, size_t size, Allocators::HeapAllocatorInterface<HAL::Heap>& owner)
+	HeapFactory::page_type HeapFactory::AllocatePage(HeapIndex index, size_t size, Allocators::PageOwnerInterface<HAL::Heap>& owner)
 	{
-		auto page = Base::AllocateHeap(index, size, owner);
+		auto page = Base::AllocatePage(index, size, owner);
 		_add(index, page->inner_heap_page_handle.get_size());
 		return page;
 	}

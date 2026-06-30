@@ -83,7 +83,7 @@ export
 
 
 			if (compiler.rtvs.size()) {
-				compiled.table_rtv = context.alloc_descriptor<HAL::RTVHandle>(static_cast<uint>(compiler.rtvs.size()), HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::None });
+				compiled.table_rtv = context.alloc_descriptor<HAL::Handles::RTV>(static_cast<uint>(compiler.rtvs.size()), HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::None });
 				for (UINT i = 0; i < (UINT)compiled.table_rtv.get_count(); i++)
 				{
 					compiled.table_rtv[i].place(*compiler.rtvs[i]);
@@ -93,7 +93,7 @@ export
 
 			if (compiler.dsv)
 			{
-				compiled.table_dsv = context.alloc_descriptor<HAL::DSVHandle>(1u, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::None });
+				compiled.table_dsv = context.alloc_descriptor<HAL::Handles::DSV>(1u, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::None });
 				compiled.table_dsv[0].place(**compiler.dsv);
 			}
 

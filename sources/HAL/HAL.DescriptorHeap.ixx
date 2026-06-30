@@ -82,17 +82,17 @@ export
 			static const size_t PageAlignment = 256;
 		};
 
-		using DescriptorHeapHandle = Allocators::HeapHandle<HAL::DescriptorHeap>;
+		using DescriptorHeapAllocation = Allocators::PagedAllocation<HAL::DescriptorHeap>;
 
 		class DescriptorHeapStorage:public SharedObject<DescriptorHeapStorage>,public ObjectState<TrackedObjectState>, public TrackedObject
 		{
-			DescriptorHeapHandle handle;
+			DescriptorHeapAllocation handle;
 			uint count = 0;
 		public:
 
 			DescriptorHeapStorage() = default;
 
-			DescriptorHeapStorage(const DescriptorHeapHandle& handle);
+			DescriptorHeapStorage(const DescriptorHeapAllocation& handle);
 			~DescriptorHeapStorage();
 
 			HAL::DescriptorHeap::ptr get_heap() const;
@@ -167,14 +167,16 @@ export
 
 		};
 		}
-		
 
-		using CBVHandle = internal::TypedHandle<HandleType::CBV>;
-		using SRVHandle = internal::TypedHandle<HandleType::SRV>;
-		using UAVHandle = internal::TypedHandle<HandleType::UAV>;
-		using RTVHandle = internal::TypedHandle<HandleType::RTV>;
-		using DSVHandle = internal::TypedHandle<HandleType::DSV>;
-		using SamplerHandle = internal::TypedHandle<HandleType::SMP>;
+		namespace  Handles
+		{
+			using CBV = internal::TypedHandle<HandleType::CBV>;
+			using SRV = internal::TypedHandle<HandleType::SRV>;
+			using UAV = internal::TypedHandle<HandleType::UAV>;
+			using RTV = internal::TypedHandle<HandleType::RTV>;
+			using DSV = internal::TypedHandle<HandleType::DSV>;
+			using Sampler = internal::TypedHandle<HandleType::SMP>;
+		}
 
 		template<typename T> concept HandleClass = std::is_base_of_v<HAL::Handle, T>;
 
@@ -202,7 +204,7 @@ export
 
 
 
-		class DescriptorHeapFactory :public Allocators::HeapFactory<DescriptorHeapContext, GlobalAllocationPolicy>
+		class DescriptorHeapFactory :public Allocators::PageCache<DescriptorHeapContext, GlobalAllocationPolicy>
 		{
 			ptr_type gpu_sampler;
 			ptr_type gpu_cbv_srv_uav;
@@ -216,11 +218,11 @@ export
 			ptr_type get_cbv_srv_uav_heap();
 		};
 		template<class AllocationPolicy>
-		class DescriptorHeapPageManager :public Allocators::HeapPageManager<DescriptorHeapContext, AllocationPolicy>
+		class DescriptorHeapPageManager :public Allocators::PagedAllocator<DescriptorHeapContext, AllocationPolicy>
 		{
 			Device& device;
 		public:
-			DescriptorHeapPageManager(Device& _device) :Allocators::HeapPageManager<DescriptorHeapContext, AllocationPolicy>(_device.get_descriptor_heap_factory()), device(_device) {}
+			DescriptorHeapPageManager(Device& _device) :Allocators::PagedAllocator<DescriptorHeapContext, AllocationPolicy>(_device.get_descriptor_heap_factory()), device(_device) {}
 
 
 		};

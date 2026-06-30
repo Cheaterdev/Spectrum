@@ -219,8 +219,8 @@ public:
 		HAL::FenceWaiter fence;
 		size_t frame_id;
 
-		std::set<Pass*> related;
-		std::set<Pass*> related_read;
+		std::unordered_set<Pass*> related;
+		std::unordered_set<Pass*> related_read;
 
 
 				Events::Event<Pass*, FrameContext*>	process_debug_resource;
@@ -498,7 +498,7 @@ public:
 
 	struct TaskBuilder
 	{
-		using MemoryAllocatorType = Allocators::HeapPageManager<ResourceContext, TaskBuilderResourceAllocationContext>;
+		using MemoryAllocatorType = Allocators::PagedAllocator<ResourceContext, TaskBuilderResourceAllocationContext>;
 
 	private:
 
@@ -668,9 +668,9 @@ public:
 		SyncState sync_state_with_self;
 
 
-		std::set<Pass*> prev_passes;
+		std::unordered_set<Pass*> prev_passes;
 
-		std::set<Pass*> next_passes;
+		std::unordered_set<Pass*> next_passes;
 		std::future<void> render_task;
 		std::future<void> compile_task;
 

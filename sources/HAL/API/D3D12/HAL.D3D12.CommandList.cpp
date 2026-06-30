@@ -63,7 +63,7 @@ namespace HAL
             m_commandList->DispatchGraph(&desc);
         }
 
-        void CommandList::clear_uav(const UAVHandle& h, vec4 ClearColor)
+        void CommandList::clear_uav(const Handles::UAV& h, vec4 ClearColor)
         {
             auto v = h.get_resource_info().view;
             auto uav = std::get<HAL::Views::UnorderedAccess>(v);
@@ -81,22 +81,22 @@ namespace HAL
             m_commandList->ClearUnorderedAccessViewFloat(h.get_gpu(), h.get_cpu(), dx_resource, reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
         }
 
-        void CommandList::clear_rtv(const RTVHandle& h, vec4 ClearColor)
+        void CommandList::clear_rtv(const Handles::RTV& h, vec4 ClearColor)
         {
             m_commandList->ClearRenderTargetView(h.get_cpu(), ClearColor.data(), 0, nullptr);
         }
 
-        void CommandList::clear_stencil(const DSVHandle& dsv, UINT8 stencil)
+        void CommandList::clear_stencil(const Handles::DSV& dsv, UINT8 stencil)
         {
             m_commandList->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_STENCIL, 0, stencil, 0, nullptr);
         }
 
-        void CommandList::clear_depth(const DSVHandle& dsv, float depth)
+        void CommandList::clear_depth(const Handles::DSV& dsv, float depth)
         {
             m_commandList->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
         }
 
-        void CommandList::clear_depth_stencil(const DSVHandle& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil)
+        void CommandList::clear_depth_stencil(const Handles::DSV& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil)
         {
             m_commandList->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAGS((depth * D3D12_CLEAR_FLAG_DEPTH) | (stencil * D3D12_CLEAR_FLAG_STENCIL)), fdepth, fstencil, 0, nullptr);
         }
@@ -258,7 +258,7 @@ namespace HAL
                 counter_offset);
         }
 
-        void CommandList::set_rtv(int c, RTVHandle rt, DSVHandle h)
+        void CommandList::set_rtv(int c, Handles::RTV rt, Handles::DSV h)
         {
             CD3DX12_CPU_DESCRIPTOR_HANDLE rtv;
             CD3DX12_CPU_DESCRIPTOR_HANDLE dsv;

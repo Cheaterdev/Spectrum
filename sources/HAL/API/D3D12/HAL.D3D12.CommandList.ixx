@@ -38,11 +38,11 @@ export namespace HAL {
             void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
             void dispatch_graph(ResourceAddress addr);
 
-            void clear_uav(const UAVHandle& h, vec4 ClearColor);
-            void clear_rtv(const RTVHandle& h, vec4 ClearColor);
-            void clear_stencil(const DSVHandle& dsv, UINT8 stencil);
-            void clear_depth(const DSVHandle& dsv, float depth);
-            void clear_depth_stencil(const DSVHandle& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil);
+            void clear_uav(const Handles::UAV& h, vec4 ClearColor);
+            void clear_rtv(const Handles::RTV& h, vec4 ClearColor);
+            void clear_stencil(const Handles::DSV& dsv, UINT8 stencil);
+            void clear_depth(const Handles::DSV& dsv, float depth);
+            void clear_depth_stencil(const Handles::DSV& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil);
             void set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST, bool adjusted = false, uint controlpoints = 0);
             void set_stencil_ref(UINT ref);
 
@@ -71,7 +71,7 @@ export namespace HAL {
             void copy_buffer(HAL::Resource* dest, uint64 dest_offset, HAL::Resource* source, uint64 source_offset, uint64 size);
             void set_pipeline(std::shared_ptr<TrackedPipeline> pipeline);
             void execute_indirect(const IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset);
-            void set_rtv(int c, RTVHandle rt, DSVHandle h);
+            void set_rtv(int c, Handles::RTV rt, Handles::DSV h);
             void start_event(std::wstring_view str);
             void end_event();
             void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom);
