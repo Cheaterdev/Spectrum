@@ -295,6 +295,35 @@ int main()
 			                
 			                 ArgInfo{"offsets"}, ArgInfo{"i"}
 		                 ));
+		global.AddGlobal("get_all_resources", jinja2::MakeCallable(
+			[&]() -> ValuesList
+			{
+				std::set<std::string> seen;
+				ValuesList result;
+
+				std::function<void(const std::list<View_Param>&)> collect;
+				collect = [&](const std::list<View_Param>& params)
+				{
+					for (const auto& p : params)
+					{
+						View* view = parsed.views.find(p.class_no_template);
+						if (view)
+							collect(view->params);
+						else
+						{
+							if (seen.insert(p.name).second)
+								result.emplace_back(p.name);
+						}
+					}
+				};
+
+				for (const auto& pass : parsed.passes)
+					collect(pass.params);
+
+				return result;
+			}
+		));
+
 		global.AddGlobal("get_pipeline_resources", jinja2::MakeCallable(
 			[&](const std::string& pipeline_name) -> ValuesList
 			{
@@ -493,6 +522,7 @@ int main()
 		}
 
 		my_stream(cpp_path_render, "pass_defaults.h") << cpp_templates.generate(L"pass_defaults");
+		my_stream(cpp_path_render, "resource_ids.h") << cpp_templates.generate(L"resource_ids");
 
 		// includes
 		my_stream(cpp_path, "autogen.ixx") << cpp_templates.generate(L"autogen");

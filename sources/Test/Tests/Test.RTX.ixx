@@ -83,7 +83,7 @@ export namespace Test
 		scene->update(*graph.builder.current_frame);
 
 		// Register the output texture as the FrameGraph resource "ColorOutput".
-		graph.builder.pass_texture("ColorOutput", output->resource,
+		graph.builder.pass_texture(FrameGraph::ResourceID::ColorOutput, output->resource,
 			{}, FrameGraph::ResourceFlags::Required);
 
 		// FrameInfo slot: camera, sun, BRDF LUT.

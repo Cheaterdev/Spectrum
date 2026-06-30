@@ -13,18 +13,18 @@ namespace Passes
 {
 	struct GBuffer 
 	{
-		Handlers::Texture H(GBuffer_Albedo);
-		Handlers::Texture H(GBuffer_Normals);
-		Handlers::Texture H(GBuffer_Depth);
-		Handlers::Texture H(GBuffer_Specular);
-		Handlers::Texture H(GBuffer_Speed);
-		Handlers::Texture H(GBuffer_DepthMips);
-		Handlers::Texture H(GBuffer_Quality);
-		Handlers::Texture H(GBuffer_TempColor);
-		Handlers::Texture H(GBuffer_NormalsPrev);
-		Handlers::Texture H(GBuffer_SpecularPrev);
-		Handlers::Texture H(GBuffer_DepthPrev);
-		Handlers::Texture H(GBuffer_HiZ);
-		Handlers::Texture H(GBuffer_HiZ_UAV);
+		Handlers::Texture GBuffer_Albedo = ResourceID::GBuffer_Albedo;
+		Handlers::Texture GBuffer_Normals = ResourceID::GBuffer_Normals;
+		Handlers::Texture GBuffer_Depth = ResourceID::GBuffer_Depth;
+		Handlers::Texture GBuffer_Specular = ResourceID::GBuffer_Specular;
+		Handlers::Texture GBuffer_Speed = ResourceID::GBuffer_Speed;
+		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
+		Handlers::Texture GBuffer_Quality = ResourceID::GBuffer_Quality;
+		Handlers::Texture GBuffer_TempColor = ResourceID::GBuffer_TempColor;
+		Handlers::Texture GBuffer_NormalsPrev = ResourceID::GBuffer_NormalsPrev;
+		Handlers::Texture GBuffer_SpecularPrev = ResourceID::GBuffer_SpecularPrev;
+		Handlers::Texture GBuffer_DepthPrev = ResourceID::GBuffer_DepthPrev;
+		Handlers::Texture GBuffer_HiZ = ResourceID::GBuffer_HiZ;
+		Handlers::Texture GBuffer_HiZ_UAV = ResourceID::GBuffer_HiZ_UAV;
 	};
 }

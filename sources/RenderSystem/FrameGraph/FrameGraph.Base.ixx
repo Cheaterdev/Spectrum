@@ -1,3 +1,5 @@
+#include "autogen/resource_ids.h"
+
 export module FrameGraph:Base;
 
 import Core;
@@ -163,7 +165,8 @@ public:
 
 	struct ResourceAllocInfo
 	{
-		std::string name;
+		ResourceID id = ResourceID::Count;
+		const char* name() const;
 		// desc
 		//ResourceType type;
 		//MyVariant desc;
@@ -171,7 +174,6 @@ public:
 
 
 		HAL::ResourceHandle alloc_ptr;
-		ResourceAllocInfo* orig = nullptr;
 
 		HAL::ResourceDesc d3ddesc;
 		HAL::HeapType heap_type;
@@ -281,7 +283,7 @@ public:
 			using View = typename T::View;
 			Desc desc;
 
-			std::string name;
+			ResourceID id = ResourceID::Count;
 			auto& operator*()
 			{
 				return *static_cast<View*>(info->view.get());
@@ -301,12 +303,9 @@ public:
 
 			UniversalHandler(const Desc& desc) :desc(desc)
 			{
-
-				//info->buffer = HAL::BufferView();
 			}
-			UniversalHandler(std::string_view name) :name(name)
+			UniversalHandler(ResourceID id) :id(id)
 			{
-
 			}
 
 			virtual void init(ResourceAllocInfo& info) override
@@ -460,16 +459,51 @@ public:
 		using LockPolicy = Thread::Free;
 	};
 
+	struct ResourceChain
+	{
+		bool   empty() const { return items.empty(); }
+		size_t size()  const { return items.size(); }
+
+		ResourceAllocInfo&       active()       { return items[pos]; }
+		const ResourceAllocInfo& active() const { return items[pos]; }
+
+		auto active_span()
+		{
+			size_t n = std::min(pos + 1, items.size());
+			return std::ranges::subrange(items.begin(), items.begin() + (std::ptrdiff_t)n);
+		}
+
+		// Ensure at least one slot exists (used by create()).
+		void ensure_first()
+		{
+			if (items.empty())
+				items.emplace_back();
+		}
+
+		// Advance to the next slot, growing the deque if needed.
+		ResourceAllocInfo& emplace_back()
+		{
+			++pos;
+			if (items.size() <= pos)
+				items.emplace_back();
+			return items[pos];
+		}
+
+		void reset_frame() { pos = 0; }
+
+	private:
+		std::deque<ResourceAllocInfo> items;
+		size_t pos = 0;
+	};
+
 	struct TaskBuilder
 	{
 		using MemoryAllocatorType = Allocators::HeapPageManager<ResourceContext, TaskBuilderResourceAllocationContext>;
-	
+
 	private:
 
 	public:
-		std::map<std::string, std::string> resources_names;
-
-		std::map<std::string, ResourceAllocInfo> alloc_resources;
+		std::array<ResourceChain, (size_t)ResourceID::Count> alloc_resources;
 
 		std::set<ResourceAllocInfo*> passed_resources;
 		std::shared_ptr<Pass>         external_pass;   // fake creator pass for passed_resources
@@ -492,88 +526,80 @@ public:
 		void end(Pass* pass);
 
 
-		void init(ResourceAllocInfo& info, std::string name, ResourceFlags flags);
+		void init(ResourceAllocInfo& info, ResourceFlags flags);
 		void init_pass(ResourceAllocInfo& info, ResourceFlags flags);
 
 
 		template<class T>
 		void create(T& result, const typename T::Desc& desc, ResourceFlags flags = ResourceFlags::None)
 		{
-			std::string& name = result.name;
-			resources_names[name] = name;
-			ResourceAllocInfo& info = alloc_resources[name];
+			auto& chain = alloc_resources[(size_t)result.id];
+			chain.reset_frame();
+			chain.ensure_first();
 
+			ResourceAllocInfo& info = chain.active();
+			info.id = result.id;
 			T& handler = info.create_handler<T>(desc);
-			init(info, name, flags);
-			//handler.init(info);
+			init(info, flags);
 			result = handler;
-
+			result.id = info.id;
 		}
+
 		template<class T>
 		void recreate(T& result, ResourceFlags flags = ResourceFlags::None)
 		{
-			std::string name = result.name;
-			ResourceAllocInfo& old_info = alloc_resources[name];
-			std::string new_name = resources_names[name] + "recreated";
-			resources_names[name] = new_name;
-			name = new_name;
+			auto& chain = alloc_resources[(size_t)result.id];
+			ASSERT(!chain.empty());
+			ResourceAllocInfo& old = chain.active();
+			ResourceAllocInfo& info = chain.emplace_back();
 
-			if (check(old_info.flags&ResourceFlags::Required))
-				flags|=ResourceFlags::Required;
-			ResourceAllocInfo& info = alloc_resources[name];
-			T& handler = info.clone_handler<T>(old_info.handler);
-			init(info, name, flags);
-			//handler.init(info);
-			info.orig = &old_info;
-
-
+			if (check(old.flags & ResourceFlags::Required))
+				flags |= ResourceFlags::Required;
+			info.id = result.id;
+			T& handler = info.clone_handler<T>(old.handler);
+			init(info, flags);
 			result = handler;
+			result.id = info.id;
 		}
-
 
 		template<class T>
 		void recreate(T& result, const typename T::Desc& desc, ResourceFlags flags = ResourceFlags::None)
 		{
-			std::string name = result.name;
-			ResourceAllocInfo& old_info = alloc_resources[name];
-			std::string new_name = resources_names[name] + "recreated";
-			resources_names[name] = new_name;
-			name = new_name;
+			auto& chain = alloc_resources[(size_t)result.id];
+			ASSERT(!chain.empty());
+			ResourceFlags old_flags = chain.active().flags;
+			ResourceAllocInfo& info = chain.emplace_back();
 
-						if (check(old_info.flags&ResourceFlags::Required))
-				flags|=ResourceFlags::Required;
-			ResourceAllocInfo& info = alloc_resources[name];
+			if (check(old_flags & ResourceFlags::Required))
+				flags |= ResourceFlags::Required;
+			info.id = result.id;
 			T& handler = info.create_handler<T>(desc);
-			init(info, name, flags);
-			//handler.init(info);
-			info.orig = &old_info;
-
-
+			init(info, flags);
 			result = handler;
+			result.id = info.id;
 		}
 
 		template<class T>
 		bool exists(T& result)
 		{
-		//	std::string& name = resources_names[result.name];
-			return resources_names.count(result.name);
+			auto& chain = alloc_resources[(size_t)result.id];
+			return !chain.empty();
 		}
 
 		template<class T>
 		void need(T& result, ResourceFlags flags = ResourceFlags::None)
 		{
 			ASSERT(exists(result));
-			std::string& name = resources_names[result.name];
-			ResourceAllocInfo& info = alloc_resources[name];
+			auto& chain = alloc_resources[(size_t)result.id];
+			ResourceAllocInfo& info = chain.active();
 			T& handler = info.get_handler<T>();
-
 			init_pass(info, flags);
-
 			result = handler;
+			result.id = info.id;
 		}
 
 		//void free_texture(ResourceHandler* handler);
-		void pass_texture(std::string name, HAL::TextureResource::ptr tex, HAL::FenceWaiter fence = {}, ResourceFlags flags = ResourceFlags::None);
+		void pass_texture(ResourceID id, HAL::TextureResource::ptr tex, HAL::FenceWaiter fence = {}, ResourceFlags flags = ResourceFlags::None);
 
 
 		void create_resources();
@@ -590,7 +616,7 @@ public:
 
 		Pass* get_pass(uint id) const;
 
-		ResourceAllocInfo* get(std::string name);
+		ResourceAllocInfo* get(ResourceID id);
 	};
 
 	  class Graph;

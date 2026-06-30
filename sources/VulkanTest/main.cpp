@@ -161,7 +161,7 @@ public:
         // Render into our off-screen texture (passed as "swapchain" so the
         // UI pipeline writes to it).  The real swapchain is still cycled via
         // wait_for_free()/present() but won't have any rendered content.
-        graph.builder.pass_texture("swapchain", swap_chain->get_current_frame());
+        graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, swap_chain->get_current_frame());
 
         pipeline.add_passes(graph);
         create_graph(graph);       // injects UI_Render pass slots

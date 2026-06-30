@@ -18,14 +18,14 @@ public:
 	{
 
 
-		Handlers::Texture H(ResultTexture);
+		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 
-		Handlers::Texture H(Stencil_color_tex);
+		Handlers::Texture Stencil_color_tex = ResourceID::Stencil_color_tex;
 
 		static inline const wchar_t* const resource_names[] = {		L"ResultTexture",		L"Stencil_color_tex",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

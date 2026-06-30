@@ -18,26 +18,26 @@ public:
 	{
 
 
-		Handlers::StructuredBuffer<uint> H(ShadowDenoiser_TileMetaBuffer);
+		Handlers::StructuredBuffer<uint> ShadowDenoiser_TileMetaBuffer = ResourceID::ShadowDenoiser_TileMetaBuffer;
 
 
-		Handlers::Texture H(ShadowMask);
+		Handlers::Texture ShadowMask = ResourceID::ShadowMask;
 
 
-		Handlers::Texture H(GBuffer_Depth);
+		Handlers::Texture GBuffer_Depth = ResourceID::GBuffer_Depth;
 
 
-		Handlers::Texture H(GBuffer_Normals);
+		Handlers::Texture GBuffer_Normals = ResourceID::GBuffer_Normals;
 
 
-		Handlers::Texture H(ShadowDenoiser_Scratch);
+		Handlers::Texture ShadowDenoiser_Scratch = ResourceID::ShadowDenoiser_Scratch;
 
 
-		Handlers::Texture H(ShadowDenoiser_Scratch2);
+		Handlers::Texture ShadowDenoiser_Scratch2 = ResourceID::ShadowDenoiser_Scratch2;
 
 		static inline const wchar_t* const resource_names[] = {		L"ShadowDenoiser_TileMetaBuffer",		L"ShadowMask",		L"GBuffer_Depth",		L"GBuffer_Normals",		L"ShadowDenoiser_Scratch",		L"ShadowDenoiser_Scratch2",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

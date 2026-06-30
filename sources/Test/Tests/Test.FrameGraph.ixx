@@ -72,7 +72,7 @@ export namespace Test
 		Pipelines::UIPipeline pipeline;
 
 		graph.start_new_frame();
-		graph.builder.pass_texture("swapchain", rt);
+		graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, rt);
 
 		pipeline.add_passes(graph);
 		ui.create_graph(graph);   // populates UIContext::draw_infos

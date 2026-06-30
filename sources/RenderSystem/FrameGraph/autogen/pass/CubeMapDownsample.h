@@ -18,17 +18,17 @@ public:
 	{
 
 
-		Handlers::TextureCube H(sky_cubemap);
+		Handlers::TextureCube sky_cubemap = ResourceID::sky_cubemap;
 
 
-		Handlers::TextureCube H(sky_cubemap_filtered);
+		Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
 
 
-		Handlers::TextureCube H(sky_cubemap_filtered_diffuse);
+		Handlers::TextureCube sky_cubemap_filtered_diffuse = ResourceID::sky_cubemap_filtered_diffuse;
 
 		static inline const wchar_t* const resource_names[] = {		L"sky_cubemap",		L"sky_cubemap_filtered",		L"sky_cubemap_filtered_diffuse",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

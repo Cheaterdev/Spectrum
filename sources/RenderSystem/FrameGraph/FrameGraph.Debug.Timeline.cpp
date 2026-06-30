@@ -1084,7 +1084,7 @@ class FrameGraphTimelineCanvas : public dock_base
                 return lbl;
             };
 
-            add_row("Resource: " + (alloc ? alloc->name : "?"));
+            add_row(std::string("Resource: ") + (alloc ? alloc->name() : "?"));
             add_row("Pass:     " + pass_name + "  (#" + std::to_string(call_id) + ")");
             m_type_lbl = add_row("Type:     ...");
             m_dim_lbl  = add_row("Size:     ...");
@@ -1764,8 +1764,8 @@ private:
         {
             for (auto& [alloc, flags] : pass->used.resource_flags)
             {
-                auto& tr = track_map[alloc->name];
-                tr.name      = alloc->name;
+                auto& tr = track_map[alloc->name()];
+                tr.name      = alloc->name();
                 tr.is_static = alloc->is_static();
                 tr.is_passed = alloc->passed;
 
@@ -1784,8 +1784,8 @@ private:
             {
                 if (pass->used.resource_flags.count(alloc)) continue;
 
-                auto& tr = track_map[alloc->name];
-                tr.name  = alloc->name;
+                auto& tr = track_map[alloc->name()];
+                tr.name  = alloc->name();
 
                 ResourceCell cell;
                 cell.call_id    = pass->call_id;
@@ -1803,8 +1803,8 @@ private:
             UINT col = it->second;
             for (auto& [alloc, flags] : sp->used.resource_flags)
             {
-                auto& tr    = track_map[alloc->name];
-                tr.name     = alloc->name;
+                auto& tr    = track_map[alloc->name()];
+                tr.name     = alloc->name();
                 tr.is_static = alloc->is_static();
                 tr.is_passed = alloc->passed;
                 ResourceCell cell;

@@ -18,11 +18,11 @@ public:
 	{
 
 
-		Handlers::Texture H(BlueNoise);
+		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 		static inline const wchar_t* const resource_names[] = {		L"BlueNoise",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

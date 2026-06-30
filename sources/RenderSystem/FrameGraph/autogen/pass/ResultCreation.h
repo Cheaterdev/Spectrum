@@ -18,11 +18,11 @@ public:
 	{
 
 
-		Handlers::Texture H(ResultTexture);
+		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 		static inline const wchar_t* const resource_names[] = {		L"ResultTexture",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

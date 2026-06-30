@@ -1,4 +1,6 @@
-﻿module FrameGraph;
+﻿module;
+#include "autogen/resource_ids.h"
+module FrameGraph;
 import RenderSystem;
 import HAL;
 import Core;
@@ -10,6 +12,8 @@ using namespace HAL;
 
 namespace FrameGraph
 {
+	const char* ResourceAllocInfo::name() const { return resource_id_name(id); }
+
 	void ResourceAllocInfo::add_pass(Pass* pass, ResourceFlags flags)
 	{
 		PROFILE(L"add_pass");
@@ -150,7 +154,7 @@ namespace FrameGraph
 		current_pass = nullptr;
 	}
 
-	void TaskBuilder::pass_texture(std::string name, HAL::TextureResource::ptr tex, HAL::FenceWaiter fence, ResourceFlags flags)
+	void TaskBuilder::pass_texture(ResourceID id, HAL::TextureResource::ptr tex, HAL::FenceWaiter fence, ResourceFlags flags)
 	{
 
 		tex->disable_state_tracking();
@@ -158,7 +162,7 @@ namespace FrameGraph
 		auto tex_desc = tex->get_desc().as_texture();
 		if (tex_desc.is2D())
 		{
-			Handlers::Texture h(name);
+			Handlers::Texture h(id);
 			create(h, { ivec3(0,0,0), HAL::Format::UNKNOWN, 0 }, flags);
 			auto& info = *h.info;
 			info.passed = true;
@@ -174,8 +178,7 @@ namespace FrameGraph
 			h.desc.mip_count = tex->get_desc().as_texture().MipLevels;
 			h.desc.size = tex->get_desc().as_texture().Dimensions;
 
-			info.name = name;
-			tex->set_name(name);
+			tex->set_name(FrameGraph::resource_id_name(id));
 
 			h.init_view(info, *current_frame);
 
@@ -184,12 +187,11 @@ namespace FrameGraph
 		}
 		else if (tex_desc.is3D())
 		{
-			Handlers::Texture3D h(name);
+			Handlers::Texture3D h(id);
 			create(h, { ivec3(0,0,0), HAL::Format::UNKNOWN, }, flags);
 			auto& info = *h.info;
 
-			info.name = name;
-			tex->set_name(name);
+			tex->set_name(FrameGraph::resource_id_name(id));
 
 
 			info.passed = true;
@@ -362,7 +364,7 @@ namespace FrameGraph
 			PROFILE(L"begin_frame");
 
 			builder.current_frame = builder.frames.begin_frame();
-		   builder.resources_names.clear();
+			for (auto& chain : builder.alloc_resources) chain.reset_frame();
 
 		}
 	}
@@ -382,19 +384,13 @@ namespace FrameGraph
 			pass->renderable = pass->setup(builder);
 		}
 
-		for (auto& pair : builder.alloc_resources)
-		{
-			if (pair.second.passed) continue;
+		for (auto& chain : builder.alloc_resources)
+			for (auto& info : chain.active_span())
+			{
 
-			// here need to delete unused info
-		//	if (pair.second.frame_id != builder.current_frame->get_frame())
-			//	continue;
-
-			auto info = &pair.second;
-
-			info->enabled = false;
-
-		}
+				if (info.passed) continue;
+				info.enabled = false;
+			}
 
 		std::function<void(ResourceAllocInfo&, int)> process_resource;
 
@@ -424,11 +420,13 @@ namespace FrameGraph
 
 			};
 
-		for (auto& res : builder.alloc_resources)
-		{
-			if (check(res.second.flags & ResourceFlags::Required))
-				process_resource(res.second, (int)builder.passes.size());
-		}
+		for (auto& chain : builder.alloc_resources)
+			for (auto& info : chain.active_span())
+			{
+
+				if (check(info.flags & ResourceFlags::Required))
+					process_resource(info, (int)builder.passes.size());
+			}
 
 
 		for (auto& pass : builder.required_passes)
@@ -628,8 +626,10 @@ namespace FrameGraph
 				ext->used.resource_creations.insert(alloc);
 			}
 
-			for (auto& [name, alloc] : builder.alloc_resources)
+			for (auto& chain : builder.alloc_resources)
 			{
+				if (chain.empty()) continue;
+				auto& alloc = chain.active();
 				if (!alloc.is_static()) continue;
 				ext->used.resources.insert(&alloc);
 				ext->used.resource_flags[&alloc] = ResourceFlags::RenderTarget;
@@ -643,9 +643,10 @@ namespace FrameGraph
 			}
 		}
 
-		for (auto& pair : builder.alloc_resources)
-		{
-			auto& info = pair.second;
+		for (auto& chain : builder.alloc_resources)
+			for (auto& info : chain.active_span())
+			{
+
 			if (!info.enabled) continue;
 
 			info.remove_inactive();
@@ -678,7 +679,7 @@ namespace FrameGraph
 
 				prev_state = &state;
 			}
-		}
+			}
 	}
 
 	void Graph::compile(int frame)
@@ -799,21 +800,15 @@ namespace FrameGraph
 
 
 
-		for (auto& pair : builder.alloc_resources)
-		{
-			auto info = &pair.second;
-			if (!check(info->flags & ResourceFlags::Static)&&!info->passed)
+		for (auto& chain : builder.alloc_resources)
+			for (auto& info : chain.active_span())
 			{
-				info->resource = nullptr;
-				//		info->view = nullptr;
-			}
 
-			if (info->heap_type != HAL::HeapType::DEFAULT)
-			{
-				info->alloc_ptr.Free();
+				if (!check(info.flags & ResourceFlags::Static) && !info.passed)
+					info.resource = nullptr;
+				if (info.heap_type != HAL::HeapType::DEFAULT)
+					info.alloc_ptr.Free();
 			}
-
-		}
 		return result;
 	}
 
@@ -837,12 +832,11 @@ namespace FrameGraph
 
 
 
-	void TaskBuilder::init(ResourceAllocInfo& info, std::string name, ResourceFlags flags)
+	void TaskBuilder::init(ResourceAllocInfo& info, ResourceFlags flags)
 	{
 		//flags |=ResourceFlags::Static;
 		info.reset();
 		info.flags = flags;
-		info.name = name;
 		info.frame_id = current_frame->get_frame();
 		info.is_new = false;
 		//info.valid_from = info.valid_to = info.valid_to_start = nullptr;
@@ -992,9 +986,10 @@ namespace FrameGraph
 	void TaskBuilder::process_transitions()
 	{
 		PROFILE(L"optimizing transitions");
-		for (auto& pair : alloc_resources)
-		{
-			auto& info = pair.second;
+		for (auto& chain : alloc_resources)
+			for (auto& info : chain.active_span())
+			{
+
 			if (!info.enabled) continue;
 
 			///	if (info.passed) continue;///wtf
@@ -1006,7 +1001,7 @@ namespace FrameGraph
 
 			if (info.heap_type != HAL::HeapType::DEFAULT) continue;
 
-			   bool nb = info.name == "PSSM_Depths";
+			   bool nb = info.id == ResourceID::PSSM_Depths;
 			auto pass_checker = [&](Pass* pass) {
 				auto commandList = pass->context.list;
 				if (!commandList)
@@ -1265,16 +1260,12 @@ namespace FrameGraph
 
 		std::map<int, Events> events;
 		std::set<ResourceAllocInfo*> non_deleted;
-		for (auto& pair : alloc_resources)
-		{
-			if (pair.second.passed) continue;
-
-			// here need to delete unused info
-			if (pair.second.frame_id != current_frame->get_frame())
-				continue;
-			ResourceAllocInfo* info = &pair.second;
-			if (!info->enabled)
-				continue;
+		for (auto& chain : alloc_resources)
+			for (auto& info_ref : chain.active_span())
+			{
+			auto* info = &info_ref;
+			if (info->passed) continue;
+			if (!info->enabled) continue;
 
 
 			info->handler->init(*info);
@@ -1395,17 +1386,12 @@ namespace FrameGraph
 			PROFILE(L"create resources");
 			int id = 0;
 
-			for (auto& pair : alloc_resources)
-			{
-				auto info = &pair.second;
-
-				// here need to delete unused info
-				if (pair.second.frame_id != current_frame->get_frame())
-					continue;
-
+			for (auto& chain : alloc_resources)
+				for (auto& info_ref : chain.active_span())
+				{
+				auto* info = &info_ref;
 				if (info->passed) continue;
-				if (!info->enabled)
-					continue;
+				if (!info->enabled) continue;
 
 				PROFILE(L"resource");
 
@@ -1426,7 +1412,7 @@ namespace FrameGraph
 //res.resource->debug_transitions = info->name=="ShadowMask"; // TODO: move everywhere		
 
 
-						res.resource->set_name(info->name);
+						res.resource->set_name(info->name());
 						res.view = nullptr;
 					}
 
@@ -1488,7 +1474,7 @@ namespace FrameGraph
 						info->creation_state =info->last_state = info->resource->get_state_manager().copy_gpu();
 						info->last_state = TextureLayout::UNDEFINED;
 						info->view = nullptr;
-						info->resource->set_name(info->name);
+						info->resource->set_name(info->name());
 
 						if (info->heap_type != HAL::HeapType::DEFAULT)
 							info->handler->init_view(*info, *current_frame);
@@ -1816,11 +1802,11 @@ namespace FrameGraph
 		return it != id_to_pass.end() ? it->second : nullptr;
 	}
 
-	ResourceAllocInfo* TaskBuilder::get(std::string name)
+	ResourceAllocInfo* TaskBuilder::get(ResourceID id)
 	{
-		if (resources_names.count(name) == 0) return nullptr;
-		name = resources_names[name];
-		ResourceAllocInfo& info = alloc_resources[name];
+		auto& chain = alloc_resources[(size_t)id];
+		if (chain.empty()) return nullptr;
+		ResourceAllocInfo& info = chain.active();
 		if (!info.enabled) return nullptr;
 		return &info;
 	}

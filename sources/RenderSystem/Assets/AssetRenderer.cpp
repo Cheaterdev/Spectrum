@@ -129,7 +129,7 @@ public:
             PROFILE(L"FrameInfo");
             Slots::FrameInfo frameInfo;
             //// hack zone
-            auto sky = graph.builder.get("sky_cubemap_filtered");
+            auto sky = graph.builder.get(FrameGraph::ResourceID::sky_cubemap_filtered);
             if (sky && sky->resource)
                 frameInfo.GetSky() = sky->get_handler<Handlers::TextureCube>()->textureCube;
             /////////
@@ -191,7 +191,7 @@ void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
 
     skyinfo.sunDir = float3(1, 1, 1).normalize();
 
-    graph.builder.pass_texture("swapchain", result->resource, {}, ResourceFlags::Required);
+    graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, result->resource, {}, ResourceFlags::Required);
     graph.builder.debug = true;
     vp.frame_size   = result->get_size().xy / 2;
     vp.upscale_size = result->get_size().xy;

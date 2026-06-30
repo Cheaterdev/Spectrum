@@ -18,53 +18,53 @@ public:
 	{
 
 
-		Handlers::Texture H(GBuffer_DepthPrev);
+		Handlers::Texture GBuffer_DepthPrev = ResourceID::GBuffer_DepthPrev;
 
 
-		Handlers::Texture H(GBuffer_NormalsPrev);
+		Handlers::Texture GBuffer_NormalsPrev = ResourceID::GBuffer_NormalsPrev;
 
 
-		Handlers::Texture H(GBuffer_Depth);
+		Handlers::Texture GBuffer_Depth = ResourceID::GBuffer_Depth;
 
 
-		Handlers::Texture H(GBuffer_Normals);
+		Handlers::Texture GBuffer_Normals = ResourceID::GBuffer_Normals;
 
 
-		Handlers::Texture H(GBuffer_Speed);
+		Handlers::Texture GBuffer_Speed = ResourceID::GBuffer_Speed;
 
 
-		Handlers::Texture H(VoxelReflectionNoise);
+		Handlers::Texture VoxelReflectionNoise = ResourceID::VoxelReflectionNoise;
 
 
-		Handlers::Texture H(ReflectionDenoiser_RadiancePrev);
+		Handlers::Texture ReflectionDenoiser_RadiancePrev = ResourceID::ReflectionDenoiser_RadiancePrev;
 
 
-		Handlers::Texture H(ReflectionDenoiser_AverageRadiance);
+		Handlers::Texture ReflectionDenoiser_AverageRadiance = ResourceID::ReflectionDenoiser_AverageRadiance;
 
 
-		Handlers::Texture H(ReflectionDenoiser_AverageRadiancePrev);
+		Handlers::Texture ReflectionDenoiser_AverageRadiancePrev = ResourceID::ReflectionDenoiser_AverageRadiancePrev;
 
 
-		Handlers::Texture H(ReflectionDenoiser_Variance);
+		Handlers::Texture ReflectionDenoiser_Variance = ResourceID::ReflectionDenoiser_Variance;
 
 
-		Handlers::Texture H(ReflectionDenoiser_VariancePrev);
+		Handlers::Texture ReflectionDenoiser_VariancePrev = ResourceID::ReflectionDenoiser_VariancePrev;
 
 
-		Handlers::Texture H(ReflectionDenoiser_SampleCount);
+		Handlers::Texture ReflectionDenoiser_SampleCount = ResourceID::ReflectionDenoiser_SampleCount;
 
 
-		Handlers::Texture H(ReflectionDenoiser_SampleCountPrev);
+		Handlers::Texture ReflectionDenoiser_SampleCountPrev = ResourceID::ReflectionDenoiser_SampleCountPrev;
 
 
-		Handlers::Texture H(ReflectionDenoiser_ReprojectedRadiance);
+		Handlers::Texture ReflectionDenoiser_ReprojectedRadiance = ResourceID::ReflectionDenoiser_ReprojectedRadiance;
 
 
-		Handlers::Texture H(BlueNoise);
+		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 		static inline const wchar_t* const resource_names[] = {		L"GBuffer_DepthPrev",		L"GBuffer_NormalsPrev",		L"GBuffer_Depth",		L"GBuffer_Normals",		L"GBuffer_Speed",		L"VoxelReflectionNoise",		L"ReflectionDenoiser_RadiancePrev",		L"ReflectionDenoiser_AverageRadiance",		L"ReflectionDenoiser_AverageRadiancePrev",		L"ReflectionDenoiser_Variance",		L"ReflectionDenoiser_VariancePrev",		L"ReflectionDenoiser_SampleCount",		L"ReflectionDenoiser_SampleCountPrev",		L"ReflectionDenoiser_ReprojectedRadiance",		L"BlueNoise",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

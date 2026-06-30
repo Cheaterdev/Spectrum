@@ -18,11 +18,11 @@ public:
 	{
 
 
-		Handlers::TextureCube H(sky_cubemap);
+		Handlers::TextureCube sky_cubemap = ResourceID::sky_cubemap;
 
 		static inline const wchar_t* const resource_names[] = {		L"sky_cubemap",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

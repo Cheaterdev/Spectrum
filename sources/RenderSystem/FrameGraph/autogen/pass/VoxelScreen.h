@@ -19,41 +19,41 @@ public:
 
 		GBuffer gbuffer;
 
-		Handlers::Texture H(ResultTexture);
+		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 
-		Handlers::Texture3D H(VoxelLighted);
+		Handlers::Texture3D VoxelLighted = ResourceID::VoxelLighted;
 
 
-		Handlers::Texture H(VoxelFramesCount);
+		Handlers::Texture VoxelFramesCount = ResourceID::VoxelFramesCount;
 
 
-		Handlers::Texture H(VoxelIndirectNoise);
+		Handlers::Texture VoxelIndirectNoise = ResourceID::VoxelIndirectNoise;
 
 
-		Handlers::Texture H(VoxelIndirectFiltered);
+		Handlers::Texture VoxelIndirectFiltered = ResourceID::VoxelIndirectFiltered;
 
 
-		Handlers::TextureCube H(sky_cubemap_filtered);
+		Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
 
 
-		Handlers::Texture H(BlueNoise);
+		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
-		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_hi);
+		Handlers::StructuredBuffer<DispatchArguments> VoxelScreen_hi = ResourceID::VoxelScreen_hi;
 
 
-		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_low);
+		Handlers::StructuredBuffer<DispatchArguments> VoxelScreen_low = ResourceID::VoxelScreen_low;
 
 
-		Handlers::StructuredBuffer<uint2> H(VoxelScreen_low_data);
+		Handlers::StructuredBuffer<uint2> VoxelScreen_low_data = ResourceID::VoxelScreen_low_data;
 
 
-		Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
+		Handlers::StructuredBuffer<uint2> VoxelScreen_hi_data = ResourceID::VoxelScreen_hi_data;
 
 		static inline const wchar_t* const resource_names[] = {		L"GBuffer_Albedo",		L"GBuffer_Normals",		L"GBuffer_Depth",		L"GBuffer_Specular",		L"GBuffer_Speed",		L"GBuffer_DepthMips",		L"GBuffer_Quality",		L"GBuffer_TempColor",		L"GBuffer_NormalsPrev",		L"GBuffer_SpecularPrev",		L"GBuffer_DepthPrev",		L"GBuffer_HiZ",		L"GBuffer_HiZ_UAV",		L"ResultTexture",		L"VoxelLighted",		L"VoxelFramesCount",		L"VoxelIndirectNoise",		L"VoxelIndirectFiltered",		L"sky_cubemap_filtered",		L"BlueNoise",		L"VoxelScreen_hi",		L"VoxelScreen_low",		L"VoxelScreen_low_data",		L"VoxelScreen_hi_data",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

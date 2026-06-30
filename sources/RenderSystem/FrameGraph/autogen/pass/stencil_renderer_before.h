@@ -18,17 +18,17 @@ public:
 	{
 
 
-		Handlers::Texture H(depth_tex);
+		Handlers::Texture depth_tex = ResourceID::depth_tex;
 
 
-		Handlers::StructuredBuffer<UINT> H(id_buffer);
+		Handlers::StructuredBuffer<UINT> id_buffer = ResourceID::id_buffer;
 
 
-		Handlers::StructuredBuffer<UINT> H(axis_id_buffer);
+		Handlers::StructuredBuffer<UINT> axis_id_buffer = ResourceID::axis_id_buffer;
 
 		static inline const wchar_t* const resource_names[] = {		L"depth_tex",		L"id_buffer",		L"axis_id_buffer",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

@@ -18,26 +18,26 @@ public:
 	{
 
 
-		Handlers::Texture H(VoxelAlbedo);
+		Handlers::Texture VoxelAlbedo = ResourceID::VoxelAlbedo;
 
 
-		Handlers::Texture H(VoxelNormal);
+		Handlers::Texture VoxelNormal = ResourceID::VoxelNormal;
 
 
-		Handlers::Texture H(VoxelAlbedoStatic);
+		Handlers::Texture VoxelAlbedoStatic = ResourceID::VoxelAlbedoStatic;
 
 
-		Handlers::Texture H(VoxelNormalStatic);
+		Handlers::Texture VoxelNormalStatic = ResourceID::VoxelNormalStatic;
 
 
-		Handlers::Texture H(VoxelAlbedoDynamic);
+		Handlers::Texture VoxelAlbedoDynamic = ResourceID::VoxelAlbedoDynamic;
 
 
-		Handlers::Texture H(VoxelNormalDynamic);
+		Handlers::Texture VoxelNormalDynamic = ResourceID::VoxelNormalDynamic;
 
 		static inline const wchar_t* const resource_names[] = {		L"VoxelAlbedo",		L"VoxelNormal",		L"VoxelAlbedoStatic",		L"VoxelNormalStatic",		L"VoxelAlbedoDynamic",		L"VoxelNormalDynamic",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

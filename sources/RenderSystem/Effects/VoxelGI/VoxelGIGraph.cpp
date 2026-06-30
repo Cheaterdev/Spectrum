@@ -166,13 +166,13 @@ void Texture3DRefTiles::zero_tiles(HAL::CommandList& list)
 void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
 {
 	// Always register external textures with the frame graph
-	builder.pass_texture("VoxelAlbedo",        albedo.tex_result->resource);
-	builder.pass_texture("VoxelNormal",        normal.tex_result->resource);
-	builder.pass_texture("VoxelLighted",       tex_lighting.tex_result->resource);
-	builder.pass_texture("VoxelAlbedoStatic",  albedo.tex_static->resource);
-	builder.pass_texture("VoxelNormalStatic",  normal.tex_static->resource);
-	builder.pass_texture("VoxelAlbedoDynamic", albedo.tex_dynamic->resource);
-	builder.pass_texture("VoxelNormalDynamic", normal.tex_dynamic->resource);
+	builder.pass_texture(FrameGraph::ResourceID::VoxelAlbedo,        albedo.tex_result->resource);
+	builder.pass_texture(FrameGraph::ResourceID::VoxelNormal,        normal.tex_result->resource);
+	builder.pass_texture(FrameGraph::ResourceID::VoxelLighted,       tex_lighting.tex_result->resource);
+	builder.pass_texture(FrameGraph::ResourceID::VoxelAlbedoStatic,  albedo.tex_static->resource);
+	builder.pass_texture(FrameGraph::ResourceID::VoxelNormalStatic,  normal.tex_static->resource);
+	builder.pass_texture(FrameGraph::ResourceID::VoxelAlbedoDynamic, albedo.tex_dynamic->resource);
+	builder.pass_texture(FrameGraph::ResourceID::VoxelNormalDynamic, normal.tex_dynamic->resource);
 }
 
 

@@ -19,14 +19,14 @@ public:
 
 		GBuffer gbuffer;
 
-		Handlers::Texture H(VoxelDebug);
+		Handlers::Texture VoxelDebug = ResourceID::VoxelDebug;
 
 
-		Handlers::Texture3D H(VoxelLighted);
+		Handlers::Texture3D VoxelLighted = ResourceID::VoxelLighted;
 
 		static inline const wchar_t* const resource_names[] = {		L"GBuffer_Albedo",		L"GBuffer_Normals",		L"GBuffer_Depth",		L"GBuffer_Specular",		L"GBuffer_Speed",		L"GBuffer_DepthMips",		L"GBuffer_Quality",		L"GBuffer_TempColor",		L"GBuffer_NormalsPrev",		L"GBuffer_SpecularPrev",		L"GBuffer_DepthPrev",		L"GBuffer_HiZ",		L"GBuffer_HiZ_UAV",		L"VoxelDebug",		L"VoxelLighted",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

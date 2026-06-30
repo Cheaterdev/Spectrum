@@ -42,9 +42,9 @@ public:
 {%- set t =  parsed.tables[v.type] -%}
 {%- if t is undefined -%}
 {%-if parsed.tables[v.template_arg] is defined and parsed.tables[v.template_arg].options.shader_only is undefined -%}
-		Handlers::{{v.type | replace("<", "<Table::")}} H({{v.name}});
+		Handlers::{{v.type | replace("<", "<Table::")}} {{v.name}} = ResourceID::{{v.name}};
 {%else%}
-		Handlers::{{v.type}} H({{v.name}});
+		Handlers::{{v.type}} {{v.name}} = ResourceID::{{v.name}};
 {%endif%}
 {%-else-%}
 		{{v.type}} {{v.name}};
@@ -56,7 +56,7 @@ public:
 		static inline const wchar_t* const resource_names[] = {
 {{- collect_resource_names(pass.params) }}
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

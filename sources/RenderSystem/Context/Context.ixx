@@ -150,16 +150,16 @@ export{
 	class GBufferViewDesc
 	{
 	public:
-		Handlers::Texture H(GBuffer_Albedo);
-		Handlers::Texture H(GBuffer_Normals);
-		Handlers::Texture H(GBuffer_Depth);
-		Handlers::Texture H(GBuffer_Specular);
-		Handlers::Texture H(GBuffer_Speed);
-		Handlers::Texture H(GBuffer_DepthMips);
-		Handlers::Texture H(GBuffer_DepthPrev);
+		Handlers::Texture GBuffer_Albedo = FrameGraph::ResourceID::GBuffer_Albedo;
+		Handlers::Texture GBuffer_Normals = FrameGraph::ResourceID::GBuffer_Normals;
+		Handlers::Texture GBuffer_Depth = FrameGraph::ResourceID::GBuffer_Depth;
+		Handlers::Texture GBuffer_Specular = FrameGraph::ResourceID::GBuffer_Specular;
+		Handlers::Texture GBuffer_Speed = FrameGraph::ResourceID::GBuffer_Speed;
+		Handlers::Texture GBuffer_DepthMips = FrameGraph::ResourceID::GBuffer_DepthMips;
+		Handlers::Texture GBuffer_DepthPrev = FrameGraph::ResourceID::GBuffer_DepthPrev;
 
-		Handlers::Texture H(GBuffer_Quality);
-		Handlers::Texture H(GBuffer_TempColor);
+		Handlers::Texture GBuffer_Quality = FrameGraph::ResourceID::GBuffer_Quality;
+		Handlers::Texture GBuffer_TempColor = FrameGraph::ResourceID::GBuffer_TempColor;
 
 
 	public:

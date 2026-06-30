@@ -18,14 +18,14 @@ public:
 	{
 
 
-		Handlers::Texture H(ShadowMask);
+		Handlers::Texture ShadowMask = ResourceID::ShadowMask;
 
 
-		Handlers::StructuredBuffer<uint> H(ShadowDenoiser_TileBuffer);
+		Handlers::StructuredBuffer<uint> ShadowDenoiser_TileBuffer = ResourceID::ShadowDenoiser_TileBuffer;
 
 		static inline const wchar_t* const resource_names[] = {		L"ShadowMask",		L"ShadowDenoiser_TileBuffer",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

@@ -1012,7 +1012,7 @@ namespace GUI
 
         ui_ctx.dt          = dt;
         ui_ctx.scaled_size = scaled_size.get();
-        ui_ctx.result_texture_handler = Handlers::Texture("ResultTexture");
+        ui_ctx.result_texture_handler = Handlers::Texture(FrameGraph::ResourceID::ResultTexture);
 
         {
             PROFILE(L"process_graph");

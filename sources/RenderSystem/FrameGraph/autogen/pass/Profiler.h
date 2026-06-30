@@ -18,11 +18,11 @@ public:
 	{
 
 
-		Handlers::Texture H(swapchain);
+		Handlers::Texture swapchain = ResourceID::swapchain;
 
 		static inline const wchar_t* const resource_names[] = {		L"swapchain",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

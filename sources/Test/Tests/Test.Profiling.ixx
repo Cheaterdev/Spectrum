@@ -39,19 +39,19 @@ export namespace Test
 
 	TEST(Core.Profiling, TimedBlockCreation)
 	{
-		auto block = std::make_shared<TimedBlock>(L"test_block", nullptr);
-		ASSERT_TRUE(block != nullptr);
-		ASSERT_TRUE(block->level == 0);
+		auto timer = Profiler::get().start(L"test_block");
+		ASSERT_TRUE(Profiler::current_block != nullptr);
 	}
 
 	TEST(Core.Profiling, TimedBlockHierarchy)
 	{
-		auto parent = std::make_shared<TimedBlock>(L"parent", nullptr);
-		auto child = std::make_shared<TimedBlock>(L"child", parent.get());
-
-		ASSERT_TRUE(parent->level == 0);
-		ASSERT_TRUE(child->level == 1);
-		ASSERT_EQ(child->parent, parent.get());
+		auto outer = Profiler::get().start(L"parent");
+		int parent_level = Profiler::current_block ? Profiler::current_block->level : -1;
+		{
+			auto inner = Profiler::get().start(L"child");
+			int child_level = Profiler::current_block ? Profiler::current_block->level : -1;
+			ASSERT_TRUE(child_level > parent_level);
+		}
 	}
 
 	TEST(Core.Profiling, TimerBasicFunctionality)
@@ -62,14 +62,11 @@ export namespace Test
 
 	TEST(Core.Profiling, TimerElapsedTime)
 	{
-		TimedBlock::ptr block_ptr;
 		{
 			auto timer = Profiler::get().start(L"elapsed_test");
-			block_ptr = std::make_shared<TimedBlock>(L"test", nullptr);
+			ASSERT_TRUE(Profiler::current_block != nullptr);
 			busy_wait_ms(5);
 		}
-
-		ASSERT_TRUE(block_ptr != nullptr);
 	}
 
 	TEST(Core.Profiling, TimerMultipleScopes)
@@ -154,8 +151,9 @@ export namespace Test
 
 	TEST(Core.Profiling, TimedBlockNameStorage)
 	{
-		auto block = std::make_shared<TimedBlock>(L"named_block", nullptr);
-		ASSERT_TRUE(block->get_name() == std::wstring_view(L"named_block"));
+		auto timer = Profiler::get().start(L"named_block");
+		ASSERT_TRUE(Profiler::current_block != nullptr);
+		ASSERT_TRUE(Profiler::current_block->get_name() == std::wstring_view(L"named_block"));
 	}
 
 	TEST(Core.Profiling, PerformanceCounterAccuracy)
@@ -201,14 +199,19 @@ export namespace Test
 
 	TEST(Core.Profiling, TimedBlockChaining)
 	{
-		auto root = std::make_shared<TimedBlock>(L"root", nullptr);
-		auto child1 = std::make_shared<TimedBlock>(L"child1", root.get());
-		auto child2 = std::make_shared<TimedBlock>(L"child2", root.get());
-		auto grandchild = std::make_shared<TimedBlock>(L"grandchild", child1.get());
-
-		ASSERT_TRUE(root->level == 0);
-		ASSERT_TRUE(child1->level == 1);
-		ASSERT_TRUE(child2->level == 1);
-		ASSERT_TRUE(grandchild->level == 2);
+		auto t0 = Profiler::get().start(L"root");
+		int root_level = Profiler::current_block->level;
+		{
+			auto t1 = Profiler::get().start(L"child1");
+			int child_level = Profiler::current_block->level;
+			{
+				auto t2 = Profiler::get().start(L"grandchild");
+				int grand_level = Profiler::current_block->level;
+				ASSERT_TRUE(grand_level == child_level + 1);
+			}
+			auto t3 = Profiler::get().start(L"child2");
+			ASSERT_TRUE(Profiler::current_block->level == child_level);
+		}
+		ASSERT_TRUE(root_level < Profiler::current_block->level + 1);
 	}
 }

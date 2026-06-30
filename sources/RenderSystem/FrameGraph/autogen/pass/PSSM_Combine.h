@@ -17,21 +17,21 @@ public:
 	struct Context
 	{
 
-		Handlers::StructuredBuffer<Table::Camera> H(PSSM_Cameras);
+		Handlers::StructuredBuffer<Table::Camera> PSSM_Cameras = ResourceID::PSSM_Cameras;
 
 		GBuffer gbuffer;
 
-		Handlers::Texture H(LightMask);
+		Handlers::Texture LightMask = ResourceID::LightMask;
 
 
-		Handlers::Texture H(ShadowMask);
+		Handlers::Texture ShadowMask = ResourceID::ShadowMask;
 
 
-		Handlers::Texture H(ResultTexture);
+		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 		static inline const wchar_t* const resource_names[] = {		L"PSSM_Cameras",		L"GBuffer_Albedo",		L"GBuffer_Normals",		L"GBuffer_Depth",		L"GBuffer_Specular",		L"GBuffer_Speed",		L"GBuffer_DepthMips",		L"GBuffer_Quality",		L"GBuffer_TempColor",		L"GBuffer_NormalsPrev",		L"GBuffer_SpecularPrev",		L"GBuffer_DepthPrev",		L"GBuffer_HiZ",		L"GBuffer_HiZ_UAV",		L"LightMask",		L"ShadowMask",		L"ResultTexture",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

@@ -366,7 +366,7 @@ public:
 
 				Slots::FrameInfo frameInfo;
 				//// hack zone
-				auto sky = graph.builder.get("sky_cubemap_filtered");
+				auto sky = graph.builder.get(FrameGraph::ResourceID::sky_cubemap_filtered);
 				if (sky && sky->resource)
 					frameInfo.GetSky() = *sky->get_handler<Handlers::TextureCube>();
 
@@ -633,7 +633,7 @@ public:
 	{
 		PROFILE(L"setup_graph");
 		graph.start_new_frame();
-		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame(), swap_chain->get_fence(), ResourceFlags::Required);
+		graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, swap_chain->get_current_frame(), swap_chain->get_fence(), ResourceFlags::Required);
 
 
 		{
@@ -669,12 +669,14 @@ public:
 			std::map<CommandListType, float> list_positions;
 
 
-			for (auto& res : graph.builder.alloc_resources)
+			for (auto& chain : graph.builder.alloc_resources)
 			{
-				if (res.second.passed)
+				if (chain.empty()) continue;
+				auto& info = chain.active();
+				if (info.passed)
 				{
-					auto input = frameFlowGraph->register_input(res.second.name);
-					resource_stages[&res.second] = input;
+					auto input = frameFlowGraph->register_input(info.name());
+					resource_stages[&info] = input;
 				}
 			}
 			uint offset = 0;
@@ -720,7 +722,7 @@ public:
 				{
 					if (pass->used.resource_creations.count(info) == 0)
 					{
-						auto input = node->register_input(info->name);
+						auto input = node->register_input(info->name());
 						auto prev = resource_stages[info];
 
 						if (prev)
@@ -732,7 +734,7 @@ public:
 
 						if (check(resource_flags & FrameGraph::WRITEABLE_FLAGS))
 						{
-							auto output = node->register_output(info->name);
+							auto output = node->register_output(info->name());
 							resource_stages[info] = output;
 						}
 					}
@@ -743,19 +745,21 @@ public:
 				{
 					if (pass->used.resource_creations.count(info))
 					{
-						auto output = node->register_output(info->name);
+						auto output = node->register_output(info->name());
 						resource_stages[info] = output;
 					}
 				}
 			}
 
 
-			for (auto& res : graph.builder.alloc_resources)
+			for (auto& chain : graph.builder.alloc_resources)
 			{
-				if (res.second.passed && check(res.second.flags & ResourceFlags::Required))
+				if (chain.empty()) continue;
+				auto& info = chain.active();
+				if (info.passed && check(info.flags & ResourceFlags::Required))
 				{
-					auto input = frameFlowGraph->register_output(res.second.name);
-					auto prev = resource_stages[&res.second];
+					auto input = frameFlowGraph->register_output(info.name());
+					auto prev = resource_stages[&info];
 
 					if (prev)
 					{

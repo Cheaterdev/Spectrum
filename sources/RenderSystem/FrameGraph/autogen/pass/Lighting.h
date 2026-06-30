@@ -18,37 +18,37 @@ public:
 	{
 
 
-		Handlers::Texture H(global_depth);
+		Handlers::Texture global_depth = ResourceID::global_depth;
 
-		Handlers::StructuredBuffer<Table::Camera> H(global_camera);
-
-
-		Handlers::Texture3D H(VoxelLighted);
+		Handlers::StructuredBuffer<Table::Camera> global_camera = ResourceID::global_camera;
 
 
-		Handlers::Texture3D H(VoxelAlbedo);
+		Handlers::Texture3D VoxelLighted = ResourceID::VoxelLighted;
 
 
-		Handlers::Texture3D H(VoxelNormal);
+		Handlers::Texture3D VoxelAlbedo = ResourceID::VoxelAlbedo;
 
 
-		Handlers::TextureCube H(sky_cubemap_filtered);
+		Handlers::Texture3D VoxelNormal = ResourceID::VoxelNormal;
 
 
-		Handlers::Texture H(VoxelAlbedoStatic);
+		Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
 
 
-		Handlers::Texture H(VoxelNormalStatic);
+		Handlers::Texture VoxelAlbedoStatic = ResourceID::VoxelAlbedoStatic;
 
 
-		Handlers::Texture H(VoxelAlbedoDynamic);
+		Handlers::Texture VoxelNormalStatic = ResourceID::VoxelNormalStatic;
 
 
-		Handlers::Texture H(VoxelNormalDynamic);
+		Handlers::Texture VoxelAlbedoDynamic = ResourceID::VoxelAlbedoDynamic;
+
+
+		Handlers::Texture VoxelNormalDynamic = ResourceID::VoxelNormalDynamic;
 
 		static inline const wchar_t* const resource_names[] = {		L"global_depth",		L"global_camera",		L"VoxelLighted",		L"VoxelAlbedo",		L"VoxelNormal",		L"sky_cubemap_filtered",		L"VoxelAlbedoStatic",		L"VoxelNormalStatic",		L"VoxelAlbedoDynamic",		L"VoxelNormalDynamic",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

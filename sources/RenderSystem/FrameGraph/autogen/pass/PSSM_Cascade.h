@@ -18,13 +18,13 @@ public:
 	{
 
 
-		Handlers::Texture H(PSSM_Depths);
+		Handlers::Texture PSSM_Depths = ResourceID::PSSM_Depths;
 
-		Handlers::StructuredBuffer<Table::Camera> H(PSSM_Cameras);
+		Handlers::StructuredBuffer<Table::Camera> PSSM_Cameras = ResourceID::PSSM_Cameras;
 
 		static inline const wchar_t* const resource_names[] = {		L"PSSM_Depths",		L"PSSM_Cameras",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 

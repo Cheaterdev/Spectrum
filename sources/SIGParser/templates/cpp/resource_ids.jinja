@@ -6,27 +6,21 @@
 // ============================================================================
 #pragma once
 
-{% for v in pass.params -%}
-{%- set t =  parsed.tables[v.type] -%}
-{%- if t is undefined -%}{%-else-%}
-#include "{{v.type}}.h"
-{%-endif-%}	
-{% endfor -%}
-
-using namespace FrameGraph;
-
-namespace Passes
+namespace FrameGraph
 {
-	struct {{view.name}} 
+	enum class ResourceID : unsigned int
 	{
-{% for v in view.params -%}
-{%- set t =  parsed.tables[v.type] -%}
-{%- if t is undefined -%}
-		Handlers::{{v.type}} {{v.name}} = ResourceID::{{v.name}};
-{%-else-%}
-		{{v.type}} {{v.name}};
-{%-endif-%}	
-
-{% endfor -%}
+{% for name in get_all_resources() %}		{{name}},
+{% endfor %}		Count
 	};
+
+	inline const char* resource_id_name(ResourceID id)
+	{
+		static const char* names[] = {
+{% for name in get_all_resources() %}			"{{name}}",
+{% endfor %}		};
+		auto i = (unsigned int)id;
+		if (i < (unsigned int)ResourceID::Count) return names[i];
+		return "<invalid>";
+	}
 }

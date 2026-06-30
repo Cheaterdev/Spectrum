@@ -18,13 +18,13 @@ public:
 	{
 
 
-		Handlers::Texture H(global_depth);
+		Handlers::Texture global_depth = ResourceID::global_depth;
 
-		Handlers::StructuredBuffer<Table::Camera> H(global_camera);
+		Handlers::StructuredBuffer<Table::Camera> global_camera = ResourceID::global_camera;
 
 		static inline const wchar_t* const resource_names[] = {		L"global_depth",		L"global_camera",
 		};
-		static constexpr uint32_t resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_names);
 	};
 
 
