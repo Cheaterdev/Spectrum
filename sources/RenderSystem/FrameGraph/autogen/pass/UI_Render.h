@@ -20,7 +20,10 @@ public:
 
 		Handlers::Texture swapchain = ResourceID::swapchain;
 
-		static inline const wchar_t* const resource_names[] = {		L"swapchain",
+
+		Handlers::StructuredBuffer<uint> UI_PreDraw_Sync = ResourceID::UI_PreDraw_Sync;
+
+		static inline const wchar_t* const resource_names[] = {		L"swapchain",		L"UI_PreDraw_Sync",
 		};
 		static constexpr uint resource_count = std::size(resource_names);
 	};
@@ -28,7 +31,7 @@ public:
 
 	std::span<const wchar_t* const> GetUsedResourcesList() const override
 	{
-		return Context::resource_names;
+		return std::span<const wchar_t* const>(Context::resource_names, Context::resource_count);
 	}
 
 	static constexpr LiteralWStr Name{L"UI_Render"};

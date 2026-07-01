@@ -489,7 +489,14 @@ public:
 			return items[pos];
 		}
 
-		void reset_frame() { pos = 0; }
+		// True only if create() ran for this resource in the current frame.
+		// Distinct from empty()/size(), which stay "non-empty" forever once any
+		// earlier frame created the resource — that weaker check let exists()/
+		// need() silently operate on stale, un-reset state on frames where
+		// create() was skipped (see UI_PreDraw_Sync staleness bug).
+		bool created_this_frame = false;
+
+		void reset_frame() { pos = 0; created_this_frame = false; }
 
 	private:
 		std::deque<ResourceAllocInfo> items;
@@ -553,6 +560,7 @@ public:
 			auto& chain = alloc_resources[(size_t)result.id];
 			chain.reset_frame();
 			chain.ensure_first();
+			chain.created_this_frame = true;
 
 			ResourceAllocInfo& info = chain.active();
 			info.id = result.id;
@@ -566,7 +574,7 @@ public:
 		void recreate(T& result, ResourceFlags flags = ResourceFlags::None)
 		{
 			auto& chain = alloc_resources[(size_t)result.id];
-			ASSERT(!chain.empty());
+			ASSERT(chain.created_this_frame);
 			ResourceAllocInfo& old = chain.active();
 			ResourceAllocInfo& info = chain.emplace_back();
 
@@ -583,7 +591,7 @@ public:
 		void recreate(T& result, const typename T::Desc& desc, ResourceFlags flags = ResourceFlags::None)
 		{
 			auto& chain = alloc_resources[(size_t)result.id];
-			ASSERT(!chain.empty());
+			ASSERT(chain.created_this_frame);
 			ResourceFlags old_flags = chain.active().flags;
 			ResourceAllocInfo& info = chain.emplace_back();
 
@@ -600,7 +608,7 @@ public:
 		bool exists(T& result)
 		{
 			auto& chain = alloc_resources[(size_t)result.id];
-			return !chain.empty();
+			return chain.created_this_frame;
 		}
 
 		template<class T>

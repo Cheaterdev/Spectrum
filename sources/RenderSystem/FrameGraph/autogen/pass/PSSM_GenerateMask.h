@@ -34,7 +34,7 @@ public:
 
 	std::span<const wchar_t* const> GetUsedResourcesList() const override
 	{
-		return Context::resource_names;
+		return std::span<const wchar_t* const>(Context::resource_names, Context::resource_count);
 	}
 
 	static constexpr LiteralWStr Name{L"PSSM_GenerateMask"};

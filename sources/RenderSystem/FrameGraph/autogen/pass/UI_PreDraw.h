@@ -11,16 +11,16 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class ResultCreation : public PassNodeBase
+class UI_PreDraw : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
 
-		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
+		Handlers::StructuredBuffer<uint> UI_PreDraw_Sync = ResourceID::UI_PreDraw_Sync;
 
-		static inline const wchar_t* const resource_names[] = {		L"ResultTexture",
+		static inline const wchar_t* const resource_names[] = {		L"UI_PreDraw_Sync",
 		};
 		static constexpr uint resource_count = std::size(resource_names);
 	};
@@ -31,9 +31,9 @@ public:
 		return std::span<const wchar_t* const>(Context::resource_names, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"ResultCreation"};
+	static constexpr LiteralWStr Name{L"UI_PreDraw"};
 
-	static constexpr PassID ID = PassID::ResultCreation;
+	static constexpr PassID ID = PassID::UI_PreDraw;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
@@ -43,7 +43,7 @@ public:
 	setup_func_type setup_func;
 	render_func_type render_func;
 
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;
 };
 
 }

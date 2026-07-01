@@ -46,6 +46,7 @@ export
 		Library::SMAA SMAA;
 		Library::stencil_renderer_before stencil_renderer_before;
 		Library::stencil_renderer_after stencil_renderer_after;
+		Library::UI_PreDraw UI_PreDraw;
 		Library::UI_Render UI_Render;
 		Library::GBufferDownsampler GBufferDownsampler;
 		Library::VoxelDebug VoxelDebug;

@@ -131,6 +131,17 @@ struct PassDefault<Passes::CubeMapEnviromentProcessor>
 
 
 template<>
+struct PassDefault<Passes::UI_PreDraw>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;
+
+	static bool setup(Passes::UI_PreDraw::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::UI_PreDraw::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::UI_Render>
 {
 	static constexpr bool enabled = true;

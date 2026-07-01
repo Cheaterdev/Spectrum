@@ -6,6 +6,7 @@
 // ============================================================================
 
 #include "Profiler.h"
+#include "UI_PreDraw.h"
 #include "UI_Render.h"
 #include "../pass_defaults.h"
 
@@ -20,6 +21,7 @@ public:
 
 	static inline const wchar_t* const pass_names[] = {
 		Passes::Profiler::Name.ptr,
+		Passes::UI_PreDraw::Name.ptr,
 		Passes::UI_Render::Names[0].ptr,
 		Passes::UI_Render::Names[1].ptr,
 		Passes::UI_Render::Names[2].ptr,
@@ -46,6 +48,7 @@ public:
 
 	static inline const wchar_t* const resource_names[] = {
 		L"swapchain",
+		L"UI_PreDraw_Sync",
 	};
 	static constexpr uint32_t resource_count = std::size(resource_names);
 
@@ -59,6 +62,7 @@ public:
 		graph.set_pipeline(this);
 
 		graph.add_library_pass<Passes::Profiler>(PassDefault<Passes::Profiler>::setup, PassDefault<Passes::Profiler>::render, PassDefault<Passes::Profiler>::flags);
+		graph.add_library_pass<Passes::UI_PreDraw>(PassDefault<Passes::UI_PreDraw>::setup, PassDefault<Passes::UI_PreDraw>::render, PassDefault<Passes::UI_PreDraw>::flags);
 		for (uint32_t i = 0; i < Passes::UI_Render::MaxCount; ++i)
 			graph.add_library_pass<Passes::UI_Render>(i, PassDefault<Passes::UI_Render>::setup, PassDefault<Passes::UI_Render>::render, PassDefault<Passes::UI_Render>::flags);
 	}

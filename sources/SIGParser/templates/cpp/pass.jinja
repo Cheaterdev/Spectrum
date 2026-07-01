@@ -53,16 +53,21 @@ public:
 		Handlers::{{v.type}} {{v.options.Recreate.value_atom.expr}} = {{v.name}};
 {%- endif %}
 {% endfor -%}
+{% if pass.params | length > 0 -%}
 		static inline const wchar_t* const resource_names[] = {
 {{- collect_resource_names(pass.params) }}
 		};
 		static constexpr uint resource_count = std::size(resource_names);
+{% else -%}
+		static inline const wchar_t* const resource_names[] = { nullptr };
+		static constexpr uint resource_count = 0;
+{% endif -%}
 	};
 
 
 	std::span<const wchar_t* const> GetUsedResourcesList() const override
 	{
-		return Context::resource_names;
+		return std::span<const wchar_t* const>(Context::resource_names, Context::resource_count);
 	}
 
 	static constexpr LiteralWStr Name{L"{{pass.name}}"};

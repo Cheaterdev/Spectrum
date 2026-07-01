@@ -1007,6 +1007,7 @@ namespace GUI
 
         auto& ui_ctx = graph.get_context<UIContext>();
         ui_ctx.draw_infos = std::move(draw_infos);
+        ui_ctx.pre_draw_infos = std::move(pre_draw_infos);
 
         ui_ctx.setup_counter = 0;
 
@@ -1017,17 +1018,6 @@ namespace GUI
         {
             PROFILE(L"process_graph");
             process_graph(graph);
-        }
-
-        if (pre_draw_infos.size())
-        {
-            PROFILE(L"pre_draw");
-            auto command_list = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
-            command_list->begin(L"pre_draw");
-            for (auto& e : pre_draw_infos)
-                e->pre_draw(command_list);
-            command_list->end();
-            command_list->execute();
         }
      }
 
@@ -1588,9 +1578,44 @@ namespace GUI
             gen->generate(graph);
         }
     }
+
+    void user_interface::run_pre_draw(std::vector<base*>& infos, HAL::CommandList::ptr list)
+    {
+        for (auto& e : infos)
+            e->pre_draw(list);
+    }
 }
 
 
+
+
+// ============================================================
+// PassDefault<Passes::UI_PreDraw>
+// ============================================================
+
+bool PassDefault<Passes::UI_PreDraw>::setup(
+    Passes::UI_PreDraw::Context& data, FrameGraph::TaskBuilder& builder)
+{
+    // Always create the sync resource — even on frames with nothing to
+    // pre-draw — so its ResourceChain resets every frame (create() is the
+    // only thing that calls reset_frame()). Skipping this on empty frames
+    // left it stale, so exists() kept reporting true from a prior frame and
+    // UI_Render's need() kept appending onto an un-cleared states list.
+    builder.create(data.UI_PreDraw_Sync, { 1 }, ResourceFlags::UnorderedAccess|ResourceFlags::Required);
+
+    auto& ui_ctx = builder.graph->get_context<GUI::UIContext>();
+    return !ui_ctx.pre_draw_infos.empty();
+}
+
+void PassDefault<Passes::UI_PreDraw>::render(
+    Passes::UI_PreDraw::Context& data, FrameGraph::FrameContext& context)
+{
+    auto& ui_ctx = context.graph->get_context<GUI::UIContext>();
+    auto command_list = context.get_list();
+
+    PROFILE(L"pre_draw");
+    GUI::user_interface::run_pre_draw(ui_ctx.pre_draw_infos, command_list);
+}
 
 
 // ============================================================
@@ -1619,12 +1644,22 @@ bool PassDefault<Passes::UI_Render>::setup(
     builder.need(data.swapchain, ResourceFlags::RenderTarget);
     if (builder.exists(ui_ctx.result_texture_handler))
         builder.need(ui_ctx.result_texture_handler, ResourceFlags::PixelRead);
+    if (builder.exists(data.UI_PreDraw_Sync))
+        builder.need(data.UI_PreDraw_Sync, ResourceFlags::ComputeRead);
     return true;
 }
 
 void PassDefault<Passes::UI_Render>::render(
     Passes::UI_Render::Context& data, FrameGraph::FrameContext& context)
 {
+    // UI_Render reads cache state (label cache textures, etc.) that UI_PreDraw
+    // writes. The FrameGraph's shared-resource dependency edge (see
+    // PassDefault<Passes::UI_PreDraw>::setup) only drives GPU barrier ordering,
+    // not CPU dispatch order — Graph::render() enqueues every pass's render()
+    // without waiting on prev_passes. Wait on it explicitly here instead.
+    if (auto* pre_draw = context.graph->builder.get_pass(Passes::UI_PreDraw::Name))
+        pre_draw->wait();
+
     auto& ui_ctx = context.graph->get_context<GUI::UIContext>();
 
     uint32_t slot = context.pass->GetPassIndex();

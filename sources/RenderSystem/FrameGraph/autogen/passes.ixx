@@ -39,6 +39,7 @@ export import "../defines.h";
 #include "pass/SMAA.h"
 #include "pass/stencil_renderer_before.h"
 #include "pass/stencil_renderer_after.h"
+#include "pass/UI_PreDraw.h"
 #include "pass/UI_Render.h"
 #include "pass/GBufferDownsampler.h"
 #include "pass/VoxelDebug.h"
@@ -82,6 +83,7 @@ export namespace Passes
 	using ::Passes::SMAA;
 	using ::Passes::stencil_renderer_before;
 	using ::Passes::stencil_renderer_after;
+	using ::Passes::UI_PreDraw;
 	using ::Passes::UI_Render;
 	using ::Passes::GBufferDownsampler;
 	using ::Passes::VoxelDebug;

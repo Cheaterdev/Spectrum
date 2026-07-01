@@ -36,6 +36,7 @@ namespace FrameGraph
 		SMAA,
 		stencil_renderer_before,
 		stencil_renderer_after,
+		UI_PreDraw,
 		UI_Render,
 		GBufferDownsampler,
 		VoxelDebug,

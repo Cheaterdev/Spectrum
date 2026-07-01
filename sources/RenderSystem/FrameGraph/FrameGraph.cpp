@@ -76,7 +76,15 @@ namespace FrameGraph
 	void ResourceAllocInfo::remove_inactive()
 	{
 
-		auto fn = [](Pass* pass) {return !pass->active(); };
+		// Filter by enabled (reachable), not active() (enabled && renderable).
+		// A pass can be enabled but choose renderable=false (nothing to render
+		// this frame) while still needing its create()/need() touches to count —
+		// otherwise it gets stripped from its own creation state here, which can
+		// prune the whole state and leave the resource never created downstream.
+		// process_transitions() independently filters by context.list nullness,
+		// so passes that never actually got a command list still don't
+		// participate in real GPU barrier scheduling.
+		auto fn = [](Pass* pass) {return !pass->enabled; };
 
 		for (auto& state : states)
 		{
@@ -100,8 +108,13 @@ namespace FrameGraph
 
 
 			for (auto p : state.passes)
-
 			{
+				// state.passes now keeps enabled-but-not-renderable passes (needed
+				// for resource creation, see fn above) — but sync points must only
+				// ever reference passes that actually execute and signal a fence.
+				// Waiting on one that never renders would hang forever.
+				if (!p->active()) continue;
+
 				state.from.min(p);
 				state.to.max(p);
 			}
@@ -703,6 +716,12 @@ namespace FrameGraph
 			{
 				for (auto pass : state.passes)
 				{
+					// Same rule as remove_inactive(): state.passes now keeps
+					// enabled-but-not-renderable passes for resource-creation
+					// purposes, but sync/fence state must only ever reference
+					// passes that actually execute and signal something.
+					if (!pass->active()) continue;
+
 					info.used_begin.min(pass);
 					info.used_end.max(pass);
 				}
@@ -715,6 +734,8 @@ namespace FrameGraph
 				if (prev_state)
 					for (auto pass : state.passes)
 					{
+						if (!pass->active()) continue;
+
 						pass->sync_state.max(prev_state->to);
 
 						pass->sync_state_with_self.max(prev_state->to);

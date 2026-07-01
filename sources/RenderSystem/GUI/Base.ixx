@@ -521,6 +521,7 @@ namespace GUI
     struct UIContext
     {
         std::vector<draw_info> draw_infos;
+        std::vector<base*> pre_draw_infos;
         uint32_t setup_counter = 0; // incremented per slot during graph setup; reset each frame
 
         float dt = 0;
@@ -596,6 +597,10 @@ namespace GUI
             void add_task(std::function<void()> f);
 
             void process_graph(FrameGraph::Graph& graph);
+
+            // base::pre_draw is protected (only user_interface is a friend) — this
+            // bridges it for the UI_PreDraw FrameGraph pass, which isn't a member.
+            static void run_pre_draw(std::vector<base*>& infos, HAL::CommandList::ptr list);
 
 
 

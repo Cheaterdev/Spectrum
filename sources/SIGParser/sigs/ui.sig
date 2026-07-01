@@ -277,16 +277,25 @@ GraphicsPSO StatGraphLines
 
 
 [Static]
+[Required]
+PassNode UI_PreDraw
+{
+	StructuredBuffer<uint> UI_PreDraw_Sync;
+}
+
+[Static]
 [Multiple = 16]
 PassNode UI_Render
 {
 	Texture swapchain;
+	StructuredBuffer<uint> UI_PreDraw_Sync;
 }
 
 
 Pipeline UIPipeline
 {
 	Profiler;
+	UI_PreDraw;
 	UI_Render;
 }
 
