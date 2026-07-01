@@ -517,7 +517,13 @@ public:
 		std::map<uint, Pass*> id_to_pass;
 
 		StaticCompiledGPUData global_frame;
-		
+
+				// Kicked off at the end of render(), once every pass has finished recording and
+		// no more descriptor writes for the frame can happen. Waited on in
+		// commit_command_lists(), just before the first command list is submitted.
+		std::future<void> descriptor_commit_task;
+
+
 		bool debug = false;
 		Pass* current_pass = nullptr;
 		Graph* graph = nullptr;

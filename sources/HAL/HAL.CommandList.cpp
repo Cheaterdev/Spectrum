@@ -248,7 +248,11 @@ namespace HAL
 		device.context_generator.generate(this);
 		first_debug_log = true;
 
-		if (!frame_resources) frame_resources = device.get_frame_manager().begin_frame();
+		if (!frame_resources)
+		{
+			frame_resources = device.get_frame_manager().begin_frame();
+			owns_frame_resources = true;
+		}
 		auto proxy = frame_resources->get_storage();
 		set_proxy(proxy);
 
@@ -301,6 +305,13 @@ namespace HAL
 			});
 		active = false;
 		frame_resources->free_storage(proxy);
+
+		// If this command list created its own frame_resources (nobody else shares it,
+		// e.g. FrameGraph::start_list()), it's the sole owner and commits now. Shared
+		// frame_resources (FrameGraph's current_frame) are committed once by the owner
+		// after all passes for the frame have been compiled.
+		if (owns_frame_resources)
+			frame_resources->commit_descriptors_to_gpu();
 
 		set_proxy(nullptr);
 		if (graphics) graphics->set_proxy(nullptr);

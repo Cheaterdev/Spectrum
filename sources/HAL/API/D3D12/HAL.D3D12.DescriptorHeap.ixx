@@ -56,6 +56,9 @@ export namespace HAL
 
             HAL::Descriptor operator[](uint i);
 
+            // Batched CPU-heap -> GPU-heap sync. ranges are [from, to) absolute descriptor indices.
+            void copy_ranges_to_gpu(std::span<const std::pair<uint64, uint64>> ranges);
+
             auto get_dx() const
             {
                 if (m_gpu_heap)

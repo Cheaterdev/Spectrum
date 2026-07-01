@@ -36,6 +36,7 @@ export{
 			DelayedCommandList* get_native_list();
 		public:
 			FrameResources::ptr frame_resources;
+			bool owns_frame_resources = false;
 			DelayedCommandList compiler;
 			template<TrackableClass T>
 			void track_object(T& obj)

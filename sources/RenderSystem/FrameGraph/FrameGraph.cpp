@@ -669,6 +669,7 @@ namespace FrameGraph
 		builder.compile_lists();
 
 
+
 		on_compile(*this);
 	}
 
@@ -679,9 +680,10 @@ namespace FrameGraph
 		HAL::FenceWaiter result;
 
 
-		
 
-			
+
+
+
 				PROFILE(L"submitting lists");
 
 				std::map<CommandListType, std::list<CommandList::ptr>> queued_lists;
@@ -863,6 +865,12 @@ namespace FrameGraph
 
 		}
 
+				descriptor_commit_task = thread_pool::get().enqueue([this]()
+			{
+				current_frame->commit_descriptors_to_gpu();
+			});
+
+
 	    {
 
 			PROFILE(L"compile_passes");
@@ -918,6 +926,18 @@ namespace FrameGraph
 				pass->debug_commands = std::move(records);
 			}
 		}
+
+				// Descriptors must be visible to the GPU before any list below actually executes.
+		// This is the last possible point to wait - everything since render() kicked the
+		// commit off (queued_lists bookkeeping, this call's own dispatch) ran concurrently
+		// with it for free.
+		if (descriptor_commit_task.valid())
+		{
+			PROFILE(L"wait descriptor_commit");
+			descriptor_commit_task.wait();
+		}
+
+
 	}
 
 

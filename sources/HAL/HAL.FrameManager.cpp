@@ -138,6 +138,23 @@ namespace HAL {
 		return gpu_resources.get();
 	}
 
+	void FrameResources::commit_descriptors_to_gpu()
+	{
+		PROFILE(L"commit_descriptors_to_gpu");
+
+		DescriptorRangeList ranges;
+		ranges.reserve(2); // in practice: CBV_SRV_UAV singleton, occasionally + Sampler singleton
+		size_t reserve_hint = gpu_resources.table.size() + 1;
+
+		GPUEntityStorage<LocalAllocationPolicy>::collect_descriptor_ranges(ranges, reserve_hint);
+
+		for (auto& e : gpu_resources.table)
+			e->collect_descriptor_ranges(ranges, reserve_hint);
+
+		for (auto& [heap, list] : ranges)
+			heap->copy_ranges_to_gpu(list);
+	}
+
 	void FrameResources::free_ca(std::shared_ptr<CommandAllocator> e)
 	{
 		command_allocators[e->get_type()].put(e);
@@ -148,10 +165,11 @@ namespace HAL {
 		return command_allocators[type].get();
 	}
 
-	std::shared_ptr<CommandList> FrameResources::start_list(LiteralWStr name, CommandListType type)
+	std::shared_ptr<CommandList> FrameResources::start_list(LiteralWStr name, CommandListType type, bool exclusive)
 	{
 		auto list = (device.get_queue(type)->get_free_list());
 		list->frame_resources = get_ptr();
+		list->owns_frame_resources = exclusive;
 		list->begin(name);
 
 		return list;

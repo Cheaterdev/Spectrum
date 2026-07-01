@@ -58,11 +58,11 @@ export
 		public:
 			void operator=(const Descriptor& r);
 
-			void place(const Views::ShaderResource& view);
-			void place(const Views::UnorderedAccess& view);
-			void place(const Views::RenderTarget& view);
-			void place(const Views::ConstantBuffer& view);
-			void place(const Views::DepthStencil& view);
+			void place(const Views::ShaderResource& view, bool skip_gpu_write = false);
+			void place(const Views::UnorderedAccess& view, bool skip_gpu_write = false);
+			void place(const Views::RenderTarget& view, bool skip_gpu_write = false);
+			void place(const Views::ConstantBuffer& view, bool skip_gpu_write = false);
+			void place(const Views::DepthStencil& view, bool skip_gpu_write = false);
 		};
 
 		struct DescriptorHeapIndex
@@ -88,11 +88,12 @@ export
 		{
 			DescriptorHeapAllocation handle;
 			uint count = 0;
+			bool deferred_gpu_write = false;
 		public:
 
 			DescriptorHeapStorage() = default;
 
-			DescriptorHeapStorage(const DescriptorHeapAllocation& handle);
+			DescriptorHeapStorage(const DescriptorHeapAllocation& handle, bool deferred_gpu_write = false);
 			~DescriptorHeapStorage();
 
 			HAL::DescriptorHeap::ptr get_heap() const;
@@ -100,6 +101,7 @@ export
 			uint get_offset() const;
 			uint get_count() const;
 			bool can_free() const;
+			bool is_deferred() const { return deferred_gpu_write; }
 			std::shared_ptr<DescriptorHeapStorage> get_tracked();
 
 
@@ -187,7 +189,7 @@ export
 		{
 			PROFILE(L"HLSL View");
 			auto& heap = *storage->get_heap();
-			heap[get_offset()].place(v);
+			heap[get_offset()].place(v, storage->is_deferred());
 			get_resource_info() = ResourceInfo(v);
 		}
 
@@ -196,7 +198,7 @@ export
 		{
 			PROFILE(L"HLSL View");
 			auto& heap = *storage->get_heap();
-			heap[get_offset()].place(v);                      // read before move
+			heap[get_offset()].place(v, storage->is_deferred());  // read before move
 			get_resource_info() = ResourceInfo(std::move(v)); // move shared_ptr into variant
 		}
 

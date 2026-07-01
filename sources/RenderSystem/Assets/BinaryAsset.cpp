@@ -87,7 +87,7 @@ void BinaryAsset::update_preview(HAL::Texture::ptr preview)
 	if (!preview || !preview->is_rt())
 		preview.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
-	auto list = (RenderSystem::get().device().get_frame_manager().begin_frame()->start_list(L"BinaryAsset"));
+	auto list = (RenderSystem::get().device().get_frame_manager().begin_frame()->start_list(L"BinaryAsset", HAL::CommandListType::DIRECT, true));
 
 	auto font = Fonts::FontSystem::get().get_font("Segoe UI Light");
 	auto 	geomerty = std::make_shared<Fonts::FontGeometry>();

@@ -129,6 +129,10 @@ namespace HAL {
 	template<class T>
 	concept IsGPUEntityStorageInterface = std::is_base_of_v<GPUEntityStorageInterface, T>;
 
+	// Flat list instead of a map: there are only ever 1-2 distinct shader-visible heaps
+	// (the singleton CBV_SRV_UAV and Sampler heaps), so linear scan beats tree lookups.
+	using DescriptorRangeList = std::vector<std::pair<HAL::DescriptorHeap*, std::vector<std::pair<uint64, uint64>>>>;
+
 	template<class MemoryAllocationPolicy, class AllocationPolicy = MemoryAllocationPolicy>
 	struct GPUEntityStorage :
 		public GPUEntityStorageInterface,
@@ -155,11 +159,52 @@ namespace HAL {
 			return QueryHeapPageManager<AllocationPolicy>::alloc(size, 1, options);
 		}
 
+		// Set once this storage allocates a descriptor from a shader-visible heap. Lets
+		// collect_descriptor_ranges skip the whole page-walk for storages that never
+		// touched one (transitions-only, memory-only, RTV/DSV-only command lists, etc).
+		bool has_deferred_descriptors = false;
+
 		Handle  alloc_base_descriptor(uint size, DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions options) override
 		{
 			auto h = DescriptorHeapPageManager<AllocationPolicy>::alloc(size, 1, options);
 
-			return Handle{ std::make_shared<DescriptorHeapStorage>(h),0 };
+			// LinearAllocator-backed (per-frame) storages defer their GPU-visible heap
+			// write to a single batched CopyDescriptors done at collect_descriptor_ranges().
+			constexpr bool deferred_gpu_write = std::is_same_v<typename AllocationPolicy::AllocatorType, LinearAllocator>;
+
+			if constexpr (deferred_gpu_write)
+				if (check(options.flags & DescriptorHeapFlags::ShaderVisible))
+					has_deferred_descriptors = true;
+
+			return Handle{ std::make_shared<DescriptorHeapStorage>(h, deferred_gpu_write), 0 };
+		}
+
+		// Accumulates every shader-visible page's [start, current-watermark) range into
+		// the caller's flat range list, keyed by physical heap. Pure collection - no D3D12
+		// call here, so many storages can contribute into one list and be flushed in one
+		// CopyDescriptors call per heap (see FrameResources::commit_descriptors_to_gpu).
+		// reserve_hint: upper bound on how many storages will contribute, used to size a
+		// heap's range vector once, on its first range.
+		void collect_descriptor_ranges(DescriptorRangeList& ranges, size_t reserve_hint = 0)
+		{
+			if (!has_deferred_descriptors) return;
+
+			DescriptorHeapPageManager<AllocationPolicy>::for_each(
+				[&](const DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions& options, uint64 from, uint64 to, HAL::DescriptorHeap::ptr heap)
+				{
+					if (!check(options.flags & DescriptorHeapFlags::ShaderVisible)) return;
+					if (to <= from) return;
+
+					HAL::DescriptorHeap* h = heap.get();
+					auto it = std::find_if(ranges.begin(), ranges.end(), [h](auto& entry) { return entry.first == h; });
+					if (it == ranges.end())
+					{
+						ranges.emplace_back(h, std::vector<std::pair<uint64, uint64>>{});
+						it = ranges.end() - 1;
+						if (reserve_hint) it->second.reserve(reserve_hint);
+					}
+					it->second.push_back({ from, to });
+				});
 		}
 
 
@@ -257,10 +302,21 @@ namespace HAL {
 
 		std::uint64_t get_frame();
 
-		std::shared_ptr<CommandList> start_list(LiteralWStr name = L"", CommandListType type = CommandListType::DIRECT);
+		// exclusive: true when this FrameResources was obtained (via begin_frame()) just for
+		// this one command list, which then owns committing its descriptors in end().
+		// false (default) when this FrameResources is shared across multiple command lists
+		// by a longer-lived owner (e.g. FrameGraph's current_frame) that commits once itself.
+		std::shared_ptr<CommandList> start_list(LiteralWStr name = L"", CommandListType type = CommandListType::DIRECT, bool exclusive = false);
 
 		void free_storage(std::shared_ptr<GPUEntityStorageInterface> e);
 		std::shared_ptr<GPUEntityStorageInterface> get_storage();
+
+		// Flushes this FrameResources' own descriptor pages plus every per-commandlist
+		// storage handed out via get_storage(). Called once by whichever owner obtained
+		// this FrameResources from FrameResourceManager::begin_frame(): either a single
+		// CommandList (in end(), if it created its own frame_resources) or the FrameGraph
+		// (once, after all passes for the frame have been compiled).
+		void commit_descriptors_to_gpu();
 
 		void free_ca(std::shared_ptr<CommandAllocator> e);
 		std::shared_ptr<CommandAllocator> get_ca(CommandListType type);

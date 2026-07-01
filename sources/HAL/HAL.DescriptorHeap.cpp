@@ -192,7 +192,7 @@ namespace HAL {
 		return resources[offset];
 	}
 
-	DescriptorHeapStorage::DescriptorHeapStorage(const DescriptorHeapAllocation& handle) : handle(handle) {}
+	DescriptorHeapStorage::DescriptorHeapStorage(const DescriptorHeapAllocation& handle, bool deferred_gpu_write) : handle(handle), deferred_gpu_write(deferred_gpu_write) {}
 
 	DescriptorHeapStorage::~DescriptorHeapStorage()
 	{

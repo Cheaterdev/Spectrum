@@ -18,7 +18,7 @@ namespace HAL
             gpu_handle = { heap.gpu_start.ptr + size * offset };
     }
 
-    void Descriptor::place(const Views::ShaderResource& view)
+    void Descriptor::place(const Views::ShaderResource& view, bool skip_gpu_write)
     {
          PROFILE(L"place");
 
@@ -150,7 +150,7 @@ namespace HAL
          //   if constexpr (Debug::CheckErrors)    TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
         }
 
-        if (heap.m_gpu_heap)
+        if (heap.m_gpu_heap && !skip_gpu_write)
         {
              PROFILE(L"GPU");
             auto h = heap.gpu_cpu_start;
@@ -160,7 +160,7 @@ namespace HAL
         }
     }
 
-    void Descriptor::place(const Views::RenderTarget& view)
+    void Descriptor::place(const Views::RenderTarget& view, bool skip_gpu_write)
     {
         if constexpr (Debug::DebugViews)
         {
@@ -231,7 +231,7 @@ namespace HAL
             if constexpr (Debug::CheckErrors)    TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
         }
 
-        if (heap.m_gpu_heap)
+        if (heap.m_gpu_heap && !skip_gpu_write)
         {
             auto h = heap.gpu_cpu_start;
             h.Offset(offset, size);
@@ -240,7 +240,7 @@ namespace HAL
         }
     }
 
-    void Descriptor::place(const Views::DepthStencil& view)
+    void Descriptor::place(const Views::DepthStencil& view, bool skip_gpu_write)
     {
         if constexpr (Debug::DebugViews)
         {
@@ -304,7 +304,7 @@ namespace HAL
             heap.device.native_device->CreateDepthStencilView(native_resource, &desc, h);
         }
 
-        if (heap.m_gpu_heap)
+        if (heap.m_gpu_heap && !skip_gpu_write)
         {
             auto h = heap.gpu_cpu_start;
             h.Offset(offset, size);
@@ -314,7 +314,7 @@ namespace HAL
         if constexpr (Debug::CheckErrors)    TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 
     }
-    void Descriptor::place(const Views::UnorderedAccess& view)
+    void Descriptor::place(const Views::UnorderedAccess& view, bool skip_gpu_write)
     {
         if constexpr (Debug::DebugViews)
         {
@@ -391,7 +391,7 @@ namespace HAL
             if constexpr (Debug::CheckErrors)    TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
         }
 
-        if (heap.m_gpu_heap)
+        if (heap.m_gpu_heap && !skip_gpu_write)
         {
             auto h = heap.gpu_cpu_start;
             h.Offset(offset, size);
@@ -400,7 +400,7 @@ namespace HAL
         }
     }
 
-    void Descriptor::place(const Views::ConstantBuffer& view)
+    void Descriptor::place(const Views::ConstantBuffer& view, bool skip_gpu_write)
     {
         if constexpr (Debug::DebugViews)
         {
@@ -422,7 +422,7 @@ namespace HAL
             if constexpr (Debug::CheckErrors)    TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
         }
 
-        if (heap.m_gpu_heap)
+        if (heap.m_gpu_heap && !skip_gpu_write)
         {
             auto h = heap.gpu_cpu_start;
             h.Offset(offset, size);
@@ -444,7 +444,57 @@ namespace HAL
 
         ASSERT(my != other);
         heap.device.native_device->CopyDescriptorsSimple(1, my, other, type);
+
+        // The CopyDescriptors source must be non-shader-visible, so it always reads
+        // from r's CPU-only mirror above. If the destination heap is also shader-visible,
+        // mirror the copy into its GPU-visible heap too (source stays r's CPU heap).
+        if (heap.m_gpu_heap)
+        {
+            auto my_gpu = heap.gpu_cpu_start;
+            my_gpu.Offset(offset, size);
+            heap.device.native_device->CopyDescriptorsSimple(1, my_gpu, other, type);
+        }
+
         if constexpr (Debug::CheckErrors)    TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+    }
+
+    void API::DescriptorHeap::copy_ranges_to_gpu(std::span<const std::pair<uint64, uint64>> ranges)
+    {
+        PROFILE(L"copy_ranges_to_gpu");
+
+        if (!m_gpu_heap || ranges.empty()) return;
+
+        std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> dest_starts;
+        std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> src_starts;
+        std::vector<UINT> sizes;
+        dest_starts.reserve(ranges.size());
+        src_starts.reserve(ranges.size());
+        sizes.reserve(ranges.size());
+
+        for (auto& [from, to] : ranges)
+        {
+            if (to <= from) continue;
+            UINT count = static_cast<UINT>(to - from);
+
+            auto dst = gpu_cpu_start;
+            dst.Offset(static_cast<INT>(from), handle_size);
+            auto src = cpu_start;
+            src.Offset(static_cast<INT>(from), handle_size);
+
+            dest_starts.push_back(dst);
+            src_starts.push_back(src);
+            sizes.push_back(count);
+        }
+
+        if (dest_starts.empty()) return;
+
+        D3D12_DESCRIPTOR_HEAP_TYPE type = (D3D12_DESCRIPTOR_HEAP_TYPE)::to_native(desc.HeapType);
+        device.native_device->CopyDescriptors(
+            static_cast<UINT>(dest_starts.size()), dest_starts.data(), sizes.data(),
+            static_cast<UINT>(src_starts.size()), src_starts.data(), sizes.data(),
+            type);
+
+        if constexpr (Debug::CheckErrors)    TEST(device, device.native_device->GetDeviceRemovedReason());
     }
 
     uint DescriptorHeap::get_size()
