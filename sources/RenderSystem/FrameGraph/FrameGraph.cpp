@@ -41,8 +41,10 @@ namespace FrameGraph
 	}
 
 	// Stage 2: once every pass has run add_pass for this resource, derive prev/next
-	// pass edges from the completed states timeline. Runs once, after setup.
-	void ResourceAllocInfo::resolve_dependencies()
+	// pass edges from the completed states timeline. Gathers edges into a caller-owned
+	// buffer instead of writing into Pass directly, so this can run concurrently across
+	// resources (each resource only ever touches its own buffer slot).
+	void ResourceAllocInfo::resolve_dependencies(std::vector<std::pair<Pass*, Pass*>>& edges)
 	{
 		PROFILE(L"resolve");
 
@@ -55,9 +57,8 @@ namespace FrameGraph
 				for (auto p : related)
 				{
 					ASSERT(p != pass);
-					p->next_passes.insert(pass);
+					edges.emplace_back(p, pass);
 				}
-				pass->prev_passes.insert(related.begin(), related.end());
 			}
 			related.insert(state.passes.begin(), state.passes.end());
 		}
@@ -368,9 +369,87 @@ namespace FrameGraph
 
 		{
 			PROFILE(L"resolve_dependencies");
-			for (auto& chain : builder.alloc_resources)
-				for (auto& info : chain.active_span())
-					info.resolve_dependencies();
+
+			// Flip to benchmark: work per resource is tiny, so thread-pool dispatch
+			// overhead may or may not be worth paying depending on pass/resource count.
+			constexpr bool resolve_dependencies_mt = false;
+
+			if constexpr (resolve_dependencies_mt)
+			{
+				// Work per resource is tiny, so per-submit overhead dominates well before
+				// hardware_concurrency() chunks are reached — cap chunk count hard instead
+				// of scaling with core count.
+				constexpr size_t max_chunks = 4;
+				size_t n = builder.alloc_resources.size();
+				size_t worker_count = std::min<size_t>(n, max_chunks);
+				size_t chunk_size = (n + worker_count - 1) / worker_count;
+
+				std::vector<std::vector<std::pair<Pass*, Pass*>>> gathered_edges(worker_count);
+				std::atomic<size_t> pending{ 0 };
+
+				// Chunk 0 runs inline on the calling thread — one fewer dispatch round trip,
+				// and the caller does useful work instead of idling in the wait loop below.
+				for (size_t w = 1; w < worker_count; ++w)
+				{
+					size_t begin = w * chunk_size;
+					size_t end = std::min(begin + chunk_size, n);
+					if (begin >= end) break;
+					PROFILE(L"enqueue_detached");
+
+					pending.fetch_add(1, std::memory_order_relaxed);
+					thread_pool::get().enqueue_detached([this, &gathered_edges, &pending, w, begin, end]()
+					{
+						auto& edges = gathered_edges[w];
+						for (size_t i = begin; i < end; ++i)
+						{
+							auto& chain = builder.alloc_resources[i];
+							for (auto& info : chain.active_span())
+								info.resolve_dependencies(edges);
+						}
+						pending.fetch_sub(1, std::memory_order_acq_rel);
+					});
+				}
+
+				{
+					PROFILE(L"inline_chunk");
+					size_t end0 = std::min(chunk_size, n);
+					auto& edges0 = gathered_edges[0];
+					for (size_t i = 0; i < end0; ++i)
+					{
+						auto& chain = builder.alloc_resources[i];
+						for (auto& info : chain.active_span())
+							info.resolve_dependencies(edges0);
+					}
+				}
+
+				{
+					PROFILE(L"wait");
+					while (pending.load(std::memory_order_acquire) != 0)
+						std::this_thread::yield();
+				}
+
+				PROFILE(L"complete");
+				for (auto& edges : gathered_edges)
+					for (auto [prev, next] : edges)
+					{
+						prev->next_passes.insert(next);
+						next->prev_passes.insert(prev);
+					}
+			}
+			else
+			{
+				std::vector<std::pair<Pass*, Pass*>> edges;
+				for (auto& chain : builder.alloc_resources)
+					for (auto& info : chain.active_span())
+						info.resolve_dependencies(edges);
+
+				PROFILE(L"complete");
+				for (auto [prev, next] : edges)
+				{
+					prev->next_passes.insert(next);
+					next->prev_passes.insert(prev);
+				}
+			}
 		}
 
 		for (auto& chain : builder.alloc_resources)
@@ -381,9 +460,12 @@ namespace FrameGraph
 				info.enabled = false;
 			}
 
+		builder.enabled_resources.clear();
+
 		auto process_resource = [&](this auto&& self, ResourceAllocInfo& info, UINT pass_id) -> void {
 
 		//	if (info.enabled) return;
+			if (!info.enabled) builder.enabled_resources.push_back(&info);
 			info.enabled = true;
 
 			for (auto& s : info.states)
@@ -787,6 +869,15 @@ namespace FrameGraph
 		builder.required_passes.clear();
 		builder.enabled_passes.clear();
 		builder.reset();
+
+		// Release cached passes' per-frame state (context.frame/list in particular
+		// hold shared_ptrs into this frame's HAL::FrameResources/command list, which
+		// wrap the swapchain back buffer) right away instead of deferring it to next
+		// frame's add_passes() — otherwise those references outlive the frame across
+		// the gap until reuse, which blocks swapchain resize.
+		for (auto& slots : builder.pass_cache)
+			for (auto& slot : slots)
+				if (slot) slot->reset_frame();
 
 		pre_run.clear();
 		slot_setters.clear();
@@ -1241,12 +1332,9 @@ namespace FrameGraph
 
 		std::map<int, Events> events;
 		std::set<ResourceAllocInfo*> non_deleted;
-		for (auto& chain : alloc_resources)
-			for (auto& info_ref : chain.active_span())
-			{
-			auto* info = &info_ref;
+		for (auto* info : enabled_resources)
+		{
 			if (info->passed) continue;
-			if (!info->enabled) continue;
 
 
 			info->handler->init(*info);
@@ -1365,12 +1453,9 @@ namespace FrameGraph
 			PROFILE(L"create resources");
 			int id = 0;
 
-			for (auto& chain : alloc_resources)
-				for (auto& info_ref : chain.active_span())
-				{
-				auto* info = &info_ref;
+			for (auto* info : enabled_resources)
+			{
 				if (info->passed) continue;
-				if (!info->enabled) continue;
 
 				PROFILE(L"resource");
 
@@ -1393,6 +1478,7 @@ namespace FrameGraph
 
 						res.resource->set_name(info->name());
 						res.view = nullptr;
+						res.resource->frame_graph_managed = true;
 					}
 
 					if (info->resource != res.resource)
@@ -1722,6 +1808,47 @@ namespace FrameGraph
 	bool Pass::active()
 	{
 		return enabled && renderable;
+	}
+
+	void Pass::reset_frame()
+	{
+		enabled = false;
+		renderable = true;
+		dependency_level = 0;
+
+		used.fences.clear();
+		used.resources.clear();
+		used.resource_flags.clear();
+		used.resource_creations.clear();
+		used.resource_deletions_before.clear();
+		used.resource_deletions_after.clear();
+
+		context.graph = nullptr;
+		context.pass = nullptr;
+		context.frame = nullptr;
+		context.list = nullptr;
+
+		sync_state.reset();
+		sync_state_with_self.reset();
+
+		prev_passes.clear();
+		next_passes.clear();
+
+		render_task = std::future<void>();
+		compile_task = std::future<void>();
+
+		debug_commands.clear();
+
+		fence_end = HAL::FenceWaiter();
+
+		graphic_count = 0;
+		compute_count = 0;
+		wait_pass = nullptr;
+
+		put_fence = false;
+		prev_pass = nullptr;
+
+		inserted = false;
 	}
 
 	ExternalPass::ExternalPass()

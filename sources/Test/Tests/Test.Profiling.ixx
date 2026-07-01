@@ -6,6 +6,8 @@ export import Test.Framework;
 
 import Core;
 
+SETUP_CATEGORY(Core.Profiling, []() { Profiler::get().enabled = true; })
+
 namespace {
 	void busy_wait_ms(int milliseconds) {
 		auto start = std::chrono::high_resolution_clock::now();

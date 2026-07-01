@@ -149,7 +149,7 @@ public:
 
 	Profiler() {}
 
-	bool enabled = true;
+	bool enabled = false;
 	int max_level = std::numeric_limits<int>::max();
 
 	TimedBlock* get_current() const;

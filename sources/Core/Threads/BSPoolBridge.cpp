@@ -19,5 +19,5 @@ void BSPool_Destroy(BSPoolHandle* h)
 
 void BSPool_Submit(BSPoolHandle* h, void* ctx, void(*fn)(void*))
 {
-	h->pool.submit_task([ctx, fn]() { fn(ctx); });
+	h->pool.detach_task([ctx, fn]() { fn(ctx); });
 }

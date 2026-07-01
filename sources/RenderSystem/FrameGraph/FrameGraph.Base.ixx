@@ -228,7 +228,7 @@ public:
 
 
 		void add_pass(Pass* pass, ResourceFlags flags);
-		void resolve_dependencies();
+		void resolve_dependencies(std::vector<std::pair<Pass*, Pass*>>& edges);
 		void reset(size_t max_passes);
 
 		void remove_inactive();
@@ -505,6 +505,17 @@ public:
 	public:
 		std::array<ResourceChain, (size_t)ResourceID::Count> alloc_resources;
 
+		// Compact list of resources enabled this frame, populated during the
+		// enable-marking pass in Graph::setup(). Lets later passes (create_resources)
+		// iterate only what matters instead of rescanning all of alloc_resources.
+		std::vector<ResourceAllocInfo*> enabled_resources;
+
+		// Persistent pass cache, indexed by PassID (+ index for [Multiple] passes),
+		// so library passes are reused frame to frame instead of reallocated. Only
+		// covers add_library_pass — the raw add_pass<T>(name, ...) path has no PassID
+		// (type_id == PassID::Count) and always allocates fresh.
+		std::array<std::vector<std::shared_ptr<Pass>>, (size_t)PassID::Count> pass_cache;
+
 		std::set<ResourceAllocInfo*> passed_resources;
 		std::shared_ptr<Pass>         external_pass;   // fake creator pass for passed_resources
 		std::list<std::shared_ptr<Pass>> passes;
@@ -661,7 +672,7 @@ public:
 		bool enabled = false;
 		bool renderable = true;
 		PassFlags flags;
-		LiteralWStr name{L""};
+		LiteralWStr name{L""};				  
 
 
 		uint32_t pass_index = 0;
@@ -708,12 +719,18 @@ public:
 
 		// optimization
 		bool inserted = false;
+
+		// Clears every per-frame-mutable member so a cached Pass instance can be
+		// reused next frame instead of reallocated. id/name/setup_func/render_func
+		// are reassigned separately by internal_pass right after this call.
+		void reset_frame();
 	};
 
 
 	template <class Handler>
 	struct TypedPass : public Pass
 	{
+		using HandlerType = Handler;
 
 		using render_func_type = std::function<void(Handler&, FrameContext&)>;
 		using setup_func_type = std::function<bool(Handler&, TaskBuilder&)>;
@@ -826,19 +843,53 @@ public:
 		Variable<bool> optimize = { true, "optimize", this };
 
 		std::list<std::function<void(Graph& g)>> pre_run;
-		template<class Pass>
+		template<class PassT>
 		void internal_pass(LiteralWStr name, auto s, auto r, PassFlags flags = PassFlags::General, uint32_t index = 0, PassID type_id = PassID::Count)
 		{
 			PROFILE(name);
 
-			builder.passes.push_back(std::make_shared<Pass>((UINT)builder.passes.size(), name, s, r));
-			builder.passes.back()->flags = flags;
-			builder.passes.back()->pass_index = index;
-			builder.passes.back()->type_id = type_id;
+			std::shared_ptr<Pass> pass_ptr;
+
+			if (type_id != PassID::Count)
+			{
+				auto& slots = builder.pass_cache[(size_t)type_id];
+				if (slots.size() <= index)
+					slots.resize(index + 1);
+
+				auto& slot = slots[index];
+				if (!slot)
+				{
+					slot = std::make_shared<PassT>((UINT)builder.passes.size(), name, s, r);
+				}
+				else
+				{
+					slot->reset_frame();
+					auto* typed = static_cast<PassT*>(slot.get());
+					// Fresh Handler each frame — matches what a brand-new PassT would
+					// have, so fields this frame's setup_func doesn't touch don't leak
+					// last frame's resolved values instead of their declared defaults.
+					typed->data = typename PassT::HandlerType{};
+					typed->setup_func = s;
+					typed->render_func = r;
+					slot->id = (UINT)builder.passes.size();
+					slot->name = name;
+				}
+				pass_ptr = slot;
+			}
+			else
+			{
+				pass_ptr = std::make_shared<PassT>((UINT)builder.passes.size(), name, s, r);
+			}
+
+			pass_ptr->flags = flags;
+			pass_ptr->pass_index = index;
+			pass_ptr->type_id = type_id;
+
+			builder.passes.push_back(pass_ptr);
 
 			if (check(flags & PassFlags::Required))
 			{
-				builder.required_passes.push_back(builder.passes.back());
+				builder.required_passes.push_back(pass_ptr);
 			}
 		}
 

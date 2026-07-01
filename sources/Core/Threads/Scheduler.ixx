@@ -34,7 +34,16 @@ public:
 		auto task = std::make_shared<std::packaged_task<return_type()>>(std::forward<F>(f));
 		auto fut = task->get_future();
 		submit_impl([task]() { (*task)(); });
-		return fut;
+		return std::move(fut);
+	}
+
+	// Fire-and-forget submit for void tasks that don't need a future — skips the
+	// packaged_task/promise allocation. Caller is responsible for its own completion signal.
+	template<class F>
+	void enqueue_detached(F&& f)
+	{
+		if (stop) throw std::exception("wtf");
+		submit_impl(std::forward<F>(f));
 	}
 
 private:
