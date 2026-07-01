@@ -31,7 +31,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"GBufferDownsampler"};
 
-//	static constexpr PassID ID = PassID::GBufferDownsampler;
+	static constexpr PassID ID = PassID::GBufferDownsampler;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

@@ -48,7 +48,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"Voxelize"};
 
-//	static constexpr PassID ID = PassID::Voxelize;
+	static constexpr PassID ID = PassID::Voxelize;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

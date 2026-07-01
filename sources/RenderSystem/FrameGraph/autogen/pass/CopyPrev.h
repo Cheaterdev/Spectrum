@@ -31,7 +31,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"CopyPrev"};
 
-//	static constexpr PassID ID = PassID::CopyPrev;
+	static constexpr PassID ID = PassID::CopyPrev;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

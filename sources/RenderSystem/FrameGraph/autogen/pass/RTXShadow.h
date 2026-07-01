@@ -37,7 +37,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"RTXShadow"};
 
-//	static constexpr PassID ID = PassID::RTXShadow;
+	static constexpr PassID ID = PassID::RTXShadow;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

@@ -58,7 +58,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"VoxelCombine"};
 
-//	static constexpr PassID ID = PassID::VoxelCombine;
+	static constexpr PassID ID = PassID::VoxelCombine;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

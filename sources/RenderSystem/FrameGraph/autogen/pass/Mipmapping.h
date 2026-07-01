@@ -33,7 +33,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"Mipmapping"};
 
-//	static constexpr PassID ID = PassID::Mipmapping;
+	static constexpr PassID ID = PassID::Mipmapping;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

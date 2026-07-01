@@ -53,7 +53,7 @@ public:
 		LiteralWStr{L"UI_Render_15"},
 	};
 
-//	static constexpr PassID ID = PassID::UI_Render;
+	static constexpr PassID ID = PassID::UI_Render;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

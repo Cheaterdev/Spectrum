@@ -37,7 +37,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"ReflCombine"};
 
-//	static constexpr PassID ID = PassID::ReflCombine;
+	static constexpr PassID ID = PassID::ReflCombine;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

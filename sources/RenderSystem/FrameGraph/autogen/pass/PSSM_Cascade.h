@@ -45,7 +45,7 @@ public:
 		LiteralWStr{L"PSSM_Cascade_5"},
 	};
 
-//	static constexpr PassID ID = PassID::PSSM_Cascade;
+	static constexpr PassID ID = PassID::PSSM_Cascade;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

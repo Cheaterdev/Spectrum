@@ -59,7 +59,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"Lighting"};
 
-//	static constexpr PassID ID = PassID::Lighting;
+	static constexpr PassID ID = PassID::Lighting;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

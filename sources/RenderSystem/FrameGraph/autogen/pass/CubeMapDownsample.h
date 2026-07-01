@@ -39,7 +39,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"CubeMapDownsample"};
 
-//	static constexpr PassID ID = PassID::CubeMapDownsample;
+	static constexpr PassID ID = PassID::CubeMapDownsample;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

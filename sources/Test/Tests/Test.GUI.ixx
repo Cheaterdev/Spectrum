@@ -53,7 +53,7 @@ namespace
 	}
 
 	std::shared_ptr<HAL::TextureResource> run_clip_test(
-		HAL::Device& device, sizer_long clip, const wchar_t* label)
+		HAL::Device& device, sizer_long clip, LiteralWStr label)
 	{
 		constexpr uint RT_W = 256, RT_H = 128;
 		auto src = make_ninepatch_src(device);
@@ -688,7 +688,7 @@ export namespace Test
 	{
 		THREAD_SCOPE(GUI);
 		sizer_long clip{ 52, 0, 256, 128 };
-		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipLeft");
+		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipLeft"_cs);
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_left");
 	}
 
@@ -697,7 +697,7 @@ export namespace Test
 	{
 		THREAD_SCOPE(GUI);
 		sizer_long clip{ 0, 0, 204, 128 };
-		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipRight");
+		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipRight"_cs);
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_right");
 	}
 
@@ -706,7 +706,7 @@ export namespace Test
 	{
 		THREAD_SCOPE(GUI);
 		sizer_long clip{ 0, 28, 256, 128 };
-		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipTop");
+		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipTop"_cs);
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_top");
 	}
 
@@ -715,7 +715,7 @@ export namespace Test
 	{
 		THREAD_SCOPE(GUI);
 		sizer_long clip{ 0, 0, 256, 100 };
-		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipBottom");
+		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipBottom"_cs);
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_bottom");
 	}
 
@@ -724,7 +724,7 @@ export namespace Test
 	{
 		THREAD_SCOPE(GUI);
 		sizer_long clip{ 60, 36, 196, 92 };
-		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipCenter");
+		auto rt = run_clip_test(RenderSystem::get().device(), clip, L"GUINinePatch_ClipCenter"_cs);
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_center");
 	}
 

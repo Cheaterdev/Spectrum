@@ -36,7 +36,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"Sky"};
 
-//	static constexpr PassID ID = PassID::Sky;
+	static constexpr PassID ID = PassID::Sky;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

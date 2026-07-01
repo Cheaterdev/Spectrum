@@ -75,7 +75,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"ReflectionDenoiser_Reproject"};
 
-//	static constexpr PassID ID = PassID::ReflectionDenoiser_Reproject;
+	static constexpr PassID ID = PassID::ReflectionDenoiser_Reproject;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

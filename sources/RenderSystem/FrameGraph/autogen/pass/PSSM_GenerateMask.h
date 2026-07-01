@@ -39,7 +39,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"PSSM_GenerateMask"};
 
-//	static constexpr PassID ID = PassID::PSSM_GenerateMask;
+	static constexpr PassID ID = PassID::PSSM_GenerateMask;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

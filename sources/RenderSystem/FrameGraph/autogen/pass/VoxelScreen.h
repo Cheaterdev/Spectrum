@@ -64,7 +64,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"VoxelScreen"};
 
-//	static constexpr PassID ID = PassID::VoxelScreen;
+	static constexpr PassID ID = PassID::VoxelScreen;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

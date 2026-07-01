@@ -37,7 +37,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"AssetMip"};
 
-//	static constexpr PassID ID = PassID::AssetMip;
+	static constexpr PassID ID = PassID::AssetMip;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

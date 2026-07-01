@@ -58,7 +58,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"ScreenReflection"};
 
-//	static constexpr PassID ID = PassID::ScreenReflection;
+	static constexpr PassID ID = PassID::ScreenReflection;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

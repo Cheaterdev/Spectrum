@@ -33,7 +33,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"BlueNoise"};
 
-//	static constexpr PassID ID = PassID::BlueNoise;
+	static constexpr PassID ID = PassID::BlueNoise;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

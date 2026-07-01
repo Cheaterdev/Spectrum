@@ -35,7 +35,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"PSSM_Global"};
 
-//	static constexpr PassID ID = PassID::PSSM_Global;
+	static constexpr PassID ID = PassID::PSSM_Global;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

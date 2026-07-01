@@ -523,6 +523,7 @@ int main()
 
 		my_stream(cpp_path_render, "pass_defaults.h") << cpp_templates.generate(L"pass_defaults");
 		my_stream(cpp_path_render, "resource_ids.h") << cpp_templates.generate(L"resource_ids");
+		my_stream(cpp_path_render, "pass_ids.h") << cpp_templates.generate(L"pass_ids");
 
 		// includes
 		my_stream(cpp_path, "autogen.ixx") << cpp_templates.generate(L"autogen");

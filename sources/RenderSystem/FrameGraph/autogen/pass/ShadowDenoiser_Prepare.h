@@ -36,7 +36,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"ShadowDenoiser_Prepare"};
 
-//	static constexpr PassID ID = PassID::ShadowDenoiser_Prepare;
+	static constexpr PassID ID = PassID::ShadowDenoiser_Prepare;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

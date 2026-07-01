@@ -1,4 +1,5 @@
 #include "autogen/resource_ids.h"
+#include "autogen/pass_ids.h"
 
 export module FrameGraph:Base;
 
@@ -151,10 +152,10 @@ public:
 	struct ResourceRWState
 	{
 		bool write = false;
-		std::list<Pass*> passes;
+		std::vector<Pass*> passes;
 
-		std::list<Pass*> compute;
-		std::list<Pass*> graphics;
+		std::vector<Pass*> compute;
+		std::vector<Pass*> graphics;
 
 
 		HAL::SubResourcesGPU merged_read_state;
@@ -192,6 +193,7 @@ public:
 		bool resource_just_created = true;
 		std::vector<ResourceRWState> states;
 		int last_writer;
+		size_t max_passes = 0; // upper bound on passes per state, known from Pass::id assignment
 		//compile
 
 		struct CompiledResource
@@ -219,9 +221,6 @@ public:
 		HAL::FenceWaiter fence;
 		size_t frame_id;
 
-		std::unordered_set<Pass*> related;
-		std::unordered_set<Pass*> related_read;
-
 
 				Events::Event<Pass*, FrameContext*>	process_debug_resource;
 
@@ -229,7 +228,8 @@ public:
 
 
 		void add_pass(Pass* pass, ResourceFlags flags);
-		void reset();
+		void resolve_dependencies();
+		void reset(size_t max_passes);
 
 		void remove_inactive();
 
@@ -655,6 +655,7 @@ public:
 	struct Pass
 	{
 		UINT id = 0;
+		PassID type_id = PassID::Count;
 		UINT call_id;
 		int dependency_level;
 		bool enabled = false;
@@ -826,13 +827,14 @@ public:
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class Pass>
-		void internal_pass(LiteralWStr name, auto s, auto r, PassFlags flags = PassFlags::General, uint32_t index = 0)
+		void internal_pass(LiteralWStr name, auto s, auto r, PassFlags flags = PassFlags::General, uint32_t index = 0, PassID type_id = PassID::Count)
 		{
 			PROFILE(name);
 
 			builder.passes.push_back(std::make_shared<Pass>((UINT)builder.passes.size(), name, s, r));
 			builder.passes.back()->flags = flags;
 			builder.passes.back()->pass_index = index;
+			builder.passes.back()->type_id = type_id;
 
 			if (check(flags & PassFlags::Required))
 			{
@@ -864,13 +866,13 @@ public:
 		template<class T>
 		void add_library_pass(typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
 		{
-			internal_pass<TypedPass<T::Context>>(T::Name, s, r, flags);
+			internal_pass<TypedPass<T::Context>>(T::Name, s, r, flags, 0, T::ID);
 		}
 
 		template<class T>
 		void add_library_pass(uint32_t index, typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
 		{
-			internal_pass<TypedPass<T::Context>>(T::Names[index], s, r, flags, index);
+			internal_pass<TypedPass<T::Context>>(T::Names[index], s, r, flags, index, T::ID);
 		}
 
 

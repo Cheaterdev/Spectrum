@@ -33,7 +33,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"PreScene"};
 
-//	static constexpr PassID ID = PassID::PreScene;
+	static constexpr PassID ID = PassID::PreScene;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

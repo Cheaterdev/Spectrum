@@ -14,6 +14,7 @@ namespace FrameGraph
 {
 	const char* ResourceAllocInfo::name() const { return resource_id_name(id); }
 
+	// Stage 1: record this pass's touch against the resource's RW-state timeline.
 	void ResourceAllocInfo::add_pass(Pass* pass, ResourceFlags flags)
 	{
 		PROFILE(L"add_pass");
@@ -27,30 +28,47 @@ namespace FrameGraph
 			states.push_back({ .write = is_writer });
 			if (is_writer)
 				last_writer = static_cast<int>(states.size() - 1);
-			related.insert(related_read.begin(), related_read.end());
-			related_read.clear();
+
+			ResourceRWState& new_state = states.back();
+			new_state.passes.reserve(max_passes);
+			new_state.compute.reserve(max_passes);
+			new_state.graphics.reserve(max_passes);
 		}
 
 		ResourceRWState& state = states.back();
 		state.passes.emplace_back(pass);
 		(check(pass->flags & PassFlags::Compute) ? state.compute : state.graphics).emplace_back(pass);
+	}
 
-		for (auto p : related)
+	// Stage 2: once every pass has run add_pass for this resource, derive prev/next
+	// pass edges from the completed states timeline. Runs once, after setup.
+	void ResourceAllocInfo::resolve_dependencies()
+	{
+		PROFILE(L"resolve");
+
+		std::unordered_set<Pass*> related;
+
+		for (auto& state : states)
 		{
-			ASSERT(p != pass);
-			p->next_passes.insert(pass);
+			for (auto pass : state.passes)
+			{
+				for (auto p : related)
+				{
+					ASSERT(p != pass);
+					p->next_passes.insert(pass);
+				}
+				pass->prev_passes.insert(related.begin(), related.end());
+			}
+			related.insert(state.passes.begin(), state.passes.end());
 		}
-		pass->prev_passes.insert(related.begin(), related.end());
-		related_read.insert(pass);
 	}
 
 
-	void ResourceAllocInfo::reset()
+	void ResourceAllocInfo::reset(size_t new_max_passes)
 	{
 		last_writer = 0;
+		max_passes = new_max_passes;
 		states.clear();
-		related.clear();
-		related_read.clear();
 		states.reserve(16);
 	}
 
@@ -343,12 +361,16 @@ namespace FrameGraph
 
 		for (auto& pass : builder.passes)
 		{
-
 			PROFILE(L"one_pass_setup");
-
 			pass->enabled = false;
-
 			pass->renderable = pass->setup(builder);
+		}
+
+		{
+			PROFILE(L"resolve_dependencies");
+			for (auto& chain : builder.alloc_resources)
+				for (auto& info : chain.active_span())
+					info.resolve_dependencies();
 		}
 
 		for (auto& chain : builder.alloc_resources)
@@ -776,7 +798,7 @@ namespace FrameGraph
 	void TaskBuilder::init(ResourceAllocInfo& info, ResourceFlags flags)
 	{
 		//flags |=ResourceFlags::Static;
-		info.reset();
+		info.reset(passes.size());
 		info.flags = flags;
 		info.frame_id = current_frame->get_frame();
 		info.is_new = false;

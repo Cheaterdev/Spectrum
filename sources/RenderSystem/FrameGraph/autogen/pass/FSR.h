@@ -38,7 +38,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"FSR"};
 
-//	static constexpr PassID ID = PassID::FSR;
+	static constexpr PassID ID = PassID::FSR;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

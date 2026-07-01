@@ -33,7 +33,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"CubeSky"};
 
-//	static constexpr PassID ID = PassID::CubeSky;
+	static constexpr PassID ID = PassID::CubeSky;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
