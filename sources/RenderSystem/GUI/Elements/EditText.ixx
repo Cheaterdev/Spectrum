@@ -57,7 +57,7 @@ export namespace GUI
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
 
-                virtual void on_key_action(long key) override;
+                virtual void on_key_action(key_action action, long key) override;
 
                 void draw(Context& c);
 

@@ -301,6 +301,13 @@ public:
 		//cam.set_projection_params(std::max(1.0f, bounds.znear - 1), bounds.zfar + 1);
 		cam.set_projection_params(1, 1500);
 
+		// Camera only responds to keyboard while the viewport is focused; drop any
+		// held movement otherwise so it can't drift after focus is lost.
+		if (!stenciler->is_focused())
+		{
+			cam.move_input = { 0, 0, 0 };
+			cam.fast_move  = false;
+		}
 
 		cam.frame_move(dt);
 	}

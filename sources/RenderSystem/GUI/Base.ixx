@@ -44,6 +44,12 @@ enum class mouse_action : int
     CANCEL
 };
 
+enum class key_action : int
+{
+    DOWN,
+    UP
+};
+
 
 enum class mouse_wheel : int
 {
@@ -59,7 +65,7 @@ struct InputHandler
 	virtual	void mouse_action_event(mouse_action action, mouse_button button, vec2 pos) = 0;
 	virtual	void mouse_wheel_event(mouse_wheel wheel, float value, vec2 pos) = 0;
 
-	virtual	void key_action_event(long key) = 0;
+	virtual	void key_action_event(key_action action, long key) = 0;
 };
 
 namespace GUI
@@ -337,7 +343,7 @@ namespace GUI
 
 
         public:
-            virtual void on_key_action(long key);
+            virtual void on_key_action(key_action action, long key);
             virtual bool on_mouse_move(vec2 pos);
             virtual void on_mouse_enter(vec2 pos);
             virtual void on_mouse_leave(vec2 pos);
@@ -352,6 +358,8 @@ namespace GUI
             void focus();
 
             void unfocus();
+
+            bool is_focused();
         protected:
             virtual void on_add(base* parent) override;
             virtual void on_remove() override;
@@ -581,13 +589,13 @@ namespace GUI
             void mouse_move_event_internal(vec2 pos);
             void mouse_action_event_internal(mouse_action action, mouse_button button, vec2 pos);
             void mouse_wheel_event_internal(mouse_wheel type, float value, vec2 pos);
-            void key_action_event_internal(long key);
+            void key_action_event_internal(key_action action, long key);
 
-         
+
             virtual void mouse_move_event(vec2 pos);
             virtual void mouse_action_event(mouse_action action, mouse_button button, vec2 pos);
             virtual void mouse_wheel_event(mouse_wheel type, float value, vec2 pos);
-            virtual void key_action_event(long key);
+            virtual void key_action_event(key_action action, long key);
 
          //   virtual void draw_ui(Context&);
 

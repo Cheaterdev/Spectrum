@@ -118,7 +118,13 @@ export class first_person_camera : public camera
 {
         vec2 angles;
     public:
+        // Input state, driven by the owning GUI element (no global key polling).
+        vec3  move_input       = {0, 0, 0}; // x=right(A/D), y=up(E/Q), z=forward(W/S)
+        bool  fast_move        = false;
+        float move_speed       = 20.0f;
+        float look_sensitivity = 0.004f;
 
+        void add_look(vec2 delta); // mouse-look: rotate by a screen-space drag delta
         void frame_move(float dt);
 };
 

@@ -174,9 +174,16 @@ camera::camera()
     //  const_buffer.reset(new HAL::Buffer<shader_params>());
 }
 
+void first_person_camera::add_look(vec2 delta)
+{
+    // screen +x -> look right (yaw+), screen +y (down) -> look down (pitch-)
+    angles.x += delta.x * look_sensitivity;
+    angles.y -= delta.y * look_sensitivity;
+    angles.y = Math::clamp(angles.y, -Math::m_pi_2 + Math::eps2, Math::m_pi_2 - Math::eps2);
+}
+
 void first_person_camera::frame_move(float dt)
 {
-    angles += 2.0f * vec2(!!GetAsyncKeyState('L') - !!GetAsyncKeyState('J'), !!GetAsyncKeyState('I') - !!GetAsyncKeyState('K')) * dt;
     angles.y = Math::clamp(angles.y, -Math::m_pi_2 + Math::eps2, Math::m_pi_2 - Math::eps2);
     vec3 direction;
     direction.x = Math::sin(angles.x) * Math::cos(angles.y);
@@ -185,10 +192,10 @@ void first_person_camera::frame_move(float dt)
     vec3 up(0, 1, 0);
     vec3 right = vec3::cross(up, direction).normalize();
     up = vec3::cross(direction, right).normalize();
-    position += (!!GetAsyncKeyState(VK_LSHIFT) ? 2000.0f : 20.0f) * (
-                    right * static_cast<float>(!!GetAsyncKeyState('D') - !!GetAsyncKeyState('A')) +
-                    direction * static_cast<float>(!!GetAsyncKeyState('W') - !!GetAsyncKeyState('S')) +
-                    up * static_cast<float>(!!GetAsyncKeyState('E') - !!GetAsyncKeyState('Q'))
+    position += (fast_move ? 2000.0f : move_speed) * (
+                    right * move_input.x +
+                    direction * move_input.z +
+                    up * move_input.y
                 ) * dt;
     target = position + direction * 10;
     //     update();

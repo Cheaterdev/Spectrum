@@ -8,8 +8,9 @@ import :Renderer;
 import GUI;
 
 
-void GUI::Elements::edit_text::on_key_action(long key)
+void GUI::Elements::edit_text::on_key_action(key_action action, long key)
 {
+	if (action != key_action::DOWN) return;
 	std::lock_guard<std::mutex> guard(m);
 	keys.push_back(key);
 }

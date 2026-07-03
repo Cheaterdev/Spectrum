@@ -112,7 +112,10 @@ LRESULT Window::MsgProc(MSG msg)
         break;
     }
     case WM_KEYDOWN:
-        if (input_handler) input_handler->key_action_event((long)msg.wParam);
+        if (input_handler) input_handler->key_action_event(key_action::DOWN, (long)msg.wParam);
+        break;
+    case WM_KEYUP:
+        if (input_handler) input_handler->key_action_event(key_action::UP, (long)msg.wParam);
         break;
     case WM_ERASEBKGND:
         return true;

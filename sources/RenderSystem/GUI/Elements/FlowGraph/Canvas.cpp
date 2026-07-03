@@ -560,8 +560,9 @@ bool GUI::Elements::FlowGraph::canvas::on_mouse_action(mouse_action action, mous
 	return true;
 }
 
-void GUI::Elements::FlowGraph::canvas::on_key_action(long key)
+void GUI::Elements::FlowGraph::canvas::on_key_action(key_action action, long key)
 {
+	if (action != key_action::DOWN) return;
 	if (key == VK_DELETE)
 	{
 		auto copy = linking;

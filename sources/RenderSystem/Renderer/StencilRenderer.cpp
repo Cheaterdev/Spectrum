@@ -31,6 +31,19 @@ void stencil_renderer::select_current()
 
 bool stencil_renderer::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
 {
+	if (action == mouse_action::DOWN)
+		focus(); // clicking the viewport focuses it, so WASD/QE reach us
+
+	// Right-drag = camera look (Unreal-style). A right-click without a drag falls
+	// through to the context-menu logic below.
+	if (action == mouse_action::DOWN && button == mouse_button::RIGHT)
+	{
+		looking     = true;
+		rmb_dragged = false;
+		look_last   = pos;
+		set_movable(true);
+	}
+
 	if (action == mouse_action::DOWN && button == mouse_button::LEFT)
 	{
 		if (selected.empty() || mouse_on_axis == -1)
@@ -60,9 +73,11 @@ bool stencil_renderer::on_mouse_action(mouse_action action, mouse_button button,
 		}
 	}
 
-	if (action == mouse_action::UP)
+	if (action == mouse_action::UP || action == mouse_action::CANCEL)
 		set_movable(false);
-	if (action == mouse_action::UP && button == mouse_button::RIGHT)
+	if ((action == mouse_action::UP || action == mouse_action::CANCEL) && button == mouse_button::RIGHT)
+		looking = false;
+	if (action == mouse_action::UP && button == mouse_button::RIGHT && !rmb_dragged)
 	{
 		if (selected.size() && mouse_on_object == selected[0])
 		{
@@ -164,6 +179,19 @@ bool stencil_renderer::on_mouse_action(mouse_action action, mouse_button button,
 
 bool stencil_renderer::on_mouse_move(vec2 pos)
 {
+	if (looking)
+	{
+		vec2 delta = pos - look_last;
+		look_last  = pos;
+		float adx = delta.x < 0 ? -delta.x : delta.x;
+		float ady = delta.y < 0 ? -delta.y : delta.y;
+		if (adx + ady > 2.0f)
+			rmb_dragged = true; // it's a look-drag, not a click
+		if (rmb_dragged && player_cam)
+			player_cam->add_look(delta);
+		return true;
+	}
+
 	vec2 local = (pos - get_render_bounds().pos) / vec2(get_render_bounds().size);
 	direction = player_cam->to_direction(local);
 	prev_mouse_pos = mouse_pos;
@@ -210,6 +238,24 @@ bool stencil_renderer::on_mouse_move(vec2 pos)
 	}
 
 	return base::on_mouse_move(pos) | true;;
+}
+
+void stencil_renderer::on_key_action(key_action action, long key)
+{
+	if (key >= 0 && key < 256) camera_keys[key] = (action == key_action::DOWN);
+	update_move_input();
+}
+
+void stencil_renderer::update_move_input()
+{
+	if (!player_cam) return;
+	auto k = [this](int vk) { return camera_keys[vk] ? 1.0f : 0.0f; };
+	player_cam->move_input = {
+		k('D') - k('A'),   // right
+		k('E') - k('Q'),   // up
+		k('W') - k('S')    // forward
+	};
+	player_cam->fast_move = camera_keys[0x10]; // VK_SHIFT
 }
 
 float3 stencil_renderer::get_axis(int axis)

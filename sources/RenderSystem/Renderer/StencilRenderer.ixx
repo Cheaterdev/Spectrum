@@ -25,6 +25,14 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
         void select_current();
         virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
         virtual bool on_mouse_move(vec2 pos) override;
+        virtual void on_key_action(key_action action, long key) override; // camera move
+
+        // Camera fly-controls (active only while this viewport is focused).
+        bool camera_keys[256] = {};
+        bool looking          = false; // RMB held -> mouse-look
+        bool rmb_dragged      = false; // distinguishes look-drag from a menu click
+        vec2 look_last;
+        void update_move_input();
 
         float3 mouse_pos;
         float3 prev_mouse_pos;
@@ -59,7 +67,7 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
     public:
         Scene::ptr debug_scene;
         Scene::ptr scene;
-        camera* player_cam;
+        first_person_camera* player_cam;
 
         Variable<bool> draw_aabb = { false, "Draw AABB", this };
 

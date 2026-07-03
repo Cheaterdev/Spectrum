@@ -698,6 +698,11 @@ namespace GUI
         user_ui->focused.reset();
     }
 
+    bool base::is_focused()
+    {
+        return user_ui && user_ui->focused.lock().get() == this;
+    }
+
     void base::set_update_layout()
     {
         need_update_layout = true;
@@ -706,7 +711,7 @@ namespace GUI
             parent->set_update_layout();
     }
 
-    void base::on_key_action(long key)
+    void base::on_key_action(key_action action, long key)
     {
     }
 
@@ -1210,12 +1215,12 @@ namespace GUI
         if (frame_gen)
             frame_generators.insert(frame_gen);
     }
-	void user_interface::key_action_event_internal(long key)
+	void user_interface::key_action_event_internal(key_action action, long key)
 	{
 		auto really_focused = focused.lock();
 
 		if (really_focused)
-			really_focused->on_key_action(key);
+			really_focused->on_key_action(action, key);
 	}
     
 	void user_interface::mouse_move_event(vec2 pos)
@@ -1246,11 +1251,11 @@ namespace GUI
 		::SetCursor(LoadCursor(nullptr, cursors[static_cast<int>(cursor)]));
 	}
 
-    void user_interface::key_action_event(long key)
+    void user_interface::key_action_event(key_action action, long key)
     {
-        run_on_ui([this, key]()
+        run_on_ui([this, action, key]()
         {
-                key_action_event_internal(key);
+                key_action_event_internal(action, key);
         });
     }
 
