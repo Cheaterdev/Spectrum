@@ -284,6 +284,8 @@ export import :Autogen.PSO.DrawStencil;
 export import :Autogen.PSO.DrawSelected;
 export import :Autogen.PSO.DrawBox;
 export import :Autogen.PSO.DrawAxis;
+export import :Autogen.PSO.DrawRing;
+export import :Autogen.PSO.DrawRingPick;
 export import :Autogen.PSO.StencilerLast;
 export import :Autogen.PSO.NinePatch;
 export import :Autogen.PSO.SimpleRect;

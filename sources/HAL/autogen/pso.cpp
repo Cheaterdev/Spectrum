@@ -90,6 +90,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DrawSelected>(device, pso[PSO::DrawSelected]));
 	tasks.emplace_back(PSOBase::create<PSOS::DrawBox>(device, pso[PSO::DrawBox]));
 	tasks.emplace_back(PSOBase::create<PSOS::DrawAxis>(device, pso[PSO::DrawAxis]));
+	tasks.emplace_back(PSOBase::create<PSOS::DrawRing>(device, pso[PSO::DrawRing]));
+	tasks.emplace_back(PSOBase::create<PSOS::DrawRingPick>(device, pso[PSO::DrawRingPick]));
 	tasks.emplace_back(PSOBase::create<PSOS::StencilerLast>(device, pso[PSO::StencilerLast]));
 	tasks.emplace_back(PSOBase::create<PSOS::NinePatch>(device, pso[PSO::NinePatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::SimpleRect>(device, pso[PSO::SimpleRect]));

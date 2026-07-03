@@ -15,7 +15,7 @@ import :Slots;
 
 export namespace Slots
 {
-	struct Color :public DataHolder<Color, SlotID::Color, Table::Color, DefaultLayout::Instance0>
+	struct Color :public DataHolder<Color, SlotID::Color, Table::Color, DefaultLayout::Instance4>
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		Color() = default;

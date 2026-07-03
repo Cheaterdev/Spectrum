@@ -5,7 +5,7 @@ struct Countour
 	Texture2D<float4> tex;
 }
 
-[Bind = DefaultLayout::Instance0]
+[Bind = DefaultLayout::Instance5]
 struct DrawStencil
 {
 	StructuredBuffer<float4> vertices;
@@ -24,7 +24,7 @@ struct Instance
 }
 
 
-[Bind = DefaultLayout::Instance0]
+[Bind = DefaultLayout::Instance4]
 struct Color
 {
 	float4 color;
@@ -116,6 +116,39 @@ GraphicsPSO DrawAxis
 	cull = None;
 
 	rtv = { R16G16B16A16_FLOAT };
+}
+
+
+GraphicsPSO DrawRing
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = ring;
+
+	[EntryPoint = PS_COLOR]
+	pixel = ring;
+
+	enable_depth = false;
+	cull = None;
+
+	rtv = { R16G16B16A16_FLOAT };
+}
+
+
+GraphicsPSO DrawRingPick
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = ring;
+
+	[EntryPoint = PS]
+	pixel = ring;
+
+	ds = D32_FLOAT;
+	cull = None;
+	depth_func = GREATER;
 }
 
 

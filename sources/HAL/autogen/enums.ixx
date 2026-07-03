@@ -85,6 +85,8 @@ export
 		DrawSelected,
 		DrawBox,
 		DrawAxis,
+		DrawRing,
+		DrawRingPick,
 		StencilerLast,
 		NinePatch,
 		SimpleRect,

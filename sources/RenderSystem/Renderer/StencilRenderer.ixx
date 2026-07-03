@@ -38,6 +38,18 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
         HAL::StructuredBufferView<vec4> vertex_buffer;
         HAL::IndexBuffer index_buffer;
 
+        // Rotation rings (procedural): one flat annulus per axis, at the gizmo origin.
+        HAL::StructuredBufferView<vec4> ring_vertex_buffer;
+        HAL::IndexBuffer                ring_index_buffer;
+        struct ring_range { UINT offset; UINT count; };
+        ring_range ring_ranges[3] = {};
+        bool       rings_sized     = false; // built once axis bounds are known
+        void build_rings(float radius, float thickness);
+
+        // Rotation drag state (selected_axis 0..2 = translate, 3..5 = rotate).
+        vec3 rot_prev;
+        bool is_rotate() const { return selected_axis >= 3; }
+
         virtual bool can_accept(GUI::drag_n_drop_package::ptr p) override;
         virtual void on_drop_move(GUI::drag_n_drop_package::ptr p, vec2) override;
         virtual bool on_drop(GUI::drag_n_drop_package::ptr p, vec2 m) override;

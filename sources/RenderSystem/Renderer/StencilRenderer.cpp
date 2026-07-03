@@ -42,9 +42,19 @@ bool stencil_renderer::on_mouse_action(mouse_action action, mouse_button button,
 		else
 		{
 			selected_axis = mouse_on_axis;
-			current_plane = Plane(get_normal(selected_axis), center_pos);
-
-			mouse_pos = get_current_pos();
+			if (is_rotate())
+			{
+				// rotate about the picked axis: drag plane is perpendicular to it
+				vec3 axis = get_axis(selected_axis - 3);
+				current_plane = Plane(axis, center_pos);
+				rot_prev = get_current_pos() - center_pos;
+				rot_prev.normalize();
+			}
+			else
+			{
+				current_plane = Plane(get_normal(selected_axis), center_pos);
+				mouse_pos = get_current_pos();
+			}
 
 			set_movable(true);
 		}
@@ -159,7 +169,34 @@ bool stencil_renderer::on_mouse_move(vec2 pos)
 	prev_mouse_pos = mouse_pos;
 	mouse_pos = get_current_pos();
 
-	if (is_pressed() && selected_axis != -1)
+	if (is_pressed() && selected_axis != -1 && is_rotate())
+	{
+		vec3 axis = get_axis(selected_axis - 3);
+		vec3 cur  = get_current_pos() - center_pos;
+		cur.normalize();
+
+		float cosA = Math::clamp(vec3::dot(rot_prev, cur), -1.0f, 1.0f);
+		float sinA = vec3::dot(axis, vec3::cross(rot_prev, cur));
+		float dphi = Math::acos(cosA) * (sinA < 0 ? 1.0f : -1.0f);
+		rot_prev = cur;
+
+		if (selected.size() && dphi != 0.0f)
+		{
+			quat q(axis, dphi);
+			run_on_ui([this, q]() {
+				quat  lq = q;
+				auto& T  = selected[0].first->local_transform;
+				for (int c = 0; c < 3; c++)
+				{
+					vec3 b = vec3(T[c].x, T[c].y, T[c].z);
+					vec3 r = lq.rotate(b);
+					T[c] = float4(r, T[c].w);
+				}
+				selected[0].first->update_layout();
+				});
+		}
+	}
+	else if (is_pressed() && selected_axis != -1)
 	{
 		center_pos += (mouse_pos - prev_mouse_pos) * get_axis(selected_axis);
 		if (selected.size())
@@ -263,6 +300,53 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 	//throw std::exception("The method or operation is not implemented.");
 }
 
+void stencil_renderer::build_rings(float radius, float thickness)
+{
+	const int   N  = 64;
+	const float r1 = radius;             // outer
+	const float r0 = radius - thickness; // inner
+
+	// For the ring that rotates about axis a, its plane is spanned by the other two axes.
+	static const vec3 U[3] = { vec3(0,1,0), vec3(0,0,1), vec3(1,0,0) };
+	static const vec3 V[3] = { vec3(0,0,1), vec3(1,0,0), vec3(0,1,0) };
+
+	std::vector<vec4>         verts;
+	std::vector<unsigned int> indices;
+	verts.reserve(3 * 2 * N);
+	indices.reserve(3 * 6 * N);
+
+	for (int a = 0; a < 3; a++)
+	{
+		UINT base = (UINT)verts.size();
+		UINT ioff = (UINT)indices.size();
+
+		for (int i = 0; i < N; i++)
+		{
+			float ang = (float(i) / N) * Math::m_2_pi;
+			vec3  dir = U[a] * Math::cos(ang) + V[a] * Math::sin(ang);
+			verts.push_back(vec4(dir * r0, 0)); // inner
+			verts.push_back(vec4(dir * r1, 0)); // outer
+		}
+		for (int i = 0; i < N; i++)
+		{
+			UINT i0 = base + (i * 2);
+			UINT i1 = base + (i * 2 + 1);
+			UINT i2 = base + (((i + 1) % N) * 2);
+			UINT i3 = base + (((i + 1) % N) * 2 + 1);
+			indices.push_back(i0); indices.push_back(i1); indices.push_back(i3);
+			indices.push_back(i0); indices.push_back(i3); indices.push_back(i2);
+		}
+		ring_ranges[a] = { ioff, (UINT)indices.size() - ioff };
+	}
+
+	ring_index_buffer  = Helpers::make_buffer<unsigned int>(RenderSystem::get().device(), indices);
+	ring_vertex_buffer = HAL::StructuredBufferView<vec4>(RenderSystem::get().device(), (UINT)verts.size());
+
+	auto list = RenderSystem::get().device().get_upload_list();
+	list->get_copy().update(ring_vertex_buffer, 0, verts);
+	list->execute_and_wait();
+}
+
 stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 {
 	docking = GUI::dock::PARENT;
@@ -313,6 +397,27 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	{
 		process_tasks();
 		debug_scene->update_transforms();
+
+		// Size the rotation rings from the arrows' actual (post-import-scale) bounds,
+		// once they are available. The arrows are drawn through the mesh node transform,
+		// so a hardcoded radius in raw model units would not match their rendered size.
+		if (!rings_sized && axis && !axis->rendering.empty())
+		{
+			float ext = 0.0f;
+			auto  fabs2 = [](float v) { return v < 0 ? -v : v; };
+			for (auto& r : axis->rendering)
+			{
+				auto mn = r.primitive->get_min();
+				auto mx = r.primitive->get_max();
+				ext = std::max(ext, std::max(std::max(fabs2(mx.x), fabs2(mx.y)), fabs2(mx.z)));
+				ext = std::max(ext, std::max(std::max(fabs2(mn.x), fabs2(mn.y)), fabs2(mn.z)));
+			}
+			if (ext > 0.0f)
+			{
+				build_rings(ext * 0.9f, ext * 0.12f);
+				rings_sized = true;
+			}
+		}
 
 		auto& caminfo = builder.graph->get_context<CameraInfo>();
 		cam = *caminfo.cam;
@@ -440,6 +545,29 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 			return true;
 		});
 
+		// pick rotation rings (ids 4/5/6 -> mouse_on_axis 3/4/5); shares the depth
+		// buffer with the arrows so the nearest handle along the ray wins.
+		if (rings_sized)
+		{
+			graphics.set_pipeline<PSOS::DrawRingPick>();
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+			graphics.set_index_buffer(ring_index_buffer.get_index_buffer_view());
+			{
+				Slots::DrawStencil draw;
+				draw.GetVertices() = ring_vertex_buffer;
+				graphics.set(draw);
+			}
+			for (int a = 0; a < 3; a++)
+			{
+				{
+					Slots::Instance instance;
+					instance.GetInstanceId() = 4 + a;
+					graphics.set(instance);
+				}
+				graphics.draw_indexed(ring_ranges[a].count, ring_ranges[a].offset, 0);
+			}
+		}
+
 		copy.read<uint>(*data.id_buffer, 0, 1, [current, this](std::span<uint> memory)
 		{
 			auto result = *memory.data() - 1;
@@ -566,6 +694,34 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 				graphics.set(m.mesh_instance_info);
 				graphics.dispatch_mesh(m.dispatch_mesh_arguments);
 				i++;
+			}
+		}
+
+		// draw rotation rings (camera-facing half; back half discarded in the PS)
+		if (rings_sized)
+		{
+			graphics.set_pipeline<PSOS::DrawRing>();
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+			graphics.set_index_buffer(ring_index_buffer.get_index_buffer_view());
+			{
+				Slots::FrameInfo frameInfo;
+				frameInfo.GetCamera() = axis_cam.camera_cb.current;
+				graphics.set(frameInfo);
+			}
+			{
+				Slots::DrawStencil draw;
+				draw.GetVertices() = ring_vertex_buffer;
+				graphics.set(draw);
+			}
+			for (int a = 0; a < 3; a++)
+			{
+				float lighted = (mouse_on_axis == 3 + a) * 0.7f;
+				{
+					Slots::Color color;
+					color.GetColor() = { a == 0 ? 1.0f : lighted, a == 1 ? 1.0f : lighted, a == 2 ? 1.0f : lighted, 1 };
+					graphics.set(color);
+				}
+				graphics.draw_indexed(ring_ranges[a].count, ring_ranges[a].offset, 0);
 			}
 		}
 	};
