@@ -54,6 +54,12 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
         bool       rings_sized     = false; // built once axis bounds are known
         void build_rings(float radius, float thickness);
 
+        // Viewport height (px) at which the gizmo has its base size. The camera
+        // distance scales with the actual height so the gizmo stays a constant
+        // pixel size instead of a fixed fraction of the ResultTexture. Lower =
+        // larger gizmo on screen.
+        float gizmo_ref_height = 300.0f;
+
         // Rotation drag state (selected_axis 0..2 = translate, 3..5 = rotate).
         vec3 rot_prev;
         bool is_rotate() const { return selected_axis >= 3; }

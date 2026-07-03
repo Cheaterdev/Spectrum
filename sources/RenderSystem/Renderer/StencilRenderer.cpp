@@ -474,15 +474,23 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 		axis_cam = *caminfo.cam;
 		vec3 dir = caminfo.cam->target - caminfo.cam->position;
 		dir.normalize();
-		axis_cam.set_projection_params(1, 1000);
 		axis_cam.position -= center_pos;
 		axis_cam.position.normalize();
-		axis_cam.position *= 200;
+		// Distance scales with viewport height so the gizmo keeps a constant on-screen
+		// pixel size. Clamp to the known-good base distance so it can't cross the near
+		// plane (or swallow the camera) at small viewport sizes.
+		float frame_h = float(builder.graph->get_context<ViewportInfo>().frame_size.y);
+		float dist    = 200.0f * frame_h / gizmo_ref_height;
+		if (dist < 200.0f) dist = 200.0f;
+		axis_cam.position *= dist;
 		axis_cam.target = axis_cam.position + dir;
+		// near/far track the distance so the gizmo is always bracketed regardless of
+		// how far the camera sits (at dist == 200 this is exactly near=1 / far=1000).
+		axis_cam.set_projection_params(dist * 0.005f, dist * 5.0f);
 		axis_cam.update();
 
 		axis_intersect_cam = axis_cam;
-		axis_intersect_cam.set_projection_params(1, 1000);
+		axis_intersect_cam.set_projection_params(dist * 0.005f, dist * 5.0f);
 		axis_intersect_cam.target = axis_intersect_cam.position + direction;
 		axis_intersect_cam.update();
 
