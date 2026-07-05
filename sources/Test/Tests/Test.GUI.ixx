@@ -365,6 +365,19 @@ export namespace Test
 		ui.create_graph(graph);
 		device.get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
 
+		// pre_draw (glyph raster) now happens in the UI_PreDraw FrameGraph pass's
+		// render(), which this test never invokes — run it directly instead.
+		auto& ui_ctx_predraw = graph.get_context<GUI::UIContext>();
+		if (!ui_ctx_predraw.pre_draw_infos.empty())
+		{
+			auto& pre_draw_queue = device.get_queue(HAL::CommandListType::DIRECT);
+			auto pre_draw_list = pre_draw_queue->get_free_list();
+			pre_draw_list->begin(L"pre_draw");
+			GUI::user_interface::run_pre_draw(ui_ctx_predraw.pre_draw_infos, pre_draw_list);
+			pre_draw_list->end();
+			pre_draw_list->execute_and_wait();
+		}
+
 		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
 		auto  list  = queue->get_free_list();
 		list->begin(L"GUIElement_Label");
@@ -525,10 +538,25 @@ export namespace Test
 		// Layout pass
 		ui.process_ui(0.0f);
 
-		// Populate UIContext.draw_infos + async pre-render of label glyphs
+		// Populate UIContext.draw_infos. Pre-draw (label glyph cache updates
+		// etc.) now happens in the UI_PreDraw FrameGraph pass's render(), which
+		// this test never invokes (it drives the GPU render manually instead of
+		// via Graph::setup()/render()) — so run it directly here, matching what
+		// PassDefault<Passes::UI_PreDraw>::render() does.
 		FrameGraph::Graph graph;
 		ui.create_graph(graph);
 		device.get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+
+		auto& ui_ctx_predraw = graph.get_context<GUI::UIContext>();
+		if (!ui_ctx_predraw.pre_draw_infos.empty())
+		{
+			auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+			auto pre_draw_list = queue->get_free_list();
+			pre_draw_list->begin(L"pre_draw");
+			GUI::user_interface::run_pre_draw(ui_ctx_predraw.pre_draw_infos, pre_draw_list);
+			pre_draw_list->end();
+			pre_draw_list->execute_and_wait();
+		}
 
 		// GPU render pass
 		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);

@@ -172,7 +172,7 @@ bool PassDefault<Passes::RTXShadow>::setup(
 		builder.create(data.WorkGraphBuffer, { TILE_SECTION }, ResourceFlags::UnorderedAccess);
 	}
 
-	return true;
+	return RenderSystem::get().device().get_properties().rtx;
 }
 
 void PassDefault<Passes::RTXShadow>::render(

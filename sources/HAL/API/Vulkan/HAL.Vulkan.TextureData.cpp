@@ -68,13 +68,128 @@ namespace HAL
         return orig;
     }
 
+    // ---- Minimal DDS parser -------------------------------------------------
+    // WIC cannot decode HDR-float or volume DDS (atmospheric LUTs etc.).  The GPU
+    // consumes DDS surface data directly (BC blocks, float, 3D — no CPU decode),
+    // so we just parse the header and hand the raw subresources to texture_data.
+    namespace
+    {
+        constexpr uint32_t DDS_MAGIC        = 0x20534444; // "DDS "
+        constexpr uint32_t DDPF_ALPHA       = 0x2;
+        constexpr uint32_t DDPF_FOURCC      = 0x4;
+        constexpr uint32_t DDPF_RGB         = 0x40;
+        constexpr uint32_t DDPF_LUMINANCE   = 0x20000;
+        constexpr uint32_t DDSCAPS2_VOLUME  = 0x200000;
+        constexpr uint32_t DDSCAPS2_CUBEMAP = 0x200;
+        constexpr uint32_t DDS_DIMENSION_TEXTURE3D = 4;
+
+        constexpr uint32_t make_fourcc(char a, char b, char c, char d)
+        { return uint32_t(a) | (uint32_t(b) << 8) | (uint32_t(c) << 16) | (uint32_t(d) << 24); }
+
+    #pragma pack(push, 1)
+        struct DDS_PIXELFORMAT { uint32_t size, flags, fourCC, RGBBitCount, RBitMask, GBitMask, BBitMask, ABitMask; };
+        struct DDS_HEADER
+        {
+            uint32_t size, flags, height, width, pitchOrLinearSize, depth, mipMapCount;
+            uint32_t reserved1[11];
+            DDS_PIXELFORMAT ddspf;
+            uint32_t caps, caps2, caps3, caps4, reserved2;
+        };
+        struct DDS_HEADER_DXT10 { uint32_t dxgiFormat, resourceDimension, miscFlag, arraySize, miscFlags2; };
+    #pragma pack(pop)
+
+        // Legacy D3DFMT fourCC / numeric formats → HAL Format (== DXGI numbering).
+        Format legacy_format(const DDS_PIXELFORMAT& pf)
+        {
+            if (pf.flags & DDPF_FOURCC)
+            {
+                switch (pf.fourCC)
+                {
+                case make_fourcc('D','X','T','1'): return Format::BC1_UNORM;
+                case make_fourcc('D','X','T','3'): return Format::BC2_UNORM;
+                case make_fourcc('D','X','T','5'): return Format::BC3_UNORM;
+                case 111: return Format::R16_FLOAT;
+                case 112: return Format::R16G16_FLOAT;
+                case 113: return Format::R16G16B16A16_FLOAT;
+                case 114: return Format::R32_FLOAT;
+                case 115: return Format::R32G32_FLOAT;
+                case 116: return Format::R32G32B32A32_FLOAT;
+                default:  break;
+                }
+            }
+            // Uncompressed formats — pick by pixel-format flags and bit count so the
+            // per-pixel size matches the file (a wrong size fails the length check).
+            if ((pf.flags & DDPF_ALPHA) && pf.RGBBitCount == 8)
+                return Format::A8_UNORM;                      // alpha-only (e.g. best-fit normals)
+            if ((pf.flags & DDPF_LUMINANCE) && pf.RGBBitCount == 8)
+                return Format::R8_UNORM;                      // single-channel
+            if (pf.flags & DDPF_RGB)
+            {
+                if (pf.RGBBitCount == 32)
+                    return (pf.RBitMask == 0x00ff0000)        // BGRA vs RGBA channel order
+                         ? Format::B8G8R8A8_UNORM : Format::R8G8B8A8_UNORM;
+            }
+            return Format::R8G8B8A8_UNORM;
+        }
+    }
+
     texture_data::ptr texture_data::load_texture(std::shared_ptr<file> file, int /*flags*/)
     {
-        // WIC's stream decoder auto-detects the container (JPEG/PNG/BMP/…), so
-        // from_png() handles any of them — decode straight from the file bytes.
         if (!file) return nullptr;
         auto bytes = file->load_all();
-        return from_png(bytes.data(), bytes.size());
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(bytes.data());
+        const size_t   size = bytes.size();
+
+        const bool is_dds = size >= 4 && *reinterpret_cast<const uint32_t*>(data) == DDS_MAGIC;
+        if (!is_dds)
+        {
+            // WIC's stream decoder auto-detects PNG/JPEG/BMP containers.
+            return from_png(bytes.data(), size);
+        }
+
+        if (size < 4 + sizeof(DDS_HEADER)) return nullptr;
+        const DDS_HEADER& hdr = *reinterpret_cast<const DDS_HEADER*>(data + 4);
+        size_t offset = 4 + sizeof(DDS_HEADER);
+
+        Format   format     = legacy_format(hdr.ddspf);
+        uint32_t array_size = 1;
+        uint32_t depth      = (hdr.caps2 & DDSCAPS2_VOLUME) ? std::max<uint32_t>(hdr.depth, 1u) : 1u;
+
+        const bool has_dx10 = (hdr.ddspf.flags & DDPF_FOURCC) &&
+                              hdr.ddspf.fourCC == make_fourcc('D','X','1','0');
+        if (has_dx10)
+        {
+            if (size < offset + sizeof(DDS_HEADER_DXT10)) return nullptr;
+            const DDS_HEADER_DXT10& dx10 = *reinterpret_cast<const DDS_HEADER_DXT10*>(data + offset);
+            offset += sizeof(DDS_HEADER_DXT10);
+            format     = Format(static_cast<Format::Formats>(dx10.dxgiFormat));
+            array_size = std::max<uint32_t>(dx10.arraySize, 1u);
+            if (dx10.resourceDimension == DDS_DIMENSION_TEXTURE3D)
+                depth = std::max<uint32_t>(hdr.depth, 1u);
+        }
+        if (hdr.caps2 & DDSCAPS2_CUBEMAP) array_size *= 6;
+
+        const uint32_t width  = std::max<uint32_t>(hdr.width, 1u);
+        const uint32_t height = std::max<uint32_t>(hdr.height, 1u);
+        const uint32_t mips   = std::max<uint32_t>(hdr.mipMapCount, 1u);
+
+        auto result = std::make_shared<texture_data>(array_size, mips, width, height, depth, format);
+
+        // DDS surface order: array-major, then mip (largest first), depth slices
+        // packed per mip.  texture_data already sized each mip's data buffer with
+        // the same format's surface_info, so DDS packing matches — copy in order.
+        const uint8_t* src = data + offset;
+        const uint8_t* end = data + size;
+        for (uint32_t a = 0; a < array_size; ++a)
+            for (uint32_t m = 0; m < mips; ++m)
+            {
+                auto& dst = result->array[a]->mips[m]->data;
+                if (src + dst.size() > end) return nullptr; // truncated file
+                std::memcpy(dst.data(), src, dst.size());
+                src += dst.size();
+            }
+
+        return result;
     }
 
     // Build from GPU readback data: strips row padding (layout.row_stride →

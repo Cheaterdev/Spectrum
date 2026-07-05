@@ -14,6 +14,7 @@ export namespace HAL
             VkPipeline           vk_pipeline  = VK_NULL_HANDLE;
             VkDevice             vk_device    = VK_NULL_HANDLE; // for destructor cleanup
             bool                 is_compute   = false;
+            bool                 is_mesh      = false;   // task/mesh pipeline (no vertex input / topology)
             VkPrimitiveTopology  vk_topology  = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
             virtual ~TrackedPipeline();

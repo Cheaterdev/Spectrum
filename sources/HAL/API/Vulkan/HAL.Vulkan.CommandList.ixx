@@ -48,11 +48,12 @@ export namespace HAL
             bool        in_render_pass     = false;
 
             // Pipeline state
-            VkPipelineLayout current_pipeline_layout = VK_NULL_HANDLE;
-            bool             descriptor_sets_dirty   = false;
             // Last bound graphics pipeline — re-bound before each draw because the
             // recorder may split set_pipeline and the draw across command buffers.
             VkPipeline       current_graphics_pipeline = VK_NULL_HANDLE;
+            // Mesh pipelines have no primitive-topology dynamic state, so the
+            // per-draw topology re-apply must be skipped for them.
+            bool             current_is_mesh = false;
             // Last bound index buffer — re-bound before each indexed draw for the same reason.
             VkBuffer         current_index_buffer = VK_NULL_HANDLE;
             VkDeviceSize     current_index_offset = 0;
@@ -66,11 +67,23 @@ export namespace HAL
             bool                    has_scissor       = false;
             VkPrimitiveTopology     current_topology  = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-            // Bound descriptor heaps (set by set_descriptor_heaps())
-            VkDescriptorSet  cbv_srv_uav_set = VK_NULL_HANDLE;
-            VkDescriptorSet  sampler_set     = VK_NULL_HANDLE;
+            // Bound descriptor heaps (set by set_descriptor_heaps()).  Under
+            // VK_EXT_descriptor_heap a heap is a device-address range bound via
+            // vkCmdBindResourceHeapEXT / vkCmdBindSamplerHeapEXT.  Like D3D12's
+            // SetDescriptorHeaps, the binding persists — flushed once per command
+            // buffer (and re-flushed after a recorder-induced CB split).
+            VkDeviceAddress cbv_srv_uav_addr           = 0;
+            VkDeviceSize    cbv_srv_uav_size           = 0;
+            VkDeviceSize    cbv_srv_uav_reserved_off   = 0;
+            VkDeviceSize    cbv_srv_uav_reserved_size  = 0;
+            VkDeviceAddress sampler_addr               = 0;
+            VkDeviceSize    sampler_size               = 0;
+            VkDeviceSize    sampler_reserved_off       = 0;
+            VkDeviceSize    sampler_reserved_size      = 0;
+            bool            heaps_dirty                = false;
 
-            // Push constant staging (for graphics_set_constant / compute_set_constant)
+            // Push constant staging (for graphics_set_constant / compute_set_constant),
+            // re-pushed via vkCmdPushDataEXT after a command-buffer split.
             std::array<uint32_t, 32> push_constants = {};
 
             // Deferred PRESENT_SRC_KHR transitions.
@@ -96,7 +109,8 @@ export namespace HAL
             void begin_rendering(VkAttachmentLoadOp color_load, VkClearValue color_clear,
                                  VkAttachmentLoadOp depth_load, VkClearValue depth_clear);
             void ensure_rendering_active(); // lazily start render pass for draw calls
-            void flush_descriptor_sets();  // bind pending descriptor sets
+            void flush_heaps();            // bind pending descriptor heaps (resource + sampler)
+            void push_full_constants();    // push the whole staged root-constant block
             void reapply_draw_state();     // re-bind pipeline + viewport/scissor before a draw
 
         public:

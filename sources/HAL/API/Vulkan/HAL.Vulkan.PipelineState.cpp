@@ -139,10 +139,6 @@ namespace HAL
         VkDevice vk_dev = api_dev.get_native_device();
         if (vk_dev == VK_NULL_HANDLE) return;
 
-        VkPipelineLayout layout = static_cast<API::RootSignature&>(*root_signature)
-                                    .get_vk_pipeline_layout();
-        if (layout == VK_NULL_HANDLE) return;
-
         // ---- Shader modules -------------------------------------------------
         auto make_stage = [&](VkShaderStageFlagBits stage,
                                const binary& blob,
@@ -178,9 +174,22 @@ namespace HAL
         add_stage(VK_SHADER_STAGE_GEOMETRY_BIT, desc.geometry);
         add_stage(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,    desc.hull);
         add_stage(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, desc.domain);
+        // Mesh pipeline: amplification shader → task stage, mesh shader → mesh stage.
+        add_stage(VK_SHADER_STAGE_TASK_BIT_EXT, desc.amplification);
         add_stage(VK_SHADER_STAGE_MESH_BIT_EXT, desc.mesh);
 
         if (stages.empty()) return; // no compiled shaders yet
+
+        // A mesh pipeline has no vertex-pulling input assembly and must NOT declare
+        // the primitive-topology dynamic state (VUID-...-07065).
+        const bool has_mesh = (desc.mesh != nullptr);
+
+        // ---- Descriptor-heap binding mapping (VK_EXT_descriptor_heap) --------
+        // The set/binding -> heap mapping MUST be chained into every stage's pNext
+        // (VUID-VkGraphicsPipelineCreateInfo-flags-11312), not the pipeline pNext.
+        const auto& mapping_info = api_dev.get_binding_mapping_info();
+        for (auto& si : stages)
+            si.pNext = &mapping_info;
 
         // ---- Vertex input — vertex-pulling; no VS input attributes ---------
         VkPipelineVertexInputStateCreateInfo vi{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
@@ -272,18 +281,20 @@ namespace HAL
         viewport.scissorCount  = 1;
 
         // ---- Dynamic state --------------------------------------------------
-        const VkDynamicState dyn_states[] = {
+        std::vector<VkDynamicState> dyn_states = {
             VK_DYNAMIC_STATE_VIEWPORT,
             VK_DYNAMIC_STATE_SCISSOR,
             VK_DYNAMIC_STATE_STENCIL_REFERENCE,
-            // Topology is set per-draw via set_topology() (mirrors D3D12's
-            // IASetPrimitiveTopology: PSO has topology TYPE, draw call sets LIST/STRIP).
-            // Promoted to Vulkan 1.3 core via VK_EXT_extended_dynamic_state.
-            VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY,
         };
+        // Topology is set per-draw via set_topology() (mirrors D3D12's
+        // IASetPrimitiveTopology: PSO has topology TYPE, draw sets LIST/STRIP).
+        // Mesh pipelines have no input assembly, so this dynamic state is illegal there.
+        if (!has_mesh)
+            dyn_states.push_back(VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY);
+
         VkPipelineDynamicStateCreateInfo dyn_ci{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
-        dyn_ci.dynamicStateCount = 4;
-        dyn_ci.pDynamicStates    = dyn_states;
+        dyn_ci.dynamicStateCount = static_cast<uint32_t>(dyn_states.size());
+        dyn_ci.pDynamicStates    = dyn_states.data();
 
         // ---- Dynamic rendering attachment formats ---------------------------
         std::vector<VkFormat> color_formats;
@@ -313,8 +324,9 @@ namespace HAL
         VkGraphicsPipelineCreateInfo gp_ci{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
         gp_ci.stageCount          = static_cast<uint32_t>(stages.size());
         gp_ci.pStages             = stages.data();
-        gp_ci.pVertexInputState   = &vi;
-        gp_ci.pInputAssemblyState = &ia;
+        // Mesh pipelines have no vertex-pulling input assembly (ignored / must be null).
+        gp_ci.pVertexInputState   = has_mesh ? nullptr : &vi;
+        gp_ci.pInputAssemblyState = has_mesh ? nullptr : &ia;
         gp_ci.pTessellationState  = has_tessellation ? &tess_ci : nullptr;
         gp_ci.pRasterizationState = &raster;
         gp_ci.pMultisampleState   = &ms;
@@ -322,8 +334,13 @@ namespace HAL
         gp_ci.pColorBlendState    = &blend_ci;
         gp_ci.pViewportState      = &viewport;
         gp_ci.pDynamicState       = &dyn_ci;
-        gp_ci.layout              = layout;
-        gp_ci.pNext               = &rendering_ci; // dynamic rendering (no render pass)
+        gp_ci.layout              = VK_NULL_HANDLE; // no VkPipelineLayout with descriptor_heap
+
+        // Enable descriptor-heap mode; chain: flags2 -> rendering_ci (dynamic rendering).
+        VkPipelineCreateFlags2CreateInfo flags2{ VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO };
+        flags2.flags = VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT;
+        flags2.pNext = &rendering_ci;
+        gp_ci.pNext  = &flags2;
 
         VkPipeline pipeline = VK_NULL_HANDLE;
         VkResult r = vkCreateGraphicsPipelines(vk_dev, VK_NULL_HANDLE, 1, &gp_ci,
@@ -333,6 +350,7 @@ namespace HAL
             tracked_info->vk_pipeline = pipeline;
             tracked_info->vk_device   = vk_dev;
             tracked_info->vk_topology = ia.topology;
+            tracked_info->is_mesh     = has_mesh;
         }
         else
             Log::get() << Log::LEVEL_WARNING << "vkCreateGraphicsPipelines failed "
@@ -355,10 +373,6 @@ namespace HAL
         VkDevice vk_dev = api_dev.get_native_device();
         if (vk_dev == VK_NULL_HANDLE) return;
 
-        VkPipelineLayout layout = static_cast<API::RootSignature&>(*root_signature)
-                                    .get_vk_pipeline_layout();
-        if (layout == VK_NULL_HANDLE) return;
-
         const auto& blob = desc.shader->get_blob();
         if (blob.empty() || blob.size() % 4 != 0) return;
 
@@ -374,12 +388,21 @@ namespace HAL
         vkCreateShaderModule(vk_dev, &module_ci, nullptr, &cs_module);
         if (cs_module == VK_NULL_HANDLE) return;
 
+        // Binding mapping chains into the stage pNext (per VUID-...-flags-11312).
+        const auto& mapping_info = api_dev.get_binding_mapping_info();
+
         VkComputePipelineCreateInfo cp_ci{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
         cp_ci.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         cp_ci.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
         cp_ci.stage.module = cs_module;
         cp_ci.stage.pName  = cs_entry.c_str();
-        cp_ci.layout       = layout;
+        cp_ci.stage.pNext  = &mapping_info;
+        cp_ci.layout       = VK_NULL_HANDLE; // no VkPipelineLayout with descriptor_heap
+
+        // Enable descriptor-heap mode on the compute pipeline.
+        VkPipelineCreateFlags2CreateInfo flags2{ VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO };
+        flags2.flags = VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT;
+        cp_ci.pNext  = &flags2;
 
         VkPipeline pipeline = VK_NULL_HANDLE;
         vkCreateComputePipelines(vk_dev, VK_NULL_HANDLE, 1, &cp_ci, nullptr, &pipeline);

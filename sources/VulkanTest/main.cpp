@@ -218,7 +218,7 @@ int APIENTRY WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     while (true)
     {
         Window::process_messages();
-        if (!Application::is_good()) break;
+        if (!Application::get().is_alive()) break;
         app->render();
     }
 

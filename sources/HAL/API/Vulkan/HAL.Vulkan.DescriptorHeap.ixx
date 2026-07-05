@@ -42,16 +42,26 @@ export namespace HAL
 
     namespace API
     {
+        // VK_EXT_descriptor_heap: a heap is a host-visible, device-addressable
+        // VkBuffer holding raw descriptors at a uniform stride.  This mirrors
+        // D3D12 exactly — a descriptor "handle" is just base + slot*stride, and
+        // CopyDescriptors is a plain memcpy between mapped heaps.
         class DescriptorHeap
         {
         protected:
-            // Vulkan descriptor objects — only valid for CBV_SRV_UAV / SAMPLER heaps.
-            VkDescriptorPool    vk_pool       = VK_NULL_HANDLE;
-            VkDescriptorSet     vk_set        = VK_NULL_HANDLE;
+            VkBuffer      vk_heap_buffer = VK_NULL_HANDLE;
+            VmaAllocation vma_alloc      = VK_NULL_HANDLE;
+            uint8_t*      mapped         = nullptr;  // persistent CPU mapping
+            VkDeviceAddress device_address = 0;      // heap base GPU address
+
+            VkDeviceSize  descriptor_size = 0;       // per-slot stride (uniform)
+            VkDeviceSize  main_size       = 0;       // Count * stride
+            VkDeviceSize  reserved_offset = 0;       // start of reserved (embedded) range
+            VkDeviceSize  reserved_size   = 0;       // size of reserved range
 
         public:
             const DescriptorHeapDesc desc;
-            Device& device;   // non-const: place() calls vkUpdateDescriptorSets
+            Device& device;   // non-const: place() calls vkWriteResourceDescriptorsEXT
 
             uint handle_size = 0;
 
@@ -62,8 +72,19 @@ export namespace HAL
 
             HAL::Descriptor operator[](uint i);
 
-            // Returns the backing VkDescriptorSet so CommandList can bind it.
-            VkDescriptorSet get_vk_set() const noexcept { return vk_set; }
+            // D3D12 stages descriptors in a CPU heap and copies ranges to the GPU
+            // heap on demand.  VK_EXT_descriptor_heap writes straight into the
+            // host-visible GPU heap, so this batched sync is a no-op — kept for
+            // shared-code interface parity (FrameManager calls it).
+            void copy_ranges_to_gpu(std::span<const std::pair<uint64, uint64>> ranges) {}
+
+            // Heap binding info for CommandList::set_descriptor_heaps.
+            VkDeviceAddress get_device_address() const noexcept { return device_address; }
+            VkDeviceSize    get_total_size()     const noexcept { return main_size + reserved_size; }
+            VkDeviceSize    get_reserved_offset()const noexcept { return reserved_offset; }
+            VkDeviceSize    get_reserved_size()  const noexcept { return reserved_size; }
+            VkDeviceSize    get_descriptor_size()const noexcept { return descriptor_size; }
+            uint8_t*        get_mapped()         const noexcept { return mapped; }
         };
     }
 }

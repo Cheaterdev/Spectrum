@@ -6,9 +6,9 @@ module HAL:API.CommandList;
 import stl.core;
 import Core;
 import :CommandAllocator;   // full definition needed: allocator.vk_command_pool
-import :RootSignature;      // API::RootSignature::get_vk_pipeline_layout()
+import :RootSignature;      // HAL::RootSignature (no Vulkan objects with descriptor_heap)
 import :API.Device;         // API::Device::get_native_device()
-import :API.DescriptorHeap; // API::DescriptorHeap::get_vk_set()
+import :API.DescriptorHeap; // API::DescriptorHeap heap address/size accessors
 import :API.QueryHeap;      // API::QueryHeap::get_native()
 
 namespace HAL::API
@@ -446,30 +446,52 @@ namespace HAL::API
         }
 
         // Re-set topology — dynamic topology state doesn't survive a CB split.
-        vkCmdSetPrimitiveTopology(vk_cmd, current_topology);
+        // Mesh pipelines have no topology dynamic state, so skip it for them.
+        if (!current_is_mesh)
+            vkCmdSetPrimitiveTopology(vk_cmd, current_topology);
 
-        // Re-push the staged push-constant block (carries the bindless descriptor
-        // indices the shader reads as _hal_push.sN).  128 bytes = the range declared
-        // by the root signature's VkPushConstantRange.
-        if (current_pipeline_layout != VK_NULL_HANDLE)
-            vkCmdPushConstants(vk_cmd, current_pipeline_layout, VK_SHADER_STAGE_ALL,
-                               0, 128, push_constants.data());
+        // Re-push the staged root-constant block (bindless descriptor indices).
+        push_full_constants();
     }
 
-    void CommandList::flush_descriptor_sets()
+    // Push the entire staged 128-byte root-constant block.  With VK_EXT_descriptor_heap
+    // the driver requires EVERY statically-used push-constant byte to have been set via
+    // vkCmdPushDataEXT before a draw/dispatch, so we push the whole block (unset slots
+    // stay zero) rather than only the individually-set constants.
+    void CommandList::push_full_constants()
     {
-        if (!descriptor_sets_dirty || current_pipeline_layout == VK_NULL_HANDLE) return;
-        descriptor_sets_dirty = false;
+        if (vk_cmd == VK_NULL_HANDLE) return;
+        VkPushDataInfoEXT pi{ VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT };
+        pi.offset       = 0;
+        pi.data.address = push_constants.data();
+        pi.data.size    = push_constants.size() * sizeof(uint32_t);
+        vkCmdPushDataEXT(vk_cmd, &pi);
+    }
 
-        VkDescriptorSet sets[2] = { cbv_srv_uav_set, sampler_set };
-        uint32_t set_count = 0;
-        if (sets[0] != VK_NULL_HANDLE) set_count = 1;
-        if (sets[1] != VK_NULL_HANDLE) set_count = 2;
-        if (set_count == 0) return;
+    // Bind resource + sampler heaps (VK_EXT_descriptor_heap).  Like D3D12's
+    // SetDescriptorHeaps the binding persists for the command buffer; we re-flush
+    // when the heaps change or after a recorder-induced command-buffer split.
+    void CommandList::flush_heaps()
+    {
+        if (!heaps_dirty || vk_cmd == VK_NULL_HANDLE) return;
+        heaps_dirty = false;
 
-        // Bind for both graphics and compute so set is available regardless of pipeline type.
-        vkCmdBindDescriptorSets(vk_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                current_pipeline_layout, 0, set_count, sets, 0, nullptr);
+        if (cbv_srv_uav_addr != 0)
+        {
+            VkBindHeapInfoEXT bi{ VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT };
+            bi.heapRange           = { cbv_srv_uav_addr, cbv_srv_uav_size };
+            bi.reservedRangeOffset = cbv_srv_uav_reserved_off;
+            bi.reservedRangeSize   = cbv_srv_uav_reserved_size;
+            vkCmdBindResourceHeapEXT(vk_cmd, &bi);
+        }
+        if (sampler_addr != 0)
+        {
+            VkBindHeapInfoEXT bi{ VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT };
+            bi.heapRange           = { sampler_addr, sampler_size };
+            bi.reservedRangeOffset = sampler_reserved_off;
+            bi.reservedRangeSize   = sampler_reserved_size;
+            vkCmdBindSamplerHeapEXT(vk_cmd, &bi);
+        }
     }
 
     // ---- Pipeline binding ---------------------------------------------------
@@ -486,6 +508,7 @@ namespace HAL::API
         if (!pipeline->is_compute)
         {
             current_graphics_pipeline = pipeline->vk_pipeline;
+            current_is_mesh           = pipeline->is_mesh;
             // Keep dynamic topology in sync with the PSO's declared topology so
             // the spec requirement (same class) is always satisfied without
             // requiring explicit set_topology calls at every draw site.
@@ -493,22 +516,14 @@ namespace HAL::API
         }
 
         vkCmdBindPipeline(vk_cmd, bind_point, pipeline->vk_pipeline);
-        flush_descriptor_sets();
+        flush_heaps();
     }
 
-    void CommandList::set_graphics_signature(const HAL::RootSignature::ptr& sig)
-    {
-        if (!sig) return;
-        current_pipeline_layout = static_cast<API::RootSignature&>(*sig).get_vk_pipeline_layout();
-        descriptor_sets_dirty   = true;
-    }
-
-    void CommandList::set_compute_signature(const HAL::RootSignature::ptr& sig)
-    {
-        if (!sig) return;
-        current_pipeline_layout = static_cast<API::RootSignature&>(*sig).get_vk_pipeline_layout();
-        descriptor_sets_dirty   = true;
-    }
+    // With VK_EXT_descriptor_heap the root signature owns no Vulkan objects, so
+    // there is nothing to bind here.  Binding mappings are baked into the pipeline
+    // at creation; heaps are bound by set_descriptor_heaps().
+    void CommandList::set_graphics_signature(const HAL::RootSignature::ptr&) {}
+    void CommandList::set_compute_signature(const HAL::RootSignature::ptr&)  {}
 
     // ---- Descriptor heap binding -------------------------------------------
 
@@ -517,9 +532,27 @@ namespace HAL::API
         auto* api_cbv     = static_cast<API::DescriptorHeap*>(cbv);
         auto* api_sampler = static_cast<API::DescriptorHeap*>(sampler);
 
-        cbv_srv_uav_set = api_cbv     ? api_cbv->get_vk_set()     : VK_NULL_HANDLE;
-        sampler_set     = api_sampler ? api_sampler->get_vk_set() : VK_NULL_HANDLE;
-        descriptor_sets_dirty = true;
+        if (api_cbv)
+        {
+            cbv_srv_uav_addr          = api_cbv->get_device_address();
+            cbv_srv_uav_size          = api_cbv->get_total_size();
+            cbv_srv_uav_reserved_off  = api_cbv->get_reserved_offset();
+            cbv_srv_uav_reserved_size = api_cbv->get_reserved_size();
+        }
+        else { cbv_srv_uav_addr = 0; cbv_srv_uav_size = 0;
+               cbv_srv_uav_reserved_off = 0; cbv_srv_uav_reserved_size = 0; }
+
+        if (api_sampler)
+        {
+            sampler_addr          = api_sampler->get_device_address();
+            sampler_size          = api_sampler->get_total_size();
+            sampler_reserved_off  = api_sampler->get_reserved_offset();
+            sampler_reserved_size = api_sampler->get_reserved_size();
+        }
+        else { sampler_addr = 0; sampler_size = 0;
+               sampler_reserved_off = 0; sampler_reserved_size = 0; }
+
+        heaps_dirty = true;
     }
 
     // ---- Draw / dispatch ---------------------------------------------------
@@ -531,7 +564,7 @@ namespace HAL::API
         ensure_rendering_active();
         if (!in_render_pass) return; // no RTV set — skip rather than crash validation
         reapply_draw_state();
-        flush_descriptor_sets();
+        flush_heaps();
         vkCmdDraw(vk_cmd, vertex_count, instance_count, vertex_offset, instance_offset);
     }
 
@@ -544,7 +577,7 @@ namespace HAL::API
         reapply_draw_state();
         if (current_index_buffer != VK_NULL_HANDLE)
             vkCmdBindIndexBuffer(vk_cmd, current_index_buffer, current_index_offset, current_index_type);
-        flush_descriptor_sets();
+        flush_heaps();
         vkCmdDrawIndexed(vk_cmd, index_count, instance_count,
                          index_offset, static_cast<int32_t>(vertex_offset), instance_offset);
     }
@@ -554,23 +587,34 @@ namespace HAL::API
         if (vk_cmd == VK_NULL_HANDLE) return;
         // Compute doesn't use a render pass — end any active one first.
         end_rendering_if_active();
-        if (current_pipeline_layout != VK_NULL_HANDLE &&
-            (cbv_srv_uav_set != VK_NULL_HANDLE || sampler_set != VK_NULL_HANDLE))
-        {
-            VkDescriptorSet sets[2] = { cbv_srv_uav_set, sampler_set };
-            uint32_t count = (sampler_set != VK_NULL_HANDLE) ? 2 : 1;
-            vkCmdBindDescriptorSets(vk_cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                    current_pipeline_layout, 0, count, sets, 0, nullptr);
-        }
+        flush_heaps();
+        push_full_constants();  // compute shaders read bindless indices from push data
         vkCmdDispatch(vk_cmd, static_cast<uint32_t>(v.x),
                                static_cast<uint32_t>(v.y),
                                static_cast<uint32_t>(v.z));
     }
 
-    void CommandList::dispatch_mesh(ivec3 /*v*/)
+    void CommandList::dispatch_mesh(ivec3 v)
     {
-        // VK_EXT_mesh_shader not yet requested — Phase 5.
-        ASSERT(0);
+        if (vk_cmd == VK_NULL_HANDLE) return;
+        // Mesh dispatch is a rasterization command — needs an active render pass and
+        // the same pipeline/viewport/scissor/heaps as a draw (but no topology).
+        ensure_rendering_active();
+        if (!in_render_pass) return;
+        reapply_draw_state();
+        flush_heaps();
+        // vkCmdDrawMeshTasksEXT is an extension entry point — not exported by
+        // vulkan-1.dll — so resolve it once via vkGetDeviceProcAddr.
+        auto* dev = static_cast<API::Device*>(m_device);
+        VkDevice vk_dev = dev ? dev->get_native_device() : VK_NULL_HANDLE;
+        static PFN_vkCmdDrawMeshTasksEXT p_mesh = nullptr;
+        if (!p_mesh && vk_dev)
+            p_mesh = reinterpret_cast<PFN_vkCmdDrawMeshTasksEXT>(
+                vkGetDeviceProcAddr(vk_dev, "vkCmdDrawMeshTasksEXT"));
+        if (p_mesh)
+            p_mesh(vk_cmd, static_cast<uint32_t>(v.x),
+                           static_cast<uint32_t>(v.y),
+                           static_cast<uint32_t>(v.z));
     }
 
     // ---- Index buffer ------------------------------------------------------
@@ -638,25 +682,31 @@ namespace HAL::API
 
     void CommandList::graphics_set_constant(UINT slot, UINT offset, UINT value)
     {
-        if (vk_cmd == VK_NULL_HANDLE || current_pipeline_layout == VK_NULL_HANDLE) return;
-        uint32_t byte_offset = (slot + offset) * sizeof(uint32_t);
-        // Stage so reapply_draw_state() can re-push before each draw — vkCmdPushConstants
-        // does not survive a command-buffer split; without re-pushing, the shader reads 0
-        // for every bindless descriptor index (s4, …) → all bindless reads fail → black UI.
-        if ((slot + offset) < push_constants.size())
-            push_constants[slot + offset] = value;
-        vkCmdPushConstants(vk_cmd, current_pipeline_layout,
-                           VK_SHADER_STAGE_ALL, // must cover all stages in pipeline layout range
-                           byte_offset, sizeof(uint32_t), &value);
+        if (vk_cmd == VK_NULL_HANDLE) return;
+        const uint32_t idx = slot + offset;
+        // Stage so reapply_draw_state() can re-push the whole block before each draw —
+        // push data does not survive a command-buffer split; without re-pushing, the
+        // shader reads 0 for every bindless descriptor index → all bindless reads fail.
+        if (idx < push_constants.size()) push_constants[idx] = value;
+
+        VkPushDataInfoEXT pi{ VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT };
+        pi.offset       = idx * sizeof(uint32_t);
+        pi.data.address = &value;
+        pi.data.size    = sizeof(uint32_t);
+        vkCmdPushDataEXT(vk_cmd, &pi);
     }
 
     void CommandList::compute_set_constant(UINT slot, UINT offset, UINT value)
     {
-        if (vk_cmd == VK_NULL_HANDLE || current_pipeline_layout == VK_NULL_HANDLE) return;
-        uint32_t byte_offset = (slot + offset) * sizeof(uint32_t);
-        vkCmdPushConstants(vk_cmd, current_pipeline_layout,
-                           VK_SHADER_STAGE_ALL, // must cover all stages in pipeline layout range
-                           byte_offset, sizeof(uint32_t), &value);
+        if (vk_cmd == VK_NULL_HANDLE) return;
+        const uint32_t idx = slot + offset;
+        if (idx < push_constants.size()) push_constants[idx] = value;
+
+        VkPushDataInfoEXT pi{ VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT };
+        pi.offset       = idx * sizeof(uint32_t);
+        pi.data.address = &value;
+        pi.data.size    = sizeof(uint32_t);
+        vkCmdPushDataEXT(vk_cmd, &pi);
     }
 
     // Phase 5: push descriptors for inline CBV binding
@@ -717,11 +767,13 @@ namespace HAL::API
         auto& tdesc = resource.get_desc().as_texture();
         uint  mips  = tdesc.MipLevels ? tdesc.MipLevels : 1u;
 
+        VkImageAspectFlags aspect = static_cast<const API::Resource&>(resource).get_vk_aspect();
+
         VkBufferImageCopy region{};
         region.bufferOffset      = address.resource_offset;
         region.bufferRowLength   = (layout.row_stride / bpt);
         region.bufferImageHeight = 0; // tight vertically: rows = imageExtent.height
-        region.imageSubresource  = { VK_IMAGE_ASPECT_COLOR_BIT,
+        region.imageSubresource  = { aspect,
                                      sub_resource % mips, sub_resource / mips, 1 };
         region.imageOffset       = { offset.x, offset.y, offset.z };
         region.imageExtent       = { (uint32_t)box.x, (uint32_t)box.y, (uint32_t)box.z };
@@ -772,8 +824,8 @@ namespace HAL::API
         // For regular textures, get_imported_extent() falls back to {0,0}; use 1 as minimum.
         VkExtent2D ext = dst.get_imported_extent();
         VkImageCopy region{};
-        region.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-        region.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+        region.srcSubresource = { src.get_vk_aspect(), 0, 0, 1 };
+        region.dstSubresource = { dst.get_vk_aspect(), 0, 0, 1 };
         region.extent         = { ext.width  ? ext.width  : 1,
                                    ext.height ? ext.height : 1, 1 };
         vkCmdCopyImage(vk_cmd,
@@ -791,8 +843,8 @@ namespace HAL::API
         if (dst.get_vk_image() == VK_NULL_HANDLE || src.get_vk_image() == VK_NULL_HANDLE) return;
 
         VkImageCopy region{};
-        region.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-        region.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+        region.srcSubresource = { src.get_vk_aspect(), 0, 0, 1 };
+        region.dstSubresource = { dst.get_vk_aspect(), 0, 0, 1 };
         region.srcOffset      = { src_pos.x, src_pos.y, src_pos.z };
         region.dstOffset      = { dest_pos.x, dest_pos.y, dest_pos.z };
         region.extent         = { static_cast<uint32_t>(size.x),
@@ -860,8 +912,79 @@ namespace HAL::API
     }
 
     // ---- Indirect -----------------------------------------------------------
-    void CommandList::execute_indirect(const IndirectCommand&, UINT, Resource*, UINT64,
-                                        Resource*, UINT64) { ASSERT(0); }
+    // The engine's argument structs (DrawIndexedArguments / DispatchArguments /
+    // DispatchMeshArguments) are laid out identically to Vulkan's indirect command
+    // structs and carry no per-command root constants, so each maps straight to a
+    // vkCmd*Indirect call.  A counter buffer (when present) selects the *Count
+    // variant, matching D3D12 ExecuteIndirect's max(count, maxCommands) semantics.
+    void CommandList::execute_indirect(const IndirectCommand& command, UINT max_commands,
+                                        Resource* command_buffer, UINT64 command_offset,
+                                        Resource* counter_buffer, UINT64 counter_offset)
+    {
+        if (vk_cmd == VK_NULL_HANDLE || !command_buffer) return;
+        VkBuffer args = static_cast<API::Resource&>(*command_buffer).get_vk_buffer();
+        if (args == VK_NULL_HANDLE) return;
+
+        const uint32_t stride = command.stride;
+        VkBuffer count_buf = counter_buffer
+            ? static_cast<API::Resource&>(*counter_buffer).get_vk_buffer() : VK_NULL_HANDLE;
+
+        switch (command.kind)
+        {
+        case IndirectKind::DrawIndexed:
+        {
+            ensure_rendering_active();
+            if (!in_render_pass) return;
+            reapply_draw_state();
+            if (current_index_buffer != VK_NULL_HANDLE)
+                vkCmdBindIndexBuffer(vk_cmd, current_index_buffer, current_index_offset, current_index_type);
+            flush_heaps();
+            if (count_buf != VK_NULL_HANDLE)
+                vkCmdDrawIndexedIndirectCount(vk_cmd, args, command_offset,
+                                              count_buf, counter_offset, max_commands, stride);
+            else
+                vkCmdDrawIndexedIndirect(vk_cmd, args, command_offset, max_commands, stride);
+            break;
+        }
+        case IndirectKind::DispatchMesh:
+        {
+            ensure_rendering_active();
+            if (!in_render_pass) return;
+            reapply_draw_state();
+            flush_heaps();
+            // Mesh-shader indirect commands are EXT — not exported by vulkan-1.dll,
+            // so resolve them once via vkGetDeviceProcAddr.
+            auto* dev = static_cast<API::Device*>(m_device);
+            VkDevice vk_dev = dev ? dev->get_native_device() : VK_NULL_HANDLE;
+            static PFN_vkCmdDrawMeshTasksIndirectEXT      p_mesh = nullptr;
+            static PFN_vkCmdDrawMeshTasksIndirectCountEXT p_mesh_count = nullptr;
+            if (!p_mesh && vk_dev)
+                p_mesh = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectEXT>(
+                    vkGetDeviceProcAddr(vk_dev, "vkCmdDrawMeshTasksIndirectEXT"));
+            if (!p_mesh_count && vk_dev)
+                p_mesh_count = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectCountEXT>(
+                    vkGetDeviceProcAddr(vk_dev, "vkCmdDrawMeshTasksIndirectCountEXT"));
+            if (count_buf != VK_NULL_HANDLE && p_mesh_count)
+                p_mesh_count(vk_cmd, args, command_offset, count_buf, counter_offset, max_commands, stride);
+            else if (p_mesh)
+                p_mesh(vk_cmd, args, command_offset, max_commands, stride);
+            break;
+        }
+        case IndirectKind::Dispatch:
+        {
+            end_rendering_if_active();
+            flush_heaps();
+            push_full_constants();  // compute shaders read bindless indices from push data
+            // Vulkan has no indirect-count dispatch; issue up to max_commands
+            // individual indirect dispatches from consecutive buffer entries.
+            for (uint32_t i = 0; i < max_commands; ++i)
+                vkCmdDispatchIndirect(vk_cmd, args, command_offset + static_cast<VkDeviceSize>(i) * stride);
+            break;
+        }
+        default:
+            break;
+        }
+    }
 
     // ---- Misc ---------------------------------------------------------------
     void CommandList::set_name(std::wstring_view name)

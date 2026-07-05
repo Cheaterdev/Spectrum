@@ -37,6 +37,7 @@ public:
 
     ~GraphicsSystem() override
     {
+	    GUI::NinePatch::reset();
     	AssetRenderer::reset();
         Skin::reset();
         HAL::Texture::reset_manager();

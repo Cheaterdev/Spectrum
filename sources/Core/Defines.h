@@ -9,6 +9,7 @@
 
 // ---- Token utilities, compiler helpers, thread-safety annotations ----------
 #include "utils/utils_macros.h"
+#include <cstdio>   // assert_fail diagnostics (fopen/fprintf)
 
 // ============================================================================
 // Assert  (no standalone header — originates in Core/Core_defs.h alongside
@@ -29,7 +30,14 @@
 #define CORE_ASSERT_FAIL_DEFINED
 namespace Core {
     [[noreturn]] inline void assert_fail(const char* expr, const char* file, int line) noexcept {
-        (void)expr; (void)file; (void)line;
+        // Record where the assert fired before breaking — WER only reports the
+        // __debugbreak address inside this function, not the failing call site.
+        if (FILE* f = std::fopen("assert.txt", "a")) {
+            std::fprintf(f, "ASSERT FAILED: (%s)  at %s:%d\n", expr, file, line);
+            std::fclose(f);
+        }
+        std::fprintf(stderr, "ASSERT FAILED: (%s)  at %s:%d\n", expr, file, line);
+        std::fflush(stderr);
         __debugbreak();
     }
 }

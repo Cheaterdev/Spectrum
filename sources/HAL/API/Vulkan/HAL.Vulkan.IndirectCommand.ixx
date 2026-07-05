@@ -20,16 +20,33 @@ namespace HAL
 
 export namespace HAL
 {
+    // Which vkCmd*Indirect the command buffer feeds.  The engine's argument
+    // structs (SIG.ixx) are laid out identically to Vulkan's indirect command
+    // structs, so no command signature is needed — only the kind + stride.
+    enum class IndirectKind : uint { Unknown, DrawIndexed, Dispatch, DispatchMesh };
+
+    template<class T>
+    constexpr IndirectKind indirect_kind_of()
+    {
+        if      constexpr (std::is_same_v<T, DrawIndexedArguments>)  return IndirectKind::DrawIndexed;
+        else if constexpr (std::is_same_v<T, DispatchArguments>)     return IndirectKind::Dispatch;
+        else if constexpr (std::is_same_v<T, DispatchMeshArguments>) return IndirectKind::DispatchMesh;
+        else                                                         return IndirectKind::Unknown;
+    }
+
     class IndirectCommand
     {
-        IndirectCommand(const UsedSlots& slots) : slots(slots) {}
+        IndirectCommand(const UsedSlots& slots, IndirectKind kind, uint stride)
+            : slots(slots), kind(kind), stride(stride) {}
     public:
-        UsedSlots slots;
+        UsedSlots    slots;
+        IndirectKind kind   = IndirectKind::Unknown; // selects the vkCmd*Indirect call
+        uint         stride = 0;                      // bytes between commands in the buffer
 
         IndirectCommand() = default;
 
         template<class T>
-        static void process_one(UsedSlots& slots, uint& total_size)
+        static void process_one(UsedSlots& slots, uint& total_size, IndirectKind& kind)
         {
             if constexpr (HasID<T>)
             {
@@ -38,17 +55,20 @@ export namespace HAL
             }
             else
                 total_size += sizeof(Underlying<T>);
+
+            constexpr IndirectKind k = indirect_kind_of<T>();
+            if constexpr (k != IndirectKind::Unknown) kind = k;
         }
 
         template<class... Args>
         static IndirectCommand create_command(Device& /*device*/,
                                               RootSignature* /*layout*/ = nullptr)
         {
-            UsedSlots slots;
-            uint total_size = 0;
-            (process_one<Args>(slots, total_size), ...);
-            // Phase 4: create real Vulkan indirect buffer layout.
-            return IndirectCommand(slots);
+            UsedSlots    slots;
+            uint         total_size = 0;
+            IndirectKind kind = IndirectKind::Unknown;
+            (process_one<Args>(slots, total_size, kind), ...);
+            return IndirectCommand(slots, kind, total_size);
         }
 
         template<class... Args>

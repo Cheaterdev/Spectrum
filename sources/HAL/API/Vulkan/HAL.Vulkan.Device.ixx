@@ -1,3 +1,9 @@
+module;
+// Global module fragment: VK_EXT_descriptor_heap types (VkDescriptorSetAndBindingMappingEXT,
+// VkShaderDescriptorSetAndBindingMappingInfoEXT, VkPhysicalDeviceDescriptorHeapPropertiesEXT)
+// are not reliably visible through the `vulkan` header unit, so include the header directly.
+#define VK_USE_PLATFORM_WIN32_KHR
+#include <vulkan/vulkan.h>
 export module HAL:API.Device;
 
 import stl.core;
@@ -61,14 +67,29 @@ export namespace HAL
             // Descriptor sizes — interface compat; always 0 in Vulkan.
             enum_array<DescriptorHeapType, uint> descriptor_sizes;
 
-            // Global bindless descriptor set layouts (created in init()).
-            VkDescriptorSetLayout cbv_srv_uav_layout = VK_NULL_HANDLE;
-            VkDescriptorSetLayout sampler_layout     = VK_NULL_HANDLE;
+            // ---- VK_EXT_descriptor_heap ------------------------------------
+            // Descriptor sizes reported by the driver.  Unlike D3D12 (one uniform
+            // CBV_SRV_UAV increment), Vulkan reports separate image/buffer/sampler
+            // sizes.  We use a single uniform resource stride = max(image,buffer)
+            // so a flat heap keeps D3D12's "slot index == array element, uniform
+            // increment" model; the sampler heap uses its own stride.
+            VkDeviceSize resource_descriptor_size = 0;   // uniform resource stride
+            VkDeviceSize sampler_descriptor_size  = 0;
+            VkDeviceSize resource_heap_alignment  = 0;
+            VkDeviceSize sampler_heap_alignment   = 0;
+            VkDeviceSize resource_reserved_range  = 0;   // minResourceHeapReservedRange
+            VkDeviceSize sampler_reserved_range   = 0;   // minSamplerHeapReservedRange(WithEmbedded)
 
-            // Inline static samplers s0..s4 (FrameLayout.h, binding 384+N in set 0).
-            // Created in init(); written into every CBV_SRV_UAV DescriptorHeap set.
+            // Shader set/binding -> heap mapping table, built once in init().
+            // Storage must outlive every pipeline (pipelines reference pMappings
+            // by pointer at creation), so it is owned here for the device lifetime.
+            // Inline static samplers s0..s4 (FrameLayout.h) are embedded directly
+            // into the resource heap via pEmbeddedSampler; we keep their
+            // VkSamplerCreateInfo alive (pointed at by the mapping table).
             static constexpr uint32_t NUM_INLINE_SMP = 5;
-            VkSampler inline_samplers[NUM_INLINE_SMP] = {};
+            std::vector<VkSamplerCreateInfo>                 embedded_sampler_cis;
+            std::vector<VkDescriptorSetAndBindingMappingEXT> binding_mappings;
+            VkShaderDescriptorSetAndBindingMappingInfoEXT    binding_mapping_info{};
 
             // ---- Pending initial-layout transitions --------------------------
             // D3D12 creates resources directly in their initial state; Vulkan
@@ -98,11 +119,18 @@ export namespace HAL
             VkPhysicalDevice get_vk_physical_dev()   const noexcept { return vk_physical; }
             uint32_t         get_queue_family(int i) const noexcept { return queue_families[i]; }
 
-            // ---- Global bindless descriptor set layouts ----------------------
-            // Created once in init(); shared by DescriptorHeap and RootSignature.
-            VkDescriptorSetLayout get_cbv_srv_uav_layout() const noexcept { return cbv_srv_uav_layout; }
-            VkDescriptorSetLayout get_sampler_layout()     const noexcept { return sampler_layout; }
-            const VkSampler*      get_inline_samplers()    const noexcept { return inline_samplers; }
+            // ---- VK_EXT_descriptor_heap accessors ----------------------------
+            // Uniform resource-heap slot stride (D3D12 "handle increment size").
+            VkDeviceSize get_resource_descriptor_size() const noexcept { return resource_descriptor_size; }
+            VkDeviceSize get_sampler_descriptor_size()  const noexcept { return sampler_descriptor_size; }
+            VkDeviceSize get_resource_heap_alignment()  const noexcept { return resource_heap_alignment; }
+            VkDeviceSize get_sampler_heap_alignment()   const noexcept { return sampler_heap_alignment; }
+            VkDeviceSize get_resource_reserved_range()  const noexcept { return resource_reserved_range; }
+            VkDeviceSize get_sampler_reserved_range()   const noexcept { return sampler_reserved_range; }
+
+            // Shader set/binding -> heap mapping, chained into every pipeline's stages.
+            const VkShaderDescriptorSetAndBindingMappingInfoEXT& get_binding_mapping_info() const noexcept
+            { return binding_mapping_info; }
 
             // Queue a one-time UNDEFINED -> layout transition for a new image.
             // Flushed by the next Queue::execute on whichever queue submits first

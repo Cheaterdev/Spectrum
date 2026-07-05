@@ -309,18 +309,24 @@ namespace HAL
 
         // Pre-acquire the first image so m_frameIndex is valid before the
         // first wait_for_free() + get_current_frame() calls.  Use ring slot 0.
-        do_acquire(api_dev.vk_device, vk_swapchain,
-                   image_available[acquire_counter % image_available.size()],
-                   current_image, m_frameIndex);
-
-        // Wire the image-available wait semaphore into the first execute() call so the
-        // GPU waits for the presentation engine before writing to the swapchain image.
-        // render_finished is signalled explicitly in present() (not via pending_signal_sem)
-        // so it always fires after ALL render command lists — not just the first submit.
+        // Only wire the wait semaphore if the acquire signalled it — otherwise the
+        // first render submit would wait on an unsignalled binary semaphore.
         auto& api_queue = static_cast<API::Queue&>(*device.get_queue(CommandListType::DIRECT));
-        api_queue.set_frame_semaphores(
-            image_available[acquire_counter % image_available.size()], VK_NULL_HANDLE);
-        ++acquire_counter;
+        const uint32_t first_sem = acquire_counter % image_available.size();
+        if (do_acquire(api_dev.vk_device, vk_swapchain,
+                       image_available[first_sem], current_image, m_frameIndex))
+        {
+            // Wire the image-available wait semaphore into the first execute() so the
+            // GPU waits for the presentation engine before writing the swapchain image.
+            // render_finished is signalled explicitly in present() so it always fires
+            // after ALL render command lists — not just the first submit.
+            api_queue.set_frame_semaphores(image_available[first_sem], VK_NULL_HANDLE);
+            ++acquire_counter;
+        }
+        else
+        {
+            api_queue.set_frame_semaphores(VK_NULL_HANDLE, VK_NULL_HANDLE);
+        }
     }
 
     void SwapChain::on_change()
@@ -619,6 +625,12 @@ namespace HAL
             }
             else
             {
+                // Acquire failed (OUT_OF_DATE mid-resize) — the previous frame's
+                // acquire semaphore was already consumed, so leaving it wired would
+                // make the next render submit wait on a binary semaphore that has no
+                // way to be signaled (→ deadlock).  Clear it; resize() re-establishes
+                // sync on the next frame.
+                api_queue.set_frame_semaphores(VK_NULL_HANDLE, VK_NULL_HANDLE);
                 m_frameIndex = (m_frameIndex + 1) % image_count;
             }
 
@@ -768,12 +780,19 @@ namespace HAL
 
         // Re-acquire the first image post-resize using ring slot 0, then advance
         // the counter so present() rotates through the rest of the ring.
-        do_acquire(api_dev.vk_device, vk_swapchain,
-                   image_available[acquire_counter % image_available.size()],
-                   current_image, m_frameIndex);
-        // Wire only the wait side; render_finished is signalled explicitly in present().
-        api_queue.set_frame_semaphores(
-            image_available[acquire_counter % image_available.size()], VK_NULL_HANDLE);
-        ++acquire_counter;
+        // Only wire the wait semaphore if the acquire actually signalled it — a
+        // freshly-created swapchain can be immediately OUT_OF_DATE (rapid resizing),
+        // and waiting on an unsignalled binary semaphore deadlocks the next submit.
+        const uint32_t sem_idx = acquire_counter % image_available.size();
+        if (do_acquire(api_dev.vk_device, vk_swapchain,
+                       image_available[sem_idx], current_image, m_frameIndex))
+        {
+            api_queue.set_frame_semaphores(image_available[sem_idx], VK_NULL_HANDLE);
+            ++acquire_counter;
+        }
+        else
+        {
+            api_queue.set_frame_semaphores(VK_NULL_HANDLE, VK_NULL_HANDLE);
+        }
     }
 }

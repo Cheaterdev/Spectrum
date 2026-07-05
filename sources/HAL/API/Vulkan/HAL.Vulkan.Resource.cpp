@@ -186,6 +186,20 @@ namespace HAL
                 ici.imageType   = tex.is3D() ? VK_IMAGE_TYPE_3D :
                                   tex.is1D() ? VK_IMAGE_TYPE_1D : VK_IMAGE_TYPE_2D;
                 ici.format      = to_native(tex.Format);
+                // A depth resource may declare a typeless/color format (R32_TYPELESS,
+                // R32_FLOAT) because it is also sampled.  Vulkan requires the image to
+                // carry a genuine depth format so it matches the pipeline's
+                // depthAttachmentFormat (mismatch = draw-time crash on the depth pass).
+                if (check(_desc.Flags & ResFlags::DepthStencil))
+                {
+                    switch (ici.format)
+                    {
+                    case VK_FORMAT_R32_SFLOAT: ici.format = VK_FORMAT_D32_SFLOAT; break;
+                    case VK_FORMAT_R16_SFLOAT:
+                    case VK_FORMAT_R16_UNORM:   ici.format = VK_FORMAT_D16_UNORM;  break;
+                    default: break; // already a depth format (D16/D24S8/D32/D32S8)
+                    }
+                }
                 ici.extent      = { tex.Dimensions.x,
                                     tex.is1D() ? 1u : tex.Dimensions.y,
                                     tex.is3D() ? tex.Dimensions.z : 1u };
@@ -239,6 +253,8 @@ namespace HAL
                     ivci.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
                     ivci.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
                     vkCreateImageView(device.get_native_device(), &ivci, nullptr, &vk_image_view);
+                    // Saved for VK_EXT_descriptor_heap SRV writes (which take a create-info).
+                    vk_view_ci = ivci;
 
                     // The state manager records `initialLayout` as the layout this
                     // image rests in between command lists, but a fresh VkImage is

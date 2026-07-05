@@ -46,6 +46,8 @@ VkFormat to_native(Format format)
     case Format::R8G8B8A8_SINT:         return VK_FORMAT_R8G8B8A8_SINT;
     case Format::B8G8R8A8_UNORM:        return VK_FORMAT_B8G8R8A8_UNORM;
     case Format::B8G8R8A8_UNORM_SRGB:   return VK_FORMAT_B8G8R8A8_SRGB;
+    // Alpha-only (glyph/font atlases).  Exact match provided by VK_KHR_maintenance5.
+    case Format::A8_UNORM:              return VK_FORMAT_A8_UNORM;
     // ---- 16-bit --------------------------------------------------------------
     case Format::R16_FLOAT:             return VK_FORMAT_R16_SFLOAT;
     case Format::R16_UNORM:             return VK_FORMAT_R16_UNORM;
@@ -159,6 +161,7 @@ Format from_native(VkFormat format)
     case VK_FORMAT_R8G8B8A8_SINT:                 return Format::R8G8B8A8_SINT;
     case VK_FORMAT_B8G8R8A8_UNORM:                return Format::B8G8R8A8_UNORM;
     case VK_FORMAT_B8G8R8A8_SRGB:                 return Format::B8G8R8A8_UNORM_SRGB;
+    case VK_FORMAT_A8_UNORM:                      return Format::A8_UNORM;
     case VK_FORMAT_R16_SFLOAT:                    return Format::R16_FLOAT;
     case VK_FORMAT_R16_UNORM:                     return Format::R16_UNORM;
     case VK_FORMAT_R16_UINT:                      return Format::R16_UINT;
