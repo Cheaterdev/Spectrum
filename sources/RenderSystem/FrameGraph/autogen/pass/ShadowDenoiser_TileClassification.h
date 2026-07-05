@@ -47,15 +47,27 @@ public:
 
 		Handlers::Texture ShadowDenoiser_Scratch2 = ResourceID::ShadowDenoiser_Scratch2;
 
-		static inline const wchar_t* const resource_names[] = {		L"ShadowDenoiser_TileBuffer",		L"GBuffer_DepthPrev",		L"GBuffer_Depth",		L"GBuffer_Normals",		L"GBuffer_Speed",		L"ShadowDenoiser_TileMetaBuffer",		L"ShadowDenoiser_Moments",		L"ShadowDenoiser_MomentsPrev",		L"ShadowDenoiser_Scratch",		L"ShadowDenoiser_Scratch2",
+		// Resources this pass touches, in declaration order, each paired with
+		// whether the pass declares [Write] on it.
+		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+		{ ResourceID::ShadowDenoiser_TileBuffer, false },
+		{ ResourceID::GBuffer_DepthPrev, false },
+		{ ResourceID::GBuffer_Depth, false },
+		{ ResourceID::GBuffer_Normals, false },
+		{ ResourceID::GBuffer_Speed, false },
+		{ ResourceID::ShadowDenoiser_TileMetaBuffer, false },
+		{ ResourceID::ShadowDenoiser_Moments, false },
+		{ ResourceID::ShadowDenoiser_MomentsPrev, false },
+		{ ResourceID::ShadowDenoiser_Scratch, false },
+		{ ResourceID::ShadowDenoiser_Scratch2, false },
 		};
-		static constexpr uint resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_accesses);
 	};
 
 
-	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
 	{
-		return std::span<const wchar_t* const>(Context::resource_names, Context::resource_count);
+		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
 	static constexpr LiteralWStr Name{L"ShadowDenoiser_TileClassification"};

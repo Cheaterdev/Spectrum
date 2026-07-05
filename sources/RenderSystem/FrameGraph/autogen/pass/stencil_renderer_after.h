@@ -23,15 +23,19 @@ public:
 
 		Handlers::Texture Stencil_color_tex = ResourceID::Stencil_color_tex;
 
-		static inline const wchar_t* const resource_names[] = {		L"ResultTexture",		L"Stencil_color_tex",
+		// Resources this pass touches, in declaration order, each paired with
+		// whether the pass declares [Write] on it.
+		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+		{ ResourceID::ResultTexture, false },
+		{ ResourceID::Stencil_color_tex, false },
 		};
-		static constexpr uint resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_accesses);
 	};
 
 
-	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
 	{
-		return std::span<const wchar_t* const>(Context::resource_names, Context::resource_count);
+		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
 	static constexpr LiteralWStr Name{L"stencil_renderer_after"};

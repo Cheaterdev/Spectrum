@@ -15,15 +15,20 @@
 
 using namespace FrameGraph;
 
-{%- macro collect_resource_names(params) -%}
+{#- Emits { ResourceID::X, is_write } per resource the pass touches. -#}
+{%- macro collect_resource_accesses(params) -%}
 {%- for v in params -%}
 {%- set view = parsed.views[v.type] -%}
 {%- if view is defined -%}
-{{ collect_resource_names(view.params) -}}
+{{ collect_resource_accesses(view.params) -}}
 {%- else -%}
-		L"{{v.name}}",
+{%- if v.options.Write is defined %}
+		{ ResourceID::{{v.name}}, true },
+{%- else %}
+		{ ResourceID::{{v.name}}, false },
+{%- endif %}
 {%- if v.options.Recreate is defined %}
-		L"{{v.options.Recreate.value_atom.expr}}",
+		{ ResourceID::{{v.name}}, true },
 {%- endif %}
 {%- endif -%}
 {%- endfor -%}
@@ -54,20 +59,22 @@ public:
 {%- endif %}
 {% endfor -%}
 {% if pass.params | length > 0 -%}
-		static inline const wchar_t* const resource_names[] = {
-{{- collect_resource_names(pass.params) }}
+		// Resources this pass touches, in declaration order, each paired with
+		// whether the pass declares [Write] on it.
+		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+{{- collect_resource_accesses(pass.params) }}
 		};
-		static constexpr uint resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_accesses);
 {% else -%}
-		static inline const wchar_t* const resource_names[] = { nullptr };
+		static inline const FrameGraph::ResourceAccess resource_accesses[] = { { ResourceID::Count, false } };
 		static constexpr uint resource_count = 0;
 {% endif -%}
 	};
 
 
-	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
 	{
-		return std::span<const wchar_t* const>(Context::resource_names, Context::resource_count);
+		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
 	static constexpr LiteralWStr Name{L"{{pass.name}}"};

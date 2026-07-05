@@ -62,15 +62,32 @@ public:
 
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
-		static inline const wchar_t* const resource_names[] = {		L"GBuffer_DepthPrev",		L"GBuffer_NormalsPrev",		L"GBuffer_Depth",		L"GBuffer_Normals",		L"GBuffer_Speed",		L"VoxelReflectionNoise",		L"ReflectionDenoiser_RadiancePrev",		L"ReflectionDenoiser_AverageRadiance",		L"ReflectionDenoiser_AverageRadiancePrev",		L"ReflectionDenoiser_Variance",		L"ReflectionDenoiser_VariancePrev",		L"ReflectionDenoiser_SampleCount",		L"ReflectionDenoiser_SampleCountPrev",		L"ReflectionDenoiser_ReprojectedRadiance",		L"BlueNoise",
+		// Resources this pass touches, in declaration order, each paired with
+		// whether the pass declares [Write] on it.
+		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+		{ ResourceID::GBuffer_DepthPrev, false },
+		{ ResourceID::GBuffer_NormalsPrev, false },
+		{ ResourceID::GBuffer_Depth, false },
+		{ ResourceID::GBuffer_Normals, false },
+		{ ResourceID::GBuffer_Speed, false },
+		{ ResourceID::VoxelReflectionNoise, false },
+		{ ResourceID::ReflectionDenoiser_RadiancePrev, false },
+		{ ResourceID::ReflectionDenoiser_AverageRadiance, false },
+		{ ResourceID::ReflectionDenoiser_AverageRadiancePrev, false },
+		{ ResourceID::ReflectionDenoiser_Variance, false },
+		{ ResourceID::ReflectionDenoiser_VariancePrev, false },
+		{ ResourceID::ReflectionDenoiser_SampleCount, false },
+		{ ResourceID::ReflectionDenoiser_SampleCountPrev, false },
+		{ ResourceID::ReflectionDenoiser_ReprojectedRadiance, false },
+		{ ResourceID::BlueNoise, false },
 		};
-		static constexpr uint resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_accesses);
 	};
 
 
-	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
 	{
-		return std::span<const wchar_t* const>(Context::resource_names, Context::resource_count);
+		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
 	static constexpr LiteralWStr Name{L"ReflectionDenoiser_Reproject"};

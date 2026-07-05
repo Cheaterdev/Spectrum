@@ -8,7 +8,7 @@ class PassNodeBase
 {
 public:
 	virtual ~PassNodeBase() = default;
-	virtual std::span<const wchar_t* const> GetUsedResourcesList() const = 0;
+	virtual std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const = 0;
 };
 
 }

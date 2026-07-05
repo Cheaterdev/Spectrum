@@ -23,15 +23,19 @@ public:
 
 		Handlers::StructuredBuffer<uint> ShadowDenoiser_TileBuffer = ResourceID::ShadowDenoiser_TileBuffer;
 
-		static inline const wchar_t* const resource_names[] = {		L"ShadowMask",		L"ShadowDenoiser_TileBuffer",
+		// Resources this pass touches, in declaration order, each paired with
+		// whether the pass declares [Write] on it.
+		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+		{ ResourceID::ShadowMask, false },
+		{ ResourceID::ShadowDenoiser_TileBuffer, false },
 		};
-		static constexpr uint resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_accesses);
 	};
 
 
-	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
 	{
-		return std::span<const wchar_t* const>(Context::resource_names, Context::resource_count);
+		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
 	static constexpr LiteralWStr Name{L"ShadowDenoiser_Prepare"};

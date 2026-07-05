@@ -62,6 +62,15 @@ public:
 
 	 constexpr ResourceFlags WRITEABLE_FLAGS =ResourceFlags::CopyDest |  ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil;// | ResourceFlags::GenCPU;
 
+	// A pass's static declaration of one resource it touches, from the SIG
+	// PassNode block: the resource id plus whether the pass declares [Write] on
+	// it. Emitted per-pass as Context::resource_accesses[].
+	struct ResourceAccess
+	{
+		ResourceID id;
+		bool       write;
+	};
+
 	//struct BufferDesc
 	//{
 	//	size_t size;

@@ -29,15 +29,34 @@ public:
 
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
-		static inline const wchar_t* const resource_names[] = {		L"PSSM_Cameras",		L"GBuffer_Albedo",		L"GBuffer_Normals",		L"GBuffer_Depth",		L"GBuffer_Specular",		L"GBuffer_Speed",		L"GBuffer_DepthMips",		L"GBuffer_Quality",		L"GBuffer_TempColor",		L"GBuffer_NormalsPrev",		L"GBuffer_SpecularPrev",		L"GBuffer_DepthPrev",		L"GBuffer_HiZ",		L"GBuffer_HiZ_UAV",		L"LightMask",		L"ShadowMask",		L"ResultTexture",
+		// Resources this pass touches, in declaration order, each paired with
+		// whether the pass declares [Write] on it.
+		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+		{ ResourceID::PSSM_Cameras, false },
+		{ ResourceID::GBuffer_Albedo, false },
+		{ ResourceID::GBuffer_Normals, false },
+		{ ResourceID::GBuffer_Depth, false },
+		{ ResourceID::GBuffer_Specular, false },
+		{ ResourceID::GBuffer_Speed, false },
+		{ ResourceID::GBuffer_DepthMips, false },
+		{ ResourceID::GBuffer_Quality, false },
+		{ ResourceID::GBuffer_TempColor, false },
+		{ ResourceID::GBuffer_NormalsPrev, false },
+		{ ResourceID::GBuffer_SpecularPrev, false },
+		{ ResourceID::GBuffer_DepthPrev, false },
+		{ ResourceID::GBuffer_HiZ, false },
+		{ ResourceID::GBuffer_HiZ_UAV, false },
+		{ ResourceID::LightMask, false },
+		{ ResourceID::ShadowMask, false },
+		{ ResourceID::ResultTexture, false },
 		};
-		static constexpr uint resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_accesses);
 	};
 
 
-	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
 	{
-		return std::span<const wchar_t* const>(Context::resource_names, Context::resource_count);
+		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
 	static constexpr LiteralWStr Name{L"PSSM_Combine"};

@@ -280,7 +280,7 @@ GraphicsPSO StatGraphLines
 [Required]
 PassNode UI_PreDraw
 {
-	StructuredBuffer<uint> UI_PreDraw_Sync;
+	[Write] StructuredBuffer<uint> UI_PreDraw_Sync;
 }
 
 [Static]

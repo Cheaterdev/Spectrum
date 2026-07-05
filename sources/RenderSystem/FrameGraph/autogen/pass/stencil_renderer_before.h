@@ -26,15 +26,20 @@ public:
 
 		Handlers::StructuredBuffer<UINT> axis_id_buffer = ResourceID::axis_id_buffer;
 
-		static inline const wchar_t* const resource_names[] = {		L"depth_tex",		L"id_buffer",		L"axis_id_buffer",
+		// Resources this pass touches, in declaration order, each paired with
+		// whether the pass declares [Write] on it.
+		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+		{ ResourceID::depth_tex, false },
+		{ ResourceID::id_buffer, false },
+		{ ResourceID::axis_id_buffer, false },
 		};
-		static constexpr uint resource_count = std::size(resource_names);
+		static constexpr uint resource_count = std::size(resource_accesses);
 	};
 
 
-	std::span<const wchar_t* const> GetUsedResourcesList() const override
+	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
 	{
-		return std::span<const wchar_t* const>(Context::resource_names, Context::resource_count);
+		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
 	static constexpr LiteralWStr Name{L"stencil_renderer_before"};
