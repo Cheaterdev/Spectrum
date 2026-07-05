@@ -374,36 +374,6 @@ namespace Spectrum
         }
     }
 
-
-    // Minimal Vulkan clear-screen test — depends only on HAL (no RenderSystem).
-    // Useful for validating the Vulkan backend without the full engine init path.
-    [Sharpmake.Generate]
-    public class VulkanTest : Application
-    {
-        public VulkanTest()
-        {
-            SourceRootPath = @"[project.SharpmakeCsPath]\sources\VulkanTest";
-            AssemblyName = "VulkanTest";
-        }
-
-        public override void ConfigureAll(Configuration conf, CustomTarget target)
-        {
-            base.ConfigureAll(conf, target);
-
-            conf.LibraryFiles.Add("Onecore.lib");
-            conf.LibraryFiles.Add("user32.lib");
-
-            conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
-            conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
-
-            // Window.h lives under sources/Spectrum/Platform — expose it to VulkanTest
-            conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\sources\Spectrum");
-
-            conf.AddPublicDependency<HAL>(target);
-            conf.AddPublicDependency<RenderSystem>(target);
-        }
-    }
-
     [Sharpmake.Generate]
     public class Spectrum : Application
     {
@@ -512,7 +482,6 @@ namespace Spectrum
             conf.Name = platformName;
 
             conf.AddProject<Spectrum>(target);
-            conf.AddProject<VulkanTest>(target);
             conf.AddProject<SIGParser>(target);
             conf.AddProject<Test>(target);
             conf.AddProject<Resources>(target);

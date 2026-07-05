@@ -355,13 +355,13 @@ public:
 		cam.update({ 0, 0 });
 
 
-		voxel_gi->pass_data(graph.builder);
-
+	
 		{
 			PROFILE(L"graph");
 			pipeline.add_passes(graph);
 		}
 
+	   	voxel_gi->pass_data(graph.builder);
 
 		graph.add_slot_generator([this](Graph& graph)
 			{
@@ -596,7 +596,11 @@ public:
 				pipeline.add_passes(graph);
 
 			}
-			
+
+			// Register the swapchain as a passed resource only after all passes
+			// exist: max_passes (used to pre-size per-state append storage) is
+			// captured from passes.size() at resource-creation time.
+			graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, swap_chain->get_current_frame(), swap_chain->get_fence(), ResourceFlags::Required);
 
 			graph.setup();
 			graph.compile(swap_chain->m_frameIndex);
@@ -640,15 +644,13 @@ public:
 	{
 		PROFILE(L"setup_graph");
 		graph.start_new_frame();
-		graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, swap_chain->get_current_frame(), swap_chain->get_fence(), ResourceFlags::Required);
-
+		
 
 		{
 			PROFILE(L"create_graph");
 			create_graph(graph);
 		}
 
-	
 		static bool gen = false;
 
 		if (!gen && GetAsyncKeyState('N'))

@@ -332,6 +332,95 @@ export
 	};
 
 
+	// Vector whose emplace_back/push_back is safe to call from many threads at
+	// once: each caller claims a unique slot via an atomic counter. Requires
+	// reserve() to have sized the backing storage up front (single-threaded) so
+	// concurrent appends never reallocate or exceed capacity. Every other
+	// operation (iteration, erase, front/back, indexing) is single-threaded and
+	// meant to run after the concurrent-append phase has joined.
+	//
+	// The atomic counter only guarantees non-overlapping slots — visibility of
+	// concurrently-appended elements to a later reader relies on the caller's
+	// own join barrier (e.g. a thread-pool wait) establishing happens-before.
+	template<class T>
+	class concurrent_vector
+	{
+		std::vector<T>      storage;
+		std::atomic<size_t> count{ 0 };
+
+	public:
+		concurrent_vector() = default;
+
+		concurrent_vector(const concurrent_vector& r)
+			: storage(r.storage), count(r.count.load(std::memory_order_relaxed)) {}
+
+		concurrent_vector(concurrent_vector&& r) noexcept
+			: storage(std::move(r.storage)), count(r.count.load(std::memory_order_relaxed))
+		{
+			r.count.store(0, std::memory_order_relaxed);
+		}
+
+		concurrent_vector& operator=(const concurrent_vector& r)
+		{
+			storage = r.storage;
+			count.store(r.count.load(std::memory_order_relaxed), std::memory_order_relaxed);
+			return *this;
+		}
+
+		concurrent_vector& operator=(concurrent_vector&& r) noexcept
+		{
+			storage = std::move(r.storage);
+			count.store(r.count.load(std::memory_order_relaxed), std::memory_order_relaxed);
+			r.count.store(0, std::memory_order_relaxed);
+			return *this;
+		}
+
+		// Single-threaded: pre-size backing storage so concurrent emplace_back
+		// never reallocates. Does not change the logical size (count).
+		void reserve(size_t n)
+		{
+			if (storage.size() < n)
+				storage.resize(n);
+		}
+
+		// Thread-safe append. Requires a free reserved slot (see reserve()).
+		T& emplace_back(const T& v)
+		{
+			size_t i = count.fetch_add(1, std::memory_order_relaxed);
+			ASSERT(i < storage.size());
+			storage[i] = v;
+			return storage[i];
+		}
+		T& push_back(const T& v) { return emplace_back(v); }
+
+		size_t size()  const { return count.load(std::memory_order_relaxed); }
+		bool   empty() const { return size() == 0; }
+
+		T*       begin()       { return storage.data(); }
+		T*       end()         { return storage.data() + size(); }
+		const T* begin() const { return storage.data(); }
+		const T* end()   const { return storage.data() + size(); }
+
+		T&       operator[](size_t i)       { return storage[i]; }
+		const T& operator[](size_t i) const { return storage[i]; }
+
+		T&       front()       { return storage[0]; }
+		const T& front() const { return storage[0]; }
+		T&       back()        { return storage[size() - 1]; }
+		const T& back()  const { return storage[size() - 1]; }
+
+		void clear() { count.store(0, std::memory_order_relaxed); }
+
+		// Single-threaded compacting erase, matching std::vector::erase(first,last).
+		T* erase(T* first, T* last)
+		{
+			T* new_end = std::move(last, end(), first);
+			count.store((size_t)(new_end - storage.data()), std::memory_order_relaxed);
+			return first;
+		}
+	};
+
+
 	class SharedObjectBase :public std::enable_shared_from_this<SharedObjectBase>
 	{
 	protected:

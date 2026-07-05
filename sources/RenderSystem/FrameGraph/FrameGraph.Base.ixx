@@ -152,10 +152,12 @@ public:
 	struct ResourceRWState
 	{
 		bool write = false;
-		std::vector<Pass*> passes;
+		// Thread-safe append (populated concurrently in add_pass); all reads
+		// happen single-threaded after the setup/append phase joins.
+		concurrent_vector<Pass*> passes;
 
-		std::vector<Pass*> compute;
-		std::vector<Pass*> graphics;
+		concurrent_vector<Pass*> compute;
+		concurrent_vector<Pass*> graphics;
 
 
 		HAL::SubResourcesGPU merged_read_state;

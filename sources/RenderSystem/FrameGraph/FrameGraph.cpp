@@ -68,7 +68,7 @@ namespace FrameGraph
 	void ResourceAllocInfo::reset(size_t new_max_passes)
 	{
 		last_writer = 0;
-		max_passes = new_max_passes;
+ 		max_passes = new_max_passes;
 		states.clear();
 		states.reserve(16);
 	}
@@ -909,6 +909,14 @@ namespace FrameGraph
 
 	void TaskBuilder::init(ResourceAllocInfo& info, ResourceFlags flags)
 	{
+		// All passes must be registered (add_passes) before any resource is
+		// created: max_passes is captured here from passes.size() and used to
+		// pre-size the per-state concurrent_vector append storage. Creating a
+		// resource while passes is still empty (e.g. passing the swapchain in
+		// before add_passes) under-sizes that storage and overflows on later
+		// need()s from real passes.
+		ASSERT(!passes.empty());
+
 		//flags |=ResourceFlags::Static;
 		info.reset(passes.size());
 		info.flags = flags;

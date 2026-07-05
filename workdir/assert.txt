@@ -1,0 +1,3 @@
+ASSERT FAILED: (i < storage.size())  at C:\github\Spectrum\sources\Core\Data\Data.ixx:390
+ASSERT FAILED: (i < storage.size())  at C:\github\Spectrum\sources\Core\Data\Data.ixx:390
+ASSERT FAILED: (!passes.empty())  at C:\github\Spectrum\sources\RenderSystem\FrameGraph\FrameGraph.cpp:918
