@@ -124,6 +124,23 @@ public:
 
 	 constexpr ResourceFlags WRITEABLE_FLAGS =ResourceFlags::CopyDest |  ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil;// | ResourceFlags::GenCPU;
 
+	// Which image the UI composites onto the swapchain. Anything other than
+	// Final makes UI_Render sample the DebugResult texture instead of the final
+	// ResultTexture. Read/set via graph.get_context<DebugContext>().
+	enum class DebugMode
+	{
+		Final,
+		Albedo,
+		Motion,
+		GI_Indirect,
+		GI_Reflection
+	};
+
+	struct DebugContext
+	{
+		DebugMode mode = DebugMode::Final;
+	};
+
 	//struct BufferDesc
 	//{
 	//	size_t size;

@@ -857,6 +857,30 @@ public:
 				{
 					auto b = std::make_shared<GUI::base>();
 
+					// Debug output selector: drives graph's DebugContext::mode so
+					// UI_Render composites the chosen buffer instead of the final image.
+					{
+						struct DbgOpt { const char* name; FrameGraph::DebugMode mode; };
+						static const DbgOpt dbg_opts[] = {
+							{ "Final",         FrameGraph::DebugMode::Final },
+							{ "Albedo",        FrameGraph::DebugMode::Albedo },
+							{ "Motion",        FrameGraph::DebugMode::Motion },
+							{ "GI Indirect",   FrameGraph::DebugMode::GI_Indirect },
+							{ "GI Reflection", FrameGraph::DebugMode::GI_Reflection },
+						};
+
+						auto debug_combo = std::make_shared<GUI::Elements::combo_box>();
+						debug_combo->docking = GUI::dock::TOP;
+						debug_combo->size = { 200, 20 };
+						for (auto& o : dbg_opts)
+						{
+							auto mode = o.mode;
+							debug_combo->add_item(o.name)->on_select =
+								[this, mode]() { graph.get_context<FrameGraph::DebugContext>().mode = mode; };
+						}
+						b->add_child(debug_combo);
+					}
+
 
 					auto folders = std::make_shared<GUI::Elements::tree<VariableContext>>();
 					folders->size = { 200, 150 };

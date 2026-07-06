@@ -1018,7 +1018,23 @@ namespace GUI
 
         ui_ctx.dt          = dt;
         ui_ctx.scaled_size = scaled_size.get();
-        ui_ctx.result_texture_handler = Handlers::Texture(FrameGraph::ResourceID::ResultTexture);
+
+        // Pick the source the UI composites onto the swapchain based on the
+        // current debug output selection (Final = the final ResultTexture).
+        auto debug_source = [](FrameGraph::DebugMode mode)
+        {
+            using DM = FrameGraph::DebugMode;
+            switch (mode)
+            {
+            case DM::Albedo:        return FrameGraph::ResourceID::GBuffer_Albedo;
+            case DM::Motion:        return FrameGraph::ResourceID::GBuffer_Speed;
+            case DM::GI_Indirect:   return FrameGraph::ResourceID::VoxelIndirectFiltered;
+            case DM::GI_Reflection: return FrameGraph::ResourceID::ReflectionDenoiser_ReprojectedRadiance;
+            default:                return FrameGraph::ResourceID::ResultTexture;
+            }
+        };
+        auto& dbg = graph.get_context<FrameGraph::DebugContext>();
+        ui_ctx.result_texture_handler = Handlers::Texture(debug_source(dbg.mode));
 
         {
             PROFILE(L"process_graph");
@@ -1647,6 +1663,8 @@ bool PassDefault<Passes::UI_Render>::setup(
     if (slot * per_thread >= size)
         return false;
     builder.need(data.swapchain, ResourceFlags::RenderTarget);
+    // result_texture_handler already points at the resource for the current
+    // DebugContext::mode (set in create_graph), so no branching needed here.
     if (builder.exists(ui_ctx.result_texture_handler))
         builder.need(ui_ctx.result_texture_handler, ResourceFlags::PixelRead);
     if (builder.exists(data.UI_PreDraw_Sync))
