@@ -452,6 +452,23 @@ namespace GUI
 }
 
 
+// Floating panel (shadow + dark background), styled like the FlowGraph canvas
+// toolbar. Used to overlay the viewport with the debug-view selector.
+class debug_toolbar_panel : public GUI::base
+{
+public:
+	void draw(GUI::base::Context& c) override
+	{
+		GUI::Texture shadow = Skin::get().Shadow;
+		shadow.margins = { 12, 12, 12, 12 };
+		c.renderer->draw(c, shadow, get_render_bounds());
+
+		GUI::Texture bg = Skin::get().FlowWindow.Inactive;
+		bg.mul_color = float4(22, 28, 38, 255) / 255.0f;
+		c.renderer->draw(c, bg, get_render_bounds());
+	}
+};
+
 class GraphRender : public Window, public GUI::user_interface
 {
 	HAL::SwapChain::ptr swap_chain;
@@ -830,6 +847,39 @@ public:
 				drawer.reset(new triangle_drawer());
 				drawer->docking = GUI::dock::FILL;
 
+				// Floating debug-view selector over the viewport: each button sets
+				// graph's DebugContext::mode, which repoints what UI_Render composites.
+				{
+					struct DbgOpt { const char* name; FrameGraph::DebugMode mode; };
+					static const DbgOpt dbg_opts[] = {
+						{ "Final",         FrameGraph::DebugMode::Final },
+						{ "Albedo",        FrameGraph::DebugMode::Albedo },
+						{ "Motion",        FrameGraph::DebugMode::Motion },
+						{ "GI Indirect",   FrameGraph::DebugMode::GI_Indirect },
+						{ "GI Reflection", FrameGraph::DebugMode::GI_Reflection },
+					};
+
+					auto toolbar = std::make_shared<debug_toolbar_panel>();
+					toolbar->docking     = GUI::dock::NONE;
+					toolbar->pos         = vec2(8, 8);
+					toolbar->height_size = GUI::size_type::MATCH_CHILDREN;
+					toolbar->width_size  = GUI::size_type::MATCH_CHILDREN;
+					toolbar->padding     = { 4, 4, 4, 4 };
+
+					auto debug_combo = std::make_shared<GUI::Elements::combo_box>();
+					debug_combo->docking = GUI::dock::TOP;
+					debug_combo->size = { 140, 24 };
+					for (auto& o : dbg_opts)
+					{
+						auto mode = o.mode;
+						debug_combo->add_item(o.name)->on_select =
+							[this, mode]() { graph.get_context<FrameGraph::DebugContext>().mode = mode; };
+					}
+					toolbar->add_child(debug_combo);
+
+					drawer->GUI::base::add_child(toolbar);
+				}
+
 				d->get_tabs()->add_page("Game", drawer);
 				EVENT("End Drawer");
 			}
@@ -856,30 +906,6 @@ public:
 
 				{
 					auto b = std::make_shared<GUI::base>();
-
-					// Debug output selector: drives graph's DebugContext::mode so
-					// UI_Render composites the chosen buffer instead of the final image.
-					{
-						struct DbgOpt { const char* name; FrameGraph::DebugMode mode; };
-						static const DbgOpt dbg_opts[] = {
-							{ "Final",         FrameGraph::DebugMode::Final },
-							{ "Albedo",        FrameGraph::DebugMode::Albedo },
-							{ "Motion",        FrameGraph::DebugMode::Motion },
-							{ "GI Indirect",   FrameGraph::DebugMode::GI_Indirect },
-							{ "GI Reflection", FrameGraph::DebugMode::GI_Reflection },
-						};
-
-						auto debug_combo = std::make_shared<GUI::Elements::combo_box>();
-						debug_combo->docking = GUI::dock::TOP;
-						debug_combo->size = { 200, 20 };
-						for (auto& o : dbg_opts)
-						{
-							auto mode = o.mode;
-							debug_combo->add_item(o.name)->on_select =
-								[this, mode]() { graph.get_context<FrameGraph::DebugContext>().mode = mode; };
-						}
-						b->add_child(debug_combo);
-					}
 
 
 					auto folders = std::make_shared<GUI::Elements::tree<VariableContext>>();
