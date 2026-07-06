@@ -8,6 +8,7 @@
 #include "../PassNodeBase.h"
 
 using namespace FrameGraph;
+
 namespace Passes
 {
 
@@ -63,23 +64,24 @@ public:
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass declares [Write] on it.
+		// whether the pass writes it (own [Write], or the view usage's
+		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-		{ ResourceID::GBuffer_DepthPrev, false },
-		{ ResourceID::GBuffer_NormalsPrev, false },
-		{ ResourceID::GBuffer_Depth, false },
-		{ ResourceID::GBuffer_Normals, false },
-		{ ResourceID::GBuffer_Speed, false },
-		{ ResourceID::VoxelReflectionNoise, false },
-		{ ResourceID::ReflectionDenoiser_RadiancePrev, false },
-		{ ResourceID::ReflectionDenoiser_AverageRadiance, false },
-		{ ResourceID::ReflectionDenoiser_AverageRadiancePrev, false },
-		{ ResourceID::ReflectionDenoiser_Variance, false },
-		{ ResourceID::ReflectionDenoiser_VariancePrev, false },
-		{ ResourceID::ReflectionDenoiser_SampleCount, false },
-		{ ResourceID::ReflectionDenoiser_SampleCountPrev, false },
-		{ ResourceID::ReflectionDenoiser_ReprojectedRadiance, false },
-		{ ResourceID::BlueNoise, false },
+			{ ResourceID::GBuffer_DepthPrev, false },
+			{ ResourceID::GBuffer_NormalsPrev, false },
+			{ ResourceID::GBuffer_Depth, false },
+			{ ResourceID::GBuffer_Normals, false },
+			{ ResourceID::GBuffer_Speed, false },
+			{ ResourceID::VoxelReflectionNoise, true },
+			{ ResourceID::ReflectionDenoiser_RadiancePrev, true },
+			{ ResourceID::ReflectionDenoiser_AverageRadiance, true },
+			{ ResourceID::ReflectionDenoiser_AverageRadiancePrev, true },
+			{ ResourceID::ReflectionDenoiser_Variance, true },
+			{ ResourceID::ReflectionDenoiser_VariancePrev, true },
+			{ ResourceID::ReflectionDenoiser_SampleCount, true },
+			{ ResourceID::ReflectionDenoiser_SampleCountPrev, true },
+			{ ResourceID::ReflectionDenoiser_ReprojectedRadiance, true },
+			{ ResourceID::BlueNoise, false },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

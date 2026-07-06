@@ -8,6 +8,7 @@
 #include "../PassNodeBase.h"
 
 using namespace FrameGraph;
+
 namespace Passes
 {
 
@@ -21,9 +22,10 @@ public:
 		Handlers::StructuredBuffer<uint> UI_PreDraw_Sync = ResourceID::UI_PreDraw_Sync;
 
 		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass declares [Write] on it.
+		// whether the pass writes it (own [Write], or the view usage's
+		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-		{ ResourceID::UI_PreDraw_Sync, true },
+			{ ResourceID::UI_PreDraw_Sync, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

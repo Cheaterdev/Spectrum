@@ -472,7 +472,7 @@ PassNode GBufferDownsampler
 PassNode VoxelDebug
 {
 	GBuffer gbuffer;
-	Texture VoxelDebug;
+	[Write] Texture VoxelDebug;
 	Texture3D VoxelLighted;
 }
 
@@ -482,25 +482,25 @@ PassNode VoxelScreen
 	GBuffer gbuffer;
 	Texture ResultTexture;
 	Texture3D VoxelLighted;
-	Texture VoxelFramesCount;
-	Texture VoxelIndirectNoise;
-	Texture VoxelIndirectFiltered;
+	[Write] Texture VoxelFramesCount;
+	[Write] Texture VoxelIndirectNoise;
+	[Write] Texture VoxelIndirectFiltered;
 	TextureCube sky_cubemap_filtered;
 	Texture BlueNoise;
-	StructuredBuffer<DispatchArguments> VoxelScreen_hi;
-	StructuredBuffer<DispatchArguments> VoxelScreen_low;
-	StructuredBuffer<uint2> VoxelScreen_low_data;
-	StructuredBuffer<uint2> VoxelScreen_hi_data;
+	[Write] StructuredBuffer<DispatchArguments> VoxelScreen_hi;
+	[Write] StructuredBuffer<DispatchArguments> VoxelScreen_low;
+	[Write] StructuredBuffer<uint2> VoxelScreen_low_data;
+	[Write] StructuredBuffer<uint2> VoxelScreen_hi_data;
 }
 
 [Compute]
 PassNode VoxelCombine
 {
 	GBuffer gbuffer;
-	Texture ResultTexture;
-	Texture VoxelFramesCount;
+	[Write] Texture ResultTexture;
+	[Write] Texture VoxelFramesCount;
 	Texture VoxelIndirectNoise;
-	Texture VoxelIndirectFiltered;
+	[Write] Texture VoxelIndirectFiltered;
 	TextureCube sky_cubemap_filtered;
 	StructuredBuffer<DispatchArguments> VoxelScreen_hi;
 	StructuredBuffer<DispatchArguments> VoxelScreen_low;
@@ -512,8 +512,8 @@ PassNode VoxelCombine
 PassNode ScreenReflection
 {
 	GBuffer gbuffer;
-	Texture VoxelReflectionNoise;
-	Texture noise_dir_pdf;
+	[Write] Texture VoxelReflectionNoise;
+	[Write] Texture noise_dir_pdf;
 	TextureCube sky_cubemap_filtered;
 	Texture BlueNoise;
 	Texture3D VoxelLighted;
@@ -527,18 +527,18 @@ PassNode ScreenReflection
 PassNode ReflCombine
 {
 	GBuffer gbuffer;
-	Texture ResultTexture;
+	[Write] Texture ResultTexture;
 	Texture VoxelReflectionNoise;
 }
 
 PassNode Voxelize
 {
-	Texture VoxelAlbedo;
-	Texture VoxelNormal;
-	Texture VoxelAlbedoStatic;
-	Texture VoxelNormalStatic;
-	Texture VoxelAlbedoDynamic;
-	Texture VoxelNormalDynamic;
+	[Write] Texture VoxelAlbedo;
+	[Write] Texture VoxelNormal;
+	[Write] Texture VoxelAlbedoStatic;
+	[Write] Texture VoxelNormalStatic;
+	[Write] Texture VoxelAlbedoDynamic;
+	[Write] Texture VoxelNormalDynamic;
 }
 
 [Compute]
@@ -546,7 +546,7 @@ PassNode Lighting
 {
 	Texture global_depth;
 	StructuredBuffer<Camera> global_camera;
-	Texture3D VoxelLighted;
+	[Write] Texture3D VoxelLighted;
 	Texture3D VoxelAlbedo;
 	Texture3D VoxelNormal;
 	TextureCube sky_cubemap_filtered;
@@ -559,5 +559,5 @@ PassNode Lighting
 [Compute]
 PassNode Mipmapping
 {
-	Texture3D VoxelLighted;
+	[Write] Texture3D VoxelLighted;
 }

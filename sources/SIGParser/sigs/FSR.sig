@@ -48,8 +48,8 @@ ComputePSO RCAS
 [Compute]
 PassNode FSR
 {
-	[Recreate = ResultTextureNew]
+	[Write] [Recreate = ResultTextureNew]
 	Texture ResultTexture;
 
-	Texture FSRTemp;
+	[Write] Texture FSRTemp;
 }

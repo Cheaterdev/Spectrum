@@ -287,7 +287,7 @@ PassNode UI_PreDraw
 [Multiple = 16]
 PassNode UI_Render
 {
-	Texture swapchain;
+	[Write] Texture swapchain;
 	StructuredBuffer<uint> UI_PreDraw_Sync;
 }
 

@@ -8,6 +8,7 @@
 #include "../PassNodeBase.h"
 
 using namespace FrameGraph;
+
 namespace Passes
 {
 
@@ -23,10 +24,11 @@ public:
 		Handlers::StructuredBuffer<Table::Camera> PSSM_Cameras = ResourceID::PSSM_Cameras;
 
 		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass declares [Write] on it.
+		// whether the pass writes it (own [Write], or the view usage's
+		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-		{ ResourceID::PSSM_Depths, false },
-		{ ResourceID::PSSM_Cameras, false },
+			{ ResourceID::PSSM_Depths, true },
+			{ ResourceID::PSSM_Cameras, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

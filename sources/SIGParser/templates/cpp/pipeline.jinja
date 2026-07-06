@@ -58,6 +58,52 @@ public:
 		return resource_names;
 	}
 
+{%- set states_data = get_pipeline_states(pipeline.name) %}
+	// Precomputed per-resource RW-state timeline (see FrameGraph::PrecompiledResourceInfo).
+	// Each resource owns its pass-ref pool and its states; a state's passes are
+	// a span into that resource's own <id>_pass_refs[].
+{%- for r in states_data.resources %}
+	static inline const FrameGraph::PassRef {{r.id}}_pass_refs[] = {
+{%- for p in r.pass_refs %}
+		{ PassID::{{p.pass}}, {{p.index}} },
+{%- endfor %}
+	};
+	static inline const FrameGraph::PrecompiledState {{r.id}}_states[] = {
+{%- for s in r.states %}
+		{ {{ "true" if s.write else "false" }}, { {{r.id}}_pass_refs + {{s.begin}}, {{s.count}} } },
+{%- endfor %}
+	};
+{%- endfor %}
+{%- if states_data.resources %}
+	static inline const FrameGraph::PrecompiledResourceInfo resource_infos[] = {
+{%- for r in states_data.resources %}
+		{ ResourceID::{{r.id}}, {{r.id}}_states },
+{%- endfor %}
+	};
+{%- else %}
+	static inline const FrameGraph::PrecompiledResourceInfo resource_infos[] = { { ResourceID::Count, {} } };
+{%- endif %}
+	static constexpr uint32_t resource_info_count = std::size(resource_infos);
+
+{%- set pipeline_passes = get_pipeline_passes(pipeline.name) %}
+	// Precomputed pass instances with queue type and prev-pass dependency edges
+	// (static resolve_dependencies). Each pass owns its <pass>_<idx>_prev[] refs.
+{%- for p in pipeline_passes %}
+{%- if p.prev | length > 0 %}
+	static inline const FrameGraph::PassRef {{p.pass}}_{{p.index}}_prev[] = {
+{%- for r in p.prev %}
+		{ PassID::{{r.pass}}, {{r.index}} },
+{%- endfor %}
+	};
+{%- endif %}
+{%- endfor %}
+	static inline const FrameGraph::PrecompiledPass precompiled_passes[] = {
+{%- for p in pipeline_passes %}
+		{ PassID::{{p.pass}}, {{p.index}}, {{ "true" if p.compute else "false" }}, {% if p.prev | length > 0 %}{{p.pass}}_{{p.index}}_prev{% else %}{}{% endif %} },
+{%- endfor %}
+	};
+	static constexpr uint32_t precompiled_pass_count = std::size(precompiled_passes);
+
 	void add_passes(FrameGraph::Graph& graph)
 	{
 		graph.set_pipeline(this);

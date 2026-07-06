@@ -8,6 +8,7 @@
 #include "../PassNodeBase.h"
 
 using namespace FrameGraph;
+
 namespace Passes
 {
 
@@ -24,10 +25,11 @@ public:
 		Handlers::StructuredBuffer<uint> ShadowDenoiser_TileBuffer = ResourceID::ShadowDenoiser_TileBuffer;
 
 		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass declares [Write] on it.
+		// whether the pass writes it (own [Write], or the view usage's
+		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-		{ ResourceID::ShadowMask, false },
-		{ ResourceID::ShadowDenoiser_TileBuffer, false },
+			{ ResourceID::ShadowMask, false },
+			{ ResourceID::ShadowDenoiser_TileBuffer, false },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

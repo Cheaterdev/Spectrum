@@ -8,6 +8,7 @@
 #include "../PassNodeBase.h"
 
 using namespace FrameGraph;
+
 namespace Passes
 {
 
@@ -24,10 +25,11 @@ public:
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass declares [Write] on it.
+		// whether the pass writes it (own [Write], or the view usage's
+		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-		{ ResourceID::GBuffer_Depth, false },
-		{ ResourceID::ResultTexture, false },
+			{ ResourceID::GBuffer_Depth, false },
+			{ ResourceID::ResultTexture, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

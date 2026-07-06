@@ -8,6 +8,7 @@
 #include "../PassNodeBase.h"
 #include "GBuffer.h"
 using namespace FrameGraph;
+
 namespace Passes
 {
 
@@ -27,24 +28,25 @@ public:
 		Handlers::Texture LightMask = ResourceID::LightMask;
 
 		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass declares [Write] on it.
+		// whether the pass writes it (own [Write], or the view usage's
+		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-		{ ResourceID::PSSM_Depths, false },
-		{ ResourceID::PSSM_Cameras, false },
-		{ ResourceID::GBuffer_Albedo, false },
-		{ ResourceID::GBuffer_Normals, false },
-		{ ResourceID::GBuffer_Depth, false },
-		{ ResourceID::GBuffer_Specular, false },
-		{ ResourceID::GBuffer_Speed, false },
-		{ ResourceID::GBuffer_DepthMips, false },
-		{ ResourceID::GBuffer_Quality, false },
-		{ ResourceID::GBuffer_TempColor, false },
-		{ ResourceID::GBuffer_NormalsPrev, false },
-		{ ResourceID::GBuffer_SpecularPrev, false },
-		{ ResourceID::GBuffer_DepthPrev, false },
-		{ ResourceID::GBuffer_HiZ, false },
-		{ ResourceID::GBuffer_HiZ_UAV, false },
-		{ ResourceID::LightMask, false },
+			{ ResourceID::PSSM_Depths, false },
+			{ ResourceID::PSSM_Cameras, false },
+			{ ResourceID::GBuffer_Albedo, false },
+			{ ResourceID::GBuffer_Normals, false },
+			{ ResourceID::GBuffer_Depth, false },
+			{ ResourceID::GBuffer_Specular, false },
+			{ ResourceID::GBuffer_Speed, false },
+			{ ResourceID::GBuffer_DepthMips, false },
+			{ ResourceID::GBuffer_Quality, false },
+			{ ResourceID::GBuffer_TempColor, false },
+			{ ResourceID::GBuffer_NormalsPrev, false },
+			{ ResourceID::GBuffer_SpecularPrev, false },
+			{ ResourceID::GBuffer_DepthPrev, false },
+			{ ResourceID::GBuffer_HiZ, false },
+			{ ResourceID::GBuffer_HiZ_UAV, false },
+			{ ResourceID::LightMask, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

@@ -324,6 +324,77 @@ int main()
 			}
 		));
 
+		// Shared source of truth for a pass's ordered (resource_id, write)
+		// accesses. A leaf's write-ness comes from: its own [Write] if declared
+		// directly, or the enclosing view usage's [Write] / [Write = {leaves...}]
+		// if it's inside a view group. A recreate adds a trailing write on the
+		// same id.
+		auto compute_pass_accesses = [&](Pass* pass, std::vector<std::pair<std::string, bool>>& out)
+		{
+			std::function<void(const std::list<View_Param>&, bool, const std::function<bool(const std::string&)>&)> rec;
+			rec = [&](const std::list<View_Param>& params, bool inside_view, const std::function<bool(const std::string&)>& parent_is_write)
+			{
+				for (const auto& p : params)
+				{
+					View* view = parsed.views.find(p.class_no_template);
+					if (view)
+					{
+						// Build the write predicate for this view usage from its
+						// [Write] option: a list -> membership; bare [Write] ->
+						// whole view; absent -> nothing.
+						const option* w = p.find_option("Write");
+						std::function<bool(const std::string&)> pred;
+						if (!w)
+						{
+							pred = [](const std::string&) { return false; };
+						}
+						else
+						{
+							std::set<std::string> s;
+							if (!w->value_atom.values.empty())
+								for (const auto& v : w->value_atom.values) s.insert(v.expr);
+							else if (!w->value_atom.expr.empty())
+								s.insert(w->value_atom.expr);
+
+							if (s.empty()) pred = [](const std::string&) { return true; };
+							else            pred = [s](const std::string& n) { return s.count(n) > 0; };
+						}
+						rec(view->params, true, pred);
+					}
+					else
+					{
+						bool write = inside_view ? parent_is_write(p.name)
+						                         : (p.find_option("Write") != nullptr);
+						out.emplace_back(p.name, write);
+						if (p.find_option("Recreate"))
+							out.emplace_back(p.name, true);
+					}
+				}
+			};
+			rec(pass->params, false, {});
+		};
+
+		global.AddGlobal("get_pass_accesses", jinja2::MakeCallable(
+			[&, compute_pass_accesses](const std::string& pass_name) -> ValuesList
+			{
+				ValuesList result;
+				Pass* pass = parsed.passes.find(pass_name);
+				if (!pass) return result;
+
+				std::vector<std::pair<std::string, bool>> acc;
+				compute_pass_accesses(pass, acc);
+				for (const auto& [id, write] : acc)
+				{
+					ValuesMap m;
+					m["id"] = id;
+					m["write"] = write;
+					result.push_back(std::move(m));
+				}
+				return result;
+			},
+			ArgInfo{"pass_name"}
+		));
+
 		global.AddGlobal("get_pipeline_resources", jinja2::MakeCallable(
 			[&](const std::string& pipeline_name) -> ValuesList
 			{
@@ -365,6 +436,210 @@ int main()
 						collect(pass->params);
 				}
 
+				return result;
+			},
+			ArgInfo{"pipeline_name"}
+		));
+
+		// Precomputes each pipeline's per-resource RW-state timeline (mirroring the
+		// runtime add_pass grouping). Returns:
+		//   { "resources": [ {id, states:[{write,begin,count}]}... ],
+		//     "passes":    [ {pass, index}... ] }         // referenced by begin/count
+		// where each pass ref is a PassID name + [Multiple] instance index.
+		global.AddGlobal("get_pipeline_states", jinja2::MakeCallable(
+			[&, compute_pass_accesses](const std::string& pipeline_name) -> ValuesMap
+			{
+				ValuesMap out;
+				out["resources"] = ValuesList{};
+
+				Pipeline* pipeline_ptr = parsed.pipelines.find(pipeline_name);
+				if (!pipeline_ptr) return out;
+
+				// A single pass touch: which pass (name + Multiple instance) and
+				// whether it writes.
+				struct Touch { std::string pass; uint32_t index; bool write; };
+
+				// Per resource, ordered touches. Separate first-seen order keeps
+				// output deterministic.
+				std::map<std::string, std::vector<Touch>> touches;
+				std::vector<std::string> resource_order;
+
+				for (const auto& entry : pipeline_ptr->entries)
+				{
+					Pass* pass = parsed.passes.find(entry.name);
+					if (!pass) continue;
+
+					uint32_t count = 1;
+					if (const option* m = pass->find_option("Multiple"))
+						count = (uint32_t)std::max(1, atoi(m->value_atom.expr.c_str()));
+
+					std::vector<std::pair<std::string, bool>> accesses;
+					compute_pass_accesses(pass, accesses);
+
+					for (uint32_t inst = 0; inst < count; ++inst)
+					{
+						for (const auto& [id, write] : accesses)
+						{
+							auto it = touches.find(id);
+							if (it == touches.end())
+							{
+								resource_order.push_back(id);
+								it = touches.emplace(id, std::vector<Touch>{}).first;
+							}
+							it->second.push_back({ entry.name, inst, write });
+						}
+					}
+				}
+
+				// Group touches into states (new state on write, first touch, or
+				// read-after-write). Each resource owns its own states and pass
+				// refs; state begin/count are offsets into that resource's refs.
+				ValuesList resources;
+				for (const auto& id : resource_order)
+				{
+					const auto& ts = touches[id];
+
+					ValuesList states;
+					ValuesList pass_refs;
+					bool have_state = false;
+					bool cur_write = false;
+					uint32_t begin = 0;
+					uint32_t cnt = 0;
+
+					auto flush = [&]()
+					{
+						if (!have_state) return;
+						ValuesMap s;
+						s["write"] = cur_write;
+						s["begin"] = (int64_t)begin;
+						s["count"] = (int64_t)cnt;
+						states.push_back(std::move(s));
+					};
+
+					for (const auto& t : ts)
+					{
+						bool need_new = !have_state || t.write || cur_write;
+						if (need_new)
+						{
+							flush();
+							have_state = true;
+							cur_write = t.write;
+							begin = (uint32_t)pass_refs.size();
+							cnt = 0;
+						}
+						ValuesMap pr;
+						pr["pass"] = t.pass;
+						pr["index"] = (int64_t)t.index;
+						pass_refs.push_back(std::move(pr));
+						++cnt;
+					}
+					flush();
+
+					ValuesMap r;
+					r["pass_refs"] = std::move(pass_refs);
+					r["id"] = id;
+					r["states"] = std::move(states);
+					resources.push_back(std::move(r));
+				}
+
+				out["resources"] = std::move(resources);
+				return out;
+			},
+			ArgInfo{"pipeline_name"}
+		));
+
+		// Precomputes each pipeline's pass instances with queue type and prev-pass
+		// dependency edges (the codegen equivalent of resolve_dependencies, run
+		// over the same per-resource state timelines). Returns a list of
+		//   { pass, index, compute, prev:[{pass,index}...] }
+		// in pipeline order.
+		global.AddGlobal("get_pipeline_passes", jinja2::MakeCallable(
+			[&, compute_pass_accesses](const std::string& pipeline_name) -> ValuesList
+			{
+				ValuesList result;
+				Pipeline* pipeline_ptr = parsed.pipelines.find(pipeline_name);
+				if (!pipeline_ptr) return result;
+
+				using Ref = std::pair<std::string, uint32_t>;   // (pass name, instance)
+				struct Touch { Ref ref; bool write; };
+
+				std::vector<std::pair<Ref, bool>>       order;    // (ref, compute) in pipeline order
+				std::map<std::string, std::vector<Touch>> touches; // per resource, ordered
+				std::vector<std::string>                resource_order;
+
+				for (const auto& entry : pipeline_ptr->entries)
+				{
+					Pass* pass = parsed.passes.find(entry.name);
+					if (!pass) continue;
+
+					uint32_t count = 1;
+					if (const option* m = pass->find_option("Multiple"))
+						count = (uint32_t)std::max(1, atoi(m->value_atom.expr.c_str()));
+					bool compute = pass->find_option("Compute") != nullptr;
+
+					std::vector<std::pair<std::string, bool>> accesses;
+					compute_pass_accesses(pass, accesses);
+
+					for (uint32_t inst = 0; inst < count; ++inst)
+					{
+						Ref ref{ entry.name, inst };
+						order.emplace_back(ref, compute);
+						for (const auto& [id, write] : accesses)
+						{
+							auto it = touches.find(id);
+							if (it == touches.end())
+							{
+								resource_order.push_back(id);
+								it = touches.emplace(id, std::vector<Touch>{}).first;
+							}
+							it->second.push_back({ ref, write });
+						}
+					}
+				}
+
+				// prev-pass edges: for each resource, walk its states accumulating
+				// 'related' (passes of prior states); each pass in the current
+				// state depends on all of related. Aggregate across resources.
+				std::map<Ref, std::set<Ref>> deps;
+				for (const auto& id : resource_order)
+				{
+					const auto& ts = touches[id];
+					std::set<Ref>         related;
+					std::vector<Ref>      cur;      // current state's passes
+					bool have = false, cur_write = false;
+
+					auto flush = [&]() { for (const auto& r : cur) related.insert(r); cur.clear(); };
+
+					for (const auto& t : ts)
+					{
+						bool need_new = !have || t.write || cur_write;
+						if (need_new) { flush(); have = true; cur_write = t.write; }
+						for (const auto& r : related)
+							if (r != t.ref) deps[t.ref].insert(r);
+						cur.push_back(t.ref);
+					}
+				}
+
+				for (const auto& [ref, compute] : order)
+				{
+					ValuesMap m;
+					m["pass"] = ref.first;
+					m["index"] = (int64_t)ref.second;
+					m["compute"] = compute;
+
+					ValuesList prev;
+					auto it = deps.find(ref);
+					if (it != deps.end())
+						for (const auto& r : it->second)   // std::set -> deterministic order
+						{
+							ValuesMap pr;
+							pr["pass"] = r.first;
+							pr["index"] = (int64_t)r.second;
+							prev.push_back(std::move(pr));
+						}
+					m["prev"] = std::move(prev);
+					result.push_back(std::move(m));
+				}
 				return result;
 			},
 			ArgInfo{"pipeline_name"}

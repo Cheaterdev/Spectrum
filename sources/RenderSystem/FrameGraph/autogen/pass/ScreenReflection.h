@@ -8,6 +8,7 @@
 #include "../PassNodeBase.h"
 #include "GBuffer.h"
 using namespace FrameGraph;
+
 namespace Passes
 {
 
@@ -46,30 +47,31 @@ public:
 		Handlers::StructuredBuffer<uint2> VoxelScreen_hi_data = ResourceID::VoxelScreen_hi_data;
 
 		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass declares [Write] on it.
+		// whether the pass writes it (own [Write], or the view usage's
+		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-		{ ResourceID::GBuffer_Albedo, false },
-		{ ResourceID::GBuffer_Normals, false },
-		{ ResourceID::GBuffer_Depth, false },
-		{ ResourceID::GBuffer_Specular, false },
-		{ ResourceID::GBuffer_Speed, false },
-		{ ResourceID::GBuffer_DepthMips, false },
-		{ ResourceID::GBuffer_Quality, false },
-		{ ResourceID::GBuffer_TempColor, false },
-		{ ResourceID::GBuffer_NormalsPrev, false },
-		{ ResourceID::GBuffer_SpecularPrev, false },
-		{ ResourceID::GBuffer_DepthPrev, false },
-		{ ResourceID::GBuffer_HiZ, false },
-		{ ResourceID::GBuffer_HiZ_UAV, false },
-		{ ResourceID::VoxelReflectionNoise, false },
-		{ ResourceID::noise_dir_pdf, false },
-		{ ResourceID::sky_cubemap_filtered, false },
-		{ ResourceID::BlueNoise, false },
-		{ ResourceID::VoxelLighted, false },
-		{ ResourceID::VoxelScreen_hi, false },
-		{ ResourceID::VoxelScreen_low, false },
-		{ ResourceID::VoxelScreen_low_data, false },
-		{ ResourceID::VoxelScreen_hi_data, false },
+			{ ResourceID::GBuffer_Albedo, false },
+			{ ResourceID::GBuffer_Normals, false },
+			{ ResourceID::GBuffer_Depth, false },
+			{ ResourceID::GBuffer_Specular, false },
+			{ ResourceID::GBuffer_Speed, false },
+			{ ResourceID::GBuffer_DepthMips, false },
+			{ ResourceID::GBuffer_Quality, false },
+			{ ResourceID::GBuffer_TempColor, false },
+			{ ResourceID::GBuffer_NormalsPrev, false },
+			{ ResourceID::GBuffer_SpecularPrev, false },
+			{ ResourceID::GBuffer_DepthPrev, false },
+			{ ResourceID::GBuffer_HiZ, false },
+			{ ResourceID::GBuffer_HiZ_UAV, false },
+			{ ResourceID::VoxelReflectionNoise, true },
+			{ ResourceID::noise_dir_pdf, true },
+			{ ResourceID::sky_cubemap_filtered, false },
+			{ ResourceID::BlueNoise, false },
+			{ ResourceID::VoxelLighted, false },
+			{ ResourceID::VoxelScreen_hi, false },
+			{ ResourceID::VoxelScreen_low, false },
+			{ ResourceID::VoxelScreen_low_data, false },
+			{ ResourceID::VoxelScreen_hi_data, false },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

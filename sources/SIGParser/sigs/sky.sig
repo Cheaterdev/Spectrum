@@ -98,13 +98,13 @@ GraphicsPSO CubemapENVDiffuse
 PassNode Sky
 {
 	Texture GBuffer_Depth;
-	Texture ResultTexture;
+	[Write] Texture ResultTexture;
 }
 
 
 PassNode CubeSky
 {
-	TextureCube sky_cubemap;
+	[Write] TextureCube sky_cubemap;
 }
 
 
@@ -112,7 +112,7 @@ PassNode CubeSky
 [Compute]
 PassNode CubeMapDownsample
 {
-	TextureCube sky_cubemap;
+	[Write] TextureCube sky_cubemap;
 	TextureCube sky_cubemap_filtered;
 	TextureCube sky_cubemap_filtered_diffuse;
 }
@@ -121,6 +121,6 @@ PassNode CubeMapDownsample
 PassNode CubeMapEnviromentProcessor
 {
 	TextureCube sky_cubemap;
-	TextureCube sky_cubemap_filtered;
-	TextureCube sky_cubemap_filtered_diffuse;
+	[Write] TextureCube sky_cubemap_filtered;
+	[Write] TextureCube sky_cubemap_filtered_diffuse;
 }

@@ -22,5 +22,5 @@ ComputePSO BlueNoise
 [Compute]
 PassNode BlueNoise
 {
-	Texture BlueNoise;
+	[Write] Texture BlueNoise;
 }

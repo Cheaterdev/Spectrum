@@ -907,8 +907,39 @@ namespace FrameGraph
 
 
 
+	// Verifies the imperative create/need write-flag against the pass's static
+	// [Write] declaration (resource_accesses[]). Only checks resources that
+	// appear exactly once in the declaration — recreate/chained resources (id
+	// listed more than once) are skipped for now, and undeclared resources
+	// (count 0) are a separate concern.
+	static void verify_declared_access(Pass* pass, ResourceID id, ResourceFlags flags)
+	{
+		if (!pass) return;
+
+		auto declared = pass->declared_accesses();
+		int  found = 0;
+		bool declared_write = false;
+		for (const auto& a : declared)
+			if (a.id == id) { ++found; declared_write = a.write; }
+
+		if (found != 1) return;
+
+		bool actual_write = check(flags & WRITEABLE_FLAGS);
+		if (declared_write != actual_write)
+		{
+			Log::get() << "[FrameGraph] [Write] mismatch: pass '" << pass->name.ptr
+			           << "' resource '" << resource_id_name(id)
+			           << "': SIG declares " << (declared_write ? "write" : "read")
+			           << " but runtime does " << (actual_write ? "write" : "read")
+			           << Log::endl;
+			ASSERT(declared_write == actual_write);
+		}
+	}
+
 	void TaskBuilder::init(ResourceAllocInfo& info, ResourceFlags flags)
 	{
+		verify_declared_access(current_pass, info.id, flags);
+
 		// All passes must be registered (add_passes) before any resource is
 		// created: max_passes is captured here from passes.size() and used to
 		// pre-size the per-state concurrent_vector append storage. Creating a
@@ -933,6 +964,7 @@ namespace FrameGraph
 
 	void TaskBuilder::init_pass(ResourceAllocInfo& info, ResourceFlags flags)
 	{
+		verify_declared_access(current_pass, info.id, flags);
 		current_pass->used.resources.insert(&info);
 		current_pass->used.resource_flags[&info] = flags;
 		info.is_new = false;

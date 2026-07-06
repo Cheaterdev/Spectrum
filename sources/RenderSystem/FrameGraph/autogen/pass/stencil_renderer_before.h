@@ -8,6 +8,7 @@
 #include "../PassNodeBase.h"
 
 using namespace FrameGraph;
+
 namespace Passes
 {
 
@@ -27,11 +28,12 @@ public:
 		Handlers::StructuredBuffer<UINT> axis_id_buffer = ResourceID::axis_id_buffer;
 
 		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass declares [Write] on it.
+		// whether the pass writes it (own [Write], or the view usage's
+		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-		{ ResourceID::depth_tex, false },
-		{ ResourceID::id_buffer, false },
-		{ ResourceID::axis_id_buffer, false },
+			{ ResourceID::depth_tex, true },
+			{ ResourceID::id_buffer, true },
+			{ ResourceID::axis_id_buffer, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

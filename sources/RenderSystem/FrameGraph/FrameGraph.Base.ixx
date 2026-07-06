@@ -71,6 +71,46 @@ public:
 		bool       write;
 	};
 
+	// A reference to a pass in precompiled state data: the pass type plus, for
+	// [Multiple] passes, which instance (0 otherwise).
+	struct PassRef
+	{
+		PassID   id;
+		uint32_t index;
+	};
+
+	// One precomputed RW-state in a pipeline's per-resource timeline (mirrors a
+	// runtime ResourceRWState): whether it's a write, and the passes in it.
+	struct PrecompiledState
+	{
+		bool                     write;
+		std::span<const PassRef> passes;
+	};
+
+	// A pipeline's precomputed timeline for one resource: the ordered states it
+	// passes through. Emitted per-pipeline as resource_infos[]. This is a
+	// template — at runtime disabled passes are pruned and cross-pipeline
+	// timelines concatenated in pipeline-add order.
+	struct PrecompiledResourceInfo
+	{
+		ResourceID                       id;
+		std::span<const PrecompiledState> states;
+	};
+
+	// A precomputed pass instance in a pipeline: its type, [Multiple] instance,
+	// queue (compute vs direct/graphics), and its prev-pass dependency edges —
+	// derived at codegen time from the per-resource state timelines (the static
+	// equivalent of resolve_dependencies). Emitted per-pipeline as
+	// precompiled_passes[]. Also a template: disabled passes are pruned at
+	// runtime and cross-pipeline edges resolved at add time.
+	struct PrecompiledPass
+	{
+		PassID                   id;
+		uint32_t                 index;    // [Multiple] instance (0 otherwise)
+		bool                     compute;  // queue: compute if true, else direct/graphics
+		std::span<const PassRef> prev_passes;
+	};
+
 	//struct BufferDesc
 	//{
 	//	size_t size;
@@ -727,6 +767,10 @@ public:
 
 		virtual bool setup(TaskBuilder& builder) = 0;
 
+		// Static [Write]/read declaration from the pass's SIG (empty for passes
+		// whose Context has no resource_accesses, e.g. custom add_pass<T>).
+		virtual std::span<const ResourceAccess> declared_accesses() const { return {}; }
+
 		HAL::CommandListType get_type() const;
 		void compile(TaskBuilder& builder);
 
@@ -775,8 +819,16 @@ public:
 			builder.begin(this);
 			bool res = setup_func(data, builder);
 			builder.end(this);
-																																																										  
+
 			return res;
+		}
+
+		virtual std::span<const ResourceAccess> declared_accesses() const override
+		{
+			if constexpr (requires { Handler::resource_accesses; Handler::resource_count; })
+				return { Handler::resource_accesses, Handler::resource_count };
+			else
+				return {};
 		}
 
 		virtual void render(Graph*graph,  HAL::FrameResources::ptr& frame) override

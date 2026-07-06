@@ -8,6 +8,7 @@
 #include "../PassNodeBase.h"
 
 using namespace FrameGraph;
+
 namespace Passes
 {
 
@@ -36,14 +37,15 @@ public:
 		Handlers::Texture VoxelNormalDynamic = ResourceID::VoxelNormalDynamic;
 
 		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass declares [Write] on it.
+		// whether the pass writes it (own [Write], or the view usage's
+		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-		{ ResourceID::VoxelAlbedo, false },
-		{ ResourceID::VoxelNormal, false },
-		{ ResourceID::VoxelAlbedoStatic, false },
-		{ ResourceID::VoxelNormalStatic, false },
-		{ ResourceID::VoxelAlbedoDynamic, false },
-		{ ResourceID::VoxelNormalDynamic, false },
+			{ ResourceID::VoxelAlbedo, true },
+			{ ResourceID::VoxelNormal, true },
+			{ ResourceID::VoxelAlbedoStatic, true },
+			{ ResourceID::VoxelNormalStatic, true },
+			{ ResourceID::VoxelAlbedoDynamic, true },
+			{ ResourceID::VoxelNormalDynamic, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

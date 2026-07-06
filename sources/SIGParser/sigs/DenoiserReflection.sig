@@ -122,14 +122,14 @@ PassNode ReflectionDenoiser_Reproject
 	Texture GBuffer_Depth;
 	Texture GBuffer_Normals;
 	Texture GBuffer_Speed;
-	Texture VoxelReflectionNoise;
-	Texture ReflectionDenoiser_RadiancePrev;
-	Texture ReflectionDenoiser_AverageRadiance;
-	Texture ReflectionDenoiser_AverageRadiancePrev;
-	Texture ReflectionDenoiser_Variance;
-	Texture ReflectionDenoiser_VariancePrev;
-	Texture ReflectionDenoiser_SampleCount;
-	Texture ReflectionDenoiser_SampleCountPrev;
-	Texture ReflectionDenoiser_ReprojectedRadiance;
+	[Write] Texture VoxelReflectionNoise;
+	[Write] Texture ReflectionDenoiser_RadiancePrev;
+	[Write] Texture ReflectionDenoiser_AverageRadiance;
+	[Write] Texture ReflectionDenoiser_AverageRadiancePrev;
+	[Write] Texture ReflectionDenoiser_Variance;
+	[Write] Texture ReflectionDenoiser_VariancePrev;
+	[Write] Texture ReflectionDenoiser_SampleCount;
+	[Write] Texture ReflectionDenoiser_SampleCountPrev;
+	[Write] Texture ReflectionDenoiser_ReprojectedRadiance;
 	Texture BlueNoise;
 }

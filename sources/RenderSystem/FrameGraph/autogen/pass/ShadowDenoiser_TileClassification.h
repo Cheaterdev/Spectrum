@@ -8,6 +8,7 @@
 #include "../PassNodeBase.h"
 
 using namespace FrameGraph;
+
 namespace Passes
 {
 
@@ -48,18 +49,19 @@ public:
 		Handlers::Texture ShadowDenoiser_Scratch2 = ResourceID::ShadowDenoiser_Scratch2;
 
 		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass declares [Write] on it.
+		// whether the pass writes it (own [Write], or the view usage's
+		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-		{ ResourceID::ShadowDenoiser_TileBuffer, false },
-		{ ResourceID::GBuffer_DepthPrev, false },
-		{ ResourceID::GBuffer_Depth, false },
-		{ ResourceID::GBuffer_Normals, false },
-		{ ResourceID::GBuffer_Speed, false },
-		{ ResourceID::ShadowDenoiser_TileMetaBuffer, false },
-		{ ResourceID::ShadowDenoiser_Moments, false },
-		{ ResourceID::ShadowDenoiser_MomentsPrev, false },
-		{ ResourceID::ShadowDenoiser_Scratch, false },
-		{ ResourceID::ShadowDenoiser_Scratch2, false },
+			{ ResourceID::ShadowDenoiser_TileBuffer, false },
+			{ ResourceID::GBuffer_DepthPrev, false },
+			{ ResourceID::GBuffer_Depth, false },
+			{ ResourceID::GBuffer_Normals, false },
+			{ ResourceID::GBuffer_Speed, false },
+			{ ResourceID::ShadowDenoiser_TileMetaBuffer, false },
+			{ ResourceID::ShadowDenoiser_Moments, false },
+			{ ResourceID::ShadowDenoiser_MomentsPrev, false },
+			{ ResourceID::ShadowDenoiser_Scratch, false },
+			{ ResourceID::ShadowDenoiser_Scratch2, false },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

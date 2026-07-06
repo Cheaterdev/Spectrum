@@ -172,10 +172,10 @@ GraphicsPSO StencilerLast
 [Required]
 PassNode stencil_renderer_before
 {
-	Texture depth_tex;
+	[Write] Texture depth_tex;
 
-	StructuredBuffer<UINT> id_buffer;
-	StructuredBuffer<UINT> axis_id_buffer;
+	[Write] StructuredBuffer<UINT> id_buffer;
+	[Write] StructuredBuffer<UINT> axis_id_buffer;
 }
 
 PassNode stencil_renderer_after

@@ -15,25 +15,6 @@
 
 using namespace FrameGraph;
 
-{#- Emits { ResourceID::X, is_write } per resource the pass touches. -#}
-{%- macro collect_resource_accesses(params) -%}
-{%- for v in params -%}
-{%- set view = parsed.views[v.type] -%}
-{%- if view is defined -%}
-{{ collect_resource_accesses(view.params) -}}
-{%- else -%}
-{%- if v.options.Write is defined %}
-		{ ResourceID::{{v.name}}, true },
-{%- else %}
-		{ ResourceID::{{v.name}}, false },
-{%- endif %}
-{%- if v.options.Recreate is defined %}
-		{ ResourceID::{{v.name}}, true },
-{%- endif %}
-{%- endif -%}
-{%- endfor -%}
-{%- endmacro -%}
-
 namespace Passes
 {
 
@@ -58,11 +39,15 @@ public:
 		Handlers::{{v.type}} {{v.options.Recreate.value_atom.expr}} = {{v.name}};
 {%- endif %}
 {% endfor -%}
-{% if pass.params | length > 0 -%}
+{%- set accesses = get_pass_accesses(pass.name) -%}
+{% if accesses | length > 0 -%}
 		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass declares [Write] on it.
+		// whether the pass writes it (own [Write], or the view usage's
+		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-{{- collect_resource_accesses(pass.params) }}
+{%- for a in accesses %}
+			{ ResourceID::{{a.id}}, {{ "true" if a.write else "false" }} },
+{%- endfor %}
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 {% else -%}

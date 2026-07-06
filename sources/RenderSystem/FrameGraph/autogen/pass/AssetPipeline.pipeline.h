@@ -108,6 +108,406 @@ public:
 	{
 		return resource_names;
 	}
+	// Precomputed per-resource RW-state timeline (see FrameGraph::PrecompiledResourceInfo).
+	// Each resource owns its pass-ref pool and its states; a state's passes are
+	// a span into that resource's own <id>_pass_refs[].
+	static inline const FrameGraph::PassRef ResultTexture_pass_refs[] = {
+		{ PassID::ResultCreation, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::Sky, 0 },
+		{ PassID::SMAA, 0 },
+		{ PassID::SMAA, 0 },
+		{ PassID::FSR, 0 },
+		{ PassID::FSR, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState ResultTexture_states[] = {
+		{ true, { ResultTexture_pass_refs + 0, 1 } },
+		{ true, { ResultTexture_pass_refs + 1, 1 } },
+		{ true, { ResultTexture_pass_refs + 2, 1 } },
+		{ true, { ResultTexture_pass_refs + 3, 1 } },
+		{ true, { ResultTexture_pass_refs + 4, 1 } },
+		{ true, { ResultTexture_pass_refs + 5, 1 } },
+		{ true, { ResultTexture_pass_refs + 6, 1 } },
+		{ false, { ResultTexture_pass_refs + 7, 1 } },
+	};
+	static inline const FrameGraph::PassRef scene_pass_refs[] = {
+		{ PassID::PreScene, 0 },
+		{ PassID::AssetGBuffer, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState scene_states[] = {
+		{ true, { scene_pass_refs + 0, 1 } },
+		{ false, { scene_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef BlueNoise_pass_refs[] = {
+		{ PassID::BlueNoise, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState BlueNoise_states[] = {
+		{ true, { BlueNoise_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_Albedo_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_Albedo_states[] = {
+		{ false, { GBuffer_Albedo_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_Normals_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_Normals_states[] = {
+		{ false, { GBuffer_Normals_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_Depth_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::Sky, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_Depth_states[] = {
+		{ false, { GBuffer_Depth_pass_refs + 0, 5 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_Specular_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_Specular_states[] = {
+		{ false, { GBuffer_Specular_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_Speed_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_Speed_states[] = {
+		{ false, { GBuffer_Speed_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_DepthMips_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_DepthMips_states[] = {
+		{ false, { GBuffer_DepthMips_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_Quality_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_Quality_states[] = {
+		{ false, { GBuffer_Quality_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_TempColor_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_TempColor_states[] = {
+		{ false, { GBuffer_TempColor_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_NormalsPrev_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_NormalsPrev_states[] = {
+		{ false, { GBuffer_NormalsPrev_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_SpecularPrev_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_SpecularPrev_states[] = {
+		{ false, { GBuffer_SpecularPrev_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_DepthPrev_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_DepthPrev_states[] = {
+		{ false, { GBuffer_DepthPrev_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_HiZ_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_states[] = {
+		{ false, { GBuffer_HiZ_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_HiZ_UAV_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_UAV_states[] = {
+		{ false, { GBuffer_HiZ_UAV_pass_refs + 0, 4 } },
+	};
+	static inline const FrameGraph::PassRef global_depth_pass_refs[] = {
+		{ PassID::PSSM_Global, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState global_depth_states[] = {
+		{ true, { global_depth_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef global_camera_pass_refs[] = {
+		{ PassID::PSSM_Global, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState global_camera_states[] = {
+		{ true, { global_camera_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef PSSM_Depths_pass_refs[] = {
+		{ PassID::PSSM_Cascade, 0 },
+		{ PassID::PSSM_Cascade, 1 },
+		{ PassID::PSSM_Cascade, 2 },
+		{ PassID::PSSM_Cascade, 3 },
+		{ PassID::PSSM_Cascade, 4 },
+		{ PassID::PSSM_Cascade, 5 },
+		{ PassID::PSSM_GenerateMask, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState PSSM_Depths_states[] = {
+		{ true, { PSSM_Depths_pass_refs + 0, 1 } },
+		{ true, { PSSM_Depths_pass_refs + 1, 1 } },
+		{ true, { PSSM_Depths_pass_refs + 2, 1 } },
+		{ true, { PSSM_Depths_pass_refs + 3, 1 } },
+		{ true, { PSSM_Depths_pass_refs + 4, 1 } },
+		{ true, { PSSM_Depths_pass_refs + 5, 1 } },
+		{ false, { PSSM_Depths_pass_refs + 6, 1 } },
+	};
+	static inline const FrameGraph::PassRef PSSM_Cameras_pass_refs[] = {
+		{ PassID::PSSM_Cascade, 0 },
+		{ PassID::PSSM_Cascade, 1 },
+		{ PassID::PSSM_Cascade, 2 },
+		{ PassID::PSSM_Cascade, 3 },
+		{ PassID::PSSM_Cascade, 4 },
+		{ PassID::PSSM_Cascade, 5 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState PSSM_Cameras_states[] = {
+		{ true, { PSSM_Cameras_pass_refs + 0, 1 } },
+		{ true, { PSSM_Cameras_pass_refs + 1, 1 } },
+		{ true, { PSSM_Cameras_pass_refs + 2, 1 } },
+		{ true, { PSSM_Cameras_pass_refs + 3, 1 } },
+		{ true, { PSSM_Cameras_pass_refs + 4, 1 } },
+		{ true, { PSSM_Cameras_pass_refs + 5, 1 } },
+		{ false, { PSSM_Cameras_pass_refs + 6, 2 } },
+	};
+	static inline const FrameGraph::PassRef sky_cubemap_pass_refs[] = {
+		{ PassID::CubeSky, 0 },
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState sky_cubemap_states[] = {
+		{ true, { sky_cubemap_pass_refs + 0, 1 } },
+		{ true, { sky_cubemap_pass_refs + 1, 1 } },
+		{ false, { sky_cubemap_pass_refs + 2, 1 } },
+	};
+	static inline const FrameGraph::PassRef sky_cubemap_filtered_pass_refs[] = {
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_states[] = {
+		{ false, { sky_cubemap_filtered_pass_refs + 0, 1 } },
+		{ true, { sky_cubemap_filtered_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef sky_cubemap_filtered_diffuse_pass_refs[] = {
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_diffuse_states[] = {
+		{ false, { sky_cubemap_filtered_diffuse_pass_refs + 0, 1 } },
+		{ true, { sky_cubemap_filtered_diffuse_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef LightMask_pass_refs[] = {
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::PSSM_Combine, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState LightMask_states[] = {
+		{ true, { LightMask_pass_refs + 0, 1 } },
+		{ false, { LightMask_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef ShadowMask_pass_refs[] = {
+		{ PassID::PSSM_Combine, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState ShadowMask_states[] = {
+		{ false, { ShadowMask_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef SMAA_edges_pass_refs[] = {
+		{ PassID::SMAA, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState SMAA_edges_states[] = {
+		{ true, { SMAA_edges_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef SMAA_blend_pass_refs[] = {
+		{ PassID::SMAA, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState SMAA_blend_states[] = {
+		{ true, { SMAA_blend_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef FSRTemp_pass_refs[] = {
+		{ PassID::FSR, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState FSRTemp_states[] = {
+		{ true, { FSRTemp_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef swapchain_pass_refs[] = {
+		{ PassID::AssetMip, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState swapchain_states[] = {
+		{ false, { swapchain_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PrecompiledResourceInfo resource_infos[] = {
+		{ ResourceID::ResultTexture, ResultTexture_states },
+		{ ResourceID::scene, scene_states },
+		{ ResourceID::BlueNoise, BlueNoise_states },
+		{ ResourceID::GBuffer_Albedo, GBuffer_Albedo_states },
+		{ ResourceID::GBuffer_Normals, GBuffer_Normals_states },
+		{ ResourceID::GBuffer_Depth, GBuffer_Depth_states },
+		{ ResourceID::GBuffer_Specular, GBuffer_Specular_states },
+		{ ResourceID::GBuffer_Speed, GBuffer_Speed_states },
+		{ ResourceID::GBuffer_DepthMips, GBuffer_DepthMips_states },
+		{ ResourceID::GBuffer_Quality, GBuffer_Quality_states },
+		{ ResourceID::GBuffer_TempColor, GBuffer_TempColor_states },
+		{ ResourceID::GBuffer_NormalsPrev, GBuffer_NormalsPrev_states },
+		{ ResourceID::GBuffer_SpecularPrev, GBuffer_SpecularPrev_states },
+		{ ResourceID::GBuffer_DepthPrev, GBuffer_DepthPrev_states },
+		{ ResourceID::GBuffer_HiZ, GBuffer_HiZ_states },
+		{ ResourceID::GBuffer_HiZ_UAV, GBuffer_HiZ_UAV_states },
+		{ ResourceID::global_depth, global_depth_states },
+		{ ResourceID::global_camera, global_camera_states },
+		{ ResourceID::PSSM_Depths, PSSM_Depths_states },
+		{ ResourceID::PSSM_Cameras, PSSM_Cameras_states },
+		{ ResourceID::sky_cubemap, sky_cubemap_states },
+		{ ResourceID::sky_cubemap_filtered, sky_cubemap_filtered_states },
+		{ ResourceID::sky_cubemap_filtered_diffuse, sky_cubemap_filtered_diffuse_states },
+		{ ResourceID::LightMask, LightMask_states },
+		{ ResourceID::ShadowMask, ShadowMask_states },
+		{ ResourceID::SMAA_edges, SMAA_edges_states },
+		{ ResourceID::SMAA_blend, SMAA_blend_states },
+		{ ResourceID::FSRTemp, FSRTemp_states },
+		{ ResourceID::swapchain, swapchain_states },
+	};
+	static constexpr uint32_t resource_info_count = std::size(resource_infos);
+	// Precomputed pass instances with queue type and prev-pass dependency edges
+	// (static resolve_dependencies). Each pass owns its <pass>_<idx>_prev[] refs.
+	static inline const FrameGraph::PassRef AssetGBuffer_0_prev[] = {
+		{ PassID::PreScene, 0 },
+	};
+	static inline const FrameGraph::PassRef PSSM_Cascade_1_prev[] = {
+		{ PassID::PSSM_Cascade, 0 },
+	};
+	static inline const FrameGraph::PassRef PSSM_Cascade_2_prev[] = {
+		{ PassID::PSSM_Cascade, 0 },
+		{ PassID::PSSM_Cascade, 1 },
+	};
+	static inline const FrameGraph::PassRef PSSM_Cascade_3_prev[] = {
+		{ PassID::PSSM_Cascade, 0 },
+		{ PassID::PSSM_Cascade, 1 },
+		{ PassID::PSSM_Cascade, 2 },
+	};
+	static inline const FrameGraph::PassRef PSSM_Cascade_4_prev[] = {
+		{ PassID::PSSM_Cascade, 0 },
+		{ PassID::PSSM_Cascade, 1 },
+		{ PassID::PSSM_Cascade, 2 },
+		{ PassID::PSSM_Cascade, 3 },
+	};
+	static inline const FrameGraph::PassRef PSSM_Cascade_5_prev[] = {
+		{ PassID::PSSM_Cascade, 0 },
+		{ PassID::PSSM_Cascade, 1 },
+		{ PassID::PSSM_Cascade, 2 },
+		{ PassID::PSSM_Cascade, 3 },
+		{ PassID::PSSM_Cascade, 4 },
+	};
+	static inline const FrameGraph::PassRef CubeMapDownsample_0_prev[] = {
+		{ PassID::CubeSky, 0 },
+	};
+	static inline const FrameGraph::PassRef CubeMapEnviromentProcessor_0_prev[] = {
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeSky, 0 },
+	};
+	static inline const FrameGraph::PassRef PSSM_GenerateMask_0_prev[] = {
+		{ PassID::PSSM_Cascade, 0 },
+		{ PassID::PSSM_Cascade, 1 },
+		{ PassID::PSSM_Cascade, 2 },
+		{ PassID::PSSM_Cascade, 3 },
+		{ PassID::PSSM_Cascade, 4 },
+		{ PassID::PSSM_Cascade, 5 },
+	};
+	static inline const FrameGraph::PassRef PSSM_Combine_0_prev[] = {
+		{ PassID::PSSM_Cascade, 0 },
+		{ PassID::PSSM_Cascade, 1 },
+		{ PassID::PSSM_Cascade, 2 },
+		{ PassID::PSSM_Cascade, 3 },
+		{ PassID::PSSM_Cascade, 4 },
+		{ PassID::PSSM_Cascade, 5 },
+		{ PassID::PSSM_GenerateMask, 0 },
+		{ PassID::ResultCreation, 0 },
+	};
+	static inline const FrameGraph::PassRef Sky_0_prev[] = {
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::ResultCreation, 0 },
+	};
+	static inline const FrameGraph::PassRef SMAA_0_prev[] = {
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::ResultCreation, 0 },
+		{ PassID::Sky, 0 },
+	};
+	static inline const FrameGraph::PassRef FSR_0_prev[] = {
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::ResultCreation, 0 },
+		{ PassID::SMAA, 0 },
+		{ PassID::Sky, 0 },
+	};
+	static inline const FrameGraph::PassRef AssetMip_0_prev[] = {
+		{ PassID::FSR, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::ResultCreation, 0 },
+		{ PassID::SMAA, 0 },
+		{ PassID::Sky, 0 },
+	};
+	static inline const FrameGraph::PrecompiledPass precompiled_passes[] = {
+		{ PassID::ResultCreation, 0, false, {} },
+		{ PassID::PreScene, 0, false, {} },
+		{ PassID::BlueNoise, 0, true, {} },
+		{ PassID::AssetGBuffer, 0, false, AssetGBuffer_0_prev },
+		{ PassID::PSSM_Global, 0, false, {} },
+		{ PassID::PSSM_Cascade, 0, false, {} },
+		{ PassID::PSSM_Cascade, 1, false, PSSM_Cascade_1_prev },
+		{ PassID::PSSM_Cascade, 2, false, PSSM_Cascade_2_prev },
+		{ PassID::PSSM_Cascade, 3, false, PSSM_Cascade_3_prev },
+		{ PassID::PSSM_Cascade, 4, false, PSSM_Cascade_4_prev },
+		{ PassID::PSSM_Cascade, 5, false, PSSM_Cascade_5_prev },
+		{ PassID::CubeSky, 0, false, {} },
+		{ PassID::CubeMapDownsample, 0, true, CubeMapDownsample_0_prev },
+		{ PassID::CubeMapEnviromentProcessor, 0, false, CubeMapEnviromentProcessor_0_prev },
+		{ PassID::PSSM_GenerateMask, 0, false, PSSM_GenerateMask_0_prev },
+		{ PassID::PSSM_Combine, 0, false, PSSM_Combine_0_prev },
+		{ PassID::Sky, 0, false, Sky_0_prev },
+		{ PassID::SMAA, 0, false, SMAA_0_prev },
+		{ PassID::FSR, 0, true, FSR_0_prev },
+		{ PassID::AssetMip, 0, false, AssetMip_0_prev },
+	};
+	static constexpr uint32_t precompiled_pass_count = std::size(precompiled_passes);
 
 	void add_passes(FrameGraph::Graph& graph)
 	{

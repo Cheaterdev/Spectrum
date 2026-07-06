@@ -71,9 +71,9 @@ GraphicsPSO Blending
 
 PassNode SMAA
 {
-	[Recreate = ResultTextureNew]
+	[Write] [Recreate = ResultTextureNew]
 	Texture ResultTexture;
 
-	Texture SMAA_edges;
-	Texture SMAA_blend;
+	[Write] Texture SMAA_edges;
+	[Write] Texture SMAA_blend;
 }

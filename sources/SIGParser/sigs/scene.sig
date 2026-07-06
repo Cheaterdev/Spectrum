@@ -94,7 +94,7 @@ GraphicsPSO Voxelization
 [Static]
 PassNode PreScene
 {
-	StructuredBuffer<uint> scene;
+	[Write] StructuredBuffer<uint> scene;
 }
 
 
@@ -103,19 +103,21 @@ PassNode PreScene
 [Required]
 PassNode Profiler
 {
-	Texture swapchain;
+	[Write] Texture swapchain;
 }
 
 [Static]
 [Compute]
 PassNode CopyPrev
 {
-	GBuffer gbuffer;
+	[Write = {GBuffer_DepthPrev, GBuffer_NormalsPrev, GBuffer_SpecularPrev}] GBuffer gbuffer;
 }
 
 [Static]
 PassNode Scene
 {
+	[Write = {GBuffer_Albedo, GBuffer_Normals, GBuffer_Depth, GBuffer_Specular, GBuffer_Speed,
+	          GBuffer_DepthMips, GBuffer_Quality, GBuffer_HiZ, GBuffer_HiZ_UAV}]
 	GBuffer gbuffer;
 	StructuredBuffer<uint> scene;
 }

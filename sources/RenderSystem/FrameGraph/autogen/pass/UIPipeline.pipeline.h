@@ -56,6 +56,282 @@ public:
 	{
 		return resource_names;
 	}
+	// Precomputed per-resource RW-state timeline (see FrameGraph::PrecompiledResourceInfo).
+	// Each resource owns its pass-ref pool and its states; a state's passes are
+	// a span into that resource's own <id>_pass_refs[].
+	static inline const FrameGraph::PassRef swapchain_pass_refs[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+		{ PassID::UI_Render, 7 },
+		{ PassID::UI_Render, 8 },
+		{ PassID::UI_Render, 9 },
+		{ PassID::UI_Render, 10 },
+		{ PassID::UI_Render, 11 },
+		{ PassID::UI_Render, 12 },
+		{ PassID::UI_Render, 13 },
+		{ PassID::UI_Render, 14 },
+		{ PassID::UI_Render, 15 },
+	};
+	static inline const FrameGraph::PrecompiledState swapchain_states[] = {
+		{ true, { swapchain_pass_refs + 0, 1 } },
+		{ true, { swapchain_pass_refs + 1, 1 } },
+		{ true, { swapchain_pass_refs + 2, 1 } },
+		{ true, { swapchain_pass_refs + 3, 1 } },
+		{ true, { swapchain_pass_refs + 4, 1 } },
+		{ true, { swapchain_pass_refs + 5, 1 } },
+		{ true, { swapchain_pass_refs + 6, 1 } },
+		{ true, { swapchain_pass_refs + 7, 1 } },
+		{ true, { swapchain_pass_refs + 8, 1 } },
+		{ true, { swapchain_pass_refs + 9, 1 } },
+		{ true, { swapchain_pass_refs + 10, 1 } },
+		{ true, { swapchain_pass_refs + 11, 1 } },
+		{ true, { swapchain_pass_refs + 12, 1 } },
+		{ true, { swapchain_pass_refs + 13, 1 } },
+		{ true, { swapchain_pass_refs + 14, 1 } },
+		{ true, { swapchain_pass_refs + 15, 1 } },
+		{ true, { swapchain_pass_refs + 16, 1 } },
+	};
+	static inline const FrameGraph::PassRef UI_PreDraw_Sync_pass_refs[] = {
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+		{ PassID::UI_Render, 7 },
+		{ PassID::UI_Render, 8 },
+		{ PassID::UI_Render, 9 },
+		{ PassID::UI_Render, 10 },
+		{ PassID::UI_Render, 11 },
+		{ PassID::UI_Render, 12 },
+		{ PassID::UI_Render, 13 },
+		{ PassID::UI_Render, 14 },
+		{ PassID::UI_Render, 15 },
+	};
+	static inline const FrameGraph::PrecompiledState UI_PreDraw_Sync_states[] = {
+		{ true, { UI_PreDraw_Sync_pass_refs + 0, 1 } },
+		{ false, { UI_PreDraw_Sync_pass_refs + 1, 16 } },
+	};
+	static inline const FrameGraph::PrecompiledResourceInfo resource_infos[] = {
+		{ ResourceID::swapchain, swapchain_states },
+		{ ResourceID::UI_PreDraw_Sync, UI_PreDraw_Sync_states },
+	};
+	static constexpr uint32_t resource_info_count = std::size(resource_infos);
+	// Precomputed pass instances with queue type and prev-pass dependency edges
+	// (static resolve_dependencies). Each pass owns its <pass>_<idx>_prev[] refs.
+	static inline const FrameGraph::PassRef UI_Render_0_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_1_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_2_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_3_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_4_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_5_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_6_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_7_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_8_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+		{ PassID::UI_Render, 7 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_9_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+		{ PassID::UI_Render, 7 },
+		{ PassID::UI_Render, 8 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_10_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+		{ PassID::UI_Render, 7 },
+		{ PassID::UI_Render, 8 },
+		{ PassID::UI_Render, 9 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_11_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+		{ PassID::UI_Render, 7 },
+		{ PassID::UI_Render, 8 },
+		{ PassID::UI_Render, 9 },
+		{ PassID::UI_Render, 10 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_12_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+		{ PassID::UI_Render, 7 },
+		{ PassID::UI_Render, 8 },
+		{ PassID::UI_Render, 9 },
+		{ PassID::UI_Render, 10 },
+		{ PassID::UI_Render, 11 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_13_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+		{ PassID::UI_Render, 7 },
+		{ PassID::UI_Render, 8 },
+		{ PassID::UI_Render, 9 },
+		{ PassID::UI_Render, 10 },
+		{ PassID::UI_Render, 11 },
+		{ PassID::UI_Render, 12 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_14_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+		{ PassID::UI_Render, 7 },
+		{ PassID::UI_Render, 8 },
+		{ PassID::UI_Render, 9 },
+		{ PassID::UI_Render, 10 },
+		{ PassID::UI_Render, 11 },
+		{ PassID::UI_Render, 12 },
+		{ PassID::UI_Render, 13 },
+	};
+	static inline const FrameGraph::PassRef UI_Render_15_prev[] = {
+		{ PassID::Profiler, 0 },
+		{ PassID::UI_PreDraw, 0 },
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+		{ PassID::UI_Render, 7 },
+		{ PassID::UI_Render, 8 },
+		{ PassID::UI_Render, 9 },
+		{ PassID::UI_Render, 10 },
+		{ PassID::UI_Render, 11 },
+		{ PassID::UI_Render, 12 },
+		{ PassID::UI_Render, 13 },
+		{ PassID::UI_Render, 14 },
+	};
+	static inline const FrameGraph::PrecompiledPass precompiled_passes[] = {
+		{ PassID::Profiler, 0, false, {} },
+		{ PassID::UI_PreDraw, 0, false, {} },
+		{ PassID::UI_Render, 0, false, UI_Render_0_prev },
+		{ PassID::UI_Render, 1, false, UI_Render_1_prev },
+		{ PassID::UI_Render, 2, false, UI_Render_2_prev },
+		{ PassID::UI_Render, 3, false, UI_Render_3_prev },
+		{ PassID::UI_Render, 4, false, UI_Render_4_prev },
+		{ PassID::UI_Render, 5, false, UI_Render_5_prev },
+		{ PassID::UI_Render, 6, false, UI_Render_6_prev },
+		{ PassID::UI_Render, 7, false, UI_Render_7_prev },
+		{ PassID::UI_Render, 8, false, UI_Render_8_prev },
+		{ PassID::UI_Render, 9, false, UI_Render_9_prev },
+		{ PassID::UI_Render, 10, false, UI_Render_10_prev },
+		{ PassID::UI_Render, 11, false, UI_Render_11_prev },
+		{ PassID::UI_Render, 12, false, UI_Render_12_prev },
+		{ PassID::UI_Render, 13, false, UI_Render_13_prev },
+		{ PassID::UI_Render, 14, false, UI_Render_14_prev },
+		{ PassID::UI_Render, 15, false, UI_Render_15_prev },
+	};
+	static constexpr uint32_t precompiled_pass_count = std::size(precompiled_passes);
 
 	void add_passes(FrameGraph::Graph& graph)
 	{
