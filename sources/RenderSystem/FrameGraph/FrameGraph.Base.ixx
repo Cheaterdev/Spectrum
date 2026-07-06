@@ -133,7 +133,8 @@ public:
 		Albedo,
 		Motion,
 		GI_Indirect,
-		GI_Reflection
+		GI_Reflection,
+		VoxelTrace
 	};
 
 	struct DebugContext

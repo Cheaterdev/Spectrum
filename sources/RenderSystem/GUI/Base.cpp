@@ -1030,6 +1030,7 @@ namespace GUI
             case DM::Motion:        return FrameGraph::ResourceID::GBuffer_Speed;
             case DM::GI_Indirect:   return FrameGraph::ResourceID::VoxelIndirectFiltered;
             case DM::GI_Reflection: return FrameGraph::ResourceID::ReflectionDenoiser_ReprojectedRadiance;
+            case DM::VoxelTrace:    return FrameGraph::ResourceID::VoxelDebug;
             default:                return FrameGraph::ResourceID::ResultTexture;
             }
         };
