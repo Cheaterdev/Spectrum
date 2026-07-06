@@ -459,10 +459,15 @@ int main()
 				// whether it writes.
 				struct Touch { std::string pass; uint32_t index; bool write; };
 
-				// Per resource, ordered touches. Separate first-seen order keeps
-				// output deterministic.
-				std::map<std::string, std::vector<Touch>> touches;
-				std::vector<std::string> resource_order;
+				// Per resource version (id + chain_index), ordered touches. A
+				// recreate() starts a new chain version: within one pass instance,
+				// the 2nd+ access to the same id is the recreate, and it plus every
+				// later touch go to the new version. Separate first-seen order
+				// keeps output deterministic.
+				using Key = std::pair<std::string, uint32_t>;   // (id, chain_index)
+				std::map<Key, std::vector<Touch>> touches;
+				std::vector<Key>                  resource_order;
+				std::map<std::string, uint32_t>   version;       // current chain version per id
 
 				for (const auto& entry : pipeline_ptr->entries)
 				{
@@ -478,13 +483,18 @@ int main()
 
 					for (uint32_t inst = 0; inst < count; ++inst)
 					{
+						std::set<std::string> seen_in_pass;
 						for (const auto& [id, write] : accesses)
 						{
-							auto it = touches.find(id);
+							if (!seen_in_pass.insert(id).second)
+								++version[id];              // recreate -> next chain version
+
+							Key key{ id, version[id] };
+							auto it = touches.find(key);
 							if (it == touches.end())
 							{
-								resource_order.push_back(id);
-								it = touches.emplace(id, std::vector<Touch>{}).first;
+								resource_order.push_back(key);
+								it = touches.emplace(key, std::vector<Touch>{}).first;
 							}
 							it->second.push_back({ entry.name, inst, write });
 						}
@@ -492,12 +502,13 @@ int main()
 				}
 
 				// Group touches into states (new state on write, first touch, or
-				// read-after-write). Each resource owns its own states and pass
-				// refs; state begin/count are offsets into that resource's refs.
+				// read-after-write). Each resource version owns its own states and
+				// pass refs; state begin/count are offsets into that version's refs.
 				ValuesList resources;
-				for (const auto& id : resource_order)
+				for (const auto& key : resource_order)
 				{
-					const auto& ts = touches[id];
+					const auto& id = key.first;
+					const auto& ts = touches[key];
 
 					ValuesList states;
 					ValuesList pass_refs;
@@ -538,6 +549,7 @@ int main()
 					ValuesMap r;
 					r["pass_refs"] = std::move(pass_refs);
 					r["id"] = id;
+					r["chain_index"] = (int64_t)key.second;
 					r["states"] = std::move(states);
 					resources.push_back(std::move(r));
 				}

@@ -24,53 +24,16 @@ namespace FrameGraph
 		bool needs_new_state = is_writer || states.empty() || states.back().write;
 
 		if (needs_new_state)
-		{
-			states.push_back({ .write = is_writer });
-			if (is_writer)
-				last_writer = static_cast<int>(states.size() - 1);
+			states.push(is_writer, max_passes);
 
-			ResourceRWState& new_state = states.back();
-			new_state.passes.reserve(max_passes);
-			new_state.compute.reserve(max_passes);
-			new_state.graphics.reserve(max_passes);
-		}
-
-		ResourceRWState& state = states.back();
-		state.passes.emplace_back(pass);
-		(check(pass->flags & PassFlags::Compute) ? state.compute : state.graphics).emplace_back(pass);
-	}
-
-	// Stage 2: once every pass has run add_pass for this resource, derive prev/next
-	// pass edges from the completed states timeline. Gathers edges into a caller-owned
-	// buffer instead of writing into Pass directly, so this can run concurrently across
-	// resources (each resource only ever touches its own buffer slot).
-	void ResourceAllocInfo::resolve_dependencies(std::vector<std::pair<Pass*, Pass*>>& edges)
-	{
-		PROFILE(L"resolve");
-
-		std::unordered_set<Pass*> related;
-
-		for (auto& state : states)
-		{
-			for (auto pass : state.passes)
-			{
-				for (auto p : related)
-				{
-					ASSERT(p != pass);
-					edges.emplace_back(p, pass);
-				}
-			}
-			related.insert(state.passes.begin(), state.passes.end());
-		}
+		states.back().passes.emplace_back(pass);
 	}
 
 
 	void ResourceAllocInfo::reset(size_t new_max_passes)
 	{
-		last_writer = 0;
- 		max_passes = new_max_passes;
-		states.clear();
-		states.reserve(16);
+		max_passes = new_max_passes;
+		states.reset_frame();
 	}
 
 	void ResourceAllocInfo::remove_inactive()
@@ -88,17 +51,6 @@ namespace FrameGraph
 
 		for (auto& state : states)
 		{
-
-			{
-				const auto ret2 = std::ranges::remove_if(state.graphics, fn);
-				state.graphics.erase(ret2.begin(), ret2.end());
-			}
-
-			{
-				const auto ret2 = std::ranges::remove_if(state.compute, fn);
-				state.compute.erase(ret2.begin(), ret2.end());
-			}
-
 
 			{
 				const auto ret2 = std::ranges::remove_if(state.passes, fn);
@@ -122,12 +74,7 @@ namespace FrameGraph
 
 
 
-		{
-			auto fn = [](ResourceRWState& s) {return s.passes.empty(); };
-
-			const auto ret2 = std::ranges::remove_if(states, fn);
-			states.erase(ret2.begin(), ret2.end());
-		}
+		states.remove_if([](ResourceRWState& s) { return s.passes.empty(); });
 
 	}
 	TaskBuilder::TaskBuilder() : frames(RenderSystem::get().device()), allocator(RenderSystem::get().device().get_heap_factory(), false), global_frame(RenderSystem::get().device())
@@ -263,7 +210,7 @@ namespace FrameGraph
 
 		this->pass = pass;
 		this->frame = frame;
-		 this->graph = graph;
+		this->graph = graph;
 
 		bool need_list = !pass->used.resource_deletions_before.empty() || !pass->used.resource_creations.empty();
 
@@ -302,10 +249,10 @@ namespace FrameGraph
 		if (list)
 		{
 
-			for(auto [info, flags]:pass->used.resource_flags)
+			for (auto [info, flags] : pass->used.resource_flags)
 			{
-				if(!check(flags&WRITEABLE_FLAGS)) continue;
-				 info->process_debug_resource(pass, this);
+				if (!check(flags & WRITEABLE_FLAGS)) continue;
+				info->process_debug_resource(pass, this);
 			}
 			for (auto info : pass->used.resource_deletions_after)
 			{
@@ -380,144 +327,68 @@ namespace FrameGraph
 			pass->renderable = pass->setup(builder);
 		}
 
+		// Setup only recorded resource desc/flags + ordered touches; build the
+		// per-resource RW-state timelines now, after every setup has run.
+		builder.build_resource_states();
+
 		{
-			PROFILE(L"resolve_dependencies");
 
-			// Flip to benchmark: work per resource is tiny, so thread-pool dispatch
-			// overhead may or may not be worth paying depending on pass/resource count.
-			constexpr bool resolve_dependencies_mt = false;
-
-			if constexpr (resolve_dependencies_mt)
-			{
-				// Work per resource is tiny, so per-submit overhead dominates well before
-				// hardware_concurrency() chunks are reached — cap chunk count hard instead
-				// of scaling with core count.
-				constexpr size_t max_chunks = 4;
-				size_t n = builder.alloc_resources.size();
-				size_t worker_count = std::min<size_t>(n, max_chunks);
-				size_t chunk_size = (n + worker_count - 1) / worker_count;
-
-				std::vector<std::vector<std::pair<Pass*, Pass*>>> gathered_edges(worker_count);
-				std::atomic<size_t> pending{ 0 };
-
-				// Chunk 0 runs inline on the calling thread — one fewer dispatch round trip,
-				// and the caller does useful work instead of idling in the wait loop below.
-				for (size_t w = 1; w < worker_count; ++w)
+			PROFILE(L"enabled");
+			for (auto& chain : builder.alloc_resources)
+				for (auto& info : chain.active_span())
 				{
-					size_t begin = w * chunk_size;
-					size_t end = std::min(begin + chunk_size, n);
-					if (begin >= end) break;
-					PROFILE(L"enqueue_detached");
 
-					pending.fetch_add(1, std::memory_order_relaxed);
-					thread_pool::get().enqueue_detached([this, &gathered_edges, &pending, w, begin, end]()
+					if (info.passed) continue;
+					info.enabled = false;
+				}
+
+			builder.enabled_resources.clear();
+
+			auto process_resource = [&](this auto&& self, ResourceAllocInfo& info, UINT pass_id) -> void {
+
+				//	if (info.enabled) return;
+				if (!info.enabled) builder.enabled_resources.push_back(&info);
+				info.enabled = true;
+
+				for (auto& s : info.states)
+				{
+					if (s.write)
 					{
-						auto& edges = gathered_edges[w];
-						for (size_t i = begin; i < end; ++i)
+
+						auto& pass = s.passes.front();
+
+						if (pass->enabled) continue;
+
+						if (!check(info.flags & ResourceFlags::Static) && pass->id > pass_id) continue;
+						pass->enabled = true;
+
+						for (auto& info : pass->used.resources)
 						{
-							auto& chain = builder.alloc_resources[i];
-							for (auto& info : chain.active_span())
-								info.resolve_dependencies(edges);
+							self(*info, pass->id);
 						}
-						pending.fetch_sub(1, std::memory_order_acq_rel);
-					});
-				}
-
-				{
-					PROFILE(L"inline_chunk");
-					size_t end0 = std::min(chunk_size, n);
-					auto& edges0 = gathered_edges[0];
-					for (size_t i = 0; i < end0; ++i)
-					{
-						auto& chain = builder.alloc_resources[i];
-						for (auto& info : chain.active_span())
-							info.resolve_dependencies(edges0);
 					}
 				}
 
+				};
+
+			for (auto& chain : builder.alloc_resources)
+				for (auto& info : chain.active_span())
 				{
-					PROFILE(L"wait");
-					while (pending.load(std::memory_order_acquire) != 0)
-						std::this_thread::yield();
+
+					if (check(info.flags & ResourceFlags::Required))
+						process_resource(info, (int)builder.passes.size());
 				}
 
-				PROFILE(L"complete");
-				for (auto& edges : gathered_edges)
-					for (auto [prev, next] : edges)
-					{
-						prev->next_passes.insert(next);
-						next->prev_passes.insert(prev);
-					}
-			}
-			else
-			{
-				std::vector<std::pair<Pass*, Pass*>> edges;
-				for (auto& chain : builder.alloc_resources)
-					for (auto& info : chain.active_span())
-						info.resolve_dependencies(edges);
 
-				PROFILE(L"complete");
-				for (auto [prev, next] : edges)
+			for (auto& pass : builder.required_passes)
+			{
+				pass->enabled = true;
+				for (auto& info : pass->used.resources)
 				{
-					prev->next_passes.insert(next);
-					next->prev_passes.insert(prev);
-				}
-			}
-		}
-
-		for (auto& chain : builder.alloc_resources)
-			for (auto& info : chain.active_span())
-			{
-
-				if (info.passed) continue;
-				info.enabled = false;
-			}
-
-		builder.enabled_resources.clear();
-
-		auto process_resource = [&](this auto&& self, ResourceAllocInfo& info, UINT pass_id) -> void {
-
-		//	if (info.enabled) return;
-			if (!info.enabled) builder.enabled_resources.push_back(&info);
-			info.enabled = true;
-
-			for (auto& s : info.states)
-			{
-				if (s.write)
-				{
-
-					auto& pass = s.passes.front();
-
-					if (pass->enabled) continue;
-
-					if (!check(info.flags & ResourceFlags::Static) && pass->id > pass_id) continue;
-					pass->enabled = true;
-
-					for (auto& info : pass->used.resources)
-					{
-						self(*info, pass->id);
-					}
+					process_resource(*info, pass->id);
 				}
 			}
 
-			};
-
-		for (auto& chain : builder.alloc_resources)
-			for (auto& info : chain.active_span())
-			{
-
-				if (check(info.flags & ResourceFlags::Required))
-					process_resource(info, (int)builder.passes.size());
-			}
-
-
-		for (auto& pass : builder.required_passes)
-		{
-			pass->enabled = true;
-			for (auto& info : pass->used.resources)
-			{
-				process_resource(*info, pass->id);
-			}
 		}
 
 		for (auto pass : builder.passes)
@@ -525,7 +396,6 @@ namespace FrameGraph
 			if (!pass->active()) continue;
 			auto pass_ptr = pass.get();
 
-			pass->dependency_level = 0;
 			builder.enabled_passes.emplace_back(pass_ptr);
 
 			if (!optimize)
@@ -535,143 +405,60 @@ namespace FrameGraph
 
 		}
 
-		if (optimize)
+		int i = 1;
+
+
 		{
 
-			PROFILE(L"optimizing");
+			PROFILE(L"sync_state");
 
+			for (auto pass : builder.enabled_passes)
 			{
-				PROFILE(L"sorting");
-
-				bool sorted = false;
-
-				bool cyclic = false;
-				while (!sorted)
-				{
-
-					sorted = true;
-					for (auto pass : builder.enabled_passes)
-					{
-
-						for (auto prev_passes : pass->next_passes)
-						{
-							if (!prev_passes->active()) continue;
-
-							if (prev_passes == pass)
-							{
-								cyclic = true;
-								continue;
-							}
-
-							if (pass->dependency_level >= prev_passes->dependency_level)
-							{
-								prev_passes->dependency_level = pass->dependency_level + 1;
-								sorted = false;
-							}
-						}
-					}
-				}
-
+				pass->call_id = i++;
+				pass->wait_pass = nullptr;
+				pass->prev_pass = nullptr;
 			}
 
-
-			for (auto pass : builder.enabled_passes | std::ranges::views::reverse)
-			{
-
-				for (auto dep : pass->prev_passes)
-				{
-					if (!dep->active()) continue;
-
-					dep->graphic_count += pass->graphic_count;
-					dep->compute_count += pass->compute_count;
-
-					if (check(pass->flags & PassFlags::Compute))
-						dep->compute_count++;
-					else
-						dep->graphic_count++;
-				}
-			}
-
-			std::list<Pass*> graphics;
-			std::list<Pass*> compute;
-			std::list<Pass*> new_enabled_passes;
+			Pass* prev_compute = nullptr;
+			Pass* prev_graphics = nullptr;
 
 			for (auto pass : builder.enabled_passes)
 			{
 				if (check(pass->flags & PassFlags::Compute))
-					compute.emplace_back(pass);
+				{
+					if (prev_compute)
+					{
+						pass->sync_state.max(prev_compute);
+						pass->sync_state.max(prev_compute->sync_state);
+					}
+					prev_compute = pass;
+				}
 				else
-					graphics.emplace_back(pass);
-			}
 
-			auto insert_pass = [&](this auto&& self, Pass* pass) -> void {
-				for (auto prev : pass->prev_passes)
 				{
-					if (!prev->inserted) self(prev);
+					if (prev_graphics)
+					{
+						pass->sync_state.max(prev_graphics);
+						pass->sync_state.max(prev_graphics->sync_state);
+					}
+					prev_graphics = pass;
+
+
 				}
-				new_enabled_passes.emplace_back(pass);
-				pass->inserted = true;
-			};
 
-			for (auto pass : compute)
-			{
-				if (!pass->inserted) insert_pass(pass);
+				pass->sync_state_with_self = pass->sync_state;
+				pass->sync_state_with_self.max(pass);
 			}
 
-			for (auto pass : graphics)
-			{
-				if (!pass->inserted) insert_pass(pass);
-			}
 
-			//builder.enabled_passes = new_enabled_passes;
 		}
 
-		int i = 1;
-
-
-
-		for (auto pass : builder.enabled_passes)
-		{
-			pass->call_id = i++;
-			pass->wait_pass = nullptr;
-			pass->prev_pass = nullptr;
-		}
-
-		Pass* prev_compute = nullptr;
-		Pass* prev_graphics = nullptr;
-
-		for (auto pass : builder.enabled_passes)
-		{
-			if (check(pass->flags & PassFlags::Compute))
-			{
-				if (prev_compute)
-				{
-					pass->sync_state.max(prev_compute);
-					pass->sync_state.max(prev_compute->sync_state);
-				}
-				prev_compute = pass;
-			}
-			else
-
-			{
-				if (prev_graphics)
-				{
-					pass->sync_state.max(prev_graphics);
-					pass->sync_state.max(prev_graphics->sync_state);
-				}
-				prev_graphics = pass;
-
-
-			}
-
-			pass->sync_state_with_self = pass->sync_state;
-			pass->sync_state_with_self.max(pass);
-		}
 
 		// Inject a fake pass that owns passed and static resources as their creator.
 		// Added after call_id/sync-state assignment so it doesn't disturb scheduling;
 		// call_id=0 places it before all real passes in the timeline.
 		{
+				PROFILE(L"ExternalPass");
 			auto ext = std::make_shared<ExternalPass>();
 			ext->call_id = 0;
 
@@ -699,50 +486,52 @@ namespace FrameGraph
 			}
 		}
 
+			PROFILE(L"sync_state final");
+
 		for (auto& chain : builder.alloc_resources)
 			for (auto& info : chain.active_span())
 			{
 
-			if (!info.enabled) continue;
+				if (!info.enabled) continue;
 
-			info.remove_inactive();
+				info.remove_inactive();
 
-			info.used_begin.reset();
-			info.used_end.reset();
+				info.used_begin.reset();
+				info.used_end.reset();
 
 
 
-			for (auto& state : info.states)
-			{
-				for (auto pass : state.passes)
+				for (auto& state : info.states)
 				{
-					// Same rule as remove_inactive(): state.passes now keeps
-					// enabled-but-not-renderable passes for resource-creation
-					// purposes, but sync/fence state must only ever reference
-					// passes that actually execute and signal something.
-					if (!pass->active()) continue;
-
-					info.used_begin.min(pass);
-					info.used_end.max(pass);
-				}
-			}
-
-			ResourceRWState* prev_state = nullptr;
-			for (auto& state : info.states)
-			{
-
-				if (prev_state)
 					for (auto pass : state.passes)
 					{
+						// Same rule as remove_inactive(): state.passes now keeps
+						// enabled-but-not-renderable passes for resource-creation
+						// purposes, but sync/fence state must only ever reference
+						// passes that actually execute and signal something.
 						if (!pass->active()) continue;
 
-						pass->sync_state.max(prev_state->to);
-
-						pass->sync_state_with_self.max(prev_state->to);
+						info.used_begin.min(pass);
+						info.used_end.max(pass);
 					}
+				}
 
-				prev_state = &state;
-			}
+				ResourceRWState* prev_state = nullptr;
+				for (auto& state : info.states)
+				{
+
+					if (prev_state)
+						for (auto pass : state.passes)
+						{
+							if (!pass->active()) continue;
+
+							pass->sync_state.max(prev_state->to);
+
+							pass->sync_state_with_self.max(prev_state->to);
+						}
+
+					prev_state = &state;
+				}
 			}
 	}
 
@@ -809,60 +598,60 @@ namespace FrameGraph
 
 
 
-				PROFILE(L"submitting lists");
+		PROFILE(L"submitting lists");
 
-				std::map<CommandListType, std::list<CommandList::ptr>> queued_lists;
+		std::map<CommandListType, std::list<CommandList::ptr>> queued_lists;
 
 
-				for (auto& pass : builder.enabled_passes)
+		for (auto& pass : builder.enabled_passes)
+		{
+			HAL::CommandListType list_type = pass->get_type();
+
+			auto commandList = pass->context.list;
+
+			if (commandList)
+			{
+
+
+				for (auto sync_pass : pass->sync_state.values)
 				{
-					HAL::CommandListType list_type = pass->get_type();
+					if (!sync_pass) continue;
 
-					auto commandList = pass->context.list;
+					RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
+					queued_lists[list_type].clear();
 
-					if (commandList)
-					{
-
-
-						for (auto sync_pass : pass->sync_state.values)
-						{
-							if (!sync_pass) continue;
-
-							RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
-							queued_lists[list_type].clear();
-
-							RenderSystem::get().device().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
-						}
-
-
-
-						queued_lists[list_type].emplace_back(commandList);
-
-							if(pass->put_fence)		//////////////////////// ARGH!!!!
-						{
-							pass->fence_end = RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
-
-							queued_lists[list_type].clear();
-
-							result = pass->fence_end;
-						}
-						//	pass->fence_end = commandList->execute();
-
-						//	
-					}
-
-
+					RenderSystem::get().device().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
 				}
 
 
-				for (auto& [type, lists] : queued_lists)
-				{
-					if (lists.empty()) continue;
-					result = RenderSystem::get().device().get_queue(type)->execute(lists);
-				}
-			
 
-		 PROFILE(L"free resources");
+				queued_lists[list_type].emplace_back(commandList);
+
+				if (pass->put_fence)		//////////////////////// ARGH!!!!
+				{
+					pass->fence_end = RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
+
+					queued_lists[list_type].clear();
+
+					result = pass->fence_end;
+				}
+				//	pass->fence_end = commandList->execute();
+
+				//	
+			}
+
+
+		}
+
+
+		for (auto& [type, lists] : queued_lists)
+		{
+			if (lists.empty()) continue;
+			result = RenderSystem::get().device().get_queue(type)->execute(lists);
+		}
+
+
+		PROFILE(L"free resources");
 
 
 
@@ -902,6 +691,7 @@ namespace FrameGraph
 
 		pre_run.clear();
 		slot_setters.clear();
+		added_pipelines.clear();
 
 	}
 
@@ -928,10 +718,10 @@ namespace FrameGraph
 		if (declared_write != actual_write)
 		{
 			Log::get() << "[FrameGraph] [Write] mismatch: pass '" << pass->name.ptr
-			           << "' resource '" << resource_id_name(id)
-			           << "': SIG declares " << (declared_write ? "write" : "read")
-			           << " but runtime does " << (actual_write ? "write" : "read")
-			           << Log::endl;
+				<< "' resource '" << resource_id_name(id)
+				<< "': SIG declares " << (declared_write ? "write" : "read")
+				<< " but runtime does " << (actual_write ? "write" : "read")
+				<< Log::endl;
 			ASSERT(declared_write == actual_write);
 		}
 	}
@@ -956,9 +746,10 @@ namespace FrameGraph
 		//info.valid_from = info.valid_to = info.valid_to_start = nullptr;
 
 		if (current_pass) {
+			// Setup only records what the pass touched + the flags; states are
+			// built after all setups (build_resource_states).
 			current_pass->used.resources.insert(&info);
 			current_pass->used.resource_flags[&info] = flags;
-			info.add_pass(current_pass, flags);
 		}
 	}
 
@@ -969,12 +760,29 @@ namespace FrameGraph
 		current_pass->used.resource_flags[&info] = flags;
 		info.is_new = false;
 		info.flags = info.flags | flags;
-		info.add_pass(current_pass, flags);
 
 		if (info.fence)
 		{
 			current_pass->used.fences.emplace_back(info.fence);
 		}
+	}
+
+	// Builds each resource's ResourceRWState timeline after all setups have run,
+	// by replaying what every pass touched (used.resources) in pipeline order.
+	// This is O(touches) with no intermediate maps: add_pass appends into the
+	// exact ResourceAllocInfo (so recreate chain versions stay separate), and a
+	// pass that conditionally skipped a resource simply isn't in used.resources.
+	//
+	// The per-pipeline precomputed resource_infos aren't used here: filtering the
+	// static template against actual touches (mandatory for conditional need()s)
+	// costs more than this direct replay saves.
+	void TaskBuilder::build_resource_states()
+	{
+		PROFILE(L"build_resource_states");
+
+		for (auto& pass : passes)
+			for (auto* info : pass->used.resources)
+				info->add_pass(pass.get(), pass->used.resource_flags[info]);
 	}
 
 
@@ -1025,42 +833,42 @@ namespace FrameGraph
 		PROFILE(L"compile");
 
 
-	  {
+		{
 
 			PROFILE(L"compile_transitions");
-		for (auto& pass : enabled_passes)
-		{
-			auto commandList = pass->context.list;
-			if (!commandList) continue;
+			for (auto& pass : enabled_passes)
+			{
+				auto commandList = pass->context.list;
+				if (!commandList) continue;
 
-			
+
+			}
+
+
 		}
 
-
-		}
-
-				descriptor_commit_task = thread_pool::get().enqueue([this]()
+		descriptor_commit_task = thread_pool::get().enqueue([this]()
 			{
 				current_frame->commit_descriptors_to_gpu();
 			});
 
 
-	    {
+		{
 
 			PROFILE(L"compile_passes");
-		for (auto& pass : enabled_passes)
-		{
-			auto commandList = pass->context.list;
-			if (!commandList) continue;
+			for (auto& pass : enabled_passes)
+			{
+				auto commandList = pass->context.list;
+				if (!commandList) continue;
 
-			pass->compile_task = thread_pool::get().enqueue([commandList, pass]() {
-				PROFILE(pass->name);
-			   commandList->compile_transitions();
-				commandList->compile();
-				});
+				pass->compile_task = thread_pool::get().enqueue([commandList, pass]() {
+					PROFILE(pass->name);
+					commandList->compile_transitions();
+					commandList->compile();
+					});
 
+			}
 		}
-	  }
 
 		for (auto& pass : enabled_passes)
 		{
@@ -1088,10 +896,10 @@ namespace FrameGraph
 						{
 							HAL::CommandRecord::BarrierDetail detail;
 							detail.resource_name = b.resource ? b.resource->name : "?";
-							detail.before        = b.before;
-							detail.after         = b.after;
-							detail.subres        = b.subres;
-							detail.flags         = b.flags;
+							detail.before = b.before;
+							detail.after = b.after;
+							detail.subres = b.subres;
+							detail.flags = b.flags;
 							rec.barrier_details.push_back(std::move(detail));
 						}
 						rec.barrier_point = nullptr;
@@ -1101,10 +909,10 @@ namespace FrameGraph
 			}
 		}
 
-				// Descriptors must be visible to the GPU before any list below actually executes.
-		// This is the last possible point to wait - everything since render() kicked the
-		// commit off (queued_lists bookkeeping, this call's own dispatch) ran concurrently
-		// with it for free.
+		// Descriptors must be visible to the GPU before any list below actually executes.
+// This is the last possible point to wait - everything since render() kicked the
+// commit off (queued_lists bookkeeping, this call's own dispatch) ran concurrently
+// with it for free.
 		if (descriptor_commit_task.valid())
 		{
 			PROFILE(L"wait descriptor_commit");
@@ -1123,260 +931,262 @@ namespace FrameGraph
 			for (auto& info : chain.active_span())
 			{
 
-			if (!info.enabled) continue;
+				if (!info.enabled) continue;
 
-			///	if (info.passed) continue;///wtf
+				///	if (info.passed) continue;///wtf
 
-			auto& resource = info.resource;
+				auto& resource = info.resource;
 
-			if (!resource) continue;
-			if (resource->get_desc().is_buffer()) continue;
+				if (!resource) continue;
+				if (resource->get_desc().is_buffer()) continue;
 
-			if (info.heap_type != HAL::HeapType::DEFAULT) continue;
+				if (info.heap_type != HAL::HeapType::DEFAULT) continue;
 
-			   bool nb = info.id == ResourceID::PSSM_Depths;
-			auto pass_checker = [&](Pass* pass) {
-				auto commandList = pass->context.list;
-				if (!commandList)
-					return true;
-
-				auto& cpu_state = info.resource->get_state_manager().get_cpu_state(commandList.get());
-				if (!cpu_state.used)
-					return true;
-
-
-				return false;
-				};
-
-
-			auto state_checker = [](const ResourceRWState& state) {
-				return state.passes.empty();
-				};
-			// remove unused passes
-			for (auto& state : info.states)
-			{
-				state.passes.erase(std::remove_if(state.passes.begin(), state.passes.end(), pass_checker), state.passes.end());
-			}
-			info.states.erase(std::remove_if(info.states.begin(), info.states.end(), state_checker), info.states.end());
-
-			// merge resourcestate access in a same read or write state
-			for (auto& state : info.states)
-			{
-				if (state.write) continue;
-				state.merged_read_state.subres.resize(resource->get_state_manager().get_subres_count());
-
-				// calculate merged state
-				for (auto& pass : state.passes)
-				{
+				bool nb = info.id == ResourceID::PSSM_Depths;
+				auto pass_checker = [&](Pass* pass) {
 					auto commandList = pass->context.list;
-					auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
-					state.merged_read_state.merge(cpu_state);
-				}
+					if (!commandList)
+						return true;
 
-				// propagate merged state through passes
-				for (auto& pass : state.passes)
+					auto& cpu_state = info.resource->get_state_manager().get_cpu_state(commandList.get());
+					if (!cpu_state.used)
+						return true;
+
+
+					return false;
+					};
+
+
+				auto state_checker = [](const ResourceRWState& state) {
+					return state.passes.empty();
+					};
+				// remove unused passes
+				for (auto& state : info.states)
 				{
-					auto commandList = pass->context.list;
-					auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
-					cpu_state.merge_read_state(commandList->get_type(), state.merged_read_state);
+					state.passes.erase(std::remove_if(state.passes.begin(), state.passes.end(), pass_checker), state.passes.end());
 				}
-			}
+				info.states.remove_if(state_checker);
 
-			bool need_first_transition = true;
-			// link statee between passes
-			for (uint i = 0; i < info.states.size(); i++)
-			{
-				auto& state = info.states[i];
-				if (!state.write)
+				// merge resourcestate access in a same read or write state
+				for (auto& state : info.states)
 				{
+					if (state.write) continue;
+					state.merged_read_state.subres.resize(resource->get_state_manager().get_subres_count());
 
+					// calculate merged state
 					for (auto& pass : state.passes)
 					{
 						auto commandList = pass->context.list;
-						if (!commandList) continue;
 						auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
-						if (!cpu_state.used) continue;
-
-						need_first_transition = false;
-						break;
+						state.merged_read_state.merge(cpu_state);
 					}
 
-					continue;
-				}
-				ASSERT(state.passes.size() == 1);
-				auto pass = state.passes.front();
-				auto commandList = pass->context.list;
-				if (!commandList) continue;
-
-				HAL::CommandListType list_type = pass->get_type();
-
-				// first write synchronize with start=end
-				if (i == 0 && (info.is_static() || info.passed))
-				{
-					auto target = ResourceStates::NO_ACCESS;
-					auto layout = info.last_state.get_subres_state(0).layout;
-					target.layout = layout;
-					info.resource->get_state_manager().prepare_state(commandList.get(), target);
-				}
-
-
-				// check previous pass is read
-				if (i > 0 && !info.states[i - 1].write)
-				{
-					auto prev_state = info.states[i - 1];
-					auto best_type = prev_state.merged_read_state.get_best_list_type();
-					//		its in 99% read to write compatible on all queues
-					ASSERT(IsCompatible(list_type, best_type));
-					info.resource->get_state_manager().prepare_state(commandList.get(), prev_state.merged_read_state);
-				}
-
-
-				// check next pass is read
-				if ((i < info.states.size() - 1) && !info.states[i + 1].write)
-				{
-					auto next_state = info.states[i + 1];
-					auto best_type = next_state.merged_read_state.get_best_list_type();
-					//		its in 99% write to read compatible on all queues
-					ASSERT(IsCompatible(list_type, best_type));
-					info.resource->get_state_manager().prepare_after_state(commandList.get(), next_state.merged_read_state);
-				}
-
-				// cur pass is write, next pass is write ,what can be wrong?
-
-				if ((i < info.states.size() - 1) && info.states[i + 1].write)
-				{
-					auto prev_writer = info.states[i];
-					auto next_writer = info.states[i + 1];
-
-					auto prev_pass = prev_writer.passes.front();
-					auto next_pass = next_writer.passes.front();
-
-					auto prev_cmd = prev_pass->context.list;
-					auto next_cmd = next_pass->context.list;
-					if (!prev_cmd || !next_cmd)
+					// propagate merged state through passes
+					for (auto& pass : state.passes)
 					{
-						ASSERT(false); // no write requested with no commandlist
+						auto commandList = pass->context.list;
+						auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
+						cpu_state.merge_read_state(commandList->get_type(), state.merged_read_state);
+					}
+				}
+
+				bool need_first_transition = true;
+				// link statee between passes
+				for (uint i = 0; i < info.states.size(); i++)
+				{
+					auto& state = info.states[i];
+					if (!state.write)
+					{
+
+						for (auto& pass : state.passes)
+						{
+							auto commandList = pass->context.list;
+							if (!commandList) continue;
+							auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
+							if (!cpu_state.used) continue;
+
+							need_first_transition = false;
+							break;
+						}
+
 						continue;
 					}
+					ASSERT(state.passes.size() == 1);
+					auto pass = state.passes.front();
+					auto commandList = pass->context.list;
+					if (!commandList) continue;
 
-					auto& prev_cpu_state = resource->get_state_manager().get_cpu_state(prev_cmd.get());
-					auto& next_cpu_state = resource->get_state_manager().get_cpu_state(next_cmd.get());
+					HAL::CommandListType list_type = pass->get_type();
 
-
-					// TODO: try removing this write state if not used
-					ASSERT(prev_cpu_state.used);
-					ASSERT(next_cpu_state.used);
-
-					HAL::CommandListType next_list_type = next_pass->get_type();
-					HAL::CommandListType prev_list_type = prev_pass->get_type();
-
-					HAL::SubResourcesGPU prev_gpu_state;
-					prev_gpu_state.subres.resize(resource->get_state_manager().get_subres_count());
-					prev_gpu_state.set_cpu_state(prev_cpu_state);
-
-
-					HAL::SubResourcesGPU next_gpu_state;
-					next_gpu_state.subres.resize(resource->get_state_manager().get_subres_count());
-					next_gpu_state.set_cpu_state_first(next_cpu_state);
-
-
-					auto transition_best_type_layout = Merge(prev_gpu_state.get_best_list_type(), next_gpu_state.get_best_list_type());
-
-
-					bool compatible_next_layout = IsCompatible(next_list_type, transition_best_type_layout);
-					bool compatible_prev_layout = IsCompatible(prev_list_type, transition_best_type_layout);
-  					
-	   			   auto transition_best_type = Merge(prev_cpu_state.get_best_list_type_last(), next_cpu_state.get_best_list_type_first());
-
-					bool compatible_next = IsCompatible(next_list_type, transition_best_type);
-					bool compatible_prev = IsCompatible(prev_list_type, transition_best_type);
-
-					  // 	
-					//info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
-				/*	if (compatible_next && compatible_prev)	
+					// first write synchronize with start=end
+					if (i == 0 && (info.is_static() || info.passed))
 					{
-						// do a split transition
-						info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
+						auto target = ResourceStates::NO_ACCESS;
+						auto layout = info.last_state.get_subres_state(0).layout;
+						target.layout = layout;
+						info.resource->get_state_manager().prepare_state(commandList.get(), target);
 					}
-					else*/ if (compatible_next_layout)
+
+
+					// check previous pass is read
+					if (i > 0 && !info.states[i - 1].write)
 					{
-						// next pass should rewrite its first state
-						info.resource->get_state_manager().prepare_state(next_cmd.get(), prev_gpu_state);			  // add sync&access info
+						auto prev_state = info.states[i - 1];
+						auto best_type = prev_state.merged_read_state.get_best_list_type();
+						//		its in 99% read to write compatible on all queues
+						ASSERT(IsCompatible(list_type, best_type));
+						info.resource->get_state_manager().prepare_state(commandList.get(), prev_state.merged_read_state);
 					}
-					else if (compatible_prev_layout)
+
+
+					// check next pass is read
+					if ((i < info.states.size() - 1) && !info.states[i + 1].write)
 					{
+						auto next_state = info.states[i + 1];
+						auto best_type = next_state.merged_read_state.get_best_list_type();
+						//		its in 99% write to read compatible on all queues
+						ASSERT(IsCompatible(list_type, best_type));
+						info.resource->get_state_manager().prepare_after_state(commandList.get(), next_state.merged_read_state);
+					}
 
-						info.resource->get_state_manager().prepare_after_state(prev_cmd.get(), next_gpu_state);		 // add sync&access infoZ
-					}else
-						ASSERT(false);
+					// cur pass is write, next pass is write ,what can be wrong?
 
+					if ((i < info.states.size() - 1) && info.states[i + 1].write)
+					{
+						auto prev_writer = info.states[i];
+						auto next_writer = info.states[i + 1];
+
+						auto prev_pass = prev_writer.passes.front();
+						auto next_pass = next_writer.passes.front();
+
+						auto prev_cmd = prev_pass->context.list;
+						auto next_cmd = next_pass->context.list;
+						if (!prev_cmd || !next_cmd)
+						{
+							ASSERT(false); // no write requested with no commandlist
+							continue;
+						}
+
+						auto& prev_cpu_state = resource->get_state_manager().get_cpu_state(prev_cmd.get());
+						auto& next_cpu_state = resource->get_state_manager().get_cpu_state(next_cmd.get());
+
+
+						// TODO: try removing this write state if not used
+						ASSERT(prev_cpu_state.used);
+						ASSERT(next_cpu_state.used);
+
+						HAL::CommandListType next_list_type = next_pass->get_type();
+						HAL::CommandListType prev_list_type = prev_pass->get_type();
+
+						HAL::SubResourcesGPU prev_gpu_state;
+						prev_gpu_state.subres.resize(resource->get_state_manager().get_subres_count());
+						prev_gpu_state.set_cpu_state(prev_cpu_state);
+
+
+						HAL::SubResourcesGPU next_gpu_state;
+						next_gpu_state.subres.resize(resource->get_state_manager().get_subres_count());
+						next_gpu_state.set_cpu_state_first(next_cpu_state);
+
+
+						auto transition_best_type_layout = Merge(prev_gpu_state.get_best_list_type(), next_gpu_state.get_best_list_type());
+
+
+						bool compatible_next_layout = IsCompatible(next_list_type, transition_best_type_layout);
+						bool compatible_prev_layout = IsCompatible(prev_list_type, transition_best_type_layout);
+
+						auto transition_best_type = Merge(prev_cpu_state.get_best_list_type_last(), next_cpu_state.get_best_list_type_first());
+
+						bool compatible_next = IsCompatible(next_list_type, transition_best_type);
+						bool compatible_prev = IsCompatible(prev_list_type, transition_best_type);
+
+						// 	
+					  //info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
+				  /*	if (compatible_next && compatible_prev)
+					  {
+						  // do a split transition
+						  info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
+					  }
+					  else*/ if (compatible_next_layout)
+					  {
+						  // next pass should rewrite its first state
+						  info.resource->get_state_manager().prepare_state(next_cmd.get(), prev_gpu_state);			  // add sync&access info
+					  }
+					  else if (compatible_prev_layout)
+					  {
+
+						  info.resource->get_state_manager().prepare_after_state(prev_cmd.get(), next_gpu_state);		 // add sync&access infoZ
+					  }
+					  else
+	ASSERT(false);
+
+
+
+					}
+
+
+					//last state is a write state
+					if ((i == info.states.size() - 1) && info.states[i].write && (info.is_static() || info.passed))
+					{
+						auto layout = info.creation_state.get_subres_state(0).layout;
+						auto target = ResourceStates::NO_ACCESS;
+
+						target.layout = layout;
+						info.resource->get_state_manager().transition(commandList.get(), target, ALL_SUBRESOURCES);
+					}
 
 
 				}
 
 
-				//last state is a write state
-				if ((i == info.states.size() - 1) && info.states[i].write && (info.is_static() || info.passed))
+
+
+
+
+				// link end to start transition
+				if (!info.states.empty() && (info.is_static() || info.passed))
 				{
-					auto layout = info.creation_state.get_subres_state(0).layout;
-					auto target = ResourceStates::NO_ACCESS;
+					Pass* pass = info.states.back().passes.back();
+					auto commandList = pass->context.list;
+					info.last_state.set_cpu_state(info.resource->get_state_manager().get_cpu_state(commandList.get()));
 
-					target.layout = layout;
-					info.resource->get_state_manager().transition(commandList.get(), target, ALL_SUBRESOURCES);
 				}
 
 
 			}
-
-
-
-
-
-
-			// link end to start transition
-			if (!info.states.empty() && (info.is_static() || info.passed))
-			{
-				Pass* pass = info.states.back().passes.back();
-				auto commandList = pass->context.list;
-				info.last_state.set_cpu_state(info.resource->get_state_manager().get_cpu_state(commandList.get()));
-
-			}
-
-
-		}
 
 
 		for (auto& pass : enabled_passes)
 		{
 			auto commandList = pass->context.list;
 			if (!commandList) continue;
-			
-			for(auto info:pass->used.resource_deletions_before)
+
+			for (auto info : pass->used.resource_deletions_before)
 			{
 
-			if(info->states.empty())continue;
+				if (info->states.empty())continue;
 				auto& last_state = info->states.back();
-				if(last_state.write)
+				if (last_state.write)
 				{
-						auto prev_pass = last_state.passes.front();
-						 	auto prev_cmd = prev_pass->context.list;
-								auto& prev_cpu_state = info->resource->get_state_manager().get_cpu_state(prev_cmd.get());
-				
+					auto prev_pass = last_state.passes.front();
+					auto prev_cmd = prev_pass->context.list;
+					auto& prev_cpu_state = info->resource->get_state_manager().get_cpu_state(prev_cmd.get());
 
-								   	HAL::SubResourcesGPU prev_gpu_state;
+
+					HAL::SubResourcesGPU prev_gpu_state;
 					prev_gpu_state.subres.resize(info->resource->get_state_manager().get_subres_count());
 					prev_gpu_state.set_cpu_state(prev_cpu_state);
 
 					info->resource->get_state_manager().prepare_state(commandList.get(), prev_gpu_state);
-				}else
+				}
+				else
 				{
 					info->resource->get_state_manager().prepare_state(commandList.get(), last_state.merged_read_state);
-	
+
 				}
-			//	
+				//	
 
 
-		
+
 			}
 		}
 	}
@@ -1413,11 +1223,11 @@ namespace FrameGraph
 					  */
 			if (check(info->flags & ResourceFlags::Static)) continue;
 
-		//	
+			//	
 
 
 
-			// if the resource is temp, first pass should create it -> write
+				// if the resource is temp, first pass should create it -> write
 			ASSERT(info->states[0].passes.size() == 1);
 			ASSERT(info->states[0].write);
 
@@ -1444,8 +1254,8 @@ namespace FrameGraph
 					break;
 				}
 			}
-					  
-					  // if no pass found - find any pass that is synced to the usage
+
+			// if no pass found - find any pass that is synced to the usage
 			if (!best_deletion_pass)
 			{
 
@@ -1457,14 +1267,14 @@ namespace FrameGraph
 						events[best_deletion_pass->call_id].free_before.insert(info);
 
 						if (!alias_ended)
-						best_deletion_pass->used.resource_deletions_before.insert(info);
+							best_deletion_pass->used.resource_deletions_before.insert(info);
 
 						//	events[best_deletion_pass->call_id].free_after.insert(info);
 						//best_deletion_pass->used.resource_deletions_after.insert(info);
 						break;
 					}
 				}
-					   
+
 				if (!best_deletion_pass)
 				{
 					info->non_deleted = true;
@@ -1559,27 +1369,27 @@ namespace FrameGraph
 				else
 				{
 
-				/*	if (info->heap_type == HAL::HeapType::UPLOAD)
-					{
-						PROFILE(L"UPLOAD");
+					/*	if (info->heap_type == HAL::HeapType::UPLOAD)
+						{
+							PROFILE(L"UPLOAD");
 
-							auto creation_info = RenderSystem::get().device().get_alloc_info(info->d3ddesc);
+								auto creation_info = RenderSystem::get().device().get_alloc_info(info->d3ddesc);
 
-						UploadInfo ui = current_frame->get_storage()->place_data(creation_info.size,creation_info.alignment);
+							UploadInfo ui = current_frame->get_storage()->place_data(creation_info.size,creation_info.alignment);
 
-						info->resource = ui.resource->get_ptr();
-						info->offset_in_bytes = ui.resource_offset;
-						info->is_new = true;
-					}
-					else if (info->heap_type == HAL::HeapType::READBACK)
-					{
-						PROFILE(L"READBACK");
-						info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type);
-						info->is_new = true;
-					}
-					else
-						*/
-						if (!info->resource || info->resource->get_desc() != info->d3ddesc)
+							info->resource = ui.resource->get_ptr();
+							info->offset_in_bytes = ui.resource_offset;
+							info->is_new = true;
+						}
+						else if (info->heap_type == HAL::HeapType::READBACK)
+						{
+							PROFILE(L"READBACK");
+							info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type);
+							info->is_new = true;
+						}
+						else
+							*/
+					if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 					{
 						PROFILE(L"DEFAULT");
 						info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type);
@@ -1597,7 +1407,7 @@ namespace FrameGraph
 					if (info->is_new)
 					{
 						info->resource->frame_graph_managed = true;
-						info->creation_state =info->last_state = info->resource->get_state_manager().copy_gpu();
+						info->creation_state = info->last_state = info->resource->get_state_manager().copy_gpu();
 						info->last_state = TextureLayout::UNDEFINED;
 						info->view = nullptr;
 						info->resource->set_name(info->name());
@@ -1761,7 +1571,7 @@ namespace FrameGraph
 		return HAL::ResourceDesc::Buffer(count, flags);
 	}
 
-	ByteBufferViewDesc Handlers::ByteBufferDesc::as_view(uint64 offset,ResourceFlags resflags)
+	ByteBufferViewDesc Handlers::ByteBufferDesc::as_view(uint64 offset, ResourceFlags resflags)
 	{
 		return { offset, count };
 	}
@@ -1784,14 +1594,14 @@ namespace FrameGraph
 			auto tsize = size;
 			while (tsize.x != 1 && tsize.y != 1)
 			{
-				tsize = uint3::max(tsize/2, {1,1,1});
+				tsize = uint3::max(tsize / 2, { 1,1,1 });
 				mip_count++;
 			}
 		}
 		return HAL::ResourceDesc::Tex2D(format, size.xy, array_count, mip_count, flags);
 	}
 
-	HAL::TextureViewDesc Handlers::TextureDesc::as_view(uint64 offset,ResourceFlags resflags)
+	HAL::TextureViewDesc Handlers::TextureDesc::as_view(uint64 offset, ResourceFlags resflags)
 	{
 		return { 0, mip_count, 0, array_count };
 	}
@@ -1821,7 +1631,7 @@ namespace FrameGraph
 		return HAL::ResourceDesc::Tex3D(format, size, mip_count, flags);
 	}
 
-	HAL::Texture3DViewDesc Handlers::Texture3DDesc::as_view(uint64 offset,ResourceFlags resflags)
+	HAL::Texture3DViewDesc Handlers::Texture3DDesc::as_view(uint64 offset, ResourceFlags resflags)
 	{
 		return { 0, mip_count };
 	}
@@ -1851,7 +1661,7 @@ namespace FrameGraph
 		return HAL::ResourceDesc::Tex2D(format, size.xy, array_count * 6, mip_count, flags);
 	}
 
-	HAL::CubeViewDesc Handlers::CubeDesc::as_view(uint64 offset,ResourceFlags resflags)
+	HAL::CubeViewDesc Handlers::CubeDesc::as_view(uint64 offset, ResourceFlags resflags)
 	{
 		return { 0, mip_count, 0, array_count * 6 };
 	}
@@ -1892,9 +1702,6 @@ namespace FrameGraph
 		sync_state.reset();
 		sync_state_with_self.reset();
 
-		prev_passes.clear();
-		next_passes.clear();
-
 		render_task = std::future<void>();
 		compile_task = std::future<void>();
 
@@ -1914,11 +1721,11 @@ namespace FrameGraph
 
 	ExternalPass::ExternalPass()
 	{
-		name       = s_name;
-		id         = std::numeric_limits<UINT>::max();
-		enabled    = true;
+		name = s_name;
+		id = std::numeric_limits<UINT>::max();
+		enabled = true;
 		renderable = true;
-		flags      = PassFlags::General;
+		flags = PassFlags::General;
 	}
 
 	bool ExternalPass::setup(TaskBuilder&) { return true; }
@@ -1926,12 +1733,12 @@ namespace FrameGraph
 	void ExternalPass::render(Graph* graph, HAL::FrameResources::ptr& frame)
 	{
 		render_task = thread_pool::get().enqueue([this, &frame, graph]()
-		{
-			context.begin(graph, this, frame);
-			// No GPU work — context.end() fires process_debug_resource for each
-			// write-flagged passed resource, which triggers thumbnail capture.
-			context.end();
-		});
+			{
+				context.begin(graph, this, frame);
+				// No GPU work — context.end() fires process_debug_resource for each
+				// write-flagged passed resource, which triggers thumbnail capture.
+				context.end();
+			});
 	}
 
 	void SlotContext::set_slot(SlotID id, HAL::SignatureDataSetter& setter)
@@ -1960,7 +1767,7 @@ namespace FrameGraph
 		upload->execute_and_wait();
 	}
 
-	void Graph::set_pipeline(Pipelines::PipelineBase* p) { current_pipeline = p; }
+	void Graph::set_pipeline(Pipelines::PipelineBase* p) { current_pipeline = p; added_pipelines.push_back(p); }
 	Pipelines::PipelineBase* Graph::get_pipeline() const { return current_pipeline; }
 
 	Pass* TaskBuilder::get_pass(uint id) const

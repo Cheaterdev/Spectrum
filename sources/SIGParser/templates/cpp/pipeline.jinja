@@ -63,25 +63,25 @@ public:
 	// Each resource owns its pass-ref pool and its states; a state's passes are
 	// a span into that resource's own <id>_pass_refs[].
 {%- for r in states_data.resources %}
-	static inline const FrameGraph::PassRef {{r.id}}_pass_refs[] = {
+	static inline const FrameGraph::PassRef {{r.id}}_c{{r.chain_index}}_pass_refs[] = {
 {%- for p in r.pass_refs %}
 		{ PassID::{{p.pass}}, {{p.index}} },
 {%- endfor %}
 	};
-	static inline const FrameGraph::PrecompiledState {{r.id}}_states[] = {
+	static inline const FrameGraph::PrecompiledState {{r.id}}_c{{r.chain_index}}_states[] = {
 {%- for s in r.states %}
-		{ {{ "true" if s.write else "false" }}, { {{r.id}}_pass_refs + {{s.begin}}, {{s.count}} } },
+		{ {{ "true" if s.write else "false" }}, { {{r.id}}_c{{r.chain_index}}_pass_refs + {{s.begin}}, {{s.count}} } },
 {%- endfor %}
 	};
 {%- endfor %}
 {%- if states_data.resources %}
 	static inline const FrameGraph::PrecompiledResourceInfo resource_infos[] = {
 {%- for r in states_data.resources %}
-		{ ResourceID::{{r.id}}, {{r.id}}_states },
+		{ ResourceID::{{r.id}}, {{r.chain_index}}, {{r.id}}_c{{r.chain_index}}_states },
 {%- endfor %}
 	};
 {%- else %}
-	static inline const FrameGraph::PrecompiledResourceInfo resource_infos[] = { { ResourceID::Count, {} } };
+	static inline const FrameGraph::PrecompiledResourceInfo resource_infos[] = { { ResourceID::Count, 0, {} } };
 {%- endif %}
 	static constexpr uint32_t resource_info_count = std::size(resource_infos);
 
@@ -103,6 +103,16 @@ public:
 {%- endfor %}
 	};
 	static constexpr uint32_t precompiled_pass_count = std::size(precompiled_passes);
+
+	std::span<const FrameGraph::PrecompiledResourceInfo> GetResourceInfos() const override
+	{
+		return resource_infos;
+	}
+
+	std::span<const FrameGraph::PrecompiledPass> GetPrecompiledPasses() const override
+	{
+		return precompiled_passes;
+	}
 
 	void add_passes(FrameGraph::Graph& graph)
 	{

@@ -10,6 +10,64 @@ import HAL;
 using namespace HAL;
 
 
+// Precompiled-graph structs, defined early so PipelineBase can expose them.
+// They only depend on ResourceID / PassID from the includes above.
+export namespace FrameGraph
+{
+	// A pass's static declaration of one resource it touches, from the SIG
+	// PassNode block: the resource id plus whether the pass declares [Write] on
+	// it. Emitted per-pass as Context::resource_accesses[].
+	struct ResourceAccess
+	{
+		ResourceID id;
+		bool       write;
+	};
+
+	// A reference to a pass in precompiled state data: the pass type plus, for
+	// [Multiple] passes, which instance (0 otherwise).
+	struct PassRef
+	{
+		PassID   id;
+		uint32_t index;
+	};
+
+	// One precomputed RW-state in a pipeline's per-resource timeline (mirrors a
+	// runtime ResourceRWState): whether it's a write, and the passes in it.
+	struct PrecompiledState
+	{
+		bool                     write;
+		std::span<const PassRef> passes;
+	};
+
+	// A pipeline's precomputed timeline for one resource version: the ordered
+	// states it passes through. Emitted per-pipeline as resource_infos[]. A
+	// recreate() produces a new chain version of the same id — chain_index
+	// selects which ResourceAllocInfo in the resource's chain this timeline maps
+	// to (0 = the original create). This is a template — at runtime disabled
+	// passes are pruned and cross-pipeline timelines concatenated in add order.
+	struct PrecompiledResourceInfo
+	{
+		ResourceID                       id;
+		uint32_t                         chain_index;
+		std::span<const PrecompiledState> states;
+	};
+
+	// A precomputed pass instance in a pipeline: its type, [Multiple] instance,
+	// queue (compute vs direct/graphics), and its prev-pass dependency edges —
+	// derived at codegen time from the per-resource state timelines (the static
+	// equivalent of resolve_dependencies). Emitted per-pipeline as
+	// precompiled_passes[]. Also a template: disabled passes are pruned at
+	// runtime and cross-pipeline edges resolved at add time.
+	struct PrecompiledPass
+	{
+		PassID                   id;
+		uint32_t                 index;    // [Multiple] instance (0 otherwise)
+		bool                     compute;  // queue: compute if true, else direct/graphics
+		std::span<const PassRef> prev_passes;
+	};
+}
+
+
 namespace Pipelines
 {
 
@@ -19,6 +77,10 @@ public:
 	virtual ~PipelineBase() = default;
 	virtual std::span<const wchar_t* const> GetUsedPassNamesList() const = 0;
 	virtual std::span<const wchar_t* const> GetUsedResourcesList() const = 0;
+
+	// Precomputed per-resource RW-state timelines and per-pass dependency data.
+	virtual std::span<const FrameGraph::PrecompiledResourceInfo> GetResourceInfos() const = 0;
+	virtual std::span<const FrameGraph::PrecompiledPass>         GetPrecompiledPasses() const = 0;
 };
 
 }
@@ -61,55 +123,6 @@ public:
 	};
 
 	 constexpr ResourceFlags WRITEABLE_FLAGS =ResourceFlags::CopyDest |  ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil;// | ResourceFlags::GenCPU;
-
-	// A pass's static declaration of one resource it touches, from the SIG
-	// PassNode block: the resource id plus whether the pass declares [Write] on
-	// it. Emitted per-pass as Context::resource_accesses[].
-	struct ResourceAccess
-	{
-		ResourceID id;
-		bool       write;
-	};
-
-	// A reference to a pass in precompiled state data: the pass type plus, for
-	// [Multiple] passes, which instance (0 otherwise).
-	struct PassRef
-	{
-		PassID   id;
-		uint32_t index;
-	};
-
-	// One precomputed RW-state in a pipeline's per-resource timeline (mirrors a
-	// runtime ResourceRWState): whether it's a write, and the passes in it.
-	struct PrecompiledState
-	{
-		bool                     write;
-		std::span<const PassRef> passes;
-	};
-
-	// A pipeline's precomputed timeline for one resource: the ordered states it
-	// passes through. Emitted per-pipeline as resource_infos[]. This is a
-	// template — at runtime disabled passes are pruned and cross-pipeline
-	// timelines concatenated in pipeline-add order.
-	struct PrecompiledResourceInfo
-	{
-		ResourceID                       id;
-		std::span<const PrecompiledState> states;
-	};
-
-	// A precomputed pass instance in a pipeline: its type, [Multiple] instance,
-	// queue (compute vs direct/graphics), and its prev-pass dependency edges —
-	// derived at codegen time from the per-resource state timelines (the static
-	// equivalent of resolve_dependencies). Emitted per-pipeline as
-	// precompiled_passes[]. Also a template: disabled passes are pruned at
-	// runtime and cross-pipeline edges resolved at add time.
-	struct PrecompiledPass
-	{
-		PassID                   id;
-		uint32_t                 index;    // [Multiple] instance (0 otherwise)
-		bool                     compute;  // queue: compute if true, else direct/graphics
-		std::span<const PassRef> prev_passes;
-	};
 
 	//struct BufferDesc
 	//{
@@ -205,14 +218,68 @@ public:
 		// happen single-threaded after the setup/append phase joins.
 		concurrent_vector<Pass*> passes;
 
-		concurrent_vector<Pass*> compute;
-		concurrent_vector<Pass*> graphics;
-
-
 		HAL::SubResourcesGPU merged_read_state;
 
 		SyncState from;
 		SyncState to;
+	};
+
+	// A resource version's RW-state timeline. Cursor-based like ResourceChain:
+	// the state slots — and each slot's passes / merged_read_state buffers —
+	// persist across frames. reset_frame() only rewinds the cursor and push()
+	// reuses a slot (clearing passes keeps its storage, so reserve() is a no-op
+	// once it's large enough), so we don't reallocate the per-state vectors
+	// every frame. Exposes a vector-like read interface for the many consumers.
+	struct StateTimeline
+	{
+		std::vector<ResourceRWState> items;
+		size_t count = 0;
+
+		void reset_frame() { count = 0; }
+
+		bool   empty() const { return count == 0; }
+		size_t size()  const { return count; }
+
+		ResourceRWState&       operator[](size_t i)       { return items[i]; }
+		const ResourceRWState& operator[](size_t i) const { return items[i]; }
+		ResourceRWState&       front()       { return items[0]; }
+		const ResourceRWState& front() const { return items[0]; }
+		ResourceRWState&       back()        { return items[count - 1]; }
+		const ResourceRWState& back()  const { return items[count - 1]; }
+
+		ResourceRWState*       begin()       { return items.data(); }
+		ResourceRWState*       end()         { return items.data() + count; }
+		const ResourceRWState* begin() const { return items.data(); }
+		const ResourceRWState* end()   const { return items.data() + count; }
+
+		// Append a new state, reusing a persisted slot's storage when available.
+		ResourceRWState& push(bool write, size_t reserve_n)
+		{
+			if (count >= items.size())
+				items.emplace_back();
+			ResourceRWState& s = items[count++];
+			s.write = write;
+			s.passes.clear();            // keeps the concurrent_vector's storage
+			s.passes.reserve(reserve_n); // no-op once large enough
+			s.from.reset();
+			s.to.reset();
+			s.merged_read_state.subres.clear();
+			return s;
+		}
+
+		// Stable removal that keeps removed slots' storage in items for reuse.
+		template<class Pred>
+		void remove_if(Pred pred)
+		{
+			size_t w = 0;
+			for (size_t r = 0; r < count; ++r)
+				if (!pred(items[r]))
+				{
+					if (w != r) std::swap(items[w], items[r]);
+					++w;
+				}
+			count = w;
+		}
 	};
 
 	struct ResourceAllocInfo
@@ -242,8 +309,7 @@ public:
 
 		bool is_new = false;
 		bool resource_just_created = true;
-		std::vector<ResourceRWState> states;
-		int last_writer;
+		StateTimeline states;
 		size_t max_passes = 0; // upper bound on passes per state, known from Pass::id assignment
 		//compile
 
@@ -279,7 +345,6 @@ public:
 
 
 		void add_pass(Pass* pass, ResourceFlags flags);
-		void resolve_dependencies(std::vector<std::pair<Pass*, Pass*>>& edges);
 		void reset(size_t max_passes);
 
 		void remove_inactive();
@@ -518,6 +583,12 @@ public:
 		ResourceAllocInfo&       active()       { return items[pos]; }
 		const ResourceAllocInfo& active() const { return items[pos]; }
 
+		// Number of chain versions active this frame (0 if not created), and
+		// direct access to a specific version. Used to map a precomputed
+		// resource timeline's chain_index to its ResourceAllocInfo.
+		size_t             active_count() const { return created_this_frame ? pos + 1 : 0; }
+		ResourceAllocInfo& at(size_t i)         { return items[i]; }
+
 		auto active_span()
 		{
 			size_t n = std::min(pos + 1, items.size());
@@ -567,6 +638,12 @@ public:
 		// enable-marking pass in Graph::setup(). Lets later passes (create_resources)
 		// iterate only what matters instead of rescanning all of alloc_resources.
 		std::vector<ResourceAllocInfo*> enabled_resources;
+
+		// Builds each resource's RW-state timeline after all setups have run —
+		// from the added pipelines' precomputed resource_infos (recreate chains
+		// fall back to add_pass). Setup itself only records resource desc/flags
+		// and what each pass touched (used.resources / used.resource_flags).
+		void build_resource_states();
 
 		// Persistent pass cache, indexed by PassID (+ index for [Multiple] passes),
 		// so library passes are reused frame to frame instead of reallocated. Only
@@ -745,9 +822,6 @@ public:
 		SyncState sync_state_with_self;
 
 
-		std::unordered_set<Pass*> prev_passes;
-
-		std::unordered_set<Pass*> next_passes;
 		std::future<void> render_task;
 		std::future<void> compile_task;
 
@@ -971,6 +1045,10 @@ public:
 
 		void set_pipeline(Pipelines::PipelineBase* p);
 		Pipelines::PipelineBase* get_pipeline() const;
+
+		// All pipelines added this frame, in add order (for concatenating their
+		// precomputed per-resource timelines). Cleared in reset().
+		std::vector<Pipelines::PipelineBase*> added_pipelines;
 
 	private:
 		Pipelines::PipelineBase* current_pipeline = nullptr;

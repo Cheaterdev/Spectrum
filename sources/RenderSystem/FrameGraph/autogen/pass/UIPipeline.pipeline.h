@@ -59,7 +59,7 @@ public:
 	// Precomputed per-resource RW-state timeline (see FrameGraph::PrecompiledResourceInfo).
 	// Each resource owns its pass-ref pool and its states; a state's passes are
 	// a span into that resource's own <id>_pass_refs[].
-	static inline const FrameGraph::PassRef swapchain_pass_refs[] = {
+	static inline const FrameGraph::PassRef swapchain_c0_pass_refs[] = {
 		{ PassID::Profiler, 0 },
 		{ PassID::UI_Render, 0 },
 		{ PassID::UI_Render, 1 },
@@ -78,26 +78,26 @@ public:
 		{ PassID::UI_Render, 14 },
 		{ PassID::UI_Render, 15 },
 	};
-	static inline const FrameGraph::PrecompiledState swapchain_states[] = {
-		{ true, { swapchain_pass_refs + 0, 1 } },
-		{ true, { swapchain_pass_refs + 1, 1 } },
-		{ true, { swapchain_pass_refs + 2, 1 } },
-		{ true, { swapchain_pass_refs + 3, 1 } },
-		{ true, { swapchain_pass_refs + 4, 1 } },
-		{ true, { swapchain_pass_refs + 5, 1 } },
-		{ true, { swapchain_pass_refs + 6, 1 } },
-		{ true, { swapchain_pass_refs + 7, 1 } },
-		{ true, { swapchain_pass_refs + 8, 1 } },
-		{ true, { swapchain_pass_refs + 9, 1 } },
-		{ true, { swapchain_pass_refs + 10, 1 } },
-		{ true, { swapchain_pass_refs + 11, 1 } },
-		{ true, { swapchain_pass_refs + 12, 1 } },
-		{ true, { swapchain_pass_refs + 13, 1 } },
-		{ true, { swapchain_pass_refs + 14, 1 } },
-		{ true, { swapchain_pass_refs + 15, 1 } },
-		{ true, { swapchain_pass_refs + 16, 1 } },
+	static inline const FrameGraph::PrecompiledState swapchain_c0_states[] = {
+		{ true, { swapchain_c0_pass_refs + 0, 1 } },
+		{ true, { swapchain_c0_pass_refs + 1, 1 } },
+		{ true, { swapchain_c0_pass_refs + 2, 1 } },
+		{ true, { swapchain_c0_pass_refs + 3, 1 } },
+		{ true, { swapchain_c0_pass_refs + 4, 1 } },
+		{ true, { swapchain_c0_pass_refs + 5, 1 } },
+		{ true, { swapchain_c0_pass_refs + 6, 1 } },
+		{ true, { swapchain_c0_pass_refs + 7, 1 } },
+		{ true, { swapchain_c0_pass_refs + 8, 1 } },
+		{ true, { swapchain_c0_pass_refs + 9, 1 } },
+		{ true, { swapchain_c0_pass_refs + 10, 1 } },
+		{ true, { swapchain_c0_pass_refs + 11, 1 } },
+		{ true, { swapchain_c0_pass_refs + 12, 1 } },
+		{ true, { swapchain_c0_pass_refs + 13, 1 } },
+		{ true, { swapchain_c0_pass_refs + 14, 1 } },
+		{ true, { swapchain_c0_pass_refs + 15, 1 } },
+		{ true, { swapchain_c0_pass_refs + 16, 1 } },
 	};
-	static inline const FrameGraph::PassRef UI_PreDraw_Sync_pass_refs[] = {
+	static inline const FrameGraph::PassRef UI_PreDraw_Sync_c0_pass_refs[] = {
 		{ PassID::UI_PreDraw, 0 },
 		{ PassID::UI_Render, 0 },
 		{ PassID::UI_Render, 1 },
@@ -116,13 +116,13 @@ public:
 		{ PassID::UI_Render, 14 },
 		{ PassID::UI_Render, 15 },
 	};
-	static inline const FrameGraph::PrecompiledState UI_PreDraw_Sync_states[] = {
-		{ true, { UI_PreDraw_Sync_pass_refs + 0, 1 } },
-		{ false, { UI_PreDraw_Sync_pass_refs + 1, 16 } },
+	static inline const FrameGraph::PrecompiledState UI_PreDraw_Sync_c0_states[] = {
+		{ true, { UI_PreDraw_Sync_c0_pass_refs + 0, 1 } },
+		{ false, { UI_PreDraw_Sync_c0_pass_refs + 1, 16 } },
 	};
 	static inline const FrameGraph::PrecompiledResourceInfo resource_infos[] = {
-		{ ResourceID::swapchain, swapchain_states },
-		{ ResourceID::UI_PreDraw_Sync, UI_PreDraw_Sync_states },
+		{ ResourceID::swapchain, 0, swapchain_c0_states },
+		{ ResourceID::UI_PreDraw_Sync, 0, UI_PreDraw_Sync_c0_states },
 	};
 	static constexpr uint32_t resource_info_count = std::size(resource_infos);
 	// Precomputed pass instances with queue type and prev-pass dependency edges
@@ -332,6 +332,16 @@ public:
 		{ PassID::UI_Render, 15, false, UI_Render_15_prev },
 	};
 	static constexpr uint32_t precompiled_pass_count = std::size(precompiled_passes);
+
+	std::span<const FrameGraph::PrecompiledResourceInfo> GetResourceInfos() const override
+	{
+		return resource_infos;
+	}
+
+	std::span<const FrameGraph::PrecompiledPass> GetPrecompiledPasses() const override
+	{
+		return precompiled_passes;
+	}
 
 	void add_passes(FrameGraph::Graph& graph)
 	{
