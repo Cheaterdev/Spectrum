@@ -7,6 +7,12 @@ struct RaytracingRays
 	float pixelAngle;
 }
 
+[Bind = DefaultLayout::Instance3]
+struct ColorRTXOutput
+{
+	RWTexture2D<float4> output;
+}
+
 [nobind]
 [raypayload]
 struct RayCone
@@ -154,7 +160,7 @@ RaytraceRaygen Indirect
 RaytraceRaygen ColorRTX
 {
 	[EntryPoint = ColorRTXRaygenShader]
-	raygen = raytracing;
+	raygen = raytracing_debug;
 }
 
 [Bind = MainRTX]
@@ -199,6 +205,7 @@ PassNode RTXShadow
 [Compute]
 PassNode RTXColorPass
 {
+	# Read-only dependency on PreScene so the RTX BVH is built/updated before tracing.
 	StructuredBuffer<uint> scene;
-	Texture ColorOutput;
+	[Write] Texture ColorOutput;
 }

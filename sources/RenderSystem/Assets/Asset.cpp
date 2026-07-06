@@ -296,6 +296,10 @@ void Asset::mark_contents_changed()
 {
 	if (!changing_state)
 	{
+		// Bump before notifying so consumers see the new revision in on_asset_change,
+		// and so consumers created later can detect they're behind (get_version()).
+		version++;
+
 		if (holder)
 			holder->mark_contents_changed();
 

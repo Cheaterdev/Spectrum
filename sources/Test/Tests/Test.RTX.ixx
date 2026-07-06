@@ -120,8 +120,9 @@ export namespace Test
 		const ivec2 rtx_size {W, H};
 		graph.add_library_pass<Passes::RTXColorPass>(
 			[](auto& data, FrameGraph::TaskBuilder& builder) -> bool {
+				// Depend on PreScene (writes `scene`) so the RTX BVH is ready before tracing.
+				builder.need(data.scene, FrameGraph::ResourceFlags::ComputeRead);
 				builder.need(data.ColorOutput, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.scene, FrameGraph::ResourceFlags::UnorderedAccess);
 
 				return true;
 			},
@@ -135,10 +136,10 @@ export namespace Test
 				ctx.graph->set_slot(SlotID::FrameInfo, compute);
 				ctx.graph->set_slot(SlotID::SceneData,  compute);
 
-				// Bind the output UAV through the VoxelOutput slot (same as other raygens).
-				Slots::VoxelOutput voxel_output;
-				voxel_output.GetNoise() = data.ColorOutput->rwTexture2D;
-				compute.set(voxel_output);
+				// Bind the output UAV through the dedicated ColorRTXOutput slot.
+				Slots::ColorRTXOutput output;
+				output.GetOutput() = data.ColorOutput->rwTexture2D;
+				compute.set(output);
 
 				// Dispatch primary rays using ColorRTX raygen.
 				RTX::get().render<ColorRTX>(compute,

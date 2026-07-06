@@ -77,6 +77,8 @@ class AssetReferenceBase
 		const  AssetHolder* get_owner() const;
 Guid get_id();
 
+		explicit operator bool() const { return static_cast<bool>(base_asset); }
+
 		virtual ~AssetReferenceBase();
 };
 
@@ -214,6 +216,12 @@ class Asset : public SharedObject<Asset>, public AssetHolder, public EditObject,
 		
 		bool changing_state = false;
 
+		// Monotonic revision counter. Bumped whenever the asset's contents change
+		// (e.g. reload_resource). Lets consumers created after a change detect they
+		// were generated against stale contents — change notifications only reach
+		// consumers that exist at change time.
+		uint32_t version = 0;
+
 		void start_changing_contents();
 		void end_changing_contents();
 
@@ -228,6 +236,8 @@ public:
 
 		void set_name(std::wstring name);
 		Guid get_id();
+
+		uint32_t get_version() const { return version; }
 
 		//void set_id(Guid id);
 
@@ -261,6 +271,7 @@ public:
 			 SAVE_PARENT(AssetHolder);
 			ar& NVP(name);
 			ar& NVP(additional_files);
+			ar& NVP(version);
 		}
 };
 //BOOST_SERIALIZATION_ASSUME_ABSTRACT(Asset);

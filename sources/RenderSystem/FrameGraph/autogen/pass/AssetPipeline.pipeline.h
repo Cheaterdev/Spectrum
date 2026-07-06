@@ -144,7 +144,8 @@ public:
 		{ PassID::AssetMip, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Albedo_c0_states[] = {
-		{ false, { GBuffer_Albedo_c0_pass_refs + 0, 4 } },
+		{ true, { GBuffer_Albedo_c0_pass_refs + 0, 1 } },
+		{ false, { GBuffer_Albedo_c0_pass_refs + 1, 3 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Normals_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
@@ -153,7 +154,8 @@ public:
 		{ PassID::AssetMip, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Normals_c0_states[] = {
-		{ false, { GBuffer_Normals_c0_pass_refs + 0, 4 } },
+		{ true, { GBuffer_Normals_c0_pass_refs + 0, 1 } },
+		{ false, { GBuffer_Normals_c0_pass_refs + 1, 3 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Depth_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
@@ -163,7 +165,8 @@ public:
 		{ PassID::AssetMip, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Depth_c0_states[] = {
-		{ false, { GBuffer_Depth_c0_pass_refs + 0, 5 } },
+		{ true, { GBuffer_Depth_c0_pass_refs + 0, 1 } },
+		{ false, { GBuffer_Depth_c0_pass_refs + 1, 4 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
@@ -172,7 +175,8 @@ public:
 		{ PassID::AssetMip, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Specular_c0_states[] = {
-		{ false, { GBuffer_Specular_c0_pass_refs + 0, 4 } },
+		{ true, { GBuffer_Specular_c0_pass_refs + 0, 1 } },
+		{ false, { GBuffer_Specular_c0_pass_refs + 1, 3 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Speed_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
@@ -181,7 +185,8 @@ public:
 		{ PassID::AssetMip, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
-		{ false, { GBuffer_Speed_c0_pass_refs + 0, 4 } },
+		{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
+		{ false, { GBuffer_Speed_c0_pass_refs + 1, 3 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
@@ -190,7 +195,8 @@ public:
 		{ PassID::AssetMip, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_DepthMips_c0_states[] = {
-		{ false, { GBuffer_DepthMips_c0_pass_refs + 0, 4 } },
+		{ true, { GBuffer_DepthMips_c0_pass_refs + 0, 1 } },
+		{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 3 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Quality_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
@@ -244,7 +250,8 @@ public:
 		{ PassID::AssetMip, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_c0_states[] = {
-		{ false, { GBuffer_HiZ_c0_pass_refs + 0, 4 } },
+		{ true, { GBuffer_HiZ_c0_pass_refs + 0, 1 } },
+		{ false, { GBuffer_HiZ_c0_pass_refs + 1, 3 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HiZ_UAV_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
@@ -253,7 +260,8 @@ public:
 		{ PassID::AssetMip, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_UAV_c0_states[] = {
-		{ false, { GBuffer_HiZ_UAV_c0_pass_refs + 0, 4 } },
+		{ true, { GBuffer_HiZ_UAV_c0_pass_refs + 0, 1 } },
+		{ false, { GBuffer_HiZ_UAV_c0_pass_refs + 1, 3 } },
 	};
 	static inline const FrameGraph::PassRef global_depth_c0_pass_refs[] = {
 		{ PassID::PSSM_Global, 0 },
@@ -456,6 +464,7 @@ public:
 		{ PassID::CubeSky, 0 },
 	};
 	static inline const FrameGraph::PassRef PSSM_GenerateMask_0_prev[] = {
+		{ PassID::AssetGBuffer, 0 },
 		{ PassID::PSSM_Cascade, 0 },
 		{ PassID::PSSM_Cascade, 1 },
 		{ PassID::PSSM_Cascade, 2 },
@@ -464,6 +473,7 @@ public:
 		{ PassID::PSSM_Cascade, 5 },
 	};
 	static inline const FrameGraph::PassRef PSSM_Combine_0_prev[] = {
+		{ PassID::AssetGBuffer, 0 },
 		{ PassID::PSSM_Cascade, 0 },
 		{ PassID::PSSM_Cascade, 1 },
 		{ PassID::PSSM_Cascade, 2 },
@@ -474,6 +484,7 @@ public:
 		{ PassID::ResultCreation, 0 },
 	};
 	static inline const FrameGraph::PassRef Sky_0_prev[] = {
+		{ PassID::AssetGBuffer, 0 },
 		{ PassID::PSSM_Combine, 0 },
 		{ PassID::ResultCreation, 0 },
 	};
@@ -489,6 +500,7 @@ public:
 		{ PassID::Sky, 0 },
 	};
 	static inline const FrameGraph::PassRef AssetMip_0_prev[] = {
+		{ PassID::AssetGBuffer, 0 },
 		{ PassID::FSR, 0 },
 		{ PassID::PSSM_Combine, 0 },
 		{ PassID::ResultCreation, 0 },

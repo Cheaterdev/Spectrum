@@ -103,103 +103,139 @@ std::string native_file_provider::load_all(file* info)
 	return result;
 }
 
-void native_file_provider::on_change(const std::filesystem::path& path, std::function<void()> f)
+// A single dedicated thread polls every registered file/dir for mtime changes.
+// Previously each on_change() spun up its own infinite-loop task on the shared
+// thread_pool; with enough watchers that exhausts the pool and later watchers
+// (and any other pool work) never start. One thread scales to any count.
+namespace
 {
-	// this function is completely written by copilot
-
-	auto watch_path = path;
-	bool is_dir = false;
-	std::filesystem::path monitored_parent;
-	std::filesystem::path monitored_filename;
-
-	std::error_code ec;
-	if (std::filesystem::is_directory(watch_path, ec) && !ec)
+	struct FileWatcher
 	{
-		is_dir = true;
-		monitored_parent = watch_path;
-	}
-	else
-	{
-		monitored_parent = watch_path.parent_path();
-		monitored_filename = watch_path.filename();
-	}
-
-	// initialize last write time
-	std::filesystem::file_time_type last_time = std::filesystem::file_time_type::min();
-	if (!is_dir && !monitored_parent.empty())
-	{
-		auto full = monitored_parent / monitored_filename;
-		std::error_code ec2;
-		last_time = std::filesystem::last_write_time(full, ec2);
-		if (ec2)
-			last_time = std::filesystem::file_time_type::min();
-	}
-
-	// Use thread pool to run a lightweight polling watcher.
-	thread_pool::get().enqueue([monitored_parent, monitored_filename, is_dir, f, last_time]()
-	{
-		using namespace std::chrono;
-		using namespace std::chrono_literals;
-
-		std::filesystem::file_time_type local_last = last_time;
-		std::error_code ec_inner;
-
-		while (Application::is_good())
+		struct Entry
 		{
-			try
+			std::filesystem::path            parent;
+			std::filesystem::path            filename;   // empty ⇒ directory watch
+			bool                             is_dir = false;
+			std::function<void()>            callback;
+			std::filesystem::file_time_type  last = std::filesystem::file_time_type::min();
+		};
+
+		std::mutex          mutex;
+		std::vector<Entry>  entries;
+		std::atomic<bool>   started{ false };
+
+		static FileWatcher& get()
+		{
+			static FileWatcher* instance = new FileWatcher(); // intentionally leaked: outlives statics
+			return *instance;
+		}
+
+		void add(const std::filesystem::path& path, std::function<void()> f)
+		{
+			Entry e;
+			e.callback = std::move(f);
+
+			std::error_code ec;
+			if (std::filesystem::is_directory(path, ec) && !ec)
 			{
-				if (is_dir)
+				e.is_dir = true;
+				e.parent = path;
+			}
+			else
+			{
+				e.parent   = path.parent_path();
+				e.filename = path.filename();
+
+				std::error_code ec2;
+				auto t = std::filesystem::last_write_time(e.parent / e.filename, ec2);
+				if (!ec2)
+					e.last = t;
+			}
+
+			Log::get() << "watching " << path << Log::endl;
+
+			{
+				std::lock_guard<std::mutex> g(mutex);
+				entries.push_back(std::move(e));
+			}
+
+			// Lazily start the single polling thread on first registration.
+			if (!started.exchange(true))
+				std::thread(&FileWatcher::run, this).detach();
+		}
+
+		void run()
+		{
+			using namespace std::chrono_literals;
+
+			// NOTE: watchers are registered from inside the Application constructor,
+			// which runs *before* Singleton sets its ptr — so is_good() is false at
+			// startup. Don't exit on that transient false: only stop once the app has
+			// come up and then been torn down (is_good() false again == real shutdown).
+			bool ever_good = false;
+
+			while (true)
+			{
+				bool good = Application::is_good();
+				if (good)
+					ever_good = true;
+				else if (ever_good)
+					break; // app shut down
+
+				if (!good)
 				{
-					// For directory watches: scan entries and detect any file modification.
-					for (auto& entry : std::filesystem::directory_iterator(monitored_parent, ec_inner))
+					std::this_thread::sleep_for(200ms); // still starting up — idle
+					continue;
+				}
+
+				std::vector<std::function<void()>> fire;
+
+				{
+					std::lock_guard<std::mutex> g(mutex);
+					for (auto& e : entries)
 					{
-						if (ec_inner)
-							break;
-
-						if (!entry.is_regular_file())
-							continue;
-
-						std::error_code ec_time;
-						auto t = std::filesystem::last_write_time(entry.path(), ec_time);
-						if (ec_time)
-							continue;
-
-						if (t != local_last)
+						std::error_code ec;
+						if (e.is_dir)
 						{
-							local_last = t;
-							std::this_thread::sleep_for(100ms); // debounce / allow file to become accessible
-							try { f(); } catch (...) { Log::get() << Log::LEVEL_ERROR << "on_change callback threw" << Log::endl; }
-							// after detecting one change, break to avoid multiple callbacks in the same loop
-							break;
+							// Directory watch: fire if any regular file changed mtime.
+							auto newest = e.last;
+							bool changed = false;
+							for (auto& it : std::filesystem::directory_iterator(e.parent, ec))
+							{
+								if (ec) break;
+								if (!it.is_regular_file()) continue;
+								std::error_code ect;
+								auto t = std::filesystem::last_write_time(it.path(), ect);
+								if (ect) continue;
+								if (t > newest) { newest = t; changed = true; }
+							}
+							if (changed) { e.last = newest; fire.push_back(e.callback); }
+						}
+						else
+						{
+							auto t = std::filesystem::last_write_time(e.parent / e.filename, ec);
+							if (!ec && t != e.last) { e.last = t; fire.push_back(e.callback); }
 						}
 					}
 				}
-				else
-				{
-					// For single-file watches: poll that file only.
-					auto full = monitored_parent / monitored_filename;
-					std::error_code ec_time;
-					auto t = std::filesystem::last_write_time(full, ec_time);
-					if (!ec_time && t != local_last)
-					{
-						local_last = t;
-						std::this_thread::sleep_for(100ms); // debounce
-						try { f(); } catch (...) { Log::get() << Log::LEVEL_ERROR << "on_change callback threw" << Log::endl; }
-					}
-				}
-			}
-			catch (const std::exception& ex)
-			{
-				Log::get() << Log::LEVEL_ERROR << "on_change exception: " << ex.what() << Log::endl;
-			}
-			catch (...)
-			{
-				Log::get() << Log::LEVEL_ERROR << "on_change unknown exception" << Log::endl;
-			}
 
-			std::this_thread::sleep_for(200ms); // polling interval
+				// Fire outside the lock so a callback may register new watches.
+				for (auto& cb : fire)
+				{
+					try { cb(); }
+					catch (const std::exception& ex) { Log::get() << Log::LEVEL_ERROR << "on_change callback: " << ex.what() << Log::endl; }
+					catch (...) { Log::get() << Log::LEVEL_ERROR << "on_change callback threw" << Log::endl; }
+				}
+
+				std::this_thread::sleep_for(200ms); // polling interval
+			}
 		}
-	});
+	};
+}
+
+void native_file_provider::on_change(const std::filesystem::path& path, std::function<void()> f)
+{
+	FileWatcher::get().add(path, std::move(f));
 }
 
 std::shared_ptr<file> native_file_provider::get_file(std::filesystem::path file_name)

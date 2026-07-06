@@ -205,6 +205,14 @@ void materials::universal_material::update()
 #endif
 	//std::lock_guard<std::mutex> g(m);
 	PROFILE(L"universal_material");
+
+	// Catch header reloads that happened before this material existed (or whose
+	// change notification we missed): the shared BinaryAsset's version will be
+	// ahead of what we last generated against.
+	if ((include_file          && include_file->get_version()          != ps_header_version) ||
+	    (include_file_raytacing && include_file_raytacing->get_version() != rt_header_version))
+		need_regenerate_material = true;
+
 	if (need_regenerate_material)
 	{
 		generate_material();
@@ -358,6 +366,10 @@ void materials::universal_material::generate_material()
 	raytracing_lib = HAL::library_shader::get_resource({ raytracing_str, "" , ShaderOptions::None, context->hit_shader.macros, true });
 	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, raytracing_str, context);
 	ps_uniforms = context->uniforms_ps;
+
+	// Remember which header revisions this generation baked in.
+	if (include_file)           ps_header_version = include_file->get_version();
+	if (include_file_raytacing) rt_header_version = include_file_raytacing->get_version();
 
 
 	//	tess_uniforms = context->uniforms_tess;

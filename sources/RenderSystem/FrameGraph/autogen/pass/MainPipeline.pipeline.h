@@ -26,6 +26,7 @@
 #include "ReflectionDenoiser_Reproject.h"
 #include "ReflCombine.h"
 #include "VoxelDebug.h"
+#include "RTXColorPass.h"
 #include "Sky.h"
 #include "stencil_renderer_before.h"
 #include "stencil_renderer_after.h"
@@ -89,6 +90,7 @@ public:
 		Passes::ReflectionDenoiser_Reproject::Name.ptr,
 		Passes::ReflCombine::Name.ptr,
 		Passes::VoxelDebug::Name.ptr,
+		Passes::RTXColorPass::Name.ptr,
 		Passes::Sky::Name.ptr,
 		Passes::stencil_renderer_before::Name.ptr,
 		Passes::stencil_renderer_after::Name.ptr,
@@ -155,6 +157,7 @@ public:
 		L"ReflectionDenoiser_SampleCountPrev",
 		L"ReflectionDenoiser_ReprojectedRadiance",
 		L"VoxelDebug",
+		L"ColorOutput",
 		L"depth_tex",
 		L"id_buffer",
 		L"axis_id_buffer",
@@ -176,10 +179,11 @@ public:
 	static inline const FrameGraph::PassRef scene_c0_pass_refs[] = {
 		{ PassID::PreScene, 0 },
 		{ PassID::Scene, 0 },
+		{ PassID::RTXColorPass, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState scene_c0_states[] = {
 		{ true, { scene_c0_pass_refs + 0, 1 } },
-		{ false, { scene_c0_pass_refs + 1, 1 } },
+		{ false, { scene_c0_pass_refs + 1, 2 } },
 	};
 	static inline const FrameGraph::PassRef BlueNoise_c0_pass_refs[] = {
 		{ PassID::BlueNoise, 0 },
@@ -720,6 +724,12 @@ public:
 	static inline const FrameGraph::PrecompiledState VoxelDebug_c0_states[] = {
 		{ true, { VoxelDebug_c0_pass_refs + 0, 1 } },
 	};
+	static inline const FrameGraph::PassRef ColorOutput_c0_pass_refs[] = {
+		{ PassID::RTXColorPass, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState ColorOutput_c0_states[] = {
+		{ true, { ColorOutput_c0_pass_refs + 0, 1 } },
+	};
 	static inline const FrameGraph::PassRef depth_tex_c0_pass_refs[] = {
 		{ PassID::stencil_renderer_before, 0 },
 	};
@@ -828,6 +838,7 @@ public:
 		{ ResourceID::ReflectionDenoiser_SampleCountPrev, 0, ReflectionDenoiser_SampleCountPrev_c0_states },
 		{ ResourceID::ReflectionDenoiser_ReprojectedRadiance, 0, ReflectionDenoiser_ReprojectedRadiance_c0_states },
 		{ ResourceID::VoxelDebug, 0, VoxelDebug_c0_states },
+		{ ResourceID::ColorOutput, 0, ColorOutput_c0_states },
 		{ ResourceID::depth_tex, 0, depth_tex_c0_states },
 		{ ResourceID::id_buffer, 0, id_buffer_c0_states },
 		{ ResourceID::axis_id_buffer, 0, axis_id_buffer_c0_states },
@@ -955,6 +966,9 @@ public:
 		{ PassID::Mipmapping, 0 },
 		{ PassID::Scene, 0 },
 	};
+	static inline const FrameGraph::PassRef RTXColorPass_0_prev[] = {
+		{ PassID::PreScene, 0 },
+	};
 	static inline const FrameGraph::PassRef Sky_0_prev[] = {
 		{ PassID::PSSM_Combine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -1029,6 +1043,7 @@ public:
 		{ PassID::ReflectionDenoiser_Reproject, 0, true, ReflectionDenoiser_Reproject_0_prev },
 		{ PassID::ReflCombine, 0, true, ReflCombine_0_prev },
 		{ PassID::VoxelDebug, 0, false, VoxelDebug_0_prev },
+		{ PassID::RTXColorPass, 0, true, RTXColorPass_0_prev },
 		{ PassID::Sky, 0, false, Sky_0_prev },
 		{ PassID::stencil_renderer_before, 0, false, {} },
 		{ PassID::stencil_renderer_after, 0, false, stencil_renderer_after_0_prev },
@@ -1089,6 +1104,7 @@ public:
 			graph.add_library_pass<Passes::ReflCombine>(reflCombine.setup_func, reflCombine.render_func, reflCombine.flags);
 		if (voxelDebug.setup_func)
 			graph.add_library_pass<Passes::VoxelDebug>(voxelDebug.setup_func, voxelDebug.render_func, voxelDebug.flags);
+		graph.add_library_pass<Passes::RTXColorPass>(PassDefault<Passes::RTXColorPass>::setup, PassDefault<Passes::RTXColorPass>::render, PassDefault<Passes::RTXColorPass>::flags);
 		if (sky.setup_func)
 			graph.add_library_pass<Passes::Sky>(sky.setup_func, sky.render_func, sky.flags);
 		if (stencil_renderer_before.setup_func)

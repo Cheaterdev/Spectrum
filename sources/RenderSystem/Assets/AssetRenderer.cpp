@@ -191,8 +191,7 @@ void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
 
     skyinfo.sunDir = float3(1, 1, 1).normalize();
 
-    graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, result->resource, {}, ResourceFlags::Required);
-    graph.builder.debug = true;
+   graph.builder.debug = true;
     vp.frame_size   = result->get_size().xy / 2;
     vp.upscale_size = result->get_size().xy;
 
@@ -201,6 +200,8 @@ void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
     caminfo.cam        = &cam;
 
     rendering->render(graph);
+	graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, result->resource, {}, ResourceFlags::Required);
+ 
     graph.setup();
     graph.compile(frame++);
     graph.render();

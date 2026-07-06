@@ -106,13 +106,13 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 	ShadowPayload shadow_payload = { false };
 	RayDesc shadow_ray;
-	shadow_ray.Origin    = t.v.pos + t.v.normal * 0.001;
+	shadow_ray.Origin    = t.v.pos;// + t.v.normal * 0.001;
 	shadow_ray.Direction = normalize(frame.GetSunDir().xyz);
 	shadow_ray.TMin      = 0.001;
 	shadow_ray.TMax      = 10000.0;
 	ShadowPass(raytracing.GetScene(), shadow_ray, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, shadow_payload);
 
-	float NdotL = saturate(dot(t.v.normal, normalize(frame.GetSunDir().xyz)));
+	float NdotL = saturate(dot(t.v.normal, normalize(frame.GetSunDir().xyz))); 
 	payload.color = float4(color.rgb * NdotL * (shadow_payload.hit ? 0.0 : 1.0), 1.0);
 	payload.dist  = RayTCurrent();
 }

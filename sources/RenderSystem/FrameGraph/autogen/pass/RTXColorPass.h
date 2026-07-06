@@ -29,7 +29,7 @@ public:
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
 			{ ResourceID::scene, false },
-			{ ResourceID::ColorOutput, false },
+			{ ResourceID::ColorOutput, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

@@ -147,6 +147,26 @@ struct SelectLocal<T>
 
 			return static_cast<UINT>(info->handle.get_offset());
 		}
+
+		// (Re)build the per-material collections from the material's current
+		// raytracing_lib. Called on first init and again on every material change
+		// (shader hot-reload) so the rebuilt DXR state object binds the new hit shader.
+		void build_material_collections(material* mat, material_info& e)
+		{
+			e.collections.clear();
+
+			auto init_part = [&](auto& pass) {
+				auto collection = pass.init_for_material(*this, mat);
+
+				if (collection)
+				{
+					e.collections.push_back(collection);
+				}
+			};
+
+			(init_part(std::get<Passes>(passes)), ...);
+		}
+
 		void init_material(material* mat)
 		{
 			std::lock_guard<std::mutex> g(m);
@@ -159,23 +179,23 @@ struct SelectLocal<T>
 				auto& e = new_materials[mat];
 				e.handle = hitgroup_ids->allocate(sizeof...(Passes));
 
-				auto init_part = [&](auto& pass) {
-					auto collection = pass.init_for_material(*this, mat);
-
-					if (collection)
-					{
-						e.collections.push_back(collection);
-					}
-				};
-
-				(init_part(std::get<Passes>(passes)), ...);
+				build_material_collections(mat, e);
 
 
 				//	new_materials[mat] = (UINT)(materials.size() + new_materials.size());
 
 				need_recreate = true;
 
-				mat->on_change.register_handler(this, [this]() {
+				mat->on_change.register_handler(this, [this, mat]() {
+					std::lock_guard<std::mutex> g(m);
+
+					// Material may still be pending in new_materials or already merged into
+					// materials â rebuild its collections so the next compile() picks up the
+					// reloaded hit shader.
+					auto it = materials.find(mat);
+					material_info& info = (it != materials.end()) ? it->second : new_materials[mat];
+					build_material_collections(mat, info);
+
 					need_recreate = true;
 					});
 			}

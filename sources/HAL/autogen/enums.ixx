@@ -168,6 +168,7 @@ export
 		PSSMLighting = "PSSMLighting"_crc32,
 		GBufferDownsampleRT = "GBufferDownsampleRT"_crc32,
 		RaytracingRays = "RaytracingRays"_crc32,
+		ColorRTXOutput = "ColorRTXOutput"_crc32,
 		RayCone = "RayCone"_crc32,
 		RayPayload = "RayPayload"_crc32,
 		ShadowPayload = "ShadowPayload"_crc32,

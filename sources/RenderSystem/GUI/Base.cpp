@@ -1031,6 +1031,7 @@ namespace GUI
             case DM::GI_Indirect:   return FrameGraph::ResourceID::VoxelIndirectFiltered;
             case DM::GI_Reflection: return FrameGraph::ResourceID::ReflectionDenoiser_ReprojectedRadiance;
             case DM::VoxelTrace:    return FrameGraph::ResourceID::VoxelDebug;
+            case DM::RTX:           return FrameGraph::ResourceID::ColorOutput;
             default:                return FrameGraph::ResourceID::ResultTexture;
             }
         };

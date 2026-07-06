@@ -69,7 +69,7 @@ void BinaryAsset::reload_resource()
 		mark_changed();
 	}
 
-	mark_contents_changed();
+	mark_contents_changed(); // bumps version + notifies consumers
 }
 
 BinaryAsset::BinaryAsset()

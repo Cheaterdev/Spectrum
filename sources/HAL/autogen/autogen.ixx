@@ -118,6 +118,8 @@ export import :Autogen.Tables.PSSMLighting;
 export import :Autogen.Tables.GBufferDownsampleRT;
 export import :Autogen.Slots.RaytracingRays;
 export import :Autogen.Tables.RaytracingRays;
+export import :Autogen.Slots.ColorRTXOutput;
+export import :Autogen.Tables.ColorRTXOutput;
 export import :Autogen.Tables.RayCone;
 export import :Autogen.Tables.RayPayload;
 export import :Autogen.Tables.ShadowPayload;

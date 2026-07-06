@@ -5,10 +5,9 @@
 // Changes will be lost on next generation. Edit the .sig source files instead.
 // ============================================================================
 #pragma once
-
-struct ColorRTX: public RaytraceRaygen<ColorRTX>
+#include "sig_hlsl.hlsl"
+struct ColorRTXOutput
 {
-	static const constexpr uint ID = 3;
-	static const constexpr std::string_view shader = "shaders\\raytracing_debug.hlsl";
-	static const constexpr std::wstring_view raygen = L"ColorRTXRaygenShader";
+	uint output; // RWTexture2D<float4>
+	RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
 };

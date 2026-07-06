@@ -49,6 +49,7 @@ Pipeline MainPipeline
 	ReflectionDenoiser_Reproject;
 	ReflCombine;
 	VoxelDebug;
+	RTXColorPass;
 
 	# sky + post
 	Sky;

@@ -152,6 +152,11 @@ export namespace materials
 		universal_material();
 		bool need_regenerate_material = false;
 
+		// Header (shader include) reload versions this material was last generated
+		// against; if the shared BinaryAsset advances past these we regenerate.
+		uint32_t ps_header_version = 0;
+		uint32_t rt_header_version = 0;
+
 		void generate_texture_handles();
 
 		Slots::MaterialInfo material_info;

@@ -134,7 +134,8 @@ public:
 		Motion,
 		GI_Indirect,
 		GI_Reflection,
-		VoxelTrace
+		VoxelTrace,
+		RTX
 	};
 
 	struct DebugContext

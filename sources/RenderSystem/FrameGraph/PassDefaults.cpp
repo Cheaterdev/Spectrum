@@ -2,6 +2,7 @@ module Graphics;
 import RenderSystem;
 
 import :FrameGraphContext;
+import :RTX;
 import FrameGraph;
 import HAL;
 
@@ -275,4 +276,46 @@ void PassDefault<Passes::RTXShadow>::render(
 			}
 		}
 	}
+}
+
+// ── RTXColorPass — full-scene ray-traced color view ────────────────────────
+// Casts primary camera rays via the ColorRTX raygen (ColorPass hit/miss) and
+// writes the traced color to ColorOutput. On-demand: only enabled when a
+// consumer (the debug view) needs ColorOutput.
+
+bool PassDefault<Passes::RTXColorPass>::setup(
+    Passes::RTXColorPass::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!RenderSystem::get().device().get_properties().rtx)
+		return false;
+
+	auto& frame = builder.graph->get_context<ViewportInfo>();
+	auto  size  = frame.frame_size;
+
+	// Depend on PreScene (writes `scene`) so the RTX BVH is ready before tracing.
+	builder.need(data.scene, ResourceFlags::ComputeRead);
+
+	builder.create(data.ColorOutput,
+	    { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
+	    ResourceFlags::UnorderedAccess);
+	return true;
+}
+
+void PassDefault<Passes::RTXColorPass>::render(
+    Passes::RTXColorPass::Context& data, FrameGraph::FrameContext& context)
+{
+	auto& sceneinfo = context.graph->get_context<SceneInfo>();
+	auto& compute   = context.get_list()->get_compute();
+
+	compute.set_signature(RTX::get().rtx.m_root_sig);
+	context.graph->set_slot(SlotID::FrameInfo, compute);
+	context.graph->set_slot(SlotID::SceneData, compute);
+
+	{
+		Slots::ColorRTXOutput output;
+		output.GetOutput() = data.ColorOutput->rwTexture2D;
+		compute.set(output);
+	}
+
+	RTX::get().render<ColorRTX>(compute, sceneinfo.scene->raytrace_scene, data.ColorOutput->get_size());
 }

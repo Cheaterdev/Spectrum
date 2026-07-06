@@ -858,6 +858,7 @@ public:
 						{ "GI Indirect",   FrameGraph::DebugMode::GI_Indirect },
 						{ "GI Reflection", FrameGraph::DebugMode::GI_Reflection },
 						{ "Voxel Trace",   FrameGraph::DebugMode::VoxelTrace },
+						{ "RTX",           FrameGraph::DebugMode::RTX },
 					};
 
 					auto toolbar = std::make_shared<debug_toolbar_panel>();
