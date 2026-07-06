@@ -1029,6 +1029,8 @@ public:
 			pass_ptr->flags = flags;
 			pass_ptr->pass_index = index;
 			pass_ptr->type_id = type_id;
+			pass_ptr->wait_pass = nullptr;
+			pass_ptr->prev_pass = nullptr;
 
 			builder.passes.push_back(pass_ptr);
 

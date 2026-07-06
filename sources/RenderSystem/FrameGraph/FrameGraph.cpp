@@ -34,6 +34,11 @@ namespace FrameGraph
 	{
 		max_passes = new_max_passes;
 		states.reset_frame();
+
+		is_new = false;
+		used_begin.reset();
+		used_end.reset();
+		enabled = false;
 	}
 
 	void ResourceAllocInfo::remove_inactive()
@@ -112,7 +117,7 @@ namespace FrameGraph
 			create(h, { ivec3(0,0,0), HAL::Format::UNKNOWN, 0 }, flags);
 			auto& info = *h.info;
 			info.passed = true;
-
+			info.enabled = true;
 			info.resource = tex;
 			info.fence = fence;
 			info.d3ddesc = tex->get_desc();
@@ -141,7 +146,7 @@ namespace FrameGraph
 
 
 			info.passed = true;
-
+			info.enabled = true;
 			info.resource = tex;
 			info.d3ddesc = tex->get_desc();
 			info.fence = fence;
@@ -334,14 +339,7 @@ namespace FrameGraph
 		{
 
 			PROFILE(L"enabled");
-			for (auto& chain : builder.alloc_resources)
-				for (auto& info : chain.active_span())
-				{
-
-					if (info.passed) continue;
-					info.enabled = false;
-				}
-
+	
 			builder.enabled_resources.clear();
 
 			auto process_resource = [&](this auto&& self, ResourceAllocInfo& info, UINT pass_id) -> void {
@@ -372,12 +370,23 @@ namespace FrameGraph
 				};
 
 			for (auto& chain : builder.alloc_resources)
-				for (auto& info : chain.active_span())
+			{
+				// A later chain version being Required implies every earlier
+				// version it was recreated from is Required too (they produce the
+				// content the final version clones/depends on). Propagate the flag
+				// backward through the chain before enabling creators.
+				bool required = false;
+				for (auto& info : chain.active_span() | std::ranges::views::reverse)
 				{
+					required = required || check(info.flags & ResourceFlags::Required);
+					if (required)
+						info.flags |= ResourceFlags::Required;
+				}
 
+				for (auto& info : chain.active_span())
 					if (check(info.flags & ResourceFlags::Required))
 						process_resource(info, (int)builder.passes.size());
-				}
+			}
 
 
 			for (auto& pass : builder.required_passes)
@@ -415,8 +424,7 @@ namespace FrameGraph
 			for (auto pass : builder.enabled_passes)
 			{
 				pass->call_id = i++;
-				pass->wait_pass = nullptr;
-				pass->prev_pass = nullptr;
+
 			}
 
 			Pass* prev_compute = nullptr;
@@ -491,14 +499,9 @@ namespace FrameGraph
 		for (auto& chain : builder.alloc_resources)
 			for (auto& info : chain.active_span())
 			{
-
 				if (!info.enabled) continue;
 
 				info.remove_inactive();
-
-				info.used_begin.reset();
-				info.used_end.reset();
-
 
 
 				for (auto& state : info.states)
@@ -742,7 +745,7 @@ namespace FrameGraph
 		info.reset(passes.size());
 		info.flags = flags;
 		info.frame_id = current_frame->get_frame();
-		info.is_new = false;
+	
 		//info.valid_from = info.valid_to = info.valid_to_start = nullptr;
 
 		if (current_pass) {
