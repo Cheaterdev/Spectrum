@@ -352,6 +352,9 @@ void materials::universal_material::generate_material()
 
 	context->start(include_file->get_data(), graph.get().get());
 
+	// Whether the graph drives opacity — used later by RTXColorPass.
+	transparent = context->transparent;
+
 
 	auto ps_str = context->get_pixel_result().uniforms + include_file->get_data() + context->get_pixel_result().text;
 	auto tess_orig_shader = context->get_tess_result().text;

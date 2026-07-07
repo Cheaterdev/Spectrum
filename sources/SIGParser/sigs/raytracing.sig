@@ -97,6 +97,23 @@ struct ShadowPayload
 }
 
 [nobind]
+[raypayload]
+struct ColorShadowPayload
+{
+	# Accumulated light transmittance toward the sun. Starts at 1 (fully lit);
+	# an opaque hit zeroes it, a transparent hit tints/attenuates it.
+	[read = {closesthit,miss,caller}]
+	[write = {closesthit,miss,caller}]
+	float3 transmittance;
+
+	# Distance of the occluder hit; < 0 signals a miss (light reached). The caller
+	# advances past each transparent hit and re-traces until opaque or miss.
+	[read = {closesthit,miss,caller}]
+	[write = {closesthit,miss,caller}]
+	float dist;
+}
+
+[nobind]
 struct Triangle
 {
 	mesh_vertex_input v;
@@ -190,6 +207,24 @@ RaytracePass ColorPass
 	per_material = true;
 }
 
+# Transparent-aware shadow ray: per-material so each material's closest-hit knows
+# its own transparency (opaque -> block, transparent -> tint + continue). Used by
+# the RTX color hit shader only; the binary ShadowPass above is left untouched.
+[Bind = MainRTX]
+RaytracePass ColorShadowPass
+{
+	[EntryPoint = ColorShadowMissShader]
+	miss = raytracing;
+
+	[EntryPoint = ColorShadowClosestHitShader]
+	closest_hit = none;
+
+	payload = ColorShadowPayload;
+
+	local = MaterialInfo;
+	per_material = true;
+}
+
 
 
 [Static]
@@ -207,5 +242,7 @@ PassNode RTXColorPass
 {
 	# Read-only dependency on PreScene so the RTX BVH is built/updated before tracing.
 	StructuredBuffer<uint> scene;
+	# Force the sky chain to run so FrameInfo.GetSky() is populated for the miss shader.
+	TextureCube sky_cubemap_filtered;
 	[Write] Texture ColorOutput;
 }

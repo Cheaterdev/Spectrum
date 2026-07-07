@@ -30,10 +30,10 @@ bool PassDefault<Passes::Scene>::setup(
 
     builder.create(data.gbuffer.GBuffer_NormalsPrev,
                    { ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 },
-                   FrameGraph::ResourceFlags::Static);
+                   FrameGraph::ResourceFlags::Static | FrameGraph::ResourceFlags::UnorderedAccess);
     builder.create(data.gbuffer.GBuffer_SpecularPrev,
                    { ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 },
-                   FrameGraph::ResourceFlags::Static);
+                   FrameGraph::ResourceFlags::Static | FrameGraph::ResourceFlags::UnorderedAccess);
 
     return true;
 }
@@ -60,6 +60,13 @@ void PassDefault<Passes::Scene>::render(
     gbuffer.HalfBuffer.hiZ_depth_uav = *(data.gbuffer.GBuffer_HiZ_UAV);
 
     command_list->clear_uav(gbuffer.depth_mips.rwTexture2D, vec4(0, 0, 0, 0));
+
+    // First frame these history buffers hold garbage (CopyPrev hasn't run yet) —
+    // clear them so temporal consumers don't reproject from noise.
+    if (data.gbuffer.GBuffer_NormalsPrev.is_new())
+        command_list->clear_uav(data.gbuffer.GBuffer_NormalsPrev->rwTexture2D, vec4(0, 0, 0, 0));
+    if (data.gbuffer.GBuffer_SpecularPrev.is_new())
+        command_list->clear_uav(data.gbuffer.GBuffer_SpecularPrev->rwTexture2D, vec4(0, 0, 0, 0));
 
     {
         RT::GBuffer rtv;

@@ -292,6 +292,10 @@ class MaterialContext : public FlowGraph::GraphContext
     public:
 		ShaderSource hit_shader;
 
+        // Set during start(): true when the graph's opacity output is driven,
+        // i.e. the material is (partially) transparent. Consumed CPU-side.
+        bool transparent = false;
+
         std::vector<Uniform::ptr> uniforms_ps;
         std::vector<Uniform::ptr> uniforms_tess;
 
@@ -390,6 +394,10 @@ class MaterialGraph : public MaterialFunction
         FlowGraph::output::ptr i_normal;
         FlowGraph::output::ptr i_tess_displacement;
         FlowGraph::output::ptr i_glow;
+        // Registered after i_glow so they append to the end of the generated
+        // COMPILED_FUNC output list (keeps existing output order stable).
+        FlowGraph::output::ptr i_opacity;
+        FlowGraph::output::ptr i_refraction;
 
     public:
         using ptr = s_ptr<MaterialGraph>;
@@ -407,6 +415,8 @@ class MaterialGraph : public MaterialFunction
         FlowGraph::output::ptr get_glow();
            FlowGraph::output::ptr get_roughness();
     FlowGraph::output::ptr get_tess_displacement();
+        FlowGraph::output::ptr get_opacity();
+        FlowGraph::output::ptr get_refraction();
         virtual void start(MaterialContext* context);
     private:
         SERIALIZE()
@@ -422,6 +432,8 @@ class MaterialGraph : public MaterialFunction
             ar& NVP(i_emissive);
             ar& NVP(i_normal);
             ar& NVP(i_tess_displacement);
+            ar& NVP(i_opacity);
+            ar& NVP(i_refraction);
             i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
             i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 			i_roughness->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
@@ -429,6 +441,9 @@ class MaterialGraph : public MaterialFunction
             i_normal->default_value = shader_parameter("float4(0.5,0.5,1,0)", ShaderParams::get().FLOAT4);
             i_glow->default_value = shader_parameter("float4(0.0,0.0,0,0)", ShaderParams::get().FLOAT4);
             i_tess_displacement->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+            // 1.0 opacity = fully opaque; 1.0 IOR = no refraction (air).
+            i_opacity->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
+            i_refraction->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
         }
 
 };

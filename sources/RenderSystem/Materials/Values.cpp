@@ -178,9 +178,19 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 	graph->get_mettalic()->set_enabled(true);
 	graph->get_base_color()->set_enabled(true);
 	graph->get_roughness()->set_enabled(true);
+	graph->get_opacity()->set_enabled(true);
+	graph->get_refraction()->set_enabled(true);
 
 	graph->get_tess_displacement()->set_enabled(false);
 	graph->start(this);
+
+	// The material is transparent iff its opacity output is actually driven.
+	transparent = graph->get_opacity()->has_input();
+
+	// Transparent materials compile the refraction/continuation-ray path in the
+	// raytracing hit shader (see UniversalMaterialRaytracing.hlsl).
+	if (transparent)
+		hit_shader.macros.emplace_back("TRANSPARENT", "1");
 
 
 
@@ -222,6 +232,8 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		graph->get_texcoord()->set_enabled(false);
 		graph->get_mettalic()->set_enabled(false);
 		graph->get_roughness()->set_enabled(false);
+		graph->get_opacity()->set_enabled(false);
+		graph->get_refraction()->set_enabled(false);
 
 		graph->get_base_color()->set_enabled(false);
 		graph->get_tess_displacement()->set_enabled(true);
@@ -564,6 +576,9 @@ MaterialGraph::MaterialGraph()
 	i_normal = register_output(/*ShaderParams::get().FLOAT4, */"normal", ShaderParams::get().FLOAT4);
 	i_tess_displacement = register_output(/*ShaderParams::get().FLOAT1,*/ "displacement", ShaderParams::get().FLOAT1);
 	i_glow = register_output(/*ShaderParams::get().FLOAT4, */"glow", ShaderParams::get().FLOAT4);
+	// Registered after glow so they append to the end of the COMPILED_FUNC output list.
+	i_opacity = register_output("opacity", ShaderParams::get().FLOAT1);
+	i_refraction = register_output("refraction", ShaderParams::get().FLOAT1);
 
 	i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
 	i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
@@ -574,6 +589,9 @@ MaterialGraph::MaterialGraph()
 
 	i_glow->default_value = shader_parameter("float4(0.0,0.0,0,0)", ShaderParams::get().FLOAT4);
 
+	// 1.0 opacity = fully opaque; 1.0 IOR = no refraction (air).
+	i_opacity->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
+	i_refraction->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
 }
 
 MaterialGraph::~MaterialGraph()
@@ -617,6 +635,16 @@ FlowGraph::output::ptr MaterialGraph::get_glow()
 FlowGraph::output::ptr MaterialGraph::get_tess_displacement()
 {
 	return i_tess_displacement;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_opacity()
+{
+	return i_opacity;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_refraction()
+{
+	return i_refraction;
 }
 
 void MaterialGraph::start(MaterialContext* context)
@@ -748,8 +776,13 @@ GUI::base::ptr ScalarNode::create_editor_window()
 {
 	GUI::Elements::value_box::ptr box(new GUI::Elements::value_box);
 	box->docking = GUI::dock::TOP;
-	// img->text = std::to_string(value);
-	// img->size = { 64, 64 };
+
+	// Values are stored as current_value/100, so max_value=100 capped scalars at
+	// 1.0. Widen the range so values > 1 (e.g. a refraction index) are editable,
+	// and seed current_value from the uniform so the box starts at its real value.
+	box->max_value     = 1000; // 0.00 .. 10.00 in 0.01 steps
+	box->current_value = int(uniform->value.f_value * 100 + 0.5f);
+
 	box->on_change = [this](int value, GUI::Elements::value_box* b)
 	{
 		uniform->value.f_value = float(value) / 100;

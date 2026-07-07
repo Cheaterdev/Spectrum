@@ -157,6 +157,10 @@ export namespace materials
 		uint32_t ps_header_version = 0;
 		uint32_t rt_header_version = 0;
 
+		// True when the material graph drives the opacity output (see MaterialContext).
+		// Consumed later by RTXColorPass to handle refraction/blending.
+		bool transparent = false;
+
 		void generate_texture_handles();
 
 		Slots::MaterialInfo material_info;
@@ -183,6 +187,8 @@ export namespace materials
 		void update();
 
 		UINT get_material_id();
+
+		bool is_transparent() const { return transparent; }
 
 		Pipeline::ptr get_pipeline();
 

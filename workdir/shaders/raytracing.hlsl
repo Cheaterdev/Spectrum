@@ -19,6 +19,7 @@
 
 #include "autogen/tables/RayPayload.h"
 #include "autogen/tables/ShadowPayload.h"
+#include "autogen/tables/ColorShadowPayload.h"
 #include "autogen/VoxelScreen.h"
 #include "autogen/VoxelInfo.h"
 
@@ -557,7 +558,10 @@ void MyRaygenShaderReflection()
 void MyMissShader([raypayload]inout
 RayPayload payload)
 {
-	payload.color = float4(0.0, 0.1, 0.4, 1.0); // debug: sky blue — rays dispatched but missed
+	// Missed all geometry -> sample the sky cubemap in the ray direction so
+	// reflections/refractions and primary rays show the real environment.
+	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()), 0);
+	payload.color = float4(sky, 1.0);
 	payload.dist = 100000;
 }
 
@@ -576,6 +580,14 @@ void ShadowMissShader([raypayload] inout
 ShadowPayload payload)
 {
 	payload.hit = false;
+}
+
+
+[shader("miss")]
+void ColorShadowMissShader([raypayload] inout ColorShadowPayload payload)
+{
+	// Nothing occluded the ray -> the light fully reaches; leave transmittance as-is.
+	payload.dist = -1.0; // signal "no hit" so the caller stops advancing.
 }
 
 #endif // RAYTRACING_HLSL

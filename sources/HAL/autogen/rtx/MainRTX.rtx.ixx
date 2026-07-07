@@ -12,6 +12,7 @@ import :Enums;
 import :Types;
 import :Autogen.Tables.ShadowPayload;
 import :Autogen.Tables.RayPayload;
+import :Autogen.Tables.ColorShadowPayload;
 import :Autogen.Slots.MaterialInfo;
 export {
 #include "Shadow.h"
@@ -20,11 +21,12 @@ export {
 #include "ColorRTX.h"
 #include "ShadowPass.h"
 #include "ColorPass.h"
+#include "ColorShadowPass.h"
 
-struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass>, Typelist<Shadow, Reflection, Indirect, ColorRTX>>
+struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass, ColorShadowPass>, Typelist<Shadow, Reflection, Indirect, ColorRTX>>
 {
 	using RTXPSO::RTXPSO;
 	static const constexpr Layouts global_sig = Layouts::DefaultLayout;
-	static const constexpr uint MaxTraceRecursionDepth = 2;
+	static const constexpr uint MaxTraceRecursionDepth = 8;
 };
 }

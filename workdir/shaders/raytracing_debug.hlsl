@@ -50,7 +50,7 @@ void ColorRTXRaygenShader()
 	ray.TMax      = 10000.0;
 	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload);
 
-	out_data.GetOutput()[itc] = payload.color;
+	out_data.GetOutput()[itc] = pow(payload.color,1.0/2.2);
 }
 
 #endif // RAYTRACING_DEBUG_HLSL

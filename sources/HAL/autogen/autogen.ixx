@@ -123,6 +123,7 @@ export import :Autogen.Tables.ColorRTXOutput;
 export import :Autogen.Tables.RayCone;
 export import :Autogen.Tables.RayPayload;
 export import :Autogen.Tables.ShadowPayload;
+export import :Autogen.Tables.ColorShadowPayload;
 export import :Autogen.Tables.Triangle;
 export import :Autogen.Slots.Raytracing;
 export import :Autogen.Tables.Raytracing;

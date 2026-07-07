@@ -388,7 +388,8 @@ public:
 		{ PassID::CopyPrev, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_NormalsPrev_c0_states[] = {
-		{ false, { GBuffer_NormalsPrev_c0_pass_refs + 0, 10 } },
+		{ true, { GBuffer_NormalsPrev_c0_pass_refs + 0, 1 } },
+		{ false, { GBuffer_NormalsPrev_c0_pass_refs + 1, 9 } },
 		{ true, { GBuffer_NormalsPrev_c0_pass_refs + 10, 1 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_SpecularPrev_c0_pass_refs[] = {
@@ -404,7 +405,8 @@ public:
 		{ PassID::CopyPrev, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_SpecularPrev_c0_states[] = {
-		{ false, { GBuffer_SpecularPrev_c0_pass_refs + 0, 9 } },
+		{ true, { GBuffer_SpecularPrev_c0_pass_refs + 0, 1 } },
+		{ false, { GBuffer_SpecularPrev_c0_pass_refs + 1, 8 } },
 		{ true, { GBuffer_SpecularPrev_c0_pass_refs + 9, 1 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthPrev_c0_pass_refs[] = {
@@ -526,11 +528,12 @@ public:
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ScreenReflection, 0 },
+		{ PassID::RTXColorPass, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_c0_states[] = {
 		{ false, { sky_cubemap_filtered_c0_pass_refs + 0, 1 } },
 		{ true, { sky_cubemap_filtered_c0_pass_refs + 1, 1 } },
-		{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 4 } },
+		{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 5 } },
 	};
 	static inline const FrameGraph::PassRef sky_cubemap_filtered_diffuse_c0_pass_refs[] = {
 		{ PassID::CubeMapDownsample, 0 },
@@ -967,6 +970,8 @@ public:
 		{ PassID::Scene, 0 },
 	};
 	static inline const FrameGraph::PassRef RTXColorPass_0_prev[] = {
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
 		{ PassID::PreScene, 0 },
 	};
 	static inline const FrameGraph::PassRef Sky_0_prev[] = {

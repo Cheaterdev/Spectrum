@@ -89,7 +89,7 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     return result;       
 }    
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, float lod);
 GBuffer PS(vertex_output i)
 {
 	float4 color = 1;
@@ -97,10 +97,12 @@ GBuffer PS(vertex_output i)
 	float roughness = 1;
 	float4 normal = 0;
     float4 glow = 0;
+    float opacity = 1;
+    float refraction = 1;
 
-    COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, 0);
+    COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, 0);
 
-    
+
 	return universal(i, color, metallic, roughness, normal, glow);
 }
 
@@ -131,7 +133,7 @@ void universal_voxel(vertex_output i, float4 albedo, float metallic, float rough
 #endif
     
 }
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, float lod);
 void PS_VOXEL(vertex_output i)
 {
 	float4 color = 1;
@@ -139,8 +141,10 @@ void PS_VOXEL(vertex_output i)
 	float roughness = 1;
 	float4 normal = 0;
     float4 glow = 0;
+    float opacity = 1;
+    float refraction = 1;
 
-	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, 2);
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, 2);
 
 	universal_voxel(i, color, metallic, roughness, normal, glow);
 } 

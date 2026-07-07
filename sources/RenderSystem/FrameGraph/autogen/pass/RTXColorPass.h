@@ -22,6 +22,9 @@ public:
 		Handlers::StructuredBuffer<uint> scene = ResourceID::scene;
 
 
+		Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
+
+
 		Handlers::Texture ColorOutput = ResourceID::ColorOutput;
 
 		// Resources this pass touches, in declaration order, each paired with
@@ -29,6 +32,7 @@ public:
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
 			{ ResourceID::scene, false },
+			{ ResourceID::sky_cubemap_filtered, false },
 			{ ResourceID::ColorOutput, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

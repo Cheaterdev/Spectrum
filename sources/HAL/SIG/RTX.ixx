@@ -429,13 +429,19 @@ struct SelectLocal<T>
 
 				HAL::LibraryObject lib;
 				lib.library = mat->raytracing_lib;
-				lib.export_shader(/*new*/ mat->wshader_name, /*was*/ std::wstring(Desc::hit_name));
+
+				// Export name must be unique per (material, pass): several per-material
+				// passes (ColorPass, ColorShadowPass, ...) are separate collections all
+				// linked into MainRTX, so exporting each under the bare wshader_name
+				// would collide. Desc::hit_name differs per pass, so append it.
+				std::wstring hit_export = mat->wshader_name + std::wstring(Desc::hit_name);
+				lib.export_shader(/*new*/ hit_export, /*was*/ std::wstring(Desc::hit_name));
 
 				HAL::HitGroup group;
 
 				group.local_root = rtx.m_local_sig;
 				group.name = mat->wshader_name + std::wstring(Desc::name);
-				group.closest_hit_shader = mat->wshader_name;
+				group.closest_hit_shader = hit_export;
 				group.type = HAL::HitGroupType::TRIANGLES;
 				raytracingPipeline.hit_groups.emplace_back(group);
 

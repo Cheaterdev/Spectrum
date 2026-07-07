@@ -172,6 +172,7 @@ export
 		RayCone = "RayCone"_crc32,
 		RayPayload = "RayPayload"_crc32,
 		ShadowPayload = "ShadowPayload"_crc32,
+		ColorShadowPayload = "ColorShadowPayload"_crc32,
 		Triangle = "Triangle"_crc32,
 		Raytracing = "Raytracing"_crc32,
 		SceneData = "SceneData"_crc32,

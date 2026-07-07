@@ -295,6 +295,10 @@ bool PassDefault<Passes::RTXColorPass>::setup(
 	// Depend on PreScene (writes `scene`) so the RTX BVH is ready before tracing.
 	builder.need(data.scene, ResourceFlags::ComputeRead);
 
+	// Force the sky passes to run so the FrameInfo slot generator can populate
+	// GetSky() (used by the color miss shader); otherwise the sky sample is black.
+	builder.need(data.sky_cubemap_filtered, ResourceFlags::ComputeRead);
+
 	builder.create(data.ColorOutput,
 	    { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
 	    ResourceFlags::UnorderedAccess);
