@@ -759,7 +759,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 			voxelScreen.GetVoxels()     = tex_lighting.tex_result->texture_3d().texture3D;
 			voxelScreen.GetTex_cube()   = sky_cubemap_filtered.textureCube;
 			voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
-			voxelScreen.GetPrev_gi()    = gi_filtered.texture2D;
+		//	voxelScreen.GetPrev_gi()    = gi_filtered.texture2D;
 			compute.set(voxelScreen);
 		}
 		context.graph->set_slot(SlotID::VoxelInfo, compute);

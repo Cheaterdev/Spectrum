@@ -1096,6 +1096,15 @@ class FrameGraphTimelineCanvas : public dock_base
                 {
                     if (pass->call_id != m_call_id) return;
 
+                    // The ExternalPass owns Static/passed resources before any real
+                    // pass writes them; on resize such a resource is freshly
+                    // reallocated (is_new) and still uninitialized at that point, so
+                    // skip its preview (heap garbage). is_new stays set for the whole
+                    // frame though, so only skip for the ExternalPass — a real pass
+                    // that has written the resource previews fine. The ExternalPass is
+                    // the only pass with id == UINT_MAX (real passes get sequential ids).
+                    if (m_alloc->is_new && pass->id == std::numeric_limits<UINT>::max()) return;
+
                     if (m_alloc->resource->get_desc().is_texture())
                     {
                         // Read view size cached by update_layout on the UI thread.
@@ -2001,7 +2010,13 @@ private:
             {
                 if (cell.disabled) continue;
 
-                if (cell.is_write)
+                // A history `prev` is never written by a pass, so it has no write cell
+                // to anchor a thumbnail. Treat its first read cell as the anchor — the
+                // preview is captured from the adopted resource on that reading pass
+                // (see FrameContext::end + the is_history_prev handler below).
+                const bool prev_anchor = cell.alloc && cell.alloc->is_history_prev && !last_write_alloc;
+
+                if (cell.is_write || prev_anchor)
                 {
                     last_write_alloc   = cell.alloc;
                     last_write_call_id = cell.call_id;
@@ -2099,7 +2114,10 @@ private:
 
             for (auto& cell : tr.cells)
             {
-                if (!cell.preview || !cell.alloc || !cell.is_write || !cell.thumb_tex) continue;
+                // Write cells anchor thumbnails; a history `prev` has none, so its
+                // anchor read cell (the only one given a thumb_tex above) qualifies too.
+                if (!cell.preview || !cell.alloc || !cell.thumb_tex) continue;
+                if (!cell.is_write && !cell.alloc->is_history_prev) continue;
 
                 UINT  capture_call_id = cell.call_id;
                 auto* info            = cell.alloc;
@@ -2112,6 +2130,12 @@ private:
                     (FrameGraph::Pass* pass, FrameGraph::FrameContext* context) mutable
                     {
                         if (pass->call_id != capture_call_id) return;
+
+                        // Only skip the ExternalPass's pre-write view of a freshly
+                        // reallocated (is_new) Static resource — heap garbage. A real
+                        // pass writing it previews fine even though is_new stays set.
+                        // ExternalPass is the only pass with id == UINT_MAX.
+                        if (info->is_new && pass->id == std::numeric_limits<UINT>::max()) return;
 
                         if (!icon_done)
                         {

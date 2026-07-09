@@ -357,6 +357,16 @@ public:
 		HAL::FenceWaiter fence;
 		size_t frame_id;
 
+		// --- History (previous-frame) support -------------------------------
+		// Role flags for a resource participating in a history link (set in init()).
+		// A `current` allocates fresh each frame but its allocation is NOT freed this
+		// frame — it's carried one frame forward to become next frame's `prev`. A
+		// `prev` doesn't allocate: it adopts the carried resource+allocation and gets
+		// a freshly-created view every frame (views are frame-linked). See
+		// create_resources() and roll_history().
+		bool is_history_prev    = false;
+		bool is_history_current = false;
+
 
 				Events::Event<Pass*, FrameContext*>	process_debug_resource;
 
@@ -653,6 +663,41 @@ public:
 	public:
 		std::array<ResourceChain, (size_t)ResourceID::Count> alloc_resources;
 
+		// One physical allocation carried across a frame boundary: last frame's
+		// `current`, reserved (not freed) to serve as this frame's `prev`.
+		struct HistorySlot
+		{
+			HAL::Resource::ptr   resource;
+			HAL::ResourceHandle  alloc_ptr;
+			HAL::ResourceDesc    desc;
+			HAL::SubResourcesGPU last_state;
+
+			bool valid() const { return !!resource; }
+		};
+
+		// History link {current, prev}. `carried` holds current's allocation from
+		// the previous frame; create_resources() binds it into `prev` (fresh view),
+		// and roll_history() frees the consumed one and carries this frame's current.
+		struct HistoryLink
+		{
+			ResourceID  current = ResourceID::Count;
+			ResourceID  prev    = ResourceID::Count;
+			HistorySlot carried;
+		};
+		std::vector<HistoryLink> history_links;
+
+		// Register `prev` as the previous-frame alias of `current`. Idempotent;
+		// safe to call every frame from a pass setup.
+		void link_history(ResourceID current, ResourceID prev);
+
+		HistoryLink* history_by_current(ResourceID id);
+		HistoryLink* history_by_prev(ResourceID id);
+
+		// End-of-frame: free each link's consumed carried slot and carry this
+		// frame's current allocation forward. Called in commit_command_lists()
+		// before the normal transient free pass.
+		void roll_history();
+
 		// Compact list of resources enabled this frame, populated during the
 		// enable-marking pass in Graph::setup(). Lets later passes (create_resources)
 		// iterate only what matters instead of rescanning all of alloc_resources.
@@ -715,6 +760,46 @@ public:
 			init(info, flags);
 			result = handler;
 			result.id = info.id;
+
+			// If this resource is a history `current`, provision its linked `prev`
+			// here — derived from current's desc, marked existing so consumers can
+			// need() it, but created by NO pass (no write state, no dependency, no
+			// alias barriers). prev only ever adopts current's carried allocation.
+			if (HistoryLink* link = history_by_current(result.id))
+				provision_history_prev<T>(link->prev, desc, flags);
+		}
+
+		// Bind a caller's local handler to the already-provisioned prev chain, so
+		// dereferencing it (e.g. in a GBuffer actualize view) resolves the adopted
+		// view. Needed because provision sets up the chain, not the caller's handle.
+		template<class T>
+		void bind_history_prev(T& result)
+		{
+			auto& chain = alloc_resources[(size_t)result.id];
+			ASSERT(chain.created_this_frame); // provisioned by create(current) already
+			ResourceAllocInfo& info = chain.active();
+			result    = info.get_handler<T>();
+			result.id = info.id;
+		}
+
+		template<class T>
+		void provision_history_prev(ResourceID prev_id, const typename T::Desc& desc, ResourceFlags flags)
+		{
+			auto& chain = alloc_resources[(size_t)prev_id];
+			chain.reset_frame();
+			chain.ensure_first();
+			chain.created_this_frame = true;
+
+			ResourceAllocInfo& info = chain.active();
+			info.id = prev_id;
+			info.create_handler<T>(desc);
+			// Deliberately NOT init(): init() registers the resource against
+			// current_pass and gives it a creation/write state. prev has no creator.
+			info.reset(passes.size());
+			info.flags              = flags;
+			info.frame_id           = current_frame->get_frame();
+			info.is_history_prev    = true;
+			info.is_history_current = false;
 		}
 
 		template<class T>

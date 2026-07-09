@@ -165,15 +165,29 @@ export{
 	public:
 		static void create(ivec2 size,auto &context, TaskBuilder& builder)
 		{
+			// Previous-frame history links (registered before the current resources
+			// are created, so they get tagged is_history_current and auto-provision
+			// their *Prev). Applies to every GBuffer producer graph (main + asset).
+			builder.link_history(context.GBuffer_Normals.id,   context.GBuffer_NormalsPrev.id);
+			builder.link_history(context.GBuffer_DepthMips.id, context.GBuffer_DepthPrev.id);
+
 			builder.create(context.GBuffer_Albedo, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-			builder.create(context.GBuffer_Normals, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+			builder.create(context.GBuffer_Normals, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget | ResourceFlags::UnorderedAccess);
 			builder.create(context.GBuffer_Depth, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::DepthStencil);
 			builder.create(context.GBuffer_Specular, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 			builder.create(context.GBuffer_Speed, { ivec3(size,0), HAL::Format::R16G16_FLOAT,1, 1 }, ResourceFlags::RenderTarget);
 
 
-			builder.create(context.GBuffer_DepthMips, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 },ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Static);
-			builder.create(context.GBuffer_DepthPrev, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::Static);
+			// GBuffer_DepthPrev is the previous-frame view of GBuffer_DepthMips — the
+			// history link above makes create() below provision and carry it, so it is
+			// not created here and DepthMips is no longer Static (it's carried a frame).
+			builder.create(context.GBuffer_DepthMips, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 },ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget);
+
+			// The *Prev resources are provisioned (chain-only) by the current creates
+			// above; bind this context's local handles to them so actualize() can
+			// dereference them (GBuffer::depth_prev_mips = *context.GBuffer_DepthPrev).
+			builder.bind_history_prev(context.GBuffer_NormalsPrev);
+			builder.bind_history_prev(context.GBuffer_DepthPrev);
 		}
 
 		static void create_quality(ivec2 size, auto &context, TaskBuilder& builder)

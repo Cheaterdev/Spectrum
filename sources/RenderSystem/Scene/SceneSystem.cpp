@@ -17,6 +17,8 @@ bool PassDefault<Passes::Scene>::setup(
 
     builder.need(data.scene, FrameGraph::ResourceFlags::PixelRead);
 
+    // *Prev history links are registered inside GBufferViewDesc::create (shared by
+    // every GBuffer producer), replacing the old CopyPrev copies.
     GBufferViewDesc::create(size, data.gbuffer, builder);
     GBufferViewDesc::create_mips(size, data.gbuffer, builder);
     GBufferViewDesc::create_quality(size, data.gbuffer, builder);
@@ -27,13 +29,6 @@ bool PassDefault<Passes::Scene>::setup(
     builder.create(data.gbuffer.GBuffer_HiZ_UAV,
                    { ivec3(size / 8, 1), HAL::Format::R32_FLOAT, 1 },
                    FrameGraph::ResourceFlags::UnorderedAccess);
-
-    builder.create(data.gbuffer.GBuffer_NormalsPrev,
-                   { ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 },
-                   FrameGraph::ResourceFlags::Static | FrameGraph::ResourceFlags::UnorderedAccess);
-    builder.create(data.gbuffer.GBuffer_SpecularPrev,
-                   { ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 },
-                   FrameGraph::ResourceFlags::Static | FrameGraph::ResourceFlags::UnorderedAccess);
 
     return true;
 }
@@ -61,12 +56,9 @@ void PassDefault<Passes::Scene>::render(
 
     command_list->clear_uav(gbuffer.depth_mips.rwTexture2D, vec4(0, 0, 0, 0));
 
-    // First frame these history buffers hold garbage (CopyPrev hasn't run yet) —
-    // clear them so temporal consumers don't reproject from noise.
-    if (data.gbuffer.GBuffer_NormalsPrev.is_new())
-        command_list->clear_uav(data.gbuffer.GBuffer_NormalsPrev->rwTexture2D, vec4(0, 0, 0, 0));
-    if (data.gbuffer.GBuffer_SpecularPrev.is_new())
-        command_list->clear_uav(data.gbuffer.GBuffer_SpecularPrev->rwTexture2D, vec4(0, 0, 0, 0));
+    // NormalsPrev / DepthPrev are history-linked and provisioned automatically —
+    // not touched here. SpecularPrev history was unused (denoiser roughness-history
+    // is disabled) so it's been removed along with the CopyPrev copies.
 
     {
         RT::GBuffer rtv;

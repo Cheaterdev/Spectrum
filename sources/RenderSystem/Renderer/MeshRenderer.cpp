@@ -290,7 +290,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 			{
 				PROFILE_GPU(L"dispatch");
-
+																																																								   
 				compute.exec_indirect( dispatch_buffer, 1);
 			}
 

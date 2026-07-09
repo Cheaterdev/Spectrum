@@ -261,7 +261,7 @@ GI_RESULT PS(quad_output i)
 	float3 prev_pos = depth_to_wpos(prev_z, prev_tc, prevCamera.GetInvViewProj());
 
 	float l = length(pos - prev_pos) * MOVE_SCALER;
-	gi = lerp(gi, prev_gi, saturate(0.95 - l));
+	//gi = lerp(gi, prev_gi, saturate(0.95 - l));
 
 
 	result.gi = gi;
@@ -356,6 +356,16 @@ struct upscale_result
 
 upscale_result get_history(float3 pos, float2 tc, float2 prev_tc, float2 dims, float l)
 {
+	// Previous-frame textures may be a different resolution than this frame (window
+	// resize / dynamic resolution). prev_tc is a normalized UV, so build the
+	// reprojection grid from the prev texture's OWN size, not the current dispatch
+	// size, or the gather/sample taps land between its texels (chunked shift).
+	{
+		uint2 prev_dims;
+		tex_depth_prev2.GetDimensions(prev_dims.x, prev_dims.y);
+		dims = float2(prev_dims);
+	}
+
 	Bilinear bilinearFilterAtPrevPos = GetBilinearFilter((prev_tc), dims);
 	float2 gatherUv = (float2(bilinearFilterAtPrevPos.origin) +0.5) / dims;
 

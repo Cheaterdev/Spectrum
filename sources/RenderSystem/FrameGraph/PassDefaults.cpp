@@ -100,30 +100,20 @@ void PassDefault<Passes::ResultCreation>::render(
 
 
 // ---- CopyPrev ---------------------------------------------------------------
+// Obsolete: GBuffer_NormalsPrev and GBuffer_DepthPrev are now fed by FrameGraph
+// history links (see Scene::setup) — the previous-frame allocation is carried
+// forward instead of copied. GBuffer_SpecularPrev history was unused and removed.
+// The pass is kept disabled (returns false) until it can be dropped from the .sig.
 
 bool PassDefault<Passes::CopyPrev>::setup(
 	Passes::CopyPrev::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	builder.need(data.gbuffer.GBuffer_NormalsPrev,  FrameGraph::ResourceFlags::CopyDest);
-	builder.need(data.gbuffer.GBuffer_SpecularPrev, FrameGraph::ResourceFlags::CopyDest);
-	builder.need(data.gbuffer.GBuffer_Normals,      FrameGraph::ResourceFlags::CopySource);
-	builder.need(data.gbuffer.GBuffer_Specular,     FrameGraph::ResourceFlags::CopySource);
-	builder.need(data.gbuffer.GBuffer_DepthPrev,    FrameGraph::ResourceFlags::CopyDest);
-	builder.need(data.gbuffer.GBuffer_DepthMips,    FrameGraph::ResourceFlags::CopySource);
-	return true;
+	return false;
 }
 
 void PassDefault<Passes::CopyPrev>::render(
 	Passes::CopyPrev::Context& data, FrameGraph::FrameContext& context)
 {
-	auto& copy = context.get_list()->get_copy();
-
-	copy.copy_resource(data.gbuffer.GBuffer_NormalsPrev->resource,
-	                   data.gbuffer.GBuffer_Normals->resource);
-	copy.copy_resource(data.gbuffer.GBuffer_SpecularPrev->resource,
-	                   data.gbuffer.GBuffer_Specular->resource);
-	copy.copy_texture(data.gbuffer.GBuffer_DepthPrev->resource, 0,
-	                  data.gbuffer.GBuffer_DepthMips->resource, 0);
 }
 
 

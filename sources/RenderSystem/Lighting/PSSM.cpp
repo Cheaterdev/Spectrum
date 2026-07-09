@@ -285,6 +285,8 @@ PSSM::PSSM()
 		auto& graphics = list.get_graphics();
 		auto& compute  = list.get_compute();
 
+		
+
 		context.graph->set_slot(SlotID::FrameInfo, graphics);
 		context.graph->set_slot(SlotID::FrameInfo, compute);
 

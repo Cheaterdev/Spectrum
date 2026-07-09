@@ -352,7 +352,7 @@ cur_gi = voxel_color;// lerp(cur_gi, voxel_color, saturate(cur_gi.w / max_ray));
 
 	float3 color = temporal_reprojection(itc, 0, dims);
 	// color = lerp(color, prev_gi, 0.9);
-	tex_gi_result[index] = float4(color,0);
+	tex_gi_result[index] = 1;//float4(color,0);
 
 
 //cur_gi = lerp(cur_gi/(cur_gi.w+0.0001), voxel_color, 1-saturate(cur_gi.w));

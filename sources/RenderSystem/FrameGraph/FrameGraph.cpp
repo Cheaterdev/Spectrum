@@ -41,6 +41,61 @@ namespace FrameGraph
 		enabled = false;
 	}
 
+	void TaskBuilder::link_history(ResourceID current, ResourceID prev)
+	{
+		for (auto& l : history_links)
+			if (l.current == current && l.prev == prev) return; // already linked
+
+		HistoryLink l;
+		l.current = current;
+		l.prev    = prev;
+		history_links.push_back(std::move(l));
+	}
+
+	TaskBuilder::HistoryLink* TaskBuilder::history_by_current(ResourceID id)
+	{
+		for (auto& l : history_links)
+			if (l.current == id) return &l;
+		return nullptr;
+	}
+
+	TaskBuilder::HistoryLink* TaskBuilder::history_by_prev(ResourceID id)
+	{
+		for (auto& l : history_links)
+			if (l.prev == id) return &l;
+		return nullptr;
+	}
+
+	void TaskBuilder::roll_history()
+	{
+		// End of frame. For each link: free the carried slot (last frame's current,
+		// consumed this frame as prev), then carry this frame's current allocation
+		// forward to serve as next frame's prev. current's allocation was kept alive
+		// by suppressing its free in create_resources (is_history_current), so it is
+		// still valid here; detach it from the info so nothing else frees it.
+		for (auto& l : history_links)
+		{
+			// release last frame's current (this frame's prev), now done being read
+			l.carried.resource = nullptr;
+			l.carried.alloc_ptr.handle.Free();
+			l.carried = HistorySlot{};
+
+			auto& cur_chain = alloc_resources[(size_t)l.current];
+			if (cur_chain.empty()) continue;
+			ResourceAllocInfo& cur = cur_chain.active();
+
+			if (!cur.resource || !cur.alloc_ptr.handle) continue; // wasn't created this frame
+
+			l.carried.resource   = cur.resource;
+			l.carried.alloc_ptr  = cur.alloc_ptr;
+			l.carried.desc       = cur.d3ddesc;
+			l.carried.last_state = cur.last_state; // best-effort; barrier priming handled later
+
+			// Detach so the normal free pass / next frame's realloc don't touch it.
+			cur.alloc_ptr = HAL::ResourceHandle{};
+		}
+	}
+
 	void ResourceAllocInfo::remove_inactive()
 	{
 
@@ -256,7 +311,10 @@ namespace FrameGraph
 
 			for (auto [info, flags] : pass->used.resource_flags)
 			{
-				if (!check(flags & WRITEABLE_FLAGS)) continue;
+				// Debug preview fires on the producing (write) pass. A history `prev`
+				// is never written by a pass — fire it on a reading pass instead so
+				// its thumbnail can be captured from the adopted resource.
+				if (!check(flags & WRITEABLE_FLAGS) && !info->is_history_prev) continue;
 				info->process_debug_resource(pass, this);
 			}
 			for (auto info : pass->used.resource_deletions_after)
@@ -316,7 +374,6 @@ namespace FrameGraph
 
 			builder.current_frame = builder.frames.begin_frame();
 			for (auto& chain : builder.alloc_resources) chain.reset_frame();
-
 		}
 	}
 
@@ -656,7 +713,10 @@ namespace FrameGraph
 
 		PROFILE(L"free resources");
 
-
+		// Carry each history current's allocation forward and free the consumed
+		// prev — before the normal free pass, so current's detached allocation
+		// isn't touched by it (and the carried resource keeps a live reference).
+		builder.roll_history();
 
 		for (auto& chain : builder.alloc_resources)
 			for (auto& info : chain.active_span())
@@ -741,10 +801,14 @@ namespace FrameGraph
 		// need()s from real passes.
 		ASSERT(!passes.empty());
 
-		//flags |=ResourceFlags::Static;
 		info.reset(passes.size());
 		info.flags = flags;
 		info.frame_id = current_frame->get_frame();
+
+		// History roles (see create_resources / roll_history). current allocates
+		// fresh but defers its free; prev adopts the carried allocation.
+		info.is_history_current = history_by_current(info.id) != nullptr;
+		info.is_history_prev    = history_by_prev(info.id)    != nullptr;
 	
 		//info.valid_from = info.valid_to = info.valid_to_start = nullptr;
 
@@ -1226,6 +1290,11 @@ namespace FrameGraph
 					  */
 			if (check(info->flags & ResourceFlags::Static)) continue;
 
+			// A history `prev` doesn't allocate — it adopts the carried allocation
+			// in the placement loop below. Skip all alloc/free scheduling (and the
+			// first-state-is-write assert, since prev is read-only this frame).
+			if (info->is_history_prev) continue;
+
 			//	
 
 
@@ -1245,6 +1314,11 @@ namespace FrameGraph
 
 
 			if (info->heap_type != HAL::HeapType::DEFAULT) continue;
+
+			// A history `current` allocates fresh (above) but its allocation is
+			// carried one frame forward (roll_history) to become next frame's prev,
+			// so it must NOT be freed/aliased this frame — skip free scheduling.
+			if (info->is_history_current) continue;
 
 
 			bool alias_ended = false;
@@ -1316,6 +1390,53 @@ namespace FrameGraph
 			}
 
 
+#ifdef DEV
+			// Aliasing validation: two transient resources may share heap memory only
+			// when their lifetimes don't overlap. Replay the create/free schedule and
+			// assert that no two *simultaneously live* resources occupy overlapping
+			// heap ranges — otherwise a pass touches another live resource's memory
+			// (garbage, e.g. ResultTexture created with junk in it).
+			{
+				PROFILE(L"validate aliasing");
+
+				auto ranges_overlap = [](ResourceAllocInfo* a, ResourceAllocInfo* b)
+				{
+					auto ha = a->alloc_ptr.get_heap();
+					auto hb = b->alloc_ptr.get_heap();
+					if (!ha || !hb || ha != hb) return false; // committed / different heaps
+
+					uint64_t a0 = a->alloc_ptr.get_offset(), a1 = a0 + a->alloc_ptr.get_size();
+					uint64_t b0 = b->alloc_ptr.get_offset(), b1 = b0 + b->alloc_ptr.get_size();
+					return a0 < b1 && b0 < a1;
+				};
+
+				std::vector<ResourceAllocInfo*> live;
+
+				for (auto& [id, e] : events)
+				{
+					for (auto info : e.free_before)
+						std::erase(live, info);
+
+					for (auto info : e.create)
+					{
+						for (auto* other : live)
+							if (ranges_overlap(info, other))
+							{
+								Log::get() << "[FrameGraph] aliasing conflict at pass call " << id
+								           << ": '" << info->name() << "' and '" << other->name()
+								           << "' overlap in heap memory while both alive" << Log::endl;
+								ASSERT(false);
+							}
+
+						live.push_back(info);
+					}
+
+					for (auto info : e.free_after)
+						std::erase(live, info);
+				}
+			}
+#endif
+
 
 			for (auto info : non_deleted)
 			{
@@ -1333,7 +1454,42 @@ namespace FrameGraph
 
 				PROFILE(L"resource");
 
+				// History `prev`: adopt the allocation `current` wrote last frame,
+				// with a freshly-created view (views are frame-linked). On the first
+				// frame or a resize the carried slot is absent/mismatched, so fall
+				// back to a fresh cleared resource (is_new -> consumers clear).
+				if (info->is_history_prev)
+				{
+					HistoryLink* link = history_by_prev(info->id);
+					// Adopt the carried resource whenever one exists — even at a
+					// different size. An SRV doesn't encode resolution (just format +
+					// mip/array range), so a view built with this frame's desc over
+					// last frame's resource is valid; the shader just samples the old
+					// resolution. is_new fires only when there is no history at all
+					// (first frame), so consumers clear only then, not on resize.
+					if (link && link->carried.valid())
+					{
+						info->resource   = link->carried.resource;
+						info->alloc_ptr  = link->carried.alloc_ptr;
+						info->last_state = link->carried.last_state;
+						info->is_new     = false;
+					}
+					else
+					{
+						info->resource   = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type);
+						info->resource->frame_graph_managed = true;
+						info->creation_state = info->last_state = info->resource->get_state_manager().copy_gpu();
+						info->last_state = TextureLayout::UNDEFINED;
+						info->resource->set_name(info->name());
+						info->alloc_ptr  = HAL::ResourceHandle{};
+						info->is_new     = true;
+					}
 
+					info->view = nullptr;
+					info->handler->init_view(*info, global_frame);
+					id++;
+					continue;
+				}
 
 				if (info->alloc_ptr.handle)
 				{
