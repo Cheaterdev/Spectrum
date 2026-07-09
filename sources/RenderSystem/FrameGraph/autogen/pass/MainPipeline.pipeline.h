@@ -142,6 +142,7 @@ public:
 		L"VoxelFramesCount",
 		L"VoxelIndirectNoise",
 		L"VoxelIndirectFiltered",
+		L"VoxelIndirectFilteredPrev",
 		L"VoxelScreen_hi",
 		L"VoxelScreen_low",
 		L"VoxelScreen_low_data",
@@ -621,6 +622,13 @@ public:
 		{ true, { VoxelIndirectFiltered_c0_pass_refs + 0, 1 } },
 		{ true, { VoxelIndirectFiltered_c0_pass_refs + 1, 1 } },
 	};
+	static inline const FrameGraph::PassRef VoxelIndirectFilteredPrev_c0_pass_refs[] = {
+		{ PassID::VoxelScreen, 0 },
+		{ PassID::VoxelCombine, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VoxelIndirectFilteredPrev_c0_states[] = {
+		{ false, { VoxelIndirectFilteredPrev_c0_pass_refs + 0, 2 } },
+	};
 	static inline const FrameGraph::PassRef VoxelScreen_hi_c0_pass_refs[] = {
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
@@ -826,6 +834,7 @@ public:
 		{ ResourceID::VoxelFramesCount, 0, VoxelFramesCount_c0_states },
 		{ ResourceID::VoxelIndirectNoise, 0, VoxelIndirectNoise_c0_states },
 		{ ResourceID::VoxelIndirectFiltered, 0, VoxelIndirectFiltered_c0_states },
+		{ ResourceID::VoxelIndirectFilteredPrev, 0, VoxelIndirectFilteredPrev_c0_states },
 		{ ResourceID::VoxelScreen_hi, 0, VoxelScreen_hi_c0_states },
 		{ ResourceID::VoxelScreen_low, 0, VoxelScreen_low_c0_states },
 		{ ResourceID::VoxelScreen_low_data, 0, VoxelScreen_low_data_c0_states },

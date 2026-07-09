@@ -141,6 +141,12 @@ namespace GUI
 					texture->compress();
 				};
 
+				if (texture && on_open_preview)
+					menu->add_item("Preview")->on_click = [this](menu_list_element::ptr e)
+				{
+					if (on_open_preview) on_open_preview(asset->get_asset());
+				};
+
 				menu->add_item("refresh")->on_click = [this](menu_list_element::ptr e)
 				{
 					asset->update_preview();

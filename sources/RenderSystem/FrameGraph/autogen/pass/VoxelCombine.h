@@ -32,6 +32,9 @@ public:
 		Handlers::Texture VoxelIndirectFiltered = ResourceID::VoxelIndirectFiltered;
 
 
+		Handlers::Texture VoxelIndirectFilteredPrev = ResourceID::VoxelIndirectFilteredPrev;
+
+
 		Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
 
 
@@ -67,6 +70,7 @@ public:
 			{ ResourceID::VoxelFramesCount, true },
 			{ ResourceID::VoxelIndirectNoise, false },
 			{ ResourceID::VoxelIndirectFiltered, true },
+			{ ResourceID::VoxelIndirectFilteredPrev, false },
 			{ ResourceID::sky_cubemap_filtered, false },
 			{ ResourceID::VoxelScreen_hi, false },
 			{ ResourceID::VoxelScreen_low, false },

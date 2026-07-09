@@ -24,6 +24,11 @@ export namespace GUI
 
                 AssetStorage::ptr asset;
 
+                // Set by a higher layer (which can build a resource_preview window,
+                // above the Graphics module) to open a preview for the given loaded
+                // asset. asset_item only invokes it.
+                static inline std::function<void(std::shared_ptr<Asset>)> on_open_preview;
+
                 void draw(Context& c);
 
                 virtual bool need_drag_drop() override;

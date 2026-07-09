@@ -66,6 +66,46 @@ public:
 	}
 };
 
+// Window content that previews a texture asset. Hosts the universal
+// resource_preview and self-drives its GPU render each frame via a tiny
+// frame-graph pass (the asset texture is persistent, so no resource tracking).
+class asset_preview_content : public GUI::base, public FrameGraph::GraphGenerator
+{
+	resource_preview::ptr              m_preview;
+	std::shared_ptr<TextureAsset>      m_asset; // keeps the texture alive
+	std::shared_ptr<HAL::ResourceView> m_view;
+public:
+	using ptr = std::shared_ptr<asset_preview_content>;
+
+	asset_preview_content(std::shared_ptr<TextureAsset> asset) : m_asset(asset)
+	{
+		docking     = GUI::dock::FILL;
+		width_size  = GUI::size_type::MATCH_PARENT;
+		height_size = GUI::size_type::MATCH_PARENT;
+
+		m_preview = std::make_shared<resource_preview>();
+		add_child(m_preview);
+
+		if (auto tex = m_asset ? m_asset->get_texture() : nullptr)
+		{
+			m_view = std::make_shared<HAL::Texture2DView>(tex->texture_2d());
+			m_preview->set_source(m_view, "asset");
+		}
+	}
+
+	void generate(FrameGraph::Graph& graph) override
+	{
+		if (!m_view) return;
+		struct empty_pass_data {};
+		// PassFlags::Required — the pass writes no graph-tracked resource, so it
+		// would otherwise be culled; force it to always run.
+		graph.add_pass<empty_pass_data>(L"AssetPreview",
+			[](empty_pass_data&, FrameGraph::TaskBuilder&) { return true; },
+			[this](empty_pass_data&, FrameGraph::FrameContext& ctx) { m_preview->render(&ctx); },
+			FrameGraph::PassFlags::Required);
+	}
+};
+
 class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext
 {
 		Pipelines::MainPipeline pipeline;
@@ -1090,6 +1130,21 @@ public:
 					GUI::Elements::asset_explorer::ptr cont(new GUI::Elements::asset_explorer());
 					dock->get_tabs()->add_page("Asset Explorer", cont);
 					dock->size = { 400, 400 };
+
+					// Open a texture asset in a preview window ("Preview" in the
+					// asset context menu). Lives here (above the Graphics module) so
+					// it can use resource_preview.
+					GUI::Elements::asset_item::on_open_preview = [this](std::shared_ptr<Asset> a)
+					{
+						auto tex = a ? a->get_ptr<TextureAsset>() : nullptr;
+						if (!tex) return;
+						auto wnd     = std::make_shared<GUI::Elements::window>();
+						auto content = std::make_shared<asset_preview_content>(tex);
+						wnd->add_child(content);
+						wnd->pos  = { 250, 250 };
+						wnd->size = { 520, 560 };
+						if (auto ui = get_user_ui()) ui->add_child(wnd);
+					};
 					EVENT("End Asset Explorer");
 				}
 			}

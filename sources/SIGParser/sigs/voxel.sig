@@ -485,6 +485,8 @@ PassNode VoxelScreen
 	[Write] Texture VoxelFramesCount;
 	[Write] Texture VoxelIndirectNoise;
 	[Write] Texture VoxelIndirectFiltered;
+	# Previous-frame view of VoxelIndirectFiltered (history-prev, adopted resource).
+	Texture VoxelIndirectFilteredPrev;
 	TextureCube sky_cubemap_filtered;
 	Texture BlueNoise;
 	[Write] StructuredBuffer<DispatchArguments> VoxelScreen_hi;
@@ -501,6 +503,8 @@ PassNode VoxelCombine
 	[Write] Texture VoxelFramesCount;
 	Texture VoxelIndirectNoise;
 	[Write] Texture VoxelIndirectFiltered;
+	# Previous-frame view of VoxelIndirectFiltered (history-prev, adopted resource).
+	Texture VoxelIndirectFilteredPrev;
 	TextureCube sky_cubemap_filtered;
 	StructuredBuffer<DispatchArguments> VoxelScreen_hi;
 	StructuredBuffer<DispatchArguments> VoxelScreen_low;

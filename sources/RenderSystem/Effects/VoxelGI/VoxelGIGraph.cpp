@@ -580,9 +580,19 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 		builder.create(data.VoxelIndirectNoise,
 			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 }, ResourceFlags::UnorderedAccess);
+
+		// Temporal history: carry last frame's VoxelIndirectFiltered forward as the
+		// adopted *Prev (resource is reused, not recreated -> no data loss), instead
+		// of a Static buffer that garbages on resize. link_history must precede the
+		// create; the create then tags it is_history_current (no longer Static) and
+		// auto-provisions the Prev, which bind_history_prev binds to our handle.
+		builder.link_history(data.VoxelIndirectFiltered.id, data.VoxelIndirectFilteredPrev.id);
 		builder.create(data.VoxelIndirectFiltered,
 			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
-			ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+			ResourceFlags::UnorderedAccess);
+		builder.bind_history_prev(data.VoxelIndirectFilteredPrev);
+		builder.need(data.VoxelIndirectFilteredPrev, ResourceFlags::ComputeRead);
+
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 		builder.need(data.VoxelLighted,         ResourceFlags::ComputeRead);
 		builder.need(data.BlueNoise,            ResourceFlags::ComputeRead);
@@ -604,17 +614,21 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		auto    sky_cubemap_filtered   = *data.sky_cubemap_filtered;
 		auto    noisy_output           = *data.VoxelIndirectNoise;
 		auto    gi_filtered            = *data.VoxelIndirectFiltered;
+		auto    gi_prev                = *data.VoxelIndirectFilteredPrev;
 		auto    frames_count           = *data.VoxelFramesCount;
 		auto    sz                     = noisy_output.get_size();
 
 		auto& sceneinfo = context.graph->get_context<SceneInfo>();
 
-		if (data.VoxelIndirectFiltered.is_new())
-		{
-			command_list->clear_uav(gi_filtered.rwTexture2D,   vec4(0, 0, 0, 0));
-			command_list->clear_uav(noisy_output.rwTexture2D,  vec4(0, 0, 0, 0));
-			command_list->clear_uav(frames_count.rwTexture2D,  vec4(0, 0, 0, 0));
-		}
+		// Only the *Prev is uninitialized on the first frame (no history yet); on
+		// resize it adopts a valid old-size resource (is_new == false) and the shader
+		// remaps via GetDimensions. The current is written fresh each frame.
+		if (data.VoxelIndirectFilteredPrev.is_new())
+			command_list->clear_uav(gi_prev.rwTexture2D, vec4(0, 0, 0, 0));
+		if (data.VoxelIndirectNoise.is_new())
+			command_list->clear_uav(noisy_output.rwTexture2D, vec4(0, 0, 0, 0));
+		if (data.VoxelFramesCount.is_new())
+			command_list->clear_uav(frames_count.rwTexture2D, vec4(0, 0, 0, 0));
 
 		auto& compute = command_list->get_compute();
 
@@ -633,7 +647,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 			voxelScreen.GetVoxels()     = tex_lighting.tex_result->texture_3d().texture3D;
 			voxelScreen.GetTex_cube()   = sky_cubemap_filtered.textureCube;
 			voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
-			voxelScreen.GetPrev_gi()    = gi_filtered.texture2D;
+			voxelScreen.GetPrev_gi()    = gi_prev.texture2D;
 			compute.set(voxelScreen);
 		}
 
@@ -726,7 +740,8 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 	{
 		builder.need(data.ResultTexture,         ResourceFlags::UnorderedAccess);
 		GBufferViewDesc::need(builder, data.gbuffer);
-		builder.need(data.VoxelIndirectFiltered, ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelIndirectFiltered,     ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelIndirectFilteredPrev, ResourceFlags::ComputeRead);
 		builder.need(data.sky_cubemap_filtered,  ResourceFlags::PixelRead);
 		builder.need(data.VoxelFramesCount,      ResourceFlags::UnorderedAccess);
 		builder.need(data.VoxelIndirectNoise,    ResourceFlags::ComputeRead);
@@ -747,6 +762,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		auto  noisy_output        = *data.VoxelIndirectNoise;
 		auto  frames_count        = *data.VoxelFramesCount;
 		auto  gi_filtered         = *data.VoxelIndirectFiltered;
+		auto  gi_prev             = *data.VoxelIndirectFilteredPrev;
 		auto  sz                  = target_tex.get_size();
 
 		auto& compute = command_list->get_compute();
@@ -759,7 +775,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 			voxelScreen.GetVoxels()     = tex_lighting.tex_result->texture_3d().texture3D;
 			voxelScreen.GetTex_cube()   = sky_cubemap_filtered.textureCube;
 			voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
-		//	voxelScreen.GetPrev_gi()    = gi_filtered.texture2D;
+			voxelScreen.GetPrev_gi()    = gi_prev.texture2D;
 			compute.set(voxelScreen);
 		}
 		context.graph->set_slot(SlotID::VoxelInfo, compute);
