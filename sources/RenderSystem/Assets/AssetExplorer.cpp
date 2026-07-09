@@ -1,6 +1,7 @@
 module Graphics:AssetExplorer;
 import :Materials.UniversalMaterial;
 import :MeshAsset;
+import :BinaryAsset;
 import Core;
 
 import GUI;
@@ -133,6 +134,7 @@ namespace GUI
 
 				};
 				auto texture = loaded_asset->get_ptr<TextureAsset>();
+				auto binary  = loaded_asset->get_ptr<BinaryAsset>();
 
 				if (texture)
 					menu->add_item("Compress")->on_click = [this](menu_list_element::ptr e)
@@ -141,7 +143,7 @@ namespace GUI
 					texture->compress();
 				};
 
-				if (texture && on_open_preview)
+				if ((texture || binary) && on_open_preview)
 					menu->add_item("Preview")->on_click = [this](menu_list_element::ptr e)
 				{
 					if (on_open_preview) on_open_preview(asset->get_asset());

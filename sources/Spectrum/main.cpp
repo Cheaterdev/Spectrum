@@ -66,36 +66,48 @@ public:
 	}
 };
 
-// Window content that previews a texture asset. Hosts the universal
-// resource_preview and self-drives its GPU render each frame via a tiny
-// frame-graph pass (the asset texture is persistent, so no resource tracking).
+// Window content that previews an asset. Dispatches by type:
+//   TextureAsset -> universal resource_preview (GPU), self-driven each frame
+//                   via a tiny frame-graph pass (the texture is persistent).
+//   BinaryAsset  -> MultiLineLabel (one label per line) in its scroll container.
 class asset_preview_content : public GUI::base, public FrameGraph::GraphGenerator
 {
-	resource_preview::ptr              m_preview;
-	std::shared_ptr<TextureAsset>      m_asset; // keeps the texture alive
+	resource_preview::ptr              m_preview; // textures only
+	std::shared_ptr<TextureAsset>      m_asset;   // keeps the texture alive
 	std::shared_ptr<HAL::ResourceView> m_view;
 public:
 	using ptr = std::shared_ptr<asset_preview_content>;
 
-	asset_preview_content(std::shared_ptr<TextureAsset> asset) : m_asset(asset)
+	asset_preview_content(std::shared_ptr<Asset> asset)
 	{
 		docking     = GUI::dock::FILL;
 		width_size  = GUI::size_type::MATCH_PARENT;
 		height_size = GUI::size_type::MATCH_PARENT;
 
-		m_preview = std::make_shared<resource_preview>();
-		add_child(m_preview);
-
-		if (auto tex = m_asset ? m_asset->get_texture() : nullptr)
+		if (auto tex = asset ? asset->get_ptr<TextureAsset>() : nullptr)
 		{
-			m_view = std::make_shared<HAL::Texture2DView>(tex->texture_2d());
-			m_preview->set_source(m_view, "asset");
+			m_asset   = tex;
+			m_preview = std::make_shared<resource_preview>();
+			add_child(m_preview);
+
+			if (auto t = tex->get_texture())
+			{
+				m_view = std::make_shared<HAL::Texture2DView>(t->texture_2d());
+				m_preview->set_source(m_view, "asset");
+			}
+		}
+		else if (auto bin = asset ? asset->get_ptr<BinaryAsset>() : nullptr)
+		{
+			auto text     = std::make_shared<GUI::Elements::MultiLineLabel>();
+			text->docking = GUI::dock::FILL;
+			text->text    = bin->get_data();
+			add_child(text);
 		}
 	}
 
 	void generate(FrameGraph::Graph& graph) override
 	{
-		if (!m_view) return;
+		if (!m_view) return; // only the texture preview needs a GPU pass
 		struct empty_pass_data {};
 		// PassFlags::Required — the pass writes no graph-tracked resource, so it
 		// would otherwise be culled; force it to always run.
@@ -1136,10 +1148,9 @@ public:
 					// it can use resource_preview.
 					GUI::Elements::asset_item::on_open_preview = [this](std::shared_ptr<Asset> a)
 					{
-						auto tex = a ? a->get_ptr<TextureAsset>() : nullptr;
-						if (!tex) return;
+						if (!a) return;
 						auto wnd     = std::make_shared<GUI::Elements::window>();
-						auto content = std::make_shared<asset_preview_content>(tex);
+						auto content = std::make_shared<asset_preview_content>(a);
 						wnd->add_child(content);
 						wnd->pos  = { 250, 250 };
 						wnd->size = { 520, 560 };
