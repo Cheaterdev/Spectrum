@@ -248,3 +248,120 @@ AssetRenderer::AssetRenderer()
     //	ssgi = std::make_shared<SSGI>(*gbuffer);
 
 }
+
+
+// ===========================================================================
+//  SceneTextureRenderer — copy of AssetRenderer's scene-to-texture core.
+//  (AssetRenderer left intact; it will later be rewritten to use this.)
+// ===========================================================================
+
+SceneTextureRenderer::SceneTextureRenderer()
+{
+    std::lock_guard<std::mutex> g(lock);
+
+    scene_renderer = std::make_shared<main_renderer>();
+    scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
+    cam.position = vec3(0, 5, -30);
+
+    mesh_plane.reset(new MeshAssetInstance(EngineAssets::plane.get_asset()));
+    material_tester.reset(new MeshAssetInstance(EngineAssets::material_tester.get_asset()));
+
+    scene = std::make_shared<Scene>();
+
+    rendering = std::make_shared<SceneRenderWorkflow>();
+    rendering->scene_renderer = scene_renderer;
+}
+
+void SceneTextureRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
+{
+    graph.start_new_frame();
+
+    scene->update_transforms();
+
+    auto mn = scene->get_min();
+    auto mx = scene->get_max();
+    scene->add_child(mesh_plane);
+    scene->update(*graph.builder.current_frame);
+
+    float x = mx.x - mn.x;
+    float y = mx.y - mn.y;
+
+    mesh_plane->local_transform.scaling(std::max(x, y));
+
+    mesh_plane->local_transform.a42 = mn.y;
+    scene->update_transforms();
+
+    auto& time      = graph.get_context<TimeInfo>();
+    auto& skyinfo   = graph.get_context<SkyInfo>();
+    auto& caminfo   = graph.get_context<CameraInfo>();
+    auto& sceneinfo = graph.get_context<SceneInfo>();
+    auto& vp        = graph.get_context<ViewportInfo>();
+
+    auto  rsize  = result->get_size().xy;
+    float aspect = float(rsize.x) / float(rsize.y);
+
+    float base_dist = (mx - mn).length();
+    if (base_dist < 0.001f) base_dist = 1.0f;
+
+    // Orbit direction from yaw/pitch; distance scaled by zoom.
+    vec3 dir;
+    dir.x = Math::cos(m_orbit.y) * Math::sin(m_orbit.x);
+    dir.y = Math::sin(m_orbit.y);
+    dir.z = Math::cos(m_orbit.y) * Math::cos(m_orbit.x);
+
+    cam.target   = (mn + mx) / 2;
+    cam.position = cam.target + dir * (base_dist * m_zoom);
+    cam.set_projection_params(Math::pi / 4, aspect, 1, 100 + (mn - mx).length());
+    cam.update();
+
+    skyinfo.sunDir = float3(1, 1, 1).normalize();
+
+    graph.builder.debug = true;
+    vp.frame_size   = rsize / 2;
+    vp.upscale_size = rsize;
+
+    sceneinfo.scene    = scene;
+    sceneinfo.renderer = scene_renderer;
+    caminfo.cam        = &cam;
+
+    rendering->render(graph);
+    graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, result->resource, {}, ResourceFlags::Required);
+
+    graph.setup();
+    graph.compile(frame++);
+    graph.render();
+    graph.commit_command_lists();
+    graph.reset();
+    mesh_plane->remove_from_parent();
+}
+
+void SceneTextureRenderer::draw(scene_object::ptr obj, HAL::Texture::ptr result)
+{
+    std::lock_guard<std::mutex> g(lock);
+
+    scene->add_child(obj);
+    draw(scene, result);
+    obj->remove_from_parent();
+}
+
+void SceneTextureRenderer::draw(MaterialAsset::ptr mat, HAL::Texture::ptr result)
+{
+    std::lock_guard<std::mutex> g(lock);
+
+    scene->add_child(material_tester);
+    material_tester->override_material(1, mat);
+
+    draw(scene, result);
+    material_tester->remove_from_parent();
+}
+
+void SceneTextureRenderer::orbit(vec2 delta)
+{
+    m_orbit += delta;
+    m_orbit.y = Math::clamp(m_orbit.y, -Math::m_pi_2 + Math::eps2, Math::m_pi_2 - Math::eps2);
+}
+
+void SceneTextureRenderer::zoom(float amount)
+{
+    m_zoom = Math::clamp(m_zoom * (1.0f - amount * 0.1f), 0.05f, 10.0f);
+}

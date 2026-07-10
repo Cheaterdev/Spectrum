@@ -402,8 +402,16 @@ class MaterialGraph : public MaterialFunction
     public:
         using ptr = s_ptr<MaterialGraph>;
 
+        // The owning material (set by universal_material); used to build a live
+        // preview on the graph-output node.
+        Asset* preview_material = nullptr;
+        // Filled by the app layer (which can build a preview widget above the
+        // Materials module — Materials can't import the renderer without a cycle).
+        static inline std::function<GUI::base::ptr(std::shared_ptr<Asset>)> create_preview_hook;
+
         MaterialGraph();
         virtual ~MaterialGraph();
+        virtual GUI::base::ptr create_editor_window() override;
         FlowGraph::input::ptr get_texcoord();
 
         FlowGraph::output::ptr get_base_color();

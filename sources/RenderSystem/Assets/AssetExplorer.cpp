@@ -133,8 +133,10 @@ namespace GUI
 
 
 				};
-				auto texture = loaded_asset->get_ptr<TextureAsset>();
-				auto binary  = loaded_asset->get_ptr<BinaryAsset>();
+				auto texture  = loaded_asset->get_ptr<TextureAsset>();
+				auto binary   = loaded_asset->get_ptr<BinaryAsset>();
+				auto mesh     = loaded_asset->get_ptr<MeshAsset>();
+				auto material = loaded_asset->get_ptr<MaterialAsset>();
 
 				if (texture)
 					menu->add_item("Compress")->on_click = [this](menu_list_element::ptr e)
@@ -143,7 +145,7 @@ namespace GUI
 					texture->compress();
 				};
 
-				if ((texture || binary) && on_open_preview)
+				if ((texture || binary || mesh || material) && on_open_preview)
 					menu->add_item("Preview")->on_click = [this](menu_list_element::ptr e)
 				{
 					if (on_open_preview) on_open_preview(asset->get_asset());

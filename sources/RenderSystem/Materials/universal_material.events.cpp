@@ -16,7 +16,9 @@ size_t materials::universal_material::get_id()
 
 MaterialGraph::ptr materials::universal_material::get_graph()
 {
-	return graph.get();
+	auto g = graph.get();
+	if (g) g->preview_material = this; // ensure the editor's graph can build a live preview
+	return g;
 }
 
 void materials::universal_material::test()

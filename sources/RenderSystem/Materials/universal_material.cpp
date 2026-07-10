@@ -413,6 +413,7 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 	include_file_raytacing = EngineAssets::material_raytracing_header.get_asset();
 	this->graph = BinaryData<MaterialGraph>(graph);
 	graph->add_listener(this, false);
+	graph->preview_material = this; // let the graph-output node build a live preview
 	need_regenerate_material = true;
 	need_update_uniforms = true;
 	generate_material();

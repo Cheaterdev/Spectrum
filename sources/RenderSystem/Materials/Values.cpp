@@ -741,6 +741,14 @@ void VectorNode::operator()(MaterialContext* c)
 	o_value->put(res);
 }
 
+GUI::base::ptr MaterialGraph::create_editor_window()
+{
+	// Live material preview on the graph-output node (widget built by the app).
+	if (create_preview_hook && preview_material)
+		return create_preview_hook(preview_material->get_ptr<Asset>());
+	return nullptr;
+}
+
 GUI::base::ptr VectorNode::create_editor_window()
 {
 	auto picker = std::make_shared<GUI::Elements::color_picker>();

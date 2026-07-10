@@ -132,7 +132,7 @@ GUI::Elements::FlowGraph::component_window::component_window(canvas* canva, ::Fl
 	contents_preview->width_size = size_type::MATCH_CHILDREN;
 	contents_preview->height_size = size_type::MATCH_CHILDREN;
 	visual_graph = dynamic_cast<VisualGraph*>(node);
-	if (visual_graph)
+	if (visual_graph && type != window_type::GRAPH_IN) // input side never shows the editor/preview
 	{
 		auto p = visual_graph->create_editor_window();
 

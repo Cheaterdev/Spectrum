@@ -66,58 +66,6 @@ public:
 	}
 };
 
-// Window content that previews an asset. Dispatches by type:
-//   TextureAsset -> universal resource_preview (GPU), self-driven each frame
-//                   via a tiny frame-graph pass (the texture is persistent).
-//   BinaryAsset  -> MultiLineLabel (one label per line) in its scroll container.
-class asset_preview_content : public GUI::base, public FrameGraph::GraphGenerator
-{
-	resource_preview::ptr              m_preview; // textures only
-	std::shared_ptr<TextureAsset>      m_asset;   // keeps the texture alive
-	std::shared_ptr<HAL::ResourceView> m_view;
-public:
-	using ptr = std::shared_ptr<asset_preview_content>;
-
-	asset_preview_content(std::shared_ptr<Asset> asset)
-	{
-		docking     = GUI::dock::FILL;
-		width_size  = GUI::size_type::MATCH_PARENT;
-		height_size = GUI::size_type::MATCH_PARENT;
-
-		if (auto tex = asset ? asset->get_ptr<TextureAsset>() : nullptr)
-		{
-			m_asset   = tex;
-			m_preview = std::make_shared<resource_preview>();
-			add_child(m_preview);
-
-			if (auto t = tex->get_texture())
-			{
-				m_view = std::make_shared<HAL::Texture2DView>(t->texture_2d());
-				m_preview->set_source(m_view, "asset");
-			}
-		}
-		else if (auto bin = asset ? asset->get_ptr<BinaryAsset>() : nullptr)
-		{
-			auto text     = std::make_shared<GUI::Elements::MultiLineLabel>();
-			text->docking = GUI::dock::FILL;
-			text->text    = bin->get_data();
-			add_child(text);
-		}
-	}
-
-	void generate(FrameGraph::Graph& graph) override
-	{
-		if (!m_view) return; // only the texture preview needs a GPU pass
-		struct empty_pass_data {};
-		// PassFlags::Required — the pass writes no graph-tracked resource, so it
-		// would otherwise be culled; force it to always run.
-		graph.add_pass<empty_pass_data>(L"AssetPreview",
-			[](empty_pass_data&, FrameGraph::TaskBuilder&) { return true; },
-			[this](empty_pass_data&, FrameGraph::FrameContext& ctx) { m_preview->render(&ctx); },
-			FrameGraph::PassFlags::Required);
-	}
-};
-
 class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext
 {
 		Pipelines::MainPipeline pipeline;
@@ -139,9 +87,9 @@ class triangle_drawer : public GUI::Elements::image, public GraphGenerator, Vari
 		{}
 	};
 
+public:
 	first_person_camera cam;
 
-public:
 	using ptr = std::shared_ptr<triangle_drawer>;
 	//	PostProcessGraph::ptr render_graph;
 
@@ -465,6 +413,140 @@ public:
 		if (r.w <= 64 || r.h <= 64) return;
 		ivec2 size = r.size;
 		cam.set_projection_params(Math::pi / 4, float(r.w) / r.h, 1, 1500);
+	}
+};
+
+// Window content that previews an asset. Dispatches by type:
+//   TextureAsset -> universal resource_preview (GPU), self-driven via a pass.
+//   BinaryAsset  -> MultiLineLabel (one label per line) in a scroll container.
+//   MeshAsset    -> a live render in AssetRenderer's OWN framegraph (a second
+//                   main pipeline can't be injected into the shared UI graph),
+//                   re-rendered every frame from think() into a target texture.
+class asset_preview_content : public GUI::base, public FrameGraph::GraphGenerator
+{
+	resource_preview::ptr              m_preview; // textures only
+	std::shared_ptr<TextureAsset>      m_asset;   // keeps the texture alive
+	std::shared_ptr<HAL::ResourceView> m_view;
+
+	std::shared_ptr<MeshAssetInstance>  m_mesh_instance;
+	std::shared_ptr<HAL::Texture>       m_mesh_target;
+	GUI::Elements::image::ptr           m_mesh_img;
+	std::shared_ptr<SceneTextureRenderer> m_mesh_renderer; // own graph, per preview
+	std::shared_ptr<MaterialAsset>        m_material;      // material preview
+	bool m_mesh_dragging = false;
+	vec2 m_mesh_prev;
+public:
+	using ptr = std::shared_ptr<asset_preview_content>;
+
+	asset_preview_content(std::shared_ptr<Asset> asset)
+	{
+		docking     = GUI::dock::FILL;
+		width_size  = GUI::size_type::MATCH_PARENT;
+		height_size = GUI::size_type::MATCH_PARENT;
+		clickable   = true; // mesh orbit; texture/binary children handle their own input first
+
+		if (auto tex = asset ? asset->get_ptr<TextureAsset>() : nullptr)
+		{
+			m_asset   = tex;
+			m_preview = std::make_shared<resource_preview>();
+			add_child(m_preview);
+			if (auto t = tex->get_texture())
+			{
+				m_view = std::make_shared<HAL::Texture2DView>(t->texture_2d());
+				m_preview->set_source(m_view, "asset");
+			}
+		}
+		else if (auto bin = asset ? asset->get_ptr<BinaryAsset>() : nullptr)
+		{
+			auto text     = std::make_shared<GUI::Elements::MultiLineLabel>();
+			text->docking = GUI::dock::FILL;
+			text->text    = bin->get_data();
+			add_child(text);
+		}
+		else if (auto mesh = asset ? asset->get_ptr<MeshAsset>() : nullptr)
+		{
+			m_mesh_instance = mesh->create_instance();
+			m_mesh_renderer = std::make_shared<SceneTextureRenderer>();
+
+			m_mesh_img          = std::make_shared<GUI::Elements::image>();
+			m_mesh_img->docking = GUI::dock::FILL;
+			add_child(m_mesh_img);
+
+			thinkable = true; // re-render each frame via the renderer's own graph
+		}
+		else if (auto material = asset ? asset->get_ptr<MaterialAsset>() : nullptr)
+		{
+			m_material      = material;
+			m_mesh_renderer = std::make_shared<SceneTextureRenderer>();
+
+			m_mesh_img          = std::make_shared<GUI::Elements::image>();
+			m_mesh_img->docking = GUI::dock::FILL;
+			add_child(m_mesh_img);
+
+			thinkable = true; // material rendered on a test mesh, same as meshes
+		}
+	}
+
+	bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override
+	{
+		if (!m_mesh_renderer) return false;
+		if (button == mouse_button::LEFT || button == mouse_button::RIGHT)
+		{
+			m_mesh_dragging = (action == mouse_action::DOWN);
+			m_mesh_prev     = pos;
+			set_movable(m_mesh_dragging);
+			return true;
+		}
+		return false;
+	}
+
+	bool on_mouse_move(vec2 pos) override
+	{
+		if (m_mesh_renderer && m_mesh_dragging)
+		{
+			m_mesh_renderer->orbit((pos - m_mesh_prev) * 0.01f);
+			m_mesh_prev = pos;
+			return true;
+		}
+		return false;
+	}
+
+	bool on_wheel(mouse_wheel type, float value, vec2 pos) override
+	{
+		if (!m_mesh_renderer) return false;
+		m_mesh_renderer->zoom(value);
+		return true;
+	}
+
+	void think(float dt) override
+	{
+		if (!m_mesh_renderer || (!m_mesh_instance && !m_material)) return;
+
+		// Size the render target to the widget; recreate it when the size changes
+		// so the mesh follows window resizes instead of being stretched.
+		ivec2 want = ivec2::max(ivec2(m_mesh_img->get_render_bounds().size), ivec2(64, 64));
+		if (!m_mesh_target || ivec2(m_mesh_target->get_size().xy) != want)
+		{
+			m_mesh_target = std::make_shared<HAL::Texture>(RenderSystem::get().device(),
+				HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { want }, 1, 6,
+					HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess));
+			m_mesh_img->texture.texture = m_mesh_target->texture_2d();
+		}
+
+		if (m_mesh_instance) m_mesh_renderer->draw(m_mesh_instance, m_mesh_target);
+		else if (m_material) m_mesh_renderer->draw(m_material, m_mesh_target);
+	}
+
+	void generate(FrameGraph::Graph& graph) override
+	{
+		if (!m_view) return; // only the texture preview needs a GPU pass
+		struct empty_pass_data {};
+		// PassFlags::Required — the pass writes no graph-tracked resource, so it
+		// would otherwise be culled; force it to always run.
+		graph.add_pass<empty_pass_data>(L"AssetPreview",
+			[](empty_pass_data&, FrameGraph::TaskBuilder&) { return true; },
+			[this](empty_pass_data&, FrameGraph::FrameContext& ctx) { m_preview->render(&ctx); },
+			FrameGraph::PassFlags::Required);
 	}
 };
 
@@ -1156,6 +1238,18 @@ public:
 						wnd->size = { 520, 560 };
 						if (auto ui = get_user_ui()) ui->add_child(wnd);
 					};
+
+					// Live material preview embedded in the material graph's output node.
+					MaterialGraph::create_preview_hook = [](std::shared_ptr<Asset> a) -> GUI::base::ptr
+					{
+						if (!a) return nullptr;
+						auto box         = std::make_shared<GUI::base>();
+						box->width_size  = GUI::size_type::FIXED;
+						box->height_size = GUI::size_type::FIXED;
+						box->size        = { 160, 160 };
+						box->add_child(std::make_shared<asset_preview_content>(a));
+						return box;
+					};
 					EVENT("End Asset Explorer");
 				}
 			}
@@ -1224,7 +1318,6 @@ class RenderApplication : public Application
 
 
 	std::shared_ptr<GraphRender> main_window;
-	//std::shared_ptr<WindowRender> main_window;
 #ifdef OCULUS_SUPPORT
 	std::shared_ptr<OVRRender> ovr;
 #endif
