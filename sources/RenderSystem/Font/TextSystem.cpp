@@ -366,6 +366,14 @@ static std::vector<GlyphVtx> layout_text(
     float line_height = static_cast<float>(face->size->metrics.height   >> 6);
     float ascender    = static_cast<float>(face->size->metrics.ascender  >> 6);
 
+    // Tab width = 4 spaces; tabs snap to the next tab stop instead of drawing
+    // the font's missing-glyph box.
+    float space_adv = 0.f;
+    if (FT_Load_Char(face, ' ', FT_LOAD_DEFAULT) == 0)
+        space_adv = static_cast<float>(face->glyph->advance.x >> 6);
+    if (space_adv <= 0.f) space_adv = static_cast<float>(px) * 0.25f;
+    const float tab_width = space_adv * 4.0f;
+
     std::vector<GlyphVtx> out;
     out.reserve(str.size());
 
@@ -388,6 +396,12 @@ static std::vector<GlyphVtx> layout_text(
             FT_UInt prev = 0;
             for (wchar_t wc : line)
             {
+                if (wc == L'\t')
+                {
+                    line_w = (static_cast<float>(static_cast<int>(line_w / tab_width)) + 1.f) * tab_width;
+                    prev = 0;
+                    continue;
+                }
                 FT_UInt gi = FT_Get_Char_Index(face, static_cast<uint32_t>(wc));
                 if (prev && gi)
                 {
@@ -411,9 +425,18 @@ static std::vector<GlyphVtx> layout_text(
             x = area.left;
 
         // --- Emit glyph vertices ---
+        const float x_line_start = x;
         FT_UInt prev = 0;
         for (wchar_t wc : line)
         {
+            if (wc == L'\t')
+            {
+                float rel = x - x_line_start;
+                x = x_line_start + (static_cast<float>(static_cast<int>(rel / tab_width)) + 1.f) * tab_width;
+                prev = 0;
+                continue;
+            }
+
             uint32_t char_code = static_cast<uint32_t>(wc);
             FT_UInt  gi        = FT_Get_Char_Index(face, char_code);
 

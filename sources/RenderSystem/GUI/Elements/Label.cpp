@@ -294,7 +294,6 @@ for (const auto& token : parsed) {
 		auto line = std::make_shared<label>();
 		line->text = std::string(word_view.substr(0,word_view.length()-1));
 		line->docking = dock::TOP;
-		line->draw_helper = true;
 		add_child(line);
 
 
