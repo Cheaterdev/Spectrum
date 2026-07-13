@@ -43,7 +43,7 @@ public:
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
 			{ ResourceID::ResultTexture, false },
-			{ ResourceID::swapchain, false },
+			{ ResourceID::swapchain, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

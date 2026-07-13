@@ -88,3 +88,4 @@ ASSERT FAILED: (declared_write == actual_write)  at C:\github\Spectrum\sources\R
 ASSERT FAILED: (declared_write == actual_write)  at C:\github\Spectrum\sources\RenderSystem\FrameGraph\FrameGraph.cpp:788
 ASSERT FAILED: (declared_write == actual_write)  at C:\github\Spectrum\sources\RenderSystem\FrameGraph\FrameGraph.cpp:788
 ASSERT FAILED: (declared_write == actual_write)  at C:\github\Spectrum\sources\RenderSystem\FrameGraph\FrameGraph.cpp:788
+ASSERT FAILED: (declared_write == actual_write)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\RenderSystem\FrameGraph\FrameGraph.cpp:788

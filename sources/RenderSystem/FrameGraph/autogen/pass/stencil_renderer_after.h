@@ -28,8 +28,8 @@ public:
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::ResultTexture, false },
-			{ ResourceID::Stencil_color_tex, false },
+			{ ResourceID::ResultTexture, true },
+			{ ResourceID::Stencil_color_tex, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

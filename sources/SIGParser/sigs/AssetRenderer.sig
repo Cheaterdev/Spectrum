@@ -17,7 +17,7 @@ PassNode AssetMip
 {
 	GBuffer gbuffer;
 	Texture ResultTexture;
-	Texture swapchain;
+	[Write] Texture swapchain;
 }
 
 

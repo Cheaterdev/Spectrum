@@ -587,7 +587,7 @@ public:
 		{ true, { ResultTexture_c0_pass_refs + 3, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 4, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 5, 1 } },
-		{ false, { ResultTexture_c0_pass_refs + 6, 1 } },
+		{ true, { ResultTexture_c0_pass_refs + 6, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 7, 1 } },
 	};
 	static inline const FrameGraph::PassRef LightMask_c0_pass_refs[] = {
@@ -763,7 +763,7 @@ public:
 		{ PassID::stencil_renderer_after, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState Stencil_color_tex_c0_states[] = {
-		{ false, { Stencil_color_tex_c0_pass_refs + 0, 1 } },
+		{ true, { Stencil_color_tex_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef ResultTexture_c1_pass_refs[] = {
 		{ PassID::SMAA, 0 },

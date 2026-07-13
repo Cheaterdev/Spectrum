@@ -180,6 +180,6 @@ PassNode stencil_renderer_before
 
 PassNode stencil_renderer_after
 {
-	Texture ResultTexture;
-	Texture Stencil_color_tex;
+	[Write] Texture ResultTexture;
+	[Write] Texture Stencil_color_tex;
 }

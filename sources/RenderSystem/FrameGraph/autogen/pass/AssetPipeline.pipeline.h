@@ -390,7 +390,7 @@ public:
 		{ PassID::AssetMip, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState swapchain_c0_states[] = {
-		{ false, { swapchain_c0_pass_refs + 0, 1 } },
+		{ true, { swapchain_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PrecompiledResourceInfo resource_infos[] = {
 		{ ResourceID::ResultTexture, 0, ResultTexture_c0_states },
