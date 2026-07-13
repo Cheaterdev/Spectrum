@@ -28,12 +28,22 @@ vertex_output VS( uint index: SV_VertexID, uint instance: SV_InstanceID)
 {
     BoxInfo info = gatherBoxes.GetInput_meshes()[instance];
     node_data node = sceneData.GetNodes()[info.GetNode_offset()];
-        AABB aabb = node.GetAabb();
-        float3 min = aabb.GetMin().xyz;
-        float3 max = aabb.GetMax().xyz;
+    AABB aabb = node.GetAabb();
+    float3 bmin = aabb.GetMin().xyz;
+    float3 bmax = aabb.GetMax().xyz;
 
-        float3 localpos = gatherBoxes.GetVertices()[index].xyz;
-        float4 pos = float4(lerp(min, max, localpos *0.5+0.5),1); 
+    // Inflate degenerate extents: a flat AABB (plane/wall/floor with zero
+    // thickness on one axis) turns every box face edge-on or zero-area, so it
+    // rasterizes no pixels — even with conservative raster — and the mesh is
+    // never marked visible (flicker). Epsilon is relative to the largest
+    // extent so it survives arbitrary node scaling.
+    float3 center = (bmin + bmax) * 0.5;
+    float3 ext = (bmax - bmin) * 0.5;
+    float eps = max(max(ext.x, max(ext.y, ext.z)) * 1e-2, 1e-4);
+    ext = max(ext, eps);
+
+    float3 localpos = gatherBoxes.GetVertices()[index].xyz;
+    float4 pos = float4(center + localpos * ext, 1);
 
     matrix node_global_matrix = sceneData.GetNodes()[info.GetNode_offset()].GetNode_global_matrix();
   

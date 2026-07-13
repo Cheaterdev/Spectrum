@@ -28,8 +28,11 @@ GroupMemoryBarrierWithGroupSync();
 	[unroll(TotalNumThreads)]
 	for(uint s = TotalNumThreads / 2; s > 0; s >>= 1)
 	{
+		// reversed-Z: keep the FARTHEST depth (min) per tile so the HiZ is a
+		// conservative occluder — a box only fails the GREATER_EQUAL test if
+		// it is behind everything in the tile.
 		if(index < s)
-			data[index] = max(data[index],data[index + s]);
+			data[index] = min(data[index],data[index + s]);
 
 		GroupMemoryBarrierWithGroupSync();
 	}

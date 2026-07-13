@@ -38,7 +38,8 @@ public:
 
             builder.need(data.scene, FrameGraph::ResourceFlags::PixelRead);
 
-            builder.create(data.gbuffer.GBuffer_HiZ,     { ivec3(m_size / 8, 0), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+            // Static: occlusion pass 1 tests against LAST frame's HiZ (see SceneSystem).
+            builder.create(data.gbuffer.GBuffer_HiZ,     { ivec3(m_size / 8, 0), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil | ResourceFlags::Static);
             builder.create(data.gbuffer.GBuffer_HiZ_UAV, { ivec3(m_size / 8, 0), HAL::Format::R32_FLOAT,    1 }, ResourceFlags::UnorderedAccess);
             return true;
         };
@@ -78,6 +79,11 @@ public:
                 rtv.GetDepth()              = gbuffer.HalfBuffer.hiZ_depth.depthStencil;
                 gbuffer.HalfBuffer.compiled = rtv.compile(*command_list);
             }
+
+            // Fresh/resized HiZ holds garbage — clear to far (0, reversed-Z).
+            if (data.gbuffer.GBuffer_HiZ.is_new())
+                command_list->get_graphics().set_rtv(
+                    gbuffer.HalfBuffer.compiled, RTOptions::Default | RTOptions::ClearDepth);
 
             context->g_buffer = &gbuffer;
 

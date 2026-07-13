@@ -141,7 +141,11 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	{
 
 		compute.set_pipeline<PSOS::GatherMeshes>(PSOS::GatherMeshes::Invisible.Use(invisibleToo));
-		compute.set(scene->compiledGather[(int)mesh_render_context->render_mesh]);
+		// Bound check must be the commands_boxes counter (what the indirect
+		// dispatch was sized from) — binding the scene's total mesh count lets
+		// the tail threads of the last group read stale BoxInfo entries past
+		// the counter and append garbage mesh ids.
+		compute.set(gather_boxes_commands);
 		compute.set(gather_neshes_boxes_compiled);
 
 		graphics.exec_indirect(	dispatch_buffer, 1);

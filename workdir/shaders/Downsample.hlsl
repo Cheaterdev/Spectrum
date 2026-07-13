@@ -76,10 +76,12 @@ GBufferDownsampleRT PS(quad_output input)
 
     //result.depth = float4((sumd - mind - maxd) / 2,0,0,1);
     //  result.normal = float4(((sumn - minN - maxN) /2).xyz * 0.5 + 0.5, 1);
-    result.depth = float4(mind, 0, 0, 1);
-    result.color =  float4(minN.xyz * 0.5 + 0.5, minN.w);
-  // result.depth = float4(maxd, 0, 0, 1);
- // result.normal = float4(maxN.xyz * 0.5 + 0.5, maxN.w);
+
+    // Keep the CLOSEST surface (and its normal) so screen-space tracing
+    // doesn't leak through geometry. reversed-Z: closest = max depth value
+    // (this was mind before the reverse-Z migration flipped the meaning).
+    result.depth = float4(maxd, 0, 0, 1);
+    result.color =  float4(maxN.xyz * 0.5 + 0.5, maxN.w);
     //result.depth = float4(depths[0].xxx, 1) ;
     // result.normal  = float4(normals[0], 1) ;
     return result;

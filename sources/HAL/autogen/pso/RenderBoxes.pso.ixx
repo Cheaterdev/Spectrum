@@ -52,7 +52,7 @@ export namespace PSOS
 			mpso.depth_write =false;
 			mpso.ds =HAL::Format::D32_FLOAT;
 			mpso.cull =HAL::CullMode::None;
-			mpso.depth_func =HAL::ComparisonFunc::ALWAYS;
+			mpso.depth_func =HAL::ComparisonFunc::GREATER_EQUAL;
 			return mpso;
 		}
 

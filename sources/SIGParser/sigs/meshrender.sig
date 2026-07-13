@@ -263,5 +263,7 @@ GraphicsPSO RenderBoxes
 
 	cull = None;
 
-	depth_func = ALWAYS;
+	# reversed-Z: box passes if any pixel is at least as close as the farthest
+	# occluder depth stored in the HiZ tile (see downsample_depth.hlsl min()).
+	depth_func = GREATER_EQUAL;
 }
