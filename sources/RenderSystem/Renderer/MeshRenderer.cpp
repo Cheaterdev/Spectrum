@@ -252,6 +252,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 	graphics.set_index_buffer(HAL::Views::IndexBuffer());// universal_index_manager::get().buffer->get_index_buffer_view(true));
 	while (end != pipelines.end())
 	{
+		begin = end;
 
 		int total = 0;
 		{

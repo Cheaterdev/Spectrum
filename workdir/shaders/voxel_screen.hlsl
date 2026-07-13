@@ -188,7 +188,7 @@ GI_RESULT PS(quad_output i)
 	int2 tc = i.tc * dims;
 
 	float raw_z = gbuffer.GetDepth()[tc.xy];
-	if (raw_z >= 1)
+	if (raw_z == 0) // reversed-Z: far/sky is 0 (was `>= 1` — never fired after the migration)
 		return result;
 	float3 pos = depth_to_wpos(raw_z, i.tc, camera.GetInvViewProj());
 	float3 normal = normalize(gbuffer.GetNormals()[tc].xyz * 2 - 1);
@@ -393,6 +393,11 @@ upscale_result get_history(float3 pos, float2 tc, float2 prev_tc, float2 dims, f
 	// ... read s00, s10, s01, s11 using point filtering
 	float4 history =  ApplyBilinearCustomWeights(s00, s10, s01, s11, weights, true);
 
+	// Sanitize: clamp kills NaN (D3D min/max return the non-NaN operand) and
+	// caps inf at half-float max, so a poisoned history heals instead of
+	// spreading spatially through the bilinear taps and temporally forever.
+	history = clamp(history, 0, 65504.0);
+
 	accumSpeedPrev = min(FRAMES * accumSpeedPrev + 1.0, FRAMES);
 	//	int newFrames = occlusion ? 0 : clamp(prevFrames + 1, 0, 8);
 
@@ -431,8 +436,13 @@ void  CS(uint3 groupID       : SV_GroupID,
 	float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, itc, 0);
 	if (raw_z ==0)
 	{
+		// Sky/far pixel (reversed-Z): nothing to trace. Without the return the
+		// code below fell through — depth_to_wpos(0) divides by w≈0 giving
+		// inf/NaN pos — and overwrote these zeros with garbage that then spread
+		// through the history blend.
 		tex_noise[dispatchID.xy] = 0;
 		tex_frames[dispatchID.xy] = 1;
+		return;
 	}
 
 	float3 pos = depth_to_wpos(raw_z, itc, camera.GetInvViewProj());

@@ -303,7 +303,11 @@ void  PS(uint3 groupID       : SV_GroupID,
 	}
 
 
-float4 cur_gi = res/w;
+// max() guards w==0 (all taps rejected -> 0/0 = NaN; happens on sky/far pixels
+// where depth_to_wpos gives inf positions and every weight collapses). The
+// clamp kills NaN/inf from any tap before it reaches VoxelIndirectFiltered,
+// where the history blend would spread it across frames.
+float4 cur_gi = clamp(res / max(w, 1e-4), 0, 65504.0);
 
 //tex_gi_result[index] = float4(cur_gi.xyz, framesNorm);
 //tex_result[index] += float4(albedo.xyz * cur_gi.xyz, 1);
