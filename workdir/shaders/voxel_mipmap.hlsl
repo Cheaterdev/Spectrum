@@ -12,15 +12,19 @@ static const Texture3D<float4> SrcMip = GetVoxelMipMap().GetSrcMip();
 static const VoxelInfo voxel_info = GetVoxelInfo();
 
 
-void calc(inout float4 color)
+// For the first stage the /8 average is done by the trilinear fetch itself;
+// the groupshared stages below still sum 8 values and need the divide.
+void calc_avg(inout float4 color)
 {
-//	color.rgb/= color.w ;//+ 1;
-	//color.w = saturate(color.w/4);
-
-    color /= 8;
 	color.w=saturate(color.w*1.3f);
 	//todo: investigate negative values
 	color = max(0, color);
+}
+
+void calc(inout float4 color)
+{
+    color /= 8;
+	calc_avg(color);
 }
 
 void add_color(inout float4 result, float4 c)
@@ -43,27 +47,22 @@ void CS(
  uint local_index = groupThreadID.x+groupThreadID.y*4+groupThreadID.z*16;
  uint3 index = GetVoxelMipMap().GetParams().get_voxel_pos(dispatchID);
 
+	float3 dims;
+	SrcMip.GetDimensions(dims.x, dims.y, dims.z);
 
+	// One trilinear fetch at the 2x2x2 block corner IS the 8-texel average —
+	// the filtering hardware does the 8 loads + divide. Unmapped source tiles
+	// read as 0, so loaded output tiles over unloaded input regions come out
+	// zero without a separate clear pass.
+	float4 c = SrcMip.SampleLevel(linearClampSampler, (2 * index + 1) / dims, 0);
 
-//	float4 color = SrcMip.SampleLevel(linearSampler,(2*index+1)/dims,0);
-	float4 c = 0;
+	calc_avg(c);
 
-	int4 tc = int4(2 * index , 0);
-
-	add_color(c, SrcMip.Load(tc, int3(0, 0, 0)));
-	add_color(c, SrcMip.Load(tc, int3(0, 0, 1)));
-	add_color(c, SrcMip.Load(tc, int3(0, 1, 0)));
-	add_color(c, SrcMip.Load(tc, int3(0, 1, 1)));
-
-	add_color(c, SrcMip.Load(tc, int3(1, 0, 0)));
-	add_color(c, SrcMip.Load(tc, int3(1, 0, 1)));
-	add_color(c, SrcMip.Load(tc, int3(1, 1, 0)));
-	add_color(c, SrcMip.Load(tc, int3(1, 1, 1)));
-
-	calc(c);
-		
 	OutMip1[index] = c;
+
+	#if COUNT >= 2
 	data[local_index] = c;
+	#endif
 	
 	#if COUNT >=2
 	GroupMemoryBarrierWithGroupSync();

@@ -8,7 +8,11 @@ export {
 		uint3 tile_count;
 		vec3 min, max;
 
-		uint3 one_tile_size;
+		// World-space tile extent. MUST stay float: scene_size/tile_count is
+		// fractional (e.g. 200/16 = 12.5) and integer truncation makes the
+		// tile ranges in add() drift with distance from the scene min —
+		// dynamic objects far from the origin mark the wrong tiles.
+		vec3 one_tile_size;
 		grid<uint3, uint64> all_tiles;
 		std::list<uint3> old_tiles;
 

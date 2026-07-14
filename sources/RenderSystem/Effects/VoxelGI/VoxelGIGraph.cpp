@@ -504,52 +504,40 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		compute.set_signature(Layouts::DefaultLayout);
 		context.graph->set_slot(SlotID::VoxelInfo, compute);
 
-		compute.set_pipeline<PSOS::VoxelZero>();
+		const uint mip_levels = tex_lighting.tex_result->get_desc().as_texture().MipLevels;
+
 		{
-			PROFILE_GPU(L"ZERO");
-			for (uint i = 1; i < tex_lighting.tex_result->get_desc().as_texture().MipLevels; i++)
-			{
+			// Only the tail mips without a tile list (packed) still need a
+			// clear — they are never downsampled and the cone trace samples
+			// them at high LODs. Tiny textures, cost is negligible.
+			PROFILE_GPU(L"clear tail mips");
+			for (uint i = 1; i < mip_levels; i++)
 				if (i >= gpu_tiles_buffer.size() || !gpu_tiles_buffer[i])
-				{
 					list.clear_uav(tex_lighting.tex_result->texture_3d().mips[i].rwTexture3D,
 						vec4(0, 0, 0, 0));
-					continue;
-				}
-
-				{
-					Slots::VoxelZero utils;
-					utils.GetTarget() = tex_lighting.tex_result->texture_3d().mips[i].rwTexture3D;
-					auto& params = utils.GetParams();
-					params.GetTiles() = gpu_tiles_buffer[i]->buffer;
-					params.GetVoxels_per_tile().xyz =
-						tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
-					compute.set(utils);
-				}
-
-				compute.exec_indirect(gpu_tiles_buffer[i]->dispatch_buffer, 1);
-			}
 		}
 
 		{
+			// One dispatch per mip over that mip's OWN tile list: every texel
+			// of every loaded tile is written, and unmapped source tiles read
+			// as 0 — so the old per-tile VoxelZero pre-pass is unnecessary.
+			// (The old 3-mips-per-dispatch batches covered mips 2,3,5,6 only
+			// under loaded finer tiles, which is what the zero pass patched.)
 			PROFILE_GPU(L"EXEC");
-			unsigned int mip_count = 1;
-			while (mip_count < tex_lighting.tex_result->get_desc().as_texture().MipLevels)
+			compute.set_pipeline<PSOS::VoxelDownsample>(PSOS::VoxelDownsample::Count(1));
+
+			for (uint mip = 1; mip < mip_levels; mip++)
 			{
-				if (!gpu_tiles_buffer[mip_count]) break;
-				unsigned int current_mips = std::min(
-					3u, tex_lighting.tex_result->get_desc().as_texture().MipLevels - mip_count);
-				compute.set_pipeline<PSOS::VoxelDownsample>(
-					PSOS::VoxelDownsample::Count(current_mips));
+				if (mip >= gpu_tiles_buffer.size() || !gpu_tiles_buffer[mip]) break;
 
 				{
 					Slots::VoxelMipMap mipmapping;
 					mipmapping.GetSrcMip() =
-						tex_lighting.tex_result->texture_3d().mips[mip_count - 1].texture3D;
-					for (unsigned int i = 0; i < current_mips; i++)
-						mipmapping.GetOutMips()[i] =
-							tex_lighting.tex_result->texture_3d().mips[mip_count + i].rwTexture3D;
+						tex_lighting.tex_result->texture_3d().mips[mip - 1].texture3D;
+					mipmapping.GetOutMips()[0] =
+						tex_lighting.tex_result->texture_3d().mips[mip].rwTexture3D;
 					auto& params = mipmapping.GetParams();
-					params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer;
+					params.GetTiles() = gpu_tiles_buffer[mip]->buffer;
 					params.GetVoxels_per_tile().xyz =
 						tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 					compute.set(mipmapping);
@@ -560,9 +548,8 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 					L"mip_8",  L"mip_9",  L"mip_10", L"mip_11",
 					L"mip_12", L"mip_13", L"mip_14", L"mip_15",
 				};
-				PROFILE_GPU(mip_names[mip_count < 16 ? mip_count : 0]);
-				compute.exec_indirect(gpu_tiles_buffer[mip_count]->dispatch_buffer, 1);
-				mip_count += current_mips;
+				PROFILE_GPU(mip_names[mip < 16 ? mip : 0]);
+				compute.exec_indirect(gpu_tiles_buffer[mip]->dispatch_buffer, 1);
 			}
 		}
 	};

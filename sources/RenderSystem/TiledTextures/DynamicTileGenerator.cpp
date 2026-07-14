@@ -43,7 +43,7 @@ void TileDynamicGenerator::set_scene_volume(vec3 min, vec3 max)
 	this->min = min;
 	this->max = max;
 
-	one_tile_size = (max - min) / tile_count;
+	one_tile_size = (max - min) / vec3(tile_count);
 }
 
 void TileDynamicGenerator::begin(vec3 min, vec3 max)
@@ -62,6 +62,12 @@ void TileDynamicGenerator::add(vec3 min, vec3 max)
 {
 	ivec3 from = (min - this->min) / one_tile_size;
 	ivec3 to = (max - this->min + one_tile_size ) / one_tile_size;
+
+	// Clamp to the tile grid: an AABB at/outside the scene volume produces
+	// negative or past-end indices, and all_tiles[pos] would index the grid
+	// out of bounds. Fully-outside objects end up with from >= to (no tiles).
+	from = ivec3::max(from, ivec3(0, 0, 0));
+	to   = ivec3::min(to, ivec3(tile_count));
 
 	for (int x = from.x; x < to.x; x++)
 		for (int y = from.y; y < to.y; y++)
