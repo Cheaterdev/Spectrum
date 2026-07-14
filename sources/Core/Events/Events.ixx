@@ -141,6 +141,14 @@ export namespace Events
 					p->run(std::forward<T>(args)...);
 		}
 
+		// Any listeners currently registered? Lets emitters skip work that
+		// only exists to feed the event (e.g. debug thumbnail capture).
+		bool has_handlers()
+		{
+			std::lock_guard<std::mutex> g(m);
+			return !i_helpers.empty();
+		}
+
 		virtual ~Event()
 		{
 			std::lock_guard<std::mutex> g(m);

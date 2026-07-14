@@ -546,6 +546,11 @@ namespace FrameGraph
 
 			if (!ext->used.resources.empty())
 			{
+				// Same contract as Graph::setup()'s `renderable = setup(builder)`,
+				// just deferred to here — the pass's resource set is only complete
+				// after every other setup has run (see ExternalPass::setup).
+				ext->renderable = ext->setup(builder);
+
 				builder.external_pass = ext;
 				builder.enabled_passes.push_front(ext.get());
 			}
@@ -1887,10 +1892,28 @@ namespace FrameGraph
 		flags = PassFlags::General;
 	}
 
-	bool ExternalPass::setup(TaskBuilder&) { return true; }
+	// Unlike regular passes this runs AFTER all other setups, at the synthesis
+	// point in add_passes — the pass's resource set (passed + Static) is only
+	// complete once every other setup() has run its creates. Same contract
+	// though: the return value becomes `renderable`. The pass's only GPU-side
+	// purpose is submitting an empty list so FrameContext::end() fires
+	// process_debug_resource (debug thumbnails) — without listeners it stays a
+	// setup-only resource-creation anchor.
+	bool ExternalPass::setup(TaskBuilder&)
+	{
+		for (auto* alloc : used.resources)
+			if (alloc->process_debug_resource.has_handlers())
+				return true;
+
+		return false;
+	}
 
 	void ExternalPass::render(Graph* graph, HAL::FrameResources::ptr& frame)
 	{
+		// Only renderable when a process_debug_resource listener exists (see
+		// the ExternalPass creation in add_passes) — otherwise no list at all.
+		if (!enabled || !renderable) return;
+
 		render_task = thread_pool::get().enqueue([this, &frame, graph]()
 			{
 				context.begin(graph, this, frame);

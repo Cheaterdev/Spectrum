@@ -26,8 +26,6 @@ NODE_ClassifyPixels_Node(
             params.GetOutputTexture()[uint2(v.pixel_pos)] = 0;
         else
         {
-
-            params.GetOutputTexture()[uint2(v.pixel_pos)] = 0.3;
              WG_SET_RECORD(tileRecord, tileXY, uint2(v.pixel_pos));
         }
            
@@ -50,16 +48,16 @@ NODE_Shadows_Node(
     float2 dims;
     gbuffer.GetAlbedo().GetDimensions(dims.x, dims.y);
 
-    float3 pos = depth_to_wpos(raw_z, float2(pixel_pos) / dims, camera.GetInvViewProj());
+    float3 pos = depth_to_wpos(raw_z, float2(pixel_pos+0.5f) / dims, camera.GetInvViewProj());
     	float3 normal = normalize(gbuffer.GetNormals()[pixel_pos].xyz * 2 - 1);
 
 
     DispatchParameters params = CreateDispatchParameters();
 
     RayDesc ray;
-    ray.Origin = pos + normal*0.001;
+    ray.Origin = pos+normal*0.005;
     ray.Direction = sunDir;
-    ray.TMin = 0.2;
+    ray.TMin = 0.01;
     ray.TMax = 100000;
 
     RayQuery<RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rayQuery;

@@ -684,8 +684,11 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 				compute.set(frame_classification);
 			}
 
+			// One 8x8 group per 32x32 tile (groupshared min-reduction in the
+			// shader) — raw group counts, NOT the size/8 helper: rounded-up
+			// tail groups would append garbage tiles and overflow the lists.
 			uint2 tiles_count = uint2(Math::DivideByMultiple(sz.x, 32), Math::DivideByMultiple(sz.y, 32));
-			compute.dispatch(tiles_count);
+			compute.dispatch(tiles_count.x, tiles_count.y, 1);
 		}
 		{
 			PROFILE_GPU(L"init_dispatch");
