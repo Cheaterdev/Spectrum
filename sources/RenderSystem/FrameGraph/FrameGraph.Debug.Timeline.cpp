@@ -974,6 +974,11 @@ class FrameGraphTimelineCanvas : public dock_base
                 {
                     if (pass->call_id != m_call_id) return;
                     if (m_alloc->is_new && pass->id == std::numeric_limits<UINT>::max()) return;
+                    // The FrameGraph reassigns alloc->view every frame: aliasing
+                    // can move the allocation, a resize recreates it. Re-resolve
+                    // before rendering or the preview shows another resource's
+                    // memory (or a freed one after resize).
+                    m_preview->refresh_source(m_alloc->view);
                     m_preview->render(context);
                 });
         }

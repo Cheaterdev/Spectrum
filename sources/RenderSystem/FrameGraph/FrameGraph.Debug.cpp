@@ -432,6 +432,7 @@ resource_preview::resource_preview()
 void resource_preview::set_source(std::shared_ptr<HAL::ResourceView> source, const std::string& title)
 {
 	m_source        = source;
+	m_title         = title;
 	m_fit_done      = false;
 	m_buffer_inited = false;
 	run_on_ui([this, title]()
@@ -440,6 +441,22 @@ void resource_preview::set_source(std::shared_ptr<HAL::ResourceView> source, con
 		m_mip_combo->visible   = false;
 		m_array_combo->visible = false;
 	});
+}
+
+void resource_preview::refresh_source(std::shared_ptr<HAL::ResourceView> source)
+{
+	if (source == m_source) return; // same placement as last frame — nothing to do
+
+	if (!source || !m_source)
+	{
+		set_source(source, m_title);
+		return;
+	}
+
+	if (m_source->get_desc() == source->get_desc())
+		m_source = source; // aliasing moved the allocation — keep pan/zoom/UI state
+	else
+		set_source(source, m_title); // resize/recreate — full reset (fit, labels, combos)
 }
 
 void resource_preview::render(FrameGraph::FrameContext* context)
@@ -463,7 +480,23 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 				HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
 			m_current_tex = std::make_shared<Texture>(RenderSystem::get().device(), desc);
 
-			if (!m_fit_done)
+			// Hand the new texture to the image widget on the UI thread.
+			auto tex = m_current_tex;
+			run_on_ui([this, tex]()
+			{
+				m_img->texture.texture = tex->texture_2d();
+				m_img->visible         = true;
+				m_buffer_tree->visible = false;
+			});
+		}
+
+		if (!m_current_tex) return;
+
+		// Runs after set_source (initial or full reset on a desc change), not
+		// only when the preview target got recreated — otherwise labels/fit
+		// stay stale when the SOURCE changes but the widget size doesn't.
+		if (!m_fit_done)
+		{
 			{
 				m_fit_done = true;
 				auto   d   = res_desc.as_texture().Dimensions;
@@ -516,18 +549,7 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 					m_array_combo->visible = (array_count > 1);
 				});
 			}
-
-			// Hand the new texture to the image widget on the UI thread.
-			auto tex = m_current_tex;
-			run_on_ui([this, tex]()
-			{
-				m_img->texture.texture = tex->texture_2d();
-				m_img->visible         = true;
-				m_buffer_tree->visible = false;
-			});
 		}
-
-		if (!m_current_tex) return;
 
 		auto& compute = context->get_list()->get_compute();
 		{

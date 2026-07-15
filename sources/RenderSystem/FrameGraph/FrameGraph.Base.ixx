@@ -678,11 +678,20 @@ public:
 		// History link {current, prev}. `carried` holds current's allocation from
 		// the previous frame; create_resources() binds it into `prev` (fresh view),
 		// and roll_history() frees the consumed one and carries this frame's current.
+		//
+		// `pending_release` delays the consumed slot's heap-range free by one
+		// extra frame: prev's last readers run on the async compute queue, and
+		// freeing immediately lets next frame's direct-queue transients adopt
+		// the range with no fence edge against that compute tail (unlike
+		// normal transients, whose frees go through the sync-aware deletion
+		// scheduling) — the range could be stomped while still being read,
+		// blending garbage into the history chain.
 		struct HistoryLink
 		{
 			ResourceID  current = ResourceID::Count;
 			ResourceID  prev    = ResourceID::Count;
 			HistorySlot carried;
+			HistorySlot pending_release;
 		};
 		std::vector<HistoryLink> history_links;
 

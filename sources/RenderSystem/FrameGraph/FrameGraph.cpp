@@ -75,9 +75,15 @@ namespace FrameGraph
 		// still valid here; detach it from the info so nothing else frees it.
 		for (auto& l : history_links)
 		{
-			// release last frame's current (this frame's prev), now done being read
-			l.carried.resource = nullptr;
-			l.carried.alloc_ptr.handle.Free();
+			// Release the slot consumed TWO frames ago (see HistoryLink comment:
+			// prev's compute-queue readers have no fence edge against next
+			// frame's direct-queue transients, so the just-consumed range must
+			// not return to the allocator yet).
+			l.pending_release.alloc_ptr.handle.Free();
+
+			// The slot consumed this frame as prev: keep the resource + range
+			// alive one more frame, release on the next roll.
+			l.pending_release = l.carried;
 			l.carried = HistorySlot{};
 
 			auto& cur_chain = alloc_resources[(size_t)l.current];
@@ -546,11 +552,6 @@ namespace FrameGraph
 
 			if (!ext->used.resources.empty())
 			{
-				// Same contract as Graph::setup()'s `renderable = setup(builder)`,
-				// just deferred to here — the pass's resource set is only complete
-				// after every other setup has run (see ExternalPass::setup).
-				ext->renderable = ext->setup(builder);
-
 				builder.external_pass = ext;
 				builder.enabled_passes.push_front(ext.get());
 			}
@@ -1264,7 +1265,7 @@ namespace FrameGraph
 	}
 	void TaskBuilder::create_resources()
 	{
-
+		  bool delete_resources = !GetAsyncKeyState('5');
 		struct Events
 		{
 			std::set<ResourceAllocInfo*> create;
@@ -1327,6 +1328,7 @@ namespace FrameGraph
 
 
 			bool alias_ended = false;
+			if (delete_resources)
 			for (auto pass : info->states.back().passes)
 			{
 				if (info->used_end.is_in_sync(pass->sync_state_with_self))
@@ -1340,7 +1342,7 @@ namespace FrameGraph
 			// if no pass found - find any pass that is synced to the usage
 			if (!best_deletion_pass)
 			{
-
+				  if(delete_resources)
 				for (auto pass : enabled_passes)
 				{
 					if (info->used_end.is_in_sync(pass->sync_state, false))
@@ -1892,28 +1894,10 @@ namespace FrameGraph
 		flags = PassFlags::General;
 	}
 
-	// Unlike regular passes this runs AFTER all other setups, at the synthesis
-	// point in add_passes — the pass's resource set (passed + Static) is only
-	// complete once every other setup() has run its creates. Same contract
-	// though: the return value becomes `renderable`. The pass's only GPU-side
-	// purpose is submitting an empty list so FrameContext::end() fires
-	// process_debug_resource (debug thumbnails) — without listeners it stays a
-	// setup-only resource-creation anchor.
-	bool ExternalPass::setup(TaskBuilder&)
-	{
-		for (auto* alloc : used.resources)
-			if (alloc->process_debug_resource.has_handlers())
-				return true;
-
-		return false;
-	}
+	bool ExternalPass::setup(TaskBuilder&) { return true; }
 
 	void ExternalPass::render(Graph* graph, HAL::FrameResources::ptr& frame)
 	{
-		// Only renderable when a process_debug_resource listener exists (see
-		// the ExternalPass creation in add_passes) — otherwise no list at all.
-		if (!enabled || !renderable) return;
-
 		render_task = thread_pool::get().enqueue([this, &frame, graph]()
 			{
 				context.begin(graph, this, frame);

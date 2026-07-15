@@ -34,6 +34,7 @@ export class resource_preview : public GUI::base
 
 	// What we are previewing. get_desc()/get_resource() come off the view.
 	std::shared_ptr<HAL::ResourceView> m_source;
+	std::string                        m_title;   // kept for refresh_source's full-reset path
 
 	// Texture produced on the render thread; handed to m_img via run_on_ui.
 	std::shared_ptr<HAL::Texture> m_current_tex;
@@ -71,6 +72,14 @@ public:
 	// Point the preview at a new resource. Resets fit/zoom and re-populates the
 	// mip / array selectors on the next render. title labels the info panel.
 	void set_source(std::shared_ptr<HAL::ResourceView> source, const std::string& title = "");
+
+	// Re-point at the current frame's incarnation of the same logical resource.
+	// FrameGraph placement reassigns ResourceAllocInfo::view every frame
+	// (aliasing can move it; resize recreates it) — call this before render()
+	// each capture. Same view: no-op. Same desc, new view (moved by aliasing):
+	// swaps the source, keeps pan/zoom/UI. Different desc (resize): full
+	// set_source reset.
+	void refresh_source(std::shared_ptr<HAL::ResourceView> source);
 
 	// Render the current source into the preview image. Must run inside a pass
 	// while source is in a shader-readable state.
