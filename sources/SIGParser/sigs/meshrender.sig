@@ -152,12 +152,23 @@ struct BoxInfo
 	uint mesh_id;
 }
 
+# Producers maintain counters manually (InterlockedAdd) instead of Append so
+# the slot index is known: it initializes visible_boxes[idx] (kills the old
+# full-buffer 999 clears) and bumps the consumer's DispatchArguments /
+# DrawIndexedArguments via InterlockedMax (kills the InitDispatch dispatches
+# and the counter->draw-args copy).
 [Bind = DefaultLayout::Instance1]
 struct GatherBoxes
 {
-	AppendStructuredBuffer<BoxInfo> culledMeshes;
+	RWStructuredBuffer<BoxInfo> culledMeshes;
+	RWStructuredBuffer<uint> culledCount;
+	RWStructuredBuffer<uint> visible_boxes;
+	RWStructuredBuffer<DrawIndexedArguments> drawBoxesArgs;
+	RWStructuredBuffer<DispatchArguments> gatherMeshesArgs;
 
-	AppendStructuredBuffer<uint> visibleMeshes;
+	RWStructuredBuffer<uint> visibleMeshes;
+	RWStructuredBuffer<uint> visibleCount;
+	RWStructuredBuffer<DispatchArguments> renderArgs;
 }
 
 
@@ -167,14 +178,14 @@ struct DrawBoxes
 {
 	StructuredBuffer<float4> vertices;
 	StructuredBuffer<BoxInfo> input_meshes;
-	
+
 	RWStructuredBuffer<uint> visible_meshes;
 }
 
 [Bind = DefaultLayout::Instance1]
 struct InitDispatch
 {
-	RWStructuredBuffer<uint> counter;	
+	RWStructuredBuffer<uint> counter;
 	#RWStructuredBuffer<GatherPipelineGlobal> pipelineGlobal;
 	RWStructuredBuffer<DispatchArguments> dispatch_data;
 }
@@ -182,11 +193,16 @@ struct InitDispatch
 [Bind = DefaultLayout::Instance1]
 struct GatherMeshesBoxes
 {
-	StructuredBuffer<BoxInfo> input_meshes;	
-	StructuredBuffer<uint> visible_boxes;	
+	StructuredBuffer<BoxInfo> input_meshes;
+	StructuredBuffer<uint> visible_boxes;
 
-	AppendStructuredBuffer<uint> visibleMeshes;
-	AppendStructuredBuffer<uint> invisibleMeshes;
+	RWStructuredBuffer<uint> visibleMeshes;
+	RWStructuredBuffer<uint> visibleCount;
+	RWStructuredBuffer<DispatchArguments> renderArgs;
+
+	RWStructuredBuffer<uint> invisibleMeshes;
+	RWStructuredBuffer<uint> invisibleCount;
+	RWStructuredBuffer<DispatchArguments> retestArgs;
 }
 
 
@@ -243,6 +259,12 @@ ComputePSO GatherMeshes
 	[CS, nullable]
 	define Invisible;
 }
+
+# Per-stage arg resets are plain clear_uav-to-zero calls (CLEAR sync differs
+# from COMPUTE, so the state tracker emits a real barrier before the producer
+# dispatches — a reset CS would be same-state UAV->UAV and race). Producers
+# restore the constant components (dispatch y/z = 1, draw IndexCount = 36)
+# with benign racing writes whenever they bump the counts.
 
 
 

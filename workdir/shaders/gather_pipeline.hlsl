@@ -122,12 +122,16 @@ void CS(
 }
 #endif
 
+// Consumer dispatch groups for `count` list entries (64 threads per group).
+uint dispatch_groups(uint count)
+{
+    return (count + 63) / 64;
+}
+
 #ifdef  BUILD_FUNC_CS_boxes
 
 #include "autogen/GatherBoxes.h"
 static const GatherBoxes pipi = GetGatherBoxes();
-
-static const AppendStructuredBuffer<uint> visible = pipi.GetVisibleMeshes();
 
 [numthreads(64, 1, 1)]
 void CS_boxes(
@@ -150,20 +154,40 @@ void CS_boxes(
     if (!intersection) return;
     if (intersection == 1)
     {
+        // Near-crossing: box would be clipped — force visible.
+        uint idx;
+        InterlockedAdd(pipi.GetVisibleCount()[0], 1, idx);
+        pipi.GetVisibleMeshes()[idx] = id;
 
-        visible.Append(id);
-            return;
+        // Args buffers are clear_uav'ed to zero per stage; the count is bumped
+        // monotonically and the constant components restored with benign
+        // racing writes (every appender stores the same values).
+        InterlockedMax(pipi.GetRenderArgs()[0].counts.x, dispatch_groups(idx + 1));
+        pipi.GetRenderArgs()[0].counts.y = 1;
+        pipi.GetRenderArgs()[0].counts.z = 1;
+        return;
     }
-
- //   GetDebugInfo().Log(dispatchID.x, uint4(pip.GetMeshes_count()[0], id, 0, 0));
-
-
 
     BoxInfo info;
     info.node_offset = mesh.GetNode_offset();
     info.mesh_id = id;
 
-    pipi.GetCulledMeshes().Append(info);
+    uint idx;
+    InterlockedAdd(pipi.GetCulledCount()[0], 1, idx);
+    pipi.GetCulledMeshes()[idx] = info;
+
+    // Not-covered sentinel for the box raster test — initialized exactly for
+    // this stage's candidates, replacing the old full-buffer 999 clear.
+    pipi.GetVisible_boxes()[idx] = 999;
+
+    // Bump the consumers' indirect args directly (replaces InitDispatch and
+    // the counter->InstanceCount copy). Monotonic, so racing appends are fine.
+    InterlockedMax(pipi.GetDrawBoxesArgs()[0].data[1], idx + 1); // InstanceCount
+    pipi.GetDrawBoxesArgs()[0].data[0] = 36; // IndexCountPerInstance (unit cube)
+
+    InterlockedMax(pipi.GetGatherMeshesArgs()[0].counts.x, dispatch_groups(idx + 1));
+    pipi.GetGatherMeshesArgs()[0].counts.y = 1;
+    pipi.GetGatherMeshesArgs()[0].counts.z = 1;
 }
 #endif
 
@@ -173,12 +197,6 @@ void CS_boxes(
 #include "autogen/GatherMeshesBoxes.h"
 static const GatherMeshesBoxes pipi = GetGatherMeshesBoxes();
 
-
-static const AppendStructuredBuffer<uint> visible = pipi.GetVisibleMeshes();
-
-#ifdef INVISIBLE
-static const AppendStructuredBuffer<uint> invisible = pipi.GetInvisibleMeshes();
-#endif
 [numthreads(64, 1, 1)]
 void CS_meshes_from_boxes(
     uint3 groupID       : SV_GroupID,
@@ -196,18 +214,25 @@ void CS_meshes_from_boxes(
 
     if (id == 999)
     {
-     //   GetDebugInfo().Log(dispatchID.x, uint4(pip.GetMeshes_count()[0], id, 0, 3));
-
 #ifdef INVISIBLE
-        invisible.Append(mesh_id);
+        uint idx;
+        InterlockedAdd(pipi.GetInvisibleCount()[0], 1, idx);
+        pipi.GetInvisibleMeshes()[idx] = mesh_id;
+        InterlockedMax(pipi.GetRetestArgs()[0].counts.x, dispatch_groups(idx + 1));
+        pipi.GetRetestArgs()[0].counts.y = 1;
+        pipi.GetRetestArgs()[0].counts.z = 1;
 #endif
     }
     else
     {
-    //    GetDebugInfo().Log(dispatchID.x, uint4(pip.GetMeshes_count()[0], id, 0, 6));
-        pipi.GetVisibleMeshes().Append(mesh_id);
+        uint idx;
+        InterlockedAdd(pipi.GetVisibleCount()[0], 1, idx);
+        pipi.GetVisibleMeshes()[idx] = mesh_id;
+        InterlockedMax(pipi.GetRenderArgs()[0].counts.x, dispatch_groups(idx + 1));
+        pipi.GetRenderArgs()[0].counts.y = 1;
+        pipi.GetRenderArgs()[0].counts.z = 1;
     }
-        
+
 }
 #endif
 

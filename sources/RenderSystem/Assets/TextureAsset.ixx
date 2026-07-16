@@ -31,6 +31,7 @@ export{
 		using ref = AssetReference<TextureAsset>;
 
 		TextureAsset(std::filesystem::path file_name);
+		TextureAsset(HAL::texture_data::ptr data, std::wstring name);
 		TextureAsset();
 
 		HAL::Texture::ptr get_texture();

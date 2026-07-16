@@ -62,19 +62,25 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
         virtual void render(MeshRenderContext::ptr mesh_render_context, Scene::ptr obj) override;
 
 		void iterate(MESH_TYPE mesh_type,  std::function<void(scene_object::ptr&)> f) override;
-		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling);
+		// gatherData supplies the shader-side bound check; dispatch_args (when
+		// non-null) drives an indirect dispatch, otherwise direct_count is used
+		// for a CPU-sized direct dispatch (count known on CPU — no indirect).
+		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
 		void  draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene);
-		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling);
+		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
 		void  gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, bool invisibleToo);
-		void  init_dispatch(MeshRenderContext::ptr mesh_render_context, Slots::GatherPipelineGlobal::Compiled & from);
 
 
 		virtual_gpu_buffer<Table::BoxInfo>::ptr commands_boxes;
 		virtual_gpu_buffer<Table::CommandData>::ptr commands_buffer[8];
 
 
-		HAL::StructuredBufferView<DispatchArguments> dispatch_buffer;
-        HAL::StructuredBufferView<DispatchArguments> dispatch_buffer111;
+		// Indirect args written by the producer shaders (InterlockedMax) and
+		// zeroed per stage via clear_uav (CLEAR sync = real barrier before the
+		// COMPUTE producers) — no InitDispatch round trips.
+		HAL::StructuredBufferView<DispatchArguments> gather_meshes_args; // sized by commands_boxes count
+		HAL::StructuredBufferView<DispatchArguments> render_args;        // sized by meshes_ids count
+		HAL::StructuredBufferView<DispatchArguments> retest_args;        // sized by meshes_invisible_ids count
 
 
 		HAL::StructuredBufferView<DrawIndexedArguments> draw_boxes_first;
@@ -88,7 +94,6 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		Slots::GatherPipelineGlobal::Compiled gather_invisible;
 		Slots::GatherPipelineGlobal::Compiled gather_boxes_commands;
 
-		Slots::InitDispatch::Compiled init_dispatch_compiled;
 		Slots::GatherMeshesBoxes::Compiled gather_neshes_boxes_compiled;
 
 		Slots::DrawBoxes::Compiled draw_boxes_compiled;

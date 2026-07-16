@@ -87,8 +87,11 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid 
       //  node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
    //    matrix m = node.GetNode_global_matrix();
     
-        // Do visibility testing for this thread
-        visible =  true;//IsVisible(sceneData.GetMeshletCullData()[meshInfo.GetMeshlet_offset() + dtid], m, 1, frameInfo.GetCamera());
+        // Intentionally NO culling here: voxelization rasterizes from three
+        // axes over the whole voxel volume — a camera frustum test and the
+        // backface cone test are both invalid for it. (mesh_shader.hlsl's AS
+        // has the fixed IsVisible enabled for camera passes.)
+        visible =  true;
     }
 
     // Compact visible meshlets into the export payload array 

@@ -133,18 +133,16 @@ namespace HAL
         }
     }
 
-    texture_data::ptr texture_data::load_texture(std::shared_ptr<file> file, int /*flags*/)
+    texture_data::ptr texture_data::load_from_memory(const void* blob, size_t size, std::string /*format_hint*/, int /*flags*/)
     {
-        if (!file) return nullptr;
-        auto bytes = file->load_all();
-        const uint8_t* data = reinterpret_cast<const uint8_t*>(bytes.data());
-        const size_t   size = bytes.size();
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(blob);
 
+        // DDS is detected by magic, so the format hint is not needed here.
         const bool is_dds = size >= 4 && *reinterpret_cast<const uint32_t*>(data) == DDS_MAGIC;
         if (!is_dds)
         {
             // WIC's stream decoder auto-detects PNG/JPEG/BMP containers.
-            return from_png(bytes.data(), size);
+            return from_png(blob, size);
         }
 
         if (size < 4 + sizeof(DDS_HEADER)) return nullptr;
@@ -190,6 +188,13 @@ namespace HAL
             }
 
         return result;
+    }
+
+    texture_data::ptr texture_data::load_texture(std::shared_ptr<file> file, int flags)
+    {
+        if (!file) return nullptr;
+        auto bytes = file->load_all();
+        return load_from_memory(bytes.data(), bytes.size(), file->file_name.extension().generic_string(), flags);
     }
 
     // Build from GPU readback data: strips row padding (layout.row_stride →

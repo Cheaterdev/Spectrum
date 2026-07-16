@@ -102,6 +102,12 @@ export namespace HAL
 		texture_data(uint array_count, uint num_mips, uint width, uint height, uint depth, Format format);
 
 		static ptr load_texture(std::shared_ptr<file> file, int flags);
+
+		// Decode an in-memory image blob (PNG/JPG/TGA/DDS/...).
+		// format_hint is an extension with or without the leading dot ("png", ".dds");
+		// empty means auto-detect via WIC.
+		static ptr load_from_memory(const void* data, size_t size, std::string format_hint, int flags);
+
 		static ptr compress(ptr orig);
 
 		// Build from GPU readback data: strips row padding (layout.row_stride → width_stride)

@@ -20,12 +20,20 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::GatherMeshesBoxes;
 		HLSL::StructuredBuffer<BoxInfo> input_meshes;
 		HLSL::StructuredBuffer<uint> visible_boxes;
-		HLSL::AppendStructuredBuffer<uint> visibleMeshes;
-		HLSL::AppendStructuredBuffer<uint> invisibleMeshes;
+		HLSL::RWStructuredBuffer<uint> visibleMeshes;
+		HLSL::RWStructuredBuffer<uint> visibleCount;
+		HLSL::RWStructuredBuffer<DispatchArguments> renderArgs;
+		HLSL::RWStructuredBuffer<uint> invisibleMeshes;
+		HLSL::RWStructuredBuffer<uint> invisibleCount;
+		HLSL::RWStructuredBuffer<DispatchArguments> retestArgs;
 		HLSL::StructuredBuffer<BoxInfo>& GetInput_meshes() { return input_meshes; }
 		HLSL::StructuredBuffer<uint>& GetVisible_boxes() { return visible_boxes; }
-		HLSL::AppendStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
-		HLSL::AppendStructuredBuffer<uint>& GetInvisibleMeshes() { return invisibleMeshes; }
+		HLSL::RWStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
+		HLSL::RWStructuredBuffer<uint>& GetVisibleCount() { return visibleCount; }
+		HLSL::RWStructuredBuffer<DispatchArguments>& GetRenderArgs() { return renderArgs; }
+		HLSL::RWStructuredBuffer<uint>& GetInvisibleMeshes() { return invisibleMeshes; }
+		HLSL::RWStructuredBuffer<uint>& GetInvisibleCount() { return invisibleCount; }
+		HLSL::RWStructuredBuffer<DispatchArguments>& GetRetestArgs() { return retestArgs; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -33,14 +41,22 @@ export namespace Table
 			compiler.compile(input_meshes);
 			compiler.compile(visible_boxes);
 			compiler.compile(visibleMeshes);
+			compiler.compile(visibleCount);
+			compiler.compile(renderArgs);
 			compiler.compile(invisibleMeshes);
+			compiler.compile(invisibleCount);
+			compiler.compile(retestArgs);
 		}
 		struct Compiled
 		{
 			uint input_meshes; // StructuredBuffer<BoxInfo>
 			uint visible_boxes; // StructuredBuffer<uint>
-			uint visibleMeshes; // AppendStructuredBuffer<uint>
-			uint invisibleMeshes; // AppendStructuredBuffer<uint>
+			uint visibleMeshes; // RWStructuredBuffer<uint>
+			uint visibleCount; // RWStructuredBuffer<uint>
+			uint renderArgs; // RWStructuredBuffer<DispatchArguments>
+			uint invisibleMeshes; // RWStructuredBuffer<uint>
+			uint invisibleCount; // RWStructuredBuffer<uint>
+			uint retestArgs; // RWStructuredBuffer<DispatchArguments>
 
 			
 			private:

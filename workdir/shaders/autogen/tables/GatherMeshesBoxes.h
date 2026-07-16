@@ -7,14 +7,23 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "BoxInfo.h"
+#include "DispatchArguments.h"
 struct GatherMeshesBoxes
 {
 	uint input_meshes; // StructuredBuffer<BoxInfo>
 	uint visible_boxes; // StructuredBuffer<uint>
-	uint visibleMeshes; // AppendStructuredBuffer<uint>
-	uint invisibleMeshes; // AppendStructuredBuffer<uint>
+	uint visibleMeshes; // RWStructuredBuffer<uint>
+	uint visibleCount; // RWStructuredBuffer<uint>
+	uint renderArgs; // RWStructuredBuffer<DispatchArguments>
+	uint invisibleMeshes; // RWStructuredBuffer<uint>
+	uint invisibleCount; // RWStructuredBuffer<uint>
+	uint retestArgs; // RWStructuredBuffer<DispatchArguments>
 	StructuredBuffer<BoxInfo> GetInput_meshes() { return ResourceDescriptorHeap[input_meshes]; }
 	StructuredBuffer<uint> GetVisible_boxes() { return ResourceDescriptorHeap[visible_boxes]; }
-	AppendStructuredBuffer<uint> GetVisibleMeshes() { return ResourceDescriptorHeap[visibleMeshes]; }
-	AppendStructuredBuffer<uint> GetInvisibleMeshes() { return ResourceDescriptorHeap[invisibleMeshes]; }
+	RWStructuredBuffer<uint> GetVisibleMeshes() { return ResourceDescriptorHeap[visibleMeshes]; }
+	RWStructuredBuffer<uint> GetVisibleCount() { return ResourceDescriptorHeap[visibleCount]; }
+	RWStructuredBuffer<DispatchArguments> GetRenderArgs() { return ResourceDescriptorHeap[renderArgs]; }
+	RWStructuredBuffer<uint> GetInvisibleMeshes() { return ResourceDescriptorHeap[invisibleMeshes]; }
+	RWStructuredBuffer<uint> GetInvisibleCount() { return ResourceDescriptorHeap[invisibleCount]; }
+	RWStructuredBuffer<DispatchArguments> GetRetestArgs() { return ResourceDescriptorHeap[retestArgs]; }
 };

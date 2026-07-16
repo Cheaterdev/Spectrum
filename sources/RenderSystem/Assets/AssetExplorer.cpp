@@ -306,7 +306,7 @@ namespace GUI
 				menu->add_item("Import asset")->on_click = [this](menu_list_element::ptr e)
 				{
 
-					auto files = Application::get().file_open("Choose your destiny", "", "dds|*.dds|" "png|*.png|" "jpg|*.jpg|"  "obj|*.obj|"  "blend|*.blend|"  "all|*.*|"   "|");
+					auto files = Application::get().file_open("Choose your destiny", "", "dds|*.dds|" "png|*.png|" "jpg|*.jpg|"  "obj|*.obj|" "fbx|*.fbx|" "glb|*.glb|" "gltf|*.gltf|" "blend|*.blend|"  "all|*.*|"   "|");
 
 					struct material_info
 					{

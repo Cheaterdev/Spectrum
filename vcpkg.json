@@ -5,7 +5,7 @@
     "freetype",
     "zlib",
     "directxtex",
-    "assimp",
+    {"name" :"assimp", "version>=":"6.0.4#3"},
     {"name" :"antlr4", "version>=":"4.13.2#1"},
     {"name" :"magic-enum", "version>=":"0.9.7#1"},
     "crossguid",

@@ -48,6 +48,20 @@ TextureAsset::TextureAsset(std::filesystem::path file_name)
 	name = file_name.filename().wstring();
 	mark_changed();
 }
+
+TextureAsset::TextureAsset(HAL::texture_data::ptr data, std::wstring name)
+{
+	auto task = TaskInfoManager::get().create_task(name);
+
+	if (data)
+		texture = HAL::Texture::create(RenderSystem::get().device(), data);
+
+	if (!texture)
+		texture = HAL::Texture::null;
+
+	this->name = name;
+	mark_changed();
+}
 void TextureAsset::try_register()
 {
 	if ((texture && texture != HAL::Texture::null))

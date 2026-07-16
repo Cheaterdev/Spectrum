@@ -18,21 +18,45 @@ export namespace Table
 	struct GatherBoxes
 	{
 		static constexpr SlotID ID = SlotID::GatherBoxes;
-		HLSL::AppendStructuredBuffer<BoxInfo> culledMeshes;
-		HLSL::AppendStructuredBuffer<uint> visibleMeshes;
-		HLSL::AppendStructuredBuffer<BoxInfo>& GetCulledMeshes() { return culledMeshes; }
-		HLSL::AppendStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
+		HLSL::RWStructuredBuffer<BoxInfo> culledMeshes;
+		HLSL::RWStructuredBuffer<uint> culledCount;
+		HLSL::RWStructuredBuffer<uint> visible_boxes;
+		HLSL::RWStructuredBuffer<DrawIndexedArguments> drawBoxesArgs;
+		HLSL::RWStructuredBuffer<DispatchArguments> gatherMeshesArgs;
+		HLSL::RWStructuredBuffer<uint> visibleMeshes;
+		HLSL::RWStructuredBuffer<uint> visibleCount;
+		HLSL::RWStructuredBuffer<DispatchArguments> renderArgs;
+		HLSL::RWStructuredBuffer<BoxInfo>& GetCulledMeshes() { return culledMeshes; }
+		HLSL::RWStructuredBuffer<uint>& GetCulledCount() { return culledCount; }
+		HLSL::RWStructuredBuffer<uint>& GetVisible_boxes() { return visible_boxes; }
+		HLSL::RWStructuredBuffer<DrawIndexedArguments>& GetDrawBoxesArgs() { return drawBoxesArgs; }
+		HLSL::RWStructuredBuffer<DispatchArguments>& GetGatherMeshesArgs() { return gatherMeshesArgs; }
+		HLSL::RWStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
+		HLSL::RWStructuredBuffer<uint>& GetVisibleCount() { return visibleCount; }
+		HLSL::RWStructuredBuffer<DispatchArguments>& GetRenderArgs() { return renderArgs; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(culledMeshes);
+			compiler.compile(culledCount);
+			compiler.compile(visible_boxes);
+			compiler.compile(drawBoxesArgs);
+			compiler.compile(gatherMeshesArgs);
 			compiler.compile(visibleMeshes);
+			compiler.compile(visibleCount);
+			compiler.compile(renderArgs);
 		}
 		struct Compiled
 		{
-			uint culledMeshes; // AppendStructuredBuffer<BoxInfo>
-			uint visibleMeshes; // AppendStructuredBuffer<uint>
+			uint culledMeshes; // RWStructuredBuffer<BoxInfo>
+			uint culledCount; // RWStructuredBuffer<uint>
+			uint visible_boxes; // RWStructuredBuffer<uint>
+			uint drawBoxesArgs; // RWStructuredBuffer<DrawIndexedArguments>
+			uint gatherMeshesArgs; // RWStructuredBuffer<DispatchArguments>
+			uint visibleMeshes; // RWStructuredBuffer<uint>
+			uint visibleCount; // RWStructuredBuffer<uint>
+			uint renderArgs; // RWStructuredBuffer<DispatchArguments>
 
 			
 			private:

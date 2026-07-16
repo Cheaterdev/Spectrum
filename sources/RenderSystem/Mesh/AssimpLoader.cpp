@@ -8,6 +8,9 @@
 // exported headers don't cross the module boundary into this TU, so include it
 // explicitly in the global module fragment to keep the definition reachable.
 #include <assimp/material.h>
+// config.h is macro-only (importer property name strings), so it also has to be
+// included here rather than relied on through `import assimp`.
+#include <assimp/config.h>
 
 module Graphics;
 import Core;
@@ -184,10 +187,15 @@ class MyIOStream : public Assimp::IOStream
 
         size_t Read(void* pvBuffer, size_t pSize, size_t pCount)
         {
-            size_t count = std::min(data.size() - pos, pSize*pCount);
-            std::memcpy(pvBuffer, data.data() + pos, count);
-            pos += pSize*pCount;
-            return count;
+            // fread contract: return the number of complete items read, not bytes
+            // (the glTF importers check `Read(&header, sizeof(header), 1) != 1`).
+            if (!pSize || pos >= data.size())
+                return 0;
+
+            size_t items = std::min((data.size() - pos) / pSize, pCount);
+            std::memcpy(pvBuffer, data.data() + pos, items * pSize);
+            pos += items * pSize;
+            return items;
         }
 
 
@@ -198,7 +206,7 @@ class MyIOStream : public Assimp::IOStream
                 pos += pOffset;
 
             if (pOrigin == aiOrigin::aiOrigin_END)
-                pos += pOffset;
+                pos = data.size() + pOffset; // fseek semantics: offset relative to end
 
             if (pOrigin == aiOrigin::aiOrigin_SET)
                 pos = pOffset;
@@ -229,7 +237,9 @@ class MyIOSystem : public Assimp::IOSystem
         virtual Assimp::IOStream* Open(const char* pFile, const char* pMode = "rb") override
         {
 			auto new_path = path / to_path(pFile);
-			new_path = std::filesystem::canonical(new_path);
+			// weakly_canonical: canonical() throws for nonexistent paths, and Assimp
+			// probes embedded-texture names (e.g. "Image_9") as if they were files.
+			new_path = std::filesystem::weakly_canonical(new_path);
             auto file = FileSystem::get().get_file(new_path);
             files.add_depend(file);
             return new MyIOStream(new_path.generic_string());
@@ -267,6 +277,20 @@ public:
 };
 
 
+// Embedded textures (FBX/glTF pack them inside the model file) come as either a
+// compressed image blob (mHeight == 0, achFormatHint = extension) or a raw aiTexel
+// array (b,g,r,a byte order == B8G8R8A8).
+static HAL::texture_data::ptr texture_data_from_embedded(const aiTexture* tex)
+{
+	if (tex->mHeight == 0)
+		return HAL::texture_data::load_from_memory(tex->pcData, tex->mWidth, tex->achFormatHint, HAL::texture_data::GENERATE_MIPS);
+
+	auto data = std::make_shared<HAL::texture_data>(1, 1, tex->mWidth, tex->mHeight, 1, HAL::Format::B8G8R8A8_UNORM);
+	auto& mip = data->array[0]->mips[0];
+	std::memcpy(mip->data.data(), tex->pcData, mip->data.size());
+	return data;
+}
+
 std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, resource_file_depender& files, AssetLoadingContext::ptr & context)
 {
     Assimp::Importer importer;
@@ -278,12 +302,28 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 	// TODO: need delete?
     importer.SetIOHandler(new MyIOSystem(directory, files));
 	importer.SetProgressHandler(new MyProgressHandler(context));
+
+	// The mesh loop assumes 3 indices per face; SortByPType with this property
+	// strips point/line primitives (including degenerates demoted by FindDegenerates).
+	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
+
     //  auto file = FileSystem::get().get_file(file_name);
     const aiScene* scene;
 
     try
     {
-        scene = importer.ReadFile(to_path(file_name).filename().generic_string(), aiProcess_JoinIdenticalVertices| aiProcess_GenBoundingBoxes| aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals/* | aiProcess_PreTransformVertices*/);
+        scene = importer.ReadFile(to_path(file_name).filename().generic_string(),
+            aiProcess_JoinIdenticalVertices |
+            aiProcess_GenBoundingBoxes |
+            aiProcess_CalcTangentSpace |
+            aiProcess_Triangulate |
+            aiProcess_SortByPType |
+            aiProcess_FindDegenerates |
+            aiProcess_FindInvalidData |
+            aiProcess_GenUVCoords |
+            aiProcess_TransformUVCoords |
+            aiProcess_FlipUVs |
+            aiProcess_GenSmoothNormals/* | aiProcess_PreTransformVertices*/);
     }
 
     catch (const std::exception &e)
@@ -306,6 +346,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
 		std::map<std::filesystem::path, AssetStorage::ptr>& load_textures =settings.load_textures;
 
+		// keyed the same way as load_textures, so material creation finds them by path
+		std::map<std::filesystem::path, const aiTexture*> embedded_textures;
 
 		auto check_texture = [&load_textures](std::filesystem::path name)
 		{
@@ -322,12 +364,14 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			}
 		};
 
-		auto check_assimp_texture = [&directory, &check_texture](aiMaterial*native_material, aiTextureType type) {
+		auto check_assimp_texture = [&directory, &check_texture, &embedded_textures, &scene](aiMaterial*native_material, aiTextureType type) {
 			aiString path;
 			if (AI_SUCCESS == native_material->GetTexture(type, 0, &path))
 			{
 				auto native_path = directory / to_path(path.C_Str());
 
+				if (auto embedded = scene->GetEmbeddedTexture(path.C_Str()))
+					embedded_textures[native_path] = embedded;
 
 				check_texture(native_path);
 			}
@@ -378,10 +422,16 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 				auto &&val = t.second;
 				auto index = t.first;
 
-				tasks.emplace_back(thread_pool::get().enqueue([t, index,&load_textures]() {
+				tasks.emplace_back(thread_pool::get().enqueue([t, index,&load_textures,&embedded_textures]() {
 
+					TextureAsset* tex;
+					auto embedded = embedded_textures.find(index);
 
-					auto tex = new TextureAsset(t.first);
+					if (embedded != embedded_textures.end())
+						tex = new TextureAsset(texture_data_from_embedded(embedded->second), index.filename().wstring());
+					else
+						tex = new TextureAsset(t.first);
+
 					load_textures[index] = tex->register_new();
 				}));
 

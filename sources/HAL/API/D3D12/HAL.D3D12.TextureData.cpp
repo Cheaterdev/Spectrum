@@ -256,63 +256,49 @@ namespace HAL
         return generate_tex_data(image);
     }
 
-    texture_data::ptr texture_data::load_texture(std::shared_ptr<file> file, int flags)
+    texture_data::ptr texture_data::load_from_memory(const void* data, size_t size, std::string format_hint, int flags)
     {
         bool mips = (flags & LoadFlags::GENERATE_MIPS);
-        bool compress = (flags & LoadFlags::COMPRESS);
 
-        if (file)
-        {
-            auto&& data = file->load_all();
-            DirectXTex::TexMetadata metadata;
-            DirectXTex::ScratchImage orig_image;
-            auto name = file->file_name;
-            std::wstring ext = name.extension().generic_wstring();
+        if (!format_hint.empty() && format_hint[0] == '.')
+            format_hint.erase(0, 1);
 
-            HRESULT hri = CoInitialize(nullptr);
+        for (auto& c : format_hint)
+            if (c >= 'A' && c <= 'Z') c += 'a' - 'A';
 
-            HRESULT hr = 0;
-            if (ext == L".tga")
-            {
-                hr = DirectXTex::LoadFromTGAMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), &metadata, orig_image);
-            }
+        DirectXTex::TexMetadata metadata;
+        DirectXTex::ScratchImage orig_image;
 
-            else if (ext == L".dds")
-            {
-                hr = DirectXTex::LoadFromDDSMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), DirectXTex::DDS_FLAGS::DDS_FLAGS_NONE, &metadata, orig_image);
-            }
+        CoInitialize(nullptr);
 
-            else     hr = DirectXTex::LoadFromWICMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), DirectXTex::WIC_FLAGS::WIC_FLAGS_NONE, &metadata, orig_image);
+        auto bytes = reinterpret_cast<const uint8_t*>(data);
+        HRESULT hr = 0;
+        if (format_hint == "tga")
+            hr = DirectXTex::LoadFromTGAMemory(bytes, size, &metadata, orig_image);
+        else if (format_hint == "dds")
+            hr = DirectXTex::LoadFromDDSMemory(bytes, size, DirectXTex::DDS_FLAGS::DDS_FLAGS_NONE, &metadata, orig_image);
+        else
+            hr = DirectXTex::LoadFromWICMemory(bytes, size, DirectXTex::WIC_FLAGS::WIC_FLAGS_NONE, &metadata, orig_image);
 
-            if (FAILED(hr))
-                return nullptr;
-            DirectXTex::ScratchImage mipChain;
-            bool res = true;
+        if (FAILED(hr))
+            return nullptr;
 
-            if (!mips || FAILED(DirectXTex::GenerateMipMaps(orig_image.GetImages(), orig_image.GetImageCount(), orig_image.GetMetadata(), DirectXTex::TEX_FILTER_FLAGS::TEX_FILTER_DEFAULT, 0, mipChain)))
-                res = false;
+        DirectXTex::ScratchImage mipChain;
+        bool res = true;
 
-            DirectXTex::ScratchImage& image1 = res ? mipChain : orig_image;
-            metadata = image1.GetMetadata();
+        if (!mips || FAILED(DirectXTex::GenerateMipMaps(orig_image.GetImages(), orig_image.GetImageCount(), orig_image.GetMetadata(), DirectXTex::TEX_FILTER_FLAGS::TEX_FILTER_DEFAULT, 0, mipChain)))
+            res = false;
 
-            if (compress)
-            {
-                DirectXTex::ScratchImage compressed;
-                res = true;
-                metadata.mipLevels -= 2;
+        return generate_tex_data(res ? mipChain : orig_image);
+    }
 
-                ASSERT(false);
-                // if (FAILED(DirectXTex::Compress(DX11::Device::get().get_native_device(), image1.GetImages(), image1.GetImageCount() - 2, metadata, DXGI_FORMAT_BC7_UNORM_SRGB, 1, 1, compressed)))
-                res = false;
+    texture_data::ptr texture_data::load_texture(std::shared_ptr<file> file, int flags)
+    {
+        if (!file)
+            return nullptr;
 
-                return generate_tex_data(res ? compressed : image1);
-            }
-
-            else
-                return generate_tex_data(image1);
-        }
-
-        return nullptr;
+        auto&& data = file->load_all();
+        return load_from_memory(data.data(), data.size(), file->file_name.extension().generic_string(), flags);
     }
 
 }
