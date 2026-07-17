@@ -157,7 +157,8 @@ PSSM::PSSM()
 			{
 				command_list->transition((*data.PSSM_Depths).resource, ResourceStates::DEPTH_STENCIL);
 			}
-
+				
+	 if(GetAsyncKeyState('4'))  return;
 			MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
 			mesh_ctx->priority = TaskPriority::HIGH;
 			mesh_ctx->list     = command_list;
@@ -267,18 +268,22 @@ PSSM::PSSM()
 	{
 		GBufferViewDesc::need(builder, data.gbuffer);
 		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::RenderTarget);
-		builder.need(data.PSSM_Cameras,  FrameGraph::ResourceFlags::PixelRead);
-
+		
 		if (builder.exists(data.ShadowMask))
 			builder.need(data.ShadowMask,  FrameGraph::ResourceFlags::PixelRead);
 		else
+		{
 			builder.need(data.LightMask, FrameGraph::ResourceFlags::PixelRead);
+			builder.need(data.PSSM_Cameras,  FrameGraph::ResourceFlags::PixelRead);
 
+		}
 		return true;
 	};
 
 	m_combine_render = [this](Passes::PSSM_Combine::Context& data, FrameGraph::FrameContext& context)
-	{
+	{	  
+
+
 		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
 
 		auto& list     = *context.get_list();
@@ -286,7 +291,6 @@ PSSM::PSSM()
 		auto& compute  = list.get_compute();
 
 		
-
 		context.graph->set_slot(SlotID::FrameInfo, graphics);
 		context.graph->set_slot(SlotID::FrameInfo, compute);
 
@@ -295,9 +299,9 @@ PSSM::PSSM()
 		graphics.set_scissor(data.ResultTexture->get_scissor());
 
 		{
-			Slots::PSSMData pssmdata;
-			pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
-			graphics.set(pssmdata);
+	//		Slots::PSSMData pssmdata;
+	//		pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
+	//		graphics.set(pssmdata);
 		}
 
 		{

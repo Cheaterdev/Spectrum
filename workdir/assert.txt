@@ -91,3 +91,20 @@ ASSERT FAILED: (declared_write == actual_write)  at C:\github\Spectrum\sources\R
 ASSERT FAILED: (declared_write == actual_write)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\RenderSystem\FrameGraph\FrameGraph.cpp:788
 ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
 ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:280
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (exists(result))  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\RenderSystem\FrameGraph\FrameGraph.Base.ixx:863
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:269

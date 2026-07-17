@@ -111,6 +111,8 @@ void  CS(uint3 groupID       : SV_GroupID,
 
 if (mipLevel == 0)
 	{
+		
+    //    target[index] = 0.5;
 		return;
 
 	}
@@ -142,7 +144,7 @@ if (mipLevel == 0)
 	float4 blurry = ApplyBilinearCustomWeights(s00, s10, s01, s11, w, true);
 
 	float total = dot(w,float4(1,1,1,1));
-	target[index] = blurry;// +result * saturate(1 - total);
+    target[index] = blurry; // +result * saturate(1 - total);
 
 	//target[index] = float4(1, 0, 0, 1);
 }

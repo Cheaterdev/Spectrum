@@ -87,7 +87,7 @@ public:
 
 		auto scale_slider = std::make_shared<GUI::Elements::float_slider>();
 		scale_slider->min        = 0.01f;
-		scale_slider->max        = 10.0f;
+		scale_slider->max        = 100.0f;
 		scale_slider->value      = settings.scale;
 		scale_slider->docking    = GUI::dock::FILL;
 		scale_slider->height_size = GUI::size_type::FIXED;
@@ -364,16 +364,22 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			}
 		};
 
-		auto check_assimp_texture = [&directory, &check_texture, &embedded_textures, &scene](aiMaterial*native_material, aiTextureType type) {
+		auto check_assimp_texture = [&directory, &check_texture, &load_textures, &embedded_textures, &scene](aiMaterial*native_material, aiTextureType type) {
 			aiString path;
 			if (AI_SUCCESS == native_material->GetTexture(type, 0, &path))
 			{
 				auto native_path = directory / to_path(path.C_Str());
 
 				if (auto embedded = scene->GetEmbeddedTexture(path.C_Str()))
+				{
 					embedded_textures[native_path] = embedded;
-
-				check_texture(native_path);
+					// Embedded names ("*0", "Image_0") are file-local — never reuse a
+					// registered asset by that name (a previous import's "*2" can be a
+					// completely different image); always decode from this file's data.
+					load_textures.emplace(native_path, nullptr);
+				}
+				else
+					check_texture(native_path);
 			}
 
 		};
@@ -384,8 +390,13 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			auto& native_material = scene->mMaterials[i];
 
 			check_assimp_texture(native_material, aiTextureType_DIFFUSE);
+			check_assimp_texture(native_material, aiTextureType_BASE_COLOR);
 			check_assimp_texture(native_material, aiTextureType_NORMALS);
 			check_assimp_texture(native_material, aiTextureType_HEIGHT);
+			check_assimp_texture(native_material, aiTextureType_METALNESS);
+			check_assimp_texture(native_material, aiTextureType_DIFFUSE_ROUGHNESS);
+			check_assimp_texture(native_material, aiTextureType_EMISSION_COLOR);
+			check_assimp_texture(native_material, aiTextureType_EMISSIVE);
 
 		}
 
@@ -428,7 +439,15 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 					auto embedded = embedded_textures.find(index);
 
 					if (embedded != embedded_textures.end())
-						tex = new TextureAsset(texture_data_from_embedded(embedded->second), index.filename().wstring());
+					{
+						auto* ai_tex = embedded->second;
+						// glTF refers to embedded textures as "*0", "*1", ...; prefer the
+						// image's own name (e.g. "Image_0") for the registered asset.
+						auto name = ai_tex->mFilename.length
+							? to_path(ai_tex->mFilename.C_Str()).filename().wstring()
+							: index.filename().wstring();
+						tex = new TextureAsset(texture_data_from_embedded(ai_tex), name);
+					}
 					else
 						tex = new TextureAsset(t.first);
 
@@ -484,7 +503,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 MaterialGraph::ptr graph(new MaterialGraph);
                 TextureNode::ptr  tex_node;
 
-                if (AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE, 0, &path))
+                if (AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE, 0, &path)
+                 || AI_SUCCESS == native_material->GetTexture(aiTextureType_BASE_COLOR, 0, &path))
                 {
                    auto native_path = directory / to_path(path.C_Str());
                     auto diff = get_texture(native_path);
@@ -523,17 +543,24 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     tex_node->get_output(0)->link(graph->get_normals());
                 }
 
-          /*      if (AI_SUCCESS == native_material->GetTexture(aiTextureType_SPECULAR, 0, &path))
+                // glTF packs metallic-roughness into one texture: G = roughness, B = metallic.
+                // Standalone (grayscale) maps are sampled from R instead.
+                aiString metal_path, rough_path;
+                bool has_metal_tex = AI_SUCCESS == native_material->GetTexture(aiTextureType_METALNESS, 0, &metal_path);
+                bool has_rough_tex = AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &rough_path);
+                bool packed = has_metal_tex && has_rough_tex && std::strcmp(metal_path.C_Str(), rough_path.C_Str()) == 0;
+
+                TextureNode::ptr metal_rough_node;
+
+                if (has_rough_tex)
                 {
-                    std::string native_path = directory + std::string(path.C_Str());
-                    auto diff = get_texture(native_path);
-                    auto tex_node = std::make_shared<TextureNode>(diff);
-                    graph->register_node(tex_node);
-                    graph->get_texcoord()->link(tex_node->get_input(0));
-                    tex_node->get_output(0)->link(graph->get_roughness());
+                    metal_rough_node = std::make_shared<TextureNode>(get_texture(directory / to_path(rough_path.C_Str())));
+                    graph->register_node(metal_rough_node);
+                    graph->get_texcoord()->link(metal_rough_node->get_input(0));
+                    metal_rough_node->get_output(packed ? 2 : 1)->link(graph->get_roughness());
                 }
 
-                else*/
+                else
                 {
 					float albedo;
 
@@ -550,23 +577,22 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 					}
                 }
 				
-     /*           if (AI_SUCCESS == native_material->GetTexture(aiTextureType_SHININESS, 0, &path))
+                if (has_metal_tex)
                 {
-                    std::string native_path = directory + std::string(path.C_Str());
-                    auto diff = get_texture(native_path);
-                    auto tex_node = std::make_shared<TextureNode>(diff);
-                    graph->register_node(tex_node);
-                    graph->get_texcoord()->link(tex_node->get_input(0));
-                    tex_node->get_output(0)->link(graph->get_mettalic_color());
+                    auto node = metal_rough_node;
+
+                    if (!packed)
+                    {
+                        node = std::make_shared<TextureNode>(get_texture(directory / to_path(metal_path.C_Str())));
+                        graph->register_node(node);
+                        graph->get_texcoord()->link(node->get_input(0));
+                    }
+
+                    node->get_output(packed ? 3 : 1)->link(graph->get_mettalic());
                 }
 
-                else*/       
-				
-				
-				
-
-
-				{
+                else
+                {
                     float albedo;
 
                     if (AI_SUCCESS == native_material->Get(AI_MATKEY_REFLECTIVITY, albedo))
@@ -580,11 +606,15 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                         graph->register_node(value_node);
                         value_node->get_output(0)->link(graph->get_mettalic());
                     }
+                }
 
-                    else
-                    {
-       //                 if (tex_node)tex_node->get_output(0)->link(graph->get_mettalic_color());
-                    }
+                if (AI_SUCCESS == native_material->GetTexture(aiTextureType_EMISSION_COLOR, 0, &path)
+                 || AI_SUCCESS == native_material->GetTexture(aiTextureType_EMISSIVE, 0, &path))
+                {
+                    auto node = std::make_shared<TextureNode>(get_texture(directory / to_path(path.C_Str())), true);
+                    graph->register_node(node);
+                    graph->get_texcoord()->link(node->get_input(0));
+                    node->get_output(0)->link(graph->get_glow());
                 }
 
                 //  m->shader = HAL::pixel_shader::get_resource({ "material.hlsl", "PS", 0, {} });

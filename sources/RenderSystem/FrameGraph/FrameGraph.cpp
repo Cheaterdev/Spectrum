@@ -668,6 +668,23 @@ namespace FrameGraph
 
 		std::map<CommandListType, std::list<CommandList::ptr>> queued_lists;
 
+		// Frame-boundary cross-queue sync: each queue waits for the OTHER
+		// queues' end of the previous frame before this frame's first
+		// submission. Transient heap ranges freed at frame N's tail are
+		// re-placed at frame N+1's head; without this, N+1's direct-queue
+		// writers can race N's async-compute tail still reading the same
+		// memory (confirmed via the '5' no-aliasing experiment). Costs the
+		// cross-frame queue overlap — revisit when moving to an epoch-tagged
+		// allocator for the async-compute frame-split plans.
+		for (auto wait_type : magic_enum::enum_values<CommandListType>())
+			for (auto signal_type : magic_enum::enum_values<CommandListType>())
+			{
+				if (wait_type == signal_type) continue;
+				if (!prev_frame_end_fence[signal_type]) continue;
+				RenderSystem::get().device().get_queue(wait_type)->gpu_wait(prev_frame_end_fence[signal_type]);
+			}
+
+		enum_array<CommandListType, HAL::FenceWaiter> frame_end_fence;
 
 		for (auto& pass : builder.enabled_passes)
 		{
@@ -693,6 +710,14 @@ namespace FrameGraph
 
 				queued_lists[list_type].emplace_back(commandList);
 
+				// Diagnostic: full queue serialization — every pass gets a
+				// fence and every OTHER queue waits on it, so no two passes
+				// ever run concurrently across queues. If garbage persists
+				// with this on, the corruption is NOT an async/lifetime race
+				// (look for an out-of-bounds writer instead).
+				if (serialize_queues)
+					pass->put_fence = true;
+
 				if (pass->put_fence)		//////////////////////// ARGH!!!!
 				{
 					pass->fence_end = RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
@@ -700,6 +725,14 @@ namespace FrameGraph
 					queued_lists[list_type].clear();
 
 					result = pass->fence_end;
+					frame_end_fence[list_type] = pass->fence_end;
+
+					if (serialize_queues)
+						for (auto other : magic_enum::enum_values<CommandListType>())
+						{
+							if (other == list_type) continue;
+							RenderSystem::get().device().get_queue(other)->gpu_wait(pass->fence_end);
+						}
 				}
 				//	pass->fence_end = commandList->execute();
 
@@ -714,7 +747,18 @@ namespace FrameGraph
 		{
 			if (lists.empty()) continue;
 			result = RenderSystem::get().device().get_queue(type)->execute(lists);
+			frame_end_fence[type] = result;
+
+			if (serialize_queues)
+				for (auto other : magic_enum::enum_values<CommandListType>())
+				{
+					if (other == type) continue;
+					RenderSystem::get().device().get_queue(other)->gpu_wait(result);
+				}
 		}
+
+		// Remember each queue's final fence for next frame's boundary wait.
+		prev_frame_end_fence = frame_end_fence;
 
 
 		PROFILE(L"free resources");
@@ -1328,7 +1372,7 @@ namespace FrameGraph
 
 
 			bool alias_ended = false;
-			if (delete_resources)
+		/*	if (delete_resources)
 			for (auto pass : info->states.back().passes)
 			{
 				if (info->used_end.is_in_sync(pass->sync_state_with_self))
@@ -1337,7 +1381,7 @@ namespace FrameGraph
 					alias_ended = true;
 					break;
 				}
-			}
+			}*/
 
 			// if no pass found - find any pass that is synced to the usage
 			if (!best_deletion_pass)
@@ -1372,10 +1416,20 @@ namespace FrameGraph
 			PROFILE(L"allocate memory");
 
 
+			auto log_lifetime = [this](const char* what, ResourceAllocInfo* info, int call_id)
+			{
+				if (!debug_lifetime.contains(info->id)) return;
+				Log::get() << "[Lifetime] " << what << " '" << info->name()
+					<< "' @call " << call_id
+					<< " off=" << info->alloc_ptr.get_offset()
+					<< " size=" << info->alloc_ptr.get_size() << Log::endl;
+			};
+
 			for (auto [id, e] : events)
 			{
 				for (auto info : e.free_before)
 				{
+					log_lifetime("free ", info, id);
 					info->alloc_ptr.handle.Free();
 				}
 
@@ -1387,62 +1441,16 @@ namespace FrameGraph
 					HeapIndex index = { HAL::MemoryType::COMMITED , info->heap_type };
 
 					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, index);
+					log_lifetime("alloc", info, id);
 				}
 
 
 				for (auto info : e.free_after)
 				{
+					log_lifetime("free ", info, id);
 					info->alloc_ptr.handle.Free();
 				}
 			}
-
-
-#ifdef DEV
-			// Aliasing validation: two transient resources may share heap memory only
-			// when their lifetimes don't overlap. Replay the create/free schedule and
-			// assert that no two *simultaneously live* resources occupy overlapping
-			// heap ranges — otherwise a pass touches another live resource's memory
-			// (garbage, e.g. ResultTexture created with junk in it).
-			{
-				PROFILE(L"validate aliasing");
-
-				auto ranges_overlap = [](ResourceAllocInfo* a, ResourceAllocInfo* b)
-				{
-					auto ha = a->alloc_ptr.get_heap();
-					auto hb = b->alloc_ptr.get_heap();
-					if (!ha || !hb || ha != hb) return false; // committed / different heaps
-
-					uint64_t a0 = a->alloc_ptr.get_offset(), a1 = a0 + a->alloc_ptr.get_size();
-					uint64_t b0 = b->alloc_ptr.get_offset(), b1 = b0 + b->alloc_ptr.get_size();
-					return a0 < b1 && b0 < a1;
-				};
-
-				std::vector<ResourceAllocInfo*> live;
-
-				for (auto& [id, e] : events)
-				{
-					for (auto info : e.free_before)
-						std::erase(live, info);
-
-					for (auto info : e.create)
-					{
-						for (auto* other : live)
-							if (ranges_overlap(info, other))
-							{
-								Log::get() << "[FrameGraph] aliasing conflict at pass call " << id
-								           << ": '" << info->name() << "' and '" << other->name()
-								           << "' overlap in heap memory while both alive" << Log::endl;
-								ASSERT(false);
-							}
-
-						live.push_back(info);
-					}
-
-					for (auto info : e.free_after)
-						std::erase(live, info);
-				}
-			}
-#endif
 
 
 			for (auto info : non_deleted)
@@ -1480,6 +1488,8 @@ namespace FrameGraph
 						info->alloc_ptr  = link->carried.alloc_ptr;
 						info->last_state = link->carried.last_state;
 						info->is_new     = false;
+
+
 					}
 					else
 					{

@@ -574,6 +574,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		// create; the create then tags it is_history_current (no longer Static) and
 		// auto-provisions the Prev, which bind_history_prev binds to our handle.
 		builder.link_history(data.VoxelIndirectFiltered.id, data.VoxelIndirectFilteredPrev.id);
+
 		builder.create(data.VoxelIndirectFiltered,
 			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
 			ResourceFlags::UnorderedAccess);
@@ -610,6 +611,8 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		// Only the *Prev is uninitialized on the first frame (no history yet); on
 		// resize it adopts a valid old-size resource (is_new == false) and the shader
 		// remaps via GetDimensions. The current is written fresh each frame.
+		if (data.VoxelIndirectFiltered.is_new())
+			command_list->clear_uav(gi_filtered.rwTexture2D, vec4(0, 0, 0, 0));
 		if (data.VoxelIndirectFilteredPrev.is_new())
 			command_list->clear_uav(gi_prev.rwTexture2D, vec4(0, 0, 0, 0));
 		if (data.VoxelIndirectNoise.is_new())

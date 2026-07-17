@@ -695,6 +695,11 @@ public:
 		};
 		std::vector<HistoryLink> history_links;
 
+	// Lifetime tracing (DEV): resources whose alloc/free/adopt/carry events are
+	// logged with heap ranges and pass call ids. Seed from a pass setup, e.g.
+	// builder.debug_lifetime.insert(data.VoxelIndirectFiltered.id);
+	std::set<ResourceID> debug_lifetime;
+
 		// Register `prev` as the previous-frame alias of `current`. Idempotent;
 		// safe to call every frame from a pass setup.
 		void link_history(ResourceID current, ResourceID prev);
@@ -1096,9 +1101,21 @@ public:
 		// X is overwritten each frame via copy_buffer; Y and Z are initialized once to 1.
 		enum_array<HAL::CommandListType, HAL::StructuredBufferView<DispatchArguments>> indirect_dispatch_args;
 
+		// Each queue's final fence of the previous frame — waited on by the
+		// OTHER queues before this frame's first submission, so re-placed
+		// transient heap ranges can't race the prior frame's async tail (see
+		// commit_command_lists).
+		enum_array<HAL::CommandListType, HAL::FenceWaiter> prev_frame_end_fence;
+
 		Events::Event<const Graph&> on_compile;
 	
 		Variable<bool> optimize = { true, "optimize", this };
+
+		// Diagnostic: serialize all queues (fence after EVERY pass, all other
+		// queues wait) — kills any cross-queue concurrency. Garbage that
+		// survives this is not an async/lifetime race but a rogue writer
+		// (out-of-bounds dispatch, wrong descriptor, stale indirect args).
+		Variable<bool> serialize_queues = { false, "serialize_queues", this };
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class PassT>
