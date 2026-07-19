@@ -695,11 +695,6 @@ public:
 		};
 		std::vector<HistoryLink> history_links;
 
-	// Lifetime tracing (DEV): resources whose alloc/free/adopt/carry events are
-	// logged with heap ranges and pass call ids. Seed from a pass setup, e.g.
-	// builder.debug_lifetime.insert(data.VoxelIndirectFiltered.id);
-	std::set<ResourceID> debug_lifetime;
-
 		// Register `prev` as the previous-frame alias of `current`. Idempotent;
 		// safe to call every frame from a pass setup.
 		void link_history(ResourceID current, ResourceID prev);

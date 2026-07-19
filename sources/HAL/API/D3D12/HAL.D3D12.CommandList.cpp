@@ -431,12 +431,29 @@ namespace HAL
                     barrier.LayoutAfter  = to_native(e.after.get_layout());
                     barrier.pResource    = e.resource->get_dx();
 
-                    barrier.Subresources.IndexOrFirstMipLevel = e.resource->get_desc().as_texture().get_mip(e.subres);
-                    barrier.Subresources.NumMipLevels         = 1;
-                    barrier.Subresources.FirstArraySlice      = e.resource->get_desc().as_texture().get_array(e.subres);
-                    barrier.Subresources.NumArraySlices       = 1;
-                    barrier.Subresources.FirstPlane           = e.resource->get_desc().as_texture().get_plane(e.subres);
-                    barrier.Subresources.NumPlanes            = 1;
+                    if (e.subres == 0xffffffffu) // HAL::ALL_SUBRESOURCES
+                    {
+                        // Single barrier covering every subresource. D3D12 uses
+                        // IndexOrFirstMipLevel == 0xffffffff (== ALL_SUBRESOURCES)
+                        // as the "all subresources" sentinel; the other range
+                        // fields are then ignored. The uniform-state fast path
+                        // emits this instead of one barrier per mip/array/plane.
+                        barrier.Subresources.IndexOrFirstMipLevel = 0xffffffff;
+                        barrier.Subresources.NumMipLevels         = 0;
+                        barrier.Subresources.FirstArraySlice      = 0;
+                        barrier.Subresources.NumArraySlices       = 0;
+                        barrier.Subresources.FirstPlane           = 0;
+                        barrier.Subresources.NumPlanes            = 0;
+                    }
+                    else
+                    {
+                        barrier.Subresources.IndexOrFirstMipLevel = e.resource->get_desc().as_texture().get_mip(e.subres);
+                        barrier.Subresources.NumMipLevels         = 1;
+                        barrier.Subresources.FirstArraySlice      = e.resource->get_desc().as_texture().get_array(e.subres);
+                        barrier.Subresources.NumArraySlices       = 1;
+                        barrier.Subresources.FirstPlane           = e.resource->get_desc().as_texture().get_plane(e.subres);
+                        barrier.Subresources.NumPlanes            = 1;
+                    }
 
                     barrier.Flags = D3D12_TEXTURE_BARRIER_FLAG_NONE;
                     if (check(e.flags & BarrierFlags::DISCARD))

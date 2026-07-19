@@ -1241,15 +1241,9 @@ namespace FrameGraph
 					}
 
 
-					//last state is a write state
-					if ((i == info.states.size() - 1) && info.states[i].write && (info.is_static() || info.passed))
-					{
-						auto layout = info.creation_state.get_subres_state(0).layout;
-						auto target = ResourceStates::NO_ACCESS;
-
-						target.layout = layout;
-						info.resource->get_state_manager().transition(commandList.get(), target, ALL_SUBRESOURCES);
-					}
+					// (Last-touch decay to the resting state now happens once,
+					// after the states loop — see below — so it also covers a
+					// read-last touch, not just write-last.)
 
 
 				}
@@ -1258,6 +1252,27 @@ namespace FrameGraph
 
 
 
+
+				// Canonical resting-state contract for passed/static resources:
+				// at the LAST pass that touches the resource (read OR write), decay
+				// it back to creation_state.layout — its per-resource CanonicalRead
+				// (SHADER_RESOURCE for read resources, PRESENT for the swapchain).
+				// Within the graph they're FG-scheduled like transients; this is the
+				// single point where they return to a state any queue/list can pick
+				// up. A no-op when the last touch already left it there (merge_state
+				// collapses it). Must run before the end-state capture below so
+				// last_state carries the resting layout into next frame.
+				if (!info.states.empty() && (info.is_static() || info.passed))
+				{
+					Pass* last_pass = info.states.back().passes.back();
+					auto commandList = last_pass->context.list;
+					if (commandList)
+					{
+						auto target = ResourceStates::NO_ACCESS;
+						target.layout = info.creation_state.get_subres_state(0).layout;
+						info.resource->get_state_manager().transition(commandList.get(), target, ALL_SUBRESOURCES);
+					}
+				}
 
 				// link end to start transition
 				if (!info.states.empty() && (info.is_static() || info.passed))
@@ -1416,20 +1431,10 @@ namespace FrameGraph
 			PROFILE(L"allocate memory");
 
 
-			auto log_lifetime = [this](const char* what, ResourceAllocInfo* info, int call_id)
-			{
-				if (!debug_lifetime.contains(info->id)) return;
-				Log::get() << "[Lifetime] " << what << " '" << info->name()
-					<< "' @call " << call_id
-					<< " off=" << info->alloc_ptr.get_offset()
-					<< " size=" << info->alloc_ptr.get_size() << Log::endl;
-			};
-
 			for (auto [id, e] : events)
 			{
 				for (auto info : e.free_before)
 				{
-					log_lifetime("free ", info, id);
 					info->alloc_ptr.handle.Free();
 				}
 
@@ -1441,13 +1446,11 @@ namespace FrameGraph
 					HeapIndex index = { HAL::MemoryType::COMMITED , info->heap_type };
 
 					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, index);
-					log_lifetime("alloc", info, id);
 				}
 
 
 				for (auto info : e.free_after)
 				{
-					log_lifetime("free ", info, id);
 					info->alloc_ptr.handle.Free();
 				}
 			}

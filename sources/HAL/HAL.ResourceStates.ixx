@@ -123,6 +123,22 @@ export
 
 			bool used = false;
 
+			// Uniform fast path: while `uniform`, all subresources are tracked as
+			// one chain (`uniform_state`) whose usage nodes carry subres ==
+			// ALL_SUBRESOURCES, so a full-resource transition costs one node/one
+			// barrier instead of one per mip/array/plane. The first subresource-
+			// scoped transition calls expand(): each per-subres slot is seeded
+			// from uniform_state (sharing the chain history) and the resource is
+			// per-subres for the rest of the list. slot() resolves either mode, so
+			// read helpers work unchanged; only mutating loops must run once in
+			// uniform mode (see transition/prepare_state).
+			bool uniform = true;
+			ResourceListStateCPU uniform_state;
+
+			ResourceListStateCPU& slot(UINT id);
+			const ResourceListStateCPU& slot(UINT id) const;
+			void expand(UINT count);
+
 			void reset();
 			CommandListType get_best_list_type_last();
 			CommandListType get_best_list_type_first();
@@ -164,6 +180,14 @@ export
 		protected:
 			mutable SubResourcesGPU gpu_state;
 
+
+		protected:
+			// Non-FG resources: true until their first-ever use. The first
+			// activation of a virgin resource discards (UNDEFINED->state) since
+			// its contents are meaningless (fresh/placed memory) — point R4.
+			// Flips false permanently after the first transition; later uses
+			// preserve contents. FG resources ignore this (own activation path).
+			mutable bool virgin = true;
 
 		public:
 			virtual ~ResourceStateManager() = default;
