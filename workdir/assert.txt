@@ -141,3 +141,6 @@ ASSERT FAILED: (prev==f.second)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\so
 ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:298
 ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:298
 ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:298
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:299
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:299
+ASSERT FAILED: (false)  at C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\HAL\HAL.ResourceStates.cpp:299

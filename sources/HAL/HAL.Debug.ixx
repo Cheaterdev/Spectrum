@@ -10,6 +10,11 @@ export namespace HAL
 	{
 		constexpr bool RunForPix = false;
 
+		// Phase-3 operation batching. Flip false to fall back to one usage point
+		// per op (near the pre-batching behavior) — batched vs unbatched output
+		// must be identical; any difference is a hazard-detection bug.
+		inline bool EnableOpBatching = true;
+
 #ifdef DEV
 		constexpr bool GfxDebug = !RunForPix&&false;
 		constexpr bool ValidationErrors = !RunForPix&&true;

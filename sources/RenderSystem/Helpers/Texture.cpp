@@ -62,11 +62,11 @@ namespace HAL
 		init();
 	}
 
-	Texture::Texture(Device& device, HAL::ResourceDesc desc, TextureLayout initialLayout)
+	Texture::Texture(Device& device, HAL::ResourceDesc desc, TextureLayout initialLayout, vec4 clear_value)
 	{
 		m_device = &device;
 
-		resource = std::make_shared<HAL::TextureResource>(device, desc, desc.is_virtual()?HeapType::RESERVED:HeapType::DEFAULT,  initialLayout);
+		resource = std::make_shared<HAL::TextureResource>(device, desc, desc.is_virtual()?HeapType::RESERVED:HeapType::DEFAULT,  initialLayout, clear_value);
 		init();
 	}
 

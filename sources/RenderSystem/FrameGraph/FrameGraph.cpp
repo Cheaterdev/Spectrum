@@ -323,6 +323,11 @@ namespace FrameGraph
 				if (!check(flags & WRITEABLE_FLAGS) && !info->is_history_prev) continue;
 				info->process_debug_resource(pass, this);
 			}
+
+			// Close the pass's open op-batch before deactivating freed resources,
+			// so alias_end lands after the last op instead of inside its batch.
+			list->close_op();
+
 			for (auto info : pass->used.resource_deletions_after)
 			{
 				if (!info->alloc_ptr.handle) continue;
@@ -643,6 +648,14 @@ namespace FrameGraph
 
 
 		}
+
+		// Close every pass list's open op-batch before the FrameGraph appends
+		// its cross-pass transitions (decay-to-resting, prepare_after_state).
+		// Those are recorded at the list's back point; without this they would
+		// fall inside the last op's still-open batch and be mis-positioned.
+		for (auto& pass : builder.enabled_passes)
+			if (pass->context.list)
+				pass->context.list->close_op();
 
 		builder.process_transitions();
 		builder.process_fences();
@@ -1372,6 +1385,24 @@ namespace FrameGraph
 			Pass* best_creation_pass = info->states.front().passes.front();
 			Pass* best_deletion_pass = nullptr;
 
+			// The creating pass must actually execute. A pass whose setup()
+			// returned false (renderable == false — e.g. ResultCreation, which
+			// only declares ResultTexture and records nothing) never runs
+			// FrameContext::begin, so its alias_begin — the DISCARD that
+			// initializes a placed/aliased resource — would never be emitted.
+			// The first real use then hits an uninitialized resource carrying a
+			// stale tracked layout (D3D12 #1422 + INCOMPATIBLE_BARRIER_LAYOUT).
+			// Fall forward to the first pass that actually records commands.
+			if (!best_creation_pass->active())
+			{
+				for (auto& st : info->states)
+				{
+					for (auto p : st.passes)
+						if (p->active()) { best_creation_pass = p; break; }
+
+					if (best_creation_pass->active()) break;
+				}
+			}
 
 			// create - easy
 			events[best_creation_pass->call_id].create.insert(info);

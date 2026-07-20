@@ -123,6 +123,13 @@ export
 
 			bool used = false;
 
+			// Operation batching (phase 3): the id of the batch this resource was
+			// last touched in, and the state it was transitioned to. The command
+			// list compares batch_touch_id against its monotonic current_batch_id
+			// to detect a same-batch reuse that needs a split. Reset per frame.
+			uint          batch_touch_id = 0;
+			ResourceState batch_touch_state;
+
 			// Uniform fast path: while `uniform`, all subresources are tracked as
 			// one chain (`uniform_state`) whose usage nodes carry subres ==
 			// ALL_SUBRESOURCES, so a full-resource transition costs one node/one

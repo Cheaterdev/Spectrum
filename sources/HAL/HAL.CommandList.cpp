@@ -885,10 +885,67 @@ namespace HAL
 				compiler.func_barrier(point);
 			}
 
+			// Open a new batch of `op`, continue the current one if same, or close
+			// the previous (different class) and open a new one.
+			void Transitions::begin_op(BarrierSync op)
+			{
+				if (HAL::Debug::EnableOpBatching && open_op == op)
+					return;                                      // same class → keep open
+				if (open_op != BarrierSync::NONE)
+					create_usage_point(open_op, false);          // close previous batch
+				create_usage_point(op);                          // open new batch
+				open_op = op;
+				current_batch_id++;                              // fresh batch id
+			}
+
+			// Close the currently open batch (list end / flush).
+			void Transitions::close_op()
+			{
+				if (open_op == BarrierSync::NONE) return;
+				create_usage_point(open_op, false);
+				open_op = BarrierSync::NONE;
+			}
+
+			// Split the open batch when this transition would need a real barrier
+			// against an earlier op in the same batch (different, non-mergeable
+			// state on the same resource — write-after-write in another state,
+			// read-after-write, etc.). Same/mergeable state = no barrier = no
+			// split, exactly matching the un-batched barrier set. Reads the
+			// resource's per-list state directly (no parallel map).
+			void Transitions::batch_hazard_check(const HAL::Resource* resource, ResourceState to)
+			{
+				if (open_op == BarrierSync::NONE) return;
+
+				auto& cpu = const_cast<HAL::Resource*>(resource)->get_state_manager().get_cpu_state(this);
+
+				if (cpu.batch_touch_id == current_batch_id
+					&& !(cpu.batch_touch_state == to) && !merge_state(cpu.batch_touch_state, to))
+				{
+					// Split so this transition (and the ops after it) land in a new
+					// point positioned after the earlier op — the barrier must run
+					// between the two conflicting uses. current_batch_id is NOT
+					// bumped: it is the OP-CLASS batch epoch (advanced only by
+					// begin_op). A resource touched anywhere in the op-class batch
+					// must stay detectable across intra-batch splits — otherwise a
+					// later conflicting use (e.g. SMAA_blend written RT by one draw,
+					// read SR by the next) would miss its split after an unrelated
+					// split already occurred, mis-positioning the barrier.
+					create_usage_point(open_op, false);   // close before the hazard
+					create_usage_point(open_op);           // reopen same class after
+				}
+
+				cpu.batch_touch_id    = current_batch_id;
+				cpu.batch_touch_state = to;
+			}
+
 			void Transitions::compile_transitions()
 			{
-			 if(transitions_compiled) 
+			 if(transitions_compiled)
 				 return;
+
+				// Close any batch still open at list end so its resources are
+				// fully recorded before the usage points are walked below.
+				close_op();
 						std::set<Resource*> non_tracked_resources;
 
 
@@ -1143,6 +1200,7 @@ namespace HAL
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
 			use_resource(resource);
+			batch_hazard_check(resource, target_state);
 			visit_subres(info, [&](const HAL::Resource::ptr&, UINT subres) {
 				use_resource(resource);
 				resource->get_state_manager().transition(this, target_state, subres);
@@ -1228,6 +1286,7 @@ namespace HAL
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
 			use_resource(resource);
+			batch_hazard_check(resource, to);
 			const_cast<Resource*>(resource)->get_state_manager().transition(this, to, subres);
 		}
 	}
@@ -1608,6 +1667,8 @@ namespace HAL
 	{
 		transition_count = 0;
 		pool_used = 0;
+		open_op = BarrierSync::NONE;
+		current_batch_id = 0;
 		tracked_resources.reserve(512);
 		used_resources.reserve(256);
 		create_usage_point(BarrierSync::NONE, false);
@@ -1620,6 +1681,7 @@ namespace HAL
 		used_resources.clear();
 		need_check_transitions.clear();
 		transitions_compiled = false;
+		open_op = BarrierSync::NONE;
 	}
 
 	void SignatureDataSetter::commit_tables(BarrierSync operation, UsedSlots* slots)

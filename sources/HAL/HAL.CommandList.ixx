@@ -80,6 +80,30 @@ export{
 			std::set<Resource*> need_check_transitions;
 			void create_usage_point(BarrierSync operation, bool end = true);
 
+			// --- Operation batching (phase 3) ---------------------------------
+			// Consecutive ops of the same class share ONE usage point (one
+			// barrier group) instead of each bracketing itself. open_op is the
+			// currently open batch's class (NONE = none open). current_batch_id
+			// is the OP-CLASS batch epoch — advanced ONLY by begin_op (op-class
+			// change), NOT by intra-batch hazard splits, so a resource touched
+			// anywhere in the op-class batch stays detectable across splits. Each
+			// resource's per-list state stamps batch_touch_id/state, so the hazard
+			// check reads the resource directly (no parallel map): if it was
+			// already touched in THIS epoch with a different, non-mergeable state,
+			// the batch is split. A different op class closes the batch (begin_op);
+			// list end closes it (close_op).
+			BarrierSync open_op = BarrierSync::NONE;
+			uint current_batch_id = 0;
+
+			void begin_op(BarrierSync op);
+			void batch_hazard_check(const HAL::Resource* resource, ResourceState to);
+		public:
+			// Close the open op-batch. Called at list end (compile_transitions)
+			// and by the FrameGraph before it appends cross-pass transitions, so
+			// those land after the last op instead of inside its batch.
+			void close_op();
+		protected:
+
 		public://temporarily to allow transition into read mode
 			void transition(const HAL::Resource* resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
 			void transition(const HAL::Resource::ptr& resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
@@ -252,7 +276,9 @@ export{
 			template<bool compute, bool graphics, class T>
 			void pre_command(T& context, BarrierSync operation, UsedSlots* slots = nullptr)
 			{
-				create_usage_point(operation);
+				// Operation batching: open (or continue) a batch of this class
+				// instead of bracketing every op with its own usage point.
+				begin_op(operation);
 				if constexpr (compute || graphics)
 				{
 					if constexpr (Debug::GfxDebug)	setup_debug(&context);
@@ -263,7 +289,9 @@ export{
 			template<bool compute, bool graphics, class T>
 			void post_command(T& context, BarrierSync operation)
 			{
-				create_usage_point(operation, false);
+				// Leave the batch OPEN — it is closed lazily by the next op of a
+				// different class (begin_op) or at list end (close_op). A hazard
+				// on a shared resource splits it (see batch_hazard_check).
 				if constexpr (Debug::GfxDebug)
 					if constexpr (compute || graphics)	print_debug();
 			}

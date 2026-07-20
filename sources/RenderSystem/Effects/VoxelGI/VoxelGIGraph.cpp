@@ -613,8 +613,13 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		// remaps via GetDimensions. The current is written fresh each frame.
 		if (data.VoxelIndirectFiltered.is_new())
 			command_list->clear_uav(gi_filtered.rwTexture2D, vec4(0, 0, 0, 0));
-		if (data.VoxelIndirectFilteredPrev.is_new())
-			command_list->clear_uav(gi_prev.rwTexture2D, vec4(0, 0, 0, 0));
+		// NOTE: the prev is a READ-ONLY history resource — clearing it here via
+		// clear_uav was an illegal UAV write on a read-declared resource (the
+		// FrameGraph folds it into the merged read state, clobbering the clear's
+		// UAV transition -> D3D12 #1334). A fresh prev (first frame, no carried
+		// history) is instead rejected shader-side in get_history(), which
+		// zeroes the accumulation speed when the stored frame count is not a
+		// valid normalized value.
 		if (data.VoxelIndirectNoise.is_new())
 			command_list->clear_uav(noisy_output.rwTexture2D, vec4(0, 0, 0, 0));
 		if (data.VoxelFramesCount.is_new())

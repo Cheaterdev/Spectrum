@@ -18,6 +18,9 @@ namespace GUI
             std::shared_ptr<void> output_owner; // keeps HAL::Texture alive
             HAL::Texture2DView    output_view;  // SRV + UAV handles
             ivec2                 size = {0, 0};
+            // Optimized clear value baked into the texture. Recreate if the
+            // graph's background colour changes, or the clear would mismatch.
+            float4                clear_color = {-1, -1, -1, -1};
         };
 
         // ── Construction / destruction ─────────────────────────────────────────
@@ -261,17 +264,27 @@ namespace GUI
             if (!gpu)
                 gpu = std::make_unique<stat_graph_gpu>();
 
-            if (gpu->size != tex_size)
+            bool clear_changed = gpu->clear_color.x != background_color.x
+                              || gpu->clear_color.y != background_color.y
+                              || gpu->clear_color.z != background_color.z
+                              || gpu->clear_color.w != background_color.w;
+
+            if (gpu->size != tex_size || clear_changed)
             {
+                // Bake background_color as the optimized clear value — the lines
+                // path clears this RT to exactly that colour, and a mismatch
+                // costs a slow clear (D3D12 #820).
                 auto tex = std::make_shared<HAL::Texture>(device,
                     HAL::ResourceDesc::Tex2D(
                         HAL::Format::R8G8B8A8_UNORM,
                         {(UINT)tex_size.x, (UINT)tex_size.y}, 1, 1,
-                        HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess | HAL::ResFlags::RenderTarget));
+                        HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess | HAL::ResFlags::RenderTarget),
+                    HAL::TextureLayout::UNDEFINED, background_color);
                 tex->resource->set_name("stat_graph::output");
                 gpu->output_view  = tex->texture_2d();
                 gpu->output_owner = tex;
                 gpu->size = tex_size;
+                gpu->clear_color = background_color;
             }
 
             // ── Upload samples into transient frame memory ─────────────────────

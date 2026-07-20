@@ -72,7 +72,10 @@ export
 
 			static const ptr null;
 
-			Texture(Device& device, HAL::ResourceDesc desc, TextureLayout initialLayout = TextureLayout::UNDEFINED);
+			// clear_value: the optimized clear value baked into the resource. Must
+			// match the colour actually passed to ClearRenderTargetView or D3D12
+			// warns (#820) and takes a slower clear path.
+			Texture(Device& device, HAL::ResourceDesc desc, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
 
 			static Texture::ptr create(Device& device, HAL::texture_data::ptr& data);
 

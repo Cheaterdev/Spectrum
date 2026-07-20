@@ -53,7 +53,7 @@ namespace HAL
             return ptr;
         }
 
-        void Resource::init(Device& device, const ResourceDesc& _desc, const PlacementAddress& address, TextureLayout initialLayout)
+        void Resource::init(Device& device, const ResourceDesc& _desc, const PlacementAddress& address, TextureLayout initialLayout, vec4 clear_value)
         {
             auto THIS = static_cast<HAL::Resource*>(this);
             auto& desc = THIS->desc;
@@ -92,11 +92,15 @@ namespace HAL
 
                 if (check(desc.Flags & HAL::ResFlags::RenderTarget))
                 {
+                    // Honour the requested optimized clear value (was hardcoded to
+                    // black, so any ClearRenderTargetView with another colour got
+                    // D3D12 #820 MISMATCHINGCLEARVALUE and took the slow path).
+                    // Defaults to (0,0,0,0), so existing callers are unaffected.
                     value.Format = to_native(texture_desc.Format.to_srv());
-                    value.Color[0] = 0;
-                    value.Color[1] = 0;
-                    value.Color[2] = 0;
-                    value.Color[3] = 0;
+                    value.Color[0] = clear_value.x;
+                    value.Color[1] = clear_value.y;
+                    value.Color[2] = clear_value.z;
+                    value.Color[3] = clear_value.w;
                     pass_value = &value;
                 }
 
@@ -226,7 +230,10 @@ namespace HAL
             address = { alloc_handle.get_heap().get(),alloc_handle.get_offset() };
         }
 
-        init(device, desc, address, initialLayout);
+        // Forward the optimized clear value — it was being dropped here, so the
+        // parameter plumbed through TextureResource/Resource never reached
+        // resource creation.
+        init(device, desc, address, initialLayout, clear_value);
     }
     Resource::Resource(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value) :state_manager(this), tiled_manager(this)
     {

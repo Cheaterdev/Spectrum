@@ -213,6 +213,7 @@ namespace HAL
 	{
 		used = false;
 		uniform = true;
+		batch_touch_id = 0;   // stale batch id from a prior frame must not match
 		uniform_state.reset();
 		for (auto& s : subres)
 			s.reset();
@@ -418,6 +419,7 @@ namespace HAL
 			{
 				state.used = false;
 				state.uniform = true;             // start each list in the uniform fast path
+				state.batch_touch_id = 0;
 				state.uniform_state.reset();
 				state.subres.resize(count);
 				for (auto& e : state.subres)
@@ -525,14 +527,23 @@ namespace HAL
 					// touch. Non-FG virgin resource whose first-ever use is a WRITE
 					// (incl. COPY_DEST upload) → UNKNOWN so compile_transitions
 					// emits a DISCARD activation (R4): contents are meaningless and
-					// about to be overwritten. A read-first virgin resource keeps
-					// initial_layout — it was initialized out-of-band, so must not
-					// be discarded. (2b replaces initial_layout with CanonicalRead.)
+					// about to be overwritten. A read-first virgin resource is
+					// initialized out-of-band, so must not be discarded.
+					//
+					// Otherwise seed from the TRACKED layout (gpu_state), not the
+					// creation-time initial_layout. initial_layout is only a guess
+					// and is wrong for any resource whose layout has since moved —
+					// e.g. an adopted history-prev, which carries the layout last
+					// frame's `current` ended in. Seeding the guess emitted barriers
+					// whose LayoutBefore disagreed with the real layout
+					// (D3D12 #1334 INCOMPATIBLE_BARRIER_LAYOUT). gpu_state equals
+					// initial_layout for a freshly created resource, so this is a
+					// strict improvement.
 					auto target = ResourceStates::NO_ACCESS;
 					if (!resource->frame_graph_managed && was_virgin && state.has_write_bits())
 						target = ResourceStates::UNKNOWN;
 					else
-						target.layout = initial_layout;
+						target.layout = gpu_state.get_subres_state(subres).layout;
 
 					subres_cpu.used = true;
 					subres_cpu.first_usage = subres_cpu.last_usage = (list)->add_usage((resource), subres, target);

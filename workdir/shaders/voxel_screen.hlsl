@@ -389,7 +389,16 @@ upscale_result get_history(float3 pos, float2 tc, float2 prev_tc, float2 dims, f
 	float4 s11 = tex_gi_prev2.SampleLevel(pointBorderSampler, gatherUv + float2(offset[3]) / dims, 0);
 
 	float4 accumSpeedPrev = float4(s00.w, s01.w,s10.w,s11.w);
-	 
+
+	// A fresh history texture (first frame — nothing carried yet) holds garbage.
+	// .w stores a NORMALIZED frame count, so anything outside [0,1] — including
+	// NaN, which fails both comparisons — means "no history here": zero the
+	// accumulation so speed becomes 1 and this frame's value is used directly.
+	// (Replaces the old clear_uav on the prev, which was an illegal UAV write
+	// on a read-only history resource.)
+	accumSpeedPrev = select(and(accumSpeedPrev >= 0.0, accumSpeedPrev <= 1.0), accumSpeedPrev, 0.0);
+
+
 	// ... read s00, s10, s01, s11 using point filtering
 	float4 history =  ApplyBilinearCustomWeights(s00, s10, s01, s11, weights, true);
 
