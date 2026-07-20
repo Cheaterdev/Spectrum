@@ -119,15 +119,16 @@ export{
 			HAL::UsagePoint* get_last_usage_point();
 
 			void use_resource(const HAL::Resource* resource);
+
+			// Resources this list touched (populated by use_resource). Used by
+			// list-group compilation to find resources shared between lists that
+			// land in the same ExecuteCommandLists scope.
+			const std::vector<HAL::Resource*>& get_used_resources() const { return used_resources; }
 		public:
 
 			void alias_begin(HAL::Resource*);
 			void alias_end(HAL::Resource*);
 
-
-#ifdef PRETRANSITIONS_FIX
-			std::shared_ptr<TransitionCommandList> fix_pretransitions();
-#endif
 
 			void transition_present(const HAL::Resource* resource_ptr);
 

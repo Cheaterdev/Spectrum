@@ -7,6 +7,8 @@ projects/
 workdir/cache/
 workdir/Assets/
 workdir/pso
+workdir/assert.txt
+
 *.dat
 
 AgilitySDK/

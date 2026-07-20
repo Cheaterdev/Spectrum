@@ -53,7 +53,6 @@ export
 		{
 			std::vector<Barrier> barriers;
 
-			void validate();
 			CommandListType type;
 		public:
 
@@ -81,6 +80,15 @@ export
 			UsagePoint* last_point = nullptr;
 
 			bool debug = false;
+
+			// Set by ResourceStateManager::chain_lists when this usage is a
+			// SYNC_NONE list-boundary marker (a seed, a prepare_state zero
+			// transition, or a prepare_after_state release) that got bypassed
+			// because the neighbouring list is in the same ExecuteCommandLists
+			// group.  compile_transitions must not emit a barrier for it: inside
+			// one ECL scope a SyncBefore/SyncAfter of NONE is illegal once the
+			// resource has been touched (#1417).
+			bool suppressed = false;
 		};
 
 		struct UsagePoint
@@ -103,6 +111,17 @@ export
 
 			bool used = false;
 			bool need_discard = false;
+
+			// List-group compilation (phase 4): a LATER list in the same
+			// ExecuteCommandLists group also uses THIS subresource, so its state
+			// was handed over directly (chain_lists) and this list must not emit
+			// the end-of-list release to NO_ACCESS/SYNC_NONE — inside one ECL
+			// scope that makes it untouchable afterwards (D3D12 #1417). Tracked
+			// per subresource: chaining is per subresource, and a resource whose
+			// mips are only partially carried forward must still release the rest,
+			// or it never returns to `initial_layout` and the next group's seed
+			// mismatches (D3D12 #1334).
+			bool skip_end_decay = false;
 
 			ResourceState get_first_usage();
 			ResourceState get_usage();
@@ -212,10 +231,6 @@ export
 			bool is_used(Transitions* list) const;
 
 
-#ifdef PRETRANSITIONS_FIX
-			CommandListType process_transitions(Barriers& target, Transitions* list) const;
-#endif
-
 			void transition(Transitions* list, ResourceState state, unsigned int subres) const;
 
 			void prepare_state(Transitions* from, const SubResourcesGPU& subres) const;
@@ -227,6 +242,15 @@ export
 			void alias_end(Transitions* list) const;
 
 			void connect(Transitions* from, Transitions* to);
+
+			// List-group chaining (phase 4). `from` and `to` are two lists that
+			// will be submitted inside ONE ExecuteCommandLists scope, `from`
+			// first. Gives `to`'s first real usage `from`'s last usage as its
+			// predecessor — so the emitted barrier carries a real SyncBefore
+			// instead of the SYNC_NONE seed — and marks `from` to skip its
+			// end-of-list release. Result: one SYNC_NONE entry and one
+			// SYNC_NONE exit per resource per group instead of one per list.
+			void chain_lists(Transitions* from, Transitions* to) const;
 
 		};
 

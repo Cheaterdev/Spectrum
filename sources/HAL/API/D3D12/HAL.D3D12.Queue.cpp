@@ -264,9 +264,17 @@ namespace HAL
         void Queue::execute(const API::CommandList* list)
         {
             PROFILE(L"Queue::execute");
-            queued.emplace_back(list->get_native().Get());
 
-            // My framegraph system pushes Sync&Access barrier as NONE at the end of the pass so its not possible to use it later, need to redesign it
+            // One ExecuteCommandLists per list.
+            //
+            // Batching several lists into one ECL scope is phase 4 step 2, and it
+            // requires TaskBuilder::link_list_groups to chain resource state
+            // across list boundaries first: D3D12 forbids, within one scope,
+            // accessing a resource after a SyncAfter == SYNC_NONE barrier, or
+            // emitting a SyncBefore == SYNC_NONE barrier once it has been
+            // accessed (#1417). Each list is currently self-contained (SYNC_NONE
+            // seed in, SYNC_NONE release out), so it must get its own scope.
+            queued.emplace_back(list->get_native().Get());
             flush();
         }
 

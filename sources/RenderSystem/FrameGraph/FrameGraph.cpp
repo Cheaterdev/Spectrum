@@ -659,6 +659,21 @@ namespace FrameGraph
 
 		builder.process_transitions();
 		builder.process_fences();
+
+		// DISABLED — phase 4 step 2 (multiple command lists per ExecuteCommandLists).
+		//
+		// link_list_groups() runs AFTER process_transitions(), which has already
+		// finalized the persistent GPU layout via set_cpu_state (gpu.layout =
+		// last usage's layout). Chaining then retroactively suppresses barriers
+		// that computation depended on, so the tracked layout and the real layout
+		// drift apart and the next frame's seed mismatches (D3D12 #1334).
+		//
+		// The fix is not another suppression rule: group membership has to be
+		// known BEFORE transitions are generated, so releases are never emitted
+		// for intra-group hand-offs in the first place and set_cpu_state sees the
+		// truth. Kept compiled but unreferenced until that reordering is done.
+		// builder.link_list_groups();
+
 		builder.compile_lists();
 
 
@@ -956,6 +971,64 @@ namespace FrameGraph
 			}
 			queued_state[list_type].max(pass);
 		}
+	}
+
+	void TaskBuilder::link_list_groups()
+	{
+		PROFILE(L"link_list_groups");
+
+		// Lists that will be submitted together in one ExecuteCommandLists, per
+		// queue. Mirrors commit_command_lists: a pass that must gpu_wait flushes
+		// the pending batch before it, and a pass with put_fence closes one after.
+		enum_array<HAL::CommandListType, std::vector<HAL::CommandList*>> pending;
+
+		auto close_group = [&](HAL::CommandListType type)
+		{
+			auto& lists = pending[type];
+
+			// Within a group, chain each resource from the list that used it last
+			// to the one using it next. That replaces the SYNC_NONE release +
+			// SYNC_NONE re-seed pair at the boundary with a direct state hand-off,
+			// leaving exactly one SYNC_NONE entry (first user) and one SYNC_NONE
+			// exit (last user) per resource per group.
+			if (lists.size() > 1)
+			{
+				std::map<HAL::Resource*, HAL::CommandList*> last_user;
+
+				for (auto* cmd : lists)
+					for (auto* res : cmd->get_used_resources())
+					{
+						auto it = last_user.find(res);
+						if (it != last_user.end() && it->second != cmd)
+							res->get_state_manager().chain_lists(it->second, cmd);
+
+						last_user[res] = cmd;
+					}
+			}
+
+			lists.clear();
+		};
+
+		for (auto& pass : enabled_passes)
+		{
+			auto commandList = pass->context.list;
+			if (!commandList) continue;
+
+			HAL::CommandListType list_type = pass->get_type();
+
+			bool waits = false;
+			for (auto sync_pass : pass->sync_state.values)
+				if (sync_pass) waits = true;
+
+			if (waits) close_group(list_type);      // gpu_wait flushes the batch
+
+			pending[list_type].push_back(commandList.get());
+
+			if (pass->put_fence) close_group(list_type);   // fence closes the batch
+		}
+
+		for (auto type : magic_enum::enum_values<HAL::CommandListType>())
+			close_group(type);
 	}
 
 	void TaskBuilder::compile_lists()

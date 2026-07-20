@@ -871,6 +871,13 @@ public:
 		void create_resources();
 		void process_transitions();
 		void process_fences();
+
+		// Phase 4: mirror commit_command_lists' batching to find the sets of
+		// lists that will be submitted in ONE ExecuteCommandLists, and chain
+		// resource state across the boundaries inside each set. Must run after
+		// process_transitions (all usages recorded) and process_fences (which
+		// decides where batches are flushed), and before compile_lists.
+		void link_list_groups();
 	   	void compile_lists();
 		void reset();
 

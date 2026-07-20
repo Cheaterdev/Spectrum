@@ -83,19 +83,6 @@ namespace HAL
 		return barriers;
 	}
 
-	void Barriers::validate()
-	{
-#ifdef _DEV
-		for (int j = 0; j < native.size() - 1; j++)
-		{
-			if (native.back().Type == native[j].Type)
-				if (native.back().ResourceUsage.pResource == native[j].ResourceUsage.pResource)
-					if (native.back().ResourceUsage.Subresource == native[j].ResourceUsage.Subresource)
-						ASSERT(false);
-		}
-#endif
-	}
-
 	void Barriers::transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres, BarrierFlags flags)
 	{
 		ASSERT(resource);
@@ -107,8 +94,6 @@ namespace HAL
 			ASSERT(check(resource->get_desc().Flags & ResFlags::Raytracing));
 
 		barriers.emplace_back(Barrier{ const_cast<Resource*>(resource), before, after, subres, flags });
-
-		validate();
 	}
 
 
@@ -135,6 +120,7 @@ namespace HAL
 	{
 		need_discard = false;
 		used = false;
+		skip_end_decay = false;
 		first_usage = nullptr;
 		last_usage = nullptr;
 	}
@@ -423,7 +409,10 @@ namespace HAL
 				state.uniform_state.reset();
 				state.subres.resize(count);
 				for (auto& e : state.subres)
+				{
 					e.used = false;   // prevents set_cpu_state_first from using stale layout
+					e.skip_end_decay = false;
+				}
 			});
 	}
 
@@ -440,49 +429,6 @@ namespace HAL
 	}
 
 
-#ifdef PRETRANSITIONS_FIX
-	CommandListType ResourceStateManager::process_transitions(Barriers& target, Transitions* list) const
-	{
-		CommandListType cmd_type = CommandListType::COPY;
-		if (!resource) return cmd_type;
-
-		ASSERT(!check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
-
-		if (resource->get_desc().is_buffer())
-			return cmd_type;
-
-		auto& cpu_state = get_state((list));
-
-		for (int i = 0; i < gpu_state.subres.size(); i++)
-		{
-			auto& gpu = gpu_state.get_subres_state(i);
-			auto& cpu = cpu_state.get_subres_state(i);
-
-			if (!cpu.used) continue;
-
-			auto first_usage = cpu_state.get_first_usage(i);
-			auto first_state = first_usage->wanted_state;
-
-			if (first_state != ResourceStates::UNKNOWN)
-				if (gpu.layout != first_state.layout)
-				{
-					auto from = ResourceStates::NO_ACCESS;
-					from.layout = gpu.layout;
-
-					target.transition(resource, from, first_state, i);
-
-					cmd_type = Merge(cmd_type, from.get_best_cmd_type());
-					cmd_type = Merge(cmd_type, first_state.get_best_cmd_type());
-				}
-
-			cpu.check_valid(resource);
-		}
-
-		gpu_state.set_cpu_state(cpu_state);
-
-		return cmd_type;
-	}
-#endif
 
 	void ResourceStateManager::transition(Transitions* list, ResourceState state, unsigned int s) const
 	{
@@ -820,6 +766,79 @@ namespace HAL
 		{
 			for (int i = 0; i < gpu_state.subres.size(); i++) transit(i);
 		}
+	}
+
+	void ResourceStateManager::chain_lists(Transitions* from, Transitions* to) const
+	{
+		if (resource->get_desc().is_buffer()) return;
+
+		auto& prev = get_state(from);
+		auto& next = get_state(to);
+
+		if (!prev.used || !next.used) return;
+
+		// A SYNC_NONE / NO_ACCESS node: the first-touch seed planted by
+		// transition_one, a zero-transition prepended by prepare_state, or a
+		// release appended by prepare_after_state. A list can carry several of
+		// them at either end, around its real usages.
+		auto is_none = [](const ResourceUsage* u)
+		{
+			return u->wanted_state.operation == BarrierSync::NONE
+				&& u->wanted_state.access == BarrierAccess::NO_ACCESS;
+		};
+
+		auto one = [&](UINT subres)
+		{
+			auto* last  = prev.slot(subres).last_usage;
+			auto* first = next.slot(subres).first_usage;
+
+			if (!last || !first) return;
+
+			// Walk forward over `to`'s SYNC_NONE prefix to its first REAL usage.
+			auto* target = first;
+			while (is_none(target) && target->next_usage)
+				target = target->next_usage;
+
+			// Nothing but boundary markers in this list — there is no real usage
+			// to hand a predecessor to.
+			if (is_none(target)) return;
+
+			// Walk back over `from`'s SYNC_NONE suffix to its last REAL usage.
+			// Chaining onto a release node would emit `SyncBefore == NONE`, which
+			// is precisely the thing being avoided.
+			while (is_none(last) && last->prev_usage)
+				last = last->prev_usage;
+
+			if (is_none(last)) return;
+
+			// Replace only a missing or SYNC_NONE predecessor; never clobber a
+			// real one (already chained, or a genuine in-list transition).
+			if (target->prev_usage && !is_none(target->prev_usage)) return;
+
+			// Everything bypassed on both sides must emit nothing: a suffix node
+			// would publish SyncAfter == NONE (making the resource untouchable for
+			// the rest of the scope) and a non-leading prefix node would publish
+			// SyncBefore == NONE after it had already been touched.
+			for (auto* u = first; u != target; u = u->next_usage)
+				u->suppressed = true;
+
+			for (auto* u = prev.slot(subres).last_usage; u != last; u = u->prev_usage)
+				u->suppressed = true;
+
+			target->prev_usage = last;
+
+			// `from` must not run the generic end-of-list release for THIS
+			// subresource either — a later list in the same ECL scope still
+			// touches it. Subresources that were not carried forward keep their
+			// release, so they still return to `initial_layout`.
+			prev.slot(subres).skip_end_decay = true;
+		};
+
+		if (prev.uniform && next.uniform)
+			one(ALL_SUBRESOURCES);
+		else
+			for (UINT i = 0; i < gpu_state.subres.size(); i++)
+				one(i);
 	}
 
 	void ResourceStateManager::connect(Transitions* from, Transitions* to)

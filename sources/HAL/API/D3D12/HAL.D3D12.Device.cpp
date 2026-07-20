@@ -305,6 +305,37 @@ namespace HAL
                     filter.DenyList.pIDList = hide;
                     d3dInfoQueue->AddStorageFilterEntries(&filter);
                 }
+
+                // Mirror debug-layer output into workdir/log.txt. Without this the
+                // messages only reach the attached debugger's output window, which
+                // makes barrier work (where the validation layer IS the test) hard
+                // to iterate on from a plain console run.
+                ComPtr<ID3D12InfoQueue1> d3dInfoQueue1;
+                if (SUCCEEDED(native_device.As(&d3dInfoQueue1)))
+                {
+                    DWORD cookie = 0;
+                    d3dInfoQueue1->RegisterMessageCallback(
+                        [](D3D12_MESSAGE_CATEGORY, D3D12_MESSAGE_SEVERITY severity,
+                           D3D12_MESSAGE_ID id, LPCSTR description, void*)
+                        {
+                            const char* tag =
+                                severity == D3D12_MESSAGE_SEVERITY_CORRUPTION ? "D3D12 CORRUPTION" :
+                                severity == D3D12_MESSAGE_SEVERITY_ERROR      ? "D3D12 ERROR"      :
+                                severity == D3D12_MESSAGE_SEVERITY_WARNING    ? "D3D12 WARNING"    :
+                                nullptr;
+
+                            if (!tag) return;   // INFO/MESSAGE would drown the log
+
+                            Log::get() << tag << " #" << int(id) << ": " << description << Log::endl;
+                        },
+                        D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &cookie);
+
+                    Log::get() << "D3D12 SETUP: message callback registered, cookie " << int(cookie) << Log::endl;
+                }
+                else
+                {
+                    Log::get() << "D3D12 SETUP: ID3D12InfoQueue1 unavailable — no callback" << Log::endl;
+                }
             }
 
             DSTORAGE_CONFIGURATION ds_config{};

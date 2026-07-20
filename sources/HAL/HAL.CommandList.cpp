@@ -956,8 +956,16 @@ namespace HAL
 						auto& usage = *u;
 						auto prev_usage = usage.prev_usage;
 
+						// A list-boundary marker bypassed by chain_lists: the
+						// neighbouring list is in this ExecuteCommandLists group,
+						// so state is handed over directly and this node must not
+						// publish a SYNC_NONE barrier (D3D12 #1417). It is also not
+						// an unsynchronized first touch, so keep it out of
+						// non_tracked_resources below.
+						if (usage.suppressed) continue;
+
 					//	ASSERT(!usage.debug);
-						if(!prev_usage) 
+						if(!prev_usage)
 						{
 							bool is_automatic =  check(usage.resource->get_desc().Flags &HAL::ResFlags::DisableStateTracking);
 				//			ASSERT(!);
@@ -1060,6 +1068,15 @@ namespace HAL
 						if (!subres_cpu.used) return;
 						ASSERT(subres_cpu.used);
 
+						// A later list in the same ExecuteCommandLists group still
+						// uses this subresource, and its state was chained across
+						// the boundary (chain_lists) — releasing it here to
+						// NO_ACCESS/SYNC_NONE would make it untouchable for the
+						// rest of the scope (D3D12 #1417). The group's last user
+						// releases it. Checked per subresource so that mips which
+						// were NOT carried forward still decay to initial_layout.
+						if (subres_cpu.skip_end_decay) return;
+
 
 
 						auto target = ResourceStates::NO_ACCESS;
@@ -1110,6 +1127,7 @@ namespace HAL
 				usage.point = point;
 				usage.last_point = nullptr;
 				usage.debug = false;
+				usage.suppressed = false;
 
 				HAL::Debug::BarrierBreakpoints::check_usage(resource->name, subres, state);
 
@@ -1217,44 +1235,6 @@ namespace HAL
 					const_cast<HAL::Resource*>(resource.get())->get_state_manager().stop_using(this, subres);
 				});
 			}
-
-
-#ifdef PRETRANSITIONS_FIX
-	std::shared_ptr<TransitionCommandList> Transitions::fix_pretransitions()
-	{
-		PROFILE(L"fix_pretransitions");
-
-		HAL::Barriers result(CommandListType::DIRECT);
-		
-		CommandListType transition_type = type;
-
-		{
-			PROFILE(L"processing resources");
-
-		
-			for (auto& r : need_check_transitions)
-			{
-				auto res_type = r->get_state_manager().process_transitions(result, this);
-
-				transition_type = Merge(transition_type, res_type);
-			}
-
-		}
-		if (result)
-		{
-				PROFILE(L"creating list");
-			auto cmd = static_cast<CommandList*>(this);
-
-
-			auto transition_list = (static_cast<CommandList*>(this)->get_device().get_queue(transition_type)->get_transition_list());
-			transition_list->compiler.set_name(L":Transitions");
-			transition_list->create_transition_list(*cmd->frame_resources, result);
-			return transition_list;
-		}
-		return nullptr;
-	}
-#endif
-
 
 
 	void Transitions::transition(const Resource::ptr& resource, ResourceState to, UINT subres)
