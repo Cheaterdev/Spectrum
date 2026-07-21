@@ -1084,6 +1084,19 @@ namespace HAL
 
 						auto end_point = subres_cpu.last_usage->point->next_point;
 
+						// A bare transition-only list (built with the public
+						// transition() API, e.g. the upload/promote list) never opened
+						// an op batch, so close_op()'s open_op==NONE guard skipped the
+						// trailing point — the last usage sits at the final point with
+						// no next_point. Append one now (usage_points is a deque, so
+						// existing UsagePoint* stay valid) so the release lands AFTER
+						// the last usage. Op-batched lists already have this point.
+						if (!end_point)
+						{
+							create_usage_point(BarrierSync::NONE, false);
+							end_point = subres_cpu.last_usage->point->next_point;
+						}
+
 
 						if (resource->debug_transitions)
 							Log::get() << "TRANSITION" << subres_cpu.last_usage->wanted_state << " " << target << "subres: " << subres << Log::endl;

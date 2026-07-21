@@ -383,6 +383,13 @@ namespace FrameGraph
 		{
 			PROFILE(L"begin_frame");
 
+			// Promote any freshly-uploaded resources into their canonical read state
+			// before passes record (so seeds see the read state) and before this
+			// frame's lists are submitted. This is what removes the class-1 #1334
+			// flood (uploaded assets no longer rest in COMMON / rely on implicit
+			// promotion) — validated 2026-07-21.
+			RenderSystem::get().device().flush_uploads();
+
 			builder.current_frame = builder.frames.begin_frame();
 			for (auto& chain : builder.alloc_resources) chain.reset_frame();
 		}
@@ -672,7 +679,7 @@ namespace FrameGraph
 		// known BEFORE transitions are generated, so releases are never emitted
 		// for intra-group hand-offs in the first place and set_cpu_state sees the
 		// truth. Kept compiled but unreferenced until that reordering is done.
-		// builder.link_list_groups();
+		// builder.link_list_groups();   // enable once class-2 (#1417 FG transients) is chained
 
 		builder.compile_lists();
 

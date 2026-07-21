@@ -22,6 +22,7 @@ export namespace HAL
 	class GPUTimeProfiler;
 	class GPUEntityStorageInterface;
 	class CommandAllocator;
+	class Resource;
 	class Device : public API::Device, public TypedObject<Device>
 	{
 		friend class API::Device;
@@ -53,7 +54,23 @@ export namespace HAL
 
 		enum_array<CommandListType, Pool<std::shared_ptr<CommandAllocator>>> command_allocators;
 
+		// Deferred upload-promote batch. Freshly-uploaded resources register here
+		// (thread-safe, from asset-loading worker threads); flush_uploads() drains
+		// the batch on the main thread at frame-begin, firing ONE direct-queue
+		// transition list that moves them from COPY_QUEUE/COMMON into their
+		// canonical read state. Batching avoids a per-asset execute_and_wait, which
+		// deadlocks when called from worker threads.
+		std::mutex upload_mutex;
+		std::vector<std::shared_ptr<Resource>> pending_promotes;
+
 	public:
+		// Register a just-uploaded resource for promotion to its read state.
+		// Thread-safe; records only — no GPU work here.
+		void register_promote(std::shared_ptr<Resource> resource);
+		// Drain the promote batch on the main thread (call at frame-begin, before
+		// passes record). Submits one transition list on the DIRECT queue.
+		void flush_uploads();
+
 		Device(HAL::DeviceDesc desc);
 		virtual ~Device();
 
