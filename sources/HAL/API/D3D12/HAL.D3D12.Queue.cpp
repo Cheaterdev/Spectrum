@@ -274,8 +274,11 @@ namespace HAL
             // emitting a SyncBefore == SYNC_NONE barrier once it has been
             // accessed (#1417). Each list is currently self-contained (SYNC_NONE
             // seed in, SYNC_NONE release out), so it must get its own scope.
+            // Accumulate into one ExecuteCommandLists (requirement 6). Legal now
+            // that TaskBuilder::link_list_groups chains resource state across list
+            // boundaries within a group — no per-list flush. gpu_wait/signal still
+            // flush at real sync points.
             queued.emplace_back(list->get_native().Get());
-            flush();
         }
 
         void Queue::flush()

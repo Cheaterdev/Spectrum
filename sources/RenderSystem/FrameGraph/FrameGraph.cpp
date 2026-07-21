@@ -679,7 +679,13 @@ namespace FrameGraph
 		// known BEFORE transitions are generated, so releases are never emitted
 		// for intra-group hand-offs in the first place and set_cpu_state sees the
 		// truth. Kept compiled but unreferenced until that reordering is done.
-		// builder.link_list_groups();   // enable once class-2 (#1417 FG transients) is chained
+		// Requirement 6: chain resource state across command-list boundaries so
+		// multiple lists share one ExecuteCommandLists scope. Depends on the
+		// UploadManager (class-1 assets rest in a read state) and chain_lists'
+		// all-none handling (class-2 FG transients). #1417/#1334 eliminated
+		// 2026-07-22 (2 frame-1-transient #1334 on a pre-promote deserialize
+		// texture remain).
+		builder.link_list_groups();
 
 		builder.compile_lists();
 

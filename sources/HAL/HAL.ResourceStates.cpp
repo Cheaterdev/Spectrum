@@ -816,9 +816,39 @@ namespace HAL
 			while (is_none(target) && target->next_usage)
 				target = target->next_usage;
 
-			// Nothing but boundary markers in this list — there is no real usage
-			// to hand a predecessor to.
-			if (is_none(target)) return;
+			// `to` has NO real usage — only SYNC_NONE reconciliation nodes
+			// (redundant seed + release from prepare_state/prepare_after_state). If
+			// `from` really accessed the resource, `to`'s first node re-declares the
+			// state with SyncBefore=NONE AFTER that access → #1417. Walk `from` back
+			// to its last REAL usage and hand it to `to`'s first node so the barrier
+			// carries a real SyncBefore; suppress `from`'s own end release (the
+			// resource stays live for `to`). The remaining `to` nodes now chain off a
+			// real predecessor instead of a SYNC_NONE seed.
+			if (is_none(target))
+			{
+				while (is_none(last) && last->prev_usage)
+					last = last->prev_usage;
+
+				if (!is_none(last))
+				{
+					// `to`'s LAST node is its exit release; the earlier none nodes are
+					// redundant re-seeds. Suppress the seeds (so none emit a bare
+					// SyncBefore=NONE after the access) and hand the release `from`'s
+					// last real usage as predecessor so it carries real sync. Suppress
+					// `from`'s own end release — the resource stays live until here.
+					auto* lastnode = first;
+					while (lastnode->next_usage) lastnode = lastnode->next_usage;
+
+					for (auto* u = first; u != lastnode; u = u->next_usage)
+						u->suppressed = true;
+
+					if (!lastnode->prev_usage || is_none(lastnode->prev_usage))
+						lastnode->prev_usage = last;
+
+					prev.slot(subres).skip_end_decay = true;
+				}
+				return;
+			}
 
 			// Walk back over `from`'s SYNC_NONE suffix to its last REAL usage.
 			// Chaining onto a release node would emit `SyncBefore == NONE`, which
