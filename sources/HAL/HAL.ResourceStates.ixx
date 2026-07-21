@@ -224,6 +224,19 @@ export
 			SubResourcesGPU copy_gpu() const;
 			void init_subres(int count, TextureLayout layout);
 
+			// The canonical READ state this resource should rest in after upload,
+			// derived from its declared usage flags (ShaderResource -> SHADER_RESOURCE,
+			// etc.). Used by the UploadManager to transition a freshly-uploaded
+			// resource out of COPY_DEST/COMMON into a strictly-defined read state.
+			ResourceState get_desired_state() const;
+
+			// Pin the persistent resting state to `layout`. Called once by the
+			// UploadManager's post-upload transition so every later command list
+			// seeds this resource in its read state (a no-op) and never decays it
+			// back to COMMON. This is the strict replacement for the old
+			// gpu_state-as-first-list-link behaviour.
+			void set_resting_state(TextureLayout layout);
+
 			SubResourcesCPU& get_cpu_state(Transitions* list) const;
 
 			void stop_using(Transitions* list, UINT subres) const;

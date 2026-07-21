@@ -141,6 +141,16 @@ namespace HAL
 				}
 		}
 
+		// Strict promote: transition out of COPY_DEST into the resource's canonical
+		// read state on this (DIRECT) upload list, and pin the persistent resting
+		// state there. Every later command list then seeds it in the read state as
+		// a no-op and never decays it to COMMON — removing the implicit-promotion /
+		// #1334 path for uploaded assets. set_resting_state runs before execute so
+		// this list's own end-of-list decay is a no-op too.
+		auto desired = resource->get_state_manager().get_desired_state();
+		list->transition(resource.get(), desired);
+		resource->get_state_manager().set_resting_state(desired.layout);
+
 		list->execute_and_wait();
 		init();
 	}

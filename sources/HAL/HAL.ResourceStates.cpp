@@ -390,6 +390,23 @@ namespace HAL
 		return gpu_state;
 	}
 
+	ResourceState ResourceStateManager::get_desired_state() const
+	{
+		auto flags = resource->get_desc().Flags;
+		if (check(flags & ResFlags::ShaderResource))  return ResourceStates::SHADER_RESOURCE;
+		if (check(flags & ResFlags::UnorderedAccess)) return ResourceStates::UNORDERED_ACCESS;
+		// No read usage declared — leave it in the copy-destination state.
+		return ResourceStates::COPY_DEST;
+	}
+
+	void ResourceStateManager::set_resting_state(TextureLayout layout)
+	{
+		initial_layout = layout;
+		for (auto& e : gpu_state.subres)
+			e.layout = layout;
+		virgin = false;
+	}
+
 	void ResourceStateManager::init_subres(int count, TextureLayout layout)
 	{
 		initial_layout = layout;
