@@ -521,7 +521,7 @@ void MyRaygenShaderReflection()
 	ray.Origin = pos;
 	ray.Direction = dir;
 	ray.TMin = 0.05;
-	ray.TMax = 0.5 * length(oneVoxelSize) / (tan(roughness) + 0.001);
+    ray.TMax = 0.5 * length(oneVoxelSize) / (tan(roughness + 0.001) + 0.001);
 	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
 
 	if (payload_gi.dist > 100000 - 5)

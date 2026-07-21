@@ -1116,6 +1116,7 @@ namespace FrameGraph
 							detail.after = b.after;
 							detail.subres = b.subres;
 							detail.flags = b.flags;
+							detail.resource_id = reinterpret_cast<uint64>(b.resource);   // opaque instance id
 							rec.barrier_details.push_back(std::move(detail));
 						}
 						rec.barrier_point = nullptr;
