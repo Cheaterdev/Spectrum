@@ -611,14 +611,22 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		// Only the *Prev is uninitialized on the first frame (no history yet); on
 		// resize it adopts a valid old-size resource (is_new == false) and the shader
 		// remaps via GetDimensions. The current is written fresh each frame.
-		if (data.VoxelIndirectFiltered.is_new())
-			command_list->clear_uav(gi_filtered.rwTexture2D, vec4(0, 0, 0, 0));
-		if (data.VoxelIndirectFilteredPrev.is_new())
-			command_list->clear_uav(gi_prev.rwTexture2D, vec4(0, 0, 0, 0));
-		if (data.VoxelIndirectNoise.is_new())
-			command_list->clear_uav(noisy_output.rwTexture2D, vec4(0, 0, 0, 0));
-		if (data.VoxelFramesCount.is_new())
-			command_list->clear_uav(frames_count.rwTexture2D, vec4(0, 0, 0, 0));
+		{
+			PROFILE_GPU(L"clear");
+			if (data.VoxelIndirectFiltered.is_new())
+				command_list->clear_uav(gi_filtered.rwTexture2D, vec4(0, 0, 0, 0));
+			// NOTE: the prev is a READ-ONLY history resource — clearing it here via
+			// clear_uav was an illegal UAV write on a read-declared resource (the
+			// FrameGraph folds it into the merged read state, clobbering the clear's
+			// UAV transition -> D3D12 #1334). A fresh prev (first frame, no carried
+			// history) is instead rejected shader-side in get_history(), which
+			// zeroes the accumulation speed when the stored frame count is not a
+			// valid normalized value.
+			if (data.VoxelIndirectNoise.is_new())
+				command_list->clear_uav(noisy_output.rwTexture2D, vec4(0, 0, 0, 0));
+			if (data.VoxelFramesCount.is_new())
+				command_list->clear_uav(frames_count.rwTexture2D, vec4(0, 0, 0, 0));
+		}
 
 		auto& compute = command_list->get_compute();
 
@@ -650,7 +658,10 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		}
 
 		if (use_rtx_flag)
+		{
+			PROFILE_GPU(L"noise_rtx");
 			RTX::get().render<Indirect>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
+		}
 		else
 		{
 			PROFILE_GPU(L"noise");
@@ -829,6 +840,8 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 	{
 		auto& command_list = context.get_list();
 
+		bool use_rtx_flag = RenderSystem::get().device().is_rtx_supported() && (bool)use_rtx;
+
 		MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
 		GBuffer gbuffer           = GBufferViewDesc::actualize(data.gbuffer);
 		auto sky_cubemap_filtered = *data.sky_cubemap_filtered;
@@ -838,7 +851,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		auto& caminfo   = context.graph->get_context<CameraInfo>();
 		auto& sceneinfo = context.graph->get_context<SceneInfo>();
 
-		if (use_rtx)
+		if (use_rtx_flag)
 			command_list->get_compute().set_signature(RTX::get().rtx.m_root_sig);
 
 		mesh_ctx->current_time = 0;
@@ -864,8 +877,9 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 
 		context.graph->set_slot(SlotID::VoxelInfo, compute);
 
-		if (use_rtx)
+		if (use_rtx_flag)
 		{
+			PROFILE_GPU(L"reflection_rtx");
 			{
 				Slots::VoxelOutput output;
 				output.GetNoise()     = noisy_output.rwTexture2D;

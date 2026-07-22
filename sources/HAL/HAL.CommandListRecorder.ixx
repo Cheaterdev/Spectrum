@@ -47,6 +47,11 @@ export namespace HAL
 			HAL::ResourceState after;
 			uint               subres = 0;
 			HAL::BarrierFlags  flags  = HAL::BarrierFlags::NONE;
+			// Opaque per-instance id (the source Resource address). A recreate()
+			// makes a NEW Resource object with the SAME name, so the debugger uses
+			// this to tell old/new instances apart and separate them. Never
+			// dereferenced — identity comparison only.
+			uint64             resource_id = 0;
 		};
 
 		CommandType  type          = CommandType::Func;

@@ -53,7 +53,6 @@ export
 		{
 			std::vector<Barrier> barriers;
 
-			void validate();
 			CommandListType type;
 		public:
 
@@ -81,6 +80,15 @@ export
 			UsagePoint* last_point = nullptr;
 
 			bool debug = false;
+
+			// Set by ResourceStateManager::chain_lists when this usage is a
+			// SYNC_NONE list-boundary marker (a seed, a prepare_state zero
+			// transition, or a prepare_after_state release) that got bypassed
+			// because the neighbouring list is in the same ExecuteCommandLists
+			// group.  compile_transitions must not emit a barrier for it: inside
+			// one ECL scope a SyncBefore/SyncAfter of NONE is illegal once the
+			// resource has been touched (#1417).
+			bool suppressed = false;
 		};
 
 		struct UsagePoint
@@ -104,6 +112,17 @@ export
 			bool used = false;
 			bool need_discard = false;
 
+			// A LATER list in the same ExecuteCommandLists group also uses THIS
+			// subresource, so its state was handed over directly (chain_lists) and
+			// this list must not emit the end-of-list release to
+			// NO_ACCESS/SYNC_NONE — inside one ECL
+			// scope that makes it untouchable afterwards (D3D12 #1417). Tracked
+			// per subresource: chaining is per subresource, and a resource whose
+			// mips are only partially carried forward must still release the rest,
+			// or it never returns to `initial_layout` and the next group's seed
+			// mismatches (D3D12 #1334).
+			bool skip_end_decay = false;
+
 			ResourceState get_first_usage();
 			ResourceState get_usage();
 			void reset();
@@ -122,6 +141,29 @@ export
 			std::vector<ResourceListStateCPU> subres;
 
 			bool used = false;
+
+			// Operation batching: the id of the batch this resource was last
+			// touched in, and the state it was transitioned to. The command
+			// list compares batch_touch_id against its monotonic current_batch_id
+			// to detect a same-batch reuse that needs a split. Reset per frame.
+			uint          batch_touch_id = 0;
+			ResourceState batch_touch_state;
+
+			// Uniform fast path: while `uniform`, all subresources are tracked as
+			// one chain (`uniform_state`) whose usage nodes carry subres ==
+			// ALL_SUBRESOURCES, so a full-resource transition costs one node/one
+			// barrier instead of one per mip/array/plane. The first subresource-
+			// scoped transition calls expand(): each per-subres slot is seeded
+			// from uniform_state (sharing the chain history) and the resource is
+			// per-subres for the rest of the list. slot() resolves either mode, so
+			// read helpers work unchanged; only mutating loops must run once in
+			// uniform mode (see transition/prepare_state).
+			bool uniform = true;
+			ResourceListStateCPU uniform_state;
+
+			ResourceListStateCPU& slot(UINT id);
+			const ResourceListStateCPU& slot(UINT id) const;
+			void expand(UINT count);
 
 			void reset();
 			CommandListType get_best_list_type_last();
@@ -165,6 +207,14 @@ export
 			mutable SubResourcesGPU gpu_state;
 
 
+		protected:
+			// Non-FG resources: true until their first-ever use. The first
+			// activation of a virgin resource discards (UNDEFINED->state) since
+			// its contents are meaningless (fresh/placed memory) — point R4.
+			// Flips false permanently after the first transition; later uses
+			// preserve contents. FG resources ignore this (own activation path).
+			mutable bool virgin = true;
+
 		public:
 			virtual ~ResourceStateManager() = default;
 			TextureLayout initial_layout;
@@ -174,16 +224,25 @@ export
 			SubResourcesGPU copy_gpu() const;
 			void init_subres(int count, TextureLayout layout);
 
+			// The canonical READ state this resource should rest in after upload,
+			// derived from its declared usage flags (ShaderResource -> SHADER_RESOURCE,
+			// etc.). Used by the UploadManager to transition a freshly-uploaded
+			// resource out of COPY_DEST/COMMON into a strictly-defined read state.
+			ResourceState get_desired_state() const;
+
+			// Pin the persistent resting state to `layout`. Called once by the
+			// UploadManager's post-upload transition so every later command list
+			// seeds this resource in its read state (a no-op) and never decays it
+			// back to COMMON. This is the strict replacement for the old
+			// gpu_state-as-first-list-link behaviour.
+			void set_resting_state(TextureLayout layout);
+
 			SubResourcesCPU& get_cpu_state(Transitions* list) const;
 
 			void stop_using(Transitions* list, UINT subres) const;
 
 			bool is_used(Transitions* list) const;
 
-
-#ifdef PRETRANSITIONS_FIX
-			CommandListType process_transitions(Barriers& target, Transitions* list) const;
-#endif
 
 			void transition(Transitions* list, ResourceState state, unsigned int subres) const;
 
@@ -196,6 +255,15 @@ export
 			void alias_end(Transitions* list) const;
 
 			void connect(Transitions* from, Transitions* to);
+
+			// `from` and `to` are two lists that
+			// will be submitted inside ONE ExecuteCommandLists scope, `from`
+			// first. Gives `to`'s first real usage `from`'s last usage as its
+			// predecessor — so the emitted barrier carries a real SyncBefore
+			// instead of the SYNC_NONE seed — and marks `from` to skip its
+			// end-of-list release. Result: one SYNC_NONE entry and one
+			// SYNC_NONE exit per resource per group instead of one per list.
+			void chain_lists(Transitions* from, Transitions* to) const;
 
 		};
 

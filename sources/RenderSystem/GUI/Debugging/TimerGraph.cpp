@@ -120,7 +120,7 @@ namespace GUI
 			}
 
 			// ── Color from name hash (HSV→RGB) ────────────────────────────────────
-			static float4 name_color(const std::wstring& name)
+			static float4 name_color(std::wstring_view name)
 			{
 				size_t h = 0;
 				for (wchar_t c : name) h = h * 131 + static_cast<size_t>(c);
@@ -149,7 +149,7 @@ namespace GUI
 
 			// ── GraphElement ──────────────────────────────────────────────────────
 
-			static void setup_block(GraphElement* e, const std::wstring& block_name)
+			static void setup_block(GraphElement* e, std::wstring_view block_name)
 			{
 				label::ptr lbl(new label);
 				lbl->docking = dock::FILL;
@@ -706,7 +706,7 @@ namespace GUI
 					auto  my_id  = data.gpu_block_id.fetch_add(1);
 					ASSERT(my_id < 4096 * 256);
 					auto& d      = data.gpu_blocks[my_id];
-					d.name       = p.first->get_name();
+					d.name       = p.first->name;
 					d.depth      = p.first->level;
 					d.start_time = static_cast<double>(timer.get_start()) / clock_info[timer.queue_type].frequency;
 					d.end_time   = static_cast<double>(timer.get_end())   / clock_info[timer.queue_type].frequency;
@@ -725,7 +725,7 @@ void GUI::Elements::Debug::TimeGraph::on_cpu_start(TimedBlock* block)
 	auto  my_id  = data.block_id.fetch_add(1);
 	ASSERT(my_id < 4096 * 128);
 	auto& d      = data.blocks[my_id];
-	d.name       = block->get_name();
+	d.name       = block->name;
 	d.depth      = block->level;
 	d.native_id  = std::this_thread::get_id();
 	block->id    = my_id;

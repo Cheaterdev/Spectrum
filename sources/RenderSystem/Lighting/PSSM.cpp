@@ -158,7 +158,6 @@ PSSM::PSSM()
 				command_list->transition((*data.PSSM_Depths).resource, ResourceStates::DEPTH_STENCIL);
 			}
 				
-	 if(GetAsyncKeyState('4'))  return;
 			MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
 			mesh_ctx->priority = TaskPriority::HIGH;
 			mesh_ctx->list     = command_list;

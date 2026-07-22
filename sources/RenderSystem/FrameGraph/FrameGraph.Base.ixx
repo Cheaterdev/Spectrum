@@ -695,11 +695,6 @@ public:
 		};
 		std::vector<HistoryLink> history_links;
 
-	// Lifetime tracing (DEV): resources whose alloc/free/adopt/carry events are
-	// logged with heap ranges and pass call ids. Seed from a pass setup, e.g.
-	// builder.debug_lifetime.insert(data.VoxelIndirectFiltered.id);
-	std::set<ResourceID> debug_lifetime;
-
 		// Register `prev` as the previous-frame alias of `current`. Idempotent;
 		// safe to call every frame from a pass setup.
 		void link_history(ResourceID current, ResourceID prev);
@@ -876,6 +871,13 @@ public:
 		void create_resources();
 		void process_transitions();
 		void process_fences();
+
+		// Mirror commit_command_lists' batching to find the sets of lists that
+		// will be submitted in ONE ExecuteCommandLists, and chain
+		// resource state across the boundaries inside each set. Must run after
+		// process_transitions (all usages recorded) and process_fences (which
+		// decides where batches are flushed), and before compile_lists.
+		void link_list_groups();
 	   	void compile_lists();
 		void reset();
 

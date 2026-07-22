@@ -33,7 +33,10 @@ export namespace HAL
             GPUAddressPtr address;
         public:
             using ptr = std::shared_ptr<Resource>;
-            void init(Device& device, const ResourceDesc& desc, const PlacementAddress& address, TextureLayout initialLayout = TextureLayout::UNDEFINED);
+            // clear_value: optimized clear value baked into a RenderTarget
+            // resource. Must match the colour passed to ClearRenderTargetView or
+            // D3D12 warns (#820) and takes a slower clear path.
+            void init(Device& device, const ResourceDesc& desc, const PlacementAddress& address, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
 
             // Replaces the old D3D::Resource constructor; backend-neutral.
             void init(const NativeImportHandle& handle, TextureLayout layout, Device& device);

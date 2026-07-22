@@ -212,7 +212,11 @@ export namespace Test
 				ASSERT_TRUE(grand_level == child_level + 1);
 			}
 			auto t3 = Profiler::get().start(L"child2");
-			ASSERT_TRUE(Profiler::current_block->level == child_level);
+			auto block = Profiler::current_block;
+
+			// child2 starts while child1 (t1) is still the current block, so it
+			// nests UNDER child1 — a sibling of grandchild, one level below child1.
+			ASSERT_TRUE(block->level == child_level + 1);
 		}
 		ASSERT_TRUE(root_level < Profiler::current_block->level + 1);
 	}

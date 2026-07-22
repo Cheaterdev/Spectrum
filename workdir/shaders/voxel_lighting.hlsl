@@ -111,7 +111,7 @@ float4 get_direction(float3 pos, float3 normal, float3 dir, float k, float a)
 }
 float4 getGI(float3 Pos, float3 Normal)
 {
-	float a = 0.4;
+	float a = 0.7;
 
 	float4 Color = 0;
 	float t = 1;
@@ -172,10 +172,11 @@ void CS(
 #endif
 
 
-	float3 pos = index * voxel_size / dims + voxel_min + oneVoxelSize * normals ;
+    float3 pos = index * voxel_size / dims + voxel_min;//
+   // +oneVoxelSize * normals;
 
 	float shadow = saturate(dot(normals, dir)) * get_shadow(pos);
     float3 lighting = 2 * albedo.xyz * gi.xyz + 1 * albedo.xyz* shadow;
 
-	output[index] = float4(lighting, 1);
+    output[index] = lerp(output[index], float4(lighting, 1), 1);
 }

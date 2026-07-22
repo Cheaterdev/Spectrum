@@ -172,6 +172,7 @@ export
     using ID3D12Debug                   = ::ID3D12Debug;
     using ID3D12Debug1                  = ::ID3D12Debug1;
     using ID3D12InfoQueue               = ::ID3D12InfoQueue;
+    using ID3D12InfoQueue1              = ::ID3D12InfoQueue1;   // RegisterMessageCallback
     using ID3D12DeviceRemovedExtendedDataSettings = ::ID3D12DeviceRemovedExtendedDataSettings;
     using ID3D12DeviceRemovedExtendedData         = ::ID3D12DeviceRemovedExtendedData;
     using ID3D12WorkGraphProperties               = ::ID3D12WorkGraphProperties;

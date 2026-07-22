@@ -19,7 +19,7 @@ export namespace GUI
 				size_t thread_id;
 		
 				uint depth;
-				std::wstring name;
+				const wchar_t* name = nullptr; // points at the TimedBlock's LiteralWStr (static storage) - no copy
 			};
 
 
@@ -30,7 +30,7 @@ export namespace GUI
 				double start_time;
 				double end_time;
 				HAL::CommandListType queue_type;
-				std::wstring name;
+				const wchar_t* name = nullptr; // points at the TimedBlock's LiteralWStr (static storage) - no copy
 			};
 			struct collected_data
 			{
@@ -55,7 +55,7 @@ export namespace GUI
 			class GraphElement :public image
 			{
 			//	stack_trace trace;
-				std::wstring name;
+				const wchar_t* name = nullptr;
 
 				float4 block_color;
 				base::ptr info;

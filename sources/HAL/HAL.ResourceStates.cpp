@@ -83,19 +83,6 @@ namespace HAL
 		return barriers;
 	}
 
-	void Barriers::validate()
-	{
-#ifdef _DEV
-		for (int j = 0; j < native.size() - 1; j++)
-		{
-			if (native.back().Type == native[j].Type)
-				if (native.back().ResourceUsage.pResource == native[j].ResourceUsage.pResource)
-					if (native.back().ResourceUsage.Subresource == native[j].ResourceUsage.Subresource)
-						ASSERT(false);
-		}
-#endif
-	}
-
 	void Barriers::transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres, BarrierFlags flags)
 	{
 		ASSERT(resource);
@@ -107,8 +94,6 @@ namespace HAL
 			ASSERT(check(resource->get_desc().Flags & ResFlags::Raytracing));
 
 		barriers.emplace_back(Barrier{ const_cast<Resource*>(resource), before, after, subres, flags });
-
-		validate();
 	}
 
 
@@ -135,6 +120,7 @@ namespace HAL
 	{
 		need_discard = false;
 		used = false;
+		skip_end_decay = false;
 		first_usage = nullptr;
 		last_usage = nullptr;
 	}
@@ -184,9 +170,37 @@ namespace HAL
 
 	// --- SubResourcesCPU ---
 
+	ResourceListStateCPU& SubResourcesCPU::slot(UINT id)
+	{
+		return (uniform || id == ALL_SUBRESOURCES) ? uniform_state : subres[id];
+	}
+
+	const ResourceListStateCPU& SubResourcesCPU::slot(UINT id) const
+	{
+		return (uniform || id == ALL_SUBRESOURCES) ? uniform_state : subres[id];
+	}
+
+	void SubResourcesCPU::expand(UINT count)
+	{
+		if (!uniform) return;
+
+		// Materialize per-subres slots from the shared uniform chain: each slot
+		// copies uniform_state's first/last_usage (sharing the history nodes,
+		// which carry subres == ALL_SUBRESOURCES). The next per-subres
+		// transition forks its own node after that shared history — correct, at
+		// the cost of one extra barrier for that subresource on the frame it
+		// first diverges (design A).
+		if (subres.size() < count) subres.resize(count);
+		for (UINT i = 0; i < count; i++) subres[i] = uniform_state;
+		uniform = false;
+	}
+
 	void SubResourcesCPU::reset()
 	{
 		used = false;
+		uniform = true;
+		batch_touch_id = 0;   // stale batch id from a prior frame must not match
+		uniform_state.reset();
 		for (auto& s : subres)
 			s.reset();
 	}
@@ -195,12 +209,13 @@ namespace HAL
 	{
 		CommandListType type = CommandListType::COPY;
 
-		for (auto& cpu : subres)
-		{
-			if (!cpu.used) continue;
-			auto state = cpu.last_usage->wanted_state;
-			type = Merge(type, state.get_best_cmd_type());
-		}
+		auto one = [&](const ResourceListStateCPU& cpu) {
+			if (!cpu.used) return;
+			type = Merge(type, cpu.last_usage->wanted_state.get_best_cmd_type());
+		};
+
+		if (uniform) one(uniform_state);
+		else for (auto& cpu : subres) one(cpu);
 
 		return type;
 	}
@@ -209,34 +224,35 @@ namespace HAL
 	{
 		CommandListType type = CommandListType::COPY;
 
-		for (auto& cpu : subres)
-		{
-			if (!cpu.used) continue;
-			auto state = cpu.first_usage->wanted_state;
-			type = Merge(type, state.get_best_cmd_type());
-		}
+		auto one = [&](const ResourceListStateCPU& cpu) {
+			if (!cpu.used) return;
+			type = Merge(type, cpu.first_usage->wanted_state.get_best_cmd_type());
+		};
+
+		if (uniform) one(uniform_state);
+		else for (auto& cpu : subres) one(cpu);
 
 		return type;
 	}
 
 	const ResourceListStateCPU& SubResourcesCPU::get_subres_state(UINT id) const
 	{
-		return subres[id];
+		return slot(id);
 	}
 
 	ResourceListStateCPU& SubResourcesCPU::get_subres_state(UINT id)
 	{
-		return subres[id];
+		return slot(id);
 	}
 
 	ResourceUsage* SubResourcesCPU::get_first_usage(UINT id) const
 	{
-		return subres[id].first_usage;
+		return slot(id).first_usage;
 	}
 
 	ResourceUsage* SubResourcesCPU::get_last_usage(UINT id) const
 	{
-		return subres[id].last_usage;
+		return slot(id).last_usage;
 	}
 
 	ResourceState SubResourcesCPU::get_first_state(UINT id) const
@@ -332,12 +348,14 @@ namespace HAL
 
 	const ResourceListStateGPU& SubResourcesGPU::get_subres_state(UINT id) const
 	{
-		return subres[id];
+		// ALL_SUBRESOURCES resolves to subresource 0 as the representative — used
+		// by the uniform CPU fast path, where the GPU layout is uniform anyway.
+		return subres[id == ALL_SUBRESOURCES ? 0 : id];
 	}
 
 	ResourceListStateGPU& SubResourcesGPU::get_subres_state(UINT id)
 	{
-		return subres[id];
+		return subres[id == ALL_SUBRESOURCES ? 0 : id];
 	}
 
 	void SubResourcesGPU::merge(SubResourcesCPU& other)
@@ -372,6 +390,23 @@ namespace HAL
 		return gpu_state;
 	}
 
+	ResourceState ResourceStateManager::get_desired_state() const
+	{
+		auto flags = resource->get_desc().Flags;
+		if (check(flags & ResFlags::ShaderResource))  return ResourceStates::SHADER_RESOURCE;
+		if (check(flags & ResFlags::UnorderedAccess)) return ResourceStates::UNORDERED_ACCESS;
+		// No read usage declared — leave it in the copy-destination state.
+		return ResourceStates::COPY_DEST;
+	}
+
+	void ResourceStateManager::set_resting_state(TextureLayout layout)
+	{
+		initial_layout = layout;
+		for (auto& e : gpu_state.subres)
+			e.layout = layout;
+		virgin = false;
+	}
+
 	void ResourceStateManager::init_subres(int count, TextureLayout layout)
 	{
 		initial_layout = layout;
@@ -386,9 +421,15 @@ namespace HAL
 		states.set_init_func([count](SubResourcesCPU& state)
 			{
 				state.used = false;
+				state.uniform = true;             // start each list in the uniform fast path
+				state.batch_touch_id = 0;
+				state.uniform_state.reset();
 				state.subres.resize(count);
 				for (auto& e : state.subres)
+				{
 					e.used = false;   // prevents set_cpu_state_first from using stale layout
+					e.skip_end_decay = false;
+				}
 			});
 	}
 
@@ -405,49 +446,6 @@ namespace HAL
 	}
 
 
-#ifdef PRETRANSITIONS_FIX
-	CommandListType ResourceStateManager::process_transitions(Barriers& target, Transitions* list) const
-	{
-		CommandListType cmd_type = CommandListType::COPY;
-		if (!resource) return cmd_type;
-
-		ASSERT(!check(resource->get_desc().Flags & ResFlags::DisableStateTracking));
-
-		if (resource->get_desc().is_buffer())
-			return cmd_type;
-
-		auto& cpu_state = get_state((list));
-
-		for (int i = 0; i < gpu_state.subres.size(); i++)
-		{
-			auto& gpu = gpu_state.get_subres_state(i);
-			auto& cpu = cpu_state.get_subres_state(i);
-
-			if (!cpu.used) continue;
-
-			auto first_usage = cpu_state.get_first_usage(i);
-			auto first_state = first_usage->wanted_state;
-
-			if (first_state != ResourceStates::UNKNOWN)
-				if (gpu.layout != first_state.layout)
-				{
-					auto from = ResourceStates::NO_ACCESS;
-					from.layout = gpu.layout;
-
-					target.transition(resource, from, first_state, i);
-
-					cmd_type = Merge(cmd_type, from.get_best_cmd_type());
-					cmd_type = Merge(cmd_type, first_state.get_best_cmd_type());
-				}
-
-			cpu.check_valid(resource);
-		}
-
-		gpu_state.set_cpu_state(cpu_state);
-
-		return cmd_type;
-	}
-#endif
 
 	void ResourceStateManager::transition(Transitions* list, ResourceState state, unsigned int s) const
 	{
@@ -474,15 +472,41 @@ namespace HAL
 
 		ASSERT(state.is_valid(resource->get_type()));
 
+		// Captured before the per-subres loop so every subresource of this
+		// transition sees the same virginity (the flag flips once, below).
+		const bool was_virgin = virgin;
+
+		// `subres` here is the value stamped onto the emitted usage node: a real
+		// subresource index in expanded mode, or ALL_SUBRESOURCES in uniform mode
+		// (one node → one all-subresources barrier).
 		auto transition_one = [&](UINT subres) {
 
-			auto& subres_cpu = cpu_state.get_subres_state(subres);
+			auto& subres_cpu = cpu_state.slot(subres);
 			if (!subres_cpu.used)
 			{
 				if (!check(resource->get_desc().Flags & ResFlags::DisableStateTracking) && resource->get_desc().is_texture())
 				{
+					// Seed node = the state the resource is IN at this list's first
+					// touch. Non-FG virgin resource whose first-ever use is a WRITE
+					// (incl. COPY_DEST upload) → UNKNOWN so compile_transitions
+					// emits a DISCARD activation (R4): contents are meaningless and
+					// about to be overwritten. A read-first virgin resource is
+					// initialized out-of-band, so must not be discarded.
+					//
+					// Otherwise seed from the TRACKED layout (gpu_state), not the
+					// creation-time initial_layout. initial_layout is only a guess
+					// and is wrong for any resource whose layout has since moved —
+					// e.g. an adopted history-prev, which carries the layout last
+					// frame's `current` ended in. Seeding the guess emitted barriers
+					// whose LayoutBefore disagreed with the real layout
+					// (D3D12 #1334 INCOMPATIBLE_BARRIER_LAYOUT). gpu_state equals
+					// initial_layout for a freshly created resource, so this is a
+					// strict improvement.
 					auto target = ResourceStates::NO_ACCESS;
-					target.layout = initial_layout;
+					if (!resource->frame_graph_managed && was_virgin && state.has_write_bits())
+						target = ResourceStates::UNKNOWN;
+					else
+						target.layout = gpu_state.get_subres_state(subres).layout;
 
 					subres_cpu.used = true;
 					subres_cpu.first_usage = subres_cpu.last_usage = (list)->add_usage((resource), subres, target);
@@ -518,13 +542,29 @@ namespace HAL
 		};
 
 
-		if(s!=ALL_SUBRESOURCES)
+		if (s != ALL_SUBRESOURCES)
 		{
+			// Subresource-scoped touch: leave the uniform mode (if any) and track
+			// this subresource independently from here on.
+			if (cpu_state.uniform)
+				cpu_state.expand((UINT)gpu_state.subres.size());
 			transition_one(s);
 		}
+		else if (cpu_state.uniform)
+		{
+			// Whole-resource touch while still uniform: one shared node.
+			transition_one(ALL_SUBRESOURCES);
+		}
 		else
-		for (int i = 0; i < gpu_state.subres.size(); i++)
-			transition_one(i);
+		{
+			for (int i = 0; i < gpu_state.subres.size(); i++)
+				transition_one(i);
+		}
+
+		// First use has now been recorded — later uses preserve contents
+		// (no more DISCARD). Re-discarding would only ever be safe anyway, but
+		// non-FG resources persist data across frames, so this must flip once.
+		virgin = false;
 	}
 
 
@@ -578,8 +618,17 @@ namespace HAL
 			}
 		};
 
-		for (int i = 0; i < gpu_state.subres.size(); i++) merge_one(i);
-		for (int i = 0; i < gpu_state.subres.size(); i++) transition_one(i);
+		// Uniform CPU state → one pass stamping ALL_SUBRESOURCES; else per-subres.
+		if (cpu_state.uniform)
+		{
+			merge_one(ALL_SUBRESOURCES);
+			transition_one(ALL_SUBRESOURCES);
+		}
+		else
+		{
+			for (int i = 0; i < gpu_state.subres.size(); i++) merge_one(i);
+			for (int i = 0; i < gpu_state.subres.size(); i++) transition_one(i);
+		}
 
 		if (updated)
 		{
@@ -651,8 +700,17 @@ namespace HAL
 			cpu.check_valid(resource);
 		};
 
-		for (int i = 0; i < gpu_state.subres.size(); i++) merge_one(i);
-		for (int i = 0; i < gpu_state.subres.size(); i++) transition_one(i);
+		// Uniform CPU state → one pass stamping ALL_SUBRESOURCES; else per-subres.
+		if (cpu_state.uniform)
+		{
+			merge_one(ALL_SUBRESOURCES);
+			transition_one(ALL_SUBRESOURCES);
+		}
+		else
+		{
+			for (int i = 0; i < gpu_state.subres.size(); i++) merge_one(i);
+			for (int i = 0; i < gpu_state.subres.size(); i++) transition_one(i);
+		}
 
 		if (updated)
 		{
@@ -680,13 +738,27 @@ namespace HAL
 
 		auto& cpu_state = get_state((from));
 
-		for (int i = 0; i < gpu_state.subres.size(); i++)
+		if (cpu_state.uniform)
 		{
-			if (gpu_state.subres[i].layout == TextureLayout::NONE) continue;
+			// Uniform CPU state ⟺ uniform GPU handoff: subresource 0 represents
+			// all. One ALL_SUBRESOURCES transition keeps the resource uniform.
+			if (gpu_state.subres[0].layout != TextureLayout::NONE)
+			{
+				auto target = ResourceStates::NO_ACCESS;
+				target.layout = gpu_state.subres[0].layout;
+				transition(from, target, ALL_SUBRESOURCES);
+			}
+		}
+		else
+		{
+			for (int i = 0; i < gpu_state.subres.size(); i++)
+			{
+				if (gpu_state.subres[i].layout == TextureLayout::NONE) continue;
 
-			auto target = ResourceStates::NO_ACCESS;
-			target.layout = gpu_state.subres[i].layout;
-			transition(from, target, i);
+				auto target = ResourceStates::NO_ACCESS;
+				target.layout = gpu_state.subres[i].layout;
+				transition(from, target, i);
+			}
 		}
 
 		if (!cpu_state.used)
@@ -711,6 +783,109 @@ namespace HAL
 		{
 			for (int i = 0; i < gpu_state.subres.size(); i++) transit(i);
 		}
+	}
+
+	void ResourceStateManager::chain_lists(Transitions* from, Transitions* to) const
+	{
+		if (resource->get_desc().is_buffer()) return;
+
+		auto& prev = get_state(from);
+		auto& next = get_state(to);
+
+		if (!prev.used || !next.used) return;
+
+		// A SYNC_NONE / NO_ACCESS node: the first-touch seed planted by
+		// transition_one, a zero-transition prepended by prepare_state, or a
+		// release appended by prepare_after_state. A list can carry several of
+		// them at either end, around its real usages.
+		auto is_none = [](const ResourceUsage* u)
+		{
+			return u->wanted_state.operation == BarrierSync::NONE
+				&& u->wanted_state.access == BarrierAccess::NO_ACCESS;
+		};
+
+		auto one = [&](UINT subres)
+		{
+			auto* last  = prev.slot(subres).last_usage;
+			auto* first = next.slot(subres).first_usage;
+
+			if (!last || !first) return;
+
+			// Walk forward over `to`'s SYNC_NONE prefix to its first REAL usage.
+			auto* target = first;
+			while (is_none(target) && target->next_usage)
+				target = target->next_usage;
+
+			// `to` has NO real usage — only SYNC_NONE reconciliation nodes
+			// (redundant seed + release from prepare_state/prepare_after_state). If
+			// `from` really accessed the resource, `to`'s first node re-declares the
+			// state with SyncBefore=NONE AFTER that access → #1417. Walk `from` back
+			// to its last REAL usage and hand it to `to`'s first node so the barrier
+			// carries a real SyncBefore; suppress `from`'s own end release (the
+			// resource stays live for `to`). The remaining `to` nodes now chain off a
+			// real predecessor instead of a SYNC_NONE seed.
+			if (is_none(target))
+			{
+				while (is_none(last) && last->prev_usage)
+					last = last->prev_usage;
+
+				if (!is_none(last))
+				{
+					// `to`'s LAST node is its exit release; the earlier none nodes are
+					// redundant re-seeds. Suppress the seeds (so none emit a bare
+					// SyncBefore=NONE after the access) and hand the release `from`'s
+					// last real usage as predecessor so it carries real sync. Suppress
+					// `from`'s own end release — the resource stays live until here.
+					auto* lastnode = first;
+					while (lastnode->next_usage) lastnode = lastnode->next_usage;
+
+					for (auto* u = first; u != lastnode; u = u->next_usage)
+						u->suppressed = true;
+
+					if (!lastnode->prev_usage || is_none(lastnode->prev_usage))
+						lastnode->prev_usage = last;
+
+					prev.slot(subres).skip_end_decay = true;
+				}
+				return;
+			}
+
+			// Walk back over `from`'s SYNC_NONE suffix to its last REAL usage.
+			// Chaining onto a release node would emit `SyncBefore == NONE`, which
+			// is precisely the thing being avoided.
+			while (is_none(last) && last->prev_usage)
+				last = last->prev_usage;
+
+			if (is_none(last)) return;
+
+			// Replace only a missing or SYNC_NONE predecessor; never clobber a
+			// real one (already chained, or a genuine in-list transition).
+			if (target->prev_usage && !is_none(target->prev_usage)) return;
+
+			// Everything bypassed on both sides must emit nothing: a suffix node
+			// would publish SyncAfter == NONE (making the resource untouchable for
+			// the rest of the scope) and a non-leading prefix node would publish
+			// SyncBefore == NONE after it had already been touched.
+			for (auto* u = first; u != target; u = u->next_usage)
+				u->suppressed = true;
+
+			for (auto* u = prev.slot(subres).last_usage; u != last; u = u->prev_usage)
+				u->suppressed = true;
+
+			target->prev_usage = last;
+
+			// `from` must not run the generic end-of-list release for THIS
+			// subresource either — a later list in the same ECL scope still
+			// touches it. Subresources that were not carried forward keep their
+			// release, so they still return to `initial_layout`.
+			prev.slot(subres).skip_end_decay = true;
+		};
+
+		if (prev.uniform && next.uniform)
+			one(ALL_SUBRESOURCES);
+		else
+			for (UINT i = 0; i < gpu_state.subres.size(); i++)
+				one(i);
 	}
 
 	void ResourceStateManager::connect(Transitions* from, Transitions* to)

@@ -485,7 +485,11 @@ PassNode VoxelScreen
 	[Write] Texture VoxelFramesCount;
 	[Write] Texture VoxelIndirectNoise;
 	[Write] Texture VoxelIndirectFiltered;
-	# Previous-frame view of VoxelIndirectFiltered (history-prev, adopted resource).
+	# Previous-frame view of VoxelIndirectFiltered (history-prev, adopted
+	# resource). READ-ONLY by design — the FrameGraph skips alloc/free
+	# scheduling for a history prev and assumes it is never written. A fresh
+	# prev (first frame, no carried history) is handled shader-side, not by
+	# clearing it here.
 	Texture VoxelIndirectFilteredPrev;
 	TextureCube sky_cubemap_filtered;
 	Texture BlueNoise;

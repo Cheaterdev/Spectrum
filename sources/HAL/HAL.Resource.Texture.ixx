@@ -61,6 +61,12 @@ export{
 								Resource::write(load_subresources[i]);
 
 						}
+
+						// Strict promote (deferred): register this freshly-uploaded
+						// texture so the UploadManager transitions it out of COMMON
+						// into its canonical read state at the next frame-begin.
+						if (!desc.is_virtual())
+							device.register_promote(get_ptr());
 					
 
 

@@ -323,6 +323,11 @@ namespace FrameGraph
 				if (!check(flags & WRITEABLE_FLAGS) && !info->is_history_prev) continue;
 				info->process_debug_resource(pass, this);
 			}
+
+			// Close the pass's open op-batch before deactivating freed resources,
+			// so alias_end lands after the last op instead of inside its batch.
+			list->close_op();
+
 			for (auto info : pass->used.resource_deletions_after)
 			{
 				if (!info->alloc_ptr.handle) continue;
@@ -377,6 +382,12 @@ namespace FrameGraph
 	{
 		{
 			PROFILE(L"begin_frame");
+
+			// Promote any freshly-uploaded resources into their canonical read state
+			// before passes record (so seeds see the read state) and before this
+			// frame's lists are submitted, so uploaded assets rest in a read state
+			// rather than COMMON and never rely on implicit promotion (#1334).
+			RenderSystem::get().device().flush_uploads();
 
 			builder.current_frame = builder.frames.begin_frame();
 			for (auto& chain : builder.alloc_resources) chain.reset_frame();
@@ -644,8 +655,23 @@ namespace FrameGraph
 
 		}
 
+		// Close every pass list's open op-batch before the FrameGraph appends
+		// its cross-pass transitions (decay-to-resting, prepare_after_state).
+		// Those are recorded at the list's back point; without this they would
+		// fall inside the last op's still-open batch and be mis-positioned.
+		for (auto& pass : builder.enabled_passes)
+			if (pass->context.list)
+				pass->context.list->close_op();
+
 		builder.process_transitions();
 		builder.process_fences();
+
+		// Chain resource state across command-list boundaries so multiple lists
+		// share one ExecuteCommandLists scope. Runs after process_transitions
+		// (all usages recorded) and process_fences (batch flush points known),
+		// before compile_lists.
+		builder.link_list_groups();
+
 		builder.compile_lists();
 
 
@@ -700,8 +726,11 @@ namespace FrameGraph
 				{
 					if (!sync_pass) continue;
 
-					RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
-					queued_lists[list_type].clear();
+					if(!queued_lists[list_type].empty())  
+					{				
+						RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
+						queued_lists[list_type].clear();
+					}
 
 					RenderSystem::get().device().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
 				}
@@ -945,6 +974,64 @@ namespace FrameGraph
 		}
 	}
 
+	void TaskBuilder::link_list_groups()
+	{
+		PROFILE(L"link_list_groups");
+
+		// Lists that will be submitted together in one ExecuteCommandLists, per
+		// queue. Mirrors commit_command_lists: a pass that must gpu_wait flushes
+		// the pending batch before it, and a pass with put_fence closes one after.
+		enum_array<HAL::CommandListType, std::vector<HAL::CommandList*>> pending;
+
+		auto close_group = [&](HAL::CommandListType type)
+		{
+			auto& lists = pending[type];
+
+			// Within a group, chain each resource from the list that used it last
+			// to the one using it next. That replaces the SYNC_NONE release +
+			// SYNC_NONE re-seed pair at the boundary with a direct state hand-off,
+			// leaving exactly one SYNC_NONE entry (first user) and one SYNC_NONE
+			// exit (last user) per resource per group.
+			if (lists.size() > 1)
+			{
+				std::map<HAL::Resource*, HAL::CommandList*> last_user;
+
+				for (auto* cmd : lists)
+					for (auto* res : cmd->get_used_resources())
+					{
+						auto it = last_user.find(res);
+						if (it != last_user.end() && it->second != cmd)
+							res->get_state_manager().chain_lists(it->second, cmd);
+
+						last_user[res] = cmd;
+					}
+			}
+
+			lists.clear();
+		};
+
+		for (auto& pass : enabled_passes)
+		{
+			auto commandList = pass->context.list;
+			if (!commandList) continue;
+
+			HAL::CommandListType list_type = pass->get_type();
+
+			bool waits = false;
+			for (auto sync_pass : pass->sync_state.values)
+				if (sync_pass) waits = true;
+
+			if (waits) close_group(list_type);      // gpu_wait flushes the batch
+
+			pending[list_type].push_back(commandList.get());
+
+			if (pass->put_fence) close_group(list_type);   // fence closes the batch
+		}
+
+		for (auto type : magic_enum::enum_values<HAL::CommandListType>())
+			close_group(type);
+	}
+
 	void TaskBuilder::compile_lists()
 	{
 		PROFILE(L"compile");
@@ -1017,6 +1104,7 @@ namespace FrameGraph
 							detail.after = b.after;
 							detail.subres = b.subres;
 							detail.flags = b.flags;
+							detail.resource_id = reinterpret_cast<uint64>(b.resource);   // opaque instance id
 							rec.barrier_details.push_back(std::move(detail));
 						}
 						rec.barrier_point = nullptr;
@@ -1241,15 +1329,9 @@ namespace FrameGraph
 					}
 
 
-					//last state is a write state
-					if ((i == info.states.size() - 1) && info.states[i].write && (info.is_static() || info.passed))
-					{
-						auto layout = info.creation_state.get_subres_state(0).layout;
-						auto target = ResourceStates::NO_ACCESS;
-
-						target.layout = layout;
-						info.resource->get_state_manager().transition(commandList.get(), target, ALL_SUBRESOURCES);
-					}
+					// (Last-touch decay to the resting state now happens once,
+					// after the states loop — see below — so it also covers a
+					// read-last touch, not just write-last.)
 
 
 				}
@@ -1258,6 +1340,27 @@ namespace FrameGraph
 
 
 
+
+				// Canonical resting-state contract for passed/static resources:
+				// at the LAST pass that touches the resource (read OR write), decay
+				// it back to creation_state.layout — its per-resource CanonicalRead
+				// (SHADER_RESOURCE for read resources, PRESENT for the swapchain).
+				// Within the graph they're FG-scheduled like transients; this is the
+				// single point where they return to a state any queue/list can pick
+				// up. A no-op when the last touch already left it there (merge_state
+				// collapses it). Must run before the end-state capture below so
+				// last_state carries the resting layout into next frame.
+				if (!info.states.empty() && (info.is_static() || info.passed))
+				{
+					Pass* last_pass = info.states.back().passes.back();
+					auto commandList = last_pass->context.list;
+					if (commandList)
+					{
+						auto target = ResourceStates::NO_ACCESS;
+						target.layout = info.creation_state.get_subres_state(0).layout;
+						info.resource->get_state_manager().transition(commandList.get(), target, ALL_SUBRESOURCES);
+					}
+				}
 
 				// link end to start transition
 				if (!info.states.empty() && (info.is_static() || info.passed))
@@ -1357,6 +1460,24 @@ namespace FrameGraph
 			Pass* best_creation_pass = info->states.front().passes.front();
 			Pass* best_deletion_pass = nullptr;
 
+			// The creating pass must actually execute. A pass whose setup()
+			// returned false (renderable == false — e.g. ResultCreation, which
+			// only declares ResultTexture and records nothing) never runs
+			// FrameContext::begin, so its alias_begin — the DISCARD that
+			// initializes a placed/aliased resource — would never be emitted.
+			// The first real use then hits an uninitialized resource carrying a
+			// stale tracked layout (D3D12 #1422 + INCOMPATIBLE_BARRIER_LAYOUT).
+			// Fall forward to the first pass that actually records commands.
+			if (!best_creation_pass->active())
+			{
+				for (auto& st : info->states)
+				{
+					for (auto p : st.passes)
+						if (p->active()) { best_creation_pass = p; break; }
+
+					if (best_creation_pass->active()) break;
+				}
+			}
 
 			// create - easy
 			events[best_creation_pass->call_id].create.insert(info);
@@ -1416,20 +1537,10 @@ namespace FrameGraph
 			PROFILE(L"allocate memory");
 
 
-			auto log_lifetime = [this](const char* what, ResourceAllocInfo* info, int call_id)
-			{
-				if (!debug_lifetime.contains(info->id)) return;
-				Log::get() << "[Lifetime] " << what << " '" << info->name()
-					<< "' @call " << call_id
-					<< " off=" << info->alloc_ptr.get_offset()
-					<< " size=" << info->alloc_ptr.get_size() << Log::endl;
-			};
-
 			for (auto [id, e] : events)
 			{
 				for (auto info : e.free_before)
 				{
-					log_lifetime("free ", info, id);
 					info->alloc_ptr.handle.Free();
 				}
 
@@ -1441,13 +1552,11 @@ namespace FrameGraph
 					HeapIndex index = { HAL::MemoryType::COMMITED , info->heap_type };
 
 					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, index);
-					log_lifetime("alloc", info, id);
 				}
 
 
 				for (auto info : e.free_after)
 				{
-					log_lifetime("free ", info, id);
 					info->alloc_ptr.handle.Free();
 				}
 			}

@@ -30,6 +30,57 @@ namespace HAL
 		return list;
 	}
 
+	void Device::register_promote(std::shared_ptr<Resource> resource)
+	{
+		std::lock_guard<std::mutex> g(upload_mutex);
+		pending_promotes.push_back(std::move(resource));
+	}
+
+	void Device::flush_uploads()
+	{
+		std::vector<std::shared_ptr<Resource>> batch;
+		{
+			std::lock_guard<std::mutex> g(upload_mutex);
+			if (pending_promotes.empty()) return;
+			batch.swap(pending_promotes);
+		}
+
+		auto list = get_upload_list();
+
+		std::vector<std::shared_ptr<Resource>> promoted;
+		promoted.reserve(batch.size());
+
+		for (auto& r : batch)
+		{
+			if (r->get_desc().is_buffer()) continue;   // buffers carry no layout
+
+			auto desired = r->get_state_manager().get_desired_state();
+			// Only promote resources that actually have a read state.
+			if (!check(desired.layout & (TextureLayout::SHADER_RESOURCE | TextureLayout::UNORDERED_ACCESS)))
+				continue;
+
+			// The resource is physically in COMMON (its data upload already waited on
+			// the DStorage fence). Record COMMON -> read: the seed reads gpu_state
+			// (still COMMON) so a REAL transition is emitted. Set initial_layout to
+			// the read layout NOW so this list's own end-of-list decay is a no-op
+			// (it decays to initial_layout). gpu_state is pinned to the read state
+			// AFTER execute, once the seed has been consumed by compile.
+			list->transition(r.get(), desired);
+			r->get_state_manager().initial_layout = desired.layout;
+			promoted.push_back(r);
+		}
+
+		// Submit on the DIRECT queue and wait. This runs on the MAIN thread at
+		// frame-begin (unlike the old worker-thread finish_upload that deadlocked),
+		// and only when there are pending promotes — a one-time cost after loads.
+		// Waiting keeps the list alive until the GPU is done and orders the
+		// transition ahead of this frame's rendering.
+		list->execute_and_wait();
+
+		for (auto& r : promoted)
+			r->get_state_manager().set_resting_state(r->get_state_manager().get_desired_state().layout);
+	}
+
 	HAL::Queue::ptr& Device::get_queue(CommandListType type)
 	{
 		return queues[type];

@@ -171,7 +171,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 		float3 s_dir    = normalize(frame.GetSunDir().xyz);
 
 		[loop]
-		for (int si = 0; si < 16; si++)
+		for (int si = 0; si < 1; si++)
 		{
 			[raypayload] ColorShadowPayload sp;
 			sp.transmittance = sun_vis;

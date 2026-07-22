@@ -885,10 +885,67 @@ namespace HAL
 				compiler.func_barrier(point);
 			}
 
+			// Open a new batch of `op`, continue the current one if same, or close
+			// the previous (different class) and open a new one.
+			void Transitions::begin_op(BarrierSync op)
+			{
+				if (HAL::Debug::EnableOpBatching && open_op == op)
+					return;                                      // same class → keep open
+				if (open_op != BarrierSync::NONE)
+					create_usage_point(open_op, false);          // close previous batch
+				create_usage_point(op);                          // open new batch
+				open_op = op;
+				current_batch_id++;                              // fresh batch id
+			}
+
+			// Close the currently open batch (list end / flush).
+			void Transitions::close_op()
+			{
+				if (open_op == BarrierSync::NONE) return;
+				create_usage_point(open_op, false);
+				open_op = BarrierSync::NONE;
+			}
+
+			// Split the open batch when this transition would need a real barrier
+			// against an earlier op in the same batch (different, non-mergeable
+			// state on the same resource — write-after-write in another state,
+			// read-after-write, etc.). Same/mergeable state = no barrier = no
+			// split, exactly matching the un-batched barrier set. Reads the
+			// resource's per-list state directly (no parallel map).
+			void Transitions::batch_hazard_check(const HAL::Resource* resource, ResourceState to)
+			{
+				if (open_op == BarrierSync::NONE) return;
+
+				auto& cpu = const_cast<HAL::Resource*>(resource)->get_state_manager().get_cpu_state(this);
+
+				if (cpu.batch_touch_id == current_batch_id
+					&& !(cpu.batch_touch_state == to) && !merge_state(cpu.batch_touch_state, to))
+				{
+					// Split so this transition (and the ops after it) land in a new
+					// point positioned after the earlier op — the barrier must run
+					// between the two conflicting uses. current_batch_id is NOT
+					// bumped: it is the OP-CLASS batch epoch (advanced only by
+					// begin_op). A resource touched anywhere in the op-class batch
+					// must stay detectable across intra-batch splits — otherwise a
+					// later conflicting use (e.g. SMAA_blend written RT by one draw,
+					// read SR by the next) would miss its split after an unrelated
+					// split already occurred, mis-positioning the barrier.
+					create_usage_point(open_op, false);   // close before the hazard
+					create_usage_point(open_op);           // reopen same class after
+				}
+
+				cpu.batch_touch_id    = current_batch_id;
+				cpu.batch_touch_state = to;
+			}
+
 			void Transitions::compile_transitions()
 			{
-			 if(transitions_compiled) 
+			 if(transitions_compiled)
 				 return;
+
+				// Close any batch still open at list end so its resources are
+				// fully recorded before the usage points are walked below.
+				close_op();
 						std::set<Resource*> non_tracked_resources;
 
 
@@ -899,8 +956,16 @@ namespace HAL
 						auto& usage = *u;
 						auto prev_usage = usage.prev_usage;
 
+						// A list-boundary marker bypassed by chain_lists: the
+						// neighbouring list is in this ExecuteCommandLists group,
+						// so state is handed over directly and this node must not
+						// publish a SYNC_NONE barrier (D3D12 #1417). It is also not
+						// an unsynchronized first touch, so keep it out of
+						// non_tracked_resources below.
+						if (usage.suppressed) continue;
+
 					//	ASSERT(!usage.debug);
-						if(!prev_usage) 
+						if(!prev_usage)
 						{
 							bool is_automatic =  check(usage.resource->get_desc().Flags &HAL::ResFlags::DisableStateTracking);
 				//			ASSERT(!);
@@ -1003,12 +1068,34 @@ namespace HAL
 						if (!subres_cpu.used) return;
 						ASSERT(subres_cpu.used);
 
+						// A later list in the same ExecuteCommandLists group still
+						// uses this subresource, and its state was chained across
+						// the boundary (chain_lists) — releasing it here to
+						// NO_ACCESS/SYNC_NONE would make it untouchable for the
+						// rest of the scope (D3D12 #1417). The group's last user
+						// releases it. Checked per subresource so that mips which
+						// were NOT carried forward still decay to initial_layout.
+						if (subres_cpu.skip_end_decay) return;
+
 
 
 						auto target = ResourceStates::NO_ACCESS;
 						target.layout = resource->get_state_manager().initial_layout;
 
 						auto end_point = subres_cpu.last_usage->point->next_point;
+
+						// A bare transition-only list (built with the public
+						// transition() API, e.g. the upload/promote list) never opened
+						// an op batch, so close_op()'s open_op==NONE guard skipped the
+						// trailing point — the last usage sits at the final point with
+						// no next_point. Append one now (usage_points is a deque, so
+						// existing UsagePoint* stay valid) so the release lands AFTER
+						// the last usage. Op-batched lists already have this point.
+						if (!end_point)
+						{
+							create_usage_point(BarrierSync::NONE, false);
+							end_point = subres_cpu.last_usage->point->next_point;
+						}
 
 
 						if (resource->debug_transitions)
@@ -1053,6 +1140,7 @@ namespace HAL
 				usage.point = point;
 				usage.last_point = nullptr;
 				usage.debug = false;
+				usage.suppressed = false;
 
 				HAL::Debug::BarrierBreakpoints::check_usage(resource->name, subres, state);
 
@@ -1143,6 +1231,7 @@ namespace HAL
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
 			use_resource(resource);
+			batch_hazard_check(resource, target_state);
 			visit_subres(info, [&](const HAL::Resource::ptr&, UINT subres) {
 				use_resource(resource);
 				resource->get_state_manager().transition(this, target_state, subres);
@@ -1159,44 +1248,6 @@ namespace HAL
 					const_cast<HAL::Resource*>(resource.get())->get_state_manager().stop_using(this, subres);
 				});
 			}
-
-
-#ifdef PRETRANSITIONS_FIX
-	std::shared_ptr<TransitionCommandList> Transitions::fix_pretransitions()
-	{
-		PROFILE(L"fix_pretransitions");
-
-		HAL::Barriers result(CommandListType::DIRECT);
-		
-		CommandListType transition_type = type;
-
-		{
-			PROFILE(L"processing resources");
-
-		
-			for (auto& r : need_check_transitions)
-			{
-				auto res_type = r->get_state_manager().process_transitions(result, this);
-
-				transition_type = Merge(transition_type, res_type);
-			}
-
-		}
-		if (result)
-		{
-				PROFILE(L"creating list");
-			auto cmd = static_cast<CommandList*>(this);
-
-
-			auto transition_list = (static_cast<CommandList*>(this)->get_device().get_queue(transition_type)->get_transition_list());
-			transition_list->compiler.set_name(L":Transitions");
-			transition_list->create_transition_list(*cmd->frame_resources, result);
-			return transition_list;
-		}
-		return nullptr;
-	}
-#endif
-
 
 
 	void Transitions::transition(const Resource::ptr& resource, ResourceState to, UINT subres)
@@ -1228,6 +1279,7 @@ namespace HAL
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
 			use_resource(resource);
+			batch_hazard_check(resource, to);
 			const_cast<Resource*>(resource)->get_state_manager().transition(this, to, subres);
 		}
 	}
@@ -1608,6 +1660,8 @@ namespace HAL
 	{
 		transition_count = 0;
 		pool_used = 0;
+		open_op = BarrierSync::NONE;
+		current_batch_id = 0;
 		tracked_resources.reserve(512);
 		used_resources.reserve(256);
 		create_usage_point(BarrierSync::NONE, false);
@@ -1620,6 +1674,7 @@ namespace HAL
 		used_resources.clear();
 		need_check_transitions.clear();
 		transitions_compiled = false;
+		open_op = BarrierSync::NONE;
 	}
 
 	void SignatureDataSetter::commit_tables(BarrierSync operation, UsedSlots* slots)

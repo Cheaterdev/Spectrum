@@ -160,63 +160,24 @@ namespace HAL
 				device.get_ds_queue().flush();
 		}
 
-		std::list<TransitionCommandList::ptr> transition_lists;
 			for (auto& list : lists)
 			{
-
-#ifdef PRETRANSITIONS_FIX
-				auto transition_list = (list)->fix_pretransitions();
-				  ASSERT(!transition_list);
-				if (transition_list)
-				{
-					transition_lists.emplace_back(transition_list);
-					PROFILE(L"execute_transitions");
-					if (transition_list->get_type() == (list)->get_type())
-					{
-						API::Queue::execute(&transition_list->get_compiled());
-						API::Queue::execute(&list->compiler.get_list());
-					}
-					else
-					{
-						// Need to request other queue to make a proper transition.
-						// It's OK, but better to avoid this
-						auto queue = device.get_queue(transition_list->get_type());
-						auto waiter = queue->run_transition_list(last_executed_fence, transition_list.get());
-
-						API::Queue::gpu_wait(waiter);
-						API::Queue::execute(&list->compiler.get_list());
-					}
-
-				}
-				else		  
-#endif
-				{
-					PROFILE(L"execute_simple");
-					API::Queue::execute(&list->compiler.get_list());	 
-				}
-
-			
-			
+				PROFILE(L"execute_simple");
+				API::Queue::execute(&list->compiler.get_list());
 			}
 		
 		API::Queue::signal(commandListCounter, fence_value);
 
 		 FenceWaiter execution_fence{ &commandListCounter, fence_value, type};
 
-		  gpu_wait_thread.enqueue([lists, transition_lists, execution_fence, this]()
+		  gpu_wait_thread.enqueue([lists, execution_fence, this]()
 			{
 				if (!device.alive) return;
 
 				PROFILE(L"on_execute wait");
 				execution_fence.wait();
 
-			
-
-
 				PROFILE(L"on_execute process");
-				for (auto& transition_list : transition_lists)
-					transition_list->on_execute();
-
 				for (auto& list : lists)
 				{
 					auto& updates = (list)->tile_updates;
