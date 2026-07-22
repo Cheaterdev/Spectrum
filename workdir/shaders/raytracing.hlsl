@@ -352,7 +352,7 @@ void ColorPass()
 
 	//TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 0, 0, 0, ray, payload_shadow);
 
-	tex_noise[itc] = payload_gi.color;// erp(tex_noise[itc], shadow, 0.1);// !payload_shadow.hit;
+    tex_noise[itc] = float4(payload_gi.color.rgb, 1); // erp(tex_noise[itc], shadow, 0.1);// !payload_shadow.hit;
 }
 
 

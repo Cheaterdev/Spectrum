@@ -82,10 +82,6 @@ export namespace Test
 		scene->update_transforms();
 		scene->update(*graph.builder.current_frame);
 
-		// Register the output texture as the FrameGraph resource "ColorOutput".
-		graph.builder.pass_texture(FrameGraph::ResourceID::ColorOutput, output->resource,
-			{}, FrameGraph::ResourceFlags::Required);
-
 		// FrameInfo slot: camera, sun, BRDF LUT.
 		graph.add_slot_generator([](FrameGraph::Graph& g) {
 			auto& sky = g.get_context<SkyInfo>();
@@ -146,6 +142,10 @@ export namespace Test
 					scene_info.scene->raytrace_scene, rtx_size);
 			},
 			FrameGraph::PassFlags::Compute);
+
+		// Register the output texture as the FrameGraph resource "ColorOutput".
+		graph.builder.pass_texture(FrameGraph::ResourceID::ColorOutput, output->resource,
+			{}, FrameGraph::ResourceFlags::Required);
 
 		graph.setup();
 		graph.compile(frame_idx++);
