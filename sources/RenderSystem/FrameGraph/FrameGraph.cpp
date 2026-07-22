@@ -385,9 +385,8 @@ namespace FrameGraph
 
 			// Promote any freshly-uploaded resources into their canonical read state
 			// before passes record (so seeds see the read state) and before this
-			// frame's lists are submitted. This is what removes the class-1 #1334
-			// flood (uploaded assets no longer rest in COMMON / rely on implicit
-			// promotion) — validated 2026-07-21.
+			// frame's lists are submitted, so uploaded assets rest in a read state
+			// rather than COMMON and never rely on implicit promotion (#1334).
 			RenderSystem::get().device().flush_uploads();
 
 			builder.current_frame = builder.frames.begin_frame();
@@ -667,24 +666,10 @@ namespace FrameGraph
 		builder.process_transitions();
 		builder.process_fences();
 
-		// DISABLED — phase 4 step 2 (multiple command lists per ExecuteCommandLists).
-		//
-		// link_list_groups() runs AFTER process_transitions(), which has already
-		// finalized the persistent GPU layout via set_cpu_state (gpu.layout =
-		// last usage's layout). Chaining then retroactively suppresses barriers
-		// that computation depended on, so the tracked layout and the real layout
-		// drift apart and the next frame's seed mismatches (D3D12 #1334).
-		//
-		// The fix is not another suppression rule: group membership has to be
-		// known BEFORE transitions are generated, so releases are never emitted
-		// for intra-group hand-offs in the first place and set_cpu_state sees the
-		// truth. Kept compiled but unreferenced until that reordering is done.
-		// Requirement 6: chain resource state across command-list boundaries so
-		// multiple lists share one ExecuteCommandLists scope. Depends on the
-		// UploadManager (class-1 assets rest in a read state) and chain_lists'
-		// all-none handling (class-2 FG transients). #1417/#1334 eliminated
-		// 2026-07-22 (2 frame-1-transient #1334 on a pre-promote deserialize
-		// texture remain).
+		// Chain resource state across command-list boundaries so multiple lists
+		// share one ExecuteCommandLists scope. Runs after process_transitions
+		// (all usages recorded) and process_fences (batch flush points known),
+		// before compile_lists.
 		builder.link_list_groups();
 
 		builder.compile_lists();

@@ -265,19 +265,12 @@ namespace HAL
         {
             PROFILE(L"Queue::execute");
 
-            // One ExecuteCommandLists per list.
-            //
-            // Batching several lists into one ECL scope is phase 4 step 2, and it
-            // requires TaskBuilder::link_list_groups to chain resource state
-            // across list boundaries first: D3D12 forbids, within one scope,
-            // accessing a resource after a SyncAfter == SYNC_NONE barrier, or
-            // emitting a SyncBefore == SYNC_NONE barrier once it has been
-            // accessed (#1417). Each list is currently self-contained (SYNC_NONE
-            // seed in, SYNC_NONE release out), so it must get its own scope.
-            // Accumulate into one ExecuteCommandLists (requirement 6). Legal now
-            // that TaskBuilder::link_list_groups chains resource state across list
-            // boundaries within a group — no per-list flush. gpu_wait/signal still
-            // flush at real sync points.
+            // Accumulate lists into one ExecuteCommandLists — no per-list flush.
+            // Legal because TaskBuilder::link_list_groups chains resource state
+            // across list boundaries within a group: D3D12 forbids, within one
+            // scope, accessing a resource after a SyncAfter == SYNC_NONE barrier or
+            // emitting a SyncBefore == SYNC_NONE barrier once it has been accessed
+            // (#1417). gpu_wait/signal still flush at real sync points.
             queued.emplace_back(list->get_native().Get());
         }
 

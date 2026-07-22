@@ -80,7 +80,7 @@ export{
 			std::set<Resource*> need_check_transitions;
 			void create_usage_point(BarrierSync operation, bool end = true);
 
-			// --- Operation batching (phase 3) ---------------------------------
+			// --- Operation batching -------------------------------------------
 			// Consecutive ops of the same class share ONE usage point (one
 			// barrier group) instead of each bracketing itself. open_op is the
 			// currently open batch's class (NONE = none open). current_batch_id
@@ -121,8 +121,8 @@ export{
 			void use_resource(const HAL::Resource* resource);
 
 			// Resources this list touched (populated by use_resource). Used by
-			// list-group compilation to find resources shared between lists that
-			// land in the same ExecuteCommandLists scope.
+			// link_list_groups to find resources shared between lists that land in
+			// the same ExecuteCommandLists scope.
 			const std::vector<HAL::Resource*>& get_used_resources() const { return used_resources; }
 		public:
 

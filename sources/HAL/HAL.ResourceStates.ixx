@@ -112,10 +112,10 @@ export
 			bool used = false;
 			bool need_discard = false;
 
-			// List-group compilation (phase 4): a LATER list in the same
-			// ExecuteCommandLists group also uses THIS subresource, so its state
-			// was handed over directly (chain_lists) and this list must not emit
-			// the end-of-list release to NO_ACCESS/SYNC_NONE — inside one ECL
+			// A LATER list in the same ExecuteCommandLists group also uses THIS
+			// subresource, so its state was handed over directly (chain_lists) and
+			// this list must not emit the end-of-list release to
+			// NO_ACCESS/SYNC_NONE — inside one ECL
 			// scope that makes it untouchable afterwards (D3D12 #1417). Tracked
 			// per subresource: chaining is per subresource, and a resource whose
 			// mips are only partially carried forward must still release the rest,
@@ -142,8 +142,8 @@ export
 
 			bool used = false;
 
-			// Operation batching (phase 3): the id of the batch this resource was
-			// last touched in, and the state it was transitioned to. The command
+			// Operation batching: the id of the batch this resource was last
+			// touched in, and the state it was transitioned to. The command
 			// list compares batch_touch_id against its monotonic current_batch_id
 			// to detect a same-batch reuse that needs a split. Reset per frame.
 			uint          batch_touch_id = 0;
@@ -256,7 +256,7 @@ export
 
 			void connect(Transitions* from, Transitions* to);
 
-			// List-group chaining (phase 4). `from` and `to` are two lists that
+			// `from` and `to` are two lists that
 			// will be submitted inside ONE ExecuteCommandLists scope, `from`
 			// first. Gives `to`'s first real usage `from`'s last usage as its
 			// predecessor — so the emitted barrier carries a real SyncBefore
