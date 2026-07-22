@@ -741,8 +741,11 @@ namespace FrameGraph
 				{
 					if (!sync_pass) continue;
 
-					RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
-					queued_lists[list_type].clear();
+					if(!queued_lists[list_type].empty())  
+					{				
+						RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
+						queued_lists[list_type].clear();
+					}
 
 					RenderSystem::get().device().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
 				}

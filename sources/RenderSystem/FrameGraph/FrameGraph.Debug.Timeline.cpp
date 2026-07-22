@@ -38,6 +38,10 @@ class FrameGraphTimelineCanvas : public dock_base
         bool                 put_fence  = false;
         bool                 disabled   = false;
         bool                 runs_alone = false;
+        // Which ExecuteCommandLists this pass is packed into (unique across queues,
+        // -1 for disabled). commit_command_lists submits one ECL per queue whenever
+        // a pass waits (flush before) or has put_fence (flush after).
+        int                  ecl_group  = -1;
         // Cross-queue deps resolved at rebuild time — no raw pointers.
         std::vector<std::pair<HAL::CommandListType, UINT>> cross_queue_deps;
         // Copied from Pass::debug_commands during rebuild(); barrier_point == nullptr.
@@ -373,6 +377,20 @@ class FrameGraphTimelineCanvas : public dock_base
                 owner.dr(c, pc, px + PAD, py + PAD, owner.col_w() - 2.0f * PAD, PASS_H - 2.0f * PAD);
                 if (!pass.disabled)
                 {
+                    // ExecuteCommandLists packing: a colour strip along the top,
+                    // shared by all passes submitted in the same ECL. The strip is
+                    // drawn edge-to-edge (no inter-column pad) so consecutive
+                    // same-ECL passes merge into one continuous bar.
+                    if (pass.ecl_group >= 0)
+                    {
+                        static const float4 ecl_pal[] = {
+                            { 0.36f, 0.62f, 0.86f, 1.0f }, { 0.86f, 0.58f, 0.30f, 1.0f },
+                            { 0.45f, 0.76f, 0.48f, 1.0f }, { 0.78f, 0.47f, 0.78f, 1.0f },
+                            { 0.83f, 0.75f, 0.36f, 1.0f }, { 0.42f, 0.74f, 0.74f, 1.0f },
+                        };
+                        const float4& gc = ecl_pal[pass.ecl_group % (int)std::size(ecl_pal)];
+                        owner.dr(c, gc, px, py + PAD, owner.col_w(), 4.0f);
+                    }
                     if (pass.runs_alone)
                         owner.dr(c, C_RUNS_ALONE, px + PAD, py + PASS_H - PAD - 3.0f,
                                  owner.col_w() - 2.0f * PAD, 3.0f);
@@ -650,6 +668,7 @@ class FrameGraphTimelineCanvas : public dock_base
                 info.queue == HAL::CommandListType::DIRECT ? "Direct" : "Compute"));
             add_row("ID:     #" + std::to_string(info.call_id));
             add_row(std::string("Fence:  ") + (info.put_fence ? "yes" : "no"));
+            add_row("ECL:    group " + std::to_string(info.ecl_group));
 
             auto queue_name = [](HAL::CommandListType t) -> const char*
             {
@@ -1376,6 +1395,28 @@ private:
                 m_passes.push_back(info);
                 if (next_col > m_max_call_id) m_max_call_id = next_col;
                 ++next_col;
+            }
+        }
+
+        // ECL packing: replicate commit_command_lists. Per queue, a fresh
+        // ExecuteCommandLists starts at the first pass, or when a pass waits on
+        // another queue (gpu_wait flushes the batch first); a pass with put_fence
+        // closes the batch (flush after), so the next same-queue pass starts a new
+        // ECL. Ids are unique across queues so colours don't collide. m_passes is
+        // in execution order for the enabled section.
+        {
+            std::unordered_map<int, int> cur;   // queue -> current ECL id (-1 = closed)
+            int next = 0;
+            for (auto& pass : m_passes)
+            {
+                if (pass.disabled) continue;
+                const int q  = static_cast<int>(pass.queue);
+                auto      it = cur.find(q);
+                if (it == cur.end() || it->second < 0 || !pass.cross_queue_deps.empty())
+                    cur[q] = next++;
+                pass.ecl_group = cur[q];
+                if (pass.put_fence)
+                    cur[q] = -1;
             }
         }
 
