@@ -4,10 +4,11 @@ struct SkyData
 
 	float3 sunDir;
 	Texture2D<float> depthBuffer;
- 
+
 	Texture2D<float4> transmittance;
 	Texture3D<float4> inscatter;
 	Texture2D<float4> irradiance;
+	RWTexture2D<float4> result;
 }
 
 
@@ -46,6 +47,14 @@ GraphicsPSO Sky
 
 	rtv = { R16G16B16A16_FLOAT };
 	blend = { Additive };
+}
+
+ComputePSO SkyCompute
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = sky;
 }
 
 
@@ -95,6 +104,7 @@ GraphicsPSO CubemapENVDiffuse
 
 
 
+[Compute]
 PassNode Sky
 {
 	Texture GBuffer_Depth;

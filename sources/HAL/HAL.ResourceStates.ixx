@@ -89,6 +89,19 @@ export
 			// one ECL scope a SyncBefore/SyncAfter of NONE is illegal once the
 			// resource has been touched (#1417).
 			bool suppressed = false;
+
+			// Phase 5 maximal split: set by chain_lists when this is a uniform
+			// (ALL_SUBRESOURCES) usage whose source list left the resource in a
+			// MIXED per-subresource state (e.g. a producer that writes mip 0 as
+			// UAV but leaves the rest in SHADER_RESOURCE). A single ALL barrier
+			// can only carry one before-layout, so it mismatches whichever
+			// subresources differ (D3D12 #1334) and its SYNC_NONE decay makes them
+			// untouchable (#1417). When non-empty, compile_transitions emits one
+			// barrier per subresource using split_before[i] as that subresource's
+			// real before-state instead of the single ALL barrier; entries equal to
+			// wanted_state (untouched or already-matching subresources) emit
+			// nothing. After this usage the resource is uniform again.
+			std::vector<ResourceState> split_before;
 		};
 
 		struct UsagePoint

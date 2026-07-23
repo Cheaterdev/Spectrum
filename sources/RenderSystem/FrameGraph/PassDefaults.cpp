@@ -148,7 +148,7 @@ bool PassDefault<Passes::RTXShadow>::setup(
 	builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::None);
 
 	builder.create(data.ShadowMask,
-	    { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
+	    { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
 	    ResourceFlags::UnorderedAccess);
 
 	if (RenderSystem::get().device().get_properties().work_graph)

@@ -22,11 +22,13 @@ export namespace Table
 		HLSL::Texture2D<float4> transmittance;
 		HLSL::Texture3D<float4> inscatter;
 		HLSL::Texture2D<float4> irradiance;
+		HLSL::RWTexture2D<float4> result;
 		float3& GetSunDir() { return sunDir; }
 		HLSL::Texture2D<float>& GetDepthBuffer() { return depthBuffer; }
 		HLSL::Texture2D<float4>& GetTransmittance() { return transmittance; }
 		HLSL::Texture3D<float4>& GetInscatter() { return inscatter; }
 		HLSL::Texture2D<float4>& GetIrradiance() { return irradiance; }
+		HLSL::RWTexture2D<float4>& GetResult() { return result; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -36,6 +38,7 @@ export namespace Table
 			compiler.compile(transmittance);
 			compiler.compile(inscatter);
 			compiler.compile(irradiance);
+			compiler.compile(result);
 		}
 		struct Compiled
 		{
@@ -44,6 +47,7 @@ export namespace Table
 			uint transmittance; // Texture2D<float4>
 			uint inscatter; // Texture3D<float4>
 			uint irradiance; // Texture2D<float4>
+			uint result; // RWTexture2D<float4>
 
 			
 			private:

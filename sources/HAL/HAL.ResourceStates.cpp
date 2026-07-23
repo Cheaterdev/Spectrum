@@ -881,11 +881,101 @@ namespace HAL
 			prev.slot(subres).skip_end_decay = true;
 		};
 
-		if (prev.uniform && next.uniform)
-			one(ALL_SUBRESOURCES);
+		if (next.uniform)
+		{
+			if (prev.uniform)
+			{
+				// Both sides track the whole resource as one chain.
+				one(ALL_SUBRESOURCES);
+			}
+			else
+			{
+				// `next` reads the whole resource through a single shared node, but
+				// `prev` left it in per-subresource tracking. The one() loop cannot be
+				// used here: its first iteration chains the shared node, and every later
+				// iteration then hits the "predecessor already real" guard and returns
+				// BEFORE suppressing `prev`'s release for that subresource. Those
+				// releases publish SyncAfter == NONE, and the shared read node still
+				// touches subres 1..N in the same ECL scope (#1417), while their stale
+				// per-subres before-layout drives #1334. Suppress `prev`'s exit release
+				// for EVERY subresource it used, and hand the shared node one real
+				// predecessor (the resting read state is uniform across subresources, so
+				// any real last-usage is a valid before-state for the ALL barrier).
+				auto* first = next.uniform_state.first_usage;
+				if (first)
+				{
+					auto* target = first;
+					while (is_none(target) && target->next_usage)
+						target = target->next_usage;
+
+					ResourceUsage* rep_last = nullptr;
+
+					// Per-subresource before-state as seen at this boundary, defaulted
+					// to the read state so untouched / already-matching subresources
+					// become no-ops in the split path below.
+					std::vector<ResourceState> subres_before(gpu_state.subres.size(), target->wanted_state);
+
+					for (UINT i = 0; i < gpu_state.subres.size(); i++)
+					{
+						auto* last = prev.slot(i).last_usage;
+						if (!last) continue;
+
+						while (is_none(last) && last->prev_usage)
+							last = last->prev_usage;
+						if (is_none(last)) continue;   // `prev` never really touched subres i
+
+						// Keep subres i live past the boundary: drop its trailing
+						// SYNC_NONE release and stop the generic end-of-list decay.
+						for (auto* u = prev.slot(i).last_usage; u != last; u = u->prev_usage)
+							u->suppressed = true;
+						prev.slot(i).skip_end_decay = true;
+
+						subres_before[i] = last->wanted_state;   // this subresource's real before-state
+						rep_last = last;
+					}
+
+					if (rep_last)
+					{
+						if (is_none(target))
+						{
+							// `next` carries only SYNC_NONE nodes — hand its exit release
+							// a real predecessor and suppress the redundant seeds.
+							auto* lastnode = first;
+							while (lastnode->next_usage) lastnode = lastnode->next_usage;
+							for (auto* u = first; u != lastnode; u = u->next_usage)
+								u->suppressed = true;
+							if (!lastnode->prev_usage || is_none(lastnode->prev_usage))
+								lastnode->prev_usage = rep_last;
+						}
+						else
+						{
+							for (auto* u = first; u != target; u = u->next_usage)
+								u->suppressed = true;
+							if (!target->prev_usage || is_none(target->prev_usage))
+								target->prev_usage = rep_last;
+
+							// If `prev` left the subresources in DIFFERENT states, a single
+							// ALL barrier cannot express it (it would carry one before-layout
+							// and mismatch the rest -> #1334/#1417). Record the per-subres
+							// before-states so compile_transitions emits a split barrier;
+							// after it the resource is uniform in the read state again. When
+							// the states ARE uniform, keep the single ALL barrier (cheaper).
+							bool split = false;
+							for (UINT i = 1; i < subres_before.size(); i++)
+								if (!(subres_before[i] == subres_before[0])) { split = true; break; }
+
+							if (split)
+								target->split_before = std::move(subres_before);
+						}
+					}
+				}
+			}
+		}
 		else
+		{
 			for (UINT i = 0; i < gpu_state.subres.size(); i++)
 				one(i);
+		}
 	}
 
 	void ResourceStateManager::connect(Transitions* from, Transitions* to)

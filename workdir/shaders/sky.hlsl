@@ -205,30 +205,6 @@ float3 get_sky_only(float3 p, float3 v, float t)
 
 
 
-#ifdef BUILD_FUNC_CS
-
-
-[numthreads(SIZE, SIZE, 1)]
-void CS(uint3 group_id :  SV_GroupID, uint3 thread_id : SV_GroupThreadID)
-{
-    const uint2 tc = (group_id.xy * SIZE + thread_id.xy);
-    float2 dims;
-    uint dummy;
-    gbuffer[0].GetDimensions(dims.x, dims.y);
-
-    if (dims.x < tc.x) return;
-
-    if (dims.y < tc.y) return;
-
-    float raw_z = depth_buffer[tc.xy];
-    float3 p = depth_to_wpos(raw_z, float2(tc.xy) / dims, camera.inv_view_proj);
-    float t = (raw_z >0) * Scaler * length(p - camera.GetPosition());
-    float3 v = normalize(p - camera.GetPosition());
-    result[tc.xy] = float4(get_sky(p, v, t), 1);
-}
-#endif
-
-
 struct quad_output
 {
     float4 pos : SV_POSITION;
@@ -300,14 +276,39 @@ quad_output VS(uint index : SV_VERTEXID)
 }
 
 
-float4 PS(quad_output i): SV_Target0
-{ 
-    float3 v = normalize(i.ray);
-    float raw_z =  GetSkyData().GetDepthBuffer().SampleLevel(pointClampSampler, i.tc, 0).x;
-    float3 p = depth_to_wpos(raw_z, i.tc.xy, camera.GetInvViewProj());
+// Shared scatter/sky logic — used by both the graphics PS and the compute CS.
+float4 sky_result(float2 tc, float3 ray)
+{
+    float3 v = normalize(ray);
+    float raw_z =  GetSkyData().GetDepthBuffer().SampleLevel(pointClampSampler, tc, 0).x;
+    float3 p = depth_to_wpos(raw_z, tc.xy, camera.GetInvViewProj());
     float t = (raw_z >0) * Scaler * length(p - camera.GetPosition());
 
     return float4(get_sky(camera.GetPosition(), v, t), 1);
+}
+
+float4 PS(quad_output i): SV_Target0
+{
+    return sky_result(i.tc, i.ray);
+}
+
+// Compute-queue variant. The graphics pass used additive blending, so this does
+// the same read-modify-write on the result UAV. The per-pixel ray is rebuilt the
+// same way the VS did (clip-space position -> inverse proj/view).
+[numthreads(16, 16, 1)]
+void CS(uint3 DTid : SV_DispatchThreadID)
+{
+    uint2 dims;
+    GetSkyData().GetResult().GetDimensions(dims.x, dims.y);
+    if (any(DTid.xy >= dims))
+        return;
+
+    float2 tc = (float2(DTid.xy) + 0.5) / float2(dims);
+    float2 clip = tc * float2(2, -2) + float2(-1, 1);
+    float4 r = mul(camera.GetInvProj(), float4(clip, 1, 1));
+    float3 ray = mul(camera.GetInvView(), r.xyz);
+
+    GetSkyData().GetResult()[DTid.xy] += sky_result(tc, ray);
 }
 
 

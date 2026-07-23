@@ -978,7 +978,34 @@ namespace HAL
 
 						auto prev_state =  prev_usage->wanted_state;
 
-					
+						// Phase 5 maximal split: the source list left this resource in a
+						// MIXED per-subresource state. Emit one barrier per subresource
+						// from its recorded real before-state; a single ALL barrier could
+						// only carry one before-layout and would mismatch the rest
+						// (#1334) while its decay stranded them (#1417). Subresources
+						// whose before already equals wanted (untouched, or the matching
+						// majority) emit nothing. After this the resource is uniform.
+						if (!usage.split_before.empty())
+						{
+							for (UINT i = 0; i < usage.split_before.size(); i++)
+							{
+								auto sub_prev = usage.split_before[i];
+								if (sub_prev == usage.wanted_state) continue;
+
+								BarrierFlags sflags = BarrierFlags::NONE;
+								if (sub_prev == ResourceStates::UNKNOWN)
+									sflags |= BarrierFlags::DISCARD;
+
+								ASSERT(sub_prev.is_valid(usage.resource->get_type()));
+								ASSERT(usage.wanted_state.is_valid(usage.resource->get_type()));
+
+								point.transitions.transition(usage.resource,
+									sub_prev,
+									usage.wanted_state,
+									i, sflags);
+							}
+							continue;
+						}
 
 
 						if (prev_state == usage.wanted_state) continue;
@@ -1141,6 +1168,7 @@ namespace HAL
 				usage.last_point = nullptr;
 				usage.debug = false;
 				usage.suppressed = false;
+				usage.split_before.clear();
 
 				HAL::Debug::BarrierBreakpoints::check_usage(resource->name, subres, state);
 

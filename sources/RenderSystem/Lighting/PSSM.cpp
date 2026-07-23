@@ -270,11 +270,11 @@ PSSM::PSSM()
 		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 
 		if (builder.exists(data.ShadowMask))
-			builder.need(data.ShadowMask,  FrameGraph::ResourceFlags::PixelRead);
+			builder.need(data.ShadowMask,  FrameGraph::ResourceFlags::ComputeRead);
 		else
 		{
-			builder.need(data.LightMask, FrameGraph::ResourceFlags::PixelRead);
-			builder.need(data.PSSM_Cameras,  FrameGraph::ResourceFlags::PixelRead);
+			builder.need(data.LightMask, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.PSSM_Cameras,  FrameGraph::ResourceFlags::ComputeRead);
 
 		}
 		return true;

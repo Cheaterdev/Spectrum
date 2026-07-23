@@ -103,25 +103,17 @@ SkyRender::SkyRender()
 	// Sky: full-screen sky pass that composites over the GBuffer depth.
 	m_sky_setup = [](Passes::Sky::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		builder.need(data.GBuffer_Depth, FrameGraph::ResourceFlags::PixelRead);
-		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::RenderTarget);
+		builder.need(data.GBuffer_Depth, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 
 	m_sky_render = [this](Passes::Sky::Context& data, FrameGraph::FrameContext& context)
 	{
-		auto& sky      = context.graph->get_context<SkyInfo>();
-		auto& graphics = context.get_list()->get_graphics();
+		auto& sky     = context.graph->get_context<SkyInfo>();
+		auto& compute = context.get_list()->get_compute();
 
-		graphics.set_pipeline<PSOS::Sky>();
-		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE,
-		                      HAL::PrimitiveTopologyFeed::STRIP);
-
-		{
-			RT::SingleColor rt;
-			rt.GetColor() = data.ResultTexture->renderTarget;
-			graphics.set_rtv(rt);
-		}
+		context.graph->set_slot(SlotID::FrameInfo, compute);
 
 		{
 			Slots::SkyData skydata;
@@ -130,12 +122,12 @@ SkyRender::SkyRender()
 			skydata.GetTransmittance() = transmittance->texture_2d().texture2D;
 			skydata.GetDepthBuffer()   = data.GBuffer_Depth->texture2D;
 			skydata.GetSunDir()        = sky.sunDir;
-			graphics.set(skydata);
+			skydata.GetResult()        = data.ResultTexture->rwTexture2D;
+			compute.set(skydata);
 		}
 
-		context.graph->set_slot(SlotID::FrameInfo, graphics);
-
-		graphics.draw(4);
+		compute.set_pipeline<PSOS::SkyCompute>();
+		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 }
 
