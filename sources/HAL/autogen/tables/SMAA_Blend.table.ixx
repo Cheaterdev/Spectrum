@@ -18,16 +18,20 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::SMAA_Blend;
 		HLSL::Texture2D<float4> blendTex;
+		HLSL::RWTexture2D<float4> resultOut;
 		HLSL::Texture2D<float4>& GetBlendTex() { return blendTex; }
+		HLSL::RWTexture2D<float4>& GetResultOut() { return resultOut; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(blendTex);
+			compiler.compile(resultOut);
 		}
 		struct Compiled
 		{
 			uint blendTex; // Texture2D<float4>
+			uint resultOut; // RWTexture2D<float4>
 
 			
 			private:

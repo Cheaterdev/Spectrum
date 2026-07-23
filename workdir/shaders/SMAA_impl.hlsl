@@ -50,7 +50,7 @@
  *
  * The shader has three passes, chained together as follows:
  *
- *                           |input|------------------·
+ *                           |input|------------------ï¿½
  *                              v                     |
  *                    [ SMAA*EdgeDetection ]          |
  *                              v                     |
@@ -60,7 +60,7 @@
  *                              v                     |
  *                          |blendTex|                |
  *                              v                     |
- *                [ SMAANeighborhoodBlending ] <------·
+ *                [ SMAANeighborhoodBlending ] <------ï¿½
  *                              v
  *                           |output|
  *
@@ -545,9 +545,13 @@ SamplerState PointSampler { Filter = MIN_MAG_MIP_POINT; AddressU = Clamp; Addres
 #define SMAASampleLevelZero(tex, coord) tex.SampleLevel(LinearSampler, coord, 0)
 #define SMAASampleLevelZeroPoint(tex, coord) tex.SampleLevel(PointSampler, coord, 0)
 #define SMAASampleLevelZeroOffset(tex, coord, offset) tex.SampleLevel(LinearSampler, coord, 0, offset)
-#define SMAASample(tex, coord) tex.Sample(LinearSampler, coord)
-#define SMAASamplePoint(tex, coord) tex.Sample(PointSampler, coord)
-#define SMAASampleOffset(tex, coord, offset) tex.Sample(LinearSampler, coord, offset)
+// Explicit LOD 0 (not implicit-derivative Sample): every SMAA target here is
+// single-mip, so this is bit-identical to Sample()/SamplePoint() but also
+// valid from a compute shader (Sample() requires screen-derivatives, which
+// only exist in a pixel shader).
+#define SMAASample(tex, coord) tex.SampleLevel(LinearSampler, coord, 0)
+#define SMAASamplePoint(tex, coord) tex.SampleLevel(PointSampler, coord, 0)
+#define SMAASampleOffset(tex, coord, offset) tex.SampleLevel(LinearSampler, coord, 0, offset)
 #define SMAA_FLATTEN [flatten]
 #define SMAA_BRANCH [branch]
 #define SMAATexture2DMS2(tex) Texture2DMS<float4, 2> tex
@@ -717,9 +721,15 @@ float2 SMAALumaEdgeDetectionPS(float2 texcoord,
     delta.xy = abs(L - float2(Lleft, Ltop));
     float2 edges = step(threshold, delta.xy);
 
-    // Then discard if there is no edge:
+    // Bail if there is no edge. A plain `return` here is exactly equivalent to
+    // the original pixel-shader `discard`: `edges` already equals (0,0) at
+    // this point (that IS the discard condition), and the caller always
+    // overwrites (never blends) its target, so writing (0,0) reproduces the
+    // discard-preserved, pre-cleared render target byte-for-byte. This also
+    // makes the function callable from a compute shader, where `discard`
+    // (a rasterizer/OM concept) does not exist.
     if (dot(edges, float2(1.0, 1.0)) == 0.0)
-        discard;
+        return edges;
 
     // Calculate right and bottom deltas:
     float Lright = dot(SMAASamplePoint(colorTex, offset[1].xy).rgb, weights);

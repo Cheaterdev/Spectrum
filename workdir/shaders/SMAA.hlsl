@@ -172,8 +172,6 @@ float2 DX10_SMAADepthEdgeDetectionPS(float4 position : SV_POSITION,
 
 
 #ifdef BUILD_FUNC_DX10_SMAABlendingWeightCalculationPS
-
-
 #include "autogen/SMAA_Weights.h"
 
     float4 DX10_SMAABlendingWeightCalculationPS(float4 position : SV_POSITION,
@@ -200,4 +198,74 @@ float2 DX10_SMAADepthEdgeDetectionPS(float4 position : SV_POSITION,
         return pow(SMAANeighborhoodBlendingPS(texcoord, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex()),1.0/2.2);
     #endif
     }
+#endif
+
+// ---------------------------------------------------------------------------
+// Compute-queue variants of the three passes above. Each per-vertex "offset"
+// output in the original VS is an exact linear function of texcoord (mad on
+// SMAA_RT_METRICS), so it is recomputed directly per-pixel here instead of
+// being rasterizer-interpolated across the quad — bit-identical result, no
+// vertex stage needed. Each CS mirrors one of the three draws, in the same
+// order, reading the previous stage's output as a compute-read SRV.
+
+[numthreads(16, 16, 1)]
+void CS_EdgeDetect(uint3 DTid : SV_DispatchThreadID)
+{
+    uint2 dims;
+    GetSMAA_Global().GetEdgesOut().GetDimensions(dims.x, dims.y);
+    if (any(DTid.xy >= dims))
+        return;
+
+    float2 tc = (float2(DTid.xy) + 0.5) / float2(dims);
+
+    float4 offset[3];
+    SMAAEdgeDetectionVS(tc, offset);
+
+    GetSMAA_Global().GetEdgesOut()[DTid.xy] =
+        SMAALumaEdgeDetectionPS(tc, offset, GetSMAA_Global().GetColorTex());
+}
+
+#ifdef BUILD_FUNC_CS_BlendWeight
+#include "autogen/SMAA_Weights.h"
+
+[numthreads(16, 16, 1)]
+void CS_BlendWeight(uint3 DTid : SV_DispatchThreadID)
+{
+    uint2 dims;
+    GetSMAA_Weights().GetBlendOut().GetDimensions(dims.x, dims.y);
+    if (any(DTid.xy >= dims))
+        return;
+
+    float2 tc = (float2(DTid.xy) + 0.5) / float2(dims);
+
+    float2 pixcoord;
+    float4 offset[3];
+    SMAABlendingWeightCalculationVS(tc, pixcoord, offset);
+
+    GetSMAA_Weights().GetBlendOut()[DTid.xy] = SMAABlendingWeightCalculationPS(
+        tc, pixcoord, offset,
+        GetSMAA_Weights().GetEdgesTex(), GetSMAA_Weights().GetAreaTex(), GetSMAA_Weights().GetSearchTex(),
+        GetSMAA_Global().GetSubsampleIndices());
+}
+#endif
+
+#ifdef BUILD_FUNC_CS_Blending
+#include "autogen/SMAA_Blend.h"
+
+[numthreads(16, 16, 1)]
+void CS_Blending(uint3 DTid : SV_DispatchThreadID)
+{
+    uint2 dims;
+    GetSMAA_Blend().GetResultOut().GetDimensions(dims.x, dims.y);
+    if (any(DTid.xy >= dims))
+        return;
+
+    float2 tc = (float2(DTid.xy) + 0.5) / float2(dims);
+
+    float4 offset;
+    SMAANeighborhoodBlendingVS(tc, offset);
+
+    GetSMAA_Blend().GetResultOut()[DTid.xy] =
+        pow(SMAANeighborhoodBlendingPS(tc, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex()), 1.0 / 2.2);
+}
 #endif

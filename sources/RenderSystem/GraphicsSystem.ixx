@@ -30,6 +30,15 @@ public:
 #endif
         AssetManager::create();
 
+        // Force-load engine assets (brdf, best_fit_normals, sky/SMAA LUTs, etc.)
+        // now, while the device and AssetManager are up but before any frame
+        // renders. Left lazy, an engine asset first used inside a render pass is
+        // deserialized mid-frame in COMMON and consumed before its deferred
+        // promote runs -> D3D12 #1334. Centralised here so it is not any single
+        // pass's responsibility (brdf, for one, is used by both PSSM and the
+        // AssetRenderer).
+        preload_engine_assets();
+
         return std::make_shared<GraphicsSystem>();
     }
 

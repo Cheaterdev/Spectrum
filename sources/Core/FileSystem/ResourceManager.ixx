@@ -181,6 +181,15 @@ protected:
 				storage.get("resource",*result);
 				result->file_depends = file_depends;
 				result->header = h;
+
+				// Name the underlying GPU resource after its cache source, so any
+				// later D3D12 validation message identifies the actual file instead
+				// of the generic "TextureResource::deserializing". Only compiles for
+				// resource types that expose a HAL resource + a path-like header name
+				// (textures); skipped for the rest.
+				if constexpr (requires { result->resource->set_name(h.name.string()); })
+					if (result->resource)
+						result->resource->set_name("cache:" + h.name.string());
 			}
 		}
 

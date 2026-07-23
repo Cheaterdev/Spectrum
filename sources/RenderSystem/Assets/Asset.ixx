@@ -569,6 +569,19 @@ material_tester.reset(new MeshAssetInstance(asset_ptr));
 
 
 
+// Central registry of every EngineAsset's loader. EngineAssets are namespace-
+// scope globals (e.g. EngineAssets::brdf), so each registers a `[this]{ get_asset(); }`
+// on construction and preload_engine_assets() force-loads them all once at
+// graphics init. Without this, an engine asset first used inside a render pass is
+// deserialized lazily DURING that frame (get_asset blocks on an async load),
+// created in COMMON, and consumed before its deferred frame-begin promote runs —
+// so every list touching it re-issues COMMON->read and trips D3D12 #1334.
+inline std::vector<std::function<void()>>& engine_asset_preloaders()
+{
+	static std::vector<std::function<void()>> v;
+	return v;
+}
+
 template<class T>
 class EngineAsset
 {
@@ -591,6 +604,7 @@ public:
 			ids[i] = 0;
 		id = Guid(ids);
 
+		engine_asset_preloaders().push_back([this] { get_asset(); });
 	}
 
 
@@ -614,8 +628,18 @@ public:
 		return shared;
 	}
 
-	
+
 };
+
+// Force-load every registered engine asset. Call once at graphics init (after
+// the device and AssetManager exist) so engine assets rest in their canonical
+// read state before the first frame, instead of being deserialized lazily mid-
+// render. Idempotent: get_asset() returns the cached asset on repeat calls.
+inline void preload_engine_assets()
+{
+	for (auto& loader : engine_asset_preloaders())
+		loader();
+}
 
 
 

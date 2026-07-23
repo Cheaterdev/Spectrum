@@ -20,9 +20,11 @@ export namespace Table
 		HLSL::Texture2D<float4> areaTex;
 		HLSL::Texture2D<float4> searchTex;
 		HLSL::Texture2D<float4> edgesTex;
+		HLSL::RWTexture2D<float4> blendOut;
 		HLSL::Texture2D<float4>& GetAreaTex() { return areaTex; }
 		HLSL::Texture2D<float4>& GetSearchTex() { return searchTex; }
 		HLSL::Texture2D<float4>& GetEdgesTex() { return edgesTex; }
+		HLSL::RWTexture2D<float4>& GetBlendOut() { return blendOut; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -30,12 +32,14 @@ export namespace Table
 			compiler.compile(areaTex);
 			compiler.compile(searchTex);
 			compiler.compile(edgesTex);
+			compiler.compile(blendOut);
 		}
 		struct Compiled
 		{
 			uint areaTex; // Texture2D<float4>
 			uint searchTex; // Texture2D<float4>
 			uint edgesTex; // Texture2D<float4>
+			uint blendOut; // RWTexture2D<float4>
 
 			
 			private:

@@ -9,5 +9,7 @@
 struct SMAA_Blend
 {
 	uint blendTex; // Texture2D<float4>
+	uint resultOut; // RWTexture2D<float4>
 	Texture2D<float4> GetBlendTex() { return ResourceDescriptorHeap[blendTex]; }
+	RWTexture2D<float4> GetResultOut() { return ResourceDescriptorHeap[resultOut]; }
 };

@@ -834,8 +834,7 @@ namespace HAL
 					// `to`'s LAST node is its exit release; the earlier none nodes are
 					// redundant re-seeds. Suppress the seeds (so none emit a bare
 					// SyncBefore=NONE after the access) and hand the release `from`'s
-					// last real usage as predecessor so it carries real sync. Suppress
-					// `from`'s own end release — the resource stays live until here.
+					// last real usage as predecessor so it carries real sync.
 					auto* lastnode = first;
 					while (lastnode->next_usage) lastnode = lastnode->next_usage;
 
@@ -844,6 +843,18 @@ namespace HAL
 
 					if (!lastnode->prev_usage || is_none(lastnode->prev_usage))
 						lastnode->prev_usage = last;
+
+					// Suppress `from`'s OWN trailing release nodes for this subresource
+					// too — the resource stays live for `to` (and whatever real consumer
+					// follows it). Setting skip_end_decay alone only stops the generic
+					// transition_one end-decay; the explicit prepare_after_state release
+					// nodes appended between `last` and `from`'s recorded last_usage still
+					// publish DS_WRITE->NO_ACCESS (SyncAfter=NONE) unless suppressed here,
+					// which is exactly the #1417 seen on PSSM_Depths' non-rendered array
+					// slices (each cascade needs the whole array but renders one slice, so
+					// the other slices resolve to this reconciliation-only branch).
+					for (auto* u = prev.slot(subres).last_usage; u != last; u = u->prev_usage)
+						u->suppressed = true;
 
 					prev.slot(subres).skip_end_decay = true;
 				}
@@ -858,27 +869,33 @@ namespace HAL
 
 			if (is_none(last)) return;
 
-			// Replace only a missing or SYNC_NONE predecessor; never clobber a
-			// real one (already chained, or a genuine in-list transition).
-			if (target->prev_usage && !is_none(target->prev_usage)) return;
-
-			// Everything bypassed on both sides must emit nothing: a suffix node
-			// would publish SyncAfter == NONE (making the resource untouchable for
-			// the rest of the scope) and a non-leading prefix node would publish
-			// SyncBefore == NONE after it had already been touched.
-			for (auto* u = first; u != target; u = u->next_usage)
-				u->suppressed = true;
-
+			// Keep `from`'s subresource live past the boundary — suppress its
+			// trailing SYNC_NONE suffix and stop the generic end-of-list release.
+			// This runs UNCONDITIONALLY (before the predecessor guard below): when
+			// `to` expanded from a uniform `need`, several of its subresources
+			// resolve to ONE shared usage node. The first sibling chains that node
+			// and sets its prev_usage; without suppressing here first, every later
+			// sibling would hit the "predecessor already real" guard and return
+			// with `from`'s decay for THAT subresource still in place — the release
+			// publishes SyncAfter == NONE and `to` then touches the subresource in
+			// the same ECL scope (#1417). The decay must be dropped per subresource
+			// `to` actually uses; the shared node only needs one predecessor.
 			for (auto* u = prev.slot(subres).last_usage; u != last; u = u->prev_usage)
 				u->suppressed = true;
 
-			target->prev_usage = last;
-
-			// `from` must not run the generic end-of-list release for THIS
-			// subresource either — a later list in the same ECL scope still
-			// touches it. Subresources that were not carried forward keep their
-			// release, so they still return to `initial_layout`.
 			prev.slot(subres).skip_end_decay = true;
+
+			// Replace only a missing or SYNC_NONE predecessor; never clobber a
+			// real one (already chained by a sibling subresource sharing this node,
+			// or a genuine in-list transition). A leading SYNC_NONE prefix on `to`
+			// would publish SyncBefore == NONE after the resource was touched, so
+			// suppress it too — but only on the path that actually (re)chains.
+			if (target->prev_usage && !is_none(target->prev_usage)) return;
+
+			for (auto* u = first; u != target; u = u->next_usage)
+				u->suppressed = true;
+
+			target->prev_usage = last;
 		};
 
 		if (next.uniform)

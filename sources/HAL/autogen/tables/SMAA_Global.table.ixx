@@ -20,9 +20,11 @@ export namespace Table
 		float4 subsampleIndices;
 		float4 SMAA_RT_METRICS;
 		HLSL::Texture2D<float4> colorTex;
+		HLSL::RWTexture2D<float2> edgesOut;
 		HLSL::Texture2D<float4>& GetColorTex() { return colorTex; }
 		float4& GetSubsampleIndices() { return subsampleIndices; }
 		float4& GetSMAA_RT_METRICS() { return SMAA_RT_METRICS; }
+		HLSL::RWTexture2D<float2>& GetEdgesOut() { return edgesOut; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -30,12 +32,14 @@ export namespace Table
 			compiler.compile(subsampleIndices);
 			compiler.compile(SMAA_RT_METRICS);
 			compiler.compile(colorTex);
+			compiler.compile(edgesOut);
 		}
 		struct Compiled
 		{
 			float4 subsampleIndices; // float4
 			float4 SMAA_RT_METRICS; // float4
 			uint colorTex; // Texture2D<float4>
+			uint edgesOut; // RWTexture2D<float2>
 
 			
 			private:

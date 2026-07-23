@@ -48,6 +48,9 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::MipMapping>(device, pso[PSO::MipMapping]));
 	tasks.emplace_back(PSOBase::create<PSOS::PSSMApplyCompute>(device, pso[PSO::PSSMApplyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::SkyCompute>(device, pso[PSO::SkyCompute]));
+	tasks.emplace_back(PSOBase::create<PSOS::EdgeDetectCompute>(device, pso[PSO::EdgeDetectCompute]));
+	tasks.emplace_back(PSOBase::create<PSOS::BlendWeightCompute>(device, pso[PSO::BlendWeightCompute]));
+	tasks.emplace_back(PSOBase::create<PSOS::BlendingCompute>(device, pso[PSO::BlendingCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::SS_Shadow>(device, pso[PSO::SS_Shadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_Texture2D>(device, pso[PSO::FrameGraph_Debug_Texture2D]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_Texture2DArray>(device, pso[PSO::FrameGraph_Debug_Texture2DArray]));

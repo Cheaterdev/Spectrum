@@ -4,9 +4,11 @@
 struct SMAA_Global
 {
 	Texture2D<float4> colorTex;
-	
+
 	float4 subsampleIndices;
     float4 SMAA_RT_METRICS;
+
+	RWTexture2D<float2> edgesOut;
 }
 
 [Bind = DefaultLayout::Instance1]
@@ -15,6 +17,8 @@ struct SMAA_Weights
 	Texture2D<float4> areaTex;
 	Texture2D<float4> searchTex;
 	Texture2D<float4> edgesTex;
+
+	RWTexture2D<float4> blendOut;
 }
 
 
@@ -22,6 +26,8 @@ struct SMAA_Weights
 struct SMAA_Blend
 {
 	Texture2D<float4> blendTex;
+
+	RWTexture2D<float4> resultOut;
 }
 
 
@@ -68,7 +74,32 @@ GraphicsPSO Blending
 	rtv = { R16G16B16A16_FLOAT };
 }
 
+ComputePSO EdgeDetectCompute
+{
+	root = DefaultLayout;
 
+	[EntryPoint = CS_EdgeDetect]
+	compute = SMAA;
+}
+
+ComputePSO BlendWeightCompute
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_BlendWeight]
+	compute = SMAA;
+}
+
+ComputePSO BlendingCompute
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_Blending]
+	compute = SMAA;
+}
+
+
+[Compute]
 PassNode SMAA
 {
 	[Write] [Recreate = ResultTextureNew]

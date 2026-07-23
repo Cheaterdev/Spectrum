@@ -1061,7 +1061,7 @@ public:
 		{ PassID::RTXColorPass, 0, true, RTXColorPass_0_prev },
 		{ PassID::Sky, 0, true, Sky_0_prev },
 		{ PassID::stencil_renderer_after, 0, false, stencil_renderer_after_0_prev },
-		{ PassID::SMAA, 0, false, SMAA_0_prev },
+		{ PassID::SMAA, 0, true, SMAA_0_prev },
 		{ PassID::FSR, 0, true, FSR_0_prev },
 		{ PassID::CopyPrev, 0, true, CopyPrev_0_prev },
 	};
