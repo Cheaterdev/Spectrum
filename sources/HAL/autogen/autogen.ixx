@@ -245,6 +245,7 @@ export import :Autogen.PSO.InitDispatch;
 export import :Autogen.PSO.GatherMeshes;
 export import :Autogen.PSO.DownsampleDepth;
 export import :Autogen.PSO.MipMapping;
+export import :Autogen.PSO.PSSMApplyCompute;
 export import :Autogen.PSO.SS_Shadow;
 export import :Autogen.PSO.FrameGraph_Debug_Texture2D;
 export import :Autogen.PSO.FrameGraph_Debug_Texture2DArray;

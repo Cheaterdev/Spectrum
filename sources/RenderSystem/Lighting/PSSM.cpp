@@ -4,6 +4,7 @@ module Graphics:PSSM;
 import :PSSM;
 import :BRDF;
 import :EngineAssets;
+import :FrameGraphContext;
 
 import HAL;
 
@@ -266,8 +267,8 @@ PSSM::PSSM()
 	m_combine_setup = [this](Passes::PSSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
 		GBufferViewDesc::need(builder, data.gbuffer);
-		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::RenderTarget);
-		
+		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
+
 		if (builder.exists(data.ShadowMask))
 			builder.need(data.ShadowMask,  FrameGraph::ResourceFlags::PixelRead);
 		else
@@ -280,28 +281,13 @@ PSSM::PSSM()
 	};
 
 	m_combine_render = [this](Passes::PSSM_Combine::Context& data, FrameGraph::FrameContext& context)
-	{	  
-
-
+	{
 		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
 
-		auto& list     = *context.get_list();
-		auto& graphics = list.get_graphics();
-		auto& compute  = list.get_compute();
+		auto& list    = *context.get_list();
+		auto& compute = list.get_compute();
 
-		
-		context.graph->set_slot(SlotID::FrameInfo, graphics);
 		context.graph->set_slot(SlotID::FrameInfo, compute);
-
-		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-		graphics.set_viewport(data.ResultTexture->get_viewport());
-		graphics.set_scissor(data.ResultTexture->get_scissor());
-
-		{
-	//		Slots::PSSMData pssmdata;
-	//		pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
-	//		graphics.set(pssmdata);
-		}
 
 		{
 			Slots::PSSMLighting lighting;
@@ -310,16 +296,11 @@ PSSM::PSSM()
 				lighting.GetLight_mask() = data.ShadowMask->texture2D;
 			else
 				lighting.GetLight_mask() = data.LightMask->texture2D;
-			graphics.set(lighting);
+			lighting.GetResult() = data.ResultTexture->rwTexture2D;
+			compute.set(lighting);
 		}
 
-		{
-			RT::SingleColor rt;
-			rt.GetColor() = data.ResultTexture->renderTarget;
-			graphics.set_rtv(rt);
-		}
-
-		graphics.set_pipeline<PSOS::PSSMApply>();
-		graphics.draw(4);
+		compute.set_pipeline<PSOS::PSSMApplyCompute>();
+		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 }

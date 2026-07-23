@@ -197,32 +197,33 @@ float2 GetBRDF(float Roughness, float Metallic, float NoV)
 	return  GetFrameInfo().GetBrdf().SampleLevel(linearClampSampler, float3(Roughness, Metallic, NoV), 0);
 }
 
-float4 PS_RESULT(quad_output i) : SV_Target0
+// Shared combine logic — used by both the graphics PS and the compute CS below.
+float4 combine_result(float2 tc)
 {
 
 	pixel_info info;
 Camera camera = GetFrameInfo().GetCamera();
-float4 packed_0 = gbuffer.GetAlbedo().SampleLevel(pointClampSampler, i.tc, 0);
+float4 packed_0 = gbuffer.GetAlbedo().SampleLevel(pointClampSampler, tc, 0);
 
 //return packed_0;
 info.albedo = packed_0.rgb;
 info.metallic = packed_0.w;
 
-info.normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, i.tc, 0).xyz * 2 - 1);
-float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, i.tc, 0);
+info.normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
+float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, tc, 0);
   //  return raw_z;
 if (raw_z == 0) return 0;
-info.pos = depth_to_wpos(raw_z, i.tc, camera.GetInvViewProj());
+info.pos = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
 
-//info.specular = GetGbuffer().[2].SampleLevel(pointClampSampler, i.tc, 0);
-info.roughness = max(0.04, gbuffer.GetNormals().SampleLevel(pointClampSampler, i.tc, 0).w);// GetGbuffer().[2][tc.xy].w;
+//info.specular = GetGbuffer().[2].SampleLevel(pointClampSampler, tc, 0);
+info.roughness = max(0.04, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w);// GetGbuffer().[2][tc.xy].w;
 
 info.view_z = camera.GetProj()._34 * raw_z / (raw_z - camera.GetProj()._33);
 info.view = normalize(camera.GetPosition() - info.pos);
 info.reflection = reflect(info.view, info.normal);
 
-float sss = 0;// get_sss(info.view_z, info.pos, i.tc, info.normal);// *saturate(dot(-light_cameras[0].direction, info.normal));
-float shadow =  GetPSSMLighting().GetLight_mask().SampleLevel(pointClampSampler, i.tc, 0);
+float sss = 0;// get_sss(info.view_z, info.pos, tc, info.normal);// *saturate(dot(-light_cameras[0].direction, info.normal));
+float shadow =  GetPSSMLighting().GetLight_mask().SampleLevel(pointClampSampler, tc, 0);
 //float3 res_color = calc_color(info, -GetPSSMData().GetLight_cameras()[0].GetDirection(), shadow);
 //sss = saturate(sss * 2 - 1);
 //shadow = light_cameras[0].direction.x;
@@ -268,4 +269,22 @@ EnvBRDF = 0;*/
 return  float4(shadow * (saturate(EnvBRDF.x) * info.albedo * (1 - info.metallic)), 1);
 
 //return  float4(PBR(direct, reflection, info.albedo, info.normal, info.view, 0.2, info.roughness, packed_0.w), 1);
+}
+
+float4 PS_RESULT(quad_output i) : SV_Target0
+{
+	return combine_result(i.tc);
+}
+
+// Compute-queue variant: one thread per output pixel, writes the result UAV.
+[numthreads(16, 16, 1)]
+void CS_RESULT(uint3 DTid : SV_DispatchThreadID)
+{
+	uint2 dims;
+	GetPSSMLighting().GetResult().GetDimensions(dims.x, dims.y);
+	if (any(DTid.xy >= dims))
+		return;
+
+	float2 tc = (float2(DTid.xy) + 0.5) / float2(dims);
+	GetPSSMLighting().GetResult()[DTid.xy] = combine_result(tc);
 }

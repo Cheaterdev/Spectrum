@@ -43,6 +43,7 @@ export
 		GatherMeshes,
 		DownsampleDepth,
 		MipMapping,
+		PSSMApplyCompute,
 		SS_Shadow,
 		FrameGraph_Debug_Texture2D,
 		FrameGraph_Debug_Texture2DArray,

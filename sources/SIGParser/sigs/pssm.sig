@@ -42,6 +42,7 @@ struct PSSMLighting
 {
 	GBuffer gbuffer;
 	Texture2D<float> light_mask;
+	RWTexture2D<float4> result;
 }
 
 
@@ -69,6 +70,14 @@ GraphicsPSO PSSMApply
 	pixel = PSSM;
 
 	rtv = { R16G16B16A16_FLOAT };
+}
+
+ComputePSO PSSMApplyCompute
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_RESULT]
+	compute = PSSM;
 }
 
 
@@ -132,12 +141,13 @@ PassNode PSSM_GenerateMask
 	[Write] Texture LightMask;
 }
 
+[Compute]
 PassNode PSSM_Combine
 {
 	StructuredBuffer<Camera> PSSM_Cameras;
 	GBuffer gbuffer;
 	Texture LightMask;
-	Texture ShadowMask;	
+	Texture ShadowMask;
 	[Write] Texture ResultTexture;
 }
 

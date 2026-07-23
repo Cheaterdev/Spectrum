@@ -523,7 +523,7 @@ public:
 		{ PassID::CubeMapDownsample, 0, true, CubeMapDownsample_0_prev },
 		{ PassID::CubeMapEnviromentProcessor, 0, false, CubeMapEnviromentProcessor_0_prev },
 		{ PassID::PSSM_GenerateMask, 0, false, PSSM_GenerateMask_0_prev },
-		{ PassID::PSSM_Combine, 0, false, PSSM_Combine_0_prev },
+		{ PassID::PSSM_Combine, 0, true, PSSM_Combine_0_prev },
 		{ PassID::Sky, 0, false, Sky_0_prev },
 		{ PassID::SMAA, 0, false, SMAA_0_prev },
 		{ PassID::FSR, 0, true, FSR_0_prev },

@@ -19,19 +19,23 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::PSSMLighting;
 		HLSL::Texture2D<float> light_mask;
+		HLSL::RWTexture2D<float4> result;
 		GBuffer gbuffer;
 		HLSL::Texture2D<float>& GetLight_mask() { return light_mask; }
+		HLSL::RWTexture2D<float4>& GetResult() { return result; }
 		GBuffer& GetGbuffer() { return gbuffer; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(light_mask);
+			compiler.compile(result);
 			compiler.compile(gbuffer);
 		}
 		struct Compiled
 		{
 			uint light_mask; // Texture2D<float>
+			uint result; // RWTexture2D<float4>
 			GBuffer::Compiled gbuffer; // GBuffer
 
 			

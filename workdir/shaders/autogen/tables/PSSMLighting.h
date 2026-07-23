@@ -10,7 +10,9 @@
 struct PSSMLighting
 {
 	uint light_mask; // Texture2D<float>
+	uint result; // RWTexture2D<float4>
 	GBuffer gbuffer; // GBuffer
 	GBuffer GetGbuffer() { return gbuffer; }
 	Texture2D<float> GetLight_mask() { return ResourceDescriptorHeap[light_mask]; }
+	RWTexture2D<float4> GetResult() { return ResourceDescriptorHeap[result]; }
 };

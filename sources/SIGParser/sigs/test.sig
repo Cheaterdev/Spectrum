@@ -12,15 +12,18 @@ Pipeline MainPipeline
 {
 	# scene prep
 	PreScene;
+	#[Async] 
 	BlueNoise;
 
 	# voxel pre (generate_pre)
 	Voxelize;
 
-	# shadow (generate_global)
-	Scene;
 	PSSM_Global;
 	PSSM_Cascade;
+
+	# shadow (generate_global)
+	Scene;
+	stencil_renderer_before;
 
 	# sky setup (sky.generate)
 	CubeSky;
@@ -29,9 +32,14 @@ Pipeline MainPipeline
 
 	# voxel lighting (generate_light)
 	
-	RTXShadow;
+
+	#[Async] 
 	Lighting;
+	#[Async] 
 	Mipmapping;
+
+
+	RTXShadow;
 
 	# main gbuffer + rtx
 
@@ -53,7 +61,7 @@ Pipeline MainPipeline
 
 	# sky + post
 	Sky;
-	stencil_renderer_before;
+	
 	stencil_renderer_after;
 	SMAA;
 	FSR;
