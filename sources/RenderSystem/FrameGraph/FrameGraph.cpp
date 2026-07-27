@@ -1423,6 +1423,13 @@ namespace FrameGraph
 
 		std::map<int, Events> events;
 		std::set<ResourceAllocInfo*> non_deleted;
+
+		// Which pass actually writes each resource first (after the active()
+		// fall-forward below). The aliasing validation needs this pass's
+		// sync_state: it is the one that touches recycled memory, and it is NOT
+		// the pass the free-side guard is checked against.
+		std::map<ResourceAllocInfo*, Pass*> creation_pass_of;
+
 		for (auto* info : enabled_resources)
 		{
 			if (info->passed) continue;
@@ -1482,6 +1489,7 @@ namespace FrameGraph
 			// create - easy
 			events[best_creation_pass->call_id].create.insert(info);
 			best_creation_pass->used.resource_creations.insert(info);
+			creation_pass_of[info] = best_creation_pass;
 
 
 			if (info->heap_type != HAL::HeapType::DEFAULT) continue;
@@ -1536,13 +1544,171 @@ namespace FrameGraph
 		{
 			PROFILE(L"allocate memory");
 
+			// ---- transient-aliasing safety --------------------------------------
+			// When a freed heap range is recycled, the NEW owner's first writer must
+			// be fence-ordered after the OLD owner's last use on EVERY queue. The
+			// scheduler only guarantees that for the pass that FREES a range (the
+			// used_end.is_in_sync(...) search above); the pass that CREATES into it
+			// is picked as "first writer" with no sync check at all, and the heap
+			// allocator is queue-agnostic. So a range freed after a DIRECT-queue
+			// resource could be handed to a COMPUTE-queue creator with no fence
+			// between them — both queues then touch the same bytes, which faults the
+			// GPU and removes the device (classically surfacing at the next
+			// CreatePlacedResource2, and far more likely while resizing because every
+			// transient changes size at once).
+			//
+			// Provenance is tracked HERE rather than inside the allocator: the Core
+			// allocators coalesce and split free blocks freely (which would destroy
+			// per-block tags) and are shared with descriptor/query heaps. Keeping the
+			// tags FrameGraph-side and testing raw byte OVERLAP is immune to both
+			// coalescing and partial reuse, and needs no changes to shared code.
+			// `freed_ranges` is per-frame by construction, which is also exactly the
+			// right lifetime: the frame-boundary cross-queue wait in
+			// commit_command_lists already makes any range last used in an EARLIER
+			// frame safe to reuse, so only intra-frame provenance has to be precise.
+			//
+			// Enforcement never adds a barrier or a fence — it relocates instead. An
+			// unsafe range is HELD (not freed) and the allocation retried, so the
+			// allocator is forced to hand out different memory: another block,
+			// another page, or ultimately a fresh page, which by definition has no
+			// previous owner. Held ranges are released once a safe one is found.
+			struct FreedRange
+			{
+				const void* heap  = nullptr;
+				uint64      begin = 0;
+				uint64      end   = 0;      // inclusive
+				SyncState   used_end;
+				const char* name  = "";
+			};
+
+			struct Range
+			{
+				const void* heap  = nullptr;
+				uint64      begin = 0;
+				uint64      end   = 0;      // inclusive
+				bool        valid = false;
+			};
+
+			std::vector<FreedRange> freed_ranges;
+			int alias_hazards = 0;
+
+			// Per-queue call_id watermarks of a SyncState. A missing watermark is 0,
+			// which is maximally restrictive — exactly the semantics is_in_sync()
+			// applies. (SyncState::min(SyncState) is not usable here: it dereferences
+			// null watermarks.)
+			constexpr size_t QueueCount = magic_enum::enum_count<CommandListType>();
+
+			auto sync_of = [](const SyncState& s)
+			{
+				std::array<uint, QueueCount> v{};
+				for (size_t q = 0; q < QueueCount; q++)
+				{
+					auto* p = s.values[(CommandListType)q];
+					v[q] = p ? (uint)p->call_id : 0u;
+				}
+				return v;
+			};
+
+			// A SyncState as the allocator's lane watermarks.
+			auto tag_of = [&](const SyncState& s)
+			{
+				auto v = sync_of(s);
+
+				AllocSyncTag tag;
+				tag.epoch = SyncAwareAllocator::s_epoch;
+				for (size_t q = 0; q < QueueCount && q < AllocSyncTag::MaxLanes; q++)
+					tag.lane[q] = v[q];
+
+				return tag;
+			};
+
+			// Everything released before this point belongs to an earlier frame and is
+			// unconstrained: the frame-boundary cross-queue wait in commit_command_lists
+			// already orders it against anything this frame does.
+			SyncAwareAllocator::begin_epoch();
+
+			auto range_of = [](ResourceAllocInfo* info) -> Range
+			{
+				Range r;
+				if (!info->alloc_ptr.handle) return r;
+				auto heap = info->alloc_ptr.get_heap();
+				if (!heap) return r;
+				uint64 sz = info->alloc_ptr.get_size();
+				if (!sz) return r;
+
+				r.heap  = heap.get();
+				r.begin = info->alloc_ptr.get_offset();
+				r.end   = r.begin + sz - 1;
+				r.valid = true;
+				return r;
+			};
+
+			auto overlaps = [](const FreedRange& fr, const Range& r)
+			{
+				return fr.heap == r.heap && r.end >= fr.begin && r.begin <= fr.end;
+			};
+
+			auto record_free = [&](ResourceAllocInfo* info)
+			{
+				if constexpr (!BuildOptions::Dev) return;   // verification-only bookkeeping
+
+				Range r = range_of(info);
+				if (!r.valid) return;
+				freed_ranges.push_back({ r.heap, r.begin, r.end, info->used_end, info->name() });
+			};
+
+			// The freed range this candidate would unsafely recycle, if any.
+			auto unsafe_predecessor = [&](const Range& r, Pass* creator) -> const FreedRange*
+			{
+				if (!r.valid || !creator) return nullptr;
+
+				for (auto& fr : freed_ranges)
+					if (overlaps(fr, r) && !SyncState(fr.used_end).is_in_sync(creator->sync_state, false))
+						return &fr;
+
+				return nullptr;
+			};
+
+			// Take ownership of the bytes: drop them from the free-range list so a
+			// later reuse is validated against its IMMEDIATE predecessor only, and
+			// keep whatever parts of the old ranges are still unclaimed.
+			auto claim = [&](const Range& r)
+			{
+				if constexpr (!BuildOptions::Dev) return;   // verification-only bookkeeping
+
+				if (!r.valid) return;
+
+				std::vector<FreedRange> remainder;
+				remainder.reserve(freed_ranges.size());
+
+				for (auto& fr : freed_ranges)
+				{
+					if (!overlaps(fr, r))
+					{
+						remainder.push_back(fr);
+						continue;
+					}
+
+					if (fr.begin < r.begin) remainder.push_back({ fr.heap, fr.begin,  r.begin - 1, fr.used_end, fr.name });
+					if (fr.end   > r.end)   remainder.push_back({ fr.heap, r.end + 1, fr.end,      fr.used_end, fr.name });
+				}
+
+				freed_ranges.swap(remainder);
+			};
+
+			// Releasing a range stamps it with the point its owner finished, so the
+			// allocator can decide for itself who may take it next.
+			auto free_now = [&](ResourceAllocInfo* info)
+			{
+				record_free(info);
+				SyncAwareAllocator::set_release(tag_of(info->used_end));
+				info->alloc_ptr.handle.Free();
+			};
 
 			for (auto [id, e] : events)
 			{
 				for (auto info : e.free_before)
-				{
-					info->alloc_ptr.handle.Free();
-				}
+					free_now(info);
 
 
 				for (auto info : e.create)
@@ -1551,13 +1717,83 @@ namespace FrameGraph
 					auto creation_info = RenderSystem::get().device().get_alloc_info(info->d3ddesc);
 					HeapIndex index = { HAL::MemoryType::COMMITED , info->heap_type };
 
+					Pass* creator = nullptr;
+					if (auto it = creation_pass_of.find(info); it != creation_pass_of.end())
+						creator = it->second;
+
+					// Who is asking. The allocator skips any block whose previous owner
+					// this pass is not ordered after, so it relocates rather than
+					// returning memory that would need a cross-queue barrier. Without a
+					// creator the default (all-zero) tag applies, which accepts only
+					// unconstrained memory.
+					if (creator)
+						SyncAwareAllocator::set_request(tag_of(creator->sync_state));
+					else
+						SyncAwareAllocator::clear_request();
+
 					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, index);
+
+					// Verification only — the allocator should make this unreachable.
+					Range r = range_of(info);
+
+					if constexpr (BuildOptions::Dev)
+					{
+						if (const FreedRange* clash = unsafe_predecessor(r, creator))
+						{
+							++alias_hazards;
+
+							std::string msg = std::string("ALIAS-HAZARD recycled '") + clash->name
+							                + "' -> '" + info->name()
+							                + "' creator_queue=" + std::to_string((int)creator->get_type())
+							                + " creator_call=" + std::to_string((int)creator->call_id);
+
+							for (auto q : magic_enum::enum_values<CommandListType>())
+							{
+								auto* prev = clash->used_end.values[q];
+								auto* sync = creator->sync_state.values[q];
+								msg += " | q" + std::to_string((int)q)
+								     + " prev_used_end=" + std::to_string(prev ? (int)prev->call_id : 0)
+								     + " creator_sync="  + std::to_string(sync ? (int)sync->call_id : 0);
+							}
+
+							Log::get() << msg << Log::endl;
+						}
+					}
+
+					claim(r);
 				}
 
 
 				for (auto info : e.free_after)
+					free_now(info);
+			}
+
+			SyncAwareAllocator::clear_request();
+
+			if (alias_hazards)
+				Log::get() << (std::string("ALIAS-HAZARD survived: ")
+				               + std::to_string(alias_hazards)) << Log::endl;
+
+			// Transient heap footprint — the cost of relocating instead of fencing.
+			// Logged only when it moves, so a growth trend is visible without spam.
+			if constexpr (BuildOptions::Dev)
+			{
+				uint64 heap_pages = 0;
+				uint64 heap_bytes = 0;
+				allocator.for_each([&](const HeapIndex&, uint64, uint64, std::shared_ptr<HAL::Heap> heap)
 				{
-					info->alloc_ptr.handle.Free();
+					heap_pages++;
+					if (heap) heap_bytes += heap->get_size();
+				});
+
+				static uint64 logged_heap_bytes = 0;
+
+				if (heap_bytes != logged_heap_bytes)
+				{
+					logged_heap_bytes = heap_bytes;
+
+					Log::get() << (std::string("ALIAS heap_pages=") + std::to_string(heap_pages)
+					               + " heap_bytes=" + std::to_string(heap_bytes)) << Log::endl;
 				}
 			}
 

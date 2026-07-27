@@ -600,7 +600,12 @@ public:
 
 	struct TaskBuilderResourceAllocationContext
 	{
-		using AllocatorType = CommonAllocator;
+		// Transient memory is recycled within a frame, and a range may be handed to a
+		// consumer on a different queue than its previous owner. SyncAwareAllocator
+		// tags each free block with the point its previous owner finished and refuses
+		// to hand it to a requester that is not ordered after that, relocating the
+		// allocation instead of needing a cross-queue barrier.
+		using AllocatorType = SyncAwareAllocator;
 		using LockPolicy = Thread::Free;
 	};
 

@@ -476,7 +476,7 @@ PassNode VoxelDebug
 	Texture3D VoxelLighted;
 }
 
-[Compute]
+#[Compute]
 PassNode VoxelScreen
 {
 	GBuffer gbuffer;
@@ -499,7 +499,7 @@ PassNode VoxelScreen
 	[Write] StructuredBuffer<uint2> VoxelScreen_hi_data;
 }
 
-[Compute]
+#[Compute]
 PassNode VoxelCombine
 {
 	GBuffer gbuffer;
