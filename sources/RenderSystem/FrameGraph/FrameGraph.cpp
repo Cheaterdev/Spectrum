@@ -1609,23 +1609,23 @@ namespace FrameGraph
 				return v;
 			};
 
-			// A SyncState as the allocator's lane watermarks.
+			// Everything released before this point belongs to an earlier frame and is
+			// unconstrained: the frame-boundary cross-queue wait in commit_command_lists
+			// already orders it against anything this frame does.
+			++alias_epoch;
+
+			// A SyncState as the allocator's lane watermarks, stamped with this frame.
 			auto tag_of = [&](const SyncState& s)
 			{
 				auto v = sync_of(s);
 
 				AllocSyncTag tag;
-				tag.epoch = SyncAwareAllocator::s_epoch;
+				tag.epoch = alias_epoch;
 				for (size_t q = 0; q < QueueCount && q < AllocSyncTag::MaxLanes; q++)
 					tag.lane[q] = v[q];
 
 				return tag;
 			};
-
-			// Everything released before this point belongs to an earlier frame and is
-			// unconstrained: the frame-boundary cross-queue wait in commit_command_lists
-			// already orders it against anything this frame does.
-			SyncAwareAllocator::begin_epoch();
 
 			auto range_of = [](ResourceAllocInfo* info) -> Range
 			{
@@ -1701,8 +1701,15 @@ namespace FrameGraph
 			auto free_now = [&](ResourceAllocInfo* info)
 			{
 				record_free(info);
-				SyncAwareAllocator::set_release(tag_of(info->used_end));
-				info->alloc_ptr.handle.Free();
+
+				// Hand the allocator the point this resource's last use finished, so it
+				// can decide for itself who may take the range next.
+				auto& handle = info->alloc_ptr.handle;
+
+				if (auto* owner = handle.get_owner())
+					owner->Free(handle, tag_of(info->used_end));
+				else
+					handle.Free();
 			};
 
 			for (auto [id, e] : events)
@@ -1721,17 +1728,15 @@ namespace FrameGraph
 					if (auto it = creation_pass_of.find(info); it != creation_pass_of.end())
 						creator = it->second;
 
-					// Who is asking. The allocator skips any block whose previous owner
-					// this pass is not ordered after, so it relocates rather than
-					// returning memory that would need a cross-queue barrier. Without a
-					// creator the default (all-zero) tag applies, which accepts only
-					// unconstrained memory.
-					if (creator)
-						SyncAwareAllocator::set_request(tag_of(creator->sync_state));
-					else
-						SyncAwareAllocator::clear_request();
+					// Who is asking. The allocator skips memory whose previous owner this
+					// pass is not ordered after, relocating rather than returning bytes
+					// that would need a cross-queue barrier. With no creator we pass a
+					// bare epoch tag, which accepts only unconstrained memory.
+					AllocSyncTag requester;
+					requester.epoch = alias_epoch;
+					if (creator) requester = tag_of(creator->sync_state);
 
-					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, index);
+					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, index, &requester);
 
 					// Verification only — the allocator should make this unreachable.
 					Range r = range_of(info);
@@ -1767,8 +1772,6 @@ namespace FrameGraph
 				for (auto info : e.free_after)
 					free_now(info);
 			}
-
-			SyncAwareAllocator::clear_request();
 
 			if (alias_hazards)
 				Log::get() << (std::string("ALIAS-HAZARD survived: ")

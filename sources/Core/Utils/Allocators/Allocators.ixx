@@ -70,6 +70,10 @@ export
 
 
 
+	// Defined below. Only ever referenced through a pointer/reference here, so the
+	// declaration is enough.
+	struct AllocSyncTag;
+
 	class Allocator
 	{
 	public:
@@ -91,6 +95,21 @@ export
 		virtual std::optional<AllocatorHanle>  TryAllocate(uint64 size, uint64 align = 1) = 0;
 
 		virtual void Free(AllocatorHanle& handle) = 0;
+
+		// Constraint-aware entry points. `constraint` describes what the requester is
+		// ordered after, and `tag` records what the releaser had finished, so an
+		// allocator can refuse to hand memory to someone who would race its previous
+		// owner. The defaults ignore both, so allocators with no such notion need no
+		// changes; only callers that care pass them.
+		virtual std::optional<AllocatorHanle> TryAllocate(uint64 size, uint64 align, const AllocSyncTag* constraint)
+		{
+			return TryAllocate(size, align);
+		}
+
+		virtual void Free(AllocatorHanle& handle, const AllocSyncTag& tag)
+		{
+			Free(handle);
+		}
 
 		virtual bool isEmpty() const = 0;
 
@@ -178,27 +197,25 @@ export
 		uint64                     epoch = 0;
 		std::array<uint, MaxLanes> lane{};
 
-		// May a requester holding `requester` take memory last owned under *this*?
-		// Never-owned memory and memory released in an earlier epoch are free for
-		// all — callers are expected to sync epochs at the batch boundary. Within
-		// the same epoch the requester must be at or past the owner on every lane.
-		bool satisfied_by(uint64 current_epoch, const AllocSyncTag& requester) const
+		// Recorded in an epoch older than the requester's (or never owned at all), so
+		// permanently safe for everyone from here on. Callers are expected to fully
+		// order epochs against each other — for GPU use the frame boundary already
+		// waits across queues.
+		bool stale_for(const AllocSyncTag& requester) const
 		{
-			if (epoch == 0 || epoch < current_epoch) return true;
+			return epoch == 0 || epoch < requester.epoch;
+		}
+
+		// May a requester holding `requester` take memory last owned under *this*?
+		// Inside one epoch the requester must be at or past the owner on every lane.
+		bool satisfied_by(const AllocSyncTag& requester) const
+		{
+			if (stale_for(requester)) return true;
 
 			for (size_t i = 0; i < MaxLanes; i++)
 				if (lane[i] > requester.lane[i]) return false;
 
 			return true;
-		}
-
-		// Conservative combination, for when two tagged ranges become one.
-		void join(const AllocSyncTag& o)
-		{
-			epoch = std::max(epoch, o.epoch);
-
-			for (size_t i = 0; i < MaxLanes; i++)
-				lane[i] = std::max(lane[i], o.lane[i]);
 		}
 	};
 
@@ -222,13 +239,14 @@ export
 		using Handle = AllocatorHanle;
 
 	private:
-		struct block
+		// --- FIT: an ordinary coalescing free list. No tags, merges unconditionally;
+		// reads exactly like any other first-fit allocator.
+		struct span
 		{
-			uint64       begin = 0;
-			uint64       end   = 0;   // inclusive
-			AllocSyncTag tag;
+			uint64 begin = 0;
+			uint64 end   = 0;   // inclusive
 
-			bool operator<(const block& b) const { return begin < b.begin; }
+			bool operator<(const span& s) const { return begin < s.begin; }
 		};
 
 		const uint64 start_region;
@@ -238,48 +256,118 @@ export
 		uint64 max_usage = 0;
 		uint64 reset_id  = 0;
 
-		std::set<block> free_blocks;
+		std::set<span> free_spans;
 
-		void reset_free_list()
+		// --- SAFETY: who last owned which bytes, recorded per released range and kept
+		// deliberately apart from the free list. Because merging free space cannot
+		// touch these, the two concerns never interfere: the free list is free to
+		// coalesce as aggressively as it likes, and a candidate placement is simply
+		// checked against whatever records it overlaps. Keyed by range start.
+		std::map<uint64, std::pair<uint64, AllocSyncTag>> owners;   // begin -> {end, tag}
+
+		void reset_spans()
 		{
-			free_blocks.clear();
+			free_spans.clear();
+			owners.clear();
+
 			if (start_region < end_region)
-				free_blocks.insert(block{ start_region, end_region - 1, AllocSyncTag{} });
+				free_spans.insert(span{ start_region, end_region - 1 });
 		}
 
-		// Two ranges may only be merged when they agree on whether they are still
-		// restricted this epoch. Merging restricted memory into unconstrained memory
-		// would drag the whole block down to the restricted tag and throw reuse away;
-		// merging the other way would be unsafe.
-		bool same_class(const AllocSyncTag& a, const AllocSyncTag& b) const
+		// First record that could overlap `begin`.
+		auto first_overlapping(uint64 begin)
 		{
-			return (a.epoch >= s_epoch) == (b.epoch >= s_epoch);
-		}
-
-		// First-fit scan, skipping blocks this requester is not ordered after.
-		std::optional<Handle> try_place(uint64 size, uint64 align)
-		{
-			for (auto it = free_blocks.begin(); it != free_blocks.end(); ++it)
+			auto it = owners.upper_bound(begin);
+			if (it != owners.begin())
 			{
-				const block cur = *it;
+				auto prev = std::prev(it);
+				if (prev->second.first >= begin) return prev;
+			}
+			return it;
+		}
 
-				uint64 aligned = Math::roundUp(cur.begin, align);
-				if (aligned < cur.begin || aligned + size - 1 > cur.end) continue;
+		// Is [begin,end] safe for this requester? Every record it overlaps has to be
+		// satisfied — after coalescing a candidate can straddle several. Records from
+		// older epochs can never constrain anyone again, so they are dropped on sight.
+		bool placement_allowed(uint64 begin, uint64 end, const AllocSyncTag& requester)
+		{
+			for (auto it = first_overlapping(begin); it != owners.end() && it->first <= end; )
+			{
+				if (it->second.second.stale_for(requester))
+				{
+					it = owners.erase(it);
+					continue;
+				}
 
-				// Skip memory this requester is not ordered after. Moving on is the
-				// whole point: it relocates the allocation instead of forcing a
-				// barrier onto the caller.
-				if (!cur.tag.satisfied_by(s_epoch, s_request)) continue;
+				if (!it->second.second.satisfied_by(requester)) return false;
+				++it;
+			}
 
-				free_blocks.erase(it);
+			return true;
+		}
 
-				// Remainders are still the same previously-owned memory, so they keep
-				// the tag.
-				if (aligned > cur.begin)
-					free_blocks.insert(block{ cur.begin, aligned - 1, cur.tag });
+		// Ownership records only describe memory that is free; drop the part just
+		// handed out, keeping the head/tail slivers (same previous owner).
+		void drop_owner_records(uint64 begin, uint64 end)
+		{
+			for (auto it = first_overlapping(begin); it != owners.end() && it->first <= end; )
+			{
+				uint64       rec_begin = it->first;
+				uint64       rec_end   = it->second.first;
+				AllocSyncTag tag       = it->second.second;
 
-				if (aligned + size - 1 < cur.end)
-					free_blocks.insert(block{ aligned + size, cur.end, cur.tag });
+				it = owners.erase(it);
+
+				if (rec_begin < begin) owners.emplace(rec_begin, std::make_pair(begin - 1, tag));
+				if (rec_end   > end)   it = owners.emplace(end + 1, std::make_pair(rec_end, tag)).first, ++it;
+			}
+		}
+
+	public:
+		SyncAwareAllocator(uint64 size = std::numeric_limits<uint64>::max())
+			: start_region(0), end_region(size), region_size(size)
+		{
+			reset_spans();
+		}
+
+		SyncAwareAllocator(uint64 start_region, uint64 end_region)
+			: start_region(start_region), end_region(end_region), region_size(end_region - start_region)
+		{
+			reset_spans();
+		}
+
+		uint64 get_max_usage() const override { return max_usage; }
+		uint64 get_size()      const override { return region_size; }
+
+		// Unconstrained: caller has no ordering requirements (or does not track any).
+		std::optional<Handle> TryAllocate(uint64 size, uint64 align = 1) override final
+		{
+			return TryAllocate(size, align, nullptr);
+		}
+
+		std::optional<Handle> TryAllocate(uint64 size, uint64 align, const AllocSyncTag* constraint) override final
+		{
+			if (size == 0)
+				return Handle(MemoryInfo(start_region, 0, reset_id), this);
+
+			for (auto it = free_spans.begin(); it != free_spans.end(); ++it)
+			{
+				uint64 aligned = Math::roundUp(it->begin, align);
+				if (aligned < it->begin || aligned + size - 1 > it->end) continue;
+
+				// Skip memory whose previous owner this requester would race. Moving on
+				// is the whole point: it relocates the allocation — to another span, or
+				// (via PagedAllocator) another page — instead of forcing a barrier.
+				if (constraint && !placement_allowed(aligned, aligned + size - 1, *constraint))
+					continue;
+
+				span cur = *it;
+				free_spans.erase(it);
+
+				if (aligned > cur.begin)             free_spans.insert(span{ cur.begin, aligned - 1 });
+				if (aligned + size - 1 < cur.end)    free_spans.insert(span{ aligned + size, cur.end });
+
+				drop_owner_records(aligned, aligned + size - 1);
 
 				max_usage = std::max(max_usage, aligned + size);
 				return Handle(MemoryInfo(aligned, size, reset_id), this);
@@ -288,96 +376,35 @@ export
 			return std::nullopt;
 		}
 
-		// Merge every adjacent pair that is now in the same class. Blocks released in
-		// an earlier epoch have since become unconstrained, so neighbours that could
-		// not be merged at release time usually can be by now. Run only when nothing
-		// fit — recovering a contiguous range here is much cheaper than letting the
-		// caller fall through and commit a whole new page.
-		bool collapse()
-		{
-			if (free_blocks.size() < 2) return false;
-
-			std::set<block> merged;
-			bool changed = false;
-
-			auto it = free_blocks.begin();
-			block cur = *it++;
-
-			for (; it != free_blocks.end(); ++it)
-			{
-				if (cur.end + 1 == it->begin && same_class(cur.tag, it->tag))
-				{
-					cur.end = it->end;
-					cur.tag.join(it->tag);
-					changed = true;
-				}
-				else
-				{
-					merged.insert(cur);
-					cur = *it;
-				}
-			}
-
-			merged.insert(cur);
-
-			if (changed) free_blocks.swap(merged);
-			return changed;
-		}
-
-	public:
-		// PagedAllocator owns one instance per page and chooses between them
-		// internally, so the request being served cannot be threaded through the
-		// virtual TryAllocate signature. These carry it instead; single-threaded by
-		// construction (one batch/frame is prepared at a time).
-		static inline uint64       s_epoch   = 1;
-		static inline AllocSyncTag s_request;   // consulted by TryAllocate
-		static inline AllocSyncTag s_release;   // stamped onto blocks by Free
-
-		// Start a new batch. Everything released earlier becomes unconstrained,
-		// which also lets it coalesce freely again — no sweep over blocks needed.
-		static void begin_epoch() { ++s_epoch; }
-
-		// Default is deliberately the most restrictive thing possible: a forgotten
-		// set_request costs memory (nothing in-epoch is reusable), never safety.
-		static void set_request(const AllocSyncTag& t) { s_request = t; }
-
-		static void set_release(const AllocSyncTag& t) { s_release = t; }
-
-		static void clear_request()
-		{
-			s_request = AllocSyncTag{};
-		}
-
-		SyncAwareAllocator(uint64 size = std::numeric_limits<uint64>::max())
-			: start_region(0), end_region(size), region_size(size)
-		{
-			reset_free_list();
-		}
-
-		SyncAwareAllocator(uint64 start_region, uint64 end_region)
-			: start_region(start_region), end_region(end_region), region_size(end_region - start_region)
-		{
-			reset_free_list();
-		}
-
-		uint64 get_max_usage() const override { return max_usage; }
-		uint64 get_size()      const override { return region_size; }
-
-		std::optional<Handle> TryAllocate(uint64 size, uint64 align = 1) override final
-		{
-			if (size == 0)
-				return Handle(MemoryInfo(start_region, 0, reset_id), this);
-
-			if (auto handle = try_place(size, align)) return handle;
-
-			// Nothing fit — try recovering contiguity before the caller gives up on
-			// this region and commits a new page.
-			if (collapse()) return try_place(size, align);
-
-			return std::nullopt;
-		}
-
 		void Free(Handle& handle) override
+		{
+			// Untagged release: the caller tracks no ownership, so the memory is left
+			// unconstrained and anyone may take it.
+			release(handle, nullptr);
+		}
+
+		void Free(Handle& handle, const AllocSyncTag& tag) override
+		{
+			release(handle, &tag);
+		}
+
+		void Reset() override
+		{
+			reset_id++;
+			max_usage = 0;
+			reset_spans();
+		}
+
+		bool isEmpty() const override
+		{
+			if (free_spans.size() != 1) return false;
+
+			auto& s = *free_spans.begin();
+			return s.begin == start_region && s.end == end_region - 1;
+		}
+
+	private:
+		void release(Handle& handle, const AllocSyncTag* tag)
 		{
 			if (!handle) return;
 			if (handle.get_reset_id() != reset_id) return;
@@ -385,56 +412,39 @@ export
 			ASSERT(handle.get_owner() == this);
 			if (!handle.get_size()) return;
 
-			block freed;
-			freed.begin = handle.get_info().offset;
-			freed.end   = freed.begin + handle.get_size() - 1;
-			freed.tag   = s_release;
+			uint64 begin = handle.get_info().offset;
+			uint64 end   = begin + handle.get_size() - 1;
 
 #ifdef DEV
-			for (auto& b : free_blocks)
-				ASSERT(b.end < freed.begin || b.begin > freed.end);   // no double free / overlap
+			for (auto& s : free_spans)
+				ASSERT(s.end < begin || s.begin > end);   // no double free / overlap
 #endif
 
-			// Coalesce with same-class neighbours only (see same_class). Blocks kept
-			// apart here rejoin later via collapse(), once begin_epoch() has made them
-			// all unconstrained.
-			auto next = free_blocks.lower_bound(block{ freed.end + 1, 0, AllocSyncTag{} });
+			// Remember who finished with these bytes, before merging them away.
+			if (tag) owners.insert_or_assign(begin, std::make_pair(end, *tag));
 
-			if (next != free_blocks.end() && next->begin == freed.end + 1 && same_class(freed.tag, next->tag))
+			// Plain unconditional coalesce — safety lives in `owners`, so nothing here
+			// has to reason about it.
+			auto next = free_spans.lower_bound(span{ end + 1, 0 });
+
+			if (next != free_spans.end() && next->begin == end + 1)
 			{
-				freed.end = next->end;
-				freed.tag.join(next->tag);
-				next = free_blocks.erase(next);
+				end  = next->end;
+				next = free_spans.erase(next);
 			}
 
-			if (next != free_blocks.begin())
+			if (next != free_spans.begin())
 			{
 				auto prev = std::prev(next);
 
-				if (prev->end + 1 == freed.begin && same_class(freed.tag, prev->tag))
+				if (prev->end + 1 == begin)
 				{
-					freed.begin = prev->begin;
-					freed.tag.join(prev->tag);
-					free_blocks.erase(prev);
+					begin = prev->begin;
+					free_spans.erase(prev);
 				}
 			}
 
-			free_blocks.insert(freed);
-		}
-
-		void Reset() override
-		{
-			reset_id++;
-			max_usage = 0;
-			reset_free_list();
-		}
-
-		bool isEmpty() const override
-		{
-			if (free_blocks.size() != 1) return false;
-
-			auto& b = *free_blocks.begin();
-			return b.begin == start_region && b.end == end_region - 1;
+			free_spans.insert(span{ begin, end });
 		}
 	};
 

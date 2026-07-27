@@ -86,7 +86,7 @@ export namespace Allocators
 	class PageOwnerInterface
 	{
 	public:
-		virtual PagedAllocation<HeapPageType> alloc(size_t size, size_t alignment) = 0;
+		virtual PagedAllocation<HeapPageType> alloc(size_t size, size_t alignment, const AllocSyncTag* constraint = nullptr) = 0;
 		virtual void free(PagedAllocation<HeapPageType>& handle) = 0;
 
 		virtual bool CanFree() = 0;
@@ -259,14 +259,14 @@ export namespace Allocators
 		}
 
 
-		PagedAllocation<typename Context::HeapPageType> alloc(size_t size, size_t alignment) override
+		PagedAllocation<typename Context::HeapPageType> alloc(size_t size, size_t alignment, const AllocSyncTag* constraint = nullptr) override
 		{
 			typename AllocationPolicy::LockPolicy::guard g(m);
 
 
 			for (auto& page : all_pages)
 			{
-				auto handle = page->allocator->TryAllocate(size, alignment);
+				auto handle = page->allocator->TryAllocate(size, alignment, constraint);
 
 				if (handle)
 				{
@@ -349,7 +349,7 @@ export namespace Allocators
 		{
 
 		}
-		PagedAllocation<typename Context::HeapPageType> alloc(size_t size, size_t alignment, typename Context::HeapMemoryOptions options)
+		PagedAllocation<typename Context::HeapPageType> alloc(size_t size, size_t alignment, typename Context::HeapMemoryOptions options, const AllocSyncTag* constraint = nullptr)
 		{
 			ASSERT(size > 0);
 			typename AllocationPolicy::LockPolicy::guard g(m);
@@ -360,7 +360,7 @@ export namespace Allocators
 				creator = std::make_shared<PagePool<Context, AllocationPolicy>>(factory, options, del_heaps);
 			}
 
-			auto res = creator->alloc(size, alignment);
+			auto res = creator->alloc(size, alignment, constraint);
 			ASSERT(res.get_offset() % alignment == 0);
 
 			ASSERT(res.get_offset() + size <= res.get_heap()->get_size());

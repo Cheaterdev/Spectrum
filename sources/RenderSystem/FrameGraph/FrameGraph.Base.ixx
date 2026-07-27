@@ -735,6 +735,12 @@ public:
 		std::list<std::shared_ptr<Pass>> required_passes;
 		std::list<Pass*> enabled_passes;
 		MemoryAllocatorType allocator;
+
+		// Epoch handed to the transient allocator. Bumped once per create_resources,
+		// so everything released in a previous frame is unconstrained — justified by
+		// the frame-boundary cross-queue wait in commit_command_lists. Per-builder
+		// rather than global: the inference belongs to THIS graph's frame boundary.
+		uint64 alias_epoch = 0;
 		HAL::FrameResourceManager frames;
 		HAL::FrameResources::ptr current_frame;
 
