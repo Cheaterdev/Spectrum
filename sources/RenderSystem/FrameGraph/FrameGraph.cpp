@@ -692,7 +692,9 @@ namespace FrameGraph
 
 		PROFILE(L"submitting lists");
 
-		std::map<CommandListType, std::list<CommandList::ptr>> queued_lists;
+		// enum_array, not std::map: the key is a 3-value enum, so a red-black
+		// tree rebuilt every frame buys nothing over direct indexing.
+		enum_array<CommandListType, std::list<CommandList::ptr>> queued_lists;
 
 		// Frame-boundary cross-queue sync: each queue waits for the OTHER
 		// queues' end of the previous frame before this frame's first
@@ -726,9 +728,9 @@ namespace FrameGraph
 				{
 					if (!sync_pass) continue;
 
-					if(!queued_lists[list_type].empty())  
-					{				
-						RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
+					if(!queued_lists[list_type].empty())
+					{
+						RenderSystem::get().device().get_queue(list_type)->execute(std::move(queued_lists[list_type]));
 						queued_lists[list_type].clear();
 					}
 
@@ -749,7 +751,7 @@ namespace FrameGraph
 
 				if (pass->put_fence)		//////////////////////// ARGH!!!!
 				{
-					pass->fence_end = RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
+					pass->fence_end = RenderSystem::get().device().get_queue(list_type)->execute(std::move(queued_lists[list_type]));
 
 					queued_lists[list_type].clear();
 
@@ -772,10 +774,12 @@ namespace FrameGraph
 		}
 
 
-		for (auto& [type, lists] : queued_lists)
+		for (auto type : magic_enum::enum_values<CommandListType>())
 		{
+			auto& lists = queued_lists[type];
 			if (lists.empty()) continue;
-			result = RenderSystem::get().device().get_queue(type)->execute(lists);
+			result = RenderSystem::get().device().get_queue(type)->execute(std::move(lists));
+			lists.clear();
 			frame_end_fence[type] = result;
 
 			if (serialize_queues)
@@ -955,6 +959,16 @@ namespace FrameGraph
 					if (!queued_state[list_type].is_in_sync(sync_pass, true))
 					{
 						ASSERT(other_type != list_type);
+
+						// The producer must be able to signal. commit_command_lists
+						// only assigns fence_end inside its `if (commandList)` block,
+						// so a producer without a list leaves fence_end unset — and
+						// Queue::gpu_wait() opens with `if (!waiter) return;`. The
+						// cross-queue wait would then vanish with no error anywhere.
+						// remove_inactive() filters sync sources by active()
+						// (enabled && renderable), which does NOT imply a list.
+						ASSERT(sync_pass->context.list);
+
 						const_cast<Pass*>(sync_pass)->put_fence = true;
 						queued_state[list_type].max(sync_pass);
 					}

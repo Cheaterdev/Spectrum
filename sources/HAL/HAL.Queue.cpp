@@ -1,4 +1,4 @@
-module HAL:Queue;
+﻿module HAL:Queue;
 
 
 import Core;
@@ -170,7 +170,7 @@ namespace HAL
 
 		 FenceWaiter execution_fence{ &commandListCounter, fence_value, type};
 
-		  gpu_wait_thread.enqueue([lists, execution_fence, this]()
+		  gpu_wait_thread.enqueue([lists = std::move(lists), execution_fence, this]()
 			{
 				if (!device.alive) return;
 
@@ -266,12 +266,16 @@ namespace HAL
 	}
 
 	HAL::FenceWaiter Queue::execute(std::list<CommandList::ptr> list)
-	{	
+	{
 		std::unique_lock<std::mutex> lock(submit_mutex);
 
 		const UINT64 fence = ++m_fenceValue;
-		gpu_execute_thread.enqueue([this, list, fence]() {
-			execute_internal(fence, list);
+
+		// Move the batch through: caller -> executor closure -> execute_internal.
+		// Copying a std::list of shared_ptr costs a node allocation and an atomic
+		// refcount bump per element, per hop.
+		gpu_execute_thread.enqueue([this, list = std::move(list), fence]() mutable {
+			execute_internal(fence, std::move(list));
 			});
 
 		return  HAL::FenceWaiter(&commandListCounter, fence, type);
@@ -281,7 +285,7 @@ namespace HAL
 		void Queue::run(std::function<void()> f)
 		{
 			std::unique_lock<std::mutex> lock(submit_mutex);
-			gpu_execute_thread.enqueue(f);
+			gpu_execute_thread.enqueue(std::move(f));
 		}
 
 	UINT64 Queue::get_frequency() const { return frequency; }
