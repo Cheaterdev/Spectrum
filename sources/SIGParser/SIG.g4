@@ -239,7 +239,7 @@ view_stat
  view_definition: option_block*? VIEW name_id inherit? OBRACE view_block CBRACE;
  pass_definition: option_block*? PASS name_id inherit? OBRACE view_block CBRACE;
 
-pipeline_stat : name_id SCOL | COMMENT ;
+pipeline_stat : option_block* name_id SCOL | COMMENT ;
 pipeline_block : pipeline_stat* ;
 pipeline_definition : PIPELINE name_id OBRACE pipeline_block CBRACE ;
 

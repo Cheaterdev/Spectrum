@@ -541,36 +541,40 @@ public:
 		return precompiled_passes;
 	}
 
+	// [Compute] on a PassNode says the pass CAN run on the compute queue; [Async]
+	// on the pipeline entry says it SHOULD here. Async is opt-in per pipeline, so
+	// an untagged compute pass runs inline on the direct queue - no fence pair for
+	// work that has nothing to overlap with.
 	void add_passes(FrameGraph::Graph& graph)
 	{
 		graph.set_pipeline(this);
 
-		graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, PassDefault<Passes::ResultCreation>::flags);
-		graph.add_library_pass<Passes::PreScene>(PassDefault<Passes::PreScene>::setup, PassDefault<Passes::PreScene>::render, PassDefault<Passes::PreScene>::flags);
+		graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, (PassDefault<Passes::ResultCreation>::flags & ~FrameGraph::PassFlags::Compute));
+		graph.add_library_pass<Passes::PreScene>(PassDefault<Passes::PreScene>::setup, PassDefault<Passes::PreScene>::render, (PassDefault<Passes::PreScene>::flags & ~FrameGraph::PassFlags::Compute));
 		if (blueNoise.setup_func)
-			graph.add_library_pass<Passes::BlueNoise>(blueNoise.setup_func, blueNoise.render_func, blueNoise.flags);
+			graph.add_library_pass<Passes::BlueNoise>(blueNoise.setup_func, blueNoise.render_func, (blueNoise.flags));
 		if (assetGBuffer.setup_func)
-			graph.add_library_pass<Passes::AssetGBuffer>(assetGBuffer.setup_func, assetGBuffer.render_func, assetGBuffer.flags);
+			graph.add_library_pass<Passes::AssetGBuffer>(assetGBuffer.setup_func, assetGBuffer.render_func, (assetGBuffer.flags & ~FrameGraph::PassFlags::Compute));
 		if (pSSM_Global.setup_func)
-			graph.add_library_pass<Passes::PSSM_Global>(pSSM_Global.setup_func, pSSM_Global.render_func, pSSM_Global.flags);
+			graph.add_library_pass<Passes::PSSM_Global>(pSSM_Global.setup_func, pSSM_Global.render_func, (pSSM_Global.flags & ~FrameGraph::PassFlags::Compute));
 		for (uint32_t i = 0; i < Passes::PSSM_Cascade::MaxCount; ++i)
 			if (pSSM_Cascade.setup_funcs[i])
-				graph.add_library_pass<Passes::PSSM_Cascade>(i, pSSM_Cascade.setup_funcs[i], pSSM_Cascade.render_funcs[i], pSSM_Cascade.flags);
+				graph.add_library_pass<Passes::PSSM_Cascade>(i, pSSM_Cascade.setup_funcs[i], pSSM_Cascade.render_funcs[i], (pSSM_Cascade.flags & ~FrameGraph::PassFlags::Compute));
 		if (cubeSky.setup_func)
-			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, cubeSky.flags);
-		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, PassDefault<Passes::CubeMapDownsample>::flags);
-		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, PassDefault<Passes::CubeMapEnviromentProcessor>::flags);
+			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, (cubeSky.flags & ~FrameGraph::PassFlags::Compute));
+		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, (PassDefault<Passes::CubeMapDownsample>::flags));
+		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, (PassDefault<Passes::CubeMapEnviromentProcessor>::flags & ~FrameGraph::PassFlags::Compute));
 		if (pSSM_GenerateMask.setup_func)
-			graph.add_library_pass<Passes::PSSM_GenerateMask>(pSSM_GenerateMask.setup_func, pSSM_GenerateMask.render_func, pSSM_GenerateMask.flags);
+			graph.add_library_pass<Passes::PSSM_GenerateMask>(pSSM_GenerateMask.setup_func, pSSM_GenerateMask.render_func, (pSSM_GenerateMask.flags & ~FrameGraph::PassFlags::Compute));
 		if (pSSM_Combine.setup_func)
-			graph.add_library_pass<Passes::PSSM_Combine>(pSSM_Combine.setup_func, pSSM_Combine.render_func, pSSM_Combine.flags);
+			graph.add_library_pass<Passes::PSSM_Combine>(pSSM_Combine.setup_func, pSSM_Combine.render_func, (pSSM_Combine.flags));
 		if (sky.setup_func)
-			graph.add_library_pass<Passes::Sky>(sky.setup_func, sky.render_func, sky.flags);
+			graph.add_library_pass<Passes::Sky>(sky.setup_func, sky.render_func, (sky.flags));
 		if (sMAA.setup_func)
-			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, sMAA.flags);
-		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, PassDefault<Passes::FSR>::flags);
+			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, (sMAA.flags));
+		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, (PassDefault<Passes::FSR>::flags));
 		if (assetMip.setup_func)
-			graph.add_library_pass<Passes::AssetMip>(assetMip.setup_func, assetMip.render_func, assetMip.flags);
+			graph.add_library_pass<Passes::AssetMip>(assetMip.setup_func, assetMip.render_func, (assetMip.flags & ~FrameGraph::PassFlags::Compute));
 	}
 };
 

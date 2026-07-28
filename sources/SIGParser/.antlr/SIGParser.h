@@ -1,5 +1,5 @@
 
-// Generated from sources/SIGParser/SIG.g4 by ANTLR 4.11.1
+// Generated from SIG.g4 by ANTLR 4.11.1
 
 #pragma once
 
@@ -1478,6 +1478,8 @@ public:
     virtual size_t getRuleIndex() const override;
     Name_idContext *name_id();
     antlr4::tree::TerminalNode *SCOL();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
     antlr4::tree::TerminalNode *COMMENT();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;

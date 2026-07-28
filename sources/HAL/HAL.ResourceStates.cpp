@@ -892,6 +892,15 @@ namespace HAL
 			// suppress it too — but only on the path that actually (re)chains.
 			if (target->prev_usage && !is_none(target->prev_usage)) return;
 
+			// NOTE: this can drop a resource's initializing DISCARD. If one of the
+			// bypassed nodes is the alias_begin (state UNKNOWN) and `target` is then
+			// rewired to a real predecessor, compile_transitions no longer sees
+			// prev_state == UNKNOWN and never sets BarrierFlags::DISCARD — D3D12 then
+			// reports the placed resource as uninitialized (#1422). Reproduces with
+			// auto_async enabled, on sky_cubemap_filtered. Fixing it needs to tell a
+			// stale cross-frame tracked state on a freshly placed resource apart from
+			// a genuine initialise-and-write earlier in the same frame; blindly
+			// keeping the DISCARD would destroy the earlier list's writes.
 			for (auto* u = first; u != target; u = u->next_usage)
 				u->suppressed = true;
 

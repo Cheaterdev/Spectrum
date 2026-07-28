@@ -343,14 +343,18 @@ public:
 		return precompiled_passes;
 	}
 
+	// [Compute] on a PassNode says the pass CAN run on the compute queue; [Async]
+	// on the pipeline entry says it SHOULD here. Async is opt-in per pipeline, so
+	// an untagged compute pass runs inline on the direct queue - no fence pair for
+	// work that has nothing to overlap with.
 	void add_passes(FrameGraph::Graph& graph)
 	{
 		graph.set_pipeline(this);
 
-		graph.add_library_pass<Passes::Profiler>(PassDefault<Passes::Profiler>::setup, PassDefault<Passes::Profiler>::render, PassDefault<Passes::Profiler>::flags);
-		graph.add_library_pass<Passes::UI_PreDraw>(PassDefault<Passes::UI_PreDraw>::setup, PassDefault<Passes::UI_PreDraw>::render, PassDefault<Passes::UI_PreDraw>::flags);
+		graph.add_library_pass<Passes::Profiler>(PassDefault<Passes::Profiler>::setup, PassDefault<Passes::Profiler>::render, (PassDefault<Passes::Profiler>::flags & ~FrameGraph::PassFlags::Compute));
+		graph.add_library_pass<Passes::UI_PreDraw>(PassDefault<Passes::UI_PreDraw>::setup, PassDefault<Passes::UI_PreDraw>::render, (PassDefault<Passes::UI_PreDraw>::flags & ~FrameGraph::PassFlags::Compute));
 		for (uint32_t i = 0; i < Passes::UI_Render::MaxCount; ++i)
-			graph.add_library_pass<Passes::UI_Render>(i, PassDefault<Passes::UI_Render>::setup, PassDefault<Passes::UI_Render>::render, PassDefault<Passes::UI_Render>::flags);
+			graph.add_library_pass<Passes::UI_Render>(i, PassDefault<Passes::UI_Render>::setup, PassDefault<Passes::UI_Render>::render, (PassDefault<Passes::UI_Render>::flags & ~FrameGraph::PassFlags::Compute));
 	}
 };
 

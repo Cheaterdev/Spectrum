@@ -28,6 +28,7 @@ Pipeline AssetPipeline
 
 	# scene prep
 	PreScene;
+	[Async]
 	BlueNoise;
 
 	# shadow (generate_global)
@@ -37,16 +38,21 @@ Pipeline AssetPipeline
 
 	# sky setup (sky.generate)
 	CubeSky;
+	[Async]
 	CubeMapDownsample;
 	CubeMapEnviromentProcessor;
 
 	# shadow composition (pssm.generate)
 	PSSM_GenerateMask;
+	[Async]
 	PSSM_Combine;
 
 	# sky + post
+	[Async]
 	Sky;
+	[Async]
 	SMAA;
+	[Async]
 	FSR;
 
 	AssetMip;

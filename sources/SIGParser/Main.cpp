@@ -209,6 +209,21 @@ int main()
 			                 ArgInfo{"b"}
 		                 ));
 
+		// Is this pipeline entry tagged [Async]? Placement is a per-pipeline
+		// decision, so it lives on the entry rather than the PassNode. Resolved in
+		// C++ because the template's view of an entry does not expose its options.
+		global.AddGlobal("entry_is_async", jinja2::MakeCallable(
+			                 [&](const std::string& pipeline_name, const std::string& entry_name)
+			                 {
+				                 Pipeline* pipeline_ptr = parsed.pipelines.find(pipeline_name);
+				                 if (!pipeline_ptr) return false;
+
+				                 const PipelineEntry* entry = pipeline_ptr->entries.find(entry_name);
+				                 return entry && entry->find_option("Async") != nullptr;
+			                 },
+			                 ArgInfo{"pipeline"}, ArgInfo{"entry"}
+		                 ));
+
 		global.AddGlobal("myappend", jinja2::MakeCallable(
 			                 [&](const std::string& list_name, const std::string& b)
 			                 {
@@ -587,7 +602,13 @@ int main()
 					uint32_t count = 1;
 					if (const option* m = pass->find_option("Multiple"))
 						count = (uint32_t)std::max(1, atoi(m->value_atom.expr.c_str()));
-					bool compute = pass->find_option("Compute") != nullptr;
+					// [Compute] on the PassNode says the pass CAN run on the compute
+					// queue; [Async] on this pipeline entry says it SHOULD. Async is
+					// opt-in: a compute pass with no [Async] runs inline on the direct
+					// queue, which costs nothing extra and avoids a fence pair for work
+					// that has nothing to overlap with.
+					bool compute = pass->find_option("Compute") != nullptr
+					            && entry.find_option("Async") != nullptr;
 
 					std::vector<std::pair<std::string, bool>> accesses;
 					compute_pass_accesses(pass, accesses);

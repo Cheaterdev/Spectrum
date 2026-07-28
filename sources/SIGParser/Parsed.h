@@ -815,11 +815,15 @@ struct Table : public inherited, have_options, have_name, have_hlsl
 };
 
 
-struct PipelineEntry : public have_name
+// One pass slot in a Pipeline block. Options here are placement decisions for
+// THIS pipeline (e.g. [Async]), as opposed to the PassNode's own options which
+// describe what the pass is (e.g. [Compute] = it uses compute shaders).
+struct PipelineEntry : public have_name, public have_options
 {
 	SERIALIZE()
 	{
 		SAVE_PARENT_MERGED(have_name);
+		SAVE_PARENT_MERGED(have_options);
 	}
 };
 

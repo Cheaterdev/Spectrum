@@ -465,6 +465,7 @@ namespace HAL
                     {
                         Log::get() << "d3d12 trans " << barrier.SyncBefore << ";" << barrier.SyncAfter << ";" << barrier.AccessBefore << " ---> " << barrier.AccessAfter << ";" << barrier.LayoutBefore << ";" << barrier.LayoutAfter << Log::endl;
                     }
+
                 }
             }
 

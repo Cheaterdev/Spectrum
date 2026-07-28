@@ -1124,6 +1124,7 @@ public:
 	
 		Variable<bool> optimize = { true, "optimize", this };
 
+
 		// Diagnostic: serialize all queues (fence after EVERY pass, all other
 		// queues wait) — kills any cross-queue concurrency. Garbage that
 		// survives this is not an async/lifetime race but a rogue writer

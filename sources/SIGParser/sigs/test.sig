@@ -12,8 +12,8 @@ Pipeline MainPipeline
 {
 	# scene prep
 	PreScene;
-	#[Async] 
-	BlueNoise;
+											[Async]
+											BlueNoise;
 
 	# voxel pre (generate_pre)
 	Voxelize;
@@ -23,41 +23,40 @@ Pipeline MainPipeline
 
 	# shadow (generate_global)
 	Scene;
-	stencil_renderer_before;
+
 
 	# sky setup (sky.generate)
 	CubeSky;
 	CubeMapDownsample;
 	CubeMapEnviromentProcessor;
 
-	# voxel lighting (generate_light)
-	
+											# voxel lighting (generate_light)
+											[Async]
+											Lighting;
+											[Async]
+											Mipmapping;
+	stencil_renderer_before;
 
-	#[Async] 
-	Lighting;
-	#[Async] 
-	Mipmapping;
-
-
-	RTXShadow;
-
-	# main gbuffer + rtx
 
 	# result target
 	ResultCreation;
 
 	# shadow composition (pssm.generate)
 	PSSM_GenerateMask;
-	PSSM_Combine;
 
-	# voxel screen (voxel_gi.generate)
-	VoxelScreen;
-	VoxelCombine;
 	ScreenReflection;
 	ReflectionDenoiser_Reproject;
+
+											[Async]
+											RTXShadow;
+											[Async]PSSM_Combine;
+											# voxel screen (voxel_gi.generate)
+											[Async]
+											VoxelScreen;
+											[Async]
+											VoxelCombine;
+
 	ReflCombine;
-	VoxelDebug;
-	RTXColorPass;
 
 	# sky + post
 	Sky;
@@ -66,7 +65,10 @@ Pipeline MainPipeline
 	SMAA;
 	FSR;
 
-	# frame end
-	CopyPrev;
+
+	#Debug stuff
+
+	RTXColorPass;
+	VoxelDebug;
 }
 
