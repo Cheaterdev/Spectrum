@@ -286,6 +286,20 @@ namespace HAL
 		}
 	}
 
+	void CommandList::invalidate_state()
+	{
+		current_pipeline = nullptr;
+		if (graphics) { graphics->invalidate_signature(); graphics->invalidate_tables(); }
+		if (compute)  { compute->invalidate_signature();  compute->invalidate_tables();  }
+
+		// Record time, so this pushes a real Cmd (replayed in sequence right
+		// after the func() call that prompted this) — not a live D3D12 call.
+		compiler.set_descriptor_heaps(
+			device.get_descriptor_heap_factory().get_cbv_srv_uav_heap().get(),
+			device.get_descriptor_heap_factory().get_sampler_heap().get()
+		);
+	}
+
 
 	void CommandList::end()
 	{

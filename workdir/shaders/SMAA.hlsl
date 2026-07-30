@@ -195,7 +195,10 @@ float2 DX10_SMAADepthEdgeDetectionPS(float4 position : SV_POSITION,
     #if SMAA_REPROJECTION
         return 1;// SMAANeighborhoodBlendingPS(texcoord, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex(), velocityTex);
     #else
-        return pow(SMAANeighborhoodBlendingPS(texcoord, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex()),1.0/2.2);
+        // Gamma encode is applied centrally at the viewport composite
+        // (ninepatch.hlsl's gammaEncode) so every producer of
+        // ResultTextureNew (SMAA/FSR/DLSS) is handled the same way.
+        return SMAANeighborhoodBlendingPS(texcoord, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex());
     #endif
     }
 #endif
@@ -266,6 +269,6 @@ void CS_Blending(uint3 DTid : SV_DispatchThreadID)
     SMAANeighborhoodBlendingVS(tc, offset);
 
     GetSMAA_Blend().GetResultOut()[DTid.xy] =
-        pow(SMAANeighborhoodBlendingPS(tc, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex()), 1.0 / 2.2);
+        SMAANeighborhoodBlendingPS(tc, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex());
 }
 #endif

@@ -58,6 +58,13 @@ namespace HAL
 		if (check(source & LAYOUT_WRITE) || check(need & LAYOUT_WRITE))
 			return std::nullopt;
 
+		// PRESENT can't merge with any other layout (unlike SHADER_RESOURCE|
+		// COPY_SOURCE) — OR-ing it in produces a bit combination to_native()
+		// has no case for and asserts on. nullopt forces a real separate
+		// transition instead.
+		if (check(source & TextureLayout::PRESENT) || check(need & TextureLayout::PRESENT))
+			return std::nullopt;
+
 		return source | need;
 	}
 

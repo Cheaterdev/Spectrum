@@ -12,8 +12,10 @@ struct vertex_input
 	float2 tc; // float2
 	float4 mulColor; // float4
 	float4 addColor; // float4
+	float gammaEncode; // float
 	float2 GetPos() { return pos; }
 	float2 GetTc() { return tc; }
 	float4 GetMulColor() { return mulColor; }
 	float4 GetAddColor() { return addColor; }
+	float GetGammaEncode() { return gammaEncode; }
 };

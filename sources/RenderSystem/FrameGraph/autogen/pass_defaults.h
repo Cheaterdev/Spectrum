@@ -152,4 +152,15 @@ struct PassDefault<Passes::UI_Render>
 };
 
 
+template<>
+struct PassDefault<Passes::UpscalingDLSS>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+
+	static bool setup(Passes::UpscalingDLSS::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::UpscalingDLSS::Context& data, FrameGraph::FrameContext& context);
+};
+
+
 }

@@ -318,6 +318,12 @@ export{
 
 			void begin(LiteralWStr name = L"");
 
+			// Call at record time, right after a compiler.func() callback whose
+			// deferred body lets an external SDK rebind its own compute state
+			// on this list (see nvidia::DLSS::upscale()). Must NOT be called
+			// from inside that callback — see HAL.CommandList.cpp.
+			void invalidate_state();
+
 
 			void clear_uav(const Handles::UAV& h, vec4 ClearColor = vec4(0, 0, 0, 0));
 
@@ -449,6 +455,13 @@ export{
 			void set_signature(const RootSignature::ptr& signature);
 
 			void set_signature(Layouts layout);
+
+			// Forces the next set_signature() call to reissue. See CommandList::invalidate_state().
+			void invalidate_signature() { root_sig = nullptr; }
+
+			// Forces commit_tables() to re-bind every already-set CBV. Skips
+			// never-set slots — set_cb() has no validity check.
+			void invalidate_tables() { for (auto& t : tables) if (t.const_buffer) t.dirty = true; }
 
 			void set_pipeline(std::shared_ptr<PipelineStateBase> pipeline);
 

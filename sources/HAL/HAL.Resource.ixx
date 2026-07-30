@@ -166,6 +166,12 @@ export{
 			ResourceHandle alloc_handle;
 			ResourceStateManager& get_state_manager();
 
+			// Backend-native resource-state value (D3D12_RESOURCE_STATES or
+			// VkImageLayout, as uint32_t) for the currently tracked GPU state —
+			// paired with get_native() at API boundaries that need the raw
+			// handle/state pair (e.g. NVIDIA Streamline's sl::Resource tag).
+			uint32_t get_native_state() const;
+
 			TiledResourceManager& get_tiled_manager();
 
 			std::shared_ptr<Resource> get_tracked();

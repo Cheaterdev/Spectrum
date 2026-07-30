@@ -41,6 +41,7 @@ export import "../defines.h";
 #include "pass/stencil_renderer_after.h"
 #include "pass/UI_PreDraw.h"
 #include "pass/UI_Render.h"
+#include "pass/UpscalingDLSS.h"
 #include "pass/GBufferDownsampler.h"
 #include "pass/VoxelDebug.h"
 #include "pass/VoxelScreen.h"
@@ -85,6 +86,7 @@ export namespace Passes
 	using ::Passes::stencil_renderer_after;
 	using ::Passes::UI_PreDraw;
 	using ::Passes::UI_Render;
+	using ::Passes::UpscalingDLSS;
 	using ::Passes::GBufferDownsampler;
 	using ::Passes::VoxelDebug;
 	using ::Passes::VoxelScreen;

@@ -663,6 +663,33 @@ D3D12_BARRIER_LAYOUT to_native(TextureLayout layout)
     return D3D12_BARRIER_LAYOUT_UNDEFINED;
 }
 
+uint32_t to_native_resource_state(TextureLayout layout)
+{
+    if (check(layout & TextureLayout::COPY_QUEUE)) return D3D12_RESOURCE_STATE_COMMON;
+
+    TextureLayout GEN_READ = TextureLayout::SHADER_RESOURCE | TextureLayout::COPY_SOURCE;
+
+    if ((layout & GEN_READ) == GEN_READ) return D3D12_RESOURCE_STATE_GENERIC_READ;
+    if (check(layout & TextureLayout::DEPTH_STENCIL_WRITE)) return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
+    if (layout == TextureLayout::NONE) return D3D12_RESOURCE_STATE_COMMON;
+    if (layout == TextureLayout::PRESENT) return D3D12_RESOURCE_STATE_COMMON; // == D3D12_RESOURCE_STATE_PRESENT, both 0
+    if (layout == TextureLayout::RENDER_TARGET) return D3D12_RESOURCE_STATE_RENDER_TARGET;
+    if (layout == TextureLayout::UNORDERED_ACCESS) return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    if (layout == TextureLayout::DEPTH_STENCIL_WRITE) return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    if (layout == TextureLayout::DEPTH_STENCIL_READ) return D3D12_RESOURCE_STATE_DEPTH_READ;
+    // Our layout enum doesn't distinguish pixel/non-pixel shader visibility —
+    // combine both legacy bits, matching how a resource bound to either stage
+    // is conventionally described.
+    if (layout == TextureLayout::SHADER_RESOURCE)
+        return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    if (layout == TextureLayout::COPY_SOURCE) return D3D12_RESOURCE_STATE_COPY_SOURCE;
+    if (layout == TextureLayout::COPY_DEST) return D3D12_RESOURCE_STATE_COPY_DEST;
+
+    ASSERT(false);
+    return D3D12_RESOURCE_STATE_COMMON;
+}
+
 D3D12_BARRIER_SYNC to_native(BarrierSync flags)
 {
     D3D12_BARRIER_SYNC result = D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_NONE;

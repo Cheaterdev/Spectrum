@@ -21,10 +21,12 @@ export namespace Table
 		float2 tc;
 		float4 mulColor;
 		float4 addColor;
+		float gammaEncode;
 		float2& GetPos() { return pos; }
 		float2& GetTc() { return tc; }
 		float4& GetMulColor() { return mulColor; }
 		float4& GetAddColor() { return addColor; }
+		float& GetGammaEncode() { return gammaEncode; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -33,6 +35,7 @@ export namespace Table
 			compiler.compile(tc);
 			compiler.compile(mulColor);
 			compiler.compile(addColor);
+			compiler.compile(gammaEncode);
 		}
 		using Compiled = vertex_input;
 
@@ -47,6 +50,7 @@ export namespace Table
 			ar& NVP(tc);
 			ar& NVP(mulColor);
 			ar& NVP(addColor);
+			ar& NVP(gammaEncode);
 		}
 
 	};

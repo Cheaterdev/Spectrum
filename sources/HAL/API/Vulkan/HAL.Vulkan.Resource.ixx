@@ -90,6 +90,14 @@ export namespace HAL
             // Cross-partition friends are unreliable in MSVC; expose via getters.
             VkImage     get_vk_image()        const noexcept { return vk_image; }
             VkBuffer    get_vk_buffer()       const noexcept { return vk_buffer; }
+
+            // Backend-uniform native handle (see HAL.D3D12.Resource.ixx).
+            // Prefers an imported (e.g. swapchain) image over an owned one.
+            void* get_native() const noexcept
+            {
+                VkImage image = import_handle.image != VK_NULL_HANDLE ? import_handle.image : vk_image;
+                return reinterpret_cast<void*>(image);
+            }
             // Image aspect (DEPTH for depth images, COLOR otherwise) — used for
             // transfer/barrier subresources so depth images aren't touched as COLOR.
             VkImageAspectFlags get_vk_aspect() const noexcept {

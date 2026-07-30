@@ -208,6 +208,10 @@ export
     Format               from_native(VkFormat format);
 
     VkImageLayout        to_native(TextureLayout layout);
+
+    // Backend-native resource-state value as a plain uint32_t, mirroring
+    // D3D12's to_native_resource_state (HAL.Utils.ixx).
+    uint32_t             to_native_resource_state(TextureLayout layout);
     VkPipelineStageFlags2 to_native_stage(BarrierSync sync);
     VkAccessFlags2       to_native_access(BarrierAccess access);
 

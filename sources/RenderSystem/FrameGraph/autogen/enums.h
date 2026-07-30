@@ -48,6 +48,7 @@ export
 		Library::stencil_renderer_after stencil_renderer_after;
 		Library::UI_PreDraw UI_PreDraw;
 		Library::UI_Render UI_Render;
+		Library::UpscalingDLSS UpscalingDLSS;
 		Library::GBufferDownsampler GBufferDownsampler;
 		Library::VoxelDebug VoxelDebug;
 		Library::VoxelScreen VoxelScreen;

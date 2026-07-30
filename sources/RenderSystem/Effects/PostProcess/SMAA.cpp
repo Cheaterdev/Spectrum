@@ -28,6 +28,10 @@ SMAA::SMAA()
 
 	m_smaa_setup = [this](Passes::SMAA::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
+		// DLSS does its own temporal AA; running SMAA on top would double up.
+		if (nvidia::DLSS::get().available())
+			return false;
+
 		auto& frame = builder.graph->get_context<ViewportInfo>();
 		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::ComputeRead);
 		builder.create(data.SMAA_edges,

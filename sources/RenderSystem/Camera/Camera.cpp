@@ -228,8 +228,13 @@ void third_person_camera::frame_move(float dt)
 
 void camera::update(float2 offset)
 {
-	auto jitter_mat = mat4x4::translation(vec3{ offset, 0 });
-	auto proj_jittered = proj_mat;// *jitter_mat;
+	// `offset` is NDC-space jitter. Added into row 3 (a31/a32) rather than
+	// post-multiplying a translation matrix — that's the row proportional to
+	// view-space z (== clip.w), so it cancels uniformly across the w-divide
+	// regardless of depth (a post-multiply translation would vary with depth).
+	auto proj_jittered = proj_mat;
+	proj_jittered.a31 += offset.x;
+	proj_jittered.a32 += offset.y;
 
 	vec3 _dir = target - position;// (0, 0, 1);
 	vec3 _up (0, 1, 0);
@@ -238,6 +243,10 @@ void camera::update(float2 offset)
 	_up = eye_rot.rotate(_up);
 
 	vec3 pos = position +this->offset;// (0, 1, 0);
+
+	// Snapshot before view_mat is overwritten below — still last frame's pose,
+	// giving last frame's unjittered view*proj for DLSS's clipToPrevClip.
+	prev_view_proj_unjittered = view_mat * proj_mat;
 
 	//_dir = target - position;
 	view_mat.look_at(pos, pos + _dir, _up);
@@ -258,7 +267,9 @@ void camera::update(float2 offset)
 	calculate(inv_view_proj_mat);
 	vec3 right = vec3::cross(params.direction.xyz, _up);
 	res_up = vec3::cross(params.direction.xyz, right);
-	params.jitter = { 0, 0,0,0 };// offset;
+	// UV-space jitter (half the NDC offset) — matches UniversalMaterial.hlsl's
+	// motion-vector math so camera.jitter - prev_camera.jitter cancels correctly.
+	params.jitter = { offset.x * 0.5f, offset.y * 0.5f, 0, 0 };
 	
 
 	for (int i = 0; i < 6; i++)

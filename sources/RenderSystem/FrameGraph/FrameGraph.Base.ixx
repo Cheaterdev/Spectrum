@@ -5,6 +5,7 @@ export module FrameGraph:Base;
 
 import Core;
 import HAL;
+import :UpscalerViewport;
 
 
 using namespace HAL;
@@ -119,7 +120,12 @@ public:
 		Static = (1 << 11),
 		Required = (1 << 12),
 
-		Changed = (1 << 13)
+		Changed = (1 << 13),
+
+		// Marks a read that must not be folded into a neighboring canonical-read
+		// window — for passes that manage their own transition to a layout other
+		// passes never request (e.g. PRESENT/COMMON for a Streamline hand-off).
+		ExclusiveRead = (1 << 14)
 	};
 
 	 constexpr ResourceFlags WRITEABLE_FLAGS =ResourceFlags::CopyDest |  ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil;// | ResourceFlags::GenCPU;
@@ -233,6 +239,9 @@ public:
 	struct ResourceRWState
 	{
 		bool write = false;
+		// True for a state forced open by ResourceFlags::ExclusiveRead — always
+		// a singleton, excluded from process_transitions()'s merge-back.
+		bool exclusive = false;
 		// Thread-safe append (populated concurrently in add_pass); all reads
 		// happen single-threaded after the setup/append phase joins.
 		concurrent_vector<Pass*> passes;
@@ -278,6 +287,7 @@ public:
 				items.emplace_back();
 			ResourceRWState& s = items[count++];
 			s.write = write;
+			s.exclusive = false;
 			s.passes.clear();            // keeps the concurrent_vector's storage
 			s.passes.reserve(reserve_n); // no-op once large enough
 			s.from.reset();
@@ -1121,8 +1131,11 @@ public:
 		enum_array<HAL::CommandListType, HAL::FenceWaiter> prev_frame_end_fence;
 
 		Events::Event<const Graph&> on_compile;
-	
+
 		Variable<bool> optimize = { true, "optimize", this };
+
+		UpscalerViewport upscaler_viewport;
+		uint32_t get_upscaler_viewport() const { return upscaler_viewport; }
 
 
 		// Diagnostic: serialize all queues (fence after EVERY pass, all other

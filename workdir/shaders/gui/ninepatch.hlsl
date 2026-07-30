@@ -6,6 +6,7 @@ float4 mulColor:TEXCOORD0;
 float4 addColor:TEXCOORD1;
 float2 tc: TEXCOORD2;
 nointerpolation uint texture_offset : TEXCOORD3;
+nointerpolation float gammaEncode : TEXCOORD4;
 };
 
 
@@ -23,6 +24,7 @@ quad_output VS(uint index : SV_VERTEXID, uint instance : SV_INSTANCEID)
 	Output.texture_offset = instance;// texture_offset[instance];
     Output.mulColor = input.GetMulColor();
     Output.addColor = input.GetAddColor();
+    Output.gammaEncode = input.GetGammaEncode();
 
     return Output;
 }
@@ -33,6 +35,9 @@ float4 PS(quad_output i) : SV_TARGET0
 {
     float4 col = GetNinePatch().GetTextures(i.texture_offset).Sample(anisoBordeSampler , i.tc);
     //col.xyz/=col.w;
-    return  i.addColor + i.mulColor *col;
+    float4 result = i.addColor + i.mulColor * col;
+    if (i.gammaEncode > 0.5)
+        result.rgb = pow(result.rgb, 1.0 / 2.2);
+    return result;
 }
 #endif

@@ -52,6 +52,12 @@ export namespace HAL
             {
                 return native_resource.Get();
             }
+
+            // Backend-uniform native handle (see HAL.Vulkan.Resource.ixx).
+            void* get_native() const
+            {
+                return native_resource.Get();
+            }
         };
     }
 }

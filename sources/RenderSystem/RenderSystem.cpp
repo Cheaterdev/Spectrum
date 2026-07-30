@@ -1,4 +1,4 @@
-module RenderSystem;
+﻿module RenderSystem;
 
 import HAL;
 import Core;
@@ -39,6 +39,12 @@ std::shared_ptr<HAL::Device> RenderSystem::select_adapter()
     if (!result) return nullptr;
 
     Log::get() << "Selected adapter: " << result_name << Log::endl;
+
+    {
+        const auto props = HAL::Device::probe(result);
+        Log::get() << (std::string("DLSS: super-resolution=") + (props.dlss ? "yes" : "no")
+                       + " ray-reconstruction=" + (props.dlss_rr ? "yes" : "no")) << Log::endl;
+    }
 
     HAL::DeviceDesc dev_desc;
     dev_desc.adapter = result;

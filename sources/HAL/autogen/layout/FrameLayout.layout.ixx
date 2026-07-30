@@ -14,7 +14,7 @@ export struct FrameLayout
 	struct CameraData
 	{
 		static const uint ID = 0;
-		static const uint CB = 34;
+		static const uint CB = 35;
 		static const uint CB_ID = 0;
 		static const uint SRV = 3;
 		static const uint SRV_ID = 2;

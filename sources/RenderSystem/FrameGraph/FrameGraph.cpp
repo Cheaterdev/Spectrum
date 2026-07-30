@@ -21,10 +21,15 @@ namespace FrameGraph
 
 		ASSERT(pass);
 		bool is_writer = check(flags & WRITEABLE_FLAGS);
-		bool needs_new_state = is_writer || states.empty() || states.back().write;
+		bool is_exclusive = check(flags & ResourceFlags::ExclusiveRead);
+		bool needs_new_state = is_writer || is_exclusive
+			|| states.empty() || states.back().write || states.back().exclusive;
 
 		if (needs_new_state)
+		{
 			states.push(is_writer, max_passes);
+			states.back().exclusive = is_exclusive;
+		}
 
 		states.back().passes.emplace_back(pass);
 	}
@@ -1199,6 +1204,9 @@ namespace FrameGraph
 						auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
 						state.merged_read_state.merge(cpu_state);
 					}
+
+					// Exclusive-read states are always singleton — nothing to merge.
+					if (state.exclusive) continue;
 
 					// propagate merged state through passes
 					for (auto& pass : state.passes)

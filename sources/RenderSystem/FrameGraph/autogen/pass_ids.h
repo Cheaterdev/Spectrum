@@ -38,6 +38,7 @@ namespace FrameGraph
 		stencil_renderer_after,
 		UI_PreDraw,
 		UI_Render,
+		UpscalingDLSS,
 		GBufferDownsampler,
 		VoxelDebug,
 		VoxelScreen,

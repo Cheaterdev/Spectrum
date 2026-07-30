@@ -5,6 +5,9 @@ struct vertex_input
 	float2 tc;
 	float4 mulColor;
 	float4 addColor;
+	# Linear -> gamma encode (pow(x, 1/2.2)) for this draw. Used by the main
+	# viewport image, which is fed a linear HDR render result.
+	float gammaEncode;
 }
 
 [Bind = DefaultLayout::Instance0]

@@ -4,6 +4,7 @@
 #include "autogen/rt/GBuffer.h"
 
 static const Camera camera = GetFrameInfo().GetCamera();
+static const Camera prev_camera = GetFrameInfo().GetPrevCamera();
 
 #define Sampler linearSampler
 
@@ -85,7 +86,8 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     float2 cur_p = float2(0.5, 0.5) + float2(0.5, -0.5)*(i.cur_pos.xy / i.cur_pos.w);
     float2 prev_p = float2(0.5,0.5) + float2(0.5, -0.5)*(i.prev_pos.xy / i.prev_pos.w);
 	   
-    result.motion = (cur_p - prev_p);// +float2(-1, 1) *(camera.jitter - prev_camera.jitter);
+    // Cancels the jitter baked into cur_p/prev_p, so motion stays unjittered.
+    result.motion = (cur_p - prev_p) + float2(-1, 1) * (camera.jitter - prev_camera.jitter);
     return result;       
 }    
 
@@ -227,7 +229,7 @@ vertex_output2 HS(InputPatch<vertex_output2, 3> inputPatch,
 
 
 #ifdef BUILD_FUNC_PS
-#define sample(tex, s,  tc, lod) get_texture(tex).Sample(s, tc);
+#define sample(tex, s,  tc, lod) get_texture(tex).SampleBias(s, tc, GetFrameInfo().GetMipBias());
 #elif defined(BUILD_FUNC_PS_VOXEL)
  
  

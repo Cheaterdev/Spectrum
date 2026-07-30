@@ -100,6 +100,11 @@ export D3D12_SHADER_VISIBILITY to_native(ShaderVisibility visibility);
 
 export D3D12_BARRIER_LAYOUT to_native(TextureLayout layout);
 
+// Backend-native resource-state value as a plain uint32_t (legacy
+// D3D12_RESOURCE_STATES, not the enhanced-barrier layout `to_native` above
+// returns) — see HAL::Resource::get_native_state().
+export uint32_t to_native_resource_state(TextureLayout layout);
+
 export D3D12_BARRIER_SYNC  to_native(BarrierSync flags);
 
 export D3D12_BARRIER_ACCESS  to_native(BarrierAccess flags);

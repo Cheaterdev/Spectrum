@@ -41,6 +41,7 @@ export import :BRDF;
 export import :Sky;
 export import :SMAA;
 export import :FSR;
+export import :UpscalingDLSS;
 export import :VoxelGI;
 export import :RTX;
 export import :ShadowDenoiser;

@@ -1,4 +1,4 @@
-export module HAL;
+﻿export module HAL;
 
 export import :Format;
 
@@ -28,6 +28,8 @@ export import :Resource.Buffer;
 export import :Resource.Texture;
 export import :SwapChain;
 export import :Adapter;
+export import :Streamline;
+export import :DLSS;
 //export import :Debug;
 
 export import :Shader;

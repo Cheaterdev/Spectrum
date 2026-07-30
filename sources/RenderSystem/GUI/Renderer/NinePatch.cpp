@@ -274,6 +274,7 @@ namespace GUI
 			_vertexes[i].pos = { t.x, -t.y };
 			_vertexes[i].mulColor = item.mul_color;
 			_vertexes[i].addColor = item.add_color;
+			_vertexes[i].gammaEncode = item.gamma ? 1.0f : 0.0f;
 		}
 
 		if (textures_handles.size() == 512)

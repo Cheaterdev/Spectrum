@@ -1,4 +1,4 @@
-using Sharpmake;
+﻿using Sharpmake;
 using System;
 using System.Collections.Generic;
 
@@ -26,6 +26,12 @@ namespace Spectrum
         public Optimization Optimization;
         public Mode Mode;
         public Backend Backend;
+    }
+
+    // Subdirectory (relative to the exe) holding the NVIDIA Streamline runtime.
+    public static class Streamline
+    {
+        public const string Dir = "Streamline";
     }
 
     public static class Vcpkg
@@ -70,6 +76,9 @@ namespace Spectrum
 			CustomProperties.Add("VcpkgConfiguration", "Release");
             CustomProperties.Add("VcpkgApplocalDeps", "true");
             CustomProperties.Add("ScanSourceForModuleDependencies", "true");
+            // Lets MSBuild run multiple graph-respecting cl.exe invocations concurrently.
+            CustomProperties.Add("UseMultiToolTask", "true");
+            CustomProperties.Add("EnforceProcessCountAcrossBuilds", "true");
          //   BlobWorkFileCount = 8;
         //    GeneratableBlobCount  = 8;
         }
@@ -244,6 +253,38 @@ namespace Spectrum
            //     conf.LibraryPaths.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64", 66);
 			}
 
+            { // NVIDIA Streamline (DLSS-SR / DLSS-RR)
+                // Manual-hooking mode: nothing is linked against Streamline (see
+                // the sl.interposer.lib note below). Every plugin/NGX DLL is
+                // LoadLibrary'd at runtime, so VcpkgApplocalDeps can't see them
+                // and they're copied explicitly.
+                string slBin = (target.Mode == Mode.Debug) ? Vcpkg.DebugBin : Vcpkg.Bin;
+
+                var slDlls = new List<string> {
+                    "sl.interposer.dll",   // loader / sl* entry points
+                    "sl.common.dll",       // shared plugin infrastructure
+                    "sl.dlss.dll",         // Super Resolution
+                    "nvngx_dlss.dll",      //   ...its NGX model
+                    "sl.dlss_d.dll",       // Ray Reconstruction
+                    "nvngx_dlssd.dll",     //   ...its NGX model
+                };
+                if (target.Mode == Mode.Debug)
+                {
+                    slDlls.Add("sl.imgui.dll");
+                    slDlls.Add("WinPixEventRuntime.dll");
+                }
+
+                foreach (var dll in slDlls)
+                    conf.TargetCopyFilesToSubDirectory.Add(
+                        new KeyValuePair<string, string>(slBin + @"\" + dll, Streamline.Dir));
+
+                // sl.interposer.lib is NOT linked: Windows doesn't search
+                // subdirectories for statically imported DLLs, and this
+                // Sharpmake version has no working delay-load path either.
+                // HAL LoadLibrary's it from Streamline.Dir and resolves sl*
+                // entry points via GetProcAddress instead.
+            }
+
             // runtime-loaded DLLs not detected by VcpkgApplocalDeps
             conf.TargetCopyFiles.Add(Vcpkg.Bin + @"\dstoragecore.dll");
             conf.TargetCopyFiles.Add(Vcpkg.Bin + @"\dxcompiler.dll");
@@ -344,6 +385,15 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
             conf.AddPublicDependency<HAL>(target);
+
+            // Sharpmake Defines don't propagate through AddPublicDependency, so
+            // mirror HAL's own HAL_BACKEND_* defines here for RenderSystem's
+            // #ifdef HAL_BACKEND_D3D12 guards (GraphicsSystem.ixx,
+            // universal_material.cpp, UpscalingDLSS.cpp).
+            if (target.Backend == Backend.D3D12)
+                conf.Defines.Add("HAL_BACKEND_D3D12");
+            else
+                conf.Defines.Add("HAL_BACKEND_VULKAN");
         }
     }
 

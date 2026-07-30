@@ -1,0 +1,24 @@
+streamline provides the NVIDIA Streamline SDK (DLSS Super Resolution + Ray Reconstruction).
+
+Spectrum consumes it via Sharpmake, not CMake, and does NOT link sl.interposer.lib:
+
+    // headers: <streamline/sl.h>, <streamline/sl_dlss.h>, <streamline/sl_dlss_d.h>
+    // runtime: LoadLibrary("Streamline/sl.interposer.dll") + GetProcAddress
+
+Integration mode is MANUAL HOOKING - slInit() + slSetD3DDevice() after the
+engine creates its own device. D3D12CreateDevice / CreateDXGIFactory2 / the
+swapchain are deliberately NOT proxied by sl.interposer. That is sufficient for
+DLSS-SR and DLSS-RR; DLSS Frame Generation would require the full interposer
+and a proxied swapchain.
+
+All plugin and NGX DLLs are deployed to a "Streamline" subdirectory next to the
+executable, not beside it. Because Windows does not search subdirectories for
+statically imported DLLs, the interposer is loaded explicitly at runtime and
+that same directory is handed to sl::Preferences::pathsToPlugins so it can find
+sl.common / sl.dlss / sl.dlss_d and the nvngx_* models.
+
+sl.interposer.lib is still installed by this port, so switching to a linked
+(or delay-loaded) integration later needs no port change.
+
+Debug builds get Streamline's "development" DLL set (verbose logging + imgui
+overlay); release builds get the signed production set.

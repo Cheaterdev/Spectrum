@@ -116,6 +116,9 @@ export namespace HAL
         public:
             VkCommandBuffer get_native() const { return vk_cmd; }
 
+            // Backend-uniform handle, mirroring HAL::Resource::get_native().
+            void* get_native_handle() const { return reinterpret_cast<void*>(vk_cmd); }
+
             void create(CommandListType type, Device& device);
             void begin(CommandAllocator& allocator);
             void end();

@@ -30,6 +30,7 @@
 #include "stencil_renderer_after.h"
 #include "SMAA.h"
 #include "FSR.h"
+#include "UpscalingDLSS.h"
 #include "RTXColorPass.h"
 #include "VoxelDebug.h"
 #include "../pass_defaults.h"
@@ -93,6 +94,7 @@ public:
 		Passes::stencil_renderer_after::Name.ptr,
 		Passes::SMAA::Name.ptr,
 		Passes::FSR::Name.ptr,
+		Passes::UpscalingDLSS::Name.ptr,
 		Passes::RTXColorPass::Name.ptr,
 		Passes::VoxelDebug::Name.ptr,
 	};
@@ -337,11 +339,12 @@ public:
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::Sky, 0 },
+		{ PassID::UpscalingDLSS, 0 },
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Depth_c0_states[] = {
 		{ true, { GBuffer_Depth_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Depth_c0_pass_refs + 1, 10 } },
+		{ false, { GBuffer_Depth_c0_pass_refs + 1, 11 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -368,11 +371,12 @@ public:
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
+		{ PassID::UpscalingDLSS, 0 },
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
 		{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Speed_c0_pass_refs + 1, 9 } },
+		{ false, { GBuffer_Speed_c0_pass_refs + 1, 10 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -761,15 +765,23 @@ public:
 	};
 	static inline const FrameGraph::PassRef ResultTexture_c2_pass_refs[] = {
 		{ PassID::FSR, 0 },
+		{ PassID::UpscalingDLSS, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState ResultTexture_c2_states[] = {
 		{ true, { ResultTexture_c2_pass_refs + 0, 1 } },
+		{ true, { ResultTexture_c2_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef FSRTemp_c0_pass_refs[] = {
 		{ PassID::FSR, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState FSRTemp_c0_states[] = {
 		{ true, { FSRTemp_c0_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef ResultTexture_c3_pass_refs[] = {
+		{ PassID::UpscalingDLSS, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState ResultTexture_c3_states[] = {
+		{ true, { ResultTexture_c3_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef ColorOutput_c0_pass_refs[] = {
 		{ PassID::RTXColorPass, 0 },
@@ -844,6 +856,7 @@ public:
 		{ ResourceID::SMAA_blend, 0, SMAA_blend_c0_states },
 		{ ResourceID::ResultTexture, 2, ResultTexture_c2_states },
 		{ ResourceID::FSRTemp, 0, FSRTemp_c0_states },
+		{ ResourceID::ResultTexture, 3, ResultTexture_c3_states },
 		{ ResourceID::ColorOutput, 0, ColorOutput_c0_states },
 		{ ResourceID::VoxelDebug, 0, VoxelDebug_c0_states },
 	};
@@ -995,6 +1008,18 @@ public:
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::stencil_renderer_after, 0 },
 	};
+	static inline const FrameGraph::PassRef UpscalingDLSS_0_prev[] = {
+		{ PassID::FSR, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::ReflCombine, 0 },
+		{ PassID::ResultCreation, 0 },
+		{ PassID::SMAA, 0 },
+		{ PassID::Scene, 0 },
+		{ PassID::Sky, 0 },
+		{ PassID::VoxelCombine, 0 },
+		{ PassID::VoxelScreen, 0 },
+		{ PassID::stencil_renderer_after, 0 },
+	};
 	static inline const FrameGraph::PassRef RTXColorPass_0_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
 		{ PassID::CubeMapEnviromentProcessor, 0 },
@@ -1036,6 +1061,7 @@ public:
 		{ PassID::stencil_renderer_after, 0, false, stencil_renderer_after_0_prev },
 		{ PassID::SMAA, 0, false, SMAA_0_prev },
 		{ PassID::FSR, 0, false, FSR_0_prev },
+		{ PassID::UpscalingDLSS, 0, false, UpscalingDLSS_0_prev },
 		{ PassID::RTXColorPass, 0, false, RTXColorPass_0_prev },
 		{ PassID::VoxelDebug, 0, false, VoxelDebug_0_prev },
 	};
@@ -1103,6 +1129,7 @@ public:
 		if (sMAA.setup_func)
 			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, (sMAA.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, (PassDefault<Passes::FSR>::flags & ~FrameGraph::PassFlags::Compute));
+		graph.add_library_pass<Passes::UpscalingDLSS>(PassDefault<Passes::UpscalingDLSS>::setup, PassDefault<Passes::UpscalingDLSS>::render, (PassDefault<Passes::UpscalingDLSS>::flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::RTXColorPass>(PassDefault<Passes::RTXColorPass>::setup, PassDefault<Passes::RTXColorPass>::render, (PassDefault<Passes::RTXColorPass>::flags & ~FrameGraph::PassFlags::Compute));
 		if (voxelDebug.setup_func)
 			graph.add_library_pass<Passes::VoxelDebug>(voxelDebug.setup_func, voxelDebug.render_func, (voxelDebug.flags & ~FrameGraph::PassFlags::Compute));

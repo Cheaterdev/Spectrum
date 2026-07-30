@@ -20,6 +20,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::FrameInfo;
 		float4 time;
 		float4 sunDir;
+		float mipBias;
 		HLSL::Texture2D<float4> bestFitNormals;
 		HLSL::Texture3D<float4> brdf;
 		HLSL::TextureCube<float4> sky;
@@ -30,6 +31,7 @@ export namespace Table
 		HLSL::Texture3D<float4>& GetBrdf() { return brdf; }
 		HLSL::TextureCube<float4>& GetSky() { return sky; }
 		float4& GetSunDir() { return sunDir; }
+		float& GetMipBias() { return mipBias; }
 		Camera& GetCamera() { return camera; }
 		Camera& GetPrevCamera() { return prevCamera; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -38,6 +40,7 @@ export namespace Table
 		{
 			compiler.compile(time);
 			compiler.compile(sunDir);
+			compiler.compile(mipBias);
 			compiler.compile(bestFitNormals);
 			compiler.compile(brdf);
 			compiler.compile(sky);
@@ -48,6 +51,7 @@ export namespace Table
 		{
 			float4 time; // float4
 			float4 sunDir; // float4
+			float mipBias; // float
 			uint bestFitNormals; // Texture2D<float4>
 			uint brdf; // Texture3D<float4>
 			uint sky; // TextureCube<float4>
@@ -62,6 +66,7 @@ export namespace Table
 				ar& NVP(camera);
 				ar& NVP(prevCamera);
 				ar& NVP(sunDir);
+				ar& NVP(mipBias);
 			}
 
 
@@ -78,6 +83,7 @@ export namespace Table
 			ar& NVP(camera);
 			ar& NVP(prevCamera);
 			ar& NVP(sunDir);
+			ar& NVP(mipBias);
 		}
 
 	};

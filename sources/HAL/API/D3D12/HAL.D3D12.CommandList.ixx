@@ -27,6 +27,11 @@ export namespace HAL {
                 return m_commandList;
             }
 
+            // Backend-uniform handle, mirroring HAL::Resource::get_native().
+            void* get_native_handle() const {
+                return m_commandList.Get();
+            }
+
             void create(CommandListType type, Device& device);
             void begin(CommandAllocator& allocator);
             void end();

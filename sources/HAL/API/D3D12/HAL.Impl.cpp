@@ -1,6 +1,7 @@
 ﻿module HAL:Impl;
 
 import :Debug;
+import :Streamline;
 import d3d12;
 import wrl;
 
@@ -44,6 +45,10 @@ namespace HAL
 
     void init()
     {
+        // Must run before any D3D12 call (EnableGPUDebug() below counts) and
+        // before adapter enumeration. Failure is non-fatal.
+        nvidia::Streamline::get();
+
         EnableGPUDebug();
         EnableShaderModel();
     }

@@ -3,6 +3,7 @@ module HAL:Resource;
 import :HeapAllocators;
 import :API.Device;
 import :API.Resource;
+import :Utils;
 
 import :TiledMemoryManager;
 import :ResourceStates;
@@ -87,6 +88,12 @@ namespace HAL
 	ResourceStateManager& Resource::get_state_manager()
 	{
 		return state_manager;
+	}
+
+	uint32_t Resource::get_native_state() const
+	{
+		TextureLayout layout = state_manager.copy_gpu().get_subres_state(0).layout;
+		return to_native_resource_state(layout);
 	}
 
 	TiledResourceManager& Resource::get_tiled_manager()

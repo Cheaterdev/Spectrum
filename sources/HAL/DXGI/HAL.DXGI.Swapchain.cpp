@@ -36,6 +36,17 @@ namespace HAL
 
 		swapChain.As(&m_swapChain);
 
+		// Manual hooking's substitute for the interposer's automatic
+		// IDXGISwapChain::Present hook — see [[project-streamline-dlss-integration]].
+		if (nvidia::Streamline::get().available())
+		{
+			IDXGISwapChain3* raw = m_swapChain.Detach();
+			void* raw_void = raw;
+			if (nvidia::Streamline::get().upgrade_interface(&raw_void))
+				raw = static_cast<IDXGISwapChain3*>(raw_void);
+			m_swapChain.Attach(raw);
+		}
+
 		m_swapChain->GetDesc(&desc);
 
 		frames.resize(desc.BufferCount);

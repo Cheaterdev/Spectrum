@@ -2,6 +2,8 @@
 
 module HAL:Device;
 import :Debug;
+import :Streamline;
+import :DLSS;
 import :Utils;
 import :HeapAllocators;
 
@@ -198,6 +200,13 @@ namespace HAL
         props.direct_gpu_upload_heap = options16.GPUUploadHeapSupported;
         props.work_graph             = options21.WorkGraphsTier != D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED;
 
+        {   // NVIDIA Streamline capability, per adapter.
+            auto& sl = nvidia::Streamline::get();
+            const auto luid = adapter->get_desc().AdapterLuid;
+            props.dlss    = sl.supports(nvidia::Feature::DLSS,              &luid, sizeof(luid));
+            props.dlss_rr = sl.supports(nvidia::Feature::RayReconstruction, &luid, sizeof(luid));
+        }
+
         return props;
     }
 
@@ -237,6 +246,27 @@ namespace HAL
             );
 
             if (!native_device) return;
+
+            // Manual hooking: hand the device to Streamline ourselves.
+            nvidia::Streamline::get().bind_device(native_device);
+
+            // Resolve DLSS's entry points now (must happen after bind_device,
+            // and DLSS::get() only resolves once as a Singleton).
+            if (nvidia::Streamline::get().available())
+            {
+                auto& dlss = nvidia::DLSS::get();
+
+                // One-shot end-to-end check that resolution + a real query work.
+                nvidia::DLSSOptimalSettings settings{};
+                const bool queried = dlss.available()
+                    && dlss.get_optimal_settings(nvidia::DLSSMode::Balanced, { 1920, 1080 }, /*hdr=*/true, settings);
+
+                Log::get() << (std::string("[Streamline] DLSS available=") + (dlss.available() ? "yes" : "no")
+                              + (queried ? (", Balanced@1920x1080 -> render "
+                                            + std::to_string(settings.render_size.x) + "x"
+                                            + std::to_string(settings.render_size.y))
+                                         : "")) << Log::endl;
+            }
 
             THIS->adapter = desc.adapter;
             THIS->properties.name = convert(std::wstring_view(desc.adapter->get_desc().Description));

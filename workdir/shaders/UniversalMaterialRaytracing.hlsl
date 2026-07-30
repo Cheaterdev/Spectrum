@@ -41,7 +41,7 @@ Texture2D get_texture(uint i)
 }
 
 #ifdef BUILD_FUNC_PS
-#define sample(tex, s,  tc, lod) get_texture(tex).Sample(s, tc);
+#define sample(tex, s,  tc, lod) get_texture(tex).SampleBias(s, tc, GetFrameInfo().GetMipBias());
 #else
 float4 sample(uint itex, SamplerState s, float2 tc, float lod)
 {

@@ -1,0 +1,8 @@
+{
+  "name": "streamline",
+  "version": "2.12.0",
+  "description": "NVIDIA Streamline SDK - DLSS Super Resolution (sl.dlss) and DLSS Ray Reconstruction (sl.dlss_d). Installed for manual-hooking integration: sl.interposer.lib provides the sl* entry points, but D3D12 device and swapchain creation are NOT proxied.",
+  "homepage": "https://github.com/NVIDIA-RTX/Streamline",
+  "license": null,
+  "supports": "windows & x64 & !uwp & !xbox"
+}

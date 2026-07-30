@@ -64,6 +64,7 @@ Pipeline MainPipeline
 	stencil_renderer_after;
 	SMAA;
 	FSR;
+	UpscalingDLSS;
 
 
 	#Debug stuff

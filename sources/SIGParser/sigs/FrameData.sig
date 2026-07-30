@@ -23,7 +23,7 @@ struct Camera
 struct FrameInfo
 {
 	float4 time;
-	
+
     Camera camera;
     Camera prevCamera;
 
@@ -31,6 +31,10 @@ struct FrameInfo
 	Texture3D<float4> brdf;
 	TextureCube<float4> sky;
 	float4 sunDir;
+
+	# Texture LOD bias compensating for rendering at frame_size and upscaling
+	# to upscale_size (FSR/DLSS). 0 when no upscaler is active.
+	float mipBias;
 
 
 	%{

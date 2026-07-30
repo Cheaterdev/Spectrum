@@ -30,6 +30,9 @@ export class camera : public Frustum
 
         mat4x4 view_proj_mat;
         mat4x4 inv_view_proj_mat;
+
+        // Last completed frame's UNJITTERED view*proj, for DLSS's clipToPrevClip.
+        mat4x4 prev_view_proj_unjittered;
         //Frustum frustum;
     
         shader_params params;
@@ -79,6 +82,9 @@ export class camera : public Frustum
 
 			const mat4x4& get_view() const;
         const mat4x4& get_inv_view_proj() const;
+
+        // Only valid from the second update() call onward.
+        const mat4x4& get_prev_view_proj_unjittered() const { return prev_view_proj_unjittered; }
 
 		void update(float2 offset = { 0, 0 });
 

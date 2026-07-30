@@ -255,6 +255,11 @@ VkImageLayout to_native(TextureLayout layout)
     }
 }
 
+uint32_t to_native_resource_state(TextureLayout layout)
+{
+    return static_cast<uint32_t>(to_native(layout));
+}
+
 // ============================================================================
 //  BarrierSync → VkPipelineStageFlags2 (synchronization2)
 // ============================================================================

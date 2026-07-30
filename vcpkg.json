@@ -17,6 +17,7 @@
       {"name" :"directx12-agility", "version>=":"1.619.3"},
      {"name" :"directx-headers", "version>=":"1.619.1"},
      "bshoshany-thread-pool",
+     "streamline",
      "vulkan-headers",
      "vulkan-loader",
      "vulkan-memory-allocator"

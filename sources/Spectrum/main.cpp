@@ -128,6 +128,10 @@ public:
 	{
 		texture.mul_color = { 1, 1, 1, 0 };
 		texture.add_color = { 0, 0, 0, 1 };
+		// SMAA used to bake this in (pow(x, 1/2.2)) when it ran; now applied
+		// here so the viewport looks the same whether SMAA, FSR, or DLSS
+		// produced ResultTextureNew.
+		texture.gamma = true;
 
 
 		auto t = CounterManager::get().start_count<triangle_drawer>();
@@ -340,7 +344,19 @@ public:
 
 
 		if (downsampled)
-			vp.frame_size = size / 1.5;
+		{
+			// Use DLSS's own recommended render resolution for the current
+			// mode when available; get_optimal_settings can return eOk with
+			// render_size (0,0) for an unsupported mode/size, so validate
+			// before using it. Falls back to /1.5 (the FSR path).
+			nvidia::DLSSOptimalSettings settings{};
+			if (nvidia::DLSS::get().available() &&
+			    nvidia::DLSS::get().get_optimal_settings(g_upscaling_dlss_mode, size, /*hdr=*/true, settings) &&
+			    settings.render_size.x > 0 && settings.render_size.y > 0)
+				vp.frame_size = settings.render_size;
+			else
+				vp.frame_size = size / 1.5;
+		}
 		else
 			vp.frame_size = size;
 
@@ -352,7 +368,45 @@ public:
 		timeinfo.time = (float)my_timer.tick();
 		timeinfo.totalTime += timeinfo.time;
 		skyinfo.sunDir = pssm.get_position();
-		cam.update({ 0, 0 });
+
+		// Exactly once per frame — a second call anywhere else would desync
+		// SL's internal frame counter.
+		if (nvidia::Streamline::get().available())
+			nvidia::Streamline::get().begin_frame();
+
+		// Jitter only matters when something accumulates it temporally (DLSS);
+		// FSR1/native have no such accumulation.
+		vec2 jitter_px(0, 0);
+		if (nvidia::DLSS::get().available())
+		{
+			// Halton(2,3); phase count per NVIDIA's guidance: 8*(display/render)^2.
+			const float scale_x = float(vp.upscale_size.x) / float(vp.frame_size.x);
+			const float scale_y = float(vp.upscale_size.y) / float(vp.frame_size.y);
+			const uint32_t phase_count = std::max<uint32_t>(1,
+				static_cast<uint32_t>(8.0f * scale_x * scale_y + 0.5f));
+			const uint32_t phase = static_cast<uint32_t>(graph.builder.current_frame->get_frame() % phase_count) + 1;
+
+			auto halton = [](uint32_t index, uint32_t base) -> float
+				{
+					float f = 1.0f, r = 0.0f;
+					while (index > 0)
+					{
+						f /= static_cast<float>(base);
+						r += f * (index % base);
+						index /= base;
+					}
+					return r;
+				};
+
+			// [-0.5, 0.5] pixels, screen convention: +x = right, +y = down.
+			jitter_px = { halton(phase, 2) - 0.5f, halton(phase, 3) - 0.5f };
+		}
+
+		// NDC is [-1,1]; Y negated since NDC +y is up, jitter_px +y is down.
+		const vec2 jitter_ndc(
+			jitter_px.x / float(vp.frame_size.x),
+			-jitter_px.y / float(vp.frame_size.y));
+		cam.update(jitter_ndc);
 
 
 	
@@ -387,6 +441,14 @@ public:
 
 				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d();
 				frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d();
+
+				// Material texture LOD bias — see FrameData.sig's mipBias comment.
+				{
+					auto& vp = graph.get_context<ViewportInfo>();
+					frameInfo.GetMipBias() = downsampled
+						? (std::log2(float(vp.frame_size.x) / float(vp.upscale_size.x)) - 1.0f)
+						: 0.0f;
+				}
 
 				auto compiled = frameInfo.compile(*graph.builder.current_frame);
 				graph.register_slot_setter(compiled);
@@ -1012,6 +1074,41 @@ public:
 							[this, mode]() { graph.get_context<FrameGraph::DebugContext>().mode = mode; };
 					}
 					toolbar->add_child(debug_combo);
+
+					// DLSS-quality selector, writes g_upscaling_dlss_mode.
+					// "Off" isn't offered — DLSS on/off is via FSR/DLSS
+					// mutual exclusion elsewhere, not DLSSMode::Off.
+					if (nvidia::DLSS::get().available())
+					{
+						struct DlssOpt { const char* name; nvidia::DLSSMode mode; };
+						static const DlssOpt dlss_opts[] = {
+							{ "Max Performance",   nvidia::DLSSMode::MaxPerformance },
+							{ "Balanced",          nvidia::DLSSMode::Balanced },
+							{ "Max Quality",       nvidia::DLSSMode::MaxQuality },
+							{ "Ultra Quality",     nvidia::DLSSMode::UltraQuality },
+							{ "Ultra Performance", nvidia::DLSSMode::UltraPerformance },
+							{ "DLAA",              nvidia::DLSSMode::DLAA },
+						};
+
+						auto dlss_combo = std::make_shared<GUI::Elements::combo_box>();
+						dlss_combo->docking = GUI::dock::TOP;
+						dlss_combo->size = { 140, 24 };
+						for (auto& o : dlss_opts)
+						{
+							// Skip modes SL reports unsupported (e.g. UltraQuality
+							// at 1920x1080 returns render_size (0,0)).
+							nvidia::DLSSOptimalSettings probe{};
+							if (!nvidia::DLSS::get().get_optimal_settings(o.mode, { 1920, 1080 }, /*hdr=*/true, probe))
+								continue;
+
+							auto mode = o.mode;
+							dlss_combo->add_item(o.name)->on_select =
+								[mode]() { g_upscaling_dlss_mode = mode; };
+							if (mode == g_upscaling_dlss_mode)
+								dlss_combo->get_label()->text = o.name;
+						}
+						toolbar->add_child(dlss_combo);
+					}
 
 					drawer->GUI::base::add_child(toolbar);
 				}

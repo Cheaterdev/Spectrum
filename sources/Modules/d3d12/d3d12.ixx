@@ -111,6 +111,7 @@ export
     using D3D12_BARRIER_LAYOUT                              = ::D3D12_BARRIER_LAYOUT;
     using D3D12_BARRIER_SYNC                                = ::D3D12_BARRIER_SYNC;
     using D3D12_BARRIER_ACCESS                              = ::D3D12_BARRIER_ACCESS;
+    using D3D12_RESOURCE_STATES                             = ::D3D12_RESOURCE_STATES;
     using D3D12_RESOURCE_FLAGS                              = ::D3D12_RESOURCE_FLAGS;
     using D3D12_HIT_GROUP_TYPE                              = ::D3D12_HIT_GROUP_TYPE;
     using D3D12_RAYTRACING_GEOMETRY_TYPE                    = ::D3D12_RAYTRACING_GEOMETRY_TYPE;
