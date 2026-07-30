@@ -52,6 +52,13 @@ struct DispatchParameters
 	float4 LightCoordinate;					# Values stored in DispatchList::LightCoordinate_Shader by BuildDispatchList()
 	int2 WaveOffset;						# Values stored in DispatchData::WaveOffset_Shader by BuildDispatchList()
 
+	# render_size / upscale_size (<=1). Scales the cooperative-loading search
+	# step in WriteScreenSpaceShadow (NOT the wavefront/tile geometry in
+	# ComputeWavefrontExtents - that must stay exactly WAVE_SIZE-periodic),
+	# so the shadow's world-space reach stays constant across DLSS render
+	# scales instead of always meaning "N render-resolution pixels."
+	float PixelStepScale = 1;
+
 	# Renderer Specific Values:
 	float FarDepthValue;					# Set to the Depth Buffer Value for the far clip plane, as determined by renderer projection matrix setup (typically 0).
 	float NearDepthValue;					# Set to the Depth Buffer Value for the near clip plane, as determined by renderer projection matrix setup (typically 1).

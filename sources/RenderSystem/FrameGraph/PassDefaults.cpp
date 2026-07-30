@@ -172,6 +172,7 @@ void PassDefault<Passes::RTXShadow>::render(
 	auto& scene_ctx  = context.graph->get_context<SceneInfo>();
 	auto& camera_ctx = context.graph->get_context<CameraInfo>();
 	auto& sky_ctx    = context.graph->get_context<SkyInfo>();
+	auto& frame      = context.graph->get_context<ViewportInfo>();
 
 	auto& compute = context.get_list()->get_compute();
 
@@ -216,6 +217,13 @@ void PassDefault<Passes::RTXShadow>::render(
 	dispatchParameters.InvDepthTextureSize = float2(
 	    1.0f / data.ShadowMask->get_size().x,
 	    1.0f / data.ShadowMask->get_size().y);
+
+	dispatchParameters.SurfaceThickness  =0.001;
+	// render_size / upscale_size - keeps the shadow's screen-space search
+	// reach a constant fraction of the DISPLAY resolution, regardless of
+	// DLSS's current render scale (frame.frame_size varies, upscale_size
+	// doesn't). See PixelStepScale's doc comment in SS_Shadow.sig.
+	dispatchParameters.GetPixelStepScale() = float(frame.frame_size.x) / float(frame.upscale_size.x);
 	compute.set(dispatchParameters);
 
 	if (RenderSystem::get().device().get_properties().work_graph)

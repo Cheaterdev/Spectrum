@@ -43,9 +43,7 @@ export namespace nvidia
 	};
 
 	// Per-frame camera/motion data a temporal SL feature needs. Matrices are
-	// UNJITTERED — SL applies jitter_offset itself. NOTE: the motion-vector
-	// convention here is unaudited against GBuffer_Speed — see
-	// [[project-streamline-dlss-integration]].
+	// UNJITTERED — SL applies jitter_offset itself.
 	struct FrameConstants
 	{
 		mat4x4 view_to_clip;       // current-frame unjittered projection

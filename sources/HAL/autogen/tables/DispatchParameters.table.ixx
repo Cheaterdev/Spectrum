@@ -30,6 +30,7 @@ export namespace Table
 		uint UseEarlyOut = false;
 		float4 LightCoordinate;
 		int2 WaveOffset;
+		float PixelStepScale = 1;
 		float FarDepthValue;
 		float NearDepthValue;
 		float2 InvDepthTextureSize;
@@ -48,6 +49,7 @@ export namespace Table
 		uint& GetUseEarlyOut() { return UseEarlyOut; }
 		float4& GetLightCoordinate() { return LightCoordinate; }
 		int2& GetWaveOffset() { return WaveOffset; }
+		float& GetPixelStepScale() { return PixelStepScale; }
 		float& GetFarDepthValue() { return FarDepthValue; }
 		float& GetNearDepthValue() { return NearDepthValue; }
 		float2& GetInvDepthTextureSize() { return InvDepthTextureSize; }
@@ -70,6 +72,7 @@ export namespace Table
 			compiler.compile(UseEarlyOut);
 			compiler.compile(LightCoordinate);
 			compiler.compile(WaveOffset);
+			compiler.compile(PixelStepScale);
 			compiler.compile(FarDepthValue);
 			compiler.compile(NearDepthValue);
 			compiler.compile(InvDepthTextureSize);
@@ -91,6 +94,7 @@ export namespace Table
 			uint UseEarlyOut; // uint
 			float4 LightCoordinate; // float4
 			int2 WaveOffset; // int2
+			float PixelStepScale; // float
 			float FarDepthValue; // float
 			float NearDepthValue; // float
 			float2 InvDepthTextureSize; // float2
@@ -114,6 +118,7 @@ export namespace Table
 				ar& NVP(UseEarlyOut);
 				ar& NVP(LightCoordinate);
 				ar& NVP(WaveOffset);
+				ar& NVP(PixelStepScale);
 				ar& NVP(FarDepthValue);
 				ar& NVP(NearDepthValue);
 				ar& NVP(InvDepthTextureSize);
@@ -142,6 +147,7 @@ export namespace Table
 			ar& NVP(UseEarlyOut);
 			ar& NVP(LightCoordinate);
 			ar& NVP(WaveOffset);
+			ar& NVP(PixelStepScale);
 			ar& NVP(FarDepthValue);
 			ar& NVP(NearDepthValue);
 			ar& NVP(InvDepthTextureSize);

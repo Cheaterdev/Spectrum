@@ -89,8 +89,7 @@ void PassDefault<Passes::UpscalingDLSS>::render(
 	}
 
 	// jitter_offset: recovered from camera_cb.current.jitter (UV-space) back
-	// into pixel units. Motion-vector convention still unaudited against
-	// GBuffer_Speed — see [[project-streamline-dlss-integration]].
+	// into pixel units.
 	const auto& cb_jitter = cam.camera_cb.current.jitter;
 	constants.jitter_offset = {  cb_jitter.x * float(frame.frame_size.x),
 	                            -cb_jitter.y * float(frame.frame_size.y) };

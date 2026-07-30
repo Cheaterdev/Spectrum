@@ -242,11 +242,15 @@ namespace nvidia
 		// this one is a known project fact, not a pending-audit guess.
 		sl_constants.depthInverted = sl::Boolean::eTrue;
 
-		// PENDING AUDIT (see FrameConstants' doc comment): these five assume
-		// GBuffer_Speed is 2D, screen-space, unjittered, undilated pixel motion
-		// with no camera motion baked in. Wrong in any of these ways = visible
-		// ghosting/smearing, not a crash.
-		sl_constants.cameraMotionIncluded  = sl::Boolean::eFalse;
+		// Audited against UniversalMaterial.hlsl/triangle.hlsl's motion output:
+		// cur_pos/prev_pos each go through their OWN frame's camera AND object
+		// matrix (triangle.hlsl's `transform()`), so the resulting screen-space
+		// delta bakes in camera motion as well as object motion — hence eTrue,
+		// not the previous (wrong) eFalse. Jitter IS explicitly cancelled
+		// before this (see UniversalMaterial.hlsl's motion computation), and
+		// these are raw per-pixel GBuffer values, never dilated — so
+		// motionVectorsJittered/motionVectorsDilated stay eFalse.
+		sl_constants.cameraMotionIncluded  = sl::Boolean::eTrue;
 		sl_constants.motionVectors3D       = sl::Boolean::eFalse;
 		sl_constants.motionVectorsJittered = sl::Boolean::eFalse;
 		sl_constants.motionVectorsDilated  = sl::Boolean::eFalse;

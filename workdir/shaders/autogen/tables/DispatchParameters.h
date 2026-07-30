@@ -21,6 +21,7 @@ struct DispatchParameters
 	uint UseEarlyOut; // uint
 	float4 LightCoordinate; // float4
 	int2 WaveOffset; // int2
+	float PixelStepScale; // float
 	float FarDepthValue; // float
 	float NearDepthValue; // float
 	float2 InvDepthTextureSize; // float2
@@ -39,6 +40,7 @@ struct DispatchParameters
 	uint GetUseEarlyOut() { return UseEarlyOut; }
 	float4 GetLightCoordinate() { return LightCoordinate; }
 	int2 GetWaveOffset() { return WaveOffset; }
+	float GetPixelStepScale() { return PixelStepScale; }
 	float GetFarDepthValue() { return FarDepthValue; }
 	float GetNearDepthValue() { return NearDepthValue; }
 	float2 GetInvDepthTextureSize() { return InvDepthTextureSize; }

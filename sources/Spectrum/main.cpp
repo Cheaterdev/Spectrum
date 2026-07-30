@@ -353,7 +353,16 @@ public:
 			if (nvidia::DLSS::get().available() &&
 			    nvidia::DLSS::get().get_optimal_settings(g_upscaling_dlss_mode, size, /*hdr=*/true, settings) &&
 			    settings.render_size.x > 0 && settings.render_size.y > 0)
-				vp.frame_size = settings.render_size;
+			{
+				if (g_upscaling_dlss_scale_override >= 0.0f)
+				{
+					float t = g_upscaling_dlss_scale_override / 100.0f;
+					vp.frame_size.x = int(settings.render_size_min.x + (settings.render_size_max.x - settings.render_size_min.x) * t);
+					vp.frame_size.y = int(settings.render_size_min.y + (settings.render_size_max.y - settings.render_size_min.y) * t);
+				}
+				else
+					vp.frame_size = settings.render_size;
+			}
 			else
 				vp.frame_size = size / 1.5;
 		}
@@ -1108,6 +1117,71 @@ public:
 								dlss_combo->get_label()->text = o.name;
 						}
 						toolbar->add_child(dlss_combo);
+
+						// Manual render-scale override: percent between DLSS's
+						// reported render_size_min/max for the current mode.
+						// "Recommended" resets to DLSS's own optimal size.
+						auto scale_row = std::make_shared<GUI::base>();
+						scale_row->docking     = GUI::dock::TOP;
+						scale_row->height_size = GUI::size_type::FIXED;
+						scale_row->size        = { 140, 22 };
+						toolbar->add_child(scale_row);
+
+						auto scale_value_label = std::make_shared<GUI::Elements::label>();
+						scale_value_label->docking     = GUI::dock::RIGHT;
+						scale_value_label->width_size  = GUI::size_type::FIXED;
+						scale_value_label->size        = { 44, 0 };
+						scale_value_label->magnet_text = FW1_RIGHT | FW1_VCENTER | FW1_NOWORDWRAP;
+						scale_row->add_child(scale_value_label);
+
+						auto scale_slider = std::make_shared<GUI::Elements::float_slider>();
+						scale_slider->min         = 0.0f;
+						scale_slider->max         = 100.0f;
+						scale_slider->value       = g_upscaling_dlss_scale_override >= 0.0f ? g_upscaling_dlss_scale_override : 50.0f;
+						scale_slider->docking     = GUI::dock::FILL;
+						scale_slider->height_size = GUI::size_type::FIXED;
+						scale_slider->size        = { 0, 14 };
+						scale_slider->y_type      = GUI::pos_y_type::CENTER;
+						scale_row->add_child(scale_slider);
+
+						auto update_scale_label = [scale_value_label]()
+						{
+							scale_value_label->text = g_upscaling_dlss_scale_override >= 0.0f
+								? std::to_string(int(g_upscaling_dlss_scale_override)) + "%"
+								: "Rec.";
+						};
+						update_scale_label();
+
+						scale_slider->on_change = [update_scale_label](float v)
+						{
+							g_upscaling_dlss_scale_override = v;
+							update_scale_label();
+						};
+
+						auto recommended_but = std::make_shared<GUI::Elements::button>();
+						recommended_but->get_label()->text = "Recommended";
+						recommended_but->docking     = GUI::dock::TOP;
+						recommended_but->height_size = GUI::size_type::FIXED;
+						recommended_but->size        = { 140, 22 };
+						recommended_but->on_click = [scale_slider, update_scale_label](GUI::Elements::button::ptr)
+						{
+							g_upscaling_dlss_scale_override = -1.0f;
+
+							// Move the slider handle to reflect where "recommended"
+							// sits, for display only — 1920x1080 is a representative
+							// probe (the real window size isn't known this early;
+							// same limitation as the DLSS-quality combobox above).
+							nvidia::DLSSOptimalSettings settings{};
+							if (nvidia::DLSS::get().get_optimal_settings(g_upscaling_dlss_mode, { 1920, 1080 }, true, settings) &&
+							    settings.render_size_max.x > settings.render_size_min.x)
+							{
+								float t = float(settings.render_size.x - settings.render_size_min.x) /
+								          float(settings.render_size_max.x - settings.render_size_min.x);
+								scale_slider->value = t * 100.0f;
+							}
+							update_scale_label();
+						};
+						toolbar->add_child(recommended_but);
 					}
 
 					drawer->GUI::base::add_child(toolbar);
