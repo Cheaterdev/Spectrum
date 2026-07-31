@@ -3,20 +3,17 @@
 // DispatchMesh call per node, instead of one CPU-issued draw per page.
 //
 // Deliberately independent from mesh_shader.hlsl (used by GBuffer/PSSM) --
-// no shared file is touched, so this cannot regress either of those. No
-// amplification shader / meshlet culling yet (Phase 1b/3 territory): the
-// CPU dispatches ceil(meshlet_count/32) x page_count x 1 threadgroups
-// directly, one meshlet per X, one page per Y.
+// no shared file is touched, so this cannot regress either of those.
 //
-// KNOWN ISSUE (under active debugging): only viewport index 0 of the bound
-// array ever receives geometry -- forcing prims[gtid].viewport to any fixed
-// non-zero value makes everything vanish, while leaving it at pageLocal
-// only ever shows content in whichever pass's own local index 0 happens to
-// land (confirmed via the FrameGraph debugger's VSM_Atlas view). Root cause
-// not yet found -- the C++ call chain (GraphicsContext::set_viewports ->
-// DelayedCommandList::set_viewports -> CommandList::set_viewports ->
-// RSSetViewports) and the Viewport->D3D12_VIEWPORT field mapping both look
-// correct on inspection.
+// Per-meshlet culling (Phase 1b): each (meshlet, page) thread group tests
+// the meshlet's bounding sphere + normal cone against that page's own
+// camera before doing any vertex work, mirroring mesh_shader.hlsl's
+// IsVisible() (already proven correct against a light camera, not just the
+// main view -- PSSM's cascades use the same function against their own
+// light_cam). Still no amplification-shader-based compaction: an
+// invisible (meshlet, page) pair skips its vertex/index work but the
+// thread group itself still launches -- true compaction (skipping the
+// dispatch itself) is a further optimization, not done here.
 
 #include "Common.hlsl"
 
@@ -40,6 +37,44 @@ struct vsm_prim_attrs
 	uint viewport : SV_ViewportArrayIndex;
 };
 
+float vsm_plane_dist(float4 plane, float3 pt)
+{
+	return dot(pt, plane.xyz) + plane.w;
+}
+
+// Bounding-sphere-vs-frustum test only -- deliberately NOT mesh_shader.hlsl's
+// full IsVisible(), which also does a normal-cone backface test. That test
+// discards meshlets whose triangles are entirely back-facing relative to the
+// camera -- correct for normal front-face rendering, but VSMDepthDraw uses
+// cull=Front (renders back faces, standard shadow-map peter-panning fix), so
+// the all-backface meshlets the cone test throws away are exactly the ones
+// this pass needs to keep. Frustum culling alone is still valid regardless
+// of winding/cull mode.
+bool vsm_is_visible(MeshletCullData c, float4x4 world, Camera camera)
+{
+	float4 BoundingSphere = c.GetBoundingSphere();
+
+	float3 scales = float3(
+		length(float3(world[0].x, world[1].x, world[2].x)),
+		length(float3(world[0].y, world[1].y, world[2].y)),
+		length(float3(world[0].z, world[1].z, world[2].z)));
+	float scale = max(scales.x, max(scales.y, scales.z));
+
+	float4 center = mul(world, float4(BoundingSphere.xyz, 1));
+	center.xyz /= center.w;
+	float radius = BoundingSphere.w * scale;
+
+	[unroll]
+	for (int i = 0; i < 6; ++i)
+	{
+		float d = vsm_plane_dist(camera.GetFrustum().GetPlanes(i), center.xyz);
+		if (d < -radius)
+			return false;
+	}
+
+	return true;
+}
+
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
 void VS(
@@ -52,31 +87,62 @@ void VS(
 {
 	uint meshletIndex = gid3.x;
 	uint pageLocal = gid3.y;
-	if (meshletIndex >= meshInfo.GetMeshlet_count())
-		return;
 
-	Meshlet m = meshInstanceInfo.GetMeshlets()[meshInfo.GetMeshlet_offset_local() + meshletIndex];
-	SetMeshOutputCounts(m.GetVertexCount(), m.GetPrimitiveCount());
+	// Clamp to something always safe to read -- avoids a second conditional
+	// path feeding into anything upstream of SetMeshOutputCounts.
+	bool in_bounds = meshletIndex < meshInfo.GetMeshlet_count();
+	uint safe_index = in_bounds ? meshletIndex : 0;
 
 	Camera page_cam = GetVSMPageTableData().GetPage_cameras()[GetVSMPageBatch().GetPage_base_slot() + pageLocal];
 
+	node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
+	matrix node_mat = node.GetNode_global_matrix();
+
+	MeshletCullData cull_data = meshInstanceInfo.GetMeshletCullData()[meshInfo.GetMeshlet_offset_local() + safe_index];
+	bool visible = in_bounds && vsm_is_visible(cull_data, node_mat, page_cam);
+
+	Meshlet m = meshInstanceInfo.GetMeshlets()[meshInfo.GetMeshlet_offset_local() + safe_index];
+
+	// SetMeshOutputCounts must be called exactly once, with no conditional
+	// call sites at all -- DXC rejects even textually-single, ternary-fed
+	// calls here as "cannot be called multiple times" once vsm_is_visible's
+	// unrolled loop gets inlined, and a thread group that never calls it
+	// leaves its output state undefined (rasterizes stale data left over
+	// from whatever group last used that physical output slot -- this is
+	// what caused the earlier "exploded triangles"). So: always declare the
+	// meshlet's real counts unconditionally, and cull by writing degenerate
+	// (zero-area) triangles for invisible/out-of-bounds groups instead of
+	// shrinking the declared counts.
+	SetMeshOutputCounts(m.GetVertexCount(), m.GetPrimitiveCount());
+
 	if (gtid < m.GetPrimitiveCount())
 	{
-		uint index_offset = 3 * (m.GetPrimitiveOffset() + gtid);
-		tris[gtid] = uint3(
-			meshInstanceInfo.GetPrimitive_indices()[index_offset],
-			meshInstanceInfo.GetPrimitive_indices()[index_offset + 1],
-			meshInstanceInfo.GetPrimitive_indices()[index_offset + 2]);
+		if (visible)
+		{
+			uint index_offset = 3 * (m.GetPrimitiveOffset() + gtid);
+			tris[gtid] = uint3(
+				meshInstanceInfo.GetPrimitive_indices()[index_offset],
+				meshInstanceInfo.GetPrimitive_indices()[index_offset + 1],
+				meshInstanceInfo.GetPrimitive_indices()[index_offset + 2]);
+		}
+		else
+		{
+			tris[gtid] = uint3(0, 0, 0); // degenerate, zero area, never rasterizes
+		}
 		prims[gtid].viewport = pageLocal;
 	}
 
 	if (gtid < m.GetVertexCount())
 	{
-		uint vertexIndex = meshInfo.GetVertex_offset_local() + meshInstanceInfo.GetUnique_indices()[m.GetVertexOffset() + gtid];
-		node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
-		matrix node_mat = node.GetNode_global_matrix();
-
-		float4 wpos = mul(node_mat, float4(meshInstanceInfo.GetVertexes()[vertexIndex].pos, 1));
-		verts[gtid].pos = mul(page_cam.GetViewProj(), wpos);
+		if (visible)
+		{
+			uint vertexIndex = meshInfo.GetVertex_offset_local() + meshInstanceInfo.GetUnique_indices()[m.GetVertexOffset() + gtid];
+			float4 wpos = mul(node_mat, float4(meshInstanceInfo.GetVertexes()[vertexIndex].pos, 1));
+			verts[gtid].pos = mul(page_cam.GetViewProj(), wpos);
+		}
+		else
+		{
+			verts[gtid].pos = float4(0, 0, 0, 1);
+		}
 	}
 }
