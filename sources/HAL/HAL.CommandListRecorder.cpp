@@ -396,6 +396,15 @@ namespace HAL
 		});
 	}
 
+	void DelayedCommandList::set_scissors(std::vector<sizer_long> rects)
+	{
+		if constexpr (BuildOptions::Dev)
+			debug_recorder.push_back({CommandType::SetScissor, "SetScissor"});
+		push_fn(CommandType::SetScissor, [rc = std::move(rects)](API::CommandList& list) {
+			list.set_scissors(rc);
+		});
+	}
+
 	void DelayedCommandList::set_viewports(std::vector<Viewport> viewports)
 	{
 		if constexpr (BuildOptions::Dev)

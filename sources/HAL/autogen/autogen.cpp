@@ -93,6 +93,10 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FrameClassification") return SlotID::FrameClassification;
 	if(slot_name == "FrameClassificationInitDispatch") return SlotID::FrameClassificationInitDispatch;
 	if(slot_name == "ReflectionCombine") return SlotID::ReflectionCombine;
+	if(slot_name == "VSMConstants") return SlotID::VSMConstants;
+	if(slot_name == "VSMPageTableData") return SlotID::VSMPageTableData;
+	if(slot_name == "VSMPageBatch") return SlotID::VSMPageBatch;
+	if(slot_name == "VSMLighting") return SlotID::VSMLighting;
 	if(slot_name == "WorkGraphTest") return SlotID::WorkGraphTest;
 	if(slot_name == "WorkGR_ClassifyPixels_NodeEmulation") return SlotID::WorkGR_ClassifyPixels_NodeEmulation;
 	if(slot_name == "WorkGR_Shadows_NodeEmulation") return SlotID::WorkGR_Shadows_NodeEmulation;
@@ -270,6 +274,14 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::ReflectionCombine) return Slots::ReflectionCombine::Slot::ID;
 
+	if(id == SlotID::VSMConstants) return Slots::VSMConstants::Slot::ID;
+
+	if(id == SlotID::VSMPageTableData) return Slots::VSMPageTableData::Slot::ID;
+
+	if(id == SlotID::VSMPageBatch) return Slots::VSMPageBatch::Slot::ID;
+
+	if(id == SlotID::VSMLighting) return Slots::VSMLighting::Slot::ID;
+
 	if(id == SlotID::WorkGraphTest) return Slots::WorkGraphTest::Slot::ID;
 
 	if(id == SlotID::WorkGR_ClassifyPixels_NodeEmulation) return Slots::WorkGR_ClassifyPixels_NodeEmulation::Slot::ID;
@@ -364,6 +376,10 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FrameClassification) return "FrameClassification";
 	if(id == SlotID::FrameClassificationInitDispatch) return "FrameClassificationInitDispatch";
 	if(id == SlotID::ReflectionCombine) return "ReflectionCombine";
+	if(id == SlotID::VSMConstants) return "VSMConstants";
+	if(id == SlotID::VSMPageTableData) return "VSMPageTableData";
+	if(id == SlotID::VSMPageBatch) return "VSMPageBatch";
+	if(id == SlotID::VSMLighting) return "VSMLighting";
 	if(id == SlotID::WorkGraphTest) return "WorkGraphTest";
 	if(id == SlotID::WorkGR_ClassifyPixels_NodeEmulation) return "WorkGR_ClassifyPixels_NodeEmulation";
 	if(id == SlotID::WorkGR_Shadows_NodeEmulation) return "WorkGR_Shadows_NodeEmulation";

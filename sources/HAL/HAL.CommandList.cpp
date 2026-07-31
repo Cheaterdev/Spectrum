@@ -648,6 +648,11 @@ namespace HAL
 		list->set_scissors(rect);
 	}
 
+	void GraphicsContext::set_scissors(std::vector<sizer_long> rects)
+	{
+		list->set_scissors(rects);
+	}
+
 	void GraphicsContext::set_viewports(std::vector<Viewport> viewports)
 	{
 		this->viewports = viewports;

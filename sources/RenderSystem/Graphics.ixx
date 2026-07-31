@@ -37,6 +37,9 @@ export import :Materials.UniversalMaterial;
 export import :Materials.ShaderMaterial;
 
 export import :PSSM;
+export import :VSMClipmap;
+export import :VSMPageTable;
+export import :VSM;
 export import :BRDF;
 export import :Sky;
 export import :SMAA;

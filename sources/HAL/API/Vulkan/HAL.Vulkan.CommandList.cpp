@@ -437,8 +437,8 @@ namespace HAL::API
             vkCmdSetViewport(vk_cmd, 0, 1, &vp);
         }
 
-        if (has_scissor)
-            vkCmdSetScissor(vk_cmd, 0, 1, &current_scissor);
+        if (!current_scissors.empty())
+            vkCmdSetScissor(vk_cmd, 0, static_cast<uint32_t>(current_scissors.size()), current_scissors.data());
         else if (current_extent.width && current_extent.height)
         {
             VkRect2D sc{ {0,0}, current_extent };
@@ -667,9 +667,26 @@ namespace HAL::API
                            static_cast<int32_t>(rect.top) };
         scissor.extent = { static_cast<uint32_t>(rect.right  - rect.left),
                            static_cast<uint32_t>(rect.bottom - rect.top) };
-        current_scissor = scissor;   // remember for per-draw re-apply (CB-split safe)
-        has_scissor     = true;
+        current_scissors.assign(1, scissor);   // remember for per-draw re-apply (CB-split safe)
         vkCmdSetScissor(vk_cmd, 0, 1, &scissor);
+    }
+
+    void CommandList::set_scissors(std::vector<sizer_long> rects)
+    {
+        if (vk_cmd == VK_NULL_HANDLE) return;
+        std::vector<VkRect2D> vk_scissors;
+        vk_scissors.reserve(rects.size());
+        for (auto& rect : rects)
+        {
+            VkRect2D scissor{};
+            scissor.offset = { static_cast<int32_t>(rect.left),
+                               static_cast<int32_t>(rect.top) };
+            scissor.extent = { static_cast<uint32_t>(rect.right  - rect.left),
+                               static_cast<uint32_t>(rect.bottom - rect.top) };
+            vk_scissors.push_back(scissor);
+        }
+        current_scissors = vk_scissors;   // remember for per-draw re-apply (CB-split safe)
+        vkCmdSetScissor(vk_cmd, 0, static_cast<uint32_t>(vk_scissors.size()), vk_scissors.data());
     }
 
     void CommandList::set_stencil_ref(UINT ref)

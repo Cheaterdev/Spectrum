@@ -203,6 +203,15 @@ namespace HAL
             m_commandList->RSSetScissorRects(1, reinterpret_cast<D3D12_RECT*>(&rect));
         }
 
+        void CommandList::set_scissors(std::vector<sizer_long> rects)
+        {
+            // D3D12 always requires NumScissorRects == NumViewports (there is
+            // no rasterizer ScissorEnable toggle in D3D12, unlike D3D11) -- a
+            // multi-viewport draw with only 1 scissor rect bound silently
+            // discards every primitive outside viewport 0.
+            m_commandList->RSSetScissorRects(static_cast<UINT>(rects.size()), reinterpret_cast<D3D12_RECT*>(rects.data()));
+        }
+
         void CommandList::set_viewports(std::vector<Viewport> viewports)
         {
             std::vector<D3D12_VIEWPORT> vps(viewports.size());

@@ -10,6 +10,7 @@
 #include "Voxelize.h"
 #include "PSSM_Global.h"
 #include "PSSM_Cascade.h"
+#include "VSM_RenderPage.h"
 #include "Scene.h"
 #include "CubeSky.h"
 #include "CubeMapDownsample.h"
@@ -23,14 +24,15 @@
 #include "ReflectionDenoiser_Reproject.h"
 #include "RTXShadow.h"
 #include "PSSM_Combine.h"
+#include "VSM_Combine.h"
 #include "VoxelScreen.h"
 #include "VoxelCombine.h"
 #include "ReflCombine.h"
 #include "Sky.h"
-#include "stencil_renderer_after.h"
 #include "SMAA.h"
 #include "FSR.h"
 #include "UpscalingDLSS.h"
+#include "stencil_renderer_after.h"
 #include "RTXColorPass.h"
 #include "VoxelDebug.h"
 #include "../pass_defaults.h"
@@ -47,6 +49,7 @@ public:
 	Passes::Voxelize voxelize;
 	Passes::PSSM_Global pSSM_Global;
 	Passes::PSSM_Cascade pSSM_Cascade;
+	Passes::VSM_RenderPage vSM_RenderPage;
 	Passes::CubeSky cubeSky;
 	Passes::Lighting lighting;
 	Passes::Mipmapping mipmapping;
@@ -55,12 +58,13 @@ public:
 	Passes::ScreenReflection screenReflection;
 	Passes::ReflectionDenoiser_Reproject reflectionDenoiser_Reproject;
 	Passes::PSSM_Combine pSSM_Combine;
+	Passes::VSM_Combine vSM_Combine;
 	Passes::VoxelScreen voxelScreen;
 	Passes::VoxelCombine voxelCombine;
 	Passes::ReflCombine reflCombine;
 	Passes::Sky sky;
-	Passes::stencil_renderer_after stencil_renderer_after;
 	Passes::SMAA sMAA;
+	Passes::stencil_renderer_after stencil_renderer_after;
 	Passes::VoxelDebug voxelDebug;
 
 	static inline const wchar_t* const pass_names[] = {
@@ -74,6 +78,14 @@ public:
 		Passes::PSSM_Cascade::Names[3].ptr,
 		Passes::PSSM_Cascade::Names[4].ptr,
 		Passes::PSSM_Cascade::Names[5].ptr,
+		Passes::VSM_RenderPage::Names[0].ptr,
+		Passes::VSM_RenderPage::Names[1].ptr,
+		Passes::VSM_RenderPage::Names[2].ptr,
+		Passes::VSM_RenderPage::Names[3].ptr,
+		Passes::VSM_RenderPage::Names[4].ptr,
+		Passes::VSM_RenderPage::Names[5].ptr,
+		Passes::VSM_RenderPage::Names[6].ptr,
+		Passes::VSM_RenderPage::Names[7].ptr,
 		Passes::Scene::Name.ptr,
 		Passes::CubeSky::Name.ptr,
 		Passes::CubeMapDownsample::Name.ptr,
@@ -87,14 +99,15 @@ public:
 		Passes::ReflectionDenoiser_Reproject::Name.ptr,
 		Passes::RTXShadow::Name.ptr,
 		Passes::PSSM_Combine::Name.ptr,
+		Passes::VSM_Combine::Name.ptr,
 		Passes::VoxelScreen::Name.ptr,
 		Passes::VoxelCombine::Name.ptr,
 		Passes::ReflCombine::Name.ptr,
 		Passes::Sky::Name.ptr,
-		Passes::stencil_renderer_after::Name.ptr,
 		Passes::SMAA::Name.ptr,
 		Passes::FSR::Name.ptr,
 		Passes::UpscalingDLSS::Name.ptr,
+		Passes::stencil_renderer_after::Name.ptr,
 		Passes::RTXColorPass::Name.ptr,
 		Passes::VoxelDebug::Name.ptr,
 	};
@@ -118,6 +131,9 @@ public:
 		L"global_camera",
 		L"PSSM_Depths",
 		L"PSSM_Cameras",
+		L"VSM_Atlas",
+		L"VSM_PageTable",
+		L"VSM_PageCameras",
 		L"GBuffer_Albedo",
 		L"GBuffer_Normals",
 		L"GBuffer_Depth",
@@ -160,11 +176,11 @@ public:
 		L"VoxelIndirectNoise",
 		L"VoxelIndirectFiltered",
 		L"VoxelIndirectFilteredPrev",
-		L"Stencil_color_tex",
 		L"ResultTextureNew",
 		L"SMAA_edges",
 		L"SMAA_blend",
 		L"FSRTemp",
+		L"Stencil_color_tex",
 		L"ColorOutput",
 		L"VoxelDebug",
 	};
@@ -297,12 +313,79 @@ public:
 		{ true, { PSSM_Cameras_c0_pass_refs + 5, 1 } },
 		{ false, { PSSM_Cameras_c0_pass_refs + 6, 2 } },
 	};
+	static inline const FrameGraph::PassRef VSM_Atlas_c0_pass_refs[] = {
+		{ PassID::VSM_RenderPage, 0 },
+		{ PassID::VSM_RenderPage, 1 },
+		{ PassID::VSM_RenderPage, 2 },
+		{ PassID::VSM_RenderPage, 3 },
+		{ PassID::VSM_RenderPage, 4 },
+		{ PassID::VSM_RenderPage, 5 },
+		{ PassID::VSM_RenderPage, 6 },
+		{ PassID::VSM_RenderPage, 7 },
+		{ PassID::VSM_Combine, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_Atlas_c0_states[] = {
+		{ true, { VSM_Atlas_c0_pass_refs + 0, 1 } },
+		{ true, { VSM_Atlas_c0_pass_refs + 1, 1 } },
+		{ true, { VSM_Atlas_c0_pass_refs + 2, 1 } },
+		{ true, { VSM_Atlas_c0_pass_refs + 3, 1 } },
+		{ true, { VSM_Atlas_c0_pass_refs + 4, 1 } },
+		{ true, { VSM_Atlas_c0_pass_refs + 5, 1 } },
+		{ true, { VSM_Atlas_c0_pass_refs + 6, 1 } },
+		{ true, { VSM_Atlas_c0_pass_refs + 7, 1 } },
+		{ false, { VSM_Atlas_c0_pass_refs + 8, 1 } },
+	};
+	static inline const FrameGraph::PassRef VSM_PageTable_c0_pass_refs[] = {
+		{ PassID::VSM_RenderPage, 0 },
+		{ PassID::VSM_RenderPage, 1 },
+		{ PassID::VSM_RenderPage, 2 },
+		{ PassID::VSM_RenderPage, 3 },
+		{ PassID::VSM_RenderPage, 4 },
+		{ PassID::VSM_RenderPage, 5 },
+		{ PassID::VSM_RenderPage, 6 },
+		{ PassID::VSM_RenderPage, 7 },
+		{ PassID::VSM_Combine, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_PageTable_c0_states[] = {
+		{ true, { VSM_PageTable_c0_pass_refs + 0, 1 } },
+		{ true, { VSM_PageTable_c0_pass_refs + 1, 1 } },
+		{ true, { VSM_PageTable_c0_pass_refs + 2, 1 } },
+		{ true, { VSM_PageTable_c0_pass_refs + 3, 1 } },
+		{ true, { VSM_PageTable_c0_pass_refs + 4, 1 } },
+		{ true, { VSM_PageTable_c0_pass_refs + 5, 1 } },
+		{ true, { VSM_PageTable_c0_pass_refs + 6, 1 } },
+		{ true, { VSM_PageTable_c0_pass_refs + 7, 1 } },
+		{ false, { VSM_PageTable_c0_pass_refs + 8, 1 } },
+	};
+	static inline const FrameGraph::PassRef VSM_PageCameras_c0_pass_refs[] = {
+		{ PassID::VSM_RenderPage, 0 },
+		{ PassID::VSM_RenderPage, 1 },
+		{ PassID::VSM_RenderPage, 2 },
+		{ PassID::VSM_RenderPage, 3 },
+		{ PassID::VSM_RenderPage, 4 },
+		{ PassID::VSM_RenderPage, 5 },
+		{ PassID::VSM_RenderPage, 6 },
+		{ PassID::VSM_RenderPage, 7 },
+		{ PassID::VSM_Combine, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_PageCameras_c0_states[] = {
+		{ true, { VSM_PageCameras_c0_pass_refs + 0, 1 } },
+		{ true, { VSM_PageCameras_c0_pass_refs + 1, 1 } },
+		{ true, { VSM_PageCameras_c0_pass_refs + 2, 1 } },
+		{ true, { VSM_PageCameras_c0_pass_refs + 3, 1 } },
+		{ true, { VSM_PageCameras_c0_pass_refs + 4, 1 } },
+		{ true, { VSM_PageCameras_c0_pass_refs + 5, 1 } },
+		{ true, { VSM_PageCameras_c0_pass_refs + 6, 1 } },
+		{ true, { VSM_PageCameras_c0_pass_refs + 7, 1 } },
+		{ false, { VSM_PageCameras_c0_pass_refs + 8, 1 } },
+	};
 	static inline const FrameGraph::PassRef GBuffer_Albedo_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
 		{ PassID::PSSM_GenerateMask, 0 },
 		{ PassID::ScreenReflection, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -310,7 +393,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Albedo_c0_states[] = {
 		{ true, { GBuffer_Albedo_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Albedo_c0_pass_refs + 1, 8 } },
+		{ false, { GBuffer_Albedo_c0_pass_refs + 1, 9 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Normals_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -319,6 +402,7 @@ public:
 		{ PassID::ReflectionDenoiser_Reproject, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -326,7 +410,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Normals_c0_states[] = {
 		{ true, { GBuffer_Normals_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Normals_c0_pass_refs + 1, 9 } },
+		{ false, { GBuffer_Normals_c0_pass_refs + 1, 10 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Depth_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -335,6 +419,7 @@ public:
 		{ PassID::ReflectionDenoiser_Reproject, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -344,7 +429,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Depth_c0_states[] = {
 		{ true, { GBuffer_Depth_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Depth_c0_pass_refs + 1, 11 } },
+		{ false, { GBuffer_Depth_c0_pass_refs + 1, 12 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -352,6 +437,7 @@ public:
 		{ PassID::ScreenReflection, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -359,7 +445,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Specular_c0_states[] = {
 		{ true, { GBuffer_Specular_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Specular_c0_pass_refs + 1, 8 } },
+		{ false, { GBuffer_Specular_c0_pass_refs + 1, 9 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Speed_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -368,6 +454,7 @@ public:
 		{ PassID::ReflectionDenoiser_Reproject, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -376,7 +463,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
 		{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Speed_c0_pass_refs + 1, 10 } },
+		{ false, { GBuffer_Speed_c0_pass_refs + 1, 11 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -384,6 +471,7 @@ public:
 		{ PassID::ScreenReflection, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -391,7 +479,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_DepthMips_c0_states[] = {
 		{ true, { GBuffer_DepthMips_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 8 } },
+		{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 9 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Quality_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -399,6 +487,7 @@ public:
 		{ PassID::ScreenReflection, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -406,7 +495,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Quality_c0_states[] = {
 		{ true, { GBuffer_Quality_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Quality_c0_pass_refs + 1, 8 } },
+		{ false, { GBuffer_Quality_c0_pass_refs + 1, 9 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_TempColor_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -414,13 +503,14 @@ public:
 		{ PassID::ScreenReflection, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_TempColor_c0_states[] = {
-		{ false, { GBuffer_TempColor_c0_pass_refs + 0, 9 } },
+		{ false, { GBuffer_TempColor_c0_pass_refs + 0, 10 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_NormalsPrev_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -429,6 +519,7 @@ public:
 		{ PassID::ReflectionDenoiser_Reproject, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -436,7 +527,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_NormalsPrev_c0_states[] = {
 		{ true, { GBuffer_NormalsPrev_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_NormalsPrev_c0_pass_refs + 1, 9 } },
+		{ false, { GBuffer_NormalsPrev_c0_pass_refs + 1, 10 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_SpecularPrev_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -444,6 +535,7 @@ public:
 		{ PassID::ScreenReflection, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -451,7 +543,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_SpecularPrev_c0_states[] = {
 		{ true, { GBuffer_SpecularPrev_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_SpecularPrev_c0_pass_refs + 1, 8 } },
+		{ false, { GBuffer_SpecularPrev_c0_pass_refs + 1, 9 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthPrev_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -460,13 +552,14 @@ public:
 		{ PassID::ReflectionDenoiser_Reproject, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_DepthPrev_c0_states[] = {
-		{ false, { GBuffer_DepthPrev_c0_pass_refs + 0, 10 } },
+		{ false, { GBuffer_DepthPrev_c0_pass_refs + 0, 11 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HiZ_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -474,6 +567,7 @@ public:
 		{ PassID::ScreenReflection, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -481,7 +575,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_c0_states[] = {
 		{ true, { GBuffer_HiZ_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_HiZ_c0_pass_refs + 1, 8 } },
+		{ false, { GBuffer_HiZ_c0_pass_refs + 1, 9 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HiZ_UAV_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -489,6 +583,7 @@ public:
 		{ PassID::ScreenReflection, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -496,7 +591,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_UAV_c0_states[] = {
 		{ true, { GBuffer_HiZ_UAV_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_HiZ_UAV_c0_pass_refs + 1, 8 } },
+		{ false, { GBuffer_HiZ_UAV_c0_pass_refs + 1, 9 } },
 	};
 	static inline const FrameGraph::PassRef sky_cubemap_c0_pass_refs[] = {
 		{ PassID::CubeSky, 0 },
@@ -563,18 +658,18 @@ public:
 	static inline const FrameGraph::PassRef ResultTexture_c0_pass_refs[] = {
 		{ PassID::ResultCreation, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::Sky, 0 },
-		{ PassID::stencil_renderer_after, 0 },
 		{ PassID::SMAA, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState ResultTexture_c0_states[] = {
 		{ true, { ResultTexture_c0_pass_refs + 0, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 1, 1 } },
-		{ false, { ResultTexture_c0_pass_refs + 2, 1 } },
-		{ true, { ResultTexture_c0_pass_refs + 3, 1 } },
+		{ true, { ResultTexture_c0_pass_refs + 2, 1 } },
+		{ false, { ResultTexture_c0_pass_refs + 3, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 4, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 5, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 6, 1 } },
@@ -737,12 +832,6 @@ public:
 	static inline const FrameGraph::PrecompiledState VoxelIndirectFilteredPrev_c0_states[] = {
 		{ false, { VoxelIndirectFilteredPrev_c0_pass_refs + 0, 2 } },
 	};
-	static inline const FrameGraph::PassRef Stencil_color_tex_c0_pass_refs[] = {
-		{ PassID::stencil_renderer_after, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState Stencil_color_tex_c0_states[] = {
-		{ true, { Stencil_color_tex_c0_pass_refs + 0, 1 } },
-	};
 	static inline const FrameGraph::PassRef ResultTexture_c1_pass_refs[] = {
 		{ PassID::SMAA, 0 },
 		{ PassID::FSR, 0 },
@@ -779,9 +868,17 @@ public:
 	};
 	static inline const FrameGraph::PassRef ResultTexture_c3_pass_refs[] = {
 		{ PassID::UpscalingDLSS, 0 },
+		{ PassID::stencil_renderer_after, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState ResultTexture_c3_states[] = {
 		{ true, { ResultTexture_c3_pass_refs + 0, 1 } },
+		{ true, { ResultTexture_c3_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef Stencil_color_tex_c0_pass_refs[] = {
+		{ PassID::stencil_renderer_after, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState Stencil_color_tex_c0_states[] = {
+		{ true, { Stencil_color_tex_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef ColorOutput_c0_pass_refs[] = {
 		{ PassID::RTXColorPass, 0 },
@@ -808,6 +905,9 @@ public:
 		{ ResourceID::global_camera, 0, global_camera_c0_states },
 		{ ResourceID::PSSM_Depths, 0, PSSM_Depths_c0_states },
 		{ ResourceID::PSSM_Cameras, 0, PSSM_Cameras_c0_states },
+		{ ResourceID::VSM_Atlas, 0, VSM_Atlas_c0_states },
+		{ ResourceID::VSM_PageTable, 0, VSM_PageTable_c0_states },
+		{ ResourceID::VSM_PageCameras, 0, VSM_PageCameras_c0_states },
 		{ ResourceID::GBuffer_Albedo, 0, GBuffer_Albedo_c0_states },
 		{ ResourceID::GBuffer_Normals, 0, GBuffer_Normals_c0_states },
 		{ ResourceID::GBuffer_Depth, 0, GBuffer_Depth_c0_states },
@@ -850,13 +950,13 @@ public:
 		{ ResourceID::VoxelIndirectNoise, 0, VoxelIndirectNoise_c0_states },
 		{ ResourceID::VoxelIndirectFiltered, 0, VoxelIndirectFiltered_c0_states },
 		{ ResourceID::VoxelIndirectFilteredPrev, 0, VoxelIndirectFilteredPrev_c0_states },
-		{ ResourceID::Stencil_color_tex, 0, Stencil_color_tex_c0_states },
 		{ ResourceID::ResultTexture, 1, ResultTexture_c1_states },
 		{ ResourceID::SMAA_edges, 0, SMAA_edges_c0_states },
 		{ ResourceID::SMAA_blend, 0, SMAA_blend_c0_states },
 		{ ResourceID::ResultTexture, 2, ResultTexture_c2_states },
 		{ ResourceID::FSRTemp, 0, FSRTemp_c0_states },
 		{ ResourceID::ResultTexture, 3, ResultTexture_c3_states },
+		{ ResourceID::Stencil_color_tex, 0, Stencil_color_tex_c0_states },
 		{ ResourceID::ColorOutput, 0, ColorOutput_c0_states },
 		{ ResourceID::VoxelDebug, 0, VoxelDebug_c0_states },
 	};
@@ -887,6 +987,48 @@ public:
 		{ PassID::PSSM_Cascade, 2 },
 		{ PassID::PSSM_Cascade, 3 },
 		{ PassID::PSSM_Cascade, 4 },
+	};
+	static inline const FrameGraph::PassRef VSM_RenderPage_1_prev[] = {
+		{ PassID::VSM_RenderPage, 0 },
+	};
+	static inline const FrameGraph::PassRef VSM_RenderPage_2_prev[] = {
+		{ PassID::VSM_RenderPage, 0 },
+		{ PassID::VSM_RenderPage, 1 },
+	};
+	static inline const FrameGraph::PassRef VSM_RenderPage_3_prev[] = {
+		{ PassID::VSM_RenderPage, 0 },
+		{ PassID::VSM_RenderPage, 1 },
+		{ PassID::VSM_RenderPage, 2 },
+	};
+	static inline const FrameGraph::PassRef VSM_RenderPage_4_prev[] = {
+		{ PassID::VSM_RenderPage, 0 },
+		{ PassID::VSM_RenderPage, 1 },
+		{ PassID::VSM_RenderPage, 2 },
+		{ PassID::VSM_RenderPage, 3 },
+	};
+	static inline const FrameGraph::PassRef VSM_RenderPage_5_prev[] = {
+		{ PassID::VSM_RenderPage, 0 },
+		{ PassID::VSM_RenderPage, 1 },
+		{ PassID::VSM_RenderPage, 2 },
+		{ PassID::VSM_RenderPage, 3 },
+		{ PassID::VSM_RenderPage, 4 },
+	};
+	static inline const FrameGraph::PassRef VSM_RenderPage_6_prev[] = {
+		{ PassID::VSM_RenderPage, 0 },
+		{ PassID::VSM_RenderPage, 1 },
+		{ PassID::VSM_RenderPage, 2 },
+		{ PassID::VSM_RenderPage, 3 },
+		{ PassID::VSM_RenderPage, 4 },
+		{ PassID::VSM_RenderPage, 5 },
+	};
+	static inline const FrameGraph::PassRef VSM_RenderPage_7_prev[] = {
+		{ PassID::VSM_RenderPage, 0 },
+		{ PassID::VSM_RenderPage, 1 },
+		{ PassID::VSM_RenderPage, 2 },
+		{ PassID::VSM_RenderPage, 3 },
+		{ PassID::VSM_RenderPage, 4 },
+		{ PassID::VSM_RenderPage, 5 },
+		{ PassID::VSM_RenderPage, 6 },
 	};
 	static inline const FrameGraph::PassRef Scene_0_prev[] = {
 		{ PassID::PreScene, 0 },
@@ -944,6 +1086,19 @@ public:
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Scene, 0 },
 	};
+	static inline const FrameGraph::PassRef VSM_Combine_0_prev[] = {
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::ResultCreation, 0 },
+		{ PassID::Scene, 0 },
+		{ PassID::VSM_RenderPage, 0 },
+		{ PassID::VSM_RenderPage, 1 },
+		{ PassID::VSM_RenderPage, 2 },
+		{ PassID::VSM_RenderPage, 3 },
+		{ PassID::VSM_RenderPage, 4 },
+		{ PassID::VSM_RenderPage, 5 },
+		{ PassID::VSM_RenderPage, 6 },
+		{ PassID::VSM_RenderPage, 7 },
+	};
 	static inline const FrameGraph::PassRef VoxelScreen_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
 		{ PassID::CubeMapDownsample, 0 },
@@ -954,6 +1109,7 @@ public:
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Scene, 0 },
 		{ PassID::ScreenReflection, 0 },
+		{ PassID::VSM_Combine, 0 },
 	};
 	static inline const FrameGraph::PassRef VoxelCombine_0_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
@@ -962,6 +1118,7 @@ public:
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Scene, 0 },
 		{ PassID::ScreenReflection, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 	};
 	static inline const FrameGraph::PassRef ReflCombine_0_prev[] = {
@@ -970,6 +1127,7 @@ public:
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Scene, 0 },
 		{ PassID::ScreenReflection, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::VoxelScreen, 0 },
 	};
@@ -978,14 +1136,7 @@ public:
 		{ PassID::ReflCombine, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Scene, 0 },
-		{ PassID::VoxelCombine, 0 },
-		{ PassID::VoxelScreen, 0 },
-	};
-	static inline const FrameGraph::PassRef stencil_renderer_after_0_prev[] = {
-		{ PassID::PSSM_Combine, 0 },
-		{ PassID::ReflCombine, 0 },
-		{ PassID::ResultCreation, 0 },
-		{ PassID::Sky, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::VoxelScreen, 0 },
 	};
@@ -994,9 +1145,9 @@ public:
 		{ PassID::ReflCombine, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Sky, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::VoxelScreen, 0 },
-		{ PassID::stencil_renderer_after, 0 },
 	};
 	static inline const FrameGraph::PassRef FSR_0_prev[] = {
 		{ PassID::PSSM_Combine, 0 },
@@ -1004,9 +1155,9 @@ public:
 		{ PassID::ResultCreation, 0 },
 		{ PassID::SMAA, 0 },
 		{ PassID::Sky, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::VoxelScreen, 0 },
-		{ PassID::stencil_renderer_after, 0 },
 	};
 	static inline const FrameGraph::PassRef UpscalingDLSS_0_prev[] = {
 		{ PassID::FSR, 0 },
@@ -1016,9 +1167,21 @@ public:
 		{ PassID::SMAA, 0 },
 		{ PassID::Scene, 0 },
 		{ PassID::Sky, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::VoxelScreen, 0 },
-		{ PassID::stencil_renderer_after, 0 },
+	};
+	static inline const FrameGraph::PassRef stencil_renderer_after_0_prev[] = {
+		{ PassID::FSR, 0 },
+		{ PassID::PSSM_Combine, 0 },
+		{ PassID::ReflCombine, 0 },
+		{ PassID::ResultCreation, 0 },
+		{ PassID::SMAA, 0 },
+		{ PassID::Sky, 0 },
+		{ PassID::UpscalingDLSS, 0 },
+		{ PassID::VSM_Combine, 0 },
+		{ PassID::VoxelCombine, 0 },
+		{ PassID::VoxelScreen, 0 },
 	};
 	static inline const FrameGraph::PassRef RTXColorPass_0_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
@@ -1041,6 +1204,14 @@ public:
 		{ PassID::PSSM_Cascade, 3, false, PSSM_Cascade_3_prev },
 		{ PassID::PSSM_Cascade, 4, false, PSSM_Cascade_4_prev },
 		{ PassID::PSSM_Cascade, 5, false, PSSM_Cascade_5_prev },
+		{ PassID::VSM_RenderPage, 0, false, {} },
+		{ PassID::VSM_RenderPage, 1, false, VSM_RenderPage_1_prev },
+		{ PassID::VSM_RenderPage, 2, false, VSM_RenderPage_2_prev },
+		{ PassID::VSM_RenderPage, 3, false, VSM_RenderPage_3_prev },
+		{ PassID::VSM_RenderPage, 4, false, VSM_RenderPage_4_prev },
+		{ PassID::VSM_RenderPage, 5, false, VSM_RenderPage_5_prev },
+		{ PassID::VSM_RenderPage, 6, false, VSM_RenderPage_6_prev },
+		{ PassID::VSM_RenderPage, 7, false, VSM_RenderPage_7_prev },
 		{ PassID::Scene, 0, false, Scene_0_prev },
 		{ PassID::CubeSky, 0, false, {} },
 		{ PassID::CubeMapDownsample, 0, false, CubeMapDownsample_0_prev },
@@ -1054,14 +1225,15 @@ public:
 		{ PassID::ReflectionDenoiser_Reproject, 0, false, ReflectionDenoiser_Reproject_0_prev },
 		{ PassID::RTXShadow, 0, true, RTXShadow_0_prev },
 		{ PassID::PSSM_Combine, 0, true, PSSM_Combine_0_prev },
+		{ PassID::VSM_Combine, 0, false, VSM_Combine_0_prev },
 		{ PassID::VoxelScreen, 0, true, VoxelScreen_0_prev },
 		{ PassID::VoxelCombine, 0, true, VoxelCombine_0_prev },
 		{ PassID::ReflCombine, 0, false, ReflCombine_0_prev },
 		{ PassID::Sky, 0, false, Sky_0_prev },
-		{ PassID::stencil_renderer_after, 0, false, stencil_renderer_after_0_prev },
 		{ PassID::SMAA, 0, false, SMAA_0_prev },
 		{ PassID::FSR, 0, false, FSR_0_prev },
 		{ PassID::UpscalingDLSS, 0, false, UpscalingDLSS_0_prev },
+		{ PassID::stencil_renderer_after, 0, false, stencil_renderer_after_0_prev },
 		{ PassID::RTXColorPass, 0, false, RTXColorPass_0_prev },
 		{ PassID::VoxelDebug, 0, false, VoxelDebug_0_prev },
 	};
@@ -1095,6 +1267,9 @@ public:
 		for (uint32_t i = 0; i < Passes::PSSM_Cascade::MaxCount; ++i)
 			if (pSSM_Cascade.setup_funcs[i])
 				graph.add_library_pass<Passes::PSSM_Cascade>(i, pSSM_Cascade.setup_funcs[i], pSSM_Cascade.render_funcs[i], (pSSM_Cascade.flags & ~FrameGraph::PassFlags::Compute));
+		for (uint32_t i = 0; i < Passes::VSM_RenderPage::MaxCount; ++i)
+			if (vSM_RenderPage.setup_funcs[i])
+				graph.add_library_pass<Passes::VSM_RenderPage>(i, vSM_RenderPage.setup_funcs[i], vSM_RenderPage.render_funcs[i], (vSM_RenderPage.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::Scene>(PassDefault<Passes::Scene>::setup, PassDefault<Passes::Scene>::render, (PassDefault<Passes::Scene>::flags & ~FrameGraph::PassFlags::Compute));
 		if (cubeSky.setup_func)
 			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, (cubeSky.flags & ~FrameGraph::PassFlags::Compute));
@@ -1116,6 +1291,8 @@ public:
 		graph.add_library_pass<Passes::RTXShadow>(PassDefault<Passes::RTXShadow>::setup, PassDefault<Passes::RTXShadow>::render, (PassDefault<Passes::RTXShadow>::flags));
 		if (pSSM_Combine.setup_func)
 			graph.add_library_pass<Passes::PSSM_Combine>(pSSM_Combine.setup_func, pSSM_Combine.render_func, (pSSM_Combine.flags));
+		if (vSM_Combine.setup_func)
+			graph.add_library_pass<Passes::VSM_Combine>(vSM_Combine.setup_func, vSM_Combine.render_func, (vSM_Combine.flags & ~FrameGraph::PassFlags::Compute));
 		if (voxelScreen.setup_func)
 			graph.add_library_pass<Passes::VoxelScreen>(voxelScreen.setup_func, voxelScreen.render_func, (voxelScreen.flags));
 		if (voxelCombine.setup_func)
@@ -1124,12 +1301,12 @@ public:
 			graph.add_library_pass<Passes::ReflCombine>(reflCombine.setup_func, reflCombine.render_func, (reflCombine.flags & ~FrameGraph::PassFlags::Compute));
 		if (sky.setup_func)
 			graph.add_library_pass<Passes::Sky>(sky.setup_func, sky.render_func, (sky.flags & ~FrameGraph::PassFlags::Compute));
-		if (stencil_renderer_after.setup_func)
-			graph.add_library_pass<Passes::stencil_renderer_after>(stencil_renderer_after.setup_func, stencil_renderer_after.render_func, (stencil_renderer_after.flags & ~FrameGraph::PassFlags::Compute));
 		if (sMAA.setup_func)
 			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, (sMAA.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, (PassDefault<Passes::FSR>::flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::UpscalingDLSS>(PassDefault<Passes::UpscalingDLSS>::setup, PassDefault<Passes::UpscalingDLSS>::render, (PassDefault<Passes::UpscalingDLSS>::flags & ~FrameGraph::PassFlags::Compute));
+		if (stencil_renderer_after.setup_func)
+			graph.add_library_pass<Passes::stencil_renderer_after>(stencil_renderer_after.setup_func, stencil_renderer_after.render_func, (stencil_renderer_after.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::RTXColorPass>(PassDefault<Passes::RTXColorPass>::setup, PassDefault<Passes::RTXColorPass>::render, (PassDefault<Passes::RTXColorPass>::flags & ~FrameGraph::PassFlags::Compute));
 		if (voxelDebug.setup_func)
 			graph.add_library_pass<Passes::VoxelDebug>(voxelDebug.setup_func, voxelDebug.render_func, (voxelDebug.flags & ~FrameGraph::PassFlags::Compute));

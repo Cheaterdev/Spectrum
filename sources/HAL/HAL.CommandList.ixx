@@ -564,6 +564,7 @@ export{
 			void set_viewport(Viewport viewport);
 			void set_viewport(vec4 viewport);
 			void set_scissors(sizer_long rect);
+			void set_scissors(std::vector<sizer_long> rects);
 			void set_viewports(std::vector<Viewport> viewports);
 
 			void dispatch_mesh(ivec3 v);

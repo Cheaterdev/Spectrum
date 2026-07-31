@@ -48,6 +48,8 @@ namespace FrameGraph
 		Voxelize,
 		Lighting,
 		Mipmapping,
+		VSM_RenderPage,
+		VSM_Combine,
 		Count
 	};
 }

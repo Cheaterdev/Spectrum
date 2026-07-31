@@ -63,8 +63,7 @@ export namespace HAL
             // without this the draw inherits an undefined/empty scissor and is fully
             // clipped → nothing renders (the classic Vulkan "black screen" here).
             std::vector<VkViewport> current_viewports;
-            VkRect2D                current_scissor   = {};
-            bool                    has_scissor       = false;
+            std::vector<VkRect2D>   current_scissors;
             VkPrimitiveTopology     current_topology  = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
             // Bound descriptor heaps (set by set_descriptor_heaps()).  Under
@@ -163,6 +162,7 @@ export namespace HAL
             void dispatch_mesh(ivec3 v);
             void dispatch(ivec3 v);
             void set_scissors(sizer_long rect);
+            void set_scissors(std::vector<sizer_long> rects);
             void set_viewports(std::vector<Viewport> viewports);
             void copy_resource(HAL::Resource* dest, HAL::Resource* source);
             void copy_buffer(HAL::Resource* dest, uint64 dest_offset,

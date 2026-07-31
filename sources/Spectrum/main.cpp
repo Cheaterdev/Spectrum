@@ -66,6 +66,14 @@ public:
 	}
 };
 
+// Phase 1a toggle for the VSM implementation (see VSM implementation plan):
+// PSSM_Combine unconditionally overwrites ResultTexture whenever a PSSM
+// instance is wired into the pipeline, and VSM_Combine does the same for
+// VSM, so only one of the two may be wired at a time. Flip and rebuild to
+// switch which shadow system is live; PSSM's own construction is otherwise
+// untouched.
+#define SPECTRUM_USE_VSM_SHADOWS 1
+
 class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext
 {
 		Pipelines::MainPipeline pipeline;
@@ -111,6 +119,7 @@ public:
 	MeshAssetInstance::ptr instance;
 
 	PSSM pssm;
+	VSM vsm;
 	SkyRender sky;
 	ShadowDenoiser shadow_denoiser;
 
@@ -125,7 +134,24 @@ public:
 
 		 }
 		triangle_drawer() : VariableContext(L"triangle_drawer"), pipeline(), blue_noise(pipeline), smaa(pipeline), sky(pipeline), pssm(pipeline)
+#if SPECTRUM_USE_VSM_SHADOWS
+		, vsm(pipeline)
+#endif
 	{
+		// PSSM stays fully wired either way -- PSSM_Global's global_depth/global_camera
+		// are consumed unconditionally elsewhere in the pipeline (e.g. reflections),
+		// independent of whether PSSM's own cascade+combine shadow result is used.
+		// VSM's 48 page-render passes, by contrast, have no such external consumer,
+		// so vsm is only constructed (and its passes only registered at all) when
+		// this toggle is on -- otherwise it stays default-constructed and inert.
+		// Only the ResultTexture writer needs to be mutually exclusive (see plan
+		// notes on PSSM_Combine's unconditional overwrite): null out PSSM's combine
+		// pass here, from main.cpp, without touching PSSM's own source.
+#if SPECTRUM_USE_VSM_SHADOWS
+		pipeline.pSSM_Combine.setup_func  = nullptr;
+		pipeline.pSSM_Combine.render_func = nullptr;
+#endif
+
 		texture.mul_color = { 1, 1, 1, 0 };
 		texture.add_color = { 0, 0, 0, 1 };
 		// SMAA used to bake this in (pow(x, 1/2.2)) when it ran; now applied
@@ -191,6 +217,7 @@ public:
 				float2 v = value;
 				float3 dir = { 0.001 + v.x, sqrt(1.001 - v.length_squared()), -v.y };
 				pssm.set_position(dir);
+				vsm.set_position(dir);
 			});
 
 		circle->set_value({ 1, 0 });

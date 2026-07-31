@@ -78,6 +78,9 @@ namespace FrameGraph
 		VoxelNormalStatic,
 		VoxelAlbedoDynamic,
 		VoxelNormalDynamic,
+		VSM_Atlas,
+		VSM_PageTable,
+		VSM_PageCameras,
 		Count
 	};
 
@@ -152,6 +155,9 @@ namespace FrameGraph
 			"VoxelNormalStatic",
 			"VoxelAlbedoDynamic",
 			"VoxelNormalDynamic",
+			"VSM_Atlas",
+			"VSM_PageTable",
+			"VSM_PageCameras",
 		};
 		auto i = (unsigned int)id;
 		if (i < (unsigned int)ResourceID::Count) return names[i];

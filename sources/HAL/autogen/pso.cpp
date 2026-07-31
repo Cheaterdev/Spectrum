@@ -69,6 +69,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::FrameClassification>(device, pso[PSO::FrameClassification]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameClassificationInitDispatch>(device, pso[PSO::FrameClassificationInitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::ReflectionCombine>(device, pso[PSO::ReflectionCombine]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMApplyCompute>(device, pso[PSO::VSMApplyCompute]));
 
 
 	tasks.emplace_back(PSOBase::create<PSOS::FontRender>(device, pso[PSO::FontRender]));
@@ -109,6 +110,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectUpsample>(device, pso[PSO::VoxelIndirectUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDebug>(device, pso[PSO::VoxelDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(device, pso[PSO::DenoiserDownsample]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthDraw>(device, pso[PSO::VSMDepthDraw]));
 
 	if (device.get_properties().work_graph)
 	{

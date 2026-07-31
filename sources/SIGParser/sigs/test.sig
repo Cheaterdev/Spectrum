@@ -20,6 +20,7 @@ Pipeline MainPipeline
 
 	PSSM_Global;
 	PSSM_Cascade;
+	VSM_RenderPage;
 
 	# shadow (generate_global)
 	Scene;
@@ -50,6 +51,7 @@ Pipeline MainPipeline
 											[Async]
 											RTXShadow;
 											[Async]PSSM_Combine;
+											VSM_Combine;
 											# voxel screen (voxel_gi.generate)
 											[Async]
 											VoxelScreen;
@@ -61,11 +63,11 @@ Pipeline MainPipeline
 	# sky + post
 	Sky;
 	
-	stencil_renderer_after;
 	SMAA;
 	FSR;
 	UpscalingDLSS;
-
+	
+	stencil_renderer_after;
 
 	#Debug stuff
 

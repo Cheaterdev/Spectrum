@@ -71,6 +71,7 @@ export namespace HAL {
             void dispatch_mesh(ivec3 v);
             void dispatch(ivec3 v);
             void set_scissors(sizer_long rect);
+            void set_scissors(std::vector<sizer_long> rects);
             void set_viewports(std::vector<Viewport> viewports);
             void copy_resource(HAL::Resource* dest, HAL::Resource* source);
             void copy_buffer(HAL::Resource* dest, uint64 dest_offset, HAL::Resource* source, uint64 source_offset, uint64 size);

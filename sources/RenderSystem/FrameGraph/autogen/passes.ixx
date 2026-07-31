@@ -51,6 +51,8 @@ export import "../defines.h";
 #include "pass/Voxelize.h"
 #include "pass/Lighting.h"
 #include "pass/Mipmapping.h"
+#include "pass/VSM_RenderPage.h"
+#include "pass/VSM_Combine.h"
 #include "pass/GBuffer.h"
 #include "pass/AssetPipeline.pipeline.h"
 #include "pass/MainPipeline.pipeline.h"
@@ -96,6 +98,8 @@ export namespace Passes
 	using ::Passes::Voxelize;
 	using ::Passes::Lighting;
 	using ::Passes::Mipmapping;
+	using ::Passes::VSM_RenderPage;
+	using ::Passes::VSM_Combine;
 }
 
 export namespace Pipelines
