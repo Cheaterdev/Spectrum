@@ -134,6 +134,7 @@ public:
 		L"VSM_Atlas",
 		L"VSM_PageTable",
 		L"VSM_PageCameras",
+		L"VSM_PageHiZ",
 		L"GBuffer_Albedo",
 		L"GBuffer_Normals",
 		L"GBuffer_Depth",
@@ -378,6 +379,26 @@ public:
 		{ true, { VSM_PageCameras_c0_pass_refs + 6, 1 } },
 		{ true, { VSM_PageCameras_c0_pass_refs + 7, 1 } },
 		{ false, { VSM_PageCameras_c0_pass_refs + 8, 1 } },
+	};
+	static inline const FrameGraph::PassRef VSM_PageHiZ_c0_pass_refs[] = {
+		{ PassID::VSM_RenderPage, 0 },
+		{ PassID::VSM_RenderPage, 1 },
+		{ PassID::VSM_RenderPage, 2 },
+		{ PassID::VSM_RenderPage, 3 },
+		{ PassID::VSM_RenderPage, 4 },
+		{ PassID::VSM_RenderPage, 5 },
+		{ PassID::VSM_RenderPage, 6 },
+		{ PassID::VSM_RenderPage, 7 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_PageHiZ_c0_states[] = {
+		{ true, { VSM_PageHiZ_c0_pass_refs + 0, 1 } },
+		{ true, { VSM_PageHiZ_c0_pass_refs + 1, 1 } },
+		{ true, { VSM_PageHiZ_c0_pass_refs + 2, 1 } },
+		{ true, { VSM_PageHiZ_c0_pass_refs + 3, 1 } },
+		{ true, { VSM_PageHiZ_c0_pass_refs + 4, 1 } },
+		{ true, { VSM_PageHiZ_c0_pass_refs + 5, 1 } },
+		{ true, { VSM_PageHiZ_c0_pass_refs + 6, 1 } },
+		{ true, { VSM_PageHiZ_c0_pass_refs + 7, 1 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Albedo_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -908,6 +929,7 @@ public:
 		{ ResourceID::VSM_Atlas, 0, VSM_Atlas_c0_states },
 		{ ResourceID::VSM_PageTable, 0, VSM_PageTable_c0_states },
 		{ ResourceID::VSM_PageCameras, 0, VSM_PageCameras_c0_states },
+		{ ResourceID::VSM_PageHiZ, 0, VSM_PageHiZ_c0_states },
 		{ ResourceID::GBuffer_Albedo, 0, GBuffer_Albedo_c0_states },
 		{ ResourceID::GBuffer_Normals, 0, GBuffer_Normals_c0_states },
 		{ ResourceID::GBuffer_Depth, 0, GBuffer_Depth_c0_states },

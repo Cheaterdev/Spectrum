@@ -39,6 +39,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "MipMapping") return SlotID::MipMapping;
 	if(slot_name == "CopyTexture") return SlotID::CopyTexture;
 	if(slot_name == "DownsampleDepth") return SlotID::DownsampleDepth;
+	if(slot_name == "DownsampleDepthMip") return SlotID::DownsampleDepthMip;
 	if(slot_name == "GBufferDownsample") return SlotID::GBufferDownsample;
 	if(slot_name == "GBufferQuality") return SlotID::GBufferQuality;
 	if(slot_name == "PSSMConstants") return SlotID::PSSMConstants;
@@ -95,6 +96,8 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "ReflectionCombine") return SlotID::ReflectionCombine;
 	if(slot_name == "VSMConstants") return SlotID::VSMConstants;
 	if(slot_name == "VSMPageTableData") return SlotID::VSMPageTableData;
+	if(slot_name == "VSMPageHiZ") return SlotID::VSMPageHiZ;
+	if(slot_name == "VSMCopyPageDepth") return SlotID::VSMCopyPageDepth;
 	if(slot_name == "VSMPageBatch") return SlotID::VSMPageBatch;
 	if(slot_name == "VSMLighting") return SlotID::VSMLighting;
 	if(slot_name == "WorkGraphTest") return SlotID::WorkGraphTest;
@@ -165,6 +168,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::CopyTexture) return Slots::CopyTexture::Slot::ID;
 
 	if(id == SlotID::DownsampleDepth) return Slots::DownsampleDepth::Slot::ID;
+
+	if(id == SlotID::DownsampleDepthMip) return Slots::DownsampleDepthMip::Slot::ID;
 
 	if(id == SlotID::GBufferDownsample) return Slots::GBufferDownsample::Slot::ID;
 
@@ -278,6 +283,10 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::VSMPageTableData) return Slots::VSMPageTableData::Slot::ID;
 
+	if(id == SlotID::VSMPageHiZ) return Slots::VSMPageHiZ::Slot::ID;
+
+	if(id == SlotID::VSMCopyPageDepth) return Slots::VSMCopyPageDepth::Slot::ID;
+
 	if(id == SlotID::VSMPageBatch) return Slots::VSMPageBatch::Slot::ID;
 
 	if(id == SlotID::VSMLighting) return Slots::VSMLighting::Slot::ID;
@@ -322,6 +331,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::MipMapping) return "MipMapping";
 	if(id == SlotID::CopyTexture) return "CopyTexture";
 	if(id == SlotID::DownsampleDepth) return "DownsampleDepth";
+	if(id == SlotID::DownsampleDepthMip) return "DownsampleDepthMip";
 	if(id == SlotID::GBufferDownsample) return "GBufferDownsample";
 	if(id == SlotID::GBufferQuality) return "GBufferQuality";
 	if(id == SlotID::PSSMConstants) return "PSSMConstants";
@@ -378,6 +388,8 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::ReflectionCombine) return "ReflectionCombine";
 	if(id == SlotID::VSMConstants) return "VSMConstants";
 	if(id == SlotID::VSMPageTableData) return "VSMPageTableData";
+	if(id == SlotID::VSMPageHiZ) return "VSMPageHiZ";
+	if(id == SlotID::VSMCopyPageDepth) return "VSMCopyPageDepth";
 	if(id == SlotID::VSMPageBatch) return "VSMPageBatch";
 	if(id == SlotID::VSMLighting) return "VSMLighting";
 	if(id == SlotID::WorkGraphTest) return "WorkGraphTest";

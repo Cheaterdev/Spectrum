@@ -17,6 +17,12 @@ public:
 
 	void downsample_depth(HAL::ComputeContext& compute_context, HAL::Texture2DView& tex, HAL::Texture2DView& to);
 
+	// Fills mips 1..N of `view` from its already-populated mip 0, one 2x2
+	// min-reduction dispatch per mip (reversed-Z conservative -- see
+	// downsample_depth_mip.hlsl). Caller is responsible for mip 0's content;
+	// this only builds the coarser chain on top of it.
+	void build_hiz_pyramid(HAL::ComputeContext& compute_context, HAL::Texture2DView view);
+
 	void generate_quality(HAL::GraphicsContext& context, camera* cam, GBuffer& buffer, HAL::Texture2DView tempColor);
 	void write_to_depth(HAL::GraphicsContext& list, HAL::Texture2DView from, HAL::Texture2DView to);
 

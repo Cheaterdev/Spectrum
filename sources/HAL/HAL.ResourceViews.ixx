@@ -210,6 +210,7 @@ export
 
 
 			HLSL::Texture2DArray<> texture2DArray;
+			HLSL::RWTexture2DArray<> rwTexture2DArray;
 
 			HLSL::RenderTarget<> renderTarget;
 			HLSL::DepthStencil<> depthStencil;

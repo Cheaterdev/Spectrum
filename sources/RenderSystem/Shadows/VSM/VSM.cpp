@@ -22,7 +22,10 @@ float3 VSM::get_position()
 void VSM::set_position(float3 p)
 {
 	pos_mutex.lock();
+	bool changed = position.x != p.x || position.y != p.y || position.z != p.z;
 	position = p;
+	if (changed)
+		light_change_pending.fill(true);
 	pos_mutex.unlock();
 }
 
@@ -107,13 +110,21 @@ VSM::VSM()
 	const int pages_side       = page_table.clipmap.pages_per_level;
 	const int pages_per_level  = pages_side * pages_side;
 
+	// Phase 3: one Hi-Z pyramid slice per physical atlas slot, mip chain from
+	// page_size down to an 8x8 floor (a 1x1 mip is nearly useless as a
+	// conservative occluder and just wastes dispatches/VRAM).
+	const int physical_slots = page_table.atlas_pages_per_side * page_table.atlas_pages_per_side;
+	int pyramid_mip_count = 1;
+	for (int s = page_table.page_size; s > 8; s >>= 1)
+		pyramid_mip_count++;
+
 	// ---- Page rendering (one pass per clipmap LEVEL, all of that level's
 	// pages_per_level^2 pages rendered in a single mesh-shader dispatch via
 	// SV_ViewportArrayIndex -- see mesh_shader_vsm.hlsl) -----------------------
 
 	for (int level = 0; level < page_table.clipmap.level_count; level++)
 	{
-		m_level_setup[level] = [this, level](Passes::VSM_RenderPage::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+		m_level_setup[level] = [this, level, physical_slots, pyramid_mip_count](Passes::VSM_RenderPage::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 		{
 			int atlas_size = page_table.atlas_size_texels();
 
@@ -126,17 +137,22 @@ VSM::VSM()
 				builder.create(data.VSM_Atlas, { ivec3(atlas_size, atlas_size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
 				builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 				builder.create(data.VSM_PageCameras, { (size_t)MaxPages }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+				// Phase 3: same Static persistence as VSM_Atlas -- a page's
+				// pyramid must survive until the next time that page is
+				// dirty, which may be many frames later.
+				builder.create(data.VSM_PageHiZ, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32_FLOAT, (UINT)physical_slots, (UINT)pyramid_mip_count }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 			}
 			else
 			{
 				builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::DepthStencil);
 				builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::CopyDest);
 				builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::CopyDest);
+				builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::UnorderedAccess);
 			}
 			return true;
 		};
 
-		m_level_render[level] = [this, level, pages_side, pages_per_level](Passes::VSM_RenderPage::Context& data, FrameGraph::FrameContext& context)
+		m_level_render[level] = [this, level, pages_side, pages_per_level, pyramid_mip_count](Passes::VSM_RenderPage::Context& data, FrameGraph::FrameContext& context)
 		{
 			auto& sceneinfo = context.graph->get_context<SceneInfo>();
 			auto& caminfo   = context.graph->get_context<CameraInfo>();
@@ -156,22 +172,15 @@ VSM::VSM()
 			float2 cam_pos_ls = (float4(cam->position, 1) * light_view_cam.get_view()).xy;
 			float2 origin     = page_table.clipmap.grid_origin(level, cam_pos_ls);
 
-			bool recentered  = !level_initialized[level] || origin.x != cached_origin[level].x || origin.y != cached_origin[level].y;
-			bool light_moved = !light_initialized
-				|| current_light_pos.x != last_light_position.x
-				|| current_light_pos.y != last_light_position.y
-				|| current_light_pos.z != last_light_position.z;
+			bool recentered = !level_initialized[level] || origin.x != cached_origin[level].x || origin.y != cached_origin[level].y;
 
-			if (level == page_table.clipmap.level_count - 1)
-			{
-				// Only the light-position snapshot needs last-level-only
-				// update ordering (it's a single shared value, not per-level
-				// like the dirty masks -- take_dirty() below already reads
-				// and clears its own level's mask, so no cross-level
-				// "steals the flag" concern there).
-				light_initialized   = true;
-				last_light_position = current_light_pos;
-			}
+			// Read-and-clear this level's own sticky flag (see the member's
+			// comment in VSM.ixx) -- not "first render" here, `recentered`
+			// already covers that (level_initialized starts false).
+			pos_mutex.lock();
+			bool light_moved = light_change_pending[level];
+			light_change_pending[level] = false;
+			pos_mutex.unlock();
 
 			// recentered/light_moved invalidate every page of this level;
 			// otherwise only the pages VSMInvalidationTracker actually
@@ -246,6 +255,17 @@ VSM::VSM()
 						reinterpret_cast<const char*>(indirection.data() + lvl * pages_per_level),
 						row_stride);
 				}
+
+				// Fresh/resized pyramid holds garbage -- clear to far (0,
+				// reversed-Z) so a page's occlusion test can't falsely cull
+				// against it before that page has ever rendered real depth.
+				// One array-spanning UAV clear per mip (all physical slots
+				// at once) -- only runs once ever (cold start / resize).
+				if (data.VSM_PageHiZ.is_new())
+				{
+					for (int mip = 0; mip < pyramid_mip_count; mip++)
+						command_list->clear_uav(data.VSM_PageHiZ->create_mip(mip, *command_list).rwTexture2DArray, vec4(0, 0, 0, 0));
+				}
 			}
 
 			{
@@ -283,9 +303,26 @@ VSM::VSM()
 			}
 			{
 				Slots::VSMPageBatch batch;
-				batch.GetPage_base_slot() = base_slot;
-				batch.GetDirty_mask()     = (int)dirty_mask;
+				batch.GetPage_base_slot()  = base_slot;
+				batch.GetDirty_mask()      = (int)dirty_mask;
+				// A recenter/light-move redraw has no valid prior pyramid to
+				// test against (same slot, unrelated old world region/light
+				// angle) -- see the field's comment in vsm.sig.
+				batch.GetSkip_occlusion()  = (recentered || light_moved) ? 1 : 0;
 				graphics.set(batch);
+			}
+
+			// Phase 3: the AS reads each (meshlet, page) pair's occlusion
+			// state from its page's pyramid -- built from the LAST time that
+			// page rendered (see the rebuild loop below), not this frame's
+			// not-yet-drawn geometry. No manual transition here: like
+			// VSM_PageTable (CopyDest-written, then bound as SRV in this
+			// same draw with no explicit transition), graphics.set() tracks
+			// the read state itself.
+			{
+				Slots::VSMPageHiZ pageHiZ;
+				pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
+				graphics.set(pageHiZ);
 			}
 
 			graphics.set(scene->compiledScene);
@@ -309,6 +346,54 @@ VSM::VSM()
 					graphics.dispatch_mesh(ivec3{ (int)as_groups, 1, 1 });
 				}
 			});
+
+			// Phase 3: rebuild each just-rendered page's own Hi-Z pyramid, so
+			// the NEXT time this page goes dirty (a future frame -- pages are
+			// cached indefinitely, see Phase 2), the AS can test new geometry
+			// against this frame's depth. Only dirty pages: a cached page's
+			// pyramid still matches its still-cached depth, nothing to redo.
+			// (dirty_mask is guaranteed nonzero here -- the early return
+			// above already handled the all-cached case.)
+
+			// VSM_Atlas was just bound as a DSV for the draw above -- nudge
+			// it to a readable state for the copy shader below, same one-off
+			// manual transition idiom PSSM.cpp uses for this Static/shared
+			// resource. The next draw into it (this level next frame, or
+			// another level right after) transitions it back automatically
+			// via set_rtv.
+			command_list->transition(data.VSM_Atlas->resource, HAL::ResourceStates::SHADER_RESOURCE);
+
+			for (int local = 0; local < pages_per_level; local++)
+			{
+				if (!((dirty_mask >> local) & 1))
+					continue;
+
+				int slot = base_slot + local;
+				ivec2 atlas_origin = page_table.atlas_slot_origin(slot);
+				auto slice = data.VSM_PageHiZ->create_2d_slice(slot, *command_list);
+
+				compute.set_pipeline<PSOS::VSMCopyPageDepth>();
+				{
+					Slots::VSMCopyPageDepth copy;
+					copy.GetAtlas()        = data.VSM_Atlas->texture2D;
+					copy.GetAtlas_origin() = atlas_origin;
+					copy.GetDst_mip0()     = slice.create_mip(0, *command_list).rwTexture2D;
+					compute.set(copy);
+				}
+				compute.dispatch(ivec2(page_table.page_size, page_table.page_size), ivec2(8, 8));
+
+				MipMapGenerator::get().build_hiz_pyramid(compute, slice);
+
+				// Every mip except the last is subsequently read as another
+				// mip's SrcMip within build_hiz_pyramid, so it naturally
+				// rests as SHADER_RESOURCE afterward -- only the coarsest
+				// mip's write is never followed by a read, leaving it (and
+				// only it) in UNORDERED_ACCESS. Nudge just that one
+				// subresource so the AS's whole-array SRV read next time
+				// this slot is dirty sees a consistent state.
+				UINT last_mip_subres = (UINT)(pyramid_mip_count - 1) + (UINT)slot * (UINT)pyramid_mip_count;
+				command_list->transition(data.VSM_PageHiZ->resource, HAL::ResourceStates::SHADER_RESOURCE, last_mip_subres);
+			}
 		};
 	}
 

@@ -26,6 +26,9 @@ public:
 
 		Handlers::StructuredBuffer<Table::Camera> VSM_PageCameras = ResourceID::VSM_PageCameras;
 
+
+		Handlers::Texture VSM_PageHiZ = ResourceID::VSM_PageHiZ;
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
@@ -33,6 +36,7 @@ public:
 			{ ResourceID::VSM_Atlas, true },
 			{ ResourceID::VSM_PageTable, true },
 			{ ResourceID::VSM_PageCameras, true },
+			{ ResourceID::VSM_PageHiZ, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

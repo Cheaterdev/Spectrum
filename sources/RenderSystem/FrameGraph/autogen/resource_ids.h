@@ -81,6 +81,7 @@ namespace FrameGraph
 		VSM_Atlas,
 		VSM_PageTable,
 		VSM_PageCameras,
+		VSM_PageHiZ,
 		Count
 	};
 
@@ -158,6 +159,7 @@ namespace FrameGraph
 			"VSM_Atlas",
 			"VSM_PageTable",
 			"VSM_PageCameras",
+			"VSM_PageHiZ",
 		};
 		auto i = (unsigned int)id;
 		if (i < (unsigned int)ResourceID::Count) return names[i];

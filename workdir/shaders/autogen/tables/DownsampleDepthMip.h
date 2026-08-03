@@ -6,12 +6,10 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-struct VSMPageBatch
+struct DownsampleDepthMip
 {
-	int page_base_slot; // int
-	int dirty_mask; // int
-	int skip_occlusion; // int
-	int GetPage_base_slot() { return page_base_slot; }
-	int GetDirty_mask() { return dirty_mask; }
-	int GetSkip_occlusion() { return skip_occlusion; }
+	uint srcMip; // Texture2D<float>
+	uint dstMip; // RWTexture2D<float>
+	Texture2D<float> GetSrcMip() { return ResourceDescriptorHeap[srcMip]; }
+	RWTexture2D<float> GetDstMip() { return ResourceDescriptorHeap[dstMip]; }
 };

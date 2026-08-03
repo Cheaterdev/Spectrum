@@ -65,57 +65,59 @@ export struct DefaultLayout: public FrameLayout
 		static const uint ID = 8;
 		static const uint CB = 2;
 		static const uint CB_ID = 28;
-		static inline const std::vector<uint> tables = { 28 };
+		static const uint SRV = 1;
+		static const uint SRV_ID = 30;
+		static inline const std::vector<uint> tables = { 28, 30 };
 	};
 
 	struct Instance5
 	{
 		static const uint ID = 9;
 		static const uint CB = 2;
-		static const uint CB_ID = 30;
+		static const uint CB_ID = 31;
 		static const uint SRV = 1;
-		static const uint SRV_ID = 32;
-		static inline const std::vector<uint> tables = { 30, 32 };
+		static const uint SRV_ID = 33;
+		static inline const std::vector<uint> tables = { 31, 33 };
 	};
 
 	struct Raytracing
 	{
 		static const uint ID = 10;
 		static const uint CB = 2;
-		static const uint CB_ID = 33;
+		static const uint CB_ID = 34;
 		static const uint SRV = 1;
-		static const uint SRV_ID = 35;
-		static inline const std::vector<uint> tables = { 33, 35 };
+		static const uint SRV_ID = 36;
+		static inline const std::vector<uint> tables = { 34, 36 };
 	};
 
 	struct MaterialData
 	{
 		static const uint ID = 11;
 		static const uint CB = 2;
-		static const uint CB_ID = 36;
+		static const uint CB_ID = 37;
 		static const uint SRV = 1;
-		static const uint SRV_ID = 38;
-		static inline const std::vector<uint> tables = { 36, 38 };
+		static const uint SRV_ID = 39;
+		static inline const std::vector<uint> tables = { 37, 39 };
 	};
 
 	struct WorkGR_ClassifyPixels_NodeEmulation
 	{
 		static const uint ID = 12;
 		static const uint CB = 5;
-		static const uint CB_ID = 39;
+		static const uint CB_ID = 40;
 		static const uint UAV = 1;
-		static const uint UAV_ID = 41;
-		static inline const std::vector<uint> tables = { 39, 41 };
+		static const uint UAV_ID = 42;
+		static inline const std::vector<uint> tables = { 40, 42 };
 	};
 
 	struct WorkGR_Shadows_NodeEmulation
 	{
 		static const uint ID = 13;
 		static const uint CB = 2;
-		static const uint CB_ID = 42;
+		static const uint CB_ID = 43;
 		static const uint UAV = 1;
-		static const uint UAV_ID = 44;
-		static inline const std::vector<uint> tables = { 42, 44 };
+		static const uint UAV_ID = 45;
+		static inline const std::vector<uint> tables = { 43, 45 };
 	};
 
 	template<class Processor> static void for_each(Processor& processor)

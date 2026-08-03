@@ -1,0 +1,49 @@
+﻿
+  Scanning sources for module dependencies...
+  modules.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\modules\output\win64\vs2026_release_win64_d3d12_debug\modules.lib
+  Scanning sources for module dependencies...
+  core.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\core\output\win64\vs2026_release_win64_d3d12_debug\core.lib
+  Copy files to output paths...
+  Scanning sources for module dependencies...
+  sigparser.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\sigparser.exe
+  hal.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\hal\output\win64\vs2026_release_win64_d3d12_debug\hal.lib
+  Scanning sources for module dependencies...
+  VSM.cpp
+  rendersystem.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\rendersystem\output\win64\vs2026_release_win64_d3d12_debug\rendersystem.lib
+  Copy files to output paths...
+  Copy files to output paths...
+  Scanning sources for module dependencies...
+  Compiling...
+  Window.cpp
+  main.cpp
+  Test.Framework.ixx
+  Test.HAL.TextureUtils.ixx
+  Test.Core.ixx
+  Test.Events.ixx
+  Test.Math.Extended.ixx
+  Test.Math.ixx
+  Test.Profiling.ixx
+  Test.Threading.ixx
+  Test.Serialization.ixx
+  Test.FileSystem.ixx
+  Test.HAL.UI.ixx
+  Test.HAL.SIG.ixx
+  Test.GUI.ixx
+  Test.HAL.Rendering.ixx
+  Test.FrameGraph.ixx
+  Test.RTX.ixx
+C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\Test\Tests\Test.Profiling.ixx(221,3): warning C4018: '<': signed/unsigned mismatch [C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\test\test.vcxproj]
+C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\Test\Tests\Test.HAL.Rendering.ixx(375,1): warning C4566: character represented by universal-character-name '\u2192' cannot be represented in the current code page (1252) [C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\test\test.vcxproj]
+  Test.HAL.ixx
+  Test.HAL.TextureUtils.cpp
+  main.cpp
+C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\Test\Tests\Test.HAL.TextureUtils.cpp(134,7): warning C4566: character represented by universal-character-name '\u2192' cannot be represented in the current code page (1252) [C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\test\test.vcxproj]
+C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\Test\Tests\Test.HAL.TextureUtils.cpp(135,7): warning C4566: character represented by universal-character-name '\u2192' cannot be represented in the current code page (1252) [C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\test\test.vcxproj]
+     Creating library ..\..\bin\debug\test.lib and object ..\..\bin\debug\test.exp
+     Creating library ..\..\bin\debug\spectrum.lib and object ..\..\bin\debug\spectrum.exp
+  test.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\test.exe
+  'pwsh.exe' is not recognized as an internal or external command,
+  operable program or batch file.
+  spectrum.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\spectrum.exe
+  'pwsh.exe' is not recognized as an internal or external command,
+  operable program or batch file.

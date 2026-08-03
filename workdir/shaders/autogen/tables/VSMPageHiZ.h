@@ -6,12 +6,8 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-struct VSMPageBatch
+struct VSMPageHiZ
 {
-	int page_base_slot; // int
-	int dirty_mask; // int
-	int skip_occlusion; // int
-	int GetPage_base_slot() { return page_base_slot; }
-	int GetDirty_mask() { return dirty_mask; }
-	int GetSkip_occlusion() { return skip_occlusion; }
+	uint page_hiz; // Texture2DArray<float>
+	Texture2DArray<float> GetPage_hiz() { return ResourceDescriptorHeap[page_hiz]; }
 };

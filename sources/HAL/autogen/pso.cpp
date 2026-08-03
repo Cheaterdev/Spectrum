@@ -45,6 +45,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::InitDispatch>(device, pso[PSO::InitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::GatherMeshes>(device, pso[PSO::GatherMeshes]));
 	tasks.emplace_back(PSOBase::create<PSOS::DownsampleDepth>(device, pso[PSO::DownsampleDepth]));
+	tasks.emplace_back(PSOBase::create<PSOS::DownsampleDepthMip>(device, pso[PSO::DownsampleDepthMip]));
 	tasks.emplace_back(PSOBase::create<PSOS::MipMapping>(device, pso[PSO::MipMapping]));
 	tasks.emplace_back(PSOBase::create<PSOS::PSSMApplyCompute>(device, pso[PSO::PSSMApplyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::SkyCompute>(device, pso[PSO::SkyCompute]));
@@ -69,6 +70,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::FrameClassification>(device, pso[PSO::FrameClassification]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameClassificationInitDispatch>(device, pso[PSO::FrameClassificationInitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::ReflectionCombine>(device, pso[PSO::ReflectionCombine]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepth>(device, pso[PSO::VSMCopyPageDepth]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMApplyCompute>(device, pso[PSO::VSMApplyCompute]));
 
 

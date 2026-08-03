@@ -84,6 +84,42 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 }
 
 
+void MipMapGenerator::build_hiz_pyramid(HAL::ComputeContext& compute_context, HAL::Texture2DView view)
+{
+	PROFILE(L"build_hiz_pyramid");
+
+	compute_context.set_signature(Layouts::DefaultLayout);
+	compute_context.set_pipeline<PSOS::DownsampleDepthMip>();
+
+	uint32_t maps = view.get_mip_count() - 1;
+	auto size = view.get_size();
+
+	// One dispatch per mip, 2x2->1 min-reduction each step (see
+	// downsample_depth_mip.hlsl) -- unlike generate()'s box-average color
+	// chain, a min-reduction pyramid this shallow (~6-7 mips) doesn't need
+	// the 4-mips-per-dispatch batching that amortizes dispatch overhead for
+	// much deeper color mip chains.
+	for (uint32_t mip = 0; mip < maps; mip++)
+	{
+		uint32_t DstWidth = uint32_t(size.x >> (mip + 1));
+		uint32_t DstHeight = uint32_t(size.y >> (mip + 1));
+
+		if (DstWidth == 0)
+			DstWidth = 1;
+
+		if (DstHeight == 0)
+			DstHeight = 1;
+
+		Slots::DownsampleDepthMip data;
+		data.GetSrcMip() = view.create_mip(mip, compute_context.get_base()).texture2D;
+		data.GetDstMip() = view.create_mip(mip + 1, compute_context.get_base()).rwTexture2D;
+		compute_context.set(data);
+
+		compute_context.dispatch(ivec2(DstWidth, DstHeight), ivec2(8, 8));
+	}
+}
+
+
 void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL::Texture::ptr tex, HAL::Texture::ptr& to)
 {
 	compute_context.set_pipeline<PSOS::DownsampleDepth>();

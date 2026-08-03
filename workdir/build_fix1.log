@@ -1,0 +1,248 @@
+﻿
+  Scanning sources for module dependencies...
+  modules.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\modules\output\win64\vs2026_release_win64_d3d12_debug\modules.lib
+  Scanning sources for module dependencies...
+  core.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\core\output\win64\vs2026_release_win64_d3d12_debug\core.lib
+  Copy files to output paths...
+  Scanning sources for module dependencies...
+  sigparser.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\sigparser.exe
+  VSMPageBatch.table.ixx
+  Compiling...
+  VSMPageBatch.table.ixx
+  VSMPageBatch.ixx
+  autogen.ixx
+  HAL.ixx
+  HAL.DXGI.Swapchain.cpp
+  pso.cpp
+  autogen.cpp
+  HAL.Device.cpp
+  HAL.D3D12.Queue.cpp
+  HAL.D3D12.TiledMemoryManager.cpp
+  HAL.D3D12.CommandAllocator.cpp
+  HAL.Queue.cpp
+  HAL.D3D12.Heap.cpp
+  HAL.FrameManager.cpp
+  HAL.CommandList.cpp
+  HAL.TiledMemoryManager.cpp
+  HAL.ResourceStates.cpp
+  PSO_sig.cpp
+  HAL.CommandListRecorder.cpp
+  HAL.DescriptorHeap.cpp
+  hal.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\hal\output\win64\vs2026_release_win64_d3d12_debug\hal.lib
+  Scanning sources for module dependencies...
+  Compiling...
+  UpscalingDLSS.ixx
+  RenderSystem.ixx
+  FrameGraph.Base.ixx
+  TextSystem.ixx
+  Camera.ixx
+  GPUTilesBuffer.ixx
+C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\RenderSystem\FrameGraph\FrameGraph.Base.ixx(4,30): warning C5201: a module declaration can appear only at the start of a translation unit unless a global module fragment is used [C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\rendersystem\rendersystem.vcxproj]
+  passes.ixx
+  Texture.ixx
+  Asset.ixx
+  FrameGraph.ixx
+  VisibilityBuffer.ixx
+  BinaryAsset.ixx
+  ReflectionDenoiser.ixx
+  Context.ixx
+  TextureAsset.ixx
+  ShadowDenoiser.ixx
+  Base.ixx
+  BlueNoise.ixx
+  Image.ixx
+  ColoredRect.ixx
+  Skin.ixx
+  Dragger.ixx
+  ProgressBar.ixx
+  BRDF.ixx
+  HorizontalLayout.ixx
+  VerticalLayout.ixx
+  FloatSlider.ixx
+  Separator.ixx
+  Renderer.ixx
+  MaterialAsset.ixx
+  MipMapGeneration.ixx
+  ScrollBar.ixx
+  StatusBar.ixx
+  CircleSelector.ixx
+  ToggleSwitch.ixx
+  CheckBox.ixx
+  Resizer.ixx
+  Scene.ixx
+  ShaderMaterial.ixx
+  Resizable.ixx
+  ScrollContainer.ixx
+  TaskViewer.ixx
+  OutputWindow.ixx
+  Label.ixx
+  Container.ixx
+  VSMInvalidationTracker.ixx
+  EditText.ixx
+  MenuList.ixx
+  Tree.ixx
+  TimerGraph.ixx
+  ListBox.ixx
+  CheckBoxText.ixx
+  Tooltip.ixx
+  StatGraph.ixx
+  ColorPicker.ixx
+  Button.ixx
+  TimerWatcher.ixx
+  TabControl.ixx
+  ComboBox.ixx
+  CollapsibleSection.ixx
+  ValueBox.ixx
+  ObjectViewer.ixx
+  Window.ixx
+  ComponentWindow.ixx
+  OptionBox.ixx
+  Table.ixx
+  DockBase.ixx
+  Comment.ixx
+  Canvas.ixx
+  FlowManager.ixx
+  ParameterWindow.ixx
+  FlowSystem.ixx
+  GUI.ixx
+  Values.ixx
+  AssetExplorer.ixx
+  MeshAsset.ixx
+  universal_material.ixx
+  MeshRenderer.ixx
+  EngineAssets.ixx
+  RTX.ixx
+  FrameGraphContext.ixx
+  Sky.ixx
+  StencilRenderer.ixx
+  SMAA.ixx
+  PSSM.ixx
+  PreSceneSystem.ixx
+  SceneSystem.ixx
+  VSM.ixx
+  AssetRenderer.ixx
+  VoxelGI.ixx
+  GraphicsSystem.ixx
+  Graphics.ixx
+  FrameGraph.Debug.ixx
+  EngineAssets.cpp
+  FSR.cpp
+  TextureAsset.cpp
+  ShadowDenoiser.cpp
+  RTX.cpp
+  MeshAsset.cpp
+  UpscalingDLSS.cpp
+  Camera.cpp
+  MaterialAsset.cpp
+  BinaryAsset.cpp
+  AssetExplorer.cpp
+  ReflectionDenoiser.cpp
+  AssetRenderer.cpp
+  SMAA.cpp
+  Context2.cpp
+  Asset.cpp
+  Sky.cpp
+  TextSystem.cpp
+  VoxelGIGraph.cpp
+  FrameGraph.cpp
+  FrameGraph.Debug.cpp
+  FrameGraph.Debug.Timeline.cpp
+  PassDefaults.cpp
+  ObjectViewer.cpp
+  Base.cpp
+  OutputWindow.cpp
+C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\RenderSystem\FrameGraph\bend_sss_cpu.h(89,63): warning C4244: '=': conversion from 'int' to 'float', possible loss of data [C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\rendersystem\rendersystem.vcxproj]
+  (compiling source file '../../sources/RenderSystem/FrameGraph/PassDefaults.cpp')
+  
+  TaskViewer.cpp
+  TimerGraph.cpp
+  Button.cpp
+  TimerWatcher.cpp
+  CheckBox.cpp
+  CheckBoxText.cpp
+  CircleSelector.cpp
+  CollapsibleSection.cpp
+  ColoredRect.cpp
+  ColorPicker.cpp
+  Container.cpp
+  FlowManager.cpp
+  Comment.cpp
+  FlowSystem.cpp
+  EditText.cpp
+  DockBase.cpp
+  Canvas.cpp
+  ComboBox.cpp
+  ComponentWindow.cpp
+  ParameterWindow.cpp
+  Dragger.cpp
+  FloatSlider.cpp
+  HorizontalLayout.cpp
+  Image.cpp
+  Label.cpp
+  MenuList.cpp
+  ListBox.cpp
+  OptionBox.cpp
+  ProgressBar.cpp
+  Resizable.cpp
+  Resizer.cpp
+  ScrollBar.cpp
+  Separator.cpp
+  ScrollContainer.cpp
+  StatusBar.cpp
+  TabControl.cpp
+  Table.cpp
+  ValueBox.cpp
+  Tree.cpp
+  Tooltip.cpp
+  ToggleSwitch.cpp
+  VerticalLayout.cpp
+  StatGraph.cpp
+  Window.cpp
+  NinePatch.cpp
+  Renderer.cpp
+  Skin.cpp
+  BlueNoise.cpp
+  MipMapGeneration.cpp
+  ShaderMaterial.cpp
+  Values.cpp
+  BRDF.cpp
+  PSSM.cpp
+  Texture.cpp
+  universal_material.cpp
+  universal_material.events.cpp
+  AssimpLoader.cpp
+  StencilRenderer.cpp
+  RenderSystem.cpp
+  MeshletGeneration.cpp
+  MeshRenderer.cpp
+  PreSceneSystem.cpp
+  Scene.cpp
+  SceneSystem.cpp
+  SceneObject.cpp
+  VSM.cpp
+  VisibilityBuffer.cpp
+  GPUTilesBuffer.cpp
+  rendersystem.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\rendersystem\output\win64\vs2026_release_win64_d3d12_debug\rendersystem.lib
+  Copy files to output paths...
+  Copy files to output paths...
+  Scanning sources for module dependencies...
+  Window.cpp
+  main.cpp
+  Compiling...
+  Test.HAL.TextureUtils.ixx
+  Test.RTX.ixx
+  Test.GUI.ixx
+  Test.HAL.SIG.ixx
+  Test.HAL.UI.ixx
+  Test.HAL.Rendering.ixx
+  Test.FrameGraph.ixx
+C:\Users\Bohdan\Documents\GitHub\Spectrum\sources\Test\Tests\Test.HAL.Rendering.ixx(375,1): warning C4566: character represented by universal-character-name '\u2192' cannot be represented in the current code page (1252) [C:\Users\Bohdan\Documents\GitHub\Spectrum\projects\test\test.vcxproj]
+  Test.HAL.ixx
+     Creating library ..\..\bin\debug\test.lib and object ..\..\bin\debug\test.exp
+  test.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\test.exe
+  'pwsh.exe' is not recognized as an internal or external command,
+  operable program or batch file.
+     Creating library ..\..\bin\debug\spectrum.lib and object ..\..\bin\debug\spectrum.exp
+  spectrum.vcxproj -> C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\spectrum.exe
+  'pwsh.exe' is not recognized as an internal or external command,
+  operable program or batch file.

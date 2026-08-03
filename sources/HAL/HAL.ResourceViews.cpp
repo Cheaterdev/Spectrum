@@ -97,7 +97,7 @@ namespace HAL
 			view_desc.MipLevels = desc.MipLevels - view_desc.MipSlice;
 		}
 
-		auto hlsl = frame.alloc_descriptor(4, DescriptorHeapIndex{
+		auto hlsl = frame.alloc_descriptor(5, DescriptorHeapIndex{
 			                                   HAL::DescriptorHeapType::CBV_SRV_UAV,
 			                                   HAL::DescriptorHeapFlags::ShaderVisible
 		                                   });
@@ -110,6 +110,7 @@ namespace HAL
 			rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
 
 			texture2DArray = HLSL::Texture2DArray<>(hlsl[2]);
+			rwTexture2DArray = HLSL::RWTexture2DArray<>(hlsl[4]);
 		}
 
 
@@ -136,6 +137,8 @@ namespace HAL
 		{
 			if (desc.is2D() && view_desc.ArraySize == 1)
 				rwTexture2D.create(resource, view_desc.MipSlice, view_desc.FirstArraySlice);
+			else if (desc.is2D())
+				rwTexture2DArray.create(resource, view_desc.MipSlice, 1, view_desc.FirstArraySlice, view_desc.ArraySize);
 				//	else if (desc.is3D())
 				//		rwTexture3D.create(resource, view_desc.MipSlice);
 			else

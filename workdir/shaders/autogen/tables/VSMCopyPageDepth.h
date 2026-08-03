@@ -6,12 +6,12 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-struct VSMPageBatch
+struct VSMCopyPageDepth
 {
-	int page_base_slot; // int
-	int dirty_mask; // int
-	int skip_occlusion; // int
-	int GetPage_base_slot() { return page_base_slot; }
-	int GetDirty_mask() { return dirty_mask; }
-	int GetSkip_occlusion() { return skip_occlusion; }
+	int2 atlas_origin; // int2
+	uint atlas; // Texture2D<float>
+	uint dst_mip0; // RWTexture2D<float>
+	int2 GetAtlas_origin() { return atlas_origin; }
+	Texture2D<float> GetAtlas() { return ResourceDescriptorHeap[atlas]; }
+	RWTexture2D<float> GetDst_mip0() { return ResourceDescriptorHeap[dst_mip0]; }
 };

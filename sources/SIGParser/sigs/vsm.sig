@@ -32,6 +32,43 @@ struct VSMPageTableData
 	StructuredBuffer<Camera> page_cameras;
 }
 
+# Phase 3: per-physical-atlas-slot Hi-Z pyramid (one array slice per slot,
+# each its own mip chain -- NOT packed into VSM_Atlas itself, since mip
+# downsampling across shared-atlas tile edges would bleed neighboring pages'
+# depth into each other). Array slice = physical atlas slot, same indexing
+# VSM_Atlas's viewport routing already uses (page_base_slot + local page).
+#
+# Instance4, not Instance3: mesh_shader_vsm.hlsl's AS/VS need this alongside
+# VSMPageTableData in the SAME PSO (VSMDepthDraw), and Instance0/2/3 are
+# already taken there (VSMPageBatch/MeshInstanceInfo/VSMPageTableData) --
+# Instance1 is also unsafe (aliases MeshInfo's fixed slot, see
+# VSMPageTableData's comment above).
+[Bind = DefaultLayout::Instance4]
+struct VSMPageHiZ
+{
+	Texture2DArray<float> page_hiz;
+}
+
+# Copies one page's just-rendered region of VSM_Atlas into VSMPageHiZ's mip 0
+# for that slot -- a small dedicated shader rather than a generic sub-rect
+# SRV view, since VSM_Atlas (one monolithic depth texture) and VSMPageHiZ
+# (a Texture2DArray) are different resource shapes.
+[Bind = DefaultLayout::Instance0]
+struct VSMCopyPageDepth
+{
+	Texture2D<float> atlas;
+	int2 atlas_origin;
+	RWTexture2D<float> dst_mip0;
+}
+
+ComputePSO VSMCopyPageDepth
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = vsm_copy_page_depth;
+}
+
 [Bind = DefaultLayout::Instance0]
 struct VSMPageBatch
 {
@@ -40,6 +77,17 @@ struct VSMPageBatch
 	# this frame. Phase 2 per-page invalidation: a page outside this mask
 	# is skipped by the AS even if visible, keeping its cached content.
 	int dirty_mask;
+	# Phase 3: nonzero when this level's dirty_mask came from a full
+	# recenter/light-move invalidation rather than a per-object scene
+	# change. On a recenter, the SAME physical atlas slot now represents a
+	# DIFFERENT world region (or, on light-move, the same region under a
+	# different light angle) -- its Hi-Z pyramid still holds whatever was
+	# there before, which has nothing to do with this frame's geometry.
+	# The AS must skip the occlusion test in that case (frustum-only),
+	# since testing against that stale pyramid data would falsely occlude
+	# real geometry (see the "meshlets not rasterized" regression this
+	# fixed).
+	int skip_occlusion;
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -93,6 +141,7 @@ PassNode VSM_RenderPage
 	[Write] Texture VSM_Atlas;
 	[Write] Texture VSM_PageTable;
 	[Write] StructuredBuffer<Camera> VSM_PageCameras;
+	[Write] Texture VSM_PageHiZ;
 }
 
 [Compute]
