@@ -566,6 +566,10 @@ export{
 			void set_scissors(sizer_long rect);
 			void set_scissors(std::vector<sizer_long> rects);
 			void set_viewports(std::vector<Viewport> viewports);
+			// Clears only the given rects of the currently-bound DSV (from the
+			// last set_rtv call) -- for a shared/persistent depth target where
+			// other regions must keep their prior-frame content.
+			void clear_depth_rects(std::vector<sizer_long> rects, float depth);
 
 			void dispatch_mesh(ivec3 v);
 			void dispatch_mesh(DispatchMeshArguments args);

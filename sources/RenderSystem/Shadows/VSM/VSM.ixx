@@ -8,6 +8,7 @@ import :FrameGraphContext;
 import :BRDF;
 import :VSMClipmap;
 import :VSMPageTable;
+import :VSMInvalidationTracker;
 
 import FrameGraph;
 import HAL;
@@ -36,9 +37,30 @@ public:
 
 private:
 	VSMPageTable page_table;
+	VSMInvalidationTracker tracker;
 
 	std::mutex pos_mutex;
 	float3 position;
+
+	// Phase 2 caching state: per-level "is this the first time / has the
+	// clipmap grid recentered since last frame" tracking. Written and read
+	// only from within VSM_RenderPage's render() callbacks, which the
+	// FrameGraph executes single-threaded per frame, so no separate lock is
+	// needed beyond pos_mutex (which already guards `position`, read here
+	// too via get_position()).
+	std::array<bool, MaxLevels>   level_initialized{};
+	std::array<float2, MaxLevels> cached_origin{};
+
+	// Light direction/position isn't a Scene event -- set_position() (driven
+	// by the sun-direction UI control) doesn't touch the scene at all, so
+	// VSMInvalidationTracker never sees it. Without this, a light change
+	// wouldn't just leave shadows stale: VSM_Combine picks pages using the
+	// *current* light-space projection while sampling depth data rendered
+	// under whatever light direction was active last time that page
+	// rendered -- a real mismatch, not just staleness. Compared/updated
+	// once per frame (at the last level), same ordering fix as tracker.clear().
+	bool   light_initialized = false;
+	float3 last_light_position{};
 
 	std::array<Passes::VSM_RenderPage::setup_func_type,  MaxLevels> m_level_setup;
 	std::array<Passes::VSM_RenderPage::render_func_type, MaxLevels> m_level_render;
@@ -50,6 +72,11 @@ public:
 
 	float3 get_position();
 	void set_position(float3 p);
+
+	// Call once, after the Scene exists (VSM is a class member wired at
+	// construction time, before main.cpp creates the scene -- mirrors
+	// stenciler->scene = scene; being assigned post-construction too).
+	void attach_scene(std::shared_ptr<Scene> scene);
 
 	VSM();
 

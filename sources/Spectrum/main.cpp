@@ -187,6 +187,13 @@ public:
 		stenciler->scene = scene;
 		base::add_child(stenciler);
 
+#if SPECTRUM_USE_VSM_SHADOWS
+		// VSM is a class member (wired at construction, before scene exists
+		// above) -- its Phase 2 invalidation tracker registers scene event
+		// handlers here instead, once the scene is actually available.
+		vsm.attach_scene(scene);
+#endif
+
 
 		info.reset(new GUI::Elements::label);
 		info->docking = GUI::dock::TOP;

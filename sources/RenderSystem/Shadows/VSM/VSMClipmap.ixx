@@ -39,6 +39,21 @@ export
 			return origin + float2((float)page.x, (float)page.y) * page_world_size(level);
 		}
 
+		// Inverse of page_min: which page a light-view-space XY position
+		// falls into, clamped to the valid [0, pages_per_level) range (a
+		// point outside the level's grid maps to the nearest edge page --
+		// used for per-object invalidation, where "clamp to the edge" is a
+		// safe, if slightly conservative, fallback rather than a hard error).
+		ivec2 world_to_page(int level, float2 pos_ls, float2 origin) const
+		{
+			float size = page_world_size(level);
+			int px = (int)std::floor((pos_ls.x - origin.x) / size);
+			int py = (int)std::floor((pos_ls.y - origin.y) / size);
+			px = std::clamp(px, 0, pages_per_level - 1);
+			py = std::clamp(py, 0, pages_per_level - 1);
+			return ivec2(px, py);
+		}
+
 		int total_pages() const
 		{
 			return level_count * pages_per_level * pages_per_level;

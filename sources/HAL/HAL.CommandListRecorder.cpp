@@ -198,6 +198,16 @@ namespace HAL
 		});
 	}
 
+	void DelayedCommandList::clear_depth_rects(const Handles::DSV& dsv, float depth, std::vector<sizer_long> rects)
+	{
+		if constexpr (BuildOptions::Dev)
+			debug_recorder.push_back({CommandType::ClearDepth,
+				"ClearDepthRects d=" + std::to_string(depth) + " n=" + std::to_string(rects.size())});
+		push_fn(CommandType::ClearDepth, [dsv, depth, rc = std::move(rects)](API::CommandList& list) {
+			list.clear_depth_rects(dsv, depth, rc);
+		});
+	}
+
 	void DelayedCommandList::clear_depth_stencil(const Handles::DSV& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil)
 	{
 		if constexpr (BuildOptions::Dev)

@@ -42,6 +42,46 @@ namespace
 	}
 }
 
+void VSM::attach_scene(std::shared_ptr<Scene> scene)
+{
+	// Per-page invalidation (Phase 2): map a touched object's world AABB to
+	// the (level, page) bits it overlaps, via the same light-view-space
+	// projection/clamp math VSMClipmap already uses for page selection --
+	// world_to_page's edge-clamp means an object slightly outside a coarse
+	// level's grid still marks that level's nearest edge page (conservative,
+	// not a correctness bug).
+	tracker.attach(scene, [this](scene_object* object)
+	{
+		vec3 wmin = object->get_min();
+		vec3 wmax = object->get_max();
+
+		camera light_view_cam = make_light_view_camera(get_position());
+		box bounds_ls = light_view_cam.get_points(wmin, wmax).get_bounds_in(light_view_cam.get_view());
+		float2 ls_min(bounds_ls.left, bounds_ls.top);
+		float2 ls_max(bounds_ls.right, bounds_ls.bottom);
+
+		for (int level = 0; level < page_table.clipmap.level_count; level++)
+		{
+			// A level that hasn't rendered yet has no meaningful
+			// cached_origin -- it'll get a full-mask render (recentered)
+			// the first time it does run, so there's nothing useful to
+			// mark here yet.
+			if (!level_initialized[level])
+				continue;
+
+			ivec2 p0 = page_table.clipmap.world_to_page(level, ls_min, cached_origin[level]);
+			ivec2 p1 = page_table.clipmap.world_to_page(level, ls_max, cached_origin[level]);
+
+			uint32_t mask = 0;
+			for (int py = p0.y; py <= p1.y; py++)
+				for (int px = p0.x; px <= p1.x; px++)
+					mask |= 1u << (py * page_table.clipmap.pages_per_level + px);
+
+			tracker.mark_pages(level, mask);
+		}
+	});
+}
+
 VSM::VSM()
 {
 	position = float3(200, 400, 200);
@@ -79,9 +119,13 @@ VSM::VSM()
 
 			if (level == 0)
 			{
-				builder.create(data.VSM_Atlas, { ivec3(atlas_size, atlas_size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil);
-				builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest);
-				builder.create(data.VSM_PageCameras, { (size_t)MaxPages }, FrameGraph::ResourceFlags::CopyDest);
+				// Static: Phase 2 caching relies on this atlas (and the page
+				// table / page cameras) surviving across frames -- a level
+				// that isn't dirty this frame does nothing and relies on its
+				// pages still holding last frame's content.
+				builder.create(data.VSM_Atlas, { ivec3(atlas_size, atlas_size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
+				builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+				builder.create(data.VSM_PageCameras, { (size_t)MaxPages }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 			}
 			else
 			{
@@ -94,21 +138,63 @@ VSM::VSM()
 
 		m_level_render[level] = [this, level, pages_side, pages_per_level](Passes::VSM_RenderPage::Context& data, FrameGraph::FrameContext& context)
 		{
-			auto& command_list = context.get_list();
-			auto& graphics      = command_list->get_graphics();
-			auto& compute       = command_list->get_compute();
-
 			auto& sceneinfo = context.graph->get_context<SceneInfo>();
 			auto& caminfo   = context.graph->get_context<CameraInfo>();
 			auto  cam       = caminfo.cam;
 			auto  scene     = sceneinfo.scene;
 
-			graphics.set_signature(Layouts::DefaultLayout);
-			compute.set_signature(Layouts::DefaultLayout);
-
-			camera light_view_cam = make_light_view_camera(get_position());
+			// Phase 2 caching: only pay for a re-render when something
+			// actually requires it -- first time this level is ever
+			// rendered, the clipmap grid recentered (crossed a page
+			// boundary, so the local page indices now mean a different
+			// world region than what's cached there), or any scene change
+			// happened (coarse whole-VSM invalidation, see
+			// VSMInvalidationTracker). Otherwise this level's pages keep
+			// exactly what they held last frame -- zero GPU work.
+			float3 current_light_pos = get_position();
+			camera light_view_cam = make_light_view_camera(current_light_pos);
 			float2 cam_pos_ls = (float4(cam->position, 1) * light_view_cam.get_view()).xy;
 			float2 origin     = page_table.clipmap.grid_origin(level, cam_pos_ls);
+
+			bool recentered  = !level_initialized[level] || origin.x != cached_origin[level].x || origin.y != cached_origin[level].y;
+			bool light_moved = !light_initialized
+				|| current_light_pos.x != last_light_position.x
+				|| current_light_pos.y != last_light_position.y
+				|| current_light_pos.z != last_light_position.z;
+
+			if (level == page_table.clipmap.level_count - 1)
+			{
+				// Only the light-position snapshot needs last-level-only
+				// update ordering (it's a single shared value, not per-level
+				// like the dirty masks -- take_dirty() below already reads
+				// and clears its own level's mask, so no cross-level
+				// "steals the flag" concern there).
+				light_initialized   = true;
+				last_light_position = current_light_pos;
+			}
+
+			// recentered/light_moved invalidate every page of this level;
+			// otherwise only the pages VSMInvalidationTracker actually
+			// marked (from scene events, mapped to pages via world_to_page
+			// in attach_scene's callback) need a refresh. Always drain the
+			// tracker's mask (even when unused below) so stale bits from a
+			// recenter/light-move frame don't linger into the next one.
+			uint32_t all_pages_mask = (1u << pages_per_level) - 1;
+			uint32_t scene_mask     = tracker.take_dirty(level) & all_pages_mask;
+			uint32_t dirty_mask     = (recentered || light_moved) ? all_pages_mask : scene_mask;
+
+			if (dirty_mask == 0)
+				return;
+
+			level_initialized[level] = true;
+			cached_origin[level]     = origin;
+
+			auto& command_list = context.get_list();
+			auto& graphics      = command_list->get_graphics();
+			auto& compute       = command_list->get_compute();
+
+			graphics.set_signature(Layouts::DefaultLayout);
+			compute.set_signature(Layouts::DefaultLayout);
 
 			auto min = scene->get_min();
 			auto max = scene->get_max();
@@ -165,7 +251,23 @@ VSM::VSM()
 			{
 				RT::DepthOnly rt;
 				rt.GetDepth() = data.VSM_Atlas->depthStencil;
-				command_list->get_graphics().set_rtv(rt, level == 0 ? (RTOptions::Default | RTOptions::ClearDepth) : RTOptions::Default);
+				// No RTOptions::ClearDepth here: VSM_Atlas is shared and
+				// Static across all levels now (Phase 2 caching), so a
+				// whole-resource clear would wipe out other levels' cached
+				// pages. Clear only the pages actually being re-rendered
+				// this frame (dirty_mask) -- a page kept cached must NOT be
+				// cleared, or its surviving depth data would be wiped even
+				// though the AS skips rendering into it.
+				std::vector<sizer_long> dirty_scissors;
+				dirty_scissors.reserve(pages_per_level);
+				for (int local = 0; local < pages_per_level; local++)
+				{
+					if ((dirty_mask >> local) & 1)
+						dirty_scissors.push_back(scissors[local]);
+				}
+
+				command_list->get_graphics().set_rtv(rt, RTOptions::Default);
+				graphics.clear_depth_rects(dirty_scissors, 0.0f);
 			}
 
 			graphics.set_viewports(viewports);
@@ -182,6 +284,7 @@ VSM::VSM()
 			{
 				Slots::VSMPageBatch batch;
 				batch.GetPage_base_slot() = base_slot;
+				batch.GetDirty_mask()     = (int)dirty_mask;
 				graphics.set(batch);
 			}
 

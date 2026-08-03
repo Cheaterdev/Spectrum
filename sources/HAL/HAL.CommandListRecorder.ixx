@@ -153,6 +153,7 @@ export namespace HAL
 		void clear_rtv(const Handles::RTV& h, vec4 ClearColor);
 		void clear_stencil(const Handles::DSV& dsv, UINT8 stencil);
 		void clear_depth(const Handles::DSV& dsv, float depth);
+		void clear_depth_rects(const Handles::DSV& dsv, float depth, std::vector<sizer_long> rects);
 		void clear_depth_stencil(const Handles::DSV& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil);
 
 		void set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST, bool adjusted = false, uint controlpoints = 0);

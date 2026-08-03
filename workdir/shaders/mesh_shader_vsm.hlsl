@@ -106,7 +106,12 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
 	matrix node_mat = node.GetNode_global_matrix();
 	MeshletCullData cull_data = meshInstanceInfo.GetMeshletCullData()[meshInfo.GetMeshlet_offset_local() + meshletIndex];
 
-	bool visible = valid && vsm_is_visible(cull_data, node_mat, page_cam);
+	// Phase 2 per-page caching: a page outside this frame's dirty mask keeps
+	// its existing content even if this meshlet would otherwise be visible
+	// there -- CPU only clears the pages actually being re-rendered, so
+	// skipping the geometry here is what makes that clear valid.
+	bool page_dirty = (GetVSMPageBatch().GetDirty_mask() >> pageLocal) & 1;
+	bool visible = valid && page_dirty && vsm_is_visible(cull_data, node_mat, page_cam);
 
 	if (visible)
 	{

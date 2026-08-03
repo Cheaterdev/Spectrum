@@ -9,5 +9,7 @@
 struct VSMPageBatch
 {
 	int page_base_slot; // int
+	int dirty_mask; // int
 	int GetPage_base_slot() { return page_base_slot; }
+	int GetDirty_mask() { return dirty_mask; }
 };

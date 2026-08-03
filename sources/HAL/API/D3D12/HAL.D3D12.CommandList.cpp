@@ -96,6 +96,12 @@ namespace HAL
             m_commandList->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
         }
 
+        void CommandList::clear_depth_rects(const Handles::DSV& dsv, float depth, std::vector<sizer_long> rects)
+        {
+            m_commandList->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_DEPTH, depth, 0,
+                static_cast<UINT>(rects.size()), reinterpret_cast<const D3D12_RECT*>(rects.data()));
+        }
+
         void CommandList::clear_depth_stencil(const Handles::DSV& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil)
         {
             m_commandList->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAGS((depth * D3D12_CLEAR_FLAG_DEPTH) | (stencil * D3D12_CLEAR_FLAG_STENCIL)), fdepth, fstencil, 0, nullptr);

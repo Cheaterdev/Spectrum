@@ -18,12 +18,15 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::VSMPageBatch;
 		int page_base_slot;
+		int dirty_mask;
 		int& GetPage_base_slot() { return page_base_slot; }
+		int& GetDirty_mask() { return dirty_mask; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(page_base_slot);
+			compiler.compile(dirty_mask);
 		}
 		using Compiled = VSMPageBatch;
 
@@ -35,6 +38,7 @@ export namespace Table
 		SERIALIZE()
 		{
 			ar& NVP(page_base_slot);
+			ar& NVP(dirty_mask);
 		}
 
 	};

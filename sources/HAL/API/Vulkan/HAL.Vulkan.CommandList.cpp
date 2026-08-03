@@ -377,6 +377,63 @@ namespace HAL::API
     {
         if (d) clear_depth(dsv, fd);
     }
+
+    void CommandList::clear_depth_rects(const Handles::DSV& dsv, float depth, std::vector<sizer_long> rects)
+    {
+        if (vk_cmd == VK_NULL_HANDLE || !dsv.is_valid()) return;
+
+        auto& ri = dsv.get_resource_info();
+        auto* dv = std::get_if<Views::DepthStencil>(&ri.view);
+        if (!dv || !dv->Resource) return;
+
+        auto& api = static_cast<API::Resource&>(*dv->Resource);
+        VkImageView view = api.get_vk_image_view();
+        if (view == VK_NULL_HANDLE) return;
+
+        end_rendering_if_active();
+
+        {
+            VkImageMemoryBarrier2 b{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+            b.srcStageMask  = VK_PIPELINE_STAGE_2_NONE;
+            b.srcAccessMask = 0;
+            b.dstStageMask  = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
+            b.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            b.oldLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
+            b.newLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            b.image         = api.get_vk_image();
+            b.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
+            VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+            dep.imageMemoryBarrierCount = 1;
+            dep.pImageMemoryBarriers    = &b;
+            vkCmdPipelineBarrier2(vk_cmd, &dep);
+        }
+
+        VkClearValue cv;
+        cv.depthStencil = { depth, 0 };
+
+        VkRenderingAttachmentInfo att{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+        att.imageView   = view;
+        att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        att.loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        att.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+        att.clearValue  = cv;
+
+        // One begin/end per rect -- dynamic rendering's renderArea IS the
+        // clear scope for LOAD_OP_CLEAR, so restricting it per-rect gives a
+        // scoped clear without needing a separate vkCmdClearAttachments path.
+        for (auto& rect : rects)
+        {
+            VkRenderingInfo rinfo{ VK_STRUCTURE_TYPE_RENDERING_INFO };
+            rinfo.renderArea = {
+                { (int32_t)rect.left, (int32_t)rect.top },
+                { (uint32_t)(rect.right - rect.left), (uint32_t)(rect.bottom - rect.top) } };
+            rinfo.layerCount       = 1;
+            rinfo.pDepthAttachment = &att;
+
+            vkCmdBeginRendering(vk_cmd, &rinfo);
+            vkCmdEndRendering(vk_cmd);
+        }
+    }
     void CommandList::clear_stencil(const Handles::DSV&, UINT8) { ASSERT(0); }
     void CommandList::clear_uav(const Handles::UAV& h, vec4 color)
     {

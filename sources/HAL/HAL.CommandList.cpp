@@ -643,6 +643,12 @@ namespace HAL
 	}
 
 
+	void GraphicsContext::clear_depth_rects(std::vector<sizer_long> rects, float depth)
+	{
+		if (compiled_rt.table_dsv)
+			list->clear_depth_rects(compiled_rt.table_dsv[0], depth, rects);
+	}
+
 	void GraphicsContext::set_scissors(sizer_long rect)
 	{
 		list->set_scissors(rect);

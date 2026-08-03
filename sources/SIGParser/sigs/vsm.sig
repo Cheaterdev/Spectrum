@@ -36,6 +36,10 @@ struct VSMPageTableData
 struct VSMPageBatch
 {
 	int page_base_slot;
+	# Bit i = local page i (0..pages_per_level^2-1, currently 16) is dirty
+	# this frame. Phase 2 per-page invalidation: a page outside this mask
+	# is skipped by the AS even if visible, keeping its cached content.
+	int dirty_mask;
 }
 
 [Bind = DefaultLayout::Instance2]
