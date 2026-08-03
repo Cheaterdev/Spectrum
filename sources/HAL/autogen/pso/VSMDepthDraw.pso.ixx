@@ -43,6 +43,10 @@ export namespace PSOS
 			mpso.mesh.entry_point = "VS";
 			mpso.mesh.flags = HAL::ShaderOptions::None;
 			
+			mpso.amplification.file_name = "shaders/mesh_shader_vsm.hlsl";
+			mpso.amplification.entry_point = "AS";
+			mpso.amplification.flags = HAL::ShaderOptions::None;
+			
 
 			mpso.rtv_formats = {  };	
 			mpso.blend = {  };

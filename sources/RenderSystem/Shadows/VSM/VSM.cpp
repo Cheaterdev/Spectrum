@@ -196,13 +196,14 @@ VSM::VSM()
 				{
 					graphics.set(m.compiled_mesh_info);
 					graphics.set(m.mesh_instance_info);
-					// One threadgroup PER MESHLET (mesh_shader_vsm.hlsl's "VS" reads
-					// gid2.x as a direct meshlet index -- there is no amplification
-					// shader batching/compacting 32 meshlets per group here, unlike
-					// the original mesh_shader.hlsl path that
-					// dispatch_mesh_arguments.ThreadGroupCountX (=ceil(meshlet_count/32))
-					// was precomputed for).
-					graphics.dispatch_mesh(ivec3{ (int)m.meshlet_count, pages_per_level, 1 });
+					// Dispatch AS threadgroups, not MS ones directly: 32
+					// (meshlet, page) pairs tested per group, AS compacts
+					// visible pairs into a payload and calls DispatchMesh
+					// itself (see mesh_shader_vsm.hlsl). Count must cover
+					// meshlet_count * pages_per_level total pairs.
+					UINT pair_count = (UINT)m.meshlet_count * (UINT)pages_per_level;
+					UINT as_groups  = (pair_count + 31) / 32;
+					graphics.dispatch_mesh(ivec3{ (int)as_groups, 1, 1 });
 				}
 			});
 		};

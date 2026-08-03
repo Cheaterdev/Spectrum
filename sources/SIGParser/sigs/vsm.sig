@@ -56,10 +56,13 @@ ComputePSO VSMApplyCompute
 	compute = VSM;
 }
 
-# Mesh-shader-only PSO (no amplification/culling stage yet -- Phase 1b/3
-# territory): CPU dispatches (ceil(meshlet_count/32), page_count, 1)
-# directly, mesh shader routes each output primitive to a viewport via
-# SV_ViewportArrayIndex based on the dispatch's Y group index.
+# Amplification-shader-driven compaction (Phase 1b): CPU dispatches AS
+# threadgroups covering meshlet_count*16 (meshlet,page) pairs; the AS culls
+# each pair against that page's camera and compacts survivors into a
+# payload, so an invisible pair never launches a mesh-shader threadgroup at
+# all (earlier version culled inside the MS, which still launched every
+# group and wrote degenerate triangles for culled ones). Mesh shader routes
+# each output primitive to a viewport via SV_ViewportArrayIndex.
 GraphicsPSO VSMDepthDraw
 {
 	root = DefaultLayout;
@@ -69,6 +72,9 @@ GraphicsPSO VSMDepthDraw
 
 	[EntryPoint = VS]
 	mesh = mesh_shader_vsm;
+
+	[EntryPoint = AS]
+	amplification = mesh_shader_vsm;
 
 	ds = D32_FLOAT;
 	cull = Front;
