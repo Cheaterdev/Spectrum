@@ -19,12 +19,12 @@ export namespace Table
 	struct VSMLighting
 	{
 		static constexpr SlotID ID = SlotID::VSMLighting;
-		HLSL::Texture2D<float> vsm_atlas;
+		HLSL::Texture2DArray<float> vsm_atlas;
 		HLSL::Texture2DArray<uint> page_table;
 		HLSL::StructuredBuffer<Camera> page_cameras;
 		HLSL::RWTexture2D<float4> result;
 		GBuffer gbuffer;
-		HLSL::Texture2D<float>& GetVsm_atlas() { return vsm_atlas; }
+		HLSL::Texture2DArray<float>& GetVsm_atlas() { return vsm_atlas; }
 		HLSL::Texture2DArray<uint>& GetPage_table() { return page_table; }
 		HLSL::StructuredBuffer<Camera>& GetPage_cameras() { return page_cameras; }
 		HLSL::RWTexture2D<float4>& GetResult() { return result; }
@@ -41,7 +41,7 @@ export namespace Table
 		}
 		struct Compiled
 		{
-			uint vsm_atlas; // Texture2D<float>
+			uint vsm_atlas; // Texture2DArray<float>
 			uint page_table; // Texture2DArray<uint>
 			uint page_cameras; // StructuredBuffer<Camera>
 			uint result; // RWTexture2D<float4>

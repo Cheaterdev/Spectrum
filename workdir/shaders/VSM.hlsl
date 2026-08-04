@@ -33,7 +33,7 @@ float4 combine_result(float2 tc)
 
 	VSMConstants constants = GetVSMConstants();
 	float shadow = get_shadow_vsm(constants, GetVSMLighting(), info.pos);
-	//#define VSM_DEBUG_HEATMAP
+//	#define VSM_DEBUG_HEATMAP
 //	#define VSM_DEBUG_RAWDEPTH
 #ifdef VSM_DEBUG_HEATMAP
 	return float4(get_vsm_debug_color(constants, info.pos) * shadow, 1);

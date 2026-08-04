@@ -59,11 +59,17 @@ export
 			return level_count * pages_per_level * pages_per_level;
 		}
 
-		// Flat slot index for (level, page). Deterministic 1:1 mapping in
-		// Phase 1a -- dynamic allocation/eviction is Phase 2.
-		int slot_of(int level, ivec2 page) const
+		// A page's identity independent of the grid's current recentering:
+		// origin is always an exact multiple of page_world_size(level) (see
+		// grid_origin), so origin/size is an integer grid index -- adding the
+		// local page coord gives a key that stays the same for the same
+		// world-space page across recenters, letting VSMPageTable cache pages
+		// by identity instead of by local slot position.
+		ivec2 abs_page(int level, ivec2 local, float2 origin) const
 		{
-			return (level * pages_per_level + page.y) * pages_per_level + page.x;
+			float size = page_world_size(level);
+			ivec2 grid_idx((int)std::lround(origin.x / size), (int)std::lround(origin.y / size));
+			return grid_idx + local;
 		}
 	};
 }

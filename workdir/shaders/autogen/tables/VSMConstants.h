@@ -11,13 +11,11 @@ struct VSMConstants
 	int level_count; // int
 	int page_size; // int
 	int pages_per_level; // int
-	int atlas_pages_per_side; // int
 	float4x4 light_view; // float4x4
 	float4 level_info[8]; // float4
 	int GetLevel_count() { return level_count; }
 	int GetPage_size() { return page_size; }
 	int GetPages_per_level() { return pages_per_level; }
-	int GetAtlas_pages_per_side() { return atlas_pages_per_side; }
 	float4x4 GetLight_view() { return light_view; }
 	float4 GetLevel_info(int i) { return level_info[i]; }
 };

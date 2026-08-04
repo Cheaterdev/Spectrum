@@ -489,7 +489,7 @@ export
 			}
 
 			void createFrom2D(const Resource::ptr& resource, uint mip_offset = 0);
-			void createFrom2DArray(const Resource::ptr& resource, uint mip_offset = 0, uint array_offset = 0);
+			void createFrom2DArray(const Resource::ptr& resource, uint mip_offset = 0, uint array_offset = 0, uint array_size = 1);
 
 		};
 
@@ -509,7 +509,7 @@ export
 			}
 
 			void createFrom2D(const Resource::ptr& resource, uint mip_offset = 0);
-			void createFrom2DArray(const Resource::ptr& resource, uint mip_offset = 0, uint array_offset = 0);
+			void createFrom2DArray(const Resource::ptr& resource, uint mip_offset = 0, uint array_offset = 0, uint array_size = 1);
 
 		};
 
@@ -795,7 +795,7 @@ namespace HLSL
 
 
 	template<class T>
-	void RenderTarget<T>::createFrom2DArray(const Resource::ptr& resource, uint first_mip, uint array_id)
+	void RenderTarget<T>::createFrom2DArray(const Resource::ptr& resource, uint first_mip, uint array_id, uint array_size)
 	{
 		auto desc = HAL::Views::RenderTarget{
 	.Resource = resource,
@@ -804,7 +804,7 @@ namespace HLSL
 		{
 			.MipSlice = first_mip,
 			.FirstArraySlice = uint(array_id),
-			.ArraySize = 1,
+			.ArraySize = array_size,
 			.PlaneSlice = 0
 		}
 		};
@@ -838,7 +838,7 @@ namespace HLSL
 
 
 	template<class T>
-	void DepthStencil<T>::createFrom2DArray(const Resource::ptr& resource, uint first_mip, uint array_id)
+	void DepthStencil<T>::createFrom2DArray(const Resource::ptr& resource, uint first_mip, uint array_id, uint array_size)
 	{
 		auto desc = HAL::Views::DepthStencil{
 		.Resource = resource,
@@ -848,7 +848,7 @@ namespace HLSL
 			{
 				.MipSlice = first_mip,
 				.FirstArraySlice = array_id,
-				.ArraySize = 1,
+				.ArraySize = array_size,
 			}
 		};
 		Handle::operator= (std::move(desc));

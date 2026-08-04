@@ -10,13 +10,13 @@
 #include "GBuffer.h"
 struct VSMLighting
 {
-	uint vsm_atlas; // Texture2D<float>
+	uint vsm_atlas; // Texture2DArray<float>
 	uint page_table; // Texture2DArray<uint>
 	uint page_cameras; // StructuredBuffer<Camera>
 	uint result; // RWTexture2D<float4>
 	GBuffer gbuffer; // GBuffer
 	GBuffer GetGbuffer() { return gbuffer; }
-	Texture2D<float> GetVsm_atlas() { return ResourceDescriptorHeap[vsm_atlas]; }
+	Texture2DArray<float> GetVsm_atlas() { return ResourceDescriptorHeap[vsm_atlas]; }
 	Texture2DArray<uint> GetPage_table() { return ResourceDescriptorHeap[page_table]; }
 	StructuredBuffer<Camera> GetPage_cameras() { return ResourceDescriptorHeap[page_cameras]; }
 	RWTexture2D<float4> GetResult() { return ResourceDescriptorHeap[result]; }

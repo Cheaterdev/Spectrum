@@ -1,5 +1,5 @@
 // VSM-only mesh shader: renders one clipmap level's worth of pages (up to
-// pages_per_level^2, routed via SV_ViewportArrayIndex) in a single
+// pages_per_level^2, routed via SV_RenderTargetArrayIndex) in a single
 // DispatchMesh call per node, instead of one CPU-issued draw per page.
 //
 // Deliberately independent from mesh_shader.hlsl (used by GBuffer/PSSM) --
@@ -26,10 +26,23 @@ static const MeshInfo meshInfo = GetMeshInfo();
 static const SceneData sceneData = GetSceneData();
 static const MeshInstanceInfo meshInstanceInfo = GetMeshInstanceInfo();
 
-// pages_per_level is pinned at 4x4=16 (matches VSM.cpp / VSMClipmap -- the
-// D3D12 16-viewport-per-draw cap the single-dispatch-per-level design
-// depends on). If that ever changes, this must change with it.
-#define VSM_PAGES_PER_LEVEL 16
+// pages_per_level side/total, matching VSM.cpp / VSMClipmap. No longer
+// bound by the 16-viewport cap (routing is by array slice), but must stay
+// in step with the C++ side.
+#define VSM_PAGES_PER_LEVEL_SIDE 4
+#define VSM_PAGES_PER_LEVEL (VSM_PAGES_PER_LEVEL_SIDE * VSM_PAGES_PER_LEVEL_SIDE)
+
+// Matches VSMPageTable::VSM_INVALID_SLOT.
+#define VSM_INVALID_SLOT 0xFFFFFFFFu
+
+// Real allocator (Phase 5.3): a local page's physical slot is no longer a
+// fixed function of (level, local) -- look it up in the same indirection
+// texture VSM_impl.hlsl's get_shadow_vsm samples from.
+uint vsm_slot_of(uint pageLocal)
+{
+	uint2 pageXY = uint2(pageLocal % VSM_PAGES_PER_LEVEL_SIDE, pageLocal / VSM_PAGES_PER_LEVEL_SIDE);
+	return GetVSMPageTableData().GetPage_table()[uint3(pageXY, (uint)GetVSMPageBatch().GetLevel())];
+}
 
 struct vsm_vertex_output
 {
@@ -38,7 +51,9 @@ struct vsm_vertex_output
 
 struct vsm_prim_attrs
 {
-	uint viewport : SV_ViewportArrayIndex;
+	// Array slice, not viewport: the atlas is one slice per page, which also
+	// lifts the D3D12 16-viewport-per-draw cap.
+	uint slice : SV_RenderTargetArrayIndex;
 };
 
 struct Payload
@@ -186,8 +201,11 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
 	uint meshletIndex = safePair / VSM_PAGES_PER_LEVEL;
 	uint pageLocal = safePair % VSM_PAGES_PER_LEVEL;
 
-	int slot = GetVSMPageBatch().GetPage_base_slot() + pageLocal;
-	Camera page_cam = GetVSMPageTableData().GetPage_cameras()[slot];
+	uint slot = vsm_slot_of(pageLocal);
+	valid = valid && slot != VSM_INVALID_SLOT;
+	uint safeSlot = valid ? slot : 0;
+
+	Camera page_cam = GetVSMPageTableData().GetPage_cameras()[safeSlot];
 	node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
 	matrix node_mat = node.GetNode_global_matrix();
 	MeshletCullData cull_data = meshInstanceInfo.GetMeshletCullData()[meshInfo.GetMeshlet_offset_local() + meshletIndex];
@@ -199,11 +217,12 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
 	bool page_dirty = (GetVSMPageBatch().GetDirty_mask() >> pageLocal) & 1;
 	bool visible = valid && page_dirty && vsm_is_visible(cull_data, node_mat, page_cam);
 
-	// Additional filter on top of frustum+dirty, skipped on a recenter/
-	// light-move redraw (stale pyramid -- see VSMPageBatch::skip_occlusion).
-	bool skip_occlusion = GetVSMPageBatch().GetSkip_occlusion() != 0;
+	// Per-page now: a page whose slot/content survived a recenter keeps its
+	// Hi-Z history even when a sibling page (freshly allocated, or every
+	// page on a light move) doesn't -- see VSMPageBatch::skip_occlusion.
+	bool skip_occlusion = (GetVSMPageBatch().GetSkip_occlusion() >> pageLocal) & 1;
 	if (visible && !skip_occlusion)
-		visible = !vsm_is_occluded(cull_data, node_mat, page_cam, slot);
+		visible = !vsm_is_occluded(cull_data, node_mat, page_cam, safeSlot);
 
 	if (visible)
 	{
@@ -231,7 +250,10 @@ void VS(
 	uint meshletIndex = pairIndex / VSM_PAGES_PER_LEVEL;
 	uint pageLocal = pairIndex % VSM_PAGES_PER_LEVEL;
 
-	Camera page_cam = GetVSMPageTableData().GetPage_cameras()[GetVSMPageBatch().GetPage_base_slot() + pageLocal];
+	// AS only ever forwards pairs that passed its own INVALID_SLOT check, so
+	// this lookup is guaranteed valid here.
+	uint slot = vsm_slot_of(pageLocal);
+	Camera page_cam = GetVSMPageTableData().GetPage_cameras()[slot];
 	node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
 	matrix node_mat = node.GetNode_global_matrix();
 
@@ -245,7 +267,7 @@ void VS(
 			meshInstanceInfo.GetPrimitive_indices()[index_offset],
 			meshInstanceInfo.GetPrimitive_indices()[index_offset + 1],
 			meshInstanceInfo.GetPrimitive_indices()[index_offset + 2]);
-		prims[gtid].viewport = pageLocal;
+		prims[gtid].slice = slot;
 	}
 
 	if (gtid < m.GetVertexCount())

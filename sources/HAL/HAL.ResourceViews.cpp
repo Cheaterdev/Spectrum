@@ -159,7 +159,7 @@ namespace HAL
 			}
 			else
 			{
-				renderTarget.createFrom2DArray(resource, view_desc.MipSlice, view_desc.FirstArraySlice);
+				renderTarget.createFrom2DArray(resource, view_desc.MipSlice, view_desc.FirstArraySlice, view_desc.ArraySize);
 			}
 		}
 
@@ -176,7 +176,9 @@ namespace HAL
 			}
 			else
 			{
-				depthStencil.createFrom2DArray(resource, view_desc.MipSlice, view_desc.FirstArraySlice);
+				// ArraySize > 1 gives a DSV spanning several slices, which is what
+				// SV_RenderTargetArrayIndex routing needs (VSM page slices).
+				depthStencil.createFrom2DArray(resource, view_desc.MipSlice, view_desc.FirstArraySlice, view_desc.ArraySize);
 			}
 		}
 	}

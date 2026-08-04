@@ -17,17 +17,17 @@ export namespace Table
 	struct VSMPageBatch
 	{
 		static constexpr SlotID ID = SlotID::VSMPageBatch;
-		int page_base_slot;
+		int level;
 		int dirty_mask;
 		int skip_occlusion;
-		int& GetPage_base_slot() { return page_base_slot; }
+		int& GetLevel() { return level; }
 		int& GetDirty_mask() { return dirty_mask; }
 		int& GetSkip_occlusion() { return skip_occlusion; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(page_base_slot);
+			compiler.compile(level);
 			compiler.compile(dirty_mask);
 			compiler.compile(skip_occlusion);
 		}
@@ -40,7 +40,7 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
-			ar& NVP(page_base_slot);
+			ar& NVP(level);
 			ar& NVP(dirty_mask);
 			ar& NVP(skip_occlusion);
 		}

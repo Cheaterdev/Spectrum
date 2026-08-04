@@ -3,6 +3,9 @@
 #include "autogen/tables/VSMConstants.h"
 #include "autogen/tables/VSMLighting.h"
 
+// Matches VSMPageTable::VSM_INVALID_SLOT.
+#define VSM_INVALID_SLOT 0xFFFFFFFFu
+
 // Which clipmap level a world position falls into, using the shared
 // light-space view + per-level grid_origin/page_world_size table VSM.cpp
 // uploads every frame (VSMClipmap::grid_origin, computed identically on the
@@ -24,38 +27,51 @@ int get_vsm_level(VSMConstants c, float2 pos_ls)
 	return -1;
 }
 
+// Real allocator (Phase 5.3): a page in range isn't guaranteed resident (not
+// yet reachable while every level's pages always fit the atlas, but becomes
+// load-bearing once residency culling lets demand exceed supply -- Phase
+// 5.4). On VSM_INVALID_SLOT, walk out to the next coarser level instead of
+// returning unshadowed -- a blurrier shadow beats a hole.
+uint get_vsm_slot(VSMConstants c, VSMLighting lighting, float2 pos_ls, int start_level)
+{
+	int pages = c.GetPages_per_level();
+	for (int level = start_level; level < c.GetLevel_count(); level++)
+	{
+		float4 info = c.GetLevel_info(level);
+		float2 page_f = (pos_ls - info.xy) / max(info.z, 0.0001);
+		int2 page = clamp(int2(floor(page_f)), int2(0, 0), int2(pages - 1, pages - 1));
+
+		uint slot = lighting.GetPage_table()[uint3(page.x, page.y, level)];
+		if (slot != VSM_INVALID_SLOT)
+			return slot;
+	}
+	return VSM_INVALID_SLOT;
+}
+
 float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos)
 {
 	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
 	int level = get_vsm_level(c, pos_ls);
 	if (level < 0)
 		return 1.0;
-	float4 info = c.GetLevel_info(level);
 
-	int pages = c.GetPages_per_level();
-	float2 page_f = (pos_ls - info.xy) / max(info.z, 0.0001);
-	int2 page = clamp(int2(floor(page_f)), int2(0, 0), int2(pages - 1, pages - 1));
-
-	uint slot = lighting.GetPage_table()[uint3(page.x, page.y, level)];
+	uint slot = get_vsm_slot(c, lighting, pos_ls, level);
+	if (slot == VSM_INVALID_SLOT)
+		return 1.0;
 
 	Camera page_cam = lighting.GetPage_cameras()[slot];
 	float4 pos_l = mul(page_cam.GetViewProj(), float4(wpos, 1));
 	pos_l /= pos_l.w;
 	float2 light_tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 
-	int atlas_pages_per_side = c.GetAtlas_pages_per_side();
-	int page_size = c.GetPage_size();
-	int2 atlas_origin = int2(slot % atlas_pages_per_side, slot / atlas_pages_per_side) * page_size;
-	float atlas_size = float(atlas_pages_per_side * page_size);
-
-	float2 atlas_tc = (float2(atlas_origin) + light_tc * float2(page_size, page_size)) / atlas_size;
-
+	// The atlas is one array slice per page, so the slot IS the slice and the
+	// page-local UV is used directly -- no packed-atlas offset math.
 	// No comparison sampler is declared in DefaultLayout's sampler set, so this
 	// does the depth test manually. Reversed-Z convention (clear=0, closer
 	// fragments have larger stored z): lit if this point is at least as close
 	// to the light as whatever is stored at that atlas texel.
-	float light_raw_z = lighting.GetVsm_atlas().SampleLevel(pointClampSampler, atlas_tc, 0);
-	float shadow = (pos_l.z >= light_raw_z - 0.001) ? 1.0 : 0.0;
+	float light_raw_z = lighting.GetVsm_atlas().SampleLevel(pointClampSampler, float3(light_tc, (float)slot), 0);
+	float shadow = (pos_l.z >= light_raw_z) ? 1.0 : 0.0;
 
 	if (pos_l.z < 0 || pos_l.z > 1 || any(light_tc < 0) || any(light_tc > 1))
 		shadow = 1;
@@ -74,25 +90,17 @@ float get_vsm_debug_raw_depth(VSMConstants c, VSMLighting lighting, float3 wpos)
 	int level = get_vsm_level(c, pos_ls);
 	if (level < 0)
 		return 0;
-	float4 info = c.GetLevel_info(level);
 
-	int pages = c.GetPages_per_level();
-	float2 page_f = (pos_ls - info.xy) / max(info.z, 0.0001);
-	int2 page = clamp(int2(floor(page_f)), int2(0, 0), int2(pages - 1, pages - 1));
-	uint slot = lighting.GetPage_table()[uint3(page.x, page.y, level)];
+	uint slot = get_vsm_slot(c, lighting, pos_ls, level);
+	if (slot == VSM_INVALID_SLOT)
+		return 0;
 
 	Camera page_cam = lighting.GetPage_cameras()[slot];
 	float4 pos_l = mul(page_cam.GetViewProj(), float4(wpos, 1));
 	pos_l /= pos_l.w;
 	float2 light_tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 
-	int atlas_pages_per_side = c.GetAtlas_pages_per_side();
-	int page_size = c.GetPage_size();
-	int2 atlas_origin = int2(slot % atlas_pages_per_side, slot / atlas_pages_per_side) * page_size;
-	float atlas_size = float(atlas_pages_per_side * page_size);
-	float2 atlas_tc = (float2(atlas_origin) + light_tc * float2(page_size, page_size)) / atlas_size;
-
-	return lighting.GetVsm_atlas().SampleLevel(pointClampSampler, atlas_tc, 0);
+	return lighting.GetVsm_atlas().SampleLevel(pointClampSampler, float3(light_tc, (float)slot), 0);
 }
 
 // Debug heatmap: one flat color per clipmap level, for visually confirming

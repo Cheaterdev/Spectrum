@@ -85,55 +85,251 @@ void VSM::attach_scene(std::shared_ptr<Scene> scene)
 	});
 }
 
+void VSM::plan_frame(FrameGraph::Graph& graph)
+{
+	// Single-threaded, once per frame, strictly before any level's render()
+	// is dispatched (see the LevelPlan comment in VSM.ixx for why this has
+	// to live here and not in m_level_render).
+	auto& sceneinfo = graph.get_context<SceneInfo>();
+	auto& caminfo   = graph.get_context<CameraInfo>();
+	auto  cam       = caminfo.cam;
+	auto  scene     = sceneinfo.scene;
+	if (!scene)
+		return;
+
+	float3 current_light_pos = get_position();
+	camera light_view_cam = make_light_view_camera(current_light_pos);
+	float2 cam_pos_ls = (float4(cam->position, 1) * light_view_cam.get_view()).xy;
+
+	auto min = scene->get_min();
+	auto max = scene->get_max();
+	auto points_all = cam->get_points(min, max);
+	auto bounds_all = points_all.get_bounds_in(light_view_cam.get_view());
+
+	uint64_t tick = ++m_frame_id;
+
+	const int pages_side      = page_table.clipmap.pages_per_level;
+	const int pages_per_level = pages_side * pages_side;
+	uint32_t  all_pages_mask  = (1u << pages_per_level) - 1;
+
+	// Finest level first: acquire_slot_with_priority only ever steals from
+	// a level STRICTLY coarser than the requester, so processing in this
+	// order means a fine level always gets first pick of whatever's free
+	// this frame, and can reclaim an already-resident coarser page if it
+	// has to -- never the other way around.
+	for (int level = 0; level < page_table.clipmap.level_count; level++)
+	{
+		LevelPlan plan;
+		plan.origin     = page_table.clipmap.grid_origin(level, cam_pos_ls);
+		plan.bounds_all = bounds_all;
+		plan.valid      = true;
+
+		// Recentered = this level's local page indices now mean a different
+		// world region than they did last frame -- the indirection ROW must
+		// be rewritten either way (it's indexed by local position), even on
+		// frames where every page it now points to happens to already be
+		// cached.
+		bool recentered = !level_initialized[level] || plan.origin.x != cached_origin[level].x || plan.origin.y != cached_origin[level].y;
+
+		// Read-and-clear this level's sticky flag (see VSM.ixx).
+		pos_mutex.lock();
+		bool light_moved = light_change_pending[level];
+		light_change_pending[level] = false;
+		pos_mutex.unlock();
+
+		uint32_t scene_mask = tracker.take_dirty(level) & all_pages_mask;
+
+		// A page that has scrolled entirely off this level's grid (recenter
+		// moved past it) isn't covered by any local cell below any more, so
+		// the per-cell "not needed" evict never gets a chance to see it --
+		// left alone it's a permanent orphan for level 0 specifically
+		// (nothing is finer, so nothing can ever steal it back). Sweep it
+		// here, every frame, before this level tries to allocate anything;
+		// harmless no-op when nothing actually left the grid.
+		{
+			ivec2 grid_min = page_table.clipmap.abs_page(level, ivec2(0, 0), plan.origin);
+			ivec2 grid_max = grid_min + ivec2(pages_side, pages_side);
+			page_table.evict_outside_range(level, grid_min, grid_max);
+		}
+
+		// Resolve every local cell's physical slot by page IDENTITY (level +
+		// abs_page), not by local position -- a page that stays in view
+		// keeps its slot and its rendered content across a recenter.
+		//
+		// Residency culling: a page whose light-space footprint misses
+		// bounds_all (the camera-frustum-clipped scene) can't be
+		// contributing to anything the camera sees right now -- skip
+		// allocating it, freeing budget for pages that matter. Conservative
+		// (bounds_all is an AABB, a superset of the true frustum), never a
+		// hole.
+		uint32_t newly_allocated_mask = 0;
+		for (int local = 0; local < pages_per_level; local++)
+		{
+			ivec2 page      = ivec2(local % pages_side, local / pages_side);
+			float2 page_min = page_table.clipmap.page_min(level, page, plan.origin);
+			float2 page_max = page_min + float2(page_table.clipmap.page_world_size(level));
+			ivec2 abs_page  = page_table.clipmap.abs_page(level, page, plan.origin);
+
+			bool needed = page_max.x >= bounds_all.left && page_min.x <= bounds_all.right
+			           && page_max.y >= bounds_all.top  && page_min.y <= bounds_all.bottom;
+
+			if (!needed)
+			{
+				plan.slots[local] = (int)VSM_INVALID_SLOT;
+				// The allocator's reclaim path: a page the camera has
+				// panned away from gives its slot back so it's available
+				// for whatever's actually needed this frame. Safe to do
+				// unconditionally (not just when scene-dirty) because this
+				// whole pass is single-threaded -- nothing else is touching
+				// the allocator right now.
+				page_table.evict_page(level, abs_page);
+				continue;
+			}
+
+			auto alloc = page_table.allocate_or_touch(level, abs_page, tick);
+			plan.slots[local] = (int)alloc.slot;
+
+			if (alloc.slot != VSM_INVALID_SLOT)
+				plan.resident_mask |= (1u << local);
+
+			if (alloc.newly_allocated)
+			{
+				newly_allocated_mask |= (1u << local);
+				allocation_exhausted.store(false, std::memory_order_relaxed);
+			}
+			else if (alloc.slot == VSM_INVALID_SLOT)
+			{
+				// Pool exhausted AND nothing coarser than this level to
+				// steal from either. Log the start of an episode, then only
+				// a periodic reminder while it persists, not once per
+				// failed cell per frame.
+				uint64_t failed = total_failed_allocations.fetch_add(1, std::memory_order_relaxed) + 1;
+				bool was_exhausted = allocation_exhausted.exchange(true, std::memory_order_relaxed);
+				if (!was_exhausted || (failed % 300 == 0))
+				{
+					Log::get() << (std::string("VSM: page pool exhausted (physical_page_count=")
+						+ std::to_string(page_table.physical_page_count) + "), level=" + std::to_string(level)
+						+ ", total failed allocations=" + std::to_string(failed)
+						+ " -- affected pages fall back to a coarser level") << Log::endl;
+				}
+			}
+		}
+
+		// newly_allocated/light_moved invalidate that specific page (not the
+		// whole level -- a page whose slot/content survived the recenter
+		// needs neither); scene_mask adds whatever VSMInvalidationTracker
+		// actually marked. Masked to resident_mask: a page with no valid
+		// slot this frame -- not needed, or needed but the pool was
+		// exhausted -- is never drawn into a slot it doesn't have.
+		plan.dirty_mask          = (newly_allocated_mask | scene_mask | (light_moved ? all_pages_mask : 0u)) & plan.resident_mask;
+		// A newly-allocated slot has no Hi-Z history; light_moved makes
+		// every resident page's existing pyramid stale too (built under the
+		// old light projection).
+		plan.skip_occlusion_mask = (newly_allocated_mask | (light_moved ? all_pages_mask : 0u)) & plan.resident_mask;
+
+		// Indirection row is stale if local->slot changed for ANY cell --
+		// recenter, a residency flip, or a priority steal reassigning a
+		// slot this level was pointing at.
+		bool row_changed = recentered;
+		for (int local = 0; local < pages_per_level; local++)
+		{
+			if (cached_slots[level][local] != plan.slots[local])
+				row_changed = true;
+			cached_slots[level][local] = plan.slots[local];
+		}
+		plan.row_changed = row_changed;
+
+		level_initialized[level] = true;
+		cached_origin[level]     = plan.origin;
+
+		m_plan[level] = plan;
+	}
+}
+
 VSM::VSM()
 {
 	position = float3(200, 400, 200);
 
-	page_table.clipmap.level_count = 3;
+	// Phase 5.4: 6 levels now that residency culling (below) keeps demand
+	// within physical_page_count instead of requiring
+	// level_count * pages_per_level^2 <= physical_page_count outright --
+	// MaxLevels (8) and the [Multiple=8]/level_info[8] budgets in vsm.sig
+	// already supported more than 3, this was the only thing actually
+	// capping it. Coarsest level spans pages_per_level * base_page_world_size
+	// * 2^(level_count-1) world units centered on the camera -- 6 levels / 4
+	// pages / base=32 reaches ~4096u total (2048u radius), vs. 512u at 3
+	// levels. Geometry past the coarsest level's edge clamps into an
+	// unrelated page (shadows vanishing with distance -- see also the
+	// out-of-range check in get_shadow_vsm, which returns unshadowed
+	// instead of clamp-sampling).
+	page_table.clipmap.level_count = 6;
 	page_table.clipmap.pages_per_level = 4;
-	// Coarsest level spans pages_per_level * base_page_world_size * 2^(level_count-1)
-	// world units, centered on the camera -- with 3 levels / 4 pages and base=32
-	// that's 512u total (256u radius). Tune to taste; too small and geometry past
-	// the edge of the coarsest level clamps into an unrelated page (looks like
-	// shadows vanishing with distance -- see also the out-of-range check in
-	// get_shadow_vsm, which now returns unshadowed instead of clamp-sampling).
 	page_table.clipmap.base_page_world_size = 32.0f;
-	// pages_per_level is pinned at 4 (4x4=16), exactly the D3D12 16-viewport
-	// cap the single-draw-per-level batching depends on -- so page_size
-	// (texels/page) is the resolution lever, not page count. Atlas is
-	// atlas_pages_per_side * page_size texels square; 7*512=3584, well
-	// under the 16384 D3D12 max texture dimension, so there's headroom to
-	// go higher (1024 -> 7168) if this still isn't sharp enough.
+	// page_size (texels/page) is the resolution lever. The atlas is an array
+	// of page_size^2 slices, so the old 16-viewport cap on pages_per_level is
+	// gone. physical_page_count no longer needs to cover every level's full
+	// grid at once (level_count * pages_per_level^2 = 96 at 6 levels) --
+	// residency culling (the `needed` test in m_level_render) keeps most of
+	// each coarse level's ring outside the camera's frustum and never allocated.
+	// Measured against a large/dense scene, 64 wasn't enough even with
+	// culling active (a wide FOV or a lot of visible geometry can still
+	// leave demand near or over supply) -- allocate_or_touch now fails
+	// closed rather than evicting under pressure (see VSMPageTable), so
+	// running out shows as coarser-level fallback, not corruption, but
+	// still means less resolution than intended.
+	//
+	// 128 is a moderate bump, not a guess at the "real" number -- VRAM cost
+	// is committed for every slot regardless of use (atlas + Hi-Z pyramid
+	// together run ~2.6MB/slot at page_size=512, so 128 ~= 335MB). Push this
+	// higher only after checking it's actually still hitting VSM_INVALID_SLOT
+	// (a debug counter would be the honest way to know, not currently
+	// wired up). A scene that genuinely needs far more resident pages than
+	// that wants this backed by a reserved/tiled resource instead (commit
+	// memory only for slices actually in use), not just a bigger committed
+	// array -- see the class comment on VSM_Atlas's creation below.
 	page_table.page_size = 512;
-	page_table.atlas_pages_per_side = 7;
+	page_table.physical_page_count = 128;
 
 	const int pages_side       = page_table.clipmap.pages_per_level;
 	const int pages_per_level  = pages_side * pages_side;
 
-	// One Hi-Z pyramid slice per physical atlas slot, mip chain down to an
-	// 8x8 floor (1x1 wastes dispatches/VRAM for no real occluder benefit).
-	const int physical_slots = page_table.atlas_pages_per_side * page_table.atlas_pages_per_side;
+	// One Hi-Z pyramid slice per physical page, mip chain down to an 8x8
+	// floor (1x1 wastes dispatches/VRAM for no real occluder benefit).
+	const int physical_slots = page_table.physical_page_count;
 	int pyramid_mip_count = 1;
 	for (int s = page_table.page_size; s > 8; s >>= 1)
 		pyramid_mip_count++;
 
 	// ---- Page rendering (one pass per clipmap LEVEL, all of that level's
 	// pages_per_level^2 pages rendered in a single mesh-shader dispatch via
-	// SV_ViewportArrayIndex -- see mesh_shader_vsm.hlsl) -----------------------
+	// SV_RenderTargetArrayIndex -- see mesh_shader_vsm.hlsl) ------------------
 
 	for (int level = 0; level < page_table.clipmap.level_count; level++)
 	{
 		m_level_setup[level] = [this, level, physical_slots, pyramid_mip_count](Passes::VSM_RenderPage::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 		{
-			int atlas_size = page_table.atlas_size_texels();
-
 			if (level == 0)
 			{
 				// Static: Phase 2 caching relies on this atlas (and the page
 				// table / page cameras) surviving across frames -- a level
 				// that isn't dirty this frame does nothing and relies on its
 				// pages still holding last frame's content.
-				builder.create(data.VSM_Atlas, { ivec3(atlas_size, atlas_size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
+				//
+				// One array slice per physical page rather than regions of one
+				// big texture: slot IS the slice, so no atlas-offset math, and
+				// routing via SV_RenderTargetArrayIndex drops the 16-viewport
+				// cap that pinned pages_per_level at 4.
+				//
+				// This is a committed resource -- VRAM for all physical_slots
+				// slices is paid up front regardless of how many are ever
+				// used. Scaling physical_page_count much further than a
+				// couple hundred should switch this (and VSM_PageHiZ below)
+				// to a reserved/tiled resource, mapping physical memory only
+				// to slices actually handed out by allocate_or_touch and
+				// unmapping on evict_page -- the array can then be sized
+				// generously (its logical slice count costs nothing by
+				// itself) without paying for slices nobody's using.
+				builder.create(data.VSM_Atlas, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32_TYPELESS, (UINT)physical_slots, 1 }, FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
 				builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 				builder.create(data.VSM_PageCameras, { (size_t)MaxPages }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 				// Static like VSM_Atlas: must survive until this page is next dirty.
@@ -151,47 +347,19 @@ VSM::VSM()
 
 		m_level_render[level] = [this, level, pages_side, pages_per_level, pyramid_mip_count](Passes::VSM_RenderPage::Context& data, FrameGraph::FrameContext& context)
 		{
-			auto& sceneinfo = context.graph->get_context<SceneInfo>();
-			auto& caminfo   = context.graph->get_context<CameraInfo>();
-			auto  cam       = caminfo.cam;
-			auto  scene     = sceneinfo.scene;
-
-			// Phase 2 caching: only pay for a re-render when something
-			// actually requires it -- first time this level is ever
-			// rendered, the clipmap grid recentered (crossed a page
-			// boundary, so the local page indices now mean a different
-			// world region than what's cached there), or any scene change
-			// happened (coarse whole-VSM invalidation, see
-			// VSMInvalidationTracker). Otherwise this level's pages keep
-			// exactly what they held last frame -- zero GPU work.
-			float3 current_light_pos = get_position();
-			camera light_view_cam = make_light_view_camera(current_light_pos);
-			float2 cam_pos_ls = (float4(cam->position, 1) * light_view_cam.get_view()).xy;
-			float2 origin     = page_table.clipmap.grid_origin(level, cam_pos_ls);
-
-			bool recentered = !level_initialized[level] || origin.x != cached_origin[level].x || origin.y != cached_origin[level].y;
-
-			// Read-and-clear this level's sticky flag (see VSM.ixx).
-			pos_mutex.lock();
-			bool light_moved = light_change_pending[level];
-			light_change_pending[level] = false;
-			pos_mutex.unlock();
-
-			// recentered/light_moved invalidate every page of this level;
-			// otherwise only the pages VSMInvalidationTracker actually
-			// marked (from scene events, mapped to pages via world_to_page
-			// in attach_scene's callback) need a refresh. Always drain the
-			// tracker's mask (even when unused below) so stale bits from a
-			// recenter/light-move frame don't linger into the next one.
-			uint32_t all_pages_mask = (1u << pages_per_level) - 1;
-			uint32_t scene_mask     = tracker.take_dirty(level) & all_pages_mask;
-			uint32_t dirty_mask     = (recentered || light_moved) ? all_pages_mask : scene_mask;
-
-			if (dirty_mask == 0)
+			// All the decision-making (which pages get a slot, priority
+			// stealing, dirty tracking) already happened in plan_frame(),
+			// single-threaded, before this -- and any other level's --
+			// render() was dispatched. This is purely "emit GPU commands for
+			// what was already decided."
+			const LevelPlan& plan = m_plan[level];
+			if (!plan.valid)
 				return;
 
-			level_initialized[level] = true;
-			cached_origin[level]     = origin;
+			// Nothing to redraw AND the indirection row still matches what's
+			// on the GPU -- true no-op frame for this level.
+			if (plan.dirty_mask == 0 && !plan.row_changed)
+				return;
 
 			auto& command_list = context.get_list();
 			auto& graphics      = command_list->get_graphics();
@@ -200,93 +368,89 @@ VSM::VSM()
 			graphics.set_signature(Layouts::DefaultLayout);
 			compute.set_signature(Layouts::DefaultLayout);
 
-			auto min = scene->get_min();
-			auto max = scene->get_max();
-			auto points_all = cam->get_points(min, max);
-			auto bounds_all = points_all.get_bounds_in(light_view_cam.get_view());
-
-			int base_slot = level * pages_per_level;
-			std::vector<HAL::Viewport> viewports(pages_per_level);
-			std::vector<sizer_long> scissors(pages_per_level);
-
+			// Camera bounds only depend on (level, abs_page) -- page_min ==
+			// origin + local*size == size*(grid_idx + local) == size*abs_page
+			// regardless of how that abs_page was reached -- but znear/zfar
+			// track the live scene/camera bounds, so still refresh every
+			// active frame rather than only on (re)allocation. Skipped for
+			// non-resident cells: their slot is invalid, nothing to upload.
 			for (int local = 0; local < pages_per_level; local++)
 			{
+				if (!((plan.resident_mask >> local) & 1))
+					continue;
+
 				ivec2 page = ivec2(local % pages_side, local / pages_side);
-				float2 page_min = page_table.clipmap.page_min(level, page, origin);
+				float2 page_min = page_table.clipmap.page_min(level, page, plan.origin);
 				float2 page_max = page_min + float2(page_table.clipmap.page_world_size(level));
 
 				camera page_cam = make_light_view_camera(get_position());
 				page_cam.set_projection_params(
 					page_min.x, page_max.x,
 					page_min.y, page_max.y,
-					bounds_all.znear - 10, bounds_all.zfar);
+					plan.bounds_all.znear - 10, plan.bounds_all.zfar);
 				page_cam.update();
 
-				int slot = base_slot + local;
-				command_list->get_copy().update(*data.VSM_PageCameras, slot, std::span{ &page_cam.camera_cb.current, 1 });
-
-				ivec2 atlas_origin = page_table.atlas_slot_origin(slot);
-				viewports[local].pos    = float2((float)atlas_origin.x, (float)atlas_origin.y);
-				viewports[local].size   = float2((float)page_table.page_size, (float)page_table.page_size);
-				viewports[local].depths = float2(0, 1);
-
-				// D3D12 always requires NumScissorRects == NumViewports (no
-				// rasterizer ScissorEnable toggle exists in D3D12) -- match each
-				// viewport's own bounds exactly so nothing gets clipped beyond
-				// what the viewport already constrains.
-				scissors[local] = sizer_long{
-					atlas_origin.x, atlas_origin.y,
-					atlas_origin.x + page_table.page_size, atlas_origin.y + page_table.page_size };
+				command_list->get_copy().update(*data.VSM_PageCameras, plan.slots[local], std::span{ &page_cam.camera_cb.current, 1 });
 			}
 
-			if (level == 0)
+			// Indirection is indexed by (local position, level) -- rewrite
+			// this level's row whenever local->slot changed for any cell
+			// (plan.row_changed, computed in plan_frame()).
+			if (plan.row_changed)
 			{
-				std::vector<uint32_t> indirection = page_table.build_indirection();
-				UINT row_stride = (UINT)(pages_side * sizeof(uint32_t));
-				for (int lvl = 0; lvl < page_table.clipmap.level_count; lvl++)
-				{
-					command_list->get_copy().update_texture(
-						(*data.VSM_PageTable).resource, ivec3(0, 0, 0), ivec3(pages_side, pages_side, 1), (UINT)lvl,
-						reinterpret_cast<const char*>(indirection.data() + lvl * pages_per_level),
-						row_stride);
-				}
+				std::vector<uint32_t> row(pages_per_level);
+				for (int local = 0; local < pages_per_level; local++)
+					row[local] = (uint32_t)plan.slots[local];
 
+				UINT row_stride = (UINT)(pages_side * sizeof(uint32_t));
+				command_list->get_copy().update_texture(
+					(*data.VSM_PageTable).resource, ivec3(0, 0, 0), ivec3(pages_side, pages_side, 1), (UINT)level,
+					reinterpret_cast<const char*>(row.data()), row_stride);
+			}
+
+			if (level == 0 && data.VSM_PageHiZ.is_new())
+			{
 				// Fresh/resized pyramid holds garbage -- clear to far (0,
 				// reversed-Z) so a page's occlusion test can't falsely cull
 				// against it before that page has ever rendered real depth.
 				// One array-spanning UAV clear per mip (all physical slots
 				// at once) -- only runs once ever (cold start / resize).
-				if (data.VSM_PageHiZ.is_new())
-				{
-					for (int mip = 0; mip < pyramid_mip_count; mip++)
-						command_list->clear_uav(data.VSM_PageHiZ->create_mip(mip, *command_list).rwTexture2DArray, vec4(0, 0, 0, 0));
-				}
+				for (int mip = 0; mip < pyramid_mip_count; mip++)
+					command_list->clear_uav(data.VSM_PageHiZ->create_mip(mip, *command_list).rwTexture2DArray, vec4(0, 0, 0, 0));
+			}
+
+			if (plan.dirty_mask == 0)
+				return;
+
+			// Clear only the pages actually being re-rendered this frame: the
+			// atlas is Static and shared across levels, so a cached page must
+			// keep its depth. One slice DSV per dirty page (the create_2d_slice
+			// + ClearDepth idiom PSSM.cpp uses), replacing the old multi-rect
+			// clear into a packed atlas.
+			for (int local = 0; local < pages_per_level; local++)
+			{
+				if (!((plan.dirty_mask >> local) & 1))
+					continue;
+
+				RT::DepthOnly slice_rt;
+				slice_rt.GetDepth() = data.VSM_Atlas->create_2d_slice(plan.slots[local], *command_list).depthStencil;
+				graphics.set_rtv(slice_rt, RTOptions::Default | RTOptions::ClearDepth);
 			}
 
 			{
+				// Draw target: a DSV spanning every slice, so the mesh shader
+				// can route each primitive to its page with
+				// SV_RenderTargetArrayIndex (needs the multi-slice DSV support
+				// added in HAL.HLSL.ixx).
 				RT::DepthOnly rt;
 				rt.GetDepth() = data.VSM_Atlas->depthStencil;
-				// No RTOptions::ClearDepth here: VSM_Atlas is shared and
-				// Static across all levels now (Phase 2 caching), so a
-				// whole-resource clear would wipe out other levels' cached
-				// pages. Clear only the pages actually being re-rendered
-				// this frame (dirty_mask) -- a page kept cached must NOT be
-				// cleared, or its surviving depth data would be wiped even
-				// though the AS skips rendering into it.
-				std::vector<sizer_long> dirty_scissors;
-				dirty_scissors.reserve(pages_per_level);
-				for (int local = 0; local < pages_per_level; local++)
-				{
-					if ((dirty_mask >> local) & 1)
-						dirty_scissors.push_back(scissors[local]);
-				}
-
-				command_list->get_graphics().set_rtv(rt, RTOptions::Default);
-				graphics.clear_depth_rects(dirty_scissors, 0.0f);
+				graphics.set_rtv(rt, RTOptions::Default);
 			}
 
-			graphics.set_viewports(viewports);
-			graphics.set_scissors(scissors);
+			// One viewport now -- each slice is its own full page_size target,
+			// so there is no per-page offset to encode.
+			graphics.set_viewport(data.VSM_Atlas->get_viewport());
+			graphics.set_scissor(data.VSM_Atlas->get_scissor());
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 			graphics.set_pipeline<PSOS::VSMDepthDraw>();
 
@@ -298,10 +462,12 @@ VSM::VSM()
 			}
 			{
 				Slots::VSMPageBatch batch;
-				batch.GetPage_base_slot()  = base_slot;
-				batch.GetDirty_mask()      = (int)dirty_mask;
-				// Stale-pyramid case -- see the field's comment in vsm.sig.
-				batch.GetSkip_occlusion()  = (recentered || light_moved) ? 1 : 0;
+				batch.GetLevel()           = level;
+				batch.GetDirty_mask()      = (int)plan.dirty_mask;
+				// Per-page now, not per-level -- see the field's comment in
+				// vsm.sig. A page whose slot/content survived the recenter
+				// keeps its Hi-Z history and doesn't need this bit.
+				batch.GetSkip_occlusion()  = (int)plan.skip_occlusion_mask;
 				graphics.set(batch);
 			}
 
@@ -312,6 +478,9 @@ VSM::VSM()
 				pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
 				graphics.set(pageHiZ);
 			}
+
+			auto& sceneinfo = context.graph->get_context<SceneInfo>();
+			auto  scene     = sceneinfo.scene;
 
 			graphics.set(scene->compiledScene);
 
@@ -343,19 +512,19 @@ VSM::VSM()
 
 			for (int local = 0; local < pages_per_level; local++)
 			{
-				if (!((dirty_mask >> local) & 1))
+				if (!((plan.dirty_mask >> local) & 1))
 					continue;
 
-				int slot = base_slot + local;
-				ivec2 atlas_origin = page_table.atlas_slot_origin(slot);
+				int slot = plan.slots[local];
 				auto slice = data.VSM_PageHiZ->create_2d_slice(slot, *command_list);
 
 				compute.set_pipeline<PSOS::VSMCopyPageDepth>();
 				{
+					// Both sides are per-page slices of the same size now, so
+					// this is a straight 1:1 slice copy -- no atlas offset.
 					Slots::VSMCopyPageDepth copy;
-					copy.GetAtlas()        = data.VSM_Atlas->texture2D;
-					copy.GetAtlas_origin() = atlas_origin;
-					copy.GetDst_mip0()     = slice.create_mip(0, *command_list).rwTexture2D;
+					copy.GetAtlas()    = data.VSM_Atlas->create_2d_slice(slot, *command_list).texture2D;
+					copy.GetDst_mip0() = slice.create_mip(0, *command_list).rwTexture2D;
 					compute.set(copy);
 				}
 				compute.dispatch(ivec2(page_table.page_size, page_table.page_size), ivec2(8, 8));
@@ -401,7 +570,7 @@ VSM::VSM()
 		{
 			Slots::VSMLighting lighting;
 			gbuffer.SetTable(lighting.GetGbuffer());
-			lighting.GetVsm_atlas()    = data.VSM_Atlas->texture2D;
+			lighting.GetVsm_atlas()    = data.VSM_Atlas->texture2DArray;
 			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
 			lighting.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
 			lighting.GetResult()       = data.ResultTexture->rwTexture2D;
@@ -413,7 +582,6 @@ VSM::VSM()
 			constants.GetLevel_count()          = page_table.clipmap.level_count;
 			constants.GetPage_size()            = page_table.page_size;
 			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
-			constants.GetAtlas_pages_per_side() = page_table.atlas_pages_per_side;
 			constants.GetLight_view()           = light_cam.get_view();
 
 			for (int level = 0; level < page_table.clipmap.level_count; level++)

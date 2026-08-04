@@ -8,10 +8,8 @@
 #include "sig_hlsl.hlsl"
 struct VSMCopyPageDepth
 {
-	int2 atlas_origin; // int2
 	uint atlas; // Texture2D<float>
 	uint dst_mip0; // RWTexture2D<float>
-	int2 GetAtlas_origin() { return atlas_origin; }
 	Texture2D<float> GetAtlas() { return ResourceDescriptorHeap[atlas]; }
 	RWTexture2D<float> GetDst_mip0() { return ResourceDescriptorHeap[dst_mip0]; }
 };

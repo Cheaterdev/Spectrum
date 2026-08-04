@@ -460,6 +460,18 @@ public:
 
 	   	voxel_gi->pass_data(graph.builder);
 
+#if SPECTRUM_USE_VSM_SHADOWS
+		// Single-threaded allocation-planning pass for all VSM clip levels,
+		// run once per frame here (via add_slot_generator's pre_run hook)
+		// strictly before any VSM_RenderPage level's render() is dispatched
+		// to the thread pool -- see the LevelPlan comment in VSM.ixx for why
+		// this can't safely happen inside render() itself.
+		graph.add_slot_generator([this](Graph& graph)
+			{
+				vsm.plan_frame(graph);
+			});
+#endif
+
 		graph.add_slot_generator([this](Graph& graph)
 			{
 				PROFILE(L"FrameInfo");

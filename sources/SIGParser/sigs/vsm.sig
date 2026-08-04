@@ -17,7 +17,6 @@ struct VSMConstants
 	int level_count;
 	int page_size;
 	int pages_per_level;
-	int atlas_pages_per_side;
 	float4x4 light_view;
 	float4 level_info[8];
 }
@@ -42,12 +41,12 @@ struct VSMPageHiZ
 	Texture2DArray<float> page_hiz;
 }
 
-# Copies one page's rendered region of VSM_Atlas into VSMPageHiZ's mip 0.
+# Copies one page's rendered slice of VSM_Atlas into VSMPageHiZ's mip 0.
+# Both are per-page slices of the same size, so it is a straight 1:1 copy.
 [Bind = DefaultLayout::Instance0]
 struct VSMCopyPageDepth
 {
 	Texture2D<float> atlas;
-	int2 atlas_origin;
 	RWTexture2D<float> dst_mip0;
 }
 
@@ -62,14 +61,19 @@ ComputePSO VSMCopyPageDepth
 [Bind = DefaultLayout::Instance0]
 struct VSMPageBatch
 {
-	int page_base_slot;
+	# Which clipmap level this draw covers. Physical slots are no longer a
+	# fixed function of (level, local page) -- the AS/VS look the slot up
+	# per local page via VSMPageTableData's page_table (real allocator,
+	# see VSMPageTable.ixx).
+	int level;
 	# Bit i = local page i (0..pages_per_level^2-1, currently 16) is dirty
 	# this frame. Phase 2 per-page invalidation: a page outside this mask
 	# is skipped by the AS even if visible, keeping its cached content.
 	int dirty_mask;
-	# Nonzero when dirty_mask came from a recenter/light-move, not a scene
-	# change -- the slot's Hi-Z pyramid is then stale (different world
-	# region or light angle), so the AS must skip occlusion this draw.
+	# Bit i = local page i has no valid Hi-Z history this frame (freshly
+	# (re)allocated, or the light moved) -- the AS must skip occlusion for
+	# it. Per-page, not per-level: a page whose slot/content survived a
+	# recenter keeps its history even when siblings don't.
 	int skip_occlusion;
 }
 
@@ -77,7 +81,7 @@ struct VSMPageBatch
 struct VSMLighting
 {
 	GBuffer gbuffer;
-	Texture2D<float> vsm_atlas;
+	Texture2DArray<float> vsm_atlas;
 	Texture2DArray<uint> page_table;
 	StructuredBuffer<Camera> page_cameras;
 	RWTexture2D<float4> result;

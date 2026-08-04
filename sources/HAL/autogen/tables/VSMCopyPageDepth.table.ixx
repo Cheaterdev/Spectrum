@@ -17,23 +17,19 @@ export namespace Table
 	struct VSMCopyPageDepth
 	{
 		static constexpr SlotID ID = SlotID::VSMCopyPageDepth;
-		int2 atlas_origin;
 		HLSL::Texture2D<float> atlas;
 		HLSL::RWTexture2D<float> dst_mip0;
 		HLSL::Texture2D<float>& GetAtlas() { return atlas; }
-		int2& GetAtlas_origin() { return atlas_origin; }
 		HLSL::RWTexture2D<float>& GetDst_mip0() { return dst_mip0; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(atlas_origin);
 			compiler.compile(atlas);
 			compiler.compile(dst_mip0);
 		}
 		struct Compiled
 		{
-			int2 atlas_origin; // int2
 			uint atlas; // Texture2D<float>
 			uint dst_mip0; // RWTexture2D<float>
 
@@ -41,7 +37,6 @@ export namespace Table
 			private:
 			SERIALIZE()
 			{
-				ar& NVP(atlas_origin);
 			}
 
 
@@ -54,7 +49,6 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
-			ar& NVP(atlas_origin);
 		}
 
 	};
