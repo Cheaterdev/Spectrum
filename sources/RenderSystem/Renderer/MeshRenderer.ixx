@@ -65,7 +65,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		// gatherData supplies the shader-side bound check; dispatch_args (when
 		// non-null) drives an indirect dispatch, otherwise direct_count is used
 		// for a CPU-sized direct dispatch (count known on CPU — no indirect).
-		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
+		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion);
 		void  draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene);
 		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
 		void  gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, bool invisibleToo);
@@ -104,6 +104,11 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
         unsigned int instances_count;
 
         Variable<bool> use_gpu_occlusion = { true,"GPU culling", this };
+        // Additive on top of use_gpu_occlusion's instance-level box test --
+        // per-meshlet Hi-Z check in the AS, for objects partly occluded
+        // within an otherwise-visible instance. Independent toggle to A/B
+        // its cost/benefit separately.
+        Variable<bool> use_meshlet_hiz_occlusion = { true,"Meshlet Hi-Z occlusion", this };
 	/*	Variable<bool> use_cpu_culling = Variable<bool>(false, "use_cpu_culling", this);
 		Variable<bool> use_gpu_culling = Variable<bool>(false, "use_gpu_culling", this);
 		Variable<bool> clear_depth = Variable<bool>(true, "clear_depth", this);*/

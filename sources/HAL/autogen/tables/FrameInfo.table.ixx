@@ -24,6 +24,7 @@ export namespace Table
 		HLSL::Texture2D<float4> bestFitNormals;
 		HLSL::Texture3D<float4> brdf;
 		HLSL::TextureCube<float4> sky;
+		HLSL::Texture2D<float> mainHiZ;
 		Camera camera;
 		Camera prevCamera;
 		float4& GetTime() { return time; }
@@ -32,6 +33,7 @@ export namespace Table
 		HLSL::TextureCube<float4>& GetSky() { return sky; }
 		float4& GetSunDir() { return sunDir; }
 		float& GetMipBias() { return mipBias; }
+		HLSL::Texture2D<float>& GetMainHiZ() { return mainHiZ; }
 		Camera& GetCamera() { return camera; }
 		Camera& GetPrevCamera() { return prevCamera; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -44,6 +46,7 @@ export namespace Table
 			compiler.compile(bestFitNormals);
 			compiler.compile(brdf);
 			compiler.compile(sky);
+			compiler.compile(mainHiZ);
 			compiler.compile(camera);
 			compiler.compile(prevCamera);
 		}
@@ -55,6 +58,7 @@ export namespace Table
 			uint bestFitNormals; // Texture2D<float4>
 			uint brdf; // Texture3D<float4>
 			uint sky; // TextureCube<float4>
+			uint mainHiZ; // Texture2D<float>
 			Camera::Compiled camera; // Camera
 			Camera::Compiled prevCamera; // Camera
 

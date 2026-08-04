@@ -51,27 +51,39 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	if (!gbuffer || !use_gpu_occlusion)
 	{
 		// Scene mesh count is CPU-known — direct dispatch, no indirect args.
-		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL), nullptr, meshes_count);
+		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL), nullptr, meshes_count, false);
 		return;
 	}
 
 	{
 
 		PROFILE_GPU(L"first stage");
+		// The AS samples the Hi-Z pyramid (IsOccludedHiZ) through the global
+		// FrameInfo slot, so its read state isn't tracked per-pass -- make it
+		// explicit, or it is still UNORDERED_ACCESS from the last build.
+		if (use_meshlet_hiz_occlusion)
+			list.transition(gbuffer->HalfBuffer.hiZ_depth_uav.resource, HAL::ResourceStates::SHADER_RESOURCE);
 		// Stage 1 walks the full scene list: CPU-known count, direct dispatch.
 		generate_boxes(mesh_render_context, scene, scene->compiledGather[(int)mesh_render_context->render_mesh], nullptr, meshes_count);
 
 		draw_boxes(mesh_render_context, scene);
 		gather_rendered_boxes(mesh_render_context, scene, true);
 
-		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0);
+		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0, false);
 		MipMapGenerator::get().downsample_depth(compute, gbuffer->depth, gbuffer->HalfBuffer.hiZ_depth_uav);
+		// Coarser mips on top of mip 0, for the AS's per-meshlet test below.
+		// Skipped with the toggle off so disabling it is a clean baseline.
+		if (use_meshlet_hiz_occlusion)
+			MipMapGenerator::get().build_hiz_pyramid(compute, gbuffer->HalfBuffer.hiZ_depth_uav);
 		MipMapGenerator::get().write_to_depth(graphics, gbuffer->HalfBuffer.hiZ_depth_uav, gbuffer->HalfBuffer.hiZ_depth);
 	}
 
 
 	{
 		PROFILE_GPU(L"second stage");
+		// Same as stage 1: stage 1 left the pyramid in UNORDERED_ACCESS.
+		if (use_meshlet_hiz_occlusion)
+			list.transition(gbuffer->HalfBuffer.hiZ_depth_uav.resource, HAL::ResourceStates::SHADER_RESOURCE);
 		// Stage 2 retests the invisible list: sized by retest_args, written by
 		// stage 1's GatherMeshes.
 		generate_boxes(mesh_render_context, scene, gather_invisible, &retest_args, 0);
@@ -79,9 +91,13 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		draw_boxes(mesh_render_context, scene);
 		gather_rendered_boxes(mesh_render_context, scene, false);
 
-		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0);
+		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0, use_meshlet_hiz_occlusion);
 
 		MipMapGenerator::get().downsample_depth(compute, gbuffer->depth, gbuffer->HalfBuffer.hiZ_depth_uav);
+		// Coarser mips on top of mip 0, for the AS's per-meshlet test below.
+		// Skipped with the toggle off so disabling it is a clean baseline.
+		if (use_meshlet_hiz_occlusion)
+			MipMapGenerator::get().build_hiz_pyramid(compute, gbuffer->HalfBuffer.hiZ_depth_uav);
 		MipMapGenerator::get().write_to_depth(graphics, gbuffer->HalfBuffer.hiZ_depth_uav, gbuffer->HalfBuffer.hiZ_depth);
 
 	}
@@ -202,7 +218,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	graphics.set_rtv(gbuffer->compiled);
 }
-void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count)
+void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion)
 {
 	PROFILE_GPU(L"render_meshes");
 
@@ -293,7 +309,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 				{
 					PROFILE_GPU(L"flush");
 			
-					it->second->set(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics);
+					it->second->set(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics, hiz_occlusion);
 				}
 
 				{

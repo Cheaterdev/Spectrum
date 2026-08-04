@@ -493,6 +493,14 @@ public:
 						: 0.0f;
 				}
 
+				// Hi-Z pyramid for per-meshlet occlusion; the PSO permutation
+				// decides whether it is sampled (scene.sig's HiZOcclusion).
+				{
+					auto hiz = graph.builder.get(FrameGraph::ResourceID::GBuffer_HiZ_UAV);
+					if (hiz && hiz->resource)
+						frameInfo.GetMainHiZ() = hiz->get_handler<Handlers::Texture>()->texture2D;
+				}
+
 				auto compiled = frameInfo.compile(*graph.builder.current_frame);
 				graph.register_slot_setter(compiled);
 			});

@@ -17,18 +17,22 @@ export namespace PSOS
 	struct GBufferDraw: public PSOBase
 	{
 		struct Keys {
+			KeyValue<int, Nullable> HiZOcclusion;
 			GEN_DEF_COMP(Keys);
 		private:
 			SERIALIZE()
 			{
+				ar&NVP(HiZOcclusion);
 			}
 		};
 
-		GEN_GRAPHICS_PSO(GBufferDraw)
+		GEN_GRAPHICS_PSO(GBufferDraw, HiZOcclusion)
+		GEN_KEY(HiZOcclusion, true);
 
 
 		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 		{
+			static const ShaderDefine<&Keys::HiZOcclusion,&SimpleGraphicsPSO::amplification> HiZOcclusion = "HIZ_OCCLUSION";
 
 
 			SimplePSO mpso("GBufferDraw");
@@ -44,6 +48,7 @@ export namespace PSOS
 			mpso.amplification.entry_point = "AS";
 			mpso.amplification.flags = HAL::ShaderOptions::None;
 			
+			HiZOcclusion.Apply(mpso, key);
 
 			mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R16G16_FLOAT };	
 			mpso.blend = {  };

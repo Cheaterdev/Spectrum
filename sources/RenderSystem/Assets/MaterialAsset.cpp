@@ -47,7 +47,7 @@ void material::set(MESH_TYPE type, MeshRenderContext::ptr&)
 {
 }
 
-void material::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics)
+void material::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion)
 {
 }
 

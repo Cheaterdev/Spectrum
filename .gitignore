@@ -1,6 +1,7 @@
 #Project-specific
 .claude/
 log.txt
+*.log
 
 projects/
 

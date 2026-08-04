@@ -153,5 +153,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::VoxelIndirectFilter::Reflection) PSOS::VoxelIndirectFilter::Reflection;
 //decltype(PSOS::FontRender::Format) PSOS::FontRender::Format;
 //decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;
+//decltype(PSOS::GBufferDraw::HiZOcclusion) PSOS::GBufferDraw::HiZOcclusion;
+//decltype(PSOS::DepthDraw::HiZOcclusion) PSOS::DepthDraw::HiZOcclusion;
 //decltype(PSOS::Voxelization::Dynamic) PSOS::Voxelization::Dynamic;
 //decltype(PSOS::CubemapENV::Level) PSOS::CubemapENV::Level;

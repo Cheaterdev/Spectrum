@@ -42,11 +42,8 @@ ComputePSO DownsampleDepth
 }
 
 
-# Hi-Z pyramid mip-chain step: reads one mip, writes the next (exactly half
-# size per axis, standard mip halving -- unlike DownsampleDepth above, which
-# is a one-shot 8x reduction from a full-res depth buffer down to a single
-# coarse level). Min-reduced (reversed-Z conservative), same semantics as
-# DownsampleDepth, just 2x2->1 instead of 8x8->1 per output texel.
+# Hi-Z mip-chain step: one mip -> the next, 2x2->1 min-reduction (standard
+# mip halving, unlike DownsampleDepth's one-shot 8x reduction).
 [Bind = DefaultLayout::Instance0]
 struct DownsampleDepthMip
 {

@@ -17,18 +17,22 @@ export namespace PSOS
 	struct DepthDraw: public PSOBase
 	{
 		struct Keys {
+			KeyValue<int, Nullable> HiZOcclusion;
 			GEN_DEF_COMP(Keys);
 		private:
 			SERIALIZE()
 			{
+				ar&NVP(HiZOcclusion);
 			}
 		};
 
-		GEN_GRAPHICS_PSO(DepthDraw)
+		GEN_GRAPHICS_PSO(DepthDraw, HiZOcclusion)
+		GEN_KEY(HiZOcclusion, true);
 
 
 		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 		{
+			static const ShaderDefine<&Keys::HiZOcclusion,&SimpleGraphicsPSO::amplification> HiZOcclusion = "HIZ_OCCLUSION";
 
 
 			SimplePSO mpso("DepthDraw");
@@ -47,6 +51,7 @@ export namespace PSOS
 			mpso.amplification.entry_point = "AS";
 			mpso.amplification.flags = HAL::ShaderOptions::None;
 			
+			HiZOcclusion.Apply(mpso, key);
 
 			mpso.rtv_formats = {  };	
 			mpso.blend = {  };

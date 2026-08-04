@@ -931,20 +931,49 @@ namespace HAL
 				open_op = BarrierSync::NONE;
 			}
 
-			// Split the open batch when this transition would need a real barrier
-			// against an earlier op in the same batch (different, non-mergeable
-			// state on the same resource — write-after-write in another state,
-			// read-after-write, etc.). Same/mergeable state = no barrier = no
-			// split, exactly matching the un-batched barrier set. Reads the
-			// resource's per-list state directly (no parallel map).
-			void Transitions::batch_hazard_check(const HAL::Resource* resource, ResourceState to)
+			// Accesses that write memory. A dependency on one of these needs
+			// ordering even when the state itself is unchanged.
+			static bool is_write_access(ResourceState s)
+			{
+				return check(s.access & (BarrierAccess::UNORDERED_ACCESS
+									   | BarrierAccess::RENDER_TARGET
+									   | BarrierAccess::DEPTH_STENCIL_WRITE
+									   | BarrierAccess::COPY_DEST
+									   | BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE));
+			}
+
+			// Split the open batch when this use needs a barrier against an
+			// earlier op in the same batch. Two independent reasons:
+			//   1. a real state change is required (different, non-mergeable), or
+			//   2. the state is unchanged but there is a data dependency on the
+			//      same subresource -- RAW/WAW (earlier write) or WAR.
+			// (2) is what a state-only test misses: a mip chain / ping-pong /
+			// reduction stays UNORDERED_ACCESS throughout, so nothing "changes",
+			// yet each step must observe the previous one's writes.
+			void Transitions::batch_hazard_check(const HAL::Resource* resource, ResourceState to, UINT subres)
 			{
 				if (open_op == BarrierSync::NONE) return;
 
 				auto& cpu = const_cast<HAL::Resource*>(resource)->get_state_manager().get_cpu_state(this);
 
-				if (cpu.batch_touch_id == current_batch_id
-					&& !(cpu.batch_touch_state == to) && !merge_state(cpu.batch_touch_state, to))
+				const uint64 bit = (subres == ALL_SUBRESOURCES) ? ~0ull : (1ull << (subres & 63));
+				const bool   writes = is_write_access(to);
+
+				if (cpu.batch_touch_id != current_batch_id)
+				{
+					// First touch this batch: nothing to conflict with.
+					cpu.batch_touch_id    = current_batch_id;
+					cpu.batch_touch_state = to;
+					cpu.batch_write_mask  = writes ? bit : 0;
+					cpu.batch_read_mask   = writes ? 0 : bit;
+					return;
+				}
+
+				const bool state_hazard = !(cpu.batch_touch_state == to) && !merge_state(cpu.batch_touch_state, to);
+				const bool data_hazard  = (cpu.batch_write_mask & bit) != 0
+									   || (writes && (cpu.batch_read_mask & bit) != 0);
+
+				if (state_hazard || data_hazard)
 				{
 					// Split so this transition (and the ops after it) land in a new
 					// point positioned after the earlier op — the barrier must run
@@ -957,10 +986,17 @@ namespace HAL
 					// split already occurred, mis-positioning the barrier.
 					create_usage_point(open_op, false);   // close before the hazard
 					create_usage_point(open_op);           // reopen same class after
+
+					// Everything recorded so far is now ordered ahead of this
+					// use, so dependency tracking starts over from it.
+					cpu.batch_write_mask = 0;
+					cpu.batch_read_mask  = 0;
 				}
 
 				cpu.batch_touch_id    = current_batch_id;
 				cpu.batch_touch_state = to;
+				if (writes) cpu.batch_write_mask |= bit;
+				else        cpu.batch_read_mask  |= bit;
 			}
 
 			void Transitions::compile_transitions()
@@ -1033,7 +1069,20 @@ namespace HAL
 						}
 
 
-						if (prev_state == usage.wanted_state) continue;
+						if (prev_state == usage.wanted_state)
+						{
+							// No transition needed -- but if batch_hazard_check
+							// split these two uses of the same subresource apart
+							// (write dependency), execution/memory ordering still
+							// is. Under enhanced barriers a same-state barrier is
+							// exactly the UAV barrier that provides it.
+							if (usage.point != prev_usage->point && is_write_access(usage.wanted_state))
+								point.transitions.transition(usage.resource,
+									prev_state,
+									usage.wanted_state,
+									usage.subres, BarrierFlags::NONE);
+							continue;
+						}
 
 
 						if (prev_state!=ResourceStates::UNKNOWN && usage.prev_usage->prev_usage)
@@ -1284,9 +1333,9 @@ namespace HAL
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
 			use_resource(resource);
-			batch_hazard_check(resource, target_state);
 			visit_subres(info, [&](const HAL::Resource::ptr&, UINT subres) {
 				use_resource(resource);
+				batch_hazard_check(resource, target_state, subres);
 				resource->get_state_manager().transition(this, target_state, subres);
 			});
 		}
@@ -1332,7 +1381,7 @@ namespace HAL
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
 			use_resource(resource);
-			batch_hazard_check(resource, to);
+			batch_hazard_check(resource, to, subres);
 			const_cast<Resource*>(resource)->get_state_manager().transition(this, to, subres);
 		}
 	}

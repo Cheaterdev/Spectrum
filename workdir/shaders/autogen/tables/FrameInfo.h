@@ -15,6 +15,7 @@ struct FrameInfo
 	uint bestFitNormals; // Texture2D<float4>
 	uint brdf; // Texture3D<float4>
 	uint sky; // TextureCube<float4>
+	uint mainHiZ; // Texture2D<float>
 	Camera camera; // Camera
 	Camera prevCamera; // Camera
 	float4 GetTime() { return time; }
@@ -25,6 +26,7 @@ struct FrameInfo
 	Texture2D<float4> GetBestFitNormals() { return ResourceDescriptorHeap[bestFitNormals]; }
 	Texture3D<float4> GetBrdf() { return ResourceDescriptorHeap[brdf]; }
 	TextureCube<float4> GetSky() { return ResourceDescriptorHeap[sky]; }
+	Texture2D<float> GetMainHiZ() { return ResourceDescriptorHeap[mainHiZ]; }
 		float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 		{
 			return GetBrdf().SampleLevel(linearClampSampler, float3(Roughness, Metallic, 0.5 + 0.5 * NoV), 0);

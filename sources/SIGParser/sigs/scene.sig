@@ -37,6 +37,13 @@ GraphicsPSO GBufferDraw
 	[EntryPoint = AS]
 	amplification  = mesh_shader;
 
+	# Per-meshlet Hi-Z occlusion in the AS. Off for the occlusion culler's
+	# stage 1 (it would test against last frame's pyramid with this frame's
+	# camera, and a wrongly culled meshlet is never re-tested), on for stage 2.
+	[rename = HIZ_OCCLUSION]
+	[AS, nullable]
+	define HiZOcclusion;
+
 	rtv = { R8G8B8A8_UNORM, R8G8B8A8_UNORM, R8G8B8A8_UNORM, R16G16_FLOAT };
 
 	ds = D32_FLOAT;
@@ -58,6 +65,11 @@ GraphicsPSO DepthDraw
 
 	[EntryPoint = AS]
 	amplification  = mesh_shader;
+
+	# See GBufferDraw.
+	[rename = HIZ_OCCLUSION]
+	[AS, nullable]
+	define HiZOcclusion;
 
 	ds = D32_FLOAT;
 

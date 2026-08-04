@@ -96,7 +96,7 @@ export{
 			uint current_batch_id = 0;
 
 			void begin_op(BarrierSync op);
-			void batch_hazard_check(const HAL::Resource* resource, ResourceState to);
+			void batch_hazard_check(const HAL::Resource* resource, ResourceState to, UINT subres);
 		public:
 			// Close the open op-batch. Called at list end (compile_transitions)
 			// and by the FrameGraph before it appends cross-pass transitions, so

@@ -59,17 +59,11 @@ private:
 	// under whatever light direction was active last time that page
 	// rendered -- a real mismatch, not just staleness.
 	//
-	// Push-based, not poll-and-compare: set_position() runs on the UI
-	// thread and can mutate `position` at any point relative to a level's
-	// render() call, including between two different levels' renders within
-	// the same frame -- a shared "last known position" compared
-	// independently per level (the previous design) let different levels
-	// observe different snapshots of an in-progress drag and disagree about
-	// whether the light moved, so only some pages got invalidated. Guarded
-	// by pos_mutex like `position` itself: set_position() ORs `true` into
-	// every level on an actual change, each level clears only its own entry
-	// once it has consumed it, so no level can miss a change regardless of
-	// how many times set_position() is called mid-frame.
+	// Push-based (set atomically in set_position, guarded by pos_mutex),
+	// not poll-and-compare against a shared "last position": the UI thread
+	// can mutate `position` between two levels' renders in the same frame,
+	// so independent comparisons let levels disagree about whether the
+	// light moved. Each level clears only its own entry once consumed.
 	std::array<bool, MaxLevels> light_change_pending{};
 
 	std::array<Passes::VSM_RenderPage::setup_func_type,  MaxLevels> m_level_setup;

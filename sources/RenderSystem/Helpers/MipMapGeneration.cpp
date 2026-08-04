@@ -94,11 +94,8 @@ void MipMapGenerator::build_hiz_pyramid(HAL::ComputeContext& compute_context, HA
 	uint32_t maps = view.get_mip_count() - 1;
 	auto size = view.get_size();
 
-	// One dispatch per mip, 2x2->1 min-reduction each step (see
-	// downsample_depth_mip.hlsl) -- unlike generate()'s box-average color
-	// chain, a min-reduction pyramid this shallow (~6-7 mips) doesn't need
-	// the 4-mips-per-dispatch batching that amortizes dispatch overhead for
-	// much deeper color mip chains.
+	// One dispatch per mip -- shallow enough (~6-7 mips) not to need
+	// generate()'s 4-mips-per-dispatch batching.
 	for (uint32_t mip = 0; mip < maps; mip++)
 	{
 		uint32_t DstWidth = uint32_t(size.x >> (mip + 1));

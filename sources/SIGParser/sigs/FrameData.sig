@@ -36,6 +36,11 @@ struct FrameInfo
 	# to upscale_size (FSR/DLSS). 0 when no upscaler is active.
 	float mipBias;
 
+	# Hi-Z pyramid for per-meshlet occlusion (built in MeshRenderer.cpp).
+	# Whether it is USED is a PSO permutation, not a runtime flag -- see
+	# GBufferDraw's HiZOcclusion define in scene.sig.
+	Texture2D<float> mainHiZ;
+
 
 	%{
 		float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)

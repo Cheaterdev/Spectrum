@@ -60,7 +60,7 @@ export namespace materials
 		PipelineSimple(UINT id, pixel_shader::ptr pixel = nullptr);
 		PipelineSimple() = default;
 
-		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override;
+		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) override;
 
 	private:
 
@@ -83,7 +83,7 @@ export namespace materials
 
 		HAL::library_shader::ptr  raytrace_lib;
 
-		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override;
+		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) override;
 	private:
 
 		SERIALIZE()
@@ -203,7 +203,7 @@ export namespace materials
 		void generate_material();
 
 		virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override;
-		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override;
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) override;
 	private:
 		SERIALIZE() {
 			SAVE_PARENT(MaterialAsset);

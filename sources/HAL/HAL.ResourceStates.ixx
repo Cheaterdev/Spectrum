@@ -162,6 +162,14 @@ export
 			uint          batch_touch_id = 0;
 			ResourceState batch_touch_state;
 
+			// Which subresources were read/written so far in this batch, for
+			// detecting data dependencies that need ordering even when the
+			// state does not change (UAV->UAV). Subresource index hashed into
+			// 64 bits: exact for typical mip/slice counts, conservative past
+			// that (a false overlap costs a split, never misses a hazard).
+			uint64        batch_write_mask = 0;
+			uint64        batch_read_mask  = 0;
+
 			// Uniform fast path: while `uniform`, all subresources are tracked as
 			// one chain (`uniform_state`) whose usage nodes carry subres ==
 			// ALL_SUBRESOURCES, so a full-resource transition costs one node/one

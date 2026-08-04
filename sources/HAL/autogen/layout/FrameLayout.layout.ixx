@@ -16,7 +16,7 @@ export struct FrameLayout
 		static const uint ID = 0;
 		static const uint CB = 35;
 		static const uint CB_ID = 0;
-		static const uint SRV = 3;
+		static const uint SRV = 4;
 		static const uint SRV_ID = 2;
 		static inline const std::vector<uint> tables = { 0, 2 };
 	};

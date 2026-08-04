@@ -22,7 +22,7 @@ export namespace materials
         Pipeline() = default;
         virtual ~Pipeline() = default;
 
-		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) = 0;
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) = 0;
 
         uint get_id();
 	private:
@@ -43,7 +43,7 @@ export namespace materials
         public:
             using ptr = s_ptr<material>;
             virtual void set(MESH_TYPE type, MeshRenderContext::ptr&);
-            virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics);
+            virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion);
             virtual ~material() = default;
             virtual void compile();
             virtual void update();

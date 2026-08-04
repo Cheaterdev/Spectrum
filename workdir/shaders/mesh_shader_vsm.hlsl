@@ -84,21 +84,11 @@ bool vsm_is_visible(MeshletCullData c, float4x4 world, Camera camera)
 	return true;
 }
 
-// Phase 3: occlusion test against this page's OWN Hi-Z pyramid, built from
-// the LAST time this page rendered (see VSM.cpp's rebuild loop) -- not this
-// frame's not-yet-drawn geometry. Single-phase by design: VSM pages are
-// cached indefinitely (Phase 2), so there's no same-frame retest like the
-// main camera's two-phase occlusion; a moving occluder is expected to
-// invalidate both its own page and whatever it was hiding via the same
-// AABB-to-page mapping in VSM::attach_scene.
-//
-// Sphere-only (no per-meshlet AABB exists anywhere in this codebase). VSM's
-// page cameras are orthographic (VSM.cpp's set_projection_params(l,r,t,b,
-// znear,zfar)), so unlike a perspective test, screen-space footprint is
-// depth-independent -- no perspective divide needed for the radius, and the
-// "nearest point toward the light" is exact by pushing the center back along
-// the page camera's forward axis, not an approximation of a curved
-// projection.
+// Occlusion test against this page's own Hi-Z pyramid, from the last time
+// it rendered (single-phase: no same-frame retest, unlike the main camera --
+// see VSMPageBatch::skip_occlusion for why that's safe). Sphere-only (no
+// per-meshlet AABB exists), page cameras are orthographic so the screen
+// footprint is depth-independent.
 bool vsm_is_occluded(MeshletCullData c, float4x4 world, Camera page_cam, int slot)
 {
 	float4 BoundingSphere = c.GetBoundingSphere();
@@ -121,40 +111,60 @@ bool vsm_is_occluded(MeshletCullData c, float4x4 world, Camera page_cam, int slo
 
 	float4 center_clip = mul(page_cam.GetViewProj(), float4(center.xyz, 1));
 	center_clip.xyz /= center_clip.w;
-	// Same NDC->page-UV convention as get_shadow_vsm() in VSM_impl.hlsl.
-	float2 page_uv = center_clip.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 
-	// Sphere center outside this page: let the frustum test's own
-	// conservative sphere-vs-plane result stand rather than guessing.
-	if (any(page_uv < 0) || any(page_uv > 1))
+	// The sphere's actual NDC bounding rect, from projecting +-radius along
+	// BOTH screen-perpendicular axes -- not just one direction assumed
+	// isotropic and not just the center point. Thin/sparse geometry (a
+	// fence, where the bounding sphere is mostly empty space between bars)
+	// needs the whole measured footprint checked, or the nearest-point
+	// sample can land somewhere unrepresentative and wrongly cull geometry
+	// that's genuinely in front.
+	float3 world_up = (abs(forward.y) > 0.99) ? float3(1, 0, 0) : float3(0, 1, 0);
+	float3 right = normalize(cross(world_up, forward));
+	float3 up = normalize(cross(forward, right));
+
+	float2 ndc_min = center_clip.xy;
+	float2 ndc_max = center_clip.xy;
+	float3 offsets[4] = { right * radius, -right * radius, up * radius, -up * radius };
+	[unroll]
+	for (int i = 0; i < 4; i++)
+	{
+		float4 p = mul(page_cam.GetViewProj(), float4(center.xyz + offsets[i], 1));
+		p.xyz /= p.w;
+		ndc_min = min(ndc_min, p.xy);
+		ndc_max = max(ndc_max, p.xy);
+	}
+
+	// Same NDC->page-UV convention as get_shadow_vsm() in VSM_impl.hlsl.
+	// NDC->UV flips Y, so min/max swap; re-sort after converting.
+	float2 uv_a = ndc_min * float2(0.5, -0.5) + float2(0.5, 0.5);
+	float2 uv_b = ndc_max * float2(0.5, -0.5) + float2(0.5, 0.5);
+	float2 page_uv_min = min(uv_a, uv_b);
+	float2 page_uv_max = max(uv_a, uv_b);
+
+	// Entirely outside this page: let the frustum test's own result stand.
+	if (any(page_uv_max < 0) || any(page_uv_min > 1))
 		return false;
 
 	Texture2DArray<float> pyramid = GetVSMPageHiZ().GetPage_hiz();
 	uint pw, ph, elems, numLevels;
 	pyramid.GetDimensions(0, pw, ph, elems, numLevels);
 
-	// Screen-space radius via NDC distance to an offset point, reusing the
-	// same mul(viewProj, pos) pattern as everywhere else in this file --
-	// deliberately NOT indexing page_cam.GetProj() directly (its row/column
-	// layout in this codegen was never verified, and a wrong assumption
-	// there would silently pick too-fine a mip, sampling a single texel
-	// instead of the properly conservative footprint -- exactly the kind of
-	// bug that shows up as sporadic, patchy false occlusion rather than
-	// something consistently broken). Orthographic, so the measured radius
-	// is the same regardless of which perpendicular direction is used.
-	float3 world_up = (abs(forward.y) > 0.99) ? float3(1, 0, 0) : float3(0, 1, 0);
-	float3 right = normalize(cross(world_up, forward));
-	float4 edge_clip = mul(page_cam.GetViewProj(), float4(center.xyz + right * radius, 1));
-	edge_clip.xyz /= edge_clip.w;
-	float radius_ndc = length(edge_clip.xy - center_clip.xy);
-	float radius_texels = radius_ndc * 0.5 * (float)ph;
-	uint mip = (uint)clamp(ceil(log2(max(radius_texels * 2.0, 1.0))), 0.0, (float)(numLevels - 1));
+	// Standard HZB test: pick the LOD where the rect spans at most 2x2
+	// texels, then sample its four corners. Constant 4 taps, no loop.
+	float2 rect_texels = (page_uv_max - page_uv_min) * float2(pw, ph);
+	float  mip_f = ceil(log2(max(max(rect_texels.x, rect_texels.y), 1.0) * 0.5));
+	uint   mip = (uint)clamp(mip_f, 0.0, (float)(numLevels - 1));
 
-	float sampled = pyramid.SampleLevel(pointClampSampler, float3(page_uv, (float)slot), mip);
+	// MIN, not max -- see IsOccludedHiZ in mesh_shader.hlsl. Each texel holds
+	// the farthest depth in its footprint, so occlusion requires being behind
+	// every covered texel: near_z < min(taps).
+	float sampled = 1.0;
+	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_min.x, page_uv_min.y, (float)slot), mip));
+	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_max.x, page_uv_min.y, (float)slot), mip));
+	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_min.x, page_uv_max.y, (float)slot), mip));
+	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_max.x, page_uv_max.y, (float)slot), mip));
 
-	// reversed-Z: occluded if even the sphere's nearest point is farther
-	// (numerically smaller) than the farthest depth already recorded at that
-	// texel/mip -- see downsample_depth.hlsl's min-reduction.
 	return near_clip.z < sampled;
 }
 
@@ -189,12 +199,8 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
 	bool page_dirty = (GetVSMPageBatch().GetDirty_mask() >> pageLocal) & 1;
 	bool visible = valid && page_dirty && vsm_is_visible(cull_data, node_mat, page_cam);
 
-	// Phase 3: occlusion is an additional filter on top of frustum+dirty,
-	// not a replacement -- an occluded pair on a dirty page must still not
-	// launch mesh-shader work. Skipped on a recenter/light-move redraw:
-	// this slot's pyramid still holds an unrelated old world region (or the
-	// same region under a different light angle), so it can't validly
-	// occlude this frame's geometry -- see VSMPageBatch::skip_occlusion.
+	// Additional filter on top of frustum+dirty, skipped on a recenter/
+	// light-move redraw (stale pyramid -- see VSMPageBatch::skip_occlusion).
 	bool skip_occlusion = GetVSMPageBatch().GetSkip_occlusion() != 0;
 	if (visible && !skip_occlusion)
 		visible = !vsm_is_occluded(cull_data, node_mat, page_cam, slot);
