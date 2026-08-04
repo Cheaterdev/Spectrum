@@ -33,6 +33,10 @@ namespace EngineAssets
 		return  new BinaryAsset(to_path(L"shaders\\UniversalMaterialRaytracing.hlsl"));
 		});
 
+	EngineAsset<BinaryAsset> material_preview_header(L"material_header_preview", [] {
+		return  new BinaryAsset(to_path(L"shaders\\UniversalMaterialPreview.hlsl"));
+		});
+
 
 
 

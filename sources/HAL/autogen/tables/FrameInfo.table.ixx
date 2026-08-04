@@ -20,7 +20,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::FrameInfo;
 		float4 time;
 		float4 sunDir;
-		float mipBias;
+		float mipBias = 0;
 		HLSL::Texture2D<float4> bestFitNormals;
 		HLSL::Texture3D<float4> brdf;
 		HLSL::TextureCube<float4> sky;

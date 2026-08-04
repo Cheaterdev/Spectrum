@@ -11,6 +11,7 @@ export namespace EngineAssets
 	extern EngineAsset<MeshAsset> plane;
 	extern EngineAsset<BinaryAsset> material_header;
 	extern EngineAsset<BinaryAsset> material_raytracing_header;
+	extern EngineAsset<BinaryAsset> material_preview_header;
 
 
 	extern EngineAsset<TextureAsset> best_fit_normals;

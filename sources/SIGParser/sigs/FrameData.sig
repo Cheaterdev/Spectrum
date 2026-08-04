@@ -33,8 +33,12 @@ struct FrameInfo
 	float4 sunDir;
 
 	# Texture LOD bias compensating for rendering at frame_size and upscaling
-	# to upscale_size (FSR/DLSS). 0 when no upscaler is active.
-	float mipBias;
+	# to upscale_size (FSR/DLSS). 0 when no upscaler is active, and the
+	# correct default for every OTHER pipeline that fills its own FrameInfo
+	# (AssetRenderer, PSSM, StencilRenderer) without touching this field --
+	# unset, it was garbage, and SampleBias() read that garbage as an LOD
+	# offset, sampling the smallest/flattest mip (trashed material colors).
+	float mipBias = 0;
 
 	# Hi-Z pyramid for per-meshlet occlusion (built in MeshRenderer.cpp).
 	# Whether it is USED is a PSO permutation, not a runtime flag -- see

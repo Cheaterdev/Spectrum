@@ -541,6 +541,31 @@ public:
 	}
 };
 
+// Small per-node live-value thumbnail shown on material graph nodes (see
+// MaterialGraph::create_node_preview_hook). Node itself isn't owned by this
+// widget -- it's only valid while the graph editor holding it is open, same
+// lifetime assumption as the node's other editor-window widgets.
+class node_preview_thumbnail : public GUI::Elements::image
+{
+	std::shared_ptr<Asset> m_asset;
+	FlowGraph::Node*       m_node;
+public:
+	node_preview_thumbnail(std::shared_ptr<Asset> a, FlowGraph::Node* node) : m_asset(a), m_node(node)
+	{
+		docking     = GUI::dock::TOP;
+		width_size  = GUI::size_type::FIXED;
+		height_size = GUI::size_type::FIXED;
+		size        = { 128, 128 };
+		thinkable   = true; // re-fetch each frame: the slice view is rebuilt whenever the graph regenerates
+	}
+
+	void think(float dt) override
+	{
+		if (auto mat = m_asset ? m_asset->get_ptr<materials::universal_material>() : nullptr)
+			texture = mat->get_preview_slice_view(m_node);
+	}
+};
+
 // Window content that previews an asset. Dispatches by type:
 //   TextureAsset -> universal resource_preview (GPU), self-driven via a pass.
 //   BinaryAsset  -> MultiLineLabel (one label per line) in a scroll container.
@@ -1474,6 +1499,13 @@ public:
 						box->size        = { 160, 160 };
 						box->add_child(std::make_shared<asset_preview_content>(a));
 						return box;
+					};
+
+					// Per-node live-value thumbnail (see node_preview_thumbnail).
+					MaterialGraph::create_node_preview_hook = [](std::shared_ptr<Asset> a, FlowGraph::Node* node) -> GUI::base::ptr
+					{
+						if (!a || !node) return nullptr;
+						return std::make_shared<node_preview_thumbnail>(a, node);
 					};
 					EVENT("End Asset Explorer");
 				}

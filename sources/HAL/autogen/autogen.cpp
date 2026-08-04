@@ -28,6 +28,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FrameInfo") return SlotID::FrameInfo;
 	if(slot_name == "FSR") return SlotID::FSR;
 	if(slot_name == "MaterialInfo") return SlotID::MaterialInfo;
+	if(slot_name == "MaterialPreviewInfo") return SlotID::MaterialPreviewInfo;
 	if(slot_name == "MeshInstanceInfo") return SlotID::MeshInstanceInfo;
 	if(slot_name == "MeshInfo") return SlotID::MeshInfo;
 	if(slot_name == "GatherPipelineGlobal") return SlotID::GatherPipelineGlobal;
@@ -146,6 +147,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::FSR) return Slots::FSR::Slot::ID;
 
 	if(id == SlotID::MaterialInfo) return Slots::MaterialInfo::Slot::ID;
+
+	if(id == SlotID::MaterialPreviewInfo) return Slots::MaterialPreviewInfo::Slot::ID;
 
 	if(id == SlotID::MeshInstanceInfo) return Slots::MeshInstanceInfo::Slot::ID;
 
@@ -320,6 +323,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FrameInfo) return "FrameInfo";
 	if(id == SlotID::FSR) return "FSR";
 	if(id == SlotID::MaterialInfo) return "MaterialInfo";
+	if(id == SlotID::MaterialPreviewInfo) return "MaterialPreviewInfo";
 	if(id == SlotID::MeshInstanceInfo) return "MeshInstanceInfo";
 	if(id == SlotID::MeshInfo) return "MeshInfo";
 	if(id == SlotID::GatherPipelineGlobal) return "GatherPipelineGlobal";

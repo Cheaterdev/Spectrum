@@ -157,8 +157,19 @@ class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
             T::start_if_output = true;
         }
 
+        // Default per-node preview thumbnail (see create_node_preview_hook).
+        // Node types with their own custom editor window (VectorNode,
+        // ScalarNode, MaterialGraph) override this themselves and don't get
+        // this default -- but can still call build_live_preview_widget()
+        // directly (see TextureNode::create_editor_window) to embed the same
+        // live thumbnail alongside their own content.
+        virtual GUI::base::ptr create_editor_window() override;
 
-   
+        // Null if there's no hook registered yet, this node has no
+        // preview_material reachable via its owning graph, or this is a
+        // graph/function container node (those never get a preview slice).
+        GUI::base::ptr build_live_preview_widget();
+
     private:
         SERIALIZE()
         {
@@ -264,9 +275,29 @@ class MaterialContext : public FlowGraph::GraphContext
 		ShaderSource voxel_shader;
 		ShaderSource pixel_shader;
 		ShaderSource tess_shader;
+		ShaderSource preview_shader;
 
-	
+
         std::string text;
+
+        // Per-node preview capture (see material_preview.sig / Materials.cpp).
+        // Only populated while generating preview_shader.
+        //
+        // Node outputs are transient here -- put() triggers send_next()
+        // immediately, which pushes the value downstream then clears it
+        // (parameter::send_next() in Core/FlowGraph/FlowGraph.cpp), all
+        // synchronously inside put(). So a node's output.value is gone by
+        // the time its operator() returns; capture_value() is called
+        // directly from add_value()/create_value() instead, where the
+        // value is generated, gated by capturing_node (set/restored around
+        // each node's call in MaterialTNode<T>::operator()).
+        bool capture_preview = false;
+        int preview_slice_counter = 0;
+        std::map<FlowGraph::Node*, int> node_preview_slot;
+    public:
+        FlowGraph::Node* capturing_node = nullptr;
+        void capture_value(MaterialFunction* owner_func, const shader_parameter& val);
+    private:
 
         std::map < MaterialFunction*, std::string > functions;
         std::vector<TextureSRVParams::ptr> textures;
@@ -319,10 +350,16 @@ class MaterialContext : public FlowGraph::GraphContext
 		ShaderSource get_pixel_result();
 		ShaderSource get_voxel_result();
 		ShaderSource get_tess_result();
+		ShaderSource get_preview_result();
 
         void start(std::string orig_file,MaterialGraph* graph);
 
 		void clear_parameters();
+
+		// Slice a node was assigned in the preview results array, or -1 if the
+		// graph hasn't been (re)generated with previews yet / node has no output.
+		int get_preview_slot(FlowGraph::Node* node);
+		int get_preview_slot_count();
 
         /*	virtual FlowGraph::graph* create_graph(){
         return new MaterialGraph();
@@ -408,6 +445,10 @@ class MaterialGraph : public MaterialFunction
         // Filled by the app layer (which can build a preview widget above the
         // Materials module — Materials can't import the renderer without a cycle).
         static inline std::function<GUI::base::ptr(std::shared_ptr<Asset>)> create_preview_hook;
+        // Same idea, per node: builds the small live-value thumbnail shown on
+        // graph nodes that don't already have a custom editor window (see
+        // MaterialTNode<T>::create_editor_window below).
+        static inline std::function<GUI::base::ptr(std::shared_ptr<Asset>, ::FlowGraph::Node*)> create_node_preview_hook;
 
         MaterialGraph();
         virtual ~MaterialGraph();
@@ -629,10 +670,57 @@ class MulNode : public MaterialNode
 template <class T>
 void MaterialTNode<T>::operator()(::FlowGraph::GraphContext* c)
 {
-    (*this)(static_cast<MaterialContext*>(c));
+    auto* mat_context = static_cast<MaterialContext*>(c);
+
+    // Marks this as the "currently executing" leaf node so add_value()/
+    // create_value() can attribute generated values to it (see
+    // MaterialContext::capturing_node). Save/restore so nested
+    // MaterialFunction traversal nests correctly; skip container nodes
+    // themselves -- only leaf nodes represent a single computed value.
+    FlowGraph::Node* prev_capturing = mat_context->capturing_node;
+    if (!dynamic_cast<::FlowGraph::graph*>(this))
+        mat_context->capturing_node = this;
+
+    (*this)(mat_context);
+
+    mat_context->capturing_node = prev_capturing;
 }
 
+template <class T>
+GUI::base::ptr MaterialTNode<T>::create_editor_window()
+{
+    return build_live_preview_widget();
+}
 
+template <class T>
+GUI::base::ptr MaterialTNode<T>::build_live_preview_widget()
+{
+    // Graph/function container nodes (MaterialGraph, MaterialFunction) never
+    // get a preview slice -- capture_value() skips them (see
+    // MaterialTNode<T>::operator()) since their "outputs" are boundary pins,
+    // not a single computed value. Bail out before building an empty widget.
+    if (dynamic_cast<::FlowGraph::graph*>(this))
+        return nullptr;
+
+    if (!MaterialGraph::create_node_preview_hook)
+        return nullptr;
+
+    // Walk up to the owning MaterialGraph (nodes inside a nested
+    // MaterialFunction have that function as their immediate owner, not the
+    // root graph) to reach preview_material.
+    ::FlowGraph::graph* cur = this->get_graph();
+    while (cur)
+    {
+        if (auto* g = dynamic_cast<MaterialGraph*>(cur))
+        {
+            if (!g->preview_material)
+                return nullptr;
+            return MaterialGraph::create_node_preview_hook(g->preview_material->get_ptr<Asset>(), this);
+        }
+        cur = cur->get_graph();
+    }
+    return nullptr;
+}
 
 class SpecToMetNode : public MaterialNode
 {

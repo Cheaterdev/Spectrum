@@ -40,6 +40,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_Filter>(device, pso[PSO::DenoiserShadow_Filter]));
 	tasks.emplace_back(PSOBase::create<PSOS::FSR>(device, pso[PSO::FSR]));
 	tasks.emplace_back(PSOBase::create<PSOS::RCAS>(device, pso[PSO::RCAS]));
+	tasks.emplace_back(PSOBase::create<PSOS::MaterialPreview>(device, pso[PSO::MaterialPreview]));
 	tasks.emplace_back(PSOBase::create<PSOS::GatherPipeline>(device, pso[PSO::GatherPipeline]));
 	tasks.emplace_back(PSOBase::create<PSOS::GatherBoxes>(device, pso[PSO::GatherBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::InitDispatch>(device, pso[PSO::InitDispatch]));

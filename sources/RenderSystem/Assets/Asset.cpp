@@ -758,6 +758,15 @@ void Asset::save(std::ostream&& s)
 
 AssetHolder::~AssetHolder()
 {
+	// Outstanding AssetReferenceBase instances can outlive this holder (e.g.
+	// a shared_ptr held elsewhere after the owning node is removed).
+	// destroy() null-checks owner before unregistering, but nothing nulled
+	// it here -- leaving a dangling AssetHolder* that use-after-freed on
+	// later destruction. Null it out now so that check actually holds.
+	std::lock_guard<std::mutex> g(m);
+	for (auto* r : assets)
+		if (r)
+			r->owner = nullptr;
 }
 
 AssetStorage::ptr AssetManager::find_storage_by_name(std::wstring name)

@@ -105,7 +105,17 @@ shader_parameter MaterialContext::create_value(Uniform::ptr f)
 
 	uniform_struct += ")";*/
 
-	return graph->add_value(f->type, std::string("GetMaterialInfo().GetData().") + shader_name);
+	// The preview build binds MaterialPreviewInfo (its own SIG table, see
+	// material_preview.sig), not the production MaterialInfo -- same CB
+	// layout/shader_name, different accessor.
+	auto accessor = capture_preview ? "GetMaterialPreviewInfo()" : "GetMaterialInfo()";
+	auto result = graph->add_value(f->type, std::string(accessor) + ".GetData()." + shader_name);
+	// add_value() below always targets the root graph's text regardless of
+	// which nested MaterialFunction is executing (pre-existing behavior,
+	// not something this feature changes) -- so graph is the right owner
+	// to append the capture write to as well.
+	capture_value(graph, result);
+	return result;
 }
 
 std::string MaterialContext::get_texture(TextureSRVParams::ptr& p)
@@ -163,6 +173,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 	voxel_shader = ShaderSource();
 	tess_shader = ShaderSource();
 	hit_shader = ShaderSource();
+	preview_shader = ShaderSource();
 
 	this->graph = graph;
 	uniform_struct = "";
@@ -247,12 +258,45 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		tess_shader.text = text;
 
 	}
+
+	// Third pass: same reachable node set as the pixel path (so every node
+	// visible in the final material gets a slice), but with capture_preview
+	// on so add_value()/create_value() inject a capture write per node (see
+	// MaterialContext::capture_value). Reuses shader_parameter_uniform/_srv's
+	// dedup, so this doesn't duplicate uniforms/textures registered above.
+	{
+		text = "";
+		functions.clear();
+		preview_slice_counter = 0;
+		node_preview_slot.clear();
+
+		graph->get_normals()->set_enabled(true);
+		graph->get_glow()->set_enabled(true);
+		graph->get_texcoord()->set_enabled(true);
+		graph->get_mettalic()->set_enabled(true);
+		graph->get_base_color()->set_enabled(true);
+		graph->get_roughness()->set_enabled(true);
+		graph->get_opacity()->set_enabled(true);
+		graph->get_refraction()->set_enabled(true);
+		graph->get_tess_displacement()->set_enabled(false);
+
+		capture_preview = true;
+		graph->start(this);
+		capture_preview = false;
+
+		if (functions.find(graph) != functions.end())
+			preview_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);
+
+		preview_shader.text = text;
+	}
+
 	std::string uniforms_string = generate_uniform_struct();
 
 	pixel_shader.uniforms = uniforms_string;
 	voxel_shader.uniforms = uniforms_string;
 	hit_shader.uniforms = uniforms_string;
 	tess_shader.uniforms = uniforms_string;
+	preview_shader.uniforms = uniforms_string;
 
 	uniforms_ps = uniforms;
 	text = pixel_shader.text;
@@ -261,6 +305,66 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 ShaderSource MaterialContext::get_tess_result()
 {
 	return tess_shader;
+}
+
+ShaderSource MaterialContext::get_preview_result()
+{
+	return preview_shader;
+}
+
+int MaterialContext::get_preview_slot(FlowGraph::Node* node)
+{
+	auto it = node_preview_slot.find(node);
+	return it != node_preview_slot.end() ? it->second : -1;
+}
+
+int MaterialContext::get_preview_slot_count()
+{
+	return preview_slice_counter;
+}
+
+namespace
+{
+	// Preview slices are always float4 (see material_preview.sig); node values
+	// can be narrower (scalars, float2/3), so pad/broadcast into one. Alpha is
+	// always forced to 1 (even for genuine float4 values) -- the GUI draws
+	// this alpha-blended, and a node's own .w (opacity/pack/whatever) isn't
+	// meant to make its *preview thumbnail* translucent or invisible.
+	std::string coerce_preview_value(const shader_parameter& val)
+	{
+		switch (val.type.N)
+		{
+		case 1:  return "float4((" + val.name + ").xxx, 1)";
+		case 2:  return "float4(" + val.name + ", 0, 1)";
+		case 3:  return "float4(" + val.name + ", 1)";
+		default: return "float4((" + val.name + ").xyz, 1)";
+		}
+	}
+}
+
+void MaterialContext::capture_value(MaterialFunction* owner_func, const shader_parameter& val)
+{
+	if (!capture_preview || !capturing_node || !owner_func)
+		return;
+
+	// First captured value for a node wins the slot -- e.g. SpecToMetNode
+	// generates two (albedo, metallic); the preview thumbnail just shows
+	// whichever was computed first. Nodes that never reach here (their
+	// operator() doesn't call add_value()/create_value() at all, e.g.
+	// TiledTextureNode, currently unimplemented) simply get no slot --
+	// get_preview_slot() returns -1, no thumbnail shown, not a crash.
+	if (node_preview_slot.find(capturing_node) != node_preview_slot.end())
+		return;
+
+	int slice = preview_slice_counter++;
+	node_preview_slot[capturing_node] = slice;
+
+	// preview_tid, not id: this write lands inside COMPILED_FUNC's body, a
+	// separate function from CS() where SV_DispatchThreadID is a parameter
+	// -- see UniversalMaterialPreview.hlsl.
+	owner_func->add_function(
+		std::string("GetMaterialPreviewInfo().GetResults()[uint3(preview_tid.xy, ") +
+		std::to_string(slice) + ")] = " + coerce_preview_value(val));
 }
 
 ShaderSource MaterialContext::get_pixel_result()
@@ -492,6 +596,7 @@ shader_parameter MaterialFunction::add_value(const ShaderParamType& type, std::s
 	shader_parameter result;
 	result.name = param_name;
 	result.type = type;
+	mat_context->capture_value(this, result);
 	return result;
 }
 
@@ -891,17 +996,26 @@ GUI::base::ptr TextureNode::create_editor_window()
 	img->width_size = GUI::size_type::MATCH_CHILDREN;
 	img->height_size = GUI::size_type::MATCH_CHILDREN;
 	img->docking = dock::TOP;
-	//   img->size = { 64, 64 };
-	GUI::Elements::image::ptr img_inner(new GUI::Elements::image);
-	//img_inner->texture.texture = asset->get_texture();
-
-	//img_inner->texture.srv = HAL::StaticDescriptors::get().place(1);
-
 
 	auto asset = (texture_info->asset)->get_ptr<TextureAsset>();
-	img_inner->texture = asset->get_texture()->texture_2d();
-	img_inner->size = { 64, 64 };
-	img->add_child(img_inner);
+
+	// Live preview goes through the compiled shader (same as any other
+	// node), so unlike the raw asset texture it actually reflects whatever
+	// tc/texcoord transform feeds i_tc (e.g. a tiling/panning node
+	// upstream). Falls back to the raw texture if no preview is available
+	// yet (e.g. before the material's first generation).
+	auto live = build_live_preview_widget();
+	if (live)
+	{
+		img->add_child(live);
+	}
+	else
+	{
+		GUI::Elements::image::ptr img_inner(new GUI::Elements::image);
+		img_inner->texture = asset->get_texture()->texture_2d();
+		img_inner->size = { 64, 64 };
+		img->add_child(img_inner);
+	}
 
 
 
@@ -923,7 +1037,7 @@ GUI::base::ptr TextureNode::create_editor_window()
 	chk_srgb->get_label()->text = "linear";
 
 	chk_srgb->get_check()->set_checked(texture_info->to_linear);
-	chk_srgb->on_check = [this, img_inner, asset](bool v) {
+	chk_srgb->on_check = [this, asset](bool v) {
 
 		texture_info->to_linear = v;
 		//	asset->get_texture()->texture_2d().srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
