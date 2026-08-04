@@ -809,6 +809,15 @@ void GUI::Elements::FlowGraph::canvas::init(::FlowGraph::graph* g)
 		win->pos = node->pos;
 	if (graph_in)  graph_in->pos  = g->pos_in;
 	if (graph_out) graph_out->pos = g->pos_out;
+
+	if (on_open)
+		on_open(g);
+}
+
+GUI::Elements::FlowGraph::canvas::~canvas()
+{
+	if (g && on_close)
+		on_close(g);
 }
 
 /*

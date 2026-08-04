@@ -102,9 +102,19 @@ export namespace GUI
                     using ptr = s_ptr<canvas>;
                     using wptr = w_ptr<canvas>;
                     canvas(manager* main_manager);
+                    virtual ~canvas();
                     //virtual void set_skin(Renderer_ptr skin) override;
                     virtual void on_add(base* parent) override;
                     virtual void on_remove() override;
+
+                    // Fired once when a graph finishes opening into a canvas
+                    // (end of init()) and once when that canvas is destroyed.
+                    // Generic on purpose -- this is GUI-layer code with no
+                    // knowledge of Materials -- so app-layer code (main.cpp)
+                    // can react (e.g. attach/detach a materials::
+                    // MaterialPreviewSession) without a module cycle.
+                    static inline std::function<void(::FlowGraph::graph*)> on_open;
+                    static inline std::function<void(::FlowGraph::graph*)> on_close;
 
                     void init(::FlowGraph::graph* g);
 

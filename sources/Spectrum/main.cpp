@@ -561,8 +561,13 @@ public:
 
 	void think(float dt) override
 	{
-		if (auto mat = m_asset ? m_asset->get_ptr<materials::universal_material>() : nullptr)
-			texture = mat->get_preview_slice_view(m_node);
+		auto mat = m_asset ? m_asset->get_ptr<materials::universal_material>() : nullptr;
+		if (!mat) return;
+
+		auto* session = materials::MaterialPreviewSession::find(mat->get_graph().get());
+		if (!session) return;
+
+		texture = session->get_slice_view(mat->get_preview_slot(m_node));
 	}
 };
 
@@ -1507,6 +1512,14 @@ public:
 						if (!a || !node) return nullptr;
 						return std::make_shared<node_preview_thumbnail>(a, node);
 					};
+
+					// Attach/detach a materials::MaterialPreviewSession for as
+					// long as a material graph is open in an editor canvas --
+					// lives here (above both GUI and Graphics) since canvas
+					// (GUI) can't know about Materials, and Materials can't
+					// know when a canvas opens/closes.
+					GUI::Elements::FlowGraph::canvas::on_open  = [](FlowGraph::graph* g) { materials::MaterialPreviewSession::open(g); };
+					GUI::Elements::FlowGraph::canvas::on_close = [](FlowGraph::graph* g) { materials::MaterialPreviewSession::close(g); };
 					EVENT("End Asset Explorer");
 				}
 			}

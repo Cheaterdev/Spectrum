@@ -76,20 +76,14 @@ export namespace materials
 		PSOS::GBufferDraw::ptr gbuffer;
 		PSOS::Voxelization::ptr voxelization;
 		PSOS::DepthDraw::ptr depth_draw;
-		// Per-node preview capture PSO (see material_preview.sig). Fully
-		// decoupled from the passes above: own root-signature slot, own
-		// harness HLSL, never touched by the production render path.
-		PSOS::MaterialPreview::ptr preview;
 	public:
 		using ptr = std::shared_ptr<PipelinePasses>;
 		PipelinePasses() = default;
-		PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, std::string preview_source, MaterialContext::ptr context);
+		PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context);
 
 		HAL::library_shader::ptr  raytrace_lib;
 
 		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) override;
-
-		PSOS::MaterialPreview::ptr get_preview() { return preview; }
 	private:
 
 		SERIALIZE()
@@ -99,10 +93,6 @@ export namespace materials
 			ar& NVP(gbuffer);
 			ar& NVP(depth_draw);
 			ar& NVP(voxelization);
-			// preview intentionally not serialized: it's editor-only, and
-			// WrapperMap's cereal path (HAL.PipelineState.ixx) is hardcoded
-			// to HAL::PipelineState, not the ComputePipelineState this PSO
-			// uses. generate_material() rebuilds it fresh on the next edit.
 
 		}
 	};
@@ -113,7 +103,7 @@ export namespace materials
 		std::mutex m;
 	public:
 		Pipeline::ptr get_pipeline(Pipeline::ptr orig);
-		Pipeline::ptr get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, std::string preview, MaterialContext::ptr context);
+		Pipeline::ptr get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context);
 
 	};
 	
@@ -152,8 +142,6 @@ export namespace materials
 
 		BinaryAsset::ref include_file;
 		BinaryAsset::ref include_file_raytacing;
-		BinaryAsset::ref include_file_preview;
-		uint32_t preview_header_version = 0;
 
 		bool need_update_uniforms = false;
 		bool need_update_compiled = false;
@@ -180,14 +168,6 @@ export namespace materials
 		std::vector<HLSL::Texture2D<float4>> texture_srvs;
 		std::vector<HLSL::FeedbackTexture2DMip> texture_feedbacks;
 		Pipeline::ptr pipeline;
-
-		// Editor-only per-node preview capture: one small array texture, one
-		// slice per node (see MaterialContext::get_preview_slot_count()).
-		// Rebuilt/redispatched every time the graph regenerates.
-		static constexpr int preview_resolution = 64;
-		HAL::Texture::ptr preview_results;
-		std::vector<HAL::Texture2DView> preview_slice_views;
-		void update_preview_textures();
 
 	public:
 		using ptr = s_ptr<universal_material>;
@@ -223,15 +203,27 @@ export namespace materials
 		void generate_material();
 
 		// Per-node preview capture (editor-only; see material_preview.sig).
-		// Returns null if the graph hasn't produced a preview PSO yet.
-		PSOS::MaterialPreview::ptr get_preview_pso();
+		// Just the raw ingredients -- building/compiling/dispatching the
+		// actual preview PSO and results texture is materials::
+		// MaterialPreviewSession's job (owned by the graph editor's canvas
+		// while it's open), not this material's.
+		//
+		// preview_source_generation bumps only on a structural regenerate
+		// (compiled shader text changed -- a session needs to recompile its
+		// PSO). preview_generation bumps on that AND on pixel_data-only
+		// updates (e.g. a slider drag -- a session just needs to redispatch
+		// with its existing PSO).
+		uint32_t preview_source_generation = 0;
+		uint32_t preview_generation = 0;
 		int get_preview_slot(::FlowGraph::Node* node);
 		int get_preview_slot_count();
-		void render_preview(HAL::ComputeContext& compute, HLSL::RWTexture2DArray<float4> results, ivec2 res);
+		ShaderSource get_preview_shader_source();
 
-		// Empty (default-constructed) Texture2DView if the node has no preview
-		// yet (never generated, or a graph/function container node).
-		HAL::Texture2DView get_preview_slice_view(::FlowGraph::Node* node);
+		// Binds this material's current texture/uniform data and dispatches
+		// into results using the caller-supplied preview PSO (owned by
+		// whoever is hosting the preview, e.g. MaterialPreviewSession -- this
+		// material only knows how to feed itself into one).
+		void render_preview(HAL::ComputeContext& compute, PSOS::MaterialPreview::ptr preview_pso, HLSL::RWTexture2DArray<float4> results, ivec2 res);
 
 		virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override;
 		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) override;
@@ -243,7 +235,6 @@ export namespace materials
 			ar& NVP(graph);
 			ar& NVP(include_file);
 			ar& NVP(include_file_raytacing);
-			ar& NVP(include_file_preview);
 
 			ar& NVP(ps_uniforms);
 			ar& NVP(tess_uniforms);

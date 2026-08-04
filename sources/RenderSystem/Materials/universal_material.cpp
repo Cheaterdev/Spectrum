@@ -42,23 +42,8 @@ CEREAL_FORCE_REGISTER_RELATION(materials::Pipeline, materials::PipelineSimple);
 // PipelinePasses
 // ---------------------------------------------------------------------------
 
-materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, std::string preview_source, MaterialContext::ptr context) :Pipeline(id)
+materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context) :Pipeline(id)
 {
-	{
-		// Not using PSOS::MaterialPreview's normal (device, modifier) ctor:
-		// generated init_pso() re-sets mpso.compute.file_name/entry_point to
-		// the .sig's static default *after* the modifier callback runs (see
-		// pso.jinja), clobbering our inline source text back to the literal
-		// path string. Drive init_pso() + override + create() manually so
-		// nothing runs after our assignment.
-		preview = std::make_shared<PSOS::MaterialPreview>();
-		PSOS::MaterialPreview::Keys key;
-		auto mpso = preview->init_pso(key, nullptr);
-		mpso.name += std::to_string(id);
-		mpso.compute = { preview_source, "CS", HAL::ShaderOptions::None, context->get_preview_result().macros, true };
-		preview->psos[key] = mpso.create(RenderSystem::get().device());
-	}
-
 	depth_draw = std::make_shared<PSOS::DepthDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::DepthDraw::Keys& )
 	{
 		target.name += std::to_string(id);
@@ -139,7 +124,7 @@ materials::Pipeline::ptr materials::PipelineManager::get_pipeline(Pipeline::ptr 
 	return pip;
 }
 
-materials::Pipeline::ptr materials::PipelineManager::get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, std::string preview, MaterialContext::ptr context)
+materials::Pipeline::ptr materials::PipelineManager::get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context)
 {
 	std::lock_guard<std::mutex> g(m);
 	auto hash = crc32(pixel + tess);
@@ -147,7 +132,7 @@ materials::Pipeline::ptr materials::PipelineManager::get_pipeline(std::string pi
 
 	if (!pip)
 	{
-		auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), pixel,tess,voxel,raytracing,preview,context);
+		auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), pixel,tess,voxel,raytracing,context);
 		pipeline->hash = hash;
 		pip = pipeline;
 	}
@@ -225,8 +210,7 @@ void materials::universal_material::update()
 	// change notification we missed): the shared BinaryAsset's version will be
 	// ahead of what we last generated against.
 	if ((include_file          && include_file->get_version()          != ps_header_version) ||
-	    (include_file_raytacing && include_file_raytacing->get_version() != rt_header_version) ||
-	    (include_file_preview   && include_file_preview->get_version()  != preview_header_version))
+	    (include_file_raytacing && include_file_raytacing->get_version() != rt_header_version))
 		need_regenerate_material = true;
 
 	if (need_regenerate_material)
@@ -268,12 +252,9 @@ void materials::universal_material::update()
 
 		update_rtx();
 
-		// pixel_data just changed (e.g. a ScalarNode slider drag or VectorNode
-		// color edit) -- redispatch previews so they reflect the live value
-		// instead of whatever was baked in at the last structural regeneration.
-		// Same node count as before, so this only redispatches, it doesn't
-		// reallocate the texture/recreate slice views (see update_preview_textures).
-		update_preview_textures();
+		// pixel_data just changed (e.g. a slider drag) -- let any attached
+		// MaterialPreviewSession know its cached preview PSO/dispatch is stale.
+		preview_generation++;
 	}
 
 	if (need_update_uniforms || need_update_compiled)
@@ -383,7 +364,6 @@ void materials::universal_material::generate_material()
 	auto tess_orig_shader = context->get_tess_result().text;
 	auto tess_str = tess_orig_shader.empty() ? std::string() : (context->get_tess_result().uniforms + include_file->get_data() + tess_orig_shader);
 	auto voxel_str = context->get_voxel_result().uniforms + include_file->get_data() + context->get_voxel_result().text;
-	auto preview_str = context->get_preview_result().uniforms + include_file_preview->get_data() + context->get_preview_result().text;
 
 
 
@@ -391,13 +371,12 @@ void materials::universal_material::generate_material()
 
 
 	raytracing_lib = HAL::library_shader::get_resource({ raytracing_str, "" , ShaderOptions::None, context->hit_shader.macros, true });
-	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, raytracing_str, preview_str, context);
+	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, raytracing_str, context);
 	ps_uniforms = context->uniforms_ps;
 
 	// Remember which header revisions this generation baked in.
 	if (include_file)           ps_header_version = include_file->get_version();
 	if (include_file_raytacing) rt_header_version = include_file_raytacing->get_version();
-	if (include_file_preview)   preview_header_version = include_file_preview->get_version();
 
 
 	//	tess_uniforms = context->uniforms_tess;
@@ -420,7 +399,8 @@ void materials::universal_material::generate_material()
 
 
 		compile();
-		update_preview_textures();
+		preview_source_generation++;
+		preview_generation++;
 	}
 
 	//  if ((textures_changed || shaders_changed))
@@ -431,13 +411,12 @@ void materials::universal_material::generate_material()
 	on_change();
 }
 
-materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this), include_file_raytacing(this), include_file_preview(this)
+materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this), include_file_raytacing(this)
 {
 
 
 	include_file = EngineAssets::material_header.get_asset();
 	include_file_raytacing = EngineAssets::material_raytracing_header.get_asset();
-	include_file_preview = EngineAssets::material_preview_header.get_asset();
 	this->graph = BinaryData<MaterialGraph>(graph);
 	graph->add_listener(this, false);
 	graph->preview_material = this; // let the graph-output node build a live preview
@@ -495,12 +474,6 @@ materials::Pipeline::ptr materials::universal_material::get_pipeline()
 	return pipeline;
 }
 
-PSOS::MaterialPreview::ptr materials::universal_material::get_preview_pso()
-{
-	auto pp = std::dynamic_pointer_cast<PipelinePasses>(pipeline);
-	return pp ? pp->get_preview() : nullptr;
-}
-
 int materials::universal_material::get_preview_slot(::FlowGraph::Node* node)
 {
 	return context ? context->get_preview_slot(node) : -1;
@@ -511,11 +484,13 @@ int materials::universal_material::get_preview_slot_count()
 	return context ? context->get_preview_slot_count() : 0;
 }
 
-// Caller owns the results UAV (sized previewRes x previewRes x node-count) --
-// see get_preview_slot_count(). One dispatch fills every node's slice.
-void materials::universal_material::render_preview(HAL::ComputeContext& compute, HLSL::RWTexture2DArray<float4> results, ivec2 res)
+ShaderSource materials::universal_material::get_preview_shader_source()
 {
-	auto preview_pso = get_preview_pso();
+	return context ? context->get_preview_result() : ShaderSource();
+}
+
+void materials::universal_material::render_preview(HAL::ComputeContext& compute, PSOS::MaterialPreview::ptr preview_pso, HLSL::RWTexture2DArray<float4> results, ivec2 res)
+{
 	if (!preview_pso)
 		return;
 
@@ -529,76 +504,6 @@ void materials::universal_material::render_preview(HAL::ComputeContext& compute,
 	compute.set(data);
 
 	compute.dispatch(res, ivec2(8, 8));
-}
-
-// Editor-only: rebuild/redispatch every node's preview slice. Called both
-// Called from generate_material() (structural edits) and from update()
-// whenever pixel_data is recompiled (uniform-only edits, e.g. a slider
-// drag). Only recreates preview_slice_views when the node count actually
-// changes -- create_2d_slice() allocates from a persistent descriptor
-// heap, so recreating them on every uniform tweak would leak slots.
-void materials::universal_material::update_preview_textures()
-{
-#ifdef HAL_BACKEND_VULKAN
-	return;
-#endif
-	int count = context ? context->get_preview_slot_count() : 0;
-
-	if (count <= 0)
-	{
-		preview_results = nullptr;
-		preview_slice_views.clear();
-		return;
-	}
-
-	bool need_views = !preview_results || (int)preview_results->get_desc().as_texture().ArraySize != count;
-
-	if (need_views)
-	{
-		preview_results.reset(new HAL::Texture(RenderSystem::get().device(),
-			HAL::ResourceDesc::Tex2D(HAL::Format::R32G32B32A32_FLOAT, { preview_resolution, preview_resolution }, count, 1,
-				HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)));
-	}
-
-	auto list = RenderSystem::get().device().get_frame_manager().begin_frame()->start_list(L"MaterialPreview", HAL::CommandListType::DIRECT, true);
-
-	render_preview(list->get_compute(), preview_results->texture_2d().rwTexture2DArray, ivec2(preview_resolution));
-
-	// This resource is only touched by ad hoc immediate lists (never the
-	// FrameGraph), so its tracked GPU state doesn't get kept in sync
-	// automatically. Explicitly transition to the desired read state and
-	// pin it as the resting state (same fix as Texture.cpp's upload path)
-	// so later lists -- the GUI's SRV read, or our own next dispatch --
-	// start from an accurate assumption instead of a stale one.
-	{
-		auto desired = preview_results->resource->get_state_manager().get_desired_state();
-		list->transition(preview_results->resource.get(), desired);
-		preview_results->resource->get_state_manager().set_resting_state(desired.layout);
-	}
-
-	if (need_views)
-	{
-		// Persistent allocator, not *list (a throwaway per-call list) --
-		// these views need to survive across many future GUI draw calls.
-		auto& static_data = RenderSystem::get().device().get_static_gpu_data();
-
-		preview_slice_views.clear();
-		preview_slice_views.reserve(count);
-		for (int i = 0; i < count; i++)
-			preview_slice_views.push_back(preview_results->texture_2d().create_2d_slice(i, static_data));
-	}
-
-	list->execute_and_wait();
-}
-
-HAL::Texture2DView materials::universal_material::get_preview_slice_view(::FlowGraph::Node* node)
-{
-	int slot = get_preview_slot(node);
-
-	if (slot < 0 || slot >= (int)preview_slice_views.size())
-		return HAL::Texture2DView();
-
-	return preview_slice_views[slot];
 }
 
 Slots::MaterialInfo& materials::universal_material::get_render_info()
