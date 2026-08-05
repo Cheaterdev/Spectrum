@@ -568,6 +568,17 @@ public:
 		if (!session) return;
 
 		texture = session->get_slice_view(mat->get_preview_slot(m_node));
+
+		// The shared GUI sampler (anisoBordeSampler) addresses U/V as WRAP,
+		// not clamp/border despite the name -- and this texture gets
+		// magnified ~2x on screen, so sampling right at the true edge
+		// (tc=0 or 1) blends in texels wrapped from the opposite side of
+		// the resource. Inset the UV range by half a texel so the GPU
+		// never samples that close to the edge. Fixed here, per-widget,
+		// rather than in the shared ninepatch shader (tried that -- it
+		// affected every other GUI element too and made things worse).
+		constexpr float half_texel = 0.5f / materials::MaterialPreviewSession::preview_resolution;
+		texture.tc = { half_texel, half_texel, 1.0f - half_texel, 1.0f - half_texel };
 	}
 };
 

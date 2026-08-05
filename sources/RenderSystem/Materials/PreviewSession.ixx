@@ -13,8 +13,6 @@ export namespace materials
 	// material never opened in the editor never pays for any of this.
 	class MaterialPreviewSession
 	{
-		static constexpr int preview_resolution = 64;
-
 		universal_material* material;
 
 		// ~0u so a freshly-constructed session always rebuilds/redispatches
@@ -30,6 +28,8 @@ export namespace materials
 		void dispatch();
 
 	public:
+		static constexpr int preview_resolution = 64;
+
 		MaterialPreviewSession(universal_material* material);
 
 		// Rebuilds the PSO/redispatches only if the material has changed
