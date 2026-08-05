@@ -22,13 +22,24 @@ void materials::MaterialPreviewSession::rebuild_pso()
 	// normal (device, modifier) ctor, since the generated init_pso()
 	// re-clobbers mpso.compute.file_name/entry_point to the .sig's static
 	// default right after any modifier callback runs.
+	auto macros = src.macros;
+	if (want_3d)
+		macros.emplace_back("PREVIEW_3D", "1");
+
 	pso = std::make_shared<PSOS::MaterialPreview>();
 	PSOS::MaterialPreview::Keys key;
 	auto mpso = pso->init_pso(key, nullptr);
-	mpso.compute = { preview_source, "CS", HAL::ShaderOptions::None, src.macros, true };
+	mpso.compute = { preview_source, "CS", HAL::ShaderOptions::None, macros, true };
 	pso->psos[key] = mpso.create(RenderSystem::get().device());
 
 	built_source_generation = material->preview_source_generation;
+	built_3d = want_3d;
+
+	// The results texture holds output from the *old* PSO -- force
+	// get_slice_view()'s dispatched_generation check to redispatch even
+	// though material->preview_generation itself hasn't moved (a mode
+	// toggle isn't a material change).
+	dispatched_generation = ~0u;
 }
 
 void materials::MaterialPreviewSession::dispatch()
@@ -90,7 +101,7 @@ HAL::Texture2DView materials::MaterialPreviewSession::get_slice_view(int slot)
 #ifdef HAL_BACKEND_VULKAN
 	return HAL::Texture2DView();
 #else
-	if (!pso || built_source_generation != material->preview_source_generation)
+	if (!pso || built_source_generation != material->preview_source_generation || built_3d != want_3d)
 		rebuild_pso();
 
 	if (dispatched_generation != material->preview_generation)
@@ -116,6 +127,11 @@ void materials::MaterialPreviewSession::open(::FlowGraph::graph* g)
 
 	auto* mat = dynamic_cast<universal_material*>(mg->preview_material);
 	if (!mat)
+		return;
+
+	// on_add() can fire more than once for the same canvas -- don't discard
+	// an already-built PSO/dispatch just because we got asked again.
+	if (g_preview_sessions.find(g) != g_preview_sessions.end())
 		return;
 
 	g_preview_sessions[g] = std::make_unique<MaterialPreviewSession>(mat);

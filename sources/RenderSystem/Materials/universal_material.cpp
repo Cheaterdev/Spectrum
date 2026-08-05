@@ -489,6 +489,11 @@ ShaderSource materials::universal_material::get_preview_shader_source()
 	return context ? context->get_preview_result() : ShaderSource();
 }
 
+ShaderSource materials::universal_material::get_pixel_shader_source()
+{
+	return context ? context->get_pixel_result() : ShaderSource();
+}
+
 void materials::universal_material::render_preview(HAL::ComputeContext& compute, PSOS::MaterialPreview::ptr preview_pso, HLSL::RWTexture2DArray<float4> results, ivec2 res)
 {
 	if (!preview_pso)

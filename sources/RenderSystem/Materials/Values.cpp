@@ -330,14 +330,19 @@ namespace
 	// always forced to 1 (even for genuine float4 values) -- the GUI draws
 	// this alpha-blended, and a node's own .w (opacity/pack/whatever) isn't
 	// meant to make its *preview thumbnail* translucent or invisible.
+	//
+	// preview_shade is a global set once per pixel in CS() (see
+	// UniversalMaterialPreview.hlsl) -- 1 in flat 2D mode (no-op, same value
+	// as before this existed), or a lit N.L term when PREVIEW_3D evaluates
+	// this over an analytic sphere instead of a flat quad.
 	std::string coerce_preview_value(const shader_parameter& val)
 	{
 		switch (val.type.N)
 		{
-		case 1:  return "float4((" + val.name + ").xxx, 1)";
-		case 2:  return "float4(" + val.name + ", 0, 1)";
-		case 3:  return "float4(" + val.name + ", 1)";
-		default: return "float4((" + val.name + ").xyz, 1)";
+		case 1:  return "float4((" + val.name + ").xxx * preview_shade, 1)";
+		case 2:  return "float4(" + val.name + " * preview_shade, 0, 1)";
+		case 3:  return "float4(" + val.name + " * preview_shade, 1)";
+		default: return "float4((" + val.name + ").xyz * preview_shade, 1)";
 		}
 	}
 }

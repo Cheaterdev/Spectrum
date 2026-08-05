@@ -582,6 +582,168 @@ public:
 	}
 };
 
+// Dock tab shown for as long as a material graph is open in an editor
+// canvas (see canvas::on_open/on_close wiring below): the final compiled
+// pixel shader text, plus toggles for the two editor-only live previews
+// (per-node 2D thumbnails and the whole-graph 3D scene render) -- both
+// re-render every frame while on, so switching them off is a real perf
+// option on a big/slow graph, not just declutter.
+std::map<::FlowGraph::graph*, GUI::Elements::tab_button::ptr> material_settings_tabs;
+
+class material_settings_panel : public GUI::base
+{
+	materials::universal_material*   m_material;
+	::FlowGraph::graph*              m_graph;
+	uint32_t                         m_shown_generation = ~0u;
+	GUI::Elements::MultiLineLabel::ptr m_text;
+
+	// Live 3D preview, docked at the very top of the panel -- same
+	// SceneTextureRenderer/test-mesh mechanism asset_preview_content uses
+	// for the Asset Explorer's material preview, just embedded here too so
+	// it's visible while editing without switching tabs.
+	std::shared_ptr<SceneTextureRenderer> m_mesh_renderer;
+	std::shared_ptr<HAL::Texture>         m_mesh_target;
+	GUI::Elements::image::ptr             m_mesh_img;
+	bool m_mesh_dragging = false;
+	vec2 m_mesh_prev;
+
+public:
+	material_settings_panel(materials::universal_material* material, ::FlowGraph::graph* graph)
+		: m_material(material), m_graph(graph)
+	{
+		// Lives inside a dock tab page (see canvas::on_open below) -- the
+		// tab control handles sizing/placement, so just fill it.
+		docking     = GUI::dock::FILL;
+		thinkable   = true;
+
+		m_mesh_renderer = std::make_shared<SceneTextureRenderer>();
+
+		m_mesh_img           = std::make_shared<GUI::Elements::image>();
+		m_mesh_img->docking   = GUI::dock::TOP;
+		m_mesh_img->width_size  = GUI::size_type::MATCH_PARENT;
+		m_mesh_img->height_size = GUI::size_type::FIXED;
+		m_mesh_img->size     = { 0.0f, 240.0f };
+		add_child(m_mesh_img);
+
+		// Node preview mode -- 2D (flat per-node dispatch, original
+		// behavior) or 3D (same graph evaluated over an analytic sphere
+		// instead of a flat quad, with the captured value lit -- see
+		// MaterialPreviewSession::rebuild_pso / UniversalMaterialPreview.hlsl
+		// PREVIEW_3D). The session itself stays open the whole time the
+		// graph editor is open; this only switches how it renders.
+		{
+			auto row = std::make_shared<GUI::base>();
+			row->docking     = GUI::dock::TOP;
+			row->height_size = GUI::size_type::FIXED;
+			row->size        = { 0.0f, 26.0f };
+
+			auto lbl         = std::make_shared<GUI::Elements::label>();
+			lbl->text        = "Node preview:";
+			lbl->docking     = GUI::dock::NONE;
+			lbl->width_size  = GUI::size_type::FIXED;
+			lbl->height_size = GUI::size_type::FIXED;
+			lbl->size        = { 90.0f, 20.0f };
+			lbl->pos         = { 4.0f, 4.0f };
+			row->add_child(lbl);
+
+			auto combo         = std::make_shared<GUI::Elements::combo_box>();
+			combo->docking     = GUI::dock::NONE;
+			combo->width_size  = GUI::size_type::FIXED;
+			combo->height_size = GUI::size_type::FIXED;
+			combo->size        = { 80.0f, 20.0f };
+			combo->pos         = { 96.0f, 3.0f };
+
+			bool is_3d = false;
+			if (auto* session = materials::MaterialPreviewSession::find(m_graph))
+				is_3d = session->is_3d();
+			combo->get_label()->text = is_3d ? "3D" : "2D";
+
+			combo->add_item("2D")->on_select = [this]()
+			{
+				if (auto* session = materials::MaterialPreviewSession::find(m_graph))
+					session->set_3d(false);
+			};
+			combo->add_item("3D")->on_select = [this]()
+			{
+				if (auto* session = materials::MaterialPreviewSession::find(m_graph))
+					session->set_3d(true);
+			};
+			row->add_child(combo);
+
+			add_child(row);
+		}
+
+		// Own child, not inherited -- MultiLineLabel::on_text_changed() does
+		// contents->remove_all() on itself whenever .text is set, which
+		// would also wipe the checkboxes above if they were its children
+		// too.
+		m_text = std::make_shared<GUI::Elements::MultiLineLabel>();
+		m_text->docking = GUI::dock::FILL;
+		add_child(m_text);
+	}
+
+	bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override
+	{
+		if (button == mouse_button::LEFT || button == mouse_button::RIGHT)
+		{
+			m_mesh_dragging = (action == mouse_action::DOWN);
+			m_mesh_prev     = pos;
+			set_movable(m_mesh_dragging);
+			return true;
+		}
+		return false;
+	}
+
+	bool on_mouse_move(vec2 pos) override
+	{
+		if (m_mesh_dragging)
+		{
+			m_mesh_renderer->orbit((pos - m_mesh_prev) * 0.01f);
+			m_mesh_prev = pos;
+			return true;
+		}
+		return false;
+	}
+
+	bool on_wheel(mouse_wheel type, float value, vec2 pos) override
+	{
+		m_mesh_renderer->zoom(value);
+		return true;
+	}
+
+	void think(float dt) override
+	{
+		// Same toggle as the "Show 3D scene preview" checkbox below -- keep
+		// this panel's own preview off, too, when the user's turned it off
+		// for perf.
+		if (m_material->show_scene_preview)
+		{
+			// Size the render target to the preview widget; recreate it when
+			// the size changes so it follows resizes instead of stretching.
+			ivec2 want = ivec2::max(ivec2(m_mesh_img->get_render_bounds().size), ivec2(64, 64));
+			if (!m_mesh_target || ivec2(m_mesh_target->get_size().xy) != want)
+			{
+				m_mesh_target = std::make_shared<HAL::Texture>(RenderSystem::get().device(),
+					HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { want }, 1, 6,
+						HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess));
+				m_mesh_img->texture.texture = m_mesh_target->texture_2d();
+			}
+
+			m_mesh_renderer->draw(m_material->get_ptr<MaterialAsset>(), m_mesh_target);
+		}
+
+		// Only re-fetch the shader text when it's actually changed -- it's
+		// the same structural-regen signal MaterialPreviewSession uses to
+		// know when to recompile.
+		if (m_shown_generation == m_material->preview_source_generation)
+			return;
+
+		m_shown_generation = m_material->preview_source_generation;
+		auto src = m_material->get_pixel_shader_source();
+		m_text->text = src.uniforms + src.text;
+	}
+};
+
 // Window content that previews an asset. Dispatches by type:
 //   TextureAsset -> universal resource_preview (GPU), self-driven via a pass.
 //   BinaryAsset  -> MultiLineLabel (one label per line) in a scroll container.
@@ -687,6 +849,12 @@ public:
 	void think(float dt) override
 	{
 		if (!m_mesh_renderer || (!m_mesh_instance && !m_material)) return;
+
+		if (m_material)
+		{
+			auto mat = m_material->get_ptr<materials::universal_material>();
+			if (mat && !mat->show_scene_preview) return;
+		}
 
 		// Size the render target to the widget; recreate it when the size changes
 		// so the mesh follows window resizes instead of being stretched.
@@ -1524,13 +1692,89 @@ public:
 						return std::make_shared<node_preview_thumbnail>(a, node);
 					};
 
-					// Attach/detach a materials::MaterialPreviewSession for as
-					// long as a material graph is open in an editor canvas --
-					// lives here (above both GUI and Graphics) since canvas
-					// (GUI) can't know about Materials, and Materials can't
-					// know when a canvas opens/closes.
-					GUI::Elements::FlowGraph::canvas::on_open  = [](FlowGraph::graph* g) { materials::MaterialPreviewSession::open(g); };
-					GUI::Elements::FlowGraph::canvas::on_close = [](FlowGraph::graph* g) { materials::MaterialPreviewSession::close(g); };
+					// Attach/detach a materials::MaterialPreviewSession (and a
+					// "Material Settings" dock tab) for as long as a material
+					// graph is open in an editor canvas -- lives here (above
+					// both GUI and Graphics) since canvas (GUI) can't know
+					// about Materials, and Materials can't know when a canvas
+					// opens/closes.
+					GUI::Elements::FlowGraph::canvas::on_open = [](GUI::Elements::FlowGraph::canvas* c)
+					{
+						materials::MaterialPreviewSession::open(c->g);
+
+						// Guard against re-entrancy: wrapping the canvas below
+						// (moving it under editor_dock) synchronously fires
+						// canvas::on_add() -> on_open() again via add_child(),
+						// so this placeholder must land BEFORE that call, not
+						// after -- otherwise the nested call sees an empty map
+						// and wraps a second time.
+						if (material_settings_tabs.find(c->g) != material_settings_tabs.end())
+							return;
+						material_settings_tabs[c->g] = nullptr;
+
+						if (auto* mg = dynamic_cast<MaterialGraph*>(c->g))
+						if (auto* mat = dynamic_cast<materials::universal_material*>(mg->preview_material))
+						{
+							// Find this graph's own tab_button (via the
+							// manager's registry, same trick FlowManager.cpp
+							// uses internally for "edit in new tab") so we can
+							// keep the tab_control's bookkeeping (tab->page)
+							// consistent once we swap in the wrapper below.
+							for (auto& [graph_ptr, tab] : c->main_manager->get_all())
+							{
+								if (graph_ptr.get() != c->g)
+									continue;
+
+								auto parent = c->get_parent();
+								if (!parent) break;
+
+								// Self-contained wrap, same pattern as
+								// FrameGraph's resource_preview: the canvas
+								// fills a private dock_base and the settings
+								// panel docks to its right, both owned by
+								// this wrapper -- not split off some ambient
+								// dock found by walking up the tree, which
+								// depends on exactly where/when this canvas
+								// happens to be parented and breaks (wrong
+								// spot, invisible, or lost on re-dock) as
+								// soon as that canvas moves. Wrapping here
+								// keeps the settings panel physically
+								// attached to the graph it belongs to.
+								auto editor_dock = std::make_shared<GUI::Elements::dock_base>();
+								editor_dock->docking = GUI::dock::FILL;
+
+								// Detach canvas into the wrapper first (fires
+								// the re-entrant on_open above, which no-ops
+								// on the guard) before the wrapper itself is
+								// attached in canvas's old slot.
+								editor_dock->add_child(c->get_ptr<GUI::Elements::FlowGraph::canvas>());
+								parent->add_child(editor_dock);
+
+								auto right_dock = editor_dock->get_dock(GUI::dock::RIGHT);
+								right_dock->size = { 300.0f, 0.0f };
+
+								auto panel = std::make_shared<material_settings_panel>(mat, c->g);
+								auto tab_b = right_dock->get_tabs()->add_page("Material Settings", panel);
+
+								tab->page = editor_dock;
+								material_settings_tabs[c->g] = tab_b;
+								break;
+							}
+						}
+					};
+					GUI::Elements::FlowGraph::canvas::on_close = [](GUI::Elements::FlowGraph::canvas* c)
+					{
+						materials::MaterialPreviewSession::close(c->g);
+
+						auto it = material_settings_tabs.find(c->g);
+						if (it != material_settings_tabs.end())
+						{
+							if (it->second)
+							if (auto owner_tabs = it->second->owner.lock())
+								owner_tabs->remove_button(it->second);
+							material_settings_tabs.erase(it);
+						}
+					};
 					EVENT("End Asset Explorer");
 				}
 			}

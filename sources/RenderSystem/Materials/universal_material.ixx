@@ -218,6 +218,12 @@ export namespace materials
 		int get_preview_slot(::FlowGraph::Node* node);
 		int get_preview_slot_count();
 		ShaderSource get_preview_shader_source();
+		ShaderSource get_pixel_shader_source();
+
+		// Editor-only settings, read by main.cpp's material settings panel /
+		// asset_preview_content. Purely presentational -- generate_material()/
+		// compile() are entirely unaffected by these.
+		bool show_scene_preview = true;
 
 		// Binds this material's current texture/uniform data and dispatches
 		// into results using the caller-supplied preview PSO (owned by

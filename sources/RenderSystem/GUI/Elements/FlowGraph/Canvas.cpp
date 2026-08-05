@@ -621,6 +621,15 @@ void GUI::Elements::FlowGraph::canvas::think(float dt)
 void GUI::Elements::FlowGraph::canvas::on_add(base* parent)
 {
 	scroll_container::on_add(parent);
+
+	// Not init(): at that point (see manager::add_graph) this canvas hasn't
+	// been wrapped in a tab_button or attached to a tab_control yet, so a
+	// handler couldn't find where it actually landed. on_add() fires once
+	// it's really in the tree -- e.g. main.cpp's settings-panel hook looks
+	// up this graph's own tab_button (via main_manager) to find its real
+	// owning tab_control, rather than targeting some hardcoded dock.
+	if (on_open)
+		on_open(this);
 }
 
 GUI::Elements::FlowGraph::canvas::canvas(manager* main_manager)
@@ -809,15 +818,12 @@ void GUI::Elements::FlowGraph::canvas::init(::FlowGraph::graph* g)
 		win->pos = node->pos;
 	if (graph_in)  graph_in->pos  = g->pos_in;
 	if (graph_out) graph_out->pos = g->pos_out;
-
-	if (on_open)
-		on_open(g);
 }
 
 GUI::Elements::FlowGraph::canvas::~canvas()
 {
 	if (g && on_close)
-		on_close(g);
+		on_close(this);
 }
 
 /*

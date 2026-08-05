@@ -19,6 +19,18 @@ export namespace materials
 		// on its first get_slice_view() call.
 		uint32_t built_source_generation = ~0u;
 		uint32_t dispatched_generation = ~0u;
+		bool built_3d = false;
+
+		// Node preview mode: 2D is the original flat per-node dispatch (each
+		// node's raw value coerced straight into its slice); 3D evaluates the
+		// same graph over an analytic unit sphere instead of a flat UV quad
+		// (real pos/normal/uv per pixel) and lights the captured value with
+		// them, so e.g. triplanar/normal/world-pos-driven nodes preview
+		// correctly and everything reads as an actual shaded surface instead
+		// of a flat swatch. Switching it is a PSO macro (PREVIEW_3D), so it
+		// forces the same rebuild path as a structural graph change -- see
+		// rebuild_pso().
+		bool want_3d = false;
 
 		HAL::Texture::ptr results;
 		std::vector<HAL::Texture2DView> slice_views;
@@ -36,6 +48,9 @@ export namespace materials
 		// since our last call, then returns the requested slot's slice view
 		// (empty if out of range or nothing captured for that node).
 		HAL::Texture2DView get_slice_view(int slot);
+
+		bool is_3d() const { return want_3d; }
+		void set_3d(bool value) { want_3d = value; }
 
 		static void open(::FlowGraph::graph* g);
 		static void close(::FlowGraph::graph* g);

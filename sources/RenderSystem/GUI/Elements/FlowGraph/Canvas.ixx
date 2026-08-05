@@ -109,12 +109,15 @@ export namespace GUI
 
                     // Fired once when a graph finishes opening into a canvas
                     // (end of init()) and once when that canvas is destroyed.
-                    // Generic on purpose -- this is GUI-layer code with no
-                    // knowledge of Materials -- so app-layer code (main.cpp)
-                    // can react (e.g. attach/detach a materials::
-                    // MaterialPreviewSession) without a module cycle.
-                    static inline std::function<void(::FlowGraph::graph*)> on_open;
-                    static inline std::function<void(::FlowGraph::graph*)> on_close;
+                    // Passes the canvas itself (not just its graph) so a
+                    // handler can attach a child widget (e.g. a settings
+                    // panel), not just react. Generic on purpose -- this is
+                    // GUI-layer code with no knowledge of Materials -- so
+                    // app-layer code (main.cpp) can react (e.g. attach/detach
+                    // a materials::MaterialPreviewSession, add a settings
+                    // panel) without a module cycle.
+                    static inline std::function<void(canvas*)> on_open;
+                    static inline std::function<void(canvas*)> on_close;
 
                     void init(::FlowGraph::graph* g);
 

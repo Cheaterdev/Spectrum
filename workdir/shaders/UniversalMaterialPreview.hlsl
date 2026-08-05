@@ -21,6 +21,11 @@
 // being a global accessor rather than a threaded-through parameter.
 static uint3 preview_tid;
 
+// Per-pixel shade multiplier applied to every node's captured value (see
+// MaterialContext::capture_value / coerce_preview_value in Values.cpp). 1 in
+// flat 2D mode (no-op); a lit N.L term in PREVIEW_3D mode.
+static float preview_shade;
+
 Texture2D get_texture(uint i)
 {
     return GetMaterialPreviewInfo().GetTextures(i);
@@ -60,6 +65,52 @@ void CS(uint3 id : SV_DispatchThreadID)
 
     float2 tc  = (float2(id.xy) + 0.5) / float2(w, hh);
     float3 pos = float3(0, 0, 0);
+    preview_shade = 1;
+
+#ifdef PREVIEW_3D
+    {
+        // Analytic unit sphere instead of a flat quad -- COMPILED_FUNC is
+        // identical either way, it just gets fed a real hit position/normal
+        // /UV instead of the flat parametrization, so world-pos/normal/UV
+        // -driven nodes (triplanar, normal maps, etc.) preview correctly,
+        // and the captured value gets a simple N.L shade instead of being
+        // shown flat/unlit. No separate mesh-render pass -- this stays a
+        // single dispatch, same as the 2D path.
+        float2 ndc = tc * 2 - 1;
+        ndc.y = -ndc.y;
+
+        float3 eye     = float3(0, 0, -2.5);
+        float3 forward = float3(0, 0, 1);
+        float3 right   = float3(1, 0, 0);
+        float3 up      = float3(0, 1, 0);
+        float  tan_fov = 0.5; // sphere (radius 1 @ dist 2.5) fits with margin
+
+        float3 dir = normalize(forward + right * (ndc.x * tan_fov) + up * (ndc.y * tan_fov));
+
+        // Sphere centered on the origin, radius 1 -- oc = eye - center = eye.
+        float b    = dot(eye, dir);
+        float c    = dot(eye, eye) - 1;
+        float disc = b * b - c;
+
+        if (disc < 0)
+        {
+            float4 bg = float4(0.05, 0.05, 0.05, 1);
+            for (uint e = 0; e < elements; e++)
+                GetMaterialPreviewInfo().GetResults()[uint3(id.xy, e)] = bg;
+            return;
+        }
+
+        float  t          = -b - sqrt(disc);
+        float3 hit         = eye + dir * t;
+        float3 hit_normal  = hit; // already unit length (unit sphere @ origin)
+
+        pos = hit;
+        tc  = float2(0.5 + atan2(hit_normal.z, hit_normal.x) / (2 * 3.14159265), 0.5 - asin(hit_normal.y) / 3.14159265);
+
+        float3 light_dir = normalize(float3(0.5, 0.8, -0.6));
+        preview_shade = saturate(0.25 + saturate(dot(hit_normal, light_dir)));
+    }
+#endif
 
     float4 color      = 1;
     float  metallic    = 1;
