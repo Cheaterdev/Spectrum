@@ -86,6 +86,11 @@ struct ShaderParams:public Singleton<ShaderParams>
     const ShaderParamType FLOAT2 = ShaderParamType(1,2,"float2");
     const ShaderParamType FLOAT3 = ShaderParamType(1,3,"float3");
     const ShaderParamType FLOAT4 = ShaderParamType(1,4,"float4");
+    // A texture reference (TextureAssetNode's output, SamplingNode's input)
+    // -- not a numeric value, so M=2 deliberately doesn't match any FLOATn
+    // (all M=1) or VectorType::can_cast's M==1 check, so the GUI won't let
+    // it link to a plain float/vector port.
+    const ShaderParamType TEXTURE = ShaderParamType(2,1,"uint");
 };
 template <class T, class N>
 class TemplatedParameter: public T
@@ -161,7 +166,7 @@ class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
         // Node types with their own custom editor window (VectorNode,
         // ScalarNode, MaterialGraph) override this themselves and don't get
         // this default -- but can still call build_live_preview_widget()
-        // directly (see TextureNode::create_editor_window) to embed the same
+        // directly (see TextureAssetNode::create_editor_window) to embed the same
         // live thumbnail alongside their own content.
         virtual GUI::base::ptr create_editor_window() override;
 
@@ -497,34 +502,28 @@ class MaterialGraph : public MaterialFunction
 
 };
 
-class TextureNode : public MaterialNode, public AssetHolder
+// Holds a texture asset reference and exposes it (as a ShaderParams::TEXTURE
+// value) for SamplingNode to sample. Split out from what used to be a single
+// TextureNode so a texture can be referenced once and sampled multiple ways
+// (different tc, different sampling nodes) without re-picking the asset each
+// time, and so the asset preview (the raw texture) is separate from a
+// sampled node's live computed-value preview.
+class TextureAssetNode : public MaterialNode, public AssetHolder
 {
-        FlowGraph::input::ptr i_tc;
-        FlowGraph::output::ptr o_vec4, o_r, o_g, o_b, o_a;
-     
-        TextureNode();
-		TextureSRVParams::ptr texture_info;
+        FlowGraph::output::ptr o_texture;
+
+        TextureAssetNode();
+        TextureSRVParams::ptr texture_info;
     public:
-        using ptr = s_ptr<TextureNode>;
+        using ptr = s_ptr<TextureAssetNode>;
 
-        TextureNode(TextureAsset::ptr _Asset, bool to_linear = false);
-        virtual ~TextureNode();
+        TextureAssetNode(TextureAsset::ptr _Asset, bool to_linear = false);
+        virtual ~TextureAssetNode();
         void operator()(MaterialContext* context) override;
-        /* virtual bool test_start()
-         {
-             if (!i_tc->has_input() && !i_tc->has_value())
-             {
-                 shader_parameter input;
-                 input.name = "input.tc";
-                 input.type = ShaderParams::get().FLOAT2;
-                 i_tc->put(input);
-                 return false;
-             }
 
-             else
-                 return Node::test_start();
-         }*/
-
+        // Raw 2D texture preview -- unlike a sampled node's live
+        // computed-value preview, this asset has no "value" of its own to
+        // run through the shader/preview PSO.
         virtual GUI::base::ptr create_editor_window();
     private:
         SERIALIZE()
@@ -533,7 +532,36 @@ class TextureNode : public MaterialNode, public AssetHolder
             SAVE_PARENT(AssetHolder);
 
             ar& NVP(texture_info);
+            ar& NVP(o_texture);
+        }
+
+};
+
+// Samples a texture (from an upstream TextureAssetNode) at a given tc.
+// Used to be TextureNode, with the texture asset reference baked in
+// directly instead of taken as an input -- see TextureAssetNode's comment.
+class SamplingNode : public MaterialNode
+{
+        FlowGraph::input::ptr i_tc, i_texture;
+        FlowGraph::output::ptr o_vec4, o_r, o_g, o_b, o_a;
+
+    public:
+        using ptr = s_ptr<SamplingNode>;
+
+        SamplingNode();
+        virtual ~SamplingNode();
+        void operator()(MaterialContext* context) override;
+
+             	static ptr create_default() {
+			return std::make_shared<SamplingNode>();
+		}
+    private:
+        SERIALIZE()
+        {
+            SAVE_PARENT(::FlowGraph::Node);
+
             ar& NVP(i_tc);
+            ar& NVP(i_texture);
             ar& NVP(o_vec4);
             ar& NVP(o_r);
             ar& NVP(o_g);
@@ -543,7 +571,13 @@ class TextureNode : public MaterialNode, public AssetHolder
 
 };
 
-
+// Convenience for callers that just want to sample a texture asset at the
+// graph's own texcoord input -- the common case for procedurally-built
+// graphs (mesh import, asset-explorer "create material from textures").
+// Builds and registers both nodes and wires TextureAssetNode -> SamplingNode
+// -> graph texcoord; returns the SamplingNode so callers can still link
+// individual output channels (o_r/o_g/... for packed maps).
+SamplingNode::ptr make_sampling_node(MaterialGraph* graph, TextureAsset::ptr asset, bool to_linear = false);
 
 class PowerNode : public MaterialNode
 {

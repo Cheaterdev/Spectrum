@@ -323,52 +323,36 @@ namespace GUI
 
 							if (albedo)
 							{
-
-								auto value_node = std::make_shared<TextureNode>(albedo, true);
-								graph->register_node(value_node);
+								auto value_node = make_sampling_node(graph.get(), albedo, true);
 								value_node->get_output(0)->link(graph->get_base_color());
-
-								graph->get_texcoord()->link(value_node->get_input(0));
 							}
 
 							if (roughness)
-
 							{
-								auto value_node = std::make_shared<TextureNode>(roughness);
-								graph->register_node(value_node);
+								auto value_node = make_sampling_node(graph.get(), roughness);
 								value_node->get_output(1)->link(graph->get_roughness());
-								graph->get_texcoord()->link(value_node->get_input(0));
 							}
 
 							if (metallic)
 							{
-								auto value_node = std::make_shared<TextureNode>(metallic);
-								graph->register_node(value_node);
+								auto value_node = make_sampling_node(graph.get(), metallic);
 								value_node->get_output(1)->link(graph->get_mettalic());
-								graph->get_texcoord()->link(value_node->get_input(0));
 							}
 
 							if (normals)
 							{
-								auto value_node = std::make_shared<TextureNode>(normals);
-								graph->register_node(value_node);
+								auto value_node = make_sampling_node(graph.get(), normals);
 								value_node->get_output(0)->link(graph->get_normals());
-								graph->get_texcoord()->link(value_node->get_input(0));
-
 							}
 
 							if (height)
 							{
-
 								auto mul_node = std::make_shared<MulNode>();
 								auto scalar_node = std::make_shared<ScalarNode>(1.0f);
-								auto value_node = std::make_shared<TextureNode>(height);
+								auto value_node = make_sampling_node(graph.get(), height);
 								graph->register_node(mul_node);
 								graph->register_node(scalar_node);
-								graph->register_node(value_node);
 
-
-								graph->get_texcoord()->link(value_node->get_input(0));
 								value_node->get_output(1)->link(mul_node->get_input(0));
 								scalar_node->get_output(0)->link(mul_node->get_input(1));
 

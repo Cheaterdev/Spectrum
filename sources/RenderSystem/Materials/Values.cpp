@@ -422,7 +422,9 @@ std::list<FlowGraph::Node::ptr>  MaterialFunction::on_drop(MyVariant value)
 
 	if (item->asset->get_type() == Asset_Type::TEXTURE)
 	{
-		TextureNode::ptr node(new TextureNode(item->asset->get_asset()->get_ptr<TextureAsset>()));
+		// Just the asset reference -- the user wires up a SamplingNode (with
+		// a tc input) separately to actually sample it.
+		TextureAssetNode::ptr node(new TextureAssetNode(item->asset->get_asset()->get_ptr<TextureAsset>()));
 		register_node(node);
 		result.push_back(node);
 	}
@@ -612,7 +614,8 @@ void MaterialFunction::add_function(std::string s)
 REGISTER_MATERIAL_NODE(ScalarNode);
 REGISTER_MATERIAL_NODE(MulNode);
 REGISTER_MATERIAL_NODE(SumNode);
-REGISTER_MATERIAL_NODE(TextureNode);
+REGISTER_MATERIAL_NODE(TextureAssetNode);
+REGISTER_MATERIAL_NODE(SamplingNode);
 REGISTER_MATERIAL_NODE(VectorNode);
 REGISTER_MATERIAL_NODE(TiledTextureNode);
 REGISTER_MATERIAL_NODE(MaterialGraph);
@@ -625,7 +628,8 @@ REGISTER_MATERIAL_NODE(SpecToMetNode);
 REGISTER_TYPE(ScalarNode);
 REGISTER_TYPE(MulNode);
 REGISTER_TYPE(SumNode);
-REGISTER_TYPE(TextureNode);
+REGISTER_TYPE(TextureAssetNode);
+REGISTER_TYPE(SamplingNode);
 REGISTER_TYPE(VectorNode);
 REGISTER_TYPE(TiledTextureNode);
 REGISTER_TYPE(MaterialGraph);
@@ -637,7 +641,8 @@ REGISTER_TYPE(VectorType);
 CEREAL_FORCE_REGISTER(ScalarNode);
 CEREAL_FORCE_REGISTER(MulNode);
 CEREAL_FORCE_REGISTER(SumNode);
-CEREAL_FORCE_REGISTER(TextureNode);
+CEREAL_FORCE_REGISTER(TextureAssetNode);
+CEREAL_FORCE_REGISTER(SamplingNode);
 CEREAL_FORCE_REGISTER(VectorNode);
 CEREAL_FORCE_REGISTER(TiledTextureNode);
 CEREAL_FORCE_REGISTER(MaterialGraph);
@@ -651,7 +656,8 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::parameter_type, ShaderParamTyp
 CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::parameter_type, VectorType);
 // Node subtypes (stored as shared_ptr<FlowGraph::Node> in graph::nodes)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::Node, MaterialNode);   // abstract; needed for transitive paths
-CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::Node, TextureNode);    // SAVE_PARENT(Node) in serialize
+CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::Node, TextureAssetNode); // SAVE_PARENT(Node) in serialize
+CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::Node, SamplingNode);    // SAVE_PARENT(Node) in serialize
 CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::Node, SumNode);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::Node, MulNode);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialNode,      ScalarNode);
@@ -666,7 +672,8 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::graph, MaterialGraph);
 CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::parameter_type, ShaderParamType);
 CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::parameter_type, VectorType);
 CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::Node,  MaterialNode);
-CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::Node,  TextureNode);
+CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::Node,  TextureAssetNode);
+CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::Node,  SamplingNode);
 CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::Node,  SumNode);
 CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::Node,  MulNode);
 CEREAL_FORCE_REGISTER_RELATION(MaterialNode,       ScalarNode);
@@ -779,40 +786,83 @@ void MaterialGraph::start(MaterialContext* context)
 }
 
 
-TextureNode::TextureNode(TextureAsset::ptr _Asset, bool to_linear)
+TextureAssetNode::TextureAssetNode(TextureAsset::ptr _Asset, bool to_linear)
 {
+	// Nodes created via the palette (FlowSystem::create) get their title
+	// from the registered name automatically; nodes built directly in code
+	// (mesh import, asset-explorer material building -- see
+	// make_sampling_node) never go through that path, so set it here too.
+	name = "TextureAssetNode";
 	texture_info = std::make_shared<TextureSRVParams>(std::move(register_asset<Asset>(_Asset)),to_linear);
 
-
-	i_tc = register_input(/*ShaderParams::get().FLOAT2,*/ "tc", ShaderParams::get().FLOAT2);
-	o_vec4 = register_output(/*ShaderParams::get().FLOAT4,*/ "", ShaderParams::get().FLOAT4);
-	o_r = register_output(/*ShaderParams::get().FLOAT1,*/ "", ShaderParams::get().FLOAT1);
-	o_g = register_output(/*ShaderParams::get().FLOAT1,*/ "", ShaderParams::get().FLOAT1);
-	o_b = register_output(/*ShaderParams::get().FLOAT1,*/ "", ShaderParams::get().FLOAT1);
-	o_a = register_output(/*ShaderParams::get().FLOAT1,*/ "", ShaderParams::get().FLOAT1);
-
+	o_texture = register_output("texture", ShaderParams::get().TEXTURE);
 }
 
-TextureNode::TextureNode()
+TextureAssetNode::TextureAssetNode()
 {
+	name = "TextureAssetNode";
 }
 
-TextureNode::~TextureNode()
+TextureAssetNode::~TextureAssetNode()
 {
 
 }
 
-void TextureNode::operator()(MaterialContext* context)
+void TextureAssetNode::operator()(MaterialContext* context)
+{
+	// Just the bindless texture index as a string -- SamplingNode is the one
+	// that actually calls sample()/get_texture() with it. Not a real
+	// computed shader value, so it never goes through
+	// MaterialContext::capture_value (no live per-node preview to build from
+	// this -- create_editor_window() always shows the raw asset instead).
+	o_texture->put(shader_parameter(context->get_texture(texture_info), ShaderParams::get().TEXTURE));
+}
+
+SamplingNode::SamplingNode()
+{
+	name = "SamplingNode";
+	i_tc = register_input("tc", ShaderParams::get().FLOAT2);
+	i_texture = register_input("texture", ShaderParams::get().TEXTURE);
+	o_vec4 = register_output("", ShaderParams::get().FLOAT4);
+	o_r = register_output("", ShaderParams::get().FLOAT1);
+	o_g = register_output("", ShaderParams::get().FLOAT1);
+	o_b = register_output("", ShaderParams::get().FLOAT1);
+	o_a = register_output("", ShaderParams::get().FLOAT1);
+}
+
+SamplingNode::~SamplingNode()
+{
+}
+
+void SamplingNode::operator()(MaterialContext* context)
 {
 	auto mat_graph = static_cast<MaterialFunction*>(owner);
-	//auto val = mat_graph->add_value(ShaderParams::get().FLOAT4, "float4(1,0,0,1)");
-	auto val = mat_graph->add_value(ShaderParams::get().FLOAT4, std::string("sample(") + context->get_texture(texture_info) + ",Sampler, " + i_tc->get<shader_parameter>().name + ".xy, lod)");
+
+	// No upstream TextureAssetNode linked yet -- nothing to sample.
+	if (!i_texture->has_input() && !i_texture->has_value())
+		return;
+
+	auto tex = i_texture->get<shader_parameter>();
+	auto val = mat_graph->add_value(ShaderParams::get().FLOAT4, std::string("sample(") + tex.name + ",Sampler, " + i_tc->get<shader_parameter>().name + ".xy, lod)");
 	o_vec4->put(shader_parameter("float4(" + val.name + ".xyz,1)", ShaderParams::get().FLOAT4));
 	o_r->put(shader_parameter(val.name + ".r", ShaderParams::get().FLOAT1));
 	o_g->put(shader_parameter(val.name + ".g", ShaderParams::get().FLOAT1));
 	o_b->put(shader_parameter(val.name + ".b", ShaderParams::get().FLOAT1));
 	o_a->put(shader_parameter(val.name + ".a", ShaderParams::get().FLOAT1));
-	//	mat_graph
+}
+
+SamplingNode::ptr make_sampling_node(MaterialGraph* graph, TextureAsset::ptr asset, bool to_linear)
+{
+	auto asset_node = std::make_shared<TextureAssetNode>(asset, to_linear);
+	graph->register_node(asset_node);
+
+	auto sample_node = std::make_shared<SamplingNode>();
+	graph->register_node(sample_node);
+
+	asset_node->get_output(0)->link(sample_node->get_input(1));
+	graph->get_texcoord()->link(sample_node->get_input(0));
+
+	return sample_node;
 }
 
 PowerNode::PowerNode()
@@ -834,6 +884,11 @@ void PowerNode::operator()(MaterialContext*)
 
 VectorNode::VectorNode(vec4 value)
 {
+	// See TextureAssetNode::TextureAssetNode -- callers like
+	// AssimpLoader/StencilRenderer/main.cpp build these directly (default
+	// material color/roughness/metallic), bypassing the palette factory
+	// that would otherwise set the title.
+	name = "VectorNode";
 	uniform.reset(new Uniform);
 	uniform->value.f4_value = value;
 	uniform->name = "some_val";
@@ -843,6 +898,7 @@ VectorNode::VectorNode(vec4 value)
 
 VectorNode::VectorNode()
 {
+	name = "VectorNode";
 }
 
 void VectorNode::operator()(MaterialContext* c)
@@ -875,6 +931,7 @@ GUI::base::ptr VectorNode::create_editor_window()
 
 ScalarNode::ScalarNode(float value)
 {
+	name = "ScalarNode";
 	uniform.reset(new Uniform);
 	uniform->value.f_value = value;
 	uniform->name = "some_val";
@@ -930,6 +987,7 @@ void SumNode::operator()(MaterialContext*)
 
 MulNode::MulNode()
 {
+	name = "MulNode";
 	i_vec = register_input(/*ShaderParams::get().VECTOR,*/ "a", ShaderParams::get().VECTOR);
 	i_power = register_input(/*ShaderParams::get().VECTOR,*/ "b", ShaderParams::get().VECTOR);
 	o_value = register_output(/*ShaderParams::get().VECTOR, */"result", ShaderParams::get().VECTOR);
@@ -992,7 +1050,7 @@ using namespace GUI;
 using namespace Elements;
 
 
-GUI::base::ptr TextureNode::create_editor_window()
+GUI::base::ptr TextureAssetNode::create_editor_window()
 {
 	GUI::Elements::image::ptr img(new GUI::Elements::image);
 	img->texture = Skin::get().Shadow;
@@ -1004,23 +1062,12 @@ GUI::base::ptr TextureNode::create_editor_window()
 
 	auto asset = (texture_info->asset)->get_ptr<TextureAsset>();
 
-	// Live preview goes through the compiled shader (same as any other
-	// node), so unlike the raw asset texture it actually reflects whatever
-	// tc/texcoord transform feeds i_tc (e.g. a tiling/panning node
-	// upstream). Falls back to the raw texture if no preview is available
-	// yet (e.g. before the material's first generation).
-	auto live = build_live_preview_widget();
-	if (live)
-	{
-		img->add_child(live);
-	}
-	else
-	{
-		GUI::Elements::image::ptr img_inner(new GUI::Elements::image);
-		img_inner->texture = asset->get_texture()->texture_2d();
-		img_inner->size = { 64, 64 };
-		img->add_child(img_inner);
-	}
+	// The raw asset texture -- this node has no computed shader "value" of
+	// its own (no live per-node preview to show instead, see operator()).
+	GUI::Elements::image::ptr img_inner(new GUI::Elements::image);
+	img_inner->texture = asset->get_texture()->texture_2d();
+	img_inner->size = { 64, 64 };
+	img->add_child(img_inner);
 
 
 

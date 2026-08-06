@@ -70,11 +70,11 @@ void PS_PREVIEW(vertex_output i)
     if (preview_tid.x >= w || preview_tid.y >= hh)
         return;
 
-    // No real scene lighting here by design (no floor/sky/shadows) -- a
-    // single fixed light gives the shape enough depth cues to read as 3D.
-    float3 n = normalize(i.normal);
-    float3 light_dir = normalize(float3(0.5, 0.8, -0.6));
-    preview_shade = saturate(0.25 + saturate(dot(n, light_dir)));
+    // Raw, unlit values -- same as 2D mode (preview_shade stays 1 there
+    // too). A fake N.L light made captured values look darker/lighter than
+    // what the node actually computed, which defeats the point of the
+    // preview.
+    preview_shade = 1;
 
     float4 color      = 1;
     float  metallic    = 1;

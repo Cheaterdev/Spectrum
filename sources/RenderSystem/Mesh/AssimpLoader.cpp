@@ -516,16 +516,14 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 auto& native_material = scene->mMaterials[i];
                 aiString path;
                 MaterialGraph::ptr graph(new MaterialGraph);
-                TextureNode::ptr  tex_node;
+                SamplingNode::ptr  tex_node;
 
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE, 0, &path)
                  || AI_SUCCESS == native_material->GetTexture(aiTextureType_BASE_COLOR, 0, &path))
                 {
                    auto native_path = resolve_texture_path(directory, path.C_Str());
                     auto diff = get_texture(native_path);
-                    tex_node = std::make_shared<TextureNode>(diff, true);
-                    graph->register_node(tex_node);
-                    graph->get_texcoord()->link(tex_node->get_input(0));
+                    tex_node = make_sampling_node(graph.get(), diff, true);
                     tex_node->get_output(0)->link(graph->get_base_color());
                 }
 
@@ -542,9 +540,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 {
 					auto native_path = resolve_texture_path(directory, path.C_Str());
 					auto diff = get_texture(native_path);
-                    auto tex_node = std::make_shared<TextureNode>(diff);
-                    graph->register_node(tex_node);
-                    graph->get_texcoord()->link(tex_node->get_input(0));
+                    auto tex_node = make_sampling_node(graph.get(), diff);
                     tex_node->get_output(0)->link(graph->get_normals());
                 }
 
@@ -552,9 +548,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 {
 					auto native_path = resolve_texture_path(directory, path.C_Str());
 					auto diff = get_texture(native_path);
-                    auto tex_node = std::make_shared<TextureNode>(diff);
-                    graph->register_node(tex_node);
-                    graph->get_texcoord()->link(tex_node->get_input(0));
+                    auto tex_node = make_sampling_node(graph.get(), diff);
                     tex_node->get_output(0)->link(graph->get_normals());
                 }
 
@@ -565,13 +559,11 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 bool has_rough_tex = AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &rough_path);
                 bool packed = has_metal_tex && has_rough_tex && std::strcmp(metal_path.C_Str(), rough_path.C_Str()) == 0;
 
-                TextureNode::ptr metal_rough_node;
+                SamplingNode::ptr metal_rough_node;
 
                 if (has_rough_tex)
                 {
-                    metal_rough_node = std::make_shared<TextureNode>(get_texture(resolve_texture_path(directory, rough_path.C_Str())));
-                    graph->register_node(metal_rough_node);
-                    graph->get_texcoord()->link(metal_rough_node->get_input(0));
+                    metal_rough_node = make_sampling_node(graph.get(), get_texture(resolve_texture_path(directory, rough_path.C_Str())));
                     metal_rough_node->get_output(packed ? 2 : 1)->link(graph->get_roughness());
                 }
 
@@ -597,11 +589,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     auto node = metal_rough_node;
 
                     if (!packed)
-                    {
-                        node = std::make_shared<TextureNode>(get_texture(resolve_texture_path(directory, metal_path.C_Str())));
-                        graph->register_node(node);
-                        graph->get_texcoord()->link(node->get_input(0));
-                    }
+                        node = make_sampling_node(graph.get(), get_texture(resolve_texture_path(directory, metal_path.C_Str())));
 
                     node->get_output(packed ? 3 : 1)->link(graph->get_mettalic());
                 }
@@ -626,9 +614,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_EMISSION_COLOR, 0, &path)
                  || AI_SUCCESS == native_material->GetTexture(aiTextureType_EMISSIVE, 0, &path))
                 {
-                    auto node = std::make_shared<TextureNode>(get_texture(resolve_texture_path(directory, path.C_Str())), true);
-                    graph->register_node(node);
-                    graph->get_texcoord()->link(node->get_input(0));
+                    auto node = make_sampling_node(graph.get(), get_texture(resolve_texture_path(directory, path.C_Str())), true);
                     node->get_output(0)->link(graph->get_glow());
                 }
 
