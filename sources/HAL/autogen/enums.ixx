@@ -71,6 +71,7 @@ export
 		VSMCopyPageDepth,
 		VSMApplyCompute,
 		FontRender,
+		MaterialPreview3D,
 		RenderBoxes,
 		RenderToDS,
 		QualityColor,

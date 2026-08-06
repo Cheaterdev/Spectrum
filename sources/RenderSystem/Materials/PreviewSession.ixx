@@ -1,6 +1,9 @@
 export module Graphics:Materials.PreviewSession;
 
 import :Materials.UniversalMaterial;
+import :Scene;
+import :MeshAsset;
+import :Camera;
 import HAL;
 import Core;
 
@@ -21,26 +24,44 @@ export namespace materials
 		uint32_t dispatched_generation = ~0u;
 		bool built_3d = false;
 
-		// Node preview mode: 2D is the original flat per-node dispatch (each
-		// node's raw value coerced straight into its slice); 3D evaluates the
-		// same graph over an analytic unit sphere instead of a flat UV quad
-		// (real pos/normal/uv per pixel) and lights the captured value with
-		// them, so e.g. triplanar/normal/world-pos-driven nodes preview
-		// correctly and everything reads as an actual shaded surface instead
-		// of a flat swatch. Switching it is a PSO macro (PREVIEW_3D), so it
-		// forces the same rebuild path as a structural graph change -- see
-		// rebuild_pso().
+		// Node preview mode: 2D is the original flat per-node compute dispatch
+		// (each node's raw value coerced straight into its slice). 3D instead
+		// draws the real material_tester mesh with a direct (non-indirect)
+		// dispatch_mesh -- see dispatch() -- so COMPILED_FUNC (and every
+		// node's capture write) gets real interpolated position/normal/UV
+		// per pixel, and the captured value gets lit with a simple fixed
+		// light instead of shown flat. Switching it forces a PSO rebuild
+		// (different PSO type entirely) -- see rebuild_pso().
 		bool want_3d = false;
 
 		HAL::Texture::ptr results;
 		std::vector<HAL::Texture2DView> slice_views;
 		PSOS::MaterialPreview::ptr pso;
+		PSOS::MaterialPreview3D::ptr pso3d;
+
+		// 3D mode only: real hidden-surface removal for the rasterized mesh
+		// (there's no other visibility resolution -- no rtv, UAV-only PS).
+		// Always preview_resolution x preview_resolution, so built once and
+		// reused for the session's lifetime, unlike results (which resizes
+		// with node/slot count).
+		HAL::Texture::ptr preview_depth;
+
+		// 3D mode's private mesh/scene/camera -- built lazily on first 3D
+		// dispatch, kept for the session's lifetime. Never enters any
+		// FrameGraph; dispatch() issues its own direct command list, mirroring
+		// how the 2D path already does an ad hoc immediate dispatch.
+		Scene::ptr           preview_scene;
+		MeshAssetInstance::ptr preview_mesh;
+		camera                preview_cam;
+		void ensure_3d_scene();
 
 		void rebuild_pso();
 		void dispatch();
 
 	public:
-		static constexpr int preview_resolution = 64;
+		// Matches node_preview_thumbnail's display size (main.cpp) 1:1 --
+		// anything smaller gets upscaled/blurred by the GUI.
+		static constexpr int preview_resolution = 128;
 
 		MaterialPreviewSession(universal_material* material);
 

@@ -8,6 +8,7 @@ export import Test.HAL.TextureUtils;
 import Core;
 import HAL;
 import RenderSystem;
+import Graphics;
 
 namespace {
 	// Left triangle  — CCW in NDC (signed area > 0) = front face = GREEN
@@ -337,6 +338,121 @@ float4 PS(VSOut i) : SV_Target { return i.col; }
 	{
 		auto rt = run_cull_test(RenderSystem::get().device(), HAL::CullMode::Front, L"RenderCull_Front"_cs);
 		ASSERT_TEXTURE(rt.get(), "cull_front");
+	}
+
+	// Regression test for the direct (non-indirect) dispatch_mesh pattern
+	// MaterialPreviewSession::dispatch() uses (see PreviewSession.cpp):
+	// material_tester drawn with a real mesh/AS + a trivial
+	// normal-visualization PS, no COMPILED_FUNC, no capture writes. Catches
+	// the actual bug this was built to isolate -- Scene::update() alone only
+	// refreshes CPU-side handle allocations, not the GPU-visible node/mesh/
+	// material buffers mesh_shader.hlsl reads; SceneFrameManager::prepare()
+	// is the real upload (normally done once per frame by PreSceneSystem.cpp's
+	// PreScene pass) and is easy to forget when bypassing the FrameGraph.
+	TEST(Core.HAL, RenderMeshDirect)
+	{
+		auto& device = RenderSystem::get().device();
+		constexpr uint W = 256, H = 256;
+
+		auto color_tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, {W, H}, 1, 1,
+				HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		auto depth_tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::D32_FLOAT, {W, H}, 1, 1,
+				HAL::ResFlags::DepthStencil),
+			HAL::HeapType::DEFAULT);
+
+		auto mesh_inst = std::make_shared<MeshAssetInstance>(EngineAssets::material_tester.get_asset());
+		auto scene = std::make_shared<Scene>();
+		scene->add_child(mesh_inst);
+		scene->update_transforms();
+
+		// Auto-fit camera from the mesh's actual bounds, same as
+		// MaterialPreviewSession::dispatch() -- the RTX test's hardcoded
+		// camera assumes a specific scale that may not suit rasterization's
+		// near/far clipping the same way it suits ray tracing.
+		auto mn = scene->get_min();
+		auto mx = scene->get_max();
+		float base_dist = (mx - mn).length();
+		if (base_dist < 0.001f) base_dist = 1.0f;
+
+		camera cam;
+		vec3 dir = vec3(0.577f, 0.577f, 0.577f);
+		cam.target   = (mn + mx) / 2;
+		cam.position = cam.target + dir * (base_dist * 1.5f);
+		cam.set_projection_params(Math::pi / 4, 1.0f, 0.01f, base_dist * 4.0f + 1.0f);
+		cam.update();
+
+		auto frame = device.get_frame_manager().begin_frame();
+		scene->update(*frame);
+
+		// Scene::update() alone only updates CPU-side handle allocations --
+		// SceneFrameManager::prepare() is the actual GPU upload (see
+		// PreSceneSystem.cpp's PreScene pass, which every real render calls
+		// once per frame). Without it the mesh/node/material buffers this
+		// mesh shader reads are stale/empty.
+		{
+			auto upload_list = frame->start_list(L"PrepareUpload", HAL::CommandListType::DIRECT, false);
+			SceneFrameManager::get().prepare(upload_list, *scene);
+			upload_list->execute_and_wait();
+		}
+
+		static constexpr const char* kNormalPS = R"hlsl(
+#include "mesh_shader.hlsl"
+float4 PS(vertex_output i) : SV_Target { return float4(i.normal * 0.5 + 0.5, 1); }
+)hlsl";
+
+		SimpleGraphicsPSO mpso("TestMeshDirect");
+		mpso.root_signature = Layouts::DefaultLayout;
+		mpso.mesh           = { "shaders/mesh_shader.hlsl", "VS", HAL::ShaderOptions::None, {}, false };
+		mpso.amplification  = { "shaders/mesh_shader.hlsl", "AS", HAL::ShaderOptions::None, {}, false };
+		mpso.pixel          = { kNormalPS, "PS", HAL::ShaderOptions::None, {}, true };
+		mpso.rtv_formats    = { HAL::Format::R8G8B8A8_UNORM };
+		mpso.ds             = HAL::Format::D32_FLOAT;
+		mpso.enable_depth   = true;
+		mpso.cull           = HAL::CullMode::None;
+		mpso.depth_func     = HAL::ComparisonFunc::GREATER;
+		mpso.topology       = HAL::PrimitiveTopologyType::TRIANGLE;
+		auto pso = mpso.create(device);
+
+		// Same list scene->update(*frame) itself is tied to -- not a separate
+		// queue->get_free_list(), which isn't synchronized against it.
+		auto list = frame->start_list(L"RenderMeshDirect", HAL::CommandListType::DIRECT, true);
+
+		HAL::Texture2DView color_view(color_tex, *list);
+		HAL::Texture2DView depth_view(depth_tex, *list);
+
+		HAL::CompiledRT compiled;
+		compiled.table_rtv = color_view.renderTarget;
+		compiled.table_dsv = depth_view.depthStencil;
+
+		auto& gfx = list->get_graphics();
+		gfx.set_signature(Layouts::DefaultLayout);
+		gfx.set_rtv(compiled,
+			HAL::RTOptions::Default | HAL::RTOptions::ClearColor | HAL::RTOptions::ClearDepth,
+			0, 0, vec4(0.05f, 0.05f, 0.1f, 1.0f));
+		gfx.set_pipeline(pso);
+		gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE);
+
+		gfx.set(scene->compiledScene);
+		{
+			Slots::FrameInfo frameInfo;
+			frameInfo.GetCamera() = cam.camera_cb.current;
+			gfx.set(frameInfo);
+		}
+
+		for (auto& m : mesh_inst->rendering)
+		{
+			gfx.set(m.compiled_mesh_info);
+			gfx.set(m.mesh_instance_info);
+			gfx.dispatch_mesh(m.dispatch_mesh_arguments);
+		}
+
+		list->execute_and_wait();
+
+		ASSERT_TEXTURE(color_tex.get(), "mesh_direct_normal");
 	}
 
 	// Geometry shader: VS emits one point at the origin; GS expands it into a

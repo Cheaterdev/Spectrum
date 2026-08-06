@@ -1044,7 +1044,22 @@ namespace GUI
         }
      }
 
-     
+
+    // hovered_controls/pressed only keep weak refs so a control that disappears between
+    // hit-test and dispatch (owner destroyed, removed from tree) is detected via lock()
+    // failing rather than dispatched to a dangling object; on that, re-hit-test at pos
+    // in place instead of silently dropping the event.
+    static std::vector<base::wptr> to_weak_controls(const std::vector<base::ptr>& v)
+    {
+        std::vector<base::wptr> res;
+        res.reserve(v.size());
+
+        for (auto& p : v)
+            res.emplace_back(p);
+
+        return res;
+    }
+
     void user_interface::mouse_action_event_internal(mouse_action action, mouse_button button, vec2 pos)
     {
      //   cursor = cursor_style::ARROW;
@@ -1069,7 +1084,29 @@ namespace GUI
                 release_interpret[i_button] = true;
             }
 
-            std::vector<base::ptr>& controls = hovered_controls;// find_control(pos, true);
+            std::vector<base::ptr> controls;
+            controls.reserve(hovered_controls.size());
+
+            for (auto& w : hovered_controls)
+            {
+                base::ptr c = w.lock();
+
+                if (!c)
+                {
+                    hovered_controls = to_weak_controls(find_control(pos, true));
+                    controls.clear();
+                    controls.reserve(hovered_controls.size());
+
+                    for (auto& w2 : hovered_controls)
+                        if (auto c2 = w2.lock())
+                            controls.push_back(c2);
+
+                    break;
+                }
+
+                controls.push_back(c);
+            }
+
             auto m_focus = mouse_focus.lock();
 
             if (m_focus)
@@ -1103,7 +1140,10 @@ namespace GUI
             {
                 for (unsigned int i = 0; i < pressed[i_button].size(); i++)
                 {
-                    base::ptr control = pressed[i_button][i];
+                    base::ptr control = pressed[i_button][i].lock();
+
+                    if (!control)
+                        continue;
 
                     if (controls.size() > i && control == controls[i])
                         control->on_mouse_action(action, button, pos);
@@ -1112,23 +1152,31 @@ namespace GUI
                 }
 
                 if (pressed[i_button].size())
-                    drag.mouse_action_event(pressed[i_button].back(), action, button, pos);
+                {
+                    if (auto last = pressed[i_button].back().lock())
+                        drag.mouse_action_event(last, action, button, pos);
+                }
             }
 
             if (action == mouse_action::CANCEL)
             {
                 for (unsigned int i = 0; i < pressed[i_button].size(); i++)
                 {
-                    base::ptr control = pressed[i_button][i];
-                    control->on_mouse_action(action, button, pos);
+                    base::ptr control = pressed[i_button][i].lock();
+
+                    if (control)
+                        control->on_mouse_action(action, button, pos);
                 }
 
                 if (pressed[i_button].size())
-                    drag.mouse_action_event(pressed[i_button].back(), action, button, pos);
+                {
+                    if (auto last = pressed[i_button].back().lock())
+                        drag.mouse_action_event(last, action, button, pos);
+                }
             }
         }
         mouse_move_event(pos);
-     
+
     }
 
     void user_interface::mouse_move_event_internal(vec2 pos)
@@ -1142,7 +1190,7 @@ namespace GUI
         		movable->on_mouse_move(pos);
         		movable->update_cursor();
             }*/
-        hovered_controls = find_control(pos, true);
+        hovered_controls = to_weak_controls(find_control(pos, true));
         auto t = mouse_focus.lock();
 
         if (t)
@@ -1158,7 +1206,11 @@ namespace GUI
 
         for (size_t i = 0; i < hovered_controls.size(); i++)
         {
-            base::ptr control = hovered_controls[i];
+            base::ptr control = hovered_controls[i].lock();
+
+            if (!control)
+                continue;
+
             auto hover = hovered.lock();
 
             if (hover != control)
@@ -1186,13 +1238,16 @@ namespace GUI
 
         for (size_t i = remove_index; i < hovered_controls.size(); i++)
         {
-            base::ptr control = hovered_controls[i];
+            base::ptr control = hovered_controls[i].lock();
+
+            if (!control)
+                continue;
 
             for (size_t i_button = 0; i_button < 3; i_button++)
             {
                 for (size_t j = 0; j < pressed[i_button].size(); j++)
                 {
-                    if (pressed[i_button][j] == control)
+                    if (pressed[i_button][j].lock() == control)
                     {
                         control->on_mouse_action(mouse_action::CANCEL, static_cast<mouse_button>(i_button), pos);
                         pressed[i_button].erase(pressed[i_button].begin() + j);
@@ -1361,9 +1416,22 @@ namespace GUI
 
     void user_interface::mouse_wheel_event_internal(mouse_wheel type, float value, vec2 pos)
     {
+        bool refreshed = false;
+
         for (int i = (int)hovered_controls.size() - 1; i >= 0; i--)
         {
-            base::ptr control = hovered_controls[i];
+            base::ptr control = hovered_controls[i].lock();
+
+            if (!control)
+            {
+                if (refreshed)
+                    continue;
+
+                refreshed = true;
+                hovered_controls = to_weak_controls(find_control(pos, true));
+                i = (int)hovered_controls.size();
+                continue;
+            }
 
             if (control->on_wheel(type, value, pos))
                 break;

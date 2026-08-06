@@ -2,6 +2,9 @@ module Graphics:Materials.PreviewSession;
 import RenderSystem;
 
 import :EngineAssets;
+import :Scene;
+import :MeshAsset;
+import :Camera;
 import HAL;
 import Core;
 
@@ -13,24 +16,50 @@ materials::MaterialPreviewSession::MaterialPreviewSession(universal_material* ma
 
 void materials::MaterialPreviewSession::rebuild_pso()
 {
-	auto header = EngineAssets::material_preview_header.get_asset();
 	auto src = material->get_preview_shader_source();
-	auto preview_source = src.uniforms + header->get_data() + src.text;
 
 	// Same reasoning as the old PipelinePasses ctor: drive init_pso() +
-	// override + create() manually rather than PSOS::MaterialPreview's
-	// normal (device, modifier) ctor, since the generated init_pso()
-	// re-clobbers mpso.compute.file_name/entry_point to the .sig's static
+	// override + create() manually rather than the PSOS type's normal
+	// (device, modifier) ctor, since the generated init_pso() re-clobbers
+	// the overridden stage's file_name/entry_point to the .sig's static
 	// default right after any modifier callback runs.
-	auto macros = src.macros;
 	if (want_3d)
-		macros.emplace_back("PREVIEW_3D", "1");
+	{
+		// Inline text, not a file compile -- unlike stencil.hlsl's PS_COLOR,
+		// we don't get vertex_output for free from however the engine wires
+		// mesh+pixel files together for a normal GraphicsPSO compile, so
+		// material_preview_3d.hlsl pulls mesh_shader.hlsl in itself (see
+		// that file).
+		auto header = EngineAssets::material_preview_3d_header.get_asset();
+		auto preview_source = src.uniforms + header->get_data() + src.text;
 
-	pso = std::make_shared<PSOS::MaterialPreview>();
-	PSOS::MaterialPreview::Keys key;
-	auto mpso = pso->init_pso(key, nullptr);
-	mpso.compute = { preview_source, "CS", HAL::ShaderOptions::None, macros, true };
-	pso->psos[key] = mpso.create(RenderSystem::get().device());
+		pso3d = std::make_shared<PSOS::MaterialPreview3D>();
+		PSOS::MaterialPreview3D::Keys key;
+		auto mpso = pso3d->init_pso(key, nullptr);
+		mpso.pixel = { preview_source, "PS_PREVIEW", HAL::ShaderOptions::None, src.macros, true };
+
+		// See mesh_shader.hlsl's DISABLE_MESHLET_CULL comment -- our mesh
+		// instance's cull data lives in the same shared global buffers the
+		// main editor scene concurrently touches every frame, and boundary
+		// meshlets were flickering in/out under that contention.
+		mpso.amplification = { "shaders/mesh_shader.hlsl", "AS", HAL::ShaderOptions::None,
+			{ HAL::shader_macro("DISABLE_MESHLET_CULL") }, false };
+
+		pso3d->psos[key] = mpso.create(RenderSystem::get().device());
+		pso = nullptr;
+	}
+	else
+	{
+		auto header = EngineAssets::material_preview_header.get_asset();
+		auto preview_source = src.uniforms + header->get_data() + src.text;
+
+		pso = std::make_shared<PSOS::MaterialPreview>();
+		PSOS::MaterialPreview::Keys key;
+		auto mpso = pso->init_pso(key, nullptr);
+		mpso.compute = { preview_source, "CS", HAL::ShaderOptions::None, src.macros, true };
+		pso->psos[key] = mpso.create(RenderSystem::get().device());
+		pso3d = nullptr;
+	}
 
 	built_source_generation = material->preview_source_generation;
 	built_3d = want_3d;
@@ -40,6 +69,21 @@ void materials::MaterialPreviewSession::rebuild_pso()
 	// though material->preview_generation itself hasn't moved (a mode
 	// toggle isn't a material change).
 	dispatched_generation = ~0u;
+}
+
+void materials::MaterialPreviewSession::ensure_3d_scene()
+{
+	if (preview_scene)
+		return;
+
+	// Lives for the session's lifetime -- never enters any FrameGraph, never
+	// gets a real material assigned (we bypass the indirect mesh-shader
+	// pipeline entirely and dispatch_mesh it directly in dispatch(), so the
+	// mesh's own default material is irrelevant).
+	preview_mesh.reset(new MeshAssetInstance(EngineAssets::material_tester.get_asset()));
+
+	preview_scene = std::make_shared<Scene>();
+	preview_scene->add_child(preview_mesh);
 }
 
 void materials::MaterialPreviewSession::dispatch()
@@ -63,9 +107,98 @@ void materials::MaterialPreviewSession::dispatch()
 				HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)));
 	}
 
-	auto list = RenderSystem::get().device().get_frame_manager().begin_frame()->start_list(L"MaterialPreview", HAL::CommandListType::DIRECT, true);
+	auto frame = RenderSystem::get().device().get_frame_manager().begin_frame();
+	auto list  = frame->start_list(L"MaterialPreview", HAL::CommandListType::DIRECT, true);
 
-	material->render_preview(list->get_compute(), pso, results->texture_2d().rwTexture2DArray, ivec2(preview_resolution));
+	if (want_3d)
+	{
+		ensure_3d_scene();
+
+		// Real rasterization, not a full-screen dispatch -- pixels outside
+		// the mesh silhouette never get a PS invocation, so they'd otherwise
+		// keep whatever was in the texture before (garbage on first use,
+		// stale content on redispatch).
+		list->clear_uav(results->texture_2d().rwTexture2DArray, vec4(0.05f, 0.05f, 0.05f, 1.0f));
+
+		preview_scene->update_transforms();
+		auto mn = preview_scene->get_min();
+		auto mx = preview_scene->get_max();
+
+		float base_dist = (mx - mn).length();
+		if (base_dist < 0.001f) base_dist = 1.0f;
+
+		// Fixed 3/4 view, same yaw/pitch SceneTextureRenderer defaults to --
+		// no orbit/zoom interaction needed for a thumbnail this small.
+		float yaw = 0.785398f, pitch = 0.35f;
+		vec3 dir = vec3(
+			Math::cos(pitch) * Math::sin(yaw),
+			Math::sin(pitch),
+			Math::cos(pitch) * Math::cos(yaw));
+
+		preview_cam.target   = (mn + mx) / 2;
+		preview_cam.position = preview_cam.target + dir * (base_dist * 1.5f);
+		preview_cam.set_projection_params(Math::pi / 4, 1.0f, 0.01f, base_dist * 4.0f + 1.0f);
+		preview_cam.update();
+
+		preview_scene->update(*frame);
+
+		// Scene::update() alone only refreshes CPU-side handle allocations --
+		// SceneFrameManager::prepare() is the actual GPU upload of the node/
+		// mesh/material buffers mesh_shader.hlsl reads (see PreSceneSystem.cpp's
+		// PreScene pass, which every real render calls once per frame). Without
+		// this, our own dispatch_mesh call reads stale/empty global buffers and
+		// renders nothing -- what visibly rendered before was riding on the
+		// *main* scene's own PreScene pass happening to run around the same
+		// time, racing unpredictably against ours (holes, flicker).
+		SceneFrameManager::get().prepare(list, *preview_scene);
+
+		if (!preview_depth)
+		{
+			preview_depth.reset(new HAL::Texture(RenderSystem::get().device(),
+				HAL::ResourceDesc::Tex2D(HAL::Format::R32_TYPELESS, { preview_resolution, preview_resolution }, 1, 1,
+					HAL::ResFlags::DepthStencil)));
+		}
+
+		auto& graphics = list->get_graphics();
+		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+		graphics.set_viewport(vec4(0, 0, (float)preview_resolution, (float)preview_resolution));
+		graphics.set_scissor({ 0, 0, preview_resolution, preview_resolution });
+
+		// Real depth test/write -- overlapping front/back geometry on the
+		// mesh has nothing else to resolve visibility per pixel (no rtv,
+		// UAV-only PS -- see material_preview.sig).
+		{
+			RT::DepthOnly rt;
+			rt.GetDepth() = preview_depth->texture_2d().depthStencil;
+			auto rtv = rt.compile(*list);
+			graphics.set_rtv(rtv, RTOptions::Default | RTOptions::ClearDepth);
+		}
+
+		// Binds the PSO + MaterialPreviewInfo (results/textures/uniforms).
+		material->render_preview_3d(graphics, pso3d, results->texture_2d().rwTexture2DArray);
+
+		graphics.set(preview_scene->compiledScene);
+		{
+			Slots::FrameInfo frameInfo;
+			frameInfo.GetCamera() = preview_cam.camera_cb.current;
+			graphics.set(frameInfo);
+		}
+
+		// Direct (non-indirect) dispatch_mesh, same pattern StencilRenderer
+		// uses to draw arbitrary scene meshes with a custom PSO -- bypasses
+		// the GPU-driven indirect GatherPipeline entirely, so there's no
+		// dependency on material_tester's own (irrelevant here) material.
+		for (auto& m : preview_mesh->rendering)
+		{
+			graphics.set(m.compiled_mesh_info);
+			graphics.set(m.mesh_instance_info);
+			graphics.dispatch_mesh(m.dispatch_mesh_arguments);
+		}
+	}
+	else
+	{
+		material->render_preview(list->get_compute(), pso, results->texture_2d().rwTexture2DArray, ivec2(preview_resolution));
+	}
 
 	// This resource is only touched by ad hoc immediate lists (never the
 	// FrameGraph), so its tracked GPU state doesn't get kept in sync
@@ -101,7 +234,14 @@ HAL::Texture2DView materials::MaterialPreviewSession::get_slice_view(int slot)
 #ifdef HAL_BACKEND_VULKAN
 	return HAL::Texture2DView();
 #else
-	if (!pso || built_source_generation != material->preview_source_generation || built_3d != want_3d)
+	// pso vs. pso3d depending on mode -- rebuild_pso() nulls out whichever
+	// one isn't current, so checking the wrong one is always "missing" and
+	// forces a full PSO rebuild (shader recompile) + redispatch on every
+	// single call, i.e. every frame -- the actual cause of the "flickering"
+	// (a fresh render each frame with whatever GPU scheduling variance
+	// happens to land) rather than anything about the geometry itself.
+	bool pso_missing = want_3d ? !pso3d : !pso;
+	if (pso_missing || built_source_generation != material->preview_source_generation || built_3d != want_3d)
 		rebuild_pso();
 
 	if (dispatched_generation != material->preview_generation)

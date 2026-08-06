@@ -25,6 +25,11 @@ void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HA
 	commands[IndirectCommands::CommandData] = AutoGenIndirectCommand<Table::CommandData>(device).create_command();	
 }
 
+// [Template]-tagged PSOs are skipped here entirely -- they're never built
+// with their .sig default file/entry point (some caller always drives
+// init_pso()+override+create() manually with fully custom inline source, see
+// e.g. MaterialPreviewSession::rebuild_pso), so building one unconditionally
+// at startup would just be wasted compile time.
 void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {
 	std::vector<task<void>> tasks;
@@ -40,7 +45,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_Filter>(device, pso[PSO::DenoiserShadow_Filter]));
 	tasks.emplace_back(PSOBase::create<PSOS::FSR>(device, pso[PSO::FSR]));
 	tasks.emplace_back(PSOBase::create<PSOS::RCAS>(device, pso[PSO::RCAS]));
-	tasks.emplace_back(PSOBase::create<PSOS::MaterialPreview>(device, pso[PSO::MaterialPreview]));
 	tasks.emplace_back(PSOBase::create<PSOS::GatherPipeline>(device, pso[PSO::GatherPipeline]));
 	tasks.emplace_back(PSOBase::create<PSOS::GatherBoxes>(device, pso[PSO::GatherBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::InitDispatch>(device, pso[PSO::InitDispatch]));

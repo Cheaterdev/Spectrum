@@ -267,7 +267,16 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid 
         // THIS AS: gbuffer/stencil bind their own camera, PSSM binds the
         // light camera. Voxelization uses mesh_shader_voxel's own AS, where
         // frustum/cone culling stays disabled by design (3-axis raster).
+        // MaterialPreview3D (see material_preview.sig) also disables it: its
+        // mesh instance's cull data lives in the same shared global buffers
+        // the main editor scene concurrently reads/writes every frame, and
+        // boundary meshlets were flickering in/out -- a borderline/racy
+        // IsVisible() result, not anything about the geometry itself.
+#ifdef DISABLE_MESHLET_CULL
+        visible = true;
+#else
         visible = IsVisible(cull_data, m, frameInfo.GetCamera());
+#endif
 
 #ifdef HIZ_OCCLUSION
         // Additive Hi-Z check. The PSO permutation decides where this is on:

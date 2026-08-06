@@ -289,6 +289,7 @@ export import :Autogen.PSO.ReflectionCombine;
 export import :Autogen.PSO.VSMCopyPageDepth;
 export import :Autogen.PSO.VSMApplyCompute;
 export import :Autogen.PSO.FontRender;
+export import :Autogen.PSO.MaterialPreview3D;
 export import :Autogen.PSO.RenderBoxes;
 export import :Autogen.PSO.RenderToDS;
 export import :Autogen.PSO.QualityColor;

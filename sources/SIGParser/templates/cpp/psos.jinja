@@ -31,20 +31,25 @@ void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HA
 {%endfor -%}
 }
 
+// [Template]-tagged PSOs are skipped here entirely -- they're never built
+// with their .sig default file/entry point (some caller always drives
+// init_pso()+override+create() manually with fully custom inline source, see
+// e.g. MaterialPreviewSession::rebuild_pso), so building one unconditionally
+// at startup would just be wasted compile time.
 void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {
 	std::vector<task<void>> tasks;
 
 {% for v in parsed.compute_pso -%}
 {%- set t = parsed.compute_pso[v] -%}
-{%- if t.options.ExcludeVulkan is undefined %}
+{%- if t.options.ExcludeVulkan is undefined and t.options.Template is undefined %}
 	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
 
 {% for v in parsed.graphics_pso -%}
 {%- set t = parsed.graphics_pso[v] -%}
-{%- if t.options.ExcludeVulkan is undefined %}
+{%- if t.options.ExcludeVulkan is undefined and t.options.Template is undefined %}
 	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
@@ -53,7 +58,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	{
 {%- for v in parsed.workgraph_pso %}
 {%- set t = parsed.workgraph_pso[v] %}
-{%- if t.options.ExcludeVulkan is undefined %}
+{%- if t.options.ExcludeVulkan is undefined and t.options.Template is undefined %}
 		tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
@@ -62,14 +67,14 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 #ifndef HAL_BACKEND_VULKAN
 {% for v in parsed.compute_pso -%}
 {%- set t = parsed.compute_pso[v] -%}
-{%- if t.options.ExcludeVulkan is defined %}
+{%- if t.options.ExcludeVulkan is defined and t.options.Template is undefined %}
 	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
 
 {% for v in parsed.graphics_pso -%}
 {%- set t = parsed.graphics_pso[v] -%}
-{%- if t.options.ExcludeVulkan is defined %}
+{%- if t.options.ExcludeVulkan is defined and t.options.Template is undefined %}
 	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
@@ -78,7 +83,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	{
 {%- for v in parsed.workgraph_pso %}
 {%- set t = parsed.workgraph_pso[v] %}
-{%- if t.options.ExcludeVulkan is defined %}
+{%- if t.options.ExcludeVulkan is defined and t.options.Template is undefined %}
 		tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
@@ -87,7 +92,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	{
 {%- for v in parsed.workgraph_pso %}
 {%- set t = parsed.workgraph_pso[v] %}
-{%- if t.options.ExcludeVulkan is defined %}
+{%- if t.options.ExcludeVulkan is defined and t.options.Template is undefined %}
 {%- for node_name in t.nodes %}
 		tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}_{{node_name}}>(device, pso[PSO::{{t.name}}_{{node_name}}]));
 {%- endfor %}

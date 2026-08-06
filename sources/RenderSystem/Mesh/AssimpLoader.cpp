@@ -277,6 +277,21 @@ public:
 };
 
 
+// FBX (and some OBJ/DAE) material paths are frequently baked as the exporting
+// artist's absolute machine path. std::filesystem::path::operator/ discards the
+// base directory whenever the right-hand side is already absolute, so joining
+// directory / path silently reproduces that dead path instead of resolving next
+// to the model. Fall back to the texture's bare filename next to the model file.
+static std::filesystem::path resolve_texture_path(const std::filesystem::path& directory, const char* raw_path)
+{
+	auto path = to_path(raw_path);
+
+	if (path.is_absolute())
+		return directory / path.filename();
+
+	return directory / path;
+}
+
 // Embedded textures (FBX/glTF pack them inside the model file) come as either a
 // compressed image blob (mHeight == 0, achFormatHint = extension) or a raw aiTexel
 // array (b,g,r,a byte order == B8G8R8A8).
@@ -368,7 +383,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			aiString path;
 			if (AI_SUCCESS == native_material->GetTexture(type, 0, &path))
 			{
-				auto native_path = directory / to_path(path.C_Str());
+				auto native_path = resolve_texture_path(directory, path.C_Str());
 
 				if (auto embedded = scene->GetEmbeddedTexture(path.C_Str()))
 				{
@@ -506,7 +521,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE, 0, &path)
                  || AI_SUCCESS == native_material->GetTexture(aiTextureType_BASE_COLOR, 0, &path))
                 {
-                   auto native_path = directory / to_path(path.C_Str());
+                   auto native_path = resolve_texture_path(directory, path.C_Str());
                     auto diff = get_texture(native_path);
                     tex_node = std::make_shared<TextureNode>(diff, true);
                     graph->register_node(tex_node);
@@ -525,7 +540,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_NORMALS, 0, &path))
                 {
-					auto native_path = directory / to_path(path.C_Str());
+					auto native_path = resolve_texture_path(directory, path.C_Str());
 					auto diff = get_texture(native_path);
                     auto tex_node = std::make_shared<TextureNode>(diff);
                     graph->register_node(tex_node);
@@ -535,7 +550,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                 else if (AI_SUCCESS == native_material->GetTexture(aiTextureType_HEIGHT, 0, &path))
                 {
-					auto native_path = directory / to_path(path.C_Str());
+					auto native_path = resolve_texture_path(directory, path.C_Str());
 					auto diff = get_texture(native_path);
                     auto tex_node = std::make_shared<TextureNode>(diff);
                     graph->register_node(tex_node);
@@ -554,7 +569,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                 if (has_rough_tex)
                 {
-                    metal_rough_node = std::make_shared<TextureNode>(get_texture(directory / to_path(rough_path.C_Str())));
+                    metal_rough_node = std::make_shared<TextureNode>(get_texture(resolve_texture_path(directory, rough_path.C_Str())));
                     graph->register_node(metal_rough_node);
                     graph->get_texcoord()->link(metal_rough_node->get_input(0));
                     metal_rough_node->get_output(packed ? 2 : 1)->link(graph->get_roughness());
@@ -583,7 +598,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                     if (!packed)
                     {
-                        node = std::make_shared<TextureNode>(get_texture(directory / to_path(metal_path.C_Str())));
+                        node = std::make_shared<TextureNode>(get_texture(resolve_texture_path(directory, metal_path.C_Str())));
                         graph->register_node(node);
                         graph->get_texcoord()->link(node->get_input(0));
                     }
@@ -611,7 +626,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_EMISSION_COLOR, 0, &path)
                  || AI_SUCCESS == native_material->GetTexture(aiTextureType_EMISSIVE, 0, &path))
                 {
-                    auto node = std::make_shared<TextureNode>(get_texture(directory / to_path(path.C_Str())), true);
+                    auto node = std::make_shared<TextureNode>(get_texture(resolve_texture_path(directory, path.C_Str())), true);
                     graph->register_node(node);
                     graph->get_texcoord()->link(node->get_input(0));
                     node->get_output(0)->link(graph->get_glow());
@@ -765,6 +780,14 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
             std::memcpy(&obj.local_matrix, node->mTransformation[0], sizeof(obj.local_matrix));
             obj.local_matrix.transpose();
+
+            // Vertex positions are pre-scaled by `scale` (position_function below), but
+            // node translations come straight from the FBX file's native units. Scale just
+            // the translation row to match - the rotation/local-scale block must stay as
+            // authored, or the hierarchy's accumulated rotations would be corrupted.
+            obj.local_matrix.a41 *= scale;
+            obj.local_matrix.a42 *= scale;
+            obj.local_matrix.a43 *= scale;
 
             if (parent)
                 obj.mesh_matrix = obj.local_matrix * parent->mesh_matrix;

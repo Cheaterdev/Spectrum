@@ -231,6 +231,12 @@ export namespace materials
 		// material only knows how to feed itself into one).
 		void render_preview(HAL::ComputeContext& compute, PSOS::MaterialPreview::ptr preview_pso, HLSL::RWTexture2DArray<float4> results, ivec2 res);
 
+		// Same idea, 3D mode: binds this material's data for a direct
+		// dispatch_mesh draw (see MaterialPreviewSession::dispatch) instead
+		// of a compute dispatch -- the PSO/mesh submission is the caller's
+		// job, this only binds MaterialPreviewInfo onto the graphics context.
+		void render_preview_3d(HAL::GraphicsContext& graphics, PSOS::MaterialPreview3D::ptr preview_pso, HLSL::RWTexture2DArray<float4> results);
+
 		virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override;
 		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) override;
 	private:

@@ -190,6 +190,17 @@ DynamicData generate_data(std::vector<Uniform::ptr>& un)
 		offset = (offset + need_size) % 16;
 	}
 
+	// Mirrors MaterialContext::generate_uniform_struct()'s own fallback: an
+	// empty uniform list still gets "struct MaterialCB { int dummy; };" on
+	// the HLSL side (a material with only textures, no scalar/vector params,
+	// is a real, common case), so the CPU-side buffer can never be truly
+	// empty either -- a 0-byte dynamic CBV against a 4-byte-expecting shader
+	// struct was corrupting the whole MaterialInfo binding (textures
+	// included), not just leaving an unused dummy field, making
+	// texture-only materials render black.
+	if (data.empty())
+		data.resize(sizeof(int));
+
 	return data;
 }
 
@@ -509,6 +520,21 @@ void materials::universal_material::render_preview(HAL::ComputeContext& compute,
 	compute.set(data);
 
 	compute.dispatch(res, ivec2(8, 8));
+}
+
+void materials::universal_material::render_preview_3d(HAL::GraphicsContext& graphics, PSOS::MaterialPreview3D::ptr preview_pso, HLSL::RWTexture2DArray<float4> results)
+{
+	if (!preview_pso)
+		return;
+
+	graphics.set_signature(Layouts::DefaultLayout);
+	graphics.set_pipeline(preview_pso->GetPSO());
+
+	Slots::MaterialPreviewInfo data;
+	data.GetTextures() = texture_srvs;
+	data.GetData()     = pixel_data;
+	data.GetResults()  = results;
+	graphics.set(data);
 }
 
 Slots::MaterialInfo& materials::universal_material::get_render_info()

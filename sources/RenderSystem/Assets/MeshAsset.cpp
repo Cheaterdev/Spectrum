@@ -9,6 +9,21 @@ import :RTX;
 import HAL;
 using namespace HAL;
 
+// Engine mat4x4 is row-vector (v' = v*M, translation in row 3). DXR's transform
+// buffers (D3D12_RAYTRACING_TRANSFORM3X4 / INSTANCE_DESC::Transform) are row-major
+// 3x4 for column-vector convention (worldPos = M*objectPos) - transpose and drop
+// the implicit last row (0,0,0,1) to convert.
+static mat3x4 to_transform3x4(const mat4x4& m)
+{
+	mat3x4 result;
+
+	for (int r = 0; r < 3; r++)
+		for (int c = 0; c < 4; c++)
+			result.rows[r][c] = m.rows[c][r];
+
+	return result;
+}
+
 REGISTER_TYPE(MeshAsset);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Asset, MeshAsset);
 CEREAL_REGISTER_DYNAMIC_INIT(MeshAsset);
@@ -73,7 +88,7 @@ void MeshAsset::init_gpu()
 		{
 			auto list = (RenderSystem::get().device().get_queue(CommandListType::DIRECT)->get_free_list());
 			list->begin(L"RTX");
-			auto mat = list->place_raw(nodes[mesh.node_index]->mesh_matrix);
+			auto mat = list->place_raw(to_transform3x4(nodes[mesh.node_index]->mesh_matrix));
 			GeometryDesc geometryDesc = {};
 			geometryDesc.Type = HAL::GeometryType::TRIANGLES;
 			geometryDesc.IndexBuffer = mesh.index_buffer_view.get_resource_address();
@@ -490,9 +505,7 @@ void MeshAssetInstance::update_rtx_instance()
 
 			HAL::InstanceDesc instanceDesc = {};
 
-			for (int r = 0; r < 3; r++)
-				for (int c = 0; c < 4; c++)
-					instanceDesc.transform.rows[r][c] = global_transform.rows[c][r];
+			instanceDesc.transform = to_transform3x4(global_transform);
 
 			instanceDesc.mask = 1;
 			instanceDesc.acceleration_structure = info.ras->get_gpu_address().get_ptr();

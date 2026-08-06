@@ -558,8 +558,8 @@ namespace GUI
             base::wptr mouse_focus;
             vec2 last_mouse_pos;
 
-            std::array<std::vector<base::ptr>, 3> pressed;
-            std::vector<base::ptr> hovered_controls;
+            std::array<std::vector<base::wptr>, 3> pressed;
+            std::vector<base::wptr> hovered_controls;
             base::wptr focused;
 
     

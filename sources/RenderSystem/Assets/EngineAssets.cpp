@@ -37,6 +37,10 @@ namespace EngineAssets
 		return  new BinaryAsset(to_path(L"shaders\\UniversalMaterialPreview.hlsl"));
 		});
 
+	EngineAsset<BinaryAsset> material_preview_3d_header(L"material_header_preview_3d", [] {
+		return  new BinaryAsset(to_path(L"shaders\\material_preview_3d.hlsl"));
+		});
+
 
 
 
