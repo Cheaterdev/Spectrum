@@ -148,6 +148,7 @@ namespace HAL
                     std::memcpy(tex_data->array[a]->mips[m]->data.data(), img.pixels, tex_data->array[a]->mips[m]->data.size());
                     tex_data->array[a]->mips[m]->width_stride = static_cast<UINT>(img.rowPitch);
                     tex_data->array[a]->mips[m]->slice_stride = static_cast<UINT>(img.slicePitch);
+
                     /*   sub_data[idx].pData = img.pixels;
                     sub_data[idx].RowPitch = static_cast<DWORD>(img.rowPitch);
                     sub_data[idx].SlicePitch = static_cast<DWORD>(img.slicePitch);*/

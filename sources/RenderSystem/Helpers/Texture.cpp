@@ -137,6 +137,7 @@ namespace HAL
 				for (unsigned int m = 0; m < data.mip_maps; m++)
 				{
 					int i = m * data.array_size + a;
+
 					list->get_copy().update_texture(resource, { 0, 0, 0 }, { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, (const char*)data.array[a]->mips[m]->data.data(), data.array[a]->mips[m]->width_stride, data.array[a]->mips[m]->slice_stride);
 				}
 		}

@@ -718,7 +718,7 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		base.transition(resource, ResourceStates::COPY_DEST);
+		base.transition(resource, ResourceStates::COPY_DEST, sub_resource);
 		auto layout = base.get_device().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.place_data(layout.size, layout.alignment);
 
@@ -778,7 +778,7 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		base.transition(resource, ResourceStates::COPY_SOURCE);
+		base.transition(resource, ResourceStates::COPY_SOURCE, sub_resource);
 
 		auto layout = base.get_device().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.read_data(layout.size, layout.alignment, static_cast<uint>(base.get_type()));
@@ -802,7 +802,7 @@ namespace HAL
 	                                            std::function<void(std::span<std::byte>, texture_layout)> f)
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
-		base.transition(resource, ResourceStates::COPY_SOURCE);
+		base.transition(resource, ResourceStates::COPY_SOURCE, sub_resource);
 
 		auto layout = base.get_device().get_texture_layout(resource->get_desc(), sub_resource);
 		auto info = base.read_data(layout.size, layout.alignment, static_cast<uint>(base.get_type()));
