@@ -50,6 +50,7 @@ namespace FrameGraph
 		Mipmapping,
 		VSM_RenderPage,
 		VSM_Combine,
+		VSM_DepthAnalysis,
 		Count
 	};
 }

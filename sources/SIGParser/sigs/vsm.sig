@@ -18,7 +18,9 @@ struct VSMConstants
 	int page_size;
 	int pages_per_level;
 	float4x4 light_view;
-	float4 level_info[8];
+	# MaxLevels (VSM.ixx) storage slots: regular_level_count (6) rings plus
+	# AdaptiveTierCount (3) adaptive tiers -- keep this in step with both.
+	float4 level_info[9];
 }
 
 # Instance3, not Instance1: mesh_shader_vsm.hlsl needs this alongside MeshInfo
@@ -119,10 +121,11 @@ GraphicsPSO VSMDepthDraw
 	cull = Front;
 }
 
-# One slot per clipmap level (not per page anymore -- see mesh_shader_vsm.hlsl).
-# MaxCount is a generous Phase-1a budget; level_count itself is set at
-# runtime in VSM.cpp and must stay <= this.
-[Multiple = 8]
+# One slot per storage level -- both regular rings and Phase 5.6 adaptive
+# tiers, since an adaptive tier is a normal level with a fixed size and an
+# on/off flag, not a separate mechanism (see VSM.ixx's AdaptiveTierCount).
+# Must match VSM::MaxLevels / VSMConstants::level_info[]'s size.
+[Multiple = 9]
 PassNode VSM_RenderPage
 {
 	[Write] Texture VSM_Atlas;
@@ -139,4 +142,49 @@ PassNode VSM_Combine
 	Texture VSM_PageTable;
 	StructuredBuffer<Camera> VSM_PageCameras;
 	[Write] Texture ResultTexture;
+}
+
+# Phase 5.6: single-value feedback for the adaptive-tier hysteresis in
+# VSM.cpp's plan_frame() -- MIN world-space texel size (screen pixel
+# footprint projected to world space) over the central screen region,
+# reduced via InterlockedMin on the bit pattern of a positive float (valid
+# since IEEE754 preserves ordering under uint reinterpretation for positive
+# values). Static like VSM_PageCameras: cleared then written each frame,
+# read back on the copy queue afterward (VisibilityBuffer.cpp's
+# process_tile_readback is the precedent for the copy.read<T> callback
+# pattern this follows) -- letting the FrameGraph track this resource
+# normally handles the cross-queue synchronization automatically. Result
+# is inherently last frame's, same latency class as any GPU feedback loop.
+#
+# [Required]: nothing ever reads VSM_DepthAnalysisResult through the normal
+# graph dependency system -- its only consumer is the out-of-band
+# copy.read<T> callback in VSM.cpp's render(), which the FrameGraph has no
+# visibility into. Without [Required], a pass whose output nothing else
+# declares a read dependency on gets silently discarded before actual GPU
+# submission: no crash, no validation error, no shader error -- it just
+# never runs on the GPU, so the readback callback registered inside it never
+# fires either. (Confirmed the hard way: removed manually-redundant resource
+# transitions first as the suspected cause, no change; this was the actual
+# one.)
+[Bind = DefaultLayout::Instance0]
+struct VSMDepthAnalysis
+{
+	GBuffer gbuffer;
+	RWStructuredBuffer<uint> result;
+}
+
+ComputePSO VSMDepthAnalysis
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = vsm_depth_analysis;
+}
+
+[Compute]
+[Required]
+PassNode VSM_DepthAnalysis
+{
+	GBuffer gbuffer;
+	[Write] StructuredBuffer<uint> VSM_DepthAnalysisResult;
 }

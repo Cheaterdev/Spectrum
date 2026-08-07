@@ -21,7 +21,7 @@ export namespace Table
 		int page_size;
 		int pages_per_level;
 		float4x4 light_view;
-		float4 level_info[8];
+		float4 level_info[9];
 		int& GetLevel_count() { return level_count; }
 		int& GetPage_size() { return page_size; }
 		int& GetPages_per_level() { return pages_per_level; }

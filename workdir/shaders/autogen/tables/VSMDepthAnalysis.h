@@ -6,16 +6,11 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-struct VSMConstants
+#include "GBuffer.h"
+struct VSMDepthAnalysis
 {
-	int level_count; // int
-	int page_size; // int
-	int pages_per_level; // int
-	float4x4 light_view; // float4x4
-	float4 level_info[9]; // float4
-	int GetLevel_count() { return level_count; }
-	int GetPage_size() { return page_size; }
-	int GetPages_per_level() { return pages_per_level; }
-	float4x4 GetLight_view() { return light_view; }
-	float4 GetLevel_info(int i) { return level_info[i]; }
+	uint result; // RWStructuredBuffer<uint>
+	GBuffer gbuffer; // GBuffer
+	GBuffer GetGbuffer() { return gbuffer; }
+	RWStructuredBuffer<uint> GetResult() { return ResourceDescriptorHeap[result]; }
 };

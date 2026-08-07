@@ -6,6 +6,14 @@
 // Matches VSMPageTable::VSM_INVALID_SLOT.
 #define VSM_INVALID_SLOT 0xFFFFFFFFu
 
+// level_info[] holds MaxLevels (9) slots (see vsm.sig's VSMConstants) --
+// c.GetLevel_count() is only the REGULAR ring count (VSMClipmap::
+// regular_level_count, currently 6); indices count..8 are the Phase 5.6
+// adaptive tiers, finer than level 0, addressed by fixed index rather than
+// folded into that loop bound. Keep this literal 9 in sync with vsm.sig's
+// level_info[9] if that ever changes.
+#define VSM_MAX_LEVELS 9
+
 // Which clipmap level a world position falls into, using the shared
 // light-space view + per-level grid_origin/page_world_size table VSM.cpp
 // uploads every frame (VSMClipmap::grid_origin, computed identically on the
@@ -16,6 +24,21 @@
 int get_vsm_level(VSMConstants c, float2 pos_ls)
 {
 	int pages = c.GetPages_per_level();
+
+	// Adaptive tiers first, deepest (finest) active one wins -- they cover
+	// strictly less area than level 0, so a point they don't contain still
+	// needs the regular sweep below regardless of activity.
+	for (int adaptive = VSM_MAX_LEVELS - 1; adaptive >= c.GetLevel_count(); adaptive--)
+	{
+		float4 info = c.GetLevel_info(adaptive);
+		if (info.w == 0) // inactive
+			continue;
+		float extent = info.z * pages;
+		float2 rel = pos_ls - info.xy;
+		if (all(rel >= 0) && all(rel < extent))
+			return adaptive;
+	}
+
 	for (int level = 0; level < c.GetLevel_count(); level++)
 	{
 		float4 info = c.GetLevel_info(level);
@@ -32,9 +55,33 @@ int get_vsm_level(VSMConstants c, float2 pos_ls)
 // load-bearing once residency culling lets demand exceed supply -- Phase
 // 5.4). On VSM_INVALID_SLOT, walk out to the next coarser level instead of
 // returning unshadowed -- a blurrier shadow beats a hole.
+//
+// start_level can be an adaptive tier (>= c.GetLevel_count()) -- walk
+// COARSER adaptive tiers first (decreasing index, toward c.GetLevel_count()
+// -- deeper/finer tiers are higher indices, see get_vsm_level), then fall
+// into the regular sweep from level 0. The regular for-loop's own bound
+// (c.GetLevel_count()) means it would never execute at all if start_level
+// was left at an adaptive index, silently skipping every regular level.
 uint get_vsm_slot(VSMConstants c, VSMLighting lighting, float2 pos_ls, int start_level)
 {
 	int pages = c.GetPages_per_level();
+
+	if (start_level >= c.GetLevel_count())
+	{
+		for (int adaptive = start_level; adaptive >= c.GetLevel_count(); adaptive--)
+		{
+			float4 info = c.GetLevel_info(adaptive);
+			if (info.w == 0)
+				continue;
+			float2 page_f = (pos_ls - info.xy) / max(info.z, 0.0001);
+			int2 page = clamp(int2(floor(page_f)), int2(0, 0), int2(pages - 1, pages - 1));
+			uint slot = lighting.GetPage_table()[uint3(page.x, page.y, adaptive)];
+			if (slot != VSM_INVALID_SLOT)
+				return slot;
+		}
+		start_level = 0;
+	}
+
 	for (int level = start_level; level < c.GetLevel_count(); level++)
 	{
 		float4 info = c.GetLevel_info(level);
@@ -66,12 +113,26 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos)
 
 	// The atlas is one array slice per page, so the slot IS the slice and the
 	// page-local UV is used directly -- no packed-atlas offset math.
-	// No comparison sampler is declared in DefaultLayout's sampler set, so this
-	// does the depth test manually. Reversed-Z convention (clear=0, closer
-	// fragments have larger stored z): lit if this point is at least as close
-	// to the light as whatever is stored at that atlas texel.
-	float light_raw_z = lighting.GetVsm_atlas().SampleLevel(pointClampSampler, float3(light_tc, (float)slot), 0);
-	float shadow = (pos_l.z >= light_raw_z) ? 1.0 : 0.0;
+	// No comparison sampler is declared in DefaultLayout's sampler set, so
+	// this does the depth test manually rather than via SampleCmp -- a plain
+	// 3x3 box of manually-compared texel-offset taps (SampleLevel's built-in
+	// int2 offset param) instead of PSSM_impl.hlsl's dilated-Poisson layout,
+	// whose spread constants are dead/commented-out there and collapse to
+	// duplicate offsets if copied literally. Reversed-Z convention (clear=0,
+	// closer fragments have larger stored z): lit if this point is at least
+	// as close to the light as whatever is stored at that atlas texel.
+	float shadow = 0;
+	[unroll]
+	for (int oy = -1; oy <= 1; oy++)
+	{
+		[unroll]
+		for (int ox = -1; ox <= 1; ox++)
+		{
+			float sampled = lighting.GetVsm_atlas().SampleLevel(pointClampSampler, float3(light_tc, (float)slot), 0, int2(ox, oy));
+			shadow += (pos_l.z >= sampled) ? 1.0 : 0.0;
+		}
+	}
+	shadow /= 9.0;
 
 	if (pos_l.z < 0 || pos_l.z > 1 || any(light_tc < 0) || any(light_tc > 1))
 		shadow = 1;

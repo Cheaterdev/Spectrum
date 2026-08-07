@@ -140,6 +140,12 @@ export
 			}
 
 			bool has_value();
+
+			// True if get<T>() has nothing to fall back on when unconnected
+			// (see get<T>() above) -- i.e. this parameter was never given a
+			// default_value, so leaving it unlinked produces a garbage/empty
+			// value rather than a deliberate default.
+			bool has_default();
 			Node* owner;
 
 			std::set< std::shared_ptr<connection>> input_connections;
@@ -421,6 +427,20 @@ export
 			bool has_outputs()
 			{
 				return !output_parametres.empty();
+			}
+
+			// True if any input is neither linked, directly set, nor backed
+			// by a default_value -- i.e. this node can't actually produce a
+			// meaningful result right now. Used to flag the node in the
+			// editor (see component_window::draw) rather than let it fail
+			// silently.
+			bool is_broken()
+			{
+				for (auto& i : input_parametres)
+					if (i->enabled && !i->has_input() && !i->has_value() && !i->has_default())
+						return true;
+
+				return false;
 			}
 		protected:
 			virtual  void operator()(GraphContext*) = 0;

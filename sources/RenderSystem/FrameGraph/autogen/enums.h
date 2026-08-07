@@ -60,6 +60,7 @@ export
 		Library::Mipmapping Mipmapping;
 		Library::VSM_RenderPage VSM_RenderPage;
 		Library::VSM_Combine VSM_Combine;
+		Library::VSM_DepthAnalysis VSM_DepthAnalysis;
 	
 	};
 

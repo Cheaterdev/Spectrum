@@ -112,138 +112,213 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	const int pages_per_level = pages_side * pages_side;
 	uint32_t  all_pages_mask  = (1u << pages_per_level) - 1;
 
-	// Finest level first: acquire_slot_with_priority only ever steals from
-	// a level STRICTLY coarser than the requester, so processing in this
-	// order means a fine level always gets first pick of whatever's free
-	// this frame, and can reclaim an already-resident coarser page if it
-	// has to -- never the other way around.
-	for (int level = 0; level < page_table.clipmap.level_count; level++)
+	// Phase 5.6: adaptive tiers (storage indices regular_level_count..
+	// level_count-1) get the depth-analysis hysteresis decision first, then
+	// get planned (if active) or explicitly marked not-valid (if not) ahead
+	// of the regular sweep -- see update_adaptive_tiers() and VSM.ixx's
+	// LevelPlan/AdaptiveTierCount comments.
+	update_adaptive_tiers();
+	for (int i = AdaptiveTierCount - 1; i >= 0; i--)
 	{
-		LevelPlan plan;
-		plan.origin     = page_table.clipmap.grid_origin(level, cam_pos_ls);
-		plan.bounds_all = bounds_all;
-		plan.valid      = true;
-
-		// Recentered = this level's local page indices now mean a different
-		// world region than they did last frame -- the indirection ROW must
-		// be rewritten either way (it's indexed by local position), even on
-		// frames where every page it now points to happens to already be
-		// cached.
-		bool recentered = !level_initialized[level] || plan.origin.x != cached_origin[level].x || plan.origin.y != cached_origin[level].y;
-
-		// Read-and-clear this level's sticky flag (see VSM.ixx).
-		pos_mutex.lock();
-		bool light_moved = light_change_pending[level];
-		light_change_pending[level] = false;
-		pos_mutex.unlock();
-
-		uint32_t scene_mask = tracker.take_dirty(level) & all_pages_mask;
-
-		// A page that has scrolled entirely off this level's grid (recenter
-		// moved past it) isn't covered by any local cell below any more, so
-		// the per-cell "not needed" evict never gets a chance to see it --
-		// left alone it's a permanent orphan for level 0 specifically
-		// (nothing is finer, so nothing can ever steal it back). Sweep it
-		// here, every frame, before this level tries to allocate anything;
-		// harmless no-op when nothing actually left the grid.
-		{
-			ivec2 grid_min = page_table.clipmap.abs_page(level, ivec2(0, 0), plan.origin);
-			ivec2 grid_max = grid_min + ivec2(pages_side, pages_side);
-			page_table.evict_outside_range(level, grid_min, grid_max);
-		}
-
-		// Resolve every local cell's physical slot by page IDENTITY (level +
-		// abs_page), not by local position -- a page that stays in view
-		// keeps its slot and its rendered content across a recenter.
-		//
-		// Residency culling: a page whose light-space footprint misses
-		// bounds_all (the camera-frustum-clipped scene) can't be
-		// contributing to anything the camera sees right now -- skip
-		// allocating it, freeing budget for pages that matter. Conservative
-		// (bounds_all is an AABB, a superset of the true frustum), never a
-		// hole.
-		uint32_t newly_allocated_mask = 0;
-		for (int local = 0; local < pages_per_level; local++)
-		{
-			ivec2 page      = ivec2(local % pages_side, local / pages_side);
-			float2 page_min = page_table.clipmap.page_min(level, page, plan.origin);
-			float2 page_max = page_min + float2(page_table.clipmap.page_world_size(level));
-			ivec2 abs_page  = page_table.clipmap.abs_page(level, page, plan.origin);
-
-			bool needed = page_max.x >= bounds_all.left && page_min.x <= bounds_all.right
-			           && page_max.y >= bounds_all.top  && page_min.y <= bounds_all.bottom;
-
-			if (!needed)
-			{
-				plan.slots[local] = (int)VSM_INVALID_SLOT;
-				// The allocator's reclaim path: a page the camera has
-				// panned away from gives its slot back so it's available
-				// for whatever's actually needed this frame. Safe to do
-				// unconditionally (not just when scene-dirty) because this
-				// whole pass is single-threaded -- nothing else is touching
-				// the allocator right now.
-				page_table.evict_page(level, abs_page);
-				continue;
-			}
-
-			auto alloc = page_table.allocate_or_touch(level, abs_page, tick);
-			plan.slots[local] = (int)alloc.slot;
-
-			if (alloc.slot != VSM_INVALID_SLOT)
-				plan.resident_mask |= (1u << local);
-
-			if (alloc.newly_allocated)
-			{
-				newly_allocated_mask |= (1u << local);
-				allocation_exhausted.store(false, std::memory_order_relaxed);
-			}
-			else if (alloc.slot == VSM_INVALID_SLOT)
-			{
-				// Pool exhausted AND nothing coarser than this level to
-				// steal from either. Log the start of an episode, then only
-				// a periodic reminder while it persists, not once per
-				// failed cell per frame.
-				uint64_t failed = total_failed_allocations.fetch_add(1, std::memory_order_relaxed) + 1;
-				bool was_exhausted = allocation_exhausted.exchange(true, std::memory_order_relaxed);
-				if (!was_exhausted || (failed % 300 == 0))
-				{
-					Log::get() << (std::string("VSM: page pool exhausted (physical_page_count=")
-						+ std::to_string(page_table.physical_page_count) + "), level=" + std::to_string(level)
-						+ ", total failed allocations=" + std::to_string(failed)
-						+ " -- affected pages fall back to a coarser level") << Log::endl;
-				}
-			}
-		}
-
-		// newly_allocated/light_moved invalidate that specific page (not the
-		// whole level -- a page whose slot/content survived the recenter
-		// needs neither); scene_mask adds whatever VSMInvalidationTracker
-		// actually marked. Masked to resident_mask: a page with no valid
-		// slot this frame -- not needed, or needed but the pool was
-		// exhausted -- is never drawn into a slot it doesn't have.
-		plan.dirty_mask          = (newly_allocated_mask | scene_mask | (light_moved ? all_pages_mask : 0u)) & plan.resident_mask;
-		// A newly-allocated slot has no Hi-Z history; light_moved makes
-		// every resident page's existing pyramid stale too (built under the
-		// old light projection).
-		plan.skip_occlusion_mask = (newly_allocated_mask | (light_moved ? all_pages_mask : 0u)) & plan.resident_mask;
-
-		// Indirection row is stale if local->slot changed for ANY cell --
-		// recenter, a residency flip, or a priority steal reassigning a
-		// slot this level was pointing at.
-		bool row_changed = recentered;
-		for (int local = 0; local < pages_per_level; local++)
-		{
-			if (cached_slots[level][local] != plan.slots[local])
-				row_changed = true;
-			cached_slots[level][local] = plan.slots[local];
-		}
-		plan.row_changed = row_changed;
-
-		level_initialized[level] = true;
-		cached_origin[level]     = plan.origin;
-
-		m_plan[level] = plan;
+		int level = page_table.clipmap.regular_level_count + i;
+		if (adaptive_active[i])
+			plan_level(level, cam_pos_ls, bounds_all, tick, pages_side, pages_per_level, all_pages_mask);
+		else
+			m_plan[level].valid = false;
 	}
+
+	// Finest regular level first: acquire_slot_with_priority only ever
+	// steals from a level STRICTLY coarser than the requester, so
+	// processing in this order means a fine level always gets first pick of
+	// whatever's free this frame, and can reclaim an already-resident
+	// coarser page if it has to -- never the other way around. (Adaptive
+	// tiers, planned above, are numerically higher than every regular
+	// level, so this can also reclaim an idle adaptive tier's abandoned
+	// pages the same way it reclaims any other coarser level's.)
+	for (int level = 0; level < page_table.clipmap.regular_level_count; level++)
+		plan_level(level, cam_pos_ls, bounds_all, tick, pages_side, pages_per_level, all_pages_mask);
+}
+
+void VSM::update_adaptive_tiers()
+{
+	float measured = std::bit_cast<float>(measured_texel_size_bits.load(std::memory_order_relaxed));
+
+	// TEMP diagnostics (Phase 5.6 tuning): confirm the readback is actually
+	// arriving and see the real numbers driving activation, throttled to
+	// avoid spam. Remove once the mechanism is confirmed working.
+	{
+		static uint64_t s_diag_frame = 0;
+		if ((s_diag_frame++ % 120) == 0)
+		{
+			float level0_texel = page_table.clipmap.page_world_size(0) / (float)page_table.page_size;
+			Log::get() << (std::string("VSM adaptive diag: measured=") + std::to_string(measured)
+				+ " level0_texel=" + std::to_string(level0_texel)
+				+ " tier0_active=" + std::to_string(adaptive_active[0])
+				+ " tier0_want_active_run=" + std::to_string(adaptive_want_active_run[0])
+				+ " tier1_active=" + std::to_string(adaptive_active[1])
+				+ " tier2_active=" + std::to_string(adaptive_active[2])) << Log::endl;
+		}
+	}
+
+	// Cascading: tier i is only a candidate for activation if tier i-1 is
+	// (or is becoming) active too -- "go deeper" one step at a time, never
+	// straight to the deepest tier. Tier 0 compares against level 0 itself.
+	bool prev_active = true;
+	for (int i = 0; i < AdaptiveTierCount; i++)
+	{
+		int   prev_level      = (i == 0) ? 0 : (page_table.clipmap.regular_level_count + i - 1);
+		float prev_texel_size = page_table.clipmap.page_world_size(prev_level) / (float)page_table.page_size;
+
+		bool want_active = prev_active && measured < prev_texel_size;
+
+		if (want_active)
+		{
+			adaptive_want_active_run[i]++;
+			adaptive_want_inactive_run[i] = 0;
+		}
+		else
+		{
+			adaptive_want_inactive_run[i]++;
+			adaptive_want_active_run[i] = 0;
+		}
+
+		if (!adaptive_active[i] && adaptive_want_active_run[i] >= AdaptiveActivateFrames)
+			adaptive_active[i] = true;
+		else if (adaptive_active[i] && adaptive_want_inactive_run[i] >= AdaptiveDeactivateFrames)
+			adaptive_active[i] = false;
+
+		prev_active = adaptive_active[i];
+	}
+}
+
+void VSM::plan_level(int level, float2 cam_pos_ls, const box& bounds_all, uint64_t tick,
+                      int pages_side, int pages_per_level, uint32_t all_pages_mask)
+{
+	LevelPlan plan;
+	plan.origin     = page_table.clipmap.grid_origin(level, cam_pos_ls);
+	plan.bounds_all = bounds_all;
+	plan.valid      = true;
+
+	// Recentered = this level's local page indices now mean a different
+	// world region than they did last frame -- the indirection ROW must
+	// be rewritten either way (it's indexed by local position), even on
+	// frames where every page it now points to happens to already be
+	// cached. Also true, correctly, the first frame an adaptive tier
+	// activates (level_initialized[level] is still false then).
+	bool recentered = !level_initialized[level] || plan.origin.x != cached_origin[level].x || plan.origin.y != cached_origin[level].y;
+
+	// Read-and-clear this level's sticky flag (see VSM.ixx).
+	pos_mutex.lock();
+	bool light_moved = light_change_pending[level];
+	light_change_pending[level] = false;
+	pos_mutex.unlock();
+
+	uint32_t scene_mask = tracker.take_dirty(level) & all_pages_mask;
+
+	// A page that has scrolled entirely off this level's grid (recenter
+	// moved past it) isn't covered by any local cell below any more, so
+	// the per-cell "not needed" evict never gets a chance to see it --
+	// left alone it's a permanent orphan for level 0 specifically
+	// (nothing is finer, so nothing can ever steal it back). Sweep it
+	// here, every frame, before this level tries to allocate anything;
+	// harmless no-op when nothing actually left the grid.
+	{
+		ivec2 grid_min = page_table.clipmap.abs_page(level, ivec2(0, 0), plan.origin);
+		ivec2 grid_max = grid_min + ivec2(pages_side, pages_side);
+		page_table.evict_outside_range(level, grid_min, grid_max);
+	}
+
+	// Resolve every local cell's physical slot by page IDENTITY (level +
+	// abs_page), not by local position -- a page that stays in view
+	// keeps its slot and its rendered content across a recenter.
+	//
+	// Residency culling: a page whose light-space footprint misses
+	// bounds_all (the camera-frustum-clipped scene) can't be
+	// contributing to anything the camera sees right now -- skip
+	// allocating it, freeing budget for pages that matter. Conservative
+	// (bounds_all is an AABB, a superset of the true frustum), never a
+	// hole.
+	uint32_t newly_allocated_mask = 0;
+	for (int local = 0; local < pages_per_level; local++)
+	{
+		ivec2 page      = ivec2(local % pages_side, local / pages_side);
+		float2 page_min = page_table.clipmap.page_min(level, page, plan.origin);
+		float2 page_max = page_min + float2(page_table.clipmap.page_world_size(level));
+		ivec2 abs_page  = page_table.clipmap.abs_page(level, page, plan.origin);
+
+		bool needed = page_max.x >= bounds_all.left && page_min.x <= bounds_all.right
+		           && page_max.y >= bounds_all.top  && page_min.y <= bounds_all.bottom;
+
+		if (!needed)
+		{
+			plan.slots[local] = (int)VSM_INVALID_SLOT;
+			// The allocator's reclaim path: a page the camera has
+			// panned away from gives its slot back so it's available
+			// for whatever's actually needed this frame. Safe to do
+			// unconditionally (not just when scene-dirty) because this
+			// whole pass is single-threaded -- nothing else is touching
+			// the allocator right now.
+			page_table.evict_page(level, abs_page);
+			continue;
+		}
+
+		auto alloc = page_table.allocate_or_touch(level, abs_page, tick);
+		plan.slots[local] = (int)alloc.slot;
+
+		if (alloc.slot != VSM_INVALID_SLOT)
+			plan.resident_mask |= (1u << local);
+
+		if (alloc.newly_allocated)
+		{
+			newly_allocated_mask |= (1u << local);
+			allocation_exhausted.store(false, std::memory_order_relaxed);
+		}
+		else if (alloc.slot == VSM_INVALID_SLOT)
+		{
+			// Pool exhausted AND nothing coarser than this level to
+			// steal from either. Log the start of an episode, then only
+			// a periodic reminder while it persists, not once per
+			// failed cell per frame.
+			uint64_t failed = total_failed_allocations.fetch_add(1, std::memory_order_relaxed) + 1;
+			bool was_exhausted = allocation_exhausted.exchange(true, std::memory_order_relaxed);
+			if (!was_exhausted || (failed % 300 == 0))
+			{
+				Log::get() << (std::string("VSM: page pool exhausted (physical_page_count=")
+					+ std::to_string(page_table.physical_page_count) + "), level=" + std::to_string(level)
+					+ ", total failed allocations=" + std::to_string(failed)
+					+ " -- affected pages fall back to a coarser level") << Log::endl;
+			}
+		}
+	}
+
+	// newly_allocated/light_moved invalidate that specific page (not the
+	// whole level -- a page whose slot/content survived the recenter
+	// needs neither); scene_mask adds whatever VSMInvalidationTracker
+	// actually marked. Masked to resident_mask: a page with no valid
+	// slot this frame -- not needed, or needed but the pool was
+	// exhausted -- is never drawn into a slot it doesn't have.
+	plan.dirty_mask          = (newly_allocated_mask | scene_mask | (light_moved ? all_pages_mask : 0u)) & plan.resident_mask;
+	// A newly-allocated slot has no Hi-Z history; light_moved makes
+	// every resident page's existing pyramid stale too (built under the
+	// old light projection).
+	plan.skip_occlusion_mask = (newly_allocated_mask | (light_moved ? all_pages_mask : 0u)) & plan.resident_mask;
+
+	// Indirection row is stale if local->slot changed for ANY cell --
+	// recenter, a residency flip, or a priority steal reassigning a
+	// slot this level was pointing at.
+	bool row_changed = recentered;
+	for (int local = 0; local < pages_per_level; local++)
+	{
+		if (cached_slots[level][local] != plan.slots[local])
+			row_changed = true;
+		cached_slots[level][local] = plan.slots[local];
+	}
+	plan.row_changed = row_changed;
+
+	level_initialized[level] = true;
+	cached_origin[level]     = plan.origin;
+
+	m_plan[level] = plan;
 }
 
 VSM::VSM()
@@ -262,7 +337,13 @@ VSM::VSM()
 	// unrelated page (shadows vanishing with distance -- see also the
 	// out-of-range check in get_shadow_vsm, which returns unshadowed
 	// instead of clamp-sampling).
-	page_table.clipmap.level_count = 6;
+	// level_count covers ALL storage slots, including the 3 adaptive tiers
+	// (Phase 5.6) at indices 6/7/8 (base/2, base/4, base/8) --
+	// regular_level_count (6) is what the shader's normal ascending sweep
+	// and this class's own per-level loops actually iterate; see
+	// VSMClipmap::page_world_size and VSM.ixx's AdaptiveTierCount comment.
+	page_table.clipmap.level_count = 9;
+	page_table.clipmap.regular_level_count = 6;
 	page_table.clipmap.pages_per_level = 4;
 	page_table.clipmap.base_page_world_size = 32.0f;
 	// page_size (texels/page) is the resolution lever. The atlas is an array
@@ -579,7 +660,11 @@ VSM::VSM()
 
 		{
 			Slots::VSMConstants constants;
-			constants.GetLevel_count()          = page_table.clipmap.level_count;
+			// Regular-ring count only -- get_vsm_level's normal ascending
+			// loop stops here; the adaptive tiers (indices
+			// regular_level_count..level_count-1) are addressed by fixed
+			// index in a separate pre-check (see VSM_impl.hlsl).
+			constants.GetLevel_count()          = page_table.clipmap.regular_level_count;
 			constants.GetPage_size()            = page_table.page_size;
 			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
 			constants.GetLight_view()           = light_cam.get_view();
@@ -587,7 +672,12 @@ VSM::VSM()
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
 			{
 				float2 origin = page_table.clipmap.grid_origin(level, cam_pos_ls);
-				constants.GetLevel_info()[level] = float4(origin.x, origin.y, page_table.clipmap.page_world_size(level), 0);
+				// Adaptive tiers stash their active flag in .w, otherwise
+				// unused -- lets the shader's pre-check skip a currently
+				// inactive tier without a separate constant.
+				int   adaptive_index = level - page_table.clipmap.regular_level_count;
+				float active_flag = (adaptive_index >= 0 && adaptive_index < AdaptiveTierCount && adaptive_active[adaptive_index]) ? 1.0f : 0.0f;
+				constants.GetLevel_info()[level] = float4(origin.x, origin.y, page_table.clipmap.page_world_size(level), active_flag);
 			}
 
 			compute.set(constants);
@@ -595,5 +685,87 @@ VSM::VSM()
 
 		compute.set_pipeline<PSOS::VSMApplyCompute>();
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
+	};
+
+	// ---- Depth analysis (Phase 5.6: adaptive-tier hysteresis feedback) --
+
+	m_depth_analysis_setup = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		GBufferViewDesc::need(builder, data.gbuffer);
+
+		// Static: cleared and re-measured every frame, but the buffer
+		// itself persists so the readback (issued after this frame's
+		// dispatch, consumed in a later frame's plan_frame()) always has
+		// something valid to read. Unlike VSM_RenderPage's Multiple=8
+		// instances (which branch create() vs need() on level==0 to avoid
+		// every instance re-creating shared resources), this is a single,
+		// non-Multiple PassNode -- nothing else ever touches this resource,
+		// so it's always the owner and always calls create(); Static is
+		// what keeps the underlying allocation from being torn down and
+		// rebuilt every frame, not a manual is_new()/create()-once branch
+		// (calling .is_new() before anything has ever created/needed this
+		// resource in this pass crashed -- it isn't valid to query cold).
+		builder.create(data.VSM_DepthAnalysisResult, { (size_t)1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+
+		return true;
+	};
+
+	m_depth_analysis_render = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::FrameContext& context)
+	{
+		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+
+		auto& command_list = context.get_list();
+		auto& compute = command_list->get_compute();
+		auto& copy    = command_list->get_copy();
+
+		compute.set_signature(Layouts::DefaultLayout);
+		// The shader reads GetFrameInfo().GetCamera() for InvViewProj/
+		// Position/Proj -- without this, that slot is never bound for this
+		// pass's compute context and the shader reads whatever garbage was
+		// last there, so world_texel_size comes out NaN/Inf-ish and never
+		// improves the FLT_MAX clear value via InterlockedMin (its bit
+		// pattern sorts above FLT_MAX's). Confirmed via diagnostic logging:
+		// the readback callback fired correctly, but the value never moved
+		// even standing right up against geometry -- this was why.
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+
+		// No manual transitions anywhere in this pass -- update(), set(),
+		// and read()/read_buffer() all self-transition internally
+		// (confirmed by reading their implementations: update_buffer/
+		// read_buffer both call base.transition(...) themselves; set()'s
+		// self-tracking is already noted elsewhere in this file, "graphics.
+		// set() tracks the read state for this SRV bind itself"). Adding
+		// redundant manual transitions to the same states right before each
+		// call was the actual bug here: the readback callback never fired
+		// at all (confirmed via diagnostic logging) until these were
+		// removed -- this codebase's op-batching layer has hit exactly this
+		// class of same-state-transition-elision bug before.
+
+		// Clear to FLT_MAX's bit pattern so this frame's first InterlockedMin
+		// always improves it -- 0 would read back as an impossibly tiny
+		// texel size (0 sorts below every real positive float's bit
+		// pattern), spuriously activating every adaptive tier.
+		{
+			uint32_t flt_max_bits = 0x7F7FFFFFu;
+			copy.update(*data.VSM_DepthAnalysisResult, 0, std::span{ &flt_max_bits, 1 });
+		}
+
+		{
+			Slots::VSMDepthAnalysis analysis;
+			gbuffer.SetTable(analysis.GetGbuffer());
+			analysis.GetResult() = data.VSM_DepthAnalysisResult->rwStructuredBuffer;
+			compute.set(analysis);
+		}
+		compute.set_pipeline<PSOS::VSMDepthAnalysis>();
+
+		// Full-frame-covering dispatch; the shader's own bounds check keeps
+		// only the central 50% region's threads doing real work, so this
+		// doesn't need to precompute/match that region on the CPU side too.
+		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2(8, 8));
+
+		copy.read<uint>(*data.VSM_DepthAnalysisResult, 0, 1, [this](std::span<uint> result)
+		{
+			measured_texel_size_bits.store(result[0], std::memory_order_relaxed);
+		});
 	};
 }

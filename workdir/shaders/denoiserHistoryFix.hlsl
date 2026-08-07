@@ -22,7 +22,7 @@ float3 depth_to_wpos_center(float d, float2 tc, matrix mat)
 }
 
 
-#define MOVE_SCALER 0.1
+#define MOVE_SCALER 0.01
 
 static const Texture2D<float4> color_tex = denoiser_history.GetColor();
 static const Texture2D<float> tex_frames = denoiser_history.GetFrames();
@@ -75,7 +75,7 @@ float get_occlusion(float prev_z, float2 tc, float3 pos)
 {
 	float3 prev_pos = depth_to_wpos(prev_z, tc, camera.GetInvViewProj());
 
-	float l = 15*length(pos - prev_pos) * MOVE_SCALER;
+	float l = length(pos - prev_pos) * MOVE_SCALER;
 
     return 0.0005 + all(and(tc > 0, tc < 1)) * saturate(1 - l);
 	//return all(tc > 0 && tc < 1) && l < 0.1 ? 1 : 0.005;

@@ -855,6 +855,11 @@ bool parameter::has_value()
 	return value.exists();
 }
 
+bool parameter::has_default()
+{
+	return default_value.exists();
+}
+
 bool parameter::has_input()
 {
 	return !input_connections.empty();

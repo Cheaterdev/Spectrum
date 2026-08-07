@@ -56,6 +56,12 @@ void GUI::Elements::FlowGraph::component_window::draw(Context& c)
 	else
 		texture.mul_color = float4(31, 63, 85, 255) / 255.0f;
 
+	// Flag a node that can't actually produce a result right now (an input
+	// left unlinked with nothing to fall back on -- see Node::is_broken)
+	// instead of letting it fail silently downstream.
+	if (type == window_type::NODE && node && node->is_broken())
+		texture.mul_color = float4(0.7f, 0.15f, 0.15f, 1.0f);
+
 	c.renderer->draw(c, texture, get_render_bounds());
 }
 

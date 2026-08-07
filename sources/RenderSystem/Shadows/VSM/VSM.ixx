@@ -31,7 +31,10 @@ import HAL;
 export class VSM
 {
 public:
-	static constexpr int MaxLevels = 8;
+	// 6 regular rings (VSM::VSM()'s regular_level_count) + AdaptiveTierCount
+	// (3) adaptive tiers below -- keep in step with vsm.sig's
+	// [Multiple=9] on VSM_RenderPage and VSMConstants::level_info[9].
+	static constexpr int MaxLevels = 9;
 	static constexpr int MaxPagesPerLevel = 16;   // 4x4, matches VSMClipmap::pages_per_level
 	static constexpr int MaxPages = MaxLevels * MaxPagesPerLevel;
 
@@ -115,11 +118,45 @@ private:
 	std::atomic<bool>     allocation_exhausted{ false };
 	std::atomic<uint64_t> total_failed_allocations{ 0 };
 
+	// Phase 5.6: adaptive tiers (storage indices regular_level_count..
+	// level_count-1, finer than level 0, fixed size -- see VSMClipmap)
+	// toggled on/off by depth-analysis feedback with hysteresis, never
+	// resized. "Want active"/"want inactive" run length gates the flip so a
+	// single noisy frame can't toggle a tier -- see plan_frame().
+	static constexpr int AdaptiveTierCount = 3;
+	static constexpr int AdaptiveActivateFrames   = 30; // ~0.5s @ 60fps
+	static constexpr int AdaptiveDeactivateFrames = 90; // biased toward staying active -- flapping is worse than a few extra frames of fine coverage
+	std::array<bool, AdaptiveTierCount> adaptive_active{};
+	std::array<int,  AdaptiveTierCount> adaptive_want_active_run{};
+	std::array<int,  AdaptiveTierCount> adaptive_want_inactive_run{};
+
+	// Written from VSM_DepthAnalysis's GPU->CPU readback callback (may fire
+	// on a different thread than plan_frame()'s single-threaded pre_run --
+	// see VSM_DepthAnalysis.cpp), read once per frame in plan_frame().
+	// Starts at FLT_MAX's bit pattern ("nothing needs to be finer yet") so
+	// a cold start before the first real measurement arrives doesn't
+	// spuriously activate a tier.
+	std::atomic<uint32_t> measured_texel_size_bits{ 0x7F7FFFFFu };
+
 	std::array<Passes::VSM_RenderPage::setup_func_type,  MaxLevels> m_level_setup;
 	std::array<Passes::VSM_RenderPage::render_func_type, MaxLevels> m_level_render;
 
 	Passes::VSM_Combine::setup_func_type  m_combine_setup;
 	Passes::VSM_Combine::render_func_type m_combine_render;
+
+	Passes::VSM_DepthAnalysis::setup_func_type  m_depth_analysis_setup;
+	Passes::VSM_DepthAnalysis::render_func_type m_depth_analysis_render;
+
+	// Shared body for planning one storage level (regular or adaptive) --
+	// see plan_frame()'s definition for the full walkthrough of what this
+	// does and why. Writes m_plan[level].
+	void plan_level(int level, float2 cam_pos_ls, const box& bounds_all, uint64_t tick,
+	                 int pages_side, int pages_per_level, uint32_t all_pages_mask);
+
+	// Reads measured_texel_size_bits, applies the activate/deactivate frame
+	// hysteresis, updates adaptive_active[]. Called once at the top of
+	// plan_frame(), before either tier is (or isn't) planned.
+	void update_adaptive_tiers();
 
 public:
 
@@ -149,5 +186,8 @@ public:
 
 		pipeline.vSM_Combine.setup_func  = m_combine_setup;
 		pipeline.vSM_Combine.render_func = m_combine_render;
+
+		pipeline.vSM_DepthAnalysis.setup_func  = m_depth_analysis_setup;
+		pipeline.vSM_DepthAnalysis.render_func = m_depth_analysis_render;
 	}
 };

@@ -20,8 +20,26 @@ export
 		int pages_per_level = 4;
 		float base_page_world_size = 8.0f;
 
+		// Phase 5.6: storage indices >= regular_level_count are adaptive
+		// tiers (finer than level 0, toggled on/off by depth-analysis
+		// hysteresis in VSM.cpp's plan_frame() -- see VSM.ixx) rather than
+		// part of the regular geometric ring progression. level_count still
+		// covers all of them (indirection texture / level_info array sizing
+		// needs the storage), but the shader's normal ascending sweep and
+		// plan_frame()'s regular per-level loop both stop at
+		// regular_level_count -- the adaptive tiers are addressed by fixed
+		// index instead, both sides.
+		int regular_level_count = 3;
+
 		float page_world_size(int level) const
 		{
+			if (level >= regular_level_count)
+			{
+				// Fixed sizes below level 0: base/2, base/4, ... -- never
+				// change once chosen, only whether the tier is active.
+				int i = level - regular_level_count;
+				return base_page_world_size / float(2 << i);
+			}
 			return base_page_world_size * float(1 << level);
 		}
 

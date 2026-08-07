@@ -6,37 +6,40 @@
 // ============================================================================
 #pragma once
 #include "../PassNodeBase.h"
-
+#include "GBuffer.h"
 using namespace FrameGraph;
 
 namespace Passes
 {
 
-class VSM_RenderPage : public PassNodeBase
+class VSM_DepthAnalysis : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
+		GBuffer gbuffer;
 
-		Handlers::Texture VSM_Atlas = ResourceID::VSM_Atlas;
-
-
-		Handlers::Texture VSM_PageTable = ResourceID::VSM_PageTable;
-
-		Handlers::StructuredBuffer<Table::Camera> VSM_PageCameras = ResourceID::VSM_PageCameras;
-
-
-		Handlers::Texture VSM_PageHiZ = ResourceID::VSM_PageHiZ;
+		Handlers::StructuredBuffer<uint> VSM_DepthAnalysisResult = ResourceID::VSM_DepthAnalysisResult;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::VSM_Atlas, true },
-			{ ResourceID::VSM_PageTable, true },
-			{ ResourceID::VSM_PageCameras, true },
-			{ ResourceID::VSM_PageHiZ, true },
+			{ ResourceID::GBuffer_Albedo, false },
+			{ ResourceID::GBuffer_Normals, false },
+			{ ResourceID::GBuffer_Depth, false },
+			{ ResourceID::GBuffer_Specular, false },
+			{ ResourceID::GBuffer_Speed, false },
+			{ ResourceID::GBuffer_DepthMips, false },
+			{ ResourceID::GBuffer_Quality, false },
+			{ ResourceID::GBuffer_TempColor, false },
+			{ ResourceID::GBuffer_NormalsPrev, false },
+			{ ResourceID::GBuffer_SpecularPrev, false },
+			{ ResourceID::GBuffer_DepthPrev, false },
+			{ ResourceID::GBuffer_HiZ, false },
+			{ ResourceID::GBuffer_HiZ_UAV, false },
+			{ ResourceID::VSM_DepthAnalysisResult, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -47,32 +50,19 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"VSM_RenderPage"};
+	static constexpr LiteralWStr Name{L"VSM_DepthAnalysis"};
 
-	static constexpr uint32_t MaxCount = 9;
-	static constexpr LiteralWStr Names[MaxCount] = {
-		LiteralWStr{L"VSM_RenderPage_0"},
-		LiteralWStr{L"VSM_RenderPage_1"},
-		LiteralWStr{L"VSM_RenderPage_2"},
-		LiteralWStr{L"VSM_RenderPage_3"},
-		LiteralWStr{L"VSM_RenderPage_4"},
-		LiteralWStr{L"VSM_RenderPage_5"},
-		LiteralWStr{L"VSM_RenderPage_6"},
-		LiteralWStr{L"VSM_RenderPage_7"},
-		LiteralWStr{L"VSM_RenderPage_8"},
-	};
-
-	static constexpr PassID ID = PassID::VSM_RenderPage;
+	static constexpr PassID ID = PassID::VSM_DepthAnalysis;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
 
-	std::array<setup_func_type, MaxCount> setup_funcs;
-	std::array<render_func_type, MaxCount> render_funcs;
+	setup_func_type setup_func;
+	render_func_type render_func;
 
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute | FrameGraph::PassFlags::Required;
 };
 
 }

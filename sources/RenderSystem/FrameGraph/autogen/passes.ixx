@@ -53,6 +53,7 @@ export import "../defines.h";
 #include "pass/Mipmapping.h"
 #include "pass/VSM_RenderPage.h"
 #include "pass/VSM_Combine.h"
+#include "pass/VSM_DepthAnalysis.h"
 #include "pass/GBuffer.h"
 #include "pass/AssetPipeline.pipeline.h"
 #include "pass/MainPipeline.pipeline.h"
@@ -100,6 +101,7 @@ export namespace Passes
 	using ::Passes::Mipmapping;
 	using ::Passes::VSM_RenderPage;
 	using ::Passes::VSM_Combine;
+	using ::Passes::VSM_DepthAnalysis;
 }
 
 export namespace Pipelines
