@@ -18,7 +18,10 @@ export
 	class VSMInvalidationTracker : public Events::prop_handler
 	{
 		std::mutex m;
-		static constexpr int MaxLevels = 8;
+		// Must cover VSM::MaxLevels (Phase 5.7: 26, one unified ladder --
+		// any storage slot can become active depending on the current
+		// [active_min, active_max] window, not just a fixed "regular" range).
+		static constexpr int MaxLevels = 26;
 		std::array<uint32_t, MaxLevels> dirty_masks{};
 
 	public:

@@ -17,12 +17,14 @@ export namespace Table
 	struct VSMConstants
 	{
 		static constexpr SlotID ID = SlotID::VSMConstants;
-		int level_count;
+		int active_min;
+		int active_max;
 		int page_size;
 		int pages_per_level;
 		float4x4 light_view;
-		float4 level_info[9];
-		int& GetLevel_count() { return level_count; }
+		float4 level_info[26];
+		int& GetActive_min() { return active_min; }
+		int& GetActive_max() { return active_max; }
 		int& GetPage_size() { return page_size; }
 		int& GetPages_per_level() { return pages_per_level; }
 		float4x4& GetLight_view() { return light_view; }
@@ -31,7 +33,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(level_count);
+			compiler.compile(active_min);
+			compiler.compile(active_max);
 			compiler.compile(page_size);
 			compiler.compile(pages_per_level);
 			compiler.compile(light_view);
@@ -46,7 +49,8 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
-			ar& NVP(level_count);
+			ar& NVP(active_min);
+			ar& NVP(active_max);
 			ar& NVP(page_size);
 			ar& NVP(pages_per_level);
 			ar& NVP(light_view);

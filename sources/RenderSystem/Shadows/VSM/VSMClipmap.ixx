@@ -20,27 +20,19 @@ export
 		int pages_per_level = 4;
 		float base_page_world_size = 8.0f;
 
-		// Phase 5.6: storage indices >= regular_level_count are adaptive
-		// tiers (finer than level 0, toggled on/off by depth-analysis
-		// hysteresis in VSM.cpp's plan_frame() -- see VSM.ixx) rather than
-		// part of the regular geometric ring progression. level_count still
-		// covers all of them (indirection texture / level_info array sizing
-		// needs the storage), but the shader's normal ascending sweep and
-		// plan_frame()'s regular per-level loop both stop at
-		// regular_level_count -- the adaptive tiers are addressed by fixed
-		// index instead, both sides.
-		int regular_level_count = 3;
+		// Phase 5.7: one geometric ladder covers every storage slot, no
+		// regular/adaptive split. level_zero_slot is the fixed storage index
+		// whose size equals base_page_world_size -- slots below it are
+		// progressively finer, slots above progressively coarser. A slot's
+		// size is a pure function of these two constants and never changes
+		// at runtime (the BVH-style "always go deeper, never resize"
+		// constraint); only which contiguous range of slots is active
+		// changes frame to frame (see VSM.ixx's active_min/active_max).
+		int level_zero_slot = 0;
 
 		float page_world_size(int level) const
 		{
-			if (level >= regular_level_count)
-			{
-				// Fixed sizes below level 0: base/2, base/4, ... -- never
-				// change once chosen, only whether the tier is active.
-				int i = level - regular_level_count;
-				return base_page_world_size / float(2 << i);
-			}
-			return base_page_world_size * float(1 << level);
+			return base_page_world_size * std::exp2(float(level - level_zero_slot));
 		}
 
 		// Snapped, camera-centered world-space min corner of the level's

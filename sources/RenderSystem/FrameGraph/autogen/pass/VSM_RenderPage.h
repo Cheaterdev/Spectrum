@@ -49,7 +49,7 @@ public:
 
 	static constexpr LiteralWStr Name{L"VSM_RenderPage"};
 
-	static constexpr uint32_t MaxCount = 9;
+	static constexpr uint32_t MaxCount = 26;
 	static constexpr LiteralWStr Names[MaxCount] = {
 		LiteralWStr{L"VSM_RenderPage_0"},
 		LiteralWStr{L"VSM_RenderPage_1"},
@@ -60,6 +60,23 @@ public:
 		LiteralWStr{L"VSM_RenderPage_6"},
 		LiteralWStr{L"VSM_RenderPage_7"},
 		LiteralWStr{L"VSM_RenderPage_8"},
+		LiteralWStr{L"VSM_RenderPage_9"},
+		LiteralWStr{L"VSM_RenderPage_10"},
+		LiteralWStr{L"VSM_RenderPage_11"},
+		LiteralWStr{L"VSM_RenderPage_12"},
+		LiteralWStr{L"VSM_RenderPage_13"},
+		LiteralWStr{L"VSM_RenderPage_14"},
+		LiteralWStr{L"VSM_RenderPage_15"},
+		LiteralWStr{L"VSM_RenderPage_16"},
+		LiteralWStr{L"VSM_RenderPage_17"},
+		LiteralWStr{L"VSM_RenderPage_18"},
+		LiteralWStr{L"VSM_RenderPage_19"},
+		LiteralWStr{L"VSM_RenderPage_20"},
+		LiteralWStr{L"VSM_RenderPage_21"},
+		LiteralWStr{L"VSM_RenderPage_22"},
+		LiteralWStr{L"VSM_RenderPage_23"},
+		LiteralWStr{L"VSM_RenderPage_24"},
+		LiteralWStr{L"VSM_RenderPage_25"},
 	};
 
 	static constexpr PassID ID = PassID::VSM_RenderPage;

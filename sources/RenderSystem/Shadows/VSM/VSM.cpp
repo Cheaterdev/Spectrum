@@ -63,12 +63,13 @@ void VSM::attach_scene(std::shared_ptr<Scene> scene)
 		float2 ls_min(bounds_ls.left, bounds_ls.top);
 		float2 ls_max(bounds_ls.right, bounds_ls.bottom);
 
-		for (int level = 0; level < page_table.clipmap.level_count; level++)
+		for (int level = 0; level < VSM::MaxLevels; level++)
 		{
 			// A level that hasn't rendered yet has no meaningful
 			// cached_origin -- it'll get a full-mask render (recentered)
 			// the first time it does run, so there's nothing useful to
-			// mark here yet.
+			// mark here yet. Also true of any level currently outside
+			// [active_min, active_max] -- plan_frame() never planned it.
 			if (!level_initialized[level])
 				continue;
 
@@ -112,82 +113,70 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	const int pages_per_level = pages_side * pages_side;
 	uint32_t  all_pages_mask  = (1u << pages_per_level) - 1;
 
-	// Phase 5.6: adaptive tiers (storage indices regular_level_count..
-	// level_count-1) get the depth-analysis hysteresis decision first, then
-	// get planned (if active) or explicitly marked not-valid (if not) ahead
-	// of the regular sweep -- see update_adaptive_tiers() and VSM.ixx's
-	// LevelPlan/AdaptiveTierCount comments.
-	update_adaptive_tiers();
-	for (int i = AdaptiveTierCount - 1; i >= 0; i--)
-	{
-		int level = page_table.clipmap.regular_level_count + i;
-		if (adaptive_active[i])
-			plan_level(level, cam_pos_ls, bounds_all, tick, pages_side, pages_per_level, all_pages_mask);
-		else
-			m_plan[level].valid = false;
-	}
-
-	// Finest regular level first: acquire_slot_with_priority only ever
-	// steals from a level STRICTLY coarser than the requester, so
+	// Phase 5.7: compute this frame's active window first, then plan exactly
+	// the levels inside it -- one uniform loop, no more separate adaptive/
+	// regular passes. Finest-active-first: acquire_slot_with_priority only
+	// ever steals from a level STRICTLY coarser than the requester, so
 	// processing in this order means a fine level always gets first pick of
 	// whatever's free this frame, and can reclaim an already-resident
-	// coarser page if it has to -- never the other way around. (Adaptive
-	// tiers, planned above, are numerically higher than every regular
-	// level, so this can also reclaim an idle adaptive tier's abandoned
-	// pages the same way it reclaims any other coarser level's.)
-	for (int level = 0; level < page_table.clipmap.regular_level_count; level++)
+	// coarser page if it has to -- never the other way around.
+	update_active_window(cam->z_far);
+	for (int level = active_min; level <= active_max; level++)
 		plan_level(level, cam_pos_ls, bounds_all, tick, pages_side, pages_per_level, all_pages_mask);
+	for (int level = 0; level < VSM::MaxLevels; level++)
+		if (level < active_min || level > active_max)
+			m_plan[level].valid = false;
 }
 
-void VSM::update_adaptive_tiers()
+void VSM::update_active_window(float z_far)
 {
 	float measured = std::bit_cast<float>(measured_texel_size_bits.load(std::memory_order_relaxed));
 
-	// TEMP diagnostics (Phase 5.6 tuning): confirm the readback is actually
-	// arriving and see the real numbers driving activation, throttled to
-	// avoid spam. Remove once the mechanism is confirmed working.
+	// active_max: correctness floor, driven purely by z_far (CPU-only,
+	// zero-latency, can never under-cover based on what happened to be
+	// visible in the depth-analysis sample region this/last frame).
+	// radius(level) = 2 * base_page_world_size * 2^(level - level_zero_slot)
+	// -- smallest level whose radius covers z_far.
+	float base = page_table.clipmap.base_page_world_size;
+	int   zero = page_table.clipmap.level_zero_slot;
+	int required_max = zero + (int)std::ceil(std::log2(std::max(z_far, 1.0f) / (2.0f * base)));
+	required_max = std::clamp(required_max, zero, VSM::MaxLevels - 1);
+
+	// active_min: quality knob, driven by the depth-analysis MIN-texel
+	// signal (same readback Phase 5.6 already built) -- finest level whose
+	// texel density is still <= measured. No valid measurement (FLT_MAX)
+	// clamps naturally to level_zero_slot: no gratuitous fine levels
+	// without evidence there's anything nearby to resolve.
+	int required_min = zero;
+	if (measured < std::numeric_limits<float>::max() * 0.5f && measured > 0.0f)
+		required_min = zero + (int)std::floor(std::log2(measured * (float)page_table.page_size / base));
+	required_min = std::clamp(required_min, 0, zero);
+
+	// Instant grow, debounced shrink -- both bounds. "Grow" for active_max
+	// means numerically larger (more coverage); "grow" for active_min means
+	// numerically smaller (more/finer detail).
+	if (required_max > active_max) { active_max = required_max; max_shrink_run = 0; }
+	else if (required_max < active_max) { if (++max_shrink_run >= ShrinkFrames) { active_max = required_max; max_shrink_run = 0; } }
+	else max_shrink_run = 0;
+
+	if (required_min < active_min) { active_min = required_min; min_shrink_run = 0; }
+	else if (required_min > active_min) { if (++min_shrink_run >= ShrinkFrames) { active_min = required_min; min_shrink_run = 0; } }
+	else min_shrink_run = 0;
+
+	// TEMP diagnostics (Phase 5.7 tuning): confirm the computed window is
+	// tracking z_far/measured sensibly, throttled to avoid spam. Remove
+	// once confirmed working.
 	{
 		static uint64_t s_diag_frame = 0;
 		if ((s_diag_frame++ % 120) == 0)
 		{
-			float level0_texel = page_table.clipmap.page_world_size(0) / (float)page_table.page_size;
-			Log::get() << (std::string("VSM adaptive diag: measured=") + std::to_string(measured)
-				+ " level0_texel=" + std::to_string(level0_texel)
-				+ " tier0_active=" + std::to_string(adaptive_active[0])
-				+ " tier0_want_active_run=" + std::to_string(adaptive_want_active_run[0])
-				+ " tier1_active=" + std::to_string(adaptive_active[1])
-				+ " tier2_active=" + std::to_string(adaptive_active[2])) << Log::endl;
+			Log::get() << (std::string("VSM active window diag: measured=") + std::to_string(measured)
+				+ " z_far=" + std::to_string(z_far)
+				+ " active_min=" + std::to_string(active_min)
+				+ " active_max=" + std::to_string(active_max)
+				+ " required_min=" + std::to_string(required_min)
+				+ " required_max=" + std::to_string(required_max)) << Log::endl;
 		}
-	}
-
-	// Cascading: tier i is only a candidate for activation if tier i-1 is
-	// (or is becoming) active too -- "go deeper" one step at a time, never
-	// straight to the deepest tier. Tier 0 compares against level 0 itself.
-	bool prev_active = true;
-	for (int i = 0; i < AdaptiveTierCount; i++)
-	{
-		int   prev_level      = (i == 0) ? 0 : (page_table.clipmap.regular_level_count + i - 1);
-		float prev_texel_size = page_table.clipmap.page_world_size(prev_level) / (float)page_table.page_size;
-
-		bool want_active = prev_active && measured < prev_texel_size;
-
-		if (want_active)
-		{
-			adaptive_want_active_run[i]++;
-			adaptive_want_inactive_run[i] = 0;
-		}
-		else
-		{
-			adaptive_want_inactive_run[i]++;
-			adaptive_want_active_run[i] = 0;
-		}
-
-		if (!adaptive_active[i] && adaptive_want_active_run[i] >= AdaptiveActivateFrames)
-			adaptive_active[i] = true;
-		else if (adaptive_active[i] && adaptive_want_inactive_run[i] >= AdaptiveDeactivateFrames)
-			adaptive_active[i] = false;
-
-		prev_active = adaptive_active[i];
 	}
 }
 
@@ -325,25 +314,20 @@ VSM::VSM()
 {
 	position = float3(200, 400, 200);
 
-	// Phase 5.4: 6 levels now that residency culling (below) keeps demand
-	// within physical_page_count instead of requiring
-	// level_count * pages_per_level^2 <= physical_page_count outright --
-	// MaxLevels (8) and the [Multiple=8]/level_info[8] budgets in vsm.sig
-	// already supported more than 3, this was the only thing actually
-	// capping it. Coarsest level spans pages_per_level * base_page_world_size
-	// * 2^(level_count-1) world units centered on the camera -- 6 levels / 4
-	// pages / base=32 reaches ~4096u total (2048u radius), vs. 512u at 3
-	// levels. Geometry past the coarsest level's edge clamps into an
-	// unrelated page (shadows vanishing with distance -- see also the
-	// out-of-range check in get_shadow_vsm, which returns unshadowed
-	// instead of clamp-sampling).
-	// level_count covers ALL storage slots, including the 3 adaptive tiers
-	// (Phase 5.6) at indices 6/7/8 (base/2, base/4, base/8) --
-	// regular_level_count (6) is what the shader's normal ascending sweep
-	// and this class's own per-level loops actually iterate; see
-	// VSMClipmap::page_world_size and VSM.ixx's AdaptiveTierCount comment.
-	page_table.clipmap.level_count = 9;
-	page_table.clipmap.regular_level_count = 6;
+	// Phase 5.7: level_count is now just the fixed storage budget (MaxLevels,
+	// 26 slots) -- which of those slots are actually planned/rendered each
+	// frame is the dynamically-computed [active_min, active_max] window
+	// (see update_active_window()), not a compile-time split. level_zero_slot
+	// (12) is the fixed index whose size equals base_page_world_size=32;
+	// slots below are progressively finer, above progressively coarser (see
+	// VSMClipmap::page_world_size) -- geometry outside every active level's
+	// grid clamps into an unrelated page (shadows vanishing with distance --
+	// see also the out-of-range check in get_shadow_vsm, which returns
+	// unshadowed instead of clamp-sampling). active_min/active_max both
+	// start at level_zero_slot (VSM.ixx's in-class initializers), matching
+	// today's default behavior before any real measurement/z_far arrives.
+	page_table.clipmap.level_count = VSM::MaxLevels;
+	page_table.clipmap.level_zero_slot = VSM::LevelZeroSlot;
 	page_table.clipmap.pages_per_level = 4;
 	page_table.clipmap.base_page_world_size = 32.0f;
 	// page_size (texels/page) is the resolution lever. The atlas is an array
@@ -359,17 +343,25 @@ VSM::VSM()
 	// running out shows as coarser-level fallback, not corruption, but
 	// still means less resolution than intended.
 	//
-	// 128 is a moderate bump, not a guess at the "real" number -- VRAM cost
-	// is committed for every slot regardless of use (atlas + Hi-Z pyramid
-	// together run ~2.6MB/slot at page_size=512, so 128 ~= 335MB). Push this
-	// higher only after checking it's actually still hitting VSM_INVALID_SLOT
-	// (a debug counter would be the honest way to know, not currently
-	// wired up). A scene that genuinely needs far more resident pages than
-	// that wants this backed by a reserved/tiled resource instead (commit
-	// memory only for slices actually in use), not just a bigger committed
-	// array -- see the class comment on VSM_Atlas's creation below.
+	// 256 (raised from 128 -- Phase 5.7): the unified active window can
+	// legitimately span more simultaneously-active levels than the old
+	// fixed-6-regular-plus-occasional-tier system did -- active_min can sit
+	// several levels below level_zero_slot AND active_max still has to
+	// reach z_far's coverage floor at the same time, so worst case is
+	// (active_max - active_min + 1) levels all wanting up to 16 pages each
+	// at once, confirmed via the "VSM: page pool exhausted" log actually
+	// firing at the coarse end (levels active_max-3..active_max) under a
+	// normal test scene at the old 128 budget. VRAM cost is committed for
+	// every slot regardless of use (atlas + Hi-Z pyramid together run
+	// ~2.6MB/slot at page_size=512, so 256 ~= 670MB). Push this higher only
+	// after checking it's actually still hitting VSM_INVALID_SLOT (a debug
+	// counter would be the honest way to know, not currently wired up). A
+	// scene that genuinely needs far more resident pages than that wants
+	// this backed by a reserved/tiled resource instead (commit memory only
+	// for slices actually in use), not just a bigger committed array -- see
+	// the class comment on VSM_Atlas's creation below.
 	page_table.page_size = 512;
-	page_table.physical_page_count = 128;
+	page_table.physical_page_count = 256;
 
 	const int pages_side       = page_table.clipmap.pages_per_level;
 	const int pages_per_level  = pages_side * pages_side;
@@ -660,11 +652,11 @@ VSM::VSM()
 
 		{
 			Slots::VSMConstants constants;
-			// Regular-ring count only -- get_vsm_level's normal ascending
-			// loop stops here; the adaptive tiers (indices
-			// regular_level_count..level_count-1) are addressed by fixed
-			// index in a separate pre-check (see VSM_impl.hlsl).
-			constants.GetLevel_count()          = page_table.clipmap.regular_level_count;
+			// Phase 5.7: the active window is two scalars, computed once per
+			// frame in plan_frame() (via update_active_window()) -- get_vsm_level
+			// walks exactly this contiguous range, finest (active_min) first.
+			constants.GetActive_min()           = active_min;
+			constants.GetActive_max()           = active_max;
 			constants.GetPage_size()            = page_table.page_size;
 			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
 			constants.GetLight_view()           = light_cam.get_view();
@@ -672,12 +664,7 @@ VSM::VSM()
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
 			{
 				float2 origin = page_table.clipmap.grid_origin(level, cam_pos_ls);
-				// Adaptive tiers stash their active flag in .w, otherwise
-				// unused -- lets the shader's pre-check skip a currently
-				// inactive tier without a separate constant.
-				int   adaptive_index = level - page_table.clipmap.regular_level_count;
-				float active_flag = (adaptive_index >= 0 && adaptive_index < AdaptiveTierCount && adaptive_active[adaptive_index]) ? 1.0f : 0.0f;
-				constants.GetLevel_info()[level] = float4(origin.x, origin.y, page_table.clipmap.page_world_size(level), active_flag);
+				constants.GetLevel_info()[level] = float4(origin.x, origin.y, page_table.clipmap.page_world_size(level), 0.0f);
 			}
 
 			compute.set(constants);
@@ -687,7 +674,7 @@ VSM::VSM()
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 
-	// ---- Depth analysis (Phase 5.6: adaptive-tier hysteresis feedback) --
+	// ---- Depth analysis (feeds active_min's hysteresis, see update_active_window()) --
 
 	m_depth_analysis_setup = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{

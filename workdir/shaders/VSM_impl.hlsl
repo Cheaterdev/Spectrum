@@ -6,40 +6,30 @@
 // Matches VSMPageTable::VSM_INVALID_SLOT.
 #define VSM_INVALID_SLOT 0xFFFFFFFFu
 
-// level_info[] holds MaxLevels (9) slots (see vsm.sig's VSMConstants) --
-// c.GetLevel_count() is only the REGULAR ring count (VSMClipmap::
-// regular_level_count, currently 6); indices count..8 are the Phase 5.6
-// adaptive tiers, finer than level 0, addressed by fixed index rather than
-// folded into that loop bound. Keep this literal 9 in sync with vsm.sig's
-// level_info[9] if that ever changes.
-#define VSM_MAX_LEVELS 9
+// level_info[] holds MaxLevels (26) slots, one geometric ladder, no
+// regular/adaptive split (see VSMClipmap::page_world_size, VSM.ixx's
+// LevelZeroSlot). Keep this literal 26 in sync with vsm.sig's level_info[26]
+// if that ever changes -- only used as an array-bound sanity check now, the
+// actual sweep range each frame is c.GetActive_min()/GetActive_max().
+#define VSM_MAX_LEVELS 26
 
 // Which clipmap level a world position falls into, using the shared
 // light-space view + per-level grid_origin/page_world_size table VSM.cpp
 // uploads every frame (VSMClipmap::grid_origin, computed identically on the
 // CPU side so both agree on the same level for the same position).
-// Returns -1 if pos_ls falls outside even the coarsest level's grid (past
-// the edge of the whole clipmap) -- callers must not clamp-sample in that
-// case, since that would silently read an unrelated page.
+// Returns -1 if pos_ls falls outside even the coarsest active level's grid
+// (past the edge of the whole clipmap) -- callers must not clamp-sample in
+// that case, since that would silently read an unrelated page.
+//
+// Phase 5.7: active levels are always a contiguous [active_min, active_max]
+// range (see VSM.cpp's update_active_window()) -- finest (active_min) first,
+// so the first containing level found is also the finest one covering this
+// point.
 int get_vsm_level(VSMConstants c, float2 pos_ls)
 {
 	int pages = c.GetPages_per_level();
 
-	// Adaptive tiers first, deepest (finest) active one wins -- they cover
-	// strictly less area than level 0, so a point they don't contain still
-	// needs the regular sweep below regardless of activity.
-	for (int adaptive = VSM_MAX_LEVELS - 1; adaptive >= c.GetLevel_count(); adaptive--)
-	{
-		float4 info = c.GetLevel_info(adaptive);
-		if (info.w == 0) // inactive
-			continue;
-		float extent = info.z * pages;
-		float2 rel = pos_ls - info.xy;
-		if (all(rel >= 0) && all(rel < extent))
-			return adaptive;
-	}
-
-	for (int level = 0; level < c.GetLevel_count(); level++)
+	for (int level = c.GetActive_min(); level <= c.GetActive_max(); level++)
 	{
 		float4 info = c.GetLevel_info(level);
 		float extent = info.z * pages;
@@ -56,33 +46,14 @@ int get_vsm_level(VSMConstants c, float2 pos_ls)
 // 5.4). On VSM_INVALID_SLOT, walk out to the next coarser level instead of
 // returning unshadowed -- a blurrier shadow beats a hole.
 //
-// start_level can be an adaptive tier (>= c.GetLevel_count()) -- walk
-// COARSER adaptive tiers first (decreasing index, toward c.GetLevel_count()
-// -- deeper/finer tiers are higher indices, see get_vsm_level), then fall
-// into the regular sweep from level 0. The regular for-loop's own bound
-// (c.GetLevel_count()) means it would never execute at all if start_level
-// was left at an adaptive index, silently skipping every regular level.
+// Phase 5.7: walk from start_level (whatever get_vsm_level found -- always
+// within [active_min, active_max]) up to active_max, coarser levels only,
+// since a coarser level's grid is a superset of a finer one's.
 uint get_vsm_slot(VSMConstants c, VSMLighting lighting, float2 pos_ls, int start_level)
 {
 	int pages = c.GetPages_per_level();
 
-	if (start_level >= c.GetLevel_count())
-	{
-		for (int adaptive = start_level; adaptive >= c.GetLevel_count(); adaptive--)
-		{
-			float4 info = c.GetLevel_info(adaptive);
-			if (info.w == 0)
-				continue;
-			float2 page_f = (pos_ls - info.xy) / max(info.z, 0.0001);
-			int2 page = clamp(int2(floor(page_f)), int2(0, 0), int2(pages - 1, pages - 1));
-			uint slot = lighting.GetPage_table()[uint3(page.x, page.y, adaptive)];
-			if (slot != VSM_INVALID_SLOT)
-				return slot;
-		}
-		start_level = 0;
-	}
-
-	for (int level = start_level; level < c.GetLevel_count(); level++)
+	for (int level = start_level; level <= c.GetActive_max(); level++)
 	{
 		float4 info = c.GetLevel_info(level);
 		float2 page_f = (pos_ls - info.xy) / max(info.z, 0.0001);

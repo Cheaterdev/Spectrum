@@ -8,12 +8,14 @@
 #include "sig_hlsl.hlsl"
 struct VSMConstants
 {
-	int level_count; // int
+	int active_min; // int
+	int active_max; // int
 	int page_size; // int
 	int pages_per_level; // int
 	float4x4 light_view; // float4x4
-	float4 level_info[9]; // float4
-	int GetLevel_count() { return level_count; }
+	float4 level_info[26]; // float4
+	int GetActive_min() { return active_min; }
+	int GetActive_max() { return active_max; }
 	int GetPage_size() { return page_size; }
 	int GetPages_per_level() { return pages_per_level; }
 	float4x4 GetLight_view() { return light_view; }

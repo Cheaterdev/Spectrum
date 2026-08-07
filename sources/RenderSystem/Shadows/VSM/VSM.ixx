@@ -25,16 +25,20 @@ import HAL;
 // VSM_RenderPage is one pass PER LEVEL (not per page): each level's whole
 // pages_per_level^2 page grid is rendered in a single mesh-shader dispatch,
 // routed via SV_ViewportArrayIndex (see mesh_shader_vsm.hlsl) -- MaxLevels
-// is the [Multiple=8] PassNode budget, level_count (runtime, currently 3)
-// is how many of those slots actually get wired, matching how PSSM_Cascade
-// only wires renders_size of its MaxCount=6 slots.
+// is the [Multiple=26] PassNode budget, a fixed, generously-sized storage
+// array; the actually-active contiguous sub-range [active_min, active_max]
+// is computed every frame (Phase 5.7) and is what varies at runtime.
 export class VSM
 {
 public:
-	// 6 regular rings (VSM::VSM()'s regular_level_count) + AdaptiveTierCount
-	// (3) adaptive tiers below -- keep in step with vsm.sig's
-	// [Multiple=9] on VSM_RenderPage and VSMConstants::level_info[9].
-	static constexpr int MaxLevels = 9;
+	// Phase 5.7: one unified storage budget, no more separate "regular ring"
+	// / "adaptive tier" split. LevelZeroSlot is the fixed index whose size
+	// equals VSMClipmap::base_page_world_size; slots below are finer, above
+	// are coarser (see VSMClipmap::page_world_size). Keep MaxLevels in step
+	// with vsm.sig's [Multiple=26] on VSM_RenderPage and
+	// VSMConstants::level_info[26].
+	static constexpr int MaxLevels = 26;
+	static constexpr int LevelZeroSlot = 12;
 	static constexpr int MaxPagesPerLevel = 16;   // 4x4, matches VSMClipmap::pages_per_level
 	static constexpr int MaxPages = MaxLevels * MaxPagesPerLevel;
 
@@ -118,17 +122,19 @@ private:
 	std::atomic<bool>     allocation_exhausted{ false };
 	std::atomic<uint64_t> total_failed_allocations{ 0 };
 
-	// Phase 5.6: adaptive tiers (storage indices regular_level_count..
-	// level_count-1, finer than level 0, fixed size -- see VSMClipmap)
-	// toggled on/off by depth-analysis feedback with hysteresis, never
-	// resized. "Want active"/"want inactive" run length gates the flip so a
-	// single noisy frame can't toggle a tier -- see plan_frame().
-	static constexpr int AdaptiveTierCount = 3;
-	static constexpr int AdaptiveActivateFrames   = 30; // ~0.5s @ 60fps
-	static constexpr int AdaptiveDeactivateFrames = 90; // biased toward staying active -- flapping is worse than a few extra frames of fine coverage
-	std::array<bool, AdaptiveTierCount> adaptive_active{};
-	std::array<int,  AdaptiveTierCount> adaptive_want_active_run{};
-	std::array<int,  AdaptiveTierCount> adaptive_want_inactive_run{};
+	// Phase 5.7: the active range is two committed scalars, not a per-level
+	// flag -- activation is always a contiguous [active_min, active_max]
+	// (never a gap in the middle). active_max is a correctness floor (must
+	// cover the camera's z_far, or a visible patch of frustum goes
+	// unshadowed) so it grows instantly and only shrinks after a debounce;
+	// active_min is a quality knob (driven by the depth-analysis MIN-texel
+	// signal, same as Phase 5.6's tiers) with the same instant-grow/
+	// debounced-shrink shape. See update_active_window().
+	static constexpr int ShrinkFrames = 90; // biased toward staying active -- flapping is worse than a few extra frames of unnecessary coverage
+	int active_min = LevelZeroSlot;
+	int active_max = LevelZeroSlot;
+	int min_shrink_run = 0;
+	int max_shrink_run = 0;
 
 	// Written from VSM_DepthAnalysis's GPU->CPU readback callback (may fire
 	// on a different thread than plan_frame()'s single-threaded pre_run --
@@ -153,10 +159,10 @@ private:
 	void plan_level(int level, float2 cam_pos_ls, const box& bounds_all, uint64_t tick,
 	                 int pages_side, int pages_per_level, uint32_t all_pages_mask);
 
-	// Reads measured_texel_size_bits, applies the activate/deactivate frame
-	// hysteresis, updates adaptive_active[]. Called once at the top of
-	// plan_frame(), before either tier is (or isn't) planned.
-	void update_adaptive_tiers();
+	// Reads measured_texel_size_bits and cam->z_far, applies the asymmetric
+	// grow/shrink hysteresis described above, updates active_min/active_max.
+	// Called once at the top of plan_frame(), before any level is planned.
+	void update_active_window(float z_far);
 
 public:
 

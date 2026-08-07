@@ -14,13 +14,19 @@
 [Bind = DefaultLayout::Instance0]
 struct VSMConstants
 {
-	int level_count;
+	# Phase 5.7: the active range is a contiguous [active_min, active_max]
+	# window over the fixed level_info[] ladder, recomputed every frame in
+	# VSM.cpp's update_active_window() -- no more separate "regular ring
+	# count" field. Finest-first: get_vsm_level walks active_min upward.
+	int active_min;
+	int active_max;
 	int page_size;
 	int pages_per_level;
 	float4x4 light_view;
-	# MaxLevels (VSM.ixx) storage slots: regular_level_count (6) rings plus
-	# AdaptiveTierCount (3) adaptive tiers -- keep this in step with both.
-	float4 level_info[9];
+	# MaxLevels (VSM.ixx) storage slots -- one geometric ladder, no
+	# regular/adaptive split (see VSMClipmap::page_world_size). Keep this in
+	# step with VSM::MaxLevels and VSM_RenderPage's [Multiple=26] below.
+	float4 level_info[26];
 }
 
 # Instance3, not Instance1: mesh_shader_vsm.hlsl needs this alongside MeshInfo
@@ -121,11 +127,11 @@ GraphicsPSO VSMDepthDraw
 	cull = Front;
 }
 
-# One slot per storage level -- both regular rings and Phase 5.6 adaptive
-# tiers, since an adaptive tier is a normal level with a fixed size and an
-# on/off flag, not a separate mechanism (see VSM.ixx's AdaptiveTierCount).
-# Must match VSM::MaxLevels / VSMConstants::level_info[]'s size.
-[Multiple = 9]
+# One slot per storage level in the Phase 5.7 unified ladder -- every level
+# is a normal level with a fixed size and an active/inactive state (whether
+# it falls in this frame's [active_min, active_max] window), not a separate
+# mechanism per region. Must match VSM::MaxLevels / VSMConstants::level_info[]'s size.
+[Multiple = 26]
 PassNode VSM_RenderPage
 {
 	[Write] Texture VSM_Atlas;
