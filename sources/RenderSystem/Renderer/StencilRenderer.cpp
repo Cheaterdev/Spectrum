@@ -86,15 +86,25 @@ bool stencil_renderer::on_mouse_action(mouse_action action, mouse_button button,
 			{
 				if (mouse_on_object.first)
 				{
-					window::ptr wnd(new window);
-					user_ui->add_child(wnd);
-					dock_base::ptr dock(new dock_base);
-					wnd->add_child(dock);
-					auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
-					auto& mat = draw.material;
-					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(static_cast<materials::universal_material*>(mat->get_ptr().get())->get_graph()));
-					wnd->pos = { 200, 200 };
-					wnd->size = { 300, 300 };
+					auto& draw   = mouse_on_object.first->rendering[mouse_on_object.second];
+					auto& mat    = draw.material;
+					auto g       = static_cast<materials::universal_material*>(mat->get_ptr().get())->get_graph();
+					auto content = materials::open_material_editor(g);
+
+					GUI::Elements::tab_button::ptr btn;
+					if (GUI::Elements::FlowGraph::manager::on_open_tab)
+						btn = GUI::Elements::FlowGraph::manager::on_open_tab(g->name, content);
+					else
+					{
+						window::ptr wnd(new window);
+						user_ui->add_child(wnd);
+						dock_base::ptr dock(new dock_base);
+						wnd->add_child(dock);
+						btn = dock->get_tabs()->add_page(g->name, content);
+						wnd->pos = { 200, 200 };
+						wnd->size = { 300, 300 };
+					}
+					GUI::Elements::FlowGraph::manager::get().register_tab(g, btn);
 				}
 
 			};
@@ -140,14 +150,6 @@ bool stencil_renderer::on_mouse_action(mouse_action action, mouse_button button,
 
 					MaterialAsset::ptr base_mat = make_material({ 1,1,1 }, 1, 0);
 
-
-
-					window::ptr wnd(new window);
-					user_ui->add_child(wnd);
-					dock_base::ptr dock(new dock_base);
-					wnd->add_child(dock);
-
-
 					auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
 					//mouse_on_object.first->overrided_material.emplace_back();// [draw.mesh->material];
 
@@ -157,9 +159,23 @@ bool stencil_renderer::on_mouse_action(mouse_action action, mouse_button button,
 				//	draw.mesh->material = mouse_on_object.first->register_material(base_mat);
 
 					mouse_on_object.first->override_material(mouse_on_object.second, base_mat);
-					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(static_cast<materials::universal_material*>(base_mat->get_ptr().get())->get_graph()));
-					wnd->pos = { 200, 200 };
-					wnd->size = { 300, 300 };
+					auto g       = static_cast<materials::universal_material*>(base_mat->get_ptr().get())->get_graph();
+					auto content = materials::open_material_editor(g);
+
+					GUI::Elements::tab_button::ptr btn;
+					if (GUI::Elements::FlowGraph::manager::on_open_tab)
+						btn = GUI::Elements::FlowGraph::manager::on_open_tab(g->name, content);
+					else
+					{
+						window::ptr wnd(new window);
+						user_ui->add_child(wnd);
+						dock_base::ptr dock(new dock_base);
+						wnd->add_child(dock);
+						btn = dock->get_tabs()->add_page(g->name, content);
+						wnd->pos = { 200, 200 };
+						wnd->size = { 300, 300 };
+					}
+					GUI::Elements::FlowGraph::manager::get().register_tab(g, btn);
 				}
 			};
 

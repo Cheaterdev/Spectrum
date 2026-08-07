@@ -582,14 +582,12 @@ public:
 	}
 };
 
-// Dock tab shown for as long as a material graph is open in an editor
-// canvas (see canvas::on_open/on_close wiring below): the final compiled
-// pixel shader text, plus toggles for the two editor-only live previews
-// (per-node 2D thumbnails and the whole-graph 3D scene render) -- both
-// re-render every frame while on, so switching them off is a real perf
-// option on a big/slow graph, not just declutter.
-std::map<::FlowGraph::graph*, GUI::Elements::tab_button::ptr> material_settings_tabs;
-
+// Dock tab embedded in a material graph's editor dock (see materials::
+// open_material_editor / create_settings_panel_hook wiring below): the
+// final compiled pixel shader text, plus toggles for the two editor-only
+// live previews (per-node 2D thumbnails and the whole-graph 3D scene
+// render) -- both re-render every frame while on, so switching them off is
+// a real perf option on a big/slow graph, not just declutter.
 class material_settings_panel : public GUI::base
 {
 	materials::universal_material*   m_material;
@@ -854,6 +852,16 @@ public:
 		{
 			auto mat = m_material->get_ptr<materials::universal_material>();
 			if (mat && !mat->show_scene_preview) return;
+
+			// Share this preview's camera so MaterialPreviewSession's
+			// per-node 3D thumbnails (main.cpp's node_preview_thumbnail)
+			// match whatever angle the user last orbited/zoomed here,
+			// instead of their own fixed 3/4 view.
+			if (mat)
+			{
+				mat->preview_orbit = m_mesh_renderer->get_orbit();
+				mat->preview_zoom  = m_mesh_renderer->get_zoom();
+			}
 		}
 
 		// Size the render target to the widget; recreate it when the size changes
@@ -1309,6 +1317,17 @@ public:
 			auto d = std::make_shared<GUI::Elements::dock_base>();
 			docker = d;
 			d->docking = GUI::dock::FILL;
+
+			// Material editor / "edit material" / "create material" all used
+			// to spawn their own floating window+dock; open them as a page
+			// in the center dock instead, the same place "Debug Graph"
+			// (below) opens FrameGraphDebug. The manager only ever builds
+			// the graph's canvas (create_canvas) -- this is the one place
+			// that decides where it's actually hosted.
+			GUI::Elements::FlowGraph::manager::on_open_tab = [this](std::string name, GUI::base::ptr content) -> GUI::Elements::tab_button::ptr
+			{
+				return docker->get_tabs()->add_page(name, content);
+			};
 #ifndef HAL_BACKEND_VULKAN
 			{
 				EVENT("Start Drawer");
@@ -1519,7 +1538,11 @@ public:
 
 					frameFlowGraph = std::make_shared<FrameFlowGraph>();
 
-					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
+					{
+						auto canva = GUI::Elements::FlowGraph::manager::get().create_canvas(frameFlowGraph);
+						auto btn   = dock->get_tabs()->add_page(frameFlowGraph->name, canva);
+						GUI::Elements::FlowGraph::manager::get().register_tab(frameFlowGraph, btn);
+					}
 				}
 
 				{
@@ -1692,88 +1715,30 @@ public:
 						return std::make_shared<node_preview_thumbnail>(a, node);
 					};
 
-					// Attach/detach a materials::MaterialPreviewSession (and a
-					// "Material Settings" dock tab) for as long as a material
-					// graph is open in an editor canvas -- lives here (above
-					// both GUI and Graphics) since canvas (GUI) can't know
-					// about Materials, and Materials can't know when a canvas
-					// opens/closes.
+					// Builds the "Material Settings" panel embedded in a
+					// material graph's editor dock -- see materials::
+					// open_material_editor, which is what actually wraps the
+					// canvas+panel together now (called wherever a material
+					// graph gets opened, e.g. AssetExplorer's "Edit").
+					// Materials can't build main.cpp's material_settings_panel
+					// directly (it's app-layer GUI), hence the hook.
+					materials::create_settings_panel_hook = [](materials::universal_material* mat, ::FlowGraph::graph* g) -> GUI::base::ptr
+					{
+						return std::make_shared<material_settings_panel>(mat, g);
+					};
+
+					// Attach/detach a materials::MaterialPreviewSession for as
+					// long as a material graph is open in an editor canvas --
+					// lives here (above both GUI and Graphics) since canvas
+					// (GUI) can't know about Materials, and Materials can't
+					// know when a canvas opens/closes.
 					GUI::Elements::FlowGraph::canvas::on_open = [](GUI::Elements::FlowGraph::canvas* c)
 					{
 						materials::MaterialPreviewSession::open(c->g);
-
-						// Guard against re-entrancy: wrapping the canvas below
-						// (moving it under editor_dock) synchronously fires
-						// canvas::on_add() -> on_open() again via add_child(),
-						// so this placeholder must land BEFORE that call, not
-						// after -- otherwise the nested call sees an empty map
-						// and wraps a second time.
-						if (material_settings_tabs.find(c->g) != material_settings_tabs.end())
-							return;
-						material_settings_tabs[c->g] = nullptr;
-
-						if (auto* mg = dynamic_cast<MaterialGraph*>(c->g))
-						if (auto* mat = dynamic_cast<materials::universal_material*>(mg->preview_material))
-						{
-							// Find this graph's own tab_button (via the
-							// manager's registry, same trick FlowManager.cpp
-							// uses internally for "edit in new tab") so we can
-							// keep the tab_control's bookkeeping (tab->page)
-							// consistent once we swap in the wrapper below.
-							for (auto& [graph_ptr, tab] : c->main_manager->get_all())
-							{
-								if (graph_ptr.get() != c->g)
-									continue;
-
-								auto parent = c->get_parent();
-								if (!parent) break;
-
-								// Self-contained wrap, same pattern as
-								// FrameGraph's resource_preview: the canvas
-								// fills a private dock_base and the settings
-								// panel docks to its right, both owned by
-								// this wrapper -- not split off some ambient
-								// dock found by walking up the tree, which
-								// depends on exactly where/when this canvas
-								// happens to be parented and breaks (wrong
-								// spot, invisible, or lost on re-dock) as
-								// soon as that canvas moves. Wrapping here
-								// keeps the settings panel physically
-								// attached to the graph it belongs to.
-								auto editor_dock = std::make_shared<GUI::Elements::dock_base>();
-								editor_dock->docking = GUI::dock::FILL;
-
-								// Detach canvas into the wrapper first (fires
-								// the re-entrant on_open above, which no-ops
-								// on the guard) before the wrapper itself is
-								// attached in canvas's old slot.
-								editor_dock->add_child(c->get_ptr<GUI::Elements::FlowGraph::canvas>());
-								parent->add_child(editor_dock);
-
-								auto right_dock = editor_dock->get_dock(GUI::dock::RIGHT);
-								right_dock->size = { 300.0f, 0.0f };
-
-								auto panel = std::make_shared<material_settings_panel>(mat, c->g);
-								auto tab_b = right_dock->get_tabs()->add_page("Material Settings", panel);
-
-								tab->page = editor_dock;
-								material_settings_tabs[c->g] = tab_b;
-								break;
-							}
-						}
 					};
 					GUI::Elements::FlowGraph::canvas::on_close = [](GUI::Elements::FlowGraph::canvas* c)
 					{
 						materials::MaterialPreviewSession::close(c->g);
-
-						auto it = material_settings_tabs.find(c->g);
-						if (it != material_settings_tabs.end())
-						{
-							if (it->second)
-							if (auto owner_tabs = it->second->owner.lock())
-								owner_tabs->remove_button(it->second);
-							material_settings_tabs.erase(it);
-						}
 					};
 					EVENT("End Asset Explorer");
 				}

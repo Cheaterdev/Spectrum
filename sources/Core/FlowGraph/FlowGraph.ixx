@@ -583,6 +583,15 @@ export
 
 			virtual void add_listener(graph_listener* listener, bool) override;
 
+			// Nodes only run if start_if_output is off or something reads their
+			// output (see Node::test_start) -- normally correct, since it's what
+			// dead-code-eliminates unused branches from the compiled shader. A
+			// preview-only compile pass wants every node's value available even
+			// if nothing downstream consumes it yet (e.g. while the graph is
+			// still being wired up), so it can flip this off for its run and
+			// restore it after. Recurses into nested subgraphs.
+			void set_start_if_output_recursive(bool v);
+
 		private:
 			SERIALIZE()
 			{

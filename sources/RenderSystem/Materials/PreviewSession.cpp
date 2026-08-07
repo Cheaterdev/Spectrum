@@ -95,6 +95,8 @@ void materials::MaterialPreviewSession::dispatch()
 		results = nullptr;
 		slice_views.clear();
 		dispatched_generation = material->preview_generation;
+		dispatched_orbit = material->preview_orbit;
+		dispatched_zoom  = material->preview_zoom;
 		return;
 	}
 
@@ -127,18 +129,23 @@ void materials::MaterialPreviewSession::dispatch()
 		float base_dist = (mx - mn).length();
 		if (base_dist < 0.001f) base_dist = 1.0f;
 
-		// Fixed 3/4 view, same yaw/pitch SceneTextureRenderer defaults to --
-		// no orbit/zoom interaction needed for a thumbnail this small.
-		float yaw = 0.785398f, pitch = 0.35f;
+		// Shared with whatever full preview of this material the user last
+		// orbited/zoomed (asset_preview_content, via universal_material::
+		// preview_orbit/preview_zoom) -- so every node's thumbnail matches
+		// that view instead of a fixed 3/4 angle.
+		float yaw = material->preview_orbit.x, pitch = material->preview_orbit.y;
 		vec3 dir = vec3(
 			Math::cos(pitch) * Math::sin(yaw),
 			Math::sin(pitch),
 			Math::cos(pitch) * Math::cos(yaw));
 
 		preview_cam.target   = (mn + mx) / 2;
-		preview_cam.position = preview_cam.target + dir * (base_dist * 1.5f);
+		preview_cam.position = preview_cam.target + dir * (base_dist * material->preview_zoom);
 		preview_cam.set_projection_params(Math::pi / 4, 1.0f, 0.01f, base_dist * 4.0f + 1.0f);
 		preview_cam.update();
+
+		dispatched_orbit = material->preview_orbit;
+		dispatched_zoom  = material->preview_zoom;
 
 		preview_scene->update(*frame);
 
@@ -244,7 +251,11 @@ HAL::Texture2DView materials::MaterialPreviewSession::get_slice_view(int slot)
 	if (pso_missing || built_source_generation != material->preview_source_generation || built_3d != want_3d)
 		rebuild_pso();
 
-	if (dispatched_generation != material->preview_generation)
+	bool orbit_changed = want_3d &&
+		(dispatched_orbit.x != material->preview_orbit.x || dispatched_orbit.y != material->preview_orbit.y ||
+		 dispatched_zoom != material->preview_zoom);
+
+	if (dispatched_generation != material->preview_generation || orbit_changed)
 		dispatch();
 
 	if (slot < 0 || slot >= (int)slice_views.size())
@@ -286,4 +297,32 @@ materials::MaterialPreviewSession* materials::MaterialPreviewSession::find(::Flo
 {
 	auto it = g_preview_sessions.find(g);
 	return it != g_preview_sessions.end() ? it->second.get() : nullptr;
+}
+
+GUI::base::ptr materials::open_material_editor(::FlowGraph::graph::ptr g)
+{
+	auto canva = GUI::Elements::FlowGraph::manager::get().create_canvas(g);
+	if (!canva)
+		return nullptr;
+
+	auto* mg  = dynamic_cast<MaterialGraph*>(g.get());
+	auto* mat = mg ? dynamic_cast<universal_material*>(mg->preview_material) : nullptr;
+
+	// Not an actual material graph (e.g. a nested MaterialFunction opened
+	// via "edit in new tab", or the frame-flow-graph debug view) -- just the
+	// bare canvas, same as before this feature existed.
+	if (!mat || !create_settings_panel_hook)
+		return canva;
+
+	auto editor_dock = std::make_shared<GUI::Elements::dock_base>();
+	editor_dock->docking = GUI::dock::FILL;
+	editor_dock->add_child(canva);
+
+	auto right_dock = editor_dock->get_dock(GUI::dock::RIGHT);
+	right_dock->size = { 300.0f, 0.0f };
+
+	auto panel = create_settings_panel_hook(mat, g.get());
+	right_dock->get_tabs()->add_page("Material Settings", panel);
+
+	return editor_dock;
 }

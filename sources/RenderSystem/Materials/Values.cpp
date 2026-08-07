@@ -280,9 +280,19 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		graph->get_refraction()->set_enabled(true);
 		graph->get_tess_displacement()->set_enabled(false);
 
+		// Unlike the pixel/tess passes above, the preview pass wants a value
+		// for every node reachable from its inputs, even ones whose output
+		// isn't wired to anything downstream yet (still being authored, or a
+		// deliberate dead end) -- see graph::set_start_if_output_recursive.
+		// Nodes with missing/unconnected *inputs* still can't run (nothing to
+		// compute from), so this only surfaces previews for otherwise-valid,
+		// just-unused nodes -- it doesn't change what the compiled shader
+		// itself does, since that already finished compiling above.
+		graph->set_start_if_output_recursive(false);
 		capture_preview = true;
 		graph->start(this);
 		capture_preview = false;
+		graph->set_start_if_output_recursive(true);
 
 		if (functions.find(graph) != functions.end())
 			preview_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);

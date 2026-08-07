@@ -85,6 +85,17 @@ namespace FlowGraph
 		}
 	}
 
+	void graph::set_start_if_output_recursive(bool v)
+	{
+		for (auto n : nodes)
+		{
+			n->start_if_output = v;
+
+			if (graph* g = dynamic_cast<graph*>(n.get()))
+				g->set_start_if_output_recursive(v);
+		}
+	}
+
 	void graph::register_node(std::shared_ptr<window> node)
 	{
 		if (node->owner && node->owner != this)

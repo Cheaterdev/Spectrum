@@ -33,28 +33,30 @@ namespace GUI::Elements::FlowGraph
 
 	void manager::add_graph(::FlowGraph::graph::ptr from, ::FlowGraph::graph::ptr g)
 	{
-		tab_control::ptr tabs = canvases[from]->owner.lock();
-		canvas::ptr canva(new canvas(this));
-		canva->init(g.get());
-		g->name = "some graph";
-		tab_button::ptr but(new tab_button());
-		but->get_label()->text = g->name;
-		but->page = canva;
-		canvases[g] = but;
-		tabs->add_button(but);
+		auto owner_tab = canvases[from];
+		if (!owner_tab) return;
+
+		tab_control::ptr tabs = owner_tab->owner.lock();
+		if (!tabs) return;
+
+		auto canva = create_canvas(g);
+		if (!canva) return;
+
+		canvases[g] = tabs->add_page(g->name, canva);
 	}
 
-	tab_button::ptr manager::add_graph(::FlowGraph::graph::ptr g)
+	canvas::ptr manager::create_canvas(::FlowGraph::graph::ptr g)
 	{
 		if (!g) return nullptr;
 
 		canvas::ptr canva(new canvas(this));
 		canva->init(g.get());
 		g->name = "some graph";
-		tab_button::ptr but(new tab_button());
-		but->get_label()->text = g->name;
-		but->page = canva;
-		canvases[g] = but;
-		return but;
+		return canva;
+	}
+
+	void manager::register_tab(::FlowGraph::graph::ptr g, tab_button::ptr tab)
+	{
+		canvases[g] = tab;
 	}
 }

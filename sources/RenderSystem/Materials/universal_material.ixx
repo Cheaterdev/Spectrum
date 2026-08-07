@@ -225,6 +225,16 @@ export namespace materials
 		// compile() are entirely unaffected by these.
 		bool show_scene_preview = true;
 
+		// Shared live-3D-preview camera, in the same orbit/zoom terms
+		// SceneTextureRenderer uses. Any full preview of this material
+		// (asset_preview_content -- the material graph's output-node-embedded
+		// preview, or an Asset Explorer preview window) writes here while the
+		// user orbits/zooms it; MaterialPreviewSession's per-node 3D preview
+		// thumbnails read it instead of using a fixed angle, so every node's
+		// preview matches whatever view the user last set on the full one.
+		vec2  preview_orbit = { 0.785398f, 0.35f }; // yaw, pitch -- ~pi/4 yaw, slight pitch
+		float preview_zoom  = 1.5f;
+
 		// Binds this material's current texture/uniform data and dispatches
 		// into results using the caller-supplied preview PSO (owned by
 		// whoever is hosting the preview, e.g. MaterialPreviewSession -- this

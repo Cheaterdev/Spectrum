@@ -198,7 +198,10 @@ void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
     skyinfo.sunDir = float3(1, 1, 1).normalize();
 
    graph.builder.debug = true;
-    vp.frame_size   = result->get_size().xy / 2;
+    // Render 1:1 -- this is a small, one-shot thumbnail render (asset
+    // browser preview), not a real-time viewport, so there's no perf reason
+    // to render at half res and upscale (which just blurs the result).
+    vp.frame_size   = result->get_size().xy;
     vp.upscale_size = result->get_size().xy;
 
     sceneinfo.scene    = scene;
@@ -323,7 +326,10 @@ void SceneTextureRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
     skyinfo.sunDir = float3(1, 1, 1).normalize();
 
     graph.builder.debug = true;
-    vp.frame_size   = rsize / 2;
+    // See AssetRenderer::draw's identical comment -- these are thumbnail/
+    // live-editing-widget renders, not a real-time viewport, so render at
+    // the target's actual resolution instead of half-res + upscale.
+    vp.frame_size   = rsize;
     vp.upscale_size = rsize;
 
     sceneinfo.scene    = scene;

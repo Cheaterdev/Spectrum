@@ -1,5 +1,6 @@
 module Graphics:AssetExplorer;
 import :Materials.UniversalMaterial;
+import :Materials.PreviewSession;
 import :MeshAsset;
 import :BinaryAsset;
 import Core;
@@ -86,13 +87,23 @@ namespace GUI
 
 						if (universal)
 						{
-							window::ptr wnd(new window);
-							user_ui->add_child(wnd);
-							dock_base::ptr dock(new dock_base);
-							wnd->add_child(dock);
-							dock->get_tabs()->add_button(FlowGraph::manager::get().add_graph(universal->get_graph()));
-							wnd->pos = { 200, 200 };
-							wnd->size = { 300, 300 };
+							auto g       = universal->get_graph();
+							auto content = materials::open_material_editor(g);
+
+							tab_button::ptr btn;
+							if (FlowGraph::manager::on_open_tab)
+								btn = FlowGraph::manager::on_open_tab(g->name, content);
+							else
+							{
+								window::ptr wnd(new window);
+								user_ui->add_child(wnd);
+								dock_base::ptr dock(new dock_base);
+								wnd->add_child(dock);
+								btn = dock->get_tabs()->add_page(g->name, content);
+								wnd->pos = { 200, 200 };
+								wnd->size = { 300, 300 };
+							}
+							FlowGraph::manager::get().register_tab(g, btn);
 						}
 					}
 
@@ -203,7 +214,9 @@ namespace GUI
 							user_ui->add_child(wnd);
 							dock_base::ptr dock(new dock_base);
 							wnd->add_child(dock);
-							dock->get_tabs()->add_button(FlowGraph::manager::get().add_graph(graph));
+							auto canva = FlowGraph::manager::get().create_canvas(graph);
+							auto btn   = dock->get_tabs()->add_page(graph->name, canva);
+							FlowGraph::manager::get().register_tab(graph, btn);
 							wnd->pos = { 200, 200 };
 							wnd->size = { 300, 300 };
 						});

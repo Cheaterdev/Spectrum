@@ -76,6 +76,12 @@ export class SceneTextureRenderer
         void orbit(vec2 delta);
         void zoom(float amount);
 
+        // Current orbit (yaw, pitch) / zoom, so a caller can copy this
+        // renderer's view onto something else (e.g. universal_material::
+        // preview_orbit/preview_zoom -- see asset_preview_content).
+        vec2  get_orbit() const { return m_orbit; }
+        float get_zoom() const { return m_zoom; }
+
         void draw(Scene::ptr scene, HAL::Texture::ptr result);
         void draw(scene_object::ptr obj, HAL::Texture::ptr result);
         void draw(MaterialAsset::ptr m, HAL::Texture::ptr result);

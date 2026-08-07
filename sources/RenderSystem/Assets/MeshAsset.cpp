@@ -398,8 +398,18 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 
 	meshpart_handle.write(i, meshpart);
 
+	// The raster path reads material_id out of meshpart (just written
+	// above) fresh every frame, but RTX picks its shader via the TLAS
+	// instance's hit_group_index, which is only baked in update_rtx_instance()
+	// -- called from on_add() and from update_transforms() (and only there
+	// if the object actually moved). Without this, a material override only
+	// reaches RTX rays if the object happens to move afterward; it otherwise
+	// keeps hitting the old material's shader record.
 	if (scene)
+	{
+		update_rtx_instance();
 		scene->on_changed(this);
+	}
 }
 
 void MeshAssetInstance::on_asset_change(Asset::ptr asset)
