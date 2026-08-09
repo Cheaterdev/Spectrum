@@ -22,12 +22,15 @@ import HAL;
 // this is a fully parallel, separately-registered pass set (construction-
 // time toggle in main.cpp decides which one is actually instantiated).
 //
-// VSM_RenderPage is one pass PER LEVEL (not per page): each level's whole
-// pages_per_level^2 page grid is rendered in a single mesh-shader dispatch,
-// routed via SV_ViewportArrayIndex (see mesh_shader_vsm.hlsl) -- MaxLevels
-// is the [Multiple=26] PassNode budget, a fixed, generously-sized storage
-// array; the actually-active contiguous sub-range [active_min, active_max]
-// is computed every frame (Phase 5.7) and is what varies at runtime.
+// Phase 5.8: VSM_RenderPages is a SINGLE pass, not one per level -- plan_frame()
+// builds a flat list of per-(level,mesh) indirect draw entries
+// (Table::VSMDispatchCommandData, one DispatchMesh's worth of threadgroups
+// each) and the pass issues exactly one exec_indirect() call over all of
+// them, replacing the old "for level { for mesh { dispatch_mesh() } }" CPU
+// loop. MaxLevels (26) is still the fixed, generously-sized STORAGE budget
+// (level_info[]/page-table array sizing); the actually-active contiguous
+// sub-range [active_min, active_max] is computed every frame (Phase 5.7)
+// and determines which levels actually contribute entries this frame.
 export class VSM
 {
 public:
@@ -35,12 +38,18 @@ public:
 	// / "adaptive tier" split. LevelZeroSlot is the fixed index whose size
 	// equals VSMClipmap::base_page_world_size; slots below are finer, above
 	// are coarser (see VSMClipmap::page_world_size). Keep MaxLevels in step
-	// with vsm.sig's [Multiple=26] on VSM_RenderPage and
-	// VSMConstants::level_info[26].
+	// with VSMConstants::level_info[26] (Phase 5.8: no longer also a
+	// [Multiple=N] PassNode budget -- VSM_RenderPages is a single pass now).
 	static constexpr int MaxLevels = 26;
 	static constexpr int LevelZeroSlot = 12;
 	static constexpr int MaxPagesPerLevel = 16;   // 4x4, matches VSMClipmap::pages_per_level
 	static constexpr int MaxPages = MaxLevels * MaxPagesPerLevel;
+	// Phase 5.8: upper bound on per-frame (active level x scene mesh)
+	// indirect draw entries -- generous, not a measured real number (mirrors
+	// physical_page_count's "moderate bump" philosophy). If a scene's mesh
+	// count x active level count ever exceeds this, entries are clamped and
+	// logged once per episode rather than overflowing the buffer.
+	static constexpr int MaxDispatchEntries = MaxLevels * 2048;
 
 private:
 	VSMPageTable page_table;
@@ -49,14 +58,17 @@ private:
 	std::mutex pos_mutex;
 	float3 position;
 
-	// Per-level VSM_RenderPage render() callbacks run concurrently (confirmed
-	// via logging -- different Multiple-slot instances of the same PassNode
-	// are not serialized). That makes any decision that spans levels (which
-	// page gets a physical slot when demand exceeds supply -- see
-	// plan_frame()) unsafe to make from inside render(): two levels could
-	// race over the same slot, or a fine level's "steal from a coarser
-	// level" decision could land on a page the coarser level had already
-	// committed rendering commands for this same frame.
+	// Phase 5.8 note: VSM_RenderPages is a single pass now, not one Multiple-
+	// slot instance per level, so the original concurrency hazard here (two
+	// levels' render() callbacks racing over the same slot) no longer
+	// applies literally -- but the underlying reason plan_frame() exists is
+	// unchanged: allocation decisions (which page gets a physical slot when
+	// demand exceeds supply, priority-stealing across levels) still need to
+	// be fully resolved BEFORE any GPU commands referencing slot assignments
+	// are built, since the single render() call now builds ALL levels'
+	// indirect draw entries in one pass and can't discover a slot changed
+	// out from under it mid-build. Single-threaded, once-per-frame,
+	// strictly before render() runs is still the right place for this.
 	//
 	// So all of that moves to plan_frame(), a Graph::add_slot_generator
 	// callback (see main.cpp) that runs once per frame, single-threaded,
@@ -144,8 +156,23 @@ private:
 	// spuriously activate a tier.
 	std::atomic<uint32_t> measured_texel_size_bits{ 0x7F7FFFFFu };
 
-	std::array<Passes::VSM_RenderPage::setup_func_type,  MaxLevels> m_level_setup;
-	std::array<Passes::VSM_RenderPage::render_func_type, MaxLevels> m_level_render;
+	// Phase 5.8: flat per-(level,mesh) indirect draw entries, built once in
+	// plan_frame() (which already knows exactly which levels are active+dirty
+	// and can enumerate the scene's meshes the same way the old per-level
+	// render() loop did) and consumed by the single VSM_RenderPages render()
+	// via one exec_indirect() call. Rebuilt fresh every frame -- not persisted
+	// across frames like m_plan[] is, since it's pure per-frame draw-command
+	// data with no caching semantics of its own.
+	std::vector<Table::VSMDispatchCommandData> m_dispatch_entries;
+	// Set true the first time a frame's real entry count exceeds
+	// MaxDispatchEntries, cleared once a frame fits again -- same
+	// start-of-episode-then-periodic-reminder logging shape as
+	// allocation_exhausted/total_failed_allocations above.
+	bool     dispatch_entries_clamped = false;
+	uint64_t total_clamped_entries = 0;
+
+	Passes::VSM_RenderPages::setup_func_type  m_renderpages_setup;
+	Passes::VSM_RenderPages::render_func_type m_renderpages_render;
 
 	Passes::VSM_Combine::setup_func_type  m_combine_setup;
 	Passes::VSM_Combine::render_func_type m_combine_render;
@@ -184,11 +211,8 @@ public:
 	template<typename TPipeline>
 	explicit VSM(TPipeline& pipeline) : VSM()
 	{
-		for (int i = 0; i < MaxLevels; i++)
-		{
-			pipeline.vSM_RenderPage.setup_funcs[i]  = m_level_setup[i];
-			pipeline.vSM_RenderPage.render_funcs[i] = m_level_render[i];
-		}
+		pipeline.vSM_RenderPages.setup_func  = m_renderpages_setup;
+		pipeline.vSM_RenderPages.render_func = m_renderpages_render;
 
 		pipeline.vSM_Combine.setup_func  = m_combine_setup;
 		pipeline.vSM_Combine.render_func = m_combine_render;

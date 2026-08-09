@@ -237,6 +237,7 @@ export import :Autogen.Slots.VSMPageBatch;
 export import :Autogen.Tables.VSMPageBatch;
 export import :Autogen.Slots.VSMLighting;
 export import :Autogen.Tables.VSMLighting;
+export import :Autogen.Tables.VSMDispatchCommandData;
 export import :Autogen.Slots.VSMDepthAnalysis;
 export import :Autogen.Tables.VSMDepthAnalysis;
 export import :Autogen.Slots.WorkGraphTest;

@@ -22,7 +22,8 @@ export
 		DrawIndexedArguments,
 		DispatchMeshArguments,
 		DispatchArguments,
-		CommandData
+		CommandData,
+		VSMDispatchCommandData
 	};
 
 	enum class PSO: int
@@ -244,6 +245,7 @@ export
 		VSMCopyPageDepth = "VSMCopyPageDepth"_crc32,
 		VSMPageBatch = "VSMPageBatch"_crc32,
 		VSMLighting = "VSMLighting"_crc32,
+		VSMDispatchCommandData = "VSMDispatchCommandData"_crc32,
 		VSMDepthAnalysis = "VSMDepthAnalysis"_crc32,
 		WorkGraphTest = "WorkGraphTest"_crc32,
 		GraphInput = "GraphInput"_crc32,

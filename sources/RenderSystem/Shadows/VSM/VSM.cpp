@@ -280,6 +280,23 @@ void VSM::plan_level(int level, float2 cam_pos_ls, const box& bounds_all, uint64
 		}
 	}
 
+	// Bug fix: take_dirty() above already destructively cleared scene_mask's
+	// bits out of the tracker, but a bit for a page that isn't resident THIS
+	// frame (not needed yet, or needed but the pool was exhausted) gets
+	// masked away below and would otherwise be lost forever -- nothing else
+	// ever re-marks it, since newly_allocated_mask only fires the frame an
+	// allocation actually succeeds, not retroactively for a scene-change
+	// that happened while the page was unavailable. Symptom this caused,
+	// confirmed by the user: a newly-added mesh's shadow didn't appear until
+	// an unrelated full-level redraw (moving the light) happened to also
+	// redraw that page. Fix: put back exactly the bits that don't survive
+	// the resident_mask filter below, so a future frame -- once the page
+	// actually becomes resident -- picks them up instead of the signal
+	// silently vanishing.
+	uint32_t lost_scene_mask = scene_mask & ~plan.resident_mask;
+	if (lost_scene_mask)
+		tracker.mark_pages(level, lost_scene_mask);
+
 	// newly_allocated/light_moved invalidate that specific page (not the
 	// whole level -- a page whose slot/content survived the recenter
 	// needs neither); scene_mask adds whatever VSMInvalidationTracker
@@ -373,73 +390,75 @@ VSM::VSM()
 	for (int s = page_table.page_size; s > 8; s >>= 1)
 		pyramid_mip_count++;
 
-	// ---- Page rendering (one pass per clipmap LEVEL, all of that level's
-	// pages_per_level^2 pages rendered in a single mesh-shader dispatch via
-	// SV_RenderTargetArrayIndex -- see mesh_shader_vsm.hlsl) ------------------
+	// ---- Page rendering (Phase 5.8: ONE pass, one exec_indirect() call
+	// covering every active+dirty level's every mesh, instead of one
+	// Multiple-slot pass per level) ------------------------------------------
 
-	for (int level = 0; level < page_table.clipmap.level_count; level++)
+	m_renderpages_setup = [this, physical_slots, pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		m_level_setup[level] = [this, level, physical_slots, pyramid_mip_count](Passes::VSM_RenderPage::Context& data, FrameGraph::TaskBuilder& builder) -> bool
-		{
-			if (level == 0)
-			{
-				// Static: Phase 2 caching relies on this atlas (and the page
-				// table / page cameras) surviving across frames -- a level
-				// that isn't dirty this frame does nothing and relies on its
-				// pages still holding last frame's content.
-				//
-				// One array slice per physical page rather than regions of one
-				// big texture: slot IS the slice, so no atlas-offset math, and
-				// routing via SV_RenderTargetArrayIndex drops the 16-viewport
-				// cap that pinned pages_per_level at 4.
-				//
-				// This is a committed resource -- VRAM for all physical_slots
-				// slices is paid up front regardless of how many are ever
-				// used. Scaling physical_page_count much further than a
-				// couple hundred should switch this (and VSM_PageHiZ below)
-				// to a reserved/tiled resource, mapping physical memory only
-				// to slices actually handed out by allocate_or_touch and
-				// unmapping on evict_page -- the array can then be sized
-				// generously (its logical slice count costs nothing by
-				// itself) without paying for slices nobody's using.
-				builder.create(data.VSM_Atlas, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32_TYPELESS, (UINT)physical_slots, 1 }, FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
-				builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
-				builder.create(data.VSM_PageCameras, { (size_t)MaxPages }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
-				// Static like VSM_Atlas: must survive until this page is next dirty.
-				builder.create(data.VSM_PageHiZ, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32_FLOAT, (UINT)physical_slots, (UINT)pyramid_mip_count }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
-			else
-			{
-				builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::DepthStencil);
-				builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::CopyDest);
-				builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::CopyDest);
-				builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::UnorderedAccess);
-			}
-			return true;
-		};
+		// Static: Phase 2 caching relies on this atlas (and the page table /
+		// page cameras) surviving across frames -- a level that isn't dirty
+		// this frame does nothing and relies on its pages still holding last
+		// frame's content. Single pass now, so no more level==0-owns-creation
+		// branch -- this setup() is the only one that ever runs.
+		//
+		// One array slice per physical page rather than regions of one big
+		// texture: slot IS the slice, so no atlas-offset math, and routing
+		// via SV_RenderTargetArrayIndex drops the 16-viewport cap that
+		// pinned pages_per_level at 4.
+		//
+		// This is a committed resource -- VRAM for all physical_slots slices
+		// is paid up front regardless of how many are ever used. Scaling
+		// physical_page_count much further than a couple hundred should
+		// switch this (and VSM_PageHiZ below) to a reserved/tiled resource,
+		// mapping physical memory only to slices actually handed out by
+		// allocate_or_touch and unmapping on evict_page -- the array can
+		// then be sized generously (its logical slice count costs nothing
+		// by itself) without paying for slices nobody's using.
+		builder.create(data.VSM_Atlas, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32_TYPELESS, (UINT)physical_slots, 1 }, FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
+		builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+		builder.create(data.VSM_PageCameras, { (size_t)MaxPages }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+		// Static like VSM_Atlas: must survive until this page is next dirty.
+		builder.create(data.VSM_PageHiZ, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32_FLOAT, (UINT)physical_slots, (UINT)pyramid_mip_count }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+		// CPU-built and re-uploaded fresh every frame (like VSM_PageCameras),
+		// but the underlying allocation persists -- Static, sized to the
+		// generous fixed upper bound rather than the real per-frame count.
+		builder.create(data.VSM_DispatchCommands, { (size_t)MaxDispatchEntries }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+		return true;
+	};
 
-		m_level_render[level] = [this, level, pages_side, pages_per_level, pyramid_mip_count](Passes::VSM_RenderPage::Context& data, FrameGraph::FrameContext& context)
+	m_renderpages_render = [this, pages_side, pages_per_level, pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::FrameContext& context)
+	{
+		// All the decision-making (which pages get a slot, priority
+		// stealing, dirty tracking) already happened in plan_frame(),
+		// single-threaded, before this ran. This is purely "emit GPU
+		// commands for what was already decided" -- looping every level's
+		// m_plan[] instead of being called once per level.
+		auto& command_list = context.get_list();
+		auto& graphics      = command_list->get_graphics();
+		auto& compute       = command_list->get_compute();
+
+		graphics.set_signature(Layouts::DefaultLayout);
+		compute.set_signature(Layouts::DefaultLayout);
+
+		auto& sceneinfo = context.graph->get_context<SceneInfo>();
+		auto  scene     = sceneinfo.scene;
+
+		bool any_dirty = false;
+		bool hiz_cleared_this_frame = false;
+
+		m_dispatch_entries.clear();
+
+		for (int level = 0; level < VSM::MaxLevels; level++)
 		{
-			// All the decision-making (which pages get a slot, priority
-			// stealing, dirty tracking) already happened in plan_frame(),
-			// single-threaded, before this -- and any other level's --
-			// render() was dispatched. This is purely "emit GPU commands for
-			// what was already decided."
 			const LevelPlan& plan = m_plan[level];
 			if (!plan.valid)
-				return;
+				continue;
 
 			// Nothing to redraw AND the indirection row still matches what's
 			// on the GPU -- true no-op frame for this level.
 			if (plan.dirty_mask == 0 && !plan.row_changed)
-				return;
-
-			auto& command_list = context.get_list();
-			auto& graphics      = command_list->get_graphics();
-			auto& compute       = command_list->get_compute();
-
-			graphics.set_signature(Layouts::DefaultLayout);
-			compute.set_signature(Layouts::DefaultLayout);
+				continue;
 
 			// Camera bounds only depend on (level, abs_page) -- page_min ==
 			// origin + local*size == size*(grid_idx + local) == size*abs_page
@@ -481,19 +500,24 @@ VSM::VSM()
 					reinterpret_cast<const char*>(row.data()), row_stride);
 			}
 
-			if (level == 0 && data.VSM_PageHiZ.is_new())
+			if (!hiz_cleared_this_frame && data.VSM_PageHiZ.is_new())
 			{
 				// Fresh/resized pyramid holds garbage -- clear to far (0,
 				// reversed-Z) so a page's occlusion test can't falsely cull
 				// against it before that page has ever rendered real depth.
 				// One array-spanning UAV clear per mip (all physical slots
-				// at once) -- only runs once ever (cold start / resize).
+				// at once) -- only runs once ever (cold start / resize), not
+				// once per level -- hiz_cleared_this_frame guards that since
+				// there's no more level==0 to pin it to.
 				for (int mip = 0; mip < pyramid_mip_count; mip++)
 					command_list->clear_uav(data.VSM_PageHiZ->create_mip(mip, *command_list).rwTexture2DArray, vec4(0, 0, 0, 0));
+				hiz_cleared_this_frame = true;
 			}
 
 			if (plan.dirty_mask == 0)
-				return;
+				continue;
+
+			any_dirty = true;
 
 			// Clear only the pages actually being re-rendered this frame: the
 			// atlas is Static and shared across levels, so a cached page must
@@ -510,11 +534,94 @@ VSM::VSM()
 				graphics.set_rtv(slice_rt, RTOptions::Default | RTOptions::ClearDepth);
 			}
 
+			// One per-level page-batch CB (level/dirty_mask/skip_occlusion),
+			// compiled (allocated+written) now but not bound live -- each
+			// dispatch entry referencing this level points at it via
+			// page_batch_cb, and D3D12's command signature rebinds it per
+			// entry when exec_indirect walks the buffer below.
+			Slots::VSMPageBatch batch;
+			batch.GetLevel()          = level;
+			batch.GetDirty_mask()     = (int)plan.dirty_mask;
+			// Per-page now, not per-level -- see the field's comment in
+			// vsm.sig. A page whose slot/content survived the recenter
+			// keeps its Hi-Z history and doesn't need this bit.
+			batch.GetSkip_occlusion() = (int)plan.skip_occlusion_mask;
+			auto compiled_batch = batch.compile(graphics);
+
+			scene->iterate_meshes(MESH_TYPE::STATIC | MESH_TYPE::DYNAMIC, [&](scene_object::ptr obj)
+			{
+				auto mesh = dynamic_cast<MeshAssetInstance*>(obj.get());
+				if (!mesh) return;
+
+				for (auto& m : mesh->rendering)
+				{
+					if ((int)m_dispatch_entries.size() >= MaxDispatchEntries)
+						return;
+
+					// Dispatch AS threadgroups, not MS ones directly: 32
+					// (meshlet, page) pairs tested per group, AS compacts
+					// visible pairs into a payload and calls DispatchMesh
+					// itself (see mesh_shader_vsm.hlsl). Count must cover
+					// meshlet_count * pages_per_level total pairs.
+					UINT pair_count = (UINT)m.meshlet_count * (UINT)pages_per_level;
+					UINT as_groups  = (pair_count + 31) / 32;
+
+					Table::VSMDispatchCommandData entry;
+					entry.mesh_cb          = m.compiled_mesh_info.compiled();
+					entry.meshinstance_cb  = m.mesh_instance_info.compiled();
+					entry.page_batch_cb    = compiled_batch.compiled();
+					entry.draw_commands.ThreadGroupCountX = as_groups;
+					entry.draw_commands.ThreadGroupCountY = 1;
+					entry.draw_commands.ThreadGroupCountZ = 1;
+					m_dispatch_entries.push_back(entry);
+				}
+			});
+		}
+
+		// Diagnostics for the entry-count clamp above -- same start-of-
+		// episode-then-periodic-reminder shape as the page-pool exhaustion
+		// log in plan_level().
+		if ((int)m_dispatch_entries.size() >= MaxDispatchEntries)
+		{
+			total_clamped_entries++;
+			if (!dispatch_entries_clamped || (total_clamped_entries % 300 == 0))
+			{
+				Log::get() << (std::string("VSM: dispatch entry buffer exhausted (MaxDispatchEntries=")
+					+ std::to_string(MaxDispatchEntries) + ") -- some (level,mesh) pairs were dropped this frame") << Log::endl;
+			}
+			dispatch_entries_clamped = true;
+		}
+		else
+			dispatch_entries_clamped = false;
+
+		if (!any_dirty && m_dispatch_entries.empty())
+			return;
+
+		if (!m_dispatch_entries.empty())
+		{
+			command_list->get_copy().update(*data.VSM_DispatchCommands, 0, std::span{ m_dispatch_entries });
+
+			graphics.set_pipeline<PSOS::VSMDepthDraw>();
+			{
+				Slots::VSMPageTableData pageTableData;
+				pageTableData.GetPage_table()   = data.VSM_PageTable->texture2DArray;
+				pageTableData.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
+				graphics.set(pageTableData);
+			}
+			// No manual transition needed: like VSM_PageTable, graphics.set()
+			// tracks the read state for this SRV bind itself.
+			{
+				Slots::VSMPageHiZ pageHiZ;
+				pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
+				graphics.set(pageHiZ);
+			}
+			graphics.set(scene->compiledScene);
+
 			{
 				// Draw target: a DSV spanning every slice, so the mesh shader
 				// can route each primitive to its page with
-				// SV_RenderTargetArrayIndex (needs the multi-slice DSV support
-				// added in HAL.HLSL.ixx).
+				// SV_RenderTargetArrayIndex (needs the multi-slice DSV
+				// support added in HAL.HLSL.ixx).
 				RT::DepthOnly rt;
 				rt.GetDepth() = data.VSM_Atlas->depthStencil;
 				graphics.set_rtv(rt, RTOptions::Default);
@@ -525,63 +632,29 @@ VSM::VSM()
 			graphics.set_viewport(data.VSM_Atlas->get_viewport());
 			graphics.set_scissor(data.VSM_Atlas->get_scissor());
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-			graphics.set_pipeline<PSOS::VSMDepthDraw>();
 
-			{
-				Slots::VSMPageTableData pageTableData;
-				pageTableData.GetPage_table()   = data.VSM_PageTable->texture2DArray;
-				pageTableData.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
-				graphics.set(pageTableData);
-			}
-			{
-				Slots::VSMPageBatch batch;
-				batch.GetLevel()           = level;
-				batch.GetDirty_mask()      = (int)plan.dirty_mask;
-				// Per-page now, not per-level -- see the field's comment in
-				// vsm.sig. A page whose slot/content survived the recenter
-				// keeps its Hi-Z history and doesn't need this bit.
-				batch.GetSkip_occlusion()  = (int)plan.skip_occlusion_mask;
-				graphics.set(batch);
-			}
+			// Every (level,mesh) pair's AS/MS dispatch in one call -- D3D12's
+			// command signature rebinds mesh_cb/meshinstance_cb/page_batch_cb
+			// per entry from the buffer just uploaded above, exactly as if a
+			// live graphics.set(...) had preceded each dispatch_mesh() the
+			// old per-level CPU loop issued.
+			graphics.exec_indirect(*data.VSM_DispatchCommands, (UINT)m_dispatch_entries.size());
+		}
 
-			// No manual transition needed: like VSM_PageTable, graphics.set()
-			// tracks the read state for this SRV bind itself.
-			{
-				Slots::VSMPageHiZ pageHiZ;
-				pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
-				graphics.set(pageHiZ);
-			}
+		if (!any_dirty)
+			return;
 
-			auto& sceneinfo = context.graph->get_context<SceneInfo>();
-			auto  scene     = sceneinfo.scene;
+		// Rebuild each just-redrawn page's pyramid for next time it's dirty.
+		// VSM_Atlas was just a DSV -- nudge readable for the copy shader
+		// below, same one-off idiom PSSM.cpp uses; the next draw into it
+		// transitions it back automatically via set_rtv.
+		command_list->transition(data.VSM_Atlas->resource, HAL::ResourceStates::SHADER_RESOURCE);
 
-			graphics.set(scene->compiledScene);
-
-			scene->iterate_meshes(MESH_TYPE::STATIC | MESH_TYPE::DYNAMIC, [&](scene_object::ptr obj)
-			{
-				auto mesh = dynamic_cast<MeshAssetInstance*>(obj.get());
-				if (!mesh) return;
-
-				for (auto& m : mesh->rendering)
-				{
-					graphics.set(m.compiled_mesh_info);
-					graphics.set(m.mesh_instance_info);
-					// Dispatch AS threadgroups, not MS ones directly: 32
-					// (meshlet, page) pairs tested per group, AS compacts
-					// visible pairs into a payload and calls DispatchMesh
-					// itself (see mesh_shader_vsm.hlsl). Count must cover
-					// meshlet_count * pages_per_level total pairs.
-					UINT pair_count = (UINT)m.meshlet_count * (UINT)pages_per_level;
-					UINT as_groups  = (pair_count + 31) / 32;
-					graphics.dispatch_mesh(ivec3{ (int)as_groups, 1, 1 });
-				}
-			});
-
-			// Rebuild each just-redrawn page's pyramid for next time it's dirty.
-			// VSM_Atlas was just a DSV -- nudge readable for the copy shader
-			// below, same one-off idiom PSSM.cpp uses; the next draw into it
-			// transitions it back automatically via set_rtv.
-			command_list->transition(data.VSM_Atlas->resource, HAL::ResourceStates::SHADER_RESOURCE);
+		for (int level = 0; level < VSM::MaxLevels; level++)
+		{
+			const LevelPlan& plan = m_plan[level];
+			if (!plan.valid || plan.dirty_mask == 0)
+				continue;
 
 			for (int local = 0; local < pages_per_level; local++)
 			{
@@ -610,8 +683,8 @@ VSM::VSM()
 				UINT last_mip_subres = (UINT)(pyramid_mip_count - 1) + (UINT)slot * (UINT)pyramid_mip_count;
 				command_list->transition(data.VSM_PageHiZ->resource, HAL::ResourceStates::SHADER_RESOURCE, last_mip_subres);
 			}
-		};
-	}
+		}
+	};
 
 	// ---- Combine lighting ------------------------------------------------
 
@@ -683,10 +756,8 @@ VSM::VSM()
 		// Static: cleared and re-measured every frame, but the buffer
 		// itself persists so the readback (issued after this frame's
 		// dispatch, consumed in a later frame's plan_frame()) always has
-		// something valid to read. Unlike VSM_RenderPage's Multiple=8
-		// instances (which branch create() vs need() on level==0 to avoid
-		// every instance re-creating shared resources), this is a single,
-		// non-Multiple PassNode -- nothing else ever touches this resource,
+		// something valid to read. This is a single, non-Multiple PassNode
+		// (like VSM_RenderPages since Phase 5.8) -- nothing else ever touches this resource,
 		// so it's always the owner and always calls create(); Static is
 		// what keeps the underlying allocation from being torn down and
 		// rebuilt every frame, not a manual is_new()/create()-once branch

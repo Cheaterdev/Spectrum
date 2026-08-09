@@ -23,6 +23,7 @@ void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HA
 	commands[IndirectCommands::DispatchMeshArguments] = AutoGenIndirectCommand<DispatchMeshArguments>(device).create_command();
 	commands[IndirectCommands::DispatchArguments] = AutoGenIndirectCommand<DispatchArguments>(device).create_command();
 	commands[IndirectCommands::CommandData] = AutoGenIndirectCommand<Table::CommandData>(device).create_command();	
+	commands[IndirectCommands::VSMDispatchCommandData] = AutoGenIndirectCommand<Table::VSMDispatchCommandData>(device).create_command();	
 }
 
 // [Template]-tagged PSOs are skipped here entirely -- they're never built

@@ -58,7 +58,7 @@ export
 		Library::Voxelize Voxelize;
 		Library::Lighting Lighting;
 		Library::Mipmapping Mipmapping;
-		Library::VSM_RenderPage VSM_RenderPage;
+		Library::VSM_RenderPages VSM_RenderPages;
 		Library::VSM_Combine VSM_Combine;
 		Library::VSM_DepthAnalysis VSM_DepthAnalysis;
 	

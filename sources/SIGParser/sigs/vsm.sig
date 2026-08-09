@@ -25,7 +25,7 @@ struct VSMConstants
 	float4x4 light_view;
 	# MaxLevels (VSM.ixx) storage slots -- one geometric ladder, no
 	# regular/adaptive split (see VSMClipmap::page_world_size). Keep this in
-	# step with VSM::MaxLevels and VSM_RenderPage's [Multiple=26] below.
+	# step with VSM::MaxLevels.
 	float4 level_info[26];
 }
 
@@ -127,17 +127,48 @@ GraphicsPSO VSMDepthDraw
 	cull = Front;
 }
 
-# One slot per storage level in the Phase 5.7 unified ladder -- every level
-# is a normal level with a fixed size and an active/inactive state (whether
-# it falls in this frame's [active_min, active_max] window), not a separate
-# mechanism per region. Must match VSM::MaxLevels / VSMConstants::level_info[]'s size.
-[Multiple = 26]
-PassNode VSM_RenderPage
+# Phase 5.8: per-(level,mesh) indirect draw entry, replacing the CPU
+# "for level { for mesh { dispatch_mesh() } }" loop with one exec_indirect
+# call. Shaped exactly like meshrender.sig's CommandData (pointer fields to
+# Bind-tagged CBV structs + a DispatchMeshArguments) -- page_batch_cb takes
+# VSMPageBatch's place of CommandData's MaterialInfo*, carrying this entry's
+# level/dirty_mask/skip_occlusion instead of per-level root-constant binds.
+# No [shader_only] (unlike Dispatch*Arguments) -- CommandData is the
+# precedent: this needs a C++-side Table:: struct too, since entries are
+# built CPU-side in plan_frame(), not GPU-populated like CommandData is.
+#
+# Field order matters: D3D12 requires a command signature's root-parameter
+# updates to be in strictly increasing {RootParameterIndex, offset} order.
+# VSMPageBatch is DefaultLayout::Instance0, MeshInfo is Instance1,
+# MeshInstanceInfo is Instance2 -- page_batch_cb must come first, or
+# CreateCommandSignature fails with "Root parameter {slots, offset} must be
+# increasing" (confirmed the hard way).
+[IndirectCommand]
+struct VSMDispatchCommandData
+{
+	VSMPageBatch* page_batch_cb;
+	MeshInfo* mesh_cb;
+	MeshInstanceInfo* meshinstance_cb;
+	DispatchMeshArguments draw_commands;
+}
+
+# Single pass, not [Multiple=N]: plan_frame() already decides exactly which
+# (level,mesh) pairs need drawing (Phase 5.7's m_plan[]); this pass just
+# uploads that CPU-built entry list and issues one exec_indirect() call
+# instead of the old per-level Multiple-instance CPU loop.
+PassNode VSM_RenderPages
 {
 	[Write] Texture VSM_Atlas;
 	[Write] Texture VSM_PageTable;
 	[Write] StructuredBuffer<Camera> VSM_PageCameras;
 	[Write] Texture VSM_PageHiZ;
+	# Per-(level,mesh) indirect draw entries, CPU-built and uploaded fresh
+	# every frame (copy.update, same idiom as VSM_PageCameras). Each entry's
+	# page_batch_cb points at a per-level VSMPageBatch CB allocated via
+	# Slots::VSMPageBatch::compile() -- that allocator is self-contained
+	# (the same per-frame dynamic-constants mechanism graphics.set() already
+	# uses under the hood), so it needs no separate FrameGraph resource here.
+	[Write] StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
 }
 
 [Compute]
