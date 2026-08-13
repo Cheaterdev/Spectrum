@@ -461,6 +461,8 @@ public:
 	   	voxel_gi->pass_data(graph.builder);
 
 #if SPECTRUM_USE_VSM_SHADOWS
+		vsm.pass_data(graph.builder);
+
 		// Single-threaded allocation-planning pass for all VSM clip levels,
 		// run once per frame here (via add_slot_generator's pre_run hook)
 		// strictly before VSM_RenderPages' single render() is dispatched

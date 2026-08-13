@@ -52,6 +52,8 @@ public:
 	static constexpr int MaxDispatchEntries = MaxLevels * 2048;
 
 private:
+	HAL::Texture::ptr vsm_atlas_tex;
+
 	VSMPageTable page_table;
 	VSMInvalidationTracker tracker;
 
@@ -205,6 +207,8 @@ public:
 	// comment above for why this can't live inside render(). Register via
 	// graph.add_slot_generator in main.cpp, alongside FrameInfo's.
 	void plan_frame(FrameGraph::Graph& graph);
+
+	void pass_data(FrameGraph::TaskBuilder& builder);
 
 	VSM();
 

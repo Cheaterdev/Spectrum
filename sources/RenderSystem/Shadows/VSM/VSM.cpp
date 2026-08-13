@@ -86,6 +86,13 @@ void VSM::attach_scene(std::shared_ptr<Scene> scene)
 	});
 }
 
+void VSM::pass_data(FrameGraph::TaskBuilder& builder)
+{
+	if (!vsm_atlas_tex)
+		vsm_atlas_tex.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R32_TYPELESS, uint2(page_table.page_size, page_table.page_size), (uint)page_table.physical_page_count, 1, HAL::ResFlags::DepthStencil | HAL::ResFlags::ShaderResource)));
+	builder.pass_texture(FrameGraph::ResourceID::VSM_Atlas, vsm_atlas_tex->resource);
+}
+
 void VSM::plan_frame(FrameGraph::Graph& graph)
 {
 	// Single-threaded, once per frame, strictly before any level's render()
@@ -396,26 +403,7 @@ VSM::VSM()
 
 	m_renderpages_setup = [this, physical_slots, pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		// Static: Phase 2 caching relies on this atlas (and the page table /
-		// page cameras) surviving across frames -- a level that isn't dirty
-		// this frame does nothing and relies on its pages still holding last
-		// frame's content. Single pass now, so no more level==0-owns-creation
-		// branch -- this setup() is the only one that ever runs.
-		//
-		// One array slice per physical page rather than regions of one big
-		// texture: slot IS the slice, so no atlas-offset math, and routing
-		// via SV_RenderTargetArrayIndex drops the 16-viewport cap that
-		// pinned pages_per_level at 4.
-		//
-		// This is a committed resource -- VRAM for all physical_slots slices
-		// is paid up front regardless of how many are ever used. Scaling
-		// physical_page_count much further than a couple hundred should
-		// switch this (and VSM_PageHiZ below) to a reserved/tiled resource,
-		// mapping physical memory only to slices actually handed out by
-		// allocate_or_touch and unmapping on evict_page -- the array can
-		// then be sized generously (its logical slice count costs nothing
-		// by itself) without paying for slices nobody's using.
-		builder.create(data.VSM_Atlas, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32_TYPELESS, (UINT)physical_slots, 1 }, FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
+		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::DepthStencil);
 		builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		builder.create(data.VSM_PageCameras, { (size_t)MaxPages }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		// Static like VSM_Atlas: must survive until this page is next dirty.
