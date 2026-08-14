@@ -441,6 +441,25 @@ void MeshAssetInstance::on_add(scene_object* parent)
 {
 
 	auto old_scene = scene;
+
+	// Compute real world bounds/transform before scene_object::on_add()
+	// below fires on_element_add -- otherwise listeners (VSM's invalidation
+	// tracker) observe this object's still-default (0,0,0) bounds instead of
+	// its real placement, since update_transforms() normally only runs on
+	// the next per-frame scene update pass (Scene::update_transforms(),
+	// called once/frame from think()), not at insertion time.
+	// this->parent/this->scene are set here so update_transforms() has what
+	// it needs (parent->global_transform, and MeshAssetInstance's own
+	// override calls update_rtx_instance() which needs a valid scene) --
+	// harmlessly redundant with parent_type::on_add() doing the same
+	// assignment again inside scene_object::on_add() right below.
+	if (!old_scene && parent && parent->scene)
+	{
+		this->parent = parent;
+		this->scene  = parent->scene;
+		update_transforms();
+	}
+
 	scene_object::on_add(parent);
 
 	if (!old_scene && scene)

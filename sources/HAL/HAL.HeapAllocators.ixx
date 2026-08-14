@@ -46,7 +46,25 @@ export namespace HAL
 	struct ResourceTile
 	{
 		ivec3 pos = ivec3(0, 0, 0);
+
+		// The real D3D12 subresource (MipSlice + ArraySlice*MipLevels +
+		// PlaneSlice*MipLevels*ArraySize) -- meaningful ONLY to the actual
+		// D3D12 API call (D3D12_TILED_RESOURCE_COORDINATE::Subresource in
+		// UpdateTileMappings). Never use this to index tiles[]/gpu_tiles[].
 		UINT subresource;
+
+		// Our own flat storage index into TiledResourceManager's
+		// tiles[]/gpu_tiles[] (mip + array_slice*unpacked_mip_count, mip
+		// varies fastest -- see TiledResourceManager::flat_index()).
+		// Deliberately a SEPARATE field from `subresource` above: the two
+		// coincide only when the resource has no packed mips (MipLevels ==
+		// unpacked_mip_count) and PlaneSlice==0 -- conflating them (as this
+		// code used to, indexing gpu_tiles[] by the real subresource) is
+		// silently wrong whenever that's not true, and forced every caller of
+		// the higher-level load_tiles()/zero_tiles()/is_mapped() API to
+		// hand-compute a single combined index that meant "a mip" for some
+		// resources and "an array slice times a mip count" for others.
+		UINT storage_index;
 
 		ivec3 size = ivec3(1, 1, 1);
 		TileHeapPosition heap_position;

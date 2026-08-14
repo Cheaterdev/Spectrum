@@ -236,8 +236,18 @@ namespace HAL {
 
 	void Handle::operator=(const Handle& r)
 	{
+		// Plain, unchecked copy -- this is used for generic whole-object
+		// handle copies (e.g. StructuredBufferView's move-assignment
+		// memberwise-copying every sub-handle, most structurally
+		// inapplicable to the underlying resource and never read by
+		// anything). The "is this handle actually safe to bind for shader
+		// use" check lives at the narrower, correct point: the
+		// HasTexture2D-etc.-constrained operator= overloads in HAL.HLSL.ixx
+		// that pull ONE named view field out of a source struct to bind
+		// into a Table field -- see is_written()'s comment.
 		storage = r.storage;
 		offset = r.offset;
+		written = r.written;
 	}
 
 	Handle Handle::operator[](uint i) const

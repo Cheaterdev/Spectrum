@@ -1870,18 +1870,61 @@ private:
 
                         if (auto* source = dynamic_cast<HAL::Texture2DView*>(info->view.get()))
                         {
-                            compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
-                            Slots::FrameGraph_Debug_Texture2D tex2d;
                             uint2  src_dim   = info->resource->get_desc().as_texture().Dimensions.xy;
                             float2 src_size  = float2(src_dim);
                             float2 dst_size  = float2(preview_size);
                             float  fit_scale = std::min(dst_size.x / src_size.x, dst_size.y / src_size.y);
                             float2 offset    = (dst_size - src_size * fit_scale) * 0.5f;
-                            tex2d.GetSource()     = *source;
-                            tex2d.GetSourceSize() = src_dim;
-                            tex2d.GetOffset()     = offset;
-                            tex2d.GetScale()      = fit_scale;
-                            compute.set(tex2d);
+
+                            // Array textures MUST preview through the
+                            // Texture2DArray path. Texture2DView::init() only
+                            // writes the non-array `texture2D` SRV when
+                            // ArraySize == 1 -- for an array it writes
+                            // `texture2DArray` instead and leaves `texture2D` a
+                            // valid-but-never-written descriptor slot. Binding
+                            // that here sampled whatever unrelated resource last
+                            // occupied the slot, so array resources (VSM_Atlas,
+                            // PSSM_Depths, ...) previewed as random other
+                            // textures -- GUI text, etc. -- with no D3D12
+                            // validation error. resource_preview (FrameGraph.
+                            // Debug.cpp) already branches like this; the timeline
+                            // thumbnails just never got the same treatment.
+                            // ...and a resource with no SRV AT ALL (no
+                            // ResFlags::ShaderResource -- e.g. a UAV-only or
+                            // depth-stencil-only target like GBuffer_Quality)
+                            // has neither descriptor written. There is simply
+                            // nothing to sample, so skip the preview rather
+                            // than binding an unwritten slot and displaying
+                            // some unrelated resource's contents. The thumbnail
+                            // just stays blank for those, which is honest.
+                            const bool is_array = info->resource->get_desc().as_texture().ArraySize > 1;
+                            const bool srv_ok   = is_array ? source->texture2DArray.is_written()
+                                                           : source->texture2D.is_written();
+
+                            if (srv_ok && is_array)
+                            {
+                                compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2DArray>();
+                                Slots::FrameGraph_Debug_Texture2DArray tex2darr;
+                                tex2darr.GetSource()     = *source;
+                                tex2darr.GetSourceSize() = src_dim;
+                                tex2darr.GetOffset()     = offset;
+                                tex2darr.GetScale()      = float2(fit_scale, fit_scale);
+                                compute.set(tex2darr);
+                            }
+                            else if (srv_ok)
+                            {
+                                compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
+                                Slots::FrameGraph_Debug_Texture2D tex2d;
+                                tex2d.GetSource()     = *source;
+                                tex2d.GetSourceSize() = src_dim;
+                                tex2d.GetOffset()     = offset;
+                                tex2d.GetScale()      = fit_scale;
+                                compute.set(tex2d);
+                            }
+                            else
+                            {
+                                return; // nothing sampleable -- leave the thumbnail blank
+                            }
                         }
                         else if (auto* source = dynamic_cast<HAL::Texture3DView*>(info->view.get()))
                         {

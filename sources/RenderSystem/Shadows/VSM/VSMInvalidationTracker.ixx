@@ -33,9 +33,15 @@ export
 			dirty_masks.fill(0xFFFFFFFFu);
 		}
 
-		void attach(std::shared_ptr<Scene> scene, std::function<void(scene_object*)> on_change)
+		// on_add is registered separately from the other three: a freshly
+		// inserted object's world bounds aren't reliably valid yet (on_add
+		// fires immediately on insertion, before update_transforms() has
+		// necessarily run for it -- see the comment at VSM::attach_scene()'s
+		// on_add handler), so it can't be trusted to compute a precise
+		// (level, page) mask the way a move/change/remove can.
+		void attach(std::shared_ptr<Scene> scene, std::function<void(scene_object*)> on_add, std::function<void(scene_object*)> on_change)
 		{
-			scene->on_element_add.register_handler(this, on_change);
+			scene->on_element_add.register_handler(this, on_add);
 			scene->on_element_remove.register_handler(this, on_change);
 			scene->on_moved.register_handler(this, on_change);
 			scene->on_changed.register_handler(this, on_change);

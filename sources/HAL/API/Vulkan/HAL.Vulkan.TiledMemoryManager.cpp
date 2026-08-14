@@ -37,12 +37,20 @@ namespace HAL
             tiles.resize(1);
             tiles[0].resize(uint3{ num_tiles, 1, 1 });
             for (uint x = 0; x < num_tiles; ++x)
+            {
                 tiles[0][{x, 0, 0}].pos = { x, 0, 0 };
+                tiles[0][{x, 0, 0}].subresource = 0;
+                tiles[0][{x, 0, 0}].storage_index = 0;
+            }
 
             gpu_tiles.resize(1);
             gpu_tiles[0].resize(uint3{ num_tiles, 1, 1 });
             for (uint x = 0; x < num_tiles; ++x)
+            {
                 gpu_tiles[0][{x, 0, 0}].pos = { x, 0, 0 };
+                gpu_tiles[0][{x, 0, 0}].subresource = 0;
+                gpu_tiles[0][{x, 0, 0}].storage_index = 0;
+            }
         }
         else if (desc.is_texture())
         {
@@ -85,8 +93,10 @@ namespace HAL
                         {
                             tiles[m][{x,y,z}].pos        = { x, y, z };
                             tiles[m][{x,y,z}].subresource = m;
+                            tiles[m][{x,y,z}].storage_index = m;
                             gpu_tiles[m][{x,y,z}].pos        = { x, y, z };
                             gpu_tiles[m][{x,y,z}].subresource = m;
+                            gpu_tiles[m][{x,y,z}].storage_index = m;
                         }
             }
         }

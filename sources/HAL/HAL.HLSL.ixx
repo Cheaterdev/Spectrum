@@ -268,6 +268,14 @@ export
 			template<HasTexture2D H>
 			auto operator= (const H& h)
 			{
+				// h.texture2D pointing at a real descriptor slot but never
+				// having been .create()'d means the shader would sample
+				// whatever unrelated resource's descriptor last occupied
+				// that heap slot -- no D3D12 validation error either way.
+				// Root-caused a real bug this way (VSM_Atlas created
+				// DepthStencil-only, silently sampling GUI text through its
+				// never-written SRV). See Handle::is_written()'s comment.
+				ASSERT(!h.texture2D.is_valid() || h.texture2D.is_written());
 				this->operator=(h.texture2D);
 
 				return *this;
@@ -304,6 +312,9 @@ export
 			template<HasTexture2DArray H>
 			auto operator= (const H& h)
 			{
+				// See Texture2D::operator='s comment -- same check, this is
+				// the exact assignment pattern that caught VSM_Atlas's bug.
+				ASSERT(!h.texture2DArray.is_valid() || h.texture2DArray.is_written());
 				this->operator=(h.texture2DArray);
 
 				return *this;
@@ -338,6 +349,8 @@ export
 			template<HasTexture3D H>
 			auto operator= (const H& h)
 			{
+				// See Texture2D::operator='s comment.
+				ASSERT(!h.texture3D.is_valid() || h.texture3D.is_written());
 				this->operator=(h.texture3D);
 
 				return *this;
@@ -374,6 +387,8 @@ export
 			template<HasTextureCube H>
 			auto operator= (const H& h)
 			{
+				// See Texture2D::operator='s comment.
+				ASSERT(!h.textureCube.is_valid() || h.textureCube.is_written());
 				this->operator=(h.textureCube);
 
 				return *this;
@@ -406,6 +421,9 @@ export
 			template<HasRWTexture2D H>
 			auto operator= (const H& h)
 			{
+				// See Texture2D::operator='s comment (same class of bug,
+				// UnorderedAccess instead of ShaderResource).
+				ASSERT(!h.rwTexture2D.is_valid() || h.rwTexture2D.is_written());
 				this->operator=(h.rwTexture2D);
 
 				return *this;
@@ -437,6 +455,8 @@ export
 			template<HasRWTexture2DArray H>
 			auto operator= (const H& h)
 			{
+				// See Texture2D::operator='s comment.
+				ASSERT(!h.rwTexture2DArray.is_valid() || h.rwTexture2DArray.is_written());
 				this->operator=(h.rwTexture2DArray);
 
 				return *this;
@@ -464,6 +484,8 @@ export
 			template<HasRWTexture3D H>
 			auto operator= (const H& h)
 			{
+				// See Texture2D::operator='s comment.
+				ASSERT(!h.rwTexture3D.is_valid() || h.rwTexture3D.is_written());
 				this->operator=(h.rwTexture3D);
 
 				return *this;

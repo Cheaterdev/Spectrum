@@ -13,21 +13,32 @@ namespace HAL {
 		load_tiles_internal(target, { begin,0,0 }, { end,0,0 }, 0, false);
 	}
 
-	void TiledResourceManager::load_tile(update_tiling_info& target, uint3 pos, uint subres, bool recursive)
+	void TiledResourceManager::load_tile(update_tiling_info& target, uint3 pos, uint storage_index, bool recursive)
 	{
 		auto& alloc_info = (resource)->alloc_info;
-		auto& tile = tiles[subres][pos];
+		auto& tile = tiles[storage_index][pos];
 
 		if (!tile.heap_position.heap)
 		{
 			tile.heap_position = resource->get_device().get_static_gpu_data().create_tile(tile_heap_type);
 			target.add_tile(tile);
-			on_load(ivec4(pos, subres));
+			on_load(ivec4(pos, storage_index));
 			if (recursive)
 			{
-				if (subres != tiles.size() - 1)
+				// Phase 5.9: tiles[]/storage_index are flat-indexed as
+				// (mip + slice*unpacked_mip_count) once an array is
+				// involved -- "storage_index+1" only means "next coarser mip
+				// of THIS SAME slice" while still inside that slice's mip
+				// range; must not walk into the next slice's mip 0.
+				// Array-aware, but load_packed() itself is still only
+				// correct for a single slice (see its own comment) -- an
+				// array resource simply never reaches this branch in
+				// practice, since callers clamp their usable mip count to
+				// unpacked_mip_count.
+				bool at_last_standard_mip_of_slice = (unpacked_mip_count == 0) || ((storage_index % unpacked_mip_count) == unpacked_mip_count - 1);
+				if (!at_last_standard_mip_of_slice)
 				{
-					load_tile(target, pos / 2, subres + 1, recursive);
+					load_tile(target, uint3(pos.x / 2, pos.y / 2, pos.z / 2), storage_index + 1, recursive);
 				}
 				else
 				{
@@ -37,21 +48,34 @@ namespace HAL {
 		}
 	}
 
-	void  TiledResourceManager::zero_tile(update_tiling_info& target, uint3 pos, uint subres)
+	void  TiledResourceManager::zero_tile(update_tiling_info& target, uint3 pos, uint storage_index)
 	{
-		auto& tile = tiles[subres][pos];
+		auto& tile = tiles[storage_index][pos];
 
 		if (tile.heap_position.heap)
 		{
-			tile.heap_position.handle.Free();
+			// Phase 5.9 fix: don't Free() the handle here -- the underlying
+			// allocator (PagePool::free()) makes the sub-allocation reusable
+			// for a completely unrelated request immediately, with no GPU
+			// fence delay, but the GPU hasn't even been told about this
+			// UpdateTileMappings unmap yet (that happens later, when this
+			// command list's queue submission is processed), let alone
+			// finished any in-flight reads of the old content. Keep the
+			// handle alive in target.pending_free; it gets actually freed in
+			// on_tile_update(), which only runs after a real GPU fence wait
+			// confirms this batch has completed.
+			target.pending_free.push_back(tile.heap_position.handle);
 
 			tile.heap_position.heap = nullptr;
 			target.add_tile(tile);
 
-			on_zero(ivec4(pos, subres));
+			on_zero(ivec4(pos, storage_index));
 
 
-			if (/*recursive && */subres != tiles.size() - 1)
+			// Phase 5.9: see the matching comment in load_tile() -- must not
+			// walk the parent-mip collapse check across a slice boundary.
+			bool at_last_standard_mip_of_slice = (unpacked_mip_count == 0) || ((storage_index % unpacked_mip_count) == unpacked_mip_count - 1);
+			if (/*recursive && */!at_last_standard_mip_of_slice)
 			{
 				uint3 parent_pos = pos / 2;
 
@@ -59,9 +83,9 @@ namespace HAL {
 
 				auto is_mapped = [&](uint3 pos) {
 
-					if (math::all(pos.higher_eq(uint3(0, 0, 0))) && math::all(pos.lower_eq(tiles[subres].size())))
+					if (math::all(pos.higher_eq(uint3(0, 0, 0))) && math::all(pos.lower_eq(tiles[storage_index].size())))
 					{
-						return !!tiles[subres][pos].heap_position.heap;
+						return !!tiles[storage_index][pos].heap_position.heap;
 					}
 
 					return false;
@@ -76,29 +100,28 @@ namespace HAL {
 
 				if (can_unmap)
 				{
-					zero_tile(target, parent_pos, subres + 1);
+					zero_tile(target, parent_pos, storage_index + 1);
 				}
 
 			}
 		}
 	}
 
-	void TiledResourceManager::load_tiles_internal(update_tiling_info& target, uint3 from, uint3 to, uint subres, bool recursive)
+	void TiledResourceManager::load_tiles_internal(update_tiling_info& target, uint3 from, uint3 to, uint storage_index, bool recursive)
 	{
 		for (uint x = from.x; x <= to.x; x++)
 			for (uint y = from.y; y <= to.y; y++)
 				for (uint z = from.z; z <= to.z; z++)
 				{
-					load_tile(target, { x,y,z }, subres, recursive);
+					load_tile(target, { x,y,z }, storage_index, recursive);
 				}
 	}
 
-	void TiledResourceManager::load_tiles(CommandList* list, uint3 from, uint3 to, uint subres)
+	void TiledResourceManager::load_tiles(CommandList* list, uint3 from, uint3 to, uint array_slice, uint mip)
 	{
-
 		update_tiling_info info;
 		info.resource = resource;
-		load_tiles_internal(info, from, to, subres, true);
+		load_tiles_internal(info, from, to, flat_index(array_slice, mip), true);
 		// TODO: make list
 		if (list)
 		{
@@ -108,18 +131,20 @@ namespace HAL {
 			resource->get_device().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
-	void TiledResourceManager::zero_tiles(CommandList* list, uint3 from, uint3 to)
+	// One signature for both "just slice 0" (VoxelGI's single-slice usage,
+	// via the defaults) and "a specific slice/mip" (VSM's per-page-slot
+	// atlas/HiZ) -- see the .ixx declaration comment.
+	void TiledResourceManager::zero_tiles(CommandList* list, uint3 from, uint3 to, uint array_slice, uint mip)
 	{
-
 		update_tiling_info info;
 		info.resource = resource;
 
-
+		uint storage_index = flat_index(array_slice, mip);
 		for (uint x = from.x; x <= to.x; x++)
 			for (uint y = from.y; y <= to.y; y++)
 				for (uint z = from.z; z <= to.z; z++)
 				{
-					zero_tile(info, { x,y,z }, 0);
+					zero_tile(info, { x,y,z }, storage_index);
 				}
 
 		// TODO: make list
@@ -132,13 +157,14 @@ namespace HAL {
 	}
 
 
-	void TiledResourceManager::load_tiles(CommandList* list, std::list<uint3>& tiles, uint subres, bool recursive)
+	void TiledResourceManager::load_tiles(CommandList* list, std::list<uint3>& tiles, uint array_slice, uint mip, bool recursive)
 	{
 		update_tiling_info info;
 		info.resource = resource;
 
+		uint storage_index = flat_index(array_slice, mip);
 		for (auto t : tiles)
-			load_tile(info, t, subres, recursive);
+			load_tile(info, t, storage_index, recursive);
 
 
 		// TODO: make list
@@ -149,15 +175,15 @@ namespace HAL {
 		else
 			resource->get_device().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
-	void TiledResourceManager::zero_tiles(CommandList* list, std::list<uint3>& tiles_to_remove)
+	void TiledResourceManager::zero_tiles(CommandList* list, std::list<uint3>& tiles_to_remove, uint array_slice, uint mip)
 	{
 		update_tiling_info info;
 		info.resource = resource;
 
-
+		uint storage_index = flat_index(array_slice, mip);
 		for (auto t : tiles_to_remove)
 		{
-			zero_tile(info, t, 0);
+			zero_tile(info, t, storage_index);
 		}
 
 		// TODO: make list
@@ -178,13 +204,19 @@ namespace HAL {
 		info.resource = resource;
 		for (int i = 0; i < tiles.size(); i++)
 		{
-			uint3 size = tiles[i].size();
-
 			for (uint x = 0; x < tiles[i].size().x; x++)
 				for (uint y = 0; y < tiles[i].size().y; y++)
 					for (uint z = 0; z < tiles[i].size().z; z++)
 					{
-						zero_tile(info, { x, y, z }, 0);
+						// Fixed (Phase 5.9 audit): this used to hardcode
+						// storage_index=0 regardless of `i` -- every slot
+						// beyond the first (any mip>0 for a single-slice
+						// resource, or any slice/mip beyond (0,0) for an
+						// array) never actually got unmapped by a "zero
+						// everything" call, silently leaking its tile
+						// mapping. `i` already IS the flat storage index this
+						// loop is sized from -- use it.
+						zero_tile(info, { x, y, z }, i);
 					}
 		}
 
@@ -214,10 +246,9 @@ namespace HAL {
 		info.add_tile(tile);
 	}
 
-	uint3 TiledResourceManager::get_tiles_count(int mip_level)
+	uint3 TiledResourceManager::get_tiles_count(uint array_slice, uint mip)
 	{
-		return tiles[mip_level].size();
-
+		return tiles[flat_index(array_slice, mip)].size();
 	}
 	uint3 TiledResourceManager::get_tile_shape()
 	{
@@ -269,18 +300,32 @@ namespace HAL {
 			info.resource->get_device().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
-	void TiledResourceManager::on_tile_update(const update_tiling_info& info)
+	void TiledResourceManager::on_tile_update(update_tiling_info& info)
 	{
 		for (auto& [heap, tiles] : info.tiles)
 		{
 			for (auto tile : tiles)
 			{
-				if (tile.subresource == gpu_tiles.size())
+				// Fixed (Phase 5.9 audit): this used to index by
+				// tile.subresource (the REAL D3D12 subresource), which only
+				// coincides with our flat storage_index when the resource
+				// has no packed mips and PlaneSlice==0 -- use storage_index,
+				// the field that's actually meant to index gpu_tiles[].
+				if (tile.storage_index == gpu_tiles.size())
 					gpu_packed_tile = tile;
 				else
-					gpu_tiles[tile.subresource][tile.pos] = tile;
+					gpu_tiles[tile.storage_index][tile.pos] = tile;
 			}
 		}
+
+		// Phase 5.9 fix: safe to actually release the old physical memory now
+		// -- this only runs after Queue::execute_internal's gpu_wait_thread has
+		// confirmed (via a real fence wait) that the batch which recorded
+		// these unmaps has completed on the GPU. See the pending_free member
+		// comment in HAL.TiledMemoryManager.ixx.
+		for (auto& handle : info.pending_free)
+			handle.Free();
+		info.pending_free.clear();
 	}
 
 
@@ -298,10 +343,9 @@ namespace HAL {
 		return !tiles.empty();
 	}
 
-	bool TiledResourceManager::is_mapped(uint3 pos, uint subres) const
+	bool TiledResourceManager::is_mapped(uint3 pos, uint array_slice, uint mip) const
 	{
-		return !!tiles[subres][pos].heap_position.heap;
+		return !!tiles[flat_index(array_slice, mip)][pos].heap_position.heap;
 	}
 
 }
-

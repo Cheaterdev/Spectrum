@@ -143,9 +143,42 @@ export
 			uint get_offset() const;
 
 			std::shared_ptr<DescriptorHeapStorage> get_storage() const;
+
+			// True once .create()'s underlying operator=(view_desc) has
+			// actually written a descriptor into this slot (see the
+			// `written` member's own comment below). Used at the point a
+			// NAMED view field (texture2D, texture2DArray, rwTexture2D, ...)
+			// gets pulled out of one struct and bound into another (the
+			// HasTexture2D-etc.-constrained operator= overloads in
+			// HAL.HLSL.ixx) -- that is specifically "about to be sampled by
+			// a shader", unlike a generic whole-object copy of a multi-view
+			// container (e.g. StructuredBufferView's move-assignment
+			// memberwise-copying every sub-handle, most of which are
+			// structurally inapplicable -- e.g. a raygen SBT record's
+			// never-created TextureCube slot -- and never read by anything).
+			bool is_written() const { return written; }
 		protected:
 			std::shared_ptr<DescriptorHeapStorage> storage;
 			UINT offset = std::numeric_limits<uint>::max();
+
+			// Set only by operator=(const T&)/operator=(T&&) below -- the
+			// actual "write the descriptor into the heap slot" step (.create()
+			// on Texture2D/Texture2DArray/RWTexture2D/etc. bottoms out here).
+			// A Texture2DView (and friends) always hands out a Handle for
+			// every possible view kind regardless of whether the owning
+			// resource's ResFlags actually support it (see
+			// Texture2DView::init(), HAL.ResourceViews.cpp) -- only the
+			// flag-gated .create() call actually writes content into that
+			// heap slot. Without this flag, a resource created with e.g.
+			// DepthStencil but not ShaderResource silently hands shaders a
+			// perfectly valid-looking, bindable, but NEVER-WRITTEN descriptor
+			// index -- no D3D12 validation error, just whatever unrelated
+			// resource's content last occupied that heap slot (root-caused a
+			// real bug: VSM_Atlas sampled GUI text). See
+			// operator=(const Handle&)'s ASSERT below, which is where this
+			// gets caught -- at the point a view is actually bound for
+			// shader use.
+			bool written = false;
 		};
 
 		namespace internal // TODO oops, exported
@@ -191,6 +224,7 @@ export
 			auto& heap = *storage->get_heap();
 			heap[get_offset()].place(v, storage->is_deferred());
 			get_resource_info() = ResourceInfo(v);
+			written = true;
 		}
 
 		template<HAL::Views::ViewTemplate T>
@@ -200,6 +234,7 @@ export
 			auto& heap = *storage->get_heap();
 			heap[get_offset()].place(v, storage->is_deferred());  // read before move
 			get_resource_info() = ResourceInfo(std::move(v)); // move shared_ptr into variant
+			written = true;
 		}
 
 

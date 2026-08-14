@@ -42,7 +42,7 @@ void Texture3DMultiTiles::set(HAL::ResourceDesc desc)
 
 	tex_dynamic->resource->get_tiled_manager().on_zero = [this](ivec4 pos)
 	{
-		if (tex_static->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
+		if (tex_static->resource->get_tiled_manager().is_mapped(pos.xyz, 0, pos.w))
 		{
 			auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;
 			heap_pos.handle = ResourceHandle();
@@ -56,7 +56,7 @@ void Texture3DMultiTiles::set(HAL::ResourceDesc desc)
 
 	tex_static->resource->get_tiled_manager().on_load = [this](ivec4 pos)
 	{
-		if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
+		if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, 0, pos.w))
 		{
 			auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;
 			heap_pos.handle = ResourceHandle();
@@ -66,7 +66,7 @@ void Texture3DMultiTiles::set(HAL::ResourceDesc desc)
 
 	tex_static->resource->get_tiled_manager().on_zero = [this](ivec4 pos)
 	{
-		if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
+		if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, 0, pos.w))
 		{
 			tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos.xyz, 0);
 		}
@@ -332,7 +332,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		for (int i = 0; i < gpu_tiles_buffer.size(); i++)
 		{
 			gpu_tiles_buffer[i].reset(new GPUTilesBuffer);
-			gpu_tiles_buffer[i]->set_size(tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count(i), tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape());
+			gpu_tiles_buffer[i]->set_size(tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count(0, i), tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape());
 		}
 
 
@@ -364,7 +364,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		voxel_info.GetSize().x = voxel_info.GetSize().y = voxel_info.GetSize().z =
 			std::max(200.0f, voxel_info.GetSize().max_element());
 		voxel_info.GetVoxel_tiles_count().xyz =
-			tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count(0);
+			tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count();
 		voxel_info.GetVoxels_per_tile().xyz =
 			tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 

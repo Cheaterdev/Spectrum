@@ -119,6 +119,7 @@ export
 			resident.erase(it);
 			slot_owner[slot] = VSMPageKey{ -1, 0, 0 };
 			free_list.push_back(slot);
+			pending_unmap_slots.push_back(slot);
 		}
 
 		// The other reclaim path: a page that has scrolled entirely off a
@@ -153,8 +154,41 @@ export
 				int slot = it->second;
 				slot_owner[slot] = VSMPageKey{ -1, 0, 0 };
 				free_list.push_back(slot);
+				pending_unmap_slots.push_back(slot);
 				it = resident.erase(it);
 			}
+		}
+
+		// Which physical slots need a D3D12 tile-mapping change this frame,
+		// for the reserved-resource atlas VSM owns directly. A slot only
+		// needs an actual GPU map/unmap when it crosses the free-list
+		// boundary (popped = needs backing memory, pushed = give its heap
+		// tile back) -- a slot that changes owner via priority-stealing
+		// stays physically mapped throughout, just gets redrawn.
+		//
+		// Called once per frame (from VSM_RenderPages' render(), before
+		// issuing any tile-mapping GPU calls) to drain and coalesce this
+		// frame's requests -- a slot freed then immediately re-acquired the
+		// same frame nets out to "stays mapped," not two redundant GPU calls.
+		void take_pending_tile_changes(std::vector<int>& out_to_map, std::vector<int>& out_to_unmap)
+		{
+			out_to_map.clear();
+			out_to_unmap.clear();
+			if (pending_map_slots.empty() && pending_unmap_slots.empty())
+				return;
+
+			std::unordered_set<int> unmap_set(pending_unmap_slots.begin(), pending_unmap_slots.end());
+			std::unordered_set<int> map_set(pending_map_slots.begin(), pending_map_slots.end());
+
+			for (int s : pending_map_slots)
+				if (!unmap_set.count(s))
+					out_to_map.push_back(s);
+			for (int s : pending_unmap_slots)
+				if (!map_set.count(s))
+					out_to_unmap.push_back(s);
+
+			pending_map_slots.clear();
+			pending_unmap_slots.clear();
 		}
 
 	private:
@@ -162,6 +196,8 @@ export
 		std::vector<int>      free_list;
 		std::vector<VSMPageKey> slot_owner;
 		std::vector<uint64_t> last_used_frame;
+		std::vector<int> pending_map_slots;
+		std::vector<int> pending_unmap_slots;
 
 		void ensure_capacity()
 		{
@@ -186,6 +222,7 @@ export
 			{
 				int slot = free_list.back();
 				free_list.pop_back();
+				pending_map_slots.push_back(slot);
 				return slot;
 			}
 

@@ -76,7 +76,7 @@ CD3DX12_RESOURCE_DESC1  to_native(const ResourceDesc& desc)
             auto texture_desc = feedback_desc.texture->get_desc().as_texture();
 
         auto result = CD3DX12_RESOURCE_DESC1 ::Tex2D(DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE, texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.ArraySize, texture_desc.MipLevels, 1, 0, to_native(desc.Flags));
-        auto tiles= feedback_desc.texture->get_tiled_manager().get_tiles_count(0);
+        auto tiles= feedback_desc.texture->get_tiled_manager().get_tiles_count();
 
         auto res = uint2(4,4);
 

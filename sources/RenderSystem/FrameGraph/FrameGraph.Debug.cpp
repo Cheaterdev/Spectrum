@@ -571,6 +571,19 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 				snap_scale = m_scale;
 			}
 			UINT array_size = res_desc.as_texture().ArraySize;
+
+			// A resource with no ResFlags::ShaderResource (UAV-only or
+			// depth-stencil-only, e.g. GBuffer_Quality) has no SRV descriptor
+			// written at all -- Texture2DView::init() only calls .create() on
+			// texture2D/texture2DArray inside `if (ShaderResource)`, while the
+			// descriptor SLOTS are always allocated. Binding an unwritten slot
+			// samples whatever unrelated resource last occupied it and shows
+			// its contents here, with no D3D12 validation error. Skip instead.
+			const bool srv_ok = (array_size > 1) ? src->texture2DArray.is_written()
+			                                     : src->texture2D.is_written();
+			if (!srv_ok)
+				return;
+
 			if (array_size > 1)
 			{
 				compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2DArray>();

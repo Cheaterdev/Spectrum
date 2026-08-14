@@ -50,6 +50,14 @@ public:
 	// count x active level count ever exceeds this, entries are clamped and
 	// logged once per episode rather than overflowing the buffer.
 	static constexpr int MaxDispatchEntries = MaxLevels * 2048;
+	// VSM_Atlas's logical slice count, decoupled from physical_page_count
+	// (the real, elastic VRAM budget -- see VSMPageTable's map/unmap
+	// tracking). D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION is 2048, the
+	// hardware ceiling for a Texture2DArray's ArraySize -- since VSM_Atlas
+	// is a reserved resource now, an unused slice costs nothing but the
+	// tiny per-slice tile bookkeeping, so there's no reason to size it any
+	// smaller than the API allows.
+	static constexpr int MaxPhysicalSlots = 2048;
 
 private:
 	HAL::Texture::ptr vsm_atlas_tex;
@@ -57,8 +65,37 @@ private:
 	VSMPageTable page_table;
 	VSMInvalidationTracker tracker;
 
+	// Last world bounds marked dirty for each tracked object (see
+	// attach_scene()) -- a fast-moving object can leave a page's footprint
+	// entirely between two move events, so its OLD bounds need marking too,
+	// not just its current ones, or the vacated page's stale shadow content
+	// never gets invalidated. Scene events can fire from arbitrary threads.
+	std::mutex bounds_mutex;
+	std::unordered_map<scene_object*, std::pair<vec3, vec3>> last_marked_bounds;
+
 	std::mutex pos_mutex;
 	float3 position;
+
+	// Per-frame snapshot of `position`, taken once at the top of plan_frame()
+	// and used by EVERY consumer for the rest of the frame (page planning, the
+	// per-page rasterization cameras in m_renderpages_render, and the
+	// light_view uploaded for sampling in m_combine_render).
+	//
+	// These three used to call get_position() independently. set_position() is
+	// driven from the UI thread, so while the light is being dragged the three
+	// reads can each observe a DIFFERENT direction within one frame: pages get
+	// planned in one light basis, rasterized in a second, and sampled in a
+	// third. The resulting mismatched depth content is then cached forever --
+	// dirty_mask returns to 0 as soon as the light stops moving, so nothing
+	// ever redraws it (confirmed live: resident=28 dirty=0 held for 20+
+	// seconds while shadows stayed visibly wrong). That's why shadows were
+	// correct the first time through a given light direction but permanently
+	// broken after sweeping the light around and coming back.
+	//
+	// plan_frame() runs in Graph::compile()'s pre_run -- single-threaded and
+	// strictly before any pass's render() -- so a snapshot taken there is
+	// stable and consistent for the whole frame.
+	float3 frame_light_pos;
 
 	// Phase 5.8 note: VSM_RenderPages is a single pass now, not one Multiple-
 	// slot instance per level, so the original concurrency hazard here (two
@@ -107,6 +144,18 @@ private:
 	std::array<bool, MaxLevels>   level_initialized{};
 	std::array<float2, MaxLevels> cached_origin{};
 	std::array<std::array<int, MaxPagesPerLevel>, MaxLevels> cached_slots{};
+
+	// Scene-dirty bits for pages that aren't resident yet (not needed this
+	// frame, or needed but the pool was exhausted) -- held here directly
+	// instead of being bounced back through VSMInvalidationTracker every
+	// frame. The tracker's take_dirty() is destructive-on-read, so routing
+	// these bits back into it via mark_pages() just to have them read right
+	// back out next frame (since resident_mask hasn't changed) was a
+	// permanent no-op busy-loop for any page outside the current frustum --
+	// confirmed live (scene_mask sitting at a fixed nonzero value for an
+	// entire session). Cleared for exactly the bits that become resident
+	// each frame (folded into scene_mask there); otherwise persists untouched.
+	std::array<uint32_t, MaxLevels> pending_scene_mask{};
 
 	// Light direction/position isn't a Scene event -- set_position() (driven
 	// by the sun-direction UI control) doesn't touch the scene at all, so

@@ -53,43 +53,82 @@ void VSM::attach_scene(std::shared_ptr<Scene> scene)
 	// world_to_page's edge-clamp means an object slightly outside a coarse
 	// level's grid still marks that level's nearest edge page (conservative,
 	// not a correctness bug).
-	tracker.attach(scene, [this](scene_object* object)
+	tracker.attach(scene,
+	[this](scene_object* object)
+	{
+		// on_element_add: object->get_min()/get_max() aren't reliably valid
+		// yet here. on_add() (SceneObject.cpp) fires this event immediately
+		// on insertion, before update_transforms() has necessarily run for
+		// the new object -- occluder::min/max are cached fields only ever
+		// set by apply_transform(), which update_transforms() only calls
+		// when its own change-detection fires. Worse,
+		// MeshAssetInstance::update_transforms() gates its entire bounds
+		// computation (and the on_moved firing that would otherwise
+		// self-correct this) behind `res || need_update_mats`, and
+		// need_update_mats starts false -- so a freshly added object whose
+		// very first computed transform happens not to trip that check
+		// never gets a correcting on_moved at all. Rather than trust a
+		// possibly-default (0,0,0) AABB, just mark every currently-active
+		// level fully dirty -- object adds are rare, not a per-frame cost.
+		for (int level = 0; level < VSM::MaxLevels; level++)
+			if (level_initialized[level])
+				tracker.mark_level_full(level);
+	},
+	[this](scene_object* object)
 	{
 		vec3 wmin = object->get_min();
 		vec3 wmax = object->get_max();
 
-		camera light_view_cam = make_light_view_camera(get_position());
-		box bounds_ls = light_view_cam.get_points(wmin, wmax).get_bounds_in(light_view_cam.get_view());
-		float2 ls_min(bounds_ls.left, bounds_ls.top);
-		float2 ls_max(bounds_ls.right, bounds_ls.bottom);
-
-		for (int level = 0; level < VSM::MaxLevels; level++)
+		auto mark_bounds = [this](vec3 mn, vec3 mx)
 		{
-			// A level that hasn't rendered yet has no meaningful
-			// cached_origin -- it'll get a full-mask render (recentered)
-			// the first time it does run, so there's nothing useful to
-			// mark here yet. Also true of any level currently outside
-			// [active_min, active_max] -- plan_frame() never planned it.
-			if (!level_initialized[level])
-				continue;
+			camera light_view_cam = make_light_view_camera(get_position());
+			box bounds_ls = light_view_cam.get_points(mn, mx).get_bounds_in(light_view_cam.get_view());
+			float2 ls_min(bounds_ls.left, bounds_ls.top);
+			float2 ls_max(bounds_ls.right, bounds_ls.bottom);
 
-			ivec2 p0 = page_table.clipmap.world_to_page(level, ls_min, cached_origin[level]);
-			ivec2 p1 = page_table.clipmap.world_to_page(level, ls_max, cached_origin[level]);
+			for (int level = 0; level < VSM::MaxLevels; level++)
+			{
+				// A level that hasn't rendered yet has no meaningful
+				// cached_origin -- it'll get a full-mask render (recentered)
+				// the first time it does run, so there's nothing useful to
+				// mark here yet. Also true of any level currently outside
+				// [active_min, active_max] -- plan_frame() never planned it.
+				if (!level_initialized[level])
+					continue;
 
-			uint32_t mask = 0;
-			for (int py = p0.y; py <= p1.y; py++)
-				for (int px = p0.x; px <= p1.x; px++)
-					mask |= 1u << (py * page_table.clipmap.pages_per_level + px);
+				ivec2 p0 = page_table.clipmap.world_to_page(level, ls_min, cached_origin[level]);
+				ivec2 p1 = page_table.clipmap.world_to_page(level, ls_max, cached_origin[level]);
 
-			tracker.mark_pages(level, mask);
-		}
+				uint32_t mask = 0;
+				for (int py = p0.y; py <= p1.y; py++)
+					for (int px = p0.x; px <= p1.x; px++)
+						mask |= 1u << (py * page_table.clipmap.pages_per_level + px);
+
+				tracker.mark_pages(level, mask);
+			}
+		};
+
+		mark_bounds(wmin, wmax);
+
+		// A fast-moving object can clear a page's footprint entirely between
+		// two on_moved events -- only marking its CURRENT bounds then leaves
+		// the page it just LEFT never invalidated, so that page's cached
+		// content keeps showing the object's shadow at its old position
+		// forever (nothing else will ever redraw that page). Track each
+		// object's last-marked world bounds and also mark those on a change,
+		// so the vacated page gets a redraw too.
+		std::lock_guard<std::mutex> g(bounds_mutex);
+		auto it = last_marked_bounds.find(object);
+		if (it != last_marked_bounds.end() && (it->second.first != wmin || it->second.second != wmax))
+			mark_bounds(it->second.first, it->second.second);
+		last_marked_bounds[object] = { wmin, wmax };
 	});
 }
 
 void VSM::pass_data(FrameGraph::TaskBuilder& builder)
 {
 	if (!vsm_atlas_tex)
-		vsm_atlas_tex.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R32_TYPELESS, uint2(page_table.page_size, page_table.page_size), (uint)page_table.physical_page_count, 1, HAL::ResFlags::DepthStencil | HAL::ResFlags::ShaderResource)));
+		vsm_atlas_tex.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R32_TYPELESS, uint2(page_table.page_size, page_table.page_size), (uint)MaxPhysicalSlots, 1, HAL::ResFlags::DepthStencil | HAL::ResFlags::ShaderResource | HAL::ResFlags::Virtual)));
 	builder.pass_texture(FrameGraph::ResourceID::VSM_Atlas, vsm_atlas_tex->resource);
 }
 
@@ -106,6 +145,7 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 		return;
 
 	float3 current_light_pos = get_position();
+	frame_light_pos = current_light_pos;
 	camera light_view_cam = make_light_view_camera(current_light_pos);
 	float2 cam_pos_ls = (float4(cam->position, 1) * light_view_cam.get_view()).xy;
 
@@ -209,7 +249,10 @@ void VSM::plan_level(int level, float2 cam_pos_ls, const box& bounds_all, uint64
 	light_change_pending[level] = false;
 	pos_mutex.unlock();
 
-	uint32_t scene_mask = tracker.take_dirty(level) & all_pages_mask;
+	// Combine this frame's freshly-marked dirty pages with whatever's still
+	// pending from an earlier frame because it wasn't resident yet (see the
+	// pending_scene_mask member comment in VSM.ixx).
+	uint32_t scene_mask = (tracker.take_dirty(level) & all_pages_mask) | pending_scene_mask[level];
 
 	// A page that has scrolled entirely off this level's grid (recenter
 	// moved past it) isn't covered by any local cell below any more, so
@@ -287,22 +330,14 @@ void VSM::plan_level(int level, float2 cam_pos_ls, const box& bounds_all, uint64
 		}
 	}
 
-	// Bug fix: take_dirty() above already destructively cleared scene_mask's
-	// bits out of the tracker, but a bit for a page that isn't resident THIS
-	// frame (not needed yet, or needed but the pool was exhausted) gets
-	// masked away below and would otherwise be lost forever -- nothing else
-	// ever re-marks it, since newly_allocated_mask only fires the frame an
-	// allocation actually succeeds, not retroactively for a scene-change
-	// that happened while the page was unavailable. Symptom this caused,
-	// confirmed by the user: a newly-added mesh's shadow didn't appear until
-	// an unrelated full-level redraw (moving the light) happened to also
-	// redraw that page. Fix: put back exactly the bits that don't survive
-	// the resident_mask filter below, so a future frame -- once the page
-	// actually becomes resident -- picks them up instead of the signal
-	// silently vanishing.
-	uint32_t lost_scene_mask = scene_mask & ~plan.resident_mask;
-	if (lost_scene_mask)
-		tracker.mark_pages(level, lost_scene_mask);
+	// A bit for a page that isn't resident THIS frame (not needed yet, or
+	// needed but the pool was exhausted) would otherwise be lost forever --
+	// nothing else ever re-marks it, since newly_allocated_mask only fires
+	// the frame an allocation actually succeeds, not retroactively for a
+	// scene-change that happened while the page was unavailable. Keep it in
+	// pending_scene_mask instead of routing it back through
+	// VSMInvalidationTracker (see that member's comment in VSM.ixx).
+	pending_scene_mask[level] = scene_mask & ~plan.resident_mask;
 
 	// newly_allocated/light_moved invalidate that specific page (not the
 	// whole level -- a page whose slot/content survived the recenter
@@ -429,6 +464,22 @@ VSM::VSM()
 		graphics.set_signature(Layouts::DefaultLayout);
 		compute.set_signature(Layouts::DefaultLayout);
 
+		{
+			std::vector<int> to_map, to_unmap;
+			page_table.take_pending_tile_changes(to_map, to_unmap);
+			if (!to_map.empty() || !to_unmap.empty())
+			{
+				auto& atlas_tiled = vsm_atlas_tex->resource->get_tiled_manager();
+				uint3 tile_dims = atlas_tiled.get_tiles_count();
+				uint3 to = uint3(tile_dims.x - 1, tile_dims.y - 1, 0);
+
+				for (int slot : to_map)
+					atlas_tiled.load_tiles(command_list.get(), uint3(0, 0, 0), to, (uint)slot);
+				for (int slot : to_unmap)
+					atlas_tiled.zero_tiles(command_list.get(), uint3(0, 0, 0), to, (uint)slot);
+			}
+		}
+
 		auto& sceneinfo = context.graph->get_context<SceneInfo>();
 		auto  scene     = sceneinfo.scene;
 
@@ -463,7 +514,7 @@ VSM::VSM()
 				float2 page_min = page_table.clipmap.page_min(level, page, plan.origin);
 				float2 page_max = page_min + float2(page_table.clipmap.page_world_size(level));
 
-				camera page_cam = make_light_view_camera(get_position());
+				camera page_cam = make_light_view_camera(frame_light_pos);
 				page_cam.set_projection_params(
 					page_min.x, page_max.x,
 					page_min.y, page_max.y,
@@ -698,7 +749,7 @@ VSM::VSM()
 
 		context.graph->set_slot(SlotID::FrameInfo, compute);
 
-		camera light_cam = make_light_view_camera(get_position());
+		camera light_cam = make_light_view_camera(frame_light_pos);
 		float2 cam_pos_ls = (float4(cam->position, 1) * light_cam.get_view()).xy;
 
 		{
