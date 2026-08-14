@@ -327,6 +327,14 @@ export{
 
 			void clear_uav(const Handles::UAV& h, vec4 ClearColor = vec4(0, 0, 0, 0));
 
+			// Clears a DSV directly (ClearDepthStencilView-equivalent) without
+			// binding it as the active render target the way set_rtv's
+			// RTOptions::ClearDepth does -- set_rtv's clear path also does a
+			// full OM bind, resource-state transitions for every attachment,
+			// and render-target-size bookkeeping, all irrelevant when the
+			// caller only wants the clear. Mirrors clear_uav's shape.
+			void clear_dsv(const Handles::DSV& h, bool clear_depth = true, bool clear_stencil = false, float depth = 0, UINT8 stencil = 0);
+
 		};
 
 		class CopyContext

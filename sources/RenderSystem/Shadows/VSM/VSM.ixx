@@ -34,6 +34,22 @@ import HAL;
 export class VSM
 {
 public:
+	// Runtime A/B toggle for measuring Hi-Z occlusion culling's real cost:
+	// when false, plan_level() forces every resident page's skip_occlusion
+	// bit (the AS then never consults the pyramid, same as a page with no
+	// valid history) and m_renderpages_render skips rebuilding it entirely
+	// -- no copy/downsample dispatches at all, not just an untested pyramid.
+	// Plain bool: only ever read/written from the render thread and the
+	// UI's on_check callback (main thread), same low-ceremony treatment as
+	// auto_rotate_sun in main.cpp.
+	bool hiz_culling_enabled = true;
+private:
+	// Tracks the previous frame's toggle state so plan_frame() can detect
+	// an off->on transition and force a full pyramid rebuild -- see its
+	// use there.
+	bool hiz_culling_enabled_prev = true;
+public:
+
 	// Phase 5.7: one unified storage budget, no more separate "regular ring"
 	// / "adaptive tier" split. LevelZeroSlot is the fixed index whose size
 	// equals VSMClipmap::base_page_world_size; slots below are finer, above
@@ -215,6 +231,30 @@ private:
 	// Rebuilt fresh every frame, same as the old m_dispatch_entries it
 	// replaces.
 	std::vector<Table::VSMLevelDispatchInfo> m_level_dispatch_info;
+
+	// Phase 5.13: every per-slot view VSM_RenderPages' render() would
+	// otherwise call create_2d_slice()/create_mip() for -- once per dirty
+	// page, every frame -- is instead built ONCE, eagerly, for every
+	// physical slot, from the engine's permanent descriptor storage
+	// (Device::get_static_gpu_data(), not the per-frame resettable one
+	// create_2d_slice/create_mip normally allocate from). A slot's
+	// subresource identity never changes -- only which logical page
+	// currently owns it does -- so these views stay valid for the whole
+	// lifetime of VSM_Atlas/VSM_PageHiZ. Built on VSM_RenderPages' first
+	// real render() (data.VSM_PageHiZ doesn't exist before its own setup()
+	// runs, so this can't happen at VSM construction time); see
+	// build_slot_views().
+	bool slot_views_built = false;
+	std::vector<HAL::Texture2DView> atlas_slot_views;                // [slot]
+	std::vector<std::vector<HAL::Texture2DView>> page_hiz_mip_views; // [slot][mip]
+
+	void build_slot_views(Passes::VSM_RenderPages::Context& data, int pyramid_mip_count);
+
+	// Mirrors MipMapGenerator::build_hiz_pyramid's dispatch loop exactly
+	// (that one is shared with the main camera's own Hi-Z, so it stays
+	// untouched), but reads pre-built views out of page_hiz_mip_views
+	// instead of calling create_mip per mip per dirty page per frame.
+	void dispatch_page_hiz_pyramid(HAL::ComputeContext& compute, int slot, int pyramid_mip_count);
 
 	Passes::VSM_GatherDispatch::setup_func_type  m_gatherdispatch_setup;
 	Passes::VSM_GatherDispatch::render_func_type m_gatherdispatch_render;

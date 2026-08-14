@@ -2088,6 +2088,20 @@ namespace HAL
 		create_usage_point(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW, false);
 	}
 
+	void CommandList::clear_dsv(const Handles::DSV& h, bool clear_depth, bool clear_stencil, float depth, UINT8 stencil)
+	{
+		// begin_op (not a bracketing create_usage_point pair) so consecutive
+		// clear_dsv calls against different subresources of the same
+		// resource -- e.g. one per dirty VSM page slice -- automatically
+		// merge into a single open batch instead of one barrier pair each.
+		// The batch is closed lazily by the next differing-class op or at
+		// list end, same as every draw/dispatch already does via
+		// pre_command/post_command.
+		begin_op(BarrierSync::DEPTH_STENCIL);
+		transition(h.get_resource_info(), BarrierSync::DEPTH_STENCIL);
+		compiler.clear_depth_stencil(h, clear_depth, clear_stencil, depth, stencil);
+	}
+
 	const std::vector<CommandRecord>& CommandList::get_debug_records() const
 	{
 		return compiler.get_debug_records();

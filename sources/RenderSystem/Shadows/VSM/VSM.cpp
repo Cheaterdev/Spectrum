@@ -125,6 +125,54 @@ void VSM::attach_scene(std::shared_ptr<Scene> scene)
 	});
 }
 
+void VSM::build_slot_views(Passes::VSM_RenderPages::Context& data, int pyramid_mip_count)
+{
+	if (slot_views_built)
+		return;
+
+	auto& storage = RenderSystem::get().device().get_static_gpu_data();
+	int physical_slots = page_table.physical_page_count;
+
+	atlas_slot_views.resize(physical_slots);
+	page_hiz_mip_views.resize(physical_slots);
+
+	for (int slot = 0; slot < physical_slots; slot++)
+	{
+		atlas_slot_views[slot] = HAL::Texture2DView(vsm_atlas_tex->resource, storage,
+			HAL::TextureViewDesc{ 0, 1, (uint)slot, 1 });
+
+		auto& mips = page_hiz_mip_views[slot];
+		mips.resize(pyramid_mip_count);
+		for (int mip = 0; mip < pyramid_mip_count; mip++)
+			mips[mip] = HAL::Texture2DView(data.VSM_PageHiZ->resource, storage,
+				HAL::TextureViewDesc{ (uint)mip, 1, (uint)slot, 1 });
+	}
+
+	slot_views_built = true;
+}
+
+void VSM::dispatch_page_hiz_pyramid(HAL::ComputeContext& compute, int slot, int pyramid_mip_count)
+{
+	compute.set_signature(Layouts::DefaultLayout);
+	compute.set_pipeline<PSOS::DownsampleDepthMip>();
+
+	int page_size = page_table.page_size;
+	auto& mips = page_hiz_mip_views[slot];
+
+	for (int mip = 0; mip < pyramid_mip_count - 1; mip++)
+	{
+		uint32_t DstWidth  = (uint32_t)std::max(1, page_size >> (mip + 1));
+		uint32_t DstHeight = DstWidth;
+
+		Slots::DownsampleDepthMip mip_data;
+		mip_data.GetSrcMip() = mips[mip].texture2D;
+		mip_data.GetDstMip() = mips[mip + 1].rwTexture2D;
+		compute.set(mip_data);
+
+		compute.dispatch(ivec2(DstWidth, DstHeight), ivec2(8, 8));
+	}
+}
+
 void VSM::pass_data(FrameGraph::TaskBuilder& builder)
 {
 	if (!vsm_atlas_tex)
@@ -143,6 +191,15 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	auto  scene     = sceneinfo.scene;
 	if (!scene)
 		return;
+
+	// Re-enabling after a period with the pyramid un-rebuilt: any page
+	// redrawn while disabled has stale Hi-Z content that no longer matches
+	// its current atlas depth. Force the same full-level invalidation a
+	// light move already causes, so every resident page gets a real
+	// rebuild before anything trusts its pyramid again.
+	if (hiz_culling_enabled && !hiz_culling_enabled_prev)
+		light_change_pending.fill(true);
+	hiz_culling_enabled_prev = hiz_culling_enabled;
 
 	float3 current_light_pos = get_position();
 	frame_light_pos = current_light_pos;
@@ -348,8 +405,11 @@ void VSM::plan_level(int level, float2 cam_pos_ls, const box& bounds_all, uint64
 	plan.dirty_mask          = (newly_allocated_mask | scene_mask | (light_moved ? all_pages_mask : 0u)) & plan.resident_mask;
 	// A newly-allocated slot has no Hi-Z history; light_moved makes
 	// every resident page's existing pyramid stale too (built under the
-	// old light projection).
-	plan.skip_occlusion_mask = (newly_allocated_mask | (light_moved ? all_pages_mask : 0u)) & plan.resident_mask;
+	// old light projection). hiz_culling_enabled==false forces every
+	// resident page into this state -- the pyramid is never rebuilt for
+	// any of them (see m_renderpages_render), so none ever have valid
+	// history to test against.
+	plan.skip_occlusion_mask = (newly_allocated_mask | (light_moved || !hiz_culling_enabled ? all_pages_mask : 0u)) & plan.resident_mask;
 
 	// Indirection row is stale if local->slot changed for ANY cell --
 	// recenter, a residency flip, or a priority steal reassigning a
@@ -568,6 +628,8 @@ VSM::VSM()
 		graphics.set_signature(Layouts::DefaultLayout);
 		compute.set_signature(Layouts::DefaultLayout);
 
+		build_slot_views(data, pyramid_mip_count);
+
 		{
 			std::vector<int> to_map, to_unmap;
 			page_table.take_pending_tile_changes(to_map, to_unmap);
@@ -662,17 +724,16 @@ VSM::VSM()
 
 			// Clear only the pages actually being re-rendered this frame: the
 			// atlas is Static and shared across levels, so a cached page must
-			// keep its depth. One slice DSV per dirty page (the create_2d_slice
-			// + ClearDepth idiom PSSM.cpp uses), replacing the old multi-rect
-			// clear into a packed atlas.
+			// keep its depth. clear_dsv() (not set_rtv+ClearDepth) -- we're
+			// not about to draw into this slice yet, so binding it as the
+			// active render target would just be wasted OM-bind/transition/
+			// size-bookkeeping work on top of the actual clear.
 			for (int local = 0; local < pages_per_level; local++)
 			{
 				if (!((plan.dirty_mask >> local) & 1))
 					continue;
 
-				RT::DepthOnly slice_rt;
-				slice_rt.GetDepth() = data.VSM_Atlas->create_2d_slice(plan.slots[local], *command_list).depthStencil;
-				graphics.set_rtv(slice_rt, RTOptions::Default | RTOptions::ClearDepth);
+				command_list->clear_dsv(atlas_slot_views[plan.slots[local]].depthStencil);
 			}
 		}
 
@@ -725,44 +786,50 @@ VSM::VSM()
 			graphics.exec_indirect(*data.VSM_DispatchCommands, (UINT)MaxDispatchEntries);
 		}
 
-		// Rebuild each just-redrawn page's pyramid for next time it's dirty.
-		// VSM_Atlas was just a DSV -- nudge readable for the copy shader
-		// below, same one-off idiom PSSM.cpp uses; the next draw into it
-		// transitions it back automatically via set_rtv.
-		command_list->transition(data.VSM_Atlas->resource, HAL::ResourceStates::SHADER_RESOURCE);
-
-		for (int level = 0; level < VSM::MaxLevels; level++)
+		// Rebuild each just-redrawn page's pyramid for next time it's dirty
+		// -- skipped entirely when hiz_culling_enabled is false, not just
+		// left unconsulted: no copy/downsample dispatches at all, so this
+		// toggle actually measures the pyramid-maintenance cost rather than
+		// just disabling its result.
+		if (hiz_culling_enabled)
 		{
-			const LevelPlan& plan = m_plan[level];
-			if (!plan.valid || plan.dirty_mask == 0)
-				continue;
+			// VSM_Atlas was just a DSV -- nudge readable for the copy shader
+			// below, same one-off idiom PSSM.cpp uses; the next draw into it
+			// transitions it back automatically via set_rtv.
+			command_list->transition(data.VSM_Atlas->resource, HAL::ResourceStates::SHADER_RESOURCE);
 
-			for (int local = 0; local < pages_per_level; local++)
+			for (int level = 0; level < VSM::MaxLevels; level++)
 			{
-				if (!((plan.dirty_mask >> local) & 1))
+				const LevelPlan& plan = m_plan[level];
+				if (!plan.valid || plan.dirty_mask == 0)
 					continue;
 
-				int slot = plan.slots[local];
-				auto slice = data.VSM_PageHiZ->create_2d_slice(slot, *command_list);
-
-				compute.set_pipeline<PSOS::VSMCopyPageDepth>();
+				for (int local = 0; local < pages_per_level; local++)
 				{
-					// Both sides are per-page slices of the same size now, so
-					// this is a straight 1:1 slice copy -- no atlas offset.
-					Slots::VSMCopyPageDepth copy;
-					copy.GetAtlas()    = data.VSM_Atlas->create_2d_slice(slot, *command_list).texture2D;
-					copy.GetDst_mip0() = slice.create_mip(0, *command_list).rwTexture2D;
-					compute.set(copy);
+					if (!((plan.dirty_mask >> local) & 1))
+						continue;
+
+					int slot = plan.slots[local];
+
+					compute.set_pipeline<PSOS::VSMCopyPageDepth>();
+					{
+						// Both sides are per-page slices of the same size now, so
+						// this is a straight 1:1 slice copy -- no atlas offset.
+						Slots::VSMCopyPageDepth copy;
+						copy.GetAtlas()    = atlas_slot_views[slot].texture2D;
+						copy.GetDst_mip0() = page_hiz_mip_views[slot][0].rwTexture2D;
+						compute.set(copy);
+					}
+					compute.dispatch(ivec2(page_table.page_size, page_table.page_size), ivec2(8, 8));
+
+					dispatch_page_hiz_pyramid(compute, slot, pyramid_mip_count);
+
+					// Every mip but the last is later read as another mip's
+					// SrcMip, so it naturally rests as SHADER_RESOURCE; only the
+					// coarsest mip's write is never followed by a read.
+					UINT last_mip_subres = (UINT)(pyramid_mip_count - 1) + (UINT)slot * (UINT)pyramid_mip_count;
+					command_list->transition(data.VSM_PageHiZ->resource, HAL::ResourceStates::SHADER_RESOURCE, last_mip_subres);
 				}
-				compute.dispatch(ivec2(page_table.page_size, page_table.page_size), ivec2(8, 8));
-
-				MipMapGenerator::get().build_hiz_pyramid(compute, slice);
-
-				// Every mip but the last is later read as another mip's
-				// SrcMip, so it naturally rests as SHADER_RESOURCE; only the
-				// coarsest mip's write is never followed by a read.
-				UINT last_mip_subres = (UINT)(pyramid_mip_count - 1) + (UINT)slot * (UINT)pyramid_mip_count;
-				command_list->transition(data.VSM_PageHiZ->resource, HAL::ResourceStates::SHADER_RESOURCE, last_mip_subres);
 			}
 		}
 	};

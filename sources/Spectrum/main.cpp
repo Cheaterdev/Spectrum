@@ -242,6 +242,14 @@ public:
 		auto_rotate_row->on_check = [this](bool v) { auto_rotate_sun = v; };
 		base::add_child(auto_rotate_row);
 
+		auto hiz_row = std::make_shared<GUI::Elements::check_box_text>();
+		hiz_row->docking = GUI::dock::TOP;
+		hiz_row->x_type  = GUI::pos_x_type::RIGHT;
+		hiz_row->get_label()->text = "VSM Hi-Z culling";
+		hiz_row->get_check()->set_checked(vsm.hiz_culling_enabled);
+		hiz_row->on_check = [this](bool v) { vsm.hiz_culling_enabled = v; };
+		base::add_child(hiz_row);
+
 
 		MeshAsset::ptr asset_ptr = EngineAssets::material_tester.get_asset();
 
