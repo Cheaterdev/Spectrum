@@ -123,6 +123,7 @@ struct MeshCommandData
 	MeshInfo* mesh_cb;
 	MeshInstanceInfo* meshinstance_cb;
 	DispatchMeshArguments draw_commands;
+	uint meshlet_count;
 }
 
 struct MaterialCommandData

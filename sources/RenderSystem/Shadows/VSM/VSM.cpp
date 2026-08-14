@@ -436,6 +436,24 @@ VSM::VSM()
 	// covering every active+dirty level's every mesh, instead of one
 	// Multiple-slot pass per level) ------------------------------------------
 
+	m_gatherdispatch_setup = [this](Passes::VSM_GatherDispatch::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		// CPU-built and re-uploaded fresh every frame (like VSM_PageCameras),
+		// but the underlying allocation persists -- Static, sized to the
+		// fixed level-count budget (small, not mesh-count-dependent).
+		builder.create(data.VSM_LevelDispatchInfo, { (size_t)MaxLevels }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+		// GPU-appended now (Phase 5.12), not CPU-uploaded -- UnorderedAccess,
+		// not CopyDest. Sized to the same generous fixed upper bound as
+		// before (worst case is still bounded by total mesh parts x active
+		// dirty level count, same shape the old CPU loop's own worst case
+		// was).
+		// counted=true: this buffer is GPU-appended (AppendStructuredBuffer in
+		// the gather shader) and needs a real counter -- clear_counter() and
+		// exec_indirect()'s GPU-computed count both read it.
+		builder.create(data.VSM_DispatchCommands, { (size_t)MaxDispatchEntries, true }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+		return true;
+	};
+
 	m_renderpages_setup = [this, physical_slots, pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
 		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::DepthStencil);
@@ -443,11 +461,97 @@ VSM::VSM()
 		builder.create(data.VSM_PageCameras, { (size_t)MaxPages }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		// Static like VSM_Atlas: must survive until this page is next dirty.
 		builder.create(data.VSM_PageHiZ, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32_FLOAT, (UINT)physical_slots, (UINT)pyramid_mip_count }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-		// CPU-built and re-uploaded fresh every frame (like VSM_PageCameras),
-		// but the underlying allocation persists -- Static, sized to the
-		// generous fixed upper bound rather than the real per-frame count.
-		builder.create(data.VSM_DispatchCommands, { (size_t)MaxDispatchEntries }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+		// Now GPU-appended by VSM_GatherDispatch -- this pass only reads it
+		// via exec_indirect.
+		builder.need(data.VSM_DispatchCommands, FrameGraph::ResourceFlags::ComputeRead);
 		return true;
+	};
+
+	m_gatherdispatch_render = [this, pages_side, pages_per_level](Passes::VSM_GatherDispatch::Context& data, FrameGraph::FrameContext& context)
+	{
+		// GPU-driven replacement (Phase 5.12) for the old CPU
+		// scene->iterate_meshes() walk -- builds one small per-level info
+		// entry per active+dirty level (bounded by level count, same as the
+		// VSMPageBatch CBs already compiled per level), uploads it, and
+		// dispatches a compute shader that tests every scene mesh's AABB
+		// against every entry and Append()s a VSMDispatchCommandData for
+		// each overlap. plan_frame() already decided which levels are dirty
+		// (m_plan[]) -- this only decides which meshes matter for them.
+		auto& command_list = context.get_list();
+		auto& compute       = command_list->get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+
+		auto& sceneinfo = context.graph->get_context<SceneInfo>();
+		auto  scene     = sceneinfo.scene;
+
+		// Always reset, even if nothing ends up appended this frame --
+		// otherwise a stale count from a previous frame would make
+		// VSM_RenderPages' exec_indirect replay old entries.
+		compute.clear_counter(*data.VSM_DispatchCommands);
+
+		if (!scene)
+			return;
+
+		m_level_dispatch_info.clear();
+		for (int level = 0; level < VSM::MaxLevels; level++)
+		{
+			const LevelPlan& plan = m_plan[level];
+			if (!plan.valid || plan.dirty_mask == 0)
+				continue;
+
+			// One per-level page-batch CB (level/dirty_mask/skip_occlusion),
+			// compiled here (not in VSM_RenderPages) since the gather
+			// shader needs a valid pointer to embed in every entry it
+			// appends for this level -- reused as-is by VSM_RenderPages'
+			// exec_indirect later this same frame (a compiled CB is just an
+			// index into per-frame dynamic-constant storage, valid from
+			// either context).
+			Slots::VSMPageBatch batch;
+			batch.GetLevel()          = level;
+			batch.GetDirty_mask()     = (int)plan.dirty_mask;
+			batch.GetSkip_occlusion() = (int)plan.skip_occlusion_mask;
+			auto compiled_batch = batch.compile(compute);
+
+			// This level's overall grid extent in light-space (not per-page
+			// -- the gather shader only decides "does this mesh matter for
+			// this LEVEL at all"; the AS still does per-page/per-meshlet
+			// culling exactly as before).
+			float2 level_min = page_table.clipmap.page_min(level, ivec2(0, 0), plan.origin);
+			float2 level_max = level_min + float2(page_table.clipmap.page_world_size(level) * pages_side);
+
+			Table::VSMLevelDispatchInfo info;
+			info.page_batch_cb = compiled_batch.compiled();
+			info.bounds_min = level_min;
+			info.bounds_max = level_max;
+			m_level_dispatch_info.push_back(info);
+		}
+
+		if (m_level_dispatch_info.empty())
+			return;
+
+		command_list->get_copy().update(*data.VSM_LevelDispatchInfo, 0, std::span{ m_level_dispatch_info });
+
+		UINT mesh_count = (UINT)scene->command_ids[(int)MESH_TYPE::ALL].size();
+		if (mesh_count == 0)
+			return;
+
+		{
+			Slots::VSMGatherDispatchData gatherData;
+			gatherData.GetLevels()            = data.VSM_LevelDispatchInfo->structuredBuffer;
+			gatherData.GetLevel_count()       = (uint)m_level_dispatch_info.size();
+			gatherData.GetDispatch_commands() = data.VSM_DispatchCommands->appendStructuredBuffer;
+
+			camera light_view_cam = make_light_view_camera(frame_light_pos);
+			gatherData.GetLight_view() = light_view_cam.get_view();
+
+			compute.set(gatherData);
+		}
+
+		compute.set(scene->compiledGather[(int)MESH_TYPE::ALL]);
+		compute.set(scene->compiledScene);
+
+		compute.set_pipeline<PSOS::VSMGatherDispatch>();
+		compute.dispatch(ivec2((int)mesh_count, (int)m_level_dispatch_info.size()), ivec2(64, 1));
 	};
 
 	m_renderpages_render = [this, pages_side, pages_per_level, pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::FrameContext& context)
@@ -485,8 +589,6 @@ VSM::VSM()
 
 		bool any_dirty = false;
 		bool hiz_cleared_this_frame = false;
-
-		m_dispatch_entries.clear();
 
 		for (int level = 0; level < VSM::MaxLevels; level++)
 		{
@@ -572,74 +674,17 @@ VSM::VSM()
 				slice_rt.GetDepth() = data.VSM_Atlas->create_2d_slice(plan.slots[local], *command_list).depthStencil;
 				graphics.set_rtv(slice_rt, RTOptions::Default | RTOptions::ClearDepth);
 			}
-
-			// One per-level page-batch CB (level/dirty_mask/skip_occlusion),
-			// compiled (allocated+written) now but not bound live -- each
-			// dispatch entry referencing this level points at it via
-			// page_batch_cb, and D3D12's command signature rebinds it per
-			// entry when exec_indirect walks the buffer below.
-			Slots::VSMPageBatch batch;
-			batch.GetLevel()          = level;
-			batch.GetDirty_mask()     = (int)plan.dirty_mask;
-			// Per-page now, not per-level -- see the field's comment in
-			// vsm.sig. A page whose slot/content survived the recenter
-			// keeps its Hi-Z history and doesn't need this bit.
-			batch.GetSkip_occlusion() = (int)plan.skip_occlusion_mask;
-			auto compiled_batch = batch.compile(graphics);
-
-			scene->iterate_meshes(MESH_TYPE::STATIC | MESH_TYPE::DYNAMIC, [&](scene_object::ptr obj)
-			{
-				auto mesh = dynamic_cast<MeshAssetInstance*>(obj.get());
-				if (!mesh) return;
-
-				for (auto& m : mesh->rendering)
-				{
-					if ((int)m_dispatch_entries.size() >= MaxDispatchEntries)
-						return;
-
-					// Dispatch AS threadgroups, not MS ones directly: 32
-					// (meshlet, page) pairs tested per group, AS compacts
-					// visible pairs into a payload and calls DispatchMesh
-					// itself (see mesh_shader_vsm.hlsl). Count must cover
-					// meshlet_count * pages_per_level total pairs.
-					UINT pair_count = (UINT)m.meshlet_count * (UINT)pages_per_level;
-					UINT as_groups  = (pair_count + 31) / 32;
-
-					Table::VSMDispatchCommandData entry;
-					entry.mesh_cb          = m.compiled_mesh_info.compiled();
-					entry.meshinstance_cb  = m.mesh_instance_info.compiled();
-					entry.page_batch_cb    = compiled_batch.compiled();
-					entry.draw_commands.ThreadGroupCountX = as_groups;
-					entry.draw_commands.ThreadGroupCountY = 1;
-					entry.draw_commands.ThreadGroupCountZ = 1;
-					m_dispatch_entries.push_back(entry);
-				}
-			});
 		}
 
-		// Diagnostics for the entry-count clamp above -- same start-of-
-		// episode-then-periodic-reminder shape as the page-pool exhaustion
-		// log in plan_level().
-		if ((int)m_dispatch_entries.size() >= MaxDispatchEntries)
-		{
-			total_clamped_entries++;
-			if (!dispatch_entries_clamped || (total_clamped_entries % 300 == 0))
-			{
-				Log::get() << (std::string("VSM: dispatch entry buffer exhausted (MaxDispatchEntries=")
-					+ std::to_string(MaxDispatchEntries) + ") -- some (level,mesh) pairs were dropped this frame") << Log::endl;
-			}
-			dispatch_entries_clamped = true;
-		}
-		else
-			dispatch_entries_clamped = false;
-
-		if (!any_dirty && m_dispatch_entries.empty())
+		if (!any_dirty)
 			return;
 
-		if (!m_dispatch_entries.empty())
 		{
-			command_list->get_copy().update(*data.VSM_DispatchCommands, 0, std::span{ m_dispatch_entries });
-
+			// Dispatch entries were built and appended by VSM_GatherDispatch
+			// (Phase 5.12), GPU-side -- this pass just consumes them.
+			// exec_indirect's real per-entry count comes from
+			// VSM_DispatchCommands' own append counter, MaxDispatchEntries
+			// is only the upper bound.
 			graphics.set_pipeline<PSOS::VSMDepthDraw>();
 			{
 				Slots::VSMPageTableData pageTableData;
@@ -677,11 +722,8 @@ VSM::VSM()
 			// per entry from the buffer just uploaded above, exactly as if a
 			// live graphics.set(...) had preceded each dispatch_mesh() the
 			// old per-level CPU loop issued.
-			graphics.exec_indirect(*data.VSM_DispatchCommands, (UINT)m_dispatch_entries.size());
+			graphics.exec_indirect(*data.VSM_DispatchCommands, (UINT)MaxDispatchEntries);
 		}
-
-		if (!any_dirty)
-			return;
 
 		// Rebuild each just-redrawn page's pyramid for next time it's dirty.
 		// VSM_Atlas was just a DSV -- nudge readable for the copy shader

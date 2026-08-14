@@ -48,6 +48,7 @@ namespace FrameGraph
 		Voxelize,
 		Lighting,
 		Mipmapping,
+		VSM_GatherDispatch,
 		VSM_RenderPages,
 		VSM_Combine,
 		VSM_DepthAnalysis,

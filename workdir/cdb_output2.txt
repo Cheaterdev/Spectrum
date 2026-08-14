@@ -1,0 +1,124 @@
+
+Microsoft (R) Windows Debugger Version 10.0.22621.755 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+CommandLine: ./../bin/debug/spectrum.exe
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*
+Symbol search path is: srv*
+Executable search path is: 
+ModLoad: 00007ff6`0e450000 00007ff6`0eda7000   spectrum.exe
+ModLoad: 00007ffd`16460000 00007ffd`166c6000   ntdll.dll
+ModLoad: 00007ffd`15360000 00007ffd`15429000   C:\WINDOWS\System32\KERNEL32.DLL
+ModLoad: 00007ffd`13730000 00007ffd`13b2e000   C:\WINDOWS\System32\KERNELBASE.dll
+ModLoad: 00007ffd`14190000 00007ffd`14357000   C:\WINDOWS\System32\USER32.dll
+ModLoad: 00007ffd`13d80000 00007ffd`13da7000   C:\WINDOWS\System32\win32u.dll
+ModLoad: 00007ffc`d3680000 00007ffc`d36a3000   C:\WINDOWS\SYSTEM32\d3d12.dll
+ModLoad: 00007ffd`102e0000 00007ffd`1041e000   C:\WINDOWS\SYSTEM32\dxgi.dll
+ModLoad: 00007ffd`13680000 00007ffd`13723000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00007ffd`15320000 00007ffd`1534b000   C:\WINDOWS\System32\GDI32.dll
+ModLoad: 00007ffd`13db0000 00007ffd`13efc000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 000001ec`66170000 000001ec`662bc000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00007ffd`13fd0000 00007ffd`140fa000   C:\WINDOWS\System32\gdi32full.dll
+ModLoad: 00007ffd`16320000 00007ffd`16417000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00007ffd`13500000 00007ffd`1355e000   C:\WINDOWS\SYSTEM32\powrprof.dll
+ModLoad: 00007ffd`14910000 00007ffd`14aa9000   C:\WINDOWS\System32\ole32.dll
+ModLoad: 00007ffd`16200000 00007ffd`16318000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00007ffd`14580000 00007ffd`14903000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00007ffd`15e20000 00007ffd`15f12000   C:\WINDOWS\System32\COMDLG32.dll
+ModLoad: 00007ffd`156d0000 00007ffd`15737000   C:\WINDOWS\System32\SHLWAPI.dll
+ModLoad: 00007ffd`14ac0000 00007ffd`15252000   C:\WINDOWS\System32\SHELL32.dll
+ModLoad: 00007ffc`ff260000 00007ffc`ff315000   C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_5.82.26100.8328_none_87eede957a2ccddd\COMCTL32.dll
+ModLoad: 00007ffd`15260000 00007ffd`15317000   C:\WINDOWS\System32\ADVAPI32.dll
+ModLoad: 00007ffc`e13b0000 00007ffc`e13e5000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\DSTORAGE.dll
+ModLoad: 00007ffd`16120000 00007ffd`161c9000   C:\WINDOWS\System32\msvcrt.dll
+ModLoad: 00007ffb`a5c10000 00007ffb`a615b000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\assimp-vc143-mt.dll
+ModLoad: 00007ffc`cbf10000 00007ffc`cbfc0000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\freetype.dll
+ModLoad: 00007ffd`158a0000 00007ffd`1594a000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00007ffc`ea250000 00007ffc`ea26b000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\z.dll
+ModLoad: 00007ffc`faf10000 00007ffc`fafad000   C:\WINDOWS\SYSTEM32\MSVCP140.dll
+ModLoad: 00007ffc`b0570000 00007ffc`b05ca000   C:\WINDOWS\SYSTEM32\CONCRT140.dll
+ModLoad: 00007ffc`e5d20000 00007ffc`e5d36000   C:\WINDOWS\SYSTEM32\MSVCP140_ATOMIC_WAIT.dll
+ModLoad: 00007ffc`fa520000 00007ffc`fa54c000   C:\WINDOWS\SYSTEM32\VCRUNTIME140.dll
+ModLoad: 00007ffc`faf00000 00007ffc`faf0c000   C:\WINDOWS\SYSTEM32\VCRUNTIME140_1.dll
+ModLoad: 00007ffc`84cc0000 00007ffc`84d9a000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\DirectXTex.dll
+ModLoad: 00007ffd`0d780000 00007ffd`0d790000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\poly2tri.dll
+ModLoad: 00007ffc`e9590000 00007ffc`e95a1000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\minizip.dll
+ModLoad: 00007ffc`e89a0000 00007ffc`e89b7000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\kubazip.dll
+ModLoad: 00007ffc`d8720000 00007ffc`d8755000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\pugixml.dll
+ModLoad: 00007ffc`d8700000 00007ffc`d8717000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\bz2.dll
+ModLoad: 00007ffc`c9ca0000 00007ffc`c9cd5000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\libpng16.dll
+ModLoad: 00007ffc`d86e0000 00007ffc`d86f1000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\brotlidec.dll
+ModLoad: 00007ffc`cced0000 00007ffc`ccef7000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\brotlicommon.dll
+ModLoad: 00007ffc`c9670000 00007ffc`c96a5000   C:\WINDOWS\SYSTEM32\VCOMP140.DLL
+ModLoad: 00007ffd`134e0000 00007ffd`134f4000   C:\WINDOWS\SYSTEM32\UMPDC.dll
+ModLoad: 00007ffd`15950000 00007ffd`15982000   C:\WINDOWS\System32\IMM32.DLL
+ModLoad: 00007ffd`12360000 00007ffd`1237b000   C:\WINDOWS\SYSTEM32\kernel.appcore.dll
+ModLoad: 00007ffd`13b40000 00007ffd`13bec000   C:\WINDOWS\System32\bcryptPrimitives.dll
+ModLoad: 00007ffd`101b0000 00007ffd`10259000   C:\WINDOWS\system32\uxtheme.dll
+[INFO] : 4 info text
+[WARNING] : 4 warning text
+[DEBUG] : 5 debug text
+[ERROR] : 5 error text
+[INFO] : 5 EVENT: start time: 5
+ModLoad: 00007ffc`c2380000 00007ffc`c242d000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\Streamline\sl.interposer.dll
+ModLoad: 00007ffd`10c10000 00007ffd`10e52000   C:\WINDOWS\SYSTEM32\dbghelp.dll
+ModLoad: 00007ffd`157c0000 00007ffd`15899000   C:\WINDOWS\System32\OLEAUT32.dll
+ModLoad: 00007ffd`10e60000 00007ffd`10e9b000   C:\WINDOWS\SYSTEM32\dbgcore.DLL
+ModLoad: 00007ffc`84be0000 00007ffc`84cc0000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\Streamline\sl.common.dll
+[INFO] : 11 [Streamline] [16-58-57][streamline][warn][tid:23128][0s:003ms:137us]sl.cpp:228[operator ()] Seems like some DX/VK APIs were invoked before slInit()!!! This may result in incorrect behaviour.
+
+ModLoad: 00007ffd`0cce0000 00007ffd`0cceb000   C:\WINDOWS\SYSTEM32\VERSION.dll
+[INFO] : 11 [Streamline] [16-58-57][streamline][info][tid:23128][0s:003ms:556us]pluginManager.cpp:423[setHostSDKVersion] Streamline v2.12.0.17026aaf - built on Mon Jun 22 13:01:47 2026 - host SDK v2.12.0
+
+[INFO] : 11 [Streamline] [16-58-57][streamline][info][tid:23128][0s:003ms:719us]pluginManager.cpp:538[findPlugins] Looking for plugins in C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\Streamline ...
+
+[INFO] : 12 [Streamline] [16-58-57][streamline][info][tid:23128][0s:003ms:859us]pluginManager.cpp:1027[loadPlugins] SL_PRODUCTION not defined at build-time, OTA'd plugins will not be loaded!
+
+[INFO] : 13 [Streamline] [16-58-57][streamline][info][tid:23128][0s:005ms:221us]commonInterface.cpp:168[getSystemCaps] Enumerating up to 8 adapters but only one of them can be used to create a device - no mGPU support in this SDK
+
+ModLoad: 00007ffd`10290000 00007ffd`102d6000   C:\WINDOWS\SYSTEM32\dxcore.dll
+ModLoad: 00007ffd`107d0000 00007ffd`107e4000   C:\WINDOWS\SYSTEM32\resourcepolicyclient.dll
+ModLoad: 00007ffd`0dc20000 00007ffd`0dc7f000   C:\WINDOWS\SYSTEM32\directxdatabasehelper.dll
+ModLoad: 00007ffd`131e0000 00007ffd`13231000   C:\WINDOWS\SYSTEM32\cfgmgr32.dll
+ModLoad: 00007ffc`c92d0000 00007ffc`c930a000   C:\WINDOWS\System32\DriverStore\FileRepository\nvami.inf_amd64_1a0e2bbd9919af1d\nvdlistx.dll
+ModLoad: 00007ffc`c92d0000 00007ffc`c930a000   C:\WINDOWS\System32\DriverStore\FileRepository\nvami.inf_amd64_1a0e2bbd9919af1d\nvdlistx.dll
+ModLoad: 00007ffd`12d60000 00007ffd`12d73000   C:\WINDOWS\SYSTEM32\msasn1.dll
+ModLoad: 00007ffd`0cca0000 00007ffd`0ccdb000   C:\WINDOWS\SYSTEM32\cryptnet.dll
+ModLoad: 00007ffd`13c00000 00007ffd`13d78000   C:\WINDOWS\System32\CRYPT32.dll
+ModLoad: 00007ffd`0ca90000 00007ffd`0cc09000   C:\WINDOWS\SYSTEM32\drvstore.dll
+ModLoad: 00007ffd`131a0000 00007ffd`131cf000   C:\WINDOWS\SYSTEM32\devobj.dll
+ModLoad: 00007ffd`12cf0000 00007ffd`12d5a000   C:\WINDOWS\SYSTEM32\wldp.dll
+ModLoad: 00007ffd`12c30000 00007ffd`12c3c000   C:\WINDOWS\SYSTEM32\cryptbase.dll
+ModLoad: 00007ffd`07e20000 00007ffd`07ea9000   C:\WINDOWS\SYSTEM32\nvapi64.dll
+ModLoad: 00007ffd`11130000 00007ffd`119c2000   C:\WINDOWS\SYSTEM32\windows.storage.dll
+ModLoad: 00007ffd`078a0000 00007ffd`07e17000   C:\WINDOWS\system32\DriverStore\FileRepository\nvami.inf_amd64_1a0e2bbd9919af1d\nvapi64_impl.dll
+ModLoad: 00007ffd`15990000 00007ffd`15e17000   C:\WINDOWS\System32\SETUPAPI.dll
+[INFO] : 56 [Streamline] [16-58-57][streamline][info][tid:23128][0s:047ms:915us]commonInterface.cpp:290[getSystemCaps] >-----------------------------------------
+
+[INFO] : 56 [Streamline] [16-58-57][streamline][info][tid:23128][0s:048ms:184us]commonInterface.cpp:293[getSystemCaps] NVIDIA driver 610.74
+
+[INFO] : 1387 [Streamline] [16-58-58][streamline][info][tid:23128][1s:379ms:152us]commonInterface.cpp:318[getSystemCaps] Adapter 0 architecture 0x170 implementation 0x6 revision 0xa1 - bit 0x2 - LUID 0.64955
+
+[INFO] : 1387 [Streamline] [16-58-58][streamline][info][tid:23128][1s:379ms:484us]commonInterface.cpp:324[getSystemCaps] -----------------------------------------<
+
+[INFO] : 1388 [Streamline] [16-58-58][streamline][info][tid:23128][1s:380ms:367us]commonEntry.cpp:1944[getOSVersionAndUpdateTimerResolution] Changed high resolution timer resolution to 4988 [100 ns units].
+
+[INFO] : 1388 [Streamline] [16-58-58][streamline][info][tid:23128][1s:380ms:587us]commonEntry.cpp:2023[updateEmbeddedJSON] Detected Windows OS version 10.0.26200
+
+[INFO] : 1389 [Streamline] [16-58-58][streamline][info][tid:23128][1s:381ms:336us]pluginManager.cpp:883[mapPlugins] Loaded plugin 'sl.common' - version 2.12.0.17026aaf DEVELOPMENT - id 4294967295 - priority 0 - adapter mask 0x3 - interposer 'no'
+
+ModLoad: 00007ffc`bdc50000 00007ffc`bdcbb000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\Streamline\sl.dlss.dll
+ModLoad: 00007ffd`14100000 00007ffd`14183000   C:\WINDOWS\System32\wintrust.dll
+ModLoad: 00007ffd`161d0000 00007ffd`161f0000   C:\WINDOWS\System32\imagehlp.dll
+ModLoad: 00007ffd`12c10000 00007ffd`12c2b000   C:\WINDOWS\SYSTEM32\CRYPTSP.dll
+ModLoad: 00007ffd`122c0000 00007ffd`122f9000   C:\WINDOWS\system32\rsaenh.dll
+ModLoad: 00007ffd`13570000 00007ffd`1359a000   C:\WINDOWS\SYSTEM32\bcrypt.dll
+ModLoad: 00007ffd`12990000 00007ffd`129bf000   C:\WINDOWS\SYSTEM32\gpapi.dll
+ModLoad: 00007ffd`135a0000 00007ffd`135c9000   C:\WINDOWS\SYSTEM32\profapi.dll
+ModLoad: 00007ffc`84a60000 00007ffc`84bd3000   C:\WINDOWS\System32\DriverStore\FileRepository\nvami.inf_amd64_1a0e2bbd9919af1d\_nvngx.dll
+ModLoad: 00007ffd`12490000 00007ffd`124c6000   C:\WINDOWS\SYSTEM32\ntmarta.dll
+ModLoad: 00007ffb`905c0000 00007ffb`9485b000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\Streamline\nvngx_dlss.dll
+ModLoad: 00007ffb`8de20000 00007ffb`905b8000   C:\Users\Bohdan\Documents\GitHub\Spectrum\bin\debug\Streamline\nvngx_dlssd.dll

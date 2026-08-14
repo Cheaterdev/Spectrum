@@ -395,6 +395,7 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 
 	meshpart[0].draw_commands = info.dispatch_mesh_arguments;
 	meshpart[0].node_offset = info.mesh_info.GetNode_offset();
+	meshpart[0].meshlet_count = info.meshlet_count;
 
 	meshpart_handle.write(i, meshpart);
 
@@ -482,6 +483,7 @@ void MeshAssetInstance::on_add(scene_object* parent)
 			meshpart[i].material_id = static_cast<materials::universal_material*>(info.material)->get_material_id();
 			meshpart[i].draw_commands = info.dispatch_mesh_arguments;
 			meshpart[i].node_offset = info.mesh_info.GetNode_offset();
+			meshpart[i].meshlet_count = info.meshlet_count;
 
 
 			render_scene->command_ids[static_cast<int>(type)].insert(static_cast<UINT>(meshpart_handle.get_offset()) + i);

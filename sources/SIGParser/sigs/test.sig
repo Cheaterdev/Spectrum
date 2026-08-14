@@ -20,6 +20,7 @@ Pipeline MainPipeline
 
 	PSSM_Global;
 	PSSM_Cascade;
+	VSM_GatherDispatch;
 	VSM_RenderPages;
 
 	# shadow (generate_global)

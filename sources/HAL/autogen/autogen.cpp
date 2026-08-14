@@ -101,6 +101,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "VSMCopyPageDepth") return SlotID::VSMCopyPageDepth;
 	if(slot_name == "VSMPageBatch") return SlotID::VSMPageBatch;
 	if(slot_name == "VSMLighting") return SlotID::VSMLighting;
+	if(slot_name == "VSMGatherDispatchData") return SlotID::VSMGatherDispatchData;
 	if(slot_name == "VSMDepthAnalysis") return SlotID::VSMDepthAnalysis;
 	if(slot_name == "WorkGraphTest") return SlotID::WorkGraphTest;
 	if(slot_name == "WorkGR_ClassifyPixels_NodeEmulation") return SlotID::WorkGR_ClassifyPixels_NodeEmulation;
@@ -295,6 +296,8 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::VSMLighting) return Slots::VSMLighting::Slot::ID;
 
+	if(id == SlotID::VSMGatherDispatchData) return Slots::VSMGatherDispatchData::Slot::ID;
+
 	if(id == SlotID::VSMDepthAnalysis) return Slots::VSMDepthAnalysis::Slot::ID;
 
 	if(id == SlotID::WorkGraphTest) return Slots::WorkGraphTest::Slot::ID;
@@ -399,6 +402,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::VSMCopyPageDepth) return "VSMCopyPageDepth";
 	if(id == SlotID::VSMPageBatch) return "VSMPageBatch";
 	if(id == SlotID::VSMLighting) return "VSMLighting";
+	if(id == SlotID::VSMGatherDispatchData) return "VSMGatherDispatchData";
 	if(id == SlotID::VSMDepthAnalysis) return "VSMDepthAnalysis";
 	if(id == SlotID::WorkGraphTest) return "WorkGraphTest";
 	if(id == SlotID::WorkGR_ClassifyPixels_NodeEmulation) return "WorkGR_ClassifyPixels_NodeEmulation";

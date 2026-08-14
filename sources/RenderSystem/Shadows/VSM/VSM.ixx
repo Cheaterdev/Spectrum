@@ -207,20 +207,17 @@ private:
 	// spuriously activate a tier.
 	std::atomic<uint32_t> measured_texel_size_bits{ 0x7F7FFFFFu };
 
-	// Phase 5.8: flat per-(level,mesh) indirect draw entries, built once in
-	// plan_frame() (which already knows exactly which levels are active+dirty
-	// and can enumerate the scene's meshes the same way the old per-level
-	// render() loop did) and consumed by the single VSM_RenderPages render()
-	// via one exec_indirect() call. Rebuilt fresh every frame -- not persisted
-	// across frames like m_plan[] is, since it's pure per-frame draw-command
-	// data with no caching semantics of its own.
-	std::vector<Table::VSMDispatchCommandData> m_dispatch_entries;
-	// Set true the first time a frame's real entry count exceeds
-	// MaxDispatchEntries, cleared once a frame fits again -- same
-	// start-of-episode-then-periodic-reminder logging shape as
-	// allocation_exhausted/total_failed_allocations above.
-	bool     dispatch_entries_clamped = false;
-	uint64_t total_clamped_entries = 0;
+	// Phase 5.12: one entry per active+dirty LEVEL this frame (bounded by
+	// level count, not mesh count), built in VSM_GatherDispatch's render()
+	// and uploaded to VSM_LevelDispatchInfo -- the GPU gather compute shader
+	// tests every scene mesh's AABB against every entry and appends the
+	// actual per-(level,mesh) VSMDispatchCommandData entries itself.
+	// Rebuilt fresh every frame, same as the old m_dispatch_entries it
+	// replaces.
+	std::vector<Table::VSMLevelDispatchInfo> m_level_dispatch_info;
+
+	Passes::VSM_GatherDispatch::setup_func_type  m_gatherdispatch_setup;
+	Passes::VSM_GatherDispatch::render_func_type m_gatherdispatch_render;
 
 	Passes::VSM_RenderPages::setup_func_type  m_renderpages_setup;
 	Passes::VSM_RenderPages::render_func_type m_renderpages_render;
@@ -264,6 +261,9 @@ public:
 	template<typename TPipeline>
 	explicit VSM(TPipeline& pipeline) : VSM()
 	{
+		pipeline.vSM_GatherDispatch.setup_func  = m_gatherdispatch_setup;
+		pipeline.vSM_GatherDispatch.render_func = m_gatherdispatch_render;
+
 		pipeline.vSM_RenderPages.setup_func  = m_renderpages_setup;
 		pipeline.vSM_RenderPages.render_func = m_renderpages_render;
 

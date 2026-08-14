@@ -51,6 +51,7 @@ export import "../defines.h";
 #include "pass/Voxelize.h"
 #include "pass/Lighting.h"
 #include "pass/Mipmapping.h"
+#include "pass/VSM_GatherDispatch.h"
 #include "pass/VSM_RenderPages.h"
 #include "pass/VSM_Combine.h"
 #include "pass/VSM_DepthAnalysis.h"
@@ -99,6 +100,7 @@ export namespace Passes
 	using ::Passes::Voxelize;
 	using ::Passes::Lighting;
 	using ::Passes::Mipmapping;
+	using ::Passes::VSM_GatherDispatch;
 	using ::Passes::VSM_RenderPages;
 	using ::Passes::VSM_Combine;
 	using ::Passes::VSM_DepthAnalysis;

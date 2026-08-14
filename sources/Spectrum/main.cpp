@@ -110,6 +110,11 @@ public:
 	//Variable<bool> debug_draw = Variable<bool>(false, "debug_draw",this);
 	//	VoxelGI::ptr voxel_renderer;
 
+	GUI::Elements::circle_selector::ptr sun_direction_circle;
+	bool  auto_rotate_sun = false;
+	float sun_rotation_angle = 0;
+	static constexpr float sun_rotation_speed = 0.2f; // radians/sec
+
 	int visible_count;
 
 	mesh_renderer::ptr meshes_renderer;
@@ -210,16 +215,16 @@ public:
 
 
 
-		GUI::Elements::circle_selector::ptr circle(new GUI::Elements::circle_selector);
-		circle->docking = GUI::dock::FILL;
-		circle->x_type = GUI::pos_x_type::RIGHT;
-		circle->y_type = GUI::pos_y_type::TOP;
+		sun_direction_circle.reset(new GUI::Elements::circle_selector);
+		sun_direction_circle->docking = GUI::dock::FILL;
+		sun_direction_circle->x_type = GUI::pos_x_type::RIGHT;
+		sun_direction_circle->y_type = GUI::pos_y_type::TOP;
 
 
-		base::add_child(circle);
+		base::add_child(sun_direction_circle);
 		//	lighting = std::make_shared<LightingNode>();
 
-		circle->on_change.register_handler(this, [this](const float2& value)
+		sun_direction_circle->on_change.register_handler(this, [this](const float2& value)
 			{
 				float2 v = value;
 				float3 dir = { 0.001 + v.x, sqrt(1.001 - v.length_squared()), -v.y };
@@ -227,7 +232,15 @@ public:
 				vsm.set_position(dir);
 			});
 
-		circle->set_value({ 1, 0 });
+		sun_direction_circle->set_value({ 1, 0 });
+
+		auto auto_rotate_row = std::make_shared<GUI::Elements::check_box_text>();
+		auto_rotate_row->docking = GUI::dock::TOP;
+		auto_rotate_row->x_type  = GUI::pos_x_type::RIGHT;
+		auto_rotate_row->get_label()->text = "Auto rotate sun";
+		auto_rotate_row->get_check()->set_checked(auto_rotate_sun);
+		auto_rotate_row->on_check = [this](bool v) { auto_rotate_sun = v; };
+		base::add_child(auto_rotate_row);
 
 
 		MeshAsset::ptr asset_ptr = EngineAssets::material_tester.get_asset();
@@ -328,6 +341,14 @@ public:
 		//	return;
 
 		scene->update_transforms();
+
+		if (auto_rotate_sun)
+		{
+			sun_rotation_angle += dt * sun_rotation_speed;
+			// set_value() fires the same on_change handler a manual drag
+			// would -- keeps the widget's own visual position in sync too.
+			sun_direction_circle->set_value(float2(cos(sun_rotation_angle), sin(sun_rotation_angle)) * 0.99f);
+		}
 
 		auto min = scene->get_min();
 		auto max = scene->get_max();

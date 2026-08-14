@@ -152,23 +152,72 @@ struct VSMDispatchCommandData
 	DispatchMeshArguments draw_commands;
 }
 
-# Single pass, not [Multiple=N]: plan_frame() already decides exactly which
-# (level,mesh) pairs need drawing (Phase 5.7's m_plan[]); this pass just
-# uploads that CPU-built entry list and issues one exec_indirect() call
-# instead of the old per-level Multiple-instance CPU loop.
+# Phase 5.12: one entry per active+dirty LEVEL this frame (bounded by level
+# count, not mesh count -- plan_frame() already decided this list, same as
+# the VSMPageBatch CBs it already compiles per level). VSM_GatherDispatch
+# tests every scene mesh's AABB against every entry's bounds and appends a
+# VSMDispatchCommandData for each overlap, replacing VSM.cpp's old CPU
+# "for level { for mesh { ... } }" loop.
+struct VSMLevelDispatchInfo
+{
+	VSMPageBatch* page_batch_cb;
+	float2 bounds_min;
+	float2 bounds_max;
+}
+
+[Bind = DefaultLayout::Instance1]
+struct VSMGatherDispatchData
+{
+	StructuredBuffer<VSMLevelDispatchInfo> levels;
+	uint level_count;
+	# Same rotation-only light-space view make_light_view_camera() builds
+	# CPU-side (VSM.cpp) -- mesh AABBs are transformed into this space here
+	# to compare against each level's bounds_min/bounds_max, computed in the
+	# same space CPU-side.
+	float4x4 light_view;
+	AppendStructuredBuffer<VSMDispatchCommandData> dispatch_commands;
+}
+
+ComputePSO VSMGatherDispatch
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = vsm_gather_dispatch;
+}
+
+# GPU-driven replacement for VSM.cpp's old per-frame scene->iterate_meshes()
+# walk (Phase 5.12) -- reuses the scene's own already-per-frame-built mesh
+# list/count (Scene.cpp's compiledGather[MESH_TYPE::ALL], the same data the
+# main camera's GatherMeshes pipeline already consumes every frame) and
+# SceneData (already bound the same out-of-band way VSM_RenderPages binds
+# it) rather than declaring either as FrameGraph resources here -- neither
+# is owned or created by VSM.
+[Compute]
+PassNode VSM_GatherDispatch
+{
+	[Write] StructuredBuffer<VSMLevelDispatchInfo> VSM_LevelDispatchInfo;
+	# AppendStructuredBuffer here (not just in VSMGatherDispatchData below) is
+	# not supported by FrameGraph's PassNode codegen -- FrameGraph::Handlers
+	# only implements the resource-tracking wrapper for plain
+	# StructuredBuffer (confirmed the hard way: C2039, Handlers has no
+	# AppendStructuredBuffer). The underlying HAL::StructuredBufferView<T>
+	# already carries both .structuredBuffer and .appendStructuredBuffer
+	# sub-views regardless of which one the FrameGraph field declares --
+	# VSM_GatherDispatch's render() uses ->appendStructuredBuffer directly.
+	[Write] StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
+}
+
+# Single pass, not [Multiple=N]: VSM_GatherDispatch already decided exactly
+# which (level,mesh) pairs need drawing and appended them; this pass just
+# issues one exec_indirect() call over the resulting (GPU-counted) list.
 PassNode VSM_RenderPages
 {
 	[Write] Texture VSM_Atlas;
 	[Write] Texture VSM_PageTable;
 	[Write] StructuredBuffer<Camera> VSM_PageCameras;
 	[Write] Texture VSM_PageHiZ;
-	# Per-(level,mesh) indirect draw entries, CPU-built and uploaded fresh
-	# every frame (copy.update, same idiom as VSM_PageCameras). Each entry's
-	# page_batch_cb points at a per-level VSMPageBatch CB allocated via
-	# Slots::VSMPageBatch::compile() -- that allocator is self-contained
-	# (the same per-frame dynamic-constants mechanism graphics.set() already
-	# uses under the hood), so it needs no separate FrameGraph resource here.
-	[Write] StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
+	StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
 }
 
 [Compute]

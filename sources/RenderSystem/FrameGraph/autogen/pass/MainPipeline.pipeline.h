@@ -10,6 +10,7 @@
 #include "Voxelize.h"
 #include "PSSM_Global.h"
 #include "PSSM_Cascade.h"
+#include "VSM_GatherDispatch.h"
 #include "VSM_RenderPages.h"
 #include "Scene.h"
 #include "CubeSky.h"
@@ -50,6 +51,7 @@ public:
 	Passes::Voxelize voxelize;
 	Passes::PSSM_Global pSSM_Global;
 	Passes::PSSM_Cascade pSSM_Cascade;
+	Passes::VSM_GatherDispatch vSM_GatherDispatch;
 	Passes::VSM_RenderPages vSM_RenderPages;
 	Passes::CubeSky cubeSky;
 	Passes::Lighting lighting;
@@ -80,6 +82,7 @@ public:
 		Passes::PSSM_Cascade::Names[3].ptr,
 		Passes::PSSM_Cascade::Names[4].ptr,
 		Passes::PSSM_Cascade::Names[5].ptr,
+		Passes::VSM_GatherDispatch::Name.ptr,
 		Passes::VSM_RenderPages::Name.ptr,
 		Passes::Scene::Name.ptr,
 		Passes::CubeSky::Name.ptr,
@@ -127,11 +130,12 @@ public:
 		L"global_camera",
 		L"PSSM_Depths",
 		L"PSSM_Cameras",
+		L"VSM_LevelDispatchInfo",
+		L"VSM_DispatchCommands",
 		L"VSM_Atlas",
 		L"VSM_PageTable",
 		L"VSM_PageCameras",
 		L"VSM_PageHiZ",
-		L"VSM_DispatchCommands",
 		L"GBuffer_Albedo",
 		L"GBuffer_Normals",
 		L"GBuffer_Depth",
@@ -312,6 +316,20 @@ public:
 		{ true, { PSSM_Cameras_c0_pass_refs + 5, 1 } },
 		{ false, { PSSM_Cameras_c0_pass_refs + 6, 2 } },
 	};
+	static inline const FrameGraph::PassRef VSM_LevelDispatchInfo_c0_pass_refs[] = {
+		{ PassID::VSM_GatherDispatch, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_LevelDispatchInfo_c0_states[] = {
+		{ true, { VSM_LevelDispatchInfo_c0_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef VSM_DispatchCommands_c0_pass_refs[] = {
+		{ PassID::VSM_GatherDispatch, 0 },
+		{ PassID::VSM_RenderPages, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_DispatchCommands_c0_states[] = {
+		{ true, { VSM_DispatchCommands_c0_pass_refs + 0, 1 } },
+		{ false, { VSM_DispatchCommands_c0_pass_refs + 1, 1 } },
+	};
 	static inline const FrameGraph::PassRef VSM_Atlas_c0_pass_refs[] = {
 		{ PassID::VSM_RenderPages, 0 },
 		{ PassID::VSM_Combine, 0 },
@@ -341,12 +359,6 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState VSM_PageHiZ_c0_states[] = {
 		{ true, { VSM_PageHiZ_c0_pass_refs + 0, 1 } },
-	};
-	static inline const FrameGraph::PassRef VSM_DispatchCommands_c0_pass_refs[] = {
-		{ PassID::VSM_RenderPages, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState VSM_DispatchCommands_c0_states[] = {
-		{ true, { VSM_DispatchCommands_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Albedo_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -893,11 +905,12 @@ public:
 		{ ResourceID::global_camera, 0, global_camera_c0_states },
 		{ ResourceID::PSSM_Depths, 0, PSSM_Depths_c0_states },
 		{ ResourceID::PSSM_Cameras, 0, PSSM_Cameras_c0_states },
+		{ ResourceID::VSM_LevelDispatchInfo, 0, VSM_LevelDispatchInfo_c0_states },
+		{ ResourceID::VSM_DispatchCommands, 0, VSM_DispatchCommands_c0_states },
 		{ ResourceID::VSM_Atlas, 0, VSM_Atlas_c0_states },
 		{ ResourceID::VSM_PageTable, 0, VSM_PageTable_c0_states },
 		{ ResourceID::VSM_PageCameras, 0, VSM_PageCameras_c0_states },
 		{ ResourceID::VSM_PageHiZ, 0, VSM_PageHiZ_c0_states },
-		{ ResourceID::VSM_DispatchCommands, 0, VSM_DispatchCommands_c0_states },
 		{ ResourceID::GBuffer_Albedo, 0, GBuffer_Albedo_c0_states },
 		{ ResourceID::GBuffer_Normals, 0, GBuffer_Normals_c0_states },
 		{ ResourceID::GBuffer_Depth, 0, GBuffer_Depth_c0_states },
@@ -978,6 +991,9 @@ public:
 		{ PassID::PSSM_Cascade, 2 },
 		{ PassID::PSSM_Cascade, 3 },
 		{ PassID::PSSM_Cascade, 4 },
+	};
+	static inline const FrameGraph::PassRef VSM_RenderPages_0_prev[] = {
+		{ PassID::VSM_GatherDispatch, 0 },
 	};
 	static inline const FrameGraph::PassRef Scene_0_prev[] = {
 		{ PassID::PreScene, 0 },
@@ -1149,7 +1165,8 @@ public:
 		{ PassID::PSSM_Cascade, 3, false, PSSM_Cascade_3_prev },
 		{ PassID::PSSM_Cascade, 4, false, PSSM_Cascade_4_prev },
 		{ PassID::PSSM_Cascade, 5, false, PSSM_Cascade_5_prev },
-		{ PassID::VSM_RenderPages, 0, false, {} },
+		{ PassID::VSM_GatherDispatch, 0, false, {} },
+		{ PassID::VSM_RenderPages, 0, false, VSM_RenderPages_0_prev },
 		{ PassID::Scene, 0, false, Scene_0_prev },
 		{ PassID::CubeSky, 0, false, {} },
 		{ PassID::CubeMapDownsample, 0, false, CubeMapDownsample_0_prev },
@@ -1206,6 +1223,8 @@ public:
 		for (uint32_t i = 0; i < Passes::PSSM_Cascade::MaxCount; ++i)
 			if (pSSM_Cascade.setup_funcs[i])
 				graph.add_library_pass<Passes::PSSM_Cascade>(i, pSSM_Cascade.setup_funcs[i], pSSM_Cascade.render_funcs[i], (pSSM_Cascade.flags & ~FrameGraph::PassFlags::Compute));
+		if (vSM_GatherDispatch.setup_func)
+			graph.add_library_pass<Passes::VSM_GatherDispatch>(vSM_GatherDispatch.setup_func, vSM_GatherDispatch.render_func, (vSM_GatherDispatch.flags & ~FrameGraph::PassFlags::Compute));
 		if (vSM_RenderPages.setup_func)
 			graph.add_library_pass<Passes::VSM_RenderPages>(vSM_RenderPages.setup_func, vSM_RenderPages.render_func, (vSM_RenderPages.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::Scene>(PassDefault<Passes::Scene>::setup, PassDefault<Passes::Scene>::render, (PassDefault<Passes::Scene>::flags & ~FrameGraph::PassFlags::Compute));

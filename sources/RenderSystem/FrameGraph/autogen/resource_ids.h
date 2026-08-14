@@ -78,11 +78,12 @@ namespace FrameGraph
 		VoxelNormalStatic,
 		VoxelAlbedoDynamic,
 		VoxelNormalDynamic,
+		VSM_LevelDispatchInfo,
+		VSM_DispatchCommands,
 		VSM_Atlas,
 		VSM_PageTable,
 		VSM_PageCameras,
 		VSM_PageHiZ,
-		VSM_DispatchCommands,
 		VSM_DepthAnalysisResult,
 		Count
 	};
@@ -158,11 +159,12 @@ namespace FrameGraph
 			"VoxelNormalStatic",
 			"VoxelAlbedoDynamic",
 			"VoxelNormalDynamic",
+			"VSM_LevelDispatchInfo",
+			"VSM_DispatchCommands",
 			"VSM_Atlas",
 			"VSM_PageTable",
 			"VSM_PageCameras",
 			"VSM_PageHiZ",
-			"VSM_DispatchCommands",
 			"VSM_DepthAnalysisResult",
 		};
 		auto i = (unsigned int)id;
