@@ -202,6 +202,54 @@ namespace HAL
 		uniform = false;
 	}
 
+	bool SubResourcesCPU::assert_shared_state(const TiledResourceManager* mapped)
+	{
+		if (uniform) return false;
+		if (subres.empty()) return false;
+
+		auto is_required = [&](UINT i) {
+			// A subresource with no tile currently mapped to real memory
+			// (reserved/Virtual resource only) is structurally never part of
+			// the working set -- e.g. VSM_Atlas declares MaxPhysicalSlots
+			// (2048) array slices but only physical_page_count (~256) are
+			// ever tile-mapped; the rest can never be `used` and must not
+			// block the fold.
+			return !mapped || mapped->is_subresource_mapped_flat(i);
+		};
+
+		// Find a representative required-and-used subresource to seed the
+		// fold from. This runs in BOTH Dev and Retail (unlike the verify loop
+		// below) -- without a real `rep` there is nothing valid to collapse
+		// to, in any build.
+		UINT rep_index = UINT(-1);
+		for (UINT i = 0; i < (UINT)subres.size(); i++)
+		{
+			if (!is_required(i)) continue;
+			if (!subres[i].used) return false;
+			rep_index = i;
+			break;
+		}
+		if (rep_index == UINT(-1)) return false;
+
+		// uniform_state.first_usage is untouched by expand()/per-subres
+		// transitions — it still marks how this resource entered the list, so
+		// only last_usage needs to move forward to the (now shared-again) tail.
+		ResourceUsage* rep = subres[rep_index].last_usage;
+
+#ifdef DEV
+		for (UINT i = rep_index + 1; i < (UINT)subres.size(); i++)
+		{
+			if (!is_required(i)) continue;
+			ASSERT(subres[i].used);
+			ASSERT(subres[i].get_usage() == rep->wanted_state);
+		}
+#endif
+
+		uniform_state.last_usage = rep;
+		uniform = true;
+		return true;
+	}
+
 	void SubResourcesCPU::reset()
 	{
 		used = false;
@@ -444,6 +492,17 @@ namespace HAL
 	{
 		SubResourcesCPU& s = get_state((list));
 		return s.used;
+	}
+
+	bool ResourceStateManager::assert_shared_state(Transitions* list) const
+	{
+		SubResourcesCPU& s = get_state((list));
+
+		const TiledResourceManager* mapped = resource->get_desc().is_virtual()
+			? &const_cast<Resource*>(resource)->get_tiled_manager()
+			: nullptr;
+
+		return s.assert_shared_state(mapped);
 	}
 
 	SubResourcesCPU& ResourceStateManager::get_cpu_state(Transitions* list) const

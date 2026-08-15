@@ -21,6 +21,7 @@ namespace HAL {
 		if (!tile.heap_position.heap)
 		{
 			tile.heap_position = resource->get_device().get_static_gpu_data().create_tile(tile_heap_type);
+			mark_tile_mapped(storage_index);
 			target.add_tile(tile);
 			on_load(ivec4(pos, storage_index));
 			if (recursive)
@@ -67,6 +68,7 @@ namespace HAL {
 			target.pending_free.push_back(tile.heap_position.handle);
 
 			tile.heap_position.heap = nullptr;
+			mark_tile_unmapped(storage_index);
 			target.add_tile(tile);
 
 			on_zero(ivec4(pos, storage_index));
@@ -241,6 +243,9 @@ namespace HAL {
 	{
 		auto& tile = tiles[0][pos];
 
+		if (!tile.heap_position.heap)
+			mark_tile_mapped(0);
+
 		tile.heap_position = heap_pos;
 
 		info.add_tile(tile);
@@ -346,6 +351,50 @@ namespace HAL {
 	bool TiledResourceManager::is_mapped(uint3 pos, uint array_slice, uint mip) const
 	{
 		return !!tiles[flat_index(array_slice, mip)][pos].heap_position.heap;
+	}
+
+	void TiledResourceManager::mark_tile_mapped(uint storage_index)
+	{
+		if (mapped_tile_count.size() <= storage_index)
+		{
+			mapped_tile_count.resize(tiles.size(), 0);
+			subres_list_pos.resize(tiles.size(), -1);
+		}
+
+		if (mapped_tile_count[storage_index]++ == 0)
+		{
+			subres_list_pos[storage_index] = (int)mapped_subresources.size();
+			mapped_subresources.push_back(storage_index);
+		}
+	}
+
+	void TiledResourceManager::mark_tile_unmapped(uint storage_index)
+	{
+		// Only ever called right after load_tile/zero_tile/map_tile confirm
+		// this exact tile was mapped, so the counter is always >0 here.
+		if (--mapped_tile_count[storage_index] == 0)
+		{
+			// Swap-erase out of the compact list -- position lookup is O(1)
+			// via subres_list_pos, so this whole removal is O(1) too.
+			int pos      = subres_list_pos[storage_index];
+			int last_pos = (int)mapped_subresources.size() - 1;
+			UINT moved   = mapped_subresources[last_pos];
+
+			mapped_subresources[pos] = moved;
+			subres_list_pos[moved]   = pos;
+			mapped_subresources.pop_back();
+			subres_list_pos[storage_index] = -1;
+		}
+	}
+
+	bool TiledResourceManager::is_subresource_mapped(uint array_slice, uint mip) const
+	{
+		return is_subresource_mapped_flat(flat_index(array_slice, mip));
+	}
+
+	bool TiledResourceManager::is_subresource_mapped_flat(uint index) const
+	{
+		return index < mapped_tile_count.size() && mapped_tile_count[index] != 0;
 	}
 
 }

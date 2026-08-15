@@ -816,6 +816,38 @@ VSM::VSM()
 			// live graphics.set(...) had preceded each dispatch_mesh() the
 			// old per-level CPU loop issued.
 			graphics.exec_indirect(*data.VSM_DispatchCommands, (UINT)MaxDispatchEntries);
+
+			// Tried assert_shared_state() here (2026-08), after giving it a
+			// tile-mapping mask (HAL.TiledMemoryManager) specifically to fix
+			// VSM_Atlas's precondition problem: 2048 declared array slices,
+			// only physical_page_count (~256) ever tile-mapped, so the old
+			// "every declared subresource is used" requirement could never be
+			// satisfied. The mask fixed exactly that -- the DEV assert passed
+			// -- but the fold still produced a real, NEW D3D12 #1334 (72
+			// instances, barrier layout SHADER_RESOURCE vs expected
+			// DEPTH_STENCIL_WRITE), confirmed live. Reverted.
+			//
+			// Root cause (this time actually traced, not just observed): once
+			// folded, SubResourcesCPU::slot(i) returns the single shared
+			// uniform_state for ANY index, including ones the fold's own
+			// verification never individually covered (structurally excluded
+			// by the mask, or simply never touched this list). But
+			// SubResourcesGPU::merge() -- which persists per-subresource
+			// layout across FRAMES, not just this list -- loops the FULL
+			// declared subresource count and calls slot(i) unconditionally
+			// (HAL.ResourceStates.cpp, SubResourcesGPU::merge). Post-fold that
+			// silently stamps the persistent cross-frame layout for every
+			// declared subresource to match uniform_state's first_usage, even
+			// ones that were never actually verified -- corrupting the record
+			// for whichever subresource the debug layer then disagrees with.
+			// This is NOT a mask-specific bug: it explains VSM_PageHiZ's
+			// earlier #1334 too, even though PageHiZ had no declared/mapped
+			// mismatch at all -- see [[project-assert-shared-state-vsm-pagehiz]].
+			// A real fix needs merge() (or an equivalent) to stop trusting
+			// slot(i) for indices the fold didn't individually prove, which
+			// cuts against the whole point of folding (not tracking indices
+			// individually anymore) -- needs a real design pass, not another
+			// live-fire attempt.
 		}
 
 		// Rebuild each just-redrawn page's pyramid for next time it's dirty
@@ -848,6 +880,20 @@ VSM::VSM()
 
 			if (!dirty_slots.empty())
 			{
+				// NOT a candidate for assert_shared_state(), still. Its
+				// declared array size is MaxPhysicalSlots (2048), not
+				// physical_page_count (256) -- originally this alone blocked
+				// the fold (DEV assert fired immediately on the "every
+				// declared subresource is used" precondition). Fixed that part
+				// (2026-08) with an optional tile-mapping mask on
+				// assert_shared_state() (HAL.TiledMemoryManager) so unmapped
+				// subresources are skipped rather than required -- see the
+				// comment after the vsm_draw block below for what happened
+				// next: the precondition passed, but the fold still produced a
+				// real, new #1334 via a separate mechanism
+				// (SubResourcesGPU::merge()) that isn't specific to this mask
+				// at all -- see [[project-assert-shared-state-vsm-pagehiz]].
+
 				// VSM_Atlas was just a DSV -- nudge readable for the copy shader
 				// below, same one-off idiom PSSM.cpp uses; the next draw into it
 				// transitions it back automatically via set_rtv.
@@ -909,6 +955,21 @@ VSM::VSM()
 				}
 
 				PROFILE(L"vsm_hiz_transition");
+				// Tried collapsing this to one wide transition (covering the
+				// whole physical_page_count-slice last-mip range) + an
+				// assert_shared_state() fold -- the DEV-mode ASSERT inside
+				// assert_shared_state() passed (every subresource genuinely
+				// converged on the same tracked state), but it broke the
+				// once-ever cold-start clear_uav path with a real, new D3D12
+				// validation error (#1334, incompatible barrier layout,
+				// ClearUnorderedAccessViewFloat expecting UNORDERED_ACCESS but
+				// finding SHADER_RESOURCE) -- 3584 instances, confirmed via a
+				// live run. Reverted to the known-good per-dirty-slot loop;
+				// the interaction between assert_shared_state()'s uniform-mode
+				// fold and this resource's separate once-ever cold-clear path
+				// isn't understood well enough yet to trust past what the
+				// DEV assert alone checks.
+				//
 				// Every mip but the last is later read as another mip's
 				// SrcMip (via the shared whole-chain SRV), so it naturally
 				// rests as SHADER_RESOURCE; only the coarsest mip's write is

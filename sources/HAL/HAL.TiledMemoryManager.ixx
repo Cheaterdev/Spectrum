@@ -56,6 +56,39 @@ export
 			std::vector<grid<uint3, ResourceTile>> gpu_tiles;
 			ResourceTile gpu_packed_tile;
 
+			// Mapped-subresource mask: lets barrier-tracking code for a
+			// reserved/Virtual resource (e.g. VSM_Atlas: 2048 declared array
+			// slices, ~256 ever tile-mapped) skip subresources nobody has
+			// backed with real memory instead of walking every declared one.
+			//
+			// mapped_tile_count[flat_index] = how many of that subresource's
+			// tiles are currently mapped -- one counter per tiles[] entry,
+			// maintained incrementally by load_tile()/zero_tile()/map_tile()
+			// (each already gates on the tile's own mapped/unmapped state
+			// before touching it, so the counter can never double-count).
+			// is_subresource_mapped() is then an O(1) count!=0 read, no scan.
+			//
+			// mapped_subresources is the same fact kept as a compact, order-
+			// preserving list of flat_index values with count>0 -- lets a
+			// caller enumerate just the working set (~256 entries) instead of
+			// the full declared range (2048) when it needs to VISIT every
+			// mapped subresource, not just test one. subres_list_pos mirrors
+			// it (flat_index -> position in mapped_subresources, or -1) so
+			// add/remove during load_tile/zero_tile are O(1) swap-erase
+			// instead of a linear search.
+			std::vector<uint32_t> mapped_tile_count;
+			std::vector<UINT>     mapped_subresources;
+			std::vector<int>      subres_list_pos;
+
+			// 0->1 / 1->0 transition bookkeeping for the mask above -- called
+			// from load_tile()/zero_tile()/map_tile() exactly where each
+			// already knows a tile just became mapped/unmapped. Lazily grows
+			// the mask vectors to tiles.size() on first use, since tiles[]
+			// itself is only sized once init_tilings() (backend-specific) has
+			// run.
+			void mark_tile_mapped(uint storage_index);
+			void mark_tile_unmapped(uint storage_index);
+
 		protected:
 			uint3 tile_shape;
 			void load_tiles_internal(update_tiling_info& target, uint3 from, uint3 to, uint storage_index, bool recursive);
@@ -127,6 +160,25 @@ export
 			void zero_tiles(CommandList& list);
 
 			bool is_mapped(uint3 pos, uint array_slice, uint mip = 0) const;
+
+			// True iff subresource (array_slice, mip) has at least one tile
+			// currently mapped to real memory. See mapped_tile_count above.
+			bool is_subresource_mapped(uint array_slice, uint mip = 0) const;
+
+			// Same as above but takes flat_index()'s own raw index directly --
+			// equals the real D3D12 subresource index whenever this resource
+			// has no packed mip tail (mip count == unpacked_mip_count), which
+			// covers every current Virtual-resource consumer in this codebase
+			// (see flat_index()'s own comment). Barrier-tracking code (which
+			// deals in real D3D12 subresource indices) should call this
+			// overload directly rather than decompose subres into slice/mip
+			// itself.
+			bool is_subresource_mapped_flat(uint index) const;
+
+			// Compact, order-preserving list of every currently-mapped
+			// flat_index -- iterate this instead of [0, declared_count) when
+			// visiting every mapped subresource of a reserved resource.
+			const std::vector<UINT>& get_mapped_subresources() const { return mapped_subresources; }
 
 			void copy_mappings(CommandList& list, uint3 target_pos, Resource* source, uint3 source_pos, uint3 size);
 

@@ -15,7 +15,7 @@ export
 	namespace HAL
 	{
 		class Transitions;
-
+		class TiledResourceManager;
 
 
 		enum class TransitionType :int
@@ -185,6 +185,52 @@ export
 			const ResourceListStateCPU& slot(UINT id) const;
 			void expand(UINT count);
 
+			// Reverse of expand(): caller asserts every subresource has
+			// re-converged to the same state (e.g. a batched pass that touched
+			// every slice independently but landed them all back on
+			// SHADER_RESOURCE) and folds back to the uniform fast path so the
+			// NEXT full-resource transition costs one node/barrier again instead
+			// of one per subresource. DEV builds verify the claim (ASSERT per
+			// subresource); Retail trusts it unconditionally and collapses in
+			// O(1) — same contract as the standard library's assert(). Returns
+			// false only if there is nothing to collapse (already uniform, or
+			// never expanded/touched).
+			//
+			// The DEV verify is THIS LIST's local bookkeeping only (every
+			// subres[i].wanted_state agrees) — it is NOT proof the fold is
+			// safe, and the reason is a specific, known mechanism, not a vague
+			// one: once folded, slot(i) resolves to the single shared
+			// uniform_state for ANY index, including ones the fold's own
+			// verification never individually covered. SubResourcesGPU::merge()
+			// persists per-subresource layout ACROSS FRAMES (not just this
+			// list) by looping the full declared subresource count and calling
+			// other.get_first_usage(i) unconditionally, no `used` guard — post-
+			// fold that silently stamps the persistent layout for every
+			// declared subresource, including ones never actually verified,
+			// corrupting the record for whichever one the debug layer
+			// disagrees with later. Confirmed live twice (2026-08): VSM_PageHiZ
+			// (#1334, 3584x, its once-ever cold-start clear_uav path) and
+			// VSM_Atlas even WITH the mapped-subresource mask below applied
+			// correctly and the DEV assert passing (#1334, 72x) — see
+			// [[project-assert-shared-state-vsm-pagehiz]]. A real fix needs
+			// merge() (or an equivalent) to stop trusting slot(i) for indices
+			// the fold didn't individually prove; not attempted yet. Until
+			// then, treat "DEV assert passed" as necessary, not sufficient —
+			// any resource whose layout persists across frames via merge()
+			// (i.e. most things) is not provably safe to fold, live validation
+			// or not.
+			//
+			// `mapped` (optional): for a reserved/Virtual resource, pass its
+			// TiledResourceManager so subresources with no tile currently
+			// mapped to real memory are skipped entirely -- neither required
+			// to be `used` nor compared against the representative state.
+			// Without this a resource like VSM_Atlas (2048 declared array
+			// slices, ~256 ever tile-mapped) could never collapse: the
+			// declared-but-never-backed slices would always fail the "every
+			// subresource used" precondition. Mapped subresources still go
+			// through the exact same used/state checks as before.
+			bool assert_shared_state(const TiledResourceManager* mapped = nullptr);
+
 			void reset();
 			CommandListType get_best_list_type_last();
 			CommandListType get_best_list_type_first();
@@ -260,6 +306,17 @@ export
 			SubResourcesCPU& get_cpu_state(Transitions* list) const;
 
 			bool is_used(Transitions* list) const;
+
+			// See SubResourcesCPU::assert_shared_state — collapses this
+			// resource's per-subresource tracking on `list` back to the uniform
+			// fast path if (DEV: verified; Retail: trusted) every subresource is
+			// currently at the same state. For a reserved/Virtual resource,
+			// automatically narrows that requirement to tile-mapped
+			// subresources only (via this resource's own TiledResourceManager)
+			// — declared-but-never-mapped subresources (e.g. VSM_Atlas's
+			// unused array headroom) are skipped rather than blocking the
+			// fold.
+			bool assert_shared_state(Transitions* list) const;
 
 
 			void transition(Transitions* list, ResourceState state, unsigned int subres) const;
