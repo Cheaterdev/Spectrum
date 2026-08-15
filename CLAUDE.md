@@ -59,3 +59,25 @@ The `RenderSystem/FrameGraph` subsystem manages render pass scheduling, automati
 
 ## CI/CD
 GitHub Actions workflow at `.github/workflows/build.yml` builds the **Retail** configuration on `windows-2025-vs2026` runners. vcpkg dependencies are cached in `vcpkg_installed/`. Build artifacts (workdir output) are uploaded after a successful build.
+
+## Profiling
+
+`PROFILE(L"name")` (CPU) and `PROFILE_GPU(L"name")` (GPU) are scoped timers defined in `sources/Core/Profiling/macros.h`, forced-included everywhere via `Core/Defines.h`. They compile to `((void)0)` unless `PROFILING` is defined for the build config, so they're free to add liberally — no need to gate them behind anything yourself.
+
+When writing or editing any function that does non-trivial per-frame CPU work (loops over resources/passes, resource-view creation, upload/copy calls) or issues GPU commands (draws, dispatches, barrier-heavy resource binding), add scoped `PROFILE` blocks around its logically distinct sub-sections, not just one at the top of the function:
+
+```cpp
+{
+    PROFILE(L"vsm_hiz_copy");
+    // ... the copy dispatch ...
+}
+{
+    PROFILE(L"vsm_hiz_downsample");
+    // ... the downsample loop ...
+}
+```
+
+- Scope with an explicit `{ }` block — the macro declares a local variable whose destructor stops the timer at end of scope, so an unbracketed `PROFILE(...)` at the top of a big function silently times everything after it, not just the intended section.
+- Name markers by what they measure, not where they live (`vsm_hiz_copy`, not `loop1`) — this is what shows up in the profiler UI and needs to be legible next to unrelated markers from other systems.
+- Prefer several small, named scopes over one broad one when a function has multiple distinct phases (setup vs. dispatch vs. teardown) — this is what makes a profiler capture actionable instead of just "this function is slow somewhere."
+- This is the same convention already used throughout `HAL.CommandList.cpp` (`commit_tables`, `transitions`, `rt_transitions`) and `MipMapGeneration.cpp` — match that granularity when adding new instrumented code, don't invent a different style.

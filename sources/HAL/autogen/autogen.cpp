@@ -99,6 +99,8 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "VSMPageTableData") return SlotID::VSMPageTableData;
 	if(slot_name == "VSMPageHiZ") return SlotID::VSMPageHiZ;
 	if(slot_name == "VSMCopyPageDepth") return SlotID::VSMCopyPageDepth;
+	if(slot_name == "VSMCopyPageDepthBatch") return SlotID::VSMCopyPageDepthBatch;
+	if(slot_name == "VSMDownsampleHiZBatch") return SlotID::VSMDownsampleHiZBatch;
 	if(slot_name == "VSMPageBatch") return SlotID::VSMPageBatch;
 	if(slot_name == "VSMLighting") return SlotID::VSMLighting;
 	if(slot_name == "VSMGatherDispatchData") return SlotID::VSMGatherDispatchData;
@@ -292,6 +294,10 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::VSMCopyPageDepth) return Slots::VSMCopyPageDepth::Slot::ID;
 
+	if(id == SlotID::VSMCopyPageDepthBatch) return Slots::VSMCopyPageDepthBatch::Slot::ID;
+
+	if(id == SlotID::VSMDownsampleHiZBatch) return Slots::VSMDownsampleHiZBatch::Slot::ID;
+
 	if(id == SlotID::VSMPageBatch) return Slots::VSMPageBatch::Slot::ID;
 
 	if(id == SlotID::VSMLighting) return Slots::VSMLighting::Slot::ID;
@@ -400,6 +406,8 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::VSMPageTableData) return "VSMPageTableData";
 	if(id == SlotID::VSMPageHiZ) return "VSMPageHiZ";
 	if(id == SlotID::VSMCopyPageDepth) return "VSMCopyPageDepth";
+	if(id == SlotID::VSMCopyPageDepthBatch) return "VSMCopyPageDepthBatch";
+	if(id == SlotID::VSMDownsampleHiZBatch) return "VSMDownsampleHiZBatch";
 	if(id == SlotID::VSMPageBatch) return "VSMPageBatch";
 	if(id == SlotID::VSMLighting) return "VSMLighting";
 	if(id == SlotID::VSMGatherDispatchData) return "VSMGatherDispatchData";

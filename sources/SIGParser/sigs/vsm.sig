@@ -66,6 +66,50 @@ ComputePSO VSMCopyPageDepth
 	compute = vsm_copy_page_depth;
 }
 
+# Phase 5.14: batches the copy step across every dirty page at once (Z
+# dimension = dirty page count this frame) instead of one dispatch per
+# dirty page -- atlas/dst_mip0 are whole-array views (every physical slot),
+# and dirty_slots.Load(z) picks which slice each Z-group actually writes.
+[Bind = DefaultLayout::Instance0]
+struct VSMCopyPageDepthBatch
+{
+	Texture2DArray<float> atlas;
+	RWTexture2DArray<float> dst_mip0;
+	StructuredBuffer<uint> dirty_slots;
+}
+
+ComputePSO VSMCopyPageDepthBatch
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = vsm_copy_page_depth_batch;
+}
+
+# Phase 5.14: one dispatch per mip level, covering every dirty page at once
+# (Z dimension = dirty page count), replacing the old one-dispatch-per-
+# dirty-page-per-mip loop. src is a single SRV spanning the WHOLE mip
+# chain (Load's 4th component selects src_mip directly -- HLSL can address
+# any mip of a multi-mip SRV without a separate view per mip); only the
+# write side needs a mip-specific view, since a UAV can only ever address
+# one mip.
+[Bind = DefaultLayout::Instance0]
+struct VSMDownsampleHiZBatch
+{
+	Texture2DArray<float> src;
+	RWTexture2DArray<float> dst_mip;
+	StructuredBuffer<uint> dirty_slots;
+	uint src_mip;
+}
+
+ComputePSO VSMDownsampleHiZBatch
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = vsm_hiz_downsample_batch;
+}
+
 [Bind = DefaultLayout::Instance0]
 struct VSMPageBatch
 {
@@ -218,6 +262,10 @@ PassNode VSM_RenderPages
 	[Write] StructuredBuffer<Camera> VSM_PageCameras;
 	[Write] Texture VSM_PageHiZ;
 	StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
+	# Phase 5.14: this frame's flat list of dirty physical slots, CPU-built
+	# and uploaded once, consumed by the batched Hi-Z copy/downsample
+	# dispatches (VSMCopyPageDepthBatch/VSMDownsampleHiZBatch).
+	[Write] StructuredBuffer<uint> VSM_DirtySlots;
 }
 
 [Compute]

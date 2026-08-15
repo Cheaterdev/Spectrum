@@ -43,6 +43,16 @@ namespace
 		light_cam.update();
 		return light_cam;
 	}
+
+	// Phase 5.15: flat per-frame collections m_renderpages_render's process
+	// phase fills before executing each GPU-command type in its own pass
+	// (see there). File-scope, not local-to-the-lambda: a local class type
+	// used as a std::vector element passed through a cross-module template
+	// (CopyContext::update<T>, defined in HAL) hit real deduction failures
+	// under this toolset's C++20 modules implementation -- file scope sidesteps
+	// it and matches this file's own existing convention for shared helpers.
+	struct PageCameraUpdate { int slot; camera cam; };
+	struct RowUpdate { int level; std::vector<uint32_t> row; };
 }
 
 void VSM::attach_scene(std::shared_ptr<Scene> scene)
@@ -134,43 +144,18 @@ void VSM::build_slot_views(Passes::VSM_RenderPages::Context& data, int pyramid_m
 	int physical_slots = page_table.physical_page_count;
 
 	atlas_slot_views.resize(physical_slots);
-	page_hiz_mip_views.resize(physical_slots);
-
 	for (int slot = 0; slot < physical_slots; slot++)
-	{
 		atlas_slot_views[slot] = HAL::Texture2DView(vsm_atlas_tex->resource, storage,
 			HAL::TextureViewDesc{ 0, 1, (uint)slot, 1 });
 
-		auto& mips = page_hiz_mip_views[slot];
-		mips.resize(pyramid_mip_count);
-		for (int mip = 0; mip < pyramid_mip_count; mip++)
-			mips[mip] = HAL::Texture2DView(data.VSM_PageHiZ->resource, storage,
-				HAL::TextureViewDesc{ (uint)mip, 1, (uint)slot, 1 });
-	}
+	atlas_array_view = HAL::Texture2DView(vsm_atlas_tex->resource, storage,
+		HAL::TextureViewDesc{ 0, 1, 0, (uint)physical_slots });
+
+	page_hiz_mip_array_views.resize(pyramid_mip_count);
+	for (int mip = 0; mip < pyramid_mip_count; mip++)
+		page_hiz_mip_array_views[mip] = data.VSM_PageHiZ->create_mip(mip, storage);
 
 	slot_views_built = true;
-}
-
-void VSM::dispatch_page_hiz_pyramid(HAL::ComputeContext& compute, int slot, int pyramid_mip_count)
-{
-	compute.set_signature(Layouts::DefaultLayout);
-	compute.set_pipeline<PSOS::DownsampleDepthMip>();
-
-	int page_size = page_table.page_size;
-	auto& mips = page_hiz_mip_views[slot];
-
-	for (int mip = 0; mip < pyramid_mip_count - 1; mip++)
-	{
-		uint32_t DstWidth  = (uint32_t)std::max(1, page_size >> (mip + 1));
-		uint32_t DstHeight = DstWidth;
-
-		Slots::DownsampleDepthMip mip_data;
-		mip_data.GetSrcMip() = mips[mip].texture2D;
-		mip_data.GetDstMip() = mips[mip + 1].rwTexture2D;
-		compute.set(mip_data);
-
-		compute.dispatch(ivec2(DstWidth, DstHeight), ivec2(8, 8));
-	}
 }
 
 void VSM::pass_data(FrameGraph::TaskBuilder& builder)
@@ -524,6 +509,11 @@ VSM::VSM()
 		// Now GPU-appended by VSM_GatherDispatch -- this pass only reads it
 		// via exec_indirect.
 		builder.need(data.VSM_DispatchCommands, FrameGraph::ResourceFlags::ComputeRead);
+		// Phase 5.14: CPU-built and re-uploaded fresh every frame (like
+		// VSM_PageCameras), sized to the whole physical slot budget -- every
+		// dirty page occupies a distinct slot, so that's a hard upper bound
+		// on how many entries this can ever need in one frame.
+		builder.create(data.VSM_DirtySlots, { (size_t)physical_slots }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		return true;
 	};
 
@@ -631,6 +621,7 @@ VSM::VSM()
 		build_slot_views(data, pyramid_mip_count);
 
 		{
+			PROFILE(L"vsm_tile_mapping");
 			std::vector<int> to_map, to_unmap;
 			page_table.take_pending_tile_changes(to_map, to_unmap);
 			if (!to_map.empty() || !to_unmap.empty())
@@ -650,97 +641,130 @@ VSM::VSM()
 		auto  scene     = sceneinfo.scene;
 
 		bool any_dirty = false;
-		bool hiz_cleared_this_frame = false;
 
-		for (int level = 0; level < VSM::MaxLevels; level++)
+		// Phase 5.15: process every level FIRST, without touching the
+		// command list at all, then execute each GPU-command TYPE in its
+		// own contiguous pass -- every page-camera CB write, then every
+		// indirection-row write, then the (at most once-ever) Hi-Z
+		// cold-clear, then every DSV clear. Replaces the old per-level
+		// "update, maybe update_texture, maybe clear_uav, maybe clear_dsv"
+		// interleaving, which forced these four distinct command types to
+		// alternate up to MaxLevels times a frame. PageCameraUpdate/RowUpdate
+		// are file-scope (top of this file), not local to this lambda -- see
+		// their declaration comment for why.
+		std::vector<PageCameraUpdate> camera_updates;
+		std::vector<RowUpdate> row_updates;
+
+		std::vector<int> dsv_clear_slots;
+
 		{
-			const LevelPlan& plan = m_plan[level];
-			if (!plan.valid)
-				continue;
-
-			// Nothing to redraw AND the indirection row still matches what's
-			// on the GPU -- true no-op frame for this level.
-			if (plan.dirty_mask == 0 && !plan.row_changed)
-				continue;
-
-			// Camera bounds only depend on (level, abs_page) -- page_min ==
-			// origin + local*size == size*(grid_idx + local) == size*abs_page
-			// regardless of how that abs_page was reached -- but znear/zfar
-			// track the live scene/camera bounds, so still refresh every
-			// active frame rather than only on (re)allocation. Skipped for
-			// non-resident cells: their slot is invalid, nothing to upload.
-			for (int local = 0; local < pages_per_level; local++)
+			PROFILE(L"vsm_plan_levels_process");
+			for (int level = 0; level < VSM::MaxLevels; level++)
 			{
-				if (!((plan.resident_mask >> local) & 1))
+				const LevelPlan& plan = m_plan[level];
+				if (!plan.valid)
 					continue;
 
-				ivec2 page = ivec2(local % pages_side, local / pages_side);
-				float2 page_min = page_table.clipmap.page_min(level, page, plan.origin);
-				float2 page_max = page_min + float2(page_table.clipmap.page_world_size(level));
+				// Nothing to redraw AND the indirection row still matches what's
+				// on the GPU -- true no-op frame for this level.
+				if (plan.dirty_mask == 0 && !plan.row_changed)
+					continue;
 
-				camera page_cam = make_light_view_camera(frame_light_pos);
-				page_cam.set_projection_params(
-					page_min.x, page_max.x,
-					page_min.y, page_max.y,
-					plan.bounds_all.znear - 10, plan.bounds_all.zfar);
-				page_cam.update();
-
-				command_list->get_copy().update(*data.VSM_PageCameras, plan.slots[local], std::span{ &page_cam.camera_cb.current, 1 });
-			}
-
-			// Indirection is indexed by (local position, level) -- rewrite
-			// this level's row whenever local->slot changed for any cell
-			// (plan.row_changed, computed in plan_frame()).
-			if (plan.row_changed)
-			{
-				std::vector<uint32_t> row(pages_per_level);
+				// Camera bounds only depend on (level, abs_page) -- page_min ==
+				// origin + local*size == size*(grid_idx + local) == size*abs_page
+				// regardless of how that abs_page was reached -- but znear/zfar
+				// track the live scene/camera bounds, so still refresh every
+				// active frame rather than only on (re)allocation. Skipped for
+				// non-resident cells: their slot is invalid, nothing to upload.
 				for (int local = 0; local < pages_per_level; local++)
-					row[local] = (uint32_t)plan.slots[local];
+				{
+					if (!((plan.resident_mask >> local) & 1))
+						continue;
 
-				UINT row_stride = (UINT)(pages_side * sizeof(uint32_t));
-				command_list->get_copy().update_texture(
-					(*data.VSM_PageTable).resource, ivec3(0, 0, 0), ivec3(pages_side, pages_side, 1), (UINT)level,
-					reinterpret_cast<const char*>(row.data()), row_stride);
+					ivec2 page = ivec2(local % pages_side, local / pages_side);
+					float2 page_min = page_table.clipmap.page_min(level, page, plan.origin);
+					float2 page_max = page_min + float2(page_table.clipmap.page_world_size(level));
+
+					camera page_cam = make_light_view_camera(frame_light_pos);
+					page_cam.set_projection_params(
+						page_min.x, page_max.x,
+						page_min.y, page_max.y,
+						plan.bounds_all.znear - 10, plan.bounds_all.zfar);
+					page_cam.update();
+
+					camera_updates.push_back({ plan.slots[local], page_cam });
+				}
+
+				// Indirection is indexed by (local position, level) -- rewrite
+				// this level's row whenever local->slot changed for any cell
+				// (plan.row_changed, computed in plan_frame()).
+				if (plan.row_changed)
+				{
+					RowUpdate ru;
+					ru.level = level;
+					ru.row.resize(pages_per_level);
+					for (int local = 0; local < pages_per_level; local++)
+						ru.row[local] = (uint32_t)plan.slots[local];
+					row_updates.push_back(std::move(ru));
+				}
+
+				if (plan.dirty_mask == 0)
+					continue;
+
+				any_dirty = true;
+
+				for (int local = 0; local < pages_per_level; local++)
+					if ((plan.dirty_mask >> local) & 1)
+						dsv_clear_slots.push_back(plan.slots[local]);
 			}
+		}
 
-			if (!hiz_cleared_this_frame && data.VSM_PageHiZ.is_new())
+		{
+			PROFILE(L"UPDATE");
+			for (auto& u : camera_updates)
 			{
-				// Fresh/resized pyramid holds garbage -- clear to far (0,
-				// reversed-Z) so a page's occlusion test can't falsely cull
-				// against it before that page has ever rendered real depth.
-				// One array-spanning UAV clear per mip (all physical slots
-				// at once) -- only runs once ever (cold start / resize), not
-				// once per level -- hiz_cleared_this_frame guards that since
-				// there's no more level==0 to pin it to.
-				for (int mip = 0; mip < pyramid_mip_count; mip++)
-					command_list->clear_uav(data.VSM_PageHiZ->create_mip(mip, *command_list).rwTexture2DArray, vec4(0, 0, 0, 0));
-				hiz_cleared_this_frame = true;
+				command_list->get_copy().update(*data.VSM_PageCameras, u.slot, std::span{ &u.cam.camera_cb.current, 1 });
 			}
+		}
 
-			if (plan.dirty_mask == 0)
-				continue;
+		{
+			PROFILE(L"update_texture");
+			UINT row_stride = (UINT)(pages_side * sizeof(uint32_t));
+			for (auto& ru : row_updates)
+				command_list->get_copy().update_texture(
+					(*data.VSM_PageTable).resource, ivec3(0, 0, 0), ivec3(pages_side, pages_side, 1), (UINT)ru.level,
+					reinterpret_cast<const char*>(ru.row.data()), row_stride);
+		}
 
-			any_dirty = true;
+		// Fresh/resized pyramid holds garbage -- clear to far (0, reversed-Z)
+		// so a page's occlusion test can't falsely cull against it before
+		// that page has ever rendered real depth. One array-spanning UAV
+		// clear per mip (all physical slots at once) -- only runs once ever
+		// (cold start / resize), independent of level iteration order.
+		if (data.VSM_PageHiZ.is_new())
+		{
+			PROFILE(L"clear_uav");
+			for (int mip = 0; mip < pyramid_mip_count; mip++)
+				command_list->clear_uav(data.VSM_PageHiZ->create_mip(mip, *command_list).rwTexture2DArray, vec4(0, 0, 0, 0));
+		}
 
+		{
+			PROFILE(L"clear_dsv");
 			// Clear only the pages actually being re-rendered this frame: the
 			// atlas is Static and shared across levels, so a cached page must
 			// keep its depth. clear_dsv() (not set_rtv+ClearDepth) -- we're
 			// not about to draw into this slice yet, so binding it as the
 			// active render target would just be wasted OM-bind/transition/
 			// size-bookkeeping work on top of the actual clear.
-			for (int local = 0; local < pages_per_level; local++)
-			{
-				if (!((plan.dirty_mask >> local) & 1))
-					continue;
-
-				command_list->clear_dsv(atlas_slot_views[plan.slots[local]].depthStencil);
-			}
+			for (int slot : dsv_clear_slots)
+				command_list->clear_dsv(atlas_slot_views[slot].depthStencil);
 		}
 
 		if (!any_dirty)
 			return;
 
 		{
+			PROFILE(L"vsm_draw");
 			// Dispatch entries were built and appended by VSM_GatherDispatch
 			// (Phase 5.12), GPU-side -- this pass just consumes them.
 			// exec_indirect's real per-entry count comes from
@@ -763,12 +787,20 @@ VSM::VSM()
 			graphics.set(scene->compiledScene);
 
 			{
-				// Draw target: a DSV spanning every slice, so the mesh shader
-				// can route each primitive to its page with
-				// SV_RenderTargetArrayIndex (needs the multi-slice DSV
-				// support added in HAL.HLSL.ixx).
+				// Draw target: a DSV spanning every slot the mesh shader can
+				// ever route a primitive to via SV_RenderTargetArrayIndex
+				// (needs the multi-slice DSV support added in HAL.HLSL.ixx).
+				// atlas_array_view (narrowed to physical_page_count slots,
+				// not data.VSM_Atlas->depthStencil's full MaxPhysicalSlots=
+				// 2048 reserved-resource array) is enough: VSMPageTable's
+				// allocator never returns a slot >= physical_page_count, so
+				// nothing can ever target a slice past this view's range.
+				// set_rtv's own rt_transitions step walks every subresource
+				// in the bound DSV's range on every draw -- this is the same
+				// stop_using()-adjacent cost class as the Hi-Z batch binds,
+				// just for the draw pass instead of the compute passes.
 				RT::DepthOnly rt;
-				rt.GetDepth() = data.VSM_Atlas->depthStencil;
+				rt.GetDepth() = atlas_array_view.depthStencil;
 				graphics.set_rtv(rt, RTOptions::Default);
 			}
 
@@ -793,41 +825,97 @@ VSM::VSM()
 		// just disabling its result.
 		if (hiz_culling_enabled)
 		{
-			// VSM_Atlas was just a DSV -- nudge readable for the copy shader
-			// below, same one-off idiom PSSM.cpp uses; the next draw into it
-			// transitions it back automatically via set_rtv.
-			command_list->transition(data.VSM_Atlas->resource, HAL::ResourceStates::SHADER_RESOURCE);
-
-			for (int level = 0; level < VSM::MaxLevels; level++)
+			// Phase 5.14: collect every dirty page's physical slot into one
+			// flat list -- lets the whole rebuild (copy + full mip chain)
+			// run as pyramid_mip_count dispatches TOTAL this frame (Z
+			// dimension = dirty page count), instead of pyramid_mip_count
+			// dispatches PER dirty page. Cheap CPU-side walk (at most
+			// MaxLevels x pages_per_level iterations).
+			std::vector<uint32_t> dirty_slots;
 			{
-				const LevelPlan& plan = m_plan[level];
-				if (!plan.valid || plan.dirty_mask == 0)
-					continue;
-
-				for (int local = 0; local < pages_per_level; local++)
+				PROFILE(L"vsm_hiz_collect");
+				for (int level = 0; level < VSM::MaxLevels; level++)
 				{
-					if (!((plan.dirty_mask >> local) & 1))
+					const LevelPlan& plan = m_plan[level];
+					if (!plan.valid || plan.dirty_mask == 0)
 						continue;
 
-					int slot = plan.slots[local];
+					for (int local = 0; local < pages_per_level; local++)
+						if ((plan.dirty_mask >> local) & 1)
+							dirty_slots.push_back((uint32_t)plan.slots[local]);
+				}
+			}
 
-					compute.set_pipeline<PSOS::VSMCopyPageDepth>();
+			if (!dirty_slots.empty())
+			{
+				// VSM_Atlas was just a DSV -- nudge readable for the copy shader
+				// below, same one-off idiom PSSM.cpp uses; the next draw into it
+				// transitions it back automatically via set_rtv.
+				command_list->transition(data.VSM_Atlas->resource, HAL::ResourceStates::SHADER_RESOURCE);
+
+				command_list->get_copy().update(*data.VSM_DirtySlots, 0, std::span{ dirty_slots });
+
+				ivec3 dispatch_size((int)page_table.page_size, (int)page_table.page_size, (int)dirty_slots.size());
+
+				{
+					PROFILE(L"vsm_hiz_copy");
+					compute.set_pipeline<PSOS::VSMCopyPageDepthBatch>();
 					{
-						// Both sides are per-page slices of the same size now, so
-						// this is a straight 1:1 slice copy -- no atlas offset.
-						Slots::VSMCopyPageDepth copy;
-						copy.GetAtlas()    = atlas_slot_views[slot].texture2D;
-						copy.GetDst_mip0() = page_hiz_mip_views[slot][0].rwTexture2D;
+						// Narrowed views (atlas_array_view/page_hiz_mip_array_views),
+						// not the base handlers' full-array/full-mip-chain ones --
+						// originally to dodge HAL::Transitions::stop_using()'s
+						// teardown cost on the wide base views (thousands of times
+						// more than the per-slice binds it replaced). stop_using()
+						// has since been removed (it only fed an unread
+						// ResourceUsage::last_point, dead split-barrier bookkeeping),
+						// so that cost no longer applies, but these stay narrow as
+						// the correct shape for the dispatch. dirty_slots.Load(z)
+						// still picks which physical slice each Z-group touches.
+						Slots::VSMCopyPageDepthBatch copy;
+						copy.GetAtlas()       = atlas_array_view.texture2DArray;
+						copy.GetDst_mip0()    = page_hiz_mip_array_views[0].rwTexture2DArray;
+						copy.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
 						compute.set(copy);
 					}
-					compute.dispatch(ivec2(page_table.page_size, page_table.page_size), ivec2(8, 8));
+					compute.dispatch(dispatch_size, ivec3(8, 8, 1));
+				}
 
-					dispatch_page_hiz_pyramid(compute, slot, pyramid_mip_count);
+				{
+					PROFILE(L"vsm_hiz_downsample");
+					compute.set_pipeline<PSOS::VSMDownsampleHiZBatch>();
+					for (int mip = 0; mip < pyramid_mip_count - 1; mip++)
+					{
+						int dst_size = std::max(1, page_table.page_size >> (mip + 1));
 
-					// Every mip but the last is later read as another mip's
-					// SrcMip, so it naturally rests as SHADER_RESOURCE; only the
-					// coarsest mip's write is never followed by a read.
-					UINT last_mip_subres = (UINT)(pyramid_mip_count - 1) + (UINT)slot * (UINT)pyramid_mip_count;
+						Slots::VSMDownsampleHiZBatch down;
+						// Both sides narrowed to exactly one mip (array-spanning,
+						// physical_page_count slices) instead of the base
+						// handler's whole 7-mip-chain SRV -- same narrowing
+						// reasoning as the copy step above (stop_using() is gone,
+						// see that comment), and this one runs
+						// pyramid_mip_count-1 times per frame, not once.
+						// src_mip is no longer needed for addressing (the view
+						// itself is already narrowed to that mip -- Load's mip
+						// component is always 0 relative to it) but is kept for
+						// parity with the entry's own bookkeeping.
+						down.GetSrc()         = page_hiz_mip_array_views[mip].texture2DArray;
+						down.GetDst_mip()     = page_hiz_mip_array_views[mip + 1].rwTexture2DArray;
+						down.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
+						down.GetSrc_mip()     = (uint)mip;
+						compute.set(down);
+
+						compute.dispatch(ivec3(dst_size, dst_size, (int)dirty_slots.size()), ivec3(8, 8, 1));
+					}
+				}
+
+				PROFILE(L"vsm_hiz_transition");
+				// Every mip but the last is later read as another mip's
+				// SrcMip (via the shared whole-chain SRV), so it naturally
+				// rests as SHADER_RESOURCE; only the coarsest mip's write is
+				// never followed by a read.
+				for (uint32_t slot : dirty_slots)
+				{
+					UINT last_mip_subres = (UINT)(pyramid_mip_count - 1) + slot * (UINT)pyramid_mip_count;
 					command_list->transition(data.VSM_PageHiZ->resource, HAL::ResourceStates::SHADER_RESOURCE, last_mip_subres);
 				}
 			}

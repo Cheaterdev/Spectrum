@@ -116,8 +116,6 @@ export{
 			UINT transition_count = 0;
 			HAL::ResourceUsage* add_usage(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST);
 
-			HAL::UsagePoint* get_last_usage_point();
-
 			void use_resource(const HAL::Resource* resource);
 
 			// Resources this list touched (populated by use_resource). Used by
@@ -133,7 +131,6 @@ export{
 			void transition_present(const HAL::Resource* resource_ptr);
 
 			void transition(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE);
-			void stop_using(const ResourceInfo& info);
 		};
 
 
@@ -446,7 +443,6 @@ export{
 
 			virtual void set_const_buffer(UINT i, UINT offset, UINT v) = 0;
 
-			void stop_using(uint id);
 			void reset_tables();
 
 			void commit_tables(BarrierSync operation, UsedSlots* slots = nullptr);
@@ -489,7 +485,6 @@ export{
 			template<SIG_TYPES_COMPILED::Slot Compiled>
 			void set(const Compiled& compiled)
 			{
-				stop_using(Compiled::Slot::ID);
 				auto& table = tables[Compiled::Slot::ID];
 				table.slot_id = Compiled::ID;
 				table.dirty = true;

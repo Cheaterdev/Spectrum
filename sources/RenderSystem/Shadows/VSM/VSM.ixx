@@ -233,28 +233,43 @@ private:
 	std::vector<Table::VSMLevelDispatchInfo> m_level_dispatch_info;
 
 	// Phase 5.13: every per-slot view VSM_RenderPages' render() would
-	// otherwise call create_2d_slice()/create_mip() for -- once per dirty
-	// page, every frame -- is instead built ONCE, eagerly, for every
-	// physical slot, from the engine's permanent descriptor storage
-	// (Device::get_static_gpu_data(), not the per-frame resettable one
-	// create_2d_slice/create_mip normally allocate from). A slot's
-	// subresource identity never changes -- only which logical page
-	// currently owns it does -- so these views stay valid for the whole
-	// lifetime of VSM_Atlas/VSM_PageHiZ. Built on VSM_RenderPages' first
-	// real render() (data.VSM_PageHiZ doesn't exist before its own setup()
-	// runs, so this can't happen at VSM construction time); see
-	// build_slot_views().
+	// otherwise call create_2d_slice() for -- once per dirty page, every
+	// frame, for the atlas DSV clear -- is instead built ONCE, eagerly,
+	// for every physical slot, from the engine's permanent descriptor
+	// storage (Device::get_static_gpu_data(), not the per-frame resettable
+	// one create_2d_slice normally allocates from). A slot's subresource
+	// identity never changes -- only which logical page currently owns it
+	// does -- so these views stay valid for the whole lifetime of
+	// VSM_Atlas. Built on VSM_RenderPages' first real render()
+	// (data.VSM_PageHiZ doesn't exist before its own setup() runs, so this
+	// can't happen at VSM construction time); see build_slot_views().
 	bool slot_views_built = false;
-	std::vector<HAL::Texture2DView> atlas_slot_views;                // [slot]
-	std::vector<std::vector<HAL::Texture2DView>> page_hiz_mip_views; // [slot][mip]
+	std::vector<HAL::Texture2DView> atlas_slot_views; // [slot], DSV clear only
+
+	// Phase 5.14: batched Hi-Z copy source, narrowed to physical_page_count
+	// slices -- NOT VSM_Atlas's own base handler view, which spans the
+	// full MaxPhysicalSlots=2048 reserved-resource array. Originally narrowed
+	// to dodge HAL::Transitions::stop_using()'s O(subresources in view) x
+	// O(total resource subresource count) teardown cost (~2ms/call on the
+	// wide view); stop_using() has since been removed entirely (it only fed
+	// an unread ResourceUsage::last_point, a dead split-barrier mechanism),
+	// so that specific cost no longer applies, but the narrower binding is
+	// still the right shape for this dispatch. See build_slot_views().
+	HAL::Texture2DView atlas_array_view;
+
+	// Phase 5.14: the Hi-Z pyramid rebuild is batched across every dirty
+	// page at once (one dispatch per mip level, not one per dirty page per
+	// mip -- see m_renderpages_render). Array-spanning (every physical
+	// slot at once) but narrowed to exactly ONE mip per entry -- both SRV
+	// and UAV -- instead of VSM_PageHiZ's base handler view, which spans
+	// the WHOLE mip chain (pyramid_mip_count x physical_page_count
+	// subresources). Same stop_using()-avoidance reasoning as
+	// atlas_array_view above (see that comment); stop_using() is gone now,
+	// but this stayed narrow since it's rebound on every one of the
+	// pyramid_mip_count-1 downsample dispatches, not just once.
+	std::vector<HAL::Texture2DView> page_hiz_mip_array_views; // [mip]
 
 	void build_slot_views(Passes::VSM_RenderPages::Context& data, int pyramid_mip_count);
-
-	// Mirrors MipMapGenerator::build_hiz_pyramid's dispatch loop exactly
-	// (that one is shared with the main camera's own Hi-Z, so it stays
-	// untouched), but reads pre-built views out of page_hiz_mip_views
-	// instead of calling create_mip per mip per dirty page per frame.
-	void dispatch_page_hiz_pyramid(HAL::ComputeContext& compute, int slot, int pyramid_mip_count);
 
 	Passes::VSM_GatherDispatch::setup_func_type  m_gatherdispatch_setup;
 	Passes::VSM_GatherDispatch::render_func_type m_gatherdispatch_render;

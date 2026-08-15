@@ -446,7 +446,7 @@ export
 			}
 
 			template<class T2>
-			RWTexture2DArray(const RWTexture2DArray<T2>& h) : Handle(h)
+			RWTexture2DArray(const RWTexture2DArray<T2>& h) : Handles::UAV(h)
 			{
 
 			}

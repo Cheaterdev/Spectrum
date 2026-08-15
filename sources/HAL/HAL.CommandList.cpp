@@ -1239,7 +1239,6 @@ namespace HAL
 				usage.prev_usage = nullptr;
 				usage.next_usage = nullptr;
 				usage.point = point;
-				usage.last_point = nullptr;
 				usage.debug = false;
 				usage.suppressed = false;
 				usage.split_before.clear();
@@ -1340,17 +1339,6 @@ namespace HAL
 			});
 		}
 			}
-
-			void Transitions::stop_using(const ResourceInfo& info)
-			{
-				if (!info.is_valid()) return;
-
-
-				visit_subres(info, [&](const HAL::Resource::ptr& resource, UINT subres) {
-					const_cast<HAL::Resource*>(resource.get())->get_state_manager().stop_using(this, subres);
-				});
-			}
-
 
 	void Transitions::transition(const Resource::ptr& resource, ResourceState to, UINT subres)
 	{
@@ -1825,18 +1813,6 @@ namespace HAL
 		}
 	}
 
-	void SignatureDataSetter::stop_using(uint id)
-	{
-		PROFILE(L"stop_using");
-		auto& table = tables[id];
-
-		for (auto& res : table.resources)
-		{
-			base.stop_using(*res);
-		}
-	}
-
-
 	void SignatureDataSetter::set_pipeline(std::shared_ptr<PipelineStateBase> pipeline)
 	{
 		{
@@ -2110,11 +2086,6 @@ namespace HAL
 	DelayedCommandList* CommandListBase::get_native_list()
 	{
 		return &compiler;
-	}
-
-	HAL::UsagePoint* Transitions::get_last_usage_point()
-	{
-		return &usage_points.back();
 	}
 
 	CopyContext::CopyContext(CommandList& base) : base(base), list(base.get_native_list()) {}

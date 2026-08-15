@@ -775,23 +775,6 @@ namespace HAL
 		}
 	}
 
-	void ResourceStateManager::stop_using(Transitions* list, UINT subres) const
-	{
-		auto& state = get_state((list));
-
-		auto transit = [&](UINT i)
-		{
-			auto last_usage = state.get_last_usage(i);
-			if(last_usage)
-			last_usage->last_point = (list)->get_last_usage_point();
-		};
-
-		if (state.used)
-		{
-			for (int i = 0; i < gpu_state.subres.size(); i++) transit(i);
-		}
-	}
-
 	void ResourceStateManager::chain_lists(Transitions* from, Transitions* to) const
 	{
 		if (resource->get_desc().is_buffer()) return;

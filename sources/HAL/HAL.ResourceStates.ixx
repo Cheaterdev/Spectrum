@@ -77,7 +77,6 @@ export
   			ResourceUsage* next_usage = nullptr;
 
 			UsagePoint* point = nullptr;
-			UsagePoint* last_point = nullptr;
 
 			bool debug = false;
 
@@ -259,8 +258,6 @@ export
 			void set_resting_state(TextureLayout layout);
 
 			SubResourcesCPU& get_cpu_state(Transitions* list) const;
-
-			void stop_using(Transitions* list, UINT subres) const;
 
 			bool is_used(Transitions* list) const;
 

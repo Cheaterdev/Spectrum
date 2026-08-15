@@ -77,6 +77,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::FrameClassificationInitDispatch>(device, pso[PSO::FrameClassificationInitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::ReflectionCombine>(device, pso[PSO::ReflectionCombine]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepth>(device, pso[PSO::VSMCopyPageDepth]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepthBatch>(device, pso[PSO::VSMCopyPageDepthBatch]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMDownsampleHiZBatch>(device, pso[PSO::VSMDownsampleHiZBatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMApplyCompute>(device, pso[PSO::VSMApplyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMGatherDispatch>(device, pso[PSO::VSMGatherDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));

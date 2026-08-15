@@ -136,6 +136,7 @@ public:
 		L"VSM_PageTable",
 		L"VSM_PageCameras",
 		L"VSM_PageHiZ",
+		L"VSM_DirtySlots",
 		L"GBuffer_Albedo",
 		L"GBuffer_Normals",
 		L"GBuffer_Depth",
@@ -359,6 +360,12 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState VSM_PageHiZ_c0_states[] = {
 		{ true, { VSM_PageHiZ_c0_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef VSM_DirtySlots_c0_pass_refs[] = {
+		{ PassID::VSM_RenderPages, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_DirtySlots_c0_states[] = {
+		{ true, { VSM_DirtySlots_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Albedo_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -911,6 +918,7 @@ public:
 		{ ResourceID::VSM_PageTable, 0, VSM_PageTable_c0_states },
 		{ ResourceID::VSM_PageCameras, 0, VSM_PageCameras_c0_states },
 		{ ResourceID::VSM_PageHiZ, 0, VSM_PageHiZ_c0_states },
+		{ ResourceID::VSM_DirtySlots, 0, VSM_DirtySlots_c0_states },
 		{ ResourceID::GBuffer_Albedo, 0, GBuffer_Albedo_c0_states },
 		{ ResourceID::GBuffer_Normals, 0, GBuffer_Normals_c0_states },
 		{ ResourceID::GBuffer_Depth, 0, GBuffer_Depth_c0_states },
