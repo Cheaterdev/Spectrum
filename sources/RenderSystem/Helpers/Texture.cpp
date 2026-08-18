@@ -142,15 +142,14 @@ namespace HAL
 				}
 		}
 
-		// Strict promote: transition out of COPY_DEST into the resource's canonical
-		// read state on this (DIRECT) upload list, and pin the persistent resting
-		// state there. Every later command list then seeds it in the read state as
-		// a no-op and never decays it to COMMON — removing the implicit-promotion /
-		// #1334 path for uploaded assets. set_resting_state runs before execute so
-		// this list's own end-of-list decay is a no-op too.
-		auto desired = resource->get_state_manager().get_desired_state();
-		list->transition(resource.get(), desired);
-		resource->get_state_manager().set_resting_state(desired.layout);
+		// Transition out of COPY_DEST into the resource's canonical read state
+		// on this (DIRECT) upload list. Nothing needs pinning afterwards: the
+		// resting layout follows from the resource's own flags, and this list
+		// returns it there when it is done.
+		auto layout = HAL::resting_layout(resource.get());
+		list->add_resource_usage(resource.get(), check(layout & HAL::TextureLayout::UNORDERED_ACCESS)
+			? HAL::ResourceStates::UNORDERED_ACCESS
+			: HAL::ResourceStates::SHADER_RESOURCE);
 
 		list->execute_and_wait();
 		init();

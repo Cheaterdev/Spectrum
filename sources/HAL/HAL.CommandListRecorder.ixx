@@ -56,7 +56,7 @@ export namespace HAL
 
 		CommandType  type          = CommandType::Func;
 		std::string  description;
-		UsagePoint*  barrier_point = nullptr; // non-null only until snapshot
+		Barriers*  barrier_point = nullptr; // non-null only until snapshot
 		std::vector<BarrierDetail> barrier_details; // non-empty only for Transition records
 	};
 
@@ -91,7 +91,7 @@ export namespace HAL
 
 			union
 			{
-				UsagePoint*   barrier;
+				Barriers*   barrier;
 
 				struct { UINT vc, vo, ic, io; }                               draw;
 				struct { UINT ic, ioff, vo, inst, io; }                       draw_indexed;
@@ -192,7 +192,7 @@ export namespace HAL
 		void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout);
 		void read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout);
 
-		void func_barrier(UsagePoint* point);
+		void func_barrier(Barriers* barriers);
 		const std::vector<CommandRecord>& get_debug_records() const;
 
 		template<class Hit, class Miss, class Raygen>

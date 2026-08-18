@@ -54,19 +54,17 @@ namespace HAL
 		{
 			if (r->get_desc().is_buffer()) continue;   // buffers carry no layout
 
-			auto desired = r->get_state_manager().get_desired_state();
+			auto layout = resting_layout(r.get());
 			// Only promote resources that actually have a read state.
-			if (!check(desired.layout & (TextureLayout::SHADER_RESOURCE | TextureLayout::UNORDERED_ACCESS)))
+			if (!check(layout & (TextureLayout::SHADER_RESOURCE | TextureLayout::UNORDERED_ACCESS)))
 				continue;
 
-			// The resource is physically in COMMON (its data upload already waited on
-			// the DStorage fence). Record COMMON -> read: the seed reads gpu_state
-			// (still COMMON) so a REAL transition is emitted. Set initial_layout to
-			// the read layout NOW so this list's own end-of-list decay is a no-op
-			// (it decays to initial_layout). gpu_state is pinned to the read state
-			// AFTER execute, once the seed has been consumed by compile.
-			list->transition(r.get(), desired);
-			r->get_state_manager().initial_layout = desired.layout;
+			// Record the read use. Nothing has to be pinned afterwards: the
+			// resting layout is derived from the resource's own flags, and this
+			// list returns it there when it is done.
+			list->add_resource_usage(r.get(), check(layout & TextureLayout::SHADER_RESOURCE)
+				? ResourceStates::SHADER_RESOURCE
+				: ResourceStates::UNORDERED_ACCESS);
 			promoted.push_back(r);
 		}
 
@@ -76,9 +74,6 @@ namespace HAL
 		// Waiting keeps the list alive until the GPU is done and orders the
 		// transition ahead of this frame's rendering.
 		list->execute_and_wait();
-
-		for (auto& r : promoted)
-			r->get_state_manager().set_resting_state(r->get_state_manager().get_desired_state().layout);
 	}
 
 	HAL::Queue::ptr& Device::get_queue(CommandListType type)

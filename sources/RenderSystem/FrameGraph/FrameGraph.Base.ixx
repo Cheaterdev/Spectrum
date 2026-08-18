@@ -246,14 +246,12 @@ public:
 		// happen single-threaded after the setup/append phase joins.
 		concurrent_vector<Pass*> passes;
 
-		HAL::SubResourcesGPU merged_read_state;
-
 		SyncState from;
 		SyncState to;
 	};
 
 	// A resource version's RW-state timeline. Cursor-based like ResourceChain:
-	// the state slots — and each slot's passes / merged_read_state buffers —
+	// the state slots — and each slot's passes buffers —
 	// persist across frames. reset_frame() only rewinds the cursor and push()
 	// reuses a slot (clearing passes keeps its storage, so reserve() is a no-op
 	// once it's large enough), so we don't reallocate the per-state vectors
@@ -292,7 +290,6 @@ public:
 			s.passes.reserve(reserve_n); // no-op once large enough
 			s.from.reset();
 			s.to.reset();
-			s.merged_read_state.subres.clear();
 			return s;
 		}
 
@@ -356,10 +353,6 @@ public:
 		uint64 offset_in_bytes;
 
 		std::shared_ptr<HAL::ResourceView> view;
-			HAL::SubResourcesGPU creation_state;
-
-		HAL::SubResourcesGPU last_state;
-
 		std::shared_ptr<ResourceHandler> handler;
 	
 		bool passed      = false;
@@ -685,7 +678,6 @@ public:
 			HAL::Resource::ptr   resource;
 			HAL::ResourceHandle  alloc_ptr;
 			HAL::ResourceDesc    desc;
-			HAL::SubResourcesGPU last_state;
 
 			bool valid() const { return !!resource; }
 		};

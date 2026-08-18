@@ -97,7 +97,6 @@ namespace HAL
                 }
             }
 
-            THIS->state_manager.init_subres(device.Subresources(THIS->get_desc()), initialLayout);
 
             if (THIS->heap_type == HeapType::RESERVED)
             {
@@ -288,7 +287,6 @@ namespace HAL
             if (layout == TextureLayout::PRESENT)
                 THIS->desc.Flags |= ResFlags::Swapchain;
 
-            THIS->state_manager.init_subres(device.Subresources(THIS->get_desc()), layout);
         }
     }
 
@@ -305,13 +303,13 @@ namespace HAL
 
     Resource::Resource(Device& device, const ResourceDesc& desc, HeapType heap_type,
                        TextureLayout initialLayout, vec4 clear_value)
-        : state_manager(this), tiled_manager(this)
+        : tiled_manager(this)
     {
         _init(device, desc, heap_type, initialLayout, clear_value);
     }
 
     Resource::Resource(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own)
-        : state_manager(this), tiled_manager(this)
+        : tiled_manager(this)
     {
         m_device = &device;
         PlacementAddress address = { handle.get_heap().get(), handle.get_offset() };
@@ -321,14 +319,14 @@ namespace HAL
     }
 
     Resource::Resource(Device& device, const ResourceDesc& desc, PlacementAddress address)
-        : state_manager(this), tiled_manager(this)
+        : tiled_manager(this)
     {
         m_device = &device;
         init(device, desc, address, TextureLayout::UNDEFINED);
     }
 
     Resource::Resource(Device& device, const API::NativeImportHandle& handle, TextureLayout initialLayout)
-        : state_manager(this), tiled_manager(this)
+        : tiled_manager(this)
     {
         m_device = &device;
         init(handle, initialLayout, device);

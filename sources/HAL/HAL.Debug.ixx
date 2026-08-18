@@ -15,6 +15,16 @@ export namespace HAL
 		// identical; any difference is a hazard-detection bug.
 		inline bool EnableOpBatching = true;
 
+		// Log every barrier CommandListGroup::compile_transitions decides on,
+		// with the resource, subresource and before/after states, plus WHY the
+		// before-state was chosen (carried within the group / assumed resting /
+		// first-ever discard). Noisy — intended for correlating a D3D12
+		// validation error against the decision that produced it.
+		inline bool LogBarrierDecisions = false;
+
+		// Restrict LogBarrierDecisions to one resource. Empty = log everything.
+		inline std::string LogBarrierResource = "";
+
 #ifdef DEV
 		constexpr bool GfxDebug = !RunForPix&&false;
 		constexpr bool ValidationErrors = !RunForPix&&true;

@@ -135,8 +135,7 @@ namespace GUI
 		}
 		void label::pre_draw(HAL::CommandList::ptr command_list)
 		{
-//		cache.texture->resource->get_state_manager().prepare_state(command_list.get(), { HAL::BarrierSync::NONE, HAL::BarrierAccess::NO_ACCESS, HAL::TextureLayout::SHADER_RESOURCE });	
-			//						   command_list->transition(cache.texture->resource, );
+			//						   command_list->add_resource_usage(cache.texture->resource, );
 			geomerty->clear();
 
 				  /*
@@ -256,7 +255,7 @@ for (const auto& token : parsed) {
 			geomerty->draw(command_list, lay2, 0, { 0,0 });
 			MipMapGenerator::get().generate(command_list->get_compute(), cache.texture);
 
-								//	   command_list->transition(cache.texture->resource, { HAL::BarrierSync::NONE, HAL::BarrierAccess::NO_ACCESS, HAL::TextureLayout::SHADER_RESOURCE });
+								//	   command_list->add_resource_usage(cache.texture->resource, { HAL::BarrierSync::NONE, HAL::BarrierAccess::NO_ACCESS, HAL::TextureLayout::SHADER_RESOURCE });
 
 		};
 		Fonts::FontGeometry::ptr label::get_geometry()

@@ -101,10 +101,10 @@ void PassDefault<Passes::UpscalingDLSS>::render(
 	HAL::Resource* gbuffer_speed       = data.GBuffer_Speed->get_resource();
 	HAL::Resource* result_texture_new  = data.ResultTextureNew->get_resource();
 
-	context.get_list()->transition(result_texture,     kCommonState);
-	context.get_list()->transition(gbuffer_depth,      kCommonState);
-	context.get_list()->transition(gbuffer_speed,      kCommonState);
-	context.get_list()->transition(result_texture_new, kUnorderedAccessState);
+	context.get_list()->add_resource_usage(result_texture,     kCommonState);
+	context.get_list()->add_resource_usage(gbuffer_depth,      kCommonState);
+	context.get_list()->add_resource_usage(gbuffer_speed,      kCommonState);
+	context.get_list()->add_resource_usage(result_texture_new, kUnorderedAccessState);
 
 	const nvidia::DLSSMode mode = g_upscaling_dlss_mode;
 

@@ -148,8 +148,16 @@ export namespace HAL
 	enum class BarrierSync : uint
 	{
 		NONE = 0x0,
-	//	ALL = 0x1,
-	
+
+		// Not a real pipeline stage -- "synchronize against everything". Used
+		// where a barrier's predecessor is genuinely unknown: entering a
+		// resource from its undefined creation layout after something has
+		// already touched it. D3D12 rejects SyncBefore=NONE there (#1417), and
+		// NONE is the only alternative that would otherwise fit.
+		// Bit 19 rather than 0x1, which would collide with INDEX_INPUT; the
+		// value never reaches the API directly, to_native() translates it.
+		ALL = 1<<19,
+
 		INDEX_INPUT = 1<<0,
 		VERTEX_SHADING = 1<<1,
 		PIXEL_SHADING =  1<<2,

@@ -65,7 +65,7 @@ namespace HAL
 		load_waiter.wait();
 	}
 
-	Resource::Resource() : state_manager(this), tiled_manager(this) {}
+	Resource::Resource() : tiled_manager(this) {}
 
 	bool Resource::is_ready() const
 	{
@@ -85,14 +85,12 @@ namespace HAL
 		return desc;
 	}
 
-	ResourceStateManager& Resource::get_state_manager()
-	{
-		return state_manager;
-	}
-
 	uint32_t Resource::get_native_state() const
 	{
-		TextureLayout layout = state_manager.copy_gpu().get_subres_state(0).layout;
+		// No per-list tracking is consulted here: this is asked at API
+		// boundaries that want the resource's steady state (e.g. Streamline's
+		// sl::Resource tag), and every list hands a resource back at rest.
+		TextureLayout layout = resting_layout(this);
 		return to_native_resource_state(layout);
 	}
 

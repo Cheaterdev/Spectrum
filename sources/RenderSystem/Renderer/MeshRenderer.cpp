@@ -62,7 +62,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		// FrameInfo slot, so its read state isn't tracked per-pass -- make it
 		// explicit, or it is still UNORDERED_ACCESS from the last build.
 		if (use_meshlet_hiz_occlusion)
-			list.transition(gbuffer->HalfBuffer.hiZ_depth_uav.resource, HAL::ResourceStates::SHADER_RESOURCE);
+			list.add_resource_usage(gbuffer->HalfBuffer.hiZ_depth_uav.resource, HAL::ResourceStates::SHADER_RESOURCE);
 		// Stage 1 walks the full scene list: CPU-known count, direct dispatch.
 		generate_boxes(mesh_render_context, scene, scene->compiledGather[(int)mesh_render_context->render_mesh], nullptr, meshes_count);
 
@@ -83,7 +83,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		PROFILE_GPU(L"second stage");
 		// Same as stage 1: stage 1 left the pyramid in UNORDERED_ACCESS.
 		if (use_meshlet_hiz_occlusion)
-			list.transition(gbuffer->HalfBuffer.hiZ_depth_uav.resource, HAL::ResourceStates::SHADER_RESOURCE);
+			list.add_resource_usage(gbuffer->HalfBuffer.hiZ_depth_uav.resource, HAL::ResourceStates::SHADER_RESOURCE);
 		// Stage 2 retests the invisible list: sized by retest_args, written by
 		// stage 1's GatherMeshes.
 		generate_boxes(mesh_render_context, scene, gather_invisible, &retest_args, 0);

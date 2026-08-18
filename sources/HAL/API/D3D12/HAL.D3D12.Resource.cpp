@@ -206,7 +206,6 @@ namespace HAL
             else
                 this->address = 0;
 
-            THIS->state_manager.init_subres(device.Subresources(THIS->get_desc()), layout);
 
             if (THIS->heap_type == HeapType::RESERVED)
                 THIS->tiled_manager.init_tilings();
@@ -235,13 +234,13 @@ namespace HAL
         // resource creation.
         init(device, desc, address, initialLayout, clear_value);
     }
-    Resource::Resource(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value) :state_manager(this), tiled_manager(this)
+    Resource::Resource(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value) : tiled_manager(this)
     {
         _init(device, desc, heap_type, initialLayout, clear_value);
 
     }
 
-    Resource::Resource(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own) :state_manager(this), tiled_manager(this)
+    Resource::Resource(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own) :tiled_manager(this)
     {
         auto t = CounterManager::get().start_count<Resource>();
         m_device = &device;
@@ -256,7 +255,7 @@ namespace HAL
         }
     }
 
-    Resource::Resource(Device& device, const ResourceDesc& desc, PlacementAddress address) :state_manager(this), tiled_manager(this)
+    Resource::Resource(Device& device, const ResourceDesc& desc, PlacementAddress address) : tiled_manager(this)
     {
         auto t = CounterManager::get().start_count<Resource>();
         m_device = &device;
@@ -264,7 +263,7 @@ namespace HAL
         init(device, desc, address, TextureLayout::UNDEFINED);
     }
 
-    Resource::Resource(Device& device, const API::NativeImportHandle& handle, TextureLayout initialLayout) :state_manager(this), tiled_manager(this)
+    Resource::Resource(Device& device, const API::NativeImportHandle& handle, TextureLayout initialLayout) : tiled_manager(this)
     {
         native_resource = handle.resource;
         m_device = &device;

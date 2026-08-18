@@ -207,16 +207,14 @@ void materials::MaterialPreviewSession::dispatch()
 		material->render_preview(list->get_compute(), pso, results->texture_2d().rwTexture2DArray, ivec2(preview_resolution));
 	}
 
-	// This resource is only touched by ad hoc immediate lists (never the
-	// FrameGraph), so its tracked GPU state doesn't get kept in sync
-	// automatically. Explicitly transition to the desired read state and
-	// pin it as the resting state (same fix as Texture.cpp's upload path)
-	// so later lists -- the GUI's SRV read, or our own next dispatch --
-	// start from an accurate assumption instead of a stale one.
+	// Leave the result readable for whoever picks it up next -- the GUI's SRV
+	// read, or our own next dispatch. The resting layout follows from the
+	// resource's flags, so recording the use is all that is needed.
 	{
-		auto desired = results->resource->get_state_manager().get_desired_state();
-		list->transition(results->resource.get(), desired);
-		results->resource->get_state_manager().set_resting_state(desired.layout);
+		auto layout = HAL::resting_layout(results->resource.get());
+		list->add_resource_usage(results->resource.get(), check(layout & HAL::TextureLayout::UNORDERED_ACCESS)
+			? HAL::ResourceStates::UNORDERED_ACCESS
+			: HAL::ResourceStates::SHADER_RESOURCE);
 	}
 
 	if (need_views)

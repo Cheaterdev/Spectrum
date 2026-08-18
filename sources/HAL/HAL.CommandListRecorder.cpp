@@ -43,11 +43,11 @@ namespace HAL
 				{
 				case CommandType::Transition:
 					if constexpr (BuildOptions::Dev)
-						for (const auto& b : cmd.barrier->transitions.get_barriers())
+						for (const auto& b : cmd.barrier->get_barriers())
 							HAL::Debug::BarrierBreakpoints::check_barrier(
 								b.resource ? std::string_view{b.resource->name} : std::string_view{},
 								b.subres, b.before, b.after);
-					list.transitions(cmd.barrier->transitions);
+					list.transitions(*cmd.barrier);
 					break;
 
 				case CommandType::Draw:
@@ -145,11 +145,18 @@ namespace HAL
 
 	// ── push methods ─────────────────────────────────────────────────────────
 
-	void DelayedCommandList::func_barrier(UsagePoint* point)
+	// Reserve this point in the command stream for a barrier group. The group
+	// is still empty at record time -- it is filled in later, once the barriers
+	// for the whole list are computed -- so what matters here is only the
+	// POSITION. Callers reserve one point per group they intend to emit
+	// (CmdListOperation brackets its work with barriers_before/barriers_after).
+	// `barriers` must outlive compile(); the groups are owned by the list's
+	// `operations` deque, whose entries never move.
+	void DelayedCommandList::func_barrier(Barriers* barriers)
 	{
 		if constexpr (BuildOptions::Dev)
-			debug_recorder.push_back({CommandType::Transition, {}, point});
-		Cmd cmd{}; cmd.type = CommandType::Transition; cmd.barrier = point;
+			debug_recorder.push_back({CommandType::Transition, {}, barriers});
+		Cmd cmd{}; cmd.type = CommandType::Transition; cmd.barrier = barriers;
 		tasks.push_back(cmd);
 	}
 

@@ -817,37 +817,9 @@ VSM::VSM()
 			// old per-level CPU loop issued.
 			graphics.exec_indirect(*data.VSM_DispatchCommands, (UINT)MaxDispatchEntries);
 
-			// Tried assert_shared_state() here (2026-08), after giving it a
-			// tile-mapping mask (HAL.TiledMemoryManager) specifically to fix
-			// VSM_Atlas's precondition problem: 2048 declared array slices,
-			// only physical_page_count (~256) ever tile-mapped, so the old
-			// "every declared subresource is used" requirement could never be
-			// satisfied. The mask fixed exactly that -- the DEV assert passed
-			// -- but the fold still produced a real, NEW D3D12 #1334 (72
-			// instances, barrier layout SHADER_RESOURCE vs expected
-			// DEPTH_STENCIL_WRITE), confirmed live. Reverted.
-			//
-			// Root cause (this time actually traced, not just observed): once
-			// folded, SubResourcesCPU::slot(i) returns the single shared
-			// uniform_state for ANY index, including ones the fold's own
-			// verification never individually covered (structurally excluded
-			// by the mask, or simply never touched this list). But
-			// SubResourcesGPU::merge() -- which persists per-subresource
-			// layout across FRAMES, not just this list -- loops the FULL
-			// declared subresource count and calls slot(i) unconditionally
-			// (HAL.ResourceStates.cpp, SubResourcesGPU::merge). Post-fold that
-			// silently stamps the persistent cross-frame layout for every
-			// declared subresource to match uniform_state's first_usage, even
-			// ones that were never actually verified -- corrupting the record
-			// for whichever subresource the debug layer then disagrees with.
-			// This is NOT a mask-specific bug: it explains VSM_PageHiZ's
-			// earlier #1334 too, even though PageHiZ had no declared/mapped
-			// mismatch at all -- see [[project-assert-shared-state-vsm-pagehiz]].
-			// A real fix needs merge() (or an equivalent) to stop trusting
-			// slot(i) for indices the fold didn't individually prove, which
-			// cuts against the whole point of folding (not tracking indices
-			// individually anymore) -- needs a real design pass, not another
-			// live-fire attempt.
+			// (Was a post-mortem on assert_shared_state / SubResourcesCPU folding.
+			//  That whole tracking layer is gone as of the 2026-08 barrier
+			//  rewrite, so the hazard it described no longer exists.)
 		}
 
 		// Rebuild each just-redrawn page's pyramid for next time it's dirty
@@ -880,24 +852,14 @@ VSM::VSM()
 
 			if (!dirty_slots.empty())
 			{
-				// NOT a candidate for assert_shared_state(), still. Its
-				// declared array size is MaxPhysicalSlots (2048), not
-				// physical_page_count (256) -- originally this alone blocked
-				// the fold (DEV assert fired immediately on the "every
-				// declared subresource is used" precondition). Fixed that part
-				// (2026-08) with an optional tile-mapping mask on
-				// assert_shared_state() (HAL.TiledMemoryManager) so unmapped
-				// subresources are skipped rather than required -- see the
-				// comment after the vsm_draw block below for what happened
-				// next: the precondition passed, but the fold still produced a
-				// real, new #1334 via a separate mechanism
-				// (SubResourcesGPU::merge()) that isn't specific to this mask
-				// at all -- see [[project-assert-shared-state-vsm-pagehiz]].
+				// (Was a note about assert_shared_state / subresource folding on
+				//  VSM_Atlas's 2048 declared vs ~256 mapped slices. That tracking
+				//  layer is gone as of the 2026-08 barrier rewrite.)
 
 				// VSM_Atlas was just a DSV -- nudge readable for the copy shader
 				// below, same one-off idiom PSSM.cpp uses; the next draw into it
 				// transitions it back automatically via set_rtv.
-				command_list->transition(data.VSM_Atlas->resource, HAL::ResourceStates::SHADER_RESOURCE);
+				command_list->add_resource_usage(data.VSM_Atlas->resource, HAL::ResourceStates::SHADER_RESOURCE);
 
 				command_list->get_copy().update(*data.VSM_DirtySlots, 0, std::span{ dirty_slots });
 
@@ -909,13 +871,9 @@ VSM::VSM()
 					{
 						// Narrowed views (atlas_array_view/page_hiz_mip_array_views),
 						// not the base handlers' full-array/full-mip-chain ones --
-						// originally to dodge HAL::Transitions::stop_using()'s
-						// teardown cost on the wide base views (thousands of times
-						// more than the per-slice binds it replaced). stop_using()
-						// has since been removed (it only fed an unread
-						// ResourceUsage::last_point, dead split-barrier bookkeeping),
-						// so that cost no longer applies, but these stay narrow as
-						// the correct shape for the dispatch. dirty_slots.Load(z)
+						// originally to dodge a per-bind teardown cost that has
+						// since been removed, but these stay narrow as the correct
+						// shape for the dispatch. dirty_slots.Load(z)
 						// still picks which physical slice each Z-group touches.
 						Slots::VSMCopyPageDepthBatch copy;
 						copy.GetAtlas()       = atlas_array_view.texture2DArray;
@@ -955,20 +913,10 @@ VSM::VSM()
 				}
 
 				PROFILE(L"vsm_hiz_transition");
-				// Tried collapsing this to one wide transition (covering the
-				// whole physical_page_count-slice last-mip range) + an
-				// assert_shared_state() fold -- the DEV-mode ASSERT inside
-				// assert_shared_state() passed (every subresource genuinely
-				// converged on the same tracked state), but it broke the
-				// once-ever cold-start clear_uav path with a real, new D3D12
-				// validation error (#1334, incompatible barrier layout,
-				// ClearUnorderedAccessViewFloat expecting UNORDERED_ACCESS but
-				// finding SHADER_RESOURCE) -- 3584 instances, confirmed via a
-				// live run. Reverted to the known-good per-dirty-slot loop;
-				// the interaction between assert_shared_state()'s uniform-mode
-				// fold and this resource's separate once-ever cold-clear path
-				// isn't understood well enough yet to trust past what the
-				// DEV assert alone checks.
+				// (Was a post-mortem on collapsing this into one wide transition
+				//  plus an assert_shared_state() fold. That tracking layer is gone
+				//  as of the 2026-08 barrier rewrite; revisit whether the wide
+				//  transition is worth it against the new system.)
 				//
 				// Every mip but the last is later read as another mip's
 				// SrcMip (via the shared whole-chain SRV), so it naturally
@@ -977,7 +925,7 @@ VSM::VSM()
 				for (uint32_t slot : dirty_slots)
 				{
 					UINT last_mip_subres = (UINT)(pyramid_mip_count - 1) + slot * (UINT)pyramid_mip_count;
-					command_list->transition(data.VSM_PageHiZ->resource, HAL::ResourceStates::SHADER_RESOURCE, last_mip_subres);
+					command_list->add_resource_usage(data.VSM_PageHiZ->resource, HAL::ResourceStates::SHADER_RESOURCE, last_mip_subres);
 				}
 			}
 		}
@@ -1087,7 +1035,7 @@ VSM::VSM()
 		// No manual transitions anywhere in this pass -- update(), set(),
 		// and read()/read_buffer() all self-transition internally
 		// (confirmed by reading their implementations: update_buffer/
-		// read_buffer both call base.transition(...) themselves; set()'s
+		// read_buffer both call base.add_resource_usage(...) themselves; set()'s
 		// self-tracking is already noted elsewhere in this file, "graphics.
 		// set() tracks the read state for this SRV bind itself"). Adding
 		// redundant manual transitions to the same states right before each

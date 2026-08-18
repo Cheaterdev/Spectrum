@@ -252,7 +252,7 @@ private:
 	// to dodge HAL::Transitions::stop_using()'s O(subresources in view) x
 	// O(total resource subresource count) teardown cost (~2ms/call on the
 	// wide view); stop_using() has since been removed entirely (it only fed
-	// an unread ResourceUsage::last_point, a dead split-barrier mechanism),
+	// a dead split-barrier mechanism),
 	// so that specific cost no longer applies, but the narrower binding is
 	// still the right shape for this dispatch. See build_slot_views().
 	HAL::Texture2DView atlas_array_view;
