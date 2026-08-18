@@ -30,9 +30,9 @@ export namespace Table
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(src_mip);
-			compiler.compile(src);
+			compiler.compile_whole(src);
 			compiler.compile(dirty_slots);
-			compiler.compile(dst_mip);
+			compiler.compile_whole(dst_mip);
 		}
 		struct Compiled
 		{

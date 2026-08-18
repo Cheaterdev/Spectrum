@@ -912,7 +912,7 @@ class FrameGraphTimelineCanvas : public dock_base
                         //
                         // EXCEPTION — a release to UNDEFINED (alias_end) validly ends
                         // the lifetime from whatever layout it holds; with cross-list
-                        // chaining (link_list_groups) its before is handed off from
+                        // chaining (CommandListGroup) its before is handed off from
                         // another list, not the previous barrier in this view. D3D12
                         // validates the real before-layout, so skip it here.
                         const bool is_release = (bd.after.layout == HAL::TextureLayout::UNDEFINED);

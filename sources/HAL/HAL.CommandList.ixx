@@ -88,8 +88,6 @@ export{
 			// more operations are appended.
 			std::deque<HAL::CmdListOperation> operations;
 
-			std::set<Resource*> need_check_transitions;
-
 			// Start (or keep growing) the current operation. Consecutive calls
 			// with the same class are a no-op; a different class closes the
 			// previous operation and appends a new one, reserving both barrier
@@ -126,17 +124,48 @@ export{
 
 
 		public:
-			void free_resources();
-			 bool transitions_compiled = false;
-			UINT transition_count = 0;
-
 			void use_resource(const HAL::Resource* resource);
 
-			// Resources this list touched (populated by use_resource). Used by
-			// link_list_groups to find resources shared between lists that land in
-			// the same ExecuteCommandLists scope.
+			// Resources this list touched (populated by use_resource). This is the
+			// set CommandListGroup::compile_transitions walks -- a resource shared
+			// between lists in the group is diffed against where the previous list
+			// actually left it, not against the resting layout.
 			const std::vector<HAL::Resource*>& get_used_resources() const { return used_resources; }
 		public:
+
+			// Declare what state this list will find `resource` in. Only used
+			// when the list holds its group's FIRST touch of the resource --
+			// otherwise the group has tracked it directly and knows better.
+			// Lets the FrameGraph link a resource across a group boundary, which
+			// the group cannot see over.
+			void set_entry_state(const HAL::Resource* resource, ResourceState state);
+
+			// Record a trailing use that leaves `resource` in `state`, in an
+			// operation of its own so the barrier lands AFTER the work already
+			// recorded rather than merging into its state.
+			//
+			// This is how the FrameGraph converges a resource at its PRODUCER
+			// rather than at whichever consumer happens to run first: several
+			// passes reading the same version each need the same "before", and
+			// only one of them could ever supply it.
+			void transition_to(const HAL::Resource* resource, ResourceState state);
+
+			// transition_to() with the resource's resting state. CommandListGroup
+			// deliberately does not rest frame_graph_managed resources (a group
+			// is only part of the frame), so the FrameGraph calls this on the
+			// last pass that touches one.
+			void transition_to_rest(const HAL::Resource* resource);
+
+			// The state this list leaves `resource` in: the state of its last
+			// recorded usage, or nullopt if it never touched it. The FrameGraph
+			// pairs this with set_entry_state on the consuming list to hand a
+			// resource from one pass to the next.
+			//
+			// Subresource-accurate only when the list used the resource
+			// uniformly; a list that touched subresources individually reports
+			// its last usage's state, which is why the FrameGraph declares a
+			// whole-resource state at the boundaries it links.
+			std::optional<ResourceState> get_exit_state(const HAL::Resource* resource) const;
 
 			void alias_begin(HAL::Resource*);
 			void alias_end(HAL::Resource*);
@@ -144,7 +173,10 @@ export{
 
 			void transition_present(const HAL::Resource* resource_ptr);
 
-			void add_resource_usage(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE);
+			// whole_resource: record the use as ALL_SUBRESOURCES instead of the
+			// mip/array range the view names. Set by a table member declared
+			// [Barrier = ALL] in its .sig -- see HAL::BoundResource.
+			void add_resource_usage(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE, bool whole_resource = false);
 		};
 
 
@@ -442,7 +474,7 @@ export{
 
 				SlotID slot_id;
 				Handles::CBV const_buffer;
-				std::vector<HAL::ResourceInfo*> resources;
+				std::vector<HAL::BoundResource> resources;
 			};
 			std::vector<RowInfo> tables;
 

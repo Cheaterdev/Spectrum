@@ -173,7 +173,11 @@ namespace FrameGraph
 	void TaskBuilder::pass_texture(ResourceID id, HAL::TextureResource::ptr tex, HAL::FenceWaiter fence, ResourceFlags flags)
 	{
 
-		tex->disable_state_tracking();
+		// Handing a resource to the FrameGraph makes the FrameGraph responsible
+		// for its transitions -- same contract as a resource the graph created
+		// itself, so it carries the same marker and opts out of the per-group
+		// return-to-rest in CommandListGroup::compile_transitions.
+		tex->frame_graph_managed = true;
 
 		auto tex_desc = tex->get_desc().as_texture();
 		if (tex_desc.is2D())
@@ -653,18 +657,11 @@ namespace FrameGraph
 
 		}
 
-		// Close every pass list's open op-batch before the FrameGraph appends
-		// its cross-pass transitions (decay-to-resting, prepare_after_state).
-		// Those are recorded at the list's back point; without this they would
-		// fall inside the last op's still-open batch and be mis-positioned.
+		// Runs after every pass has recorded: process_transitions appends
+		// producer-side hand-off and resting transitions to lists that are
+		// already complete, so it needs their final operation sequence.
 		builder.process_transitions();
 		builder.process_fences();
-
-		// Chain resource state across command-list boundaries so multiple lists
-		// share one ExecuteCommandLists scope. Runs after process_transitions
-		// (all usages recorded) and process_fences (batch flush points known),
-		// before compile_lists.
-		builder.link_list_groups();
 
 		builder.compile_lists();
 
@@ -1075,49 +1072,6 @@ namespace FrameGraph
 		}
 	}
 
-	void TaskBuilder::link_list_groups()
-	{
-		PROFILE(L"link_list_groups");
-
-		// Lists that will be submitted together in one ExecuteCommandLists, per
-		// queue. Mirrors commit_command_lists: a pass that must gpu_wait flushes
-		// the pending batch before it, and a pass with put_fence closes one after.
-		enum_array<HAL::CommandListType, std::vector<HAL::CommandList*>> pending;
-
-		auto close_group = [&](HAL::CommandListType type)
-		{
-			auto& lists = pending[type];
-
-			// Intra-group hand-off (passing a resource straight from the list
-			// that used it last to the next one, instead of routing it back
-			// through the resting layout) went with ResourceStateManager and
-			// has no replacement yet.
-
-			lists.clear();
-		};
-
-		for (auto& pass : enabled_passes)
-		{
-			auto commandList = pass->context.list;
-			if (!commandList) continue;
-
-			HAL::CommandListType list_type = pass->get_type();
-
-			bool waits = false;
-			for (auto sync_pass : pass->sync_state.values)
-				if (sync_pass) waits = true;
-
-			if (waits) close_group(list_type);      // gpu_wait flushes the batch
-
-			pending[list_type].push_back(commandList.get());
-
-			if (pass->put_fence) close_group(list_type);   // fence closes the batch
-		}
-
-		for (auto type : magic_enum::enum_values<HAL::CommandListType>())
-			close_group(type);
-	}
-
 	void TaskBuilder::compile_lists()
 	{
 		PROFILE(L"compile");
@@ -1149,19 +1103,210 @@ namespace FrameGraph
 
 
 
-	// Cross-pass / cross-list reconciliation. The entire previous implementation
-	// was built on ResourceStateManager (prepare_state, prepare_after_state,
-	// chain_lists, connect, per-list SubResourcesCPU snapshots) and went with it.
+	// Cross-pass linking for FrameGraph-owned resources.
 	//
-	// Nothing here for now: each list computes its own barriers in
-	// Transitions::compile_transitions, entering every resource from its resting
-	// layout and returning it there, so lists are already self-contained. What is
-	// missing is the cross-pass optimisation this used to do -- merging several
-	// readers into one shared read state, and handing a resource straight from
-	// one list to the next inside an ExecuteCommandLists group instead of going
-	// back through the resting layout.
+	// A command-list group can only reason about what it can see: it enters a
+	// resource from its resting layout and leaves it there. That works for
+	// resources nobody else schedules, but a FrameGraph resource is written by
+	// one pass and read by the next, often with a fence between them -- routing
+	// it through the resting layout at every boundary would be both wrong (the
+	// group cannot know where it actually is) and expensive.
+	//
+	// So the graph, which knows the whole pass timeline, does three things here:
+	//   1. merges concurrent readers onto one shared state, so several passes
+	//      reading the same resource cost one transition rather than one each;
+	//   2. tells each consuming list what state the producing pass left the
+	//      resource in (set_entry_state), which is what lets a group see over a
+	//      boundary it would otherwise stop at;
+	//   3. returns the resource to its resting layout once, at the last pass
+	//      that touches it -- not at every group boundary.
+	//
+	// Replaces the pre-2026-08 version of this function, which did the same jobs
+	// through ResourceStateManager's prepare_state / prepare_after_state seed
+	// nodes and per-subresource SubResourcesGPU snapshots.
 	void TaskBuilder::process_transitions()
 	{
+		PROFILE(L"process_transitions");
+
+		for (auto& chain : alloc_resources)
+			for (auto& info : chain.active_span())
+			{
+				if (!info.enabled) continue;
+
+				auto& resource = info.resource;
+				if (!resource) continue;
+				if (info.heap_type != HAL::HeapType::DEFAULT) continue;
+				if (!resource->frame_graph_managed) continue;   // the group rests these itself
+
+				// Drop passes that never actually touched the resource -- a pass
+				// can declare a resource and then not use it, and linking through
+				// it would hand state to a list that has nothing to receive it.
+				auto untouched = [&](Pass* pass)
+				{
+					auto& list = pass->context.list;
+					if (!list) return true;
+					return !list->get_exit_state(resource.get()).has_value();
+				};
+
+				for (auto& state : info.states)
+				{
+					std::vector<Pass*> kept;
+					kept.reserve(state.passes.size());
+					for (auto* pass : state.passes)
+						if (!untouched(pass)) kept.push_back(pass);
+
+					if (kept.size() == state.passes.size()) continue;
+
+					state.passes.clear();
+					for (auto* pass : kept) state.passes.push_back(pass);
+				}
+
+				info.states.remove_if([](const ResourceRWState& s) { return s.passes.empty(); });
+
+				if (info.states.empty()) continue;
+
+				// A barrier's BEFORE state has to be expressible on the queue that
+				// records it: a compute list cannot barrier a resource out of
+				// RENDER_TARGET, and asserting on that is exactly what
+				// Barriers::transition does. Linking is the only thing that can
+				// hand a list a state some OTHER queue produced, so every state
+				// this function hands over is checked first.
+				auto supported = [&](Pass* pass, const HAL::ResourceState& state)
+				{
+					return HAL::IsFullySupport(pass->context.list->get_type(), state);
+				};
+
+				// --- 1. one shared state per read phase --------------------------
+				//
+				// Readers of the same version can disagree on sync (a pixel-shader
+				// read vs a compute read). Left alone each would transition the
+				// resource again; declaring the union on every reader makes them
+				// agree, so only the first emits a barrier and the rest are no-ops.
+				std::vector<std::optional<HAL::ResourceState>> merged_read(info.states.size());
+
+				for (uint i = 0; i < info.states.size(); i++)
+				{
+					auto& state = info.states[i];
+					if (state.write || state.exclusive) continue;
+
+					std::optional<HAL::ResourceState> merged;
+					for (auto* pass : state.passes)
+					{
+						auto exit = pass->context.list->get_exit_state(resource.get());
+						if (!exit) continue;
+
+						if (!merged) { merged = *exit; continue; }
+						if (auto both = HAL::merge_state(*merged, *exit)) merged = *both;
+					}
+
+					if (!merged) continue;
+
+					// Readers on different queues can merge into a state one of
+					// them cannot record (a pixel-shader read unioned onto a
+					// compute list). Then there is no single state to agree on --
+					// leave every reader with its own and pay the extra barrier.
+					bool all_can = true;
+					for (auto* pass : state.passes)
+						if (!supported(pass, *merged)) { all_can = false; break; }
+					if (!all_can) continue;
+
+					merged_read[i] = merged;
+
+					// Propagate it back so every reader asks for the same thing.
+					for (auto* pass : state.passes)
+						pass->context.list->add_resource_usage(resource.get(), *merged, HAL::ALL_SUBRESOURCES);
+				}
+
+				// --- 2. link each state to the one before it ---------------------
+				//
+				// The consumer is told where the producer left the resource. Only
+				// used when the consumer's group has not already tracked it, so a
+				// producer and consumer that land in the SAME group cost nothing
+				// here -- the group threads the state itself.
+				for (uint i = 1; i < info.states.size(); i++)
+				{
+					auto& prev = info.states[i - 1];
+					auto& cur  = info.states[i];
+					if (prev.passes.empty() || cur.passes.empty()) continue;
+
+					Pass* producer = prev.passes.back();
+					auto& producer_list = producer->context.list;
+
+					// The hand-off state has to be the SAME for every pass in the
+					// consuming phase: they are told what they will find, and a
+					// phase with several readers has no ordering among them. So
+					// the resource is converged at the producer -- one barrier on
+					// the producing list, none on any reader -- rather than
+					// leaving the first reader to transition it and the rest to
+					// discover it already transitioned.
+					//
+					// The phase's merged read state is the natural target: step 1
+					// already made every reader ask for exactly that.
+					std::optional<HAL::ResourceState> handoff = merged_read[i];
+
+					// Must also be recordable on the producer's own queue -- a
+					// compute list cannot transition anything into a pixel-shader
+					// read. Resting works from and to any queue, so it is the
+					// fallback for every case the direct hand-off cannot express.
+					if (handoff && !HAL::IsFullySupport(producer_list->get_type(), *handoff))
+						handoff.reset();
+
+					// A single consumer needs no convergence: it is the only pass
+					// that can see the state, so the producer's own exit does.
+					if (!handoff && cur.passes.size() == 1)
+					{
+						auto exit = producer_list->get_exit_state(resource.get());
+						if (exit && supported(cur.passes[0], *exit))
+							handoff = exit;
+					}
+
+					const bool rested = !handoff;
+					if (rested)
+						handoff = HAL::state_at_rest(HAL::resting_layout(resource.get()));
+
+					producer_list->transition_to(resource.get(), *handoff);
+
+					if (HAL::Debug::LogBarrierDecisions && !HAL::Debug::LogBarrierResource.empty()
+						&& std::string_view{ resource->name }.find(HAL::Debug::LogBarrierResource) != std::string_view::npos)
+					{
+						Log::get() << "[fg-link] '" << resource->name << "' state " << i
+							<< " producer '" << producer->name.ptr << "'"
+							<< (prev.write ? " (write)" : " (read)")
+							<< " -> " << (uint)cur.passes.size() << " consumer(s), first '"
+							<< cur.passes.front()->name.ptr << "'"
+							<< "  layout=" << (uint)handoff->layout
+							<< (rested ? " [rested]" : "") << Log::endl;
+					}
+
+					for (auto* pass : cur.passes)
+						pass->context.list->set_entry_state(resource.get(), *handoff);
+				}
+
+				// --- 3. rest once, at the last pass that touches it --------------
+				//
+				// Read or write -- whichever comes last. This is the single point
+				// where an FG resource returns to a state any queue can pick up,
+				// replacing the per-group convergence that CommandListGroup skips
+				// for frame_graph_managed resources.
+				//
+				// Deliberately unconditional, and deliberately the resting state
+				// rather than whatever the last pass happened to leave behind.
+				// The resting layout is HAL's global contract -- every group
+				// enters a resource from it, and code outside the graph does too
+				// -- so it is the ONLY end state that stays valid no matter who
+				// picks the resource up next. Carrying the real end state into
+				// next frame instead would be strictly worse: a resource left in
+				// DEPTH_STENCIL_WRITE cannot be barriered out of by a compute
+				// queue at all, so next frame's first pass could be handed a
+				// before-state it has no way to express.
+				//
+				// That also means there is nothing to carry across frames: the
+				// next frame's first pass needs no entry state, because the
+				// barrier system's own resting-layout default is already right.
+				Pass* last_pass = info.states.back().passes.back();
+				if (auto& list = last_pass->context.list)
+					list->transition_to_rest(resource.get());
+			}
 	}
 
 	void TaskBuilder::create_resources()
@@ -1976,7 +2121,6 @@ namespace FrameGraph
 		sync_state_with_self.reset();
 
 		render_task = std::future<void>();
-		compile_task = std::future<void>();
 
 		debug_commands.clear();
 

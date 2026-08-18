@@ -266,8 +266,8 @@ namespace HAL
             PROFILE(L"Queue::execute");
 
             // Accumulate lists into one ExecuteCommandLists — no per-list flush.
-            // Legal because TaskBuilder::link_list_groups chains resource state
-            // across list boundaries within a group: D3D12 forbids, within one
+            // Legal because CommandListGroup::compile_transitions chains resource
+            // state across list boundaries within a group: D3D12 forbids, within one
             // scope, accessing a resource after a SyncAfter == SYNC_NONE barrier or
             // emitting a SyncBefore == SYNC_NONE barrier once it has been accessed
             // (#1417). gpu_wait/signal still flush at real sync points.

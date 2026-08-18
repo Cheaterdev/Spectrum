@@ -188,8 +188,6 @@ export{
 
 			std::shared_ptr<Resource> get_tracked();
 
-			void disable_state_tracking();
-			void enable_state_tracking();
 			ResourceAllocationInfo alloc_info;
 			std::string name;
 			void set_name(std::string name);
@@ -227,19 +225,8 @@ export{
 
 			SERIALIZE()
 			{
-
-				desc.Flags &= ~ResFlags::DisableStateTracking;
-				if (check(desc.Flags & ResFlags::DisableStateTracking))
-				{
-					ASSERT(false);
-					Log::get() << "AlARMA!!" << Log::endl;
-				}
-	ASSERT(!check(desc.Flags & ResFlags::DisableStateTracking));
-			
 				ASSERT(serialize_from_derived);
 				ar& NVP(desc);
-				ASSERT(!check(desc.Flags & ResFlags::DisableStateTracking));
-
 			}
 		};
 			

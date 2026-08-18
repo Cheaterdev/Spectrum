@@ -24,6 +24,27 @@ namespace HAL
 		return TextureLayout::COPY_DEST;
 	}
 
+	ResourceState state_at_rest(TextureLayout layout)
+	{
+		if (check(layout & TextureLayout::SHADER_RESOURCE))     return { BarrierSync::ALL, BarrierAccess::SHADER_RESOURCE, layout };
+		if (check(layout & TextureLayout::UNORDERED_ACCESS))    return { BarrierSync::ALL, BarrierAccess::UNORDERED_ACCESS, layout };
+		if (check(layout & TextureLayout::RENDER_TARGET))       return { BarrierSync::ALL, BarrierAccess::RENDER_TARGET, layout };
+		if (check(layout & TextureLayout::DEPTH_STENCIL_WRITE)) return { BarrierSync::ALL, BarrierAccess::DEPTH_STENCIL_WRITE, layout };
+		if (check(layout & TextureLayout::DEPTH_STENCIL_READ))  return { BarrierSync::ALL, BarrierAccess::DEPTH_STENCIL_READ, layout };
+		if (check(layout & TextureLayout::COPY_SOURCE))         return { BarrierSync::ALL, BarrierAccess::COPY_SOURCE, layout };
+		if (check(layout & TextureLayout::COPY_DEST))           return { BarrierSync::ALL, BarrierAccess::COPY_DEST, layout };
+
+		// PRESENT / UNDEFINED / NONE -- nothing is accessing it. NO_ACCESS is
+		// also the only access D3D12 permits alongside LAYOUT_UNDEFINED.
+		//
+		// Sync NONE rather than ALL here, unlike every branch above: D3D12
+		// rejects NO_ACCESS paired with any real sync unless the layout is
+		// UNDEFINED (#1331), and PRESENT maps to LAYOUT_COMMON. This is the
+		// same state transition_present() records, which is what a swapchain
+		// resource genuinely rests in.
+		return { BarrierSync::NONE, BarrierAccess::NO_ACCESS, layout };
+	}
+
 	bool IsCompatible(CommandListType a, CommandListType b)
 	{
 		if (a == CommandListType::DIRECT) return true;

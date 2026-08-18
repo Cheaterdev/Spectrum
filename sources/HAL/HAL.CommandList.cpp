@@ -121,19 +121,6 @@ static void visit_subres(const HAL::ResourceInfo& info, F&& f)
 	}, info.view);
 }
 
-// Fill a resting layout back out into the ResourceState a barrier needs. The
-// access follows from the layout; the sync stays generic, because a barrier
-// against a resting resource is crossing into (or out of) a scope where no
-// specific producer/consumer stage is known -- and it must NOT be
-// BarrierSync::NONE, which D3D12 rejects once a resource has been accessed.
-static HAL::ResourceState state_at_rest(HAL::TextureLayout layout)
-{
-	using namespace HAL;
-
-	// PRESENT / UNDEFINED / NONE -- nothing is accessing it.
-	return { BarrierSync::NONE, BarrierAccess::NO_ACCESS, layout };
-}
-
 //using namespace HAL;
 namespace HAL
 
@@ -973,7 +960,27 @@ namespace HAL
 			}
 
 
-			void Transitions::add_resource_usage(const ResourceInfo& info, BarrierSync operation )
+			void Transitions::transition_to(const HAL::Resource* resource, ResourceState state)
+			{
+				// split_op, not begin_op: begin_op would merge into the last
+				// operation whenever the classes happen to match, and the target
+				// state would then be merged with that operation's real use
+				// instead of following it.
+				if (operations.empty())
+					begin_op(BarrierSync::NONE);
+				else
+					split_op();
+
+				add_resource_usage(resource, state, ALL_SUBRESOURCES);
+			}
+
+			void Transitions::transition_to_rest(const HAL::Resource* resource)
+			{
+				transition_to(resource, state_at_rest(resting_layout(resource)));
+			}
+
+
+			void Transitions::add_resource_usage(const ResourceInfo& info, BarrierSync operation, bool whole_resource )
 			{
 				if (!info.is_valid()) return;
 				ResourceState target_state;//= ResourceState::COMMON;
@@ -1050,7 +1057,15 @@ namespace HAL
 			// would pay a per-subresource cost on every bind for information
 			// that can be recovered later, once, only for resources that
 			// actually need a barrier.
-			record_usage(resource, HAL::OperationUsage(&info, target_state));
+			//
+			// [Barrier = ALL] drops the view entirely and records a bare
+			// whole-resource use: there is then no range to expand at all, so
+			// the resource stays on compile_transitions' single
+			// current[ALL_SUBRESOURCES] entry instead of diverging into one
+			// per slice.
+			record_usage(resource, whole_resource
+				? HAL::OperationUsage(ALL_SUBRESOURCES, target_state)
+				: HAL::OperationUsage(&info, target_state));
 		}
 			}
 
@@ -1067,10 +1082,6 @@ namespace HAL
 			state.listed = true;
 			used_resources.emplace_back(const_cast<Resource*>(resource));
 		}
-	}
-
-	void Transitions::free_resources()
-	{
 	}
 
 	// Append one use of `resource` to the operation currently being recorded.
@@ -1137,6 +1148,27 @@ namespace HAL
 		}
 	}
 
+
+	void Transitions::set_entry_state(const HAL::Resource* resource, ResourceState state)
+	{
+		auto& tracked = const_cast<Resource*>(resource)->get_state(this);
+		tracked.has_entry_state = true;
+		tracked.entry_state     = state;
+	}
+
+	std::optional<ResourceState> Transitions::get_exit_state(const HAL::Resource* resource) const
+	{
+		auto& tracked = const_cast<Resource*>(resource)->get_state(const_cast<Transitions*>(this));
+		if (tracked.operations.empty()) return std::nullopt;
+
+		// operations is ordered by index, so the last entry is the last
+		// operation, and its last usage is the one that leaves the resource
+		// where it ends up.
+		const auto& usages = tracked.operations.rbegin()->second;
+		if (usages.empty()) return std::nullopt;
+
+		return usages.back().state;
+	}
 
 	void Transitions::alias_begin(HAL::Resource* resource)
 	{
@@ -1515,7 +1547,6 @@ namespace HAL
 
 	void Transitions::begin()
 	{
-		transition_count = 0;
 		operations.clear();
 		op_step = 0;
 		tracked_resources.reserve(512);
@@ -1527,8 +1558,6 @@ namespace HAL
 		operations.clear();
 		op_step = 0;
 		used_resources.clear();
-		need_check_transitions.clear();
-		transitions_compiled = false;
 	}
 
 	void SignatureDataSetter::commit_tables(BarrierSync operation, UsedSlots* slots)
@@ -1541,8 +1570,8 @@ namespace HAL
 			{
 				{
 					PROFILE(L"transitions");
-					for (auto& resource_info : table.resources)
-						get_base().add_resource_usage(*resource_info, operation);
+					for (auto& bound : table.resources)
+						get_base().add_resource_usage(*bound.info, operation, bound.whole_resource);
 				}
 				{
 					PROFILE(L"set_cb");
@@ -2010,6 +2039,13 @@ namespace HAL
 				auto& tracked = resource->get_state(list.get());
 				if (tracked.operations.empty()) continue;
 
+				// Whoever schedules this resource may know where the previous
+				// group left it -- something this group cannot see for itself.
+				// Only meaningful before the group has touched it; once it has,
+				// its own tracking is authoritative.
+				if (current.empty() && tracked.has_entry_state)
+					current[ALL_SUBRESOURCES] = tracked.entry_state;
+
 				// tracked.operations is an ordered map, so this walks the
 				// operations in the order they were recorded.
 				for (auto& [op_index, usages] : tracked.operations)
@@ -2198,10 +2234,18 @@ namespace HAL
 
 			// Hand the resource back at rest, right after the group's last use
 			// of it -- not at end of group, so it is released as early as it is
-			// actually free. Every group therefore both finds and leaves a
+			// actually free. A group therefore both finds and leaves such a
 			// resource in the same well-defined state, which is what makes
 			// groups independent of the order they are submitted in.
+			//
+			// FrameGraph-managed resources opt out: the FrameGraph knows the
+			// whole pass graph, so it links their usage across passes itself and
+			// rests them once, at the last pass that uses them -- rather than
+			// converging every group boundary, which for something like the VSM
+			// pyramid costs a barrier per subresource each time a fence happens
+			// to split its passes.
 			if (!last_use) continue;
+			if (resource->frame_graph_managed) continue;
 
 			const TextureLayout rest_layout = resting_layout(resource);
 			const ResourceState rest = state_at_rest(rest_layout);

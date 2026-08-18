@@ -459,9 +459,10 @@ public:
 			virtual void init(ResourceAllocInfo& info) override
 			{
 				info.d3ddesc = desc.create_resource_desc(info.flags);
-				
-			info.d3ddesc.Flags|=HAL::ResFlags::DisableStateTracking;
 
+				// "The FrameGraph owns this resource's transitions" is now
+				// Resource::frame_graph_managed, set on the resource itself in
+				// create_resources -- no longer a creation-desc flag.
 			}
 
 			virtual void init_view(ResourceAllocInfo& info,GPUEntityStorageInterface& frame) override
@@ -885,12 +886,6 @@ public:
 		void process_transitions();
 		void process_fences();
 
-		// Mirror commit_command_lists' batching to find the sets of lists that
-		// will be submitted in ONE ExecuteCommandLists, and chain
-		// resource state across the boundaries inside each set. Must run after
-		// process_transitions (all usages recorded) and process_fences (which
-		// decides where batches are flushed), and before compile_lists.
-		void link_list_groups();
 	   	void compile_lists();
 		void reset();
 
@@ -956,7 +951,6 @@ public:
 
 
 		std::future<void> render_task;
-		std::future<void> compile_task;
 
 		// Populated after compile_lists(); available during on_compile.
 		// Transition records have barrier_point == nullptr (resolved into description).

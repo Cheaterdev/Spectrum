@@ -88,13 +88,8 @@ namespace HAL
                         initialLayout = TextureLayout::COPY_DEST;
                 }
 
-                if (check(_desc.Flags & ResFlags::DisableStateTracking))
-                {
-                    if (check(_desc.Flags & ResFlags::ShaderResource))
-                        initialLayout = TextureLayout::SHADER_RESOURCE;
-                    else
-                        initialLayout = TextureLayout::COPY_SOURCE;
-                }
+                // (See the D3D12 path: the DisableStateTracking override is gone
+                // with the flag, and frame_graph_managed is set post-creation.)
             }
 
 

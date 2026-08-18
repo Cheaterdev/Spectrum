@@ -852,15 +852,13 @@ VSM::VSM()
 
 			if (!dirty_slots.empty())
 			{
-				// (Was a note about assert_shared_state / subresource folding on
-				//  VSM_Atlas's 2048 declared vs ~256 mapped slices. That tracking
-				//  layer is gone as of the 2026-08 barrier rewrite.)
-
-				// VSM_Atlas was just a DSV -- nudge readable for the copy shader
-				// below, same one-off idiom PSSM.cpp uses; the next draw into it
-				// transitions it back automatically via set_rtv.
-				command_list->add_resource_usage(data.VSM_Atlas->resource, HAL::ResourceStates::SHADER_RESOURCE);
-
+				// No manual transitions here any more. VSM_Atlas (DSV -> SRV for
+				// the copy shader) and VSM_PageHiZ's per-mip UAV/SRV binds are
+				// declared [Barrier = ALL] in vsm.sig, so each bind records one
+				// whole-resource use instead of expanding into its
+				// physical_page_count-slice range -- which is exactly what the
+				// bare add_resource_usage() calls that used to sit here were
+				// faking by hand.
 				command_list->get_copy().update(*data.VSM_DirtySlots, 0, std::span{ dirty_slots });
 
 				ivec3 dispatch_size((int)page_table.page_size, (int)page_table.page_size, (int)dirty_slots.size());
@@ -912,21 +910,6 @@ VSM::VSM()
 					}
 				}
 
-				PROFILE(L"vsm_hiz_transition");
-				// (Was a post-mortem on collapsing this into one wide transition
-				//  plus an assert_shared_state() fold. That tracking layer is gone
-				//  as of the 2026-08 barrier rewrite; revisit whether the wide
-				//  transition is worth it against the new system.)
-				//
-				// Every mip but the last is later read as another mip's
-				// SrcMip (via the shared whole-chain SRV), so it naturally
-				// rests as SHADER_RESOURCE; only the coarsest mip's write is
-				// never followed by a read.
-				for (uint32_t slot : dirty_slots)
-				{
-					UINT last_mip_subres = (UINT)(pyramid_mip_count - 1) + slot * (UINT)pyramid_mip_count;
-					command_list->add_resource_usage(data.VSM_PageHiZ->resource, HAL::ResourceStates::SHADER_RESOURCE, last_mip_subres);
-				}
 			}
 		}
 	};

@@ -104,16 +104,6 @@ namespace HAL
 		return get_ptr<Resource>();
 	}
 
-	void Resource::disable_state_tracking()
-	{
-		desc.Flags |= ResFlags::DisableStateTracking;
-	}
-
-	void Resource::enable_state_tracking()
-	{
-		desc.Flags &= ~ResFlags::DisableStateTracking;
-	}
-
 	HeapType Resource::get_heap_type() const
 	{
 		return heap_type;

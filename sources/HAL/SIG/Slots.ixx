@@ -39,8 +39,26 @@ class Slot_Compiler
 	}
 public:
 	Context* context;
-	std::vector<HAL::ResourceInfo*> resources;
+	std::vector<HAL::BoundResource> resources;
 	std::set<std::shared_ptr<HAL::DescriptorHeapStorage>> descriptors;
+
+	// Set for the duration of one member's compile() when the .sig declared it
+	// [Barrier = ALL]. A flag rather than a parameter because a member can be a
+	// scalar handle, a fixed array, or a vector, each with its own compile()
+	// overload and its own push_back -- all of which inherit the scope this way
+	// without every overload having to forward it.
+	bool bind_whole_resource = false;
+
+	// compile() for a member the .sig marked [Barrier = ALL]. Generated table
+	// code calls this instead of compile(); everything else is identical, so
+	// the layout it writes is unchanged.
+	template<class T>
+	void compile_whole(const T& t)
+	{
+		bind_whole_resource = true;
+		compile(t);
+		bind_whole_resource = false;
+	}
 
 	std::stringstream s;
 	Slot_Compiler() :s(std::stringstream::out | std::stringstream::binary)
@@ -56,7 +74,7 @@ public:
 		{
 			if (handle.get_storage()->can_free())
 				descriptors.insert(handle.get_storage());
-			resources.push_back(&handle.get_resource_info());
+			resources.push_back({ &handle.get_resource_info(), bind_whole_resource });
 			offset = handle.get_offset();
 		}
 
@@ -105,7 +123,7 @@ public:
 					if (handle.get_storage()->can_free())
 						descriptors.insert(handle.get_storage());
 					offsets.emplace_back(handle.get_offset());
-					resources.push_back(&handle.get_resource_info());
+					resources.push_back({ &handle.get_resource_info(), bind_whole_resource });
 				}
 				else
 				{
@@ -179,7 +197,7 @@ export {
 		using Slot = _Slot;
 
 		HLSL::ConstantBuffer<Table> const_buffer;
-		std::vector<HAL::ResourceInfo*> resources;
+		std::vector<HAL::BoundResource> resources;
 		std::set<std::shared_ptr<HAL::DescriptorHeapStorage>> descriptors;
 
 		const HLSL::ConstantBuffer<Table>& compiled() const

@@ -73,8 +73,12 @@ ComputePSO VSMCopyPageDepth
 [Bind = DefaultLayout::Instance0]
 struct VSMCopyPageDepthBatch
 {
-	Texture2DArray<float> atlas;
-	RWTexture2DArray<float> dst_mip0;
+	# atlas / dst_mip0 are NARROWED views (one mip, physical_page_count array
+	# slices). Without [Barrier = ALL] each bind expands into one barrier per
+	# slice; the whole resource is being rewritten by this step anyway, so one
+	# whole-resource transition is both correct and far cheaper.
+	[Barrier = ALL] Texture2DArray<float> atlas;
+	[Barrier = ALL] RWTexture2DArray<float> dst_mip0;
 	StructuredBuffer<uint> dirty_slots;
 }
 
@@ -96,8 +100,11 @@ ComputePSO VSMCopyPageDepthBatch
 [Bind = DefaultLayout::Instance0]
 struct VSMDownsampleHiZBatch
 {
-	Texture2DArray<float> src;
-	RWTexture2DArray<float> dst_mip;
+	# Both sides are narrowed to exactly one mip across physical_page_count
+	# slices, and this runs once per mip per frame -- the single worst
+	# subresource-expansion site in the frame. See VSMCopyPageDepthBatch.
+	[Barrier = ALL] Texture2DArray<float> src;
+	[Barrier = ALL] RWTexture2DArray<float> dst_mip;
 	StructuredBuffer<uint> dirty_slots;
 	uint src_mip;
 }

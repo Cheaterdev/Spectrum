@@ -139,13 +139,11 @@ namespace HAL
                         initialLayout = TextureLayout::COPY_DEST; // probably update from CPU or copy
                 }
 
-            if (check(_desc.Flags & ResFlags::DisableStateTracking))
-            {
-                if (check(_desc.Flags & ResFlags::ShaderResource))
-                    initialLayout = TextureLayout::SHADER_RESOURCE;// | TextureLayout::COPY_SOURCE;
-                else
-                    initialLayout = TextureLayout::COPY_SOURCE;
-            }
+            // (Used to force SHADER_RESOURCE / COPY_SOURCE for
+            // DisableStateTracking resources. That flag is gone, and its
+            // replacement -- frame_graph_managed -- is set after creation, so it
+            // cannot be consulted here. Nothing assumes the creation layout
+            // anyway: a resource's first-ever barrier enters from UNDEFINED.)
 
             }
             else

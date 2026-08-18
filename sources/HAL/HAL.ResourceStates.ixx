@@ -77,6 +77,20 @@ export
 			// compile_transitions with nothing to do and no barriers emitted.
 			bool listed = false;
 
+			// The state this list will FIND the resource in, when the group has
+			// no way to know it -- i.e. this list holds the group's first touch
+			// of it. Declared by whoever owns the resource's scheduling: the
+			// FrameGraph knows the whole pass graph, so for its own resources it
+			// can say what the previous pass left behind, across a group
+			// boundary the group itself cannot see over.
+			//
+			// Unset means "assume the resting layout", which is correct for any
+			// resource the group model owns end to end (every group hands those
+			// back at rest). This is the replacement for the old
+			// prepare_state()/zero-transition seed node.
+			bool          has_entry_state = false;
+			ResourceState entry_state;
+
 			// Every operation on this list that touched this resource, keyed by
 			// CmdListOperation::index -> the places it was used in that
 			// operation. Ordered map: iteration is already in operation order,
@@ -92,6 +106,7 @@ export
 			{
 				TrackedObjectState::reset();
 				listed = false;
+				has_entry_state = false;
 				operations.clear();
 			}
 		};
@@ -106,6 +121,14 @@ export
 		// specific point, and a resource at rest is by definition not being
 		// accessed by anyone.
 		TextureLayout resting_layout(const Resource* resource);
+
+		// Fill a resting layout back out into the ResourceState a barrier needs.
+		// The access follows from the layout; the sync stays generic, because a
+		// barrier against a resting resource is crossing into (or out of) a
+		// scope where no specific producer/consumer stage is known -- and it
+		// must NOT be BarrierSync::NONE, which D3D12 rejects once a resource has
+		// been accessed.
+		ResourceState state_at_rest(TextureLayout layout);
 
 		bool IsCompatible(CommandListType a, CommandListType b);
 		bool IsFullySupport(CommandListType type, const ResourceState& states);

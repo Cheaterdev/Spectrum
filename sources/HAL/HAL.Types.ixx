@@ -532,7 +532,9 @@ private:
 		Virtual = 1 << 7,
 		Swapchain = 1<<8,
 		WriteInitialized = 1<<9,
-		DisableStateTracking = 1<<10,
+		// 1<<10 was DisableStateTracking. Removed: "the FrameGraph owns this
+		// resource's transitions" is now Resource::frame_graph_managed, a
+		// property of the resource rather than of its creation desc.
 		Immutable            = 1<<11   // upload once (CopyDest → read), no further transitions
 	};
 
