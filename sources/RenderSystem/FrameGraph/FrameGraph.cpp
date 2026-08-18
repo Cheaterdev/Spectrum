@@ -759,6 +759,35 @@ namespace FrameGraph
 
 		enum_array<CommandListType, HAL::FenceWaiter> frame_end_fence;
 
+		// One batch that will become a single ExecuteCommandLists, with the
+		// ordering work that has to happen around it. Barrier computation is
+		// the expensive part and is pure once plan_resources() has run, so it
+		// is hoisted out of this loop and done for every batch at once, in
+		// parallel; submission below stays strictly ordered because fences
+		// flow between batches.
+		struct PendingSubmit
+		{
+			HAL::CommandListGroup    group;
+			HAL::CommandListType     type;
+			std::vector<const Pass*> waits;                // gpu_wait these before submitting
+			Pass*                    fence_pass = nullptr; // receives fence_end, if any
+		};
+		std::vector<PendingSubmit> submits;
+
+		// Close the batch open on `type`: decide its first-use questions (this
+		// is the only part of the barrier work that must happen in submission
+		// order) and queue it for compilation.
+		auto close_batch = [&](HAL::CommandListType type, Pass* fence_pass, std::vector<const Pass*> waits = {})
+		{
+			auto& group = queued_lists[type];
+			if (group.empty() && waits.empty()) return;
+
+			group.plan_resources();
+
+			submits.push_back(PendingSubmit{ std::move(group), type, std::move(waits), fence_pass });
+			group.clear();
+		};
+
 		for (auto& pass : builder.enabled_passes)
 		{
 			HAL::CommandListType list_type = pass->get_type();
@@ -767,25 +796,12 @@ namespace FrameGraph
 
 			if (commandList)
 			{
-
-
+				std::vector<const Pass*> waits;
 				for (auto sync_pass : pass->sync_state.values)
-				{
-					if (!sync_pass) continue;
+					if (sync_pass) waits.push_back(sync_pass);
 
-					if(!queued_lists[list_type].empty())
-					{
-						queued_lists[list_type].compile_transitions();
-						queued_lists[list_type].compile();
-						snapshot_group(queued_lists[list_type]);
-						RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
-						queued_lists[list_type].clear();
-					}
-
-					RenderSystem::get().device().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
-				}
-
-
+				if (!waits.empty())
+					close_batch(list_type, nullptr, std::move(waits));
 
 				queued_lists[list_type].add(commandList);
 
@@ -798,50 +814,67 @@ namespace FrameGraph
 					pass->put_fence = true;
 
 				if (pass->put_fence)		//////////////////////// ARGH!!!!
-				{
-					queued_lists[list_type].compile_transitions();
-					queued_lists[list_type].compile();
-					snapshot_group(queued_lists[list_type]);
-					pass->fence_end = RenderSystem::get().device().get_queue(list_type)->execute(queued_lists[list_type]);
-
-					queued_lists[list_type].clear();
-
-					result = pass->fence_end;
-					frame_end_fence[list_type] = pass->fence_end;
-
-					if (serialize_queues)
-						for (auto other : magic_enum::enum_values<CommandListType>())
-						{
-							if (other == list_type) continue;
-							RenderSystem::get().device().get_queue(other)->gpu_wait(pass->fence_end);
-						}
-				}
-				//	pass->fence_end = commandList->execute();
-
-				//	
+					close_batch(list_type, pass);
 			}
 
 
 		}
 
-
+		// Whatever is still open at end of frame.
 		for (auto type : magic_enum::enum_values<CommandListType>())
-		{
-			auto& group = queued_lists[type];
-			if (group.empty()) continue;
-			group.compile_transitions();
-			group.compile();
-			snapshot_group(group);
-			result = RenderSystem::get().device().get_queue(type)->execute(group);
-			group.clear();
-			frame_end_fence[type] = result;
+			close_batch(type, nullptr);
 
-			if (serialize_queues)
-				for (auto other : magic_enum::enum_values<CommandListType>())
+		// Every batch's barriers, computed in parallel. plan_resources() has
+		// already resolved everything order-dependent, so these touch nothing
+		// shared: `current`/`wanted` are group-local and the Barriers they fill
+		// belong to their own lists.
+		{
+			PROFILE(L"compile_groups");
+
+			std::vector<std::future<void>> tasks;
+			tasks.reserve(submits.size());
+
+			for (auto& submit : submits)
+				tasks.emplace_back(thread_pool::get().enqueue([&submit]()
 				{
-					if (other == type) continue;
-					RenderSystem::get().device().get_queue(other)->gpu_wait(result);
-				}
+					submit.group.compile_transitions();
+					submit.group.compile();
+				}));
+
+			for (auto& t : tasks)
+				t.wait();
+		}
+
+		// Ordered submission. Cheap now -- the batches are already compiled --
+		// but it must stay in order: a batch's fence_end is consumed by a later
+		// batch's gpu_wait, and gpu_wait/execute derive their relative order
+		// from the order they are posted to the queue's executor thread.
+		{
+			PROFILE(L"submit_groups");
+
+			for (auto& submit : submits)
+			{
+				auto queue = RenderSystem::get().device().get_queue(submit.type);
+
+				for (const auto* sync_pass : submit.waits)
+					queue->gpu_wait(sync_pass->fence_end);
+
+				if (submit.group.empty()) continue;
+
+				snapshot_group(submit.group);
+				result = queue->execute(submit.group);
+
+				frame_end_fence[submit.type] = result;
+				if (submit.fence_pass)
+					submit.fence_pass->fence_end = result;
+
+				if (serialize_queues)
+					for (auto other : magic_enum::enum_values<CommandListType>())
+					{
+						if (other == submit.type) continue;
+						RenderSystem::get().device().get_queue(other)->gpu_wait(result);
+					}
+			}
 		}
 
 		// Remember each queue's final fence for next frame's boundary wait.

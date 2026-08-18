@@ -101,6 +101,19 @@ export{
 			// once at end of recording for the final operation.
 			void end_op();
 
+			// Force a new operation of the SAME class. begin_op deliberately
+			// merges a run of same-class work into one operation, which is what
+			// makes barriers batch -- but two dispatches in that run that both
+			// touch the same UAV have to be ordered against each other, and a
+			// barrier can only sit between operations. record_usage calls this
+			// when it spots that case.
+			void split_op();
+
+			// Bumped on every begin_op call, including the ones that merge into
+			// the current operation. Stamped onto each recorded usage so
+			// record_usage can tell one dispatch's binds from the next's.
+			uint op_step = 0;
+
 		protected:
 			// Append one use to the operation currently being recorded (the
 			// back of `operations`), on this resource's per-list
@@ -720,6 +733,24 @@ export{
 		{
 			std::vector<CommandList::ptr> lists;
 
+			// What this group must do about a resource's first-ever use.
+			// Decided by plan_resources() on the submitting thread, in
+			// submission order, so that compile_transitions() itself reads only
+			// group-local data and several groups can compile concurrently.
+			struct ResourcePlan
+			{
+				// This group is the first ever to touch the resource, so it
+				// enters from the creation (undefined) layout with SyncBefore
+				// NONE. Otherwise something has already touched it and NONE is
+				// illegal (#1417).
+				bool from_undefined = false;
+
+				// This group holds the resource's first-ever WRITE and therefore
+				// owns its initializing discard (#1422).
+				bool owns_discard = false;
+			};
+			std::unordered_map<Resource*, ResourcePlan> plan;
+
 		public:
 			void add(const CommandList::ptr& list) { lists.emplace_back(list); }
 
@@ -737,6 +768,17 @@ export{
 			// Must run exactly once per list. A list processed by two groups (or
 			// by a group and again on its own) gets two independently computed
 			// barrier sets spliced into one command stream.
+			// Resolve the first-use questions for every resource this group
+			// touches. MUST run on the submitting thread, in submission order,
+			// BEFORE compile_transitions -- it is the only step that reads or
+			// writes the per-resource `virgin` / `initialized` flags, and "which
+			// group owns the first write" is meaningless out of order.
+			//
+			// Splitting it out is what makes compile_transitions pure: after
+			// this, a group's barrier computation touches nothing shared, so
+			// groups can be compiled in parallel.
+			void plan_resources();
+
 			void compile_transitions();
 
 			// Replay every list into its API command list. Must follow

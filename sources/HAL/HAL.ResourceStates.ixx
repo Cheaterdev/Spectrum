@@ -51,6 +51,13 @@ export
 			// another, and nothing in `subres` distinguishes them.
 			ResourceState state;
 
+			// Which command within the operation recorded this. An operation is
+			// a RUN of same-class work, so several dispatches share one -- and
+			// two usages with different `step` values are different dispatches,
+			// which is what distinguishes "bound twice for one dispatch" from
+			// "written by one dispatch, then touched by the next".
+			uint step = 0;
+
 			OperationUsage() = default;
 			OperationUsage(const ResourceInfo* info, ResourceState state) : info(info), state(state) {}
 			OperationUsage(UINT subres, ResourceState state) : subres(subres), state(state) {}

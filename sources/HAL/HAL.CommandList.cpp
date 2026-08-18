@@ -402,6 +402,7 @@ namespace HAL
 
 		CommandListGroup group;
 		group.add(dynamic_cast<CommandList*>(this)->get_ptr());
+		group.plan_resources();
 		group.compile_transitions();
 		group.compile();
 	}
@@ -930,8 +931,24 @@ namespace HAL
 			//     [op0.before] op0 cmds [op0.after] [op1.before] op1 cmds ...
 			void Transitions::begin_op(BarrierSync op)
 			{
+				// Counts commands, not operations -- a run of same-class work
+				// merges below but each call is still a distinct dispatch/draw.
+				op_step++;
+
 				if (!operations.empty() && operations.back().type == op)
 					return;                                      // same class -> keep growing
+
+				end_op();
+
+				auto& operation = operations.emplace_back(type, op, static_cast<uint>(operations.size()));
+				compiler.func_barrier(&operation.barriers_before);
+			}
+
+			void Transitions::split_op()
+			{
+				if (operations.empty()) return;
+
+				const BarrierSync op = operations.back().type;
 
 				end_op();
 
@@ -1075,7 +1092,32 @@ namespace HAL
 		uint op_index = operations.back().index;
 
 		auto& state = const_cast<Resource*>(resource)->get_state(this);
-		state.operations[op_index].push_back(usage);
+
+		// Unordered access is the one case where re-touching a resource inside
+		// a single operation is a real hazard: two dispatches writing the same
+		// UAV (or one writing and the next reading it) must be ordered, and the
+		// state does not change to signal it. Render-target and depth writes are
+		// ordered by the pipeline, so they are deliberately not included.
+		//
+		// `step` is what separates "bound twice for the same dispatch" -- which
+		// is fine, those binds merge -- from "touched again by a later dispatch
+		// in the same run", which needs the operation split so a barrier can sit
+		// between the two halves.
+		const bool uav_involved = check(usage.state.access & BarrierAccess::UNORDERED_ACCESS);
+
+		for (const auto& prev : state.operations[op_index])
+		{
+			if (prev.step == op_step) continue;   // same dispatch, just another bind
+			if (!uav_involved && !check(prev.state.access & BarrierAccess::UNORDERED_ACCESS)) continue;
+
+			split_op();
+			op_index = operations.back().index;
+			break;
+		}
+
+		auto& usages = state.operations[op_index];
+		usages.push_back(usage);
+		usages.back().step = op_step;
 	}
 
 	void Transitions::add_resource_usage(const Resource* resource, ResourceState to, UINT subres)
@@ -1475,6 +1517,7 @@ namespace HAL
 	{
 		transition_count = 0;
 		operations.clear();
+		op_step = 0;
 		tracked_resources.reserve(512);
 		used_resources.reserve(256);
 	}
@@ -1482,6 +1525,7 @@ namespace HAL
 	void Transitions::on_execute()
 	{
 		operations.clear();
+		op_step = 0;
 		used_resources.clear();
 		need_check_transitions.clear();
 		transitions_compiled = false;
@@ -1847,6 +1891,51 @@ namespace HAL
 		return resource && std::string_view{ resource->name }.find(HAL::Debug::LogBarrierResource) != std::string_view::npos;
 	}
 
+	void CommandListGroup::plan_resources()
+	{
+		PROFILE(L"plan_resources");
+
+		plan.clear();
+
+		for (auto& list : lists)
+		{
+			for (auto* resource : list->get_used_resources())
+			{
+				if (plan.count(resource)) continue;   // already decided for this group
+
+				ResourcePlan p;
+				p.from_undefined = resource->virgin;
+
+				// Does this group write the resource anywhere? Only a write can
+				// establish contents, so only a write can own the discard.
+				bool writes = false;
+				if (!resource->initialized)
+				{
+					for (auto& l : lists)
+					{
+						auto& tracked = resource->get_state(l.get());
+						for (auto& [op_index, usages] : tracked.operations)
+						{
+							for (auto& usage : usages)
+								if (usage.state.has_write_bits()) { writes = true; break; }
+							if (writes) break;
+						}
+						if (writes) break;
+					}
+				}
+
+				if (writes)
+				{
+					p.owns_discard = true;
+					resource->initialized = true;
+				}
+
+				resource->virgin = false;
+				plan.emplace(resource, p);
+			}
+		}
+	}
+
 	void CommandListGroup::compile_transitions()
 	{
 		PROFILE(L"compile_transitions");
@@ -1867,9 +1956,31 @@ namespace HAL
 
 		for (auto* resource : resources)
 		{
+			// Decided by plan_resources() on the submitting thread; read-only
+			// here, which is what lets groups compile in parallel. A missing
+			// entry means plan_resources() was never called -- which would
+			// silently disable this resource's first-use discard and make it
+			// enter from the wrong state, so catch it rather than default it.
+			auto plan_it = plan.find(resource);
+			ASSERT(plan_it != plan.end());
+			if (plan_it == plan.end()) continue;
+			const ResourcePlan& res_plan = plan_it->second;
+
+			// Both first-use facts are consumed ONCE within the group, so they
+			// are tracked group-locally rather than read back off the resource.
+			// The discard goes to the first write; SyncBefore=NONE goes to the
+			// genuinely first barrier and nothing after it, since D3D12 rejects
+			// NONE once the resource has been accessed (#1417).
+			bool discard_pending    = res_plan.owns_discard;
+			bool undefined_pending  = res_plan.from_undefined;
+
+			// Diagnostics -- see HAL::Debug::LogBarrierSummary.
+			uint stat_ops = 0, stat_usages = 0, stat_expands = 0, stat_expanded_subres = 0, stat_barriers = 0;
+
 			if (should_log_barrier(resource))
 				Log::get() << "[barriers]   resource '" << resource->name
-				           << "' virgin=" << (resource->virgin ? 1 : 0)
+				           << "' from_undefined=" << (res_plan.from_undefined ? 1 : 0)
+				           << " owns_discard=" << (res_plan.owns_discard ? 1 : 0)
 				           << " rest_layout=" << hex_of((uint)resting_layout(resource))
 				           << Log::endl;
 
@@ -1903,6 +2014,8 @@ namespace HAL
 				// operations in the order they were recorded.
 				for (auto& [op_index, usages] : tracked.operations)
 				{
+					stat_ops++;
+					stat_usages += (uint)usages.size();
 					// 1. Collapse everything this operation does to the
 					//    resource into one wanted state per subresource. A
 					//    resource bound several ways in one operation (e.g.
@@ -1953,9 +2066,12 @@ namespace HAL
 					// alongside LAYOUT_UNDEFINED.
 					auto from_undefined = [&]() -> ResourceState
 					{
-						return resource->virgin
-							? ResourceStates::UNKNOWN
-							: ResourceState{ BarrierSync::ALL, BarrierAccess::NO_ACCESS, TextureLayout::UNDEFINED };
+						if (undefined_pending)
+						{
+							undefined_pending = false;
+							return ResourceStates::UNKNOWN;   // never seen: NONE is correct, and required
+						}
+						return ResourceState{ BarrierSync::ALL, BarrierAccess::NO_ACCESS, TextureLayout::UNDEFINED };
 					};
 
 					auto emit = [&](UINT subres, ResourceState after)
@@ -1972,7 +2088,7 @@ namespace HAL
 						// first-ever touch is a READ gets a defined layout from
 						// that point on but still holds nothing, so the discard has
 						// to wait for the write that actually fills it (#1422).
-						if (!resource->initialized && after.has_write_bits())
+						if (discard_pending && after.has_write_bits())
 						{
 							const ResourceState before = from_undefined();
 
@@ -1983,9 +2099,9 @@ namespace HAL
 
 							barriers.transition(resource, before, after,
 								ALL_SUBRESOURCES, BarrierFlags::SINGLE | BarrierFlags::DISCARD);
+							stat_barriers++;
 
-							resource->initialized = true;
-							resource->virgin = false;
+							discard_pending = false;
 
 							current.clear();
 							current[ALL_SUBRESOURCES] = after;
@@ -1993,18 +2109,39 @@ namespace HAL
 						}
 
 						ResourceState before;
-						if (!resolve(subres, before))
+
+						// Whether the group has actually touched this subresource
+						// before, as opposed to us assuming where it rests. Only a
+						// real prior touch can be a hazard to order against.
+						const bool was_tracked = resolve(subres, before);
+
+						if (!was_tracked)
 						{
 							// Untouched by this group so far. A resource no barrier
 							// has ever moved is still in its creation (undefined)
 							// layout; anything else was handed back at rest by
 							// whoever used it last.
-							before = resource->virgin
+							before = res_plan.from_undefined
 								? from_undefined()
 								: state_at_rest(resting_layout(resource));
 						}
 
-						if (before == after)
+						// Same state is not the same as no hazard. Two dispatches
+						// writing the same UAV need ordering even though nothing
+						// about the state changes -- the layouts match, so this
+						// is purely an execution/memory barrier, which is what a
+						// legacy UAV barrier was. Only unordered access needs it:
+						// render-target and depth writes are pipeline-ordered,
+						// and read-after-read needs nothing.
+						//
+						// record_usage has already split the operation when this
+						// happens inside one run, so the two accesses are always
+						// in different operations by the time we get here.
+						const bool uav_ordering = (before == after)
+							&& check(after.access & BarrierAccess::UNORDERED_ACCESS)
+							&& was_tracked;
+
+						if (before == after && !uav_ordering)
 						{
 							current[subres] = after;
 							return;
@@ -2012,11 +2149,11 @@ namespace HAL
 
 						if (should_log_barrier(resource))
 							Log::get() << "[barriers]     op" << op_index << " subres " << subres
-							           << (resource->virgin ? "  from-undefined  before " : "  before ")
+							           << (res_plan.from_undefined ? "  from-undefined  before " : "  before ")
 							           << describe_state(before) << "  after " << describe_state(after) << Log::endl;
 
 						barriers.transition(resource, before, after, subres, BarrierFlags::SINGLE);
-						resource->virgin = false;
+						stat_barriers++;
 						current[subres] = after;
 					};
 
@@ -2037,6 +2174,8 @@ namespace HAL
 						if (diverged)
 						{
 							uint count = resource->get_device().Subresources(resource->get_desc());
+							stat_expands++;
+							stat_expanded_subres += count;
 							for (uint i = 0; i < count; i++)
 								emit(i, all_it->second);
 
@@ -2076,6 +2215,8 @@ namespace HAL
 				// Subresources sit in different states, so one ALL barrier
 				// cannot carry a single valid before-state.
 				uint count = resource->get_device().Subresources(resource->get_desc());
+				stat_expands++;
+				stat_expanded_subres += count;
 				for (uint i = 0; i < count; i++)
 				{
 					ResourceState before;
@@ -2086,6 +2227,7 @@ namespace HAL
 						           << "\n                 before " << describe_state(before)
 						           << "\n                 after  " << describe_state(rest) << Log::endl;
 					after_barriers.transition(resource, before, rest, i);
+					stat_barriers++;
 				}
 			}
 			else
@@ -2098,7 +2240,26 @@ namespace HAL
 						           << "\n                 before " << describe_state(it->second)
 						           << "\n                 after  " << describe_state(rest) << Log::endl;
 					after_barriers.transition(resource, it->second, rest, ALL_SUBRESOURCES);
+					stat_barriers++;
 				}
+			}
+
+			// Aggregate cost for this resource in this group. `expands` is the
+			// number that matters: each one walks the resource's FULL declared
+			// subresource count because subresources had diverged and a single
+			// ALL barrier could no longer express the transition. For something
+			// like the VSM atlas that is thousands of iterations per expand.
+			if (HAL::Debug::LogBarrierSummary && stat_barriers >= HAL::Debug::LogBarrierSummaryMin)
+			{
+				Log::get() << "[barrier-cost] " << resource->name
+				           << "  subres=" << resource->get_device().Subresources(resource->get_desc())
+				           << "  ops=" << stat_ops
+				           << "  usages=" << stat_usages
+				           << "  expands=" << stat_expands
+				           << "  expanded_subres=" << stat_expanded_subres
+				           << "  barriers=" << stat_barriers
+				           << "  diverged_final=" << (uint)current.size()
+				           << Log::endl;
 			}
 		}
 	}
