@@ -970,6 +970,18 @@ namespace HAL
 			}
 
 
+			void Transitions::begin_external_op(BarrierSync op)
+			{
+				// begin_op without its merge check: a run of same-class work
+				// merges by design, but external work must be its own operation
+				// or its barriers would be hoisted in front of unrelated commands
+				// that happen to share the class.
+				end_op();
+
+				auto& operation = operations.emplace_back(type, op, static_cast<uint>(operations.size()));
+				compiler.func_barrier(&operation.barriers_before, operation.index, false, operation.type);
+			}
+
 			void Transitions::transition_to(const HAL::Resource* resource, ResourceState state)
 			{
 				// split_op, not begin_op: begin_op would merge into the last

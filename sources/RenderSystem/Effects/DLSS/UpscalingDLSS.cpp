@@ -16,19 +16,6 @@ using namespace FrameGraph;
 
 namespace
 {
-	// Streamline's plugins issue their own legacy ResourceBarrier calls on
-	// tagged resources internally, requiring legacy/enhanced barrier interop
-	// hand-off at COMMON (D3D12 #1350). NOT transition_present() — that
-	// requests NO_ACCESS ("handed to the OS"), which is wrong here and trips
-	// a DEV-only assert. Sync is COMPUTE_SHADING, not NONE, since these
-	// resources are used again downstream.
-	const HAL::ResourceState kCommonState{ HAL::BarrierSync::COMPUTE_SHADING, HAL::BarrierAccess::COMMON, HAL::TextureLayout::PRESENT };
-
-	// ResultTextureNew is WRITTEN by SL's internal compute work (unlike the
-	// other 3 read-only tags) — forcing it to COMMON tripped D3D12 #1334 on
-	// SL's own UAV clears, so it stays in UNORDERED_ACCESS instead.
-	const HAL::ResourceState kUnorderedAccessState{ HAL::BarrierSync::COMPUTE_SHADING, HAL::BarrierAccess::UNORDERED_ACCESS, HAL::TextureLayout::UNORDERED_ACCESS };
-
 	// ResultTextureNew is R16G16B16A16_FLOAT (see setup() below) — full HDR,
 	// not the roughly-sRGB range SL's non-HDR path assumes.
 	constexpr bool kHDR = true;
@@ -47,7 +34,7 @@ bool PassDefault<Passes::UpscalingDLSS>::setup(
 	builder.need(data.ResultTexture, ResourceFlags::ComputeRead);
 
 	// ExclusiveRead: this pass transitions these to PRESENT/COMMON for
-	// Streamline (see kCommonState), which must not be folded into the
+	// Streamline (see DLSS::upscale), which must not be folded into the
 	// shared SRV read-window every other pass uses for them.
 	builder.need(data.GBuffer_Depth, ResourceFlags::ComputeRead | ResourceFlags::ExclusiveRead);
 	builder.need(data.GBuffer_Speed, ResourceFlags::ComputeRead | ResourceFlags::ExclusiveRead);
@@ -101,10 +88,8 @@ void PassDefault<Passes::UpscalingDLSS>::render(
 	HAL::Resource* gbuffer_speed       = data.GBuffer_Speed->get_resource();
 	HAL::Resource* result_texture_new  = data.ResultTextureNew->get_resource();
 
-	context.get_list()->add_resource_usage(result_texture,     kCommonState);
-	context.get_list()->add_resource_usage(gbuffer_depth,      kCommonState);
-	context.get_list()->add_resource_usage(gbuffer_speed,      kCommonState);
-	context.get_list()->add_resource_usage(result_texture_new, kUnorderedAccessState);
+	// No transitions here: DLSS::upscale declares the states its tagged
+	// resources need, in an operation that wraps the call itself.
 
 	const nvidia::DLSSMode mode = g_upscaling_dlss_mode;
 

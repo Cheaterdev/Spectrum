@@ -145,6 +145,16 @@ export{
 			// the group cannot see over.
 			void set_entry_state(const HAL::Resource* resource, ResourceState state);
 
+			// Open an operation for work this list cannot introspect -- an
+			// external SDK recording straight into the native command list
+			// (Streamline/DLSS). Unlike begin_op it never merges into the
+			// operation in front of it, so the states declared afterwards land
+			// in THIS operation's barriers_before and bracket exactly that work.
+			//
+			// The caller follows it with add_resource_usage for each resource the
+			// external call touches; nothing else can know those.
+			void begin_external_op(BarrierSync op);
+
 			// Record a trailing use that leaves `resource` in `state`, in an
 			// operation of its own so the barrier lands AFTER the work already
 			// recorded rather than merging into its state.

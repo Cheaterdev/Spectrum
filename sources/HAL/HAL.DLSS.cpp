@@ -91,6 +91,32 @@ namespace nvidia
 	{
 		if (!resolved || !frame.valid()) return;
 
+		// Streamline's plugins issue their own legacy ResourceBarrier calls on
+		// tagged resources internally, requiring legacy/enhanced barrier interop
+		// hand-off at COMMON (D3D12 #1350). NOT transition_present() -- that
+		// requests NO_ACCESS ("handed to the OS"), which is wrong here and trips
+		// a DEV-only assert. Sync is COMPUTE_SHADING, not NONE, since these
+		// resources are used again downstream.
+		static const HAL::ResourceState kTagged{
+			HAL::BarrierSync::COMPUTE_SHADING, HAL::BarrierAccess::COMMON, HAL::TextureLayout::PRESENT };
+
+		// color_out is WRITTEN by SL's internal compute work, unlike the three
+		// read-only tags -- forcing it to COMMON tripped D3D12 #1334 on SL's own
+		// UAV clears, so it stays in UNORDERED_ACCESS.
+		static const HAL::ResourceState kWritten{
+			HAL::BarrierSync::COMPUTE_SHADING, HAL::BarrierAccess::UNORDERED_ACCESS, HAL::TextureLayout::UNORDERED_ACCESS };
+
+		// Declare the states HERE rather than at the call site: which resources
+		// SL tags, and in what state each has to be, is a property of this call.
+		// The operation wraps exactly the deferred body below, so the barriers
+		// land immediately before it instead of merging into whatever compute
+		// work happened to precede the pass.
+		list.begin_external_op(HAL::BarrierSync::COMPUTE_SHADING);
+		list.add_resource_usage(color_in,       kTagged);
+		list.add_resource_usage(depth,          kTagged);
+		list.add_resource_usage(motion_vectors, kTagged);
+		list.add_resource_usage(color_out,      kWritten);
+
 		list.compiler.func(
 			[this, frame, constants, mode, hdr, viewport, color_in, depth, motion_vectors, color_out]
 			(HAL::API::CommandList& native_list)
