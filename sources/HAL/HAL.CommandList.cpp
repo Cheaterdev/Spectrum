@@ -950,7 +950,17 @@ namespace HAL
 			void Transitions::end_op()
 			{
 				if (operations.empty()) return;
-				compiler.func_barrier(&operations.back().barriers_after);
+
+				// Idempotent: reserving the same barriers_after twice emits that
+				// group twice, and the second run's LayoutBefore is stale by
+				// definition. CommandList::end() closes the final operation, and
+				// anything appending afterwards (process_transitions) would
+				// otherwise close it a second time.
+				auto& operation = operations.back();
+				if (operation.closed) return;
+				operation.closed = true;
+
+				compiler.func_barrier(&operation.barriers_after);
 			}
 
 			void Transitions::transition_present(const HAL::Resource* resource_ptr)
@@ -972,6 +982,13 @@ namespace HAL
 					split_op();
 
 				add_resource_usage(resource, state, ALL_SUBRESOURCES);
+
+				// Close it here: this runs after CommandList::end() has already
+				// closed the list, so nothing else will reserve this operation's
+				// barriers_after, and any resource whose last use lands in it
+				// would lose its trailing barriers. end_op() is idempotent, so a
+				// later split_op() on the same list stays correct.
+				end_op();
 			}
 
 			void Transitions::transition_to_rest(const HAL::Resource* resource)
@@ -1168,6 +1185,20 @@ namespace HAL
 		if (usages.empty()) return std::nullopt;
 
 		return usages.back().state;
+	}
+
+	std::optional<ResourceState> Transitions::get_first_use_state(const HAL::Resource* resource) const
+	{
+		auto& tracked = const_cast<Resource*>(resource)->get_state(const_cast<Transitions*>(this));
+		if (tracked.operations.empty()) return std::nullopt;
+
+		// Mirror of get_exit_state: ordered map, so the FIRST entry is the
+		// earliest operation, and its first usage is the state this list needs
+		// the resource to already be in when it starts.
+		const auto& usages = tracked.operations.begin()->second;
+		if (usages.empty()) return std::nullopt;
+
+		return usages.front().state;
 	}
 
 	void Transitions::alias_begin(HAL::Resource* resource)
@@ -1895,6 +1926,23 @@ namespace HAL
 	// to real activity, not to a resource's declared subresource count: a
 	// resource used whole stays a single ALL_SUBRESOURCES entry from start to
 	// finish and never pays per-mip anything.
+	// Swapchain transition log -- see HAL::Debug::LogSwapchainTransitions.
+	// Every barrier the back buffer receives, in the order compile_transitions
+	// decides them (which is group order, then list order within the group, then
+	// operation order -- i.e. GPU submission order).
+	static bool log_swapchain(const Resource* r)
+	{
+		return HAL::Debug::LogSwapchainTransitions && r
+			&& check(r->get_desc().Flags & ResFlags::Swapchain);
+	}
+
+	static std::string sc_state(const ResourceState& s)
+	{
+		return "sync=" + std::to_string((uint)s.operation)
+		     + " access=" + std::to_string((uint)s.access)
+		     + " layout=" + std::to_string((uint)s.layout);
+	}
+
 	void CommandListGroup::plan_resources()
 	{
 		PROFILE(L"plan_resources");
@@ -1996,8 +2044,14 @@ namespace HAL
 			// barriers_after is where the return to rest goes.
 			CmdListOperation* last_use = nullptr;
 
+			const wchar_t* list_name = L"?";
 			for (auto& list : lists)
 			{
+				// Qualified: CommandList inherits a get_name() from more than one
+				// base (Object's, among others), so the unqualified call is
+				// ambiguous. This is the command-list name, i.e. the pass name.
+				list_name = list->CommandListBase::get_name().ptr;
+
 				auto& tracked = resource->get_state(list.get());
 				if (tracked.operations.empty()) continue;
 
@@ -2088,6 +2142,11 @@ namespace HAL
 						{
 							const ResourceState before = from_undefined();
 
+							if (log_swapchain(resource))
+								Log::get() << "[swapchain] " << list_name << " op" << op_index
+									<< " FIRST-WRITE/DISCARD  " << sc_state(before)
+									<< "  ->  " << sc_state(after) << Log::endl;
+
 							barriers.transition(resource, before, after,
 								ALL_SUBRESOURCES, BarrierFlags::SINGLE | BarrierFlags::DISCARD);
 
@@ -2114,6 +2173,25 @@ namespace HAL
 						// scope (see Queue::execute).
 						const bool group_first_touch = current.empty();
 
+						// Whether we actually KNOW where the resource is on entry,
+						// as opposed to guessing the resting layout.
+						//
+						// The rest block below deliberately does NOT rest
+						// frame_graph_managed resources -- the FrameGraph links
+						// those across passes itself and rests them once, at the
+						// last pass that uses them. So for those the resting layout
+						// is not where they are; the only trustworthy entry state is
+						// the one the FrameGraph declares via set_entry_state, and
+						// that has already been consumed into `current` above (which
+						// would make was_tracked true).
+						//
+						// Reaching the fallback with a frame_graph_managed resource
+						// therefore means the FrameGraph left this boundary unlinked
+						// and we are about to guess. Guessing is what the code did
+						// before, so keep doing it rather than change behaviour --
+						// but never let an optimization TRUST the guess.
+						const bool entry_known = !resource->frame_graph_managed;
+
 						if (!was_tracked)
 						{
 							// Untouched by this group so far. A resource no barrier
@@ -2121,32 +2199,41 @@ namespace HAL
 							// layout; anything else was handed back at rest by
 							// whoever used it last.
 							//
-							// Only the LAYOUT carries over a scope boundary. There
-							// are no pending commands or cache flushes across
-							// ExecuteCommandLists, so there is nothing for a
-							// SyncBefore/AccessBefore to name -- declaring the
-							// resting layout's access (and sync ALL) instead would
-							// invent a dependency on work that has already fully
-							// retired, and cost a barrier whenever the incoming use
-							// only differs in sync.
+							// state_at_rest, NOT {SYNC_NONE, NO_ACCESS, rest_layout}.
+							// The spec does license SyncBefore = NONE for the first
+							// touch in an ExecuteCommandLists scope, but NO_ACCESS
+							// paired with a REAL layout is the same combination
+							// D3D12 rejects on the after side (#1331: "LayoutAfter
+							// must be LAYOUT_UNDEFINED or SyncAfter must be
+							// SYNC_NONE when AccessAfter is ACCESS_NO_ACCESS").
+							// Such a barrier does not take effect, so the layout
+							// never moves and the NEXT barrier -- which correctly
+							// declares the layout this one was supposed to reach --
+							// fails validation instead (#1334).
 							//
-							// Falls back to the resting access once the group has
-							// touched the resource: NONE is then no longer legal
-							// (#1417), and the group's own prior barrier is a real
-							// thing to order against.
+							// It also bought nothing: the skip below keys on
+							// before.layout == after.layout, which is identical
+							// under either form.
 							const TextureLayout rest = resting_layout(resource);
 							before = res_plan.from_undefined
 								? from_undefined()
-								: (group_first_touch
-									? ResourceState{ BarrierSync::NONE, BarrierAccess::NO_ACCESS, rest }
-									: state_at_rest(rest));
+								: state_at_rest(rest);
 						}
 
 						// Entering the scope in the layout we already want. Nothing
 						// to transition and nothing to synchronize against -- the
 						// scope boundary already guarantees prior work retired and
 						// caches flushed -- so this costs no barrier at all.
-						if (!was_tracked && group_first_touch && before.layout == after.layout
+						//
+						// Gated on entry_known. Skipping does two things: it emits
+						// no barrier, and it writes `after` into `current` as the
+						// group's belief about the resource. On a GUESSED entry that
+						// belief is unfounded, and every later barrier for this
+						// resource in the group is then computed from a wrong base --
+						// turning one wrong LayoutBefore into a cascade. Emitting the
+						// barrier keeps a wrong guess to a single self-correcting
+						// transition instead.
+						if (entry_known && !was_tracked && group_first_touch && before.layout == after.layout
 							&& !res_plan.from_undefined)
 						{
 							current[subres] = after;
@@ -2159,6 +2246,8 @@ namespace HAL
 						// would only widen a sync scope. Access must match exactly --
 						// a different access needs the data made visible to it even
 						// when both are reads.
+						// No entry_known gate here: this one only fires on a state the
+						// group actually tracked (was_tracked), never on a guess.
 						if (was_tracked && before.layout == after.layout
 							&& before.access == after.access
 							&& !before.has_write_bits() && !after.has_write_bits())
@@ -2187,6 +2276,13 @@ namespace HAL
 							current[subres] = after;
 							return;
 						}
+
+
+						if (log_swapchain(resource))
+							Log::get() << "[swapchain] " << list_name << " op" << op_index
+								<< " subres=" << subres
+								<< (was_tracked ? "  (tracked)  " : (group_first_touch ? "  (entry:assumed-rest)  " : "  (assumed)  "))
+								<< sc_state(before) << "  ->  " << sc_state(after) << Log::endl;
 
 						barriers.transition(resource, before, after, subres, BarrierFlags::SINGLE);
 						current[subres] = after;
@@ -2261,18 +2357,46 @@ namespace HAL
 					ResourceState before;
 					if (!resolve(i, before)) continue;      // untouched by the group
 					if (before.layout == rest_layout) continue;
+					if (log_swapchain(resource))
+						Log::get() << "[swapchain] REST(sub " << i << ") after op" << last_use->index
+							<< "  " << sc_state(before) << "  ->  " << sc_state(rest) << Log::endl;
 					after_barriers.transition(resource, before, rest, i);
 				}
+
+				// Collapse back to one uniform entry. Writing rest into each
+				// visited subresource instead would leave the ALL_SUBRESOURCES
+				// fallback holding whatever pre-rest state the loop resolved
+				// against -- stale, and still the answer resolve() gives for
+				// every subresource the loop skipped. Subresources this group
+				// never touched are at rest too, by the same contract.
+				current.clear();
+				current[ALL_SUBRESOURCES] = rest;
 			}
 			else
 			{
 				auto it = current.find(ALL_SUBRESOURCES);
 				if (it != current.end() && it->second.layout != rest_layout)
 				{
+					if (log_swapchain(resource))
+						Log::get() << "[swapchain] REST after op" << last_use->index
+							<< "  " << sc_state(it->second) << "  ->  " << sc_state(rest) << Log::endl;
 					after_barriers.transition(resource, it->second, rest, ALL_SUBRESOURCES);
+					it->second = rest;
 				}
 			}
 
+			// The contract this whole design rests on: a non-FrameGraph resource
+			// enters a group at its resting layout and leaves at its resting
+			// layout, so groups are independent of the order they are submitted
+			// in and the next group can assume where it is without being told.
+			//
+			// Every consumer of that assumption is above -- the entry fallback
+			// and the entry_known skip -- so if convergence ever fails here, they
+			// are all quietly wrong and the group hands the next one a resource
+			// that is not where it claims. Check it rather than assume it.
+			if constexpr (BuildOptions::Dev)
+				for (auto& [subres, state] : current)
+					ASSERT(state.layout == rest_layout);
 		}
 	}
 

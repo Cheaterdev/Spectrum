@@ -321,7 +321,11 @@ public:
 		HAL::ResourceHandle alloc_ptr;
 
 		HAL::ResourceDesc d3ddesc;
-		HAL::HeapType heap_type;
+		// Initialised, because not every path assigns it: create_resources() skips
+		// passed resources, and these slots are reused across frames, so an
+		// uninitialised value is indeterminate rather than merely wrong. Anything
+		// that filters on heap_type would then drop resources at random.
+		HAL::HeapType heap_type = HAL::HeapType::DEFAULT;
 		// setup
 		SyncState used_begin;
 		SyncState used_end;

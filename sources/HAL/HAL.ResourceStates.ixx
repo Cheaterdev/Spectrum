@@ -216,6 +216,14 @@ export
 			// than precede it, e.g. end-of-aliasing barriers.
 			HAL::Barriers barriers_after;
 
+			// Whether barriers_after has already been given its point in the
+			// command stream. Reserving it twice emits the SAME barrier group
+			// twice: the second run declares a LayoutBefore the first one
+			// already moved past, which D3D12 rejects (#1334). That happens
+			// whenever something appends to a list after CommandList::end()
+			// closed it -- process_transitions does exactly that.
+			bool closed = false;
+
 			CmdListOperation(CommandListType list_type, BarrierSync type, uint index)
 				: type(type), index(index), barriers_before(list_type), barriers_after(list_type) {}
 		};

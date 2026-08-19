@@ -1738,6 +1738,21 @@ private:
                             HAL::Format::R8G8B8A8_UNORM, { thumb_dim }, 1, 1,
                             HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
                         last_write_thumb_tex = std::make_shared<Texture>(RenderSystem::get().device(), desc);
+
+                        // resource@pass, matching the per-pass preview textures in
+                        // FrameGraph.Debug.cpp. The pass is the one that produced
+                        // this cell, found by the cell's call_id; unnamed these all
+                        // report as "Unnamed ID3D12Resource Object" and cannot be
+                        // told apart in validation output.
+                        {
+                            std::string pass_name = "?";
+                            for (const auto& p : m_passes)
+                                if (p.call_id == cell.call_id) { pass_name = convert(p.name.ptr); break; }
+
+                            last_write_thumb_tex->resource->set_name(
+                                "FGDebug::thumb::" + m_resources[ri].name + "@" + pass_name);
+                        }
+
                         cell.thumb_tex       = last_write_thumb_tex;
                     }
                     else

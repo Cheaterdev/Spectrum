@@ -190,6 +190,15 @@ namespace FrameGraph
 			info.resource = tex;
 			info.fence = fence;
 			info.d3ddesc = tex->get_desc();
+
+			// From the resource, not assumed: create_resources() -- the only other
+			// place that sets heap_type -- skips passed resources entirely, so
+			// without this the field keeps its default-constructed value. Anything
+			// filtering on it then silently drops every passed resource;
+			// process_transitions did exactly that, which is why a passed texture
+			// was linked by nobody and rested by nobody (pass_texture also marks it
+			// frame_graph_managed, opting it out of the per-group rest).
+			info.heap_type = tex->get_heap_type();
 			passed_resources.insert(&info);
 
 
@@ -218,6 +227,7 @@ namespace FrameGraph
 			info.resource = tex;
 			info.d3ddesc = tex->get_desc();
 			info.fence = fence;
+			info.heap_type = tex->get_heap_type();   // see the 2D branch above
 			passed_resources.insert(&info);
 
 			h.desc.format = tex->get_desc().as_texture().Format;
@@ -328,6 +338,23 @@ namespace FrameGraph
 				// its thumbnail can be captured from the adopted resource.
 				if (!check(flags & WRITEABLE_FLAGS) && !info->is_history_prev) continue;
 				info->process_debug_resource(pass, this);
+
+				// The ExternalPass exists only so the debugger can capture; it does
+				// no rendering of its own and is deliberately NOT part of any
+				// resource's state timeline, so process_transitions never links it
+				// to the passes around it. Linking it would mean a fence for a pass
+				// with no GPU work, which is not worth paying for a debug feature.
+				//
+				// So it has to be transparent instead: the capture moved the
+				// resource (to SHADER_RESOURCE, to sample it), and nothing else
+				// will move it back -- a frame_graph_managed resource is exempt
+				// from the per-group return to rest. Hand it back at rest here,
+				// which is the state it was found in, and the state the next group
+				// assumes for its first touch. Without this the back buffer stayed
+				// in SHADER_RESOURCE while UI_Render_0 opened its group declaring
+				// PRESENT (#1334, once per frame).
+				if (pass->id == std::numeric_limits<UINT>::max() && info->resource)
+					list->transition_to_rest(info->resource.get());
 			}
 
 			for (auto info : pass->used.resource_deletions_after)
@@ -752,23 +779,6 @@ namespace FrameGraph
 						}
 						rec.barrier_point = nullptr;
 					}
-					{
-						static int diag = 0;
-						if (diag < 12)
-						{
-							uint tr = 0, nullpt = 0, bars = 0;
-							for (auto& r : records)
-								if (r.type == HAL::CommandType::Transition)
-								{
-									tr++;
-									if (r.barrier_details.empty()) nullpt++;
-									bars += (uint)r.barrier_details.size();
-								}
-							Log::get() << "[diag] pass '" << it->second->name.ptr << "' records=" << (uint)records.size()
-								<< " transitions=" << tr << " empty=" << nullpt << " barriers=" << bars << Log::endl;
-							diag++;
-						}
-					}
 					it->second->debug_commands = std::move(records);
 				}
 			}
@@ -857,6 +867,22 @@ namespace FrameGraph
 		for (auto type : magic_enum::enum_values<CommandListType>())
 			close_batch(type, nullptr);
 
+		// Resolve every batch's first-use questions FIRST, on this thread, in
+		// submission order.
+		//
+		// This cannot move into the parallel fan-out below: plan_resources()
+		// reads and mutates Resource::virgin / Resource::initialized, which are
+		// per-RESOURCE and shared by every group that touches them. Running it
+		// concurrently races on "which group owns this resource's first-ever
+		// write", so the initializing discard lands on a nondeterministic group
+		// -- and in submission order it may land on a group that executes after
+		// the one that needed it.
+		{
+			PROFILE(L"plan_groups");
+			for (auto& submit : submits)
+				submit.group.plan_resources();
+		}
+
 		// Every batch's barriers, computed in parallel. plan_resources() has
 		// already resolved everything order-dependent, so these touch nothing
 		// shared: `current`/`wanted` are group-local and the Barriers they fill
@@ -868,12 +894,23 @@ namespace FrameGraph
 			tasks.reserve(submits.size());
 
 			for (auto& submit : submits)
-				tasks.emplace_back(thread_pool::get().enqueue([&submit]()
+			{
+				auto task = thread_pool::get().enqueue([&submit]()
 				{
-					submit.group.plan_resources();
 					submit.group.compile_transitions();
 					submit.group.compile();
-				}));
+				});
+
+				// Serialize while the swapchain log is on. Groups normally
+				// compile concurrently, so anything they log interleaves by
+				// whichever thread wins -- useless for reading a resource's
+				// transitions in the order the GPU will see them. Waiting here
+				// makes log order == submission order.
+				if (HAL::Debug::LogSwapchainTransitions)
+					task.wait();
+
+				tasks.emplace_back(std::move(task));
+			}
 
 			for (auto& t : tasks)
 				t.wait();
@@ -1171,8 +1208,19 @@ namespace FrameGraph
 				if (!info.enabled) continue;
 
 				auto& resource = info.resource;
+
+
 				if (!resource) continue;
-				if (info.heap_type != HAL::HeapType::DEFAULT) continue;
+				// Skip only the CPU-visible heaps, which carry no layout to link.
+				// NOT "anything that isn't DEFAULT": RESERVED covers both tiled
+				// resources and natively imported ones (the swapchain arrives that
+				// way -- Resource::init(NativeImportHandle) never assigns a heap
+				// type, so it keeps the RESERVED sentinel), and those need linking
+				// exactly as much as a DEFAULT resource does. This mirrors the same
+				// choice HAL makes when deciding what to barrier-track at all
+				// (Transitions::add_resource_usage).
+				if (info.heap_type == HAL::HeapType::UPLOAD ||
+					info.heap_type == HAL::HeapType::READBACK) continue;
 				if (!resource->frame_graph_managed) continue;   // the group rests these itself
 
 				// Drop passes that never actually touched the resource -- a pass
@@ -1211,6 +1259,22 @@ namespace FrameGraph
 				auto supported = [&](Pass* pass, const HAL::ResourceState& state)
 				{
 					return HAL::IsFullySupport(pass->context.list->get_type(), state);
+				};
+
+				// The pass in a phase that actually runs LAST. Not passes.back():
+				// ResourceRWState::passes is a concurrent_vector appended from
+				// several threads during setup, so its order is arbitrary. Using
+				// the back element put a phase's hand-off (and the return to rest)
+				// on whichever pass happened to be appended last, which for a
+				// multi-pass phase lands mid-frame with other passes still to
+				// come -- the back buffer went to PRESENT while UI_Render_1..4
+				// were still writing it. call_id is the execution order.
+				auto last_of = [](const auto& passes) -> Pass*
+				{
+					Pass* best = nullptr;
+					for (auto* p : passes)
+						if (!best || p->call_id > best->call_id) best = p;
+					return best;
 				};
 
 				// --- 1. one shared state per read phase --------------------------
@@ -1266,7 +1330,7 @@ namespace FrameGraph
 					auto& cur  = info.states[i];
 					if (prev.passes.empty() || cur.passes.empty()) continue;
 
-					Pass* producer = prev.passes.back();
+					Pass* producer = last_of(prev.passes);
 					auto& producer_list = producer->context.list;
 
 					// The hand-off state has to be the SAME for every pass in the
@@ -1288,24 +1352,48 @@ namespace FrameGraph
 					if (handoff && !HAL::IsFullySupport(producer_list->get_type(), *handoff))
 						handoff.reset();
 
-					// A single consumer needs no convergence: it is the only pass
-					// that can see the state, so the producer's own exit does.
-					if (!handoff && cur.passes.size() == 1)
+					// Not a read phase, so there is no merged read state to aim
+					// for. Aim instead for what the consuming passes need at
+					// their FIRST use -- the state they would otherwise each
+					// transition into themselves.
+					//
+					// This has to be a state they ALL agree on. Handing them the
+					// producer's exit instead is only true for whichever consumer
+					// happens to run first; the others find it already
+					// transitioned. (Tried 2026-08-19: 6269 x #1334 on
+					// VoxelLighted, GBuffer_DepthMips, BlueNoise.) Converging the
+					// producer into their common first-use state costs the
+					// consumers no barrier at all, so no ordering among them is
+					// needed -- the same reason merged_read works for readers.
+					if (!handoff)
 					{
-						auto exit = producer_list->get_exit_state(resource.get());
-						if (exit && supported(cur.passes[0], *exit))
-							handoff = exit;
+						std::optional<HAL::ResourceState> common;
+						bool agree = true;
+
+						for (auto* pass : cur.passes)
+						{
+							auto first = pass->context.list->get_first_use_state(resource.get());
+							if (!first) continue;
+
+							if (!common) common = first;
+							else if (!(*common == *first)) { agree = false; break; }
+						}
+
+						if (agree && common && HAL::IsFullySupport(producer_list->get_type(), *common))
+							handoff = common;
 					}
 
 					const bool rested = !handoff;
 					if (rested)
 						handoff = HAL::state_at_rest(HAL::resting_layout(resource.get()));
 
+
 					producer_list->transition_to(resource.get(), *handoff);
 
 					for (auto* pass : cur.passes)
 						pass->context.list->set_entry_state(resource.get(), *handoff);
 				}
+
 
 				// --- 3. rest once, at the last pass that touches it --------------
 				//
@@ -1328,9 +1416,18 @@ namespace FrameGraph
 				// That also means there is nothing to carry across frames: the
 				// next frame's first pass needs no entry state, because the
 				// barrier system's own resting-layout default is already right.
-				Pass* last_pass = info.states.back().passes.back();
+				Pass* last_pass = last_of(info.states.back().passes);
 				if (auto& list = last_pass->context.list)
+				{
+					// Resting here is correct only because last_pass is the phase's
+					// LAST-EXECUTING pass. Getting that wrong is not a lost
+					// optimisation but a correctness bug: a back buffer rested to
+					// PRESENT while later passes still write it makes every
+					// subsequent use find PRESENT where it expected a readable
+					// layout (#1334 "layout(COMMON) does not match expected
+					// (SHADER_RESOURCE)").
 					list->transition_to_rest(resource.get());
+				}
 			}
 	}
 

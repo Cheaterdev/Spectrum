@@ -63,6 +63,11 @@ export{
 			virtual ~CommandListBase() = default;
 
 			CommandListType get_type();
+
+			// The list's debug name -- the owning pass's name for FrameGraph
+			// lists. Used by diagnostics that need to say WHICH list a barrier
+			// belongs to; an index within a group is meaningless across groups.
+			LiteralWStr get_name() const { return name; }
 		};
 
 		class TransitionCommandList;
@@ -166,6 +171,14 @@ export{
 			// its last usage's state, which is why the FrameGraph declares a
 			// whole-resource state at the boundaries it links.
 			std::optional<ResourceState> get_exit_state(const HAL::Resource* resource) const;
+
+			// The state this list needs `resource` to already be in when it
+			// starts -- its first recorded usage. The counterpart of
+			// get_exit_state: the FrameGraph converges a producer INTO this so
+			// the consuming pass needs no barrier of its own, which is the only
+			// hand-off that works when a phase has several passes (none of them
+			// ordered against each other).
+			std::optional<ResourceState> get_first_use_state(const HAL::Resource* resource) const;
 
 			void alias_begin(HAL::Resource*);
 			void alias_end(HAL::Resource*);
