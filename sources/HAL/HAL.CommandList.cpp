@@ -928,7 +928,7 @@ namespace HAL
 				end_op();
 
 				auto& operation = operations.emplace_back(type, op, static_cast<uint>(operations.size()));
-				compiler.func_barrier(&operation.barriers_before);
+				compiler.func_barrier(&operation.barriers_before, operation.index, false, operation.type);
 			}
 
 			void Transitions::split_op()
@@ -940,7 +940,7 @@ namespace HAL
 				end_op();
 
 				auto& operation = operations.emplace_back(type, op, static_cast<uint>(operations.size()));
-				compiler.func_barrier(&operation.barriers_before);
+				compiler.func_barrier(&operation.barriers_before, operation.index, false, operation.type);
 			}
 
 			// Close the operation currently at the back, reserving the point its
@@ -960,7 +960,7 @@ namespace HAL
 				if (operation.closed) return;
 				operation.closed = true;
 
-				compiler.func_barrier(&operation.barriers_after);
+				compiler.func_barrier(&operation.barriers_after, operation.index, true, operation.type);
 			}
 
 			void Transitions::transition_present(const HAL::Resource* resource_ptr)
@@ -1209,7 +1209,15 @@ namespace HAL
 		// The aliased-into resource has no meaningful contents -- its first use
 		// is entered from UNKNOWN with a discard. compile_transitions already
 		// does that for a virgin resource, so re-arm the flag here.
+		//
+		// BOTH flags, because they gate different halves of that and only
+		// re-arming `virgin` produced a barrier from UNDEFINED with no DISCARD:
+		// `virgin` decides the before-state (from_undefined), while
+		// `initialized` decides whether the first write carries the discard.
+		// Left initialized, the resource claims UNDEFINED and then preserves
+		// contents that are another resource's memory.
 		resource->virgin = true;
+		resource->initialized = false;
 	}
 
 	void Transitions::alias_end(HAL::Resource* resource)
@@ -1926,23 +1934,6 @@ namespace HAL
 	// to real activity, not to a resource's declared subresource count: a
 	// resource used whole stays a single ALL_SUBRESOURCES entry from start to
 	// finish and never pays per-mip anything.
-	// Swapchain transition log -- see HAL::Debug::LogSwapchainTransitions.
-	// Every barrier the back buffer receives, in the order compile_transitions
-	// decides them (which is group order, then list order within the group, then
-	// operation order -- i.e. GPU submission order).
-	static bool log_swapchain(const Resource* r)
-	{
-		return HAL::Debug::LogSwapchainTransitions && r
-			&& check(r->get_desc().Flags & ResFlags::Swapchain);
-	}
-
-	static std::string sc_state(const ResourceState& s)
-	{
-		return "sync=" + std::to_string((uint)s.operation)
-		     + " access=" + std::to_string((uint)s.access)
-		     + " layout=" + std::to_string((uint)s.layout);
-	}
-
 	void CommandListGroup::plan_resources()
 	{
 		PROFILE(L"plan_resources");
@@ -2044,13 +2035,8 @@ namespace HAL
 			// barriers_after is where the return to rest goes.
 			CmdListOperation* last_use = nullptr;
 
-			const wchar_t* list_name = L"?";
 			for (auto& list : lists)
 			{
-				// Qualified: CommandList inherits a get_name() from more than one
-				// base (Object's, among others), so the unqualified call is
-				// ambiguous. This is the command-list name, i.e. the pass name.
-				list_name = list->CommandListBase::get_name().ptr;
 
 				auto& tracked = resource->get_state(list.get());
 				if (tracked.operations.empty()) continue;
@@ -2138,14 +2124,38 @@ namespace HAL
 						// first-ever touch is a READ gets a defined layout from
 						// that point on but still holds nothing, so the discard has
 						// to wait for the write that actually fills it (#1422).
+						//
+						// Do NOT relax this to "discard on the first barrier" so that
+						// a read arriving before the first write gets a discard.
+						// Tried 2026-08-19 twice: unconditionally, it costs 54 x
+						// #1422 (D3D12 counts a placed RT/DS resource as initialized
+						// only when the DISCARD rides a barrier INTO an RT/DS
+						// layout); restricted to non-RT/DS resources it "works", but
+						// only by making a read of never-written memory look
+						// legitimate. A read before the first write is a bug in the
+						// pass, and the debugger flagging it is the point.
 						if (discard_pending && after.has_write_bits())
 						{
-							const ResourceState before = from_undefined();
+							// Declare where the resource ACTUALLY is, not UNDEFINED
+							// unconditionally. This path used to call
+							// from_undefined() outright, so when the group had
+							// already moved the resource -- a read before the first
+							// write -- the barrier contradicted our own tracking:
+							// `current` said SHADER_RESOURCE while the barrier
+							// declared UNDEFINED. A barrier must never disagree with
+							// the state we believe it starts from.
+							//
+							// Only a uniform whole-resource state can be used, since
+							// this barrier covers ALL_SUBRESOURCES; if subresources
+							// have diverged there is no single before-state to name
+							// and UNDEFINED (don't care) is the honest answer.
+							ResourceState before;
+							auto all_it = current.find(ALL_SUBRESOURCES);
 
-							if (log_swapchain(resource))
-								Log::get() << "[swapchain] " << list_name << " op" << op_index
-									<< " FIRST-WRITE/DISCARD  " << sc_state(before)
-									<< "  ->  " << sc_state(after) << Log::endl;
+							if (current.size() == 1 && all_it != current.end())
+								before = all_it->second;
+							else
+								before = from_undefined();
 
 							barriers.transition(resource, before, after,
 								ALL_SUBRESOURCES, BarrierFlags::SINGLE | BarrierFlags::DISCARD);
@@ -2278,11 +2288,6 @@ namespace HAL
 						}
 
 
-						if (log_swapchain(resource))
-							Log::get() << "[swapchain] " << list_name << " op" << op_index
-								<< " subres=" << subres
-								<< (was_tracked ? "  (tracked)  " : (group_first_touch ? "  (entry:assumed-rest)  " : "  (assumed)  "))
-								<< sc_state(before) << "  ->  " << sc_state(after) << Log::endl;
 
 						barriers.transition(resource, before, after, subres, BarrierFlags::SINGLE);
 						current[subres] = after;
@@ -2357,9 +2362,6 @@ namespace HAL
 					ResourceState before;
 					if (!resolve(i, before)) continue;      // untouched by the group
 					if (before.layout == rest_layout) continue;
-					if (log_swapchain(resource))
-						Log::get() << "[swapchain] REST(sub " << i << ") after op" << last_use->index
-							<< "  " << sc_state(before) << "  ->  " << sc_state(rest) << Log::endl;
 					after_barriers.transition(resource, before, rest, i);
 				}
 
@@ -2377,9 +2379,6 @@ namespace HAL
 				auto it = current.find(ALL_SUBRESOURCES);
 				if (it != current.end() && it->second.layout != rest_layout)
 				{
-					if (log_swapchain(resource))
-						Log::get() << "[swapchain] REST after op" << last_use->index
-							<< "  " << sc_state(it->second) << "  ->  " << sc_state(rest) << Log::endl;
 					after_barriers.transition(resource, it->second, rest, ALL_SUBRESOURCES);
 					it->second = rest;
 				}

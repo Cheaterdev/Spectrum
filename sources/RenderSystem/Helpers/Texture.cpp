@@ -142,14 +142,9 @@ namespace HAL
 				}
 		}
 
-		// Transition out of COPY_DEST into the resource's canonical read state
-		// on this (DIRECT) upload list. Nothing needs pinning afterwards: the
-		// resting layout follows from the resource's own flags, and this list
-		// returns it there when it is done.
-		auto layout = HAL::resting_layout(resource.get());
-		list->add_resource_usage(resource.get(), check(layout & HAL::TextureLayout::UNORDERED_ACCESS)
-			? HAL::ResourceStates::UNORDERED_ACCESS
-			: HAL::ResourceStates::SHADER_RESOURCE);
+		// No explicit transition out of COPY_DEST: update_texture above already
+		// recorded a usage, so the resource is in this list's used_resources and
+		// the group's return-to-rest leaves it at its resting layout.
 
 		list->execute_and_wait();
 		init();

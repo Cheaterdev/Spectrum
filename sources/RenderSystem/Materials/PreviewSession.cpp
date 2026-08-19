@@ -207,15 +207,9 @@ void materials::MaterialPreviewSession::dispatch()
 		material->render_preview(list->get_compute(), pso, results->texture_2d().rwTexture2DArray, ivec2(preview_resolution));
 	}
 
-	// Leave the result readable for whoever picks it up next -- the GUI's SRV
-	// read, or our own next dispatch. The resting layout follows from the
-	// resource's flags, so recording the use is all that is needed.
-	{
-		auto layout = HAL::resting_layout(results->resource.get());
-		list->add_resource_usage(results->resource.get(), check(layout & HAL::TextureLayout::UNORDERED_ACCESS)
-			? HAL::ResourceStates::UNORDERED_ACCESS
-			: HAL::ResourceStates::SHADER_RESOURCE);
-	}
+	// The result is left readable without an explicit transition: the dispatch
+	// above already recorded a usage, so the group's return-to-rest hands it
+	// back at its resting layout for the GUI's SRV read.
 
 	if (need_views)
 	{

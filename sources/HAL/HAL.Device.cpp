@@ -47,9 +47,6 @@ namespace HAL
 
 		auto list = get_upload_list();
 
-		std::vector<std::shared_ptr<Resource>> promoted;
-		promoted.reserve(batch.size());
-
 		for (auto& r : batch)
 		{
 			if (r->get_desc().is_buffer()) continue;   // buffers carry no layout
@@ -59,13 +56,14 @@ namespace HAL
 			if (!check(layout & (TextureLayout::SHADER_RESOURCE | TextureLayout::UNORDERED_ACCESS)))
 				continue;
 
-			// Record the read use. Nothing has to be pinned afterwards: the
-			// resting layout is derived from the resource's own flags, and this
-			// list returns it there when it is done.
+			// Record the read use. This is not a redundant hint: recording it is
+			// what puts the resource in this list's used_resources at all, which
+			// is what makes the group transition it out of COPY_DEST. The state
+			// asked for is the resting layout, so the group's return-to-rest then
+			// has nothing left to do.
 			list->add_resource_usage(r.get(), check(layout & TextureLayout::SHADER_RESOURCE)
 				? ResourceStates::SHADER_RESOURCE
 				: ResourceStates::UNORDERED_ACCESS);
-			promoted.push_back(r);
 		}
 
 		// Submit on the DIRECT queue and wait. This runs on the MAIN thread at

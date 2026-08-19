@@ -15,14 +15,6 @@ export namespace HAL
 		// identical; any difference is a hazard-detection bug.
 		inline bool EnableOpBatching = true;
 
-		// Log every barrier the swapchain / back buffer receives, in the order
-		// compile_transitions decides them -- group order, then list order
-		// within the group, then operation order, which is submission order.
-		//
-		// Narrow on purpose: the back buffer is the one resource whose layout is
-		// shared with the OS, so a stray transition to PRESENT mid-frame breaks
-		// every later use of it and is otherwise very hard to see.
-		inline bool LogSwapchainTransitions = false;
 
 #ifdef DEV
 		constexpr bool GfxDebug = !RunForPix&&false;

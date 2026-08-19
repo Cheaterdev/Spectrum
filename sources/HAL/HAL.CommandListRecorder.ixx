@@ -58,6 +58,18 @@ export namespace HAL
 		std::string  description;
 		Barriers*  barrier_point = nullptr; // non-null only until snapshot
 		std::vector<BarrierDetail> barrier_details; // non-empty only for Transition records
+
+		// Which CmdListOperation this barrier group belongs to, and which of its
+		// two groups it is. Recorded when the point is reserved, because that is
+		// the only moment the structure is known -- by snapshot time a barrier is
+		// just an entry in a list. Transition records only.
+		uint op_index   = 0;
+		bool after_op   = false;   // false = barriers_before, true = barriers_after
+
+		// The operation's class -- the BarrierSync a run of same-class work was
+		// opened with (begin_op). Names the operation in the debugger far better
+		// than its index: "COMPUTE_SHADING" says what the barriers bracket.
+		HAL::BarrierSync op_type = HAL::BarrierSync::NONE;
 	};
 
 	class DelayedCommandList
@@ -202,7 +214,8 @@ export namespace HAL
 		void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout);
 		void read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout);
 
-		void func_barrier(Barriers* barriers);
+		void func_barrier(Barriers* barriers, uint op_index = 0, bool after_op = false,
+		                  HAL::BarrierSync op_type = HAL::BarrierSync::NONE);
 		const std::vector<CommandRecord>& get_debug_records() const;
 		std::vector<CommandRecord> take_debug_records();
 

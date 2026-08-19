@@ -152,10 +152,17 @@ namespace HAL
 	// (CmdListOperation brackets its work with barriers_before/barriers_after).
 	// `barriers` must outlive compile(); the groups are owned by the list's
 	// `operations` deque, whose entries never move.
-	void DelayedCommandList::func_barrier(Barriers* barriers)
+	void DelayedCommandList::func_barrier(Barriers* barriers, uint op_index, bool after_op,
+	                                     HAL::BarrierSync op_type)
 	{
 		if constexpr (BuildOptions::Dev)
-			debug_recorder.push_back({CommandType::Transition, {}, barriers});
+		{
+			CommandRecord rec{ CommandType::Transition, {}, barriers };
+			rec.op_index = op_index;
+			rec.after_op = after_op;
+			rec.op_type  = op_type;
+			debug_recorder.push_back(std::move(rec));
+		}
 		Cmd cmd{}; cmd.type = CommandType::Transition; cmd.barrier = barriers;
 		tasks.push_back(cmd);
 	}

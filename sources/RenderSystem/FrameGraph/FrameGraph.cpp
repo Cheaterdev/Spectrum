@@ -779,6 +779,7 @@ namespace FrameGraph
 						}
 						rec.barrier_point = nullptr;
 					}
+
 					it->second->debug_commands = std::move(records);
 				}
 			}
@@ -894,23 +895,11 @@ namespace FrameGraph
 			tasks.reserve(submits.size());
 
 			for (auto& submit : submits)
-			{
-				auto task = thread_pool::get().enqueue([&submit]()
+				tasks.emplace_back(thread_pool::get().enqueue([&submit]()
 				{
 					submit.group.compile_transitions();
 					submit.group.compile();
-				});
-
-				// Serialize while the swapchain log is on. Groups normally
-				// compile concurrently, so anything they log interleaves by
-				// whichever thread wins -- useless for reading a resource's
-				// transitions in the order the GPU will see them. Waiting here
-				// makes log order == submission order.
-				if (HAL::Debug::LogSwapchainTransitions)
-					task.wait();
-
-				tasks.emplace_back(std::move(task));
-			}
+				}));
 
 			for (auto& t : tasks)
 				t.wait();
@@ -2244,7 +2233,17 @@ namespace FrameGraph
 
 		render_task = std::future<void>();
 
-		debug_commands.clear();
+		// debug_commands is deliberately NOT cleared here.
+		//
+		// It is filled by the debug snapshot in commit_command_lists, at the END
+		// of a frame, but the debugger copies it from graph.on_compile, near the
+		// START of one. Clearing here emptied it between those two points, so the
+		// debugger only ever copied a vector this frame had not filled yet and
+		// the Transitions panel showed nothing.
+		//
+		// Leaving it means the debugger shows the PREVIOUS frame's transitions,
+		// which is what it can actually have. The snapshot assigns over it every
+		// frame, so nothing accumulates.
 
 		fence_end = HAL::FenceWaiter();
 
