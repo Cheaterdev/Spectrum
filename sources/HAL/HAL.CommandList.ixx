@@ -355,6 +355,10 @@ export{
 
 			const std::vector<CommandRecord>& get_debug_records() const;
 
+			// Move the records out rather than copying them. Used by the
+			// FrameGraph debug snapshot, which rewrites what it takes.
+			std::vector<CommandRecord> take_debug_records();
+
 			void discard(HAL::Resource* resource);
 
 			CommandList(CommandListType, Device&);
@@ -765,12 +769,15 @@ export{
 		{
 			std::vector<CommandList::ptr> lists;
 
-			// What this group must do about a resource's first-ever use.
-			// Decided by plan_resources() on the submitting thread, in
-			// submission order, so that compile_transitions() itself reads only
-			// group-local data and several groups can compile concurrently.
-			struct ResourcePlan
+			// One resource this group touches, plus what the group must do
+			// about its first-ever use. Decided by plan_resources() on the
+			// submitting thread, in submission order, so that
+			// compile_transitions() itself reads only group-local data and
+			// several groups can compile concurrently.
+			struct PlannedResource
 			{
+				Resource* resource = nullptr;
+
 				// This group is the first ever to touch the resource, so it
 				// enters from the creation (undefined) layout with SyncBefore
 				// NONE. Otherwise something has already touched it and NONE is
@@ -781,7 +788,18 @@ export{
 				// owns its initializing discard (#1422).
 				bool owns_discard = false;
 			};
-			std::unordered_map<Resource*, ResourcePlan> plan;
+
+			// Every resource any list in the group touched, deduplicated, in
+			// first-seen order. Built ONCE by plan_resources and then just
+			// walked by compile_transitions -- which used to rebuild the same
+			// list through a std::set (a tree-node allocation per resource) and
+			// then pay a hash lookup per resource to find its plan.
+			std::vector<PlannedResource> planned;
+
+			// Whether plan_resources() has run for this group. Not derivable
+			// from `planned` being non-empty: a group whose lists touched no
+			// resources at all plans to an empty list, which is legitimate.
+			bool planned_built = false;
 
 		public:
 			void add(const CommandList::ptr& list) { lists.emplace_back(list); }

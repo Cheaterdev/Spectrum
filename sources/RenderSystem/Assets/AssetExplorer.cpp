@@ -226,12 +226,12 @@ namespace GUI
 				menu->pos = vec2(pos);
 
 
-				menu->self_open(user_ui);
+			
 				menu->add_item("Reload")->on_click = [this](menu_list_element::ptr e)
 				{
 					asset->get_asset()->reload_resource();
 				};
-
+						menu->self_open(user_ui);
 			}
 
 			return true;

@@ -115,9 +115,13 @@ void GUI::Elements::scroll_container::resized()
     if (!allow_overflow)
         contents->pos = vec2::min(vec2(0, 0), vec2::max(contents->pos.get(), -contents->scaled_size.get() + vec2(filled->get_render_bounds().size)));
 
+    // contents is the only unclamped measure of the real content size, so it -- not
+    // filled (which clamp_to_parent shrinks to fit us) -- is what we size ourselves
+    // from. The read is stale on the frame the container is first laid out, but
+    // c_contents::on_size_changed re-enters resized() as soon as contents computes
+    // its size, which repairs it within the same frame.
     if (auto_size)
-        size = float2{ size->x, contents->size->y + contents->margin->top + contents->margin->bottom + padding->top + padding->bottom };
-
+        size = float2{ size->x, contents->scaled_size->y + contents->margin->top + contents->margin->bottom + padding->top + padding->bottom };
 }
 
 void GUI::Elements::scroll_container::remove_child(base::ptr obj)
@@ -155,11 +159,11 @@ GUI::Elements::scroll_container::scroll_container()
     filled->add_child(over_filled);
     vert->on_move = [this](float y)
     {
-        contents->pos = { contents->pos->x, -y* (contents->size->y - filled->get_render_bounds().h) };
+        contents->pos = { contents->pos->x, -y* (contents->scaled_size->y - filled->get_render_bounds().h) };
     };
     hor->on_move = [this](float x)
     {
-        contents->pos = { -x* (contents->size->x - filled->get_render_bounds().w), contents->pos->y };
+        contents->pos = { -x* (contents->scaled_size->x - filled->get_render_bounds().w), contents->pos->y };
     };
 }
 

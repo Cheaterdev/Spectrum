@@ -1875,6 +1875,11 @@ namespace HAL
 		return compiler.get_debug_records();
 	}
 
+	std::vector<CommandRecord> CommandList::take_debug_records()
+	{
+		return compiler.take_debug_records();
+	}
+
 	DelayedCommandList* CommandListBase::get_native_list()
 	{
 		return &compiler;
@@ -1890,49 +1895,29 @@ namespace HAL
 	// to real activity, not to a resource's declared subresource count: a
 	// resource used whole stays a single ALL_SUBRESOURCES entry from start to
 	// finish and never pays per-mip anything.
-	// Diagnostic only -- see HAL::Debug::LogBarrierDecisions. Formats a state as
-	// sync/access/layout so a logged decision can be compared directly against
-	// what the D3D12 debug layer reports.
-	static std::string hex_of(uint v)
-	{
-		static const char* digits = "0123456789ABCDEF";
-		std::string r = "0x";
-		bool started = false;
-		for (int shift = 28; shift >= 0; shift -= 4)
-		{
-			uint nibble = (v >> shift) & 0xF;
-			if (nibble || started || shift == 0) { r += digits[nibble]; started = true; }
-		}
-		return r;
-	}
-
-	static std::string describe_state(const ResourceState& s)
-	{
-		return "sync=" + hex_of((uint)s.operation)
-		     + " access=" + hex_of((uint)s.access)
-		     + " layout=" + hex_of((uint)s.layout);
-	}
-
-	static bool should_log_barrier(const Resource* resource)
-	{
-		if (!HAL::Debug::LogBarrierDecisions) return false;
-		if (HAL::Debug::LogBarrierResource.empty()) return true;
-		return resource && std::string_view{ resource->name }.find(HAL::Debug::LogBarrierResource) != std::string_view::npos;
-	}
-
 	void CommandListGroup::plan_resources()
 	{
 		PROFILE(L"plan_resources");
 
-		plan.clear();
+		planned.clear();
+		planned_built = true;
 
 		for (auto& list : lists)
 		{
 			for (auto* resource : list->get_used_resources())
 			{
-				if (plan.count(resource)) continue;   // already decided for this group
+				// Dedup by linear scan rather than a hash set: a list names a
+				// resource at most once (TrackedResourceState::listed), so this
+				// only has to catch resources shared BETWEEN the group's lists,
+				// and `planned` is a short contiguous array of pointers. A set
+				// would trade that scan for an allocation per resource.
+				bool seen = false;
+				for (auto& p : planned)
+					if (p.resource == resource) { seen = true; break; }
+				if (seen) continue;
 
-				ResourcePlan p;
+				PlannedResource p;
+				p.resource       = resource;
 				p.from_undefined = resource->virgin;
 
 				// Does this group write the resource anywhere? Only a write can
@@ -1960,7 +1945,7 @@ namespace HAL
 				}
 
 				resource->virgin = false;
-				plan.emplace(resource, p);
+				planned.push_back(p);
 			}
 		}
 	}
@@ -1969,31 +1954,18 @@ namespace HAL
 	{
 		PROFILE(L"compile_transitions");
 
-		// Every resource any list in the group touched, in first-seen order.
-		std::vector<Resource*> resources;
-		{
-			std::set<Resource*> seen;
-			for (auto& list : lists)
-				for (auto* r : list->get_used_resources())
-					if (seen.insert(r).second)
-						resources.push_back(r);
-		}
+		// `planned` is built by plan_resources() on the submitting thread and
+		// is read-only here, which is what lets groups compile in parallel. It
+		// already holds every resource the group touches, deduplicated and in
+		// first-seen order, so there is no list to rebuild.
+		//
+		// Skipping plan_resources() would silently disable every first-use
+		// discard and enter every resource from the wrong state, so catch it.
+		ASSERT(planned_built);
 
-		if (HAL::Debug::LogBarrierDecisions)
-			Log::get() << "[barriers] group of " << (uint)lists.size()
-			           << " list(s), " << (uint)resources.size() << " resource(s)" << Log::endl;
-
-		for (auto* resource : resources)
+		for (auto& res_plan : planned)
 		{
-			// Decided by plan_resources() on the submitting thread; read-only
-			// here, which is what lets groups compile in parallel. A missing
-			// entry means plan_resources() was never called -- which would
-			// silently disable this resource's first-use discard and make it
-			// enter from the wrong state, so catch it rather than default it.
-			auto plan_it = plan.find(resource);
-			ASSERT(plan_it != plan.end());
-			if (plan_it == plan.end()) continue;
-			const ResourcePlan& res_plan = plan_it->second;
+			Resource* resource = res_plan.resource;
 
 			// Both first-use facts are consumed ONCE within the group, so they
 			// are tracked group-locally rather than read back off the resource.
@@ -2002,16 +1974,6 @@ namespace HAL
 			// NONE once the resource has been accessed (#1417).
 			bool discard_pending    = res_plan.owns_discard;
 			bool undefined_pending  = res_plan.from_undefined;
-
-			// Diagnostics -- see HAL::Debug::LogBarrierSummary.
-			uint stat_ops = 0, stat_usages = 0, stat_expands = 0, stat_expanded_subres = 0, stat_barriers = 0;
-
-			if (should_log_barrier(resource))
-				Log::get() << "[barriers]   resource '" << resource->name
-				           << "' from_undefined=" << (res_plan.from_undefined ? 1 : 0)
-				           << " owns_discard=" << (res_plan.owns_discard ? 1 : 0)
-				           << " rest_layout=" << hex_of((uint)resting_layout(resource))
-				           << Log::endl;
 
 			// Where the group has left each subresource so far -- carried
 			// ACROSS lists, which is the whole point: list N+1 diffs against
@@ -2050,8 +2012,6 @@ namespace HAL
 				// operations in the order they were recorded.
 				for (auto& [op_index, usages] : tracked.operations)
 				{
-					stat_ops++;
-					stat_usages += (uint)usages.size();
 					// 1. Collapse everything this operation does to the
 					//    resource into one wanted state per subresource. A
 					//    resource bound several ways in one operation (e.g.
@@ -2128,14 +2088,8 @@ namespace HAL
 						{
 							const ResourceState before = from_undefined();
 
-							if (should_log_barrier(resource))
-								Log::get() << "[barriers]     op" << op_index << " subres ALL first-write  before "
-								           << describe_state(before) << "  after " << describe_state(after)
-								           << "  [DISCARD, whole resource]" << Log::endl;
-
 							barriers.transition(resource, before, after,
 								ALL_SUBRESOURCES, BarrierFlags::SINGLE | BarrierFlags::DISCARD);
-							stat_barriers++;
 
 							discard_pending = false;
 
@@ -2151,15 +2105,66 @@ namespace HAL
 						// real prior touch can be a hazard to order against.
 						const bool was_tracked = resolve(subres, before);
 
+						// True when nothing in this GROUP has touched the resource
+						// yet -- not merely this subresource. That is the exact
+						// condition the D3D12 spec attaches to SyncBefore = NONE:
+						// "there MUST have been no preceding barriers or accesses
+						// made to that resource in the same ExecuteCommandLists
+						// scope", and a group is submitted as exactly one such
+						// scope (see Queue::execute).
+						const bool group_first_touch = current.empty();
+
 						if (!was_tracked)
 						{
 							// Untouched by this group so far. A resource no barrier
 							// has ever moved is still in its creation (undefined)
 							// layout; anything else was handed back at rest by
 							// whoever used it last.
+							//
+							// Only the LAYOUT carries over a scope boundary. There
+							// are no pending commands or cache flushes across
+							// ExecuteCommandLists, so there is nothing for a
+							// SyncBefore/AccessBefore to name -- declaring the
+							// resting layout's access (and sync ALL) instead would
+							// invent a dependency on work that has already fully
+							// retired, and cost a barrier whenever the incoming use
+							// only differs in sync.
+							//
+							// Falls back to the resting access once the group has
+							// touched the resource: NONE is then no longer legal
+							// (#1417), and the group's own prior barrier is a real
+							// thing to order against.
+							const TextureLayout rest = resting_layout(resource);
 							before = res_plan.from_undefined
 								? from_undefined()
-								: state_at_rest(resting_layout(resource));
+								: (group_first_touch
+									? ResourceState{ BarrierSync::NONE, BarrierAccess::NO_ACCESS, rest }
+									: state_at_rest(rest));
+						}
+
+						// Entering the scope in the layout we already want. Nothing
+						// to transition and nothing to synchronize against -- the
+						// scope boundary already guarantees prior work retired and
+						// caches flushed -- so this costs no barrier at all.
+						if (!was_tracked && group_first_touch && before.layout == after.layout
+							&& !res_plan.from_undefined)
+						{
+							current[subres] = after;
+							return;
+						}
+
+						// Read-after-read inside the group, differing only in which
+						// shader stages read it. Neither side writes, so there is no
+						// hazard to order and nothing to make visible; the barrier
+						// would only widen a sync scope. Access must match exactly --
+						// a different access needs the data made visible to it even
+						// when both are reads.
+						if (was_tracked && before.layout == after.layout
+							&& before.access == after.access
+							&& !before.has_write_bits() && !after.has_write_bits())
+						{
+							current[subres] = after;
+							return;
 						}
 
 						// Same state is not the same as no hazard. Two dispatches
@@ -2183,13 +2188,7 @@ namespace HAL
 							return;
 						}
 
-						if (should_log_barrier(resource))
-							Log::get() << "[barriers]     op" << op_index << " subres " << subres
-							           << (res_plan.from_undefined ? "  from-undefined  before " : "  before ")
-							           << describe_state(before) << "  after " << describe_state(after) << Log::endl;
-
 						barriers.transition(resource, before, after, subres, BarrierFlags::SINGLE);
-						stat_barriers++;
 						current[subres] = after;
 					};
 
@@ -2210,8 +2209,6 @@ namespace HAL
 						if (diverged)
 						{
 							uint count = resource->get_device().Subresources(resource->get_desc());
-							stat_expands++;
-							stat_expanded_subres += count;
 							for (uint i = 0; i < count; i++)
 								emit(i, all_it->second);
 
@@ -2259,19 +2256,12 @@ namespace HAL
 				// Subresources sit in different states, so one ALL barrier
 				// cannot carry a single valid before-state.
 				uint count = resource->get_device().Subresources(resource->get_desc());
-				stat_expands++;
-				stat_expanded_subres += count;
 				for (uint i = 0; i < count; i++)
 				{
 					ResourceState before;
 					if (!resolve(i, before)) continue;      // untouched by the group
 					if (before.layout == rest_layout) continue;
-					if (should_log_barrier(resource))
-						Log::get() << "[barriers]     -> rest (op" << last_use->index << " after) subres " << i
-						           << "\n                 before " << describe_state(before)
-						           << "\n                 after  " << describe_state(rest) << Log::endl;
 					after_barriers.transition(resource, before, rest, i);
-					stat_barriers++;
 				}
 			}
 			else
@@ -2279,32 +2269,10 @@ namespace HAL
 				auto it = current.find(ALL_SUBRESOURCES);
 				if (it != current.end() && it->second.layout != rest_layout)
 				{
-					if (should_log_barrier(resource))
-						Log::get() << "[barriers]     -> rest (op" << last_use->index << " after) subres ALL"
-						           << "\n                 before " << describe_state(it->second)
-						           << "\n                 after  " << describe_state(rest) << Log::endl;
 					after_barriers.transition(resource, it->second, rest, ALL_SUBRESOURCES);
-					stat_barriers++;
 				}
 			}
 
-			// Aggregate cost for this resource in this group. `expands` is the
-			// number that matters: each one walks the resource's FULL declared
-			// subresource count because subresources had diverged and a single
-			// ALL barrier could no longer express the transition. For something
-			// like the VSM atlas that is thousands of iterations per expand.
-			if (HAL::Debug::LogBarrierSummary && stat_barriers >= HAL::Debug::LogBarrierSummaryMin)
-			{
-				Log::get() << "[barrier-cost] " << resource->name
-				           << "  subres=" << resource->get_device().Subresources(resource->get_desc())
-				           << "  ops=" << stat_ops
-				           << "  usages=" << stat_usages
-				           << "  expands=" << stat_expands
-				           << "  expanded_subres=" << stat_expanded_subres
-				           << "  barriers=" << stat_barriers
-				           << "  diverged_final=" << (uint)current.size()
-				           << Log::endl;
-			}
 		}
 	}
 

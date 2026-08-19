@@ -22,6 +22,15 @@ export namespace HAL {
             D3D_PRIMITIVE_TOPOLOGY  native_topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
             CommandListType type;
             Device* m_device = nullptr;
+
+            // Scratch for transitions(), kept alive between calls so their
+            // capacity survives. Members rather than locals or thread_local:
+            // transitions() is called once per barrier point (hundreds of times
+            // per frame) and a fresh vector would malloc/free every time; a
+            // list is only ever replayed by one thread at a time, so per-list
+            // storage needs no synchronisation and costs no TLS lookup.
+            std::vector<D3D12_TEXTURE_BARRIER> scratch_textures;
+            std::vector<D3D12_BUFFER_BARRIER>  scratch_buffers;
         public:
             D3D::CommandList get_native() const {
                 return m_commandList;

@@ -15,27 +15,6 @@ export namespace HAL
 		// identical; any difference is a hazard-detection bug.
 		inline bool EnableOpBatching = true;
 
-		// Log every barrier CommandListGroup::compile_transitions decides on,
-		// with the resource, subresource and before/after states, plus WHY the
-		// before-state was chosen (carried within the group / assumed resting /
-		// first-ever discard). Noisy — intended for correlating a D3D12
-		// validation error against the decision that produced it.
-		inline bool LogBarrierDecisions = false;
-
-		// One aggregate line per (resource, group) instead of per barrier: how
-		// many operations/usages fed it, how many subresources the expand path
-		// had to walk, and how many barriers came out. This is what answers
-		// "why is this resource producing so much work" -- LogBarrierDecisions
-		// is per-barrier and drowns a 2048-slice resource in its own output.
-		inline bool LogBarrierSummary = true;
-
-		// Only summarise resources that produced at least this many barriers,
-		// so the interesting ones stand out. 0 = summarise everything.
-		inline uint LogBarrierSummaryMin = 8;
-
-		// Restrict LogBarrierDecisions to one resource. Empty = log everything.
-		inline std::string LogBarrierResource = "";
-
 #ifdef DEV
 		constexpr bool GfxDebug = !RunForPix&&false;
 		constexpr bool ValidationErrors = !RunForPix&&true;

@@ -120,6 +120,8 @@ namespace HAL
 	void Barriers::clear()
 	{
 		barriers.clear();
+		buffer_count = 0;
+		texture_count = 0;
 	}
 
 	const std::vector<Barrier>& Barriers::get_barriers() const
@@ -136,6 +138,11 @@ namespace HAL
 
 		if (check(after.access & (BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE | BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ)))
 			ASSERT(check(resource->get_desc().Flags & ResFlags::Raytracing));
+
+		if (resource->get_desc().is_buffer())
+			buffer_count++;
+		else
+			texture_count++;
 
 		barriers.emplace_back(Barrier{ const_cast<Resource*>(resource), before, after, subres, flags });
 	}

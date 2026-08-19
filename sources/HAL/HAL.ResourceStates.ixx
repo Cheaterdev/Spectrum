@@ -159,6 +159,14 @@ export
 		{
 			std::vector<Barrier> barriers;
 
+			// How many of `barriers` target a buffer and how many a texture.
+			// D3D12 wants those split into two separate native arrays, and the
+			// resource desc is already in hand here at record time -- so the
+			// backend can size both arrays exactly instead of growing them and
+			// re-walking the list to find out how big they should have been.
+			uint buffer_count = 0;
+			uint texture_count = 0;
+
 			CommandListType type;
 		public:
 
@@ -166,6 +174,9 @@ export
 			operator bool() const;
 			void clear();
 			const std::vector<Barrier>& get_barriers() const;
+
+			uint get_buffer_count() const { return buffer_count; }
+			uint get_texture_count() const { return texture_count; }
 
 			void transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres, BarrierFlags flags = BarrierFlags::SINGLE);
 

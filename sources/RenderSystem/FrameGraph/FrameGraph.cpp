@@ -712,7 +712,21 @@ namespace FrameGraph
 					auto it = pass_of_list.find(list.get());
 					if (it == pass_of_list.end()) continue;
 
-					auto records = list->get_debug_records();
+					auto records = list->take_debug_records();
+
+					// One name lookup per distinct resource instead of one per
+					// barrier. A resource is typically barriered many times in a
+					// list, and most names are past the small-string limit, so
+					// this is the difference between a heap allocation per
+					// barrier and one per resource.
+					//
+					// The name has to be captured eagerly rather than read from
+					// b.resource later: these records outlive the frame that
+					// produced them, and a transient resource can be freed or
+					// aliased away in the meantime. That is why resource_id is
+					// documented as never dereferenced.
+					std::unordered_map<const HAL::Resource*, std::string> names;
+
 					for (auto& rec : records)
 					{
 						if (rec.type != HAL::CommandType::Transition || !rec.barrier_point) continue;
@@ -723,7 +737,12 @@ namespace FrameGraph
 						for (const auto& b : barriers)
 						{
 							HAL::CommandRecord::BarrierDetail detail;
-							detail.resource_name = b.resource ? b.resource->name : "?";
+
+							auto name_it = names.find(b.resource);
+							if (name_it == names.end())
+								name_it = names.emplace(b.resource, b.resource ? b.resource->name : "?").first;
+							detail.resource_name = name_it->second;
+
 							detail.before = b.before;
 							detail.after = b.after;
 							detail.subres = b.subres;
@@ -732,6 +751,23 @@ namespace FrameGraph
 							rec.barrier_details.push_back(std::move(detail));
 						}
 						rec.barrier_point = nullptr;
+					}
+					{
+						static int diag = 0;
+						if (diag < 12)
+						{
+							uint tr = 0, nullpt = 0, bars = 0;
+							for (auto& r : records)
+								if (r.type == HAL::CommandType::Transition)
+								{
+									tr++;
+									if (r.barrier_details.empty()) nullpt++;
+									bars += (uint)r.barrier_details.size();
+								}
+							Log::get() << "[diag] pass '" << it->second->name.ptr << "' records=" << (uint)records.size()
+								<< " transitions=" << tr << " empty=" << nullpt << " barriers=" << bars << Log::endl;
+							diag++;
+						}
 					}
 					it->second->debug_commands = std::move(records);
 				}
@@ -779,7 +815,7 @@ namespace FrameGraph
 			auto& group = queued_lists[type];
 			if (group.empty() && waits.empty()) return;
 
-			group.plan_resources();
+		
 
 			submits.push_back(PendingSubmit{ std::move(group), type, std::move(waits), fence_pass });
 			group.clear();
@@ -834,6 +870,7 @@ namespace FrameGraph
 			for (auto& submit : submits)
 				tasks.emplace_back(thread_pool::get().enqueue([&submit]()
 				{
+					submit.group.plan_resources();
 					submit.group.compile_transitions();
 					submit.group.compile();
 				}));
@@ -1265,18 +1302,6 @@ namespace FrameGraph
 						handoff = HAL::state_at_rest(HAL::resting_layout(resource.get()));
 
 					producer_list->transition_to(resource.get(), *handoff);
-
-					if (HAL::Debug::LogBarrierDecisions && !HAL::Debug::LogBarrierResource.empty()
-						&& std::string_view{ resource->name }.find(HAL::Debug::LogBarrierResource) != std::string_view::npos)
-					{
-						Log::get() << "[fg-link] '" << resource->name << "' state " << i
-							<< " producer '" << producer->name.ptr << "'"
-							<< (prev.write ? " (write)" : " (read)")
-							<< " -> " << (uint)cur.passes.size() << " consumer(s), first '"
-							<< cur.passes.front()->name.ptr << "'"
-							<< "  layout=" << (uint)handoff->layout
-							<< (rested ? " [rested]" : "") << Log::endl;
-					}
 
 					for (auto* pass : cur.passes)
 						pass->context.list->set_entry_state(resource.get(), *handoff);
