@@ -9,78 +9,84 @@ import Core;
 import HAL;
 
 // File-local template — full HAL::Resource available here, no std::function overhead.
+//
+// Reports each resource a view touches ONCE, with the SubresRange it covers,
+// rather than calling back per subresource. A view already IS a range -- the
+// mip/array/plane fields below are the same six numbers -- so shredding it here
+// only to have the caller (and formerly the backend) put it back together was
+// wasted work: a 256-slice view meant 256 callbacks, 256 shared_ptr passes and
+// 256 identical resource comparisons in the caller's filter.
+//
+// SubresRange::all() is still preferred wherever the view covers the whole
+// resource: D3D12 has a dedicated sentinel for that and it stays cheaper than an
+// equivalent range all the way down.
 template<typename F>
 static void visit_subres(const HAL::ResourceInfo& info, F&& f)
 {
+	using HAL::SubresRange;
+
 	std::visit(overloaded{
 		[&](const HAL::Views::ShaderResource& v) {
 			std::visit(overloaded{
-				[&](const HAL::Views::ShaderResource::Buffer&) { f(v.Resource, HAL::ALL_SUBRESOURCES); },
+				[&](const HAL::Views::ShaderResource::Buffer&) { f(v.Resource, SubresRange::all()); },
 				[&](const HAL::Views::ShaderResource::Texture2D& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0 && desc.is2D())
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
-							f(v.Resource, desc.CalcSubresource(mip, 0, t.PlaneSlice));
+						f(v.Resource, SubresRange{ t.MostDetailedMip, t.MipLevels, 0, 1, t.PlaneSlice, 1 });
 				},
 				[&](const HAL::Views::ShaderResource::Texture2DArray& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0 && t.FirstArraySlice == 0 && t.ArraySize == desc.ArraySize && desc.is2D())
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
-							for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
-								f(v.Resource, desc.CalcSubresource(mip, arr, t.PlaneSlice));
+						f(v.Resource, SubresRange{ t.MostDetailedMip, t.MipLevels, t.FirstArraySlice, t.ArraySize, t.PlaneSlice, 1 });
 				},
 				[&](const HAL::Views::ShaderResource::Texture3D& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0)
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
-							f(v.Resource, desc.CalcSubresource(mip, 0, 0));
+						f(v.Resource, SubresRange{ t.MostDetailedMip, t.MipLevels, 0, 1, 0, 1 });
 				},
 				[&](const HAL::Views::ShaderResource::Cube& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0)
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
-							for (auto arr = 0; arr < 6; arr++)
-								f(v.Resource, desc.CalcSubresource(mip, arr, 0));
+						f(v.Resource, SubresRange{ t.MostDetailedMip, t.MipLevels, 0, 6, 0, 1 });
 				},
-				[&](const HAL::Views::ShaderResource::Raytracing&) { f(v.Resource, HAL::ALL_SUBRESOURCES); },
+				[&](const HAL::Views::ShaderResource::Raytracing&) { f(v.Resource, SubresRange::all()); },
 				[&](auto) { ASSERT(false); }
 			}, v.View);
 		},
 		[&](const HAL::Views::UnorderedAccess& v) {
 			std::visit(overloaded{
 				[&](const HAL::Views::UnorderedAccess::Buffer& b) {
-					f(v.Resource, HAL::ALL_SUBRESOURCES);
-					if (b.CounterResource) f(b.CounterResource, HAL::ALL_SUBRESOURCES);
+					f(v.Resource, SubresRange::all());
+					if (b.CounterResource) f(b.CounterResource, SubresRange::all());
 				},
 				[&](const HAL::Views::UnorderedAccess::Texture2D& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (desc.MipLevels == 1 && desc.is2D())
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, t.PlaneSlice));
+						f(v.Resource, SubresRange{ t.MipSlice, 1, 0, 1, t.PlaneSlice, 1 });
 				},
 				[&](const HAL::Views::UnorderedAccess::Texture2DArray& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (desc.MipLevels == 1 && desc.is2D() && desc.ArraySize == 1)
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
-							f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, t.PlaneSlice));
+						f(v.Resource, SubresRange{ t.MipSlice, 1, t.FirstArraySlice, t.ArraySize, t.PlaneSlice, 1 });
 				},
 				[&](const HAL::Views::UnorderedAccess::Texture3D& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (t.FirstWSlice == 0 && t.WSize == desc.Dimensions.z && desc.MipLevels == 1)
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, 0));
+						f(v.Resource, SubresRange{ t.MipSlice, 1, 0, 1, 0, 1 });
 				},
 				[&](auto) { ASSERT(false); }
 			}, v.View);
@@ -90,14 +96,12 @@ static void visit_subres(const HAL::ResourceInfo& info, F&& f)
 				[&](const HAL::Views::RenderTarget::Texture2D& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (desc.MipLevels == 1 && desc.is2D() == 1)
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, t.PlaneSlice));
+						f(v.Resource, SubresRange{ t.MipSlice, 1, 0, 1, t.PlaneSlice, 1 });
 				},
 				[&](const HAL::Views::RenderTarget::Texture2DArray& t) {
-					auto& desc = v.Resource->get_desc().as_texture();
-					for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
-						f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, t.PlaneSlice));
+					f(v.Resource, SubresRange{ t.MipSlice, 1, t.FirstArraySlice, t.ArraySize, t.PlaneSlice, 1 });
 				},
 				[&](auto) { ASSERT(false); }
 			}, v.View);
@@ -105,18 +109,15 @@ static void visit_subres(const HAL::ResourceInfo& info, F&& f)
 		[&](const HAL::Views::DepthStencil& v) {
 			std::visit(overloaded{
 				[&](const HAL::Views::DepthStencil::Texture2D& t) {
-					auto& desc = v.Resource->get_desc().as_texture();
-					f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, 0));
+					f(v.Resource, SubresRange{ t.MipSlice, 1, 0, 1, 0, 1 });
 				},
 				[&](const HAL::Views::DepthStencil::Texture2DArray& t) {
-					auto& desc = v.Resource->get_desc().as_texture();
-					for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
-						f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, 0));
+					f(v.Resource, SubresRange{ t.MipSlice, 1, t.FirstArraySlice, t.ArraySize, 0, 1 });
 				},
 				[&](auto) { ASSERT(false); }
 			}, v.View);
 		},
-		[&](const HAL::Views::ConstantBuffer& v) { f(v.Resource, HAL::ALL_SUBRESOURCES); },
+		[&](const HAL::Views::ConstantBuffer& v) { f(v.Resource, SubresRange::all()); },
 		[&](auto) { ASSERT(false); }
 	}, info.view);
 }
@@ -2093,9 +2094,30 @@ namespace HAL
 							// turned out to need barriers at all. visit_subres
 							// also reports side resources (a UAV counter
 							// buffer), so filter to ours.
-							visit_subres(*usage.info, [&](const HAL::Resource::ptr& r, UINT s)
+							visit_subres(*usage.info, [&](const HAL::Resource::ptr& r, SubresRange range)
 							{
-								if (r.get() == resource) want(s, usage.state);
+								// One compare per VIEW now, not per subresource --
+								// visit_subres also reports side resources (a UAV
+								// counter buffer), so this still has to filter.
+								if (r.get() != resource) return;
+
+								if (range.is_all())
+								{
+									want(ALL_SUBRESOURCES, usage.state);
+									return;
+								}
+
+								// Tracking is still per flat subresource, so expand
+								// here -- but as a tight loop over known bounds, with
+								// no callback or shared_ptr per entry. Mip innermost:
+								// that yields CONSECUTIVE flat indices, which is what
+								// lets Barriers::transition merge the run back into
+								// one range on the way out.
+								const auto& tex = resource->get_desc().as_texture();
+								for (uint p = range.first_plane; p < range.first_plane + range.num_planes; p++)
+									for (uint a = range.first_slice; a < range.first_slice + range.num_slices; a++)
+										for (uint m = range.first_mip; m < range.first_mip + range.num_mips; m++)
+											want(tex.CalcSubresource(m, a, p), usage.state);
 							});
 						}
 						else

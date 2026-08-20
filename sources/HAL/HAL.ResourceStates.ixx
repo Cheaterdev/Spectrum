@@ -130,6 +130,7 @@ export
 		// been accessed.
 		ResourceState state_at_rest(TextureLayout layout);
 
+
 		bool IsCompatible(CommandListType a, CommandListType b);
 		bool IsFullySupport(CommandListType type, const ResourceState& states);
 		CommandListType Merge(CommandListType a, CommandListType b);
@@ -145,14 +146,54 @@ export
 			DISCARD = 4
 		};
 
+		// A rectangle in (mip x array-slice x plane) space -- the same six numbers
+		// D3D12_BARRIER_SUBRESOURCE_RANGE carries, and the same shape a VIEW
+		// already has. Tracking is still per flat subresource index; this is how
+		// a run of those is EXPRESSED once it reaches the API, so a Hi-Z level
+		// spanning 256 slices costs one barrier instead of 256.
+		//
+		// is_all() is the whole-resource form. It is not the same as a range that
+		// happens to cover everything: D3D12 has a dedicated sentinel for it and
+		// ignores the other fields.
+		struct SubresRange
+		{
+			uint first_mip   = ALL_SUBRESOURCES;   // sentinel == whole resource
+			uint num_mips    = 0;
+			uint first_slice = 0;
+			uint num_slices  = 0;
+			uint first_plane = 0;
+			uint num_planes  = 0;
+
+			bool is_all() const { return first_mip == ALL_SUBRESOURCES; }
+
+			static SubresRange all() { return {}; }
+
+			// One flat subresource index, decomposed. Flat indexing is
+			// mip-major within a slice (mip + slice*MipLevels + plane*...), so
+			// CONSECUTIVE indices are consecutive mips of one slice -- which is
+			// what makes the incremental merge in Barriers::transition work.
+			static SubresRange single(uint mip, uint slice, uint plane)
+			{
+				return SubresRange{ mip, 1, slice, 1, plane, 1 };
+			}
+
+			bool operator==(const SubresRange&) const = default;
+		};
+
 		struct Barrier
 		{
 			Resource* resource;
 			ResourceState before;
 			ResourceState after;
-			UINT subres;
+			SubresRange range;
 			BarrierFlags flags;
 		};
+		// A single flat subresource index standing in for a range, for consumers
+		// that key on one (breakpoints, the debugger's per-subresource
+		// continuity tracking). Exact when the range is one subresource;
+		// ALL_SUBRESOURCES otherwise, which is how those consumers already treat
+		// "covers more than one".
+		uint representative_subres(const Resource* resource, const SubresRange& range);
 
 
 		class Barriers
@@ -178,7 +219,12 @@ export
 			uint get_buffer_count() const { return buffer_count; }
 			uint get_texture_count() const { return texture_count; }
 
+			// Flat subresource index (or ALL_SUBRESOURCES). Decomposes into a
+			// range and merges with the previous barrier where possible.
 			void transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres, BarrierFlags flags = BarrierFlags::SINGLE);
+
+			// Explicit range. Same merging.
+			void transition(const Resource* resource, ResourceState before, ResourceState after, SubresRange range, BarrierFlags flags = BarrierFlags::SINGLE);
 
 		};
 

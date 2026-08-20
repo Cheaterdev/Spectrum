@@ -455,7 +455,7 @@ namespace HAL
                     barrier.LayoutAfter  = to_native(e.after.get_layout());
                     barrier.pResource    = e.resource->get_dx();
 
-                    if (e.subres == 0xffffffffu) // HAL::ALL_SUBRESOURCES
+                    if (e.range.is_all())
                     {
                         // Single barrier covering every subresource. D3D12 uses
                         // IndexOrFirstMipLevel == 0xffffffff (== ALL_SUBRESOURCES)
@@ -471,12 +471,15 @@ namespace HAL
                     }
                     else
                     {
-                        barrier.Subresources.IndexOrFirstMipLevel = e.resource->get_desc().as_texture().get_mip(e.subres);
-                        barrier.Subresources.NumMipLevels         = 1;
-                        barrier.Subresources.FirstArraySlice      = e.resource->get_desc().as_texture().get_array(e.subres);
-                        barrier.Subresources.NumArraySlices       = 1;
-                        barrier.Subresources.FirstPlane           = e.resource->get_desc().as_texture().get_plane(e.subres);
-                        barrier.Subresources.NumPlanes            = 1;
+                        // Straight copy: SubresRange holds exactly these six fields,
+                        // so a run of subresources merged at record time reaches the
+                        // API as one barrier instead of one per subresource.
+                        barrier.Subresources.IndexOrFirstMipLevel = e.range.first_mip;
+                        barrier.Subresources.NumMipLevels         = e.range.num_mips;
+                        barrier.Subresources.FirstArraySlice      = e.range.first_slice;
+                        barrier.Subresources.NumArraySlices       = e.range.num_slices;
+                        barrier.Subresources.FirstPlane           = e.range.first_plane;
+                        barrier.Subresources.NumPlanes            = e.range.num_planes;
                     }
 
                     barrier.Flags = D3D12_TEXTURE_BARRIER_FLAG_NONE;

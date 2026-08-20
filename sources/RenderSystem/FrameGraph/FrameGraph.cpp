@@ -772,7 +772,8 @@ namespace FrameGraph
 
 							detail.before = b.before;
 							detail.after = b.after;
-							detail.subres = b.subres;
+							detail.subres = HAL::representative_subres(b.resource, b.range);
+							detail.range  = b.range;
 							detail.flags = b.flags;
 							detail.resource_id = reinterpret_cast<uint64>(b.resource);   // opaque instance id
 							rec.barrier_details.push_back(std::move(detail));

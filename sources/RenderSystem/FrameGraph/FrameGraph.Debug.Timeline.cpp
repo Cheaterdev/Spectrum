@@ -1030,9 +1030,20 @@ class FrameGraphTimelineCanvas : public dock_base
                     const auto& bd = *e.detail;
 
                     // Subresource / split-barrier annotations on the Sync line.
+                    // Exact extent, not just the representative index: a coalesced
+                    // barrier covers a mip/slice rectangle and "sub=N" would be a
+                    // lie about how much it moves.
                     std::string sub_str;
-                    if (bd.subres != HAL::ALL_SUBRESOURCES)
-                        sub_str = "  sub=" + std::to_string(bd.subres);
+                    if (!bd.range.is_all())
+                    {
+                        const auto& r = bd.range;
+                        const bool one = (r.num_mips == 1 && r.num_slices == 1);
+
+                        sub_str = one
+                            ? "  sub=" + std::to_string(bd.subres)
+                            : "  mips " + std::to_string(r.first_mip) + "+" + std::to_string(r.num_mips) +
+                              " slices " + std::to_string(r.first_slice) + "+" + std::to_string(r.num_slices);
+                    }
 
                     std::string flag_str;
                     using BF = HAL::BarrierFlags;

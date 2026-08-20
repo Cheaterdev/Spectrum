@@ -45,6 +45,18 @@ namespace HAL
 		return { BarrierSync::NONE, BarrierAccess::NO_ACCESS, layout };
 	}
 
+	uint representative_subres(const Resource* resource, const SubresRange& range)
+	{
+		if (range.is_all() || !resource->get_desc().is_texture())
+			return ALL_SUBRESOURCES;
+
+		if (range.num_mips != 1 || range.num_slices != 1 || range.num_planes != 1)
+			return ALL_SUBRESOURCES;
+
+		return resource->get_desc().as_texture().CalcSubresource(
+			range.first_mip, range.first_slice, range.first_plane);
+	}
+
 	bool IsCompatible(CommandListType a, CommandListType b)
 	{
 		if (a == CommandListType::DIRECT) return true;
@@ -133,18 +145,74 @@ namespace HAL
 	{
 		ASSERT(resource);
 
+		SubresRange range = SubresRange::all();
+
+		if (subres != ALL_SUBRESOURCES && resource->get_desc().is_texture())
+		{
+			const auto& tex = resource->get_desc().as_texture();
+			range = SubresRange::single(tex.get_mip(subres), tex.get_array(subres), tex.get_plane(subres));
+		}
+
+		transition(resource, before, after, range, flags);
+	}
+
+	void Barriers::transition(const Resource* resource, ResourceState before, ResourceState after, SubresRange range, BarrierFlags flags)
+	{
+		ASSERT(resource);
+
 		ASSERT(IsFullySupport(type, before));
 		ASSERT(IsFullySupport(type, after));
 
 		if (check(after.access & (BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE | BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ)))
 			ASSERT(check(resource->get_desc().Flags & ResFlags::Raytracing));
 
+		// Merge into the previous barrier when this one continues it.
+		//
+		// The expand paths emit a run of subresources back to back with the same
+		// before/after, and flat subresource indexing is mip-major within a slice
+		// -- so consecutive indices are consecutive MIPS of one slice, and a
+		// whole mip chain collapses to a single range. A second case follows:
+		// once a slice's full mip chain is one range, the NEXT slice with the
+		// same mip span extends it along the slice axis.
+		//
+		// O(1) and order-preserving: only ever the immediately preceding entry is
+		// considered, so a barrier can never move past an unrelated one.
+		if (!barriers.empty() && !range.is_all())
+		{
+			Barrier& prev = barriers.back();
+
+			if (prev.resource == resource && prev.before == before && prev.after == after
+				&& prev.flags == flags && !prev.range.is_all()
+				&& prev.range.first_plane == range.first_plane
+				&& prev.range.num_planes  == range.num_planes)
+			{
+				// Same slice, next mip.
+				if (prev.range.first_slice == range.first_slice
+					&& prev.range.num_slices == range.num_slices
+					&& prev.range.first_mip + prev.range.num_mips == range.first_mip)
+				{
+					prev.range.num_mips += range.num_mips;
+					return;
+				}
+
+				// Same mip span, next slice.
+				if (prev.range.first_mip == range.first_mip
+					&& prev.range.num_mips == range.num_mips
+					&& prev.range.first_slice + prev.range.num_slices == range.first_slice)
+				{
+					prev.range.num_slices += range.num_slices;
+					return;
+				}
+			}
+		}
+
 		if (resource->get_desc().is_buffer())
 			buffer_count++;
 		else
 			texture_count++;
 
-		barriers.emplace_back(Barrier{ const_cast<Resource*>(resource), before, after, subres, flags });
+		barriers.emplace_back(Barrier{ const_cast<Resource*>(resource), before, after, range, flags });
+
 	}
 
 

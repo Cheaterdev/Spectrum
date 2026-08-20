@@ -45,7 +45,11 @@ export namespace HAL
 			std::string        resource_name;
 			HAL::ResourceState before;
 			HAL::ResourceState after;
+			// Representative flat index (ALL_SUBRESOURCES when the barrier covers
+			// more than one) -- what the continuity tracking keys on. `range` is
+			// the exact extent, for display.
 			uint               subres = 0;
+			HAL::SubresRange   range;
 			HAL::BarrierFlags  flags  = HAL::BarrierFlags::NONE;
 			// Opaque per-instance id (the source Resource address). A recreate()
 			// makes a NEW Resource object with the SAME name, so the debugger uses
