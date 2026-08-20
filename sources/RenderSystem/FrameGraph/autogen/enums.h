@@ -60,6 +60,7 @@ export
 		Library::Mipmapping Mipmapping;
 		Library::VSM_GatherDispatch VSM_GatherDispatch;
 		Library::VSM_RenderPages VSM_RenderPages;
+		Library::VSM_HiZRebuild VSM_HiZRebuild;
 		Library::VSM_Combine VSM_Combine;
 		Library::VSM_DepthAnalysis VSM_DepthAnalysis;
 	

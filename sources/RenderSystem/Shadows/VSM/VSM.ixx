@@ -243,7 +243,17 @@ private:
 	// VSM_Atlas. Built on VSM_RenderPages' first real render()
 	// (data.VSM_PageHiZ doesn't exist before its own setup() runs, so this
 	// can't happen at VSM construction time); see build_slot_views().
-	bool slot_views_built = false;
+	// Phase 5.17: VSM_RenderPages (direct queue) and VSM_HiZRebuild (async
+	// compute queue) now record on genuinely different threads -- the GPU-
+	// level dependency via VSM_Atlas guarantees the *GPU work* orders
+	// correctly, but says nothing about which pass's render() callback the
+	// CPU records FIRST. A plain bool "built" flag raced (confirmed live:
+	// a null-deref crash the very first frame VSM_HiZRebuild had real work,
+	// landing right where it first touched atlas_array_view -- built by
+	// VSM_RenderPages' render(), which this assumed always ran first).
+	// std::call_once makes "build lazily, exactly once, safe from either
+	// thread" actually true instead of assumed.
+	std::once_flag atlas_views_once;
 	std::vector<HAL::Texture2DView> atlas_slot_views; // [slot], DSV clear only
 
 	// Phase 5.14: batched Hi-Z copy source, narrowed to physical_page_count
@@ -259,23 +269,48 @@ private:
 
 	// Phase 5.14: the Hi-Z pyramid rebuild is batched across every dirty
 	// page at once (one dispatch per mip level, not one per dirty page per
-	// mip -- see m_renderpages_render). Array-spanning (every physical
-	// slot at once) but narrowed to exactly ONE mip per entry -- both SRV
-	// and UAV -- instead of VSM_PageHiZ's base handler view, which spans
-	// the WHOLE mip chain (pyramid_mip_count x physical_page_count
-	// subresources). Same stop_using()-avoidance reasoning as
-	// atlas_array_view above (see that comment); stop_using() is gone now,
-	// but this stayed narrow since it's rebound on every one of the
-	// pyramid_mip_count-1 downsample dispatches, not just once.
+	// mip). Array-spanning (every physical slot at once) but narrowed to
+	// exactly ONE mip per entry -- both SRV and UAV -- instead of
+	// VSM_PageHiZ's base handler view, which spans the WHOLE mip chain
+	// (pyramid_mip_count x physical_page_count subresources). Same
+	// stop_using()-avoidance reasoning as atlas_array_view above (see that
+	// comment); stop_using() is gone now, but this stayed narrow since it's
+	// rebound on every one of the pyramid_mip_count-1 downsample dispatches,
+	// not just once. Phase 5.17: only VSM_HiZRebuild's render() ever touches
+	// this now (the whole rebuild moved there), so it doesn't need the
+	// cross-pass synchronization atlas_views_once exists for -- but it's
+	// still built lazily via its own once_flag for the same "exactly once"
+	// guarantee, cheap insurance against a future second caller.
+	std::once_flag page_hiz_views_once;
 	std::vector<HAL::Texture2DView> page_hiz_mip_array_views; // [mip]
 
-	void build_slot_views(Passes::VSM_RenderPages::Context& data, int pyramid_mip_count);
+	// Builds atlas_slot_views/atlas_array_view -- needs only vsm_atlas_tex,
+	// no pass Context, so it's callable identically from either
+	// VSM_RenderPages' or VSM_HiZRebuild's render() (both need
+	// atlas_array_view; only VSM_RenderPages needs atlas_slot_views for its
+	// per-dirty-page DSV clears). Thread-safe via atlas_views_once -- see
+	// its declaration for why that's required, not just tidy.
+	void build_atlas_views();
+
+	// Builds page_hiz_mip_array_views from VSM_HiZRebuild's OWN Context
+	// (that PassNode need()s VSM_PageHiZ too, alongside VSM_RenderPages,
+	// which still create()s it for the once-ever cold-start clear -- see
+	// vsm.sig's VSM_HiZRebuild comment).
+	void build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyramid_mip_count);
 
 	Passes::VSM_GatherDispatch::setup_func_type  m_gatherdispatch_setup;
 	Passes::VSM_GatherDispatch::render_func_type m_gatherdispatch_render;
 
 	Passes::VSM_RenderPages::setup_func_type  m_renderpages_setup;
 	Passes::VSM_RenderPages::render_func_type m_renderpages_render;
+
+	// Phase 5.17: split off VSM_RenderPages so the per-frame Hi-Z pyramid
+	// rebuild (copy + downsample dispatches) runs on the async compute
+	// queue instead of serializing into VSM_RenderPages' own direct-queue
+	// pass -- nothing else this frame reads VSM_PageHiZ, only next frame's
+	// draw does. See vsm.sig's VSM_HiZRebuild PassNode comment.
+	Passes::VSM_HiZRebuild::setup_func_type  m_hizrebuild_setup;
+	Passes::VSM_HiZRebuild::render_func_type m_hizrebuild_render;
 
 	Passes::VSM_Combine::setup_func_type  m_combine_setup;
 	Passes::VSM_Combine::render_func_type m_combine_render;
@@ -321,6 +356,9 @@ public:
 
 		pipeline.vSM_RenderPages.setup_func  = m_renderpages_setup;
 		pipeline.vSM_RenderPages.render_func = m_renderpages_render;
+
+		pipeline.vSM_HiZRebuild.setup_func  = m_hizrebuild_setup;
+		pipeline.vSM_HiZRebuild.render_func = m_hizrebuild_render;
 
 		pipeline.vSM_Combine.setup_func  = m_combine_setup;
 		pipeline.vSM_Combine.render_func = m_combine_render;

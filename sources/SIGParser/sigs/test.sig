@@ -23,6 +23,7 @@ Pipeline MainPipeline
 	VSM_GatherDispatch;
 	VSM_RenderPages;
 
+
 	# shadow (generate_global)
 	Scene;
 
@@ -59,7 +60,7 @@ Pipeline MainPipeline
 											VoxelScreen;
 											[Async]
 											VoxelCombine;
-
+	[Async]VSM_HiZRebuild;
 	ReflCombine;
 
 	# sky + post

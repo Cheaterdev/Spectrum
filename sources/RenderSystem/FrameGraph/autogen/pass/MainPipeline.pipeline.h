@@ -29,6 +29,7 @@
 #include "VSM_Combine.h"
 #include "VoxelScreen.h"
 #include "VoxelCombine.h"
+#include "VSM_HiZRebuild.h"
 #include "ReflCombine.h"
 #include "Sky.h"
 #include "SMAA.h"
@@ -65,6 +66,7 @@ public:
 	Passes::VSM_Combine vSM_Combine;
 	Passes::VoxelScreen voxelScreen;
 	Passes::VoxelCombine voxelCombine;
+	Passes::VSM_HiZRebuild vSM_HiZRebuild;
 	Passes::ReflCombine reflCombine;
 	Passes::Sky sky;
 	Passes::SMAA sMAA;
@@ -101,6 +103,7 @@ public:
 		Passes::VSM_Combine::Name.ptr,
 		Passes::VoxelScreen::Name.ptr,
 		Passes::VoxelCombine::Name.ptr,
+		Passes::VSM_HiZRebuild::Name.ptr,
 		Passes::ReflCombine::Name.ptr,
 		Passes::Sky::Name.ptr,
 		Passes::SMAA::Name.ptr,
@@ -136,7 +139,6 @@ public:
 		L"VSM_PageTable",
 		L"VSM_PageCameras",
 		L"VSM_PageHiZ",
-		L"VSM_DirtySlots",
 		L"GBuffer_Albedo",
 		L"GBuffer_Normals",
 		L"GBuffer_Depth",
@@ -180,6 +182,7 @@ public:
 		L"VoxelIndirectNoise",
 		L"VoxelIndirectFiltered",
 		L"VoxelIndirectFilteredPrev",
+		L"VSM_DirtySlots",
 		L"ResultTextureNew",
 		L"SMAA_edges",
 		L"SMAA_blend",
@@ -334,10 +337,11 @@ public:
 	static inline const FrameGraph::PassRef VSM_Atlas_c0_pass_refs[] = {
 		{ PassID::VSM_RenderPages, 0 },
 		{ PassID::VSM_Combine, 0 },
+		{ PassID::VSM_HiZRebuild, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState VSM_Atlas_c0_states[] = {
 		{ true, { VSM_Atlas_c0_pass_refs + 0, 1 } },
-		{ false, { VSM_Atlas_c0_pass_refs + 1, 1 } },
+		{ false, { VSM_Atlas_c0_pass_refs + 1, 2 } },
 	};
 	static inline const FrameGraph::PassRef VSM_PageTable_c0_pass_refs[] = {
 		{ PassID::VSM_RenderPages, 0 },
@@ -357,15 +361,11 @@ public:
 	};
 	static inline const FrameGraph::PassRef VSM_PageHiZ_c0_pass_refs[] = {
 		{ PassID::VSM_RenderPages, 0 },
+		{ PassID::VSM_HiZRebuild, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState VSM_PageHiZ_c0_states[] = {
 		{ true, { VSM_PageHiZ_c0_pass_refs + 0, 1 } },
-	};
-	static inline const FrameGraph::PassRef VSM_DirtySlots_c0_pass_refs[] = {
-		{ PassID::VSM_RenderPages, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState VSM_DirtySlots_c0_states[] = {
-		{ true, { VSM_DirtySlots_c0_pass_refs + 0, 1 } },
+		{ true, { VSM_PageHiZ_c0_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Albedo_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -839,6 +839,12 @@ public:
 	static inline const FrameGraph::PrecompiledState VoxelIndirectFilteredPrev_c0_states[] = {
 		{ false, { VoxelIndirectFilteredPrev_c0_pass_refs + 0, 2 } },
 	};
+	static inline const FrameGraph::PassRef VSM_DirtySlots_c0_pass_refs[] = {
+		{ PassID::VSM_HiZRebuild, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_DirtySlots_c0_states[] = {
+		{ true, { VSM_DirtySlots_c0_pass_refs + 0, 1 } },
+	};
 	static inline const FrameGraph::PassRef ResultTexture_c1_pass_refs[] = {
 		{ PassID::SMAA, 0 },
 		{ PassID::FSR, 0 },
@@ -918,7 +924,6 @@ public:
 		{ ResourceID::VSM_PageTable, 0, VSM_PageTable_c0_states },
 		{ ResourceID::VSM_PageCameras, 0, VSM_PageCameras_c0_states },
 		{ ResourceID::VSM_PageHiZ, 0, VSM_PageHiZ_c0_states },
-		{ ResourceID::VSM_DirtySlots, 0, VSM_DirtySlots_c0_states },
 		{ ResourceID::GBuffer_Albedo, 0, GBuffer_Albedo_c0_states },
 		{ ResourceID::GBuffer_Normals, 0, GBuffer_Normals_c0_states },
 		{ ResourceID::GBuffer_Depth, 0, GBuffer_Depth_c0_states },
@@ -962,6 +967,7 @@ public:
 		{ ResourceID::VoxelIndirectNoise, 0, VoxelIndirectNoise_c0_states },
 		{ ResourceID::VoxelIndirectFiltered, 0, VoxelIndirectFiltered_c0_states },
 		{ ResourceID::VoxelIndirectFilteredPrev, 0, VoxelIndirectFilteredPrev_c0_states },
+		{ ResourceID::VSM_DirtySlots, 0, VSM_DirtySlots_c0_states },
 		{ ResourceID::ResultTexture, 1, ResultTexture_c1_states },
 		{ ResourceID::SMAA_edges, 0, SMAA_edges_c0_states },
 		{ ResourceID::SMAA_blend, 0, SMAA_blend_c0_states },
@@ -1090,6 +1096,9 @@ public:
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 	};
+	static inline const FrameGraph::PassRef VSM_HiZRebuild_0_prev[] = {
+		{ PassID::VSM_RenderPages, 0 },
+	};
 	static inline const FrameGraph::PassRef ReflCombine_0_prev[] = {
 		{ PassID::PSSM_Combine, 0 },
 		{ PassID::ReflectionDenoiser_Reproject, 0 },
@@ -1192,6 +1201,7 @@ public:
 		{ PassID::VSM_Combine, 0, false, VSM_Combine_0_prev },
 		{ PassID::VoxelScreen, 0, true, VoxelScreen_0_prev },
 		{ PassID::VoxelCombine, 0, true, VoxelCombine_0_prev },
+		{ PassID::VSM_HiZRebuild, 0, true, VSM_HiZRebuild_0_prev },
 		{ PassID::ReflCombine, 0, false, ReflCombine_0_prev },
 		{ PassID::Sky, 0, false, Sky_0_prev },
 		{ PassID::SMAA, 0, false, SMAA_0_prev },
@@ -1264,6 +1274,8 @@ public:
 			graph.add_library_pass<Passes::VoxelScreen>(voxelScreen.setup_func, voxelScreen.render_func, (voxelScreen.flags));
 		if (voxelCombine.setup_func)
 			graph.add_library_pass<Passes::VoxelCombine>(voxelCombine.setup_func, voxelCombine.render_func, (voxelCombine.flags));
+		if (vSM_HiZRebuild.setup_func)
+			graph.add_library_pass<Passes::VSM_HiZRebuild>(vSM_HiZRebuild.setup_func, vSM_HiZRebuild.render_func, (vSM_HiZRebuild.flags));
 		if (reflCombine.setup_func)
 			graph.add_library_pass<Passes::ReflCombine>(reflCombine.setup_func, reflCombine.render_func, (reflCombine.flags & ~FrameGraph::PassFlags::Compute));
 		if (sky.setup_func)

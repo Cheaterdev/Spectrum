@@ -135,27 +135,33 @@ void VSM::attach_scene(std::shared_ptr<Scene> scene)
 	});
 }
 
-void VSM::build_slot_views(Passes::VSM_RenderPages::Context& data, int pyramid_mip_count)
+void VSM::build_atlas_views()
 {
-	if (slot_views_built)
-		return;
+	std::call_once(atlas_views_once, [this]
+	{
+		auto& storage = RenderSystem::get().device().get_static_gpu_data();
+		int physical_slots = page_table.physical_page_count;
 
-	auto& storage = RenderSystem::get().device().get_static_gpu_data();
-	int physical_slots = page_table.physical_page_count;
+		atlas_slot_views.resize(physical_slots);
+		for (int slot = 0; slot < physical_slots; slot++)
+			atlas_slot_views[slot] = HAL::Texture2DView(vsm_atlas_tex->resource, storage,
+				HAL::TextureViewDesc{ 0, 1, (uint)slot, 1 });
 
-	atlas_slot_views.resize(physical_slots);
-	for (int slot = 0; slot < physical_slots; slot++)
-		atlas_slot_views[slot] = HAL::Texture2DView(vsm_atlas_tex->resource, storage,
-			HAL::TextureViewDesc{ 0, 1, (uint)slot, 1 });
+		atlas_array_view = HAL::Texture2DView(vsm_atlas_tex->resource, storage,
+			HAL::TextureViewDesc{ 0, 1, 0, (uint)physical_slots });
+	});
+}
 
-	atlas_array_view = HAL::Texture2DView(vsm_atlas_tex->resource, storage,
-		HAL::TextureViewDesc{ 0, 1, 0, (uint)physical_slots });
+void VSM::build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyramid_mip_count)
+{
+	std::call_once(page_hiz_views_once, [this, &data, pyramid_mip_count]
+	{
+		auto& storage = RenderSystem::get().device().get_static_gpu_data();
 
-	page_hiz_mip_array_views.resize(pyramid_mip_count);
-	for (int mip = 0; mip < pyramid_mip_count; mip++)
-		page_hiz_mip_array_views[mip] = data.VSM_PageHiZ->create_mip(mip, storage);
-
-	slot_views_built = true;
+		page_hiz_mip_array_views.resize(pyramid_mip_count);
+		for (int mip = 0; mip < pyramid_mip_count; mip++)
+			page_hiz_mip_array_views[mip] = data.VSM_PageHiZ->create_mip(mip, storage);
+	});
 }
 
 void VSM::pass_data(FrameGraph::TaskBuilder& builder)
@@ -509,6 +515,19 @@ VSM::VSM()
 		// Now GPU-appended by VSM_GatherDispatch -- this pass only reads it
 		// via exec_indirect.
 		builder.need(data.VSM_DispatchCommands, FrameGraph::ResourceFlags::ComputeRead);
+		return true;
+	};
+
+	// Phase 5.17: the async-compute Hi-Z rebuild pass. need()s VSM_Atlas
+	// (read, establishes "runs after VSM_RenderPages' draw") and
+	// VSM_PageHiZ (write, for the per-frame rebuild -- VSM_RenderPages
+	// still owns create() for the cold-start clear, see its own setup()).
+	// VSM_DirtySlots moves here entirely since only this pass's dispatches
+	// consume it now.
+	m_hizrebuild_setup = [this, physical_slots](Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::UnorderedAccess);
 		// Phase 5.14: CPU-built and re-uploaded fresh every frame (like
 		// VSM_PageCameras), sized to the whole physical slot budget -- every
 		// dirty page occupies a distinct slot, so that's a hard upper bound
@@ -618,7 +637,7 @@ VSM::VSM()
 		graphics.set_signature(Layouts::DefaultLayout);
 		compute.set_signature(Layouts::DefaultLayout);
 
-		build_slot_views(data, pyramid_mip_count);
+		build_atlas_views();
 
 		{
 			PROFILE(L"vsm_tile_mapping");
@@ -833,95 +852,112 @@ VSM::VSM()
 			//  That whole tracking layer is gone as of the 2026-08 barrier
 			//  rewrite, so the hazard it described no longer exists.)
 		}
+	};
 
-		// Rebuild each just-redrawn page's pyramid for next time it's dirty
+	// ---- Hi-Z pyramid rebuild (Phase 5.17: async compute, see vsm.sig's
+	// VSM_HiZRebuild comment) -----------------------------------------------
+
+	m_hizrebuild_render = [this, pages_per_level, pyramid_mip_count](Passes::VSM_HiZRebuild::Context& data, FrameGraph::FrameContext& context)
+	{
+		// Rebuilds each just-redrawn page's pyramid for next time it's dirty
 		// -- skipped entirely when hiz_culling_enabled is false, not just
 		// left unconsulted: no copy/downsample dispatches at all, so this
 		// toggle actually measures the pyramid-maintenance cost rather than
 		// just disabling its result.
-		if (hiz_culling_enabled)
+		if (!hiz_culling_enabled)
+			return;
+
+		auto& command_list = context.get_list();
+		auto& compute       = command_list->get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+
+		// This pass records on its own (async-compute) thread, possibly
+		// concurrently with VSM_RenderPages' -- build both view caches
+		// from here too (each is a no-op past the first caller, thread-
+		// safe via std::call_once) rather than assuming VSM_RenderPages'
+		// render() already ran on the same thread. Confirmed the hard way:
+		// a plain bool guard produced a live, reproducible null-deref
+		// crash the first frame this pass had real work to do.
+		build_atlas_views();
+		build_page_hiz_views(data, pyramid_mip_count);
+
+		// Phase 5.14: collect every dirty page's physical slot into one
+		// flat list -- lets the whole rebuild (copy + full mip chain)
+		// run as pyramid_mip_count dispatches TOTAL this frame (Z
+		// dimension = dirty page count), instead of pyramid_mip_count
+		// dispatches PER dirty page. Cheap CPU-side walk (at most
+		// MaxLevels x pages_per_level iterations).
+		std::vector<uint32_t> dirty_slots;
 		{
-			// Phase 5.14: collect every dirty page's physical slot into one
-			// flat list -- lets the whole rebuild (copy + full mip chain)
-			// run as pyramid_mip_count dispatches TOTAL this frame (Z
-			// dimension = dirty page count), instead of pyramid_mip_count
-			// dispatches PER dirty page. Cheap CPU-side walk (at most
-			// MaxLevels x pages_per_level iterations).
-			std::vector<uint32_t> dirty_slots;
+			PROFILE(L"vsm_hiz_collect");
+			for (int level = 0; level < VSM::MaxLevels; level++)
 			{
-				PROFILE(L"vsm_hiz_collect");
-				for (int level = 0; level < VSM::MaxLevels; level++)
-				{
-					const LevelPlan& plan = m_plan[level];
-					if (!plan.valid || plan.dirty_mask == 0)
-						continue;
+				const LevelPlan& plan = m_plan[level];
+				if (!plan.valid || plan.dirty_mask == 0)
+					continue;
 
-					for (int local = 0; local < pages_per_level; local++)
-						if ((plan.dirty_mask >> local) & 1)
-							dirty_slots.push_back((uint32_t)plan.slots[local]);
-				}
+				for (int local = 0; local < pages_per_level; local++)
+					if ((plan.dirty_mask >> local) & 1)
+						dirty_slots.push_back((uint32_t)plan.slots[local]);
 			}
+		}
 
-			if (!dirty_slots.empty())
+		if (dirty_slots.empty())
+			return;
+
+		// No manual transitions here any more. VSM_Atlas (DSV -> SRV for
+		// the copy shader) and VSM_PageHiZ's per-mip UAV/SRV binds are
+		// declared [Barrier = ALL] in vsm.sig, so each bind records one
+		// whole-resource use instead of expanding into its
+		// physical_page_count-slice range -- which is exactly what the
+		// bare add_resource_usage() calls that used to sit here were
+		// faking by hand.
+		command_list->get_copy().update(*data.VSM_DirtySlots, 0, std::span{ dirty_slots });
+
+		ivec3 dispatch_size((int)page_table.page_size, (int)page_table.page_size, (int)dirty_slots.size());
+
+		{
+			PROFILE(L"vsm_hiz_copy");
+			compute.set_pipeline<PSOS::VSMCopyPageDepthBatch>();
 			{
-				// No manual transitions here any more. VSM_Atlas (DSV -> SRV for
-				// the copy shader) and VSM_PageHiZ's per-mip UAV/SRV binds are
-				// declared [Barrier = ALL] in vsm.sig, so each bind records one
-				// whole-resource use instead of expanding into its
-				// physical_page_count-slice range -- which is exactly what the
-				// bare add_resource_usage() calls that used to sit here were
-				// faking by hand.
-				command_list->get_copy().update(*data.VSM_DirtySlots, 0, std::span{ dirty_slots });
+				// Narrowed views (atlas_array_view/page_hiz_mip_array_views,
+				// VSM's own members, built just above), not the base
+				// handlers' full-array/full-mip-chain ones. dirty_slots.
+				// Load(z) still picks which physical slice each Z-group
+				// touches.
+				Slots::VSMCopyPageDepthBatch copy;
+				copy.GetAtlas()       = atlas_array_view.texture2DArray;
+				copy.GetDst_mip0()    = page_hiz_mip_array_views[0].rwTexture2DArray;
+				copy.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
+				compute.set(copy);
+			}
+			compute.dispatch(dispatch_size, ivec3(8, 8, 1));
+		}
 
-				ivec3 dispatch_size((int)page_table.page_size, (int)page_table.page_size, (int)dirty_slots.size());
+		{
+			PROFILE(L"vsm_hiz_downsample");
+			compute.set_pipeline<PSOS::VSMDownsampleHiZBatch>();
+			for (int mip = 0; mip < pyramid_mip_count - 1; mip++)
+			{
+				int dst_size = std::max(1, page_table.page_size >> (mip + 1));
 
-				{
-					PROFILE(L"vsm_hiz_copy");
-					compute.set_pipeline<PSOS::VSMCopyPageDepthBatch>();
-					{
-						// Narrowed views (atlas_array_view/page_hiz_mip_array_views),
-						// not the base handlers' full-array/full-mip-chain ones --
-						// originally to dodge a per-bind teardown cost that has
-						// since been removed, but these stay narrow as the correct
-						// shape for the dispatch. dirty_slots.Load(z)
-						// still picks which physical slice each Z-group touches.
-						Slots::VSMCopyPageDepthBatch copy;
-						copy.GetAtlas()       = atlas_array_view.texture2DArray;
-						copy.GetDst_mip0()    = page_hiz_mip_array_views[0].rwTexture2DArray;
-						copy.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
-						compute.set(copy);
-					}
-					compute.dispatch(dispatch_size, ivec3(8, 8, 1));
-				}
+				Slots::VSMDownsampleHiZBatch down;
+				// Both sides narrowed to exactly one mip (array-spanning,
+				// physical_page_count slices) instead of the base
+				// handler's whole 7-mip-chain SRV -- same narrowing
+				// reasoning as the copy step above, and this one runs
+				// pyramid_mip_count-1 times per frame, not once.
+				// src_mip is no longer needed for addressing (the view
+				// itself is already narrowed to that mip -- Load's mip
+				// component is always 0 relative to it) but is kept for
+				// parity with the entry's own bookkeeping.
+				down.GetSrc()         = page_hiz_mip_array_views[mip].texture2DArray;
+				down.GetDst_mip()     = page_hiz_mip_array_views[mip + 1].rwTexture2DArray;
+				down.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
+				down.GetSrc_mip()     = (uint)mip;
+				compute.set(down);
 
-				{
-					PROFILE(L"vsm_hiz_downsample");
-					compute.set_pipeline<PSOS::VSMDownsampleHiZBatch>();
-					for (int mip = 0; mip < pyramid_mip_count - 1; mip++)
-					{
-						int dst_size = std::max(1, page_table.page_size >> (mip + 1));
-
-						Slots::VSMDownsampleHiZBatch down;
-						// Both sides narrowed to exactly one mip (array-spanning,
-						// physical_page_count slices) instead of the base
-						// handler's whole 7-mip-chain SRV -- same narrowing
-						// reasoning as the copy step above (stop_using() is gone,
-						// see that comment), and this one runs
-						// pyramid_mip_count-1 times per frame, not once.
-						// src_mip is no longer needed for addressing (the view
-						// itself is already narrowed to that mip -- Load's mip
-						// component is always 0 relative to it) but is kept for
-						// parity with the entry's own bookkeeping.
-						down.GetSrc()         = page_hiz_mip_array_views[mip].texture2DArray;
-						down.GetDst_mip()     = page_hiz_mip_array_views[mip + 1].rwTexture2DArray;
-						down.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
-						down.GetSrc_mip()     = (uint)mip;
-						compute.set(down);
-
-						compute.dispatch(ivec3(dst_size, dst_size, (int)dirty_slots.size()), ivec3(8, 8, 1));
-					}
-				}
-
+				compute.dispatch(ivec3(dst_size, dst_size, (int)dirty_slots.size()), ivec3(8, 8, 1));
 			}
 		}
 	};

@@ -267,11 +267,37 @@ PassNode VSM_RenderPages
 	[Write] Texture VSM_Atlas;
 	[Write] Texture VSM_PageTable;
 	[Write] StructuredBuffer<Camera> VSM_PageCameras;
+	# Still [Write] and still created here (not in VSM_HiZRebuild below):
+	# the once-ever cold-start clear runs in this pass's render(), before
+	# the draw reads it for occlusion, so data.VSM_PageHiZ.is_new() has to
+	# be queryable on THIS pass's own handler -- matching the precedent
+	# that is_new() is not valid on a handler that never create()'d/need()'d
+	# the resource in that pass. VSM_HiZRebuild need()s the same resource
+	# for the actual per-frame rebuild writes.
 	[Write] Texture VSM_PageHiZ;
 	StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
+}
+
+# Phase 5.17: Hi-Z pyramid rebuild, split into its own async-compute pass.
+# Nothing this frame reads VSM_PageHiZ after VSM_RenderPages' own draw --
+# the mesh shader's occlusion test only ever consults whatever pyramid
+# content was left by the LAST time a page was rebuilt (a page's own
+# last-rendered depth is always at least one frame stale by design; see
+# the invalidation tracker's job of covering for that). So this pass has
+# nothing forcing it to finish before the rest of the frame's direct-queue
+# work: it only needs to run after VSM_RenderPages' draw (reads VSM_Atlas,
+# which that pass just wrote) and before NEXT frame's VSM_RenderPages draw
+# (which reads VSM_PageHiZ). [Compute] puts it on the async compute queue
+# instead of serializing it into the direct queue's own critical path.
+[Compute]
+PassNode VSM_HiZRebuild
+{
+	Texture VSM_Atlas;
+	[Write] Texture VSM_PageHiZ;
 	# Phase 5.14: this frame's flat list of dirty physical slots, CPU-built
 	# and uploaded once, consumed by the batched Hi-Z copy/downsample
-	# dispatches (VSMCopyPageDepthBatch/VSMDownsampleHiZBatch).
+	# dispatches (VSMCopyPageDepthBatch/VSMDownsampleHiZBatch). Moved here
+	# from VSM_RenderPages along with the rest of the per-frame rebuild.
 	[Write] StructuredBuffer<uint> VSM_DirtySlots;
 }
 

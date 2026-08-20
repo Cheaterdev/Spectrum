@@ -12,7 +12,7 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class VSM_RenderPages : public PassNodeBase
+class VSM_HiZRebuild : public PassNodeBase
 {
 public:
 	struct Context
@@ -22,24 +22,18 @@ public:
 		Handlers::Texture VSM_Atlas = ResourceID::VSM_Atlas;
 
 
-		Handlers::Texture VSM_PageTable = ResourceID::VSM_PageTable;
-
-		Handlers::StructuredBuffer<Table::Camera> VSM_PageCameras = ResourceID::VSM_PageCameras;
-
-
 		Handlers::Texture VSM_PageHiZ = ResourceID::VSM_PageHiZ;
 
-		Handlers::StructuredBuffer<Table::VSMDispatchCommandData> VSM_DispatchCommands = ResourceID::VSM_DispatchCommands;
+
+		Handlers::StructuredBuffer<uint> VSM_DirtySlots = ResourceID::VSM_DirtySlots;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::VSM_Atlas, true },
-			{ ResourceID::VSM_PageTable, true },
-			{ ResourceID::VSM_PageCameras, true },
+			{ ResourceID::VSM_Atlas, false },
 			{ ResourceID::VSM_PageHiZ, true },
-			{ ResourceID::VSM_DispatchCommands, false },
+			{ ResourceID::VSM_DirtySlots, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -50,9 +44,9 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"VSM_RenderPages"};
+	static constexpr LiteralWStr Name{L"VSM_HiZRebuild"};
 
-	static constexpr PassID ID = PassID::VSM_RenderPages;
+	static constexpr PassID ID = PassID::VSM_HiZRebuild;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
@@ -62,7 +56,7 @@ public:
 	setup_func_type setup_func;
 	render_func_type render_func;
 
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
 };
 
 }
