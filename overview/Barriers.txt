@@ -1,0 +1,350 @@
+BARRIER SYSTEM — TECHNICAL REFERENCE
+================================================================================
+How resource state transitions are decided and emitted.
+
+This is the operation-based system that replaced ResourceStateManager (2026-08).
+Nothing tracks state "globally": every decision is made per command-list GROUP,
+from data recorded per (resource, list), against a small set of invariants.
+
+Files:
+  HAL/HAL.ResourceStates.ixx/.cpp   OperationUsage, TrackedResourceState,
+                                    CmdListOperation, Barriers, resting_layout,
+                                    state_at_rest
+  HAL/HAL.CommandList.ixx/.cpp      Transitions (recording), CommandListGroup
+                                    (plan_resources / compile_transitions)
+  RenderSystem/FrameGraph/
+    FrameGraph.cpp                  TaskBuilder::process_transitions (cross-pass
+                                    linking), the debug snapshot
+
+
+================================================================================
+  THE MODEL
+================================================================================
+
+A command list is a SEQUENCE OF OPERATIONS, not a flat command stream.
+
+CmdListOperation
+  One contiguous run of same-class work. begin_op(BarrierSync) starts a new one
+  only when the class differs from the one at the back, so a run of same-class
+  commands grows ONE operation instead of producing one per command. That is
+  what makes barriers batch.
+
+  - type            the BarrierSync the run was opened with (names the operation)
+  - index           position in the list's `operations` (stable ordering key)
+  - barriers_before runs immediately before the operation's commands
+  - barriers_after  runs immediately after them
+  - closed          whether barriers_after already has its point in the stream
+
+  `operations` is a std::deque, NOT a vector: the recorder holds
+  CmdListOperation* (DelayedCommandList::func_barrier), so entries must not move
+  as more are appended.
+
+OperationUsage
+  One place a resource was used inside one operation. Either:
+    - through a bound view (`info`), carrying a mip/array/plane range, or
+    - as a bare subresource index (`subres`), for uses with no descriptor.
+  Plus the ResourceState it is used in, and `step` — which command within the
+  operation recorded it. Two usages with different `step` are different
+  dispatches, which is how "bound twice for one dispatch" is told apart from
+  "written by one dispatch, then read by the next".
+
+TrackedResourceState  (per resource, PER LIST — via ObjectState<T>)
+  - listed          resource has been added to this list's used_resources
+  - has_entry_state / entry_state   what this list will FIND the resource in,
+                                    when only an outside scheduler can know
+  - operations      map<op_index, vector<OperationUsage>>, ordered
+
+  NOTE `listed` is deliberately not TrackedObjectState::used. A resource carries
+  ONE state object for both purposes; track_object sets `used` first for
+  non-FrameGraph resources, so sharing the flag would leave use_resource never
+  listing the resource, and no barriers would be emitted at all.
+
+CommandListGroup
+  One or more lists submitted in ONE ExecuteCommandLists. Barriers are computed
+  per group, and a queue accepts only a group — never a bare list.
+
+
+================================================================================
+  LIFECYCLE OF A FRAME'S BARRIERS
+================================================================================
+
+1. RECORD (per list, during pass render)
+     add_resource_usage / commit_tables append OperationUsage entries to the
+     resource's per-list TrackedResourceState. Cheap by construction: a lookup
+     and a push_back. No state comparison, no barrier decision, no subresource
+     expansion — all of that happens later, once.
+
+2. LINK (TaskBuilder::process_transitions, after all passes recorded)
+     Cross-pass work for frame_graph_managed resources only. See below.
+
+3. PLAN (CommandListGroup::plan_resources)
+     ORDERED, on the submitting thread, in submission order. Resolves the
+     first-use questions and builds the group's resource list.
+     MUST NOT run in the parallel fan-out: it reads and mutates
+     Resource::virgin / Resource::initialized, which are per-RESOURCE and shared
+     by every group that touches them.
+
+4. COMPILE (CommandListGroup::compile_transitions)
+     Pure and parallel-safe: reads only group-local data (`planned`, `current`,
+     `wanted`) and fills Barriers owned by its own lists. Several groups compile
+     concurrently.
+
+5. REPLAY (CommandListGroup::compile)
+     Replays each list into its API command list; the reserved barrier points
+     are emitted with whatever compile_transitions put in them.
+
+6. SNAPSHOT (Dev only, FrameGraph.cpp)
+     Between compile() and execute(), resolves each Transition record's
+     barrier_point into plain data for the debugger. MUST be before execute:
+     Transitions::on_execute() clears `operations` on the submit thread, which
+     destroys the Barriers the records point into.
+
+
+================================================================================
+  THE INVARIANTS
+================================================================================
+
+RESTING LAYOUT
+  Every non-FrameGraph resource ENTERS a group at its resting layout and is LEFT
+  at its resting layout. That is what makes groups independent of the order they
+  are submitted in, and lets a group assume where a resource is without being
+  told.
+
+    resting_layout(resource) -> TextureLayout
+      Swapchain        -> PRESENT
+      ShaderResource   -> SHADER_RESOURCE
+      UnorderedAccess  -> UNORDERED_ACCESS
+      otherwise        -> COPY_DEST        (where an upload would put it)
+
+    state_at_rest(layout) -> ResourceState
+      Fills the layout back out. Access follows from the layout; sync is ALL,
+      because a barrier against a resting resource crosses into a scope where no
+      specific producer/consumer stage is known.
+
+  A Dev-only check at the end of compile_transitions asserts the group actually
+  converged. Every consumer of the resting assumption is silently wrong if it
+  does not.
+
+FRAME-GRAPH-MANAGED RESOURCES OPT OUT
+  Resource::frame_graph_managed means the FrameGraph owns the transitions.
+  Groups do NOT rest those — the graph knows the whole pass timeline and rests
+  them once, at the last pass that uses them, rather than converging at every
+  group boundary (which for the VSM pyramid costs a barrier per subresource
+  every time a fence splits its passes).
+
+  The consequence: for those resources the entry state must come from
+  set_entry_state. Reaching the resting fallback with one means the graph left a
+  boundary unlinked and the group is about to guess.
+
+EXECUTECOMMANDLISTS SCOPE
+  A group is exactly one ECL scope. Per the D3D12 spec only the LAYOUT carries
+  across that boundary — there are no pending commands or cache flushes between
+  scopes. compile_transitions uses this: the group's first touch of a resource
+  whose layout already matches what it wants emits NO barrier at all.
+
+
+================================================================================
+  compile_transitions — HOW A BARRIER IS DECIDED
+================================================================================
+
+Per resource in `planned`, per list, per operation, in order:
+
+  1. Collapse every usage in the operation into ONE wanted state per subresource
+     (`want`). Read-only states combine via merge_state; anything else cannot be
+     satisfied by one barrier, so the later use wins.
+
+  2. Expand views (visit_subres) ONLY here — once, and only for resources that
+     turned out to need barriers at all. visit_subres also reports side
+     resources (a UAV counter buffer), so it is filtered to the resource in
+     hand.
+
+  3. emit(subres, after) resolves the before-state and decides:
+
+       a. first write of a virgin resource     -> DISCARD, whole resource
+       b. entry matches what we want (scope)   -> no barrier   [entry_known only]
+       c. read-after-read, same layout+access  -> no barrier
+       d. before == after, UAV involved        -> UAV ordering barrier
+       e. before == after otherwise            -> no barrier
+       f. otherwise                            -> transition
+
+  `current` maps subresource -> state for the group so far, CARRIED ACROSS LISTS
+  (the whole point: list N+1 diffs against where list N actually left it). The
+  ALL_SUBRESOURCES key is the uniform value standing in for every subresource
+  with no entry of its own, so a whole-resource lifetime costs exactly one entry.
+
+  entry_known == !frame_graph_managed. Rule (b) writes `after` into `current` as
+  the group's belief; on a GUESSED entry that belief is unfounded and would
+  cascade through every later barrier, so it is only allowed where the resting
+  contract actually holds.
+
+FIRST USE — TWO SEPARATE FACTS
+  Resource::virgin      no barrier has ever transitioned it, so its layout is
+                        undefined. Decides the BEFORE-state.
+  Resource::initialized contents have been established by a write. Decides
+                        whether the first write carries the DISCARD.
+
+  They are distinct because a resource whose first touch is a READ gets a
+  defined layout from that point on but still holds nothing.
+
+  alias_begin() must re-arm BOTH: aliased memory is another resource's data, so
+  it is both undefined AND uninitialized.
+
+
+================================================================================
+  process_transitions — CROSS-PASS LINKING
+================================================================================
+
+Only for frame_graph_managed resources; skips UPLOAD/READBACK heaps (CPU-visible,
+no layout). Steps:
+
+  1. PRUNE   passes whose list never actually touched the resource.
+  2. MERGE   readers of one version onto a single shared state, pushed back to
+             every reader, so only the first transitions and the rest are no-ops.
+  3. LINK    state N-1 -> state N via set_entry_state.
+  4. REST    transition_to_rest at the LAST-EXECUTING pass.
+
+CONVERGE AT THE PRODUCER, NOT THE FIRST CONSUMER
+  A phase's passes have no order among them. Telling all of them "you will find
+  it in the producer's exit state" is true for exactly one — the rest find it
+  already transitioned. So the producer is converged into a state they ALL agree
+  on (merged_read for readers, common first-use state otherwise), which costs the
+  consumers no barrier at all and makes their order irrelevant.
+
+ORDER PASSES BY call_id
+  ResourceRWState::passes is a concurrent_vector appended from several threads
+  during setup — its order is ARBITRARY. Anything that needs "the last pass"
+  must pick by call_id (see `last_of`). Using .back() put the return-to-rest on
+  an arbitrary pass of the phase, mid-frame.
+
+NOTHING IS CARRIED ACROSS FRAMES
+  The graph rests at the last pass, so the next frame's first pass needs no
+  entry state — the resting default is already right. Carrying the real end
+  state forward would be worse: a resource left in DEPTH_STENCIL_WRITE cannot be
+  barriered out of by a compute queue at all.
+
+
+================================================================================
+  WORK THE SYSTEM CANNOT SEE
+================================================================================
+
+Three cases where usage must be declared by hand, because nothing can derive it:
+
+  EXTERNAL SDKs (Streamline/DLSS)
+    begin_external_op(BarrierSync) opens an operation that never merges into the
+    one in front of it, then the caller declares each resource the external call
+    touches. The barriers land in THAT operation's barriers_before and bracket
+    exactly the external work. See HAL::DLSS::upscale.
+
+  GLOBAL SLOTS
+    A resource sampled through a global slot (FrameInfo) rather than a per-pass
+    binding has no ResourceInfo recorded, so its read must be declared.
+
+  LISTING A RESOURCE AT ALL
+    Device::flush_uploads records a read use whose state IS the resting layout.
+    That looks redundant but is not: recording it is what puts the resource in
+    that list's used_resources, which is what makes the group transition it out
+    of COPY_DEST.
+
+Everything else should be derived. A manual add_resource_usage elsewhere is a
+smell — it usually means a pass declares something it does not do, or does
+something it does not declare.
+
+
+================================================================================
+  [Barrier = ALL] — SIG ANNOTATION
+================================================================================
+
+A .sig table member may be declared:
+
+    [Barrier = ALL] RWTexture2DArray<float> dst_mip;
+
+The bind then records ONE whole-resource use instead of expanding the view's
+mip/array range. For a view narrowed to one mip of a large array (a Hi-Z level
+over N slices) the range costs one barrier per slice per bind, while the whole
+resource is being rewritten anyway.
+
+Chain:
+  table.jinja emits compiler.compile_whole(x)
+    -> Slot_Compiler::bind_whole_resource (scoped flag, so the scalar/array/
+       vector overloads all inherit it)
+    -> HAL::BoundResource { info, whole_resource }
+    -> commit_tables -> add_resource_usage(info, op, whole)
+    -> records OperationUsage(ALL_SUBRESOURCES, state) instead of the view.
+
+No grammar change was needed: value_declaration already accepts option_block, and
+options are exposed to Jinja generically. Regenerate with bin/debug/sigparser.exe
+from sources/SIGParser — generate_sigs.bat only rebuilds the ANTLR grammar.
+
+
+================================================================================
+  DEBUGGING
+================================================================================
+
+The FrameGraph timeline debugger's "Transitions" panel shows, per resource:
+
+    Pass
+        Operation N  [class]
+            Pre barriers
+                Sync / Access / Layout  before -> after   [discard]
+            Post barriers
+                ...
+
+  - Operation identity comes from the record (op_index, after_op, op_type),
+    captured when the barrier POINT is reserved — by snapshot time a barrier is
+    just an entry in a list.
+  - The Sync line is clickable: toggles a GPU-side breakpoint that fires only
+    when that exact before->after transition executes
+    (HAL::Debug::BarrierBreakpoints).
+  - Red rows are the panel's own validator. Its one rule for a first barrier:
+    claiming UNDEFINED without discarding is wrong; entering from a real layout
+    is fine for any resource. Continuity checks skip releases (alias_end) and
+    discards, since neither's `before` is a continuity claim.
+
+  The panel reads Pass::debug_commands, which is filled at END of frame
+  (commit_command_lists) but copied by the debugger at START of one
+  (graph.on_compile) — so it shows the PREVIOUS frame's transitions. That is
+  also why Pass::reset_frame must NOT clear debug_commands.
+
+
+================================================================================
+  PITFALLS (each of these was a real bug — do not re-derive them)
+================================================================================
+
+SYNC_NONE WITH A REAL LAYOUT
+  {SYNC_NONE, ACCESS_NO_ACCESS, <real layout>} does not take effect. D3D12
+  rejects NO_ACCESS paired with a real layout (the after-side form of this is
+  #1331: "LayoutAfter must be UNDEFINED or SyncAfter must be SYNC_NONE when
+  AccessAfter is ACCESS_NO_ACCESS"). The barrier silently does nothing and the
+  NEXT one fails instead. Use state_at_rest.
+
+DISCARD MUST RIDE AN RT/DS BARRIER FOR RT/DS RESOURCES
+  #1422 counts a placed RENDER_TARGET/DEPTH_STENCIL resource as initialized only
+  when the DISCARD accompanies a barrier INTO an RT/DS layout. Moving the discard
+  onto an earlier SHADER_RESOURCE read costs 54x #1422.
+
+RESERVING A BARRIER POINT TWICE
+  end_op() must be idempotent. Reserving barriers_after twice emits the SAME
+  group twice; the second run's LayoutBefore is stale by definition (#1334).
+  This happens whenever something appends to a list after CommandList::end()
+  closed it — process_transitions does exactly that.
+
+BARRIERS THAT DISAGREE WITH `current`
+  Every emission path must resolve its before-state from the group's tracking.
+  The discard path once called from_undefined() outright, so after a read had
+  already moved the resource the barrier declared UNDEFINED while `current` said
+  SHADER_RESOURCE. D3D12 tolerates it (UNDEFINED means "don't care"), so it
+  shows up only as an inconsistency in the debugger.
+
+UNINITIALISED heap_type
+  ResourceAllocInfo::heap_type is assigned in create_resources(), which SKIPS
+  passed resources. Anything filtering on it silently dropped every passed-in
+  resource. Also: Resource::init(NativeImportHandle) never assigns a heap type,
+  so an imported resource (the swapchain) keeps the RESERVED sentinel — filter
+  on "is CPU-visible", not on "== DEFAULT".
+
+DEBUG-ONLY PASSES MUST BE TRANSPARENT
+  ExternalPass exists so the debugger can capture; it is not in any resource's
+  state timeline, and linking it would add a fence for a pass with no GPU work.
+  It must hand every resource it touched back at rest instead.
+
+================================================================================

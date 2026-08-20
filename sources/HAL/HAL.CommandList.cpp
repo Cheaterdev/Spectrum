@@ -1900,14 +1900,15 @@ namespace HAL
 		track_object(*(info.resource));
 	}
 
-	void CommandList::clear_uav(const Handles::UAV& h, vec4 ClearColor)
+	void CommandList::clear_uav(const Handles::UAV& h, vec4 ClearColor, bool whole_resource)
 	{
 		begin_op(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
-		add_resource_usage(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
+		add_resource_usage(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW, whole_resource);
 		compiler.clear_uav(h, ClearColor);
 	}
 
-	void CommandList::clear_dsv(const Handles::DSV& h, bool clear_depth, bool clear_stencil, float depth, UINT8 stencil)
+	void CommandList::clear_dsv(const Handles::DSV& h, bool clear_depth, bool clear_stencil, float depth, UINT8 stencil,
+	                            bool whole_resource)
 	{
 		// begin_op (not a bracketing barrier-point pair) so consecutive
 		// clear_dsv calls against different subresources of the same
@@ -1917,7 +1918,7 @@ namespace HAL
 		// list end, same as every draw/dispatch already does via
 		// pre_command/post_command.
 		begin_op(BarrierSync::DEPTH_STENCIL);
-		add_resource_usage(h.get_resource_info(), BarrierSync::DEPTH_STENCIL);
+		add_resource_usage(h.get_resource_info(), BarrierSync::DEPTH_STENCIL, whole_resource);
 		compiler.clear_depth_stencil(h, clear_depth, clear_stencil, depth, stencil);
 	}
 
@@ -2321,9 +2322,53 @@ namespace HAL
 
 						if (diverged)
 						{
-							uint count = resource->get_device().Subresources(resource->get_desc());
-							for (uint i = 0; i < count; i++)
-								emit(i, all_it->second);
+							// Where the subresources with no entry of their own
+							// sit. If that already matches what this operation
+							// wants, only the DIVERGED ones can need a barrier --
+							// and there are usually a handful of those against a
+							// resource with thousands of subresources.
+							//
+							// VSM_Atlas: 2048 subresources, 257 diverged by the
+							// per-slice clear_dsv calls. The full walk emitted ~257
+							// barriers but visited 2048 entries and grew `current`
+							// to 2048 map nodes before clearing it -- every frame,
+							// twice (here and in the return-to-rest below).
+							ResourceState fallback;
+							bool have_fallback = false;
+
+							if (auto all_cur = current.find(ALL_SUBRESOURCES); all_cur != current.end())
+							{
+								fallback      = all_cur->second;
+								have_fallback = true;
+							}
+							else if (!res_plan.from_undefined)
+							{
+								// No uniform entry: untouched subresources are
+								// wherever the resting contract left them. Not valid
+								// for a virgin resource, whose untouched
+								// subresources still need the undefined handling.
+								fallback      = state_at_rest(resting_layout(resource));
+								have_fallback = true;
+							}
+
+							if (have_fallback && fallback == all_it->second)
+							{
+								// Snapshot the keys first: emit() writes into
+								// `current`, which would invalidate iteration.
+								std::vector<UINT> diverged_subres;
+								diverged_subres.reserve(current.size());
+								for (auto& [s, st] : current)
+									if (s != ALL_SUBRESOURCES) diverged_subres.push_back(s);
+
+								for (UINT s : diverged_subres)
+									emit(s, all_it->second);
+							}
+							else
+							{
+								uint count = resource->get_device().Subresources(resource->get_desc());
+								for (uint i = 0; i < count; i++)
+									emit(i, all_it->second);
+							}
 
 							current.clear();
 							current[ALL_SUBRESOURCES] = all_it->second;
@@ -2368,13 +2413,33 @@ namespace HAL
 			{
 				// Subresources sit in different states, so one ALL barrier
 				// cannot carry a single valid before-state.
-				uint count = resource->get_device().Subresources(resource->get_desc());
-				for (uint i = 0; i < count; i++)
+				//
+				// Which subresources can possibly need one depends on whether a
+				// uniform fallback exists. Without one, resolve() fails for
+				// everything the group never touched and the loop skips it -- so
+				// only the tracked entries matter, and walking the resource's full
+				// subresource count to find them is wasted (2048 iterations to
+				// reach 257 for VSM_Atlas).
+				const bool has_uniform = current.count(ALL_SUBRESOURCES) != 0;
+
+				if (!has_uniform)
 				{
-					ResourceState before;
-					if (!resolve(i, before)) continue;      // untouched by the group
-					if (before.layout == rest_layout) continue;
-					after_barriers.transition(resource, before, rest, i);
+					for (auto& [subres, before] : current)
+					{
+						if (before.layout == rest_layout) continue;
+						after_barriers.transition(resource, before, rest, subres);
+					}
+				}
+				else
+				{
+					uint count = resource->get_device().Subresources(resource->get_desc());
+					for (uint i = 0; i < count; i++)
+					{
+						ResourceState before;
+						if (!resolve(i, before)) continue;      // untouched by the group
+						if (before.layout == rest_layout) continue;
+						after_barriers.transition(resource, before, rest, i);
+					}
 				}
 
 				// Collapse back to one uniform entry. Writing rest into each
@@ -2439,7 +2504,9 @@ namespace HAL
 		for (auto& list : lists)
 			tasks.emplace_back(thread_pool::get().enqueue([list]()
 			{
+					PROFILE(((CommandListBase*)list.get())->get_name());
 				auto ca = list->frame_resources->get_ca(list->get_type());
+
 				list->compiler.compile(*ca);
 				list->frame_resources->free_ca(ca);
 			}));

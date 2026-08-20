@@ -744,8 +744,14 @@ VSM::VSM()
 		if (data.VSM_PageHiZ.is_new())
 		{
 			PROFILE(L"clear_uav");
+			// whole_resource: the loop clears every mip of every slice, so the
+			// declaration is exactly the whole resource. Declaring each
+			// create_mip() view separately shredded it into one entry per slice
+			// per mip -- all 1792 -- and the next whole-resource use then had to
+			// reconcile every one of them individually.
 			for (int mip = 0; mip < pyramid_mip_count; mip++)
-				command_list->clear_uav(data.VSM_PageHiZ->create_mip(mip, *command_list).rwTexture2DArray, vec4(0, 0, 0, 0));
+				command_list->clear_uav(data.VSM_PageHiZ->create_mip(mip, *command_list).rwTexture2DArray,
+				                        vec4(0, 0, 0, 0), /*whole_resource*/ true);
 		}
 
 		{
@@ -756,8 +762,14 @@ VSM::VSM()
 			// not about to draw into this slice yet, so binding it as the
 			// active render target would just be wasted OM-bind/transition/
 			// size-bookkeeping work on top of the actual clear.
+			// whole_resource: the whole atlas is bound as a DSV a few lines below
+			// regardless, so declaring each clear over just its own slice buys
+			// nothing and costs a lot -- 257 per-slice declarations diverged the
+			// group's tracking, and the following whole-resource use then had to
+			// reconcile all 2048 subresources one at a time.
 			for (int slot : dsv_clear_slots)
-				command_list->clear_dsv(atlas_slot_views[slot].depthStencil);
+				command_list->clear_dsv(atlas_slot_views[slot].depthStencil,
+				                        true, false, 0, 0, /*whole_resource*/ true);
 		}
 
 		if (!any_dirty)

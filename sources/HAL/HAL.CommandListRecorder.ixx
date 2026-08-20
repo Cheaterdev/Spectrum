@@ -153,7 +153,7 @@ export namespace HAL
 
 		bool compiled = false;
 		API::CommandList list;
-		std::wstring name;
+		std::wstring_view name;
 		std::vector<Cmd> tasks;
 		std::vector<std::function<void(API::CommandList&)>> fn_pool; // shared_ptr captures
 		[[no_unique_address]]

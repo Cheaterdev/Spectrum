@@ -395,7 +395,12 @@ export{
 			void invalidate_state();
 
 
-			void clear_uav(const Handles::UAV& h, vec4 ClearColor = vec4(0, 0, 0, 0));
+			// whole_resource: see clear_dsv below. Declares the barrier over the
+			// entire resource instead of the subresources this view names, so a
+			// caller clearing selected slices/mips of a resource it then uses as
+			// a whole does not diverge the group's per-subresource tracking.
+			void clear_uav(const Handles::UAV& h, vec4 ClearColor = vec4(0, 0, 0, 0),
+			               bool whole_resource = false);
 
 			// Clears a DSV directly (ClearDepthStencilView-equivalent) without
 			// binding it as the active render target the way set_rtv's
@@ -403,7 +408,15 @@ export{
 			// full OM bind, resource-state transitions for every attachment,
 			// and render-target-size bookkeeping, all irrelevant when the
 			// caller only wants the clear. Mirrors clear_uav's shape.
-			void clear_dsv(const Handles::DSV& h, bool clear_depth = true, bool clear_stencil = false, float depth = 0, UINT8 stencil = 0);
+			// whole_resource: declare the barrier over the ENTIRE resource rather
+			// than the subresources this view names. For a caller that clears
+			// selected slices of an atlas and then binds the whole thing as a
+			// DSV anyway, that is both accurate and far cheaper -- per-slice
+			// declarations diverge the group's per-subresource tracking, and the
+			// next whole-resource use then has to reconcile every subresource
+			// individually.
+			void clear_dsv(const Handles::DSV& h, bool clear_depth = true, bool clear_stencil = false, float depth = 0, UINT8 stencil = 0,
+			               bool whole_resource = false);
 
 		};
 
@@ -710,15 +723,17 @@ export{
 			CommandList& get_base();
 
 			template<class T>
-			void clear(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0))
+			void clear(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0),
+			           bool whole_resource = false)
 			{
-				get_base().clear_uav(view.rwRAW, ClearColor);
+				get_base().clear_uav(view.rwRAW, ClearColor, whole_resource);
 			}
 
 			template<class T>
-			void clear_counter(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0))
+			void clear_counter(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0),
+			                   bool whole_resource = false)
 			{
-				get_base().clear_uav(view.counter_view.rwRAW, ClearColor);
+				get_base().clear_uav(view.counter_view.rwRAW, ClearColor, whole_resource);
 			}
 
 			void dispatch(int = 1, int = 1, int = 1);
