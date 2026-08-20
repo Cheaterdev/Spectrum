@@ -8,6 +8,7 @@ import Test.Events;
 import Test.FileSystem;
 import Test.Profiling;
 import Test.HAL;
+import Test.HAL.SubresRangeMap;
 import Core;
 
 void SetupLogging()

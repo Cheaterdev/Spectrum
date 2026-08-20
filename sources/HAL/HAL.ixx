@@ -22,6 +22,7 @@ export import :QueryHeap;
 export import :HeapAllocators;
 export import :TiledMemoryManager;
 export import :ResourceStates;
+export import :SubresRangeMap;
 export import :ResourceViews;
 export import :Resource;
 export import :Resource.Buffer;

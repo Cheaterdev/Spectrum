@@ -213,6 +213,7 @@ namespace HAL
 
 		barriers.emplace_back(Barrier{ const_cast<Resource*>(resource), before, after, range, flags });
 
+
 	}
 
 

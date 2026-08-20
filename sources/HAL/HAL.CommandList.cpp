@@ -2034,16 +2034,37 @@ namespace HAL
 			// layout. The ALL_SUBRESOURCES key is the uniform value standing in
 			// for every subresource with no entry of its own, so a
 			// whole-resource lifetime costs exactly one entry.
-			std::unordered_map<UINT, ResourceState> current;
-
-			auto resolve = [&](UINT subres, ResourceState& out)
+			// Per-subresource state for this group, kept as RANGES.
+			//
+			// A view is a rectangle in (mip x slice x plane) space and so is a
+			// D3D12 barrier. Keying this per flat subresource forced both ends to
+			// be shredded and rebuilt -- one map entry and one barrier per
+			// subresource, thousands of them for an atlas or a Hi-Z pyramid.
+			// SubresRangeMap keeps the rectangle intact from the view all the way
+			// to D3D12_BARRIER_SUBRESOURCE_RANGE.
+			uint dim_mips = 1, dim_slices = 1, dim_planes = 1;
+			if (resource->get_desc().is_texture())
 			{
-				auto it = current.find(subres);
-				if (it != current.end()) { out = it->second; return true; }
-				auto all = current.find(ALL_SUBRESOURCES);
-				if (all != current.end()) { out = all->second; return true; }
-				return false;              // untouched by the group so far
+				const auto& tex = resource->get_desc().as_texture();
+				dim_mips   = std::max(1u, (uint)tex.MipLevels);
+				dim_slices = std::max(1u, (uint)tex.ArraySize);
+				dim_planes = std::max(1u, resource->get_device().Subresources(resource->get_desc())
+					/ (dim_mips * dim_slices));
+			}
+
+			// A bare subresource index (a use with no descriptor -- copies name
+			// one directly) as the rectangle it stands for.
+			auto index_to_range = [&](UINT subres) -> SubresRange
+			{
+				if (subres == ALL_SUBRESOURCES || !resource->get_desc().is_texture())
+					return SubresRange::all();
+
+				const auto& tex = resource->get_desc().as_texture();
+				return SubresRange::single(tex.get_mip(subres), tex.get_array(subres), tex.get_plane(subres));
 			};
+
+			SubresRangeMap current;
+			current.reset(dim_mips, dim_slices, dim_planes);
 
 			// The last operation in the group that used this resource -- its
 			// barriers_after is where the return to rest goes.
@@ -2051,7 +2072,6 @@ namespace HAL
 
 			for (auto& list : lists)
 			{
-
 				auto& tracked = resource->get_state(list.get());
 				if (tracked.operations.empty()) continue;
 
@@ -2060,71 +2080,64 @@ namespace HAL
 				// Only meaningful before the group has touched it; once it has,
 				// its own tracking is authoritative.
 				if (current.empty() && tracked.has_entry_state)
-					current[ALL_SUBRESOURCES] = tracked.entry_state;
+					current.assign(SubresRange::all(), tracked.entry_state);
 
 				// tracked.operations is an ordered map, so this walks the
 				// operations in the order they were recorded.
 				for (auto& [op_index, usages] : tracked.operations)
 				{
-					// 1. Collapse everything this operation does to the
-					//    resource into one wanted state per subresource. A
-					//    resource bound several ways in one operation (e.g.
-					//    sampled and written through different views) merges
-					//    where the states allow it.
-					std::unordered_map<UINT, ResourceState> wanted;
+					// 1. Collapse everything this operation does to the resource
+					//    into one wanted state per REGION. A resource bound
+					//    several ways in one operation (sampled and written
+					//    through different views) merges where the states allow.
+					SubresRangeMap wanted;
+					wanted.reset(dim_mips, dim_slices, dim_planes);
 
-					auto want = [&](UINT subres, ResourceState state)
+					std::vector<std::pair<SubresRange, ResourceState>> pending;
+
+					auto want = [&](SubresRange range, ResourceState state)
 					{
-						auto it = wanted.find(subres);
-						if (it == wanted.end()) { wanted.emplace(subres, state); return; }
-
 						// Read-only states combine; anything else cannot be
-						// satisfied by one barrier, so the later use wins and
-						// the operation runs in that state.
-						auto merged = merge_state(it->second, state);
-						it->second = merged ? *merged : state;
+						// satisfied by one barrier, so the later use wins and the
+						// operation runs in that state.
+						//
+						// Collected before assigning: assign() rewrites the very
+						// entries visit() is walking.
+						pending.clear();
+						wanted.visit(range, [&](SubresRange piece, const ResourceState* cur)
+						{
+							ResourceState result = state;
+							if (cur)
+							{
+								auto merged = merge_state(*cur, state);
+								result = merged ? *merged : state;
+							}
+							pending.emplace_back(piece, result);
+						});
+
+						for (auto& pr : pending) wanted.assign(pr.first, pr.second);
 					};
 
 					for (auto& usage : usages)
 					{
 						if (usage.info)
 						{
-							// A view names its own mip/array/plane range --
-							// expand it here, once, only because this resource
-							// turned out to need barriers at all. visit_subres
-							// also reports side resources (a UAV counter
-							// buffer), so filter to ours.
+							// The view reports the rectangle it covers and it goes
+							// straight in -- no expansion into subresources at any
+							// point. visit_subres also reports side resources (a UAV
+							// counter buffer), so this still has to filter.
 							visit_subres(*usage.info, [&](const HAL::Resource::ptr& r, SubresRange range)
 							{
-								// One compare per VIEW now, not per subresource --
-								// visit_subres also reports side resources (a UAV
-								// counter buffer), so this still has to filter.
-								if (r.get() != resource) return;
-
-								if (range.is_all())
-								{
-									want(ALL_SUBRESOURCES, usage.state);
-									return;
-								}
-
-								// Tracking is still per flat subresource, so expand
-								// here -- but as a tight loop over known bounds, with
-								// no callback or shared_ptr per entry. Mip innermost:
-								// that yields CONSECUTIVE flat indices, which is what
-								// lets Barriers::transition merge the run back into
-								// one range on the way out.
-								const auto& tex = resource->get_desc().as_texture();
-								for (uint p = range.first_plane; p < range.first_plane + range.num_planes; p++)
-									for (uint a = range.first_slice; a < range.first_slice + range.num_slices; a++)
-										for (uint m = range.first_mip; m < range.first_mip + range.num_mips; m++)
-											want(tex.CalcSubresource(m, a, p), usage.state);
+								if (r.get() == resource) want(range, usage.state);
 							});
 						}
 						else
 						{
-							want(usage.subres, usage.state);
+							want(index_to_range(usage.subres), usage.state);
 						}
 					}
+
+					if (wanted.empty()) continue;
 
 					auto& operation = list->operations[op_index];
 					auto& barriers  = operation.barriers_before;
@@ -2145,7 +2158,7 @@ namespace HAL
 						return ResourceState{ BarrierSync::ALL, BarrierAccess::NO_ACCESS, TextureLayout::UNDEFINED };
 					};
 
-					auto emit = [&](UINT subres, ResourceState after)
+					auto emit = [&](SubresRange want_range, ResourceState after)
 					{
 						// The first WRITE establishes the resource's contents. Its
 						// memory is fresh (or freshly aliased), so discard rather
@@ -2160,9 +2173,9 @@ namespace HAL
 						// that point on but still holds nothing, so the discard has
 						// to wait for the write that actually fills it (#1422).
 						//
-						// Do NOT relax this to "discard on the first barrier" so that
-						// a read arriving before the first write gets a discard.
-						// Tried 2026-08-19 twice: unconditionally, it costs 54 x
+						// Do NOT relax this to "discard on the first barrier" so
+						// that a read arriving before the first write gets one.
+						// Tried 2026-08-19 twice: unconditionally it costs 54 x
 						// #1422 (D3D12 counts a placed RT/DS resource as initialized
 						// only when the DISCARD rides a barrier INTO an RT/DS
 						// layout); restricted to non-RT/DS resources it "works", but
@@ -2172,50 +2185,32 @@ namespace HAL
 						if (discard_pending && after.has_write_bits())
 						{
 							// Declare where the resource ACTUALLY is, not UNDEFINED
-							// unconditionally. This path used to call
-							// from_undefined() outright, so when the group had
-							// already moved the resource -- a read before the first
-							// write -- the barrier contradicted our own tracking:
-							// `current` said SHADER_RESOURCE while the barrier
-							// declared UNDEFINED. A barrier must never disagree with
-							// the state we believe it starts from.
-							//
-							// Only a uniform whole-resource state can be used, since
-							// this barrier covers ALL_SUBRESOURCES; if subresources
-							// have diverged there is no single before-state to name
-							// and UNDEFINED (don't care) is the honest answer.
-							ResourceState before;
-							auto all_it = current.find(ALL_SUBRESOURCES);
-
-							if (current.size() == 1 && all_it != current.end())
-								before = all_it->second;
-							else
-								before = from_undefined();
+							// unconditionally: a barrier must never disagree with
+							// the state we believe it starts from. Only a uniform
+							// whole-resource state can be used, since this barrier
+							// covers everything; if regions have diverged there is
+							// no single before-state to name and UNDEFINED (don't
+							// care) is the honest answer.
+							const ResourceState before = current.is_uniform()
+								? current.uniform_state()
+								: from_undefined();
 
 							barriers.transition(resource, before, after,
-								ALL_SUBRESOURCES, BarrierFlags::SINGLE | BarrierFlags::DISCARD);
+								SubresRange::all(), BarrierFlags::SINGLE | BarrierFlags::DISCARD);
 
 							discard_pending = false;
 
 							current.clear();
-							current[ALL_SUBRESOURCES] = after;
+							current.assign(SubresRange::all(), after);
 							return;
 						}
 
-						ResourceState before;
-
-						// Whether the group has actually touched this subresource
-						// before, as opposed to us assuming where it rests. Only a
-						// real prior touch can be a hazard to order against.
-						const bool was_tracked = resolve(subres, before);
-
 						// True when nothing in this GROUP has touched the resource
-						// yet -- not merely this subresource. That is the exact
-						// condition the D3D12 spec attaches to SyncBefore = NONE:
-						// "there MUST have been no preceding barriers or accesses
-						// made to that resource in the same ExecuteCommandLists
-						// scope", and a group is submitted as exactly one such
-						// scope (see Queue::execute).
+						// yet -- not merely this region. That is the exact condition
+						// the D3D12 spec attaches to SyncBefore = NONE: "there MUST
+						// have been no preceding barriers or accesses made to that
+						// resource in the same ExecuteCommandLists scope", and a
+						// group is submitted as exactly one such scope.
 						const bool group_first_touch = current.empty();
 
 						// Whether we actually KNOW where the resource is on entry,
@@ -2227,183 +2222,101 @@ namespace HAL
 						// last pass that uses them. So for those the resting layout
 						// is not where they are; the only trustworthy entry state is
 						// the one the FrameGraph declares via set_entry_state, and
-						// that has already been consumed into `current` above (which
-						// would make was_tracked true).
-						//
-						// Reaching the fallback with a frame_graph_managed resource
-						// therefore means the FrameGraph left this boundary unlinked
-						// and we are about to guess. Guessing is what the code did
-						// before, so keep doing it rather than change behaviour --
-						// but never let an optimization TRUST the guess.
+						// that has already been consumed into `current` above.
 						const bool entry_known = !resource->frame_graph_managed;
 
-						if (!was_tracked)
+						// One pass over the region: `current` reports each part of
+						// it with the state that part is in, splitting wherever they
+						// differ. What used to need a per-subresource walk plus a
+						// "have they diverged?" special case is just this.
+						std::vector<std::pair<SubresRange, ResourceState>> updates;
+
+						current.visit(want_range, [&](SubresRange piece, const ResourceState* tracked_before)
 						{
-							// Untouched by this group so far. A resource no barrier
-							// has ever moved is still in its creation (undefined)
-							// layout; anything else was handed back at rest by
-							// whoever used it last.
-							//
-							// state_at_rest, NOT {SYNC_NONE, NO_ACCESS, rest_layout}.
-							// The spec does license SyncBefore = NONE for the first
-							// touch in an ExecuteCommandLists scope, but NO_ACCESS
-							// paired with a REAL layout is the same combination
-							// D3D12 rejects on the after side (#1331: "LayoutAfter
-							// must be LAYOUT_UNDEFINED or SyncAfter must be
-							// SYNC_NONE when AccessAfter is ACCESS_NO_ACCESS").
-							// Such a barrier does not take effect, so the layout
-							// never moves and the NEXT barrier -- which correctly
-							// declares the layout this one was supposed to reach --
-							// fails validation instead (#1334).
-							//
-							// It also bought nothing: the skip below keys on
-							// before.layout == after.layout, which is identical
-							// under either form.
-							const TextureLayout rest = resting_layout(resource);
-							before = res_plan.from_undefined
-								? from_undefined()
-								: state_at_rest(rest);
-						}
+							ResourceState before;
+							const bool was_tracked = tracked_before != nullptr;
 
-						// Entering the scope in the layout we already want. Nothing
-						// to transition and nothing to synchronize against -- the
-						// scope boundary already guarantees prior work retired and
-						// caches flushed -- so this costs no barrier at all.
-						//
-						// Gated on entry_known. Skipping does two things: it emits
-						// no barrier, and it writes `after` into `current` as the
-						// group's belief about the resource. On a GUESSED entry that
-						// belief is unfounded, and every later barrier for this
-						// resource in the group is then computed from a wrong base --
-						// turning one wrong LayoutBefore into a cascade. Emitting the
-						// barrier keeps a wrong guess to a single self-correcting
-						// transition instead.
-						if (entry_known && !was_tracked && group_first_touch && before.layout == after.layout
-							&& !res_plan.from_undefined)
-						{
-							current[subres] = after;
-							return;
-						}
-
-						// Read-after-read inside the group, differing only in which
-						// shader stages read it. Neither side writes, so there is no
-						// hazard to order and nothing to make visible; the barrier
-						// would only widen a sync scope. Access must match exactly --
-						// a different access needs the data made visible to it even
-						// when both are reads.
-						// No entry_known gate here: this one only fires on a state the
-						// group actually tracked (was_tracked), never on a guess.
-						if (was_tracked && before.layout == after.layout
-							&& before.access == after.access
-							&& !before.has_write_bits() && !after.has_write_bits())
-						{
-							current[subres] = after;
-							return;
-						}
-
-						// Same state is not the same as no hazard. Two dispatches
-						// writing the same UAV need ordering even though nothing
-						// about the state changes -- the layouts match, so this
-						// is purely an execution/memory barrier, which is what a
-						// legacy UAV barrier was. Only unordered access needs it:
-						// render-target and depth writes are pipeline-ordered,
-						// and read-after-read needs nothing.
-						//
-						// record_usage has already split the operation when this
-						// happens inside one run, so the two accesses are always
-						// in different operations by the time we get here.
-						const bool uav_ordering = (before == after)
-							&& check(after.access & BarrierAccess::UNORDERED_ACCESS)
-							&& was_tracked;
-
-						if (before == after && !uav_ordering)
-						{
-							current[subres] = after;
-							return;
-						}
-
-
-
-						barriers.transition(resource, before, after, subres, BarrierFlags::SINGLE);
-						current[subres] = after;
-					};
-
-					// 2. Apply the whole-resource entry first, so a
-					//    subresource-scoped use in the same operation overrides
-					//    it rather than the other way round.
-					auto all_it = wanted.find(ALL_SUBRESOURCES);
-					if (all_it != wanted.end())
-					{
-						// If individual subresources have diverged, one ALL
-						// barrier cannot express the transition: each carries a
-						// different before-state. Expand across the declared
-						// count, then collapse back to uniform so later
-						// operations are cheap again.
-						bool diverged = current.size() > 1
-							|| (current.size() == 1 && !current.count(ALL_SUBRESOURCES));
-
-						if (diverged)
-						{
-							// Where the subresources with no entry of their own
-							// sit. If that already matches what this operation
-							// wants, only the DIVERGED ones can need a barrier --
-							// and there are usually a handful of those against a
-							// resource with thousands of subresources.
-							//
-							// VSM_Atlas: 2048 subresources, 257 diverged by the
-							// per-slice clear_dsv calls. The full walk emitted ~257
-							// barriers but visited 2048 entries and grew `current`
-							// to 2048 map nodes before clearing it -- every frame,
-							// twice (here and in the return-to-rest below).
-							ResourceState fallback;
-							bool have_fallback = false;
-
-							if (auto all_cur = current.find(ALL_SUBRESOURCES); all_cur != current.end())
+							if (was_tracked)
 							{
-								fallback      = all_cur->second;
-								have_fallback = true;
-							}
-							else if (!res_plan.from_undefined)
-							{
-								// No uniform entry: untouched subresources are
-								// wherever the resting contract left them. Not valid
-								// for a virgin resource, whose untouched
-								// subresources still need the undefined handling.
-								fallback      = state_at_rest(resting_layout(resource));
-								have_fallback = true;
-							}
-
-							if (have_fallback && fallback == all_it->second)
-							{
-								// Snapshot the keys first: emit() writes into
-								// `current`, which would invalidate iteration.
-								std::vector<UINT> diverged_subres;
-								diverged_subres.reserve(current.size());
-								for (auto& [s, st] : current)
-									if (s != ALL_SUBRESOURCES) diverged_subres.push_back(s);
-
-								for (UINT s : diverged_subres)
-									emit(s, all_it->second);
+								before = *tracked_before;
 							}
 							else
 							{
-								uint count = resource->get_device().Subresources(resource->get_desc());
-								for (uint i = 0; i < count; i++)
-									emit(i, all_it->second);
+								// Untouched by this group so far. A resource no
+								// barrier has ever moved is still in its creation
+								// (undefined) layout; anything else was handed back
+								// at rest by whoever used it last.
+								//
+								// state_at_rest, NOT {SYNC_NONE, NO_ACCESS, rest}.
+								// The spec does license SyncBefore = NONE for the
+								// first touch in an ExecuteCommandLists scope, but
+								// NO_ACCESS paired with a REAL layout is the same
+								// combination D3D12 rejects on the after side
+								// (#1331). Such a barrier does not take effect, so
+								// the layout never moves and the NEXT barrier fails
+								// validation instead (#1334). It also bought
+								// nothing: the skip below keys on layout equality,
+								// which is identical under either form.
+								before = res_plan.from_undefined
+									? from_undefined()
+									: state_at_rest(resting_layout(resource));
 							}
 
-							current.clear();
-							current[ALL_SUBRESOURCES] = all_it->second;
-						}
-						else
-						{
-							emit(ALL_SUBRESOURCES, all_it->second);
-						}
-					}
+							updates.emplace_back(piece, after);
 
-					for (auto& [subres, after] : wanted)
-						if (subres != ALL_SUBRESOURCES)
-							emit(subres, after);
+							// Entering the scope in the layout we already want.
+							// Nothing to transition and nothing to synchronize
+							// against -- the scope boundary already guarantees prior
+							// work retired and caches flushed.
+							//
+							// Gated on entry_known. Skipping both emits no barrier
+							// AND records `after` as the group's belief; on a
+							// GUESSED entry that belief is unfounded and every later
+							// barrier is computed from a wrong base. Emitting keeps
+							// a wrong guess to one self-correcting transition.
+							if (entry_known && !was_tracked && group_first_touch
+								&& before.layout == after.layout && !res_plan.from_undefined)
+								return;
+
+							// Read-after-read, differing only in which shader stages
+							// read it. Neither side writes, so there is no hazard to
+							// order and nothing to make visible. Access must match
+							// exactly -- a different access needs the data made
+							// visible to it even when both are reads. No entry_known
+							// gate: this only fires on a state the group actually
+							// tracked, never on a guess.
+							if (was_tracked && before.layout == after.layout
+								&& before.access == after.access
+								&& !before.has_write_bits() && !after.has_write_bits())
+								return;
+
+							// Same state is not the same as no hazard. Two dispatches
+							// writing the same UAV need ordering even though nothing
+							// about the state changes -- the layouts match, so this
+							// is purely an execution/memory barrier, which is what a
+							// legacy UAV barrier was. Only unordered access needs it:
+							// render-target and depth writes are pipeline-ordered,
+							// and read-after-read needs nothing.
+							const bool uav_ordering = (before == after)
+								&& check(after.access & BarrierAccess::UNORDERED_ACCESS)
+								&& was_tracked;
+
+							if (before == after && !uav_ordering)
+								return;
+
+							barriers.transition(resource, before, after, piece, BarrierFlags::SINGLE);
+						});
+
+						for (auto& up : updates) current.assign(up.first, up.second);
+					};
+
+					// 2. Apply. Each region of the resource this operation wants a
+					//    state for, with that state -- regions it does not touch
+					//    report none and are skipped.
+					wanted.visit(SubresRange::all(), [&](SubresRange piece, const ResourceState* st)
+					{
+						if (st) emit(piece, *st);
+					});
 
 					last_use = &operation;
 				}
@@ -2418,9 +2331,7 @@ namespace HAL
 			// FrameGraph-managed resources opt out: the FrameGraph knows the
 			// whole pass graph, so it links their usage across passes itself and
 			// rests them once, at the last pass that uses them -- rather than
-			// converging every group boundary, which for something like the VSM
-			// pyramid costs a barrier per subresource each time a fence happens
-			// to split its passes.
+			// converging every group boundary.
 			if (!last_use) continue;
 			if (resource->frame_graph_managed) continue;
 
@@ -2428,73 +2339,31 @@ namespace HAL
 			const ResourceState rest = state_at_rest(rest_layout);
 			auto& after_barriers = last_use->barriers_after;
 
-			bool diverged = current.size() > 1
-				|| (current.size() == 1 && !current.count(ALL_SUBRESOURCES));
-
-			if (diverged)
+			// Regions the group never touched report no state and are already at
+			// rest by the same contract, so only tracked ones can need a barrier.
+			// No subresource count anywhere in here.
+			current.visit(SubresRange::all(), [&](SubresRange piece, const ResourceState* st)
 			{
-				// Subresources sit in different states, so one ALL barrier
-				// cannot carry a single valid before-state.
-				//
-				// Which subresources can possibly need one depends on whether a
-				// uniform fallback exists. Without one, resolve() fails for
-				// everything the group never touched and the loop skips it -- so
-				// only the tracked entries matter, and walking the resource's full
-				// subresource count to find them is wasted (2048 iterations to
-				// reach 257 for VSM_Atlas).
-				const bool has_uniform = current.count(ALL_SUBRESOURCES) != 0;
+				if (!st) return;
+				if (st->layout == rest_layout) return;
+				after_barriers.transition(resource, *st, rest, piece);
+			});
 
-				if (!has_uniform)
-				{
-					for (auto& [subres, before] : current)
-					{
-						if (before.layout == rest_layout) continue;
-						after_barriers.transition(resource, before, rest, subres);
-					}
-				}
-				else
-				{
-					uint count = resource->get_device().Subresources(resource->get_desc());
-					for (uint i = 0; i < count; i++)
-					{
-						ResourceState before;
-						if (!resolve(i, before)) continue;      // untouched by the group
-						if (before.layout == rest_layout) continue;
-						after_barriers.transition(resource, before, rest, i);
-					}
-				}
-
-				// Collapse back to one uniform entry. Writing rest into each
-				// visited subresource instead would leave the ALL_SUBRESOURCES
-				// fallback holding whatever pre-rest state the loop resolved
-				// against -- stale, and still the answer resolve() gives for
-				// every subresource the loop skipped. Subresources this group
-				// never touched are at rest too, by the same contract.
-				current.clear();
-				current[ALL_SUBRESOURCES] = rest;
-			}
-			else
-			{
-				auto it = current.find(ALL_SUBRESOURCES);
-				if (it != current.end() && it->second.layout != rest_layout)
-				{
-					after_barriers.transition(resource, it->second, rest, ALL_SUBRESOURCES);
-					it->second = rest;
-				}
-			}
+			current.clear();
+			current.assign(SubresRange::all(), rest);
 
 			// The contract this whole design rests on: a non-FrameGraph resource
 			// enters a group at its resting layout and leaves at its resting
 			// layout, so groups are independent of the order they are submitted
 			// in and the next group can assume where it is without being told.
-			//
-			// Every consumer of that assumption is above -- the entry fallback
-			// and the entry_known skip -- so if convergence ever fails here, they
-			// are all quietly wrong and the group hands the next one a resource
-			// that is not where it claims. Check it rather than assume it.
 			if constexpr (BuildOptions::Dev)
-				for (auto& [subres, state] : current)
-					ASSERT(state.layout == rest_layout);
+			{
+				ASSERT(current.check_disjoint());
+				current.visit(SubresRange::all(), [&](SubresRange, const ResourceState* st)
+				{
+					ASSERT(!st || st->layout == rest_layout);
+				});
+			}
 		}
 	}
 
