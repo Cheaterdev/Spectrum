@@ -55,6 +55,9 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::MipMapping>(device, pso[PSO::MipMapping]));
 	tasks.emplace_back(PSOBase::create<PSOS::PSSMApplyCompute>(device, pso[PSO::PSSMApplyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::SkyCompute>(device, pso[PSO::SkyCompute]));
+	tasks.emplace_back(PSOBase::create<PSOS::SkyCube>(device, pso[PSO::SkyCube]));
+	tasks.emplace_back(PSOBase::create<PSOS::CubemapENV>(device, pso[PSO::CubemapENV]));
+	tasks.emplace_back(PSOBase::create<PSOS::CubemapENVDiffuse>(device, pso[PSO::CubemapENVDiffuse]));
 	tasks.emplace_back(PSOBase::create<PSOS::EdgeDetectCompute>(device, pso[PSO::EdgeDetectCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::BlendWeightCompute>(device, pso[PSO::BlendWeightCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::BlendingCompute>(device, pso[PSO::BlendingCompute]));
@@ -98,9 +101,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DepthDraw>(device, pso[PSO::DepthDraw]));
 	tasks.emplace_back(PSOBase::create<PSOS::Voxelization>(device, pso[PSO::Voxelization]));
 	tasks.emplace_back(PSOBase::create<PSOS::Sky>(device, pso[PSO::Sky]));
-	tasks.emplace_back(PSOBase::create<PSOS::SkyCube>(device, pso[PSO::SkyCube]));
-	tasks.emplace_back(PSOBase::create<PSOS::CubemapENV>(device, pso[PSO::CubemapENV]));
-	tasks.emplace_back(PSOBase::create<PSOS::CubemapENVDiffuse>(device, pso[PSO::CubemapENVDiffuse]));
 	tasks.emplace_back(PSOBase::create<PSOS::EdgeDetect>(device, pso[PSO::EdgeDetect]));
 	tasks.emplace_back(PSOBase::create<PSOS::BlendWeight>(device, pso[PSO::BlendWeight]));
 	tasks.emplace_back(PSOBase::create<PSOS::Blending>(device, pso[PSO::Blending]));
@@ -157,6 +157,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::GatherMeshes::Invisible) PSOS::GatherMeshes::Invisible;
 //decltype(PSOS::MipMapping::NonPowerOfTwo) PSOS::MipMapping::NonPowerOfTwo;
 //decltype(PSOS::MipMapping::Gamma) PSOS::MipMapping::Gamma;
+//decltype(PSOS::MipMapping::Slices) PSOS::MipMapping::Slices;
 //decltype(PSOS::Lighting::SecondBounce) PSOS::Lighting::SecondBounce;
 //decltype(PSOS::VoxelDownsample::Count) PSOS::VoxelDownsample::Count;
 //decltype(PSOS::VoxelIndirectFilter::Blur) PSOS::VoxelIndirectFilter::Blur;
@@ -166,4 +167,3 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::GBufferDraw::HiZOcclusion) PSOS::GBufferDraw::HiZOcclusion;
 //decltype(PSOS::DepthDraw::HiZOcclusion) PSOS::DepthDraw::HiZOcclusion;
 //decltype(PSOS::Voxelization::Dynamic) PSOS::Voxelization::Dynamic;
-//decltype(PSOS::CubemapENV::Level) PSOS::CubemapENV::Level;

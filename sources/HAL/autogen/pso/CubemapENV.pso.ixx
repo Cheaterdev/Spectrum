@@ -17,22 +17,18 @@ export namespace PSOS
 	struct CubemapENV: public PSOBase
 	{
 		struct Keys {
-			KeyValue<int, NonNullable, 1, 8, 32, 64, 128> Level;
 			GEN_DEF_COMP(Keys);
 		private:
 			SERIALIZE()
 			{
-				ar&NVP(Level);
 			}
 		};
 
-		GEN_GRAPHICS_PSO(CubemapENV, Level)
-		GEN_KEY(Level, false);
+		GEN_COMPUTE_PSO(CubemapENV)
 
 
 		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 		{
-			static const ShaderDefine<&Keys::Level,&SimpleGraphicsPSO::pixel> Level = "NumSamples";
 
 
 			SimplePSO mpso("CubemapENV");
@@ -40,19 +36,10 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.vertex.file_name = "shaders/cubemap_down.hlsl";
-			mpso.vertex.entry_point = "VS";
-			mpso.vertex.flags = HAL::ShaderOptions::None;
+			mpso.compute.file_name = "shaders/cubemap_down.hlsl";
+			mpso.compute.entry_point = "CS";
+			mpso.compute.flags = HAL::ShaderOptions::None;
 			
-			mpso.pixel.file_name = "shaders/cubemap_down.hlsl";
-			mpso.pixel.entry_point = "PS";
-			mpso.pixel.flags = HAL::ShaderOptions::None;
-			
-			Level.Apply(mpso, key);
-
-			mpso.rtv_formats = { HAL::Format::R11G11B10_FLOAT };	
-			mpso.blend = {  };
-
 			return mpso;
 		}
 

@@ -8,6 +8,6 @@
 #include "sig_hlsl.hlsl"
 struct SkyFace
 {
-	uint face; // uint
-	uint GetFace() { return face; }
+	uint faces; // RWTexture2DArray<float4>
+	RWTexture2DArray<float4> GetFaces() { return ResourceDescriptorHeap[faces]; }
 };

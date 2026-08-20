@@ -1185,9 +1185,9 @@ public:
 		{ PassID::VSM_GatherDispatch, 0, false, {} },
 		{ PassID::VSM_RenderPages, 0, false, VSM_RenderPages_0_prev },
 		{ PassID::Scene, 0, false, Scene_0_prev },
-		{ PassID::CubeSky, 0, false, {} },
-		{ PassID::CubeMapDownsample, 0, false, CubeMapDownsample_0_prev },
-		{ PassID::CubeMapEnviromentProcessor, 0, false, CubeMapEnviromentProcessor_0_prev },
+		{ PassID::CubeSky, 0, true, {} },
+		{ PassID::CubeMapDownsample, 0, true, CubeMapDownsample_0_prev },
+		{ PassID::CubeMapEnviromentProcessor, 0, true, CubeMapEnviromentProcessor_0_prev },
 		{ PassID::Lighting, 0, true, Lighting_0_prev },
 		{ PassID::Mipmapping, 0, true, Mipmapping_0_prev },
 		{ PassID::stencil_renderer_before, 0, false, {} },
@@ -1247,9 +1247,9 @@ public:
 			graph.add_library_pass<Passes::VSM_RenderPages>(vSM_RenderPages.setup_func, vSM_RenderPages.render_func, (vSM_RenderPages.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::Scene>(PassDefault<Passes::Scene>::setup, PassDefault<Passes::Scene>::render, (PassDefault<Passes::Scene>::flags & ~FrameGraph::PassFlags::Compute));
 		if (cubeSky.setup_func)
-			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, (cubeSky.flags & ~FrameGraph::PassFlags::Compute));
-		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, (PassDefault<Passes::CubeMapDownsample>::flags & ~FrameGraph::PassFlags::Compute));
-		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, (PassDefault<Passes::CubeMapEnviromentProcessor>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, (cubeSky.flags));
+		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, (PassDefault<Passes::CubeMapDownsample>::flags));
+		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, (PassDefault<Passes::CubeMapEnviromentProcessor>::flags));
 		if (lighting.setup_func)
 			graph.add_library_pass<Passes::Lighting>(lighting.setup_func, lighting.render_func, (lighting.flags));
 		if (mipmapping.setup_func)

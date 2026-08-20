@@ -17,21 +17,31 @@ export namespace Table
 	struct EnvFilter
 	{
 		static constexpr SlotID ID = SlotID::EnvFilter;
-		uint4 face;
-		float4 scaler;
 		uint4 size;
-		uint4& GetFace() { return face; }
-		float4& GetScaler() { return scaler; }
+		HLSL::RWTexture2DArray<float4> targets[8];
 		uint4& GetSize() { return size; }
+		HLSL::RWTexture2DArray<float4>* GetTargets() { return targets; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(face);
-			compiler.compile(scaler);
 			compiler.compile(size);
+			compiler.compile(targets);
 		}
-		using Compiled = EnvFilter;
+		struct Compiled
+		{
+			uint4 size; // uint4
+			uint targets[8]; // RWTexture2DArray<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(size);
+			}
+
+
+		};
 
 		static std::string get_typename()
 		{
@@ -40,8 +50,6 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
-			ar& NVP(face);
-			ar& NVP(scaler);
 			ar& NVP(size);
 		}
 

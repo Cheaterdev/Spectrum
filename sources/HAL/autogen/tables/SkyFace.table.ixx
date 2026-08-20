@@ -17,15 +17,26 @@ export namespace Table
 	struct SkyFace
 	{
 		static constexpr SlotID ID = SlotID::SkyFace;
-		uint face;
-		uint& GetFace() { return face; }
+		HLSL::RWTexture2DArray<float4> faces;
+		HLSL::RWTexture2DArray<float4>& GetFaces() { return faces; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(face);
+			compiler.compile(faces);
 		}
-		using Compiled = SkyFace;
+		struct Compiled
+		{
+			uint faces; // RWTexture2DArray<float4>
+
+			
+			private:
+			SERIALIZE()
+			{
+			}
+
+
+		};
 
 		static std::string get_typename()
 		{
@@ -34,7 +45,6 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
-			ar& NVP(face);
 		}
 
 	};

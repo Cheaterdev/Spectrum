@@ -17,25 +17,40 @@
 #define NON_POWER_OF_TWO 0
 #endif
 
-static const RWTexture2D<float4> OutMip1 = GetMipMapping().GetOutMip(0);
-static const RWTexture2D<float4> OutMip2 = GetMipMapping().GetOutMip(1);
-static const RWTexture2D<float4> OutMip3 = GetMipMapping().GetOutMip(2);
-static const RWTexture2D<float4> OutMip4 = GetMipMapping().GetOutMip(3);
-static const  Texture2D<float4> SrcMip = GetMipMapping().GetSrcMip();
-
-static const   SamplerState BilinearClamp = linearClampSampler;
-/*
-RWTexture2D<float4> OutMip1 : register(u0);
-RWTexture2D<float4> OutMip2 : register(u1);
-RWTexture2D<float4> OutMip3 : register(u2);
-RWTexture2D<float4> OutMip4 : register(u3);
-Texture2D<float4> SrcMip : register(t0);
-SamplerState BilinearClamp : register(s0);*/
-
-
 static const  uint SrcMipLevel = 0;// GetMipMapping().GetSrcMipLevel();	// Texture level of source mip
 static const  uint NumMipLevels = GetMipMapping().GetNumMipLevels();	// Number of OutMips to write: [1, 4]
 static const  float2 TexelSize = GetMipMapping().GetTexelSize();	// 1.0 / OutMip1.Dimensions
+
+static const   SamplerState BilinearClamp = linearClampSampler;
+
+// ARRAY_SLICES builds the whole array (e.g. all six cube faces) in one
+// dispatch, with the slice in Z; the plain build keeps the single-2D-texture
+// path. Only the addressing differs, so the reduction below is shared.
+#ifdef ARRAY_SLICES
+
+float4 SampleSrc(float2 uv, uint slice)
+{
+    return GetMipMapping().GetSrcMipArray().SampleLevel(BilinearClamp, float3(uv, slice), SrcMipLevel);
+}
+
+void StoreMip(uint mip, uint2 pos, uint slice, float4 color)
+{
+    GetMipMapping().GetOutMipArray(mip)[uint3(pos, slice)] = color;
+}
+
+#else
+
+float4 SampleSrc(float2 uv, uint slice)
+{
+    return GetMipMapping().GetSrcMip().SampleLevel(BilinearClamp, uv, SrcMipLevel);
+}
+
+void StoreMip(uint mip, uint2 pos, uint slice, float4 color)
+{
+    GetMipMapping().GetOutMip(mip)[pos] = color;
+}
+
+#endif
 
 
 // The reason for separating channels is to reduce bank conflicts in the
@@ -87,36 +102,36 @@ void CS(uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID)
     // have to take more source texture samples.
 #if NON_POWER_OF_TWO == 0
     float2 UV = TexelSize * (DTid.xy + 0.5);
-    float4 Src1 = SrcMip.SampleLevel(BilinearClamp, UV, SrcMipLevel);
+    float4 Src1 = SampleSrc(UV, DTid.z);
 #elif NON_POWER_OF_TWO == 1
     // > 2:1 in X dimension
     // Use 2 bilinear samples to guarantee we don't undersample when downsizing by more than 2x
     // horizontally.
     float2 UV1 = TexelSize * (DTid.xy + float2(0.25, 0.5));
     float2 Off = TexelSize * float2(0.5, 0.0);
-    float4 Src1 = 0.5 * (SrcMip.SampleLevel(BilinearClamp, UV1, SrcMipLevel) +
-                         SrcMip.SampleLevel(BilinearClamp, UV1 + Off, SrcMipLevel));
+    float4 Src1 = 0.5 * (SampleSrc(UV1, DTid.z) +
+                         SampleSrc(UV1 + Off, DTid.z));
 #elif NON_POWER_OF_TWO == 2
     // > 2:1 in Y dimension
     // Use 2 bilinear samples to guarantee we don't undersample when downsizing by more than 2x
     // vertically.
     float2 UV1 = TexelSize * (DTid.xy + float2(0.5, 0.25));
     float2 Off = TexelSize * float2(0.0, 0.5);
-    float4 Src1 = 0.5 * (SrcMip.SampleLevel(BilinearClamp, UV1, SrcMipLevel) +
-                         SrcMip.SampleLevel(BilinearClamp, UV1 + Off, SrcMipLevel));
+    float4 Src1 = 0.5 * (SampleSrc(UV1, DTid.z) +
+                         SampleSrc(UV1 + Off, DTid.z));
 #elif NON_POWER_OF_TWO == 3
     // > 2:1 in in both dimensions
     // Use 4 bilinear samples to guarantee we don't undersample when downsizing by more than 2x
     // in both directions.
     float2 UV1 = TexelSize * (DTid.xy + float2(0.25, 0.25));
     float2 O = TexelSize * 0.5;
-    float4 Src1 = SrcMip.SampleLevel(BilinearClamp, UV1, SrcMipLevel);
-    Src1 += SrcMip.SampleLevel(BilinearClamp, UV1 + float2(O.x, 0.0), SrcMipLevel);
-    Src1 += SrcMip.SampleLevel(BilinearClamp, UV1 + float2(0.0, O.y), SrcMipLevel);
-    Src1 += SrcMip.SampleLevel(BilinearClamp, UV1 + float2(O.x, O.y), SrcMipLevel);
+    float4 Src1 = SampleSrc(UV1, DTid.z);
+    Src1 += SampleSrc(UV1 + float2(O.x, 0.0), DTid.z);
+    Src1 += SampleSrc(UV1 + float2(0.0, O.y), DTid.z);
+    Src1 += SampleSrc(UV1 + float2(O.x, O.y), DTid.z);
     Src1 *= 0.25;
 #endif
-    OutMip1[DTid.xy] = PackColor(Src1);
+    StoreMip(0, DTid.xy, DTid.z, PackColor(Src1));
 
     // A scalar (constant) branch can exit all threads coherently.
     if (NumMipLevels == 1)
@@ -138,7 +153,7 @@ void CS(uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID)
         float4 Src3 = LoadColor(GI + 0x08);
         float4 Src4 = LoadColor(GI + 0x09);
         Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
-        OutMip2[DTid.xy / 2] = PackColor(Src1);
+        StoreMip(1, DTid.xy / 2, DTid.z, PackColor(Src1));
         StoreColor(GI, Src1);
     }
 
@@ -154,7 +169,7 @@ void CS(uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID)
         float4 Src3 = LoadColor(GI + 0x10);
         float4 Src4 = LoadColor(GI + 0x12);
         Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
-        OutMip3[DTid.xy / 4] = PackColor(Src1);
+        StoreMip(2, DTid.xy / 4, DTid.z, PackColor(Src1));
         StoreColor(GI, Src1);
     }
 
@@ -171,6 +186,6 @@ void CS(uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID)
         float4 Src3 = LoadColor(GI + 0x20);
         float4 Src4 = LoadColor(GI + 0x24);
         Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
-        OutMip4[DTid.xy / 8] = PackColor(Src1);
+        StoreMip(3, DTid.xy / 8, DTid.z, PackColor(Src1));
     }
 }

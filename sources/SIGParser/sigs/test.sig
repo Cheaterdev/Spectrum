@@ -29,9 +29,9 @@ Pipeline MainPipeline
 
 
 	# sky setup (sky.generate)
-	CubeSky;
-	CubeMapDownsample;
-	CubeMapEnviromentProcessor;
+	[Async]CubeSky;
+	[Async]CubeMapDownsample;
+	[Async]CubeMapEnviromentProcessor;
 
 											# voxel lighting (generate_light)
 											[Async]
