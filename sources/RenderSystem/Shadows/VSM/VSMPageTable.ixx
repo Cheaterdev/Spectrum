@@ -119,7 +119,8 @@ export
 			resident.erase(it);
 			slot_owner[slot] = VSMPageKey{ -1, 0, 0 };
 			free_list.push_back(slot);
-			pending_unmap_slots.push_back(slot);
+			// Phase 5.10: stays physically tile-mapped -- see ever_mapped's
+			// own comment. Ordinary eviction is not a reason to unmap.
 		}
 
 		// The other reclaim path: a page that has scrolled entirely off a
@@ -154,7 +155,9 @@ export
 				int slot = it->second;
 				slot_owner[slot] = VSMPageKey{ -1, 0, 0 };
 				free_list.push_back(slot);
-				pending_unmap_slots.push_back(slot);
+				// Phase 5.10: stays physically tile-mapped -- see ever_mapped's
+				// own comment. Recentering a page out of range is not a reason
+				// to unmap either.
 				it = resident.erase(it);
 			}
 		}
@@ -198,6 +201,19 @@ export
 		std::vector<uint64_t> last_used_frame;
 		std::vector<int> pending_map_slots;
 		std::vector<int> pending_unmap_slots;
+		// Phase 5.10: true once a slot has ever been tile-mapped. Ordinary
+		// eviction/reallocation churn (a page scrolls out, another needs a
+		// slot the same or next frame) no longer unmaps -- D3D12 tile
+		// mapping is oblivious to logical page identity, only the render
+		// content differs between the old and new owner, and drawing into
+		// an already-mapped slice is already free. So a slot only needs a
+		// REAL map call the first time it's ever used; every reuse after
+		// that is just a new owner + a redraw (which dirty_mask/
+		// newly_allocated_mask already force). Real reclaim of long-idle
+		// mapped slots (if VRAM pressure ever needs it) stays a separate,
+		// deliberately unbuilt future policy -- see vsm-future-phases.md's
+		// Phase 5.10 Part C -- not something this flag tries to do.
+		std::vector<bool> ever_mapped;
 
 		void ensure_capacity()
 		{
@@ -207,6 +223,7 @@ export
 			resident.clear();
 			slot_owner.assign(physical_page_count, VSMPageKey{ -1, 0, 0 });
 			last_used_frame.assign(physical_page_count, 0);
+			ever_mapped.assign(physical_page_count, false);
 			free_list.clear();
 			free_list.reserve(physical_page_count);
 			for (int i = physical_page_count - 1; i >= 0; i--)
@@ -222,7 +239,16 @@ export
 			{
 				int slot = free_list.back();
 				free_list.pop_back();
-				pending_map_slots.push_back(slot);
+				// Phase 5.10: only a genuinely first-ever use of this slot
+				// needs a real tile-mapping call -- a slot reused after an
+				// ordinary eviction was never unmapped (see evict_page()/
+				// evict_outside_range()), so mapping it again would be a
+				// redundant GPU call for memory that's already backed.
+				if (!ever_mapped[slot])
+				{
+					pending_map_slots.push_back(slot);
+					ever_mapped[slot] = true;
+				}
 				return slot;
 			}
 

@@ -159,6 +159,44 @@ namespace HAL {
 	}
 
 
+	void TiledResourceManager::load_tiles_batch(CommandList* list, uint3 from, uint3 to, const std::vector<int>& array_slices, uint mip)
+	{
+		update_tiling_info info;
+		info.resource = resource;
+		for (int slice : array_slices)
+			load_tiles_internal(info, from, to, flat_index((uint)slice, mip), true);
+
+		// TODO: make list
+		if (list)
+		{
+			(list)->update_tilings(std::move(info));
+		}
+		else
+			resource->get_device().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+	}
+
+	void TiledResourceManager::zero_tiles_batch(CommandList* list, uint3 from, uint3 to, const std::vector<int>& array_slices, uint mip)
+	{
+		update_tiling_info info;
+		info.resource = resource;
+		for (int slice : array_slices)
+		{
+			uint storage_index = flat_index((uint)slice, mip);
+			for (uint x = from.x; x <= to.x; x++)
+				for (uint y = from.y; y <= to.y; y++)
+					for (uint z = from.z; z <= to.z; z++)
+						zero_tile(info, { x,y,z }, storage_index);
+		}
+
+		// TODO: make list
+		if (list)
+		{
+			(list)->update_tilings(std::move(info));
+		}
+		else
+			resource->get_device().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+	}
+
 	void TiledResourceManager::load_tiles(CommandList* list, std::list<uint3>& tiles, uint array_slice, uint mip, bool recursive)
 	{
 		update_tiling_info info;

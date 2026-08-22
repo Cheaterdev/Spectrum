@@ -667,10 +667,13 @@ VSM::VSM()
 				uint3 tile_dims = atlas_tiled.get_tiles_count();
 				uint3 to = uint3(tile_dims.x - 1, tile_dims.y - 1, 0);
 
-				for (int slot : to_map)
-					atlas_tiled.load_tiles(command_list.get(), uint3(0, 0, 0), to, (uint)slot);
-				for (int slot : to_unmap)
-					atlas_tiled.zero_tiles(command_list.get(), uint3(0, 0, 0), to, (uint)slot);
+				// Phase 5.10: one batched UpdateTileMappings call for however
+				// many slots need it this frame, not one call per slot -- see
+				// load_tiles_batch()/zero_tiles_batch()'s own comments.
+				if (!to_map.empty())
+					atlas_tiled.load_tiles_batch(command_list.get(), uint3(0, 0, 0), to, to_map);
+				if (!to_unmap.empty())
+					atlas_tiled.zero_tiles_batch(command_list.get(), uint3(0, 0, 0), to, to_unmap);
 			}
 		}
 

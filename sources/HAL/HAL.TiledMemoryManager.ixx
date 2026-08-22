@@ -140,6 +140,18 @@ export
 			// index.
 			void zero_tiles(CommandList* list, uint3 from, uint3 to, uint array_slice = 0, uint mip = 0);
 
+			// Phase 5.10: same range as load_tiles()/zero_tiles() above, but
+			// applied to MULTIPLE array slices in one update_tiling_info and
+			// one commit()/update_tilings() call, instead of one call per
+			// slice. update_tile_mappings() (HAL.Queue.cpp) issues one real
+			// ID3D12CommandQueue::UpdateTileMappings per update_tiling_info
+			// it drains -- calling load_tiles()/zero_tiles() once per slot in
+			// a loop means one native call per slot; these two exist so a
+			// caller batching many slots' worth of (un)mapping in the same
+			// frame (VSM's per-frame tile-mapping drain) pays for exactly one.
+			void load_tiles_batch(CommandList* list, uint3 from, uint3 to, const std::vector<int>& array_slices, uint mip = 0);
+			void zero_tiles_batch(CommandList* list, uint3 from, uint3 to, const std::vector<int>& array_slices, uint mip = 0);
+
 
 			template<std::ranges::view R>
 			void load_tiles2(CommandList* list, R tiles, uint array_slice = 0, uint mip = 0, bool recursive = false)
