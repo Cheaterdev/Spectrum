@@ -183,6 +183,24 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	if (!scene)
 		return;
 
+	// While a non-Final debug view is selected, UI_Render points its own
+	// need() at a different GBuffer/debug resource instead of ResultTexture
+	// (GUI/Base.cpp's debug_source) -- nothing consumes ResultTexture that
+	// frame, so FrameGraph's dependency-based culling drops VSM_Combine and,
+	// transitively, VSM_RenderPages/VSM_HiZRebuild (none of them
+	// [Required]). This function isn't part of that cullable pass graph --
+	// it's a plain add_slot_generator callback -- so without this check it
+	// would keep planning (evicting, priority-stealing, dirty-tracking)
+	// every frame regardless, as if pages were still being rendered, while
+	// nothing ever actually redraws them. Switching back to Final then
+	// resumes rendering against a page table that drifted out from under
+	// the GPU's real content (confirmed live: pages visibly evicted/wrong
+	// on returning to Final after time spent in another debug view).
+	// Freezing here instead -- the page table simply holds whatever it held
+	// the last time this actually ran, and picks back up cleanly.
+	if (graph.get_context<FrameGraph::DebugContext>().mode != FrameGraph::DebugMode::Final)
+		return;
+
 	// Re-enabling after a period with the pyramid un-rebuilt: any page
 	// redrawn while disabled has stale Hi-Z content that no longer matches
 	// its current atlas depth. Force the same full-level invalidation a
@@ -971,6 +989,7 @@ VSM::VSM()
 		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
 		return true;
 	};
 
@@ -996,6 +1015,7 @@ VSM::VSM()
 			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
 			lighting.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
 			lighting.GetResult()       = data.ResultTexture->rwTexture2D;
+			lighting.GetBlue_noise()   = data.BlueNoise->texture2D;
 			compute.set(lighting);
 		}
 
@@ -1019,7 +1039,7 @@ VSM::VSM()
 			compute.set(constants);
 		}
 
-		compute.set_pipeline<PSOS::VSMApplyCompute>();
+		compute.set_pipeline<PSOS::VSMApplyCompute>(PSOS::VSMApplyCompute::VsmPenumbra.Use(use_vsm_penumbra));
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 

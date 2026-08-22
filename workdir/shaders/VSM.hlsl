@@ -14,7 +14,7 @@ float2 GetBRDF(float Roughness, float Metallic, float NoV)
 	return GetFrameInfo().GetBrdf().SampleLevel(linearClampSampler, float3(Roughness, Metallic, NoV), 0);
 }
 
-float4 combine_result(float2 tc)
+float4 combine_result(float2 tc, uint2 pixel)
 {
 	pixel_info info;
 	Camera camera = GetFrameInfo().GetCamera();
@@ -32,7 +32,7 @@ float4 combine_result(float2 tc)
 	info.view = normalize(camera.GetPosition() - info.pos);
 
 	VSMConstants constants = GetVSMConstants();
-	float shadow = get_shadow_vsm(constants, GetVSMLighting(), info.pos);
+	float shadow = get_shadow_vsm(constants, GetVSMLighting(), info.pos, pixel);
 //	#define VSM_DEBUG_HEATMAP
 //	#define VSM_DEBUG_RAWDEPTH
 #ifdef VSM_DEBUG_HEATMAP
@@ -64,5 +64,5 @@ void CS_RESULT(uint3 DTid : SV_DispatchThreadID)
 		return;
 
 	float2 tc = (float2(DTid.xy) + 0.5) / float2(dims);
-	GetVSMLighting().GetResult()[DTid.xy] = combine_result(tc);
+	GetVSMLighting().GetResult()[DTid.xy] = combine_result(tc, DTid.xy);
 }

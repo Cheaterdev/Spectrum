@@ -13,6 +13,7 @@ struct VSMLighting
 	uint vsm_atlas; // Texture2DArray<float>
 	uint page_table; // Texture2DArray<uint>
 	uint page_cameras; // StructuredBuffer<Camera>
+	uint blue_noise; // Texture2D<float2>
 	uint result; // RWTexture2D<float4>
 	GBuffer gbuffer; // GBuffer
 	GBuffer GetGbuffer() { return gbuffer; }
@@ -20,4 +21,5 @@ struct VSMLighting
 	Texture2DArray<uint> GetPage_table() { return ResourceDescriptorHeap[page_table]; }
 	StructuredBuffer<Camera> GetPage_cameras() { return ResourceDescriptorHeap[page_cameras]; }
 	RWTexture2D<float4> GetResult() { return ResourceDescriptorHeap[result]; }
+	Texture2D<float2> GetBlue_noise() { return ResourceDescriptorHeap[blue_noise]; }
 };

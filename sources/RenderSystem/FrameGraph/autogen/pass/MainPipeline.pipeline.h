@@ -213,11 +213,12 @@ public:
 		{ PassID::BlueNoise, 0 },
 		{ PassID::ScreenReflection, 0 },
 		{ PassID::ReflectionDenoiser_Reproject, 0 },
+		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState BlueNoise_c0_states[] = {
 		{ true, { BlueNoise_c0_pass_refs + 0, 1 } },
-		{ false, { BlueNoise_c0_pass_refs + 1, 3 } },
+		{ false, { BlueNoise_c0_pass_refs + 1, 4 } },
 	};
 	static inline const FrameGraph::PassRef VoxelAlbedo_c0_pass_refs[] = {
 		{ PassID::Voxelize, 0 },
@@ -1069,6 +1070,7 @@ public:
 		{ PassID::Scene, 0 },
 	};
 	static inline const FrameGraph::PassRef VSM_Combine_0_prev[] = {
+		{ PassID::BlueNoise, 0 },
 		{ PassID::PSSM_Combine, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Scene, 0 },

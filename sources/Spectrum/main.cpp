@@ -250,6 +250,14 @@ public:
 		hiz_row->on_check = [this](bool v) { vsm.hiz_culling_enabled = v; };
 		base::add_child(hiz_row);
 
+		auto penumbra_row = std::make_shared<GUI::Elements::check_box_text>();
+		penumbra_row->docking = GUI::dock::TOP;
+		penumbra_row->x_type  = GUI::pos_x_type::RIGHT;
+		penumbra_row->get_label()->text = "VSM PCSS penumbra";
+		penumbra_row->get_check()->set_checked(vsm.use_vsm_penumbra);
+		penumbra_row->on_check = [this](bool v) { vsm.use_vsm_penumbra = v; };
+		base::add_child(penumbra_row);
+
 
 		MeshAsset::ptr asset_ptr = EngineAssets::material_tester.get_asset();
 
@@ -433,6 +441,25 @@ public:
 			vp.frame_size = size;
 
 		vp.upscale_size = size;
+
+		// Edge-triggered: logs only when the actual computed size driving
+		// GBuffer_HiZ/GBuffer_HiZ_UAV's size/8 dimensions changes, whatever
+		// the cause (window resize, DLSS mode switch, scale override drag) --
+		// for correlating against a suspected resize/DLSS-triggered Hi-Z
+		// content bug. Remove once that's tracked down.
+		static ivec2 last_logged_frame_size = { -1, -1 };
+		static ivec2 last_logged_upscale_size = { -1, -1 };
+		if (vp.frame_size != last_logged_frame_size || vp.upscale_size != last_logged_upscale_size)
+		{
+			Log::get() << "[Viewport] frame_size " << last_logged_frame_size.x << "x" << last_logged_frame_size.y
+				<< " -> " << vp.frame_size.x << "x" << vp.frame_size.y
+				<< ", upscale_size " << last_logged_upscale_size.x << "x" << last_logged_upscale_size.y
+				<< " -> " << vp.upscale_size.x << "x" << vp.upscale_size.y
+				<< ", dlss_mode=" << (int)g_upscaling_dlss_mode
+				<< ", scale_override=" << g_upscaling_dlss_scale_override << Log::endl;
+			last_logged_frame_size = vp.frame_size;
+			last_logged_upscale_size = vp.upscale_size;
+		}
 
 		sceneinfo.scene = scene;
 		sceneinfo.renderer = gpu_scene_renderer;
@@ -1424,8 +1451,14 @@ public:
 								continue;
 
 							auto mode = o.mode;
+							auto mode_name = std::string(o.name);
 							dlss_combo->add_item(o.name)->on_select =
-								[mode]() { g_upscaling_dlss_mode = mode; };
+								[mode, mode_name]()
+								{
+									Log::get() << "[DLSS] mode changed " << (int)g_upscaling_dlss_mode
+										<< " -> " << (int)mode << " (" << mode_name << ")" << Log::endl;
+									g_upscaling_dlss_mode = mode;
+								};
 							if (mode == g_upscaling_dlss_mode)
 								dlss_combo->get_label()->text = o.name;
 						}
@@ -1467,6 +1500,8 @@ public:
 
 						scale_slider->on_change = [update_scale_label](float v)
 						{
+							Log::get() << "[DLSS] scale override changed " << g_upscaling_dlss_scale_override
+								<< " -> " << v << Log::endl;
 							g_upscaling_dlss_scale_override = v;
 							update_scale_label();
 						};
@@ -1478,6 +1513,8 @@ public:
 						recommended_but->size        = { 140, 22 };
 						recommended_but->on_click = [scale_slider, update_scale_label](GUI::Elements::button::ptr)
 						{
+							Log::get() << "[DLSS] scale override reset to Recommended (was "
+								<< g_upscaling_dlss_scale_override << ")" << Log::endl;
 							g_upscaling_dlss_scale_override = -1.0f;
 
 							// Move the slider handle to reflect where "recommended"
@@ -1809,6 +1846,8 @@ public:
 	}
 	void on_resize(vec2 size) override
 	{
+		Log::get() << "[Resize] window resize requested " << size.x << "x" << size.y
+			<< " (clamped from previous new_size " << new_size.x << "x" << new_size.y << ")" << Log::endl;
 		new_size = vec2::max(size, vec2{ 64, 64 });
 
 		/*bool was_alive = alive;

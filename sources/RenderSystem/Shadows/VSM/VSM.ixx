@@ -43,6 +43,14 @@ public:
 	// UI's on_check callback (main thread), same low-ceremony treatment as
 	// auto_rotate_sun in main.cpp.
 	bool hiz_culling_enabled = true;
+
+	// Runtime A/B toggle between the fixed single-tap 3x3 hardware-PCF grid
+	// (get_shadow_vsm's default path) and the PCSS-style blocker-search +
+	// penumbra-scaled variant (VSM_impl.hlsl, gated by VSM_PENUMBRA) -- picks
+	// which VSMApplyCompute PSO permutation gets bound in m_combine_render.
+	// Off by default: new, unvalidated shader math, kept separate from the
+	// known-working fixed-tap baseline until confirmed visually correct.
+	bool use_vsm_penumbra = true; // TEMP: flip back to false after validation
 private:
 	// Tracks the previous frame's toggle state so plan_frame() can detect
 	// an off->on transition and force a full pyramid rebuild -- see its

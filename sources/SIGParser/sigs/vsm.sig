@@ -144,6 +144,14 @@ struct VSMLighting
 	Texture2DArray<uint> page_table;
 	StructuredBuffer<Camera> page_cameras;
 	RWTexture2D<float4> result;
+	# Pre-baked screen-space noise (see BlueNoise.sig) -- rotates the PCSS
+	# Poisson disc per pixel (VSM_impl.hlsl's get_shadow_vsm) so the fixed
+	# 16-tap pattern doesn't read as a rigid, repeating grid at wide radii.
+	# A plain field on the already-Instance2-bound VSMLighting rather than
+	# re-binding the whole BlueNoise struct (which wants Instance0, already
+	# taken here by VSMConstants) -- same pattern VoxelGI/ReflectionDenoiser
+	# already use for consuming this same baked texture.
+	Texture2D<float2> blue_noise;
 }
 
 ComputePSO VSMApplyCompute
@@ -152,6 +160,12 @@ ComputePSO VSMApplyCompute
 
 	[EntryPoint = CS_RESULT]
 	compute = VSM;
+
+	# Fixed single-tap 3x3 hardware-PCF (off) vs blocker-search + penumbra-
+	# scaled PCF (on) -- see get_shadow_vsm in VSM_impl.hlsl.
+	[rename = VSM_PENUMBRA]
+	[CS, nullable]
+	define VsmPenumbra;
 }
 
 # Amplification-shader-driven compaction (Phase 1b): CPU dispatches AS
@@ -308,6 +322,7 @@ PassNode VSM_Combine
 	Texture VSM_Atlas;
 	Texture VSM_PageTable;
 	StructuredBuffer<Camera> VSM_PageCameras;
+	Texture BlueNoise;
 	[Write] Texture ResultTexture;
 }
 
