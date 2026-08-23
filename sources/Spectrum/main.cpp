@@ -258,6 +258,22 @@ public:
 		penumbra_row->on_check = [this](bool v) { vsm.use_vsm_penumbra = v; };
 		base::add_child(penumbra_row);
 
+		auto rtx_verify_row = std::make_shared<GUI::Elements::check_box_text>();
+		rtx_verify_row->docking = GUI::dock::TOP;
+		rtx_verify_row->x_type  = GUI::pos_x_type::RIGHT;
+		rtx_verify_row->get_label()->text = "VSM RTX blocker verify";
+		rtx_verify_row->get_check()->set_checked(vsm.use_vsm_rtx_verify);
+		rtx_verify_row->on_check = [this](bool v) { vsm.use_vsm_rtx_verify = v; };
+		base::add_child(rtx_verify_row);
+
+		auto rtx_dual_blur_row = std::make_shared<GUI::Elements::check_box_text>();
+		rtx_dual_blur_row->docking = GUI::dock::TOP;
+		rtx_dual_blur_row->x_type  = GUI::pos_x_type::RIGHT;
+		rtx_dual_blur_row->get_label()->text = "VSM RTX verify: dual blur + min()";
+		rtx_dual_blur_row->get_check()->set_checked(vsm.use_vsm_rtx_dual_blur);
+		rtx_dual_blur_row->on_check = [this](bool v) { vsm.use_vsm_rtx_dual_blur = v; };
+		base::add_child(rtx_dual_blur_row);
+
 
 		MeshAsset::ptr asset_ptr = EngineAssets::material_tester.get_asset();
 

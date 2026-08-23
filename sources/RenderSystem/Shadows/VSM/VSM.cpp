@@ -1031,6 +1031,7 @@ VSM::VSM()
 			constants.GetActive_max()           = active_max;
 			constants.GetPage_size()            = page_table.page_size;
 			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
+			constants.GetRtx_dual_blur()        = use_vsm_rtx_dual_blur ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
 
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
@@ -1042,7 +1043,23 @@ VSM::VSM()
 			compute.set(constants);
 		}
 
-		compute.set_pipeline<PSOS::VSMApplyCompute>(PSOS::VSMApplyCompute::VsmPenumbra.Use(use_vsm_penumbra));
+		bool rtx_capable    = use_vsm_penumbra && RenderSystem::get().device().get_properties().rtx;
+		bool rtx_verify     = rtx_capable && use_vsm_rtx_verify;
+		if (rtx_verify)
+		{
+			// Same binding VSM.cpp mirrors from PassDefaults.cpp's
+			// RTXShadow::render -- Raytracing has its own dedicated
+			// DefaultLayout root-signature slot, so this doesn't need a
+			// FrameGraph-tracked field on VSM_Combine's PassNode.
+			auto& scene_ctx = context.graph->get_context<SceneInfo>();
+			Slots::Raytracing rtx;
+			rtx.GetScene() = scene_ctx.scene->raytrace_scene->get_handle();
+			compute.set(rtx);
+		}
+
+		compute.set_pipeline<PSOS::VSMApplyCompute>(
+			PSOS::VSMApplyCompute::VsmPenumbra.Use(use_vsm_penumbra)
+			| PSOS::VSMApplyCompute::VsmRtxVerify.Use(rtx_verify));
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 

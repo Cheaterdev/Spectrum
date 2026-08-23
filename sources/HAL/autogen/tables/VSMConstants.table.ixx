@@ -21,12 +21,14 @@ export namespace Table
 		int active_max;
 		int page_size;
 		int pages_per_level;
+		int rtx_dual_blur;
 		float4x4 light_view;
 		float4 level_info[26];
 		int& GetActive_min() { return active_min; }
 		int& GetActive_max() { return active_max; }
 		int& GetPage_size() { return page_size; }
 		int& GetPages_per_level() { return pages_per_level; }
+		int& GetRtx_dual_blur() { return rtx_dual_blur; }
 		float4x4& GetLight_view() { return light_view; }
 		float4* GetLevel_info() { return level_info; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -37,6 +39,7 @@ export namespace Table
 			compiler.compile(active_max);
 			compiler.compile(page_size);
 			compiler.compile(pages_per_level);
+			compiler.compile(rtx_dual_blur);
 			compiler.compile(light_view);
 			compiler.compile(level_info);
 		}
@@ -53,6 +56,7 @@ export namespace Table
 			ar& NVP(active_max);
 			ar& NVP(page_size);
 			ar& NVP(pages_per_level);
+			ar& NVP(rtx_dual_blur);
 			ar& NVP(light_view);
 			ar& NVP(level_info);
 		}

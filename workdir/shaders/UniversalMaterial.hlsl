@@ -78,7 +78,7 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     float3 r = reflect(v, normal);         
     GBuffer result;
 
-    result.albedo = float4(1,1,1, metallic);
+    result.albedo = float4(albedo.rgb, metallic);
     result.normals = float4(GetFrameInfo().compress_normals(normal), (roughness));
 	result.specular = 0;// float4(metallic, roughness); 
       

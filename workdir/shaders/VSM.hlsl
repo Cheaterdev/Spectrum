@@ -3,6 +3,10 @@
 #include "autogen/VSMLighting.h"
 #include "autogen/FrameInfo.h"
 #include "autogen/VSMConstants.h"
+// Only actually referenced inside get_shadow_vsm's VSM_RTX_VERIFY branch;
+// unconditionally included since it's dead-code-eliminated when the define
+// is off, same as every other permutation-gated accessor in this codebase.
+#include "autogen/Raytracing.h"
 
 static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 
@@ -32,7 +36,7 @@ float4 combine_result(float2 tc, uint2 pixel)
 	info.view = normalize(camera.GetPosition() - info.pos);
 
 	VSMConstants constants = GetVSMConstants();
-	float shadow = get_shadow_vsm(constants, GetVSMLighting(), info.pos, pixel);
+	float shadow = get_shadow_vsm(constants, GetVSMLighting(), info.pos, info.normal, pixel);
 //	#define VSM_DEBUG_HEATMAP
 //	#define VSM_DEBUG_RAWDEPTH
 #ifdef VSM_DEBUG_HEATMAP

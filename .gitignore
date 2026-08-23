@@ -1,7 +1,12 @@
 #Project-specific
-.claude/
+# Ignore local Claude Code state (settings.local.json, caches) but keep the
+# shared skills, which describe repo workflows and belong in version control.
+.claude/*
+!.claude/skills/
 log.txt
 *.log
+# Temporary debug logging — see "Temporary debug logging" in CLAUDE.md
+*.temp
 
 projects/
 

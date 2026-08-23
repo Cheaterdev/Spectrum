@@ -51,6 +51,24 @@ public:
 	// Off by default: new, unvalidated shader math, kept separate from the
 	// known-working fixed-tap baseline until confirmed visually correct.
 	bool use_vsm_penumbra = true; // TEMP: flip back to false after validation
+
+	// Runtime toggle for the RTX blocker-distance verification ray (Phase
+	// 5.18 Part B) -- only has any effect when use_vsm_penumbra is also on
+	// and the device supports RTX (both checked in m_combine_render before
+	// selecting the VsmRtxVerify PSO permutation). Off by default: new,
+	// unvalidated, same cautious rollout as use_vsm_penumbra above.
+	bool use_vsm_rtx_verify = false;
+
+	// Only meaningful when use_vsm_rtx_verify is also on. false = single
+	// blur pass (uses the RTX-verified distance when the ray hit something,
+	// VSM's own estimate otherwise -- cheaper). true = blur both distances
+	// and take min() of the two resulting shadow values -- pricier (an
+	// extra 16-tap blur whenever the ray hits) but confirmed visually to
+	// remove the bright spots a single blended estimate left between
+	// overlapping penumbras. Defaults to the confirmed-better option since
+	// this is a quality/perf choice, not an unvalidated-math gate like the
+	// two toggles above.
+	bool use_vsm_rtx_dual_blur = true;
 private:
 	// Tracks the previous frame's toggle state so plan_frame() can detect
 	// an off->on transition and force a full pyramid rebuild -- see its

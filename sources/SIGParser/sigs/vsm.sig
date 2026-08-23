@@ -22,6 +22,14 @@ struct VSMConstants
 	int active_max;
 	int page_size;
 	int pages_per_level;
+	# 0 = single blur pass (uses the RTX-verified distance when the
+	# verification ray hit something, VSM's own estimate otherwise -- cheaper,
+	# one 16-tap blur per pixel). 1 = blur BOTH distances and take min() of
+	# the two resulting shadow values (pricier -- an extra 16-tap blur
+	# whenever the ray hits -- but avoids the bright spots a single blended
+	# estimate produced between overlapping penumbras). Only read when
+	# VsmRtxVerify is enabled.
+	int rtx_dual_blur;
 	float4x4 light_view;
 	# MaxLevels (VSM.ixx) storage slots -- one geometric ladder, no
 	# regular/adaptive split (see VSMClipmap::page_world_size). Keep this in
@@ -166,6 +174,18 @@ ComputePSO VSMApplyCompute
 	[rename = VSM_PENUMBRA]
 	[CS, nullable]
 	define VsmPenumbra;
+
+	# Only meaningful together with VsmPenumbra (VSM.cpp only ever enables
+	# this when penumbra is also on): once VSM's blocker search finds a
+	# blocker, fires one RayQuery toward the sun to verify/correct its
+	# distance against the real BVH -- shadow maps only record the front-
+	# most surface per texel, so a closer blocker can exist without ever
+	# being rasterized where the search looked. Needs RTX hardware; gated
+	# at runtime in VSM.cpp, not just by this define, since VSM must keep
+	# working correctly without it.
+	[rename = VSM_RTX_VERIFY]
+	[CS, nullable]
+	define VsmRtxVerify;
 }
 
 # Amplification-shader-driven compaction (Phase 1b): CPU dispatches AS
@@ -189,7 +209,15 @@ GraphicsPSO VSMDepthDraw
 	amplification = mesh_shader_vsm;
 
 	ds = D32_FLOAT;
-	cull = Front;
+	# Was cull=Front (render only back faces -- a common shadow-map trick
+	# that avoids self-shadow acne "for free" by using the far side of
+	# closed geometry as the recorded blocker depth). Switched to None:
+	# cull=Front silently casts NO shadow at all for single-sided/thin
+	# geometry (leaves, cards, thin walls) with no back face to rasterize.
+	# Needs the compensating depth bias in VSM_impl.hlsl's get_shadow_vsm
+	# (VSM_DEPTH_BIAS) to avoid the self-shadow acne cull=Front used to
+	# dodge.
+	cull = None;
 }
 
 # Phase 5.8: per-(level,mesh) indirect draw entry, replacing the CPU
