@@ -27,16 +27,33 @@ float4 combine_result(float2 tc, uint2 pixel)
 	info.albedo = packed_0.rgb;
 	info.metallic = packed_0.w;
 
-	info.normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
 	float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, tc, 0);
-	if (raw_z == 0) return 0;
-	info.pos = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
+	// Was an early `return 0` here for sky/background pixels (raw_z==0, no
+	// geometry) -- removed. get_shadow_vsm's quad-shared blocker search
+	// (VSM_impl.hlsl, quad_blocker_search) needs every thread in a 2x2
+	// dispatch quad to reach its QuadReadAcrossX/Y/Diagonal calls
+	// uniformly, and this early return fired at EVERY silhouette edge in
+	// the whole image -- by far the single biggest source of the
+	// divergence artifacts quad-sharing otherwise produces (much more
+	// common than CS_RESULT's screen-edge bounds check). has_geometry
+	// gates the final returned color instead; info.pos/info.normal fall
+	// back to safe, finite dummy values for sky pixels (camera.GetPosition()
+	// / a fixed up vector) rather than whatever depth_to_wpos(0, ...) or an
+	// unwritten gbuffer normal texel would produce, so get_shadow_vsm never
+	// sees NaN/Inf-risking input even though its result is discarded here.
+	bool has_geometry = (raw_z != 0);
+	info.normal = has_geometry
+		? normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1)
+		: float3(0, 1, 0);
+	info.pos = has_geometry ? depth_to_wpos(raw_z, tc, camera.GetInvViewProj()) : camera.GetPosition();
 
 	info.roughness = max(0.04, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w);
 	info.view = normalize(camera.GetPosition() - info.pos);
 
 	VSMConstants constants = GetVSMConstants();
 	float shadow = get_shadow_vsm(constants, GetVSMLighting(), info.pos, info.normal, pixel);
+	if (!has_geometry)
+		return 0;
 //	#define VSM_DEBUG_HEATMAP
 //	#define VSM_DEBUG_RAWDEPTH
 #ifdef VSM_DEBUG_HEATMAP
@@ -64,9 +81,17 @@ void CS_RESULT(uint3 DTid : SV_DispatchThreadID)
 {
 	uint2 dims;
 	GetVSMLighting().GetResult().GetDimensions(dims.x, dims.y);
-	if (any(DTid.xy >= dims))
-		return;
-
+	// Was an early `return` here for padding threads past the dispatch's
+	// clamped-to-16 screen bounds -- removed for the same reason as
+	// combine_result's raw_z==0 removal (see its comment): a compute-shader
+	// `return` deactivates the thread before it can reach get_shadow_vsm's
+	// quad-shared blocker search, undefining its still-active quad-mates'
+	// QuadReadAcrossX/Y/Diagonal reads right along the screen edge. tc
+	// beyond [0,1] just clamps to the edge texel (pointClampSampler) --
+	// harmless, redundant work for padding threads, discarded by the
+	// in-bounds check on the write below instead of skipping the compute.
 	float2 tc = (float2(DTid.xy) + 0.5) / float2(dims);
-	GetVSMLighting().GetResult()[DTid.xy] = combine_result(tc, DTid.xy);
+	float4 result = combine_result(tc, DTid.xy);
+	if (all(DTid.xy < dims))
+		GetVSMLighting().GetResult()[DTid.xy] = result;
 }

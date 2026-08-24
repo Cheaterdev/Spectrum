@@ -2,6 +2,7 @@ module Graphics:SMAA;
 
 
 import :FrameGraphContext;
+import :UpscalingDLSS;
 
 import HAL;
 
@@ -28,8 +29,10 @@ SMAA::SMAA()
 
 	m_smaa_setup = [this](Passes::SMAA::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		// DLSS does its own temporal AA; running SMAA on top would double up.
-		if (nvidia::DLSS::get().available())
+		// Runs only when upscaling is off entirely (native rendering needs its
+		// own AA) — when it's on, DLSS/FSR each produce ResultTextureNew and
+		// DLSS does its own temporal AA, so SMAA on top would double up.
+		if (g_upscaling_enabled)
 			return false;
 
 		auto& frame = builder.graph->get_context<ViewportInfo>();

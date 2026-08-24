@@ -25,8 +25,10 @@ bool PassDefault<Passes::UpscalingDLSS>::setup(
 	Passes::UpscalingDLSS::Context& data, TaskBuilder& builder)
 {
 	// Mirrors FSR.cpp's inverted condition — exactly one of the two producers
-	// of ResultTextureNew is active per frame.
-	if (!nvidia::DLSS::get().available())
+	// of ResultTextureNew is active per frame. g_upscaling_enabled is false
+	// when main.cpp's "downsampled" toggle is off (frame_size == upscale_size
+	// already, nothing to upscale) — SMAA runs instead.
+	if (!g_upscaling_enabled || !nvidia::DLSS::get().available())
 		return false;
 
 	auto& frame = builder.graph->get_context<ViewportInfo>();

@@ -30,6 +30,12 @@ struct VSMConstants
 	# estimate produced between overlapping penumbras). Only read when
 	# VsmRtxVerify is enabled.
 	int rtx_dual_blur;
+	# 0 = every pixel runs its own full 16-tap blocker search (original).
+	# 1 = split the 16 taps 4-per-thread across each 2x2 pixel quad, merged
+	# via QuadReadAcrossX/Y/Diagonal -- ~4x fewer atlas samples per pixel for
+	# the search, same total 16-tap coverage. New/unverified, hence a
+	# runtime A/B switch rather than replacing the original outright.
+	int quad_blocker_search;
 	float4x4 light_view;
 	# MaxLevels (VSM.ixx) storage slots -- one geometric ladder, no
 	# regular/adaptive split (see VSMClipmap::page_world_size). Keep this in

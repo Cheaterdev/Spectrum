@@ -69,6 +69,14 @@ public:
 	// this is a quality/perf choice, not an unvalidated-math gate like the
 	// two toggles above.
 	bool use_vsm_rtx_dual_blur = true;
+
+	// Runtime A/B switch for the quad-shared blocker search (splits the 16
+	// Poisson-disc taps 4-per-thread across each 2x2 pixel quad instead of
+	// every pixel doing all 16, merged via QuadReadAcrossX/Y/Diagonal).
+	// Off by default -- new, not yet visually/perf verified against the
+	// original full-per-pixel search, same cautious rollout as
+	// use_vsm_rtx_verify above.
+	bool use_vsm_quad_blocker_search = false;
 private:
 	// Tracks the previous frame's toggle state so plan_frame() can detect
 	// an off->on transition and force a full pyramid rebuild -- see its

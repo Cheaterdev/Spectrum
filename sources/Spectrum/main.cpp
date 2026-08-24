@@ -274,6 +274,14 @@ public:
 		rtx_dual_blur_row->on_check = [this](bool v) { vsm.use_vsm_rtx_dual_blur = v; };
 		base::add_child(rtx_dual_blur_row);
 
+		auto quad_blocker_search_row = std::make_shared<GUI::Elements::check_box_text>();
+		quad_blocker_search_row->docking = GUI::dock::TOP;
+		quad_blocker_search_row->x_type  = GUI::pos_x_type::RIGHT;
+		quad_blocker_search_row->get_label()->text = "VSM quad-shared blocker search";
+		quad_blocker_search_row->get_check()->set_checked(vsm.use_vsm_quad_blocker_search);
+		quad_blocker_search_row->on_check = [this](bool v) { vsm.use_vsm_quad_blocker_search = v; };
+		base::add_child(quad_blocker_search_row);
+
 
 		MeshAsset::ptr asset_ptr = EngineAssets::material_tester.get_asset();
 
@@ -430,6 +438,8 @@ public:
 		auto& vp = graph.get_context<ViewportInfo>();
 
 
+		g_upscaling_enabled = downsampled;
+
 		if (downsampled)
 		{
 			// Use DLSS's own recommended render resolution for the current
@@ -489,10 +499,13 @@ public:
 		if (nvidia::Streamline::get().available())
 			nvidia::Streamline::get().begin_frame();
 
-		// Jitter only matters when something accumulates it temporally (DLSS);
-		// FSR1/native have no such accumulation.
+		// Jitter only matters when something accumulates it temporally (DLSS)
+		// AND DLSS is actually the pass running this frame — g_upscaling_enabled
+		// off (downsampled toggled off) or DLSS unsupported both mean nothing
+		// consumes the jitter, so applying it would just add visible instability
+		// for no benefit. FSR1/native have no such accumulation either way.
 		vec2 jitter_px(0, 0);
-		if (nvidia::DLSS::get().available())
+		if (g_upscaling_enabled && nvidia::DLSS::get().available())
 		{
 			// Halton(2,3); phase count per NVIDIA's guidance: 8*(display/render)^2.
 			const float scale_x = float(vp.upscale_size.x) / float(vp.frame_size.x);

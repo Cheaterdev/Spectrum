@@ -1032,6 +1032,7 @@ VSM::VSM()
 			constants.GetPage_size()            = page_table.page_size;
 			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
 			constants.GetRtx_dual_blur()        = use_vsm_rtx_dual_blur ? 1 : 0;
+			constants.GetQuad_blocker_search()  = use_vsm_quad_blocker_search ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
 
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
