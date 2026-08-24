@@ -36,6 +36,23 @@ struct VSMConstants
 	# the search, same total 16-tap coverage. New/unverified, hence a
 	# runtime A/B switch rather than replacing the original outright.
 	int quad_blocker_search;
+	# Debug view: when nonzero, VSM_Combine ignores get_shadow_vsm entirely
+	# for real geometry pixels and instead displays RTXShadow's own
+	# (denoised) full-RT shadow mask directly as grayscale -- a reference
+	# to compare VSM's quality/performance against. See VSMLighting's
+	# rtx_shadow_mask field.
+	int debug_rtx_reference;
+	# Only meaningful when VsmRtxVerify is enabled and a blocker was found.
+	# 0 = single verification ray (aims at the shadow-map search's own
+	# best-guess blocker, corrects/blends its distance, still relies on
+	# vsm_pcf_shadow's VSM-driven blur for the actual penumbra size). 1 =
+	# fire 16 rays across the sun's full angular disc (not aimed at any
+	# particular blocker -- genuine stochastic sampling) and set shadow
+	# directly from the hit ratio, bypassing vsm_pcf_shadow entirely for
+	# that pixel. A real ray-traced penumbra instead of VSM's
+	# distance-estimate-driven blur, at the cost of 16 rays instead of 1
+	# whenever the coarse blocker search already suspects occlusion.
+	int rtx_full_penumbra;
 	float4x4 light_view;
 	# MaxLevels (VSM.ixx) storage slots -- one geometric ladder, no
 	# regular/adaptive split (see VSMClipmap::page_world_size). Keep this in
@@ -166,6 +183,15 @@ struct VSMLighting
 	# taken here by VSMConstants) -- same pattern VoxelGI/ReflectionDenoiser
 	# already use for consuming this same baked texture.
 	Texture2D<float2> blue_noise;
+	# Reference-comparison debug view: RTXShadow's own (denoised) full-RT
+	# shadow mask, same resource PSSM_Combine reads as an alternative to its
+	# own cascade shadow maps. RTXShadow runs unconditionally every frame on
+	# RTX-capable hardware regardless of which of PSSM/VSM is the active
+	# shadow system, so this is available for VSM to sample too -- see
+	# VSM.cpp's m_combine_setup for the builder.exists() guard (RTXShadow's
+	# own setup() can return false on non-RTX hardware, in which case this
+	# resource never gets created that frame).
+	Texture2D<float> rtx_shadow_mask;
 }
 
 ComputePSO VSMApplyCompute
@@ -357,6 +383,11 @@ PassNode VSM_Combine
 	Texture VSM_PageTable;
 	StructuredBuffer<Camera> VSM_PageCameras;
 	Texture BlueNoise;
+	# Same resource RTXShadow writes / PSSM_Combine reads -- see
+	# VSMLighting's rtx_shadow_mask field for the full rationale. Not
+	# [Write]: this pass only ever reads it, for the debug-view comparison
+	# toggle (VSM.ixx's use_vsm_debug_rtx_reference).
+	Texture ShadowMask;
 	[Write] Texture ResultTexture;
 }
 

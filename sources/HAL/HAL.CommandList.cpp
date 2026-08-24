@@ -491,6 +491,12 @@ namespace HAL
 
 		{ PROFILE(L"pre_command"); base.pre_command<false, false>(*this, BarrierSync::DRAW); }
 
+		// Changing the render target ends the batch: see Transitions::break_op.
+		// Must come after pre_command, which is what establishes the operation
+		// class -- breaking first would split the PREVIOUS class and leave an
+		// empty operation of it behind.
+		get_base().break_op();
+
 		{ PROFILE(L"rt_transitions");
 		for (uint i = 0; i < table_rtv.get_count(); i++)
 			get_base().add_resource_usage(table_rtv[i].get_resource_info());
@@ -930,6 +936,7 @@ namespace HAL
 
 				auto& operation = operations.emplace_back(type, op, static_cast<uint>(operations.size()));
 				compiler.func_barrier(&operation.barriers_before, operation.index, false, operation.type);
+				op_first_step = op_step;
 			}
 
 			void Transitions::split_op()
@@ -942,6 +949,17 @@ namespace HAL
 
 				auto& operation = operations.emplace_back(type, op, static_cast<uint>(operations.size()));
 				compiler.func_barrier(&operation.barriers_before, operation.index, false, operation.type);
+				op_first_step = op_step;
+			}
+
+			void Transitions::break_op()
+			{
+				// Nothing recorded into the current operation yet -- it already
+				// IS the fresh one the caller wants, and splitting would strand
+				// an empty operation with two reserved barrier points.
+				if (operations.empty() || op_step == op_first_step) return;
+
+				split_op();
 			}
 
 			// Close the operation currently at the back, reserving the point its

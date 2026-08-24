@@ -70,6 +70,18 @@ public:
 	// two toggles above.
 	bool use_vsm_rtx_dual_blur = true;
 
+	// Only meaningful when use_vsm_rtx_verify is also on. false = single
+	// verification ray (aims at the shadow-map search's own best-guess
+	// blocker, still relies on vsm_pcf_shadow's VSM-driven blur for the
+	// actual penumbra size). true = fire 16 rays across the sun's full
+	// angular disc instead (genuine stochastic sampling, not aimed at any
+	// particular blocker) and set shadow directly from the hit ratio --
+	// bypasses vsm_pcf_shadow entirely, a real ray-traced penumbra instead
+	// of a VSM-distance-driven blur. Off by default: new, unvalidated,
+	// pricier (16 rays instead of 1 whenever the coarse search suspects
+	// occlusion).
+	bool use_vsm_rtx_full_penumbra = false;
+
 	// Runtime A/B switch for the quad-shared blocker search (splits the 16
 	// Poisson-disc taps 4-per-thread across each 2x2 pixel quad instead of
 	// every pixel doing all 16, merged via QuadReadAcrossX/Y/Diagonal).
@@ -77,6 +89,15 @@ public:
 	// original full-per-pixel search, same cautious rollout as
 	// use_vsm_rtx_verify above.
 	bool use_vsm_quad_blocker_search = false;
+
+	// Debug-view toggle: when on, VSM_Combine displays RTXShadow's own
+	// (denoised) full-RT shadow mask directly as grayscale, in place of
+	// VSM's normal lit output, for real geometry pixels -- a reference to
+	// compare VSM's quality/performance against. RTXShadow already runs
+	// unconditionally every frame on RTX-capable hardware (see
+	// PassDefaults.cpp), independent of PSSM/VSM, so no extra pass wiring
+	// is needed beyond VSM_Combine reading its output.
+	bool use_vsm_debug_rtx_reference = false;
 private:
 	// Tracks the previous frame's toggle state so plan_frame() can detect
 	// an off->on transition and force a full pyramid rebuild -- see its

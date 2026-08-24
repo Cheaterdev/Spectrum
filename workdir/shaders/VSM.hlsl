@@ -54,6 +54,17 @@ float4 combine_result(float2 tc, uint2 pixel)
 	float shadow = get_shadow_vsm(constants, GetVSMLighting(), info.pos, info.normal, pixel);
 	if (!has_geometry)
 		return 0;
+
+	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_rtx_reference):
+	// bypass VSM's own shadow entirely and show RTXShadow's own denoised
+	// full-RT shadow mask as grayscale, restricted to real geometry (sky
+	// already returned above) so the comparison is apples-to-apples with
+	// the normal lit path's own masking.
+	if (constants.GetDebug_rtx_reference() != 0)
+	{
+		float rtx_shadow = GetVSMLighting().GetRtx_shadow_mask().SampleLevel(pointClampSampler, tc, 0);
+		return float4(rtx_shadow, rtx_shadow, rtx_shadow, 1);
+	}
 //	#define VSM_DEBUG_HEATMAP
 //	#define VSM_DEBUG_RAWDEPTH
 #ifdef VSM_DEBUG_HEATMAP

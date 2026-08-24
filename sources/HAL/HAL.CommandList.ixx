@@ -117,6 +117,12 @@ export{
 			// record_usage can tell one dispatch's binds from the next's.
 			uint op_step = 0;
 
+			// op_step at the moment the operation at the back was appended. When
+			// it still equals op_step the operation is empty, and forcing
+			// another one would leave a stray operation behind holding two
+			// reserved-but-unused barrier points.
+			uint op_first_step = 0;
+
 		protected:
 			// Append one use to the operation currently being recorded (the
 			// back of `operations`), on this resource's per-list
@@ -129,6 +135,23 @@ export{
 
 
 		public:
+			// End the current operation so the next command starts a fresh one,
+			// even though it is the same class. Unlike split_op this is a no-op
+			// on an operation nothing has recorded into yet, so it is safe to
+			// call unconditionally at the head of a command.
+			//
+			// Used by set_rtv: a run of draws merges into one operation, and one
+			// operation gets ONE set of entry barriers, so every resource it
+			// touches has to hold a single state throughout. That breaks the
+			// moment the render target changes -- a pass that renders to a
+			// texture and then samples it records RENDER_TARGET and
+			// SHADER_RESOURCE into the same operation, and the later use wins,
+			// so the clear/draw that needed RENDER_TARGET runs against
+			// SHADER_RESOURCE (#1334). Draws with different render targets can't
+			// overlap on the GPU anyway, so there is nothing to lose by not
+			// batching across the change.
+			void break_op();
+
 			void use_resource(const HAL::Resource* resource);
 
 			// Resources this list touched (populated by use_resource). This is the

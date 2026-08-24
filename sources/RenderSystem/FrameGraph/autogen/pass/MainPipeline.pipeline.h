@@ -792,10 +792,11 @@ public:
 	static inline const FrameGraph::PassRef ShadowMask_c0_pass_refs[] = {
 		{ PassID::RTXShadow, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::VSM_Combine, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState ShadowMask_c0_states[] = {
 		{ true, { ShadowMask_c0_pass_refs + 0, 1 } },
-		{ false, { ShadowMask_c0_pass_refs + 1, 1 } },
+		{ false, { ShadowMask_c0_pass_refs + 1, 2 } },
 	};
 	static inline const FrameGraph::PassRef WorkGraphBuffer_c0_pass_refs[] = {
 		{ PassID::RTXShadow, 0 },
@@ -1072,6 +1073,7 @@ public:
 	static inline const FrameGraph::PassRef VSM_Combine_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
 		{ PassID::PSSM_Combine, 0 },
+		{ PassID::RTXShadow, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Scene, 0 },
 		{ PassID::VSM_RenderPages, 0 },

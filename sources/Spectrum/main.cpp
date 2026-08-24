@@ -274,6 +274,14 @@ public:
 		rtx_dual_blur_row->on_check = [this](bool v) { vsm.use_vsm_rtx_dual_blur = v; };
 		base::add_child(rtx_dual_blur_row);
 
+		auto rtx_full_penumbra_row = std::make_shared<GUI::Elements::check_box_text>();
+		rtx_full_penumbra_row->docking = GUI::dock::TOP;
+		rtx_full_penumbra_row->x_type  = GUI::pos_x_type::RIGHT;
+		rtx_full_penumbra_row->get_label()->text = "VSM RTX verify: full 16-ray penumbra";
+		rtx_full_penumbra_row->get_check()->set_checked(vsm.use_vsm_rtx_full_penumbra);
+		rtx_full_penumbra_row->on_check = [this](bool v) { vsm.use_vsm_rtx_full_penumbra = v; };
+		base::add_child(rtx_full_penumbra_row);
+
 		auto quad_blocker_search_row = std::make_shared<GUI::Elements::check_box_text>();
 		quad_blocker_search_row->docking = GUI::dock::TOP;
 		quad_blocker_search_row->x_type  = GUI::pos_x_type::RIGHT;
@@ -281,6 +289,14 @@ public:
 		quad_blocker_search_row->get_check()->set_checked(vsm.use_vsm_quad_blocker_search);
 		quad_blocker_search_row->on_check = [this](bool v) { vsm.use_vsm_quad_blocker_search = v; };
 		base::add_child(quad_blocker_search_row);
+
+		auto debug_rtx_reference_row = std::make_shared<GUI::Elements::check_box_text>();
+		debug_rtx_reference_row->docking = GUI::dock::TOP;
+		debug_rtx_reference_row->x_type  = GUI::pos_x_type::RIGHT;
+		debug_rtx_reference_row->get_label()->text = "VSM debug: RTX reference shadow mask";
+		debug_rtx_reference_row->get_check()->set_checked(vsm.use_vsm_debug_rtx_reference);
+		debug_rtx_reference_row->on_check = [this](bool v) { vsm.use_vsm_debug_rtx_reference = v; };
+		base::add_child(debug_rtx_reference_row);
 
 
 		MeshAsset::ptr asset_ptr = EngineAssets::material_tester.get_asset();

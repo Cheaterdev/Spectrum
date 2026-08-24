@@ -195,7 +195,7 @@ float vsm_pcf_shadow(VSMConstants c, VSMLighting lighting, int level, float2 pos
 			continue;
 		float sampled = lighting.GetVsm_atlas().SampleLevel(pointClampSampler, float3(tc, (float)tap_slot), 0);
 
-		float scaler = 1+0.01*length(VSM_POISSON_DISK[si]);
+		float scaler = 1+0.001*length(VSM_POISSON_DISK[si]);
 		float depth_gap_world = abs(pos_l_z*scaler - sampled) * depth_range;
 		float w = saturate(depth_gap_world / max(penumbra_world, 0.00001));
 		sum_w  += w;
@@ -558,6 +558,56 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 		float world_delta = (max_blocker_z - pos_l.z) * depth_range;
 
 #ifdef VSM_RTX_VERIFY
+		if (c.GetRtx_full_penumbra() != 0)
+		{
+			// Full ray-traced penumbra: 16 rays sampling the ENTIRE sun
+			// angular disc (not aimed at any particular blocker -- genuine
+			// stochastic sampling, same cone-jitter construction the old
+			// VSM_RTX_BLOCKER_SEARCH mode used before it was removed this
+			// session), shadow set DIRECTLY from the hit ratio. Bypasses
+			// vsm_pcf_shadow entirely for this pixel -- the ray set itself
+			// already encodes the real penumbra, no VSM-distance-driven
+			// blur needed on top of it.
+			float3 sun_dir       = normalize(GetFrameInfo().GetSunDir().xyz);
+			float3 penumbra_up   = (abs(sun_dir.y) > 0.99) ? float3(1, 0, 0) : float3(0, 1, 0);
+			float3 penumbra_right = normalize(cross(penumbra_up, sun_dir));
+			penumbra_up            = normalize(cross(sun_dir, penumbra_right));
+			float3 ray_origin     = wpos + normal * 0.005;
+
+			int lit_count = 0;
+			[unroll]
+			for (int fi = 0; fi < 16; fi++)
+			{
+				float2 rotated = vsm_rotate(VSM_POISSON_DISK[fi], noise_angle);
+				float3 jittered_dir = normalize(sun_dir +
+					(penumbra_right * rotated.x + penumbra_up * rotated.y) * tan(VSM_SUN_ANGULAR_RADIUS));
+
+				RayDesc ray;
+				ray.Origin    = ray_origin;
+				ray.Direction = jittered_dir;
+				ray.TMin      = 0.01;
+				// No VSM estimate to clamp against here (that's the whole
+				// point -- these rays sample the light disc directly, not a
+				// specific known blocker) -- generous fixed depth, tune to
+				// the scene's typical near-occluder scale.
+				ray.TMax      = 500.0;
+
+				// ACCEPT_FIRST_HIT_AND_END_SEARCH is safe here (unlike the
+				// single-ray verify path below) -- this is a pure hit/miss
+				// test, not a distance measurement, so the FIRST hit found
+				// is exactly as good as the closest one for deciding
+				// occluded-vs-not.
+				RayQuery<RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rayQuery;
+				rayQuery.TraceRayInline(GetRaytracing().GetScene(), RAY_FLAG_NONE, 0xFF, ray);
+				rayQuery.Proceed();
+
+				if (rayQuery.CommittedStatus() == COMMITTED_NOTHING)
+					lit_count++;
+			}
+			shadow = lit_count / 16.0;
+		}
+		else
+		{
 		// Shadow maps only record the front-most surface per texel -- a
 		// closer blocker can be geometrically present but never rasterized
 		// into the atlas at the exact XY the search looked, so
@@ -674,6 +724,7 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 			// fall back to VSM's own shadow-map-derived distance.
 			float chosen_delta = rtx_hit ? rtx_world_delta : world_delta;
 			shadow = vsm_pcf_shadow(c, lighting, level, pos_ls, pos_l.z, texel_world_size, depth_range, noise_angle, chosen_delta);
+		}
 		}
 #else
 		shadow = vsm_pcf_shadow(c, lighting, level, pos_ls, pos_l.z, texel_world_size, depth_range, noise_angle, world_delta);

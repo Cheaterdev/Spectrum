@@ -993,6 +993,13 @@ VSM::VSM()
 		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
+		// RTXShadow runs unconditionally every frame on RTX-capable
+		// hardware, independent of PSSM/VSM -- but its own setup() can
+		// still return false (no RTX hardware), in which case ShadowMask
+		// never gets created this frame. Same defensive builder.exists()
+		// guard PSSM_Combine already uses for the same resource.
+		if (builder.exists(data.ShadowMask))
+			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
 		return true;
 	};
 
@@ -1019,6 +1026,8 @@ VSM::VSM()
 			lighting.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
 			lighting.GetResult()       = data.ResultTexture->rwTexture2D;
 			lighting.GetBlue_noise()   = data.BlueNoise->texture2D;
+			if (data.ShadowMask)
+				lighting.GetRtx_shadow_mask() = data.ShadowMask->texture2D;
 			compute.set(lighting);
 		}
 
@@ -1033,6 +1042,11 @@ VSM::VSM()
 			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
 			constants.GetRtx_dual_blur()        = use_vsm_rtx_dual_blur ? 1 : 0;
 			constants.GetQuad_blocker_search()  = use_vsm_quad_blocker_search ? 1 : 0;
+			// Only meaningful when ShadowMask actually exists this frame
+			// (see m_combine_setup's builder.exists() guard) -- otherwise
+			// rtx_shadow_mask was never bound to anything real above.
+			constants.GetDebug_rtx_reference()  = (use_vsm_debug_rtx_reference && data.ShadowMask) ? 1 : 0;
+			constants.GetRtx_full_penumbra()    = use_vsm_rtx_full_penumbra ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
 
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
