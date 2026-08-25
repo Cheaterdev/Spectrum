@@ -438,7 +438,7 @@ void VSM::plan_level(int level, float2 cam_pos_ls, const box& bounds_all, uint64
 	m_plan[level] = plan;
 }
 
-VSM::VSM()
+VSM::VSM() : VariableContext(L"VSM")
 {
 	position = float3(200, 400, 200);
 

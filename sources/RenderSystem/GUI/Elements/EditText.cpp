@@ -15,6 +15,15 @@ void GUI::Elements::edit_text::on_key_action(key_action action, long key)
 	keys.push_back(key);
 }
 
+void GUI::Elements::edit_text::set_text(const std::string& t)
+{
+	std::lock_guard<std::mutex> guard(m);
+	text       = t;
+	cursor_pos = (unsigned int)text.size();
+	label_text->text           = text;
+	placeholder_label->visible = text.empty();
+}
+
 bool GUI::Elements::edit_text::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
 {
 	std::lock_guard<std::mutex> guard(m);

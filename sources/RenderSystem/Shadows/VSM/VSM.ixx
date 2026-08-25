@@ -31,7 +31,7 @@ import HAL;
 // (level_info[]/page-table array sizing); the actually-active contiguous
 // sub-range [active_min, active_max] is computed every frame (Phase 5.7)
 // and determines which levels actually contribute entries this frame.
-export class VSM
+export class VSM : public VariableContext
 {
 public:
 	// Runtime A/B toggle for measuring Hi-Z occlusion culling's real cost:
@@ -39,10 +39,7 @@ public:
 	// bit (the AS then never consults the pyramid, same as a page with no
 	// valid history) and m_renderpages_render skips rebuilding it entirely
 	// -- no copy/downsample dispatches at all, not just an untested pyramid.
-	// Plain bool: only ever read/written from the render thread and the
-	// UI's on_check callback (main thread), same low-ceremony treatment as
-	// auto_rotate_sun in main.cpp.
-	bool hiz_culling_enabled = true;
+	Variable<bool> hiz_culling_enabled = { true, "Hi-Z culling", this };
 
 	// Runtime A/B toggle between the fixed single-tap 3x3 hardware-PCF grid
 	// (get_shadow_vsm's default path) and the PCSS-style blocker-search +
@@ -50,14 +47,14 @@ public:
 	// which VSMApplyCompute PSO permutation gets bound in m_combine_render.
 	// Off by default: new, unvalidated shader math, kept separate from the
 	// known-working fixed-tap baseline until confirmed visually correct.
-	bool use_vsm_penumbra = true; // TEMP: flip back to false after validation
+	Variable<bool> use_vsm_penumbra = { true, "PCSS penumbra", this }; // TEMP: flip back to false after validation
 
 	// Runtime toggle for the RTX blocker-distance verification ray (Phase
 	// 5.18 Part B) -- only has any effect when use_vsm_penumbra is also on
 	// and the device supports RTX (both checked in m_combine_render before
 	// selecting the VsmRtxVerify PSO permutation). Off by default: new,
 	// unvalidated, same cautious rollout as use_vsm_penumbra above.
-	bool use_vsm_rtx_verify = false;
+	Variable<bool> use_vsm_rtx_verify = { false, "RTX blocker verify", this };
 
 	// Only meaningful when use_vsm_rtx_verify is also on. false = single
 	// blur pass (uses the RTX-verified distance when the ray hit something,
@@ -68,7 +65,7 @@ public:
 	// overlapping penumbras. Defaults to the confirmed-better option since
 	// this is a quality/perf choice, not an unvalidated-math gate like the
 	// two toggles above.
-	bool use_vsm_rtx_dual_blur = true;
+	Variable<bool> use_vsm_rtx_dual_blur = { true, "RTX verify: dual blur + min()", this };
 
 	// Runtime A/B switch for the quad-shared blocker search (splits the 16
 	// Poisson-disc taps 4-per-thread across each 2x2 pixel quad instead of
@@ -76,7 +73,7 @@ public:
 	// Off by default -- new, not yet visually/perf verified against the
 	// original full-per-pixel search, same cautious rollout as
 	// use_vsm_rtx_verify above.
-	bool use_vsm_quad_blocker_search = false;
+	Variable<bool> use_vsm_quad_blocker_search = { false, "Quad-shared blocker search", this };
 
 	// Third search mode (mutually exclusive with quad-sharing above, takes
 	// priority if somehow both are on): each pixel samples exactly ONE of
@@ -89,7 +86,7 @@ public:
 	// noise than quad-sharing, worst on a static/paused frame. Off by
 	// default: new, unvalidated, same cautious rollout as the toggles
 	// above.
-	bool use_vsm_stochastic_blocker_search = false;
+	Variable<bool> use_vsm_stochastic_blocker_search = { false, "Stochastic 1-tap blocker search", this };
 
 	// Debug-view toggle: when on, VSM_Combine displays RTXShadow's own
 	// (denoised) full-RT shadow mask directly as grayscale, in place of
@@ -98,7 +95,7 @@ public:
 	// unconditionally every frame on RTX-capable hardware (see
 	// PassDefaults.cpp), independent of PSSM/VSM, so no extra pass wiring
 	// is needed beyond VSM_Combine reading its output.
-	bool use_vsm_debug_rtx_reference = false;
+	Variable<bool> use_vsm_debug_rtx_reference = { false, "Debug: RTX reference shadow mask", this };
 private:
 	// Tracks the previous frame's toggle state so plan_frame() can detect
 	// an off->on transition and force a full pyramid rebuild -- see its

@@ -111,7 +111,17 @@ public:
 	//	VoxelGI::ptr voxel_renderer;
 
 	GUI::Elements::circle_selector::ptr sun_direction_circle;
-	bool  auto_rotate_sun = false;
+	Variable<bool> auto_rotate_sun = { false, "Auto rotate sun", this };
+
+	// Grouping contexts for the mesh_renderer instances constructed below --
+	// mesh_renderer always names itself "mesh_renderer" (see MeshRenderer.cpp),
+	// so without these every instance across the whole app would land as an
+	// identically-named sibling directly under global, with no way to tell
+	// them apart in the Properties tree. Declared as members (not locals in
+	// the constructor body) so they stay alive for the whole app, same as the
+	// mesh_renderer instances parented under them.
+	VariableContext main_view_forward_context{ L"Main View / Forward" };
+	VariableContext main_view_gpu_context{ L"Main View / GPU" };
 	float sun_rotation_angle = 0;
 	static constexpr float sun_rotation_speed = 0.2f; // radians/sec
 
@@ -143,6 +153,17 @@ public:
 		, vsm(pipeline)
 #endif
 	{
+		// Pushed for the rest of this constructor: any VariableContext-derived
+		// member constructed from here on (stenciler, voxel_gi, mesh_renderer
+		// via register_renderer, ...) nests under "triangle_drawer" instead of
+		// landing as a flat sibling of it under global, with no per-member
+		// wiring needed at each construction site. Doesn't cover vsm/
+		// main_view_*_context below -- those are member-initializer-list
+		// entries (or plain default members) that already finished
+		// constructing before this body even starts, so they need the
+		// explicit add_child re-parent instead.
+		VariableContext::Scope self_scope(*this);
+
 		// PSSM stays fully wired either way -- PSSM_Global's global_depth/global_camera
 		// are consumed unconditionally elsewhere in the pipeline (e.g. reflections),
 		// independent of whether PSSM's own cascade+combine shadow result is used.
@@ -156,6 +177,19 @@ public:
 		pipeline.pSSM_Combine.setup_func  = nullptr;
 		pipeline.pSSM_Combine.render_func = nullptr;
 #endif
+
+		// vsm/main_view_*_context construct before this body runs (regular data
+		// members), so by the ctor-body-start rule they land under whatever was
+		// on the Scope stack at that point -- nothing, here, so they'd otherwise
+		// sit as flat top-level siblings of "triangle_drawer" instead of nested
+		// under it. VariableContext::add_child re-parents them explicitly (it
+		// already detaches from the current parent first -- see tree::add_child
+		// -- so this is safe even though vsm etc. are already attached to
+		// global); qualified because triangle_drawer also inherits GUI::base's
+		// unrelated add_child(GUI::base::ptr), which unqualified lookup prefers.
+		VariableContext::add_child(&main_view_forward_context);
+		VariableContext::add_child(&main_view_gpu_context);
+		VariableContext::add_child(&vsm);
 
 		texture.mul_color = { 1, 1, 1, 0 };
 		texture.add_color = { 0, 0, 0, 1 };
@@ -173,12 +207,19 @@ public:
 		scene->name = L"Scene";
 
 		scene_renderer = std::make_shared<main_renderer>();
-		scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
-
+		{
+			// Distinguishes this mesh_renderer's Properties-tree entry from the
+			// otherwise-identically-named ones below and in AssetRenderer.cpp.
+			VariableContext::Scope scope(main_view_forward_context);
+			scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
+		}
 
 		gpu_scene_renderer = std::make_shared<main_renderer>();
 
-		gpu_scene_renderer->register_renderer(std::make_shared<mesh_renderer>());
+		{
+			VariableContext::Scope scope(main_view_gpu_context);
+			gpu_scene_renderer->register_renderer(std::make_shared<mesh_renderer>());
+		}
 
 
 		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_static = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::STATIC));
@@ -234,70 +275,9 @@ public:
 
 		sun_direction_circle->set_value({ 1, 0 });
 
-		auto auto_rotate_row = std::make_shared<GUI::Elements::check_box_text>();
-		auto_rotate_row->docking = GUI::dock::TOP;
-		auto_rotate_row->x_type  = GUI::pos_x_type::RIGHT;
-		auto_rotate_row->get_label()->text = "Auto rotate sun";
-		auto_rotate_row->get_check()->set_checked(auto_rotate_sun);
-		auto_rotate_row->on_check = [this](bool v) { auto_rotate_sun = v; };
-		base::add_child(auto_rotate_row);
-
-		auto hiz_row = std::make_shared<GUI::Elements::check_box_text>();
-		hiz_row->docking = GUI::dock::TOP;
-		hiz_row->x_type  = GUI::pos_x_type::RIGHT;
-		hiz_row->get_label()->text = "VSM Hi-Z culling";
-		hiz_row->get_check()->set_checked(vsm.hiz_culling_enabled);
-		hiz_row->on_check = [this](bool v) { vsm.hiz_culling_enabled = v; };
-		base::add_child(hiz_row);
-
-		auto penumbra_row = std::make_shared<GUI::Elements::check_box_text>();
-		penumbra_row->docking = GUI::dock::TOP;
-		penumbra_row->x_type  = GUI::pos_x_type::RIGHT;
-		penumbra_row->get_label()->text = "VSM PCSS penumbra";
-		penumbra_row->get_check()->set_checked(vsm.use_vsm_penumbra);
-		penumbra_row->on_check = [this](bool v) { vsm.use_vsm_penumbra = v; };
-		base::add_child(penumbra_row);
-
-		auto rtx_verify_row = std::make_shared<GUI::Elements::check_box_text>();
-		rtx_verify_row->docking = GUI::dock::TOP;
-		rtx_verify_row->x_type  = GUI::pos_x_type::RIGHT;
-		rtx_verify_row->get_label()->text = "VSM RTX blocker verify";
-		rtx_verify_row->get_check()->set_checked(vsm.use_vsm_rtx_verify);
-		rtx_verify_row->on_check = [this](bool v) { vsm.use_vsm_rtx_verify = v; };
-		base::add_child(rtx_verify_row);
-
-		auto rtx_dual_blur_row = std::make_shared<GUI::Elements::check_box_text>();
-		rtx_dual_blur_row->docking = GUI::dock::TOP;
-		rtx_dual_blur_row->x_type  = GUI::pos_x_type::RIGHT;
-		rtx_dual_blur_row->get_label()->text = "VSM RTX verify: dual blur + min()";
-		rtx_dual_blur_row->get_check()->set_checked(vsm.use_vsm_rtx_dual_blur);
-		rtx_dual_blur_row->on_check = [this](bool v) { vsm.use_vsm_rtx_dual_blur = v; };
-		base::add_child(rtx_dual_blur_row);
-
-		auto quad_blocker_search_row = std::make_shared<GUI::Elements::check_box_text>();
-		quad_blocker_search_row->docking = GUI::dock::TOP;
-		quad_blocker_search_row->x_type  = GUI::pos_x_type::RIGHT;
-		quad_blocker_search_row->get_label()->text = "VSM quad-shared blocker search";
-		quad_blocker_search_row->get_check()->set_checked(vsm.use_vsm_quad_blocker_search);
-		quad_blocker_search_row->on_check = [this](bool v) { vsm.use_vsm_quad_blocker_search = v; };
-		base::add_child(quad_blocker_search_row);
-
-		auto stochastic_blocker_search_row = std::make_shared<GUI::Elements::check_box_text>();
-		stochastic_blocker_search_row->docking = GUI::dock::TOP;
-		stochastic_blocker_search_row->x_type  = GUI::pos_x_type::RIGHT;
-		stochastic_blocker_search_row->get_label()->text = "VSM stochastic 1-tap blocker search";
-		stochastic_blocker_search_row->get_check()->set_checked(vsm.use_vsm_stochastic_blocker_search);
-		stochastic_blocker_search_row->on_check = [this](bool v) { vsm.use_vsm_stochastic_blocker_search = v; };
-		base::add_child(stochastic_blocker_search_row);
-
-		auto debug_rtx_reference_row = std::make_shared<GUI::Elements::check_box_text>();
-		debug_rtx_reference_row->docking = GUI::dock::TOP;
-		debug_rtx_reference_row->x_type  = GUI::pos_x_type::RIGHT;
-		debug_rtx_reference_row->get_label()->text = "VSM debug: RTX reference shadow mask";
-		debug_rtx_reference_row->get_check()->set_checked(vsm.use_vsm_debug_rtx_reference);
-		debug_rtx_reference_row->on_check = [this](bool v) { vsm.use_vsm_debug_rtx_reference = v; };
-		base::add_child(debug_rtx_reference_row);
-
+		// auto_rotate_sun and VSM's toggles are Variable<bool>s now -- they show
+		// up automatically in the Properties debug panel (Properties -> triangle_drawer
+		// / VSM) instead of needing a hand-wired check_box_text row here per toggle.
 
 		MeshAsset::ptr asset_ptr = EngineAssets::material_tester.get_asset();
 
@@ -1379,8 +1359,23 @@ public:
 
 	GUI::Elements::dock_base::ptr docker;
 
+	// Doesn't make GraphRender itself derive VariableContext (it already
+	// inherits GUI::base's add_child(GUI::base::ptr) via GUI::user_interface;
+	// adding a second, unrelated add_child from VariableContext would make
+	// every existing unqualified add_child(...) call elsewhere in this class
+	// ambiguous) -- a plain owned context, same as AssetRenderer::preview_context.
+	std::unique_ptr<VariableContext> graph_context = VariableContext::create(L"GraphRender");
+
 	GraphRender()
 	{
+		// graph is a plain member, already fully constructed (default Graph())
+		// by the time this body runs, so it needs this explicit re-parent
+		// rather than a Scope wrapping its construction. Without it, it lands
+		// as a flat "Graph" sibling under global instead of nested here -- and
+		// since Graph's own VariableContext ctor always uses the fixed literal
+		// name "Graph" (see FrameGraph.cpp), it's otherwise indistinguishable
+		// from AssetRenderer/SceneTextureRenderer's own Graph members.
+		graph_context->add_child(&graph);
 
 		//scale = 1.25f;
 		Window::input_handler = this;

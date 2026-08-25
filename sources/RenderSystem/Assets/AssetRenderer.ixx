@@ -22,6 +22,12 @@ export  class AssetRenderer : public Singleton<AssetRenderer>
         mesh_renderer::ptr meshes_renderer;
         std::shared_ptr<SceneRenderWorkflow> rendering;
 
+        // Groups meshes_renderer's Properties-tree entry under a name distinct
+        // from the other mesh_renderer instances elsewhere in the app (main
+        // view x2, SceneTextureRenderer) -- AssetRenderer doesn't derive
+        // VariableContext itself, hence create() rather than a direct member.
+        std::unique_ptr<VariableContext> preview_context = VariableContext::create(L"Asset Preview");
+
         MeshAssetInstance::ptr material_tester;
 		MeshAssetInstance::ptr mesh_plane;
 
@@ -56,6 +62,9 @@ export class SceneTextureRenderer
         camera cam;
         mesh_renderer::ptr meshes_renderer;
         std::shared_ptr<SceneRenderWorkflow> rendering;
+
+        // See AssetRenderer::preview_context above -- same reasoning.
+        std::unique_ptr<VariableContext> preview_context = VariableContext::create(L"Scene Texture Preview");
 
         MeshAssetInstance::ptr mesh_plane;
         MeshAssetInstance::ptr material_tester; // test mesh for material previews
