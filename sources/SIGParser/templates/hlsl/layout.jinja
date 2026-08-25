@@ -11,8 +11,13 @@
 #include "{{layout.parent.name}}.h"
 {% endif -%}
 
-{%- for s in layout.samplers %}
+{%- for key in layout.samplers %}
+{%- set s = layout.samplers[key] %}
+{%- if s.expr == "SamplerShadowComparisonDesc" %}
+SamplerComparisonState {{s.name}}:register(s{{loop.index0}});
+{%- else %}
 SamplerState {{s.name}}:register(s{{loop.index0}});
+{%- endif %}
 {%- endfor-%}
 
 {%- if layout.parent is undefined %}

@@ -7,6 +7,11 @@ import HAL;
 
 namespace HAL
 {
+    // A GPU-decompressed DirectStorage request whose compressed size approaches
+    // or exceeds the staging buffer silently decodes to all-zero (no error, no
+    // validation warning) instead of failing loudly - this is what caused the
+    // 8192^2-texture mip-0-black bug. Assert instead of letting that recur.
+    static constexpr UINT64 DS_STAGING_BUFFER_SIZE = 128 * 1024 * 1024;
 
     // NOTE: the shared HAL::Queue(CommandListType, Device&) constructor is
     // defined in the backend-neutral sources/HAL/HAL.Queue.cpp (it just calls
@@ -106,7 +111,11 @@ namespace HAL
         TEST(device, DStorageGetFactory(IID_PPV_ARGS(&factory)));
         if constexpr (Debug::CheckErrors)
             factory->SetDebugFlags(DSTORAGE_DEBUG_BREAK_ON_ERROR | DSTORAGE_DEBUG_SHOW_ERRORS);
-        factory->SetStagingBufferSize(32 * 1024 * 1024);
+        // 32MB was silently dropping GPU-decompressed subresources whose request
+        // size approached/exceeded it (observed: an 8192^2 mip, ~21MB compressed /
+        // 64MB uncompressed, decoded to all-zero while every smaller subresource
+        // of the same texture was fine). 128MB gives headroom for large top mips.
+        factory->SetStagingBufferSize(static_cast<uint32_t>(DS_STAGING_BUFFER_SIZE));
 
         // Create a DirectStorage queue which will be used to load data into a
         // buffer on the GPU.
@@ -183,6 +192,17 @@ namespace HAL
 
         ASSERT(request.Source.File.Size == srequest.size);
         ASSERT(request.UncompressedSize == srequest.uncompressed_size);
+
+        // A GPU-decompressed (compressed==true) request whose compressed size is
+        // at/above the staging buffer decodes to all-zero with no HRESULT error
+        // and no debug-layer warning - see DS_STAGING_BUFFER_SIZE above. Assert
+        // on the compressed size, since that's what's DMA'd into the staging
+        // buffer; if this trips for a request whose compressed size looks safely
+        // under the limit, the real constraint may be the uncompressed size or a
+        // multi-request-in-flight sum instead - check that before just raising
+        // the limit again.
+        if (srequest.compressed)
+            ASSERT(srequest.size < DS_STAGING_BUFFER_SIZE);
 
         std::visit(overloaded{
             [&](const StorageRequest::Buffer& buffer)
@@ -266,8 +286,8 @@ namespace HAL
             PROFILE(L"Queue::execute");
 
             // Accumulate lists into one ExecuteCommandLists — no per-list flush.
-            // Legal because TaskBuilder::link_list_groups chains resource state
-            // across list boundaries within a group: D3D12 forbids, within one
+            // Legal because CommandListGroup::compile_transitions chains resource
+            // state across list boundaries within a group: D3D12 forbids, within one
             // scope, accessing a resource after a SyncAfter == SYNC_NONE barrier or
             // emitting a SyncBefore == SYNC_NONE barrier once it has been accessed
             // (#1417). gpu_wait/signal still flush at real sync points.

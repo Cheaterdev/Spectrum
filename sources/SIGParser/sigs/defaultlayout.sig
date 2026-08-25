@@ -10,6 +10,7 @@ layout FrameLayout {
 	Sampler linearClampSampler = SamplerLinearClampDesc;
 	Sampler anisoBordeSampler = SamplerAnisoBorderDesc;
 	Sampler pointBorderSampler = SamplerPointBorderDesc;
+	Sampler vsmShadowSampler = SamplerShadowComparisonDesc;
 }
 
 layout DefaultLayout: FrameLayout 

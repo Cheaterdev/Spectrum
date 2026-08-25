@@ -212,18 +212,9 @@ struct quad_output
     float3 ray : TEXCOORD1;
 };
 
-#ifdef BUILD_FUNC_VS_Cube
+#ifdef BUILD_FUNC_CS_Cube
 
 #include "autogen/SkyFace.h"
-static float2 Pos[] =
-{
-    float2(-1, -1),
-    float2(-1, 1),
-    float2(1, -1),
-    float2(1, 1)
-};
-
-
 
 static float3x3 mats[] =
 {
@@ -237,13 +228,24 @@ float3x3(1,0,0,   0,1,0,   0,0,1), //Z+
 float3x3(-1,0,0,   0,1,0,   0,0,-1)//Z-
 };
 
-quad_output VS_Cube(uint index : SV_VERTEXID)
+// Compute-queue cube bake: one (w, h, 6) dispatch over the whole cube, with the
+// face taken from Z and written through an array UAV. The ray the old VS_Cube
+// interpolated across the quad was linear in the clip-space position (mats[] is
+// a rotation, so mul() commutes with the interpolation), so rebuilding it per
+// texel from the pixel centre reproduces it exactly.
+[numthreads(8, 8, 1)]
+void CS_Cube(uint3 DTid : SV_DispatchThreadID)
 {
-    quad_output Output;
-    Output.pos = float4(Pos[index], 0.99999, 1);
-    Output.ray = normalize(mul(mats[GetSkyFace().GetFace()], float3(Pos[index], 1)));
+    uint3 dims;
+    GetSkyFace().GetFaces().GetDimensions(dims.x, dims.y, dims.z);
+    if (any(DTid >= dims))
+        return;
 
-    return Output;
+    float2 uv = (float2(DTid.xy) + 0.5) / float2(dims.xy);
+    float2 clip = uv * float2(2, -2) + float2(-1, 1);
+    float3 v = normalize(mul(mats[DTid.z], float3(clip, 1)));
+
+    GetSkyFace().GetFaces()[DTid] = float4(get_sky_only(camera.GetPosition(), v, 0), 1);
 }
 #endif
 
@@ -309,12 +311,4 @@ void CS(uint3 DTid : SV_DispatchThreadID)
     float3 ray = mul(camera.GetInvView(), r.xyz);
 
     GetSkyData().GetResult()[DTid.xy] += sky_result(tc, ray);
-}
-
-
-float4 PS_Cube(quad_output i) : SV_Target0
-{
-    float3 v = normalize(i.ray);
-
-    return  float4(get_sky_only(camera.GetPosition(), v, 0), 1);
 }

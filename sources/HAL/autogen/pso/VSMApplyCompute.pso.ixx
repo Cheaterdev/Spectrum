@@ -17,18 +17,26 @@ export namespace PSOS
 	struct VSMApplyCompute: public PSOBase
 	{
 		struct Keys {
+			KeyValue<int, Nullable> VsmPenumbra;
+			KeyValue<int, Nullable> VsmRtxVerify;
 			GEN_DEF_COMP(Keys);
 		private:
 			SERIALIZE()
 			{
+				ar&NVP(VsmPenumbra);
+				ar&NVP(VsmRtxVerify);
 			}
 		};
 
-		GEN_COMPUTE_PSO(VSMApplyCompute)
+		GEN_COMPUTE_PSO(VSMApplyCompute, VsmPenumbra, VsmRtxVerify)
+		GEN_KEY(VsmPenumbra, true);
+		GEN_KEY(VsmRtxVerify, true);
 
 
 		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 		{
+			static const ShaderDefine<&Keys::VsmPenumbra,&SimpleComputePSO::compute> VsmPenumbra = "VSM_PENUMBRA";
+			static const ShaderDefine<&Keys::VsmRtxVerify,&SimpleComputePSO::compute> VsmRtxVerify = "VSM_RTX_VERIFY";
 
 
 			SimplePSO mpso("VSMApplyCompute");
@@ -40,6 +48,8 @@ export namespace PSOS
 			mpso.compute.entry_point = "CS_RESULT";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			
+			VsmPenumbra.Apply(mpso, key);
+			VsmRtxVerify.Apply(mpso, key);
 			return mpso;
 		}
 

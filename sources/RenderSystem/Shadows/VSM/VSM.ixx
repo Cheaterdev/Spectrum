@@ -31,7 +31,7 @@ import HAL;
 // (level_info[]/page-table array sizing); the actually-active contiguous
 // sub-range [active_min, active_max] is computed every frame (Phase 5.7)
 // and determines which levels actually contribute entries this frame.
-export class VSM
+export class VSM : public VariableContext
 {
 public:
 	// Runtime A/B toggle for measuring Hi-Z occlusion culling's real cost:
@@ -39,10 +39,63 @@ public:
 	// bit (the AS then never consults the pyramid, same as a page with no
 	// valid history) and m_renderpages_render skips rebuilding it entirely
 	// -- no copy/downsample dispatches at all, not just an untested pyramid.
-	// Plain bool: only ever read/written from the render thread and the
-	// UI's on_check callback (main thread), same low-ceremony treatment as
-	// auto_rotate_sun in main.cpp.
-	bool hiz_culling_enabled = true;
+	Variable<bool> hiz_culling_enabled = { true, "Hi-Z culling", this };
+
+	// Runtime A/B toggle between the fixed single-tap 3x3 hardware-PCF grid
+	// (get_shadow_vsm's default path) and the PCSS-style blocker-search +
+	// penumbra-scaled variant (VSM_impl.hlsl, gated by VSM_PENUMBRA) -- picks
+	// which VSMApplyCompute PSO permutation gets bound in m_combine_render.
+	// Off by default: new, unvalidated shader math, kept separate from the
+	// known-working fixed-tap baseline until confirmed visually correct.
+	Variable<bool> use_vsm_penumbra = { true, "PCSS penumbra", this }; // TEMP: flip back to false after validation
+
+	// Runtime toggle for the RTX blocker-distance verification ray (Phase
+	// 5.18 Part B) -- only has any effect when use_vsm_penumbra is also on
+	// and the device supports RTX (both checked in m_combine_render before
+	// selecting the VsmRtxVerify PSO permutation). Off by default: new,
+	// unvalidated, same cautious rollout as use_vsm_penumbra above.
+	Variable<bool> use_vsm_rtx_verify = { false, "RTX blocker verify", this };
+
+	// Only meaningful when use_vsm_rtx_verify is also on. false = single
+	// blur pass (uses the RTX-verified distance when the ray hit something,
+	// VSM's own estimate otherwise -- cheaper). true = blur both distances
+	// and take min() of the two resulting shadow values -- pricier (an
+	// extra 16-tap blur whenever the ray hits) but confirmed visually to
+	// remove the bright spots a single blended estimate left between
+	// overlapping penumbras. Defaults to the confirmed-better option since
+	// this is a quality/perf choice, not an unvalidated-math gate like the
+	// two toggles above.
+	Variable<bool> use_vsm_rtx_dual_blur = { true, "RTX verify: dual blur + min()", this };
+
+	// Runtime A/B switch for the quad-shared blocker search (splits the 16
+	// Poisson-disc taps 4-per-thread across each 2x2 pixel quad instead of
+	// every pixel doing all 16, merged via QuadReadAcrossX/Y/Diagonal).
+	// Off by default -- new, not yet visually/perf verified against the
+	// original full-per-pixel search, same cautious rollout as
+	// use_vsm_rtx_verify above.
+	Variable<bool> use_vsm_quad_blocker_search = { false, "Quad-shared blocker search", this };
+
+	// Third search mode (mutually exclusive with quad-sharing above, takes
+	// priority if somehow both are on): each pixel samples exactly ONE of
+	// the 16 Poisson-disc positions, picked by a fresh per-pixel random
+	// index every frame instead of a fixed subset -- 1/16th the atlas
+	// samples of the original search. Relies on neighboring pixels'
+	// different random picks (spatial) plus the per-frame reroll
+	// (temporal) for vsm_pcf_shadow's own blur to reconstruct a coherent
+	// result -- no dedicated denoiser backing this, so expect more visible
+	// noise than quad-sharing, worst on a static/paused frame. Off by
+	// default: new, unvalidated, same cautious rollout as the toggles
+	// above.
+	Variable<bool> use_vsm_stochastic_blocker_search = { false, "Stochastic 1-tap blocker search", this };
+
+	// Debug-view toggle: when on, VSM_Combine displays RTXShadow's own
+	// (denoised) full-RT shadow mask directly as grayscale, in place of
+	// VSM's normal lit output, for real geometry pixels -- a reference to
+	// compare VSM's quality/performance against. RTXShadow already runs
+	// unconditionally every frame on RTX-capable hardware (see
+	// PassDefaults.cpp), independent of PSSM/VSM, so no extra pass wiring
+	// is needed beyond VSM_Combine reading its output.
+	Variable<bool> use_vsm_debug_rtx_reference = { false, "Debug: RTX reference shadow mask", this };
 private:
 	// Tracks the previous frame's toggle state so plan_frame() can detect
 	// an off->on transition and force a full pyramid rebuild -- see its
@@ -243,7 +296,17 @@ private:
 	// VSM_Atlas. Built on VSM_RenderPages' first real render()
 	// (data.VSM_PageHiZ doesn't exist before its own setup() runs, so this
 	// can't happen at VSM construction time); see build_slot_views().
-	bool slot_views_built = false;
+	// Phase 5.17: VSM_RenderPages (direct queue) and VSM_HiZRebuild (async
+	// compute queue) now record on genuinely different threads -- the GPU-
+	// level dependency via VSM_Atlas guarantees the *GPU work* orders
+	// correctly, but says nothing about which pass's render() callback the
+	// CPU records FIRST. A plain bool "built" flag raced (confirmed live:
+	// a null-deref crash the very first frame VSM_HiZRebuild had real work,
+	// landing right where it first touched atlas_array_view -- built by
+	// VSM_RenderPages' render(), which this assumed always ran first).
+	// std::call_once makes "build lazily, exactly once, safe from either
+	// thread" actually true instead of assumed.
+	std::once_flag atlas_views_once;
 	std::vector<HAL::Texture2DView> atlas_slot_views; // [slot], DSV clear only
 
 	// Phase 5.14: batched Hi-Z copy source, narrowed to physical_page_count
@@ -252,30 +315,63 @@ private:
 	// to dodge HAL::Transitions::stop_using()'s O(subresources in view) x
 	// O(total resource subresource count) teardown cost (~2ms/call on the
 	// wide view); stop_using() has since been removed entirely (it only fed
-	// an unread ResourceUsage::last_point, a dead split-barrier mechanism),
+	// a dead split-barrier mechanism),
 	// so that specific cost no longer applies, but the narrower binding is
 	// still the right shape for this dispatch. See build_slot_views().
 	HAL::Texture2DView atlas_array_view;
 
 	// Phase 5.14: the Hi-Z pyramid rebuild is batched across every dirty
 	// page at once (one dispatch per mip level, not one per dirty page per
-	// mip -- see m_renderpages_render). Array-spanning (every physical
-	// slot at once) but narrowed to exactly ONE mip per entry -- both SRV
-	// and UAV -- instead of VSM_PageHiZ's base handler view, which spans
-	// the WHOLE mip chain (pyramid_mip_count x physical_page_count
-	// subresources). Same stop_using()-avoidance reasoning as
-	// atlas_array_view above (see that comment); stop_using() is gone now,
-	// but this stayed narrow since it's rebound on every one of the
-	// pyramid_mip_count-1 downsample dispatches, not just once.
+	// mip). Array-spanning (every physical slot at once) but narrowed to
+	// exactly ONE mip per entry -- both SRV and UAV -- instead of
+	// VSM_PageHiZ's base handler view, which spans the WHOLE mip chain
+	// (pyramid_mip_count x physical_page_count subresources). Same
+	// stop_using()-avoidance reasoning as atlas_array_view above (see that
+	// comment); stop_using() is gone now, but this stayed narrow since it's
+	// rebound on every one of the pyramid_mip_count-1 downsample dispatches,
+	// not just once. Phase 5.17: only VSM_HiZRebuild's render() ever touches
+	// this now (the whole rebuild moved there), so it doesn't need the
+	// cross-pass synchronization atlas_views_once exists for -- but it's
+	// still built lazily via its own once_flag for the same "exactly once"
+	// guarantee, cheap insurance against a future second caller.
+	std::once_flag page_hiz_views_once;
 	std::vector<HAL::Texture2DView> page_hiz_mip_array_views; // [mip]
 
-	void build_slot_views(Passes::VSM_RenderPages::Context& data, int pyramid_mip_count);
+	// Builds atlas_slot_views/atlas_array_view -- needs only vsm_atlas_tex,
+	// no pass Context, so it's callable identically from either
+	// VSM_RenderPages' or VSM_HiZRebuild's render() (both need
+	// atlas_array_view; only VSM_RenderPages needs atlas_slot_views for its
+	// per-dirty-page DSV clears). Thread-safe via atlas_views_once -- see
+	// its declaration for why that's required, not just tidy.
+	void build_atlas_views();
+
+	// Builds page_hiz_mip_array_views from VSM_HiZRebuild's OWN Context
+	// (that PassNode need()s VSM_PageHiZ too, alongside VSM_RenderPages,
+	// which still create()s it for the once-ever cold-start clear -- see
+	// vsm.sig's VSM_HiZRebuild comment).
+	void build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyramid_mip_count);
 
 	Passes::VSM_GatherDispatch::setup_func_type  m_gatherdispatch_setup;
 	Passes::VSM_GatherDispatch::render_func_type m_gatherdispatch_render;
 
 	Passes::VSM_RenderPages::setup_func_type  m_renderpages_setup;
 	Passes::VSM_RenderPages::render_func_type m_renderpages_render;
+
+	// Phase 5.17: split off VSM_RenderPages so the per-frame Hi-Z pyramid
+	// rebuild (copy + downsample dispatches) runs on the async compute
+	// queue instead of serializing into VSM_RenderPages' own direct-queue
+	// pass -- nothing else this frame reads VSM_PageHiZ, only next frame's
+	// draw does. See vsm.sig's VSM_HiZRebuild PassNode comment.
+	Passes::VSM_HiZRebuild::setup_func_type  m_hizrebuild_setup;
+	Passes::VSM_HiZRebuild::render_func_type m_hizrebuild_render;
+
+	// Blocker-search extraction: one full-screen dispatch running ONLY the
+	// wide, many-tap PCSS blocker search, writing its result for
+	// m_combine_render to read back -- see vsm.sig's VSM_BlockerSearch
+	// PassNode comment. Registered ahead of VSM_Combine in test.sig's
+	// pipeline listing.
+	Passes::VSM_BlockerSearch::setup_func_type  m_blockersearch_setup;
+	Passes::VSM_BlockerSearch::render_func_type m_blockersearch_render;
 
 	Passes::VSM_Combine::setup_func_type  m_combine_setup;
 	Passes::VSM_Combine::render_func_type m_combine_render;
@@ -321,6 +417,12 @@ public:
 
 		pipeline.vSM_RenderPages.setup_func  = m_renderpages_setup;
 		pipeline.vSM_RenderPages.render_func = m_renderpages_render;
+
+		pipeline.vSM_HiZRebuild.setup_func  = m_hizrebuild_setup;
+		pipeline.vSM_HiZRebuild.render_func = m_hizrebuild_render;
+
+		pipeline.vSM_BlockerSearch.setup_func  = m_blockersearch_setup;
+		pipeline.vSM_BlockerSearch.render_func = m_blockersearch_render;
 
 		pipeline.vSM_Combine.setup_func  = m_combine_setup;
 		pipeline.vSM_Combine.render_func = m_combine_render;

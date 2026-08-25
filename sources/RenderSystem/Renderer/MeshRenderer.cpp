@@ -58,11 +58,21 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	{
 
 		PROFILE_GPU(L"first stage");
-		// The AS samples the Hi-Z pyramid (IsOccludedHiZ) through the global
-		// FrameInfo slot, so its read state isn't tracked per-pass -- make it
-		// explicit, or it is still UNORDERED_ACCESS from the last build.
-		if (use_meshlet_hiz_occlusion)
-			list.transition(gbuffer->HalfBuffer.hiZ_depth_uav.resource, HAL::ResourceStates::SHADER_RESOURCE);
+		// No Hi-Z read declared here, unlike stage 2 below.
+		//
+		// GBuffer_HiZ_UAV is created WITHOUT ResourceFlags::Static, so it is a
+		// transient: allocated (and aliased) fresh every frame. At stage 1 it
+		// has not been built yet this frame -- build_hiz_pyramid runs a few
+		// lines below -- so declaring an SRV read of it here was reading
+		// whatever the transient heap last held, every frame, not just the
+		// first. Stage 2's identical-looking hint IS valid, because stage 1
+		// genuinely builds the pyramid it reads.
+		//
+		// That also means stage 1's per-meshlet occlusion test has no
+		// previous-frame pyramid to test against: the persistent copy is
+		// GBuffer_HiZ (Static), which write_to_depth fills, while MainHiZ is
+		// wired to this transient (main.cpp). Worth resolving separately.
+
 		// Stage 1 walks the full scene list: CPU-known count, direct dispatch.
 		generate_boxes(mesh_render_context, scene, scene->compiledGather[(int)mesh_render_context->render_mesh], nullptr, meshes_count);
 
@@ -82,8 +92,8 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	{
 		PROFILE_GPU(L"second stage");
 		// Same as stage 1: stage 1 left the pyramid in UNORDERED_ACCESS.
-		if (use_meshlet_hiz_occlusion)
-			list.transition(gbuffer->HalfBuffer.hiZ_depth_uav.resource, HAL::ResourceStates::SHADER_RESOURCE);
+	//	if (use_meshlet_hiz_occlusion)
+	//		list.add_resource_usage(gbuffer->HalfBuffer.hiZ_depth_uav.resource, HAL::ResourceStates::SHADER_RESOURCE);
 		// Stage 2 retests the invisible list: sized by retest_args, written by
 		// stage 1's GatherMeshes.
 		generate_boxes(mesh_render_context, scene, gather_invisible, &retest_args, 0);

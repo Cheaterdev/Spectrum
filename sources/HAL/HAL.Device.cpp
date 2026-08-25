@@ -47,27 +47,33 @@ namespace HAL
 
 		auto list = get_upload_list();
 
-		std::vector<std::shared_ptr<Resource>> promoted;
-		promoted.reserve(batch.size());
-
 		for (auto& r : batch)
 		{
 			if (r->get_desc().is_buffer()) continue;   // buffers carry no layout
 
-			auto desired = r->get_state_manager().get_desired_state();
+			auto layout = resting_layout(r.get());
 			// Only promote resources that actually have a read state.
-			if (!check(desired.layout & (TextureLayout::SHADER_RESOURCE | TextureLayout::UNORDERED_ACCESS)))
+			if (!check(layout & (TextureLayout::SHADER_RESOURCE | TextureLayout::UNORDERED_ACCESS)))
 				continue;
 
-			// The resource is physically in COMMON (its data upload already waited on
-			// the DStorage fence). Record COMMON -> read: the seed reads gpu_state
-			// (still COMMON) so a REAL transition is emitted. Set initial_layout to
-			// the read layout NOW so this list's own end-of-list decay is a no-op
-			// (it decays to initial_layout). gpu_state is pinned to the read state
-			// AFTER execute, once the seed has been consumed by compile.
-			list->transition(r.get(), desired);
-			r->get_state_manager().initial_layout = desired.layout;
-			promoted.push_back(r);
+			// Record the read use. This is not a redundant hint: recording it is
+			// what puts the resource in this list's used_resources at all, which
+			// is what makes the group transition it out of COPY_DEST. The state
+			// asked for is the resting layout, so the group's return-to-rest then
+			// has nothing left to do.
+			//
+			// Per-subresource, not ALL_SUBRESOURCES: this is the resource's first
+			// ever touch through the Transitions state tracker (its subresources
+			// were written via DirectStorage, which bypasses Transitions entirely),
+			// so an ALL_SUBRESOURCES call here hits the virgin/non_tracked_resources
+			// fallback in compile_transitions() and drops the promotion for some
+			// subresources (observed: subresource 0, the largest mip, left black).
+			auto desired = check(layout & TextureLayout::SHADER_RESOURCE)
+				? ResourceStates::SHADER_RESOURCE
+				: ResourceStates::UNORDERED_ACCESS;
+
+			for (UINT s = 0; s < r->get_desc().as_texture().Subresources(); s++)
+				list->add_resource_usage(r.get(), desired, s);
 		}
 
 		// Submit on the DIRECT queue and wait. This runs on the MAIN thread at
@@ -76,9 +82,6 @@ namespace HAL
 		// Waiting keeps the list alive until the GPU is done and orders the
 		// transition ahead of this frame's rendering.
 		list->execute_and_wait();
-
-		for (auto& r : promoted)
-			r->get_state_manager().set_resting_state(r->get_state_manager().get_desired_state().layout);
 	}
 
 	HAL::Queue::ptr& Device::get_queue(CommandListType type)

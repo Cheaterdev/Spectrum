@@ -2,6 +2,7 @@ module Graphics:FSR;
 
 
 import :FrameGraphContext;
+import :UpscalingDLSS;
 
 import HAL;
 
@@ -16,8 +17,9 @@ using namespace FrameGraph;
 
 bool PassDefault<Passes::FSR>::setup(Passes::FSR::Context& data, TaskBuilder& builder)
 {
-	// Prefer DLSS-SR when available — mirrored in UpscalingDLSS.cpp's setup().
-	if (nvidia::DLSS::get().available())
+	// g_upscaling_enabled: see UpscalingDLSS.cpp's mirrored check. Prefer
+	// DLSS-SR when available — mirrored in UpscalingDLSS.cpp's setup().
+	if (!g_upscaling_enabled || nvidia::DLSS::get().available())
 		return false;
 
 	auto& frame = builder.graph->get_context<ViewportInfo>();

@@ -11,10 +11,82 @@ using namespace HAL;
 //	generate(compute_context, tex->texture_2d());
 //}
 
+// Cube mip chain in one dispatch per 4-mip batch (the shader's structural
+// limit), instead of one batch per face: every mip view spans all six slices
+// and the dispatch carries the face in Z.
 void MipMapGenerator::generate_cube(HAL::ComputeContext& compute_context, HAL::CubeView view)
 {
-	for (int i = 0; i < 6; i++)
-		generate(compute_context, view.get_face(i));
+	PROFILE(L"MipMapGenerator_cube");
+
+	compute_context.set_signature(Layouts::DefaultLayout);
+
+	auto& desc = view.get_desc().as_texture();
+
+	const uint32_t slices = desc.ArraySize;
+	const uint32_t maps = desc.MipLevels - 1;
+	const auto size = view.get_size();
+
+	auto slice_span = [&](uint32_t mip)
+	{
+		HAL::TextureViewDesc vdesc;
+		vdesc.MipSlice = mip;
+		vdesc.MipLevels = 1;
+		vdesc.FirstArraySlice = 0;
+		vdesc.ArraySize = slices;
+
+		return view.resource->create_view<HAL::Texture2DView>(compute_context.get_base(), vdesc);
+	};
+
+	for (uint32_t TopMip = 0; TopMip < maps;)
+	{
+		uint32_t SrcWidth = uint32_t(size.x >> TopMip);
+		uint32_t SrcHeight = uint32_t(size.y >> TopMip);
+		uint32_t DstWidth = SrcWidth >> 1;
+		uint32_t DstHeight = SrcHeight >> 1;
+		uint32_t NonPowerOfTwo = (SrcWidth & 1) | (SrcHeight & 1) << 1;
+
+		{
+			PROFILE(L"set_pipeline");
+
+			compute_context.set_pipeline<PSOS::MipMapping>(
+				PSOS::MipMapping::NonPowerOfTwo(NonPowerOfTwo)
+				| PSOS::MipMapping::Gamma.Use(desc.Format.is_srgb())
+				| PSOS::MipMapping::Slices.Use(true)
+				);
+		}
+
+		uint32_t AdditionalMips;
+		_BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
+		uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
+
+		if (TopMip + NumMips > maps)
+			NumMips = maps - TopMip;
+
+		if (DstWidth == 0)
+			DstWidth = 1;
+
+		if (DstHeight == 0)
+			DstHeight = 1;
+
+		// Value-initialised: the 2D fields and the unused array mips stay zero.
+		Slots::MipMapping data{};
+		data.GetSrcMipLevel() = TopMip;
+		data.GetNumMipLevels() = NumMips;
+		data.GetTexelSize() = { 1.0f / DstWidth, 1.0f / DstHeight };
+		{
+			PROFILE(L"create_mip");
+			for (uint32_t i = 0; i < NumMips; i++)
+			{
+				data.GetOutMipArray()[i] = slice_span(TopMip + 1 + i).rwTexture2DArray;
+			}
+			data.GetSrcMipArray() = slice_span(TopMip).texture2DArray;
+		}
+		compute_context.set(data);
+
+		compute_context.dispatch(ivec3(DstWidth, DstHeight, slices), ivec3(8, 8, 1));
+
+		TopMip += NumMips;
+	}
 }
 
 void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Texture2DView  view)

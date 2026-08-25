@@ -246,14 +246,12 @@ public:
 		// happen single-threaded after the setup/append phase joins.
 		concurrent_vector<Pass*> passes;
 
-		HAL::SubResourcesGPU merged_read_state;
-
 		SyncState from;
 		SyncState to;
 	};
 
 	// A resource version's RW-state timeline. Cursor-based like ResourceChain:
-	// the state slots — and each slot's passes / merged_read_state buffers —
+	// the state slots — and each slot's passes buffers —
 	// persist across frames. reset_frame() only rewinds the cursor and push()
 	// reuses a slot (clearing passes keeps its storage, so reserve() is a no-op
 	// once it's large enough), so we don't reallocate the per-state vectors
@@ -292,7 +290,6 @@ public:
 			s.passes.reserve(reserve_n); // no-op once large enough
 			s.from.reset();
 			s.to.reset();
-			s.merged_read_state.subres.clear();
 			return s;
 		}
 
@@ -324,7 +321,11 @@ public:
 		HAL::ResourceHandle alloc_ptr;
 
 		HAL::ResourceDesc d3ddesc;
-		HAL::HeapType heap_type;
+		// Initialised, because not every path assigns it: create_resources() skips
+		// passed resources, and these slots are reused across frames, so an
+		// uninitialised value is indeterminate rather than merely wrong. Anything
+		// that filters on heap_type would then drop resources at random.
+		HAL::HeapType heap_type = HAL::HeapType::DEFAULT;
 		// setup
 		SyncState used_begin;
 		SyncState used_end;
@@ -356,10 +357,6 @@ public:
 		uint64 offset_in_bytes;
 
 		std::shared_ptr<HAL::ResourceView> view;
-			HAL::SubResourcesGPU creation_state;
-
-		HAL::SubResourcesGPU last_state;
-
 		std::shared_ptr<ResourceHandler> handler;
 	
 		bool passed      = false;
@@ -466,9 +463,10 @@ public:
 			virtual void init(ResourceAllocInfo& info) override
 			{
 				info.d3ddesc = desc.create_resource_desc(info.flags);
-				
-			info.d3ddesc.Flags|=HAL::ResFlags::DisableStateTracking;
 
+				// "The FrameGraph owns this resource's transitions" is now
+				// Resource::frame_graph_managed, set on the resource itself in
+				// create_resources -- no longer a creation-desc flag.
 			}
 
 			virtual void init_view(ResourceAllocInfo& info,GPUEntityStorageInterface& frame) override
@@ -685,7 +683,6 @@ public:
 			HAL::Resource::ptr   resource;
 			HAL::ResourceHandle  alloc_ptr;
 			HAL::ResourceDesc    desc;
-			HAL::SubResourcesGPU last_state;
 
 			bool valid() const { return !!resource; }
 		};
@@ -893,12 +890,6 @@ public:
 		void process_transitions();
 		void process_fences();
 
-		// Mirror commit_command_lists' batching to find the sets of lists that
-		// will be submitted in ONE ExecuteCommandLists, and chain
-		// resource state across the boundaries inside each set. Must run after
-		// process_transitions (all usages recorded) and process_fences (which
-		// decides where batches are flushed), and before compile_lists.
-		void link_list_groups();
 	   	void compile_lists();
 		void reset();
 
@@ -964,7 +955,6 @@ public:
 
 
 		std::future<void> render_task;
-		std::future<void> compile_task;
 
 		// Populated after compile_lists(); available during on_compile.
 		// Transition records have barrier_point == nullptr (resolved into description).

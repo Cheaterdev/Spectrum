@@ -8,10 +8,9 @@
 #include "sig_hlsl.hlsl"
 struct EnvFilter
 {
-	uint4 face; // uint4
-	float4 scaler; // float4
 	uint4 size; // uint4
-	uint4 GetFace() { return face; }
-	float4 GetScaler() { return scaler; }
+	uint targets[8]; // RWTexture2DArray<float4>
 	uint4 GetSize() { return size; }
+	RWTexture2DArray<float4> GetTargets(int i) { return ResourceDescriptorHeap[targets[i]]; }
+
 };

@@ -24,7 +24,7 @@ export namespace PSOS
 			}
 		};
 
-		GEN_GRAPHICS_PSO(CubemapENVDiffuse)
+		GEN_COMPUTE_PSO(CubemapENVDiffuse)
 
 
 		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
@@ -36,18 +36,10 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.vertex.file_name = "shaders/cubemap_down.hlsl";
-			mpso.vertex.entry_point = "VS";
-			mpso.vertex.flags = HAL::ShaderOptions::None;
+			mpso.compute.file_name = "shaders/cubemap_down.hlsl";
+			mpso.compute.entry_point = "CS_Diffuse";
+			mpso.compute.flags = HAL::ShaderOptions::None;
 			
-			mpso.pixel.file_name = "shaders/cubemap_down.hlsl";
-			mpso.pixel.entry_point = "PS_Diffuse";
-			mpso.pixel.flags = HAL::ShaderOptions::None;
-			
-
-			mpso.rtv_formats = { HAL::Format::R11G11B10_FLOAT };	
-			mpso.blend = {  };
-
 			return mpso;
 		}
 

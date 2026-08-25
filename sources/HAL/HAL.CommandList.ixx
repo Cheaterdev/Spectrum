@@ -41,7 +41,12 @@ export{
 			template<TrackableClass T>
 			void track_object(T& obj)
 			{
-				auto& state = obj.ObjectState<TrackedObjectState>::get_state(this);
+				// Unqualified: the state type is whatever this object stores per
+				// context -- TrackedObjectState for most things, a type derived
+				// from it where the object needs more (HAL::Resource keeps its
+				// per-list barrier tracking there). Naming the base explicitly
+				// would only compile for the former.
+				auto& state = obj.get_state(this);
 				if (!state.used)
 				{
 					state.used = true;
@@ -58,6 +63,11 @@ export{
 			virtual ~CommandListBase() = default;
 
 			CommandListType get_type();
+
+			// The list's debug name -- the owning pass's name for FrameGraph
+			// lists. Used by diagnostics that need to say WHICH list a barrier
+			// belongs to; an index within a group is meaningless across groups.
+			LiteralWStr get_name() const { return name; }
 		};
 
 		class TransitionCommandList;
@@ -70,59 +80,138 @@ export{
 			friend class SignatureDataSetter;
 			friend class Sendable;
 			friend class Eventer;
-			friend class ResourceStateManager;
+			friend class CommandListGroup;
 		protected:
 			void begin();
 			void on_execute();
-			std::deque<HAL::UsagePoint> usage_points;
-			std::deque<HAL::ResourceUsage> usage_pool;
-			size_t pool_used = 0;
-			std::set<Resource*> need_check_transitions;
-			void create_usage_point(BarrierSync operation, bool end = true);
 
-			// --- Operation batching -------------------------------------------
-			// Consecutive ops of the same class share ONE usage point (one
-			// barrier group) instead of each bracketing itself. open_op is the
-			// currently open batch's class (NONE = none open). current_batch_id
-			// is the OP-CLASS batch epoch — advanced ONLY by begin_op (op-class
-			// change), NOT by intra-batch hazard splits, so a resource touched
-			// anywhere in the op-class batch stays detectable across splits. Each
-			// resource's per-list state stamps batch_touch_id/state, so the hazard
-			// check reads the resource directly (no parallel map): if it was
-			// already touched in THIS epoch with a different, non-mergeable state,
-			// the batch is split. A different op class closes the batch (begin_op);
-			// list end closes it (close_op).
-			BarrierSync open_op = BarrierSync::NONE;
-			uint current_batch_id = 0;
+			// This list's work, split into contiguous same-class runs. Appended
+			// to by begin_op() only when the operation class actually changes.
+			//
+			// deque, not vector: the recorder holds CmdListOperation* (see
+			// DelayedCommandList::func_barrier) so entries must not move as
+			// more operations are appended.
+			std::deque<HAL::CmdListOperation> operations;
 
+			// Start (or keep growing) the current operation. Consecutive calls
+			// with the same class are a no-op; a different class closes the
+			// previous operation and appends a new one, reserving both barrier
+			// points in the command stream as it goes.
 			void begin_op(BarrierSync op);
-			void batch_hazard_check(const HAL::Resource* resource, ResourceState to, UINT subres);
-		public:
-			// Close the open op-batch. Called at list end (compile_transitions)
-			// and by the FrameGraph before it appends cross-pass transitions, so
-			// those land after the last op instead of inside its batch.
-			void close_op();
+
+			// Close the operation at the back, reserving the point for its
+			// barriers_after. Called by begin_op when the class changes, and
+			// once at end of recording for the final operation.
+			void end_op();
+
+			// Force a new operation of the SAME class. begin_op deliberately
+			// merges a run of same-class work into one operation, which is what
+			// makes barriers batch -- but two dispatches in that run that both
+			// touch the same UAV have to be ordered against each other, and a
+			// barrier can only sit between operations. record_usage calls this
+			// when it spots that case.
+			void split_op();
+
+			// Bumped on every begin_op call, including the ones that merge into
+			// the current operation. Stamped onto each recorded usage so
+			// record_usage can tell one dispatch's binds from the next's.
+			uint op_step = 0;
+
+			// op_step at the moment the operation at the back was appended. When
+			// it still equals op_step the operation is empty, and forcing
+			// another one would leave a stray operation behind holding two
+			// reserved-but-unused barrier points.
+			uint op_first_step = 0;
+
 		protected:
+			// Append one use to the operation currently being recorded (the
+			// back of `operations`), on this resource's per-list
+			// TrackedResourceState.
+			void record_usage(const HAL::Resource* resource, const HAL::OperationUsage& usage);
 
 		public://temporarily to allow transition into read mode
-			void transition(const HAL::Resource* resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
-			void transition(const HAL::Resource::ptr& resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
+			void add_resource_usage(const HAL::Resource* resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
+			void add_resource_usage(const HAL::Resource::ptr& resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
 
 
-				  	void compile_transitions();
 		public:
-			void free_resources();
-			 bool transitions_compiled = false;
-			UINT transition_count = 0;
-			HAL::ResourceUsage* add_usage(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST);
+			// End the current operation so the next command starts a fresh one,
+			// even though it is the same class. Unlike split_op this is a no-op
+			// on an operation nothing has recorded into yet, so it is safe to
+			// call unconditionally at the head of a command.
+			//
+			// Used by set_rtv: a run of draws merges into one operation, and one
+			// operation gets ONE set of entry barriers, so every resource it
+			// touches has to hold a single state throughout. That breaks the
+			// moment the render target changes -- a pass that renders to a
+			// texture and then samples it records RENDER_TARGET and
+			// SHADER_RESOURCE into the same operation, and the later use wins,
+			// so the clear/draw that needed RENDER_TARGET runs against
+			// SHADER_RESOURCE (#1334). Draws with different render targets can't
+			// overlap on the GPU anyway, so there is nothing to lose by not
+			// batching across the change.
+			void break_op();
 
 			void use_resource(const HAL::Resource* resource);
 
-			// Resources this list touched (populated by use_resource). Used by
-			// link_list_groups to find resources shared between lists that land in
-			// the same ExecuteCommandLists scope.
+			// Resources this list touched (populated by use_resource). This is the
+			// set CommandListGroup::compile_transitions walks -- a resource shared
+			// between lists in the group is diffed against where the previous list
+			// actually left it, not against the resting layout.
 			const std::vector<HAL::Resource*>& get_used_resources() const { return used_resources; }
 		public:
+
+			// Declare what state this list will find `resource` in. Only used
+			// when the list holds its group's FIRST touch of the resource --
+			// otherwise the group has tracked it directly and knows better.
+			// Lets the FrameGraph link a resource across a group boundary, which
+			// the group cannot see over.
+			void set_entry_state(const HAL::Resource* resource, ResourceState state);
+
+			// Open an operation for work this list cannot introspect -- an
+			// external SDK recording straight into the native command list
+			// (Streamline/DLSS). Unlike begin_op it never merges into the
+			// operation in front of it, so the states declared afterwards land
+			// in THIS operation's barriers_before and bracket exactly that work.
+			//
+			// The caller follows it with add_resource_usage for each resource the
+			// external call touches; nothing else can know those.
+			void begin_external_op(BarrierSync op);
+
+			// Record a trailing use that leaves `resource` in `state`, in an
+			// operation of its own so the barrier lands AFTER the work already
+			// recorded rather than merging into its state.
+			//
+			// This is how the FrameGraph converges a resource at its PRODUCER
+			// rather than at whichever consumer happens to run first: several
+			// passes reading the same version each need the same "before", and
+			// only one of them could ever supply it.
+			void transition_to(const HAL::Resource* resource, ResourceState state);
+
+			// transition_to() with the resource's resting state. CommandListGroup
+			// deliberately does not rest frame_graph_managed resources (a group
+			// is only part of the frame), so the FrameGraph calls this on the
+			// last pass that touches one.
+			void transition_to_rest(const HAL::Resource* resource);
+
+			// The state this list leaves `resource` in: the state of its last
+			// recorded usage, or nullopt if it never touched it. The FrameGraph
+			// pairs this with set_entry_state on the consuming list to hand a
+			// resource from one pass to the next.
+			//
+			// Subresource-accurate only when the list used the resource
+			// uniformly; a list that touched subresources individually reports
+			// its last usage's state, which is why the FrameGraph declares a
+			// whole-resource state at the boundaries it links.
+			std::optional<ResourceState> get_exit_state(const HAL::Resource* resource) const;
+
+			// The state this list needs `resource` to already be in when it
+			// starts -- its first recorded usage. The counterpart of
+			// get_exit_state: the FrameGraph converges a producer INTO this so
+			// the consuming pass needs no barrier of its own, which is the only
+			// hand-off that works when a phase has several passes (none of them
+			// ordered against each other).
+			std::optional<ResourceState> get_first_use_state(const HAL::Resource* resource) const;
 
 			void alias_begin(HAL::Resource*);
 			void alias_end(HAL::Resource*);
@@ -130,7 +219,10 @@ export{
 
 			void transition_present(const HAL::Resource* resource_ptr);
 
-			void transition(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE);
+			// whole_resource: record the use as ALL_SUBRESOURCES instead of the
+			// mip/array range the view names. Set by a table member declared
+			// [Barrier = ALL] in its .sig -- see HAL::BoundResource.
+			void add_resource_usage(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE, bool whole_resource = false);
 		};
 
 
@@ -288,7 +380,7 @@ export{
 			void post_command(T& context, BarrierSync operation)
 			{
 				// Leave the batch OPEN — it is closed lazily by the next op of a
-				// different class (begin_op) or at list end (close_op). A hazard
+				// different class (begin_op) or at list end. A hazard
 				// on a shared resource splits it (see batch_hazard_check).
 				if constexpr (Debug::GfxDebug)
 					if constexpr (compute || graphics)	print_debug();
@@ -309,6 +401,10 @@ export{
 
 			const std::vector<CommandRecord>& get_debug_records() const;
 
+			// Move the records out rather than copying them. Used by the
+			// FrameGraph debug snapshot, which rewrites what it takes.
+			std::vector<CommandRecord> take_debug_records();
+
 			void discard(HAL::Resource* resource);
 
 			CommandList(CommandListType, Device&);
@@ -322,7 +418,12 @@ export{
 			void invalidate_state();
 
 
-			void clear_uav(const Handles::UAV& h, vec4 ClearColor = vec4(0, 0, 0, 0));
+			// whole_resource: see clear_dsv below. Declares the barrier over the
+			// entire resource instead of the subresources this view names, so a
+			// caller clearing selected slices/mips of a resource it then uses as
+			// a whole does not diverge the group's per-subresource tracking.
+			void clear_uav(const Handles::UAV& h, vec4 ClearColor = vec4(0, 0, 0, 0),
+			               bool whole_resource = false);
 
 			// Clears a DSV directly (ClearDepthStencilView-equivalent) without
 			// binding it as the active render target the way set_rtv's
@@ -330,7 +431,15 @@ export{
 			// full OM bind, resource-state transitions for every attachment,
 			// and render-target-size bookkeeping, all irrelevant when the
 			// caller only wants the clear. Mirrors clear_uav's shape.
-			void clear_dsv(const Handles::DSV& h, bool clear_depth = true, bool clear_stencil = false, float depth = 0, UINT8 stencil = 0);
+			// whole_resource: declare the barrier over the ENTIRE resource rather
+			// than the subresources this view names. For a caller that clears
+			// selected slices of an atlas and then binds the whole thing as a
+			// DSV anyway, that is both accurate and far cheaper -- per-slice
+			// declarations diverge the group's per-subresource tracking, and the
+			// next whole-resource use then has to reconcile every subresource
+			// individually.
+			void clear_dsv(const Handles::DSV& h, bool clear_depth = true, bool clear_stencil = false, float depth = 0, UINT8 stencil = 0,
+			               bool whole_resource = false);
 
 		};
 
@@ -428,7 +537,7 @@ export{
 
 				SlotID slot_id;
 				Handles::CBV const_buffer;
-				std::vector<HAL::ResourceInfo*> resources;
+				std::vector<HAL::BoundResource> resources;
 			};
 			std::vector<RowInfo> tables;
 
@@ -637,15 +746,17 @@ export{
 			CommandList& get_base();
 
 			template<class T>
-			void clear(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0))
+			void clear(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0),
+			           bool whole_resource = false)
 			{
-				get_base().clear_uav(view.rwRAW, ClearColor);
+				get_base().clear_uav(view.rwRAW, ClearColor, whole_resource);
 			}
 
 			template<class T>
-			void clear_counter(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0))
+			void clear_counter(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0),
+			                   bool whole_resource = false)
 			{
-				get_base().clear_uav(view.counter_view.rwRAW, ClearColor);
+				get_base().clear_uav(view.counter_view.rwRAW, ClearColor, whole_resource);
 			}
 
 			void dispatch(int = 1, int = 1, int = 1);
@@ -677,9 +788,9 @@ export{
 			{
 				base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 
-				base.transition(hit_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
-				base.transition(miss_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
-				base.transition(raygen_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
+				base.add_resource_usage(hit_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
+				base.add_resource_usage(miss_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
+				base.add_resource_usage(raygen_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
 
 				list->dispatch_rays<Hit, Miss, Raygen>(size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
 
@@ -701,6 +812,92 @@ export{
 			}
 
 
+		};
+
+
+		// A set of command lists that will be submitted together, in this order,
+		// as one ExecuteCommandLists batch. Everything reaches a queue through a
+		// group -- there is no way to submit a bare array of lists -- because
+		// barriers can only be computed correctly with the whole batch in view.
+		//
+		// Barriers are computed ACROSS the group, not per list: a resource is
+		// entered from its resting layout once, at the group's first use of it,
+		// and returned there once, after the group's last use. Between those,
+		// lists hand the resource to each other directly, so a resource read (or
+		// written) by several consecutive lists no longer bounces through the
+		// resting layout at every list boundary.
+		class CommandListGroup
+		{
+			std::vector<CommandList::ptr> lists;
+
+			// One resource this group touches, plus what the group must do
+			// about its first-ever use. Decided by plan_resources() on the
+			// submitting thread, in submission order, so that
+			// compile_transitions() itself reads only group-local data and
+			// several groups can compile concurrently.
+			struct PlannedResource
+			{
+				Resource* resource = nullptr;
+
+				// This group is the first ever to touch the resource, so it
+				// enters from the creation (undefined) layout with SyncBefore
+				// NONE. Otherwise something has already touched it and NONE is
+				// illegal (#1417).
+				bool from_undefined = false;
+
+				// This group holds the resource's first-ever WRITE and therefore
+				// owns its initializing discard (#1422).
+				bool owns_discard = false;
+			};
+
+			// Every resource any list in the group touched, deduplicated, in
+			// first-seen order. Built ONCE by plan_resources and then just
+			// walked by compile_transitions -- which used to rebuild the same
+			// list through a std::set (a tree-node allocation per resource) and
+			// then pay a hash lookup per resource to find its plan.
+			std::vector<PlannedResource> planned;
+
+			// Whether plan_resources() has run for this group. Not derivable
+			// from `planned` being non-empty: a group whose lists touched no
+			// resources at all plans to an empty list, which is legitimate.
+			bool planned_built = false;
+
+		public:
+			void add(const CommandList::ptr& list) { lists.emplace_back(list); }
+
+			bool empty() const { return lists.empty(); }
+			size_t size() const { return lists.size(); }
+			void clear() { lists.clear(); }
+
+			const std::vector<CommandList::ptr>& get_lists() const { return lists; }
+
+			// Compute every barrier for the group and fill the groups the
+			// reserved points in each list's command stream refer to. Runs after
+			// recording and before the lists are compiled -- compile() consumes
+			// the barrier groups, so filling them afterwards would emit nothing.
+			//
+			// Must run exactly once per list. A list processed by two groups (or
+			// by a group and again on its own) gets two independently computed
+			// barrier sets spliced into one command stream.
+			// Resolve the first-use questions for every resource this group
+			// touches. MUST run on the submitting thread, in submission order,
+			// BEFORE compile_transitions -- it is the only step that reads or
+			// writes the per-resource `virgin` / `initialized` flags, and "which
+			// group owns the first write" is meaningless out of order.
+			//
+			// Splitting it out is what makes compile_transitions pure: after
+			// this, a group's barrier computation touches nothing shared, so
+			// groups can be compiled in parallel.
+			void plan_resources();
+
+			void compile_transitions();
+
+			// Replay every list into its API command list. Must follow
+			// compile_transitions -- this is what consumes the barrier groups,
+			// so compiling first would emit them empty. Lists compile
+			// independently, so this fans out across the thread pool and joins
+			// before returning.
+			void compile();
 		};
 
 

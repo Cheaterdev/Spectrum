@@ -29,6 +29,26 @@ export
 			void for_each_subres(std::function<void(const std::shared_ptr<Resource>&, UINT)> f) const;
 		};
 
+		// One view bound into a table slot, plus how the barrier system should
+		// scope it. Separate from ResourceInfo because the scope belongs to the
+		// BINDING, not the view: the same descriptor can be bound by one table
+		// that wants whole-resource barriers and another that does not.
+		struct BoundResource
+		{
+			ResourceInfo* info = nullptr;
+
+			// [Barrier = ALL] on the .sig member. Transition the WHOLE resource
+			// instead of the mip/array range this view names.
+			//
+			// For a view narrowed to one mip of a big array (a Hi-Z pyramid
+			// level over N slices), the range costs one barrier per slice per
+			// bind while the neighbouring levels are being written anyway. One
+			// whole-resource entry is both cheaper and what the surrounding
+			// code actually wants -- which is why several call sites used to
+			// hand-write a bare add_resource_usage() next to the bind.
+			bool whole_resource = false;
+		};
+
 		class DescriptorHeap : public SharedObject<DescriptorHeap>, public API::DescriptorHeap, public TypedObject<DescriptorHeap>
 		{
 			friend struct Handle;

@@ -156,7 +156,7 @@ PSSM::PSSM()
 
 			if (i == 0)	// small hack to enable aliasing of entire resource
 			{
-				command_list->transition((*data.PSSM_Depths).resource, ResourceStates::DEPTH_STENCIL);
+				command_list->add_resource_usage((*data.PSSM_Depths).resource, ResourceStates::DEPTH_STENCIL);
 			}
 				
 			MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());

@@ -23,14 +23,15 @@ Pipeline MainPipeline
 	VSM_GatherDispatch;
 	VSM_RenderPages;
 
+
 	# shadow (generate_global)
 	Scene;
 
 
 	# sky setup (sky.generate)
-	CubeSky;
-	CubeMapDownsample;
-	CubeMapEnviromentProcessor;
+	[Async]CubeSky;
+	[Async]CubeMapDownsample;
+	[Async]CubeMapEnviromentProcessor;
 
 											# voxel lighting (generate_light)
 											[Async]
@@ -53,13 +54,14 @@ Pipeline MainPipeline
 											RTXShadow;
 											[Async]PSSM_Combine;
 											VSM_DepthAnalysis;
+											VSM_BlockerSearch;
 											VSM_Combine;
 											# voxel screen (voxel_gi.generate)
 											[Async]
 											VoxelScreen;
 											[Async]
 											VoxelCombine;
-
+	[Async]VSM_HiZRebuild;
 	ReflCombine;
 
 	# sky + post

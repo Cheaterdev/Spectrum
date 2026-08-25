@@ -413,9 +413,18 @@ namespace HAL
         void CommandList::transitions(const HAL::Barriers& _barriers)
         {
             auto& barriers = _barriers.get_barriers();
+            if (barriers.empty()) return;
 
-            std::vector<D3D12_TEXTURE_BARRIER> textures;
-            std::vector<D3D12_BUFFER_BARRIER>  buffers;
+            // Exact sizes, counted as the barriers were recorded -- so neither
+            // array ever grows mid-fill, and after the first few frames the
+            // reserve is a no-op because the capacity is already there.
+            auto& textures = scratch_textures;
+            auto& buffers  = scratch_buffers;
+
+            textures.clear();
+            buffers.clear();
+            textures.reserve(_barriers.get_texture_count());
+            buffers.reserve(_barriers.get_buffer_count());
 
             for (auto& e : barriers)
             {
@@ -434,7 +443,7 @@ namespace HAL
                     buffers.emplace_back(barrier);
                 }
 
-                if (e.resource->get_desc().is_texture())
+                else if (e.resource->get_desc().is_texture())
                 {
                     D3D12_TEXTURE_BARRIER barrier;
 
@@ -446,7 +455,7 @@ namespace HAL
                     barrier.LayoutAfter  = to_native(e.after.get_layout());
                     barrier.pResource    = e.resource->get_dx();
 
-                    if (e.subres == 0xffffffffu) // HAL::ALL_SUBRESOURCES
+                    if (e.range.is_all())
                     {
                         // Single barrier covering every subresource. D3D12 uses
                         // IndexOrFirstMipLevel == 0xffffffff (== ALL_SUBRESOURCES)
@@ -462,12 +471,15 @@ namespace HAL
                     }
                     else
                     {
-                        barrier.Subresources.IndexOrFirstMipLevel = e.resource->get_desc().as_texture().get_mip(e.subres);
-                        barrier.Subresources.NumMipLevels         = 1;
-                        barrier.Subresources.FirstArraySlice      = e.resource->get_desc().as_texture().get_array(e.subres);
-                        barrier.Subresources.NumArraySlices       = 1;
-                        barrier.Subresources.FirstPlane           = e.resource->get_desc().as_texture().get_plane(e.subres);
-                        barrier.Subresources.NumPlanes            = 1;
+                        // Straight copy: SubresRange holds exactly these six fields,
+                        // so a run of subresources merged at record time reaches the
+                        // API as one barrier instead of one per subresource.
+                        barrier.Subresources.IndexOrFirstMipLevel = e.range.first_mip;
+                        barrier.Subresources.NumMipLevels         = e.range.num_mips;
+                        barrier.Subresources.FirstArraySlice      = e.range.first_slice;
+                        barrier.Subresources.NumArraySlices       = e.range.num_slices;
+                        barrier.Subresources.FirstPlane           = e.range.first_plane;
+                        barrier.Subresources.NumPlanes            = e.range.num_planes;
                     }
 
                     barrier.Flags = D3D12_TEXTURE_BARRIER_FLAG_NONE;
@@ -484,28 +496,30 @@ namespace HAL
                 }
             }
 
-            std::vector<D3D12_BARRIER_GROUP> native;
+            // At most one buffer group and one texture group, so a stack array
+            // rather than a vector -- this used to heap-allocate for two
+            // entries on every barrier point.
+            D3D12_BARRIER_GROUP native[2];
+            UINT native_count = 0;
 
             if (!buffers.empty())
             {
-                D3D12_BARRIER_GROUP group;
+                auto& group = native[native_count++];
                 group.Type            = D3D12_BARRIER_TYPE_BUFFER;
                 group.NumBarriers     = uint(buffers.size());
                 group.pBufferBarriers = buffers.data();
-                native.emplace_back(group);
             }
 
             if (!textures.empty())
             {
-                D3D12_BARRIER_GROUP group;
+                auto& group = native[native_count++];
                 group.Type             = D3D12_BARRIER_TYPE_TEXTURE;
                 group.NumBarriers      = uint(textures.size());
                 group.pTextureBarriers = textures.data();
-                native.emplace_back(group);
             }
 
-            if (!native.empty())
-                m_commandList->Barrier((UINT)native.size(), native.data());
+            if (native_count)
+                m_commandList->Barrier(native_count, native);
         }
     }
 }

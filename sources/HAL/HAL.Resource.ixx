@@ -134,7 +134,7 @@ export{
 	{
 
 
-		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>, public TrackedObject, public API::Resource, public TypedObject<Resource>
+		class Resource :public SharedObject<Resource>, public ObjectState<TrackedResourceState>, public TrackedObject, public API::Resource, public TypedObject<Resource>
 		{
 					protected:
 						bool serialize_from_derived = false;
@@ -145,7 +145,6 @@ export{
 			Device* m_device = nullptr;
 
 		protected:
-			ResourceStateManager state_manager;
 			TiledResourceManager tiled_manager;
 			void _init(Device& device, const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
 
@@ -159,12 +158,25 @@ export{
 			bool debug = false;
 			bool debug_transitions = false;
 			bool frame_graph_managed = false;
+
+			// True until any barrier has transitioned this resource. While set,
+			// its layout is whatever it was created with (undefined), so a first
+			// touch enters from UNKNOWN rather than from the resting layout.
+			bool virgin = true;
+
+			// True until the resource's contents have been established by a
+			// write. D3D12 requires a placed render-target/depth resource to be
+			// initialized by a Discard/Clear/Copy before it is used as one
+			// (#1422), and only a WRITE can do that -- so this is deliberately
+			// separate from `virgin`: a resource whose first-ever touch is a
+			// read has a defined layout from that point on, but is still
+			// uninitialized, and the discard has to wait for the first write.
+			bool initialized = false;
 			bool is_ready() const;
 
 			ResourceType get_type() const;
 			const ResourceDesc& get_desc() const;
 			ResourceHandle alloc_handle;
-			ResourceStateManager& get_state_manager();
 
 			// Backend-native resource-state value (D3D12_RESOURCE_STATES or
 			// VkImageLayout, as uint32_t) for the currently tracked GPU state —
@@ -176,8 +188,6 @@ export{
 
 			std::shared_ptr<Resource> get_tracked();
 
-			void disable_state_tracking();
-			void enable_state_tracking();
 			ResourceAllocationInfo alloc_info;
 			std::string name;
 			void set_name(std::string name);
@@ -215,19 +225,8 @@ export{
 
 			SERIALIZE()
 			{
-
-				desc.Flags &= ~ResFlags::DisableStateTracking;
-				if (check(desc.Flags & ResFlags::DisableStateTracking))
-				{
-					ASSERT(false);
-					Log::get() << "AlARMA!!" << Log::endl;
-				}
-	ASSERT(!check(desc.Flags & ResFlags::DisableStateTracking));
-			
 				ASSERT(serialize_from_derived);
 				ar& NVP(desc);
-				ASSERT(!check(desc.Flags & ResFlags::DisableStateTracking));
-
 			}
 		};
 			

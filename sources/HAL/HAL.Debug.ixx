@@ -15,6 +15,7 @@ export namespace HAL
 		// identical; any difference is a hazard-detection bug.
 		inline bool EnableOpBatching = true;
 
+
 #ifdef DEV
 		constexpr bool GfxDebug = !RunForPix&&false;
 		constexpr bool ValidationErrors = !RunForPix&&true;

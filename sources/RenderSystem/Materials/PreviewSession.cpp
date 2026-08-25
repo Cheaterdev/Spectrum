@@ -207,17 +207,9 @@ void materials::MaterialPreviewSession::dispatch()
 		material->render_preview(list->get_compute(), pso, results->texture_2d().rwTexture2DArray, ivec2(preview_resolution));
 	}
 
-	// This resource is only touched by ad hoc immediate lists (never the
-	// FrameGraph), so its tracked GPU state doesn't get kept in sync
-	// automatically. Explicitly transition to the desired read state and
-	// pin it as the resting state (same fix as Texture.cpp's upload path)
-	// so later lists -- the GUI's SRV read, or our own next dispatch --
-	// start from an accurate assumption instead of a stale one.
-	{
-		auto desired = results->resource->get_state_manager().get_desired_state();
-		list->transition(results->resource.get(), desired);
-		results->resource->get_state_manager().set_resting_state(desired.layout);
-	}
+	// The result is left readable without an explicit transition: the dispatch
+	// above already recorded a usage, so the group's return-to-rest hands it
+	// back at its resting layout for the GUI's SRV read.
 
 	if (need_views)
 	{

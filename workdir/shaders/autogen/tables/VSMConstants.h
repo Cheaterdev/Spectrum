@@ -12,12 +12,18 @@ struct VSMConstants
 	int active_max; // int
 	int page_size; // int
 	int pages_per_level; // int
+	int rtx_dual_blur; // int
+	int quad_blocker_search; // int
+	int debug_rtx_reference; // int
 	float4x4 light_view; // float4x4
 	float4 level_info[26]; // float4
 	int GetActive_min() { return active_min; }
 	int GetActive_max() { return active_max; }
 	int GetPage_size() { return page_size; }
 	int GetPages_per_level() { return pages_per_level; }
+	int GetRtx_dual_blur() { return rtx_dual_blur; }
+	int GetQuad_blocker_search() { return quad_blocker_search; }
+	int GetDebug_rtx_reference() { return debug_rtx_reference; }
 	float4x4 GetLight_view() { return light_view; }
 	float4 GetLevel_info(int i) { return level_info[i]; }
 };

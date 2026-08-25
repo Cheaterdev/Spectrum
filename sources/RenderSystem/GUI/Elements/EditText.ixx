@@ -55,6 +55,11 @@ export namespace GUI
 
                 edit_text();
 
+                // Programmatic set (e.g. seeding a bound value at construction).
+                // Does not fire on_change -- callers seed the initial text before
+                // wiring on_change, same ordering check_box_text/float_slider use.
+                void set_text(const std::string& t);
+
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
 
                 virtual void on_key_action(key_action action, long key) override;

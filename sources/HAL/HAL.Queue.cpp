@@ -106,7 +106,7 @@ namespace HAL
 		return signal_internal();
 	}	 */
 
-	void Queue::execute_internal(UINT64 fence_value, std::list<CommandList::ptr> lists)
+	void Queue::execute_internal(UINT64 fence_value, std::vector<CommandList::ptr> lists)
 	{
 				std::unique_lock<std::mutex> lock(queue_mutex);
 
@@ -265,17 +265,15 @@ namespace HAL
 		result.wait();
 	}
 
-	HAL::FenceWaiter Queue::execute(std::list<CommandList::ptr> list)
+	HAL::FenceWaiter Queue::execute(const CommandListGroup& group)
 	{
 		std::unique_lock<std::mutex> lock(submit_mutex);
 
 		const UINT64 fence = ++m_fenceValue;
 
 		// Move the batch through: caller -> executor closure -> execute_internal.
-		// Copying a std::list of shared_ptr costs a node allocation and an atomic
-		// refcount bump per element, per hop.
-		gpu_execute_thread.enqueue([this, list = std::move(list), fence]() mutable {
-			execute_internal(fence, std::move(list));
+		gpu_execute_thread.enqueue([this, lists = group.get_lists(), fence]() mutable {
+			execute_internal(fence, std::move(lists));
 			});
 
 		return  HAL::FenceWaiter(&commandListCounter, fence, type);

@@ -143,8 +143,15 @@ public:
 						if (!rendered_image->texture.texture || uint2(rendered_image->texture.texture->get_desc().as_texture().Dimensions.xy) != debug_size)
 						{
 							HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { debug_size }, 1, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
-							auto texture = std::make_shared<Texture>(RenderSystem::get().device(), desc, TextureLayout::SHADER_RESOURCE);
 							rendered_image->texture.texture = std::make_shared<Texture>(RenderSystem::get().device(), desc);
+
+							// resource@pass, so a validation message names what it is
+							// and where it came from. These are debugger-owned
+							// textures, and unnamed they show up as "Unnamed
+							// ID3D12Resource Object" -- indistinguishable from each
+							// other and from anything else the debug layer reports.
+							rendered_image->texture.texture->resource->set_name(
+								std::string("FGDebug::preview::") + info->name() + "@" + convert(pass->name.ptr));
 						}
 
 

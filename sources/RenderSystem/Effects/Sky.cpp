@@ -43,7 +43,6 @@ SkyRender::SkyRender()
 		builder.create(data.sky_cubemap,
 		               { ivec3(256, 256, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 },
 		               FrameGraph::ResourceFlags::UnorderedAccess |
-		               FrameGraph::ResourceFlags::RenderTarget    |
 		               FrameGraph::ResourceFlags::Static);
 
 		bool changed = ((sky.sunDir - dir).length() > 0.001f);
@@ -57,46 +56,44 @@ SkyRender::SkyRender()
 
 	m_cubesky_render = [this](Passes::CubeSky::Context& data, FrameGraph::FrameContext& context)
 	{
-		auto& sky      = context.graph->get_context<SkyInfo>();
-		auto& graphics = context.get_list()->get_graphics();
+		auto& sky     = context.graph->get_context<SkyInfo>();
+		auto& compute = context.get_list()->get_compute();
 
-		graphics.set_pipeline<PSOS::SkyCube>();
-		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE,
-		                      HAL::PrimitiveTopologyFeed::STRIP);
+		compute.set_pipeline<PSOS::SkyCube>();
 
 		{
+			PROFILE(L"cube_sky_setup");
+
 			Slots::SkyData skydata;
 			skydata.GetInscatter()     = inscatter->texture_3d().texture3D;
 			skydata.GetIrradiance()    = irradiance->texture_2d().texture2D;
 			skydata.GetTransmittance() = transmittance->texture_2d().texture2D;
 			skydata.GetSunDir()        = sky.sunDir;
-			graphics.set(skydata);
+			compute.set(skydata);
+
+			context.graph->set_slot(SlotID::FrameInfo, compute);
 		}
 
-		context.graph->set_slot(SlotID::FrameInfo, graphics);
-
-		for (unsigned int i = 0; i < 6; i++)
 		{
-			HAL::TextureViewDesc subres;
-			subres.ArraySize       = 1;
-			subres.FirstArraySlice = i;
-			subres.MipLevels       = 1;
-			subres.MipSlice        = 0;
+			PROFILE(L"cube_sky_faces");
 
-			auto face = data.sky_cubemap->resource->create_view<HAL::Texture2DView>(
-				graphics.get_base(), subres);
+			auto& cube = *data.sky_cubemap;
+			auto  size = cube.get_size();
+
+			// Mip 0 of all six faces as one array UAV, so the whole cube is a
+			// single dispatch with the face in Z.
+			HAL::TextureViewDesc subres;
+			subres.MipSlice        = 0;
+			subres.MipLevels       = 1;
+			subres.FirstArraySlice = 0;
+			subres.ArraySize       = 6;
 
 			Slots::SkyFace skyFace;
-			skyFace.GetFace() = i;
-			graphics.set(skyFace);
+			skyFace.GetFaces() = cube.resource->create_view<HAL::Texture2DView>(
+				compute.get_base(), subres).rwTexture2DArray;
+			compute.set(skyFace);
 
-			{
-				RT::SingleColor rt;
-				rt.GetColor() = face.renderTarget;
-				graphics.set_rtv(rt);
-			}
-
-			graphics.draw(4);
+			compute.dispatch(ivec3(size.x, size.y, 6), ivec3(8, 8, 1));
 		}
 	};
 
@@ -155,94 +152,92 @@ void PassDefault<Passes::CubeMapDownsample>::render(
 bool PassDefault<Passes::CubeMapEnviromentProcessor>::setup(
 	Passes::CubeMapEnviromentProcessor::Context& data, TaskBuilder& builder)
 {
-	builder.need(data.sky_cubemap, ResourceFlags::PixelRead);
+	builder.need(data.sky_cubemap, ResourceFlags::ComputeRead);
 	builder.create(data.sky_cubemap_filtered,
 	               { ivec3(64, 64, 0), HAL::Format::R11G11B10_FLOAT, 1 },
-	               ResourceFlags::RenderTarget | ResourceFlags::Static);
+	               ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 	builder.create(data.sky_cubemap_filtered_diffuse,
 	               { ivec3(64, 64, 0), HAL::Format::R11G11B10_FLOAT, 1 },
-	               ResourceFlags::RenderTarget | ResourceFlags::Static);
+	               ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 	return data.sky_cubemap.is_changed();
 }
 
 void PassDefault<Passes::CubeMapEnviromentProcessor>::render(
 	Passes::CubeMapEnviromentProcessor::Context& data, FrameContext& context)
 {
-	auto& graphics = context.get_list()->get_graphics();
+	auto& compute = context.get_list()->get_compute();
 
-	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-	graphics.set_signature(Layouts::DefaultLayout);
+	compute.set_signature(Layouts::DefaultLayout);
 
 	{
 		Slots::EnvSource downsample;
 		downsample.GetSourceTex() = data.sky_cubemap->textureCube;
-		graphics.set(downsample);
+		compute.set(downsample);
 	}
 
-	// Specular filtered cubemap — one draw per mip level per face.
-	UINT count = data.sky_cubemap_filtered->resource->get_desc().as_texture().MipLevels;
-	for (unsigned int m = 0; m < count; m++)
-	{
-		graphics.set_pipeline<PSOS::CubemapENV>(PSOS::CubemapENV::Level(std::min(m, 4u)));
-
-		for (unsigned int i = 0; i < 6; i++)
-		{
-			HAL::TextureViewDesc subres;
-			subres.ArraySize       = 1;
-			subres.FirstArraySlice = i;
-			subres.MipLevels       = 1;
-			subres.MipSlice        = m;
-
-			auto face = data.sky_cubemap_filtered->resource->create_view<HAL::Texture2DView>(
-				graphics.get_base(), subres);
-
-			{
-				RT::SingleColor rt;
-				rt.GetColor() = face.renderTarget;
-				graphics.set_rtv(rt, i == 0 ? RTOptions::Default : RTOptions::SetHandles);
-			}
-
-			Slots::EnvFilter filter;
-			filter.GetFace().x   = i;
-			filter.GetScaler().x = (float(m) + 0.5f) / count;
-			filter.GetSize().x   = (UINT)data.sky_cubemap->resource->get_desc().as_texture().Dimensions.x;
-			graphics.set(filter);
-
-			graphics.draw(4);
-		}
-	}
-
-	// Diffuse filtered cubemap — one draw per face.
-	graphics.set_pipeline<PSOS::CubemapENVDiffuse>();
-	for (unsigned int i = 0; i < 6; i++)
+	// One mip of a cubemap as a single UAV spanning all six faces.
+	auto slice_span = [&](HAL::CubeView& cube, UINT mip)
 	{
 		HAL::TextureViewDesc subres;
-		subres.ArraySize       = 1;
-		subres.FirstArraySlice = i;
+		subres.MipSlice        = mip;
 		subres.MipLevels       = 1;
-		subres.MipSlice        = 0;
+		subres.FirstArraySlice = 0;
+		subres.ArraySize       = 6;
 
-		auto face = data.sky_cubemap_filtered_diffuse->resource->create_view<HAL::Texture2DView>(
-			graphics.get_base(), subres);
+		return cube.resource->create_view<HAL::Texture2DView>(compute.get_base(), subres);
+	};
 
-		if (i == 0)
+	// Specular filtered cubemap -- every mip of every face in one dispatch. The
+	// shader walks a flat index over the concatenated per-mip spans, so the
+	// mismatched mip sizes still map to one texel per thread.
+	{
+		PROFILE(L"env_specular_filter");
+
+		auto& filtered = *data.sky_cubemap_filtered;
+
+		const UINT count = filtered.get_desc().as_texture().MipLevels;
+		const UINT base  = (UINT)filtered.get_size().x;
+
+		// EnvFilter carries one array UAV per mip; the 64^2 cubemap is 7 mips.
+		ASSERT(count <= 8);
+
+		compute.set_pipeline<PSOS::CubemapENV>();
+
+		// Value-initialised: only the first `count` targets are filled.
+		Slots::EnvFilter filter{};
+		filter.GetSize().x = (UINT)data.sky_cubemap->resource->get_desc().as_texture().Dimensions.x;
+		filter.GetSize().y = count;
+		filter.GetSize().z = base;
+
+		UINT total = 0;
+		for (UINT m = 0; m < count; m++)
 		{
-			graphics.set_viewport(face.get_viewport());
-			graphics.set_scissor(face.get_scissor());
+			UINT size = std::max(base >> m, 1u);
+
+			filter.GetTargets()[m] = slice_span(filtered, m).rwTexture2DArray;
+			total += size * size * 6;
 		}
+		compute.set(filter);
 
-		{
-			RT::SingleColor rt;
-			rt.GetColor() = face.renderTarget;
-			graphics.set_rtv(rt);
-		}
+		compute.dispatch(ivec2(total, 1), ivec2(64, 1));
+	}
 
-		Slots::EnvFilter filter;
-		filter.GetFace().x   = i;
-		filter.GetScaler().x = (float(0) + 0.5f) / count;
-		filter.GetSize().x   = (UINT)data.sky_cubemap_filtered_diffuse->resource->get_desc().as_texture().Dimensions.x;
-		graphics.set(filter);
+	// Diffuse filtered cubemap -- mip 0 only, so one dispatch with the face in Z.
+	{
+		PROFILE(L"env_diffuse_filter");
 
-		graphics.draw(4);
+		auto& diffuse = *data.sky_cubemap_filtered_diffuse;
+		auto  size    = diffuse.get_size();
+
+		compute.set_pipeline<PSOS::CubemapENVDiffuse>();
+
+		Slots::EnvFilter filter{};
+		filter.GetSize().x     = (UINT)size.x;
+		filter.GetSize().y     = 1;
+		filter.GetSize().z     = (UINT)size.x;
+		filter.GetTargets()[0] = slice_span(diffuse, 0).rwTexture2DArray;
+		compute.set(filter);
+
+		compute.dispatch(ivec3(size.x, size.y, 6), ivec3(8, 8, 1));
 	}
 }

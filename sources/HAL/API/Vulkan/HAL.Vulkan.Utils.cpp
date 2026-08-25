@@ -267,7 +267,7 @@ uint32_t to_native_resource_state(TextureLayout layout)
 VkPipelineStageFlags2 to_native_stage(BarrierSync sync)
 {
     if (sync == BarrierSync::NONE) return VK_PIPELINE_STAGE_2_NONE;
-    //if (check(sync & BarrierSync::ALL)) return VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    if (check(sync & BarrierSync::ALL)) return VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
     VkPipelineStageFlags2 result = VK_PIPELINE_STAGE_2_NONE;
     if (check(sync & BarrierSync::DRAW))             result |= VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;

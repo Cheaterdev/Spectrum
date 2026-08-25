@@ -601,14 +601,10 @@ namespace HAL
             pi.pWaitSemaphores    = (wait_sem != VK_NULL_HANDLE) ? &wait_sem : nullptr;
             VkResult pr = api_queue.present(pi);
 
-            // 3) Re-assert initial_layout=PRESENT so next frame's compile_transitions
-            //    emits a fresh PRESENT→COLOR_ATTACHMENT barrier.
-            if (presented_image < static_cast<uint32_t>(frames.size()) &&
-                frames[presented_image].m_renderTarget)
-            {
-                frames[presented_image].m_renderTarget->get_state_manager()
-                    .init_subres(1, TextureLayout::PRESENT);
-            }
+            // 3) The back buffer is back at its resting layout (PRESENT) by
+            //    construction now -- resting_layout() derives it from the
+            //    Swapchain flag, and every list returns a resource to rest --
+            //    so nothing has to be re-asserted here.
 
             // 4) Acquire the NEXT image (free-running ring slot — NOT keyed by image
             //    index) and wire its wait semaphore into the next render submit.

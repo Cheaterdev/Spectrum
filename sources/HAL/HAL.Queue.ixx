@@ -48,7 +48,7 @@ export namespace HAL
 
 		HAL::CommandListType type;
 
-		void execute_internal(UINT64 fence_value, std::list<CommandList::ptr> list);
+		void execute_internal(UINT64 fence_value, std::vector<CommandList::ptr> lists);
 		uint64 frequency;
 
 	public:
@@ -69,7 +69,11 @@ export namespace HAL
 
 		void signal_and_wait();
   		HAL::FenceWaiter signal();
-		HAL::FenceWaiter execute(std::list<CommandList::ptr> list);
+		// Submit a group. There is deliberately no overload taking a bare
+		// array of lists: barriers are computed across a whole group (see
+		// CommandListGroup::compile_transitions), so a batch that never
+		// became a group would reach the GPU with its barriers unfilled.
+		HAL::FenceWaiter execute(const CommandListGroup& group);
 		HAL::FenceWaiter signal(HAL::Fence& fence, UINT64 value);
 		void gpu_wait(HAL::FenceWaiter waiter);
 

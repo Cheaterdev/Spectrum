@@ -22,11 +22,18 @@ void Texture3DMultiTiles::flush(HAL::CommandList& list)
 
 void Texture3DMultiTiles::set(HAL::ResourceDesc desc)
 {
-	desc.Flags |= ResFlags::Virtual | ResFlags::DisableStateTracking;
+	desc.Flags |= ResFlags::Virtual;
 	tex_dynamic.reset(new HAL::Texture(RenderSystem::get().device(), desc, TextureLayout::SHADER_RESOURCE));
 	tex_static.reset(new HAL::Texture(RenderSystem::get().device(), desc, TextureLayout::SHADER_RESOURCE));
 
 	tex_result.reset(new HAL::Texture(RenderSystem::get().device(), desc, TextureLayout::SHADER_RESOURCE));
+
+	// Allocated outside the FrameGraph's allocator, but only ever transitioned
+	// by its passes -- so the graph owns their state, which is what the
+	// DisableStateTracking flag used to say.
+	tex_dynamic->resource->frame_graph_managed = true;
+	tex_static->resource->frame_graph_managed  = true;
+	tex_result->resource->frame_graph_managed  = true;
 
 	tex_dynamic->resource->set_name("tex_dynamic");
 
@@ -93,8 +100,11 @@ void Texture3DRefTiles::flush(HAL::CommandList& list)
 
 void Texture3DRefTiles::set(HAL::ResourceDesc desc)
 {
-	desc.Flags |= ResFlags::Virtual | ResFlags::DisableStateTracking;
+	desc.Flags |= ResFlags::Virtual;
 	tex_result.reset(new HAL::Texture(RenderSystem::get().device(), desc, TextureLayout::SHADER_RESOURCE));
+
+	// See Texture3DMultiTiles::set -- FrameGraph passes own its transitions.
+	tex_result->resource->frame_graph_managed = true;
 
 	static_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
 	dynamic_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);

@@ -22,6 +22,26 @@ struct VSMConstants
 	int active_max;
 	int page_size;
 	int pages_per_level;
+	# 0 = single blur pass (uses the RTX-verified distance when the
+	# verification ray hit something, VSM's own estimate otherwise -- cheaper,
+	# one 16-tap blur per pixel). 1 = blur BOTH distances and take min() of
+	# the two resulting shadow values (pricier -- an extra 16-tap blur
+	# whenever the ray hits -- but avoids the bright spots a single blended
+	# estimate produced between overlapping penumbras). Only read when
+	# VsmRtxVerify is enabled.
+	int rtx_dual_blur;
+	# 0 = every pixel runs its own full 16-tap blocker search (original).
+	# 1 = split the 16 taps 4-per-thread across each 2x2 pixel quad, merged
+	# via QuadReadAcrossX/Y/Diagonal -- ~4x fewer atlas samples per pixel for
+	# the search, same total 16-tap coverage. New/unverified, hence a
+	# runtime A/B switch rather than replacing the original outright.
+	int quad_blocker_search;
+	# Debug view: when nonzero, VSM_Combine ignores get_shadow_vsm entirely
+	# for real geometry pixels and instead displays RTXShadow's own
+	# (denoised) full-RT shadow mask directly as grayscale -- a reference
+	# to compare VSM's quality/performance against. See VSMLighting's
+	# rtx_shadow_mask field.
+	int debug_rtx_reference;
 	float4x4 light_view;
 	# MaxLevels (VSM.ixx) storage slots -- one geometric ladder, no
 	# regular/adaptive split (see VSMClipmap::page_world_size). Keep this in
@@ -73,8 +93,12 @@ ComputePSO VSMCopyPageDepth
 [Bind = DefaultLayout::Instance0]
 struct VSMCopyPageDepthBatch
 {
-	Texture2DArray<float> atlas;
-	RWTexture2DArray<float> dst_mip0;
+	# atlas / dst_mip0 are NARROWED views (one mip, physical_page_count array
+	# slices). Without [Barrier = ALL] each bind expands into one barrier per
+	# slice; the whole resource is being rewritten by this step anyway, so one
+	# whole-resource transition is both correct and far cheaper.
+	[Barrier = ALL] Texture2DArray<float> atlas;
+	[Barrier = ALL] RWTexture2DArray<float> dst_mip0;
 	StructuredBuffer<uint> dirty_slots;
 }
 
@@ -96,8 +120,11 @@ ComputePSO VSMCopyPageDepthBatch
 [Bind = DefaultLayout::Instance0]
 struct VSMDownsampleHiZBatch
 {
-	Texture2DArray<float> src;
-	RWTexture2DArray<float> dst_mip;
+	# Both sides are narrowed to exactly one mip across physical_page_count
+	# slices, and this runs once per mip per frame -- the single worst
+	# subresource-expansion site in the frame. See VSMCopyPageDepthBatch.
+	[Barrier = ALL] Texture2DArray<float> src;
+	[Barrier = ALL] RWTexture2DArray<float> dst_mip;
 	StructuredBuffer<uint> dirty_slots;
 	uint src_mip;
 }
@@ -137,6 +164,36 @@ struct VSMLighting
 	Texture2DArray<uint> page_table;
 	StructuredBuffer<Camera> page_cameras;
 	RWTexture2D<float4> result;
+	# Pre-baked screen-space noise (see BlueNoise.sig) -- rotates the PCSS
+	# Poisson disc per pixel (VSM_impl.hlsl's get_shadow_vsm) so the fixed
+	# 16-tap pattern doesn't read as a rigid, repeating grid at wide radii.
+	# A plain field on the already-Instance2-bound VSMLighting rather than
+	# re-binding the whole BlueNoise struct (which wants Instance0, already
+	# taken here by VSMConstants) -- same pattern VoxelGI/ReflectionDenoiser
+	# already use for consuming this same baked texture.
+	Texture2D<float2> blue_noise;
+	# Reference-comparison debug view: RTXShadow's own (denoised) full-RT
+	# shadow mask, same resource PSSM_Combine reads as an alternative to its
+	# own cascade shadow maps. RTXShadow runs unconditionally every frame on
+	# RTX-capable hardware regardless of which of PSSM/VSM is the active
+	# shadow system, so this is available for VSM to sample too -- see
+	# VSM.cpp's m_combine_setup for the builder.exists() guard (RTXShadow's
+	# own setup() can return false on non-RTX hardware, in which case this
+	# resource never gets created that frame).
+	Texture2D<float> rtx_shadow_mask;
+	# Blocker-search extraction: written by the new VSM_BlockerSearch pass
+	# (one full-screen dispatch, same size as VSM_Combine's), read back here
+	# by VSM_Combine's resolve step -- the wide, many-tap search no longer
+	# runs inline inside the same dispatch as the final PCF blur/shading.
+	# uint4, not float4: x = asuint(world_delta), or asuint(-1.0) as the
+	# sentinel for "no blocker found" (world_delta is otherwise always >=0
+	# by construction); y/z = asuint(best_tc.x)/asuint(best_tc.y); w =
+	# best_slot directly (already a uint). Bit-reinterpreted rather than
+	# stored as native floats so best_slot doesn't lose precision the way
+	# it would packed into a half-float channel. RWTexture2D (not a plain
+	# Texture2D SRV) because VSM_BlockerSearch's own shader writes it --
+	# VSM_Combine only ever reads it, via the same field/binding.
+	RWTexture2D<uint4> blocker_result;
 }
 
 ComputePSO VSMApplyCompute
@@ -145,6 +202,37 @@ ComputePSO VSMApplyCompute
 
 	[EntryPoint = CS_RESULT]
 	compute = VSM;
+
+	# Fixed single-tap 3x3 hardware-PCF (off) vs blocker-search + penumbra-
+	# scaled PCF (on) -- see get_shadow_vsm in VSM_impl.hlsl.
+	[rename = VSM_PENUMBRA]
+	[CS, nullable]
+	define VsmPenumbra;
+
+	# Only meaningful together with VsmPenumbra (VSM.cpp only ever enables
+	# this when penumbra is also on): once VSM's blocker search finds a
+	# blocker, fires one RayQuery toward the sun to verify/correct its
+	# distance against the real BVH -- shadow maps only record the front-
+	# most surface per texel, so a closer blocker can exist without ever
+	# being rasterized where the search looked. Needs RTX hardware; gated
+	# at runtime in VSM.cpp, not just by this define, since VSM must keep
+	# working correctly without it.
+	[rename = VSM_RTX_VERIFY]
+	[CS, nullable]
+	define VsmRtxVerify;
+}
+
+# Blocker-search extraction (see VSM_BlockerSearch's own PassNode comment):
+# no VsmPenumbra/VsmRtxVerify defines needed here -- VSM.cpp only ever runs
+# this pass at all when penumbra mode is on (there's no blocker search
+# without it), and RTX ray-firing happens entirely in the resolve step
+# (VSMApplyCompute), not here.
+ComputePSO VSMBlockerSearchCompute
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_BLOCKER_SEARCH]
+	compute = VSM_BlockerSearch;
 }
 
 # Amplification-shader-driven compaction (Phase 1b): CPU dispatches AS
@@ -168,6 +256,16 @@ GraphicsPSO VSMDepthDraw
 	amplification = mesh_shader_vsm;
 
 	ds = D32_FLOAT;
+	# Back to cull=Front (render only back faces -- avoids self-shadow acne
+	# "for free" by using the far side of closed geometry as the recorded
+	# blocker depth). Was briefly cull=None to fix single-sided/thin
+	# geometry (leaves, cards, thin walls) casting no shadow at all with no
+	# back face to rasterize -- but that traded a real, if narrow, bug for
+	# a much messier one: cull=None reintroduces self-shadow acne on ALL
+	# front-facing geometry, and compensating for it (normal-offset bias,
+	# self-shadow dead zones, etc.) chased artifacts (gray penumbras, page-
+	# edge flicker) for longer than the original single-sided-geometry gap
+	# was worth. Accepting the narrower, well-understood limitation again.
 	cull = Front;
 }
 
@@ -260,12 +358,54 @@ PassNode VSM_RenderPages
 	[Write] Texture VSM_Atlas;
 	[Write] Texture VSM_PageTable;
 	[Write] StructuredBuffer<Camera> VSM_PageCameras;
+	# Still [Write] and still created here (not in VSM_HiZRebuild below):
+	# the once-ever cold-start clear runs in this pass's render(), before
+	# the draw reads it for occlusion, so data.VSM_PageHiZ.is_new() has to
+	# be queryable on THIS pass's own handler -- matching the precedent
+	# that is_new() is not valid on a handler that never create()'d/need()'d
+	# the resource in that pass. VSM_HiZRebuild need()s the same resource
+	# for the actual per-frame rebuild writes.
 	[Write] Texture VSM_PageHiZ;
 	StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
+}
+
+# Phase 5.17: Hi-Z pyramid rebuild, split into its own async-compute pass.
+# Nothing this frame reads VSM_PageHiZ after VSM_RenderPages' own draw --
+# the mesh shader's occlusion test only ever consults whatever pyramid
+# content was left by the LAST time a page was rebuilt (a page's own
+# last-rendered depth is always at least one frame stale by design; see
+# the invalidation tracker's job of covering for that). So this pass has
+# nothing forcing it to finish before the rest of the frame's direct-queue
+# work: it only needs to run after VSM_RenderPages' draw (reads VSM_Atlas,
+# which that pass just wrote) and before NEXT frame's VSM_RenderPages draw
+# (which reads VSM_PageHiZ). [Compute] puts it on the async compute queue
+# instead of serializing it into the direct queue's own critical path.
+[Compute]
+PassNode VSM_HiZRebuild
+{
+	Texture VSM_Atlas;
+	[Write] Texture VSM_PageHiZ;
 	# Phase 5.14: this frame's flat list of dirty physical slots, CPU-built
 	# and uploaded once, consumed by the batched Hi-Z copy/downsample
-	# dispatches (VSMCopyPageDepthBatch/VSMDownsampleHiZBatch).
+	# dispatches (VSMCopyPageDepthBatch/VSMDownsampleHiZBatch). Moved here
+	# from VSM_RenderPages along with the rest of the per-frame rebuild.
 	[Write] StructuredBuffer<uint> VSM_DirtySlots;
+}
+
+# Blocker-search extraction: one full-screen dispatch (same size as
+# VSM_Combine's) that runs ONLY the wide, many-tap PCSS blocker search
+# (VSM_impl.hlsl's vsm_search_blocker), writing its result to
+# VSM_BlockerResult for VSM_Combine's resolve step to read back -- no
+# longer inline inside the same dispatch as the final PCF blur/shading.
+[Compute]
+PassNode VSM_BlockerSearch
+{
+	GBuffer gbuffer;
+	Texture VSM_Atlas;
+	Texture VSM_PageTable;
+	StructuredBuffer<Camera> VSM_PageCameras;
+	Texture BlueNoise;
+	[Write] Texture VSM_BlockerResult;
 }
 
 [Compute]
@@ -275,6 +415,16 @@ PassNode VSM_Combine
 	Texture VSM_Atlas;
 	Texture VSM_PageTable;
 	StructuredBuffer<Camera> VSM_PageCameras;
+	Texture BlueNoise;
+	# Same resource RTXShadow writes / PSSM_Combine reads -- see
+	# VSMLighting's rtx_shadow_mask field for the full rationale. Not
+	# [Write]: this pass only ever reads it, for the debug-view comparison
+	# toggle (VSM.ixx's use_vsm_debug_rtx_reference).
+	Texture ShadowMask;
+	# Written by VSM_BlockerSearch above -- see VSMLighting's own
+	# blocker_result field for the packed uint4 layout. Not [Write]: this
+	# pass only ever reads it.
+	Texture VSM_BlockerResult;
 	[Write] Texture ResultTexture;
 }
 

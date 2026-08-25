@@ -14,6 +14,12 @@ struct MipMapping
 
 	Texture2D<float4> SrcMip;
 
+	# ARRAY_SLICES variant: the same four output mips and source viewed as
+	# arrays, so one dispatch covers every slice (cube face = dispatch Z)
+	# instead of one dispatch per slice.
+	RWTexture2DArray<float4> OutMipArray[4];
+
+	Texture2DArray<float4> SrcMipArray;
 }
 
 
@@ -75,6 +81,10 @@ ComputePSO MipMapping
 	[rename = CONVERT_TO_SRGB]
 	[CS]
 	define Gamma;
+
+	[rename = ARRAY_SLICES]
+	[CS]
+	define Slices;
 }
 
 

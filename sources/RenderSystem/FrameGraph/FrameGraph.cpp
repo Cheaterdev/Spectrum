@@ -100,7 +100,6 @@ namespace FrameGraph
 			l.carried.resource   = cur.resource;
 			l.carried.alloc_ptr  = cur.alloc_ptr;
 			l.carried.desc       = cur.d3ddesc;
-			l.carried.last_state = cur.last_state; // best-effort; barrier priming handled later
 
 			// Detach so the normal free pass / next frame's realloc don't touch it.
 			cur.alloc_ptr = HAL::ResourceHandle{};
@@ -174,7 +173,11 @@ namespace FrameGraph
 	void TaskBuilder::pass_texture(ResourceID id, HAL::TextureResource::ptr tex, HAL::FenceWaiter fence, ResourceFlags flags)
 	{
 
-		tex->disable_state_tracking();
+		// Handing a resource to the FrameGraph makes the FrameGraph responsible
+		// for its transitions -- same contract as a resource the graph created
+		// itself, so it carries the same marker and opts out of the per-group
+		// return-to-rest in CommandListGroup::compile_transitions.
+		tex->frame_graph_managed = true;
 
 		auto tex_desc = tex->get_desc().as_texture();
 		if (tex_desc.is2D())
@@ -187,6 +190,15 @@ namespace FrameGraph
 			info.resource = tex;
 			info.fence = fence;
 			info.d3ddesc = tex->get_desc();
+
+			// From the resource, not assumed: create_resources() -- the only other
+			// place that sets heap_type -- skips passed resources entirely, so
+			// without this the field keeps its default-constructed value. Anything
+			// filtering on it then silently drops every passed resource;
+			// process_transitions did exactly that, which is why a passed texture
+			// was linked by nobody and rested by nobody (pass_texture also marks it
+			// frame_graph_managed, opting it out of the per-group rest).
+			info.heap_type = tex->get_heap_type();
 			passed_resources.insert(&info);
 
 
@@ -200,7 +212,6 @@ namespace FrameGraph
 			h.init_view(info, *current_frame);
 
 
-			info.creation_state = info.last_state = info.resource->get_state_manager().copy_gpu();
 		}
 		else if (tex_desc.is3D())
 		{
@@ -216,6 +227,7 @@ namespace FrameGraph
 			info.resource = tex;
 			info.d3ddesc = tex->get_desc();
 			info.fence = fence;
+			info.heap_type = tex->get_heap_type();   // see the 2D branch above
 			passed_resources.insert(&info);
 
 			h.desc.format = tex->get_desc().as_texture().Format;
@@ -223,7 +235,6 @@ namespace FrameGraph
 			h.desc.size = tex->get_desc().as_texture().Dimensions;
 
 			h.init_view(info, *current_frame);
-			info.creation_state = info.last_state = info.resource->get_state_manager().copy_gpu();
 		}
 		else
 			ASSERT(false);
@@ -327,11 +338,24 @@ namespace FrameGraph
 				// its thumbnail can be captured from the adopted resource.
 				if (!check(flags & WRITEABLE_FLAGS) && !info->is_history_prev) continue;
 				info->process_debug_resource(pass, this);
-			}
 
-			// Close the pass's open op-batch before deactivating freed resources,
-			// so alias_end lands after the last op instead of inside its batch.
-			list->close_op();
+				// The ExternalPass exists only so the debugger can capture; it does
+				// no rendering of its own and is deliberately NOT part of any
+				// resource's state timeline, so process_transitions never links it
+				// to the passes around it. Linking it would mean a fence for a pass
+				// with no GPU work, which is not worth paying for a debug feature.
+				//
+				// So it has to be transparent instead: the capture moved the
+				// resource (to SHADER_RESOURCE, to sample it), and nothing else
+				// will move it back -- a frame_graph_managed resource is exempt
+				// from the per-group return to rest. Hand it back at rest here,
+				// which is the state it was found in, and the state the next group
+				// assumes for its first touch. Without this the back buffer stayed
+				// in SHADER_RESOURCE while UI_Render_0 opened its group declaring
+				// PRESENT (#1334, once per frame).
+				if (pass->id == std::numeric_limits<UINT>::max() && info->resource)
+					list->transition_to_rest(info->resource.get());
+			}
 
 			for (auto info : pass->used.resource_deletions_after)
 			{
@@ -660,22 +684,11 @@ namespace FrameGraph
 
 		}
 
-		// Close every pass list's open op-batch before the FrameGraph appends
-		// its cross-pass transitions (decay-to-resting, prepare_after_state).
-		// Those are recorded at the list's back point; without this they would
-		// fall inside the last op's still-open batch and be mis-positioned.
-		for (auto& pass : builder.enabled_passes)
-			if (pass->context.list)
-				pass->context.list->close_op();
-
+		// Runs after every pass has recorded: process_transitions appends
+		// producer-side hand-off and resting transitions to lists that are
+		// already complete, so it needs their final operation sequence.
 		builder.process_transitions();
 		builder.process_fences();
-
-		// Chain resource state across command-list boundaries so multiple lists
-		// share one ExecuteCommandLists scope. Runs after process_transitions
-		// (all usages recorded) and process_fences (batch flush points known),
-		// before compile_lists.
-		builder.link_list_groups();
 
 		builder.compile_lists();
 
@@ -699,7 +712,79 @@ namespace FrameGraph
 
 		// enum_array, not std::map: the key is a 3-value enum, so a red-black
 		// tree rebuilt every frame buys nothing over direct indexing.
-		enum_array<CommandListType, std::list<CommandList::ptr>> queued_lists;
+		// Batches waiting to be submitted, per queue. A batch IS the barrier
+		// group: it is exactly the set of lists that will go in one
+		// ExecuteCommandLists, and the flush points below (a gpu_wait, a fence,
+		// end of frame) are precisely the group boundaries.
+		enum_array<CommandListType, HAL::CommandListGroup> queued_lists;
+
+		// Resolve a group's recorded Transition points into plain data for the
+		// debugger. Must run after the group's barriers are computed (so the
+		// groups are filled) and BEFORE it is submitted: barrier_point points
+		// into the list's `operations`, which Transitions::on_execute clears as
+		// soon as the list finishes executing on the submit thread.
+		std::map<HAL::CommandList*, Pass*> pass_of_list;
+		if constexpr (BuildOptions::Dev)
+			for (auto& pass : builder.enabled_passes)
+				if (pass->context.list)
+					pass_of_list[pass->context.list.get()] = pass;
+
+		auto snapshot_group = [&](HAL::CommandListGroup& group)
+		{
+			if constexpr (BuildOptions::Dev)
+			{
+				PROFILE(L"debug_snapshot");
+				for (auto& list : group.get_lists())
+				{
+					auto it = pass_of_list.find(list.get());
+					if (it == pass_of_list.end()) continue;
+
+					auto records = list->take_debug_records();
+
+					// One name lookup per distinct resource instead of one per
+					// barrier. A resource is typically barriered many times in a
+					// list, and most names are past the small-string limit, so
+					// this is the difference between a heap allocation per
+					// barrier and one per resource.
+					//
+					// The name has to be captured eagerly rather than read from
+					// b.resource later: these records outlive the frame that
+					// produced them, and a transient resource can be freed or
+					// aliased away in the meantime. That is why resource_id is
+					// documented as never dereferenced.
+					std::unordered_map<const HAL::Resource*, std::string> names;
+
+					for (auto& rec : records)
+					{
+						if (rec.type != HAL::CommandType::Transition || !rec.barrier_point) continue;
+
+						const auto& barriers = rec.barrier_point->get_barriers();
+						rec.description = "Barriers: " + std::to_string(barriers.size());
+						rec.barrier_details.reserve(barriers.size());
+						for (const auto& b : barriers)
+						{
+							HAL::CommandRecord::BarrierDetail detail;
+
+							auto name_it = names.find(b.resource);
+							if (name_it == names.end())
+								name_it = names.emplace(b.resource, b.resource ? b.resource->name : "?").first;
+							detail.resource_name = name_it->second;
+
+							detail.before = b.before;
+							detail.after = b.after;
+							detail.subres = HAL::representative_subres(b.resource, b.range);
+							detail.range  = b.range;
+							detail.flags = b.flags;
+							detail.resource_id = reinterpret_cast<uint64>(b.resource);   // opaque instance id
+							rec.barrier_details.push_back(std::move(detail));
+						}
+						rec.barrier_point = nullptr;
+					}
+
+					it->second->debug_commands = std::move(records);
+				}
+			}
+		};
 
 		// Frame-boundary cross-queue sync: each queue waits for the OTHER
 		// queues' end of the previous frame before this frame's first
@@ -719,6 +804,35 @@ namespace FrameGraph
 
 		enum_array<CommandListType, HAL::FenceWaiter> frame_end_fence;
 
+		// One batch that will become a single ExecuteCommandLists, with the
+		// ordering work that has to happen around it. Barrier computation is
+		// the expensive part and is pure once plan_resources() has run, so it
+		// is hoisted out of this loop and done for every batch at once, in
+		// parallel; submission below stays strictly ordered because fences
+		// flow between batches.
+		struct PendingSubmit
+		{
+			HAL::CommandListGroup    group;
+			HAL::CommandListType     type;
+			std::vector<const Pass*> waits;                // gpu_wait these before submitting
+			Pass*                    fence_pass = nullptr; // receives fence_end, if any
+		};
+		std::vector<PendingSubmit> submits;
+
+		// Close the batch open on `type`: decide its first-use questions (this
+		// is the only part of the barrier work that must happen in submission
+		// order) and queue it for compilation.
+		auto close_batch = [&](HAL::CommandListType type, Pass* fence_pass, std::vector<const Pass*> waits = {})
+		{
+			auto& group = queued_lists[type];
+			if (group.empty() && waits.empty()) return;
+
+		
+
+			submits.push_back(PendingSubmit{ std::move(group), type, std::move(waits), fence_pass });
+			group.clear();
+		};
+
 		for (auto& pass : builder.enabled_passes)
 		{
 			HAL::CommandListType list_type = pass->get_type();
@@ -727,24 +841,14 @@ namespace FrameGraph
 
 			if (commandList)
 			{
-
-
+				std::vector<const Pass*> waits;
 				for (auto sync_pass : pass->sync_state.values)
-				{
-					if (!sync_pass) continue;
+					if (sync_pass) waits.push_back(sync_pass);
 
-					if(!queued_lists[list_type].empty())
-					{
-						RenderSystem::get().device().get_queue(list_type)->execute(std::move(queued_lists[list_type]));
-						queued_lists[list_type].clear();
-					}
+				if (!waits.empty())
+					close_batch(list_type, nullptr, std::move(waits));
 
-					RenderSystem::get().device().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
-				}
-
-
-
-				queued_lists[list_type].emplace_back(commandList);
+				queued_lists[list_type].add(commandList);
 
 				// Diagnostic: full queue serialization — every pass gets a
 				// fence and every OTHER queue waits on it, so no two passes
@@ -755,44 +859,83 @@ namespace FrameGraph
 					pass->put_fence = true;
 
 				if (pass->put_fence)		//////////////////////// ARGH!!!!
-				{
-					pass->fence_end = RenderSystem::get().device().get_queue(list_type)->execute(std::move(queued_lists[list_type]));
-
-					queued_lists[list_type].clear();
-
-					result = pass->fence_end;
-					frame_end_fence[list_type] = pass->fence_end;
-
-					if (serialize_queues)
-						for (auto other : magic_enum::enum_values<CommandListType>())
-						{
-							if (other == list_type) continue;
-							RenderSystem::get().device().get_queue(other)->gpu_wait(pass->fence_end);
-						}
-				}
-				//	pass->fence_end = commandList->execute();
-
-				//	
+					close_batch(list_type, pass);
 			}
 
 
 		}
 
-
+		// Whatever is still open at end of frame.
 		for (auto type : magic_enum::enum_values<CommandListType>())
-		{
-			auto& lists = queued_lists[type];
-			if (lists.empty()) continue;
-			result = RenderSystem::get().device().get_queue(type)->execute(std::move(lists));
-			lists.clear();
-			frame_end_fence[type] = result;
+			close_batch(type, nullptr);
 
-			if (serialize_queues)
-				for (auto other : magic_enum::enum_values<CommandListType>())
+		// Resolve every batch's first-use questions FIRST, on this thread, in
+		// submission order.
+		//
+		// This cannot move into the parallel fan-out below: plan_resources()
+		// reads and mutates Resource::virgin / Resource::initialized, which are
+		// per-RESOURCE and shared by every group that touches them. Running it
+		// concurrently races on "which group owns this resource's first-ever
+		// write", so the initializing discard lands on a nondeterministic group
+		// -- and in submission order it may land on a group that executes after
+		// the one that needed it.
+		{
+			PROFILE(L"plan_groups");
+			for (auto& submit : submits)
+				submit.group.plan_resources();
+		}
+
+		// Every batch's barriers, computed in parallel. plan_resources() has
+		// already resolved everything order-dependent, so these touch nothing
+		// shared: `current`/`wanted` are group-local and the Barriers they fill
+		// belong to their own lists.
+		{
+			PROFILE(L"compile_groups");
+
+			std::vector<std::future<void>> tasks;
+			tasks.reserve(submits.size());
+
+			for (auto& submit : submits)
+				tasks.emplace_back(thread_pool::get().enqueue([&submit]()
 				{
-					if (other == type) continue;
-					RenderSystem::get().device().get_queue(other)->gpu_wait(result);
-				}
+					submit.group.compile_transitions();
+					submit.group.compile();
+				}));
+
+			for (auto& t : tasks)
+				t.wait();
+		}
+
+		// Ordered submission. Cheap now -- the batches are already compiled --
+		// but it must stay in order: a batch's fence_end is consumed by a later
+		// batch's gpu_wait, and gpu_wait/execute derive their relative order
+		// from the order they are posted to the queue's executor thread.
+		{
+			PROFILE(L"submit_groups");
+
+			for (auto& submit : submits)
+			{
+				auto queue = RenderSystem::get().device().get_queue(submit.type);
+
+				for (const auto* sync_pass : submit.waits)
+					queue->gpu_wait(sync_pass->fence_end);
+
+				if (submit.group.empty()) continue;
+
+				snapshot_group(submit.group);
+				result = queue->execute(submit.group);
+
+				frame_end_fence[submit.type] = result;
+				if (submit.fence_pass)
+					submit.fence_pass->fence_end = result;
+
+				if (serialize_queues)
+					for (auto other : magic_enum::enum_values<CommandListType>())
+					{
+						if (other == submit.type) continue;
+						RenderSystem::get().device().get_queue(other)->gpu_wait(result);
+					}
+			}
 		}
 
 		// Remember each queue's final fence for next frame's boundary wait.
@@ -993,82 +1136,10 @@ namespace FrameGraph
 		}
 	}
 
-	void TaskBuilder::link_list_groups()
-	{
-		PROFILE(L"link_list_groups");
-
-		// Lists that will be submitted together in one ExecuteCommandLists, per
-		// queue. Mirrors commit_command_lists: a pass that must gpu_wait flushes
-		// the pending batch before it, and a pass with put_fence closes one after.
-		enum_array<HAL::CommandListType, std::vector<HAL::CommandList*>> pending;
-
-		auto close_group = [&](HAL::CommandListType type)
-		{
-			auto& lists = pending[type];
-
-			// Within a group, chain each resource from the list that used it last
-			// to the one using it next. That replaces the SYNC_NONE release +
-			// SYNC_NONE re-seed pair at the boundary with a direct state hand-off,
-			// leaving exactly one SYNC_NONE entry (first user) and one SYNC_NONE
-			// exit (last user) per resource per group.
-			if (lists.size() > 1)
-			{
-				std::map<HAL::Resource*, HAL::CommandList*> last_user;
-
-				for (auto* cmd : lists)
-					for (auto* res : cmd->get_used_resources())
-					{
-						auto it = last_user.find(res);
-						if (it != last_user.end() && it->second != cmd)
-							res->get_state_manager().chain_lists(it->second, cmd);
-
-						last_user[res] = cmd;
-					}
-			}
-
-			lists.clear();
-		};
-
-		for (auto& pass : enabled_passes)
-		{
-			auto commandList = pass->context.list;
-			if (!commandList) continue;
-
-			HAL::CommandListType list_type = pass->get_type();
-
-			bool waits = false;
-			for (auto sync_pass : pass->sync_state.values)
-				if (sync_pass) waits = true;
-
-			if (waits) close_group(list_type);      // gpu_wait flushes the batch
-
-			pending[list_type].push_back(commandList.get());
-
-			if (pass->put_fence) close_group(list_type);   // fence closes the batch
-		}
-
-		for (auto type : magic_enum::enum_values<HAL::CommandListType>())
-			close_group(type);
-	}
-
 	void TaskBuilder::compile_lists()
 	{
 		PROFILE(L"compile");
 
-
-		{
-
-			PROFILE(L"compile_transitions");
-			for (auto& pass : enabled_passes)
-			{
-				auto commandList = pass->context.list;
-				if (!commandList) continue;
-
-
-			}
-
-
-		}
 
 		descriptor_commit_task = thread_pool::get().enqueue([this]()
 			{
@@ -1076,62 +1147,10 @@ namespace FrameGraph
 			});
 
 
-		{
+		// Lists are compiled by their CommandListGroup at submission time --
+		// compile() consumes the barrier groups, so it has to follow the
+		// group's compile_transitions(). Nothing per-pass to do here.
 
-			PROFILE(L"compile_passes");
-			for (auto& pass : enabled_passes)
-			{
-				auto commandList = pass->context.list;
-				if (!commandList) continue;
-
-				pass->compile_task = thread_pool::get().enqueue([commandList, pass]() {
-					PROFILE(pass->name);
-					commandList->compile_transitions();
-					commandList->compile();
-					});
-
-			}
-		}
-
-		for (auto& pass : enabled_passes)
-		{
-			auto commandList = pass->context.list;
-			if (!commandList) continue;
-
-			{
-				PROFILE(L"pass_wait");
-				pass->compile_task.wait();
-			}
-
-			// Snapshot debug records now: compile_transitions has filled barrier data,
-			// compile() has run. Resolve Transition descriptions so no raw pointers survive.
-			if constexpr (BuildOptions::Dev)
-			{
-				auto records = commandList->get_debug_records();
-				for (auto& rec : records)
-				{
-					if (rec.type == HAL::CommandType::Transition && rec.barrier_point)
-					{
-						const auto& barriers = rec.barrier_point->transitions.get_barriers();
-						rec.description = "Barriers: " + std::to_string(barriers.size());
-						rec.barrier_details.reserve(barriers.size());
-						for (const auto& b : barriers)
-						{
-							HAL::CommandRecord::BarrierDetail detail;
-							detail.resource_name = b.resource ? b.resource->name : "?";
-							detail.before = b.before;
-							detail.after = b.after;
-							detail.subres = b.subres;
-							detail.flags = b.flags;
-							detail.resource_id = reinterpret_cast<uint64>(b.resource);   // opaque instance id
-							rec.barrier_details.push_back(std::move(detail));
-						}
-						rec.barrier_point = nullptr;
-					}
-				}
-				pass->debug_commands = std::move(records);
-			}
-		}
 
 		// Descriptors must be visible to the GPU before any list below actually executes.
 // This is the last possible point to wait - everything since render() kicked the
@@ -1148,290 +1167,260 @@ namespace FrameGraph
 
 
 
+	// Cross-pass linking for FrameGraph-owned resources.
+	//
+	// A command-list group can only reason about what it can see: it enters a
+	// resource from its resting layout and leaves it there. That works for
+	// resources nobody else schedules, but a FrameGraph resource is written by
+	// one pass and read by the next, often with a fence between them -- routing
+	// it through the resting layout at every boundary would be both wrong (the
+	// group cannot know where it actually is) and expensive.
+	//
+	// So the graph, which knows the whole pass timeline, does three things here:
+	//   1. merges concurrent readers onto one shared state, so several passes
+	//      reading the same resource cost one transition rather than one each;
+	//   2. tells each consuming list what state the producing pass left the
+	//      resource in (set_entry_state), which is what lets a group see over a
+	//      boundary it would otherwise stop at;
+	//   3. returns the resource to its resting layout once, at the last pass
+	//      that touches it -- not at every group boundary.
+	//
+	// Replaces the pre-2026-08 version of this function, which did the same jobs
+	// through ResourceStateManager's prepare_state / prepare_after_state seed
+	// nodes and per-subresource SubResourcesGPU snapshots.
 	void TaskBuilder::process_transitions()
 	{
-		PROFILE(L"optimizing transitions");
+		PROFILE(L"process_transitions");
+
 		for (auto& chain : alloc_resources)
 			for (auto& info : chain.active_span())
 			{
-
 				if (!info.enabled) continue;
-
-				///	if (info.passed) continue;///wtf
 
 				auto& resource = info.resource;
 
+
 				if (!resource) continue;
-				if (resource->get_desc().is_buffer()) continue;
+				// Skip only the CPU-visible heaps, which carry no layout to link.
+				// NOT "anything that isn't DEFAULT": RESERVED covers both tiled
+				// resources and natively imported ones (the swapchain arrives that
+				// way -- Resource::init(NativeImportHandle) never assigns a heap
+				// type, so it keeps the RESERVED sentinel), and those need linking
+				// exactly as much as a DEFAULT resource does. This mirrors the same
+				// choice HAL makes when deciding what to barrier-track at all
+				// (Transitions::add_resource_usage).
+				if (info.heap_type == HAL::HeapType::UPLOAD ||
+					info.heap_type == HAL::HeapType::READBACK) continue;
+				if (!resource->frame_graph_managed) continue;   // the group rests these itself
 
-				if (info.heap_type != HAL::HeapType::DEFAULT) continue;
+				// Drop passes that never actually touched the resource -- a pass
+				// can declare a resource and then not use it, and linking through
+				// it would hand state to a list that has nothing to receive it.
+				auto untouched = [&](Pass* pass)
+				{
+					auto& list = pass->context.list;
+					if (!list) return true;
+					return !list->get_exit_state(resource.get()).has_value();
+				};
 
-				bool nb = info.id == ResourceID::PSSM_Depths;
-				auto pass_checker = [&](Pass* pass) {
-					auto commandList = pass->context.list;
-					if (!commandList)
-						return true;
-
-					auto& cpu_state = info.resource->get_state_manager().get_cpu_state(commandList.get());
-					if (!cpu_state.used)
-						return true;
-
-
-					return false;
-					};
-
-
-				auto state_checker = [](const ResourceRWState& state) {
-					return state.passes.empty();
-					};
-				// remove unused passes
 				for (auto& state : info.states)
 				{
-					state.passes.erase(std::remove_if(state.passes.begin(), state.passes.end(), pass_checker), state.passes.end());
-				}
-				info.states.remove_if(state_checker);
+					std::vector<Pass*> kept;
+					kept.reserve(state.passes.size());
+					for (auto* pass : state.passes)
+						if (!untouched(pass)) kept.push_back(pass);
 
-				// merge resourcestate access in a same read or write state
-				for (auto& state : info.states)
+					if (kept.size() == state.passes.size()) continue;
+
+					state.passes.clear();
+					for (auto* pass : kept) state.passes.push_back(pass);
+				}
+
+				info.states.remove_if([](const ResourceRWState& s) { return s.passes.empty(); });
+
+				if (info.states.empty()) continue;
+
+				// A barrier's BEFORE state has to be expressible on the queue that
+				// records it: a compute list cannot barrier a resource out of
+				// RENDER_TARGET, and asserting on that is exactly what
+				// Barriers::transition does. Linking is the only thing that can
+				// hand a list a state some OTHER queue produced, so every state
+				// this function hands over is checked first.
+				auto supported = [&](Pass* pass, const HAL::ResourceState& state)
 				{
-					if (state.write) continue;
-					state.merged_read_state.subres.resize(resource->get_state_manager().get_subres_count());
+					return HAL::IsFullySupport(pass->context.list->get_type(), state);
+				};
 
-					// calculate merged state
-					for (auto& pass : state.passes)
-					{
-						auto commandList = pass->context.list;
-						auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
-						state.merged_read_state.merge(cpu_state);
-					}
+				// The pass in a phase that actually runs LAST. Not passes.back():
+				// ResourceRWState::passes is a concurrent_vector appended from
+				// several threads during setup, so its order is arbitrary. Using
+				// the back element put a phase's hand-off (and the return to rest)
+				// on whichever pass happened to be appended last, which for a
+				// multi-pass phase lands mid-frame with other passes still to
+				// come -- the back buffer went to PRESENT while UI_Render_1..4
+				// were still writing it. call_id is the execution order.
+				auto last_of = [](const auto& passes) -> Pass*
+				{
+					Pass* best = nullptr;
+					for (auto* p : passes)
+						if (!best || p->call_id > best->call_id) best = p;
+					return best;
+				};
 
-					// Exclusive-read states are always singleton — nothing to merge.
-					if (state.exclusive) continue;
+				// --- 1. one shared state per read phase --------------------------
+				//
+				// Readers of the same version can disagree on sync (a pixel-shader
+				// read vs a compute read). Left alone each would transition the
+				// resource again; declaring the union on every reader makes them
+				// agree, so only the first emits a barrier and the rest are no-ops.
+				std::vector<std::optional<HAL::ResourceState>> merged_read(info.states.size());
 
-					// propagate merged state through passes
-					for (auto& pass : state.passes)
-					{
-						auto commandList = pass->context.list;
-						auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
-						cpu_state.merge_read_state(commandList->get_type(), state.merged_read_state);
-					}
-				}
-
-				bool need_first_transition = true;
-				// link statee between passes
 				for (uint i = 0; i < info.states.size(); i++)
 				{
 					auto& state = info.states[i];
-					if (!state.write)
+					if (state.write || state.exclusive) continue;
+
+					std::optional<HAL::ResourceState> merged;
+					for (auto* pass : state.passes)
 					{
+						auto exit = pass->context.list->get_exit_state(resource.get());
+						if (!exit) continue;
 
-						for (auto& pass : state.passes)
+						if (!merged) { merged = *exit; continue; }
+						if (auto both = HAL::merge_state(*merged, *exit)) merged = *both;
+					}
+
+					if (!merged) continue;
+
+					// Readers on different queues can merge into a state one of
+					// them cannot record (a pixel-shader read unioned onto a
+					// compute list). Then there is no single state to agree on --
+					// leave every reader with its own and pay the extra barrier.
+					bool all_can = true;
+					for (auto* pass : state.passes)
+						if (!supported(pass, *merged)) { all_can = false; break; }
+					if (!all_can) continue;
+
+					merged_read[i] = merged;
+
+					// Propagate it back so every reader asks for the same thing.
+					for (auto* pass : state.passes)
+						pass->context.list->add_resource_usage(resource.get(), *merged, HAL::ALL_SUBRESOURCES);
+				}
+
+				// --- 2. link each state to the one before it ---------------------
+				//
+				// The consumer is told where the producer left the resource. Only
+				// used when the consumer's group has not already tracked it, so a
+				// producer and consumer that land in the SAME group cost nothing
+				// here -- the group threads the state itself.
+				for (uint i = 1; i < info.states.size(); i++)
+				{
+					auto& prev = info.states[i - 1];
+					auto& cur  = info.states[i];
+					if (prev.passes.empty() || cur.passes.empty()) continue;
+
+					Pass* producer = last_of(prev.passes);
+					auto& producer_list = producer->context.list;
+
+					// The hand-off state has to be the SAME for every pass in the
+					// consuming phase: they are told what they will find, and a
+					// phase with several readers has no ordering among them. So
+					// the resource is converged at the producer -- one barrier on
+					// the producing list, none on any reader -- rather than
+					// leaving the first reader to transition it and the rest to
+					// discover it already transitioned.
+					//
+					// The phase's merged read state is the natural target: step 1
+					// already made every reader ask for exactly that.
+					std::optional<HAL::ResourceState> handoff = merged_read[i];
+
+					// Must also be recordable on the producer's own queue -- a
+					// compute list cannot transition anything into a pixel-shader
+					// read. Resting works from and to any queue, so it is the
+					// fallback for every case the direct hand-off cannot express.
+					if (handoff && !HAL::IsFullySupport(producer_list->get_type(), *handoff))
+						handoff.reset();
+
+					// Not a read phase, so there is no merged read state to aim
+					// for. Aim instead for what the consuming passes need at
+					// their FIRST use -- the state they would otherwise each
+					// transition into themselves.
+					//
+					// This has to be a state they ALL agree on. Handing them the
+					// producer's exit instead is only true for whichever consumer
+					// happens to run first; the others find it already
+					// transitioned. (Tried 2026-08-19: 6269 x #1334 on
+					// VoxelLighted, GBuffer_DepthMips, BlueNoise.) Converging the
+					// producer into their common first-use state costs the
+					// consumers no barrier at all, so no ordering among them is
+					// needed -- the same reason merged_read works for readers.
+					if (!handoff)
+					{
+						std::optional<HAL::ResourceState> common;
+						bool agree = true;
+
+						for (auto* pass : cur.passes)
 						{
-							auto commandList = pass->context.list;
-							if (!commandList) continue;
-							auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
-							if (!cpu_state.used) continue;
+							auto first = pass->context.list->get_first_use_state(resource.get());
+							if (!first) continue;
 
-							need_first_transition = false;
-							break;
+							if (!common) common = first;
+							else if (!(*common == *first)) { agree = false; break; }
 						}
 
-						continue;
-					}
-					ASSERT(state.passes.size() == 1);
-					auto pass = state.passes.front();
-					auto commandList = pass->context.list;
-					if (!commandList) continue;
-
-					HAL::CommandListType list_type = pass->get_type();
-
-					// first write synchronize with start=end
-					if (i == 0 && (info.is_static() || info.passed))
-					{
-						auto target = ResourceStates::NO_ACCESS;
-						auto layout = info.last_state.get_subres_state(0).layout;
-						target.layout = layout;
-						info.resource->get_state_manager().prepare_state(commandList.get(), target);
+						if (agree && common && HAL::IsFullySupport(producer_list->get_type(), *common))
+							handoff = common;
 					}
 
-
-					// check previous pass is read
-					if (i > 0 && !info.states[i - 1].write)
-					{
-						auto prev_state = info.states[i - 1];
-						auto best_type = prev_state.merged_read_state.get_best_list_type();
-						//		its in 99% read to write compatible on all queues
-						ASSERT(IsCompatible(list_type, best_type));
-						info.resource->get_state_manager().prepare_state(commandList.get(), prev_state.merged_read_state);
-					}
+					const bool rested = !handoff;
+					if (rested)
+						handoff = HAL::state_at_rest(HAL::resting_layout(resource.get()));
 
 
-					// check next pass is read
-					if ((i < info.states.size() - 1) && !info.states[i + 1].write)
-					{
-						auto next_state = info.states[i + 1];
-						auto best_type = next_state.merged_read_state.get_best_list_type();
-						//		its in 99% write to read compatible on all queues
-						ASSERT(IsCompatible(list_type, best_type));
-						info.resource->get_state_manager().prepare_after_state(commandList.get(), next_state.merged_read_state);
-					}
+					producer_list->transition_to(resource.get(), *handoff);
 
-					// cur pass is write, next pass is write ,what can be wrong?
-
-					if ((i < info.states.size() - 1) && info.states[i + 1].write)
-					{
-						auto prev_writer = info.states[i];
-						auto next_writer = info.states[i + 1];
-
-						auto prev_pass = prev_writer.passes.front();
-						auto next_pass = next_writer.passes.front();
-
-						auto prev_cmd = prev_pass->context.list;
-						auto next_cmd = next_pass->context.list;
-						if (!prev_cmd || !next_cmd)
-						{
-							ASSERT(false); // no write requested with no commandlist
-							continue;
-						}
-
-						auto& prev_cpu_state = resource->get_state_manager().get_cpu_state(prev_cmd.get());
-						auto& next_cpu_state = resource->get_state_manager().get_cpu_state(next_cmd.get());
-
-
-						// TODO: try removing this write state if not used
-						ASSERT(prev_cpu_state.used);
-						ASSERT(next_cpu_state.used);
-
-						HAL::CommandListType next_list_type = next_pass->get_type();
-						HAL::CommandListType prev_list_type = prev_pass->get_type();
-
-						HAL::SubResourcesGPU prev_gpu_state;
-						prev_gpu_state.subres.resize(resource->get_state_manager().get_subres_count());
-						prev_gpu_state.set_cpu_state(prev_cpu_state);
-
-
-						HAL::SubResourcesGPU next_gpu_state;
-						next_gpu_state.subres.resize(resource->get_state_manager().get_subres_count());
-						next_gpu_state.set_cpu_state_first(next_cpu_state);
-
-
-						auto transition_best_type_layout = Merge(prev_gpu_state.get_best_list_type(), next_gpu_state.get_best_list_type());
-
-
-						bool compatible_next_layout = IsCompatible(next_list_type, transition_best_type_layout);
-						bool compatible_prev_layout = IsCompatible(prev_list_type, transition_best_type_layout);
-
-						auto transition_best_type = Merge(prev_cpu_state.get_best_list_type_last(), next_cpu_state.get_best_list_type_first());
-
-						bool compatible_next = IsCompatible(next_list_type, transition_best_type);
-						bool compatible_prev = IsCompatible(prev_list_type, transition_best_type);
-
-						// 	
-					  //info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
-				  /*	if (compatible_next && compatible_prev)
-					  {
-						  // do a split transition
-						  info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
-					  }
-					  else*/ if (compatible_next_layout)
-					  {
-						  // next pass should rewrite its first state
-						  info.resource->get_state_manager().prepare_state(next_cmd.get(), prev_gpu_state);			  // add sync&access info
-					  }
-					  else if (compatible_prev_layout)
-					  {
-
-						  info.resource->get_state_manager().prepare_after_state(prev_cmd.get(), next_gpu_state);		 // add sync&access infoZ
-					  }
-					  else
-	ASSERT(false);
-
-
-
-					}
-
-
-					// (Last-touch decay to the resting state now happens once,
-					// after the states loop — see below — so it also covers a
-					// read-last touch, not just write-last.)
-
-
+					for (auto* pass : cur.passes)
+						pass->context.list->set_entry_state(resource.get(), *handoff);
 				}
 
 
-
-
-
-
-				// Canonical resting-state contract for passed/static resources:
-				// at the LAST pass that touches the resource (read OR write), decay
-				// it back to creation_state.layout — its per-resource CanonicalRead
-				// (SHADER_RESOURCE for read resources, PRESENT for the swapchain).
-				// Within the graph they're FG-scheduled like transients; this is the
-				// single point where they return to a state any queue/list can pick
-				// up. A no-op when the last touch already left it there (merge_state
-				// collapses it). Must run before the end-state capture below so
-				// last_state carries the resting layout into next frame.
-				if (!info.states.empty() && (info.is_static() || info.passed))
+				// --- 3. rest once, at the last pass that touches it --------------
+				//
+				// Read or write -- whichever comes last. This is the single point
+				// where an FG resource returns to a state any queue can pick up,
+				// replacing the per-group convergence that CommandListGroup skips
+				// for frame_graph_managed resources.
+				//
+				// Deliberately unconditional, and deliberately the resting state
+				// rather than whatever the last pass happened to leave behind.
+				// The resting layout is HAL's global contract -- every group
+				// enters a resource from it, and code outside the graph does too
+				// -- so it is the ONLY end state that stays valid no matter who
+				// picks the resource up next. Carrying the real end state into
+				// next frame instead would be strictly worse: a resource left in
+				// DEPTH_STENCIL_WRITE cannot be barriered out of by a compute
+				// queue at all, so next frame's first pass could be handed a
+				// before-state it has no way to express.
+				//
+				// That also means there is nothing to carry across frames: the
+				// next frame's first pass needs no entry state, because the
+				// barrier system's own resting-layout default is already right.
+				Pass* last_pass = last_of(info.states.back().passes);
+				if (auto& list = last_pass->context.list)
 				{
-					Pass* last_pass = info.states.back().passes.back();
-					auto commandList = last_pass->context.list;
-					if (commandList)
-					{
-						auto target = ResourceStates::NO_ACCESS;
-						target.layout = info.creation_state.get_subres_state(0).layout;
-						info.resource->get_state_manager().transition(commandList.get(), target, ALL_SUBRESOURCES);
-					}
+					// Resting here is correct only because last_pass is the phase's
+					// LAST-EXECUTING pass. Getting that wrong is not a lost
+					// optimisation but a correctness bug: a back buffer rested to
+					// PRESENT while later passes still write it makes every
+					// subsequent use find PRESENT where it expected a readable
+					// layout (#1334 "layout(COMMON) does not match expected
+					// (SHADER_RESOURCE)").
+					list->transition_to_rest(resource.get());
 				}
-
-				// link end to start transition
-				if (!info.states.empty() && (info.is_static() || info.passed))
-				{
-					Pass* pass = info.states.back().passes.back();
-					auto commandList = pass->context.list;
-					info.last_state.set_cpu_state(info.resource->get_state_manager().get_cpu_state(commandList.get()));
-
-				}
-
-
 			}
-
-
-		for (auto& pass : enabled_passes)
-		{
-			auto commandList = pass->context.list;
-			if (!commandList) continue;
-
-			for (auto info : pass->used.resource_deletions_before)
-			{
-
-				if (info->states.empty())continue;
-				auto& last_state = info->states.back();
-				if (last_state.write)
-				{
-					auto prev_pass = last_state.passes.front();
-					auto prev_cmd = prev_pass->context.list;
-					auto& prev_cpu_state = info->resource->get_state_manager().get_cpu_state(prev_cmd.get());
-
-
-					HAL::SubResourcesGPU prev_gpu_state;
-					prev_gpu_state.subres.resize(info->resource->get_state_manager().get_subres_count());
-					prev_gpu_state.set_cpu_state(prev_cpu_state);
-
-					info->resource->get_state_manager().prepare_state(commandList.get(), prev_gpu_state);
-				}
-				else
-				{
-					info->resource->get_state_manager().prepare_state(commandList.get(), last_state.merged_read_state);
-
-				}
-				//	
-
-
-
-			}
-		}
 	}
+
 	void TaskBuilder::create_resources()
 	{
 		  bool delete_resources = !GetAsyncKeyState('5');
@@ -1856,7 +1845,6 @@ namespace FrameGraph
 					{
 						info->resource   = link->carried.resource;
 						info->alloc_ptr  = link->carried.alloc_ptr;
-						info->last_state = link->carried.last_state;
 						info->is_new     = false;
 
 
@@ -1865,8 +1853,6 @@ namespace FrameGraph
 					{
 						info->resource   = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type);
 						info->resource->frame_graph_managed = true;
-						info->creation_state = info->last_state = info->resource->get_state_manager().copy_gpu();
-						info->last_state = TextureLayout::UNDEFINED;
 						info->resource->set_name(info->name());
 						info->alloc_ptr  = HAL::ResourceHandle{};
 						info->is_new     = true;
@@ -1953,8 +1939,6 @@ namespace FrameGraph
 					if (info->is_new)
 					{
 						info->resource->frame_graph_managed = true;
-						info->creation_state = info->last_state = info->resource->get_state_manager().copy_gpu();
-						info->last_state = TextureLayout::UNDEFINED;
 						info->view = nullptr;
 						info->resource->set_name(info->name());
 
@@ -2249,9 +2233,18 @@ namespace FrameGraph
 		sync_state_with_self.reset();
 
 		render_task = std::future<void>();
-		compile_task = std::future<void>();
 
-		debug_commands.clear();
+		// debug_commands is deliberately NOT cleared here.
+		//
+		// It is filled by the debug snapshot in commit_command_lists, at the END
+		// of a frame, but the debugger copies it from graph.on_compile, near the
+		// START of one. Clearing here emptied it between those two points, so the
+		// debugger only ever copied a vector this frame had not filled yet and
+		// the Transitions panel showed nothing.
+		//
+		// Leaving it means the debugger shows the PREVIOUS frame's transitions,
+		// which is what it can actually have. The snapshot assigns over it every
+		// frame, so nothing accumulates.
 
 		fence_end = HAL::FenceWaiter();
 

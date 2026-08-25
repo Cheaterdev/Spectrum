@@ -15,16 +15,23 @@ struct SkyData
 [Bind = DefaultLayout::Instance1]
 struct SkyFace
 {
-	uint face;
+	# All six cube faces as one array UAV, so the bake is a single
+	# (w, h, 6) dispatch with the face taken from the dispatch Z.
+	RWTexture2DArray<float4> faces;
 }
 
 
 [Bind = DefaultLayout::Instance1]
 struct EnvFilter
 {
-	uint4 face;	
-	float4 scaler;
+	# .x = edge length of the source cubemap (drives the solid-angle -> source
+	#      mip estimate), .y = number of output mips packed into the dispatch,
+	# .z = edge length of output mip 0.
 	uint4 size;
+
+	# One array UAV per output mip. The specular pass walks all of them from a
+	# single flattened dispatch; the diffuse pass writes [0] only.
+	RWTexture2DArray<float4> targets[8];
 }
 
 
@@ -58,48 +65,28 @@ ComputePSO SkyCompute
 }
 
 
-GraphicsPSO SkyCube
+ComputePSO SkyCube
 {
 	root = DefaultLayout;
 
-	[EntryPoint = VS_Cube]
-	vertex = sky;
-
-	[EntryPoint = PS_Cube]
-	pixel = sky;
-
-	rtv = { R11G11B10_FLOAT };
+	[EntryPoint = CS_Cube]
+	compute = sky;
 }
 
-GraphicsPSO CubemapENV
+ComputePSO CubemapENV
 {
 	root = DefaultLayout;
 
-	[EntryPoint = VS]
-	vertex = cubemap_down;
-
-	[EntryPoint = PS]
-	pixel = cubemap_down;
-
-	[rename = NumSamples, indirect]
-	[PS]
-	define Level = {1,8,32,64,128};
-
-
-	rtv = { R11G11B10_FLOAT };
+	[EntryPoint = CS]
+	compute = cubemap_down;
 }
 
-GraphicsPSO CubemapENVDiffuse
+ComputePSO CubemapENVDiffuse
 {
 	root = DefaultLayout;
 
-	[EntryPoint = VS]
-	vertex = cubemap_down;
-
-	[EntryPoint = PS_Diffuse]
-	pixel = cubemap_down;
-
-	rtv = { R11G11B10_FLOAT };
+	[EntryPoint = CS_Diffuse]
+	compute = cubemap_down;
 }
 
 
@@ -112,6 +99,7 @@ PassNode Sky
 }
 
 
+[Compute]
 PassNode CubeSky
 {
 	[Write] TextureCube sky_cubemap;
@@ -128,6 +116,7 @@ PassNode CubeMapDownsample
 }
 
 [Static]
+[Compute]
 PassNode CubeMapEnviromentProcessor
 {
 	TextureCube sky_cubemap;

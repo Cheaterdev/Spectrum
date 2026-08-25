@@ -53,6 +53,8 @@ export import "../defines.h";
 #include "pass/Mipmapping.h"
 #include "pass/VSM_GatherDispatch.h"
 #include "pass/VSM_RenderPages.h"
+#include "pass/VSM_HiZRebuild.h"
+#include "pass/VSM_BlockerSearch.h"
 #include "pass/VSM_Combine.h"
 #include "pass/VSM_DepthAnalysis.h"
 #include "pass/GBuffer.h"
@@ -102,6 +104,8 @@ export namespace Passes
 	using ::Passes::Mipmapping;
 	using ::Passes::VSM_GatherDispatch;
 	using ::Passes::VSM_RenderPages;
+	using ::Passes::VSM_HiZRebuild;
+	using ::Passes::VSM_BlockerSearch;
 	using ::Passes::VSM_Combine;
 	using ::Passes::VSM_DepthAnalysis;
 }

@@ -135,27 +135,33 @@ void VSM::attach_scene(std::shared_ptr<Scene> scene)
 	});
 }
 
-void VSM::build_slot_views(Passes::VSM_RenderPages::Context& data, int pyramid_mip_count)
+void VSM::build_atlas_views()
 {
-	if (slot_views_built)
-		return;
+	std::call_once(atlas_views_once, [this]
+	{
+		auto& storage = RenderSystem::get().device().get_static_gpu_data();
+		int physical_slots = page_table.physical_page_count;
 
-	auto& storage = RenderSystem::get().device().get_static_gpu_data();
-	int physical_slots = page_table.physical_page_count;
+		atlas_slot_views.resize(physical_slots);
+		for (int slot = 0; slot < physical_slots; slot++)
+			atlas_slot_views[slot] = HAL::Texture2DView(vsm_atlas_tex->resource, storage,
+				HAL::TextureViewDesc{ 0, 1, (uint)slot, 1 });
 
-	atlas_slot_views.resize(physical_slots);
-	for (int slot = 0; slot < physical_slots; slot++)
-		atlas_slot_views[slot] = HAL::Texture2DView(vsm_atlas_tex->resource, storage,
-			HAL::TextureViewDesc{ 0, 1, (uint)slot, 1 });
+		atlas_array_view = HAL::Texture2DView(vsm_atlas_tex->resource, storage,
+			HAL::TextureViewDesc{ 0, 1, 0, (uint)physical_slots });
+	});
+}
 
-	atlas_array_view = HAL::Texture2DView(vsm_atlas_tex->resource, storage,
-		HAL::TextureViewDesc{ 0, 1, 0, (uint)physical_slots });
+void VSM::build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyramid_mip_count)
+{
+	std::call_once(page_hiz_views_once, [this, &data, pyramid_mip_count]
+	{
+		auto& storage = RenderSystem::get().device().get_static_gpu_data();
 
-	page_hiz_mip_array_views.resize(pyramid_mip_count);
-	for (int mip = 0; mip < pyramid_mip_count; mip++)
-		page_hiz_mip_array_views[mip] = data.VSM_PageHiZ->create_mip(mip, storage);
-
-	slot_views_built = true;
+		page_hiz_mip_array_views.resize(pyramid_mip_count);
+		for (int mip = 0; mip < pyramid_mip_count; mip++)
+			page_hiz_mip_array_views[mip] = data.VSM_PageHiZ->create_mip(mip, storage);
+	});
 }
 
 void VSM::pass_data(FrameGraph::TaskBuilder& builder)
@@ -175,6 +181,24 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	auto  cam       = caminfo.cam;
 	auto  scene     = sceneinfo.scene;
 	if (!scene)
+		return;
+
+	// While a non-Final debug view is selected, UI_Render points its own
+	// need() at a different GBuffer/debug resource instead of ResultTexture
+	// (GUI/Base.cpp's debug_source) -- nothing consumes ResultTexture that
+	// frame, so FrameGraph's dependency-based culling drops VSM_Combine and,
+	// transitively, VSM_RenderPages/VSM_HiZRebuild (none of them
+	// [Required]). This function isn't part of that cullable pass graph --
+	// it's a plain add_slot_generator callback -- so without this check it
+	// would keep planning (evicting, priority-stealing, dirty-tracking)
+	// every frame regardless, as if pages were still being rendered, while
+	// nothing ever actually redraws them. Switching back to Final then
+	// resumes rendering against a page table that drifted out from under
+	// the GPU's real content (confirmed live: pages visibly evicted/wrong
+	// on returning to Final after time spent in another debug view).
+	// Freezing here instead -- the page table simply holds whatever it held
+	// the last time this actually ran, and picks back up cleanly.
+	if (graph.get_context<FrameGraph::DebugContext>().mode != FrameGraph::DebugMode::Final)
 		return;
 
 	// Re-enabling after a period with the pyramid un-rebuilt: any page
@@ -414,7 +438,7 @@ void VSM::plan_level(int level, float2 cam_pos_ls, const box& bounds_all, uint64
 	m_plan[level] = plan;
 }
 
-VSM::VSM()
+VSM::VSM() : VariableContext(L"VSM")
 {
 	position = float3(200, 400, 200);
 
@@ -509,6 +533,19 @@ VSM::VSM()
 		// Now GPU-appended by VSM_GatherDispatch -- this pass only reads it
 		// via exec_indirect.
 		builder.need(data.VSM_DispatchCommands, FrameGraph::ResourceFlags::ComputeRead);
+		return true;
+	};
+
+	// Phase 5.17: the async-compute Hi-Z rebuild pass. need()s VSM_Atlas
+	// (read, establishes "runs after VSM_RenderPages' draw") and
+	// VSM_PageHiZ (write, for the per-frame rebuild -- VSM_RenderPages
+	// still owns create() for the cold-start clear, see its own setup()).
+	// VSM_DirtySlots moves here entirely since only this pass's dispatches
+	// consume it now.
+	m_hizrebuild_setup = [this, physical_slots](Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::UnorderedAccess);
 		// Phase 5.14: CPU-built and re-uploaded fresh every frame (like
 		// VSM_PageCameras), sized to the whole physical slot budget -- every
 		// dirty page occupies a distinct slot, so that's a hard upper bound
@@ -618,7 +655,7 @@ VSM::VSM()
 		graphics.set_signature(Layouts::DefaultLayout);
 		compute.set_signature(Layouts::DefaultLayout);
 
-		build_slot_views(data, pyramid_mip_count);
+		build_atlas_views();
 
 		{
 			PROFILE(L"vsm_tile_mapping");
@@ -630,10 +667,13 @@ VSM::VSM()
 				uint3 tile_dims = atlas_tiled.get_tiles_count();
 				uint3 to = uint3(tile_dims.x - 1, tile_dims.y - 1, 0);
 
-				for (int slot : to_map)
-					atlas_tiled.load_tiles(command_list.get(), uint3(0, 0, 0), to, (uint)slot);
-				for (int slot : to_unmap)
-					atlas_tiled.zero_tiles(command_list.get(), uint3(0, 0, 0), to, (uint)slot);
+				// Phase 5.10: one batched UpdateTileMappings call for however
+				// many slots need it this frame, not one call per slot -- see
+				// load_tiles_batch()/zero_tiles_batch()'s own comments.
+				if (!to_map.empty())
+					atlas_tiled.load_tiles_batch(command_list.get(), uint3(0, 0, 0), to, to_map);
+				if (!to_unmap.empty())
+					atlas_tiled.zero_tiles_batch(command_list.get(), uint3(0, 0, 0), to, to_unmap);
 			}
 		}
 
@@ -744,8 +784,14 @@ VSM::VSM()
 		if (data.VSM_PageHiZ.is_new())
 		{
 			PROFILE(L"clear_uav");
+			// whole_resource: the loop clears every mip of every slice, so the
+			// declaration is exactly the whole resource. Declaring each
+			// create_mip() view separately shredded it into one entry per slice
+			// per mip -- all 1792 -- and the next whole-resource use then had to
+			// reconcile every one of them individually.
 			for (int mip = 0; mip < pyramid_mip_count; mip++)
-				command_list->clear_uav(data.VSM_PageHiZ->create_mip(mip, *command_list).rwTexture2DArray, vec4(0, 0, 0, 0));
+				command_list->clear_uav(data.VSM_PageHiZ->create_mip(mip, *command_list).rwTexture2DArray,
+				                        vec4(0, 0, 0, 0), /*whole_resource*/ true);
 		}
 
 		{
@@ -756,8 +802,14 @@ VSM::VSM()
 			// not about to draw into this slice yet, so binding it as the
 			// active render target would just be wasted OM-bind/transition/
 			// size-bookkeeping work on top of the actual clear.
+			// whole_resource: the whole atlas is bound as a DSV a few lines below
+			// regardless, so declaring each clear over just its own slice buys
+			// nothing and costs a lot -- 257 per-slice declarations diverged the
+			// group's tracking, and the following whole-resource use then had to
+			// reconcile all 2048 subresources one at a time.
 			for (int slot : dsv_clear_slots)
-				command_list->clear_dsv(atlas_slot_views[slot].depthStencil);
+				command_list->clear_dsv(atlas_slot_views[slot].depthStencil,
+				                        true, false, 0, 0, /*whole_resource*/ true);
 		}
 
 		if (!any_dirty)
@@ -817,170 +869,194 @@ VSM::VSM()
 			// old per-level CPU loop issued.
 			graphics.exec_indirect(*data.VSM_DispatchCommands, (UINT)MaxDispatchEntries);
 
-			// Tried assert_shared_state() here (2026-08), after giving it a
-			// tile-mapping mask (HAL.TiledMemoryManager) specifically to fix
-			// VSM_Atlas's precondition problem: 2048 declared array slices,
-			// only physical_page_count (~256) ever tile-mapped, so the old
-			// "every declared subresource is used" requirement could never be
-			// satisfied. The mask fixed exactly that -- the DEV assert passed
-			// -- but the fold still produced a real, NEW D3D12 #1334 (72
-			// instances, barrier layout SHADER_RESOURCE vs expected
-			// DEPTH_STENCIL_WRITE), confirmed live. Reverted.
-			//
-			// Root cause (this time actually traced, not just observed): once
-			// folded, SubResourcesCPU::slot(i) returns the single shared
-			// uniform_state for ANY index, including ones the fold's own
-			// verification never individually covered (structurally excluded
-			// by the mask, or simply never touched this list). But
-			// SubResourcesGPU::merge() -- which persists per-subresource
-			// layout across FRAMES, not just this list -- loops the FULL
-			// declared subresource count and calls slot(i) unconditionally
-			// (HAL.ResourceStates.cpp, SubResourcesGPU::merge). Post-fold that
-			// silently stamps the persistent cross-frame layout for every
-			// declared subresource to match uniform_state's first_usage, even
-			// ones that were never actually verified -- corrupting the record
-			// for whichever subresource the debug layer then disagrees with.
-			// This is NOT a mask-specific bug: it explains VSM_PageHiZ's
-			// earlier #1334 too, even though PageHiZ had no declared/mapped
-			// mismatch at all -- see [[project-assert-shared-state-vsm-pagehiz]].
-			// A real fix needs merge() (or an equivalent) to stop trusting
-			// slot(i) for indices the fold didn't individually prove, which
-			// cuts against the whole point of folding (not tracking indices
-			// individually anymore) -- needs a real design pass, not another
-			// live-fire attempt.
+			// (Was a post-mortem on assert_shared_state / SubResourcesCPU folding.
+			//  That whole tracking layer is gone as of the 2026-08 barrier
+			//  rewrite, so the hazard it described no longer exists.)
 		}
+	};
 
-		// Rebuild each just-redrawn page's pyramid for next time it's dirty
+	// ---- Hi-Z pyramid rebuild (Phase 5.17: async compute, see vsm.sig's
+	// VSM_HiZRebuild comment) -----------------------------------------------
+
+	m_hizrebuild_render = [this, pages_per_level, pyramid_mip_count](Passes::VSM_HiZRebuild::Context& data, FrameGraph::FrameContext& context)
+	{
+		// Rebuilds each just-redrawn page's pyramid for next time it's dirty
 		// -- skipped entirely when hiz_culling_enabled is false, not just
 		// left unconsulted: no copy/downsample dispatches at all, so this
 		// toggle actually measures the pyramid-maintenance cost rather than
 		// just disabling its result.
-		if (hiz_culling_enabled)
+		if (!hiz_culling_enabled)
+			return;
+
+		auto& command_list = context.get_list();
+		auto& compute       = command_list->get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+
+		// This pass records on its own (async-compute) thread, possibly
+		// concurrently with VSM_RenderPages' -- build both view caches
+		// from here too (each is a no-op past the first caller, thread-
+		// safe via std::call_once) rather than assuming VSM_RenderPages'
+		// render() already ran on the same thread. Confirmed the hard way:
+		// a plain bool guard produced a live, reproducible null-deref
+		// crash the first frame this pass had real work to do.
+		build_atlas_views();
+		build_page_hiz_views(data, pyramid_mip_count);
+
+		// Phase 5.14: collect every dirty page's physical slot into one
+		// flat list -- lets the whole rebuild (copy + full mip chain)
+		// run as pyramid_mip_count dispatches TOTAL this frame (Z
+		// dimension = dirty page count), instead of pyramid_mip_count
+		// dispatches PER dirty page. Cheap CPU-side walk (at most
+		// MaxLevels x pages_per_level iterations).
+		std::vector<uint32_t> dirty_slots;
 		{
-			// Phase 5.14: collect every dirty page's physical slot into one
-			// flat list -- lets the whole rebuild (copy + full mip chain)
-			// run as pyramid_mip_count dispatches TOTAL this frame (Z
-			// dimension = dirty page count), instead of pyramid_mip_count
-			// dispatches PER dirty page. Cheap CPU-side walk (at most
-			// MaxLevels x pages_per_level iterations).
-			std::vector<uint32_t> dirty_slots;
+			PROFILE(L"vsm_hiz_collect");
+			for (int level = 0; level < VSM::MaxLevels; level++)
 			{
-				PROFILE(L"vsm_hiz_collect");
-				for (int level = 0; level < VSM::MaxLevels; level++)
-				{
-					const LevelPlan& plan = m_plan[level];
-					if (!plan.valid || plan.dirty_mask == 0)
-						continue;
+				const LevelPlan& plan = m_plan[level];
+				if (!plan.valid || plan.dirty_mask == 0)
+					continue;
 
-					for (int local = 0; local < pages_per_level; local++)
-						if ((plan.dirty_mask >> local) & 1)
-							dirty_slots.push_back((uint32_t)plan.slots[local]);
-				}
-			}
-
-			if (!dirty_slots.empty())
-			{
-				// NOT a candidate for assert_shared_state(), still. Its
-				// declared array size is MaxPhysicalSlots (2048), not
-				// physical_page_count (256) -- originally this alone blocked
-				// the fold (DEV assert fired immediately on the "every
-				// declared subresource is used" precondition). Fixed that part
-				// (2026-08) with an optional tile-mapping mask on
-				// assert_shared_state() (HAL.TiledMemoryManager) so unmapped
-				// subresources are skipped rather than required -- see the
-				// comment after the vsm_draw block below for what happened
-				// next: the precondition passed, but the fold still produced a
-				// real, new #1334 via a separate mechanism
-				// (SubResourcesGPU::merge()) that isn't specific to this mask
-				// at all -- see [[project-assert-shared-state-vsm-pagehiz]].
-
-				// VSM_Atlas was just a DSV -- nudge readable for the copy shader
-				// below, same one-off idiom PSSM.cpp uses; the next draw into it
-				// transitions it back automatically via set_rtv.
-				command_list->transition(data.VSM_Atlas->resource, HAL::ResourceStates::SHADER_RESOURCE);
-
-				command_list->get_copy().update(*data.VSM_DirtySlots, 0, std::span{ dirty_slots });
-
-				ivec3 dispatch_size((int)page_table.page_size, (int)page_table.page_size, (int)dirty_slots.size());
-
-				{
-					PROFILE(L"vsm_hiz_copy");
-					compute.set_pipeline<PSOS::VSMCopyPageDepthBatch>();
-					{
-						// Narrowed views (atlas_array_view/page_hiz_mip_array_views),
-						// not the base handlers' full-array/full-mip-chain ones --
-						// originally to dodge HAL::Transitions::stop_using()'s
-						// teardown cost on the wide base views (thousands of times
-						// more than the per-slice binds it replaced). stop_using()
-						// has since been removed (it only fed an unread
-						// ResourceUsage::last_point, dead split-barrier bookkeeping),
-						// so that cost no longer applies, but these stay narrow as
-						// the correct shape for the dispatch. dirty_slots.Load(z)
-						// still picks which physical slice each Z-group touches.
-						Slots::VSMCopyPageDepthBatch copy;
-						copy.GetAtlas()       = atlas_array_view.texture2DArray;
-						copy.GetDst_mip0()    = page_hiz_mip_array_views[0].rwTexture2DArray;
-						copy.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
-						compute.set(copy);
-					}
-					compute.dispatch(dispatch_size, ivec3(8, 8, 1));
-				}
-
-				{
-					PROFILE(L"vsm_hiz_downsample");
-					compute.set_pipeline<PSOS::VSMDownsampleHiZBatch>();
-					for (int mip = 0; mip < pyramid_mip_count - 1; mip++)
-					{
-						int dst_size = std::max(1, page_table.page_size >> (mip + 1));
-
-						Slots::VSMDownsampleHiZBatch down;
-						// Both sides narrowed to exactly one mip (array-spanning,
-						// physical_page_count slices) instead of the base
-						// handler's whole 7-mip-chain SRV -- same narrowing
-						// reasoning as the copy step above (stop_using() is gone,
-						// see that comment), and this one runs
-						// pyramid_mip_count-1 times per frame, not once.
-						// src_mip is no longer needed for addressing (the view
-						// itself is already narrowed to that mip -- Load's mip
-						// component is always 0 relative to it) but is kept for
-						// parity with the entry's own bookkeeping.
-						down.GetSrc()         = page_hiz_mip_array_views[mip].texture2DArray;
-						down.GetDst_mip()     = page_hiz_mip_array_views[mip + 1].rwTexture2DArray;
-						down.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
-						down.GetSrc_mip()     = (uint)mip;
-						compute.set(down);
-
-						compute.dispatch(ivec3(dst_size, dst_size, (int)dirty_slots.size()), ivec3(8, 8, 1));
-					}
-				}
-
-				PROFILE(L"vsm_hiz_transition");
-				// Tried collapsing this to one wide transition (covering the
-				// whole physical_page_count-slice last-mip range) + an
-				// assert_shared_state() fold -- the DEV-mode ASSERT inside
-				// assert_shared_state() passed (every subresource genuinely
-				// converged on the same tracked state), but it broke the
-				// once-ever cold-start clear_uav path with a real, new D3D12
-				// validation error (#1334, incompatible barrier layout,
-				// ClearUnorderedAccessViewFloat expecting UNORDERED_ACCESS but
-				// finding SHADER_RESOURCE) -- 3584 instances, confirmed via a
-				// live run. Reverted to the known-good per-dirty-slot loop;
-				// the interaction between assert_shared_state()'s uniform-mode
-				// fold and this resource's separate once-ever cold-clear path
-				// isn't understood well enough yet to trust past what the
-				// DEV assert alone checks.
-				//
-				// Every mip but the last is later read as another mip's
-				// SrcMip (via the shared whole-chain SRV), so it naturally
-				// rests as SHADER_RESOURCE; only the coarsest mip's write is
-				// never followed by a read.
-				for (uint32_t slot : dirty_slots)
-				{
-					UINT last_mip_subres = (UINT)(pyramid_mip_count - 1) + slot * (UINT)pyramid_mip_count;
-					command_list->transition(data.VSM_PageHiZ->resource, HAL::ResourceStates::SHADER_RESOURCE, last_mip_subres);
-				}
+				for (int local = 0; local < pages_per_level; local++)
+					if ((plan.dirty_mask >> local) & 1)
+						dirty_slots.push_back((uint32_t)plan.slots[local]);
 			}
 		}
+
+		if (dirty_slots.empty())
+			return;
+
+		// No manual transitions here any more. VSM_Atlas (DSV -> SRV for
+		// the copy shader) and VSM_PageHiZ's per-mip UAV/SRV binds are
+		// declared [Barrier = ALL] in vsm.sig, so each bind records one
+		// whole-resource use instead of expanding into its
+		// physical_page_count-slice range -- which is exactly what the
+		// bare add_resource_usage() calls that used to sit here were
+		// faking by hand.
+		command_list->get_copy().update(*data.VSM_DirtySlots, 0, std::span{ dirty_slots });
+
+		ivec3 dispatch_size((int)page_table.page_size, (int)page_table.page_size, (int)dirty_slots.size());
+
+		{
+			PROFILE(L"vsm_hiz_copy");
+			compute.set_pipeline<PSOS::VSMCopyPageDepthBatch>();
+			{
+				// Narrowed views (atlas_array_view/page_hiz_mip_array_views,
+				// VSM's own members, built just above), not the base
+				// handlers' full-array/full-mip-chain ones. dirty_slots.
+				// Load(z) still picks which physical slice each Z-group
+				// touches.
+				Slots::VSMCopyPageDepthBatch copy;
+				copy.GetAtlas()       = atlas_array_view.texture2DArray;
+				copy.GetDst_mip0()    = page_hiz_mip_array_views[0].rwTexture2DArray;
+				copy.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
+				compute.set(copy);
+			}
+			compute.dispatch(dispatch_size, ivec3(8, 8, 1));
+		}
+
+		{
+			PROFILE(L"vsm_hiz_downsample");
+			compute.set_pipeline<PSOS::VSMDownsampleHiZBatch>();
+			for (int mip = 0; mip < pyramid_mip_count - 1; mip++)
+			{
+				int dst_size = std::max(1, page_table.page_size >> (mip + 1));
+
+				Slots::VSMDownsampleHiZBatch down;
+				// Both sides narrowed to exactly one mip (array-spanning,
+				// physical_page_count slices) instead of the base
+				// handler's whole 7-mip-chain SRV -- same narrowing
+				// reasoning as the copy step above, and this one runs
+				// pyramid_mip_count-1 times per frame, not once.
+				// src_mip is no longer needed for addressing (the view
+				// itself is already narrowed to that mip -- Load's mip
+				// component is always 0 relative to it) but is kept for
+				// parity with the entry's own bookkeeping.
+				down.GetSrc()         = page_hiz_mip_array_views[mip].texture2DArray;
+				down.GetDst_mip()     = page_hiz_mip_array_views[mip + 1].rwTexture2DArray;
+				down.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
+				down.GetSrc_mip()     = (uint)mip;
+				compute.set(down);
+
+				compute.dispatch(ivec3(dst_size, dst_size, (int)dirty_slots.size()), ivec3(8, 8, 1));
+			}
+		}
+	};
+
+	// ---- Blocker search (extracted from combine, see vsm.sig's ------------
+	// ---- VSM_BlockerSearch PassNode comment) -------------------------------
+
+	m_blockersearch_setup = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		// Only meaningful (and only ever dispatched) under penumbra mode --
+		// there's no blocker search to extract otherwise. m_combine_render's
+		// own PSO-permutation gate already skips VSM_RTX_VERIFY/etc. the
+		// same way; this pass just skips existing at all.
+		if (!use_vsm_penumbra)
+			return false;
+		GBufferViewDesc::need(builder, data.gbuffer);
+		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
+		auto& frame = builder.graph->get_context<ViewportInfo>();
+		builder.create(data.VSM_BlockerResult,
+		    { ivec3(frame.frame_size, 0), HAL::Format::R32G32B32A32_UINT, 1, 1 },
+		    FrameGraph::ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_blockersearch_render = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::FrameContext& context)
+	{
+		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+
+		auto& list    = *context.get_list();
+		auto& compute = list.get_compute();
+
+		auto& caminfo = context.graph->get_context<CameraInfo>();
+		auto  cam     = caminfo.cam;
+
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+
+		camera light_cam = make_light_view_camera(frame_light_pos);
+		float2 cam_pos_ls = (float4(cam->position, 1) * light_cam.get_view()).xy;
+
+		{
+			Slots::VSMLighting lighting;
+			gbuffer.SetTable(lighting.GetGbuffer());
+			lighting.GetVsm_atlas()      = data.VSM_Atlas->texture2DArray;
+			lighting.GetPage_table()     = data.VSM_PageTable->texture2DArray;
+			lighting.GetPage_cameras()   = data.VSM_PageCameras->structuredBuffer;
+			lighting.GetBlue_noise()     = data.BlueNoise->texture2D;
+			lighting.GetBlocker_result() = data.VSM_BlockerResult->rwTexture2D;
+			// Result/rtx_shadow_mask stay unbound (default) -- this pass's
+			// own shader (CS_BLOCKER_SEARCH) never reads either field.
+			compute.set(lighting);
+		}
+
+		{
+			Slots::VSMConstants constants;
+			constants.GetActive_min()          = active_min;
+			constants.GetActive_max()          = active_max;
+			constants.GetPage_size()           = page_table.page_size;
+			constants.GetPages_per_level()     = page_table.clipmap.pages_per_level;
+			constants.GetQuad_blocker_search()  = use_vsm_stochastic_blocker_search ? 2 : (use_vsm_quad_blocker_search ? 1 : 0);
+			constants.GetLight_view()           = light_cam.get_view();
+			// rtx_dual_blur/debug_rtx_reference are resolve-only concerns
+			// (see m_combine_render) -- left at their zero-initialized
+			// default here, this pass's shader never reads them.
+
+			for (int level = 0; level < page_table.clipmap.level_count; level++)
+			{
+				float2 origin = page_table.clipmap.grid_origin(level, cam_pos_ls);
+				constants.GetLevel_info()[level] = float4(origin.x, origin.y, page_table.clipmap.page_world_size(level), 0.0f);
+			}
+
+			compute.set(constants);
+		}
+
+		compute.set_pipeline<PSOS::VSMBlockerSearchCompute>();
+		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 
 	// ---- Combine lighting ------------------------------------------------
@@ -992,6 +1068,19 @@ VSM::VSM()
 		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
+		// RTXShadow runs unconditionally every frame on RTX-capable
+		// hardware, independent of PSSM/VSM -- but its own setup() can
+		// still return false (no RTX hardware), in which case ShadowMask
+		// never gets created this frame. Same defensive builder.exists()
+		// guard PSSM_Combine already uses for the same resource.
+		if (use_vsm_debug_rtx_reference && builder.exists(data.ShadowMask))
+			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
+		// Only exists when use_vsm_penumbra is on (see
+		// m_blockersearch_setup's own early-out) -- same defensive
+		// builder.exists() guard as ShadowMask above.
+		if (builder.exists(data.VSM_BlockerResult))
+			builder.need(data.VSM_BlockerResult, FrameGraph::ResourceFlags::ComputeRead);
 		return true;
 	};
 
@@ -1017,6 +1106,14 @@ VSM::VSM()
 			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
 			lighting.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
 			lighting.GetResult()       = data.ResultTexture->rwTexture2D;
+			lighting.GetBlue_noise()   = data.BlueNoise->texture2D;
+			if (data.ShadowMask)
+				lighting.GetRtx_shadow_mask() = data.ShadowMask->texture2D;
+			// Written by m_blockersearch_render above -- only exists when
+			// use_vsm_penumbra is on (see m_blockersearch_setup's own
+			// early-out and this pass's own builder.exists() guard).
+			if (data.VSM_BlockerResult)
+				lighting.GetBlocker_result() = data.VSM_BlockerResult->rwTexture2D;
 			compute.set(lighting);
 		}
 
@@ -1029,7 +1126,24 @@ VSM::VSM()
 			constants.GetActive_max()           = active_max;
 			constants.GetPage_size()            = page_table.page_size;
 			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
+			constants.GetRtx_dual_blur()        = use_vsm_rtx_dual_blur ? 1 : 0;
+			// 3-way mode packed into one int (see VSM_impl.hlsl's own
+			// comment on search_mode): 0 = full, 1 = quad-shared, 2 =
+			// stochastic single tap. Stochastic takes priority if somehow
+			// both toggles are on -- it's the more aggressive of the two.
+			constants.GetQuad_blocker_search()  = use_vsm_stochastic_blocker_search ? 2 : (use_vsm_quad_blocker_search ? 1 : 0);
+			// Only meaningful when ShadowMask actually exists this frame
+			// (see m_combine_setup's builder.exists() guard) -- otherwise
+			// rtx_shadow_mask was never bound to anything real above.
+			constants.GetDebug_rtx_reference()  = (use_vsm_debug_rtx_reference && data.ShadowMask) ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
+
+			// Propagates into RTXShadow::render (PassDefaults.cpp) via the
+			// RTX singleton -- see debug_full_reference_shadow's own
+			// comment in RTX.ixx for why it lives there instead of a
+			// VSM-local flag. One-frame lag (RTXShadow already ran earlier
+			// this frame) is fine for a debug toggle.
+			RTX::get().debug_full_reference_shadow = use_vsm_debug_rtx_reference;
 
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
 			{
@@ -1040,7 +1154,23 @@ VSM::VSM()
 			compute.set(constants);
 		}
 
-		compute.set_pipeline<PSOS::VSMApplyCompute>();
+		bool rtx_capable    = use_vsm_penumbra && RenderSystem::get().device().get_properties().rtx;
+		bool rtx_verify     = rtx_capable && use_vsm_rtx_verify;
+		if (rtx_verify)
+		{
+			// Same binding VSM.cpp mirrors from PassDefaults.cpp's
+			// RTXShadow::render -- Raytracing has its own dedicated
+			// DefaultLayout root-signature slot, so this doesn't need a
+			// FrameGraph-tracked field on VSM_Combine's PassNode.
+			auto& scene_ctx = context.graph->get_context<SceneInfo>();
+			Slots::Raytracing rtx;
+			rtx.GetScene() = scene_ctx.scene->raytrace_scene->get_handle();
+			compute.set(rtx);
+		}
+
+		compute.set_pipeline<PSOS::VSMApplyCompute>(
+			PSOS::VSMApplyCompute::VsmPenumbra.Use(use_vsm_penumbra)
+			| PSOS::VSMApplyCompute::VsmRtxVerify.Use(rtx_verify));
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 
@@ -1087,7 +1217,7 @@ VSM::VSM()
 		// No manual transitions anywhere in this pass -- update(), set(),
 		// and read()/read_buffer() all self-transition internally
 		// (confirmed by reading their implementations: update_buffer/
-		// read_buffer both call base.transition(...) themselves; set()'s
+		// read_buffer both call base.add_resource_usage(...) themselves; set()'s
 		// self-tracking is already noted elsewhere in this file, "graphics.
 		// set() tracks the read state for this SRV bind itself"). Adding
 		// redundant manual transitions to the same states right before each

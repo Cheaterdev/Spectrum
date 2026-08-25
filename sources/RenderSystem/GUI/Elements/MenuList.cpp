@@ -23,15 +23,21 @@ GUI::Elements::menu_list::menu_list(bool vertical)
 
        // max_size = { 0, 300 };
         width_size = size_type::MATCH_CHILDREN;
-        height_size = size_type::MATCH_CHILDREN;
+        // Height is NOT MATCH_CHILDREN here: it's driven by auto_size (below),
+        // which reads contents->scaled_size directly. filled->clamp_to_parent
+        // clamps filled's height to *this* element's (possibly window-clamped,
+        // see clamp_to_parent below) bounds, so filled's height can't also be
+        // the source menu_list derives its own height from -- that'd be
+        // circular (filled clamped to menu_list, menu_list sized from filled)
+        // and get stuck at whatever tiny size happened to seed the loop.
         contents->width_size = size_type::MATCH_CHILDREN;
         contents->height_size = size_type::MATCH_CHILDREN;
 
         filled->width_size = size_type::MATCH_CHILDREN;
         filled->height_size = size_type::MATCH_CHILDREN;
           filled->docking= dock::NONE;
-        auto_size = true;
         filled->clamp_to_parent = ParentClamp::HEIGHT;
+        auto_size = true;
 
         filled->x_type = pos_x_type::LEFT;
         if (hor) base::remove_child(hor);
@@ -56,15 +62,15 @@ bool GUI::Elements::menu_list::need_open_on_hover()
 void GUI::Elements::menu_list::make_fixed_width()
 {
     width_size = size_type::MATCH_CHILDREN;
-    height_size = size_type::MATCH_CHILDREN;
+    // See the vertical-menu constructor for why height isn't MATCH_CHILDREN here.
     contents->width_size = size_type::MATCH_PARENT_CHILDREN;
     contents->height_size = size_type::MATCH_CHILDREN;
 
     filled->width_size = size_type::MATCH_PARENT_CHILDREN;
     filled->height_size = size_type::MATCH_CHILDREN;
 
- //   auto_size = true;
     filled->clamp_to_parent = ParentClamp::HEIGHT;
+    auto_size = true;
     filled->docking = dock::NONE;
     filled->x_type = pos_x_type::LEFT;
     if (hor) base::remove_child(hor);

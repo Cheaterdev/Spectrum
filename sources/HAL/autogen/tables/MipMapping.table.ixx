@@ -21,12 +21,16 @@ export namespace Table
 		uint NumMipLevels;
 		float2 TexelSize;
 		HLSL::Texture2D<float4> SrcMip;
+		HLSL::Texture2DArray<float4> SrcMipArray;
 		HLSL::RWTexture2D<float4> OutMip[4];
+		HLSL::RWTexture2DArray<float4> OutMipArray[4];
 		uint& GetSrcMipLevel() { return SrcMipLevel; }
 		uint& GetNumMipLevels() { return NumMipLevels; }
 		float2& GetTexelSize() { return TexelSize; }
 		HLSL::RWTexture2D<float4>* GetOutMip() { return OutMip; }
 		HLSL::Texture2D<float4>& GetSrcMip() { return SrcMip; }
+		HLSL::RWTexture2DArray<float4>* GetOutMipArray() { return OutMipArray; }
+		HLSL::Texture2DArray<float4>& GetSrcMipArray() { return SrcMipArray; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -35,7 +39,9 @@ export namespace Table
 			compiler.compile(NumMipLevels);
 			compiler.compile(TexelSize);
 			compiler.compile(SrcMip);
+			compiler.compile(SrcMipArray);
 			compiler.compile(OutMip);
+			compiler.compile(OutMipArray);
 		}
 		struct Compiled
 		{
@@ -43,7 +49,9 @@ export namespace Table
 			uint NumMipLevels; // uint
 			float2 TexelSize; // float2
 			uint SrcMip; // Texture2D<float4>
+			uint SrcMipArray; // Texture2DArray<float4>
 			uint OutMip[4]; // RWTexture2D<float4>
+			uint OutMipArray[4]; // RWTexture2DArray<float4>
 
 			
 			private:

@@ -81,3 +81,47 @@ When writing or editing any function that does non-trivial per-frame CPU work (l
 - Name markers by what they measure, not where they live (`vsm_hiz_copy`, not `loop1`) — this is what shows up in the profiler UI and needs to be legible next to unrelated markers from other systems.
 - Prefer several small, named scopes over one broad one when a function has multiple distinct phases (setup vs. dispatch vs. teardown) — this is what makes a profiler capture actionable instead of just "this function is slow somewhere."
 - This is the same convention already used throughout `HAL.CommandList.cpp` (`commit_tables`, `transitions`, `rt_transitions`) and `MipMapGeneration.cpp` — match that granularity when adding new instrumented code, don't invent a different style.
+
+## Temporary debug logging
+
+Debug logging added to chase a specific problem is scaffolding, not code. It
+exists for one investigation and becomes noise the moment that investigation
+ends — so it needs to be obvious on sight and trivial to remove.
+
+**Write temporary log output to files with a `.temp` extension**, never into
+`log.txt` or the engine's normal logging path. `*.temp` is gitignored, so
+scratch output can never be committed by accident, and the extension makes
+every temporary artifact greppable as a set rather than something you have to
+remember file by file.
+
+**When a debugging session ends, ask before cleaning up.** Once the bug is
+found and fixed, list the temporary logging that was added — the call sites and
+the `.temp` files — and ask whether to remove it. Don't strip it automatically:
+a fix often needs one more round of verification, and silently deleting the
+instrumentation that proved it means rebuilding it from scratch. Equally, don't
+leave it behind unmentioned — untracked `PROFILE`-adjacent spam and stray
+writes accumulate and are hard to attribute later.
+
+This is specifically about *temporary* instrumentation. Permanent diagnostics
+that earn their place — the VSM active-window diag, the D3D12 message callback
+— are normal code and stay.
+
+## Comments
+
+Comment sparingly. Prefer code that doesn't need explaining, and don't restate
+in prose what the line below already says: `// increment the counter` above
+`++counter` is pure cost, and comments that merely narrate drift out of sync
+with the code and start actively lying.
+
+Write a comment when the reader would otherwise be right to think the code is
+wrong:
+
+- A workaround for a driver, API, or compiler bug — say which, and what breaks
+  without it.
+- A non-obvious ordering or lifetime requirement — why this call must precede
+  that one.
+- A deliberate deviation from the obvious implementation, with the reason.
+- A constant whose value came from measurement or a spec, not from choice.
+
+The test is whether someone competent would be tempted to "simplify" the code
+and break it. If yes, explain why it is the way it is. If no, leave it alone.

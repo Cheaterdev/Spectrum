@@ -723,6 +723,12 @@ D3D12_BARRIER_SYNC to_native(BarrierSync flags)
         result = D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_SPLIT;
     }
 
+    if (check(flags & BarrierSync::ALL))
+    {
+        ASSERT(flags == BarrierSync::ALL);
+        result = D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_ALL;
+    }
+
     return result;
 }
 

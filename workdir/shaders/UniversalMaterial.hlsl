@@ -78,7 +78,7 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     float3 r = reflect(v, normal);         
     GBuffer result;
 
-    result.albedo = float4(albedo.xyz, metallic);
+    result.albedo = float4(albedo.rgb, metallic);
     result.normals = float4(GetFrameInfo().compress_normals(normal), (roughness));
 	result.specular = 0;// float4(metallic, roughness); 
       
@@ -95,7 +95,7 @@ void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out floa
 GBuffer PS(vertex_output i)
 {
 	float4 color = 1;
-	float metallic = 1;
+	float metallic = 0.001;
 	float roughness = 1;
 	float4 normal = 0;
     float4 glow = 0;

@@ -50,6 +50,8 @@ namespace FrameGraph
 		Mipmapping,
 		VSM_GatherDispatch,
 		VSM_RenderPages,
+		VSM_HiZRebuild,
+		VSM_BlockerSearch,
 		VSM_Combine,
 		VSM_DepthAnalysis,
 		Count

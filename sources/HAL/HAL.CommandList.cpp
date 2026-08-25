@@ -9,78 +9,84 @@ import Core;
 import HAL;
 
 // File-local template — full HAL::Resource available here, no std::function overhead.
+//
+// Reports each resource a view touches ONCE, with the SubresRange it covers,
+// rather than calling back per subresource. A view already IS a range -- the
+// mip/array/plane fields below are the same six numbers -- so shredding it here
+// only to have the caller (and formerly the backend) put it back together was
+// wasted work: a 256-slice view meant 256 callbacks, 256 shared_ptr passes and
+// 256 identical resource comparisons in the caller's filter.
+//
+// SubresRange::all() is still preferred wherever the view covers the whole
+// resource: D3D12 has a dedicated sentinel for that and it stays cheaper than an
+// equivalent range all the way down.
 template<typename F>
 static void visit_subres(const HAL::ResourceInfo& info, F&& f)
 {
+	using HAL::SubresRange;
+
 	std::visit(overloaded{
 		[&](const HAL::Views::ShaderResource& v) {
 			std::visit(overloaded{
-				[&](const HAL::Views::ShaderResource::Buffer&) { f(v.Resource, HAL::ALL_SUBRESOURCES); },
+				[&](const HAL::Views::ShaderResource::Buffer&) { f(v.Resource, SubresRange::all()); },
 				[&](const HAL::Views::ShaderResource::Texture2D& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0 && desc.is2D())
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
-							f(v.Resource, desc.CalcSubresource(mip, 0, t.PlaneSlice));
+						f(v.Resource, SubresRange{ t.MostDetailedMip, t.MipLevels, 0, 1, t.PlaneSlice, 1 });
 				},
 				[&](const HAL::Views::ShaderResource::Texture2DArray& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0 && t.FirstArraySlice == 0 && t.ArraySize == desc.ArraySize && desc.is2D())
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
-							for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
-								f(v.Resource, desc.CalcSubresource(mip, arr, t.PlaneSlice));
+						f(v.Resource, SubresRange{ t.MostDetailedMip, t.MipLevels, t.FirstArraySlice, t.ArraySize, t.PlaneSlice, 1 });
 				},
 				[&](const HAL::Views::ShaderResource::Texture3D& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0)
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
-							f(v.Resource, desc.CalcSubresource(mip, 0, 0));
+						f(v.Resource, SubresRange{ t.MostDetailedMip, t.MipLevels, 0, 1, 0, 1 });
 				},
 				[&](const HAL::Views::ShaderResource::Cube& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (t.MipLevels == desc.MipLevels && t.MostDetailedMip == 0)
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						for (auto mip = t.MostDetailedMip; mip < t.MostDetailedMip + t.MipLevels; mip++)
-							for (auto arr = 0; arr < 6; arr++)
-								f(v.Resource, desc.CalcSubresource(mip, arr, 0));
+						f(v.Resource, SubresRange{ t.MostDetailedMip, t.MipLevels, 0, 6, 0, 1 });
 				},
-				[&](const HAL::Views::ShaderResource::Raytracing&) { f(v.Resource, HAL::ALL_SUBRESOURCES); },
+				[&](const HAL::Views::ShaderResource::Raytracing&) { f(v.Resource, SubresRange::all()); },
 				[&](auto) { ASSERT(false); }
 			}, v.View);
 		},
 		[&](const HAL::Views::UnorderedAccess& v) {
 			std::visit(overloaded{
 				[&](const HAL::Views::UnorderedAccess::Buffer& b) {
-					f(v.Resource, HAL::ALL_SUBRESOURCES);
-					if (b.CounterResource) f(b.CounterResource, HAL::ALL_SUBRESOURCES);
+					f(v.Resource, SubresRange::all());
+					if (b.CounterResource) f(b.CounterResource, SubresRange::all());
 				},
 				[&](const HAL::Views::UnorderedAccess::Texture2D& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (desc.MipLevels == 1 && desc.is2D())
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, t.PlaneSlice));
+						f(v.Resource, SubresRange{ t.MipSlice, 1, 0, 1, t.PlaneSlice, 1 });
 				},
 				[&](const HAL::Views::UnorderedAccess::Texture2DArray& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (desc.MipLevels == 1 && desc.is2D() && desc.ArraySize == 1)
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
-							f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, t.PlaneSlice));
+						f(v.Resource, SubresRange{ t.MipSlice, 1, t.FirstArraySlice, t.ArraySize, t.PlaneSlice, 1 });
 				},
 				[&](const HAL::Views::UnorderedAccess::Texture3D& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (t.FirstWSlice == 0 && t.WSize == desc.Dimensions.z && desc.MipLevels == 1)
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, 0));
+						f(v.Resource, SubresRange{ t.MipSlice, 1, 0, 1, 0, 1 });
 				},
 				[&](auto) { ASSERT(false); }
 			}, v.View);
@@ -90,14 +96,12 @@ static void visit_subres(const HAL::ResourceInfo& info, F&& f)
 				[&](const HAL::Views::RenderTarget::Texture2D& t) {
 					auto& desc = v.Resource->get_desc().as_texture();
 					if (desc.MipLevels == 1 && desc.is2D() == 1)
-						f(v.Resource, HAL::ALL_SUBRESOURCES);
+						f(v.Resource, SubresRange::all());
 					else
-						f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, t.PlaneSlice));
+						f(v.Resource, SubresRange{ t.MipSlice, 1, 0, 1, t.PlaneSlice, 1 });
 				},
 				[&](const HAL::Views::RenderTarget::Texture2DArray& t) {
-					auto& desc = v.Resource->get_desc().as_texture();
-					for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
-						f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, t.PlaneSlice));
+					f(v.Resource, SubresRange{ t.MipSlice, 1, t.FirstArraySlice, t.ArraySize, t.PlaneSlice, 1 });
 				},
 				[&](auto) { ASSERT(false); }
 			}, v.View);
@@ -105,18 +109,15 @@ static void visit_subres(const HAL::ResourceInfo& info, F&& f)
 		[&](const HAL::Views::DepthStencil& v) {
 			std::visit(overloaded{
 				[&](const HAL::Views::DepthStencil::Texture2D& t) {
-					auto& desc = v.Resource->get_desc().as_texture();
-					f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, 0));
+					f(v.Resource, SubresRange{ t.MipSlice, 1, 0, 1, 0, 1 });
 				},
 				[&](const HAL::Views::DepthStencil::Texture2DArray& t) {
-					auto& desc = v.Resource->get_desc().as_texture();
-					for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
-						f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, 0));
+					f(v.Resource, SubresRange{ t.MipSlice, 1, t.FirstArraySlice, t.ArraySize, 0, 1 });
 				},
 				[&](auto) { ASSERT(false); }
 			}, v.View);
 		},
-		[&](const HAL::Views::ConstantBuffer& v) { f(v.Resource, HAL::ALL_SUBRESOURCES); },
+		[&](const HAL::Views::ConstantBuffer& v) { f(v.Resource, SubresRange::all()); },
 		[&](auto) { ASSERT(false); }
 	}, info.view);
 }
@@ -305,6 +306,10 @@ namespace HAL
 	{
 		current_pipeline = nullptr;
 
+		// Reserve the last operation's barriers_after point -- nothing follows
+		// it to trigger the close in begin_op.
+		end_op();
+
 		if (graphics) graphics->end();
 		if (compute) compute->end();
 
@@ -374,17 +379,20 @@ namespace HAL
 		on_execute_funcs.emplace_back(f);
 	}
 
+	// Compile a standalone list -- one that is not part of a FrameGraph batch.
+	// It still goes through a group (of one), because that is what computes the
+	// barriers and then replays the list; running either half directly here
+	// would be a second, independent computation over the same command stream.
 	void Sendable::compile()
 	{
 		if (active)
 			end();
 
-		
-		dynamic_cast<CommandList*>(this)->compile_transitions();
-
-		auto ca = frame_resources->get_ca(type);
-		compiler.compile(*ca);
-		frame_resources->free_ca(ca);
+		CommandListGroup group;
+		group.add(dynamic_cast<CommandList*>(this)->get_ptr());
+		group.plan_resources();
+		group.compile_transitions();
+		group.compile();
 	}
 
 	FenceWaiter Sendable::execute(std::function<void()> f)
@@ -396,9 +404,9 @@ namespace HAL
 			on_execute_funcs.emplace_back(f);
 
 
-		std::list<CommandList::ptr>	lists;
-		  lists.emplace_back(dynamic_cast<CommandList*>(this)->get_ptr());
-		auto fence = dynamic_cast<CommandList*>(this)->get_device().get_queue(type)->execute(lists);
+		CommandListGroup group;
+		group.add(dynamic_cast<CommandList*>(this)->get_ptr());
+		auto fence = dynamic_cast<CommandList*>(this)->get_device().get_queue(type)->execute(group);
 
 		return fence;
 	}
@@ -483,11 +491,17 @@ namespace HAL
 
 		{ PROFILE(L"pre_command"); base.pre_command<false, false>(*this, BarrierSync::DRAW); }
 
+		// Changing the render target ends the batch: see Transitions::break_op.
+		// Must come after pre_command, which is what establishes the operation
+		// class -- breaking first would split the PREVIOUS class and leave an
+		// empty operation of it behind.
+		get_base().break_op();
+
 		{ PROFILE(L"rt_transitions");
 		for (uint i = 0; i < table_rtv.get_count(); i++)
-			get_base().transition(table_rtv[i].get_resource_info());
+			get_base().add_resource_usage(table_rtv[i].get_resource_info());
 		if (table_dsv)
-			get_base().transition(table_dsv.get_resource_info());
+			get_base().add_resource_usage(table_dsv.get_resource_info());
 		}
 
 		if (check(options & RTOptions::SetHandles))
@@ -622,7 +636,7 @@ namespace HAL
 		PROFILE_GPU(L"draw_indexed");
 		base.pre_command<false, true>(*this, BarrierSync::DRAW);
 
-		get_base().transition(index.Resource, ResourceStates::INDEX_BUFFER);
+		get_base().add_resource_usage(index.Resource, ResourceStates::INDEX_BUFFER);
 		list->set_index_buffer(index);
 
 		list->draw_indexed(index_count, index_offset, vertex_offset, instance_count, instance_offset);
@@ -698,7 +712,7 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		base.transition(resource, ResourceStates::COPY_DEST);
+		base.add_resource_usage(resource, ResourceStates::COPY_DEST);
 
 		auto info = base.place_data(size);
 		std::memcpy(info.get_cpu_data(), data, size);
@@ -718,7 +732,7 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		base.transition(resource, ResourceStates::COPY_DEST, sub_resource);
+		base.add_resource_usage(resource, ResourceStates::COPY_DEST, sub_resource);
 		auto layout = base.get_device().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.place_data(layout.size, layout.alignment);
 
@@ -778,7 +792,7 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		base.transition(resource, ResourceStates::COPY_SOURCE, sub_resource);
+		base.add_resource_usage(resource, ResourceStates::COPY_SOURCE, sub_resource);
 
 		auto layout = base.get_device().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.read_data(layout.size, layout.alignment, static_cast<uint>(base.get_type()));
@@ -802,7 +816,7 @@ namespace HAL
 	                                            std::function<void(std::span<std::byte>, texture_layout)> f)
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
-		base.transition(resource, ResourceStates::COPY_SOURCE, sub_resource);
+		base.add_resource_usage(resource, ResourceStates::COPY_SOURCE, sub_resource);
 
 		auto layout = base.get_device().get_texture_layout(resource->get_desc(), sub_resource);
 		auto info = base.read_data(layout.size, layout.alignment, static_cast<uint>(base.get_type()));
@@ -837,7 +851,7 @@ namespace HAL
 
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		base.transition(resource, ResourceStates::COPY_SOURCE);
+		base.add_resource_usage(resource, ResourceStates::COPY_SOURCE);
 
 		auto info = base.read_data(size, GPUEntityStorageInterface::DEFAULT_ALIGN, static_cast<uint>(base.get_type()));
 		list->copy_buffer(info.resource, info.resource_offset, resource, offset, size);
@@ -899,369 +913,122 @@ namespace HAL
 	}
 
 
-		void Transitions::create_usage_point(BarrierSync operation, bool end)
-
-			{
-				PROFILE(L"create_usage_point");
-				auto prev_point = usage_points.empty() ? nullptr : &usage_points.back();
-				auto* point = &usage_points.emplace_back(type);
-				if (prev_point) prev_point->next_point = point;
-				point->prev_point = prev_point; point->cmd_list = this; point->start = !end; point->index = static_cast<uint>(usage_points.size()); point->operation = operation;
-				compiler.func_barrier(point);
-			}
-
-			// Open a new batch of `op`, continue the current one if same, or close
-			// the previous (different class) and open a new one.
+			// Grow this list's operation sequence: a run of same-class work stays
+			// ONE CmdListOperation, so only a change of class appends a new one.
+			//
+			// Reserves the barrier points as it goes, which is what fixes their
+			// POSITION in the command stream (the groups themselves are filled
+			// in later): the outgoing operation's barriers_after closes right
+			// after its last command, then the new operation's barriers_before
+			// opens immediately ahead of its first. Recording a list therefore
+			// produces
+			//     [op0.before] op0 cmds [op0.after] [op1.before] op1 cmds ...
 			void Transitions::begin_op(BarrierSync op)
 			{
-				if (HAL::Debug::EnableOpBatching && open_op == op)
-					return;                                      // same class → keep open
-				if (open_op != BarrierSync::NONE)
-					create_usage_point(open_op, false);          // close previous batch
-				create_usage_point(op);                          // open new batch
-				open_op = op;
-				current_batch_id++;                              // fresh batch id
+				// Counts commands, not operations -- a run of same-class work
+				// merges below but each call is still a distinct dispatch/draw.
+				op_step++;
+
+				if (!operations.empty() && operations.back().type == op)
+					return;                                      // same class -> keep growing
+
+				end_op();
+
+				auto& operation = operations.emplace_back(type, op, static_cast<uint>(operations.size()));
+				compiler.func_barrier(&operation.barriers_before, operation.index, false, operation.type);
+				op_first_step = op_step;
 			}
 
-			// Close the currently open batch (list end / flush).
-			void Transitions::close_op()
+			void Transitions::split_op()
 			{
-				if (open_op == BarrierSync::NONE) return;
-				create_usage_point(open_op, false);
-				open_op = BarrierSync::NONE;
+				if (operations.empty()) return;
+
+				const BarrierSync op = operations.back().type;
+
+				end_op();
+
+				auto& operation = operations.emplace_back(type, op, static_cast<uint>(operations.size()));
+				compiler.func_barrier(&operation.barriers_before, operation.index, false, operation.type);
+				op_first_step = op_step;
 			}
 
-			// Accesses that write memory. A dependency on one of these needs
-			// ordering even when the state itself is unchanged.
-			static bool is_write_access(ResourceState s)
+			void Transitions::break_op()
 			{
-				return check(s.access & (BarrierAccess::UNORDERED_ACCESS
-									   | BarrierAccess::RENDER_TARGET
-									   | BarrierAccess::DEPTH_STENCIL_WRITE
-									   | BarrierAccess::COPY_DEST
-									   | BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE));
+				// Nothing recorded into the current operation yet -- it already
+				// IS the fresh one the caller wants, and splitting would strand
+				// an empty operation with two reserved barrier points.
+				if (operations.empty() || op_step == op_first_step) return;
+
+				split_op();
 			}
 
-			// Split the open batch when this use needs a barrier against an
-			// earlier op in the same batch. Two independent reasons:
-			//   1. a real state change is required (different, non-mergeable), or
-			//   2. the state is unchanged but there is a data dependency on the
-			//      same subresource -- RAW/WAW (earlier write) or WAR.
-			// (2) is what a state-only test misses: a mip chain / ping-pong /
-			// reduction stays UNORDERED_ACCESS throughout, so nothing "changes",
-			// yet each step must observe the previous one's writes.
-			void Transitions::batch_hazard_check(const HAL::Resource* resource, ResourceState to, UINT subres)
+			// Close the operation currently at the back, reserving the point its
+			// barriers_after will be emitted at. Idempotent-by-position: only the
+			// transition from one operation to the next (or to end of list) calls
+			// it, so a group is never reserved twice.
+			void Transitions::end_op()
 			{
-				if (open_op == BarrierSync::NONE) return;
+				if (operations.empty()) return;
 
-				auto& cpu = const_cast<HAL::Resource*>(resource)->get_state_manager().get_cpu_state(this);
+				// Idempotent: reserving the same barriers_after twice emits that
+				// group twice, and the second run's LayoutBefore is stale by
+				// definition. CommandList::end() closes the final operation, and
+				// anything appending afterwards (process_transitions) would
+				// otherwise close it a second time.
+				auto& operation = operations.back();
+				if (operation.closed) return;
+				operation.closed = true;
 
-				const uint64 bit = (subres == ALL_SUBRESOURCES) ? ~0ull : (1ull << (subres & 63));
-				const bool   writes = is_write_access(to);
-
-				if (cpu.batch_touch_id != current_batch_id)
-				{
-					// First touch this batch: nothing to conflict with.
-					cpu.batch_touch_id    = current_batch_id;
-					cpu.batch_touch_state = to;
-					cpu.batch_write_mask  = writes ? bit : 0;
-					cpu.batch_read_mask   = writes ? 0 : bit;
-					return;
-				}
-
-				const bool state_hazard = !(cpu.batch_touch_state == to) && !merge_state(cpu.batch_touch_state, to);
-				const bool data_hazard  = (cpu.batch_write_mask & bit) != 0
-									   || (writes && (cpu.batch_read_mask & bit) != 0);
-
-				if (state_hazard || data_hazard)
-				{
-					// Split so this transition (and the ops after it) land in a new
-					// point positioned after the earlier op — the barrier must run
-					// between the two conflicting uses. current_batch_id is NOT
-					// bumped: it is the OP-CLASS batch epoch (advanced only by
-					// begin_op). A resource touched anywhere in the op-class batch
-					// must stay detectable across intra-batch splits — otherwise a
-					// later conflicting use (e.g. SMAA_blend written RT by one draw,
-					// read SR by the next) would miss its split after an unrelated
-					// split already occurred, mis-positioning the barrier.
-					create_usage_point(open_op, false);   // close before the hazard
-					create_usage_point(open_op);           // reopen same class after
-
-					// Everything recorded so far is now ordered ahead of this
-					// use, so dependency tracking starts over from it.
-					cpu.batch_write_mask = 0;
-					cpu.batch_read_mask  = 0;
-				}
-
-				cpu.batch_touch_id    = current_batch_id;
-				cpu.batch_touch_state = to;
-				if (writes) cpu.batch_write_mask |= bit;
-				else        cpu.batch_read_mask  |= bit;
+				compiler.func_barrier(&operation.barriers_after, operation.index, true, operation.type);
 			}
 
-			void Transitions::compile_transitions()
-			{
-			 if(transitions_compiled)
-				 return;
-
-				// Close any batch still open at list end so its resources are
-				// fully recorded before the usage points are walked below.
-				close_op();
-						std::set<Resource*> non_tracked_resources;
-
-
-				for (auto& point : usage_points)
-				{
-					for (auto* u : point.usages)
-					{
-						auto& usage = *u;
-						auto prev_usage = usage.prev_usage;
-
-						// A list-boundary marker bypassed by chain_lists: the
-						// neighbouring list is in this ExecuteCommandLists group,
-						// so state is handed over directly and this node must not
-						// publish a SYNC_NONE barrier (D3D12 #1417). It is also not
-						// an unsynchronized first touch, so keep it out of
-						// non_tracked_resources below.
-						if (usage.suppressed) continue;
-
-					//	ASSERT(!usage.debug);
-						if(!prev_usage)
-						{
-							bool is_automatic =  check(usage.resource->get_desc().Flags &HAL::ResFlags::DisableStateTracking);
-				//			ASSERT(!);
-
-							if(!is_automatic&usage.resource->get_desc().is_texture())							
-							non_tracked_resources.insert(usage.resource);
-							continue; //  needs to be synchronized between cmdlists. Can track here what resources needs to be checked
-						}
-							
-
-						auto prev_state =  prev_usage->wanted_state;
-
-						// Phase 5 maximal split: the source list left this resource in a
-						// MIXED per-subresource state. Emit one barrier per subresource
-						// from its recorded real before-state; a single ALL barrier could
-						// only carry one before-layout and would mismatch the rest
-						// (#1334) while its decay stranded them (#1417). Subresources
-						// whose before already equals wanted (untouched, or the matching
-						// majority) emit nothing. After this the resource is uniform.
-						if (!usage.split_before.empty())
-						{
-							for (UINT i = 0; i < usage.split_before.size(); i++)
-							{
-								auto sub_prev = usage.split_before[i];
-								if (sub_prev == usage.wanted_state) continue;
-
-								BarrierFlags sflags = BarrierFlags::NONE;
-								if (sub_prev == ResourceStates::UNKNOWN)
-									sflags |= BarrierFlags::DISCARD;
-
-								ASSERT(sub_prev.is_valid(usage.resource->get_type()));
-								ASSERT(usage.wanted_state.is_valid(usage.resource->get_type()));
-
-								point.transitions.transition(usage.resource,
-									sub_prev,
-									usage.wanted_state,
-									i, sflags);
-							}
-							continue;
-						}
-
-
-						if (prev_state == usage.wanted_state)
-						{
-							// No transition needed -- but if batch_hazard_check
-							// split these two uses of the same subresource apart
-							// (write dependency), execution/memory ordering still
-							// is. Under enhanced barriers a same-state barrier is
-							// exactly the UAV barrier that provides it.
-							if (usage.point != prev_usage->point && is_write_access(usage.wanted_state))
-								point.transitions.transition(usage.resource,
-									prev_state,
-									usage.wanted_state,
-									usage.subres, BarrierFlags::NONE);
-							continue;
-						}
-
-
-						if (prev_state!=ResourceStates::UNKNOWN && usage.prev_usage->prev_usage)
-						{
-							  ASSERT(prev_state.operation!=BarrierSync::NONE);
-
-						}
-						ASSERT(prev_state.is_valid(usage.resource->get_type()));
-						ASSERT(usage.wanted_state.is_valid(usage.resource->get_type()));
-
-
-						auto a = prev_state.get_best_cmd_type();
-						auto b = usage.wanted_state.get_best_cmd_type();
-
-						ASSERT(IsCompatible(type, a));
-						ASSERT(IsCompatible(type, b));
-						BarrierFlags flags = BarrierFlags::NONE;
-
-						if (prev_state==ResourceStates::UNKNOWN)
-							flags |= BarrierFlags::DISCARD;
-
-						auto prev_point = prev_usage ? prev_usage->point : nullptr;
-						 if(prev_point)prev_point=prev_point->next_point;
-
-						bool can_split = false;// usage.point->cmd_list!=prev_usage->point->cmd_list;//usage.debug;
-
-						if(!point.start /*&& !usage.debug*/) can_split = false; // can split only between work i.e. only from start
-						if(prev_point==&point)	   can_split = false; // can't split if it's needed right now
-						if(usage.wanted_state==ResourceStates::UNKNOWN)	   can_split = false; // can't split if it's deactivated. probably some new resources will be activated shortly after. we dont know. we do not track it. we dont want to know. thats it. final.						
-						if(usage.wanted_state.access==BarrierAccess::NO_ACCESS)	   can_split = false; // resource or it's memory will not be used anymore. There is no end point for that(or is it? Last one in the list?)
-
-
-					//	if(usage.next_usage&& usage.point->cmd_list==usage.next_usage->point->cmd_list)
-						 ASSERT(!(usage.next_usage&&usage.wanted_state.operation==BarrierSync::NONE));
-
-						if (usage.resource->debug_transitions)
-							Log::get() << "TRANSITION" << prev_state << " " << usage.wanted_state << "subres: " << usage.subres << Log::endl;
-					
-						  				HAL::Debug::BarrierBreakpoints::check_usage(usage.resource->name, usage.subres, usage.wanted_state);
-
-						if (can_split)
-						{
-							ASSERT(prev_point->start);
-							auto sync_state = usage.wanted_state;
-
-							sync_state.operation = BarrierSync::SPLIT;
-
-							prev_point->transitions.transition(usage.resource,
-								prev_state,
-								sync_state,
-								usage.subres, flags);
-
-
-							point.transitions.transition(usage.resource,
-								sync_state,
-								usage.wanted_state,
-								usage.subres, flags);
-	
-						}
-						else
-						{
-							point.transitions.transition(usage.resource,
-								prev_state,
-								usage.wanted_state,
-								usage.subres, flags);
-
-						}
-
-
-					}
-				}
-
-				transitions_compiled = true;
-
-
-				for (auto& resource : non_tracked_resources)
-				{
-					auto& cpu_state = resource->get_state_manager().get_state(this);
-
-					auto transition_one = [&](UINT subres) {
-
-						auto& subres_cpu = cpu_state.get_subres_state(subres);
-
-						if (!subres_cpu.used) return;
-						ASSERT(subres_cpu.used);
-
-						// A later list in the same ExecuteCommandLists group still
-						// uses this subresource, and its state was chained across
-						// the boundary (chain_lists) — releasing it here to
-						// NO_ACCESS/SYNC_NONE would make it untouchable for the
-						// rest of the scope (D3D12 #1417). The group's last user
-						// releases it. Checked per subresource so that mips which
-						// were NOT carried forward still decay to initial_layout.
-						if (subres_cpu.skip_end_decay) return;
-
-
-
-						auto target = ResourceStates::NO_ACCESS;
-						target.layout = resource->get_state_manager().initial_layout;
-
-						auto end_point = subres_cpu.last_usage->point->next_point;
-
-						// A bare transition-only list (built with the public
-						// transition() API, e.g. the upload/promote list) never opened
-						// an op batch, so close_op()'s open_op==NONE guard skipped the
-						// trailing point — the last usage sits at the final point with
-						// no next_point. Append one now (usage_points is a deque, so
-						// existing UsagePoint* stay valid) so the release lands AFTER
-						// the last usage. Op-batched lists already have this point.
-						if (!end_point)
-						{
-							create_usage_point(BarrierSync::NONE, false);
-							end_point = subres_cpu.last_usage->point->next_point;
-						}
-
-
-						if (resource->debug_transitions)
-							Log::get() << "TRANSITION" << subres_cpu.last_usage->wanted_state << " " << target << "subres: " << subres << Log::endl;
-
-
-						end_point->transitions.transition(resource,
-							subres_cpu.last_usage->wanted_state,
-							target,
-							subres, BarrierFlags::NONE);
-					};
-
-					for (int i = 0; i < cpu_state.subres.size(); i++)
-						transition_one(i);
-				}
-
-			
-			}
-
-			HAL::ResourceUsage* Transitions::add_usage(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type)
-			{
-				HAL::UsagePoint* point = nullptr;
-
-				if (type == HAL::TransitionType::LAST) point = &usage_points.back();
-				if (type == HAL::TransitionType::ZERO) point = &usage_points.front();
-
-				HAL::ResourceUsage* usage_ptr;
-				if (pool_used < usage_pool.size())
-					usage_ptr = &usage_pool[pool_used];
-				else
-					usage_pool.emplace_back(), usage_ptr = &usage_pool.back();
-				pool_used++;
-
-				HAL::ResourceUsage& usage = *usage_ptr;
-				point->usages.push_back(usage_ptr);
-
-				usage.resource = const_cast<HAL::Resource*>(resource);
-				usage.subres = subres;
-				usage.wanted_state = state;
-				usage.prev_usage = nullptr;
-				usage.next_usage = nullptr;
-				usage.point = point;
-				usage.debug = false;
-				usage.suppressed = false;
-				usage.split_before.clear();
-
-				HAL::Debug::BarrierBreakpoints::check_usage(resource->name, subres, state);
-
-				return usage_ptr;
-			}
-
-	
-		
 			void Transitions::transition_present(const HAL::Resource* resource_ptr)
 			{
-
-				create_usage_point(BarrierSync::NONE);
-
-				transition(resource_ptr, { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::PRESENT }, ALL_SUBRESOURCES);
-
-				create_usage_point(BarrierSync::NONE,false);
+				begin_op(BarrierSync::NONE);
+				add_resource_usage(resource_ptr, { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::PRESENT }, ALL_SUBRESOURCES);
 			}
 
 
-			void Transitions::transition(const ResourceInfo& info, BarrierSync operation )
+			void Transitions::begin_external_op(BarrierSync op)
+			{
+				// begin_op without its merge check: a run of same-class work
+				// merges by design, but external work must be its own operation
+				// or its barriers would be hoisted in front of unrelated commands
+				// that happen to share the class.
+				end_op();
+
+				auto& operation = operations.emplace_back(type, op, static_cast<uint>(operations.size()));
+				compiler.func_barrier(&operation.barriers_before, operation.index, false, operation.type);
+			}
+
+			void Transitions::transition_to(const HAL::Resource* resource, ResourceState state)
+			{
+				// split_op, not begin_op: begin_op would merge into the last
+				// operation whenever the classes happen to match, and the target
+				// state would then be merged with that operation's real use
+				// instead of following it.
+				if (operations.empty())
+					begin_op(BarrierSync::NONE);
+				else
+					split_op();
+
+				add_resource_usage(resource, state, ALL_SUBRESOURCES);
+
+				// Close it here: this runs after CommandList::end() has already
+				// closed the list, so nothing else will reserve this operation's
+				// barriers_after, and any resource whose last use lands in it
+				// would lose its trailing barriers. end_op() is idempotent, so a
+				// later split_op() on the same list stays correct.
+				end_op();
+			}
+
+			void Transitions::transition_to_rest(const HAL::Resource* resource)
+			{
+				transition_to(resource, state_at_rest(resting_layout(resource)));
+			}
+
+
+			void Transitions::add_resource_usage(const ResourceInfo& info, BarrierSync operation, bool whole_resource )
 			{
 				if (!info.is_valid()) return;
 				ResourceState target_state;//= ResourceState::COMMON;
@@ -1332,34 +1099,87 @@ namespace HAL
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
 			use_resource(resource);
-			visit_subres(info, [&](const HAL::Resource::ptr&, UINT subres) {
-				use_resource(resource);
-				batch_hazard_check(resource, target_state, subres);
-				resource->get_state_manager().transition(this, target_state, subres);
-			});
+
+			// Record the VIEW, not its expanded subresource list. The view
+			// already names its mip/array/plane range, so expanding it here
+			// would pay a per-subresource cost on every bind for information
+			// that can be recovered later, once, only for resources that
+			// actually need a barrier.
+			//
+			// [Barrier = ALL] drops the view entirely and records a bare
+			// whole-resource use: there is then no range to expand at all, so
+			// the resource stays on compile_transitions' single
+			// current[ALL_SUBRESOURCES] entry instead of diverging into one
+			// per slice.
+			record_usage(resource, whole_resource
+				? HAL::OperationUsage(ALL_SUBRESOURCES, target_state)
+				: HAL::OperationUsage(&info, target_state));
 		}
 			}
 
-	void Transitions::transition(const Resource::ptr& resource, ResourceState to, UINT subres)
+	void Transitions::add_resource_usage(const Resource::ptr& resource, ResourceState to, UINT subres)
 	{
-		transition(resource.get(), to, subres);
+		add_resource_usage(resource.get(), to, subres);
 	}
 
 	void Transitions::use_resource(const Resource* resource)
 	{
-		auto& state = const_cast<Resource*>(resource)->get_state_manager().get_cpu_state(this);
-		if (!state.used)
+		auto& state = const_cast<Resource*>(resource)->get_state(this);
+		if (!state.listed)
 		{
-			state.used = true;
+			state.listed = true;
 			used_resources.emplace_back(const_cast<Resource*>(resource));
 		}
 	}
 
-	void Transitions::free_resources()
+	// Append one use of `resource` to the operation currently being recorded.
+	// Cheap by construction: a lookup of this resource's per-list state and a
+	// push_back. No state comparison, no barrier decision, no subresource
+	// expansion -- all of that happens later, once, over the recorded
+	// operations.
+	void Transitions::record_usage(const Resource* resource, const HAL::OperationUsage& usage)
 	{
+		// A usage always belongs to an operation. Paths that transition a
+		// resource without issuing GPU work through pre_command -- the upload
+		// flush, and other direct add_resource_usage callers -- never open one,
+		// so open it here. Without this the usage is recorded against operation
+		// 0 while `operations` stays empty, and the barrier pass indexes off the
+		// end of it.
+		if (operations.empty())
+			begin_op(BarrierSync::NONE);
+
+		uint op_index = operations.back().index;
+
+		auto& state = const_cast<Resource*>(resource)->get_state(this);
+
+		// Unordered access is the one case where re-touching a resource inside
+		// a single operation is a real hazard: two dispatches writing the same
+		// UAV (or one writing and the next reading it) must be ordered, and the
+		// state does not change to signal it. Render-target and depth writes are
+		// ordered by the pipeline, so they are deliberately not included.
+		//
+		// `step` is what separates "bound twice for the same dispatch" -- which
+		// is fine, those binds merge -- from "touched again by a later dispatch
+		// in the same run", which needs the operation split so a barrier can sit
+		// between the two halves.
+		const bool uav_involved = check(usage.state.access & BarrierAccess::UNORDERED_ACCESS);
+
+		for (const auto& prev : state.operations[op_index])
+		{
+			if (prev.step == op_step) continue;   // same dispatch, just another bind
+			if (!uav_involved && !check(prev.state.access & BarrierAccess::UNORDERED_ACCESS)) continue;
+
+			split_op();
+			op_index = operations.back().index;
+			break;
+		}
+
+		auto& usages = state.operations[op_index];
+		usages.push_back(usage);
+		usages.back().step = op_step;
 	}
 
-	void Transitions::transition(const Resource* resource, ResourceState to, UINT subres)
+	void Transitions::add_resource_usage(const Resource* resource, ResourceState to, UINT subres)
 	{
 		if (!resource) return;
 
@@ -1369,18 +1189,66 @@ namespace HAL
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
 			use_resource(resource);
-			batch_hazard_check(resource, to, subres);
-			const_cast<Resource*>(resource)->get_state_manager().transition(this, to, subres);
+
+			// No view here -- the subresource is named directly (copies, and
+			// anything else that transitions a resource without binding it).
+			record_usage(resource, HAL::OperationUsage(subres, to));
 		}
 	}
 
+
+	void Transitions::set_entry_state(const HAL::Resource* resource, ResourceState state)
+	{
+		auto& tracked = const_cast<Resource*>(resource)->get_state(this);
+		tracked.has_entry_state = true;
+		tracked.entry_state     = state;
+	}
+
+	std::optional<ResourceState> Transitions::get_exit_state(const HAL::Resource* resource) const
+	{
+		auto& tracked = const_cast<Resource*>(resource)->get_state(const_cast<Transitions*>(this));
+		if (tracked.operations.empty()) return std::nullopt;
+
+		// operations is ordered by index, so the last entry is the last
+		// operation, and its last usage is the one that leaves the resource
+		// where it ends up.
+		const auto& usages = tracked.operations.rbegin()->second;
+		if (usages.empty()) return std::nullopt;
+
+		return usages.back().state;
+	}
+
+	std::optional<ResourceState> Transitions::get_first_use_state(const HAL::Resource* resource) const
+	{
+		auto& tracked = const_cast<Resource*>(resource)->get_state(const_cast<Transitions*>(this));
+		if (tracked.operations.empty()) return std::nullopt;
+
+		// Mirror of get_exit_state: ordered map, so the FIRST entry is the
+		// earliest operation, and its first usage is the state this list needs
+		// the resource to already be in when it starts.
+		const auto& usages = tracked.operations.begin()->second;
+		if (usages.empty()) return std::nullopt;
+
+		return usages.front().state;
+	}
 
 	void Transitions::alias_begin(HAL::Resource* resource)
 	{
 		resource->get_state(this).alias_ended = false;
 		track_object(*resource);
-	
-		const_cast<Resource*>(resource)->get_state_manager().alias_begin(this);
+
+		// The aliased-into resource has no meaningful contents -- its first use
+		// is entered from UNKNOWN with a discard. compile_transitions already
+		// does that for a virgin resource, so re-arm the flag here.
+		//
+		// BOTH flags, because they gate different halves of that and only
+		// re-arming `virgin` produced a barrier from UNDEFINED with no DISCARD:
+		// `virgin` decides the before-state (from_undefined), while
+		// `initialized` decides whether the first write carries the discard.
+		// Left initialized, the resource claims UNDEFINED and then preserves
+		// contents that are another resource's memory.
+		resource->virgin = true;
+		resource->initialized = false;
 	}
 
 	void Transitions::alias_end(HAL::Resource* resource)
@@ -1388,8 +1256,9 @@ namespace HAL
 		track_object(*resource);
 
 
-		const_cast<Resource*>(resource)->get_state_manager().alias_end(this);
-												resource->get_state(this).alias_ended = true;
+		// End-of-aliasing barriers belong in the operation's barriers_after --
+		// that group is reserved and waiting, not wired up yet.
+		resource->get_state(this).alias_ended = true;
 
 	}
 
@@ -1398,8 +1267,8 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		base.transition(source, ResourceStates::COPY_SOURCE);
-		base.transition(dest, ResourceStates::COPY_DEST);
+		base.add_resource_usage(source, ResourceStates::COPY_SOURCE);
+		base.add_resource_usage(dest, ResourceStates::COPY_DEST);
 
 
 		list->copy_buffer(dest, s_dest, source, s_source, size);
@@ -1410,8 +1279,8 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		base.transition(source, ResourceStates::COPY_SOURCE);
-		base.transition(dest, ResourceStates::COPY_DEST);
+		base.add_resource_usage(source, ResourceStates::COPY_SOURCE);
+		base.add_resource_usage(dest, ResourceStates::COPY_DEST);
 		list->copy_resource(dest, source);
 		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
@@ -1426,8 +1295,8 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		base.transition(source, ResourceStates::COPY_SOURCE, source_subres);
-		base.transition(dest, ResourceStates::COPY_DEST, dest_subres);
+		base.add_resource_usage(source, ResourceStates::COPY_SOURCE, source_subres);
+		base.add_resource_usage(dest, ResourceStates::COPY_DEST, dest_subres);
 
 		list->copy_texture(dest, dest_subres, source, source_subres);
 		if constexpr (Debug::CheckErrors)
@@ -1440,8 +1309,8 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this, BarrierSync::COPY);
 
-		base.transition(from, ResourceStates::COPY_SOURCE);
-		base.transition(to, ResourceStates::COPY_DEST);
+		base.add_resource_usage(from, ResourceStates::COPY_SOURCE);
+		base.add_resource_usage(to, ResourceStates::COPY_DEST);
 		list->copy_texture(to, to_pos, from, from_pos, size);
 		if constexpr (Debug::CheckErrors)
 			TEST(base.get_device(), base.get_device().get_device_removed_reason());
@@ -1643,9 +1512,9 @@ namespace HAL
 			  base.pre_command<true, false>(get_base().get_compute(), BarrierSync::COMPUTE_SHADING, &command_types.slots); }
 
 		{ PROFILE(L"transitions");
-		  if (command_buffer) get_base().transition(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
-		  if (counter_buffer) get_base().transition(counter_buffer, ResourceStates::INDIRECT_ARGUMENT);
-		  get_base().transition(static_cast<HAL::Resource*>(index.Resource.get()), ResourceStates::INDEX_BUFFER); }
+		  if (command_buffer) get_base().add_resource_usage(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
+		  if (counter_buffer) get_base().add_resource_usage(counter_buffer, ResourceStates::INDIRECT_ARGUMENT);
+		  get_base().add_resource_usage(static_cast<HAL::Resource*>(index.Resource.get()), ResourceStates::INDEX_BUFFER); }
 
 		list->set_index_buffer(index);
 
@@ -1674,8 +1543,8 @@ namespace HAL
 		  base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING); }
 
 		{ PROFILE(L"transitions");
-		  if (command_buffer) get_base().transition(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
-		  if (counter_buffer) get_base().transition(counter_buffer, ResourceStates::INDIRECT_ARGUMENT); }
+		  if (command_buffer) get_base().add_resource_usage(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
+		  if (counter_buffer) get_base().add_resource_usage(counter_buffer, ResourceStates::INDIRECT_ARGUMENT); }
 
 		list->execute_indirect(
 			command_types,
@@ -1696,22 +1565,22 @@ namespace HAL
 
 		for (auto g : bottom.geometry)
 		{
-			base.transition(g.IndexBuffer.resource,
+			base.add_resource_usage(g.IndexBuffer.resource,
 			                HAL::ResourceState(BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE,
 			                                   TextureLayout::UNDEFINED));
-			base.transition(g.VertexBuffer.resource, {
+			base.add_resource_usage(g.VertexBuffer.resource, {
 				                BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED
 			                });
-			base.transition(g.Transform3x4.resource, {
+			base.add_resource_usage(g.Transform3x4.resource, {
 				                BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED
 			                });
 		}
 
-		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
-		base.transition(build_desc.SourceAccelerationStructureData.resource,
+		base.add_resource_usage(build_desc.DestAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
+		base.add_resource_usage(build_desc.SourceAccelerationStructureData.resource,
 		                ResourceStates::RAYTRACING_STRUCTURE_WRITE);
 
-		base.transition(build_desc.ScratchAccelerationStructureData.resource, {
+		base.add_resource_usage(build_desc.ScratchAccelerationStructureData.resource, {
 			                BarrierSync::COMPUTE_SHADING, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNDEFINED
 		                });
 		list->build_ras(build_desc, bottom);
@@ -1725,14 +1594,14 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this, BarrierSync::BUILD_RAYTRACING_ACCELERATION_STRUCTURE);
 
-		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
-		base.transition(build_desc.SourceAccelerationStructureData.resource,
+		base.add_resource_usage(build_desc.DestAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
+		base.add_resource_usage(build_desc.SourceAccelerationStructureData.resource,
 		                ResourceStates::RAYTRACING_STRUCTURE_WRITE);
-		base.transition(build_desc.ScratchAccelerationStructureData.resource, {
+		base.add_resource_usage(build_desc.ScratchAccelerationStructureData.resource, {
 			                BarrierSync::COMPUTE_SHADING, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNDEFINED
 		                });
 
-		base.transition(top.instances.resource, {
+		base.add_resource_usage(top.instances.resource, {
 			                BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED
 		                });
 
@@ -1748,23 +1617,17 @@ namespace HAL
 
 	void Transitions::begin()
 	{
-		transition_count = 0;
-		pool_used = 0;
-		open_op = BarrierSync::NONE;
-		current_batch_id = 0;
+		operations.clear();
+		op_step = 0;
 		tracked_resources.reserve(512);
 		used_resources.reserve(256);
-		create_usage_point(BarrierSync::NONE, false);
 	}
 
 	void Transitions::on_execute()
 	{
-		pool_used = 0;
-		usage_points.clear();
+		operations.clear();
+		op_step = 0;
 		used_resources.clear();
-		need_check_transitions.clear();
-		transitions_compiled = false;
-		open_op = BarrierSync::NONE;
 	}
 
 	void SignatureDataSetter::commit_tables(BarrierSync operation, UsedSlots* slots)
@@ -1777,8 +1640,8 @@ namespace HAL
 			{
 				{
 					PROFILE(L"transitions");
-					for (auto& resource_info : table.resources)
-						get_base().transition(*resource_info, operation);
+					for (auto& bound : table.resources)
+						get_base().add_resource_usage(*bound.info, operation, bound.whole_resource);
 				}
 				{
 					PROFILE(L"set_cb");
@@ -1980,7 +1843,7 @@ namespace HAL
 
 	void SignatureDataSetter::set_cb(UINT index, const Handles::CBV& cb, BarrierSync operation)
 	{
-		get_base().transition(cb.get_resource_info(), operation);
+		get_base().add_resource_usage(cb.get_resource_info(), operation);
 		set_const_buffer(index, 0, cb.get_offset());
 	}
 
@@ -2056,17 +1919,17 @@ namespace HAL
 		track_object(*(info.resource));
 	}
 
-	void CommandList::clear_uav(const Handles::UAV& h, vec4 ClearColor)
+	void CommandList::clear_uav(const Handles::UAV& h, vec4 ClearColor, bool whole_resource)
 	{
-		create_usage_point(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
-		transition(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
+		begin_op(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
+		add_resource_usage(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW, whole_resource);
 		compiler.clear_uav(h, ClearColor);
-		create_usage_point(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW, false);
 	}
 
-	void CommandList::clear_dsv(const Handles::DSV& h, bool clear_depth, bool clear_stencil, float depth, UINT8 stencil)
+	void CommandList::clear_dsv(const Handles::DSV& h, bool clear_depth, bool clear_stencil, float depth, UINT8 stencil,
+	                            bool whole_resource)
 	{
-		// begin_op (not a bracketing create_usage_point pair) so consecutive
+		// begin_op (not a bracketing barrier-point pair) so consecutive
 		// clear_dsv calls against different subresources of the same
 		// resource -- e.g. one per dirty VSM page slice -- automatically
 		// merge into a single open batch instead of one barrier pair each.
@@ -2074,13 +1937,18 @@ namespace HAL
 		// list end, same as every draw/dispatch already does via
 		// pre_command/post_command.
 		begin_op(BarrierSync::DEPTH_STENCIL);
-		transition(h.get_resource_info(), BarrierSync::DEPTH_STENCIL);
+		add_resource_usage(h.get_resource_info(), BarrierSync::DEPTH_STENCIL, whole_resource);
 		compiler.clear_depth_stencil(h, clear_depth, clear_stencil, depth, stencil);
 	}
 
 	const std::vector<CommandRecord>& CommandList::get_debug_records() const
 	{
 		return compiler.get_debug_records();
+	}
+
+	std::vector<CommandRecord> CommandList::take_debug_records()
+	{
+		return compiler.take_debug_records();
 	}
 
 	DelayedCommandList* CommandListBase::get_native_list()
@@ -2091,4 +1959,468 @@ namespace HAL
 	CopyContext::CopyContext(CommandList& base) : base(base), list(base.get_native_list()) {}
 
 	const API::CommandList& TransitionCommandList::get_compiled() const { return compiler.get_list(); }
+
+	// --- CommandListGroup ---
+
+	// One linear pass per resource across the whole group. Cost is proportional
+	// to real activity, not to a resource's declared subresource count: a
+	// resource used whole stays a single ALL_SUBRESOURCES entry from start to
+	// finish and never pays per-mip anything.
+	void CommandListGroup::plan_resources()
+	{
+		PROFILE(L"plan_resources");
+
+		planned.clear();
+		planned_built = true;
+
+		for (auto& list : lists)
+		{
+			for (auto* resource : list->get_used_resources())
+			{
+				// Dedup by linear scan rather than a hash set: a list names a
+				// resource at most once (TrackedResourceState::listed), so this
+				// only has to catch resources shared BETWEEN the group's lists,
+				// and `planned` is a short contiguous array of pointers. A set
+				// would trade that scan for an allocation per resource.
+				bool seen = false;
+				for (auto& p : planned)
+					if (p.resource == resource) { seen = true; break; }
+				if (seen) continue;
+
+				PlannedResource p;
+				p.resource       = resource;
+				p.from_undefined = resource->virgin;
+
+				// Does this group write the resource anywhere? Only a write can
+				// establish contents, so only a write can own the discard.
+				bool writes = false;
+				if (!resource->initialized)
+				{
+					for (auto& l : lists)
+					{
+						auto& tracked = resource->get_state(l.get());
+						for (auto& [op_index, usages] : tracked.operations)
+						{
+							for (auto& usage : usages)
+								if (usage.state.has_write_bits()) { writes = true; break; }
+							if (writes) break;
+						}
+						if (writes) break;
+					}
+				}
+
+				if (writes)
+				{
+					p.owns_discard = true;
+					resource->initialized = true;
+				}
+
+				resource->virgin = false;
+				planned.push_back(p);
+			}
+		}
+	}
+
+	void CommandListGroup::compile_transitions()
+	{
+		PROFILE(L"compile_transitions");
+
+		// `planned` is built by plan_resources() on the submitting thread and
+		// is read-only here, which is what lets groups compile in parallel. It
+		// already holds every resource the group touches, deduplicated and in
+		// first-seen order, so there is no list to rebuild.
+		//
+		// Skipping plan_resources() would silently disable every first-use
+		// discard and enter every resource from the wrong state, so catch it.
+		ASSERT(planned_built);
+
+		for (auto& res_plan : planned)
+		{
+			Resource* resource = res_plan.resource;
+
+			// Both first-use facts are consumed ONCE within the group, so they
+			// are tracked group-locally rather than read back off the resource.
+			// The discard goes to the first write; SyncBefore=NONE goes to the
+			// genuinely first barrier and nothing after it, since D3D12 rejects
+			// NONE once the resource has been accessed (#1417).
+			bool discard_pending    = res_plan.owns_discard;
+			bool undefined_pending  = res_plan.from_undefined;
+
+			// Where the group has left each subresource so far -- carried
+			// ACROSS lists, which is the whole point: list N+1 diffs against
+			// where list N actually left the resource, not against the resting
+			// layout. The ALL_SUBRESOURCES key is the uniform value standing in
+			// for every subresource with no entry of its own, so a
+			// whole-resource lifetime costs exactly one entry.
+			// Per-subresource state for this group, kept as RANGES.
+			//
+			// A view is a rectangle in (mip x slice x plane) space and so is a
+			// D3D12 barrier. Keying this per flat subresource forced both ends to
+			// be shredded and rebuilt -- one map entry and one barrier per
+			// subresource, thousands of them for an atlas or a Hi-Z pyramid.
+			// SubresRangeMap keeps the rectangle intact from the view all the way
+			// to D3D12_BARRIER_SUBRESOURCE_RANGE.
+			uint dim_mips = 1, dim_slices = 1, dim_planes = 1;
+			if (resource->get_desc().is_texture())
+			{
+				const auto& tex = resource->get_desc().as_texture();
+				dim_mips   = std::max(1u, (uint)tex.MipLevels);
+				dim_slices = std::max(1u, (uint)tex.ArraySize);
+				dim_planes = std::max(1u, resource->get_device().Subresources(resource->get_desc())
+					/ (dim_mips * dim_slices));
+			}
+
+			// A bare subresource index (a use with no descriptor -- copies name
+			// one directly) as the rectangle it stands for.
+			auto index_to_range = [&](UINT subres) -> SubresRange
+			{
+				if (subres == ALL_SUBRESOURCES || !resource->get_desc().is_texture())
+					return SubresRange::all();
+
+				const auto& tex = resource->get_desc().as_texture();
+				return SubresRange::single(tex.get_mip(subres), tex.get_array(subres), tex.get_plane(subres));
+			};
+
+			SubresRangeMap current;
+			current.reset(dim_mips, dim_slices, dim_planes);
+
+			// The last operation in the group that used this resource -- its
+			// barriers_after is where the return to rest goes.
+			CmdListOperation* last_use = nullptr;
+
+			for (auto& list : lists)
+			{
+				auto& tracked = resource->get_state(list.get());
+				if (tracked.operations.empty()) continue;
+
+				// Whoever schedules this resource may know where the previous
+				// group left it -- something this group cannot see for itself.
+				// Only meaningful before the group has touched it; once it has,
+				// its own tracking is authoritative.
+				if (current.empty() && tracked.has_entry_state)
+					current.assign(SubresRange::all(), tracked.entry_state);
+
+				// tracked.operations is an ordered map, so this walks the
+				// operations in the order they were recorded.
+				for (auto& [op_index, usages] : tracked.operations)
+				{
+					// 1. Collapse everything this operation does to the resource
+					//    into one wanted state per REGION. A resource bound
+					//    several ways in one operation (sampled and written
+					//    through different views) merges where the states allow.
+					SubresRangeMap wanted;
+					wanted.reset(dim_mips, dim_slices, dim_planes);
+
+					std::vector<std::pair<SubresRange, ResourceState>> pending;
+
+					auto want = [&](SubresRange range, ResourceState state)
+					{
+						// Read-only states combine; anything else cannot be
+						// satisfied by one barrier, so the later use wins and the
+						// operation runs in that state.
+						//
+						// Collected before assigning: assign() rewrites the very
+						// entries visit() is walking.
+						pending.clear();
+						wanted.visit(range, [&](SubresRange piece, const ResourceState* cur)
+						{
+							ResourceState result = state;
+							if (cur)
+							{
+								auto merged = merge_state(*cur, state);
+								result = merged ? *merged : state;
+							}
+							pending.emplace_back(piece, result);
+						});
+
+						for (auto& pr : pending) wanted.assign(pr.first, pr.second);
+					};
+
+					for (auto& usage : usages)
+					{
+						if (usage.info)
+						{
+							// The view reports the rectangle it covers and it goes
+							// straight in -- no expansion into subresources at any
+							// point. visit_subres also reports side resources (a UAV
+							// counter buffer), so this still has to filter.
+							visit_subres(*usage.info, [&](const HAL::Resource::ptr& r, SubresRange range)
+							{
+								if (r.get() == resource) want(range, usage.state);
+							});
+						}
+						else
+						{
+							want(index_to_range(usage.subres), usage.state);
+						}
+					}
+
+					if (wanted.empty()) continue;
+
+					auto& operation = list->operations[op_index];
+					auto& barriers  = operation.barriers_before;
+
+					// Entering from the creation (undefined) layout. SyncBefore
+					// may only be NONE while D3D12 has genuinely never seen the
+					// resource -- once anything has touched it, NONE is rejected
+					// outright (#1417), so widen to ALL. AccessBefore stays
+					// NO_ACCESS either way: that is the only access D3D12 permits
+					// alongside LAYOUT_UNDEFINED.
+					auto from_undefined = [&]() -> ResourceState
+					{
+						if (undefined_pending)
+						{
+							undefined_pending = false;
+							return ResourceStates::UNKNOWN;   // never seen: NONE is correct, and required
+						}
+						return ResourceState{ BarrierSync::ALL, BarrierAccess::NO_ACCESS, TextureLayout::UNDEFINED };
+					};
+
+					auto emit = [&](SubresRange want_range, ResourceState after)
+					{
+						// The first WRITE establishes the resource's contents. Its
+						// memory is fresh (or freshly aliased), so discard rather
+						// than preserve -- and cover the WHOLE resource in one
+						// barrier, because D3D12 tracks initialization per
+						// subresource while this is a per-resource fact. A cubemap
+						// otherwise reports 42 uninitialized subresources (6 faces
+						// x 7 mips) after only the first one was discarded.
+						//
+						// Keyed on `initialized`, not `virgin`: a resource whose
+						// first-ever touch is a READ gets a defined layout from
+						// that point on but still holds nothing, so the discard has
+						// to wait for the write that actually fills it (#1422).
+						//
+						// Do NOT relax this to "discard on the first barrier" so
+						// that a read arriving before the first write gets one.
+						// Tried 2026-08-19 twice: unconditionally it costs 54 x
+						// #1422 (D3D12 counts a placed RT/DS resource as initialized
+						// only when the DISCARD rides a barrier INTO an RT/DS
+						// layout); restricted to non-RT/DS resources it "works", but
+						// only by making a read of never-written memory look
+						// legitimate. A read before the first write is a bug in the
+						// pass, and the debugger flagging it is the point.
+						if (discard_pending && after.has_write_bits())
+						{
+							// Declare where the resource ACTUALLY is, not UNDEFINED
+							// unconditionally: a barrier must never disagree with
+							// the state we believe it starts from. Only a uniform
+							// whole-resource state can be used, since this barrier
+							// covers everything; if regions have diverged there is
+							// no single before-state to name and UNDEFINED (don't
+							// care) is the honest answer.
+							const ResourceState before = current.is_uniform()
+								? current.uniform_state()
+								: from_undefined();
+
+							barriers.transition(resource, before, after,
+								SubresRange::all(), BarrierFlags::SINGLE | BarrierFlags::DISCARD);
+
+							discard_pending = false;
+
+							current.clear();
+							current.assign(SubresRange::all(), after);
+							return;
+						}
+
+						// True when nothing in this GROUP has touched the resource
+						// yet -- not merely this region. That is the exact condition
+						// the D3D12 spec attaches to SyncBefore = NONE: "there MUST
+						// have been no preceding barriers or accesses made to that
+						// resource in the same ExecuteCommandLists scope", and a
+						// group is submitted as exactly one such scope.
+						const bool group_first_touch = current.empty();
+
+						// Whether we actually KNOW where the resource is on entry,
+						// as opposed to guessing the resting layout.
+						//
+						// The rest block below deliberately does NOT rest
+						// frame_graph_managed resources -- the FrameGraph links
+						// those across passes itself and rests them once, at the
+						// last pass that uses them. So for those the resting layout
+						// is not where they are; the only trustworthy entry state is
+						// the one the FrameGraph declares via set_entry_state, and
+						// that has already been consumed into `current` above.
+						const bool entry_known = !resource->frame_graph_managed;
+
+						// One pass over the region: `current` reports each part of
+						// it with the state that part is in, splitting wherever they
+						// differ. What used to need a per-subresource walk plus a
+						// "have they diverged?" special case is just this.
+						std::vector<std::pair<SubresRange, ResourceState>> updates;
+
+						current.visit(want_range, [&](SubresRange piece, const ResourceState* tracked_before)
+						{
+							ResourceState before;
+							const bool was_tracked = tracked_before != nullptr;
+
+							if (was_tracked)
+							{
+								before = *tracked_before;
+							}
+							else
+							{
+								// Untouched by this group so far. A resource no
+								// barrier has ever moved is still in its creation
+								// (undefined) layout; anything else was handed back
+								// at rest by whoever used it last.
+								//
+								// state_at_rest, NOT {SYNC_NONE, NO_ACCESS, rest}.
+								// The spec does license SyncBefore = NONE for the
+								// first touch in an ExecuteCommandLists scope, but
+								// NO_ACCESS paired with a REAL layout is the same
+								// combination D3D12 rejects on the after side
+								// (#1331). Such a barrier does not take effect, so
+								// the layout never moves and the NEXT barrier fails
+								// validation instead (#1334). It also bought
+								// nothing: the skip below keys on layout equality,
+								// which is identical under either form.
+								before = res_plan.from_undefined
+									? from_undefined()
+									: state_at_rest(resting_layout(resource));
+							}
+
+							updates.emplace_back(piece, after);
+
+							// Entering the scope in the layout we already want.
+							// Nothing to transition and nothing to synchronize
+							// against -- the scope boundary already guarantees prior
+							// work retired and caches flushed.
+							//
+							// Gated on entry_known. Skipping both emits no barrier
+							// AND records `after` as the group's belief; on a
+							// GUESSED entry that belief is unfounded and every later
+							// barrier is computed from a wrong base. Emitting keeps
+							// a wrong guess to one self-correcting transition.
+							if (entry_known && !was_tracked && group_first_touch
+								&& before.layout == after.layout && !res_plan.from_undefined)
+								return;
+
+							// Read-after-read, differing only in which shader stages
+							// read it. Neither side writes, so there is no hazard to
+							// order and nothing to make visible. Access must match
+							// exactly -- a different access needs the data made
+							// visible to it even when both are reads. No entry_known
+							// gate: this only fires on a state the group actually
+							// tracked, never on a guess.
+							if (was_tracked && before.layout == after.layout
+								&& before.access == after.access
+								&& !before.has_write_bits() && !after.has_write_bits())
+								return;
+
+							// Same state is not the same as no hazard. Two dispatches
+							// writing the same UAV need ordering even though nothing
+							// about the state changes -- the layouts match, so this
+							// is purely an execution/memory barrier, which is what a
+							// legacy UAV barrier was. Only unordered access needs it:
+							// render-target and depth writes are pipeline-ordered,
+							// and read-after-read needs nothing.
+							const bool uav_ordering = (before == after)
+								&& check(after.access & BarrierAccess::UNORDERED_ACCESS)
+								&& was_tracked;
+
+							if (before == after && !uav_ordering)
+								return;
+
+							barriers.transition(resource, before, after, piece, BarrierFlags::SINGLE);
+						});
+
+						for (auto& up : updates) current.assign(up.first, up.second);
+					};
+
+					// 2. Apply. Each region of the resource this operation wants a
+					//    state for, with that state -- regions it does not touch
+					//    report none and are skipped.
+					wanted.visit(SubresRange::all(), [&](SubresRange piece, const ResourceState* st)
+					{
+						if (st) emit(piece, *st);
+					});
+
+					last_use = &operation;
+				}
+			}
+
+			// Hand the resource back at rest, right after the group's last use
+			// of it -- not at end of group, so it is released as early as it is
+			// actually free. A group therefore both finds and leaves such a
+			// resource in the same well-defined state, which is what makes
+			// groups independent of the order they are submitted in.
+			//
+			// FrameGraph-managed resources opt out: the FrameGraph knows the
+			// whole pass graph, so it links their usage across passes itself and
+			// rests them once, at the last pass that uses them -- rather than
+			// converging every group boundary.
+			if (!last_use) continue;
+			if (resource->frame_graph_managed) continue;
+
+			const TextureLayout rest_layout = resting_layout(resource);
+			const ResourceState rest = state_at_rest(rest_layout);
+			auto& after_barriers = last_use->barriers_after;
+
+			// Regions the group never touched report no state and are already at
+			// rest by the same contract, so only tracked ones can need a barrier.
+			// No subresource count anywhere in here.
+			current.visit(SubresRange::all(), [&](SubresRange piece, const ResourceState* st)
+			{
+				if (!st) return;
+				if (st->layout == rest_layout) return;
+				after_barriers.transition(resource, *st, rest, piece);
+			});
+
+			current.clear();
+			current.assign(SubresRange::all(), rest);
+
+			// The contract this whole design rests on: a non-FrameGraph resource
+			// enters a group at its resting layout and leaves at its resting
+			// layout, so groups are independent of the order they are submitted
+			// in and the next group can assume where it is without being told.
+			if constexpr (BuildOptions::Dev)
+			{
+				ASSERT(current.check_disjoint());
+				current.visit(SubresRange::all(), [&](SubresRange, const ResourceState* st)
+				{
+					ASSERT(!st || st->layout == rest_layout);
+				});
+			}
+		}
+	}
+
+	// Replay every list into its API command list. Runs after
+	// compile_transitions -- compile() is what consumes the barrier groups, so
+	// doing it first would emit them empty.
+	//
+	// Lists compile independently of each other, so this fans out and joins
+	// before returning: whoever called us is about to submit, and every list has
+	// to be closed by then.
+	void CommandListGroup::compile()
+	{
+		PROFILE(L"group_compile");
+
+		if (lists.size() == 1)
+		{
+			// The common case (a standalone list, or a batch of one) -- not
+			// worth a task dispatch.
+			auto& list = lists.front();
+			auto ca = list->frame_resources->get_ca(list->get_type());
+			list->compiler.compile(*ca);
+			list->frame_resources->free_ca(ca);
+			return;
+		}
+
+		std::vector<std::future<void>> tasks;
+		tasks.reserve(lists.size());
+
+		for (auto& list : lists)
+			tasks.emplace_back(thread_pool::get().enqueue([list]()
+			{
+					PROFILE(((CommandListBase*)list.get())->get_name());
+				auto ca = list->frame_resources->get_ca(list->get_type());
+
+				list->compiler.compile(*ca);
+				list->frame_resources->free_ca(ca);
+			}));
+
+		for (auto& t : tasks)
+			t.wait();
+	}
 }

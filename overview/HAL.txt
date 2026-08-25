@@ -23,28 +23,29 @@ ResourceStates namespace — predefined constants:
   RAYTRACING_STRUCTURE, RAYTRACING_STRUCTURE_WRITE, INDIRECT_ARGUMENT,
   RENDER_TARGET, DEPTH_STENCIL, NO_ACCESS, UNKNOWN.
 
-SubResourcesCPU
-  CPU-side per-subresource tracking: first/last usage, state history.
-  - merge_read_state()
-  - get_subres_state(int)
-
-ResourceStateManager
-  Manages D3D12 resource transitions across command lists.
-  - transition(Transitions*, ResourceState, uint subres)
-  - prepare_state()        — merge GPU/CPU state at frame start
-  - process_transitions()  — pre-transitions between frame boundaries
-  - connect()              — connects transitions between command lists
-  - alias_begin/end()      — aliasing barrier handling
-
 Barriers
-  Accumulates resource barriers for batch submission.
-  - transition(from, to)
-  - validate()
-  - get_barriers()
+  Accumulates resource barriers for batch submission, and carries the counts
+  the D3D12 backend needs to size its two native arrays exactly.
+  - transition(resource, before, after, subres, flags)
+  - get_barriers(), get_buffer_count(), get_texture_count()
+
+CmdListOperation
+  One contiguous run of same-class work on a list, bracketed by barriers_before
+  and barriers_after. A list is a sequence of these.
 
 Transitions
-  Per-command-list resource usage tracking.
-  - add_usage(), get_last_usage_point(), track_object(), use_resource()
+  Per-command-list recording: begin_op / end_op / split_op, record_usage,
+  add_resource_usage, set_entry_state, get_exit_state, get_first_use_state,
+  transition_to / transition_to_rest, begin_external_op.
+
+CommandListGroup
+  One or more lists submitted as ONE ExecuteCommandLists. Owns the barrier
+  computation: plan_resources() (ordered) then compile_transitions() (parallel)
+  then compile(). A queue accepts only a group, never a bare list.
+
+  >>> See overview/Barriers.txt for how transitions are actually decided:
+      the operation model, the resting-layout contract, cross-pass linking,
+      first-use/discard rules, and the pitfalls that produced them.
 
 
 ================================================================================

@@ -111,7 +111,17 @@ public:
 	//	VoxelGI::ptr voxel_renderer;
 
 	GUI::Elements::circle_selector::ptr sun_direction_circle;
-	bool  auto_rotate_sun = false;
+	Variable<bool> auto_rotate_sun = { false, "Auto rotate sun", this };
+
+	// Grouping contexts for the mesh_renderer instances constructed below --
+	// mesh_renderer always names itself "mesh_renderer" (see MeshRenderer.cpp),
+	// so without these every instance across the whole app would land as an
+	// identically-named sibling directly under global, with no way to tell
+	// them apart in the Properties tree. Declared as members (not locals in
+	// the constructor body) so they stay alive for the whole app, same as the
+	// mesh_renderer instances parented under them.
+	VariableContext main_view_forward_context{ L"Main View / Forward" };
+	VariableContext main_view_gpu_context{ L"Main View / GPU" };
 	float sun_rotation_angle = 0;
 	static constexpr float sun_rotation_speed = 0.2f; // radians/sec
 
@@ -143,6 +153,17 @@ public:
 		, vsm(pipeline)
 #endif
 	{
+		// Pushed for the rest of this constructor: any VariableContext-derived
+		// member constructed from here on (stenciler, voxel_gi, mesh_renderer
+		// via register_renderer, ...) nests under "triangle_drawer" instead of
+		// landing as a flat sibling of it under global, with no per-member
+		// wiring needed at each construction site. Doesn't cover vsm/
+		// main_view_*_context below -- those are member-initializer-list
+		// entries (or plain default members) that already finished
+		// constructing before this body even starts, so they need the
+		// explicit add_child re-parent instead.
+		VariableContext::Scope self_scope(*this);
+
 		// PSSM stays fully wired either way -- PSSM_Global's global_depth/global_camera
 		// are consumed unconditionally elsewhere in the pipeline (e.g. reflections),
 		// independent of whether PSSM's own cascade+combine shadow result is used.
@@ -156,6 +177,19 @@ public:
 		pipeline.pSSM_Combine.setup_func  = nullptr;
 		pipeline.pSSM_Combine.render_func = nullptr;
 #endif
+
+		// vsm/main_view_*_context construct before this body runs (regular data
+		// members), so by the ctor-body-start rule they land under whatever was
+		// on the Scope stack at that point -- nothing, here, so they'd otherwise
+		// sit as flat top-level siblings of "triangle_drawer" instead of nested
+		// under it. VariableContext::add_child re-parents them explicitly (it
+		// already detaches from the current parent first -- see tree::add_child
+		// -- so this is safe even though vsm etc. are already attached to
+		// global); qualified because triangle_drawer also inherits GUI::base's
+		// unrelated add_child(GUI::base::ptr), which unqualified lookup prefers.
+		VariableContext::add_child(&main_view_forward_context);
+		VariableContext::add_child(&main_view_gpu_context);
+		VariableContext::add_child(&vsm);
 
 		texture.mul_color = { 1, 1, 1, 0 };
 		texture.add_color = { 0, 0, 0, 1 };
@@ -173,12 +207,19 @@ public:
 		scene->name = L"Scene";
 
 		scene_renderer = std::make_shared<main_renderer>();
-		scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
-
+		{
+			// Distinguishes this mesh_renderer's Properties-tree entry from the
+			// otherwise-identically-named ones below and in AssetRenderer.cpp.
+			VariableContext::Scope scope(main_view_forward_context);
+			scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
+		}
 
 		gpu_scene_renderer = std::make_shared<main_renderer>();
 
-		gpu_scene_renderer->register_renderer(std::make_shared<mesh_renderer>());
+		{
+			VariableContext::Scope scope(main_view_gpu_context);
+			gpu_scene_renderer->register_renderer(std::make_shared<mesh_renderer>());
+		}
 
 
 		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_static = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::STATIC));
@@ -234,22 +275,9 @@ public:
 
 		sun_direction_circle->set_value({ 1, 0 });
 
-		auto auto_rotate_row = std::make_shared<GUI::Elements::check_box_text>();
-		auto_rotate_row->docking = GUI::dock::TOP;
-		auto_rotate_row->x_type  = GUI::pos_x_type::RIGHT;
-		auto_rotate_row->get_label()->text = "Auto rotate sun";
-		auto_rotate_row->get_check()->set_checked(auto_rotate_sun);
-		auto_rotate_row->on_check = [this](bool v) { auto_rotate_sun = v; };
-		base::add_child(auto_rotate_row);
-
-		auto hiz_row = std::make_shared<GUI::Elements::check_box_text>();
-		hiz_row->docking = GUI::dock::TOP;
-		hiz_row->x_type  = GUI::pos_x_type::RIGHT;
-		hiz_row->get_label()->text = "VSM Hi-Z culling";
-		hiz_row->get_check()->set_checked(vsm.hiz_culling_enabled);
-		hiz_row->on_check = [this](bool v) { vsm.hiz_culling_enabled = v; };
-		base::add_child(hiz_row);
-
+		// auto_rotate_sun and VSM's toggles are Variable<bool>s now -- they show
+		// up automatically in the Properties debug panel (Properties -> triangle_drawer
+		// / VSM) instead of needing a hand-wired check_box_text row here per toggle.
 
 		MeshAsset::ptr asset_ptr = EngineAssets::material_tester.get_asset();
 
@@ -406,6 +434,8 @@ public:
 		auto& vp = graph.get_context<ViewportInfo>();
 
 
+		g_upscaling_enabled = downsampled;
+
 		if (downsampled)
 		{
 			// Use DLSS's own recommended render resolution for the current
@@ -434,6 +464,25 @@ public:
 
 		vp.upscale_size = size;
 
+		// Edge-triggered: logs only when the actual computed size driving
+		// GBuffer_HiZ/GBuffer_HiZ_UAV's size/8 dimensions changes, whatever
+		// the cause (window resize, DLSS mode switch, scale override drag) --
+		// for correlating against a suspected resize/DLSS-triggered Hi-Z
+		// content bug. Remove once that's tracked down.
+		static ivec2 last_logged_frame_size = { -1, -1 };
+		static ivec2 last_logged_upscale_size = { -1, -1 };
+		if (vp.frame_size != last_logged_frame_size || vp.upscale_size != last_logged_upscale_size)
+		{
+			Log::get() << "[Viewport] frame_size " << last_logged_frame_size.x << "x" << last_logged_frame_size.y
+				<< " -> " << vp.frame_size.x << "x" << vp.frame_size.y
+				<< ", upscale_size " << last_logged_upscale_size.x << "x" << last_logged_upscale_size.y
+				<< " -> " << vp.upscale_size.x << "x" << vp.upscale_size.y
+				<< ", dlss_mode=" << (int)g_upscaling_dlss_mode
+				<< ", scale_override=" << g_upscaling_dlss_scale_override << Log::endl;
+			last_logged_frame_size = vp.frame_size;
+			last_logged_upscale_size = vp.upscale_size;
+		}
+
 		sceneinfo.scene = scene;
 		sceneinfo.renderer = gpu_scene_renderer;
 		caminfo.cam = &cam;
@@ -446,10 +495,13 @@ public:
 		if (nvidia::Streamline::get().available())
 			nvidia::Streamline::get().begin_frame();
 
-		// Jitter only matters when something accumulates it temporally (DLSS);
-		// FSR1/native have no such accumulation.
+		// Jitter only matters when something accumulates it temporally (DLSS)
+		// AND DLSS is actually the pass running this frame — g_upscaling_enabled
+		// off (downsampled toggled off) or DLSS unsupported both mean nothing
+		// consumes the jitter, so applying it would just add visible instability
+		// for no benefit. FSR1/native have no such accumulation either way.
 		vec2 jitter_px(0, 0);
-		if (nvidia::DLSS::get().available())
+		if (g_upscaling_enabled && nvidia::DLSS::get().available())
 		{
 			// Halton(2,3); phase count per NVIDIA's guidance: 8*(display/render)^2.
 			const float scale_x = float(vp.upscale_size.x) / float(vp.frame_size.x);
@@ -1307,8 +1359,23 @@ public:
 
 	GUI::Elements::dock_base::ptr docker;
 
+	// Doesn't make GraphRender itself derive VariableContext (it already
+	// inherits GUI::base's add_child(GUI::base::ptr) via GUI::user_interface;
+	// adding a second, unrelated add_child from VariableContext would make
+	// every existing unqualified add_child(...) call elsewhere in this class
+	// ambiguous) -- a plain owned context, same as AssetRenderer::preview_context.
+	std::unique_ptr<VariableContext> graph_context = VariableContext::create(L"GraphRender");
+
 	GraphRender()
 	{
+		// graph is a plain member, already fully constructed (default Graph())
+		// by the time this body runs, so it needs this explicit re-parent
+		// rather than a Scope wrapping its construction. Without it, it lands
+		// as a flat "Graph" sibling under global instead of nested here -- and
+		// since Graph's own VariableContext ctor always uses the fixed literal
+		// name "Graph" (see FrameGraph.cpp), it's otherwise indistinguishable
+		// from AssetRenderer/SceneTextureRenderer's own Graph members.
+		graph_context->add_child(&graph);
 
 		//scale = 1.25f;
 		Window::input_handler = this;
@@ -1424,8 +1491,14 @@ public:
 								continue;
 
 							auto mode = o.mode;
+							auto mode_name = std::string(o.name);
 							dlss_combo->add_item(o.name)->on_select =
-								[mode]() { g_upscaling_dlss_mode = mode; };
+								[mode, mode_name]()
+								{
+									Log::get() << "[DLSS] mode changed " << (int)g_upscaling_dlss_mode
+										<< " -> " << (int)mode << " (" << mode_name << ")" << Log::endl;
+									g_upscaling_dlss_mode = mode;
+								};
 							if (mode == g_upscaling_dlss_mode)
 								dlss_combo->get_label()->text = o.name;
 						}
@@ -1467,6 +1540,8 @@ public:
 
 						scale_slider->on_change = [update_scale_label](float v)
 						{
+							Log::get() << "[DLSS] scale override changed " << g_upscaling_dlss_scale_override
+								<< " -> " << v << Log::endl;
 							g_upscaling_dlss_scale_override = v;
 							update_scale_label();
 						};
@@ -1478,6 +1553,8 @@ public:
 						recommended_but->size        = { 140, 22 };
 						recommended_but->on_click = [scale_slider, update_scale_label](GUI::Elements::button::ptr)
 						{
+							Log::get() << "[DLSS] scale override reset to Recommended (was "
+								<< g_upscaling_dlss_scale_override << ")" << Log::endl;
 							g_upscaling_dlss_scale_override = -1.0f;
 
 							// Move the slider handle to reflect where "recommended"
@@ -1809,6 +1886,8 @@ public:
 	}
 	void on_resize(vec2 size) override
 	{
+		Log::get() << "[Resize] window resize requested " << size.x << "x" << size.y
+			<< " (clamped from previous new_size " << new_size.x << "x" << new_size.y << ")" << Log::endl;
 		new_size = vec2::max(size, vec2{ 64, 64 });
 
 		/*bool was_alive = alive;

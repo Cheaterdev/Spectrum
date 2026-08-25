@@ -243,8 +243,19 @@ AssetRenderer::AssetRenderer()
 {
     std::lock_guard<std::mutex> g(lock);
 
+    // graph is a plain member, already fully constructed (default Graph()) by
+    // the time this body runs -- same "too late for Scope" situation as
+    // main.cpp's vsm, so it needs the same explicit re-parent rather than a
+    // Scope wrapping its construction.
+    preview_context->add_child(&graph);
+
     scene_renderer = std::make_shared<main_renderer>();
-    scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
+    {
+        // Distinguishes this mesh_renderer's Properties-tree entry from the
+        // main view's and SceneTextureRenderer's otherwise-identically-named ones.
+        VariableContext::Scope scope(*preview_context);
+        scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
+    }
     cam.position = vec3(0, 5, -30);
 
     mesh_plane.reset(new MeshAssetInstance(EngineAssets::plane.get_asset()));
@@ -268,8 +279,13 @@ SceneTextureRenderer::SceneTextureRenderer()
 {
     std::lock_guard<std::mutex> g(lock);
 
+    preview_context->add_child(&graph);
+
     scene_renderer = std::make_shared<main_renderer>();
-    scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
+    {
+        VariableContext::Scope scope(*preview_context);
+        scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
+    }
     cam.position = vec3(0, 5, -30);
 
     mesh_plane.reset(new MeshAssetInstance(EngineAssets::plane.get_asset()));

@@ -45,7 +45,11 @@ export namespace HAL
 			std::string        resource_name;
 			HAL::ResourceState before;
 			HAL::ResourceState after;
+			// Representative flat index (ALL_SUBRESOURCES when the barrier covers
+			// more than one) -- what the continuity tracking keys on. `range` is
+			// the exact extent, for display.
 			uint               subres = 0;
+			HAL::SubresRange   range;
 			HAL::BarrierFlags  flags  = HAL::BarrierFlags::NONE;
 			// Opaque per-instance id (the source Resource address). A recreate()
 			// makes a NEW Resource object with the SAME name, so the debugger uses
@@ -56,8 +60,20 @@ export namespace HAL
 
 		CommandType  type          = CommandType::Func;
 		std::string  description;
-		UsagePoint*  barrier_point = nullptr; // non-null only until snapshot
+		Barriers*  barrier_point = nullptr; // non-null only until snapshot
 		std::vector<BarrierDetail> barrier_details; // non-empty only for Transition records
+
+		// Which CmdListOperation this barrier group belongs to, and which of its
+		// two groups it is. Recorded when the point is reserved, because that is
+		// the only moment the structure is known -- by snapshot time a barrier is
+		// just an entry in a list. Transition records only.
+		uint op_index   = 0;
+		bool after_op   = false;   // false = barriers_before, true = barriers_after
+
+		// The operation's class -- the BarrierSync a run of same-class work was
+		// opened with (begin_op). Names the operation in the debugger far better
+		// than its index: "COMPUTE_SHADING" says what the barriers bracket.
+		HAL::BarrierSync op_type = HAL::BarrierSync::NONE;
 	};
 
 	class DelayedCommandList
@@ -70,6 +86,15 @@ export namespace HAL
 			void push_back(CommandRecord r)              { records.push_back(std::move(r)); }
 			void clear()                                 { records.clear(); }
 			const std::vector<CommandRecord>& get() const { return records; }
+
+			// Hand the records over instead of lending them. The snapshot has
+			// to MUTATE what it takes (it resolves each Transition's
+			// barrier_point into plain data and nulls it), so copying was the
+			// only alternative -- and a CommandRecord owns a description string
+			// and a vector of details, making that a deep copy of every command
+			// on every pass, every frame. The recorder clears these on reuse
+			// anyway, so it has no use for them after the snapshot.
+			std::vector<CommandRecord> take()            { return std::move(records); }
 		};
 		struct NullRecorder
 		{
@@ -80,6 +105,7 @@ export namespace HAL
 				static const std::vector<CommandRecord> s_empty;
 				return s_empty;
 			}
+			std::vector<CommandRecord> take() { return {}; }
 		};
 
 		// Typed command — trivial data stored inline (no heap, no type-erasure).
@@ -91,7 +117,7 @@ export namespace HAL
 
 			union
 			{
-				UsagePoint*   barrier;
+				Barriers*   barrier;
 
 				struct { UINT vc, vo, ic, io; }                               draw;
 				struct { UINT ic, ioff, vo, inst, io; }                       draw_indexed;
@@ -131,7 +157,7 @@ export namespace HAL
 
 		bool compiled = false;
 		API::CommandList list;
-		std::wstring name;
+		std::wstring_view name;
 		std::vector<Cmd> tasks;
 		std::vector<std::function<void(API::CommandList&)>> fn_pool; // shared_ptr captures
 		[[no_unique_address]]
@@ -192,8 +218,10 @@ export namespace HAL
 		void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout);
 		void read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout);
 
-		void func_barrier(UsagePoint* point);
+		void func_barrier(Barriers* barriers, uint op_index = 0, bool after_op = false,
+		                  HAL::BarrierSync op_type = HAL::BarrierSync::NONE);
 		const std::vector<CommandRecord>& get_debug_records() const;
+		std::vector<CommandRecord> take_debug_records();
 
 		template<class Hit, class Miss, class Raygen>
 		void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer) {

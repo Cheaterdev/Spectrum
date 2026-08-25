@@ -800,6 +800,13 @@ class FrameGraphTimelineCanvas : public dock_base
                 const PassInfo*                              pass   = nullptr;
                 const HAL::CommandRecord::BarrierDetail*     detail = nullptr;
                 bool                                         mismatch = false;
+
+                // Which CmdListOperation this barrier brackets, and on which side.
+                // Carried from the record so the view can group Pass > Operation >
+                // Pre/Post instead of presenting one flat run of transitions.
+                uint                                         op_index = 0;
+                bool                                         after_op = false;
+                HAL::BarrierSync                             op_type  = HAL::BarrierSync::NONE;
             };
             std::vector<BarrierEntry> entries;
 
@@ -812,7 +819,7 @@ class FrameGraphTimelineCanvas : public dock_base
                     if (cmd.type != HAL::CommandType::Transition) continue;
                     for (auto& bd : cmd.barrier_details)
                         if (bd.resource_name == track.name)
-                            entries.push_back({ &pass, &bd });
+                            entries.push_back({ &pass, &bd, false, cmd.op_index, cmd.after_op, cmd.op_type });
                 }
             }
 
@@ -890,20 +897,25 @@ class FrameGraphTimelineCanvas : public dock_base
 
                     if (is_first)
                     {
-                        if (is_persistent)
-                        {
-                            // Persistent: must DISCARD or declare a real before-layout.
-                            if (!has_discard &&
-                                bd.before.layout == HAL::TextureLayout::UNDEFINED)
-                                e.mismatch = true;
-                        }
-                        else
-                        {
-                            // Non-persistent: first barrier must DISCARD from UNDEFINED.
-                            if (!has_discard ||
-                                bd.before.layout != HAL::TextureLayout::UNDEFINED)
-                                e.mismatch = true;
-                        }
+                        // The only wrong thing a first barrier can do is claim
+                        // UNDEFINED without discarding: that reads contents it just
+                        // declared meaningless. Entering from a real layout is fine
+                        // for ANY resource.
+                        //
+                        // This used to demand additionally that a non-persistent
+                        // resource's first barrier BE a discard from UNDEFINED,
+                        // which no longer matches the barrier system: the discard
+                        // fires once per resource LIFETIME (latched by
+                        // Resource::initialized), not once per frame. A transient
+                        // reused from an earlier frame is already initialized, so it
+                        // correctly enters from its resting layout with no discard --
+                        // and every one of them was being flagged for it.
+                        //
+                        // Aliased transients still get their discard: alias_begin
+                        // re-arms Resource::virgin, so the next write emits one and
+                        // passes this check on the has_discard branch.
+                        if (!has_discard && bd.before.layout == HAL::TextureLayout::UNDEFINED)
+                            e.mismatch = true;
                     }
                     else
                     {
@@ -912,12 +924,19 @@ class FrameGraphTimelineCanvas : public dock_base
                         //
                         // EXCEPTION — a release to UNDEFINED (alias_end) validly ends
                         // the lifetime from whatever layout it holds; with cross-list
-                        // chaining (link_list_groups) its before is handed off from
+                        // chaining (CommandListGroup) its before is handed off from
                         // another list, not the previous barrier in this view. D3D12
                         // validates the real before-layout, so skip it here.
+                        // EXCEPTION — a DISCARD enters from UNDEFINED by definition.
+                        // It is keyed on the resource's first WRITE, not its first
+                        // barrier, so a read can legitimately precede it: the
+                        // resource is then already tracked at a real layout here
+                        // while the discard still declares UNDEFINED. That is
+                        // correct (the write establishes the contents, so nothing
+                        // needs preserving) and is not a continuity break.
                         const bool is_release = (bd.after.layout == HAL::TextureLayout::UNDEFINED);
                         auto cur = current();
-                        if (!is_release && cur && bd.before.layout != cur->layout)
+                        if (!is_release && !has_discard && cur && bd.before.layout != cur->layout)
                             e.mismatch = true;
                     }
 
@@ -950,6 +969,15 @@ class FrameGraphTimelineCanvas : public dock_base
             {
                 const PassInfo* last_pass = nullptr;
                 uint64          last_id   = entries.front().detail->resource_id;
+
+                // Pass > Operation > Pre/Post. Barriers only mean something
+                // relative to the work they bracket, and a flat list hides both
+                // which operation they belong to and whether they run before or
+                // after it -- the difference between "prepare for this dispatch"
+                // and "hand the resource on".
+                int  last_op    = -1;
+                int  last_side  = -1;   // 0 = pre, 1 = post, -1 = none printed yet
+
                 for (auto& e : entries)
                 {
                     // A recreate() swaps in a new resource instance under the same
@@ -959,6 +987,8 @@ class FrameGraphTimelineCanvas : public dock_base
                     {
                         last_id   = e.detail->resource_id;
                         last_pass = nullptr;   // force the pass header to reprint
+                        last_op   = -1;
+                        last_side = -1;
                         y += 6.0f;
                         add_row("------------ recreated (new instance) ------------", 0.0f, col_dim);
                     }
@@ -967,6 +997,8 @@ class FrameGraphTimelineCanvas : public dock_base
                     if (e.pass != last_pass)
                     {
                         last_pass = e.pass;
+                        last_op   = -1;      // operation numbering is per list
+                        last_side = -1;
                         y += 4.0f;
                         float4 hcol = e.mismatch                           ? col_err
                                     : (e.pass->call_id == clicked_call_id) ? col_sel
@@ -974,12 +1006,44 @@ class FrameGraphTimelineCanvas : public dock_base
                         add_row(to_str(e.pass->name), 0.0f, hcol);
                     }
 
+                    // Operation header, then the side within it. Both reprint
+                    // whenever either changes, so a run of barriers in one group
+                    // stays under a single heading.
+                    if ((int)e.op_index != last_op)
+                    {
+                        last_op   = (int)e.op_index;
+                        last_side = -1;
+                        // Named by its class, not just numbered: the index only
+                        // says where it sits in the list, the class says what the
+                        // barriers around it are actually bracketing.
+                        add_row("Operation " + std::to_string(e.op_index) +
+                                "  [" + barrier_sync_str(e.op_type) + "]", 12.0f, col_dim);
+                    }
+
+                    const int side = e.after_op ? 1 : 0;
+                    if (side != last_side)
+                    {
+                        last_side = side;
+                        add_row(e.after_op ? "Post barriers" : "Pre barriers", 24.0f, col_dim);
+                    }
+
                     const auto& bd = *e.detail;
 
                     // Subresource / split-barrier annotations on the Sync line.
+                    // Exact extent, not just the representative index: a coalesced
+                    // barrier covers a mip/slice rectangle and "sub=N" would be a
+                    // lie about how much it moves.
                     std::string sub_str;
-                    if (bd.subres != HAL::ALL_SUBRESOURCES)
-                        sub_str = "  sub=" + std::to_string(bd.subres);
+                    if (!bd.range.is_all())
+                    {
+                        const auto& r = bd.range;
+                        const bool one = (r.num_mips == 1 && r.num_slices == 1);
+
+                        sub_str = one
+                            ? "  sub=" + std::to_string(bd.subres)
+                            : "  mips " + std::to_string(r.first_mip) + "+" + std::to_string(r.num_mips) +
+                              " slices " + std::to_string(r.first_slice) + "+" + std::to_string(r.num_slices);
+                    }
 
                     std::string flag_str;
                     using BF = HAL::BarrierFlags;
@@ -1004,7 +1068,7 @@ class FrameGraphTimelineCanvas : public dock_base
                         sub_str + flag_str;
                     const std::string bp_prefix = bp_on ? "[*] " : "    ";
 
-                    auto sync_lbl        = add_row(bp_prefix + sync_base, 12.0f, sc);
+                    auto sync_lbl        = add_row(bp_prefix + sync_base, 36.0f, sc);
                     sync_lbl->clickable  = true;
 
                     const bool is_err = e.mismatch;
@@ -1021,10 +1085,10 @@ class FrameGraphTimelineCanvas : public dock_base
 
                     add_row("Access: " + barrier_access_str(bd.before.access) +
                             "  ->  "   + barrier_access_str(bd.after.access),
-                            12.0f, dc);
+                            36.0f, dc);
                     add_row("Layout: " + barrier_layout_str(bd.before.layout) +
                             "  ->  "   + barrier_layout_str(bd.after.layout),
-                            12.0f, dc);
+                            36.0f, dc);
                 }
             }
 
@@ -1187,6 +1251,11 @@ class FrameGraphTimelineCanvas : public dock_base
         auto u   = static_cast<uint>(s);
         auto has = [&](BS f) { return (u & static_cast<uint>(f)) != 0; };
         // Check composite aliases first.
+        //
+        // ALL is not a pipeline stage but "synchronize against everything", and
+        // it is what state_at_rest() uses -- so without it every return-to-rest
+        // and every assumed entry rendered as "?".
+        if (u == static_cast<uint>(BS::ALL))         return "ALL";
         if (u == static_cast<uint>(BS::ALL_DIRECT))  return "ALL_DIRECT";
         if (u == static_cast<uint>(BS::ALL_COMPUTE)) return "ALL_COMPUTE";
         if (u == static_cast<uint>(BS::ALL_SHADING)) return "ALL_SHADING";
@@ -1200,8 +1269,11 @@ class FrameGraphTimelineCanvas : public dock_base
         add(BS::RENDER_TARGET,    "RT");
         add(BS::COMPUTE_SHADING,  "CS");
         add(BS::RAYTRACING,       "RAY");
+        add(BS::ALL,              "ALL");
         add(BS::COPY,             "COPY");
+        add(BS::RESOLVE,          "RESOLVE");
         add(BS::EXECUTE_INDIRECT, "IND");
+        add(BS::PREDICATION,      "PRED");
         add(BS::CLEAR_UNORDERED_ACCESS_VIEW, "CLEAR_UAV");
         add(BS::BUILD_RAYTRACING_ACCELERATION_STRUCTURE, "BVH");
         add(BS::COPY_RAYTRACING_ACCELERATION_STRUCTURE,  "BVH_COPY");
@@ -1584,25 +1656,16 @@ private:
 
                             if (is_first)
                             {
-                                if (is_persistent)
+                                // Same rule as the per-pass validator above: the only
+                                // wrong first barrier is one claiming UNDEFINED without
+                                // discarding. The discard fires once per resource
+                                // LIFETIME, not per frame, so a reused transient
+                                // legitimately starts from its resting layout.
+                                if (!has_discard &&
+                                    bd.before.layout == HAL::TextureLayout::UNDEFINED)
                                 {
-                                    // Persistent: must DISCARD or declare a real before-layout.
-                                    if (!has_discard &&
-                                        bd.before.layout == HAL::TextureLayout::UNDEFINED)
-                                    {
-                                        tr.has_mismatch = true;
-                                        break;
-                                    }
-                                }
-                                else
-                                {
-                                    // Non-persistent: first barrier must DISCARD from UNDEFINED.
-                                    if (!has_discard ||
-                                        bd.before.layout != HAL::TextureLayout::UNDEFINED)
-                                    {
-                                        tr.has_mismatch = true;
-                                        break;
-                                    }
+                                    tr.has_mismatch = true;
+                                    break;
                                 }
                             }
                             else
@@ -1611,9 +1674,13 @@ private:
                                 // UNDEFINED (alias_end) validly ends the lifetime from any
                                 // layout — its before may be a cross-list hand-off, and
                                 // D3D12 validates the real layout, so skip it here.
+                                //
+                                // A DISCARD is skipped for the same reason: it enters from
+                                // UNDEFINED by definition, and it keys on the first WRITE,
+                                // so a read may already have moved the tracked layout.
                                 const bool is_release = (bd.after.layout == HAL::TextureLayout::UNDEFINED);
                                 auto cur = current();
-                                if (!is_release && cur && bd.before.layout != cur->layout)
+                                if (!is_release && !has_discard && cur && bd.before.layout != cur->layout)
                                 {
                                     tr.has_mismatch = true;
                                     break;
@@ -1738,6 +1805,21 @@ private:
                             HAL::Format::R8G8B8A8_UNORM, { thumb_dim }, 1, 1,
                             HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess);
                         last_write_thumb_tex = std::make_shared<Texture>(RenderSystem::get().device(), desc);
+
+                        // resource@pass, matching the per-pass preview textures in
+                        // FrameGraph.Debug.cpp. The pass is the one that produced
+                        // this cell, found by the cell's call_id; unnamed these all
+                        // report as "Unnamed ID3D12Resource Object" and cannot be
+                        // told apart in validation output.
+                        {
+                            std::string pass_name = "?";
+                            for (const auto& p : m_passes)
+                                if (p.call_id == cell.call_id) { pass_name = convert(p.name.ptr); break; }
+
+                            last_write_thumb_tex->resource->set_name(
+                                "FGDebug::thumb::" + m_resources[ri].name + "@" + pass_name);
+                        }
+
                         cell.thumb_tex       = last_write_thumb_tex;
                     }
                     else

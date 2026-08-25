@@ -15,11 +15,11 @@ export struct DefaultLayout: public FrameLayout
 	struct Instance0
 	{
 		static const uint ID = 4;
-		static const uint CB = 31;
+		static const uint CB = 34;
 		static const uint CB_ID = 12;
 		static const uint SRV = 7;
 		static const uint SRV_ID = 14;
-		static const uint UAV = 4;
+		static const uint UAV = 8;
 		static const uint UAV_ID = 15;
 		static inline const std::vector<uint> tables = { 12, 14, 15 };
 	};
@@ -41,7 +41,7 @@ export struct DefaultLayout: public FrameLayout
 		static const uint ID = 6;
 		static const uint CB = 17;
 		static const uint CB_ID = 20;
-		static const uint SRV = 8;
+		static const uint SRV = 10;
 		static const uint SRV_ID = 22;
 		static const uint UAV = 3;
 		static const uint UAV_ID = 23;
@@ -122,6 +122,6 @@ export struct DefaultLayout: public FrameLayout
 
 	template<class Processor> static void for_each(Processor& processor)
 	{
-		processor.template process<CameraData, SceneData, PassData, DebugInfo, Instance0, Instance1, Instance2, Instance3, Instance4, Instance5, Raytracing, MaterialData, WorkGR_ClassifyPixels_NodeEmulation, WorkGR_Shadows_NodeEmulation>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc });
+		processor.template process<CameraData, SceneData, PassData, DebugInfo, Instance0, Instance1, Instance2, Instance3, Instance4, Instance5, Raytracing, MaterialData, WorkGR_ClassifyPixels_NodeEmulation, WorkGR_Shadows_NodeEmulation>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc, HAL::Samplers::SamplerShadowComparisonDesc });
 	}
 };

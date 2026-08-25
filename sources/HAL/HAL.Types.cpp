@@ -105,6 +105,13 @@ namespace HAL
 		if (check(operation & SYNC_DIRECT))
 			return CommandListType::DIRECT;
 
+		// Nothing above found a real DIRECT-only requirement, so this state
+		// carries no list-type constraint. COPY rather than the COMPUTE default
+		// below, because COPY is compatible with every queue -- this has to be
+		// usable as a barrier's "before" wherever it lands.
+		if (check(operation & BarrierSync::ALL))
+			return CommandListType::COPY;
+
 
 
 
