@@ -983,6 +983,82 @@ VSM::VSM()
 		}
 	};
 
+	// ---- Blocker search (extracted from combine, see vsm.sig's ------------
+	// ---- VSM_BlockerSearch PassNode comment) -------------------------------
+
+	m_blockersearch_setup = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		// Only meaningful (and only ever dispatched) under penumbra mode --
+		// there's no blocker search to extract otherwise. m_combine_render's
+		// own PSO-permutation gate already skips VSM_RTX_VERIFY/etc. the
+		// same way; this pass just skips existing at all.
+		if (!use_vsm_penumbra)
+			return false;
+		GBufferViewDesc::need(builder, data.gbuffer);
+		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
+		auto& frame = builder.graph->get_context<ViewportInfo>();
+		builder.create(data.VSM_BlockerResult,
+		    { ivec3(frame.frame_size, 0), HAL::Format::R32G32B32A32_UINT, 1, 1 },
+		    FrameGraph::ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_blockersearch_render = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::FrameContext& context)
+	{
+		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+
+		auto& list    = *context.get_list();
+		auto& compute = list.get_compute();
+
+		auto& caminfo = context.graph->get_context<CameraInfo>();
+		auto  cam     = caminfo.cam;
+
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+
+		camera light_cam = make_light_view_camera(frame_light_pos);
+		float2 cam_pos_ls = (float4(cam->position, 1) * light_cam.get_view()).xy;
+
+		{
+			Slots::VSMLighting lighting;
+			gbuffer.SetTable(lighting.GetGbuffer());
+			lighting.GetVsm_atlas()      = data.VSM_Atlas->texture2DArray;
+			lighting.GetPage_table()     = data.VSM_PageTable->texture2DArray;
+			lighting.GetPage_cameras()   = data.VSM_PageCameras->structuredBuffer;
+			lighting.GetBlue_noise()     = data.BlueNoise->texture2D;
+			lighting.GetBlocker_result() = data.VSM_BlockerResult->rwTexture2D;
+			// Result/rtx_shadow_mask stay unbound (default) -- this pass's
+			// own shader (CS_BLOCKER_SEARCH) never reads either field.
+			compute.set(lighting);
+		}
+
+		{
+			Slots::VSMConstants constants;
+			constants.GetActive_min()          = active_min;
+			constants.GetActive_max()          = active_max;
+			constants.GetPage_size()           = page_table.page_size;
+			constants.GetPages_per_level()     = page_table.clipmap.pages_per_level;
+			constants.GetQuad_blocker_search()  = use_vsm_stochastic_blocker_search ? 2 : (use_vsm_quad_blocker_search ? 1 : 0);
+			constants.GetLight_view()           = light_cam.get_view();
+			// rtx_dual_blur/debug_rtx_reference are resolve-only concerns
+			// (see m_combine_render) -- left at their zero-initialized
+			// default here, this pass's shader never reads them.
+
+			for (int level = 0; level < page_table.clipmap.level_count; level++)
+			{
+				float2 origin = page_table.clipmap.grid_origin(level, cam_pos_ls);
+				constants.GetLevel_info()[level] = float4(origin.x, origin.y, page_table.clipmap.page_world_size(level), 0.0f);
+			}
+
+			compute.set(constants);
+		}
+
+		compute.set_pipeline<PSOS::VSMBlockerSearchCompute>();
+		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
+	};
+
 	// ---- Combine lighting ------------------------------------------------
 
 	m_combine_setup = [this](Passes::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
@@ -998,8 +1074,13 @@ VSM::VSM()
 		// still return false (no RTX hardware), in which case ShadowMask
 		// never gets created this frame. Same defensive builder.exists()
 		// guard PSSM_Combine already uses for the same resource.
-		if (builder.exists(data.ShadowMask))
+		if (use_vsm_debug_rtx_reference && builder.exists(data.ShadowMask))
 			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
+		// Only exists when use_vsm_penumbra is on (see
+		// m_blockersearch_setup's own early-out) -- same defensive
+		// builder.exists() guard as ShadowMask above.
+		if (builder.exists(data.VSM_BlockerResult))
+			builder.need(data.VSM_BlockerResult, FrameGraph::ResourceFlags::ComputeRead);
 		return true;
 	};
 
@@ -1028,6 +1109,11 @@ VSM::VSM()
 			lighting.GetBlue_noise()   = data.BlueNoise->texture2D;
 			if (data.ShadowMask)
 				lighting.GetRtx_shadow_mask() = data.ShadowMask->texture2D;
+			// Written by m_blockersearch_render above -- only exists when
+			// use_vsm_penumbra is on (see m_blockersearch_setup's own
+			// early-out and this pass's own builder.exists() guard).
+			if (data.VSM_BlockerResult)
+				lighting.GetBlocker_result() = data.VSM_BlockerResult->rwTexture2D;
 			compute.set(lighting);
 		}
 
@@ -1041,13 +1127,23 @@ VSM::VSM()
 			constants.GetPage_size()            = page_table.page_size;
 			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
 			constants.GetRtx_dual_blur()        = use_vsm_rtx_dual_blur ? 1 : 0;
-			constants.GetQuad_blocker_search()  = use_vsm_quad_blocker_search ? 1 : 0;
+			// 3-way mode packed into one int (see VSM_impl.hlsl's own
+			// comment on search_mode): 0 = full, 1 = quad-shared, 2 =
+			// stochastic single tap. Stochastic takes priority if somehow
+			// both toggles are on -- it's the more aggressive of the two.
+			constants.GetQuad_blocker_search()  = use_vsm_stochastic_blocker_search ? 2 : (use_vsm_quad_blocker_search ? 1 : 0);
 			// Only meaningful when ShadowMask actually exists this frame
 			// (see m_combine_setup's builder.exists() guard) -- otherwise
 			// rtx_shadow_mask was never bound to anything real above.
 			constants.GetDebug_rtx_reference()  = (use_vsm_debug_rtx_reference && data.ShadowMask) ? 1 : 0;
-			constants.GetRtx_full_penumbra()    = use_vsm_rtx_full_penumbra ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
+
+			// Propagates into RTXShadow::render (PassDefaults.cpp) via the
+			// RTX singleton -- see debug_full_reference_shadow's own
+			// comment in RTX.ixx for why it lives there instead of a
+			// VSM-local flag. One-frame lag (RTXShadow already ran earlier
+			// this frame) is fine for a debug toggle.
+			RTX::get().debug_full_reference_shadow = use_vsm_debug_rtx_reference;
 
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
 			{

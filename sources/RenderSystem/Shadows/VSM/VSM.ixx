@@ -70,18 +70,6 @@ public:
 	// two toggles above.
 	bool use_vsm_rtx_dual_blur = true;
 
-	// Only meaningful when use_vsm_rtx_verify is also on. false = single
-	// verification ray (aims at the shadow-map search's own best-guess
-	// blocker, still relies on vsm_pcf_shadow's VSM-driven blur for the
-	// actual penumbra size). true = fire 16 rays across the sun's full
-	// angular disc instead (genuine stochastic sampling, not aimed at any
-	// particular blocker) and set shadow directly from the hit ratio --
-	// bypasses vsm_pcf_shadow entirely, a real ray-traced penumbra instead
-	// of a VSM-distance-driven blur. Off by default: new, unvalidated,
-	// pricier (16 rays instead of 1 whenever the coarse search suspects
-	// occlusion).
-	bool use_vsm_rtx_full_penumbra = false;
-
 	// Runtime A/B switch for the quad-shared blocker search (splits the 16
 	// Poisson-disc taps 4-per-thread across each 2x2 pixel quad instead of
 	// every pixel doing all 16, merged via QuadReadAcrossX/Y/Diagonal).
@@ -89,6 +77,19 @@ public:
 	// original full-per-pixel search, same cautious rollout as
 	// use_vsm_rtx_verify above.
 	bool use_vsm_quad_blocker_search = false;
+
+	// Third search mode (mutually exclusive with quad-sharing above, takes
+	// priority if somehow both are on): each pixel samples exactly ONE of
+	// the 16 Poisson-disc positions, picked by a fresh per-pixel random
+	// index every frame instead of a fixed subset -- 1/16th the atlas
+	// samples of the original search. Relies on neighboring pixels'
+	// different random picks (spatial) plus the per-frame reroll
+	// (temporal) for vsm_pcf_shadow's own blur to reconstruct a coherent
+	// result -- no dedicated denoiser backing this, so expect more visible
+	// noise than quad-sharing, worst on a static/paused frame. Off by
+	// default: new, unvalidated, same cautious rollout as the toggles
+	// above.
+	bool use_vsm_stochastic_blocker_search = false;
 
 	// Debug-view toggle: when on, VSM_Combine displays RTXShadow's own
 	// (denoised) full-RT shadow mask directly as grayscale, in place of
@@ -367,6 +368,14 @@ private:
 	Passes::VSM_HiZRebuild::setup_func_type  m_hizrebuild_setup;
 	Passes::VSM_HiZRebuild::render_func_type m_hizrebuild_render;
 
+	// Blocker-search extraction: one full-screen dispatch running ONLY the
+	// wide, many-tap PCSS blocker search, writing its result for
+	// m_combine_render to read back -- see vsm.sig's VSM_BlockerSearch
+	// PassNode comment. Registered ahead of VSM_Combine in test.sig's
+	// pipeline listing.
+	Passes::VSM_BlockerSearch::setup_func_type  m_blockersearch_setup;
+	Passes::VSM_BlockerSearch::render_func_type m_blockersearch_render;
+
 	Passes::VSM_Combine::setup_func_type  m_combine_setup;
 	Passes::VSM_Combine::render_func_type m_combine_render;
 
@@ -414,6 +423,9 @@ public:
 
 		pipeline.vSM_HiZRebuild.setup_func  = m_hizrebuild_setup;
 		pipeline.vSM_HiZRebuild.render_func = m_hizrebuild_render;
+
+		pipeline.vSM_BlockerSearch.setup_func  = m_blockersearch_setup;
+		pipeline.vSM_BlockerSearch.render_func = m_blockersearch_render;
 
 		pipeline.vSM_Combine.setup_func  = m_combine_setup;
 		pipeline.vSM_Combine.render_func = m_combine_render;

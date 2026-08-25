@@ -12,7 +12,7 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class VSM_Combine : public PassNodeBase
+class VSM_BlockerSearch : public PassNodeBase
 {
 public:
 	struct Context
@@ -31,13 +31,7 @@ public:
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
-		Handlers::Texture ShadowMask = ResourceID::ShadowMask;
-
-
 		Handlers::Texture VSM_BlockerResult = ResourceID::VSM_BlockerResult;
-
-
-		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -60,9 +54,7 @@ public:
 			{ ResourceID::VSM_PageTable, false },
 			{ ResourceID::VSM_PageCameras, false },
 			{ ResourceID::BlueNoise, false },
-			{ ResourceID::ShadowMask, false },
-			{ ResourceID::VSM_BlockerResult, false },
-			{ ResourceID::ResultTexture, true },
+			{ ResourceID::VSM_BlockerResult, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -73,9 +65,9 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"VSM_Combine"};
+	static constexpr LiteralWStr Name{L"VSM_BlockerSearch"};
 
-	static constexpr PassID ID = PassID::VSM_Combine;
+	static constexpr PassID ID = PassID::VSM_BlockerSearch;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

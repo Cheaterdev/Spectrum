@@ -197,6 +197,25 @@ void PassDefault<Passes::RTXShadow>::render(
 		compute.set(voxelScreen);
 	}
 
+	// Debug reference mode (see RTX::debug_full_reference_shadow's own
+	// comment in RTX.ixx): skip the normal Bend/FFX hybrid-shadow-denoiser
+	// dispatch entirely and instead fire a genuine 16-ray soft-shadow
+	// reference directly into ShadowMask -- a ground truth to compare VSM's
+	// PCSS approximation against, entirely independent of VSM's own code.
+	// FrameInfo/SceneData/Raytracing are already bound above, same as the
+	// normal path needs them.
+	if (RTX::get().debug_full_reference_shadow)
+	{
+		Slots::RTXShadowReference reference;
+		gbuffer.SetTable(reference.GetGbuffer());
+		reference.GetOutput() = data.ShadowMask->rwTexture2D;
+		compute.set(reference);
+
+		compute.set_pipeline<PSOS::RTXShadowReferenceCompute>();
+		compute.dispatch(ivec2(data.ShadowMask->get_size().x, data.ShadowMask->get_size().y), ivec2{ 16, 16 });
+		return;
+	}
+
 	auto light = float4(sky_ctx.sunDir, 0) * camera_ctx.cam->get_view_proj();
 
 	Bend::DispatchList res = Bend::BuildDispatchList(

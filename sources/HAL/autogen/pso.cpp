@@ -54,6 +54,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DownsampleDepthMip>(device, pso[PSO::DownsampleDepthMip]));
 	tasks.emplace_back(PSOBase::create<PSOS::MipMapping>(device, pso[PSO::MipMapping]));
 	tasks.emplace_back(PSOBase::create<PSOS::PSSMApplyCompute>(device, pso[PSO::PSSMApplyCompute]));
+	tasks.emplace_back(PSOBase::create<PSOS::RTXShadowReferenceCompute>(device, pso[PSO::RTXShadowReferenceCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::SkyCompute>(device, pso[PSO::SkyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::SkyCube>(device, pso[PSO::SkyCube]));
 	tasks.emplace_back(PSOBase::create<PSOS::CubemapENV>(device, pso[PSO::CubemapENV]));
@@ -83,6 +84,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepthBatch>(device, pso[PSO::VSMCopyPageDepthBatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDownsampleHiZBatch>(device, pso[PSO::VSMDownsampleHiZBatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMApplyCompute>(device, pso[PSO::VSMApplyCompute]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMBlockerSearchCompute>(device, pso[PSO::VSMBlockerSearchCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMGatherDispatch>(device, pso[PSO::VSMGatherDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 

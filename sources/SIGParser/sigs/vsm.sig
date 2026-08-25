@@ -42,17 +42,6 @@ struct VSMConstants
 	# to compare VSM's quality/performance against. See VSMLighting's
 	# rtx_shadow_mask field.
 	int debug_rtx_reference;
-	# Only meaningful when VsmRtxVerify is enabled and a blocker was found.
-	# 0 = single verification ray (aims at the shadow-map search's own
-	# best-guess blocker, corrects/blends its distance, still relies on
-	# vsm_pcf_shadow's VSM-driven blur for the actual penumbra size). 1 =
-	# fire 16 rays across the sun's full angular disc (not aimed at any
-	# particular blocker -- genuine stochastic sampling) and set shadow
-	# directly from the hit ratio, bypassing vsm_pcf_shadow entirely for
-	# that pixel. A real ray-traced penumbra instead of VSM's
-	# distance-estimate-driven blur, at the cost of 16 rays instead of 1
-	# whenever the coarse blocker search already suspects occlusion.
-	int rtx_full_penumbra;
 	float4x4 light_view;
 	# MaxLevels (VSM.ixx) storage slots -- one geometric ladder, no
 	# regular/adaptive split (see VSMClipmap::page_world_size). Keep this in
@@ -192,6 +181,19 @@ struct VSMLighting
 	# own setup() can return false on non-RTX hardware, in which case this
 	# resource never gets created that frame).
 	Texture2D<float> rtx_shadow_mask;
+	# Blocker-search extraction: written by the new VSM_BlockerSearch pass
+	# (one full-screen dispatch, same size as VSM_Combine's), read back here
+	# by VSM_Combine's resolve step -- the wide, many-tap search no longer
+	# runs inline inside the same dispatch as the final PCF blur/shading.
+	# uint4, not float4: x = asuint(world_delta), or asuint(-1.0) as the
+	# sentinel for "no blocker found" (world_delta is otherwise always >=0
+	# by construction); y/z = asuint(best_tc.x)/asuint(best_tc.y); w =
+	# best_slot directly (already a uint). Bit-reinterpreted rather than
+	# stored as native floats so best_slot doesn't lose precision the way
+	# it would packed into a half-float channel. RWTexture2D (not a plain
+	# Texture2D SRV) because VSM_BlockerSearch's own shader writes it --
+	# VSM_Combine only ever reads it, via the same field/binding.
+	RWTexture2D<uint4> blocker_result;
 }
 
 ComputePSO VSMApplyCompute
@@ -220,6 +222,19 @@ ComputePSO VSMApplyCompute
 	define VsmRtxVerify;
 }
 
+# Blocker-search extraction (see VSM_BlockerSearch's own PassNode comment):
+# no VsmPenumbra/VsmRtxVerify defines needed here -- VSM.cpp only ever runs
+# this pass at all when penumbra mode is on (there's no blocker search
+# without it), and RTX ray-firing happens entirely in the resolve step
+# (VSMApplyCompute), not here.
+ComputePSO VSMBlockerSearchCompute
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_BLOCKER_SEARCH]
+	compute = VSM_BlockerSearch;
+}
+
 # Amplification-shader-driven compaction (Phase 1b): CPU dispatches AS
 # threadgroups covering meshlet_count*16 (meshlet,page) pairs; the AS culls
 # each pair against that page's camera and compacts survivors into a
@@ -241,15 +256,17 @@ GraphicsPSO VSMDepthDraw
 	amplification = mesh_shader_vsm;
 
 	ds = D32_FLOAT;
-	# Was cull=Front (render only back faces -- a common shadow-map trick
-	# that avoids self-shadow acne "for free" by using the far side of
-	# closed geometry as the recorded blocker depth). Switched to None:
-	# cull=Front silently casts NO shadow at all for single-sided/thin
-	# geometry (leaves, cards, thin walls) with no back face to rasterize.
-	# Needs the compensating depth bias in VSM_impl.hlsl's get_shadow_vsm
-	# (VSM_DEPTH_BIAS) to avoid the self-shadow acne cull=Front used to
-	# dodge.
-	cull = None;
+	# Back to cull=Front (render only back faces -- avoids self-shadow acne
+	# "for free" by using the far side of closed geometry as the recorded
+	# blocker depth). Was briefly cull=None to fix single-sided/thin
+	# geometry (leaves, cards, thin walls) casting no shadow at all with no
+	# back face to rasterize -- but that traded a real, if narrow, bug for
+	# a much messier one: cull=None reintroduces self-shadow acne on ALL
+	# front-facing geometry, and compensating for it (normal-offset bias,
+	# self-shadow dead zones, etc.) chased artifacts (gray penumbras, page-
+	# edge flicker) for longer than the original single-sided-geometry gap
+	# was worth. Accepting the narrower, well-understood limitation again.
+	cull = Front;
 }
 
 # Phase 5.8: per-(level,mesh) indirect draw entry, replacing the CPU
@@ -375,6 +392,22 @@ PassNode VSM_HiZRebuild
 	[Write] StructuredBuffer<uint> VSM_DirtySlots;
 }
 
+# Blocker-search extraction: one full-screen dispatch (same size as
+# VSM_Combine's) that runs ONLY the wide, many-tap PCSS blocker search
+# (VSM_impl.hlsl's vsm_search_blocker), writing its result to
+# VSM_BlockerResult for VSM_Combine's resolve step to read back -- no
+# longer inline inside the same dispatch as the final PCF blur/shading.
+[Compute]
+PassNode VSM_BlockerSearch
+{
+	GBuffer gbuffer;
+	Texture VSM_Atlas;
+	Texture VSM_PageTable;
+	StructuredBuffer<Camera> VSM_PageCameras;
+	Texture BlueNoise;
+	[Write] Texture VSM_BlockerResult;
+}
+
 [Compute]
 PassNode VSM_Combine
 {
@@ -388,6 +421,10 @@ PassNode VSM_Combine
 	# [Write]: this pass only ever reads it, for the debug-view comparison
 	# toggle (VSM.ixx's use_vsm_debug_rtx_reference).
 	Texture ShadowMask;
+	# Written by VSM_BlockerSearch above -- see VSMLighting's own
+	# blocker_result field for the packed uint4 layout. Not [Write]: this
+	# pass only ever reads it.
+	Texture VSM_BlockerResult;
 	[Write] Texture ResultTexture;
 }
 

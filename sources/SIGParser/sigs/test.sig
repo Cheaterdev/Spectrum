@@ -54,6 +54,7 @@ Pipeline MainPipeline
 											RTXShadow;
 											[Async]PSSM_Combine;
 											VSM_DepthAnalysis;
+											VSM_BlockerSearch;
 											VSM_Combine;
 											# voxel screen (voxel_gi.generate)
 											[Async]

@@ -61,9 +61,19 @@ namespace HAL
 			// is what makes the group transition it out of COPY_DEST. The state
 			// asked for is the resting layout, so the group's return-to-rest then
 			// has nothing left to do.
-			list->add_resource_usage(r.get(), check(layout & TextureLayout::SHADER_RESOURCE)
+			//
+			// Per-subresource, not ALL_SUBRESOURCES: this is the resource's first
+			// ever touch through the Transitions state tracker (its subresources
+			// were written via DirectStorage, which bypasses Transitions entirely),
+			// so an ALL_SUBRESOURCES call here hits the virgin/non_tracked_resources
+			// fallback in compile_transitions() and drops the promotion for some
+			// subresources (observed: subresource 0, the largest mip, left black).
+			auto desired = check(layout & TextureLayout::SHADER_RESOURCE)
 				? ResourceStates::SHADER_RESOURCE
-				: ResourceStates::UNORDERED_ACCESS);
+				: ResourceStates::UNORDERED_ACCESS;
+
+			for (UINT s = 0; s < r->get_desc().as_texture().Subresources(); s++)
+				list->add_resource_usage(r.get(), desired, s);
 		}
 
 		// Submit on the DIRECT queue and wait. This runs on the MAIN thread at

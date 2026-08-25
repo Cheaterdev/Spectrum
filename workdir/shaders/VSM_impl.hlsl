@@ -139,9 +139,11 @@ bool vsm_tap(VSMConstants c, VSMLighting lighting, int level, float2 pos_ls,
 	return vsm_resolve_tap(c, lighting, level, tap_pos_ls, tap_slot, tap_uv);
 }
 
-#ifdef VSM_PENUMBRA
-static const float VSM_SUN_ANGULAR_RADIUS = 0.02; // ~17 deg -- hardcoded, tune to taste.
-
+// Fixed Poisson disc, shared by the blocker search (vsm_search_blocker,
+// unconditional below -- runs in its own dispatch/PSO permutation with no
+// VSM_PENUMBRA define at all) and the PCF blur (vsm_pcf_shadow, still
+// VSM_PENUMBRA-guarded further down) -- file scope so both can see it
+// regardless of which #ifdef, if any, applies to the current compile.
 static const float2 VSM_POISSON_DISK[16] = {
 	float2(-0.94201624, -0.39906216), float2( 0.94558609, -0.76890725),
 	float2(-0.09418410, -0.92938870), float2( 0.34495938,  0.29387760),
@@ -152,6 +154,140 @@ static const float2 VSM_POISSON_DISK[16] = {
 	float2(-0.24188840,  0.99706507), float2(-0.81409955,  0.91437590),
 	float2( 0.19984126,  0.78641367), float2( 0.14383161, -0.14100790),
 };
+
+// Blocker-search extraction: everything get_shadow_vsm used to do UP
+// THROUGH finding the search result now lives here, called once per pixel
+// from VSM_BlockerSearch's own dispatch (VSM_BlockerSearch.hlsl) instead of
+// inline inside the same dispatch as the final PCF blur/shading. Packs its
+// result into a uint4 for VSMLighting's blocker_result field (see that
+// field's own comment for the exact layout) -- asuint(-1.0) in .x is the
+// sentinel for "no blocker found" (world_delta is otherwise always >=0 by
+// construction).
+//
+// Unconditional (not #ifdef VSM_PENUMBRA-guarded) -- VSMBlockerSearchCompute
+// has no VsmPenumbra define at all (VSM.cpp only ever runs this pass when
+// penumbra mode is on in the first place, via its own setup()'s early-out),
+// so this function must compile standalone.
+//
+// Callers must NOT early-return before calling this for any reason (sky
+// pixels, screen-edge padding threads, etc.) -- see `valid` below: this
+// function's own quad-shared search mode needs every thread in a 2x2
+// dispatch quad to reach its QuadReadAcrossX/Y/Diagonal calls uniformly, a
+// requirement that propagates all the way up through this function's
+// caller (VSM_BlockerSearch.hlsl's CS_BLOCKER_SEARCH).
+uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint2 pixel)
+{
+	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
+	int level_raw = get_vsm_level(c, pos_ls);
+	// See get_shadow_vsm's own history for the fuller version of this
+	// early-return-avoidance reasoning -- moved here wholesale along with
+	// the quad ops it exists to protect; get_shadow_vsm itself no longer
+	// does any quad ops, so it went back to plain early returns.
+	bool valid = level_raw >= 0;
+	int level = valid ? level_raw : c.GetActive_min();
+
+	uint slot_raw = valid ? get_vsm_slot(c, lighting, pos_ls, level) : VSM_INVALID_SLOT;
+	valid = valid && (slot_raw != VSM_INVALID_SLOT);
+	uint slot = valid ? slot_raw : 0;
+
+	Camera page_cam = lighting.GetPage_cameras()[slot];
+	float4 pos_l = mul(page_cam.GetViewProj(), float4(wpos, 1));
+	
+	static const float VSM_BLOCKER_SEARCH_RADIUS_WORLD = 4.0;
+	float texel_world_size = c.GetLevel_info(level).z / c.GetPage_size();
+
+	float4 vsm_depth_range_p0 = mul(page_cam.GetInvProj(), float4(0, 0, 0, 1));
+	float4 vsm_depth_range_p1 = mul(page_cam.GetInvProj(), float4(0, 0, 1, 1));
+	float depth_range = abs(vsm_depth_range_p1.z / vsm_depth_range_p1.w - vsm_depth_range_p0.z / vsm_depth_range_p0.w);
+
+	float blocker_search_radius_texels = clamp(
+		VSM_BLOCKER_SEARCH_RADIUS_WORLD / texel_world_size, 2.0, c.GetPage_size() * 4.0);
+
+	int  search_mode       = c.GetQuad_blocker_search();
+	bool quad_search        = search_mode == 1;
+	bool stochastic_search  = search_mode == 2;
+
+	uint2 search_noise_pixel = quad_search ? (pixel & ~1u) : pixel;
+	float search_noise_angle = lighting.GetBlue_noise().Load(int3(search_noise_pixel % 128, 0)).x * 6.28318530718;
+
+	float max_blocker_z = 0;
+	float best_sampled_z = 0;
+	float2 best_tc = 0;
+	uint best_slot = 0;
+	float best_pick_noise = lighting.GetBlue_noise().Load(int3(pixel % 128, 0)).y;
+	static const float VSM_RTX_TAP_TIE_EPS_WORLD = 0.1;
+	int blocker_count = 0;
+
+	uint quad_lane = (pixel.x & 1) + (pixel.y & 1) * 2;
+	int random_tap = (int)(frac(lighting.GetBlue_noise().Load(int3(pixel % 128, 0)).x * 4327.31) * 16.0);
+	random_tap = clamp(random_tap, 0, 15);
+	int bi_start  = stochastic_search ? random_tap : (quad_search ? (int)quad_lane : 0);
+	int bi_stride = quad_search ? 4 : 1;
+	int bi_count  = stochastic_search ? 1 : (quad_search ? 4 : 16);
+
+	[loop]
+	for (int bii = 0; bii < bi_count; bii++)
+	{
+		if (!valid)
+			continue;
+		int bi = bi_start + bii * bi_stride;
+		uint tap_slot;
+		float2 tc;
+		if (!vsm_tap(c, lighting, level, pos_ls, texel_world_size,
+		             vsm_rotate(VSM_POISSON_DISK[bi], search_noise_angle), blocker_search_radius_texels,
+		             tap_slot, tc))
+			continue;
+		float sampled = lighting.GetVsm_atlas().SampleLevel(pointClampSampler, float3(tc, (float)tap_slot), 0);
+        if (sampled > pos_l.z)
+        {
+            bool is_new_max = sampled > max_blocker_z || blocker_count == 0;
+            bool is_near_tie = !is_new_max
+				&& (max_blocker_z - sampled) * depth_range < VSM_RTX_TAP_TIE_EPS_WORLD
+				&& best_pick_noise > 0.5;
+            if (is_new_max || is_near_tie)
+            {
+                best_sampled_z = sampled;
+                best_tc = tc;
+                best_slot = tap_slot;
+            }
+            max_blocker_z = max(max_blocker_z, sampled);
+            blocker_count++;
+        }
+    }
+
+	if (quad_search)
+	{
+		float  max_x = QuadReadAcrossX(max_blocker_z);
+		float  max_y = QuadReadAcrossY(max_blocker_z);
+		float  max_d = QuadReadAcrossDiagonal(max_blocker_z);
+		uint   cnt_x = QuadReadAcrossX(blocker_count);
+		uint   cnt_y = QuadReadAcrossY(blocker_count);
+		uint   cnt_d = QuadReadAcrossDiagonal(blocker_count);
+		float2 tc_x  = QuadReadAcrossX(best_tc);
+		float2 tc_y  = QuadReadAcrossY(best_tc);
+		float2 tc_d  = QuadReadAcrossDiagonal(best_tc);
+		uint   slot_x = QuadReadAcrossX(best_slot);
+		uint   slot_y = QuadReadAcrossY(best_slot);
+		uint   slot_d = QuadReadAcrossDiagonal(best_slot);
+		float  z_x   = QuadReadAcrossX(best_sampled_z);
+		float  z_y   = QuadReadAcrossY(best_sampled_z);
+		float  z_d   = QuadReadAcrossDiagonal(best_sampled_z);
+
+		blocker_count += cnt_x + cnt_y + cnt_d;
+		if (max_x > max_blocker_z) { max_blocker_z = max_x; best_tc = tc_x; best_slot = slot_x; best_sampled_z = z_x; }
+		if (max_y > max_blocker_z) { max_blocker_z = max_y; best_tc = tc_y; best_slot = slot_y; best_sampled_z = z_y; }
+		if (max_d > max_blocker_z) { max_blocker_z = max_d; best_tc = tc_d; best_slot = slot_d; best_sampled_z = z_d; }
+	}
+
+	if (blocker_count == 0)
+        return uint4(asuint(-1.0), 0, 0, 0);
+
+	float world_delta = (max_blocker_z - pos_l.z) * depth_range;
+	return uint4(asuint(world_delta), asuint(best_tc.x), asuint(best_tc.y), best_slot);
+}
+
+#ifdef VSM_PENUMBRA
+static const float VSM_SUN_ANGULAR_RADIUS = 0.02; // ~17 deg -- hardcoded, tune to taste.
 
 // Confidence-weighted PCF blur (see the old inline version's comments in git
 // history for the full weighting rationale), factored out of get_shadow_vsm
@@ -166,6 +302,18 @@ float vsm_pcf_shadow(VSMConstants c, VSMLighting lighting, int level, float2 pos
                       float noise_angle, float world_delta)
 {
 	float penumbra_world = tan(VSM_SUN_ANGULAR_RADIUS) * max(world_delta, 0);
+	// A distant blocker can make penumbra_world huge, which shows up below as
+	// the DENOMINATOR of every tap's w = depth_gap_world / penumbra_world --
+	// growing it shrinks every tap's weight simultaneously, not just the ones
+	// that should genuinely read as ambiguous. Push it far enough and sum_w
+	// collapses under the "default to lit" threshold at the end of the tap
+	// loop, so the shadow snaps from soft-but-present straight to fully lit
+	// once world_delta crosses that point -- a visible sharp edge instead of
+	// the gradual softening a growing penumbra should produce. Capping the
+	// world-space size keeps w's denominator bounded, so confidence degrades
+	// smoothly instead of falling off a cliff.
+	static const float VSM_MAX_PENUMBRA_WORLD = 3.0; // world units, tune to taste.
+	penumbra_world = min(penumbra_world, VSM_MAX_PENUMBRA_WORLD);
 	float penumbra_texels = clamp(penumbra_world / texel_world_size, 1.0, c.GetPage_size() * 4.0);
  //pos_l_z*=1.001f;
 	float shadow = 0;
@@ -195,7 +343,7 @@ float vsm_pcf_shadow(VSMConstants c, VSMLighting lighting, int level, float2 pos
 			continue;
 		float sampled = lighting.GetVsm_atlas().SampleLevel(pointClampSampler, float3(tc, (float)tap_slot), 0);
 
-		float scaler = 1+0.001*length(VSM_POISSON_DISK[si]);
+		float scaler = 1-0.001;
 		float depth_gap_world = abs(pos_l_z*scaler - sampled) * depth_range;
 		float w = saturate(depth_gap_world / max(penumbra_world, 0.00001));
 		sum_w  += w;
@@ -215,24 +363,17 @@ float vsm_pcf_shadow(VSMConstants c, VSMLighting lighting, int level, float2 pos
 float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 normal, uint2 pixel)
 {
 	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
-	int level_raw = get_vsm_level(c, pos_ls);
-	// Was two early `return 1.0`s here (level<0 = past the edge of the
-	// whole clipmap, then slot==INVALID = page not resident) -- removed.
-	// Both happen before the quad-shared blocker search's
-	// QuadReadAcrossX/Y/Diagonal calls (see below), and a compute-shader
-	// `return` genuinely deactivates the thread (no pixel-shader-style
-	// helper-invocation guarantee) -- so a quad straddling the clipmap's
-	// edge, or with one page resident and its neighbor not, would leave its
-	// still-active quad-mates' reads undefined. `valid` gates the final
-	// return instead; level/slot get clamped to always-safe values (never
-	// used for anything but array indexing bounds below) so the rest of
-	// the function can run uniformly for every thread regardless.
-	bool valid = level_raw >= 0;
-	int level = valid ? level_raw : c.GetActive_min();
+	int level = get_vsm_level(c, pos_ls);
+	// Blocker-search extraction moved the quad-op safety concern (and the
+	// `valid`-threading pattern that used to live here to protect it) into
+	// vsm_search_blocker -- this function no longer does any quad ops
+	// itself, so plain early returns are safe again.
+	if (level < 0)
+		return 1.0;
 
-	uint slot_raw = valid ? get_vsm_slot(c, lighting, pos_ls, level) : VSM_INVALID_SLOT;
-	valid = valid && (slot_raw != VSM_INVALID_SLOT);
-	uint slot = valid ? slot_raw : 0;
+	uint slot = get_vsm_slot(c, lighting, pos_ls, level);
+	if (slot == VSM_INVALID_SLOT)
+		return 1.0;
 
 	// VSMDepthDraw switched from cull=Front (render only back faces, so a
 	// closed mesh's own front face never gets recorded as its own blocker)
@@ -279,17 +420,16 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 	// point sample.
 	float2 texel_size = 1.0 / float2(c.GetPage_size(), c.GetPage_size());
 	float shadow;
-    int blocker_count = 0;
 
 #ifdef VSM_PENUMBRA
-	// PCSS: blocker search (sparse, wide radius, raw depth compares) then a
-	// penumbra-scaled hardware-PCF using the same disc. Directional light,
-	// orthographic page cameras -- no perspective divide, so this is NOT the
-	// textbook point/spot-light formula penumbra=(recv-blocker)*lightSize/
-	// blocker (that assumes projected footprint shrinks with light-space
-	// depth). For a directional light penumbra grows linearly with
-	// world-space blocker-to-receiver distance, scaled by the sun's angular
-	// radius.
+	// PCSS: blocker search now runs in its OWN dispatch (VSM_BlockerSearch,
+	// vsm_search_blocker) -- this reads its result back instead of
+	// re-searching. Directional light, orthographic page cameras -- no
+	// perspective divide, so this is NOT the textbook point/spot-light
+	// formula penumbra=(recv-blocker)*lightSize/blocker (that assumes
+	// projected footprint shrinks with light-space depth). For a
+	// directional light penumbra grows linearly with world-space
+	// blocker-to-receiver distance, scaled by the sun's angular radius.
 	//
 	// A dense small-radius grid (the original cut of this) has two problems
 	// at once: real occluders are usually farther than a couple of texels
@@ -309,234 +449,37 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 	// line where the shadow flips from "fully lit" to a real penumbra.
 	// Converted to a per-level texel count below via texel_world_size, same
 	// as penumbra_texels already does.
-	static const float VSM_BLOCKER_SEARCH_RADIUS_WORLD = 4.0;
-
-	// page_world_size(level)/page_size -- world units per texel at whatever
-	// level this pixel resolved to. Used for the blocker-search radius and
-	// (below) for penumbra_texels; only needed under VSM_PENUMBRA, unlike
-	// the normal-offset bias above which is now a plain constant.
 	float texel_world_size = c.GetLevel_info(level).z / c.GetPage_size();
 
 	// World-units-per-NDC-Z, from the page camera's own InvProj rather than
 	// assuming a specific reversed-Z/orthographic matrix-element layout --
-	// mirrors Common.hlsl's depth_to_wpos unprojection idiom. Hoisted this
-	// far up (not just above the shadow-map blocker-search branch) because
-	// vsm_pcf_shadow needs it too, regardless of whether world_delta or
-	// the RTX-verified rtx_world_delta ends up driving a given blur pass.
+	// mirrors Common.hlsl's depth_to_wpos unprojection idiom. Needed by
+	// vsm_pcf_shadow below regardless of which distance estimate ends up
+	// driving a given blur pass.
 	float4 vsm_depth_range_p0 = mul(page_cam.GetInvProj(), float4(0, 0, 0, 1));
 	float4 vsm_depth_range_p1 = mul(page_cam.GetInvProj(), float4(0, 0, 1, 1));
 	float depth_range = abs(vsm_depth_range_p1.z / vsm_depth_range_p1.w - vsm_depth_range_p0.z / vsm_depth_range_p0.w);
-
-	// Texel-space radius the search disc actually samples at. radius_texels
-	// * texel_world_size cancels back to exactly VSM_BLOCKER_SEARCH_RADIUS_
-	// WORLD regardless of level -- THAT cancellation is the entire point of
-	// dividing by texel_world_size in the first place. A tight ceiling here
-	// (this used to clamp to page_size*0.125) breaks it: at the reference
-	// level the raw ratio already exceeded that ceiling (128 texels wanted,
-	// 64 allowed), so the clamp silently capped the ACHIEVED world-space
-	// radius to half the target, and by a different, level-dependent amount
-	// at every other level -- exactly backwards from the goal of a
-	// level-independent search radius, and the actual cause of the radius
-	// visibly depending on which level a pixel resolves to.
-	//
-	// No longer needed for correctness either way: capping the texel count
-	// used to matter when taps just clamped uselessly at the current page's
-	// edge, but vsm_resolve_tap now walks to whatever page/level genuinely
-	// contains a tap's world position no matter how far that is. Only a
-	// generous sanity ceiling remains, far past anything level_info's real
-	// range should ever produce, plus a small floor so an extremely coarse
-	// level can't round the search down to a useless sub-texel radius.
-	float blocker_search_radius_texels = clamp(
-		VSM_BLOCKER_SEARCH_RADIUS_WORLD / texel_world_size, 2.0, c.GetPage_size() * 4.0);
-
-	// VSM_POISSON_DISK is now file-scope (see above vsm_tap) -- shared with
-	// vsm_pcf_shadow, which needs the same disc for its own tap loop.
 
 	// Rotate the whole disc by a per-pixel blue-noise angle -- 16 fixed taps
 	// otherwise read as a rigid, repeating rosette once the radius gets big
 	// (visible as concentric rings rather than a blur). blue_noise_texture is
 	// baked once per frame at 128x128 (see BlueNoise.sig/blue_noise.hlsl) and
 	// tiled here the same way every other consumer reads it (VoxelGI's
-	// reflection reproject, etc.) -- .x and .y are independent noise values.
-	// This one drives vsm_pcf_shadow's own (always full-resolution,
-	// per-pixel) tap rotation below -- kept genuinely per-pixel for maximum
-	// decorrelation there, unlike search_noise_angle just below.
+	// reflection reproject, etc.). Drives vsm_pcf_shadow's own (always
+	// full-resolution, per-pixel) tap rotation below, and the full-penumbra
+	// ray cone's jitter -- kept genuinely per-pixel for maximum
+	// decorrelation, unlike vsm_search_blocker's own search_noise_angle.
 	float noise_angle = lighting.GetBlue_noise().Load(int3(pixel % 128, 0)).x * 6.28318530718;
 
-	// c.GetQuad_blocker_search() is a per-frame CONSTANT (same value for
-	// every pixel in the dispatch), not per-pixel data, so branching on it
-	// is uniform control flow -- safe for the quad ops used below regardless
-	// of which side of the branch executes.
-	bool quad_search = c.GetQuad_blocker_search() != 0;
+	// vsm_search_blocker's packed result (VSM_BlockerSearch's own dispatch,
+	// see VSMLighting's blocker_result field for the exact uint4 layout).
+	// asfloat(.x)<0 (matching the asuint(-1.0) sentinel it writes) means
+	// "no blocker found" -- skip straight to fully lit, same as the old
+	// inline blocker_count==0 fast path.
+	uint4 blocker_packed = lighting.GetBlocker_result()[pixel];
+	float world_delta_or_sentinel = asfloat(blocker_packed.x);
 
-	// The blocker SEARCH's own rotation angle -- separate from noise_angle
-	// above. When quad-sharing, this MUST be identical across all 4 threads
-	// in a quad: each thread only samples a disjoint 4-tap subset, and that
-	// only reconstructs one genuine 16-tap rotated Poisson disc if all 4
-	// subsets share the same rotation. Using each thread's own per-pixel
-	// noise_angle instead (tried first) turns "4 disjoint quarters of one
-	// disc" into 4 unrelated mini-discs -- under blue noise's frame-to-frame
-	// variation that reads as flicker, worst specifically where the search
-	// RESULT (not just presence/absence of a blocker) is sensitive to
-	// exactly which taps land where, i.e. mostly deep inside already-
-	// shadowed regions rather than at their edges. pixel & ~1 is the quad's
-	// shared base coordinate -- every thread in one quad computes the
-	// identical value with no cross-lane read needed.
-	uint2 search_noise_pixel = quad_search ? (pixel & ~1u) : pixel;
-	// TEMP diagnostic: noise disabled entirely (fixed 0 angle, same
-	// unrotated disc for every pixel) to isolate whether noise itself is
-	// contributing to the reported flicker, independent of quad-sharing.
-	// Expected side effect while this is in: the 16 fixed taps will read as
-	// a rigid, repeating rosette at wide search radii (concentric rings
-	// instead of a blur) -- that's the noise's normal job, not a new bug.
-	// Restore the real line below once done comparing.
-	float search_noise_angle = 0;
-	// float search_noise_angle = lighting.GetBlue_noise().Load(int3(search_noise_pixel % 128, 0)).x * 6.28318530718;
-
-	// "Min filter" idea (closest-to-light, so MAX under this project's
-	// reversed-Z, not MIN) applied over the same already-sampled taps rather
-	// than a separate precomputed pass: instead of averaging every found
-	// blocker's depth, just take the single closest one. Cheap to test --
-	// zero extra sampling -- but numerically this is the same substitution
-	// as the earlier nearest-blocker attempt (reverted as "kinda bad"), so
-	// expect a similar result; the article's real payoff (motion stability)
-	// only comes from actually precomputing this in shadow-map space, which
-	// this isn't doing.
-
-	float max_blocker_z = 0;
-	// Which tap VSM_RTX_VERIFY actually aims its ray at. Deliberately NOT
-	// always max_blocker_z's own tap: a strict max is a stable, repeatable
-	// winner across a local neighborhood of pixels whose rotated Poisson
-	// discs overlap heavily, which is exactly the kind of texel-aligned
-	// stair-stepping source that jittering the ray's final aim (tried
-	// earlier) can't fix -- that jitter only wobbles a few cm around a
-	// point that was already deterministically chosen, and mostly re-hits
-	// the same surface. Randomizing WHICH near-tied candidate wins instead
-	// changes the actual target position, which is the thing that needs to
-	// vary. best_sampled_z is tracked separately from max_blocker_z (which
-	// stays a strict max, unchanged, still driving world_delta's baseline
-	// value below) because the two can now disagree -- best_tc/best_slot's
-	// own depth is best_sampled_z, not necessarily max_blocker_z.
-	float best_sampled_z = 0;
-	float2 best_tc = 0;
-	uint best_slot = 0;
-	float best_pick_noise = lighting.GetBlue_noise().Load(int3(pixel % 128, 0)).y;
-	// World-space NDC-Z tolerance for "close enough to the current max to
-	// randomly swap in instead" -- converted via depth_range (hoisted
-	// above) so this tunes in world units rather than an arbitrary
-	// NDC-Z-range-dependent fraction.
-	static const float VSM_RTX_TAP_TIE_EPS_WORLD = 0.1;
-
-	// Half-resolution blocker search (runtime A/B switch, VSMConstants::
-	// quad_blocker_search -- new/unverified, not yet trusted as the only
-	// path): split the 16 Poisson-disc taps 4-per-thread across each 2x2
-	// pixel quad instead of every pixel doing all 16, merged via
-	// QuadReadAcrossX/Y/Diagonal -- the wide, many-tap search is by far the
-	// dominant cost here, and neighboring pixels' search discs overlap
-	// almost entirely at this radius anyway. quad_lane is this pixel's
-	// index (0-3) within its own 2x2 quad, purely from pixel parity -- SM6
-	// quad ops group compute threads into 2x2 tiles by SV_GroupThreadID.xy
-	// parity, matching this exactly, so no assumption about which physical
-	// corner is "lane 0" is needed (QuadReadAcrossX/Y/Diagonal below read
-	// specific neighbors, not a fixed lane index). quad_search itself is
-	// declared above, alongside search_noise_angle. bi_start/bi_stride/
-	// bi_count fold both modes into one loop instead of duplicating the tap
-	// body.
-	uint quad_lane   = (pixel.x & 1) + (pixel.y & 1) * 2;
-	int  bi_start    = quad_search ? (int)quad_lane : 0;
-	int  bi_stride   = quad_search ? 4 : 1;
-	int  bi_count    = quad_search ? 4 : 16;
-
-	// [loop] not [unroll] -- bi_start/bi_count are runtime values (quad_lane
-	// depends on pixel parity), so the trip count isn't a compile-time
-	// constant DXC can unroll from the loop bounds alone.
-	[loop]
-	for (int bii = 0; bii < bi_count; bii++)
-	{
-		// An invalid pixel (see `valid` above) still runs this loop --
-		// same iteration count, every thread -- but never touches
-		// max_blocker_z/blocker_count/best_*, so it stays at its neutral
-		// zero-initialized state. That matters specifically for the quad
-		// merge below: an invalid pixel's level/slot were clamped to
-		// arbitrary-but-safe dummy values, not meaningful ones, so letting
-		// it actually search and contribute real-looking (but bogus) data
-		// could win the quad's max() against a genuinely valid neighbor.
-		if (!valid)
-			continue;
-		int bi = bi_start + bii * bi_stride;
-		uint tap_slot;
-		float2 tc;
-		// Off the edge of the whole clip level (no page resolves there at
-		// any level, even the coarsest) -- skip, don't count it either way.
-		// search_noise_angle, not noise_angle -- see its own declaration
-		// above for why the search specifically needs a quad-shared angle.
-		if (!vsm_tap(c, lighting, level, pos_ls, texel_world_size,
-		             vsm_rotate(VSM_POISSON_DISK[bi], search_noise_angle), blocker_search_radius_texels,
-		             tap_slot, tc))
-			continue;
-		// Raw depth, not hardware-compared -- vsmShadowSampler is a
-		// SamplerComparisonState and can't be used with plain Sample*.
-		float sampled = lighting.GetVsm_atlas().SampleLevel(pointClampSampler, float3(tc, (float)tap_slot), 0);
-		// Reversed-Z: larger stored value = closer to light. A blocker is
-		// anything closer to the light than this receiver. No self-shadow
-		// dead zone here (unlike vsm_pcf_shadow) -- penumbra_world isn't
-		// known yet at this point, it's what THIS search is still trying to
-		// determine, so there's nothing to express a percentage of. Marginal
-		// self-curvature candidates still get in as low-priority blockers,
-		// but only matter downstream if vsm_pcf_shadow's own percentage-of-
-		// penumbra dead zone doesn't already neutralize them there.
-		if (sampled > pos_l.z)
-		{
-			bool is_new_max  = sampled > max_blocker_z || blocker_count == 0;
-			bool is_near_tie = !is_new_max
-				&& (max_blocker_z - sampled) * depth_range < VSM_RTX_TAP_TIE_EPS_WORLD
-				&& best_pick_noise > 0.5;
-			if (is_new_max || is_near_tie)
-			{
-				best_sampled_z = sampled;
-				best_tc        = tc;
-				best_slot      = tap_slot;
-			}
-			max_blocker_z = max(max_blocker_z, sampled);
-			blocker_count++;
-		}
-	}
-
-	// Merge this thread's own 4-tap partial result with the other 3 quad
-	// lanes' partial results (each from a DISJOINT 4-tap subset, so this
-	// reconstructs full 16-tap coverage, just spread across 4 slightly
-	// different pos_ls centers instead of one shared center -- a minor,
-	// harmless difference at an 8-world-unit search radius). Whichever lane
-	// holds the true max_blocker_z across the quad "wins" -- its own
-	// best_tc/slot/z is what VSM_RTX_VERIFY below aims at for all 4 pixels
-	// in the quad. Guarded by the same uniform quad_search constant as the
-	// loop above, so every lane either does this or none do -- required for
-	// quad ops to be well-defined.
-	if (quad_search)
-	{
-		float  max_x = QuadReadAcrossX(max_blocker_z);
-		float  max_y = QuadReadAcrossY(max_blocker_z);
-		float  max_d = QuadReadAcrossDiagonal(max_blocker_z);
-		uint   cnt_x = QuadReadAcrossX(blocker_count);
-		uint   cnt_y = QuadReadAcrossY(blocker_count);
-		uint   cnt_d = QuadReadAcrossDiagonal(blocker_count);
-		float2 tc_x  = QuadReadAcrossX(best_tc);
-		float2 tc_y  = QuadReadAcrossY(best_tc);
-		float2 tc_d  = QuadReadAcrossDiagonal(best_tc);
-		uint   slot_x = QuadReadAcrossX(best_slot);
-		uint   slot_y = QuadReadAcrossY(best_slot);
-		uint   slot_d = QuadReadAcrossDiagonal(best_slot);
-		float  z_x   = QuadReadAcrossX(best_sampled_z);
-		float  z_y   = QuadReadAcrossY(best_sampled_z);
-		float  z_d   = QuadReadAcrossDiagonal(best_sampled_z);
-
-		blocker_count += cnt_x + cnt_y + cnt_d;
-		if (max_x > max_blocker_z) { max_blocker_z = max_x; best_tc = tc_x; best_slot = slot_x; best_sampled_z = z_x; }
-		if (max_y > max_blocker_z) { max_blocker_z = max_y; best_tc = tc_y; best_slot = slot_y; best_sampled_z = z_y; }
-		if (max_d > max_blocker_z) { max_blocker_z = max_d; best_tc = tc_d; best_slot = slot_d; best_sampled_z = z_d; }
-	}
-
-	if (blocker_count == 0)
+	if (world_delta_or_sentinel < 0)
 	{
 		// Nothing in the search disc occludes the light -- fully lit, skip
 		// the penumbra PCF pass entirely.
@@ -544,84 +487,29 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 	}
 	else
 	{
-		// depth_range computed once, hoisted above the blocker-search
-		// branch -- shared with vsm_pcf_shadow below.
-		//
-		// Reversed-Z: a blocker satisfies sampled > pos_l.z by construction
-		// (that's the only way it entered the search above), so
-		// max_blocker_z - pos_l.z is the positive world-space distance the
-		// closest blocker sits in front of the receiver. Had this backwards
-		// originally (pos_l.z - avg_blocker_z) -- always negative when a
-		// blocker exists, so max(..., 0) clamped it to exactly 0 every time,
-		// making penumbra_texels floor to 1.0 unconditionally regardless of
-		// the sun radius.
-		float world_delta = (max_blocker_z - pos_l.z) * depth_range;
+		float  world_delta = world_delta_or_sentinel;
+		float2 best_tc      = float2(asfloat(blocker_packed.y), asfloat(blocker_packed.z));
+		uint   best_slot    = blocker_packed.w;
 
 #ifdef VSM_RTX_VERIFY
-		if (c.GetRtx_full_penumbra() != 0)
-		{
-			// Full ray-traced penumbra: 16 rays sampling the ENTIRE sun
-			// angular disc (not aimed at any particular blocker -- genuine
-			// stochastic sampling, same cone-jitter construction the old
-			// VSM_RTX_BLOCKER_SEARCH mode used before it was removed this
-			// session), shadow set DIRECTLY from the hit ratio. Bypasses
-			// vsm_pcf_shadow entirely for this pixel -- the ray set itself
-			// already encodes the real penumbra, no VSM-distance-driven
-			// blur needed on top of it.
-			float3 sun_dir       = normalize(GetFrameInfo().GetSunDir().xyz);
-			float3 penumbra_up   = (abs(sun_dir.y) > 0.99) ? float3(1, 0, 0) : float3(0, 1, 0);
-			float3 penumbra_right = normalize(cross(penumbra_up, sun_dir));
-			penumbra_up            = normalize(cross(sun_dir, penumbra_right));
-			float3 ray_origin     = wpos + normal * 0.005;
-
-			int lit_count = 0;
-			[unroll]
-			for (int fi = 0; fi < 16; fi++)
-			{
-				float2 rotated = vsm_rotate(VSM_POISSON_DISK[fi], noise_angle);
-				float3 jittered_dir = normalize(sun_dir +
-					(penumbra_right * rotated.x + penumbra_up * rotated.y) * tan(VSM_SUN_ANGULAR_RADIUS));
-
-				RayDesc ray;
-				ray.Origin    = ray_origin;
-				ray.Direction = jittered_dir;
-				ray.TMin      = 0.01;
-				// No VSM estimate to clamp against here (that's the whole
-				// point -- these rays sample the light disc directly, not a
-				// specific known blocker) -- generous fixed depth, tune to
-				// the scene's typical near-occluder scale.
-				ray.TMax      = 500.0;
-
-				// ACCEPT_FIRST_HIT_AND_END_SEARCH is safe here (unlike the
-				// single-ray verify path below) -- this is a pure hit/miss
-				// test, not a distance measurement, so the FIRST hit found
-				// is exactly as good as the closest one for deciding
-				// occluded-vs-not.
-				RayQuery<RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rayQuery;
-				rayQuery.TraceRayInline(GetRaytracing().GetScene(), RAY_FLAG_NONE, 0xFF, ray);
-				rayQuery.Proceed();
-
-				if (rayQuery.CommittedStatus() == COMMITTED_NOTHING)
-					lit_count++;
-			}
-			shadow = lit_count / 16.0;
-		}
-		else
-		{
 		// Shadow maps only record the front-most surface per texel -- a
 		// closer blocker can be geometrically present but never rasterized
-		// into the atlas at the exact XY the search looked, so
-		// max_blocker_z above can understate the true occlusion.
+		// into the atlas at the exact XY the search looked, so world_delta
+		// above can understate the true occlusion.
 		//
 		// Rather than probing blindly along the sun direction (which
 		// assumes the blocker sits exactly on that line -- wrong whenever
 		// the winning tap had a lateral offset, which is most of them, by
 		// construction of the Poisson disc), read the ACTUAL point the
-		// shadow map flagged: unproject (best_tc, best_sampled_z, best_slot)
-		// -- that tap's own page camera, since the winning tap may have
-		// resolved to a different page/level than the receiver via
-		// vsm_resolve_tap's coarser-level walk -- back into world space,
-		// and aim the verification ray directly at that specific point.
+		// shadow map flagged: unproject (best_tc, best_slot) -- that tap's
+		// own page camera, since the winning tap may have resolved to a
+		// different page/level than the receiver via vsm_resolve_tap's
+		// coarser-level walk -- back into world space, and aim the
+		// verification ray directly at that specific point. best_sampled_z
+		// is re-sampled from the atlas here rather than carried through
+		// vsm_search_blocker's packed uint4 -- it's just the depth already
+		// stored at (best_tc, best_slot), one extra texture read is cheaper
+		// than widening the packed result to a 5th channel.
 		// TMax is the distance to it plus a margin, not a tight bound: the
 		// point is to give the ray room to find something EVEN CLOSER along
 		// that same line of sight, not just re-confirm the target.
@@ -645,6 +533,7 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 		float rtx_world_delta = world_delta;
 		{
 			Camera blocker_page_cam = lighting.GetPage_cameras()[best_slot];
+			float best_sampled_z = lighting.GetVsm_atlas().SampleLevel(pointClampSampler, float3(best_tc, (float)best_slot), 0);
 			// Undo light_tc's own UV<->NDC mapping (see its derivation
 			// above get_shadow_vsm's atlas sample): tc.x*2-1 un-does
 			// *0.5+0.5, 1-tc.y*2 un-does *(-0.5)+0.5.
@@ -725,7 +614,6 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 			float chosen_delta = rtx_hit ? rtx_world_delta : world_delta;
 			shadow = vsm_pcf_shadow(c, lighting, level, pos_ls, pos_l.z, texel_world_size, depth_range, noise_angle, chosen_delta);
 		}
-		}
 #else
 		shadow = vsm_pcf_shadow(c, lighting, level, pos_ls, pos_l.z, texel_world_size, depth_range, noise_angle, world_delta);
 #endif
@@ -745,23 +633,16 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 		for (int ox = -1; ox <= 1; ox++)
 		{
 			float2 tc = light_tc + float2(ox, oy) * texel_size;
-			shadow += lighting.GetVsm_atlas().SampleCmpLevelZero(vsmShadowSampler, float3(tc, (float)slot), pos_l.z*1.01);
+			shadow += lighting.GetVsm_atlas().SampleCmpLevelZero(vsmShadowSampler, float3(tc, (float)slot), pos_l.z*0.999);
 		}
 	}
 	shadow /= 9.0;
-	
-    //shadow = blocker_count / 16.0;
 #endif
 
 	if (pos_l.z < 0 || pos_l.z > 1 || any(light_tc < 0) || any(light_tc > 1))
 		shadow = 1;
 
-	// Was the two early `return 1.0`s at the top of this function -- now
-	// deferred to here so every thread runs the same code uniformly (see
-	// `valid`'s own comment above). Whatever `shadow` ended up as for an
-	// invalid pixel is meaningless dummy-input noise; the original
-	// behavior (fully lit) is what actually gets returned.
-	return valid ? shadow : 1.0;
+	return shadow;
 }
 
 // Debug: raw sampled atlas depth at the page this world pos maps to (0 if

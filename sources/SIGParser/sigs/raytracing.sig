@@ -236,6 +236,28 @@ PassNode RTXShadow
 	[Write] ByteAdressBuffer WorkGraphBuffer;
 }
 
+# Debug reference mode for RTXShadow (see RTX::debug_full_reference_shadow
+# in RTX.ixx): a genuine 16-ray soft-shadow computation, entirely separate
+# from the Bend/FFX hybrid-shadow-denoiser dispatch RTXShadow normally runs
+# -- ground truth to compare VSM's own PCSS approximation against. Bound at
+# the same Instance2 slot the Bend path's own DispatchParameters (SS_Shadow.
+# sig) uses, since RTXShadow::render() only ever binds one or the other per
+# frame, never both at once.
+[Bind = DefaultLayout::Instance2]
+struct RTXShadowReference
+{
+	GBuffer gbuffer;
+	RWTexture2D<float4> output;
+}
+
+ComputePSO RTXShadowReferenceCompute
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_REFERENCE]
+	compute = RTXShadowReference;
+}
+
 [Static]
 [Compute]
 PassNode RTXColorPass

@@ -50,6 +50,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "RaytracingRays") return SlotID::RaytracingRays;
 	if(slot_name == "ColorRTXOutput") return SlotID::ColorRTXOutput;
 	if(slot_name == "Raytracing") return SlotID::Raytracing;
+	if(slot_name == "RTXShadowReference") return SlotID::RTXShadowReference;
 	if(slot_name == "SceneData") return SlotID::SceneData;
 	if(slot_name == "GBuffer") return SlotID::GBuffer;
 	if(slot_name == "SkyData") return SlotID::SkyData;
@@ -195,6 +196,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::ColorRTXOutput) return Slots::ColorRTXOutput::Slot::ID;
 
 	if(id == SlotID::Raytracing) return Slots::Raytracing::Slot::ID;
+
+	if(id == SlotID::RTXShadowReference) return Slots::RTXShadowReference::Slot::ID;
 
 	if(id == SlotID::SceneData) return Slots::SceneData::Slot::ID;
 
@@ -357,6 +360,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::RaytracingRays) return "RaytracingRays";
 	if(id == SlotID::ColorRTXOutput) return "ColorRTXOutput";
 	if(id == SlotID::Raytracing) return "Raytracing";
+	if(id == SlotID::RTXShadowReference) return "RTXShadowReference";
 	if(id == SlotID::SceneData) return "SceneData";
 	if(id == SlotID::GBuffer) return "GBuffer";
 	if(id == SlotID::SkyData) return "SkyData";
