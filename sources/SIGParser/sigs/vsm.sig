@@ -58,6 +58,17 @@ struct VSMConstants
 	# still shade normally, for context. Only read by VSM_Combine's own
 	# resolve dispatch; VSM_BlockerSearch never consults it.
 	int debug_hiz_classify;
+	# Debug view: when nonzero, get_shadow_vsm colors every pixel by which
+	# clipmap level and which page WITHIN that level it resolved to --
+	# one flat color per level (palette[level % 8], same palette the older
+	# compile-time VSM_DEBUG_HEATMAP define already used), darkened on a
+	# checkerboard by (page_x + page_y) parity so page SEAMS show up as a
+	# visible brightness step, not just level boundaries. Built to make it
+	# easy to tell whether a visual artifact (e.g. a thin line inside an
+	# otherwise-confident Hi-Z classification region) lines up with an
+	# actual page/level boundary or not. Only read by VSM_Combine's own
+	# resolve dispatch.
+	int debug_page_grid;
 	float4x4 light_view;
 	# MaxLevels (VSM.ixx) storage slots -- one geometric ladder, no
 	# regular/adaptive split (see VSMClipmap::page_world_size). Keep this in

@@ -67,6 +67,13 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	float blocker_search_radius_texels = clamp(
 		VSM_BLOCKER_SEARCH_RADIUS_WORLD / texel_world_size, 2.0, c.GetPage_size() * 4.0);
 
+	// Reverted to zero margin (both the fixed-0.5 and the radius-
+	// proportional versions were tried and neither visibly changed the
+	// "shadow=1 nearly everywhere" problem) -- going back to this known-
+	// working-better baseline to re-diagnose step by step instead of
+	// guessing at margin formulas further.
+	float hiz_classify_margin_ndc = 0.0;
+
 	// Phase 5.18 Part A: cheap classification against the receiver's own
 	// page Hi-Z pyramid (VSMPageHiZ, rebuilt fresh this frame by
 	// VSM_HiZRebuild -- see that pass's comment for the ordering this
@@ -177,8 +184,8 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 				float2 minmax = float2(min(min(c00.x, c10.x), min(c01.x, c11.x)),
 				                       max(max(c00.y, c10.y), max(c01.y, c11.y)));
 
-				confident_lit  = minmax.y < pos_l.z;
-				confident_dark = !confident_lit && minmax.x > pos_l.z;
+				confident_lit  = minmax.y < pos_l.z - hiz_classify_margin_ndc;
+				confident_dark = !confident_lit && minmax.x > pos_l.z + hiz_classify_margin_ndc;
 				classified = true;
 			}
 		}
@@ -220,22 +227,17 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 			{
 				float2 lrect_texels = (luv_max - luv_min) * float2(lw, lh);
 				float  lmip_f = ceil(log2(max(max(lrect_texels.x, lrect_texels.y), 1.0)));
-				// lnumLevels - 2, NOT - 1: the coarsest mip (1x1, e.g. at
-				// pages_per_level=4 that's ALL 16 pages of the level
-				// collapsed into one min/max pair) technically satisfies
-				// the coverage guarantee, but "everything closer to light
-				// ANYWHERE in the whole level" is not a spatially
-				// meaningful bound for a single receiver -- a level can
-				// span the entire visible scene, so whichever one page
-				// happens to contain the tallest nearby building dominates
-				// the reduction for every other receiver in the level,
-				// producing a classification that reads as flatly wrong
-				// (not just imprecise) wherever it wins the confidence
-				// check. Confirmed live: rectangular patches of confident_
-				// lit/dark appearing with no correlation to real geometry.
-				// Capping one mip short keeps the fallback to at most a
-				// 2x2-page neighborhood -- still meaningfully local.
-				bool   lmip_available = lmip_f <= (float)(lnumLevels - 2);
+				// Used to cap this at lnumLevels - 2 (rejecting the
+				// coarsest, whole-level 1x1 mip) -- that was never really
+				// about coverage, it was a symptom of every page's camera
+				// having an independently-drifting Z range (see VSM.cpp's
+				// VSM_LIGHT_Z_NEAR/FAR), which made combining far-apart
+				// pages' NDC-Z values genuinely meaningless, not just
+				// imprecise. Now that every page camera shares one fixed Z
+				// range, the whole-level summary is merely COARSE (a real
+				// but honest loss of precision, same as any Hi-Z mip), not
+				// wrong -- so the full mip range is safe to trust again.
+				bool   lmip_available = lmip_f <= (float)(lnumLevels - 1);
 
 				if (lmip_available)
 				{
@@ -247,8 +249,8 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 					float2 lminmax = float2(min(min(lc00.x, lc10.x), min(lc01.x, lc11.x)),
 					                        max(max(lc00.y, lc10.y), max(lc01.y, lc11.y)));
 
-					confident_lit  = lminmax.y < pos_l.z;
-					confident_dark = !confident_lit && lminmax.x > pos_l.z;
+					confident_lit  = lminmax.y < pos_l.z - hiz_classify_margin_ndc;
+					confident_dark = !confident_lit && lminmax.x > pos_l.z + hiz_classify_margin_ndc;
 					via_level      = true;
 				}
 			}

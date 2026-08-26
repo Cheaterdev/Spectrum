@@ -17,6 +17,7 @@ struct VSMConstants
 	int debug_rtx_reference; // int
 	int hiz_blocker_classify; // int
 	int debug_hiz_classify; // int
+	int debug_page_grid; // int
 	float4x4 light_view; // float4x4
 	float4 level_info[26]; // float4
 	int GetActive_min() { return active_min; }
@@ -28,6 +29,7 @@ struct VSMConstants
 	int GetDebug_rtx_reference() { return debug_rtx_reference; }
 	int GetHiz_blocker_classify() { return hiz_blocker_classify; }
 	int GetDebug_hiz_classify() { return debug_hiz_classify; }
+	int GetDebug_page_grid() { return debug_page_grid; }
 	float4x4 GetLight_view() { return light_view; }
 	float4 GetLevel_info(int i) { return level_info[i]; }
 };

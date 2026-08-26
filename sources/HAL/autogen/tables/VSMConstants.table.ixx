@@ -26,6 +26,7 @@ export namespace Table
 		int debug_rtx_reference;
 		int hiz_blocker_classify;
 		int debug_hiz_classify;
+		int debug_page_grid;
 		float4x4 light_view;
 		float4 level_info[26];
 		int& GetActive_min() { return active_min; }
@@ -37,6 +38,7 @@ export namespace Table
 		int& GetDebug_rtx_reference() { return debug_rtx_reference; }
 		int& GetHiz_blocker_classify() { return hiz_blocker_classify; }
 		int& GetDebug_hiz_classify() { return debug_hiz_classify; }
+		int& GetDebug_page_grid() { return debug_page_grid; }
 		float4x4& GetLight_view() { return light_view; }
 		float4* GetLevel_info() { return level_info; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -52,6 +54,7 @@ export namespace Table
 			compiler.compile(debug_rtx_reference);
 			compiler.compile(hiz_blocker_classify);
 			compiler.compile(debug_hiz_classify);
+			compiler.compile(debug_page_grid);
 			compiler.compile(light_view);
 			compiler.compile(level_info);
 		}
@@ -73,6 +76,7 @@ export namespace Table
 			ar& NVP(debug_rtx_reference);
 			ar& NVP(hiz_blocker_classify);
 			ar& NVP(debug_hiz_classify);
+			ar& NVP(debug_page_grid);
 			ar& NVP(light_view);
 			ar& NVP(level_info);
 		}

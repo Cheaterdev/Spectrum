@@ -1237,6 +1237,12 @@ VSM::VSM() : VariableContext(L"VSM")
 			constants.GetPages_per_level()     = page_table.clipmap.pages_per_level;
 			constants.GetQuad_blocker_search()  = use_vsm_stochastic_blocker_search ? 2 : (use_vsm_quad_blocker_search ? 1 : 0);
 			constants.GetHiz_blocker_classify() = use_vsm_hiz_blocker_classify ? 1 : 0;
+			// TEMP DEBUG (live "still lots of holes" investigation):
+			// vsm_search_blocker's own coverage-gap-vs-genuinely-ambiguous
+			// diagnostic needs this here too, not just in m_combine_render --
+			// see its own comment for what it does with it. Remove alongside
+			// that diagnostic once confirmed.
+			constants.GetDebug_hiz_classify()   = use_vsm_debug_hiz_classify ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
 			// rtx_dual_blur/debug_rtx_reference are resolve-only concerns
 			// (see m_combine_render) -- left at their zero-initialized
@@ -1333,6 +1339,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			// rtx_shadow_mask was never bound to anything real above.
 			constants.GetDebug_rtx_reference()  = (use_vsm_debug_rtx_reference && data.ShadowMask) ? 1 : 0;
 			constants.GetDebug_hiz_classify()   = use_vsm_debug_hiz_classify ? 1 : 0;
+			constants.GetDebug_page_grid()      = use_vsm_debug_page_grid ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
 
 			// Propagates into RTXShadow::render (PassDefaults.cpp) via the

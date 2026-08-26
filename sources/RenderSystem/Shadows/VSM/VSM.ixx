@@ -117,6 +117,14 @@ public:
 	// toggle since it's generally useful for judging how much of the
 	// frame the optimization is actually covering.
 	Variable<bool> use_vsm_debug_hiz_classify = { false, "Debug: Hi-Z classify (green=lit, blue=dark)", this };
+
+	// Debug view: colors every pixel by clipmap level (one flat hue per
+	// level) with a checkerboard darkening by page position within that
+	// level, so page and level SEAMS are directly visible instead of
+	// having to infer them from an artifact's shape. Built specifically to
+	// check whether a visual artifact lines up with an actual page/level
+	// boundary.
+	Variable<bool> use_vsm_debug_page_grid = { false, "Debug: page/level grid", this };
 private:
 	// Tracks the previous frame's toggle state so plan_frame() can detect
 	// an off->on transition and force a full pyramid rebuild -- see its

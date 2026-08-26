@@ -75,6 +75,15 @@ float4 combine_result(float2 tc, uint2 pixel)
 		if (shadow < 0)     return float4(0, 1, 0, 1);
 	}
 
+	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_page_grid): flat
+	// per-level color, checkerboard-darkened by page position within that
+	// level, so page/level seams are directly visible -- used to check
+	// whether a visual artifact actually lines up with a real boundary.
+	if (constants.GetDebug_page_grid() != 0)
+	{
+		return float4(get_vsm_debug_page_grid_color(constants, info.pos), 1);
+	}
+
 	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_rtx_reference):
 	// bypass VSM's own shadow entirely and show RTXShadow's own denoised
 	// full-RT shadow mask as grayscale.

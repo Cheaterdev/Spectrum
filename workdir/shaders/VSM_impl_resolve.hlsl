@@ -413,7 +413,7 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 		for (int ox = -1; ox <= 1; ox++)
 		{
 			float2 tc = light_tc + float2(ox, oy) * texel_size;
-			shadow += lighting.GetVsm_atlas().SampleCmpLevelZero(vsmShadowSampler, float3(tc, (float)slot), pos_l.z*0.999);
+			shadow += lighting.GetVsm_atlas().SampleCmpLevelZero(vsmShadowSampler, float3(tc, (float)slot), pos_l.z*0.9999);
 		}
 	}
 	shadow /= 9.0;
@@ -466,4 +466,28 @@ float3 get_vsm_debug_color(VSMConstants c, float3 wpos)
 		float3(0, 1, 1), float3(1, 0, 1), float3(1, 0.5, 0), float3(0.5, 0, 1)
 	};
 	return palette[level % 8];
+}
+
+// Debug view: same one-flat-color-per-level palette as get_vsm_debug_color
+// above, but ALSO darkened on a checkerboard by (page_x + page_y) parity
+// within that level -- makes page seams visible as a brightness step, not
+// just level boundaries. Built to check whether a visual artifact (e.g. a
+// thin line inside an otherwise-uniformly-classified Hi-Z region) actually
+// lines up with a real page/level boundary.
+float3 get_vsm_debug_page_grid_color(VSMConstants c, float3 wpos)
+{
+	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
+	int level = get_vsm_level(c, pos_ls);
+	if (level < 0)
+		return float3(0, 0, 0);
+
+	float4 info = c.GetLevel_info(level);
+	int2 page = int2(floor((pos_ls - info.xy) / max(info.z, 0.0001)));
+
+	static const float3 palette[8] = {
+		float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1), float3(1, 1, 0),
+		float3(0, 1, 1), float3(1, 0, 1), float3(1, 0.5, 0), float3(0.5, 0, 1)
+	};
+	bool checker = ((page.x + page.y) & 1) != 0;
+	return palette[level % 8] * (checker ? 0.5 : 1.0);
 }
