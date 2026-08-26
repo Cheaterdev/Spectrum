@@ -26,27 +26,42 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 
 	uint2 s = dst * 2;
 
-	// reversed-Z: min keeps the farthest depth (conservative occluder).
-	float d = min(min(data.GetSrc().Load(int4(s.x,     s.y,     slot, 0)),
-	                   data.GetSrc().Load(int4(s.x + 1, s.y,     slot, 0))),
-	              min(data.GetSrc().Load(int4(s.x,     s.y + 1, slot, 0)),
-	                  data.GetSrc().Load(int4(s.x + 1, s.y + 1, slot, 0))));
+	// .x = running MIN (farthest depth, conservative occluder -- unchanged
+	// semantics). .y = running MAX (closest depth, Phase 5.18 Part A --
+	// drives VSM_BlockerSearch's classification). Same 2x2 (+ edge-fold)
+	// footprint for both, just min() and max() of the same four taps.
+	float2 t00 = data.GetSrc().Load(int4(s.x,     s.y,     slot, 0));
+	float2 t10 = data.GetSrc().Load(int4(s.x + 1, s.y,     slot, 0));
+	float2 t01 = data.GetSrc().Load(int4(s.x,     s.y + 1, slot, 0));
+	float2 t11 = data.GetSrc().Load(int4(s.x + 1, s.y + 1, slot, 0));
+	float dMin = min(min(t00.x, t10.x), min(t01.x, t11.x));
+	float dMax = max(max(t00.y, t10.y), max(t01.y, t11.y));
 
 	// Odd source dimension: floor(src/2) leaves a trailing row/column no 2x2
 	// step ever reads. Dropping it raises the min, i.e. reports surfaces as
-	// CLOSER than they are, which over-culls. Fold it into the last texel.
+	// CLOSER than they are, which over-culls (and symmetrically would lower
+	// the max, under-reporting the closest occluder). Fold it into the last
+	// texel, both channels.
 	if ((srcW & 1) && dst.x == dstW - 1)
 	{
-		d = min(d, data.GetSrc().Load(int4(srcW - 1, s.y, slot, 0)));
-		d = min(d, data.GetSrc().Load(int4(srcW - 1, min(s.y + 1, srcH - 1), slot, 0)));
+		float2 e0 = data.GetSrc().Load(int4(srcW - 1, s.y, slot, 0));
+		float2 e1 = data.GetSrc().Load(int4(srcW - 1, min(s.y + 1, srcH - 1), slot, 0));
+		dMin = min(dMin, min(e0.x, e1.x));
+		dMax = max(dMax, max(e0.y, e1.y));
 	}
 	if ((srcH & 1) && dst.y == dstH - 1)
 	{
-		d = min(d, data.GetSrc().Load(int4(s.x, srcH - 1, slot, 0)));
-		d = min(d, data.GetSrc().Load(int4(min(s.x + 1, srcW - 1), srcH - 1, slot, 0)));
+		float2 e0 = data.GetSrc().Load(int4(s.x, srcH - 1, slot, 0));
+		float2 e1 = data.GetSrc().Load(int4(min(s.x + 1, srcW - 1), srcH - 1, slot, 0));
+		dMin = min(dMin, min(e0.x, e1.x));
+		dMax = max(dMax, max(e0.y, e1.y));
 	}
 	if ((srcW & 1) && (srcH & 1) && dst.x == dstW - 1 && dst.y == dstH - 1)
-		d = min(d, data.GetSrc().Load(int4(srcW - 1, srcH - 1, slot, 0)));
+	{
+		float2 e = data.GetSrc().Load(int4(srcW - 1, srcH - 1, slot, 0));
+		dMin = min(dMin, e.x);
+		dMax = max(dMax, e.y);
+	}
 
-	data.GetDst_mip()[uint3(dst, slot)] = d;
+	data.GetDst_mip()[uint3(dst, slot)] = float2(dMin, dMax);
 }

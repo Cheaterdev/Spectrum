@@ -54,6 +54,13 @@ Pipeline MainPipeline
 											RTXShadow;
 											[Async]PSSM_Combine;
 											[Async2]VSM_DepthAnalysis;
+											# Phase 5.18 Part A: must run before VSM_BlockerSearch now (its
+											# classification step reads VSM_PageHiZ) -- same [Async2] queue
+											# so that ordering is ordinary same-queue in-order execution,
+											# not a new cross-queue fence. See VSM_HiZRebuild's own comment
+											# in vsm.sig. Moved here from its previous spot near the end of
+											# the pipeline.
+											[Async2]VSM_HiZRebuild;
 											[Async2]VSM_BlockerSearch;
 											[Async2]VSM_Combine;
 											# voxel screen (voxel_gi.generate)
@@ -71,8 +78,6 @@ Pipeline MainPipeline
 	[Async]FSR;
 	UpscalingDLSS;
 
-
-	[Async]VSM_HiZRebuild;
 	stencil_renderer_after;
 
 	#Debug stuff

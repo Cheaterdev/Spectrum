@@ -96,6 +96,27 @@ public:
 	// PassDefaults.cpp), independent of PSSM/VSM, so no extra pass wiring
 	// is needed beyond VSM_Combine reading its output.
 	Variable<bool> use_vsm_debug_rtx_reference = { false, "Debug: RTX reference shadow mask", this };
+
+	// Runtime A/B toggle for the min/max Hi-Z blocker-search classification
+	// (Phase 5.18 Part A): when on, vsm_search_blocker checks the
+	// receiver's own page pyramid first and skips the 16-tap search
+	// entirely for pixels it can already answer confidently (nothing in
+	// range can block / everything in range blocks). Pure perf lever --
+	// shouldn't change the shadow's appearance, only its cost -- default
+	// on, but kept switchable for A/B measurement against the un-optimized
+	// search.
+	Variable<bool> use_vsm_hiz_blocker_classify = { true, "Hi-Z blocker classify", this };
+
+	// Debug view: shows WHERE vsm_search_blocker's Hi-Z classification
+	// fires and which way, instead of just its effect on the shadow --
+	// green = confident_lit (nothing in range can block), blue =
+	// confident_dark (everything in range blocks). Ambiguous/real-search
+	// pixels still shade normally underneath, for context. Grew out of
+	// live debugging a real coverage-gap bug in the classification itself
+	// (see vsm_search_blocker's own comments) -- kept as a permanent
+	// toggle since it's generally useful for judging how much of the
+	// frame the optimization is actually covering.
+	Variable<bool> use_vsm_debug_hiz_classify = { false, "Debug: Hi-Z classify (green=lit, blue=dark)", this };
 private:
 	// Tracks the previous frame's toggle state so plan_frame() can detect
 	// an off->on transition and force a full pyramid rebuild -- see its

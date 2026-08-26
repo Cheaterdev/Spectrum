@@ -494,11 +494,24 @@ VSM::VSM() : VariableContext(L"VSM")
 	const int pages_side       = page_table.clipmap.pages_per_level;
 	const int pages_per_level  = pages_side * pages_side;
 
-	// One Hi-Z pyramid slice per physical page, mip chain down to an 8x8
-	// floor (1x1 wastes dispatches/VRAM for no real occluder benefit).
+	// One Hi-Z pyramid slice per physical page, mip chain down to 1x1.
+	// Used to floor at 8x8 (1x1 "wastes dispatches/VRAM for no real
+	// occluder benefit") back when this only served occlusion culling.
+	// Phase 5.18 Part A's blocker-search classification (VSM_impl_search.
+	// hlsl's vsm_search_blocker) needs deeper mips too: its rect_in_page
+	// guard already caps the search radius it will ever classify at half
+	// the page width (a wider disc always fails that check, at any mip
+	// depth), which works out to needing mip index up to log2(page_size)
+	// -- i.e. a chain reaching all the way to 1x1 for a 512 page. Stopping
+	// at 8x8 left that last stretch (mips 7/8/9) permanently unavailable,
+	// which showed up live as classification silently falling back to a
+	// mip finer than the coverage guarantee needs -- a missed blocker, a
+	// shadow that should exist vanishing. The extra 3 mips are tiny
+	// (4x4+2x2+1x1 per slot) so the old VRAM/dispatch-count worry doesn't
+	// really apply at this depth.
 	const int physical_slots = page_table.physical_page_count;
 	int pyramid_mip_count = 1;
-	for (int s = page_table.page_size; s > 8; s >>= 1)
+	for (int s = page_table.page_size; s > 1; s >>= 1)
 		pyramid_mip_count++;
 
 	// ---- Page rendering (Phase 5.8: ONE pass, one exec_indirect() call
@@ -529,7 +542,10 @@ VSM::VSM() : VariableContext(L"VSM")
 		builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		builder.create(data.VSM_PageCameras, { (size_t)MaxPages }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		// Static like VSM_Atlas: must survive until this page is next dirty.
-		builder.create(data.VSM_PageHiZ, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32_FLOAT, (UINT)physical_slots, (UINT)pyramid_mip_count }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+		// R32G32_FLOAT, not R32_FLOAT: Phase 5.18 Part A widened the pyramid
+		// to two channels (.x = min/farthest, .y = max/closest -- see
+		// VSMPageHiZ's own comment in vsm.sig).
+		builder.create(data.VSM_PageHiZ, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32G32_FLOAT, (UINT)physical_slots, (UINT)pyramid_mip_count }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 		// Now GPU-appended by VSM_GatherDispatch -- this pass only reads it
 		// via exec_indirect.
 		builder.need(data.VSM_DispatchCommands, FrameGraph::ResourceFlags::ComputeRead);
@@ -998,6 +1014,11 @@ VSM::VSM() : VariableContext(L"VSM")
 		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
+		// Phase 5.18 Part A: vsm_search_blocker's classification step reads
+		// this -- needs this frame's freshly-rebuilt pyramid, hence
+		// VSM_HiZRebuild moving to run immediately before this pass (same
+		// [Async2] queue, test.sig).
+		builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
 		auto& frame = builder.graph->get_context<ViewportInfo>();
 		builder.create(data.VSM_BlockerResult,
@@ -1035,12 +1056,22 @@ VSM::VSM() : VariableContext(L"VSM")
 		}
 
 		{
+			// Phase 5.18 Part A: same one-liner m_renderpages_render already
+			// uses to bind this for the mesh shader's occlusion test -- the
+			// whole mip chain, vsm_search_blocker picks its own mip.
+			Slots::VSMPageHiZ pageHiZ;
+			pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
+			compute.set(pageHiZ);
+		}
+
+		{
 			Slots::VSMConstants constants;
 			constants.GetActive_min()          = active_min;
 			constants.GetActive_max()          = active_max;
 			constants.GetPage_size()           = page_table.page_size;
 			constants.GetPages_per_level()     = page_table.clipmap.pages_per_level;
 			constants.GetQuad_blocker_search()  = use_vsm_stochastic_blocker_search ? 2 : (use_vsm_quad_blocker_search ? 1 : 0);
+			constants.GetHiz_blocker_classify() = use_vsm_hiz_blocker_classify ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
 			// rtx_dual_blur/debug_rtx_reference are resolve-only concerns
 			// (see m_combine_render) -- left at their zero-initialized
@@ -1136,6 +1167,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			// (see m_combine_setup's builder.exists() guard) -- otherwise
 			// rtx_shadow_mask was never bound to anything real above.
 			constants.GetDebug_rtx_reference()  = (use_vsm_debug_rtx_reference && data.ShadowMask) ? 1 : 0;
+			constants.GetDebug_hiz_classify()   = use_vsm_debug_hiz_classify ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
 
 			// Propagates into RTXShadow::render (PassDefaults.cpp) via the

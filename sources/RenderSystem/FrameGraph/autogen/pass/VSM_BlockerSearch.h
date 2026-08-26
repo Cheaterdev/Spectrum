@@ -28,6 +28,9 @@ public:
 		Handlers::StructuredBuffer<Table::Camera> VSM_PageCameras = ResourceID::VSM_PageCameras;
 
 
+		Handlers::Texture VSM_PageHiZ = ResourceID::VSM_PageHiZ;
+
+
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
@@ -53,6 +56,7 @@ public:
 			{ ResourceID::VSM_Atlas, false },
 			{ ResourceID::VSM_PageTable, false },
 			{ ResourceID::VSM_PageCameras, false },
+			{ ResourceID::VSM_PageHiZ, false },
 			{ ResourceID::BlueNoise, false },
 			{ ResourceID::VSM_BlockerResult, true },
 		};

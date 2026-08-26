@@ -8,6 +8,6 @@
 #include "sig_hlsl.hlsl"
 struct VSMPageHiZ
 {
-	uint page_hiz; // Texture2DArray<float>
-	Texture2DArray<float> GetPage_hiz() { return ResourceDescriptorHeap[page_hiz]; }
+	uint page_hiz; // Texture2DArray<float2>
+	Texture2DArray<float2> GetPage_hiz() { return ResourceDescriptorHeap[page_hiz]; }
 };

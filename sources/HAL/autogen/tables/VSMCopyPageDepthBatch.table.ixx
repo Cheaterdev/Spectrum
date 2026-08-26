@@ -19,9 +19,9 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::VSMCopyPageDepthBatch;
 		HLSL::Texture2DArray<float> atlas;
 		HLSL::StructuredBuffer<uint> dirty_slots;
-		HLSL::RWTexture2DArray<float> dst_mip0;
+		HLSL::RWTexture2DArray<float2> dst_mip0;
 		HLSL::Texture2DArray<float>& GetAtlas() { return atlas; }
-		HLSL::RWTexture2DArray<float>& GetDst_mip0() { return dst_mip0; }
+		HLSL::RWTexture2DArray<float2>& GetDst_mip0() { return dst_mip0; }
 		HLSL::StructuredBuffer<uint>& GetDirty_slots() { return dirty_slots; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
@@ -35,7 +35,7 @@ export namespace Table
 		{
 			uint atlas; // Texture2DArray<float>
 			uint dirty_slots; // StructuredBuffer<uint>
-			uint dst_mip0; // RWTexture2DArray<float>
+			uint dst_mip0; // RWTexture2DArray<float2>
 
 			
 			private:

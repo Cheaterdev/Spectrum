@@ -26,6 +26,7 @@
 #include "RTXShadow.h"
 #include "PSSM_Combine.h"
 #include "VSM_DepthAnalysis.h"
+#include "VSM_HiZRebuild.h"
 #include "VSM_BlockerSearch.h"
 #include "VSM_Combine.h"
 #include "VoxelScreen.h"
@@ -35,7 +36,6 @@
 #include "SMAA.h"
 #include "FSR.h"
 #include "UpscalingDLSS.h"
-#include "VSM_HiZRebuild.h"
 #include "stencil_renderer_after.h"
 #include "RTXColorPass.h"
 #include "VoxelDebug.h"
@@ -64,6 +64,7 @@ public:
 	Passes::ReflectionDenoiser_Reproject reflectionDenoiser_Reproject;
 	Passes::PSSM_Combine pSSM_Combine;
 	Passes::VSM_DepthAnalysis vSM_DepthAnalysis;
+	Passes::VSM_HiZRebuild vSM_HiZRebuild;
 	Passes::VSM_BlockerSearch vSM_BlockerSearch;
 	Passes::VSM_Combine vSM_Combine;
 	Passes::VoxelScreen voxelScreen;
@@ -71,7 +72,6 @@ public:
 	Passes::ReflCombine reflCombine;
 	Passes::Sky sky;
 	Passes::SMAA sMAA;
-	Passes::VSM_HiZRebuild vSM_HiZRebuild;
 	Passes::stencil_renderer_after stencil_renderer_after;
 	Passes::VoxelDebug voxelDebug;
 
@@ -102,6 +102,7 @@ public:
 		Passes::RTXShadow::Name.ptr,
 		Passes::PSSM_Combine::Name.ptr,
 		Passes::VSM_DepthAnalysis::Name.ptr,
+		Passes::VSM_HiZRebuild::Name.ptr,
 		Passes::VSM_BlockerSearch::Name.ptr,
 		Passes::VSM_Combine::Name.ptr,
 		Passes::VoxelScreen::Name.ptr,
@@ -111,7 +112,6 @@ public:
 		Passes::SMAA::Name.ptr,
 		Passes::FSR::Name.ptr,
 		Passes::UpscalingDLSS::Name.ptr,
-		Passes::VSM_HiZRebuild::Name.ptr,
 		Passes::stencil_renderer_after::Name.ptr,
 		Passes::RTXColorPass::Name.ptr,
 		Passes::VoxelDebug::Name.ptr,
@@ -181,6 +181,7 @@ public:
 		L"ShadowMask",
 		L"WorkGraphBuffer",
 		L"VSM_DepthAnalysisResult",
+		L"VSM_DirtySlots",
 		L"VSM_BlockerResult",
 		L"VoxelFramesCount",
 		L"VoxelIndirectNoise",
@@ -190,7 +191,6 @@ public:
 		L"SMAA_edges",
 		L"SMAA_blend",
 		L"FSRTemp",
-		L"VSM_DirtySlots",
 		L"Stencil_color_tex",
 		L"ColorOutput",
 		L"VoxelDebug",
@@ -342,9 +342,9 @@ public:
 	};
 	static inline const FrameGraph::PassRef VSM_Atlas_c0_pass_refs[] = {
 		{ PassID::VSM_RenderPages, 0 },
+		{ PassID::VSM_HiZRebuild, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
 		{ PassID::VSM_Combine, 0 },
-		{ PassID::VSM_HiZRebuild, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState VSM_Atlas_c0_states[] = {
 		{ true, { VSM_Atlas_c0_pass_refs + 0, 1 } },
@@ -371,10 +371,12 @@ public:
 	static inline const FrameGraph::PassRef VSM_PageHiZ_c0_pass_refs[] = {
 		{ PassID::VSM_RenderPages, 0 },
 		{ PassID::VSM_HiZRebuild, 0 },
+		{ PassID::VSM_BlockerSearch, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState VSM_PageHiZ_c0_states[] = {
 		{ true, { VSM_PageHiZ_c0_pass_refs + 0, 1 } },
 		{ true, { VSM_PageHiZ_c0_pass_refs + 1, 1 } },
+		{ false, { VSM_PageHiZ_c0_pass_refs + 2, 1 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Albedo_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -831,6 +833,12 @@ public:
 	static inline const FrameGraph::PrecompiledState VSM_DepthAnalysisResult_c0_states[] = {
 		{ true, { VSM_DepthAnalysisResult_c0_pass_refs + 0, 1 } },
 	};
+	static inline const FrameGraph::PassRef VSM_DirtySlots_c0_pass_refs[] = {
+		{ PassID::VSM_HiZRebuild, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_DirtySlots_c0_states[] = {
+		{ true, { VSM_DirtySlots_c0_pass_refs + 0, 1 } },
+	};
 	static inline const FrameGraph::PassRef VSM_BlockerResult_c0_pass_refs[] = {
 		{ PassID::VSM_BlockerSearch, 0 },
 		{ PassID::VSM_Combine, 0 },
@@ -912,12 +920,6 @@ public:
 		{ true, { ResultTexture_c3_pass_refs + 0, 1 } },
 		{ true, { ResultTexture_c3_pass_refs + 1, 1 } },
 	};
-	static inline const FrameGraph::PassRef VSM_DirtySlots_c0_pass_refs[] = {
-		{ PassID::VSM_HiZRebuild, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState VSM_DirtySlots_c0_states[] = {
-		{ true, { VSM_DirtySlots_c0_pass_refs + 0, 1 } },
-	};
 	static inline const FrameGraph::PassRef Stencil_color_tex_c0_pass_refs[] = {
 		{ PassID::stencil_renderer_after, 0 },
 	};
@@ -994,6 +996,7 @@ public:
 		{ ResourceID::ShadowMask, 0, ShadowMask_c0_states },
 		{ ResourceID::WorkGraphBuffer, 0, WorkGraphBuffer_c0_states },
 		{ ResourceID::VSM_DepthAnalysisResult, 0, VSM_DepthAnalysisResult_c0_states },
+		{ ResourceID::VSM_DirtySlots, 0, VSM_DirtySlots_c0_states },
 		{ ResourceID::VSM_BlockerResult, 0, VSM_BlockerResult_c0_states },
 		{ ResourceID::VoxelFramesCount, 0, VoxelFramesCount_c0_states },
 		{ ResourceID::VoxelIndirectNoise, 0, VoxelIndirectNoise_c0_states },
@@ -1005,7 +1008,6 @@ public:
 		{ ResourceID::ResultTexture, 2, ResultTexture_c2_states },
 		{ ResourceID::FSRTemp, 0, FSRTemp_c0_states },
 		{ ResourceID::ResultTexture, 3, ResultTexture_c3_states },
-		{ ResourceID::VSM_DirtySlots, 0, VSM_DirtySlots_c0_states },
 		{ ResourceID::Stencil_color_tex, 0, Stencil_color_tex_c0_states },
 		{ ResourceID::ColorOutput, 0, ColorOutput_c0_states },
 		{ ResourceID::VoxelDebug, 0, VoxelDebug_c0_states },
@@ -1100,9 +1102,13 @@ public:
 	static inline const FrameGraph::PassRef VSM_DepthAnalysis_0_prev[] = {
 		{ PassID::Scene, 0 },
 	};
+	static inline const FrameGraph::PassRef VSM_HiZRebuild_0_prev[] = {
+		{ PassID::VSM_RenderPages, 0 },
+	};
 	static inline const FrameGraph::PassRef VSM_BlockerSearch_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
 		{ PassID::Scene, 0 },
+		{ PassID::VSM_HiZRebuild, 0 },
 		{ PassID::VSM_RenderPages, 0 },
 	};
 	static inline const FrameGraph::PassRef VSM_Combine_0_prev[] = {
@@ -1186,9 +1192,6 @@ public:
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::VoxelScreen, 0 },
 	};
-	static inline const FrameGraph::PassRef VSM_HiZRebuild_0_prev[] = {
-		{ PassID::VSM_RenderPages, 0 },
-	};
 	static inline const FrameGraph::PassRef stencil_renderer_after_0_prev[] = {
 		{ PassID::FSR, 0 },
 		{ PassID::PSSM_Combine, 0 },
@@ -1238,6 +1241,7 @@ public:
 		{ PassID::RTXShadow, 0, true, RTXShadow_0_prev },
 		{ PassID::PSSM_Combine, 0, true, PSSM_Combine_0_prev },
 		{ PassID::VSM_DepthAnalysis, 0, true, VSM_DepthAnalysis_0_prev },
+		{ PassID::VSM_HiZRebuild, 0, true, VSM_HiZRebuild_0_prev },
 		{ PassID::VSM_BlockerSearch, 0, true, VSM_BlockerSearch_0_prev },
 		{ PassID::VSM_Combine, 0, true, VSM_Combine_0_prev },
 		{ PassID::VoxelScreen, 0, true, VoxelScreen_0_prev },
@@ -1247,7 +1251,6 @@ public:
 		{ PassID::SMAA, 0, true, SMAA_0_prev },
 		{ PassID::FSR, 0, true, FSR_0_prev },
 		{ PassID::UpscalingDLSS, 0, false, UpscalingDLSS_0_prev },
-		{ PassID::VSM_HiZRebuild, 0, true, VSM_HiZRebuild_0_prev },
 		{ PassID::stencil_renderer_after, 0, false, stencil_renderer_after_0_prev },
 		{ PassID::RTXColorPass, 0, false, RTXColorPass_0_prev },
 		{ PassID::VoxelDebug, 0, false, VoxelDebug_0_prev },
@@ -1309,6 +1312,8 @@ public:
 			graph.add_library_pass<Passes::PSSM_Combine>(pSSM_Combine.setup_func, pSSM_Combine.render_func, (pSSM_Combine.flags));
 		if (vSM_DepthAnalysis.setup_func)
 			graph.add_library_pass<Passes::VSM_DepthAnalysis>(vSM_DepthAnalysis.setup_func, vSM_DepthAnalysis.render_func, (vSM_DepthAnalysis.flags | FrameGraph::PassFlags::Compute2));
+		if (vSM_HiZRebuild.setup_func)
+			graph.add_library_pass<Passes::VSM_HiZRebuild>(vSM_HiZRebuild.setup_func, vSM_HiZRebuild.render_func, (vSM_HiZRebuild.flags | FrameGraph::PassFlags::Compute2));
 		if (vSM_BlockerSearch.setup_func)
 			graph.add_library_pass<Passes::VSM_BlockerSearch>(vSM_BlockerSearch.setup_func, vSM_BlockerSearch.render_func, (vSM_BlockerSearch.flags | FrameGraph::PassFlags::Compute2));
 		if (vSM_Combine.setup_func)
@@ -1325,8 +1330,6 @@ public:
 			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, (sMAA.flags));
 		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, (PassDefault<Passes::FSR>::flags));
 		graph.add_library_pass<Passes::UpscalingDLSS>(PassDefault<Passes::UpscalingDLSS>::setup, PassDefault<Passes::UpscalingDLSS>::render, (PassDefault<Passes::UpscalingDLSS>::flags & ~FrameGraph::PassFlags::Compute));
-		if (vSM_HiZRebuild.setup_func)
-			graph.add_library_pass<Passes::VSM_HiZRebuild>(vSM_HiZRebuild.setup_func, vSM_HiZRebuild.render_func, (vSM_HiZRebuild.flags));
 		if (stencil_renderer_after.setup_func)
 			graph.add_library_pass<Passes::stencil_renderer_after>(stencil_renderer_after.setup_func, stencil_renderer_after.render_func, (stencil_renderer_after.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::RTXColorPass>(PassDefault<Passes::RTXColorPass>::setup, PassDefault<Passes::RTXColorPass>::render, (PassDefault<Passes::RTXColorPass>::flags & ~FrameGraph::PassFlags::Compute));

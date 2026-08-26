@@ -161,7 +161,10 @@ bool vsm_is_occluded(MeshletCullData c, float4x4 world, Camera page_cam, int slo
 	if (any(page_uv_max < 0) || any(page_uv_min > 1))
 		return false;
 
-	Texture2DArray<float> pyramid = GetVSMPageHiZ().GetPage_hiz();
+	// Phase 5.18 Part A: page_hiz is now float2 (.x = min/farthest, .y =
+	// max/closest -- see VSMPageHiZ's own comment). This test only ever
+	// used the min/farthest channel and still does; unchanged behavior.
+	Texture2DArray<float2> pyramid = GetVSMPageHiZ().GetPage_hiz();
 	uint pw, ph, elems, numLevels;
 	pyramid.GetDimensions(0, pw, ph, elems, numLevels);
 
@@ -175,10 +178,10 @@ bool vsm_is_occluded(MeshletCullData c, float4x4 world, Camera page_cam, int slo
 	// the farthest depth in its footprint, so occlusion requires being behind
 	// every covered texel: near_z < min(taps).
 	float sampled = 1.0;
-	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_min.x, page_uv_min.y, (float)slot), mip));
-	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_max.x, page_uv_min.y, (float)slot), mip));
-	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_min.x, page_uv_max.y, (float)slot), mip));
-	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_max.x, page_uv_max.y, (float)slot), mip));
+	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_min.x, page_uv_min.y, (float)slot), mip).x);
+	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_max.x, page_uv_min.y, (float)slot), mip).x);
+	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_min.x, page_uv_max.y, (float)slot), mip).x);
+	sampled = min(sampled, pyramid.SampleLevel(pointClampSampler, float3(page_uv_max.x, page_uv_max.y, (float)slot), mip).x);
 
 	return near_clip.z < sampled;
 }

@@ -11,7 +11,10 @@
 static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 
 #include "PBR.hlsl"
-#include "VSM_impl.hlsl"
+// Only the resolve half of VSM_impl.hlsl's old contents (get_shadow_vsm,
+// vsm_pcf_shadow, debug helpers) -- see VSM_impl_search.hlsl's own top
+// comment for why this is split from VSM_BlockerSearch.hlsl's own include.
+#include "VSM_impl_resolve.hlsl"
 
 float2 GetBRDF(float Roughness, float Metallic, float NoV)
 {
@@ -47,6 +50,20 @@ float4 combine_result(float2 tc, uint2 pixel)
 
 	VSMConstants constants = GetVSMConstants();
 	float shadow = get_shadow_vsm(constants, GetVSMLighting(), info.pos, info.normal, pixel);
+
+	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_hiz_classify):
+	// get_shadow_vsm returns an out-of-range sentinel instead of a real
+	// shadow value when this toggle is on and vsm_search_blocker's Hi-Z
+	// classification fired -- -1.0 = confident_lit (green), -2.0 =
+	// confident_dark (blue). Ambiguous/real-search pixels return a normal
+	// [0,1] shadow and fall through to ordinary shading below, so the
+	// classification's actual coverage is visible directly against
+	// context instead of just its effect on the final image.
+	if (constants.GetDebug_hiz_classify() != 0)
+	{
+		if (shadow <= -1.5) return float4(0, 0, 1, 1);
+		if (shadow < 0)     return float4(0, 1, 0, 1);
+	}
 
 	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_rtx_reference):
 	// bypass VSM's own shadow entirely and show RTXShadow's own denoised

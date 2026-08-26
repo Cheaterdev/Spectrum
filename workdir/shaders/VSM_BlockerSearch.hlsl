@@ -6,7 +6,10 @@
 
 static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 
-#include "VSM_impl.hlsl"
+// Only the search half of VSM_impl.hlsl's old contents -- see
+// VSM_impl_search.hlsl's own top comment for why this is split from
+// VSM_impl_resolve.hlsl (VSM.hlsl's own include).
+#include "VSM_impl_search.hlsl"
 
 // Compute-queue: one thread per output pixel, writes the blocker-search
 // result UAV (VSMLighting's blocker_result field) for VSM_Combine's resolve

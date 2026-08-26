@@ -42,6 +42,22 @@ struct VSMConstants
 	# to compare VSM's quality/performance against. See VSMLighting's
 	# rtx_shadow_mask field.
 	int debug_rtx_reference;
+	# Runtime A/B switch (Phase 5.18 Part A) for the min/max Hi-Z
+	# classification vsm_search_blocker does against VSMPageHiZ before
+	# running its 16-tap search -- nonzero = skip the search entirely for
+	# pixels the pyramid alone can already answer confidently (see
+	# vsm_search_blocker's own comment). Only read by VSM_BlockerSearch's
+	# own dispatch; VSM_Combine never consults it.
+	int hiz_blocker_classify;
+	# Debug view: when nonzero, get_shadow_vsm (VSM_Combine's resolve step)
+	# short-circuits into a flat color wherever vsm_search_blocker's Hi-Z
+	# classification fired confidently instead of shading normally --
+	# green for confident_lit, blue for confident_dark -- so the
+	# classification's real firing pattern is visible directly, not just
+	# its downstream effect on the shadow. Ambiguous/real-search pixels
+	# still shade normally, for context. Only read by VSM_Combine's own
+	# resolve dispatch; VSM_BlockerSearch never consults it.
+	int debug_hiz_classify;
 	float4x4 light_view;
 	# MaxLevels (VSM.ixx) storage slots -- one geometric ladder, no
 	# regular/adaptive split (see VSMClipmap::page_world_size). Keep this in
@@ -63,14 +79,27 @@ struct VSMPageTableData
 # (not packed into VSM_Atlas -- mip downsampling would bleed across tiles).
 # Instance4: Instance0/1/2/3 are all already taken in VSMDepthDraw (see
 # VSMPageTableData above).
+#
+# Phase 5.18 Part A: two channels, not one. .x = MIN reduction (farthest-
+# from-light in footprint -- the original, unchanged occlusion-culling
+# semantics: mesh_shader_vsm.hlsl's vsm_is_occluded still only ever reads
+# this channel). .y = MAX reduction (closest-to-light in footprint, new) --
+# lets VSM_BlockerSearch's own classification (VSM_impl.hlsl's
+# vsm_search_blocker) tell "definitely nothing can block here" (.y still
+# farther from light than the receiver) and "definitely everything blocks
+# here" (.x still closer to light than the receiver) apart with one fetch,
+# instead of only ever answering the first question.
 [Bind = DefaultLayout::Instance4]
 struct VSMPageHiZ
 {
-	Texture2DArray<float> page_hiz;
+	Texture2DArray<float2> page_hiz;
 }
 
 # Copies one page's rendered slice of VSM_Atlas into VSMPageHiZ's mip 0.
 # Both are per-page slices of the same size, so it is a straight 1:1 copy.
+# NOTE: unused legacy single-page (non-batched) form, superseded by
+# VSMCopyPageDepthBatch below (nothing calls PSOS::VSMCopyPageDepth any
+# more) -- left as-is, not touched by the Phase 5.18 float2 change.
 [Bind = DefaultLayout::Instance0]
 struct VSMCopyPageDepth
 {
@@ -97,8 +126,12 @@ struct VSMCopyPageDepthBatch
 	# slices). Without [Barrier = ALL] each bind expands into one barrier per
 	# slice; the whole resource is being rewritten by this step anyway, so one
 	# whole-resource transition is both correct and far cheaper.
+	# atlas stays single-channel (it's VSM_Atlas's real rendered depth);
+	# dst_mip0 is VSMPageHiZ's mip 0, now float2 -- see VSMPageHiZ's own
+	# comment. The copy shader writes float2(d, d): both channels start
+	# equal at mip 0, min/max only diverge once downsampling reduces >1 texel.
 	[Barrier = ALL] Texture2DArray<float> atlas;
-	[Barrier = ALL] RWTexture2DArray<float> dst_mip0;
+	[Barrier = ALL] RWTexture2DArray<float2> dst_mip0;
 	StructuredBuffer<uint> dirty_slots;
 }
 
@@ -123,8 +156,10 @@ struct VSMDownsampleHiZBatch
 	# Both sides are narrowed to exactly one mip across physical_page_count
 	# slices, and this runs once per mip per frame -- the single worst
 	# subresource-expansion site in the frame. See VSMCopyPageDepthBatch.
-	[Barrier = ALL] Texture2DArray<float> src;
-	[Barrier = ALL] RWTexture2DArray<float> dst_mip;
+	# float2: .x = running MIN (farthest), .y = running MAX (closest) -- see
+	# VSMPageHiZ's own comment.
+	[Barrier = ALL] Texture2DArray<float2> src;
+	[Barrier = ALL] RWTexture2DArray<float2> dst_mip;
 	StructuredBuffer<uint> dirty_slots;
 	uint src_mip;
 }
@@ -370,16 +405,18 @@ PassNode VSM_RenderPages
 }
 
 # Phase 5.17: Hi-Z pyramid rebuild, split into its own async-compute pass.
-# Nothing this frame reads VSM_PageHiZ after VSM_RenderPages' own draw --
-# the mesh shader's occlusion test only ever consults whatever pyramid
-# content was left by the LAST time a page was rebuilt (a page's own
-# last-rendered depth is always at least one frame stale by design; see
-# the invalidation tracker's job of covering for that). So this pass has
-# nothing forcing it to finish before the rest of the frame's direct-queue
-# work: it only needs to run after VSM_RenderPages' draw (reads VSM_Atlas,
-# which that pass just wrote) and before NEXT frame's VSM_RenderPages draw
-# (which reads VSM_PageHiZ). [Compute] puts it on the async compute queue
-# instead of serializing it into the direct queue's own critical path.
+# Phase 5.18 Part A: no longer true that nothing reads VSM_PageHiZ later
+# this same frame -- VSM_BlockerSearch's classification step (VSM_impl.hlsl's
+# vsm_search_blocker) now samples it too, so this pass has to actually
+# finish before VSM_BlockerSearch runs, not just before next frame's
+# VSM_RenderPages draw. test.sig's pipeline listing moves this immediately
+# before VSM_BlockerSearch (both [Async2], same physical queue) so that
+# ordering falls out of ordinary same-queue in-order execution rather than
+# needing a new cross-queue fence. [Compute] still keeps it off the direct
+# queue's own critical path -- it only needs to run after VSM_RenderPages'
+# draw (reads VSM_Atlas, which that pass just wrote) and before
+# VSM_BlockerSearch (and, as before, before NEXT frame's VSM_RenderPages
+# draw).
 [Compute]
 PassNode VSM_HiZRebuild
 {
@@ -397,6 +434,15 @@ PassNode VSM_HiZRebuild
 # (VSM_impl.hlsl's vsm_search_blocker), writing its result to
 # VSM_BlockerResult for VSM_Combine's resolve step to read back -- no
 # longer inline inside the same dispatch as the final PCF blur/shading.
+#
+# Phase 5.18 Part A: also reads VSM_PageHiZ now -- vsm_search_blocker does
+# a cheap min/max classification against the receiver's own page pyramid
+# before running the expensive 16-tap search, skipping the search entirely
+# for pixels the pyramid alone can already answer confidently (see
+# VSMPageHiZ's own comment for the two channels' meaning). This is why
+# VSM_HiZRebuild moved to run immediately before this pass in test.sig's
+# listing -- the pyramid this reads must be this frame's freshly-rebuilt
+# one, not last frame's.
 [Compute]
 PassNode VSM_BlockerSearch
 {
@@ -404,6 +450,7 @@ PassNode VSM_BlockerSearch
 	Texture VSM_Atlas;
 	Texture VSM_PageTable;
 	StructuredBuffer<Camera> VSM_PageCameras;
+	Texture VSM_PageHiZ;
 	Texture BlueNoise;
 	[Write] Texture VSM_BlockerResult;
 }

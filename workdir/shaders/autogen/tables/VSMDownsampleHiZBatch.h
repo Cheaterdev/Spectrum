@@ -9,11 +9,11 @@
 struct VSMDownsampleHiZBatch
 {
 	uint src_mip; // uint
-	uint src; // Texture2DArray<float>
+	uint src; // Texture2DArray<float2>
 	uint dirty_slots; // StructuredBuffer<uint>
-	uint dst_mip; // RWTexture2DArray<float>
+	uint dst_mip; // RWTexture2DArray<float2>
 	uint GetSrc_mip() { return src_mip; }
-	Texture2DArray<float> GetSrc() { return ResourceDescriptorHeap[src]; }
-	RWTexture2DArray<float> GetDst_mip() { return ResourceDescriptorHeap[dst_mip]; }
+	Texture2DArray<float2> GetSrc() { return ResourceDescriptorHeap[src]; }
+	RWTexture2DArray<float2> GetDst_mip() { return ResourceDescriptorHeap[dst_mip]; }
 	StructuredBuffer<uint> GetDirty_slots() { return ResourceDescriptorHeap[dirty_slots]; }
 };

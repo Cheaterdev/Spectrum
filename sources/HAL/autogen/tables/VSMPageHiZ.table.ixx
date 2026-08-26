@@ -17,8 +17,8 @@ export namespace Table
 	struct VSMPageHiZ
 	{
 		static constexpr SlotID ID = SlotID::VSMPageHiZ;
-		HLSL::Texture2DArray<float> page_hiz;
-		HLSL::Texture2DArray<float>& GetPage_hiz() { return page_hiz; }
+		HLSL::Texture2DArray<float2> page_hiz;
+		HLSL::Texture2DArray<float2>& GetPage_hiz() { return page_hiz; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -27,7 +27,7 @@ export namespace Table
 		}
 		struct Compiled
 		{
-			uint page_hiz; // Texture2DArray<float>
+			uint page_hiz; // Texture2DArray<float2>
 
 			
 			private:
