@@ -29,8 +29,22 @@
 // function's own quad-shared search mode needs every thread in a 2x2
 // dispatch quad to reach its QuadReadAcrossX/Y/Diagonal calls uniformly, a
 // requirement that propagates all the way up through this function's
-// caller (VSM_BlockerSearch.hlsl's CS_BLOCKER_SEARCH).
-uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint2 pixel)
+// caller (VSM_BlockerSearch.hlsl's CS_BLOCKER_SEARCH). The same rule means
+// `geometric_dark` (the caller's own NdotL<=0 test -- see its own parameter
+// comment below) must be passed IN rather than used by the caller to skip
+// calling this function outright.
+uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint2 pixel,
+                          // True when the receiver's own surface normal
+                          // faces away from the light (NdotL <= 0) --
+                          // combine_result's final NL*shadow multiply
+                          // already zeroes these pixels out regardless of
+                          // the shadow value, so there's nothing here worth
+                          // spending a Hi-Z sample or a 16-tap search on.
+                          // Folded into confident_dark below (an exact
+                          // result, not an approximation) rather than
+                          // skipping the call itself, which would violate
+                          // the quad-uniformity requirement above.
+                          bool geometric_dark)
 {
 	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
 	int level_raw = get_vsm_level(c, pos_ls);
@@ -67,76 +81,94 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	float blocker_search_radius_texels = clamp(
 		VSM_BLOCKER_SEARCH_RADIUS_WORLD / texel_world_size, 2.0, c.GetPage_size() * 4.0);
 
-	// Reverted to zero margin (both the fixed-0.5 and the radius-
-	// proportional versions were tried and neither visibly changed the
-	// "shadow=1 nearly everywhere" problem) -- going back to this known-
-	// working-better baseline to re-diagnose step by step instead of
-	// guessing at margin formulas further.
-	float hiz_classify_margin_ndc = 0.0;
-
-	// Phase 5.18 Part A: cheap classification against the receiver's own
-	// page Hi-Z pyramid (VSMPageHiZ, rebuilt fresh this frame by
-	// VSM_HiZRebuild -- see that pass's comment for the ordering this
-	// depends on) before paying for the 16-tap search below. One
-	// SampleLevel at the mip whose footprint covers the search disc: .x =
-	// MIN/farthest-from-light, .y = MAX/closest-to-light over that
-	// footprint (see VSMPageHiZ's own comment).
+	// Phase 5.18 Part A (follow-up: single-pyramid closed-form level pick,
+	// replacing the earlier page_hiz/level_hiz two-tier fallback): cheap
+	// classification against a page_hiz pyramid before paying for the
+	// 16-tap search below. One SampleLevel at the mip whose footprint
+	// covers the search disc: .x = MIN/farthest-from-light, .y =
+	// MAX/closest-to-light over that footprint (see VSMPageHiZ's own
+	// comment).
 	//
 	//   .y still farther from light than the receiver -- NOTHING in the
 	//   whole search disc can possibly be a blocker. confident_lit.
 	//   .x still closer to light than the receiver -- EVERYTHING in the
 	//   disc blocks. confident_dark.
 	//
-	// Must NOT early-`return` for either case -- see this function's own
-	// top comment: quad_search's QuadReadAcrossX/Y/Diagonal calls further
-	// down need every thread in a dispatch quad to reach them, and a
-	// per-pixel classification differs lane-to-lane within a quad even
-	// though quad_search itself (a uniform constant) does not. Instead,
-	// only the per-tap loop's CONTRIBUTION is skipped below (same shape as
-	// the existing `!valid` skip); the quad-merge code, the confident_dark
-	// check, and the final return all still run for every thread, exactly
-	// where they already did.
+	// Which LEVEL's page_hiz to sample: page_world_size doubles every
+	// level (VSMClipmap's geometric ladder), so footprint(level, mip) =
+	// texel_world_size(level) * 2^mip depends only on (level + mip)
+	// combined -- one level up is interchangeable with one mip down for
+	// the same footprint. That means for the fixed search diameter below,
+	// there's always some level -- at or coarser than the receiver's own
+	// -- whose OWN page is already bigger than the whole disc, so its
+	// page_hiz (built every frame for every resident page regardless of
+	// dirty state) can answer with a single corner-sampled fetch, no
+	// second per-level aggregate pyramid needed. Walking coarser only
+	// ever makes the classification MORE conservative (a bigger, still-
+	// exact min/max footprint), never wrong -- it just costs a few more
+	// ambiguous fallbacks to the real search in the levels where it
+	// wasn't actually necessary.
+	static const float VSM_BLOCKER_SEARCH_DIAMETER_WORLD = VSM_BLOCKER_SEARCH_RADIUS_WORLD * 2.0;
+
 	bool confident_lit = false;
-	bool confident_dark = false;
-	// TEMP DEBUG (live "does level_hiz fallback even fire" investigation):
-	// tracks which pyramid actually produced the classification, so the
-	// debug view can color them differently. Remove once confirmed.
-	bool via_level = false;
-	if (valid && c.GetHiz_blocker_classify() != 0)
+	// Geometric self-shadow (see this function's own geometric_dark
+	// parameter comment) folds straight into confident_dark, reusing the
+	// existing sentinel/debug color rather than a new one -- functionally
+	// identical to a Hi-Z-proven confident_dark (shadow=0, skip the PCF
+	// pass), just arrived at for a different, always-exact reason.
+	bool confident_dark = geometric_dark;
+	// Debug view (VSM.ixx's use_vsm_debug_hiz_classify): distinguishes
+	// "classified directly at the receiver's own level" from "had to walk
+	// to a coarser level to find a page big enough to fully contain the
+	// search disc" -- cyan/magenta vs green/blue, see get_shadow_vsm's own
+	// bucket comment. Left false for geometric_dark pixels -- the Hi-Z
+	// block below is skipped for them entirely, so it's never "via" either
+	// pyramid tier.
+	bool via_coarser = false;
+	if (valid && !geometric_dark && c.GetHiz_blocker_classify() != 0)
 	{
-		Texture2DArray<float2> pyramid = GetVSMPageHiZ().GetPage_hiz();
-		uint pw, ph, elems, numLevels;
-		pyramid.GetDimensions(0, pw, ph, elems, numLevels);
+		float page_world_size_here = c.GetLevel_info(level).z;
+		int   level_step = max(0, (int)ceil(log2(max(VSM_BLOCKER_SEARCH_DIAMETER_WORLD / max(page_world_size_here, 0.0001), 1.0))));
+		int   classify_level = min(level + level_step, c.GetActive_max());
+		via_coarser = classify_level > level;
 
-		float2 tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
-		// The search disc's bounding rect in UV space -- radius in texels
-		// converted to UV via page size, same radius the tap loop below
-		// actually searches.
-		float2 rect_uv = blocker_search_radius_texels / float2(pw, ph);
-		float2 uv_min = tc - rect_uv;
-		float2 uv_max = tc + rect_uv;
+		float classify_texel_world_size = c.GetLevel_info(classify_level).z / c.GetPage_size();
+		float classify_radius_texels = clamp(
+			VSM_BLOCKER_SEARCH_RADIUS_WORLD / classify_texel_world_size, 2.0, c.GetPage_size() * 4.0);
+		float classify_world_radius = classify_radius_texels * classify_texel_world_size;
 
-		// VSMPageHiZ is one pyramid PER PAGE (isolated per physical atlas
-		// slot by design -- mip downsampling must not bleed across
-		// unrelated tiles, see VSMPageHiZ's own comment), so it only ever
-		// knows about the receiver's own page. tc is this page's own
-		// camera's NDC->UV, so outside [0,1] genuinely means "past this
-		// page's edge" -- the real tap loop below can and does resolve
-		// such a tap into a DIFFERENT physical page via vsm_resolve_tap's
-		// own independent page-table walk, but this page's pyramid can't
-		// see that neighbor's content at all. Sampling it anyway just
-		// reads this page's own edge-clamped value repeated outward,
-		// which can silently disagree with what's actually resident next
-		// door -- classifying confidently based on data that was never
-		// really there. Only classify when the WHOLE rect stays inside
-		// this page; otherwise leave both flags false (ambiguous) and let
-		// the real per-tap search -- which resolves neighbors correctly --
-		// handle it, same as it always did before this optimization.
-		bool rect_in_page = all(uv_min >= 0) && all(uv_max <= 1);
-		bool classified = false;
-
-		if (rect_in_page)
+		// Resolve each of the 4 corners of the search rect to ITS OWN page
+		// independently (via vsm_resolve_tap, the exact same per-tap page
+		// lookup the real search loop below already uses) instead of
+		// requiring the whole rect to fit inside one page. level_step above
+		// only fixes the DISC-SIZE-vs-PAGE-SIZE ratio -- it says nothing
+		// about whether the receiver happens to sit near a page BOUNDARY,
+		// which can occur at any level (page boundaries are independently
+		// snapped per level, so a position can sit near an edge at several
+		// levels in a row). Requiring single-page containment turned that
+		// into permanent classification holes running along every page
+		// seam, confirmed live. Resolving corners independently removes the
+		// restriction entirely: a rect straddling 2-4 neighboring pages
+		// just samples from 2-4 different slots, same tolerance the real
+		// per-tap search already has for exactly this reason.
+		static const float2 CORNER_SIGNS[4] = { float2(-1, -1), float2(1, -1), float2(-1, 1), float2(1, 1) };
+		uint   corner_slots[4];
+		float2 corner_uvs[4];
+		bool   all_resolved = true;
+		[unroll]
+		for (int ci = 0; ci < 4; ci++)
 		{
+			float2 corner_pos_ls = pos_ls + CORNER_SIGNS[ci] * classify_world_radius;
+			if (!vsm_resolve_tap(c, lighting, classify_level, corner_pos_ls, corner_slots[ci], corner_uvs[ci]))
+				all_resolved = false;
+		}
+
+		if (all_resolved)
+		{
+			Texture2DArray<float2> pyramid = GetVSMPageHiZ().GetPage_hiz();
+			uint pw, ph, elems, numLevels;
+			pyramid.GetDimensions(0, pw, ph, elems, numLevels);
+
 			// Mip pick, deliberately NOT mesh_shader_vsm.hlsl's own
 			// "<=2x2 texels, *0.5" formula -- that bound has a real gap: an
 			// interval of width exactly 2 texels can still touch THREE
@@ -151,108 +183,44 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 			// where the rect spans at most ONE texel instead, which bounds
 			// the worst-case span to exactly two texel indices per axis --
 			// genuinely fully covered by the four corner samples below,
-			// with no gap regardless of alignment.
-			float2 rect_texels = (uv_max - uv_min) * float2(pw, ph);
-			float  mip_f = ceil(log2(max(max(rect_texels.x, rect_texels.y), 1.0)));
+			// with no gap regardless of alignment. Computed once against
+			// classify_level's own texel density -- still valid (only ever
+			// MORE conservative, never too fine) for a corner that
+			// vsm_resolve_tap had to resolve onto an even coarser page,
+			// since numLevels (the pyramid's mip depth) is the same fixed
+			// constant for every page regardless of level.
+			float mip_f = ceil(log2(max(classify_radius_texels * 2.0, 1.0)));
 
-			// pyramid_mip_count is a fixed, level-independent constant
-			// (derived once from page_size, same for every page). At fine
-			// clip levels close to the camera, texel_world_size shrinks, so
-			// blocker_search_radius_texels (a roughly fixed WORLD-space
-			// radius) balloons in texel terms -- routinely needing a mip
-			// deeper than the pyramid actually has. Clamping mip_f down to
-			// numLevels-1 in that case does NOT give a conservative
-			// coverage failure -- it silently reuses the SAME coverage-gap
-			// bug just fixed above, one level up: the clamped mip is finer
-			// than the guarantee requires, so the 4 corners can once again
-			// miss a real blocker sitting between them. Confirmed live on
-			// close-up, fine-level geometry -- a shadow that should be
-			// there vanishing entirely. Only proceed when the pyramid
+			// Clamping mip_f down to numLevels-1 when the pyramid isn't
+			// deep enough does NOT give a conservative coverage failure
+			// -- it silently reintroduces the same coverage-gap bug
+			// fixed above, one level up. Only proceed when the pyramid
 			// genuinely has enough depth to cover this radius safely;
-			// otherwise leave both flags false (ambiguous), same fallback
-			// as the page-edge case above.
+			// otherwise leave both flags false (ambiguous).
 			bool mip_available = mip_f <= (float)(numLevels - 1);
 
 			if (mip_available)
 			{
 				uint mip = (uint)mip_f;
 
-				float2 c00 = pyramid.SampleLevel(pointClampSampler, float3(uv_min.x, uv_min.y, (float)slot), mip);
-				float2 c10 = pyramid.SampleLevel(pointClampSampler, float3(uv_max.x, uv_min.y, (float)slot), mip);
-				float2 c01 = pyramid.SampleLevel(pointClampSampler, float3(uv_min.x, uv_max.y, (float)slot), mip);
-				float2 c11 = pyramid.SampleLevel(pointClampSampler, float3(uv_max.x, uv_max.y, (float)slot), mip);
-				float2 minmax = float2(min(min(c00.x, c10.x), min(c01.x, c11.x)),
-				                       max(max(c00.y, c10.y), max(c01.y, c11.y)));
-
-				confident_lit  = minmax.y < pos_l.z - hiz_classify_margin_ndc;
-				confident_dark = !confident_lit && minmax.x > pos_l.z + hiz_classify_margin_ndc;
-				classified = true;
-			}
-		}
-
-		// Fallback (Phase 5.18 follow-up multi-page pyramid): the disc
-		// didn't fit in the receiver's own page, or needed a mip deeper
-		// than page_hiz has -- try VSMPageHiZ's level_hiz field (a much
-		// smaller pyramid, one texel per PAGE, spanning the whole level's
-		// page grid) instead of giving up outright. Same shape as the
-		// page-local query above, just in LEVEL-GRID space: light-space XY
-		// directly (no page-camera-NDC Y-flip -- level_hiz's texels are
-		// indexed by raw page_x/page_y, the same convention get_vsm_level's
-		// own extent/rel math already uses, not the page-camera convention
-		// `tc` above uses), queried against level_hiz instead of page_hiz.
-		// Comparable against the SAME pos_l.z: every page's own camera
-		// within a level shares the identical Z near/far range (VSM.cpp's
-		// page_cam setup derives it from the per-LEVEL plan, not per-page),
-		// so NDC-Z values are on the same scale across any page of this
-		// level -- the real per-tap search already relies on this exact
-		// same cross-page comparability via vsm_resolve_tap's own
-		// cross-page walk, so this isn't a new assumption.
-		if (!classified)
-		{
-			Texture2DArray<float2> lpyramid = GetVSMPageHiZ().GetLevel_hiz();
-			uint lw, lh, lelems, lnumLevels;
-			lpyramid.GetDimensions(0, lw, lh, lelems, lnumLevels);
-
-			float4 linfo = c.GetLevel_info(level);
-			float  level_extent = linfo.z * c.GetPages_per_level();
-			float2 level_tc = (pos_ls - linfo.xy) / max(level_extent, 0.0001);
-			// texel_world_size/level_extent cancels down to this, same
-			// simplification reasoning as the page-local rect_uv above.
-			float lrect_uv = blocker_search_radius_texels / (c.GetPage_size() * c.GetPages_per_level());
-			float2 luv_min = level_tc - lrect_uv;
-			float2 luv_max = level_tc + lrect_uv;
-
-			bool lrect_in_level = all(luv_min >= 0) && all(luv_max <= 1);
-			if (lrect_in_level)
-			{
-				float2 lrect_texels = (luv_max - luv_min) * float2(lw, lh);
-				float  lmip_f = ceil(log2(max(max(lrect_texels.x, lrect_texels.y), 1.0)));
-				// Used to cap this at lnumLevels - 2 (rejecting the
-				// coarsest, whole-level 1x1 mip) -- that was never really
-				// about coverage, it was a symptom of every page's camera
-				// having an independently-drifting Z range (see VSM.cpp's
-				// VSM_LIGHT_Z_NEAR/FAR), which made combining far-apart
-				// pages' NDC-Z values genuinely meaningless, not just
-				// imprecise. Now that every page camera shares one fixed Z
-				// range, the whole-level summary is merely COARSE (a real
-				// but honest loss of precision, same as any Hi-Z mip), not
-				// wrong -- so the full mip range is safe to trust again.
-				bool   lmip_available = lmip_f <= (float)(lnumLevels - 1);
-
-				if (lmip_available)
+				float2 minmax = float2(3.402823466e+38, -3.402823466e+38);
+				[unroll]
+				for (int cj = 0; cj < 4; cj++)
 				{
-					uint lmip = (uint)lmip_f;
-					float2 lc00 = lpyramid.SampleLevel(pointClampSampler, float3(luv_min.x, luv_min.y, (float)level), lmip);
-					float2 lc10 = lpyramid.SampleLevel(pointClampSampler, float3(luv_max.x, luv_min.y, (float)level), lmip);
-					float2 lc01 = lpyramid.SampleLevel(pointClampSampler, float3(luv_min.x, luv_max.y, (float)level), lmip);
-					float2 lc11 = lpyramid.SampleLevel(pointClampSampler, float3(luv_max.x, luv_max.y, (float)level), lmip);
-					float2 lminmax = float2(min(min(lc00.x, lc10.x), min(lc01.x, lc11.x)),
-					                        max(max(lc00.y, lc10.y), max(lc01.y, lc11.y)));
-
-					confident_lit  = lminmax.y < pos_l.z - hiz_classify_margin_ndc;
-					confident_dark = !confident_lit && lminmax.x > pos_l.z + hiz_classify_margin_ndc;
-					via_level      = true;
+					float2 s = pyramid.SampleLevel(pointClampSampler, float3(corner_uvs[cj], (float)corner_slots[cj]), mip);
+					minmax.x = min(minmax.x, s.x);
+					minmax.y = max(minmax.y, s.y);
 				}
+
+				// pos_l.z (the RECEIVER's own NDC-Z, from its own
+				// render-level page camera) stays valid to compare against
+				// every corner's own resolved page even though each can
+				// belong to a different physical slot -- every page camera
+				// shares the identical fixed Z near/far range
+				// (VSM_LIGHT_Z_NEAR/FAR), so NDC-Z is on the same scale
+				// everywhere; only XY differs per page.
+				confident_lit  = minmax.y < pos_l.z;
+				confident_dark = !confident_lit && minmax.x > pos_l.z;
 			}
 		}
 	}
@@ -333,30 +301,24 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 		if (max_d > max_blocker_z) { max_blocker_z = max_d; best_tc = tc_d; best_slot = slot_d; best_sampled_z = z_d; }
 	}
 
-	// TEMP DEBUG (live "shadow block vanishes" investigation): confident_lit
-	// collapses into the exact same asuint(-1.0) sentinel a genuine empty
-	// search already uses, so there's no way to tell "classification said
-	// lit" apart from "the real search would have said lit too" downstream
-	// -- asuint(-3.0) makes it distinguishable. get_shadow_vsm's
-	// VSM_DEBUG_HIZ_CLASSIFY branch colors it for visual confirmation.
-	// Remove both once the bug is confirmed fixed.
-	//
-	// TEMP DEBUG (live "does level_hiz fallback even fire" investigation):
-	// -4.0/-5.0 distinguish a via_level classification from the page-local
-	// one (-3.0/-2.0) so the debug view can show them as different colors.
-	// Remove alongside via_level once confirmed.
+	// confident_lit collapses into the exact same asuint(-1.0) sentinel a
+	// genuine empty search already uses, so there's no way to tell
+	// "classification said lit" apart from "the real search would have
+	// said lit too" downstream without a distinct sentinel -- asuint(-3.0)/
+	// asuint(-4.0) (via_coarser) make it distinguishable. get_shadow_vsm's
+	// debug_hiz_classify branch colors these for visual confirmation.
 	if (confident_lit)
-		return uint4(asuint(via_level ? -4.0 : -3.0), 0, 0, 0);
+		return uint4(asuint(via_coarser ? -4.0 : -3.0), 0, 0, 0);
 
 	// confident_dark: the tap loop above never ran for this thread (skipped
 	// via continue), so blocker_count is 0 here same as the genuine
 	// no-blocker case below -- must check this FIRST, or a confidently
 	// fully-shadowed pixel would wrongly fall into the "no blocker, fully
-	// lit" sentinel just below. asuint(-2.0): a second sentinel, distinct
-	// from asuint(-1.0)'s "no blocker" -- get_shadow_vsm/vsm_pcf_shadow's
-	// caller reads this back and skips the PCF pass entirely, shadow = 0.
+	// lit" sentinel just below. asuint(-2.0)/asuint(-5.0): distinct from
+	// asuint(-1.0)'s "no blocker" -- get_shadow_vsm/vsm_pcf_shadow's caller
+	// reads this back and skips the PCF pass entirely, shadow = 0.
 	if (confident_dark)
-		return uint4(asuint(via_level ? -5.0 : -2.0), 0, 0, 0);
+		return uint4(asuint(via_coarser ? -5.0 : -2.0), 0, 0, 0);
 
 	if (blocker_count == 0)
         return uint4(asuint(-1.0), 0, 0, 0);

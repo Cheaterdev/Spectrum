@@ -18,20 +18,16 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::VSMPageHiZ;
 		HLSL::Texture2DArray<float2> page_hiz;
-		HLSL::Texture2DArray<float2> level_hiz;
 		HLSL::Texture2DArray<float2>& GetPage_hiz() { return page_hiz; }
-		HLSL::Texture2DArray<float2>& GetLevel_hiz() { return level_hiz; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(page_hiz);
-			compiler.compile(level_hiz);
 		}
 		struct Compiled
 		{
 			uint page_hiz; // Texture2DArray<float2>
-			uint level_hiz; // Texture2DArray<float2>
 
 			
 			private:

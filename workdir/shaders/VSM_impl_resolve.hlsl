@@ -225,22 +225,23 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 	// fully shadowed instead. Confirmed live, fixed by checking the more
 	// negative (more specific) sentinel first.
 	//
-	// TEMP DEBUG (live "does level_hiz fallback even fire" investigation):
-	// -4.0/-5.0 are the via_level variants of -3.0/-2.0 (see
-	// vsm_search_blocker's own comment) -- given distinct debug colors here
-	// so the two pyramids' actual contribution is visible separately.
-	// Functionally identical to their page-local counterparts outside
-	// debug mode. Remove this pair of buckets once confirmed.
+	// -4.0/-5.0 are the via_coarser variants of -3.0/-2.0 (see
+	// vsm_search_blocker's own comment) -- classification had to walk to a
+	// level coarser than the receiver's own to find a page big enough to
+	// fully contain the search disc. Given distinct debug colors here so
+	// how often that happens is visible separately from the common case.
+	// Functionally identical to their same-level counterparts outside
+	// debug mode.
 	if (world_delta_or_sentinel <= -4.5 && world_delta_or_sentinel > -5.5)
 	{
-		// confident_dark via level_hiz.
+		// confident_dark via a coarser level.
 		if (debug_hiz)
 			return -4.0;
 		shadow = 0.0;
 	}
 	else if (world_delta_or_sentinel <= -3.5 && world_delta_or_sentinel > -4.5)
 	{
-		// confident_lit via level_hiz.
+		// confident_lit via a coarser level.
 		if (debug_hiz)
 			return -3.0;
 		shadow = 1.0;

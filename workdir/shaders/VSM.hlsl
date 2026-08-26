@@ -54,19 +54,15 @@ float4 combine_result(float2 tc, uint2 pixel)
 	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_hiz_classify):
 	// get_shadow_vsm returns an out-of-range sentinel instead of a real
 	// shadow value when this toggle is on and vsm_search_blocker's Hi-Z
-	// classification fired -- -1.0 = confident_lit via page_hiz (green),
-	// -2.0 = confident_dark via page_hiz (blue). Ambiguous/real-search
-	// pixels return a normal [0,1] shadow and fall through to ordinary
-	// shading below, so the classification's actual coverage is visible
-	// directly against context instead of just its effect on the final
-	// image.
-	//
-	// TEMP DEBUG (live "does level_hiz fallback even fire" investigation):
-	// -3.0/-4.0 are the level_hiz-fallback variants -- cyan/magenta so
-	// they're visually distinct from page_hiz's green/blue. If neither
-	// ever shows up on screen, the fallback isn't firing at all. Remove
-	// this pair alongside vsm_search_blocker's via_level tracking once
-	// confirmed.
+	// classification fired -- -1.0 = confident_lit at the receiver's own
+	// level (green), -2.0 = confident_dark at the receiver's own level
+	// (blue), -3.0/-4.0 = the same two outcomes but classification had to
+	// walk to a coarser level to find a page big enough to fully contain
+	// the search disc (cyan/magenta -- see vsm_search_blocker's via_coarser
+	// comment). Ambiguous/real-search pixels return a normal [0,1] shadow
+	// and fall through to ordinary shading below, so the classification's
+	// actual coverage is visible directly against context instead of just
+	// its effect on the final image.
 	if (constants.GetDebug_hiz_classify() != 0)
 	{
 		if (shadow <= -3.5) return float4(1, 0, 1, 1);

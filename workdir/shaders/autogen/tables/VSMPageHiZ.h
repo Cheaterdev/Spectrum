@@ -9,7 +9,5 @@
 struct VSMPageHiZ
 {
 	uint page_hiz; // Texture2DArray<float2>
-	uint level_hiz; // Texture2DArray<float2>
 	Texture2DArray<float2> GetPage_hiz() { return ResourceDescriptorHeap[page_hiz]; }
-	Texture2DArray<float2> GetLevel_hiz() { return ResourceDescriptorHeap[level_hiz]; }
 };

@@ -45,8 +45,23 @@ void CS_BLOCKER_SEARCH(uint3 DTid : SV_DispatchThreadID)
 	// NaN/Inf-risking input even though its result is discarded below.
 	float3 wpos = has_geometry ? depth_to_wpos(raw_z, tc, camera.GetInvViewProj()) : camera.GetPosition();
 
+	// combine_result multiplies the final shadow by saturate(NdotL), so a
+	// surface facing away from the light already contributes zero
+	// regardless of the shadow value -- pass this through to
+	// vsm_search_blocker (which folds it into confident_dark) instead of
+	// spending a Hi-Z sample or a 16-tap search finding that out the
+	// expensive way. Sky pixels (no geometry) get false here; their result
+	// is overwritten by the -1.0 sentinel below regardless.
+	bool geometric_dark = false;
+	if (has_geometry)
+	{
+		float3 normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
+		float3 light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
+		geometric_dark = dot(normal, light_dir) <= 0;
+	}
+
 	VSMConstants constants = GetVSMConstants();
-	uint4 result = vsm_search_blocker(constants, GetVSMLighting(), wpos, DTid.xy);
+	uint4 result = vsm_search_blocker(constants, GetVSMLighting(), wpos, DTid.xy, geometric_dark);
 	if (!has_geometry)
 		result = uint4(asuint(-1.0), 0, 0, 0); // sentinel: no blocker (matches vsm_search_blocker's own !valid convention)
 

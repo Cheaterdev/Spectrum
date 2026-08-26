@@ -216,7 +216,7 @@ private:
 	// larger than any expected scene once, tune here if a much bigger
 	// scene needs more room -- costs some reversed-Z precision headroom,
 	// not correctness.
-	static constexpr float VSM_LIGHT_Z_NEAR = -500.0f;
+	static constexpr float VSM_LIGHT_Z_NEAR = -2000.0f;
 	static constexpr float VSM_LIGHT_Z_FAR  = 5000.0f;
 
 	// Phase 5.8 note: VSM_RenderPages is a single pass now, not one Multiple-
@@ -390,13 +390,6 @@ private:
 	std::once_flag page_hiz_views_once;
 	std::vector<HAL::Texture2DView> page_hiz_mip_array_views; // [mip]
 
-	// Same shape as page_hiz_mip_array_views, for VSMPageHiZ's level_hiz
-	// field (Phase 5.18 follow-up multi-page pyramid) -- only 3 mips
-	// (pages_per_level^2 e.g. 4x4, down to 1x1), array-spanning all
-	// MaxLevels slices, narrowed to one mip per view.
-	std::once_flag level_hiz_views_once;
-	std::vector<HAL::Texture2DView> level_hiz_mip_array_views; // [mip]
-
 	// Builds atlas_slot_views/atlas_array_view -- needs only vsm_atlas_tex,
 	// no pass Context, so it's callable identically from either
 	// VSM_RenderPages' or VSM_HiZRebuild's render() (both need
@@ -410,9 +403,6 @@ private:
 	// which still create()s it for the once-ever cold-start clear -- see
 	// vsm.sig's VSM_HiZRebuild comment).
 	void build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyramid_mip_count);
-
-	// Same shape as build_page_hiz_views, for VSM_LevelHiZ.
-	void build_level_hiz_views(Passes::VSM_HiZRebuild::Context& data, int level_pyramid_mip_count);
 
 	Passes::VSM_GatherDispatch::setup_func_type  m_gatherdispatch_setup;
 	Passes::VSM_GatherDispatch::render_func_type m_gatherdispatch_render;

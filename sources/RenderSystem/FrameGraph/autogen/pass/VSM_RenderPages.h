@@ -29,9 +29,6 @@ public:
 
 		Handlers::Texture VSM_PageHiZ = ResourceID::VSM_PageHiZ;
 
-
-		Handlers::Texture VSM_LevelHiZ = ResourceID::VSM_LevelHiZ;
-
 		Handlers::StructuredBuffer<Table::VSMDispatchCommandData> VSM_DispatchCommands = ResourceID::VSM_DispatchCommands;
 
 		// Resources this pass touches, in declaration order, each paired with
@@ -42,7 +39,6 @@ public:
 			{ ResourceID::VSM_PageTable, true },
 			{ ResourceID::VSM_PageCameras, true },
 			{ ResourceID::VSM_PageHiZ, true },
-			{ ResourceID::VSM_LevelHiZ, true },
 			{ ResourceID::VSM_DispatchCommands, false },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
