@@ -295,10 +295,25 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 		float  z_y   = QuadReadAcrossY(best_sampled_z);
 		float  z_d   = QuadReadAcrossDiagonal(best_sampled_z);
 
-		blocker_count += cnt_x + cnt_y + cnt_d;
-		if (max_x > max_blocker_z) { max_blocker_z = max_x; best_tc = tc_x; best_slot = slot_x; best_sampled_z = z_x; }
-		if (max_y > max_blocker_z) { max_blocker_z = max_y; best_tc = tc_y; best_slot = slot_y; best_sampled_z = z_y; }
-		if (max_d > max_blocker_z) { max_blocker_z = max_d; best_tc = tc_d; best_slot = slot_d; best_sampled_z = z_d; }
+		// Depth-discontinuity guard: a neighbor lane's "blocker" was only
+		// ever validated against THAT lane's own receiver depth (pos_l.z),
+		// not mine -- at a silhouette edge or any sharp depth change
+		// across the quad, a sample that legitimately blocked a farther
+		// neighbor can be closer to the light than MY OWN surface, i.e.
+		// not a blocker for me at all. Trusting whichever lane found the
+		// raw-largest sample (as this used to) could adopt that neighbor's
+		// value anyway, producing a bogus (sometimes negative) world_delta
+		// -- confirmed as the likely source of quad_search's edge-case
+		// divergence from the non-quad search. Re-validate each candidate
+		// against THIS thread's own pos_l.z before accepting it.
+		bool valid_x = max_x > pos_l.z;
+		bool valid_y = max_y > pos_l.z;
+		bool valid_d = max_d > pos_l.z;
+
+		blocker_count += (valid_x ? cnt_x : 0) + (valid_y ? cnt_y : 0) + (valid_d ? cnt_d : 0);
+		if (valid_x && max_x > max_blocker_z) { max_blocker_z = max_x; best_tc = tc_x; best_slot = slot_x; best_sampled_z = z_x; }
+		if (valid_y && max_y > max_blocker_z) { max_blocker_z = max_y; best_tc = tc_y; best_slot = slot_y; best_sampled_z = z_y; }
+		if (valid_d && max_d > max_blocker_z) { max_blocker_z = max_d; best_tc = tc_d; best_slot = slot_d; best_sampled_z = z_d; }
 	}
 
 	// confident_lit collapses into the exact same asuint(-1.0) sentinel a
