@@ -56,9 +56,20 @@ int get_vsm_level(VSMConstants c, float2 pos_ls)
 // Phase 5.7: walk from start_level (whatever get_vsm_level found -- always
 // within [active_min, active_max]) up to active_max, coarser levels only,
 // since a coarser level's grid is a superset of a finer one's.
-uint get_vsm_slot(VSMConstants c, VSMLighting lighting, float2 pos_ls, int start_level)
+//
+// resolved_level: which level the RETURNED slot actually belongs to --
+// NOT necessarily start_level, whenever the walk above had to fall back to
+// a coarser one. Callers that go on to look up c.GetLevel_info() for
+// anything about the resolved page (texel size, page-grid extent, etc.)
+// need THIS, not their own start_level -- using start_level there silently
+// mixes one level's geometry with a different level's actual resolved
+// page, which vsm_search_blocker's level_hiz fallback surfaced live as
+// flatly wrong (not just imprecise) confident_lit/confident_dark bands
+// exactly where residency happened to fall back to a coarser level.
+uint get_vsm_slot(VSMConstants c, VSMLighting lighting, float2 pos_ls, int start_level, out int resolved_level)
 {
 	int pages = c.GetPages_per_level();
+	resolved_level = start_level;
 
 	for (int level = start_level; level <= c.GetActive_max(); level++)
 	{
@@ -68,7 +79,10 @@ uint get_vsm_slot(VSMConstants c, VSMLighting lighting, float2 pos_ls, int start
 
 		uint slot = lighting.GetPage_table()[uint3(page.x, page.y, level)];
 		if (slot != VSM_INVALID_SLOT)
+		{
+			resolved_level = level;
 			return slot;
+		}
 	}
 	return VSM_INVALID_SLOT;
 }

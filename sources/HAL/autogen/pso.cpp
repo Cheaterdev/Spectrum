@@ -80,6 +80,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::FrameClassification>(device, pso[PSO::FrameClassification]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameClassificationInitDispatch>(device, pso[PSO::FrameClassificationInitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::ReflectionCombine>(device, pso[PSO::ReflectionCombine]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyLevelHiZBatch>(device, pso[PSO::VSMCopyLevelHiZBatch]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMDownsampleLevelHiZBatch>(device, pso[PSO::VSMDownsampleLevelHiZBatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepth>(device, pso[PSO::VSMCopyPageDepth]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepthBatch>(device, pso[PSO::VSMCopyPageDepthBatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDownsampleHiZBatch>(device, pso[PSO::VSMDownsampleHiZBatch]));

@@ -187,6 +187,30 @@ private:
 	// stable and consistent for the whole frame.
 	float3 frame_light_pos;
 
+	// Page cameras' Z near/far come from these fixed constants instead of
+	// a fresh per-frame bounds_all.znear/zfar (see plan_frame() -- XY
+	// still comes from the real per-frame bounds_all/scene bounds, ONLY Z
+	// is overridden; this must never affect which pages are needed, just
+	// the depth-buffer scale their content is stored at). Every page
+	// camera in the whole system needs the SAME Z range for their stored
+	// NDC-Z values to be directly comparable across pages/levels rendered
+	// on different frames -- a per-frame-recomputed range (drawn from
+	// scene->get_min()/get_max(), which shifts slightly whenever any
+	// dynamic object moves) let two pages disagree on Z scale depending on
+	// which frame each last happened to render, surfacing live as flatly
+	// wrong (not just stale) Hi-Z classification results right at page
+	// seams. Deliberately NOT derived from the current scene's own bounds
+	// at all (not even once, lazily) -- a scene loaded later/bigger than
+	// whatever was first measured would either get clipped (too narrow)
+	// or force a value change that invalidates every already-rendered
+	// page's stored depth with nothing currently set up to rebuild them.
+	// Fixed, generous constants sidestep both: pick a range comfortably
+	// larger than any expected scene once, tune here if a much bigger
+	// scene needs more room -- costs some reversed-Z precision headroom,
+	// not correctness.
+	static constexpr float VSM_LIGHT_Z_NEAR = -500.0f;
+	static constexpr float VSM_LIGHT_Z_FAR  = 5000.0f;
+
 	// Phase 5.8 note: VSM_RenderPages is a single pass now, not one Multiple-
 	// slot instance per level, so the original concurrency hazard here (two
 	// levels' render() callbacks racing over the same slot) no longer
@@ -358,6 +382,13 @@ private:
 	std::once_flag page_hiz_views_once;
 	std::vector<HAL::Texture2DView> page_hiz_mip_array_views; // [mip]
 
+	// Same shape as page_hiz_mip_array_views, for VSMPageHiZ's level_hiz
+	// field (Phase 5.18 follow-up multi-page pyramid) -- only 3 mips
+	// (pages_per_level^2 e.g. 4x4, down to 1x1), array-spanning all
+	// MaxLevels slices, narrowed to one mip per view.
+	std::once_flag level_hiz_views_once;
+	std::vector<HAL::Texture2DView> level_hiz_mip_array_views; // [mip]
+
 	// Builds atlas_slot_views/atlas_array_view -- needs only vsm_atlas_tex,
 	// no pass Context, so it's callable identically from either
 	// VSM_RenderPages' or VSM_HiZRebuild's render() (both need
@@ -371,6 +402,9 @@ private:
 	// which still create()s it for the once-ever cold-start clear -- see
 	// vsm.sig's VSM_HiZRebuild comment).
 	void build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyramid_mip_count);
+
+	// Same shape as build_page_hiz_views, for VSM_LevelHiZ.
+	void build_level_hiz_views(Passes::VSM_HiZRebuild::Context& data, int level_pyramid_mip_count);
 
 	Passes::VSM_GatherDispatch::setup_func_type  m_gatherdispatch_setup;
 	Passes::VSM_GatherDispatch::render_func_type m_gatherdispatch_render;

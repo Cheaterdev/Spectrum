@@ -85,9 +85,14 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 	if (level < 0)
 		return 1.0;
 
-	uint slot = get_vsm_slot(c, lighting, pos_ls, level);
+	int resolved_level = level;
+	uint slot = get_vsm_slot(c, lighting, pos_ls, level, resolved_level);
 	if (slot == VSM_INVALID_SLOT)
 		return 1.0;
+	// See get_vsm_slot's own comment: it can walk out to a coarser level
+	// than the one just resolved above (residency fallback) -- from here
+	// on, `level` means the level the resolved slot actually belongs to.
+	level = resolved_level;
 
 	// VSMDepthDraw switched from cull=Front (render only back faces, so a
 	// closed mesh's own front face never gets recorded as its own blocker)
@@ -219,7 +224,28 @@ float get_shadow_vsm(VSMConstants c, VSMLighting lighting, float3 wpos, float3 n
 	// whenever debug_hiz was off: real-search-confirmed-lit areas rendered
 	// fully shadowed instead. Confirmed live, fixed by checking the more
 	// negative (more specific) sentinel first.
-	if (world_delta_or_sentinel <= -2.5 && world_delta_or_sentinel > -3.5)
+	//
+	// TEMP DEBUG (live "does level_hiz fallback even fire" investigation):
+	// -4.0/-5.0 are the via_level variants of -3.0/-2.0 (see
+	// vsm_search_blocker's own comment) -- given distinct debug colors here
+	// so the two pyramids' actual contribution is visible separately.
+	// Functionally identical to their page-local counterparts outside
+	// debug mode. Remove this pair of buckets once confirmed.
+	if (world_delta_or_sentinel <= -4.5 && world_delta_or_sentinel > -5.5)
+	{
+		// confident_dark via level_hiz.
+		if (debug_hiz)
+			return -4.0;
+		shadow = 0.0;
+	}
+	else if (world_delta_or_sentinel <= -3.5 && world_delta_or_sentinel > -4.5)
+	{
+		// confident_lit via level_hiz.
+		if (debug_hiz)
+			return -3.0;
+		shadow = 1.0;
+	}
+	else if (world_delta_or_sentinel <= -2.5 && world_delta_or_sentinel > -3.5)
 	{
 		// confident_lit sentinel -- see this function's own comment above.
 		if (debug_hiz)
@@ -411,7 +437,10 @@ float get_vsm_debug_raw_depth(VSMConstants c, VSMLighting lighting, float3 wpos)
 	if (level < 0)
 		return 0;
 
-	uint slot = get_vsm_slot(c, lighting, pos_ls, level);
+	// Unused here (this debug helper never looks anything up by level after
+	// resolving slot) -- required by get_vsm_slot's signature regardless.
+	int unused_resolved_level = level;
+	uint slot = get_vsm_slot(c, lighting, pos_ls, level, unused_resolved_level);
 	if (slot == VSM_INVALID_SLOT)
 		return 0;
 

@@ -93,6 +93,83 @@ struct VSMPageTableData
 struct VSMPageHiZ
 {
 	Texture2DArray<float2> page_hiz;
+	# Phase 5.18 follow-up: a SECOND, much smaller pyramid, one array slice
+	# per LEVEL (not per physical slot), continuing the min/max reduction
+	# PAST a single page -- one texel per PAGE at mip 0 (pages_per_level x
+	# pages_per_level, e.g. 4x4), mip-chained down to 1x1 (covering the
+	# WHOLE level). Fed from each resident page's own page_hiz coarsest mip
+	# (see VSMCopyLevelHiZBatch below); a page with no resident slot keeps
+	# whatever it last had, or the cold-start (-INF,+INF) "unknown" clear if
+	# it's never been resident at all (see VSM.cpp's clear comment) -- NOT
+	# (0,0), since a non-resident neighbor might genuinely hold a blocker
+	# once loaded, and (0,0) would wrongly read as "confirmed empty" here.
+	# -INF/+INF poisons any min/max reduction it's folded into (a query
+	# whose footprint touches an unresolved page can never satisfy either
+	# confidence check), so vsm_search_blocker's classification safely
+	# falls back to ambiguous without needing a separate residency flag.
+	# Exists so classification can answer for a search disc too big to fit
+	# in the receiver's own page (VSM_impl_search.hlsl's rect_in_page
+	# case) -- same struct/Instance4 binding as page_hiz, just another
+	# bindless field, not a merged resource.
+	Texture2DArray<float2> level_hiz;
+}
+
+# Fills VSMPageHiZ's level_hiz mip 0: one thread per dirty (level, local
+# page) pair, copying that page's own page_hiz coarsest-mip summary (a
+# single texel, the whole page's min/max) into level_hiz's corresponding
+# per-page texel. dirty_pages carries the physical slot (source) AND the
+# logical level/page_x/page_y (destination) together, since level_hiz is
+# addressed by logical position, not physical slot -- VSM_DirtySlots (the
+# existing flat physical-slot list VSMCopyPageDepthBatch/
+# VSMDownsampleHiZBatch use) doesn't carry enough information for this.
+struct VSMDirtyPageInfo
+{
+	uint physical_slot;
+	uint level;
+	uint page_x;
+	uint page_y;
+}
+
+[Bind = DefaultLayout::Instance0]
+struct VSMCopyLevelHiZBatch
+{
+	# Narrowed to page_hiz's single coarsest mip, all physical slots --
+	# same [Barrier = ALL] whole-resource-transition reasoning as
+	# VSMCopyPageDepthBatch below.
+	[Barrier = ALL] Texture2DArray<float2> page_hiz_coarsest;
+	[Barrier = ALL] RWTexture2DArray<float2> level_hiz_mip0;
+	StructuredBuffer<VSMDirtyPageInfo> dirty_pages;
+}
+
+ComputePSO VSMCopyLevelHiZBatch
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = vsm_copy_level_hiz_batch;
+}
+
+# Downsamples level_hiz's small mip chain (pages_per_level^2 at mip 0, e.g.
+# 4x4, down to 1x1) across EVERY level unconditionally each frame, not just
+# dirty ones -- at this size (a handful of texels per level, MaxLevels
+# slices) it's cheaper to just always redo it than to track which levels'
+# mip-0 actually changed. Straight dispatchID.z-as-level indexing, no
+# dirty-list indirection needed (unlike VSMDownsampleHiZBatch below, which
+# genuinely does need to skip non-dirty PHYSICAL slots -- level_hiz has no
+# equivalent "expensive to touch" concern at this resolution).
+[Bind = DefaultLayout::Instance0]
+struct VSMDownsampleLevelHiZBatch
+{
+	[Barrier = ALL] Texture2DArray<float2> src;
+	[Barrier = ALL] RWTexture2DArray<float2> dst_mip;
+}
+
+ComputePSO VSMDownsampleLevelHiZBatch
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = vsm_downsample_level_hiz_batch;
 }
 
 # Copies one page's rendered slice of VSM_Atlas into VSMPageHiZ's mip 0.
@@ -401,6 +478,10 @@ PassNode VSM_RenderPages
 	# the resource in that pass. VSM_HiZRebuild need()s the same resource
 	# for the actual per-frame rebuild writes.
 	[Write] Texture VSM_PageHiZ;
+	# Same cold-start-clear ownership reasoning as VSM_PageHiZ just above --
+	# created here, VSM_HiZRebuild need()s it for the per-frame feed/
+	# downsample writes.
+	[Write] Texture VSM_LevelHiZ;
 	StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
 }
 
@@ -427,6 +508,13 @@ PassNode VSM_HiZRebuild
 	# dispatches (VSMCopyPageDepthBatch/VSMDownsampleHiZBatch). Moved here
 	# from VSM_RenderPages along with the rest of the per-frame rebuild.
 	[Write] StructuredBuffer<uint> VSM_DirtySlots;
+	# Phase 5.18 follow-up: feeds and downsamples VSMPageHiZ's level_hiz
+	# field too, right after the per-page pyramid rebuild above (needs each
+	# dirty page's just-rebuilt coarsest mip as its own source).
+	[Write] Texture VSM_LevelHiZ;
+	# Parallel to VSM_DirtySlots but carries logical (level, page_x,
+	# page_y) alongside physical slot -- see VSMDirtyPageInfo's own comment.
+	[Write] StructuredBuffer<VSMDirtyPageInfo> VSM_DirtyPages;
 }
 
 # Blocker-search extraction: one full-screen dispatch (same size as
@@ -451,6 +539,11 @@ PassNode VSM_BlockerSearch
 	Texture VSM_PageTable;
 	StructuredBuffer<Camera> VSM_PageCameras;
 	Texture VSM_PageHiZ;
+	# Phase 5.18 follow-up: the multi-page-per-level summary (VSMPageHiZ's
+	# level_hiz field) vsm_search_blocker falls back to when a search disc
+	# doesn't fit in the receiver's own page -- see VSMPageHiZ's own
+	# comment.
+	Texture VSM_LevelHiZ;
 	Texture BlueNoise;
 	[Write] Texture VSM_BlockerResult;
 }

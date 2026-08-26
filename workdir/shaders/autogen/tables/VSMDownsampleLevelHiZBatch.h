@@ -6,10 +6,10 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-struct VSMPageHiZ
+struct VSMDownsampleLevelHiZBatch
 {
-	uint page_hiz; // Texture2DArray<float2>
-	uint level_hiz; // Texture2DArray<float2>
-	Texture2DArray<float2> GetPage_hiz() { return ResourceDescriptorHeap[page_hiz]; }
-	Texture2DArray<float2> GetLevel_hiz() { return ResourceDescriptorHeap[level_hiz]; }
+	uint src; // Texture2DArray<float2>
+	uint dst_mip; // RWTexture2DArray<float2>
+	Texture2DArray<float2> GetSrc() { return ResourceDescriptorHeap[src]; }
+	RWTexture2DArray<float2> GetDst_mip() { return ResourceDescriptorHeap[dst_mip]; }
 };

@@ -84,7 +84,9 @@ namespace FrameGraph
 		VSM_PageTable,
 		VSM_PageCameras,
 		VSM_PageHiZ,
+		VSM_LevelHiZ,
 		VSM_DirtySlots,
+		VSM_DirtyPages,
 		VSM_BlockerResult,
 		VSM_DepthAnalysisResult,
 		Count
@@ -167,7 +169,9 @@ namespace FrameGraph
 			"VSM_PageTable",
 			"VSM_PageCameras",
 			"VSM_PageHiZ",
+			"VSM_LevelHiZ",
 			"VSM_DirtySlots",
+			"VSM_DirtyPages",
 			"VSM_BlockerResult",
 			"VSM_DepthAnalysisResult",
 		};

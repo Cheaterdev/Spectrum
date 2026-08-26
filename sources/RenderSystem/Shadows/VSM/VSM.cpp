@@ -164,6 +164,18 @@ void VSM::build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyrami
 	});
 }
 
+void VSM::build_level_hiz_views(Passes::VSM_HiZRebuild::Context& data, int level_pyramid_mip_count)
+{
+	std::call_once(level_hiz_views_once, [this, &data, level_pyramid_mip_count]
+	{
+		auto& storage = RenderSystem::get().device().get_static_gpu_data();
+
+		level_hiz_mip_array_views.resize(level_pyramid_mip_count);
+		for (int mip = 0; mip < level_pyramid_mip_count; mip++)
+			level_hiz_mip_array_views[mip] = data.VSM_LevelHiZ->create_mip(mip, storage);
+	});
+}
+
 void VSM::pass_data(FrameGraph::TaskBuilder& builder)
 {
 	if (!vsm_atlas_tex)
@@ -219,6 +231,15 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	auto max = scene->get_max();
 	auto points_all = cam->get_points(min, max);
 	auto bounds_all = points_all.get_bounds_in(light_view_cam.get_view());
+
+	// Z range overridden with fixed constants (see VSM_LIGHT_Z_NEAR/FAR's
+	// own comment) -- NOT derived from the scene at all, so it can't drift
+	// frame to frame or need changing if a bigger scene loads later. XY
+	// (left/right/top/bottom) stays the real per-frame value from above --
+	// that's about which pages are currently needed, not about Z
+	// comparability, and SHOULD track the live scene.
+	bounds_all.znear = VSM_LIGHT_Z_NEAR;
+	bounds_all.zfar  = VSM_LIGHT_Z_FAR;
 
 	uint64_t tick = ++m_frame_id;
 
@@ -514,6 +535,15 @@ VSM::VSM() : VariableContext(L"VSM")
 	for (int s = page_table.page_size; s > 1; s >>= 1)
 		pyramid_mip_count++;
 
+	// Phase 5.18 follow-up: VSMPageHiZ's level_hiz field, one array slice
+	// per LEVEL (MaxLevels), mip chain down to 1x1 -- same "down to 1x1"
+	// reasoning as pyramid_mip_count above, just one step smaller since
+	// mip 0 here is already pages_per_level^2 (a whole page's summary per
+	// texel) instead of page_size^2 raw depth texels.
+	int level_pyramid_mip_count = 1;
+	for (int s = pages_side; s > 1; s >>= 1)
+		level_pyramid_mip_count++;
+
 	// ---- Page rendering (Phase 5.8: ONE pass, one exec_indirect() call
 	// covering every active+dirty level's every mesh, instead of one
 	// Multiple-slot pass per level) ------------------------------------------
@@ -536,7 +566,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		return true;
 	};
 
-	m_renderpages_setup = [this, physical_slots, pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_renderpages_setup = [this, physical_slots, pyramid_mip_count, pages_side, level_pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
 		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::DepthStencil);
 		builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
@@ -546,6 +576,10 @@ VSM::VSM() : VariableContext(L"VSM")
 		// to two channels (.x = min/farthest, .y = max/closest -- see
 		// VSMPageHiZ's own comment in vsm.sig).
 		builder.create(data.VSM_PageHiZ, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32G32_FLOAT, (UINT)physical_slots, (UINT)pyramid_mip_count }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+		// Phase 5.18 follow-up: one array slice per LEVEL (not per physical
+		// slot), mip0 = pages_side x pages_side (one texel per page). Same
+		// Static/UnorderedAccess shape as VSM_PageHiZ.
+		builder.create(data.VSM_LevelHiZ, { ivec3(pages_side, pages_side, 0), HAL::Format::R32G32_FLOAT, (UINT)MaxLevels, (UINT)level_pyramid_mip_count }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 		// Now GPU-appended by VSM_GatherDispatch -- this pass only reads it
 		// via exec_indirect.
 		builder.need(data.VSM_DispatchCommands, FrameGraph::ResourceFlags::ComputeRead);
@@ -558,7 +592,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// still owns create() for the cold-start clear, see its own setup()).
 	// VSM_DirtySlots moves here entirely since only this pass's dispatches
 	// consume it now.
-	m_hizrebuild_setup = [this, physical_slots](Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_hizrebuild_setup = [this, physical_slots, pages_per_level](Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
 		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::UnorderedAccess);
@@ -567,6 +601,17 @@ VSM::VSM() : VariableContext(L"VSM")
 		// dirty page occupies a distinct slot, so that's a hard upper bound
 		// on how many entries this can ever need in one frame.
 		builder.create(data.VSM_DirtySlots, { (size_t)physical_slots }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+		// Phase 5.18 follow-up: feeds/downsamples VSM_LevelHiZ right after
+		// the per-page rebuild above. VSM_DirtyPages carries logical
+		// level/page_x/page_y alongside physical slot -- see
+		// VSMDirtyPageInfo's own comment. Sized to EVERY local page of
+		// EVERY level (MaxLevels x pages_per_level), not physical_slots --
+		// unlike VSM_DirtySlots, this list is built unconditionally every
+		// frame (every local page of every active level, mapped or not),
+		// not just for dirty/resident pages, so its bound is the full
+		// logical grid, which can exceed the physical slot budget.
+		builder.need(data.VSM_LevelHiZ, FrameGraph::ResourceFlags::UnorderedAccess);
+		builder.create(data.VSM_DirtyPages, { (size_t)(VSM::MaxLevels * pages_per_level) }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		return true;
 	};
 
@@ -657,7 +702,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		compute.dispatch(ivec2((int)mesh_count, (int)m_level_dispatch_info.size()), ivec2(64, 1));
 	};
 
-	m_renderpages_render = [this, pages_side, pages_per_level, pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::FrameContext& context)
+	m_renderpages_render = [this, pages_side, pages_per_level, pyramid_mip_count, level_pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::FrameContext& context)
 	{
 		// All the decision-making (which pages get a slot, priority
 		// stealing, dirty tracking) already happened in plan_frame(),
@@ -810,6 +855,24 @@ VSM::VSM() : VariableContext(L"VSM")
 				                        vec4(0, 0, 0, 0), /*whole_resource*/ true);
 		}
 
+		// Phase 5.18 follow-up: level_hiz's cold-start clear is NOT (0,0,0,0)
+		// like page_hiz's above -- a page that's never been resident could
+		// still hold real geometry once it loads, so (0,0) ("confirmed
+		// empty") would be actively wrong, not just imprecise. -FLT_MAX/
+		// +FLT_MAX poisons instead: min()/max() propagate it through the
+		// downsample chain exactly like a real spike would, so any
+		// classification query whose footprint touches an unresolved page
+		// automatically fails both confidence checks and falls back to the
+		// real search -- see VSMPageHiZ's own comment.
+		if (data.VSM_LevelHiZ.is_new())
+		{
+			PROFILE(L"clear_uav_level");
+			float max_f = std::numeric_limits<float>::max();
+			for (int mip = 0; mip < level_pyramid_mip_count; mip++)
+				command_list->clear_uav(data.VSM_LevelHiZ->create_mip(mip, *command_list).rwTexture2DArray,
+				                        vec4(-max_f, max_f, 0, 0), /*whole_resource*/ true);
+		}
+
 		{
 			PROFILE(L"clear_dsv");
 			// Clear only the pages actually being re-rendered this frame: the
@@ -894,7 +957,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// ---- Hi-Z pyramid rebuild (Phase 5.17: async compute, see vsm.sig's
 	// VSM_HiZRebuild comment) -----------------------------------------------
 
-	m_hizrebuild_render = [this, pages_per_level, pyramid_mip_count](Passes::VSM_HiZRebuild::Context& data, FrameGraph::FrameContext& context)
+	m_hizrebuild_render = [this, pages_side, pages_per_level, pyramid_mip_count, level_pyramid_mip_count](Passes::VSM_HiZRebuild::Context& data, FrameGraph::FrameContext& context)
 	{
 		// Rebuilds each just-redrawn page's pyramid for next time it's dirty
 		// -- skipped entirely when hiz_culling_enabled is false, not just
@@ -917,6 +980,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		// crash the first frame this pass had real work to do.
 		build_atlas_views();
 		build_page_hiz_views(data, pyramid_mip_count);
+		build_level_hiz_views(data, level_pyramid_mip_count);
 
 		// Phase 5.14: collect every dirty page's physical slot into one
 		// flat list -- lets the whole rebuild (copy + full mip chain)
@@ -939,7 +1003,50 @@ VSM::VSM() : VariableContext(L"VSM")
 			}
 		}
 
-		if (dirty_slots.empty())
+		// Phase 5.18 follow-up: level_hiz's own feed list, deliberately NOT
+		// gated by dirty_mask like dirty_slots above -- every local page of
+		// every ACTIVE level, every frame, mapped or not. Rebuilding only on
+		// dirty left level_hiz's per-page texel holding whatever value that
+		// page had the LAST time it was dirty, indefinitely -- including
+		// after eviction (a page that's no longer mapped kept its old,
+		// increasingly stale content forever instead of reading as empty)
+		// and, more importantly, including the page's camera Z-range from
+		// whenever that was (VSM.cpp's page_cam setup derives near/far from
+		// the per-frame bounds_all, so a page dirtied 50 frames ago can
+		// disagree in Z-scale with a neighbor dirtied this frame -- exactly
+		// what surfaced live as flatly wrong, not just stale, confident_lit/
+		// dark classification right at page seams). Rebuilding every page's
+		// entry every frame doesn't fix that Z-scale drift by itself (the
+		// underlying page_hiz VALUE is still whatever it was last rendered
+		// with), but it does fix eviction staleness, and it's what a proper
+		// per-level-stabilized-Z-range fix (separate, not done here) needs
+		// to sit on top of. VSM_INVALID_SLOT (unmapped -- not needed this
+		// frame, or needed but the pool was exhausted) is passed through
+		// as-is; the shader writes float2(0,0) for it instead of reading
+		// page_hiz, same "treat missing as empty" convention plan.slots[]
+		// itself already uses elsewhere.
+		std::vector<Table::VSMDirtyPageInfo> dirty_pages;
+		{
+			PROFILE(L"vsm_level_hiz_collect");
+			for (int level = 0; level < VSM::MaxLevels; level++)
+			{
+				const LevelPlan& plan = m_plan[level];
+				if (!plan.valid)
+					continue;
+
+				for (int local = 0; local < pages_per_level; local++)
+				{
+					Table::VSMDirtyPageInfo info;
+					info.physical_slot = (uint32_t)plan.slots[local];
+					info.level         = (uint32_t)level;
+					info.page_x        = (uint32_t)(local % pages_side);
+					info.page_y        = (uint32_t)(local / pages_side);
+					dirty_pages.push_back(info);
+				}
+			}
+		}
+
+		if (dirty_slots.empty() && dirty_pages.empty())
 			return;
 
 		// No manual transitions here any more. VSM_Atlas (DSV -> SRV for
@@ -949,52 +1056,105 @@ VSM::VSM() : VariableContext(L"VSM")
 		// physical_page_count-slice range -- which is exactly what the
 		// bare add_resource_usage() calls that used to sit here were
 		// faking by hand.
-		command_list->get_copy().update(*data.VSM_DirtySlots, 0, std::span{ dirty_slots });
-
-		ivec3 dispatch_size((int)page_table.page_size, (int)page_table.page_size, (int)dirty_slots.size());
-
+		//
+		// Guarded on dirty_slots specifically (not the combined early-out
+		// above) -- level_hiz's own feed below runs unconditionally now and
+		// no longer implies page_hiz had any dirty work to do this frame.
+		if (!dirty_slots.empty())
 		{
-			PROFILE(L"vsm_hiz_copy");
-			compute.set_pipeline<PSOS::VSMCopyPageDepthBatch>();
+			command_list->get_copy().update(*data.VSM_DirtySlots, 0, std::span{ dirty_slots });
+
+			ivec3 dispatch_size((int)page_table.page_size, (int)page_table.page_size, (int)dirty_slots.size());
+
 			{
-				// Narrowed views (atlas_array_view/page_hiz_mip_array_views,
-				// VSM's own members, built just above), not the base
-				// handlers' full-array/full-mip-chain ones. dirty_slots.
-				// Load(z) still picks which physical slice each Z-group
-				// touches.
-				Slots::VSMCopyPageDepthBatch copy;
-				copy.GetAtlas()       = atlas_array_view.texture2DArray;
-				copy.GetDst_mip0()    = page_hiz_mip_array_views[0].rwTexture2DArray;
-				copy.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
+				PROFILE(L"vsm_hiz_copy");
+				compute.set_pipeline<PSOS::VSMCopyPageDepthBatch>();
+				{
+					// Narrowed views (atlas_array_view/page_hiz_mip_array_views,
+					// VSM's own members, built just above), not the base
+					// handlers' full-array/full-mip-chain ones. dirty_slots.
+					// Load(z) still picks which physical slice each Z-group
+					// touches.
+					Slots::VSMCopyPageDepthBatch copy;
+					copy.GetAtlas()       = atlas_array_view.texture2DArray;
+					copy.GetDst_mip0()    = page_hiz_mip_array_views[0].rwTexture2DArray;
+					copy.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
+					compute.set(copy);
+				}
+				compute.dispatch(dispatch_size, ivec3(8, 8, 1));
+			}
+
+			{
+				PROFILE(L"vsm_hiz_downsample");
+				compute.set_pipeline<PSOS::VSMDownsampleHiZBatch>();
+				for (int mip = 0; mip < pyramid_mip_count - 1; mip++)
+				{
+					int dst_size = std::max(1, page_table.page_size >> (mip + 1));
+
+					Slots::VSMDownsampleHiZBatch down;
+					// Both sides narrowed to exactly one mip (array-spanning,
+					// physical_page_count slices) instead of the base
+					// handler's whole 7-mip-chain SRV -- same narrowing
+					// reasoning as the copy step above, and this one runs
+					// pyramid_mip_count-1 times per frame, not once.
+					// src_mip is no longer needed for addressing (the view
+					// itself is already narrowed to that mip -- Load's mip
+					// component is always 0 relative to it) but is kept for
+					// parity with the entry's own bookkeeping.
+					down.GetSrc()         = page_hiz_mip_array_views[mip].texture2DArray;
+					down.GetDst_mip()     = page_hiz_mip_array_views[mip + 1].rwTexture2DArray;
+					down.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
+					down.GetSrc_mip()     = (uint)mip;
+					compute.set(down);
+
+					compute.dispatch(ivec3(dst_size, dst_size, (int)dirty_slots.size()), ivec3(8, 8, 1));
+				}
+			}
+		}
+
+		// Phase 5.18 follow-up: feed + downsample VSM_LevelHiZ, right after
+		// page_hiz's own rebuild above -- needs each just-rebuilt dirty
+		// page's coarsest mip as its source for THAT page's entry (a
+		// non-dirty page's entry just re-copies whatever page_hiz already
+		// has, unchanged -- see the collection loop's own comment for why
+		// this runs unconditionally instead of only on dirty). See
+		// VSMDirtyPageInfo's own comment for why this needs its own
+		// (level, page_x, page_y)-carrying list instead of reusing
+		// VSM_DirtySlots.
+		if (!dirty_pages.empty())
+		{
+			command_list->get_copy().update(*data.VSM_DirtyPages, 0, std::span{ dirty_pages });
+
+			PROFILE(L"vsm_level_hiz_copy");
+			compute.set_pipeline<PSOS::VSMCopyLevelHiZBatch>();
+			{
+				Slots::VSMCopyLevelHiZBatch copy;
+				copy.GetPage_hiz_coarsest() = page_hiz_mip_array_views[pyramid_mip_count - 1].texture2DArray;
+				copy.GetLevel_hiz_mip0()    = level_hiz_mip_array_views[0].rwTexture2DArray;
+				copy.GetDirty_pages()       = data.VSM_DirtyPages->structuredBuffer;
 				compute.set(copy);
 			}
-			compute.dispatch(dispatch_size, ivec3(8, 8, 1));
+			compute.dispatch(ivec3(1, 1, (int)dirty_pages.size()), ivec3(1, 1, 1));
 		}
 
 		{
-			PROFILE(L"vsm_hiz_downsample");
-			compute.set_pipeline<PSOS::VSMDownsampleHiZBatch>();
-			for (int mip = 0; mip < pyramid_mip_count - 1; mip++)
+			PROFILE(L"vsm_level_hiz_downsample");
+			// Unconditionally every active-page-touching frame, across every
+			// LEVEL slice (not just ones with a dirty page this frame) --
+			// see VSMDownsampleLevelHiZBatch's own comment for why that's
+			// cheaper than tracking a separate per-level dirty list at this
+			// resolution.
+			compute.set_pipeline<PSOS::VSMDownsampleLevelHiZBatch>();
+			for (int mip = 0; mip < level_pyramid_mip_count - 1; mip++)
 			{
-				int dst_size = std::max(1, page_table.page_size >> (mip + 1));
+				int dst_size = std::max(1, pages_side >> (mip + 1));
 
-				Slots::VSMDownsampleHiZBatch down;
-				// Both sides narrowed to exactly one mip (array-spanning,
-				// physical_page_count slices) instead of the base
-				// handler's whole 7-mip-chain SRV -- same narrowing
-				// reasoning as the copy step above, and this one runs
-				// pyramid_mip_count-1 times per frame, not once.
-				// src_mip is no longer needed for addressing (the view
-				// itself is already narrowed to that mip -- Load's mip
-				// component is always 0 relative to it) but is kept for
-				// parity with the entry's own bookkeeping.
-				down.GetSrc()         = page_hiz_mip_array_views[mip].texture2DArray;
-				down.GetDst_mip()     = page_hiz_mip_array_views[mip + 1].rwTexture2DArray;
-				down.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
-				down.GetSrc_mip()     = (uint)mip;
+				Slots::VSMDownsampleLevelHiZBatch down;
+				down.GetSrc()     = level_hiz_mip_array_views[mip].texture2DArray;
+				down.GetDst_mip() = level_hiz_mip_array_views[mip + 1].rwTexture2DArray;
 				compute.set(down);
 
-				compute.dispatch(ivec3(dst_size, dst_size, (int)dirty_slots.size()), ivec3(8, 8, 1));
+				compute.dispatch(ivec3(dst_size, dst_size, (int)VSM::MaxLevels), ivec3(4, 4, 1));
 			}
 		}
 	};
@@ -1019,6 +1179,10 @@ VSM::VSM() : VariableContext(L"VSM")
 		// VSM_HiZRebuild moving to run immediately before this pass (same
 		// [Async2] queue, test.sig).
 		builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::ComputeRead);
+		// Phase 5.18 follow-up: the multi-page-per-level fallback -- same
+		// freshness dependency as VSM_PageHiZ above (fed by the same
+		// VSM_HiZRebuild pass, same ordering requirement).
+		builder.need(data.VSM_LevelHiZ, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
 		auto& frame = builder.graph->get_context<ViewportInfo>();
 		builder.create(data.VSM_BlockerResult,
@@ -1060,7 +1224,8 @@ VSM::VSM() : VariableContext(L"VSM")
 			// uses to bind this for the mesh shader's occlusion test -- the
 			// whole mip chain, vsm_search_blocker picks its own mip.
 			Slots::VSMPageHiZ pageHiZ;
-			pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
+			pageHiZ.GetPage_hiz()  = data.VSM_PageHiZ->texture2DArray;
+			pageHiZ.GetLevel_hiz() = data.VSM_LevelHiZ->texture2DArray;
 			compute.set(pageHiZ);
 		}
 

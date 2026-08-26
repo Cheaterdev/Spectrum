@@ -41,9 +41,18 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	bool valid = level_raw >= 0;
 	int level = valid ? level_raw : c.GetActive_min();
 
-	uint slot_raw = valid ? get_vsm_slot(c, lighting, pos_ls, level) : VSM_INVALID_SLOT;
+	int resolved_level = level;
+	uint slot_raw = valid ? get_vsm_slot(c, lighting, pos_ls, level, resolved_level) : VSM_INVALID_SLOT;
 	valid = valid && (slot_raw != VSM_INVALID_SLOT);
 	uint slot = valid ? slot_raw : 0;
+	// get_vsm_slot can walk out to a COARSER level than the one just
+	// resolved above (residency fallback) -- from here on, `level` means
+	// "the level the resolved slot actually belongs to", not "the level
+	// the receiver's own position would ideally use". Using the original,
+	// possibly-finer level for level_info lookups after this point mixes
+	// one level's geometry with a different level's actual page -- see
+	// get_vsm_slot's own comment for how this surfaced live.
+	level = valid ? resolved_level : level;
 
 	Camera page_cam = lighting.GetPage_cameras()[slot];
 	float4 pos_l = mul(page_cam.GetViewProj(), float4(wpos, 1));
@@ -82,6 +91,10 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	// where they already did.
 	bool confident_lit = false;
 	bool confident_dark = false;
+	// TEMP DEBUG (live "does level_hiz fallback even fire" investigation):
+	// tracks which pyramid actually produced the classification, so the
+	// debug view can color them differently. Remove once confirmed.
+	bool via_level = false;
 	if (valid && c.GetHiz_blocker_classify() != 0)
 	{
 		Texture2DArray<float2> pyramid = GetVSMPageHiZ().GetPage_hiz();
@@ -113,6 +126,7 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 		// the real per-tap search -- which resolves neighbors correctly --
 		// handle it, same as it always did before this optimization.
 		bool rect_in_page = all(uv_min >= 0) && all(uv_max <= 1);
+		bool classified = false;
 
 		if (rect_in_page)
 		{
@@ -165,6 +179,78 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 
 				confident_lit  = minmax.y < pos_l.z;
 				confident_dark = !confident_lit && minmax.x > pos_l.z;
+				classified = true;
+			}
+		}
+
+		// Fallback (Phase 5.18 follow-up multi-page pyramid): the disc
+		// didn't fit in the receiver's own page, or needed a mip deeper
+		// than page_hiz has -- try VSMPageHiZ's level_hiz field (a much
+		// smaller pyramid, one texel per PAGE, spanning the whole level's
+		// page grid) instead of giving up outright. Same shape as the
+		// page-local query above, just in LEVEL-GRID space: light-space XY
+		// directly (no page-camera-NDC Y-flip -- level_hiz's texels are
+		// indexed by raw page_x/page_y, the same convention get_vsm_level's
+		// own extent/rel math already uses, not the page-camera convention
+		// `tc` above uses), queried against level_hiz instead of page_hiz.
+		// Comparable against the SAME pos_l.z: every page's own camera
+		// within a level shares the identical Z near/far range (VSM.cpp's
+		// page_cam setup derives it from the per-LEVEL plan, not per-page),
+		// so NDC-Z values are on the same scale across any page of this
+		// level -- the real per-tap search already relies on this exact
+		// same cross-page comparability via vsm_resolve_tap's own
+		// cross-page walk, so this isn't a new assumption.
+		if (!classified)
+		{
+			Texture2DArray<float2> lpyramid = GetVSMPageHiZ().GetLevel_hiz();
+			uint lw, lh, lelems, lnumLevels;
+			lpyramid.GetDimensions(0, lw, lh, lelems, lnumLevels);
+
+			float4 linfo = c.GetLevel_info(level);
+			float  level_extent = linfo.z * c.GetPages_per_level();
+			float2 level_tc = (pos_ls - linfo.xy) / max(level_extent, 0.0001);
+			// texel_world_size/level_extent cancels down to this, same
+			// simplification reasoning as the page-local rect_uv above.
+			float lrect_uv = blocker_search_radius_texels / (c.GetPage_size() * c.GetPages_per_level());
+			float2 luv_min = level_tc - lrect_uv;
+			float2 luv_max = level_tc + lrect_uv;
+
+			bool lrect_in_level = all(luv_min >= 0) && all(luv_max <= 1);
+			if (lrect_in_level)
+			{
+				float2 lrect_texels = (luv_max - luv_min) * float2(lw, lh);
+				float  lmip_f = ceil(log2(max(max(lrect_texels.x, lrect_texels.y), 1.0)));
+				// lnumLevels - 2, NOT - 1: the coarsest mip (1x1, e.g. at
+				// pages_per_level=4 that's ALL 16 pages of the level
+				// collapsed into one min/max pair) technically satisfies
+				// the coverage guarantee, but "everything closer to light
+				// ANYWHERE in the whole level" is not a spatially
+				// meaningful bound for a single receiver -- a level can
+				// span the entire visible scene, so whichever one page
+				// happens to contain the tallest nearby building dominates
+				// the reduction for every other receiver in the level,
+				// producing a classification that reads as flatly wrong
+				// (not just imprecise) wherever it wins the confidence
+				// check. Confirmed live: rectangular patches of confident_
+				// lit/dark appearing with no correlation to real geometry.
+				// Capping one mip short keeps the fallback to at most a
+				// 2x2-page neighborhood -- still meaningfully local.
+				bool   lmip_available = lmip_f <= (float)(lnumLevels - 2);
+
+				if (lmip_available)
+				{
+					uint lmip = (uint)lmip_f;
+					float2 lc00 = lpyramid.SampleLevel(pointClampSampler, float3(luv_min.x, luv_min.y, (float)level), lmip);
+					float2 lc10 = lpyramid.SampleLevel(pointClampSampler, float3(luv_max.x, luv_min.y, (float)level), lmip);
+					float2 lc01 = lpyramid.SampleLevel(pointClampSampler, float3(luv_min.x, luv_max.y, (float)level), lmip);
+					float2 lc11 = lpyramid.SampleLevel(pointClampSampler, float3(luv_max.x, luv_max.y, (float)level), lmip);
+					float2 lminmax = float2(min(min(lc00.x, lc10.x), min(lc01.x, lc11.x)),
+					                        max(max(lc00.y, lc10.y), max(lc01.y, lc11.y)));
+
+					confident_lit  = lminmax.y < pos_l.z;
+					confident_dark = !confident_lit && lminmax.x > pos_l.z;
+					via_level      = true;
+				}
 			}
 		}
 	}
@@ -252,8 +338,13 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	// -- asuint(-3.0) makes it distinguishable. get_shadow_vsm's
 	// VSM_DEBUG_HIZ_CLASSIFY branch colors it for visual confirmation.
 	// Remove both once the bug is confirmed fixed.
+	//
+	// TEMP DEBUG (live "does level_hiz fallback even fire" investigation):
+	// -4.0/-5.0 distinguish a via_level classification from the page-local
+	// one (-3.0/-2.0) so the debug view can show them as different colors.
+	// Remove alongside via_level once confirmed.
 	if (confident_lit)
-		return uint4(asuint(-3.0), 0, 0, 0);
+		return uint4(asuint(via_level ? -4.0 : -3.0), 0, 0, 0);
 
 	// confident_dark: the tap loop above never ran for this thread (skipped
 	// via continue), so blocker_count is 0 here same as the genuine
@@ -263,7 +354,7 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	// from asuint(-1.0)'s "no blocker" -- get_shadow_vsm/vsm_pcf_shadow's
 	// caller reads this back and skips the PCF pass entirely, shadow = 0.
 	if (confident_dark)
-		return uint4(asuint(-2.0), 0, 0, 0);
+		return uint4(asuint(via_level ? -5.0 : -2.0), 0, 0, 0);
 
 	if (blocker_count == 0)
         return uint4(asuint(-1.0), 0, 0, 0);

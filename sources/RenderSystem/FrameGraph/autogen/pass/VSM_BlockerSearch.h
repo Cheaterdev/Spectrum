@@ -31,6 +31,9 @@ public:
 		Handlers::Texture VSM_PageHiZ = ResourceID::VSM_PageHiZ;
 
 
+		Handlers::Texture VSM_LevelHiZ = ResourceID::VSM_LevelHiZ;
+
+
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
@@ -57,6 +60,7 @@ public:
 			{ ResourceID::VSM_PageTable, false },
 			{ ResourceID::VSM_PageCameras, false },
 			{ ResourceID::VSM_PageHiZ, false },
+			{ ResourceID::VSM_LevelHiZ, false },
 			{ ResourceID::BlueNoise, false },
 			{ ResourceID::VSM_BlockerResult, true },
 		};

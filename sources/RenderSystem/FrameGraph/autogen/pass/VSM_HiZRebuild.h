@@ -27,6 +27,11 @@ public:
 
 		Handlers::StructuredBuffer<uint> VSM_DirtySlots = ResourceID::VSM_DirtySlots;
 
+
+		Handlers::Texture VSM_LevelHiZ = ResourceID::VSM_LevelHiZ;
+
+		Handlers::StructuredBuffer<Table::VSMDirtyPageInfo> VSM_DirtyPages = ResourceID::VSM_DirtyPages;
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
@@ -34,6 +39,8 @@ public:
 			{ ResourceID::VSM_Atlas, false },
 			{ ResourceID::VSM_PageHiZ, true },
 			{ ResourceID::VSM_DirtySlots, true },
+			{ ResourceID::VSM_LevelHiZ, true },
+			{ ResourceID::VSM_DirtyPages, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

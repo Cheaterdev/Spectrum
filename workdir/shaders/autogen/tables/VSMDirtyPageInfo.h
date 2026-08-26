@@ -6,10 +6,14 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
-struct VSMPageHiZ
+struct VSMDirtyPageInfo
 {
-	uint page_hiz; // Texture2DArray<float2>
-	uint level_hiz; // Texture2DArray<float2>
-	Texture2DArray<float2> GetPage_hiz() { return ResourceDescriptorHeap[page_hiz]; }
-	Texture2DArray<float2> GetLevel_hiz() { return ResourceDescriptorHeap[level_hiz]; }
+	uint physical_slot; // uint
+	uint level; // uint
+	uint page_x; // uint
+	uint page_y; // uint
+	uint GetPhysical_slot() { return physical_slot; }
+	uint GetLevel() { return level; }
+	uint GetPage_x() { return page_x; }
+	uint GetPage_y() { return page_y; }
 };
