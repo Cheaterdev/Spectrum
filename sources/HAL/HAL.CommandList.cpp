@@ -183,7 +183,7 @@ namespace HAL
 
 		compiler.create(type, device);
 
-		if (type == CommandListType::DIRECT || type == CommandListType::COMPUTE)
+		if (type == CommandListType::DIRECT || is_compute_queue(type))
 			compute.reset(new ComputeContext(*this));
 
 		copy.reset(new CopyContext(*this));
@@ -1041,7 +1041,7 @@ namespace HAL
 						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
 					}
 
-					if (type == CommandListType::COMPUTE)
+					if (is_compute_queue(type))
 					{
 						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
 					}
@@ -1058,7 +1058,7 @@ namespace HAL
 						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
 					}
 
-					if (type == CommandListType::COMPUTE)
+					if (is_compute_queue(type))
 					{
 						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
 					}
@@ -1081,7 +1081,7 @@ namespace HAL
 						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
 					}
 
-					if (type == CommandListType::COMPUTE)
+					if (is_compute_queue(type))
 					{
 						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
 					}

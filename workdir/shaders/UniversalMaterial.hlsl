@@ -87,7 +87,7 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     float2 prev_p = float2(0.5,0.5) + float2(0.5, -0.5)*(i.prev_pos.xy / i.prev_pos.w);
 	   
     // Cancels the jitter baked into cur_p/prev_p, so motion stays unjittered.
-    result.motion = (cur_p - prev_p) + float2(-1, 1) * (camera.jitter - prev_camera.jitter);
+    result.motion = (cur_p - prev_p)/ 2 + float2(-1, 1) * (camera.jitter - prev_camera.jitter);
     return result;       
 }    
 

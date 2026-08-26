@@ -512,7 +512,7 @@ namespace FrameGraph
 
 			if (!optimize)
 			{
-				pass->flags = pass->flags & ~(PassFlags::Compute);
+				pass->flags = pass->flags & ~(PassFlags::Compute | PassFlags::Compute2 | PassFlags::Compute3);
 			}
 
 		}
@@ -530,32 +530,24 @@ namespace FrameGraph
 
 			}
 
-			Pass* prev_compute = nullptr;
-			Pass* prev_graphics = nullptr;
+			// One chain per QUEUE, not per Compute flag: PassFlags::Compute stays
+			// set on passes that also carry Compute2/Compute3, so classifying by
+			// the flag would put every compute queue in a single chain and turn
+			// each link into a real cross-queue wait.
+			enum_array<HAL::CommandListType, Pass*> prev_on_queue;
+			for (auto type : magic_enum::enum_values<HAL::CommandListType>())
+				prev_on_queue[type] = nullptr;
 
 			for (auto pass : builder.enabled_passes)
 			{
-				if (check(pass->flags & PassFlags::Compute))
+				Pass*& prev = prev_on_queue[pass->get_type()];
+
+				if (prev)
 				{
-					if (prev_compute)
-					{
-						pass->sync_state.max(prev_compute);
-						pass->sync_state.max(prev_compute->sync_state);
-					}
-					prev_compute = pass;
+					pass->sync_state.max(prev);
+					pass->sync_state.max(prev->sync_state);
 				}
-				else
-
-				{
-					if (prev_graphics)
-					{
-						pass->sync_state.max(prev_graphics);
-						pass->sync_state.max(prev_graphics->sync_state);
-					}
-					prev_graphics = pass;
-
-
-				}
+				prev = pass;
 
 				pass->sync_state_with_self = pass->sync_state;
 				pass->sync_state_with_self.max(pass);
@@ -2202,7 +2194,14 @@ namespace FrameGraph
 	{
 		HAL::CommandListType type = HAL::CommandListType::DIRECT;
 		if (check(flags & PassFlags::Compute))
+		{
 			type = HAL::CommandListType::COMPUTE;
+
+			if (check(flags & PassFlags::Compute2))
+				type = HAL::CommandListType::COMPUTE2;
+			else if (check(flags & PassFlags::Compute3))
+				type = HAL::CommandListType::COMPUTE3;
+		}
 		return type;
 	}
 

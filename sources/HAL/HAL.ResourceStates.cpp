@@ -59,6 +59,9 @@ namespace HAL
 
 	bool IsCompatible(CommandListType a, CommandListType b)
 	{
+		a = queue_capability(a);
+		b = queue_capability(b);
+
 		if (a == CommandListType::DIRECT) return true;
 		if (b == CommandListType::DIRECT) return false;
 
@@ -75,6 +78,9 @@ namespace HAL
 
 	CommandListType Merge(CommandListType a, CommandListType b)
 	{
+		a = queue_capability(a);
+		b = queue_capability(b);
+
 		if (a == CommandListType::DIRECT || b == CommandListType::DIRECT) return CommandListType::DIRECT;
 		if (a == CommandListType::COMPUTE || b == CommandListType::COMPUTE) return CommandListType::COMPUTE;
 		return CommandListType::COPY;

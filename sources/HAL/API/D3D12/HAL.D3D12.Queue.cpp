@@ -260,15 +260,15 @@ namespace HAL
             // Describe and create the command queue.
             D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 
-            if (type == CommandListType::DIRECT)
+      /*      if (type == CommandListType::DIRECT)
             {
                 queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_HIGH;
             }
             else
             {
                 queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-            }
-
+            }*/
+                                  queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
             queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_DISABLE_GPU_TIMEOUT;
             queueDesc.Type = ::to_native(type);
             queueDesc.NodeMask = 1;

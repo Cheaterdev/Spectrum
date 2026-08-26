@@ -30,12 +30,12 @@
 #include "VSM_Combine.h"
 #include "VoxelScreen.h"
 #include "VoxelCombine.h"
-#include "VSM_HiZRebuild.h"
 #include "ReflCombine.h"
 #include "Sky.h"
 #include "SMAA.h"
 #include "FSR.h"
 #include "UpscalingDLSS.h"
+#include "VSM_HiZRebuild.h"
 #include "stencil_renderer_after.h"
 #include "RTXColorPass.h"
 #include "VoxelDebug.h"
@@ -68,10 +68,10 @@ public:
 	Passes::VSM_Combine vSM_Combine;
 	Passes::VoxelScreen voxelScreen;
 	Passes::VoxelCombine voxelCombine;
-	Passes::VSM_HiZRebuild vSM_HiZRebuild;
 	Passes::ReflCombine reflCombine;
 	Passes::Sky sky;
 	Passes::SMAA sMAA;
+	Passes::VSM_HiZRebuild vSM_HiZRebuild;
 	Passes::stencil_renderer_after stencil_renderer_after;
 	Passes::VoxelDebug voxelDebug;
 
@@ -106,12 +106,12 @@ public:
 		Passes::VSM_Combine::Name.ptr,
 		Passes::VoxelScreen::Name.ptr,
 		Passes::VoxelCombine::Name.ptr,
-		Passes::VSM_HiZRebuild::Name.ptr,
 		Passes::ReflCombine::Name.ptr,
 		Passes::Sky::Name.ptr,
 		Passes::SMAA::Name.ptr,
 		Passes::FSR::Name.ptr,
 		Passes::UpscalingDLSS::Name.ptr,
+		Passes::VSM_HiZRebuild::Name.ptr,
 		Passes::stencil_renderer_after::Name.ptr,
 		Passes::RTXColorPass::Name.ptr,
 		Passes::VoxelDebug::Name.ptr,
@@ -186,11 +186,11 @@ public:
 		L"VoxelIndirectNoise",
 		L"VoxelIndirectFiltered",
 		L"VoxelIndirectFilteredPrev",
-		L"VSM_DirtySlots",
 		L"ResultTextureNew",
 		L"SMAA_edges",
 		L"SMAA_blend",
 		L"FSRTemp",
+		L"VSM_DirtySlots",
 		L"Stencil_color_tex",
 		L"ColorOutput",
 		L"VoxelDebug",
@@ -870,12 +870,6 @@ public:
 	static inline const FrameGraph::PrecompiledState VoxelIndirectFilteredPrev_c0_states[] = {
 		{ false, { VoxelIndirectFilteredPrev_c0_pass_refs + 0, 2 } },
 	};
-	static inline const FrameGraph::PassRef VSM_DirtySlots_c0_pass_refs[] = {
-		{ PassID::VSM_HiZRebuild, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState VSM_DirtySlots_c0_states[] = {
-		{ true, { VSM_DirtySlots_c0_pass_refs + 0, 1 } },
-	};
 	static inline const FrameGraph::PassRef ResultTexture_c1_pass_refs[] = {
 		{ PassID::SMAA, 0 },
 		{ PassID::FSR, 0 },
@@ -917,6 +911,12 @@ public:
 	static inline const FrameGraph::PrecompiledState ResultTexture_c3_states[] = {
 		{ true, { ResultTexture_c3_pass_refs + 0, 1 } },
 		{ true, { ResultTexture_c3_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef VSM_DirtySlots_c0_pass_refs[] = {
+		{ PassID::VSM_HiZRebuild, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_DirtySlots_c0_states[] = {
+		{ true, { VSM_DirtySlots_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef Stencil_color_tex_c0_pass_refs[] = {
 		{ PassID::stencil_renderer_after, 0 },
@@ -999,13 +999,13 @@ public:
 		{ ResourceID::VoxelIndirectNoise, 0, VoxelIndirectNoise_c0_states },
 		{ ResourceID::VoxelIndirectFiltered, 0, VoxelIndirectFiltered_c0_states },
 		{ ResourceID::VoxelIndirectFilteredPrev, 0, VoxelIndirectFilteredPrev_c0_states },
-		{ ResourceID::VSM_DirtySlots, 0, VSM_DirtySlots_c0_states },
 		{ ResourceID::ResultTexture, 1, ResultTexture_c1_states },
 		{ ResourceID::SMAA_edges, 0, SMAA_edges_c0_states },
 		{ ResourceID::SMAA_blend, 0, SMAA_blend_c0_states },
 		{ ResourceID::ResultTexture, 2, ResultTexture_c2_states },
 		{ ResourceID::FSRTemp, 0, FSRTemp_c0_states },
 		{ ResourceID::ResultTexture, 3, ResultTexture_c3_states },
+		{ ResourceID::VSM_DirtySlots, 0, VSM_DirtySlots_c0_states },
 		{ ResourceID::Stencil_color_tex, 0, Stencil_color_tex_c0_states },
 		{ ResourceID::ColorOutput, 0, ColorOutput_c0_states },
 		{ ResourceID::VoxelDebug, 0, VoxelDebug_c0_states },
@@ -1136,9 +1136,6 @@ public:
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VoxelScreen, 0 },
 	};
-	static inline const FrameGraph::PassRef VSM_HiZRebuild_0_prev[] = {
-		{ PassID::VSM_RenderPages, 0 },
-	};
 	static inline const FrameGraph::PassRef ReflCombine_0_prev[] = {
 		{ PassID::PSSM_Combine, 0 },
 		{ PassID::ReflectionDenoiser_Reproject, 0 },
@@ -1189,6 +1186,9 @@ public:
 		{ PassID::VoxelCombine, 0 },
 		{ PassID::VoxelScreen, 0 },
 	};
+	static inline const FrameGraph::PassRef VSM_HiZRebuild_0_prev[] = {
+		{ PassID::VSM_RenderPages, 0 },
+	};
 	static inline const FrameGraph::PassRef stencil_renderer_after_0_prev[] = {
 		{ PassID::FSR, 0 },
 		{ PassID::PSSM_Combine, 0 },
@@ -1233,21 +1233,21 @@ public:
 		{ PassID::stencil_renderer_before, 0, false, {} },
 		{ PassID::ResultCreation, 0, false, {} },
 		{ PassID::PSSM_GenerateMask, 0, false, PSSM_GenerateMask_0_prev },
-		{ PassID::ScreenReflection, 0, false, ScreenReflection_0_prev },
-		{ PassID::ReflectionDenoiser_Reproject, 0, false, ReflectionDenoiser_Reproject_0_prev },
+		{ PassID::ScreenReflection, 0, true, ScreenReflection_0_prev },
+		{ PassID::ReflectionDenoiser_Reproject, 0, true, ReflectionDenoiser_Reproject_0_prev },
 		{ PassID::RTXShadow, 0, true, RTXShadow_0_prev },
 		{ PassID::PSSM_Combine, 0, true, PSSM_Combine_0_prev },
-		{ PassID::VSM_DepthAnalysis, 0, false, VSM_DepthAnalysis_0_prev },
-		{ PassID::VSM_BlockerSearch, 0, false, VSM_BlockerSearch_0_prev },
-		{ PassID::VSM_Combine, 0, false, VSM_Combine_0_prev },
+		{ PassID::VSM_DepthAnalysis, 0, true, VSM_DepthAnalysis_0_prev },
+		{ PassID::VSM_BlockerSearch, 0, true, VSM_BlockerSearch_0_prev },
+		{ PassID::VSM_Combine, 0, true, VSM_Combine_0_prev },
 		{ PassID::VoxelScreen, 0, true, VoxelScreen_0_prev },
 		{ PassID::VoxelCombine, 0, true, VoxelCombine_0_prev },
-		{ PassID::VSM_HiZRebuild, 0, true, VSM_HiZRebuild_0_prev },
-		{ PassID::ReflCombine, 0, false, ReflCombine_0_prev },
-		{ PassID::Sky, 0, false, Sky_0_prev },
-		{ PassID::SMAA, 0, false, SMAA_0_prev },
-		{ PassID::FSR, 0, false, FSR_0_prev },
+		{ PassID::ReflCombine, 0, true, ReflCombine_0_prev },
+		{ PassID::Sky, 0, true, Sky_0_prev },
+		{ PassID::SMAA, 0, true, SMAA_0_prev },
+		{ PassID::FSR, 0, true, FSR_0_prev },
 		{ PassID::UpscalingDLSS, 0, false, UpscalingDLSS_0_prev },
+		{ PassID::VSM_HiZRebuild, 0, true, VSM_HiZRebuild_0_prev },
 		{ PassID::stencil_renderer_after, 0, false, stencil_renderer_after_0_prev },
 		{ PassID::RTXColorPass, 0, false, RTXColorPass_0_prev },
 		{ PassID::VoxelDebug, 0, false, VoxelDebug_0_prev },
@@ -1288,9 +1288,9 @@ public:
 			graph.add_library_pass<Passes::VSM_RenderPages>(vSM_RenderPages.setup_func, vSM_RenderPages.render_func, (vSM_RenderPages.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::Scene>(PassDefault<Passes::Scene>::setup, PassDefault<Passes::Scene>::render, (PassDefault<Passes::Scene>::flags & ~FrameGraph::PassFlags::Compute));
 		if (cubeSky.setup_func)
-			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, (cubeSky.flags));
-		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, (PassDefault<Passes::CubeMapDownsample>::flags));
-		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, (PassDefault<Passes::CubeMapEnviromentProcessor>::flags));
+			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, (cubeSky.flags | FrameGraph::PassFlags::Compute2));
+		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, (PassDefault<Passes::CubeMapDownsample>::flags | FrameGraph::PassFlags::Compute2));
+		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, (PassDefault<Passes::CubeMapEnviromentProcessor>::flags | FrameGraph::PassFlags::Compute2));
 		if (lighting.setup_func)
 			graph.add_library_pass<Passes::Lighting>(lighting.setup_func, lighting.render_func, (lighting.flags));
 		if (mipmapping.setup_func)
@@ -1301,32 +1301,32 @@ public:
 		if (pSSM_GenerateMask.setup_func)
 			graph.add_library_pass<Passes::PSSM_GenerateMask>(pSSM_GenerateMask.setup_func, pSSM_GenerateMask.render_func, (pSSM_GenerateMask.flags & ~FrameGraph::PassFlags::Compute));
 		if (screenReflection.setup_func)
-			graph.add_library_pass<Passes::ScreenReflection>(screenReflection.setup_func, screenReflection.render_func, (screenReflection.flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::ScreenReflection>(screenReflection.setup_func, screenReflection.render_func, (screenReflection.flags));
 		if (reflectionDenoiser_Reproject.setup_func)
-			graph.add_library_pass<Passes::ReflectionDenoiser_Reproject>(reflectionDenoiser_Reproject.setup_func, reflectionDenoiser_Reproject.render_func, (reflectionDenoiser_Reproject.flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::ReflectionDenoiser_Reproject>(reflectionDenoiser_Reproject.setup_func, reflectionDenoiser_Reproject.render_func, (reflectionDenoiser_Reproject.flags));
 		graph.add_library_pass<Passes::RTXShadow>(PassDefault<Passes::RTXShadow>::setup, PassDefault<Passes::RTXShadow>::render, (PassDefault<Passes::RTXShadow>::flags));
 		if (pSSM_Combine.setup_func)
 			graph.add_library_pass<Passes::PSSM_Combine>(pSSM_Combine.setup_func, pSSM_Combine.render_func, (pSSM_Combine.flags));
 		if (vSM_DepthAnalysis.setup_func)
-			graph.add_library_pass<Passes::VSM_DepthAnalysis>(vSM_DepthAnalysis.setup_func, vSM_DepthAnalysis.render_func, (vSM_DepthAnalysis.flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::VSM_DepthAnalysis>(vSM_DepthAnalysis.setup_func, vSM_DepthAnalysis.render_func, (vSM_DepthAnalysis.flags | FrameGraph::PassFlags::Compute2));
 		if (vSM_BlockerSearch.setup_func)
-			graph.add_library_pass<Passes::VSM_BlockerSearch>(vSM_BlockerSearch.setup_func, vSM_BlockerSearch.render_func, (vSM_BlockerSearch.flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::VSM_BlockerSearch>(vSM_BlockerSearch.setup_func, vSM_BlockerSearch.render_func, (vSM_BlockerSearch.flags | FrameGraph::PassFlags::Compute2));
 		if (vSM_Combine.setup_func)
-			graph.add_library_pass<Passes::VSM_Combine>(vSM_Combine.setup_func, vSM_Combine.render_func, (vSM_Combine.flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::VSM_Combine>(vSM_Combine.setup_func, vSM_Combine.render_func, (vSM_Combine.flags | FrameGraph::PassFlags::Compute2));
 		if (voxelScreen.setup_func)
-			graph.add_library_pass<Passes::VoxelScreen>(voxelScreen.setup_func, voxelScreen.render_func, (voxelScreen.flags));
+			graph.add_library_pass<Passes::VoxelScreen>(voxelScreen.setup_func, voxelScreen.render_func, (voxelScreen.flags | FrameGraph::PassFlags::Compute2));
 		if (voxelCombine.setup_func)
-			graph.add_library_pass<Passes::VoxelCombine>(voxelCombine.setup_func, voxelCombine.render_func, (voxelCombine.flags));
+			graph.add_library_pass<Passes::VoxelCombine>(voxelCombine.setup_func, voxelCombine.render_func, (voxelCombine.flags | FrameGraph::PassFlags::Compute2));
+		if (reflCombine.setup_func)
+			graph.add_library_pass<Passes::ReflCombine>(reflCombine.setup_func, reflCombine.render_func, (reflCombine.flags));
+		if (sky.setup_func)
+			graph.add_library_pass<Passes::Sky>(sky.setup_func, sky.render_func, (sky.flags));
+		if (sMAA.setup_func)
+			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, (sMAA.flags));
+		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, (PassDefault<Passes::FSR>::flags));
+		graph.add_library_pass<Passes::UpscalingDLSS>(PassDefault<Passes::UpscalingDLSS>::setup, PassDefault<Passes::UpscalingDLSS>::render, (PassDefault<Passes::UpscalingDLSS>::flags & ~FrameGraph::PassFlags::Compute));
 		if (vSM_HiZRebuild.setup_func)
 			graph.add_library_pass<Passes::VSM_HiZRebuild>(vSM_HiZRebuild.setup_func, vSM_HiZRebuild.render_func, (vSM_HiZRebuild.flags));
-		if (reflCombine.setup_func)
-			graph.add_library_pass<Passes::ReflCombine>(reflCombine.setup_func, reflCombine.render_func, (reflCombine.flags & ~FrameGraph::PassFlags::Compute));
-		if (sky.setup_func)
-			graph.add_library_pass<Passes::Sky>(sky.setup_func, sky.render_func, (sky.flags & ~FrameGraph::PassFlags::Compute));
-		if (sMAA.setup_func)
-			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, (sMAA.flags & ~FrameGraph::PassFlags::Compute));
-		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, (PassDefault<Passes::FSR>::flags & ~FrameGraph::PassFlags::Compute));
-		graph.add_library_pass<Passes::UpscalingDLSS>(PassDefault<Passes::UpscalingDLSS>::setup, PassDefault<Passes::UpscalingDLSS>::render, (PassDefault<Passes::UpscalingDLSS>::flags & ~FrameGraph::PassFlags::Compute));
 		if (stencil_renderer_after.setup_func)
 			graph.add_library_pass<Passes::stencil_renderer_after>(stencil_renderer_after.setup_func, stencil_renderer_after.render_func, (stencil_renderer_after.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::RTXColorPass>(PassDefault<Passes::RTXColorPass>::setup, PassDefault<Passes::RTXColorPass>::render, (PassDefault<Passes::RTXColorPass>::flags & ~FrameGraph::PassFlags::Compute));

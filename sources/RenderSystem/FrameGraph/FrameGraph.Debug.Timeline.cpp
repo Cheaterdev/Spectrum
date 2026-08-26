@@ -18,7 +18,12 @@ class FrameGraphTimelineCanvas : public dock_base
     // -----------------------------------------------------------------------
     static constexpr float LABEL_W    = 162.0f;
     static constexpr float LANE_H     = 40.0f;
-    static constexpr float LANE_COUNT = 2.0f;
+    static constexpr int   LANE_N     = int(magic_enum::enum_count<HAL::CommandListType>());
+    static constexpr float LANE_COUNT = float(LANE_N);
+
+    // One lane per queue, ordered by the CommandListType enum, so the lane
+    // index IS the enum value.
+    static constexpr float lane_off(HAL::CommandListType q) { return float(uint(q)) * LANE_H; }
     static constexpr float ROW_H      = 74.0f;
     static constexpr float COL_W_BASE = 140.0f;
     static constexpr float PASS_H     = 32.0f;
@@ -286,8 +291,8 @@ class FrameGraphTimelineCanvas : public dock_base
         virtual void draw(Context& c) override
         {
             const rect b = get_render_bounds();
-            owner.dr(c, C_DIRECT_LANE,  b.x, b.y,          LABEL_W, LANE_H);
-            owner.dr(c, C_COMPUTE_LANE, b.x, b.y + LANE_H, LABEL_W, LANE_H);
+            for (int l = 0; l < LANE_N; l++)
+                owner.dr(c, C_LANES[l], b.x, b.y + l * LANE_H, LABEL_W, LANE_H);
             base::draw(c);
         }
     };
@@ -353,8 +358,8 @@ class FrameGraphTimelineCanvas : public dock_base
             const float cx = sb.x + LABEL_W;
             const float cw = sb.w - LABEL_W;
 
-            owner.dr(c, C_DIRECT_LANE,  cx, sb.y,                              cw, LANE_H);
-            owner.dr(c, C_COMPUTE_LANE, cx, sb.y + LANE_H,                     cw, LANE_H);
+            for (int l = 0; l < LANE_N; l++)
+                owner.dr(c, C_LANES[l], cx, sb.y + l * LANE_H, cw, LANE_H);
             owner.dr(c, C_SEPARATOR,    cx, sb.y + LANE_COUNT * LANE_H - 2.0f, cw, 2.0f);
 
             // Selection highlights — same columns as in the grid, clipped to lane height.
@@ -369,8 +374,7 @@ class FrameGraphTimelineCanvas : public dock_base
             for (auto& pass : owner.m_passes)
             {
                 float px = owner.dep_x(pass.call_id, bx);
-                float py = (pass.queue == HAL::CommandListType::COMPUTE)
-                           ? sb.y + LANE_H : sb.y;
+                float py = sb.y + lane_off(pass.queue);
                 const float4& pc = pass.disabled ? C_PASS_DISABLED
                                    : (pass.queue == HAL::CommandListType::DIRECT)
                                    ? C_PASS_DIRECT : C_PASS_COMPUTE;
@@ -408,13 +412,11 @@ class FrameGraphTimelineCanvas : public dock_base
                 {
                     if (pass.disabled || pass.cross_queue_deps.empty()) continue;
                     float to_cx = owner.dep_x(pass.call_id, bx) + PAD;
-                    float to_cy = ((pass.queue == HAL::CommandListType::COMPUTE)
-                                   ? sb.y + LANE_H : sb.y) + LANE_H * 0.5f;
+                    float to_cy = sb.y + lane_off(pass.queue) + LANE_H * 0.5f;
                     for (auto& [type, dep_id] : pass.cross_queue_deps)
                     {
                         float from_cx = owner.dep_x(dep_id, bx) + owner.col_w() - PAD - 1.5f;
-                        float from_cy = ((type == HAL::CommandListType::COMPUTE)
-                                         ? sb.y + LANE_H : sb.y) + LANE_H * 0.5f;
+                        float from_cy = sb.y + lane_off(type) + LANE_H * 0.5f;
                         curves.push_back({ { from_cx, from_cy }, { to_cx, to_cy } });
                     }
                 }
@@ -468,10 +470,10 @@ class FrameGraphTimelineCanvas : public dock_base
 
             for (auto& pass : owner.m_passes)
             {
-                float lane_off = (pass.queue == HAL::CommandListType::COMPUTE ? LANE_H : 0.0f);
+                float lane_y_off = lane_off(pass.queue);
                 float px = b.x + (LABEL_W + pass.call_id * owner.col_w() + PAD) * sx;
                 float pw = std::max(1.0f, (owner.col_w() - 2.0f * PAD) * sx);
-                float py = b.y + (lane_off + PAD) * sy;
+                float py = b.y + (lane_y_off + PAD) * sy;
                 float ph = std::max(1.0f, (PASS_H - 2.0f * PAD) * sy);
                 const float4& pc = pass.disabled ? C_PASS_DISABLED
                     : (pass.queue == HAL::CommandListType::DIRECT) ? C_PASS_DIRECT : C_PASS_COMPUTE;
@@ -675,6 +677,8 @@ class FrameGraphTimelineCanvas : public dock_base
                 switch (t) {
                     case HAL::CommandListType::DIRECT:  return "Direct";
                     case HAL::CommandListType::COMPUTE: return "Compute";
+                    case HAL::CommandListType::COMPUTE2: return "Compute2";
+                    case HAL::CommandListType::COMPUTE3: return "Compute3";
                     case HAL::CommandListType::COPY:    return "Copy";
                     default:                            return "?";
                 }
@@ -1163,8 +1167,7 @@ class FrameGraphTimelineCanvas : public dock_base
     // -----------------------------------------------------------------------
     //  Labels / images
     // -----------------------------------------------------------------------
-    label::ptr              m_lbl_direct;
-    label::ptr              m_lbl_compute;
+    label::ptr              m_lbl_lanes[LANE_N];
     std::vector<label::ptr> m_resource_labels;
     std::vector<image::ptr> m_resource_icons;   // one per resource row, parallel to m_resource_labels
 
@@ -1180,8 +1183,7 @@ class FrameGraphTimelineCanvas : public dock_base
     // -----------------------------------------------------------------------
     //  Palette
     // -----------------------------------------------------------------------
-    static const float4 C_DIRECT_LANE;
-    static const float4 C_COMPUTE_LANE;
+    static const float4 C_LANES[LANE_N];
     static const float4 C_PASS_DIRECT;
     static const float4 C_PASS_COMPUTE;
     static const float4 C_PASS_DISABLED;
@@ -1365,12 +1367,14 @@ public:
         // Overlay panels — drawn on top of contents via base::add_child.
         // Corner: top-left intersection, never scrolls.
         m_corner = std::make_shared<corner_overlay>(*this);
-        m_lbl_direct  = make_label(LABEL_W - 8.0f, LANE_H - 6.0f, "DIRECT",  C_TEXT_BRIGHT, LABEL_FONT);
-        m_lbl_compute = make_label(LABEL_W - 8.0f, LANE_H - 6.0f, "COMPUTE", C_TEXT_BRIGHT, LABEL_FONT);
-        m_lbl_direct->pos  = { 4.0f, (LANE_H - 14.0f) * 0.5f };
-        m_lbl_compute->pos = { 4.0f, LANE_H + (LANE_H - 14.0f) * 0.5f };
-        m_corner->add_child(m_lbl_direct);
-        m_corner->add_child(m_lbl_compute);
+        for (int l = 0; l < LANE_N; l++)
+        {
+            auto queue = magic_enum::enum_value<HAL::CommandListType>(l);
+            m_lbl_lanes[l] = make_label(LABEL_W - 8.0f, LANE_H - 6.0f,
+                                        std::string(magic_enum::enum_name(queue)), C_TEXT_BRIGHT, LABEL_FONT);
+            m_lbl_lanes[l]->pos = { 4.0f, l * LANE_H + (LANE_H - 14.0f) * 0.5f };
+            m_corner->add_child(m_lbl_lanes[l]);
+        }
         m_scroll->add_overlay(m_corner);
 
         // Left panel: pinned at X=0, follows Y scroll.
@@ -1438,6 +1442,8 @@ private:
                 HAL::CommandListType::DIRECT,
                 HAL::CommandListType::COMPUTE,
                 HAL::CommandListType::COPY,
+                HAL::CommandListType::COMPUTE2,
+                HAL::CommandListType::COMPUTE3,
             };
             for (auto type : all_types)
             {
@@ -2048,14 +2054,14 @@ private:
 
         for (auto& pass : m_passes)
         {
-            float py = (pass.queue == HAL::CommandListType::COMPUTE ? LANE_H : 0.0f) + PAD + 2.0f;
+            float py = lane_off(pass.queue) + PAD + 2.0f;
             auto lbl = make_label(0.0f, PASS_H - 2.0f * PAD - 4.0f,
                                   to_str(pass.name), pass.disabled ? C_TEXT_DIM : C_TEXT_BRIGHT, LABEL_FONT);
             lbl->pos = { 0.0f, py };
             m_top_panel->add_child(lbl);
 
             auto btn = std::make_shared<pass_button>();
-            btn->pos = { 0.0f, (pass.queue == HAL::CommandListType::COMPUTE ? LANE_H : 0.0f) + PAD };
+            btn->pos = { 0.0f, lane_off(pass.queue) + PAD };
             m_top_panel->add_child(btn);
 
             PassInfo captured = pass;
@@ -2118,11 +2124,11 @@ private:
 
         for (auto& pl : m_pass_labels)
         {
-            float lane_off = (pl.queue == HAL::CommandListType::COMPUTE ? LANE_H : 0.0f);
+            float lane_y_off = lane_off(pl.queue);
             float col_x    = LABEL_W + pl.call_id * cw;
-            pl.lbl->pos  = { col_x + PAD + 2.0f, lane_off + PAD + 2.0f };
+            pl.lbl->pos  = { col_x + PAD + 2.0f, lane_y_off + PAD + 2.0f };
             pl.lbl->size = { block_w, block_h };
-            pl.btn->pos  = { col_x + PAD, lane_off + PAD };
+            pl.btn->pos  = { col_x + PAD, lane_y_off + PAD };
             pl.btn->size = { cw - 2.0f * PAD, PASS_H - 2.0f * PAD };
         }
 
@@ -2159,7 +2165,7 @@ private:
 
     float lane_y(HAL::CommandListType queue, float by) const
     {
-        return (queue == HAL::CommandListType::COMPUTE) ? by + LANE_H : by;
+        return by + lane_off(queue);
     }
 
     float row_y(int ri, float by) const
@@ -2340,8 +2346,13 @@ private:
 // ---------------------------------------------------------------------------
 //  Colour table
 // ---------------------------------------------------------------------------
-const float4 FrameGraphTimelineCanvas::C_DIRECT_LANE  = { 0.13f, 0.13f, 0.22f, 1.0f };
-const float4 FrameGraphTimelineCanvas::C_COMPUTE_LANE = { 0.09f, 0.16f, 0.16f, 1.0f };
+const float4 FrameGraphTimelineCanvas::C_LANES[FrameGraphTimelineCanvas::LANE_N] = {
+    { 0.13f, 0.13f, 0.22f, 1.0f },   // DIRECT
+    { 0.09f, 0.16f, 0.16f, 1.0f },   // COMPUTE
+    { 0.09f, 0.13f, 0.20f, 1.0f },   // COPY
+    { 0.17f, 0.15f, 0.08f, 1.0f },   // COMPUTE2
+    { 0.19f, 0.10f, 0.09f, 1.0f },   // COMPUTE3
+};
 const float4 FrameGraphTimelineCanvas::C_PASS_DIRECT    = { 0.28f, 0.50f, 0.82f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_PASS_COMPUTE   = { 0.20f, 0.68f, 0.46f, 1.0f };
 const float4 FrameGraphTimelineCanvas::C_PASS_DISABLED  = { 0.26f, 0.26f, 0.30f, 1.0f };

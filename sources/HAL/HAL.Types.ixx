@@ -83,8 +83,24 @@ export namespace HAL
 	{
 		DIRECT,
 		COMPUTE,
-		COPY
+		COPY,
+		COMPUTE2,
+		COMPUTE3
 	};
+
+	constexpr bool is_compute_queue(CommandListType t)
+	{
+		return t == CommandListType::COMPUTE
+			|| t == CommandListType::COMPUTE2
+			|| t == CommandListType::COMPUTE3;
+	}
+
+	// Capability class of a queue: every extra compute queue behaves exactly
+	// like COMPUTE for state/layout compatibility purposes.
+	constexpr CommandListType queue_capability(CommandListType t)
+	{
+		return is_compute_queue(t) ? CommandListType::COMPUTE : t;
+	}
 
 	enum class HeapFlags :uint
 	{

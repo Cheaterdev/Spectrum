@@ -437,21 +437,27 @@ namespace GUI
 					}
 
 					// ── GPU queues ────────────────────────────────────────────
-					const wchar_t* queue_names[3]      = {L"GPU · Direct", L"GPU · Compute", L"GPU · Copy"};
-					const wchar_t* queue_lane_names[3] = {L"Direct",       L"Compute",       L"Copy"};
-					float4         queue_colors[3]     = {
+					// Indexed by CommandListType, so these must stay in enum order and
+					// cover every value -- gpu_lanes is subscripted by queue_type below.
+					constexpr int QUEUE_COUNT = int(magic_enum::enum_count<HAL::CommandListType>());
+
+					const wchar_t* queue_names[QUEUE_COUNT]      = {L"GPU · Direct", L"GPU · Compute", L"GPU · Copy", L"GPU · Compute2", L"GPU · Compute3"};
+					const wchar_t* queue_lane_names[QUEUE_COUNT] = {L"Direct",       L"Compute",       L"Copy",       L"Compute2",       L"Compute3"};
+					float4         queue_colors[QUEUE_COUNT]     = {
 						{0.18f, 0.10f, 0.32f, 1.0f},
 						{0.08f, 0.22f, 0.16f, 1.0f},
-						{0.08f, 0.18f, 0.28f, 1.0f}
+						{0.08f, 0.18f, 0.28f, 1.0f},
+						{0.22f, 0.20f, 0.08f, 1.0f},
+						{0.26f, 0.12f, 0.10f, 1.0f}
 					};
 
-					base::ptr gpu_lanes[3] = {};
+					base::ptr gpu_lanes[QUEUE_COUNT] = {};
 
 					bool any_gpu = gpu_blocks_size > 0;
 					if (any_gpu)
 					{
 						add_separator();
-						for (int q = 0; q < 3; q++)
+						for (int q = 0; q < QUEUE_COUNT; q++)
 						{
 							add_section(queue_names[q], queue_colors[q]);
 							gpu_lanes[q] = add_lane(queue_lane_names[q]);
@@ -686,9 +692,8 @@ namespace GUI
 						data.reset();
 						front->remove_all();
 
-						clock_info[CommandListType::DIRECT]  = RenderSystem::get().device().get_queue(CommandListType::DIRECT)->get_clock_time();
-						clock_info[CommandListType::COMPUTE] = RenderSystem::get().device().get_queue(CommandListType::COMPUTE)->get_clock_time();
-						clock_info[CommandListType::COPY]    = RenderSystem::get().device().get_queue(CommandListType::COPY)->get_clock_time();
+						for (auto type : magic_enum::enum_values<CommandListType>())
+							clock_info[type] = RenderSystem::get().device().get_queue(type)->get_clock_time();
 						start         = std::chrono::high_resolution_clock::now();
 						ended         = false;
 						started_frame = frame;

@@ -29,9 +29,9 @@ Pipeline MainPipeline
 
 
 	# sky setup (sky.generate)
-	[Async]CubeSky;
-	[Async]CubeMapDownsample;
-	[Async]CubeMapEnviromentProcessor;
+	[Async2]CubeSky;
+	[Async2]CubeMapDownsample;
+	[Async2]CubeMapEnviromentProcessor;
 
 											# voxel lighting (generate_light)
 											[Async]
@@ -47,30 +47,32 @@ Pipeline MainPipeline
 	# shadow composition (pssm.generate)
 	PSSM_GenerateMask;
 
-	ScreenReflection;
-	ReflectionDenoiser_Reproject;
+	[Async]ScreenReflection;
+	[Async]ReflectionDenoiser_Reproject;
 
 											[Async]
 											RTXShadow;
 											[Async]PSSM_Combine;
-											VSM_DepthAnalysis;
-											VSM_BlockerSearch;
-											VSM_Combine;
+											[Async2]VSM_DepthAnalysis;
+											[Async2]VSM_BlockerSearch;
+											[Async2]VSM_Combine;
 											# voxel screen (voxel_gi.generate)
-											[Async]
+											[Async2]
 											VoxelScreen;
-											[Async]
+											[Async2]
 											VoxelCombine;
-	[Async]VSM_HiZRebuild;
-	ReflCombine;
+	
+		[Async]ReflCombine;
 
 	# sky + post
-	Sky;
+		[Async]Sky;
 	
-	SMAA;
-	FSR;
+	[Async]SMAA;
+	[Async]FSR;
 	UpscalingDLSS;
-	
+
+
+	[Async]VSM_HiZRebuild;
 	stencil_renderer_after;
 
 	#Debug stuff

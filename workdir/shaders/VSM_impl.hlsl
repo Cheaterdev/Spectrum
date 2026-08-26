@@ -343,7 +343,7 @@ float vsm_pcf_shadow(VSMConstants c, VSMLighting lighting, int level, float2 pos
 			continue;
 		float sampled = lighting.GetVsm_atlas().SampleLevel(pointClampSampler, float3(tc, (float)tap_slot), 0);
 
-		float scaler = 1-0.001;
+		float scaler = 1-0.0001;
 		float depth_gap_world = abs(pos_l_z*scaler - sampled) * depth_range;
 		float w = saturate(depth_gap_world / max(penumbra_world, 0.00001));
 		sum_w  += w;

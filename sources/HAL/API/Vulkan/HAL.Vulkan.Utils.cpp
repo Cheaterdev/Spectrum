@@ -322,7 +322,9 @@ VkQueueFlagBits to_native_queue(CommandListType type)
     switch (type)
     {
     case CommandListType::DIRECT:  return VK_QUEUE_GRAPHICS_BIT;
-    case CommandListType::COMPUTE: return VK_QUEUE_COMPUTE_BIT;
+    case CommandListType::COMPUTE:
+    case CommandListType::COMPUTE2:
+    case CommandListType::COMPUTE3: return VK_QUEUE_COMPUTE_BIT;
     case CommandListType::COPY:    return VK_QUEUE_TRANSFER_BIT;
     default:                       return VK_QUEUE_GRAPHICS_BIT;
     }

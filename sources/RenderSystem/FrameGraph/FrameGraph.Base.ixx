@@ -927,7 +927,12 @@ public:
 		Required = 1,
 
 		Graphics = 0,
-		Compute = 2
+		Compute = 2,
+
+		// Which compute queue an async pass lands on. Compute alone = the first
+		// compute queue; these pick the extra ones.
+		Compute2 = 4,
+		Compute3 = 8
 	};
 
 

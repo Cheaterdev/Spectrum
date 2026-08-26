@@ -233,7 +233,9 @@ D3D12_COMMAND_LIST_TYPE to_native(CommandListType type)
     {
         D3D12_COMMAND_LIST_TYPE_DIRECT,
         D3D12_COMMAND_LIST_TYPE_COMPUTE,
-        D3D12_COMMAND_LIST_TYPE_COPY
+        D3D12_COMMAND_LIST_TYPE_COPY,
+        D3D12_COMMAND_LIST_TYPE_COMPUTE,
+        D3D12_COMMAND_LIST_TYPE_COMPUTE
     };
 
     return natives[static_cast<uint>(type)];

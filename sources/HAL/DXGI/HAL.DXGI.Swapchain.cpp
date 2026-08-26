@@ -110,9 +110,8 @@ namespace HAL
 		//	device.get_queue(CommandListType::DIRECT)->sync();
 
 		{
-			device.get_queue(CommandListType::DIRECT)->signal_and_wait();
-			device.get_queue(CommandListType::COMPUTE)->signal_and_wait();
-			device.get_queue(CommandListType::COPY)->signal_and_wait();
+			for (auto type : magic_enum::enum_values<CommandListType>())
+				device.get_queue(type)->signal_and_wait();
 		}
 
 		for (auto&& f : frames)

@@ -224,6 +224,34 @@ int main()
 			                 ArgInfo{"pipeline"}, ArgInfo{"entry"}
 		                 ));
 
+		// [Async2] / [Async3] pick an additional compute queue for this entry.
+		// Both imply [Async]: the pass still needs PassFlags::Compute to leave
+		// the direct queue at all.
+		auto entry_has = [&](const std::string& pipeline_name, const std::string& entry_name, const char* opt)
+		{
+			Pipeline* pipeline_ptr = parsed.pipelines.find(pipeline_name);
+			if (!pipeline_ptr) return false;
+
+			const PipelineEntry* entry = pipeline_ptr->entries.find(entry_name);
+			return entry && entry->find_option(opt) != nullptr;
+		};
+
+		global.AddGlobal("entry_is_async2", jinja2::MakeCallable(
+			                 [entry_has](const std::string& pipeline_name, const std::string& entry_name)
+			                 {
+				                 return entry_has(pipeline_name, entry_name, "Async2");
+			                 },
+			                 ArgInfo{"pipeline"}, ArgInfo{"entry"}
+		                 ));
+
+		global.AddGlobal("entry_is_async3", jinja2::MakeCallable(
+			                 [entry_has](const std::string& pipeline_name, const std::string& entry_name)
+			                 {
+				                 return entry_has(pipeline_name, entry_name, "Async3");
+			                 },
+			                 ArgInfo{"pipeline"}, ArgInfo{"entry"}
+		                 ));
+
 		global.AddGlobal("myappend", jinja2::MakeCallable(
 			                 [&](const std::string& list_name, const std::string& b)
 			                 {
@@ -608,7 +636,9 @@ int main()
 					// queue, which costs nothing extra and avoids a fence pair for work
 					// that has nothing to overlap with.
 					bool compute = pass->find_option("Compute") != nullptr
-					            && entry.find_option("Async") != nullptr;
+					            && (entry.find_option("Async") != nullptr
+					             || entry.find_option("Async2") != nullptr
+					             || entry.find_option("Async3") != nullptr);
 
 					std::vector<std::pair<std::string, bool>> accesses;
 					compute_pass_accesses(pass, accesses);
