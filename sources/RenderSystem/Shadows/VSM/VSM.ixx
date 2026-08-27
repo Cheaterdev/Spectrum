@@ -107,18 +107,23 @@ public:
 	// search.
 	Variable<bool> use_vsm_hiz_blocker_classify = { true, "Hi-Z blocker classify", this };
 
-	// Debug view (VSM_DebugClassifyOverlay): shows which of the four tile
-	// buckets each pixel actually landed in, instead of just the shadow
-	// result -- green = lit_tiles (stage 1's cheap classify), blue =
-	// dark_tiles (stage 1), cyan = confirmed_lit_tiles (stage 2's
-	// post-search "turned out lit after all"), yellow = blur_tiles (stage
-	// 2's "genuinely still needs the real blur" -- the only expensive
-	// bucket). Covers the whole frame now, not just the two uniform
-	// buckets. Grew out of live debugging a real coverage-gap bug in the
-	// classification itself -- kept as a permanent toggle since it's
-	// generally useful for judging how much of the frame each stage of the
-	// optimization is actually covering.
-	Variable<bool> use_vsm_debug_hiz_classify = { false, "Debug: tile classify (green=lit, blue=dark, cyan=confirmed lit, yellow=blur)", this };
+	// Debug view (VSM_DebugClassifyOverlay): shows which tile bucket, and
+	// within blur_tiles which per-pixel sentinel, each pixel actually
+	// resolved through, instead of just the shadow result -- bright green =
+	// lit_tiles (stage 1's cheap classify), bright blue = dark_tiles (stage
+	// 1), cyan = confirmed_lit_tiles (stage 2's post-search "turned out lit
+	// after all"). blur_tiles gets no flat color: dark green/dark blue mark
+	// individual pixels within a dispatched blur tile that STILL resolved
+	// via a sentinel (the per-pixel-level optimization, distinct from the
+	// bright tile-level colors), and anything left unmarked is a genuine
+	// real blocker -- the real blurred shadow shows through there
+	// unmodified, since that's the one case with no shortcut to show.
+	// Covers the whole frame now, not just the two uniform buckets. Grew
+	// out of live debugging a real coverage-gap bug in the classification
+	// itself -- kept as a permanent toggle since it's generally useful for
+	// judging how much of the frame each stage of the optimization is
+	// actually covering.
+	Variable<bool> use_vsm_debug_hiz_classify = { false, "Debug: tile classify (green=lit, blue=dark, cyan=confirmed lit, dark=per-pixel skip)", this };
 
 	// Debug view: colors every pixel by clipmap level (one flat hue per
 	// level) with a checkerboard darkening by page position within that
@@ -161,6 +166,23 @@ public:
 
 private:
 	HAL::Texture::ptr vsm_atlas_tex;
+
+	// Phase 5.18 Part A follow-up: indirect dispatch args for the five tile
+	// lists (stage 1's lit/dark/search, stage 2's confirmed_lit/blur), owned
+	// by VSM directly instead of being FrameGraph resources rebuilt by a
+	// tiny InitDispatch compute shader every frame. Lazily created once
+	// (m_blockerclassify_setup, same null-check-and-create shape
+	// vsm_atlas_tex already uses) and pre-initialized to {0,1,1} exactly the
+	// way Graph::indirect_dispatch_args is -- render() then only ever
+	// overwrites the 4-byte ThreadGroupCountX with the matching
+	// AppendStructuredBuffer's own counter via a plain copy_buffer (see
+	// PassDefaults.cpp's ShadowsFlowNode for the same pattern already in
+	// production elsewhere in this codebase), Y/Z staying 1 forever.
+	HAL::StructuredBufferView<DispatchArguments> lit_tiles_dispatch;
+	HAL::StructuredBufferView<DispatchArguments> dark_tiles_dispatch;
+	HAL::StructuredBufferView<DispatchArguments> search_tiles_dispatch;
+	HAL::StructuredBufferView<DispatchArguments> confirmed_lit_tiles_dispatch;
+	HAL::StructuredBufferView<DispatchArguments> blur_tiles_dispatch;
 
 	VSMPageTable page_table;
 	VSMInvalidationTracker tracker;
@@ -330,22 +352,6 @@ private:
 	// a cold start before the first real measurement arrives doesn't
 	// spuriously activate a tier.
 	std::atomic<uint32_t> measured_texel_size_bits{ 0x7F7FFFFFu };
-
-	// TEMP DIAGNOSTIC (Phase 5.18 Part A follow-up, take 4): read back via
-	// VSM_BlockerClassify's own read_counter calls -- confirms the three
-	// tile lists sum to the total tile count and land in a plausible
-	// distribution, the check this redesign's own implementation discipline
-	// calls for before trusting the visual result. Remove once confirmed
-	// solid.
-	std::atomic<uint32_t> lit_tile_count_diag{ 0 };
-	std::atomic<uint32_t> dark_tile_count_diag{ 0 };
-	std::atomic<uint32_t> search_tile_count_diag{ 0 };
-
-	// TEMP DIAGNOSTIC: stage 2's own post-search verdict counts (see
-	// VSMSearchVerdictAppend's own comment in vsm.sig) -- should sum to
-	// search_tile_count_diag above each frame. Remove once confirmed solid.
-	std::atomic<uint32_t> confirmed_lit_tile_count_diag{ 0 };
-	std::atomic<uint32_t> blur_tile_count_diag{ 0 };
 
 	// Phase 5.12: one entry per active+dirty LEVEL this frame (bounded by
 	// level count, not mesh count), built in VSM_GatherDispatch's render()

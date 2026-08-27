@@ -18,10 +18,10 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::VSMDownsampleHiZBatch;
 		uint src_mip;
-		HLSL::Texture2DArray<float2> src;
 		HLSL::StructuredBuffer<uint> dirty_slots;
+		HLSL::RWTexture2DArray<float2> src;
 		HLSL::RWTexture2DArray<float2> dst_mip;
-		HLSL::Texture2DArray<float2>& GetSrc() { return src; }
+		HLSL::RWTexture2DArray<float2>& GetSrc() { return src; }
 		HLSL::RWTexture2DArray<float2>& GetDst_mip() { return dst_mip; }
 		HLSL::StructuredBuffer<uint>& GetDirty_slots() { return dirty_slots; }
 		uint& GetSrc_mip() { return src_mip; }
@@ -30,15 +30,15 @@ export namespace Table
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(src_mip);
-			compiler.compile_whole(src);
 			compiler.compile(dirty_slots);
+			compiler.compile_whole(src);
 			compiler.compile_whole(dst_mip);
 		}
 		struct Compiled
 		{
 			uint src_mip; // uint
-			uint src; // Texture2DArray<float2>
 			uint dirty_slots; // StructuredBuffer<uint>
+			uint src; // RWTexture2DArray<float2>
 			uint dst_mip; // RWTexture2DArray<float2>
 
 			

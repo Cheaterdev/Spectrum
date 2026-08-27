@@ -212,6 +212,14 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	float world_delta_or_sentinel = asfloat(blocker_packed.x);
 
 	float shadow;
+	// [branch]: the final else below is the expensive path (an RTX trace
+	// plus up to two 16-tap vsm_pcf_shadow calls) -- the whole point of the
+	// sentinel buckets above it is to skip that work entirely for
+	// individually-confident pixels. Without an explicit hint the compiler
+	// is free to flatten this (compute the expensive branch for every
+	// thread regardless of which case it needs, then select), which would
+	// silently defeat the sentinel shortcut.
+	[branch]
 	if (world_delta_or_sentinel <= -4.5 && world_delta_or_sentinel > -5.5)
 		shadow = 0.0; // confident_dark via a coarser level.
 	else if (world_delta_or_sentinel <= -3.5 && world_delta_or_sentinel > -4.5)
@@ -267,7 +275,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 			float3 jittered_dir  = normalize(aim_dir + jitter_right * jitter_offset.x + jitter_up * jitter_offset.y);
 
 			RayDesc ray;
-			ray.Origin    = wpos;// + normal * 0.005;
+			ray.Origin    = wpos + normal * 0.005;
 			ray.Direction = jittered_dir;
 			ray.TMin      = 0.001;
 			ray.TMax      = max(target_dist * VSM_RTX_VERIFY_MARGIN, 0.02);

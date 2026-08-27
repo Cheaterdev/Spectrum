@@ -489,13 +489,14 @@ namespace HAL
 		const Handles::RTV& table_rtv = rt.table_rtv;
 		const Handles::DSV& table_dsv = rt.table_dsv;
 
-		{ PROFILE(L"pre_command"); base.pre_command<false, false>(*this, BarrierSync::DRAW); }
-
 		// Changing the render target ends the batch: see Transitions::break_op.
-		// Must come after pre_command, which is what establishes the operation
-		// class -- breaking first would split the PREVIOUS class and leave an
-		// empty operation of it behind.
+		// Before pre_command, so the begin_op inside it is the call that opens
+		// the new operation and stamps it with the right class -- the RTV
+		// usages and clears recorded below then land in that new operation
+		// rather than in the run being closed.
 		get_base().break_op();
+
+		{ PROFILE(L"pre_command"); base.pre_command<false, false>(*this, BarrierSync::DRAW); }
 
 		{ PROFILE(L"rt_transitions");
 		for (uint i = 0; i < table_rtv.get_count(); i++)
@@ -929,8 +930,10 @@ namespace HAL
 				// merges below but each call is still a distinct dispatch/draw.
 				op_step++;
 
-				if (!operations.empty() && operations.back().type == op)
+				if (!force_new_op && !operations.empty() && operations.back().type == op)
 					return;                                      // same class -> keep growing
+
+				force_new_op = false;
 
 				end_op();
 
@@ -955,11 +958,18 @@ namespace HAL
 			void Transitions::break_op()
 			{
 				// Nothing recorded into the current operation yet -- it already
-				// IS the fresh one the caller wants, and splitting would strand
+				// IS the fresh one the caller wants, and breaking would strand
 				// an empty operation with two reserved barrier points.
 				if (operations.empty() || op_step == op_first_step) return;
 
-				split_op();
+				// DEFERRED, not an immediate split: the new operation's class
+				// must come from the next command, not from the one being
+				// closed. set_pipeline runs BEFORE the following draw's
+				// pre_command, so splitting here would create an operation of
+				// the OUTGOING class -- switching a compute run to a graphics
+				// one would leave an empty COMPUTE operation behind. Letting
+				// begin_op honour the flag makes it pick the right class.
+				force_new_op = true;
 			}
 
 			// Close the operation currently at the back, reserving the point its
@@ -1391,6 +1401,19 @@ namespace HAL
 	{
 		if (current_pipeline != pipeline)
 		{
+			// A PSO change ends the batch, for the same reason set_rtv does: one
+			// operation gets ONE set of entry barriers, so every resource it
+			// touches must hold a single state across the whole run. Two draws
+			// with different pipelines bind different resources for different
+			// purposes, and merging them means a resource written by the first
+			// and read by the second collapses to whichever use came last.
+			//
+			// Only fires on a real change (this branch) and only when the
+			// current operation has recorded something (break_op's own guard),
+			// so redundant set_pipeline calls and a pass's opening bind are
+			// free.
+			break_op();
+
 			if (pipeline)
 			{
 				compiler.set_pipeline(pipeline);
@@ -1939,6 +1962,21 @@ namespace HAL
 		begin_op(BarrierSync::DEPTH_STENCIL);
 		add_resource_usage(h.get_resource_info(), BarrierSync::DEPTH_STENCIL, whole_resource);
 		compiler.clear_depth_stencil(h, clear_depth, clear_stencil, depth, stencil);
+	}
+
+	void CommandList::add_heaviest_barrier()
+	{
+		// One break is enough. It closes the operation holding the work so far
+		// and opens an empty one; the barrier is then pushed into the stream
+		// after that operation's (still empty) barriers_before point, and the
+		// commands that follow merge into the same operation. So the ordering
+		// is [prev.after][next.before] GLOBAL [next's work] -- the global
+		// barrier separates the two runs, which is the point.
+		//
+		// A second break here would be a no-op anyway: break_op declines to
+		// split an operation nothing has recorded into yet.
+		break_op();
+		compiler.global_barrier();
 	}
 
 	const std::vector<CommandRecord>& CommandList::get_debug_records() const

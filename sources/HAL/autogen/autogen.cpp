@@ -106,9 +106,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "VSMLighting") return SlotID::VSMLighting;
 	if(slot_name == "VSMBlockerTilesAppend") return SlotID::VSMBlockerTilesAppend;
 	if(slot_name == "VSMTileListRead") return SlotID::VSMTileListRead;
-	if(slot_name == "VSMBlockerClassifyInitDispatch") return SlotID::VSMBlockerClassifyInitDispatch;
 	if(slot_name == "VSMSearchVerdictAppend") return SlotID::VSMSearchVerdictAppend;
-	if(slot_name == "VSMSearchVerdictInitDispatch") return SlotID::VSMSearchVerdictInitDispatch;
 	if(slot_name == "VSMBlockerSearchOutput") return SlotID::VSMBlockerSearchOutput;
 	if(slot_name == "VSMShadowResolveIO") return SlotID::VSMShadowResolveIO;
 	if(slot_name == "VSMGatherDispatchData") return SlotID::VSMGatherDispatchData;
@@ -316,11 +314,7 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::VSMTileListRead) return Slots::VSMTileListRead::Slot::ID;
 
-	if(id == SlotID::VSMBlockerClassifyInitDispatch) return Slots::VSMBlockerClassifyInitDispatch::Slot::ID;
-
 	if(id == SlotID::VSMSearchVerdictAppend) return Slots::VSMSearchVerdictAppend::Slot::ID;
-
-	if(id == SlotID::VSMSearchVerdictInitDispatch) return Slots::VSMSearchVerdictInitDispatch::Slot::ID;
 
 	if(id == SlotID::VSMBlockerSearchOutput) return Slots::VSMBlockerSearchOutput::Slot::ID;
 
@@ -437,9 +431,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::VSMLighting) return "VSMLighting";
 	if(id == SlotID::VSMBlockerTilesAppend) return "VSMBlockerTilesAppend";
 	if(id == SlotID::VSMTileListRead) return "VSMTileListRead";
-	if(id == SlotID::VSMBlockerClassifyInitDispatch) return "VSMBlockerClassifyInitDispatch";
 	if(id == SlotID::VSMSearchVerdictAppend) return "VSMSearchVerdictAppend";
-	if(id == SlotID::VSMSearchVerdictInitDispatch) return "VSMSearchVerdictInitDispatch";
 	if(id == SlotID::VSMBlockerSearchOutput) return "VSMBlockerSearchOutput";
 	if(id == SlotID::VSMShadowResolveIO) return "VSMShadowResolveIO";
 	if(id == SlotID::VSMGatherDispatchData) return "VSMGatherDispatchData";

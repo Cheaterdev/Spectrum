@@ -52,6 +52,8 @@ export namespace HAL {
             void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
             void dispatch_graph(ResourceAddress addr);
 
+            void global_barrier();
+
             void clear_uav(const Handles::UAV& h, vec4 ClearColor);
             void clear_rtv(const Handles::RTV& h, vec4 ClearColor);
             void clear_stencil(const Handles::DSV& dsv, UINT8 stencil);

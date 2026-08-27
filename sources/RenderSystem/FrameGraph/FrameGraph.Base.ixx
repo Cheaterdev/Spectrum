@@ -542,7 +542,24 @@ public:
 
 			HAL::StructuredBufferViewDesc as_view(uint64 offset,ResourceFlags resflags)
 			{
-				return { offset, count * sizeof(Underlying<T>), counted?counterType::SELF:counterType::NONE };
+				// Must mirror create_resource_desc()'s own padding exactly:
+				// StructuredBufferView::init() (for counterType::SELF) does
+				// `size -= local_offset` on whatever size this desc reports,
+				// on the assumption that it already includes the counter's
+				// padding -- true for the resource this same struct just
+				// created via create_resource_desc(), but this used to
+				// report the UNPADDED count*sizeof(T) instead, silently
+				// under-sizing the view by exactly one element (confirmed
+				// live: a counted list created for exactly N tiles only ever
+				// exposed N-1 to the append shader, dropping whichever
+				// append happened to land on the boundary -- a different
+				// screen tile each frame depending on GPU dispatch
+				// scheduling, since nothing about WHICH append lands last is
+				// deterministic).
+				uint64 size = count * sizeof(Underlying<T>);
+				if (counted)
+					size += Math::roundUp(4, sizeof(Underlying<T>));
+				return { offset, size, counted?counterType::SELF:counterType::NONE };
 			}
 		};
 

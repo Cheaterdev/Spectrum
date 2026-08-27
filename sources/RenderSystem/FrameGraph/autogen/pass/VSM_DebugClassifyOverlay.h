@@ -25,22 +25,13 @@ public:
 		Handlers::StructuredBuffer<uint2> VSM_DarkTiles = ResourceID::VSM_DarkTiles;
 
 
-		Handlers::StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch = ResourceID::VSM_LitTilesDispatch;
-
-
-		Handlers::StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch = ResourceID::VSM_DarkTilesDispatch;
-
-
 		Handlers::StructuredBuffer<uint2> VSM_ConfirmedLitTiles = ResourceID::VSM_ConfirmedLitTiles;
 
 
 		Handlers::StructuredBuffer<uint2> VSM_BlurTiles = ResourceID::VSM_BlurTiles;
 
 
-		Handlers::StructuredBuffer<DispatchArguments> VSM_ConfirmedLitTilesDispatch = ResourceID::VSM_ConfirmedLitTilesDispatch;
-
-
-		Handlers::StructuredBuffer<DispatchArguments> VSM_BlurTilesDispatch = ResourceID::VSM_BlurTilesDispatch;
+		Handlers::Texture VSM_BlockerSearchResult = ResourceID::VSM_BlockerSearchResult;
 
 
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
@@ -51,12 +42,9 @@ public:
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
 			{ ResourceID::VSM_LitTiles, false },
 			{ ResourceID::VSM_DarkTiles, false },
-			{ ResourceID::VSM_LitTilesDispatch, false },
-			{ ResourceID::VSM_DarkTilesDispatch, false },
 			{ ResourceID::VSM_ConfirmedLitTiles, false },
 			{ ResourceID::VSM_BlurTiles, false },
-			{ ResourceID::VSM_ConfirmedLitTilesDispatch, false },
-			{ ResourceID::VSM_BlurTilesDispatch, false },
+			{ ResourceID::VSM_BlockerSearchResult, false },
 			{ ResourceID::ResultTexture, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

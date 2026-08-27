@@ -63,6 +63,31 @@ namespace HAL
             m_commandList->DispatchGraph(&desc);
         }
 
+        void CommandList::global_barrier()
+        {
+            // ACCESS_COMMON (== 0) means "every access compatible with the
+            // queue", so this waits for all prior work and makes all of it
+            // visible to all of what follows. SYNC_ALL is legal on every queue
+            // type, COPY included.
+            //
+            // Deliberately GLOBAL and not a per-resource barrier: it carries no
+            // layout, so it cannot disagree with what the tracking believes any
+            // resource's layout is. That is what makes it safe to drop in
+            // anywhere without perturbing compile_transitions.
+            D3D12_GLOBAL_BARRIER barrier{};
+            barrier.SyncBefore   = D3D12_BARRIER_SYNC_ALL;
+            barrier.SyncAfter    = D3D12_BARRIER_SYNC_ALL;
+            barrier.AccessBefore = D3D12_BARRIER_ACCESS_COMMON;
+            barrier.AccessAfter  = D3D12_BARRIER_ACCESS_COMMON;
+
+            D3D12_BARRIER_GROUP group{};
+            group.Type            = D3D12_BARRIER_TYPE_GLOBAL;
+            group.NumBarriers     = 1;
+            group.pGlobalBarriers = &barrier;
+
+            m_commandList->Barrier(1, &group);
+        }
+
         void CommandList::clear_uav(const Handles::UAV& h, vec4 ClearColor)
         {
             auto v = h.get_resource_info().view;

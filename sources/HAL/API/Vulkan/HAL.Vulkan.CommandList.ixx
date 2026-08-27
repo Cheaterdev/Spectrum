@@ -129,6 +129,7 @@ export namespace HAL
             void dispatch_graph(ResourceAddress addr) {}
 
             // --- Common recording API ---
+            void global_barrier();
             void clear_uav(const Handles::UAV& h, vec4 ClearColor);
             void clear_rtv(const Handles::RTV& h, vec4 ClearColor);
             void clear_stencil(const Handles::DSV& dsv, UINT8 stencil);

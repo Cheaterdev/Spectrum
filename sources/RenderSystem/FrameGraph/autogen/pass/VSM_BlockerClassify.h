@@ -36,15 +36,6 @@ public:
 
 		Handlers::StructuredBuffer<uint2> VSM_SearchTiles = ResourceID::VSM_SearchTiles;
 
-
-		Handlers::StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch = ResourceID::VSM_LitTilesDispatch;
-
-
-		Handlers::StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch = ResourceID::VSM_DarkTilesDispatch;
-
-
-		Handlers::StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch = ResourceID::VSM_SearchTilesDispatch;
-
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
@@ -68,9 +59,6 @@ public:
 			{ ResourceID::VSM_LitTiles, true },
 			{ ResourceID::VSM_DarkTiles, true },
 			{ ResourceID::VSM_SearchTiles, true },
-			{ ResourceID::VSM_LitTilesDispatch, true },
-			{ ResourceID::VSM_DarkTilesDispatch, true },
-			{ ResourceID::VSM_SearchTilesDispatch, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

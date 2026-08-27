@@ -301,32 +301,6 @@ void VSM::update_active_window(float z_far)
 		}
 	}
 
-	// TEMP DIAGNOSTIC (Phase 5.18 Part A follow-up, take 4): confirm the
-	// three tile lists VSM_BlockerClassify appends sum to a plausible
-	// distribution before trusting the visual result -- see this redesign's
-	// own implementation-discipline note in the plan. Remove once confirmed
-	// solid.
-	{
-		static uint64_t s_diag_frame2 = 0;
-		if ((s_diag_frame2++ % 120) == 0)
-		{
-			uint32_t lit    = lit_tile_count_diag.load(std::memory_order_relaxed);
-			uint32_t dark   = dark_tile_count_diag.load(std::memory_order_relaxed);
-			uint32_t search = search_tile_count_diag.load(std::memory_order_relaxed);
-			Log::get() << (std::string("VSM tile classify diag: lit=") + std::to_string(lit)
-				+ " dark=" + std::to_string(dark)
-				+ " search=" + std::to_string(search)
-				+ " total=" + std::to_string(lit + dark + search)) << Log::endl;
-
-			// TEMP DIAGNOSTIC: stage 2's own post-search verdict -- confirmed+blur
-			// should sum to `search` above.
-			uint32_t confirmed = confirmed_lit_tile_count_diag.load(std::memory_order_relaxed);
-			uint32_t blur      = blur_tile_count_diag.load(std::memory_order_relaxed);
-			Log::get() << (std::string("VSM search verdict diag: confirmed_lit=") + std::to_string(confirmed)
-				+ " blur=" + std::to_string(blur)
-				+ " total=" + std::to_string(confirmed + blur)) << Log::endl;
-		}
-	}
 }
 
 void VSM::plan_level(int level, float2 cam_pos_ls, const box& bounds_all, uint64_t tick,
@@ -1021,11 +995,13 @@ VSM::VSM() : VariableContext(L"VSM")
 					// handler's whole 7-mip-chain SRV -- same narrowing
 					// reasoning as the copy step above, and this one runs
 					// pyramid_mip_count-1 times per frame, not once.
-					// src_mip is no longer needed for addressing (the view
-					// itself is already narrowed to that mip -- Load's mip
-					// component is always 0 relative to it) but is kept for
-					// parity with the entry's own bookkeeping.
-					down.GetSrc()         = page_hiz_mip_array_views[mip].texture2DArray;
+					// src is a UAV, not an SRV, even though it's only ever
+					// read -- see VSMDownsampleHiZBatch's own comment in
+					// vsm.sig for why. src_mip is no longer needed for
+					// addressing (the view itself is already narrowed to
+					// that mip) but is kept for parity with the entry's own
+					// bookkeeping.
+					down.GetSrc()         = page_hiz_mip_array_views[mip].rwTexture2DArray;
 					down.GetDst_mip()     = page_hiz_mip_array_views[mip + 1].rwTexture2DArray;
 					down.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
 					down.GetSrc_mip()     = (uint)mip;
@@ -1066,13 +1042,31 @@ VSM::VSM() : VariableContext(L"VSM")
 		// FrameClassification uses for its own lists, just with VSM's own
 		// 16x16 tile size instead of VoxelGI's 32x32.
 		uint2 tiles_count = uint2((frame.frame_size.x + 15) / 16, (frame.frame_size.y + 15) / 16);
-		size_t max_tiles = (size_t)(tiles_count.x * tiles_count.y);
+		size_t max_tiles = 2*(size_t)(tiles_count.x * tiles_count.y);
 		builder.create(data.VSM_LitTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
 		builder.create(data.VSM_DarkTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
 		builder.create(data.VSM_SearchTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
-		builder.create(data.VSM_LitTilesDispatch, { 1u, false }, FrameGraph::ResourceFlags::UnorderedAccess);
-		builder.create(data.VSM_DarkTilesDispatch, { 1u, false }, FrameGraph::ResourceFlags::UnorderedAccess);
-		builder.create(data.VSM_SearchTilesDispatch, { 1u, false }, FrameGraph::ResourceFlags::UnorderedAccess);
+		// VSM-owned, not FrameGraph resources -- created once, pre-initialized
+		// to {0,1,1} (ThreadGroupCountY/Z never change again), same lazy
+		// null-check-and-create shape vsm_atlas_tex already uses. See these
+		// members' own comment in VSM.ixx.
+		if (!lit_tiles_dispatch.resource)
+		{
+			auto& device = RenderSystem::get().device();
+			lit_tiles_dispatch          = HAL::StructuredBufferView<DispatchArguments>(device, 1);
+			dark_tiles_dispatch         = HAL::StructuredBufferView<DispatchArguments>(device, 1);
+			search_tiles_dispatch       = HAL::StructuredBufferView<DispatchArguments>(device, 1);
+			confirmed_lit_tiles_dispatch = HAL::StructuredBufferView<DispatchArguments>(device, 1);
+			blur_tiles_dispatch         = HAL::StructuredBufferView<DispatchArguments>(device, 1);
+			DispatchArguments init{ 0, 1, 1 };
+			auto upload = device.get_upload_list();
+			upload->get_copy().update(lit_tiles_dispatch, 0, std::span{ &init, 1 });
+			upload->get_copy().update(dark_tiles_dispatch, 0, std::span{ &init, 1 });
+			upload->get_copy().update(search_tiles_dispatch, 0, std::span{ &init, 1 });
+			upload->get_copy().update(confirmed_lit_tiles_dispatch, 0, std::span{ &init, 1 });
+			upload->get_copy().update(blur_tiles_dispatch, 0, std::span{ &init, 1 });
+			upload->execute_and_wait();
+		}
 		return true;
 	};
 
@@ -1147,38 +1141,21 @@ VSM::VSM() : VariableContext(L"VSM")
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 
 		// Same render() as the append above (no PassNode boundary -- see
-		// this section's own top comment for why). Turns all three append
-		// counters into their matching indirect dispatch args.
-		{
-			Slots::VSMBlockerClassifyInitDispatch init;
-			init.GetLit_counter()          = data.VSM_LitTiles->counter_view;
-			init.GetDark_counter()         = data.VSM_DarkTiles->counter_view;
-			init.GetSearch_counter()       = data.VSM_SearchTiles->counter_view;
-			init.GetLit_dispatch_data()    = data.VSM_LitTilesDispatch->rwStructuredBuffer;
-			init.GetDark_dispatch_data()   = data.VSM_DarkTilesDispatch->rwStructuredBuffer;
-			init.GetSearch_dispatch_data() = data.VSM_SearchTilesDispatch->rwStructuredBuffer;
-			compute.set(init);
-		}
-		compute.set_pipeline<PSOS::VSMBlockerClassifyInitDispatch>();
-		compute.dispatch(1, 1, 1);
-
-		// TEMP DIAGNOSTIC: read back the real append counts directly via the
-		// dedicated read_counter API -- confirms the three lists sum to the
-		// total tile count and land in a plausible distribution, the check
-		// this whole redesign's implementation discipline calls for before
-		// trusting the visual result. Remove once confirmed solid.
-		list.get_copy().read_counter(*data.VSM_LitTiles, [this](uint count)
-		{
-			lit_tile_count_diag.store(count, std::memory_order_relaxed);
-		});
-		list.get_copy().read_counter(*data.VSM_DarkTiles, [this](uint count)
-		{
-			dark_tile_count_diag.store(count, std::memory_order_relaxed);
-		});
-		list.get_copy().read_counter(*data.VSM_SearchTiles, [this](uint count)
-		{
-			search_tile_count_diag.store(count, std::memory_order_relaxed);
-		});
+		// this section's own top comment for why). Each list's own
+		// AppendStructuredBuffer counter goes straight into its dispatch-args
+		// buffer's ThreadGroupCountX via a plain 4-byte copy -- no shader
+		// dispatch needed (see PassDefaults.cpp's ShadowsFlowNode for the
+		// same pattern already proven elsewhere). The write-then-read hazard
+		// on each counter is the same UAV-reuse case Transitions::record_usage
+		// already splits an operation for (see that function's own comment),
+		// so this needs no manual barrier beyond issuing the copy after the
+		// classify dispatch, same as the CS version it replaces relied on.
+		list.get_copy().copy_buffer(lit_tiles_dispatch.resource.get(), 0,
+		    data.VSM_LitTiles->get_counter_buffer().get(), data.VSM_LitTiles->get_counter_offset(), 4);
+		list.get_copy().copy_buffer(dark_tiles_dispatch.resource.get(), 0,
+		    data.VSM_DarkTiles->get_counter_buffer().get(), data.VSM_DarkTiles->get_counter_offset(), 4);
+		list.get_copy().copy_buffer(search_tiles_dispatch.resource.get(), 0,
+		    data.VSM_SearchTiles->get_counter_buffer().get(), data.VSM_SearchTiles->get_counter_offset(), 4);
 	};
 
 	// Stage 2: INDIRECT dispatch over VSM_SearchTiles only -- writes the raw
@@ -1199,9 +1176,10 @@ VSM::VSM() : VariableContext(L"VSM")
 		// [Async2] queue, test.sig).
 		builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
-		// Stage 1 (VSM_BlockerClassify) owns creating these.
+		// Stage 1 (VSM_BlockerClassify) owns creating this. Its own dispatch
+		// args (like all five lists') are a VSM-owned buffer now, not a
+		// FrameGraph field -- see VSM.ixx's own comment.
 		builder.need(data.VSM_SearchTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_SearchTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
 		auto& frame = builder.graph->get_context<ViewportInfo>();
 		builder.create(data.VSM_BlockerSearchResult,
 		    { ivec3(frame.frame_size, 0), HAL::Format::R32G32B32A32_UINT, 1, 1 },
@@ -1214,8 +1192,6 @@ VSM::VSM() : VariableContext(L"VSM")
 		size_t max_tiles = (size_t)(tiles_count.x * tiles_count.y);
 		builder.create(data.VSM_ConfirmedLitTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
 		builder.create(data.VSM_BlurTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
-		builder.create(data.VSM_ConfirmedLitTilesDispatch, { 1u, false }, FrameGraph::ResourceFlags::UnorderedAccess);
-		builder.create(data.VSM_BlurTilesDispatch, { 1u, false }, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 
@@ -1293,35 +1269,16 @@ VSM::VSM() : VariableContext(L"VSM")
 		}
 
 		compute.set_pipeline<PSOS::VSMBlockerSearchCompute>();
-		compute.exec_indirect(*data.VSM_SearchTilesDispatch, 1);
+		compute.exec_indirect(search_tiles_dispatch, 1);
 
 		// Same render() as the append above (no PassNode boundary -- see
-		// VSMSearchVerdictAppend's own comment for why). Turns the two new
-		// post-search append counters into their matching indirect dispatch
-		// args.
-		{
-			Slots::VSMSearchVerdictInitDispatch init;
-			init.GetConfirmed_lit_counter()        = data.VSM_ConfirmedLitTiles->counter_view;
-			init.GetBlur_counter()                 = data.VSM_BlurTiles->counter_view;
-			init.GetConfirmed_lit_dispatch_data()  = data.VSM_ConfirmedLitTilesDispatch->rwStructuredBuffer;
-			init.GetBlur_dispatch_data()           = data.VSM_BlurTilesDispatch->rwStructuredBuffer;
-			compute.set(init);
-		}
-		compute.set_pipeline<PSOS::VSMSearchVerdictInitDispatch>();
-		compute.dispatch(1, 1, 1);
-
-		// TEMP DIAGNOSTIC: same read_counter pattern already proven for
-		// stage 1's own three lists -- confirms confirmed_lit+blur sum to
-		// the search_tiles count this frame landed on. Remove once
-		// confirmed solid.
-		list.get_copy().read_counter(*data.VSM_ConfirmedLitTiles, [this](uint count)
-		{
-			confirmed_lit_tile_count_diag.store(count, std::memory_order_relaxed);
-		});
-		list.get_copy().read_counter(*data.VSM_BlurTiles, [this](uint count)
-		{
-			blur_tile_count_diag.store(count, std::memory_order_relaxed);
-		});
+		// VSMSearchVerdictAppend's own comment for why). Same counter-copy
+		// pattern as stage 1's own three lists (see that section's own
+		// comment) -- no shader dispatch needed.
+		list.get_copy().copy_buffer(confirmed_lit_tiles_dispatch.resource.get(), 0,
+		    data.VSM_ConfirmedLitTiles->get_counter_buffer().get(), data.VSM_ConfirmedLitTiles->get_counter_offset(), 4);
+		list.get_copy().copy_buffer(blur_tiles_dispatch.resource.get(), 0,
+		    data.VSM_BlurTiles->get_counter_buffer().get(), data.VSM_BlurTiles->get_counter_offset(), 4);
 	};
 
 	// Stage 3: three PSOs (full-lit/full-shadow/shadow-blur), ONE PassNode,
@@ -1337,19 +1294,16 @@ VSM::VSM() : VariableContext(L"VSM")
 		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
-		// Stage 1 owns these two lists + their dispatch args.
+		// Stage 1 owns these two lists (their dispatch args are a VSM-owned
+		// buffer now, not a FrameGraph field -- see VSM.ixx's own comment).
 		builder.need(data.VSM_LitTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_DarkTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_LitTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_DarkTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
 		// Stage 2 owns these -- VSM_ConfirmedLitTiles feeds a second cheap
 		// full-lit dispatch below, VSM_BlurTiles replaces VSM_SearchTiles as
 		// what the shadow-blur PSO actually dispatches over (see
 		// VSMSearchVerdictAppend's own comment in vsm.sig).
 		builder.need(data.VSM_ConfirmedLitTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_BlurTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_ConfirmedLitTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_BlurTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_BlockerSearchResult, FrameGraph::ResourceFlags::ComputeRead);
 		auto& frame = builder.graph->get_context<ViewportInfo>();
 		builder.create(data.VSM_ShadowResult,
@@ -1429,7 +1383,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(tiles);
 		}
 		compute.set_pipeline<PSOS::VSMFullLit>();
-		compute.exec_indirect(*data.VSM_LitTilesDispatch, 1);
+		compute.exec_indirect(lit_tiles_dispatch, 1);
 
 		{
 			Slots::VSMTileListRead tiles;
@@ -1437,7 +1391,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(tiles);
 		}
 		compute.set_pipeline<PSOS::VSMFullShadow>();
-		compute.exec_indirect(*data.VSM_DarkTilesDispatch, 1);
+		compute.exec_indirect(dark_tiles_dispatch, 1);
 
 		// Stage 2's own post-search confirmation -- a second, cheap full-lit
 		// dispatch (same PSO as above, just a different list stage 2 built
@@ -1450,7 +1404,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(tiles);
 		}
 		compute.set_pipeline<PSOS::VSMFullLit>();
-		compute.exec_indirect(*data.VSM_ConfirmedLitTilesDispatch, 1);
+		compute.exec_indirect(confirmed_lit_tiles_dispatch, 1);
 
 		// The real blur target is VSM_BlurTiles now, not VSM_SearchTiles --
 		// stage 2 already carved out whatever turned out fully confirmed
@@ -1461,7 +1415,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(tiles);
 		}
 		compute.set_pipeline<PSOS::VSMShadowBlur>(PSOS::VSMShadowBlur::VsmRtxVerify.Use(rtx_verify));
-		compute.exec_indirect(*data.VSM_BlurTilesDispatch, 1);
+		compute.exec_indirect(blur_tiles_dispatch, 1);
 	};
 
 	// ---- Combine lighting ------------------------------------------------
@@ -1574,12 +1528,12 @@ VSM::VSM() : VariableContext(L"VSM")
 			return false;
 		builder.need(data.VSM_LitTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_DarkTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_LitTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_DarkTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_ConfirmedLitTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_BlurTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_ConfirmedLitTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_BlurTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
+		// Stage 2's own output -- CS_OVERLAY_BLUR reads this directly for
+		// per-pixel sentinel decoding within blur_tiles (see
+		// VSM_DebugTileOverlay.hlsl's own comment on CS_OVERLAY_BLUR).
+		builder.need(data.VSM_BlockerSearchResult, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
@@ -1602,7 +1556,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(tiles);
 		}
 		compute.set_pipeline<PSOS::VSMDebugOverlayLit>();
-		compute.exec_indirect(*data.VSM_LitTilesDispatch, 1);
+		compute.exec_indirect(lit_tiles_dispatch, 1);
 
 		{
 			Slots::VSMTileListRead tiles;
@@ -1610,7 +1564,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(tiles);
 		}
 		compute.set_pipeline<PSOS::VSMDebugOverlayDark>();
-		compute.exec_indirect(*data.VSM_DarkTilesDispatch, 1);
+		compute.exec_indirect(dark_tiles_dispatch, 1);
 
 		{
 			Slots::VSMTileListRead tiles;
@@ -1618,15 +1572,24 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(tiles);
 		}
 		compute.set_pipeline<PSOS::VSMDebugOverlayConfirmedLit>();
-		compute.exec_indirect(*data.VSM_ConfirmedLitTilesDispatch, 1);
+		compute.exec_indirect(confirmed_lit_tiles_dispatch, 1);
 
 		{
 			Slots::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_BlurTiles->structuredBuffer;
 			compute.set(tiles);
 		}
+		{
+			// Only the SRV field is meaningful here -- CS_OVERLAY_BLUR never
+			// writes shadow_result, it writes through VSMLighting's own
+			// `result` field instead (bound above), same as every other
+			// entry point in this file.
+			Slots::VSMShadowResolveIO io;
+			io.GetBlocker_search_result() = data.VSM_BlockerSearchResult->texture2D;
+			compute.set(io);
+		}
 		compute.set_pipeline<PSOS::VSMDebugOverlayBlur>();
-		compute.exec_indirect(*data.VSM_BlurTilesDispatch, 1);
+		compute.exec_indirect(blur_tiles_dispatch, 1);
 	};
 
 	// ---- Depth analysis (feeds active_min's hysteresis, see update_active_window()) --

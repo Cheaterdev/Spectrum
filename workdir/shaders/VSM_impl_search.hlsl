@@ -74,7 +74,7 @@ VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighti
 	Camera page_cam = lighting.GetPage_cameras()[slot];
 	float4 pos_l = mul(page_cam.GetViewProj(), float4(wpos, 1));
 
-	static const float VSM_BLOCKER_SEARCH_RADIUS_WORLD = 4.0;
+	static const float VSM_BLOCKER_SEARCH_RADIUS_WORLD = 3.0;
 	float texel_world_size = c.GetLevel_info(level).z / c.GetPage_size();
 
 	float4 vsm_depth_range_p0 = mul(page_cam.GetInvProj(), float4(0, 0, 0, 1));

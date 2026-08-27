@@ -83,9 +83,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepth>(device, pso[PSO::VSMCopyPageDepth]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepthBatch>(device, pso[PSO::VSMCopyPageDepthBatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDownsampleHiZBatch>(device, pso[PSO::VSMDownsampleHiZBatch]));
-	tasks.emplace_back(PSOBase::create<PSOS::VSMBlockerClassifyInitDispatch>(device, pso[PSO::VSMBlockerClassifyInitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMBlockerClassify>(device, pso[PSO::VSMBlockerClassify]));
-	tasks.emplace_back(PSOBase::create<PSOS::VSMSearchVerdictInitDispatch>(device, pso[PSO::VSMSearchVerdictInitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMApplyCompute>(device, pso[PSO::VSMApplyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMBlockerSearchCompute>(device, pso[PSO::VSMBlockerSearchCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMFullLit>(device, pso[PSO::VSMFullLit]));

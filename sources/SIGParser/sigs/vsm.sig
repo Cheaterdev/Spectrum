@@ -156,11 +156,17 @@ ComputePSO VSMCopyPageDepthBatch
 
 # Phase 5.14: one dispatch per mip level, covering every dirty page at once
 # (Z dimension = dirty page count), replacing the old one-dispatch-per-
-# dirty-page-per-mip loop. src is a single SRV spanning the WHOLE mip
-# chain (Load's 4th component selects src_mip directly -- HLSL can address
-# any mip of a multi-mip SRV without a separate view per mip); only the
-# write side needs a mip-specific view, since a UAV can only ever address
-# one mip.
+# dirty-page-per-mip loop. src/dst_mip are both narrowed, single-mip,
+# [Barrier = ALL] views of the SAME VSM_PageHiZ resource -- src is RW (a
+# UAV), not an SRV, DELIBERATELY: with src+dst_mip on two different
+# subresources (mip N vs N+1) of one [Barrier = ALL]-tracked (whole-
+# resource, one layout) texture, an SRV read + a UAV write in the SAME
+# dispatch need two INCOMPATIBLE layouts simultaneously -- confirmed live
+# via GPU-Based Validation (#1358, "expected SRV layout, found
+# UNORDERED_ACCESS") once GBV was turned on to chase an unrelated VSM tile
+# flicker. Keeping src a UAV too means the whole resource only ever needs
+# UNORDERED_ACCESS for this entire loop, so there is no layout conflict to
+# resolve in the first place.
 [Bind = DefaultLayout::Instance0]
 struct VSMDownsampleHiZBatch
 {
@@ -169,7 +175,7 @@ struct VSMDownsampleHiZBatch
 	# subresource-expansion site in the frame. See VSMCopyPageDepthBatch.
 	# float2: .x = running MIN (farthest), .y = running MAX (closest) -- see
 	# VSMPageHiZ's own comment.
-	[Barrier = ALL] Texture2DArray<float2> src;
+	[Barrier = ALL] RWTexture2DArray<float2> src;
 	[Barrier = ALL] RWTexture2DArray<float2> dst_mip;
 	StructuredBuffer<uint> dirty_slots;
 	uint src_mip;
@@ -269,31 +275,6 @@ struct VSMTileListRead
 	StructuredBuffer<uint2> tiles;
 }
 
-# Turns all three of VSMBlockerTilesAppend's GPU-written append counters
-# into real dispatch arguments, one shader invocation instead of three --
-# mirrors FrameClassificationInitDispatch's own shape. One appended tile is
-# exactly one 16x16 group in every consumer (tile size == group size
-# everywhere here), so each tile count copies straight into its own
-# counts.x with no divide_by_multiple scaling needed.
-[Bind = DefaultLayout::Instance0]
-struct VSMBlockerClassifyInitDispatch
-{
-	StructuredBuffer<uint> lit_counter;
-	StructuredBuffer<uint> dark_counter;
-	StructuredBuffer<uint> search_counter;
-	RWStructuredBuffer<DispatchArguments> lit_dispatch_data;
-	RWStructuredBuffer<DispatchArguments> dark_dispatch_data;
-	RWStructuredBuffer<DispatchArguments> search_dispatch_data;
-}
-
-ComputePSO VSMBlockerClassifyInitDispatch
-{
-	root = DefaultLayout;
-
-	[EntryPoint = CS]
-	compute = VSMBlockerClassifyInitDispatch;
-}
-
 ComputePSO VSMBlockerClassify
 {
 	root = DefaultLayout;
@@ -329,28 +310,6 @@ struct VSMSearchVerdictAppend
 {
 	AppendStructuredBuffer<uint2> confirmed_lit_tiles;
 	AppendStructuredBuffer<uint2> blur_tiles;
-}
-
-# Same shape as VSMBlockerClassifyInitDispatch, a separate instance because
-# this one's append happens in a DIFFERENT pass's render() (VSM_BlockerSearch,
-# after the real search) -- the append and its own counter-read must stay
-# together in that same render() (see VSM_BlockerClassify's own comment for
-# why crossing a PassNode boundary between them raced).
-[Bind = DefaultLayout::Instance0]
-struct VSMSearchVerdictInitDispatch
-{
-	StructuredBuffer<uint> confirmed_lit_counter;
-	StructuredBuffer<uint> blur_counter;
-	RWStructuredBuffer<DispatchArguments> confirmed_lit_dispatch_data;
-	RWStructuredBuffer<DispatchArguments> blur_dispatch_data;
-}
-
-ComputePSO VSMSearchVerdictInitDispatch
-{
-	root = DefaultLayout;
-
-	[EntryPoint = CS]
-	compute = VSMSearchVerdictInitDispatch;
 }
 
 # Stage 2's own output -- VSM_BlockerSearch (INDIRECT, over search_tiles
@@ -659,12 +618,16 @@ PassNode VSM_HiZRebuild
 # Stage 1 (Phase 5.18 Part A follow-up, take 4): groupshared tile
 # classification -- see VSMBlockerTilesAppend's own comment for the
 # per-tile verdict logic. Writes NOTHING pixel-shaped: only the three tile-
-# position lists (VSMBlockerTilesAppend) and, in the SAME render() (no
-# PassNode boundary -- an AppendStructuredBuffer's hidden GPU counter isn't
-# reliably barrier-tracked by FrameGraph's normal resource-view dependency
-# system across a PassNode boundary, confirmed live earlier this session),
-# the matching indirect dispatch args (VSMBlockerClassifyInitDispatch) for
-# stage 2 and stage 3 to consume.
+# position lists (VSMBlockerTilesAppend). The matching indirect dispatch
+# args for stage 2/stage 3 are no longer built by a shader here at all --
+# VSM.cpp's render() copies each list's own AppendStructuredBuffer counter
+# directly into a VSM-owned DispatchArguments buffer's ThreadGroupCountX
+# (same pattern as PassDefaults.cpp's ShadowsFlowNode/Graph::indirect_dispatch_args),
+# in the SAME render() as the append above -- still required to stay
+# together (an AppendStructuredBuffer's hidden GPU counter isn't reliably
+# barrier-tracked by FrameGraph's normal resource-view dependency system
+# across a PassNode boundary, confirmed live earlier this session), just via
+# a copy instead of a dispatch now.
 [Compute]
 PassNode VSM_BlockerClassify
 {
@@ -675,9 +638,6 @@ PassNode VSM_BlockerClassify
 	[Write] StructuredBuffer<uint2> VSM_LitTiles;
 	[Write] StructuredBuffer<uint2> VSM_DarkTiles;
 	[Write] StructuredBuffer<uint2> VSM_SearchTiles;
-	[Write] StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch;
-	[Write] StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch;
-	[Write] StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch;
 }
 
 # Stage 2: INDIRECT dispatch over VSM_SearchTiles only -- the tiles stage 1
@@ -705,16 +665,16 @@ PassNode VSM_BlockerSearch
 	Texture VSM_PageHiZ;
 	Texture BlueNoise;
 	StructuredBuffer<uint2> VSM_SearchTiles;
-	StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch;
 	[Write] Texture VSM_BlockerSearchResult;
 	# Stage 2's own post-search verdict lists -- see VSMSearchVerdictAppend's
 	# own comment. VSM_ConfirmedLitTiles feeds a second full-lit dispatch in
 	# stage 3; VSM_BlurTiles replaces VSM_SearchTiles as what stage 3's
-	# shadow-blur PSO actually dispatches over.
+	# shadow-blur PSO actually dispatches over. Their indirect dispatch args
+	# (and VSM_SearchTiles' own, this pass's own indirect dispatch source)
+	# are VSM-owned buffers now, not FrameGraph fields -- see
+	# VSM_BlockerClassify's own comment for why.
 	[Write] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
 	[Write] StructuredBuffer<uint2> VSM_BlurTiles;
-	[Write] StructuredBuffer<DispatchArguments> VSM_ConfirmedLitTilesDispatch;
-	[Write] StructuredBuffer<DispatchArguments> VSM_BlurTilesDispatch;
 }
 
 # Stage 3: three PSOs (VSMFullLit/VSMFullShadow/VSMShadowBlur), ONE
@@ -738,16 +698,14 @@ PassNode VSM_ShadowResolve
 	Texture BlueNoise;
 	StructuredBuffer<uint2> VSM_LitTiles;
 	StructuredBuffer<uint2> VSM_DarkTiles;
-	StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch;
-	StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch;
 	# Stage 2's own post-search verdict lists, replacing VSM_SearchTiles here
 	# -- see VSMSearchVerdictAppend's own comment. Confirmed-lit gets a
 	# second cheap full-lit dispatch; blur_tiles is the (usually smaller)
-	# real target for the shadow-blur PSO.
+	# real target for the shadow-blur PSO. All four lists' indirect dispatch
+	# args are VSM-owned buffers now (see VSM_BlockerClassify's own comment),
+	# not FrameGraph fields -- render() reads them straight off `this`.
 	StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
 	StructuredBuffer<uint2> VSM_BlurTiles;
-	StructuredBuffer<DispatchArguments> VSM_ConfirmedLitTilesDispatch;
-	StructuredBuffer<DispatchArguments> VSM_BlurTilesDispatch;
 	Texture VSM_BlockerSearchResult;
 	[Write] Texture VSM_ShadowResult;
 }
@@ -781,27 +739,25 @@ PassNode VSM_Combine
 # This pass instead reads the real tile lists directly and paints a flat
 # overlay color onto the ALREADY-shaded ResultTexture, on top of
 # VSM_Combine's real output -- green=lit_tiles (stage 1), blue=dark_tiles
-# (stage 1), cyan=confirmed_lit_tiles (stage 2's post-search confirmation),
-# yellow=blur_tiles (stage 2's own "still genuinely needs the real blur"
-# verdict -- see VSMSearchVerdictAppend's own comment). Every appended tile
-# lands in exactly one of these four lists now (stage 1's search_tiles only
-# ever existed to feed stage 2, which re-buckets it fully into
-# confirmed_lit_tiles/blur_tiles), so this overlay covers the WHOLE frame,
-# not just stage 1's two uniform buckets -- unlike the original pre-refactor
-# debug view, there's no "ambiguous, shades normally" case left uncolored.
-# Only ever dispatched when the toggle is on (see m_debugoverlay_setup's own
-# early-out) -- otherwise pure overhead for no visible effect.
+# (stage 1), cyan=confirmed_lit_tiles (stage 2's post-search confirmation).
+# blur_tiles gets PER-PIXEL treatment instead of a flat color: it reads
+# VSM_BlockerSearchResult directly (the same packed data CS_SHADOW_BLUR
+# itself decodes) and paints a DARKER green/blue for pixels that resolved
+# via a sentinel even though their tile still had to dispatch (stage 2's
+# per-pixel-level optimization within an otherwise-dispatched tile),
+# leaving pixels that ran the real tap-loop blur untouched so the real
+# blurred shadow shows through -- see VSM_DebugTileOverlay.hlsl's own
+# comment on CS_OVERLAY_BLUR. Only ever dispatched when the toggle is on
+# (see m_debugoverlay_setup's own early-out) -- otherwise pure overhead for
+# no visible effect.
 [Compute]
 PassNode VSM_DebugClassifyOverlay
 {
 	StructuredBuffer<uint2> VSM_LitTiles;
 	StructuredBuffer<uint2> VSM_DarkTiles;
-	StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch;
-	StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch;
 	StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
 	StructuredBuffer<uint2> VSM_BlurTiles;
-	StructuredBuffer<DispatchArguments> VSM_ConfirmedLitTilesDispatch;
-	StructuredBuffer<DispatchArguments> VSM_BlurTilesDispatch;
+	Texture VSM_BlockerSearchResult;
 	[Write] Texture ResultTexture;
 }
 

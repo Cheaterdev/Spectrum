@@ -435,6 +435,25 @@ namespace HAL::API
         }
     }
     void CommandList::clear_stencil(const Handles::DSV&, UINT8) { ASSERT(0); }
+
+    void CommandList::global_barrier()
+    {
+        if (vk_cmd == VK_NULL_HANDLE) return;
+
+        // Vulkan equivalent of a D3D12 global barrier: one memory barrier over
+        // ALL_COMMANDS with every access bit, no image layout involved.
+        VkMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
+        barrier.srcStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        barrier.dstStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+
+        VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+        dep.memoryBarrierCount = 1;
+        dep.pMemoryBarriers    = &barrier;
+
+        vkCmdPipelineBarrier2(vk_cmd, &dep);
+    }
     void CommandList::clear_uav(const Handles::UAV& h, vec4 color)
     {
         if (vk_cmd == VK_NULL_HANDLE || !h.is_valid()) return;

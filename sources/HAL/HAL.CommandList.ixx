@@ -123,6 +123,10 @@ export{
 			// reserved-but-unused barrier points.
 			uint op_first_step = 0;
 
+			// Set by break_op, consumed by the next begin_op, which then refuses
+			// to merge even though the class matches.
+			bool force_new_op = false;
+
 		protected:
 			// Append one use to the operation currently being recorded (the
 			// back of `operations`), on this resource's per-list
@@ -417,6 +421,28 @@ export{
 			// from inside that callback — see HAL.CommandList.cpp.
 			void invalidate_state();
 
+
+			// DEBUG TOOL -- a full "wait for everything, make everything
+			// visible" global barrier at this point in the list.
+			//
+			// For bisecting a MISSING BARRIER: drop it into a pass that renders
+			// wrong, and if the corruption goes away the pass is missing a
+			// sync/access barrier that the operation batching should have
+			// produced. Bracketing a suspect sub-section narrows it further.
+			//
+			// What it can and cannot find:
+			//   CAN  -- missing execution/cache barriers: two dispatches in one
+			//           operation racing on a UAV, a write not made visible to a
+			//           later read, a producer not waited on.
+			//   CANNOT -- missing LAYOUT transitions. A global barrier carries no
+			//           layout by design (that is what makes it safe to insert
+			//           anywhere). Layout mistakes surface as debug-layer errors
+			//           anyway, so the two tools are complements, not overlaps.
+			//
+			// Breaks the current operation, so the barrier lands between
+			// operations rather than inside one. NOT free -- it serialises the
+			// queue at this point. Never leave one in committed code.
+			void add_heaviest_barrier();
 
 			// whole_resource: see clear_dsv below. Declares the barrier over the
 			// entire resource instead of the subresources this view names, so a

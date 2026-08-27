@@ -174,6 +174,15 @@ namespace HAL
 		push_fn(CommandType::Func, std::move(f));
 	}
 
+	void DelayedCommandList::global_barrier()
+	{
+		if constexpr (BuildOptions::Dev)
+			debug_recorder.push_back({CommandType::GlobalBarrier, "GlobalBarrier"});
+		push_fn(CommandType::GlobalBarrier, [](API::CommandList& list) {
+			list.global_barrier();
+		});
+	}
+
 	void DelayedCommandList::clear_uav(const Handles::UAV& h, vec4 ClearColor)
 	{
 		if constexpr (BuildOptions::Dev)
