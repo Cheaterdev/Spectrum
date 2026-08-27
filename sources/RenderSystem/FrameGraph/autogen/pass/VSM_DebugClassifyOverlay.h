@@ -31,6 +31,18 @@ public:
 		Handlers::StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch = ResourceID::VSM_DarkTilesDispatch;
 
 
+		Handlers::StructuredBuffer<uint2> VSM_ConfirmedLitTiles = ResourceID::VSM_ConfirmedLitTiles;
+
+
+		Handlers::StructuredBuffer<uint2> VSM_BlurTiles = ResourceID::VSM_BlurTiles;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_ConfirmedLitTilesDispatch = ResourceID::VSM_ConfirmedLitTilesDispatch;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_BlurTilesDispatch = ResourceID::VSM_BlurTilesDispatch;
+
+
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 		// Resources this pass touches, in declaration order, each paired with
@@ -41,6 +53,10 @@ public:
 			{ ResourceID::VSM_DarkTiles, false },
 			{ ResourceID::VSM_LitTilesDispatch, false },
 			{ ResourceID::VSM_DarkTilesDispatch, false },
+			{ ResourceID::VSM_ConfirmedLitTiles, false },
+			{ ResourceID::VSM_BlurTiles, false },
+			{ ResourceID::VSM_ConfirmedLitTilesDispatch, false },
+			{ ResourceID::VSM_BlurTilesDispatch, false },
 			{ ResourceID::ResultTexture, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

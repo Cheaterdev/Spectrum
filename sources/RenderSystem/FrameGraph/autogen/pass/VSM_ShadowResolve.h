@@ -37,16 +37,22 @@ public:
 		Handlers::StructuredBuffer<uint2> VSM_DarkTiles = ResourceID::VSM_DarkTiles;
 
 
-		Handlers::StructuredBuffer<uint2> VSM_SearchTiles = ResourceID::VSM_SearchTiles;
-
-
 		Handlers::StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch = ResourceID::VSM_LitTilesDispatch;
 
 
 		Handlers::StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch = ResourceID::VSM_DarkTilesDispatch;
 
 
-		Handlers::StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch = ResourceID::VSM_SearchTilesDispatch;
+		Handlers::StructuredBuffer<uint2> VSM_ConfirmedLitTiles = ResourceID::VSM_ConfirmedLitTiles;
+
+
+		Handlers::StructuredBuffer<uint2> VSM_BlurTiles = ResourceID::VSM_BlurTiles;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_ConfirmedLitTilesDispatch = ResourceID::VSM_ConfirmedLitTilesDispatch;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_BlurTilesDispatch = ResourceID::VSM_BlurTilesDispatch;
 
 
 		Handlers::Texture VSM_BlockerSearchResult = ResourceID::VSM_BlockerSearchResult;
@@ -77,10 +83,12 @@ public:
 			{ ResourceID::BlueNoise, false },
 			{ ResourceID::VSM_LitTiles, false },
 			{ ResourceID::VSM_DarkTiles, false },
-			{ ResourceID::VSM_SearchTiles, false },
 			{ ResourceID::VSM_LitTilesDispatch, false },
 			{ ResourceID::VSM_DarkTilesDispatch, false },
-			{ ResourceID::VSM_SearchTilesDispatch, false },
+			{ ResourceID::VSM_ConfirmedLitTiles, false },
+			{ ResourceID::VSM_BlurTiles, false },
+			{ ResourceID::VSM_ConfirmedLitTilesDispatch, false },
+			{ ResourceID::VSM_BlurTilesDispatch, false },
 			{ ResourceID::VSM_BlockerSearchResult, false },
 			{ ResourceID::VSM_ShadowResult, true },
 		};

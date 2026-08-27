@@ -302,6 +302,57 @@ ComputePSO VSMBlockerClassify
 	compute = VSM_BlockerClassify;
 }
 
+# Stage 2 follow-up: even a tile stage 1 bucketed as search_tiles can turn
+# out, after the REAL per-pixel search actually runs, to need no further
+# work at all -- every one of its 256 pixels individually resolved to a lit
+# sentinel (no blocker found), the same "fully visible" outcome stage 1's
+# cheap Hi-Z test just couldn't prove up front. Appending such a tile
+# straight to a second "confirmed lit" list lets stage 3 skip launching the
+# expensive shadow-blur PSO for it entirely, on top of the launch stage 1
+# already skips for lit_tiles/dark_tiles.
+#
+# NOT simply "zero real blockers found" -- a tile can ALSO have a mix of
+# confidently-lit and confidently-dark pixels with zero real blockers (the
+# same hard-boundary-no-penumbra case that forced it into search_tiles in
+# the first place, see VSM_BlockerClassify's own comment). Flat-filling such
+# a tile as lit would silently wipe out its dark pixels. So the verdict
+# tracks BOTH "any pixel resolved dark" and "any pixel found a real
+# blocker" -- only when NEITHER happened is confirmed_lit_tiles safe;
+# otherwise the tile goes to blur_tiles, which stage 3's shadow-blur PSO
+# still resolves correctly per-pixel (including pixels that individually
+# turned out lit or dark within it) via VSM_BlockerSearchResult's existing
+# sentinel decode -- no actual tap-loop blur runs for those pixels either,
+# just narrower coverage than launching over the whole original
+# search_tiles would have.
+[Bind = DefaultLayout::Instance5]
+struct VSMSearchVerdictAppend
+{
+	AppendStructuredBuffer<uint2> confirmed_lit_tiles;
+	AppendStructuredBuffer<uint2> blur_tiles;
+}
+
+# Same shape as VSMBlockerClassifyInitDispatch, a separate instance because
+# this one's append happens in a DIFFERENT pass's render() (VSM_BlockerSearch,
+# after the real search) -- the append and its own counter-read must stay
+# together in that same render() (see VSM_BlockerClassify's own comment for
+# why crossing a PassNode boundary between them raced).
+[Bind = DefaultLayout::Instance0]
+struct VSMSearchVerdictInitDispatch
+{
+	StructuredBuffer<uint> confirmed_lit_counter;
+	StructuredBuffer<uint> blur_counter;
+	RWStructuredBuffer<DispatchArguments> confirmed_lit_dispatch_data;
+	RWStructuredBuffer<DispatchArguments> blur_dispatch_data;
+}
+
+ComputePSO VSMSearchVerdictInitDispatch
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = VSMSearchVerdictInitDispatch;
+}
+
 # Stage 2's own output -- VSM_BlockerSearch (INDIRECT, over search_tiles
 # only) writes the raw per-ambiguous-pixel blocker-search result here
 # instead of into a texture VSM_Combine reads directly: keeps "raw search
@@ -411,9 +462,9 @@ ComputePSO VSMShadowBlur
 }
 
 # Debug overlay (see VSM_DebugClassifyOverlay's own PassNode comment) --
-# two trivial PSOs sharing one file, each an indirect dispatch over one of
-# stage 1's uniform tile lists, painting a flat color directly onto the
-# already-shaded ResultTexture.
+# four trivial PSOs sharing one file, each an indirect dispatch over one
+# tile list (two from stage 1, two from stage 2's own post-search verdict),
+# painting a flat color directly onto the already-shaded ResultTexture.
 ComputePSO VSMDebugOverlayLit
 {
 	root = DefaultLayout;
@@ -427,6 +478,22 @@ ComputePSO VSMDebugOverlayDark
 	root = DefaultLayout;
 
 	[EntryPoint = CS_OVERLAY_DARK]
+	compute = VSM_DebugTileOverlay;
+}
+
+ComputePSO VSMDebugOverlayConfirmedLit
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_OVERLAY_CONFIRMED_LIT]
+	compute = VSM_DebugTileOverlay;
+}
+
+ComputePSO VSMDebugOverlayBlur
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_OVERLAY_BLUR]
 	compute = VSM_DebugTileOverlay;
 }
 
@@ -640,6 +707,14 @@ PassNode VSM_BlockerSearch
 	StructuredBuffer<uint2> VSM_SearchTiles;
 	StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch;
 	[Write] Texture VSM_BlockerSearchResult;
+	# Stage 2's own post-search verdict lists -- see VSMSearchVerdictAppend's
+	# own comment. VSM_ConfirmedLitTiles feeds a second full-lit dispatch in
+	# stage 3; VSM_BlurTiles replaces VSM_SearchTiles as what stage 3's
+	# shadow-blur PSO actually dispatches over.
+	[Write] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
+	[Write] StructuredBuffer<uint2> VSM_BlurTiles;
+	[Write] StructuredBuffer<DispatchArguments> VSM_ConfirmedLitTilesDispatch;
+	[Write] StructuredBuffer<DispatchArguments> VSM_BlurTilesDispatch;
 }
 
 # Stage 3: three PSOs (VSMFullLit/VSMFullShadow/VSMShadowBlur), ONE
@@ -663,10 +738,16 @@ PassNode VSM_ShadowResolve
 	Texture BlueNoise;
 	StructuredBuffer<uint2> VSM_LitTiles;
 	StructuredBuffer<uint2> VSM_DarkTiles;
-	StructuredBuffer<uint2> VSM_SearchTiles;
 	StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch;
 	StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch;
-	StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch;
+	# Stage 2's own post-search verdict lists, replacing VSM_SearchTiles here
+	# -- see VSMSearchVerdictAppend's own comment. Confirmed-lit gets a
+	# second cheap full-lit dispatch; blur_tiles is the (usually smaller)
+	# real target for the shadow-blur PSO.
+	StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
+	StructuredBuffer<uint2> VSM_BlurTiles;
+	StructuredBuffer<DispatchArguments> VSM_ConfirmedLitTilesDispatch;
+	StructuredBuffer<DispatchArguments> VSM_BlurTilesDispatch;
 	Texture VSM_BlockerSearchResult;
 	[Write] Texture VSM_ShadowResult;
 }
@@ -697,15 +778,19 @@ PassNode VSM_Combine
 # pixel come from" by checking whether the FINAL shadow value happened to
 # equal exactly 1.0/0.0 -- a lossy postfactum guess (a genuinely blurred
 # result can also land on exactly 0 or 1), not the real classification data.
-# This pass instead reads stage 1's actual VSM_LitTiles/VSM_DarkTiles lists
-# directly and paints a flat overlay color onto the ALREADY-shaded
-# ResultTexture, on top of VSM_Combine's real output -- only for those two
-# uniform buckets; VSM_SearchTiles is deliberately left untouched so the
-# real blurred shadow still shows through there, for context (matches the
-# original pre-refactor debug view's own "ambiguous pixels shade normally"
-# behavior). Only ever dispatched when the toggle is on (see
-# m_debugoverlay_setup's own early-out) -- otherwise pure overhead for no
-# visible effect.
+# This pass instead reads the real tile lists directly and paints a flat
+# overlay color onto the ALREADY-shaded ResultTexture, on top of
+# VSM_Combine's real output -- green=lit_tiles (stage 1), blue=dark_tiles
+# (stage 1), cyan=confirmed_lit_tiles (stage 2's post-search confirmation),
+# yellow=blur_tiles (stage 2's own "still genuinely needs the real blur"
+# verdict -- see VSMSearchVerdictAppend's own comment). Every appended tile
+# lands in exactly one of these four lists now (stage 1's search_tiles only
+# ever existed to feed stage 2, which re-buckets it fully into
+# confirmed_lit_tiles/blur_tiles), so this overlay covers the WHOLE frame,
+# not just stage 1's two uniform buckets -- unlike the original pre-refactor
+# debug view, there's no "ambiguous, shades normally" case left uncolored.
+# Only ever dispatched when the toggle is on (see m_debugoverlay_setup's own
+# early-out) -- otherwise pure overhead for no visible effect.
 [Compute]
 PassNode VSM_DebugClassifyOverlay
 {
@@ -713,6 +798,10 @@ PassNode VSM_DebugClassifyOverlay
 	StructuredBuffer<uint2> VSM_DarkTiles;
 	StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch;
 	StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch;
+	StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
+	StructuredBuffer<uint2> VSM_BlurTiles;
+	StructuredBuffer<DispatchArguments> VSM_ConfirmedLitTilesDispatch;
+	StructuredBuffer<DispatchArguments> VSM_BlurTilesDispatch;
 	[Write] Texture ResultTexture;
 }
 

@@ -107,16 +107,18 @@ public:
 	// search.
 	Variable<bool> use_vsm_hiz_blocker_classify = { true, "Hi-Z blocker classify", this };
 
-	// Debug view: shows WHERE vsm_search_blocker's Hi-Z classification
-	// fires and which way, instead of just its effect on the shadow --
-	// green = confident_lit (nothing in range can block), blue =
-	// confident_dark (everything in range blocks). Ambiguous/real-search
-	// pixels still shade normally underneath, for context. Grew out of
-	// live debugging a real coverage-gap bug in the classification itself
-	// (see vsm_search_blocker's own comments) -- kept as a permanent
-	// toggle since it's generally useful for judging how much of the
-	// frame the optimization is actually covering.
-	Variable<bool> use_vsm_debug_hiz_classify = { false, "Debug: Hi-Z classify (green=lit, blue=dark)", this };
+	// Debug view (VSM_DebugClassifyOverlay): shows which of the four tile
+	// buckets each pixel actually landed in, instead of just the shadow
+	// result -- green = lit_tiles (stage 1's cheap classify), blue =
+	// dark_tiles (stage 1), cyan = confirmed_lit_tiles (stage 2's
+	// post-search "turned out lit after all"), yellow = blur_tiles (stage
+	// 2's "genuinely still needs the real blur" -- the only expensive
+	// bucket). Covers the whole frame now, not just the two uniform
+	// buckets. Grew out of live debugging a real coverage-gap bug in the
+	// classification itself -- kept as a permanent toggle since it's
+	// generally useful for judging how much of the frame each stage of the
+	// optimization is actually covering.
+	Variable<bool> use_vsm_debug_hiz_classify = { false, "Debug: tile classify (green=lit, blue=dark, cyan=confirmed lit, yellow=blur)", this };
 
 	// Debug view: colors every pixel by clipmap level (one flat hue per
 	// level) with a checkerboard darkening by page position within that
@@ -338,6 +340,12 @@ private:
 	std::atomic<uint32_t> lit_tile_count_diag{ 0 };
 	std::atomic<uint32_t> dark_tile_count_diag{ 0 };
 	std::atomic<uint32_t> search_tile_count_diag{ 0 };
+
+	// TEMP DIAGNOSTIC: stage 2's own post-search verdict counts (see
+	// VSMSearchVerdictAppend's own comment in vsm.sig) -- should sum to
+	// search_tile_count_diag above each frame. Remove once confirmed solid.
+	std::atomic<uint32_t> confirmed_lit_tile_count_diag{ 0 };
+	std::atomic<uint32_t> blur_tile_count_diag{ 0 };
 
 	// Phase 5.12: one entry per active+dirty LEVEL this frame (bounded by
 	// level count, not mesh count), built in VSM_GatherDispatch's render()

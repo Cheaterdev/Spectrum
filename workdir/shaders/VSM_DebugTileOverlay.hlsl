@@ -32,3 +32,22 @@ void CS_OVERLAY_DARK(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupT
 {
 	overlay_tile(groupID, groupThreadID, float4(0, 0, 1, 1));
 }
+
+// Stage 2's own post-search verdict (see VSMSearchVerdictAppend's own
+// comment in vsm.sig) -- confirmed_lit_tiles: every pixel individually
+// resolved lit after the REAL search ran, distinct color (cyan) from
+// lit_tiles' green so it's visible how much of the frame stage 1's cheap
+// classify alone couldn't prove, but the real search still confirmed lit.
+[numthreads(16, 16, 1)]
+void CS_OVERLAY_CONFIRMED_LIT(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID)
+{
+	overlay_tile(groupID, groupThreadID, float4(0, 1, 1, 1));
+}
+
+// blur_tiles: still genuinely needs the real per-pixel blur -- yellow, the
+// one bucket that's actually expensive.
+[numthreads(16, 16, 1)]
+void CS_OVERLAY_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID)
+{
+//	overlay_tile(groupID, groupThreadID, float4(1, 1, 0, 1));
+}

@@ -92,6 +92,10 @@ namespace FrameGraph
 		VSM_DarkTilesDispatch,
 		VSM_SearchTilesDispatch,
 		VSM_BlockerSearchResult,
+		VSM_ConfirmedLitTiles,
+		VSM_BlurTiles,
+		VSM_ConfirmedLitTilesDispatch,
+		VSM_BlurTilesDispatch,
 		VSM_ShadowResult,
 		VSM_DepthAnalysisResult,
 		Count
@@ -182,6 +186,10 @@ namespace FrameGraph
 			"VSM_DarkTilesDispatch",
 			"VSM_SearchTilesDispatch",
 			"VSM_BlockerSearchResult",
+			"VSM_ConfirmedLitTiles",
+			"VSM_BlurTiles",
+			"VSM_ConfirmedLitTilesDispatch",
+			"VSM_BlurTilesDispatch",
 			"VSM_ShadowResult",
 			"VSM_DepthAnalysisResult",
 		};

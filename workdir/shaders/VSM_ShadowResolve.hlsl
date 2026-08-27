@@ -267,9 +267,9 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 			float3 jittered_dir  = normalize(aim_dir + jitter_right * jitter_offset.x + jitter_up * jitter_offset.y);
 
 			RayDesc ray;
-			ray.Origin    = wpos + normal * 0.005;
+			ray.Origin    = wpos;// + normal * 0.005;
 			ray.Direction = jittered_dir;
-			ray.TMin      = 0.01;
+			ray.TMin      = 0.001;
 			ray.TMax      = max(target_dist * VSM_RTX_VERIFY_MARGIN, 0.02);
 
 			// Deliberately NOT RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH --

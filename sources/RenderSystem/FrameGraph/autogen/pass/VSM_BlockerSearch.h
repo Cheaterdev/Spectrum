@@ -42,6 +42,18 @@ public:
 
 		Handlers::Texture VSM_BlockerSearchResult = ResourceID::VSM_BlockerSearchResult;
 
+
+		Handlers::StructuredBuffer<uint2> VSM_ConfirmedLitTiles = ResourceID::VSM_ConfirmedLitTiles;
+
+
+		Handlers::StructuredBuffer<uint2> VSM_BlurTiles = ResourceID::VSM_BlurTiles;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_ConfirmedLitTilesDispatch = ResourceID::VSM_ConfirmedLitTilesDispatch;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_BlurTilesDispatch = ResourceID::VSM_BlurTilesDispatch;
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
@@ -67,6 +79,10 @@ public:
 			{ ResourceID::VSM_SearchTiles, false },
 			{ ResourceID::VSM_SearchTilesDispatch, false },
 			{ ResourceID::VSM_BlockerSearchResult, true },
+			{ ResourceID::VSM_ConfirmedLitTiles, true },
+			{ ResourceID::VSM_BlurTiles, true },
+			{ ResourceID::VSM_ConfirmedLitTilesDispatch, true },
+			{ ResourceID::VSM_BlurTilesDispatch, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

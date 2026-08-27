@@ -198,6 +198,10 @@ public:
 		L"VSM_DarkTilesDispatch",
 		L"VSM_SearchTilesDispatch",
 		L"VSM_BlockerSearchResult",
+		L"VSM_ConfirmedLitTiles",
+		L"VSM_BlurTiles",
+		L"VSM_ConfirmedLitTilesDispatch",
+		L"VSM_BlurTilesDispatch",
 		L"VSM_ShadowResult",
 		L"VoxelFramesCount",
 		L"VoxelIndirectNoise",
@@ -911,11 +915,10 @@ public:
 	static inline const FrameGraph::PassRef VSM_SearchTiles_c0_pass_refs[] = {
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
-		{ PassID::VSM_ShadowResolve, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState VSM_SearchTiles_c0_states[] = {
 		{ true, { VSM_SearchTiles_c0_pass_refs + 0, 1 } },
-		{ false, { VSM_SearchTiles_c0_pass_refs + 1, 2 } },
+		{ false, { VSM_SearchTiles_c0_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef VSM_LitTilesDispatch_c0_pass_refs[] = {
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -938,11 +941,10 @@ public:
 	static inline const FrameGraph::PassRef VSM_SearchTilesDispatch_c0_pass_refs[] = {
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
-		{ PassID::VSM_ShadowResolve, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState VSM_SearchTilesDispatch_c0_states[] = {
 		{ true, { VSM_SearchTilesDispatch_c0_pass_refs + 0, 1 } },
-		{ false, { VSM_SearchTilesDispatch_c0_pass_refs + 1, 2 } },
+		{ false, { VSM_SearchTilesDispatch_c0_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef VSM_BlockerSearchResult_c0_pass_refs[] = {
 		{ PassID::VSM_BlockerSearch, 0 },
@@ -951,6 +953,42 @@ public:
 	static inline const FrameGraph::PrecompiledState VSM_BlockerSearchResult_c0_states[] = {
 		{ true, { VSM_BlockerSearchResult_c0_pass_refs + 0, 1 } },
 		{ false, { VSM_BlockerSearchResult_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef VSM_ConfirmedLitTiles_c0_pass_refs[] = {
+		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ShadowResolve, 0 },
+		{ PassID::VSM_DebugClassifyOverlay, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_ConfirmedLitTiles_c0_states[] = {
+		{ true, { VSM_ConfirmedLitTiles_c0_pass_refs + 0, 1 } },
+		{ false, { VSM_ConfirmedLitTiles_c0_pass_refs + 1, 2 } },
+	};
+	static inline const FrameGraph::PassRef VSM_BlurTiles_c0_pass_refs[] = {
+		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ShadowResolve, 0 },
+		{ PassID::VSM_DebugClassifyOverlay, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_BlurTiles_c0_states[] = {
+		{ true, { VSM_BlurTiles_c0_pass_refs + 0, 1 } },
+		{ false, { VSM_BlurTiles_c0_pass_refs + 1, 2 } },
+	};
+	static inline const FrameGraph::PassRef VSM_ConfirmedLitTilesDispatch_c0_pass_refs[] = {
+		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ShadowResolve, 0 },
+		{ PassID::VSM_DebugClassifyOverlay, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_ConfirmedLitTilesDispatch_c0_states[] = {
+		{ true, { VSM_ConfirmedLitTilesDispatch_c0_pass_refs + 0, 1 } },
+		{ false, { VSM_ConfirmedLitTilesDispatch_c0_pass_refs + 1, 2 } },
+	};
+	static inline const FrameGraph::PassRef VSM_BlurTilesDispatch_c0_pass_refs[] = {
+		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ShadowResolve, 0 },
+		{ PassID::VSM_DebugClassifyOverlay, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_BlurTilesDispatch_c0_states[] = {
+		{ true, { VSM_BlurTilesDispatch_c0_pass_refs + 0, 1 } },
+		{ false, { VSM_BlurTilesDispatch_c0_pass_refs + 1, 2 } },
 	};
 	static inline const FrameGraph::PassRef VSM_ShadowResult_c0_pass_refs[] = {
 		{ PassID::VSM_ShadowResolve, 0 },
@@ -1117,6 +1155,10 @@ public:
 		{ ResourceID::VSM_DarkTilesDispatch, 0, VSM_DarkTilesDispatch_c0_states },
 		{ ResourceID::VSM_SearchTilesDispatch, 0, VSM_SearchTilesDispatch_c0_states },
 		{ ResourceID::VSM_BlockerSearchResult, 0, VSM_BlockerSearchResult_c0_states },
+		{ ResourceID::VSM_ConfirmedLitTiles, 0, VSM_ConfirmedLitTiles_c0_states },
+		{ ResourceID::VSM_BlurTiles, 0, VSM_BlurTiles_c0_states },
+		{ ResourceID::VSM_ConfirmedLitTilesDispatch, 0, VSM_ConfirmedLitTilesDispatch_c0_states },
+		{ ResourceID::VSM_BlurTilesDispatch, 0, VSM_BlurTilesDispatch_c0_states },
 		{ ResourceID::VSM_ShadowResult, 0, VSM_ShadowResult_c0_states },
 		{ ResourceID::VoxelFramesCount, 0, VoxelFramesCount_c0_states },
 		{ ResourceID::VoxelIndirectNoise, 0, VoxelIndirectNoise_c0_states },
@@ -1257,6 +1299,7 @@ public:
 		{ PassID::PSSM_Combine, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
+		{ PassID::VSM_BlockerSearch, 0 },
 		{ PassID::VSM_Combine, 0 },
 	};
 	static inline const FrameGraph::PassRef VoxelScreen_0_prev[] = {

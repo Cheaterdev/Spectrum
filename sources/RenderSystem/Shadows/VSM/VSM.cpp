@@ -317,6 +317,14 @@ void VSM::update_active_window(float z_far)
 				+ " dark=" + std::to_string(dark)
 				+ " search=" + std::to_string(search)
 				+ " total=" + std::to_string(lit + dark + search)) << Log::endl;
+
+			// TEMP DIAGNOSTIC: stage 2's own post-search verdict -- confirmed+blur
+			// should sum to `search` above.
+			uint32_t confirmed = confirmed_lit_tile_count_diag.load(std::memory_order_relaxed);
+			uint32_t blur      = blur_tile_count_diag.load(std::memory_order_relaxed);
+			Log::get() << (std::string("VSM search verdict diag: confirmed_lit=") + std::to_string(confirmed)
+				+ " blur=" + std::to_string(blur)
+				+ " total=" + std::to_string(confirmed + blur)) << Log::endl;
 		}
 	}
 }
@@ -1198,6 +1206,16 @@ VSM::VSM() : VariableContext(L"VSM")
 		builder.create(data.VSM_BlockerSearchResult,
 		    { ivec3(frame.frame_size, 0), HAL::Format::R32G32B32A32_UINT, 1, 1 },
 		    FrameGraph::ResourceFlags::UnorderedAccess);
+		// This pass's OWN post-search verdict lists (see VSMSearchVerdictAppend's
+		// own comment in vsm.sig) -- sized the same worst-case way as stage 1's
+		// own lists, even though in practice they can only ever hold a subset
+		// of VSM_SearchTiles' own appended tiles.
+		uint2 tiles_count = uint2((frame.frame_size.x + 15) / 16, (frame.frame_size.y + 15) / 16);
+		size_t max_tiles = (size_t)(tiles_count.x * tiles_count.y);
+		builder.create(data.VSM_ConfirmedLitTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
+		builder.create(data.VSM_BlurTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
+		builder.create(data.VSM_ConfirmedLitTilesDispatch, { 1u, false }, FrameGraph::ResourceFlags::UnorderedAccess);
+		builder.create(data.VSM_BlurTilesDispatch, { 1u, false }, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 
@@ -1245,6 +1263,16 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(output);
 		}
 
+		compute.clear_counter(*data.VSM_ConfirmedLitTiles);
+		compute.clear_counter(*data.VSM_BlurTiles);
+
+		{
+			Slots::VSMSearchVerdictAppend verdict;
+			verdict.GetConfirmed_lit_tiles() = data.VSM_ConfirmedLitTiles->appendStructuredBuffer;
+			verdict.GetBlur_tiles()          = data.VSM_BlurTiles->appendStructuredBuffer;
+			compute.set(verdict);
+		}
+
 		{
 			Slots::VSMConstants constants;
 			constants.GetActive_min()           = active_min;
@@ -1266,6 +1294,34 @@ VSM::VSM() : VariableContext(L"VSM")
 
 		compute.set_pipeline<PSOS::VSMBlockerSearchCompute>();
 		compute.exec_indirect(*data.VSM_SearchTilesDispatch, 1);
+
+		// Same render() as the append above (no PassNode boundary -- see
+		// VSMSearchVerdictAppend's own comment for why). Turns the two new
+		// post-search append counters into their matching indirect dispatch
+		// args.
+		{
+			Slots::VSMSearchVerdictInitDispatch init;
+			init.GetConfirmed_lit_counter()        = data.VSM_ConfirmedLitTiles->counter_view;
+			init.GetBlur_counter()                 = data.VSM_BlurTiles->counter_view;
+			init.GetConfirmed_lit_dispatch_data()  = data.VSM_ConfirmedLitTilesDispatch->rwStructuredBuffer;
+			init.GetBlur_dispatch_data()           = data.VSM_BlurTilesDispatch->rwStructuredBuffer;
+			compute.set(init);
+		}
+		compute.set_pipeline<PSOS::VSMSearchVerdictInitDispatch>();
+		compute.dispatch(1, 1, 1);
+
+		// TEMP DIAGNOSTIC: same read_counter pattern already proven for
+		// stage 1's own three lists -- confirms confirmed_lit+blur sum to
+		// the search_tiles count this frame landed on. Remove once
+		// confirmed solid.
+		list.get_copy().read_counter(*data.VSM_ConfirmedLitTiles, [this](uint count)
+		{
+			confirmed_lit_tile_count_diag.store(count, std::memory_order_relaxed);
+		});
+		list.get_copy().read_counter(*data.VSM_BlurTiles, [this](uint count)
+		{
+			blur_tile_count_diag.store(count, std::memory_order_relaxed);
+		});
 	};
 
 	// Stage 3: three PSOs (full-lit/full-shadow/shadow-blur), ONE PassNode,
@@ -1281,14 +1337,19 @@ VSM::VSM() : VariableContext(L"VSM")
 		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
-		// Stage 1 owns these three lists + their dispatch args.
+		// Stage 1 owns these two lists + their dispatch args.
 		builder.need(data.VSM_LitTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_DarkTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_SearchTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_LitTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_DarkTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_SearchTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
-		// Stage 2 owns this.
+		// Stage 2 owns these -- VSM_ConfirmedLitTiles feeds a second cheap
+		// full-lit dispatch below, VSM_BlurTiles replaces VSM_SearchTiles as
+		// what the shadow-blur PSO actually dispatches over (see
+		// VSMSearchVerdictAppend's own comment in vsm.sig).
+		builder.need(data.VSM_ConfirmedLitTiles, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_BlurTiles, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_ConfirmedLitTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_BlurTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_BlockerSearchResult, FrameGraph::ResourceFlags::ComputeRead);
 		auto& frame = builder.graph->get_context<ViewportInfo>();
 		builder.create(data.VSM_ShadowResult,
@@ -1378,13 +1439,29 @@ VSM::VSM() : VariableContext(L"VSM")
 		compute.set_pipeline<PSOS::VSMFullShadow>();
 		compute.exec_indirect(*data.VSM_DarkTilesDispatch, 1);
 
+		// Stage 2's own post-search confirmation -- a second, cheap full-lit
+		// dispatch (same PSO as above, just a different list stage 2 built
+		// after running the real search) for search_tiles that turned out
+		// to need no work after all. See VSMSearchVerdictAppend's own
+		// comment in vsm.sig.
 		{
 			Slots::VSMTileListRead tiles;
-			tiles.GetTiles() = data.VSM_SearchTiles->structuredBuffer;
+			tiles.GetTiles() = data.VSM_ConfirmedLitTiles->structuredBuffer;
+			compute.set(tiles);
+		}
+		compute.set_pipeline<PSOS::VSMFullLit>();
+		compute.exec_indirect(*data.VSM_ConfirmedLitTilesDispatch, 1);
+
+		// The real blur target is VSM_BlurTiles now, not VSM_SearchTiles --
+		// stage 2 already carved out whatever turned out fully confirmed
+		// lit above, so this only ever launches over what's left.
+		{
+			Slots::VSMTileListRead tiles;
+			tiles.GetTiles() = data.VSM_BlurTiles->structuredBuffer;
 			compute.set(tiles);
 		}
 		compute.set_pipeline<PSOS::VSMShadowBlur>(PSOS::VSMShadowBlur::VsmRtxVerify.Use(rtx_verify));
-		compute.exec_indirect(*data.VSM_SearchTilesDispatch, 1);
+		compute.exec_indirect(*data.VSM_BlurTilesDispatch, 1);
 	};
 
 	// ---- Combine lighting ------------------------------------------------
@@ -1499,6 +1576,10 @@ VSM::VSM() : VariableContext(L"VSM")
 		builder.need(data.VSM_DarkTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_LitTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_DarkTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_ConfirmedLitTiles, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_BlurTiles, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_ConfirmedLitTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_BlurTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
@@ -1530,6 +1611,22 @@ VSM::VSM() : VariableContext(L"VSM")
 		}
 		compute.set_pipeline<PSOS::VSMDebugOverlayDark>();
 		compute.exec_indirect(*data.VSM_DarkTilesDispatch, 1);
+
+		{
+			Slots::VSMTileListRead tiles;
+			tiles.GetTiles() = data.VSM_ConfirmedLitTiles->structuredBuffer;
+			compute.set(tiles);
+		}
+		compute.set_pipeline<PSOS::VSMDebugOverlayConfirmedLit>();
+		compute.exec_indirect(*data.VSM_ConfirmedLitTilesDispatch, 1);
+
+		{
+			Slots::VSMTileListRead tiles;
+			tiles.GetTiles() = data.VSM_BlurTiles->structuredBuffer;
+			compute.set(tiles);
+		}
+		compute.set_pipeline<PSOS::VSMDebugOverlayBlur>();
+		compute.exec_indirect(*data.VSM_BlurTilesDispatch, 1);
 	};
 
 	// ---- Depth analysis (feeds active_min's hysteresis, see update_active_window()) --
