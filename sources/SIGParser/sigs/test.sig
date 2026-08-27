@@ -70,6 +70,10 @@ Pipeline MainPipeline
 											[Async2]VSM_BlockerSearch;
 											[Async2]VSM_ShadowResolve;
 											[Async2]VSM_Combine;
+											# Debug-only overlay, after VSM_Combine so it paints on top of
+											# the already-shaded result -- see its own PassNode comment in
+											# vsm.sig.
+											[Async2]VSM_DebugClassifyOverlay;
 											# voxel screen (voxel_gi.generate)
 											[Async2]
 											VoxelScreen;

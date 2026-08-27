@@ -55,6 +55,7 @@ namespace FrameGraph
 		VSM_BlockerSearch,
 		VSM_ShadowResolve,
 		VSM_Combine,
+		VSM_DebugClassifyOverlay,
 		VSM_DepthAnalysis,
 		Count
 	};

@@ -1458,7 +1458,6 @@ VSM::VSM() : VariableContext(L"VSM")
 			// (see m_combine_setup's builder.exists() guard) -- otherwise
 			// rtx_shadow_mask was never bound to anything real above.
 			constants.GetDebug_rtx_reference()  = (use_vsm_debug_rtx_reference && data.ShadowMask) ? 1 : 0;
-			constants.GetDebug_hiz_classify()   = use_vsm_debug_hiz_classify ? 1 : 0;
 			constants.GetDebug_page_grid()      = use_vsm_debug_page_grid ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
 
@@ -1485,6 +1484,52 @@ VSM::VSM() : VariableContext(L"VSM")
 		compute.set_pipeline<PSOS::VSMApplyCompute>(
 			PSOS::VSMApplyCompute::VsmPenumbra.Use(use_vsm_penumbra));
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
+	};
+
+	// ---- Debug tile-classification overlay (see vsm.sig's own PassNode
+	// ---- comment) -- reads stage 1's real tile lists and paints over the
+	// ---- already-shaded ResultTexture; only ever dispatched when the
+	// ---- debug toggle is on.
+
+	m_debugoverlay_setup = [this](Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		if (!use_vsm_penumbra || !use_vsm_debug_hiz_classify)
+			return false;
+		builder.need(data.VSM_LitTiles, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_DarkTiles, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_LitTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_DarkTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_debugoverlay_render = [this](Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& list    = *context.get_list();
+		auto& compute = list.get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+
+		{
+			Slots::VSMLighting lighting;
+			lighting.GetResult() = data.ResultTexture->rwTexture2D;
+			compute.set(lighting);
+		}
+
+		{
+			Slots::VSMTileListRead tiles;
+			tiles.GetTiles() = data.VSM_LitTiles->structuredBuffer;
+			compute.set(tiles);
+		}
+		compute.set_pipeline<PSOS::VSMDebugOverlayLit>();
+		compute.exec_indirect(*data.VSM_LitTilesDispatch, 1);
+
+		{
+			Slots::VSMTileListRead tiles;
+			tiles.GetTiles() = data.VSM_DarkTiles->structuredBuffer;
+			compute.set(tiles);
+		}
+		compute.set_pipeline<PSOS::VSMDebugOverlayDark>();
+		compute.exec_indirect(*data.VSM_DarkTilesDispatch, 1);
 	};
 
 	// ---- Depth analysis (feeds active_min's hysteresis, see update_active_window()) --

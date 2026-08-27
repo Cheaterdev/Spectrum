@@ -410,6 +410,26 @@ ComputePSO VSMShadowBlur
 	define VsmRtxVerify;
 }
 
+# Debug overlay (see VSM_DebugClassifyOverlay's own PassNode comment) --
+# two trivial PSOs sharing one file, each an indirect dispatch over one of
+# stage 1's uniform tile lists, painting a flat color directly onto the
+# already-shaded ResultTexture.
+ComputePSO VSMDebugOverlayLit
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_OVERLAY_LIT]
+	compute = VSM_DebugTileOverlay;
+}
+
+ComputePSO VSMDebugOverlayDark
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_OVERLAY_DARK]
+	compute = VSM_DebugTileOverlay;
+}
+
 # Amplification-shader-driven compaction (Phase 1b): CPU dispatches AS
 # threadgroups covering meshlet_count*16 (meshlet,page) pairs; the AS culls
 # each pair against that page's camera and compacts survivors into a
@@ -669,6 +689,30 @@ PassNode VSM_Combine
 	# use_vsm_penumbra is on (see m_shadowresolve_setup's own early-out);
 	# not [Write] here, this pass only ever reads it.
 	Texture VSM_ShadowResult;
+	[Write] Texture ResultTexture;
+}
+
+# Debug view (VSM.ixx's use_vsm_debug_hiz_classify), moved out of VSM_Combine
+# itself: the earlier in-line version approximated "which bucket did this
+# pixel come from" by checking whether the FINAL shadow value happened to
+# equal exactly 1.0/0.0 -- a lossy postfactum guess (a genuinely blurred
+# result can also land on exactly 0 or 1), not the real classification data.
+# This pass instead reads stage 1's actual VSM_LitTiles/VSM_DarkTiles lists
+# directly and paints a flat overlay color onto the ALREADY-shaded
+# ResultTexture, on top of VSM_Combine's real output -- only for those two
+# uniform buckets; VSM_SearchTiles is deliberately left untouched so the
+# real blurred shadow still shows through there, for context (matches the
+# original pre-refactor debug view's own "ambiguous pixels shade normally"
+# behavior). Only ever dispatched when the toggle is on (see
+# m_debugoverlay_setup's own early-out) -- otherwise pure overhead for no
+# visible effect.
+[Compute]
+PassNode VSM_DebugClassifyOverlay
+{
+	StructuredBuffer<uint2> VSM_LitTiles;
+	StructuredBuffer<uint2> VSM_DarkTiles;
+	StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch;
+	StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch;
 	[Write] Texture ResultTexture;
 }
 

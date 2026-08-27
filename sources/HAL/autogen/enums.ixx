@@ -83,6 +83,8 @@ export
 		VSMFullLit,
 		VSMFullShadow,
 		VSMShadowBlur,
+		VSMDebugOverlayLit,
+		VSMDebugOverlayDark,
 		VSMGatherDispatch,
 		VSMDepthAnalysis,
 		FontRender,

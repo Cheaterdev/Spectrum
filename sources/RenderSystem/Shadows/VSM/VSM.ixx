@@ -446,6 +446,14 @@ private:
 	Passes::VSM_Combine::setup_func_type  m_combine_setup;
 	Passes::VSM_Combine::render_func_type m_combine_render;
 
+	// Debug tile-classification overlay -- reads stage 1's real
+	// VSM_LitTiles/VSM_DarkTiles lists and paints over the already-shaded
+	// ResultTexture, only when use_vsm_debug_hiz_classify is on. See
+	// vsm.sig's own PassNode comment for why this replaced the earlier
+	// postfactum "final shadow value happens to equal 1.0/0.0" guess.
+	Passes::VSM_DebugClassifyOverlay::setup_func_type  m_debugoverlay_setup;
+	Passes::VSM_DebugClassifyOverlay::render_func_type m_debugoverlay_render;
+
 	Passes::VSM_DepthAnalysis::setup_func_type  m_depth_analysis_setup;
 	Passes::VSM_DepthAnalysis::render_func_type m_depth_analysis_render;
 
@@ -502,6 +510,9 @@ public:
 
 		pipeline.vSM_Combine.setup_func  = m_combine_setup;
 		pipeline.vSM_Combine.render_func = m_combine_render;
+
+		pipeline.vSM_DebugClassifyOverlay.setup_func  = m_debugoverlay_setup;
+		pipeline.vSM_DebugClassifyOverlay.render_func = m_debugoverlay_render;
 
 		pipeline.vSM_DepthAnalysis.setup_func  = m_depth_analysis_setup;
 		pipeline.vSM_DepthAnalysis.render_func = m_depth_analysis_render;

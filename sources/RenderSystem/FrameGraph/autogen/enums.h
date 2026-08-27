@@ -65,6 +65,7 @@ export
 		Library::VSM_BlockerSearch VSM_BlockerSearch;
 		Library::VSM_ShadowResolve VSM_ShadowResolve;
 		Library::VSM_Combine VSM_Combine;
+		Library::VSM_DebugClassifyOverlay VSM_DebugClassifyOverlay;
 		Library::VSM_DepthAnalysis VSM_DepthAnalysis;
 	
 	};

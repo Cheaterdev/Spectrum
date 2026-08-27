@@ -322,6 +322,8 @@ export import :Autogen.PSO.VSMBlockerSearchCompute;
 export import :Autogen.PSO.VSMFullLit;
 export import :Autogen.PSO.VSMFullShadow;
 export import :Autogen.PSO.VSMShadowBlur;
+export import :Autogen.PSO.VSMDebugOverlayLit;
+export import :Autogen.PSO.VSMDebugOverlayDark;
 export import :Autogen.PSO.VSMGatherDispatch;
 export import :Autogen.PSO.VSMDepthAnalysis;
 export import :Autogen.PSO.FontRender;

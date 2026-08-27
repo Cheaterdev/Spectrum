@@ -90,6 +90,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VSMFullLit>(device, pso[PSO::VSMFullLit]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMFullShadow>(device, pso[PSO::VSMFullShadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMShadowBlur>(device, pso[PSO::VSMShadowBlur]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayLit>(device, pso[PSO::VSMDebugOverlayLit]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayDark>(device, pso[PSO::VSMDebugOverlayDark]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMGatherDispatch>(device, pso[PSO::VSMGatherDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 

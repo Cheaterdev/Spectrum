@@ -58,20 +58,13 @@ float4 combine_result(float2 tc, uint2 pixel)
 	// blocker search at all).
 #ifdef VSM_PENUMBRA
 	float shadow = GetVSMLighting().GetVsm_shadow_result().Load(int3(pixel, 0));
-
-	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_hiz_classify):
-	// approximate -- stage 3's full-lit/full-shadow PSOs write EXACTLY
-	// 1.0/0.0 for tiles stage 1 classified as uniform, so those exact
-	// values are a reasonable (if not perfectly precise -- a genuinely
-	// blurred result CAN legitimately land on exactly 0 or 1 too) stand-in
-	// for "which bucket this pixel came from". Green = confidently lit,
-	// blue = confidently dark; anything else (the real blur result) shades
-	// normally below, for context.
-	if (constants.GetDebug_hiz_classify() != 0)
-	{
-		if (shadow >= 0.9999) return float4(0, 1, 0, 1);
-		if (shadow <= 0.0001) return float4(0, 0, 1, 1);
-	}
+	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_hiz_classify) no
+	// longer lives here -- guessing "which bucket did this pixel come from"
+	// from the final shadow value alone is lossy (a genuinely blurred
+	// result can also land on exactly 0/1). VSM_DebugClassifyOverlay reads
+	// stage 1's real VSM_LitTiles/VSM_DarkTiles lists instead and paints
+	// over the already-shaded result afterward -- see its own PassNode
+	// comment in vsm.sig.
 #else
 	float shadow = get_shadow_vsm_simple(constants, GetVSMLighting(), info.pos);
 #endif
