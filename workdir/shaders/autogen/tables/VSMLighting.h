@@ -15,8 +15,8 @@ struct VSMLighting
 	uint page_cameras; // StructuredBuffer<Camera>
 	uint blue_noise; // Texture2D<float2>
 	uint rtx_shadow_mask; // Texture2D<float>
+	uint vsm_shadow_result; // Texture2D<float>
 	uint result; // RWTexture2D<float4>
-	uint blocker_result; // RWTexture2D<uint4>
 	GBuffer gbuffer; // GBuffer
 	GBuffer GetGbuffer() { return gbuffer; }
 	Texture2DArray<float> GetVsm_atlas() { return ResourceDescriptorHeap[vsm_atlas]; }
@@ -25,5 +25,5 @@ struct VSMLighting
 	RWTexture2D<float4> GetResult() { return ResourceDescriptorHeap[result]; }
 	Texture2D<float2> GetBlue_noise() { return ResourceDescriptorHeap[blue_noise]; }
 	Texture2D<float> GetRtx_shadow_mask() { return ResourceDescriptorHeap[rtx_shadow_mask]; }
-	RWTexture2D<uint4> GetBlocker_result() { return ResourceDescriptorHeap[blocker_result]; }
+	Texture2D<float> GetVsm_shadow_result() { return ResourceDescriptorHeap[vsm_shadow_result]; }
 };

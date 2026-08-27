@@ -300,6 +300,25 @@ void VSM::update_active_window(float z_far)
 				+ " required_max=" + std::to_string(required_max)) << Log::endl;
 		}
 	}
+
+	// TEMP DIAGNOSTIC (Phase 5.18 Part A follow-up, take 4): confirm the
+	// three tile lists VSM_BlockerClassify appends sum to a plausible
+	// distribution before trusting the visual result -- see this redesign's
+	// own implementation-discipline note in the plan. Remove once confirmed
+	// solid.
+	{
+		static uint64_t s_diag_frame2 = 0;
+		if ((s_diag_frame2++ % 120) == 0)
+		{
+			uint32_t lit    = lit_tile_count_diag.load(std::memory_order_relaxed);
+			uint32_t dark   = dark_tile_count_diag.load(std::memory_order_relaxed);
+			uint32_t search = search_tile_count_diag.load(std::memory_order_relaxed);
+			Log::get() << (std::string("VSM tile classify diag: lit=") + std::to_string(lit)
+				+ " dark=" + std::to_string(dark)
+				+ " search=" + std::to_string(search)
+				+ " total=" + std::to_string(lit + dark + search)) << Log::endl;
+		}
+	}
 }
 
 void VSM::plan_level(int level, float2 cam_pos_ls, const box& bounds_all, uint64_t tick,
@@ -1011,15 +1030,155 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	};
 
-	// ---- Blocker search (extracted from combine, see vsm.sig's ------------
-	// ---- VSM_BlockerSearch PassNode comment) -------------------------------
+	// ---- Blocker classification/search/resolve, Phase 5.18 Part A follow-up
+	// ---- (take 4): three stages, single writer per shared resource -- see
+	// ---- vsm.sig's own PassNode comments for the full rationale (root-cause
+	// ---- finding from VoxelGIGraph's own VoxelCombine precedent, after two
+	// ---- separate completely-black-screen bugs from splitting a shared
+	// ---- output resource's writes across independent PassNodes). -----------
 
+	// Stage 1: groupshared tile classification. Writes NOTHING pixel-shaped
+	// -- only the three tile-position lists + their indirect dispatch args,
+	// both in this one render() (an AppendStructuredBuffer's hidden GPU
+	// counter isn't reliably barrier-tracked across a PassNode boundary,
+	// confirmed live earlier this session).
+	m_blockerclassify_setup = [this](Passes::VSM_BlockerClassify::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		// Same penumbra gate as the other two stages -- there's nothing to
+		// classify/search/resolve without it.
+		if (!use_vsm_penumbra)
+			return false;
+		GBufferViewDesc::need(builder, data.gbuffer);
+		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::ComputeRead);
+		auto& frame = builder.graph->get_context<ViewportInfo>();
+		// Worst case: every screen tile lands in one bucket -- same "count
+		// tiles directly, don't scale by a sub-group factor" sizing
+		// FrameClassification uses for its own lists, just with VSM's own
+		// 16x16 tile size instead of VoxelGI's 32x32.
+		uint2 tiles_count = uint2((frame.frame_size.x + 15) / 16, (frame.frame_size.y + 15) / 16);
+		size_t max_tiles = (size_t)(tiles_count.x * tiles_count.y);
+		builder.create(data.VSM_LitTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
+		builder.create(data.VSM_DarkTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
+		builder.create(data.VSM_SearchTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
+		builder.create(data.VSM_LitTilesDispatch, { 1u, false }, FrameGraph::ResourceFlags::UnorderedAccess);
+		builder.create(data.VSM_DarkTilesDispatch, { 1u, false }, FrameGraph::ResourceFlags::UnorderedAccess);
+		builder.create(data.VSM_SearchTilesDispatch, { 1u, false }, FrameGraph::ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_blockerclassify_render = [this](Passes::VSM_BlockerClassify::Context& data, FrameGraph::FrameContext& context)
+	{
+		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+
+		auto& list    = *context.get_list();
+		auto& compute = list.get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+
+		auto& caminfo = context.graph->get_context<CameraInfo>();
+		auto  cam     = caminfo.cam;
+
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+
+		camera light_cam = make_light_view_camera(frame_light_pos);
+		float2 cam_pos_ls = (float4(cam->position, 1) * light_cam.get_view()).xy;
+
+		compute.clear_counter(*data.VSM_LitTiles);
+		compute.clear_counter(*data.VSM_DarkTiles);
+		compute.clear_counter(*data.VSM_SearchTiles);
+
+		{
+			Slots::VSMLighting lighting;
+			gbuffer.SetTable(lighting.GetGbuffer());
+			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
+			lighting.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
+			// vsm_atlas/blue_noise/result/rtx_shadow_mask/vsm_shadow_result
+			// stay unbound (default) -- classification never samples the
+			// atlas, picks a search tap, or writes/reads a shadow value.
+			compute.set(lighting);
+		}
+
+		{
+			Slots::VSMPageHiZ pageHiZ;
+			pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
+			compute.set(pageHiZ);
+		}
+
+		{
+			Slots::VSMBlockerTilesAppend tiles;
+			tiles.GetLit_tiles()    = data.VSM_LitTiles->appendStructuredBuffer;
+			tiles.GetDark_tiles()   = data.VSM_DarkTiles->appendStructuredBuffer;
+			tiles.GetSearch_tiles() = data.VSM_SearchTiles->appendStructuredBuffer;
+			compute.set(tiles);
+		}
+
+		{
+			Slots::VSMConstants constants;
+			constants.GetActive_min()           = active_min;
+			constants.GetActive_max()           = active_max;
+			constants.GetPage_size()            = page_table.page_size;
+			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
+			constants.GetHiz_blocker_classify() = use_vsm_hiz_blocker_classify ? 1 : 0;
+			constants.GetLight_view()           = light_cam.get_view();
+			// quad_blocker_search/debug_hiz_classify/rtx_dual_blur/
+			// debug_rtx_reference are all search/resolve-only concerns --
+			// left at their zero-initialized default here, vsm_classify_blocker
+			// never reads any of them.
+
+			for (int level = 0; level < page_table.clipmap.level_count; level++)
+			{
+				float2 origin = page_table.clipmap.grid_origin(level, cam_pos_ls);
+				constants.GetLevel_info()[level] = float4(origin.x, origin.y, page_table.clipmap.page_world_size(level), 0.0f);
+			}
+
+			compute.set(constants);
+		}
+
+		compute.set_pipeline<PSOS::VSMBlockerClassify>();
+		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
+
+		// Same render() as the append above (no PassNode boundary -- see
+		// this section's own top comment for why). Turns all three append
+		// counters into their matching indirect dispatch args.
+		{
+			Slots::VSMBlockerClassifyInitDispatch init;
+			init.GetLit_counter()          = data.VSM_LitTiles->counter_view;
+			init.GetDark_counter()         = data.VSM_DarkTiles->counter_view;
+			init.GetSearch_counter()       = data.VSM_SearchTiles->counter_view;
+			init.GetLit_dispatch_data()    = data.VSM_LitTilesDispatch->rwStructuredBuffer;
+			init.GetDark_dispatch_data()   = data.VSM_DarkTilesDispatch->rwStructuredBuffer;
+			init.GetSearch_dispatch_data() = data.VSM_SearchTilesDispatch->rwStructuredBuffer;
+			compute.set(init);
+		}
+		compute.set_pipeline<PSOS::VSMBlockerClassifyInitDispatch>();
+		compute.dispatch(1, 1, 1);
+
+		// TEMP DIAGNOSTIC: read back the real append counts directly via the
+		// dedicated read_counter API -- confirms the three lists sum to the
+		// total tile count and land in a plausible distribution, the check
+		// this whole redesign's implementation discipline calls for before
+		// trusting the visual result. Remove once confirmed solid.
+		list.get_copy().read_counter(*data.VSM_LitTiles, [this](uint count)
+		{
+			lit_tile_count_diag.store(count, std::memory_order_relaxed);
+		});
+		list.get_copy().read_counter(*data.VSM_DarkTiles, [this](uint count)
+		{
+			dark_tile_count_diag.store(count, std::memory_order_relaxed);
+		});
+		list.get_copy().read_counter(*data.VSM_SearchTiles, [this](uint count)
+		{
+			search_tile_count_diag.store(count, std::memory_order_relaxed);
+		});
+	};
+
+	// Stage 2: INDIRECT dispatch over VSM_SearchTiles only -- writes the raw
+	// blocker-search result (world_delta/tc/slot, same packed uint4 shape as
+	// before) into its OWN dedicated texture, never a texture VSM_Combine
+	// samples directly.
 	m_blockersearch_setup = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		// Only meaningful (and only ever dispatched) under penumbra mode --
-		// there's no blocker search to extract otherwise. m_combine_render's
-		// own PSO-permutation gate already skips VSM_RTX_VERIFY/etc. the
-		// same way; this pass just skips existing at all.
 		if (!use_vsm_penumbra)
 			return false;
 		GBufferViewDesc::need(builder, data.gbuffer);
@@ -1028,12 +1187,15 @@ VSM::VSM() : VariableContext(L"VSM")
 		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
 		// Phase 5.18 Part A: vsm_search_blocker's classification step reads
 		// this -- needs this frame's freshly-rebuilt pyramid, hence
-		// VSM_HiZRebuild moving to run immediately before this pass (same
+		// VSM_HiZRebuild moving to run immediately before stage 1 (same
 		// [Async2] queue, test.sig).
 		builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
+		// Stage 1 (VSM_BlockerClassify) owns creating these.
+		builder.need(data.VSM_SearchTiles, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_SearchTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
 		auto& frame = builder.graph->get_context<ViewportInfo>();
-		builder.create(data.VSM_BlockerResult,
+		builder.create(data.VSM_BlockerSearchResult,
 		    { ivec3(frame.frame_size, 0), HAL::Format::R32G32B32A32_UINT, 1, 1 },
 		    FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
@@ -1045,6 +1207,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 		auto& list    = *context.get_list();
 		auto& compute = list.get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
 
 		auto& caminfo = context.graph->get_context<CameraInfo>();
 		auto  cam     = caminfo.cam;
@@ -1057,43 +1220,40 @@ VSM::VSM() : VariableContext(L"VSM")
 		{
 			Slots::VSMLighting lighting;
 			gbuffer.SetTable(lighting.GetGbuffer());
-			lighting.GetVsm_atlas()      = data.VSM_Atlas->texture2DArray;
-			lighting.GetPage_table()     = data.VSM_PageTable->texture2DArray;
-			lighting.GetPage_cameras()   = data.VSM_PageCameras->structuredBuffer;
-			lighting.GetBlue_noise()     = data.BlueNoise->texture2D;
-			lighting.GetBlocker_result() = data.VSM_BlockerResult->rwTexture2D;
-			// Result/rtx_shadow_mask stay unbound (default) -- this pass's
-			// own shader (CS_BLOCKER_SEARCH) never reads either field.
+			lighting.GetVsm_atlas()    = data.VSM_Atlas->texture2DArray;
+			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
+			lighting.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
+			lighting.GetBlue_noise()   = data.BlueNoise->texture2D;
 			compute.set(lighting);
 		}
 
 		{
-			// Phase 5.18 Part A: same one-liner m_renderpages_render already
-			// uses to bind this for the mesh shader's occlusion test -- the
-			// whole mip chain, vsm_search_blocker picks its own mip.
 			Slots::VSMPageHiZ pageHiZ;
-			pageHiZ.GetPage_hiz()  = data.VSM_PageHiZ->texture2DArray;
+			pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
 			compute.set(pageHiZ);
 		}
 
 		{
+			Slots::VSMTileListRead tiles;
+			tiles.GetTiles() = data.VSM_SearchTiles->structuredBuffer;
+			compute.set(tiles);
+		}
+
+		{
+			Slots::VSMBlockerSearchOutput output;
+			output.GetBlocker_search_result() = data.VSM_BlockerSearchResult->rwTexture2D;
+			compute.set(output);
+		}
+
+		{
 			Slots::VSMConstants constants;
-			constants.GetActive_min()          = active_min;
-			constants.GetActive_max()          = active_max;
-			constants.GetPage_size()           = page_table.page_size;
-			constants.GetPages_per_level()     = page_table.clipmap.pages_per_level;
+			constants.GetActive_min()           = active_min;
+			constants.GetActive_max()           = active_max;
+			constants.GetPage_size()            = page_table.page_size;
+			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
 			constants.GetQuad_blocker_search()  = use_vsm_stochastic_blocker_search ? 2 : (use_vsm_quad_blocker_search ? 1 : 0);
 			constants.GetHiz_blocker_classify() = use_vsm_hiz_blocker_classify ? 1 : 0;
-			// TEMP DEBUG (live "still lots of holes" investigation):
-			// vsm_search_blocker's own coverage-gap-vs-genuinely-ambiguous
-			// diagnostic needs this here too, not just in m_combine_render --
-			// see its own comment for what it does with it. Remove alongside
-			// that diagnostic once confirmed.
-			constants.GetDebug_hiz_classify()   = use_vsm_debug_hiz_classify ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
-			// rtx_dual_blur/debug_rtx_reference are resolve-only concerns
-			// (see m_combine_render) -- left at their zero-initialized
-			// default here, this pass's shader never reads them.
 
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
 			{
@@ -1105,7 +1265,126 @@ VSM::VSM() : VariableContext(L"VSM")
 		}
 
 		compute.set_pipeline<PSOS::VSMBlockerSearchCompute>();
-		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
+		compute.exec_indirect(*data.VSM_SearchTilesDispatch, 1);
+	};
+
+	// Stage 3: three PSOs (full-lit/full-shadow/shadow-blur), ONE PassNode,
+	// ONE render() -- see vsm.sig's VSM_ShadowResolve PassNode comment for
+	// why this shape specifically (mirrors VoxelGIGraph's VoxelCombine
+	// issuing its own blur+blur2 exec_indirects together).
+	m_shadowresolve_setup = [this](Passes::VSM_ShadowResolve::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		if (!use_vsm_penumbra)
+			return false;
+		GBufferViewDesc::need(builder, data.gbuffer);
+		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
+		// Stage 1 owns these three lists + their dispatch args.
+		builder.need(data.VSM_LitTiles, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_DarkTiles, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_SearchTiles, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_LitTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_DarkTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.VSM_SearchTilesDispatch, FrameGraph::ResourceFlags::ComputeRead);
+		// Stage 2 owns this.
+		builder.need(data.VSM_BlockerSearchResult, FrameGraph::ResourceFlags::ComputeRead);
+		auto& frame = builder.graph->get_context<ViewportInfo>();
+		builder.create(data.VSM_ShadowResult,
+		    { ivec3(frame.frame_size, 0), HAL::Format::R32_FLOAT, 1, 1 },
+		    FrameGraph::ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_shadowresolve_render = [this](Passes::VSM_ShadowResolve::Context& data, FrameGraph::FrameContext& context)
+	{
+		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+
+		auto& list    = *context.get_list();
+		auto& compute = list.get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+
+		auto& caminfo = context.graph->get_context<CameraInfo>();
+		auto  cam     = caminfo.cam;
+
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+
+		camera light_cam = make_light_view_camera(frame_light_pos);
+		float2 cam_pos_ls = (float4(cam->position, 1) * light_cam.get_view()).xy;
+
+		{
+			Slots::VSMLighting lighting;
+			gbuffer.SetTable(lighting.GetGbuffer());
+			lighting.GetVsm_atlas()    = data.VSM_Atlas->texture2DArray;
+			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
+			lighting.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
+			lighting.GetBlue_noise()   = data.BlueNoise->texture2D;
+			compute.set(lighting);
+		}
+
+		{
+			Slots::VSMShadowResolveIO io;
+			io.GetBlocker_search_result() = data.VSM_BlockerSearchResult->texture2D;
+			io.GetShadow_result()         = data.VSM_ShadowResult->rwTexture2D;
+			compute.set(io);
+		}
+
+		{
+			Slots::VSMConstants constants;
+			constants.GetActive_min()      = active_min;
+			constants.GetActive_max()      = active_max;
+			constants.GetPage_size()       = page_table.page_size;
+			constants.GetPages_per_level() = page_table.clipmap.pages_per_level;
+			constants.GetRtx_dual_blur()   = use_vsm_rtx_dual_blur ? 1 : 0;
+			constants.GetLight_view()      = light_cam.get_view();
+
+			for (int level = 0; level < page_table.clipmap.level_count; level++)
+			{
+				float2 origin = page_table.clipmap.grid_origin(level, cam_pos_ls);
+				constants.GetLevel_info()[level] = float4(origin.x, origin.y, page_table.clipmap.page_world_size(level), 0.0f);
+			}
+
+			compute.set(constants);
+		}
+
+		bool rtx_capable = RenderSystem::get().device().get_properties().rtx;
+		bool rtx_verify  = rtx_capable && use_vsm_rtx_verify;
+		if (rtx_verify)
+		{
+			// Same binding PassDefaults.cpp's RTXShadow::render uses --
+			// Raytracing has its own dedicated DefaultLayout root-signature
+			// slot, so this doesn't need a FrameGraph-tracked field on
+			// VSM_ShadowResolve's own PassNode.
+			auto& scene_ctx = context.graph->get_context<SceneInfo>();
+			Slots::Raytracing rtx;
+			rtx.GetScene() = scene_ctx.scene->raytrace_scene->get_handle();
+			compute.set(rtx);
+		}
+
+		{
+			Slots::VSMTileListRead tiles;
+			tiles.GetTiles() = data.VSM_LitTiles->structuredBuffer;
+			compute.set(tiles);
+		}
+		compute.set_pipeline<PSOS::VSMFullLit>();
+		compute.exec_indirect(*data.VSM_LitTilesDispatch, 1);
+
+		{
+			Slots::VSMTileListRead tiles;
+			tiles.GetTiles() = data.VSM_DarkTiles->structuredBuffer;
+			compute.set(tiles);
+		}
+		compute.set_pipeline<PSOS::VSMFullShadow>();
+		compute.exec_indirect(*data.VSM_DarkTilesDispatch, 1);
+
+		{
+			Slots::VSMTileListRead tiles;
+			tiles.GetTiles() = data.VSM_SearchTiles->structuredBuffer;
+			compute.set(tiles);
+		}
+		compute.set_pipeline<PSOS::VSMShadowBlur>(PSOS::VSMShadowBlur::VsmRtxVerify.Use(rtx_verify));
+		compute.exec_indirect(*data.VSM_SearchTilesDispatch, 1);
 	};
 
 	// ---- Combine lighting ------------------------------------------------
@@ -1125,11 +1404,11 @@ VSM::VSM() : VariableContext(L"VSM")
 		// guard PSSM_Combine already uses for the same resource.
 		if (use_vsm_debug_rtx_reference && builder.exists(data.ShadowMask))
 			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
-		// Only exists when use_vsm_penumbra is on (see
-		// m_blockersearch_setup's own early-out) -- same defensive
-		// builder.exists() guard as ShadowMask above.
-		if (builder.exists(data.VSM_BlockerResult))
-			builder.need(data.VSM_BlockerResult, FrameGraph::ResourceFlags::ComputeRead);
+		// Only exists when use_vsm_penumbra is on (see stage 1's own
+		// early-out) -- same defensive builder.exists() guard as ShadowMask
+		// above.
+		if (builder.exists(data.VSM_ShadowResult))
+			builder.need(data.VSM_ShadowResult, FrameGraph::ResourceFlags::ComputeRead);
 		return true;
 	};
 
@@ -1158,11 +1437,11 @@ VSM::VSM() : VariableContext(L"VSM")
 			lighting.GetBlue_noise()   = data.BlueNoise->texture2D;
 			if (data.ShadowMask)
 				lighting.GetRtx_shadow_mask() = data.ShadowMask->texture2D;
-			// Written by m_blockersearch_render above -- only exists when
-			// use_vsm_penumbra is on (see m_blockersearch_setup's own
-			// early-out and this pass's own builder.exists() guard).
-			if (data.VSM_BlockerResult)
-				lighting.GetBlocker_result() = data.VSM_BlockerResult->rwTexture2D;
+			// Written by stage 3 (VSM_ShadowResolve) above -- only exists
+			// when use_vsm_penumbra is on (see stage 1's own early-out and
+			// this pass's own builder.exists() guard).
+			if (data.VSM_ShadowResult)
+				lighting.GetVsm_shadow_result() = data.VSM_ShadowResult->texture2D;
 			compute.set(lighting);
 		}
 
@@ -1175,12 +1454,6 @@ VSM::VSM() : VariableContext(L"VSM")
 			constants.GetActive_max()           = active_max;
 			constants.GetPage_size()            = page_table.page_size;
 			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
-			constants.GetRtx_dual_blur()        = use_vsm_rtx_dual_blur ? 1 : 0;
-			// 3-way mode packed into one int (see VSM_impl.hlsl's own
-			// comment on search_mode): 0 = full, 1 = quad-shared, 2 =
-			// stochastic single tap. Stochastic takes priority if somehow
-			// both toggles are on -- it's the more aggressive of the two.
-			constants.GetQuad_blocker_search()  = use_vsm_stochastic_blocker_search ? 2 : (use_vsm_quad_blocker_search ? 1 : 0);
 			// Only meaningful when ShadowMask actually exists this frame
 			// (see m_combine_setup's builder.exists() guard) -- otherwise
 			// rtx_shadow_mask was never bound to anything real above.
@@ -1205,23 +1478,12 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(constants);
 		}
 
-		bool rtx_capable    = use_vsm_penumbra && RenderSystem::get().device().get_properties().rtx;
-		bool rtx_verify     = rtx_capable && use_vsm_rtx_verify;
-		if (rtx_verify)
-		{
-			// Same binding VSM.cpp mirrors from PassDefaults.cpp's
-			// RTXShadow::render -- Raytracing has its own dedicated
-			// DefaultLayout root-signature slot, so this doesn't need a
-			// FrameGraph-tracked field on VSM_Combine's PassNode.
-			auto& scene_ctx = context.graph->get_context<SceneInfo>();
-			Slots::Raytracing rtx;
-			rtx.GetScene() = scene_ctx.scene->raytrace_scene->get_handle();
-			compute.set(rtx);
-		}
-
+		// Real per-pixel classify/search/blur work no longer happens in
+		// this pass at all when penumbra mode is on -- see stages 1-3 above
+		// -- so no VsmRtxVerify permutation is needed here any more either
+		// (that logic moved into stage 3's own VSMShadowBlur PSO).
 		compute.set_pipeline<PSOS::VSMApplyCompute>(
-			PSOS::VSMApplyCompute::VsmPenumbra.Use(use_vsm_penumbra)
-			| PSOS::VSMApplyCompute::VsmRtxVerify.Use(rtx_verify));
+			PSOS::VSMApplyCompute::VsmPenumbra.Use(use_vsm_penumbra));
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 

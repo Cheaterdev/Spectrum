@@ -85,7 +85,14 @@ namespace FrameGraph
 		VSM_PageCameras,
 		VSM_PageHiZ,
 		VSM_DirtySlots,
-		VSM_BlockerResult,
+		VSM_LitTiles,
+		VSM_DarkTiles,
+		VSM_SearchTiles,
+		VSM_LitTilesDispatch,
+		VSM_DarkTilesDispatch,
+		VSM_SearchTilesDispatch,
+		VSM_BlockerSearchResult,
+		VSM_ShadowResult,
 		VSM_DepthAnalysisResult,
 		Count
 	};
@@ -168,7 +175,14 @@ namespace FrameGraph
 			"VSM_PageCameras",
 			"VSM_PageHiZ",
 			"VSM_DirtySlots",
-			"VSM_BlockerResult",
+			"VSM_LitTiles",
+			"VSM_DarkTiles",
+			"VSM_SearchTiles",
+			"VSM_LitTilesDispatch",
+			"VSM_DarkTilesDispatch",
+			"VSM_SearchTilesDispatch",
+			"VSM_BlockerSearchResult",
+			"VSM_ShadowResult",
 			"VSM_DepthAnalysisResult",
 		};
 		auto i = (unsigned int)id;

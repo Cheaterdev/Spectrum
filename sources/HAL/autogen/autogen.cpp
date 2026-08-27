@@ -104,6 +104,11 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "VSMDownsampleHiZBatch") return SlotID::VSMDownsampleHiZBatch;
 	if(slot_name == "VSMPageBatch") return SlotID::VSMPageBatch;
 	if(slot_name == "VSMLighting") return SlotID::VSMLighting;
+	if(slot_name == "VSMBlockerTilesAppend") return SlotID::VSMBlockerTilesAppend;
+	if(slot_name == "VSMTileListRead") return SlotID::VSMTileListRead;
+	if(slot_name == "VSMBlockerClassifyInitDispatch") return SlotID::VSMBlockerClassifyInitDispatch;
+	if(slot_name == "VSMBlockerSearchOutput") return SlotID::VSMBlockerSearchOutput;
+	if(slot_name == "VSMShadowResolveIO") return SlotID::VSMShadowResolveIO;
 	if(slot_name == "VSMGatherDispatchData") return SlotID::VSMGatherDispatchData;
 	if(slot_name == "VSMDepthAnalysis") return SlotID::VSMDepthAnalysis;
 	if(slot_name == "WorkGraphTest") return SlotID::WorkGraphTest;
@@ -305,6 +310,16 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::VSMLighting) return Slots::VSMLighting::Slot::ID;
 
+	if(id == SlotID::VSMBlockerTilesAppend) return Slots::VSMBlockerTilesAppend::Slot::ID;
+
+	if(id == SlotID::VSMTileListRead) return Slots::VSMTileListRead::Slot::ID;
+
+	if(id == SlotID::VSMBlockerClassifyInitDispatch) return Slots::VSMBlockerClassifyInitDispatch::Slot::ID;
+
+	if(id == SlotID::VSMBlockerSearchOutput) return Slots::VSMBlockerSearchOutput::Slot::ID;
+
+	if(id == SlotID::VSMShadowResolveIO) return Slots::VSMShadowResolveIO::Slot::ID;
+
 	if(id == SlotID::VSMGatherDispatchData) return Slots::VSMGatherDispatchData::Slot::ID;
 
 	if(id == SlotID::VSMDepthAnalysis) return Slots::VSMDepthAnalysis::Slot::ID;
@@ -414,6 +429,11 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::VSMDownsampleHiZBatch) return "VSMDownsampleHiZBatch";
 	if(id == SlotID::VSMPageBatch) return "VSMPageBatch";
 	if(id == SlotID::VSMLighting) return "VSMLighting";
+	if(id == SlotID::VSMBlockerTilesAppend) return "VSMBlockerTilesAppend";
+	if(id == SlotID::VSMTileListRead) return "VSMTileListRead";
+	if(id == SlotID::VSMBlockerClassifyInitDispatch) return "VSMBlockerClassifyInitDispatch";
+	if(id == SlotID::VSMBlockerSearchOutput) return "VSMBlockerSearchOutput";
+	if(id == SlotID::VSMShadowResolveIO) return "VSMShadowResolveIO";
 	if(id == SlotID::VSMGatherDispatchData) return "VSMGatherDispatchData";
 	if(id == SlotID::VSMDepthAnalysis) return "VSMDepthAnalysis";
 	if(id == SlotID::WorkGraphTest) return "WorkGraphTest";

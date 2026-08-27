@@ -1,6 +1,6 @@
 #include "VSM_impl.hlsl"
 
-// Root (not tables/) variant -- vsm_search_blocker's Hi-Z classification
+// Root (not tables/) variant -- vsm_classify_blocker's Hi-Z classification
 // (Phase 5.18 Part A) reads this via the global GetVSMPageHiZ() accessor
 // directly, the same way mesh_shader_vsm.hlsl's occlusion test does, rather
 // than threading it through as an explicit function parameter like
@@ -10,48 +10,51 @@
 // VSMApplyCompute (VSM.hlsl) to recompile.
 #include "autogen/VSMPageHiZ.h"
 
-// Blocker-search extraction: everything get_shadow_vsm used to do UP
-// THROUGH finding the search result now lives here, called once per pixel
-// from VSM_BlockerSearch's own dispatch (VSM_BlockerSearch.hlsl) instead of
-// inline inside the same dispatch as the final PCF blur/shading. Packs its
-// result into a uint4 for VSMLighting's blocker_result field (see that
-// field's own comment for the exact layout) -- asuint(-1.0) in .x is the
-// sentinel for "no blocker found" (world_delta is otherwise always >=0 by
-// construction).
-//
-// Unconditional (not #ifdef VSM_PENUMBRA-guarded) -- VSMBlockerSearchCompute
-// has no VsmPenumbra define at all (VSM.cpp only ever runs this pass when
-// penumbra mode is on in the first place, via its own setup()'s early-out),
-// so this function must compile standalone.
-//
-// Callers must NOT early-return before calling this for any reason (sky
-// pixels, screen-edge padding threads, etc.) -- see `valid` below: this
-// function's own quad-shared search mode needs every thread in a 2x2
-// dispatch quad to reach its QuadReadAcrossX/Y/Diagonal calls uniformly, a
-// requirement that propagates all the way up through this function's
-// caller (VSM_BlockerSearch.hlsl's CS_BLOCKER_SEARCH). The same rule means
-// `geometric_dark` (the caller's own NdotL<=0 test -- see its own parameter
-// comment below) must be passed IN rather than used by the caller to skip
-// calling this function outright.
-uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint2 pixel,
-                          // True when the receiver's own surface normal
-                          // faces away from the light (NdotL <= 0) --
-                          // combine_result's final NL*shadow multiply
-                          // already zeroes these pixels out regardless of
-                          // the shadow value, so there's nothing here worth
-                          // spending a Hi-Z sample or a 16-tap search on.
-                          // Folded into confident_dark below (an exact
-                          // result, not an approximation) rather than
-                          // skipping the call itself, which would violate
-                          // the quad-uniformity requirement above.
-                          bool geometric_dark)
+// Phase 5.18 Part A follow-up (take 4): everything vsm_search_blocker needs
+// UP THROUGH the cheap Hi-Z classify step, factored into its own function so
+// VSM_BlockerClassify.hlsl's stage-1 tile classification can call the exact
+// same, already-debugged logic instead of forking a second copy. Returns
+// enough state (level/slot/pos_l/texel_world_size/depth_range/search
+// radius) for vsm_search_blocker to continue straight into its own tap loop
+// without re-resolving any of it.
+struct VSMBlockerClassifyResult
 {
+	bool  valid;
+	bool  confident_lit;
+	bool  confident_dark;
+	// Debug view (VSM.ixx's use_vsm_debug_hiz_classify): distinguishes
+	// "classified directly at the receiver's own level" from "had to walk
+	// to a coarser level to find a page big enough to fully contain the
+	// search disc" -- see get_shadow_vsm's own bucket comment.
+	bool  via_coarser;
+	int   level;
+	uint  slot;
+	float2 pos_ls;
+	float4 pos_l;
+	float texel_world_size;
+	float depth_range;
+	float blocker_search_radius_texels;
+};
+
+// Callers must NOT early-return before calling this for any reason (sky
+// pixels, screen-edge padding threads, etc.) when the caller itself goes on
+// to do quad-shared work (vsm_search_blocker's search loop) -- see that
+// function's own comment. This function itself does no quad ops.
+VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighting, float3 wpos,
+                                               // True when the receiver's own surface normal
+                                               // faces away from the light (NdotL <= 0) --
+                                               // combine_result's final NL*shadow multiply
+                                               // already zeroes these pixels out regardless of
+                                               // the shadow value, so there's nothing here worth
+                                               // spending a Hi-Z sample or a 16-tap search on.
+                                               // Folded into confident_dark below (an exact
+                                               // result, not an approximation).
+                                               bool geometric_dark)
+{
+	VSMBlockerClassifyResult result = (VSMBlockerClassifyResult)0;
+
 	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
 	int level_raw = get_vsm_level(c, pos_ls);
-	// See get_shadow_vsm's own history for the fuller version of this
-	// early-return-avoidance reasoning -- moved here wholesale along with
-	// the quad ops it exists to protect; get_shadow_vsm itself no longer
-	// does any quad ops, so it went back to plain early returns.
 	bool valid = level_raw >= 0;
 	int level = valid ? level_raw : c.GetActive_min();
 
@@ -117,13 +120,6 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	// identical to a Hi-Z-proven confident_dark (shadow=0, skip the PCF
 	// pass), just arrived at for a different, always-exact reason.
 	bool confident_dark = geometric_dark;
-	// Debug view (VSM.ixx's use_vsm_debug_hiz_classify): distinguishes
-	// "classified directly at the receiver's own level" from "had to walk
-	// to a coarser level to find a page big enough to fully contain the
-	// search disc" -- cyan/magenta vs green/blue, see get_shadow_vsm's own
-	// bucket comment. Left false for geometric_dark pixels -- the Hi-Z
-	// block below is skipped for them entirely, so it's never "via" either
-	// pyramid tier.
 	bool via_coarser = false;
 	if (valid && !geometric_dark && c.GetHiz_blocker_classify() != 0)
 	{
@@ -139,18 +135,18 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 
 		// Resolve each of the 4 corners of the search rect to ITS OWN page
 		// independently (via vsm_resolve_tap, the exact same per-tap page
-		// lookup the real search loop below already uses) instead of
-		// requiring the whole rect to fit inside one page. level_step above
-		// only fixes the DISC-SIZE-vs-PAGE-SIZE ratio -- it says nothing
-		// about whether the receiver happens to sit near a page BOUNDARY,
-		// which can occur at any level (page boundaries are independently
-		// snapped per level, so a position can sit near an edge at several
-		// levels in a row). Requiring single-page containment turned that
-		// into permanent classification holes running along every page
-		// seam, confirmed live. Resolving corners independently removes the
-		// restriction entirely: a rect straddling 2-4 neighboring pages
-		// just samples from 2-4 different slots, same tolerance the real
-		// per-tap search already has for exactly this reason.
+		// lookup the real search loop uses) instead of requiring the whole
+		// rect to fit inside one page. level_step above only fixes the
+		// DISC-SIZE-vs-PAGE-SIZE ratio -- it says nothing about whether the
+		// receiver happens to sit near a page BOUNDARY, which can occur at
+		// any level (page boundaries are independently snapped per level,
+		// so a position can sit near an edge at several levels in a row).
+		// Requiring single-page containment turned that into permanent
+		// classification holes running along every page seam, confirmed
+		// live. Resolving corners independently removes the restriction
+		// entirely: a rect straddling 2-4 neighboring pages just samples
+		// from 2-4 different slots, same tolerance the real per-tap search
+		// already has for exactly this reason.
 		static const float2 CORNER_SIGNS[4] = { float2(-1, -1), float2(1, -1), float2(-1, 1), float2(1, 1) };
 		uint   corner_slots[4];
 		float2 corner_uvs[4];
@@ -224,6 +220,58 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 			}
 		}
 	}
+
+	result.valid = valid;
+	result.confident_lit = confident_lit;
+	result.confident_dark = confident_dark;
+	result.via_coarser = via_coarser;
+	result.level = level;
+	result.slot = slot;
+	result.pos_ls = pos_ls;
+	result.pos_l = pos_l;
+	result.texel_world_size = texel_world_size;
+	result.depth_range = depth_range;
+	result.blocker_search_radius_texels = blocker_search_radius_texels;
+	return result;
+}
+
+// Blocker-search extraction: everything get_shadow_vsm used to do UP
+// THROUGH finding the search result now lives here, called once per pixel
+// from VSM_BlockerSearch's own dispatch (VSM_BlockerSearch.hlsl) instead of
+// inline inside the same dispatch as the final PCF blur/shading. Packs its
+// result into a uint4 for VSMBlockerSearchOutput's blocker_search_result
+// field (see that field's own comment for the exact layout) -- asuint(-1.0)
+// in .x is the sentinel for "no blocker found" (world_delta is otherwise
+// always >=0 by construction).
+//
+// Unconditional (not #ifdef VSM_PENUMBRA-guarded) -- VSMBlockerSearchCompute
+// has no VsmPenumbra define at all (VSM.cpp only ever runs this pass when
+// penumbra mode is on in the first place, via its own setup()'s early-out),
+// so this function must compile standalone.
+//
+// Callers must NOT early-return before calling this for any reason (sky
+// pixels, screen-edge padding threads, etc.) -- see `valid` below: this
+// function's own quad-shared search mode needs every thread in a 2x2
+// dispatch quad to reach its QuadReadAcrossX/Y/Diagonal calls uniformly, a
+// requirement that propagates all the way up through this function's
+// caller (VSM_BlockerSearch.hlsl's CS_BLOCKER_SEARCH). The same rule means
+// `geometric_dark` (the caller's own NdotL<=0 test -- see its own parameter
+// comment below) must be passed IN rather than used by the caller to skip
+// calling this function outright.
+uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint2 pixel, bool geometric_dark)
+{
+	VSMBlockerClassifyResult cls = vsm_classify_blocker(c, lighting, wpos, geometric_dark);
+	bool  valid                        = cls.valid;
+	int   level                        = cls.level;
+	uint  slot                         = cls.slot;
+	float2 pos_ls                      = cls.pos_ls;
+	float4 pos_l                       = cls.pos_l;
+	float texel_world_size             = cls.texel_world_size;
+	float depth_range                  = cls.depth_range;
+	float blocker_search_radius_texels = cls.blocker_search_radius_texels;
+	bool  confident_lit                = cls.confident_lit;
+	bool  confident_dark               = cls.confident_dark;
+	bool  via_coarser                  = cls.via_coarser;
 
 	int  search_mode       = c.GetQuad_blocker_search();
 	bool quad_search        = search_mode == 1;

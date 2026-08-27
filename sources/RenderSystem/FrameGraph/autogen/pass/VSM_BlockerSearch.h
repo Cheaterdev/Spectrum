@@ -34,7 +34,13 @@ public:
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
-		Handlers::Texture VSM_BlockerResult = ResourceID::VSM_BlockerResult;
+		Handlers::StructuredBuffer<uint2> VSM_SearchTiles = ResourceID::VSM_SearchTiles;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch = ResourceID::VSM_SearchTilesDispatch;
+
+
+		Handlers::Texture VSM_BlockerSearchResult = ResourceID::VSM_BlockerSearchResult;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -58,7 +64,9 @@ public:
 			{ ResourceID::VSM_PageCameras, false },
 			{ ResourceID::VSM_PageHiZ, false },
 			{ ResourceID::BlueNoise, false },
-			{ ResourceID::VSM_BlockerResult, true },
+			{ ResourceID::VSM_SearchTiles, false },
+			{ ResourceID::VSM_SearchTilesDispatch, false },
+			{ ResourceID::VSM_BlockerSearchResult, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

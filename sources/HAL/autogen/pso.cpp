@@ -83,8 +83,13 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepth>(device, pso[PSO::VSMCopyPageDepth]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepthBatch>(device, pso[PSO::VSMCopyPageDepthBatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDownsampleHiZBatch>(device, pso[PSO::VSMDownsampleHiZBatch]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMBlockerClassifyInitDispatch>(device, pso[PSO::VSMBlockerClassifyInitDispatch]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMBlockerClassify>(device, pso[PSO::VSMBlockerClassify]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMApplyCompute>(device, pso[PSO::VSMApplyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMBlockerSearchCompute>(device, pso[PSO::VSMBlockerSearchCompute]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMFullLit>(device, pso[PSO::VSMFullLit]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMFullShadow>(device, pso[PSO::VSMFullShadow]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMShadowBlur>(device, pso[PSO::VSMShadowBlur]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMGatherDispatch>(device, pso[PSO::VSMGatherDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 
@@ -165,7 +170,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::VoxelIndirectFilter::Blur) PSOS::VoxelIndirectFilter::Blur;
 //decltype(PSOS::VoxelIndirectFilter::Reflection) PSOS::VoxelIndirectFilter::Reflection;
 //decltype(PSOS::VSMApplyCompute::VsmPenumbra) PSOS::VSMApplyCompute::VsmPenumbra;
-//decltype(PSOS::VSMApplyCompute::VsmRtxVerify) PSOS::VSMApplyCompute::VsmRtxVerify;
+//decltype(PSOS::VSMShadowBlur::VsmRtxVerify) PSOS::VSMShadowBlur::VsmRtxVerify;
 //decltype(PSOS::FontRender::Format) PSOS::FontRender::Format;
 //decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;
 //decltype(PSOS::GBufferDraw::HiZOcclusion) PSOS::GBufferDraw::HiZOcclusion;

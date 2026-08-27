@@ -12,7 +12,7 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class VSM_Combine : public PassNodeBase
+class VSM_BlockerClassify : public PassNodeBase
 {
 public:
 	struct Context
@@ -20,24 +20,30 @@ public:
 
 		GBuffer gbuffer;
 
-		Handlers::Texture VSM_Atlas = ResourceID::VSM_Atlas;
-
-
 		Handlers::Texture VSM_PageTable = ResourceID::VSM_PageTable;
 
 		Handlers::StructuredBuffer<Table::Camera> VSM_PageCameras = ResourceID::VSM_PageCameras;
 
 
-		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
+		Handlers::Texture VSM_PageHiZ = ResourceID::VSM_PageHiZ;
 
 
-		Handlers::Texture ShadowMask = ResourceID::ShadowMask;
+		Handlers::StructuredBuffer<uint2> VSM_LitTiles = ResourceID::VSM_LitTiles;
 
 
-		Handlers::Texture VSM_ShadowResult = ResourceID::VSM_ShadowResult;
+		Handlers::StructuredBuffer<uint2> VSM_DarkTiles = ResourceID::VSM_DarkTiles;
 
 
-		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
+		Handlers::StructuredBuffer<uint2> VSM_SearchTiles = ResourceID::VSM_SearchTiles;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch = ResourceID::VSM_LitTilesDispatch;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch = ResourceID::VSM_DarkTilesDispatch;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch = ResourceID::VSM_SearchTilesDispatch;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -56,13 +62,15 @@ public:
 			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
-			{ ResourceID::VSM_Atlas, false },
 			{ ResourceID::VSM_PageTable, false },
 			{ ResourceID::VSM_PageCameras, false },
-			{ ResourceID::BlueNoise, false },
-			{ ResourceID::ShadowMask, false },
-			{ ResourceID::VSM_ShadowResult, false },
-			{ ResourceID::ResultTexture, true },
+			{ ResourceID::VSM_PageHiZ, false },
+			{ ResourceID::VSM_LitTiles, true },
+			{ ResourceID::VSM_DarkTiles, true },
+			{ ResourceID::VSM_SearchTiles, true },
+			{ ResourceID::VSM_LitTilesDispatch, true },
+			{ ResourceID::VSM_DarkTilesDispatch, true },
+			{ ResourceID::VSM_SearchTilesDispatch, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -73,9 +81,9 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"VSM_Combine"};
+	static constexpr LiteralWStr Name{L"VSM_BlockerClassify"};
 
-	static constexpr PassID ID = PassID::VSM_Combine;
+	static constexpr PassID ID = PassID::VSM_BlockerClassify;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

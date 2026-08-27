@@ -54,14 +54,21 @@ Pipeline MainPipeline
 											RTXShadow;
 											[Async]PSSM_Combine;
 											[Async2]VSM_DepthAnalysis;
-											# Phase 5.18 Part A: must run before VSM_BlockerSearch now (its
-											# classification step reads VSM_PageHiZ) -- same [Async2] queue
-											# so that ordering is ordinary same-queue in-order execution,
-											# not a new cross-queue fence. See VSM_HiZRebuild's own comment
-											# in vsm.sig. Moved here from its previous spot near the end of
+											# Phase 5.18 Part A: must run before VSM_BlockerClassify/VSM_BlockerSearch
+											# now (both read VSM_PageHiZ) -- same [Async2] queue so that
+											# ordering is ordinary same-queue in-order execution, not a new
+											# cross-queue fence. See VSM_HiZRebuild's own comment in
+											# vsm.sig. Moved here from its previous spot near the end of
 											# the pipeline.
 											[Async2]VSM_HiZRebuild;
+											# Phase 5.18 Part A follow-up (take 4): three stages, in order --
+											# classify builds the tile lists, search runs indirectly over
+											# just the ambiguous ones, resolve issues the three per-tile PSOs
+											# (full-lit/full-shadow/shadow-blur) that write the final shadow
+											# value. See vsm.sig's own PassNode comments.
+											[Async2]VSM_BlockerClassify;
 											[Async2]VSM_BlockerSearch;
+											[Async2]VSM_ShadowResolve;
 											[Async2]VSM_Combine;
 											# voxel screen (voxel_gi.generate)
 											[Async2]

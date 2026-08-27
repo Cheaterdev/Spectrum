@@ -12,7 +12,7 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class VSM_Combine : public PassNodeBase
+class VSM_ShadowResolve : public PassNodeBase
 {
 public:
 	struct Context
@@ -31,13 +31,28 @@ public:
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
-		Handlers::Texture ShadowMask = ResourceID::ShadowMask;
+		Handlers::StructuredBuffer<uint2> VSM_LitTiles = ResourceID::VSM_LitTiles;
+
+
+		Handlers::StructuredBuffer<uint2> VSM_DarkTiles = ResourceID::VSM_DarkTiles;
+
+
+		Handlers::StructuredBuffer<uint2> VSM_SearchTiles = ResourceID::VSM_SearchTiles;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch = ResourceID::VSM_LitTilesDispatch;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch = ResourceID::VSM_DarkTilesDispatch;
+
+
+		Handlers::StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch = ResourceID::VSM_SearchTilesDispatch;
+
+
+		Handlers::Texture VSM_BlockerSearchResult = ResourceID::VSM_BlockerSearchResult;
 
 
 		Handlers::Texture VSM_ShadowResult = ResourceID::VSM_ShadowResult;
-
-
-		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -60,9 +75,14 @@ public:
 			{ ResourceID::VSM_PageTable, false },
 			{ ResourceID::VSM_PageCameras, false },
 			{ ResourceID::BlueNoise, false },
-			{ ResourceID::ShadowMask, false },
-			{ ResourceID::VSM_ShadowResult, false },
-			{ ResourceID::ResultTexture, true },
+			{ ResourceID::VSM_LitTiles, false },
+			{ ResourceID::VSM_DarkTiles, false },
+			{ ResourceID::VSM_SearchTiles, false },
+			{ ResourceID::VSM_LitTilesDispatch, false },
+			{ ResourceID::VSM_DarkTilesDispatch, false },
+			{ ResourceID::VSM_SearchTilesDispatch, false },
+			{ ResourceID::VSM_BlockerSearchResult, false },
+			{ ResourceID::VSM_ShadowResult, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -73,9 +93,9 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"VSM_Combine"};
+	static constexpr LiteralWStr Name{L"VSM_ShadowResolve"};
 
-	static constexpr PassID ID = PassID::VSM_Combine;
+	static constexpr PassID ID = PassID::VSM_ShadowResolve;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

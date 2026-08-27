@@ -329,6 +329,16 @@ private:
 	// spuriously activate a tier.
 	std::atomic<uint32_t> measured_texel_size_bits{ 0x7F7FFFFFu };
 
+	// TEMP DIAGNOSTIC (Phase 5.18 Part A follow-up, take 4): read back via
+	// VSM_BlockerClassify's own read_counter calls -- confirms the three
+	// tile lists sum to the total tile count and land in a plausible
+	// distribution, the check this redesign's own implementation discipline
+	// calls for before trusting the visual result. Remove once confirmed
+	// solid.
+	std::atomic<uint32_t> lit_tile_count_diag{ 0 };
+	std::atomic<uint32_t> dark_tile_count_diag{ 0 };
+	std::atomic<uint32_t> search_tile_count_diag{ 0 };
+
 	// Phase 5.12: one entry per active+dirty LEVEL this frame (bounded by
 	// level count, not mesh count), built in VSM_GatherDispatch's render()
 	// and uploaded to VSM_LevelDispatchInfo -- the GPU gather compute shader
@@ -418,13 +428,20 @@ private:
 	Passes::VSM_HiZRebuild::setup_func_type  m_hizrebuild_setup;
 	Passes::VSM_HiZRebuild::render_func_type m_hizrebuild_render;
 
-	// Blocker-search extraction: one full-screen dispatch running ONLY the
-	// wide, many-tap PCSS blocker search, writing its result for
-	// m_combine_render to read back -- see vsm.sig's VSM_BlockerSearch
-	// PassNode comment. Registered ahead of VSM_Combine in test.sig's
-	// pipeline listing.
+	// Phase 5.18 Part A follow-up (take 4): groupshared tile classification,
+	// three stages -- see vsm.sig's own PassNode comments (VSM_BlockerClassify,
+	// VSM_BlockerSearch, VSM_ShadowResolve) for the full design and the
+	// root-cause finding (VoxelGIGraph's VoxelCombine precedent) that shaped
+	// it. Registered in order ahead of VSM_Combine in test.sig's pipeline
+	// listing.
+	Passes::VSM_BlockerClassify::setup_func_type  m_blockerclassify_setup;
+	Passes::VSM_BlockerClassify::render_func_type m_blockerclassify_render;
+
 	Passes::VSM_BlockerSearch::setup_func_type  m_blockersearch_setup;
 	Passes::VSM_BlockerSearch::render_func_type m_blockersearch_render;
+
+	Passes::VSM_ShadowResolve::setup_func_type  m_shadowresolve_setup;
+	Passes::VSM_ShadowResolve::render_func_type m_shadowresolve_render;
 
 	Passes::VSM_Combine::setup_func_type  m_combine_setup;
 	Passes::VSM_Combine::render_func_type m_combine_render;
@@ -474,8 +491,14 @@ public:
 		pipeline.vSM_HiZRebuild.setup_func  = m_hizrebuild_setup;
 		pipeline.vSM_HiZRebuild.render_func = m_hizrebuild_render;
 
+		pipeline.vSM_BlockerClassify.setup_func  = m_blockerclassify_setup;
+		pipeline.vSM_BlockerClassify.render_func = m_blockerclassify_render;
+
 		pipeline.vSM_BlockerSearch.setup_func  = m_blockersearch_setup;
 		pipeline.vSM_BlockerSearch.render_func = m_blockersearch_render;
+
+		pipeline.vSM_ShadowResolve.setup_func  = m_shadowresolve_setup;
+		pipeline.vSM_ShadowResolve.render_func = m_shadowresolve_render;
 
 		pipeline.vSM_Combine.setup_func  = m_combine_setup;
 		pipeline.vSM_Combine.render_func = m_combine_render;

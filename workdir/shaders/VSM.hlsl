@@ -49,27 +49,32 @@ float4 combine_result(float2 tc, uint2 pixel)
 	info.view = normalize(camera.GetPosition() - info.pos);
 
 	VSMConstants constants = GetVSMConstants();
-	float shadow = get_shadow_vsm(constants, GetVSMLighting(), info.pos, info.normal, pixel);
+
+	// Phase 5.18 Part A follow-up (take 4): the classify/search/blur
+	// pipeline moved entirely into its own three stages (VSM_BlockerClassify
+	// -> VSM_BlockerSearch -> VSM_ShadowResolve) -- this pass just samples
+	// the precomputed answer now, no decoding. VSM_PENUMBRA off keeps the
+	// old, simpler, always-available fallback (fixed 3x3 hardware PCF, no
+	// blocker search at all).
+#ifdef VSM_PENUMBRA
+	float shadow = GetVSMLighting().GetVsm_shadow_result().Load(int3(pixel, 0));
 
 	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_hiz_classify):
-	// get_shadow_vsm returns an out-of-range sentinel instead of a real
-	// shadow value when this toggle is on and vsm_search_blocker's Hi-Z
-	// classification fired -- -1.0 = confident_lit at the receiver's own
-	// level (green), -2.0 = confident_dark at the receiver's own level
-	// (blue), -3.0/-4.0 = the same two outcomes but classification had to
-	// walk to a coarser level to find a page big enough to fully contain
-	// the search disc (cyan/magenta -- see vsm_search_blocker's via_coarser
-	// comment). Ambiguous/real-search pixels return a normal [0,1] shadow
-	// and fall through to ordinary shading below, so the classification's
-	// actual coverage is visible directly against context instead of just
-	// its effect on the final image.
+	// approximate -- stage 3's full-lit/full-shadow PSOs write EXACTLY
+	// 1.0/0.0 for tiles stage 1 classified as uniform, so those exact
+	// values are a reasonable (if not perfectly precise -- a genuinely
+	// blurred result CAN legitimately land on exactly 0 or 1 too) stand-in
+	// for "which bucket this pixel came from". Green = confidently lit,
+	// blue = confidently dark; anything else (the real blur result) shades
+	// normally below, for context.
 	if (constants.GetDebug_hiz_classify() != 0)
 	{
-		if (shadow <= -3.5) return float4(1, 0, 1, 1);
-		if (shadow <= -2.5) return float4(0, 1, 1, 1);
-		if (shadow <= -1.5) return float4(0, 0, 1, 1);
-		if (shadow < 0)     return float4(0, 1, 0, 1);
+		if (shadow >= 0.9999) return float4(0, 1, 0, 1);
+		if (shadow <= 0.0001) return float4(0, 0, 1, 1);
 	}
+#else
+	float shadow = get_shadow_vsm_simple(constants, GetVSMLighting(), info.pos);
+#endif
 
 	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_page_grid): flat
 	// per-level color, checkerboard-darkened by page position within that

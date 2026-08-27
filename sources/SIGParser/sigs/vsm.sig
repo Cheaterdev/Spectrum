@@ -227,19 +227,113 @@ struct VSMLighting
 	# own setup() can return false on non-RTX hardware, in which case this
 	# resource never gets created that frame).
 	Texture2D<float> rtx_shadow_mask;
-	# Blocker-search extraction: written by the new VSM_BlockerSearch pass
-	# (one full-screen dispatch, same size as VSM_Combine's), read back here
-	# by VSM_Combine's resolve step -- the wide, many-tap search no longer
-	# runs inline inside the same dispatch as the final PCF blur/shading.
-	# uint4, not float4: x = asuint(world_delta), or asuint(-1.0) as the
-	# sentinel for "no blocker found" (world_delta is otherwise always >=0
-	# by construction); y/z = asuint(best_tc.x)/asuint(best_tc.y); w =
-	# best_slot directly (already a uint). Bit-reinterpreted rather than
-	# stored as native floats so best_slot doesn't lose precision the way
-	# it would packed into a half-float channel. RWTexture2D (not a plain
-	# Texture2D SRV) because VSM_BlockerSearch's own shader writes it --
-	# VSM_Combine only ever reads it, via the same field/binding.
-	RWTexture2D<uint4> blocker_result;
+	# Stage 3's (VSM_ShadowResolve) final, already-blurred [0,1] shadow
+	# scalar -- VSM_Combine just samples this directly when VsmPenumbra is
+	# on, no decoding needed (blur/classify/search all happened upstream
+	# now). Replaces the old packed-uint4 blocker_result field this struct
+	# used to carry -- see VSM_ShadowResolve's own PassNode comment in this
+	# file for where that data lives now.
+	Texture2D<float> vsm_shadow_result;
+}
+
+# Phase 5.18 Part A follow-up (take 4): groupshared tile classification,
+# mirroring VoxelGIGraph's FrameClassification/FrameClassificationInitDispatch
+# pattern -- one 16x16 group per screen tile, each thread runs the cheap
+# Hi-Z classify test (vsm_classify_blocker, VSM_impl_search.hlsl) and a
+# groupshared reduction decides the WHOLE tile's bucket:
+#   - lit_tiles:    every pixel confidently lit
+#   - dark_tiles:   every pixel confidently dark
+#   - search_tiles: anything else -- at least one genuinely ambiguous pixel,
+#                   OR a mix of confidently-lit and confidently-dark pixels
+#                   with none ambiguous (a hard boundary with no true
+#                   penumbra pixel in this tile -- can't go in either
+#                   uniform bucket, since stage 3's full-lit/full-shadow
+#                   PSOs write a flat value with no per-pixel check).
+[Bind = DefaultLayout::Instance1]
+struct VSMBlockerTilesAppend
+{
+	AppendStructuredBuffer<uint2> lit_tiles;
+	AppendStructuredBuffer<uint2> dark_tiles;
+	AppendStructuredBuffer<uint2> search_tiles;
+}
+
+# Read-side counterpart of VSMBlockerTilesAppend's three fields -- same
+# three underlying buffers, each bound as a plain StructuredBuffer instead
+# of an AppendStructuredBuffer. One generic single-field struct, reused by
+# VSM_BlockerSearch (search_tiles) and all three of stage 3's PSOs (one
+# list each) -- mirrors VoxelGI's own TilingPostprocess/Tiling struct,
+# reused the same way across VoxelBlur/VoxelIndirectFilter/DenoiserHistoryFix.
+[Bind = DefaultLayout::Instance1]
+struct VSMTileListRead
+{
+	StructuredBuffer<uint2> tiles;
+}
+
+# Turns all three of VSMBlockerTilesAppend's GPU-written append counters
+# into real dispatch arguments, one shader invocation instead of three --
+# mirrors FrameClassificationInitDispatch's own shape. One appended tile is
+# exactly one 16x16 group in every consumer (tile size == group size
+# everywhere here), so each tile count copies straight into its own
+# counts.x with no divide_by_multiple scaling needed.
+[Bind = DefaultLayout::Instance0]
+struct VSMBlockerClassifyInitDispatch
+{
+	StructuredBuffer<uint> lit_counter;
+	StructuredBuffer<uint> dark_counter;
+	StructuredBuffer<uint> search_counter;
+	RWStructuredBuffer<DispatchArguments> lit_dispatch_data;
+	RWStructuredBuffer<DispatchArguments> dark_dispatch_data;
+	RWStructuredBuffer<DispatchArguments> search_dispatch_data;
+}
+
+ComputePSO VSMBlockerClassifyInitDispatch
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = VSMBlockerClassifyInitDispatch;
+}
+
+ComputePSO VSMBlockerClassify
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_BLOCKER_CLASSIFY]
+	compute = VSM_BlockerClassify;
+}
+
+# Stage 2's own output -- VSM_BlockerSearch (INDIRECT, over search_tiles
+# only) writes the raw per-ambiguous-pixel blocker-search result here
+# instead of into a texture VSM_Combine reads directly: keeps "raw search
+# output for ambiguous pixels only" separate from stage 3's own final
+# resolved shadow value, so the two meanings never get confused the way a
+# single shared texture's did across earlier attempts. Instance3: free for
+# this PSO (VSMPageTableData claims Instance3 too, but for a completely
+# different PSO -- mesh_shader_vsm.hlsl -- no collision, a given PSO only
+# ever binds the structs its own shader references).
+#
+# uint4, not float4: x = asuint(world_delta), or asuint(-1.0)/asuint(-2.0)
+# as the confident_lit/confident_dark sentinels for a pixel that resolved
+# individually within an otherwise-ambiguous tile (world_delta is otherwise
+# always >=0 by construction); y/z = asuint(best_tc.x)/asuint(best_tc.y);
+# w = best_slot directly (already a uint).
+[Bind = DefaultLayout::Instance3]
+struct VSMBlockerSearchOutput
+{
+	RWTexture2D<uint4> blocker_search_result;
+}
+
+# Stage 3's own I/O -- reads stage 2's raw search output (SRV, same
+# underlying resource as VSMBlockerSearchOutput's RW field above, just this
+# PSO only ever reads it) and writes the FINAL resolved shadow scalar
+# (plain float, not a packed uint4 -- blur has already happened by the time
+# this is written, nothing left to decode). Same Instance3 slot as
+# VSMBlockerSearchOutput above -- different PSO, no collision.
+[Bind = DefaultLayout::Instance3]
+struct VSMShadowResolveIO
+{
+	Texture2D<uint4> blocker_search_result;
+	RWTexture2D<float> shadow_result;
 }
 
 ComputePSO VSMApplyCompute
@@ -249,36 +343,71 @@ ComputePSO VSMApplyCompute
 	[EntryPoint = CS_RESULT]
 	compute = VSM;
 
-	# Fixed single-tap 3x3 hardware-PCF (off) vs blocker-search + penumbra-
-	# scaled PCF (on) -- see get_shadow_vsm in VSM_impl.hlsl.
+	# Fixed single-tap 3x3 hardware-PCF (off) vs sampling the precomputed
+	# VSM_ShadowResult stage 3 already resolved (on) -- see combine_result in
+	# VSM.hlsl. The real per-pixel classify/search/blur work no longer
+	# happens here at all when this is on; VSM_Combine just reads the
+	# answer.
 	[rename = VSM_PENUMBRA]
 	[CS, nullable]
 	define VsmPenumbra;
-
-	# Only meaningful together with VsmPenumbra (VSM.cpp only ever enables
-	# this when penumbra is also on): once VSM's blocker search finds a
-	# blocker, fires one RayQuery toward the sun to verify/correct its
-	# distance against the real BVH -- shadow maps only record the front-
-	# most surface per texel, so a closer blocker can exist without ever
-	# being rasterized where the search looked. Needs RTX hardware; gated
-	# at runtime in VSM.cpp, not just by this define, since VSM must keep
-	# working correctly without it.
-	[rename = VSM_RTX_VERIFY]
-	[CS, nullable]
-	define VsmRtxVerify;
 }
 
-# Blocker-search extraction (see VSM_BlockerSearch's own PassNode comment):
-# no VsmPenumbra/VsmRtxVerify defines needed here -- VSM.cpp only ever runs
-# this pass at all when penumbra mode is on (there's no blocker search
-# without it), and RTX ray-firing happens entirely in the resolve step
-# (VSMApplyCompute), not here.
+# Blocker-search extraction: INDIRECT dispatch (Phase 5.18 Part A follow-up:
+# groupshared tile classification) over only search_tiles -- the tiles
+# VSM_BlockerClassify actually bucketed as needing real work. Runs the wide,
+# many-tap PCSS blocker search (VSM_impl_search.hlsl's vsm_search_blocker),
+# writing its raw result to VSMBlockerSearchOutput's blocker_search_result
+# for stage 3's shadow-blur PSO to read back -- see that struct's own
+# comment. No VsmRtxVerify define here: RTX ray-firing happens entirely in
+# stage 3's shadow-blur PSO now (it's what actually runs the PCF blur the
+# ray-corrected distance feeds into), not here.
 ComputePSO VSMBlockerSearchCompute
 {
 	root = DefaultLayout;
 
 	[EntryPoint = CS_BLOCKER_SEARCH]
 	compute = VSM_BlockerSearch;
+}
+
+# Stage 3: three PSOs sharing one file (VSM_ShadowResolve.hlsl), one
+# PassNode, one render() -- see VSM_ShadowResolve's own PassNode comment for
+# why all three must be issued from the same render() (mirrors VoxelGI's
+# VoxelCombine issuing its own blur+blur2 exec_indirects together).
+ComputePSO VSMFullLit
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_FULL_LIT]
+	compute = VSM_ShadowResolve;
+}
+
+ComputePSO VSMFullShadow
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_FULL_SHADOW]
+	compute = VSM_ShadowResolve;
+}
+
+ComputePSO VSMShadowBlur
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_SHADOW_BLUR]
+	compute = VSM_ShadowResolve;
+
+	# Once the blocker search (stage 2) finds a blocker, fires one RayQuery
+	# toward the sun to verify/correct its distance against the real BVH --
+	# shadow maps only record the front-most surface per texel, so a closer
+	# blocker can exist without ever being rasterized where the search
+	# looked. Needs RTX hardware; gated at runtime in VSM.cpp, not just by
+	# this define, since VSM must keep working correctly without it. Moved
+	# here from VSMApplyCompute -- this is the PSO that now actually runs
+	# the PCF blur the ray-corrected distance feeds into.
+	[rename = VSM_RTX_VERIFY]
+	[CS, nullable]
+	define VsmRtxVerify;
 }
 
 # Amplification-shader-driven compaction (Phase 1b): CPU dispatches AS
@@ -440,20 +569,45 @@ PassNode VSM_HiZRebuild
 	[Write] StructuredBuffer<uint> VSM_DirtySlots;
 }
 
-# Blocker-search extraction: one full-screen dispatch (same size as
-# VSM_Combine's) that runs ONLY the wide, many-tap PCSS blocker search
-# (VSM_impl.hlsl's vsm_search_blocker), writing its result to
-# VSM_BlockerResult for VSM_Combine's resolve step to read back -- no
-# longer inline inside the same dispatch as the final PCF blur/shading.
+# Stage 1 (Phase 5.18 Part A follow-up, take 4): groupshared tile
+# classification -- see VSMBlockerTilesAppend's own comment for the
+# per-tile verdict logic. Writes NOTHING pixel-shaped: only the three tile-
+# position lists (VSMBlockerTilesAppend) and, in the SAME render() (no
+# PassNode boundary -- an AppendStructuredBuffer's hidden GPU counter isn't
+# reliably barrier-tracked by FrameGraph's normal resource-view dependency
+# system across a PassNode boundary, confirmed live earlier this session),
+# the matching indirect dispatch args (VSMBlockerClassifyInitDispatch) for
+# stage 2 and stage 3 to consume.
+[Compute]
+PassNode VSM_BlockerClassify
+{
+	GBuffer gbuffer;
+	Texture VSM_PageTable;
+	StructuredBuffer<Camera> VSM_PageCameras;
+	Texture VSM_PageHiZ;
+	[Write] StructuredBuffer<uint2> VSM_LitTiles;
+	[Write] StructuredBuffer<uint2> VSM_DarkTiles;
+	[Write] StructuredBuffer<uint2> VSM_SearchTiles;
+	[Write] StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch;
+	[Write] StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch;
+	[Write] StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch;
+}
+
+# Stage 2: INDIRECT dispatch over VSM_SearchTiles only -- the tiles stage 1
+# bucketed as needing real work. Runs the wide, many-tap PCSS blocker search
+# (VSM_impl_search.hlsl's vsm_search_blocker), writing its raw result to
+# VSM_BlockerSearchResult (VSMBlockerSearchOutput's own field) for stage
+# 3's shadow-blur PSO to read back -- NOT to a texture VSM_Combine reads
+# directly any more (see VSMBlockerSearchOutput's own comment for why).
 #
-# Phase 5.18 Part A: also reads VSM_PageHiZ now -- vsm_search_blocker does
-# a cheap min/max classification against the receiver's own page pyramid
+# Phase 5.18 Part A: also reads VSM_PageHiZ -- vsm_search_blocker does a
+# cheap min/max classification against the receiver's own page pyramid
 # before running the expensive 16-tap search, skipping the search entirely
-# for pixels the pyramid alone can already answer confidently (see
-# VSMPageHiZ's own comment for the two channels' meaning). This is why
-# VSM_HiZRebuild moved to run immediately before this pass in test.sig's
-# listing -- the pyramid this reads must be this frame's freshly-rebuilt
-# one, not last frame's.
+# for pixels the pyramid alone can already answer confidently within an
+# otherwise-ambiguous tile (see VSMPageHiZ's own comment for the two
+# channels' meaning). This is why VSM_HiZRebuild moved to run immediately
+# before stage 1 in test.sig's listing -- the pyramid both stage 1 and
+# stage 2 read must be this frame's freshly-rebuilt one, not last frame's.
 [Compute]
 PassNode VSM_BlockerSearch
 {
@@ -463,7 +617,38 @@ PassNode VSM_BlockerSearch
 	StructuredBuffer<Camera> VSM_PageCameras;
 	Texture VSM_PageHiZ;
 	Texture BlueNoise;
-	[Write] Texture VSM_BlockerResult;
+	StructuredBuffer<uint2> VSM_SearchTiles;
+	StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch;
+	[Write] Texture VSM_BlockerSearchResult;
+}
+
+# Stage 3: three PSOs (VSMFullLit/VSMFullShadow/VSMShadowBlur), ONE
+# PassNode, ONE render() -- see this session's own root-cause finding
+# (VoxelGIGraph.cpp's VoxelCombine issuing its own blur+blur2 exec_indirects
+# together, never split across separate PassNodes) for why: every write to
+# a shared output resource, however many indirect dispatches it takes, must
+# come from one PassNode's render(), or FrameGraph's dependency resolution
+# doesn't reliably make every writer's output visible to the resource's
+# other consumers. VSM_ShadowResult is created here and written disjointly
+# by all three PSOs (lit_tiles -> 1.0, dark_tiles -> 0.0, search_tiles ->
+# the real PCF blur read from VSM_BlockerSearchResult) -- full coverage by
+# construction, same as the three tile lists are disjoint by construction.
+[Compute]
+PassNode VSM_ShadowResolve
+{
+	GBuffer gbuffer;
+	Texture VSM_Atlas;
+	Texture VSM_PageTable;
+	StructuredBuffer<Camera> VSM_PageCameras;
+	Texture BlueNoise;
+	StructuredBuffer<uint2> VSM_LitTiles;
+	StructuredBuffer<uint2> VSM_DarkTiles;
+	StructuredBuffer<uint2> VSM_SearchTiles;
+	StructuredBuffer<DispatchArguments> VSM_LitTilesDispatch;
+	StructuredBuffer<DispatchArguments> VSM_DarkTilesDispatch;
+	StructuredBuffer<DispatchArguments> VSM_SearchTilesDispatch;
+	Texture VSM_BlockerSearchResult;
+	[Write] Texture VSM_ShadowResult;
 }
 
 [Compute]
@@ -479,10 +664,11 @@ PassNode VSM_Combine
 	# [Write]: this pass only ever reads it, for the debug-view comparison
 	# toggle (VSM.ixx's use_vsm_debug_rtx_reference).
 	Texture ShadowMask;
-	# Written by VSM_BlockerSearch above -- see VSMLighting's own
-	# blocker_result field for the packed uint4 layout. Not [Write]: this
-	# pass only ever reads it.
-	Texture VSM_BlockerResult;
+	# Written by stage 3 (VSM_ShadowResolve) above -- the final, already-
+	# blurred [0,1] shadow scalar, no decoding needed. Only exists when
+	# use_vsm_penumbra is on (see m_shadowresolve_setup's own early-out);
+	# not [Write] here, this pass only ever reads it.
+	Texture VSM_ShadowResult;
 	[Write] Texture ResultTexture;
 }
 

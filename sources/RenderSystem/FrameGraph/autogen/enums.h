@@ -61,7 +61,9 @@ export
 		Library::VSM_GatherDispatch VSM_GatherDispatch;
 		Library::VSM_RenderPages VSM_RenderPages;
 		Library::VSM_HiZRebuild VSM_HiZRebuild;
+		Library::VSM_BlockerClassify VSM_BlockerClassify;
 		Library::VSM_BlockerSearch VSM_BlockerSearch;
+		Library::VSM_ShadowResolve VSM_ShadowResolve;
 		Library::VSM_Combine VSM_Combine;
 		Library::VSM_DepthAnalysis VSM_DepthAnalysis;
 	
