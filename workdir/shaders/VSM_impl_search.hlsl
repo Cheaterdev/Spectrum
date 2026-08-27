@@ -273,9 +273,8 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	bool  confident_dark               = cls.confident_dark;
 	bool  via_coarser                  = cls.via_coarser;
 
-	int  search_mode       = c.GetQuad_blocker_search();
-	bool quad_search        = search_mode == 1;
-	bool stochastic_search  = search_mode == 2;
+	int  search_mode = c.GetQuad_blocker_search();
+	bool quad_search = search_mode == 1;
 
 	uint2 search_noise_pixel = quad_search ? (pixel & ~1u) : pixel;
 	float search_noise_angle = lighting.GetBlue_noise().Load(int3(search_noise_pixel % 128, 0)).x * 6.28318530718;
@@ -289,11 +288,9 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	int blocker_count = 0;
 
 	uint quad_lane = (pixel.x & 1) + (pixel.y & 1) * 2;
-	int random_tap = (int)(frac(lighting.GetBlue_noise().Load(int3(pixel % 128, 0)).x * 4327.31) * 16.0);
-	random_tap = clamp(random_tap, 0, 15);
-	int bi_start  = stochastic_search ? random_tap : (quad_search ? (int)quad_lane : 0);
+	int bi_start  = quad_search ? (int)quad_lane : 0;
 	int bi_stride = quad_search ? 4 : 1;
-	int bi_count  = stochastic_search ? 1 : (quad_search ? 4 : 16);
+	int bi_count  = quad_search ? 4 : 16;
 
 	[loop]
 	for (int bii = 0; bii < bi_count; bii++)

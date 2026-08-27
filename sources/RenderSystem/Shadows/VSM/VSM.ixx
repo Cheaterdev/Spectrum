@@ -56,6 +56,14 @@ public:
 	// unvalidated, same cautious rollout as use_vsm_penumbra above.
 	Variable<bool> use_vsm_rtx_verify = { false, "RTX blocker verify", this };
 
+	// Runtime A/B switch for the quad-shared blocker search (splits the 16
+	// Poisson-disc taps 4-per-thread across each 2x2 pixel quad instead of
+	// every pixel doing all 16, merged via QuadReadAcrossX/Y/Diagonal).
+	// Off by default -- new, not yet visually/perf verified against the
+	// original full-per-pixel search, same cautious rollout as
+	// use_vsm_rtx_verify above.
+	Variable<bool> use_vsm_quad_blocker_search = { false, "Quad-shared blocker search", this };
+
 	// Only meaningful when use_vsm_rtx_verify is also on. false = single
 	// blur pass (uses the RTX-verified distance when the ray hit something,
 	// VSM's own estimate otherwise -- cheaper). true = blur both distances
@@ -66,27 +74,6 @@ public:
 	// this is a quality/perf choice, not an unvalidated-math gate like the
 	// two toggles above.
 	Variable<bool> use_vsm_rtx_dual_blur = { true, "RTX verify: dual blur + min()", this };
-
-	// Runtime A/B switch for the quad-shared blocker search (splits the 16
-	// Poisson-disc taps 4-per-thread across each 2x2 pixel quad instead of
-	// every pixel doing all 16, merged via QuadReadAcrossX/Y/Diagonal).
-	// Off by default -- new, not yet visually/perf verified against the
-	// original full-per-pixel search, same cautious rollout as
-	// use_vsm_rtx_verify above.
-	Variable<bool> use_vsm_quad_blocker_search = { false, "Quad-shared blocker search", this };
-
-	// Third search mode (mutually exclusive with quad-sharing above, takes
-	// priority if somehow both are on): each pixel samples exactly ONE of
-	// the 16 Poisson-disc positions, picked by a fresh per-pixel random
-	// index every frame instead of a fixed subset -- 1/16th the atlas
-	// samples of the original search. Relies on neighboring pixels'
-	// different random picks (spatial) plus the per-frame reroll
-	// (temporal) for vsm_pcf_shadow's own blur to reconstruct a coherent
-	// result -- no dedicated denoiser backing this, so expect more visible
-	// noise than quad-sharing, worst on a static/paused frame. Off by
-	// default: new, unvalidated, same cautious rollout as the toggles
-	// above.
-	Variable<bool> use_vsm_stochastic_blocker_search = { false, "Stochastic 1-tap blocker search", this };
 
 	// Debug-view toggle: when on, VSM_Combine displays RTXShadow's own
 	// (denoised) full-RT shadow mask directly as grayscale, in place of

@@ -21,8 +21,8 @@ export namespace Table
 		int active_max;
 		int page_size;
 		int pages_per_level;
-		int rtx_dual_blur;
 		int quad_blocker_search;
+		int rtx_dual_blur;
 		int debug_rtx_reference;
 		int hiz_blocker_classify;
 		int debug_hiz_classify;
@@ -33,8 +33,8 @@ export namespace Table
 		int& GetActive_max() { return active_max; }
 		int& GetPage_size() { return page_size; }
 		int& GetPages_per_level() { return pages_per_level; }
-		int& GetRtx_dual_blur() { return rtx_dual_blur; }
 		int& GetQuad_blocker_search() { return quad_blocker_search; }
+		int& GetRtx_dual_blur() { return rtx_dual_blur; }
 		int& GetDebug_rtx_reference() { return debug_rtx_reference; }
 		int& GetHiz_blocker_classify() { return hiz_blocker_classify; }
 		int& GetDebug_hiz_classify() { return debug_hiz_classify; }
@@ -49,8 +49,8 @@ export namespace Table
 			compiler.compile(active_max);
 			compiler.compile(page_size);
 			compiler.compile(pages_per_level);
-			compiler.compile(rtx_dual_blur);
 			compiler.compile(quad_blocker_search);
+			compiler.compile(rtx_dual_blur);
 			compiler.compile(debug_rtx_reference);
 			compiler.compile(hiz_blocker_classify);
 			compiler.compile(debug_hiz_classify);
@@ -71,8 +71,8 @@ export namespace Table
 			ar& NVP(active_max);
 			ar& NVP(page_size);
 			ar& NVP(pages_per_level);
-			ar& NVP(rtx_dual_blur);
 			ar& NVP(quad_blocker_search);
+			ar& NVP(rtx_dual_blur);
 			ar& NVP(debug_rtx_reference);
 			ar& NVP(hiz_blocker_classify);
 			ar& NVP(debug_hiz_classify);

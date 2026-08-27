@@ -12,8 +12,8 @@ struct VSMConstants
 	int active_max; // int
 	int page_size; // int
 	int pages_per_level; // int
-	int rtx_dual_blur; // int
 	int quad_blocker_search; // int
+	int rtx_dual_blur; // int
 	int debug_rtx_reference; // int
 	int hiz_blocker_classify; // int
 	int debug_hiz_classify; // int
@@ -24,8 +24,8 @@ struct VSMConstants
 	int GetActive_max() { return active_max; }
 	int GetPage_size() { return page_size; }
 	int GetPages_per_level() { return pages_per_level; }
-	int GetRtx_dual_blur() { return rtx_dual_blur; }
 	int GetQuad_blocker_search() { return quad_blocker_search; }
+	int GetRtx_dual_blur() { return rtx_dual_blur; }
 	int GetDebug_rtx_reference() { return debug_rtx_reference; }
 	int GetHiz_blocker_classify() { return hiz_blocker_classify; }
 	int GetDebug_hiz_classify() { return debug_hiz_classify; }

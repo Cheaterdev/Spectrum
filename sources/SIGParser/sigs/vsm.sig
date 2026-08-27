@@ -22,6 +22,12 @@ struct VSMConstants
 	int active_max;
 	int page_size;
 	int pages_per_level;
+	# 0 = every pixel runs its own full 16-tap blocker search (original).
+	# 1 = split the 16 taps 4-per-thread across each 2x2 pixel quad, merged
+	# via QuadReadAcrossX/Y/Diagonal -- ~4x fewer atlas samples per pixel for
+	# the search, same total 16-tap coverage. New/unverified, hence a
+	# runtime A/B switch rather than replacing the original outright.
+	int quad_blocker_search;
 	# 0 = single blur pass (uses the RTX-verified distance when the
 	# verification ray hit something, VSM's own estimate otherwise -- cheaper,
 	# one 16-tap blur per pixel). 1 = blur BOTH distances and take min() of
@@ -30,12 +36,6 @@ struct VSMConstants
 	# estimate produced between overlapping penumbras). Only read when
 	# VsmRtxVerify is enabled.
 	int rtx_dual_blur;
-	# 0 = every pixel runs its own full 16-tap blocker search (original).
-	# 1 = split the 16 taps 4-per-thread across each 2x2 pixel quad, merged
-	# via QuadReadAcrossX/Y/Diagonal -- ~4x fewer atlas samples per pixel for
-	# the search, same total 16-tap coverage. New/unverified, hence a
-	# runtime A/B switch rather than replacing the original outright.
-	int quad_blocker_search;
 	# Debug view: when nonzero, VSM_Combine ignores get_shadow_vsm entirely
 	# for real geometry pixels and instead displays RTXShadow's own
 	# (denoised) full-RT shadow mask directly as grayscale -- a reference
