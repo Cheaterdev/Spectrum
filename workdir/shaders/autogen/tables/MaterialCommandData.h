@@ -11,7 +11,9 @@ struct MaterialCommandData
 	uint material_cb; // uint
 	uint pipeline_id; // uint
 	uint is_transparent; // uint
+	uint opacity_texture_index; // uint
 	uint GetMaterial_cb() { return material_cb; }
 	uint GetPipeline_id() { return pipeline_id; }
 	uint GetIs_transparent() { return is_transparent; }
+	uint GetOpacity_texture_index() { return opacity_texture_index; }
 };

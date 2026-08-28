@@ -294,7 +294,7 @@ RT: 'rt';
 RTV: 'RTV';
 DSV: 'DSV';
 ROOTSIG: 'root';
-shader_type: 
+shader_type:
 'compute'
 |'vertex'
 |'pixel'
@@ -303,6 +303,7 @@ shader_type:
 |'geometry'
 |'miss'
 |'closest_hit'
+|'any_hit'
 |'raygen'
 |'amplification'
 |'mesh'

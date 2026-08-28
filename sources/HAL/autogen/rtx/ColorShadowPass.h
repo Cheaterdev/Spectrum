@@ -19,6 +19,11 @@ struct ColorShadowPass: public RaytracePass<ColorShadowPass>
 	static const constexpr std::wstring_view name = L"ColorShadowPass_GROUP";
 	static const constexpr std::wstring_view hit_name = L"ColorShadowClosestHitShader";
 	static const constexpr std::wstring_view miss_name = L"ColorShadowMissShader";
+	// Empty when this pass doesn't declare an any_hit stage -- always emitted
+	// (rather than conditionally, per pass) so RaytracePass<Desc>'s init()/
+	// init_for_material() can check Desc::any_hit_name.empty() uniformly
+	// instead of needing per-Desc SFINAE for a member that may not exist.
+	static const constexpr std::wstring_view any_hit_name = L"ColorShadowAnyHitShader";
 
 	static const constexpr bool per_material = true;
 };

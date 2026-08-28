@@ -9,6 +9,9 @@
 // unconditionally included since it's dead-code-eliminated when the define
 // is off, same as every other permutation-gated accessor in this codebase.
 #include "autogen/Raytracing.h"
+// Also VSM_RTX_VERIFY-only: RaytraceInstanceInfo/MaterialCommandData for the
+// inline candidate-opacity check (see the VSM_RTX_VERIFY block below).
+#include "autogen/SceneData.h"
 
 static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 
@@ -340,9 +343,59 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 			// unreliable distance. This needs the genuinely closest hit
 			// within [TMin, TMax], so RayQuery is left to run its normal
 			// closest-hit tracking to completion.
-			RayQuery<RAY_FLAG_FORCE_OPAQUE> rayQuery;
+			//
+			// No RAY_FLAG_FORCE_OPAQUE any more: alpha-cutout materials are
+			// now built with D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE
+			// (MeshAssetInstance::update_rtx_instance()), so their triangles
+			// surface here as real candidates instead of being auto-
+			// committed. The Proceed() loop below is inline ray tracing's
+			// own equivalent of an any-hit shader -- there is no pipeline
+			// hit-group reachable from a RayQuery (no local root signature),
+			// so this evaluates opacity directly off MaterialCommandData's
+			// flat opacity_texture_index rather than the material's real
+			// compiled shader graph (see that field's own comment in
+			// meshrender.sig for why, and its limits: only the common
+			// single-texture-drives-opacity case is recognized -- anything
+			// else reads ~0u and is treated as opaque, same as today).
+			RayQuery<RAY_FLAG_NONE> rayQuery;
 			rayQuery.TraceRayInline(GetRaytracing().GetScene(), RAY_FLAG_NONE, 0xFF, ray);
-			rayQuery.Proceed();
+
+			while (rayQuery.Proceed())
+			{
+				if (rayQuery.CandidateType() != CANDIDATE_NON_OPAQUE_TRIANGLE)
+					continue;
+
+				RaytraceInstanceInfo rtx_instance = GetSceneData().GetRaytraceInstanceInfo()[rayQuery.CandidateInstanceID()];
+				MaterialCommandData rtx_material = GetSceneData().GetMaterials()[rtx_instance.GetMaterial_id()];
+
+				bool commit = true; // unknown opacity source -- conservative, same as today's forced-opaque behavior.
+				if (rtx_material.GetOpacity_texture_index() != 0xFFFFFFFF)
+				{
+					uint prim = rayQuery.CandidatePrimitiveIndex();
+					uint i0 = rtx_instance.GetIndices()[prim * 3];
+					uint i1 = rtx_instance.GetIndices()[prim * 3 + 1];
+					uint i2 = rtx_instance.GetIndices()[prim * 3 + 2];
+
+					float2 bary2 = rayQuery.CandidateTriangleBarycentrics();
+					float3 bary  = float3(1 - bary2.x - bary2.y, bary2.x, bary2.y);
+					float2 tc = rtx_instance.GetVertexes()[i0].tc * bary.x
+					          + rtx_instance.GetVertexes()[i1].tc * bary.y
+					          + rtx_instance.GetVertexes()[i2].tc * bary.z;
+
+					// .r, not .a -- matches SamplingNode's own o_r output
+					// (the channel AssimpLoader's opacity import wires),
+					// see find_opacity_texture()'s own comment.
+					Texture2D<float4> opacity_tex = ResourceDescriptorHeap[rtx_material.GetOpacity_texture_index()];
+					float opacity = opacity_tex.SampleLevel(linearSampler, tc, 0).r;
+					commit = opacity >= 0.5;
+				}
+
+				if (commit)
+					rayQuery.CommitNonOpaqueTriangleHit();
+				// else: leave uncommitted -- traversal continues past this
+				// candidate, exactly like IgnoreHit() in a pipeline any-hit
+				// shader.
+			}
 
 			if (rayQuery.CommittedStatus() != COMMITTED_NOTHING)
 			{

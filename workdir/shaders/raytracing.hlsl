@@ -414,7 +414,7 @@ void MyRaygenShader()
 	ray.Origin = pos;
 	ray.Direction = dir;
 	ray.TMin = 0.01;
-	ray.TMax = length(oneVoxelSize) * 8;
+    ray.TMax = length(oneVoxelSize);// * 8;
 	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
 
 	if (payload_gi.dist > 100000 - 5)

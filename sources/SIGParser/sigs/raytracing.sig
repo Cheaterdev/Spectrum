@@ -201,6 +201,15 @@ RaytracePass ColorPass
 	[EntryPoint = MyClosestHitShader]
 	closest_hit = none;
 
+	# Real DXR any-hit shader (not the inline-RayQuery candidate-loop
+	# workaround VSM's own verify ray uses -- TraceRay()'s hit groups have a
+	# local root signature reaching this material's own MaterialInfo/
+	# compiled opacity graph directly, which inline ray tracing can't).
+	# Per-material like closest_hit above, same reason: needs this specific
+	# material's COMPILED_FUNC to evaluate its actual opacity.
+	[EntryPoint = MyAnyHitShader]
+	any_hit = none;
+
 	payload = RayPayload;
 
 	local = MaterialInfo;
@@ -218,6 +227,11 @@ RaytracePass ColorShadowPass
 
 	[EntryPoint = ColorShadowClosestHitShader]
 	closest_hit = none;
+
+	# See ColorPass's own comment on any_hit above -- same reasoning, this
+	# pass's shadow rays need real per-material cutout support too.
+	[EntryPoint = ColorShadowAnyHitShader]
+	any_hit = none;
 
 	payload = ColorShadowPayload;
 

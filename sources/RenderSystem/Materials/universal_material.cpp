@@ -301,6 +301,43 @@ void materials::universal_material::update()
 
 }
 
+// Phase 5.19 (RTX blocker search): finds which texture (if any) directly
+// drives the material graph's opacity output, so VSM's inline RayQuery
+// candidate loop can sample it later without needing the material's
+// compiled shader (inline ray tracing has no local root signature to reach
+// per-material shader code with -- see VSM_ShadowResolve.hlsl's own
+// comment). Deliberately narrow: only recognizes the single common shape
+// AssimpLoader's own opacity import produces (get_opacity() <- a
+// SamplingNode's output <- a TextureAssetNode) -- a one-hop-then-one-hop
+// walk, not a general graph evaluator. Anything else (opacity computed by
+// a value node, combined from multiple textures, driven by a chain of
+// intermediate math nodes) returns nullptr, and the caller leaves
+// opacity_texture_index at its "unknown" sentinel -- that material's
+// candidate hits are then always committed by the verify ray (today's
+// behavior, not a regression, just not improved yet for that case).
+static TextureSRVParams::ptr find_opacity_texture(MaterialGraph* graph)
+{
+	auto opacity = graph->get_opacity();
+	if (!opacity || opacity->input_connections.empty())
+		return nullptr;
+
+	auto src = (*opacity->input_connections.begin())->from;
+	auto sampling = src ? dynamic_cast<SamplingNode*>(src->owner) : nullptr;
+	if (!sampling)
+		return nullptr;
+
+	auto tex_input = sampling->get_texture_input();
+	if (!tex_input || tex_input->input_connections.empty())
+		return nullptr;
+
+	auto tex_src = (*tex_input->input_connections.begin())->from;
+	auto tex_node = tex_src ? dynamic_cast<TextureAssetNode*>(tex_src->owner) : nullptr;
+	if (!tex_node)
+		return nullptr;
+
+	return tex_node->get_texture_info();
+}
+
 void materials::universal_material::compile()
 {
 	start_changing_contents();
@@ -357,6 +394,32 @@ void materials::universal_material::compile()
 	elem[0].pipeline_id = pipeline->get_id();
 	elem[0].material_cb = compiled_material_info.compiled().get_offset();
 	elem[0].is_transparent = transparent ? 1 : 0;
+
+	// ~0u ("unknown") unless find_opacity_texture() recognizes a simple
+	// direct texture->opacity wiring -- see its own comment. Stored as the
+	// RAW bindless descriptor-heap index of that one texture (texture_srvs[
+	// idx].get_offset(), same accessor material_cb itself uses above) --
+	// deliberately NOT an index into MaterialInfo.textures[]: that array
+	// lives inline after MaterialInfo's own [dynamic] MaterialCB data,
+	// whose byte size varies per material's own uniform payload, so its
+	// real offset isn't knowable without the per-material compiled shader
+	// (see VSM_ShadowResolve.hlsl's own comment on why that's unavailable
+	// to an inline RayQuery). Reading straight from texture_srvs sidesteps
+	// that entirely -- ResourceDescriptorHeap[opacity_texture_index] is a
+	// plain Texture2D, unconditionally, from anywhere.
+	elem[0].opacity_texture_index = ~0u;
+	if (auto opacity_tex = find_opacity_texture(graph.get().get()))
+	{
+		auto srv_list = context->get_textures();
+		auto it = std::find(srv_list.begin(), srv_list.end(), opacity_tex);
+		if (it != srv_list.end())
+		{
+			size_t idx = it - srv_list.begin();
+			if (idx < texture_srvs.size())
+				elem[0].opacity_texture_index = texture_srvs[idx].get_offset();
+		}
+	}
+
 	info_handle.write(0, elem);
 
 	need_update_compiled = false;

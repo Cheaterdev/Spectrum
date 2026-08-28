@@ -407,6 +407,11 @@ struct SelectLocal<T>
 				group.name = std::wstring(Desc::name);
 				group.closest_hit_shader = std::wstring(Desc::hit_name);
 				group.type = HAL::HitGroupType::TRIANGLES;
+				if (!Desc::any_hit_name.empty())
+				{
+					group.any_hit_shader = std::wstring(Desc::any_hit_name);
+					lib.export_shader(std::wstring(Desc::any_hit_name));
+				}
 				raytracingPipeline.hit_groups.emplace_back(group);
 				lib.export_shader(std::wstring(Desc::hit_name));
 			}
@@ -443,6 +448,17 @@ struct SelectLocal<T>
 				group.name = mat->wshader_name + std::wstring(Desc::name);
 				group.closest_hit_shader = hit_export;
 				group.type = HAL::HitGroupType::TRIANGLES;
+
+				// Same per-(material,pass) rename as the closest-hit export above --
+				// empty when this pass doesn't declare an any_hit stage at all (see
+				// Desc::any_hit_name's own comment).
+				if (!Desc::any_hit_name.empty())
+				{
+					std::wstring any_hit_export = mat->wshader_name + std::wstring(Desc::any_hit_name);
+					lib.export_shader(/*new*/ any_hit_export, /*was*/ std::wstring(Desc::any_hit_name));
+					group.any_hit_shader = any_hit_export;
+				}
+
 				raytracingPipeline.hit_groups.emplace_back(group);
 
 				raytracingPipeline.libraries.emplace_back(lib);

@@ -20,9 +20,11 @@ export namespace Table
 		uint material_cb;
 		uint pipeline_id;
 		uint is_transparent;
+		uint opacity_texture_index;
 		uint& GetMaterial_cb() { return material_cb; }
 		uint& GetPipeline_id() { return pipeline_id; }
 		uint& GetIs_transparent() { return is_transparent; }
+		uint& GetOpacity_texture_index() { return opacity_texture_index; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -30,6 +32,7 @@ export namespace Table
 			compiler.compile(material_cb);
 			compiler.compile(pipeline_id);
 			compiler.compile(is_transparent);
+			compiler.compile(opacity_texture_index);
 		}
 		using Compiled = MaterialCommandData;
 
@@ -43,6 +46,7 @@ export namespace Table
 			ar& NVP(material_cb);
 			ar& NVP(pipeline_id);
 			ar& NVP(is_transparent);
+			ar& NVP(opacity_texture_index);
 		}
 
 	};

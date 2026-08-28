@@ -52,7 +52,15 @@ struct MeshInfo
 struct RaytraceInstanceInfo
 {
 	StructuredBuffer<mesh_vertex_input> vertexes;
-	StructuredBuffer<uint> indices;	
+	StructuredBuffer<uint> indices;
+	# Phase 5.19: same value as MeshCommandData.material_id (both come from
+	# universal_material::get_material_id()) -- lets a hit shader/inline
+	# RayQuery reach GetSceneData().GetMaterials()[material_id] from
+	# InstanceID() alone, the same way the main render path already reaches
+	# it from a mesh index. Needed because per-material hit-group shader-
+	# table binding (see raytracing.sig's ColorShadowPass) isn't reachable
+	# from inline ray tracing at all -- this is the one path that is.
+	uint material_id;
 }
 
 struct Meshlet
@@ -137,6 +145,20 @@ struct MaterialCommandData
 	# materials need a depth pass with a real pixel shader (clip()), opaque
 	# ones don't -- without decoding the material graph itself.
 	uint is_transparent;
+	# RAW bindless descriptor-heap index (ResourceDescriptorHeap[this] is a
+	# plain Texture2D, from anywhere) of whichever texture directly drives
+	# this material's opacity graph output, or ~0u ("unknown") if there
+	# isn't a simple single-texture answer (universal_material.cpp's
+	# find_opacity_texture() only recognizes the common direct-wiring case).
+	# Deliberately NOT an index into MaterialInfo.textures[] -- that array
+	# sits after MaterialInfo's own [dynamic] MaterialCB data, whose byte
+	# size varies per material, so it's only readable from the material's
+	# own compiled shader. Lets VSM's inline RTX blocker-search RayQuery
+	# sample the real opacity texture per candidate hit and skip committing
+	# it below threshold, without needing that compiled shader -- inline ray
+	# tracing has no local root signature to reach it with (see
+	# VSM_ShadowResolve.hlsl).
+	uint opacity_texture_index;
 }
 
 [Bind = DefaultLayout::Instance0]

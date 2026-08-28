@@ -9,8 +9,10 @@
 #include "mesh_vertex_input.h"
 struct RaytraceInstanceInfo
 {
+	uint material_id; // uint
 	uint vertexes; // StructuredBuffer<mesh_vertex_input>
 	uint indices; // StructuredBuffer<uint>
+	uint GetMaterial_id() { return material_id; }
 	StructuredBuffer<mesh_vertex_input> GetVertexes() { return ResourceDescriptorHeap[vertexes]; }
 	StructuredBuffer<uint> GetIndices() { return ResourceDescriptorHeap[indices]; }
 };

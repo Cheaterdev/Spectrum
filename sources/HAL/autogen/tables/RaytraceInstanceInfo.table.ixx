@@ -18,19 +18,23 @@ export namespace Table
 	struct RaytraceInstanceInfo
 	{
 		static constexpr SlotID ID = SlotID::RaytraceInstanceInfo;
+		uint material_id;
 		HLSL::StructuredBuffer<mesh_vertex_input> vertexes;
 		HLSL::StructuredBuffer<uint> indices;
 		HLSL::StructuredBuffer<mesh_vertex_input>& GetVertexes() { return vertexes; }
 		HLSL::StructuredBuffer<uint>& GetIndices() { return indices; }
+		uint& GetMaterial_id() { return material_id; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
+			compiler.compile(material_id);
 			compiler.compile(vertexes);
 			compiler.compile(indices);
 		}
 		struct Compiled
 		{
+			uint material_id; // uint
 			uint vertexes; // StructuredBuffer<mesh_vertex_input>
 			uint indices; // StructuredBuffer<uint>
 
@@ -38,6 +42,7 @@ export namespace Table
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(material_id);
 			}
 
 
@@ -50,6 +55,7 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
+			ar& NVP(material_id);
 		}
 
 	};

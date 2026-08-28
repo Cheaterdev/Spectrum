@@ -543,6 +543,19 @@ void MeshAssetInstance::update_rtx_instance()
 			instanceDesc.instance_id = info.node_id;
 			instanceDesc.hit_group_index = RTX::get().rtx.get_index(static_cast<materials::universal_material*>(info.material));
 
+			// Phase 5.19: the BLAS geometry itself is always built OPAQUE
+			// (see init_gpu() above -- one BLAS per raw mesh part, shared
+			// across however many differently-materialed instances use it,
+			// so the opaque/non-opaque decision can only be made here, per
+			// INSTANCE, not at BLAS build time). FORCE_NON_OPAQUE lets any
+			// non-opaque candidate hit actually reach a RayQuery's
+			// CandidateType() check instead of being auto-committed --
+			// needed for VSM's blocker-search verify ray to see cutout
+			// materials as anything other than solid.
+			instanceDesc.flags = static_cast<materials::universal_material*>(info.material)->is_transparent()
+				? (uint)HAL::RaytracingInstanceFlags::FORCE_NON_OPAQUE
+				: (uint)HAL::RaytracingInstanceFlags::NONE;
+
 
 			ras[i] = instanceDesc;
 
@@ -725,6 +738,7 @@ void MeshAssetInstance::update_nodes()
 			auto& my_instance = gpu_instances[static_cast<UINT>(nodes.size()) - 1];
 			my_instance.vertexes = info.vertex_buffer_view.structuredBuffer.get_offset();
 			my_instance.indices = info.index_buffer_view.structuredBuffer.get_offset();
+			my_instance.material_id = static_cast<materials::universal_material*>(info.material)->get_material_id();
 
 			rendering.push_back(info);
 		}

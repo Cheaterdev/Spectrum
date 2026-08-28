@@ -282,8 +282,13 @@ namespace HAL
             auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
 
             hitGroup->SetHitGroupExport(e.name.c_str());
-            //TODO: more shaders
             hitGroup->SetClosestHitShaderImport(e.closest_hit_shader.c_str());
+            if (!e.any_hit_shader.empty())
+                hitGroup->SetAnyHitShaderImport(e.any_hit_shader.c_str());
+            //TODO: intersection shaders (procedural geometry -- nothing in
+            // this codebase needs one yet, unlike any_hit which VSM's RTX
+            // blocker-search verify ray and ColorPass/ColorShadowPass's
+            // alpha-cutout materials both need now).
             hitGroup->SetHitGroupType(to_native(e.type));
 
             if (e.local_root)

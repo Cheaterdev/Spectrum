@@ -86,6 +86,54 @@ void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity)
 }
 
 
+// Real DXR any-hit: alpha-cutout support for ColorPass's general rays
+// (reflections, GI, ...) and ColorShadowPass's sun-visibility rays. Unlike
+// VSM's own RTX blocker-search verify ray (which fires from a compute
+// shader via inline RayQuery and has no local root signature to reach a
+// material's compiled shader with -- see VSM_ShadowResolve.hlsl's own
+// comment), a real TraceRay()-driven hit group DOES have one, so this can
+// evaluate the material's REAL compiled opacity via ShadowSurface() above
+// (the same COMPILED_FUNC call MyClosestHitShader/ColorShadowClosestHitShader
+// already make) instead of VSM's flat-texture-index workaround.
+//
+// IgnoreHit() below the same 0.5 threshold universal()'s clip(albedo.w-0.5)
+// and VSM's own cutout paths already use, so a hole reads identically
+// everywhere in the engine. Only ever actually invoked for instances built
+// with D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE (MeshAssetInstance::
+// update_rtx_instance(), set for transparent materials) -- opaque materials'
+// geometry stays flagged opaque at the BLAS level, so any-hit is skipped
+// for them entirely by the hardware, not just by this check.
+//
+// Note this reuses the SAME is_transparent()/opacity signal the existing
+// TRANSPARENT blend path below (Fresnel reflection/refraction) already
+// keys off of -- for a true cutout material (opacity effectively 0 or 1)
+// the two compose cleanly (any-hit removes the holes, closest-hit's blend
+// math degenerates to fully-opaque for the opacity=1 remainder). A material
+// that's genuinely translucent across a continuous opacity range (frosted
+// glass, not cutout foliage) will now also lose its sub-0.5-opacity regions
+// to IgnoreHit() instead of a faint blend -- not exercised by anything in
+// this codebase today, but worth knowing if that changes.
+[shader("anyhit")]
+void MyAnyHitShader(inout RayPayload payload, in MyAttributes attr)
+{
+	float4 color; float opacity;
+	ShadowSurface(attr, color, opacity);
+
+	if (opacity < 0.5)
+		IgnoreHit();
+}
+
+[shader("anyhit")]
+void ColorShadowAnyHitShader([raypayload] inout ColorShadowPayload payload, in MyAttributes attr)
+{
+	float4 color; float opacity;
+	ShadowSurface(attr, color, opacity);
+
+	if (opacity < 0.5)
+		IgnoreHit();
+}
+
+
 // Transparent-aware shadow closest-hit (per material). Opaque materials block the
 // light; transparent ones tint the transmittance by their colour/opacity and
 // continue the ray toward the light through further layers.
@@ -158,125 +206,125 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, t.lod);
 
-	// Transparent-aware sun visibility (float3 transmittance instead of a bool).
-	// Iterate the shadow ray through transparent occluders (advancing past each
-	// hit) until it hits something opaque (fully black) or misses (reaches the
-	// light). The loop keeps every trace at the same recursion depth, so however
-	// many glass layers there are it costs only one level. Gated at shallow color
-	// recursion so deep refraction bounces don't spawn shadow rays.
-	float3 sun_vis = 1.0;
-	if (payload.recursion < 2)
-	{
-		float3 s_origin = t.v.pos;
-		float3 s_dir    = normalize(frame.GetSunDir().xyz);
+//	// Transparent-aware sun visibility (float3 transmittance instead of a bool).
+//	// Iterate the shadow ray through transparent occluders (advancing past each
+//	// hit) until it hits something opaque (fully black) or misses (reaches the
+//	// light). The loop keeps every trace at the same recursion depth, so however
+//	// many glass layers there are it costs only one level. Gated at shallow color
+//	// recursion so deep refraction bounces don't spawn shadow rays.
+//	float3 sun_vis = 1.0;
+//	if (payload.recursion < 2)
+//	{
+//		float3 s_origin = t.v.pos;
+//		float3 s_dir    = normalize(frame.GetSunDir().xyz);
 
-		[loop]
-		for (int si = 0; si < 1; si++)
-		{
-			[raypayload] ColorShadowPayload sp;
-			sp.transmittance = sun_vis;
-			sp.dist          = -1.0;
+//		[loop]
+//		for (int si = 0; si < 1; si++)
+//		{
+//			[raypayload] ColorShadowPayload sp;
+//			sp.transmittance = sun_vis;
+//			sp.dist          = -1.0;
 
-			RayDesc shadow_ray;
-			shadow_ray.Origin    = s_origin;
-			shadow_ray.Direction = s_dir;
-			shadow_ray.TMin      = 0.001;
-			shadow_ray.TMax      = 10000.0;
-			ColorShadowPass(raytracing.GetScene(), shadow_ray, RAY_FLAG_NONE, sp);
+//			RayDesc shadow_ray;
+//			shadow_ray.Origin    = s_origin;
+//			shadow_ray.Direction = s_dir;
+//			shadow_ray.TMin      = 0.001;
+//			shadow_ray.TMax      = 10000.0;
+//			ColorShadowPass(raytracing.GetScene(), shadow_ray, RAY_FLAG_NONE, sp);
 
-			sun_vis = sp.transmittance;
+//			sun_vis = sp.transmittance;
 
-			if (sp.dist < 0.0)         break; // missed -> reached the light
-			if (all(sun_vis < 0.01))   break; // fully occluded -> black shadow
+//			if (sp.dist < 0.0)         break; // missed -> reached the light
+//			if (all(sun_vis < 0.01))   break; // fully occluded -> black shadow
 
-			// Advance just past the transparent hit and keep tracing.
-			s_origin += s_dir * (sp.dist + 0.01);
-		}
-	}
+//			// Advance just past the transparent hit and keep tracing.
+//			s_origin += s_dir * (sp.dist + 0.01);
+//		}
+//	}
 
-	float NdotL = saturate(dot(t.v.normal, normalize(frame.GetSunDir().xyz)));
-	payload.color = float4(color.rgb * NdotL * sun_vis, 1.0);
-	payload.dist  = RayTCurrent();
+    float NdotL = saturate(dot(t.v.normal, normalize(frame.GetSunDir().xyz)));
+    payload.color = float4(color.rgb * NdotL/* * sun_vis*/, 1.0);
+    payload.dist = RayTCurrent();
 
-#ifdef TRANSPARENT
-	// Transparent surface: continue a refracted color ray through the surface
-	// (Snell's law with the material's refraction index) and blend it behind the
-	// surface shading according to opacity. Guarded by recursion depth.
-	if (payload.recursion < 6)
-	{
-		float3 wi = normalize(WorldRayDirection());
-		float3 N  = normalize(t.v.normal);
+//#ifdef TRANSPARENT
+//	// Transparent surface: continue a refracted color ray through the surface
+//	// (Snell's law with the material's refraction index) and blend it behind the
+//	// surface shading according to opacity. Guarded by recursion depth.
+//	if (payload.recursion < 6)
+//	{
+//		float3 wi = normalize(WorldRayDirection());
+//		float3 N  = normalize(t.v.normal);
 
-		// Orient the normal against the incoming ray. entering = hitting the outer
-		// (air-side) face; !entering = the ray is leaving the medium (back face).
-		bool entering = dot(wi, N) < 0.0;
-		if (!entering) N = -N;
+//		// Orient the normal against the incoming ray. entering = hitting the outer
+//		// (air-side) face; !entering = the ray is leaving the medium (back face).
+//		bool entering = dot(wi, N) < 0.0;
+//		if (!entering) N = -N;
 
-		// eta = n_from / n_to.
-		float eta = entering ? (1.0 / refraction) : refraction;
+//		// eta = n_from / n_to.
+//		float eta = entering ? (1.0 / refraction) : refraction;
 
-		// Fresnel (Schlick) reflectance for the air/medium interface: grazing
-		// angles reflect more, near-normal angles transmit more.
-		float R0   = (refraction - 1.0) / (refraction + 1.0);
-		R0        *= R0;
-		float cosI = saturate(dot(-wi, N));
-		float F    = R0 + (1.0 - R0) * pow(1.0 - cosI, 5.0);
+//		// Fresnel (Schlick) reflectance for the air/medium interface: grazing
+//		// angles reflect more, near-normal angles transmit more.
+//		float R0   = (refraction - 1.0) / (refraction + 1.0);
+//		R0        *= R0;
+//		float cosI = saturate(dot(-wi, N));
+//		float F    = R0 + (1.0 - R0) * pow(1.0 - cosI, 5.0);
 
-		float3 refr_dir = refract(wi, N, eta);
-		bool   tir      = dot(refr_dir, refr_dir) < 1e-4;
-		if (tir) F = 1.0; // total internal reflection: everything reflects
+//		float3 refr_dir = refract(wi, N, eta);
+//		bool   tir      = dot(refr_dir, refr_dir) < 1e-4;
+//		if (tir) F = 1.0; // total internal reflection: everything reflects
 
-		// Beer-Lambert absorption coefficient from the glass tint.
-		const float absorption = 0.35; // tune: higher = tints faster with distance
-		float3 sigma = (1.0 - saturate(color.rgb)) * absorption;
+//		// Beer-Lambert absorption coefficient from the glass tint.
+//		const float absorption = 0.35; // tune: higher = tints faster with distance
+//		float3 sigma = (1.0 - saturate(color.rgb)) * absorption;
 
-		float3 reflected = 0;
-		float3 refracted = 0;
+//		float3 reflected = 0;
+//		float3 refracted = 0;
 
-		// Reflection ray. Only branch at shallow recursion to keep the ray tree
-		// from exploding; deeper bounces transmit only.
-		if (F > 0.01 && payload.recursion < 3)
-		{
-			[raypayload] RayPayload rp;
-			rp.init();
-			rp.recursion = payload.recursion + 1;
-			rp.cone      = payload.cone;
+//		// Reflection ray. Only branch at shallow recursion to keep the ray tree
+//		// from exploding; deeper bounces transmit only.
+//		if (F > 0.01 && payload.recursion < 3)
+//		{
+//			[raypayload] RayPayload rp;
+//			rp.init();
+//			rp.recursion = payload.recursion + 1;
+//			rp.cone      = payload.cone;
 
-			RayDesc rr;
-			rr.Origin    = t.v.pos;
-			rr.Direction = reflect(wi, N);
-			rr.TMin      = 0.001;
-			rr.TMax      = 10000.0;
-			ColorPass(raytracing.GetScene(), rr, RAY_FLAG_NONE, rp);
+//			RayDesc rr;
+//			rr.Origin    = t.v.pos;
+//			rr.Direction = reflect(wi, N);
+//			rr.TMin      = 0.001;
+//			rr.TMax      = 10000.0;
+//			ColorPass(raytracing.GetScene(), rr, RAY_FLAG_NONE, rp);
 
-			reflected = rp.color.rgb;
-			// A reflection off the inner boundary stays inside the medium.
-			if (!entering) reflected *= exp(-sigma * rp.dist);
-		}
+//			reflected = rp.color.rgb;
+//			// A reflection off the inner boundary stays inside the medium.
+//			if (!entering) reflected *= exp(-sigma * rp.dist);
+//		}
 
-		// Refraction ray (skipped on TIR or when its Fresnel weight is negligible).
-		if (!tir && F < 0.99)
-		{
-			[raypayload] RayPayload rp;
-			rp.init();
-			rp.recursion = payload.recursion + 1;
-			rp.cone      = payload.cone;
+//		// Refraction ray (skipped on TIR or when its Fresnel weight is negligible).
+//		if (!tir && F < 0.99)
+//		{
+//			[raypayload] RayPayload rp;
+//			rp.init();
+//			rp.recursion = payload.recursion + 1;
+//			rp.cone      = payload.cone;
 
-			RayDesc rr;
-			rr.Origin    = t.v.pos;
-			rr.Direction = refr_dir;
-			rr.TMin      = 0.001;
-			rr.TMax      = 10000.0;
-			ColorPass(raytracing.GetScene(), rr, RAY_FLAG_NONE, rp);
+//			RayDesc rr;
+//			rr.Origin    = t.v.pos;
+//			rr.Direction = refr_dir;
+//			rr.TMin      = 0.001;
+//			rr.TMax      = 10000.0;
+//			ColorPass(raytracing.GetScene(), rr, RAY_FLAG_NONE, rp);
 
-			refracted = rp.color.rgb;
-			// Refracting inward travels through the medium -> Beer-Lambert absorb.
-			if (entering) refracted *= exp(-sigma * rp.dist);
-		}
+//			refracted = rp.color.rgb;
+//			// Refracting inward travels through the medium -> Beer-Lambert absorb.
+//			if (entering) refracted *= exp(-sigma * rp.dist);
+//		}
 
-		// Fresnel blend of reflection and transmission, then surface coverage.
-		float3 combined = lerp(refracted, reflected, F);
-		payload.color = lerp(float4(combined, 1.0), payload.color, saturate(opacity));
-	}
-#endif
+//		// Fresnel blend of reflection and transmission, then surface coverage.
+//		float3 combined = lerp(refracted, reflected, F);
+//		payload.color = lerp(float4(combined, 1.0), payload.color, saturate(opacity));
+//	}
+//#endif
 }

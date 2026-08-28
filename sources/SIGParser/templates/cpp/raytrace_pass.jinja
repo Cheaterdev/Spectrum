@@ -19,6 +19,11 @@ struct {{pso.name}}: public RaytracePass<{{pso.name}}>
 	static const constexpr std::wstring_view name = L"{{pso.name}}_GROUP";
 	static const constexpr std::wstring_view hit_name = L"{{pso.shaders['closest_hit'].options['EntryPoint'].value_atom.expr}}";
 	static const constexpr std::wstring_view miss_name = L"{{pso.shaders['miss'].options['EntryPoint'].value_atom.expr}}";
+	// Empty when this pass doesn't declare an any_hit stage -- always emitted
+	// (rather than conditionally, per pass) so RaytracePass<Desc>'s init()/
+	// init_for_material() can check Desc::any_hit_name.empty() uniformly
+	// instead of needing per-Desc SFINAE for a member that may not exist.
+	static const constexpr std::wstring_view any_hit_name = L"{% if pso.shaders['any_hit'] is defined %}{{pso.shaders['any_hit'].options['EntryPoint'].value_atom.expr}}{% endif %}";
 
 	static const constexpr bool per_material = {{pso.params['per_material'].expr or false}};
 };

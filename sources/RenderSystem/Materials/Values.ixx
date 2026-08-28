@@ -521,6 +521,12 @@ class TextureAssetNode : public MaterialNode, public AssetHolder
         virtual ~TextureAssetNode();
         void operator()(MaterialContext* context) override;
 
+        // Phase 5.19 (RTX blocker search): lets a caller that already knows
+        // this is the texture feeding some output (see
+        // universal_material::find_opacity_texture) ask MaterialContext for
+        // its already-assigned bindless index, without re-walking the graph.
+        TextureSRVParams::ptr get_texture_info() const { return texture_info; }
+
         // Raw 2D texture preview -- unlike a sampled node's live
         // computed-value preview, this asset has no "value" of its own to
         // run through the shader/preview PSO.
@@ -551,6 +557,12 @@ class SamplingNode : public MaterialNode
         SamplingNode();
         virtual ~SamplingNode();
         void operator()(MaterialContext* context) override;
+
+        // Phase 5.19 (RTX blocker search): the "texture" input, so a caller
+        // walking the graph backward from e.g. get_opacity() can follow one
+        // more hop to find the TextureAssetNode actually driving it (see
+        // universal_material::find_opacity_texture).
+        FlowGraph::input::ptr get_texture_input() const { return i_texture; }
 
              	static ptr create_default() {
 			return std::make_shared<SamplingNode>();
