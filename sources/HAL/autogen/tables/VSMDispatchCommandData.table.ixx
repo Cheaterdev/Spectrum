@@ -11,6 +11,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
+import :Autogen.Slots.MaterialInfo;
 import :Autogen.Slots.MeshInfo;
 import :Autogen.Slots.MeshInstanceInfo;
 import :Autogen.Slots.VSMPageBatch;
@@ -23,10 +24,12 @@ export namespace Table
 		Pointer<VSMPageBatch> page_batch_cb;
 		Pointer<MeshInfo> mesh_cb;
 		Pointer<MeshInstanceInfo> meshinstance_cb;
+		Pointer<MaterialInfo> material_cb;
 		DispatchMeshArguments draw_commands;
 		Pointer<VSMPageBatch>& GetPage_batch_cb() { return page_batch_cb; }
 		Pointer<MeshInfo>& GetMesh_cb() { return mesh_cb; }
 		Pointer<MeshInstanceInfo>& GetMeshinstance_cb() { return meshinstance_cb; }
+		Pointer<MaterialInfo>& GetMaterial_cb() { return material_cb; }
 		DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
@@ -35,13 +38,14 @@ export namespace Table
 			compiler.compile(page_batch_cb);
 			compiler.compile(mesh_cb);
 			compiler.compile(meshinstance_cb);
+			compiler.compile(material_cb);
 			compiler.compile(draw_commands);
 		}
 		using Compiled = VSMDispatchCommandData;
 		static const IndirectCommands CommandID = IndirectCommands::VSMDispatchCommandData;
 		template<class Processor> static void for_each(Processor& processor)
 		{
-			processor.template process<Slots::VSMPageBatch, Slots::MeshInfo, Slots::MeshInstanceInfo, DispatchMeshArguments>();
+			processor.template process<Slots::VSMPageBatch, Slots::MeshInfo, Slots::MeshInstanceInfo, Slots::MaterialInfo, DispatchMeshArguments>();
 		}
 		static std::string get_typename()
 		{
@@ -53,6 +57,7 @@ export namespace Table
 			ar& NVP(page_batch_cb);
 			ar& NVP(mesh_cb);
 			ar& NVP(meshinstance_cb);
+			ar& NVP(material_cb);
 			ar& NVP(draw_commands);
 		}
 

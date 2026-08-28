@@ -502,6 +502,35 @@ GraphicsPSO VSMDepthDraw
 	cull = Front;
 }
 
+# Phase 5.19: alpha-cutout materials need a real pixel shader (clip() on
+# opacity) in the VSM depth pass, or they'd cast a fully solid shadow
+# regardless of opacity -- plain VSMDepthDraw above has no pixel shader at
+# all ([Erase] pixel = null), by design, since the overwhelming majority of
+# materials are opaque and shouldn't pay for one. This is the per-material
+# variant: same mesh/amplification shaders (mesh_shader_vsm doesn't care
+# which depth PSO ends up bound), but `pixel` is left for
+# materials::PipelinePasses to override with the material's own compiled PS
+# entry point (UniversalMaterial.hlsl's PS -- the SAME entry point
+# depth_draw/gbuffer already use; a GBuffer-returning PS bound to a PSO
+# with no RTVs just has its color outputs discarded, exactly like DepthDraw
+# already relies on). Only ever compiled for materials whose opacity graph
+# is actually driven (see PipelinePasses' constructor) -- opaque materials
+# never get one of these at all, keeping VSMDepthDraw the common case.
+[Base]
+GraphicsPSO VSMDepthDrawMaterial
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	mesh = mesh_shader_vsm;
+
+	[EntryPoint = AS]
+	amplification = mesh_shader_vsm;
+
+	ds = D32_FLOAT;
+	cull = Front;
+}
+
 # Phase 5.8: per-(level,mesh) indirect draw entry, replacing the CPU
 # "for level { for mesh { dispatch_mesh() } }" loop with one exec_indirect
 # call. Shaped exactly like meshrender.sig's CommandData (pointer fields to
@@ -515,15 +544,29 @@ GraphicsPSO VSMDepthDraw
 # Field order matters: D3D12 requires a command signature's root-parameter
 # updates to be in strictly increasing {RootParameterIndex, offset} order.
 # VSMPageBatch is DefaultLayout::Instance0, MeshInfo is Instance1,
-# MeshInstanceInfo is Instance2 -- page_batch_cb must come first, or
-# CreateCommandSignature fails with "Root parameter {slots, offset} must be
-# increasing" (confirmed the hard way).
+# MeshInstanceInfo is Instance2, MaterialInfo is DefaultLayout::MaterialData
+# (declared AFTER Instance0-5/Raytracing in defaultlayout.sig, so its root
+# index is higher than all three Instance ones) -- material_cb must come
+# last of the pointer fields, matching meshrender.sig's CommandData's own
+# order, or CreateCommandSignature fails with "Root parameter {slots,
+# offset} must be increasing" (confirmed the hard way, twice now).
+#
+# Phase 5.19: material_cb is populated for EVERY entry, not just alpha-
+# cutout ones -- vsm_gather_dispatch.hlsl's CS (default/opaque list) sets it
+# too, even though VSMDepthDraw's shader (pixel=null) never reads it, since
+# both the default and material-bucketed lists share this one struct/one
+# command signature. Harmless for the opaque case; required for
+# VSMDepthDrawMaterial's real pixel shader (UniversalMaterial.hlsl's PS),
+# which needs MaterialInfo bound to sample its textures at all -- its
+# absence here (before this fix) surfaced as "Possible null slot
+# MaterialInfo" followed by a null-PSO crash.
 [IndirectCommand]
 struct VSMDispatchCommandData
 {
 	VSMPageBatch* page_batch_cb;
 	MeshInfo* mesh_cb;
 	MeshInstanceInfo* meshinstance_cb;
+	MaterialInfo* material_cb;
 	DispatchMeshArguments draw_commands;
 }
 
@@ -558,6 +601,40 @@ ComputePSO VSMGatherDispatch
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
+	compute = vsm_gather_dispatch;
+}
+
+# Phase 5.19: alpha-cutout material routing. A different PSO from
+# VSMGatherDispatch above (its own Instance1 binding, no collision -- only
+# one of the two is ever bound at once), same file/mesh-vs-level test, but
+# routes matching entries into one of up to 8 per-material-pipeline bucket
+# lists instead of the single default list -- mirrors meshrender.sig's
+# GatherPipeline (pip_ids[2]/commands[8]) and gather_pipeline.hlsl's
+# get_index exactly, just producing VSMDispatchCommandData instead of
+# CommandData. VSM.cpp runs this once per batch of <=8 distinct transparent
+# material pipelines actually present in the scene (same batching loop
+# shape as MeshRenderer::render_meshes), reusing 8 fixed VSM-owned bucket
+# buffers across batches -- see VSM.cpp's own comment at the call site.
+[Bind = DefaultLayout::Instance1]
+struct VSMGatherDispatchMaterialData
+{
+	StructuredBuffer<VSMLevelDispatchInfo> levels;
+	uint level_count;
+	float4x4 light_view;
+	# This batch's up to 8 distinct transparent-material pipeline ids
+	# (materials::Pipeline::get_id()), packed the same uint4[2] way
+	# GatherPipeline.pip_ids is. A slot beyond this batch's real count is
+	# set to 0xFFFFFFFF (never a real pipeline id) so it can't spuriously
+	# match.
+	uint4 material_pip_ids[2];
+	AppendStructuredBuffer<VSMDispatchCommandData> material_commands[8];
+}
+
+ComputePSO VSMGatherDispatchMaterial
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_MATERIAL]
 	compute = vsm_gather_dispatch;
 }
 
@@ -600,6 +677,14 @@ PassNode VSM_RenderPages
 	# for the actual per-frame rebuild writes.
 	[Write] Texture VSM_PageHiZ;
 	StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
+	# Phase 5.19: read here too (not just by VSM_GatherDispatch that wrote
+	# it) -- this pass's render() also dispatches VSMGatherDispatchMaterial
+	# (CS_MATERIAL) per batch of transparent-material pipelines, immediately
+	# followed by that batch's own material-PSO draw, so the whole alpha-
+	# cutout gather+draw cycle stays in one place instead of splitting across
+	# two PassNodes and racing the shared 8-bucket pool (see VSM.cpp's own
+	# comment at the call site for why it can't split).
+	StructuredBuffer<VSMLevelDispatchInfo> VSM_LevelDispatchInfo;
 }
 
 # Phase 5.17: Hi-Z pyramid rebuild, split into its own async-compute pass.

@@ -44,9 +44,19 @@ uint vsm_slot_of(uint pageLocal)
 	return GetVSMPageTableData().GetPage_table()[uint3(pageXY, (uint)GetVSMPageBatch().GetLevel())];
 }
 
+// Phase 5.19: wpos/tc are only ever CONSUMED by VSMDepthDrawMaterial's real
+// pixel shader (UniversalMaterial.hlsl's PS_VSM_DEPTH, which needs a world
+// position + texcoord to sample the material's opacity texture and clip())
+// -- VSMDepthDraw's own [Erase]d null pixel shader never reads them. Kept
+// unconditional here (not gated behind a per-PSO define) rather than
+// maintaining two mesh-shader output variants: both PSOs share this one
+// file/entry point, and the extra 20 bytes/vertex is cheap next to the
+// actual cost of this pass (real per-page geometry submission).
 struct vsm_vertex_output
 {
 	float4 pos : SV_POSITION;
+	float3 wpos : POSITION;
+	float2 tc : TEXCOORD;
 };
 
 struct vsm_prim_attrs
@@ -276,7 +286,10 @@ void VS(
 	if (gtid < m.GetVertexCount())
 	{
 		uint vertexIndex = meshInfo.GetVertex_offset_local() + meshInstanceInfo.GetUnique_indices()[m.GetVertexOffset() + gtid];
-		float4 wpos = mul(node_mat, float4(meshInstanceInfo.GetVertexes()[vertexIndex].pos, 1));
+		mesh_vertex_input v = meshInstanceInfo.GetVertexes()[vertexIndex];
+		float4 wpos = mul(node_mat, float4(v.pos, 1));
 		verts[gtid].pos = mul(page_cam.GetViewProj(), wpos);
+		verts[gtid].wpos = wpos.xyz;
+		verts[gtid].tc = v.tc;
 	}
 }

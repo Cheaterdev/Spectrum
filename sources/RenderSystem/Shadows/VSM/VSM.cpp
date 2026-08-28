@@ -569,6 +569,10 @@ VSM::VSM() : VariableContext(L"VSM")
 		// Now GPU-appended by VSM_GatherDispatch -- this pass only reads it
 		// via exec_indirect.
 		builder.need(data.VSM_DispatchCommands, FrameGraph::ResourceFlags::ComputeRead);
+		// Phase 5.19: also read here, for this pass's own per-batch
+		// VSMGatherDispatchMaterial (CS_MATERIAL) dispatches -- see this
+		// PassNode's own comment in vsm.sig.
+		builder.need(data.VSM_LevelDispatchInfo, FrameGraph::ResourceFlags::ComputeRead);
 		return true;
 	};
 
@@ -908,6 +912,138 @@ VSM::VSM() : VariableContext(L"VSM")
 			// (Was a post-mortem on assert_shared_state / SubResourcesCPU folding.
 			//  That whole tracking layer is gone as of the 2026-08 barrier
 			//  rewrite, so the hazard it described no longer exists.)
+		}
+
+		{
+			PROFILE(L"vsm_material_draw");
+			// Phase 5.19: alpha-cutout materials, batched <=8 distinct
+			// transparent-material pipelines at a time (scene->pipelines has
+			// every pipeline the scene uses, not filtered to "visible this
+			// frame" -- same tolerance MeshRenderer::render_meshes already
+			// accepts for its own identical batching loop: a pipeline with
+			// zero surviving entries this frame just costs an empty
+			// exec_indirect, not a correctness issue).
+			//
+			// Gather (VSMGatherDispatchMaterial's CS_MATERIAL) and draw happen
+			// back-to-back per batch, in this same render(), not split across
+			// VSM_GatherDispatch/VSM_RenderPages the way the default list is:
+			// both use the SAME 8 VSM-owned bucket buffers, so deferring every
+			// batch's draw until after every batch's gather would let a later
+			// batch's gather silently overwrite an earlier batch's still-
+			// unread entries.
+			if (!m_level_dispatch_info.empty() && scene)
+			{
+				// Lazily created once, same null-check-and-create shape the
+				// tile-dispatch-args members already use.
+				if (!vsm_material_commands_buffer[0].resource)
+				{
+					for (int i = 0; i < 8; i++)
+						vsm_material_commands_buffer[i] = HAL::StructuredBufferView<Table::VSMDispatchCommandData>(
+							RenderSystem::get().device(), (size_t)MaxMaterialDispatchEntries, HAL::counterType::SELF,
+							HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+				}
+
+				camera light_view_cam = make_light_view_camera(frame_light_pos);
+				float4x4 light_view = light_view_cam.get_view();
+				UINT mesh_count = (UINT)scene->command_ids[(int)MESH_TYPE::ALL].size();
+
+				// VSMDepthDrawMaterial's pixel shader is the material's real
+				// compiled PS (UniversalMaterial.hlsl) -- unlike the default
+				// VSMDepthDraw (pixel=null), it statically references
+				// GetFrameInfo() (the reflection-vector math in universal(),
+				// dead for a depth-only draw with no RTV bound, but still a
+				// real root-signature slot the shader reads). Never bound
+				// otherwise in this pass -- without this, the slot is null
+				// and the read faults. Mirrors PSSM_Cascade's own identical
+				// bind for the same underlying shader function; the camera
+				// itself doesn't matter for VSM's depth-only purposes (its
+				// only live use here is that dead reflection vector), so the
+				// main view camera (already available via CameraInfo) is
+				// fine -- there's no single "the VSM camera" the way PSSM
+				// has one, since VSM pages each carry their own.
+				{
+					Slots::FrameInfo frameInfo;
+					frameInfo.GetBrdf()   = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+					frameInfo.GetCamera() = context.graph->get_context<CameraInfo>().cam->camera_cb.current;
+					graphics.set(frameInfo);
+				}
+
+				auto it  = scene->pipelines.begin();
+				auto end = scene->pipelines.end();
+				while (it != end && mesh_count != 0)
+				{
+					materials::Pipeline::ptr batch[8] = {};
+					int total = 0;
+					while (total < 8 && it != end)
+					{
+						if (it->second->is_transparent())
+							batch[total++] = it->second;
+						++it;
+					}
+					if (total == 0)
+						continue;
+
+					for (int i = 0; i < total; i++)
+						compute.clear_counter(vsm_material_commands_buffer[i]);
+
+					{
+						Slots::VSMGatherDispatchMaterialData gatherData;
+						gatherData.GetLevels()      = data.VSM_LevelDispatchInfo->structuredBuffer;
+						gatherData.GetLevel_count() = (uint)m_level_dispatch_info.size();
+						gatherData.GetLight_view()  = light_view;
+
+						UINT* ids = (UINT*)gatherData.GetMaterial_pip_ids();
+						for (int i = 0; i < 8; i++)
+							ids[i] = (i < total) ? (UINT)batch[i]->get_id() : ~0u;
+
+						for (int i = 0; i < 8; i++)
+							gatherData.GetMaterial_commands()[i] = vsm_material_commands_buffer[i];
+
+						compute.set(gatherData);
+					}
+
+					compute.set(scene->compiledGather[(int)MESH_TYPE::ALL]);
+					compute.set(scene->compiledScene);
+					compute.set_pipeline<PSOS::VSMGatherDispatchMaterial>();
+					compute.dispatch(ivec2((int)mesh_count, (int)m_level_dispatch_info.size()), ivec2(64, 1));
+
+					for (int i = 0; i < total; i++)
+					{
+						auto pso = batch[i]->get_vsm_depth_draw();
+						if (!pso)
+							continue;
+
+						// High-level guard: GetPSO()'s own internal ASSERT
+						// (PSO_defines.h) fires on a map-lookup miss, but
+						// doesn't stop this code from going on to hand a
+						// null PSOState::ptr to set_pipeline() -> a null
+						// SetPipelineState1 crashes with an opaque D3D12
+						// error (and an access violation soon after) instead
+						// of a diagnosable engine-level failure. Assert here
+						// too and skip this pipeline's draw rather than
+						// crash the whole frame over one bad material.
+						auto real_pso = pso->GetPSO();
+						ASSERT(real_pso);
+						if (!real_pso)
+							continue;
+
+						graphics.set_pipeline(real_pso);
+						{
+							Slots::VSMPageTableData pageTableData;
+							pageTableData.GetPage_table()   = data.VSM_PageTable->texture2DArray;
+							pageTableData.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
+							graphics.set(pageTableData);
+						}
+						{
+							Slots::VSMPageHiZ pageHiZ;
+							pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
+							graphics.set(pageHiZ);
+						}
+						graphics.set(scene->compiledScene);
+						graphics.exec_indirect(vsm_material_commands_buffer[i], (UINT)MaxMaterialDispatchEntries);
+					}
+				}
+			}
 		}
 	};
 

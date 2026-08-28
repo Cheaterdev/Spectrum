@@ -171,6 +171,16 @@ private:
 	HAL::StructuredBufferView<DispatchArguments> confirmed_lit_tiles_dispatch;
 	HAL::StructuredBufferView<DispatchArguments> blur_tiles_dispatch;
 
+	// Phase 5.19: alpha-cutout material routing. Fixed pool of 8 VSM-owned
+	// bucket buffers, lazily created once (same null-check-and-create shape
+	// as the tile-dispatch-args members above) and reused across however
+	// many batches of <=8 distinct transparent-material pipelines the scene
+	// actually has this frame -- mirrors MeshRenderer's own commands_buffer[8]
+	// pool. Sized much smaller than MaxDispatchEntries: scoped to whichever
+	// meshes belong to ONE material at a time, not the whole scene.
+	static constexpr int MaxMaterialDispatchEntries = 512;
+	HAL::StructuredBufferView<Table::VSMDispatchCommandData> vsm_material_commands_buffer[8];
+
 	VSMPageTable page_table;
 	VSMInvalidationTracker tracker;
 

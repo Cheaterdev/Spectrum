@@ -24,6 +24,19 @@ export namespace materials
 
 		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) = 0;
 
+		// Whether this pipeline's material graph actually drives opacity (see
+		// universal_material::is_transparent()). VSM's alpha-cutout depth pass
+		// only needs to know this per pipeline, not the material graph itself
+		// -- default false so non-material pipelines (PipelineSimple, used for
+		// UI/preview-style draws) don't need to care.
+		virtual bool is_transparent() const { return false; }
+
+		// Non-null only for a PipelinePasses whose is_transparent() is true
+		// (see PipelinePasses' constructor) -- a virtual accessor here, not a
+		// cast at the VSM.cpp call site, since only pipelines that already
+		// pass is_transparent() ever get asked for this.
+		virtual PSOS::VSMDepthDrawMaterial::ptr get_vsm_depth_draw() const { return nullptr; }
+
         uint get_id();
 	private:
 

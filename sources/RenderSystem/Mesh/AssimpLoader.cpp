@@ -4,6 +4,7 @@
 #define AI_MATKEY_COLOR_DIFFUSE "$clr.diffuse", 0, 0
 #define AI_MATKEY_SHININESS     "$mat.shininess", 0, 0
 #define AI_MATKEY_REFLECTIVITY  "$mat.reflectivity", 0, 0
+#define AI_MATKEY_OPACITY       "$mat.opacity", 0, 0
 // material.h defines aiGetMaterialFloat as static inline; static functions from
 // exported headers don't cross the module boundary into this TU, so include it
 // explicitly in the global module fragment to keep the definition reachable.
@@ -412,6 +413,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			check_assimp_texture(native_material, aiTextureType_DIFFUSE_ROUGHNESS);
 			check_assimp_texture(native_material, aiTextureType_EMISSION_COLOR);
 			check_assimp_texture(native_material, aiTextureType_EMISSIVE);
+			check_assimp_texture(native_material, aiTextureType_OPACITY);
 
 		}
 
@@ -616,6 +618,29 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 {
                     auto node = make_sampling_node(graph.get(), get_texture(resolve_texture_path(directory, path.C_Str())), true);
                     node->get_output(0)->link(graph->get_glow());
+                }
+
+                // Standalone grayscale map (R channel), same convention as the
+                // roughness/metalness standalone case above.
+                if (AI_SUCCESS == native_material->GetTexture(aiTextureType_OPACITY, 0, &path))
+                {
+                    auto node = make_sampling_node(graph.get(), get_texture(resolve_texture_path(directory, path.C_Str())));
+                    node->get_output(1)->link(graph->get_opacity());
+                }
+                else
+                {
+                    float opacity;
+
+                    // Only wire a constant when it's actually < 1: linking anything
+                    // into get_opacity() flips the material to transparent (see
+                    // universal_material's has_input() check), so a virgin 1.0
+                    // (fully opaque) material must stay unlinked.
+                    if (AI_SUCCESS == native_material->Get(AI_MATKEY_OPACITY, opacity) && opacity < 1.0f)
+                    {
+                        auto value_node = std::make_shared<ScalarNode>(opacity);
+                        graph->register_node(value_node);
+                        value_node->get_output(0)->link(graph->get_opacity());
+                    }
                 }
 
                 //  m->shader = HAL::pixel_shader::get_resource({ "material.hlsl", "PS", 0, {} });

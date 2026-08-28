@@ -92,6 +92,30 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		}
 	});
 
+	transparent = context->transparent;
+
+	// Only for alpha-cutout materials -- see vsm_depth_draw's own comment.
+	// VSM has no tessellation support (mesh_shader_vsm.hlsl is mesh-shader-
+	// only, no HS/DS stage), so unlike depth_draw/gbuffer above this never
+	// wires a tess variant even when `tess` is non-empty -- a tessellated
+	// cutout material simply keeps its VSM shadow un-displaced, same
+	// limitation VSM already has for tessellated opaque materials via the
+	// plain VSMDepthDraw PSO.
+	if (transparent)
+	{
+		vsm_depth_draw = std::make_shared<PSOS::VSMDepthDrawMaterial>(RenderSystem::get().device(), [&](SimpleGraphicsPSO& target, PSOS::VSMDepthDrawMaterial::Keys&)
+		{
+			target.name += std::to_string(id);
+			// PS_VSM_DEPTH, not PS -- mesh_shader_vsm.hlsl's vertex output is
+			// much smaller than mesh_shader.hlsl's (no normal/tangent/
+			// binormal/motion data), so this can't reuse the same PS entry
+			// depth_draw/gbuffer above do. See PS_VSM_DEPTH's own comment in
+			// UniversalMaterial.hlsl.
+			target.pixel = { pixel, "PS_VSM_DEPTH", HAL::ShaderOptions::None, context->get_pixel_result().macros, true };
+			target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
+		});
+	}
+
 	raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , HAL::ShaderOptions::None, context->hit_shader.macros, true });
 }
 
@@ -332,6 +356,7 @@ void materials::universal_material::compile()
 	auto elem = info_handle.map();
 	elem[0].pipeline_id = pipeline->get_id();
 	elem[0].material_cb = compiled_material_info.compiled().get_offset();
+	elem[0].is_transparent = transparent ? 1 : 0;
 	info_handle.write(0, elem);
 
 	need_update_compiled = false;

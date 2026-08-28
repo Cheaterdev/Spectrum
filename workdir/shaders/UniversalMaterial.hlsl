@@ -68,7 +68,7 @@ void spec_to_metallic(float4 albedo, float3 specular,out float4 mat_albedo, out 
 
 GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness, float4 bump, float4 glow)
 { 
- //  clip(albedo.w-0.5);
+   clip(albedo.w-0.5);
    // clip(albedo.a - 0.2);  
     bump.xyz = normalize(bump.xyz * 2.0 - 1.0);
     //float3 bump = xy.x > 0 ? normalize(tex_normal.Sample(point_sampler, i.tc).xyz * 2.0 - 1.0) : float3(0, 0, 1);
@@ -104,12 +104,45 @@ GBuffer PS(vertex_output i)
 
     COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, 0);
 
-
+color.w=opacity;
 	return universal(i, color, metallic, roughness, normal, glow);
 }
 
 #endif
-   
+
+#ifdef BUILD_FUNC_PS_VSM_DEPTH
+
+// VSM's alpha-cutout depth pass (VSMDepthDrawMaterial). mesh_shader_vsm.hlsl
+// outputs a much smaller vertex than mesh_shader.hlsl's full vertex_output
+// (no normal/tangent/binormal/motion-vector data at all -- irrelevant for a
+// depth-only draw with no RTVs bound), so this can't reuse universal()/PS
+// above: just enough to sample the material's opacity and clip(), nothing
+// else. No GBuffer write -- there is nowhere to write one to.
+struct vsm_depth_vertex_output
+{
+	float4 pos : SV_POSITION;
+	float3 wpos : POSITION;
+	float2 tc : TEXCOORD;
+};
+
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, float lod);
+void PS_VSM_DEPTH(vsm_depth_vertex_output i)
+{
+	float4 color = 1;
+	float metallic = 0.001;
+	float roughness = 1;
+	float4 normal = 0;
+	float4 glow = 0;
+	float opacity = 1;
+	float refraction = 1;
+
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, 0);
+
+	clip(opacity - 0.5);
+}
+
+#endif
+
 #ifdef BUILD_FUNC_PS_VOXEL
 
 #include "autogen/Voxelization.h"
@@ -122,7 +155,7 @@ static const RWTexture3D<uint> visibility = GetVoxelization().GetVisibility();
 
 void universal_voxel(vertex_output i, float4 albedo, float metallic, float roughness, float4 bump, float4 glow)
 {   
- //   clip(albedo.w - 0.5);
+    clip(albedo.w - 0.5);
   
     uint3 index = floor(voxel_info.GetVoxels_per_tile().xyz * voxel_info.GetVoxel_tiles_count().xyz*((i.wpos.xyz - voxel_info.GetMin().xyz) / voxel_info.GetSize().xyz));
 
@@ -147,6 +180,7 @@ void PS_VOXEL(vertex_output i)
     float refraction = 1;
 
 	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, 2);
+    color.w = opacity;
 
 	universal_voxel(i, color, metallic, roughness, normal, glow);
 } 

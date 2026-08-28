@@ -76,6 +76,11 @@ export namespace materials
 		PSOS::GBufferDraw::ptr gbuffer;
 		PSOS::Voxelization::ptr voxelization;
 		PSOS::DepthDraw::ptr depth_draw;
+		// Only compiled when transparent is true (see the constructor) --
+		// opaque materials (the vast majority) never pay for this PSO at all
+		// and keep using VSM's single shared VSMDepthDraw (no pixel shader).
+		PSOS::VSMDepthDrawMaterial::ptr vsm_depth_draw;
+		bool transparent = false;
 	public:
 		using ptr = std::shared_ptr<PipelinePasses>;
 		PipelinePasses() = default;
@@ -84,6 +89,10 @@ export namespace materials
 		HAL::library_shader::ptr  raytrace_lib;
 
 		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) override;
+		bool is_transparent() const override { return transparent; }
+		// nullptr for opaque pipelines -- callers (VSM.cpp) must check
+		// is_transparent() first, or just null-check this directly.
+		PSOS::VSMDepthDrawMaterial::ptr get_vsm_depth_draw() const override { return vsm_depth_draw; }
 	private:
 
 		SERIALIZE()
@@ -93,6 +102,8 @@ export namespace materials
 			ar& NVP(gbuffer);
 			ar& NVP(depth_draw);
 			ar& NVP(voxelization);
+			ar& NVP(vsm_depth_draw);
+			ar& NVP(transparent);
 
 		}
 	};

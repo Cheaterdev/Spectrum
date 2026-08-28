@@ -96,6 +96,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayPageGrid>(device, pso[PSO::VSMDebugOverlayPageGrid]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayRtxReference>(device, pso[PSO::VSMDebugOverlayRtxReference]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMGatherDispatch>(device, pso[PSO::VSMGatherDispatch]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMGatherDispatchMaterial>(device, pso[PSO::VSMGatherDispatchMaterial]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 
 
@@ -135,6 +136,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDebug>(device, pso[PSO::VoxelDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(device, pso[PSO::DenoiserDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthDraw>(device, pso[PSO::VSMDepthDraw]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthDrawMaterial>(device, pso[PSO::VSMDepthDrawMaterial]));
 
 	if (device.get_properties().work_graph)
 	{

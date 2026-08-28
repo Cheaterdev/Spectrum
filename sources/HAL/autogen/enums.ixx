@@ -89,6 +89,7 @@ export
 		VSMDebugOverlayPageGrid,
 		VSMDebugOverlayRtxReference,
 		VSMGatherDispatch,
+		VSMGatherDispatchMaterial,
 		VSMDepthAnalysis,
 		FontRender,
 		MaterialPreview3D,
@@ -127,6 +128,7 @@ export
 		VoxelDebug,
 		DenoiserDownsample,
 		VSMDepthDraw,
+		VSMDepthDrawMaterial,
 		WorkGR,
 		WorkGR_ClassifyPixels_Node,
 		WorkGR_Shadows_Node
@@ -271,6 +273,7 @@ export
 		VSMDispatchCommandData = "VSMDispatchCommandData"_crc32,
 		VSMLevelDispatchInfo = "VSMLevelDispatchInfo"_crc32,
 		VSMGatherDispatchData = "VSMGatherDispatchData"_crc32,
+		VSMGatherDispatchMaterialData = "VSMGatherDispatchMaterialData"_crc32,
 		VSMDepthAnalysis = "VSMDepthAnalysis"_crc32,
 		WorkGraphTest = "WorkGraphTest"_crc32,
 		GraphInput = "GraphInput"_crc32,

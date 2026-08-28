@@ -19,14 +19,17 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::MaterialCommandData;
 		uint material_cb;
 		uint pipeline_id;
+		uint is_transparent;
 		uint& GetMaterial_cb() { return material_cb; }
 		uint& GetPipeline_id() { return pipeline_id; }
+		uint& GetIs_transparent() { return is_transparent; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(material_cb);
 			compiler.compile(pipeline_id);
+			compiler.compile(is_transparent);
 		}
 		using Compiled = MaterialCommandData;
 
@@ -39,6 +42,7 @@ export namespace Table
 		{
 			ar& NVP(material_cb);
 			ar& NVP(pipeline_id);
+			ar& NVP(is_transparent);
 		}
 
 	};

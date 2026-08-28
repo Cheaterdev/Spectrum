@@ -130,6 +130,13 @@ struct MaterialCommandData
 {
 	uint material_cb;
 	uint pipeline_id;
+	# Set from universal_material::is_transparent() (the material graph's
+	# opacity output is actually driven) at the same site material_cb/
+	# pipeline_id are populated. Lets a GPU-side gather pass (e.g. VSM's
+	# vsm_gather_dispatch.hlsl) route a mesh differently -- alpha-cutout
+	# materials need a depth pass with a real pixel shader (clip()), opaque
+	# ones don't -- without decoding the material graph itself.
+	uint is_transparent;
 }
 
 [Bind = DefaultLayout::Instance0]

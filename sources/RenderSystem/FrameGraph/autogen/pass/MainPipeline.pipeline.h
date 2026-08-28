@@ -343,9 +343,11 @@ public:
 	};
 	static inline const FrameGraph::PassRef VSM_LevelDispatchInfo_c0_pass_refs[] = {
 		{ PassID::VSM_GatherDispatch, 0 },
+		{ PassID::VSM_RenderPages, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState VSM_LevelDispatchInfo_c0_states[] = {
 		{ true, { VSM_LevelDispatchInfo_c0_pass_refs + 0, 1 } },
+		{ false, { VSM_LevelDispatchInfo_c0_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef VSM_DispatchCommands_c0_pass_refs[] = {
 		{ PassID::VSM_GatherDispatch, 0 },

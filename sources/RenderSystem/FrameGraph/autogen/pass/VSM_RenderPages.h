@@ -31,6 +31,8 @@ public:
 
 		Handlers::StructuredBuffer<Table::VSMDispatchCommandData> VSM_DispatchCommands = ResourceID::VSM_DispatchCommands;
 
+		Handlers::StructuredBuffer<Table::VSMLevelDispatchInfo> VSM_LevelDispatchInfo = ResourceID::VSM_LevelDispatchInfo;
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
@@ -40,6 +42,7 @@ public:
 			{ ResourceID::VSM_PageCameras, true },
 			{ ResourceID::VSM_PageHiZ, true },
 			{ ResourceID::VSM_DispatchCommands, false },
+			{ ResourceID::VSM_LevelDispatchInfo, false },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
