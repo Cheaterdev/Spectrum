@@ -16,6 +16,7 @@ struct VSMConstants
 	int rtx_dual_blur; // int
 	int debug_rtx_reference; // int
 	int hiz_blocker_classify; // int
+	int hemisphere_cull_blocker; // int
 	int debug_hiz_classify; // int
 	int debug_page_grid; // int
 	float4x4 light_view; // float4x4
@@ -28,6 +29,7 @@ struct VSMConstants
 	int GetRtx_dual_blur() { return rtx_dual_blur; }
 	int GetDebug_rtx_reference() { return debug_rtx_reference; }
 	int GetHiz_blocker_classify() { return hiz_blocker_classify; }
+	int GetHemisphere_cull_blocker() { return hemisphere_cull_blocker; }
 	int GetDebug_hiz_classify() { return debug_hiz_classify; }
 	int GetDebug_page_grid() { return debug_page_grid; }
 	float4x4 GetLight_view() { return light_view; }

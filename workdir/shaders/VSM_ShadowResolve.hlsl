@@ -257,6 +257,14 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	float4 vsm_depth_range_p1 = mul(page_cam.GetInvProj(), float4(0, 0, 1, 1));
 	float depth_range = abs(vsm_depth_range_p1.z / vsm_depth_range_p1.w - vsm_depth_range_p0.z / vsm_depth_range_p0.w);
 
+	// See vsm_depth_bias_ndc's own comment (VSM_impl.hlsl) -- same formula
+	// VSM_impl_search.hlsl's vsm_classify_blocker already applied to its own
+	// independently-derived pos_l.z, kept consistent here since this stage
+	// re-derives pos_l from the same wpos/level/slot rather than receiving
+	// stage 2's already-biased one directly.
+	float3 bias_light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
+	pos_l.z = saturate(pos_l.z - vsm_depth_bias_ndc(normal, bias_light_dir, texel_world_size, depth_range));
+
 	float noise_angle = lighting.GetBlue_noise().Load(int3(pixel % 128, 0)).x * 6.28318530718;
 
 	// Stage 2's packed result -- same sentinel scheme vsm_search_blocker

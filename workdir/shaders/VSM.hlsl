@@ -58,7 +58,8 @@ float4 combine_result(float2 tc, uint2 pixel)
 	// intermediate scalar this pass used to sample -- so there's only ever
 	// one shadow-lookup path left here, the always-available fixed 3x3
 	// hardware-PCF fallback.
-	float shadow = get_shadow_vsm_simple(constants, GetVSMLighting(), info.pos);
+	float3 bias_light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
+	float shadow = get_shadow_vsm_simple(constants, GetVSMLighting(), info.pos, info.normal, bias_light_dir);
 
 	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_page_grid): flat
 	// per-level color, checkerboard-darkened by page position within that

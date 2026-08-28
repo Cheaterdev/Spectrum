@@ -34,6 +34,18 @@ struct VSMBlockerClassifyResult
 	float texel_world_size;
 	float depth_range;
 	float blocker_search_radius_texels;
+	// Light-camera world-space basis (xaxis/yaxis = the tangent plane
+	// pos_ls.x/.y are measured along; zaxis = page_cam.GetDirection(), the
+	// light's own forward/into-scene axis) -- see vsm_search_blocker's own
+	// hemisphere-cull comment for why/how these get used. Computed once
+	// here (from page_cam.GetDirection() + the exact same up-vector
+	// VSM.cpp's make_light_view_camera() uses, replicating look_at()'s own
+	// xaxis/yaxis construction bit-for-bit) rather than trying to read them
+	// back out of c.GetLight_view()'s matrix, which would need this file to
+	// commit to that matrix's row/column storage convention.
+	float3 xaxis;
+	float3 yaxis;
+	float3 zaxis;
 };
 
 // Callers must NOT early-return before calling this for any reason (sky
@@ -41,6 +53,13 @@ struct VSMBlockerClassifyResult
 // to do quad-shared work (vsm_search_blocker's search loop) -- see that
 // function's own comment. This function itself does no quad ops.
 VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighting, float3 wpos,
+                                               // Receiver's own surface normal and the (toward-
+                                               // light) sun direction -- both already computed by
+                                               // every caller for its own geometric_dark check
+                                               // below, threaded through here (rather than
+                                               // re-derived) purely for vsm_depth_bias_ndc's bias
+                                               // (see its own comment) once pos_l is known.
+                                               float3 normal, float3 light_dir,
                                                // True when the receiver's own surface normal
                                                // faces away from the light (NdotL <= 0) --
                                                // combine_result's final NL*shadow multiply
@@ -74,12 +93,27 @@ VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighti
 	Camera page_cam = lighting.GetPage_cameras()[slot];
 	float4 pos_l = mul(page_cam.GetViewProj(), float4(wpos, 1));
 
+	// See VSMBlockerClassifyResult's own comment. up_hint is the exact
+	// literal VSM.cpp's make_light_view_camera() uses, not a generic axis
+	// guess -- must match so xaxis/yaxis reconstruct the SAME basis
+	// c.GetLight_view() was actually built from.
+	float3 zaxis = page_cam.GetDirection().xyz;
+	float3 up_hint = float3(0.01, 1, 0.023);
+	float3 xaxis = normalize(cross(up_hint, zaxis));
+	float3 yaxis = cross(zaxis, xaxis);
+
 	static const float VSM_BLOCKER_SEARCH_RADIUS_WORLD = 3.0;
 	float texel_world_size = c.GetLevel_info(level).z / c.GetPage_size();
 
 	float4 vsm_depth_range_p0 = mul(page_cam.GetInvProj(), float4(0, 0, 0, 1));
 	float4 vsm_depth_range_p1 = mul(page_cam.GetInvProj(), float4(0, 0, 1, 1));
 	float depth_range = abs(vsm_depth_range_p1.z / vsm_depth_range_p1.w - vsm_depth_range_p0.z / vsm_depth_range_p0.w);
+
+	// See vsm_depth_bias_ndc's own comment (VSM_impl.hlsl) -- applied here
+	// (not just in the final PCF resolve) so the blocker search's own
+	// `sampled > pos_l.z` test and the world_delta it hands to stage 3 are
+	// already consistent with the biased receiver, not the raw one.
+	pos_l.z = saturate(pos_l.z - vsm_depth_bias_ndc(normal, light_dir, texel_world_size, depth_range));
 
 	float blocker_search_radius_texels = clamp(
 		VSM_BLOCKER_SEARCH_RADIUS_WORLD / texel_world_size, 2.0, c.GetPage_size() * 4.0);
@@ -232,6 +266,9 @@ VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighti
 	result.texel_world_size = texel_world_size;
 	result.depth_range = depth_range;
 	result.blocker_search_radius_texels = blocker_search_radius_texels;
+	result.xaxis = xaxis;
+	result.yaxis = yaxis;
+	result.zaxis = zaxis;
 	return result;
 }
 
@@ -257,9 +294,9 @@ VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighti
 // `geometric_dark` (the caller's own NdotL<=0 test -- see its own parameter
 // comment below) must be passed IN rather than used by the caller to skip
 // calling this function outright.
-uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint2 pixel, bool geometric_dark)
+uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint2 pixel, float3 normal, float3 light_dir, bool geometric_dark)
 {
-	VSMBlockerClassifyResult cls = vsm_classify_blocker(c, lighting, wpos, geometric_dark);
+	VSMBlockerClassifyResult cls = vsm_classify_blocker(c, lighting, wpos, normal, light_dir, geometric_dark);
 	bool  valid                        = cls.valid;
 	int   level                        = cls.level;
 	uint  slot                         = cls.slot;
@@ -271,6 +308,11 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	bool  confident_lit                = cls.confident_lit;
 	bool  confident_dark               = cls.confident_dark;
 	bool  via_coarser                  = cls.via_coarser;
+	float3 xaxis                       = cls.xaxis;
+	float3 yaxis                       = cls.yaxis;
+	float3 zaxis                       = cls.zaxis;
+
+	bool hemisphere_cull = c.GetHemisphere_cull_blocker() != 0;
 
 	int  search_mode = c.GetQuad_blocker_search();
 	bool quad_search = search_mode == 1;
@@ -297,15 +339,35 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 		if (!valid || confident_lit || confident_dark)
 			continue;
 		int bi = bi_start + bii * bi_stride;
+		float2 rotated_offset = vsm_rotate(VSM_POISSON_DISK[bi], search_noise_angle);
 		uint tap_slot;
 		float2 tc;
 		if (!vsm_tap(c, lighting, level, pos_ls, texel_world_size,
-		             vsm_rotate(VSM_POISSON_DISK[bi], search_noise_angle), blocker_search_radius_texels,
+		             rotated_offset, blocker_search_radius_texels,
 		             tap_slot, tc))
 			continue;
 		float sampled = lighting.GetVsm_atlas().SampleLevel(pointClampSampler, float3(tc, (float)tap_slot), 0);
         if (sampled > pos_l.z)
         {
+            // Hemisphere cull: reconstruct this candidate's world-space
+            // offset from the receiver (same tangent_offset formula
+            // vsm_tap uses internally for its light-space XY, the sampled
+            // depth converted to a world-space distance along zaxis for
+            // the third) and discard it if it sits behind the receiver's
+            // own tangent plane -- see use_vsm_hemisphere_cull's own
+            // comment (VSM.ixx) for the motivating case. A small negative
+            // epsilon (not a strict >=0) tolerates the receiver's own
+            // surface reappearing at glancing angles without over-culling.
+            if (hemisphere_cull)
+            {
+                float2 tangent_offset = rotated_offset * blocker_search_radius_texels * texel_world_size * float2(1, -1);
+                float3 blocker_delta = xaxis * tangent_offset.x + yaxis * tangent_offset.y
+                                      - zaxis * ((sampled - pos_l.z) * depth_range);
+                static const float VSM_HEMISPHERE_CULL_EPS_WORLD = 0.02;
+                if (dot(blocker_delta, normal) < -VSM_HEMISPHERE_CULL_EPS_WORLD)
+                    continue;
+            }
+
             bool is_new_max = sampled > max_blocker_z || blocker_count == 0;
             bool is_near_tie = !is_new_max
 				&& (max_blocker_z - sampled) * depth_range < VSM_RTX_TAP_TIE_EPS_WORLD

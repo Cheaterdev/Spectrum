@@ -7,7 +7,7 @@
 // (VSM_ShadowResolve.hlsl) does the real per-pixel work AND the PBR combine
 // itself, writing ResultTexture directly. See that file's own PassNode
 // comment in vsm.sig.
-float get_shadow_vsm_simple(VSMConstants c, VSMLighting lighting, float3 wpos)
+float get_shadow_vsm_simple(VSMConstants c, VSMLighting lighting, float3 wpos, float3 normal, float3 light_dir)
 {
 	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
 	int level = get_vsm_level(c, pos_ls);
@@ -27,6 +27,16 @@ float get_shadow_vsm_simple(VSMConstants c, VSMLighting lighting, float3 wpos)
 	if (pos_l.z < 0 || pos_l.z > 1 || any(light_tc < 0) || any(light_tc > 1))
 		return 1.0;
 
+	// See vsm_depth_bias_ndc's own comment (VSM_impl.hlsl) -- closes light
+	// leaks near contact shadows/grazing geometry. Replaces the old flat
+	// `pos_l.z * 0.9999` (a pure floating-point-exactness epsilon, not a
+	// real geometric bias).
+	float texel_world_size = c.GetLevel_info(level).z / c.GetPage_size();
+	float4 vsm_depth_range_p0 = mul(page_cam.GetInvProj(), float4(0, 0, 0, 1));
+	float4 vsm_depth_range_p1 = mul(page_cam.GetInvProj(), float4(0, 0, 1, 1));
+	float depth_range = abs(vsm_depth_range_p1.z / vsm_depth_range_p1.w - vsm_depth_range_p0.z / vsm_depth_range_p0.w);
+	float biased_z = saturate(pos_l.z - vsm_depth_bias_ndc(normal, light_dir, texel_world_size, depth_range));
+
 	// Still averaged over a 3x3 grid of manually offset taps (Texture2DArray
 	// has no SampleCmp overload taking a raw texel offset the way SampleLevel
 	// does, so int2 offset here comes from re-deriving the UV per tap rather
@@ -42,7 +52,7 @@ float get_shadow_vsm_simple(VSMConstants c, VSMLighting lighting, float3 wpos)
 		for (int ox = -1; ox <= 1; ox++)
 		{
 			float2 tc = light_tc + float2(ox, oy) * texel_size;
-			shadow += lighting.GetVsm_atlas().SampleCmpLevelZero(vsmShadowSampler, float3(tc, (float)slot), pos_l.z * 0.9999);
+			shadow += lighting.GetVsm_atlas().SampleCmpLevelZero(vsmShadowSampler, float3(tc, (float)slot), biased_z);
 		}
 	}
 	return shadow / 9.0;

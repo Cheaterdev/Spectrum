@@ -71,12 +71,15 @@ void CS_BLOCKER_CLASSIFY(
 	float3 wpos = has_geometry ? depth_to_wpos(raw_z, tc, camera.GetInvViewProj()) : camera.GetPosition();
 
 	// Same geometric self-shadow early-out as VSM_BlockerSearch.hlsl's own
-	// CS_BLOCKER_SEARCH -- see its comment for why.
+	// CS_BLOCKER_SEARCH -- see its comment for why. normal/light_dir also
+	// feed vsm_classify_blocker's own depth bias (vsm_depth_bias_ndc), so
+	// hoisted out of this block rather than scoped to it.
 	bool geometric_dark = false;
+	float3 normal = 0;
+	float3 light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
 	if (has_geometry)
 	{
-		float3 normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
-		float3 light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
+		normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
 		geometric_dark = dot(normal, light_dir) <= 0;
 	}
 
@@ -86,7 +89,7 @@ void CS_BLOCKER_CLASSIFY(
 	uint verdict = 0;
 	if (has_geometry)
 	{
-		VSMBlockerClassifyResult cls = vsm_classify_blocker(constants, GetVSMLighting(), wpos, geometric_dark);
+		VSMBlockerClassifyResult cls = vsm_classify_blocker(constants, GetVSMLighting(), wpos, normal, light_dir, geometric_dark);
 		if (!cls.valid)
 			verdict = 0; // matches vsm_search_blocker's own !valid -> -1.0 fallback
 		else if (cls.confident_lit)

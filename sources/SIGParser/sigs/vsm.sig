@@ -49,6 +49,17 @@ struct VSMConstants
 	# vsm_search_blocker's own comment). Only read by VSM_BlockerSearch's
 	# own dispatch; VSM_Combine never consults it.
 	int hiz_blocker_classify;
+	# Runtime A/B switch: nonzero = vsm_search_blocker discards a candidate
+	# tap whose reconstructed world position falls behind the receiver's own
+	# tangent plane (point+normal hemisphere) before counting it as a
+	# blocker. Fixes a near-two-sided-floor-at-grazing-sun case: a nearly
+	# coplanar/self-referential "blocker" the shadow map records can pass
+	# the plain sampled>pos_l.z depth test while being geometrically behind
+	# the receiving surface, not a real occluder for it at all. Only read by
+	# VSM_BlockerSearch's own dispatch (vsm_search_blocker's tap loop);
+	# vsm_classify_blocker's Hi-Z classification and VSM_Combine never
+	# consult it.
+	int hemisphere_cull_blocker;
 	# Debug view: when nonzero, get_shadow_vsm (VSM_Combine's resolve step)
 	# short-circuits into a flat color wherever vsm_search_blocker's Hi-Z
 	# classification fired confidently instead of shading normally --

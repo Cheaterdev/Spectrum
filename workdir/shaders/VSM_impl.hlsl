@@ -160,6 +160,40 @@ bool vsm_tap(VSMConstants c, VSMLighting lighting, int level, float2 pos_ls,
 	return vsm_resolve_tap(c, lighting, level, tap_pos_ls, tap_slot, tap_uv);
 }
 
+// Slope-scaled receiver bias, shared by the blocker search/classify
+// (VSM_impl_search.hlsl) and the PCF blur / non-penumbra fallback
+// (VSM_ShadowResolve.hlsl, VSM_impl_resolve.hlsl). Returns a POSITIVE NDC-Z
+// amount to SUBTRACT from a receiver's pos_l.z before any shadow compare.
+//
+// VSM page cameras are reversed-Z (camera::set_projection_params's
+// orthographic() swaps zn/zf before building the matrix -- confirmed
+// against Camera.cpp/matrix4_functions.h): pos_l.z == 1 is the near plane,
+// closest to the light; 0 is far from it. Every blocker test in this file
+// (e.g. vsm_search_blocker's `sampled > pos_l.z`) fires when the recorded
+// depth reads CLOSER to light than the receiver -- so subtracting from the
+// receiver's own pos_l.z, i.e. biasing it AWAY from the light, is what
+// makes a marginal/grazing comparison register as shadowed MORE readily.
+// That is the fix for light leaks near geometry (a thin contact shadow, or
+// any grazing-angle surface, not quite reaching all the way to its true
+// occluder): a single shadow-map texel's real-world footprint spans a
+// depth range that grows with 1/NdotL, and without this headroom the
+// receiver's own exact point can read as fractionally closer to light than
+// its true occluder purely from that quantization, letting light leak
+// through what should be a solid contact.
+//
+// Scaled by the LOCAL level's texel world size (finer levels need less)
+// and clamped in texel units so it never grows large enough to visibly
+// detach a real contact shadow the other way (peter-panning, the opposite
+// failure mode this must not trade for).
+float vsm_depth_bias_ndc(float3 normal, float3 light_dir, float texel_world_size, float depth_range)
+{
+	float NdotL = saturate(dot(normal, light_dir));
+	float slope = sqrt(saturate(1 - NdotL * NdotL)) / max(NdotL, 0.05);
+	static const float VSM_BIAS_MAX_TEXELS = 3.0;
+	float bias_world = min(texel_world_size * slope, texel_world_size * VSM_BIAS_MAX_TEXELS);
+	return bias_world / max(depth_range, 0.00001);
+}
+
 // Fixed Poisson disc, shared by the blocker search (VSM_impl_search.hlsl's
 // vsm_search_blocker) and the PCF blur (VSM_ShadowResolve.hlsl's
 // vsm_pcf_shadow) -- both unconditional now (no VSM_PENUMBRA define exists

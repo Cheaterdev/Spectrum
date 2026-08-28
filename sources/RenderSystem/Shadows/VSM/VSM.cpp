@@ -1401,8 +1401,9 @@ VSM::VSM() : VariableContext(L"VSM")
 			constants.GetActive_max()           = active_max;
 			constants.GetPage_size()            = page_table.page_size;
 			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
-			constants.GetQuad_blocker_search()  = use_vsm_quad_blocker_search ? 1 : 0;
-			constants.GetHiz_blocker_classify() = use_vsm_hiz_blocker_classify ? 1 : 0;
+			constants.GetQuad_blocker_search()   = use_vsm_quad_blocker_search ? 1 : 0;
+			constants.GetHiz_blocker_classify()  = use_vsm_hiz_blocker_classify ? 1 : 0;
+			constants.GetHemisphere_cull_blocker() = use_vsm_hemisphere_cull ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
 
 			for (int level = 0; level < page_table.clipmap.level_count; level++)

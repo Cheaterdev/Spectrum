@@ -64,6 +64,18 @@ public:
 	// use_vsm_rtx_verify above.
 	Variable<bool> use_vsm_quad_blocker_search = { false, "Quad-shared blocker search", this };
 
+	// Discards a blocker-search candidate whose reconstructed world position
+	// falls behind the receiver's own tangent plane (point+normal
+	// hemisphere) before it can count as a blocker -- fixes a near-two-
+	// sided-floor-at-grazing-sun case where the shadow map records a nearly
+	// coplanar/self-referential "blocker" that passes the plain depth
+	// compare without being a real occluder. On by default -- cheap (two
+	// cross products per receiver, one dot product per surviving tap), but
+	// new enough to want an easy A/B disable if the tangent-basis
+	// reconstruction (VSM_impl_search.hlsl) turns out subtly wrong for some
+	// geometry.
+	Variable<bool> use_vsm_hemisphere_cull = { true, "Hemisphere-cull blocker search", this };
+
 	// Only meaningful when use_vsm_rtx_verify is also on. false = single
 	// blur pass (uses the RTX-verified distance when the ray hit something,
 	// VSM's own estimate otherwise -- cheaper). true = blur both distances

@@ -25,6 +25,7 @@ export namespace Table
 		int rtx_dual_blur;
 		int debug_rtx_reference;
 		int hiz_blocker_classify;
+		int hemisphere_cull_blocker;
 		int debug_hiz_classify;
 		int debug_page_grid;
 		float4x4 light_view;
@@ -37,6 +38,7 @@ export namespace Table
 		int& GetRtx_dual_blur() { return rtx_dual_blur; }
 		int& GetDebug_rtx_reference() { return debug_rtx_reference; }
 		int& GetHiz_blocker_classify() { return hiz_blocker_classify; }
+		int& GetHemisphere_cull_blocker() { return hemisphere_cull_blocker; }
 		int& GetDebug_hiz_classify() { return debug_hiz_classify; }
 		int& GetDebug_page_grid() { return debug_page_grid; }
 		float4x4& GetLight_view() { return light_view; }
@@ -53,6 +55,7 @@ export namespace Table
 			compiler.compile(rtx_dual_blur);
 			compiler.compile(debug_rtx_reference);
 			compiler.compile(hiz_blocker_classify);
+			compiler.compile(hemisphere_cull_blocker);
 			compiler.compile(debug_hiz_classify);
 			compiler.compile(debug_page_grid);
 			compiler.compile(light_view);
@@ -75,6 +78,7 @@ export namespace Table
 			ar& NVP(rtx_dual_blur);
 			ar& NVP(debug_rtx_reference);
 			ar& NVP(hiz_blocker_classify);
+			ar& NVP(hemisphere_cull_blocker);
 			ar& NVP(debug_hiz_classify);
 			ar& NVP(debug_page_grid);
 			ar& NVP(light_view);
