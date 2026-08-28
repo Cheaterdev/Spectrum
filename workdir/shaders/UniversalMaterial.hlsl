@@ -155,7 +155,7 @@ static const RWTexture3D<uint> visibility = GetVoxelization().GetVisibility();
 
 void universal_voxel(vertex_output i, float4 albedo, float metallic, float roughness, float4 bump, float4 glow)
 {   
-    clip(albedo.w - 0.5);
+ //   clip(albedo.w - 0.5);
   
     uint3 index = floor(voxel_info.GetVoxels_per_tile().xyz * voxel_info.GetVoxel_tiles_count().xyz*((i.wpos.xyz - voxel_info.GetMin().xyz) / voxel_info.GetSize().xyz));
 
@@ -179,7 +179,7 @@ void PS_VOXEL(vertex_output i)
     float opacity = 1;
     float refraction = 1;
 
-	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, 2);
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, 1);
     color.w = opacity;
 
 	universal_voxel(i, color, metallic, roughness, normal, glow);

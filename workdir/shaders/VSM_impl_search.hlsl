@@ -234,12 +234,14 @@ VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighti
 				uint mip = (uint)mip_f;
 
 				float2 minmax = float2(3.402823466e+38, -3.402823466e+38);
+				float corner_x[4];
 				[unroll]
 				for (int cj = 0; cj < 4; cj++)
 				{
 					float2 s = pyramid.SampleLevel(pointClampSampler, float3(corner_uvs[cj], (float)corner_slots[cj]), mip);
 					minmax.x = min(minmax.x, s.x);
 					minmax.y = max(minmax.y, s.y);
+					corner_x[cj] = s.x;
 				}
 
 				// pos_l.z (the RECEIVER's own NDC-Z, from its own
@@ -251,6 +253,37 @@ VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighti
 				// everywhere; only XY differs per page.
 				confident_lit  = minmax.y < pos_l.z;
 				confident_dark = !confident_lit && minmax.x > pos_l.z;
+
+				// Hemisphere check (see use_vsm_hemisphere_cull's own
+				// comment, VSM.ixx, and vsm_search_blocker's matching
+				// per-tap version below): confident_dark claims EVERY point
+				// in the whole search disc occludes the receiver, which
+				// (per the math above) implicitly requires each corner's
+				// own worst-case value to individually clear the same depth
+				// test too. A corner whose worst case actually sits BEHIND
+				// the receiver's tangent plane (the near-two-sided-floor
+				// case this toggle exists for) isn't a valid occluder at
+				// all -- its depth passing the test proves nothing. Only
+				// ever narrows confident_dark to "fall through to the real
+				// search" (never flips a real dark verdict to lit outright);
+				// the search below does its own per-tap hemisphere cull and
+				// can still legitimately find a genuine blocker.
+				if (confident_dark && c.GetHemisphere_cull_blocker() != 0)
+				{
+					[unroll]
+					for (int ck = 0; ck < 4; ck++)
+					{
+						float2 tangent_offset = CORNER_SIGNS[ck] * classify_world_radius;
+						float3 blocker_delta = xaxis * tangent_offset.x + yaxis * tangent_offset.y
+						                      - zaxis * ((corner_x[ck] - pos_l.z) * depth_range);
+						static const float VSM_HEMISPHERE_CULL_EPS_WORLD = 0.02;
+						if (dot(blocker_delta, normal) < -VSM_HEMISPHERE_CULL_EPS_WORLD)
+						{
+							confident_dark = false;
+							break;
+						}
+					}
+				}
 			}
 		}
 	}

@@ -196,6 +196,9 @@ namespace HAL
 		compilationArguments.emplace_back(L"-T");
 		compilationArguments.emplace_back(convert(target));
 
+		compilationArguments.emplace_back(L"-HV");
+		compilationArguments.emplace_back(L"2021");
+
 		compilationArguments.emplace_back(L"-no-warnings");
 		compilationArguments.emplace_back(L"-O3");
 
