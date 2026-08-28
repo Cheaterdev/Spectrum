@@ -206,45 +206,45 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, t.lod);
 
-//	// Transparent-aware sun visibility (float3 transmittance instead of a bool).
-//	// Iterate the shadow ray through transparent occluders (advancing past each
-//	// hit) until it hits something opaque (fully black) or misses (reaches the
-//	// light). The loop keeps every trace at the same recursion depth, so however
-//	// many glass layers there are it costs only one level. Gated at shallow color
-//	// recursion so deep refraction bounces don't spawn shadow rays.
-//	float3 sun_vis = 1.0;
-//	if (payload.recursion < 2)
-//	{
-//		float3 s_origin = t.v.pos;
-//		float3 s_dir    = normalize(frame.GetSunDir().xyz);
+	// Transparent-aware sun visibility (float3 transmittance instead of a bool).
+	// Iterate the shadow ray through transparent occluders (advancing past each
+	// hit) until it hits something opaque (fully black) or misses (reaches the
+	// light). The loop keeps every trace at the same recursion depth, so however
+	// many glass layers there are it costs only one level. Gated at shallow color
+	// recursion so deep refraction bounces don't spawn shadow rays.
+	float3 sun_vis = 1.0;
+	if (payload.recursion < 2)
+	{
+		float3 s_origin = t.v.pos;
+		float3 s_dir    = normalize(frame.GetSunDir().xyz);
 
-//		[loop]
-//		for (int si = 0; si < 1; si++)
-//		{
-//			[raypayload] ColorShadowPayload sp;
-//			sp.transmittance = sun_vis;
-//			sp.dist          = -1.0;
+		[loop]
+		for (int si = 0; si < 1; si++)
+		{
+			[raypayload] ColorShadowPayload sp;
+			sp.transmittance = sun_vis;
+			sp.dist          = -1.0;
 
-//			RayDesc shadow_ray;
-//			shadow_ray.Origin    = s_origin;
-//			shadow_ray.Direction = s_dir;
-//			shadow_ray.TMin      = 0.001;
-//			shadow_ray.TMax      = 10000.0;
-//			ColorShadowPass(raytracing.GetScene(), shadow_ray, RAY_FLAG_NONE, sp);
+			RayDesc shadow_ray;
+			shadow_ray.Origin    = s_origin;
+			shadow_ray.Direction = s_dir;
+			shadow_ray.TMin      = 0.001;
+			shadow_ray.TMax      = 10000.0;
+			ColorShadowPass(raytracing.GetScene(), shadow_ray, RAY_FLAG_NONE, sp);
 
-//			sun_vis = sp.transmittance;
+			sun_vis = sp.transmittance;
 
-//			if (sp.dist < 0.0)         break; // missed -> reached the light
-//			if (all(sun_vis < 0.01))   break; // fully occluded -> black shadow
+			if (sp.dist < 0.0)         break; // missed -> reached the light
+			if (all(sun_vis < 0.01))   break; // fully occluded -> black shadow
 
-//			// Advance just past the transparent hit and keep tracing.
-//			s_origin += s_dir * (sp.dist + 0.01);
-//		}
-//	}
+			// Advance just past the transparent hit and keep tracing.
+			s_origin += s_dir * (sp.dist + 0.01);
+		}
+	}
 
-    float NdotL = saturate(dot(t.v.normal, normalize(frame.GetSunDir().xyz)));
-    payload.color = float4(color.rgb * NdotL/* * sun_vis*/, 1.0);
-    payload.dist = RayTCurrent();
+	float NdotL = saturate(dot(t.v.normal, normalize(frame.GetSunDir().xyz)));
+	payload.color = float4(color.rgb * NdotL * sun_vis, 1.0);
+	payload.dist  = RayTCurrent();
 
 //#ifdef TRANSPARENT
 //	// Transparent surface: continue a refracted color ray through the surface
