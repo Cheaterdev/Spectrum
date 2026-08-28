@@ -233,13 +233,6 @@ struct VSMLighting
 	# own setup() can return false on non-RTX hardware, in which case this
 	# resource never gets created that frame).
 	Texture2D<float> rtx_shadow_mask;
-	# Stage 3's (VSM_ShadowResolve) final, already-blurred [0,1] shadow
-	# scalar -- VSM_Combine just samples this directly when VsmPenumbra is
-	# on, no decoding needed (blur/classify/search all happened upstream
-	# now). Replaces the old packed-uint4 blocker_result field this struct
-	# used to carry -- see VSM_ShadowResolve's own PassNode comment in this
-	# file for where that data lives now.
-	Texture2D<float> vsm_shadow_result;
 }
 
 # Phase 5.18 Part A follow-up (take 4): groupshared tile classification,
@@ -343,24 +336,21 @@ struct VSMBlockerSearchOutput
 struct VSMShadowResolveIO
 {
 	Texture2D<uint4> blocker_search_result;
-	RWTexture2D<float> shadow_result;
 }
 
+# VSM_Combine only ever runs now when use_vsm_penumbra is off (see that
+# PassNode's own comment) -- the penumbra-on case moved entirely into stage
+# 3 (VSM_ShadowResolve), which writes ResultTexture directly instead of an
+# intermediate scalar this PSO used to sample. So there's only ever one
+# real permutation of this PSO left; the old VsmPenumbra define (and
+# combine_result's #ifdef VSM_PENUMBRA branch in VSM.hlsl) is gone rather
+# than kept as a permanently-unreachable "off" path.
 ComputePSO VSMApplyCompute
 {
 	root = DefaultLayout;
 
 	[EntryPoint = CS_RESULT]
 	compute = VSM;
-
-	# Fixed single-tap 3x3 hardware-PCF (off) vs sampling the precomputed
-	# VSM_ShadowResult stage 3 already resolved (on) -- see combine_result in
-	# VSM.hlsl. The real per-pixel classify/search/blur work no longer
-	# happens here at all when this is on; VSM_Combine just reads the
-	# answer.
-	[rename = VSM_PENUMBRA]
-	[CS, nullable]
-	define VsmPenumbra;
 }
 
 # Blocker-search extraction: INDIRECT dispatch (Phase 5.18 Part A follow-up:
@@ -453,6 +443,28 @@ ComputePSO VSMDebugOverlayBlur
 	root = DefaultLayout;
 
 	[EntryPoint = CS_OVERLAY_BLUR]
+	compute = VSM_DebugTileOverlay;
+}
+
+# Moved here from VSM_Combine's own combine_result (VSM.hlsl) now that stage
+# 3 (VSM_ShadowResolve) writes ResultTexture directly and VSM_Combine no
+# longer runs at all when use_vsm_penumbra is on -- see this PassNode's own
+# comment for why. Both are full-screen, not tile-list-driven (these debug
+# views don't care which classify bucket a pixel landed in), unlike every
+# other entry point in this file.
+ComputePSO VSMDebugOverlayPageGrid
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_OVERLAY_PAGE_GRID]
+	compute = VSM_DebugTileOverlay;
+}
+
+ComputePSO VSMDebugOverlayRtxReference
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_OVERLAY_RTX_REFERENCE]
 	compute = VSM_DebugTileOverlay;
 }
 
@@ -684,10 +696,20 @@ PassNode VSM_BlockerSearch
 # a shared output resource, however many indirect dispatches it takes, must
 # come from one PassNode's render(), or FrameGraph's dependency resolution
 # doesn't reliably make every writer's output visible to the resource's
-# other consumers. VSM_ShadowResult is created here and written disjointly
-# by all three PSOs (lit_tiles -> 1.0, dark_tiles -> 0.0, search_tiles ->
-# the real PCF blur read from VSM_BlockerSearchResult) -- full coverage by
+# other consumers. ResultTexture is written disjointly by all three PSOs
+# (lit_tiles -> flat lit, dark_tiles -> flat black, search_tiles -> the real
+# PCF blur read from VSM_BlockerSearchResult) -- full coverage by
 # construction, same as the three tile lists are disjoint by construction.
+#
+# Used to write an intermediate VSM_ShadowResult scalar for VSM_Combine's
+# own separate full-screen pass to read and apply -- collapsed into one
+# step (each PSO now does the full PBR combine itself and writes
+# ResultTexture directly) once it was clear these dispatches already cover
+# every screen pixel exactly once, making VSM_Combine's own full-screen
+# dispatch (plus the shadow-mask texture's read/write round trip) pure
+# overhead whenever use_vsm_penumbra is on. VSM_Combine still exists for the
+# non-penumbra fallback (get_shadow_vsm_simple, no tile pipeline to
+# piggyback on) -- see its own PassNode comment.
 [Compute]
 PassNode VSM_ShadowResolve
 {
@@ -707,9 +729,16 @@ PassNode VSM_ShadowResolve
 	StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
 	StructuredBuffer<uint2> VSM_BlurTiles;
 	Texture VSM_BlockerSearchResult;
-	[Write] Texture VSM_ShadowResult;
+	[Write] Texture ResultTexture;
 }
 
+# Only runs when use_vsm_penumbra is OFF now (see m_combine_setup's own
+# early-out) -- the penumbra-on case is handled entirely by stage 3
+# (VSM_ShadowResolve) writing ResultTexture directly, since its four
+# dispatches already cover every pixel and there's no tile pipeline for
+# this pass to still add value on top of. Kept for the non-penumbra
+# fallback (get_shadow_vsm_simple, a plain fixed 3x3 hardware-PCF full-
+# screen pass with no tile lists to dispatch over) and nothing else.
 [Compute]
 PassNode VSM_Combine
 {
@@ -723,11 +752,6 @@ PassNode VSM_Combine
 	# [Write]: this pass only ever reads it, for the debug-view comparison
 	# toggle (VSM.ixx's use_vsm_debug_rtx_reference).
 	Texture ShadowMask;
-	# Written by stage 3 (VSM_ShadowResolve) above -- the final, already-
-	# blurred [0,1] shadow scalar, no decoding needed. Only exists when
-	# use_vsm_penumbra is on (see m_shadowresolve_setup's own early-out);
-	# not [Write] here, this pass only ever reads it.
-	Texture VSM_ShadowResult;
 	[Write] Texture ResultTexture;
 }
 
@@ -747,17 +771,31 @@ PassNode VSM_Combine
 # per-pixel-level optimization within an otherwise-dispatched tile),
 # leaving pixels that ran the real tap-loop blur untouched so the real
 # blurred shadow shows through -- see VSM_DebugTileOverlay.hlsl's own
-# comment on CS_OVERLAY_BLUR. Only ever dispatched when the toggle is on
-# (see m_debugoverlay_setup's own early-out) -- otherwise pure overhead for
-# no visible effect.
+# comment on CS_OVERLAY_BLUR.
+#
+# Also now the only home (when use_vsm_penumbra is on) for two debug views
+# that used to live in VSM_Combine's own combine_result: use_vsm_debug_page_
+# grid and use_vsm_debug_rtx_reference. VSM_Combine no longer runs at all
+# when penumbra is on (see its own PassNode comment), so this pass's own
+# early-out (m_debugoverlay_setup) widened to cover all three debug toggles,
+# not just use_vsm_debug_hiz_classify -- otherwise those two would go dark
+# the moment penumbra mode is the active path. gbuffer/ShadowMask are only
+# for those two (full-screen, not tile-list-driven, unlike everything else
+# in this PassNode) -- see VSM_DebugTileOverlay.hlsl's own CS_OVERLAY_PAGE_
+# GRID/CS_OVERLAY_RTX_REFERENCE.
 [Compute]
 PassNode VSM_DebugClassifyOverlay
 {
+	GBuffer gbuffer;
 	StructuredBuffer<uint2> VSM_LitTiles;
 	StructuredBuffer<uint2> VSM_DarkTiles;
 	StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
 	StructuredBuffer<uint2> VSM_BlurTiles;
 	Texture VSM_BlockerSearchResult;
+	# Same resource RTXShadow writes / PSSM_Combine reads -- see
+	# VSMLighting's rtx_shadow_mask field. Not [Write]: only ever read, for
+	# use_vsm_debug_rtx_reference.
+	Texture ShadowMask;
 	[Write] Texture ResultTexture;
 }
 

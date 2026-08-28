@@ -46,7 +46,7 @@ public:
 		Handlers::Texture VSM_BlockerSearchResult = ResourceID::VSM_BlockerSearchResult;
 
 
-		Handlers::Texture VSM_ShadowResult = ResourceID::VSM_ShadowResult;
+		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -74,7 +74,7 @@ public:
 			{ ResourceID::VSM_ConfirmedLitTiles, false },
 			{ ResourceID::VSM_BlurTiles, false },
 			{ ResourceID::VSM_BlockerSearchResult, false },
-			{ ResourceID::VSM_ShadowResult, true },
+			{ ResourceID::ResultTexture, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

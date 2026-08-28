@@ -93,6 +93,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayDark>(device, pso[PSO::VSMDebugOverlayDark]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayConfirmedLit>(device, pso[PSO::VSMDebugOverlayConfirmedLit]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayBlur>(device, pso[PSO::VSMDebugOverlayBlur]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayPageGrid>(device, pso[PSO::VSMDebugOverlayPageGrid]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayRtxReference>(device, pso[PSO::VSMDebugOverlayRtxReference]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMGatherDispatch>(device, pso[PSO::VSMGatherDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 
@@ -172,7 +174,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::VoxelDownsample::Count) PSOS::VoxelDownsample::Count;
 //decltype(PSOS::VoxelIndirectFilter::Blur) PSOS::VoxelIndirectFilter::Blur;
 //decltype(PSOS::VoxelIndirectFilter::Reflection) PSOS::VoxelIndirectFilter::Reflection;
-//decltype(PSOS::VSMApplyCompute::VsmPenumbra) PSOS::VSMApplyCompute::VsmPenumbra;
 //decltype(PSOS::VSMShadowBlur::VsmRtxVerify) PSOS::VSMShadowBlur::VsmRtxVerify;
 //decltype(PSOS::FontRender::Format) PSOS::FontRender::Format;
 //decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;

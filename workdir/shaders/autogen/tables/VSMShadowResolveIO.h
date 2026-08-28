@@ -9,7 +9,5 @@
 struct VSMShadowResolveIO
 {
 	uint blocker_search_result; // Texture2D<uint4>
-	uint shadow_result; // RWTexture2D<float>
 	Texture2D<uint4> GetBlocker_search_result() { return ResourceDescriptorHeap[blocker_search_result]; }
-	RWTexture2D<float> GetShadow_result() { return ResourceDescriptorHeap[shadow_result]; }
 };

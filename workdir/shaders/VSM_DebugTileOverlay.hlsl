@@ -1,12 +1,21 @@
 #include "Common.hlsl"
 
 #include "autogen/VSMLighting.h"
+#include "autogen/VSMConstants.h"
+#include "autogen/FrameInfo.h"
 #include "autogen/VSMTileListRead.h"
 // Reused for its blocker_search_result SRV field only (Instance3 is free
 // for this PSO, same as it is for VSM_ShadowResolve's own three -- no
 // collision, a given PSO only ever binds the structs its own shader
 // references) -- CS_OVERLAY_BLUR never touches shadow_result.
 #include "autogen/VSMShadowResolveIO.h"
+
+static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
+
+// Only actually needed by CS_OVERLAY_PAGE_GRID (get_vsm_debug_page_grid_color)
+// -- pulls in VSM_impl.hlsl transitively (get_vsm_level/get_vsm_slot), same
+// as every other file in this pipeline that needs the debug helpers.
+#include "VSM_impl_resolve.hlsl"
 
 // Debug view (VSM.ixx's use_vsm_debug_hiz_classify) -- see this PassNode's
 // own comment in vsm.sig for why this reads the REAL tile lists directly
@@ -91,4 +100,49 @@ void CS_OVERLAY_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupT
 	// else: real blocker (world_delta_or_sentinel >= 0) -- leave untouched,
 	// the real blurred shadow already written by CS_SHADOW_BLUR shows
 	// through as-is.
+}
+
+// Moved here from VSM.hlsl's combine_result now that VSM_Combine no longer
+// runs at all when use_vsm_penumbra is on (see this PassNode's own comment
+// in vsm.sig) -- both full-screen, not tile-list-driven, since these debug
+// views don't care which classify bucket a pixel landed in. Mutually
+// exclusive with each other and with the tile-classify overlay above (see
+// VSM.cpp's m_debugoverlay_render for the precedence).
+
+// Debug view (VSM.ixx's use_vsm_debug_page_grid): flat per-level color,
+// checkerboard-darkened by page position within that level -- see
+// get_vsm_debug_page_grid_color's own comment (VSM_impl_resolve.hlsl).
+[numthreads(16, 16, 1)]
+void CS_OVERLAY_PAGE_GRID(uint3 DTid : SV_DispatchThreadID)
+{
+	uint2 dims;
+	GetVSMLighting().GetResult().GetDimensions(dims.x, dims.y);
+	if (any(DTid.xy >= dims))
+		return;
+
+	float2 tc = (float2(DTid.xy) + 0.5) / float2(dims);
+	float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, tc, 0);
+	if (raw_z == 0)
+		return;
+
+	Camera camera = GetFrameInfo().GetCamera();
+	float3 wpos = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
+	VSMConstants c = GetVSMConstants();
+	GetVSMLighting().GetResult()[DTid.xy] = float4(get_vsm_debug_page_grid_color(c, wpos), 1);
+}
+
+// Debug view (VSM.ixx's use_vsm_debug_rtx_reference): bypass VSM's own
+// shadow entirely and show RTXShadow's own denoised full-RT shadow mask as
+// grayscale.
+[numthreads(16, 16, 1)]
+void CS_OVERLAY_RTX_REFERENCE(uint3 DTid : SV_DispatchThreadID)
+{
+	uint2 dims;
+	GetVSMLighting().GetResult().GetDimensions(dims.x, dims.y);
+	if (any(DTid.xy >= dims))
+		return;
+
+	float2 tc = (float2(DTid.xy) + 0.5) / float2(dims);
+	float rtx_shadow = GetVSMLighting().GetRtx_shadow_mask().SampleLevel(pointClampSampler, tc, 0);
+	GetVSMLighting().GetResult()[DTid.xy] = float4(rtx_shadow, rtx_shadow, rtx_shadow, 1);
 }

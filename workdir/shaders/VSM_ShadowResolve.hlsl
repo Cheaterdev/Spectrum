@@ -16,8 +16,8 @@ static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 // vsm_rotate, VSM_POISSON_DISK) -- NOT VSM_impl_search.hlsl (this file never
 // needs vsm_search_blocker/vsm_classify_blocker; stages 1/2 already did that
 // work) and NOT VSM_impl_resolve.hlsl (that file's own get_shadow_vsm is
-// what this file replaces -- see VSM.hlsl's combine_result for the
-// simplified, post-refactor caller).
+// the non-penumbra fallback VSM.hlsl's combine_result calls instead, when
+// this whole three-stage pipeline isn't even running).
 #include "VSM_impl.hlsl"
 
 // Stage 3 (Phase 5.18 Part A follow-up, take 4): three PSOs sharing this one
@@ -36,27 +36,69 @@ uint2 resolve_pixel(uint3 groupID, uint3 groupThreadID)
 	return GetVSMTileListRead().GetTiles()[groupID.x] * 16 + groupThreadID.xy;
 }
 
+// Final PBR combine, shared by all three entry points below -- each one
+// writes ResultTexture directly with the real shaded pixel now, instead of
+// a bare shadow scalar VSM_Combine's own separate full-screen pass used to
+// read and apply afterward (see this file's own PassNode comment in
+// vsm.sig for why that intermediate step went away). Mirrors VSM.hlsl's
+// combine_result formula exactly -- shadow * NL * albedo * (1-metallic);
+// EnvBRDF is computed there but never actually used in its return, so it's
+// not replicated here either.
+float4 vsm_resolve_combine(float3 albedo, float metallic, float3 normal, float shadow)
+{
+	float3 light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
+	float  NL = saturate(dot(normal, light_dir));
+	return float4(shadow * (NL * albedo * (1 - metallic)), 1);
+}
+
 // full-lit: stage 1 already proved every pixel in this tile is confidently
-// lit -- no per-pixel check, no atlas sampling, just write the answer.
+// lit -- no level/slot lookup, no atlas sampling, just the PBR combine with
+// shadow=1 (still needs albedo/normal; full light doesn't make NL free).
 [numthreads(16, 16, 1)]
 void CS_FULL_LIT(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID)
 {
 	uint2 dims;
 	gbuffer.GetDepth().GetDimensions(dims.x, dims.y);
 	uint2 pixel = resolve_pixel(groupID, groupThreadID);
-	if (all(pixel < dims))
-		GetVSMShadowResolveIO().GetShadow_result()[pixel] = 1.0;
+	if (any(pixel >= dims))
+		return;
+
+	float2 tc = (float2(pixel) + 0.5) / float2(dims);
+	float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, tc, 0);
+	// Sky pixel -- matches combine_result's own `if (raw_z == 0) return 0;`,
+	// an alpha=0 sentinel something downstream reads, not the normal
+	// shadow=1-fed-through-combine result this PSO writes for everything
+	// else (a search tile can still contain a sky pixel at its edge -- the
+	// tile was appended because SOME other pixel in it was ambiguous, not
+	// because every pixel has geometry).
+	if (raw_z == 0)
+	{
+		GetVSMLighting().GetResult()[pixel] = 0;
+		return;
+	}
+
+	float4 packed_0 = gbuffer.GetAlbedo().SampleLevel(pointClampSampler, tc, 0);
+	float3 normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
+	GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(packed_0.rgb, packed_0.w, normal, 1.0);
 }
 
-// full-shadow: same as full-lit, opposite verdict.
+// full-shadow: same tile-to-pixel reconstruction as full-lit, opposite
+// verdict. shadow=0 zeroes the combine regardless of albedo/normal, so this
+// only ever needs a depth sample (to preserve combine_result's own
+// alpha=0-for-sky sentinel) -- genuinely cheaper than full-lit, not just
+// its mirror image.
 [numthreads(16, 16, 1)]
 void CS_FULL_SHADOW(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID)
 {
 	uint2 dims;
 	gbuffer.GetDepth().GetDimensions(dims.x, dims.y);
 	uint2 pixel = resolve_pixel(groupID, groupThreadID);
-	if (all(pixel < dims))
-		GetVSMShadowResolveIO().GetShadow_result()[pixel] = 0.0;
+	if (any(pixel >= dims))
+		return;
+
+	float2 tc = (float2(pixel) + 0.5) / float2(dims);
+	float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, tc, 0);
+	GetVSMLighting().GetResult()[pixel] = raw_z == 0 ? float4(0, 0, 0, 0) : float4(0, 0, 0, 1);
 }
 
 static const float VSM_SUN_ANGULAR_RADIUS = 0.02; // ~17 deg -- hardcoded, tune to taste.
@@ -156,22 +198,34 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, tc, 0);
 	if (raw_z == 0)
 	{
-		// A search tile can still contain a sky pixel at its edge (the tile
-		// was appended because SOME other pixel in it was ambiguous, not
-		// because every pixel has geometry) -- sky is always lit.
-		GetVSMShadowResolveIO().GetShadow_result()[pixel] = 1.0;
+		// Sky pixel -- matches combine_result's own `if (raw_z == 0) return 0;`,
+		// alpha=0 sentinel, not the normal shadow=1-fed-through-combine
+		// result every other early-out below writes (a search tile can
+		// still contain a sky pixel at its edge -- the tile was appended
+		// because SOME other pixel in it was ambiguous, not because every
+		// pixel has geometry).
+		GetVSMLighting().GetResult()[pixel] = 0;
 		return;
 	}
 
+	// Sampled once, up front -- every early-out from here down (and the
+	// real-blur case at the bottom) needs albedo/normal for its own final
+	// vsm_resolve_combine call, so there's no reason to re-sample per exit
+	// point the way the old scalar-only version's early returns didn't
+	// need to.
+	float4 packed_0 = gbuffer.GetAlbedo().SampleLevel(pointClampSampler, tc, 0);
+	float3 albedo   = packed_0.rgb;
+	float  metallic = packed_0.w;
+	float3 normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
+
 	Camera camera = GetFrameInfo().GetCamera();
 	float3 wpos = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
-	float3 normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
 
 	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
 	int level = get_vsm_level(c, pos_ls);
 	if (level < 0)
 	{
-		GetVSMShadowResolveIO().GetShadow_result()[pixel] = 1.0;
+		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);
 		return;
 	}
 
@@ -179,7 +233,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	uint slot = get_vsm_slot(c, lighting, pos_ls, level, resolved_level);
 	if (slot == VSM_INVALID_SLOT)
 	{
-		GetVSMShadowResolveIO().GetShadow_result()[pixel] = 1.0;
+		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);
 		return;
 	}
 	level = resolved_level;
@@ -190,7 +244,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 
 	if (pos_l.z < 0 || pos_l.z > 1 || any(light_tc < 0) || any(light_tc > 1))
 	{
-		GetVSMShadowResolveIO().GetShadow_result()[pixel] = 1.0;
+		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);
 		return;
 	}
 
@@ -316,5 +370,5 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 #endif
 	}
 
-	GetVSMShadowResolveIO().GetShadow_result()[pixel] = shadow;
+	GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, shadow);
 }

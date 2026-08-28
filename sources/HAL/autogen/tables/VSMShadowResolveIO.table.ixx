@@ -18,20 +18,16 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::VSMShadowResolveIO;
 		HLSL::Texture2D<uint4> blocker_search_result;
-		HLSL::RWTexture2D<float> shadow_result;
 		HLSL::Texture2D<uint4>& GetBlocker_search_result() { return blocker_search_result; }
-		HLSL::RWTexture2D<float>& GetShadow_result() { return shadow_result; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(blocker_search_result);
-			compiler.compile(shadow_result);
 		}
 		struct Compiled
 		{
 			uint blocker_search_result; // Texture2D<uint4>
-			uint shadow_result; // RWTexture2D<float>
 
 			
 			private:

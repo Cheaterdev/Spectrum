@@ -426,7 +426,7 @@ void MyRaygenShader()
 	{
 	}
 
-	float2 delta = voxel_screen.GetGbuffer().GetMotion().SampleLevel(pointClampSampler, tc, 0).xy;
+	float2 delta = -voxel_screen.GetGbuffer().GetMotion().SampleLevel(pointClampSampler, tc, 0).xy;
 	float2 prev_tc = tc - delta;
 
 	float l = length(pos - frame.GetCamera().GetPosition());

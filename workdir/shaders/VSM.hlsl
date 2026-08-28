@@ -50,29 +50,23 @@ float4 combine_result(float2 tc, uint2 pixel)
 
 	VSMConstants constants = GetVSMConstants();
 
-	// Phase 5.18 Part A follow-up (take 4): the classify/search/blur
-	// pipeline moved entirely into its own three stages (VSM_BlockerClassify
-	// -> VSM_BlockerSearch -> VSM_ShadowResolve) -- this pass just samples
-	// the precomputed answer now, no decoding. VSM_PENUMBRA off keeps the
-	// old, simpler, always-available fallback (fixed 3x3 hardware PCF, no
-	// blocker search at all).
-#ifdef VSM_PENUMBRA
-	float shadow = GetVSMLighting().GetVsm_shadow_result().Load(int3(pixel, 0));
-	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_hiz_classify) no
-	// longer lives here -- guessing "which bucket did this pixel come from"
-	// from the final shadow value alone is lossy (a genuinely blurred
-	// result can also land on exactly 0/1). VSM_DebugClassifyOverlay reads
-	// stage 1's real VSM_LitTiles/VSM_DarkTiles lists instead and paints
-	// over the already-shaded result afterward -- see its own PassNode
-	// comment in vsm.sig.
-#else
+	// This pass (VSM_Combine) only runs any more when use_vsm_penumbra is
+	// off -- see its own PassNode comment in vsm.sig. The penumbra-on case
+	// (classify -> search -> blur, Phase 5.18 Part A follow-up) moved
+	// entirely into stage 3 (VSM_ShadowResolve), which now does this same
+	// PBR combine itself and writes ResultTexture directly instead of an
+	// intermediate scalar this pass used to sample -- so there's only ever
+	// one shadow-lookup path left here, the always-available fixed 3x3
+	// hardware-PCF fallback.
 	float shadow = get_shadow_vsm_simple(constants, GetVSMLighting(), info.pos);
-#endif
 
 	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_page_grid): flat
 	// per-level color, checkerboard-darkened by page position within that
 	// level, so page/level seams are directly visible -- used to check
 	// whether a visual artifact actually lines up with a real boundary.
+	// Only reachable in non-penumbra mode (this pass doesn't run at all
+	// when penumbra is on) -- VSM_DebugTileOverlay.hlsl's own
+	// CS_OVERLAY_PAGE_GRID is this same view's penumbra-on equivalent.
 	if (constants.GetDebug_page_grid() != 0)
 	{
 		return float4(get_vsm_debug_page_grid_color(constants, info.pos), 1);
@@ -80,7 +74,8 @@ float4 combine_result(float2 tc, uint2 pixel)
 
 	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_rtx_reference):
 	// bypass VSM's own shadow entirely and show RTXShadow's own denoised
-	// full-RT shadow mask as grayscale.
+	// full-RT shadow mask as grayscale. Same penumbra-on caveat as above --
+	// see VSM_DebugTileOverlay.hlsl's CS_OVERLAY_RTX_REFERENCE.
 	if (constants.GetDebug_rtx_reference() != 0)
 	{
 		float rtx_shadow = GetVSMLighting().GetRtx_shadow_mask().SampleLevel(pointClampSampler, tc, 0);

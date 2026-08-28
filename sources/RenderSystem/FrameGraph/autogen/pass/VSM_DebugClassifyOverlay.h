@@ -6,7 +6,7 @@
 // ============================================================================
 #pragma once
 #include "../PassNodeBase.h"
-
+#include "GBuffer.h"
 using namespace FrameGraph;
 
 namespace Passes
@@ -18,6 +18,7 @@ public:
 	struct Context
 	{
 
+		GBuffer gbuffer;
 
 		Handlers::StructuredBuffer<uint2> VSM_LitTiles = ResourceID::VSM_LitTiles;
 
@@ -34,17 +35,34 @@ public:
 		Handlers::Texture VSM_BlockerSearchResult = ResourceID::VSM_BlockerSearchResult;
 
 
+		Handlers::Texture ShadowMask = ResourceID::ShadowMask;
+
+
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+			{ ResourceID::GBuffer_Albedo, false },
+			{ ResourceID::GBuffer_Normals, false },
+			{ ResourceID::GBuffer_Depth, false },
+			{ ResourceID::GBuffer_Specular, false },
+			{ ResourceID::GBuffer_Speed, false },
+			{ ResourceID::GBuffer_DepthMips, false },
+			{ ResourceID::GBuffer_Quality, false },
+			{ ResourceID::GBuffer_TempColor, false },
+			{ ResourceID::GBuffer_NormalsPrev, false },
+			{ ResourceID::GBuffer_SpecularPrev, false },
+			{ ResourceID::GBuffer_DepthPrev, false },
+			{ ResourceID::GBuffer_HiZ, false },
+			{ ResourceID::GBuffer_HiZ_UAV, false },
 			{ ResourceID::VSM_LitTiles, false },
 			{ ResourceID::VSM_DarkTiles, false },
 			{ ResourceID::VSM_ConfirmedLitTiles, false },
 			{ ResourceID::VSM_BlurTiles, false },
 			{ ResourceID::VSM_BlockerSearchResult, false },
+			{ ResourceID::ShadowMask, false },
 			{ ResourceID::ResultTexture, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

@@ -161,11 +161,10 @@ bool vsm_tap(VSMConstants c, VSMLighting lighting, int level, float2 pos_ls,
 }
 
 // Fixed Poisson disc, shared by the blocker search (VSM_impl_search.hlsl's
-// vsm_search_blocker, unconditional -- runs in its own dispatch/PSO
-// permutation with no VSM_PENUMBRA define at all) and the PCF blur
-// (VSM_impl_resolve.hlsl's vsm_pcf_shadow, still VSM_PENUMBRA-guarded) --
-// file scope so both can see it regardless of which #ifdef, if any, applies
-// to the current compile.
+// vsm_search_blocker) and the PCF blur (VSM_ShadowResolve.hlsl's
+// vsm_pcf_shadow) -- both unconditional now (no VSM_PENUMBRA define exists
+// any more; use_vsm_penumbra gates which PassNodes even run, at the C++
+// level, not an HLSL permutation) -- file scope so both can see it.
 static const float2 VSM_POISSON_DISK[16] = {
 	float2(-0.94201624, -0.39906216), float2( 0.94558609, -0.76890725),
 	float2(-0.09418410, -0.92938870), float2( 0.34495938,  0.29387760),

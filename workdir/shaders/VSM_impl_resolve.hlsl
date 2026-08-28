@@ -1,11 +1,12 @@
 #include "VSM_impl.hlsl"
 
-// Non-penumbra fallback only (VSM_PENUMBRA off, VSM.ixx's use_vsm_penumbra
-// toggle) -- fixed single-tap-per-corner 3x3 hardware-PCF, no blocker
-// search/blur at all. When VSM_PENUMBRA is ON, VSM.hlsl's combine_result
-// doesn't call this at all -- it samples stage 3's precomputed
-// VSM_ShadowResult directly instead (see that file's own VSM_ShadowResolve
-// PassNode comment for where the real per-pixel work now lives).
+// Non-penumbra fallback only (VSM.ixx's use_vsm_penumbra toggle off) --
+// fixed single-tap-per-corner 3x3 hardware-PCF, no blocker search/blur at
+// all. When penumbra is ON, VSM_Combine (VSM.hlsl's combine_result, the
+// only caller of this function) doesn't run at all any more -- stage 3
+// (VSM_ShadowResolve.hlsl) does the real per-pixel work AND the PBR combine
+// itself, writing ResultTexture directly. See that file's own PassNode
+// comment in vsm.sig.
 float get_shadow_vsm_simple(VSMConstants c, VSMLighting lighting, float3 wpos)
 {
 	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;

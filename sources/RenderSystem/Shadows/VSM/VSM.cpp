@@ -173,6 +173,16 @@ void VSM::pass_data(FrameGraph::TaskBuilder& builder)
 
 void VSM::plan_frame(FrameGraph::Graph& graph)
 {
+	// Propagates into RTXShadow::render (PassDefaults.cpp) via the RTX
+	// singleton -- see debug_full_reference_shadow's own comment in RTX.ixx
+	// for why it lives there instead of a VSM-local flag. Set unconditionally
+	// here, before either of this function's own early-returns below, since
+	// this must keep updating every frame regardless of debug mode or
+	// whether VSM_Combine itself runs this frame -- VSM_Combine no longer
+	// runs at all when use_vsm_penumbra is on (see its own PassNode comment
+	// in vsm.sig), which used to be the only place this was set.
+	RTX::get().debug_full_reference_shadow = use_vsm_debug_rtx_reference;
+
 	// Single-threaded, once per frame, strictly before any level's render()
 	// is dispatched (see the LevelPlan comment in VSM.ixx for why this has
 	// to live here and not in m_level_render).
@@ -1305,10 +1315,10 @@ VSM::VSM() : VariableContext(L"VSM")
 		builder.need(data.VSM_ConfirmedLitTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_BlurTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_BlockerSearchResult, FrameGraph::ResourceFlags::ComputeRead);
-		auto& frame = builder.graph->get_context<ViewportInfo>();
-		builder.create(data.VSM_ShadowResult,
-		    { ivec3(frame.frame_size, 0), HAL::Format::R32_FLOAT, 1, 1 },
-		    FrameGraph::ResourceFlags::UnorderedAccess);
+		// Writes ResultTexture directly now (the final PBR-combined pixel),
+		// not an intermediate VSM_ShadowResult scalar VSM_Combine used to
+		// read separately -- see this PassNode's own comment in vsm.sig.
+		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 
@@ -1335,13 +1345,16 @@ VSM::VSM() : VariableContext(L"VSM")
 			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
 			lighting.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
 			lighting.GetBlue_noise()   = data.BlueNoise->texture2D;
+			// Written directly now -- each of the four dispatches below does
+			// its own full PBR combine and writes here, instead of a bare
+			// shadow scalar VSM_Combine used to read separately.
+			lighting.GetResult()       = data.ResultTexture->rwTexture2D;
 			compute.set(lighting);
 		}
 
 		{
 			Slots::VSMShadowResolveIO io;
 			io.GetBlocker_search_result() = data.VSM_BlockerSearchResult->texture2D;
-			io.GetShadow_result()         = data.VSM_ShadowResult->rwTexture2D;
 			compute.set(io);
 		}
 
@@ -1423,6 +1436,12 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	m_combine_setup = [this](Passes::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
+		// Penumbra-on is handled entirely by stage 3 (VSM_ShadowResolve)
+		// writing ResultTexture directly now -- see that PassNode's own
+		// comment in vsm.sig. This pass only exists any more for the
+		// non-penumbra fallback (get_shadow_vsm_simple).
+		if (use_vsm_penumbra)
+			return false;
 		GBufferViewDesc::need(builder, data.gbuffer);
 		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
@@ -1436,11 +1455,6 @@ VSM::VSM() : VariableContext(L"VSM")
 		// guard PSSM_Combine already uses for the same resource.
 		if (use_vsm_debug_rtx_reference && builder.exists(data.ShadowMask))
 			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
-		// Only exists when use_vsm_penumbra is on (see stage 1's own
-		// early-out) -- same defensive builder.exists() guard as ShadowMask
-		// above.
-		if (builder.exists(data.VSM_ShadowResult))
-			builder.need(data.VSM_ShadowResult, FrameGraph::ResourceFlags::ComputeRead);
 		return true;
 	};
 
@@ -1469,11 +1483,6 @@ VSM::VSM() : VariableContext(L"VSM")
 			lighting.GetBlue_noise()   = data.BlueNoise->texture2D;
 			if (data.ShadowMask)
 				lighting.GetRtx_shadow_mask() = data.ShadowMask->texture2D;
-			// Written by stage 3 (VSM_ShadowResolve) above -- only exists
-			// when use_vsm_penumbra is on (see stage 1's own early-out and
-			// this pass's own builder.exists() guard).
-			if (data.VSM_ShadowResult)
-				lighting.GetVsm_shadow_result() = data.VSM_ShadowResult->texture2D;
 			compute.set(lighting);
 		}
 
@@ -1493,13 +1502,6 @@ VSM::VSM() : VariableContext(L"VSM")
 			constants.GetDebug_page_grid()      = use_vsm_debug_page_grid ? 1 : 0;
 			constants.GetLight_view()           = light_cam.get_view();
 
-			// Propagates into RTXShadow::render (PassDefaults.cpp) via the
-			// RTX singleton -- see debug_full_reference_shadow's own
-			// comment in RTX.ixx for why it lives there instead of a
-			// VSM-local flag. One-frame lag (RTXShadow already ran earlier
-			// this frame) is fine for a debug toggle.
-			RTX::get().debug_full_reference_shadow = use_vsm_debug_rtx_reference;
-
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
 			{
 				float2 origin = page_table.clipmap.grid_origin(level, cam_pos_ls);
@@ -1509,12 +1511,10 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(constants);
 		}
 
-		// Real per-pixel classify/search/blur work no longer happens in
-		// this pass at all when penumbra mode is on -- see stages 1-3 above
-		// -- so no VsmRtxVerify permutation is needed here any more either
-		// (that logic moved into stage 3's own VSMShadowBlur PSO).
-		compute.set_pipeline<PSOS::VSMApplyCompute>(
-			PSOS::VSMApplyCompute::VsmPenumbra.Use(use_vsm_penumbra));
+		// This pass only ever runs now when use_vsm_penumbra is off (see
+		// m_combine_setup's own early-out), so VSMApplyCompute has only one
+		// permutation left -- no VsmPenumbra selection needed any more.
+		compute.set_pipeline<PSOS::VSMApplyCompute>();
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 
@@ -1525,8 +1525,24 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	m_debugoverlay_setup = [this](Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		if (!use_vsm_penumbra || !use_vsm_debug_hiz_classify)
+		// Widened from "just use_vsm_debug_hiz_classify" now that this pass
+		// also owns use_vsm_debug_page_grid/use_vsm_debug_rtx_reference --
+		// see this PassNode's own comment in vsm.sig for why (VSM_Combine no
+		// longer runs at all when penumbra is on, so it can't host those two
+		// any more).
+		if (!use_vsm_penumbra)
 			return false;
+		if (!use_vsm_debug_hiz_classify && !use_vsm_debug_page_grid && !use_vsm_debug_rtx_reference)
+			return false;
+		// Only actually needed for the page-grid/rtx-reference cases (full-
+		// screen, not tile-driven) -- harmless to need() unconditionally
+		// alongside the tile-classify case's own needs below.
+		GBufferViewDesc::need(builder, data.gbuffer);
+		// Same defensive builder.exists() guard VSM_Combine used to use for
+		// this (RTXShadow's own setup() can return false on non-RTX
+		// hardware, in which case this never gets created this frame).
+		if (use_vsm_debug_rtx_reference && builder.exists(data.ShadowMask))
+			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_LitTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_DarkTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_ConfirmedLitTiles, FrameGraph::ResourceFlags::ComputeRead);
@@ -1544,6 +1560,64 @@ VSM::VSM() : VariableContext(L"VSM")
 		auto& list    = *context.get_list();
 		auto& compute = list.get_compute();
 		compute.set_signature(Layouts::DefaultLayout);
+
+		// Moved here from VSM_Combine's own combine_result -- see this
+		// PassNode's own comment in vsm.sig. Full-screen, not tile-driven
+		// (these two don't care which classify bucket a pixel landed in),
+		// and mutually exclusive with each other and with the tile-classify
+		// overlay below, same precedence combine_result's own early-return
+		// chain always used: page-grid first, then rtx-reference. rtx
+		// reference only actually fires when ShadowMask exists this frame
+		// (same builder.exists()-guarded case VSM_Combine used to handle) --
+		// falls through to the tile-classify overlay (or does nothing, if
+		// that toggle is also off) rather than silently reading an unbound
+		// texture on non-RTX hardware.
+		bool do_page_grid     = use_vsm_debug_page_grid;
+		bool do_rtx_reference = use_vsm_debug_rtx_reference && data.ShadowMask;
+		if (do_page_grid || do_rtx_reference)
+		{
+			GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+
+			auto& caminfo = context.graph->get_context<CameraInfo>();
+			auto  cam     = caminfo.cam;
+			context.graph->set_slot(SlotID::FrameInfo, compute);
+
+			camera light_cam = make_light_view_camera(frame_light_pos);
+			float2 cam_pos_ls = (float4(cam->position, 1) * light_cam.get_view()).xy;
+
+			{
+				Slots::VSMLighting lighting;
+				gbuffer.SetTable(lighting.GetGbuffer());
+				lighting.GetResult() = data.ResultTexture->rwTexture2D;
+				if (data.ShadowMask)
+					lighting.GetRtx_shadow_mask() = data.ShadowMask->texture2D;
+				compute.set(lighting);
+			}
+			{
+				Slots::VSMConstants constants;
+				constants.GetActive_min()      = active_min;
+				constants.GetActive_max()      = active_max;
+				constants.GetPage_size()       = page_table.page_size;
+				constants.GetPages_per_level() = page_table.clipmap.pages_per_level;
+				constants.GetLight_view()      = light_cam.get_view();
+				for (int level = 0; level < page_table.clipmap.level_count; level++)
+				{
+					float2 origin = page_table.clipmap.grid_origin(level, cam_pos_ls);
+					constants.GetLevel_info()[level] = float4(origin.x, origin.y, page_table.clipmap.page_world_size(level), 0.0f);
+				}
+				compute.set(constants);
+			}
+
+			if (do_page_grid)
+				compute.set_pipeline<PSOS::VSMDebugOverlayPageGrid>();
+			else
+				compute.set_pipeline<PSOS::VSMDebugOverlayRtxReference>();
+			compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
+			return;
+		}
+
+		if (!use_vsm_debug_hiz_classify)
+			return;
 
 		{
 			Slots::VSMLighting lighting;

@@ -325,6 +325,8 @@ export import :Autogen.PSO.VSMDebugOverlayLit;
 export import :Autogen.PSO.VSMDebugOverlayDark;
 export import :Autogen.PSO.VSMDebugOverlayConfirmedLit;
 export import :Autogen.PSO.VSMDebugOverlayBlur;
+export import :Autogen.PSO.VSMDebugOverlayPageGrid;
+export import :Autogen.PSO.VSMDebugOverlayRtxReference;
 export import :Autogen.PSO.VSMGatherDispatch;
 export import :Autogen.PSO.VSMDepthAnalysis;
 export import :Autogen.PSO.FontRender;

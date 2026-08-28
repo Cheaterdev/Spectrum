@@ -244,9 +244,8 @@ VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighti
 // in .x is the sentinel for "no blocker found" (world_delta is otherwise
 // always >=0 by construction).
 //
-// Unconditional (not #ifdef VSM_PENUMBRA-guarded) -- VSMBlockerSearchCompute
-// has no VsmPenumbra define at all (VSM.cpp only ever runs this pass when
-// penumbra mode is on in the first place, via its own setup()'s early-out),
+// Unconditional (no #ifdef guard) -- VSM.cpp only ever runs this pass when
+// penumbra mode is on in the first place, via its own setup()'s early-out,
 // so this function must compile standalone.
 //
 // Callers must NOT early-return before calling this for any reason (sky

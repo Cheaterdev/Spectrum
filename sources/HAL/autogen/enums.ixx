@@ -86,6 +86,8 @@ export
 		VSMDebugOverlayDark,
 		VSMDebugOverlayConfirmedLit,
 		VSMDebugOverlayBlur,
+		VSMDebugOverlayPageGrid,
+		VSMDebugOverlayRtxReference,
 		VSMGatherDispatch,
 		VSMDepthAnalysis,
 		FontRender,
