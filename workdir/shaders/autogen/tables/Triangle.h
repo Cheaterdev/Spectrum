@@ -5,6 +5,7 @@
 // Changes will be lost on next generation. Edit the .sig source files instead.
 // ============================================================================
 #pragma once
+#include "enums.h"
 
 #include "mesh_vertex_input.h"
 struct Triangle

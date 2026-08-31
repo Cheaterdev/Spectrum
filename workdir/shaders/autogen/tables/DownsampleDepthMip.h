@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct DownsampleDepthMip
 {
 	uint srcMip; // Texture2D<float>

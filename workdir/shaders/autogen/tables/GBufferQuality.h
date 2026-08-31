@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct GBufferQuality
 {
 	uint ref; // Texture2D<float4>

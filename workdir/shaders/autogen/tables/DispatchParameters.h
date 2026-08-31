@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct DispatchParameters
 {
 	float SurfaceThickness; // float

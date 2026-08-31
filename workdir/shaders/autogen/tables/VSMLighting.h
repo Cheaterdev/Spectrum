@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 #include "Camera.h"
 #include "GBuffer.h"
 struct VSMLighting

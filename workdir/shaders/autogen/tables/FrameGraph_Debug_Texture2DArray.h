@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct FrameGraph_Debug_Texture2DArray
 {
 	uint2 sourceSize; // uint2

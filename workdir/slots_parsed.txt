@@ -1,0 +1,235 @@
+shaders/denoiser/reflection_reproject.hlsl :: main -> 1085148881 3671273811 
+shaders/blue_noise.hlsl :: CS -> 2366285198 
+shaders/BRDF.hlsl :: CS -> 1959517136 
+shaders/denoiser/reflection_prefilter.hlsl :: main -> 655143819 1085148881 
+shaders/denoiser/tile_classification_d3d12.hlsl :: main -> 557483870 
+shaders/denoiser/reflection_resolve.hlsl :: main -> 1085148881 2348303714 
+shaders/denoiser/filter_soft_shadows_pass_d3d12.hlsl :: main -> 488355822 966921336 
+shaders/FSR.hlsl :: CS -> 2678396463 
+shaders/denoiser/prepare_shadow_mask_d3d12.hlsl :: main -> 1499014926 
+shaders/downsample_depth.hlsl :: CS -> 4195300155 
+shaders/occluder_cs_dispatch_init.hlsl :: CS -> 264989287 1313247286 
+shaders/gather_pipeline.hlsl :: CS -> 264989287 1704310865 3821185626 
+shaders/downsample_depth_mip.hlsl :: CS -> 802362489 
+shaders/gather_pipeline.hlsl :: CS_meshes_from_boxes -> 264989287 3036874237 
+shaders/gather_pipeline.hlsl :: CS_boxes -> 264989287 661789267 1374051937 1704310865 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/PSSM.hlsl :: CS_RESULT -> 661789267 2354075153 
+shaders/RTXShadowReference.hlsl :: CS_REFERENCE -> 449723840 661789267 2970053666 
+shaders/sky.hlsl :: CS -> 661789267 891671090 
+shaders/sky.hlsl :: CS_Cube -> 661789267 891671090 2646759990 
+shaders/cubemap_down.hlsl :: CS -> 3509706392 4051697398 
+shaders/cubemap_down.hlsl :: CS_Diffuse -> 3509706392 4051697398 
+shaders/SMAA.hlsl :: CS_EdgeDetect -> 1186456998 
+shaders/SMAA.hlsl :: CS_BlendWeight -> 1186456998 1366824305 
+shaders/SMAA.hlsl :: CS_Blending -> 1186456998 3365478080 
+shaders/SS_Shadow.hlsl :: CS -> 1084224559 
+shaders/framegraph/draw_texture_2d.hlsl :: CS -> 336182748 2779244033 
+shaders/framegraph/draw_texture_2d_array.hlsl :: CS -> 2779244033 3803130230 
+shaders/framegraph/draw_texture_3d.hlsl :: CS -> 219319453 2779244033 
+shaders/framegraph/draw_texture_cube.hlsl :: CS -> 1170052984 2779244033 
+shaders/framegraph/draw_not_implemented.hlsl :: CS -> 2779244033 
+shaders/gui/stat_graph.hlsl :: CS -> 907551540 
+shaders/voxel_lighting.hlsl :: CS -> 1660549929 2131314137 
+shaders/voxel_mipmap.hlsl :: CS -> 1551665582 
+shaders/voxel_copy.hlsl :: CS -> 4181380876 
+shaders/voxel_zero.hlsl :: CS -> 526288156 
+shaders/voxel_visibility.hlsl :: CS -> 1449693264 
+shaders/voxel_screen_blur.hlsl :: PS -> 661789267 757388624 994198510 2841983997 
+shaders/voxel_screen.hlsl :: CS -> 661789267 757388624 1052156158 2131314137 
+shaders/DenoiserHistoryFix.hlsl :: CS -> 661789267 994198510 3626931638 
+shaders/FrameClassification.hlsl :: CS -> 707111498 
+shaders/FrameClassificationInitDispatch.hlsl :: CS -> 963374530 
+shaders/reflection_combine.hlsl :: CS -> 661789267 1191058107 
+shaders/vsm_copy_page_depth.hlsl :: CS -> 894490664 
+shaders/vsm_copy_page_depth_batch.hlsl :: CS -> 3843449957 
+shaders/vsm_hiz_downsample_batch.hlsl :: CS -> 3878194062 
+shaders/VSM_BlockerClassify.hlsl :: CS_BLOCKER_CLASSIFY -> 512844347 661789267 676862382 3509508060 3586025347 
+shaders/VSM.hlsl :: CS_RESULT -> 661789267 3509508060 3586025347 
+shaders/VSM_BlockerSearch.hlsl :: CS_BLOCKER_SEARCH -> 661789267 676862382 951524871 3241416530 3509508060 3586025347 3949532126 
+shaders/VSM_ShadowResolve.hlsl :: CS_FULL_LIT -> 661789267 3509508060 3949532126 
+shaders/VSM_ShadowResolve.hlsl :: CS_FULL_SHADOW -> 3509508060 3949532126 
+shaders/VSM_ShadowResolve.hlsl :: CS_SHADOW_BLUR -> 661789267 3083308901 3509508060 3586025347 3949532126 
+shaders/VSM_DebugTileOverlay.hlsl :: CS_OVERLAY_LIT -> 3509508060 3949532126 
+shaders/VSM_DebugTileOverlay.hlsl :: CS_OVERLAY_DARK -> 3509508060 3949532126 
+shaders/VSM_DebugTileOverlay.hlsl :: CS_OVERLAY_CONFIRMED_LIT -> 3509508060 3949532126 
+shaders/VSM_DebugTileOverlay.hlsl :: CS_OVERLAY_BLUR -> 3083308901 3509508060 3949532126 
+shaders/VSM_DebugTileOverlay.hlsl :: CS_OVERLAY_PAGE_GRID -> 661789267 3509508060 3586025347 
+shaders/VSM_DebugTileOverlay.hlsl :: CS_OVERLAY_RTX_REFERENCE -> 3509508060 
+shaders/vsm_gather_dispatch.hlsl :: CS -> 163467998 264989287 1704310865 
+shaders/vsm_gather_dispatch.hlsl :: CS_MATERIAL -> 264989287 1704310865 1826513433 
+shaders/vsm_depth_analysis.hlsl :: CS -> 661789267 2840407475 
+shaders/font/vsSimple.hlsl :: VS -> 320887073 
+shaders/occluder.hlsl :: VS -> 661789267 1704310865 2062991504 
+shaders/depth_render.hlsl :: VS -> 
+shaders/gbuffer_quality.hlsl :: VS -> 
+shaders/copy_texture.hlsl :: VS -> 
+shaders/PSSM.hlsl :: VS -> 
+shaders/Downsample.hlsl :: VS -> 
+shaders/mesh_shader.hlsl :: VS -> 661789267 890524687 1614768513 1704310865 
+shaders/mesh_shader_voxel.hlsl :: VS -> 661789267 890524687 1614768513 1704310865 3831523889 
+shaders/sky.hlsl :: VS -> 661789267 
+shaders/SMAA.hlsl :: DX10_SMAAEdgeDetectionVS -> 1186456998 
+shaders/SMAA.hlsl :: DX10_SMAABlendingWeightCalculationVS -> 1186456998 
+shaders/SMAA.hlsl :: DX10_SMAANeighborhoodBlendingVS -> 1186456998 
+shaders/stencil.hlsl :: PS -> 3141981064 3961106286 
+shaders/stencil.hlsl :: PS_RESULT -> 
+shaders/triangle_stencil.hlsl :: VS -> 661789267 1614768513 1704310865 2687029086 
+shaders/stencil.hlsl :: PS_COLOR -> 2811717613 
+shaders/ring.hlsl :: VS -> 661789267 2687029086 
+shaders/contour.hlsl :: VS -> 
+shaders/gui/ninepatch.hlsl :: VS -> 1501925589 
+shaders/gui/rect.hlsl :: VS -> 148632169 
+shaders/gui/flow_line.hlsl :: VS -> 2836485267 
+shaders/voxel_screen.hlsl :: VS -> 
+shaders/gui/stat_graph_lines.hlsl :: VS -> 2042986823 
+shaders/DenoiserDownsample.hlsl :: VS -> 
+shaders/mesh_shader_vsm.hlsl :: VS -> 890524687 1614768513 1704310865 2774043050 3342852451 
+shaders/workgraph_test.hlsl ::  -> 449723840 661789267 757388624 1084224559 
+shaders/denoiser/filter_soft_shadows_pass_d3d12.hlsl :: main -> 488355822 966921336 
+shaders/FSR.hlsl :: CS -> 2678396463 
+shaders/occluder_cs_dispatch_init.hlsl :: CS -> 264989287 1313247286 
+shaders/gather_pipeline.hlsl :: CS -> 264989287 661789267 1704310865 3821185626 
+shaders/gather_pipeline.hlsl :: CS_meshes_from_boxes -> 264989287 3036874237 
+shaders/gather_pipeline.hlsl :: CS_boxes -> 264989287 661789267 1374051937 1704310865 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/voxel_lighting.hlsl :: CS -> 1660549929 2131314137 
+shaders/voxel_mipmap.hlsl :: CS -> 1551665582 
+shaders/voxel_screen_blur.hlsl :: PS -> 661789267 757388624 994198510 2841983997 
+shaders/VSM_ShadowResolve.hlsl :: CS_SHADOW_BLUR -> 449723840 661789267 1704310865 3083308901 3509508060 3586025347 3949532126 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/occluder.hlsl :: PS -> 2062991504 
+shaders/depth_render.hlsl :: PS -> 2546610945 
+shaders/gbuffer_quality.hlsl :: PS_STENCIL -> 646799690 
+shaders/gbuffer_quality.hlsl :: PS -> 661789267 2616508654 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/PSSM.hlsl :: PS_RESULT -> 661789267 2354075153 
+shaders/PSSM.hlsl :: PS -> 
+shaders/Downsample.hlsl :: PS -> 3453419380 
+shaders/mesh_shader.hlsl :: AS -> 661789267 890524687 1614768513 1704310865 
+shaders/mesh_shader_voxel.hlsl :: AS -> 1614768513 
+shaders/sky.hlsl :: PS -> 661789267 891671090 
+shaders/SMAA.hlsl :: DX10_SMAALumaEdgeDetectionPS -> 1186456998 
+shaders/SMAA.hlsl :: DX10_SMAABlendingWeightCalculationPS -> 1186456998 1366824305 
+shaders/SMAA.hlsl :: DX10_SMAANeighborhoodBlendingPS -> 1186456998 3365478080 
+shaders/triangle_stencil.hlsl :: PS -> 
+shaders/ring.hlsl :: PS -> 3141981064 3961106286 
+shaders/ring.hlsl :: PS_COLOR -> 661789267 2811717613 
+shaders/contour.hlsl :: PS -> 2310427968 
+shaders/gui/ninepatch.hlsl :: PS -> 1501925589 
+shaders/gui/canvas.hlsl :: PS -> 2847541095 
+shaders/gui/rect.hlsl :: PS_COLOR -> 
+shaders/gui/flow_line.hlsl :: PS -> 2847541095 
+shaders/voxel_screen.hlsl :: PS -> 661789267 757388624 1329264198 
+shaders/voxel_screen.hlsl :: PS_Resize -> 661789267 757388624 1329264198 
+shaders/voxel_screen_reflection.hlsl :: PS -> 661789267 757388624 
+shaders/voxel_screen_reflection.hlsl :: PS_resize -> 757388624 
+shaders/voxel_screen_debug.hlsl :: Debug -> 661789267 1712417268 2131314137 
+shaders/gui/stat_graph_lines.hlsl :: PS -> 2042986823 
+shaders/DenoiserDownsample.hlsl :: PS -> 1146367756 
+shaders/mesh_shader_vsm.hlsl :: AS -> 676862382 890524687 1614768513 1704310865 2774043050 3342852451 
+shaders/denoiser/filter_soft_shadows_pass_d3d12.hlsl :: main -> 966921336 2387354090 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/voxel_mipmap.hlsl :: CS -> 1551665582 
+shaders/voxel_screen_blur.hlsl :: PS -> 661789267 757388624 994198510 2841983997 
+shaders/font/gsSimple.hlsl :: GS -> 3335720157 4265683659 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/mesh_shader.hlsl :: AS -> 661789267 890524687 1614768513 1704310865 
+shaders/gui/flow_line.hlsl :: GS -> 2847541095 
+shaders/gui/stat_graph_lines.hlsl :: GS -> 2042986823 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/voxel_screen_blur.hlsl :: PS -> 661789267 757388624 994198510 2841983997 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/gui/flow_line.hlsl :: DS -> 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/gui/flow_line.hlsl :: HS -> 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/GenerateMips.hlsl :: CS -> 3479799905 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/font/psSimple.hlsl :: PS -> 3335720157 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders/copy_texture.hlsl :: PS -> 2546610945 
+shaders\raytracing.hlsl ::  -> 449723840 661789267 757388624 1052156158 2131314137 
+shaders\raytracing_debug.hlsl ::  -> 449723840 661789267 1047146819 
+struct MaterialCB
+struct MaterialCB
+struct MaterialCB
+struct MaterialCB
+struct MaterialCB
+struct MaterialCB
+struct MaterialCB
+struct MaterialCB
+struct MaterialCB
+struct MaterialCB
+struct MaterialCB
+struct MaterialCB

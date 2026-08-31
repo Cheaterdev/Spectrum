@@ -6,7 +6,7 @@ options
   }
 
 parse
- : (layout_definition|table_definition|rt_definition|workgraph_pso_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|pass_definition|view_definition|pipeline_definition|COMMENT)* EOF
+ : (layout_definition|table_definition|rt_definition|workgraph_pso_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|pass_definition|view_definition|pipeline_definition|enum_definition|COMMENT)* EOF
  ;
 
 
@@ -243,6 +243,11 @@ pipeline_stat : option_block* name_id SCOL | COMMENT ;
 pipeline_block : pipeline_stat* ;
 pipeline_definition : PIPELINE name_id OBRACE pipeline_block CBRACE ;
 
+enum_value_declaration : name_id (ASSIGN value_id)? SCOL;
+enum_stat : enum_value_declaration | COMMENT;
+enum_block : enum_stat*;
+enum_definition : ENUM name_id OBRACE enum_block CBRACE;
+
 
 OR : '||';
 AND : '&&';
@@ -294,6 +299,7 @@ RT: 'rt';
 RTV: 'RTV';
 DSV: 'DSV';
 ROOTSIG: 'root';
+ENUM: 'enum';
 shader_type:
 'compute'
 |'vertex'

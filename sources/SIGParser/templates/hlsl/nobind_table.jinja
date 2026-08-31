@@ -5,6 +5,8 @@
 // Changes will be lost on next generation. Edit the .sig source files instead.
 // ============================================================================
 #pragma once
+{#- bare filename -- see the comment on this include in hlsl/table.jinja #}
+#include "enums.h"
 
 {% for t in table.used_tables -%}
 #include "{{ t }}.h"

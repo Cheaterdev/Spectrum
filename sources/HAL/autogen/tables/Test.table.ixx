@@ -19,9 +19,11 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::Test;
 		float data[16];
+		TestEnumMode mode = TestEnumMode::None;
 		std::vector<HLSL::StructuredBuffer<MeshInstanceInfo>> instances;
 		std::vector<HLSL::Texture2D<float4>> tex;
 		float* GetData() { return data; }
+		TestEnumMode& GetMode() { return mode; }
 		std::vector<HLSL::StructuredBuffer<MeshInstanceInfo>>& GetInstances() { return instances; }
 		std::vector<HLSL::Texture2D<float4>>& GetTex() { return tex; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -29,12 +31,14 @@ export namespace Table
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(data);
+			compiler.compile(mode);
 			compiler.compile(instances);
 			compiler.compile(tex);
 		}
 		struct Compiled
 		{
 			float data[16]; // float
+			TestEnumMode mode; // TestEnumMode
 			uint instances; // StructuredBuffer<MeshInstanceInfo>
 			uint tex; // Texture2D<float4>
 
@@ -43,6 +47,7 @@ export namespace Table
 			SERIALIZE()
 			{
 				ar& NVP(data);
+				ar& NVP(mode);
 			}
 
 
@@ -56,6 +61,7 @@ export namespace Table
 		SERIALIZE()
 		{
 			ar& NVP(data);
+			ar& NVP(mode);
 		}
 
 	};

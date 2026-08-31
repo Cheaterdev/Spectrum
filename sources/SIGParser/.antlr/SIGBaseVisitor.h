@@ -319,6 +319,22 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitEnum_value_declaration(SIGParser::Enum_value_declarationContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitEnum_stat(SIGParser::Enum_statContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitEnum_block(SIGParser::Enum_blockContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitEnum_definition(SIGParser::Enum_definitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitShader_type(SIGParser::Shader_typeContext *ctx) override {
     return visitChildren(ctx);
   }

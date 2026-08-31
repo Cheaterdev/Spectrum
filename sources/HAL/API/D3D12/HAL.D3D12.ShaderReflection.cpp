@@ -73,7 +73,8 @@ namespace HAL
                     {
                         cb_name = cb_name.substr(5);
                         auto slot_id = get_slot(cb_name);
-                        rf.slots.merge(slot_id.value());
+                        if (slot_id)
+                            rf.slots.merge(slot_id.value());
                     }
                 }
             }

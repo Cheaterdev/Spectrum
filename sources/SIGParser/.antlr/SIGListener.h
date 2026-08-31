@@ -242,6 +242,18 @@ public:
   virtual void enterPipeline_definition(SIGParser::Pipeline_definitionContext *ctx) = 0;
   virtual void exitPipeline_definition(SIGParser::Pipeline_definitionContext *ctx) = 0;
 
+  virtual void enterEnum_value_declaration(SIGParser::Enum_value_declarationContext *ctx) = 0;
+  virtual void exitEnum_value_declaration(SIGParser::Enum_value_declarationContext *ctx) = 0;
+
+  virtual void enterEnum_stat(SIGParser::Enum_statContext *ctx) = 0;
+  virtual void exitEnum_stat(SIGParser::Enum_statContext *ctx) = 0;
+
+  virtual void enterEnum_block(SIGParser::Enum_blockContext *ctx) = 0;
+  virtual void exitEnum_block(SIGParser::Enum_blockContext *ctx) = 0;
+
+  virtual void enterEnum_definition(SIGParser::Enum_definitionContext *ctx) = 0;
+  virtual void exitEnum_definition(SIGParser::Enum_definitionContext *ctx) = 0;
+
   virtual void enterShader_type(SIGParser::Shader_typeContext *ctx) = 0;
   virtual void exitShader_type(SIGParser::Shader_typeContext *ctx) = 0;
 

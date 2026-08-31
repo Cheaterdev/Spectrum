@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct VSMCopyPageDepthBatch
 {
 	uint atlas; // Texture2DArray<float>

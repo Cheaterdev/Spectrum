@@ -7,7 +7,8 @@ import cereal.json;
 #include "Parsing.h"
 
 static const std::string cpp_path = "../../sources/HAL/autogen";
-static const std::string hlsl_path = "../../workdir/shaders/autogen";
+static const std::string shaders_path = "../../workdir/shaders";
+static const std::string hlsl_path = shaders_path + "/autogen";
 
 
 static const std::string cpp_path_render = "../../sources/RenderSystem/FrameGraph/autogen";
@@ -132,6 +133,7 @@ int main()
 			tag(p.rt);
 			tag(p.views);
 			tag(p.passes);
+			tag(p.enums);
 
 			parsed.merge(p);
 		});
@@ -867,6 +869,10 @@ int main()
 		my_stream(cpp_path, "autogen.ixx") << cpp_templates.generate(L"autogen");
 		my_stream(cpp_path, "autogen.cpp") << cpp_templates.generate(L"autogen_impl");
 		my_stream(cpp_path, "enums.ixx") << cpp_templates.generate(L"enums");
+		// Lives at the shader root (next to sig_hlsl.hlsl), not under autogen/,
+		// and is included by bare filename everywhere -- see the comment on
+		// those #include lines for why.
+		my_stream(shaders_path, "enums.h") << hlsl_templates.generate(L"enums");
 		my_stream(cpp_path, "pso.cpp") << cpp_templates.generate(L"psos");
 
 		my_stream(cpp_path_render, "enums.h") << cpp_templates.generate(L"pass_enums");

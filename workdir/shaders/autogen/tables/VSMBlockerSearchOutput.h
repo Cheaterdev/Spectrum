@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct VSMBlockerSearchOutput
 {
 	uint blocker_search_result; // RWTexture2D<uint4>

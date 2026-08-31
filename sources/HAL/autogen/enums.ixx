@@ -281,4 +281,10 @@ export
 		WorkGR_ClassifyPixels_NodeEmulation = "WorkGR_ClassifyPixels_NodeEmulation"_crc32,
 		WorkGR_Shadows_NodeEmulation = "WorkGR_Shadows_NodeEmulation"_crc32
 	};
+	enum class TestEnumMode : uint
+	{
+		None,
+		FirstMode,
+		SecondMode = 5
+	};
 }

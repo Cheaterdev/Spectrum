@@ -24,7 +24,7 @@ import :Autogen.{{"Slots" if table.options.IndirectCommand is defined else "Tabl
 {%- macro declare_func(type) -%}
 {%- for v in (table.values|unique|selectattr('value_type','==', type)) -%}
 {%-if v.options.dynamic is undefined %}
-		{{v.cpp_type}} {{v.name}}{{v.array}}{%if v.expr%} = {{v.expr}}{%endif%};
+		{{v.cpp_type}} {{v.name}}{{v.array}}{%if v.expr%} = {{(v.type + "::" + v.expr) if parsed.enums[v.type] is defined else v.expr}}{%endif%};
 {%-endif-%}
 {%- endfor -%}
 {%- endmacro -%}

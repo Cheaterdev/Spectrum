@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct DenoiserShadow_Prepare
 {
 	int2 BufferDimensions; // int2

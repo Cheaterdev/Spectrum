@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 #include "GraphInput.h"
 #include "TileRecord.h"
 struct WorkGR_ClassifyPixels_NodeEmulation

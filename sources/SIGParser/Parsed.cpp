@@ -233,6 +233,23 @@ void Table::setup(Parsed* all)
 		return false;
 	});
 
+	// A field type that isn't a recognized scalar prefix defaults to
+	// ValueType::STRUCT at parse time (have_type::detect_type), since enums
+	// may be declared in a .sig file parsed after this one. Resolve enum
+	// field types before they're mistaken for nested tables below -- an
+	// enum-typed field is plain constant-buffer data, same as an int/uint
+	// field. Called again at the bottom of this function, after the final
+	// detect_type() re-derivation pass there, which would otherwise stomp
+	// this back to STRUCT.
+	auto reclassify_enum_fields = [&]
+	{
+		for (auto& v : values)
+		{
+			if (v.value_type == ValueType::STRUCT && all->find_enum(v.get_type()))
+				v.value_type = ValueType::CB;
+		}
+	};
+	reclassify_enum_fields();
 
 	for (auto& v : values)
 	{
@@ -263,6 +280,8 @@ void Table::setup(Parsed* all)
 		if (v.value_type == ValueType::STRUCT)
 		{
 			auto t = all->find_table(v.get_type());
+			if (!t)
+				throw std::runtime_error("unknown field type '" + v.get_type() + "' for '" + v.name + "' in '" + name + "' (not a table or enum)");
 			t->setup(all);
 			can_compile &= t->can_compile;
 			for (int i = 0; i < ValueType::COUNT; i++)
@@ -327,6 +346,14 @@ void Table::setup(Parsed* all)
 			need_compiled = true;
 		v.detect_type(&v);
 	}
+
+	// v.detect_type() above recomputes value_type from class_no_template
+	// prefix rules, which knows nothing about enums and defaults back to
+	// STRUCT -- reclassify once more so the CB codegen path (used by the
+	// templates' compile()/Compiled struct) sees the final answer. cpp_type
+	// doesn't need recomputing: get_cpp_for()'s STRUCT and CB branches both
+	// just resolve to the bare type name either way.
+	reclassify_enum_fields();
 }
 
 RaytracePSO* Parsed::find_rtx(std::string name)
@@ -342,6 +369,11 @@ Layout* Parsed::find_layout(std::string name)
 Table* Parsed::find_table(std::string name)
 {
 	return tables.find(name);
+}
+
+Enum* Parsed::find_enum(std::string name)
+{
+	return enums.find(name);
 }
 
 void Parsed::setup()

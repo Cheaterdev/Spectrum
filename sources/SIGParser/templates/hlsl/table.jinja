@@ -6,6 +6,14 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+{#- bare filename, not "autogen/enums.h": the custom include resolver
+    (HAL::shader_include::load_file) finds either path, but DXC's #pragma-once
+    dedup keys on the resolved string, which differs by includer depth for a
+    subdirectory path -- causing "redefinition" when the same table is reached
+    through two different include chains. sig_hlsl.hlsl (shader root, bare
+    filename) doesn't have this problem; enums.h lives next to it for the
+    same reason. #}
+#include "enums.h"
 {%- for v in table.used_tables -%}
 {%- set t =  parsed.tables[v] -%}
 {%-if t.can_compile %}

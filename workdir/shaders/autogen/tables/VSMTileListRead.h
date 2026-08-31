@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct VSMTileListRead
 {
 	uint tiles; // StructuredBuffer<uint2>

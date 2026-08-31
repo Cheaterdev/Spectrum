@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct FontRenderingConstants
 {
 	float4x4 TransformMatrix; // float4x4

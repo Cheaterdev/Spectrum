@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct VSMSearchVerdictAppend
 {
 	uint confirmed_lit_tiles; // AppendStructuredBuffer<uint2>

@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct VSMDownsampleHiZBatch
 {
 	uint src_mip; // uint

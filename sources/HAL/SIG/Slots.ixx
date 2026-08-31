@@ -282,25 +282,6 @@ export {
 
 	public:
 		std::set<SlotID> slots_usage;
-		void merge(resource_file_depender& depender)
-		{
-			for (auto& d : depender.get_files())
-			{
-				auto parent = d.file_name.parent_path().filename();
-
-				if (to_lower(parent.wstring()) == (L"autogen"))
-				{
-
-					auto name = d.file_name.stem();
-
-					auto slot_id = get_slot(name.string());
-
-					ASSERT(slot_id);
-					slots_usage.insert(slot_id.value());
-
-				}
-			}
-		}
 		void merge(SlotID id)
 		{
 			slots_usage.insert(id);

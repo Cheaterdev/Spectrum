@@ -484,6 +484,26 @@ struct RootSig : public have_name
 {
 };
 
+struct EnumValue : public have_name, have_expr
+{
+	SERIALIZE()
+	{
+		SAVE_PARENT_MERGED(have_name);
+		SAVE_PARENT_MERGED(have_expr);
+	}
+};
+
+struct Enum : public have_name
+{
+	std::list<EnumValue> values;
+
+	SERIALIZE()
+	{
+		SAVE_PARENT_MERGED(have_name);
+		ar& NVP(values);
+	}
+};
+
 struct Shader : public have_name, have_options
 {
 	std::string path;
@@ -858,10 +878,12 @@ struct Parsed : public parsed_type
 	my_container<View> views;
 	my_container<Pass> passes;
 	my_container<Pipeline> pipelines;
+	my_container<Enum> enums;
 
 	Layout* find_layout(std::string name);
 	Table* find_table(std::string name);
 	RaytracePSO* find_rtx(std::string name);
+	Enum* find_enum(std::string name);
 
 	void setup();
 
@@ -879,6 +901,7 @@ struct Parsed : public parsed_type
 		views.merge(r.views);
 		passes.merge(r.passes);
 		pipelines.merge(r.pipelines);
+		enums.merge(r.enums);
 	}
 
 
@@ -897,5 +920,6 @@ struct Parsed : public parsed_type
 		ar& NVP(views);
 		ar& NVP(passes);
 		ar& NVP(pipelines);
+		ar& NVP(enums);
 	}
 };

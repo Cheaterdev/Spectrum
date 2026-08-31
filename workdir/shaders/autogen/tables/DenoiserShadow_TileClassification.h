@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct DenoiserShadow_TileClassification
 {
 	float3 Eye; // float3

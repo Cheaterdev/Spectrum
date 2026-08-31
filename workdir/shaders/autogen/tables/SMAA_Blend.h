@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct SMAA_Blend
 {
 	uint blendTex; // Texture2D<float4>

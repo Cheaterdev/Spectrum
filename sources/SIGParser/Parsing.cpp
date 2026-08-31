@@ -279,6 +279,16 @@ public:
 		setup_map(get_elem<Pipeline>().entries);
 	}
 
+	GENERATE(Enum_definition)
+	{
+		setup_map(get_elem<Parsed>().enums);
+	}
+
+	GENERATE(Enum_value_declaration)
+	{
+		setup_list(get_elem<Enum>().values);
+	}
+
 	void enterName_id(SIGParser::Name_idContext* ctx) override
 	{
 		auto& elem = get_elem<have_name>();

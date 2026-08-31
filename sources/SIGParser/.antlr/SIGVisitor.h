@@ -171,6 +171,14 @@ public:
 
     virtual std::any visitPipeline_definition(SIGParser::Pipeline_definitionContext *context) = 0;
 
+    virtual std::any visitEnum_value_declaration(SIGParser::Enum_value_declarationContext *context) = 0;
+
+    virtual std::any visitEnum_stat(SIGParser::Enum_statContext *context) = 0;
+
+    virtual std::any visitEnum_block(SIGParser::Enum_blockContext *context) = 0;
+
+    virtual std::any visitEnum_definition(SIGParser::Enum_definitionContext *context) = 0;
+
     virtual std::any visitShader_type(SIGParser::Shader_typeContext *context) = 0;
 
     virtual std::any visitPso_param_id(SIGParser::Pso_param_idContext *context) = 0;

@@ -49,4 +49,14 @@ export
 		{{t.name}} = "{{t.name}}"_crc32{%if not loop.last%},{%endif%}
 {%endfor -%}
 	};
+
+{%- for e in parsed.enums %}
+{%- set enum = parsed.enums[e] %}
+	enum class {{enum.name}} : uint
+	{
+		{%- for v in enum.values %}
+		{{v.name}}{% if v.expr %} = {{v.expr}}{% endif %}{% if not loop.last %},{% endif %}
+		{%- endfor %}
+	};
+{%- endfor %}
 }

@@ -272,7 +272,7 @@ namespace HAL
 		blob_str.blob.assign(static_cast<std::byte*>(resultBlob->GetBufferPointer()), static_cast<std::byte*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
 
 
-	/*omPtr<IDxcBlob> reflectionBlob{};
+		ComPtr<IDxcBlob> reflectionBlob{};
 		compiledShaderBuffer->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflectionBlob), nullptr);
 
 		const DxcBuffer reflectionBuffer
@@ -285,7 +285,6 @@ namespace HAL
 		// constant-buffer slot usage; Vulkan stubs this for now (Phase 4 will use
 		// SPIR-V reflection).  See reflect_shader() seam at top of this TU.
 		reflect_shader(library, reflectionBuffer, entry_point, blob_str);
-					*/
 		blob_str.entry_point = entry_point; // store so pipeline creation can use it
 		return std::move(blob_str);
 

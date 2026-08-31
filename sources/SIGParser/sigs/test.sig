@@ -1,9 +1,17 @@
 
 
+enum TestEnumMode
+{
+	None;
+	FirstMode;
+	SecondMode = 5;
+}
+
 [Bind = DefaultLayout::Instance0]
 struct Test
 {
 	float data[16];
+	TestEnumMode mode = None;
 	Texture2D<float4> tex[];
 	StructuredBuffer<MeshInstanceInfo> instances[];
 }

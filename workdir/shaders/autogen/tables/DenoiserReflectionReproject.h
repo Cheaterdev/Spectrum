@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct DenoiserReflectionReproject
 {
 	uint g_depth_buffer; // Texture2D<float>

@@ -6,13 +6,16 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 #include "MeshInstanceInfo.h"
 struct Test
 {
 	float data[16]; // float
+	TestEnumMode mode; // TestEnumMode
 	uint instances; // StructuredBuffer<MeshInstanceInfo>
 	uint tex; // Texture2D<float4>
 	float GetData(int i) { return data[i]; }
+	TestEnumMode GetMode() { return mode; }
 	StructuredBuffer<MeshInstanceInfo> GetInstances(int i)
 	{
 		StructuredBuffer<uint> indirection = ResourceDescriptorHeap[instances];

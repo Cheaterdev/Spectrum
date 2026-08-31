@@ -171,32 +171,6 @@ export
 				return Manager::header;
 			}
 
-			static shader_with_id<_shader_type> create_from_memory(std::string data, std::string func_name, UINT flags, std::vector<HAL::shader_macro> macros = {})
-			{
-				// auto t = CounterManager::get().start_count<_shader_type>();
-				resource_file_depender depender;
-				HAL::shader_include In("shaders/", depender);
-
-				std::optional<CompiledShader> res_blob;
-
-				while (!res_blob)
-				{
-					depender.clear();
-					res_blob = ShaderCompiler::get().Compile_Shader(data, macros, compile_code_dxil, func_name, &In);
-				}
-				auto result = std::make_shared<_shader_type>();
-
-
-				result->blob = std::move(*res_blob);
-				result->own_id();
-				result->compile();
-				result->hash = crc32(result->blob);
-				result->slots_usage = result->blob.functions.front().slots_usage;
-
-			//	ASSERT(!result->slots_usage.empty());
-				return result;
-			}
-
 			static std::shared_ptr<_shader_type> load_native(const HAL::shader_header& header, resource_file_depender& depender)
 			{
 
@@ -226,7 +200,21 @@ export
 				result->compile();
 				result->own_id();
 				result->hash = crc32(result->blob.blob);
-				result->slots_usage.merge(depender);
+				// Derived from DXC/D3D12 reflection on the compiled entry point(s),
+				// not from which files got #included -- a shared .hlsl with multiple
+				// entry points can't be told apart by file dependencies alone.
+				for (auto& f : result->blob.functions)
+					result->slots_usage.merge(f.slots);
+
+				// TEMP debug: prove per-entry-point precision vs. the old file-wide
+				// heuristic. Remove after verification.
+				{
+					std::string line = "SLOTS_TEMP: " + header.file_name + " :: " + header.entry_point + " -> ";
+					for (auto& s : result->slots_usage.slots_usage)
+						line += std::to_string(static_cast<unsigned int>(s)) + " ";
+					Log::get() << line << Log::endl;
+				}
+
 				result->init();
 				return result;
 			}

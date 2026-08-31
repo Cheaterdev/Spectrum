@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct VoxelUpscale
 {
 	uint tex_downsampled; // Texture2D<float4>

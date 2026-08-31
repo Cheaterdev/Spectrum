@@ -25,9 +25,9 @@ public:
     LOG = 66, LAYOUT = 67, STRUCT = 68, COMPUTE_PSO = 69, GRAPHICS_PSO = 70, 
     RAYTRACE_PSO = 71, WORKGRAPH_PSO = 72, NODE = 73, NODE_OUTPUT = 74, 
     RAYTRACE_RAYGEN = 75, RAYTRACE_PASS = 76, PASS = 77, VIEW = 78, PIPELINE = 79, 
-    SLOT = 80, RT = 81, RTV = 82, DSV = 83, ROOTSIG = 84, ID = 85, INT_SCALAR = 86, 
-    FLOAT_SCALAR = 87, STRING = 88, COMMENT = 89, SPACE = 90, POINTER = 91, 
-    INSERT_START = 92, INSERT_END = 93, INSERT_BLOCK = 94
+    SLOT = 80, RT = 81, RTV = 82, DSV = 83, ROOTSIG = 84, ENUM = 85, ID = 86, 
+    INT_SCALAR = 87, FLOAT_SCALAR = 88, STRING = 89, COMMENT = 90, SPACE = 91, 
+    POINTER = 92, INSERT_START = 93, INSERT_END = 94, INSERT_BLOCK = 95
   };
 
   enum {
@@ -54,7 +54,9 @@ public:
     RuleRtx_raygen_block = 66, RuleRtx_raygen_definition = 67, RuleView_declaration = 68, 
     RuleView_stat = 69, RuleView_block = 70, RuleView_definition = 71, RulePass_definition = 72, 
     RulePipeline_stat = 73, RulePipeline_block = 74, RulePipeline_definition = 75, 
-    RuleShader_type = 76, RulePso_param_id = 77, RuleBool_type = 78
+    RuleEnum_value_declaration = 76, RuleEnum_stat = 77, RuleEnum_block = 78, 
+    RuleEnum_definition = 79, RuleShader_type = 80, RulePso_param_id = 81, 
+    RuleBool_type = 82
   };
 
   explicit SIGParser(antlr4::TokenStream *input);
@@ -150,6 +152,10 @@ public:
   class Pipeline_statContext;
   class Pipeline_blockContext;
   class Pipeline_definitionContext;
+  class Enum_value_declarationContext;
+  class Enum_statContext;
+  class Enum_blockContext;
+  class Enum_definitionContext;
   class Shader_typeContext;
   class Pso_param_idContext;
   class Bool_typeContext; 
@@ -183,6 +189,8 @@ public:
     View_definitionContext* view_definition(size_t i);
     std::vector<Pipeline_definitionContext *> pipeline_definition();
     Pipeline_definitionContext* pipeline_definition(size_t i);
+    std::vector<Enum_definitionContext *> enum_definition();
+    Enum_definitionContext* enum_definition(size_t i);
     std::vector<antlr4::tree::TerminalNode *> COMMENT();
     antlr4::tree::TerminalNode* COMMENT(size_t i);
 
@@ -1525,6 +1533,75 @@ public:
   };
 
   Pipeline_definitionContext* pipeline_definition();
+
+  class  Enum_value_declarationContext : public antlr4::ParserRuleContext {
+  public:
+    Enum_value_declarationContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *SCOL();
+    antlr4::tree::TerminalNode *ASSIGN();
+    Value_idContext *value_id();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Enum_value_declarationContext* enum_value_declaration();
+
+  class  Enum_statContext : public antlr4::ParserRuleContext {
+  public:
+    Enum_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Enum_value_declarationContext *enum_value_declaration();
+    antlr4::tree::TerminalNode *COMMENT();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Enum_statContext* enum_stat();
+
+  class  Enum_blockContext : public antlr4::ParserRuleContext {
+  public:
+    Enum_blockContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<Enum_statContext *> enum_stat();
+    Enum_statContext* enum_stat(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Enum_blockContext* enum_block();
+
+  class  Enum_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Enum_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *ENUM();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *OBRACE();
+    Enum_blockContext *enum_block();
+    antlr4::tree::TerminalNode *CBRACE();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Enum_definitionContext* enum_definition();
 
   class  Shader_typeContext : public antlr4::ParserRuleContext {
   public:

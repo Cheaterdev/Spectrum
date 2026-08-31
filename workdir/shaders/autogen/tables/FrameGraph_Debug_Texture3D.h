@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 #include "Camera.h"
 struct FrameGraph_Debug_Texture3D
 {

@@ -6,6 +6,7 @@
 // ============================================================================
 #pragma once
 #include "sig_hlsl.hlsl"
+#include "enums.h"
 struct ColorRTXOutput
 {
 	uint output; // RWTexture2D<float4>
