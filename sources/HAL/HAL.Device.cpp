@@ -115,6 +115,10 @@ namespace HAL
 		frame_manager = std::make_unique<FrameResourceManager>(*this);
 		static_gpu_data = std::make_unique<StaticCompiledGPUData>(*this);
 
+		// After static_gpu_data (null descriptors are allocated from it) and
+		// before anything can compile a table.
+		init_null_descriptors(*this);
+
 		pipeline_state_cache = std::make_unique<PipelineStateCache>(*this);
 
 		engine_root_layout_holder = std::make_unique<EngineRootLayoutHolder>();

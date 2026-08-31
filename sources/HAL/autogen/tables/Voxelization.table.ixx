@@ -30,10 +30,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(albedo);
-			compiler.compile(normals);
-			compiler.compile(visibility);
-			compiler.compile(info);
+			compiler.compile(albedo, "Voxelization::albedo");
+			compiler.compile(normals, "Voxelization::normals");
+			compiler.compile(visibility, "Voxelization::visibility");
+			compiler.compile(info, "Voxelization::info");
 		}
 		struct Compiled
 		{

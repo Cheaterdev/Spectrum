@@ -31,11 +31,11 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(noisy_output);
-			compiler.compile(hit_and_pdf);
-			compiler.compile(prev_result);
-			compiler.compile(screen_result);
-			compiler.compile(gi_result);
+			compiler.compile(noisy_output, "VoxelBlur::noisy_output");
+			compiler.compile(hit_and_pdf, "VoxelBlur::hit_and_pdf");
+			compiler.compile(prev_result, "VoxelBlur::prev_result");
+			compiler.compile(screen_result, "VoxelBlur::screen_result");
+			compiler.compile(gi_result, "VoxelBlur::gi_result");
 		}
 		struct Compiled
 		{

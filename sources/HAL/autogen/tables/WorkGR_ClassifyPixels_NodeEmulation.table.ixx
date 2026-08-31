@@ -29,9 +29,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(YZBase);
-			compiler.compile(Shadows_Node);
-			compiler.compile(graphInput);
+			compiler.compile(YZBase, "WorkGR_ClassifyPixels_NodeEmulation::YZBase");
+			compiler.compile(Shadows_Node, "WorkGR_ClassifyPixels_NodeEmulation::Shadows_Node");
+			compiler.compile(graphInput, "WorkGR_ClassifyPixels_NodeEmulation::graphInput");
 		}
 		struct Compiled
 		{

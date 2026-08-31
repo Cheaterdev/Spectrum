@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(sourceSize);
-			compiler.compile(scale);
-			compiler.compile(offset);
-			compiler.compile(source);
+			compiler.compile(sourceSize, "FrameGraph_Debug_Texture2DArray::sourceSize");
+			compiler.compile(scale, "FrameGraph_Debug_Texture2DArray::scale");
+			compiler.compile(offset, "FrameGraph_Debug_Texture2DArray::offset");
+			compiler.compile(source, "FrameGraph_Debug_Texture2DArray::source");
 		}
 		struct Compiled
 		{

@@ -26,8 +26,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(lod);
-			compiler.compile(v);
+			compiler.compile(lod, "Triangle::lod");
+			compiler.compile(v, "Triangle::v");
 		}
 		using Compiled = Triangle;
 

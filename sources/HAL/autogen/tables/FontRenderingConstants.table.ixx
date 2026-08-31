@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(TransformMatrix);
-			compiler.compile(ClipRect);
+			compiler.compile(TransformMatrix, "FontRenderingConstants::TransformMatrix");
+			compiler.compile(ClipRect, "FontRenderingConstants::ClipRect");
 		}
 		using Compiled = FontRenderingConstants;
 

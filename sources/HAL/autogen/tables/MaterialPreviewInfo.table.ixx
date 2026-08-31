@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(data);
-			compiler.compile(textures);
-			compiler.compile(results);
+			compiler.compile(data, "MaterialPreviewInfo::data");
+			compiler.compile(textures, "MaterialPreviewInfo::textures");
+			compiler.compile(results, "MaterialPreviewInfo::results");
 		}
 
 

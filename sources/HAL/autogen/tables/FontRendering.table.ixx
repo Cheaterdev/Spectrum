@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(tex0);
-			compiler.compile(positions);
+			compiler.compile(tex0, "FontRendering::tex0");
+			compiler.compile(positions, "FontRendering::positions");
 		}
 		struct Compiled
 		{

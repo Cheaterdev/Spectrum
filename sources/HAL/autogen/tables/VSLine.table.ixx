@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(pos);
-			compiler.compile(color);
+			compiler.compile(pos, "VSLine::pos");
+			compiler.compile(color, "VSLine::color");
 		}
 		using Compiled = VSLine;
 

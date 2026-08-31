@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(color);
-			compiler.compile(depth);
+			compiler.compile(color, "DenoiserDownsample::color");
+			compiler.compile(depth, "DenoiserDownsample::depth");
 		}
 		struct Compiled
 		{

@@ -75,9 +75,11 @@ export namespace Table
 {%- macro compile_func(type) -%}
 {%- for v in (table.values|unique|selectattr('value_type','==', type)) %}
 {%- if v.options.Barrier is defined and v.options.Barrier.value_atom.expr == 'ALL' %}
-			compiler.compile_whole({{v.name}});
+			compiler.compile_whole({{v.name}}, "{{table.name}}::{{v.name}}");
+{%- elif v.options.Auto is defined %}
+			compiler.compile_auto({{v.name}}, "{{table.name}}::{{v.name}}");
 {%- else %}
-			compiler.compile({{v.name}});
+			compiler.compile({{v.name}}, "{{table.name}}::{{v.name}}");
 {%- endif -%}
 {%- endfor -%}
 {%- endmacro -%}

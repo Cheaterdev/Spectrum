@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(level);
-			compiler.compile(time);
+			compiler.compile(level, "PSSMConstants::level");
+			compiler.compile(time, "PSSMConstants::time");
 		}
 		using Compiled = PSSMConstants;
 

@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(areaTex);
-			compiler.compile(searchTex);
-			compiler.compile(edgesTex);
-			compiler.compile(blendOut);
+			compiler.compile(areaTex, "SMAA_Weights::areaTex");
+			compiler.compile(searchTex, "SMAA_Weights::searchTex");
+			compiler.compile(edgesTex, "SMAA_Weights::edgesTex");
+			compiler.compile(blendOut, "SMAA_Weights::blendOut");
 		}
 		struct Compiled
 		{

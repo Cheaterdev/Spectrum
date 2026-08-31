@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(dispatch_grid);
-			compiler.compile(unused);
-			compiler.compile(WaveOffset);
-			compiler.compile(unused2);
+			compiler.compile(dispatch_grid, "GraphInput::dispatch_grid");
+			compiler.compile(unused, "GraphInput::unused");
+			compiler.compile(WaveOffset, "GraphInput::WaveOffset");
+			compiler.compile(unused2, "GraphInput::unused2");
 		}
 		using Compiled = GraphInput;
 

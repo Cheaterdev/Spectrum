@@ -23,7 +23,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(color);
+			compiler.compile(color, "SingleColor::color");
 		}
 		struct Compiled
 		{

@@ -44,17 +44,17 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(view);
-			compiler.compile(proj);
-			compiler.compile(viewProj);
-			compiler.compile(invView);
-			compiler.compile(invProj);
-			compiler.compile(invViewProj);
-			compiler.compile(reprojectionProj);
-			compiler.compile(position);
-			compiler.compile(direction);
-			compiler.compile(jitter);
-			compiler.compile(frustum);
+			compiler.compile(view, "Camera::view");
+			compiler.compile(proj, "Camera::proj");
+			compiler.compile(viewProj, "Camera::viewProj");
+			compiler.compile(invView, "Camera::invView");
+			compiler.compile(invProj, "Camera::invProj");
+			compiler.compile(invViewProj, "Camera::invViewProj");
+			compiler.compile(reprojectionProj, "Camera::reprojectionProj");
+			compiler.compile(position, "Camera::position");
+			compiler.compile(direction, "Camera::direction");
+			compiler.compile(jitter, "Camera::jitter");
+			compiler.compile(frustum, "Camera::frustum");
 		}
 		using Compiled = Camera;
 

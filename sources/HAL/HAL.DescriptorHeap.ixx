@@ -283,6 +283,30 @@ export
 
 
 		};
+
+		// ---- null descriptors -------------------------------------------------
+		//
+		// Engine-lifetime descriptors that name no resource. D3D12 reads them as
+		// zero, which is what [Auto = Texture_Null] binds into a table member
+		// nothing assigned -- instead of leaving the slot at descriptor index 0,
+		// which is a REAL descriptor belonging to whatever happens to sit at the
+		// start of the heap.
+		//
+		// Cached per (view dimension, format): the descriptor has to agree with
+		// the type the shader declares, and a Texture2D<float> reading a
+		// Texture3D null descriptor is the same class of mismatch this exists to
+		// prevent.
+		//
+		// init() must run once at device setup, before any table compiles. It
+		// takes the Device because the descriptors are allocated from static GPU
+		// data -- they must outlive every frame, so a per-frame linear allocator
+		// would be wrong.
+		void init_null_descriptors(Device& device);
+
+		// Never pushes the descriptor's ResourceInfo into a bound-resource list:
+		// there is no resource, so there is nothing to transition. See
+		// Slot_Compiler::compile_auto.
+		const Handle& get_null_descriptor(const Views::ShaderResource& proto);
 	}
 
 }

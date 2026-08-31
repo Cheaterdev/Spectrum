@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(pos);
-			compiler.compile(normal);
-			compiler.compile(tc);
-			compiler.compile(tangent);
+			compiler.compile(pos, "mesh_vertex_input::pos");
+			compiler.compile(normal, "mesh_vertex_input::normal");
+			compiler.compile(tc, "mesh_vertex_input::tc");
+			compiler.compile(tangent, "mesh_vertex_input::tangent");
 		}
 		using Compiled = mesh_vertex_input;
 

@@ -298,4 +298,47 @@ namespace HAL {
 	DescriptorHeapFactory::ptr_type DescriptorHeapFactory::get_sampler_heap() { return gpu_sampler; }
 	DescriptorHeapFactory::ptr_type DescriptorHeapFactory::get_cbv_srv_uav_heap() { return gpu_cbv_srv_uav; }
 
+	// ---- null descriptors ---------------------------------------------------
+
+	namespace
+	{
+		Device*    null_descriptor_device = nullptr;
+		std::mutex null_descriptor_mutex;
+
+		// Keyed by which alternative of the view variant it is plus the format:
+		// those two are exactly what CreateShaderResourceView needs when there is
+		// no resource to read the rest from.
+		std::map<std::pair<size_t, Format>, Handle> null_descriptors;
+	}
+
+	void init_null_descriptors(Device& device)
+	{
+		std::lock_guard<std::mutex> lock(null_descriptor_mutex);
+		null_descriptor_device = &device;
+		null_descriptors.clear();
+	}
+
+	const Handle& get_null_descriptor(const Views::ShaderResource& proto)
+	{
+		// Called from table compilation, which runs across FrameGraph workers.
+		std::lock_guard<std::mutex> lock(null_descriptor_mutex);
+
+		// init_null_descriptors() was never called -- a null descriptor cannot be
+		// created without a device, and silently returning an invalid handle would
+		// put the slot back at descriptor index 0, the exact bug this prevents.
+		ASSERT(null_descriptor_device);
+
+		const auto key = std::make_pair(proto.View.index(), proto.Format);
+
+		auto it = null_descriptors.find(key);
+		if (it != null_descriptors.end()) return it->second;
+
+		Handle h = null_descriptor_device->get_static_gpu_data().alloc_descriptor(
+			1, DescriptorHeapIndex{ DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::ShaderVisible });
+
+		h = proto;   // Resource == nullptr -> CreateShaderResourceView(nullptr, ...)
+
+		return null_descriptors.emplace(key, h).first->second;
+	}
+
 }

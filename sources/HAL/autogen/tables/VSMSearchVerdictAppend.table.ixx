@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(confirmed_lit_tiles);
-			compiler.compile(blur_tiles);
+			compiler.compile(confirmed_lit_tiles, "VSMSearchVerdictAppend::confirmed_lit_tiles");
+			compiler.compile(blur_tiles, "VSMSearchVerdictAppend::blur_tiles");
 		}
 		struct Compiled
 		{

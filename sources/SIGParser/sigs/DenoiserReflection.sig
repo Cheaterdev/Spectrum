@@ -33,7 +33,12 @@ struct DenoiserReflectionReproject
 	#Texture2D<float> g_roughness_history;
 	Texture2D<float4> g_normal_history;
 
-	Texture2D<float4> g_in_radiance;
+	# RW, not Texture2D: this aliases VoxelReflectionNoise, which the resolve
+	# pass also writes through g_out_radiance. A resource cannot be in
+	# UNORDERED_ACCESS layout for the write and SHADER_RESOURCE for the read at
+	# the same time, so reading it through a UAV descriptor is the only binding
+	# that satisfies both (GPU-based validation #1358).
+	RWTexture2D<float4> g_in_radiance;
 	Texture2D<float4> g_radiance_history;
 	Texture2D<float2> g_motion_vector;
 
@@ -57,7 +62,12 @@ struct DenoiserReflectionPrefilter
 	#Texture2D<float> g_roughness;
 	Texture2D<float4> g_normal;
 	Texture2D<float3> g_average_radiance;
-	Texture2D<float4> g_in_radiance;
+	# RW, not Texture2D: this aliases VoxelReflectionNoise, which the resolve
+	# pass also writes through g_out_radiance. A resource cannot be in
+	# UNORDERED_ACCESS layout for the write and SHADER_RESOURCE for the read at
+	# the same time, so reading it through a UAV descriptor is the only binding
+	# that satisfies both (GPU-based validation #1358).
+	RWTexture2D<float4> g_in_radiance;
 	Texture2D<float> g_in_variance;
 	Texture2D<float> g_in_sample_count;
 
@@ -74,7 +84,12 @@ struct DenoiserReflectionResolve
 {
 	Texture2D<float4> g_normal;
 	Texture2D<float3> g_average_radiance;
-	Texture2D<float4> g_in_radiance;
+	# RW, not Texture2D: this aliases VoxelReflectionNoise, which the resolve
+	# pass also writes through g_out_radiance. A resource cannot be in
+	# UNORDERED_ACCESS layout for the write and SHADER_RESOURCE for the read at
+	# the same time, so reading it through a UAV descriptor is the only binding
+	# that satisfies both (GPU-based validation #1358).
+	RWTexture2D<float4> g_in_radiance;
 	Texture2D<float4> g_in_reprojected_radiance;
 	Texture2D<float> g_in_variance;
 	Texture2D<float> g_in_sample_count;

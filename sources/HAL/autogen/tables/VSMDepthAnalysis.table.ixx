@@ -26,8 +26,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(result);
-			compiler.compile(gbuffer);
+			compiler.compile(result, "VSMDepthAnalysis::result");
+			compiler.compile(gbuffer, "VSMDepthAnalysis::gbuffer");
 		}
 		struct Compiled
 		{

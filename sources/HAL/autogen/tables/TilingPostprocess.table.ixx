@@ -24,7 +24,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(tiling);
+			compiler.compile(tiling, "TilingPostprocess::tiling");
 		}
 		using Compiled = TilingPostprocess;
 

@@ -33,12 +33,12 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(sunDir);
-			compiler.compile(depthBuffer);
-			compiler.compile(transmittance);
-			compiler.compile(inscatter);
-			compiler.compile(irradiance);
-			compiler.compile(result);
+			compiler.compile(sunDir, "SkyData::sunDir");
+			compiler.compile(depthBuffer, "SkyData::depthBuffer");
+			compiler.compile(transmittance, "SkyData::transmittance");
+			compiler.compile(inscatter, "SkyData::inscatter");
+			compiler.compile(irradiance, "SkyData::irradiance");
+			compiler.compile(result, "SkyData::result");
 		}
 		struct Compiled
 		{

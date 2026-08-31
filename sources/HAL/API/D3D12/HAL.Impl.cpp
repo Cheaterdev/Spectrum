@@ -26,7 +26,8 @@ namespace HAL
             {
                 debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
                 debugController->EnableDebugLayer();
-                //    spDebugController1->SetEnableGPUBasedValidation(true);
+                if (spDebugController1)
+                    spDebugController1->SetEnableGPUBasedValidation(true);
             }
 
     }

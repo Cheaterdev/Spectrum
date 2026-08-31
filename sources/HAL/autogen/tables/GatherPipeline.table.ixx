@@ -26,8 +26,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(pip_ids);
-			compiler.compile(commands);
+			compiler.compile(pip_ids, "GatherPipeline::pip_ids");
+			compiler.compile(commands, "GatherPipeline::commands");
 		}
 		struct Compiled
 		{

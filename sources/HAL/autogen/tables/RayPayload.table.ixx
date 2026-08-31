@@ -32,11 +32,11 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(color);
-			compiler.compile(dir);
-			compiler.compile(recursion);
-			compiler.compile(dist);
-			compiler.compile(cone);
+			compiler.compile(color, "RayPayload::color");
+			compiler.compile(dir, "RayPayload::dir");
+			compiler.compile(recursion, "RayPayload::recursion");
+			compiler.compile(dist, "RayPayload::dist");
+			compiler.compile(cone, "RayPayload::cone");
 		}
 		using Compiled = RayPayload;
 

@@ -41,16 +41,16 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(Count);
-			compiler.compile(Width);
-			compiler.compile(Height);
-			compiler.compile(Vmin);
-			compiler.compile(Vmax);
-			compiler.compile(LineColor);
-			compiler.compile(FillColor);
-			compiler.compile(BgTop);
-			compiler.compile(BgBot);
-			compiler.compile(Samples);
+			compiler.compile(Count, "StatGraphLine::Count");
+			compiler.compile(Width, "StatGraphLine::Width");
+			compiler.compile(Height, "StatGraphLine::Height");
+			compiler.compile(Vmin, "StatGraphLine::Vmin");
+			compiler.compile(Vmax, "StatGraphLine::Vmax");
+			compiler.compile(LineColor, "StatGraphLine::LineColor");
+			compiler.compile(FillColor, "StatGraphLine::FillColor");
+			compiler.compile(BgTop, "StatGraphLine::BgTop");
+			compiler.compile(BgBot, "StatGraphLine::BgBot");
+			compiler.compile(Samples, "StatGraphLine::Samples");
 		}
 		struct Compiled
 		{

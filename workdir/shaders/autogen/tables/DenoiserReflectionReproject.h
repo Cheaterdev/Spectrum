@@ -13,7 +13,6 @@ struct DenoiserReflectionReproject
 	uint g_normal; // Texture2D<float4>
 	uint g_depth_buffer_history; // Texture2D<float>
 	uint g_normal_history; // Texture2D<float4>
-	uint g_in_radiance; // Texture2D<float4>
 	uint g_radiance_history; // Texture2D<float4>
 	uint g_motion_vector; // Texture2D<float2>
 	uint g_average_radiance_history; // Texture2D<float3>
@@ -21,6 +20,7 @@ struct DenoiserReflectionReproject
 	uint g_sample_count_history; // Texture2D<float>
 	uint g_blue_noise_texture; // Texture2D<float2>
 	uint g_denoiser_tile_list; // Buffer<uint>
+	uint g_in_radiance; // RWTexture2D<float4>
 	uint g_out_reprojected_radiance; // RWTexture2D<float3>
 	uint g_out_average_radiance; // RWTexture2D<float3>
 	uint g_out_variance; // RWTexture2D<float>
@@ -29,7 +29,7 @@ struct DenoiserReflectionReproject
 	Texture2D<float4> GetG_normal() { return ResourceDescriptorHeap[g_normal]; }
 	Texture2D<float> GetG_depth_buffer_history() { return ResourceDescriptorHeap[g_depth_buffer_history]; }
 	Texture2D<float4> GetG_normal_history() { return ResourceDescriptorHeap[g_normal_history]; }
-	Texture2D<float4> GetG_in_radiance() { return ResourceDescriptorHeap[g_in_radiance]; }
+	RWTexture2D<float4> GetG_in_radiance() { return ResourceDescriptorHeap[g_in_radiance]; }
 	Texture2D<float4> GetG_radiance_history() { return ResourceDescriptorHeap[g_radiance_history]; }
 	Texture2D<float2> GetG_motion_vector() { return ResourceDescriptorHeap[g_motion_vector]; }
 	Texture2D<float3> GetG_average_radiance_history() { return ResourceDescriptorHeap[g_average_radiance_history]; }

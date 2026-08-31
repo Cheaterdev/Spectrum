@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(material_id);
-			compiler.compile(vertexes);
-			compiler.compile(indices);
+			compiler.compile(material_id, "RaytraceInstanceInfo::material_id");
+			compiler.compile(vertexes, "RaytraceInstanceInfo::vertexes");
+			compiler.compile(indices, "RaytraceInstanceInfo::indices");
 		}
 		struct Compiled
 		{

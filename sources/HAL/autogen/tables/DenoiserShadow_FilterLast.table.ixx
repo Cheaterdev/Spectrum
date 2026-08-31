@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(rqt2d_input);
-			compiler.compile(rwt2d_output);
+			compiler.compile(rqt2d_input, "DenoiserShadow_FilterLast::rqt2d_input");
+			compiler.compile(rwt2d_output, "DenoiserShadow_FilterLast::rwt2d_output");
 		}
 		struct Compiled
 		{

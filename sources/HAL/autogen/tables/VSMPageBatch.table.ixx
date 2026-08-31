@@ -27,9 +27,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(level);
-			compiler.compile(dirty_mask);
-			compiler.compile(skip_occlusion);
+			compiler.compile(level, "VSMPageBatch::level");
+			compiler.compile(dirty_mask, "VSMPageBatch::dirty_mask");
+			compiler.compile(skip_occlusion, "VSMPageBatch::skip_occlusion");
 		}
 		using Compiled = VSMPageBatch;
 

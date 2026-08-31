@@ -23,7 +23,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(viewBuffer);
+			compiler.compile(viewBuffer, "PickerBuffer::viewBuffer");
 		}
 		struct Compiled
 		{

@@ -34,12 +34,12 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(voxels);
-			compiler.compile(tex_cube);
-			compiler.compile(prev_gi);
-			compiler.compile(prev_frames);
-			compiler.compile(prev_depth);
-			compiler.compile(gbuffer);
+			compiler.compile(voxels, "VoxelScreen::voxels");
+			compiler.compile(tex_cube, "VoxelScreen::tex_cube");
+			compiler.compile_auto(prev_gi, "VoxelScreen::prev_gi");
+			compiler.compile_auto(prev_frames, "VoxelScreen::prev_frames");
+			compiler.compile_auto(prev_depth, "VoxelScreen::prev_depth");
+			compiler.compile(gbuffer, "VoxelScreen::gbuffer");
 		}
 		struct Compiled
 		{

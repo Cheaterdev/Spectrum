@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(output);
-			compiler.compile(target);
-			compiler.compile(gbuffer);
+			compiler.compile(output, "WorkGraphTest::output");
+			compiler.compile(target, "WorkGraphTest::target");
+			compiler.compile(gbuffer, "WorkGraphTest::gbuffer");
 		}
 		struct Compiled
 		{

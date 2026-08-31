@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(vertex_offset_local);
-			compiler.compile(meshlet_offset_local);
-			compiler.compile(node_offset);
-			compiler.compile(meshlet_count);
+			compiler.compile(vertex_offset_local, "MeshInfo::vertex_offset_local");
+			compiler.compile(meshlet_offset_local, "MeshInfo::meshlet_offset_local");
+			compiler.compile(node_offset, "MeshInfo::node_offset");
+			compiler.compile(meshlet_count, "MeshInfo::meshlet_count");
 		}
 		using Compiled = MeshInfo;
 

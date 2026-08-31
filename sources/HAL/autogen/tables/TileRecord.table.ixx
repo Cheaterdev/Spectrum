@@ -23,7 +23,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(tileXY);
+			compiler.compile(tileXY, "TileRecord::tileXY");
 		}
 		using Compiled = TileRecord;
 

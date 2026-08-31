@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(blueNoise);
-			compiler.compile(noise);
-			compiler.compile(frames);
-			compiler.compile(DirAndPdf);
+			compiler.compile(blueNoise, "VoxelOutput::blueNoise");
+			compiler.compile(noise, "VoxelOutput::noise");
+			compiler.compile(frames, "VoxelOutput::frames");
+			compiler.compile(DirAndPdf, "VoxelOutput::DirAndPdf");
 		}
 		struct Compiled
 		{

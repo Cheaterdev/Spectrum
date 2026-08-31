@@ -31,10 +31,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(level_count);
-			compiler.compile(light_view);
-			compiler.compile(levels);
-			compiler.compile(dispatch_commands);
+			compiler.compile(level_count, "VSMGatherDispatchData::level_count");
+			compiler.compile(light_view, "VSMGatherDispatchData::light_view");
+			compiler.compile(levels, "VSMGatherDispatchData::levels");
+			compiler.compile(dispatch_commands, "VSMGatherDispatchData::dispatch_commands");
 		}
 		struct Compiled
 		{

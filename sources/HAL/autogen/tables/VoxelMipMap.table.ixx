@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(SrcMip);
-			compiler.compile(OutMips);
-			compiler.compile(params);
+			compiler.compile(SrcMip, "VoxelMipMap::SrcMip");
+			compiler.compile(OutMips, "VoxelMipMap::OutMips");
+			compiler.compile(params, "VoxelMipMap::params");
 		}
 		struct Compiled
 		{

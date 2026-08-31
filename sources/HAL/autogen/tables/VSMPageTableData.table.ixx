@@ -26,8 +26,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(page_table);
-			compiler.compile(page_cameras);
+			compiler.compile(page_table, "VSMPageTableData::page_table");
+			compiler.compile(page_cameras, "VSMPageTableData::page_cameras");
 		}
 		struct Compiled
 		{

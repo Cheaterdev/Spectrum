@@ -30,10 +30,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(node_global_matrix);
-			compiler.compile(node_global_matrix_prev);
-			compiler.compile(node_inverse_matrix);
-			compiler.compile(aabb);
+			compiler.compile(node_global_matrix, "node_data::node_global_matrix");
+			compiler.compile(node_global_matrix_prev, "node_data::node_global_matrix_prev");
+			compiler.compile(node_inverse_matrix, "node_data::node_inverse_matrix");
+			compiler.compile(aabb, "node_data::aabb");
 		}
 		using Compiled = node_data;
 

@@ -23,7 +23,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(faces);
+			compiler.compile(faces, "SkyFace::faces");
 		}
 		struct Compiled
 		{

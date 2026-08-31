@@ -27,9 +27,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(lit_tiles);
-			compiler.compile(dark_tiles);
-			compiler.compile(search_tiles);
+			compiler.compile(lit_tiles, "VSMBlockerTilesAppend::lit_tiles");
+			compiler.compile(dark_tiles, "VSMBlockerTilesAppend::dark_tiles");
+			compiler.compile(search_tiles, "VSMBlockerTilesAppend::search_tiles");
 		}
 		struct Compiled
 		{

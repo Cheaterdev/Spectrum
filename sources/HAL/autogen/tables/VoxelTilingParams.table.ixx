@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(voxels_per_tile);
-			compiler.compile(tiles);
+			compiler.compile(voxels_per_tile, "VoxelTilingParams::voxels_per_tile");
+			compiler.compile(tiles, "VoxelTilingParams::tiles");
 		}
 		struct Compiled
 		{

@@ -57,24 +57,24 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(g_inv_view_proj);
-			compiler.compile(g_proj);
-			compiler.compile(g_inv_proj);
-			compiler.compile(g_view);
-			compiler.compile(g_inv_view);
-			compiler.compile(g_prev_view_proj);
-			compiler.compile(g_buffer_dimensions);
-			compiler.compile(g_inv_buffer_dimensions);
-			compiler.compile(g_temporal_stability_factor);
-			compiler.compile(g_depth_buffer_thickness);
-			compiler.compile(g_roughness_threshold);
-			compiler.compile(g_temporal_variance_threshold);
-			compiler.compile(g_frame_index);
-			compiler.compile(g_max_traversal_intersections);
-			compiler.compile(g_min_traversal_occupancy);
-			compiler.compile(g_most_detailed_mip);
-			compiler.compile(g_samples_per_quad);
-			compiler.compile(g_temporal_variance_guided_tracing_enabled);
+			compiler.compile(g_inv_view_proj, "DenoiserReflectionCommon::g_inv_view_proj");
+			compiler.compile(g_proj, "DenoiserReflectionCommon::g_proj");
+			compiler.compile(g_inv_proj, "DenoiserReflectionCommon::g_inv_proj");
+			compiler.compile(g_view, "DenoiserReflectionCommon::g_view");
+			compiler.compile(g_inv_view, "DenoiserReflectionCommon::g_inv_view");
+			compiler.compile(g_prev_view_proj, "DenoiserReflectionCommon::g_prev_view_proj");
+			compiler.compile(g_buffer_dimensions, "DenoiserReflectionCommon::g_buffer_dimensions");
+			compiler.compile(g_inv_buffer_dimensions, "DenoiserReflectionCommon::g_inv_buffer_dimensions");
+			compiler.compile(g_temporal_stability_factor, "DenoiserReflectionCommon::g_temporal_stability_factor");
+			compiler.compile(g_depth_buffer_thickness, "DenoiserReflectionCommon::g_depth_buffer_thickness");
+			compiler.compile(g_roughness_threshold, "DenoiserReflectionCommon::g_roughness_threshold");
+			compiler.compile(g_temporal_variance_threshold, "DenoiserReflectionCommon::g_temporal_variance_threshold");
+			compiler.compile(g_frame_index, "DenoiserReflectionCommon::g_frame_index");
+			compiler.compile(g_max_traversal_intersections, "DenoiserReflectionCommon::g_max_traversal_intersections");
+			compiler.compile(g_min_traversal_occupancy, "DenoiserReflectionCommon::g_min_traversal_occupancy");
+			compiler.compile(g_most_detailed_mip, "DenoiserReflectionCommon::g_most_detailed_mip");
+			compiler.compile(g_samples_per_quad, "DenoiserReflectionCommon::g_samples_per_quad");
+			compiler.compile(g_temporal_variance_guided_tracing_enabled, "DenoiserReflectionCommon::g_temporal_variance_guided_tracing_enabled");
 		}
 		using Compiled = DenoiserReflectionCommon;
 

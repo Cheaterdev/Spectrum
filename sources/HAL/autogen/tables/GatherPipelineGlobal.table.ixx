@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(meshes_count);
-			compiler.compile(commands);
+			compiler.compile(meshes_count, "GatherPipelineGlobal::meshes_count");
+			compiler.compile(commands, "GatherPipelineGlobal::commands");
 		}
 		struct Compiled
 		{

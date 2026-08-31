@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(counter);
-			compiler.compile(dispatch_data);
+			compiler.compile(counter, "InitDispatch::counter");
+			compiler.compile(dispatch_data, "InitDispatch::dispatch_data");
 		}
 		struct Compiled
 		{

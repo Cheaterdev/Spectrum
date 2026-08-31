@@ -27,9 +27,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(color);
-			compiler.compile(frames);
-			compiler.compile(target);
+			compiler.compile(color, "DenoiserHistoryFix::color");
+			compiler.compile(frames, "DenoiserHistoryFix::frames");
+			compiler.compile(target, "DenoiserHistoryFix::target");
 		}
 		struct Compiled
 		{

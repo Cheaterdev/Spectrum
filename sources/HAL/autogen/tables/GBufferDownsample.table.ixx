@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(normals);
-			compiler.compile(depth);
+			compiler.compile(normals, "GBufferDownsample::normals");
+			compiler.compile(depth, "GBufferDownsample::depth");
 		}
 		struct Compiled
 		{

@@ -23,7 +23,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(vertices);
+			compiler.compile(vertices, "DrawStencil::vertices");
 		}
 		struct Compiled
 		{

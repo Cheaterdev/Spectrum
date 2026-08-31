@@ -23,7 +23,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(instanceId);
+			compiler.compile(instanceId, "Instance::instanceId");
 		}
 		using Compiled = Instance;
 

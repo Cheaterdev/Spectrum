@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(src_mip);
-			compiler.compile(dirty_slots);
-			compiler.compile_whole(src);
-			compiler.compile_whole(dst_mip);
+			compiler.compile(src_mip, "VSMDownsampleHiZBatch::src_mip");
+			compiler.compile(dirty_slots, "VSMDownsampleHiZBatch::dirty_slots");
+			compiler.compile_whole(src, "VSMDownsampleHiZBatch::src");
+			compiler.compile_whole(dst_mip, "VSMDownsampleHiZBatch::dst_mip");
 		}
 		struct Compiled
 		{

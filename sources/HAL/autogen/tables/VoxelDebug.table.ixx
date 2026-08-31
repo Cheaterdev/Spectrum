@@ -26,8 +26,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(volume);
-			compiler.compile(gbuffer);
+			compiler.compile(volume, "VoxelDebug::volume");
+			compiler.compile(gbuffer, "VoxelDebug::gbuffer");
 		}
 		struct Compiled
 		{

@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(Source);
-			compiler.compile(Target);
-			compiler.compile(params);
+			compiler.compile(Source, "VoxelCopy::Source");
+			compiler.compile(Target, "VoxelCopy::Target");
+			compiler.compile(params, "VoxelCopy::params");
 		}
 		struct Compiled
 		{

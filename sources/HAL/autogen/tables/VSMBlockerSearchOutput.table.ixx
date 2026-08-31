@@ -23,7 +23,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(blocker_search_result);
+			compiler.compile(blocker_search_result, "VSMBlockerSearchOutput::blocker_search_result");
 		}
 		struct Compiled
 		{

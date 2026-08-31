@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(blendTex);
-			compiler.compile(resultOut);
+			compiler.compile(blendTex, "SMAA_Blend::blendTex");
+			compiler.compile(resultOut, "SMAA_Blend::resultOut");
 		}
 		struct Compiled
 		{

@@ -54,7 +54,7 @@ public:
 	// and the device supports RTX (both checked in m_combine_render before
 	// selecting the VsmRtxVerify PSO permutation). Off by default: new,
 	// unvalidated, same cautious rollout as use_vsm_penumbra above.
-	Variable<bool> use_vsm_rtx_verify = { false, "RTX blocker verify", this };
+	Variable<bool> use_vsm_rtx_verify = { true, "RTX blocker verify", this };
 
 	// Runtime A/B switch for the quad-shared blocker search (splits the 16
 	// Poisson-disc taps 4-per-thread across each 2x2 pixel quad instead of

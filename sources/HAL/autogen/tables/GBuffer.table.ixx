@@ -31,11 +31,11 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(albedo);
-			compiler.compile(normals);
-			compiler.compile(specular);
-			compiler.compile(motion);
-			compiler.compile(depth);
+			compiler.compile(albedo, "GBuffer::albedo");
+			compiler.compile(normals, "GBuffer::normals");
+			compiler.compile(specular, "GBuffer::specular");
+			compiler.compile(motion, "GBuffer::motion");
+			compiler.compile(depth, "GBuffer::depth");
 		}
 		struct Compiled
 		{

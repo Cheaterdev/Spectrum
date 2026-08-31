@@ -43,17 +43,17 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(active_min);
-			compiler.compile(active_max);
-			compiler.compile(page_size);
-			compiler.compile(pages_per_level);
-			compiler.compile(quad_blocker_search);
-			compiler.compile(rtx_dual_blur);
-			compiler.compile(hiz_blocker_classify);
-			compiler.compile(hemisphere_cull_blocker);
-			compiler.compile(debug_view);
-			compiler.compile(light_view);
-			compiler.compile(level_info);
+			compiler.compile(active_min, "VSMConstants::active_min");
+			compiler.compile(active_max, "VSMConstants::active_max");
+			compiler.compile(page_size, "VSMConstants::page_size");
+			compiler.compile(pages_per_level, "VSMConstants::pages_per_level");
+			compiler.compile(quad_blocker_search, "VSMConstants::quad_blocker_search");
+			compiler.compile(rtx_dual_blur, "VSMConstants::rtx_dual_blur");
+			compiler.compile(hiz_blocker_classify, "VSMConstants::hiz_blocker_classify");
+			compiler.compile(hemisphere_cull_blocker, "VSMConstants::hemisphere_cull_blocker");
+			compiler.compile(debug_view, "VSMConstants::debug_view");
+			compiler.compile(light_view, "VSMConstants::light_view");
+			compiler.compile(level_info, "VSMConstants::level_info");
 		}
 		using Compiled = VSMConstants;
 

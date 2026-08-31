@@ -549,6 +549,12 @@ namespace HAL
 
         name = desc.name;
 
+        {   // [temp diag] why is DebugInfo's slot still unbound? -> compute_pso_debuggable.temp
+            std::ofstream f("compute_pso_debuggable.temp", std::ios::app);
+            f << name << " debuggable=" << debuggable
+              << " has_shader=" << (desc.shader ? 1 : 0) << "\n";
+        }
+
         //    TEST(hr);
 
         cache.clear();

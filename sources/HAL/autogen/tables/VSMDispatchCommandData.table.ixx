@@ -35,11 +35,11 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(page_batch_cb);
-			compiler.compile(mesh_cb);
-			compiler.compile(meshinstance_cb);
-			compiler.compile(material_cb);
-			compiler.compile(draw_commands);
+			compiler.compile(page_batch_cb, "VSMDispatchCommandData::page_batch_cb");
+			compiler.compile(mesh_cb, "VSMDispatchCommandData::mesh_cb");
+			compiler.compile(meshinstance_cb, "VSMDispatchCommandData::meshinstance_cb");
+			compiler.compile(material_cb, "VSMDispatchCommandData::material_cb");
+			compiler.compile(draw_commands, "VSMDispatchCommandData::draw_commands");
 		}
 		using Compiled = VSMDispatchCommandData;
 		static const IndirectCommands CommandID = IndirectCommands::VSMDispatchCommandData;

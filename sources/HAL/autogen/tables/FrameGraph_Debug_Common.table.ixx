@@ -33,12 +33,12 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(targetSize);
-			compiler.compile(minColor);
-			compiler.compile(maxColor);
-			compiler.compile(selectedMip);
-			compiler.compile(selectedArrayIndex);
-			compiler.compile(target);
+			compiler.compile(targetSize, "FrameGraph_Debug_Common::targetSize");
+			compiler.compile(minColor, "FrameGraph_Debug_Common::minColor");
+			compiler.compile(maxColor, "FrameGraph_Debug_Common::maxColor");
+			compiler.compile(selectedMip, "FrameGraph_Debug_Common::selectedMip");
+			compiler.compile(selectedArrayIndex, "FrameGraph_Debug_Common::selectedArrayIndex");
+			compiler.compile(target, "FrameGraph_Debug_Common::target");
 		}
 		struct Compiled
 		{

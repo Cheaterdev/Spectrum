@@ -48,9 +48,15 @@ struct VoxelScreen
 	Texture3D<float4> voxels;
 	TextureCube<float4> tex_cube;
 
+	# Nothing assigns these -- the history they want is not wired up yet, and
+	# voxel_screen.hlsl / raytracing.hlsl sample them every frame regardless.
+	# Unannotated they read descriptor index 0, i.e. an unrelated resource.
+	[Auto = Texture_Null]
 	Texture2D<float4> prev_gi;
 
+	[Auto = Texture_Null]
 	Texture2D<float> prev_frames;
+	[Auto = Texture_Null]
 	Texture2D<float> prev_depth;
 }
 

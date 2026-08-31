@@ -38,7 +38,7 @@ void FFX_DNSR_Reflections_LoadNeighborhood(
     out float depth,
     int2 screen_size) {
     
-    radiance = (min16float3)GetDenoiserReflectionPrefilter().GetG_in_radiance().Load(int3(pixel_coordinate, 0)).xyz;
+    radiance = (min16float3)GetDenoiserReflectionPrefilter().GetG_in_radiance()[pixel_coordinate].xyz;
     variance = (min16float)GetDenoiserReflectionPrefilter().GetG_in_variance().Load(int3(pixel_coordinate, 0)).x;
 
     normal = normalize(2.0 * (min16float3)GetDenoiserReflectionPrefilter().GetG_normal().Load(int3(pixel_coordinate, 0)) - 1.0);

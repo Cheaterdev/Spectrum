@@ -36,12 +36,12 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(vertexes);
-			compiler.compile(indices);
-			compiler.compile(meshlets);
-			compiler.compile(meshletCullData);
-			compiler.compile(unique_indices);
-			compiler.compile(primitive_indices);
+			compiler.compile(vertexes, "MeshInstanceInfo::vertexes");
+			compiler.compile(indices, "MeshInstanceInfo::indices");
+			compiler.compile(meshlets, "MeshInstanceInfo::meshlets");
+			compiler.compile(meshletCullData, "MeshInstanceInfo::meshletCullData");
+			compiler.compile(unique_indices, "MeshInstanceInfo::unique_indices");
+			compiler.compile(primitive_indices, "MeshInstanceInfo::primitive_indices");
 		}
 		struct Compiled
 		{

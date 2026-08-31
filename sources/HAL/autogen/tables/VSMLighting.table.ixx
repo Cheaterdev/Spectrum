@@ -37,13 +37,13 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(vsm_atlas);
-			compiler.compile(page_table);
-			compiler.compile(page_cameras);
-			compiler.compile(blue_noise);
-			compiler.compile(rtx_shadow_mask);
-			compiler.compile(result);
-			compiler.compile(gbuffer);
+			compiler.compile(vsm_atlas, "VSMLighting::vsm_atlas");
+			compiler.compile(page_table, "VSMLighting::page_table");
+			compiler.compile(page_cameras, "VSMLighting::page_cameras");
+			compiler.compile(blue_noise, "VSMLighting::blue_noise");
+			compiler.compile(rtx_shadow_mask, "VSMLighting::rtx_shadow_mask");
+			compiler.compile(result, "VSMLighting::result");
+			compiler.compile(gbuffer, "VSMLighting::gbuffer");
 		}
 		struct Compiled
 		{

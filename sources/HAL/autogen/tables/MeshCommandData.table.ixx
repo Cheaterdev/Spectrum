@@ -35,12 +35,12 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(material_id);
-			compiler.compile(node_offset);
-			compiler.compile(mesh_cb);
-			compiler.compile(meshinstance_cb);
-			compiler.compile(meshlet_count);
-			compiler.compile(draw_commands);
+			compiler.compile(material_id, "MeshCommandData::material_id");
+			compiler.compile(node_offset, "MeshCommandData::node_offset");
+			compiler.compile(mesh_cb, "MeshCommandData::mesh_cb");
+			compiler.compile(meshinstance_cb, "MeshCommandData::meshinstance_cb");
+			compiler.compile(meshlet_count, "MeshCommandData::meshlet_count");
+			compiler.compile(draw_commands, "MeshCommandData::draw_commands");
 		}
 		using Compiled = MeshCommandData;
 

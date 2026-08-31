@@ -27,9 +27,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(frames);
-			compiler.compile(hi);
-			compiler.compile(low);
+			compiler.compile(frames, "FrameClassification::frames");
+			compiler.compile(hi, "FrameClassification::hi");
+			compiler.compile(low, "FrameClassification::low");
 		}
 		struct Compiled
 		{

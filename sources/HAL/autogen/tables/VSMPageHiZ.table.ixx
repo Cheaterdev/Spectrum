@@ -23,7 +23,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(page_hiz);
+			compiler.compile(page_hiz, "VSMPageHiZ::page_hiz");
 		}
 		struct Compiled
 		{

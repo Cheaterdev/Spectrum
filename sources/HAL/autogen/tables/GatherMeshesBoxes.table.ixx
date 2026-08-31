@@ -38,14 +38,14 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(input_meshes);
-			compiler.compile(visible_boxes);
-			compiler.compile(visibleMeshes);
-			compiler.compile(visibleCount);
-			compiler.compile(renderArgs);
-			compiler.compile(invisibleMeshes);
-			compiler.compile(invisibleCount);
-			compiler.compile(retestArgs);
+			compiler.compile(input_meshes, "GatherMeshesBoxes::input_meshes");
+			compiler.compile(visible_boxes, "GatherMeshesBoxes::visible_boxes");
+			compiler.compile(visibleMeshes, "GatherMeshesBoxes::visibleMeshes");
+			compiler.compile(visibleCount, "GatherMeshesBoxes::visibleCount");
+			compiler.compile(renderArgs, "GatherMeshesBoxes::renderArgs");
+			compiler.compile(invisibleMeshes, "GatherMeshesBoxes::invisibleMeshes");
+			compiler.compile(invisibleCount, "GatherMeshesBoxes::invisibleCount");
+			compiler.compile(retestArgs, "GatherMeshesBoxes::retestArgs");
 		}
 		struct Compiled
 		{

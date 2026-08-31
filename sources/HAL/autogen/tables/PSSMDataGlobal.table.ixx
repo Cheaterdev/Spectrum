@@ -26,8 +26,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(light_buffer);
-			compiler.compile(light_camera);
+			compiler.compile(light_buffer, "PSSMDataGlobal::light_buffer");
+			compiler.compile(light_camera, "PSSMDataGlobal::light_camera");
 		}
 		struct Compiled
 		{

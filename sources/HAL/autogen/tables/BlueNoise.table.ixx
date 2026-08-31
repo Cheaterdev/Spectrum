@@ -31,11 +31,11 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(frame_index);
-			compiler.compile(sobol_buffer);
-			compiler.compile(ranking_tile_buffer);
-			compiler.compile(scrambling_tile_buffer);
-			compiler.compile(blue_noise_texture);
+			compiler.compile(frame_index, "BlueNoise::frame_index");
+			compiler.compile(sobol_buffer, "BlueNoise::sobol_buffer");
+			compiler.compile(ranking_tile_buffer, "BlueNoise::ranking_tile_buffer");
+			compiler.compile(scrambling_tile_buffer, "BlueNoise::scrambling_tile_buffer");
+			compiler.compile(blue_noise_texture, "BlueNoise::blue_noise_texture");
 		}
 		struct Compiled
 		{

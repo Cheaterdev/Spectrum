@@ -45,18 +45,18 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(Count);
-			compiler.compile(Width);
-			compiler.compile(Height);
-			compiler.compile(Vmin);
-			compiler.compile(Vmax);
-			compiler.compile(LineColor);
-			compiler.compile(FillTop);
-			compiler.compile(FillBot);
-			compiler.compile(BgTop);
-			compiler.compile(BgBot);
-			compiler.compile(Samples);
-			compiler.compile(Output);
+			compiler.compile(Count, "StatGraph::Count");
+			compiler.compile(Width, "StatGraph::Width");
+			compiler.compile(Height, "StatGraph::Height");
+			compiler.compile(Vmin, "StatGraph::Vmin");
+			compiler.compile(Vmax, "StatGraph::Vmax");
+			compiler.compile(LineColor, "StatGraph::LineColor");
+			compiler.compile(FillTop, "StatGraph::FillTop");
+			compiler.compile(FillBot, "StatGraph::FillBot");
+			compiler.compile(BgTop, "StatGraph::BgTop");
+			compiler.compile(BgBot, "StatGraph::BgBot");
+			compiler.compile(Samples, "StatGraph::Samples");
+			compiler.compile(Output, "StatGraph::Output");
 		}
 		struct Compiled
 		{

@@ -27,9 +27,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(BoundingSphere);
-			compiler.compile(NormalCone);
-			compiler.compile(ApexOffset);
+			compiler.compile(BoundingSphere, "MeshletCullData::BoundingSphere");
+			compiler.compile(NormalCone, "MeshletCullData::NormalCone");
+			compiler.compile(ApexOffset, "MeshletCullData::ApexOffset");
 		}
 		using Compiled = MeshletCullData;
 

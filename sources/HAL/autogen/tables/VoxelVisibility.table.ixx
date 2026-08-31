@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(visibility);
-			compiler.compile(visible_tiles);
+			compiler.compile(visibility, "VoxelVisibility::visibility");
+			compiler.compile(visible_tiles, "VoxelVisibility::visible_tiles");
 		}
 		struct Compiled
 		{

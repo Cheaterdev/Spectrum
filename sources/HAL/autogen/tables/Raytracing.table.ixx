@@ -23,7 +23,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(scene);
+			compiler.compile(scene, "Raytracing::scene");
 		}
 		struct Compiled
 		{

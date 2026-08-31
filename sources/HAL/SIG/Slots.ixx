@@ -20,6 +20,83 @@ struct placement_info
 	}
 };
 std::optional<SlotID> get_slot(std::string_view slot_name);
+
+// Report a table slot that compiled with nothing bound, once per slot.
+//
+// An unbound handle writes descriptor index 0, and index 0 is a REAL
+// descriptor -- whatever happens to sit at the start of the heap. A shader
+// that reads such a slot silently gets an unrelated resource. GPU-based
+// validation catches it (#939 / #940), but only for slots the shader actually
+// dereferences, and only when GBV is on, which is far too slow to leave
+// enabled.
+//
+// Reported rather than asserted: an unbound slot is not wrong by itself.
+// Plenty of tables leave members unset for shader paths that never read them.
+// What is wrong is unbound AND read -- which this cannot see from here. So
+// this produces the candidate list, not a verdict.
+//
+// Free function, not a static member: Slot_Compiler is a template, so a static
+// member would be per-Context-instantiation and the dedup would leak. Locked
+// because table compilation runs across FrameGraph worker threads.
+inline void report_unbound_slot(const char* member)
+{
+	static std::mutex m;
+	static std::set<std::string> seen;
+
+	std::lock_guard<std::mutex> lock(m);
+	if (seen.insert(member).second)
+		Log::get() << "[sig] unbound slot: " << member << Log::endl;
+}
+
+// ---- [Auto = ...] ----------------------------------------------------------
+//
+// Which null descriptor a table member wants when nothing was assigned to it.
+// The .sig names the kind; the member's C++ type supplies the view dimension
+// and format, because the descriptor has to agree with what the shader
+// declares -- see get_null_descriptor.
+
+// Element type of an HLSL handle -> the SRV format a null descriptor of it
+// should carry. Only the component COUNT has to match what the shader reads;
+// there is no resource, so the exact bit layout is irrelevant.
+template<class E> constexpr HAL::Format null_format_of()
+{
+	if constexpr (std::is_same_v<E, float>)  return HAL::Format::R32_FLOAT;
+	else if constexpr (std::is_same_v<E, float2>) return HAL::Format::R32G32_FLOAT;
+	else if constexpr (std::is_same_v<E, uint>)   return HAL::Format::R32_UINT;
+	else                                          return HAL::Format::R32G32B32A32_FLOAT;
+}
+
+// Primary template is deliberately undefined: a member annotated [Auto] whose
+// type has no null view here must fail to COMPILE rather than silently fall
+// back to descriptor index 0.
+template<class T> struct NullViewFor;
+
+template<class E> struct NullViewFor<HLSL::Texture2D<E>>
+{
+	static HAL::Views::ShaderResource make()
+	{
+		// MipLevels must be explicit: with no resource, "0 means all of them"
+		// has nothing to resolve against.
+		return { nullptr, null_format_of<E>(), HAL::Views::ShaderResource::Texture2D{ 0, 1, 0, 0.0f } };
+	}
+};
+
+template<class E> struct NullViewFor<HLSL::Texture3D<E>>
+{
+	static HAL::Views::ShaderResource make()
+	{
+		return { nullptr, null_format_of<E>(), HAL::Views::ShaderResource::Texture3D{ 0, 1, 0.0f } };
+	}
+};
+
+template<class E> struct NullViewFor<HLSL::Buffer<E>>
+{
+	static HAL::Views::ShaderResource make()
+	{
+		return { nullptr, null_format_of<E>(), HAL::Views::ShaderResource::Buffer{ 0, 0, 0, false } };
+	}
+};
+
 template<IsGPUEntityStorageInterface Context>
 class Slot_Compiler
 {
@@ -53,10 +130,10 @@ public:
 	// code calls this instead of compile(); everything else is identical, so
 	// the layout it writes is unchanged.
 	template<class T>
-	void compile_whole(const T& t)
+	void compile_whole(const T& t, const char* member = nullptr)
 	{
 		bind_whole_resource = true;
-		compile(t);
+		compile(t, member);
 		bind_whole_resource = false;
 	}
 
@@ -66,8 +143,38 @@ public:
 
 	}
 
+	// compile() for a member the .sig marked [Auto = ..._Null]. When the member
+	// was assigned, this is exactly compile(). When it was not, it writes the
+	// offset of a shared null descriptor instead of leaving the slot at index 0.
+	//
+	// Deliberately does NOT push into `resources` on the null path. A null
+	// descriptor names no resource, so there is nothing to transition -- routing
+	// it through the barrier system would add a bound-resource entry with a null
+	// Resource to every table that falls back, which is both meaningless and a
+	// crash waiting in add_resource_usage.
 	template<HAL::HandleClass T>
-	void compile(const T& handle)
+	void compile_auto(const T& handle, const char* member)
+	{
+		if (handle.is_valid())
+		{
+			compile(handle, member);
+			return;
+		}
+
+		// Still reported. [Auto] makes an unbound slot SAFE -- it reads zeros
+		// instead of a stranger's descriptor -- but it does not make it CORRECT:
+		// a pass that wants last frame's history and gets zeros is still a pass
+		// with unwired history. Annotating a member must not become a way to
+		// silence the detector that found it.
+		if constexpr (BuildOptions::Dev)
+			if (member) report_unbound_slot(member);
+
+		uint offset = HAL::get_null_descriptor(NullViewFor<T>::make()).get_offset();
+		s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
+	}
+
+	template<HAL::HandleClass T>
+	void compile(const T& handle, const char* member = nullptr)
 	{
 		uint offset = 0;
 		if (handle.is_valid())
@@ -77,36 +184,41 @@ public:
 			resources.push_back({ &handle.get_resource_info(), bind_whole_resource });
 			offset = handle.get_offset();
 		}
+		else if constexpr (BuildOptions::Dev)
+		{
+			// offset stays 0 -- see report_unbound_slot for why that matters.
+			if (member) report_unbound_slot(member);
+		}
 
 		s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
 	}
 
 	template<HAL::HandleClass T, uint N>
-	void compile(const T(&handles)[N])
+	void compile(const T(&handles)[N], const char* member = nullptr)
 	{
 		pad();
 		for (uint i = 0; i < N; i++)
 		{
-			compile(handles[i]);
+			compile(handles[i], member);
 			pad();
 		}
 
 	}
 
 	template<SIG_TYPES::Table T>
-	void compile(const T& t) //equires (std::is_base_of_v<T, Handle>)
+	void compile(const T& t, const char* = nullptr) //equires (std::is_base_of_v<T, Handle>)
 	{
 		pad();
 		t.compile(*this);
 	}
 
-	void compile(const DynamicData& t)
+	void compile(const DynamicData& t, const char* = nullptr)
 	{
 		s.write(reinterpret_cast<const char*>(t.data()), t.size());
 	}
 
 	template<HAL::HandleClass T>
-	void compile(const std::vector<T>& t)
+	void compile(const std::vector<T>& t, const char* member = nullptr)
 	{
 		uint offset = 0;
 
@@ -146,7 +258,7 @@ public:
 
 
 	template<class T, uint N>
-	void compile(const T(&t)[N]) //equires (std::is_base_of_v<T, Handle>)
+	void compile(const T(&t)[N], const char* = nullptr) //equires (std::is_base_of_v<T, Handle>)
 	{
 		pad();
 
@@ -161,7 +273,7 @@ public:
 
 
 	template<class T>
-	placement_info compile(const T& t) 
+	placement_info compile(const T& t, const char* = nullptr)
 	{
 		auto st = s.str().length();
 		auto start = s.str().length() % sizeof(uint4);
@@ -178,7 +290,7 @@ public:
 	}
 
 	template<>
-	placement_info compile(const bool& t)
+	placement_info compile(const bool& t, const char*)
 	{
 		return compile(uint(t));
 	}

@@ -27,7 +27,7 @@ float FFX_DNSR_Reflections_GetRandom(int2 pixel_coordinate) { return GetDenoiser
 float FFX_DNSR_Reflections_LoadDepth(int2 pixel_coordinate) { return GetDenoiserReflectionReproject().GetG_depth_buffer().Load(int3(pixel_coordinate, 0)); }
 float FFX_DNSR_Reflections_LoadDepthHistory(int2 pixel_coordinate) { return GetDenoiserReflectionReproject().GetG_depth_buffer_history().Load(int3(pixel_coordinate, 0)); }
 float FFX_DNSR_Reflections_SampleDepthHistory(float2 uv) { return GetDenoiserReflectionReproject().GetG_depth_buffer_history().SampleLevel(linearClampSampler, uv, 0.0f); }
-min16float3 FFX_DNSR_Reflections_LoadRadiance(int2 pixel_coordinate) { return (min16float3)GetDenoiserReflectionReproject().GetG_in_radiance().Load(int3(pixel_coordinate, 0)).xyz; }
+min16float3 FFX_DNSR_Reflections_LoadRadiance(int2 pixel_coordinate) { return (min16float3)GetDenoiserReflectionReproject().GetG_in_radiance()[pixel_coordinate].xyz; }
 min16float3 FFX_DNSR_Reflections_LoadRadianceHistory(int2 pixel_coordinate) { return (min16float3)GetDenoiserReflectionReproject().GetG_radiance_history().Load(int3(pixel_coordinate, 0)).xyz; }
 min16float3 FFX_DNSR_Reflections_SampleRadianceHistory(float2 uv) { return (min16float3)GetDenoiserReflectionReproject().GetG_radiance_history().SampleLevel(linearClampSampler, uv, 0.0f).xyz; }
 min16float FFX_DNSR_Reflections_SampleNumSamplesHistory(float2 uv) { return (min16float)GetDenoiserReflectionReproject().GetG_sample_count_history().SampleLevel(linearClampSampler, uv, 0.0f).x; }
@@ -40,7 +40,7 @@ min16float FFX_DNSR_Reflections_LoadRoughnessHistory(int2 pixel_coordinate) { re
 float2 FFX_DNSR_Reflections_LoadMotionVector(int2 pixel_coordinate) { return GetDenoiserReflectionReproject().GetG_motion_vector().Load(int3(pixel_coordinate, 0)); }
 min16float3 FFX_DNSR_Reflections_SamplePreviousAverageRadiance(float2 uv) { return (min16float3)GetDenoiserReflectionReproject().GetG_average_radiance_history().SampleLevel(linearClampSampler, uv, 0.0f).xyz; }
 min16float FFX_DNSR_Reflections_SampleVarianceHistory(float2 uv) { return (min16float)GetDenoiserReflectionReproject().GetG_variance_history().SampleLevel(linearClampSampler, uv, 0.0f).x; }
-min16float FFX_DNSR_Reflections_LoadRayLength(int2 pixel_coordinate) { return (min16float)GetDenoiserReflectionReproject().GetG_in_radiance().Load(int3(pixel_coordinate, 0)).w; }
+min16float FFX_DNSR_Reflections_LoadRayLength(int2 pixel_coordinate) { return (min16float)GetDenoiserReflectionReproject().GetG_in_radiance()[pixel_coordinate].w; }
 void FFX_DNSR_Reflections_StoreRadianceReprojected(int2 pixel_coordinate, min16float3 value) { GetDenoiserReflectionReproject().GetG_out_reprojected_radiance()[pixel_coordinate] = value; }
 void FFX_DNSR_Reflections_StoreAverageRadiance(int2 pixel_coordinate, min16float3 value) { GetDenoiserReflectionReproject().GetG_out_average_radiance()[pixel_coordinate] = value; }
 void FFX_DNSR_Reflections_StoreVariance(int2 pixel_coordinate, min16float value) { GetDenoiserReflectionReproject().GetG_out_variance()[pixel_coordinate] = value; }

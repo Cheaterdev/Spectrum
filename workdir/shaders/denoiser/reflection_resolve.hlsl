@@ -23,7 +23,7 @@ THE SOFTWARE.
 #include "../autogen/DenoiserReflectionResolve.h"
 
 min16float3 FFX_DNSR_Reflections_SampleAverageRadiance(float2 uv) { return (min16float3)GetDenoiserReflectionResolve().GetG_average_radiance().SampleLevel(linearClampSampler, uv, 0.0f).xyz; }
-min16float3 FFX_DNSR_Reflections_LoadRadiance(int2 pixel_coordinate) { return (min16float3)GetDenoiserReflectionResolve().GetG_in_radiance().Load(int3(pixel_coordinate, 0)).xyz; }
+min16float3 FFX_DNSR_Reflections_LoadRadiance(int2 pixel_coordinate) { return (min16float3)GetDenoiserReflectionResolve().GetG_in_radiance()[pixel_coordinate].xyz; }
 min16float3 FFX_DNSR_Reflections_LoadRadianceReprojected(int2 pixel_coordinate) { return (min16float3)GetDenoiserReflectionResolve().GetG_in_reprojected_radiance().Load(int3(pixel_coordinate, 0)).xyz; }
 min16float FFX_DNSR_Reflections_LoadRoughness(int2 pixel_coordinate) { return (min16float)GetDenoiserReflectionResolve().GetG_normal().Load(int3(pixel_coordinate, 0)).w; }
 min16float FFX_DNSR_Reflections_LoadVariance(int2 pixel_coordinate) { return (min16float)GetDenoiserReflectionResolve().GetG_in_variance().Load(int3(pixel_coordinate, 0)).x; }

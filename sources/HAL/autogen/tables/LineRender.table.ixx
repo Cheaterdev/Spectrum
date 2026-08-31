@@ -24,7 +24,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(vb);
+			compiler.compile(vb, "LineRender::vb");
 		}
 		struct Compiled
 		{

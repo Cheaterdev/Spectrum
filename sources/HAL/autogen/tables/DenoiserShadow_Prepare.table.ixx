@@ -27,9 +27,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(BufferDimensions);
-			compiler.compile(t2d_hitMaskResults);
-			compiler.compile(rwsb_shadowMask);
+			compiler.compile(BufferDimensions, "DenoiserShadow_Prepare::BufferDimensions");
+			compiler.compile(t2d_hitMaskResults, "DenoiserShadow_Prepare::t2d_hitMaskResults");
+			compiler.compile(rwsb_shadowMask, "DenoiserShadow_Prepare::rwsb_shadowMask");
 		}
 		struct Compiled
 		{

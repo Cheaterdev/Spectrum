@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(source);
-			compiler.compile(target);
-			compiler.compile(constants);
+			compiler.compile(source, "FSR::source");
+			compiler.compile(target, "FSR::target");
+			compiler.compile(constants, "FSR::constants");
 		}
 		struct Compiled
 		{

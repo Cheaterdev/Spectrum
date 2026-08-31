@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(vertex_offset);
-			compiler.compile(index_offset);
+			compiler.compile(vertex_offset, "MeshInstance::vertex_offset");
+			compiler.compile(index_offset, "MeshInstance::index_offset");
 		}
 		using Compiled = MeshInstance;
 

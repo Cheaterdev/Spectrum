@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(node_offset);
-			compiler.compile(mesh_id);
+			compiler.compile(node_offset, "BoxInfo::node_offset");
+			compiler.compile(mesh_id, "BoxInfo::mesh_id");
 		}
 		using Compiled = BoxInfo;
 

@@ -31,11 +31,11 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(pos);
-			compiler.compile(tc);
-			compiler.compile(mulColor);
-			compiler.compile(addColor);
-			compiler.compile(gammaEncode);
+			compiler.compile(pos, "vertex_input::pos");
+			compiler.compile(tc, "vertex_input::tc");
+			compiler.compile(mulColor, "vertex_input::mulColor");
+			compiler.compile(addColor, "vertex_input::addColor");
+			compiler.compile(gammaEncode, "vertex_input::gammaEncode");
 		}
 		using Compiled = vertex_input;
 

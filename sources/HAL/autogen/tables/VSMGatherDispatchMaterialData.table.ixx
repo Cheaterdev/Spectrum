@@ -33,11 +33,11 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(level_count);
-			compiler.compile(light_view);
-			compiler.compile(material_pip_ids);
-			compiler.compile(levels);
-			compiler.compile(material_commands);
+			compiler.compile(level_count, "VSMGatherDispatchMaterialData::level_count");
+			compiler.compile(light_view, "VSMGatherDispatchMaterialData::light_view");
+			compiler.compile(material_pip_ids, "VSMGatherDispatchMaterialData::material_pip_ids");
+			compiler.compile(levels, "VSMGatherDispatchMaterialData::levels");
+			compiler.compile(material_commands, "VSMGatherDispatchMaterialData::material_commands");
 		}
 		struct Compiled
 		{

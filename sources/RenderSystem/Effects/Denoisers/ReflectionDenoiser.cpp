@@ -124,7 +124,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 						//		reproject_data.g_roughness_history= data.GBuffer_SpecularPrev->texture2D;
 						reproject_data.g_normal_history = data.GBuffer_NormalsPrev->texture2D;
 
-						reproject_data.g_in_radiance = data.VoxelReflectionNoise->texture2D;
+						reproject_data.g_in_radiance = data.VoxelReflectionNoise->rwTexture2D;
 						reproject_data.g_radiance_history = data.ReflectionDenoiser_RadiancePrev->texture2D;
 						reproject_data.g_motion_vector = data.GBuffer_Speed->texture2D;
 
@@ -154,7 +154,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 						prefilter_data.g_normal = data.GBuffer_Normals->texture2D;
 						prefilter_data.g_average_radiance = data.ReflectionDenoiser_AverageRadiance->texture2D;
 						
-						prefilter_data.g_in_radiance = data.VoxelReflectionNoise->texture2D; //?????
+						prefilter_data.g_in_radiance = data.VoxelReflectionNoise->rwTexture2D; //?????
 						prefilter_data.g_in_variance = data.ReflectionDenoiser_Variance->texture2D;
 				
 						prefilter_data.g_in_sample_count = data.ReflectionDenoiser_SampleCount->texture2D;
@@ -187,7 +187,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 						resolve_data.g_normal = data.GBuffer_Normals->texture2D;
 						resolve_data.g_average_radiance = data.ReflectionDenoiser_AverageRadiance->texture2D;
 						
-						resolve_data.g_in_radiance = data.VoxelReflectionNoise->texture2D;
+						resolve_data.g_in_radiance = data.VoxelReflectionNoise->rwTexture2D;
 						resolve_data.g_in_reprojected_radiance = data.ReflectionDenoiser_ReprojectedRadiance->texture2D; 
 
 

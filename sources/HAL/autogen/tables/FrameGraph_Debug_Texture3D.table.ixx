@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(sourceSize);
-			compiler.compile(source);
-			compiler.compile(camera);
+			compiler.compile(sourceSize, "FrameGraph_Debug_Texture3D::sourceSize");
+			compiler.compile(source, "FrameGraph_Debug_Texture3D::source");
+			compiler.compile(camera, "FrameGraph_Debug_Texture3D::camera");
 		}
 		struct Compiled
 		{

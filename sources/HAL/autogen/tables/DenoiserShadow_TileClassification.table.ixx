@@ -57,24 +57,24 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(Eye);
-			compiler.compile(FirstFrame);
-			compiler.compile(BufferDimensions);
-			compiler.compile(InvBufferDimensions);
-			compiler.compile(ProjectionInverse);
-			compiler.compile(ReprojectionMatrix);
-			compiler.compile(ViewProjectionInverse);
-			compiler.compile(DepthSimilaritySigma);
-			compiler.compile(t2d_depth);
-			compiler.compile(t2d_velocity);
-			compiler.compile(t2d_normal);
-			compiler.compile(t2d_history);
-			compiler.compile(t2d_previousDepth);
-			compiler.compile(sb_raytracerResult);
-			compiler.compile(t2d_previousMoments);
-			compiler.compile(rwsb_tileMetaData);
-			compiler.compile(rwt2d_reprojectionResults);
-			compiler.compile(rwt2d_momentsBuffer);
+			compiler.compile(Eye, "DenoiserShadow_TileClassification::Eye");
+			compiler.compile(FirstFrame, "DenoiserShadow_TileClassification::FirstFrame");
+			compiler.compile(BufferDimensions, "DenoiserShadow_TileClassification::BufferDimensions");
+			compiler.compile(InvBufferDimensions, "DenoiserShadow_TileClassification::InvBufferDimensions");
+			compiler.compile(ProjectionInverse, "DenoiserShadow_TileClassification::ProjectionInverse");
+			compiler.compile(ReprojectionMatrix, "DenoiserShadow_TileClassification::ReprojectionMatrix");
+			compiler.compile(ViewProjectionInverse, "DenoiserShadow_TileClassification::ViewProjectionInverse");
+			compiler.compile(DepthSimilaritySigma, "DenoiserShadow_TileClassification::DepthSimilaritySigma");
+			compiler.compile(t2d_depth, "DenoiserShadow_TileClassification::t2d_depth");
+			compiler.compile(t2d_velocity, "DenoiserShadow_TileClassification::t2d_velocity");
+			compiler.compile(t2d_normal, "DenoiserShadow_TileClassification::t2d_normal");
+			compiler.compile(t2d_history, "DenoiserShadow_TileClassification::t2d_history");
+			compiler.compile(t2d_previousDepth, "DenoiserShadow_TileClassification::t2d_previousDepth");
+			compiler.compile(sb_raytracerResult, "DenoiserShadow_TileClassification::sb_raytracerResult");
+			compiler.compile(t2d_previousMoments, "DenoiserShadow_TileClassification::t2d_previousMoments");
+			compiler.compile(rwsb_tileMetaData, "DenoiserShadow_TileClassification::rwsb_tileMetaData");
+			compiler.compile(rwt2d_reprojectionResults, "DenoiserShadow_TileClassification::rwt2d_reprojectionResults");
+			compiler.compile(rwt2d_momentsBuffer, "DenoiserShadow_TileClassification::rwt2d_momentsBuffer");
 		}
 		struct Compiled
 		{

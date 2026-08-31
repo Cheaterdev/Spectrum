@@ -26,8 +26,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(Target);
-			compiler.compile(params);
+			compiler.compile(Target, "VoxelZero::Target");
+			compiler.compile(params, "VoxelZero::params");
 		}
 		struct Compiled
 		{

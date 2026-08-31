@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(pixelAngle);
-			compiler.compile(output);
-			compiler.compile(gbuffer);
+			compiler.compile(pixelAngle, "RaytracingRays::pixelAngle");
+			compiler.compile(output, "RaytracingRays::output");
+			compiler.compile(gbuffer, "RaytracingRays::gbuffer");
 		}
 		struct Compiled
 		{

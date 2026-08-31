@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(width);
-			compiler.compile(angle);
+			compiler.compile(width, "RayCone::width");
+			compiler.compile(angle, "RayCone::angle");
 		}
 		using Compiled = RayCone;
 

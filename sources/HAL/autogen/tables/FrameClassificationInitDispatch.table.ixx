@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(hi_counter);
-			compiler.compile(low_counter);
-			compiler.compile(hi_dispatch_data);
-			compiler.compile(low_dispatch_data);
+			compiler.compile(hi_counter, "FrameClassificationInitDispatch::hi_counter");
+			compiler.compile(low_counter, "FrameClassificationInitDispatch::low_counter");
+			compiler.compile(hi_dispatch_data, "FrameClassificationInitDispatch::hi_dispatch_data");
+			compiler.compile(low_dispatch_data, "FrameClassificationInitDispatch::low_dispatch_data");
 		}
 		struct Compiled
 		{

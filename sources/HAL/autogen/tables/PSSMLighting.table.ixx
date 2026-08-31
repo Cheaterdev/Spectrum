@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(light_mask);
-			compiler.compile(result);
-			compiler.compile(gbuffer);
+			compiler.compile(light_mask, "PSSMLighting::light_mask");
+			compiler.compile(result, "PSSMLighting::result");
+			compiler.compile(gbuffer, "PSSMLighting::gbuffer");
 		}
 		struct Compiled
 		{

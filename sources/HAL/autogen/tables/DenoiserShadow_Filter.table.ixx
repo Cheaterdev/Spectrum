@@ -35,13 +35,13 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(ProjectionInverse);
-			compiler.compile(BufferDimensions);
-			compiler.compile(InvBufferDimensions);
-			compiler.compile(DepthSimilaritySigma);
-			compiler.compile(t2d_DepthBuffer);
-			compiler.compile(t2d_NormalBuffer);
-			compiler.compile(sb_tileMetaData);
+			compiler.compile(ProjectionInverse, "DenoiserShadow_Filter::ProjectionInverse");
+			compiler.compile(BufferDimensions, "DenoiserShadow_Filter::BufferDimensions");
+			compiler.compile(InvBufferDimensions, "DenoiserShadow_Filter::InvBufferDimensions");
+			compiler.compile(DepthSimilaritySigma, "DenoiserShadow_Filter::DepthSimilaritySigma");
+			compiler.compile(t2d_DepthBuffer, "DenoiserShadow_Filter::t2d_DepthBuffer");
+			compiler.compile(t2d_NormalBuffer, "DenoiserShadow_Filter::t2d_NormalBuffer");
+			compiler.compile(sb_tileMetaData, "DenoiserShadow_Filter::sb_tileMetaData");
 		}
 		struct Compiled
 		{

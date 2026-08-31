@@ -31,11 +31,11 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(Const0);
-			compiler.compile(Const1);
-			compiler.compile(Const2);
-			compiler.compile(Const3);
-			compiler.compile(Sample);
+			compiler.compile(Const0, "FSRConstants::Const0");
+			compiler.compile(Const1, "FSRConstants::Const1");
+			compiler.compile(Const2, "FSRConstants::Const2");
+			compiler.compile(Const3, "FSRConstants::Const3");
+			compiler.compile(Sample, "FSRConstants::Sample");
 		}
 		using Compiled = FSRConstants;
 

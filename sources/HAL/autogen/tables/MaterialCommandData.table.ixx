@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(material_cb);
-			compiler.compile(pipeline_id);
-			compiler.compile(is_transparent);
-			compiler.compile(opacity_texture_index);
+			compiler.compile(material_cb, "MaterialCommandData::material_cb");
+			compiler.compile(pipeline_id, "MaterialCommandData::pipeline_id");
+			compiler.compile(is_transparent, "MaterialCommandData::is_transparent");
+			compiler.compile(opacity_texture_index, "MaterialCommandData::opacity_texture_index");
 		}
 		using Compiled = MaterialCommandData;
 

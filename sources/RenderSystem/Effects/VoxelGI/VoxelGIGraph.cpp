@@ -995,7 +995,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 			reproject.g_normal                   = data.GBuffer_Normals->texture2D;
 			reproject.g_depth_buffer_history     = data.GBuffer_DepthPrev->texture2D;
 			reproject.g_normal_history           = data.GBuffer_NormalsPrev->texture2D;
-			reproject.g_in_radiance              = data.VoxelReflectionNoise->texture2D;
+			reproject.g_in_radiance              = data.VoxelReflectionNoise->rwTexture2D;
 			reproject.g_radiance_history         = data.ReflectionDenoiser_RadiancePrev->texture2D;
 			reproject.g_motion_vector            = data.GBuffer_Speed->texture2D;
 			reproject.g_average_radiance_history = data.ReflectionDenoiser_AverageRadiancePrev->texture2D;
@@ -1016,7 +1016,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 			prefilter.g_depth_buffer     = data.GBuffer_Depth->texture2D;
 			prefilter.g_normal           = data.GBuffer_Normals->texture2D;
 			prefilter.g_average_radiance = data.ReflectionDenoiser_AverageRadiance->texture2D;
-			prefilter.g_in_radiance      = data.VoxelReflectionNoise->texture2D;
+			prefilter.g_in_radiance      = data.VoxelReflectionNoise->rwTexture2D;
 			prefilter.g_in_variance      = data.ReflectionDenoiser_Variance->texture2D;
 			prefilter.g_in_sample_count  = data.ReflectionDenoiser_SampleCount->texture2D;
 			prefilter.g_out_radiance     = data.ReflectionDenoiser_RadiancePrev->rwTexture2D;
@@ -1031,7 +1031,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 			Slots::DenoiserReflectionResolve resolve;
 			resolve.g_normal                  = data.GBuffer_Normals->texture2D;
 			resolve.g_average_radiance        = data.ReflectionDenoiser_AverageRadiance->texture2D;
-			resolve.g_in_radiance             = data.VoxelReflectionNoise->texture2D;
+			resolve.g_in_radiance             = data.VoxelReflectionNoise->rwTexture2D;
 			resolve.g_in_reprojected_radiance = data.ReflectionDenoiser_ReprojectedRadiance->texture2D;
 			resolve.g_in_variance             = data.ReflectionDenoiser_VariancePrev->texture2D;
 			resolve.g_in_sample_count         = data.ReflectionDenoiser_SampleCountPrev->texture2D;

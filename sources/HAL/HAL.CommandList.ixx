@@ -375,7 +375,7 @@ export{
 				begin_op(operation);
 				if constexpr (compute || graphics)
 				{
-					if constexpr (Debug::GfxDebug)	setup_debug(&context);
+					setup_debug(&context);
 					context.commit_tables(operation, slots);
 					if constexpr (graphics) context.validate();
 				}
@@ -383,11 +383,7 @@ export{
 			template<bool compute, bool graphics, class T>
 			void post_command(T& context, BarrierSync operation)
 			{
-				// Leave the batch OPEN — it is closed lazily by the next op of a
-				// different class (begin_op) or at list end. A hazard
-				// on a shared resource splits it (see batch_hazard_check).
-				if constexpr (Debug::GfxDebug)
-					if constexpr (compute || graphics)	print_debug();
+				if constexpr (compute || graphics)	print_debug();
 			}
 		public:
 			void end();

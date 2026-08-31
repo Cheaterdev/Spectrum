@@ -35,11 +35,11 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(nodes);
-			compiler.compile(meshes);
-			compiler.compile(materials);
-			compiler.compile(raytraceInstanceInfo);
-			compiler.compile(scene);
+			compiler.compile(nodes, "SceneData::nodes");
+			compiler.compile(meshes, "SceneData::meshes");
+			compiler.compile(materials, "SceneData::materials");
+			compiler.compile(raytraceInstanceInfo, "SceneData::raytraceInstanceInfo");
+			compiler.compile(scene, "SceneData::scene");
 		}
 		struct Compiled
 		{

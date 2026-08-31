@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(reflection);
-			compiler.compile(target);
-			compiler.compile(gbuffer);
+			compiler.compile(reflection, "ReflectionCombine::reflection");
+			compiler.compile(target, "ReflectionCombine::target");
+			compiler.compile(gbuffer, "ReflectionCombine::gbuffer");
 		}
 		struct Compiled
 		{

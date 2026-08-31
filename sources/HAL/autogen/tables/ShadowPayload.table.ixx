@@ -23,7 +23,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(hit);
+			compiler.compile(hit, "ShadowPayload::hit");
 		}
 		using Compiled = ShadowPayload;
 

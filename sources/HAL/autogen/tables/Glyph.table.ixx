@@ -27,9 +27,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(pos);
-			compiler.compile(index);
-			compiler.compile(color);
+			compiler.compile(pos, "Glyph::pos");
+			compiler.compile(index, "Glyph::index");
+			compiler.compile(color, "Glyph::color");
 		}
 		using Compiled = Glyph;
 

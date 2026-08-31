@@ -24,7 +24,7 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(tiles);
+			compiler.compile(tiles, "WorkGR_Shadows_NodeEmulation::tiles");
 		}
 		struct Compiled
 		{

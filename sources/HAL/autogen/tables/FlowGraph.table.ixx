@@ -27,9 +27,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(size);
-			compiler.compile(offset_size);
-			compiler.compile(inv_pixel);
+			compiler.compile(size, "FlowGraph::size");
+			compiler.compile(offset_size, "FlowGraph::offset_size");
+			compiler.compile(inv_pixel, "FlowGraph::inv_pixel");
 		}
 		using Compiled = FlowGraph;
 

@@ -32,10 +32,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(mesh_cb);
-			compiler.compile(meshinstance_cb);
-			compiler.compile(material_cb);
-			compiler.compile(draw_commands);
+			compiler.compile(mesh_cb, "CommandData::mesh_cb");
+			compiler.compile(meshinstance_cb, "CommandData::meshinstance_cb");
+			compiler.compile(material_cb, "CommandData::material_cb");
+			compiler.compile(draw_commands, "CommandData::draw_commands");
 		}
 		using Compiled = CommandData;
 		static const IndirectCommands CommandID = IndirectCommands::CommandData;

@@ -40,15 +40,15 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(time);
-			compiler.compile(sunDir);
-			compiler.compile(mipBias);
-			compiler.compile(bestFitNormals);
-			compiler.compile(brdf);
-			compiler.compile(sky);
-			compiler.compile(mainHiZ);
-			compiler.compile(camera);
-			compiler.compile(prevCamera);
+			compiler.compile(time, "FrameInfo::time");
+			compiler.compile(sunDir, "FrameInfo::sunDir");
+			compiler.compile(mipBias, "FrameInfo::mipBias");
+			compiler.compile(bestFitNormals, "FrameInfo::bestFitNormals");
+			compiler.compile(brdf, "FrameInfo::brdf");
+			compiler.compile(sky, "FrameInfo::sky");
+			compiler.compile(mainHiZ, "FrameInfo::mainHiZ");
+			compiler.compile(camera, "FrameInfo::camera");
+			compiler.compile(prevCamera, "FrameInfo::prevCamera");
 		}
 		struct Compiled
 		{

@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(subsampleIndices);
-			compiler.compile(SMAA_RT_METRICS);
-			compiler.compile(colorTex);
-			compiler.compile(edgesOut);
+			compiler.compile(subsampleIndices, "SMAA_Global::subsampleIndices");
+			compiler.compile(SMAA_RT_METRICS, "SMAA_Global::SMAA_RT_METRICS");
+			compiler.compile(colorTex, "SMAA_Global::colorTex");
+			compiler.compile(edgesOut, "SMAA_Global::edgesOut");
 		}
 		struct Compiled
 		{

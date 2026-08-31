@@ -30,10 +30,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(data);
-			compiler.compile(mode);
-			compiler.compile(instances);
-			compiler.compile(tex);
+			compiler.compile(data, "Test::data");
+			compiler.compile(mode, "Test::mode");
+			compiler.compile(instances, "Test::instances");
+			compiler.compile(tex, "Test::tex");
 		}
 		struct Compiled
 		{

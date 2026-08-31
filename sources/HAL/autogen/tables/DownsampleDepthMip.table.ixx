@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(srcMip);
-			compiler.compile(dstMip);
+			compiler.compile(srcMip, "DownsampleDepthMip::srcMip");
+			compiler.compile(dstMip, "DownsampleDepthMip::dstMip");
 		}
 		struct Compiled
 		{

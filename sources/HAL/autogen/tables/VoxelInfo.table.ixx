@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(min);
-			compiler.compile(size);
-			compiler.compile(voxels_per_tile);
-			compiler.compile(voxel_tiles_count);
+			compiler.compile(min, "VoxelInfo::min");
+			compiler.compile(size, "VoxelInfo::size");
+			compiler.compile(voxels_per_tile, "VoxelInfo::voxels_per_tile");
+			compiler.compile(voxel_tiles_count, "VoxelInfo::voxel_tiles_count");
 		}
 		using Compiled = VoxelInfo;
 

@@ -59,25 +59,25 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(SurfaceThickness);
-			compiler.compile(BilinearThreshold);
-			compiler.compile(ShadowContrast);
-			compiler.compile(IgnoreEdgePixels);
-			compiler.compile(UsePrecisionOffset);
-			compiler.compile(BilinearSamplingOffsetMode);
-			compiler.compile(DebugOutputEdgeMask);
-			compiler.compile(DebugOutputThreadIndex);
-			compiler.compile(DebugOutputWaveIndex);
-			compiler.compile(DepthBounds);
-			compiler.compile(UseEarlyOut);
-			compiler.compile(LightCoordinate);
-			compiler.compile(WaveOffset);
-			compiler.compile(PixelStepScale);
-			compiler.compile(FarDepthValue);
-			compiler.compile(NearDepthValue);
-			compiler.compile(InvDepthTextureSize);
-			compiler.compile(DepthTexture);
-			compiler.compile(OutputTexture);
+			compiler.compile(SurfaceThickness, "DispatchParameters::SurfaceThickness");
+			compiler.compile(BilinearThreshold, "DispatchParameters::BilinearThreshold");
+			compiler.compile(ShadowContrast, "DispatchParameters::ShadowContrast");
+			compiler.compile(IgnoreEdgePixels, "DispatchParameters::IgnoreEdgePixels");
+			compiler.compile(UsePrecisionOffset, "DispatchParameters::UsePrecisionOffset");
+			compiler.compile(BilinearSamplingOffsetMode, "DispatchParameters::BilinearSamplingOffsetMode");
+			compiler.compile(DebugOutputEdgeMask, "DispatchParameters::DebugOutputEdgeMask");
+			compiler.compile(DebugOutputThreadIndex, "DispatchParameters::DebugOutputThreadIndex");
+			compiler.compile(DebugOutputWaveIndex, "DispatchParameters::DebugOutputWaveIndex");
+			compiler.compile(DepthBounds, "DispatchParameters::DepthBounds");
+			compiler.compile(UseEarlyOut, "DispatchParameters::UseEarlyOut");
+			compiler.compile(LightCoordinate, "DispatchParameters::LightCoordinate");
+			compiler.compile(WaveOffset, "DispatchParameters::WaveOffset");
+			compiler.compile(PixelStepScale, "DispatchParameters::PixelStepScale");
+			compiler.compile(FarDepthValue, "DispatchParameters::FarDepthValue");
+			compiler.compile(NearDepthValue, "DispatchParameters::NearDepthValue");
+			compiler.compile(InvDepthTextureSize, "DispatchParameters::InvDepthTextureSize");
+			compiler.compile(DepthTexture, "DispatchParameters::DepthTexture");
+			compiler.compile(OutputTexture, "DispatchParameters::OutputTexture");
 		}
 		struct Compiled
 		{

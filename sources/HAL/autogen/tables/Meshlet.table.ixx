@@ -29,10 +29,10 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(vertexCount);
-			compiler.compile(vertexOffset);
-			compiler.compile(primitiveCount);
-			compiler.compile(primitiveOffset);
+			compiler.compile(vertexCount, "Meshlet::vertexCount");
+			compiler.compile(vertexOffset, "Meshlet::vertexOffset");
+			compiler.compile(primitiveCount, "Meshlet::primitiveCount");
+			compiler.compile(primitiveOffset, "Meshlet::primitiveOffset");
 		}
 		using Compiled = Meshlet;
 

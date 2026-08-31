@@ -37,13 +37,13 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(albedo);
-			compiler.compile(normals);
-			compiler.compile(lower);
-			compiler.compile(tex_cube);
-			compiler.compile(output);
-			compiler.compile(pssmGlobal);
-			compiler.compile(params);
+			compiler.compile(albedo, "VoxelLighting::albedo");
+			compiler.compile(normals, "VoxelLighting::normals");
+			compiler.compile(lower, "VoxelLighting::lower");
+			compiler.compile(tex_cube, "VoxelLighting::tex_cube");
+			compiler.compile(output, "VoxelLighting::output");
+			compiler.compile(pssmGlobal, "VoxelLighting::pssmGlobal");
+			compiler.compile(params, "VoxelLighting::params");
 		}
 		struct Compiled
 		{

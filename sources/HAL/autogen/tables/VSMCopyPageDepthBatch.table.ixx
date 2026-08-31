@@ -27,9 +27,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile_whole(atlas);
-			compiler.compile(dirty_slots);
-			compiler.compile_whole(dst_mip0);
+			compiler.compile_whole(atlas, "VSMCopyPageDepthBatch::atlas");
+			compiler.compile(dirty_slots, "VSMCopyPageDepthBatch::dirty_slots");
+			compiler.compile_whole(dst_mip0, "VSMCopyPageDepthBatch::dst_mip0");
 		}
 		struct Compiled
 		{

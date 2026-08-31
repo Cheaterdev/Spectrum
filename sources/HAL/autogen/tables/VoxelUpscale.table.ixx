@@ -27,9 +27,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(tex_downsampled);
-			compiler.compile(tex_gi_prev);
-			compiler.compile(tex_depth_prev);
+			compiler.compile(tex_downsampled, "VoxelUpscale::tex_downsampled");
+			compiler.compile(tex_gi_prev, "VoxelUpscale::tex_gi_prev");
+			compiler.compile(tex_depth_prev, "VoxelUpscale::tex_depth_prev");
 		}
 		struct Compiled
 		{

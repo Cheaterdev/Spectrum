@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(min);
-			compiler.compile(max);
+			compiler.compile(min, "AABB::min");
+			compiler.compile(max, "AABB::max");
 		}
 		using Compiled = AABB;
 

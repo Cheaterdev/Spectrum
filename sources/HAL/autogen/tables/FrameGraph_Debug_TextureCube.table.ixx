@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(sourceSize);
-			compiler.compile(source);
+			compiler.compile(sourceSize, "FrameGraph_Debug_TextureCube::sourceSize");
+			compiler.compile(source, "FrameGraph_Debug_TextureCube::source");
 		}
 		struct Compiled
 		{

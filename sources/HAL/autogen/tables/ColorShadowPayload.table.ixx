@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(transmittance);
-			compiler.compile(dist);
+			compiler.compile(transmittance, "ColorShadowPayload::transmittance");
+			compiler.compile(dist, "ColorShadowPayload::dist");
 		}
 		using Compiled = ColorShadowPayload;
 

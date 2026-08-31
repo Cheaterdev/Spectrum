@@ -25,8 +25,8 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(srcTex);
-			compiler.compile(targetTex);
+			compiler.compile(srcTex, "DownsampleDepth::srcTex");
+			compiler.compile(targetTex, "DownsampleDepth::targetTex");
 		}
 		struct Compiled
 		{

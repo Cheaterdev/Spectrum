@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(page_batch_cb);
-			compiler.compile(bounds_min);
-			compiler.compile(bounds_max);
+			compiler.compile(page_batch_cb, "VSMLevelDispatchInfo::page_batch_cb");
+			compiler.compile(bounds_min, "VSMLevelDispatchInfo::bounds_min");
+			compiler.compile(bounds_max, "VSMLevelDispatchInfo::bounds_max");
 		}
 		using Compiled = VSMLevelDispatchInfo;
 

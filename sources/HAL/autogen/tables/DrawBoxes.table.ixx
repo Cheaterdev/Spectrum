@@ -28,9 +28,9 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(vertices);
-			compiler.compile(input_meshes);
-			compiler.compile(visible_meshes);
+			compiler.compile(vertices, "DrawBoxes::vertices");
+			compiler.compile(input_meshes, "DrawBoxes::input_meshes");
+			compiler.compile(visible_meshes, "DrawBoxes::visible_meshes");
 		}
 		struct Compiled
 		{
