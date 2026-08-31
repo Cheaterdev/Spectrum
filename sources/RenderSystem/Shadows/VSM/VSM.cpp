@@ -1489,6 +1489,16 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(lighting);
 		}
 
+		// VSMShadowBlur's VSM_RTX_VERIFY variant reads GetSceneData() for the
+		// instance and material tables behind its RayQuery hit (see
+		// VSM_ShadowResolve.hlsl). Unset, the slot's root CBV holds 0 and the
+		// shader dereferences descriptor 0 -- which holds an SRV -- as a CBV
+		// (GPU-based validation #939, ~3.5k per run).
+		//
+		// Set unconditionally rather than only when rtx_verify is on: it costs
+		// one root CBV, and tying it to a runtime flag is how it went missing.
+		context.graph->set_slot(SlotID::SceneData, compute);
+
 		{
 			Slots::VSMShadowResolveIO io;
 			io.GetBlocker_search_result() = data.VSM_BlockerSearchResult->texture2D;

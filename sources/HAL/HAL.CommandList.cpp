@@ -241,6 +241,8 @@ namespace HAL
 		active = true;
 		compiler.set_name(name.ptr);
 
+		dbg_dispatch_index = 0;   // [temp diag] GBV counts per recording, so must this
+
 		compiler.reset();
 #ifdef DEV
 		begin_stack = Exceptions::get_stack_trace();
@@ -1364,11 +1366,31 @@ namespace HAL
 		list->set_compute_signature(s);
 	}
 
+	// [temp diag] GBV reports a "Dispatch Index" per command-list RECORDING and
+	// counts every dispatch-class command, indirect ones included. Both matter:
+	// a counter that misses execute_indirect, or that never resets, produces a
+	// mapping that looks plausible and is wrong.
+	//
+	// Locked because FrameGraph passes record on worker threads -- without it
+	// the lines interleave mid-write and the file is unreadable.
+	static void dbg_log_dispatch(CommandList& base, const char* kind, const std::string& pso)
+	{
+		static std::mutex m;
+		std::lock_guard<std::mutex> lock(m);
+
+		std::ofstream f("dispatch_index.temp", std::ios::app);
+		f << convert(std::wstring(base.CommandListBase::get_name().ptr))
+		  << " dispatch=" << base.dbg_dispatch_index++
+		  << " kind=" << kind
+		  << " pso=" << pso << "\n";
+	}
+
 	void ComputeContext::dispatch(int x, int y, int z)
 	{
 		PROFILE_GPU(L"dispatch");
 
 		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
+		dbg_log_dispatch(base, "dispatch", base.current_pipeline ? base.current_pipeline->name : std::string("<none>"));
 		list->dispatch({x, y, z});
 		base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 	}
@@ -1569,6 +1591,8 @@ namespace HAL
 		  if (command_buffer) get_base().add_resource_usage(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
 		  if (counter_buffer) get_base().add_resource_usage(counter_buffer, ResourceStates::INDIRECT_ARGUMENT); }
 
+		dbg_log_dispatch(get_base(), "exec_indirect", get_base().current_pipeline ? get_base().current_pipeline->name : std::string("<none>"));
+
 		list->execute_indirect(
 			command_types,
 			max_commands,
@@ -1672,6 +1696,7 @@ namespace HAL
 				}
 
 				table.dirty = false;
+				table.bound = true;   // root argument is live from here
 			}
 			id++;
 		}
@@ -1683,7 +1708,12 @@ namespace HAL
 			{
 				auto id = get_table_index(slot);
 
-				if (tables[id].slot_id != slot)
+				// `!bound` catches the case a slot_id comparison alone cannot: the
+				// right table IS recorded against the slot, but a root signature
+				// change threw the actual root argument away and nothing re-sent
+				// it. Without this the check passes while the GPU reads
+				// descriptor 0.
+				if (!tables[id].bound || tables[id].slot_id != slot)
 				{
 					bool found = false;
 					if (slots)
@@ -1853,6 +1883,18 @@ namespace HAL
 		if (root_sig == signature) return;
 
 		root_sig = signature;
+
+		// D3D12 discards EVERY root argument when the root signature changes, so
+		// nothing bound before this point is live any more. Model that here or
+		// the CPU-side view silently disagrees with the GPU: commit_tables only
+		// re-sends `dirty` tables, so a slot bound before the change is never
+		// restored and the shader reads descriptor 0 (GBV #939).
+		//
+		// `dirty` is deliberately NOT cleared: a set() that has not been
+		// committed yet is still pending, and it will be applied to the new
+		// signature, which is what the caller wants.
+		for (auto& table : tables)
+			table.bound = false;
 
 		auto& desc = signature->get_desc();
 

@@ -43,6 +43,17 @@ struct FrameInfo
 	# Hi-Z pyramid for per-meshlet occlusion (built in MeshRenderer.cpp).
 	# Whether it is USED is a PSO permutation, not a runtime flag -- see
 	# GBufferDraw's HiZOcclusion define in scene.sig.
+	#
+	# [Auto]: passes that render without a Hi-Z (the asset thumbnail renderer,
+	# AssetGBuffer) leave this unset, and the mesh shader samples it
+	# unconditionally. Unset it read descriptor 0 -- which holds a BUFFER --
+	# as a Texture2D (GBV #940): undefined, and capable of OVER-culling, i.e.
+	# silently dropping geometry from thumbnails.
+	#
+	# Zero is the correct fallback rather than merely a safe one: the test is
+	# `near_clip.z < min(taps)` under reversed-Z, so all-zero taps make it
+	# false and nothing is culled, which is what "no Hi-Z available" means.
+	[Auto = Texture_Null]
 	Texture2D<float> mainHiZ;
 
 

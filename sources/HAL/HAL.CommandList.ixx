@@ -127,6 +127,10 @@ export{
 			// to merge even though the class matches.
 			bool force_new_op = false;
 
+		public:
+			uint dbg_dispatch_index = 0;   // [temp diag] -> dispatch_index.temp
+		protected:
+
 		protected:
 			// Append one use to the operation currently being recorded (the
 			// back of `operations`), on this resource's per-list
@@ -556,6 +560,20 @@ export{
 			struct RowInfo
 			{
 				bool dirty = false;
+
+				// Whether this table's root argument is currently LIVE on the
+				// command list -- i.e. commit_tables has actually sent it and no
+				// root signature change has invalidated it since.
+				//
+				// Distinct from `dirty`, which only means "set() recorded new
+				// data that has not been committed yet". A table can be
+				// committed (dirty=false) and still not live, because changing
+				// the root signature discards every root argument -- and since
+				// commit_tables only re-sends dirty tables, the binding is then
+				// gone from the GPU with nothing to restore it. That is how
+				// DenoiserHistoryFix ended up reading FrameInfo from descriptor
+				// 0 (GBV #939).
+				bool bound = false;
 
 				SlotID slot_id;
 				Handles::CBV const_buffer;

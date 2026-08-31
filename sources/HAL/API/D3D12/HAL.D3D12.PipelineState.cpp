@@ -235,7 +235,7 @@ namespace HAL
                     // lib.export_shader(convert(f.name));
                 }
 
-            debuggable |= l.library && l.library->depends_on("DebugInfo");
+            debuggable |= l.library && l.library->slots_usage.uses(SlotID::DebugInfo);
         }
 
         if (desc.global_root)
@@ -497,13 +497,13 @@ namespace HAL
         cache.clear();
 
         debuggable = false;
-        debuggable |= desc.vertex && desc.vertex->depends_on("DebugInfo");
-        debuggable |= desc.pixel && desc.pixel->depends_on("DebugInfo");
-        debuggable |= desc.geometry && desc.geometry->depends_on("DebugInfo");
-        debuggable |= desc.domain && desc.domain->depends_on("DebugInfo");
-        debuggable |= desc.hull && desc.hull->depends_on("DebugInfo");
-        debuggable |= desc.mesh && desc.mesh->depends_on("DebugInfo");
-        debuggable |= desc.amplification && desc.amplification->depends_on("DebugInfo");
+        debuggable |= desc.vertex && desc.vertex->slots_usage.uses(SlotID::DebugInfo);
+        debuggable |= desc.pixel && desc.pixel->slots_usage.uses(SlotID::DebugInfo);
+        debuggable |= desc.geometry && desc.geometry->slots_usage.uses(SlotID::DebugInfo);
+        debuggable |= desc.domain && desc.domain->slots_usage.uses(SlotID::DebugInfo);
+        debuggable |= desc.hull && desc.hull->slots_usage.uses(SlotID::DebugInfo);
+        debuggable |= desc.mesh && desc.mesh->slots_usage.uses(SlotID::DebugInfo);
+        debuggable |= desc.amplification && desc.amplification->slots_usage.uses(SlotID::DebugInfo);
 
         name = desc.name;
     }
@@ -545,15 +545,9 @@ namespace HAL
                 &psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
         }
 
-        debuggable = desc.shader && desc.shader->depends_on("DebugInfo");
+        debuggable = desc.shader && desc.shader->slots_usage.uses(SlotID::DebugInfo);
 
         name = desc.name;
-
-        {   // [temp diag] why is DebugInfo's slot still unbound? -> compute_pso_debuggable.temp
-            std::ofstream f("compute_pso_debuggable.temp", std::ios::app);
-            f << name << " debuggable=" << debuggable
-              << " has_shader=" << (desc.shader ? 1 : 0) << "\n";
-        }
 
         //    TEST(hr);
 

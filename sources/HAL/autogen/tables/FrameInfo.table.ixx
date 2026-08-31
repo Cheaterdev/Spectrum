@@ -46,7 +46,7 @@ export namespace Table
 			compiler.compile(bestFitNormals, "FrameInfo::bestFitNormals");
 			compiler.compile(brdf, "FrameInfo::brdf");
 			compiler.compile(sky, "FrameInfo::sky");
-			compiler.compile(mainHiZ, "FrameInfo::mainHiZ");
+			compiler.compile_auto(mainHiZ, "FrameInfo::mainHiZ");
 			compiler.compile(camera, "FrameInfo::camera");
 			compiler.compile(prevCamera, "FrameInfo::prevCamera");
 		}

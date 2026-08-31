@@ -680,6 +680,20 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		}
 
 		compute.set_signature(Layouts::DefaultLayout);
+
+		// Re-set the slots: changing the root signature invalidates every root
+		// argument, so the bindings made above this point are gone. Only
+		// DenoiserHistoryFix (the exec_indirect below) reads one of them --
+		// FrameInfo -- and unbound it read descriptor 0 as a CBV, which is
+		// GPU-based validation #939. The other post-reset shaders happen to use
+		// only slots that are set after this line, which is why exactly one
+		// dispatch was affected and the CPU-side "Possible null slot" check
+		// stayed quiet: that check tracks table binds, not root-signature
+		// invalidation.
+		context.graph->set_slot(SlotID::FrameInfo,  compute);
+		context.graph->set_slot(SlotID::VoxelInfo,  compute);
+		context.graph->set_slot(SlotID::SceneData,  compute);
+
 		{
 			compute.set_pipeline<PSOS::FrameClassification>();
 
@@ -703,13 +717,19 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		}
 		{
 			PROFILE_GPU(L"init_dispatch");
+			// set_pipeline BEFORE set(): binding a table first and then changing
+			// the pipeline loses it, leaving the slot's root CBV at 0 -- the
+			// shader then reads descriptor 0 (an SRV) as a CBV, which is
+			// GPU-based validation #939. Every other dispatch in this pass
+			// already orders it this way.
+			compute.set_pipeline<PSOS::FrameClassificationInitDispatch>();
+
 			Slots::FrameClassificationInitDispatch init;
 			init.GetHi_counter()        = data.VoxelScreen_hi_data->counter_view;
 			init.GetLow_counter()       = data.VoxelScreen_low_data->counter_view;
 			init.GetHi_dispatch_data()  = data.VoxelScreen_hi->rwStructuredBuffer;
 			init.GetLow_dispatch_data() = data.VoxelScreen_low->rwStructuredBuffer;
 			compute.set(init);
-			compute.set_pipeline<PSOS::FrameClassificationInitDispatch>();
 			compute.dispatch(1, 1, 1);
 		}
 

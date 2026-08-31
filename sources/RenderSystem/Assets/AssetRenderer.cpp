@@ -256,6 +256,16 @@ AssetRenderer::AssetRenderer()
         VariableContext::Scope scope(*preview_context);
         scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
     }
+
+    // Meshlet Hi-Z occlusion needs FrameInfo::mainHiZ, which only the main view
+    // binds (see main.cpp). This renderer has no pyramid to point it at, so the
+    // test would run against whatever descriptor 0 happens to hold -- that is
+    // what emptied previews of their mesh (GBV #940: a BUFFER sampled as a
+    // Texture2D, which over-culls). Select the PSO permutation without the test
+    // rather than feeding it a fallback: in a single-asset preview there is
+    // nothing to occlude against, so the whole test is dead weight.
+    meshes_renderer->use_meshlet_hiz_occlusion = false;
+
     cam.position = vec3(0, 5, -30);
 
     mesh_plane.reset(new MeshAssetInstance(EngineAssets::plane.get_asset()));
@@ -286,6 +296,16 @@ SceneTextureRenderer::SceneTextureRenderer()
         VariableContext::Scope scope(*preview_context);
         scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
     }
+
+    // Meshlet Hi-Z occlusion needs FrameInfo::mainHiZ, which only the main view
+    // binds (see main.cpp). This renderer has no pyramid to point it at, so the
+    // test would run against whatever descriptor 0 happens to hold -- that is
+    // what emptied previews of their mesh (GBV #940: a BUFFER sampled as a
+    // Texture2D, which over-culls). Select the PSO permutation without the test
+    // rather than feeding it a fallback: in a single-asset preview there is
+    // nothing to occlude against, so the whole test is dead weight.
+    meshes_renderer->use_meshlet_hiz_occlusion = false;
+
     cam.position = vec3(0, 5, -30);
 
     mesh_plane.reset(new MeshAssetInstance(EngineAssets::plane.get_asset()));
