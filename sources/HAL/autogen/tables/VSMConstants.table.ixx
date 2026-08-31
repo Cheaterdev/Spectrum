@@ -23,11 +23,9 @@ export namespace Table
 		int pages_per_level;
 		int quad_blocker_search;
 		int rtx_dual_blur;
-		int debug_rtx_reference;
 		int hiz_blocker_classify;
 		int hemisphere_cull_blocker;
-		int debug_hiz_classify;
-		int debug_page_grid;
+		VSMDebugView debug_view = VSMDebugView::None;
 		float4x4 light_view;
 		float4 level_info[26];
 		int& GetActive_min() { return active_min; }
@@ -36,11 +34,9 @@ export namespace Table
 		int& GetPages_per_level() { return pages_per_level; }
 		int& GetQuad_blocker_search() { return quad_blocker_search; }
 		int& GetRtx_dual_blur() { return rtx_dual_blur; }
-		int& GetDebug_rtx_reference() { return debug_rtx_reference; }
 		int& GetHiz_blocker_classify() { return hiz_blocker_classify; }
 		int& GetHemisphere_cull_blocker() { return hemisphere_cull_blocker; }
-		int& GetDebug_hiz_classify() { return debug_hiz_classify; }
-		int& GetDebug_page_grid() { return debug_page_grid; }
+		VSMDebugView& GetDebug_view() { return debug_view; }
 		float4x4& GetLight_view() { return light_view; }
 		float4* GetLevel_info() { return level_info; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -53,11 +49,9 @@ export namespace Table
 			compiler.compile(pages_per_level);
 			compiler.compile(quad_blocker_search);
 			compiler.compile(rtx_dual_blur);
-			compiler.compile(debug_rtx_reference);
 			compiler.compile(hiz_blocker_classify);
 			compiler.compile(hemisphere_cull_blocker);
-			compiler.compile(debug_hiz_classify);
-			compiler.compile(debug_page_grid);
+			compiler.compile(debug_view);
 			compiler.compile(light_view);
 			compiler.compile(level_info);
 		}
@@ -76,11 +70,9 @@ export namespace Table
 			ar& NVP(pages_per_level);
 			ar& NVP(quad_blocker_search);
 			ar& NVP(rtx_dual_blur);
-			ar& NVP(debug_rtx_reference);
 			ar& NVP(hiz_blocker_classify);
 			ar& NVP(hemisphere_cull_blocker);
-			ar& NVP(debug_hiz_classify);
-			ar& NVP(debug_page_grid);
+			ar& NVP(debug_view);
 			ar& NVP(light_view);
 			ar& NVP(level_info);
 		}

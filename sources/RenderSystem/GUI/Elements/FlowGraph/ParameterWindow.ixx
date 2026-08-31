@@ -9,6 +9,7 @@ import :ComboBox;
 import :Label;
 import :HorizontalLayout;
 import :FlowGraph.Canvas;
+import TextSystem;
 
 
 
@@ -32,6 +33,7 @@ export namespace GUI
 		{
 			auto row = std::make_shared<GUI::Elements::layouts::horizontal>();
 			row->docking = GUI::dock::TOP;
+			row->x_type = GUI::pos_x_type::LEFT;
 
 			auto label = std::make_shared<GUI::Elements::label>();
 			label->text = elem.get_name();
@@ -93,6 +95,7 @@ export namespace GUI
 			{
 				auto row = std::make_shared<GUI::Elements::layouts::horizontal>();
 				row->docking = GUI::dock::TOP;
+				row->x_type = GUI::pos_x_type::LEFT;
 
 				auto label = std::make_shared<GUI::Elements::label>();
 				label->text = elem.get_name();
@@ -108,6 +111,22 @@ export namespace GUI
 				}
 				if (current >= 0 && current < (int)enum_names.size())
 					combo->get_label()->text = enum_names[current];
+
+				// combo_box has no autosize-to-content -- it's a fixed-size (width_size
+				// == NONE, docked LEFT) element, so it keeps its 25px ctor default
+				// regardless of what's inside it. Preset a width from the widest option
+				// text (same font/size the label itself uses), so option names like
+				// "Quad-shared blocker search" aren't clipped in the closed box or the
+				// open dropdown, which mirrors this same width for its own items.
+				{
+					auto font = Fonts::FontSystem::get().get_font("Segoe UI Light");
+					float max_text_w = 0;
+					for (auto& name : enum_names)
+						max_text_w = std::max(max_text_w, font->measure(name, 16).x);
+
+					const float combo_padding = 5 + 30; // combo_box's own padding.left + padding.right
+					combo->size = { max_text_w + combo_padding, combo->size->y };
+				}
 				row->add_child(combo);
 
 				return row;

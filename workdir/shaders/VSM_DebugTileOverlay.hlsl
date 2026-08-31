@@ -17,7 +17,7 @@ static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 // as every other file in this pipeline that needs the debug helpers.
 #include "VSM_impl_resolve.hlsl"
 
-// Debug view (VSM.ixx's use_vsm_debug_hiz_classify) -- see this PassNode's
+// Debug view (VSM.ixx's vsm_debug_view == HizClassify) -- see this PassNode's
 // own comment in vsm.sig for why this reads the REAL tile lists directly
 // instead of guessing from the final shadow value. Only ever dispatched
 // when the toggle is on; paints a flat color onto VSMLighting's `result`
@@ -109,7 +109,7 @@ void CS_OVERLAY_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupT
 // exclusive with each other and with the tile-classify overlay above (see
 // VSM.cpp's m_debugoverlay_render for the precedence).
 
-// Debug view (VSM.ixx's use_vsm_debug_page_grid): flat per-level color,
+// Debug view (VSM.ixx's vsm_debug_view == PageGrid): flat per-level color,
 // checkerboard-darkened by page position within that level -- see
 // get_vsm_debug_page_grid_color's own comment (VSM_impl_resolve.hlsl).
 [numthreads(16, 16, 1)]
@@ -131,7 +131,7 @@ void CS_OVERLAY_PAGE_GRID(uint3 DTid : SV_DispatchThreadID)
 	GetVSMLighting().GetResult()[DTid.xy] = float4(get_vsm_debug_page_grid_color(c, wpos), 1);
 }
 
-// Debug view (VSM.ixx's use_vsm_debug_rtx_reference): bypass VSM's own
+// Debug view (VSM.ixx's vsm_debug_view == RtxReference): bypass VSM's own
 // shadow entirely and show RTXShadow's own denoised full-RT shadow mask as
 // grayscale.
 [numthreads(16, 16, 1)]

@@ -181,7 +181,7 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	// whether VSM_Combine itself runs this frame -- VSM_Combine no longer
 	// runs at all when use_vsm_penumbra is on (see its own PassNode comment
 	// in vsm.sig), which used to be the only place this was set.
-	RTX::get().debug_full_reference_shadow = use_vsm_debug_rtx_reference;
+	RTX::get().debug_full_reference_shadow = (vsm_debug_view == VSMDebugView::RtxReference);
 
 	// Single-threaded, once per frame, strictly before any level's render()
 	// is dispatched (see the LevelPlan comment in VSM.ixx for why this has
@@ -1590,7 +1590,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		// still return false (no RTX hardware), in which case ShadowMask
 		// never gets created this frame. Same defensive builder.exists()
 		// guard PSSM_Combine already uses for the same resource.
-		if (use_vsm_debug_rtx_reference && builder.exists(data.ShadowMask))
+		if (vsm_debug_view == VSMDebugView::RtxReference && builder.exists(data.ShadowMask))
 			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
 		return true;
 	};
@@ -1632,11 +1632,16 @@ VSM::VSM() : VariableContext(L"VSM")
 			constants.GetActive_max()           = active_max;
 			constants.GetPage_size()            = page_table.page_size;
 			constants.GetPages_per_level()      = page_table.clipmap.pages_per_level;
-			// Only meaningful when ShadowMask actually exists this frame
-			// (see m_combine_setup's builder.exists() guard) -- otherwise
-			// rtx_shadow_mask was never bound to anything real above.
-			constants.GetDebug_rtx_reference()  = (use_vsm_debug_rtx_reference && data.ShadowMask) ? 1 : 0;
-			constants.GetDebug_page_grid()      = use_vsm_debug_page_grid ? 1 : 0;
+			// RtxReference is only meaningful when ShadowMask actually exists
+			// this frame (see m_combine_setup's builder.exists() guard) --
+			// otherwise rtx_shadow_mask was never bound to anything real
+			// above, so fall back to None rather than sending a value the
+			// shader can't actually act on. HizClassify has no meaning here
+			// at all (see VSMConstants.debug_view's own comment) -- send
+			// None for that case too.
+			constants.GetDebug_view() = (vsm_debug_view == VSMDebugView::RtxReference && !data.ShadowMask)
+				|| vsm_debug_view == VSMDebugView::HizClassify
+				? VSMDebugView::None : vsm_debug_view;
 			constants.GetLight_view()           = light_cam.get_view();
 
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
@@ -1662,14 +1667,13 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	m_debugoverlay_setup = [this](Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		// Widened from "just use_vsm_debug_hiz_classify" now that this pass
-		// also owns use_vsm_debug_page_grid/use_vsm_debug_rtx_reference --
-		// see this PassNode's own comment in vsm.sig for why (VSM_Combine no
-		// longer runs at all when penumbra is on, so it can't host those two
-		// any more).
+		// Widened from "just HizClassify" now that this pass also owns
+		// PageGrid/RtxReference -- see this PassNode's own comment in
+		// vsm.sig for why (VSM_Combine no longer runs at all when penumbra
+		// is on, so it can't host those two any more).
 		if (!use_vsm_penumbra)
 			return false;
-		if (!use_vsm_debug_hiz_classify && !use_vsm_debug_page_grid && !use_vsm_debug_rtx_reference)
+		if (vsm_debug_view == VSMDebugView::None)
 			return false;
 		// Only actually needed for the page-grid/rtx-reference cases (full-
 		// screen, not tile-driven) -- harmless to need() unconditionally
@@ -1678,7 +1682,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		// Same defensive builder.exists() guard VSM_Combine used to use for
 		// this (RTXShadow's own setup() can return false on non-RTX
 		// hardware, in which case this never gets created this frame).
-		if (use_vsm_debug_rtx_reference && builder.exists(data.ShadowMask))
+		if (vsm_debug_view == VSMDebugView::RtxReference && builder.exists(data.ShadowMask))
 			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_LitTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_DarkTiles, FrameGraph::ResourceFlags::ComputeRead);
@@ -1700,17 +1704,16 @@ VSM::VSM() : VariableContext(L"VSM")
 
 		// Moved here from VSM_Combine's own combine_result -- see this
 		// PassNode's own comment in vsm.sig. Full-screen, not tile-driven
-		// (these two don't care which classify bucket a pixel landed in),
-		// and mutually exclusive with each other and with the tile-classify
-		// overlay below, same precedence combine_result's own early-return
-		// chain always used: page-grid first, then rtx-reference. rtx
-		// reference only actually fires when ShadowMask exists this frame
+		// (these two don't care which classify bucket a pixel landed in).
+		// RtxReference only actually fires when ShadowMask exists this frame
 		// (same builder.exists()-guarded case VSM_Combine used to handle) --
 		// falls through to the tile-classify overlay (or does nothing, if
-		// that toggle is also off) rather than silently reading an unbound
-		// texture on non-RTX hardware.
-		bool do_page_grid     = use_vsm_debug_page_grid;
-		bool do_rtx_reference = use_vsm_debug_rtx_reference && data.ShadowMask;
+		// vsm_debug_view is HizClassify/None) rather than silently reading
+		// an unbound texture on non-RTX hardware. vsm_debug_view being a
+		// single-select enum makes do_page_grid/do_rtx_reference mutually
+		// exclusive by construction now, not by convention.
+		bool do_page_grid     = vsm_debug_view == VSMDebugView::PageGrid;
+		bool do_rtx_reference = vsm_debug_view == VSMDebugView::RtxReference && data.ShadowMask;
 		if (do_page_grid || do_rtx_reference)
 		{
 			GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
@@ -1753,7 +1756,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			return;
 		}
 
-		if (!use_vsm_debug_hiz_classify)
+		if (vsm_debug_view != VSMDebugView::HizClassify)
 			return;
 
 		{

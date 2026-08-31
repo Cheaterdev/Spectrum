@@ -87,15 +87,6 @@ public:
 	// two toggles above.
 	Variable<bool> use_vsm_rtx_dual_blur = { true, "RTX verify: dual blur + min()", this };
 
-	// Debug-view toggle: when on, VSM_Combine displays RTXShadow's own
-	// (denoised) full-RT shadow mask directly as grayscale, in place of
-	// VSM's normal lit output, for real geometry pixels -- a reference to
-	// compare VSM's quality/performance against. RTXShadow already runs
-	// unconditionally every frame on RTX-capable hardware (see
-	// PassDefaults.cpp), independent of PSSM/VSM, so no extra pass wiring
-	// is needed beyond VSM_Combine reading its output.
-	Variable<bool> use_vsm_debug_rtx_reference = { false, "Debug: RTX reference shadow mask", this };
-
 	// Runtime A/B toggle for the min/max Hi-Z blocker-search classification
 	// (Phase 5.18 Part A): when on, vsm_search_blocker checks the
 	// receiver's own page pyramid first and skips the 16-tap search
@@ -106,31 +97,42 @@ public:
 	// search.
 	Variable<bool> use_vsm_hiz_blocker_classify = { true, "Hi-Z blocker classify", this };
 
-	// Debug view (VSM_DebugClassifyOverlay): shows which tile bucket, and
-	// within blur_tiles which per-pixel sentinel, each pixel actually
-	// resolved through, instead of just the shadow result -- bright green =
-	// lit_tiles (stage 1's cheap classify), bright blue = dark_tiles (stage
-	// 1), cyan = confirmed_lit_tiles (stage 2's post-search "turned out lit
-	// after all"). blur_tiles gets no flat color: dark green/dark blue mark
-	// individual pixels within a dispatched blur tile that STILL resolved
-	// via a sentinel (the per-pixel-level optimization, distinct from the
-	// bright tile-level colors), and anything left unmarked is a genuine
-	// real blocker -- the real blurred shadow shows through there
-	// unmodified, since that's the one case with no shortcut to show.
-	// Covers the whole frame now, not just the two uniform buckets. Grew
-	// out of live debugging a real coverage-gap bug in the classification
-	// itself -- kept as a permanent toggle since it's generally useful for
-	// judging how much of the frame each stage of the optimization is
-	// actually covering.
-	Variable<bool> use_vsm_debug_hiz_classify = { false, "Debug: tile classify (green=lit, blue=dark, cyan=confirmed lit, dark=per-pixel skip)", this };
-
-	// Debug view: colors every pixel by clipmap level (one flat hue per
-	// level) with a checkerboard darkening by page position within that
-	// level, so page and level SEAMS are directly visible instead of
-	// having to infer them from an artifact's shape. Built specifically to
-	// check whether a visual artifact lines up with an actual page/level
-	// boundary.
-	Variable<bool> use_vsm_debug_page_grid = { false, "Debug: page/level grid", this };
+	// Single-select debug view (VSMDebugView, a SIG enum shared verbatim
+	// with the shader side -- see VSMConstants.debug_view's own comment in
+	// vsm.sig). Replaces three separate bools that were always meant to be
+	// mutually exclusive:
+	//   None         -- normal shading, no debug view.
+	//   PageGrid      -- colors every pixel by clipmap level (one flat hue
+	//                    per level) with a checkerboard darkening by page
+	//                    position within that level, so page/level SEAMS
+	//                    are directly visible.
+	//   RtxReference  -- displays RTXShadow's own (denoised) full-RT shadow
+	//                    mask directly as grayscale, in place of VSM's
+	//                    normal lit output -- a reference to compare VSM's
+	//                    quality/performance against. RTXShadow already
+	//                    runs unconditionally every frame on RTX-capable
+	//                    hardware (see PassDefaults.cpp), independent of
+	//                    PSSM/VSM, so no extra pass wiring is needed beyond
+	//                    reading its output.
+	//   HizClassify   -- (VSM_DebugClassifyOverlay, penumbra-on only) shows
+	//                    which tile bucket, and within blur_tiles which
+	//                    per-pixel sentinel, each pixel actually resolved
+	//                    through, instead of just the shadow result --
+	//                    bright green = lit_tiles (stage 1's cheap
+	//                    classify), bright blue = dark_tiles (stage 1),
+	//                    cyan = confirmed_lit_tiles (stage 2's post-search
+	//                    "turned out lit after all"). blur_tiles gets no
+	//                    flat color: dark green/dark blue mark individual
+	//                    pixels within a dispatched blur tile that STILL
+	//                    resolved via a sentinel, and anything left
+	//                    unmarked is a genuine real blocker -- the real
+	//                    blurred shadow shows through there unmodified.
+	//                    Grew out of live debugging a real coverage-gap bug
+	//                    in the classification itself -- kept as a
+	//                    permanent view since it's generally useful for
+	//                    judging how much of the frame each stage of the
+	//                    optimization actually covers.
+	Variable<VSMDebugView> vsm_debug_view = { VSMDebugView::None, "Debug view", this };
 private:
 	// Tracks the previous frame's toggle state so plan_frame() can detect
 	// an off->on transition and force a full pyramid rebuild -- see its
@@ -471,9 +473,9 @@ private:
 
 	// Debug tile-classification overlay -- reads stage 1's real
 	// VSM_LitTiles/VSM_DarkTiles lists and paints over the already-shaded
-	// ResultTexture, only when use_vsm_debug_hiz_classify is on. See
-	// vsm.sig's own PassNode comment for why this replaced the earlier
-	// postfactum "final shadow value happens to equal 1.0/0.0" guess.
+	// ResultTexture, only when vsm_debug_view is HizClassify. See vsm.sig's
+	// own PassNode comment for why this replaced the earlier postfactum
+	// "final shadow value happens to equal 1.0/0.0" guess.
 	Passes::VSM_DebugClassifyOverlay::setup_func_type  m_debugoverlay_setup;
 	Passes::VSM_DebugClassifyOverlay::render_func_type m_debugoverlay_render;
 

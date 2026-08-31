@@ -61,23 +61,23 @@ float4 combine_result(float2 tc, uint2 pixel)
 	float3 bias_light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
 	float shadow = get_shadow_vsm_simple(constants, GetVSMLighting(), info.pos, info.normal, bias_light_dir);
 
-	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_page_grid): flat
-	// per-level color, checkerboard-darkened by page position within that
-	// level, so page/level seams are directly visible -- used to check
-	// whether a visual artifact actually lines up with a real boundary.
-	// Only reachable in non-penumbra mode (this pass doesn't run at all
-	// when penumbra is on) -- VSM_DebugTileOverlay.hlsl's own
-	// CS_OVERLAY_PAGE_GRID is this same view's penumbra-on equivalent.
-	if (constants.GetDebug_page_grid() != 0)
+	// Debug view (VSM.ixx's vsm_debug_view, a single-select enum shared
+	// verbatim with the C++ side -- see VSMConstants.debug_view's own
+	// comment in vsm.sig): flat per-level color, checkerboard-darkened by
+	// page position within that level, so page/level seams are directly
+	// visible -- used to check whether a visual artifact actually lines up
+	// with a real boundary. Only reachable in non-penumbra mode (this pass
+	// doesn't run at all when penumbra is on) -- VSM_DebugTileOverlay.hlsl's
+	// own CS_OVERLAY_PAGE_GRID is this same view's penumbra-on equivalent.
+	if (constants.GetDebug_view() == VSMDebugView::PageGrid)
 	{
 		return float4(get_vsm_debug_page_grid_color(constants, info.pos), 1);
 	}
 
-	// Debug view (runtime toggle, VSM.ixx's use_vsm_debug_rtx_reference):
-	// bypass VSM's own shadow entirely and show RTXShadow's own denoised
-	// full-RT shadow mask as grayscale. Same penumbra-on caveat as above --
-	// see VSM_DebugTileOverlay.hlsl's CS_OVERLAY_RTX_REFERENCE.
-	if (constants.GetDebug_rtx_reference() != 0)
+	// Debug view: bypass VSM's own shadow entirely and show RTXShadow's own
+	// denoised full-RT shadow mask as grayscale. Same penumbra-on caveat as
+	// above -- see VSM_DebugTileOverlay.hlsl's CS_OVERLAY_RTX_REFERENCE.
+	if (constants.GetDebug_view() == VSMDebugView::RtxReference)
 	{
 		float rtx_shadow = GetVSMLighting().GetRtx_shadow_mask().SampleLevel(pointClampSampler, tc, 0);
 		return float4(rtx_shadow, rtx_shadow, rtx_shadow, 1);

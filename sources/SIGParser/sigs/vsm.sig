@@ -11,6 +11,24 @@
 # VSM_Combine, which is fully independent from PSSM_Combine. PSSM is left
 # untouched.
 
+# One mutually-exclusive debug-view selector, replacing three separate
+# int flags (debug_page_grid/debug_rtx_reference/debug_hiz_classify) that
+# were always meant to be single-select in the first place -- every
+# consumer (VSM.hlsl's combine_result, VSM.cpp's m_debugoverlay_render)
+# already picked one via a priority-ordered if/else chain (page grid, then
+# rtx reference, then hiz classify), never actually reading more than one
+# at a time. Shared C++/HLSL type (SIG enum codegen) instead of a hand-kept
+# int convention, so VSM.ixx's Variable<VSMDebugView> and every shader
+# check are the same values by construction, not by keeping two separately-
+# maintained mappings in sync.
+enum VSMDebugView
+{
+	None;
+	PageGrid;
+	RtxReference;
+	HizClassify;
+}
+
 [Bind = DefaultLayout::Instance0]
 struct VSMConstants
 {
@@ -36,12 +54,6 @@ struct VSMConstants
 	# estimate produced between overlapping penumbras). Only read when
 	# VsmRtxVerify is enabled.
 	int rtx_dual_blur;
-	# Debug view: when nonzero, VSM_Combine ignores get_shadow_vsm entirely
-	# for real geometry pixels and instead displays RTXShadow's own
-	# (denoised) full-RT shadow mask directly as grayscale -- a reference
-	# to compare VSM's quality/performance against. See VSMLighting's
-	# rtx_shadow_mask field.
-	int debug_rtx_reference;
 	# Runtime A/B switch (Phase 5.18 Part A) for the min/max Hi-Z
 	# classification vsm_search_blocker does against VSMPageHiZ before
 	# running its 16-tap search -- nonzero = skip the search entirely for
@@ -60,26 +72,21 @@ struct VSMConstants
 	# vsm_classify_blocker's Hi-Z classification and VSM_Combine never
 	# consult it.
 	int hemisphere_cull_blocker;
-	# Debug view: when nonzero, get_shadow_vsm (VSM_Combine's resolve step)
-	# short-circuits into a flat color wherever vsm_search_blocker's Hi-Z
-	# classification fired confidently instead of shading normally --
-	# green for confident_lit, blue for confident_dark -- so the
-	# classification's real firing pattern is visible directly, not just
-	# its downstream effect on the shadow. Ambiguous/real-search pixels
-	# still shade normally, for context. Only read by VSM_Combine's own
-	# resolve dispatch; VSM_BlockerSearch never consults it.
-	int debug_hiz_classify;
-	# Debug view: when nonzero, get_shadow_vsm colors every pixel by which
-	# clipmap level and which page WITHIN that level it resolved to --
-	# one flat color per level (palette[level % 8], same palette the older
-	# compile-time VSM_DEBUG_HEATMAP define already used), darkened on a
-	# checkerboard by (page_x + page_y) parity so page SEAMS show up as a
-	# visible brightness step, not just level boundaries. Built to make it
-	# easy to tell whether a visual artifact (e.g. a thin line inside an
-	# otherwise-confident Hi-Z classification region) lines up with an
-	# actual page/level boundary or not. Only read by VSM_Combine's own
-	# resolve dispatch.
-	int debug_page_grid;
+	# Non-penumbra fallback only (VSM_Combine's own combine_result reads
+	# this; the penumbra-on path's equivalent views live entirely in
+	# VSM_DebugClassifyOverlay/VSM_DebugTileOverlay.hlsl instead, selected
+	# by which dedicated PSO gets dispatched, not by this field -- see
+	# VSM.cpp's m_debugoverlay_render). PageGrid: colors every pixel by
+	# which clipmap level and which page WITHIN that level it resolved to,
+	# one flat color per level, darkened on a checkerboard by (page_x+
+	# page_y) parity so page SEAMS show up as a visible brightness step.
+	# RtxReference: bypasses get_shadow_vsm_simple entirely and displays
+	# RTXShadow's own (denoised) full-RT shadow mask directly as grayscale
+	# -- a reference to compare VSM's quality/performance against (see
+	# VSMLighting's rtx_shadow_mask field). HizClassify has no meaning here
+	# (VSM_Combine has no Hi-Z classification of its own to visualize) --
+	# VSM.cpp's own constants upload never sends that value to this field.
+	VSMDebugView debug_view = None;
 	float4x4 light_view;
 	# MaxLevels (VSM.ixx) storage slots -- one geometric ladder, no
 	# regular/adaptive split (see VSMClipmap::page_world_size). Keep this in

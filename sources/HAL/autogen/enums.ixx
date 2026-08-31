@@ -287,4 +287,11 @@ export
 		FirstMode,
 		SecondMode = 5
 	};
+	enum class VSMDebugView : uint
+	{
+		None,
+		PageGrid,
+		RtxReference,
+		HizClassify
+	};
 }

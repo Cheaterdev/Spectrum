@@ -22,7 +22,7 @@ struct VSMBlockerClassifyResult
 	bool  valid;
 	bool  confident_lit;
 	bool  confident_dark;
-	// Debug view (VSM.ixx's use_vsm_debug_hiz_classify): distinguishes
+	// Debug view (VSM.ixx's vsm_debug_view == HizClassify): distinguishes
 	// "classified directly at the receiver's own level" from "had to walk
 	// to a coarser level to find a page big enough to fully contain the
 	// search disc" -- see get_shadow_vsm's own bucket comment.
@@ -459,8 +459,8 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	// genuine empty search already uses, so there's no way to tell
 	// "classification said lit" apart from "the real search would have
 	// said lit too" downstream without a distinct sentinel -- asuint(-3.0)/
-	// asuint(-4.0) (via_coarser) make it distinguishable. get_shadow_vsm's
-	// debug_hiz_classify branch colors these for visual confirmation.
+	// asuint(-4.0) (via_coarser) make it distinguishable. VSM_DebugClassifyOverlay's
+	// HizClassify view colors these for visual confirmation.
 	if (confident_lit)
 		return uint4(asuint(via_coarser ? -4.0 : -3.0), 0, 0, 0);
 
