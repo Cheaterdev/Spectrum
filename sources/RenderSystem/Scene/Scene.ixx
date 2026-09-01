@@ -2,6 +2,7 @@ export module Graphics:Scene;
 
 import :SceneObject;
 import :MaterialAsset;
+import :MeshAsset;
 
 import HAL;
 
@@ -60,6 +61,11 @@ public:
     std::set<scene_object*> static_objects;
 	std::set<scene_object*> dynamic_objects;
 
+	// Contiguous, already-typed view of the two sets above. The sets only ever
+	// receive MeshAssetInstance (see the on_element_add handler), so iterating
+	// this needs no per-object dynamic_cast.
+	std::vector<MeshAssetInstance*> mesh_objects;
+
 
  
 	static const int MAX_COMMANDS_SIZE = 1024 * 1024 * 64;
@@ -68,8 +74,14 @@ public:
 
 	my_unique_vector<UINT> command_ids[10];
 
+	// Derived from the scene contents, which change far less often than once a
+	// frame -- rebuilt on demand rather than from scratch every update().
 	std::set<MaterialAsset*> mats;
 	std::map<size_t, materials::Pipeline::ptr> pipelines;
+
+	// Must be called by anything that adds/removes an object. Material and
+	// pipeline changes are picked up via universal_material::pipeline_epoch.
+	void invalidate_scene_caches();
 
 	Slots::SceneData::Compiled compiledScene;
 
@@ -82,6 +94,14 @@ public:
 
 
    bool init_ras(CommandList::ptr& list);
+
+private:
+    bool     scene_caches_dirty   = true;
+    uint64_t cached_material_epoch = 0;
+
+    void rebuild_scene_caches();
+
+public:
 
     void update(HAL::FrameResources& frame);
 

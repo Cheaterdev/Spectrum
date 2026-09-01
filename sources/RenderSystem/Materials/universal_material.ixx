@@ -203,6 +203,13 @@ export namespace materials
 
 		Pipeline::ptr get_pipeline();
 
+		// Bumped whenever a material's pipeline is (re)generated or a mesh's
+		// material assignment changes. Scene caches its derived material and
+		// pipeline sets and compares against this to know when to rebuild --
+		// without it, a shader recompile would leave a stale Pipeline::ptr in
+		// Scene::pipelines.
+		static std::atomic<uint64_t> pipeline_epoch;
+
 		size_t  get_id();
 
 		MaterialGraph::ptr get_graph();

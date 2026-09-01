@@ -471,6 +471,7 @@ void materials::universal_material::generate_material()
 
 	raytracing_lib = HAL::library_shader::get_resource({ raytracing_str, "" , ShaderOptions::None, context->hit_shader.macros, true });
 	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, raytracing_str, context);
+	++universal_material::pipeline_epoch;
 	ps_uniforms = context->uniforms_ps;
 
 	// Remember which header revisions this generation baked in.
@@ -567,6 +568,8 @@ UINT materials::universal_material::get_material_id()
 {
 	return (UINT)info_handle.get_offset();
 }
+
+std::atomic<uint64_t> materials::universal_material::pipeline_epoch{ 1 };
 
 materials::Pipeline::ptr materials::universal_material::get_pipeline()
 {

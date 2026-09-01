@@ -389,6 +389,9 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 	overrided_material[info.material_id] = register_asset(mat);
 	rendering[i].material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();
 
+	// Scene caches the material/pipeline sets derived from rendering[].
+	++materials::universal_material::pipeline_epoch;
+
 	meshpart[0].material_id = static_cast<materials::universal_material*>(rendering[i].material)->get_material_id();
 	meshpart[0].mesh_cb = info.compiled_mesh_info.compiled();
 	meshpart[0].meshinstance_cb = mesh_instance_info.compiled();
@@ -666,6 +669,9 @@ void MeshAssetInstance::update_nodes()
 	nodes_indexes.resize(mesh_asset->nodes.size());
 	nodes.clear();
 	rendering.clear();
+
+	// rendering[] is rebuilt below, so any Scene cache derived from it is stale.
+	++materials::universal_material::pipeline_epoch;
 
 	std::function<bool(MeshNode*)> f = [&](MeshNode* node)->bool
 	{
