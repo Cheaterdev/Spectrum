@@ -26,8 +26,20 @@ namespace HAL
             {
                 debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
                 debugController->EnableDebugLayer();
-                if (spDebugController1)
-                    spDebugController1->SetEnableGPUBasedValidation(true);
+
+                // GPU-based validation. Off by default -- it costs a large
+                // multiple of frame time, so it is a deliberate session, not a
+                // background setting.
+                //
+                // Worth turning on for the class of bug the CPU debug layer
+                // structurally cannot see: it validates the DESCRIPTOR a shader
+                // actually dereferences against the resource's live layout, which
+                // is how #1358 (UAV descriptor against a SHADER_RESOURCE layout)
+                // and #939/#940 (unbound slot or member reading descriptor 0)
+                // were found. The CPU layer only checks declared state at bind
+                // time and sees none of it.
+                //  if (spDebugController1)
+                //      spDebugController1->SetEnableGPUBasedValidation(true);
             }
 
     }

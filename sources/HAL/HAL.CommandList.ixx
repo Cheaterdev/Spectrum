@@ -157,6 +157,14 @@ export{
 			// batching across the change.
 			void break_op();
 
+			// True if using `resource` now would trip the UAV hazard against what
+			// the operation at the back already holds -- the same test
+			// record_usage applies, asked BEFORE anything is recorded.
+			//
+			// Only needs to know whether THIS use is unordered-access; the rest
+			// of the state does not enter the hazard test.
+			bool would_split(const HAL::Resource* resource, bool uav_involved) const;
+
 			void use_resource(const HAL::Resource* resource);
 
 			// Resources this list touched (populated by use_resource). This is the

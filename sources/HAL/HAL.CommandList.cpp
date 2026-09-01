@@ -1168,6 +1168,27 @@ namespace HAL
 		add_resource_usage(resource.get(), to, subres);
 	}
 
+	bool Transitions::would_split(const Resource* resource, bool uav_involved) const
+	{
+		if (!resource || operations.empty()) return false;
+
+		const uint op_index = operations.back().index;
+
+		auto& tracked = const_cast<Resource*>(resource)->get_state(const_cast<Transitions*>(this));
+
+		auto it = tracked.operations.find(op_index);
+		if (it == tracked.operations.end()) return false;
+
+		for (const auto& prev : it->second)
+		{
+			if (prev.step == op_step) continue;
+			if (!uav_involved && !check(prev.state.access & BarrierAccess::UNORDERED_ACCESS)) continue;
+			return true;
+		}
+
+		return false;
+	}
+
 	void Transitions::use_resource(const Resource* resource)
 	{
 		auto& state = const_cast<Resource*>(resource)->get_state(this);
@@ -1767,19 +1788,61 @@ namespace HAL
 			auto pipeline = get_base().current_pipeline;
 			if (pipeline)
 			{
-				for (auto& slot : pipeline->slots.slots_usage)
+				// Collect what this command binds, before recording any of it.
+				auto for_each_bound = [&](auto&& fn)
 				{
-					auto& table = tables[get_table_index(slot)];
+					for (auto& slot : pipeline->slots.slots_usage)
+					{
+						auto& table = tables[get_table_index(slot)];
 
-					// Only what is actually bound here -- an unbound or
-					// mismatched slot is the null-slot case the check below
-					// reports, and has no resources to record.
-					if (!table.bound && !table.dirty) continue;
-					if (table.slot_id != slot) continue;
+						// Only what is actually bound here -- an unbound or
+						// mismatched slot is the null-slot case the check below
+						// reports, and has no resources to record.
+						if (!table.bound && !table.dirty) continue;
+						if (table.slot_id != slot) continue;
 
-					for (auto& bound : table.resources)
-						get_base().add_resource_usage(*bound.info, operation, bound.whole_resource);
-				}
+						for (auto& bound : table.resources) fn(bound);
+					}
+				};
+
+				// SPLIT FIRST, then record -- never the other way round.
+				//
+				// record_usage splits on a UAV hazard as it goes, one resource at
+				// a time. Recording first means a hazard found on the fifth
+				// resource splits an operation the first four are already in, so a
+				// single command's binds straddle two operations: the stragglers
+				// get bracketed by the OLD operation's barriers -- transitioned
+				// for it, then rested at its end -- while the command itself runs
+				// in the new one. That is GBV #1358 on the FrameGraph debugger's
+				// thumbnails, and it only ever showed there because a UAV rested
+				// to SHADER_RESOURCE is loud; the same stranding happens to any
+				// resource bound before a hazardous one.
+				//
+				// Asking first costs one extra walk of the bound resources and
+				// leaves nothing to repair: at the moment the decision is made,
+				// this command has recorded nothing, so nothing can be left
+				// behind. Repairing afterwards was tried (moving the current
+				// step's usages into the new operation) and cost 264 x #1334,
+				// because moving a resource's first appearance between operations
+				// changes what the group derives as its entry state.
+				bool hazard = false;
+				for_each_bound([&](const HAL::BoundResource& bound)
+				{
+					if (hazard || !bound.info || !bound.info->is_valid()) return;
+
+					const bool is_uav =
+						std::holds_alternative<HAL::Views::UnorderedAccess>(bound.info->view);
+
+					if (get_base().would_split(bound.info->get_resource(), is_uav))
+						hazard = true;
+				});
+
+				if (hazard) get_base().split_op();
+
+				for_each_bound([&](const HAL::BoundResource& bound)
+				{
+					get_base().add_resource_usage(*bound.info, operation, bound.whole_resource);
+				});
 			}
 		}
 
