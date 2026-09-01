@@ -1823,8 +1823,7 @@ private:
                                 if (p.call_id == cell.call_id) { pass_name = convert(p.name.ptr); break; }
 
                             last_write_thumb_tex->resource->set_name(
-                                "FGDebug::thumb::" + m_resources[ri].name + "@" + pass_name);
-                        }
+                                "FGDebug::thumb::" + m_resources[ri].name + "@" + pass_name);                        }
 
                         cell.thumb_tex       = last_write_thumb_tex;
                     }

@@ -725,11 +725,16 @@ D3D12_BARRIER_SYNC to_native(BarrierSync flags)
         result = D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_SPLIT;
     }
 
+    // ALL DOMINATES rather than having to stand alone.
+    //
+    // It means "synchronize against everything", so it subsumes any specific
+    // stage OR-ed in with it -- ALL|COMPUTE_SHADING is just ALL. Requiring it
+    // to appear by itself was an assert waiting to fire: merge_state combines
+    // two compatible reads with `source | need`, so a resource whose resting
+    // state (sync ALL) merges with a real use (sync COMPUTE_SHADING) produces
+    // exactly that combination, and it is correct.
     if (check(flags & BarrierSync::ALL))
-    {
-        ASSERT(flags == BarrierSync::ALL);
         result = D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_ALL;
-    }
 
     return result;
 }

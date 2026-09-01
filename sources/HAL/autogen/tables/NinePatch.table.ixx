@@ -27,7 +27,7 @@ export namespace Table
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(vb, "NinePatch::vb");
-			compiler.compile(textures, "NinePatch::textures");
+			compiler.compile_auto(textures, "NinePatch::textures");
 		}
 		struct Compiled
 		{

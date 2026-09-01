@@ -58,6 +58,19 @@ export
 			// "written by one dispatch, then touched by the next".
 			uint step = 0;
 
+			// This state applies AFTER the operation, not to it.
+			//
+			// A trailing transition (transition_to / transition_to_rest) says
+			// "leave the resource here once this operation is done" -- which is
+			// exactly what barriers_after is for. Recording it as an ordinary
+			// usage would instead make it a state the operation itself has to
+			// run in, merged with the operation's real use.
+			//
+			// That is why trailing transitions used to open an operation of their
+			// own: it was the only way to get the barrier to land after the work.
+			// The flag removes the need for it.
+			bool after_op = false;
+
 			OperationUsage() = default;
 			OperationUsage(const ResourceInfo* info, ResourceState state) : info(info), state(state) {}
 			OperationUsage(UINT subres, ResourceState state) : subres(subres), state(state) {}

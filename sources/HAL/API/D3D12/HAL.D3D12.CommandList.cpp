@@ -515,7 +515,21 @@ namespace HAL
 
                     if (e.resource->debug_transitions)
                     {
-                        Log::get() << "d3d12 trans " << barrier.SyncBefore << ";" << barrier.SyncAfter << ";" << barrier.AccessBefore << " ---> " << barrier.AccessAfter << ";" << barrier.LayoutBefore << ";" << barrier.LayoutAfter << Log::endl;
+                        // Name and list first: without them a transition log is
+                        // just a wall of states with nothing to correlate against
+                        // -- which resource, recorded on which list.
+                        //
+                        // Layouts as RAW INTEGERS. D3D12_BARRIER_LAYOUT is a
+                        // sequential enum (COMMON=0, GENERIC_READ=1,
+                        // RENDER_TARGET=2, UNORDERED_ACCESS=3, ...), not a
+                        // bitfield, so the flag-style formatter prints
+                        // "GENERIC_READ|RENDER_TARGET" for the value 3 and reads
+                        // as a completely different layout than it is.
+                        Log::get() << "d3d12 trans [" << e.resource->name << "] "
+                            << " sync " << barrier.SyncBefore << " -> " << barrier.SyncAfter
+                            << " access " << barrier.AccessBefore << " -> " << barrier.AccessAfter
+                            << " layout " << uint(barrier.LayoutBefore) << " -> " << uint(barrier.LayoutAfter)
+                            << Log::endl;
                     }
 
                 }

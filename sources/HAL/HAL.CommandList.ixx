@@ -128,9 +128,6 @@ export{
 			bool force_new_op = false;
 
 		public:
-			uint dbg_dispatch_index = 0;   // [temp diag] -> dispatch_index.temp
-		protected:
-
 		protected:
 			// Append one use to the operation currently being recorded (the
 			// back of `operations`), on this resource's per-list

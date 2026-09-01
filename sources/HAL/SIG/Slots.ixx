@@ -173,6 +173,54 @@ public:
 		s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
 	}
 
+	// compile_auto for an ARRAY member. Same substitution, one element at a
+	// time: the array is placed as a buffer of descriptor indices, and an
+	// unassigned element writes index 0 there just as a scalar member would --
+	// so a shader indexing into it reads whatever sits at the start of the heap
+	// (GBV #940 on the UI's NinePatch::textures, once per drawn image).
+	template<HAL::HandleClass T>
+	void compile_auto(const std::vector<T>& t, const char* member)
+	{
+		uint offset = 0;
+
+		if (!t.empty())
+		{
+			std::vector<uint> offsets;
+			offsets.reserve(t.size());
+
+			for (uint i = 0; i < t.size(); i++)
+			{
+				const HAL::Handle& handle = t[i];
+
+				if (handle.is_valid())
+				{
+					if (handle.get_storage()->can_free())
+						descriptors.insert(handle.get_storage());
+					offsets.emplace_back(handle.get_offset());
+					resources.push_back({ &handle.get_resource_info(), bind_whole_resource });
+				}
+				else
+				{
+					if constexpr (BuildOptions::Dev)
+						if (member) report_unbound_slot(member);
+
+					// The null descriptor, never index 0. Not pushed into
+					// `resources`: it names no resource, so there is nothing to
+					// transition.
+					offsets.emplace_back(HAL::get_null_descriptor(NullViewFor<T>::make()).get_offset());
+				}
+			}
+
+			auto info = context->place_raw(offsets);
+			auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,HAL::counterType::NONE }).structuredBuffer;
+			if (srv.get_storage()->can_free())
+				descriptors.insert(srv.get_storage());
+			offset = srv.get_offset();
+		}
+
+		s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
+	}
+
 	template<HAL::HandleClass T>
 	void compile(const T& handle, const char* member = nullptr)
 	{

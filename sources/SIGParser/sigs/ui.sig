@@ -14,6 +14,13 @@ struct vertex_input
 struct NinePatch
 {
 	StructuredBuffer<vertex_input> vb;
+
+	# [Auto]: a UI image whose texture was never assigned -- a preview panel
+	# opened for a cell that has no thumbnail is the common one -- otherwise
+	# writes descriptor index 0 into the array and the pixel shader samples
+	# whatever sits at the start of the heap (GBV #940, once per such image
+	# drawn, hundreds after clicking around the FrameGraph debugger).
+	[Auto = Texture_Null]
 	Texture2D<float4> textures[];
 }
 

@@ -241,7 +241,6 @@ namespace HAL
 		active = true;
 		compiler.set_name(name.ptr);
 
-		dbg_dispatch_index = 0;   // [temp diag] GBV counts per recording, so must this
 
 		compiler.reset();
 #ifdef DEV
@@ -932,7 +931,25 @@ namespace HAL
 				// merges below but each call is still a distinct dispatch/draw.
 				op_step++;
 
-				if (!force_new_op && !operations.empty() && operations.back().type == op)
+				// A CLOSED operation must never be grown. end_op() has already
+				// reserved its barriers_after point, and its barriers_before was
+				// reserved when it was created -- so work appended now lands
+				// AFTER both, and the barriers meant to bracket that work sit in
+				// front of it instead.
+				//
+				// This is not hypothetical: transition_to() closes its operation
+				// (it runs after CommandList::end()), and the FrameGraph debugger
+				// appends a thumbnail dispatch from FrameContext::end() after
+				// exactly that. Merging put the thumbnail's
+				// SHADER_RESOURCE->UNORDERED_ACCESS transition AND the rest back
+				// to SHADER_RESOURCE both ahead of the dispatch, which then ran
+				// against SHADER_RESOURCE (GBV #1358).
+				//
+				// break_op's own emptiness guard cannot catch this: it keys on
+				// op_step, which counts COMMANDS, and transition_to records a
+				// usage without one.
+				if (!force_new_op && !operations.empty() && operations.back().type == op
+					&& !operations.back().closed)
 					return;                                      // same class -> keep growing
 
 				force_new_op = false;
@@ -1015,22 +1032,39 @@ namespace HAL
 
 			void Transitions::transition_to(const HAL::Resource* resource, ResourceState state)
 			{
-				// split_op, not begin_op: begin_op would merge into the last
-				// operation whenever the classes happen to match, and the target
-				// state would then be merged with that operation's real use
-				// instead of following it.
+				// NO new operation. The state goes into the LATEST operation's
+				// barriers_after, which is precisely what that group is for:
+				// "when this operation is done, leave the resource here".
+				//
+				// A new operation used to be created for exactly one reason --
+				// to guarantee the transition landed after the work already
+				// recorded. barriers_after gives that ordering directly, without
+				// an operation per rested resource, each carrying two reserved
+				// barrier points.
+				//
+				// The usage itself is still recorded (marked after_op), and that
+				// matters: it is what puts the resource in the operation's state
+				// map and gives it a last_use. Replacing it with a standalone
+				// declaration was tried (2026-09-01) and cost 8344 x #1334 plus
+				// 1043 x #1417, because nothing linked the resource across groups
+				// any more.
 				if (operations.empty())
 					begin_op(BarrierSync::NONE);
-				else
-					split_op();
 
-				add_resource_usage(resource, state, ALL_SUBRESOURCES);
+				const uint op_index = operations.back().index;
 
-				// Close it here: this runs after CommandList::end() has already
-				// closed the list, so nothing else will reserve this operation's
-				// barriers_after, and any resource whose last use lands in it
-				// would lose its trailing barriers. end_op() is idempotent, so a
-				// later split_op() on the same list stays correct.
+				use_resource(resource);
+				track_object(*const_cast<HAL::Resource*>(resource));
+
+				auto& usages = const_cast<HAL::Resource*>(resource)->get_state(this).operations[op_index];
+				usages.emplace_back(ALL_SUBRESOURCES, state);
+				usages.back().step     = op_step;
+				usages.back().after_op = true;
+
+				// Close it: its barriers_after now carries a trailing state, so
+				// nothing more may be appended to this operation. begin_op refuses
+				// to merge into a closed operation, so later work opens a new one
+				// and lands after these barriers rather than in front of them.
 				end_op();
 			}
 
@@ -1176,14 +1210,43 @@ namespace HAL
 		// between the two halves.
 		const bool uav_involved = check(usage.state.access & BarrierAccess::UNORDERED_ACCESS);
 
+		bool need_split = false;
+
 		for (const auto& prev : state.operations[op_index])
 		{
 			if (prev.step == op_step) continue;   // same dispatch, just another bind
 			if (!uav_involved && !check(prev.state.access & BarrierAccess::UNORDERED_ACCESS)) continue;
 
+			need_split = true;
+			break;
+		}
+
+		// KNOWN DEFECT, deliberately left as-is for now.
+		//
+		// The split is per-resource and happens mid-commit_tables, which records
+		// one dispatch's resources one at a time. A hazard found on the fifth
+		// resource splits an operation the first four are already sitting in, so
+		// a SINGLE dispatch's binds end up straddling two operations: the
+		// stragglers are bracketed by the OLD operation's barriers -- transitioned
+		// for it, then rested at its end -- before the dispatch that uses them
+		// runs.
+		//
+		// Measured: the FrameGraph debugger's thumbnails get their
+		// SHADER_RESOURCE->UNORDERED_ACCESS and the rest back to SHADER_RESOURCE
+		// around operation N while their dispatch sits in operation N+1, so the
+		// dispatch runs against SHADER_RESOURCE (GBV #1358).
+		//
+		// Migrating the current step's usages to the new operation was tried
+		// (2026-09-01) and is NOT the fix: moving a resource's first appearance
+		// between operations changes what the group derives as its entry state,
+		// which cost 264 x #1334 ('GBuffer_Speed' on 'ScreenReflection' declaring
+		// LayoutBefore=SHADER_RESOURCE against an actual COMMON). The hazard has
+		// to be detected BEFORE any of the command's binds are recorded -- i.e.
+		// scanned in pre_command ahead of commit_tables -- not repaired after.
+		if (need_split)
+		{
 			split_op();
 			op_index = operations.back().index;
-			break;
 		}
 
 		auto& usages = state.operations[op_index];
@@ -1355,6 +1418,13 @@ namespace HAL
 
 	void ComputeContext::set_program(StateObject* id, ResourceAddress buffer, uint size, bool init)
 	{
+		// Same batch break a PSO change gets in set_pipeline_internal. This path
+		// assigns current_pipeline directly instead of going through it, so it
+		// used to swap the program under an open operation -- leaving one
+		// operation's entry barriers covering work from two different programs.
+		if (base.current_pipeline != id)
+			base.break_op();
+
 		base.current_pipeline = id;
 		if (id->root_signature)
 			set_signature(id->root_signature);
@@ -1366,31 +1436,12 @@ namespace HAL
 		list->set_compute_signature(s);
 	}
 
-	// [temp diag] GBV reports a "Dispatch Index" per command-list RECORDING and
-	// counts every dispatch-class command, indirect ones included. Both matter:
-	// a counter that misses execute_indirect, or that never resets, produces a
-	// mapping that looks plausible and is wrong.
-	//
-	// Locked because FrameGraph passes record on worker threads -- without it
-	// the lines interleave mid-write and the file is unreadable.
-	static void dbg_log_dispatch(CommandList& base, const char* kind, const std::string& pso)
-	{
-		static std::mutex m;
-		std::lock_guard<std::mutex> lock(m);
-
-		std::ofstream f("dispatch_index.temp", std::ios::app);
-		f << convert(std::wstring(base.CommandListBase::get_name().ptr))
-		  << " dispatch=" << base.dbg_dispatch_index++
-		  << " kind=" << kind
-		  << " pso=" << pso << "\n";
-	}
-
 	void ComputeContext::dispatch(int x, int y, int z)
 	{
 		PROFILE_GPU(L"dispatch");
 
 		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
-		dbg_log_dispatch(base, "dispatch", base.current_pipeline ? base.current_pipeline->name : std::string("<none>"));
+
 		list->dispatch({x, y, z});
 		base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 	}
@@ -1591,7 +1642,6 @@ namespace HAL
 		  if (command_buffer) get_base().add_resource_usage(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
 		  if (counter_buffer) get_base().add_resource_usage(counter_buffer, ResourceStates::INDIRECT_ARGUMENT); }
 
-		dbg_log_dispatch(get_base(), "exec_indirect", get_base().current_pipeline ? get_base().current_pipeline->name : std::string("<none>"));
 
 		list->execute_indirect(
 			command_types,
@@ -1666,6 +1716,8 @@ namespace HAL
 	{
 		operations.clear();
 		op_step = 0;
+		op_first_step = 0;
+		force_new_op = false;
 		tracked_resources.reserve(512);
 		used_resources.reserve(256);
 	}
@@ -1674,22 +1726,68 @@ namespace HAL
 	{
 		operations.clear();
 		op_step = 0;
+		op_first_step = 0;
+		force_new_op = false;
 		used_resources.clear();
 	}
 
 	void SignatureDataSetter::commit_tables(BarrierSync operation, UsedSlots* slots)
 	{
 		PROFILE(L"commit_tables");
+
+		// `dirty` and "does this command use it" are DIFFERENT QUESTIONS, and
+		// answering the second with the first is a tracking hole.
+		//
+		// dirty means "set() was called since the last commit" -- exactly the
+		// right gate for skipping a redundant set_cb to D3D12. It says nothing
+		// about whether the CURRENT command reads the table: a binding set once
+		// and used by twenty later dispatches is dirty for the first of them and
+		// clean for the rest, while the shader reads it in all twenty.
+		//
+		// Recording usages off dirty therefore left operations using resources
+		// they had no usage for. The barrier pass then believes the last user was
+		// whichever earlier operation happened to commit the table, and rests the
+		// resource there -- correct-looking barriers, emitted too early. Measured
+		// at ~33k skipped usages in a 45s run across FrameInfo, SceneData,
+		// PickerBuffer, VSMLighting, Raytracing and more. Invisible only because
+		// those rest in SHADER_RESOURCE and are read as SHADER_RESOURCE, so the
+		// early rest is a no-op; a resource whose rest differs from its next use
+		// breaks loudly instead.
+		//
+		// It also disabled UAV hazard detection on those paths: record_usage's
+		// split check only runs from add_resource_usage, which never fired for a
+		// clean table, so two dispatches writing one UAV through an unchanged
+		// binding were never even considered for a split.
+		//
+		// So: usages come from the PIPELINE's reflected slot usage, which is
+		// precisely "what this command reads"; set_cb stays on dirty.
+		{
+			PROFILE(L"transitions");
+
+			auto pipeline = get_base().current_pipeline;
+			if (pipeline)
+			{
+				for (auto& slot : pipeline->slots.slots_usage)
+				{
+					auto& table = tables[get_table_index(slot)];
+
+					// Only what is actually bound here -- an unbound or
+					// mismatched slot is the null-slot case the check below
+					// reports, and has no resources to record.
+					if (!table.bound && !table.dirty) continue;
+					if (table.slot_id != slot) continue;
+
+					for (auto& bound : table.resources)
+						get_base().add_resource_usage(*bound.info, operation, bound.whole_resource);
+				}
+			}
+		}
+
 		uint id = 0;
 		for (auto& table : tables)
 		{
 			if (table.dirty)
 			{
-				{
-					PROFILE(L"transitions");
-					for (auto& bound : table.resources)
-						get_base().add_resource_usage(*bound.info, operation, bound.whole_resource);
-				}
 				{
 					PROFILE(L"set_cb");
 					set_cb(id, table.const_buffer, operation);
@@ -2191,10 +2289,19 @@ namespace HAL
 					SubresRangeMap wanted;
 					wanted.reset(dim_mips, dim_slices, dim_planes);
 
+					// Trailing states (transition_to) collected separately: they
+					// are not something this operation runs in, they are where it
+					// leaves the resource. They go to barriers_after below.
+					SubresRangeMap wanted_after;
+					wanted_after.reset(dim_mips, dim_slices, dim_planes);
+
+					SubresRangeMap* want_target = &wanted;
+
 					std::vector<std::pair<SubresRange, ResourceState>> pending;
 
 					auto want = [&](SubresRange range, ResourceState state)
 					{
+						SubresRangeMap& wanted = *want_target;
 						// Read-only states combine; anything else cannot be
 						// satisfied by one barrier, so the later use wins and the
 						// operation runs in that state.
@@ -2218,6 +2325,8 @@ namespace HAL
 
 					for (auto& usage : usages)
 					{
+						want_target = usage.after_op ? &wanted_after : &wanted;
+
 						if (usage.info)
 						{
 							// The view reports the rectangle it covers and it goes
@@ -2235,10 +2344,13 @@ namespace HAL
 						}
 					}
 
-					if (wanted.empty()) continue;
+					if (wanted.empty() && wanted_after.empty()) continue;
 
 					auto& operation = list->operations[op_index];
-					auto& barriers  = operation.barriers_before;
+
+					// Retargeted between the two passes below: the same emit logic
+					// serves both, only the group it writes into differs.
+					Barriers* barriers_target = &operation.barriers_before;
 
 					// Entering from the creation (undefined) layout. SyncBefore
 					// may only be NONE while D3D12 has genuinely never seen the
@@ -2293,7 +2405,7 @@ namespace HAL
 								? current.uniform_state()
 								: from_undefined();
 
-							barriers.transition(resource, before, after,
+							barriers_target->transition(resource, before, after,
 								SubresRange::all(), BarrierFlags::SINGLE | BarrierFlags::DISCARD);
 
 							discard_pending = false;
@@ -2402,7 +2514,7 @@ namespace HAL
 							if (before == after && !uav_ordering)
 								return;
 
-							barriers.transition(resource, before, after, piece, BarrierFlags::SINGLE);
+							barriers_target->transition(resource, before, after, piece, BarrierFlags::SINGLE);
 						});
 
 						for (auto& up : updates) current.assign(up.first, up.second);
@@ -2415,6 +2527,23 @@ namespace HAL
 					{
 						if (st) emit(piece, *st);
 					});
+
+					// 3. Trailing states, into barriers_after. Runs second so it
+					//    transitions from where the operation LEFT the resource
+					//    (emit above has already advanced `current`) to where the
+					//    caller asked for it to end up -- which is exactly the
+					//    ordering a separate trailing operation used to buy.
+					if (!wanted_after.empty())
+					{
+						barriers_target = &operation.barriers_after;
+
+						wanted_after.visit(SubresRange::all(), [&](SubresRange piece, const ResourceState* st)
+						{
+							if (st) emit(piece, *st);
+						});
+
+						barriers_target = &operation.barriers_before;
+					}
 
 					last_use = &operation;
 				}
@@ -2431,6 +2560,7 @@ namespace HAL
 			// rests them once, at the last pass that uses them -- rather than
 			// converging every group boundary.
 			if (!last_use) continue;
+
 			if (resource->frame_graph_managed) continue;
 
 			const TextureLayout rest_layout = resting_layout(resource);

@@ -115,7 +115,6 @@ export namespace HAL
 		{
 			CommandType type;
 			uint32_t    fn_idx = 0; // index into fn_pool for fallback commands
-
 			union
 			{
 				Barriers*   barrier;

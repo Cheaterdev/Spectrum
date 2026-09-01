@@ -47,6 +47,7 @@ namespace HAL
 							HAL::Debug::BarrierBreakpoints::check_barrier(
 								b.resource ? std::string_view{b.resource->name} : std::string_view{},
 								HAL::representative_subres(b.resource, b.range), b.before, b.after);
+
 					list.transitions(*cmd.barrier);
 					break;
 
