@@ -30,6 +30,12 @@ void CS(
 
     GetDebugInfo().Log("Hello from HLSL: hi=%u low=%u", hi[0], low[0]);
 
+    // Bare Log() (no GetDebugInfo() prefix) + a raw float arg (no manual
+    // asuint()) -- exercises the auto-injected global Log()/LogArg()
+    // template shim, in the same file that already explicitly #includes
+    // DebugInfo.h itself (proves the "already included, don't
+    // double-#include" detection works too).
+    Log("bare call: ratio=%f hi=%u", (float)hi[0] / max(low[0], 1), hi[0]);
 
  //   LOG_TEST("via macro: hi*2=%u low*2=%u", hi[0] * 2, low[0] * 2);
 

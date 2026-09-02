@@ -166,8 +166,12 @@ CommandList   (module HAL:CommandList)
     execute_and_wait()      execute + CPU wait
 
   Debug:
-    setup_debug(SignatureDataSetter*)
-    print_debug()           read back and log debug buffer
+    setup_debug(SignatureDataSetter*)   bind Slots::DebugInfo for the current PSO
+    print_debug()           read back debug_buffer + its write counter after
+                             every draw/dispatch on a "debuggable" PSO (one
+                             whose shader references DebugInfo), format each
+                             entry via DebugLogStrings, and log it -- see
+                             "SHADER DEBUG LOGGING" below for the shader side
     GPU timing via GPUBlock/GPUTimer
 
 DelayedCommandList  (API::CommandList)
@@ -411,6 +415,61 @@ shader_include
   - shader_include(dir, resource_file_depender&)
   - load_file(string)   — resolve #include, track dependency
   - Tracks autogen includes separately
+
+
+================================================================================
+  SHADER DEBUG LOGGING
+================================================================================
+
+From any shader, call the bare, printf-style:
+  Log("dist=%f count=%u", dist, count)
+No #include, no GetDebugInfo() prefix, no manual asuint() -- all three get
+handled automatically (see below). Pass typed values (float/int/uint)
+directly; the injected LogArg() template picks the right bit-reinterpretation
+per argument, and the %f/%u/%d/%x in the format string is what tells the CPU
+side how to re-read those bits at print time -- the two are independent, so a
+mismatched spec (e.g. %u on a value passed as float) prints garbage, not a
+compile error. Up to 4 args per call.
+
+How it compiles (DXC.ShaderCompiler.cpp, Compile_Shader):
+  1. Preprocess-only pass (-P / DXC_OUT_HLSL) expands every macro and
+     flattens every #include into one string, with no semantic/type
+     checking -- so a Log("...") call reached through any macro layer or
+     nested include shows up as plain literal text exactly once, and the
+     bare string-literal argument (invalid for any real Log() overload)
+     causes no error at this stage.
+  2. rewrite_debug_log_strings() scans that flattened text for Log("...")
+     calls, hashes each format string (crc32c::Crc32c) into a stable
+     uint32_t id, registers {id, format string} with the DebugLogStrings
+     singleton, and rewrites the call to Log(<id>u, ...args).
+  3. If any call was found, debug_log_prelude() prepends a small shim to
+     the now-numeric-only text: LogArg(uint/int/float) plus templated (HLSL
+     2021) Log(id, T0, T1, ...) overloads that call LogArg per argument and
+     forward the raw uint result to GetDebugInfo().Log(...), plus
+     #include "DebugInfo.h" itself -- skipped if the flattened text already
+     contains
+     "ConstantBuffer<DebugInfo>" (i.e. the shader already pulled it in),
+     since slot headers #error on being included twice (slot.jinja's
+     SLOT_{id} guard -- it's how two tables bound to the same register get
+     caught, so this can't just re-include unconditionally).
+  4. The real compile runs on this rewritten, already-flattened text.
+
+DebugLogStrings  (in-memory registry, id -> format string)
+  - register_format(id, string)   called by the rewrite above
+  - format(id, uint4 args)        %u/%d/%f/%x/%% substitution for
+                                   print_debug(); unregistered id (shouldn't
+                                   happen -- the shader had to compile to
+                                   run) falls back to raw id + args
+
+SIG side (sources/SIGParser/sigs/defaultlayout.sig):
+  DebugStruct { uint format_id; uint4 args; }
+  DebugInfo [Bind = FrameLayout::DebugInfo]
+    RWStructuredBuffer<DebugStruct> debug        -- 64-entry ring
+    RWStructuredBuffer<uint> logCount            -- InterlockedAdd claims a
+                                                     slot; bounds-checked
+                                                     against 64
+    Log(id, a0..a3) overloads (member; the auto-injected free functions
+    above just forward to these)
 
 
 ================================================================================

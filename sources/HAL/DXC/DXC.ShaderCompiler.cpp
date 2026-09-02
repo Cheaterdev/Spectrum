@@ -214,33 +214,76 @@ namespace HAL
 	}
 
 	// Gives shader authors a bare Log("fmt", args...) call -- no
-	// GetDebugInfo() prefix, no manual #include -- by forwarding to
-	// DebugInfo's own member Log() overloads (sources/SIGParser/sigs/
-	// defaultlayout.sig). Prepended to shaderText whenever
-	// rewrite_debug_log_strings found at least one call.
+	// GetDebugInfo() prefix, no manual #include, no manual asuint() -- by
+	// forwarding to DebugInfo's own member Log() overloads
+	// (sources/SIGParser/sigs/defaultlayout.sig). Injected into shaderText
+	// whenever rewrite_debug_log_strings found at least one call.
 	//
-	// The #include is conditional: slot headers #error if the same slot
-	// gets included twice in one compile (slot.jinja's SLOT_{id} guard --
-	// it's how two tables accidentally bound to the same register get
-	// caught), so a shader that already pulled in DebugInfo.h itself (to
-	// call GetDebugInfo() directly, old style) would hard-fail if this
-	// injected a second, redundant #include "DebugInfo.h" on top of it.
-	// "ConstantBuffer<DebugInfo>" only ever appears in the flattened text
-	// as part of that header's own content, so its presence is a reliable
-	// "already included" signal.
-	static std::string debug_log_prelude(const std::string& flattened_text)
+	// Where this gets inserted matters, not just whether it does: DXC
+	// resolves ordinary identifiers top-to-bottom like C, so these wrapper
+	// functions must textually follow GetDebugInfo()'s own definition (or
+	// "use of undeclared identifier 'GetDebugInfo'") but precede every
+	// Log(...) call site the shader itself contains. Two cases:
+	//   - DebugInfo.h not pulled in anywhere yet: prepend our own
+	//     #include "DebugInfo.h" + the wrapper, both at the very top --
+	//     before any of the shader's own code, call sites included.
+	//   - Already pulled in (a shader that also calls GetDebugInfo()
+	//     directly, old style): do NOT add a second #include -- slot
+	//     headers #error on being included twice in one compile
+	//     (slot.jinja's SLOT_{id} guard, which is how two tables
+	//     accidentally bound to the same register get caught) -- instead
+	//     insert just the wrapper right after GetDebugInfo()'s own
+	//     definition line, found via the first occurrence of
+	//     "GetDebugInfo()" in the text (its own definition is necessarily
+	//     the first occurrence -- anything else referencing it, including
+	//     the shader's own call sites, has to already be below it).
+	static std::string inject_debug_log_shim(std::string text)
 	{
-		std::string prelude;
-		if (flattened_text.find("ConstantBuffer<DebugInfo>") == std::string::npos)
-			prelude += "#include \"DebugInfo.h\"\n";
+		// LogArg + templated Log(id, T0, T1, ...) (HLSL 2021 -- see -HV 2021
+		// in compilationArguments below): lets a call site pass a typed
+		// value directly, Log("dist=%f", dist), instead of requiring
+		// asuint(dist) at every call. LogArg is what actually picks the
+		// bit-reinterpretation per argument type; the %f/%u/%d/%x in the
+		// format string still separately drives how the CPU side re-reads
+		// those bits at print time -- LogArg only has to get the bits
+		// *in*, not know what they mean.
+		//
+		// LogWrite4 exists because ConstantBuffer<T>'s transparent member
+		// forwarding (GetDebugInfo().Log(...) working as if GetDebugInfo()
+		// returned a DebugInfo directly, not a ConstantBuffer<DebugInfo>)
+		// does not participate correctly in name lookup from inside a
+		// template body -- DXC rejects it there ("no known conversion from
+		// 'ConstantBuffer<DebugInfo>' to 'DebugInfo'") even though the
+		// identical call compiles fine in ordinary, non-generic code. The
+		// templates below never touch GetDebugInfo() directly; they only
+		// ever call this one plain (non-template) function that does.
+		static const std::string wrapper =
+			"uint LogArg(uint v) { return v; }\n"
+			"uint LogArg(int v) { return uint(v); }\n"
+			"uint LogArg(float v) { return asuint(v); }\n"
+			"void LogWrite4(uint id, uint4 args) { GetDebugInfo().Log(id, args.x, args.y, args.z, args.w); }\n"
+			"void Log(uint id) { LogWrite4(id, uint4(0, 0, 0, 0)); }\n"
+			"template<typename T0>\n"
+			"void Log(uint id, T0 a0) { LogWrite4(id, uint4(LogArg(a0), 0, 0, 0)); }\n"
+			"template<typename T0, typename T1>\n"
+			"void Log(uint id, T0 a0, T1 a1) { LogWrite4(id, uint4(LogArg(a0), LogArg(a1), 0, 0)); }\n"
+			"template<typename T0, typename T1, typename T2>\n"
+			"void Log(uint id, T0 a0, T1 a1, T2 a2) { LogWrite4(id, uint4(LogArg(a0), LogArg(a1), LogArg(a2), 0)); }\n"
+			"template<typename T0, typename T1, typename T2, typename T3>\n"
+			"void Log(uint id, T0 a0, T1 a1, T2 a2, T3 a3) { LogWrite4(id, uint4(LogArg(a0), LogArg(a1), LogArg(a2), LogArg(a3))); }\n";
 
-		prelude +=
-			"void Log(uint id) { GetDebugInfo().Log(id); }\n"
-			"void Log(uint id, uint a0) { GetDebugInfo().Log(id, a0); }\n"
-			"void Log(uint id, uint a0, uint a1) { GetDebugInfo().Log(id, a0, a1); }\n"
-			"void Log(uint id, uint a0, uint a1, uint a2) { GetDebugInfo().Log(id, a0, a1, a2); }\n"
-			"void Log(uint id, uint a0, uint a1, uint a2, uint a3) { GetDebugInfo().Log(id, a0, a1, a2, a3); }\n";
-		return prelude;
+		size_t def = text.find("GetDebugInfo()");
+		if (def == std::string::npos)
+		{
+			text.insert(0, "#include \"DebugInfo.h\"\n" + wrapper);
+		}
+		else
+		{
+			size_t line_end = text.find('\n', def);
+			size_t insert_pos = (line_end == std::string::npos) ? text.size() : line_end + 1;
+			text.insert(insert_pos, wrapper);
+		}
+		return text;
 	}
 
 	std::optional<CompiledShader>  ShaderCompiler::Compile_Shader_File(std::string filename, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, ShaderOptions options, HAL::shader_include* includer)
@@ -402,7 +445,7 @@ namespace HAL
 			shaderText = rewrite_debug_log_strings(std::move(preprocessedText), debug_log_formats);
 
 			if (!debug_log_formats.empty())
-				shaderText = debug_log_prelude(shaderText) + shaderText;
+				shaderText = inject_debug_log_shim(std::move(shaderText));
 
 			sourceBuffer.Ptr = shaderText.data();
 			sourceBuffer.Size = shaderText.size();
