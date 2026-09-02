@@ -19,16 +19,20 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::DebugInfo;
 		HLSL::RWStructuredBuffer<DebugStruct> debug;
+		HLSL::RWStructuredBuffer<uint> logCount;
 		HLSL::RWStructuredBuffer<DebugStruct>& GetDebug() { return debug; }
+		HLSL::RWStructuredBuffer<uint>& GetLogCount() { return logCount; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(debug, "DebugInfo::debug");
+			compiler.compile(logCount, "DebugInfo::logCount");
 		}
 		struct Compiled
 		{
 			uint debug; // RWStructuredBuffer<DebugStruct>
+			uint logCount; // RWStructuredBuffer<uint>
 
 			
 			private:

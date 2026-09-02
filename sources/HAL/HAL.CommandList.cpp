@@ -4,6 +4,7 @@
 import :Autogen;
 
 import :Device;
+import :ShaderCompiler;
 import Core;
 
 import HAL;
@@ -197,6 +198,13 @@ namespace HAL
 		debug_buffer = StructuredBufferView<Table::DebugStruct>(device, 64, HAL::counterType::NONE,
 			HAL::ResFlags::ShaderResource |
 			HAL::ResFlags::UnorderedAccess);
+		// Claimed by Log()'s InterlockedAdd to hand out a distinct slot per
+		// call within one dispatch/draw -- not read back to the CPU (see
+		// print_debug: an unwritten DebugStruct::format_id is indistinguishable
+		// from 0 either way, so the readback just skips zero entries instead).
+		debug_log_count = StructuredBufferView<uint>(device, 1, HAL::counterType::NONE,
+			HAL::ResFlags::ShaderResource |
+			HAL::ResFlags::UnorderedAccess);
 	}
 
 	void CommandList::setup_debug(SignatureDataSetter* setter)
@@ -204,6 +212,7 @@ namespace HAL
 		if (!current_pipeline || !current_pipeline->debuggable) return;
 		Slots::DebugInfo info;
 		info.debug = debug_buffer;
+		info.logCount = debug_log_count;
 		setter->set(info);
 	}
 
@@ -212,27 +221,77 @@ namespace HAL
 		if (!current_pipeline->debuggable) return;
 
 		auto pso_name = current_pipeline->name;
-		get_copy().read<Table::DebugStruct>(debug_buffer, 0, 3, [this, pso_name](std::span<Table::DebugStruct> result)
+
+		// Captured by value, not read live inside try_print: op_step keeps
+		// bumping as later draws/dispatches get recorded on this same
+		// command list while this readback is still in flight, and we want
+		// the value that identified *this* draw/dispatch, not whatever it
+		// is by the time the async callback actually runs.
+		uint captured_op_step = op_step;
+
+		// Two independent reads (never one nested inside the other's
+		// callback -- not valid here), joined through shared state: read the
+		// full 64-entry buffer unconditionally, read the write count
+		// separately, and once BOTH have arrived print only the entries the
+		// count says are real. Never trust unwritten slots' own content as a
+		// "was this written" signal -- a freshly allocated UAV buffer is
+		// uninitialized (D3D12 doesn't zero it), so before the very first
+		// clear() below has ever run, unwritten slots can hold anything,
+		// including a nonzero format_id that looks like a real (but
+		// garbage) entry.
+		struct PendingDebug
+		{
+			std::mutex m;
+			std::optional<uint32_t> count;
+			std::vector<Table::DebugStruct> entries;
+			bool entries_ready = false;
+		};
+		auto pending = std::make_shared<PendingDebug>();
+
+		auto try_print = [this, pso_name, pending, captured_op_step]()
+		{
+			std::lock_guard<std::mutex> g(pending->m);
+			if (!pending->count || !pending->entries_ready) return;
+
+			uint32_t count = std::min<uint32_t>(*pending->count, (uint32_t)pending->entries.size());
+			if (count == 0) return;
+
+			LogBlock block(Log::get(), log_level_internal::level_all);
+
+			if (first_debug_log)
 			{
-				LogBlock block(Log::get(), log_level_internal::level_all);
+				block << "-----------------------------------------\n";
 
-				if (first_debug_log)
+				first_debug_log = false;
+			}
+
+			block << "DEBUG(cmdlist=" << name.ptr << ", op=" << captured_op_step << "): " << pso_name << "\n";
+			for (uint32_t i = 0; i < count; i++)
+				block << "debug(" << i << "): " << HAL::DebugLogStrings::get().format(pending->entries[i].format_id, pending->entries[i].args) << "\n";
+			Log::get() << block;
+		};
+
+		get_copy().read<uint>(debug_log_count, 0, 1, [pending, try_print](std::span<uint> result)
+			{
 				{
-					block << "-----------------------------------------\n";
-
-					first_debug_log = false;
+					std::lock_guard<std::mutex> g(pending->m);
+					pending->count = result.empty() ? 0u : result[0];
 				}
+				try_print();
+			});
 
-				block << "DEBUG(" << name.ptr << "): " << pso_name << "\n";
-				for (int i = 0; i < 3; i++)
+		get_copy().read<Table::DebugStruct>(debug_buffer, 0, 64, [pending, try_print](std::span<Table::DebugStruct> result)
+			{
 				{
-					block << "debug(" << i << "): " << result[i].v.x << " " << result[i].v.y << " " << result[i].v.z << " "
-						<< result[i].v.w << " " << "\n";
+					std::lock_guard<std::mutex> g(pending->m);
+					pending->entries.assign(result.begin(), result.end());
+					pending->entries_ready = true;
 				}
-				Log::get() << block;
+				try_print();
 			});
 
 		get_compute().clear(debug_buffer);
+		get_compute().clear(debug_log_count);
 	}
 
 

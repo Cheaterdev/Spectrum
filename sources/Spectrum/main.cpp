@@ -1093,7 +1093,7 @@ public:
 				HAL::mesh_shader::reload_all();
 				HAL::amplification_shader::reload_all();
 
-				HAL::Texture::reload_all();
+//				HAL::Texture::reload_all();
 			}
 
 			auto f_gc = thread_pool::get().enqueue([]()

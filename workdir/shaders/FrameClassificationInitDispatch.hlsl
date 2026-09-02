@@ -7,8 +7,12 @@ static const RWStructuredBuffer<DispatchArguments> hi_init = GetFrameClassificat
 static const RWStructuredBuffer<DispatchArguments> low_init = GetFrameClassificationInitDispatch().GetLow_dispatch_data();
 
 
-//#include "autogen/DebugInfo.h"
+#include "autogen/DebugInfo.h"
 
+// LOG_TEST: temporary smoke test for the printf-style Log() debug logging
+// feature -- proves a Log(...) call reached through a macro still gets
+// picked up by the preprocess-then-rewrite pass in DXC.ShaderCompiler.cpp.
+#define LOG_TEST(msg, a, b) GetDebugInfo().Log(msg, a, b)
 
 uint3 divide_by_multiple(uint3 v, uint3 a)
 {
@@ -24,7 +28,12 @@ void CS(
 )
 {
 
-  //  GetDebugInfo().Log(0, hi[0]);
+    GetDebugInfo().Log("Hello from HLSL: hi=%u low=%u", hi[0], low[0]);
+
+
+ //   LOG_TEST("via macro: hi*2=%u low*2=%u", hi[0] * 2, low[0] * 2);
+
+
     {
         DispatchArguments dinfo;
         dinfo.counts = divide_by_multiple(uint3(hi[0]*32,32,1), uint3(8, 8, 1));

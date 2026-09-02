@@ -15,6 +15,7 @@ import :ResourceViews;
 import :PSO;
 import :CommandAllocator;
 import :CommandListRecorder;
+import :ShaderCompiler;
 
 import :Autogen.Tables.DebugStruct;
 
@@ -403,6 +404,7 @@ export{
 			void print_debug();
 			bool first_debug_log = true;
 			StructuredBufferView<Table::DebugStruct> debug_buffer;
+			StructuredBufferView<uint> debug_log_count;
 
 			GraphicsContext& get_graphics();
 			ComputeContext& get_compute();

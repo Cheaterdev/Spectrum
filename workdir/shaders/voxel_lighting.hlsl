@@ -164,7 +164,7 @@ void CS(
    // +oneVoxelSize * normals;
 
 	float shadow = saturate(dot(normals, dir)) * get_shadow(pos);
-    float3 lighting = 2 * albedo.xyz * gi.xyz + 1 * albedo.xyz* shadow;
+    float3 lighting = 2 * albedo.xyz * gi.xyz + 4 * albedo.xyz* shadow;
 
     output[index] = lerp(output[index], float4(lighting, 1), 1);
 }

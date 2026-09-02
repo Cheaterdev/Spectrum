@@ -17,13 +17,16 @@ export namespace Table
 	struct DebugStruct
 	{
 		static constexpr SlotID ID = SlotID::DebugStruct;
-		uint4 v;
-		uint4& GetV() { return v; }
+		uint format_id;
+		uint4 args;
+		uint& GetFormat_id() { return format_id; }
+		uint4& GetArgs() { return args; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(v, "DebugStruct::v");
+			compiler.compile(format_id, "DebugStruct::format_id");
+			compiler.compile(args, "DebugStruct::args");
 		}
 		using Compiled = DebugStruct;
 
@@ -34,7 +37,8 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
-			ar& NVP(v);
+			ar& NVP(format_id);
+			ar& NVP(args);
 		}
 
 	};

@@ -9,6 +9,8 @@
 #include "enums.h"
 struct DebugStruct
 {
-	uint4 v; // uint4
-	uint4 GetV() { return v; }
+	uint format_id; // uint
+	uint4 args; // uint4
+	uint GetFormat_id() { return format_id; }
+	uint4 GetArgs() { return args; }
 };

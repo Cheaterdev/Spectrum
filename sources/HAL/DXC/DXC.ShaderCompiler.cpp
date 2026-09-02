@@ -5,6 +5,7 @@ import Core;
 
 import windows;       // COM base types (IUnknown, INoMarshal), MessageBoxA, LPCWSTR
 import DXCompiler;
+import crc32c;
 
 // Shader reflection is the only D3D12-coupled part of compilation (it uses the
 // ID3D12ShaderReflection / ID3D12LibraryReflection interfaces).  It is split out
@@ -128,6 +129,120 @@ namespace HAL
 	}
 
 
+	// Rewrites every Log("format string", ...) call in already-preprocessed
+	// HLSL text (macros expanded, includes flattened -- see the preprocess
+	// pass in Compile_Shader) into Log(<id>u, ...), where id is a hash of
+	// the format string, and registers {id, format string} with
+	// DebugLogStrings for CommandList::print_debug() to format on readback.
+	//
+	// This can only run on *preprocessed* text. A raw string literal isn't a
+	// valid argument to any Log() overload, so a Log("...") call reached
+	// through a macro would never resolve if we scanned each #include'd
+	// file's raw text separately (macros aren't expanded per-file, only
+	// once DXC assembles and preprocesses the whole translation unit) --
+	// and running a real (type-checking) compile on the *original* source to
+	// find these calls isn't an option either, since it would just fail on
+	// the string literal before we get the chance to rewrite it.
+	//
+	// found_formats collects this call's own discoveries (as well as
+	// registering each one into the live DebugLogStrings singleton
+	// immediately) so the caller can attach them to the CompiledShader it
+	// returns -- the shader cache (Shader<T>::SERIALIZE, HAL.Shader.ixx) can
+	// load a cached blob straight from disk without ever calling
+	// Compile_Shader again, and DebugLogStrings is in-memory only, so
+	// without persisting them here too a cache hit would leave every Log()
+	// readback showing "unregistered log id" instead of the real message.
+	static std::string rewrite_debug_log_strings(std::string text, std::unordered_map<uint32_t, std::string>& found_formats)
+	{
+		const std::string needle = "Log(";
+		if (text.find(needle) == std::string::npos)
+			return text;
+
+		std::string result;
+		result.reserve(text.size());
+
+		size_t pos = 0;
+		while (true)
+		{
+			size_t call = text.find(needle, pos);
+			if (call == std::string::npos)
+			{
+				result.append(text, pos, text.size() - pos);
+				break;
+			}
+
+			size_t quote = call + needle.size();
+			while (quote < text.size() && (text[quote] == ' ' || text[quote] == '\t' || text[quote] == '\n' || text[quote] == '\r'))
+				++quote;
+
+			if (quote >= text.size() || text[quote] != '"')
+			{
+				// Not a Log("...") call -- a differently-typed first arg, or
+				// an unrelated function that happens to also be named Log.
+				// Leave it untouched and keep scanning past "Log(".
+				result.append(text, pos, quote - pos);
+				pos = quote;
+				continue;
+			}
+
+			size_t str_end = quote + 1;
+			while (str_end < text.size() && text[str_end] != '"')
+				str_end += (text[str_end] == '\\' && str_end + 1 < text.size()) ? 2 : 1;
+
+			if (str_end >= text.size())
+			{
+				// Unterminated string literal -- leave as-is; the real
+				// compile pass will report the actual syntax error.
+				result.append(text, pos, text.size() - pos);
+				break;
+			}
+
+			std::string fmt = text.substr(quote + 1, str_end - quote - 1);
+			uint32_t id = crc32c::Crc32c(fmt);
+			DebugLogStrings::get().register_format(id, fmt);
+			found_formats.try_emplace(id, std::move(fmt));
+
+			result.append(text, pos, call - pos);
+			result += "Log(";
+			result += std::to_string(id);
+			result += "u";
+
+			pos = str_end + 1; // resume right after the closing quote
+		}
+
+		return result;
+	}
+
+	// Gives shader authors a bare Log("fmt", args...) call -- no
+	// GetDebugInfo() prefix, no manual #include -- by forwarding to
+	// DebugInfo's own member Log() overloads (sources/SIGParser/sigs/
+	// defaultlayout.sig). Prepended to shaderText whenever
+	// rewrite_debug_log_strings found at least one call.
+	//
+	// The #include is conditional: slot headers #error if the same slot
+	// gets included twice in one compile (slot.jinja's SLOT_{id} guard --
+	// it's how two tables accidentally bound to the same register get
+	// caught), so a shader that already pulled in DebugInfo.h itself (to
+	// call GetDebugInfo() directly, old style) would hard-fail if this
+	// injected a second, redundant #include "DebugInfo.h" on top of it.
+	// "ConstantBuffer<DebugInfo>" only ever appears in the flattened text
+	// as part of that header's own content, so its presence is a reliable
+	// "already included" signal.
+	static std::string debug_log_prelude(const std::string& flattened_text)
+	{
+		std::string prelude;
+		if (flattened_text.find("ConstantBuffer<DebugInfo>") == std::string::npos)
+			prelude += "#include \"DebugInfo.h\"\n";
+
+		prelude +=
+			"void Log(uint id) { GetDebugInfo().Log(id); }\n"
+			"void Log(uint id, uint a0) { GetDebugInfo().Log(id, a0); }\n"
+			"void Log(uint id, uint a0, uint a1) { GetDebugInfo().Log(id, a0, a1); }\n"
+			"void Log(uint id, uint a0, uint a1, uint a2) { GetDebugInfo().Log(id, a0, a1, a2); }\n"
+			"void Log(uint id, uint a0, uint a1, uint a2, uint a3) { GetDebugInfo().Log(id, a0, a1, a2, a3); }\n";
+		return prelude;
+	}
+
 	std::optional<CompiledShader>  ShaderCompiler::Compile_Shader_File(std::string filename, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, ShaderOptions options, HAL::shader_include* includer)
 	{
 		auto data = includer->load_file(filename);
@@ -238,6 +353,61 @@ namespace HAL
 		API::shader_include_dxil dxil_include(includer);
 		dxil_include.AddRef();
 
+		std::unordered_map<uint32_t, std::string> debug_log_formats;
+
+		// Preprocess-only pass (-P): DXC expands every macro and flattens
+		// every #include into one string, with NO semantic/type checking --
+		// so a Log("format string", ...) call reached through any number of
+		// macro layers or nested includes shows up here as plain literal
+		// text exactly once, and a bare string-literal argument (which the
+		// real compile below would reject -- no Log() overload takes a
+		// string) causes no error at this stage. rewrite_debug_log_strings
+		// turns each one into Log(<id>u, ...) before the real compile ever
+		// sees it. See DXC_OUT_HLSL in dxcapi.h ("Compile() with -P").
+		{
+			std::vector<LPCWSTR> preprocessArguments = nativeCompilationArguments;
+			preprocessArguments.push_back(L"-P");
+
+			Microsoft::WRL::ComPtr<IDxcResult> preprocessResult{};
+			HRESULT phr = compiler->Compile(&sourceBuffer,
+				preprocessArguments.data(),
+				static_cast<uint32_t>(preprocessArguments.size()),
+				&dxil_include,
+				IID_PPV_ARGS(&preprocessResult));
+
+			preprocessResult->GetStatus(&phr);
+			if (FAILED(phr))
+			{
+				IDxcBlobEncoding* error;
+				preprocessResult->GetErrorBuffer(&error);
+
+				std::string infoLog;
+				infoLog.assign(static_cast<const char*>(error->GetBufferPointer()), static_cast<const char*>(error->GetBufferPointer()) + error->GetBufferSize());
+
+				std::string errorMsg = "Shader Preprocess Error:\n";
+				errorMsg += file_name + "\n";
+				errorMsg.append(infoLog);
+				Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
+
+				MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
+				return {};
+			}
+
+			ComPtr<IDxcBlob> preprocessedBlob;
+			preprocessResult->GetOutput(DXC_OUT_HLSL, IID_PPV_ARGS(&preprocessedBlob), nullptr);
+
+			std::string preprocessedText(static_cast<const char*>(preprocessedBlob->GetBufferPointer()),
+				preprocessedBlob->GetBufferSize());
+
+			shaderText = rewrite_debug_log_strings(std::move(preprocessedText), debug_log_formats);
+
+			if (!debug_log_formats.empty())
+				shaderText = debug_log_prelude(shaderText) + shaderText;
+
+			sourceBuffer.Ptr = shaderText.data();
+			sourceBuffer.Size = shaderText.size();
+		}
+
 		// Compile the shader.
 		Microsoft::WRL::ComPtr<IDxcResult> compiledShaderBuffer{};
 		HRESULT hr = compiler->Compile(&sourceBuffer,
@@ -286,6 +456,7 @@ namespace HAL
 		// SPIR-V reflection).  See reflect_shader() seam at top of this TU.
 		reflect_shader(library, reflectionBuffer, entry_point, blob_str);
 		blob_str.entry_point = entry_point; // store so pipeline creation can use it
+		blob_str.debug_log_formats = std::move(debug_log_formats);
 		return std::move(blob_str);
 
 	}

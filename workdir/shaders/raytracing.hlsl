@@ -91,7 +91,7 @@ float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 
 		samplePos = origin + dir * dist;
 		float4 sampleValue = get_voxel(samplePos, sampleLOD);//* float4(1,1,1,1 + sampleLOD/4);
 		//sampleValue.w *= 333;
-
+        sampleValue.w = saturate(sampleValue.w * 2);
 
 		float sampleWeight = saturate(1 - accum.w);
 		accum += sampleValue * sampleWeight;
@@ -109,7 +109,7 @@ float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 
 
 	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(dir), angle * 8);
 	float sampleWeight = saturate(max_accum - accum.w) / max_accum;
-	accum.xyz += sky * pow(sampleWeight, 8);
+	//accum.xyz += sky * pow(sampleWeight, 8);
 
 
 	dist *= length(voxel_size);
@@ -414,13 +414,14 @@ void MyRaygenShader()
 	ray.Origin = pos;
 	ray.Direction = dir;
 	ray.TMin = 0.01;
-    ray.TMax = length(oneVoxelSize);// * 8;
+    ray.TMax = length(oneVoxelSize) * 8;
 	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
 
+	[branch]
 	if (payload_gi.dist > 100000 - 5)
 	{
-		payload_gi.color = trace(voxel_info, 0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.4, payload_gi.dist);
-	}
+        payload_gi.color = trace(voxel_info, 0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.4, payload_gi.dist);
+    }
 
 	//tex_noise[DispatchRaysIndex().xy] = 1;// lerp(tex_noise[DispatchRaysIndex().xy], payload_shadow.color, 0.01);
 	{

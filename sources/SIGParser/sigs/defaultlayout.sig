@@ -33,27 +33,48 @@ layout DefaultLayout: FrameLayout
 
 struct DebugStruct
 {
-	uint4 v;
+	uint format_id;
+	uint4 args;
 }
 
-layout NoneLayout { 
+layout NoneLayout {
 	slot None;
 }
 
+# Printf-style shader debug logging. Call as GetDebugInfo().Log("dist=%f
+# count=%u", asuint(dist), count) -- a build-time DXC preprocess pass
+# (DXC.ShaderCompiler.cpp) rewrites the literal string into a stable
+# uint id (hash of the string) before the real compile ever sees it, and
+# registers id -> format string for CommandList::print_debug() to format
+# on readback. Args are always raw bits (asuint() a float yourself); the
+# %f/%u/%d in the format string is what tells the CPU side how to
+# reinterpret them -- this is what keeps Log() to a handful of overloads
+# instead of one per int/uint/float combination.
 [Bind = FrameLayout::DebugInfo]
 struct DebugInfo
 {
 	RWStructuredBuffer<DebugStruct> debug;
+	RWStructuredBuffer<uint> logCount;
 
 	%{
-		void Log(uint id, uint4 v)
+		void LogWrite(uint id, uint4 args)
 		{
-			DebugStruct debug;
+			uint slot;
+			InterlockedAdd(GetLogCount()[0], 1, slot);
 
-            debug.v = v;
-
-            GetDebug()[id] = debug;
+			if (slot < 64)
+			{
+				DebugStruct e;
+				e.format_id = id;
+				e.args = args;
+				GetDebug()[slot] = e;
+			}
 		}
-		
+
+		void Log(uint id) { LogWrite(id, uint4(0, 0, 0, 0)); }
+		void Log(uint id, uint a0) { LogWrite(id, uint4(a0, 0, 0, 0)); }
+		void Log(uint id, uint a0, uint a1) { LogWrite(id, uint4(a0, a1, 0, 0)); }
+		void Log(uint id, uint a0, uint a1, uint a2) { LogWrite(id, uint4(a0, a1, a2, 0)); }
+		void Log(uint id, uint a0, uint a1, uint a2, uint a3) { LogWrite(id, uint4(a0, a1, a2, a3)); }
 	}%
 }
