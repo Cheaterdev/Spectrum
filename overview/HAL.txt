@@ -432,7 +432,7 @@ mismatched spec (e.g. %u on a value passed as float) prints garbage, not a
 compile error. Up to 4 args per call.
 
 How it compiles (DXC.ShaderCompiler.cpp, Compile_Shader):
-  1. Preprocess-only pass (-P / DXC_OUT_HLSL) expands every macro and
+  1. run_preprocess_pass() (-P / DXC_OUT_HLSL) expands every macro and
      flattens every #include into one string, with no semantic/type
      checking -- so a Log("...") call reached through any macro layer or
      nested include shows up as plain literal text exactly once, and the
@@ -442,17 +442,35 @@ How it compiles (DXC.ShaderCompiler.cpp, Compile_Shader):
      calls, hashes each format string (crc32c::Crc32c) into a stable
      uint32_t id, registers {id, format string} with the DebugLogStrings
      singleton, and rewrites the call to Log(<id>u, ...args).
-  3. If any call was found, debug_log_prelude() prepends a small shim to
-     the now-numeric-only text: LogArg(uint/int/float) plus templated (HLSL
-     2021) Log(id, T0, T1, ...) overloads that call LogArg per argument and
-     forward the raw uint result to GetDebugInfo().Log(...), plus
-     #include "DebugInfo.h" itself -- skipped if the flattened text already
-     contains
-     "ConstantBuffer<DebugInfo>" (i.e. the shader already pulled it in),
-     since slot headers #error on being included twice (slot.jinja's
-     SLOT_{id} guard -- it's how two tables bound to the same register get
-     caught, so this can't just re-include unconditionally).
-  4. The real compile runs on this rewritten, already-flattened text.
+  3. If any call was found and has_debug_info() says DebugInfo isn't part
+     of the flattened text yet (not pulled in directly or transitively by
+     anything the shader already includes), get it in there by
+     re-preprocessing -- NOT by splicing #include "autogen/DebugInfo.h"
+     straight into the already-flattened text from step 1 and moving on:
+     that would start a second, independent preprocessing context in the
+     real compile pass, with no memory of what step 1 already resolved, so
+     anything DebugInfo.h pulls in that the shader *also* already depends
+     on some other way (its own layout, e.g.) ends up defined twice.
+     Instead: prepend the #include to the *original*, pre-preprocess
+     source and run_preprocess_pass() again -- one unified pass naturally
+     dedupes everything the normal way, same as a shader that writes that
+     #include itself already does -- then rewrite_debug_log_strings()
+     again on this freshly reflattened text.
+  4. insert_debug_log_wrapper() inserts a small shim right after
+     GetDebugInfo()'s own definition line (found via the first occurrence
+     of "GetDebugInfo()" in the text -- its own definition is necessarily
+     the first occurrence; anything referencing it, this shim and the
+     shader's own call sites alike, must already be below it, since DXC
+     resolves identifiers top-to-bottom like C): LogArg(uint/int/float), a
+     plain LogWrite4(id, uint4) that calls GetDebugInfo().Log(...), and
+     templated (HLSL 2021) Log(id, T0, T1, ...) overloads that call LogArg
+     per argument and forward to LogWrite4 -- never call GetDebugInfo()
+     directly from inside a template body; ConstantBuffer<T>'s transparent
+     member-forwarding (what makes GetDebugInfo().Log(...) work as if
+     GetDebugInfo() returned a DebugInfo instead of a
+     ConstantBuffer<DebugInfo>) does not participate correctly in template
+     name lookup, so it has to happen in an ordinary function first.
+  5. The real compile runs on this rewritten, already-flattened text.
 
 DebugLogStrings  (in-memory registry, id -> format string)
   - register_format(id, string)   called by the rewrite above

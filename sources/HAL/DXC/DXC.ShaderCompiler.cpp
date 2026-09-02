@@ -213,31 +213,30 @@ namespace HAL
 		return result;
 	}
 
+	// True once `text` contains DebugInfo's own accessor -- pulled in
+	// either directly (a shader that calls GetDebugInfo() itself, old
+	// style) or transitively through something else the shader includes
+	// (e.g. any table bound under the FrameLayout tree the DebugInfo slot
+	// itself lives in). Its own definition, wherever it came from, is
+	// necessarily the first occurrence of the text "GetDebugInfo()" --
+	// anything else referencing it, this shim included, has to already be
+	// textually below it (DXC resolves identifiers top-to-bottom like C).
+	static bool has_debug_info(const std::string& text)
+	{
+		return text.find("GetDebugInfo()") != std::string::npos;
+	}
+
 	// Gives shader authors a bare Log("fmt", args...) call -- no
 	// GetDebugInfo() prefix, no manual #include, no manual asuint() -- by
 	// forwarding to DebugInfo's own member Log() overloads
-	// (sources/SIGParser/sigs/defaultlayout.sig). Injected into shaderText
-	// whenever rewrite_debug_log_strings found at least one call.
-	//
-	// Where this gets inserted matters, not just whether it does: DXC
-	// resolves ordinary identifiers top-to-bottom like C, so these wrapper
-	// functions must textually follow GetDebugInfo()'s own definition (or
-	// "use of undeclared identifier 'GetDebugInfo'") but precede every
-	// Log(...) call site the shader itself contains. Two cases:
-	//   - DebugInfo.h not pulled in anywhere yet: prepend our own
-	//     #include "DebugInfo.h" + the wrapper, both at the very top --
-	//     before any of the shader's own code, call sites included.
-	//   - Already pulled in (a shader that also calls GetDebugInfo()
-	//     directly, old style): do NOT add a second #include -- slot
-	//     headers #error on being included twice in one compile
-	//     (slot.jinja's SLOT_{id} guard, which is how two tables
-	//     accidentally bound to the same register get caught) -- instead
-	//     insert just the wrapper right after GetDebugInfo()'s own
-	//     definition line, found via the first occurrence of
-	//     "GetDebugInfo()" in the text (its own definition is necessarily
-	//     the first occurrence -- anything else referencing it, including
-	//     the shader's own call sites, has to already be below it).
-	static std::string inject_debug_log_shim(std::string text)
+	// (sources/SIGParser/sigs/defaultlayout.sig). Called on text that
+	// Compile_Shader has already made sure contains "GetDebugInfo()" (see
+	// has_debug_info and the retry-with-#include-then-reflatten path
+	// around the preprocess pass below) -- inserting the wrapper is the
+	// easy, purely-textual part; getting DebugInfo.h into the flattened
+	// text safely in the first place is the part that needs a real
+	// preprocess pass, not string surgery -- see the comment there.
+	static std::string insert_debug_log_wrapper(std::string text)
 	{
 		// LogArg + templated Log(id, T0, T1, ...) (HLSL 2021 -- see -HV 2021
 		// in compilationArguments below): lets a call site pass a typed
@@ -273,17 +272,57 @@ namespace HAL
 			"void Log(uint id, T0 a0, T1 a1, T2 a2, T3 a3) { LogWrite4(id, uint4(LogArg(a0), LogArg(a1), LogArg(a2), LogArg(a3))); }\n";
 
 		size_t def = text.find("GetDebugInfo()");
+		ASSERT(def != std::string::npos && "insert_debug_log_wrapper called before DebugInfo.h was confirmed present");
 		if (def == std::string::npos)
-		{
-			text.insert(0, "#include \"DebugInfo.h\"\n" + wrapper);
-		}
-		else
-		{
-			size_t line_end = text.find('\n', def);
-			size_t insert_pos = (line_end == std::string::npos) ? text.size() : line_end + 1;
-			text.insert(insert_pos, wrapper);
-		}
+			return text;
+
+		size_t line_end = text.find('\n', def);
+		size_t insert_pos = (line_end == std::string::npos) ? text.size() : line_end + 1;
+		text.insert(insert_pos, wrapper);
 		return text;
+	}
+
+	// Preprocess-only pass (-P): DXC expands every macro and flattens every
+	// #include into one string, with NO semantic/type checking -- so a
+	// Log("format string", ...) call reached through any number of macro
+	// layers or nested includes shows up here as plain literal text exactly
+	// once, and a bare string-literal argument (which the real compile
+	// would reject -- no Log() overload takes a string) causes no error at
+	// this stage. See DXC_OUT_HLSL in dxcapi.h ("Compile() with -P").
+	// Returns nullopt (having already logged/shown the error, matching
+	// Compile_Shader's existing error path) on failure.
+	static std::optional<std::string> run_preprocess_pass(IDxcCompiler3* compiler, const std::string& text,
+		const std::vector<LPCWSTR>& base_args, IDxcIncludeHandler* include_handler, const std::string& file_name)
+	{
+		DxcBuffer buffer{ .Ptr = text.data(), .Size = text.size(), .Encoding = CP_UTF8 };
+
+		std::vector<LPCWSTR> args = base_args;
+		args.push_back(L"-P");
+
+		Microsoft::WRL::ComPtr<IDxcResult> result{};
+		HRESULT hr = compiler->Compile(&buffer, args.data(), static_cast<uint32_t>(args.size()), include_handler, IID_PPV_ARGS(&result));
+
+		result->GetStatus(&hr);
+		if (FAILED(hr))
+		{
+			IDxcBlobEncoding* error;
+			result->GetErrorBuffer(&error);
+
+			std::string infoLog;
+			infoLog.assign(static_cast<const char*>(error->GetBufferPointer()), static_cast<const char*>(error->GetBufferPointer()) + error->GetBufferSize());
+
+			std::string errorMsg = "Shader Preprocess Error:\n";
+			errorMsg += file_name + "\n";
+			errorMsg.append(infoLog);
+			Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
+
+			MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
+			return std::nullopt;
+		}
+
+		ComPtr<IDxcBlob> blob;
+		result->GetOutput(DXC_OUT_HLSL, IID_PPV_ARGS(&blob), nullptr);
+		return std::string(static_cast<const char*>(blob->GetBufferPointer()), blob->GetBufferSize());
 	}
 
 	std::optional<CompiledShader>  ShaderCompiler::Compile_Shader_File(std::string filename, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, ShaderOptions options, HAL::shader_include* includer)
@@ -298,6 +337,13 @@ namespace HAL
 
 		if (file_name.empty())
 			file_name = "shaders/unknown";
+
+		// Kept around for the debug-log #include retry below: needs to
+		// re-preprocess the *original* source with an #include added, not
+		// the already-flattened text shaderText gets reassigned to further
+		// down (see the comment there for why).
+		const std::string original_shader_text = shaderText;
+
 		resource_file_depender dep;
 		HAL::shader_include in(file_name, dep);
 
@@ -398,54 +444,46 @@ namespace HAL
 
 		std::unordered_map<uint32_t, std::string> debug_log_formats;
 
-		// Preprocess-only pass (-P): DXC expands every macro and flattens
-		// every #include into one string, with NO semantic/type checking --
-		// so a Log("format string", ...) call reached through any number of
-		// macro layers or nested includes shows up here as plain literal
-		// text exactly once, and a bare string-literal argument (which the
-		// real compile below would reject -- no Log() overload takes a
-		// string) causes no error at this stage. rewrite_debug_log_strings
-		// turns each one into Log(<id>u, ...) before the real compile ever
-		// sees it. See DXC_OUT_HLSL in dxcapi.h ("Compile() with -P").
+		// rewrite_debug_log_strings needs already-preprocessed text (see its
+		// own comment for why), so run the preprocess pass, rewrite any
+		// Log("...") calls it finds into Log(<id>u, ...), and -- if any
+		// were found and DebugInfo.h isn't already part of the flattened
+		// text -- get it in there and insert the small forwarding shim
+		// (LogArg/LogWrite4/templated Log(), see insert_debug_log_wrapper)
+		// before the real compile below ever sees the result.
 		{
-			std::vector<LPCWSTR> preprocessArguments = nativeCompilationArguments;
-			preprocessArguments.push_back(L"-P");
-
-			Microsoft::WRL::ComPtr<IDxcResult> preprocessResult{};
-			HRESULT phr = compiler->Compile(&sourceBuffer,
-				preprocessArguments.data(),
-				static_cast<uint32_t>(preprocessArguments.size()),
-				&dxil_include,
-				IID_PPV_ARGS(&preprocessResult));
-
-			preprocessResult->GetStatus(&phr);
-			if (FAILED(phr))
-			{
-				IDxcBlobEncoding* error;
-				preprocessResult->GetErrorBuffer(&error);
-
-				std::string infoLog;
-				infoLog.assign(static_cast<const char*>(error->GetBufferPointer()), static_cast<const char*>(error->GetBufferPointer()) + error->GetBufferSize());
-
-				std::string errorMsg = "Shader Preprocess Error:\n";
-				errorMsg += file_name + "\n";
-				errorMsg.append(infoLog);
-				Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
-
-				MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
+			auto preprocessed = run_preprocess_pass(compiler, shaderText, nativeCompilationArguments, &dxil_include, file_name);
+			if (!preprocessed)
 				return {};
+
+			shaderText = rewrite_debug_log_strings(std::move(*preprocessed), debug_log_formats);
+
+			if (!debug_log_formats.empty() && !has_debug_info(shaderText))
+			{
+				// Don't splice #include "autogen/DebugInfo.h" straight into
+				// this already-flattened text and call it done: that starts
+				// a second, independent preprocessing context in the real
+				// compile pass below, which has no memory of what the first
+				// -P pass already resolved -- so anything DebugInfo.h pulls
+				// in (its own layout, e.g.) that the shader *also* already
+				// depends on some other way ends up defined twice, same
+				// class of bug as calling GetDebugInfo() before it exists
+				// (see insert_debug_log_wrapper), just one level removed and
+				// on a dependency instead of DebugInfo.h itself. Preprocess
+				// the *original* source again with the #include added, so
+				// the one unified -P pass naturally dedupes everything the
+				// normal way (the same way a shader manually writing that
+				// #include itself already works).
+				std::string augmented = "#include \"autogen/DebugInfo.h\"\n" + original_shader_text;
+				auto reflattened = run_preprocess_pass(compiler, augmented, nativeCompilationArguments, &dxil_include, file_name);
+				if (!reflattened)
+					return {};
+
+				shaderText = rewrite_debug_log_strings(std::move(*reflattened), debug_log_formats);
 			}
 
-			ComPtr<IDxcBlob> preprocessedBlob;
-			preprocessResult->GetOutput(DXC_OUT_HLSL, IID_PPV_ARGS(&preprocessedBlob), nullptr);
-
-			std::string preprocessedText(static_cast<const char*>(preprocessedBlob->GetBufferPointer()),
-				preprocessedBlob->GetBufferSize());
-
-			shaderText = rewrite_debug_log_strings(std::move(preprocessedText), debug_log_formats);
-
 			if (!debug_log_formats.empty())
-				shaderText = inject_debug_log_shim(std::move(shaderText));
+				shaderText = insert_debug_log_wrapper(std::move(shaderText));
 
 			sourceBuffer.Ptr = shaderText.data();
 			sourceBuffer.Size = shaderText.size();

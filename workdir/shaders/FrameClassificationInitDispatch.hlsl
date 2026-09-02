@@ -6,14 +6,6 @@ static const StructuredBuffer<uint> low = GetFrameClassificationInitDispatch().G
 static const RWStructuredBuffer<DispatchArguments> hi_init = GetFrameClassificationInitDispatch().GetHi_dispatch_data();
 static const RWStructuredBuffer<DispatchArguments> low_init = GetFrameClassificationInitDispatch().GetLow_dispatch_data();
 
-
-#include "autogen/DebugInfo.h"
-
-// LOG_TEST: temporary smoke test for the printf-style Log() debug logging
-// feature -- proves a Log(...) call reached through a macro still gets
-// picked up by the preprocess-then-rewrite pass in DXC.ShaderCompiler.cpp.
-#define LOG_TEST(msg, a, b) GetDebugInfo().Log(msg, a, b)
-
 uint3 divide_by_multiple(uint3 v, uint3 a)
 {
     return (v + a - 1) / a;
@@ -27,14 +19,6 @@ void CS(
     uint  groupIndex    : SV_GroupIndex
 )
 {
-
-    GetDebugInfo().Log("Hello from HLSL: hi=%u low=%u", hi[0], low[0]);
-
-    // Bare Log() (no GetDebugInfo() prefix) + a raw float arg (no manual
-    // asuint()) -- exercises the auto-injected global Log()/LogArg()
-    // template shim, in the same file that already explicitly #includes
-    // DebugInfo.h itself (proves the "already included, don't
-    // double-#include" detection works too).
     Log("bare call: ratio=%f hi=%u", (float)hi[0] / max(low[0], 1), hi[0]);
 
  //   LOG_TEST("via macro: hi*2=%u low*2=%u", hi[0] * 2, low[0] * 2);
