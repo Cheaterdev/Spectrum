@@ -544,6 +544,48 @@ GraphicsPSO VSMDepthDraw
 	# edge flicker) for longer than the original single-sided-geometry gap
 	# was worth. Accepting the narrower, well-understood limitation again.
 	cull = Front;
+	# Rasterizer depth bias -- pushes the STORED depth value toward the light
+	# (reversed-Z: larger = closer to light) at render time, complementing
+	# VSM_impl.hlsl's shader-side vsm_depth_bias_ndc/vsm_normal_offset_pos
+	# (which bias the READ side instead). Aimed at the same contact-shadow
+	# light-leak class (e.g. a wall meeting the ground) those already target,
+	# from the write side this time. D32_FLOAT's DepthBias step scales with
+	# the triangle's own Z exponent (tiny near reversed-Z's 1.0), hence the
+	# large raw DepthBias -- starting values, expect to retune visually.
+	#depth_bias = 100;
+	#slope_scaled_depth_bias = 0.2;
+}
+
+# Runtime A/B switch (VSM::use_vsm_conservative_raster) against VSMDepthDraw
+# above -- byte-identical otherwise. conservative is a rasterizer-state field
+# baked into the PSO at creation, not settable per-draw, so a genuine runtime
+# toggle needs two compiled PSOs selected at bind time (VSM.cpp's
+# m_renderpages_render), not a shader #define permutation. Aimed at thin/
+# sparse geometry (chain-link, leaf edges) that can fall entirely between a
+# triangle's rasterized samples and cast no shadow at all -- conservative
+# rasterization guarantees any pixel the triangle even partially covers gets
+# a sample, at the cost of a wider/blockier recorded silhouette. Only the
+# opaque path for now; VSMDepthDrawMaterial's per-material alpha-cutout PSOs
+# are unaffected.
+GraphicsPSO VSMDepthDrawConservative
+{
+	root = DefaultLayout;
+
+	[Erase]
+	pixel = null;
+
+	[EntryPoint = VS]
+	mesh = shadows/vsm/mesh_shader_vsm;
+
+	[EntryPoint = AS]
+	amplification = shadows/vsm/mesh_shader_vsm;
+
+	ds = D32_FLOAT;
+	cull = Front;
+	conservative = true;
+	# Same rasterizer depth bias as VSMDepthDraw above -- see its own comment.
+	#depth_bias = 100;
+	#slope_scaled_depth_bias = 0.2;
 }
 
 # Phase 5.19: alpha-cutout materials need a real pixel shader (clip() on

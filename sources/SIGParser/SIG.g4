@@ -315,13 +315,16 @@ shader_type:
 |'mesh'
 |'shader'
 ;
-pso_param_id: 
-'ds' 
-| 'cull' 
-| 'depth_func' 
+pso_param_id:
+'ds'
+| 'cull'
+| 'depth_func'
 | 'depth_write'
-| 'conservative' 
-| 'enable_depth' 
+| 'conservative'
+| 'depth_bias'
+| 'depth_bias_clamp'
+| 'slope_scaled_depth_bias'
+| 'enable_depth'
 | 'topology'
 | 'enable_stencil'
 | 'stencil_func'

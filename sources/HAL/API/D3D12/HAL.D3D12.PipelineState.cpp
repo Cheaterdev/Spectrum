@@ -404,6 +404,9 @@ namespace HAL
             RasterizerState.ConservativeRaster = desc.rasterizer.conservative
                 ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON
                 : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+            RasterizerState.DepthBias = desc.rasterizer.depth_bias;
+            RasterizerState.DepthBiasClamp = desc.rasterizer.depth_bias_clamp;
+            RasterizerState.SlopeScaledDepthBias = desc.rasterizer.slope_scaled_depth_bias;
             creator.include((D3D12_RASTERIZER_DESC)RasterizerState);
         }
 

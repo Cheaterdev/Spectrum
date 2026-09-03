@@ -130,6 +130,7 @@ export
 		VoxelDebug,
 		DenoiserDownsample,
 		VSMDepthDraw,
+		VSMDepthDrawConservative,
 		VSMDepthDrawMaterial,
 		WorkGR,
 		WorkGR_ClassifyPixels_Node,

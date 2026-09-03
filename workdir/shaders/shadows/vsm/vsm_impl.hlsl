@@ -194,6 +194,26 @@ float vsm_depth_bias_ndc(float3 normal, float3 light_dir, float texel_world_size
 	return bias_world / max(depth_range, 0.00001);
 }
 
+// World-space normal-offset bias -- nudges the query point off the true
+// surface along its own normal BEFORE the light-space transform used for the
+// depth compare, so the compared point sits slightly toward the light rather
+// than exactly on the (possibly conservative-rasterization-widened) recorded
+// silhouette. Complements vsm_depth_bias_ndc's NDC-Z bias (kept, not
+// replaced -- callers still apply both) rather than substituting for it;
+// same slope-scaled, texel-size-clamped shape so the two stay proportional.
+// Level/slot resolution (get_vsm_level/get_vsm_slot) must still use the TRUE
+// wpos, not this offset one -- callers apply this only to the position used
+// for the final pos_l/light_tc/depth-compare, after the page is already
+// resolved.
+float3 vsm_normal_offset_pos(float3 wpos, float3 normal, float3 light_dir, float texel_world_size)
+{
+	float NdotL = saturate(dot(normal, light_dir));
+	float slope = sqrt(saturate(1 - NdotL * NdotL)) / max(NdotL, 0.05);
+	static const float VSM_NORMAL_OFFSET_MAX_TEXELS = 3.0;
+	float offset_world = min(texel_world_size * slope, texel_world_size * VSM_NORMAL_OFFSET_MAX_TEXELS);
+    return wpos + normal * offset_world;
+}
+
 // Fixed Poisson disc, shared by the blocker search (VSM_impl_search.hlsl's
 // vsm_search_blocker) and the PCF blur (VSM_ShadowResolve.hlsl's
 // vsm_pcf_shadow) -- both unconditional now (no VSM_PENUMBRA define exists

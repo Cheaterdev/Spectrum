@@ -291,6 +291,12 @@ struct  SimpleGraphicsPSO {
 	char stencil_read_mask = 0;
 	char stencil_write_mask = 0;
 
+	// Same trio as HAL::RasterizerState's own -- see its comment for what
+	// these do vs. VSM's shader-side compare bias.
+	int depth_bias = 0;
+	float depth_bias_clamp = 0.0f;
+	float slope_scaled_depth_bias = 0.0f;
+
 	bool enable_stencil = false;
 	HAL::ComparisonFunc stencil_func;
 	HAL::StencilOp stencil_pass_op;

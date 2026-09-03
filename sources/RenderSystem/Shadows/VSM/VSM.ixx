@@ -97,6 +97,17 @@ public:
 	// search.
 	Variable<bool> use_vsm_hiz_blocker_classify = { true, "Hi-Z blocker classify", this };
 
+	// Runtime A/B switch between VSMDepthDraw and VSMDepthDrawConservative
+	// (vsm.sig) -- conservative rasterization is a PSO-creation-time
+	// rasterizer-state field, not settable per-draw, so the toggle picks
+	// between two compiled PSOs at bind time (m_renderpages_render) rather
+	// than a shader #define permutation. Aimed at thin/sparse geometry
+	// (chain-link, leaf edges) that can fall entirely between a triangle's
+	// rasterized samples and cast no shadow at all. Off by default -- new,
+	// unvalidated, same cautious rollout as this file's other toggles; only
+	// affects the opaque VSMDepthDraw path, not per-material alpha-cutout PSOs.
+	Variable<bool> use_vsm_conservative_raster = { false, "Conservative rasterization", this };
+
 	// Single-select debug view (VSMDebugView, a SIG enum shared verbatim
 	// with the shader side -- see VSMConstants.debug_view's own comment in
 	// vsm.sig). Replaces three separate bools that were always meant to be

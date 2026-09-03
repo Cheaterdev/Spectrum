@@ -878,7 +878,10 @@ VSM::VSM() : VariableContext(L"VSM")
 			// exec_indirect's real per-entry count comes from
 			// VSM_DispatchCommands' own append counter, MaxDispatchEntries
 			// is only the upper bound.
-			graphics.set_pipeline<PSOS::VSMDepthDraw>();
+			if (use_vsm_conservative_raster)
+				graphics.set_pipeline<PSOS::VSMDepthDrawConservative>();
+			else
+				graphics.set_pipeline<PSOS::VSMDepthDraw>();
 			{
 				Slots::VSMPageTableData pageTableData;
 				pageTableData.GetPage_table()   = data.VSM_PageTable->texture2DArray;

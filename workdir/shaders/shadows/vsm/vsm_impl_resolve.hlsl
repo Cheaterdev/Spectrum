@@ -9,6 +9,23 @@
 // comment in vsm.sig.
 float get_shadow_vsm_simple(VSMConstants c, VSMLighting lighting, float3 wpos, float3 normal, float3 light_dir)
 {
+	// Normal-offset bias (see vsm_normal_offset_pos's own comment) needs a
+	// texel-size estimate, which needs a resolved level -- cheap first pass
+	// on the TRUE position just to size the offset, then wpos is reassigned
+	// and EVERYTHING below (level/slot resolution included) uses the offset
+	// position consistently. Offsetting only the final compare while
+	// resolving level/slot from the true position let the offset walk into
+	// a neighboring page's territory while still sampling the original
+	// page's camera -- a real light leak, not a fixed one.
+	{
+		float2 probe_pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
+		int probe_level = get_vsm_level(c, probe_pos_ls);
+		if (probe_level < 0)
+			return 1.0;
+		float probe_texel_world_size = c.GetLevel_info(probe_level).z / c.GetPage_size();
+		wpos = vsm_normal_offset_pos(wpos, normal, light_dir, probe_texel_world_size);
+	}
+
 	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
 	int level = get_vsm_level(c, pos_ls);
 	if (level < 0)
@@ -30,7 +47,8 @@ float get_shadow_vsm_simple(VSMConstants c, VSMLighting lighting, float3 wpos, f
 	// See vsm_depth_bias_ndc's own comment (VSM_impl.hlsl) -- closes light
 	// leaks near contact shadows/grazing geometry. Replaces the old flat
 	// `pos_l.z * 0.9999` (a pure floating-point-exactness epsilon, not a
-	// real geometric bias).
+	// real geometric bias). Applied on top of the normal offset above, not
+	// instead of it.
 	float texel_world_size = c.GetLevel_info(level).z / c.GetPage_size();
 	float4 vsm_depth_range_p0 = mul(page_cam.GetInvProj(), float4(0, 0, 0, 1));
 	float4 vsm_depth_range_p1 = mul(page_cam.GetInvProj(), float4(0, 0, 1, 1));

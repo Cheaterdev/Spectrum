@@ -138,6 +138,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDebug>(device, pso[PSO::VoxelDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(device, pso[PSO::DenoiserDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthDraw>(device, pso[PSO::VSMDepthDraw]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthDrawConservative>(device, pso[PSO::VSMDepthDrawConservative]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthDrawMaterial>(device, pso[PSO::VSMDepthDrawMaterial]));
 
 	if (device.get_properties().work_graph)

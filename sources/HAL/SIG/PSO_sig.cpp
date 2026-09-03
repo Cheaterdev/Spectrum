@@ -54,6 +54,9 @@ HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 	desc.topology = topology;
 	desc.rtv.func = depth_func;
 	desc.rasterizer.conservative = conservative;
+	desc.rasterizer.depth_bias = depth_bias;
+	desc.rasterizer.depth_bias_clamp = depth_bias_clamp;
+	desc.rasterizer.slope_scaled_depth_bias = slope_scaled_depth_bias;
 	desc.rtv.enable_depth_write = depth_write;
 	desc.rtv.enable_depth = enable_depth;
 

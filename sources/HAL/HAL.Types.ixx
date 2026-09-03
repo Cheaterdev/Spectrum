@@ -408,6 +408,15 @@ private:
 		CullMode cull_mode = CullMode::Back;
 		FillMode fill_mode = FillMode::Solid;
 		bool conservative = false;
+		// Rasterizer-applied depth bias -- pushes the depth VALUE WRITTEN
+		// during rendering, not a read-side compare bias (see VSM's own
+		// shader-side vsm_depth_bias_ndc/vsm_normal_offset_pos for that).
+		// Same {DepthBias, SlopeScaledDepthBias, DepthBiasClamp} trio D3D12's
+		// rasterizer state has always exposed -- just not previously wired
+		// past CD3DX12_RASTERIZER_DESC's zero defaults.
+		int depth_bias = 0;
+		float depth_bias_clamp = 0.0f;
+		float slope_scaled_depth_bias = 0.0f;
 		bool operator==(const RasterizerState&) const = default;
 		auto operator<=>(const  RasterizerState& r)  const = default;
 
@@ -417,6 +426,9 @@ private:
 			ar& NVP(cull_mode);
 			ar& NVP(fill_mode);
 			ar& NVP(conservative);
+			ar& NVP(depth_bias);
+			ar& NVP(depth_bias_clamp);
+			ar& NVP(slope_scaled_depth_bias);
 		}
 	};
 

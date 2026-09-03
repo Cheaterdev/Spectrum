@@ -239,6 +239,28 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 
 	Camera camera = GetFrameInfo().GetCamera();
 	float3 wpos = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
+	float3 bias_light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
+
+	// Normal-offset bias (see vsm_normal_offset_pos's own comment), applied
+	// here at the GBuffer read -- before ANY level/slot resolution -- so
+	// every downstream lookup (page, pos_l, light_tc) is consistent with the
+	// SAME offset position. Offsetting only the final compare while
+	// resolving level/slot from the true position let the offset walk into
+	// a neighboring page's territory while still sampling the original
+	// page's camera -- a real light leak, not a fixed one. The offset itself
+	// needs a texel-size estimate, which needs a resolved level, so this is
+	// a cheap probe on the true position purely to size it.
+	{
+		float2 probe_pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
+		int probe_level = get_vsm_level(c, probe_pos_ls);
+		if (probe_level < 0)
+		{
+			GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);
+			return;
+		}
+		float probe_texel_world_size = c.GetLevel_info(probe_level).z / c.GetPage_size();
+		wpos = vsm_normal_offset_pos(wpos, normal, bias_light_dir, probe_texel_world_size);
+	}
 
 	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
 	int level = get_vsm_level(c, pos_ls);
@@ -268,7 +290,6 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	}
 
 	float texel_world_size = c.GetLevel_info(level).z / c.GetPage_size();
-
 	float4 vsm_depth_range_p0 = mul(page_cam.GetInvProj(), float4(0, 0, 0, 1));
 	float4 vsm_depth_range_p1 = mul(page_cam.GetInvProj(), float4(0, 0, 1, 1));
 	float depth_range = abs(vsm_depth_range_p1.z / vsm_depth_range_p1.w - vsm_depth_range_p0.z / vsm_depth_range_p0.w);
@@ -277,8 +298,8 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	// VSM_impl_search.hlsl's vsm_classify_blocker already applied to its own
 	// independently-derived pos_l.z, kept consistent here since this stage
 	// re-derives pos_l from the same wpos/level/slot rather than receiving
-	// stage 2's already-biased one directly.
-	float3 bias_light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
+	// stage 2's already-biased one directly. Applied on top of the normal
+	// offset above, not instead of it.
 	pos_l.z = saturate(pos_l.z - vsm_depth_bias_ndc(normal, bias_light_dir, texel_world_size, depth_range));
 
 	float noise_angle = lighting.GetBlue_noise().Load(int3(pixel % 128, 0)).x * 6.28318530718;
