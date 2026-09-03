@@ -49,12 +49,18 @@ export
 		Library::UI_PreDraw UI_PreDraw;
 		Library::UI_Render UI_Render;
 		Library::UpscalingDLSS UpscalingDLSS;
+		Library::NormalRoughnessRepack NormalRoughnessRepack;
+		Library::UpscalingDLSSRR UpscalingDLSSRR;
 		Library::GBufferDownsampler GBufferDownsampler;
 		Library::VoxelDebug VoxelDebug;
 		Library::VoxelScreen VoxelScreen;
 		Library::VoxelCombine VoxelCombine;
 		Library::ScreenReflection ScreenReflection;
+		Library::ReflectionRTX ReflectionRTX;
+		Library::ShadowRTX ShadowRTX;
+		Library::IndirectRTX IndirectRTX;
 		Library::ReflCombine ReflCombine;
+		Library::RTXCombine RTXCombine;
 		Library::Voxelize Voxelize;
 		Library::Lighting Lighting;
 		Library::Mipmapping Mipmapping;

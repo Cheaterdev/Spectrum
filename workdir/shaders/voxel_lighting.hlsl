@@ -1,9 +1,10 @@
 #include "Common.hlsl"
 
 
-//#include "autogen/FrameInfo.h"
+#include "autogen/FrameInfo.h"
 #include "autogen/VoxelInfo.h"
 #include "autogen/VoxelLighting.h"
+#include "VSM_impl_resolve.hlsl"
 
 static const VoxelInfo voxel_info = GetVoxelInfo();
 static const RWTexture3D<float4> output = GetVoxelLighting().GetOutput();
@@ -15,25 +16,39 @@ static const TextureCube<float4> tex_cube = GetVoxelLighting().GetTex_cube();
 static const float3 voxel_min = voxel_info.GetMin().xyz;
 static const float3 voxel_size = voxel_info.GetSize().xyz;
 
-static const Camera light_cam = GetVoxelLighting().GetPssmGlobal().GetLight_camera()[0];
-static const float3 dir = -normalize(light_cam.GetDirection().xyz);
+static const VSMShadowLookup vsm_lookup = GetVoxelLighting().GetVsm();
+static const float3 dir = normalize(GetFrameInfo().GetSunDir().xyz);
 #define SINGLE_SAMPLE
 
 
-float get_shadow(float3 wpos)
+// Simple atlas+page-table lookup only (VSM_impl_resolve.hlsl's
+// get_shadow_vsm_simple, no penumbra/PCSS) -- Lighting runs before
+// VSM_BlockerClassify/VSM_BlockerSearch/VSM_ShadowResolve in the frame (see
+// test.sig's MainPipeline ordering), so that's all that's available here.
+float get_shadow(float3 wpos, float3 normal)
 {
-	float4 pos_l = mul(light_cam.GetViewProj(), float4(wpos, 1));
-	pos_l /= pos_l.w;
-	float2 light_tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
+	VSMConstants c = (VSMConstants)0;
+	c.active_min      = vsm_lookup.active_min;
+	c.active_max      = vsm_lookup.active_max;
+	c.page_size       = vsm_lookup.page_size;
+	c.pages_per_level = vsm_lookup.pages_per_level;
+	c.light_view      = vsm_lookup.light_view;
+	[unroll]
+	for (int li = 0; li < 26; li++)
+		c.level_info[li] = vsm_lookup.level_info[li];
 
-	float shadow = GetVoxelLighting().GetPssmGlobal().GetLight_buffer().SampleLevel(linearSampler, light_tc, 0) < pos_l.z*0.999;
-	return shadow;
+	VSMLighting lighting = (VSMLighting)0;
+	lighting.vsm_atlas    = vsm_lookup.vsm_atlas;
+	lighting.page_table   = vsm_lookup.page_table;
+	lighting.page_cameras = vsm_lookup.page_cameras;
+
+	return get_shadow_vsm_simple(c, lighting, wpos, normal, dir);
 }
 
 float4 get_sky(float3 dir, float level)
 {
 	level *= 8;
-	return tex_cube.SampleLevel(linearSampler, dir,3);
+    return tex_cube.SampleLevel(linearSampler, dir, level);
 }
 
 float4 get_voxel(float3 pos, float level)
@@ -60,7 +75,7 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 	float3 samplePos = 0;
 	float4 accum = 0;
 	// the starting sample diameter
-	float minDiameter = 1.0 / 256;
+	float minDiameter = 1.0 / 1024;
 	float minVoxelDiameterInv = 1.0 / minDiameter;
 	// push out the starting point to avoid self-intersection
   //  float startDist = (1) * minDiameter;
@@ -70,9 +85,9 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 
 	while (dist <= maxDist && accum.w < 1 && all(samplePos <= 1) && all(samplePos >= 0))
 	{
-		float sampleDiameter = max(minDiameter, angle * dist);
+        float sampleDiameter = minDiameter +angle * dist;
 
-		float sampleLOD = 1+log2(sampleDiameter * minVoxelDiameterInv);
+		float sampleLOD = log2(sampleDiameter * minVoxelDiameterInv);
 		samplePos = origin + dir * dist;
 		float4 sampleValue = get_voxel(samplePos, sampleLOD);
 		float sampleWeight = (1 - accum.w);
@@ -84,7 +99,7 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 
 	float4 sky = get_sky(dir, angle);
 	float sampleWeight = saturate(1 - 18*accum.w);
-	//accum += sky * pow(sampleWeight, 1);
+	accum += sky * pow(sampleWeight, 4);
 
 	return accum;
 
@@ -163,8 +178,8 @@ void CS(
     float3 pos = index * voxel_size / dims + voxel_min;//
    // +oneVoxelSize * normals;
 
-	float shadow = saturate(dot(normals, dir)) * get_shadow(pos);
-    float3 lighting = 2 * albedo.xyz * gi.xyz + 4 * albedo.xyz* shadow;
+	float shadow = saturate(dot(normals, dir)) * get_shadow(pos, normals);
+    float3 lighting = albedo.xyz * gi.xyz + 1 * albedo.xyz* shadow;
 
     output[index] = lerp(output[index], float4(lighting, 1), 1);
 }

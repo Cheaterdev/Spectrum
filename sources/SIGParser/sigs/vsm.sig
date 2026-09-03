@@ -94,6 +94,32 @@ struct VSMConstants
 	float4 level_info[26];
 }
 
+# Lean, un-tagged (nestable) shadow-lookup payload for consumers outside VSM's
+# own passes that only need a simple depth-compare sample, not the full
+# penumbra/PCSS pipeline -- e.g. VoxelGI's Lighting pass, which runs before
+# VSM_BlockerClassify/VSM_BlockerSearch/VSM_ShadowResolve in the frame (see
+# test.sig's MainPipeline ordering), so only the raw atlas+page-table lookup
+# is ever available to it. Mirrors VSMConstants' own level-lookup fields
+# exactly (see VSM::fill_shadow_lookup_constants) plus the three VSMLighting
+# resource fields get_shadow_vsm_simple actually reads -- the runtime-toggle-
+# only VSMConstants fields (quad_blocker_search/hiz_blocker_classify/
+# rtx_dual_blur/debug_view/hemisphere_cull_blocker) are irrelevant to that
+# function's fixed 3x3 hardware-PCF path, so they're omitted rather than
+# carried along unused.
+struct VSMShadowLookup
+{
+	int active_min;
+	int active_max;
+	int page_size;
+	int pages_per_level;
+	float4x4 light_view;
+	float4 level_info[26];
+
+	Texture2DArray<float> vsm_atlas;
+	Texture2DArray<uint> page_table;
+	StructuredBuffer<Camera> page_cameras;
+}
+
 # Instance3, not Instance1: mesh_shader_vsm.hlsl needs this alongside MeshInfo
 # (a fixed non-Instance slot), and MeshInfo happens to land on the same raw
 # slot number as Instance1 -- Instance3 avoids the collision.

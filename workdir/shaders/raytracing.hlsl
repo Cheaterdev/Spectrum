@@ -55,6 +55,8 @@ typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 float4 get_voxel(float3 pos, float level)
 {
 	float4 color = CreateVoxelScreen().GetVoxels().SampleLevel(linearClampSampler, pos, level);
+    color.rgb *= 8;
+    color.w = saturate(color.w * 2);
 	return color;
 }
 
@@ -82,7 +84,7 @@ float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 
 	float maxDist = 1;
 	dist = length(startOrigin - origin);
 
-	float max_accum = 1.0;
+	float max_accum = 0.95;
 	while (dist <= maxDist && accum.w < max_accum && all(samplePos <= 1) && all(samplePos >= 0))
 	{
 		float sampleDiameter = minDiameter + angle * dist;
@@ -91,7 +93,7 @@ float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 
 		samplePos = origin + dir * dist;
 		float4 sampleValue = get_voxel(samplePos, sampleLOD);//* float4(1,1,1,1 + sampleLOD/4);
 		//sampleValue.w *= 333;
-        sampleValue.w = saturate(sampleValue.w * 2);
+        sampleValue.w = saturate(sampleValue.w * 1);
 
 		float sampleWeight = saturate(1 - accum.w);
 		accum += sampleValue * sampleWeight;
@@ -109,7 +111,7 @@ float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 
 
 	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(dir), angle * 8);
 	float sampleWeight = saturate(max_accum - accum.w) / max_accum;
-	//accum.xyz += sky * pow(sampleWeight, 8);
+	accum.xyz += sky * pow(sampleWeight, 18);
 
 
 	dist *= length(voxel_size);
@@ -307,6 +309,51 @@ void ShadowRaygenShader()
 	tex_noise[itc] = float4(shadow.xxx, float(reprojected.frames) / FRAMES);// lerp(tex_noise[itc], shadow, 0.01);// !payload_shadow.hit;
 }
 
+// Independent RTX-only reference shadow for ShadowRTX (see voxel.sig's
+// PassNode ShadowRTX). Deliberately NOT sharing code with ShadowRaygenShader
+// above -- that one stays untouched, still used by RTXShadowReference's
+// 16-sample ground truth. This one is genuinely raw: one ray per pixel
+// toward a jittered direction within the sun's angular disk (same
+// GetRandomDir technique, just 1 sample instead of 16, so the result is
+// actually noisy), no temporal history -- a real reference signal, cheap
+// enough to eventually feed a denoiser rather than being one itself.
+[shader("raygeneration")]
+void MyRaygenShaderShadowRTXOnly()
+{
+	uint2 itc = DispatchRaysIndex().xy;
+	uint2 dims = DispatchRaysDimensions().xy;
+	float2 tc = float2(itc + 0.5f) / dims;
+
+	const VoxelScreen voxel_screen = CreateVoxelScreen();
+	const VoxelOutput voxel_output = CreateVoxelOutput();
+	const Raytracing raytracing = CreateRaytracing();
+	const FrameInfo frame = CreateFrameInfo();
+
+	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
+
+	float raw_z = voxel_screen.GetGbuffer().GetDepth()[itc];
+	if (raw_z == 0)
+	{
+		tex_noise[itc] = 0;
+		return;
+	}
+	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
+
+	float3 dir = GetRandomDir(tc, frame.GetSunDir(), 0.02, frame.GetTime());
+
+	ShadowPayload payload_shadow = { false };
+
+	RayDesc ray;
+	ray.Origin = pos;
+	ray.Direction = dir;
+	ray.TMin = 0.1;
+	ray.TMax = 10000.0;
+	ShadowPass(raytracing.GetScene(), ray, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, payload_shadow);
+
+	float shadow = payload_shadow.hit ? 0.0 : 1.0;
+	tex_noise[itc] = float4(shadow.xxx, 1);
+}
+
 
 [shader("raygeneration")]
 void ColorPass()
@@ -418,9 +465,9 @@ void MyRaygenShader()
 	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
 
 	[branch]
-	if (payload_gi.dist > 100000 - 5)
+if (payload_gi.dist > 100000 - 5)
 	{
-        payload_gi.color = trace(voxel_info, 0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.4, payload_gi.dist);
+        payload_gi.color = trace(voxel_info, 0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.2, payload_gi.dist);
     }
 
 	//tex_noise[DispatchRaysIndex().xy] = 1;// lerp(tex_noise[DispatchRaysIndex().xy], payload_shadow.color, 0.01);
@@ -444,6 +491,55 @@ void MyRaygenShader()
 
 	tex_noise[itc] = float4(gi.xyz, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;
 	tex_frames[itc] = float(reprojected.frames) / FRAMES;
+}
+
+// Independent RTX-only reference diffuse GI for IndirectRTX (see voxel.sig's
+// PassNode IndirectRTX). Deliberately NOT sharing code with MyRaygenShader
+// above -- that one stays untouched, still used by VoxelScreen's normal
+// dispatch (RTX with a voxel-cone-trace fallback on miss, temporally
+// blended with history). This one is genuinely raw: one ray per pixel,
+// GGX-importance-sampled hemisphere direction, fixed reach, no voxel grid
+// involved, no history blend.
+[shader("raygeneration")]
+void MyRaygenShaderIndirectRTXOnly()
+{
+	uint2 itc = DispatchRaysIndex().xy;
+	uint2 dims = DispatchRaysDimensions().xy;
+	float2 tc = float2(itc + 0.5f) / dims;
+
+	const FrameInfo frame = CreateFrameInfo();
+	const Raytracing raytracing = CreateRaytracing();
+	const VoxelOutput voxel_output = CreateVoxelOutput();
+	const VoxelScreen voxel_screen = CreateVoxelScreen();
+
+	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
+
+	float raw_z = voxel_screen.GetGbuffer().GetDepth()[itc];
+	if (raw_z == 0)
+	{
+		tex_noise[itc] = 0;
+		return;
+	}
+	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
+	float3 normal = normalize(voxel_screen.GetGbuffer().GetNormals()[itc].xyz * 2 - 1);
+
+	float2 seed = voxel_output.GetBlueNoise().Load(int3(itc % 128, 0));
+	float3 dir = ImportanceSampleGGX(seed, 1, normal);
+
+	[raypayload]
+	RayPayload payload_gi;
+	payload_gi.init();
+
+	RayDesc ray;
+	ray.Origin = pos;
+	ray.Direction = dir;
+	ray.TMin = 0.01;
+	// Fixed reach, same convention as this file's other plain-RTX raygens --
+	// no voxel grid involved.
+	ray.TMax = 10000.0;
+	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
+
+	tex_noise[itc] = float4(payload_gi.color.rgb, payload_gi.dist);
 }
 
 
@@ -552,6 +648,76 @@ void MyRaygenShaderReflection()
 
 	tex_dir_pdf[itc] = float4(refl_pos, 1);
 	tex_noise[itc] = float4(screen, payload_gi.dist);// lerp(prev_gi, float4(screen, payload_gi.dist), lerper);//float4(payload_gi.color, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;
+}
+
+// Independent RTX-only reflection raygen for ReflectionRTX/DLSS-RR (see
+// voxel.sig's PassNode ReflectionRTX). Deliberately NOT sharing code with
+// MyRaygenShaderReflection above -- that one stays untouched for
+// ScreenReflection's mixed voxel-GI+RTX path. This one is pure DXR: one ray
+// per pixel, blue-noise-jittered direction (SampleReflectionVector, same
+// importance sampling as the other raygen -- this is what makes the output
+// genuinely noisy rather than a perfect mirror, which is what a ray-traced
+// denoiser like DLSS-RR expects to clean up), fixed TMax, no VoxelInfo/voxel
+// cone trace anywhere -- a real reference signal.
+[shader("raygeneration")]
+void MyRaygenShaderReflectionRTXOnly()
+{
+	uint2 itc = DispatchRaysIndex().xy;
+	uint2 dims = DispatchRaysDimensions().xy;
+	float2 tc = float2(itc + 0.5f) / dims;
+
+	const FrameInfo frame = CreateFrameInfo();
+	const Raytracing raytracing = CreateRaytracing();
+	const VoxelOutput voxel_output = CreateVoxelOutput();
+	const VoxelScreen voxel_screen = CreateVoxelScreen();
+
+	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
+	const RWTexture2D<float4> tex_dir_pdf = voxel_output.GetDirAndPdf();
+
+	float raw_z = voxel_screen.GetGbuffer().GetDepth()[itc];
+	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
+
+	if (raw_z == 0)
+	{
+		tex_noise[itc] = 0;
+		tex_dir_pdf[itc] = 0;
+		return;
+	}
+
+	float4 gbufer_normals = voxel_screen.GetGbuffer().GetNormals()[itc];
+	float4 gbufer_albedo = voxel_screen.GetGbuffer().GetAlbedo()[itc];
+
+	float3 normal = normalize(gbufer_normals.xyz * 2 - 1);
+	float roughness = pow(max(MIN_ROUGHNESS, gbufer_normals.w), 2);
+
+	float3 view = -normalize(frame.GetCamera().GetPosition() - pos);
+
+	// Blue-noise-jittered sample around the mirror direction -- one ray,
+	// genuinely stochastic (not a perfect reflection), which is the raw
+	// signal DLSS-RR's own denoiser is designed to clean up.
+	float2 seed = voxel_output.GetBlueNoise().Load(int3(itc % 128, 0));
+	float3 dir = SampleReflectionVector(view, normal, roughness, seed);
+
+	[raypayload]
+	RayPayload payload;
+	payload.color = float4(0, 0, 0, 0);
+	payload.recursion = 0;
+	payload.dist = 0;
+	payload.cone.angle = 0;
+	payload.cone.width = 0;
+
+	RayDesc ray;
+	ray.Origin = pos;
+	ray.Direction = dir;
+	ray.TMin = 0.05;
+	// Fixed reach, same convention as this file's other plain-RTX raygens
+	// (ShadowRaygenShader/ColorRTXRaygenShader) -- no voxel grid involved.
+	ray.TMax = 10000.0;
+	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload);
+
+	float3 refl_pos = pos + view * clamp(payload.dist, 0, 1000);
+	tex_dir_pdf[itc] = float4(refl_pos, 1);
+	tex_noise[itc] = float4(payload.color.rgb, payload.dist);
 }
 
 

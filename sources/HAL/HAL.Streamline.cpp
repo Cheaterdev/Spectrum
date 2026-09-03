@@ -1,6 +1,7 @@
 module;
 
 #include <Windows.h>
+#include <fstream>
 
 module HAL:Streamline;
 
@@ -52,9 +53,14 @@ namespace nvidia
 			{
 			case BufferType::Depth:          return sl::kBufferTypeDepth;
 			case BufferType::MotionVectors:  return sl::kBufferTypeMotionVectors;
-			case BufferType::ColorOut:       return sl::kBufferTypeScalingOutputColor;
+			case BufferType::ColorOut:           return sl::kBufferTypeScalingOutputColor;
+			case BufferType::SpecularHitNoisy:   return sl::kBufferTypeSpecularHitNoisy;
+			case BufferType::SpecularHitDistance:return sl::kBufferTypeSpecularHitDistance;
+			case BufferType::NormalRoughness:    return sl::kBufferTypeNormalRoughness;
+			case BufferType::Albedo:             return sl::kBufferTypeAlbedo;
+			case BufferType::SpecularAlbedo:     return sl::kBufferTypeSpecularAlbedo;
 			case BufferType::ColorIn:
-			default:                         return sl::kBufferTypeScalingInputColor;
+			default:                             return sl::kBufferTypeScalingInputColor;
 			}
 		}
 
@@ -157,6 +163,9 @@ namespace nvidia
 
 		initialized = true;
 		Log::get() << "[Streamline] initialized" << Log::endl;
+
+		// Optional: only used by log_feature_requirements()'s bring-up diagnostic.
+		resolve(fn_get_feature_requirements, "slGetFeatureRequirements");
 	}
 
 	Streamline::~Streamline()
@@ -314,6 +323,25 @@ namespace nvidia
 			return false;
 		}
 		return true;
+	}
+
+	void Streamline::log_feature_requirements(Feature feature, const char* temp_file_name) const
+	{
+		if (!initialized || !fn_get_feature_requirements) return;
+
+		sl::FeatureRequirements req{};
+		const sl::Result res = fn_get_feature_requirements(to_sl(feature), req);
+
+		// CWD at runtime is already workdir/ (see CLAUDE.md), so no prefix here.
+		std::ofstream out(temp_file_name);
+		if (!out) return;
+
+		out << "slGetFeatureRequirements result=" << (int)res << "\n";
+		if (res != sl::Result::eOk) return;
+
+		out << "numRequiredTags=" << req.numRequiredTags << "\n";
+		for (uint32_t i = 0; i < req.numRequiredTags; ++i)
+			out << "  requiredTags[" << i << "]=" << req.requiredTags[i] << "\n";
 	}
 
 	bool Streamline::allocate_resources(Feature feature, HAL::API::CommandList* native_command_list, uint32_t viewport) const

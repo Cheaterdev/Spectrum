@@ -25,10 +25,17 @@ export namespace nvidia
 	// Buffer slots a temporal SL feature reads/writes.
 	enum class BufferType
 	{
-		Depth,           // sl::kBufferTypeDepth
-		MotionVectors,   // sl::kBufferTypeMotionVectors
-		ColorIn,         // sl::kBufferTypeScalingInputColor  (render-resolution)
-		ColorOut,        // sl::kBufferTypeScalingOutputColor (output-resolution)
+		Depth,               // sl::kBufferTypeDepth
+		MotionVectors,       // sl::kBufferTypeMotionVectors
+		ColorIn,             // sl::kBufferTypeScalingInputColor  (render-resolution)
+		ColorOut,            // sl::kBufferTypeScalingOutputColor (output-resolution)
+
+		// DLSS Ray Reconstruction (reflections, phase 1).
+		SpecularHitNoisy,    // sl::kBufferTypeSpecularHitNoisy
+		SpecularHitDistance, // sl::kBufferTypeSpecularHitDistance
+		NormalRoughness,     // sl::kBufferTypeNormalRoughness (packed: xyz=normal, w=roughness)
+		Albedo,              // sl::kBufferTypeAlbedo
+		SpecularAlbedo,      // sl::kBufferTypeSpecularAlbedo (F0)
 	};
 
 	// Opaque per-frame identity for SL's internal frame pipeline. Obtain exactly
@@ -78,6 +85,8 @@ export namespace nvidia
 		PFun_slAllocateResources*   fn_allocate_resources   = nullptr;
 		PFun_slUpgradeInterface*    fn_upgrade_interface    = nullptr;
 
+		PFun_slGetFeatureRequirements* fn_get_feature_requirements = nullptr;
+
 		bool initialized = false;
 		FrameToken cached_frame;
 
@@ -95,6 +104,13 @@ export namespace nvidia
 
 		// Must be called after bind_device() succeeded.
 		bool get_feature_function(Feature feature, const char* name, void*& fn) const;
+
+		// Bring-up diagnostic for DLSS-RR: the SDK headers don't document which
+		// tags a feature actually requires per-driver, only slGetFeatureRequirements
+		// does. Dumps the real list to workdir/<temp_file_name> (a .temp file, not
+		// the engine log — see CLAUDE.md's temporary-diagnostics convention).
+		// Remove once DLSS-RR's required tag set is confirmed working.
+		void log_feature_requirements(Feature feature, const char* temp_file_name) const;
 
 		// Must be called exactly once per engine frame, before any other
 		// per-frame SL call.

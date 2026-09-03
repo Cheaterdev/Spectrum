@@ -1,8 +1,18 @@
-﻿module Graphics:VoxelGI;
+﻿module;
+
+// TEMP (voxel_vsm_diag.temp diagnostic) -- global module fragment needed for
+// <fstream>/<cfloat>, same pattern as HAL.Streamline.cpp's own std::ofstream
+// usage. Remove alongside the diagnostic block once the shadow-coverage
+// investigation is done.
+#include <fstream>
+#include <cfloat>
+
+module Graphics:VoxelGI;
 import RenderSystem;
 
 
 import Graphics;
+import :UpscalingDLSS;
 import HAL;
 import Core;
 
@@ -278,7 +288,7 @@ public:
 
 
 
-VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
+VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableContext(L"VoxelGI")
 {
 	scene->on_element_add.register_handler(this, [this](scene_object* object) {
 		auto render_object = dynamic_cast<MeshAssetInstance*>(object);
@@ -425,8 +435,9 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		light_counter = (light_counter + 1) % 5;
 		if (!light_scene) return false;
 
-		builder.need(data.global_depth,          ResourceFlags::ComputeRead);
-		builder.need(data.global_camera,         ResourceFlags::ComputeRead);
+		builder.need(data.VSM_Atlas,              ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageTable,          ResourceFlags::ComputeRead);
+		builder.need(data.VSM_PageCameras,        ResourceFlags::ComputeRead);
 		builder.need(data.sky_cubemap_filtered,  ResourceFlags::PixelRead);
 		builder.need(data.VoxelLighted,          ResourceFlags::UnorderedAccess);
 		builder.need(data.VoxelAlbedo,           ResourceFlags::ComputeRead);
@@ -474,16 +485,61 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 			params.GetVoxels_per_tile().xyz =
 				tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 
-			auto& pssm = ligthing.GetPssmGlobal();
-			pssm.GetLight_buffer() = data.global_depth->texture2D;
-			auto buffer_view = data.global_camera->resource->create_view<
-				HAL::StructuredBufferView<Table::Camera>>(list);
-			pssm.GetLight_camera() = buffer_view;
+			auto& vsm_lookup = ligthing.GetVsm();
+			// this-> needed: the ctor parameter also named "vsm" shadows the
+			// member of the same name within this lexical scope, and a
+			// [this]-only lambda can't implicitly capture a local parameter.
+			this->vsm.fill_shadow_lookup_constants(vsm_lookup, cam.cam->position);
+			vsm_lookup.GetVsm_atlas()    = data.VSM_Atlas->texture2DArray;
+			vsm_lookup.GetPage_table()   = data.VSM_PageTable->texture2DArray;
+			vsm_lookup.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
 
 			compute.set(ligthing);
+
+			// TEMP diagnostic (voxel_vsm_diag.temp) -- checking whether VSM's
+			// active window actually covers the (fixed, whole-scene-bounds)
+			// voxel GI volume, since "no shadows" after switching Lighting
+			// from PSSM_Global to VSM would be exactly what a coverage gap
+			// looks like. Logged once.
+			{
+				static bool logged_once = false;
+				if (!logged_once)
+				{
+					logged_once = true;
+					float3 corners[8];
+					for (int i = 0; i < 8; i++)
+						corners[i] = this->min + this->size * float3((i & 1) ? 1.f : 0.f, (i & 2) ? 1.f : 0.f, (i & 4) ? 1.f : 0.f);
+
+					float2 ls_min = float2( FLT_MAX,  FLT_MAX);
+					float2 ls_max = float2(-FLT_MAX, -FLT_MAX);
+					for (int i = 0; i < 8; i++)
+					{
+						float2 ls = (float4(corners[i], 1) * vsm_lookup.GetLight_view()).xy;
+						ls_min = float2(std::min(ls_min.x, ls.x), std::min(ls_min.y, ls.y));
+						ls_max = float2(std::max(ls_max.x, ls.x), std::max(ls_max.y, ls.y));
+					}
+
+					std::ofstream f("voxel_vsm_diag.temp", std::ios::app);
+					f << "voxel bounds: min=(" << this->min.x << "," << this->min.y << "," << this->min.z
+					  << ") size=(" << this->size.x << "," << this->size.y << "," << this->size.z << ")\n";
+					f << "voxel bounds in light-space XY: min=(" << ls_min.x << "," << ls_min.y
+					  << ") max=(" << ls_max.x << "," << ls_max.y << ")\n";
+					f << "active_min=" << vsm_lookup.GetActive_min() << " active_max=" << vsm_lookup.GetActive_max() << "\n";
+					for (int level = vsm_lookup.GetActive_min(); level <= vsm_lookup.GetActive_max(); level++)
+					{
+						float4 info = vsm_lookup.GetLevel_info()[level];
+						float extent = info.z * vsm_lookup.GetPages_per_level();
+						f << "  level " << level << ": origin=(" << info.x << "," << info.y
+						  << ") extent=" << extent << " covers=["
+						  << info.x << "," << (info.x + extent) << "]x[" << info.y << "," << (info.y + extent) << "]\n";
+					}
+					f.close();
+				}
+			}
 		}
 
 		context.graph->set_slot(SlotID::VoxelInfo, compute);
+		context.graph->set_slot(SlotID::FrameInfo, compute);
 		compute.exec_indirect(gpu_tiles_buffer[0]->dispatch_buffer, 1);
 	};
 
@@ -1072,13 +1128,65 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		                   data.ReflectionDenoiser_AverageRadiance->resource);
 	};
 
+	// ---- NormalRoughnessRepack -------------------------------------------
+	// Decodes GBuffer_Normals' best-fit-compressed normal into a Streamline-
+	// compatible unpacked buffer, and derives SpecularAlbedo (F0) from
+	// GBuffer_Albedo in the same dispatch. Both feed UpscalingDLSSRR's
+	// evaluate() call (see UpscalingDLSSRR.cpp / HAL.DLSSRR.cpp). Both are
+	// pure GBuffer-derived material properties, not reflection-specific, so
+	// this doesn't gate on `reflecton` -- only on DLSS-RR being the user's
+	// selected upscaler (g_upscaler_type) and actually available.
+
+	m_normalroughnessrepack_setup = [this](Passes::NormalRoughnessRepack::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		if (g_upscaler_type != UpscalerType::DLSSRR || !nvidia::DLSSRR::get().available()) return false;
+
+		auto& frame = builder.graph->get_context<ViewportInfo>();
+		builder.need(data.GBuffer_Normals, ResourceFlags::ComputeRead);
+		builder.need(data.GBuffer_Albedo,  ResourceFlags::ComputeRead);
+		builder.create(data.NormalRoughness,
+			{ ivec3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
+			ResourceFlags::UnorderedAccess);
+		builder.create(data.SpecularAlbedo,
+			{ ivec3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
+			ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_normalroughnessrepack_render = [this](Passes::NormalRoughnessRepack::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& compute = context.get_list()->get_compute();
+		auto  sz      = context.graph->get_context<ViewportInfo>().frame_size;
+
+		compute.set_pipeline<PSOS::NormalRoughnessRepack>();
+		Slots::NormalRoughnessRepackParams params;
+		params.GBuffer_Normals        = data.GBuffer_Normals->texture2D;
+		params.GBuffer_Albedo         = data.GBuffer_Albedo->texture2D;
+		params.Output                 = data.NormalRoughness->rwTexture2D;
+		params.SpecularAlbedoOutput   = data.SpecularAlbedo->rwTexture2D;
+		compute.set(params);
+		// dispatch(a, b) takes the full pixel size and divides by the group
+		// size itself (ceil(a/b)) -- passing an already-divided group count
+		// as a single-arg call left it dividing by the DEFAULT group size
+		// (4,4,4) a second time instead of matching this shader's actual
+		// [numthreads(8,8,1)], covering only a fraction of the screen.
+		compute.dispatch(uint3(sz, 1), uint3(8, 8, 1));
+	};
+
 	// ---- ReflCombine ----------------------------------------------------
 
 	m_reflcombine_setup = [this](Passes::ReflCombine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		if (!reflecton) return false;
+		// RTXCombine (voxel.sig) takes over this job -- reflections plus
+		// indirect GI plus shadow, all three -- whenever the user has picked
+		// DLSS-RR via g_upscaler_type; same gate as its own setup, kept in
+		// lockstep here.
+		if (!reflecton ||
+		    (g_upscaler_type == UpscalerType::DLSSRR &&
+		     RenderSystem::get().device().is_rtx_supported() && nvidia::DLSSRR::get().available()))
+			return false;
 
-		builder.need(data.ResultTexture,        ResourceFlags::UnorderedAccess);
+		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 		GBufferViewDesc::need(builder, data.gbuffer);
 		builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
 		return true;

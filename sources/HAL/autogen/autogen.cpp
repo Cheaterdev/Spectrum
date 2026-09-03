@@ -78,6 +78,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FrameGraph_Debug_TextureCube") return SlotID::FrameGraph_Debug_TextureCube;
 	if(slot_name == "StatGraph") return SlotID::StatGraph;
 	if(slot_name == "StatGraphLine") return SlotID::StatGraphLine;
+	if(slot_name == "NormalRoughnessRepackParams") return SlotID::NormalRoughnessRepackParams;
 	if(slot_name == "VoxelInfo") return SlotID::VoxelInfo;
 	if(slot_name == "Voxelization") return SlotID::Voxelization;
 	if(slot_name == "VoxelScreen") return SlotID::VoxelScreen;
@@ -96,6 +97,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FrameClassification") return SlotID::FrameClassification;
 	if(slot_name == "FrameClassificationInitDispatch") return SlotID::FrameClassificationInitDispatch;
 	if(slot_name == "ReflectionCombine") return SlotID::ReflectionCombine;
+	if(slot_name == "RTXCombine") return SlotID::RTXCombine;
 	if(slot_name == "VSMConstants") return SlotID::VSMConstants;
 	if(slot_name == "VSMPageTableData") return SlotID::VSMPageTableData;
 	if(slot_name == "VSMPageHiZ") return SlotID::VSMPageHiZ;
@@ -259,6 +261,8 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::StatGraphLine) return Slots::StatGraphLine::Slot::ID;
 
+	if(id == SlotID::NormalRoughnessRepackParams) return Slots::NormalRoughnessRepackParams::Slot::ID;
+
 	if(id == SlotID::VoxelInfo) return Slots::VoxelInfo::Slot::ID;
 
 	if(id == SlotID::Voxelization) return Slots::Voxelization::Slot::ID;
@@ -294,6 +298,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::FrameClassificationInitDispatch) return Slots::FrameClassificationInitDispatch::Slot::ID;
 
 	if(id == SlotID::ReflectionCombine) return Slots::ReflectionCombine::Slot::ID;
+
+	if(id == SlotID::RTXCombine) return Slots::RTXCombine::Slot::ID;
 
 	if(id == SlotID::VSMConstants) return Slots::VSMConstants::Slot::ID;
 
@@ -406,6 +412,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FrameGraph_Debug_TextureCube) return "FrameGraph_Debug_TextureCube";
 	if(id == SlotID::StatGraph) return "StatGraph";
 	if(id == SlotID::StatGraphLine) return "StatGraphLine";
+	if(id == SlotID::NormalRoughnessRepackParams) return "NormalRoughnessRepackParams";
 	if(id == SlotID::VoxelInfo) return "VoxelInfo";
 	if(id == SlotID::Voxelization) return "Voxelization";
 	if(id == SlotID::VoxelScreen) return "VoxelScreen";
@@ -424,6 +431,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FrameClassification) return "FrameClassification";
 	if(id == SlotID::FrameClassificationInitDispatch) return "FrameClassificationInitDispatch";
 	if(id == SlotID::ReflectionCombine) return "ReflectionCombine";
+	if(id == SlotID::RTXCombine) return "RTXCombine";
 	if(id == SlotID::VSMConstants) return "VSMConstants";
 	if(id == SlotID::VSMPageTableData) return "VSMPageTableData";
 	if(id == SlotID::VSMPageHiZ) return "VSMPageHiZ";

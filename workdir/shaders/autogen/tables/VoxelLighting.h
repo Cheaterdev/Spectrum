@@ -7,7 +7,7 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-#include "PSSMDataGlobal.h"
+#include "VSMShadowLookup.h"
 #include "VoxelTilingParams.h"
 struct VoxelLighting
 {
@@ -16,9 +16,9 @@ struct VoxelLighting
 	uint lower; // Texture3D<float4>
 	uint tex_cube; // TextureCube<float4>
 	uint output; // RWTexture3D<float4>
-	PSSMDataGlobal pssmGlobal; // PSSMDataGlobal
+	VSMShadowLookup vsm; // VSMShadowLookup
 	VoxelTilingParams params; // VoxelTilingParams
-	PSSMDataGlobal GetPssmGlobal() { return pssmGlobal; }
+	VSMShadowLookup GetVsm() { return vsm; }
 	VoxelTilingParams GetParams() { return params; }
 	RWTexture3D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
 	Texture3D<float4> GetAlbedo() { return ResourceDescriptorHeap[albedo]; }

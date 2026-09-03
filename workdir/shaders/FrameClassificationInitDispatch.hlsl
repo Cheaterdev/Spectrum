@@ -19,11 +19,6 @@ void CS(
     uint  groupIndex    : SV_GroupIndex
 )
 {
-    Log("bare call: ratio=%f hi=%u", (float)hi[0] / max(low[0], 1), hi[0]);
-
- //   LOG_TEST("via macro: hi*2=%u low*2=%u", hi[0] * 2, low[0] * 2);
-
-
     {
         DispatchArguments dinfo;
         dinfo.counts = divide_by_multiple(uint3(hi[0]*32,32,1), uint3(8, 8, 1));

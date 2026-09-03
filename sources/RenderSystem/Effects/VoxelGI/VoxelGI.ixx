@@ -1,5 +1,6 @@
 export module Graphics:VoxelGI;
 import :PSSM;
+import :VSM;
 import :VisibilityBuffer;
 import :TileDynamicGenerator;
 import :GPUTilesBuffer;
@@ -83,6 +84,7 @@ private:
 	TileDynamicGenerator dynamic_generator_lighted;
 
 	Scene::ptr& scene;
+	VSM& vsm;
 
 	int all_scene_regen_counter = 0;
 
@@ -123,6 +125,8 @@ private:
 	Passes::ScreenReflection::render_func_type             m_screenreflection_render;
 	Passes::ReflectionDenoiser_Reproject::setup_func_type  m_refldenoisereproject_setup;
 	Passes::ReflectionDenoiser_Reproject::render_func_type m_refldenoisereproject_render;
+	Passes::NormalRoughnessRepack::setup_func_type         m_normalroughnessrepack_setup;
+	Passes::NormalRoughnessRepack::render_func_type        m_normalroughnessrepack_render;
 	Passes::ReflCombine::setup_func_type                   m_reflcombine_setup;
 	Passes::ReflCombine::render_func_type                  m_reflcombine_render;
 	Passes::VoxelDebug::setup_func_type                    m_voxeldebug_setup;
@@ -157,11 +161,11 @@ public:
 	void resize(ivec2 size);
 	void start_new(HAL::CommandList& list);
 
-	VoxelGI(Scene::ptr& scene);
+	VoxelGI(Scene::ptr& scene, VSM& vsm);
 	void generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PSSM& pssm);
 
 	template<typename TPipeline>
-	explicit VoxelGI(TPipeline& pipeline, Scene::ptr& scene) : VoxelGI(scene)
+	explicit VoxelGI(TPipeline& pipeline, Scene::ptr& scene, VSM& vsm) : VoxelGI(scene, vsm)
 	{
 		pipeline.voxelize.setup_func          = m_voxelize_setup;
 		pipeline.voxelize.render_func         = m_voxelize_render;
@@ -177,6 +181,8 @@ public:
 		pipeline.screenReflection.render_func = m_screenreflection_render;
 		pipeline.reflectionDenoiser_Reproject.setup_func  = m_refldenoisereproject_setup;
 		pipeline.reflectionDenoiser_Reproject.render_func = m_refldenoisereproject_render;
+		pipeline.normalRoughnessRepack.setup_func = m_normalroughnessrepack_setup;
+		pipeline.normalRoughnessRepack.render_func = m_normalroughnessrepack_render;
 		pipeline.reflCombine.setup_func       = m_reflcombine_setup;
 		pipeline.reflCombine.render_func      = m_reflcombine_render;
 		pipeline.voxelDebug.setup_func        = m_voxeldebug_setup;

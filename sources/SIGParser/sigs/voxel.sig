@@ -140,7 +140,7 @@ struct VoxelLighting
 
 	TextureCube<float4> tex_cube;
 
-    PSSMDataGlobal pssmGlobal;
+	VSMShadowLookup vsm;
 
 	VoxelTilingParams params;
 }
@@ -469,6 +469,33 @@ ComputePSO ReflectionCombine
 	compute = reflection_combine;
 }
 
+# Computes full lighting on its own -- NOT a composite over ResultTexture
+# (which carries VSM/PSSM's shadow baked into it already, the exact problem
+# that made combining RTXShadowNoise into it ambiguous). Direct sun lighting
+# here uses the SAME formula every RTX hit point in the engine uses
+# (MyClosestHitShader, UniversalMaterialRaytracing.hlsl: albedo * NdotL *
+# sun_visibility), with RTXShadowNoise standing in for that hit-shader's own
+# traced sun_vis. Reflection/indirect GI add on top. Output goes to
+# ResultTextureRTXNoise -- ResultTexture is untouched, not even read.
+[Bind = DefaultLayout::Instance0]
+struct RTXCombine
+{
+	GBuffer gbuffer;
+	Texture2D<float4> reflection;
+	Texture2D<float4> indirect;
+	Texture2D<float4> shadow;
+
+	RWTexture2D<float4> target;
+}
+
+ComputePSO RTXCombine
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = RTXCombine;
+}
+
 
 PassNode GBufferDownsampler
 {
@@ -537,12 +564,87 @@ PassNode ScreenReflection
 	StructuredBuffer<uint2> VoxelScreen_hi_data;
 }
 
+# RTX-only sibling of ScreenReflection, for DLSS-RR's consumption
+# (UpscalingDLSSRR.sig). A genuinely independent pass, not a variant of
+# ScreenReflection's dispatch: dispatches its own standalone raygen
+# (MyRaygenShaderReflectionRTXOnly, raytracing.hlsl) that shares no code with
+# MyRaygenShaderReflection -- one ray per pixel, blue-noise-jittered
+# direction, no VoxelInfo/voxel cone trace, no voxel-cone fallback on miss.
+# Untouched: ScreenReflection itself, its raygen, and the old FFX
+# ReflectionDenoiser_Reproject/ReflCombine pipeline VoxelReflectionNoise
+# feeds. [Static]: nothing here is VoxelGI-private -- gated purely on RTX
+# support and DLSS-RR availability, both globally accessible.
+[Static]
+[Compute]
+PassNode ReflectionRTX
+{
+	GBuffer gbuffer;
+	Texture BlueNoise;
+
+	[Write] Texture RTXReflectionNoise;
+	[Write] Texture RTXReflectionDirPdf;
+}
+
+# RTX-only reference shadow, sibling of ReflectionRTX/IndirectRTX -- same
+# rationale (see ReflectionRTX's doc comment above). One ray per pixel
+# toward a jittered direction within the sun's angular disk (same technique
+# ShadowRaygenShader's own 16-sample reference uses, just 1 sample instead
+# of 16 -- genuinely noisy, not averaged), no temporal history. Composited
+# by RTXCombine below; RTXShadow itself (Bend/FFX hybrid denoiser) is
+# unaffected -- this is a separate signal, not a replacement.
+[Static]
+[Compute]
+PassNode ShadowRTX
+{
+	GBuffer gbuffer;
+
+	[Write] Texture RTXShadowNoise;
+}
+
+# RTX-only reference diffuse GI, sibling of ReflectionRTX/ShadowRTX. One ray
+# per pixel, GGX-importance-sampled hemisphere direction, no voxel-cone-trace
+# fallback on miss, no temporal history. Composited by RTXCombine below;
+# VoxelScreen's Indirect dispatch is unaffected -- this is a separate signal,
+# not a replacement.
+[Static]
+[Compute]
+PassNode IndirectRTX
+{
+	GBuffer gbuffer;
+	Texture BlueNoise;
+
+	[Write] Texture RTXIndirectNoise;
+}
+
+# Composites the FFX-denoised voxel/RTX reflection blend (ScreenReflection +
+# ReflectionDenoiser_Reproject) onto ResultTexture. Does NOT run when
+# RTXCombine will (see RTXCombine's own doc comment below) -- exactly one of
+# the two composites onto ResultTexture each frame.
 [Compute]
 PassNode ReflCombine
 {
 	GBuffer gbuffer;
 	[Write] Texture ResultTexture;
 	Texture VoxelReflectionNoise;
+}
+
+# DLSS-RR-active counterpart to ReflCombine, but NOT a composite over
+# ResultTexture -- it computes full lighting itself (direct sun + reflection
+# + indirect GI, see RTXCombine.hlsl) and writes ResultTextureRTXNoise, the
+# ColorIn UpscalingDLSSRR tags. ResultTexture (and whatever VSM/PSSM baked
+# into it) plays no part here at all. Gated identically to its three
+# producers -- runs instead of ReflCombine whenever DLSS-RR is the active
+# upscaler.
+[Static]
+[Compute]
+PassNode RTXCombine
+{
+	GBuffer gbuffer;
+	Texture RTXReflectionNoise;
+	Texture RTXIndirectNoise;
+	Texture RTXShadowNoise;
+
+	[Write] Texture ResultTextureRTXNoise;
 }
 
 PassNode Voxelize
@@ -558,8 +660,9 @@ PassNode Voxelize
 [Compute]
 PassNode Lighting
 {
-	Texture global_depth;
-	StructuredBuffer<Camera> global_camera;
+	Texture VSM_Atlas;
+	Texture VSM_PageTable;
+	StructuredBuffer<Camera> VSM_PageCameras;
 	[Write] Texture3D VoxelLighted;
 	Texture3D VoxelAlbedo;
 	Texture3D VoxelNormal;

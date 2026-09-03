@@ -510,6 +510,19 @@ public:
 
 	void pass_data(FrameGraph::TaskBuilder& builder);
 
+	// For consumers outside VSM's own passes that only need a simple
+	// depth-compare sample (VSMShadowLookup/get_shadow_vsm_simple), not the
+	// full penumbra/PCSS pipeline -- e.g. VoxelGI's Lighting pass, which
+	// runs before VSM_BlockerClassify/Search/ShadowResolve in the frame (see
+	// test.sig's MainPipeline ordering). Fills only the scalar level-lookup
+	// fields (active_min/max/page_size/pages_per_level/light_view/
+	// level_info) -- every VSM render() function rebuilds this same block
+	// inline today (see VSM.cpp), this is that block factored out for reuse.
+	// The caller still fills VSMShadowLookup's own vsm_atlas/page_table/
+	// page_cameras fields itself from its own FrameGraph-bound resources
+	// (VSM doesn't own those FrameGraph handles outside its own passes).
+	void fill_shadow_lookup_constants(Table::VSMShadowLookup& out, float3 cam_world_pos) const;
+
 	VSM();
 
 	template<typename TPipeline>

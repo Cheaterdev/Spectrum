@@ -69,6 +69,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_TextureCube>(device, pso[PSO::FrameGraph_Debug_TextureCube]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraph_Debug_NotImplemented>(device, pso[PSO::FrameGraph_Debug_NotImplemented]));
 	tasks.emplace_back(PSOBase::create<PSOS::StatGraph>(device, pso[PSO::StatGraph]));
+	tasks.emplace_back(PSOBase::create<PSOS::NormalRoughnessRepack>(device, pso[PSO::NormalRoughnessRepack]));
 	tasks.emplace_back(PSOBase::create<PSOS::Lighting>(device, pso[PSO::Lighting]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDownsample>(device, pso[PSO::VoxelDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelCopy>(device, pso[PSO::VoxelCopy]));
@@ -80,6 +81,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::FrameClassification>(device, pso[PSO::FrameClassification]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameClassificationInitDispatch>(device, pso[PSO::FrameClassificationInitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::ReflectionCombine>(device, pso[PSO::ReflectionCombine]));
+	tasks.emplace_back(PSOBase::create<PSOS::RTXCombine>(device, pso[PSO::RTXCombine]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepth>(device, pso[PSO::VSMCopyPageDepth]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepthBatch>(device, pso[PSO::VSMCopyPageDepthBatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDownsampleHiZBatch>(device, pso[PSO::VSMDownsampleHiZBatch]));

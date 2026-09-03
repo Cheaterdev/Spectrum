@@ -8,7 +8,7 @@
 
 struct ColorRTX: public RaytraceRaygen<ColorRTX>
 {
-	static const constexpr uint ID = 3;
+	static const constexpr uint ID = 6;
 	static const constexpr std::string_view shader = "shaders\\raytracing_debug.hlsl";
 	static const constexpr std::wstring_view raygen = L"ColorRTXRaygenShader";
 };

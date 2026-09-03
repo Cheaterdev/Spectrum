@@ -171,6 +171,24 @@ void VSM::pass_data(FrameGraph::TaskBuilder& builder)
 	builder.pass_texture(FrameGraph::ResourceID::VSM_Atlas, vsm_atlas_tex->resource);
 }
 
+void VSM::fill_shadow_lookup_constants(Table::VSMShadowLookup& out, float3 cam_world_pos) const
+{
+	out.GetActive_min()      = active_min;
+	out.GetActive_max()      = active_max;
+	out.GetPage_size()       = page_table.page_size;
+	out.GetPages_per_level() = page_table.clipmap.pages_per_level;
+
+	camera light_cam = make_light_view_camera(frame_light_pos);
+	out.GetLight_view() = light_cam.get_view();
+
+	float2 cam_pos_ls = (float4(cam_world_pos, 1) * light_cam.get_view()).xy;
+	for (int level = 0; level < page_table.clipmap.level_count; level++)
+	{
+		float2 origin = page_table.clipmap.grid_origin(level, cam_pos_ls);
+		out.GetLevel_info()[level] = float4(origin.x, origin.y, page_table.clipmap.page_world_size(level), 0.0f);
+	}
+}
+
 void VSM::plan_frame(FrameGraph::Graph& graph)
 {
 	// Propagates into RTXShadow::render (PassDefaults.cpp) via the RTX
@@ -193,23 +211,21 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	if (!scene)
 		return;
 
-	// While a non-Final debug view is selected, UI_Render points its own
-	// need() at a different GBuffer/debug resource instead of ResultTexture
-	// (GUI/Base.cpp's debug_source) -- nothing consumes ResultTexture that
-	// frame, so FrameGraph's dependency-based culling drops VSM_Combine and,
-	// transitively, VSM_RenderPages/VSM_HiZRebuild (none of them
-	// [Required]). This function isn't part of that cullable pass graph --
-	// it's a plain add_slot_generator callback -- so without this check it
-	// would keep planning (evicting, priority-stealing, dirty-tracking)
-	// every frame regardless, as if pages were still being rendered, while
-	// nothing ever actually redraws them. Switching back to Final then
-	// resumes rendering against a page table that drifted out from under
-	// the GPU's real content (confirmed live: pages visibly evicted/wrong
-	// on returning to Final after time spent in another debug view).
-	// Freezing here instead -- the page table simply holds whatever it held
-	// the last time this actually ran, and picks back up cleanly.
-	if (graph.get_context<FrameGraph::DebugContext>().mode != FrameGraph::DebugMode::Final)
-		return;
+	// TEMP: disabled while investigating the VoxelTrace-debug-mode freeze --
+	// this guard's own premise (nothing consumes VSM_Atlas/PageTable/
+	// PageCameras during a non-Final debug view, so FrameGraph culls
+	// VSM_RenderPages/VSM_HiZRebuild and this function must freeze planning
+	// to match) may no longer hold now that VoxelGI's Lighting pass also
+	// need()s those same resources, and Lighting stays required via
+	// VoxelDebug regardless of DebugMode -- see voxel_lighting.hlsl's VSM
+	// integration. If that's right, VSM_RenderPages is no longer culled in
+	// VoxelTrace mode, and this early-return was instead the thing freezing
+	// it (rendering still ran off here-frozen dirty_mask=0 plans). Original
+	// guard, restore if removing it regresses the earlier pages-evicted-on-
+	// return-to-Final bug this was written to fix:
+	//
+	// if (graph.get_context<FrameGraph::DebugContext>().mode != FrameGraph::DebugMode::Final)
+	// 	return;
 
 	// Re-enabling after a period with the pyramid un-rebuilt: any page
 	// redrawn while disabled has stale Hi-Z content that no longer matches

@@ -19,9 +19,12 @@ public:
 	{
 
 
-		Handlers::Texture global_depth = ResourceID::global_depth;
+		Handlers::Texture VSM_Atlas = ResourceID::VSM_Atlas;
 
-		Handlers::StructuredBuffer<Table::Camera> global_camera = ResourceID::global_camera;
+
+		Handlers::Texture VSM_PageTable = ResourceID::VSM_PageTable;
+
+		Handlers::StructuredBuffer<Table::Camera> VSM_PageCameras = ResourceID::VSM_PageCameras;
 
 
 		Handlers::Texture3D VoxelLighted = ResourceID::VoxelLighted;
@@ -51,8 +54,9 @@ public:
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::global_depth, false },
-			{ ResourceID::global_camera, false },
+			{ ResourceID::VSM_Atlas, false },
+			{ ResourceID::VSM_PageTable, false },
+			{ ResourceID::VSM_PageCameras, false },
 			{ ResourceID::VoxelLighted, true },
 			{ ResourceID::VoxelAlbedo, false },
 			{ ResourceID::VoxelNormal, false },

@@ -46,6 +46,15 @@ struct VSMBlockerClassifyResult
 	float3 xaxis;
 	float3 yaxis;
 	float3 zaxis;
+	// Aggregate Hi-Z MAX (closest-to-light) reading over the 4 classify
+	// corners, i.e. minmax.y from the mip_available block below -- kept
+	// around (not just used inline for confident_lit/confident_dark) so
+	// vsm_search_blocker can fall back to it when the real 16-tap random
+	// search finds nothing. -3.402823466e+38 (a value no real NDC-Z sample
+	// can produce) when the Hi-Z classify step didn't run at all (hiz
+	// classify toggle off, or !mip_available) -- see hiz_max_valid.
+	float hiz_max;
+	bool  hiz_max_valid;
 };
 
 // Callers must NOT early-return before calling this for any reason (sky
@@ -155,6 +164,8 @@ VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighti
 	// pass), just arrived at for a different, always-exact reason.
 	bool confident_dark = geometric_dark;
 	bool via_coarser = false;
+	float hiz_max = -3.402823466e+38;
+	bool  hiz_max_valid = false;
 	if (valid && !geometric_dark && c.GetHiz_blocker_classify() != 0)
 	{
 		float page_world_size_here = c.GetLevel_info(level).z;
@@ -253,6 +264,12 @@ VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighti
 				// everywhere; only XY differs per page.
 				confident_lit  = minmax.y < pos_l.z;
 				confident_dark = !confident_lit && minmax.x > pos_l.z;
+				// Kept regardless of the confident_lit/confident_dark verdict
+				// -- see vsm_search_blocker's own use of hiz_max for why an
+				// AMBIGUOUS classification still wants this exhaustive
+				// (every-texel-in-footprint) reduction on hand.
+				hiz_max = minmax.y;
+				hiz_max_valid = true;
 
 				// Hemisphere check (see use_vsm_hemisphere_cull's own
 				// comment, VSM.ixx, and vsm_search_blocker's matching
@@ -302,6 +319,8 @@ VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighti
 	result.xaxis = xaxis;
 	result.yaxis = yaxis;
 	result.zaxis = zaxis;
+	result.hiz_max = hiz_max;
+	result.hiz_max_valid = hiz_max_valid;
 	return result;
 }
 
@@ -344,6 +363,8 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 	float3 xaxis                       = cls.xaxis;
 	float3 yaxis                       = cls.yaxis;
 	float3 zaxis                       = cls.zaxis;
+	float hiz_max                      = cls.hiz_max;
+	bool  hiz_max_valid                = cls.hiz_max_valid;
 
 	bool hemisphere_cull = c.GetHemisphere_cull_blocker() != 0;
 
@@ -475,7 +496,33 @@ uint4 vsm_search_blocker(VSMConstants c, VSMLighting lighting, float3 wpos, uint
 		return uint4(asuint(via_coarser ? -5.0 : -2.0), 0, 0, 0);
 
 	if (blocker_count == 0)
-        return uint4(asuint(-1.0), 0, 0, 0);
+	{
+		// The random 16-tap search (blue-noise-rotated, so which texels it
+		// actually lands on varies per pixel) can legitimately miss a
+		// genuinely thin/sparse blocker -- a chain-link bar, a leaf edge, a
+		// fence slat -- purely because none of its taps happened to land on
+		// it, especially close to the blocker where its own footprint in
+		// texel space is narrowest. vsm_classify_blocker's own Hi-Z MAX
+		// reduction (hiz_max) is EXHAUSTIVE over every texel in the
+		// classify footprint (built via the mip-downsample chain, not
+		// sampled) -- it cannot miss a real blocker the way a handful of
+		// random taps can. Reaching here already guarantees hiz_max (when
+		// valid) is >= pos_l.z: confident_lit (the only case where Hi-Z
+		// itself says nothing is there) already returned above. Falling
+		// back to it here -- instead of defaulting straight to fully lit --
+		// is what actually fixes thin blockers going missing right at their
+		// own base. Conservative (one aggregate MAX over 4 corners, not a
+		// real tap position, so best_tc/best_slot below approximate "aim
+		// from the receiver's own position" rather than the blocker's real
+		// location) but far closer than no shadow at all.
+		if (hiz_max_valid && hiz_max > pos_l.z)
+		{
+			float world_delta_hiz = (hiz_max - pos_l.z) * depth_range;
+			float2 fallback_tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
+			return uint4(asuint(world_delta_hiz), asuint(fallback_tc.x), asuint(fallback_tc.y), slot);
+		}
+		return uint4(asuint(-1.0), 0, 0, 0);
+	}
 
 	float world_delta = (max_blocker_z - pos_l.z) * depth_range;
 	return uint4(asuint(world_delta), asuint(best_tc.x), asuint(best_tc.y), best_slot);

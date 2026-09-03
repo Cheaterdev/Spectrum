@@ -11,7 +11,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
-import :Autogen.Tables.PSSMDataGlobal;
+import :Autogen.Tables.VSMShadowLookup;
 import :Autogen.Tables.VoxelTilingParams;
 export namespace Table
 {
@@ -24,14 +24,14 @@ export namespace Table
 		HLSL::Texture3D<float4> lower;
 		HLSL::TextureCube<float4> tex_cube;
 		HLSL::RWTexture3D<float4> output;
-		PSSMDataGlobal pssmGlobal;
+		VSMShadowLookup vsm;
 		VoxelTilingParams params;
 		HLSL::RWTexture3D<float4>& GetOutput() { return output; }
 		HLSL::Texture3D<float4>& GetAlbedo() { return albedo; }
 		HLSL::Texture3D<float4>& GetNormals() { return normals; }
 		HLSL::Texture3D<float4>& GetLower() { return lower; }
 		HLSL::TextureCube<float4>& GetTex_cube() { return tex_cube; }
-		PSSMDataGlobal& GetPssmGlobal() { return pssmGlobal; }
+		VSMShadowLookup& GetVsm() { return vsm; }
 		VoxelTilingParams& GetParams() { return params; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
@@ -42,7 +42,7 @@ export namespace Table
 			compiler.compile(lower, "VoxelLighting::lower");
 			compiler.compile(tex_cube, "VoxelLighting::tex_cube");
 			compiler.compile(output, "VoxelLighting::output");
-			compiler.compile(pssmGlobal, "VoxelLighting::pssmGlobal");
+			compiler.compile(vsm, "VoxelLighting::vsm");
 			compiler.compile(params, "VoxelLighting::params");
 		}
 		struct Compiled
@@ -52,14 +52,14 @@ export namespace Table
 			uint lower; // Texture3D<float4>
 			uint tex_cube; // TextureCube<float4>
 			uint output; // RWTexture3D<float4>
-			PSSMDataGlobal::Compiled pssmGlobal; // PSSMDataGlobal
+			VSMShadowLookup::Compiled vsm; // VSMShadowLookup
 			VoxelTilingParams::Compiled params; // VoxelTilingParams
 
 			
 			private:
 			SERIALIZE()
 			{
-				ar& NVP(pssmGlobal);
+				ar& NVP(vsm);
 				ar& NVP(params);
 			}
 
@@ -73,7 +73,7 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
-			ar& NVP(pssmGlobal);
+			ar& NVP(vsm);
 			ar& NVP(params);
 		}
 

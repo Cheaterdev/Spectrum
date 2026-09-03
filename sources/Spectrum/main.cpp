@@ -66,14 +66,6 @@ public:
 	}
 };
 
-// Phase 1a toggle for the VSM implementation (see VSM implementation plan):
-// PSSM_Combine unconditionally overwrites ResultTexture whenever a PSSM
-// instance is wired into the pipeline, and VSM_Combine does the same for
-// VSM, so only one of the two may be wired at a time. Flip and rebuild to
-// switch which shadow system is live; PSSM's own construction is otherwise
-// untouched.
-#define SPECTRUM_USE_VSM_SHADOWS 1
-
 class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext
 {
 		Pipelines::MainPipeline pipeline;
@@ -133,7 +125,6 @@ public:
 	float draw_time;
 	MeshAssetInstance::ptr instance;
 
-	PSSM pssm;
 	VSM vsm;
 	SkyRender sky;
 	ShadowDenoiser shadow_denoiser;
@@ -148,10 +139,7 @@ public:
 	 RenderSystem::get().device().get_queue(CommandListType::COPY)->signal_and_wait();
 
 		 }
-		triangle_drawer() : VariableContext(L"triangle_drawer"), pipeline(), blue_noise(pipeline), smaa(pipeline), sky(pipeline), pssm(pipeline)
-#if SPECTRUM_USE_VSM_SHADOWS
-		, vsm(pipeline)
-#endif
+		triangle_drawer() : VariableContext(L"triangle_drawer"), pipeline(), blue_noise(pipeline), smaa(pipeline), sky(pipeline), vsm(pipeline)
 	{
 		// Pushed for the rest of this constructor: any VariableContext-derived
 		// member constructed from here on (stenciler, voxel_gi, mesh_renderer
@@ -163,20 +151,6 @@ public:
 		// constructing before this body even starts, so they need the
 		// explicit add_child re-parent instead.
 		VariableContext::Scope self_scope(*this);
-
-		// PSSM stays fully wired either way -- PSSM_Global's global_depth/global_camera
-		// are consumed unconditionally elsewhere in the pipeline (e.g. reflections),
-		// independent of whether PSSM's own cascade+combine shadow result is used.
-		// VSM's 48 page-render passes, by contrast, have no such external consumer,
-		// so vsm is only constructed (and its passes only registered at all) when
-		// this toggle is on -- otherwise it stays default-constructed and inert.
-		// Only the ResultTexture writer needs to be mutually exclusive (see plan
-		// notes on PSSM_Combine's unconditional overwrite): null out PSSM's combine
-		// pass here, from main.cpp, without touching PSSM's own source.
-#if SPECTRUM_USE_VSM_SHADOWS
-		pipeline.pSSM_Combine.setup_func  = nullptr;
-		pipeline.pSSM_Combine.render_func = nullptr;
-#endif
 
 		// vsm/main_view_*_context construct before this body runs (regular data
 		// members), so by the ctor-body-start rule they land under whatever was
@@ -233,12 +207,10 @@ public:
 		stenciler->scene = scene;
 		base::add_child(stenciler);
 
-#if SPECTRUM_USE_VSM_SHADOWS
 		// VSM is a class member (wired at construction, before scene exists
 		// above) -- its Phase 2 invalidation tracker registers scene event
 		// handlers here instead, once the scene is actually available.
 		vsm.attach_scene(scene);
-#endif
 
 
 		info.reset(new GUI::Elements::label);
@@ -269,7 +241,6 @@ public:
 			{
 				float2 v = value;
 				float3 dir = { 0.001 + v.x, sqrt(1.001 - v.length_squared()), -v.y };
-				pssm.set_position(dir);
 				vsm.set_position(dir);
 			});
 
@@ -358,7 +329,7 @@ public:
 		}
 
 
-		voxel_gi = std::make_shared<VoxelGI>(pipeline,scene);
+		voxel_gi = std::make_shared<VoxelGI>(pipeline,scene,vsm);
 	}
 
 	float scale_speed = 0;
@@ -488,7 +459,7 @@ public:
 		caminfo.cam = &cam;
 		timeinfo.time = (float)my_timer.tick();
 		timeinfo.totalTime += timeinfo.time;
-		skyinfo.sunDir = pssm.get_position();
+		skyinfo.sunDir = vsm.get_position();
 
 		// Exactly once per frame — a second call anywhere else would desync
 		// SL's internal frame counter.
@@ -497,11 +468,14 @@ public:
 
 		// Jitter only matters when something accumulates it temporally (DLSS)
 		// AND DLSS is actually the pass running this frame — g_upscaling_enabled
-		// off (downsampled toggled off) or DLSS unsupported both mean nothing
-		// consumes the jitter, so applying it would just add visible instability
-		// for no benefit. FSR1/native have no such accumulation either way.
+		// off (downsampled toggled off), a non-DLSS g_upscaler_type selection,
+		// or DLSS unsupported all mean nothing consumes the jitter, so
+		// applying it would just add visible instability for no benefit.
+		// FSR1/native have no such accumulation either way.
 		vec2 jitter_px(0, 0);
-		if (g_upscaling_enabled && nvidia::DLSS::get().available())
+		if (g_upscaling_enabled &&
+		    (g_upscaler_type == UpscalerType::DLSS || g_upscaler_type == UpscalerType::DLSSRR) &&
+		    upscaler_is_available(g_upscaler_type))
 		{
 			// Halton(2,3); phase count per NVIDIA's guidance: 8*(display/render)^2.
 			const float scale_x = float(vp.upscale_size.x) / float(vp.frame_size.x);
@@ -541,7 +515,6 @@ public:
 
 	   	voxel_gi->pass_data(graph.builder);
 
-#if SPECTRUM_USE_VSM_SHADOWS
 		vsm.pass_data(graph.builder);
 
 		// Single-threaded allocation-planning pass for all VSM clip levels,
@@ -553,7 +526,6 @@ public:
 			{
 				vsm.plan_frame(graph);
 			});
-#endif
 
 		graph.add_slot_generator([this](Graph& graph)
 			{
@@ -1463,6 +1435,39 @@ public:
 							[this, mode]() { graph.get_context<FrameGraph::DebugContext>().mode = mode; };
 					}
 					toolbar->add_child(debug_combo);
+
+					// Upscaler selector, writes g_upscaler_type. Only lists
+					// options actually available on this hardware (FSR is
+					// always valid); on/off is still via the separate
+					// "downsampled" toggle (g_upscaling_enabled), not an
+					// option here.
+					{
+						struct UpscalerOpt { const char* name; UpscalerType type; };
+						std::vector<UpscalerOpt> upscaler_opts = { { "FSR", UpscalerType::FSR } };
+						if (nvidia::DLSS::get().available())
+							upscaler_opts.push_back({ "DLSS", UpscalerType::DLSS });
+						if (nvidia::DLSSRR::get().available())
+							upscaler_opts.push_back({ "DLSS-RR", UpscalerType::DLSSRR });
+
+						auto upscaler_combo = std::make_shared<GUI::Elements::combo_box>();
+						upscaler_combo->docking = GUI::dock::TOP;
+						upscaler_combo->size = { 140, 24 };
+						for (auto& o : upscaler_opts)
+						{
+							auto type = o.type;
+							auto type_name = std::string(o.name);
+							upscaler_combo->add_item(o.name)->on_select =
+								[type, type_name]()
+								{
+									Log::get() << "[Upscaler] type changed " << (int)g_upscaler_type
+										<< " -> " << (int)type << " (" << type_name << ")" << Log::endl;
+									g_upscaler_type = type;
+								};
+							if (type == g_upscaler_type)
+								upscaler_combo->get_label()->text = o.name;
+						}
+						toolbar->add_child(upscaler_combo);
+					}
 
 					// DLSS-quality selector, writes g_upscaling_dlss_mode.
 					// "Off" isn't offered — DLSS on/off is via FSR/DLSS

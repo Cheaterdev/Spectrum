@@ -21,4 +21,26 @@ export
 	// availability check) so neither runs a pointless native-to-native
 	// upscale; SMAA gates on the opposite so native rendering still gets AA.
 	bool g_upscaling_enabled = true;
+
+	enum class UpscalerType { FSR, DLSS, DLSSRR };
+
+	// Explicit user choice among the upscalers, when g_upscaling_enabled is
+	// on — replaces the old implicit hardware-priority chain (DLSS-RR >
+	// DLSS-SR > FSR) with a direct switch, set by main.cpp's upscaler
+	// combobox (which only lists options actually available on this
+	// hardware). FSR is always valid (no hardware gate), so it's both the
+	// default and the automatic fallback (see upscaler_is_available())
+	// when the selected type turns out not to be available.
+	UpscalerType g_upscaler_type = UpscalerType::FSR;
+
+	bool upscaler_is_available(UpscalerType type)
+	{
+		switch (type)
+		{
+		case UpscalerType::DLSS:   return nvidia::DLSS::get().available();
+		case UpscalerType::DLSSRR: return nvidia::DLSSRR::get().available();
+		case UpscalerType::FSR:
+		default:                   return true;
+		}
+	}
 }

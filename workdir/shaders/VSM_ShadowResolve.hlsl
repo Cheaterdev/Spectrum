@@ -134,6 +134,22 @@ float vsm_pcf_shadow(VSMConstants c, VSMLighting lighting, int level, float2 pos
 	static const float VSM_MAX_PENUMBRA_WORLD = 3.0; // world units, tune to taste.
 	penumbra_world = min(penumbra_world, VSM_MAX_PENUMBRA_WORLD);
 	float penumbra_texels = clamp(penumbra_world / texel_world_size, 1.0, c.GetPage_size() * 4.0);
+	// penumbra_texels floors the ACTUAL tap spread to 1 texel (vsm_tap below),
+	// even when the true penumbra_world is near 0 right at a contact shadow --
+	// otherwise taps would collapse onto a single point and the search below
+	// would degenerate. w's own denominator must match that same floor: using
+	// the un-floored penumbra_world there lets any texel-scale depth
+	// difference (routine surface curvature, or a tap landing just past the
+	// edge of thin contact geometry) blow up depth_gap_world/penumbra_world
+	// and saturate w to 1.0 -- maximum confidence -- purely because the
+	// denominator is tinier than the spread actually being sampled, not
+	// because that tap is genuinely far outside the real penumbra. A tap that
+	// only exists due to the floor then votes "unshadowed" at full weight,
+	// diluting what should read as a solid, sharp, fully-dark contact shadow
+	// into a visibly weaker one. Flooring this the same way fixes that: a
+	// floor-only tap gets proportionately low confidence instead of an
+	// artificially maxed-out one.
+	float penumbra_world_floored = max(penumbra_world, texel_world_size);
 	float shadow = 0;
 	float sum_w = 0;
 	[unroll]
@@ -163,7 +179,7 @@ float vsm_pcf_shadow(VSMConstants c, VSMLighting lighting, int level, float2 pos
 
 		float scaler = 1;
 		float depth_gap_world = abs(pos_l_z * scaler - sampled) * depth_range;
-		float w = saturate(depth_gap_world / max(penumbra_world, 0.00001));
+		float w = saturate(depth_gap_world / penumbra_world_floored);
 		sum_w  += w;
 		shadow += w * (sampled < pos_l_z * scaler);
 	}

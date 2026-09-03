@@ -42,12 +42,18 @@ export import "../defines.h";
 #include "pass/UI_PreDraw.h"
 #include "pass/UI_Render.h"
 #include "pass/UpscalingDLSS.h"
+#include "pass/NormalRoughnessRepack.h"
+#include "pass/UpscalingDLSSRR.h"
 #include "pass/GBufferDownsampler.h"
 #include "pass/VoxelDebug.h"
 #include "pass/VoxelScreen.h"
 #include "pass/VoxelCombine.h"
 #include "pass/ScreenReflection.h"
+#include "pass/ReflectionRTX.h"
+#include "pass/ShadowRTX.h"
+#include "pass/IndirectRTX.h"
 #include "pass/ReflCombine.h"
+#include "pass/RTXCombine.h"
 #include "pass/Voxelize.h"
 #include "pass/Lighting.h"
 #include "pass/Mipmapping.h"
@@ -96,12 +102,18 @@ export namespace Passes
 	using ::Passes::UI_PreDraw;
 	using ::Passes::UI_Render;
 	using ::Passes::UpscalingDLSS;
+	using ::Passes::NormalRoughnessRepack;
+	using ::Passes::UpscalingDLSSRR;
 	using ::Passes::GBufferDownsampler;
 	using ::Passes::VoxelDebug;
 	using ::Passes::VoxelScreen;
 	using ::Passes::VoxelCombine;
 	using ::Passes::ScreenReflection;
+	using ::Passes::ReflectionRTX;
+	using ::Passes::ShadowRTX;
+	using ::Passes::IndirectRTX;
 	using ::Passes::ReflCombine;
+	using ::Passes::RTXCombine;
 	using ::Passes::Voxelize;
 	using ::Passes::Lighting;
 	using ::Passes::Mipmapping;

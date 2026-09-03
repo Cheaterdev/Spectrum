@@ -163,4 +163,59 @@ struct PassDefault<Passes::UpscalingDLSS>
 };
 
 
+template<>
+struct PassDefault<Passes::UpscalingDLSSRR>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+
+	static bool setup(Passes::UpscalingDLSSRR::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::UpscalingDLSSRR::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::ReflectionRTX>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	static bool setup(Passes::ReflectionRTX::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::ReflectionRTX::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::ShadowRTX>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	static bool setup(Passes::ShadowRTX::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::ShadowRTX::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::IndirectRTX>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	static bool setup(Passes::IndirectRTX::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::IndirectRTX::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::RTXCombine>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	static bool setup(Passes::RTXCombine::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::RTXCombine::Context& data, FrameGraph::FrameContext& context);
+};
+
+
 }

@@ -26,8 +26,6 @@ Pipeline MainPipeline
 	# voxel pre (generate_pre)
 	Voxelize;
 
-	PSSM_Global;
-	PSSM_Cascade;
 	VSM_GatherDispatch;
 	VSM_RenderPages;
 
@@ -52,15 +50,15 @@ Pipeline MainPipeline
 	# result target
 	ResultCreation;
 
-	# shadow composition (pssm.generate)
-	PSSM_GenerateMask;
-
 	[Async]ScreenReflection;
 	[Async]ReflectionDenoiser_Reproject;
+	[Async]NormalRoughnessRepack;
+	[Async]ReflectionRTX;
+	[Async]ShadowRTX;
+	[Async]IndirectRTX;
 
 											[Async]
 											RTXShadow;
-											[Async]PSSM_Combine;
 											[Async2]VSM_DepthAnalysis;
 											# Phase 5.18 Part A: must run before VSM_BlockerClassify/VSM_BlockerSearch
 											# now (both read VSM_PageHiZ) -- same [Async2] queue so that
@@ -89,6 +87,7 @@ Pipeline MainPipeline
 											VoxelCombine;
 	
 		[Async]ReflCombine;
+		[Async]RTXCombine;
 
 	# sky + post
 		[Async]Sky;
@@ -96,6 +95,7 @@ Pipeline MainPipeline
 	[Async]SMAA;
 	[Async]FSR;
 	UpscalingDLSS;
+	UpscalingDLSSRR;
 
 	stencil_renderer_after;
 

@@ -157,6 +157,17 @@ RaytraceRaygen Shadow
 	raygen = raytracing;
 }
 
+# Independent RTX-only reference: 1 ray per pixel, genuinely noisy soft
+# shadow (no 16-sample averaging, no temporal history) -- see
+# MyRaygenShaderShadowRTXOnly's doc comment in raytracing.hlsl and PassNode
+# ShadowRTX in voxel.sig.
+[Bind = MainRTX]
+RaytraceRaygen ShadowRTX
+{
+	[EntryPoint = MyRaygenShaderShadowRTXOnly]
+	raygen = raytracing;
+}
+
 
 [Bind = MainRTX]
 RaytraceRaygen Reflection
@@ -165,11 +176,32 @@ RaytraceRaygen Reflection
 	raygen = raytracing;
 }
 
+# Independent RTX-only reflection raygen, shares no code with Reflection
+# above -- see MyRaygenShaderReflectionRTXOnly's doc comment in
+# raytracing.hlsl and PassNode ReflectionRTX in voxel.sig.
+[Bind = MainRTX]
+RaytraceRaygen ReflectionRTX
+{
+	[EntryPoint = MyRaygenShaderReflectionRTXOnly]
+	raygen = raytracing;
+}
+
 
 [Bind = MainRTX]
 RaytraceRaygen Indirect
 {
 	[EntryPoint = MyRaygenShader]
+	raygen = raytracing;
+}
+
+# Independent RTX-only reference: 1 ray per pixel, genuinely noisy diffuse
+# GI (no voxel-cone-trace fallback on miss, no temporal history) -- see
+# MyRaygenShaderIndirectRTXOnly's doc comment in raytracing.hlsl and
+# PassNode IndirectRTX in voxel.sig.
+[Bind = MainRTX]
+RaytraceRaygen IndirectRTX
+{
+	[EntryPoint = MyRaygenShaderIndirectRTXOnly]
 	raygen = raytracing;
 }
 
