@@ -2,7 +2,7 @@
 #include "../autogen/FrameGraph_Debug_Common.h"
 
 
-#include "../Common.hlsl"
+#include "../common/common.hlsl"
 
 
 float2 intersectAABB(float3 rayOrigin, float3 rayDir, float3 boxMin, float3 boxMax)

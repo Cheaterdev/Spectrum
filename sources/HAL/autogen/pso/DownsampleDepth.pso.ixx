@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/downsample_depth.hlsl";
+			mpso.compute.file_name = "shaders/occlusion/downsample_depth.hlsl";
 			mpso.compute.entry_point = "CS";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

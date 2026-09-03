@@ -167,7 +167,7 @@ ComputePSO VSMCopyPageDepth
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = vsm_copy_page_depth;
+	compute = shadows/vsm/vsm_copy_page_depth;
 }
 
 # Phase 5.14: batches the copy step across every dirty page at once (Z
@@ -195,7 +195,7 @@ ComputePSO VSMCopyPageDepthBatch
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = vsm_copy_page_depth_batch;
+	compute = shadows/vsm/vsm_copy_page_depth_batch;
 }
 
 # Phase 5.14: one dispatch per mip level, covering every dirty page at once
@@ -230,7 +230,7 @@ ComputePSO VSMDownsampleHiZBatch
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = vsm_hiz_downsample_batch;
+	compute = shadows/vsm/vsm_hiz_downsample_batch;
 }
 
 [Bind = DefaultLayout::Instance0]
@@ -317,7 +317,7 @@ ComputePSO VSMBlockerClassify
 	root = DefaultLayout;
 
 	[EntryPoint = CS_BLOCKER_CLASSIFY]
-	compute = VSM_BlockerClassify;
+	compute = shadows/vsm/vsm_blocker_classify;
 }
 
 # Stage 2 follow-up: even a tile stage 1 bucketed as search_tiles can turn
@@ -394,7 +394,7 @@ ComputePSO VSMApplyCompute
 	root = DefaultLayout;
 
 	[EntryPoint = CS_RESULT]
-	compute = VSM;
+	compute = shadows/vsm/vsm;
 }
 
 # Blocker-search extraction: INDIRECT dispatch (Phase 5.18 Part A follow-up:
@@ -411,7 +411,7 @@ ComputePSO VSMBlockerSearchCompute
 	root = DefaultLayout;
 
 	[EntryPoint = CS_BLOCKER_SEARCH]
-	compute = VSM_BlockerSearch;
+	compute = shadows/vsm/vsm_blocker_search;
 }
 
 # Stage 3: three PSOs sharing one file (VSM_ShadowResolve.hlsl), one
@@ -423,7 +423,7 @@ ComputePSO VSMFullLit
 	root = DefaultLayout;
 
 	[EntryPoint = CS_FULL_LIT]
-	compute = VSM_ShadowResolve;
+	compute = shadows/vsm/vsm_shadow_resolve;
 }
 
 ComputePSO VSMFullShadow
@@ -431,7 +431,7 @@ ComputePSO VSMFullShadow
 	root = DefaultLayout;
 
 	[EntryPoint = CS_FULL_SHADOW]
-	compute = VSM_ShadowResolve;
+	compute = shadows/vsm/vsm_shadow_resolve;
 }
 
 ComputePSO VSMShadowBlur
@@ -439,7 +439,7 @@ ComputePSO VSMShadowBlur
 	root = DefaultLayout;
 
 	[EntryPoint = CS_SHADOW_BLUR]
-	compute = VSM_ShadowResolve;
+	compute = shadows/vsm/vsm_shadow_resolve;
 
 	# Once the blocker search (stage 2) finds a blocker, fires one RayQuery
 	# toward the sun to verify/correct its distance against the real BVH --
@@ -463,7 +463,7 @@ ComputePSO VSMDebugOverlayLit
 	root = DefaultLayout;
 
 	[EntryPoint = CS_OVERLAY_LIT]
-	compute = VSM_DebugTileOverlay;
+	compute = shadows/vsm/vsm_debug_tile_overlay;
 }
 
 ComputePSO VSMDebugOverlayDark
@@ -471,7 +471,7 @@ ComputePSO VSMDebugOverlayDark
 	root = DefaultLayout;
 
 	[EntryPoint = CS_OVERLAY_DARK]
-	compute = VSM_DebugTileOverlay;
+	compute = shadows/vsm/vsm_debug_tile_overlay;
 }
 
 ComputePSO VSMDebugOverlayConfirmedLit
@@ -479,7 +479,7 @@ ComputePSO VSMDebugOverlayConfirmedLit
 	root = DefaultLayout;
 
 	[EntryPoint = CS_OVERLAY_CONFIRMED_LIT]
-	compute = VSM_DebugTileOverlay;
+	compute = shadows/vsm/vsm_debug_tile_overlay;
 }
 
 ComputePSO VSMDebugOverlayBlur
@@ -487,7 +487,7 @@ ComputePSO VSMDebugOverlayBlur
 	root = DefaultLayout;
 
 	[EntryPoint = CS_OVERLAY_BLUR]
-	compute = VSM_DebugTileOverlay;
+	compute = shadows/vsm/vsm_debug_tile_overlay;
 }
 
 # Moved here from VSM_Combine's own combine_result (VSM.hlsl) now that stage
@@ -501,7 +501,7 @@ ComputePSO VSMDebugOverlayPageGrid
 	root = DefaultLayout;
 
 	[EntryPoint = CS_OVERLAY_PAGE_GRID]
-	compute = VSM_DebugTileOverlay;
+	compute = shadows/vsm/vsm_debug_tile_overlay;
 }
 
 ComputePSO VSMDebugOverlayRtxReference
@@ -509,7 +509,7 @@ ComputePSO VSMDebugOverlayRtxReference
 	root = DefaultLayout;
 
 	[EntryPoint = CS_OVERLAY_RTX_REFERENCE]
-	compute = VSM_DebugTileOverlay;
+	compute = shadows/vsm/vsm_debug_tile_overlay;
 }
 
 # Amplification-shader-driven compaction (Phase 1b): CPU dispatches AS
@@ -527,10 +527,10 @@ GraphicsPSO VSMDepthDraw
 	pixel = null;
 
 	[EntryPoint = VS]
-	mesh = mesh_shader_vsm;
+	mesh = shadows/vsm/mesh_shader_vsm;
 
 	[EntryPoint = AS]
-	amplification = mesh_shader_vsm;
+	amplification = shadows/vsm/mesh_shader_vsm;
 
 	ds = D32_FLOAT;
 	# Back to cull=Front (render only back faces -- avoids self-shadow acne
@@ -566,10 +566,10 @@ GraphicsPSO VSMDepthDrawMaterial
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	mesh = mesh_shader_vsm;
+	mesh = shadows/vsm/mesh_shader_vsm;
 
 	[EntryPoint = AS]
-	amplification = mesh_shader_vsm;
+	amplification = shadows/vsm/mesh_shader_vsm;
 
 	ds = D32_FLOAT;
 	cull = Front;
@@ -645,7 +645,7 @@ ComputePSO VSMGatherDispatch
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = vsm_gather_dispatch;
+	compute = shadows/vsm/vsm_gather_dispatch;
 }
 
 # Phase 5.19: alpha-cutout material routing. A different PSO from
@@ -679,7 +679,7 @@ ComputePSO VSMGatherDispatchMaterial
 	root = DefaultLayout;
 
 	[EntryPoint = CS_MATERIAL]
-	compute = vsm_gather_dispatch;
+	compute = shadows/vsm/vsm_gather_dispatch;
 }
 
 # GPU-driven replacement for VSM.cpp's old per-frame scene->iterate_meshes()
@@ -962,7 +962,7 @@ ComputePSO VSMDepthAnalysis
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = vsm_depth_analysis;
+	compute = shadows/vsm/vsm_depth_analysis;
 }
 
 [Compute]

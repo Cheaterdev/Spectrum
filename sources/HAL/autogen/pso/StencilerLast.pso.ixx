@@ -36,11 +36,11 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.vertex.file_name = "shaders/contour.hlsl";
+			mpso.vertex.file_name = "shaders/postprocess/contour.hlsl";
 			mpso.vertex.entry_point = "VS";
 			mpso.vertex.flags = HAL::ShaderOptions::None;
 			
-			mpso.pixel.file_name = "shaders/contour.hlsl";
+			mpso.pixel.file_name = "shaders/postprocess/contour.hlsl";
 			mpso.pixel.entry_point = "PS";
 			mpso.pixel.flags = HAL::ShaderOptions::None;
 			

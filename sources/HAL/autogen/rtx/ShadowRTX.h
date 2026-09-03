@@ -9,6 +9,6 @@
 struct ShadowRTX: public RaytraceRaygen<ShadowRTX>
 {
 	static const constexpr uint ID = 1;
-	static const constexpr std::string_view shader = "shaders\\raytracing.hlsl";
+	static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
 	static const constexpr std::wstring_view raygen = L"MyRaygenShaderShadowRTXOnly";
 };

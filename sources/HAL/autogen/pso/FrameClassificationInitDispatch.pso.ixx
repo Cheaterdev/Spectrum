@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/FrameClassificationInitDispatch.hlsl";
+			mpso.compute.file_name = "shaders/gbuffer/frame_classification_init_dispatch.hlsl";
 			mpso.compute.entry_point = "CS";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

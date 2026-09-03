@@ -44,7 +44,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/voxel_screen_blur.hlsl";
+			mpso.compute.file_name = "shaders/voxelgi/voxel_screen_blur.hlsl";
 			mpso.compute.entry_point = "PS";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

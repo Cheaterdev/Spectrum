@@ -27,7 +27,7 @@ ComputePSO MaterialPreview
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = material_preview;
+	compute = materials/material_preview;
 }
 
 # 3D node preview: draws the real material_tester mesh (a direct, non-indirect
@@ -49,13 +49,13 @@ GraphicsPSO MaterialPreview3D
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	mesh = mesh_shader;
+	mesh = gbuffer/mesh_shader;
 
 	[EntryPoint = AS]
-	amplification = mesh_shader;
+	amplification = gbuffer/mesh_shader;
 
 	[EntryPoint = PS_PREVIEW]
-	pixel = material_preview_3d_stub;
+	pixel = materials/material_preview_3d_stub;
 
 	ds = D32_FLOAT;
 	cull = Back;

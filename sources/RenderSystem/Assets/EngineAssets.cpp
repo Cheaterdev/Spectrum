@@ -26,19 +26,19 @@ namespace EngineAssets
 		});
 
 	EngineAsset<BinaryAsset> material_header(L"material_header", [] {
-		return  new BinaryAsset(to_path(L"shaders\\UniversalMaterial.hlsl"));
+		return  new BinaryAsset(to_path(L"shaders\\materials\\universal_material.hlsl"));
 		});
 
 	EngineAsset<BinaryAsset> material_raytracing_header(L"material_header_raytracing", [] {
-		return  new BinaryAsset(to_path(L"shaders\\UniversalMaterialRaytracing.hlsl"));
+		return  new BinaryAsset(to_path(L"shaders\\rtx\\universal_material_raytracing.hlsl"));
 		});
 
 	EngineAsset<BinaryAsset> material_preview_header(L"material_header_preview", [] {
-		return  new BinaryAsset(to_path(L"shaders\\UniversalMaterialPreview.hlsl"));
+		return  new BinaryAsset(to_path(L"shaders\\materials\\universal_material_preview.hlsl"));
 		});
 
 	EngineAsset<BinaryAsset> material_preview_3d_header(L"material_header_preview_3d", [] {
-		return  new BinaryAsset(to_path(L"shaders\\material_preview_3d.hlsl"));
+		return  new BinaryAsset(to_path(L"shaders\\materials\\material_preview_3d.hlsl"));
 		});
 
 

@@ -34,7 +34,7 @@ export namespace PSOS
 			if(f) f(mpso,key);
 
 			mpso.root_signature = Layouts::DefaultLayout;
-			mpso.compute.file_name = "shaders/workgraph_test.hlsl";
+			mpso.compute.file_name = "shaders/dev/workgraph_test.hlsl";
 			mpso.compute.entry_point = "ClassifyPixels_Node";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			mpso.compute.macros.emplace_back("WORKGRAPH_EMULATION", "1");

@@ -406,8 +406,8 @@ float4 PS(vertex_output i) : SV_Target { return float4(i.normal * 0.5 + 0.5, 1);
 
 		SimpleGraphicsPSO mpso("TestMeshDirect");
 		mpso.root_signature = Layouts::DefaultLayout;
-		mpso.mesh           = { "shaders/mesh_shader.hlsl", "VS", HAL::ShaderOptions::None, {}, false };
-		mpso.amplification  = { "shaders/mesh_shader.hlsl", "AS", HAL::ShaderOptions::None, {}, false };
+		mpso.mesh           = { "shaders/gbuffer/mesh_shader.hlsl", "VS", HAL::ShaderOptions::None, {}, false };
+		mpso.amplification  = { "shaders/gbuffer/mesh_shader.hlsl", "AS", HAL::ShaderOptions::None, {}, false };
 		mpso.pixel          = { kNormalPS, "PS", HAL::ShaderOptions::None, {}, true };
 		mpso.rtv_formats    = { HAL::Format::R8G8B8A8_UNORM };
 		mpso.ds             = HAL::Format::D32_FLOAT;

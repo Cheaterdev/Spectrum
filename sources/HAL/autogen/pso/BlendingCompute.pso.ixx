@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/SMAA.hlsl";
+			mpso.compute.file_name = "shaders/postprocess/smaa.hlsl";
 			mpso.compute.entry_point = "CS_Blending";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

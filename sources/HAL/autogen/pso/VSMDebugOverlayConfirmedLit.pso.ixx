@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/VSM_DebugTileOverlay.hlsl";
+			mpso.compute.file_name = "shaders/shadows/vsm/vsm_debug_tile_overlay.hlsl";
 			mpso.compute.entry_point = "CS_OVERLAY_CONFIRMED_LIT";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

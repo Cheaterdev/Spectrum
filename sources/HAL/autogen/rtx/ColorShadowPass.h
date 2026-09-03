@@ -15,7 +15,7 @@ struct ColorShadowPass: public RaytracePass<ColorShadowPass>
 
 	static const constexpr uint ID = 2;
 
-	static const constexpr std::string_view shader = "shaders\\raytracing.hlsl";
+	static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
 	static const constexpr std::wstring_view name = L"ColorShadowPass_GROUP";
 	static const constexpr std::wstring_view hit_name = L"ColorShadowClosestHitShader";
 	static const constexpr std::wstring_view miss_name = L"ColorShadowMissShader";

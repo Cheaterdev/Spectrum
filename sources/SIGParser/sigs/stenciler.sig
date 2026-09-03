@@ -38,13 +38,13 @@ GraphicsPSO DrawStencil
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	mesh = mesh_shader;
+	mesh = gbuffer/mesh_shader;
 
 	[EntryPoint = AS]
-	amplification = mesh_shader;
+	amplification = gbuffer/mesh_shader;
 
 	[EntryPoint = PS]
-	pixel = stencil;
+	pixel = postprocess/stencil;
 
 	ds = D32_FLOAT;
 	cull = None;
@@ -59,13 +59,13 @@ GraphicsPSO DrawSelected
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	mesh = mesh_shader;
+	mesh = gbuffer/mesh_shader;
 
 	[EntryPoint = AS]
-	amplification = mesh_shader;
+	amplification = gbuffer/mesh_shader;
 
 	[EntryPoint = PS_RESULT]
-	pixel = stencil;
+	pixel = postprocess/stencil;
 	
 	
 
@@ -84,10 +84,10 @@ GraphicsPSO DrawBox
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = triangle_stencil;
+	vertex = postprocess/triangle_stencil;
 
 	[EntryPoint = PS]
-	pixel = triangle_stencil;
+	pixel = postprocess/triangle_stencil;
 	
 	enable_depth = false;
 	cull = None;
@@ -103,14 +103,14 @@ GraphicsPSO DrawAxis
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	mesh = mesh_shader;
+	mesh = gbuffer/mesh_shader;
 
 	[EntryPoint = AS]
-	amplification = mesh_shader;
+	amplification = gbuffer/mesh_shader;
 
 
 	[EntryPoint = PS_COLOR]
-	pixel = stencil;
+	pixel = postprocess/stencil;
 	
 	enable_depth = false;
 	cull = None;
@@ -124,10 +124,10 @@ GraphicsPSO DrawRing
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = ring;
+	vertex = postprocess/ring;
 
 	[EntryPoint = PS_COLOR]
-	pixel = ring;
+	pixel = postprocess/ring;
 
 	enable_depth = false;
 	cull = None;
@@ -141,10 +141,10 @@ GraphicsPSO DrawRingPick
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = ring;
+	vertex = postprocess/ring;
 
 	[EntryPoint = PS]
-	pixel = ring;
+	pixel = postprocess/ring;
 
 	ds = D32_FLOAT;
 	cull = None;
@@ -157,10 +157,10 @@ GraphicsPSO StencilerLast
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = contour;
+	vertex = postprocess/contour;
 
 	[EntryPoint = PS]
-	pixel = contour;
+	pixel = postprocess/contour;
 	
 	enable_depth = false;
 	cull = None;

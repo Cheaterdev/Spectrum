@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/PSSM.hlsl";
+			mpso.compute.file_name = "shaders/shadows/pssm/pssm.hlsl";
 			mpso.compute.entry_point = "CS_RESULT";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

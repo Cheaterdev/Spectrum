@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/sky.hlsl";
+			mpso.compute.file_name = "shaders/sky/sky.hlsl";
 			mpso.compute.entry_point = "CS_Cube";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

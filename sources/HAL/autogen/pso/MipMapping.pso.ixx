@@ -48,7 +48,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/GenerateMips.hlsl";
+			mpso.compute.file_name = "shaders/postprocess/generate_mips.hlsl";
 			mpso.compute.entry_point = "CS";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

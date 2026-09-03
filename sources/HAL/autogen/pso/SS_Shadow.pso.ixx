@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/SS_Shadow.hlsl";
+			mpso.compute.file_name = "shaders/denoiser/ss_shadow.hlsl";
 			mpso.compute.entry_point = "CS";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

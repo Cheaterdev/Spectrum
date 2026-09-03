@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/VSM_BlockerSearch.hlsl";
+			mpso.compute.file_name = "shaders/shadows/vsm/vsm_blocker_search.hlsl";
 			mpso.compute.entry_point = "CS_BLOCKER_SEARCH";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

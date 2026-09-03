@@ -42,7 +42,7 @@ void materials::MaterialPreviewSession::rebuild_pso()
 		// instance's cull data lives in the same shared global buffers the
 		// main editor scene concurrently touches every frame, and boundary
 		// meshlets were flickering in/out under that contention.
-		mpso.amplification = { "shaders/mesh_shader.hlsl", "AS", HAL::ShaderOptions::None,
+		mpso.amplification = { "shaders/gbuffer/mesh_shader.hlsl", "AS", HAL::ShaderOptions::None,
 			{ HAL::shader_macro("DISABLE_MESHLET_CULL") }, false };
 
 		pso3d->psos[key] = mpso.create(RenderSystem::get().device());

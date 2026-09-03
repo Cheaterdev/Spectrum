@@ -42,7 +42,7 @@ struct WorkGR_Shadows_NodeEmulation
 {
 	root = DefaultLayout;
 
-	shader = workgraph_test;
+	shader = dev/workgraph_test;
 
 	Node ClassifyPixels_Node
 	{

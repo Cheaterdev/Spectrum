@@ -244,7 +244,7 @@ ComputePSO GatherPipeline
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = gather_pipeline;
+	compute = gbuffer/gather_pipeline;
 
 	[rename = CHECK_FRUSTUM]
 	[CS, nullable]
@@ -258,7 +258,7 @@ ComputePSO GatherBoxes
 	root = DefaultLayout;
 
 	[EntryPoint = CS_boxes]
-	compute = gather_pipeline;
+	compute = gbuffer/gather_pipeline;
 
 	[rename = CHECK_FRUSTUM]
 	[CS, nullable]
@@ -270,7 +270,7 @@ ComputePSO InitDispatch
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = occluder_cs_dispatch_init;
+	compute = occlusion/occluder_cs_dispatch_init;
 
 	[rename = CHECK_FRUSTUM]
 	[CS, nullable]
@@ -283,7 +283,7 @@ ComputePSO GatherMeshes
 	root = DefaultLayout;
 
 	[EntryPoint = CS_meshes_from_boxes]
-	compute = gather_pipeline;
+	compute = gbuffer/gather_pipeline;
 
 	[rename = INVISIBLE]
 	[CS, nullable]
@@ -303,10 +303,10 @@ GraphicsPSO RenderBoxes
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = occluder;
+	vertex = occlusion/occluder;
 
 	[EntryPoint = PS]
-	pixel = occluder;
+	pixel = occlusion/occluder;
 
 	conservative = true;
 	depth_write = false;

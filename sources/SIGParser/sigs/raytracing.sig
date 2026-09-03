@@ -154,7 +154,7 @@ RaytracePSO MainRTX
 RaytraceRaygen Shadow
 {
 	[EntryPoint = ShadowRaygenShader]
-	raygen = raytracing;
+	raygen = rtx/raytracing;
 }
 
 # Independent RTX-only reference: 1 ray per pixel, genuinely noisy soft
@@ -165,7 +165,7 @@ RaytraceRaygen Shadow
 RaytraceRaygen ShadowRTX
 {
 	[EntryPoint = MyRaygenShaderShadowRTXOnly]
-	raygen = raytracing;
+	raygen = rtx/raytracing;
 }
 
 
@@ -173,7 +173,7 @@ RaytraceRaygen ShadowRTX
 RaytraceRaygen Reflection
 {
 	[EntryPoint = MyRaygenShaderReflection]
-	raygen = raytracing;
+	raygen = rtx/raytracing;
 }
 
 # Independent RTX-only reflection raygen, shares no code with Reflection
@@ -183,7 +183,7 @@ RaytraceRaygen Reflection
 RaytraceRaygen ReflectionRTX
 {
 	[EntryPoint = MyRaygenShaderReflectionRTXOnly]
-	raygen = raytracing;
+	raygen = rtx/raytracing;
 }
 
 
@@ -191,7 +191,7 @@ RaytraceRaygen ReflectionRTX
 RaytraceRaygen Indirect
 {
 	[EntryPoint = MyRaygenShader]
-	raygen = raytracing;
+	raygen = rtx/raytracing;
 }
 
 # Independent RTX-only reference: 1 ray per pixel, genuinely noisy diffuse
@@ -202,24 +202,24 @@ RaytraceRaygen Indirect
 RaytraceRaygen IndirectRTX
 {
 	[EntryPoint = MyRaygenShaderIndirectRTXOnly]
-	raygen = raytracing;
+	raygen = rtx/raytracing;
 }
 
 [Bind = MainRTX]
 RaytraceRaygen ColorRTX
 {
 	[EntryPoint = ColorRTXRaygenShader]
-	raygen = raytracing_debug;
+	raygen = rtx/raytracing_debug;
 }
 
 [Bind = MainRTX]
 RaytracePass ShadowPass
 {
 	[EntryPoint = ShadowMissShader]
-	miss = raytracing;
+	miss = rtx/raytracing;
 
 	[EntryPoint = ShadowClosestHitShader]
-	closest_hit = raytracing;
+	closest_hit = rtx/raytracing;
 
 	payload = ShadowPayload;
 }
@@ -228,7 +228,7 @@ RaytracePass ShadowPass
 RaytracePass ColorPass
 {
 	[EntryPoint = MyMissShader]
-	miss = raytracing;
+	miss = rtx/raytracing;
 
 	[EntryPoint = MyClosestHitShader]
 	closest_hit = none;
@@ -255,7 +255,7 @@ RaytracePass ColorPass
 RaytracePass ColorShadowPass
 {
 	[EntryPoint = ColorShadowMissShader]
-	miss = raytracing;
+	miss = rtx/raytracing;
 
 	[EntryPoint = ColorShadowClosestHitShader]
 	closest_hit = none;
@@ -301,7 +301,7 @@ ComputePSO RTXShadowReferenceCompute
 	root = DefaultLayout;
 
 	[EntryPoint = CS_REFERENCE]
-	compute = RTXShadowReference;
+	compute = rtx/rtx_shadow_reference;
 }
 
 [Static]

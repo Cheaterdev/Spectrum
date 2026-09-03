@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/RTXShadowReference.hlsl";
+			mpso.compute.file_name = "shaders/rtx/rtx_shadow_reference.hlsl";
 			mpso.compute.entry_point = "CS_REFERENCE";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

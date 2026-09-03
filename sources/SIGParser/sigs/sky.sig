@@ -47,10 +47,10 @@ GraphicsPSO Sky
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = sky;
+	vertex = sky/sky;
 
 	[EntryPoint = PS]
-	pixel = sky;
+	pixel = sky/sky;
 
 	rtv = { R16G16B16A16_FLOAT };
 	blend = { Additive };
@@ -61,7 +61,7 @@ ComputePSO SkyCompute
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = sky;
+	compute = sky/sky;
 }
 
 
@@ -70,7 +70,7 @@ ComputePSO SkyCube
 	root = DefaultLayout;
 
 	[EntryPoint = CS_Cube]
-	compute = sky;
+	compute = sky/sky;
 }
 
 ComputePSO CubemapENV
@@ -78,7 +78,7 @@ ComputePSO CubemapENV
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = cubemap_down;
+	compute = sky/cubemap_down;
 }
 
 ComputePSO CubemapENVDiffuse
@@ -86,7 +86,7 @@ ComputePSO CubemapENVDiffuse
 	root = DefaultLayout;
 
 	[EntryPoint = CS_Diffuse]
-	compute = cubemap_down;
+	compute = sky/cubemap_down;
 }
 
 

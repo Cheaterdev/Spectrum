@@ -40,7 +40,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/VSM_ShadowResolve.hlsl";
+			mpso.compute.file_name = "shaders/shadows/vsm/vsm_shadow_resolve.hlsl";
 			mpso.compute.entry_point = "CS_SHADOW_BLUR";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

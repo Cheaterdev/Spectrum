@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/vsm_copy_page_depth_batch.hlsl";
+			mpso.compute.file_name = "shaders/shadows/vsm/vsm_copy_page_depth_batch.hlsl";
 			mpso.compute.entry_point = "CS";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

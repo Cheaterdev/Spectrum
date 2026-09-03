@@ -36,11 +36,11 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.vertex.file_name = "shaders/depth_render.hlsl";
+			mpso.vertex.file_name = "shaders/gbuffer/depth_render.hlsl";
 			mpso.vertex.entry_point = "VS";
 			mpso.vertex.flags = HAL::ShaderOptions::None;
 			
-			mpso.pixel.file_name = "shaders/depth_render.hlsl";
+			mpso.pixel.file_name = "shaders/gbuffer/depth_render.hlsl";
 			mpso.pixel.entry_point = "PS";
 			mpso.pixel.flags = HAL::ShaderOptions::None;
 			

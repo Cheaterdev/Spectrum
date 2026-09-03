@@ -40,7 +40,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/occluder_cs_dispatch_init.hlsl";
+			mpso.compute.file_name = "shaders/occlusion/occluder_cs_dispatch_init.hlsl";
 			mpso.compute.entry_point = "CS";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

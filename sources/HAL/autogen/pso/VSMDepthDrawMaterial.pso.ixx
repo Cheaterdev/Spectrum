@@ -36,11 +36,11 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.mesh.file_name = "shaders/mesh_shader_vsm.hlsl";
+			mpso.mesh.file_name = "shaders/shadows/vsm/mesh_shader_vsm.hlsl";
 			mpso.mesh.entry_point = "VS";
 			mpso.mesh.flags = HAL::ShaderOptions::None;
 			
-			mpso.amplification.file_name = "shaders/mesh_shader_vsm.hlsl";
+			mpso.amplification.file_name = "shaders/shadows/vsm/mesh_shader_vsm.hlsl";
 			mpso.amplification.entry_point = "AS";
 			mpso.amplification.flags = HAL::ShaderOptions::None;
 			

@@ -40,15 +40,15 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.vertex.file_name = "shaders/font/vsSimple.hlsl";
+			mpso.vertex.file_name = "shaders/font/vs_simple.hlsl";
 			mpso.vertex.entry_point = "VS";
 			mpso.vertex.flags = HAL::ShaderOptions::None;
 			
-			mpso.pixel.file_name = "shaders/font/psSimple.hlsl";
+			mpso.pixel.file_name = "shaders/font/ps_simple.hlsl";
 			mpso.pixel.entry_point = "PS";
 			mpso.pixel.flags = HAL::ShaderOptions::None;
 			
-			mpso.geometry.file_name = "shaders/font/gsSimple.hlsl";
+			mpso.geometry.file_name = "shaders/font/gs_simple.hlsl";
 			mpso.geometry.entry_point = "GS";
 			mpso.geometry.flags = HAL::ShaderOptions::None;
 			

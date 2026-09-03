@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.shader.file_name = "shaders/workgraph_test.hlsl";
+			mpso.shader.file_name = "shaders/dev/workgraph_test.hlsl";
 			mpso.shader.entry_point = "";
 			mpso.shader.flags = HAL::ShaderOptions::None;
 			

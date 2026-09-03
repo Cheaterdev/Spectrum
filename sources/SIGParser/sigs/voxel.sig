@@ -158,7 +158,7 @@ ComputePSO Lighting
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = voxel_lighting;
+	compute = voxelgi/voxel_lighting;
 
 	[rename = SECOND_BOUNCE]
 	[CS, nullable]
@@ -171,7 +171,7 @@ ComputePSO VoxelDownsample
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = voxel_mipmap;
+	compute = voxelgi/voxel_mipmap;
 
 	[rename = COUNT]
 	[CS]
@@ -185,7 +185,7 @@ ComputePSO VoxelCopy
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = voxel_copy;
+	compute = voxelgi/voxel_copy;
 }
 
 
@@ -194,7 +194,7 @@ ComputePSO VoxelZero
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = voxel_zero;
+	compute = voxelgi/voxel_zero;
 }
 
 ComputePSO VoxelVisibility
@@ -202,7 +202,7 @@ ComputePSO VoxelVisibility
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = voxel_visibility;
+	compute = voxelgi/voxel_visibility;
 }
 
 ComputePSO VoxelIndirectFilter
@@ -210,7 +210,7 @@ ComputePSO VoxelIndirectFilter
 	root = DefaultLayout;
 
 	[EntryPoint = PS]
-	compute = voxel_screen_blur;
+	compute = voxelgi/voxel_screen_blur;
 
 	[rename = ENABLE_BLUR]
 	[CS, nullable]
@@ -228,10 +228,10 @@ GraphicsPSO VoxelReflectionHi
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = voxel_screen;
+	vertex = voxelgi/voxel_screen;
 
 	[EntryPoint = PS]
-	pixel = voxel_screen_reflection;
+	pixel = voxelgi/voxel_screen_reflection;
 
 	enable_stencil = true;
 	enable_depth = false;
@@ -252,10 +252,10 @@ GraphicsPSO VoxelReflectionUpsample
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = voxel_screen;
+	vertex = voxelgi/voxel_screen;
 
 	[EntryPoint = PS_resize]
-	pixel = voxel_screen_reflection;
+	pixel = voxelgi/voxel_screen_reflection;
 
 	enable_stencil = true;
 	enable_depth = false;
@@ -276,10 +276,10 @@ GraphicsPSO VoxelIndirectHi
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = voxel_screen;
+	vertex = voxelgi/voxel_screen;
 
 	[EntryPoint = PS]
-	pixel = voxel_screen;
+	pixel = voxelgi/voxel_screen;
 
 	enable_stencil = true;
 	enable_depth = false;
@@ -300,7 +300,7 @@ ComputePSO VoxelIndirectLow
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = voxel_screen;
+	compute = voxelgi/voxel_screen;
 }
 
 
@@ -310,10 +310,10 @@ GraphicsPSO VoxelIndirectUpsample
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = voxel_screen;
+	vertex = voxelgi/voxel_screen;
 
 	[EntryPoint = PS_Resize]
-	pixel = voxel_screen;
+	pixel = voxelgi/voxel_screen;
 
 	enable_stencil = true;
 	enable_depth = false;
@@ -334,10 +334,10 @@ GraphicsPSO VoxelDebug
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = voxel_screen;
+	vertex = voxelgi/voxel_screen;
 
 	[EntryPoint = Debug]
-	pixel = voxel_screen_debug;
+	pixel = voxelgi/voxel_screen_debug;
 
 	rtv = {R16G16B16A16_FLOAT};
 	enable_depth = false;
@@ -358,10 +358,10 @@ GraphicsPSO DenoiserDownsample
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = DenoiserDownsample;
+	vertex = denoiser/denoiser_downsample;
 
 	[EntryPoint = PS]
-	pixel = DenoiserDownsample;
+	pixel = denoiser/denoiser_downsample;
 
 	rtv = { R16G16B16A16_FLOAT, R16_FLOAT };
 }
@@ -409,7 +409,7 @@ ComputePSO DenoiserHistoryFix
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = DenoiserHistoryFix;
+	compute = denoiser/denoiser_history_fix;
 }
 
 
@@ -428,7 +428,7 @@ ComputePSO FrameClassification
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = FrameClassification;
+	compute = gbuffer/frame_classification;
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -448,7 +448,7 @@ ComputePSO FrameClassificationInitDispatch
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = FrameClassificationInitDispatch;
+	compute = gbuffer/frame_classification_init_dispatch;
 }
 
 [Bind = DefaultLayout::Instance0]
@@ -466,7 +466,7 @@ ComputePSO ReflectionCombine
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = reflection_combine;
+	compute = postprocess/reflection_combine;
 }
 
 # Computes full lighting on its own -- NOT a composite over ResultTexture
@@ -493,7 +493,7 @@ ComputePSO RTXCombine
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = RTXCombine;
+	compute = rtx/rtx_combine;
 }
 
 

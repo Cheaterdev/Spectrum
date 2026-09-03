@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/cubemap_down.hlsl";
+			mpso.compute.file_name = "shaders/sky/cubemap_down.hlsl";
 			mpso.compute.entry_point = "CS_Diffuse";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

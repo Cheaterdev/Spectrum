@@ -40,7 +40,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/gather_pipeline.hlsl";
+			mpso.compute.file_name = "shaders/gbuffer/gather_pipeline.hlsl";
 			mpso.compute.entry_point = "CS";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

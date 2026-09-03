@@ -43,11 +43,11 @@ export namespace PSOS
 			mpso.pixel.file_name = "";
 			mpso.pixel.entry_point = "";
 			mpso.pixel.flags = HAL::ShaderOptions::None;
-			mpso.mesh.file_name = "shaders/mesh_shader.hlsl";
+			mpso.mesh.file_name = "shaders/gbuffer/mesh_shader.hlsl";
 			mpso.mesh.entry_point = "VS";
 			mpso.mesh.flags = HAL::ShaderOptions::None;
 			
-			mpso.amplification.file_name = "shaders/mesh_shader.hlsl";
+			mpso.amplification.file_name = "shaders/gbuffer/mesh_shader.hlsl";
 			mpso.amplification.entry_point = "AS";
 			mpso.amplification.flags = HAL::ShaderOptions::None;
 			

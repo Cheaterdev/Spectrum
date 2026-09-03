@@ -44,7 +44,7 @@ ComputePSO DownsampleDepth
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = downsample_depth;
+	compute = occlusion/downsample_depth;
 }
 
 
@@ -62,7 +62,7 @@ ComputePSO DownsampleDepthMip
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = downsample_depth_mip;
+	compute = occlusion/downsample_depth_mip;
 }
 
 
@@ -72,7 +72,7 @@ ComputePSO MipMapping
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = GenerateMips;
+	compute = postprocess/generate_mips;
 
 	[rename = NON_POWER_OF_TWO]
 	[CS]
@@ -95,10 +95,10 @@ GraphicsPSO RenderToDS
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = depth_render;
+	vertex = gbuffer/depth_render;
 
 	[EntryPoint = PS]
-	pixel = depth_render;
+	pixel = gbuffer/depth_render;
 
 
 	ds = D32_FLOAT;
@@ -112,10 +112,10 @@ GraphicsPSO QualityColor
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gbuffer_quality;
+	vertex = gbuffer/gbuffer_quality;
 
 	[EntryPoint = PS]
-	pixel = gbuffer_quality;
+	pixel = gbuffer/gbuffer_quality;
 
 	rtv = { R8G8_UNORM };
 	depth_write = false;
@@ -128,10 +128,10 @@ GraphicsPSO QualityToStencil
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gbuffer_quality;
+	vertex = gbuffer/gbuffer_quality;
 
 	[EntryPoint = PS_STENCIL]
-	pixel = gbuffer_quality;
+	pixel = gbuffer/gbuffer_quality;
 
 	enable_stencil = true;
 	enable_depth = false;
@@ -153,10 +153,10 @@ GraphicsPSO QualityToStencilREfl
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gbuffer_quality;
+	vertex = gbuffer/gbuffer_quality;
 
 	[EntryPoint = PS_STENCIL]
-	pixel = gbuffer_quality;
+	pixel = gbuffer/gbuffer_quality;
 
 	enable_stencil = true;
 	enable_depth = false;
@@ -179,10 +179,10 @@ GraphicsPSO CopyTexture
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = copy_texture;
+	vertex = postprocess/copy_texture;
 
 	[EntryPoint = PS]
-	pixel = copy_texture;
+	pixel = postprocess/copy_texture;
 
 	enable_depth = false;
 

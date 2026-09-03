@@ -100,8 +100,20 @@ namespace HAL
 			return nullptr;
 		}
 
-		auto data = file->load_all();
 		depender.add_depend(file);
+
+		// See already_included's comment: the same physical file can arrive
+		// here under two different literal spellings when reached through
+		// includers nested at different depths. DXC's own pragma-once
+		// tracking can't catch that since it never sees a shared identity,
+		// so a repeat resolves here instead -- an empty (but successful)
+		// blob satisfies the #include without re-emitting the file's
+		// content a second time.
+		auto canonical = file->file_name.lexically_normal();
+		if (!already_included.insert(canonical).second)
+			return std::make_unique<std::string>();
+
+		auto data = file->load_all();
 
 		return std::make_unique<std::string>(std::move(data));
 

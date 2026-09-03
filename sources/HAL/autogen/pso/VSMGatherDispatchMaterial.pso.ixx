@@ -36,7 +36,7 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/vsm_gather_dispatch.hlsl";
+			mpso.compute.file_name = "shaders/shadows/vsm/vsm_gather_dispatch.hlsl";
 			mpso.compute.entry_point = "CS_MATERIAL";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			

@@ -41,7 +41,7 @@ ComputePSO NormalRoughnessRepack
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = normal_roughness_repack;
+	compute = gbuffer/normal_roughness_repack;
 }
 
 PassNode NormalRoughnessRepack

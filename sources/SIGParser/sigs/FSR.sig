@@ -24,7 +24,7 @@ ComputePSO FSR
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = FSR;
+	compute = postprocess/fsr;
 }
 
 
@@ -35,7 +35,7 @@ ComputePSO RCAS
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = FSR;
+	compute = postprocess/fsr;
 
 
 	[rename = RCAS]

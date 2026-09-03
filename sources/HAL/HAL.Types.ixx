@@ -798,6 +798,21 @@ struct texture_layout
 		std::string dir;
 		resource_file_depender& depender;
 
+		// Canonical (resolved) paths already handed to DXC for this compile.
+		// The custom IDxcIncludeHandler is fed whatever literal string DXC
+		// built from the #include directive plus its own directory-relative
+		// bookkeeping, so the same physical file reached through two
+		// differently-nested includers (e.g. "../autogen/tables/Frustum.h"
+		// vs "shadows/vsm/../../autogen/tables/Frustum.h") arrives as two
+		// different strings. DXC's own pragma-once/include-guard tracking
+		// is keyed on that string, not on resolved file identity, so both
+		// get included -- causing "redefinition" errors in generated
+		// headers. Dedup here, keyed on the resolved file's own identity,
+		// and hand back an empty (but successful) blob for a repeat --
+		// the standard workaround for this exact class of custom-include-
+		// handler DXC issue.
+		std::set<std::filesystem::path> already_included;
+
 	public:
 		std::vector<std::string> autogen;
 
