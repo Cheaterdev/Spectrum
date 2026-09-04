@@ -3,7 +3,6 @@ export module Core:Events;
 import :Math;
 import :Data;
 import :serialization;
-import :my_unique_vector;
 
 export namespace Events
 {
@@ -25,13 +24,16 @@ export namespace Events
 	class prop_handler;
 	class prop_helper
 	{
-		template<typename U>
-		friend class prop;
-	   	   friend class prop_handler;
-   	protected:
+		friend class prop_handler;
+	protected:
 
 		std::function<void()> remove_func;
-		 prop_handler* event = nullptr;
+		// The publisher (Event, or formerly prop) this helper is registered
+		// against -- used only for identity comparison in
+		// prop_handler::unregister. Named `owner` (not `event`) because
+		// nothing here is an Event: renamed from the original `event` field,
+		// which read as if it held an actual Event object.
+		prop_handler* owner = nullptr;
 		Runner* runner = nullptr;
 
 	public:
@@ -44,21 +46,44 @@ export namespace Events
 	template<class ...T>
 	class prop_t_helper :public prop_helper
 	{
-		template<typename U>
-		friend class prop;
 		friend class Event<T...>;
-	   friend class prop_handler;
 
 		std::function<void(T...)> func;
 
+
+		// T can be a reference (Event<const T&>, e.g. what prop's event_type
+		// instantiates, or FrameGraph::Graph::on_compile broadcasting itself
+		// by const ref). Marshaling through a Runner defers the call, so
+		// std::tuple<T...>(args...) -- which for a reference T stores the
+		// REFERENCE itself, not a copy -- would have the deferred lambda read
+		// whatever the caller's argument pointed to, quite possibly after
+		// that object is gone (a temporary, a stack local in the emitter's
+		// now-returned frame). Decaying to a value type and copying fixes
+		// that -- but only when the decayed type is actually copyable; some
+		// Events (on_compile above) deliberately broadcast a large,
+		// non-copyable object by reference for identity, not by value, and
+		// have no copy to make. For those, fall back to the original
+		// reference-capturing behavior: it's on whoever registers a
+		// Runner-owning subscriber to such an Event to ensure the referenced
+		// object outlives every task that Runner has queued.
+		static constexpr bool can_copy_capture = std::conjunction_v<std::is_copy_constructible<std::decay_t<T>>...>;
 
 		void run(T...args)
 		{
 			if (runner)
 			{
-				runner->run([f = func, captured = std::tuple<T...>(args...)]() {
-					std::apply(f, captured);
-				});
+				if constexpr (can_copy_capture)
+				{
+					runner->run([f = func, captured = std::tuple<std::decay_t<T>...>(args...)]() {
+						std::apply(f, captured);
+					});
+				}
+				else
+				{
+					runner->run([f = func, captured = std::tuple<T...>(args...)]() {
+						std::apply(f, captured);
+					});
+				}
 			}
 			else
 				func(args...);
@@ -72,8 +97,6 @@ export namespace Events
 	protected:
 
 		void add_helper(prop_handler* handler, std::shared_ptr<prop_helper> helper);
-
-		void clear_remove_funcs();
 
 	public:
 
@@ -111,7 +134,7 @@ export namespace Events
 				std::lock_guard<std::mutex> g(m);
 
 					std::shared_ptr<prop_t_helper<T...>> helper(new prop_t_helper<T...>());
-					helper->event = this;
+					helper->owner = this;
 					helper->func = func;
 					helper->runner = dynamic_cast<Runner*>(owner);
 					auto h = helper.get();
@@ -162,156 +185,124 @@ export namespace Events
 
 
 
+	// A value plus change notification, built directly on top of Event
+	// instead of reimplementing its own listener bookkeeping and dispatch:
+	// on_change already gets owner-scoped auto-unregister (including correct
+	// teardown if `this` is destroyed before a subscriber -- Event's own
+	// destructor disarms every helper it owns), Runner-aware marshaling, and
+	// the "replay current value to a new subscriber" hook (default_state) for
+	// free. prop no longer needs to be a prop_handler itself: Event already
+	// handles both destruction orders on its own.
+	//
+	// `m` protects `value` only (reads and writes alike -- the previous
+	// version guarded the listener list but left `value` itself unlocked, a
+	// real race for any prop touched from more than one thread). It is never
+	// held while invoking a subscriber callback, to avoid a callback that
+	// re-enters this same prop (sets it again, registers another listener)
+	// deadlocking on a non-recursive mutex.
 	template<class T>
-	class prop: public prop_handler
+	class prop
 	{
 	public:
 		using function_type = void(const T&);
+		using event_type = Event<const T&>;
 
 	private:
-		std::mutex m;
-
+		mutable std::mutex m;
 		T value;
-		my_unique_vector<std::shared_ptr<std::function<function_type>>>on_change;
+		event_type on_change;
 
 		prop<T>& operator =(const prop<T>&) = delete;
 
-
-		template<class T>
-		void send_one(T f)
-		{
-			f(value);
-
-		}
-
-		void send()
-		{
-			for (auto p : on_change)
-				send_one(*p);
-		}
 	public:
-		Runner* runner = nullptr;
 		prop() = default;
+		prop(const T& t) : value(t) {}
 
-		prop(const T&t):value(t)  {};
-		using event_type = Event<const T&>;
 		void register_change(prop_handler* owner, std::function<function_type> func)
 		{
-			std::lock_guard<std::mutex> g(m);
-			if (owner)
-			{
-				std::shared_ptr<prop_helper> helper(new prop_helper());
-				auto f = std::make_shared<std::function<function_type>>(func);
-				on_change.insert(f);
-				helper->remove_func = [this, f]()
-				{
-					std::lock_guard<std::mutex> g(m);
-
-					on_change.erase(f);
-				};
-				add_helper(owner, helper);
-				add_helper(this, helper);
-			}
-		//	if(value)
-			func(value);
+			on_change.register_handler(owner, func);
+			func(get());
 		}
+
 		void register_change(event_type& event)
 		{
-			std::lock_guard<std::mutex> g(m);
-
-			auto func = [&event](const T & d)
-			{
-				event(d);
-			};
-			std::shared_ptr<prop_helper> helper(new prop_helper());
-			auto f = std::make_shared<std::function<function_type>>(func);
-			on_change.insert(f);
-			helper->remove_func = [this, f]()
-			{
-				std::lock_guard<std::mutex> g(m);
-
-				on_change.erase(f);
-			};
-
-			add_helper(&event, helper);
-		   	add_helper(this, helper);
+			on_change.register_handler(&event, [&event](const T& d) { event(d); });
 
 			event.default_state = [this](std::function<function_type> f2)
 			{
-			//	if (value)
-					send_one(f2);
+				f2(get());
 			};
-		//	if (value)
-				send_one(func);
+
+			event(get());
 		}
 
-		operator const T() const
+		operator T() const
 		{
-			return value;
+			return get();
 		}
 
-		const T operator=(const T& r)
+		T operator=(const T& r)
 		{
-
-			if (value != r)
+			bool changed;
 			{
-
-				value = r;
 				std::lock_guard<std::mutex> g(m);
-
-				send();
-
+				changed = (value != r);
+				if (changed) value = r;
 			}
+
+			if (changed)
+				on_change(r);
 
 			return r;
 		}
 
+		// Unconditional -- unlike operator=, always notifies even if the
+		// value didn't change. Existing behavior, kept as-is.
 		void set(const T& r)
 		{
-
+			{
+				std::lock_guard<std::mutex> g(m);
 				value = r;
+			}
 
-			std::lock_guard<std::mutex> g(m);
-
-			send();
+			on_change(r);
 		}
-		const bool operator==(const T& r) const
+
+		bool operator==(const T& r) const
 		{
-
-			return value == r;
+			return get() == r;
 		}
 
-		const T* operator->() const
-		{
-			return value;
-		}
-
-		const T& get() const
-		{
-			return value;
-		}
-
-		const T& operator*() const
-		{
-			return value;
-		}
-
-		virtual ~prop()
+		T get() const
 		{
 			std::lock_guard<std::mutex> g(m);
-
-			clear_remove_funcs();
+			return value;
 		}
 
+		T operator*() const
+		{
+			return get();
+		}
+
+		// operator->() used to exist here but returned `value` (type T) where
+		// the signature demanded `const T*` -- did not compile for any real T,
+		// so it was silently dead code, never instantiated. Not resurrected:
+		// with `value` now behind a mutex, a raw T* into it would be exactly
+		// as unsound as the old version was uncompilable -- get()/operator*
+		// return a safely-locked copy instead, which is what every actual
+		// caller in the codebase already uses.
 
 	private:
 		SERIALIZE()
 		{
-			ar& NVP(value);
+			{
+				std::lock_guard<std::mutex> g(m);
+				ar& NVP(value);
+			}
 
 			IF_LOAD()
 			{
-				send();
+				on_change(get());
 			}
 		}
 	};

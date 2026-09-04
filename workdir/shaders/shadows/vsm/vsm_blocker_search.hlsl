@@ -152,6 +152,11 @@ void CS_BLOCKER_SEARCH(
 		if (g_any_dark == 0 && g_any_real_blocker == 0)
 			GetVSMSearchVerdictAppend().GetConfirmed_lit_tiles().Append(tile_coord);
 		else
+		{
 			GetVSMSearchVerdictAppend().GetBlur_tiles().Append(tile_coord);
+			// VSM_ScreenSpaceShadow's own EarlyOutPixel reads this -- see
+			// VSMSearchVerdictAppend's own comment.
+			GetVSMSearchVerdictAppend().GetAmbiguous_mask()[tile_coord] = 1.0;
+		}
 	}
 }

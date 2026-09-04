@@ -98,6 +98,8 @@ namespace FrameGraph
 		VSM_BlockerSearchResult,
 		VSM_ConfirmedLitTiles,
 		VSM_BlurTiles,
+		VSM_AmbiguousMask,
+		VSM_ContactShadow,
 		VSM_DepthAnalysisResult,
 		Count
 	};
@@ -193,6 +195,8 @@ namespace FrameGraph
 			"VSM_BlockerSearchResult",
 			"VSM_ConfirmedLitTiles",
 			"VSM_BlurTiles",
+			"VSM_AmbiguousMask",
+			"VSM_ContactShadow",
 			"VSM_DepthAnalysisResult",
 		};
 		auto i = (unsigned int)id;

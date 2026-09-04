@@ -58,19 +58,11 @@ void prop_handler::add_helper(prop_handler* handler, std::shared_ptr<prop_helper
 	handler->helpers.push_back(helper);
 }
 
-void prop_handler::clear_remove_funcs()
-{
-	for (auto& p : helpers)
-	{
-		if (p) p->remove_func = nullptr;
-	}
-}
-
 void prop_handler::unregister(prop_handler* owner)
 {
 	for (auto& helper : owner->helpers)
 	{
-		if (helper->event == this)
+		if (helper->owner == this)
 		{
 			helper->unregister();
 		}

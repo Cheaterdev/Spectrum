@@ -25,6 +25,7 @@ export namespace Table
 		int rtx_dual_blur;
 		int hiz_blocker_classify;
 		int hemisphere_cull_blocker;
+		int use_contact_shadow;
 		VSMDebugView debug_view = VSMDebugView::None;
 		float4x4 light_view;
 		float4 level_info[26];
@@ -36,6 +37,7 @@ export namespace Table
 		int& GetRtx_dual_blur() { return rtx_dual_blur; }
 		int& GetHiz_blocker_classify() { return hiz_blocker_classify; }
 		int& GetHemisphere_cull_blocker() { return hemisphere_cull_blocker; }
+		int& GetUse_contact_shadow() { return use_contact_shadow; }
 		VSMDebugView& GetDebug_view() { return debug_view; }
 		float4x4& GetLight_view() { return light_view; }
 		float4* GetLevel_info() { return level_info; }
@@ -51,6 +53,7 @@ export namespace Table
 			compiler.compile(rtx_dual_blur, "VSMConstants::rtx_dual_blur");
 			compiler.compile(hiz_blocker_classify, "VSMConstants::hiz_blocker_classify");
 			compiler.compile(hemisphere_cull_blocker, "VSMConstants::hemisphere_cull_blocker");
+			compiler.compile(use_contact_shadow, "VSMConstants::use_contact_shadow");
 			compiler.compile(debug_view, "VSMConstants::debug_view");
 			compiler.compile(light_view, "VSMConstants::light_view");
 			compiler.compile(level_info, "VSMConstants::level_info");
@@ -72,6 +75,7 @@ export namespace Table
 			ar& NVP(rtx_dual_blur);
 			ar& NVP(hiz_blocker_classify);
 			ar& NVP(hemisphere_cull_blocker);
+			ar& NVP(use_contact_shadow);
 			ar& NVP(debug_view);
 			ar& NVP(light_view);
 			ar& NVP(level_info);

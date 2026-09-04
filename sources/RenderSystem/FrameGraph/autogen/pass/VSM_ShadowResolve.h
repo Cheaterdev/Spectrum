@@ -46,6 +46,9 @@ public:
 		Handlers::Texture VSM_BlockerSearchResult = ResourceID::VSM_BlockerSearchResult;
 
 
+		Handlers::Texture VSM_ContactShadow = ResourceID::VSM_ContactShadow;
+
+
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 		// Resources this pass touches, in declaration order, each paired with
@@ -74,6 +77,7 @@ public:
 			{ ResourceID::VSM_ConfirmedLitTiles, false },
 			{ ResourceID::VSM_BlurTiles, false },
 			{ ResourceID::VSM_BlockerSearchResult, false },
+			{ ResourceID::VSM_ContactShadow, false },
 			{ ResourceID::ResultTexture, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

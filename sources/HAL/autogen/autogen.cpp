@@ -113,6 +113,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "VSMShadowResolveIO") return SlotID::VSMShadowResolveIO;
 	if(slot_name == "VSMGatherDispatchData") return SlotID::VSMGatherDispatchData;
 	if(slot_name == "VSMGatherDispatchMaterialData") return SlotID::VSMGatherDispatchMaterialData;
+	if(slot_name == "VSMScreenSpaceShadowParams") return SlotID::VSMScreenSpaceShadowParams;
 	if(slot_name == "VSMDepthAnalysis") return SlotID::VSMDepthAnalysis;
 	if(slot_name == "WorkGraphTest") return SlotID::WorkGraphTest;
 	if(slot_name == "WorkGR_ClassifyPixels_NodeEmulation") return SlotID::WorkGR_ClassifyPixels_NodeEmulation;
@@ -331,6 +332,8 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::VSMGatherDispatchMaterialData) return Slots::VSMGatherDispatchMaterialData::Slot::ID;
 
+	if(id == SlotID::VSMScreenSpaceShadowParams) return Slots::VSMScreenSpaceShadowParams::Slot::ID;
+
 	if(id == SlotID::VSMDepthAnalysis) return Slots::VSMDepthAnalysis::Slot::ID;
 
 	if(id == SlotID::WorkGraphTest) return Slots::WorkGraphTest::Slot::ID;
@@ -447,6 +450,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::VSMShadowResolveIO) return "VSMShadowResolveIO";
 	if(id == SlotID::VSMGatherDispatchData) return "VSMGatherDispatchData";
 	if(id == SlotID::VSMGatherDispatchMaterialData) return "VSMGatherDispatchMaterialData";
+	if(id == SlotID::VSMScreenSpaceShadowParams) return "VSMScreenSpaceShadowParams";
 	if(id == SlotID::VSMDepthAnalysis) return "VSMDepthAnalysis";
 	if(id == SlotID::WorkGraphTest) return "WorkGraphTest";
 	if(id == SlotID::WorkGR_ClassifyPixels_NodeEmulation) return "WorkGR_ClassifyPixels_NodeEmulation";

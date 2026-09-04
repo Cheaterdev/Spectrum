@@ -8,6 +8,7 @@ import :crc32;
 import :Data;
 import windows;
 import :Tree;
+import :my_unique_vector;
 
 export
 {

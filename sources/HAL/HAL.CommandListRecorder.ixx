@@ -177,6 +177,7 @@ export namespace HAL
 		void dispatch_graph(ResourceAddress addr);
 		void global_barrier();
 		void clear_uav(const Handles::UAV& h, vec4 ClearColor = vec4(0, 0, 0, 0));
+		void clear_uav_uint(const Handles::UAV& h, uint4 ClearColor = uint4(0, 0, 0, 0));
 		void clear_rtv(const Handles::RTV& h, vec4 ClearColor);
 		void clear_stencil(const Handles::DSV& dsv, UINT8 stencil);
 		void clear_depth(const Handles::DSV& dsv, float depth);

@@ -2211,6 +2211,13 @@ namespace HAL
 		compiler.clear_uav(h, ClearColor);
 	}
 
+	void CommandList::clear_uav_uint(const Handles::UAV& h, uint4 ClearColor, bool whole_resource)
+	{
+		begin_op(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
+		add_resource_usage(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW, whole_resource);
+		compiler.clear_uav_uint(h, ClearColor);
+	}
+
 	void CommandList::clear_dsv(const Handles::DSV& h, bool clear_depth, bool clear_stencil, float depth, UINT8 stencil,
 	                            bool whole_resource)
 	{

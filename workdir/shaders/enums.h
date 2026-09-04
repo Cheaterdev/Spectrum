@@ -17,7 +17,9 @@ enum class VSMDebugView : uint
 	None,
 	PageGrid,
 	RtxReference,
-	HizClassify
+	HizClassify,
+	ContactShadow,
+	ShadowOnly
 };
 
 #endif

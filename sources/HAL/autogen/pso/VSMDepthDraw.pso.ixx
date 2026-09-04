@@ -53,8 +53,6 @@ export namespace PSOS
 
 			mpso.ds =HAL::Format::D32_FLOAT;
 			mpso.cull =HAL::CullMode::Front;
-			//mpso.depth_bias =100;
-			//mpso.slope_scaled_depth_bias =0.2;
 			return mpso;
 		}
 

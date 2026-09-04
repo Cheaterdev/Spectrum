@@ -27,6 +27,20 @@ enum VSMDebugView
 	PageGrid;
 	RtxReference;
 	HizClassify;
+	# Grayscale VSM_ContactShadow directly, same full-screen shape as
+	# RtxReference -- see m_debugoverlay_render's own comment.
+	ContactShadow;
+	# Grayscale the real per-pixel shadow scalar each of stage 3's three PSOs
+	# already computes (1.0 flat for lit_tiles, 0.0 flat for dark_tiles, the
+	# real vsm_pcf_shadow/contact-shadow-blended value for blur_tiles) --
+	# BEFORE vsm_resolve_combine's PBR multiply, so it stays legible over
+	# dark/black albedo. Unlike PageGrid/RtxReference/ContactShadow this is
+	# NOT a separate overlay pass -- there's no surviving per-pixel shadow
+	# scalar after the PBR combine for an overlay to sample (Phase 5.18's
+	# "take 4" collapse removed that intermediate texture on purpose), so
+	# vsm_resolve_combine itself branches on this instead. See its own
+	# comment in VSM_ShadowResolve.hlsl.
+	ShadowOnly;
 }
 
 [Bind = DefaultLayout::Instance0]
@@ -72,6 +86,14 @@ struct VSMConstants
 	# vsm_classify_blocker's Hi-Z classification and VSM_Combine never
 	# consult it.
 	int hemisphere_cull_blocker;
+	# Runtime A/B switch (VSM::use_vsm_contact_shadow): gates CS_SHADOW_BLUR's
+	# min() against VSM_ContactShadow. Needed as an explicit flag, not just
+	# "is the resource bound" -- when the toggle is off, VSM_ScreenSpaceShadow
+	# doesn't even run (see its own setup()), so there's no valid contact-
+	# shadow value to blend, and a naive min(shadow, 0) against an unbound/
+	# null-default read would wrongly force full shadow everywhere instead
+	# of being a no-op.
+	int use_contact_shadow;
 	# Non-penumbra fallback only (VSM_Combine's own combine_result reads
 	# this; the penumbra-on path's equivalent views live entirely in
 	# VSM_DebugClassifyOverlay/VSM_DebugTileOverlay.hlsl instead, selected
@@ -277,6 +299,9 @@ struct VSMLighting
 	# own setup() can return false on non-RTX hardware, in which case this
 	# resource never gets created that frame).
 	Texture2D<float> rtx_shadow_mask;
+	# VSM_ScreenSpaceShadow's contact-shadow patch -- see VSM_ShadowResolve's
+	# own PassNode comment. Only bound/read by the shadow-blur PSO.
+	Texture2D<float> contact_shadow;
 }
 
 # Phase 5.18 Part A follow-up (take 4): groupshared tile classification,
@@ -347,6 +372,17 @@ struct VSMSearchVerdictAppend
 {
 	AppendStructuredBuffer<uint2> confirmed_lit_tiles;
 	AppendStructuredBuffer<uint2> blur_tiles;
+	# One texel per 16x16 screen tile, written 1 wherever this dispatch
+	# appends to blur_tiles below -- see VSM_ScreenSpaceShadow's own PassNode
+	# comment for the consumer (a copied/adapted Bend screen-space shadow
+	# march that uses this as its EarlyOutPixel signal, so a wavefront
+	# sitting entirely over tiles VSM already resolved confidently skips its
+	# whole cooperative march for free). Cleared to 0 once per frame at the
+	# top of this same pass (m_blockersearch_render), before the indirect
+	# dispatch -- tiles that resolve directly in stage 1 (lit_tiles/
+	# dark_tiles) never reach this pass at all, so they rely on that clear,
+	# not an explicit write here, to read back as "not ambiguous".
+	[Write] RWTexture2D<float> ambiguous_mask;
 }
 
 # Stage 2's own output -- VSM_BlockerSearch (INDIRECT, over search_tiles
@@ -509,6 +545,14 @@ ComputePSO VSMDebugOverlayRtxReference
 	root = DefaultLayout;
 
 	[EntryPoint = CS_OVERLAY_RTX_REFERENCE]
+	compute = shadows/vsm/vsm_debug_tile_overlay;
+}
+
+ComputePSO VSMDebugOverlayContactShadow
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_OVERLAY_CONTACT_SHADOW]
 	compute = shadows/vsm/vsm_debug_tile_overlay;
 }
 
@@ -858,6 +902,71 @@ PassNode VSM_BlockerSearch
 	# VSM_BlockerClassify's own comment for why.
 	[Write] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
 	[Write] StructuredBuffer<uint2> VSM_BlurTiles;
+	# See VSMSearchVerdictAppend's own comment -- cleared then written here,
+	# read by VSM_ScreenSpaceShadow.
+	[Write] Texture VSM_AmbiguousMask;
+}
+
+# Screen-space contact-shadow patch, between stage 2 and stage 3. A
+# deliberately SEPARATE, self-contained copy of Bend Studio's public
+# screen-space shadow march (workdir/shaders/denoiser/ss_shadow.hlsl,
+# already used unmodified by RTXShadow's own classify/shadows dispatch
+# pair in PassDefaults.cpp) -- NOT a shared #include, and RTXShadow's own
+# pass is untouched. Two reasons to duplicate rather than share: (1) this
+# copy's EarlyOutPixel reads VSM_AmbiguousMask (VSM_BlockerSearch's own
+# per-tile "still ambiguous" verdict) instead of RTXShadow's depth-bounds
+# heuristic, a genuinely different skip signal tied to VSM's own tile
+# classification, not something the shared file should branch on; (2)
+# keeping VSM's copy independent means its own sample-count/quality knobs
+# can diverge freely without touching RTXShadow's already-tuned, validated
+# dispatch. Bend's own wavefront march already tiles the WHOLE screen
+# without overlap for a given light direction (that's what
+# ComputeWavefrontExtents computes) -- there's no way to constrain that
+# geometry to just VSM_BlurTiles' 16x16 blocks without recomputing new
+# non-overlapping wavefront geometry per subset, which is why the mask/
+# early-out approach was chosen over a tile-indirect dispatch: the
+# dispatch stays whole-screen, but a wavefront sitting entirely over
+# already-resolved tiles skips its own cooperative march via Bend's
+# existing WaveActiveAnyTrue group-vote (see EarlyOutPixel's own doc
+# comment in ss_shadow.hlsl for the precedent this mirrors).
+[Bind = DefaultLayout::Instance0]
+struct VSMScreenSpaceShadowParams
+{
+	GBuffer gbuffer;
+	Texture2D<float> ambiguous_mask;
+	# Bend::DispatchList::LightCoordinate_Shader / DispatchData::WaveOffset_Shader
+	# (bend_sss_cpu.h, reused as-is -- pure CPU math, no reason to duplicate
+	# it) -- one BuildDispatchList() call per frame, up to 8 dispatches, same
+	# LightCoordinate for all of them, a different WaveOffset each.
+	float4 light_coordinate;
+	int2 wave_offset;
+	float far_depth_value;
+	float near_depth_value;
+	# VSM::vsm_contact_shadow_thickness -- runtime-tunable version of Bend's
+	# own SurfaceThickness (SS_Shadow.sig's own field, same meaning: assumed
+	# thickness of each pixel for shadow-casting, as a fraction of the
+	# sample-to-FarDepthValue depth range). Was a hardcoded compile-time
+	# constant in this file's first version; the actual reach/width a
+	# contact shadow reads as is sensitive enough to scene depth scale that
+	# it needs to be tunable without a rebuild.
+	float surface_thickness;
+	[Write] RWTexture2D<float> output;
+}
+
+ComputePSO VSMScreenSpaceShadow
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = shadows/vsm/vsm_screen_space_shadow;
+}
+
+[Compute]
+PassNode VSM_ScreenSpaceShadow
+{
+	GBuffer gbuffer;
+	Texture VSM_AmbiguousMask;
+	[Write] Texture VSM_ContactShadow;
 }
 
 # Stage 3: three PSOs (VSMFullLit/VSMFullShadow/VSMShadowBlur), ONE
@@ -900,6 +1009,11 @@ PassNode VSM_ShadowResolve
 	StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
 	StructuredBuffer<uint2> VSM_BlurTiles;
 	Texture VSM_BlockerSearchResult;
+	# VSM_ScreenSpaceShadow's contact-shadow patch -- see its own PassNode
+	# comment. Sampled only by the shadow-blur PSO (CS_SHADOW_BLUR), min()'d
+	# in alongside the real blocker-search/RTX-verify result before the
+	# final PBR combine, same shape as the existing RTX dual-blur.
+	Texture VSM_ContactShadow;
 	[Write] Texture ResultTexture;
 }
 
@@ -967,6 +1081,9 @@ PassNode VSM_DebugClassifyOverlay
 	# VSMLighting's rtx_shadow_mask field. Not [Write]: only ever read, for
 	# use_vsm_debug_rtx_reference.
 	Texture ShadowMask;
+	# VSM_ScreenSpaceShadow's own output -- see vsm.sig's VSM_ScreenSpaceShadow
+	# PassNode comment. Not [Write]: only ever read, for ContactShadow.
+	Texture VSM_ContactShadow;
 	[Write] Texture ResultTexture;
 }
 

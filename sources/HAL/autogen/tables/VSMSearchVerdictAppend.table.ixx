@@ -19,19 +19,23 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::VSMSearchVerdictAppend;
 		HLSL::AppendStructuredBuffer<uint2> confirmed_lit_tiles;
 		HLSL::AppendStructuredBuffer<uint2> blur_tiles;
+		HLSL::RWTexture2D<float> ambiguous_mask;
 		HLSL::AppendStructuredBuffer<uint2>& GetConfirmed_lit_tiles() { return confirmed_lit_tiles; }
 		HLSL::AppendStructuredBuffer<uint2>& GetBlur_tiles() { return blur_tiles; }
+		HLSL::RWTexture2D<float>& GetAmbiguous_mask() { return ambiguous_mask; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(confirmed_lit_tiles, "VSMSearchVerdictAppend::confirmed_lit_tiles");
 			compiler.compile(blur_tiles, "VSMSearchVerdictAppend::blur_tiles");
+			compiler.compile(ambiguous_mask, "VSMSearchVerdictAppend::ambiguous_mask");
 		}
 		struct Compiled
 		{
 			uint confirmed_lit_tiles; // AppendStructuredBuffer<uint2>
 			uint blur_tiles; // AppendStructuredBuffer<uint2>
+			uint ambiguous_mask; // RWTexture2D<float>
 
 			
 			private:

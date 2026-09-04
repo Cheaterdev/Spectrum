@@ -8,6 +8,15 @@ import :FrameGraphContext;
 import HAL;
 
 import Graphics;
+
+// Bend Studio's CPU-side dispatch-list builder for its screen-space shadow
+// march -- pure, stateless math, reused as-is (same header PassDefaults.cpp's
+// RTXShadow already includes unmodified, same "#include after the imports it
+// needs, no global module fragment" shape). VSM_ScreenSpaceShadow's own GPU
+// shader is a deliberately separate copy, not shared -- see its own comment
+// in vsm.sig.
+#include "../../FrameGraph/bend_sss_cpu.h"
+
 using namespace FrameGraph;
 using namespace HAL;
 
@@ -1357,6 +1366,11 @@ VSM::VSM() : VariableContext(L"VSM")
 		size_t max_tiles = (size_t)(tiles_count.x * tiles_count.y);
 		builder.create(data.VSM_ConfirmedLitTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
 		builder.create(data.VSM_BlurTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
+		// See VSMSearchVerdictAppend's own comment -- one texel per 16x16
+		// screen tile, consumed by VSM_ScreenSpaceShadow's EarlyOutPixel.
+		builder.create(data.VSM_AmbiguousMask,
+		    { ivec3((int)tiles_count.x, (int)tiles_count.y, 0), HAL::Format::R8_UNORM, 1, 1 },
+		    FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 
@@ -1406,11 +1420,18 @@ VSM::VSM() : VariableContext(L"VSM")
 
 		compute.clear_counter(*data.VSM_ConfirmedLitTiles);
 		compute.clear_counter(*data.VSM_BlurTiles);
+		// See VSMSearchVerdictAppend's own comment -- cleared every frame
+		// before this dispatch writes 1 only for tiles it puts in blur_tiles;
+		// tiles resolved directly in stage 1 never reach this pass, so they
+		// rely on this clear (not an explicit write) to read back as "not
+		// ambiguous".
+		list.clear_uav(data.VSM_AmbiguousMask->rwTexture2D, vec4(0, 0, 0, 0));
 
 		{
 			Slots::VSMSearchVerdictAppend verdict;
 			verdict.GetConfirmed_lit_tiles() = data.VSM_ConfirmedLitTiles->appendStructuredBuffer;
 			verdict.GetBlur_tiles()          = data.VSM_BlurTiles->appendStructuredBuffer;
+			verdict.GetAmbiguous_mask()      = data.VSM_AmbiguousMask->rwTexture2D;
 			compute.set(verdict);
 		}
 
@@ -1434,6 +1455,12 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(constants);
 		}
 
+		// Debug-only (see use_vsm_debug_clear_unwritten's own comment) --
+		// this dispatch only ever writes pixels in search_tiles, everything
+		// else stays whatever the frame-graph's aliasing allocator left here.
+		if (use_vsm_debug_clear_unwritten)
+			list.clear_uav_uint(data.VSM_BlockerSearchResult->rwTexture2D);
+
 		compute.set_pipeline<PSOS::VSMBlockerSearchCompute>();
 		compute.exec_indirect(search_tiles_dispatch, 1);
 
@@ -1445,6 +1472,72 @@ VSM::VSM() : VariableContext(L"VSM")
 		    data.VSM_ConfirmedLitTiles->get_counter_buffer().get(), data.VSM_ConfirmedLitTiles->get_counter_offset(), 4);
 		list.get_copy().copy_buffer(blur_tiles_dispatch.resource.get(), 0,
 		    data.VSM_BlurTiles->get_counter_buffer().get(), data.VSM_BlurTiles->get_counter_offset(), 4);
+	};
+
+	// Screen-space contact-shadow patch, between stage 2 and stage 3 -- see
+	// vsm.sig's own VSMScreenSpaceShadowParams comment for the design (a
+	// deliberately separate copy of Bend's algorithm, gated by
+	// VSM_AmbiguousMask instead of a tile-indirect dispatch). CPU-side
+	// dispatch planning mirrors PassDefaults.cpp's own RTXShadow render()
+	// (Bend::BuildDispatchList usage), minus the work-graph/FlowGraph
+	// emulation -- this is a handful of plain Dispatch() calls of one PSO,
+	// no classify/compact stage needed since VSM_BlockerSearch already did
+	// the classifying.
+	m_screenspaceshadow_setup = [this](Passes::VSM_ScreenSpaceShadow::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	{
+		if (!use_vsm_penumbra || !use_vsm_contact_shadow)
+			return false;
+		GBufferViewDesc::need(builder, data.gbuffer);
+		builder.need(data.VSM_AmbiguousMask, FrameGraph::ResourceFlags::ComputeRead);
+		auto& frame = builder.graph->get_context<ViewportInfo>();
+		builder.create(data.VSM_ContactShadow,
+		    { ivec3(frame.frame_size, 0), HAL::Format::R8_UNORM, 1, 1 },
+		    FrameGraph::ResourceFlags::UnorderedAccess);
+		return true;
+	};
+
+	m_screenspaceshadow_render = [this](Passes::VSM_ScreenSpaceShadow::Context& data, FrameGraph::FrameContext& context)
+	{
+		auto& sky_ctx    = context.graph->get_context<SkyInfo>();
+		auto& camera_ctx = context.graph->get_context<CameraInfo>();
+
+		auto& list    = *context.get_list();
+		auto& compute = list.get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+
+		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+
+		// Debug-only (see use_vsm_debug_clear_unwritten's own comment) --
+		// only pixels a non-early-outed wavefront actually resolves get
+		// written below; everywhere else is unwritten allocator garbage.
+		if (use_vsm_debug_clear_unwritten)
+			list.clear_uav(data.VSM_ContactShadow->rwTexture2D);
+
+		auto light = float4(sky_ctx.sunDir, 0) * camera_ctx.cam->get_view_proj();
+		ivec2 size = ivec2(data.VSM_ContactShadow->get_size().x, data.VSM_ContactShadow->get_size().y);
+
+		Bend::DispatchList res = Bend::BuildDispatchList(
+		    { light.x, light.y, light.z, light.w },
+		    { size.x, size.y }, { 0, 0 }, { size.x, size.y }, false, 64);
+
+		for (int i = 0; i < res.DispatchCount; i++)
+		{
+			Slots::VSMScreenSpaceShadowParams params;
+			gbuffer.SetTable(params.GetGbuffer());
+			params.GetAmbiguous_mask()   = data.VSM_AmbiguousMask->texture2D;
+			params.GetOutput()           = data.VSM_ContactShadow->rwTexture2D;
+			params.GetLight_coordinate() = float4(
+			    res.LightCoordinate_Shader[0], res.LightCoordinate_Shader[1],
+			    res.LightCoordinate_Shader[2], res.LightCoordinate_Shader[3]);
+			params.GetWave_offset()      = ivec2(res.Dispatch[i].WaveOffset_Shader[0], res.Dispatch[i].WaveOffset_Shader[1]);
+			params.GetFar_depth_value()  = 0;
+			params.GetNear_depth_value() = 1;
+			params.GetSurface_thickness() = vsm_contact_shadow_thickness;
+			compute.set(params);
+
+			compute.set_pipeline<PSOS::VSMScreenSpaceShadow>();
+			compute.dispatch(res.Dispatch[i].WaveCount[0], res.Dispatch[i].WaveCount[1], res.Dispatch[i].WaveCount[2]);
+		}
 	};
 
 	// Stage 3: three PSOs (full-lit/full-shadow/shadow-blur), ONE PassNode,
@@ -1471,6 +1564,12 @@ VSM::VSM() : VariableContext(L"VSM")
 		builder.need(data.VSM_ConfirmedLitTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_BlurTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_BlockerSearchResult, FrameGraph::ResourceFlags::ComputeRead);
+		// use_vsm_contact_shadow off -> VSM_ScreenSpaceShadow's own setup()
+		// returns false, so this never exists that frame -- need() only when
+		// it might (same builder.exists() shape RtxReference's own guard
+		// uses elsewhere in this file).
+		if (use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow))
+			builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::ComputeRead);
 		// Writes ResultTexture directly now (the final PBR-combined pixel),
 		// not an intermediate VSM_ShadowResult scalar VSM_Combine used to
 		// read separately -- see this PassNode's own comment in vsm.sig.
@@ -1501,6 +1600,8 @@ VSM::VSM() : VariableContext(L"VSM")
 			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
 			lighting.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
 			lighting.GetBlue_noise()   = data.BlueNoise->texture2D;
+			if (use_vsm_contact_shadow && data.VSM_ContactShadow)
+				lighting.GetContact_shadow() = data.VSM_ContactShadow->texture2D;
 			// Written directly now -- each of the four dispatches below does
 			// its own full PBR combine and writes here, instead of a bare
 			// shadow scalar VSM_Combine used to read separately.
@@ -1534,6 +1635,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			constants.GetPage_size()       = page_table.page_size;
 			constants.GetPages_per_level() = page_table.clipmap.pages_per_level;
 			constants.GetRtx_dual_blur()   = use_vsm_rtx_dual_blur ? 1 : 0;
+			constants.GetUse_contact_shadow() = (use_vsm_contact_shadow && data.VSM_ContactShadow) ? 1 : 0;
 			constants.GetLight_view()      = light_cam.get_view();
 
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
@@ -1713,6 +1815,8 @@ VSM::VSM() : VariableContext(L"VSM")
 		// hardware, in which case this never gets created this frame).
 		if (vsm_debug_view == VSMDebugView::RtxReference && builder.exists(data.ShadowMask))
 			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
+		if (vsm_debug_view == VSMDebugView::ContactShadow && use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow))
+			builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_LitTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_DarkTiles, FrameGraph::ResourceFlags::ComputeRead);
 		builder.need(data.VSM_ConfirmedLitTiles, FrameGraph::ResourceFlags::ComputeRead);
@@ -1741,9 +1845,10 @@ VSM::VSM() : VariableContext(L"VSM")
 		// an unbound texture on non-RTX hardware. vsm_debug_view being a
 		// single-select enum makes do_page_grid/do_rtx_reference mutually
 		// exclusive by construction now, not by convention.
-		bool do_page_grid     = vsm_debug_view == VSMDebugView::PageGrid;
-		bool do_rtx_reference = vsm_debug_view == VSMDebugView::RtxReference && data.ShadowMask;
-		if (do_page_grid || do_rtx_reference)
+		bool do_page_grid      = vsm_debug_view == VSMDebugView::PageGrid;
+		bool do_rtx_reference  = vsm_debug_view == VSMDebugView::RtxReference && data.ShadowMask;
+		bool do_contact_shadow = vsm_debug_view == VSMDebugView::ContactShadow && use_vsm_contact_shadow && data.VSM_ContactShadow;
+		if (do_page_grid || do_rtx_reference || do_contact_shadow)
 		{
 			GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
 
@@ -1760,6 +1865,8 @@ VSM::VSM() : VariableContext(L"VSM")
 				lighting.GetResult() = data.ResultTexture->rwTexture2D;
 				if (data.ShadowMask)
 					lighting.GetRtx_shadow_mask() = data.ShadowMask->texture2D;
+				if (do_contact_shadow)
+					lighting.GetContact_shadow() = data.VSM_ContactShadow->texture2D;
 				compute.set(lighting);
 			}
 			{
@@ -1779,6 +1886,8 @@ VSM::VSM() : VariableContext(L"VSM")
 
 			if (do_page_grid)
 				compute.set_pipeline<PSOS::VSMDebugOverlayPageGrid>();
+			else if (do_contact_shadow)
+				compute.set_pipeline<PSOS::VSMDebugOverlayContactShadow>();
 			else
 				compute.set_pipeline<PSOS::VSMDebugOverlayRtxReference>();
 			compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });

@@ -108,6 +108,32 @@ public:
 	// affects the opaque VSMDepthDraw path, not per-material alpha-cutout PSOs.
 	Variable<bool> use_vsm_conservative_raster = { false, "Conservative rasterization", this };
 
+	// Debug-only: VSM_BlockerSearchResult and VSM_ContactShadow are freshly
+	// (re)allocated resources each frame, only ever written for the pixels
+	// their own dispatch actually covers -- everything else is whatever
+	// garbage the frame-graph's aliasing allocator left there, harmless
+	// since nothing reads outside the written region, but it reads as
+	// uninitialized noise in a GPU capture/debugger. Off by default (a real,
+	// if small, per-frame clear cost); on makes both buffers legible when
+	// inspecting them directly.
+	Variable<bool> use_vsm_debug_clear_unwritten = { false, "Debug: clear unwritten buffers", this };
+
+	// Master switch for VSM_ScreenSpaceShadow (see its own comment in
+	// vsm.sig). Off: the pass doesn't run at all (its own setup() returns
+	// false, matching use_vsm_penumbra's own gate) -- no dispatch, no
+	// VSM_ContactShadow resource created, no descriptor bound in
+	// CS_SHADOW_BLUR. On by default now that it's validated.
+	Variable<bool> use_vsm_contact_shadow = { true, "Contact shadows", this };
+
+	// VSMScreenSpaceShadowParams::surface_thickness -- Bend's own
+	// SurfaceThickness (see SS_Shadow.sig's own field comment): assumed
+	// thickness of each pixel for shadow-casting, as a fraction of the
+	// sample-to-far-clip depth range. Controls how wide/far a contact
+	// shadow reads -- scene-depth-scale-sensitive enough to want live
+	// tuning rather than a rebuild. Same starting value as SS_Shadow.sig's
+	// own documented default.
+	Variable<float> vsm_contact_shadow_thickness = { 0.005f, "Contact shadow thickness", this, 0.001f, 0.01f };
+
 	// Single-select debug view (VSMDebugView, a SIG enum shared verbatim
 	// with the shader side -- see VSMConstants.debug_view's own comment in
 	// vsm.sig). Replaces three separate bools that were always meant to be
@@ -476,6 +502,9 @@ private:
 	Passes::VSM_BlockerSearch::setup_func_type  m_blockersearch_setup;
 	Passes::VSM_BlockerSearch::render_func_type m_blockersearch_render;
 
+	Passes::VSM_ScreenSpaceShadow::setup_func_type  m_screenspaceshadow_setup;
+	Passes::VSM_ScreenSpaceShadow::render_func_type m_screenspaceshadow_render;
+
 	Passes::VSM_ShadowResolve::setup_func_type  m_shadowresolve_setup;
 	Passes::VSM_ShadowResolve::render_func_type m_shadowresolve_render;
 
@@ -553,6 +582,9 @@ public:
 
 		pipeline.vSM_BlockerSearch.setup_func  = m_blockersearch_setup;
 		pipeline.vSM_BlockerSearch.render_func = m_blockersearch_render;
+
+		pipeline.vSM_ScreenSpaceShadow.setup_func  = m_screenspaceshadow_setup;
+		pipeline.vSM_ScreenSpaceShadow.render_func = m_screenspaceshadow_render;
 
 		pipeline.vSM_ShadowResolve.setup_func  = m_shadowresolve_setup;
 		pipeline.vSM_ShadowResolve.render_func = m_shadowresolve_render;

@@ -90,8 +90,10 @@ export
 		VSMDebugOverlayBlur,
 		VSMDebugOverlayPageGrid,
 		VSMDebugOverlayRtxReference,
+		VSMDebugOverlayContactShadow,
 		VSMGatherDispatch,
 		VSMGatherDispatchMaterial,
+		VSMScreenSpaceShadow,
 		VSMDepthAnalysis,
 		FontRender,
 		MaterialPreview3D,
@@ -280,6 +282,7 @@ export
 		VSMLevelDispatchInfo = "VSMLevelDispatchInfo"_crc32,
 		VSMGatherDispatchData = "VSMGatherDispatchData"_crc32,
 		VSMGatherDispatchMaterialData = "VSMGatherDispatchMaterialData"_crc32,
+		VSMScreenSpaceShadowParams = "VSMScreenSpaceShadowParams"_crc32,
 		VSMDepthAnalysis = "VSMDepthAnalysis"_crc32,
 		WorkGraphTest = "WorkGraphTest"_crc32,
 		GraphInput = "GraphInput"_crc32,
@@ -298,6 +301,8 @@ export
 		None,
 		PageGrid,
 		RtxReference,
-		HizClassify
+		HizClassify,
+		ContactShadow,
+		ShadowOnly
 	};
 }

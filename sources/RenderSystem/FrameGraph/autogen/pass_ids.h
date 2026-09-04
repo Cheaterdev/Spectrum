@@ -59,6 +59,7 @@ namespace FrameGraph
 		VSM_HiZRebuild,
 		VSM_BlockerClassify,
 		VSM_BlockerSearch,
+		VSM_ScreenSpaceShadow,
 		VSM_ShadowResolve,
 		VSM_Combine,
 		VSM_DebugClassifyOverlay,

@@ -47,8 +47,16 @@ uint2 resolve_pixel(uint3 groupID, uint3 groupThreadID)
 // combine_result formula exactly -- shadow * NL * albedo * (1-metallic);
 // EnvBRDF is computed there but never actually used in its return, so it's
 // not replicated here either.
+// VSMDebugView::ShadowOnly (see vsm.sig's own enum comment): grayscale the
+// real per-pixel shadow scalar directly instead of the PBR combine, so it
+// stays legible over dark/black albedo. Reads GetVSMConstants() directly
+// rather than threading a param through every one of this function's
+// callers -- same reasoning as reading GetFrameInfo() directly above.
 float4 vsm_resolve_combine(float3 albedo, float metallic, float3 normal, float shadow)
 {
+	if (GetVSMConstants().GetDebug_view() == VSMDebugView::ShadowOnly)
+		return float4(shadow, shadow, shadow, 1);
+
 	float3 light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
 	float  NL = saturate(dot(normal, light_dir));
 	return float4(shadow * (NL * albedo * (1 - metallic)), 1);
@@ -250,7 +258,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	// page's camera -- a real light leak, not a fixed one. The offset itself
 	// needs a texel-size estimate, which needs a resolved level, so this is
 	// a cheap probe on the true position purely to size it.
-	{
+	/*{
 		float2 probe_pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
 		int probe_level = get_vsm_level(c, probe_pos_ls);
 		if (probe_level < 0)
@@ -260,7 +268,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 		}
 		float probe_texel_world_size = c.GetLevel_info(probe_level).z / c.GetPage_size();
 		wpos = vsm_normal_offset_pos(wpos, normal, bias_light_dir, probe_texel_world_size);
-	}
+	}*/
 
 	float2 pos_ls = mul(c.GetLight_view(), float4(wpos, 1)).xy;
 	int level = get_vsm_level(c, pos_ls);
@@ -467,6 +475,19 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 		shadow = vsm_pcf_shadow(c, lighting, level, pos_ls, pos_l.z, texel_world_size, depth_range, noise_angle, world_delta);
 #endif
 	}
+
+	// VSM_ScreenSpaceShadow's contact-shadow patch (see vsm.sig's own
+	// PassNode comment) -- min(), same reasoning as the RTX dual-blur above:
+	// whichever method actually caught the true occluder wins, rather than
+	// diluting toward the wrong answer. Only ever meaningfully written for
+	// pixels in this same blur_tiles dispatch (VSM_AmbiguousMask gates it),
+	// which is exactly the set CS_SHADOW_BLUR itself runs over. Gated by an
+	// explicit flag (VSM::use_vsm_contact_shadow), not just "is the resource
+	// bound" -- when the toggle is off VSM_ScreenSpaceShadow doesn't even
+	// run, so there's no valid value here to blend, and min()-ing against an
+	// unbound/null-default read would wrongly force full shadow everywhere.
+	if (c.GetUse_contact_shadow())
+		shadow = min(shadow, lighting.GetContact_shadow()[pixel]);
 
 	GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, shadow);
 }

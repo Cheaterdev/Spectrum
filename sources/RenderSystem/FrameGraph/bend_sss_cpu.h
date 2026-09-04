@@ -70,7 +70,7 @@ namespace Bend
 	// 
 	// inWaveSize:				Wavefront size of the compiled compute shader (currently only tested with 64)
 	//
-	DispatchList BuildDispatchList(float4 inLightProjection, int2 inViewportSize, int2 inMinRenderBounds, int2 inMaxRenderBounds, bool inExpandedZRange = false, int inWaveSize = 64)
+	inline DispatchList BuildDispatchList(float4 inLightProjection, int2 inViewportSize, int2 inMinRenderBounds, int2 inMaxRenderBounds, bool inExpandedZRange = false, int inWaveSize = 64)
 	{
 		DispatchList result = {};
 

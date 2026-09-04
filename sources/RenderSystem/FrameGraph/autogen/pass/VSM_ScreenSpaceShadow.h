@@ -12,7 +12,7 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class VSM_BlockerSearch : public PassNodeBase
+class VSM_ScreenSpaceShadow : public PassNodeBase
 {
 public:
 	struct Context
@@ -20,33 +20,10 @@ public:
 
 		GBuffer gbuffer;
 
-		Handlers::Texture VSM_Atlas = ResourceID::VSM_Atlas;
-
-
-		Handlers::Texture VSM_PageTable = ResourceID::VSM_PageTable;
-
-		Handlers::StructuredBuffer<Table::Camera> VSM_PageCameras = ResourceID::VSM_PageCameras;
-
-
-		Handlers::Texture VSM_PageHiZ = ResourceID::VSM_PageHiZ;
-
-
-		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
-
-
-		Handlers::StructuredBuffer<uint2> VSM_SearchTiles = ResourceID::VSM_SearchTiles;
-
-
-		Handlers::Texture VSM_BlockerSearchResult = ResourceID::VSM_BlockerSearchResult;
-
-
-		Handlers::StructuredBuffer<uint2> VSM_ConfirmedLitTiles = ResourceID::VSM_ConfirmedLitTiles;
-
-
-		Handlers::StructuredBuffer<uint2> VSM_BlurTiles = ResourceID::VSM_BlurTiles;
-
-
 		Handlers::Texture VSM_AmbiguousMask = ResourceID::VSM_AmbiguousMask;
+
+
+		Handlers::Texture VSM_ContactShadow = ResourceID::VSM_ContactShadow;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -65,16 +42,8 @@ public:
 			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
-			{ ResourceID::VSM_Atlas, false },
-			{ ResourceID::VSM_PageTable, false },
-			{ ResourceID::VSM_PageCameras, false },
-			{ ResourceID::VSM_PageHiZ, false },
-			{ ResourceID::BlueNoise, false },
-			{ ResourceID::VSM_SearchTiles, false },
-			{ ResourceID::VSM_BlockerSearchResult, true },
-			{ ResourceID::VSM_ConfirmedLitTiles, true },
-			{ ResourceID::VSM_BlurTiles, true },
-			{ ResourceID::VSM_AmbiguousMask, true },
+			{ ResourceID::VSM_AmbiguousMask, false },
+			{ ResourceID::VSM_ContactShadow, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -85,9 +54,9 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"VSM_BlockerSearch"};
+	static constexpr LiteralWStr Name{L"VSM_ScreenSpaceShadow"};
 
-	static constexpr PassID ID = PassID::VSM_BlockerSearch;
+	static constexpr PassID ID = PassID::VSM_ScreenSpaceShadow;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

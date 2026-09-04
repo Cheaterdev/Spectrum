@@ -193,6 +193,15 @@ namespace HAL
 		});
 	}
 
+	void DelayedCommandList::clear_uav_uint(const Handles::UAV& h, uint4 ClearColor)
+	{
+		if constexpr (BuildOptions::Dev)
+			debug_recorder.push_back({CommandType::ClearUAV, "ClearUAVUint"});
+		push_fn(CommandType::ClearUAV, [=](API::CommandList& list) {
+			list.clear_uav_uint(h, ClearColor);
+		});
+	}
+
 	void DelayedCommandList::clear_rtv(const Handles::RTV& h, vec4 ClearColor)
 	{
 		if constexpr (BuildOptions::Dev)

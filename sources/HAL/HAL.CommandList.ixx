@@ -458,6 +458,13 @@ export{
 			void clear_uav(const Handles::UAV& h, vec4 ClearColor = vec4(0, 0, 0, 0),
 			               bool whole_resource = false);
 
+			// Uint variant -- clear_uav's ClearUnorderedAccessViewFloat call
+			// requires a FLOAT/UNORM/SNORM-typed view; a genuinely integer
+			// UAV (e.g. an R32G32B32A32_UINT result buffer) needs
+			// ClearUnorderedAccessViewUint instead. Same shape otherwise.
+			void clear_uav_uint(const Handles::UAV& h, uint4 ClearColor = uint4(0, 0, 0, 0),
+			                     bool whole_resource = false);
+
 			// Clears a DSV directly (ClearDepthStencilView-equivalent) without
 			// binding it as the active render target the way set_rtv's
 			// RTOptions::ClearDepth does -- set_rtv's clear path also does a

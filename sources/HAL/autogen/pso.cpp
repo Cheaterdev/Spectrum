@@ -97,8 +97,10 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayBlur>(device, pso[PSO::VSMDebugOverlayBlur]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayPageGrid>(device, pso[PSO::VSMDebugOverlayPageGrid]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayRtxReference>(device, pso[PSO::VSMDebugOverlayRtxReference]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMDebugOverlayContactShadow>(device, pso[PSO::VSMDebugOverlayContactShadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMGatherDispatch>(device, pso[PSO::VSMGatherDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMGatherDispatchMaterial>(device, pso[PSO::VSMGatherDispatchMaterial]));
+	tasks.emplace_back(PSOBase::create<PSOS::VSMScreenSpaceShadow>(device, pso[PSO::VSMScreenSpaceShadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 
 

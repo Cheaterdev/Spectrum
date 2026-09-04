@@ -106,6 +106,24 @@ namespace HAL
             m_commandList->ClearUnorderedAccessViewFloat(h.get_gpu(), h.get_cpu(), dx_resource, reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
         }
 
+        void CommandList::clear_uav_uint(const Handles::UAV& h, uint4 ClearColor)
+        {
+            auto v = h.get_resource_info().view;
+            auto uav = std::get<HAL::Views::UnorderedAccess>(v);
+
+            if (Debug::CheckErrors)
+            {
+                if (uav.Resource->get_desc().is_buffer())
+                {
+                    auto buffer = std::get<HAL::Views::UnorderedAccess::Buffer>(uav.View);
+                    ASSERT(buffer.StructureByteStride == 0);
+                }
+            }
+
+            auto dx_resource = uav.Resource->native_resource.Get();
+            m_commandList->ClearUnorderedAccessViewUint(h.get_gpu(), h.get_cpu(), dx_resource, reinterpret_cast<UINT*>(ClearColor.data()), 0, nullptr);
+        }
+
         void CommandList::clear_rtv(const Handles::RTV& h, vec4 ClearColor)
         {
             m_commandList->ClearRenderTargetView(h.get_cpu(), ClearColor.data(), 0, nullptr);

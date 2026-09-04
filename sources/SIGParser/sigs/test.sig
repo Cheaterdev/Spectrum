@@ -74,6 +74,7 @@ Pipeline MainPipeline
 											# value. See vsm.sig's own PassNode comments.
 											[Async2]VSM_BlockerClassify;
 											[Async2]VSM_BlockerSearch;
+											[Async2]VSM_ScreenSpaceShadow;
 											[Async2]VSM_ShadowResolve;
 											[Async2]VSM_Combine;
 											# Debug-only overlay, after VSM_Combine so it paints on top of

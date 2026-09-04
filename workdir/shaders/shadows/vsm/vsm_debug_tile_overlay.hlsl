@@ -146,3 +146,22 @@ void CS_OVERLAY_RTX_REFERENCE(uint3 DTid : SV_DispatchThreadID)
 	float rtx_shadow = GetVSMLighting().GetRtx_shadow_mask().SampleLevel(pointClampSampler, tc, 0);
 	GetVSMLighting().GetResult()[DTid.xy] = float4(rtx_shadow, rtx_shadow, rtx_shadow, 1);
 }
+
+// VSMDebugView::ContactShadow -- grayscale VSM_ScreenSpaceShadow's own
+// output directly, same shape as CS_OVERLAY_RTX_REFERENCE above. Only ever
+// meaningfully written for blur_tiles pixels (VSM_AmbiguousMask-gated); a
+// pixel VSM_ScreenSpaceShadow never wrote reads back as unwritten allocator
+// content -- see use_vsm_debug_clear_unwritten if that noise makes this hard
+// to read.
+[numthreads(16, 16, 1)]
+void CS_OVERLAY_CONTACT_SHADOW(uint3 DTid : SV_DispatchThreadID)
+{
+	uint2 dims;
+	GetVSMLighting().GetResult().GetDimensions(dims.x, dims.y);
+	if (any(DTid.xy >= dims))
+		return;
+
+	float2 tc = (float2(DTid.xy) + 0.5) / float2(dims);
+	float contact_shadow = GetVSMLighting().GetContact_shadow().SampleLevel(pointClampSampler, tc, 0);
+	GetVSMLighting().GetResult()[DTid.xy] = float4(contact_shadow, contact_shadow, contact_shadow, 1);
+}

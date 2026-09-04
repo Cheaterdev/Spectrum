@@ -11,6 +11,8 @@ struct VSMSearchVerdictAppend
 {
 	uint confirmed_lit_tiles; // AppendStructuredBuffer<uint2>
 	uint blur_tiles; // AppendStructuredBuffer<uint2>
+	uint ambiguous_mask; // RWTexture2D<float>
 	AppendStructuredBuffer<uint2> GetConfirmed_lit_tiles() { return ResourceDescriptorHeap[confirmed_lit_tiles]; }
 	AppendStructuredBuffer<uint2> GetBlur_tiles() { return ResourceDescriptorHeap[blur_tiles]; }
+	RWTexture2D<float> GetAmbiguous_mask() { return ResourceDescriptorHeap[ambiguous_mask]; }
 };

@@ -69,6 +69,7 @@ export
 		Library::VSM_HiZRebuild VSM_HiZRebuild;
 		Library::VSM_BlockerClassify VSM_BlockerClassify;
 		Library::VSM_BlockerSearch VSM_BlockerSearch;
+		Library::VSM_ScreenSpaceShadow VSM_ScreenSpaceShadow;
 		Library::VSM_ShadowResolve VSM_ShadowResolve;
 		Library::VSM_Combine VSM_Combine;
 		Library::VSM_DebugClassifyOverlay VSM_DebugClassifyOverlay;

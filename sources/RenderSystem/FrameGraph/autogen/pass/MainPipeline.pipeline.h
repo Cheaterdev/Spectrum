@@ -29,6 +29,7 @@
 #include "VSM_HiZRebuild.h"
 #include "VSM_BlockerClassify.h"
 #include "VSM_BlockerSearch.h"
+#include "VSM_ScreenSpaceShadow.h"
 #include "VSM_ShadowResolve.h"
 #include "VSM_Combine.h"
 #include "VSM_DebugClassifyOverlay.h"
@@ -69,6 +70,7 @@ public:
 	Passes::VSM_HiZRebuild vSM_HiZRebuild;
 	Passes::VSM_BlockerClassify vSM_BlockerClassify;
 	Passes::VSM_BlockerSearch vSM_BlockerSearch;
+	Passes::VSM_ScreenSpaceShadow vSM_ScreenSpaceShadow;
 	Passes::VSM_ShadowResolve vSM_ShadowResolve;
 	Passes::VSM_Combine vSM_Combine;
 	Passes::VSM_DebugClassifyOverlay vSM_DebugClassifyOverlay;
@@ -105,6 +107,7 @@ public:
 		Passes::VSM_HiZRebuild::Name.ptr,
 		Passes::VSM_BlockerClassify::Name.ptr,
 		Passes::VSM_BlockerSearch::Name.ptr,
+		Passes::VSM_ScreenSpaceShadow::Name.ptr,
 		Passes::VSM_ShadowResolve::Name.ptr,
 		Passes::VSM_Combine::Name.ptr,
 		Passes::VSM_DebugClassifyOverlay::Name.ptr,
@@ -194,6 +197,8 @@ public:
 		L"VSM_BlockerSearchResult",
 		L"VSM_ConfirmedLitTiles",
 		L"VSM_BlurTiles",
+		L"VSM_AmbiguousMask",
+		L"VSM_ContactShadow",
 		L"VoxelFramesCount",
 		L"VoxelIndirectNoise",
 		L"VoxelIndirectFiltered",
@@ -362,6 +367,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -374,7 +380,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Albedo_c0_states[] = {
 		{ true, { GBuffer_Albedo_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Albedo_c0_pass_refs + 1, 18 } },
+		{ false, { GBuffer_Albedo_c0_pass_refs + 1, 19 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Normals_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -388,6 +394,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -399,7 +406,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Normals_c0_states[] = {
 		{ true, { GBuffer_Normals_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Normals_c0_pass_refs + 1, 18 } },
+		{ false, { GBuffer_Normals_c0_pass_refs + 1, 19 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Depth_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -412,6 +419,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -426,7 +434,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Depth_c0_states[] = {
 		{ true, { GBuffer_Depth_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Depth_c0_pass_refs + 1, 20 } },
+		{ false, { GBuffer_Depth_c0_pass_refs + 1, 21 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -438,6 +446,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -449,7 +458,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Specular_c0_states[] = {
 		{ true, { GBuffer_Specular_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Specular_c0_pass_refs + 1, 16 } },
+		{ false, { GBuffer_Specular_c0_pass_refs + 1, 17 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Speed_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -462,6 +471,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -475,7 +485,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
 		{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Speed_c0_pass_refs + 1, 19 } },
+		{ false, { GBuffer_Speed_c0_pass_refs + 1, 20 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -487,6 +497,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -498,7 +509,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_DepthMips_c0_states[] = {
 		{ true, { GBuffer_DepthMips_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 16 } },
+		{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 17 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Quality_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -510,6 +521,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -521,7 +533,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Quality_c0_states[] = {
 		{ true, { GBuffer_Quality_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Quality_c0_pass_refs + 1, 16 } },
+		{ false, { GBuffer_Quality_c0_pass_refs + 1, 17 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_TempColor_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -533,6 +545,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -543,7 +556,7 @@ public:
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_TempColor_c0_states[] = {
-		{ false, { GBuffer_TempColor_c0_pass_refs + 0, 17 } },
+		{ false, { GBuffer_TempColor_c0_pass_refs + 0, 18 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_NormalsPrev_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -556,6 +569,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -567,7 +581,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_NormalsPrev_c0_states[] = {
 		{ true, { GBuffer_NormalsPrev_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_NormalsPrev_c0_pass_refs + 1, 17 } },
+		{ false, { GBuffer_NormalsPrev_c0_pass_refs + 1, 18 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_SpecularPrev_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -579,6 +593,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -590,7 +605,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_SpecularPrev_c0_states[] = {
 		{ true, { GBuffer_SpecularPrev_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_SpecularPrev_c0_pass_refs + 1, 16 } },
+		{ false, { GBuffer_SpecularPrev_c0_pass_refs + 1, 17 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthPrev_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -603,6 +618,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -613,7 +629,7 @@ public:
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_DepthPrev_c0_states[] = {
-		{ false, { GBuffer_DepthPrev_c0_pass_refs + 0, 18 } },
+		{ false, { GBuffer_DepthPrev_c0_pass_refs + 0, 19 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HiZ_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -625,6 +641,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -636,7 +653,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_c0_states[] = {
 		{ true, { GBuffer_HiZ_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_HiZ_c0_pass_refs + 1, 16 } },
+		{ false, { GBuffer_HiZ_c0_pass_refs + 1, 17 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HiZ_UAV_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -648,6 +665,7 @@ public:
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -659,7 +677,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_UAV_c0_states[] = {
 		{ true, { GBuffer_HiZ_UAV_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_HiZ_UAV_c0_pass_refs + 1, 16 } },
+		{ false, { GBuffer_HiZ_UAV_c0_pass_refs + 1, 17 } },
 	};
 	static inline const FrameGraph::PassRef sky_cubemap_c0_pass_refs[] = {
 		{ PassID::CubeSky, 0 },
@@ -976,6 +994,23 @@ public:
 		{ true, { VSM_BlurTiles_c0_pass_refs + 0, 1 } },
 		{ false, { VSM_BlurTiles_c0_pass_refs + 1, 2 } },
 	};
+	static inline const FrameGraph::PassRef VSM_AmbiguousMask_c0_pass_refs[] = {
+		{ PassID::VSM_BlockerSearch, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_AmbiguousMask_c0_states[] = {
+		{ true, { VSM_AmbiguousMask_c0_pass_refs + 0, 1 } },
+		{ false, { VSM_AmbiguousMask_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef VSM_ContactShadow_c0_pass_refs[] = {
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
+		{ PassID::VSM_ShadowResolve, 0 },
+		{ PassID::VSM_DebugClassifyOverlay, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_ContactShadow_c0_states[] = {
+		{ true, { VSM_ContactShadow_c0_pass_refs + 0, 1 } },
+		{ false, { VSM_ContactShadow_c0_pass_refs + 1, 2 } },
+	};
 	static inline const FrameGraph::PassRef VoxelFramesCount_c0_pass_refs[] = {
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::VoxelCombine, 0 },
@@ -1149,6 +1184,8 @@ public:
 		{ ResourceID::VSM_BlockerSearchResult, 0, VSM_BlockerSearchResult_c0_states },
 		{ ResourceID::VSM_ConfirmedLitTiles, 0, VSM_ConfirmedLitTiles_c0_states },
 		{ ResourceID::VSM_BlurTiles, 0, VSM_BlurTiles_c0_states },
+		{ ResourceID::VSM_AmbiguousMask, 0, VSM_AmbiguousMask_c0_states },
+		{ ResourceID::VSM_ContactShadow, 0, VSM_ContactShadow_c0_states },
 		{ ResourceID::VoxelFramesCount, 0, VoxelFramesCount_c0_states },
 		{ ResourceID::VoxelIndirectNoise, 0, VoxelIndirectNoise_c0_states },
 		{ ResourceID::VoxelIndirectFiltered, 0, VoxelIndirectFiltered_c0_states },
@@ -1238,6 +1275,10 @@ public:
 		{ PassID::VSM_HiZRebuild, 0 },
 		{ PassID::VSM_RenderPages, 0 },
 	};
+	static inline const FrameGraph::PassRef VSM_ScreenSpaceShadow_0_prev[] = {
+		{ PassID::Scene, 0 },
+		{ PassID::VSM_BlockerSearch, 0 },
+	};
 	static inline const FrameGraph::PassRef VSM_ShadowResolve_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
 		{ PassID::ResultCreation, 0 },
@@ -1245,6 +1286,7 @@ public:
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
 		{ PassID::VSM_RenderPages, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 	};
 	static inline const FrameGraph::PassRef VSM_Combine_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
@@ -1261,6 +1303,7 @@ public:
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
 		{ PassID::VSM_Combine, 0 },
+		{ PassID::VSM_ScreenSpaceShadow, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 	};
 	static inline const FrameGraph::PassRef VoxelScreen_0_prev[] = {
@@ -1414,6 +1457,7 @@ public:
 		{ PassID::VSM_HiZRebuild, 0, true, VSM_HiZRebuild_0_prev },
 		{ PassID::VSM_BlockerClassify, 0, true, VSM_BlockerClassify_0_prev },
 		{ PassID::VSM_BlockerSearch, 0, true, VSM_BlockerSearch_0_prev },
+		{ PassID::VSM_ScreenSpaceShadow, 0, true, VSM_ScreenSpaceShadow_0_prev },
 		{ PassID::VSM_ShadowResolve, 0, true, VSM_ShadowResolve_0_prev },
 		{ PassID::VSM_Combine, 0, true, VSM_Combine_0_prev },
 		{ PassID::VSM_DebugClassifyOverlay, 0, true, VSM_DebugClassifyOverlay_0_prev },
@@ -1489,6 +1533,8 @@ public:
 			graph.add_library_pass<Passes::VSM_BlockerClassify>(vSM_BlockerClassify.setup_func, vSM_BlockerClassify.render_func, (vSM_BlockerClassify.flags | FrameGraph::PassFlags::Compute2));
 		if (vSM_BlockerSearch.setup_func)
 			graph.add_library_pass<Passes::VSM_BlockerSearch>(vSM_BlockerSearch.setup_func, vSM_BlockerSearch.render_func, (vSM_BlockerSearch.flags | FrameGraph::PassFlags::Compute2));
+		if (vSM_ScreenSpaceShadow.setup_func)
+			graph.add_library_pass<Passes::VSM_ScreenSpaceShadow>(vSM_ScreenSpaceShadow.setup_func, vSM_ScreenSpaceShadow.render_func, (vSM_ScreenSpaceShadow.flags | FrameGraph::PassFlags::Compute2));
 		if (vSM_ShadowResolve.setup_func)
 			graph.add_library_pass<Passes::VSM_ShadowResolve>(vSM_ShadowResolve.setup_func, vSM_ShadowResolve.render_func, (vSM_ShadowResolve.flags | FrameGraph::PassFlags::Compute2));
 		if (vSM_Combine.setup_func)
