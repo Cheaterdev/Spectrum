@@ -1,0 +1,23 @@
+{
+  "name": "nrd",
+  "version": "4.17.3",
+  "description": "NVIDIA Real-time Denoisers (NRD) - REBLUR/RELAX/SIGMA ray-tracing denoisers. Built from source (no prebuilt release exists); D3D12/DXIL only, SPIRV and DXBC embedding disabled, NRI integration layer disabled (Spectrum drives raw D3D12 dispatches itself).",
+  "homepage": "https://github.com/NVIDIA-RTX/NRD",
+  "license": "MIT",
+  "supports": "windows & x64 & !uwp & !xbox",
+  "dependencies": [
+    "directx-headers",
+    {
+      "name": "directx-dxc",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}

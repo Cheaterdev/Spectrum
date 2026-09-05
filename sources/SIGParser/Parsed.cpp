@@ -9,14 +9,37 @@ my_stream::my_stream(std::string dir, std::string filename)
 	std::filesystem::create_directories(dir);
 }
 
+// Canonicalizes to CRLF explicitly (matching every generated file already
+// checked in) rather than leaning on text-mode streams to translate \n <->
+// \r\n implicitly and consistently on both the read and write side. Strips
+// any existing \r first so a stray one already present in `s` (e.g. from a
+// %{ }% insert block authored with real CRLF) can't turn into \r\r\n.
+static std::string to_crlf(const std::string& s)
+{
+	std::string out;
+	out.reserve(s.size());
+	for (char c : s)
+	{
+		if (c == '\r') continue;
+		if (c == '\n') out += '\r';
+		out += c;
+	}
+	return out;
+}
+
 my_stream::~my_stream()
 {
-	auto result = stream.str();
+	auto result = to_crlf(stream.str());
 	bool same = false;
 	{
-		std::ifstream f;
-		f.open(path);
-
+		// Binary, not text mode: relying on a text-mode ifstream/ofstream
+		// pair to translate \n <-> \r\n implicitly only round-trips
+		// correctly as long as both sides keep agreeing -- one CRT/locale
+		// quirk away from a false "different" that rewrites (and re-stamps
+		// the mtime of) every file regardless of whether its content
+		// actually changed. Comparing the explicitly-canonicalized bytes in
+		// binary mode removes that dependency outright.
+		std::ifstream f(path, std::ios::binary);
 
 		if (f.is_open())
 		{
@@ -30,13 +53,11 @@ my_stream::~my_stream()
 
 	if (!same)
 	{
-		std::ofstream f;
+		std::ofstream f(path, std::ios::binary);
 
-		f.open(path);
 		f << result;
 		f.close();
 	}
-	//stream.close();
 }
 
 std::string get_name_for(ValueType type)

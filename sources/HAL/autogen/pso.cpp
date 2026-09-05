@@ -53,6 +53,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DownsampleDepth>(device, pso[PSO::DownsampleDepth]));
 	tasks.emplace_back(PSOBase::create<PSOS::DownsampleDepthMip>(device, pso[PSO::DownsampleDepthMip]));
 	tasks.emplace_back(PSOBase::create<PSOS::MipMapping>(device, pso[PSO::MipMapping]));
+	tasks.emplace_back(PSOBase::create<PSOS::NRD_Clear_Test>(device, pso[PSO::NRD_Clear_Test]));
 	tasks.emplace_back(PSOBase::create<PSOS::PSSMApplyCompute>(device, pso[PSO::PSSMApplyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::RTXShadowReferenceCompute>(device, pso[PSO::RTXShadowReferenceCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::SkyCompute>(device, pso[PSO::SkyCompute]));

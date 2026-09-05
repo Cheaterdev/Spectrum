@@ -32,6 +32,7 @@ export import :Adapter;
 export import :Streamline;
 export import :DLSS;
 export import :DLSSRR;
+export import :NRD;
 //export import :Debug;
 
 export import :Shader;

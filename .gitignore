@@ -15,6 +15,18 @@ workdir/Assets/
 workdir/pso
 workdir/assert.txt
 
+# Vendored NVIDIA NRD shader source (Shaders/*.hlsli, *.hlsl) + MathLib's
+# ml.hlsli, recompiled locally via HAL::ShaderCompiler -- same license as
+# vcpkg_installed/ (proprietary NVIDIA source, "distribution ... without an
+# express license agreement from NVIDIA CORPORATION is strictly
+# prohibited" per each file's own header), must never be committed.
+# Our own SIG-binding shims (sig_*.hlsl) live in the same directory (their
+# relative #includes need to be siblings of NRD's own files -- see
+# [[project-nrd-integration]]) and are the one thing in here we DO want
+# tracked, hence "nrd/*" + an explicit re-include, not a bare "nrd/".
+workdir/shaders/nrd/*
+!workdir/shaders/nrd/sig_*.hlsl
+
 *.dat
 
 AgilitySDK/

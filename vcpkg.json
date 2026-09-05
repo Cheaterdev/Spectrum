@@ -18,6 +18,7 @@
      {"name" :"directx-headers", "version>=":"1.619.1"},
      "bshoshany-thread-pool",
      "streamline",
+     "nrd",
      "vulkan-headers",
      "vulkan-loader",
      "vulkan-memory-allocator"

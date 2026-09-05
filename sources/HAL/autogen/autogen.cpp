@@ -41,6 +41,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "CopyTexture") return SlotID::CopyTexture;
 	if(slot_name == "DownsampleDepth") return SlotID::DownsampleDepth;
 	if(slot_name == "DownsampleDepthMip") return SlotID::DownsampleDepthMip;
+	if(slot_name == "Clear_Constants") return SlotID::Clear_Constants;
 	if(slot_name == "GBufferDownsample") return SlotID::GBufferDownsample;
 	if(slot_name == "GBufferQuality") return SlotID::GBufferQuality;
 	if(slot_name == "PSSMConstants") return SlotID::PSSMConstants;
@@ -187,6 +188,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::DownsampleDepth) return Slots::DownsampleDepth::Slot::ID;
 
 	if(id == SlotID::DownsampleDepthMip) return Slots::DownsampleDepthMip::Slot::ID;
+
+	if(id == SlotID::Clear_Constants) return Slots::Clear_Constants::Slot::ID;
 
 	if(id == SlotID::GBufferDownsample) return Slots::GBufferDownsample::Slot::ID;
 
@@ -378,6 +381,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::CopyTexture) return "CopyTexture";
 	if(id == SlotID::DownsampleDepth) return "DownsampleDepth";
 	if(id == SlotID::DownsampleDepthMip) return "DownsampleDepthMip";
+	if(id == SlotID::Clear_Constants) return "Clear_Constants";
 	if(id == SlotID::GBufferDownsample) return "GBufferDownsample";
 	if(id == SlotID::GBufferQuality) return "GBufferQuality";
 	if(id == SlotID::PSSMConstants) return "PSSMConstants";

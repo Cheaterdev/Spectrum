@@ -1,0 +1,16 @@
+nrd provides NVIDIA Real-time Denoisers (REBLUR/RELAX/SIGMA), built from
+source (no prebuilt release exists upstream).
+
+    // headers: <nrd/NRD.h>, <nrd/NRDDescs.h>, <nrd/NRDSettings.h>
+    // library: nrd.lib (release) / debug/nrd.lib (debug), statically linked
+
+NRD makes zero D3D12 calls itself — GetComputeDispatches() returns a list of
+{shader, constants, resource bindings, thread group counts} for the engine
+to execute. Spectrum drives that raw dispatch loop itself via
+HAL::CommandList's list.compiler.func(...) escape hatch (see HAL:NRD, same
+shape as HAL:DLSS's manual Streamline calls) rather than NRI (NRD_NRI=OFF).
+
+D3D12/DXIL only: built with NRD_EMBEDS_DXIL_SHADERS=ON,
+NRD_EMBEDS_DXBC_SHADERS=OFF (no D3D11/FXC), NRD_EMBEDS_SPIRV_SHADERS=OFF
+(no Vulkan) — no runtime shader compilation needed, the DXIL blobs are
+embedded in nrd.lib.

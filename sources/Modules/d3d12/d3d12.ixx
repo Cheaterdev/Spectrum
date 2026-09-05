@@ -43,6 +43,7 @@ export
     using D3D12_RT_FORMAT_ARRAY                               = ::D3D12_RT_FORMAT_ARRAY;
     using D3D12_CACHED_PIPELINE_STATE                         = ::D3D12_CACHED_PIPELINE_STATE;
     using D3D12_PIPELINE_STATE_STREAM_DESC                    = ::D3D12_PIPELINE_STATE_STREAM_DESC;
+    using D3D12_COMPUTE_PIPELINE_STATE_DESC                   = ::D3D12_COMPUTE_PIPELINE_STATE_DESC;
     using D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS                = ::D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS;
     using D3D12_TEXTURE_BARRIER                               = ::D3D12_TEXTURE_BARRIER;
     using D3D12_BUFFER_BARRIER                                = ::D3D12_BUFFER_BARRIER;

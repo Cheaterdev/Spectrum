@@ -57,5 +57,14 @@ std::shared_ptr<RenderSystem> RenderSystem::create_singleton()
     if (!device) return nullptr;
 
     device->init_managers();
+
+    // Phase 3 bring-up checkpoint (see [[project-nrd-integration]]):
+    // placeholder 1920x1080 to verify pool allocation works end to end now
+    // that static_gpu_data (and its suballocator) exists -- unlike
+    // create_pipelines(), which runs earlier in HAL::Device's own
+    // construction since it doesn't need it. Remove once the real call site
+    // (render resolution, from a PassNode) lands.
+    nvidia::NRD::get().ensure_pools(*device, uint2(1920, 1080));
+
     return std::make_shared<RenderSystem>(std::move(device));
 }

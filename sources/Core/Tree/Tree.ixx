@@ -236,7 +236,7 @@ virtual 	int calculate_depth()
 };
 
 
-class VariableBase
+export class VariableBase
 {
 	std::string name;
 
@@ -256,6 +256,23 @@ public:
 	virtual std::vector<std::string> get_enum_names() const { return {}; }
 	virtual int get_enum_index() const { return -1; }
 	virtual void set_enum_index(int index) {}
+
+	// Fires (no payload) whenever the value changes, for GUI/generic code
+	// that only needs to know "something changed here, re-read the current
+	// state" without caring about the concrete type -- e.g. a combo box built
+	// from get_enum_names()/get_enum_index() above (which only ever sees this
+	// Variable as a VariableBase&, never the concrete Variable<T>&) needs some
+	// way to refresh its displayed selection after a "revert to default"
+	// click. Code that already has the concrete Variable<T>& should use its
+	// typed on_change instead, which also carries the new value.
+	Events::Event<> on_changed;
+
+	// Every Variable<T> has a default value and can be reset to it (unlike
+	// the enum accessors above, this isn't type-specific, so it's pure
+	// virtual rather than defaulted to a no-op -- there's no meaningful
+	// "not applicable" case for a Variable to not have a default).
+	virtual bool is_default() const = 0;
+	virtual void reset_to_default() = 0;
 };
 
 export class VariableContext:public tree<VariableContext, std::set<VariableContext*> >, public Singleton<VariableContext>
@@ -322,6 +339,7 @@ export template<class T>
 class Variable:public VariableBase
 {
 	T value;
+	T default_value;
 	VariableContext* context;
 
 	// Only meaningful when constrained is true (the range-taking constructor
@@ -337,7 +355,24 @@ class Variable:public VariableBase
 
 public:
 
-	Variable(const T& def, std::string name, VariableContext * context) :value(def), VariableBase(name), context(context)
+	// Fires with the new value whenever it actually changes -- from a GUI
+	// widget, from code, or from reset_to_default() (which goes through
+	// operator= too, so it's just another writer here, not a separate path).
+	// By value, not by reference: unlike prop's event_type, Variable is only
+	// ever instantiated for small, cheap-to-copy types (bool, float, enums),
+	// so there's no reason to take on Event<const T&>'s reference-lifetime
+	// sharp edges (see prop_t_helper::run's Runner-marshal handling) for no
+	// benefit here.
+	//
+	// Exists so a GUI row can stay in sync when the Variable changes from
+	// somewhere other than that row's own widget -- e.g. a "revert to
+	// defaults" action resetting several Variables at once, each of whose
+	// rows then needs to visually update to match, not just the one the user
+	// actually clicked.
+	Events::Event<T> on_change;
+
+	Variable(const T& def, std::string name, VariableContext * context) :
+		value(def), default_value(def), VariableBase(name), context(context)
 	{
 		context->add(this);
 	}
@@ -346,7 +381,7 @@ public:
 	// on every subsequent assignment (GUI slider drag or a plain `var = x` in
 	// code alike), so the constraint holds no matter which path writes it.
 	Variable(const T& def, std::string name, VariableContext* context, T min, T max) :
-		value(clamp(def, min, max)), VariableBase(name), context(context),
+		value(clamp(def, min, max)), default_value(clamp(def, min, max)), VariableBase(name), context(context),
 		range_min(min), range_max(max), constrained(true)
 	{
 		context->add(this);
@@ -364,12 +399,25 @@ public:
 
 	const T operator=(const T& r)
 	{
-		return value = constrained ? clamp(r, range_min, range_max) : r;
+		T clamped = constrained ? clamp(r, range_min, range_max) : r;
+
+		if (!(value == clamped))
+		{
+			value = clamped;
+			on_change(value);
+			on_changed();
+		}
+
+		return clamped;
 	}
 
 	bool has_range() const { return constrained; }
 	T get_min() const { return range_min; }
 	T get_max() const { return range_max; }
+
+	T get_default() const { return default_value; }
+	bool is_default() const override { return value == default_value; }
+	void reset_to_default() override { *this = default_value; }
 
 	// Real implementation only for enum T -- if constexpr discards the other
 	// branch entirely (not just at runtime), so this compiles for every T

@@ -2,6 +2,7 @@
 
 import :Debug;
 import :Streamline;
+import :NRD;
 import d3d12;
 import wrl;
 
@@ -61,6 +62,10 @@ namespace HAL
         // Must run before any D3D12 call (EnableGPUDebug() below counts) and
         // before adapter enumeration. Failure is non-fatal.
         nvidia::Streamline::get();
+
+        // Bring-up smoke test only (see [[project-nrd-integration]] Phase 1)
+        // -- CreateInstance() is pure CPU-side, no device needed.
+        nvidia::NRD::get().smoke_test();
 
         EnableGPUDebug();
         EnableShaderModel();

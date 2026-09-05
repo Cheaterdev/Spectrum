@@ -40,6 +40,8 @@ namespace Spectrum
         public const string InstalledRoot = @"[project.SharpmakeCsPath]\vcpkg_installed\" + Triplet;
         public const string Bin = InstalledRoot + @"\" + Triplet + @"\bin";
         public const string DebugBin = InstalledRoot + @"\" + Triplet + @"\debug\bin";
+        public const string Lib = InstalledRoot + @"\" + Triplet + @"\lib";
+        public const string DebugLib = InstalledRoot + @"\" + Triplet + @"\debug\lib";
         public const string Include = InstalledRoot + @"\" + Triplet + @"\include";
     }
 
@@ -283,6 +285,20 @@ namespace Spectrum
                 // Sharpmake version has no working delay-load path either.
                 // HAL LoadLibrary's it from Streamline.Dir and resolves sl*
                 // entry points via GetProcAddress instead.
+            }
+
+            { // NVIDIA NRD
+                // nrd.lib itself is auto-linked by the vcpkg manifest
+                // integration (its name matches the port name, which also
+                // gets its directory added to the library search path
+                // automatically), but NRD.lib calls
+                // ShaderMake::FindPermutationInBlob() without bundling it --
+                // that symbol lives in a second static lib the nrd port
+                // also installs (ShaderMakeBlob.lib) that doesn't match any
+                // port name, so neither the reference nor its directory get
+                // added automatically.
+                conf.LibraryPaths.Add((target.Mode == Mode.Debug) ? Vcpkg.DebugLib : Vcpkg.Lib);
+                conf.LibraryFiles.Add("ShaderMakeBlob.lib");
             }
 
             // runtime-loaded DLLs not detected by VcpkgApplocalDeps
