@@ -21,6 +21,7 @@ namespace FrameGraph
 		ResultCreation,
 		NRD_GBufferPack,
 		NRD_REBLUR_Execute,
+		NRD_IndirectCombine,
 		PSSM_Cascade,
 		PSSM_GenerateMask,
 		PSSM_Combine,

@@ -633,6 +633,12 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 		builder.create(data.VoxelIndirectNoise,
 			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 }, ResourceFlags::UnorderedAccess);
+		// Raw (pre-history-lerp) signal for NRD REBLUR_DIFFUSE -- see
+		// [[project-nrd-integration]]. Unconditionally created/written
+		// (both trace paths below), simply unused when g_indirect_source
+		// picks the RTX reference signal instead.
+		builder.create(data.VoxelIndirectNoiseRaw,
+			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 
 		// Temporal history: carry last frame's VoxelIndirectFiltered forward as the
 		// adopted *Prev (resource is reused, not recreated -> no data loss), instead
@@ -667,6 +673,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		GBuffer gbuffer                = GBufferViewDesc::actualize(data.gbuffer);
 		auto    sky_cubemap_filtered   = *data.sky_cubemap_filtered;
 		auto    noisy_output           = *data.VoxelIndirectNoise;
+		auto    noisy_output_raw       = *data.VoxelIndirectNoiseRaw;
 		auto    gi_filtered            = *data.VoxelIndirectFiltered;
 		auto    gi_prev                = *data.VoxelIndirectFilteredPrev;
 		auto    frames_count           = *data.VoxelFramesCount;
@@ -719,6 +726,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 			Slots::VoxelOutput output;
 			output.GetFrames()    = frames_count.rwTexture2D;
 			output.GetNoise()     = noisy_output.rwTexture2D;
+			output.GetNoiseRaw()  = noisy_output_raw.rwTexture2D;
 			output.GetBlueNoise() = data.BlueNoise->texture2D;
 			compute.set(output);
 		}
@@ -871,11 +879,20 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		context.graph->set_slot(SlotID::VoxelInfo, compute);
 
 		{
+			// Same dlssrr_active check RTXCombine.cpp does inline -- when NRD
+			// is selected and DLSS-RR isn't the active upscaler,
+			// NRD_IndirectCombine adds REBLUR's denoised indirect term onto
+			// ResultTexture instead of this shader's own (see voxel.sig's
+			// VoxelBlur comment and [[project-nrd-integration]]).
+			bool dlssrr_active = g_upscaler_type == UpscalerType::DLSSRR &&
+				RenderSystem::get().device().is_rtx_supported() && nvidia::DLSSRR::get().available();
+
 			Slots::VoxelBlur voxelBlur;
-			voxelBlur.GetNoisy_output()  = noisy_output.texture2D;
-			voxelBlur.GetPrev_result()   = frames_count.texture2D;
-			voxelBlur.GetScreen_result() = target_tex.rwTexture2D;
-			voxelBlur.GetGi_result()     = gi_filtered.rwTexture2D;
+			voxelBlur.GetNoisy_output()   = noisy_output.texture2D;
+			voxelBlur.GetPrev_result()    = frames_count.texture2D;
+			voxelBlur.GetScreen_result()  = target_tex.rwTexture2D;
+			voxelBlur.GetGi_result()      = gi_filtered.rwTexture2D;
+			voxelBlur.GetSkip_composite() = (g_indirect_denoiser == IndirectDenoiser::NRD && !dlssrr_active) ? 1 : 0;
 			compute.set(voxelBlur);
 		}
 

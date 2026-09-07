@@ -27,7 +27,14 @@ bool PassDefault<Passes::RTXCombine>::setup(
 
 	GBufferViewDesc::need(builder, data.gbuffer);
 	builder.need(data.RTXReflectionNoise,  ResourceFlags::ComputeRead);
-	builder.need(data.RTXIndirectDenoised, ResourceFlags::ComputeRead);
+	// Which indirect input exists this frame follows g_indirect_denoiser --
+	// NRD_REBLUR_Execute (RTXIndirectDenoised's producer) is itself gated on
+	// this same flag, so only need() the one that's actually going to be
+	// produced.
+	if (g_indirect_denoiser == IndirectDenoiser::NRD)
+		builder.need(data.RTXIndirectDenoised, ResourceFlags::ComputeRead);
+	else
+		builder.need(data.VoxelIndirectFiltered, ResourceFlags::ComputeRead);
 	builder.need(data.RTXShadowNoise,      ResourceFlags::ComputeRead);
 	builder.create(data.ResultTextureRTXNoise,
 		{ ivec3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
@@ -53,7 +60,16 @@ void PassDefault<Passes::RTXCombine>::render(
 		Slots::RTXCombine combine;
 		gbuffer.SetTable(combine.GetGbuffer());
 		combine.GetReflection() = data.RTXReflectionNoise->texture2D;
-		combine.GetIndirect()   = data.RTXIndirectDenoised->texture2D;
+		if (g_indirect_denoiser == IndirectDenoiser::NRD)
+		{
+			combine.GetIndirect() = data.RTXIndirectDenoised->texture2D;
+			combine.GetUnpack_indirect() = 1;
+		}
+		else
+		{
+			combine.GetIndirect() = data.VoxelIndirectFiltered->texture2D;
+			combine.GetUnpack_indirect() = 0;
+		}
 		combine.GetShadow()     = data.RTXShadowNoise->texture2D;
 		combine.GetTarget()     = data.ResultTextureRTXNoise->rwTexture2D;
 		compute.set(combine);

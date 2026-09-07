@@ -6,50 +6,44 @@
 // ============================================================================
 #pragma once
 #include "../PassNodeBase.h"
-
+#include "GBuffer.h"
 using namespace FrameGraph;
 
 namespace Passes
 {
 
-class NRD_REBLUR_Execute : public PassNodeBase
+class NRD_IndirectCombine : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
-
-		Handlers::Texture NRD_ViewZ = ResourceID::NRD_ViewZ;
-
-
-		Handlers::Texture NRD_NormalRoughness = ResourceID::NRD_NormalRoughness;
-
-
-		Handlers::Texture NRD_Mv = ResourceID::NRD_Mv;
-
-
-		Handlers::Texture RTXIndirectNoise = ResourceID::RTXIndirectNoise;
-
-
-		Handlers::Texture VoxelIndirectNoiseRaw = ResourceID::VoxelIndirectNoiseRaw;
-
+		GBuffer gbuffer;
 
 		Handlers::Texture RTXIndirectDenoised = ResourceID::RTXIndirectDenoised;
 
 
-		Handlers::Texture RTXIndirectDenoisedPreview = ResourceID::RTXIndirectDenoisedPreview;
+		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::NRD_ViewZ, false },
-			{ ResourceID::NRD_NormalRoughness, false },
-			{ ResourceID::NRD_Mv, false },
-			{ ResourceID::RTXIndirectNoise, false },
-			{ ResourceID::VoxelIndirectNoiseRaw, false },
-			{ ResourceID::RTXIndirectDenoised, true },
-			{ ResourceID::RTXIndirectDenoisedPreview, true },
+			{ ResourceID::GBuffer_Albedo, false },
+			{ ResourceID::GBuffer_Normals, false },
+			{ ResourceID::GBuffer_Depth, false },
+			{ ResourceID::GBuffer_Specular, false },
+			{ ResourceID::GBuffer_Speed, false },
+			{ ResourceID::GBuffer_DepthMips, false },
+			{ ResourceID::GBuffer_Quality, false },
+			{ ResourceID::GBuffer_TempColor, false },
+			{ ResourceID::GBuffer_NormalsPrev, false },
+			{ ResourceID::GBuffer_SpecularPrev, false },
+			{ ResourceID::GBuffer_DepthPrev, false },
+			{ ResourceID::GBuffer_HiZ, false },
+			{ ResourceID::GBuffer_HiZ_UAV, false },
+			{ ResourceID::RTXIndirectDenoised, false },
+			{ ResourceID::ResultTexture, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -60,9 +54,9 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"NRD_REBLUR_Execute"};
+	static constexpr LiteralWStr Name{L"NRD_IndirectCombine"};
 
-	static constexpr PassID ID = PassID::NRD_REBLUR_Execute;
+	static constexpr PassID ID = PassID::NRD_IndirectCombine;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
@@ -72,7 +66,7 @@ public:
 	setup_func_type setup_func;
 	render_func_type render_func;
 
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
 };
 
 }

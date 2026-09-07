@@ -32,6 +32,9 @@ public:
 		Handlers::Texture VoxelIndirectNoise = ResourceID::VoxelIndirectNoise;
 
 
+		Handlers::Texture VoxelIndirectNoiseRaw = ResourceID::VoxelIndirectNoiseRaw;
+
+
 		Handlers::Texture VoxelIndirectFiltered = ResourceID::VoxelIndirectFiltered;
 
 
@@ -76,6 +79,7 @@ public:
 			{ ResourceID::VoxelLighted, false },
 			{ ResourceID::VoxelFramesCount, true },
 			{ ResourceID::VoxelIndirectNoise, true },
+			{ ResourceID::VoxelIndirectNoiseRaw, true },
 			{ ResourceID::VoxelIndirectFiltered, true },
 			{ ResourceID::VoxelIndirectFilteredPrev, false },
 			{ ResourceID::sky_cubemap_filtered, false },

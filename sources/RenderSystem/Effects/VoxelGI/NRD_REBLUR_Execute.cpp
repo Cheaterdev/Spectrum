@@ -12,12 +12,13 @@ using namespace HAL;
 
 // Real per-frame REBLUR_DIFFUSE execution (see [[project-nrd-integration]]),
 // replacing the one-shot smoke-test call that used to live in
-// RenderSystem::create_singleton(). Gated the same as IndirectRTX/
-// NRD_GBufferPack (its only inputs) so all three stay in lockstep.
+// RenderSystem::create_singleton(). Gated purely on g_indirect_denoiser --
+// independent of g_upscaler_type, so NRD works under FSR/DLSS too, not just
+// DLSS-RR. NRD_GBufferPack (its other input) uses the same gate.
 bool PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 	Passes::NRD_REBLUR_Execute::Context& data, TaskBuilder& builder)
 {
-	if (g_upscaler_type != UpscalerType::DLSSRR ||
+	if (g_indirect_denoiser != IndirectDenoiser::NRD ||
 	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
@@ -32,7 +33,11 @@ bool PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 	builder.need(data.NRD_ViewZ, ResourceFlags::ComputeRead);
 	builder.need(data.NRD_NormalRoughness, ResourceFlags::ComputeRead);
 	builder.need(data.NRD_Mv, ResourceFlags::ComputeRead);
+	// Both raw candidates are always needed: which one render() actually
+	// feeds to NRD is a runtime pick (g_indirect_source), but the FrameGraph
+	// dependency declared here is static per pass.
 	builder.need(data.RTXIndirectNoise, ResourceFlags::ComputeRead);
+	builder.need(data.VoxelIndirectNoiseRaw, ResourceFlags::ComputeRead);
 	builder.create(data.RTXIndirectDenoised,
 		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	// Debug-view-only unpacked preview (see nrd_sig_test.sig's
@@ -52,7 +57,9 @@ void PassDefault<Passes::NRD_REBLUR_Execute>::render(
 	inputs.view_z            = *data.NRD_ViewZ;
 	inputs.normal_roughness  = *data.NRD_NormalRoughness;
 	inputs.mv                = *data.NRD_Mv;
-	inputs.diff_noisy        = *data.RTXIndirectNoise;
+	inputs.diff_noisy        = g_indirect_source == IndirectSource::MyVCT
+	                            ? *data.VoxelIndirectNoiseRaw
+	                            : *data.RTXIndirectNoise;
 	inputs.diff_denoised     = *data.RTXIndirectDenoised;
 
 	memcpy(inputs.world_to_view,      cam->camera_cb.current.view.elems.data(), sizeof(inputs.world_to_view));

@@ -11,13 +11,13 @@ using namespace FrameGraph;
 using namespace HAL;
 
 // Front-end packing for NRD REBLUR_DIFFUSE (see [[project-nrd-integration]]).
-// Gated the same as IndirectRTX (its only real consumer) so both stay in
-// lockstep -- no point packing G-buffer data for a denoiser pass that won't
-// run.
+// Gated purely on g_indirect_denoiser -- independent of g_upscaler_type, so
+// NRD works under FSR/DLSS too, not just DLSS-RR (NRD_REBLUR_Execute, its
+// only real consumer, uses the same gate).
 bool PassDefault<Passes::NRD_GBufferPack>::setup(
 	Passes::NRD_GBufferPack::Context& data, TaskBuilder& builder)
 {
-	if (g_upscaler_type != UpscalerType::DLSSRR ||
+	if (g_indirect_denoiser != IndirectDenoiser::NRD ||
 	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 

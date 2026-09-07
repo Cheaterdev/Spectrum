@@ -8,18 +8,12 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "GBuffer.h"
-struct RTXCombine
+struct NRD_IndirectCombineParams
 {
-	uint unpack_indirect; // uint
-	uint reflection; // Texture2D<float4>
 	uint indirect; // Texture2D<float4>
-	uint shadow; // Texture2D<float4>
 	uint target; // RWTexture2D<float4>
 	GBuffer gbuffer; // GBuffer
 	GBuffer GetGbuffer() { return gbuffer; }
-	uint GetUnpack_indirect() { return unpack_indirect; }
-	Texture2D<float4> GetReflection() { return ResourceDescriptorHeap[reflection]; }
 	Texture2D<float4> GetIndirect() { return ResourceDescriptorHeap[indirect]; }
-	Texture2D<float4> GetShadow() { return ResourceDescriptorHeap[shadow]; }
 	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
 };

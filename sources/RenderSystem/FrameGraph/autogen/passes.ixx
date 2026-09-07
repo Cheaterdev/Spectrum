@@ -24,6 +24,7 @@ export import "../defines.h";
 #include "pass/ResultCreation.h"
 #include "pass/NRD_GBufferPack.h"
 #include "pass/NRD_REBLUR_Execute.h"
+#include "pass/NRD_IndirectCombine.h"
 #include "pass/PSSM_Cascade.h"
 #include "pass/PSSM_GenerateMask.h"
 #include "pass/PSSM_Combine.h"
@@ -87,6 +88,7 @@ export namespace Passes
 	using ::Passes::ResultCreation;
 	using ::Passes::NRD_GBufferPack;
 	using ::Passes::NRD_REBLUR_Execute;
+	using ::Passes::NRD_IndirectCombine;
 	using ::Passes::PSSM_Cascade;
 	using ::Passes::PSSM_GenerateMask;
 	using ::Passes::PSSM_Combine;

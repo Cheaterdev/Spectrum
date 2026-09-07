@@ -31,6 +31,7 @@ export
 		Library::ResultCreation ResultCreation;
 		Library::NRD_GBufferPack NRD_GBufferPack;
 		Library::NRD_REBLUR_Execute NRD_REBLUR_Execute;
+		Library::NRD_IndirectCombine NRD_IndirectCombine;
 		Library::PSSM_Cascade PSSM_Cascade;
 		Library::PSSM_GenerateMask PSSM_GenerateMask;
 		Library::PSSM_Combine PSSM_Combine;

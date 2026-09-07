@@ -9,11 +9,13 @@
 #include "enums.h"
 struct VoxelBlur
 {
+	uint skip_composite; // uint
 	uint noisy_output; // Texture2D<float4>
 	uint hit_and_pdf; // Texture2D<float4>
 	uint prev_result; // Texture2D<float4>
 	uint screen_result; // RWTexture2D<float4>
 	uint gi_result; // RWTexture2D<float4>
+	uint GetSkip_composite() { return skip_composite; }
 	Texture2D<float4> GetNoisy_output() { return ResourceDescriptorHeap[noisy_output]; }
 	Texture2D<float4> GetHit_and_pdf() { return ResourceDescriptorHeap[hit_and_pdf]; }
 	Texture2D<float4> GetPrev_result() { return ResourceDescriptorHeap[prev_result]; }

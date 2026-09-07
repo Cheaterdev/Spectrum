@@ -17,6 +17,7 @@ export namespace Table
 	struct VoxelBlur
 	{
 		static constexpr SlotID ID = SlotID::VoxelBlur;
+		uint skip_composite;
 		HLSL::Texture2D<float4> noisy_output;
 		HLSL::Texture2D<float4> hit_and_pdf;
 		HLSL::Texture2D<float4> prev_result;
@@ -27,10 +28,12 @@ export namespace Table
 		HLSL::Texture2D<float4>& GetPrev_result() { return prev_result; }
 		HLSL::RWTexture2D<float4>& GetScreen_result() { return screen_result; }
 		HLSL::RWTexture2D<float4>& GetGi_result() { return gi_result; }
+		uint& GetSkip_composite() { return skip_composite; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
+			compiler.compile(skip_composite, "VoxelBlur::skip_composite");
 			compiler.compile(noisy_output, "VoxelBlur::noisy_output");
 			compiler.compile(hit_and_pdf, "VoxelBlur::hit_and_pdf");
 			compiler.compile(prev_result, "VoxelBlur::prev_result");
@@ -39,6 +42,7 @@ export namespace Table
 		}
 		struct Compiled
 		{
+			uint skip_composite; // uint
 			uint noisy_output; // Texture2D<float4>
 			uint hit_and_pdf; // Texture2D<float4>
 			uint prev_result; // Texture2D<float4>
@@ -49,6 +53,7 @@ export namespace Table
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(skip_composite);
 			}
 
 
@@ -61,6 +66,7 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
+			ar& NVP(skip_composite);
 		}
 
 	};

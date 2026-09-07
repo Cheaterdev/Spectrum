@@ -16,10 +16,11 @@ using namespace HAL;
 bool PassDefault<Passes::IndirectRTX>::setup(
 	Passes::IndirectRTX::Context& data, TaskBuilder& builder)
 {
-	// Feeds RTXCombine, active only when the user has picked DLSS-RR via
-	// g_upscaler_type. Gated the same as ReflectionRTX/ShadowRTX/RTXCombine
-	// so all four stay in lockstep.
-	if (g_upscaler_type != UpscalerType::DLSSRR ||
+	// Feeds RTXCombine under DLSS-RR (gated the same as ReflectionRTX/
+	// ShadowRTX/RTXCombine there), and also feeds NRD_REBLUR_Execute (as its
+	// RTXReference diff_noisy candidate) whenever NRD is selected, regardless
+	// of upscaler -- see [[project-nrd-integration]].
+	if ((g_upscaler_type != UpscalerType::DLSSRR && g_indirect_denoiser != IndirectDenoiser::NRD) ||
 	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 

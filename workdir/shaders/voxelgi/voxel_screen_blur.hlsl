@@ -377,7 +377,10 @@ float NoV = dot(normal, v);
 float3 color = albedo*IntegrateBRDF(roughness, metallic, -NoV).x* cur_gi.xyz;
 #endif
 
-
-tex_result[index] += float4(color, 1);
+// See VoxelBlur's own comment (voxel.sig) -- NRD_IndirectCombine adds the
+// REBLUR-denoised indirect term onto ResultTexture instead when this is set,
+// so adding this shader's own (undenoised-by-REBLUR) term here would double up.
+if (!GetVoxelBlur().GetSkip_composite())
+	tex_result[index] += float4(color, 1);
 
 }

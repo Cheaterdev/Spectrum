@@ -6,6 +6,10 @@
 #include "../autogen/FrameInfo.h"
 #include "../autogen/VoxelInfo.h"
 #include "../autogen/VoxelScreen.h"
+// PackForReblurDiffuse(), used by the CS entry point below to write a raw
+// (pre-history-lerp) signal for NRD REBLUR_DIFFUSE -- see
+// [[project-nrd-integration]].
+#include "../nrd/reblur_pack_helper.hlsli"
 
 #ifndef BUILD_FUNC_CS
 #include "../autogen/VoxelUpscale.h"
@@ -425,6 +429,11 @@ upscale_result get_history(float3 pos, float2 tc, float2 prev_tc, float2 dims, f
 #include "../autogen/VoxelOutput.h"
 static const RWTexture2D<float4> tex_noise = GetVoxelOutput().GetNoise();
 static const RWTexture2D<float> tex_frames = GetVoxelOutput().GetFrames();
+// Raw (pre-history-lerp) YCoCg-packed signal for NRD REBLUR_DIFFUSE, see
+// [[project-nrd-integration]] -- tex_noise above is already temporally
+// blended by this shader's own history lerp below, which would double up
+// with REBLUR's own temporal accumulation if fed to it directly.
+static const RWTexture2D<float4> tex_noise_raw = GetVoxelOutput().GetNoiseRaw();
 
 [numthreads(8, 8, 1)]
 void  CS(uint3 groupID       : SV_GroupID,
@@ -451,6 +460,7 @@ void  CS(uint3 groupID       : SV_GroupID,
 		// through the history blend.
 		tex_noise[dispatchID.xy] = 0;
 		tex_frames[dispatchID.xy] = 1;
+		tex_noise_raw[dispatchID.xy] = 0;
 		return;
 	}
 
@@ -465,12 +475,20 @@ void  CS(uint3 groupID       : SV_GroupID,
 	float m = 1 * max(max(abs(normal.x), abs(normal.y)), abs(normal.z));
 	float4 gi = max(0, getGI(itc, pos, pos + scaler * normal / m, normal, v, r, gbuffer.GetNormals()[tc].w, albedo.w));
 
+	// getGI() cone-traces through the voxel grid without tracking a real
+	// hit-t (unlike the RTX path's payload_gi.dist), so there's no true hit
+	// distance to normalize here. Approximate with viewZ itself -- treats the
+	// GI sample as if it landed roughly at the shaded surface's own depth,
+	// which is the best guess available without threading a hit-t out of
+	// get_direction()/getGI().
+	float viewZ = mul(camera.GetView(), float4(pos, 1)).z;
+	tex_noise_raw[dispatchID.xy] = PackForReblurDiffuse(gi.rgb, abs(viewZ), viewZ);
 
 	float2 delta = speed_tex.SampleLevel(pointClampSampler, itc, 0).xy;
 	float2 prev_tc = itc - delta;
 
 	float l = length(pos - camera.GetPosition());
-	
+
 	upscale_result reprojected = get_history(pos, tc, prev_tc, dims, l);
 
 	float speed = 1.0 / (1.0 + reprojected.frames);

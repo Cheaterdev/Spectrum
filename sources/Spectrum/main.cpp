@@ -1489,6 +1489,63 @@ public:
 						toolbar->add_child(upscaler_combo);
 					}
 
+					// Indirect-GI source selector, writes g_indirect_source
+					// (see [[project-nrd-integration]]) -- which raw signal
+					// is available as a denoiser's input. Only observed
+					// while g_indirect_denoiser == NRD (below).
+					{
+						struct IndirectSourceOpt { const char* name; IndirectSource source; };
+						static const IndirectSourceOpt opts[] = {
+							{ "Indirect Src: My VCT",  IndirectSource::MyVCT },
+							{ "Indirect Src: RTX Ref", IndirectSource::RTXReference },
+						};
+
+						auto combo = std::make_shared<GUI::Elements::combo_box>();
+						combo->docking = GUI::dock::TOP;
+						combo->size = { 140, 24 };
+						for (auto& o : opts)
+						{
+							auto source = o.source;
+							combo->add_item(o.name)->on_select =
+								[source]()
+								{
+									g_indirect_source = source;
+								};
+							if (o.source == g_indirect_source)
+								combo->get_label()->text = o.name;
+						}
+						toolbar->add_child(combo);
+					}
+
+					// Indirect-GI denoiser selector, writes g_indirect_denoiser
+					// (see [[project-nrd-integration]]) -- which processed
+					// signal RTXCombine reads for the final indirect
+					// contribution. Only observable while g_upscaler_type ==
+					// DLSSRR (RTXCombine's own gate).
+					{
+						struct IndirectDenoiserOpt { const char* name; IndirectDenoiser denoiser; };
+						static const IndirectDenoiserOpt opts[] = {
+							{ "Indirect Denoiser: Legacy", IndirectDenoiser::Legacy },
+							{ "Indirect Denoiser: NRD",    IndirectDenoiser::NRD },
+						};
+
+						auto combo = std::make_shared<GUI::Elements::combo_box>();
+						combo->docking = GUI::dock::TOP;
+						combo->size = { 140, 24 };
+						for (auto& o : opts)
+						{
+							auto denoiser = o.denoiser;
+							combo->add_item(o.name)->on_select =
+								[denoiser]()
+								{
+									g_indirect_denoiser = denoiser;
+								};
+							if (o.denoiser == g_indirect_denoiser)
+								combo->get_label()->text = o.name;
+						}
+						toolbar->add_child(combo);
+					}
+
 					// DLSS-quality selector, writes g_upscaling_dlss_mode.
 					// "Off" isn't offered — DLSS on/off is via FSR/DLSS
 					// mutual exclusion elsewhere, not DLSSMode::Off.

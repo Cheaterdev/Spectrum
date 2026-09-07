@@ -65,6 +65,17 @@ struct PassDefault<Passes::NRD_REBLUR_Execute>
 
 
 template<>
+struct PassDefault<Passes::NRD_IndirectCombine>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	static bool setup(Passes::NRD_IndirectCombine::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::NRD_IndirectCombine::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::RTXShadow>
 {
 	static constexpr bool enabled = true;

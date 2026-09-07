@@ -57,7 +57,6 @@ Pipeline MainPipeline
 	[Async]ShadowRTX;
 	[Async]IndirectRTX;
 	[Async]NRD_GBufferPack;
-	[Async]NRD_REBLUR_Execute;
 
 											[Async]
 											RTXShadow;
@@ -88,7 +87,16 @@ Pipeline MainPipeline
 											VoxelScreen;
 											[Async2]
 											VoxelCombine;
-	
+
+		# Needs VoxelIndirectNoiseRaw (VoxelScreen, above) as an alternative
+		# diff_noisy input (g_indirect_source) -- must be declared after it,
+		# not grouped with NRD_GBufferPack/IndirectRTX above, see
+		# [[project-nrd-integration]].
+		[Async]NRD_REBLUR_Execute;
+		# FSR/DLSS-side equivalent of the indirect term RTXCombine computes
+		# for DLSS-RR -- see nrd_sig_test.sig's own PassNode comment and
+		# [[project-nrd-integration]].
+		[Async]NRD_IndirectCombine;
 		[Async]ReflCombine;
 		[Async]RTXCombine;
 

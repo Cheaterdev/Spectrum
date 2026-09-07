@@ -84,10 +84,18 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 
 	// Indirect GI: diffuse bounce light, weighted by the surface's own
 	// albedo (diffuse response) rather than the specular BRDF above, and
-	// rolled off by metallic (metals have ~no diffuse term). REBLUR's
-	// denoised output is packed (YCoCg + normalized hit distance, see
-	// raytracing.hlsl's MyRaygenShaderIndirectRTXOnly) -- unpack before use.
-	float3 indirect = REBLUR_BackEnd_UnpackRadianceAndNormHitDist(GetRTXCombine().GetIndirect()[tc]).rgb;
+	// rolled off by metallic (metals have ~no diffuse term). Two possible
+	// sources (see [[project-nrd-integration]], g_indirect_denoiser):
+	// REBLUR's denoised output, packed (YCoCg + normalized hit distance, see
+	// reblur_pack_helper.hlsli) and needing an unpack -- or the legacy VCT
+	// pipeline's plain VoxelIndirectFiltered, never YCoCg-encoded. Which
+	// texture is actually bound is chosen CPU-side (RTXCombine.cpp); which
+	// unpack path to take can't be, so unpack_indirect (set from the same
+	// C++ flag) drives it here.
+	float4 indirect_raw = GetRTXCombine().GetIndirect()[tc];
+	float3 indirect = GetRTXCombine().GetUnpack_indirect() != 0
+		? REBLUR_BackEnd_UnpackRadianceAndNormHitDist(indirect_raw).rgb
+		: indirect_raw.rgb;
 	float3 gi_color = albedo.rgb * indirect * (1 - metallic);
 
 	GetRTXCombine().GetTarget()[tc] = float4(direct + refl_color + gi_color, 1);

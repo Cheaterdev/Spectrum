@@ -69,6 +69,10 @@ struct VoxelOutput
 	RWTexture2D<float4> DirAndPdf;
 	 Texture2D<float2> blueNoise;
 
+	# Raw (pre-history-lerp), YCoCg-packed indirect-GI signal for NRD
+	# REBLUR_DIFFUSE -- see [[project-nrd-integration]] and PassNode
+	# VoxelScreen's VoxelIndirectNoiseRaw.
+	RWTexture2D<float4> noiseRaw;
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -81,6 +85,13 @@ struct VoxelBlur
 
 	RWTexture2D<float4> screen_result;
 	RWTexture2D<float4> gi_result;
+
+	# Set from g_indirect_denoiser (see [[project-nrd-integration]]): nonzero
+	# when NRD_IndirectCombine will add the REBLUR-denoised indirect term
+	# onto ResultTexture instead -- this shader still computes gi_result
+	# (VoxelIndirectFiltered, kept fresh for a Legacy fallback) but skips its
+	# own additive contribution to screen_result to avoid double-adding.
+	uint skip_composite;
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -486,6 +497,13 @@ struct RTXCombine
 	Texture2D<float4> shadow;
 
 	RWTexture2D<float4> target;
+
+	# Set from g_indirect_denoiser (see [[project-nrd-integration]]): nonzero
+	# when `indirect` above is REBLUR's YCoCg+hitdist-packed output
+	# (RTXIndirectDenoised) and needs REBLUR_BackEnd_UnpackRadianceAndNormHitDist;
+	# zero when it's the legacy VCT pipeline's plain VoxelIndirectFiltered,
+	# which was never YCoCg-encoded.
+	uint unpack_indirect;
 }
 
 ComputePSO RTXCombine
@@ -517,6 +535,11 @@ PassNode VoxelScreen
 	Texture3D VoxelLighted;
 	[Write] Texture VoxelFramesCount;
 	[Write] Texture VoxelIndirectNoise;
+	# Raw (pre-history-lerp) signal for NRD REBLUR_DIFFUSE -- see
+	# [[project-nrd-integration]]. Always written (both the RTX and
+	# non-RTX trace paths), unused when g_indirect_source picks the RTX
+	# reference signal instead.
+	[Write] Texture VoxelIndirectNoiseRaw;
 	[Write] Texture VoxelIndirectFiltered;
 	# Previous-frame view of VoxelIndirectFiltered (history-prev, adopted
 	# resource). READ-ONLY by design — the FrameGraph skips alloc/free
@@ -645,6 +668,9 @@ PassNode RTXCombine
 	GBuffer gbuffer;
 	Texture RTXReflectionNoise;
 	Texture RTXIndirectDenoised;
+	# Legacy VCT full pipeline's output -- alternative indirect input
+	# selected by g_indirect_denoiser instead of RTXIndirectDenoised.
+	Texture VoxelIndirectFiltered;
 	Texture RTXShadowNoise;
 
 	[Write] Texture ResultTextureRTXNoise;

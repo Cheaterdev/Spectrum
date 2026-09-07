@@ -30,12 +30,12 @@
 #include "../common/pbr.hlsl"
 #include "../common/common.hlsl"
 
-// REBLUR_FrontEnd_GetNormHitDist/REBLUR_FrontEnd_PackRadianceAndNormHitDist,
-// used by MyRaygenShaderIndirectRTXOnly below to pack IN_DIFF_RADIANCE_HITDIST
-// for NRD's REBLUR_DIFFUSE denoiser (see [[project-nrd-integration]]).
-// Self-contained (no NRD_INTERNAL/NRD_METHOD-gated code reached), safe to
-// pull into a non-NRD shader -- NRD_INCLUDED guards against double-inclusion.
-#include "../nrd/NRD.hlsli"
+// PackForReblurDiffuse(), used below and by VoxelScreen's raw output, to pack
+// IN_DIFF_RADIANCE_HITDIST for NRD's REBLUR_DIFFUSE denoiser (see
+// [[project-nrd-integration]]). Self-contained (no NRD_INTERNAL/NRD_METHOD-
+// gated code reached), safe to pull into a non-NRD shader -- NRD_INCLUDED
+// guards against double-inclusion.
+#include "../nrd/reblur_pack_helper.hlsli"
 
 
 float2 IntegrateBRDF(FrameInfo  info, float Roughness, float Metallic, float NoV)
@@ -62,8 +62,8 @@ typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 float4 get_voxel(float3 pos, float level)
 {
 	float4 color = CreateVoxelScreen().GetVoxels().SampleLevel(linearClampSampler, pos, level);
-    color.rgb *= 8;
-    color.w = saturate(color.w * 2);
+   // color.rgb *= 8;
+ //   color.w = saturate(color.w * 2);
 	return color;
 }
 
@@ -118,7 +118,7 @@ float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 
 
 	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(dir), angle * 8);
 	float sampleWeight = saturate(max_accum - accum.w) / max_accum;
-	accum.xyz += sky * pow(sampleWeight, 18);
+	accum.xyz += sky * pow(sampleWeight, 2);
 
 
 	dist *= length(voxel_size);
@@ -436,6 +436,11 @@ void MyRaygenShader()
 	// const RWTexture2D<float4> output = rays.GetOutput();
 	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
 	const RWTexture2D<float> tex_frames = voxel_output.GetFrames();
+	// Raw (pre-history-lerp) YCoCg-packed signal for NRD REBLUR_DIFFUSE, see
+	// [[project-nrd-integration]] -- tex_noise below is already temporally
+	// blended by this shader's own history lerp, which would double up with
+	// REBLUR's own temporal accumulation if fed to it directly.
+	const RWTexture2D<float4> tex_noise_raw = voxel_output.GetNoiseRaw();
 
 	// Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
 
@@ -446,6 +451,7 @@ void MyRaygenShader()
 	{
 		tex_noise[itc] = 0;
 		tex_frames[itc] = 0;
+		tex_noise_raw[itc] = 0;
 		return;
 	}
 	float3 normal = normalize(voxel_screen.GetGbuffer().GetNormals()[DispatchRaysIndex().xy].xyz * 2 - 1);
@@ -492,6 +498,8 @@ if (payload_gi.dist > 100000 - 5)
 
 	float4 gi = payload_gi.color;// max(0, getGI(itc, pos, pos + scaler * normal / m, normal, v, r, gbuffer.GetNormals()[tc].w, albedo.w));
 
+	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
+	tex_noise_raw[itc] = PackForReblurDiffuse(gi.rgb, payload_gi.dist, viewZ);
 
 	//gi=trace(voxel_info, 0, 0.0,  frame.GetCamera().GetPosition(), normalize(pos - frame.GetCamera().GetPosition()), 0.01, payload_gi.dist);//
 	gi = lerp(reprojected.history, gi, speed);
@@ -546,19 +554,8 @@ void MyRaygenShaderIndirectRTXOnly()
 	ray.TMax = 10000.0;
 	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
 
-	// Pack for NRD's REBLUR_DIFFUSE (see [[project-nrd-integration]]):
-	// IN_DIFF_RADIANCE_HITDIST expects YCoCg radiance + normalized hit
-	// distance, per NRD.hlsli's own doc comments. gHitDistParams mirrors
-	// nrd::ReblurSettings::hitDistanceParameters' library default (A=3,
-	// B=0.1, C=20, see NRDSettings.h) -- both sides are left at NRD's
-	// defaults deliberately (see HAL.NRD.cpp), so this hardcoded copy must
-	// move together with that C++ default if either is ever tuned.
-	// Roughness is a constant 1.0: NRD's own diffuse-lobe call sites always
-	// pass 1.0 here (REBLUR_HitDistReconstruction.cs.hlsl et al).
 	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
-	const float3 gHitDistParams = float3(3.0, 0.1, 20.0);
-	float normHitDist = REBLUR_FrontEnd_GetNormHitDist(payload_gi.dist, viewZ, gHitDistParams, 1.0);
-	tex_noise[itc] = REBLUR_FrontEnd_PackRadianceAndNormHitDist(payload_gi.color.rgb, normHitDist, true);
+	tex_noise[itc] = PackForReblurDiffuse(payload_gi.color.rgb, payload_gi.dist, viewZ);
 }
 
 
