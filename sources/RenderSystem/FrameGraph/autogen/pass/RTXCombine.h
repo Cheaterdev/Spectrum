@@ -23,6 +23,9 @@ public:
 		Handlers::Texture RTXReflectionNoise = ResourceID::RTXReflectionNoise;
 
 
+		Handlers::Texture RTXReflectionDenoised = ResourceID::RTXReflectionDenoised;
+
+
 		Handlers::Texture RTXIndirectDenoised = ResourceID::RTXIndirectDenoised;
 
 
@@ -52,6 +55,7 @@ public:
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
 			{ ResourceID::RTXReflectionNoise, false },
+			{ ResourceID::RTXReflectionDenoised, false },
 			{ ResourceID::RTXIndirectDenoised, false },
 			{ ResourceID::VoxelIndirectFiltered, false },
 			{ ResourceID::RTXShadowNoise, false },

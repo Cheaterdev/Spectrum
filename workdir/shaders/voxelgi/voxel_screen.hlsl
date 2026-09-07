@@ -94,7 +94,7 @@ float4 trace(float4 start_color, float3 view, float3 origin, float3 dir, float3 
 	float3 samplePos = 0;
 	float4 accum = start_color;
 	// the starting sample diameter
-	float minDiameter = 1.0 / 512;// *(1 + 4 * angle);
+	float minDiameter = 1.0 / 256;// *(1 + 4 * angle);
 	float minVoxelDiameterInv = 1.0 / minDiameter;
 
 	float maxDist = 1;

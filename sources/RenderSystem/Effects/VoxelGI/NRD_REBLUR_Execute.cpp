@@ -10,15 +10,21 @@ import Core;
 using namespace FrameGraph;
 using namespace HAL;
 
-// Real per-frame REBLUR_DIFFUSE execution (see [[project-nrd-integration]]),
-// replacing the one-shot smoke-test call that used to live in
-// RenderSystem::create_singleton(). Gated purely on g_indirect_denoiser --
-// independent of g_upscaler_type, so NRD works under FSR/DLSS too, not just
-// DLSS-RR. NRD_GBufferPack (its other input) uses the same gate.
+// Real per-frame REBLUR_DIFFUSE/REBLUR_SPECULAR execution (see
+// [[project-nrd-integration]]), replacing the one-shot smoke-test call that
+// used to live in RenderSystem::create_singleton(). Gated purely on
+// g_indirect_denoiser/g_reflection_denoiser -- independent of
+// g_upscaler_type, so NRD works under FSR/DLSS too, not just DLSS-RR.
+// NRD_GBufferPack (its other input) uses the same gate. The two denoisers are
+// independent: this pass runs whenever *either* wants NRD, and render() only
+// populates the inputs for whichever one(s) actually do (HAL.NRD::execute()
+// infers want_diffuse/want_specular from which NRDFrameInputs fields are set).
 bool PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 	Passes::NRD_REBLUR_Execute::Context& data, TaskBuilder& builder)
 {
-	if (g_indirect_denoiser != IndirectDenoiser::NRD ||
+	bool want_diffuse  = g_indirect_denoiser == IndirectDenoiser::NRD;
+	bool want_specular = g_reflection_denoiser == ReflectionDenoiserKind::NRD;
+	if ((!want_diffuse && !want_specular) ||
 	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
@@ -33,17 +39,34 @@ bool PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 	builder.need(data.NRD_ViewZ, ResourceFlags::ComputeRead);
 	builder.need(data.NRD_NormalRoughness, ResourceFlags::ComputeRead);
 	builder.need(data.NRD_Mv, ResourceFlags::ComputeRead);
-	// Both raw candidates are always needed: which one render() actually
-	// feeds to NRD is a runtime pick (g_indirect_source), but the FrameGraph
-	// dependency declared here is static per pass.
-	builder.need(data.RTXIndirectNoise, ResourceFlags::ComputeRead);
-	builder.need(data.VoxelIndirectNoiseRaw, ResourceFlags::ComputeRead);
-	builder.create(data.RTXIndirectDenoised,
-		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
-	// Debug-view-only unpacked preview (see nrd_sig_test.sig's
-	// NRD_UnpackDebugParams comment) -- not read by RTXCombine.
-	builder.create(data.RTXIndirectDenoisedPreview,
-		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+
+	// Only need() the one raw candidate actually selected per signal -- the
+	// other candidate's producer (e.g. ReflectionRTX, an entire raytracing
+	// dispatch) may not have run at all this frame, and needing an unproduced
+	// resource is a hard FrameGraph error (exists() assert), not just wasted
+	// work. Same reasoning as RTXCombine's own conditional need() below.
+	if (want_diffuse)
+	{
+		if (g_indirect_source == IndirectSource::MyVCT)
+			builder.need(data.VoxelIndirectNoiseRaw, ResourceFlags::ComputeRead);
+		else
+			builder.need(data.RTXIndirectNoise, ResourceFlags::ComputeRead);
+		builder.create(data.RTXIndirectDenoised,
+			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+		// Debug-view-only unpacked preview (see nrd_sig_test.sig's
+		// NRD_UnpackDebugParams comment) -- not read by RTXCombine.
+		builder.create(data.RTXIndirectDenoisedPreview,
+			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+	}
+	if (want_specular)
+	{
+		if (g_reflection_source == ReflectionSource::MyReflection)
+			builder.need(data.VoxelReflectionNoiseRaw, ResourceFlags::ComputeRead);
+		else
+			builder.need(data.RTXReflectionNoise, ResourceFlags::ComputeRead);
+		builder.create(data.RTXReflectionDenoised,
+			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+	}
 	return true;
 }
 
@@ -57,10 +80,25 @@ void PassDefault<Passes::NRD_REBLUR_Execute>::render(
 	inputs.view_z            = *data.NRD_ViewZ;
 	inputs.normal_roughness  = *data.NRD_NormalRoughness;
 	inputs.mv                = *data.NRD_Mv;
-	inputs.diff_noisy        = g_indirect_source == IndirectSource::MyVCT
-	                            ? *data.VoxelIndirectNoiseRaw
-	                            : *data.RTXIndirectNoise;
-	inputs.diff_denoised     = *data.RTXIndirectDenoised;
+
+	// Left unset (null resource) when their denoiser isn't NRD this frame --
+	// HAL.NRD::execute() infers want_diffuse/want_specular from exactly this,
+	// so REBLUR_DIFFUSE/REBLUR_SPECULAR only dispatch when actually selected,
+	// even though this pass itself runs whenever *either* wants NRD.
+	if (g_indirect_denoiser == IndirectDenoiser::NRD)
+	{
+		inputs.diff_noisy = g_indirect_source == IndirectSource::MyVCT
+		                     ? *data.VoxelIndirectNoiseRaw
+		                     : *data.RTXIndirectNoise;
+		inputs.diff_denoised = *data.RTXIndirectDenoised;
+	}
+	if (g_reflection_denoiser == ReflectionDenoiserKind::NRD)
+	{
+		inputs.spec_noisy = g_reflection_source == ReflectionSource::MyReflection
+		                     ? *data.VoxelReflectionNoiseRaw
+		                     : *data.RTXReflectionNoise;
+		inputs.spec_denoised = *data.RTXReflectionDenoised;
+	}
 
 	memcpy(inputs.world_to_view,      cam->camera_cb.current.view.elems.data(), sizeof(inputs.world_to_view));
 	memcpy(inputs.world_to_view_prev, cam->camera_cb.prev.view.elems.data(),    sizeof(inputs.world_to_view_prev));
@@ -73,6 +111,8 @@ void PassDefault<Passes::NRD_REBLUR_Execute>::render(
 
 	// Debug-view-only unpack (see setup()'s comment) -- decodes REBLUR's
 	// packed YCoCg+hitdist output into plain RGB for a true-color preview.
+	// RTXIndirectDenoised/Preview only exist when want_diffuse (see setup()).
+	if (g_indirect_denoiser == IndirectDenoiser::NRD)
 	{
 		auto& compute = context.get_list()->get_compute();
 		compute.set_pipeline<PSOS::NRD_UnpackDebug>();

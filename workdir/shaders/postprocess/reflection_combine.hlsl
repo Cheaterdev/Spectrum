@@ -5,6 +5,10 @@
 #include "../autogen/FrameInfo.h"
 #include "../autogen/ReflectionCombine.h"
 
+// REBLUR_BackEnd_UnpackRadianceAndNormHitDist, to decode NRD REBLUR_SPECULAR's
+// denoised reflection signal below (see [[project-nrd-integration]]).
+#include "../nrd/NRD.hlsli"
+
 
 static const Camera camera = GetFrameInfo().GetCamera();
 static const GBuffer gbuffer = GetReflectionCombine().GetGbuffer();
@@ -40,13 +44,27 @@ void CS(
 	int2 tc = dispatchID.xy;
 
 	float2 itc = float2(tc + 0.5) / dims;
-	
+
+	float raw_z = gbuffer.GetDepth()[tc.xy];
+	if (raw_z == 0)
+	{
+		// No geometry -- nothing to reflect onto. GBuffer albedo/normals are
+		// never written for background pixels (garbage/whatever a reused
+		// transient resource last held there), and depth_to_wpos(0, ...)
+		// divides by a near-zero w, so computing anything here would add
+		// garbage/NaN onto ResultTexture -- and NaN is sticky, so it would
+		// stay corrupted even after the Sky pass's own additive contribution
+		// (sky.hlsl's CS) runs afterward. Sky pass owns the actual
+		// atmospheric-scattering value for every pixel, sky included; this
+		// pass has nothing to add here.
+		return;
+	}
+
 	float4 albedo = gbuffer.GetAlbedo()[tc];
 
 	float  roughness = pow(max(MIN_ROUGHNESS, gbuffer.GetNormals()[tc].w), 2);
 	float metallic = albedo.w;// specular.w;
 
-	float raw_z = gbuffer.GetDepth()[tc.xy];
 	float3 pos = depth_to_wpos(raw_z, itc, camera.GetInvViewProj());
 	float3 v = normalize(pos - camera.GetPosition());
 
@@ -56,7 +74,15 @@ void CS(
 
 
 
-	float3 reflection = GetReflectionCombine().GetReflection()[dispatchID.xy];;
+	// Two possible sources (see [[project-nrd-integration]],
+	// g_reflection_denoiser): REBLUR SPECULAR's packed denoised output
+	// (needing an unpack) -- or the legacy FFX-denoised VoxelReflectionNoise,
+	// never YCoCg-encoded. unpack_reflection (set CPU-side, VoxelGIGraph.cpp)
+	// drives which.
+	float4 reflection_raw = GetReflectionCombine().GetReflection()[dispatchID.xy];
+	float3 reflection = GetReflectionCombine().GetUnpack_reflection() != 0
+		? REBLUR_BackEnd_UnpackRadianceAndNormHitDist(reflection_raw).rgb
+		: reflection_raw.rgb;
 
 	float3 color = get_PBR(albedo, reflection.xyz, normal, v, roughness, metallic);
 //	output[index] = float4(lighting, 1);

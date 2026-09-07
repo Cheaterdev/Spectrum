@@ -34,10 +34,19 @@ public:
 		Handlers::Texture VoxelIndirectNoiseRaw = ResourceID::VoxelIndirectNoiseRaw;
 
 
+		Handlers::Texture RTXReflectionNoise = ResourceID::RTXReflectionNoise;
+
+
+		Handlers::Texture VoxelReflectionNoiseRaw = ResourceID::VoxelReflectionNoiseRaw;
+
+
 		Handlers::Texture RTXIndirectDenoised = ResourceID::RTXIndirectDenoised;
 
 
 		Handlers::Texture RTXIndirectDenoisedPreview = ResourceID::RTXIndirectDenoisedPreview;
+
+
+		Handlers::Texture RTXReflectionDenoised = ResourceID::RTXReflectionDenoised;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -48,8 +57,11 @@ public:
 			{ ResourceID::NRD_Mv, false },
 			{ ResourceID::RTXIndirectNoise, false },
 			{ ResourceID::VoxelIndirectNoiseRaw, false },
+			{ ResourceID::RTXReflectionNoise, false },
+			{ ResourceID::VoxelReflectionNoiseRaw, false },
 			{ ResourceID::RTXIndirectDenoised, true },
 			{ ResourceID::RTXIndirectDenoisedPreview, true },
+			{ ResourceID::RTXReflectionDenoised, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

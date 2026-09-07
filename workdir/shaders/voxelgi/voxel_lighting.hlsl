@@ -75,7 +75,7 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 	float3 samplePos = 0;
 	float4 accum = 0;
 	// the starting sample diameter
-	float minDiameter = 1.0 / 1024;
+	float minDiameter = 1.0 / 256;
 	float minVoxelDiameterInv = 1.0 / minDiameter;
 	// push out the starting point to avoid self-intersection
   //  float startDist = (1) * minDiameter;
@@ -99,7 +99,7 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 
 	float4 sky = get_sky(dir, angle);
 	float sampleWeight = saturate(1 - 18*accum.w);
-	accum += sky * pow(sampleWeight, 4);
+	accum += sky * pow(sampleWeight, 8);
 
 	return accum;
 
@@ -114,7 +114,7 @@ float4 get_direction(float3 pos, float3 normal, float3 dir, float k, float a)
 }
 float4 getGI(float3 Pos, float3 Normal)
 {
-	float a = 0.7;
+	float a = 0.2;
 
 	float4 Color = 0;
 	float t = 1;
@@ -122,8 +122,8 @@ float4 getGI(float3 Pos, float3 Normal)
 	float3 right = t * normalize(cross(Normal, float3(0, 1, 0.001)));
 	float3 tangent = t * normalize(cross(right, Normal));
 
-	Color += get_direction(Pos, Normal, normalize(Normal), k, a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
-	return Color;
+	//Color += get_direction(Pos, Normal, normalize(Normal), k, a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
+	//return Color;
 
 
 	Color += get_direction(Pos, Normal, normalize(Normal + right), k, a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);

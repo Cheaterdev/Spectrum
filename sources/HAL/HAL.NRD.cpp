@@ -79,17 +79,22 @@ namespace nvidia
 		           << " denoisers supported" << Log::endl;
 
 		// SIGMA_SHADOW for RTXShadowNoise (ShadowRTX, voxel.sig). REBLUR_DIFFUSE
-		// for indirect GI (RTXIndirectNoise, IndirectRTX, voxel.sig) -- diffuse-
-		// only variant since specular/reflections go through a separate
-		// REBLUR_SPECULAR instance later, not combined here.
+		// for indirect GI (RTXIndirectNoise, IndirectRTX, voxel.sig).
+		// REBLUR_SPECULAR for reflections (RTXReflectionNoise/
+		// VoxelReflectionNoise) -- a separate instance rather than the
+		// combined REBLUR_DIFFUSE_SPECULAR method, so either signal can be
+		// denoised independently of the other (g_indirect_denoiser and
+		// g_reflection_denoiser are independent toggles, see
+		// [[project-nrd-integration]]).
 		static const nrd::DenoiserDesc denoisers[] = {
 			{ 0, nrd::Denoiser::SIGMA_SHADOW },
-			{ 1, nrd::Denoiser::REBLUR_DIFFUSE }
+			{ 1, nrd::Denoiser::REBLUR_DIFFUSE },
+			{ 2, nrd::Denoiser::REBLUR_SPECULAR }
 		};
 
 		nrd::InstanceCreationDesc desc{};
 		desc.denoisers = denoisers;
-		desc.denoisersNum = 2;
+		desc.denoisersNum = 3;
 
 		const nrd::Result res = nrd::CreateInstance(desc, instance);
 		if (res != nrd::Result::SUCCESS)
@@ -261,6 +266,8 @@ namespace nvidia
 		case nrd::ResourceType::IN_MV:                  return in.mv.texture2D;
 		case nrd::ResourceType::IN_DIFF_RADIANCE_HITDIST: return in.diff_noisy.texture2D;
 		case nrd::ResourceType::OUT_DIFF_RADIANCE_HITDIST: return in.diff_denoised.texture2D;
+		case nrd::ResourceType::IN_SPEC_RADIANCE_HITDIST: return in.spec_noisy.texture2D;
+		case nrd::ResourceType::OUT_SPEC_RADIANCE_HITDIST: return in.spec_denoised.texture2D;
 		default:
 			ASSERT(!"unhandled named SRV resource type -- see HAL.NRD.cpp's resolve_srv comment");
 			auto h = compute.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
@@ -286,6 +293,7 @@ namespace nvidia
 		case nrd::ResourceType::IN_MV:                  return in.mv.rwTexture2D; // temporal-stabilization writes it back as scratch
 		case nrd::ResourceType::IN_NORMAL_ROUGHNESS:    return in.normal_roughness.rwTexture2D; // post-blur's gOut_Normal_Roughness copy
 		case nrd::ResourceType::OUT_DIFF_RADIANCE_HITDIST: return in.diff_denoised.rwTexture2D;
+		case nrd::ResourceType::OUT_SPEC_RADIANCE_HITDIST: return in.spec_denoised.rwTexture2D;
 		default:
 			ASSERT(!"unhandled named UAV resource type -- see HAL.NRD.cpp's resolve_uav comment");
 			auto h = compute.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
@@ -350,6 +358,26 @@ namespace nvidia
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
 
+	// REBLUR_SPECULAR sibling of dispatch_reblur_hitdistreconstruction --
+	// same resource count/layout (4 in + 1 out, Diff->Spec renamed), see
+	// nrd_sig_test.sig's REBLUR_HitDistReconstructionSpecularResources
+	// comment.
+	template<typename PSO>
+	static void dispatch_reblur_hitdistreconstruction_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 5);
+		Slots::REBLUR_HitDistReconstructionSpecularResources slots;
+		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGIn_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[4], in);
+		compute.set_pipeline<PSO>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
 	static void dispatch_reblur_prepass(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 5);
@@ -361,6 +389,25 @@ namespace nvidia
 		slots.GetGIn_Diff() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
 		slots.GetGOut_Diff() = resolve_uav(nrd_hal, compute, dispatch.resources[4], in);
 		compute.set_pipeline<PSOS::NRD_REBLUR_PrePass>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
+	// REBLUR_SPECULAR sibling of dispatch_reblur_prepass -- one extra output
+	// (gOut_SpecHitDistForTracking, no diffuse equivalent), see
+	// nrd_sig_test.sig's REBLUR_PrePassSpecularResources comment.
+	static void dispatch_reblur_prepass_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 6);
+		Slots::REBLUR_PrePassSpecularResources slots;
+		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGIn_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[4], in);
+		slots.GetGOut_SpecHitDistForTracking() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
+		compute.set_pipeline<PSOS::NRD_REBLUR_PrePass_Specular>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -391,6 +438,39 @@ namespace nvidia
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
 
+	// REBLUR_SPECULAR sibling of dispatch_reblur_temporalaccumulation -- see
+	// nrd_sig_test.sig's REBLUR_TemporalAccumulationSpecularResources comment
+	// for the field-list differences vs diffuse (14 in + 5 out here, vs
+	// diffuse's 12 in + 4 out).
+	static void dispatch_reblur_temporalaccumulation_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 19);
+		Slots::REBLUR_TemporalAccumulationSpecularResources slots;
+		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGIn_Mv() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGPrev_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
+		slots.GetGPrev_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[5], in);
+		slots.GetGPrev_InternalData() = resolve_srv(nrd_hal, compute, dispatch.resources[6], in);
+		slots.GetGIn_DisocclusionThresholdMix() = resolve_srv(nrd_hal, compute, dispatch.resources[7], in);
+		slots.GetGIn_SpecConfidence() = resolve_srv(nrd_hal, compute, dispatch.resources[8], in);
+		slots.GetGIn_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[9], in);
+		slots.GetGHistory_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[10], in);
+		slots.GetGHistory_SpecFast() = resolve_srv(nrd_hal, compute, dispatch.resources[11], in);
+		slots.GetGPrev_SpecHitDistForTracking() = resolve_srv(nrd_hal, compute, dispatch.resources[12], in);
+		slots.GetGIn_SpecHitDistForTracking() = resolve_srv(nrd_hal, compute, dispatch.resources[13], in);
+		slots.GetGOut_Data1() = resolve_uav(nrd_hal, compute, dispatch.resources[14], in);
+		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[15], in);
+		slots.GetGOut_SpecFast() = resolve_uav(nrd_hal, compute, dispatch.resources[16], in);
+		slots.GetGOut_SpecHitDistForTracking() = resolve_uav(nrd_hal, compute, dispatch.resources[17], in);
+		slots.GetGOut_Data2() = resolve_uav(nrd_hal, compute, dispatch.resources[18], in);
+		compute.set_pipeline<PSOS::NRD_REBLUR_TemporalAccumulation_Specular>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
 	static void dispatch_reblur_historyfix(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 8);
@@ -409,6 +489,28 @@ namespace nvidia
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
 
+	// REBLUR_SPECULAR sibling of dispatch_reblur_historyfix -- one extra input
+	// (gIn_SpecHitDistForTracking, no diffuse equivalent), see
+	// nrd_sig_test.sig's REBLUR_HistoryFixSpecularResources comment.
+	static void dispatch_reblur_historyfix_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 9);
+		Slots::REBLUR_HistoryFixSpecularResources slots;
+		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_Data1() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGIn_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
+		slots.GetGIn_SpecFast() = resolve_srv(nrd_hal, compute, dispatch.resources[5], in);
+		slots.GetGIn_SpecHitDistForTracking() = resolve_srv(nrd_hal, compute, dispatch.resources[6], in);
+		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[7], in);
+		slots.GetGOut_SpecFast() = resolve_uav(nrd_hal, compute, dispatch.resources[8], in);
+		compute.set_pipeline<PSOS::NRD_REBLUR_HistoryFix_Specular>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
 	static void dispatch_reblur_blur(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 7);
@@ -422,6 +524,26 @@ namespace nvidia
 		slots.GetGOut_ViewZ() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
 		slots.GetGOut_Diff() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
 		compute.set_pipeline<PSOS::NRD_REBLUR_Blur>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
+	// REBLUR_SPECULAR sibling of dispatch_reblur_blur -- same resource count
+	// (5 in + 2 out, Diff->Spec renamed), see nrd_sig_test.sig's
+	// REBLUR_BlurSpecularResources comment.
+	static void dispatch_reblur_blur_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 7);
+		Slots::REBLUR_BlurSpecularResources slots;
+		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGIn_Data1() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGIn_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
+		slots.GetGOut_ViewZ() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
+		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
+		compute.set_pipeline<PSOS::NRD_REBLUR_Blur_Specular>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -445,6 +567,28 @@ namespace nvidia
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
 
+	// REBLUR_SPECULAR sibling of dispatch_reblur_postblur_ts0 -- same
+	// resource count (5 in + 4 out, Diff->Spec renamed), see
+	// nrd_sig_test.sig's REBLUR_PostBlurTS0SpecularResources comment.
+	static void dispatch_reblur_postblur_ts0_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 9);
+		Slots::REBLUR_PostBlurTS0SpecularResources slots;
+		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_Data1() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGIn_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
+		slots.GetGOut_Normal_Roughness() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
+		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
+		slots.GetGOut_InternalData() = resolve_uav(nrd_hal, compute, dispatch.resources[7], in);
+		slots.GetGOut_SpecCopy() = resolve_uav(nrd_hal, compute, dispatch.resources[8], in);
+		compute.set_pipeline<PSOS::NRD_REBLUR_PostBlurTS0_Specular>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
 	static void dispatch_reblur_postblur_ts1(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 7);
@@ -458,6 +602,26 @@ namespace nvidia
 		slots.GetGOut_Normal_Roughness() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
 		slots.GetGOut_Diff() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
 		compute.set_pipeline<PSOS::NRD_REBLUR_PostBlurTS1>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
+	// REBLUR_SPECULAR sibling of dispatch_reblur_postblur_ts1 -- same
+	// resource count (5 in + 2 out, Diff->Spec renamed), see
+	// nrd_sig_test.sig's REBLUR_PostBlurTS1SpecularResources comment.
+	static void dispatch_reblur_postblur_ts1_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 7);
+		Slots::REBLUR_PostBlurTS1SpecularResources slots;
+		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_Data1() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGIn_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
+		slots.GetGOut_Normal_Roughness() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
+		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
+		compute.set_pipeline<PSOS::NRD_REBLUR_PostBlurTS1_Specular>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -479,6 +643,31 @@ namespace nvidia
 		slots.GetGOut_Diff() = resolve_uav(nrd_hal, compute, dispatch.resources[9], in);
 		slots.GetGOut_DiffLumaStabilized() = resolve_uav(nrd_hal, compute, dispatch.resources[10], in);
 		compute.set_pipeline<PSOS::NRD_REBLUR_TemporalStabilization>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
+	// REBLUR_SPECULAR sibling of dispatch_reblur_temporalstabilization -- one
+	// extra input (gIn_SpecHitDistForTracking, no diffuse equivalent), see
+	// nrd_sig_test.sig's REBLUR_TemporalStabilizationSpecularResources comment.
+	static void dispatch_reblur_temporalstabilization_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 12);
+		Slots::REBLUR_TemporalStabilizationSpecularResources slots;
+		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGIn_Data1() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGIn_Data2() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
+		slots.GetGIn_SpecHitDistForTracking() = resolve_srv(nrd_hal, compute, dispatch.resources[5], in);
+		slots.GetGIn_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[6], in);
+		slots.GetGHistory_SpecLumaStabilized() = resolve_srv(nrd_hal, compute, dispatch.resources[7], in);
+		slots.GetGInOut_Mv() = resolve_uav(nrd_hal, compute, dispatch.resources[8], in);
+		slots.GetGOut_InternalData() = resolve_uav(nrd_hal, compute, dispatch.resources[9], in);
+		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[10], in);
+		slots.GetGOut_SpecLumaStabilized() = resolve_uav(nrd_hal, compute, dispatch.resources[11], in);
+		compute.set_pipeline<PSOS::NRD_REBLUR_TemporalStabilization_Specular>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -539,16 +728,34 @@ namespace nvidia
 		nrd::SigmaSettings sigma_settings{};
 		nrd::SetDenoiserSettings(*instance, 0, &sigma_settings);
 
+		// diff_noisy/spec_noisy are default-constructed (null resource, see
+		// Texture2DView::resource) whenever the caller (NRD_REBLUR_Execute)
+		// didn't populate them -- g_indirect_denoiser/g_reflection_denoiser
+		// aren't set to NRD this frame. Only requesting the identifiers whose
+		// signal is actually wanted keeps those denoisers' dispatches out of
+		// GetComputeDispatches() entirely, so resolve_srv/resolve_uav never
+		// need a null-resource fallback for them.
+		bool want_diffuse  = (bool)inputs.diff_noisy.resource;
+		bool want_specular = (bool)inputs.spec_noisy.resource;
+
 		// Library defaults throughout (see nrd_sig_test.sig's REBLURSharedConstants
 		// comment and raytracing.hlsl's gHitDistParams -- both must move
 		// together with hitDistanceParameters if this is ever tuned).
 		nrd::ReblurSettings reblur_settings{};
-		nrd::SetDenoiserSettings(*instance, 1, &reblur_settings);
+		if (want_diffuse)
+			nrd::SetDenoiserSettings(*instance, 1, &reblur_settings);
+		if (want_specular)
+			nrd::SetDenoiserSettings(*instance, 2, &reblur_settings);
 
-		static const nrd::Identifier identifiers[] = { 0, 1 };
+		nrd::Identifier identifiers[3];
+		uint32_t identifiers_num = 0;
+		identifiers[identifiers_num++] = 0;
+		if (want_diffuse)  identifiers[identifiers_num++] = 1;
+		if (want_specular) identifiers[identifiers_num++] = 2;
+
 		const nrd::DispatchDesc* dispatches = nullptr;
 		uint32_t dispatches_num = 0;
-		nrd::GetComputeDispatches(*instance, identifiers, 2, dispatches, dispatches_num);
+		nrd::GetComputeDispatches(*instance, identifiers, identifiers_num, dispatches, dispatches_num);
 
 		auto& compute = list.get_compute();
 
@@ -560,28 +767,70 @@ namespace nvidia
 			const nrd::DispatchDesc& dispatch = dispatches[d];
 			const std::string& identifier = idesc.pipelines[dispatch.pipelineIndex].shaderIdentifier;
 
+			// identifier 1 = REBLUR_DIFFUSE, identifier 2 = REBLUR_SPECULAR
+			// (see the ctor's denoisers[] array) -- NRD reports the SAME
+			// kernel-name prefix for both signals' permutations of a given
+			// REBLUR kernel (the NRD_SIGNAL=DIFF/SPEC marker is a `|`-suffix
+			// on the identifier string, not the prefix these starts_with()
+			// checks match on), so dispatch.identifier is what actually
+			// distinguishes which (differently-shaped, see nrd_sig_test.sig's
+			// per-kernel Specular struct comments) resource list this
+			// dispatch carries.
+			bool is_specular = dispatch.identifier == 2;
+
 			if (identifier == "Clear.cs.hlsl|FLOAT=1")
 				dispatch_clear(*this, compute, dispatch);
 			else if (identifier.starts_with("REBLUR_ClassifyTiles.cs.hlsl"))
 				dispatch_reblur_classifytiles(*this, compute, dispatch, inputs);
 			else if (identifier.starts_with("REBLUR_HitDistReconstruction.cs.hlsl") && identifier.find("MODE_5X5=1") != std::string::npos)
-				dispatch_reblur_hitdistreconstruction<PSOS::NRD_REBLUR_HitDistReconstruction5x5>(*this, compute, dispatch, inputs);
+			{
+				if (is_specular)
+					dispatch_reblur_hitdistreconstruction_specular<PSOS::NRD_REBLUR_HitDistReconstruction5x5_Specular>(*this, compute, dispatch, inputs);
+				else
+					dispatch_reblur_hitdistreconstruction<PSOS::NRD_REBLUR_HitDistReconstruction5x5>(*this, compute, dispatch, inputs);
+			}
 			else if (identifier.starts_with("REBLUR_HitDistReconstruction.cs.hlsl"))
-				dispatch_reblur_hitdistreconstruction<PSOS::NRD_REBLUR_HitDistReconstruction>(*this, compute, dispatch, inputs);
+			{
+				if (is_specular)
+					dispatch_reblur_hitdistreconstruction_specular<PSOS::NRD_REBLUR_HitDistReconstruction_Specular>(*this, compute, dispatch, inputs);
+				else
+					dispatch_reblur_hitdistreconstruction<PSOS::NRD_REBLUR_HitDistReconstruction>(*this, compute, dispatch, inputs);
+			}
 			else if (identifier.starts_with("REBLUR_PrePass.cs.hlsl"))
-				dispatch_reblur_prepass(*this, compute, dispatch, inputs);
+			{
+				if (is_specular) dispatch_reblur_prepass_specular(*this, compute, dispatch, inputs);
+				else              dispatch_reblur_prepass(*this, compute, dispatch, inputs);
+			}
 			else if (identifier.starts_with("REBLUR_TemporalAccumulation.cs.hlsl"))
-				dispatch_reblur_temporalaccumulation(*this, compute, dispatch, inputs);
+			{
+				if (is_specular) dispatch_reblur_temporalaccumulation_specular(*this, compute, dispatch, inputs);
+				else              dispatch_reblur_temporalaccumulation(*this, compute, dispatch, inputs);
+			}
 			else if (identifier.starts_with("REBLUR_HistoryFix.cs.hlsl"))
-				dispatch_reblur_historyfix(*this, compute, dispatch, inputs);
+			{
+				if (is_specular) dispatch_reblur_historyfix_specular(*this, compute, dispatch, inputs);
+				else              dispatch_reblur_historyfix(*this, compute, dispatch, inputs);
+			}
 			else if (identifier.starts_with("REBLUR_Blur.cs.hlsl"))
-				dispatch_reblur_blur(*this, compute, dispatch, inputs);
+			{
+				if (is_specular) dispatch_reblur_blur_specular(*this, compute, dispatch, inputs);
+				else              dispatch_reblur_blur(*this, compute, dispatch, inputs);
+			}
 			else if (identifier.starts_with("REBLUR_PostBlur.cs.hlsl") && identifier.find("TEMPORAL_STABILIZATION=0") != std::string::npos)
-				dispatch_reblur_postblur_ts0(*this, compute, dispatch, inputs);
+			{
+				if (is_specular) dispatch_reblur_postblur_ts0_specular(*this, compute, dispatch, inputs);
+				else              dispatch_reblur_postblur_ts0(*this, compute, dispatch, inputs);
+			}
 			else if (identifier.starts_with("REBLUR_PostBlur.cs.hlsl"))
-				dispatch_reblur_postblur_ts1(*this, compute, dispatch, inputs);
+			{
+				if (is_specular) dispatch_reblur_postblur_ts1_specular(*this, compute, dispatch, inputs);
+				else              dispatch_reblur_postblur_ts1(*this, compute, dispatch, inputs);
+			}
 			else if (identifier.starts_with("REBLUR_TemporalStabilization.cs.hlsl"))
-				dispatch_reblur_temporalstabilization(*this, compute, dispatch, inputs);
+			{
+				if (is_specular) dispatch_reblur_temporalstabilization_specular(*this, compute, dispatch, inputs);
+				else              dispatch_reblur_temporalstabilization(*this, compute, dispatch, inputs);
+			}
 			else
 			{
 				// SIGMA_SHADOW's kernels, and anything else not wired (out of

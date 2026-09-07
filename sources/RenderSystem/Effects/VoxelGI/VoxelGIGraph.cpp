@@ -930,6 +930,12 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 		builder.create(data.VoxelReflectionNoise,
 			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+		// Raw (pre-ReflectionDenoiser_Reproject) signal for NRD
+		// REBLUR_SPECULAR -- see [[project-nrd-integration]]. Unconditionally
+		// created/written, simply unused when g_reflection_source picks the
+		// RTX reference signal instead.
+		builder.create(data.VoxelReflectionNoiseRaw,
+			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 		builder.create(data.noise_dir_pdf,
 			{ ivec3(sz.x, sz.y, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 		builder.need(data.BlueNoise,            ResourceFlags::ComputeRead);
@@ -949,6 +955,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		GBuffer gbuffer           = GBufferViewDesc::actualize(data.gbuffer);
 		auto sky_cubemap_filtered = *data.sky_cubemap_filtered;
 		auto noisy_output         = *data.VoxelReflectionNoise;
+		auto noisy_output_raw     = *data.VoxelReflectionNoiseRaw;
 		auto dir_and_pdf          = *data.noise_dir_pdf;
 
 		auto& caminfo   = context.graph->get_context<CameraInfo>();
@@ -986,6 +993,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 			{
 				Slots::VoxelOutput output;
 				output.GetNoise()     = noisy_output.rwTexture2D;
+				output.GetNoiseRaw()  = noisy_output_raw.rwTexture2D;
 				output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
 				output.GetBlueNoise() = data.BlueNoise->texture2D;
 				compute.set(output);
@@ -1205,7 +1213,10 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 		GBufferViewDesc::need(builder, data.gbuffer);
-		builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
+		if (g_reflection_denoiser == ReflectionDenoiserKind::NRD)
+			builder.need(data.RTXReflectionDenoised, ResourceFlags::ComputeRead);
+		else
+			builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
 		return true;
 	};
 
@@ -1225,7 +1236,16 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		{
 			Slots::ReflectionCombine combine;
 			gbuffer.SetTable(combine.GetGbuffer());
-			combine.GetReflection() = data.VoxelReflectionNoise->texture2D;
+			if (g_reflection_denoiser == ReflectionDenoiserKind::NRD)
+			{
+				combine.GetReflection() = data.RTXReflectionDenoised->texture2D;
+				combine.GetUnpack_reflection() = 1;
+			}
+			else
+			{
+				combine.GetReflection() = data.VoxelReflectionNoise->texture2D;
+				combine.GetUnpack_reflection() = 0;
+			}
 			combine.GetTarget()     = data.ResultTexture->rwTexture2D;
 			compute.set(combine);
 		}

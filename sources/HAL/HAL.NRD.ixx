@@ -59,6 +59,8 @@ export namespace nvidia
 		HAL::Texture2DView mv;
 		HAL::Texture2DView diff_noisy;
 		HAL::Texture2DView diff_denoised;
+		HAL::Texture2DView spec_noisy;
+		HAL::Texture2DView spec_denoised;
 
 		// Column-major, vector-is-a-column, non-jittered (NRD's own
 		// convention, NRDSettings.h) -- raw 16-float dumps of this frame's
@@ -125,13 +127,14 @@ export namespace nvidia
 		// frame.upscale_size).
 		void ensure_pools(HAL::Device& device, uint2 render_size);
 
-		// Runs SetCommonSettings/SetDenoiserSettings/GetComputeDispatches for
-		// REBLUR_DIFFUSE and issues the resulting compute dispatches via the
-		// SIG system, on `list`, using `inputs` for every named resource.
-		// SIGMA_SHADOW's dispatches are still skipped (unwired, out of
-		// scope) -- only kernels with a real dispatch_*() below (all 9
-		// REBLUR_DIFFUSE ones) actually run; unmatched identifiers are
-		// logged and skipped, same as before.
+		// Runs SetCommonSettings/GetComputeDispatches and issues the
+		// resulting compute dispatches via the SIG system, on `list`, using
+		// `inputs` for every named resource. REBLUR_DIFFUSE only dispatches
+		// when inputs.diff_noisy is set (Texture2DView::resource non-null);
+		// REBLUR_SPECULAR likewise on inputs.spec_noisy -- see
+		// [[project-nrd-integration]]'s reflection-denoiser plan. SIGMA_
+		// SHADOW's dispatches are still skipped (unwired, out of scope);
+		// unmatched identifiers are logged and skipped, same as before.
 		void execute(HAL::CommandList& list, const NRDFrameInputs& inputs);
 	};
 }

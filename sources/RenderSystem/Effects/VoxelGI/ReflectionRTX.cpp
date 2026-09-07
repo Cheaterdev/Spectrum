@@ -16,11 +16,11 @@ using namespace HAL;
 bool PassDefault<Passes::ReflectionRTX>::setup(
 	Passes::ReflectionRTX::Context& data, TaskBuilder& builder)
 {
-	// Only exists to feed DLSS-RR (see UpscalingDLSSRR.sig/.cpp) -- no point
-	// tracing it otherwise, including when the user has picked FSR/DLSS-SR
-	// instead via g_upscaler_type. Mirrors UpscalingDLSSRR's own gate
-	// exactly, so the two stay in lockstep.
-	if (g_upscaler_type != UpscalerType::DLSSRR ||
+	// Feeds RTXCombine under DLSS-RR (mirrors UpscalingDLSSRR's own gate,
+	// kept in lockstep), and also feeds NRD_REBLUR_Execute (as its
+	// RTXReference spec_noisy candidate) whenever NRD is selected for
+	// reflections, regardless of upscaler -- see [[project-nrd-integration]].
+	if ((g_upscaler_type != UpscalerType::DLSSRR && g_reflection_denoiser != ReflectionDenoiserKind::NRD) ||
 	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 

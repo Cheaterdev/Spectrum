@@ -25,6 +25,9 @@ public:
 
 		Handlers::Texture VoxelReflectionNoise = ResourceID::VoxelReflectionNoise;
 
+
+		Handlers::Texture RTXReflectionDenoised = ResourceID::RTXReflectionDenoised;
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
@@ -44,6 +47,7 @@ public:
 			{ ResourceID::GBuffer_HiZ_UAV, false },
 			{ ResourceID::ResultTexture, true },
 			{ ResourceID::VoxelReflectionNoise, false },
+			{ ResourceID::RTXReflectionDenoised, false },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

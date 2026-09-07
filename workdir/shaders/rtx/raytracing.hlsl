@@ -85,7 +85,7 @@ float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 
 	float3 samplePos = 0;
 	float4 accum = start_color;
 
-	float minDiameter = oneVoxelSize.z;// *(1 + 4 * angle);
+	float minDiameter = oneVoxelSize.z*4;// *(1 + 4 * angle);
 	float minVoxelDiameterInv = 1.0 / minDiameter;
 
 	float maxDist = 1;
@@ -118,7 +118,7 @@ float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 
 
 	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(dir), angle * 8);
 	float sampleWeight = saturate(max_accum - accum.w) / max_accum;
-	accum.xyz += sky * pow(sampleWeight, 2);
+	accum.xyz += sky * pow(sampleWeight, 8);
 
 
 	dist *= length(voxel_size);
@@ -584,6 +584,14 @@ void MyRaygenShaderReflection()
 	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
 
 	const RWTexture2D<float4> tex_dir_pdf = voxel_output.GetDirAndPdf();
+	// Raw YCoCg-packed signal for NRD REBLUR_SPECULAR, see
+	// [[project-nrd-integration]] -- tex_noise above already has no temporal
+	// blend of its own (the lerp near the bottom of this function is
+	// commented out), but ReflectionDenoiser_Reproject denoises
+	// VoxelReflectionNoise (tex_noise's resource) in place later this same
+	// frame, so a separate copy is still needed for NRD to read the
+	// pre-FFX-denoise value.
+	const RWTexture2D<float4> tex_noise_raw = voxel_output.GetNoiseRaw();
 	// Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
 
 
@@ -594,6 +602,7 @@ void MyRaygenShaderReflection()
 	{
 		tex_noise[itc] = 0;
 		tex_dir_pdf[itc] = 0;
+		tex_noise_raw[itc] = 0;
 		return;
 	}
 
@@ -664,6 +673,12 @@ void MyRaygenShaderReflection()
 
 	tex_dir_pdf[itc] = float4(refl_pos, 1);
 	tex_noise[itc] = float4(screen, payload_gi.dist);// lerp(prev_gi, float4(screen, payload_gi.dist), lerper);//float4(payload_gi.color, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;
+
+	// gbufer_normals.w is the *linear* roughness (NRD_GBufferPack's own
+	// convention) -- not the squared/alpha `roughness` above, which is this
+	// raygen's own GGX-sampling parameter.
+	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
+	tex_noise_raw[itc] = PackForReblurSpecular(screen, payload_gi.dist, gbufer_normals.w, viewZ);
 }
 
 // Independent RTX-only reflection raygen for ReflectionRTX/DLSS-RR (see
@@ -733,7 +748,14 @@ void MyRaygenShaderReflectionRTXOnly()
 
 	float3 refl_pos = pos + view * clamp(payload.dist, 0, 1000);
 	tex_dir_pdf[itc] = float4(refl_pos, 1);
-	tex_noise[itc] = float4(payload.color.rgb, payload.dist);
+
+	// Pack for NRD's REBLUR_SPECULAR (see [[project-nrd-integration]]):
+	// gbufer_normals.w is the *linear* roughness (same convention
+	// NRD_GBufferPack's own NRD_NormalRoughness output uses) -- NOT the
+	// squared/alpha `roughness` above, which is this raygen's own GGX-sampling
+	// parameter, a different convention for a different purpose.
+	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
+	tex_noise[itc] = PackForReblurSpecular(payload.color.rgb, payload.dist, gbufer_normals.w, viewZ);
 }
 
 

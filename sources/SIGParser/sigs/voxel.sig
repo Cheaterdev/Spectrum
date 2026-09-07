@@ -469,6 +469,12 @@ struct ReflectionCombine
 	Texture2D<float4> reflection;
 
 	RWTexture2D<float4> target;
+
+	# Same as RTXCombine's unpack_reflection (see [[project-nrd-integration]]):
+	# nonzero when `reflection` above is REBLUR SPECULAR's packed output
+	# (RTXReflectionDenoised) and needs an unpack; zero for the legacy
+	# FFX-denoised VoxelReflectionNoise, never YCoCg-encoded.
+	uint unpack_reflection;
 }
 
 
@@ -504,6 +510,9 @@ struct RTXCombine
 	# zero when it's the legacy VCT pipeline's plain VoxelIndirectFiltered,
 	# which was never YCoCg-encoded.
 	uint unpack_indirect;
+	# Same as unpack_indirect, but for `reflection` above / g_reflection_denoiser
+	# (RTXReflectionDenoised, packed, vs raw RTXReflectionNoise).
+	uint unpack_reflection;
 }
 
 ComputePSO RTXCombine
@@ -577,6 +586,10 @@ PassNode ScreenReflection
 {
 	GBuffer gbuffer;
 	[Write] Texture VoxelReflectionNoise;
+	# Raw (pre-ReflectionDenoiser_Reproject) YCoCg-packed signal for NRD
+	# REBLUR_SPECULAR -- see [[project-nrd-integration]]. Always written,
+	# unused when g_reflection_source picks the RTX reference signal instead.
+	[Write] Texture VoxelReflectionNoiseRaw;
 	[Write] Texture noise_dir_pdf;
 	TextureCube sky_cubemap_filtered;
 	Texture BlueNoise;
@@ -649,6 +662,11 @@ PassNode ReflCombine
 	GBuffer gbuffer;
 	[Write] Texture ResultTexture;
 	Texture VoxelReflectionNoise;
+	# NRD REBLUR_SPECULAR's denoised output -- alternative reflection input
+	# selected by g_reflection_denoiser instead of VoxelReflectionNoise (same
+	# resource NRD_REBLUR_Execute creates for RTXCombine, produced regardless
+	# of upscaler -- see [[project-nrd-integration]]).
+	Texture RTXReflectionDenoised;
 }
 
 # DLSS-RR-active counterpart to ReflCombine, but NOT a composite over
@@ -667,6 +685,9 @@ PassNode RTXCombine
 {
 	GBuffer gbuffer;
 	Texture RTXReflectionNoise;
+	# NRD REBLUR_SPECULAR's denoised output -- alternative reflection input
+	# selected by g_reflection_denoiser instead of RTXReflectionNoise.
+	Texture RTXReflectionDenoised;
 	Texture RTXIndirectDenoised;
 	# Legacy VCT full pipeline's output -- alternative indirect input
 	# selected by g_indirect_denoiser instead of RTXIndirectDenoised.

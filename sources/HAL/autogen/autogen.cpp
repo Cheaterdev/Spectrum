@@ -51,13 +51,21 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "SIGMA_SplitScreenResources") return SlotID::SIGMA_SplitScreenResources;
 	if(slot_name == "REBLUR_ClassifyTilesResources") return SlotID::REBLUR_ClassifyTilesResources;
 	if(slot_name == "REBLUR_HitDistReconstructionResources") return SlotID::REBLUR_HitDistReconstructionResources;
+	if(slot_name == "REBLUR_HitDistReconstructionSpecularResources") return SlotID::REBLUR_HitDistReconstructionSpecularResources;
 	if(slot_name == "REBLUR_PrePassResources") return SlotID::REBLUR_PrePassResources;
+	if(slot_name == "REBLUR_PrePassSpecularResources") return SlotID::REBLUR_PrePassSpecularResources;
 	if(slot_name == "REBLUR_TemporalAccumulationResources") return SlotID::REBLUR_TemporalAccumulationResources;
+	if(slot_name == "REBLUR_TemporalAccumulationSpecularResources") return SlotID::REBLUR_TemporalAccumulationSpecularResources;
 	if(slot_name == "REBLUR_HistoryFixResources") return SlotID::REBLUR_HistoryFixResources;
+	if(slot_name == "REBLUR_HistoryFixSpecularResources") return SlotID::REBLUR_HistoryFixSpecularResources;
 	if(slot_name == "REBLUR_BlurResources") return SlotID::REBLUR_BlurResources;
+	if(slot_name == "REBLUR_BlurSpecularResources") return SlotID::REBLUR_BlurSpecularResources;
 	if(slot_name == "REBLUR_PostBlurTS0Resources") return SlotID::REBLUR_PostBlurTS0Resources;
+	if(slot_name == "REBLUR_PostBlurTS0SpecularResources") return SlotID::REBLUR_PostBlurTS0SpecularResources;
 	if(slot_name == "REBLUR_PostBlurTS1Resources") return SlotID::REBLUR_PostBlurTS1Resources;
+	if(slot_name == "REBLUR_PostBlurTS1SpecularResources") return SlotID::REBLUR_PostBlurTS1SpecularResources;
 	if(slot_name == "REBLUR_TemporalStabilizationResources") return SlotID::REBLUR_TemporalStabilizationResources;
+	if(slot_name == "REBLUR_TemporalStabilizationSpecularResources") return SlotID::REBLUR_TemporalStabilizationSpecularResources;
 	if(slot_name == "REBLUR_SplitScreenResources") return SlotID::REBLUR_SplitScreenResources;
 	if(slot_name == "REBLUR_ValidationResources") return SlotID::REBLUR_ValidationResources;
 	if(slot_name == "Clear_UInt4Resources") return SlotID::Clear_UInt4Resources;
@@ -231,19 +239,35 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::REBLUR_HitDistReconstructionResources) return Slots::REBLUR_HitDistReconstructionResources::Slot::ID;
 
+	if(id == SlotID::REBLUR_HitDistReconstructionSpecularResources) return Slots::REBLUR_HitDistReconstructionSpecularResources::Slot::ID;
+
 	if(id == SlotID::REBLUR_PrePassResources) return Slots::REBLUR_PrePassResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_PrePassSpecularResources) return Slots::REBLUR_PrePassSpecularResources::Slot::ID;
 
 	if(id == SlotID::REBLUR_TemporalAccumulationResources) return Slots::REBLUR_TemporalAccumulationResources::Slot::ID;
 
+	if(id == SlotID::REBLUR_TemporalAccumulationSpecularResources) return Slots::REBLUR_TemporalAccumulationSpecularResources::Slot::ID;
+
 	if(id == SlotID::REBLUR_HistoryFixResources) return Slots::REBLUR_HistoryFixResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_HistoryFixSpecularResources) return Slots::REBLUR_HistoryFixSpecularResources::Slot::ID;
 
 	if(id == SlotID::REBLUR_BlurResources) return Slots::REBLUR_BlurResources::Slot::ID;
 
+	if(id == SlotID::REBLUR_BlurSpecularResources) return Slots::REBLUR_BlurSpecularResources::Slot::ID;
+
 	if(id == SlotID::REBLUR_PostBlurTS0Resources) return Slots::REBLUR_PostBlurTS0Resources::Slot::ID;
+
+	if(id == SlotID::REBLUR_PostBlurTS0SpecularResources) return Slots::REBLUR_PostBlurTS0SpecularResources::Slot::ID;
 
 	if(id == SlotID::REBLUR_PostBlurTS1Resources) return Slots::REBLUR_PostBlurTS1Resources::Slot::ID;
 
+	if(id == SlotID::REBLUR_PostBlurTS1SpecularResources) return Slots::REBLUR_PostBlurTS1SpecularResources::Slot::ID;
+
 	if(id == SlotID::REBLUR_TemporalStabilizationResources) return Slots::REBLUR_TemporalStabilizationResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_TemporalStabilizationSpecularResources) return Slots::REBLUR_TemporalStabilizationSpecularResources::Slot::ID;
 
 	if(id == SlotID::REBLUR_SplitScreenResources) return Slots::REBLUR_SplitScreenResources::Slot::ID;
 
@@ -457,13 +481,21 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::SIGMA_SplitScreenResources) return "SIGMA_SplitScreenResources";
 	if(id == SlotID::REBLUR_ClassifyTilesResources) return "REBLUR_ClassifyTilesResources";
 	if(id == SlotID::REBLUR_HitDistReconstructionResources) return "REBLUR_HitDistReconstructionResources";
+	if(id == SlotID::REBLUR_HitDistReconstructionSpecularResources) return "REBLUR_HitDistReconstructionSpecularResources";
 	if(id == SlotID::REBLUR_PrePassResources) return "REBLUR_PrePassResources";
+	if(id == SlotID::REBLUR_PrePassSpecularResources) return "REBLUR_PrePassSpecularResources";
 	if(id == SlotID::REBLUR_TemporalAccumulationResources) return "REBLUR_TemporalAccumulationResources";
+	if(id == SlotID::REBLUR_TemporalAccumulationSpecularResources) return "REBLUR_TemporalAccumulationSpecularResources";
 	if(id == SlotID::REBLUR_HistoryFixResources) return "REBLUR_HistoryFixResources";
+	if(id == SlotID::REBLUR_HistoryFixSpecularResources) return "REBLUR_HistoryFixSpecularResources";
 	if(id == SlotID::REBLUR_BlurResources) return "REBLUR_BlurResources";
+	if(id == SlotID::REBLUR_BlurSpecularResources) return "REBLUR_BlurSpecularResources";
 	if(id == SlotID::REBLUR_PostBlurTS0Resources) return "REBLUR_PostBlurTS0Resources";
+	if(id == SlotID::REBLUR_PostBlurTS0SpecularResources) return "REBLUR_PostBlurTS0SpecularResources";
 	if(id == SlotID::REBLUR_PostBlurTS1Resources) return "REBLUR_PostBlurTS1Resources";
+	if(id == SlotID::REBLUR_PostBlurTS1SpecularResources) return "REBLUR_PostBlurTS1SpecularResources";
 	if(id == SlotID::REBLUR_TemporalStabilizationResources) return "REBLUR_TemporalStabilizationResources";
+	if(id == SlotID::REBLUR_TemporalStabilizationSpecularResources) return "REBLUR_TemporalStabilizationSpecularResources";
 	if(id == SlotID::REBLUR_SplitScreenResources) return "REBLUR_SplitScreenResources";
 	if(id == SlotID::REBLUR_ValidationResources) return "REBLUR_ValidationResources";
 	if(id == SlotID::Clear_UInt4Resources) return "Clear_UInt4Resources";

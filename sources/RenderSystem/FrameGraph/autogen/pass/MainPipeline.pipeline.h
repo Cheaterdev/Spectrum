@@ -174,6 +174,7 @@ public:
 		L"axis_id_buffer",
 		L"ResultTexture",
 		L"VoxelReflectionNoise",
+		L"VoxelReflectionNoiseRaw",
 		L"noise_dir_pdf",
 		L"VoxelScreen_hi",
 		L"VoxelScreen_low",
@@ -215,6 +216,7 @@ public:
 		L"VoxelIndirectFilteredPrev",
 		L"RTXIndirectDenoised",
 		L"RTXIndirectDenoisedPreview",
+		L"RTXReflectionDenoised",
 		L"ResultTextureRTXNoise",
 		L"ResultTextureNew",
 		L"SMAA_edges",
@@ -813,6 +815,14 @@ public:
 		{ true, { VoxelReflectionNoise_c0_pass_refs + 1, 1 } },
 		{ false, { VoxelReflectionNoise_c0_pass_refs + 2, 1 } },
 	};
+	static inline const FrameGraph::PassRef VoxelReflectionNoiseRaw_c0_pass_refs[] = {
+		{ PassID::ScreenReflection, 0 },
+		{ PassID::NRD_REBLUR_Execute, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VoxelReflectionNoiseRaw_c0_states[] = {
+		{ true, { VoxelReflectionNoiseRaw_c0_pass_refs + 0, 1 } },
+		{ false, { VoxelReflectionNoiseRaw_c0_pass_refs + 1, 1 } },
+	};
 	static inline const FrameGraph::PassRef noise_dir_pdf_c0_pass_refs[] = {
 		{ PassID::ScreenReflection, 0 },
 	};
@@ -925,12 +935,13 @@ public:
 	};
 	static inline const FrameGraph::PassRef RTXReflectionNoise_c0_pass_refs[] = {
 		{ PassID::ReflectionRTX, 0 },
+		{ PassID::NRD_REBLUR_Execute, 0 },
 		{ PassID::RTXCombine, 0 },
 		{ PassID::UpscalingDLSSRR, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState RTXReflectionNoise_c0_states[] = {
 		{ true, { RTXReflectionNoise_c0_pass_refs + 0, 1 } },
-		{ false, { RTXReflectionNoise_c0_pass_refs + 1, 2 } },
+		{ false, { RTXReflectionNoise_c0_pass_refs + 1, 3 } },
 	};
 	static inline const FrameGraph::PassRef RTXReflectionDirPdf_c0_pass_refs[] = {
 		{ PassID::ReflectionRTX, 0 },
@@ -1131,6 +1142,15 @@ public:
 	static inline const FrameGraph::PrecompiledState RTXIndirectDenoisedPreview_c0_states[] = {
 		{ true, { RTXIndirectDenoisedPreview_c0_pass_refs + 0, 1 } },
 	};
+	static inline const FrameGraph::PassRef RTXReflectionDenoised_c0_pass_refs[] = {
+		{ PassID::NRD_REBLUR_Execute, 0 },
+		{ PassID::ReflCombine, 0 },
+		{ PassID::RTXCombine, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState RTXReflectionDenoised_c0_states[] = {
+		{ true, { RTXReflectionDenoised_c0_pass_refs + 0, 1 } },
+		{ false, { RTXReflectionDenoised_c0_pass_refs + 1, 2 } },
+	};
 	static inline const FrameGraph::PassRef ResultTextureRTXNoise_c0_pass_refs[] = {
 		{ PassID::RTXCombine, 0 },
 		{ PassID::UpscalingDLSSRR, 0 },
@@ -1244,6 +1264,7 @@ public:
 		{ ResourceID::axis_id_buffer, 0, axis_id_buffer_c0_states },
 		{ ResourceID::ResultTexture, 0, ResultTexture_c0_states },
 		{ ResourceID::VoxelReflectionNoise, 0, VoxelReflectionNoise_c0_states },
+		{ ResourceID::VoxelReflectionNoiseRaw, 0, VoxelReflectionNoiseRaw_c0_states },
 		{ ResourceID::noise_dir_pdf, 0, noise_dir_pdf_c0_states },
 		{ ResourceID::VoxelScreen_hi, 0, VoxelScreen_hi_c0_states },
 		{ ResourceID::VoxelScreen_low, 0, VoxelScreen_low_c0_states },
@@ -1285,6 +1306,7 @@ public:
 		{ ResourceID::VoxelIndirectFilteredPrev, 0, VoxelIndirectFilteredPrev_c0_states },
 		{ ResourceID::RTXIndirectDenoised, 0, RTXIndirectDenoised_c0_states },
 		{ ResourceID::RTXIndirectDenoisedPreview, 0, RTXIndirectDenoisedPreview_c0_states },
+		{ ResourceID::RTXReflectionDenoised, 0, RTXReflectionDenoised_c0_states },
 		{ ResourceID::ResultTextureRTXNoise, 0, ResultTextureRTXNoise_c0_states },
 		{ ResourceID::ResultTexture, 1, ResultTexture_c1_states },
 		{ ResourceID::SMAA_edges, 0, SMAA_edges_c0_states },
@@ -1431,6 +1453,8 @@ public:
 	static inline const FrameGraph::PassRef NRD_REBLUR_Execute_0_prev[] = {
 		{ PassID::IndirectRTX, 0 },
 		{ PassID::NRD_GBufferPack, 0 },
+		{ PassID::ReflectionRTX, 0 },
+		{ PassID::ScreenReflection, 0 },
 		{ PassID::VoxelScreen, 0 },
 	};
 	static inline const FrameGraph::PassRef NRD_IndirectCombine_0_prev[] = {
@@ -1445,6 +1469,7 @@ public:
 	};
 	static inline const FrameGraph::PassRef ReflCombine_0_prev[] = {
 		{ PassID::NRD_IndirectCombine, 0 },
+		{ PassID::NRD_REBLUR_Execute, 0 },
 		{ PassID::ReflectionDenoiser_Reproject, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Scene, 0 },

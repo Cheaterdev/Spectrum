@@ -23,4 +23,24 @@ export
 	// [[project-nrd-integration]]).
 	enum class IndirectDenoiser { Legacy, NRD };
 	IndirectDenoiser g_indirect_denoiser = IndirectDenoiser::NRD;
+
+	// Reflection counterparts of the pair above (see
+	// [[project-nrd-integration]]'s reflection-denoiser plan): which raw
+	// signal feeds NRD REBLUR_SPECULAR -- the legacy ScreenReflection path
+	// (VoxelReflectionNoiseRaw, pre-ReflectionDenoiser_Reproject) or the
+	// RTX-only reference path (RTXReflectionNoise, ReflectionRTX's raygen).
+	enum class ReflectionSource { MyReflection, RTXReference };
+	ReflectionSource g_reflection_source = ReflectionSource::RTXReference;
+
+	// Which processed signal supplies the final reflection contribution: the
+	// legacy FFX-denoised VoxelReflectionNoise (ReflectionDenoiser_Reproject,
+	// unaffected by g_reflection_source) or NRD's REBLUR_SPECULAR-denoised
+	// output (RTXReflectionDenoised, whose *input* is picked by
+	// g_reflection_source). Independent of g_upscaler_type -- RTXCombine
+	// reads this under DLSS-RR, ReflCombine under FSR/DLSS.
+	// Named ReflectionDenoiserKind, not ReflectionDenoiser -- that name is
+	// already taken by the ReflectionDenoiser class (Effects/Denoisers/
+	// ReflectionDenoiser.ixx), an unrelated FFX-denoiser GraphGenerator.
+	enum class ReflectionDenoiserKind { Legacy, NRD };
+	ReflectionDenoiserKind g_reflection_denoiser = ReflectionDenoiserKind::Legacy;
 }

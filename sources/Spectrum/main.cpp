@@ -1519,9 +1519,10 @@ public:
 
 					// Indirect-GI denoiser selector, writes g_indirect_denoiser
 					// (see [[project-nrd-integration]]) -- which processed
-					// signal RTXCombine reads for the final indirect
-					// contribution. Only observable while g_upscaler_type ==
-					// DLSSRR (RTXCombine's own gate).
+					// signal supplies the final indirect contribution.
+					// Works under every upscaler (RTXCombine under DLSS-RR,
+					// NRD_IndirectCombine/VoxelCombine's own composite under
+					// FSR/DLSS).
 					{
 						struct IndirectDenoiserOpt { const char* name; IndirectDenoiser denoiser; };
 						static const IndirectDenoiserOpt opts[] = {
@@ -1541,6 +1542,63 @@ public:
 									g_indirect_denoiser = denoiser;
 								};
 							if (o.denoiser == g_indirect_denoiser)
+								combo->get_label()->text = o.name;
+						}
+						toolbar->add_child(combo);
+					}
+
+					// Reflection source selector, writes g_reflection_source
+					// (see [[project-nrd-integration]]) -- which raw signal
+					// is available as a denoiser's input. Only observed
+					// while g_reflection_denoiser == NRD (below).
+					{
+						struct ReflectionSourceOpt { const char* name; ReflectionSource source; };
+						static const ReflectionSourceOpt opts[] = {
+							{ "Reflection Src: My Reflection", ReflectionSource::MyReflection },
+							{ "Reflection Src: RTX Ref",       ReflectionSource::RTXReference },
+						};
+
+						auto combo = std::make_shared<GUI::Elements::combo_box>();
+						combo->docking = GUI::dock::TOP;
+						combo->size = { 140, 24 };
+						for (auto& o : opts)
+						{
+							auto source = o.source;
+							combo->add_item(o.name)->on_select =
+								[source]()
+								{
+									g_reflection_source = source;
+								};
+							if (o.source == g_reflection_source)
+								combo->get_label()->text = o.name;
+						}
+						toolbar->add_child(combo);
+					}
+
+					// Reflection denoiser selector, writes g_reflection_denoiser
+					// (see [[project-nrd-integration]]) -- which processed
+					// signal supplies the final reflection contribution.
+					// Works under every upscaler (RTXCombine under DLSS-RR,
+					// ReflCombine under FSR/DLSS).
+					{
+						struct ReflectionDenoiserOpt { const char* name; ReflectionDenoiserKind denoiser; };
+						static const ReflectionDenoiserOpt opts[] = {
+							{ "Reflection Denoiser: Legacy", ReflectionDenoiserKind::Legacy },
+							{ "Reflection Denoiser: NRD",    ReflectionDenoiserKind::NRD },
+						};
+
+						auto combo = std::make_shared<GUI::Elements::combo_box>();
+						combo->docking = GUI::dock::TOP;
+						combo->size = { 140, 24 };
+						for (auto& o : opts)
+						{
+							auto denoiser = o.denoiser;
+							combo->add_item(o.name)->on_select =
+								[denoiser]()
+								{
+									g_reflection_denoiser = denoiser;
+								};
+							if (o.denoiser == g_reflection_denoiser)
 								combo->get_label()->text = o.name;
 						}
 						toolbar->add_child(combo);

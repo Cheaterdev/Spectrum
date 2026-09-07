@@ -78,8 +78,16 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float shadow = GetRTXCombine().GetShadow()[tc].r;
 	float3 direct = albedo.rgb * NdotL * shadow;
 
-	// Reflections: identical weighting to ReflectionCombine.
-	float3 reflection = GetRTXCombine().GetReflection()[tc].rgb;
+	// Reflections: identical weighting to ReflectionCombine. Two possible
+	// sources (see [[project-nrd-integration]], g_reflection_denoiser): REBLUR
+	// SPECULAR's denoised output, packed (needing an unpack, same convention
+	// as indirect GI below) -- or the raw RTXReflectionNoise DLSS-RR's own
+	// denoiser cleans up downstream. unpack_reflection (set CPU-side,
+	// RTXCombine.cpp) drives which.
+	float4 reflection_raw = GetRTXCombine().GetReflection()[tc];
+	float3 reflection = GetRTXCombine().GetUnpack_reflection() != 0
+		? REBLUR_BackEnd_UnpackRadianceAndNormHitDist(reflection_raw).rgb
+		: reflection_raw.rgb;
 	float3 refl_color = get_PBR(albedo.rgb, reflection, normal, v, roughness, metallic);
 
 	// Indirect GI: diffuse bounce light, weighted by the surface's own

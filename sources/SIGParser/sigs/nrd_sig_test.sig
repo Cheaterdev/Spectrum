@@ -308,6 +308,35 @@ ComputePSO NRD_REBLUR_HitDistReconstruction5x5
 	compute = nrd/sig_reblur_hitdistreconstruction_5x5;
 }
 
+# REBLUR_SPECULAR's permutation of the same kernel (see
+# [[project-nrd-integration]] and HAL.NRD.cpp's dispatch.identifier routing) --
+# same resource *count* as diffuse (4 in + 1 out), Diff->Spec renamed, per
+# REBLUR_HitDistReconstruction.resources.hlsli's NRD_SPEC-only branch.
+[Bind = DefaultLayout::Instance2]
+struct REBLUR_HitDistReconstructionSpecularResources
+{
+	REBLURSharedConstants sharedConstants;
+	Texture2D<float> gIn_Tiles;
+	Texture2D<float4> gIn_Normal_Roughness;
+	Texture2D<float> gIn_ViewZ;
+	Texture2D<float4> gIn_Spec;
+	RWTexture2D<float4> gOut_Spec;
+}
+
+ComputePSO NRD_REBLUR_HitDistReconstruction_Specular
+{
+	root = DefaultLayout;
+	[EntryPoint = main]
+	compute = nrd/sig_reblur_hitdistreconstruction_specular;
+}
+
+ComputePSO NRD_REBLUR_HitDistReconstruction5x5_Specular
+{
+	root = DefaultLayout;
+	[EntryPoint = main]
+	compute = nrd/sig_reblur_hitdistreconstruction_5x5_specular;
+}
+
 [Bind = DefaultLayout::Instance2]
 struct REBLUR_PrePassResources
 {
@@ -324,6 +353,28 @@ ComputePSO NRD_REBLUR_PrePass
 	root = DefaultLayout;
 	[EntryPoint = main]
 	compute = nrd/sig_reblur_prepass;
+}
+
+# REBLUR_SPECULAR's permutation -- one extra output (gOut_SpecHitDistForTracking,
+# no diffuse equivalent) vs the diffuse struct, per
+# REBLUR_PrePass.resources.hlsli's NRD_SPEC-only branch.
+[Bind = DefaultLayout::Instance2]
+struct REBLUR_PrePassSpecularResources
+{
+	REBLURSharedConstants sharedConstants;
+	Texture2D<float> gIn_Tiles;
+	Texture2D<float4> gIn_Normal_Roughness;
+	Texture2D<float> gIn_ViewZ;
+	Texture2D<float4> gIn_Spec;
+	RWTexture2D<float4> gOut_Spec;
+	RWTexture2D<float> gOut_SpecHitDistForTracking;
+}
+
+ComputePSO NRD_REBLUR_PrePass_Specular
+{
+	root = DefaultLayout;
+	[EntryPoint = main]
+	compute = nrd/sig_reblur_prepass_specular;
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -355,6 +406,45 @@ ComputePSO NRD_REBLUR_TemporalAccumulation
 	compute = nrd/sig_reblur_temporalaccumulation;
 }
 
+# REBLUR_SPECULAR's permutation -- per
+# REBLUR_TemporalAccumulation.resources.hlsli's NRD_SPEC-only branch: same
+# shared prefix (0-7), then gIn_SpecConfidence/gIn_Spec/gHistory_Spec/
+# gHistory_SpecFast/gPrev_SpecHitDistForTracking/gIn_SpecHitDistForTracking
+# (14 inputs total, vs diffuse's 12 -- specular tracks an extra hit-distance
+# pair diffuse doesn't need), and gOut_Data1/gOut_Spec/gOut_SpecFast/
+# gOut_SpecHitDistForTracking/gOut_Data2 (5 outputs, vs diffuse's 4).
+[Bind = DefaultLayout::Instance2]
+struct REBLUR_TemporalAccumulationSpecularResources
+{
+	REBLURSharedConstants sharedConstants;
+	Texture2D<float> gIn_Tiles;
+	Texture2D<float4> gIn_Normal_Roughness;
+	Texture2D<float> gIn_ViewZ;
+	Texture2D<float3> gIn_Mv;
+	Texture2D<float> gPrev_ViewZ;
+	Texture2D<float4> gPrev_Normal_Roughness;
+	Texture2D<uint> gPrev_InternalData;
+	Texture2D<float> gIn_DisocclusionThresholdMix;
+	Texture2D<float> gIn_SpecConfidence;
+	Texture2D<float4> gIn_Spec;
+	Texture2D<float4> gHistory_Spec;
+	Texture2D<float> gHistory_SpecFast;
+	Texture2D<float> gPrev_SpecHitDistForTracking;
+	Texture2D<float> gIn_SpecHitDistForTracking;
+	RWTexture2D<float2> gOut_Data1;
+	RWTexture2D<float4> gOut_Spec;
+	RWTexture2D<float> gOut_SpecFast;
+	RWTexture2D<float> gOut_SpecHitDistForTracking;
+	RWTexture2D<uint> gOut_Data2;
+}
+
+ComputePSO NRD_REBLUR_TemporalAccumulation_Specular
+{
+	root = DefaultLayout;
+	[EntryPoint = main]
+	compute = nrd/sig_reblur_temporalaccumulation_specular;
+}
+
 [Bind = DefaultLayout::Instance2]
 struct REBLUR_HistoryFixResources
 {
@@ -376,6 +466,31 @@ ComputePSO NRD_REBLUR_HistoryFix
 	compute = nrd/sig_reblur_historyfix;
 }
 
+# REBLUR_SPECULAR's permutation -- one extra input (gIn_SpecHitDistForTracking,
+# no diffuse equivalent) vs the diffuse struct, per
+# REBLUR_HistoryFix.resources.hlsli's NRD_SPEC-only branch.
+[Bind = DefaultLayout::Instance2]
+struct REBLUR_HistoryFixSpecularResources
+{
+	REBLURSharedConstants sharedConstants;
+	Texture2D<float> gIn_Tiles;
+	Texture2D<float4> gIn_Normal_Roughness;
+	Texture2D<float2> gIn_Data1;
+	Texture2D<float> gIn_ViewZ;
+	Texture2D<float4> gIn_Spec;
+	Texture2D<float> gIn_SpecFast;
+	Texture2D<float> gIn_SpecHitDistForTracking;
+	RWTexture2D<float4> gOut_Spec;
+	RWTexture2D<float> gOut_SpecFast;
+}
+
+ComputePSO NRD_REBLUR_HistoryFix_Specular
+{
+	root = DefaultLayout;
+	[EntryPoint = main]
+	compute = nrd/sig_reblur_historyfix_specular;
+}
+
 [Bind = DefaultLayout::Instance2]
 struct REBLUR_BlurResources
 {
@@ -394,6 +509,29 @@ ComputePSO NRD_REBLUR_Blur
 	root = DefaultLayout;
 	[EntryPoint = main]
 	compute = nrd/sig_reblur_blur;
+}
+
+# REBLUR_SPECULAR's permutation -- same resource count as diffuse (5 in + 2
+# out), Diff->Spec renamed, per REBLUR_Blur.resources.hlsli's NRD_SPEC-only
+# branch.
+[Bind = DefaultLayout::Instance2]
+struct REBLUR_BlurSpecularResources
+{
+	REBLURSharedConstants sharedConstants;
+	Texture2D<float> gIn_Tiles;
+	Texture2D<float4> gIn_Normal_Roughness;
+	Texture2D<float> gIn_ViewZ;
+	Texture2D<float2> gIn_Data1;
+	Texture2D<float4> gIn_Spec;
+	RWTexture2D<float> gOut_ViewZ;
+	RWTexture2D<float4> gOut_Spec;
+}
+
+ComputePSO NRD_REBLUR_Blur_Specular
+{
+	root = DefaultLayout;
+	[EntryPoint = main]
+	compute = nrd/sig_reblur_blur_specular;
 }
 
 # TEMPORAL_STABILIZATION=0: PostBlur also emits gOut_InternalData/gOut_DiffCopy
@@ -421,6 +559,31 @@ ComputePSO NRD_REBLUR_PostBlurTS0
 	compute = nrd/sig_reblur_postblur_ts0;
 }
 
+# REBLUR_SPECULAR's permutation -- same resource count as diffuse (5 in + 4
+# out), Diff->Spec renamed, per REBLUR_PostBlur.resources.hlsli's
+# TEMPORAL_STABILIZATION=0, NRD_SPEC-only branch.
+[Bind = DefaultLayout::Instance2]
+struct REBLUR_PostBlurTS0SpecularResources
+{
+	REBLURSharedConstants sharedConstants;
+	Texture2D<float> gIn_Tiles;
+	Texture2D<float4> gIn_Normal_Roughness;
+	Texture2D<float2> gIn_Data1;
+	Texture2D<float> gIn_ViewZ;
+	Texture2D<float4> gIn_Spec;
+	RWTexture2D<float4> gOut_Normal_Roughness;
+	RWTexture2D<float4> gOut_Spec;
+	RWTexture2D<uint> gOut_InternalData;
+	RWTexture2D<float4> gOut_SpecCopy;
+}
+
+ComputePSO NRD_REBLUR_PostBlurTS0_Specular
+{
+	root = DefaultLayout;
+	[EntryPoint = main]
+	compute = nrd/sig_reblur_postblur_ts0_specular;
+}
+
 # TEMPORAL_STABILIZATION=1: the TemporalStabilization pass runs afterward and
 # owns gOut_InternalData itself, so PostBlur skips producing it here.
 [Bind = DefaultLayout::Instance2]
@@ -441,6 +604,29 @@ ComputePSO NRD_REBLUR_PostBlurTS1
 	root = DefaultLayout;
 	[EntryPoint = main]
 	compute = nrd/sig_reblur_postblur_ts1;
+}
+
+# REBLUR_SPECULAR's permutation -- same resource count as diffuse (5 in + 2
+# out), Diff->Spec renamed, per REBLUR_PostBlur.resources.hlsli's
+# TEMPORAL_STABILIZATION=1, NRD_SPEC-only branch.
+[Bind = DefaultLayout::Instance2]
+struct REBLUR_PostBlurTS1SpecularResources
+{
+	REBLURSharedConstants sharedConstants;
+	Texture2D<float> gIn_Tiles;
+	Texture2D<float4> gIn_Normal_Roughness;
+	Texture2D<float2> gIn_Data1;
+	Texture2D<float> gIn_ViewZ;
+	Texture2D<float4> gIn_Spec;
+	RWTexture2D<float4> gOut_Normal_Roughness;
+	RWTexture2D<float4> gOut_Spec;
+}
+
+ComputePSO NRD_REBLUR_PostBlurTS1_Specular
+{
+	root = DefaultLayout;
+	[EntryPoint = main]
+	compute = nrd/sig_reblur_postblur_ts1_specular;
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -465,6 +651,35 @@ ComputePSO NRD_REBLUR_TemporalStabilization
 	root = DefaultLayout;
 	[EntryPoint = main]
 	compute = nrd/sig_reblur_temporalstabilization;
+}
+
+# REBLUR_SPECULAR's permutation -- per
+# REBLUR_TemporalStabilization.resources.hlsli's NRD_SPEC-only branch: one
+# extra input (gIn_SpecHitDistForTracking, no diffuse equivalent) vs the
+# diffuse struct (8 inputs vs 7), same 4 outputs (Diff->Spec renamed).
+[Bind = DefaultLayout::Instance2]
+struct REBLUR_TemporalStabilizationSpecularResources
+{
+	REBLURSharedConstants sharedConstants;
+	Texture2D<float> gIn_Tiles;
+	Texture2D<float4> gIn_Normal_Roughness;
+	Texture2D<float> gIn_ViewZ;
+	Texture2D<float2> gIn_Data1;
+	Texture2D<uint> gIn_Data2;
+	Texture2D<float> gIn_SpecHitDistForTracking;
+	Texture2D<float4> gIn_Spec;
+	Texture2D<float> gHistory_SpecLumaStabilized;
+	RWTexture2D<float4> gInOut_Mv;
+	RWTexture2D<uint> gOut_InternalData;
+	RWTexture2D<float4> gOut_Spec;
+	RWTexture2D<float> gOut_SpecLumaStabilized;
+}
+
+ComputePSO NRD_REBLUR_TemporalStabilization_Specular
+{
+	root = DefaultLayout;
+	[EntryPoint = main]
+	compute = nrd/sig_reblur_temporalstabilization_specular;
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -596,9 +811,15 @@ PassNode NRD_REBLUR_Execute
 	# VoxelScreen's raw (pre-history-lerp) signal -- alternative diff_noisy
 	# input selected by g_indirect_source instead of RTXIndirectNoise.
 	Texture VoxelIndirectNoiseRaw;
+	Texture RTXReflectionNoise;
+	# ScreenReflection's raw (pre-ReflectionDenoiser_Reproject) signal --
+	# alternative spec_noisy input selected by g_reflection_source instead of
+	# RTXReflectionNoise.
+	Texture VoxelReflectionNoiseRaw;
 
 	[Write] Texture RTXIndirectDenoised;
 	[Write] Texture RTXIndirectDenoisedPreview;
+	[Write] Texture RTXReflectionDenoised;
 }
 
 # The FSR/DLSS-side equivalent of the indirect term RTXCombine computes for

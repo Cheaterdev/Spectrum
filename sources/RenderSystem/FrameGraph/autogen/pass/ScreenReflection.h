@@ -23,6 +23,9 @@ public:
 		Handlers::Texture VoxelReflectionNoise = ResourceID::VoxelReflectionNoise;
 
 
+		Handlers::Texture VoxelReflectionNoiseRaw = ResourceID::VoxelReflectionNoiseRaw;
+
+
 		Handlers::Texture noise_dir_pdf = ResourceID::noise_dir_pdf;
 
 
@@ -64,6 +67,7 @@ public:
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
 			{ ResourceID::VoxelReflectionNoise, true },
+			{ ResourceID::VoxelReflectionNoiseRaw, true },
 			{ ResourceID::noise_dir_pdf, true },
 			{ ResourceID::sky_cubemap_filtered, false },
 			{ ResourceID::BlueNoise, false },

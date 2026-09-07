@@ -27,14 +27,17 @@ bool PassDefault<Passes::RTXCombine>::setup(
 
 	GBufferViewDesc::need(builder, data.gbuffer);
 	builder.need(data.RTXReflectionNoise,  ResourceFlags::ComputeRead);
-	// Which indirect input exists this frame follows g_indirect_denoiser --
-	// NRD_REBLUR_Execute (RTXIndirectDenoised's producer) is itself gated on
-	// this same flag, so only need() the one that's actually going to be
-	// produced.
+	// Which indirect/reflection input exists this frame follows
+	// g_indirect_denoiser/g_reflection_denoiser -- NRD_REBLUR_Execute
+	// (RTXIndirectDenoised/RTXReflectionDenoised's producer) is itself gated
+	// on wanting at least one of them NRD, so only need() the ones that are
+	// actually going to be produced.
 	if (g_indirect_denoiser == IndirectDenoiser::NRD)
 		builder.need(data.RTXIndirectDenoised, ResourceFlags::ComputeRead);
 	else
 		builder.need(data.VoxelIndirectFiltered, ResourceFlags::ComputeRead);
+	if (g_reflection_denoiser == ReflectionDenoiserKind::NRD)
+		builder.need(data.RTXReflectionDenoised, ResourceFlags::ComputeRead);
 	builder.need(data.RTXShadowNoise,      ResourceFlags::ComputeRead);
 	builder.create(data.ResultTextureRTXNoise,
 		{ ivec3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
@@ -59,7 +62,16 @@ void PassDefault<Passes::RTXCombine>::render(
 	{
 		Slots::RTXCombine combine;
 		gbuffer.SetTable(combine.GetGbuffer());
-		combine.GetReflection() = data.RTXReflectionNoise->texture2D;
+		if (g_reflection_denoiser == ReflectionDenoiserKind::NRD)
+		{
+			combine.GetReflection() = data.RTXReflectionDenoised->texture2D;
+			combine.GetUnpack_reflection() = 1;
+		}
+		else
+		{
+			combine.GetReflection() = data.RTXReflectionNoise->texture2D;
+			combine.GetUnpack_reflection() = 0;
+		}
 		if (g_indirect_denoiser == IndirectDenoiser::NRD)
 		{
 			combine.GetIndirect() = data.RTXIndirectDenoised->texture2D;
