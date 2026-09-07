@@ -24,7 +24,7 @@ export namespace PSOS
 			}
 		};
 
-		GEN_GRAPHICS_PSO(GBufferDownsample)
+		GEN_COMPUTE_PSO(GBufferDownsample)
 
 
 		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
@@ -36,18 +36,10 @@ export namespace PSOS
 
 			mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.vertex.file_name = "shaders/postprocess/downsample.hlsl";
-			mpso.vertex.entry_point = "VS";
-			mpso.vertex.flags = HAL::ShaderOptions::None;
+			mpso.compute.file_name = "shaders/postprocess/downsample.hlsl";
+			mpso.compute.entry_point = "CS";
+			mpso.compute.flags = HAL::ShaderOptions::None;
 			
-			mpso.pixel.file_name = "shaders/postprocess/downsample.hlsl";
-			mpso.pixel.entry_point = "PS";
-			mpso.pixel.flags = HAL::ShaderOptions::None;
-			
-
-			mpso.rtv_formats = { HAL::Format::R32_FLOAT, HAL::Format::R8G8B8A8_UNORM };	
-			mpso.blend = {  };
-
 			return mpso;
 		}
 

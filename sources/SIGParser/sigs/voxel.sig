@@ -259,9 +259,21 @@ ComputePSO RTXCombine
 }
 
 
+# See TileClassifyData's own comment (pssm.sig) for the algorithm. Not
+# [Static] -- sizes TileClassifyHi/Low from the current frame_size in setup,
+# same reasoning as VoxelScreen's own hi/low lists.
+[Compute]
 PassNode GBufferDownsampler
 {
 	GBuffer gbuffer;
+
+	[Write] Texture GBuffer_HalfDepth;
+	[Write] Texture GBuffer_HalfNormals;
+
+	[Write] StructuredBuffer<uint2> TileClassifyHi;
+	[Write] StructuredBuffer<uint2> TileClassifyLow;
+
+	[Write] Texture TileClassifyMask;
 }
 
 PassNode VoxelDebug

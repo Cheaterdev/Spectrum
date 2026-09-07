@@ -1,10 +1,28 @@
 
 
-[Bind = DefaultLayout::Instance2]
-struct GBufferDownsample
+# Fused half-res GBuffer downsample + generic 8x8-tile classification. One
+# 8x8 thread group per screen tile: loads the tile's full-res depth+normal
+# into LDS, picks the closest (max depth, reversed-Z) real sample per 2x2
+# block as the half-res output -- same rule GBufferDownsampleRT's old PS
+# used, never an average, so nothing downstream infers geometry that isn't
+# really there -- then classifies the whole tile Hi/Low from the spread of
+# those 16 representatives, and flags individual full-res pixels whose own
+# depth diverges too far from their block's representative in tile_mask.
+# Generic infra: not tied to GI/reflections/shadows specifically, any pass
+# needing "does this tile need full-res work" reads TileClassifyHi/Low/Mask
+# by name.
+[Bind = DefaultLayout::Instance0]
+struct TileClassifyData
 {
-	Texture2D<float4> normals;
-	Texture2D<float> depth;
+	GBuffer gbuffer;
+
+	RWTexture2D<float> half_depth;
+	RWTexture2D<float4> half_normals;
+
+	AppendStructuredBuffer<uint2> tile_hi;
+	AppendStructuredBuffer<uint2> tile_low;
+
+	RWTexture2D<uint> tile_mask;
 }
 
 
@@ -81,25 +99,12 @@ ComputePSO PSSMApplyCompute
 }
 
 
-[RenderTarget]
-struct GBufferDownsampleRT
-{
-	RenderTarget<float> depth;
-	RenderTarget<float4> color;
-}
-
-
-GraphicsPSO GBufferDownsample
+ComputePSO GBufferDownsample
 {
 	root = DefaultLayout;
 
-	[EntryPoint = VS]
-	vertex = postprocess/downsample;
-
-	[EntryPoint = PS]
-	pixel = postprocess/downsample;
-
-	rtv = { R32_FLOAT, R8G8B8A8_UNORM };
+	[EntryPoint = CS]
+	compute = postprocess/downsample;
 }
 
 

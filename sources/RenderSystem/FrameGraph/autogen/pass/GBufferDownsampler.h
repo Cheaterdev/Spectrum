@@ -19,6 +19,21 @@ public:
 	{
 
 		GBuffer gbuffer;
+
+		Handlers::Texture GBuffer_HalfDepth = ResourceID::GBuffer_HalfDepth;
+
+
+		Handlers::Texture GBuffer_HalfNormals = ResourceID::GBuffer_HalfNormals;
+
+
+		Handlers::StructuredBuffer<uint2> TileClassifyHi = ResourceID::TileClassifyHi;
+
+
+		Handlers::StructuredBuffer<uint2> TileClassifyLow = ResourceID::TileClassifyLow;
+
+
+		Handlers::Texture TileClassifyMask = ResourceID::TileClassifyMask;
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
@@ -36,6 +51,11 @@ public:
 			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
+			{ ResourceID::GBuffer_HalfDepth, true },
+			{ ResourceID::GBuffer_HalfNormals, true },
+			{ ResourceID::TileClassifyHi, true },
+			{ ResourceID::TileClassifyLow, true },
+			{ ResourceID::TileClassifyMask, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -58,7 +78,7 @@ public:
 	setup_func_type setup_func;
 	render_func_type render_func;
 
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
 };
 
 }

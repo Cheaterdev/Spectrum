@@ -84,6 +84,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::NRD_UnpackDebug>(device, pso[PSO::NRD_UnpackDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::NRD_IndirectCombine>(device, pso[PSO::NRD_IndirectCombine]));
 	tasks.emplace_back(PSOBase::create<PSOS::PSSMApplyCompute>(device, pso[PSO::PSSMApplyCompute]));
+	tasks.emplace_back(PSOBase::create<PSOS::GBufferDownsample>(device, pso[PSO::GBufferDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::RTXShadowReferenceCompute>(device, pso[PSO::RTXShadowReferenceCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::SkyCompute>(device, pso[PSO::SkyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::SkyCube>(device, pso[PSO::SkyCube]));
@@ -138,7 +139,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::CopyTexture>(device, pso[PSO::CopyTexture]));
 	tasks.emplace_back(PSOBase::create<PSOS::PSSMMask>(device, pso[PSO::PSSMMask]));
 	tasks.emplace_back(PSOBase::create<PSOS::PSSMApply>(device, pso[PSO::PSSMApply]));
-	tasks.emplace_back(PSOBase::create<PSOS::GBufferDownsample>(device, pso[PSO::GBufferDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::GBufferDraw>(device, pso[PSO::GBufferDraw]));
 	tasks.emplace_back(PSOBase::create<PSOS::DepthDraw>(device, pso[PSO::DepthDraw]));
 	tasks.emplace_back(PSOBase::create<PSOS::Voxelization>(device, pso[PSO::Voxelization]));

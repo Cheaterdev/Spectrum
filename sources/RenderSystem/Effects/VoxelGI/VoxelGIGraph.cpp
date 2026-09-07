@@ -205,14 +205,26 @@ public:
 
 	void generate(Graph& graph)
 	{
-		auto& frame = graph.get_context<ViewportInfo>();
+		graph.add_library_pass<Passes::GBufferDownsampler>([this](auto& data, TaskBuilder& builder) {
 
-		auto size = frame.frame_size;
-
-		graph.add_library_pass<Passes::GBufferDownsampler>([this, size](auto& data, TaskBuilder& builder) {
+			auto& frame = builder.graph->get_context<ViewportInfo>();
+			auto  size  = frame.frame_size;
 
 			GBufferViewDesc::need(builder, data.gbuffer, true);
 			builder.create(data.gbuffer.GBuffer_TempColor, { ivec3(size,0), HAL::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+
+			ivec2 half_size = { (size.x + 1) / 2, (size.y + 1) / 2 };
+			builder.create(data.GBuffer_HalfDepth,   { ivec3(half_size,0), HAL::Format::R32_FLOAT,     1, 1 }, ResourceFlags::UnorderedAccess);
+			builder.create(data.GBuffer_HalfNormals, { ivec3(half_size,0), HAL::Format::R8G8B8A8_UNORM,1, 1 }, ResourceFlags::UnorderedAccess);
+			builder.create(data.TileClassifyMask,    { ivec3(size,0),      HAL::Format::R8_UINT,       1, 1 }, ResourceFlags::UnorderedAccess);
+
+			// Worst case: every tile lands in the same bucket -- size each
+			// list for the full tile count, same reasoning as VSM's own
+			// tile-classification lists.
+			uint2  tiles_count = uint2(Math::DivideByMultiple(size.x, 8), Math::DivideByMultiple(size.y, 8));
+			size_t max_tiles   = (size_t)tiles_count.x * tiles_count.y;
+			builder.create(data.TileClassifyHi,  { max_tiles, true }, ResourceFlags::UnorderedAccess);
+			builder.create(data.TileClassifyLow, { max_tiles, true }, ResourceFlags::UnorderedAccess);
 
 			return true;
 			}, [this, &graph](auto& data, FrameContext& _context) {
@@ -221,63 +233,41 @@ public:
 				auto tempColor = *data.gbuffer.GBuffer_TempColor;
 				GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
 				auto& graphics = command_list->get_graphics();
+				auto& compute  = command_list->get_compute();
 
 				graphics.set_signature(Layouts::DefaultLayout);
 
 				graph.set_slot(SlotID::FrameInfo, graphics);
 
-				graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-
-
-				graphics.set_pipeline<PSOS::GBufferDownsample>();
-
-				for (uint i = 1; i < gbuffer.depth_mips.resource->get_desc().as_texture().MipLevels; i++)
-				{
-
-					{
-
-						HAL::TextureViewDesc subres;
-
-						subres.ArraySize = 1;
-						subres.FirstArraySlice = 0;
-						subres.MipLevels = 1;
-						subres.MipSlice = i;
-						auto depth_view = gbuffer.depth_mips.resource->create_view<HAL::Texture2DView>(graphics.get_base(), subres);
-						auto normal_view = gbuffer.normals.resource->create_view<HAL::Texture2DView>(graphics.get_base(), subres);
-
-						RT::GBufferDownsampleRT rt;
-
-						rt.GetColor() = normal_view.renderTarget;
-
-						rt.GetDepth() = depth_view.renderTarget;
-
-						graphics.set_rtv(rt);
-
-					}
-
-
-					Slots::GBufferDownsample downsample;
-
-
-
-					{
-						HAL::TextureViewDesc subres;
-
-						subres.ArraySize = 1;
-						subres.FirstArraySlice = 0;
-						subres.MipLevels = 1;
-						subres.MipSlice = i - 1;
-
-						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<HAL::Texture2DView>(graphics.get_base(), subres).texture2D;
-						downsample.GetNormals() = gbuffer.normals.resource->create_view<HAL::Texture2DView>(graphics.get_base(), subres).texture2D;
-					}
-					graphics.set(downsample);
-					graphics.draw(4);
-				}
-
 				MipMapGenerator::get().generate_quality(graphics, nullptr, gbuffer, tempColor);
 
+				{
+					PROFILE_GPU(L"gbuffer_tile_classify");
 
+					compute.set_signature(Layouts::DefaultLayout);
+					// Every root-signature change invalidates prior root
+					// arguments -- FrameInfo must be re-bound even though this
+					// shader doesn't sample it, or an unbound CBV slot trips
+					// GPU-based validation #939 (see FrameClassification's own
+					// render() for the same lesson learned the hard way).
+					graph.set_slot(SlotID::FrameInfo, compute);
+					compute.clear_counter(*data.TileClassifyHi);
+					compute.clear_counter(*data.TileClassifyLow);
+
+					{
+						Slots::TileClassifyData params;
+						gbuffer.SetTable(params.GetGbuffer());
+						params.GetHalf_depth()   = data.GBuffer_HalfDepth->rwTexture2D;
+						params.GetHalf_normals() = data.GBuffer_HalfNormals->rwTexture2D;
+						params.GetTile_hi()      = data.TileClassifyHi->appendStructuredBuffer;
+						params.GetTile_low()     = data.TileClassifyLow->appendStructuredBuffer;
+						params.GetTile_mask()    = data.TileClassifyMask->rwTexture2D;
+						compute.set(params);
+					}
+
+					compute.set_pipeline<PSOS::GBufferDownsample>();
+					compute.dispatch(_context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 8, 8 });
+				}
 
 			});
 

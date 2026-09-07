@@ -38,10 +38,10 @@ bool PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 	// are unconditional passes themselves, so there's no "only need the
 	// selected one" complexity here (see g_indirect_source/g_reflection_source
 	// selection in render() below, [[project-nrd-integration]]).
-	builder.need(data.RTXIndirectNoise, ResourceFlags::ComputeRead);
-	builder.need(data.RTXReflectionNoise, ResourceFlags::ComputeRead);
-	builder.need(data.VoxelIndirectNoiseRaw, ResourceFlags::ComputeRead);
-	builder.need(data.VoxelReflectionNoiseRaw, ResourceFlags::ComputeRead);
+	if( g_indirect_source != IndirectSource::MyVCT) builder.need(data.RTXIndirectNoise, ResourceFlags::ComputeRead);
+	if( g_reflection_source != ReflectionSource::MyReflection)builder.need(data.RTXReflectionNoise, ResourceFlags::ComputeRead);
+	if( g_indirect_source == IndirectSource::MyVCT) builder.need(data.VoxelIndirectNoiseRaw, ResourceFlags::ComputeRead);
+	if( g_reflection_source == ReflectionSource::MyReflection)builder.need(data.VoxelReflectionNoiseRaw, ResourceFlags::ComputeRead);
 	builder.create(data.RTXIndirectDenoised,
 		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	builder.create(data.RTXReflectionDenoised,

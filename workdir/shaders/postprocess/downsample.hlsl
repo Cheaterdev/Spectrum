@@ -1,103 +1,108 @@
-#define SIZE 16
-#define FIX 8
-#include "../2D_screen_simple.h"
+// Fused GBuffer half-res downsample + generic 8x8-tile Hi/Low classification.
+// See TileClassifyData's own comment (pssm.sig) for the algorithm summary.
+//
+// One 8x8 thread group per full-res screen tile (= one 4x4 patch of the
+// half-res output). Everything is derived from a single cooperative load of
+// the tile's depth+normal into LDS: the half-res "real" sample per 2x2 block
+// (closest wins, same rule the old per-mip PS downsample used -- never an
+// average, so nothing downstream infers geometry that isn't really there),
+// the tile's own Hi/Low bucket, and the per-pixel mask for Hi tiles.
+//
+// Deliberately raw-depth (reversed-Z, [0,1], nonlinear), not linearized view
+// depth: this matches exactly what the PS this replaces did (Gather + pick
+// max, no camera involved), stays consistent with the rest of the tile's
+// comparisons, and sidesteps the raw_z==0 (sky) unprojection singularity
+// entirely -- a tile straddling the sky/geometry silhouette naturally comes
+// out Hi, which is the correct answer for that edge.
+#include "../autogen/TileClassifyData.h"
 
-#include "../autogen/FrameInfo.h"
-#include "../autogen/GBufferDownsample.h"
-#include "../autogen/rt/GBufferDownsampleRT.h"
-static const Camera camera = GetFrameInfo().GetCamera();
-static const GBufferDownsample gbuffer = GetGBufferDownsample();
+static const TileClassifyData params = GetTileClassifyData();
+static const GBuffer gbuffer = params.GetGbuffer();
 
-float3 depth_to_wpos(float d, float2 tc, matrix mat)
+// Tile classified Hi if the spread between the tile's 16 block
+// representatives' raw depth exceeds this. Per-pixel mask (inside Hi tiles
+// only, in principle) uses a tighter threshold since it is judging a single
+// pixel against its own 2x2 block, not a whole 8x8 tile.
+#define TILE_DEPTH_EDGE_THRESHOLD  0.02
+#define PIXEL_DEPTH_EDGE_THRESHOLD 0.005
+
+groupshared float  g_depth[64];
+groupshared float4 g_normal[64];   // xyz = decoded normal, w = roughness
+groupshared float  g_blockDepth[16];
+
+[numthreads(8, 8, 1)]
+void CS(
+    uint3 groupID       : SV_GroupID,
+    uint3 dispatchID    : SV_DispatchThreadID,
+    uint3 groupThreadID : SV_GroupThreadID,
+    uint  groupIndex    : SV_GroupIndex)
 {
-    float4 P = mul(mat, float4(tc * float2(2, -2) + float2(-1, 1), d, 1));
-    return P.xyz / P.w;
-}
+    uint2 dims;
+    gbuffer.GetDepth().GetDimensions(dims.x, dims.y);
 
-float3 depth_to_wpos_center(float d, float2 tc, matrix mat)
-{
-    float4 P = mul(mat, float4(tc, d, 1));
-    return P.xyz / P.w;
-}
+    uint2 pix = min(dispatchID.xy, dims - 1);
 
+    float  depth      = gbuffer.GetDepth()[pix];
+    float4 normal_raw = gbuffer.GetNormals()[pix];
 
-static const Texture2D<float> depth_tex = gbuffer.GetDepth();
-static const Texture2D<float4> normal_tex = gbuffer.GetNormals();
+    g_depth[groupIndex]  = depth;
+    g_normal[groupIndex] = float4(normalize(normal_raw.xyz * 2 - 1), normal_raw.w);
 
+    GroupMemoryBarrierWithGroupSync();
 
+    // One leader thread per 2x2 block (16 per 8x8 tile) picks the closest
+    // real sample and writes the half-res output + this block's entry in
+    // the tile-classification LDS.
+    uint2 half_dims = (dims + 1) / 2;
+    uint2 block     = groupThreadID.xy / 2;
 
-static const int2 delta[4] =
-{
-    int2(0, 1),
-    int2(1, 1),
-    int2(1, 0),
-    int2(0, 0)
-};
-
-GBufferDownsampleRT PS(quad_output input)
-{
-	GBufferDownsampleRT result;
-	float2 low_dimensions;
-	depth_tex.GetDimensions(low_dimensions.x, low_dimensions.y);
-  // i.tc-= 0.5/ low_dimensions;
-	float depths[4] = (float[4]) depth_tex.Gather(pointClampSampler, input.tc );
-	float4 normals[4];
-
-    [unroll] for (int j = 0; j < 4; j++)
-	{
-	//	depths[j]= depth_tex.Sample(PixelSampler, i.tc, delta[j]).x;
-		float4 n = normal_tex.Sample(pointClampSampler, input.tc, delta[j]);
-		normals[j] = float4(normalize(n.xyz * 2 - 1), n.w);
-}
-    float mind = depths[0];
-    float4 minN = normals[0];
-    float maxd = depths[0];
-    float4 maxN = normals[0];
-    float sumd = depths[0];
-    float3 sumn = normals[0];
-
-    [unroll] for (int i = 1; i < 4; i++)
+    if ((groupThreadID.x & 1) == 0 && (groupThreadID.y & 1) == 0)
     {
-        if (depths[i] < mind)
-        {
-            mind = depths[i];
-            minN = normals[i];
-        }
+        uint i00 = groupIndex;
+        uint i10 = groupIndex + 1;
+        uint i01 = groupIndex + 8;
+        uint i11 = groupIndex + 9;
 
-        if (depths[i] > maxd)
-        {
-            maxd = depths[i];
-            maxN = normals[i];
-        }
+        float  d   = g_depth[i00];
+        float4 n   = g_normal[i00];
 
-        sumd += depths[i];
-        sumn += normals[i];
+        // reversed-Z: closest surface = max depth value.
+        if (g_depth[i10] > d) { d = g_depth[i10]; n = g_normal[i10]; }
+        if (g_depth[i01] > d) { d = g_depth[i01]; n = g_normal[i01]; }
+        if (g_depth[i11] > d) { d = g_depth[i11]; n = g_normal[i11]; }
+
+        g_blockDepth[block.y * 4 + block.x] = d;
+
+        uint2 half_pix = groupID.xy * 4 + block;
+        if (all(half_pix < half_dims))
+        {
+            params.GetHalf_depth()[half_pix]   = d;
+            params.GetHalf_normals()[half_pix] = float4(n.xyz * 0.5 + 0.5, n.w);
+        }
     }
 
-    //result.depth = float4((sumd - mind - maxd) / 2,0,0,1);
-    //  result.normal = float4(((sumn - minN - maxN) /2).xyz * 0.5 + 0.5, 1);
+    GroupMemoryBarrierWithGroupSync();
 
-    // Keep the CLOSEST surface (and its normal) so screen-space tracing
-    // doesn't leak through geometry. reversed-Z: closest = max depth value
-    // (this was mind before the reverse-Z migration flipped the meaning).
-    result.depth = float4(maxd, 0, 0, 1);
-    result.color =  float4(maxN.xyz * 0.5 + 0.5, maxN.w);
-    //result.depth = float4(depths[0].xxx, 1) ;
-    // result.normal  = float4(normals[0], 1) ;
-    return result;
-}
+    // Per-pixel mask: this pixel vs. its own 2x2 block's chosen representative.
+    float block_depth = g_blockDepth[block.y * 4 + block.x];
+    params.GetTile_mask()[pix] = (abs(depth - block_depth) > PIXEL_DEPTH_EDGE_THRESHOLD) ? 1 : 0;
 
-GBufferDownsampleRT PS_Copy(quad_output i)
-{
-	GBufferDownsampleRT result;
-	float2 low_dimensions;
-	depth_tex.GetDimensions(low_dimensions.x, low_dimensions.y);
-	
-	result.depth = depth_tex.Sample(pointClampSampler, i.tc);
-	result.color = 1;
-	// result.depth = float4(maxd, 0, 0, 1);
-   // result.normal = float4(maxN.xyz * 0.5 + 0.5, maxN.w);
-	  //result.depth = float4(depths[0].xxx, 1) ;
-	  // result.normal  = float4(normals[0], 1) ;
-	return result;
+    // Tile classification: one thread reduces the 16 block depths.
+    if (groupIndex == 0)
+    {
+        float mind = g_blockDepth[0];
+        float maxd = g_blockDepth[0];
+
+        [unroll]
+        for (uint i = 1; i < 16; i++)
+        {
+            mind = min(mind, g_blockDepth[i]);
+            maxd = max(maxd, g_blockDepth[i]);
+        }
+
+        if (maxd - mind > TILE_DEPTH_EDGE_THRESHOLD)
+            params.GetTile_hi().Append(groupID.xy);
+        else
+            params.GetTile_low().Append(groupID.xy);
+    }
 }

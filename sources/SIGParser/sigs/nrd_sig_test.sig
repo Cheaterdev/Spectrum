@@ -1,4 +1,4 @@
-# Prototype only (see [[project-nrd-integration]]): can NRD's own vendored
+і# Prototype only (see [[project-nrd-integration]]): can NRD's own vendored
 # shader source compile against this engine's SIG/bindless reflection instead
 # of a hand-built root signature? Uses Clear.cs.hlsl (workdir/shaders/nrd/) --
 # the smallest NRD kernel: 3 constants, 1 RWTexture2D output, no inputs, no
