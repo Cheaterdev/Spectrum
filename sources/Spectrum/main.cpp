@@ -1407,7 +1407,16 @@ public:
 				// Floating debug-view selector over the viewport: each button sets
 				// graph's DebugContext::mode, which repoints what UI_Render composites.
 				{
-					struct DbgOpt { const char* name; FrameGraph::DebugMode mode; };
+					// force_dlssrr: NRD_REBLUR_Execute (and its RTX-signal
+					// producers) only run when g_upscaler_type ==
+					// UpscalerType::DLSSRR (see [[project-nrd-integration]]),
+					// same gate as IndirectRTX/RTXCombine -- selecting this
+					// view without also switching upscaler mode would just
+					// show stale/empty content (UI_Render silently falls
+					// back when the resource wasn't produced this frame), so
+					// this entry flips the upscaler too instead of requiring
+					// two separate dropdown changes.
+					struct DbgOpt { const char* name; FrameGraph::DebugMode mode; bool force_dlssrr = false; };
 					static const DbgOpt dbg_opts[] = {
 						{ "Final",         FrameGraph::DebugMode::Final },
 						{ "Albedo",        FrameGraph::DebugMode::Albedo },
@@ -1416,6 +1425,11 @@ public:
 						{ "GI Reflection", FrameGraph::DebugMode::GI_Reflection },
 						{ "Voxel Trace",   FrameGraph::DebugMode::VoxelTrace },
 						{ "RTX",           FrameGraph::DebugMode::RTX },
+						{ "RTX Indirect (REBLUR)", FrameGraph::DebugMode::RTXIndirectDenoised, true },
+						{ "RTX Indirect (REBLUR), Unpacked", FrameGraph::DebugMode::RTXIndirectDenoisedUnpacked, true },
+						{ "NRD ViewZ",             FrameGraph::DebugMode::NRDViewZ, true },
+						{ "NRD Normal/Roughness",  FrameGraph::DebugMode::NRDNormalRoughness, true },
+						{ "Raw Depth Mips",        FrameGraph::DebugMode::RawDepthMips },
 					};
 
 					auto toolbar = std::make_shared<debug_toolbar_panel>();
@@ -1431,8 +1445,14 @@ public:
 					for (auto& o : dbg_opts)
 					{
 						auto mode = o.mode;
+						auto force_dlssrr = o.force_dlssrr;
 						debug_combo->add_item(o.name)->on_select =
-							[this, mode]() { graph.get_context<FrameGraph::DebugContext>().mode = mode; };
+							[this, mode, force_dlssrr]()
+							{
+								graph.get_context<FrameGraph::DebugContext>().mode = mode;
+								if (force_dlssrr && nvidia::DLSSRR::get().available())
+									g_upscaler_type = UpscalerType::DLSSRR;
+							};
 					}
 					toolbar->add_child(debug_combo);
 

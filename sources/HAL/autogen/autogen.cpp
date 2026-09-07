@@ -42,6 +42,27 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "DownsampleDepth") return SlotID::DownsampleDepth;
 	if(slot_name == "DownsampleDepthMip") return SlotID::DownsampleDepthMip;
 	if(slot_name == "Clear_Constants") return SlotID::Clear_Constants;
+	if(slot_name == "SIGMA_ClassifyTilesResources") return SlotID::SIGMA_ClassifyTilesResources;
+	if(slot_name == "SIGMA_SmoothTilesResources") return SlotID::SIGMA_SmoothTilesResources;
+	if(slot_name == "SIGMA_CopyResources") return SlotID::SIGMA_CopyResources;
+	if(slot_name == "SIGMA_BlurFirstPass1Resources") return SlotID::SIGMA_BlurFirstPass1Resources;
+	if(slot_name == "SIGMA_BlurFirstPass0Resources") return SlotID::SIGMA_BlurFirstPass0Resources;
+	if(slot_name == "SIGMA_TemporalStabilizationResources") return SlotID::SIGMA_TemporalStabilizationResources;
+	if(slot_name == "SIGMA_SplitScreenResources") return SlotID::SIGMA_SplitScreenResources;
+	if(slot_name == "REBLUR_ClassifyTilesResources") return SlotID::REBLUR_ClassifyTilesResources;
+	if(slot_name == "REBLUR_HitDistReconstructionResources") return SlotID::REBLUR_HitDistReconstructionResources;
+	if(slot_name == "REBLUR_PrePassResources") return SlotID::REBLUR_PrePassResources;
+	if(slot_name == "REBLUR_TemporalAccumulationResources") return SlotID::REBLUR_TemporalAccumulationResources;
+	if(slot_name == "REBLUR_HistoryFixResources") return SlotID::REBLUR_HistoryFixResources;
+	if(slot_name == "REBLUR_BlurResources") return SlotID::REBLUR_BlurResources;
+	if(slot_name == "REBLUR_PostBlurTS0Resources") return SlotID::REBLUR_PostBlurTS0Resources;
+	if(slot_name == "REBLUR_PostBlurTS1Resources") return SlotID::REBLUR_PostBlurTS1Resources;
+	if(slot_name == "REBLUR_TemporalStabilizationResources") return SlotID::REBLUR_TemporalStabilizationResources;
+	if(slot_name == "REBLUR_SplitScreenResources") return SlotID::REBLUR_SplitScreenResources;
+	if(slot_name == "REBLUR_ValidationResources") return SlotID::REBLUR_ValidationResources;
+	if(slot_name == "Clear_UInt4Resources") return SlotID::Clear_UInt4Resources;
+	if(slot_name == "NRD_GBufferPackParams") return SlotID::NRD_GBufferPackParams;
+	if(slot_name == "NRD_UnpackDebugParams") return SlotID::NRD_UnpackDebugParams;
 	if(slot_name == "GBufferDownsample") return SlotID::GBufferDownsample;
 	if(slot_name == "GBufferQuality") return SlotID::GBufferQuality;
 	if(slot_name == "PSSMConstants") return SlotID::PSSMConstants;
@@ -190,6 +211,48 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::DownsampleDepthMip) return Slots::DownsampleDepthMip::Slot::ID;
 
 	if(id == SlotID::Clear_Constants) return Slots::Clear_Constants::Slot::ID;
+
+	if(id == SlotID::SIGMA_ClassifyTilesResources) return Slots::SIGMA_ClassifyTilesResources::Slot::ID;
+
+	if(id == SlotID::SIGMA_SmoothTilesResources) return Slots::SIGMA_SmoothTilesResources::Slot::ID;
+
+	if(id == SlotID::SIGMA_CopyResources) return Slots::SIGMA_CopyResources::Slot::ID;
+
+	if(id == SlotID::SIGMA_BlurFirstPass1Resources) return Slots::SIGMA_BlurFirstPass1Resources::Slot::ID;
+
+	if(id == SlotID::SIGMA_BlurFirstPass0Resources) return Slots::SIGMA_BlurFirstPass0Resources::Slot::ID;
+
+	if(id == SlotID::SIGMA_TemporalStabilizationResources) return Slots::SIGMA_TemporalStabilizationResources::Slot::ID;
+
+	if(id == SlotID::SIGMA_SplitScreenResources) return Slots::SIGMA_SplitScreenResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_ClassifyTilesResources) return Slots::REBLUR_ClassifyTilesResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_HitDistReconstructionResources) return Slots::REBLUR_HitDistReconstructionResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_PrePassResources) return Slots::REBLUR_PrePassResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_TemporalAccumulationResources) return Slots::REBLUR_TemporalAccumulationResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_HistoryFixResources) return Slots::REBLUR_HistoryFixResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_BlurResources) return Slots::REBLUR_BlurResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_PostBlurTS0Resources) return Slots::REBLUR_PostBlurTS0Resources::Slot::ID;
+
+	if(id == SlotID::REBLUR_PostBlurTS1Resources) return Slots::REBLUR_PostBlurTS1Resources::Slot::ID;
+
+	if(id == SlotID::REBLUR_TemporalStabilizationResources) return Slots::REBLUR_TemporalStabilizationResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_SplitScreenResources) return Slots::REBLUR_SplitScreenResources::Slot::ID;
+
+	if(id == SlotID::REBLUR_ValidationResources) return Slots::REBLUR_ValidationResources::Slot::ID;
+
+	if(id == SlotID::Clear_UInt4Resources) return Slots::Clear_UInt4Resources::Slot::ID;
+
+	if(id == SlotID::NRD_GBufferPackParams) return Slots::NRD_GBufferPackParams::Slot::ID;
+
+	if(id == SlotID::NRD_UnpackDebugParams) return Slots::NRD_UnpackDebugParams::Slot::ID;
 
 	if(id == SlotID::GBufferDownsample) return Slots::GBufferDownsample::Slot::ID;
 
@@ -382,6 +445,27 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::DownsampleDepth) return "DownsampleDepth";
 	if(id == SlotID::DownsampleDepthMip) return "DownsampleDepthMip";
 	if(id == SlotID::Clear_Constants) return "Clear_Constants";
+	if(id == SlotID::SIGMA_ClassifyTilesResources) return "SIGMA_ClassifyTilesResources";
+	if(id == SlotID::SIGMA_SmoothTilesResources) return "SIGMA_SmoothTilesResources";
+	if(id == SlotID::SIGMA_CopyResources) return "SIGMA_CopyResources";
+	if(id == SlotID::SIGMA_BlurFirstPass1Resources) return "SIGMA_BlurFirstPass1Resources";
+	if(id == SlotID::SIGMA_BlurFirstPass0Resources) return "SIGMA_BlurFirstPass0Resources";
+	if(id == SlotID::SIGMA_TemporalStabilizationResources) return "SIGMA_TemporalStabilizationResources";
+	if(id == SlotID::SIGMA_SplitScreenResources) return "SIGMA_SplitScreenResources";
+	if(id == SlotID::REBLUR_ClassifyTilesResources) return "REBLUR_ClassifyTilesResources";
+	if(id == SlotID::REBLUR_HitDistReconstructionResources) return "REBLUR_HitDistReconstructionResources";
+	if(id == SlotID::REBLUR_PrePassResources) return "REBLUR_PrePassResources";
+	if(id == SlotID::REBLUR_TemporalAccumulationResources) return "REBLUR_TemporalAccumulationResources";
+	if(id == SlotID::REBLUR_HistoryFixResources) return "REBLUR_HistoryFixResources";
+	if(id == SlotID::REBLUR_BlurResources) return "REBLUR_BlurResources";
+	if(id == SlotID::REBLUR_PostBlurTS0Resources) return "REBLUR_PostBlurTS0Resources";
+	if(id == SlotID::REBLUR_PostBlurTS1Resources) return "REBLUR_PostBlurTS1Resources";
+	if(id == SlotID::REBLUR_TemporalStabilizationResources) return "REBLUR_TemporalStabilizationResources";
+	if(id == SlotID::REBLUR_SplitScreenResources) return "REBLUR_SplitScreenResources";
+	if(id == SlotID::REBLUR_ValidationResources) return "REBLUR_ValidationResources";
+	if(id == SlotID::Clear_UInt4Resources) return "Clear_UInt4Resources";
+	if(id == SlotID::NRD_GBufferPackParams) return "NRD_GBufferPackParams";
+	if(id == SlotID::NRD_UnpackDebugParams) return "NRD_UnpackDebugParams";
 	if(id == SlotID::GBufferDownsample) return "GBufferDownsample";
 	if(id == SlotID::GBufferQuality) return "GBufferQuality";
 	if(id == SlotID::PSSMConstants) return "PSSMConstants";

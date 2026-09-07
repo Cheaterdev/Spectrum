@@ -526,6 +526,16 @@ namespace HAL
             psoDesc.CS = { desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size()) };
             slots.merge(desc.shader->slots_usage);
         }
+        // TEMP: identifying which PSOs hit the empty-slots assert -- see
+        // CLAUDE.md, remove once found. desc.name is empty here for compute
+        // PSOs (set later, at line 511-ish, in a DIFFERENT code path) so log
+        // the shader's own file_name instead. Logging every attempt (not
+        // just failures) so concurrent PPL scheduling doesn't hide sibling
+        // failures behind whichever one asserts first.
+        if (desc.shader)
+            Log::get() << "[PSO] " << (slots.empty() ? "EMPTY" : "ok") << " slots for shader "
+                       << desc.shader->get_header().file_name << ", blob=" << desc.shader->get_blob().size()
+                       << " bytes, functions=" << desc.shader->blob.functions.size() << Log::endl;
         ASSERT(!slots.empty());
 
         if (!cache.empty())

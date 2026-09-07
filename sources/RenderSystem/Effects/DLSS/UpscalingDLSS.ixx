@@ -31,7 +31,7 @@ export
 	// hardware). FSR is always valid (no hardware gate), so it's both the
 	// default and the automatic fallback (see upscaler_is_available())
 	// when the selected type turns out not to be available.
-	UpscalerType g_upscaler_type = UpscalerType::FSR;
+	UpscalerType g_upscaler_type = UpscalerType::DLSSRR; // TEMP: REBLUR diagnostic run, revert to FSR before finishing
 
 	bool upscaler_is_available(UpscalerType type)
 	{

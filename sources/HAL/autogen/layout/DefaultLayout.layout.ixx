@@ -39,11 +39,11 @@ export struct DefaultLayout: public FrameLayout
 	struct Instance2
 	{
 		static const uint ID = 6;
-		static const uint CB = 17;
+		static const uint CB = 79;
 		static const uint CB_ID = 20;
-		static const uint SRV = 11;
+		static const uint SRV = 12;
 		static const uint SRV_ID = 22;
-		static const uint UAV = 3;
+		static const uint UAV = 4;
 		static const uint UAV_ID = 23;
 		static inline const std::vector<uint> tables = { 20, 22, 23 };
 	};

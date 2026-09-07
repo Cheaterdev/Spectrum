@@ -19,6 +19,8 @@ namespace FrameGraph
 		ShadowDenoiser_Filter,
 		FSR,
 		ResultCreation,
+		NRD_GBufferPack,
+		NRD_REBLUR_Execute,
 		PSSM_Cascade,
 		PSSM_GenerateMask,
 		PSSM_Combine,

@@ -637,11 +637,14 @@ PassNode ReflCombine
 # upscaler.
 [Static]
 [Compute]
+# RTXIndirectDenoised (REBLUR_DIFFUSE's output, NRD_REBLUR_Execute --
+# see [[project-nrd-integration]]) replaces the raw noisy RTXIndirectNoise
+# signal here -- straight swap, no toggle.
 PassNode RTXCombine
 {
 	GBuffer gbuffer;
 	Texture RTXReflectionNoise;
-	Texture RTXIndirectNoise;
+	Texture RTXIndirectDenoised;
 	Texture RTXShadowNoise;
 
 	[Write] Texture ResultTextureRTXNoise;

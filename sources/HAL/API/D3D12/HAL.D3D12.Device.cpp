@@ -4,7 +4,6 @@ module HAL:Device;
 import :Debug;
 import :Streamline;
 import :DLSS;
-import :NRD;
 import :Utils;
 import :HeapAllocators;
 
@@ -268,18 +267,6 @@ namespace HAL
                                             + std::to_string(settings.render_size.y))
                                          : "")) << Log::endl;
             }
-
-            // Phase 2 (see [[project-nrd-integration]]): build NRD's shared
-            // root signature + PSOs now that a real device exists (Phase 1's
-            // CreateInstance() in the NRD ctor is pure CPU-side and runs
-            // earlier, before any device). Safe this early because it only
-            // makes raw ID3D12Device calls (CreateRootSignature/
-            // CreateComputePipelineState) -- unlike ensure_pools(), which
-            // needs Device::get_static_gpu_data() for its own suballocation
-            // and isn't ready until RenderSystem::init_managers() runs, well
-            // after this point (confirmed by an access violation testing it
-            // here).
-            nvidia::NRD::get().create_pipelines(*THIS);
 
             THIS->adapter = desc.adapter;
             THIS->properties.name = convert(std::wstring_view(desc.adapter->get_desc().Description));

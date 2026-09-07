@@ -43,6 +43,28 @@ struct PassDefault<Passes::ResultCreation>
 
 
 template<>
+struct PassDefault<Passes::NRD_GBufferPack>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+
+	static bool setup(Passes::NRD_GBufferPack::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::NRD_GBufferPack::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::NRD_REBLUR_Execute>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+
+	static bool setup(Passes::NRD_REBLUR_Execute::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::NRD_REBLUR_Execute::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::RTXShadow>
 {
 	static constexpr bool enabled = true;

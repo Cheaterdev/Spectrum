@@ -56,6 +56,8 @@ Pipeline MainPipeline
 	[Async]ReflectionRTX;
 	[Async]ShadowRTX;
 	[Async]IndirectRTX;
+	[Async]NRD_GBufferPack;
+	[Async]NRD_REBLUR_Execute;
 
 											[Async]
 											RTXShadow;

@@ -24,6 +24,8 @@
 #include "ReflectionRTX.h"
 #include "ShadowRTX.h"
 #include "IndirectRTX.h"
+#include "NRD_GBufferPack.h"
+#include "NRD_REBLUR_Execute.h"
 #include "RTXShadow.h"
 #include "VSM_DepthAnalysis.h"
 #include "VSM_HiZRebuild.h"
@@ -102,6 +104,8 @@ public:
 		Passes::ReflectionRTX::Name.ptr,
 		Passes::ShadowRTX::Name.ptr,
 		Passes::IndirectRTX::Name.ptr,
+		Passes::NRD_GBufferPack::Name.ptr,
+		Passes::NRD_REBLUR_Execute::Name.ptr,
 		Passes::RTXShadow::Name.ptr,
 		Passes::VSM_DepthAnalysis::Name.ptr,
 		Passes::VSM_HiZRebuild::Name.ptr,
@@ -187,6 +191,11 @@ public:
 		L"RTXReflectionDirPdf",
 		L"RTXShadowNoise",
 		L"RTXIndirectNoise",
+		L"NRD_ViewZ",
+		L"NRD_NormalRoughness",
+		L"NRD_Mv",
+		L"RTXIndirectDenoised",
+		L"RTXIndirectDenoisedPreview",
 		L"ShadowMask",
 		L"WorkGraphBuffer",
 		L"VSM_DepthAnalysisResult",
@@ -363,6 +372,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -380,7 +390,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Albedo_c0_states[] = {
 		{ true, { GBuffer_Albedo_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Albedo_c0_pass_refs + 1, 19 } },
+		{ false, { GBuffer_Albedo_c0_pass_refs + 1, 20 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Normals_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -390,6 +400,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -406,7 +417,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Normals_c0_states[] = {
 		{ true, { GBuffer_Normals_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Normals_c0_pass_refs + 1, 19 } },
+		{ false, { GBuffer_Normals_c0_pass_refs + 1, 20 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Depth_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -415,6 +426,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -434,7 +446,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Depth_c0_states[] = {
 		{ true, { GBuffer_Depth_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Depth_c0_pass_refs + 1, 21 } },
+		{ false, { GBuffer_Depth_c0_pass_refs + 1, 22 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -442,6 +454,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -458,7 +471,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Specular_c0_states[] = {
 		{ true, { GBuffer_Specular_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Specular_c0_pass_refs + 1, 17 } },
+		{ false, { GBuffer_Specular_c0_pass_refs + 1, 18 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Speed_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -467,6 +480,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -485,7 +499,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
 		{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Speed_c0_pass_refs + 1, 20 } },
+		{ false, { GBuffer_Speed_c0_pass_refs + 1, 21 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -493,6 +507,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -509,7 +524,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_DepthMips_c0_states[] = {
 		{ true, { GBuffer_DepthMips_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 17 } },
+		{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 18 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Quality_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -517,6 +532,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -533,7 +549,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Quality_c0_states[] = {
 		{ true, { GBuffer_Quality_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Quality_c0_pass_refs + 1, 17 } },
+		{ false, { GBuffer_Quality_c0_pass_refs + 1, 18 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_TempColor_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -541,6 +557,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -556,7 +573,7 @@ public:
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_TempColor_c0_states[] = {
-		{ false, { GBuffer_TempColor_c0_pass_refs + 0, 18 } },
+		{ false, { GBuffer_TempColor_c0_pass_refs + 0, 19 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_NormalsPrev_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -565,6 +582,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -581,7 +599,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_NormalsPrev_c0_states[] = {
 		{ true, { GBuffer_NormalsPrev_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_NormalsPrev_c0_pass_refs + 1, 18 } },
+		{ false, { GBuffer_NormalsPrev_c0_pass_refs + 1, 19 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_SpecularPrev_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -589,6 +607,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -605,7 +624,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_SpecularPrev_c0_states[] = {
 		{ true, { GBuffer_SpecularPrev_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_SpecularPrev_c0_pass_refs + 1, 17 } },
+		{ false, { GBuffer_SpecularPrev_c0_pass_refs + 1, 18 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthPrev_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -614,6 +633,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -629,7 +649,7 @@ public:
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_DepthPrev_c0_states[] = {
-		{ false, { GBuffer_DepthPrev_c0_pass_refs + 0, 19 } },
+		{ false, { GBuffer_DepthPrev_c0_pass_refs + 0, 20 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HiZ_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -637,6 +657,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -653,7 +674,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_c0_states[] = {
 		{ true, { GBuffer_HiZ_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_HiZ_c0_pass_refs + 1, 17 } },
+		{ false, { GBuffer_HiZ_c0_pass_refs + 1, 18 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HiZ_UAV_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -661,6 +682,7 @@ public:
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::VSM_DepthAnalysis, 0 },
 		{ PassID::VSM_BlockerClassify, 0 },
@@ -677,7 +699,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_UAV_c0_states[] = {
 		{ true, { GBuffer_HiZ_UAV_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_HiZ_UAV_c0_pass_refs + 1, 17 } },
+		{ false, { GBuffer_HiZ_UAV_c0_pass_refs + 1, 18 } },
 	};
 	static inline const FrameGraph::PassRef sky_cubemap_c0_pass_refs[] = {
 		{ PassID::CubeSky, 0 },
@@ -908,11 +930,49 @@ public:
 	};
 	static inline const FrameGraph::PassRef RTXIndirectNoise_c0_pass_refs[] = {
 		{ PassID::IndirectRTX, 0 },
-		{ PassID::RTXCombine, 0 },
+		{ PassID::NRD_REBLUR_Execute, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState RTXIndirectNoise_c0_states[] = {
 		{ true, { RTXIndirectNoise_c0_pass_refs + 0, 1 } },
 		{ false, { RTXIndirectNoise_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef NRD_ViewZ_c0_pass_refs[] = {
+		{ PassID::NRD_GBufferPack, 0 },
+		{ PassID::NRD_REBLUR_Execute, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState NRD_ViewZ_c0_states[] = {
+		{ true, { NRD_ViewZ_c0_pass_refs + 0, 1 } },
+		{ false, { NRD_ViewZ_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef NRD_NormalRoughness_c0_pass_refs[] = {
+		{ PassID::NRD_GBufferPack, 0 },
+		{ PassID::NRD_REBLUR_Execute, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState NRD_NormalRoughness_c0_states[] = {
+		{ true, { NRD_NormalRoughness_c0_pass_refs + 0, 1 } },
+		{ false, { NRD_NormalRoughness_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef NRD_Mv_c0_pass_refs[] = {
+		{ PassID::NRD_GBufferPack, 0 },
+		{ PassID::NRD_REBLUR_Execute, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState NRD_Mv_c0_states[] = {
+		{ true, { NRD_Mv_c0_pass_refs + 0, 1 } },
+		{ false, { NRD_Mv_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef RTXIndirectDenoised_c0_pass_refs[] = {
+		{ PassID::NRD_REBLUR_Execute, 0 },
+		{ PassID::RTXCombine, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState RTXIndirectDenoised_c0_states[] = {
+		{ true, { RTXIndirectDenoised_c0_pass_refs + 0, 1 } },
+		{ false, { RTXIndirectDenoised_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef RTXIndirectDenoisedPreview_c0_pass_refs[] = {
+		{ PassID::NRD_REBLUR_Execute, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState RTXIndirectDenoisedPreview_c0_states[] = {
+		{ true, { RTXIndirectDenoisedPreview_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef ShadowMask_c0_pass_refs[] = {
 		{ PassID::RTXShadow, 0 },
@@ -1174,6 +1234,11 @@ public:
 		{ ResourceID::RTXReflectionDirPdf, 0, RTXReflectionDirPdf_c0_states },
 		{ ResourceID::RTXShadowNoise, 0, RTXShadowNoise_c0_states },
 		{ ResourceID::RTXIndirectNoise, 0, RTXIndirectNoise_c0_states },
+		{ ResourceID::NRD_ViewZ, 0, NRD_ViewZ_c0_states },
+		{ ResourceID::NRD_NormalRoughness, 0, NRD_NormalRoughness_c0_states },
+		{ ResourceID::NRD_Mv, 0, NRD_Mv_c0_states },
+		{ ResourceID::RTXIndirectDenoised, 0, RTXIndirectDenoised_c0_states },
+		{ ResourceID::RTXIndirectDenoisedPreview, 0, RTXIndirectDenoisedPreview_c0_states },
 		{ ResourceID::ShadowMask, 0, ShadowMask_c0_states },
 		{ ResourceID::WorkGraphBuffer, 0, WorkGraphBuffer_c0_states },
 		{ ResourceID::VSM_DepthAnalysisResult, 0, VSM_DepthAnalysisResult_c0_states },
@@ -1253,6 +1318,13 @@ public:
 	static inline const FrameGraph::PassRef IndirectRTX_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
 		{ PassID::Scene, 0 },
+	};
+	static inline const FrameGraph::PassRef NRD_GBufferPack_0_prev[] = {
+		{ PassID::Scene, 0 },
+	};
+	static inline const FrameGraph::PassRef NRD_REBLUR_Execute_0_prev[] = {
+		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
 	};
 	static inline const FrameGraph::PassRef RTXShadow_0_prev[] = {
 		{ PassID::Scene, 0 },
@@ -1342,7 +1414,7 @@ public:
 		{ PassID::VoxelScreen, 0 },
 	};
 	static inline const FrameGraph::PassRef RTXCombine_0_prev[] = {
-		{ PassID::IndirectRTX, 0 },
+		{ PassID::NRD_REBLUR_Execute, 0 },
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::Scene, 0 },
 		{ PassID::ShadowRTX, 0 },
@@ -1452,6 +1524,8 @@ public:
 		{ PassID::ReflectionRTX, 0, true, ReflectionRTX_0_prev },
 		{ PassID::ShadowRTX, 0, true, ShadowRTX_0_prev },
 		{ PassID::IndirectRTX, 0, true, IndirectRTX_0_prev },
+		{ PassID::NRD_GBufferPack, 0, false, NRD_GBufferPack_0_prev },
+		{ PassID::NRD_REBLUR_Execute, 0, false, NRD_REBLUR_Execute_0_prev },
 		{ PassID::RTXShadow, 0, true, RTXShadow_0_prev },
 		{ PassID::VSM_DepthAnalysis, 0, true, VSM_DepthAnalysis_0_prev },
 		{ PassID::VSM_HiZRebuild, 0, true, VSM_HiZRebuild_0_prev },
@@ -1524,6 +1598,8 @@ public:
 		graph.add_library_pass<Passes::ReflectionRTX>(PassDefault<Passes::ReflectionRTX>::setup, PassDefault<Passes::ReflectionRTX>::render, (PassDefault<Passes::ReflectionRTX>::flags));
 		graph.add_library_pass<Passes::ShadowRTX>(PassDefault<Passes::ShadowRTX>::setup, PassDefault<Passes::ShadowRTX>::render, (PassDefault<Passes::ShadowRTX>::flags));
 		graph.add_library_pass<Passes::IndirectRTX>(PassDefault<Passes::IndirectRTX>::setup, PassDefault<Passes::IndirectRTX>::render, (PassDefault<Passes::IndirectRTX>::flags));
+		graph.add_library_pass<Passes::NRD_GBufferPack>(PassDefault<Passes::NRD_GBufferPack>::setup, PassDefault<Passes::NRD_GBufferPack>::render, (PassDefault<Passes::NRD_GBufferPack>::flags));
+		graph.add_library_pass<Passes::NRD_REBLUR_Execute>(PassDefault<Passes::NRD_REBLUR_Execute>::setup, PassDefault<Passes::NRD_REBLUR_Execute>::render, (PassDefault<Passes::NRD_REBLUR_Execute>::flags));
 		graph.add_library_pass<Passes::RTXShadow>(PassDefault<Passes::RTXShadow>::setup, PassDefault<Passes::RTXShadow>::render, (PassDefault<Passes::RTXShadow>::flags));
 		if (vSM_DepthAnalysis.setup_func)
 			graph.add_library_pass<Passes::VSM_DepthAnalysis>(vSM_DepthAnalysis.setup_func, vSM_DepthAnalysis.render_func, (vSM_DepthAnalysis.flags | FrameGraph::PassFlags::Compute2));

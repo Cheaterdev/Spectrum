@@ -141,7 +141,22 @@ public:
 		GI_Indirect,
 		GI_Reflection,
 		VoxelTrace,
-		RTX
+		RTX,
+		// REBLUR-denoised RTX indirect GI (NRD_REBLUR_Execute, see
+		// [[project-nrd-integration]]) -- distinct from GI_Indirect, which is
+		// the older voxel-cone-traced path (VoxelIndirectFiltered). Raw =
+		// packed (YCoCg + normalized hit-distance, matches what RTXCombine
+		// actually consumes); Unpacked = true-color debug preview.
+		RTXIndirectDenoised,
+		RTXIndirectDenoisedUnpacked,
+		// NRD_GBufferPack's own outputs, for inspecting its front-end
+		// packing directly (see [[project-nrd-integration]]).
+		NRDViewZ,
+		NRDNormalRoughness,
+		// Raw depth, bypassing NRD_GBufferPack's shader entirely -- to
+		// isolate whether GBuffer_DepthMips itself has real content by the
+		// time this pass runs, vs. a compute-shader-specific read issue.
+		RawDepthMips
 	};
 
 	struct DebugContext

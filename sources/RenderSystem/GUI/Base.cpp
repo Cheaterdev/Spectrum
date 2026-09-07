@@ -1032,6 +1032,11 @@ namespace GUI
             case DM::GI_Reflection: return FrameGraph::ResourceID::ReflectionDenoiser_ReprojectedRadiance;
             case DM::VoxelTrace:    return FrameGraph::ResourceID::VoxelDebug;
             case DM::RTX:           return FrameGraph::ResourceID::ColorOutput;
+            case DM::RTXIndirectDenoised: return FrameGraph::ResourceID::RTXIndirectDenoised;
+            case DM::RTXIndirectDenoisedUnpacked: return FrameGraph::ResourceID::RTXIndirectDenoisedPreview;
+            case DM::NRDViewZ:            return FrameGraph::ResourceID::NRD_ViewZ;
+            case DM::NRDNormalRoughness:  return FrameGraph::ResourceID::NRD_NormalRoughness;
+            case DM::RawDepthMips:        return FrameGraph::ResourceID::GBuffer_DepthMips;
             default:                return FrameGraph::ResourceID::ResultTexture;
             }
         };

@@ -30,6 +30,13 @@
 #include "../common/pbr.hlsl"
 #include "../common/common.hlsl"
 
+// REBLUR_FrontEnd_GetNormHitDist/REBLUR_FrontEnd_PackRadianceAndNormHitDist,
+// used by MyRaygenShaderIndirectRTXOnly below to pack IN_DIFF_RADIANCE_HITDIST
+// for NRD's REBLUR_DIFFUSE denoiser (see [[project-nrd-integration]]).
+// Self-contained (no NRD_INTERNAL/NRD_METHOD-gated code reached), safe to
+// pull into a non-NRD shader -- NRD_INCLUDED guards against double-inclusion.
+#include "../nrd/NRD.hlsli"
+
 
 float2 IntegrateBRDF(FrameInfo  info, float Roughness, float Metallic, float NoV)
 {
@@ -539,7 +546,19 @@ void MyRaygenShaderIndirectRTXOnly()
 	ray.TMax = 10000.0;
 	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
 
-	tex_noise[itc] = float4(payload_gi.color.rgb, payload_gi.dist);
+	// Pack for NRD's REBLUR_DIFFUSE (see [[project-nrd-integration]]):
+	// IN_DIFF_RADIANCE_HITDIST expects YCoCg radiance + normalized hit
+	// distance, per NRD.hlsli's own doc comments. gHitDistParams mirrors
+	// nrd::ReblurSettings::hitDistanceParameters' library default (A=3,
+	// B=0.1, C=20, see NRDSettings.h) -- both sides are left at NRD's
+	// defaults deliberately (see HAL.NRD.cpp), so this hardcoded copy must
+	// move together with that C++ default if either is ever tuned.
+	// Roughness is a constant 1.0: NRD's own diffuse-lobe call sites always
+	// pass 1.0 here (REBLUR_HitDistReconstruction.cs.hlsl et al).
+	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
+	const float3 gHitDistParams = float3(3.0, 0.1, 20.0);
+	float normHitDist = REBLUR_FrontEnd_GetNormHitDist(payload_gi.dist, viewZ, gHitDistParams, 1.0);
+	tex_noise[itc] = REBLUR_FrontEnd_PackRadianceAndNormHitDist(payload_gi.color.rgb, normHitDist, true);
 }
 
 
