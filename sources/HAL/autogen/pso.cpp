@@ -38,9 +38,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 
 	tasks.emplace_back(PSOBase::create<PSOS::BlueNoise>(device, pso[PSO::BlueNoise]));
 	tasks.emplace_back(PSOBase::create<PSOS::BRDF>(device, pso[PSO::BRDF]));
-	tasks.emplace_back(PSOBase::create<PSOS::DenoiserReflectionReproject>(device, pso[PSO::DenoiserReflectionReproject]));
-	tasks.emplace_back(PSOBase::create<PSOS::DenoiserReflectionPrefilter>(device, pso[PSO::DenoiserReflectionPrefilter]));
-	tasks.emplace_back(PSOBase::create<PSOS::DenoiserReflectionResolve>(device, pso[PSO::DenoiserReflectionResolve]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_Prepare>(device, pso[PSO::DenoiserShadow_Prepare]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_TileClassification>(device, pso[PSO::DenoiserShadow_TileClassification]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_Filter>(device, pso[PSO::DenoiserShadow_Filter]));
@@ -108,11 +105,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelCopy>(device, pso[PSO::VoxelCopy]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelZero>(device, pso[PSO::VoxelZero]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelVisibility>(device, pso[PSO::VoxelVisibility]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectFilter>(device, pso[PSO::VoxelIndirectFilter]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectLow>(device, pso[PSO::VoxelIndirectLow]));
-	tasks.emplace_back(PSOBase::create<PSOS::DenoiserHistoryFix>(device, pso[PSO::DenoiserHistoryFix]));
-	tasks.emplace_back(PSOBase::create<PSOS::FrameClassification>(device, pso[PSO::FrameClassification]));
-	tasks.emplace_back(PSOBase::create<PSOS::FrameClassificationInitDispatch>(device, pso[PSO::FrameClassificationInitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::ReflectionCombine>(device, pso[PSO::ReflectionCombine]));
 	tasks.emplace_back(PSOBase::create<PSOS::RTXCombine>(device, pso[PSO::RTXCombine]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMCopyPageDepth>(device, pso[PSO::VSMCopyPageDepth]));
@@ -166,12 +158,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::CanvasBack>(device, pso[PSO::CanvasBack]));
 	tasks.emplace_back(PSOBase::create<PSOS::CanvasLines>(device, pso[PSO::CanvasLines]));
 	tasks.emplace_back(PSOBase::create<PSOS::StatGraphLines>(device, pso[PSO::StatGraphLines]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionHi>(device, pso[PSO::VoxelReflectionHi]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionUpsample>(device, pso[PSO::VoxelReflectionUpsample]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectHi>(device, pso[PSO::VoxelIndirectHi]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectUpsample>(device, pso[PSO::VoxelIndirectUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDebug>(device, pso[PSO::VoxelDebug]));
-	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(device, pso[PSO::DenoiserDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthDraw>(device, pso[PSO::VSMDepthDraw]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthDrawConservative>(device, pso[PSO::VSMDepthDrawConservative]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthDrawMaterial>(device, pso[PSO::VSMDepthDrawMaterial]));
@@ -212,8 +199,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::MipMapping::Slices) PSOS::MipMapping::Slices;
 //decltype(PSOS::Lighting::SecondBounce) PSOS::Lighting::SecondBounce;
 //decltype(PSOS::VoxelDownsample::Count) PSOS::VoxelDownsample::Count;
-//decltype(PSOS::VoxelIndirectFilter::Blur) PSOS::VoxelIndirectFilter::Blur;
-//decltype(PSOS::VoxelIndirectFilter::Reflection) PSOS::VoxelIndirectFilter::Reflection;
 //decltype(PSOS::VSMShadowBlur::VsmRtxVerify) PSOS::VSMShadowBlur::VsmRtxVerify;
 //decltype(PSOS::FontRender::Format) PSOS::FontRender::Format;
 //decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;

@@ -2,7 +2,6 @@ module Graphics:IndirectRTX;
 
 import RenderSystem;
 import Graphics;
-import :UpscalingDLSS;
 import HAL;
 import Core;
 
@@ -16,12 +15,11 @@ using namespace HAL;
 bool PassDefault<Passes::IndirectRTX>::setup(
 	Passes::IndirectRTX::Context& data, TaskBuilder& builder)
 {
-	// Feeds RTXCombine under DLSS-RR (gated the same as ReflectionRTX/
-	// ShadowRTX/RTXCombine there), and also feeds NRD_REBLUR_Execute (as its
-	// RTXReference diff_noisy candidate) whenever NRD is selected, regardless
-	// of upscaler -- see [[project-nrd-integration]].
-	if ((g_upscaler_type != UpscalerType::DLSSRR && g_indirect_denoiser != IndirectDenoiser::NRD) ||
-	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
+	// Feeds NRD_REBLUR_Execute (REBLUR_DIFFUSE, see
+	// [[project-nrd-integration]]) and, under DLSS-RR, RTXCombine -- gated
+	// purely on RTX/hardware support now, independent of upscaler (NRD is
+	// the only indirect-GI denoiser).
+	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
 	auto& frame = builder.graph->get_context<ViewportInfo>();

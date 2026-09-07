@@ -808,13 +808,12 @@ PassNode NRD_REBLUR_Execute
 	Texture NRD_NormalRoughness;
 	Texture NRD_Mv;
 	Texture RTXIndirectNoise;
-	# VoxelScreen's raw (pre-history-lerp) signal -- alternative diff_noisy
-	# input selected by g_indirect_source instead of RTXIndirectNoise.
-	Texture VoxelIndirectNoiseRaw;
 	Texture RTXReflectionNoise;
-	# ScreenReflection's raw (pre-ReflectionDenoiser_Reproject) signal --
-	# alternative spec_noisy input selected by g_reflection_source instead of
-	# RTXReflectionNoise.
+	# Voxel-cone-traced raw candidates, selectable against the RTX-reference
+	# ones above via g_indirect_source/g_reflection_source (see
+	# [[project-nrd-integration]]). Both producers (VoxelScreen/
+	# ScreenReflection) are unconditional passes, so both always exist.
+	Texture VoxelIndirectNoiseRaw;
 	Texture VoxelReflectionNoiseRaw;
 
 	[Write] Texture RTXIndirectDenoised;
@@ -824,11 +823,8 @@ PassNode NRD_REBLUR_Execute
 
 # The FSR/DLSS-side equivalent of the indirect term RTXCombine computes for
 # DLSS-RR (see [[project-nrd-integration]]): adds REBLUR's denoised indirect
-# GI onto ResultTexture, using the same shading formula VoxelCombine's own
-# blur pass uses for its (undenoised) indirect term. Runs only when NRD is
-# selected and DLSS-RR is NOT the active upscaler -- RTXCombine already
-# covers DLSS-RR+NRD, and VoxelCombine's own composite (voxel_screen_blur.hlsl)
-# defers to this pass via VoxelBlur::skip_composite in exactly this case.
+# GI onto ResultTexture. Runs whenever DLSS-RR is NOT the active upscaler --
+# RTXCombine covers the DLSS-RR case itself.
 [Bind = DefaultLayout::Instance0]
 struct NRD_IndirectCombineParams
 {

@@ -169,16 +169,8 @@ RaytraceRaygen ShadowRTX
 }
 
 
-[Bind = MainRTX]
-RaytraceRaygen Reflection
-{
-	[EntryPoint = MyRaygenShaderReflection]
-	raygen = rtx/raytracing;
-}
-
-# Independent RTX-only reflection raygen, shares no code with Reflection
-# above -- see MyRaygenShaderReflectionRTXOnly's doc comment in
-# raytracing.hlsl and PassNode ReflectionRTX in voxel.sig.
+# RTX-only reflection raygen -- see MyRaygenShaderReflectionRTXOnly's doc
+# comment in raytracing.hlsl and PassNode ReflectionRTX in voxel.sig.
 [Bind = MainRTX]
 RaytraceRaygen ReflectionRTX
 {
@@ -186,15 +178,17 @@ RaytraceRaygen ReflectionRTX
 	raygen = rtx/raytracing;
 }
 
-
+# Voxel-cone-traced reflection signal, selectable against ReflectionRTX as
+# NRD's input -- see MyRaygenShaderReflection's doc comment in
+# raytracing.hlsl and PassNode ScreenReflection in voxel.sig.
 [Bind = MainRTX]
-RaytraceRaygen Indirect
+RaytraceRaygen Reflection
 {
-	[EntryPoint = MyRaygenShader]
+	[EntryPoint = MyRaygenShaderReflection]
 	raygen = rtx/raytracing;
 }
 
-# Independent RTX-only reference: 1 ray per pixel, genuinely noisy diffuse
+# RTX-only reference: 1 ray per pixel, genuinely noisy diffuse
 # GI (no voxel-cone-trace fallback on miss, no temporal history) -- see
 # MyRaygenShaderIndirectRTXOnly's doc comment in raytracing.hlsl and
 # PassNode IndirectRTX in voxel.sig.
@@ -202,6 +196,16 @@ RaytraceRaygen Indirect
 RaytraceRaygen IndirectRTX
 {
 	[EntryPoint = MyRaygenShaderIndirectRTXOnly]
+	raygen = rtx/raytracing;
+}
+
+# Voxel-cone-traced indirect-GI signal, selectable against IndirectRTX as
+# NRD's input -- see MyRaygenShader's doc comment in raytracing.hlsl and
+# PassNode VoxelScreen in voxel.sig.
+[Bind = MainRTX]
+RaytraceRaygen Indirect
+{
+	[EntryPoint = MyRaygenShader]
 	raygen = rtx/raytracing;
 }
 

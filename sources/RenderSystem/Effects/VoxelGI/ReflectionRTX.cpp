@@ -2,7 +2,6 @@ module Graphics:ReflectionRTX;
 
 import RenderSystem;
 import Graphics;
-import :UpscalingDLSS;
 import HAL;
 import Core;
 
@@ -16,12 +15,11 @@ using namespace HAL;
 bool PassDefault<Passes::ReflectionRTX>::setup(
 	Passes::ReflectionRTX::Context& data, TaskBuilder& builder)
 {
-	// Feeds RTXCombine under DLSS-RR (mirrors UpscalingDLSSRR's own gate,
-	// kept in lockstep), and also feeds NRD_REBLUR_Execute (as its
-	// RTXReference spec_noisy candidate) whenever NRD is selected for
-	// reflections, regardless of upscaler -- see [[project-nrd-integration]].
-	if ((g_upscaler_type != UpscalerType::DLSSRR && g_reflection_denoiser != ReflectionDenoiserKind::NRD) ||
-	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
+	// Feeds NRD_REBLUR_Execute (REBLUR_SPECULAR, see
+	// [[project-nrd-integration]]) and, under DLSS-RR, RTXCombine -- gated
+	// purely on RTX/hardware support now, independent of upscaler (NRD is
+	// the only reflection denoiser).
+	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
 	auto& frame = builder.graph->get_context<ViewportInfo>();

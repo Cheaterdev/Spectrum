@@ -48,8 +48,8 @@ export import :SMAA;
 export import :FSR;
 export import :UpscalingDLSS;
 export import :UpscalingDLSSRR;
-export import :IndirectSelectors;
 export import :VoxelGI;
+export import :IndirectSelectors;
 export import :RTX;
 export import :ReflectionRTX;
 export import :ShadowRTX;
@@ -59,7 +59,6 @@ export import :NRD_REBLUR_Execute;
 export import :NRD_IndirectCombine;
 export import :RTXCombine;
 export import :ShadowDenoiser;
-export import :ReflectionDenoiser;
 export import :BlueNoise;
 
 export import :System;

@@ -6,7 +6,6 @@ import :TileDynamicGenerator;
 import :GPUTilesBuffer;
 import :Scene;
 import :MeshRenderer;
-import :ReflectionDenoiser;
 import :MipMapGenerator;
 import :FrameGraphContext;
 		import :RTX;
@@ -78,7 +77,6 @@ private:
 //	std::shared_ptr<GBufferDownsampler> downsampler;
 
 	VisibilityBufferUniversal::ptr visibility;
-	ReflectionDenoiser reflection_denoiser;
 
 	TileDynamicGenerator dynamic_generator_voxelizing;
 	TileDynamicGenerator dynamic_generator_lighted;
@@ -117,20 +115,16 @@ private:
 	Passes::Lighting::render_func_type                     m_lighting_render;
 	Passes::Mipmapping::setup_func_type                    m_mipmapping_setup;
 	Passes::Mipmapping::render_func_type                   m_mipmapping_render;
-	Passes::VoxelScreen::setup_func_type                   m_voxelscreen_setup;
-	Passes::VoxelScreen::render_func_type                  m_voxelscreen_render;
-	Passes::VoxelCombine::setup_func_type                  m_voxelcombine_setup;
-	Passes::VoxelCombine::render_func_type                 m_voxelcombine_render;
-	Passes::ScreenReflection::setup_func_type              m_screenreflection_setup;
-	Passes::ScreenReflection::render_func_type             m_screenreflection_render;
-	Passes::ReflectionDenoiser_Reproject::setup_func_type  m_refldenoisereproject_setup;
-	Passes::ReflectionDenoiser_Reproject::render_func_type m_refldenoisereproject_render;
 	Passes::NormalRoughnessRepack::setup_func_type         m_normalroughnessrepack_setup;
 	Passes::NormalRoughnessRepack::render_func_type        m_normalroughnessrepack_render;
 	Passes::ReflCombine::setup_func_type                   m_reflcombine_setup;
 	Passes::ReflCombine::render_func_type                  m_reflcombine_render;
 	Passes::VoxelDebug::setup_func_type                    m_voxeldebug_setup;
 	Passes::VoxelDebug::render_func_type                   m_voxeldebug_render;
+	Passes::VoxelScreen::setup_func_type                   m_voxelscreen_setup;
+	Passes::VoxelScreen::render_func_type                  m_voxelscreen_render;
+	Passes::ScreenReflection::setup_func_type              m_screenreflection_setup;
+	Passes::ScreenReflection::render_func_type             m_screenreflection_render;
 
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
@@ -148,11 +142,11 @@ public:
 	Variable<bool> light_scene = {true, "light_scene", this};
 	Variable<bool> clear_scene = {true, "clear_scene", this};
 
-	Variable<bool> use_rtx = {true, "use_rtx", this};
 	Variable<bool> multiple_bounces = {true, "multiple_bounces", this};
 
-
-	Variable<bool> denoiser = {true, "denoiser", this};
+	// Now just "are reflections composited at all" -- gates the surviving
+	// ReflCombine (NRD REBLUR_SPECULAR path, see [[project-nrd-integration]]);
+	// the old FFX-denoised legacy path it used to also gate is gone.
 	Variable<bool> reflecton = {true, "reflecton", this};
 
 
@@ -173,19 +167,15 @@ public:
 		pipeline.lighting.render_func         = m_lighting_render;
 		pipeline.mipmapping.setup_func        = m_mipmapping_setup;
 		pipeline.mipmapping.render_func       = m_mipmapping_render;
-		pipeline.voxelScreen.setup_func       = m_voxelscreen_setup;
-		pipeline.voxelScreen.render_func      = m_voxelscreen_render;
-		pipeline.voxelCombine.setup_func      = m_voxelcombine_setup;
-		pipeline.voxelCombine.render_func     = m_voxelcombine_render;
-		pipeline.screenReflection.setup_func  = m_screenreflection_setup;
-		pipeline.screenReflection.render_func = m_screenreflection_render;
-		pipeline.reflectionDenoiser_Reproject.setup_func  = m_refldenoisereproject_setup;
-		pipeline.reflectionDenoiser_Reproject.render_func = m_refldenoisereproject_render;
 		pipeline.normalRoughnessRepack.setup_func = m_normalroughnessrepack_setup;
 		pipeline.normalRoughnessRepack.render_func = m_normalroughnessrepack_render;
 		pipeline.reflCombine.setup_func       = m_reflcombine_setup;
 		pipeline.reflCombine.render_func      = m_reflcombine_render;
 		pipeline.voxelDebug.setup_func        = m_voxeldebug_setup;
 		pipeline.voxelDebug.render_func       = m_voxeldebug_render;
+		pipeline.voxelScreen.setup_func       = m_voxelscreen_setup;
+		pipeline.voxelScreen.render_func      = m_voxelscreen_render;
+		pipeline.screenReflection.setup_func  = m_screenreflection_setup;
+		pipeline.screenReflection.render_func = m_screenreflection_render;
 	}
 };

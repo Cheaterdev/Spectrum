@@ -10,16 +10,12 @@
 #include "GBuffer.h"
 struct RTXCombine
 {
-	uint unpack_indirect; // uint
-	uint unpack_reflection; // uint
 	uint reflection; // Texture2D<float4>
 	uint indirect; // Texture2D<float4>
 	uint shadow; // Texture2D<float4>
 	uint target; // RWTexture2D<float4>
 	GBuffer gbuffer; // GBuffer
 	GBuffer GetGbuffer() { return gbuffer; }
-	uint GetUnpack_indirect() { return unpack_indirect; }
-	uint GetUnpack_reflection() { return unpack_reflection; }
 	Texture2D<float4> GetReflection() { return ResourceDescriptorHeap[reflection]; }
 	Texture2D<float4> GetIndirect() { return ResourceDescriptorHeap[indirect]; }
 	Texture2D<float4> GetShadow() { return ResourceDescriptorHeap[shadow]; }

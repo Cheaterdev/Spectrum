@@ -30,104 +30,65 @@
 #include "../common/pbr.hlsl"
 #include "../common/common.hlsl"
 
-// PackForReblurDiffuse(), used below and by VoxelScreen's raw output, to pack
-// IN_DIFF_RADIANCE_HITDIST for NRD's REBLUR_DIFFUSE denoiser (see
+// PackForReblurDiffuse()/PackForReblurSpecular(), used by the RTX-reference
+// raygens below to pack IN_DIFF_RADIANCE_HITDIST/IN_SPEC_RADIANCE_HITDIST for
+// NRD's REBLUR_DIFFUSE/REBLUR_SPECULAR denoisers (see
 // [[project-nrd-integration]]). Self-contained (no NRD_INTERNAL/NRD_METHOD-
 // gated code reached), safe to pull into a non-NRD shader -- NRD_INCLUDED
 // guards against double-inclusion.
 #include "../nrd/reblur_pack_helper.hlsli"
 
 
-float2 IntegrateBRDF(FrameInfo  info, float Roughness, float Metallic, float NoV)
-{
-	return  info.GetBrdf().SampleLevel(linearClampSampler, float3(Roughness, Metallic, 0.5 + 0.5 * NoV), 0);
-}
-
-
-float3 get_PBR(FrameInfo  info, float3 SpecularColor, float3 ReflectionColor, float3 N, float3 V, float Roughness, float Metallic)
-{
-	//V *= -1;
-	float NoV = dot(N, V);
-	//return NoV<0;
-//	float3 R = 2 * dot(V, N) * N - V;
-//	float3 PrefilteredColor = PrefilterEnvMap(Roughness, R);
-	float2 EnvBRDF = IntegrateBRDF(info, Roughness, Metallic, NoV);
-	return     ReflectionColor * (Metallic * SpecularColor * EnvBRDF.x + EnvBRDF.y);
-}
-
-
-
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 
 float4 get_voxel(float3 pos, float level)
 {
-	float4 color = CreateVoxelScreen().GetVoxels().SampleLevel(linearClampSampler, pos, level);
-   // color.rgb *= 8;
- //   color.w = saturate(color.w * 2);
-	return color;
+	return CreateVoxelScreen().GetVoxels().SampleLevel(linearClampSampler, pos, level);
 }
 
-
-
-float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 origin, float3 dir, float angle, out float dist)
+// Cone-trace fallback through the 3D voxel volume, used by MyRaygenShader/
+// MyRaygenShaderReflection below when their primary RTX ray misses within
+// its short reach. origin/dir are world-space; converted into the voxel
+// volume's normalized [0,1]^3 space via voxel_info's min/size. Same
+// cone-marching shape as voxel_lighting.hlsl's own trace(), but samples
+// VoxelScreen's screen-facing voxel texture (voxels) and falls back to the
+// sky cubemap (tex_cube) once the cone has mostly resolved.
+float4 trace(VoxelInfo voxel_info, float k, float bias, float3 origin, float3 dir, float angle, out float dist)
 {
+	dir = normalize(dir);
+
 	float3 voxel_min = voxel_info.GetMin().xyz;
 	float3 voxel_size = voxel_info.GetSize().xyz;
-	float3 oneVoxelSize = 0.5 / (voxel_info.GetVoxel_tiles_count() * voxel_info.GetVoxels_per_tile());
 
-	//float max_angle = saturate((3.14 / 2 - acos(dot(normal, dir))) / 3.14);
+	float3 samplePos = (origin - voxel_min) / voxel_size;
+	float3 sampleDir = normalize(dir / voxel_size);
 
-//	float angle_coeff = saturate(max_angle / (angle + 0.01));
-	//angle = min(angle, max_angle);
-	float3 startOrigin = saturate(((origin + start_dist * dir - (voxel_min)) / voxel_size));
-	origin = saturate(((origin - (voxel_min)) / voxel_size));
-
-	float3 samplePos = 0;
-	float4 accum = start_color;
-
-	float minDiameter = oneVoxelSize.z*4;// *(1 + 4 * angle);
+	float4 accum = 0;
+	float minDiameter = 1.0 / 256;
 	float minVoxelDiameterInv = 1.0 / minDiameter;
 
 	float maxDist = 1;
-	dist = length(startOrigin - origin);
+	float d = minDiameter + bias;
 
-	float max_accum = 0.95;
-	while (dist <= maxDist && accum.w < max_accum && all(samplePos <= 1) && all(samplePos >= 0))
+	while (d <= maxDist && accum.w < 1 && all(samplePos + sampleDir * d <= 1) && all(samplePos + sampleDir * d >= 0))
 	{
-		float sampleDiameter = minDiameter + angle * dist;
-
+		float sampleDiameter = minDiameter + angle * d;
 		float sampleLOD = log2(sampleDiameter * minVoxelDiameterInv);
-		samplePos = origin + dir * dist;
-		float4 sampleValue = get_voxel(samplePos, sampleLOD);//* float4(1,1,1,1 + sampleLOD/4);
-		//sampleValue.w *= 333;
-        sampleValue.w = saturate(sampleValue.w * 1);
-
-		float sampleWeight = saturate(1 - accum.w);
+		float3 p = samplePos + sampleDir * d;
+		float4 sampleValue = get_voxel(p, sampleLOD);
+		float sampleWeight = 1 - accum.w;
 		accum += sampleValue * sampleWeight;
-		dist += sampleDiameter;
-
-		//if (accum.w >= 0.9)
-		//	accum /= accum.w;
-
+		d += sampleDiameter;
 	}
 
-	if (accum.w < 0.1) dist = 1;
-	//accum.xyz *= pow(dist,0.7);
-	//accum.xyz *= angle_coeff;
-	//accum *= 1.0 / 0.9;
+	dist = d;
 
-	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(dir), angle * 8);
-	float sampleWeight = saturate(max_accum - accum.w) / max_accum;
-	accum.xyz += sky * pow(sampleWeight, 8);
+	float4 sky = CreateVoxelScreen().GetTex_cube().SampleLevel(linearSampler, dir, angle * 8);
+	float skyWeight = saturate(1 - 8 * accum.w);
+	accum += sky * pow(skyWeight, 2);
 
-
-	dist *= length(voxel_size);
-	//	accum.xyz = sky;
-
-	return accum;// / saturate(accum.w);
+	return accum;
 }
-
-
 
 // Generate a ray in world space for a camera pixel corresponding to an index from the dispatched 2D grid.
 inline void GenerateCameraRay(uint2 index, in Camera camera, out float3 origin, out float3 direction)
@@ -410,111 +371,10 @@ void ColorPass()
 }
 
 
-[shader("raygeneration")]
-void MyRaygenShader()
-{
-	//  float3 rayDir = float3(0,1,0);
-	//   float3 origin = float3(0, 1, 0);;
-
-	uint2 itc = DispatchRaysIndex().xy;
-	uint2 dims = DispatchRaysDimensions().xy;
-
-	float2 tc = float2(itc + 0.5f) / dims;
-
-	const FrameInfo frame = CreateFrameInfo();
-
-	const Raytracing raytracing = CreateRaytracing();
-
-	const VoxelOutput voxel_output = CreateVoxelOutput();
-	const VoxelInfo voxel_info = CreateVoxelInfo();
-	const VoxelScreen voxel_screen = CreateVoxelScreen();
-
-
-	Texture2D<float2> speed_tex = voxel_screen.GetGbuffer().GetMotion();
-
-
-	// const RWTexture2D<float4> output = rays.GetOutput();
-	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
-	const RWTexture2D<float> tex_frames = voxel_output.GetFrames();
-	// Raw (pre-history-lerp) YCoCg-packed signal for NRD REBLUR_DIFFUSE, see
-	// [[project-nrd-integration]] -- tex_noise below is already temporally
-	// blended by this shader's own history lerp, which would double up with
-	// REBLUR's own temporal accumulation if fed to it directly.
-	const RWTexture2D<float4> tex_noise_raw = voxel_output.GetNoiseRaw();
-
-	// Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
-
-	float raw_z = voxel_screen.GetGbuffer().GetDepth()[DispatchRaysIndex().xy];
-	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
-
-	if (raw_z ==0)
-	{
-		tex_noise[itc] = 0;
-		tex_frames[itc] = 0;
-		tex_noise_raw[itc] = 0;
-		return;
-	}
-	float3 normal = normalize(voxel_screen.GetGbuffer().GetNormals()[DispatchRaysIndex().xy].xyz * 2 - 1);
-
-	float2 seed =voxel_output.GetBlueNoise().Load(int3(itc.xy % 128, 0));
-	float3 dir = ImportanceSampleGGX(seed, 1, normal);
-
-	float3 dirVoxel = dir;// normalize(normal + rand2 * (right + tangent));
-
-	float3 oneVoxelSize = voxel_info.GetSize() / (voxel_info.GetVoxel_tiles_count() * voxel_info.GetVoxels_per_tile());
-	[raypayload]
-    RayPayload payload_gi;
-	payload_gi.init();
-
-
-	//dir = normalize(pos - frame.GetCamera().GetPosition());
-	//pos = frame.GetCamera().GetPosition();
-
-	RayDesc ray;
-	ray.Origin = pos;
-	ray.Direction = dir;
-	ray.TMin = 0.01;
-    ray.TMax = length(oneVoxelSize) * 8;
-	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
-
-	[branch]
-if (payload_gi.dist > 100000 - 5)
-	{
-        payload_gi.color = trace(voxel_info, 0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.2, payload_gi.dist);
-    }
-
-	//tex_noise[DispatchRaysIndex().xy] = 1;// lerp(tex_noise[DispatchRaysIndex().xy], payload_shadow.color, 0.01);
-	{
-	}
-
-	float2 delta = -voxel_screen.GetGbuffer().GetMotion().SampleLevel(pointClampSampler, tc, 0).xy;
-	float2 prev_tc = tc - delta;
-
-	float l = length(pos - frame.GetCamera().GetPosition());
-
-	upscale_result reprojected = get_history(voxel_screen, frame.GetPrevCamera(), pos, prev_tc, dims, l);
-
-	float speed = 1.0 / (1.0 + reprojected.frames);
-
-	float4 gi = payload_gi.color;// max(0, getGI(itc, pos, pos + scaler * normal / m, normal, v, r, gbuffer.GetNormals()[tc].w, albedo.w));
-
-	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
-	tex_noise_raw[itc] = PackForReblurDiffuse(gi.rgb, payload_gi.dist, viewZ);
-
-	//gi=trace(voxel_info, 0, 0.0,  frame.GetCamera().GetPosition(), normalize(pos - frame.GetCamera().GetPosition()), 0.01, payload_gi.dist);//
-	gi = lerp(reprojected.history, gi, speed);
-
-	tex_noise[itc] = float4(gi.xyz, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;
-	tex_frames[itc] = float(reprojected.frames) / FRAMES;
-}
-
-// Independent RTX-only reference diffuse GI for IndirectRTX (see voxel.sig's
-// PassNode IndirectRTX). Deliberately NOT sharing code with MyRaygenShader
-// above -- that one stays untouched, still used by VoxelScreen's normal
-// dispatch (RTX with a voxel-cone-trace fallback on miss, temporally
-// blended with history). This one is genuinely raw: one ray per pixel,
-// GGX-importance-sampled hemisphere direction, fixed reach, no voxel grid
-// involved, no history blend.
+// Indirect-GI reference signal for IndirectRTX (see voxel.sig's PassNode
+// IndirectRTX): one ray per pixel, GGX-importance-sampled hemisphere
+// direction, fixed reach, no voxel grid involved, no history blend. Denoised
+// by NRD REBLUR_DIFFUSE (see [[project-nrd-integration]]).
 [shader("raygeneration")]
 void MyRaygenShaderIndirectRTXOnly()
 {
@@ -558,138 +418,12 @@ void MyRaygenShaderIndirectRTXOnly()
 	tex_noise[itc] = PackForReblurDiffuse(payload_gi.color.rgb, payload_gi.dist, viewZ);
 }
 
-
-[shader("raygeneration")]
-void MyRaygenShaderReflection()
-{
-	//  float3 rayDir = float3(0,1,0);
-	//   float3 origin = float3(0, 1, 0);;
-
-	uint2 itc = DispatchRaysIndex().xy;
-	uint2 dims = DispatchRaysDimensions().xy;
-
-	float2 tc = float2(itc + 0.5f) / dims;
-
-	const FrameInfo frame = CreateFrameInfo();
-
-	const Raytracing raytracing = CreateRaytracing();
-
-	const VoxelOutput voxel_output = CreateVoxelOutput();
-	const VoxelInfo voxel_info = CreateVoxelInfo();
-	const VoxelScreen voxel_screen = CreateVoxelScreen();
-
-
-	//Texture2D<float2> speed_tex = voxel_screen.GetGbuffer().GetMotion();
-
-	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
-
-	const RWTexture2D<float4> tex_dir_pdf = voxel_output.GetDirAndPdf();
-	// Raw YCoCg-packed signal for NRD REBLUR_SPECULAR, see
-	// [[project-nrd-integration]] -- tex_noise above already has no temporal
-	// blend of its own (the lerp near the bottom of this function is
-	// commented out), but ReflectionDenoiser_Reproject denoises
-	// VoxelReflectionNoise (tex_noise's resource) in place later this same
-	// frame, so a separate copy is still needed for NRD to read the
-	// pre-FFX-denoise value.
-	const RWTexture2D<float4> tex_noise_raw = voxel_output.GetNoiseRaw();
-	// Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
-
-
-	float raw_z = voxel_screen.GetGbuffer().GetDepth()[DispatchRaysIndex().xy];
-	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
-
-    if (raw_z == 0)
-	{
-		tex_noise[itc] = 0;
-		tex_dir_pdf[itc] = 0;
-		tex_noise_raw[itc] = 0;
-		return;
-	}
-
-	float4 gbufer_normals = voxel_screen.GetGbuffer().GetNormals()[DispatchRaysIndex().xy];
-	float4 gbufer_albedo = voxel_screen.GetGbuffer().GetAlbedo()[DispatchRaysIndex().xy];
-
-	float3 normal = normalize(gbufer_normals.xyz * 2 - 1);
-	float3 albedo = gbufer_albedo.rgb;
-
-	float roughness = pow(max(MIN_ROUGHNESS, gbufer_normals.w), 2);
-	float metallic = gbufer_albedo.w;// specular.w;
-	//float3 lightDir = frame.GetSunDir();
-
-	float3 view = -normalize(frame.GetCamera().GetPosition() - pos);
-
-	float3 rayDir = reflect(view, normal);
-
-	float2 seed =voxel_output.GetBlueNoise().Load(int3(itc.xy % 128, 0));
-	//float3x3 space = CalculateTangent(rayDir);
-
-
-	//float4 s = ImportanceSampleGGX(seed, roughness, rayDir);
-	float3 dir = SampleReflectionVector(view, normal,roughness,seed );
-
-	float3 dirVoxel = rayDir;// normalize(normal + rand2 * (right + tangent));
-
-	float3 oneVoxelSize = voxel_info.GetSize() / (voxel_info.GetVoxel_tiles_count() * voxel_info.GetVoxels_per_tile());
-	[raypayload]
-    RayPayload payload_gi;
-	payload_gi.color = float4(dirVoxel, 0);
-	payload_gi.recursion = 0;
-	payload_gi.dist = 0;
-	payload_gi.cone.angle = 0;
-	payload_gi.cone.width = 0;
-
-
-	RayDesc ray;
-	ray.Origin = pos;
-	ray.Direction = dir;
-	ray.TMin = 0.05;
-    ray.TMax = 0.5 * length(oneVoxelSize) / (tan(roughness + 0.001) + 0.001);
-	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
-
-	if (payload_gi.dist > 100000 - 5)
-	{
-		payload_gi.color = trace(voxel_info, 0, 1 *seed.x * length(oneVoxelSize), pos + oneVoxelSize * normal + 1 * dirVoxel * ray.TMax, dirVoxel, 1 * roughness/2, payload_gi.dist);
-	}
-
-
-	float3 refl_pos = pos + view * clamp(payload_gi.dist, 0, 1000);
-	//	float2 prev_tc = project_tc(refl_pos, frame.GetPrevCamera().GetViewProj());
-
-
-		//float2 delta = voxel_screen.GetGbuffer().GetMotion().SampleLevel(pointClampSampler, tc, 0).xy;
-		//float2 prev_tc = tc - 0*delta;
-
-	//	float4 prev_gi= voxel_screen.GetPrev_gi().SampleLevel(linearClampSampler,  prev_tc, 0);
-
-
-	//	float lerper = saturate(0.05+length(prev_gi.w - payload_gi.dist)/(10000* roughness));
-		 //float fresnel = calc_fresnel(1- roughness, normal, v);
-
-	float3 screen = payload_gi.color;// get_PBR(frame, albedo, payload_gi.color, normal, rayDir, roughness, metallic);
-
-	float3 l = -dir;
-
-	//screen = screen * GGX_Specular(0.01, normal, normalize(l + view), view, l);
-
-	tex_dir_pdf[itc] = float4(refl_pos, 1);
-	tex_noise[itc] = float4(screen, payload_gi.dist);// lerp(prev_gi, float4(screen, payload_gi.dist), lerper);//float4(payload_gi.color, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;
-
-	// gbufer_normals.w is the *linear* roughness (NRD_GBufferPack's own
-	// convention) -- not the squared/alpha `roughness` above, which is this
-	// raygen's own GGX-sampling parameter.
-	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
-	tex_noise_raw[itc] = PackForReblurSpecular(screen, payload_gi.dist, gbufer_normals.w, viewZ);
-}
-
-// Independent RTX-only reflection raygen for ReflectionRTX/DLSS-RR (see
-// voxel.sig's PassNode ReflectionRTX). Deliberately NOT sharing code with
-// MyRaygenShaderReflection above -- that one stays untouched for
-// ScreenReflection's mixed voxel-GI+RTX path. This one is pure DXR: one ray
-// per pixel, blue-noise-jittered direction (SampleReflectionVector, same
-// importance sampling as the other raygen -- this is what makes the output
-// genuinely noisy rather than a perfect mirror, which is what a ray-traced
-// denoiser like DLSS-RR expects to clean up), fixed TMax, no VoxelInfo/voxel
-// cone trace anywhere -- a real reference signal.
+// Reflection reference signal for ReflectionRTX (see voxel.sig's PassNode
+// ReflectionRTX): pure DXR, one ray per pixel, blue-noise-jittered direction
+// (SampleReflectionVector -- this is what makes the output genuinely noisy
+// rather than a perfect mirror, which is what a denoiser is meant to clean
+// up), fixed TMax, no voxel grid involved. Denoised by NRD REBLUR_SPECULAR
+// (see [[project-nrd-integration]]).
 [shader("raygeneration")]
 void MyRaygenShaderReflectionRTXOnly()
 {
@@ -756,6 +490,129 @@ void MyRaygenShaderReflectionRTXOnly()
 	// parameter, a different convention for a different purpose.
 	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
 	tex_noise[itc] = PackForReblurSpecular(payload.color.rgb, payload.dist, gbufer_normals.w, viewZ);
+}
+
+
+// Indirect-GI voxel-cone-traced signal for VoxelScreen (see voxel.sig's
+// PassNode VoxelScreen): RTX primary ray (GGX-importance-sampled hemisphere
+// direction, same as MyRaygenShaderIndirectRTXOnly) with a short reach,
+// falling back to a cone-trace through the 3D voxel volume on miss. An
+// alternative source for NRD REBLUR_DIFFUSE, selected against IndirectRTX's
+// raw RTX reference via g_indirect_source (see [[project-nrd-integration]]).
+[shader("raygeneration")]
+void MyRaygenShader()
+{
+	uint2 itc = DispatchRaysIndex().xy;
+	uint2 dims = DispatchRaysDimensions().xy;
+	float2 tc = float2(itc + 0.5f) / dims;
+
+	const FrameInfo frame = CreateFrameInfo();
+	const Raytracing raytracing = CreateRaytracing();
+	const VoxelOutput voxel_output = CreateVoxelOutput();
+	const VoxelScreen voxel_screen = CreateVoxelScreen();
+	const VoxelInfo voxel_info = CreateVoxelInfo();
+
+	const RWTexture2D<float4> tex_noise_raw = voxel_output.GetNoiseRaw();
+
+	float raw_z = voxel_screen.GetGbuffer().GetDepth()[itc];
+	if (raw_z == 0)
+	{
+		tex_noise_raw[itc] = 0;
+		return;
+	}
+	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
+	float3 normal = normalize(voxel_screen.GetGbuffer().GetNormals()[itc].xyz * 2 - 1);
+
+	float2 seed = voxel_output.GetBlueNoise().Load(int3(itc % 128, 0));
+	float3 dirVoxel = ImportanceSampleGGX(seed, 1, normal);
+
+	[raypayload]
+	RayPayload payload_gi;
+	payload_gi.init();
+
+	float3 oneVoxelSize = voxel_info.GetSize().xyz / (voxel_info.GetVoxel_tiles_count().xyz * voxel_info.GetVoxels_per_tile().xyz);
+
+	RayDesc ray;
+	ray.Origin = pos;
+	ray.Direction = dirVoxel;
+	ray.TMin = 0.01;
+	ray.TMax = length(oneVoxelSize) * 8;
+	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
+
+	[branch]
+	if (payload_gi.dist > 100000 - 5)
+	{
+		payload_gi.color = trace(voxel_info, 0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.2, payload_gi.dist);
+	}
+
+	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
+	tex_noise_raw[itc] = PackForReblurDiffuse(payload_gi.color.rgb, payload_gi.dist, viewZ);
+}
+
+// Reflection voxel-cone-traced signal for ScreenReflection (see voxel.sig's
+// PassNode ScreenReflection): RTX primary ray (SampleReflectionVector, same
+// as MyRaygenShaderReflectionRTXOnly) with a roughness-dependent short reach,
+// falling back to a cone-trace through the 3D voxel volume on miss. An
+// alternative source for NRD REBLUR_SPECULAR, selected against
+// ReflectionRTX's raw RTX reference via g_reflection_source (see
+// [[project-nrd-integration]]).
+[shader("raygeneration")]
+void MyRaygenShaderReflection()
+{
+	uint2 itc = DispatchRaysIndex().xy;
+	uint2 dims = DispatchRaysDimensions().xy;
+	float2 tc = float2(itc + 0.5f) / dims;
+
+	const FrameInfo frame = CreateFrameInfo();
+	const Raytracing raytracing = CreateRaytracing();
+	const VoxelOutput voxel_output = CreateVoxelOutput();
+	const VoxelScreen voxel_screen = CreateVoxelScreen();
+	const VoxelInfo voxel_info = CreateVoxelInfo();
+
+	const RWTexture2D<float4> tex_noise_raw = voxel_output.GetNoiseRaw();
+
+	float raw_z = voxel_screen.GetGbuffer().GetDepth()[itc];
+	if (raw_z == 0)
+	{
+		tex_noise_raw[itc] = 0;
+		return;
+	}
+	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
+
+	float4 gbufer_normals = voxel_screen.GetGbuffer().GetNormals()[itc];
+	float3 normal = normalize(gbufer_normals.xyz * 2 - 1);
+	float roughness = pow(max(MIN_ROUGHNESS, gbufer_normals.w), 2);
+
+	float3 view = -normalize(frame.GetCamera().GetPosition() - pos);
+
+	float2 seed = voxel_output.GetBlueNoise().Load(int3(itc % 128, 0));
+	float3 dirVoxel = SampleReflectionVector(view, normal, roughness, seed);
+
+	[raypayload]
+	RayPayload payload_gi;
+	payload_gi.color = float4(dirVoxel, 0);
+	payload_gi.recursion = 0;
+	payload_gi.dist = 0;
+	payload_gi.cone.angle = 0;
+	payload_gi.cone.width = 0;
+
+	float3 oneVoxelSize = voxel_info.GetSize().xyz / (voxel_info.GetVoxel_tiles_count().xyz * voxel_info.GetVoxels_per_tile().xyz);
+
+	RayDesc ray;
+	ray.Origin = pos;
+	ray.Direction = dirVoxel;
+	ray.TMin = 0.05;
+	ray.TMax = 0.5 * length(oneVoxelSize) / (tan(roughness + 0.001) + 0.001);
+	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
+
+	[branch]
+	if (payload_gi.dist > 100000 - 5)
+	{
+		payload_gi.color = trace(voxel_info, 0, 1 * seed.x * length(oneVoxelSize), pos + oneVoxelSize * normal + 1 * dirVoxel * ray.TMax, dirVoxel, 1 * roughness / 2, payload_gi.dist);
+	}
+
+	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
+	tex_noise_raw[itc] = PackForReblurSpecular(payload_gi.color.rgb, payload_gi.dist, gbufer_normals.w, viewZ);
 }
 
 

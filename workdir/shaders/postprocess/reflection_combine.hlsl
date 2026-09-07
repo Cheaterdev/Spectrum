@@ -74,15 +74,10 @@ void CS(
 
 
 
-	// Two possible sources (see [[project-nrd-integration]],
-	// g_reflection_denoiser): REBLUR SPECULAR's packed denoised output
-	// (needing an unpack) -- or the legacy FFX-denoised VoxelReflectionNoise,
-	// never YCoCg-encoded. unpack_reflection (set CPU-side, VoxelGIGraph.cpp)
-	// drives which.
-	float4 reflection_raw = GetReflectionCombine().GetReflection()[dispatchID.xy];
-	float3 reflection = GetReflectionCombine().GetUnpack_reflection() != 0
-		? REBLUR_BackEnd_UnpackRadianceAndNormHitDist(reflection_raw).rgb
-		: reflection_raw.rgb;
+	// REBLUR SPECULAR's denoised output (NRD_REBLUR_Execute, see
+	// [[project-nrd-integration]]), packed (YCoCg + normalized hit distance)
+	// -- unpack before use.
+	float3 reflection = REBLUR_BackEnd_UnpackRadianceAndNormHitDist(GetReflectionCombine().GetReflection()[dispatchID.xy]).rgb;
 
 	float3 color = get_PBR(albedo, reflection.xyz, normal, v, roughness, metallic);
 //	output[index] = float4(lighting, 1);

@@ -1028,8 +1028,6 @@ namespace GUI
             {
             case DM::Albedo:        return FrameGraph::ResourceID::GBuffer_Albedo;
             case DM::Motion:        return FrameGraph::ResourceID::GBuffer_Speed;
-            case DM::GI_Indirect:   return FrameGraph::ResourceID::VoxelIndirectFiltered;
-            case DM::GI_Reflection: return FrameGraph::ResourceID::ReflectionDenoiser_ReprojectedRadiance;
             case DM::VoxelTrace:    return FrameGraph::ResourceID::VoxelDebug;
             case DM::RTX:           return FrameGraph::ResourceID::ColorOutput;
             case DM::RTXIndirectDenoised: return FrameGraph::ResourceID::RTXIndirectDenoised;

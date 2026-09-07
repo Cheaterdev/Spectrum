@@ -138,15 +138,12 @@ public:
 		Final,
 		Albedo,
 		Motion,
-		GI_Indirect,
-		GI_Reflection,
 		VoxelTrace,
 		RTX,
 		// REBLUR-denoised RTX indirect GI (NRD_REBLUR_Execute, see
-		// [[project-nrd-integration]]) -- distinct from GI_Indirect, which is
-		// the older voxel-cone-traced path (VoxelIndirectFiltered). Raw =
-		// packed (YCoCg + normalized hit-distance, matches what RTXCombine
-		// actually consumes); Unpacked = true-color debug preview.
+		// [[project-nrd-integration]]). Raw = packed (YCoCg + normalized
+		// hit-distance, matches what RTXCombine actually consumes);
+		// Unpacked = true-color debug preview.
 		RTXIndirectDenoised,
 		RTXIndirectDenoisedUnpacked,
 		// NRD_GBufferPack's own outputs, for inspecting its front-end

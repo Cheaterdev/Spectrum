@@ -16,7 +16,6 @@ export import "../defines.h";
 #include "pass/AssetGBuffer.h"
 #include "pass/AssetMip.h"
 #include "pass/BlueNoise.h"
-#include "pass/ReflectionDenoiser_Reproject.h"
 #include "pass/ShadowDenoiser_Prepare.h"
 #include "pass/ShadowDenoiser_TileClassification.h"
 #include "pass/ShadowDenoiser_Filter.h"
@@ -49,9 +48,6 @@ export import "../defines.h";
 #include "pass/UpscalingDLSSRR.h"
 #include "pass/GBufferDownsampler.h"
 #include "pass/VoxelDebug.h"
-#include "pass/VoxelScreen.h"
-#include "pass/VoxelCombine.h"
-#include "pass/ScreenReflection.h"
 #include "pass/ReflectionRTX.h"
 #include "pass/ShadowRTX.h"
 #include "pass/IndirectRTX.h"
@@ -60,6 +56,8 @@ export import "../defines.h";
 #include "pass/Voxelize.h"
 #include "pass/Lighting.h"
 #include "pass/Mipmapping.h"
+#include "pass/VoxelScreen.h"
+#include "pass/ScreenReflection.h"
 #include "pass/VSM_GatherDispatch.h"
 #include "pass/VSM_RenderPages.h"
 #include "pass/VSM_HiZRebuild.h"
@@ -80,7 +78,6 @@ export namespace Passes
 	using ::Passes::AssetGBuffer;
 	using ::Passes::AssetMip;
 	using ::Passes::BlueNoise;
-	using ::Passes::ReflectionDenoiser_Reproject;
 	using ::Passes::ShadowDenoiser_Prepare;
 	using ::Passes::ShadowDenoiser_TileClassification;
 	using ::Passes::ShadowDenoiser_Filter;
@@ -113,9 +110,6 @@ export namespace Passes
 	using ::Passes::UpscalingDLSSRR;
 	using ::Passes::GBufferDownsampler;
 	using ::Passes::VoxelDebug;
-	using ::Passes::VoxelScreen;
-	using ::Passes::VoxelCombine;
-	using ::Passes::ScreenReflection;
 	using ::Passes::ReflectionRTX;
 	using ::Passes::ShadowRTX;
 	using ::Passes::IndirectRTX;
@@ -124,6 +118,8 @@ export namespace Passes
 	using ::Passes::Voxelize;
 	using ::Passes::Lighting;
 	using ::Passes::Mipmapping;
+	using ::Passes::VoxelScreen;
+	using ::Passes::ScreenReflection;
 	using ::Passes::VSM_GatherDispatch;
 	using ::Passes::VSM_RenderPages;
 	using ::Passes::VSM_HiZRebuild;

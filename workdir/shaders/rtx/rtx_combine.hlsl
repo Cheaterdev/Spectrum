@@ -78,32 +78,17 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float shadow = GetRTXCombine().GetShadow()[tc].r;
 	float3 direct = albedo.rgb * NdotL * shadow;
 
-	// Reflections: identical weighting to ReflectionCombine. Two possible
-	// sources (see [[project-nrd-integration]], g_reflection_denoiser): REBLUR
-	// SPECULAR's denoised output, packed (needing an unpack, same convention
-	// as indirect GI below) -- or the raw RTXReflectionNoise DLSS-RR's own
-	// denoiser cleans up downstream. unpack_reflection (set CPU-side,
-	// RTXCombine.cpp) drives which.
-	float4 reflection_raw = GetRTXCombine().GetReflection()[tc];
-	float3 reflection = GetRTXCombine().GetUnpack_reflection() != 0
-		? REBLUR_BackEnd_UnpackRadianceAndNormHitDist(reflection_raw).rgb
-		: reflection_raw.rgb;
+	// Reflections: identical weighting to ReflectionCombine. REBLUR
+	// SPECULAR's denoised output, packed (YCoCg + normalized hit distance,
+	// see reblur_pack_helper.hlsli) -- unpack before use.
+	float3 reflection = REBLUR_BackEnd_UnpackRadianceAndNormHitDist(GetRTXCombine().GetReflection()[tc]).rgb;
 	float3 refl_color = get_PBR(albedo.rgb, reflection, normal, v, roughness, metallic);
 
 	// Indirect GI: diffuse bounce light, weighted by the surface's own
 	// albedo (diffuse response) rather than the specular BRDF above, and
-	// rolled off by metallic (metals have ~no diffuse term). Two possible
-	// sources (see [[project-nrd-integration]], g_indirect_denoiser):
-	// REBLUR's denoised output, packed (YCoCg + normalized hit distance, see
-	// reblur_pack_helper.hlsli) and needing an unpack -- or the legacy VCT
-	// pipeline's plain VoxelIndirectFiltered, never YCoCg-encoded. Which
-	// texture is actually bound is chosen CPU-side (RTXCombine.cpp); which
-	// unpack path to take can't be, so unpack_indirect (set from the same
-	// C++ flag) drives it here.
-	float4 indirect_raw = GetRTXCombine().GetIndirect()[tc];
-	float3 indirect = GetRTXCombine().GetUnpack_indirect() != 0
-		? REBLUR_BackEnd_UnpackRadianceAndNormHitDist(indirect_raw).rgb
-		: indirect_raw.rgb;
+	// rolled off by metallic (metals have ~no diffuse term). REBLUR
+	// DIFFUSE's denoised output, packed the same way -- unpack before use.
+	float3 indirect = REBLUR_BackEnd_UnpackRadianceAndNormHitDist(GetRTXCombine().GetIndirect()[tc]).rgb;
 	float3 gi_color = albedo.rgb * indirect * (1 - metallic);
 
 	GetRTXCombine().GetTarget()[tc] = float4(direct + refl_color + gi_color, 1);

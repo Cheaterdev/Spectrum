@@ -11,14 +11,13 @@ using namespace FrameGraph;
 using namespace HAL;
 
 // Front-end packing for NRD REBLUR_DIFFUSE/REBLUR_SPECULAR (see
-// [[project-nrd-integration]]). Gated on wanting *either* denoiser --
+// [[project-nrd-integration]]). Gated purely on RTX/hardware support --
 // independent of g_upscaler_type, so NRD works under FSR/DLSS too, not just
 // DLSS-RR. NRD_REBLUR_Execute (its only real consumer) uses the same gate.
 bool PassDefault<Passes::NRD_GBufferPack>::setup(
 	Passes::NRD_GBufferPack::Context& data, TaskBuilder& builder)
 {
-	if ((g_indirect_denoiser != IndirectDenoiser::NRD && g_reflection_denoiser != ReflectionDenoiserKind::NRD) ||
-	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
+	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
 	auto& frame = builder.graph->get_context<ViewportInfo>();

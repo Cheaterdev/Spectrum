@@ -13,10 +13,6 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "BlueNoise") return SlotID::BlueNoise;
 	if(slot_name == "BRDF") return SlotID::BRDF;
 	if(slot_name == "DebugInfo") return SlotID::DebugInfo;
-	if(slot_name == "DenoiserReflectionCommon") return SlotID::DenoiserReflectionCommon;
-	if(slot_name == "DenoiserReflectionReproject") return SlotID::DenoiserReflectionReproject;
-	if(slot_name == "DenoiserReflectionPrefilter") return SlotID::DenoiserReflectionPrefilter;
-	if(slot_name == "DenoiserReflectionResolve") return SlotID::DenoiserReflectionResolve;
 	if(slot_name == "DenoiserShadow_Prepare") return SlotID::DenoiserShadow_Prepare;
 	if(slot_name == "DenoiserShadow_TileClassification") return SlotID::DenoiserShadow_TileClassification;
 	if(slot_name == "DenoiserShadow_Filter") return SlotID::DenoiserShadow_Filter;
@@ -114,7 +110,6 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "Voxelization") return SlotID::Voxelization;
 	if(slot_name == "VoxelScreen") return SlotID::VoxelScreen;
 	if(slot_name == "VoxelOutput") return SlotID::VoxelOutput;
-	if(slot_name == "VoxelBlur") return SlotID::VoxelBlur;
 	if(slot_name == "VoxelUpscale") return SlotID::VoxelUpscale;
 	if(slot_name == "VoxelVisibility") return SlotID::VoxelVisibility;
 	if(slot_name == "VoxelMipMap") return SlotID::VoxelMipMap;
@@ -122,11 +117,6 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "VoxelZero") return SlotID::VoxelZero;
 	if(slot_name == "VoxelLighting") return SlotID::VoxelLighting;
 	if(slot_name == "VoxelDebug") return SlotID::VoxelDebug;
-	if(slot_name == "DenoiserDownsample") return SlotID::DenoiserDownsample;
-	if(slot_name == "DenoiserHistoryFix") return SlotID::DenoiserHistoryFix;
-	if(slot_name == "TilingPostprocess") return SlotID::TilingPostprocess;
-	if(slot_name == "FrameClassification") return SlotID::FrameClassification;
-	if(slot_name == "FrameClassificationInitDispatch") return SlotID::FrameClassificationInitDispatch;
 	if(slot_name == "ReflectionCombine") return SlotID::ReflectionCombine;
 	if(slot_name == "RTXCombine") return SlotID::RTXCombine;
 	if(slot_name == "VSMConstants") return SlotID::VSMConstants;
@@ -162,14 +152,6 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::BRDF) return Slots::BRDF::Slot::ID;
 
 	if(id == SlotID::DebugInfo) return Slots::DebugInfo::Slot::ID;
-
-	if(id == SlotID::DenoiserReflectionCommon) return Slots::DenoiserReflectionCommon::Slot::ID;
-
-	if(id == SlotID::DenoiserReflectionReproject) return Slots::DenoiserReflectionReproject::Slot::ID;
-
-	if(id == SlotID::DenoiserReflectionPrefilter) return Slots::DenoiserReflectionPrefilter::Slot::ID;
-
-	if(id == SlotID::DenoiserReflectionResolve) return Slots::DenoiserReflectionResolve::Slot::ID;
 
 	if(id == SlotID::DenoiserShadow_Prepare) return Slots::DenoiserShadow_Prepare::Slot::ID;
 
@@ -365,8 +347,6 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::VoxelOutput) return Slots::VoxelOutput::Slot::ID;
 
-	if(id == SlotID::VoxelBlur) return Slots::VoxelBlur::Slot::ID;
-
 	if(id == SlotID::VoxelUpscale) return Slots::VoxelUpscale::Slot::ID;
 
 	if(id == SlotID::VoxelVisibility) return Slots::VoxelVisibility::Slot::ID;
@@ -380,16 +360,6 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::VoxelLighting) return Slots::VoxelLighting::Slot::ID;
 
 	if(id == SlotID::VoxelDebug) return Slots::VoxelDebug::Slot::ID;
-
-	if(id == SlotID::DenoiserDownsample) return Slots::DenoiserDownsample::Slot::ID;
-
-	if(id == SlotID::DenoiserHistoryFix) return Slots::DenoiserHistoryFix::Slot::ID;
-
-	if(id == SlotID::TilingPostprocess) return Slots::TilingPostprocess::Slot::ID;
-
-	if(id == SlotID::FrameClassification) return Slots::FrameClassification::Slot::ID;
-
-	if(id == SlotID::FrameClassificationInitDispatch) return Slots::FrameClassificationInitDispatch::Slot::ID;
 
 	if(id == SlotID::ReflectionCombine) return Slots::ReflectionCombine::Slot::ID;
 
@@ -443,10 +413,6 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::BlueNoise) return "BlueNoise";
 	if(id == SlotID::BRDF) return "BRDF";
 	if(id == SlotID::DebugInfo) return "DebugInfo";
-	if(id == SlotID::DenoiserReflectionCommon) return "DenoiserReflectionCommon";
-	if(id == SlotID::DenoiserReflectionReproject) return "DenoiserReflectionReproject";
-	if(id == SlotID::DenoiserReflectionPrefilter) return "DenoiserReflectionPrefilter";
-	if(id == SlotID::DenoiserReflectionResolve) return "DenoiserReflectionResolve";
 	if(id == SlotID::DenoiserShadow_Prepare) return "DenoiserShadow_Prepare";
 	if(id == SlotID::DenoiserShadow_TileClassification) return "DenoiserShadow_TileClassification";
 	if(id == SlotID::DenoiserShadow_Filter) return "DenoiserShadow_Filter";
@@ -544,7 +510,6 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::Voxelization) return "Voxelization";
 	if(id == SlotID::VoxelScreen) return "VoxelScreen";
 	if(id == SlotID::VoxelOutput) return "VoxelOutput";
-	if(id == SlotID::VoxelBlur) return "VoxelBlur";
 	if(id == SlotID::VoxelUpscale) return "VoxelUpscale";
 	if(id == SlotID::VoxelVisibility) return "VoxelVisibility";
 	if(id == SlotID::VoxelMipMap) return "VoxelMipMap";
@@ -552,11 +517,6 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::VoxelZero) return "VoxelZero";
 	if(id == SlotID::VoxelLighting) return "VoxelLighting";
 	if(id == SlotID::VoxelDebug) return "VoxelDebug";
-	if(id == SlotID::DenoiserDownsample) return "DenoiserDownsample";
-	if(id == SlotID::DenoiserHistoryFix) return "DenoiserHistoryFix";
-	if(id == SlotID::TilingPostprocess) return "TilingPostprocess";
-	if(id == SlotID::FrameClassification) return "FrameClassification";
-	if(id == SlotID::FrameClassificationInitDispatch) return "FrameClassificationInitDispatch";
 	if(id == SlotID::ReflectionCombine) return "ReflectionCombine";
 	if(id == SlotID::RTXCombine) return "RTXCombine";
 	if(id == SlotID::VSMConstants) return "VSMConstants";

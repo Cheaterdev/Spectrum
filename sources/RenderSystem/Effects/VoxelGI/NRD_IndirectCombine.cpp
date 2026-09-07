@@ -11,16 +11,14 @@ using namespace FrameGraph;
 using namespace HAL;
 
 // The FSR/DLSS-side equivalent of the indirect term RTXCombine computes for
-// DLSS-RR (see [[project-nrd-integration]]). Runs exactly in the complementary
-// case to RTXCombine (which already handles DLSS-RR+NRD itself) and to
-// VoxelCombine's own composite (which defers to this pass in exactly this
-// case via VoxelBlur::skip_composite).
+// DLSS-RR (see [[project-nrd-integration]]). Runs exactly in the
+// complementary case to RTXCombine (which handles DLSS-RR itself).
 bool PassDefault<Passes::NRD_IndirectCombine>::setup(
 	Passes::NRD_IndirectCombine::Context& data, TaskBuilder& builder)
 {
 	bool dlssrr_active = g_upscaler_type == UpscalerType::DLSSRR &&
 		RenderSystem::get().device().is_rtx_supported() && nvidia::DLSSRR::get().available();
-	if (dlssrr_active || g_indirect_denoiser != IndirectDenoiser::NRD)
+	if (dlssrr_active)
 		return false;
 
 	GBufferViewDesc::need(builder, data.gbuffer);

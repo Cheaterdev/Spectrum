@@ -36,19 +36,17 @@ export struct FrameLayout
 		static const uint ID = 2;
 		static const uint CB = 2;
 		static const uint CB_ID = 6;
-		static const uint SRV = 1;
-		static const uint SRV_ID = 8;
-		static inline const std::vector<uint> tables = { 6, 8 };
+		static inline const std::vector<uint> tables = { 6 };
 	};
 
 	struct DebugInfo
 	{
 		static const uint ID = 3;
 		static const uint CB = 2;
-		static const uint CB_ID = 9;
+		static const uint CB_ID = 8;
 		static const uint UAV = 2;
-		static const uint UAV_ID = 11;
-		static inline const std::vector<uint> tables = { 9, 11 };
+		static const uint UAV_ID = 10;
+		static inline const std::vector<uint> tables = { 8, 10 };
 	};
 
 	template<class Processor> static void for_each(Processor& processor)

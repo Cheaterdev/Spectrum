@@ -23,7 +23,6 @@ export
 			Library::AssetGBuffer AssetGBuffer;
 		Library::AssetMip AssetMip;
 		Library::BlueNoise BlueNoise;
-		Library::ReflectionDenoiser_Reproject ReflectionDenoiser_Reproject;
 		Library::ShadowDenoiser_Prepare ShadowDenoiser_Prepare;
 		Library::ShadowDenoiser_TileClassification ShadowDenoiser_TileClassification;
 		Library::ShadowDenoiser_Filter ShadowDenoiser_Filter;
@@ -56,9 +55,6 @@ export
 		Library::UpscalingDLSSRR UpscalingDLSSRR;
 		Library::GBufferDownsampler GBufferDownsampler;
 		Library::VoxelDebug VoxelDebug;
-		Library::VoxelScreen VoxelScreen;
-		Library::VoxelCombine VoxelCombine;
-		Library::ScreenReflection ScreenReflection;
 		Library::ReflectionRTX ReflectionRTX;
 		Library::ShadowRTX ShadowRTX;
 		Library::IndirectRTX IndirectRTX;
@@ -67,6 +63,8 @@ export
 		Library::Voxelize Voxelize;
 		Library::Lighting Lighting;
 		Library::Mipmapping Mipmapping;
+		Library::VoxelScreen VoxelScreen;
+		Library::ScreenReflection ScreenReflection;
 		Library::VSM_GatherDispatch VSM_GatherDispatch;
 		Library::VSM_RenderPages VSM_RenderPages;
 		Library::VSM_HiZRebuild VSM_HiZRebuild;

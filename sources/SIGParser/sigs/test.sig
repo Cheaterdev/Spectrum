@@ -50,13 +50,17 @@ Pipeline MainPipeline
 	# result target
 	ResultCreation;
 
-	[Async]ScreenReflection;
-	[Async]ReflectionDenoiser_Reproject;
 	[Async]NormalRoughnessRepack;
 	[Async]ReflectionRTX;
 	[Async]ShadowRTX;
 	[Async]IndirectRTX;
 	[Async]NRD_GBufferPack;
+	# Voxel-cone-traced alternative sources for NRD_REBLUR_Execute below
+	# (selected via g_indirect_source/g_reflection_source, see
+	# [[project-nrd-integration]]) -- run after Mipmapping (VoxelLighted is
+	# ready by here) and before NRD_REBLUR_Execute (needs their raw output).
+	[Async]VoxelScreen;
+	[Async]ScreenReflection;
 
 											[Async]
 											RTXShadow;
@@ -82,16 +86,7 @@ Pipeline MainPipeline
 											# the already-shaded result -- see its own PassNode comment in
 											# vsm.sig.
 											[Async2]VSM_DebugClassifyOverlay;
-											# voxel screen (voxel_gi.generate)
-											[Async2]
-											VoxelScreen;
-											[Async2]
-											VoxelCombine;
 
-		# Needs VoxelIndirectNoiseRaw (VoxelScreen, above) as an alternative
-		# diff_noisy input (g_indirect_source) -- must be declared after it,
-		# not grouped with NRD_GBufferPack/IndirectRTX above, see
-		# [[project-nrd-integration]].
 		[Async]NRD_REBLUR_Execute;
 		# FSR/DLSS-side equivalent of the indirect term RTXCombine computes
 		# for DLSS-RR -- see nrd_sig_test.sig's own PassNode comment and

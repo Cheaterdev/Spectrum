@@ -23,9 +23,6 @@ public:
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 
-		Handlers::Texture VoxelReflectionNoise = ResourceID::VoxelReflectionNoise;
-
-
 		Handlers::Texture RTXReflectionDenoised = ResourceID::RTXReflectionDenoised;
 
 		// Resources this pass touches, in declaration order, each paired with
@@ -46,7 +43,6 @@ public:
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
 			{ ResourceID::ResultTexture, true },
-			{ ResourceID::VoxelReflectionNoise, false },
 			{ ResourceID::RTXReflectionDenoised, false },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

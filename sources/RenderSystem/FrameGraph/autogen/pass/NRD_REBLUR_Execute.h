@@ -31,10 +31,10 @@ public:
 		Handlers::Texture RTXIndirectNoise = ResourceID::RTXIndirectNoise;
 
 
-		Handlers::Texture VoxelIndirectNoiseRaw = ResourceID::VoxelIndirectNoiseRaw;
-
-
 		Handlers::Texture RTXReflectionNoise = ResourceID::RTXReflectionNoise;
+
+
+		Handlers::Texture VoxelIndirectNoiseRaw = ResourceID::VoxelIndirectNoiseRaw;
 
 
 		Handlers::Texture VoxelReflectionNoiseRaw = ResourceID::VoxelReflectionNoiseRaw;
@@ -56,8 +56,8 @@ public:
 			{ ResourceID::NRD_NormalRoughness, false },
 			{ ResourceID::NRD_Mv, false },
 			{ ResourceID::RTXIndirectNoise, false },
-			{ ResourceID::VoxelIndirectNoiseRaw, false },
 			{ ResourceID::RTXReflectionNoise, false },
+			{ ResourceID::VoxelIndirectNoiseRaw, false },
 			{ ResourceID::VoxelReflectionNoiseRaw, false },
 			{ ResourceID::RTXIndirectDenoised, true },
 			{ ResourceID::RTXIndirectDenoisedPreview, true },

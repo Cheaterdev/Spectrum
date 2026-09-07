@@ -18,26 +18,22 @@ export namespace Table
 	struct ReflectionCombine
 	{
 		static constexpr SlotID ID = SlotID::ReflectionCombine;
-		uint unpack_reflection;
 		HLSL::Texture2D<float4> reflection;
 		HLSL::RWTexture2D<float4> target;
 		GBuffer gbuffer;
 		HLSL::Texture2D<float4>& GetReflection() { return reflection; }
 		HLSL::RWTexture2D<float4>& GetTarget() { return target; }
-		uint& GetUnpack_reflection() { return unpack_reflection; }
 		GBuffer& GetGbuffer() { return gbuffer; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(unpack_reflection, "ReflectionCombine::unpack_reflection");
 			compiler.compile(reflection, "ReflectionCombine::reflection");
 			compiler.compile(target, "ReflectionCombine::target");
 			compiler.compile(gbuffer, "ReflectionCombine::gbuffer");
 		}
 		struct Compiled
 		{
-			uint unpack_reflection; // uint
 			uint reflection; // Texture2D<float4>
 			uint target; // RWTexture2D<float4>
 			GBuffer::Compiled gbuffer; // GBuffer
@@ -47,7 +43,6 @@ export namespace Table
 			SERIALIZE()
 			{
 				ar& NVP(gbuffer);
-				ar& NVP(unpack_reflection);
 			}
 
 
@@ -61,7 +56,6 @@ export namespace Table
 		SERIALIZE()
 		{
 			ar& NVP(gbuffer);
-			ar& NVP(unpack_reflection);
 		}
 
 	};

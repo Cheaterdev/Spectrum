@@ -20,43 +20,13 @@ public:
 
 		GBuffer gbuffer;
 
-		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
-
-
 		Handlers::Texture3D VoxelLighted = ResourceID::VoxelLighted;
-
-
-		Handlers::Texture VoxelFramesCount = ResourceID::VoxelFramesCount;
-
-
-		Handlers::Texture VoxelIndirectNoise = ResourceID::VoxelIndirectNoise;
-
-
-		Handlers::Texture VoxelIndirectNoiseRaw = ResourceID::VoxelIndirectNoiseRaw;
-
-
-		Handlers::Texture VoxelIndirectFiltered = ResourceID::VoxelIndirectFiltered;
-
-
-		Handlers::Texture VoxelIndirectFilteredPrev = ResourceID::VoxelIndirectFilteredPrev;
-
-
-		Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
 
 
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
-		Handlers::StructuredBuffer<DispatchArguments> VoxelScreen_hi = ResourceID::VoxelScreen_hi;
-
-
-		Handlers::StructuredBuffer<DispatchArguments> VoxelScreen_low = ResourceID::VoxelScreen_low;
-
-
-		Handlers::StructuredBuffer<uint2> VoxelScreen_low_data = ResourceID::VoxelScreen_low_data;
-
-
-		Handlers::StructuredBuffer<uint2> VoxelScreen_hi_data = ResourceID::VoxelScreen_hi_data;
+		Handlers::Texture VoxelIndirectNoiseRaw = ResourceID::VoxelIndirectNoiseRaw;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -75,19 +45,9 @@ public:
 			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
-			{ ResourceID::ResultTexture, false },
 			{ ResourceID::VoxelLighted, false },
-			{ ResourceID::VoxelFramesCount, true },
-			{ ResourceID::VoxelIndirectNoise, true },
-			{ ResourceID::VoxelIndirectNoiseRaw, true },
-			{ ResourceID::VoxelIndirectFiltered, true },
-			{ ResourceID::VoxelIndirectFilteredPrev, false },
-			{ ResourceID::sky_cubemap_filtered, false },
 			{ ResourceID::BlueNoise, false },
-			{ ResourceID::VoxelScreen_hi, true },
-			{ ResourceID::VoxelScreen_low, true },
-			{ ResourceID::VoxelScreen_low_data, true },
-			{ ResourceID::VoxelScreen_hi_data, true },
+			{ ResourceID::VoxelIndirectNoiseRaw, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

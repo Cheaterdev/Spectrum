@@ -10,12 +10,10 @@
 #include "GBuffer.h"
 struct ReflectionCombine
 {
-	uint unpack_reflection; // uint
 	uint reflection; // Texture2D<float4>
 	uint target; // RWTexture2D<float4>
 	GBuffer gbuffer; // GBuffer
 	GBuffer GetGbuffer() { return gbuffer; }
-	uint GetUnpack_reflection() { return unpack_reflection; }
 	Texture2D<float4> GetReflection() { return ResourceDescriptorHeap[reflection]; }
 	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
 };

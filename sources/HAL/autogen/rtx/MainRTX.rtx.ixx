@@ -17,16 +17,16 @@ import :Autogen.Slots.MaterialInfo;
 export {
 #include "Shadow.h"
 #include "ShadowRTX.h"
-#include "Reflection.h"
 #include "ReflectionRTX.h"
-#include "Indirect.h"
+#include "Reflection.h"
 #include "IndirectRTX.h"
+#include "Indirect.h"
 #include "ColorRTX.h"
 #include "ShadowPass.h"
 #include "ColorPass.h"
 #include "ColorShadowPass.h"
 
-struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass, ColorShadowPass>, Typelist<Shadow, ShadowRTX, Reflection, ReflectionRTX, Indirect, IndirectRTX, ColorRTX>>
+struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass, ColorShadowPass>, Typelist<Shadow, ShadowRTX, ReflectionRTX, Reflection, IndirectRTX, Indirect, ColorRTX>>
 {
 	using RTXPSO::RTXPSO;
 	static const constexpr Layouts global_sig = Layouts::DefaultLayout;

@@ -20,34 +20,13 @@ public:
 
 		GBuffer gbuffer;
 
-		Handlers::Texture VoxelReflectionNoise = ResourceID::VoxelReflectionNoise;
-
-
-		Handlers::Texture VoxelReflectionNoiseRaw = ResourceID::VoxelReflectionNoiseRaw;
-
-
-		Handlers::Texture noise_dir_pdf = ResourceID::noise_dir_pdf;
-
-
-		Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
+		Handlers::Texture3D VoxelLighted = ResourceID::VoxelLighted;
 
 
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
-		Handlers::Texture3D VoxelLighted = ResourceID::VoxelLighted;
-
-
-		Handlers::StructuredBuffer<DispatchArguments> VoxelScreen_hi = ResourceID::VoxelScreen_hi;
-
-
-		Handlers::StructuredBuffer<DispatchArguments> VoxelScreen_low = ResourceID::VoxelScreen_low;
-
-
-		Handlers::StructuredBuffer<uint2> VoxelScreen_low_data = ResourceID::VoxelScreen_low_data;
-
-
-		Handlers::StructuredBuffer<uint2> VoxelScreen_hi_data = ResourceID::VoxelScreen_hi_data;
+		Handlers::Texture VoxelReflectionNoiseRaw = ResourceID::VoxelReflectionNoiseRaw;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -66,16 +45,9 @@ public:
 			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
-			{ ResourceID::VoxelReflectionNoise, true },
-			{ ResourceID::VoxelReflectionNoiseRaw, true },
-			{ ResourceID::noise_dir_pdf, true },
-			{ ResourceID::sky_cubemap_filtered, false },
-			{ ResourceID::BlueNoise, false },
 			{ ResourceID::VoxelLighted, false },
-			{ ResourceID::VoxelScreen_hi, false },
-			{ ResourceID::VoxelScreen_low, false },
-			{ ResourceID::VoxelScreen_low_data, false },
-			{ ResourceID::VoxelScreen_hi_data, false },
+			{ ResourceID::BlueNoise, false },
+			{ ResourceID::VoxelReflectionNoiseRaw, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

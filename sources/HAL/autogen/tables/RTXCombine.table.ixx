@@ -18,8 +18,6 @@ export namespace Table
 	struct RTXCombine
 	{
 		static constexpr SlotID ID = SlotID::RTXCombine;
-		uint unpack_indirect;
-		uint unpack_reflection;
 		HLSL::Texture2D<float4> reflection;
 		HLSL::Texture2D<float4> indirect;
 		HLSL::Texture2D<float4> shadow;
@@ -29,15 +27,11 @@ export namespace Table
 		HLSL::Texture2D<float4>& GetIndirect() { return indirect; }
 		HLSL::Texture2D<float4>& GetShadow() { return shadow; }
 		HLSL::RWTexture2D<float4>& GetTarget() { return target; }
-		uint& GetUnpack_indirect() { return unpack_indirect; }
-		uint& GetUnpack_reflection() { return unpack_reflection; }
 		GBuffer& GetGbuffer() { return gbuffer; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-			compiler.compile(unpack_indirect, "RTXCombine::unpack_indirect");
-			compiler.compile(unpack_reflection, "RTXCombine::unpack_reflection");
 			compiler.compile(reflection, "RTXCombine::reflection");
 			compiler.compile(indirect, "RTXCombine::indirect");
 			compiler.compile(shadow, "RTXCombine::shadow");
@@ -46,8 +40,6 @@ export namespace Table
 		}
 		struct Compiled
 		{
-			uint unpack_indirect; // uint
-			uint unpack_reflection; // uint
 			uint reflection; // Texture2D<float4>
 			uint indirect; // Texture2D<float4>
 			uint shadow; // Texture2D<float4>
@@ -59,8 +51,6 @@ export namespace Table
 			SERIALIZE()
 			{
 				ar& NVP(gbuffer);
-				ar& NVP(unpack_indirect);
-				ar& NVP(unpack_reflection);
 			}
 
 
@@ -74,8 +64,6 @@ export namespace Table
 		SERIALIZE()
 		{
 			ar& NVP(gbuffer);
-			ar& NVP(unpack_indirect);
-			ar& NVP(unpack_reflection);
 		}
 
 	};
