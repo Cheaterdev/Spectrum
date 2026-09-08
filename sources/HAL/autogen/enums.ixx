@@ -297,6 +297,7 @@ export
 		VoxelOutput = "VoxelOutput"_crc32,
 		IndirectRTXHalfGBuffer = "IndirectRTXHalfGBuffer"_crc32,
 		IndirectRTXUpscale = "IndirectRTXUpscale"_crc32,
+		ReflectionRTXUpscale = "ReflectionRTXUpscale"_crc32,
 		VoxelUpscale = "VoxelUpscale"_crc32,
 		VoxelVisibility = "VoxelVisibility"_crc32,
 		VoxelMipMap = "VoxelMipMap"_crc32,

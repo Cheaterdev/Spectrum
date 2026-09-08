@@ -18,6 +18,7 @@ export {
 #include "Shadow.h"
 #include "ShadowRTX.h"
 #include "ReflectionRTX.h"
+#include "ReflectionRTXHalf.h"
 #include "Reflection.h"
 #include "IndirectRTX.h"
 #include "IndirectRTXHalf.h"
@@ -27,7 +28,7 @@ export {
 #include "ColorPass.h"
 #include "ColorShadowPass.h"
 
-struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass, ColorShadowPass>, Typelist<Shadow, ShadowRTX, ReflectionRTX, Reflection, IndirectRTX, IndirectRTXHalf, Indirect, ColorRTX>>
+struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass, ColorShadowPass>, Typelist<Shadow, ShadowRTX, ReflectionRTX, ReflectionRTXHalf, Reflection, IndirectRTX, IndirectRTXHalf, Indirect, ColorRTX>>
 {
 	using RTXPSO::RTXPSO;
 	static const constexpr Layouts global_sig = Layouts::DefaultLayout;

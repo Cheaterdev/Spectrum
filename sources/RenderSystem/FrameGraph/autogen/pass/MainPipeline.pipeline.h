@@ -20,6 +20,7 @@
 #include "ResultCreation.h"
 #include "GBufferDownsampler.h"
 #include "NormalRoughnessRepack.h"
+#include "ReflectionRTXHalf.h"
 #include "ReflectionRTX.h"
 #include "ShadowRTX.h"
 #include "IndirectRTXHalf.h"
@@ -99,6 +100,7 @@ public:
 		Passes::ResultCreation::Name.ptr,
 		Passes::GBufferDownsampler::Name.ptr,
 		Passes::NormalRoughnessRepack::Name.ptr,
+		Passes::ReflectionRTXHalf::Name.ptr,
 		Passes::ReflectionRTX::Name.ptr,
 		Passes::ShadowRTX::Name.ptr,
 		Passes::IndirectRTXHalf::Name.ptr,
@@ -177,8 +179,13 @@ public:
 		L"TileClassifyLow",
 		L"TileClassifyMask",
 		L"TileClassifyTiles",
+		L"TileRoughnessHi",
+		L"TileRoughnessLow",
+		L"TileRoughnessTiles",
 		L"NormalRoughness",
 		L"SpecularAlbedo",
+		L"RTXReflectionNoiseHalf",
+		L"RTXReflectionDirPdfHalf",
 		L"RTXReflectionNoise",
 		L"RTXReflectionDirPdf",
 		L"RTXShadowNoise",
@@ -233,6 +240,7 @@ public:
 	};
 	static inline const FrameGraph::PassRef BlueNoise_c0_pass_refs[] = {
 		{ PassID::BlueNoise, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::IndirectRTXHalf, 0 },
 		{ PassID::IndirectRTX, 0 },
@@ -244,7 +252,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState BlueNoise_c0_states[] = {
 		{ true, { BlueNoise_c0_pass_refs + 0, 1 } },
-		{ false, { BlueNoise_c0_pass_refs + 1, 8 } },
+		{ false, { BlueNoise_c0_pass_refs + 1, 9 } },
 	};
 	static inline const FrameGraph::PassRef VoxelAlbedo_c0_pass_refs[] = {
 		{ PassID::Voxelize, 0 },
@@ -717,20 +725,29 @@ public:
 		{ PassID::CubeMapDownsample, 0 },
 		{ PassID::CubeMapEnviromentProcessor, 0 },
 		{ PassID::Lighting, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
+		{ PassID::IndirectRTXHalf, 0 },
+		{ PassID::IndirectRTX, 0 },
 		{ PassID::RTXColorPass, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_c0_states[] = {
 		{ false, { sky_cubemap_filtered_c0_pass_refs + 0, 1 } },
 		{ true, { sky_cubemap_filtered_c0_pass_refs + 1, 1 } },
-		{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 2 } },
+		{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 6 } },
 	};
 	static inline const FrameGraph::PassRef sky_cubemap_filtered_diffuse_c0_pass_refs[] = {
 		{ PassID::CubeMapDownsample, 0 },
 		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
+		{ PassID::IndirectRTXHalf, 0 },
+		{ PassID::IndirectRTX, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_diffuse_c0_states[] = {
 		{ false, { sky_cubemap_filtered_diffuse_c0_pass_refs + 0, 1 } },
 		{ true, { sky_cubemap_filtered_diffuse_c0_pass_refs + 1, 1 } },
+		{ false, { sky_cubemap_filtered_diffuse_c0_pass_refs + 2, 4 } },
 	};
 	static inline const FrameGraph::PassRef VoxelLighted_c0_pass_refs[] = {
 		{ PassID::Lighting, 0 },
@@ -784,19 +801,21 @@ public:
 	};
 	static inline const FrameGraph::PassRef GBuffer_HalfDepth_c0_pass_refs[] = {
 		{ PassID::GBufferDownsampler, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
 		{ PassID::IndirectRTXHalf, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HalfDepth_c0_states[] = {
 		{ true, { GBuffer_HalfDepth_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_HalfDepth_c0_pass_refs + 1, 1 } },
+		{ false, { GBuffer_HalfDepth_c0_pass_refs + 1, 2 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HalfNormals_c0_pass_refs[] = {
 		{ PassID::GBufferDownsampler, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
 		{ PassID::IndirectRTXHalf, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HalfNormals_c0_states[] = {
 		{ true, { GBuffer_HalfNormals_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_HalfNormals_c0_pass_refs + 1, 1 } },
+		{ false, { GBuffer_HalfNormals_c0_pass_refs + 1, 2 } },
 	};
 	static inline const FrameGraph::PassRef TileClassifyHi_c0_pass_refs[] = {
 		{ PassID::GBufferDownsampler, 0 },
@@ -818,11 +837,32 @@ public:
 	};
 	static inline const FrameGraph::PassRef TileClassifyTiles_c0_pass_refs[] = {
 		{ PassID::GBufferDownsampler, 0 },
+		{ PassID::ReflectionRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState TileClassifyTiles_c0_states[] = {
 		{ true, { TileClassifyTiles_c0_pass_refs + 0, 1 } },
-		{ false, { TileClassifyTiles_c0_pass_refs + 1, 1 } },
+		{ false, { TileClassifyTiles_c0_pass_refs + 1, 2 } },
+	};
+	static inline const FrameGraph::PassRef TileRoughnessHi_c0_pass_refs[] = {
+		{ PassID::GBufferDownsampler, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState TileRoughnessHi_c0_states[] = {
+		{ true, { TileRoughnessHi_c0_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef TileRoughnessLow_c0_pass_refs[] = {
+		{ PassID::GBufferDownsampler, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState TileRoughnessLow_c0_states[] = {
+		{ true, { TileRoughnessLow_c0_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef TileRoughnessTiles_c0_pass_refs[] = {
+		{ PassID::GBufferDownsampler, 0 },
+		{ PassID::ReflectionRTX, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState TileRoughnessTiles_c0_states[] = {
+		{ true, { TileRoughnessTiles_c0_pass_refs + 0, 1 } },
+		{ false, { TileRoughnessTiles_c0_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef NormalRoughness_c0_pass_refs[] = {
 		{ PassID::NormalRoughnessRepack, 0 },
@@ -839,6 +879,22 @@ public:
 	static inline const FrameGraph::PrecompiledState SpecularAlbedo_c0_states[] = {
 		{ true, { SpecularAlbedo_c0_pass_refs + 0, 1 } },
 		{ false, { SpecularAlbedo_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef RTXReflectionNoiseHalf_c0_pass_refs[] = {
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState RTXReflectionNoiseHalf_c0_states[] = {
+		{ true, { RTXReflectionNoiseHalf_c0_pass_refs + 0, 1 } },
+		{ false, { RTXReflectionNoiseHalf_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef RTXReflectionDirPdfHalf_c0_pass_refs[] = {
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState RTXReflectionDirPdfHalf_c0_states[] = {
+		{ true, { RTXReflectionDirPdfHalf_c0_pass_refs + 0, 1 } },
+		{ false, { RTXReflectionDirPdfHalf_c0_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef RTXReflectionNoise_c0_pass_refs[] = {
 		{ PassID::ReflectionRTX, 0 },
@@ -1158,8 +1214,13 @@ public:
 		{ ResourceID::TileClassifyLow, 0, TileClassifyLow_c0_states },
 		{ ResourceID::TileClassifyMask, 0, TileClassifyMask_c0_states },
 		{ ResourceID::TileClassifyTiles, 0, TileClassifyTiles_c0_states },
+		{ ResourceID::TileRoughnessHi, 0, TileRoughnessHi_c0_states },
+		{ ResourceID::TileRoughnessLow, 0, TileRoughnessLow_c0_states },
+		{ ResourceID::TileRoughnessTiles, 0, TileRoughnessTiles_c0_states },
 		{ ResourceID::NormalRoughness, 0, NormalRoughness_c0_states },
 		{ ResourceID::SpecularAlbedo, 0, SpecularAlbedo_c0_states },
+		{ ResourceID::RTXReflectionNoiseHalf, 0, RTXReflectionNoiseHalf_c0_states },
+		{ ResourceID::RTXReflectionDirPdfHalf, 0, RTXReflectionDirPdfHalf_c0_states },
 		{ ResourceID::RTXReflectionNoise, 0, RTXReflectionNoise_c0_states },
 		{ ResourceID::RTXReflectionDirPdf, 0, RTXReflectionDirPdf_c0_states },
 		{ ResourceID::RTXShadowNoise, 0, RTXShadowNoise_c0_states },
@@ -1228,9 +1289,18 @@ public:
 	static inline const FrameGraph::PassRef NormalRoughnessRepack_0_prev[] = {
 		{ PassID::Scene, 0 },
 	};
+	static inline const FrameGraph::PassRef ReflectionRTXHalf_0_prev[] = {
+		{ PassID::BlueNoise, 0 },
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::GBufferDownsampler, 0 },
+	};
 	static inline const FrameGraph::PassRef ReflectionRTX_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
 		{ PassID::GBufferDownsampler, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
 		{ PassID::Scene, 0 },
 	};
 	static inline const FrameGraph::PassRef ShadowRTX_0_prev[] = {
@@ -1239,10 +1309,14 @@ public:
 	};
 	static inline const FrameGraph::PassRef IndirectRTXHalf_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
 		{ PassID::GBufferDownsampler, 0 },
 	};
 	static inline const FrameGraph::PassRef IndirectRTX_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
 		{ PassID::GBufferDownsampler, 0 },
 		{ PassID::IndirectRTXHalf, 0 },
 		{ PassID::Scene, 0 },
@@ -1453,6 +1527,7 @@ public:
 		{ PassID::ResultCreation, 0, false, {} },
 		{ PassID::GBufferDownsampler, 0, false, GBufferDownsampler_0_prev },
 		{ PassID::NormalRoughnessRepack, 0, false, NormalRoughnessRepack_0_prev },
+		{ PassID::ReflectionRTXHalf, 0, true, ReflectionRTXHalf_0_prev },
 		{ PassID::ReflectionRTX, 0, true, ReflectionRTX_0_prev },
 		{ PassID::ShadowRTX, 0, true, ShadowRTX_0_prev },
 		{ PassID::IndirectRTXHalf, 0, true, IndirectRTXHalf_0_prev },
@@ -1526,6 +1601,7 @@ public:
 		graph.add_library_pass<Passes::GBufferDownsampler>(PassDefault<Passes::GBufferDownsampler>::setup, PassDefault<Passes::GBufferDownsampler>::render, (PassDefault<Passes::GBufferDownsampler>::flags & ~FrameGraph::PassFlags::Compute));
 		if (normalRoughnessRepack.setup_func)
 			graph.add_library_pass<Passes::NormalRoughnessRepack>(normalRoughnessRepack.setup_func, normalRoughnessRepack.render_func, (normalRoughnessRepack.flags));
+		graph.add_library_pass<Passes::ReflectionRTXHalf>(PassDefault<Passes::ReflectionRTXHalf>::setup, PassDefault<Passes::ReflectionRTXHalf>::render, (PassDefault<Passes::ReflectionRTXHalf>::flags));
 		graph.add_library_pass<Passes::ReflectionRTX>(PassDefault<Passes::ReflectionRTX>::setup, PassDefault<Passes::ReflectionRTX>::render, (PassDefault<Passes::ReflectionRTX>::flags));
 		graph.add_library_pass<Passes::ShadowRTX>(PassDefault<Passes::ShadowRTX>::setup, PassDefault<Passes::ShadowRTX>::render, (PassDefault<Passes::ShadowRTX>::flags));
 		graph.add_library_pass<Passes::IndirectRTXHalf>(PassDefault<Passes::IndirectRTXHalf>::setup, PassDefault<Passes::IndirectRTXHalf>::render, (PassDefault<Passes::IndirectRTXHalf>::flags));

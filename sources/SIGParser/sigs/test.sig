@@ -57,6 +57,7 @@ Pipeline MainPipeline
 	# GBuffer directly.
 	GBufferDownsampler;
 	[Async]NormalRoughnessRepack;
+	[Async]ReflectionRTXHalf;
 	[Async]ReflectionRTX;
 	[Async]ShadowRTX;
 	[Async]IndirectRTXHalf;

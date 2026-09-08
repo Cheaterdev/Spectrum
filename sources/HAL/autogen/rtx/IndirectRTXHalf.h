@@ -8,7 +8,7 @@
 
 struct IndirectRTXHalf: public RaytraceRaygen<IndirectRTXHalf>
 {
-	static const constexpr uint ID = 5;
+	static const constexpr uint ID = 6;
 	static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
 	static const constexpr std::wstring_view raygen = L"MyRaygenShaderIndirectRTXHalfRes";
 };

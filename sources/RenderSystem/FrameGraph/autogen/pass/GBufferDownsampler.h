@@ -37,6 +37,15 @@ public:
 
 		Handlers::Texture TileClassifyTiles = ResourceID::TileClassifyTiles;
 
+
+		Handlers::StructuredBuffer<uint2> TileRoughnessHi = ResourceID::TileRoughnessHi;
+
+
+		Handlers::StructuredBuffer<uint2> TileRoughnessLow = ResourceID::TileRoughnessLow;
+
+
+		Handlers::Texture TileRoughnessTiles = ResourceID::TileRoughnessTiles;
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
@@ -60,6 +69,9 @@ public:
 			{ ResourceID::TileClassifyLow, true },
 			{ ResourceID::TileClassifyMask, true },
 			{ ResourceID::TileClassifyTiles, true },
+			{ ResourceID::TileRoughnessHi, true },
+			{ ResourceID::TileRoughnessLow, true },
+			{ ResourceID::TileRoughnessTiles, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

@@ -6,27 +6,26 @@
 // ============================================================================
 #pragma once
 #include "../PassNodeBase.h"
-#include "GBuffer.h"
+
 using namespace FrameGraph;
 
 namespace Passes
 {
 
-class IndirectRTX : public PassNodeBase
+class ReflectionRTXHalf : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
-		GBuffer gbuffer;
+
+		Handlers::Texture GBuffer_HalfDepth = ResourceID::GBuffer_HalfDepth;
+
+
+		Handlers::Texture GBuffer_HalfNormals = ResourceID::GBuffer_HalfNormals;
+
 
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
-
-
-		Handlers::Texture RTXIndirectNoiseHalf = ResourceID::RTXIndirectNoiseHalf;
-
-
-		Handlers::Texture TileClassifyTiles = ResourceID::TileClassifyTiles;
 
 
 		Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
@@ -35,31 +34,22 @@ public:
 		Handlers::TextureCube sky_cubemap_filtered_diffuse = ResourceID::sky_cubemap_filtered_diffuse;
 
 
-		Handlers::Texture RTXIndirectNoise = ResourceID::RTXIndirectNoise;
+		Handlers::Texture RTXReflectionNoiseHalf = ResourceID::RTXReflectionNoiseHalf;
+
+
+		Handlers::Texture RTXReflectionDirPdfHalf = ResourceID::RTXReflectionDirPdfHalf;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::GBuffer_Albedo, false },
-			{ ResourceID::GBuffer_Normals, false },
-			{ ResourceID::GBuffer_Depth, false },
-			{ ResourceID::GBuffer_Specular, false },
-			{ ResourceID::GBuffer_Speed, false },
-			{ ResourceID::GBuffer_DepthMips, false },
-			{ ResourceID::GBuffer_Quality, false },
-			{ ResourceID::GBuffer_TempColor, false },
-			{ ResourceID::GBuffer_NormalsPrev, false },
-			{ ResourceID::GBuffer_SpecularPrev, false },
-			{ ResourceID::GBuffer_DepthPrev, false },
-			{ ResourceID::GBuffer_HiZ, false },
-			{ ResourceID::GBuffer_HiZ_UAV, false },
+			{ ResourceID::GBuffer_HalfDepth, false },
+			{ ResourceID::GBuffer_HalfNormals, false },
 			{ ResourceID::BlueNoise, false },
-			{ ResourceID::RTXIndirectNoiseHalf, false },
-			{ ResourceID::TileClassifyTiles, false },
 			{ ResourceID::sky_cubemap_filtered, false },
 			{ ResourceID::sky_cubemap_filtered_diffuse, false },
-			{ ResourceID::RTXIndirectNoise, true },
+			{ ResourceID::RTXReflectionNoiseHalf, true },
+			{ ResourceID::RTXReflectionDirPdfHalf, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -70,9 +60,9 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"IndirectRTX"};
+	static constexpr LiteralWStr Name{L"ReflectionRTXHalf"};
 
-	static constexpr PassID ID = PassID::IndirectRTX;
+	static constexpr PassID ID = PassID::ReflectionRTXHalf;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;

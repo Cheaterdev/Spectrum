@@ -55,6 +55,7 @@ export
 		Library::UpscalingDLSSRR UpscalingDLSSRR;
 		Library::GBufferDownsampler GBufferDownsampler;
 		Library::VoxelDebug VoxelDebug;
+		Library::ReflectionRTXHalf ReflectionRTXHalf;
 		Library::ReflectionRTX ReflectionRTX;
 		Library::ShadowRTX ShadowRTX;
 		Library::IndirectRTXHalf IndirectRTXHalf;

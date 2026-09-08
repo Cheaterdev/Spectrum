@@ -101,6 +101,31 @@ struct IndirectRTXUpscale
 	Texture2D<uint> tileFlags;
 }
 
+# Read-side inputs for MyRaygenShaderReflectionRTXOnly's Low-tile shortcut --
+# sibling of IndirectRTXUpscale, with a second half-res texture (dirPdfHalf,
+# ReflectionRTX's own extra output) and a second tile-flag texture: this
+# pixel is only skipped when BOTH the geometric tile (tileFlags,
+# TileClassifyData's tile_flags) AND the roughness/metallic tile
+# (roughnessTileFlags, TileClassifyData's tile_roughness_flags) say Low --
+# either one alone forces a fresh trace, since a geometric edge makes the
+# half-res buffer untrustworthy regardless of material, and a glossy+
+# metallic surface needs real detail regardless of how flat it is.
+#
+# Instance5 -- raytracing.hlsl now has one struct per DefaultLayout instance
+# slot (0-5, VoxelInfo/VoxelScreen/VoxelOutput/IndirectRTXUpscale/
+# IndirectRTXHalfGBuffer/this), all six spoken for; a future addition to
+# this file needs to fold into an existing struct rather than declare a new
+# one (see IndirectRTXHalfGBuffer's own comment for why co-included structs
+# can't share an instance).
+[Bind = DefaultLayout::Instance5]
+struct ReflectionRTXUpscale
+{
+	Texture2D<float4> noiseHalf;
+	Texture2D<float4> dirPdfHalf;
+	Texture2D<uint> tileFlags;
+	Texture2D<uint> roughnessTileFlags;
+}
+
 [Bind = DefaultLayout::Instance2]
 struct VoxelUpscale
 {
@@ -310,6 +335,10 @@ PassNode GBufferDownsampler
 
 	[Write] Texture TileClassifyMask;
 	[Write] Texture TileClassifyTiles;
+
+	[Write] StructuredBuffer<uint2> TileRoughnessHi;
+	[Write] StructuredBuffer<uint2> TileRoughnessLow;
+	[Write] Texture TileRoughnessTiles;
 }
 
 PassNode VoxelDebug
@@ -317,6 +346,29 @@ PassNode VoxelDebug
 	GBuffer gbuffer;
 	[Write] Texture VoxelDebug;
 	Texture3D VoxelLighted;
+}
+
+# Always-on cheap base layer for ReflectionRTX's Low-tile pixels -- sibling
+# of IndirectRTXHalf. Same trace as ReflectionRTX's Hi-tile path, over
+# GBuffer_HalfDepth/HalfNormals.
+[Static]
+[Compute]
+PassNode ReflectionRTXHalf
+{
+	Texture GBuffer_HalfDepth;
+	Texture GBuffer_HalfNormals;
+	Texture BlueNoise;
+	# Read-only, never bound through this PassNode's own Slots:: struct --
+	# purely to force CubeMapEnviromentProcessor to run before this pass, so
+	# FrameInfo.GetSky() (a separate global slot, sampled by the miss shader
+	# via TraceReflection -> ColorPass) is actually populated instead of
+	# reading an unbound/null cubemap. Same pattern RTXColorPass already
+	# uses for its own miss shader, see its comment (this file).
+	TextureCube sky_cubemap_filtered;
+	TextureCube sky_cubemap_filtered_diffuse;
+
+	[Write] Texture RTXReflectionNoiseHalf;
+	[Write] Texture RTXReflectionDirPdfHalf;
 }
 
 # Reflection reference signal for both RTXCombine (DLSS-RR) and ReflCombine
@@ -327,12 +379,23 @@ PassNode VoxelDebug
 # the only reflection denoiser now. [Static]: nothing here is VoxelGI-private
 # -- gated purely on RTX support and DLSS-RR availability, both globally
 # accessible.
+#
+# Tile-classified like IndirectRTX (see its own comment above), gated on
+# BOTH the geometric tile flag AND the roughness/metallic tile flag -- see
+# ReflectionRTXUpscale's own comment for why both matter here specifically.
 [Static]
 [Compute]
 PassNode ReflectionRTX
 {
 	GBuffer gbuffer;
 	Texture BlueNoise;
+	Texture RTXReflectionNoiseHalf;
+	Texture RTXReflectionDirPdfHalf;
+	Texture TileClassifyTiles;
+	Texture TileRoughnessTiles;
+	# See ReflectionRTXHalf's own comment on the same two fields.
+	TextureCube sky_cubemap_filtered;
+	TextureCube sky_cubemap_filtered_diffuse;
 
 	[Write] Texture RTXReflectionNoise;
 	[Write] Texture RTXReflectionDirPdf;
@@ -365,6 +428,9 @@ PassNode IndirectRTXHalf
 	Texture GBuffer_HalfDepth;
 	Texture GBuffer_HalfNormals;
 	Texture BlueNoise;
+	# See ReflectionRTXHalf's own comment on the same two fields.
+	TextureCube sky_cubemap_filtered;
+	TextureCube sky_cubemap_filtered_diffuse;
 
 	[Write] Texture RTXIndirectNoiseHalf;
 }
@@ -389,6 +455,9 @@ PassNode IndirectRTX
 	Texture BlueNoise;
 	Texture RTXIndirectNoiseHalf;
 	Texture TileClassifyTiles;
+	# See ReflectionRTXHalf's own comment on the same two fields.
+	TextureCube sky_cubemap_filtered;
+	TextureCube sky_cubemap_filtered_diffuse;
 
 	[Write] Texture RTXIndirectNoise;
 }

@@ -225,7 +225,32 @@ bool PassDefault<Passes::GBufferDownsampler>::setup(
 	builder.create(data.TileClassifyTiles,
 		{ ivec3((int)tiles_count.x, (int)tiles_count.y, 0), HAL::Format::R8_UINT, 1, 1 }, ResourceFlags::UnorderedAccess);
 
+	builder.create(data.TileRoughnessHi,  { max_tiles, true }, ResourceFlags::UnorderedAccess);
+	builder.create(data.TileRoughnessLow, { max_tiles, true }, ResourceFlags::UnorderedAccess);
+	builder.create(data.TileRoughnessTiles,
+		{ ivec3((int)tiles_count.x, (int)tiles_count.y, 0), HAL::Format::R8_UINT, 1, 1 }, ResourceFlags::UnorderedAccess);
+
 	return true;
+}
+
+namespace
+{
+	// Free-standing (GBufferDownsampler is a stateless [Static] PassDefault,
+	// not a VariableContext-derived object) -- Meyer's-singleton VariableContext
+	// so these attach under a stable, named GUI node regardless of static
+	// init order across translation units (see VariableContext::create's own
+	// comment for why this is the sanctioned way to get one outside a class
+	// that derives it).
+	VariableContext& tile_classify_context()
+	{
+		static auto ctx = VariableContext::create(L"Tile Classify");
+		return *ctx;
+	}
+
+	// Pure eyeball-tuned values -- see TileClassifyData's own comment
+	// (pssm.sig) for what they gate.
+	Variable<float> g_roughness_threshold = { 0.5f,  "Reflection roughness threshold", &tile_classify_context(), 0.0f, 1.0f };
+	Variable<float> g_metallic_threshold  = { 0.05f, "Reflection metallic threshold",  &tile_classify_context(), 0.0f, 1.0f };
 }
 
 void PassDefault<Passes::GBufferDownsampler>::render(
@@ -255,6 +280,8 @@ void PassDefault<Passes::GBufferDownsampler>::render(
 		context.graph->set_slot(SlotID::FrameInfo, compute);
 		compute.clear_counter(*data.TileClassifyHi);
 		compute.clear_counter(*data.TileClassifyLow);
+		compute.clear_counter(*data.TileRoughnessHi);
+		compute.clear_counter(*data.TileRoughnessLow);
 
 		{
 			Slots::TileClassifyData params;
@@ -265,6 +292,12 @@ void PassDefault<Passes::GBufferDownsampler>::render(
 			params.GetTile_low()     = data.TileClassifyLow->appendStructuredBuffer;
 			params.GetTile_mask()    = data.TileClassifyMask->rwTexture2D;
 			params.GetTile_flags()   = data.TileClassifyTiles->rwTexture2D;
+
+			params.GetTile_roughness_hi()    = data.TileRoughnessHi->appendStructuredBuffer;
+			params.GetTile_roughness_low()   = data.TileRoughnessLow->appendStructuredBuffer;
+			params.GetTile_roughness_flags() = data.TileRoughnessTiles->rwTexture2D;
+			params.GetRoughness_threshold()  = g_roughness_threshold;
+			params.GetMetallic_threshold()   = g_metallic_threshold;
 			compute.set(params);
 		}
 

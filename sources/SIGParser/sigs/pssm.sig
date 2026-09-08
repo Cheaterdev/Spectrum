@@ -28,6 +28,26 @@ struct TileClassifyData
 
 	RWTexture2D<uint> tile_mask;
 	RWTexture2D<uint> tile_flags;
+
+	# Second, independent tile axis: is this tile worth a full-res *specular*
+	# trace, as opposed to the geometric edge test above. A tile only
+	# qualifies if it has some pixel glossy enough to show sharp reflection
+	# detail (min roughness below roughness_threshold) AND that same
+	# material actually reflects enough to matter (max metallic above
+	# metallic_threshold) -- a smooth but fully dielectric tile still reads
+	# Low here, since its traced result gets multiplied toward zero
+	# downstream regardless of how sharp it is. Same compacted-list +
+	# point-queryable-texture shape as tile_hi/low/flags, own texture
+	# (tile_roughness_flags) rather than packed bits so a consumer that only
+	# cares about one axis doesn't need to know about the other's encoding.
+	AppendStructuredBuffer<uint2> tile_roughness_hi;
+	AppendStructuredBuffer<uint2> tile_roughness_low;
+	RWTexture2D<uint> tile_roughness_flags;
+
+	# Tunable via Variable<float> (VoxelGIGraph.cpp) -- pure eyeball-tuned
+	# values, no principled derivation.
+	float roughness_threshold;
+	float metallic_threshold;
 }
 
 

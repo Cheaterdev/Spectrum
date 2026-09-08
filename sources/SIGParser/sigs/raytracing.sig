@@ -178,6 +178,16 @@ RaytraceRaygen ReflectionRTX
 	raygen = rtx/raytracing;
 }
 
+# Half-res sibling for PassNode ReflectionRTXHalf (voxel.sig) -- same trace
+# logic, shared via TraceReflection() in raytracing.hlsl, just over the
+# half-res GBuffer instead of full res.
+[Bind = MainRTX]
+RaytraceRaygen ReflectionRTXHalf
+{
+	[EntryPoint = MyRaygenShaderReflectionRTXHalfRes]
+	raygen = rtx/raytracing;
+}
+
 # Voxel-cone-traced reflection signal, selectable against ReflectionRTX as
 # NRD's input -- see MyRaygenShaderReflection's doc comment in
 # raytracing.hlsl and PassNode ScreenReflection in voxel.sig.

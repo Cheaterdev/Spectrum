@@ -10,18 +10,28 @@
 #include "GBuffer.h"
 struct TileClassifyData
 {
+	float roughness_threshold; // float
+	float metallic_threshold; // float
 	uint half_depth; // RWTexture2D<float>
 	uint half_normals; // RWTexture2D<float4>
 	uint tile_hi; // AppendStructuredBuffer<uint2>
 	uint tile_low; // AppendStructuredBuffer<uint2>
 	uint tile_mask; // RWTexture2D<uint>
 	uint tile_flags; // RWTexture2D<uint>
+	uint tile_roughness_hi; // AppendStructuredBuffer<uint2>
+	uint tile_roughness_low; // AppendStructuredBuffer<uint2>
+	uint tile_roughness_flags; // RWTexture2D<uint>
 	GBuffer gbuffer; // GBuffer
 	GBuffer GetGbuffer() { return gbuffer; }
+	float GetRoughness_threshold() { return roughness_threshold; }
+	float GetMetallic_threshold() { return metallic_threshold; }
 	RWTexture2D<float> GetHalf_depth() { return ResourceDescriptorHeap[half_depth]; }
 	RWTexture2D<float4> GetHalf_normals() { return ResourceDescriptorHeap[half_normals]; }
 	AppendStructuredBuffer<uint2> GetTile_hi() { return ResourceDescriptorHeap[tile_hi]; }
 	AppendStructuredBuffer<uint2> GetTile_low() { return ResourceDescriptorHeap[tile_low]; }
 	RWTexture2D<uint> GetTile_mask() { return ResourceDescriptorHeap[tile_mask]; }
 	RWTexture2D<uint> GetTile_flags() { return ResourceDescriptorHeap[tile_flags]; }
+	AppendStructuredBuffer<uint2> GetTile_roughness_hi() { return ResourceDescriptorHeap[tile_roughness_hi]; }
+	AppendStructuredBuffer<uint2> GetTile_roughness_low() { return ResourceDescriptorHeap[tile_roughness_low]; }
+	RWTexture2D<uint> GetTile_roughness_flags() { return ResourceDescriptorHeap[tile_roughness_flags]; }
 };

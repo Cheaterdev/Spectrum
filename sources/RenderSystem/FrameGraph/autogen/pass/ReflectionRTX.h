@@ -23,6 +23,24 @@ public:
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
+		Handlers::Texture RTXReflectionNoiseHalf = ResourceID::RTXReflectionNoiseHalf;
+
+
+		Handlers::Texture RTXReflectionDirPdfHalf = ResourceID::RTXReflectionDirPdfHalf;
+
+
+		Handlers::Texture TileClassifyTiles = ResourceID::TileClassifyTiles;
+
+
+		Handlers::Texture TileRoughnessTiles = ResourceID::TileRoughnessTiles;
+
+
+		Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
+
+
+		Handlers::TextureCube sky_cubemap_filtered_diffuse = ResourceID::sky_cubemap_filtered_diffuse;
+
+
 		Handlers::Texture RTXReflectionNoise = ResourceID::RTXReflectionNoise;
 
 
@@ -46,6 +64,12 @@ public:
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
 			{ ResourceID::BlueNoise, false },
+			{ ResourceID::RTXReflectionNoiseHalf, false },
+			{ ResourceID::RTXReflectionDirPdfHalf, false },
+			{ ResourceID::TileClassifyTiles, false },
+			{ ResourceID::TileRoughnessTiles, false },
+			{ ResourceID::sky_cubemap_filtered, false },
+			{ ResourceID::sky_cubemap_filtered_diffuse, false },
 			{ ResourceID::RTXReflectionNoise, true },
 			{ ResourceID::RTXReflectionDirPdf, true },
 		};

@@ -28,6 +28,12 @@ public:
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
+		Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
+
+
+		Handlers::TextureCube sky_cubemap_filtered_diffuse = ResourceID::sky_cubemap_filtered_diffuse;
+
+
 		Handlers::Texture RTXIndirectNoiseHalf = ResourceID::RTXIndirectNoiseHalf;
 
 		// Resources this pass touches, in declaration order, each paired with
@@ -37,6 +43,8 @@ public:
 			{ ResourceID::GBuffer_HalfDepth, false },
 			{ ResourceID::GBuffer_HalfNormals, false },
 			{ ResourceID::BlueNoise, false },
+			{ ResourceID::sky_cubemap_filtered, false },
+			{ ResourceID::sky_cubemap_filtered_diffuse, false },
 			{ ResourceID::RTXIndirectNoiseHalf, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

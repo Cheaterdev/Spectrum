@@ -219,6 +219,17 @@ struct PassDefault<Passes::GBufferDownsampler>
 
 
 template<>
+struct PassDefault<Passes::ReflectionRTXHalf>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	static bool setup(Passes::ReflectionRTXHalf::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::ReflectionRTXHalf::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::ReflectionRTX>
 {
 	static constexpr bool enabled = true;

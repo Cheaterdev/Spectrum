@@ -48,6 +48,7 @@ export import "../defines.h";
 #include "pass/UpscalingDLSSRR.h"
 #include "pass/GBufferDownsampler.h"
 #include "pass/VoxelDebug.h"
+#include "pass/ReflectionRTXHalf.h"
 #include "pass/ReflectionRTX.h"
 #include "pass/ShadowRTX.h"
 #include "pass/IndirectRTXHalf.h"
@@ -111,6 +112,7 @@ export namespace Passes
 	using ::Passes::UpscalingDLSSRR;
 	using ::Passes::GBufferDownsampler;
 	using ::Passes::VoxelDebug;
+	using ::Passes::ReflectionRTXHalf;
 	using ::Passes::ReflectionRTX;
 	using ::Passes::ShadowRTX;
 	using ::Passes::IndirectRTXHalf;

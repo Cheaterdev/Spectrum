@@ -6,9 +6,9 @@
 // ============================================================================
 #pragma once
 
-struct Indirect: public RaytraceRaygen<Indirect>
+struct ReflectionRTXHalf: public RaytraceRaygen<ReflectionRTXHalf>
 {
-	static const constexpr uint ID = 7;
+	static const constexpr uint ID = 3;
 	static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
-	static const constexpr std::wstring_view raygen = L"MyRaygenShader";
+	static const constexpr std::wstring_view raygen = L"MyRaygenShaderReflectionRTXHalfRes";
 };

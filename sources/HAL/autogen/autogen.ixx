@@ -258,6 +258,8 @@ export import :Autogen.Slots.IndirectRTXHalfGBuffer;
 export import :Autogen.Tables.IndirectRTXHalfGBuffer;
 export import :Autogen.Slots.IndirectRTXUpscale;
 export import :Autogen.Tables.IndirectRTXUpscale;
+export import :Autogen.Slots.ReflectionRTXUpscale;
+export import :Autogen.Tables.ReflectionRTXUpscale;
 export import :Autogen.Slots.VoxelUpscale;
 export import :Autogen.Tables.VoxelUpscale;
 export import :Autogen.Slots.VoxelVisibility;

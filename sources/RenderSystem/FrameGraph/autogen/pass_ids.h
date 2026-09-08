@@ -45,6 +45,7 @@ namespace FrameGraph
 		UpscalingDLSSRR,
 		GBufferDownsampler,
 		VoxelDebug,
+		ReflectionRTXHalf,
 		ReflectionRTX,
 		ShadowRTX,
 		IndirectRTXHalf,

@@ -28,7 +28,10 @@ static const GBuffer gbuffer = params.GetGbuffer();
 
 groupshared float  g_depth[64];
 groupshared float4 g_normal[64];   // xyz = decoded normal, w = roughness
+groupshared float  g_metallic[64];
 groupshared float  g_blockDepth[16];
+groupshared float  g_blockRoughness[16];
+groupshared float  g_blockMetallic[16];
 
 [numthreads(8, 8, 1)]
 void CS(
@@ -44,9 +47,12 @@ void CS(
 
     float  depth      = gbuffer.GetDepth()[pix];
     float4 normal_raw = gbuffer.GetNormals()[pix];
+    // .w = metallic (universal_material.hlsl: result.albedo = float4(albedo.rgb, metallic)).
+    float  metallic   = gbuffer.GetAlbedo()[pix].w;
 
-    g_depth[groupIndex]  = depth;
-    g_normal[groupIndex] = float4(normalize(normal_raw.xyz * 2 - 1), normal_raw.w);
+    g_depth[groupIndex]    = depth;
+    g_normal[groupIndex]   = float4(normalize(normal_raw.xyz * 2 - 1), normal_raw.w);
+    g_metallic[groupIndex] = metallic;
 
     GroupMemoryBarrierWithGroupSync();
 
@@ -65,13 +71,19 @@ void CS(
 
         float  d   = g_depth[i00];
         float4 n   = g_normal[i00];
+        float  m   = g_metallic[i00];
 
-        // reversed-Z: closest surface = max depth value.
-        if (g_depth[i10] > d) { d = g_depth[i10]; n = g_normal[i10]; }
-        if (g_depth[i01] > d) { d = g_depth[i01]; n = g_normal[i01]; }
-        if (g_depth[i11] > d) { d = g_depth[i11]; n = g_normal[i11]; }
+        // reversed-Z: closest surface = max depth value. Metallic rides
+        // along with whichever sample wins, same "real sample, never an
+        // average" rule as depth/normal.
+        if (g_depth[i10] > d) { d = g_depth[i10]; n = g_normal[i10]; m = g_metallic[i10]; }
+        if (g_depth[i01] > d) { d = g_depth[i01]; n = g_normal[i01]; m = g_metallic[i01]; }
+        if (g_depth[i11] > d) { d = g_depth[i11]; n = g_normal[i11]; m = g_metallic[i11]; }
 
-        g_blockDepth[block.y * 4 + block.x] = d;
+        uint blockIdx = block.y * 4 + block.x;
+        g_blockDepth[blockIdx]      = d;
+        g_blockRoughness[blockIdx]  = n.w;
+        g_blockMetallic[blockIdx]   = m;
 
         uint2 half_pix = groupID.xy * 4 + block;
         if (all(half_pix < half_dims))
@@ -87,17 +99,21 @@ void CS(
     float block_depth = g_blockDepth[block.y * 4 + block.x];
     params.GetTile_mask()[pix] = (abs(depth - block_depth) > PIXEL_DEPTH_EDGE_THRESHOLD) ? 1 : 0;
 
-    // Tile classification: one thread reduces the 16 block depths.
+    // Tile classification: one thread reduces the 16 blocks.
     if (groupIndex == 0)
     {
         float mind = g_blockDepth[0];
         float maxd = g_blockDepth[0];
+        float min_roughness = g_blockRoughness[0];
+        float max_metallic  = g_blockMetallic[0];
 
         [unroll]
         for (uint i = 1; i < 16; i++)
         {
             mind = min(mind, g_blockDepth[i]);
             maxd = max(maxd, g_blockDepth[i]);
+            min_roughness = min(min_roughness, g_blockRoughness[i]);
+            max_metallic  = max(max_metallic,  g_blockMetallic[i]);
         }
 
         uint hi = (maxd - mind > TILE_DEPTH_EDGE_THRESHOLD) ? 1 : 0;
@@ -110,5 +126,18 @@ void CS(
         // just wants "is my tile Hi" without indirect-dispatch machinery
         // (IndirectRTX's raygen -- see its own comment, voxel.sig).
         params.GetTile_flags()[groupID.xy] = hi;
+
+        // Second, independent axis: worth a full-res specular trace only if
+        // some pixel is both glossy enough to show detail AND metallic
+        // enough for that detail to survive the downstream multiply (see
+        // TileClassifyData's own comment, pssm.sig).
+        uint roughness_hi = (min_roughness < params.GetRoughness_threshold() &&
+                              max_metallic  > params.GetMetallic_threshold()) ? 1 : 0;
+        if (roughness_hi)
+            params.GetTile_roughness_hi().Append(groupID.xy);
+        else
+            params.GetTile_roughness_low().Append(groupID.xy);
+
+        params.GetTile_roughness_flags()[groupID.xy] = roughness_hi;
     }
 }

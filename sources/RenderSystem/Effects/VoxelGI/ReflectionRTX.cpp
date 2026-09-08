@@ -12,6 +12,63 @@ using namespace HAL;
 
 #ifdef HAL_BACKEND_D3D12
 
+bool PassDefault<Passes::ReflectionRTXHalf>::setup(
+	Passes::ReflectionRTXHalf::Context& data, TaskBuilder& builder)
+{
+	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
+		return false;
+
+	auto& frame     = builder.graph->get_context<ViewportInfo>();
+	ivec2 half_size = { (frame.frame_size.x + 1) / 2, (frame.frame_size.y + 1) / 2 };
+
+	builder.create(data.RTXReflectionNoiseHalf,
+		{ ivec3(half_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+	builder.create(data.RTXReflectionDirPdfHalf,
+		{ ivec3(half_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+	builder.need(data.BlueNoise,           ResourceFlags::ComputeRead);
+	builder.need(data.GBuffer_HalfDepth,   ResourceFlags::ComputeRead);
+	builder.need(data.GBuffer_HalfNormals, ResourceFlags::ComputeRead);
+	// Never bound through this pass's own Slots:: struct -- forces
+	// CubeMapEnviromentProcessor to run so FrameInfo.GetSky() (sampled by
+	// TraceReflection's miss shader) is actually populated. See this
+	// field's own comment, voxel.sig.
+	builder.need(data.sky_cubemap_filtered,         ResourceFlags::ComputeRead);
+	builder.need(data.sky_cubemap_filtered_diffuse, ResourceFlags::ComputeRead);
+	return true;
+}
+
+void PassDefault<Passes::ReflectionRTXHalf>::render(
+	Passes::ReflectionRTXHalf::Context& data, FrameContext& context)
+{
+	auto noisy_output = *data.RTXReflectionNoiseHalf;
+	auto dir_and_pdf  = *data.RTXReflectionDirPdfHalf;
+	auto& sceneinfo   = context.graph->get_context<SceneInfo>();
+	auto& compute     = context.get_list()->get_compute();
+
+	compute.set_signature(RTX::get().rtx.m_root_sig);
+	context.graph->set_slot(SlotID::FrameInfo, compute);
+	context.graph->set_slot(SlotID::SceneData, compute);
+
+	{
+		Slots::IndirectRTXHalfGBuffer half_gbuffer;
+		half_gbuffer.GetDepth()   = data.GBuffer_HalfDepth->texture2D;
+		half_gbuffer.GetNormals() = data.GBuffer_HalfNormals->texture2D;
+		compute.set(half_gbuffer);
+	}
+
+	{
+		PROFILE_GPU(L"reflection_rtx_half");
+		{
+			Slots::VoxelOutput output;
+			output.GetNoise()     = noisy_output.rwTexture2D;
+			output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
+			output.GetBlueNoise() = data.BlueNoise->texture2D;
+			compute.set(output);
+		}
+		RTX::get().render<ReflectionRTXHalf>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
+	}
+}
+
 bool PassDefault<Passes::ReflectionRTX>::setup(
 	Passes::ReflectionRTX::Context& data, TaskBuilder& builder)
 {
@@ -30,6 +87,12 @@ bool PassDefault<Passes::ReflectionRTX>::setup(
 	builder.create(data.RTXReflectionDirPdf,
 		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	builder.need(data.BlueNoise, ResourceFlags::ComputeRead);
+	builder.need(data.RTXReflectionNoiseHalf, ResourceFlags::ComputeRead);
+	builder.need(data.RTXReflectionDirPdfHalf, ResourceFlags::ComputeRead);
+	builder.need(data.TileClassifyTiles,   ResourceFlags::ComputeRead);
+	builder.need(data.TileRoughnessTiles,  ResourceFlags::ComputeRead);
+	builder.need(data.sky_cubemap_filtered,         ResourceFlags::ComputeRead);
+	builder.need(data.sky_cubemap_filtered_diffuse, ResourceFlags::ComputeRead);
 	GBufferViewDesc::need(builder, data.gbuffer);
 	return true;
 }
@@ -66,6 +129,15 @@ void PassDefault<Passes::ReflectionRTX>::render(
 	}
 
 	{
+		Slots::ReflectionRTXUpscale upscale;
+		upscale.GetNoiseHalf()          = data.RTXReflectionNoiseHalf->texture2D;
+		upscale.GetDirPdfHalf()         = data.RTXReflectionDirPdfHalf->texture2D;
+		upscale.GetTileFlags()          = data.TileClassifyTiles->texture2D;
+		upscale.GetRoughnessTileFlags() = data.TileRoughnessTiles->texture2D;
+		compute.set(upscale);
+	}
+
+	{
 		PROFILE_GPU(L"reflection_rtx_only");
 		{
 			Slots::VoxelOutput output;
@@ -79,6 +151,9 @@ void PassDefault<Passes::ReflectionRTX>::render(
 }
 
 #else
+
+bool PassDefault<Passes::ReflectionRTXHalf>::setup(Passes::ReflectionRTXHalf::Context&, TaskBuilder&) { return false; }
+void PassDefault<Passes::ReflectionRTXHalf>::render(Passes::ReflectionRTXHalf::Context&, FrameContext&) {}
 
 bool PassDefault<Passes::ReflectionRTX>::setup(Passes::ReflectionRTX::Context&, TaskBuilder&) { return false; }
 void PassDefault<Passes::ReflectionRTX>::render(Passes::ReflectionRTX::Context&, FrameContext&) {}

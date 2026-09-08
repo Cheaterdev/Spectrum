@@ -112,6 +112,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "VoxelOutput") return SlotID::VoxelOutput;
 	if(slot_name == "IndirectRTXHalfGBuffer") return SlotID::IndirectRTXHalfGBuffer;
 	if(slot_name == "IndirectRTXUpscale") return SlotID::IndirectRTXUpscale;
+	if(slot_name == "ReflectionRTXUpscale") return SlotID::ReflectionRTXUpscale;
 	if(slot_name == "VoxelUpscale") return SlotID::VoxelUpscale;
 	if(slot_name == "VoxelVisibility") return SlotID::VoxelVisibility;
 	if(slot_name == "VoxelMipMap") return SlotID::VoxelMipMap;
@@ -353,6 +354,8 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::IndirectRTXUpscale) return Slots::IndirectRTXUpscale::Slot::ID;
 
+	if(id == SlotID::ReflectionRTXUpscale) return Slots::ReflectionRTXUpscale::Slot::ID;
+
 	if(id == SlotID::VoxelUpscale) return Slots::VoxelUpscale::Slot::ID;
 
 	if(id == SlotID::VoxelVisibility) return Slots::VoxelVisibility::Slot::ID;
@@ -518,6 +521,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::VoxelOutput) return "VoxelOutput";
 	if(id == SlotID::IndirectRTXHalfGBuffer) return "IndirectRTXHalfGBuffer";
 	if(id == SlotID::IndirectRTXUpscale) return "IndirectRTXUpscale";
+	if(id == SlotID::ReflectionRTXUpscale) return "ReflectionRTXUpscale";
 	if(id == SlotID::VoxelUpscale) return "VoxelUpscale";
 	if(id == SlotID::VoxelVisibility) return "VoxelVisibility";
 	if(id == SlotID::VoxelMipMap) return "VoxelMipMap";

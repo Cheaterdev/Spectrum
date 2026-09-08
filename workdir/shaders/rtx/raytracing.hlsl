@@ -27,6 +27,7 @@
 #include "../autogen/VoxelOutput.h"
 #include "../autogen/IndirectRTXHalfGBuffer.h"
 #include "../autogen/IndirectRTXUpscale.h"
+#include "../autogen/ReflectionRTXUpscale.h"
 #include "../autogen/rtx/ShadowPass.h"
 #include "../autogen/rtx/ColorPass.h"
 #include "../common/pbr.hlsl"
@@ -459,28 +460,24 @@ void MyRaygenShaderIndirectRTXHalfRes()
 	TraceIndirectDiffuse(half_gbuffer.GetDepth(), half_gbuffer.GetNormals(), voxel_output.GetNoise(), voxel_output.GetBlueNoise());
 }
 
-// Reflection reference signal for ReflectionRTX (see voxel.sig's PassNode
-// ReflectionRTX): pure DXR, one ray per pixel, blue-noise-jittered direction
-// (SampleReflectionVector -- this is what makes the output genuinely noisy
-// rather than a perfect mirror, which is what a denoiser is meant to clean
-// up), fixed TMax, no voxel grid involved. Denoised by NRD REBLUR_SPECULAR
-// (see [[project-nrd-integration]]).
-[shader("raygeneration")]
-void MyRaygenShaderReflectionRTXOnly()
+// Shared body for MyRaygenShaderReflectionRTXOnly/MyRaygenShaderReflectionRTXHalfRes
+// (see voxel.sig's PassNode ReflectionRTX/ReflectionRTXHalf): pure DXR, one
+// ray per pixel, blue-noise-jittered direction (SampleReflectionVector --
+// this is what makes the output genuinely noisy rather than a perfect
+// mirror, which is what a denoiser is meant to clean up), fixed TMax, no
+// voxel grid involved. Denoised by NRD REBLUR_SPECULAR (see
+// [[project-nrd-integration]]). Parameterized on depth/normals/outputs so
+// full-res and half-res dispatches share the actual trace logic, same shape
+// as TraceIndirectDiffuse above.
+void TraceReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, RWTexture2D<float4> tex_noise, RWTexture2D<float4> tex_dir_pdf, Texture2D<float2> blueNoiseTex)
 {
 	uint2 itc = DispatchRaysIndex().xy;
-	uint2 dims = DispatchRaysDimensions().xy;
-	float2 tc = float2(itc + 0.5f) / dims;
+	float2 tc = float2(itc + 0.5f) / DispatchRaysDimensions().xy;
 
 	const FrameInfo frame = CreateFrameInfo();
 	const Raytracing raytracing = CreateRaytracing();
-	const VoxelOutput voxel_output = CreateVoxelOutput();
-	const VoxelScreen voxel_screen = CreateVoxelScreen();
 
-	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
-	const RWTexture2D<float4> tex_dir_pdf = voxel_output.GetDirAndPdf();
-
-	float raw_z = voxel_screen.GetGbuffer().GetDepth()[itc];
+	float raw_z = depth_tex[itc];
 	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
 
 	if (raw_z == 0)
@@ -490,8 +487,7 @@ void MyRaygenShaderReflectionRTXOnly()
 		return;
 	}
 
-	float4 gbufer_normals = voxel_screen.GetGbuffer().GetNormals()[itc];
-	float4 gbufer_albedo = voxel_screen.GetGbuffer().GetAlbedo()[itc];
+	float4 gbufer_normals = normal_tex[itc];
 
 	float3 normal = normalize(gbufer_normals.xyz * 2 - 1);
 	float roughness = pow(max(MIN_ROUGHNESS, gbufer_normals.w), 2);
@@ -501,7 +497,7 @@ void MyRaygenShaderReflectionRTXOnly()
 	// Blue-noise-jittered sample around the mirror direction -- one ray,
 	// genuinely stochastic (not a perfect reflection), which is the raw
 	// signal DLSS-RR's own denoiser is designed to clean up.
-	float2 seed = voxel_output.GetBlueNoise().Load(int3(itc % 128, 0));
+	float2 seed = blueNoiseTex.Load(int3(itc % 128, 0));
 	float3 dir = SampleReflectionVector(view, normal, roughness, seed);
 
 	[raypayload]
@@ -531,6 +527,48 @@ void MyRaygenShaderReflectionRTXOnly()
 	// parameter, a different convention for a different purpose.
 	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
 	tex_noise[itc] = PackForReblurSpecular(payload.color.rgb, payload.dist, gbufer_normals.w, viewZ);
+}
+
+[shader("raygeneration")]
+void MyRaygenShaderReflectionRTXOnly()
+{
+	uint2 itc = DispatchRaysIndex().xy;
+
+	const VoxelOutput voxel_output = CreateVoxelOutput();
+	const VoxelScreen voxel_screen = CreateVoxelScreen();
+	const ReflectionRTXUpscale upscale = CreateReflectionRTXUpscale();
+
+	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
+	const RWTexture2D<float4> tex_dir_pdf = voxel_output.GetDirAndPdf();
+
+	// Skip the fresh ray only when BOTH tile axes say Low -- a geometric
+	// edge makes the half-res buffer untrustworthy regardless of material,
+	// and a glossy+metallic surface needs real detail regardless of how
+	// flat it is (see ReflectionRTXUpscale's own comment, voxel.sig).
+	uint2 tile = itc / 8;
+	bool needs_trace = upscale.GetTileFlags()[tile] || upscale.GetRoughnessTileFlags()[tile];
+	if (!needs_trace)
+	{
+		float2 tc = float2(itc + 0.5f) / DispatchRaysDimensions().xy;
+		tex_noise[itc]   = upscale.GetNoiseHalf().SampleLevel(linearClampSampler, tc, 0);
+		tex_dir_pdf[itc] = upscale.GetDirPdfHalf().SampleLevel(linearClampSampler, tc, 0);
+		return;
+	}
+
+	TraceReflection(voxel_screen.GetGbuffer().GetDepth(), voxel_screen.GetGbuffer().GetNormals(), tex_noise, tex_dir_pdf, voxel_output.GetBlueNoise());
+}
+
+// Always-on half-res base layer for ReflectionRTXHalf (see voxel.sig's
+// PassNode ReflectionRTXHalf) -- same trace as MyRaygenShaderReflectionRTXOnly's
+// Hi-tile path, just over GBuffer_HalfDepth/HalfNormals (a quarter the
+// rays), consumed by MyRaygenShaderReflectionRTXOnly above for its Low tiles.
+[shader("raygeneration")]
+void MyRaygenShaderReflectionRTXHalfRes()
+{
+	const VoxelOutput voxel_output = CreateVoxelOutput();
+	const IndirectRTXHalfGBuffer half_gbuffer = CreateIndirectRTXHalfGBuffer();
+
+	TraceReflection(half_gbuffer.GetDepth(), half_gbuffer.GetNormals(), voxel_output.GetNoise(), voxel_output.GetDirAndPdf(), voxel_output.GetBlueNoise());
 }
 
 
