@@ -20,6 +20,18 @@ public:
 
 		GBuffer gbuffer;
 
+		Handlers::Texture RTXIndirectNoise = ResourceID::RTXIndirectNoise;
+
+
+		Handlers::Texture RTXReflectionNoise = ResourceID::RTXReflectionNoise;
+
+
+		Handlers::Texture VoxelIndirectNoiseRaw = ResourceID::VoxelIndirectNoiseRaw;
+
+
+		Handlers::Texture VoxelReflectionNoiseRaw = ResourceID::VoxelReflectionNoiseRaw;
+
+
 		Handlers::Texture NRD_ViewZ = ResourceID::NRD_ViewZ;
 
 
@@ -27,6 +39,12 @@ public:
 
 
 		Handlers::Texture NRD_Mv = ResourceID::NRD_Mv;
+
+
+		Handlers::Texture NRD_DiffuseRadianceHitDist = ResourceID::NRD_DiffuseRadianceHitDist;
+
+
+		Handlers::Texture NRD_SpecularRadianceHitDist = ResourceID::NRD_SpecularRadianceHitDist;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -45,9 +63,15 @@ public:
 			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
+			{ ResourceID::RTXIndirectNoise, false },
+			{ ResourceID::RTXReflectionNoise, false },
+			{ ResourceID::VoxelIndirectNoiseRaw, false },
+			{ ResourceID::VoxelReflectionNoiseRaw, false },
 			{ ResourceID::NRD_ViewZ, true },
 			{ ResourceID::NRD_NormalRoughness, true },
 			{ ResourceID::NRD_Mv, true },
+			{ ResourceID::NRD_DiffuseRadianceHitDist, true },
+			{ ResourceID::NRD_SpecularRadianceHitDist, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

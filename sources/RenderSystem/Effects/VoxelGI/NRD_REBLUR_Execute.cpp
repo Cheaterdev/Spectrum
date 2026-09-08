@@ -2,6 +2,7 @@ module Graphics:NRD_REBLUR_Execute;
 
 import RenderSystem;
 import Graphics;
+import :UpscalingDLSS;
 import HAL;
 import Core;
 
@@ -13,13 +14,16 @@ using namespace HAL;
 // Real per-frame REBLUR_DIFFUSE/REBLUR_SPECULAR execution (see
 // [[project-nrd-integration]]), replacing the one-shot smoke-test call that
 // used to live in RenderSystem::create_singleton(). NRD is the only
-// indirect-GI/reflection denoiser now -- gated purely on RTX/hardware
-// support, independent of g_upscaler_type. NRD_GBufferPack (its other input)
-// uses the same gate.
+// indirect-GI/reflection denoiser under FSR/plain-DLSS -- gated off under
+// DLSS-RR (which does its own reconstruction/denoising; see RTXCombine's
+// own comment). NRD_GBufferPack (its other input, and now the only place
+// that packs radiance+hitdist for NRD -- see its own comment) uses the same
+// gate.
 bool PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 	Passes::NRD_REBLUR_Execute::Context& data, TaskBuilder& builder)
 {
-	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
+	if (g_upscaler_type == UpscalerType::DLSSRR ||
+	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
 	auto& frame = builder.graph->get_context<ViewportInfo>();
@@ -33,15 +37,11 @@ bool PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 	builder.need(data.NRD_ViewZ, ResourceFlags::ComputeRead);
 	builder.need(data.NRD_NormalRoughness, ResourceFlags::ComputeRead);
 	builder.need(data.NRD_Mv, ResourceFlags::ComputeRead);
-	// Both raw candidates per signal are needed unconditionally -- their
-	// producers (IndirectRTX/VoxelScreen, ReflectionRTX/ScreenReflection)
-	// are unconditional passes themselves, so there's no "only need the
-	// selected one" complexity here (see g_indirect_source/g_reflection_source
-	// selection in render() below, [[project-nrd-integration]]).
-	if( g_indirect_source != IndirectSource::MyVCT) builder.need(data.RTXIndirectNoise, ResourceFlags::ComputeRead);
-	if( g_reflection_source != ReflectionSource::MyReflection)builder.need(data.RTXReflectionNoise, ResourceFlags::ComputeRead);
-	if( g_indirect_source == IndirectSource::MyVCT) builder.need(data.VoxelIndirectNoiseRaw, ResourceFlags::ComputeRead);
-	if( g_reflection_source == ReflectionSource::MyReflection)builder.need(data.VoxelReflectionNoiseRaw, ResourceFlags::ComputeRead);
+	// NRD_GBufferPack now resolves g_indirect_source/g_reflection_source
+	// itself and packs exactly the selected candidate into these (see its
+	// own .sig comment) -- no A/B left to do here, unlike before.
+	builder.need(data.NRD_DiffuseRadianceHitDist,  ResourceFlags::ComputeRead);
+	builder.need(data.NRD_SpecularRadianceHitDist, ResourceFlags::ComputeRead);
 	builder.create(data.RTXIndirectDenoised,
 		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	builder.create(data.RTXReflectionDenoised,
@@ -63,11 +63,9 @@ void PassDefault<Passes::NRD_REBLUR_Execute>::render(
 	inputs.view_z            = *data.NRD_ViewZ;
 	inputs.normal_roughness  = *data.NRD_NormalRoughness;
 	inputs.mv                = *data.NRD_Mv;
-	inputs.diff_noisy        = g_indirect_source == IndirectSource::MyVCT
-	                              ? *data.VoxelIndirectNoiseRaw : *data.RTXIndirectNoise;
+	inputs.diff_noisy        = *data.NRD_DiffuseRadianceHitDist;
 	inputs.diff_denoised     = *data.RTXIndirectDenoised;
-	inputs.spec_noisy        = g_reflection_source == ReflectionSource::MyReflection
-	                              ? *data.VoxelReflectionNoiseRaw : *data.RTXReflectionNoise;
+	inputs.spec_noisy        = *data.NRD_SpecularRadianceHitDist;
 	inputs.spec_denoised     = *data.RTXReflectionDenoised;
 
 	memcpy(inputs.world_to_view,      cam->camera_cb.current.view.elems.data(), sizeof(inputs.world_to_view));

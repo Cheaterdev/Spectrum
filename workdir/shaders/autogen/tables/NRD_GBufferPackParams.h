@@ -10,12 +10,28 @@
 #include "GBuffer.h"
 struct NRD_GBufferPackParams
 {
+	uint indirect_use_vct; // uint
+	uint reflection_use_vct; // uint
+	uint RTXIndirectNoise; // Texture2D<float4>
+	uint RTXReflectionNoise; // Texture2D<float4>
+	uint VoxelIndirectNoiseRaw; // Texture2D<float4>
+	uint VoxelReflectionNoiseRaw; // Texture2D<float4>
 	uint NRD_ViewZ; // RWTexture2D<float>
 	uint NRD_NormalRoughness; // RWTexture2D<float4>
 	uint NRD_Mv; // RWTexture2D<float4>
+	uint NRD_DiffuseRadianceHitDist; // RWTexture2D<float4>
+	uint NRD_SpecularRadianceHitDist; // RWTexture2D<float4>
 	GBuffer gbuffer; // GBuffer
 	GBuffer GetGbuffer() { return gbuffer; }
+	uint GetIndirect_use_vct() { return indirect_use_vct; }
+	uint GetReflection_use_vct() { return reflection_use_vct; }
+	Texture2D<float4> GetRTXIndirectNoise() { return ResourceDescriptorHeap[RTXIndirectNoise]; }
+	Texture2D<float4> GetRTXReflectionNoise() { return ResourceDescriptorHeap[RTXReflectionNoise]; }
+	Texture2D<float4> GetVoxelIndirectNoiseRaw() { return ResourceDescriptorHeap[VoxelIndirectNoiseRaw]; }
+	Texture2D<float4> GetVoxelReflectionNoiseRaw() { return ResourceDescriptorHeap[VoxelReflectionNoiseRaw]; }
 	RWTexture2D<float> GetNRD_ViewZ() { return ResourceDescriptorHeap[NRD_ViewZ]; }
 	RWTexture2D<float4> GetNRD_NormalRoughness() { return ResourceDescriptorHeap[NRD_NormalRoughness]; }
 	RWTexture2D<float4> GetNRD_Mv() { return ResourceDescriptorHeap[NRD_Mv]; }
+	RWTexture2D<float4> GetNRD_DiffuseRadianceHitDist() { return ResourceDescriptorHeap[NRD_DiffuseRadianceHitDist]; }
+	RWTexture2D<float4> GetNRD_SpecularRadianceHitDist() { return ResourceDescriptorHeap[NRD_SpecularRadianceHitDist]; }
 };

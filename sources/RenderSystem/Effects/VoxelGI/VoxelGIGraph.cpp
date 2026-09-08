@@ -802,11 +802,17 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	m_voxelscreen_setup = [this](Passes::VoxelScreen::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
 		// Alternative to IndirectRTX as NRD REBLUR_DIFFUSE's input, selected
-		// via g_indirect_source (see [[project-nrd-integration]]). Same base
-		// gate as IndirectRTX/ReflectionRTX -- both producers are now
-		// unconditional whenever the RTX pipeline is viable, and
-		// NRD_REBLUR_Execute picks between them at render time.
-		if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
+		// via g_indirect_source (see [[project-nrd-integration]]). Only runs
+		// when actually selected -- this is a full RTX-primary +
+		// cone-trace-fallback dispatch, not free, and its only consumer
+		// (NRD_GBufferPack -> NRD_REBLUR_Execute) is itself off under
+		// DLSS-RR (see NRD_GBufferPack's own comment). Skipping the dispatch
+		// here, not just skipping the pack of its output downstream, is
+		// what actually avoids the wasted GPU work -- a downstream need()
+		// gate alone would still force this pass to run and be discarded.
+		if (g_indirect_source != IndirectSource::MyVCT ||
+		    g_upscaler_type == UpscalerType::DLSSRR ||
+		    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 			return false;
 
 		auto& frame = builder.graph->get_context<ViewportInfo>();
@@ -863,7 +869,11 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	{
 		// Alternative to ReflectionRTX as NRD REBLUR_SPECULAR's input,
 		// selected via g_reflection_source (see [[project-nrd-integration]]).
-		if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
+		// See VoxelScreen's own comment on why this is gated on actual
+		// selection now, not just "RTX pipeline viable".
+		if (g_reflection_source != ReflectionSource::MyReflection ||
+		    g_upscaler_type == UpscalerType::DLSSRR ||
+		    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 			return false;
 
 		auto& frame = builder.graph->get_context<ViewportInfo>();

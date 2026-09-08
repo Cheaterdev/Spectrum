@@ -26,9 +26,10 @@ bool PassDefault<Passes::RTXCombine>::setup(
 	auto& frame = builder.graph->get_context<ViewportInfo>();
 
 	GBufferViewDesc::need(builder, data.gbuffer);
-	builder.need(data.RTXReflectionDenoised, ResourceFlags::ComputeRead);
-	builder.need(data.RTXIndirectDenoised,   ResourceFlags::ComputeRead);
-	builder.need(data.RTXShadowNoise,        ResourceFlags::ComputeRead);
+	// Raw, not REBLUR-denoised -- see this PassNode's own comment (voxel.sig).
+	builder.need(data.RTXReflectionNoise, ResourceFlags::ComputeRead);
+	builder.need(data.RTXIndirectNoise,   ResourceFlags::ComputeRead);
+	builder.need(data.RTXShadowNoise,     ResourceFlags::ComputeRead);
 	builder.create(data.ResultTextureRTXNoise,
 		{ ivec3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
 		ResourceFlags::UnorderedAccess);
@@ -52,8 +53,8 @@ void PassDefault<Passes::RTXCombine>::render(
 	{
 		Slots::RTXCombine combine;
 		gbuffer.SetTable(combine.GetGbuffer());
-		combine.GetReflection() = data.RTXReflectionDenoised->texture2D;
-		combine.GetIndirect()   = data.RTXIndirectDenoised->texture2D;
+		combine.GetReflection() = data.RTXReflectionNoise->texture2D;
+		combine.GetIndirect()   = data.RTXIndirectNoise->texture2D;
 		combine.GetShadow()     = data.RTXShadowNoise->texture2D;
 		combine.GetTarget()     = data.ResultTextureRTXNoise->rwTexture2D;
 		compute.set(combine);

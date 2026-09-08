@@ -33,13 +33,12 @@
 #include "../common/pbr.hlsl"
 #include "../common/common.hlsl"
 
-// PackForReblurDiffuse()/PackForReblurSpecular(), used by the RTX-reference
-// raygens below to pack IN_DIFF_RADIANCE_HITDIST/IN_SPEC_RADIANCE_HITDIST for
-// NRD's REBLUR_DIFFUSE/REBLUR_SPECULAR denoisers (see
-// [[project-nrd-integration]]). Self-contained (no NRD_INTERNAL/NRD_METHOD-
-// gated code reached), safe to pull into a non-NRD shader -- NRD_INCLUDED
-// guards against double-inclusion.
-#include "../nrd/reblur_pack_helper.hlsli"
+// No PackForReblurDiffuse()/PackForReblurSpecular() calls in this file any
+// more -- every raygen below (RTX-reference and VCT alike) writes plain
+// (RGB=hit color, A=hit distance) now; NRD_GBufferPack (gbuffer_pack.hlsl)
+// does the REBLUR-specific front-end pack for whichever candidate NRD
+// actually needs, and only when NRD is actually running (see its own
+// comment, nrd_sig_test.sig, for why this moved).
 
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
@@ -414,8 +413,13 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 	ray.TMax = 10000.0;
 	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
 
-	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
-	tex_noise[itc] = PackForReblurDiffuse(payload_gi.color.rgb, payload_gi.dist, viewZ);
+	// Plain (RGB=hit color, A=hit distance), NOT REBLUR-packed -- this feeds
+	// both NRD_GBufferPack (which does the NRD-specific pack itself now,
+	// when NRD is actually running) and RTXCombine/DLSS-RR directly (which
+	// wants exactly this shape for its ColorIn/SpecularHitDistance tags, see
+	// HAL.DLSSRR.ixx's own comment). See NRD_GBufferPack's comment
+	// (nrd_sig_test.sig) for why packing moved out of this raygen.
+	tex_noise[itc] = float4(payload_gi.color.rgb, payload_gi.dist);
 }
 
 [shader("raygeneration")]
@@ -520,13 +524,12 @@ void TraceReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, R
 	float3 refl_pos = pos + view * clamp(payload.dist, 0, 1000);
 	tex_dir_pdf[itc] = float4(refl_pos, 1);
 
-	// Pack for NRD's REBLUR_SPECULAR (see [[project-nrd-integration]]):
-	// gbufer_normals.w is the *linear* roughness (same convention
-	// NRD_GBufferPack's own NRD_NormalRoughness output uses) -- NOT the
-	// squared/alpha `roughness` above, which is this raygen's own GGX-sampling
-	// parameter, a different convention for a different purpose.
-	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
-	tex_noise[itc] = PackForReblurSpecular(payload.color.rgb, payload.dist, gbufer_normals.w, viewZ);
+	// Plain (RGB=hit color, A=hit distance), NOT REBLUR-packed -- same
+	// reasoning as TraceIndirectDiffuse above (see its comment): feeds
+	// NRD_GBufferPack's own pack step when NRD runs, and RTXCombine/
+	// DLSS-RR's SpecularHitDistance tag directly otherwise (HAL.DLSSRR.ixx's
+	// own comment documents this exact RGB+distance shape).
+	tex_noise[itc] = float4(payload.color.rgb, payload.dist);
 }
 
 [shader("raygeneration")]
@@ -624,8 +627,11 @@ void MyRaygenShader()
 		payload_gi.color = trace(voxel_info, 0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.2, payload_gi.dist);
 	}
 
-	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
-	tex_noise_raw[itc] = PackForReblurDiffuse(payload_gi.color.rgb, payload_gi.dist, viewZ);
+	// Plain (RGB=hit color, A=hit distance) -- same reasoning as
+	// TraceIndirectDiffuse's own comment: NRD_GBufferPack now does the
+	// REBLUR-specific pack for every raw candidate (RTX and VCT alike), not
+	// this raygen.
+	tex_noise_raw[itc] = float4(payload_gi.color.rgb, payload_gi.dist);
 }
 
 // Reflection voxel-cone-traced signal for ScreenReflection (see voxel.sig's
@@ -690,8 +696,9 @@ void MyRaygenShaderReflection()
 		payload_gi.color = trace(voxel_info, 0, 1 * seed.x * length(oneVoxelSize), pos + oneVoxelSize * normal + 1 * dirVoxel * ray.TMax, dirVoxel, 1 * roughness / 2, payload_gi.dist);
 	}
 
-	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
-	tex_noise_raw[itc] = PackForReblurSpecular(payload_gi.color.rgb, payload_gi.dist, gbufer_normals.w, viewZ);
+	// Plain (RGB=hit color, A=hit distance) -- see MyRaygenShader's own
+	// comment above.
+	tex_noise_raw[itc] = float4(payload_gi.color.rgb, payload_gi.dist);
 }
 
 

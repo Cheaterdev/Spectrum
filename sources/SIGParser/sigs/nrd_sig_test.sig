@@ -749,15 +749,66 @@ ComputePSO NRD_Clear_UInt4
 # R16G16_FLOAT -- z is repacked here as a constant 0 to match. Physical
 # format is still RGBA16F (no 3-channel D3D12 format exists); NRD's kernels
 # only ever read the first 3 components.
-# IN_DIFF_RADIANCE_HITDIST is packed at the source in raytracing.hlsl's
-# MyRaygenShaderIndirectRTXOnly, not here.
+# Also packs IN_DIFF_RADIANCE_HITDIST/IN_SPEC_RADIANCE_HITDIST here, from
+# whichever of RTXIndirectNoise/VoxelIndirectNoiseRaw (and RTXReflectionNoise/
+# VoxelReflectionNoiseRaw) g_indirect_source/g_reflection_source actually
+# selects this frame (indirect_use_vct/reflection_use_vct below) -- all four
+# raw candidates are plain (RGB=hit color, A=hit distance) now, NOT
+# pre-packed at their raygen any more (see raytracing.hlsl's
+# TraceIndirectDiffuse/TraceReflection/MyRaygenShader/MyRaygenShaderReflection),
+# because UpscalingDLSSRR's specular_hit_distance parameter wants that same
+# plain shape directly for the RTX pair (HAL.DLSSRR.ixx's own comment) --
+# pre-packing at the raygen made DLSS-RR's guide buffer secretly NRD-encoded,
+# and DLSS-RR does its own reconstruction/denoising, so feeding it
+# REBLUR-shaped data was a silent double-denoise.
+#
+# Exactly one candidate per channel is ever packed -- the selection is
+# resolved once, here (matching CLAUDE.md's "FrameGraph: A/B resource
+# selection"), not by packing both and having NRD_REBLUR_Execute pick later,
+# which is what this looked like initially and what forced an unconditional
+# need() on whichever candidate wasn't actually going to be read (RTXIndirectNoise
+# is "free" in the sense that IndirectRTX runs regardless of selection for
+# DLSS-RR's sake, but VoxelIndirectNoiseRaw is NOT -- VoxelScreen/
+# ScreenReflection are real dispatches, RTX primary ray + cone-trace
+# fallback, gated on g_indirect_source/g_reflection_source themselves now,
+# see their own setup() comments -- so packing "the one not selected"
+# unconditionally was either a wasted write (RTX side) or a crash from
+# need()ing a resource that was never created that frame (VCT side, hit
+# once already before this settled). A real fix is a broader RenderSystem
+# pass to have NRD's inputs arrive already in its shape instead of packing
+# anywhere at all.
 [Bind = DefaultLayout::Instance2]
 struct NRD_GBufferPackParams
 {
 	GBuffer gbuffer;
+	# Both pairs [Auto = Texture_Null] -- same pattern VoxelScreen's own
+	# prev_gi/prev_frames/prev_depth use. Exactly one of each pair is ever
+	# bound: whichever g_indirect_source/g_reflection_source actually
+	# selected this frame is the one that's need()'d and set() below (see
+	# NRD_GBufferPack.cpp) -- the other is left at its safe zero default and
+	# simply never read (the shader branches on indirect_use_vct/
+	# reflection_use_vct, not on which happens to be bound).
+	[Auto = Texture_Null]
+	Texture2D<float4> RTXIndirectNoise;
+	[Auto = Texture_Null]
+	Texture2D<float4> RTXReflectionNoise;
+	[Auto = Texture_Null]
+	Texture2D<float4> VoxelIndirectNoiseRaw;
+	[Auto = Texture_Null]
+	Texture2D<float4> VoxelReflectionNoiseRaw;
+
+	# Which raw candidate to pack per channel -- resolved once here (see
+	# CLAUDE.md's "FrameGraph: A/B resource selection") rather than packing
+	# both and letting NRD_REBLUR_Execute pick, which is what forced an
+	# unconditional need() on whichever wasn't selected.
+	uint indirect_use_vct;
+	uint reflection_use_vct;
+
 	RWTexture2D<float> NRD_ViewZ;
 	RWTexture2D<float4> NRD_NormalRoughness;
 	RWTexture2D<float4> NRD_Mv;
+	RWTexture2D<float4> NRD_DiffuseRadianceHitDist;
+	RWTexture2D<float4> NRD_SpecularRadianceHitDist;
 }
 
 ComputePSO NRD_GBufferPack
@@ -771,10 +822,16 @@ ComputePSO NRD_GBufferPack
 PassNode NRD_GBufferPack
 {
 	GBuffer gbuffer;
+	Texture RTXIndirectNoise;
+	Texture RTXReflectionNoise;
+	Texture VoxelIndirectNoiseRaw;
+	Texture VoxelReflectionNoiseRaw;
 
 	[Write] Texture NRD_ViewZ;
 	[Write] Texture NRD_NormalRoughness;
 	[Write] Texture NRD_Mv;
+	[Write] Texture NRD_DiffuseRadianceHitDist;
+	[Write] Texture NRD_SpecularRadianceHitDist;
 }
 
 # Debug-only: unpacks RTXIndirectDenoised's raw REBLUR encoding (YCoCg +
@@ -807,14 +864,12 @@ PassNode NRD_REBLUR_Execute
 	Texture NRD_ViewZ;
 	Texture NRD_NormalRoughness;
 	Texture NRD_Mv;
-	Texture RTXIndirectNoise;
-	Texture RTXReflectionNoise;
-	# Voxel-cone-traced raw candidates, selectable against the RTX-reference
-	# ones above via g_indirect_source/g_reflection_source (see
-	# [[project-nrd-integration]]). Both producers (VoxelScreen/
-	# ScreenReflection) are unconditional passes, so both always exist.
-	Texture VoxelIndirectNoiseRaw;
-	Texture VoxelReflectionNoiseRaw;
+	# Pre-packed AND pre-selected by NRD_GBufferPack now -- it resolves
+	# g_indirect_source/g_reflection_source itself (see its own .sig
+	# comment) and packs exactly the chosen candidate, so this is always the
+	# right one to read unconditionally; no A/B left to do here.
+	Texture NRD_DiffuseRadianceHitDist;
+	Texture NRD_SpecularRadianceHitDist;
 
 	[Write] Texture RTXIndirectDenoised;
 	[Write] Texture RTXIndirectDenoisedPreview;

@@ -62,13 +62,18 @@ Pipeline MainPipeline
 	[Async]ShadowRTX;
 	[Async]IndirectRTXHalf;
 	[Async]IndirectRTX;
-	[Async]NRD_GBufferPack;
 	# Voxel-cone-traced alternative sources for NRD_REBLUR_Execute below
 	# (selected via g_indirect_source/g_reflection_source, see
 	# [[project-nrd-integration]]) -- run after Mipmapping (VoxelLighted is
-	# ready by here) and before NRD_REBLUR_Execute (needs their raw output).
+	# ready by here) and before NRD_GBufferPack, which now reads their raw
+	# output too (packs every candidate unconditionally, see its own .sig
+	# comment) -- NRD_GBufferPack must come after both its RTX producers
+	# (IndirectRTX/ReflectionRTX, above) and its VCT producers (here), or
+	# builder.need() on a not-yet-created resource null-derefs in
+	# ResourceChain::active() (crashed here once already).
 	[Async]VoxelScreen;
 	[Async]ScreenReflection;
+	[Async]NRD_GBufferPack;
 
 											[Async]
 											RTXShadow;

@@ -28,16 +28,10 @@ public:
 		Handlers::Texture NRD_Mv = ResourceID::NRD_Mv;
 
 
-		Handlers::Texture RTXIndirectNoise = ResourceID::RTXIndirectNoise;
+		Handlers::Texture NRD_DiffuseRadianceHitDist = ResourceID::NRD_DiffuseRadianceHitDist;
 
 
-		Handlers::Texture RTXReflectionNoise = ResourceID::RTXReflectionNoise;
-
-
-		Handlers::Texture VoxelIndirectNoiseRaw = ResourceID::VoxelIndirectNoiseRaw;
-
-
-		Handlers::Texture VoxelReflectionNoiseRaw = ResourceID::VoxelReflectionNoiseRaw;
+		Handlers::Texture NRD_SpecularRadianceHitDist = ResourceID::NRD_SpecularRadianceHitDist;
 
 
 		Handlers::Texture RTXIndirectDenoised = ResourceID::RTXIndirectDenoised;
@@ -55,10 +49,8 @@ public:
 			{ ResourceID::NRD_ViewZ, false },
 			{ ResourceID::NRD_NormalRoughness, false },
 			{ ResourceID::NRD_Mv, false },
-			{ ResourceID::RTXIndirectNoise, false },
-			{ ResourceID::RTXReflectionNoise, false },
-			{ ResourceID::VoxelIndirectNoiseRaw, false },
-			{ ResourceID::VoxelReflectionNoiseRaw, false },
+			{ ResourceID::NRD_DiffuseRadianceHitDist, false },
+			{ ResourceID::NRD_SpecularRadianceHitDist, false },
 			{ ResourceID::RTXIndirectDenoised, true },
 			{ ResourceID::RTXIndirectDenoisedPreview, true },
 			{ ResourceID::RTXReflectionDenoised, true },

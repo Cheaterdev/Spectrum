@@ -20,10 +20,10 @@ public:
 
 		GBuffer gbuffer;
 
-		Handlers::Texture RTXReflectionDenoised = ResourceID::RTXReflectionDenoised;
+		Handlers::Texture RTXReflectionNoise = ResourceID::RTXReflectionNoise;
 
 
-		Handlers::Texture RTXIndirectDenoised = ResourceID::RTXIndirectDenoised;
+		Handlers::Texture RTXIndirectNoise = ResourceID::RTXIndirectNoise;
 
 
 		Handlers::Texture RTXShadowNoise = ResourceID::RTXShadowNoise;
@@ -48,8 +48,8 @@ public:
 			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
-			{ ResourceID::RTXReflectionDenoised, false },
-			{ ResourceID::RTXIndirectDenoised, false },
+			{ ResourceID::RTXReflectionNoise, false },
+			{ ResourceID::RTXIndirectNoise, false },
 			{ ResourceID::RTXShadowNoise, false },
 			{ ResourceID::ResultTextureRTXNoise, true },
 		};

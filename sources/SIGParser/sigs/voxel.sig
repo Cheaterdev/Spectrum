@@ -490,8 +490,13 @@ PassNode ReflCombine
 PassNode RTXCombine
 {
 	GBuffer gbuffer;
-	Texture RTXReflectionDenoised;
-	Texture RTXIndirectDenoised;
+	# Raw, not REBLUR-denoised -- DLSS-RR does its own reconstruction/
+	# denoising on this exact signal (its ColorIn tag), so feeding it
+	# NRD-denoised data would be a redundant double-denoise. NRD isn't even
+	# running when this pass does (NRD_REBLUR_Execute is gated off under
+	# DLSS-RR) -- see NRD_GBufferPack's own comment (nrd_sig_test.sig).
+	Texture RTXReflectionNoise;
+	Texture RTXIndirectNoise;
 	Texture RTXShadowNoise;
 
 	[Write] Texture ResultTextureRTXNoise;

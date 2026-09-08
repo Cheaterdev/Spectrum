@@ -3,11 +3,6 @@
 #include "../autogen/FrameInfo.h"
 #include "../autogen/RTXCombine.h"
 
-// REBLUR_BackEnd_UnpackRadianceAndNormHitDist, to decode the REBLUR-denoised
-// indirect signal below (see [[project-nrd-integration]]) -- self-contained,
-// same as raytracing.hlsl's own #include of this file.
-#include "../nrd/NRD.hlsli"
-
 static const Camera camera = GetFrameInfo().GetCamera();
 static const GBuffer gbuffer = GetRTXCombine().GetGbuffer();
 
@@ -78,17 +73,19 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float shadow = GetRTXCombine().GetShadow()[tc].r;
 	float3 direct = albedo.rgb * NdotL * shadow;
 
-	// Reflections: identical weighting to ReflectionCombine. REBLUR
-	// SPECULAR's denoised output, packed (YCoCg + normalized hit distance,
-	// see reblur_pack_helper.hlsli) -- unpack before use.
-	float3 reflection = REBLUR_BackEnd_UnpackRadianceAndNormHitDist(GetRTXCombine().GetReflection()[tc]).rgb;
+	// Reflections: identical weighting to ReflectionCombine. Raw RTX trace
+	// output now (RGB=hit color, A=hit distance, not REBLUR-packed) -- NRD
+	// doesn't run under DLSS-RR any more, DLSS-RR does its own
+	// reconstruction/denoising on this exact signal (see RTXCombine's own
+	// comment, voxel.sig).
+	float3 reflection = GetRTXCombine().GetReflection()[tc].rgb;
 	float3 refl_color = get_PBR(albedo.rgb, reflection, normal, v, roughness, metallic);
 
 	// Indirect GI: diffuse bounce light, weighted by the surface's own
 	// albedo (diffuse response) rather than the specular BRDF above, and
-	// rolled off by metallic (metals have ~no diffuse term). REBLUR
-	// DIFFUSE's denoised output, packed the same way -- unpack before use.
-	float3 indirect = REBLUR_BackEnd_UnpackRadianceAndNormHitDist(GetRTXCombine().GetIndirect()[tc]).rgb;
+	// rolled off by metallic (metals have ~no diffuse term). Same raw shape
+	// as reflection above.
+	float3 indirect = GetRTXCombine().GetIndirect()[tc].rgb;
 	float3 gi_color = albedo.rgb * indirect * (1 - metallic);
 
 	GetRTXCombine().GetTarget()[tc] = float4(direct + refl_color + gi_color, 1);
