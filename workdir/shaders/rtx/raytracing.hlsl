@@ -25,6 +25,8 @@
 
 
 #include "../autogen/VoxelOutput.h"
+#include "../autogen/IndirectRTXHalfGBuffer.h"
+#include "../autogen/IndirectRTXUpscale.h"
 #include "../autogen/rtx/ShadowPass.h"
 #include "../autogen/rtx/ColorPass.h"
 #include "../common/pbr.hlsl"
@@ -371,34 +373,31 @@ void ColorPass()
 }
 
 
-// Indirect-GI reference signal for IndirectRTX (see voxel.sig's PassNode
-// IndirectRTX): one ray per pixel, GGX-importance-sampled hemisphere
-// direction, fixed reach, no voxel grid involved, no history blend. Denoised
-// by NRD REBLUR_DIFFUSE (see [[project-nrd-integration]]).
-[shader("raygeneration")]
-void MyRaygenShaderIndirectRTXOnly()
+// Shared body for MyRaygenShaderIndirectRTXOnly/MyRaygenShaderIndirectRTXHalfRes
+// (see voxel.sig's PassNode IndirectRTX/IndirectRTXHalf): one ray per pixel,
+// GGX-importance-sampled hemisphere direction, fixed reach, no voxel grid
+// involved, no history blend. Denoised by NRD REBLUR_DIFFUSE (see
+// [[project-nrd-integration]]). Parameterized on depth/normals/output/blue-
+// noise so full-res and half-res dispatches share the actual trace logic --
+// only which GBuffer they read and which output they write differs.
+void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, RWTexture2D<float4> tex_noise, Texture2D<float2> blueNoiseTex)
 {
 	uint2 itc = DispatchRaysIndex().xy;
-	uint2 dims = DispatchRaysDimensions().xy;
-	float2 tc = float2(itc + 0.5f) / dims;
+	float2 tc = float2(itc + 0.5f) / DispatchRaysDimensions().xy;
 
 	const FrameInfo frame = CreateFrameInfo();
 	const Raytracing raytracing = CreateRaytracing();
-	const VoxelOutput voxel_output = CreateVoxelOutput();
-	const VoxelScreen voxel_screen = CreateVoxelScreen();
 
-	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
-
-	float raw_z = voxel_screen.GetGbuffer().GetDepth()[itc];
+	float raw_z = depth_tex[itc];
 	if (raw_z == 0)
 	{
 		tex_noise[itc] = 0;
 		return;
 	}
 	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
-	float3 normal = normalize(voxel_screen.GetGbuffer().GetNormals()[itc].xyz * 2 - 1);
+	float3 normal = normalize(normal_tex[itc].xyz * 2 - 1);
 
-	float2 seed = voxel_output.GetBlueNoise().Load(int3(itc % 128, 0));
+	float2 seed = blueNoiseTex.Load(int3(itc % 128, 0));
 	float3 dir = ImportanceSampleGGX(seed, 1, normal);
 
 	[raypayload]
@@ -416,6 +415,48 @@ void MyRaygenShaderIndirectRTXOnly()
 
 	float viewZ = mul(frame.GetCamera().GetView(), float4(pos, 1)).z;
 	tex_noise[itc] = PackForReblurDiffuse(payload_gi.color.rgb, payload_gi.dist, viewZ);
+}
+
+[shader("raygeneration")]
+void MyRaygenShaderIndirectRTXOnly()
+{
+	uint2 itc = DispatchRaysIndex().xy;
+
+	const VoxelOutput voxel_output = CreateVoxelOutput();
+	const VoxelScreen voxel_screen = CreateVoxelScreen();
+	const IndirectRTXUpscale upscale = CreateIndirectRTXUpscale();
+
+	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
+
+	// Low-tile pixels reuse IndirectRTXHalf's always-on half-res trace
+	// instead of firing their own ray -- see TileClassifyData's own comment
+	// (pssm.sig) for the classifier, and IndirectRTXUpscale's (this file's
+	// autogen source, voxel.sig) for why a direct bilinear sample of the
+	// packed half-res buffer is safe here. Only Hi tiles below pay for a
+	// real TraceRay call.
+	uint hi = upscale.GetTileFlags()[itc / 8];
+	[branch]
+	if (!hi)
+	{
+		float2 tc = float2(itc + 0.5f) / DispatchRaysDimensions().xy;
+		tex_noise[itc] = upscale.GetNoiseHalf().SampleLevel(linearClampSampler, tc, 0);
+		return;
+	}
+
+	TraceIndirectDiffuse(voxel_screen.GetGbuffer().GetDepth(), voxel_screen.GetGbuffer().GetNormals(), tex_noise, voxel_output.GetBlueNoise());
+}
+
+// Always-on half-res base layer for IndirectRTXHalf (see voxel.sig's
+// PassNode IndirectRTXHalf) -- same trace as MyRaygenShaderIndirectRTXOnly's
+// Hi-tile path, just over GBuffer_HalfDepth/HalfNormals (a quarter the
+// rays), consumed by MyRaygenShaderIndirectRTXOnly above for its Low tiles.
+[shader("raygeneration")]
+void MyRaygenShaderIndirectRTXHalfRes()
+{
+	const VoxelOutput voxel_output = CreateVoxelOutput();
+	const IndirectRTXHalfGBuffer half_gbuffer = CreateIndirectRTXHalfGBuffer();
+
+	TraceIndirectDiffuse(half_gbuffer.GetDepth(), half_gbuffer.GetNormals(), voxel_output.GetNoise(), voxel_output.GetBlueNoise());
 }
 
 // Reflection reference signal for ReflectionRTX (see voxel.sig's PassNode

@@ -57,6 +57,7 @@ export
 		Library::VoxelDebug VoxelDebug;
 		Library::ReflectionRTX ReflectionRTX;
 		Library::ShadowRTX ShadowRTX;
+		Library::IndirectRTXHalf IndirectRTXHalf;
 		Library::IndirectRTX IndirectRTX;
 		Library::ReflCombine ReflCombine;
 		Library::RTXCombine RTXCombine;

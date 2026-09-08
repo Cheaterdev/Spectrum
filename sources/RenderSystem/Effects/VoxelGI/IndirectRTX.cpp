@@ -12,6 +12,53 @@ using namespace HAL;
 
 #ifdef HAL_BACKEND_D3D12
 
+bool PassDefault<Passes::IndirectRTXHalf>::setup(
+	Passes::IndirectRTXHalf::Context& data, TaskBuilder& builder)
+{
+	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
+		return false;
+
+	auto& frame      = builder.graph->get_context<ViewportInfo>();
+	ivec2 half_size  = { (frame.frame_size.x + 1) / 2, (frame.frame_size.y + 1) / 2 };
+
+	builder.create(data.RTXIndirectNoiseHalf,
+		{ ivec3(half_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
+	builder.need(data.BlueNoise,          ResourceFlags::ComputeRead);
+	builder.need(data.GBuffer_HalfDepth,  ResourceFlags::ComputeRead);
+	builder.need(data.GBuffer_HalfNormals,ResourceFlags::ComputeRead);
+	return true;
+}
+
+void PassDefault<Passes::IndirectRTXHalf>::render(
+	Passes::IndirectRTXHalf::Context& data, FrameContext& context)
+{
+	auto noisy_output = *data.RTXIndirectNoiseHalf;
+	auto& sceneinfo   = context.graph->get_context<SceneInfo>();
+	auto& compute     = context.get_list()->get_compute();
+
+	compute.set_signature(RTX::get().rtx.m_root_sig);
+	context.graph->set_slot(SlotID::FrameInfo, compute);
+	context.graph->set_slot(SlotID::SceneData, compute);
+
+	{
+		Slots::IndirectRTXHalfGBuffer half_gbuffer;
+		half_gbuffer.GetDepth()   = data.GBuffer_HalfDepth->texture2D;
+		half_gbuffer.GetNormals() = data.GBuffer_HalfNormals->texture2D;
+		compute.set(half_gbuffer);
+	}
+
+	{
+		PROFILE_GPU(L"indirect_rtx_half");
+		{
+			Slots::VoxelOutput output;
+			output.GetNoise()     = noisy_output.rwTexture2D;
+			output.GetBlueNoise() = data.BlueNoise->texture2D;
+			compute.set(output);
+		}
+		RTX::get().render<IndirectRTXHalf>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
+	}
+}
+
 bool PassDefault<Passes::IndirectRTX>::setup(
 	Passes::IndirectRTX::Context& data, TaskBuilder& builder)
 {
@@ -28,6 +75,8 @@ bool PassDefault<Passes::IndirectRTX>::setup(
 	builder.create(data.RTXIndirectNoise,
 		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	builder.need(data.BlueNoise, ResourceFlags::ComputeRead);
+	builder.need(data.RTXIndirectNoiseHalf, ResourceFlags::ComputeRead);
+	builder.need(data.TileClassifyTiles,    ResourceFlags::ComputeRead);
 	GBufferViewDesc::need(builder, data.gbuffer);
 	return true;
 }
@@ -60,6 +109,13 @@ void PassDefault<Passes::IndirectRTX>::render(
 	}
 
 	{
+		Slots::IndirectRTXUpscale upscale;
+		upscale.GetNoiseHalf()  = data.RTXIndirectNoiseHalf->texture2D;
+		upscale.GetTileFlags()  = data.TileClassifyTiles->texture2D;
+		compute.set(upscale);
+	}
+
+	{
 		PROFILE_GPU(L"indirect_rtx_only");
 		{
 			Slots::VoxelOutput output;
@@ -72,6 +128,9 @@ void PassDefault<Passes::IndirectRTX>::render(
 }
 
 #else
+
+bool PassDefault<Passes::IndirectRTXHalf>::setup(Passes::IndirectRTXHalf::Context&, TaskBuilder&) { return false; }
+void PassDefault<Passes::IndirectRTXHalf>::render(Passes::IndirectRTXHalf::Context&, FrameContext&) {}
 
 bool PassDefault<Passes::IndirectRTX>::setup(Passes::IndirectRTX::Context&, TaskBuilder&) { return false; }
 void PassDefault<Passes::IndirectRTX>::render(Passes::IndirectRTX::Context&, FrameContext&) {}

@@ -47,6 +47,7 @@ namespace FrameGraph
 		VoxelDebug,
 		ReflectionRTX,
 		ShadowRTX,
+		IndirectRTXHalf,
 		IndirectRTX,
 		ReflCombine,
 		RTXCombine,

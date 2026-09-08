@@ -9,8 +9,12 @@
 # those 16 representatives, and flags individual full-res pixels whose own
 # depth diverges too far from their block's representative in tile_mask.
 # Generic infra: not tied to GI/reflections/shadows specifically, any pass
-# needing "does this tile need full-res work" reads TileClassifyHi/Low/Mask
-# by name.
+# needing "does this tile need full-res work" reads TileClassifyHi/Low/Mask/
+# Tiles by name. tile_hi/tile_low are compacted lists (for a future indirect-
+# dispatch consumer); tile_flags is the same verdict as a point-queryable
+# tile-resolution texture (1 = Hi), for a shader that just wants to test its
+# own tile without a full indirect-dispatch setup -- IndirectRTX's raygen is
+# the first consumer of this form.
 [Bind = DefaultLayout::Instance0]
 struct TileClassifyData
 {
@@ -23,6 +27,7 @@ struct TileClassifyData
 	AppendStructuredBuffer<uint2> tile_low;
 
 	RWTexture2D<uint> tile_mask;
+	RWTexture2D<uint> tile_flags;
 }
 
 

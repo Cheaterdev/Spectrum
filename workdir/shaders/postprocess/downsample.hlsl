@@ -100,9 +100,15 @@ void CS(
             maxd = max(maxd, g_blockDepth[i]);
         }
 
-        if (maxd - mind > TILE_DEPTH_EDGE_THRESHOLD)
+        uint hi = (maxd - mind > TILE_DEPTH_EDGE_THRESHOLD) ? 1 : 0;
+        if (hi)
             params.GetTile_hi().Append(groupID.xy);
         else
             params.GetTile_low().Append(groupID.xy);
+
+        // Point-queryable form of the same verdict, for a consumer that
+        // just wants "is my tile Hi" without indirect-dispatch machinery
+        // (IndirectRTX's raygen -- see its own comment, voxel.sig).
+        params.GetTile_flags()[groupID.xy] = hi;
     }
 }

@@ -23,12 +23,14 @@ export namespace Table
 		HLSL::AppendStructuredBuffer<uint2> tile_hi;
 		HLSL::AppendStructuredBuffer<uint2> tile_low;
 		HLSL::RWTexture2D<uint> tile_mask;
+		HLSL::RWTexture2D<uint> tile_flags;
 		GBuffer gbuffer;
 		HLSL::RWTexture2D<float>& GetHalf_depth() { return half_depth; }
 		HLSL::RWTexture2D<float4>& GetHalf_normals() { return half_normals; }
 		HLSL::AppendStructuredBuffer<uint2>& GetTile_hi() { return tile_hi; }
 		HLSL::AppendStructuredBuffer<uint2>& GetTile_low() { return tile_low; }
 		HLSL::RWTexture2D<uint>& GetTile_mask() { return tile_mask; }
+		HLSL::RWTexture2D<uint>& GetTile_flags() { return tile_flags; }
 		GBuffer& GetGbuffer() { return gbuffer; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
@@ -39,6 +41,7 @@ export namespace Table
 			compiler.compile(tile_hi, "TileClassifyData::tile_hi");
 			compiler.compile(tile_low, "TileClassifyData::tile_low");
 			compiler.compile(tile_mask, "TileClassifyData::tile_mask");
+			compiler.compile(tile_flags, "TileClassifyData::tile_flags");
 			compiler.compile(gbuffer, "TileClassifyData::gbuffer");
 		}
 		struct Compiled
@@ -48,6 +51,7 @@ export namespace Table
 			uint tile_hi; // AppendStructuredBuffer<uint2>
 			uint tile_low; // AppendStructuredBuffer<uint2>
 			uint tile_mask; // RWTexture2D<uint>
+			uint tile_flags; // RWTexture2D<uint>
 			GBuffer::Compiled gbuffer; // GBuffer
 
 			

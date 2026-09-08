@@ -208,6 +208,17 @@ struct PassDefault<Passes::UpscalingDLSSRR>
 
 
 template<>
+struct PassDefault<Passes::GBufferDownsampler>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	static bool setup(Passes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::GBufferDownsampler::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::ReflectionRTX>
 {
 	static constexpr bool enabled = true;
@@ -226,6 +237,17 @@ struct PassDefault<Passes::ShadowRTX>
 
 	static bool setup(Passes::ShadowRTX::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::ShadowRTX::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::IndirectRTXHalf>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	static bool setup(Passes::IndirectRTXHalf::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::IndirectRTXHalf::Context& data, FrameGraph::FrameContext& context);
 };
 
 

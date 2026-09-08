@@ -50,9 +50,16 @@ Pipeline MainPipeline
 	# result target
 	ResultCreation;
 
+	# GBuffer_HalfDepth/HalfNormals + TileClassifyHi/Low/Mask, generic infra
+	# for any pass below wanting a "does this tile need full-res work"
+	# signal -- see TileClassifyData's own comment (pssm.sig). Must precede
+	# every consumer; not [Async] since it reads this frame's just-finished
+	# GBuffer directly.
+	GBufferDownsampler;
 	[Async]NormalRoughnessRepack;
 	[Async]ReflectionRTX;
 	[Async]ShadowRTX;
+	[Async]IndirectRTXHalf;
 	[Async]IndirectRTX;
 	[Async]NRD_GBufferPack;
 	# Voxel-cone-traced alternative sources for NRD_REBLUR_Execute below

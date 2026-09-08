@@ -50,6 +50,7 @@ export import "../defines.h";
 #include "pass/VoxelDebug.h"
 #include "pass/ReflectionRTX.h"
 #include "pass/ShadowRTX.h"
+#include "pass/IndirectRTXHalf.h"
 #include "pass/IndirectRTX.h"
 #include "pass/ReflCombine.h"
 #include "pass/RTXCombine.h"
@@ -112,6 +113,7 @@ export namespace Passes
 	using ::Passes::VoxelDebug;
 	using ::Passes::ReflectionRTX;
 	using ::Passes::ShadowRTX;
+	using ::Passes::IndirectRTXHalf;
 	using ::Passes::IndirectRTX;
 	using ::Passes::ReflCombine;
 	using ::Passes::RTXCombine;

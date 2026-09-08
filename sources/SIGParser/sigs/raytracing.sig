@@ -199,6 +199,16 @@ RaytraceRaygen IndirectRTX
 	raygen = rtx/raytracing;
 }
 
+# Half-res sibling for PassNode IndirectRTXHalf (voxel.sig) -- same trace
+# logic, shared via TraceIndirectDiffuse() in raytracing.hlsl, just over the
+# half-res GBuffer instead of full res.
+[Bind = MainRTX]
+RaytraceRaygen IndirectRTXHalf
+{
+	[EntryPoint = MyRaygenShaderIndirectRTXHalfRes]
+	raygen = rtx/raytracing;
+}
+
 # Voxel-cone-traced indirect-GI signal, selectable against IndirectRTX as
 # NRD's input -- see MyRaygenShader's doc comment in raytracing.hlsl and
 # PassNode VoxelScreen in voxel.sig.

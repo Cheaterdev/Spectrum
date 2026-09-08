@@ -16,7 +16,7 @@ import :UpscalingDLSS;
 import HAL;
 import Core;
 
-
+#include "../../FrameGraph/autogen/pass_defaults.h"
 
 using namespace FrameGraph;
 using namespace HAL;
@@ -196,85 +196,82 @@ void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
 }
 
 
-class GBufferDownsampler :public Events::prop_handler
+// [Static] (see voxel.sig) -- this used to be a runtime-wired
+// add_library_pass with no call site left anywhere assigning it into a
+// pipeline (dead: never ran, before or after the compute rewrite). It is
+// fully stateless, so PassDefault<Passes::GBufferDownsampler> + a
+// MainPipeline listing (test.sig) is the right shape, matching IndirectRTX.
+bool PassDefault<Passes::GBufferDownsampler>::setup(
+	Passes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder)
 {
+	auto& frame = builder.graph->get_context<ViewportInfo>();
+	auto  size  = frame.frame_size;
 
-public:
-	using ptr = std::shared_ptr<GBufferDownsampler>;
+	GBufferViewDesc::need(builder, data.gbuffer, true);
+	builder.create(data.gbuffer.GBuffer_TempColor, { ivec3(size,0), HAL::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 
+	ivec2 half_size = { (size.x + 1) / 2, (size.y + 1) / 2 };
+	builder.create(data.GBuffer_HalfDepth,   { ivec3(half_size,0), HAL::Format::R32_FLOAT,     1, 1 }, ResourceFlags::UnorderedAccess);
+	builder.create(data.GBuffer_HalfNormals, { ivec3(half_size,0), HAL::Format::R8G8B8A8_UNORM,1, 1 }, ResourceFlags::UnorderedAccess);
+	builder.create(data.TileClassifyMask,    { ivec3(size,0),      HAL::Format::R8_UINT,       1, 1 }, ResourceFlags::UnorderedAccess);
 
-	void generate(Graph& graph)
+	// Worst case: every tile lands in the same bucket -- size each list for
+	// the full tile count, same reasoning as VSM's own tile-classification
+	// lists.
+	uint2  tiles_count = uint2(Math::DivideByMultiple(size.x, 8), Math::DivideByMultiple(size.y, 8));
+	size_t max_tiles   = (size_t)tiles_count.x * tiles_count.y;
+	builder.create(data.TileClassifyHi,  { max_tiles, true }, ResourceFlags::UnorderedAccess);
+	builder.create(data.TileClassifyLow, { max_tiles, true }, ResourceFlags::UnorderedAccess);
+	builder.create(data.TileClassifyTiles,
+		{ ivec3((int)tiles_count.x, (int)tiles_count.y, 0), HAL::Format::R8_UINT, 1, 1 }, ResourceFlags::UnorderedAccess);
+
+	return true;
+}
+
+void PassDefault<Passes::GBufferDownsampler>::render(
+	Passes::GBufferDownsampler::Context& data, FrameGraph::FrameContext& context)
+{
+	auto& command_list = context.get_list();
+	auto tempColor = *data.gbuffer.GBuffer_TempColor;
+	GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+	auto& graphics = command_list->get_graphics();
+	auto& compute  = command_list->get_compute();
+
+	graphics.set_signature(Layouts::DefaultLayout);
+
+	context.graph->set_slot(SlotID::FrameInfo, graphics);
+
+	MipMapGenerator::get().generate_quality(graphics, nullptr, gbuffer, tempColor);
+
 	{
-		graph.add_library_pass<Passes::GBufferDownsampler>([this](auto& data, TaskBuilder& builder) {
+		PROFILE_GPU(L"gbuffer_tile_classify");
 
-			auto& frame = builder.graph->get_context<ViewportInfo>();
-			auto  size  = frame.frame_size;
+		compute.set_signature(Layouts::DefaultLayout);
+		// Every root-signature change invalidates prior root arguments --
+		// FrameInfo must be re-bound even though this shader doesn't sample
+		// it, or an unbound CBV slot trips GPU-based validation #939 (see
+		// FrameClassification's own render() for the same lesson learned
+		// the hard way).
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+		compute.clear_counter(*data.TileClassifyHi);
+		compute.clear_counter(*data.TileClassifyLow);
 
-			GBufferViewDesc::need(builder, data.gbuffer, true);
-			builder.create(data.gbuffer.GBuffer_TempColor, { ivec3(size,0), HAL::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+		{
+			Slots::TileClassifyData params;
+			gbuffer.SetTable(params.GetGbuffer());
+			params.GetHalf_depth()   = data.GBuffer_HalfDepth->rwTexture2D;
+			params.GetHalf_normals() = data.GBuffer_HalfNormals->rwTexture2D;
+			params.GetTile_hi()      = data.TileClassifyHi->appendStructuredBuffer;
+			params.GetTile_low()     = data.TileClassifyLow->appendStructuredBuffer;
+			params.GetTile_mask()    = data.TileClassifyMask->rwTexture2D;
+			params.GetTile_flags()   = data.TileClassifyTiles->rwTexture2D;
+			compute.set(params);
+		}
 
-			ivec2 half_size = { (size.x + 1) / 2, (size.y + 1) / 2 };
-			builder.create(data.GBuffer_HalfDepth,   { ivec3(half_size,0), HAL::Format::R32_FLOAT,     1, 1 }, ResourceFlags::UnorderedAccess);
-			builder.create(data.GBuffer_HalfNormals, { ivec3(half_size,0), HAL::Format::R8G8B8A8_UNORM,1, 1 }, ResourceFlags::UnorderedAccess);
-			builder.create(data.TileClassifyMask,    { ivec3(size,0),      HAL::Format::R8_UINT,       1, 1 }, ResourceFlags::UnorderedAccess);
-
-			// Worst case: every tile lands in the same bucket -- size each
-			// list for the full tile count, same reasoning as VSM's own
-			// tile-classification lists.
-			uint2  tiles_count = uint2(Math::DivideByMultiple(size.x, 8), Math::DivideByMultiple(size.y, 8));
-			size_t max_tiles   = (size_t)tiles_count.x * tiles_count.y;
-			builder.create(data.TileClassifyHi,  { max_tiles, true }, ResourceFlags::UnorderedAccess);
-			builder.create(data.TileClassifyLow, { max_tiles, true }, ResourceFlags::UnorderedAccess);
-
-			return true;
-			}, [this, &graph](auto& data, FrameContext& _context) {
-
-				auto& command_list = _context.get_list();
-				auto tempColor = *data.gbuffer.GBuffer_TempColor;
-				GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
-				auto& graphics = command_list->get_graphics();
-				auto& compute  = command_list->get_compute();
-
-				graphics.set_signature(Layouts::DefaultLayout);
-
-				graph.set_slot(SlotID::FrameInfo, graphics);
-
-				MipMapGenerator::get().generate_quality(graphics, nullptr, gbuffer, tempColor);
-
-				{
-					PROFILE_GPU(L"gbuffer_tile_classify");
-
-					compute.set_signature(Layouts::DefaultLayout);
-					// Every root-signature change invalidates prior root
-					// arguments -- FrameInfo must be re-bound even though this
-					// shader doesn't sample it, or an unbound CBV slot trips
-					// GPU-based validation #939 (see FrameClassification's own
-					// render() for the same lesson learned the hard way).
-					graph.set_slot(SlotID::FrameInfo, compute);
-					compute.clear_counter(*data.TileClassifyHi);
-					compute.clear_counter(*data.TileClassifyLow);
-
-					{
-						Slots::TileClassifyData params;
-						gbuffer.SetTable(params.GetGbuffer());
-						params.GetHalf_depth()   = data.GBuffer_HalfDepth->rwTexture2D;
-						params.GetHalf_normals() = data.GBuffer_HalfNormals->rwTexture2D;
-						params.GetTile_hi()      = data.TileClassifyHi->appendStructuredBuffer;
-						params.GetTile_low()     = data.TileClassifyLow->appendStructuredBuffer;
-						params.GetTile_mask()    = data.TileClassifyMask->rwTexture2D;
-						compute.set(params);
-					}
-
-					compute.set_pipeline<PSOS::GBufferDownsample>();
-					compute.dispatch(_context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 8, 8 });
-				}
-
-			});
-
+		compute.set_pipeline<PSOS::GBufferDownsample>();
+		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 8, 8 });
 	}
-
-
-};
+}
 
 
 

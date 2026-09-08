@@ -5,10 +5,12 @@
 // Changes will be lost on next generation. Edit the .sig source files instead.
 // ============================================================================
 #pragma once
-
-struct Indirect: public RaytraceRaygen<Indirect>
+#include "sig_hlsl.hlsl"
+#include "enums.h"
+struct IndirectRTXUpscale
 {
-	static const constexpr uint ID = 6;
-	static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
-	static const constexpr std::wstring_view raygen = L"MyRaygenShader";
+	uint noiseHalf; // Texture2D<float4>
+	uint tileFlags; // Texture2D<uint>
+	Texture2D<float4> GetNoiseHalf() { return ResourceDescriptorHeap[noiseHalf]; }
+	Texture2D<uint> GetTileFlags() { return ResourceDescriptorHeap[tileFlags]; }
 };

@@ -23,6 +23,12 @@ public:
 		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
+		Handlers::Texture RTXIndirectNoiseHalf = ResourceID::RTXIndirectNoiseHalf;
+
+
+		Handlers::Texture TileClassifyTiles = ResourceID::TileClassifyTiles;
+
+
 		Handlers::Texture RTXIndirectNoise = ResourceID::RTXIndirectNoise;
 
 		// Resources this pass touches, in declaration order, each paired with
@@ -43,6 +49,8 @@ public:
 			{ ResourceID::GBuffer_HiZ, false },
 			{ ResourceID::GBuffer_HiZ_UAV, false },
 			{ ResourceID::BlueNoise, false },
+			{ ResourceID::RTXIndirectNoiseHalf, false },
+			{ ResourceID::TileClassifyTiles, false },
 			{ ResourceID::RTXIndirectNoise, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

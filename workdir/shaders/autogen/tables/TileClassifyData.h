@@ -15,6 +15,7 @@ struct TileClassifyData
 	uint tile_hi; // AppendStructuredBuffer<uint2>
 	uint tile_low; // AppendStructuredBuffer<uint2>
 	uint tile_mask; // RWTexture2D<uint>
+	uint tile_flags; // RWTexture2D<uint>
 	GBuffer gbuffer; // GBuffer
 	GBuffer GetGbuffer() { return gbuffer; }
 	RWTexture2D<float> GetHalf_depth() { return ResourceDescriptorHeap[half_depth]; }
@@ -22,4 +23,5 @@ struct TileClassifyData
 	AppendStructuredBuffer<uint2> GetTile_hi() { return ResourceDescriptorHeap[tile_hi]; }
 	AppendStructuredBuffer<uint2> GetTile_low() { return ResourceDescriptorHeap[tile_low]; }
 	RWTexture2D<uint> GetTile_mask() { return ResourceDescriptorHeap[tile_mask]; }
+	RWTexture2D<uint> GetTile_flags() { return ResourceDescriptorHeap[tile_flags]; }
 };

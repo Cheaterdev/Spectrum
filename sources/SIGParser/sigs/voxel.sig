@@ -75,6 +75,32 @@ struct VoxelOutput
 	RWTexture2D<float4> noiseRaw;
 }
 
+# Minimal depth+normal pair for MyRaygenShaderIndirectRTXHalfRes -- deliberately
+# NOT the full GBuffer/VoxelScreen struct: this dispatch only has
+# GBuffer_HalfDepth/HalfNormals, and populating a synthetic GBuffer with the
+# rest left default risks an unbound-descriptor read (the same #939 class of
+# bug documented elsewhere in this .sig) for channels the shader never
+# touches but the table still declares.
+[Bind = DefaultLayout::Instance4]
+struct IndirectRTXHalfGBuffer
+{
+	Texture2D<float> depth;
+	Texture2D<float4> normals;
+}
+
+# Read-side inputs for MyRaygenShaderIndirectRTXOnly's Low-tile shortcut: the
+# half-res trace's packed output (bilinear-sampled directly -- REBLUR's
+# packed radiance is a linear/YCoCg transform of RGB, so this is equivalent
+# to sampling then re-packing, and NRD's own internal passes already
+# resample this exact packed shape the same way) and the resolved per-tile
+# Hi/Low flag (TileClassifyData's tile_flags) this pixel's tile belongs to.
+[Bind = DefaultLayout::Instance3]
+struct IndirectRTXUpscale
+{
+	Texture2D<float4> noiseHalf;
+	Texture2D<uint> tileFlags;
+}
+
 [Bind = DefaultLayout::Instance2]
 struct VoxelUpscale
 {
@@ -259,12 +285,21 @@ ComputePSO RTXCombine
 }
 
 
-# See TileClassifyData's own comment (pssm.sig) for the algorithm. Not
-# [Static] -- sizes TileClassifyHi/Low from the current frame_size in setup,
-# same reasoning as VoxelScreen's own hi/low lists.
+# See TileClassifyData's own comment (pssm.sig) for the algorithm. [Static]
+# and listed in MainPipeline (test.sig), same as IndirectRTX -- this used to
+# be a runtime-wired add_library_pass with no actual call site left calling
+# it (dead: the pass never ran, before or after this rewrite), stateless
+# enough that [Static] + PassDefault<Passes::GBufferDownsampler> is the
+# right shape, matching every other pass here.
+[Static]
 [Compute]
 PassNode GBufferDownsampler
 {
+	# GBuffer_TempColor is the scratch target MipMapGenerator::generate_quality
+	# needs -- the only PassView GBuffer field this pass actually writes
+	# (see Scene's own [Write = {...}] on its GBuffer gbuffer for the same
+	# pattern); every other field is genuinely read-only here.
+	[Write = {GBuffer_TempColor}]
 	GBuffer gbuffer;
 
 	[Write] Texture GBuffer_HalfDepth;
@@ -274,6 +309,7 @@ PassNode GBufferDownsampler
 	[Write] StructuredBuffer<uint2> TileClassifyLow;
 
 	[Write] Texture TileClassifyMask;
+	[Write] Texture TileClassifyTiles;
 }
 
 PassNode VoxelDebug
@@ -318,17 +354,41 @@ PassNode ShadowRTX
 	[Write] Texture RTXShadowNoise;
 }
 
+# Always-on cheap base layer for IndirectRTX's Low-tile pixels: same trace,
+# same importance sampling, just over GBuffer_HalfDepth/HalfNormals instead
+# of full res (a quarter the rays). See IndirectRTXUpscale's own comment
+# (this file) for how IndirectRTX consumes RTXIndirectNoiseHalf.
+[Static]
+[Compute]
+PassNode IndirectRTXHalf
+{
+	Texture GBuffer_HalfDepth;
+	Texture GBuffer_HalfNormals;
+	Texture BlueNoise;
+
+	[Write] Texture RTXIndirectNoiseHalf;
+}
+
 # Indirect-GI reference signal, sibling of ReflectionRTX/ShadowRTX. One ray
 # per pixel, GGX-importance-sampled hemisphere direction, no voxel-cone-trace
 # fallback on miss, no temporal history. Denoised by NRD REBLUR_DIFFUSE
 # (NRD_REBLUR_Execute, see [[project-nrd-integration]]), the only indirect
 # denoiser now, then composited by RTXCombine/ReflCombine below.
+#
+# Tile-classified: a Low-tile pixel (TileClassifyTiles, from
+# GBufferDownsampler) skips its own TraceRay entirely and bilinear-samples
+# IndirectRTXHalf's output instead (see raytracing.hlsl's
+# MyRaygenShaderIndirectRTXOnly) -- first consumer of the generic tile
+# system built for exactly this (TileClassifyData, pssm.sig). Only Hi tiles
+# pay for a fresh ray.
 [Static]
 [Compute]
 PassNode IndirectRTX
 {
 	GBuffer gbuffer;
 	Texture BlueNoise;
+	Texture RTXIndirectNoiseHalf;
+	Texture TileClassifyTiles;
 
 	[Write] Texture RTXIndirectNoise;
 }

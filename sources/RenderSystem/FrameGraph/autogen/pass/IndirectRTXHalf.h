@@ -6,19 +6,18 @@
 // ============================================================================
 #pragma once
 #include "../PassNodeBase.h"
-#include "GBuffer.h"
+
 using namespace FrameGraph;
 
 namespace Passes
 {
 
-class GBufferDownsampler : public PassNodeBase
+class IndirectRTXHalf : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
-		GBuffer gbuffer;
 
 		Handlers::Texture GBuffer_HalfDepth = ResourceID::GBuffer_HalfDepth;
 
@@ -26,40 +25,19 @@ public:
 		Handlers::Texture GBuffer_HalfNormals = ResourceID::GBuffer_HalfNormals;
 
 
-		Handlers::StructuredBuffer<uint2> TileClassifyHi = ResourceID::TileClassifyHi;
+		Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
-		Handlers::StructuredBuffer<uint2> TileClassifyLow = ResourceID::TileClassifyLow;
-
-
-		Handlers::Texture TileClassifyMask = ResourceID::TileClassifyMask;
-
-
-		Handlers::Texture TileClassifyTiles = ResourceID::TileClassifyTiles;
+		Handlers::Texture RTXIndirectNoiseHalf = ResourceID::RTXIndirectNoiseHalf;
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::GBuffer_Albedo, false },
-			{ ResourceID::GBuffer_Normals, false },
-			{ ResourceID::GBuffer_Depth, false },
-			{ ResourceID::GBuffer_Specular, false },
-			{ ResourceID::GBuffer_Speed, false },
-			{ ResourceID::GBuffer_DepthMips, false },
-			{ ResourceID::GBuffer_Quality, false },
-			{ ResourceID::GBuffer_TempColor, true },
-			{ ResourceID::GBuffer_NormalsPrev, false },
-			{ ResourceID::GBuffer_SpecularPrev, false },
-			{ ResourceID::GBuffer_DepthPrev, false },
-			{ ResourceID::GBuffer_HiZ, false },
-			{ ResourceID::GBuffer_HiZ_UAV, false },
-			{ ResourceID::GBuffer_HalfDepth, true },
-			{ ResourceID::GBuffer_HalfNormals, true },
-			{ ResourceID::TileClassifyHi, true },
-			{ ResourceID::TileClassifyLow, true },
-			{ ResourceID::TileClassifyMask, true },
-			{ ResourceID::TileClassifyTiles, true },
+			{ ResourceID::GBuffer_HalfDepth, false },
+			{ ResourceID::GBuffer_HalfNormals, false },
+			{ ResourceID::BlueNoise, false },
+			{ ResourceID::RTXIndirectNoiseHalf, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -70,9 +48,9 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"GBufferDownsampler"};
+	static constexpr LiteralWStr Name{L"IndirectRTXHalf"};
 
-	static constexpr PassID ID = PassID::GBufferDownsampler;
+	static constexpr PassID ID = PassID::IndirectRTXHalf;
 
 
 	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
