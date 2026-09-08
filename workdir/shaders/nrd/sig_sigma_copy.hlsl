@@ -25,4 +25,4 @@
 	static const RWTexture2D<float4> gOut_History = _nrd_res.GetGOut_History(); \
 	static const RWTexture2D<uint> gOut_HistoryLength = _nrd_res.GetGOut_HistoryLength();
 
-#include "SIGMA_Copy.cs.hlsl"
+#include "3rdparty/SIGMA_Copy.cs.hlsl"

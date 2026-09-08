@@ -23,4 +23,4 @@
 #define NRD_OUTPUTS_END \
 	static const RWTexture2D<float2> gOut_Tiles = _nrd_res.GetGOut_Tiles();
 
-#include "SIGMA_SmoothTiles.cs.hlsl"
+#include "3rdparty/SIGMA_SmoothTiles.cs.hlsl"

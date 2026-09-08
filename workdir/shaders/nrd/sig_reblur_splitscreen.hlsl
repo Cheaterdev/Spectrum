@@ -107,4 +107,4 @@
 #define NRD_OUTPUTS_END \
 	static const RWTexture2D<float4> gOut_Diff = _nrd_res.GetGOut_Diff();
 
-#include "REBLUR_SplitScreen.cs.hlsl"
+#include "3rdparty/REBLUR_SplitScreen.cs.hlsl"

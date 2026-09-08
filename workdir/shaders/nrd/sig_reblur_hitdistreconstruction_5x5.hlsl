@@ -110,4 +110,4 @@
 
 #define MODE_5X5 1
 
-#include "REBLUR_HitDistReconstruction.cs.hlsl"
+#include "3rdparty/REBLUR_HitDistReconstruction.cs.hlsl"

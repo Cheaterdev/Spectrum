@@ -118,4 +118,4 @@
 	static const RWTexture2D<float4> gOut_Spec = _nrd_res.GetGOut_Spec(); \
 	static const RWTexture2D<float> gOut_SpecLumaStabilized = _nrd_res.GetGOut_SpecLumaStabilized();
 
-#include "REBLUR_TemporalStabilization.cs.hlsl"
+#include "3rdparty/REBLUR_TemporalStabilization.cs.hlsl"

@@ -115,4 +115,4 @@
 	static const RWTexture2D<float4> gOut_Diff = _nrd_res.GetGOut_Diff(); \
 	static const RWTexture2D<float> gOut_DiffLumaStabilized = _nrd_res.GetGOut_DiffLumaStabilized();
 
-#include "REBLUR_TemporalStabilization.cs.hlsl"
+#include "3rdparty/REBLUR_TemporalStabilization.cs.hlsl"

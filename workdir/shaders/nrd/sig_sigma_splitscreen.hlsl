@@ -25,4 +25,4 @@
 
 #define TRANSLUCENCY 0
 
-#include "SIGMA_SplitScreen.cs.hlsl"
+#include "3rdparty/SIGMA_SplitScreen.cs.hlsl"

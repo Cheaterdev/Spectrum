@@ -19,13 +19,14 @@ workdir/assert.txt
 # ml.hlsli, recompiled locally via HAL::ShaderCompiler -- same license as
 # vcpkg_installed/ (proprietary NVIDIA source, "distribution ... without an
 # express license agreement from NVIDIA CORPORATION is strictly
-# prohibited" per each file's own header), must never be committed.
-# Our own SIG-binding shims (sig_*.hlsl) live in the same directory (their
-# relative #includes need to be siblings of NRD's own files -- see
-# [[project-nrd-integration]]) and are the one thing in here we DO want
-# tracked, hence "nrd/*" + an explicit re-include, not a bare "nrd/".
-workdir/shaders/nrd/*
-!workdir/shaders/nrd/sig_*.hlsl
+# prohibited" per each file's own header), must never be committed. Lives
+# in its own subfolder specifically so a blanket ignore here can't also eat
+# our own SIG-binding shims (sig_*.hlsl, *_shim.hlsli) living alongside it in
+# workdir/shaders/nrd/ -- a name-pattern-based re-include (the previous
+# approach here) silently swallowed every new file that didn't happen to
+# match sig_*.hlsl (found 2026-09-09: several of our own hand-written .hlsl/
+# .hlsli files in that folder had never actually been tracked).
+workdir/shaders/nrd/3rdparty/
 
 *.dat
 

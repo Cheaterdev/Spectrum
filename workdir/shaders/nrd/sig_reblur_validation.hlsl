@@ -116,4 +116,4 @@
 #define NRD_OUTPUTS_END \
 	static const RWTexture2D<float4> gOut_Validation = _nrd_res.GetGOut_Validation();
 
-#include "REBLUR_Validation.cs.hlsl"
+#include "3rdparty/REBLUR_Validation.cs.hlsl"

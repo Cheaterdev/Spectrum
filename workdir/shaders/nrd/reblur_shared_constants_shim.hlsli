@@ -1,15 +1,33 @@
-// MODE_5X5=1 sibling of sig_reblur_hitdistreconstruction_specular.hlsl (see
-// [[project-nrd-integration]]) -- same resource layout, see that file's
-// comment; NRD reports these as two distinct pipelines.
-#define NRD_INTERNAL
-#define NRD_SIGNAL SPEC
-#define NRD_MODE RADIANCE
-
-#include "../autogen/REBLUR_HitDistReconstructionSpecularResources.h"
+// Spike (see [[project-nrd-integration]]): the ONE shared REBLUR
+// shared-constants forwarding block, replacing the same ~77-line block that
+// used to be hand-duplicated verbatim in every REBLUR_*.hlsl wrapper (one
+// copy per kernel, ~18 kernels). NRD_Universal's rawConstants is a plain
+// uint blob at the same byte layout as REBLURSharedConstants (memcpy'd
+// as-is by HAL.NRD.cpp, no field-by-field copy) -- reinterpreting the SAME
+// bindless CBV slot as REBLURSharedConstants instead of NRD_Universal costs
+// nothing (a constant buffer is just bytes; the C++/HLSL "type" only
+// decides how those bytes are read), so this avoids threading a nested
+// accessor through NRD_Universal at all: pass_NRD_Universal is the raw
+// per-table root CB slot.jinja always emits alongside Get/CreateNRD_Universal()
+// (see autogen/NRD_Universal.h), and .offset is its bindless heap index.
+//
+// Still one hand-typed forwarding line per field -- NRD's kernel bodies
+// reference these as bare globals (gWorldToClip, not _nrd_shared.gWorldToClip),
+// and HLSL has no way to inject struct members as locals automatically. That
+// per-field enumeration is unavoidable without letting NRD.hlsli's own
+// default DXC branch declare a real cbuffer at a dedicated register instead
+// (a bigger, separate follow-up -- see nrd_sig_test.sig's own comment).
+// See nrd_universal_shim.hlsli's comment -- NRD_Universal.h has no
+// #pragma once (its SLOT_6 guard means something different), so this shares
+// an explicit include-once guard with that file by name.
+#ifndef NRD_UNIVERSAL_INCLUDED
+#define NRD_UNIVERSAL_INCLUDED
+#include "../autogen/NRD_Universal.h"
+#endif
+#include "../autogen/tables/REBLURSharedConstants.h"
 
 #define NRD_CONSTANTS_START( resourceName ) \
-	static const ConstantBuffer<REBLUR_HitDistReconstructionSpecularResources> _nrd_res = GetREBLUR_HitDistReconstructionSpecularResources(); \
-	static const REBLURSharedConstants _nrd_shared = _nrd_res.GetSharedConstants();
+	static const ConstantBuffer<REBLURSharedConstants> _nrd_shared = ResourceDescriptorHeap[pass_NRD_Universal.offset];
 #define NRD_CONSTANT( constantType, constantName )
 #define NRD_CONSTANTS_END \
 	static const float4x4 gWorldToClip = _nrd_shared.GetGWorldToClip(); \
@@ -89,26 +107,3 @@
 	static const uint gIsRectChanged = _nrd_shared.GetGIsRectChanged(); \
 	static const uint gResetHistory = _nrd_shared.GetGResetHistory(); \
 	static const uint gReturnHistoryLengthInsteadOfOcclusion = _nrd_shared.GetGReturnHistoryLengthInsteadOfOcclusion();
-
-#define NRD_SAMPLERS_START
-#define NRD_SAMPLER( resourceType, resourceName, regName, bindingIndex )
-#define NRD_SAMPLERS_END \
-	static const SamplerState gNearestClamp = pointClampSampler; \
-	static const SamplerState gLinearClamp = linearClampSampler;
-
-#define NRD_INPUTS_START
-#define NRD_INPUT( resourceType, dataType, resourceName, regName, bindingIndex )
-#define NRD_INPUTS_END \
-	static const Texture2D<float> gIn_Tiles = _nrd_res.GetGIn_Tiles(); \
-	static const Texture2D<float4> gIn_Normal_Roughness = _nrd_res.GetGIn_Normal_Roughness(); \
-	static const Texture2D<float> gIn_ViewZ = _nrd_res.GetGIn_ViewZ(); \
-	static const Texture2D<float4> gIn_Spec = _nrd_res.GetGIn_Spec();
-
-#define NRD_OUTPUTS_START
-#define NRD_OUTPUT( resourceType, dataType, resourceName, regName, bindingIndex )
-#define NRD_OUTPUTS_END \
-	static const RWTexture2D<float4> gOut_Spec = _nrd_res.GetGOut_Spec();
-
-#define MODE_5X5 1
-
-#include "3rdparty/REBLUR_HitDistReconstruction.cs.hlsl"

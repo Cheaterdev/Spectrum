@@ -190,46 +190,6 @@ namespace nvidia
 		return r.descriptorType == nrd::DescriptorType::TEXTURE ? dummy_srv : dummy_uav;
 	}
 
-	// Clear.cs.hlsl|FLOAT=1 -- first ported kernel (see nrd_sig_test.sig,
-	// workdir/shaders/nrd/sig_clear.hlsl). Clear.resources.hlsli declares
-	// gDebug/gViewZScale/gDenoisingRange only "for availability in
-	// Common.hlsl" -- Clear.cs.hlsl's actual body (gOut[pixelPos] = 0;) never
-	// reads them, so NRD's own reflection drops them from this pipeline's
-	// constant blob entirely: constantBufferDataSize is 0, confirmed at
-	// runtime (18/18 dispatches this run) -- and idesc.pipelines[i].
-	// hasConstantData is also 0, NRD's own per-pipeline reflection flag
-	// (baked in at NRD.lib build time, independent of this dispatch call),
-	// ruling out "no real work requested" as the explanation: gridWidth/
-	// gridHeight for these same dispatches are 120x68 (full 1920x1080 at
-	// [numthreads(16,16,1)]), i.e. genuine full-resolution clears. Asserted,
-	// not branched around --
-	// if NRD ever starts sending bytes here (a version bump, a different
-	// permutation), silently leaving gDebug/gViewZScale/gDenoisingRange
-	// uninitialized would be a real correctness bug; this fails loudly
-	// instead so it gets a real fix (copy the bytes) rather than staying
-	// silently wrong. Clear_Constants' generated Compiled layout has gOut (a
-	// bindless resource index) appended after the 3 floats regardless --
-	// that's never part of NRD's own constant blob at all, since in NRD's
-	// model resources are always bound separately from constants, from the
-	// dispatch's own resource list.
-	static void dispatch_clear(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch)
-	{
-		ASSERT(dispatch.resourcesNum == 1);
-		HAL::TextureResource::ptr output = nrd_hal.resolve_pool_resource(dispatch.resources[0]);
-
-		ASSERT(dispatch.constantBufferDataSize == 0);
-		Slots::Clear_Constants slots;
-
-		auto h = compute.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
-		HLSL::RWTexture2D<float4> view(h);
-		view.create(output, 0, 0);
-		slots.GetGOut() = view;
-
-		compute.set_pipeline<PSOS::NRD_Clear_Test>();
-		compute.set(slots);
-		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
-	}
-
 	// Item 8 (see [[project-nrd-integration]]): real REBLUR_DIFFUSE dispatch
 	// wiring. resolve_srv/resolve_uav resolve one nrd::ResourceDesc entry
 	// (from a DispatchDesc::resources[] array, walked position-for-position
@@ -238,9 +198,8 @@ namespace nvidia
 	// NRD_INPUTS/NRD_OUTPUTS declaration order, so position i in one matches
 	// field i in the other) into a bindable view: PERMANENT_POOL/
 	// TRANSIENT_POOL get a fresh descriptor via alloc_descriptor + .create()
-	// (same as dispatch_clear, since pool textures are raw
-	// HAL::TextureResource, not FrameGraph resources with a cached dual
-	// view); the 4 named external inputs this integration wires
+	// (pool textures are raw HAL::TextureResource, not FrameGraph resources
+	// with a cached dual view); the 4 named external inputs this integration wires
 	// (IN_VIEWZ/IN_NORMAL_ROUGHNESS/IN_MV/IN_DIFF_RADIANCE_HITDIST) and the
 	// 1 named output (OUT_DIFF_RADIANCE_HITDIST) reuse NRDFrameInputs'
 	// already-created FrameGraph views directly (no alloc_descriptor
@@ -269,7 +228,16 @@ namespace nvidia
 		case nrd::ResourceType::IN_SPEC_RADIANCE_HITDIST: return in.spec_noisy.texture2D;
 		case nrd::ResourceType::OUT_SPEC_RADIANCE_HITDIST: return in.spec_denoised.texture2D;
 		default:
-			ASSERT(!"unhandled named SRV resource type -- see HAL.NRD.cpp's resolve_srv comment");
+			// Was a hard ASSERT back when every call site was a hand-curated
+			// per-kernel dispatch_X() with a known, pre-validated resource
+			// list -- hitting this really did mean a real REBLUR wiring gap.
+			// dispatch_generic() below now routes ANY kernel's ANY resource
+			// through here, including genuinely-anonymous ones (e.g. Clear's
+			// single scratch output) that were never meant to be "named" at
+			// all -- same dummy fallback resolve_pool_resource already uses
+			// for its own non-pool case, just logged instead of silent so a
+			// real REBLUR gap is still visible without crashing the app.
+			Log::get() << "[NRD] resolve_srv: unnamed SRV resource type " << (int)r.type << ", falling back to dummy" << Log::endl;
 			auto h = compute.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 			HLSL::Texture2D<> view(h);
 			view.create(nrd_hal.dummy_srv_resource(), 0, 1, 0);
@@ -295,12 +263,57 @@ namespace nvidia
 		case nrd::ResourceType::OUT_DIFF_RADIANCE_HITDIST: return in.diff_denoised.rwTexture2D;
 		case nrd::ResourceType::OUT_SPEC_RADIANCE_HITDIST: return in.spec_denoised.rwTexture2D;
 		default:
-			ASSERT(!"unhandled named UAV resource type -- see HAL.NRD.cpp's resolve_uav comment");
+			// See resolve_srv's default case's comment -- same reasoning.
+			Log::get() << "[NRD] resolve_uav: unnamed UAV resource type " << (int)r.type << ", falling back to dummy" << Log::endl;
 			auto h = compute.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 			HLSL::RWTexture2D<> view(h);
 			view.create(nrd_hal.dummy_uav_resource(), 0, 0);
 			return view;
 		}
+	}
+
+	// Spike (see [[project-nrd-integration]]): generic dispatch for any
+	// kernel bound through the universal NRD_Universal struct instead of a
+	// hand-typed X_Resources struct. Resource wiring is purely positional +
+	// typed off nrd::ResourceDesc::descriptorType (TEXTURE -> SRV ->
+	// slotsIn, else -> UAV -> slotsOut) -- same split
+	// nrd_universal_shim.hlsli's NRD_INPUT/NRD_OUTPUT macros rely on, since
+	// bindingIndex is already the correct per-category index on the HLSL
+	// side. Constants are a raw memcpy generalized from
+	// fill_reblur_shared_constants below: "however many bytes NRD actually
+	// sent, capped at the reservation" rather than a per-kernel exact-size
+	// assert -- C++ still never decodes a named field out of it.
+	template<typename PSO>
+	static void dispatch_generic(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute,
+		const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		Slots::NRD_Universal slots;
+
+		if (dispatch.constantBufferDataSize)
+		{
+			ASSERT(dispatch.constantBufferDataSize <= sizeof(slots.rawConstants));
+			memcpy(slots.rawConstants, dispatch.constantBufferData, dispatch.constantBufferDataSize);
+		}
+
+		uint32_t in_idx = 0, out_idx = 0;
+		for (uint32_t i = 0; i < dispatch.resourcesNum; ++i)
+		{
+			const nrd::ResourceDesc& r = dispatch.resources[i];
+			if (r.descriptorType == nrd::DescriptorType::TEXTURE)
+			{
+				ASSERT(in_idx < std::size(slots.slotsIn));
+				slots.slotsIn[in_idx++] = resolve_srv(nrd_hal, compute, r, in).get_offset();
+			}
+			else
+			{
+				ASSERT(out_idx < std::size(slots.slotsOut));
+				slots.slotsOut[out_idx++] = resolve_uav(nrd_hal, compute, r, in).get_offset();
+			}
+		}
+
+		compute.set_pipeline<PSO>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
 
 	// REBLURSharedConstants is #pragma pack(push,1) with fields in the exact
@@ -326,18 +339,6 @@ namespace nvidia
 		ASSERT(dispatch.constantBufferDataSize >= sizeof(Table::REBLURSharedConstants)
 			&& dispatch.constantBufferDataSize < sizeof(Table::REBLURSharedConstants) + 16);
 		memcpy(&dst, dispatch.constantBufferData, sizeof(Table::REBLURSharedConstants));
-	}
-
-	static void dispatch_reblur_classifytiles(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
-	{
-		ASSERT(dispatch.resourcesNum == 2);
-		Slots::REBLUR_ClassifyTilesResources slots;
-		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
-		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
-		slots.GetGOut_Tiles() = resolve_uav(nrd_hal, compute, dispatch.resources[1], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_ClassifyTiles>();
-		compute.set(slots);
-		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
 
 	// Shared by both HitDistReconstruction PSOs (MODE_5X5=0/1 -- identical
@@ -779,9 +780,9 @@ namespace nvidia
 			bool is_specular = dispatch.identifier == 2;
 
 			if (identifier == "Clear.cs.hlsl|FLOAT=1")
-				dispatch_clear(*this, compute, dispatch);
+				dispatch_generic<PSOS::NRD_Clear_Test>(*this, compute, dispatch, inputs);
 			else if (identifier.starts_with("REBLUR_ClassifyTiles.cs.hlsl"))
-				dispatch_reblur_classifytiles(*this, compute, dispatch, inputs);
+				dispatch_generic<PSOS::NRD_REBLUR_ClassifyTiles>(*this, compute, dispatch, inputs);
 			else if (identifier.starts_with("REBLUR_HitDistReconstruction.cs.hlsl") && identifier.find("MODE_5X5=1") != std::string::npos)
 			{
 				if (is_specular)

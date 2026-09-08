@@ -213,6 +213,7 @@ export
 		CopyTexture = "CopyTexture"_crc32,
 		DownsampleDepth = "DownsampleDepth"_crc32,
 		DownsampleDepthMip = "DownsampleDepthMip"_crc32,
+		NRD_Universal = "NRD_Universal"_crc32,
 		Clear_Constants = "Clear_Constants"_crc32,
 		SIGMA_ClassifyTilesResources = "SIGMA_ClassifyTilesResources"_crc32,
 		SIGMA_SmoothTilesResources = "SIGMA_SmoothTilesResources"_crc32,

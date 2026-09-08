@@ -37,6 +37,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "CopyTexture") return SlotID::CopyTexture;
 	if(slot_name == "DownsampleDepth") return SlotID::DownsampleDepth;
 	if(slot_name == "DownsampleDepthMip") return SlotID::DownsampleDepthMip;
+	if(slot_name == "NRD_Universal") return SlotID::NRD_Universal;
 	if(slot_name == "Clear_Constants") return SlotID::Clear_Constants;
 	if(slot_name == "SIGMA_ClassifyTilesResources") return SlotID::SIGMA_ClassifyTilesResources;
 	if(slot_name == "SIGMA_SmoothTilesResources") return SlotID::SIGMA_SmoothTilesResources;
@@ -203,6 +204,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::DownsampleDepth) return Slots::DownsampleDepth::Slot::ID;
 
 	if(id == SlotID::DownsampleDepthMip) return Slots::DownsampleDepthMip::Slot::ID;
+
+	if(id == SlotID::NRD_Universal) return Slots::NRD_Universal::Slot::ID;
 
 	if(id == SlotID::Clear_Constants) return Slots::Clear_Constants::Slot::ID;
 
@@ -446,6 +449,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::CopyTexture) return "CopyTexture";
 	if(id == SlotID::DownsampleDepth) return "DownsampleDepth";
 	if(id == SlotID::DownsampleDepthMip) return "DownsampleDepthMip";
+	if(id == SlotID::NRD_Universal) return "NRD_Universal";
 	if(id == SlotID::Clear_Constants) return "Clear_Constants";
 	if(id == SlotID::SIGMA_ClassifyTilesResources) return "SIGMA_ClassifyTilesResources";
 	if(id == SlotID::SIGMA_SmoothTilesResources) return "SIGMA_SmoothTilesResources";

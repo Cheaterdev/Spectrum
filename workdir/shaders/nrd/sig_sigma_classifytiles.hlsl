@@ -31,4 +31,4 @@
 // Matches the actual compiled permutation (SIGMA_SHADOW is non-translucent).
 #define TRANSLUCENCY 0
 
-#include "SIGMA_ClassifyTiles.cs.hlsl"
+#include "3rdparty/SIGMA_ClassifyTiles.cs.hlsl"

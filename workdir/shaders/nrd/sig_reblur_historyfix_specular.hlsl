@@ -115,4 +115,4 @@
 	static const RWTexture2D<float4> gOut_Spec = _nrd_res.GetGOut_Spec(); \
 	static const RWTexture2D<float> gOut_SpecFast = _nrd_res.GetGOut_SpecFast();
 
-#include "REBLUR_HistoryFix.cs.hlsl"
+#include "3rdparty/REBLUR_HistoryFix.cs.hlsl"

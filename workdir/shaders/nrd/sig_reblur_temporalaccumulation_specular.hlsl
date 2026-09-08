@@ -124,4 +124,4 @@
 	static const RWTexture2D<float> gOut_SpecHitDistForTracking = _nrd_res.GetGOut_SpecHitDistForTracking(); \
 	static const RWTexture2D<uint> gOut_Data2 = _nrd_res.GetGOut_Data2();
 
-#include "REBLUR_TemporalAccumulation.cs.hlsl"
+#include "3rdparty/REBLUR_TemporalAccumulation.cs.hlsl"

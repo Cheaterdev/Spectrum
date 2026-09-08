@@ -31,4 +31,4 @@
 
 #define TRANSLUCENCY 0
 
-#include "SIGMA_TemporalStabilization.cs.hlsl"
+#include "3rdparty/SIGMA_TemporalStabilization.cs.hlsl"

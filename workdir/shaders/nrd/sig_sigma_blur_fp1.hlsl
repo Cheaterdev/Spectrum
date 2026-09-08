@@ -30,4 +30,4 @@
 #define TRANSLUCENCY 0
 #define FIRST_PASS 1
 
-#include "SIGMA_Blur.cs.hlsl"
+#include "3rdparty/SIGMA_Blur.cs.hlsl"

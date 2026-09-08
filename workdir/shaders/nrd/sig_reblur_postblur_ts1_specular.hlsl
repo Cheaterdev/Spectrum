@@ -116,4 +116,4 @@
 
 #define TEMPORAL_STABILIZATION 1
 
-#include "REBLUR_PostBlur.cs.hlsl"
+#include "3rdparty/REBLUR_PostBlur.cs.hlsl"

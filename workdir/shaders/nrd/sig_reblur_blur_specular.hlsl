@@ -112,4 +112,4 @@
 	static const RWTexture2D<float> gOut_ViewZ = _nrd_res.GetGOut_ViewZ(); \
 	static const RWTexture2D<float4> gOut_Spec = _nrd_res.GetGOut_Spec();
 
-#include "REBLUR_Blur.cs.hlsl"
+#include "3rdparty/REBLUR_Blur.cs.hlsl"

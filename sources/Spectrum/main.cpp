@@ -1407,16 +1407,21 @@ public:
 				// Floating debug-view selector over the viewport: each button sets
 				// graph's DebugContext::mode, which repoints what UI_Render composites.
 				{
-					// force_dlssrr: NRD_REBLUR_Execute (and its RTX-signal
-					// producers) only run when g_upscaler_type ==
-					// UpscalerType::DLSSRR (see [[project-nrd-integration]]),
-					// same gate as IndirectRTX/RTXCombine -- selecting this
-					// view without also switching upscaler mode would just
-					// show stale/empty content (UI_Render silently falls
-					// back when the resource wasn't produced this frame), so
-					// this entry flips the upscaler too instead of requiring
-					// two separate dropdown changes.
-					struct DbgOpt { const char* name; FrameGraph::DebugMode mode; bool force_dlssrr = false; };
+					// force_non_dlssrr: NRD_REBLUR_Execute/NRD_GBufferPack (and
+					// so RTXIndirectDenoised/Preview, NRD_ViewZ,
+					// NRD_NormalRoughness) are gated OFF under DLSS-RR now --
+					// it does its own reconstruction/denoising, so NRD is
+					// redundant there and doesn't run (see NRD_GBufferPack's
+					// own comment, [[project-nrd-integration]]). Was the
+					// opposite direction (forced DLSS-RR ON) before that gate
+					// flipped; selecting one of these views without also
+					// leaving DLSS-RR would show stale/empty content
+					// (UI_Render silently falls back when the resource
+					// wasn't produced this frame), so this entry flips the
+					// upscaler too instead of requiring two separate
+					// dropdown changes. FSR is always available, so it's the
+					// one certain fallback (see the upscaler dropdown below).
+					struct DbgOpt { const char* name; FrameGraph::DebugMode mode; bool force_non_dlssrr = false; };
 					static const DbgOpt dbg_opts[] = {
 						{ "Final",         FrameGraph::DebugMode::Final },
 						{ "Albedo",        FrameGraph::DebugMode::Albedo },
@@ -1443,13 +1448,13 @@ public:
 					for (auto& o : dbg_opts)
 					{
 						auto mode = o.mode;
-						auto force_dlssrr = o.force_dlssrr;
+						auto force_non_dlssrr = o.force_non_dlssrr;
 						debug_combo->add_item(o.name)->on_select =
-							[this, mode, force_dlssrr]()
+							[this, mode, force_non_dlssrr]()
 							{
 								graph.get_context<FrameGraph::DebugContext>().mode = mode;
-								if (force_dlssrr && nvidia::DLSSRR::get().available())
-									g_upscaler_type = UpscalerType::DLSSRR;
+								if (force_non_dlssrr && g_upscaler_type == UpscalerType::DLSSRR)
+									g_upscaler_type = UpscalerType::FSR;
 							};
 					}
 					toolbar->add_child(debug_combo);

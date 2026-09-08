@@ -419,7 +419,7 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 	// wants exactly this shape for its ColorIn/SpecularHitDistance tags, see
 	// HAL.DLSSRR.ixx's own comment). See NRD_GBufferPack's comment
 	// (nrd_sig_test.sig) for why packing moved out of this raygen.
-	tex_noise[itc] = float4(payload_gi.color.rgb, payload_gi.dist);
+	tex_noise[itc] = float4(payload_gi.color.rgb*4, payload_gi.dist);
 }
 
 [shader("raygeneration")]

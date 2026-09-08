@@ -1,5 +1,6 @@
 ﻿module GUI;
 import RenderSystem;
+import Graphics;
 
 
 import <windows/windows.h>;
@@ -1030,8 +1031,22 @@ namespace GUI
             case DM::Motion:        return FrameGraph::ResourceID::GBuffer_Speed;
             case DM::VoxelTrace:    return FrameGraph::ResourceID::VoxelDebug;
             case DM::RTX:           return FrameGraph::ResourceID::ColorOutput;
-            case DM::RTXIndirectDenoised: return FrameGraph::ResourceID::RTXIndirectDenoised;
-            case DM::RTXIndirectDenoisedUnpacked: return FrameGraph::ResourceID::RTXIndirectDenoisedPreview;
+            // RTXIndirectDenoised/Preview only exist when NRD actually ran
+            // this frame -- NRD_REBLUR_Execute (and NRD_GBufferPack) are
+            // gated off under DLSS-RR now (it does its own reconstruction/
+            // denoising, see RTXCombine's own comment) -- so under DLSS-RR
+            // fall back to the raw RTX trace signal (RTXIndirectNoise, now
+            // plain RGB+hitdist -- see raytracing.hlsl's
+            // TraceIndirectDiffuse), the closest equivalent that's actually
+            // produced. Selecting either debug entry under DLSS-RR without
+            // this showed black (the resource was never created that
+            // frame), not an error -- the handler just resolves to nothing.
+            case DM::RTXIndirectDenoised:
+            case DM::RTXIndirectDenoisedUnpacked:
+                return g_upscaler_type == UpscalerType::DLSSRR
+                    ? FrameGraph::ResourceID::RTXIndirectNoise
+                    : (mode == DM::RTXIndirectDenoised ? FrameGraph::ResourceID::RTXIndirectDenoised
+                                                        : FrameGraph::ResourceID::RTXIndirectDenoisedPreview);
             case DM::NRDViewZ:            return FrameGraph::ResourceID::NRD_ViewZ;
             case DM::NRDNormalRoughness:  return FrameGraph::ResourceID::NRD_NormalRoughness;
             case DM::RawDepthMips:        return FrameGraph::ResourceID::GBuffer_DepthMips;
