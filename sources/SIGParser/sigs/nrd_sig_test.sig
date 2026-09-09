@@ -16,41 +16,6 @@
 # root signature (no shared heap), and DefaultLayout's generated files were
 # byte-identical with/without it. Brought back at user's request to debug
 # directly rather than treat the correlation as proof.
-# Spike (see [[project-nrd-integration]]): universal replacement for every
-# per-kernel X_Resources struct below. Two plain uint arrays instead of typed
-# Texture2D/RWTexture2D fields -- C++ writes raw bindless descriptor-heap
-# indices into slotsIn/slotsOut positionally (same order as
-# nrd::DispatchDesc::resources[], split by descriptorType), and one shared
-# HLSL shim (nrd_universal_shim.hlsli) casts ResourceDescriptorHeap[index] to
-# whatever type/dims NRD's own NRD_INPUT/NRD_OUTPUT macro call already names
-# -- no per-kernel field list needed on either side. rawConstants is NRD's
-# raw constantBufferData blob, memcpy'd wholesale; sized for REBLUR's real
-# 856-byte block (864 padded) with room for SIGMA's smaller one if it's ever
-# wired. Reinterpreted on the HLSL side as whatever real shared-constants
-# struct a given kernel family needs (REBLURSharedConstants below, cast via
-# the same bindless slot's raw offset -- see reblur_shared_constants_shim.hlsli)
-# -- C++ never decodes named fields out of it, only sizeof/memcpy.
-#
-# rawConstants MUST be uint4, not uint -- confirmed by a live repro
-# (2026-09-09, GetDebugInfo().Log() from inside REBLUR_ClassifyTiles):
-# gWorldToClip[0][0] (byte 0) read back correctly but gDenoisingRange (deep
-# in the same blob) read back as exactly 0. HLSL pads every CONSTANT BUFFER
-# ARRAY element to a 16-byte boundary regardless of element type, so a plain
-# `uint[256]` here physically occupies 4096 bytes (element i at byte i*16),
-# while the memcpy below writes NRD's blob tightly-packed (matching
-# REBLURSharedConstants' own hand-verified zero-padding layout) -- the two
-# interpretations of the same bytes only agree at index/byte 0. A `uint4`
-# element is already a full 16-byte slot, so there is no padding gap to
-# create the mismatch -- same reasoning as helpers.sig's `uint4
-# material_pip_ids[2]`, the existing precedent for this exact HLSL gotcha.
-[Bind = DefaultLayout::Instance2]
-struct NRD_Universal
-{
-	uint4 rawConstants[64];
-	uint slotsIn[14];
-	uint slotsOut[5];
-}
-
 [Bind = DefaultLayout::Instance2]
 struct Clear_Constants
 {

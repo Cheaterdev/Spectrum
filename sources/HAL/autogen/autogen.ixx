@@ -99,8 +99,6 @@ export import :Autogen.Slots.DownsampleDepth;
 export import :Autogen.Tables.DownsampleDepth;
 export import :Autogen.Slots.DownsampleDepthMip;
 export import :Autogen.Tables.DownsampleDepthMip;
-export import :Autogen.Slots.NRD_Universal;
-export import :Autogen.Tables.NRD_Universal;
 export import :Autogen.Slots.Clear_Constants;
 export import :Autogen.Tables.Clear_Constants;
 export import :Autogen.Slots.SIGMA_ClassifyTilesResources;
