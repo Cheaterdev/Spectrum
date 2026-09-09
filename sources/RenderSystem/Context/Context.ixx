@@ -208,14 +208,14 @@ export{
 
 		static void need(TaskBuilder& builder,auto &context, bool need_quality = false, bool need_mips = false)
 		{
-			builder.need(context.GBuffer_Albedo, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(context.GBuffer_Normals, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(context.GBuffer_Depth, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(context.GBuffer_Specular, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			builder.need(context.GBuffer_Speed, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(context.GBuffer_Albedo, ResourceFlags::Read);
+			builder.need(context.GBuffer_Normals, ResourceFlags::Read);
+			builder.need(context.GBuffer_Depth, ResourceFlags::Read);
+			builder.need(context.GBuffer_Specular, ResourceFlags::Read);
+			builder.need(context.GBuffer_Speed, ResourceFlags::Read);
 
-			builder.need(context.GBuffer_DepthPrev, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
-			if (need_quality) builder.need(context.GBuffer_Quality, ResourceFlags::DSRead);
+			builder.need(context.GBuffer_DepthPrev, ResourceFlags::Read);
+			if (need_quality) builder.need(context.GBuffer_Quality, ResourceFlags::Read);
 			builder.need(context.GBuffer_DepthMips, ResourceFlags::None);
 
 		}

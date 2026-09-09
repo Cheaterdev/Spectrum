@@ -117,7 +117,7 @@ export namespace Test
 		graph.add_library_pass<Passes::RTXColorPass>(
 			[](auto& data, FrameGraph::TaskBuilder& builder) -> bool {
 				// Depend on PreScene (writes `scene`) so the RTX BVH is ready before tracing.
-				builder.need(data.scene, FrameGraph::ResourceFlags::ComputeRead);
+				builder.need(data.scene, FrameGraph::ResourceFlags::Read);
 				builder.need(data.ColorOutput, FrameGraph::ResourceFlags::UnorderedAccess);
 
 				return true;

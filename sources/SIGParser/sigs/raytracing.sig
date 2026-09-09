@@ -333,8 +333,8 @@ ComputePSO RTXShadowReferenceCompute
 PassNode RTXColorPass
 {
 	# Read-only dependency on PreScene so the RTX BVH is built/updated before tracing.
-	[Always = ComputeRead] StructuredBuffer<uint> scene;
+	[Always = Read] StructuredBuffer<uint> scene;
 	# Force the sky chain to run so FrameInfo.GetSky() is populated for the miss shader.
-	[Always = ComputeRead] TextureCube sky_cubemap_filtered;
+	[Always = Read] TextureCube sky_cubemap_filtered;
 	[Write] Texture ColorOutput;
 }

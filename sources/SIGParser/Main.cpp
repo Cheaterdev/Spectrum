@@ -417,7 +417,16 @@ int main()
 					{
 						bool write;
 						if (const option* always = p.find_option("Always"))
-							write = WRITEABLE_FLAG_NAMES.count(always->value_atom.expr) > 0;
+						{
+							// [Always = A | B]: write if ANY of the OR'd flags is
+							// writeable, matching FrameGraph::ResourceFlags's own
+							// bitwise-OR semantics.
+							if (!always->value_atom.values.empty())
+								write = std::any_of(always->value_atom.values.begin(), always->value_atom.values.end(),
+									[](const have_expr& v) { return WRITEABLE_FLAG_NAMES.count(v.expr) > 0; });
+							else
+								write = WRITEABLE_FLAG_NAMES.count(always->value_atom.expr) > 0;
+						}
 						else
 							write = inside_view ? parent_is_write(p.name)
 							                    : (p.find_option("Write") != nullptr);
@@ -449,6 +458,43 @@ int main()
 				return result;
 			},
 			ArgInfo{"pass_name"}
+		));
+
+		// [Always = A] or [Always = A | B] on a leaf PassNode field, expanded
+		// into a ready-to-interpolate "FrameGraph::ResourceFlags::A |
+		// FrameGraph::ResourceFlags::B" expression for need_always()/
+		// create_always() codegen. Resolved in C++ rather than jinja since
+		// joining a variable-length reflected list with a per-item prefix
+		// isn't something to rely on the jinja2cpp dialect supporting.
+		global.AddGlobal("resolve_flags_expr", jinja2::MakeCallable(
+			[&](const std::string& pass_name, const std::string& field_name) -> std::string
+			{
+				Pass* pass = parsed.passes.find(pass_name);
+				if (!pass) return "";
+
+				for (const auto& p : pass->params)
+				{
+					if (p.name != field_name) continue;
+
+					const option* always = p.find_option("Always");
+					if (!always) return "";
+
+					if (always->value_atom.values.empty())
+						return "FrameGraph::ResourceFlags::" + always->value_atom.expr;
+
+					std::string result;
+					bool first = true;
+					for (const auto& v : always->value_atom.values)
+					{
+						if (!first) result += " | ";
+						result += "FrameGraph::ResourceFlags::" + v.expr;
+						first = false;
+					}
+					return result;
+				}
+				return "";
+			},
+			ArgInfo{"pass_name"}, ArgInfo{"field_name"}
 		));
 
 		global.AddGlobal("get_pipeline_resources", jinja2::MakeCallable(

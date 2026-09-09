@@ -74,7 +74,7 @@ public:
 	static constexpr PassID ID = PassID::UI_Render;
 
 
-	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
 

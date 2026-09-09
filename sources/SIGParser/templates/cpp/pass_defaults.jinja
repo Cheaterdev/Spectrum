@@ -35,7 +35,11 @@ struct PassDefault<Passes::{{pass_name}}>
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
 {%- endif %}
 
+{%- if pass_def.options.TriState is defined %}
+	static FrameGraph::SetupResult setup(Passes::{{pass_name}}::Context& data, FrameGraph::TaskBuilder& builder);
+{%- else %}
 	static bool setup(Passes::{{pass_name}}::Context& data, FrameGraph::TaskBuilder& builder);
+{%- endif %}
 	static void render(Passes::{{pass_name}}::Context& data, FrameGraph::FrameContext& context);
 };
 

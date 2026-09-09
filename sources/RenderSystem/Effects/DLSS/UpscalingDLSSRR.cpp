@@ -36,14 +36,14 @@ bool PassDefault<Passes::UpscalingDLSSRR>::setup(
 	// ResultTexture itself is only needed for the [Recreate]->ResultTextureNew
 	// pairing below -- the actual ColorIn value read in render() comes from
 	// ResultTextureRTXNoise (RTXCombine's output) instead.
-	builder.need(data.ResultTexture,          ResourceFlags::ComputeRead);
-	builder.need(data.ResultTextureRTXNoise,  ResourceFlags::ComputeRead | ResourceFlags::ExclusiveRead);
-	builder.need(data.GBuffer_Depth,       ResourceFlags::ComputeRead | ResourceFlags::ExclusiveRead);
-	builder.need(data.GBuffer_Speed,       ResourceFlags::ComputeRead | ResourceFlags::ExclusiveRead);
-	builder.need(data.GBuffer_Albedo,      ResourceFlags::ComputeRead | ResourceFlags::ExclusiveRead);
-	builder.need(data.NormalRoughness,     ResourceFlags::ComputeRead | ResourceFlags::ExclusiveRead);
-	builder.need(data.SpecularAlbedo,      ResourceFlags::ComputeRead | ResourceFlags::ExclusiveRead);
-	builder.need(data.RTXReflectionNoise,  ResourceFlags::ComputeRead | ResourceFlags::ExclusiveRead);
+	builder.need(data.ResultTexture,          ResourceFlags::Read);
+	builder.need(data.ResultTextureRTXNoise,  ResourceFlags::Read | ResourceFlags::ExclusiveRead);
+	builder.need(data.GBuffer_Depth,       ResourceFlags::Read | ResourceFlags::ExclusiveRead);
+	builder.need(data.GBuffer_Speed,       ResourceFlags::Read | ResourceFlags::ExclusiveRead);
+	builder.need(data.GBuffer_Albedo,      ResourceFlags::Read | ResourceFlags::ExclusiveRead);
+	builder.need(data.NormalRoughness,     ResourceFlags::Read | ResourceFlags::ExclusiveRead);
+	builder.need(data.SpecularAlbedo,      ResourceFlags::Read | ResourceFlags::ExclusiveRead);
+	builder.need(data.RTXReflectionNoise,  ResourceFlags::Read | ResourceFlags::ExclusiveRead);
 
 	builder.recreate(data.ResultTextureNew,
 		{ uint3(frame.upscale_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },

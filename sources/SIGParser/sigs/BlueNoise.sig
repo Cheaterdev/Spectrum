@@ -22,5 +22,5 @@ ComputePSO BlueNoise
 [Compute]
 PassNode BlueNoise
 {
-	[Write] Texture BlueNoise;
+	[Always = UnorderedAccess] [Size = 128] [Format = R8G8_UNORM] Texture BlueNoise;
 }

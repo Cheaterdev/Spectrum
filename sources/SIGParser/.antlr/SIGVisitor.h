@@ -23,6 +23,8 @@ public:
 
     virtual std::any visitBind_option(SIGParser::Bind_optionContext *context) = 0;
 
+    virtual std::any visitFlag_value_holder(SIGParser::Flag_value_holderContext *context) = 0;
+
     virtual std::any visitOptions_assign(SIGParser::Options_assignContext *context) = 0;
 
     virtual std::any visitOption(SIGParser::OptionContext *context) = 0;

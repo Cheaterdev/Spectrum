@@ -147,17 +147,13 @@ void PassDefault<Passes::CubeMapDownsample>::render(
 // ---- PassDefault<Passes::CubeMapEnviromentProcessor> ----------------------
 // Filters the sky cubemap into specular and diffuse IBL targets.
 
-bool PassDefault<Passes::CubeMapEnviromentProcessor>::setup(
+FrameGraph::SetupResult PassDefault<Passes::CubeMapEnviromentProcessor>::setup(
 	Passes::CubeMapEnviromentProcessor::Context& data, TaskBuilder& builder)
 {
-	builder.need(data.sky_cubemap, ResourceFlags::ComputeRead);
-	builder.create(data.sky_cubemap_filtered,
-	               { ivec3(64, 64, 0), HAL::Format::R11G11B10_FLOAT, 1 },
-	               ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-	builder.create(data.sky_cubemap_filtered_diffuse,
-	               { ivec3(64, 64, 0), HAL::Format::R11G11B10_FLOAT, 1 },
-	               ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-	return data.sky_cubemap.is_changed();
+	builder.need(data.sky_cubemap, ResourceFlags::Read);
+	return data.sky_cubemap.is_changed()
+		? FrameGraph::SetupResult::NeedsRender
+		: FrameGraph::SetupResult::IgnoreRender;
 }
 
 void PassDefault<Passes::CubeMapEnviromentProcessor>::render(

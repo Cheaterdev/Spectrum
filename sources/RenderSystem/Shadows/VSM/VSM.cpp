@@ -584,7 +584,6 @@ VSM::VSM() : VariableContext(L"VSM")
 	m_renderpages_setup = [this, physical_slots, pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
 		builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
-		builder.create(data.VSM_PageCameras, { (size_t)MaxPages }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		// Static like VSM_Atlas: must survive until this page is next dirty.
 		// R32G32_FLOAT, not R32_FLOAT: Phase 5.18 Part A widened the pyramid
 		// to two channels (.x = min/farthest, .y = max/closest -- see
@@ -1527,7 +1526,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		// it might (same builder.exists() shape RtxReference's own guard
 		// uses elsewhere in this file).
 		if (use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow))
-			builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::Read);
 		return true;
 	};
 
@@ -1671,7 +1670,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		// never gets created this frame. Same defensive builder.exists()
 		// guard PSSM_Combine already uses for the same resource.
 		if (vsm_debug_view == VSMDebugView::RtxReference && builder.exists(data.ShadowMask))
-			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::Read);
 		return true;
 	};
 
@@ -1763,9 +1762,9 @@ VSM::VSM() : VariableContext(L"VSM")
 		// this (RTXShadow's own setup() can return false on non-RTX
 		// hardware, in which case this never gets created this frame).
 		if (vsm_debug_view == VSMDebugView::RtxReference && builder.exists(data.ShadowMask))
-			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::Read);
 		if (vsm_debug_view == VSMDebugView::ContactShadow && use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow))
-			builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::Read);
 		return true;
 	};
 

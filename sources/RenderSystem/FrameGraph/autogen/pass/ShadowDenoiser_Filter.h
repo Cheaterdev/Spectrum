@@ -43,10 +43,10 @@ public:
 		// own need()/create() calls for anything conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.need(data.ShadowDenoiser_TileMetaBuffer, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.ShadowDenoiser_TileMetaBuffer, FrameGraph::ResourceFlags::Read);
 			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.GBuffer_Depth, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.GBuffer_Depth, FrameGraph::ResourceFlags::Read);
+			builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::Read);
 			builder.need(data.ShadowDenoiser_Scratch, FrameGraph::ResourceFlags::UnorderedAccess);
 			builder.need(data.ShadowDenoiser_Scratch2, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
@@ -75,7 +75,7 @@ public:
 	static constexpr PassID ID = PassID::ShadowDenoiser_Filter;
 
 
-	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
 

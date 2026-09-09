@@ -22,6 +22,9 @@ public:
   virtual void enterBind_option(SIGParser::Bind_optionContext * /*ctx*/) override { }
   virtual void exitBind_option(SIGParser::Bind_optionContext * /*ctx*/) override { }
 
+  virtual void enterFlag_value_holder(SIGParser::Flag_value_holderContext * /*ctx*/) override { }
+  virtual void exitFlag_value_holder(SIGParser::Flag_value_holderContext * /*ctx*/) override { }
+
   virtual void enterOptions_assign(SIGParser::Options_assignContext * /*ctx*/) override { }
   virtual void exitOptions_assign(SIGParser::Options_assignContext * /*ctx*/) override { }
 

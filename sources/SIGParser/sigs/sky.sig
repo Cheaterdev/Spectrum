@@ -94,7 +94,7 @@ ComputePSO CubemapENVDiffuse
 [Compute]
 PassNode Sky
 {
-	[Always = ComputeRead] Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Depth;
 	[Always = UnorderedAccess] Texture ResultTexture;
 }
 
@@ -102,6 +102,10 @@ PassNode Sky
 [Compute]
 PassNode CubeSky
 {
+	# Not [Always]: setup() calls data.sky_cubemap.changed() right after
+	# create()'ing it -- that mutator must run after the resource actually
+	# exists, but create_always() only runs after the whole setup_func
+	# returns, so this stays a manual create().
 	[Write] TextureCube sky_cubemap;
 }
 
@@ -117,9 +121,18 @@ PassNode CubeMapDownsample
 
 [Static]
 [Compute]
+# TriState: sky_cubemap_filtered/diffuse must be create()'d every frame
+# regardless of whether sky_cubemap actually changed (SetupResult::IgnoreRender
+# on unchanged frames still runs create_always()), while render() -- the
+# actual filter dispatch -- only needs to run on changed frames.
+[TriState]
 PassNode CubeMapEnviromentProcessor
 {
+	# Not [Always]: setup()'s own return value depends on
+	# data.sky_cubemap.is_changed(), which must be queried after this
+	# field's own need() runs within the SAME setup() call -- see
+	# project_sig_auto_need_and_caching's is_new()/is_changed() exclusion.
 	TextureCube sky_cubemap;
-	[Write] TextureCube sky_cubemap_filtered;
-	[Write] TextureCube sky_cubemap_filtered_diffuse;
+	[Always = UnorderedAccess | Static] [Size = 64] [Format = R11G11B10_FLOAT] [MipCount = 0] TextureCube sky_cubemap_filtered;
+	[Always = UnorderedAccess | Static] [Size = 64] [Format = R11G11B10_FLOAT] [MipCount = 0] TextureCube sky_cubemap_filtered_diffuse;
 }

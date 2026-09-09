@@ -36,7 +36,7 @@ SMAA::SMAA()
 			return false;
 
 		auto& frame = builder.graph->get_context<ViewportInfo>();
-		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::ComputeRead);
+		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::Read);
 		builder.create(data.SMAA_edges,
 			{ ivec3(frame.frame_size, 0), HAL::Format::R8G8_UNORM, 1, 1 },
 			FrameGraph::ResourceFlags::UnorderedAccess);

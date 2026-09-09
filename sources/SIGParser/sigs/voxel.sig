@@ -345,7 +345,7 @@ PassNode VoxelDebug
 {
 	GBuffer gbuffer;
 	[Write] Texture VoxelDebug;
-	[Always = ComputeRead] Texture3D VoxelLighted;
+	[Always = Read] Texture3D VoxelLighted;
 }
 
 # Always-on cheap base layer for ReflectionRTX's Low-tile pixels -- sibling
@@ -355,17 +355,17 @@ PassNode VoxelDebug
 [Compute]
 PassNode ReflectionRTXHalf
 {
-	[Always = ComputeRead] Texture GBuffer_HalfDepth;
-	[Always = ComputeRead] Texture GBuffer_HalfNormals;
-	[Always = ComputeRead] Texture BlueNoise;
+	[Always = Read] Texture GBuffer_HalfDepth;
+	[Always = Read] Texture GBuffer_HalfNormals;
+	[Always = Read] Texture BlueNoise;
 	# Read-only, never bound through this PassNode's own Slots:: struct --
 	# purely to force CubeMapEnviromentProcessor to run before this pass, so
 	# FrameInfo.GetSky() (a separate global slot, sampled by the miss shader
 	# via TraceReflection -> ColorPass) is actually populated instead of
 	# reading an unbound/null cubemap. Same pattern RTXColorPass already
 	# uses for its own miss shader, see its comment (this file).
-	[Always = ComputeRead] TextureCube sky_cubemap_filtered;
-	[Always = ComputeRead] TextureCube sky_cubemap_filtered_diffuse;
+	[Always = Read] TextureCube sky_cubemap_filtered;
+	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 
 	[Write] Texture RTXReflectionNoiseHalf;
 	[Write] Texture RTXReflectionDirPdfHalf;
@@ -388,14 +388,14 @@ PassNode ReflectionRTXHalf
 PassNode ReflectionRTX
 {
 	GBuffer gbuffer;
-	[Always = ComputeRead] Texture BlueNoise;
-	[Always = ComputeRead] Texture RTXReflectionNoiseHalf;
-	[Always = ComputeRead] Texture RTXReflectionDirPdfHalf;
-	[Always = ComputeRead] Texture TileClassifyTiles;
-	[Always = ComputeRead] Texture TileRoughnessTiles;
+	[Always = Read] Texture BlueNoise;
+	[Always = Read] Texture RTXReflectionNoiseHalf;
+	[Always = Read] Texture RTXReflectionDirPdfHalf;
+	[Always = Read] Texture TileClassifyTiles;
+	[Always = Read] Texture TileRoughnessTiles;
 	# See ReflectionRTXHalf's own comment on the same two fields.
-	[Always = ComputeRead] TextureCube sky_cubemap_filtered;
-	[Always = ComputeRead] TextureCube sky_cubemap_filtered_diffuse;
+	[Always = Read] TextureCube sky_cubemap_filtered;
+	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 
 	[Write] Texture RTXReflectionNoise;
 	[Write] Texture RTXReflectionDirPdf;
@@ -425,12 +425,12 @@ PassNode ShadowRTX
 [Compute]
 PassNode IndirectRTXHalf
 {
-	[Always = ComputeRead] Texture GBuffer_HalfDepth;
-	[Always = ComputeRead] Texture GBuffer_HalfNormals;
-	[Always = ComputeRead] Texture BlueNoise;
+	[Always = Read] Texture GBuffer_HalfDepth;
+	[Always = Read] Texture GBuffer_HalfNormals;
+	[Always = Read] Texture BlueNoise;
 	# See ReflectionRTXHalf's own comment on the same two fields.
-	[Always = ComputeRead] TextureCube sky_cubemap_filtered;
-	[Always = ComputeRead] TextureCube sky_cubemap_filtered_diffuse;
+	[Always = Read] TextureCube sky_cubemap_filtered;
+	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 
 	[Write] Texture RTXIndirectNoiseHalf;
 }
@@ -452,12 +452,12 @@ PassNode IndirectRTXHalf
 PassNode IndirectRTX
 {
 	GBuffer gbuffer;
-	[Always = ComputeRead] Texture BlueNoise;
-	[Always = ComputeRead] Texture RTXIndirectNoiseHalf;
-	[Always = ComputeRead] Texture TileClassifyTiles;
+	[Always = Read] Texture BlueNoise;
+	[Always = Read] Texture RTXIndirectNoiseHalf;
+	[Always = Read] Texture TileClassifyTiles;
 	# See ReflectionRTXHalf's own comment on the same two fields.
-	[Always = ComputeRead] TextureCube sky_cubemap_filtered;
-	[Always = ComputeRead] TextureCube sky_cubemap_filtered_diffuse;
+	[Always = Read] TextureCube sky_cubemap_filtered;
+	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 
 	[Write] Texture RTXIndirectNoise;
 }
@@ -472,7 +472,7 @@ PassNode ReflCombine
 	[Always = UnorderedAccess] Texture ResultTexture;
 	# NRD REBLUR_SPECULAR's denoised output (NRD_REBLUR_Execute, see
 	# [[project-nrd-integration]]) -- the only reflection denoiser now.
-	[Always = ComputeRead] Texture RTXReflectionDenoised;
+	[Always = Read] Texture RTXReflectionDenoised;
 }
 
 # DLSS-RR-active counterpart to ReflCombine, but NOT a composite over
@@ -495,9 +495,9 @@ PassNode RTXCombine
 	# NRD-denoised data would be a redundant double-denoise. NRD isn't even
 	# running when this pass does (NRD_REBLUR_Execute is gated off under
 	# DLSS-RR) -- see NRD_GBufferPack's own comment (nrd_sig_test.sig).
-	[Always = ComputeRead] Texture RTXReflectionNoise;
-	[Always = ComputeRead] Texture RTXIndirectNoise;
-	[Always = ComputeRead] Texture RTXShadowNoise;
+	[Always = Read] Texture RTXReflectionNoise;
+	[Always = Read] Texture RTXIndirectNoise;
+	[Always = Read] Texture RTXShadowNoise;
 
 	[Write] Texture ResultTextureRTXNoise;
 }
@@ -515,17 +515,17 @@ PassNode Voxelize
 [Compute]
 PassNode Lighting
 {
-	[Always = ComputeRead] Texture VSM_Atlas;
-	[Always = ComputeRead] Texture VSM_PageTable;
-	[Always = ComputeRead] StructuredBuffer<Camera> VSM_PageCameras;
+	[Always = Read] Texture VSM_Atlas;
+	[Always = Read] Texture VSM_PageTable;
+	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
 	[Always = UnorderedAccess] Texture3D VoxelLighted;
-	[Always = ComputeRead] Texture3D VoxelAlbedo;
-	[Always = ComputeRead] Texture3D VoxelNormal;
-	[Always = PixelRead] TextureCube sky_cubemap_filtered;
-	[Always = ComputeRead] Texture VoxelAlbedoStatic;
-	[Always = ComputeRead] Texture VoxelNormalStatic;
-	[Always = ComputeRead] Texture VoxelAlbedoDynamic;
-	[Always = ComputeRead] Texture VoxelNormalDynamic;
+	[Always = Read] Texture3D VoxelAlbedo;
+	[Always = Read] Texture3D VoxelNormal;
+	[Always = Read] TextureCube sky_cubemap_filtered;
+	[Always = Read] Texture VoxelAlbedoStatic;
+	[Always = Read] Texture VoxelNormalStatic;
+	[Always = Read] Texture VoxelAlbedoDynamic;
+	[Always = Read] Texture VoxelNormalDynamic;
 }
 
 [Compute]
@@ -543,8 +543,8 @@ PassNode Mipmapping
 PassNode VoxelScreen
 {
 	GBuffer gbuffer;
-	[Always = ComputeRead] Texture3D VoxelLighted;
-	[Always = ComputeRead] Texture BlueNoise;
+	[Always = Read] Texture3D VoxelLighted;
+	[Always = Read] Texture BlueNoise;
 
 	[Write] Texture VoxelIndirectNoiseRaw;
 }
@@ -557,8 +557,8 @@ PassNode VoxelScreen
 PassNode ScreenReflection
 {
 	GBuffer gbuffer;
-	[Always = ComputeRead] Texture3D VoxelLighted;
-	[Always = ComputeRead] Texture BlueNoise;
+	[Always = Read] Texture3D VoxelLighted;
+	[Always = Read] Texture BlueNoise;
 
 	[Write] Texture VoxelReflectionNoiseRaw;
 }

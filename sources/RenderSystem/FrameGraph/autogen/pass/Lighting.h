@@ -57,17 +57,17 @@ public:
 		// own need()/create() calls for anything conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::Read);
+			builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::Read);
+			builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::Read);
 			builder.need(data.VoxelLighted, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.VoxelAlbedo, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.VoxelNormal, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.sky_cubemap_filtered, FrameGraph::ResourceFlags::PixelRead);
-			builder.need(data.VoxelAlbedoStatic, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.VoxelNormalStatic, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.VoxelAlbedoDynamic, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.VoxelNormalDynamic, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VoxelAlbedo, FrameGraph::ResourceFlags::Read);
+			builder.need(data.VoxelNormal, FrameGraph::ResourceFlags::Read);
+			builder.need(data.sky_cubemap_filtered, FrameGraph::ResourceFlags::Read);
+			builder.need(data.VoxelAlbedoStatic, FrameGraph::ResourceFlags::Read);
+			builder.need(data.VoxelNormalStatic, FrameGraph::ResourceFlags::Read);
+			builder.need(data.VoxelAlbedoDynamic, FrameGraph::ResourceFlags::Read);
+			builder.need(data.VoxelNormalDynamic, FrameGraph::ResourceFlags::Read);
 		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -99,7 +99,7 @@ public:
 	static constexpr PassID ID = PassID::Lighting;
 
 
-	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
 

@@ -33,7 +33,7 @@ public:
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.RTXReflectionDenoised, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.RTXReflectionDenoised, FrameGraph::ResourceFlags::Read);
 		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -69,7 +69,7 @@ public:
 	static constexpr PassID ID = PassID::ReflCombine;
 
 
-	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
 

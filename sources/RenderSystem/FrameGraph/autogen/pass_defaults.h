@@ -25,7 +25,6 @@ struct PassDefault<Passes::FSR>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::FSR::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::FSR::Context& data, FrameGraph::FrameContext& context);
 };
@@ -36,7 +35,6 @@ struct PassDefault<Passes::ResultCreation>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-
 	static bool setup(Passes::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::ResultCreation::Context& data, FrameGraph::FrameContext& context);
 };
@@ -47,7 +45,6 @@ struct PassDefault<Passes::NRD_GBufferPack>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-
 	static bool setup(Passes::NRD_GBufferPack::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::NRD_GBufferPack::Context& data, FrameGraph::FrameContext& context);
 };
@@ -58,7 +55,6 @@ struct PassDefault<Passes::NRD_REBLUR_Execute>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-
 	static bool setup(Passes::NRD_REBLUR_Execute::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::NRD_REBLUR_Execute::Context& data, FrameGraph::FrameContext& context);
 };
@@ -69,7 +65,6 @@ struct PassDefault<Passes::NRD_IndirectCombine>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::NRD_IndirectCombine::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::NRD_IndirectCombine::Context& data, FrameGraph::FrameContext& context);
 };
@@ -80,7 +75,6 @@ struct PassDefault<Passes::RTXShadow>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::RTXShadow::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::RTXShadow::Context& data, FrameGraph::FrameContext& context);
 };
@@ -91,7 +85,6 @@ struct PassDefault<Passes::RTXColorPass>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::RTXColorPass::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::RTXColorPass::Context& data, FrameGraph::FrameContext& context);
 };
@@ -102,7 +95,6 @@ struct PassDefault<Passes::PreScene>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-
 	static bool setup(Passes::PreScene::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::PreScene::Context& data, FrameGraph::FrameContext& context);
 };
@@ -113,7 +105,6 @@ struct PassDefault<Passes::Profiler>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;
-
 	static bool setup(Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::Profiler::Context& data, FrameGraph::FrameContext& context);
 };
@@ -124,7 +115,6 @@ struct PassDefault<Passes::CopyPrev>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::CopyPrev::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::CopyPrev::Context& data, FrameGraph::FrameContext& context);
 };
@@ -135,7 +125,6 @@ struct PassDefault<Passes::Scene>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-
 	static bool setup(Passes::Scene::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::Scene::Context& data, FrameGraph::FrameContext& context);
 };
@@ -146,7 +135,6 @@ struct PassDefault<Passes::CubeMapDownsample>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::CubeMapDownsample::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::CubeMapDownsample::Context& data, FrameGraph::FrameContext& context);
 };
@@ -157,8 +145,7 @@ struct PassDefault<Passes::CubeMapEnviromentProcessor>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
-	static bool setup(Passes::CubeMapEnviromentProcessor::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::CubeMapEnviromentProcessor::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::CubeMapEnviromentProcessor::Context& data, FrameGraph::FrameContext& context);
 };
 
@@ -168,8 +155,7 @@ struct PassDefault<Passes::UI_PreDraw>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;
-
-	static bool setup(Passes::UI_PreDraw::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::UI_PreDraw::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::UI_PreDraw::Context& data, FrameGraph::FrameContext& context);
 };
 
@@ -179,7 +165,6 @@ struct PassDefault<Passes::UI_Render>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-
 	static bool setup(Passes::UI_Render::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::UI_Render::Context& data, FrameGraph::FrameContext& context);
 };
@@ -190,7 +175,6 @@ struct PassDefault<Passes::UpscalingDLSS>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-
 	static bool setup(Passes::UpscalingDLSS::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::UpscalingDLSS::Context& data, FrameGraph::FrameContext& context);
 };
@@ -201,7 +185,6 @@ struct PassDefault<Passes::UpscalingDLSSRR>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-
 	static bool setup(Passes::UpscalingDLSSRR::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::UpscalingDLSSRR::Context& data, FrameGraph::FrameContext& context);
 };
@@ -212,7 +195,6 @@ struct PassDefault<Passes::GBufferDownsampler>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::GBufferDownsampler::Context& data, FrameGraph::FrameContext& context);
 };
@@ -223,7 +205,6 @@ struct PassDefault<Passes::ReflectionRTXHalf>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::ReflectionRTXHalf::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::ReflectionRTXHalf::Context& data, FrameGraph::FrameContext& context);
 };
@@ -234,7 +215,6 @@ struct PassDefault<Passes::ReflectionRTX>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::ReflectionRTX::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::ReflectionRTX::Context& data, FrameGraph::FrameContext& context);
 };
@@ -245,7 +225,6 @@ struct PassDefault<Passes::ShadowRTX>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::ShadowRTX::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::ShadowRTX::Context& data, FrameGraph::FrameContext& context);
 };
@@ -256,7 +235,6 @@ struct PassDefault<Passes::IndirectRTXHalf>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::IndirectRTXHalf::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::IndirectRTXHalf::Context& data, FrameGraph::FrameContext& context);
 };
@@ -267,7 +245,6 @@ struct PassDefault<Passes::IndirectRTX>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::IndirectRTX::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::IndirectRTX::Context& data, FrameGraph::FrameContext& context);
 };
@@ -278,7 +255,6 @@ struct PassDefault<Passes::RTXCombine>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
 	static bool setup(Passes::RTXCombine::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::RTXCombine::Context& data, FrameGraph::FrameContext& context);
 };

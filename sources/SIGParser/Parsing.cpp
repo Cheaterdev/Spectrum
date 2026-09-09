@@ -257,6 +257,11 @@ public:
 		setup_list(get_elem<have_values>().values);
 	}
 
+	GENERATE(Flag_value_holder)
+	{
+		setup_list(get_elem<have_values>().values);
+	}
+
 	GENERATE(View_definition)
 	{
 		setup_map(get_elem<Parsed>().views);

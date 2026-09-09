@@ -48,13 +48,13 @@ bool PassDefault<Passes::NRD_GBufferPack>::setup(
 	// Exactly one need() per channel, matching whichever candidate render()
 	// below actually reads -- see this function's own top comment.
 	if (g_indirect_source == IndirectSource::MyVCT)
-		builder.need(data.VoxelIndirectNoiseRaw, ResourceFlags::ComputeRead);
+		builder.need(data.VoxelIndirectNoiseRaw, ResourceFlags::Read);
 	else
-		builder.need(data.RTXIndirectNoise, ResourceFlags::ComputeRead);
+		builder.need(data.RTXIndirectNoise, ResourceFlags::Read);
 	if (g_reflection_source == ReflectionSource::MyReflection)
-		builder.need(data.VoxelReflectionNoiseRaw, ResourceFlags::ComputeRead);
+		builder.need(data.VoxelReflectionNoiseRaw, ResourceFlags::Read);
 	else
-		builder.need(data.RTXReflectionNoise, ResourceFlags::ComputeRead);
+		builder.need(data.RTXReflectionNoise, ResourceFlags::Read);
 	GBufferViewDesc::need(builder, data.gbuffer);
 	return true;
 }

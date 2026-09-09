@@ -511,8 +511,6 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 		axis_intersect_cam.update();
 
 		builder.create(data.depth_tex,      { { 1,1,0 }, HAL::Format::R32_TYPELESS, 1 }, FrameGraph::ResourceFlags::DepthStencil);
-		builder.create(data.id_buffer,      { 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
-		builder.create(data.axis_id_buffer, { 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 

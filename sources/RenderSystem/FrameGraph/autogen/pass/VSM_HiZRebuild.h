@@ -34,7 +34,7 @@ public:
 		// own need()/create() calls for anything conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::Read);
 			builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Resources this pass touches, in declaration order, each paired with
@@ -59,7 +59,7 @@ public:
 	static constexpr PassID ID = PassID::VSM_HiZRebuild;
 
 
-	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
 

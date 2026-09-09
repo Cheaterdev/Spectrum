@@ -35,13 +35,13 @@ bool PassDefault<Passes::UpscalingDLSS>::setup(
 
 	auto& frame = builder.graph->get_context<ViewportInfo>();
 
-	builder.need(data.ResultTexture, ResourceFlags::ComputeRead);
+	builder.need(data.ResultTexture, ResourceFlags::Read);
 
 	// ExclusiveRead: this pass transitions these to PRESENT/COMMON for
 	// Streamline (see DLSS::upscale), which must not be folded into the
 	// shared SRV read-window every other pass uses for them.
-	builder.need(data.GBuffer_Depth, ResourceFlags::ComputeRead | ResourceFlags::ExclusiveRead);
-	builder.need(data.GBuffer_Speed, ResourceFlags::ComputeRead | ResourceFlags::ExclusiveRead);
+	builder.need(data.GBuffer_Depth, ResourceFlags::Read | ResourceFlags::ExclusiveRead);
+	builder.need(data.GBuffer_Speed, ResourceFlags::Read | ResourceFlags::ExclusiveRead);
 
 	builder.recreate(data.ResultTextureNew,
 		{ uint3(frame.upscale_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },

@@ -20,6 +20,9 @@ public:
   virtual void enterBind_option(SIGParser::Bind_optionContext *ctx) = 0;
   virtual void exitBind_option(SIGParser::Bind_optionContext *ctx) = 0;
 
+  virtual void enterFlag_value_holder(SIGParser::Flag_value_holderContext *ctx) = 0;
+  virtual void exitFlag_value_holder(SIGParser::Flag_value_holderContext *ctx) = 0;
+
   virtual void enterOptions_assign(SIGParser::Options_assignContext *ctx) = 0;
   virtual void exitOptions_assign(SIGParser::Options_assignContext *ctx) = 0;
 

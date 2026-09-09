@@ -139,12 +139,12 @@ bool PassDefault<Passes::RTXShadow>::setup(
 	auto& frame = builder.graph->get_context<ViewportInfo>();
 	auto  size  = frame.frame_size;
 
-	builder.need(data.gbuffer.GBuffer_Albedo,    ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
-	builder.need(data.gbuffer.GBuffer_Normals,   ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
-	builder.need(data.gbuffer.GBuffer_Depth,     ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
-	builder.need(data.gbuffer.GBuffer_Specular,  ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
-	builder.need(data.gbuffer.GBuffer_Speed,     ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
-	builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::PixelRead | ResourceFlags::ComputeRead);
+	builder.need(data.gbuffer.GBuffer_Albedo,    ResourceFlags::Read);
+	builder.need(data.gbuffer.GBuffer_Normals,   ResourceFlags::Read);
+	builder.need(data.gbuffer.GBuffer_Depth,     ResourceFlags::Read);
+	builder.need(data.gbuffer.GBuffer_Specular,  ResourceFlags::Read);
+	builder.need(data.gbuffer.GBuffer_Speed,     ResourceFlags::Read);
+	builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::Read);
 	builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::None);
 
 	builder.create(data.ShadowMask,

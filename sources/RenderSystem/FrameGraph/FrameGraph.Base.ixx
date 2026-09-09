@@ -102,15 +102,19 @@ public:
 
 	enum class ResourceFlags :int {
 		None = 0,
-		PixelRead = (1 << 1),
-		ComputeRead = (1 << 2),
-		DSRead = (1 << 3),
+		// Was PixelRead/ComputeRead/DSRead/CopySource -- four names for the
+		// same thing. Nothing in the barrier/RW-state timeline (ResourceAllocInfo::add_pass)
+		// or anywhere else ever branched on which one was used, only on
+		// whether a flag was in WRITEABLE_FLAGS or was ExclusiveRead; the
+		// four-way split was purely documentation that cost every read call
+		// site a choice with no behavioral difference. CopySource in
+		// particular had zero real call sites anywhere in RenderSystem.
+		Read = (1 << 1),
 
 		UnorderedAccess = (1 << 4),
 		RenderTarget = (1 << 5),
 		DepthStencil = (1 << 6),
 		CopyDest = (1 << 7),
-		CopySource = (1 << 8),
 
 
 	//	GenCPU = (1 << 9),
@@ -1029,13 +1033,51 @@ public:
 	};
 
 
+	// A plain bool return from setup_func conflates two different questions:
+	// does this pass exist in the graph at all this frame (need()/create()
+	// calls happen, barriers get computed) vs should its render() actually
+	// run. Most passes never need the distinction (false means fully
+	// disabled), but a pass that must touch a resource every frame
+	// regardless of whether there's anything to draw this frame (e.g. a
+	// ResourceChain that has to reset even on an empty frame) needs a third
+	// state -- IgnoreRender -- instead of hand-ordering its own
+	// need()/create() calls before an early return the way that pattern
+	// used to be faked.
+	//
+	// Implicitly convertible both ways with bool (true <-> NeedsRender,
+	// false <-> Disabled), so every existing `return true;`/`return false;`
+	// setup_func keeps compiling and behaving unchanged -- only a pass that
+	// wants the middle state needs to say so explicitly, by having its
+	// setup() declared to return SetupResult instead of bool (see pass_defaults.jinja's
+	// [TriState] option for PassDefault<T>-style passes).
+	struct SetupResult
+	{
+		enum Value
+		{
+			Disabled,     // pass does not exist this frame: no need()/create(), no render()
+			IgnoreRender, // need()/create() run as normal, but render() does not
+			NeedsRender,  // normal case: need()/create() run AND render() runs
+		};
+
+		Value value;
+
+		SetupResult(bool b) : value(b ? NeedsRender : Disabled) {}
+		SetupResult(Value v) : value(v) {}
+
+		// Preserves the existing bool contract every Pass::setup() caller
+		// (Graph's enabled/renderable bookkeeping) already relies on.
+		operator bool() const { return value == NeedsRender; }
+
+		bool touches_resources() const { return value != Disabled; }
+	};
+
 	template <class Handler>
 	struct TypedPass : public Pass
 	{
 		using HandlerType = Handler;
 
 		using render_func_type = std::function<void(Handler&, FrameContext&)>;
-		using setup_func_type = std::function<bool(Handler&, TaskBuilder&)>;
+		using setup_func_type = std::function<SetupResult(Handler&, TaskBuilder&)>;
 		using setup_func_type_void = std::function<void(Handler&, TaskBuilder&)>;
 
 
@@ -1056,19 +1098,23 @@ public:
 		virtual bool setup(TaskBuilder& builder) override
 		{
 			builder.begin(this);
-			bool res = setup_func(data, builder);
-			if (res)
+			SetupResult res = setup_func(data, builder);
+			if (res.touches_resources())
 			{
-				// Only after setup_func returns true - a pass can legitimately
-				// disable itself and return false, and builder.need() asserts
-				// exists() first, so needing [Always] resources unconditionally
-				// would crash the moment a pass bails out.
+				// Only when the pass isn't fully Disabled - a pass can
+				// legitimately not exist this frame, and builder.need()
+				// asserts exists() first, so needing [Always] resources
+				// unconditionally would crash the moment a pass bails out.
+				// IgnoreRender still runs these: that's the whole point of
+				// the third state.
 				if constexpr (requires { Handler::need_always(data, builder); })
 					Handler::need_always(data, builder);
+				if constexpr (requires { Handler::create_always(data, builder); })
+					Handler::create_always(data, builder);
 			}
 			builder.end(this);
 
-			return res;
+			return (bool)res;
 		}
 
 		virtual std::span<const ResourceAccess> declared_accesses() const override

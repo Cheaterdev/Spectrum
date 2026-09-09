@@ -34,7 +34,7 @@ public:
 		// own need()/create() calls for anything conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.need(data.PSSM_Depths, FrameGraph::ResourceFlags::PixelRead);
+			builder.need(data.PSSM_Depths, FrameGraph::ResourceFlags::Read);
 			builder.need(data.PSSM_Cameras, FrameGraph::ResourceFlags::None);
 		}
 		// Resources this pass touches, in declaration order, each paired with
@@ -72,7 +72,7 @@ public:
 	static constexpr PassID ID = PassID::PSSM_GenerateMask;
 
 
-	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
 

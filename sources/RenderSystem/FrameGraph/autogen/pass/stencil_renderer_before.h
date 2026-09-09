@@ -27,6 +27,17 @@ public:
 
 		Handlers::StructuredBuffer<UINT> axis_id_buffer = ResourceID::axis_id_buffer;
 
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags). Called by TypedPass::setup() after setup_func
+		// returns true - not a substitute for setup_func's own create() calls
+		// for anything whose Desc depends on runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.create(data.id_buffer, { 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.axis_id_buffer, { 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
@@ -49,7 +60,7 @@ public:
 	static constexpr PassID ID = PassID::stencil_renderer_before;
 
 
-	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
 

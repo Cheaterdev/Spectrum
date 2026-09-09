@@ -267,11 +267,11 @@ PSSM::PSSM()
 		GBufferViewDesc::need(builder, data.gbuffer);
 
 		if (builder.exists(data.ShadowMask))
-			builder.need(data.ShadowMask,  FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.ShadowMask,  FrameGraph::ResourceFlags::Read);
 		else
 		{
-			builder.need(data.LightMask, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.PSSM_Cameras,  FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.LightMask, FrameGraph::ResourceFlags::Read);
+			builder.need(data.PSSM_Cameras,  FrameGraph::ResourceFlags::Read);
 
 		}
 		return true;

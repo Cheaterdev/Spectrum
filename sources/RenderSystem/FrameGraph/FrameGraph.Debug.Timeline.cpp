@@ -1223,10 +1223,7 @@ class FrameGraphTimelineCanvas : public dock_base
         add(RF::UnorderedAccess, "UAV");
         add(RF::CopyDest,        "DST");
       //  add(RF::GenCPU,          "CPU");
-        add(RF::PixelRead,       "PSR");
-        add(RF::ComputeRead,     "CSR");
-        add(RF::DSRead,          "DS_R");
-        add(RF::CopySource,      "SRC");
+        add(RF::Read,            "R");
     //    add(RF::ReadCPU,         "CPU");
         return s;
     }

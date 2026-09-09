@@ -10,7 +10,12 @@ parse
  ;
 
 
-bind_option: (owner_id '::')? value_id;
+bind_option
+ : (owner_id '::')? value_id
+ | (owner_id '::')? flag_value_holder (PIPE flag_value_holder)+
+ ;
+
+flag_value_holder: value_id;
 
 options_assign: ASSIGN bind_option;
 
@@ -251,6 +256,7 @@ enum_definition : ENUM name_id OBRACE enum_block CBRACE;
 
 OR : '||';
 AND : '&&';
+PIPE : '|';
 EQ : '==';
 NEQ : '!=';
 GT : '>';

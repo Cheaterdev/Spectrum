@@ -23,6 +23,10 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitFlag_value_holder(SIGParser::Flag_value_holderContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitOptions_assign(SIGParser::Options_assignContext *ctx) override {
     return visitChildren(ctx);
   }

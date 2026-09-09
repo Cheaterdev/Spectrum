@@ -49,11 +49,11 @@ public:
 		// own need()/create() calls for anything conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.need(data.NRD_ViewZ, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.NRD_NormalRoughness, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.NRD_Mv, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.NRD_DiffuseRadianceHitDist, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.NRD_SpecularRadianceHitDist, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.NRD_ViewZ, FrameGraph::ResourceFlags::Read);
+			builder.need(data.NRD_NormalRoughness, FrameGraph::ResourceFlags::Read);
+			builder.need(data.NRD_Mv, FrameGraph::ResourceFlags::Read);
+			builder.need(data.NRD_DiffuseRadianceHitDist, FrameGraph::ResourceFlags::Read);
+			builder.need(data.NRD_SpecularRadianceHitDist, FrameGraph::ResourceFlags::Read);
 		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -82,7 +82,7 @@ public:
 	static constexpr PassID ID = PassID::NRD_REBLUR_Execute;
 
 
-	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
 

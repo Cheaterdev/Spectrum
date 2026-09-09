@@ -41,7 +41,7 @@ public:
 {% endfor -%}
 {%- set always_fields = create_list('always_fields') -%}
 {%- for v in pass.params -%}
-{%- if v.options.Always is defined -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
+{%- if v.options.Always is defined and v.options.Size is undefined and v.options.Format is undefined -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
 {%- endfor -%}
 {%- if get_list('always_fields') | length > 0 %}
 		// Resources this pass always needs whenever it runs, generated from
@@ -51,8 +51,31 @@ public:
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 {%- for v in pass.params %}
-{%- if v.options.Always is defined %}
-			builder.need(data.{{v.name}}, FrameGraph::ResourceFlags::{{v.options.Always.value_atom.expr}});
+{%- if v.options.Always is defined and v.options.Size is undefined and v.options.Format is undefined %}
+			builder.need(data.{{v.name}}, {{ resolve_flags_expr(pass.name, v.name) }});
+{%- endif %}
+{%- endfor %}
+		}
+{% endif -%}
+{%- set create_fields = create_list('create_fields') -%}
+{%- for v in pass.params -%}
+{%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) -%}{%- do myappend('create_fields', v.name) -%}{%- endif -%}
+{%- endfor -%}
+{%- if get_list('create_fields') | length > 0 %}
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags). Called by TypedPass::setup() after setup_func
+		// returns true - not a substitute for setup_func's own create() calls
+		// for anything whose Desc depends on runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+{%- for v in pass.params %}
+{%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) %}
+{%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
+			builder.create(data.{{v.name}}, { ivec3({{v.options.Size.value_atom.expr}}, {{v.options.Size.value_atom.expr}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_flags_expr(pass.name, v.name) }});
+{%- else %}
+			builder.create(data.{{v.name}}, { {{v.options.Size.value_atom.expr}} }, {{ resolve_flags_expr(pass.name, v.name) }});
+{%- endif %}
 {%- endif %}
 {%- endfor %}
 		}
@@ -90,7 +113,7 @@ public:
 	static constexpr PassID ID = PassID::{{pass.name}};
 
 
-	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
 {% if pass.options.Multiple is defined %}

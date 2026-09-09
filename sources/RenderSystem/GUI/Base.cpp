@@ -1702,18 +1702,19 @@ namespace GUI
 // PassDefault<Passes::UI_PreDraw>
 // ============================================================
 
-bool PassDefault<Passes::UI_PreDraw>::setup(
+FrameGraph::SetupResult PassDefault<Passes::UI_PreDraw>::setup(
     Passes::UI_PreDraw::Context& data, FrameGraph::TaskBuilder& builder)
 {
-    // Always create the sync resource — even on frames with nothing to
-    // pre-draw — so its ResourceChain resets every frame (create() is the
-    // only thing that calls reset_frame()). Skipping this on empty frames
-    // left it stale, so exists() kept reporting true from a prior frame and
-    // UI_Render's need() kept appending onto an un-cleared states list.
-    builder.create(data.UI_PreDraw_Sync, { 1 }, ResourceFlags::UnorderedAccess|ResourceFlags::Required);
-
+    // UI_PreDraw_Sync's ResourceChain must reset every frame (create() is
+    // the only thing that calls reset_frame()) even with nothing to
+    // pre-draw, or exists() keeps reporting true from a prior frame and
+    // UI_Render's need() keeps appending onto an un-cleared states list --
+    // [Always]/[Size] on the field itself now handles that create()
+    // unconditionally; IgnoreRender just skips render() on empty frames.
     auto& ui_ctx = builder.graph->get_context<GUI::UIContext>();
-    return !ui_ctx.pre_draw_infos.empty();
+    return ui_ctx.pre_draw_infos.empty()
+        ? FrameGraph::SetupResult::IgnoreRender
+        : FrameGraph::SetupResult::NeedsRender;
 }
 
 void PassDefault<Passes::UI_PreDraw>::render(
@@ -1753,9 +1754,9 @@ bool PassDefault<Passes::UI_Render>::setup(
     // result_texture_handler already points at the resource for the current
     // DebugContext::mode (set in create_graph), so no branching needed here.
     if (builder.exists(ui_ctx.result_texture_handler))
-        builder.need(ui_ctx.result_texture_handler, ResourceFlags::PixelRead);
+        builder.need(ui_ctx.result_texture_handler, ResourceFlags::Read);
     if (builder.exists(data.UI_PreDraw_Sync))
-        builder.need(data.UI_PreDraw_Sync, ResourceFlags::ComputeRead);
+        builder.need(data.UI_PreDraw_Sync, ResourceFlags::Read);
     return true;
 }
 

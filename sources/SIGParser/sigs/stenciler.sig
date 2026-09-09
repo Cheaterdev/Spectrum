@@ -174,8 +174,8 @@ PassNode stencil_renderer_before
 {
 	[Write] Texture depth_tex;
 
-	[Write] StructuredBuffer<UINT> id_buffer;
-	[Write] StructuredBuffer<UINT> axis_id_buffer;
+	[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> id_buffer;
+	[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> axis_id_buffer;
 }
 
 PassNode stencil_renderer_after

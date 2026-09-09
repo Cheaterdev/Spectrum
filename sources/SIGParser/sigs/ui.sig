@@ -288,9 +288,15 @@ GraphicsPSO StatGraphLines
 
 [Static]
 [Required]
+# TriState: setup() must create() UI_PreDraw_Sync every frame so its
+# ResourceChain resets even when there's nothing to pre-draw, but should
+# still skip render() on those frames -- SetupResult::IgnoreRender says
+# exactly that, instead of the old trick of hand-ordering create() before
+# an early return.
+[TriState]
 PassNode UI_PreDraw
 {
-	[Write] StructuredBuffer<uint> UI_PreDraw_Sync;
+	[Always = UnorderedAccess | Required] [Size = 1] StructuredBuffer<uint> UI_PreDraw_Sync;
 }
 
 [Static]

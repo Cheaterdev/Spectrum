@@ -46,8 +46,8 @@ ComputePSO NormalRoughnessRepack
 
 PassNode NormalRoughnessRepack
 {
-	[Always = ComputeRead] Texture GBuffer_Normals;
-	[Always = ComputeRead] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	[Always = Read] Texture GBuffer_Albedo;
 
 	[Write] Texture NormalRoughness;
 	[Write] Texture SpecularAlbedo;

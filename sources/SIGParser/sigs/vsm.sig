@@ -797,7 +797,10 @@ PassNode VSM_RenderPages
 {
 	[Always = DepthStencil] Texture VSM_Atlas;
 	[Write] Texture VSM_PageTable;
-	[Write] StructuredBuffer<Camera> VSM_PageCameras;
+	# MaxPages = MaxLevels(26) * MaxPagesPerLevel(16), both constexpr in
+	# VSM.ixx -- a real test of combined [Always = A | B] flags, not just a
+	# single-value one.
+	[Always = CopyDest | Static] [Size = 416] StructuredBuffer<Camera> VSM_PageCameras;
 	# Still [Write] and still created here (not in VSM_HiZRebuild below):
 	# the once-ever cold-start clear runs in this pass's render(), before
 	# the draw reads it for occlusion, so data.VSM_PageHiZ.is_new() has to
@@ -806,7 +809,7 @@ PassNode VSM_RenderPages
 	# the resource in that pass. VSM_HiZRebuild need()s the same resource
 	# for the actual per-frame rebuild writes.
 	[Write] Texture VSM_PageHiZ;
-	[Always = ComputeRead] StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
+	[Always = Read] StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
 	# Phase 5.19: read here too (not just by VSM_GatherDispatch that wrote
 	# it) -- this pass's render() also dispatches VSMGatherDispatchMaterial
 	# (CS_MATERIAL) per batch of transparent-material pipelines, immediately
@@ -814,7 +817,7 @@ PassNode VSM_RenderPages
 	# cutout gather+draw cycle stays in one place instead of splitting across
 	# two PassNodes and racing the shared 8-bucket pool (see VSM.cpp's own
 	# comment at the call site for why it can't split).
-	[Always = ComputeRead] StructuredBuffer<VSMLevelDispatchInfo> VSM_LevelDispatchInfo;
+	[Always = Read] StructuredBuffer<VSMLevelDispatchInfo> VSM_LevelDispatchInfo;
 }
 
 # Phase 5.17: Hi-Z pyramid rebuild, split into its own async-compute pass.
@@ -833,7 +836,7 @@ PassNode VSM_RenderPages
 [Compute]
 PassNode VSM_HiZRebuild
 {
-	[Always = ComputeRead] Texture VSM_Atlas;
+	[Always = Read] Texture VSM_Atlas;
 	[Always = UnorderedAccess] Texture VSM_PageHiZ;
 	# Phase 5.14: this frame's flat list of dirty physical slots, CPU-built
 	# and uploaded once, consumed by the batched Hi-Z copy/downsample
@@ -859,9 +862,9 @@ PassNode VSM_HiZRebuild
 PassNode VSM_BlockerClassify
 {
 	GBuffer gbuffer;
-	[Always = ComputeRead] Texture VSM_PageTable;
-	[Always = ComputeRead] StructuredBuffer<Camera> VSM_PageCameras;
-	[Always = ComputeRead] Texture VSM_PageHiZ;
+	[Always = Read] Texture VSM_PageTable;
+	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
+	[Always = Read] Texture VSM_PageHiZ;
 	[Write] StructuredBuffer<uint2> VSM_LitTiles;
 	[Write] StructuredBuffer<uint2> VSM_DarkTiles;
 	[Write] StructuredBuffer<uint2> VSM_SearchTiles;
@@ -886,19 +889,19 @@ PassNode VSM_BlockerClassify
 PassNode VSM_BlockerSearch
 {
 	GBuffer gbuffer;
-	[Always = ComputeRead] Texture VSM_Atlas;
-	[Always = ComputeRead] Texture VSM_PageTable;
-	[Always = ComputeRead] StructuredBuffer<Camera> VSM_PageCameras;
+	[Always = Read] Texture VSM_Atlas;
+	[Always = Read] Texture VSM_PageTable;
+	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
 	# Phase 5.18 Part A: vsm_search_blocker's classification step reads
 	# this -- needs this frame's freshly-rebuilt pyramid, hence
 	# VSM_HiZRebuild moving to run immediately before stage 1 (same
 	# [Async2] queue, test.sig).
-	[Always = ComputeRead] Texture VSM_PageHiZ;
-	[Always = ComputeRead] Texture BlueNoise;
+	[Always = Read] Texture VSM_PageHiZ;
+	[Always = Read] Texture BlueNoise;
 	# Stage 1 (VSM_BlockerClassify) owns creating this. Its own dispatch
 	# args (like all five lists') are a VSM-owned buffer now, not a
 	# FrameGraph field -- see VSM.ixx's own comment.
-	[Always = ComputeRead] StructuredBuffer<uint2> VSM_SearchTiles;
+	[Always = Read] StructuredBuffer<uint2> VSM_SearchTiles;
 	[Write] Texture VSM_BlockerSearchResult;
 	# Stage 2's own post-search verdict lists -- see VSMSearchVerdictAppend's
 	# own comment. VSM_ConfirmedLitTiles feeds a second full-lit dispatch in
@@ -972,7 +975,7 @@ ComputePSO VSMScreenSpaceShadow
 PassNode VSM_ScreenSpaceShadow
 {
 	GBuffer gbuffer;
-	[Always = ComputeRead] Texture VSM_AmbiguousMask;
+	[Always = Read] Texture VSM_AmbiguousMask;
 	[Write] Texture VSM_ContactShadow;
 }
 
@@ -1001,21 +1004,21 @@ PassNode VSM_ScreenSpaceShadow
 PassNode VSM_ShadowResolve
 {
 	GBuffer gbuffer;
-	[Always = ComputeRead] Texture VSM_Atlas;
-	[Always = ComputeRead] Texture VSM_PageTable;
-	[Always = ComputeRead] StructuredBuffer<Camera> VSM_PageCameras;
-	[Always = ComputeRead] Texture BlueNoise;
-	[Always = ComputeRead] StructuredBuffer<uint2> VSM_LitTiles;
-	[Always = ComputeRead] StructuredBuffer<uint2> VSM_DarkTiles;
+	[Always = Read] Texture VSM_Atlas;
+	[Always = Read] Texture VSM_PageTable;
+	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
+	[Always = Read] Texture BlueNoise;
+	[Always = Read] StructuredBuffer<uint2> VSM_LitTiles;
+	[Always = Read] StructuredBuffer<uint2> VSM_DarkTiles;
 	# Stage 2's own post-search verdict lists, replacing VSM_SearchTiles here
 	# -- see VSMSearchVerdictAppend's own comment. Confirmed-lit gets a
 	# second cheap full-lit dispatch; blur_tiles is the (usually smaller)
 	# real target for the shadow-blur PSO. All four lists' indirect dispatch
 	# args are VSM-owned buffers now (see VSM_BlockerClassify's own comment),
 	# not FrameGraph fields -- render() reads them straight off `this`.
-	[Always = ComputeRead] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
-	[Always = ComputeRead] StructuredBuffer<uint2> VSM_BlurTiles;
-	[Always = ComputeRead] Texture VSM_BlockerSearchResult;
+	[Always = Read] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
+	[Always = Read] StructuredBuffer<uint2> VSM_BlurTiles;
+	[Always = Read] Texture VSM_BlockerSearchResult;
 	# VSM_ScreenSpaceShadow's contact-shadow patch -- see its own PassNode
 	# comment. Sampled only by the shadow-blur PSO (CS_SHADOW_BLUR), min()'d
 	# in alongside the real blocker-search/RTX-verify result before the
@@ -1038,10 +1041,10 @@ PassNode VSM_ShadowResolve
 PassNode VSM_Combine
 {
 	GBuffer gbuffer;
-	[Always = ComputeRead] Texture VSM_Atlas;
-	[Always = ComputeRead] Texture VSM_PageTable;
-	[Always = ComputeRead] StructuredBuffer<Camera> VSM_PageCameras;
-	[Always = ComputeRead] Texture BlueNoise;
+	[Always = Read] Texture VSM_Atlas;
+	[Always = Read] Texture VSM_PageTable;
+	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
+	[Always = Read] Texture BlueNoise;
 	# Same resource RTXShadow writes / PSSM_Combine reads -- see
 	# VSMLighting's rtx_shadow_mask field for the full rationale. Not
 	# [Write]: this pass only ever reads it, for the debug-view comparison
@@ -1084,11 +1087,11 @@ PassNode VSM_Combine
 PassNode VSM_DebugClassifyOverlay
 {
 	GBuffer gbuffer;
-	[Always = ComputeRead] StructuredBuffer<uint2> VSM_LitTiles;
-	[Always = ComputeRead] StructuredBuffer<uint2> VSM_DarkTiles;
-	[Always = ComputeRead] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
-	[Always = ComputeRead] StructuredBuffer<uint2> VSM_BlurTiles;
-	[Always = ComputeRead] Texture VSM_BlockerSearchResult;
+	[Always = Read] StructuredBuffer<uint2> VSM_LitTiles;
+	[Always = Read] StructuredBuffer<uint2> VSM_DarkTiles;
+	[Always = Read] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
+	[Always = Read] StructuredBuffer<uint2> VSM_BlurTiles;
+	[Always = Read] Texture VSM_BlockerSearchResult;
 	# Same resource RTXShadow writes / PSSM_Combine reads -- see
 	# VSMLighting's rtx_shadow_mask field. Not [Write]: only ever read, for
 	# use_vsm_debug_rtx_reference. Not [Always]: existence-guarded, same

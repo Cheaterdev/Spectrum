@@ -71,9 +71,6 @@ BlueNoise::BlueNoise()
 
 	m_bluenoise_setup = [this](Passes::BlueNoise::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		builder.create(data.BlueNoise,
-			{ ivec3(128, 128, 0), HAL::Format::R8G8_UNORM, 1, 1 },
-			FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 

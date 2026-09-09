@@ -55,11 +55,11 @@ public:
 		// own need()/create() calls for anything conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.need(data.ShadowDenoiser_TileBuffer, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.GBuffer_DepthPrev, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.GBuffer_Depth, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::ComputeRead);
-			builder.need(data.GBuffer_Speed, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.ShadowDenoiser_TileBuffer, FrameGraph::ResourceFlags::Read);
+			builder.need(data.GBuffer_DepthPrev, FrameGraph::ResourceFlags::Read);
+			builder.need(data.GBuffer_Depth, FrameGraph::ResourceFlags::Read);
+			builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::Read);
+			builder.need(data.GBuffer_Speed, FrameGraph::ResourceFlags::Read);
 		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -90,7 +90,7 @@ public:
 	static constexpr PassID ID = PassID::ShadowDenoiser_TileClassification;
 
 
-	using setup_func_type = std::function<bool(Context&, FrameGraph::TaskBuilder&)>;
+	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
 
