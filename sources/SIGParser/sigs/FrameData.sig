@@ -1,3 +1,9 @@
+struct ViewportContext
+{
+	int2 frame_size;
+	int2 upscale_size;
+}
+
 struct Frustum
 {
 	float4 planes[6];

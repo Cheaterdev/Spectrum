@@ -175,6 +175,7 @@ export
 		FontRenderingConstants = "FontRenderingConstants"_crc32,
 		Glyph = "Glyph"_crc32,
 		FontRenderingGlyphs = "FontRenderingGlyphs"_crc32,
+		ViewportContext = "ViewportContext"_crc32,
 		Frustum = "Frustum"_crc32,
 		Camera = "Camera"_crc32,
 		FrameInfo = "FrameInfo"_crc32,

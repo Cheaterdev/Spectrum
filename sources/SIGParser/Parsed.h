@@ -293,9 +293,17 @@ struct have_expr: public virtual parsed_type
 {
 	std::string expr;
 
+	// True for a value_id that matched INT_SCALAR/FLOAT_SCALAR/bool_type --
+	// a bare literal, safe to interpolate as-is. False for ID/function_id/
+	// array_value_ids/shader_type -- a reference to something else (a named
+	// constant, or with an owner_name set, an Owner::Field context
+	// reference) that codegen needs to resolve rather than paste literally.
+	bool is_literal = false;
+
 	SERIALIZE()
 	{
 		ar& NVP(expr);
+		ar& NVP(is_literal);
 	}
 };
 			 

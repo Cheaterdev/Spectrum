@@ -497,6 +497,37 @@ int main()
 			ArgInfo{"pass_name"}, ArgInfo{"field_name"}
 		));
 
+		// [Size = 128] (a literal) resolves to "128" as-is. [Size =
+		// ViewportContext::frame_size] (owner_name set, not a literal)
+		// resolves to a get_context<Table::Owner>().field call -- the exact
+		// call ContextTypeFor's static-upcast redirect (Core:Holdable) makes
+		// correct regardless of which real C++ type actually implements
+		// Table::Owner. A bare identifier with no owner (no known use yet)
+		// passes through as-is, on the assumption it names something
+		// visible in scope (e.g. a compile-time constant).
+		global.AddGlobal("resolve_size_expr", jinja2::MakeCallable(
+			[&](const std::string& pass_name, const std::string& field_name) -> std::string
+			{
+				Pass* pass = parsed.passes.find(pass_name);
+				if (!pass) return "";
+
+				for (const auto& p : pass->params)
+				{
+					if (p.name != field_name) continue;
+
+					const option* size = p.find_option("Size");
+					if (!size) return "";
+
+					if (size->value_atom.is_literal || size->value_atom.owner_name.empty())
+						return size->value_atom.expr;
+
+					return "builder.graph->get_context<Table::" + size->value_atom.owner_name + ">()." + size->value_atom.expr;
+				}
+				return "";
+			},
+			ArgInfo{"pass_name"}, ArgInfo{"field_name"}
+		));
+
 		global.AddGlobal("get_pipeline_resources", jinja2::MakeCallable(
 			[&](const std::string& pipeline_name) -> ValuesList
 			{

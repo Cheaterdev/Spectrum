@@ -35,14 +35,7 @@ SMAA::SMAA()
 		if (g_upscaling_enabled)
 			return false;
 
-		auto& frame = builder.graph->get_context<ViewportInfo>();
 		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::Read);
-		builder.create(data.SMAA_edges,
-			{ ivec3(frame.frame_size, 0), HAL::Format::R8G8_UNORM, 1, 1 },
-			FrameGraph::ResourceFlags::UnorderedAccess);
-		builder.create(data.SMAA_blend,
-			{ ivec3(frame.frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 },
-			FrameGraph::ResourceFlags::UnorderedAccess);
 		builder.recreate(data.ResultTextureNew, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};

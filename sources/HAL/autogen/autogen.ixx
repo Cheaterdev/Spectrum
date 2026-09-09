@@ -49,6 +49,7 @@ export import :Autogen.Tables.FontRenderingConstants;
 export import :Autogen.Tables.Glyph;
 export import :Autogen.Slots.FontRenderingGlyphs;
 export import :Autogen.Tables.FontRenderingGlyphs;
+export import :Autogen.Tables.ViewportContext;
 export import :Autogen.Tables.Frustum;
 export import :Autogen.Tables.Camera;
 export import :Autogen.Slots.FrameInfo;

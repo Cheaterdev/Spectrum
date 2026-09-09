@@ -105,6 +105,6 @@ PassNode SMAA
 	[Write] [Recreate = ResultTextureNew]
 	Texture ResultTexture;
 
-	[Write] Texture SMAA_edges;
-	[Write] Texture SMAA_blend;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8G8_UNORM] Texture SMAA_edges;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture SMAA_blend;
 }

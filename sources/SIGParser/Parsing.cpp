@@ -363,6 +363,7 @@ public:
 	{
 		auto& elem = get_elem<have_expr>();
 		elem.expr = ctx->getText();
+		elem.is_literal = ctx->INT_SCALAR() || ctx->FLOAT_SCALAR() || ctx->bool_type();
 	}
 
 	void enterPso_param_id(SIGParser::Pso_param_idContext* ctx) override
