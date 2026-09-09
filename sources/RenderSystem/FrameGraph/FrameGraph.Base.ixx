@@ -1057,6 +1057,15 @@ public:
 		{
 			builder.begin(this);
 			bool res = setup_func(data, builder);
+			if (res)
+			{
+				// Only after setup_func returns true - a pass can legitimately
+				// disable itself and return false, and builder.need() asserts
+				// exists() first, so needing [Always] resources unconditionally
+				// would crash the moment a pass bails out.
+				if constexpr (requires { Handler::need_always(data, builder); })
+					Handler::need_always(data, builder);
+			}
 			builder.end(this);
 
 			return res;

@@ -355,17 +355,17 @@ PassNode VoxelDebug
 [Compute]
 PassNode ReflectionRTXHalf
 {
-	Texture GBuffer_HalfDepth;
-	Texture GBuffer_HalfNormals;
-	Texture BlueNoise;
+	[Always = ComputeRead] Texture GBuffer_HalfDepth;
+	[Always = ComputeRead] Texture GBuffer_HalfNormals;
+	[Always = ComputeRead] Texture BlueNoise;
 	# Read-only, never bound through this PassNode's own Slots:: struct --
 	# purely to force CubeMapEnviromentProcessor to run before this pass, so
 	# FrameInfo.GetSky() (a separate global slot, sampled by the miss shader
 	# via TraceReflection -> ColorPass) is actually populated instead of
 	# reading an unbound/null cubemap. Same pattern RTXColorPass already
 	# uses for its own miss shader, see its comment (this file).
-	TextureCube sky_cubemap_filtered;
-	TextureCube sky_cubemap_filtered_diffuse;
+	[Always = ComputeRead] TextureCube sky_cubemap_filtered;
+	[Always = ComputeRead] TextureCube sky_cubemap_filtered_diffuse;
 
 	[Write] Texture RTXReflectionNoiseHalf;
 	[Write] Texture RTXReflectionDirPdfHalf;
@@ -388,14 +388,14 @@ PassNode ReflectionRTXHalf
 PassNode ReflectionRTX
 {
 	GBuffer gbuffer;
-	Texture BlueNoise;
-	Texture RTXReflectionNoiseHalf;
-	Texture RTXReflectionDirPdfHalf;
-	Texture TileClassifyTiles;
-	Texture TileRoughnessTiles;
+	[Always = ComputeRead] Texture BlueNoise;
+	[Always = ComputeRead] Texture RTXReflectionNoiseHalf;
+	[Always = ComputeRead] Texture RTXReflectionDirPdfHalf;
+	[Always = ComputeRead] Texture TileClassifyTiles;
+	[Always = ComputeRead] Texture TileRoughnessTiles;
 	# See ReflectionRTXHalf's own comment on the same two fields.
-	TextureCube sky_cubemap_filtered;
-	TextureCube sky_cubemap_filtered_diffuse;
+	[Always = ComputeRead] TextureCube sky_cubemap_filtered;
+	[Always = ComputeRead] TextureCube sky_cubemap_filtered_diffuse;
 
 	[Write] Texture RTXReflectionNoise;
 	[Write] Texture RTXReflectionDirPdf;

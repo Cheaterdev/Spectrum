@@ -39,6 +39,24 @@ public:
 		Handlers::{{v.type}} {{v.options.Recreate.value_atom.expr}} = {{v.name}};
 {%- endif %}
 {% endfor -%}
+{%- set always_fields = create_list('always_fields') -%}
+{%- for v in pass.params -%}
+{%- if v.options.Always is defined -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
+{%- endfor -%}
+{%- if get_list('always_fields') | length > 0 %}
+		// Resources this pass always needs whenever it runs, generated from
+		// each field's own [Always=X] annotation. Called by TypedPass::setup()
+		// after setup_func returns true - not a substitute for setup_func's
+		// own need()/create() calls for anything conditional.
+		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+{%- for v in pass.params %}
+{%- if v.options.Always is defined %}
+			builder.need(data.{{v.name}}, FrameGraph::ResourceFlags::{{v.options.Always.value_atom.expr}});
+{%- endif %}
+{%- endfor %}
+		}
+{% endif -%}
 {%- set accesses = get_pass_accesses(pass.name) -%}
 {% if accesses | length > 0 -%}
 		// Resources this pass touches, in declaration order, each paired with

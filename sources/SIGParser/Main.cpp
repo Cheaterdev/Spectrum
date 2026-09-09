@@ -13,6 +13,13 @@ static const std::string hlsl_path = shaders_path + "/autogen";
 
 static const std::string cpp_path_render = "../../sources/RenderSystem/FrameGraph/autogen";
 
+// Mirrors FrameGraph::WRITEABLE_FLAGS (sources/RenderSystem/FrameGraph/FrameGraph.Base.ixx).
+// SIGParser can't include that C++ module, so keep these two lists in sync by hand -
+// used to derive [Always=X] fields' write-ness for resource_accesses[].
+static const std::set<std::string> WRITEABLE_FLAG_NAMES = {
+	"CopyDest", "UnorderedAccess", "RenderTarget", "DepthStencil"
+};
+
 
 using namespace jinja2;
 
@@ -408,8 +415,12 @@ int main()
 					}
 					else
 					{
-						bool write = inside_view ? parent_is_write(p.name)
-						                         : (p.find_option("Write") != nullptr);
+						bool write;
+						if (const option* always = p.find_option("Always"))
+							write = WRITEABLE_FLAG_NAMES.count(always->value_atom.expr) > 0;
+						else
+							write = inside_view ? parent_is_write(p.name)
+							                    : (p.find_option("Write") != nullptr);
 						out.emplace_back(p.name, write);
 						if (p.find_option("Recreate"))
 							out.emplace_back(p.name, true);

@@ -25,15 +25,6 @@ bool PassDefault<Passes::ReflectionRTXHalf>::setup(
 		{ ivec3(half_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	builder.create(data.RTXReflectionDirPdfHalf,
 		{ ivec3(half_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
-	builder.need(data.BlueNoise,           ResourceFlags::ComputeRead);
-	builder.need(data.GBuffer_HalfDepth,   ResourceFlags::ComputeRead);
-	builder.need(data.GBuffer_HalfNormals, ResourceFlags::ComputeRead);
-	// Never bound through this pass's own Slots:: struct -- forces
-	// CubeMapEnviromentProcessor to run so FrameInfo.GetSky() (sampled by
-	// TraceReflection's miss shader) is actually populated. See this
-	// field's own comment, voxel.sig.
-	builder.need(data.sky_cubemap_filtered,         ResourceFlags::ComputeRead);
-	builder.need(data.sky_cubemap_filtered_diffuse, ResourceFlags::ComputeRead);
 	return true;
 }
 
@@ -86,13 +77,6 @@ bool PassDefault<Passes::ReflectionRTX>::setup(
 		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	builder.create(data.RTXReflectionDirPdf,
 		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
-	builder.need(data.BlueNoise, ResourceFlags::ComputeRead);
-	builder.need(data.RTXReflectionNoiseHalf, ResourceFlags::ComputeRead);
-	builder.need(data.RTXReflectionDirPdfHalf, ResourceFlags::ComputeRead);
-	builder.need(data.TileClassifyTiles,   ResourceFlags::ComputeRead);
-	builder.need(data.TileRoughnessTiles,  ResourceFlags::ComputeRead);
-	builder.need(data.sky_cubemap_filtered,         ResourceFlags::ComputeRead);
-	builder.need(data.sky_cubemap_filtered_diffuse, ResourceFlags::ComputeRead);
 	GBufferViewDesc::need(builder, data.gbuffer);
 	return true;
 }
