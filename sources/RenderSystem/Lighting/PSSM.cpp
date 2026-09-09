@@ -209,8 +209,6 @@ PSSM::PSSM()
 		auto& frame = builder.graph->get_context<ViewportInfo>();
 		builder.create(data.LightMask, { ivec3(frame.frame_size, 0), HAL::Format::R8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
 		GBufferViewDesc::need(builder, data.gbuffer);
-		builder.need(data.PSSM_Depths,  FrameGraph::ResourceFlags::PixelRead);
-		builder.need(data.PSSM_Cameras, FrameGraph::ResourceFlags::None);
 		return true;
 	};
 
@@ -267,7 +265,6 @@ PSSM::PSSM()
 	m_combine_setup = [this](Passes::PSSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
 		GBufferViewDesc::need(builder, data.gbuffer);
-		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 
 		if (builder.exists(data.ShadowMask))
 			builder.need(data.ShadowMask,  FrameGraph::ResourceFlags::ComputeRead);

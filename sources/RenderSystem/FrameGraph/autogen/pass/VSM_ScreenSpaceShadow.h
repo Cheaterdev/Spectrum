@@ -25,6 +25,15 @@ public:
 
 		Handlers::Texture VSM_ContactShadow = ResourceID::VSM_ContactShadow;
 
+
+		// Resources this pass always needs whenever it runs, generated from
+		// each field's own [Always=X] annotation. Called by TypedPass::setup()
+		// after setup_func returns true - not a substitute for setup_func's
+		// own need()/create() calls for anything conditional.
+		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.need(data.VSM_AmbiguousMask, FrameGraph::ResourceFlags::ComputeRead);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

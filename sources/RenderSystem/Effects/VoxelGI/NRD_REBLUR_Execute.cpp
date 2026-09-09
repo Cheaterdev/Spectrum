@@ -34,14 +34,6 @@ bool PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 	// a no-op once already sized for this resolution.
 	nvidia::NRD::get().ensure_pools(RenderSystem::get().device(), sz);
 
-	builder.need(data.NRD_ViewZ, ResourceFlags::ComputeRead);
-	builder.need(data.NRD_NormalRoughness, ResourceFlags::ComputeRead);
-	builder.need(data.NRD_Mv, ResourceFlags::ComputeRead);
-	// NRD_GBufferPack now resolves g_indirect_source/g_reflection_source
-	// itself and packs exactly the selected candidate into these (see its
-	// own .sig comment) -- no A/B left to do here, unlike before.
-	builder.need(data.NRD_DiffuseRadianceHitDist,  ResourceFlags::ComputeRead);
-	builder.need(data.NRD_SpecularRadianceHitDist, ResourceFlags::ComputeRead);
 	builder.create(data.RTXIndirectDenoised,
 		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	builder.create(data.RTXReflectionDenoised,

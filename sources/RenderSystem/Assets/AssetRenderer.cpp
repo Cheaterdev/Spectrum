@@ -36,8 +36,6 @@ public:
         {
             GBufferViewDesc::create(m_size, data.gbuffer, builder);
 
-            builder.need(data.scene, FrameGraph::ResourceFlags::PixelRead);
-
             // Static: occlusion pass 1 tests against LAST frame's HiZ (see SceneSystem).
             builder.create(data.gbuffer.GBuffer_HiZ,     { ivec3(m_size / 8, 0), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil | ResourceFlags::Static);
             builder.create(data.gbuffer.GBuffer_HiZ_UAV, { ivec3(m_size / 8, 0), HAL::Format::R32_FLOAT,    1 }, ResourceFlags::UnorderedAccess);
@@ -119,8 +117,6 @@ public:
         //	sky.generate_sky(graph);
 
         graph.add_library_pass<Passes::AssetMip>([this, &graph](auto& data, TaskBuilder& builder) -> bool {
-            builder.need(data.ResultTexture, ResourceFlags::ComputeRead);
-            builder.need(data.swapchain, ResourceFlags::UnorderedAccess);
             GBufferViewDesc::need(builder, data.gbuffer);
             return true;
         }, [](auto& data, FrameContext& _context) {

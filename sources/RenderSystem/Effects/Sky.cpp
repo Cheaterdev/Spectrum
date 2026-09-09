@@ -100,8 +100,6 @@ SkyRender::SkyRender()
 	// Sky: full-screen sky pass that composites over the GBuffer depth.
 	m_sky_setup = [](Passes::Sky::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		builder.need(data.GBuffer_Depth, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 

@@ -345,7 +345,7 @@ PassNode VoxelDebug
 {
 	GBuffer gbuffer;
 	[Write] Texture VoxelDebug;
-	Texture3D VoxelLighted;
+	[Always = ComputeRead] Texture3D VoxelLighted;
 }
 
 # Always-on cheap base layer for ReflectionRTX's Low-tile pixels -- sibling
@@ -425,12 +425,12 @@ PassNode ShadowRTX
 [Compute]
 PassNode IndirectRTXHalf
 {
-	Texture GBuffer_HalfDepth;
-	Texture GBuffer_HalfNormals;
-	Texture BlueNoise;
+	[Always = ComputeRead] Texture GBuffer_HalfDepth;
+	[Always = ComputeRead] Texture GBuffer_HalfNormals;
+	[Always = ComputeRead] Texture BlueNoise;
 	# See ReflectionRTXHalf's own comment on the same two fields.
-	TextureCube sky_cubemap_filtered;
-	TextureCube sky_cubemap_filtered_diffuse;
+	[Always = ComputeRead] TextureCube sky_cubemap_filtered;
+	[Always = ComputeRead] TextureCube sky_cubemap_filtered_diffuse;
 
 	[Write] Texture RTXIndirectNoiseHalf;
 }
@@ -452,12 +452,12 @@ PassNode IndirectRTXHalf
 PassNode IndirectRTX
 {
 	GBuffer gbuffer;
-	Texture BlueNoise;
-	Texture RTXIndirectNoiseHalf;
-	Texture TileClassifyTiles;
+	[Always = ComputeRead] Texture BlueNoise;
+	[Always = ComputeRead] Texture RTXIndirectNoiseHalf;
+	[Always = ComputeRead] Texture TileClassifyTiles;
 	# See ReflectionRTXHalf's own comment on the same two fields.
-	TextureCube sky_cubemap_filtered;
-	TextureCube sky_cubemap_filtered_diffuse;
+	[Always = ComputeRead] TextureCube sky_cubemap_filtered;
+	[Always = ComputeRead] TextureCube sky_cubemap_filtered_diffuse;
 
 	[Write] Texture RTXIndirectNoise;
 }
@@ -469,10 +469,10 @@ PassNode IndirectRTX
 PassNode ReflCombine
 {
 	GBuffer gbuffer;
-	[Write] Texture ResultTexture;
+	[Always = UnorderedAccess] Texture ResultTexture;
 	# NRD REBLUR_SPECULAR's denoised output (NRD_REBLUR_Execute, see
 	# [[project-nrd-integration]]) -- the only reflection denoiser now.
-	Texture RTXReflectionDenoised;
+	[Always = ComputeRead] Texture RTXReflectionDenoised;
 }
 
 # DLSS-RR-active counterpart to ReflCombine, but NOT a composite over
@@ -495,43 +495,43 @@ PassNode RTXCombine
 	# NRD-denoised data would be a redundant double-denoise. NRD isn't even
 	# running when this pass does (NRD_REBLUR_Execute is gated off under
 	# DLSS-RR) -- see NRD_GBufferPack's own comment (nrd_sig_test.sig).
-	Texture RTXReflectionNoise;
-	Texture RTXIndirectNoise;
-	Texture RTXShadowNoise;
+	[Always = ComputeRead] Texture RTXReflectionNoise;
+	[Always = ComputeRead] Texture RTXIndirectNoise;
+	[Always = ComputeRead] Texture RTXShadowNoise;
 
 	[Write] Texture ResultTextureRTXNoise;
 }
 
 PassNode Voxelize
 {
-	[Write] Texture VoxelAlbedo;
-	[Write] Texture VoxelNormal;
-	[Write] Texture VoxelAlbedoStatic;
-	[Write] Texture VoxelNormalStatic;
-	[Write] Texture VoxelAlbedoDynamic;
-	[Write] Texture VoxelNormalDynamic;
+	[Always = UnorderedAccess] Texture VoxelAlbedo;
+	[Always = UnorderedAccess] Texture VoxelNormal;
+	[Always = UnorderedAccess] Texture VoxelAlbedoStatic;
+	[Always = UnorderedAccess] Texture VoxelNormalStatic;
+	[Always = UnorderedAccess] Texture VoxelAlbedoDynamic;
+	[Always = UnorderedAccess] Texture VoxelNormalDynamic;
 }
 
 [Compute]
 PassNode Lighting
 {
-	Texture VSM_Atlas;
-	Texture VSM_PageTable;
-	StructuredBuffer<Camera> VSM_PageCameras;
-	[Write] Texture3D VoxelLighted;
-	Texture3D VoxelAlbedo;
-	Texture3D VoxelNormal;
-	TextureCube sky_cubemap_filtered;
-	Texture VoxelAlbedoStatic;
-	Texture VoxelNormalStatic;
-	Texture VoxelAlbedoDynamic;
-	Texture VoxelNormalDynamic;
+	[Always = ComputeRead] Texture VSM_Atlas;
+	[Always = ComputeRead] Texture VSM_PageTable;
+	[Always = ComputeRead] StructuredBuffer<Camera> VSM_PageCameras;
+	[Always = UnorderedAccess] Texture3D VoxelLighted;
+	[Always = ComputeRead] Texture3D VoxelAlbedo;
+	[Always = ComputeRead] Texture3D VoxelNormal;
+	[Always = PixelRead] TextureCube sky_cubemap_filtered;
+	[Always = ComputeRead] Texture VoxelAlbedoStatic;
+	[Always = ComputeRead] Texture VoxelNormalStatic;
+	[Always = ComputeRead] Texture VoxelAlbedoDynamic;
+	[Always = ComputeRead] Texture VoxelNormalDynamic;
 }
 
 [Compute]
 PassNode Mipmapping
 {
-	[Write] Texture3D VoxelLighted;
+	[Always = UnorderedAccess] Texture3D VoxelLighted;
 }
 
 # Voxel-cone-traced indirect-GI signal (MyRaygenShader, raytracing.hlsl) --
@@ -543,8 +543,8 @@ PassNode Mipmapping
 PassNode VoxelScreen
 {
 	GBuffer gbuffer;
-	Texture3D VoxelLighted;
-	Texture BlueNoise;
+	[Always = ComputeRead] Texture3D VoxelLighted;
+	[Always = ComputeRead] Texture BlueNoise;
 
 	[Write] Texture VoxelIndirectNoiseRaw;
 }
@@ -557,8 +557,8 @@ PassNode VoxelScreen
 PassNode ScreenReflection
 {
 	GBuffer gbuffer;
-	Texture3D VoxelLighted;
-	Texture BlueNoise;
+	[Always = ComputeRead] Texture3D VoxelLighted;
+	[Always = ComputeRead] Texture BlueNoise;
 
 	[Write] Texture VoxelReflectionNoiseRaw;
 }

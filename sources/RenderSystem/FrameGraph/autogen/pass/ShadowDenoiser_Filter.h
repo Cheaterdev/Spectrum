@@ -36,16 +36,30 @@ public:
 
 		Handlers::Texture ShadowDenoiser_Scratch2 = ResourceID::ShadowDenoiser_Scratch2;
 
+
+		// Resources this pass always needs whenever it runs, generated from
+		// each field's own [Always=X] annotation. Called by TypedPass::setup()
+		// after setup_func returns true - not a substitute for setup_func's
+		// own need()/create() calls for anything conditional.
+		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.need(data.ShadowDenoiser_TileMetaBuffer, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.need(data.GBuffer_Depth, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.ShadowDenoiser_Scratch, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.need(data.ShadowDenoiser_Scratch2, FrameGraph::ResourceFlags::UnorderedAccess);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
 			{ ResourceID::ShadowDenoiser_TileMetaBuffer, false },
-			{ ResourceID::ShadowMask, false },
+			{ ResourceID::ShadowMask, true },
 			{ ResourceID::GBuffer_Depth, false },
 			{ ResourceID::GBuffer_Normals, false },
-			{ ResourceID::ShadowDenoiser_Scratch, false },
-			{ ResourceID::ShadowDenoiser_Scratch2, false },
+			{ ResourceID::ShadowDenoiser_Scratch, true },
+			{ ResourceID::ShadowDenoiser_Scratch2, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

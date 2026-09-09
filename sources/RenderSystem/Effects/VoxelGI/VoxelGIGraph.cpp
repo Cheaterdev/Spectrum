@@ -414,12 +414,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 		if (!voxelize_scene) return false;
 
-		builder.need(data.VoxelAlbedo,        ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelNormal,        ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelAlbedoStatic,  ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelNormalStatic,  ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelAlbedoDynamic, ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelNormalDynamic, ResourceFlags::UnorderedAccess);
 		return true;
 	};
 
@@ -455,17 +449,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		light_counter = (light_counter + 1) % 5;
 		if (!light_scene) return false;
 
-		builder.need(data.VSM_Atlas,              ResourceFlags::ComputeRead);
-		builder.need(data.VSM_PageTable,          ResourceFlags::ComputeRead);
-		builder.need(data.VSM_PageCameras,        ResourceFlags::ComputeRead);
-		builder.need(data.sky_cubemap_filtered,  ResourceFlags::PixelRead);
-		builder.need(data.VoxelLighted,          ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelAlbedo,           ResourceFlags::ComputeRead);
-		builder.need(data.VoxelNormal,           ResourceFlags::ComputeRead);
-		builder.need(data.VoxelAlbedoStatic,     ResourceFlags::ComputeRead);
-		builder.need(data.VoxelNormalStatic,     ResourceFlags::ComputeRead);
-		builder.need(data.VoxelAlbedoDynamic,    ResourceFlags::ComputeRead);
-		builder.need(data.VoxelNormalDynamic,    ResourceFlags::ComputeRead);
 		return true;
 	};
 
@@ -568,7 +551,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	m_mipmapping_setup = [this](Passes::Mipmapping::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
 		if (!light_scene) return false;
-		builder.need(data.VoxelLighted, ResourceFlags::UnorderedAccess);
 		return true;
 	};
 
@@ -654,8 +636,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		if (g_upscaler_type != UpscalerType::DLSSRR || !nvidia::DLSSRR::get().available()) return false;
 
 		auto& frame = builder.graph->get_context<ViewportInfo>();
-		builder.need(data.GBuffer_Normals, ResourceFlags::ComputeRead);
-		builder.need(data.GBuffer_Albedo,  ResourceFlags::ComputeRead);
 		builder.create(data.NormalRoughness,
 			{ ivec3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
 			ResourceFlags::UnorderedAccess);
@@ -700,9 +680,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		     RenderSystem::get().device().is_rtx_supported() && nvidia::DLSSRR::get().available()))
 			return false;
 
-		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 		GBufferViewDesc::need(builder, data.gbuffer);
-		builder.need(data.RTXReflectionDenoised, ResourceFlags::ComputeRead);
 		return true;
 	};
 
@@ -750,7 +728,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 		builder.create(data.VoxelDebug,
 			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::RenderTarget);
-		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
 		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};
@@ -820,8 +797,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 		builder.create(data.VoxelIndirectNoiseRaw,
 			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
-		builder.need(data.BlueNoise, ResourceFlags::ComputeRead);
 		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};
@@ -881,8 +856,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 		builder.create(data.VoxelReflectionNoiseRaw,
 			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
-		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
-		builder.need(data.BlueNoise, ResourceFlags::ComputeRead);
 		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};

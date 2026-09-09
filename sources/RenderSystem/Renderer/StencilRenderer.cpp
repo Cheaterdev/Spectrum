@@ -661,7 +661,6 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 		if (selected.empty())
 			return false;
 		auto& frame = builder.graph->get_context<ViewportInfo>();
-		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::RenderTarget);
 		builder.create(data.Stencil_color_tex,
 			{ ivec3(frame.frame_size, 0), HAL::Format::R8_SNORM, 1, 1 },
 			FrameGraph::ResourceFlags::RenderTarget);

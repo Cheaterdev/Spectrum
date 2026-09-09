@@ -10,14 +10,14 @@ PassNode AssetGBuffer
 	[Write = {GBuffer_Albedo, GBuffer_Normals, GBuffer_Depth, GBuffer_Specular, GBuffer_Speed,
 	          GBuffer_DepthMips, GBuffer_HiZ, GBuffer_HiZ_UAV}]
 	GBuffer gbuffer;
-	StructuredBuffer<uint> scene;
+	[Always = PixelRead] StructuredBuffer<uint> scene;
 }
 
 PassNode AssetMip
 {
 	GBuffer gbuffer;
-	Texture ResultTexture;
-	[Write] Texture swapchain;
+	[Always = ComputeRead] Texture ResultTexture;
+	[Always = UnorderedAccess] Texture swapchain;
 }
 
 

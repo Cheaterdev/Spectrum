@@ -861,15 +861,15 @@ ComputePSO NRD_UnpackDebug
 [Static]
 PassNode NRD_REBLUR_Execute
 {
-	Texture NRD_ViewZ;
-	Texture NRD_NormalRoughness;
-	Texture NRD_Mv;
+	[Always = ComputeRead] Texture NRD_ViewZ;
+	[Always = ComputeRead] Texture NRD_NormalRoughness;
+	[Always = ComputeRead] Texture NRD_Mv;
 	# Pre-packed AND pre-selected by NRD_GBufferPack now -- it resolves
 	# g_indirect_source/g_reflection_source itself (see its own .sig
 	# comment) and packs exactly the chosen candidate, so this is always the
 	# right one to read unconditionally; no A/B left to do here.
-	Texture NRD_DiffuseRadianceHitDist;
-	Texture NRD_SpecularRadianceHitDist;
+	[Always = ComputeRead] Texture NRD_DiffuseRadianceHitDist;
+	[Always = ComputeRead] Texture NRD_SpecularRadianceHitDist;
 
 	[Write] Texture RTXIndirectDenoised;
 	[Write] Texture RTXIndirectDenoisedPreview;
@@ -901,7 +901,7 @@ ComputePSO NRD_IndirectCombine
 PassNode NRD_IndirectCombine
 {
 	GBuffer gbuffer;
-	Texture RTXIndirectDenoised;
+	[Always = ComputeRead] Texture RTXIndirectDenoised;
 
-	[Write] Texture ResultTexture;
+	[Always = UnorderedAccess] Texture ResultTexture;
 }

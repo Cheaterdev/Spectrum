@@ -43,7 +43,6 @@ void ShadowDenoiser::generate(Graph& graph)
 
 	{
 		graph.add_library_pass<Passes::ShadowDenoiser_Prepare>([this, &graph, tileCount](auto& data, TaskBuilder& builder) {
-			builder.need(data.ShadowMask, ResourceFlags::ComputeRead);
 			builder.create(data.ShadowDenoiser_TileBuffer, { tileCount }, ResourceFlags::UnorderedAccess);
 
 			return true;
@@ -68,12 +67,6 @@ void ShadowDenoiser::generate(Graph& graph)
 
 	{
 		graph.add_library_pass<Passes::ShadowDenoiser_TileClassification>([this, &graph, tileCount, size](auto& data, TaskBuilder& builder) {
-			builder.need(data.ShadowDenoiser_TileBuffer, ResourceFlags::ComputeRead);
-			builder.need(data.GBuffer_DepthPrev, ResourceFlags::ComputeRead);
-			builder.need(data.GBuffer_Depth, ResourceFlags::ComputeRead);
-			builder.need(data.GBuffer_Normals, ResourceFlags::ComputeRead);
-			builder.need(data.GBuffer_Speed, ResourceFlags::ComputeRead);
-
 			builder.create(data.ShadowDenoiser_TileMetaBuffer, { tileCount }, ResourceFlags::UnorderedAccess);
 			builder.create(data.ShadowDenoiser_Moments, { ivec3(size, 0), HAL::Format::R11G11B10_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess);
 			builder.create(data.ShadowDenoiser_MomentsPrev, { ivec3(size, 0), HAL::Format::R11G11B10_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
@@ -142,15 +135,6 @@ void ShadowDenoiser::generate(Graph& graph)
 	}
 	{
 		graph.add_library_pass<Passes::ShadowDenoiser_Filter>([this, &graph, tileCount, size](auto& data, TaskBuilder& builder) {
-		//	builder.need(data.ShadowDenoiser_TileBuffer, ResourceFlags::ComputeRead);
-			builder.need(data.ShadowMask, ResourceFlags::UnorderedAccess);
-			builder.need(data.GBuffer_Depth, ResourceFlags::ComputeRead);
-			builder.need(data.GBuffer_Normals, ResourceFlags::ComputeRead);
-
-				builder.need(data.ShadowDenoiser_TileMetaBuffer, ResourceFlags::ComputeRead);
-				builder.need(data.ShadowDenoiser_Scratch, ResourceFlags::UnorderedAccess);
-			builder.need(data.ShadowDenoiser_Scratch2,ResourceFlags::UnorderedAccess);
-
 			return true;
 			}, [this, &graph,size](auto& data, FrameContext& _context) {
 				auto& list = *_context.get_list();

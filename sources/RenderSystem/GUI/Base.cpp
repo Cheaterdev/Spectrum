@@ -1750,7 +1750,6 @@ bool PassDefault<Passes::UI_Render>::setup(
     const uint32_t slot       = ui_ctx.setup_counter++;
     if (slot * per_thread >= size)
         return false;
-    builder.need(data.swapchain, ResourceFlags::RenderTarget);
     // result_texture_handler already points at the resource for the current
     // DebugContext::mode (set in create_graph), so no branching needed here.
     if (builder.exists(ui_ctx.result_texture_handler))

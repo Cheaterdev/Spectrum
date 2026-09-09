@@ -102,17 +102,17 @@ ComputePSO DenoiserShadow_Filter
 
 PassNode ShadowDenoiser_Prepare
 {
-	Texture ShadowMask;
+	[Always = ComputeRead] Texture ShadowMask;
 	StructuredBuffer<uint> ShadowDenoiser_TileBuffer;
 }
 
 PassNode ShadowDenoiser_TileClassification
 {
-	StructuredBuffer<uint> ShadowDenoiser_TileBuffer;
-	Texture GBuffer_DepthPrev;
-	Texture GBuffer_Depth;
-	Texture GBuffer_Normals;
-	Texture GBuffer_Speed;
+	[Always = ComputeRead] StructuredBuffer<uint> ShadowDenoiser_TileBuffer;
+	[Always = ComputeRead] Texture GBuffer_DepthPrev;
+	[Always = ComputeRead] Texture GBuffer_Depth;
+	[Always = ComputeRead] Texture GBuffer_Normals;
+	[Always = ComputeRead] Texture GBuffer_Speed;
 	StructuredBuffer<uint> ShadowDenoiser_TileMetaBuffer;
 	Texture ShadowDenoiser_Moments;
 	Texture ShadowDenoiser_MomentsPrev;
@@ -122,10 +122,10 @@ PassNode ShadowDenoiser_TileClassification
 
 PassNode ShadowDenoiser_Filter
 {
-	StructuredBuffer<uint> ShadowDenoiser_TileMetaBuffer;
-	Texture ShadowMask;
-	Texture GBuffer_Depth;
-	Texture GBuffer_Normals;
-	Texture ShadowDenoiser_Scratch;
-	Texture ShadowDenoiser_Scratch2;
+	[Always = ComputeRead] StructuredBuffer<uint> ShadowDenoiser_TileMetaBuffer;
+	[Always = UnorderedAccess] Texture ShadowMask;
+	[Always = ComputeRead] Texture GBuffer_Depth;
+	[Always = ComputeRead] Texture GBuffer_Normals;
+	[Always = UnorderedAccess] Texture ShadowDenoiser_Scratch;
+	[Always = UnorderedAccess] Texture ShadowDenoiser_Scratch2;
 }

@@ -583,7 +583,6 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	m_renderpages_setup = [this, physical_slots, pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::DepthStencil);
 		builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		builder.create(data.VSM_PageCameras, { (size_t)MaxPages }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		// Static like VSM_Atlas: must survive until this page is next dirty.
@@ -591,13 +590,6 @@ VSM::VSM() : VariableContext(L"VSM")
 		// to two channels (.x = min/farthest, .y = max/closest -- see
 		// VSMPageHiZ's own comment in vsm.sig).
 		builder.create(data.VSM_PageHiZ, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32G32_FLOAT, (UINT)physical_slots, (UINT)pyramid_mip_count }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-		// Now GPU-appended by VSM_GatherDispatch -- this pass only reads it
-		// via exec_indirect.
-		builder.need(data.VSM_DispatchCommands, FrameGraph::ResourceFlags::ComputeRead);
-		// Phase 5.19: also read here, for this pass's own per-batch
-		// VSMGatherDispatchMaterial (CS_MATERIAL) dispatches -- see this
-		// PassNode's own comment in vsm.sig.
-		builder.need(data.VSM_LevelDispatchInfo, FrameGraph::ResourceFlags::ComputeRead);
 		return true;
 	};
 
@@ -609,8 +601,6 @@ VSM::VSM() : VariableContext(L"VSM")
 	// consume it now.
 	m_hizrebuild_setup = [this, physical_slots](Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::UnorderedAccess);
 		// Phase 5.14: CPU-built and re-uploaded fresh every frame (like
 		// VSM_PageCameras), sized to the whole physical slot budget -- every
 		// dirty page occupies a distinct slot, so that's a hard upper bound
@@ -1207,9 +1197,6 @@ VSM::VSM() : VariableContext(L"VSM")
 		if (!use_vsm_penumbra)
 			return false;
 		GBufferViewDesc::need(builder, data.gbuffer);
-		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::ComputeRead);
 		auto& frame = builder.graph->get_context<ViewportInfo>();
 		// Worst case: every screen tile lands in one bucket -- same "count
 		// tiles directly, don't scale by a sub-group factor" sizing
@@ -1341,19 +1328,6 @@ VSM::VSM() : VariableContext(L"VSM")
 		if (!use_vsm_penumbra)
 			return false;
 		GBufferViewDesc::need(builder, data.gbuffer);
-		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
-		// Phase 5.18 Part A: vsm_search_blocker's classification step reads
-		// this -- needs this frame's freshly-rebuilt pyramid, hence
-		// VSM_HiZRebuild moving to run immediately before stage 1 (same
-		// [Async2] queue, test.sig).
-		builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
-		// Stage 1 (VSM_BlockerClassify) owns creating this. Its own dispatch
-		// args (like all five lists') are a VSM-owned buffer now, not a
-		// FrameGraph field -- see VSM.ixx's own comment.
-		builder.need(data.VSM_SearchTiles, FrameGraph::ResourceFlags::ComputeRead);
 		auto& frame = builder.graph->get_context<ViewportInfo>();
 		builder.create(data.VSM_BlockerSearchResult,
 		    { ivec3(frame.frame_size, 0), HAL::Format::R32G32B32A32_UINT, 1, 1 },
@@ -1488,7 +1462,6 @@ VSM::VSM() : VariableContext(L"VSM")
 		if (!use_vsm_penumbra || !use_vsm_contact_shadow)
 			return false;
 		GBufferViewDesc::need(builder, data.gbuffer);
-		builder.need(data.VSM_AmbiguousMask, FrameGraph::ResourceFlags::ComputeRead);
 		auto& frame = builder.graph->get_context<ViewportInfo>();
 		builder.create(data.VSM_ContactShadow,
 		    { ivec3(frame.frame_size, 0), HAL::Format::R8_UNORM, 1, 1 },
@@ -1549,31 +1522,12 @@ VSM::VSM() : VariableContext(L"VSM")
 		if (!use_vsm_penumbra)
 			return false;
 		GBufferViewDesc::need(builder, data.gbuffer);
-		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
-		// Stage 1 owns these two lists (their dispatch args are a VSM-owned
-		// buffer now, not a FrameGraph field -- see VSM.ixx's own comment).
-		builder.need(data.VSM_LitTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_DarkTiles, FrameGraph::ResourceFlags::ComputeRead);
-		// Stage 2 owns these -- VSM_ConfirmedLitTiles feeds a second cheap
-		// full-lit dispatch below, VSM_BlurTiles replaces VSM_SearchTiles as
-		// what the shadow-blur PSO actually dispatches over (see
-		// VSMSearchVerdictAppend's own comment in vsm.sig).
-		builder.need(data.VSM_ConfirmedLitTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_BlurTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_BlockerSearchResult, FrameGraph::ResourceFlags::ComputeRead);
 		// use_vsm_contact_shadow off -> VSM_ScreenSpaceShadow's own setup()
 		// returns false, so this never exists that frame -- need() only when
 		// it might (same builder.exists() shape RtxReference's own guard
 		// uses elsewhere in this file).
 		if (use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow))
 			builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::ComputeRead);
-		// Writes ResultTexture directly now (the final PBR-combined pixel),
-		// not an intermediate VSM_ShadowResult scalar VSM_Combine used to
-		// read separately -- see this PassNode's own comment in vsm.sig.
-		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 
@@ -1711,11 +1665,6 @@ VSM::VSM() : VariableContext(L"VSM")
 		if (use_vsm_penumbra)
 			return false;
 		GBufferViewDesc::need(builder, data.gbuffer);
-		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
-		builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.BlueNoise, FrameGraph::ResourceFlags::ComputeRead);
 		// RTXShadow runs unconditionally every frame on RTX-capable
 		// hardware, independent of PSSM/VSM -- but its own setup() can
 		// still return false (no RTX hardware), in which case ShadowMask
@@ -1817,15 +1766,6 @@ VSM::VSM() : VariableContext(L"VSM")
 			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::ComputeRead);
 		if (vsm_debug_view == VSMDebugView::ContactShadow && use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow))
 			builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_LitTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_DarkTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_ConfirmedLitTiles, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.VSM_BlurTiles, FrameGraph::ResourceFlags::ComputeRead);
-		// Stage 2's own output -- CS_OVERLAY_BLUR reads this directly for
-		// per-pixel sentinel decoding within blur_tiles (see
-		// VSM_DebugTileOverlay.hlsl's own comment on CS_OVERLAY_BLUR).
-		builder.need(data.VSM_BlockerSearchResult, FrameGraph::ResourceFlags::ComputeRead);
-		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 

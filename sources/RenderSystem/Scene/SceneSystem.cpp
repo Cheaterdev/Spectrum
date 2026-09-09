@@ -15,8 +15,6 @@ bool PassDefault<Passes::Scene>::setup(
     auto& frame = builder.graph->get_context<ViewportInfo>();
     auto  size  = frame.frame_size;
 
-    builder.need(data.scene, FrameGraph::ResourceFlags::PixelRead);
-
     // *Prev history links are registered inside GBufferViewDesc::create (shared by
     // every GBuffer producer), replacing the old CopyPrev copies.
     GBufferViewDesc::create(size, data.gbuffer, builder);

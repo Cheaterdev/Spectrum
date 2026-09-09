@@ -795,7 +795,7 @@ PassNode VSM_GatherDispatch
 # issues one exec_indirect() call over the resulting (GPU-counted) list.
 PassNode VSM_RenderPages
 {
-	[Write] Texture VSM_Atlas;
+	[Always = DepthStencil] Texture VSM_Atlas;
 	[Write] Texture VSM_PageTable;
 	[Write] StructuredBuffer<Camera> VSM_PageCameras;
 	# Still [Write] and still created here (not in VSM_HiZRebuild below):
@@ -806,7 +806,7 @@ PassNode VSM_RenderPages
 	# the resource in that pass. VSM_HiZRebuild need()s the same resource
 	# for the actual per-frame rebuild writes.
 	[Write] Texture VSM_PageHiZ;
-	StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
+	[Always = ComputeRead] StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
 	# Phase 5.19: read here too (not just by VSM_GatherDispatch that wrote
 	# it) -- this pass's render() also dispatches VSMGatherDispatchMaterial
 	# (CS_MATERIAL) per batch of transparent-material pipelines, immediately
@@ -814,7 +814,7 @@ PassNode VSM_RenderPages
 	# cutout gather+draw cycle stays in one place instead of splitting across
 	# two PassNodes and racing the shared 8-bucket pool (see VSM.cpp's own
 	# comment at the call site for why it can't split).
-	StructuredBuffer<VSMLevelDispatchInfo> VSM_LevelDispatchInfo;
+	[Always = ComputeRead] StructuredBuffer<VSMLevelDispatchInfo> VSM_LevelDispatchInfo;
 }
 
 # Phase 5.17: Hi-Z pyramid rebuild, split into its own async-compute pass.
@@ -833,8 +833,8 @@ PassNode VSM_RenderPages
 [Compute]
 PassNode VSM_HiZRebuild
 {
-	Texture VSM_Atlas;
-	[Write] Texture VSM_PageHiZ;
+	[Always = ComputeRead] Texture VSM_Atlas;
+	[Always = UnorderedAccess] Texture VSM_PageHiZ;
 	# Phase 5.14: this frame's flat list of dirty physical slots, CPU-built
 	# and uploaded once, consumed by the batched Hi-Z copy/downsample
 	# dispatches (VSMCopyPageDepthBatch/VSMDownsampleHiZBatch). Moved here
@@ -859,9 +859,9 @@ PassNode VSM_HiZRebuild
 PassNode VSM_BlockerClassify
 {
 	GBuffer gbuffer;
-	Texture VSM_PageTable;
-	StructuredBuffer<Camera> VSM_PageCameras;
-	Texture VSM_PageHiZ;
+	[Always = ComputeRead] Texture VSM_PageTable;
+	[Always = ComputeRead] StructuredBuffer<Camera> VSM_PageCameras;
+	[Always = ComputeRead] Texture VSM_PageHiZ;
 	[Write] StructuredBuffer<uint2> VSM_LitTiles;
 	[Write] StructuredBuffer<uint2> VSM_DarkTiles;
 	[Write] StructuredBuffer<uint2> VSM_SearchTiles;
@@ -886,12 +886,19 @@ PassNode VSM_BlockerClassify
 PassNode VSM_BlockerSearch
 {
 	GBuffer gbuffer;
-	Texture VSM_Atlas;
-	Texture VSM_PageTable;
-	StructuredBuffer<Camera> VSM_PageCameras;
-	Texture VSM_PageHiZ;
-	Texture BlueNoise;
-	StructuredBuffer<uint2> VSM_SearchTiles;
+	[Always = ComputeRead] Texture VSM_Atlas;
+	[Always = ComputeRead] Texture VSM_PageTable;
+	[Always = ComputeRead] StructuredBuffer<Camera> VSM_PageCameras;
+	# Phase 5.18 Part A: vsm_search_blocker's classification step reads
+	# this -- needs this frame's freshly-rebuilt pyramid, hence
+	# VSM_HiZRebuild moving to run immediately before stage 1 (same
+	# [Async2] queue, test.sig).
+	[Always = ComputeRead] Texture VSM_PageHiZ;
+	[Always = ComputeRead] Texture BlueNoise;
+	# Stage 1 (VSM_BlockerClassify) owns creating this. Its own dispatch
+	# args (like all five lists') are a VSM-owned buffer now, not a
+	# FrameGraph field -- see VSM.ixx's own comment.
+	[Always = ComputeRead] StructuredBuffer<uint2> VSM_SearchTiles;
 	[Write] Texture VSM_BlockerSearchResult;
 	# Stage 2's own post-search verdict lists -- see VSMSearchVerdictAppend's
 	# own comment. VSM_ConfirmedLitTiles feeds a second full-lit dispatch in
@@ -965,7 +972,7 @@ ComputePSO VSMScreenSpaceShadow
 PassNode VSM_ScreenSpaceShadow
 {
 	GBuffer gbuffer;
-	Texture VSM_AmbiguousMask;
+	[Always = ComputeRead] Texture VSM_AmbiguousMask;
 	[Write] Texture VSM_ContactShadow;
 }
 
@@ -994,27 +1001,30 @@ PassNode VSM_ScreenSpaceShadow
 PassNode VSM_ShadowResolve
 {
 	GBuffer gbuffer;
-	Texture VSM_Atlas;
-	Texture VSM_PageTable;
-	StructuredBuffer<Camera> VSM_PageCameras;
-	Texture BlueNoise;
-	StructuredBuffer<uint2> VSM_LitTiles;
-	StructuredBuffer<uint2> VSM_DarkTiles;
+	[Always = ComputeRead] Texture VSM_Atlas;
+	[Always = ComputeRead] Texture VSM_PageTable;
+	[Always = ComputeRead] StructuredBuffer<Camera> VSM_PageCameras;
+	[Always = ComputeRead] Texture BlueNoise;
+	[Always = ComputeRead] StructuredBuffer<uint2> VSM_LitTiles;
+	[Always = ComputeRead] StructuredBuffer<uint2> VSM_DarkTiles;
 	# Stage 2's own post-search verdict lists, replacing VSM_SearchTiles here
 	# -- see VSMSearchVerdictAppend's own comment. Confirmed-lit gets a
 	# second cheap full-lit dispatch; blur_tiles is the (usually smaller)
 	# real target for the shadow-blur PSO. All four lists' indirect dispatch
 	# args are VSM-owned buffers now (see VSM_BlockerClassify's own comment),
 	# not FrameGraph fields -- render() reads them straight off `this`.
-	StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
-	StructuredBuffer<uint2> VSM_BlurTiles;
-	Texture VSM_BlockerSearchResult;
+	[Always = ComputeRead] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
+	[Always = ComputeRead] StructuredBuffer<uint2> VSM_BlurTiles;
+	[Always = ComputeRead] Texture VSM_BlockerSearchResult;
 	# VSM_ScreenSpaceShadow's contact-shadow patch -- see its own PassNode
 	# comment. Sampled only by the shadow-blur PSO (CS_SHADOW_BLUR), min()'d
 	# in alongside the real blocker-search/RTX-verify result before the
-	# final PBR combine, same shape as the existing RTX dual-blur.
+	# final PBR combine, same shape as the existing RTX dual-blur. Not
+	# [Always]: use_vsm_contact_shadow off means VSM_ScreenSpaceShadow's own
+	# setup() returns false, so this never exists that frame -- setup()
+	# still guards this one with builder.exists() by hand.
 	Texture VSM_ContactShadow;
-	[Write] Texture ResultTexture;
+	[Always = UnorderedAccess] Texture ResultTexture;
 }
 
 # Only runs when use_vsm_penumbra is OFF now (see m_combine_setup's own
@@ -1028,16 +1038,18 @@ PassNode VSM_ShadowResolve
 PassNode VSM_Combine
 {
 	GBuffer gbuffer;
-	Texture VSM_Atlas;
-	Texture VSM_PageTable;
-	StructuredBuffer<Camera> VSM_PageCameras;
-	Texture BlueNoise;
+	[Always = ComputeRead] Texture VSM_Atlas;
+	[Always = ComputeRead] Texture VSM_PageTable;
+	[Always = ComputeRead] StructuredBuffer<Camera> VSM_PageCameras;
+	[Always = ComputeRead] Texture BlueNoise;
 	# Same resource RTXShadow writes / PSSM_Combine reads -- see
 	# VSMLighting's rtx_shadow_mask field for the full rationale. Not
 	# [Write]: this pass only ever reads it, for the debug-view comparison
-	# toggle (VSM.ixx's use_vsm_debug_rtx_reference).
+	# toggle (VSM.ixx's use_vsm_debug_rtx_reference). Not [Always] either:
+	# RTXShadow's own setup() can return false on non-RTX hardware, so
+	# setup() guards this one with builder.exists() by hand.
 	Texture ShadowMask;
-	[Write] Texture ResultTexture;
+	[Always = UnorderedAccess] Texture ResultTexture;
 }
 
 # Debug view (VSM.ixx's use_vsm_debug_hiz_classify), moved out of VSM_Combine
@@ -1072,19 +1084,22 @@ PassNode VSM_Combine
 PassNode VSM_DebugClassifyOverlay
 {
 	GBuffer gbuffer;
-	StructuredBuffer<uint2> VSM_LitTiles;
-	StructuredBuffer<uint2> VSM_DarkTiles;
-	StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
-	StructuredBuffer<uint2> VSM_BlurTiles;
-	Texture VSM_BlockerSearchResult;
+	[Always = ComputeRead] StructuredBuffer<uint2> VSM_LitTiles;
+	[Always = ComputeRead] StructuredBuffer<uint2> VSM_DarkTiles;
+	[Always = ComputeRead] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
+	[Always = ComputeRead] StructuredBuffer<uint2> VSM_BlurTiles;
+	[Always = ComputeRead] Texture VSM_BlockerSearchResult;
 	# Same resource RTXShadow writes / PSSM_Combine reads -- see
 	# VSMLighting's rtx_shadow_mask field. Not [Write]: only ever read, for
-	# use_vsm_debug_rtx_reference.
+	# use_vsm_debug_rtx_reference. Not [Always]: existence-guarded, same
+	# reasoning as VSM_Combine's own ShadowMask field.
 	Texture ShadowMask;
 	# VSM_ScreenSpaceShadow's own output -- see vsm.sig's VSM_ScreenSpaceShadow
-	# PassNode comment. Not [Write]: only ever read, for ContactShadow.
+	# PassNode comment. Not [Write]: only ever read, for ContactShadow. Not
+	# [Always]: existence-guarded, same reasoning as VSM_ShadowResolve's own
+	# VSM_ContactShadow field.
 	Texture VSM_ContactShadow;
-	[Write] Texture ResultTexture;
+	[Always = UnorderedAccess] Texture ResultTexture;
 }
 
 # Phase 5.6: single-value feedback for the adaptive-tier hysteresis in

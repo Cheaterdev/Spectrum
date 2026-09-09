@@ -50,6 +50,25 @@ public:
 
 		Handlers::Texture VoxelNormalDynamic = ResourceID::VoxelNormalDynamic;
 
+
+		// Resources this pass always needs whenever it runs, generated from
+		// each field's own [Always=X] annotation. Called by TypedPass::setup()
+		// after setup_func returns true - not a substitute for setup_func's
+		// own need()/create() calls for anything conditional.
+		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VoxelLighted, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.need(data.VoxelAlbedo, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VoxelNormal, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.sky_cubemap_filtered, FrameGraph::ResourceFlags::PixelRead);
+			builder.need(data.VoxelAlbedoStatic, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VoxelNormalStatic, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VoxelAlbedoDynamic, FrameGraph::ResourceFlags::ComputeRead);
+			builder.need(data.VoxelNormalDynamic, FrameGraph::ResourceFlags::ComputeRead);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

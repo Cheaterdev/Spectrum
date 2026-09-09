@@ -132,5 +132,5 @@ PassNode Scene
 	          GBuffer_DepthMips, GBuffer_Quality, GBuffer_HiZ, GBuffer_HiZ_UAV,
 	          GBuffer_NormalsPrev, GBuffer_SpecularPrev}]
 	GBuffer gbuffer;
-	StructuredBuffer<uint> scene;
+	[Always = PixelRead] StructuredBuffer<uint> scene;
 }

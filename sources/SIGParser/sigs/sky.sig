@@ -94,8 +94,8 @@ ComputePSO CubemapENVDiffuse
 [Compute]
 PassNode Sky
 {
-	Texture GBuffer_Depth;
-	[Write] Texture ResultTexture;
+	[Always = ComputeRead] Texture GBuffer_Depth;
+	[Always = UnorderedAccess] Texture ResultTexture;
 }
 
 

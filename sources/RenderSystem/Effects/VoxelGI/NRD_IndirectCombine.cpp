@@ -22,8 +22,6 @@ bool PassDefault<Passes::NRD_IndirectCombine>::setup(
 		return false;
 
 	GBufferViewDesc::need(builder, data.gbuffer);
-	builder.need(data.RTXIndirectDenoised, ResourceFlags::ComputeRead);
-	builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 	return true;
 }
 

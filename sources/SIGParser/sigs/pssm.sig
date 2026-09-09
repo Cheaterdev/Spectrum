@@ -164,8 +164,8 @@ PassNode PSSM_Cascade
 
 PassNode PSSM_GenerateMask
 {
-	Texture PSSM_Depths;
-	StructuredBuffer<Camera> PSSM_Cameras;
+	[Always = PixelRead] Texture PSSM_Depths;
+	[Always = None] StructuredBuffer<Camera> PSSM_Cameras;
 
 	GBuffer gbuffer;
 	[Write] Texture LightMask;
@@ -178,7 +178,7 @@ PassNode PSSM_Combine
 	GBuffer gbuffer;
 	Texture LightMask;
 	Texture ShadowMask;
-	[Write] Texture ResultTexture;
+	[Always = UnorderedAccess] Texture ResultTexture;
 }
 
 PassNode PSSM_Global
