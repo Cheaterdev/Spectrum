@@ -76,6 +76,12 @@ public:
 		// anything whose Desc depends on runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
+			builder.create(data.GBuffer_Albedo, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
+			builder.create(data.GBuffer_Normals, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget | FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.GBuffer_Depth, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil);
+			builder.create(data.GBuffer_Specular, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
+			builder.create(data.GBuffer_Speed, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
+			builder.create(data.GBuffer_DepthMips, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::RenderTarget);
 			builder.create(data.GBuffer_HiZ, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size / 8, 0), HAL::Format::R32_TYPELESS, 1, 0 }, FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
 			builder.create(data.GBuffer_HiZ_UAV, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size / 8, 0), HAL::Format::R32_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}

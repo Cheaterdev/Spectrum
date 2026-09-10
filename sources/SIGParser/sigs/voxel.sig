@@ -331,8 +331,6 @@ PassNode GBufferDownsampler
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 
 	# GBuffer_TempColor is the scratch target MipMapGenerator::generate_quality
 	# needs -- a plain top-level field, not a PassView GBuffer leaf (see

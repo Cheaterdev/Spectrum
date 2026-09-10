@@ -37,12 +37,6 @@ public:
 		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
 
 
-		Handlers::Texture GBuffer_Quality = ResourceID::GBuffer_Quality;
-
-
-		Handlers::Texture GBuffer_DepthPrev = ResourceID::GBuffer_DepthPrev;
-
-
 		Handlers::Texture GBuffer_TempColor = ResourceID::GBuffer_TempColor;
 
 
@@ -122,8 +116,6 @@ public:
 			{ ResourceID::GBuffer_Specular, false },
 			{ ResourceID::GBuffer_Speed, false },
 			{ ResourceID::GBuffer_DepthMips, false },
-			{ ResourceID::GBuffer_Quality, false },
-			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::GBuffer_TempColor, true },
 			{ ResourceID::GBuffer_HalfDepth, true },
 			{ ResourceID::GBuffer_HalfNormals, true },

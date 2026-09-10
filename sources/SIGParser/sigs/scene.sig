@@ -142,13 +142,23 @@ PassNode Scene
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
 	# comment. GBuffer_SpecularPrev dropped (see CopyPrev's own comment,
 	# above) -- Scene never actually created it even before flattening.
-	[Write] Texture GBuffer_Albedo;
+	#
+	# Auto-created (ViewportContext-driven, same mechanism as GBuffer_HiZ
+	# elsewhere) wherever the create() has no other ordering dependency.
+	# GBuffer_Normals/GBuffer_DepthMips stay hand-written in setup()
+	# (SceneSystem.cpp) instead: each is the trigger for a builder.
+	# link_history()-registered *Prev chain, and that link_history() call
+	# must run, then THIS create() specifically, then bind_history_prev() --
+	# all before create_always() would even run (it always runs after
+	# setup_func returns), so moving either create() to [Always]/[Size]
+	# would run it too late for its own setup()'s bind_history_prev() call.
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Albedo;
 	[Write] Texture GBuffer_Normals;
-	[Write] Texture GBuffer_Depth;
-	[Write] Texture GBuffer_Specular;
-	[Write] Texture GBuffer_Speed;
+	[Always = DepthStencil] [Size = ViewportContext::frame_size] [Format = R32_TYPELESS] Texture GBuffer_Depth;
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Specular;
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16_FLOAT] Texture GBuffer_Speed;
 	[Write] Texture GBuffer_DepthMips;
-	[Write] Texture GBuffer_Quality;
+	[Always = DepthStencil] [Size = ViewportContext::frame_size] [Format = D24_UNORM_S8_UINT] Texture GBuffer_Quality;
 	[Write] Texture GBuffer_NormalsPrev;
 	[Always = Read] Texture GBuffer_DepthPrev;
 	# Static: pass 1 of the GPU occlusion culler tests boxes against LAST

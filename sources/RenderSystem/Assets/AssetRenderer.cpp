@@ -34,19 +34,6 @@ public:
     {
         pipeline.assetGBuffer.setup_func = [this](auto& data, TaskBuilder& builder) -> bool
         {
-            // Inlined from the former GBufferViewDesc::create() (Context.ixx,
-            // removed once GBuffer stopped being a View; see pssm.sig's own
-            // comment) -- this pass's own [Write] fields, nothing more. No
-            // link_history()/bind_history_prev() needed here unlike Scene:
-            // AssetGBuffer is a static preview-panel pass (AssetRenderer.ixx),
-            // not the main scene, so it has no real "previous frame" to carry
-            // forward and doesn't declare GBuffer_NormalsPrev at all.
-            builder.create(data.GBuffer_Albedo,    { ivec3(m_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, ResourceFlags::RenderTarget);
-            builder.create(data.GBuffer_Normals,   { ivec3(m_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, ResourceFlags::RenderTarget | ResourceFlags::UnorderedAccess);
-            builder.create(data.GBuffer_Depth,     { ivec3(m_size, 0), HAL::Format::R32_TYPELESS,   1, 1 }, ResourceFlags::DepthStencil);
-            builder.create(data.GBuffer_Specular,  { ivec3(m_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, ResourceFlags::RenderTarget);
-            builder.create(data.GBuffer_Speed,     { ivec3(m_size, 0), HAL::Format::R16G16_FLOAT,   1, 1 }, ResourceFlags::RenderTarget);
-            builder.create(data.GBuffer_DepthMips, { ivec3(m_size, 0), HAL::Format::R32_TYPELESS,   1, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget);
             return true;
         };
 

@@ -204,10 +204,6 @@ void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
 bool PassDefault<Passes::GBufferDownsampler>::setup(
 	Passes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	// Quality isn't in PassView GBuffer's own [Always] set (only this pass
-	// reads it; a blanket auto-need would crash under AssetPipeline, which
-	// never creates it -- see pssm.sig's own comment), so it stays manual.
-	builder.need(data.GBuffer_Quality, ResourceFlags::Read);
 
 	return true;
 }
@@ -245,7 +241,7 @@ void PassDefault<Passes::GBufferDownsampler>::render(
 
 	context.graph->set_slot(SlotID::FrameInfo, graphics);
 
-	MipMapGenerator::get().generate_quality(graphics, nullptr, gbuffer, tempColor);
+	//MipMapGenerator::get().generate_quality(graphics, nullptr, gbuffer, tempColor);
 
 	{
 		PROFILE_GPU(L"gbuffer_tile_classify");

@@ -146,6 +146,24 @@ export{
 
 	};
 
+	template <class T>
+	 concept Has_GBuffer_DepthPrev=	  requires(T& context)
+	 {
+		 context.GBuffer_DepthPrev;
+	 };
+
+
+	 template <class T>
+	 concept Has_GBuffer_DepthMips =	  requires(T& context)
+	 {
+		 context.GBuffer_DepthMips;
+	 };
+
+	 	 template <class T>
+	 concept Has_GBuffer_Quality =	  requires(T& context)
+	 {
+		 context.GBuffer_Quality;
+	 };
 
 	class GBufferViewDesc
 	{
@@ -165,8 +183,8 @@ export{
 	public:
 	
 
-
-		static GBuffer actualize(auto& context)
+					template<class T>
+		static GBuffer actualize(T& context)
 		{
 			GBuffer result;
 
@@ -185,12 +203,12 @@ export{
 			// pass never reads -- conditional like Quality/DepthMips below,
 			// so those passes can simply not declare the field at all.
 			if (context.GBuffer_Depth)     result.depth = *context.GBuffer_Depth;
-			if (context.GBuffer_DepthPrev) result.depth_prev_mips = *context.GBuffer_DepthPrev;
+			 if constexpr(Has_GBuffer_DepthPrev<T>) if (context.GBuffer_DepthPrev) result.depth_prev_mips = *context.GBuffer_DepthPrev;
 
-			if (context.GBuffer_Quality)	result.quality = *context.GBuffer_Quality;
-			if (context.GBuffer_DepthMips)	result.depth_mips = *context.GBuffer_DepthMips;
+			 if constexpr(Has_GBuffer_Quality<T>) if (context.GBuffer_Quality)	result.quality = *context.GBuffer_Quality;
+			 if constexpr(Has_GBuffer_DepthMips<T>) if (context.GBuffer_DepthMips)	result.depth_mips = *context.GBuffer_DepthMips;
 
-
+			
 				
 				
 

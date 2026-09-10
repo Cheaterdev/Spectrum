@@ -15,34 +15,24 @@ bool PassDefault<Passes::Scene>::setup(
     auto& frame = builder.graph->get_context<ViewportInfo>();
     auto  size  = frame.frame_size;
 
-    // *Prev history links (registered before the current resources are
-    // created, so they get tagged is_history_current and auto-provision
-    // their *Prev) -- inlined from the former GBufferViewDesc::create()/
-    // create_quality() (Context.ixx, removed once GBuffer stopped being a
-    // View; see pssm.sig's own comment) since link_history()/
-    // bind_history_prev() have no [Always]/[Size] SIG equivalent to
-    // auto-generate this from.
+    // GBuffer_Albedo/Depth/Specular/Speed/Quality are auto-created (scene.sig's
+    // own [Always]/[Size]/[Format]) -- only GBuffer_Normals/GBuffer_DepthMips
+    // stay hand-written here: each is a builder.link_history()-registered
+    // *Prev chain's trigger, and that link_history() call, then THIS create(),
+    // then bind_history_prev() must all run before create_always() would even
+    // fire (it always runs after setup_func returns) -- see scene.sig's own
+    // comment.
     builder.link_history(data.GBuffer_Normals.id,   data.GBuffer_NormalsPrev.id);
     builder.link_history(data.GBuffer_DepthMips.id, data.GBuffer_DepthPrev.id);
 
-    builder.create(data.GBuffer_Albedo,   { ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, ResourceFlags::RenderTarget);
-    builder.create(data.GBuffer_Normals,  { ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, ResourceFlags::RenderTarget | ResourceFlags::UnorderedAccess);
-    builder.create(data.GBuffer_Depth,    { ivec3(size, 0), HAL::Format::R32_TYPELESS,   1, 1 }, ResourceFlags::DepthStencil);
-    builder.create(data.GBuffer_Specular, { ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, ResourceFlags::RenderTarget);
-    builder.create(data.GBuffer_Speed,    { ivec3(size, 0), HAL::Format::R16G16_FLOAT,   1, 1 }, ResourceFlags::RenderTarget);
+    builder.create(data.GBuffer_Normals,   { ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, ResourceFlags::RenderTarget | ResourceFlags::UnorderedAccess);
+    builder.create(data.GBuffer_DepthMips, { ivec3(size, 0), HAL::Format::R32_TYPELESS,   1, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget);
 
-    // GBuffer_DepthPrev is the previous-frame view of GBuffer_DepthMips -- the
-    // history link above makes create() below provision and carry it, so it is
-    // not created here.
-    builder.create(data.GBuffer_DepthMips, { ivec3(size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget);
-
-    // The *Prev resources are provisioned (chain-only) by the current creates
+    // The *Prev resources are provisioned (chain-only) by the two creates
     // above; bind this context's local handles to them so actualize() can
     // dereference them (GBuffer::depth_prev_mips = *data.GBuffer_DepthPrev).
     builder.bind_history_prev(data.GBuffer_NormalsPrev);
     builder.bind_history_prev(data.GBuffer_DepthPrev);
-
-    builder.create(data.GBuffer_Quality, { ivec3(size, 0), HAL::Format::D24_UNORM_S8_UINT, 1, 1 }, ResourceFlags::DepthStencil);
 
     return true;
 }

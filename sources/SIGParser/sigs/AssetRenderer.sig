@@ -20,12 +20,15 @@ PassNode AssetGBuffer
 	# that never runs Scene's history-chain machinery, so GBuffer_DepthPrev
 	# is never actually provisioned there -- auto-need()ing it unconditionally
 	# crashed builder.need()'s own exists() assert the moment this pass ran.
-	[Write] Texture GBuffer_Albedo;
-	[Write] Texture GBuffer_Normals;
-	[Write] Texture GBuffer_Depth;
-	[Write] Texture GBuffer_Specular;
-	[Write] Texture GBuffer_Speed;
-	[Write] Texture GBuffer_DepthMips;
+	# Auto-created (same ViewportContext-driven mechanism as GBuffer_HiZ
+	# below), not hand-written builder.create() calls reading a captured
+	# m_size member -- this reads the real per-frame context directly.
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Albedo;
+	[Always = RenderTarget | UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Normals;
+	[Always = DepthStencil] [Size = ViewportContext::frame_size] [Format = R32_TYPELESS] Texture GBuffer_Depth;
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Specular;
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16_FLOAT] Texture GBuffer_Speed;
+	[Always = UnorderedAccess | RenderTarget] [Size = ViewportContext::frame_size] [Format = R32_TYPELESS] Texture GBuffer_DepthMips;
 	Texture GBuffer_Quality;
 	Texture GBuffer_DepthPrev;
 	# Static: occlusion pass 1 tests against LAST frame's HiZ (see SceneSystem).
