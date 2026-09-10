@@ -6,7 +6,7 @@
 // ============================================================================
 #pragma once
 #include "../PassNodeBase.h"
-#include "GBuffer.h"
+
 using namespace FrameGraph;
 
 namespace Passes
@@ -18,7 +18,30 @@ public:
 	struct Context
 	{
 
-		GBuffer gbuffer;
+
+		Handlers::Texture GBuffer_Albedo = ResourceID::GBuffer_Albedo;
+
+
+		Handlers::Texture GBuffer_Normals = ResourceID::GBuffer_Normals;
+
+
+		Handlers::Texture GBuffer_Depth = ResourceID::GBuffer_Depth;
+
+
+		Handlers::Texture GBuffer_Specular = ResourceID::GBuffer_Specular;
+
+
+		Handlers::Texture GBuffer_Speed = ResourceID::GBuffer_Speed;
+
+
+		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
+
+
+		Handlers::Texture GBuffer_Quality = ResourceID::GBuffer_Quality;
+
+
+		Handlers::Texture GBuffer_DepthPrev = ResourceID::GBuffer_DepthPrev;
+
 
 		Handlers::Texture VSM_Atlas = ResourceID::VSM_Atlas;
 
@@ -53,11 +76,19 @@ public:
 		// each field's own [Always=X] annotation (further gated by [Optional=X]
 		// when present -- a raw bool expression, e.g. builder.exists(...) or a
 		// context-read flag, deciding whether this specific field is actually
-		// needed this frame). Called by TypedPass::setup() after setup_func
-		// returns true - not a substitute for setup_func's own need()/create()
-		// calls for anything else conditional.
+		// needed this frame), or, for a View-typed field (e.g. `GBuffer
+		// gbuffer;`), every leaf the View itself marks [Always=X] that this
+		// pass's own [Write=...] on that field doesn't already cover. Called
+		// by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own need()/create() calls for anything
+		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
+			builder.need(data.GBuffer_Albedo, FrameGraph::ResourceFlags::Read);
+			builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::Read);
+			builder.need(data.GBuffer_Specular, FrameGraph::ResourceFlags::Read);
+			builder.need(data.GBuffer_Speed, FrameGraph::ResourceFlags::Read);
+			builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::None);
 			builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::Read);
 			builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::Read);
 			builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::Read);
@@ -91,8 +122,6 @@ public:
 			{ ResourceID::GBuffer_Speed, false },
 			{ ResourceID::GBuffer_DepthMips, false },
 			{ ResourceID::GBuffer_Quality, false },
-			{ ResourceID::GBuffer_NormalsPrev, false },
-			{ ResourceID::GBuffer_SpecularPrev, false },
 			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::VSM_Atlas, false },
 			{ ResourceID::VSM_PageTable, false },

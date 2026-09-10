@@ -71,7 +71,6 @@ export import "../defines.h";
 #include "pass/VSM_Combine.h"
 #include "pass/VSM_DebugClassifyOverlay.h"
 #include "pass/VSM_DepthAnalysis.h"
-#include "pass/GBuffer.h"
 #include "pass/AssetPipeline.pipeline.h"
 #include "pass/MainPipeline.pipeline.h"
 #include "pass/UIPipeline.pipeline.h"

@@ -1513,11 +1513,11 @@ public:
 						{
 							auto src = o.src;
 							indirect_src_combo->add_item(o.name)->on_select =
-								[src]()
+								[this, src]()
 								{
-									g_indirect_source = src;
+									graph.get_context<Table::IndirectGISelectors>().indirect_source = src;
 								};
-							if (src == g_indirect_source)
+							if (src == graph.get_context<Table::IndirectGISelectors>().indirect_source)
 								indirect_src_combo->get_label()->text = o.name;
 						}
 						toolbar->add_child(indirect_src_combo);
@@ -1535,11 +1535,11 @@ public:
 						{
 							auto src = o.src;
 							reflection_src_combo->add_item(o.name)->on_select =
-								[src]()
+								[this, src]()
 								{
-									g_reflection_source = src;
+									graph.get_context<Table::IndirectGISelectors>().reflection_source = src;
 								};
-							if (src == g_reflection_source)
+							if (src == graph.get_context<Table::IndirectGISelectors>().reflection_source)
 								reflection_src_combo->get_label()->text = o.name;
 						}
 						toolbar->add_child(reflection_src_combo);

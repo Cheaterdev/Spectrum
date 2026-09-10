@@ -21,7 +21,6 @@ bool PassDefault<Passes::NRD_IndirectCombine>::setup(
 	if (dlssrr_active)
 		return false;
 
-	GBufferViewDesc::need(builder, data.gbuffer);
 	return true;
 }
 
@@ -29,7 +28,7 @@ void PassDefault<Passes::NRD_IndirectCombine>::render(
 	Passes::NRD_IndirectCombine::Context& data, FrameContext& context)
 {
 	auto& command_list = context.get_list();
-	GBuffer gbuffer     = GBufferViewDesc::actualize(data.gbuffer);
+	GBuffer gbuffer     = GBufferViewDesc::actualize(data);
 	auto  target_tex    = *data.ResultTexture;
 	auto  sz            = target_tex.get_size();
 	auto& compute       = command_list->get_compute();

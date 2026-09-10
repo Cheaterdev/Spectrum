@@ -49,7 +49,6 @@ export import :FSR;
 export import :UpscalingDLSS;
 export import :UpscalingDLSSRR;
 export import :VoxelGI;
-export import :IndirectSelectors;
 export import :RTX;
 export import :ReflectionRTX;
 export import :ShadowRTX;

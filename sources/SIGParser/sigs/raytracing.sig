@@ -306,7 +306,16 @@ RaytracePass ColorShadowPass
 [TriState]
 PassNode RTXShadow
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	[Always = Read] Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	[Always = Read] Texture GBuffer_DepthPrev;
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ShadowMask;
 	[Always = UnorderedAccess] [Size = `(size_t)Constants::WG_TileSection`] ByteAdressBuffer WorkGraphBuffer;
 }

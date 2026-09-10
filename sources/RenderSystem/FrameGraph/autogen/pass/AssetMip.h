@@ -6,7 +6,7 @@
 // ============================================================================
 #pragma once
 #include "../PassNodeBase.h"
-#include "GBuffer.h"
+
 using namespace FrameGraph;
 
 namespace Passes
@@ -18,7 +18,6 @@ public:
 	struct Context
 	{
 
-		GBuffer gbuffer;
 
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
@@ -30,9 +29,12 @@ public:
 		// each field's own [Always=X] annotation (further gated by [Optional=X]
 		// when present -- a raw bool expression, e.g. builder.exists(...) or a
 		// context-read flag, deciding whether this specific field is actually
-		// needed this frame). Called by TypedPass::setup() after setup_func
-		// returns true - not a substitute for setup_func's own need()/create()
-		// calls for anything else conditional.
+		// needed this frame), or, for a View-typed field (e.g. `GBuffer
+		// gbuffer;`), every leaf the View itself marks [Always=X] that this
+		// pass's own [Write=...] on that field doesn't already cover. Called
+		// by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own need()/create() calls for anything
+		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::Read);
@@ -42,16 +44,6 @@ public:
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::GBuffer_Albedo, false },
-			{ ResourceID::GBuffer_Normals, false },
-			{ ResourceID::GBuffer_Depth, false },
-			{ ResourceID::GBuffer_Specular, false },
-			{ ResourceID::GBuffer_Speed, false },
-			{ ResourceID::GBuffer_DepthMips, false },
-			{ ResourceID::GBuffer_Quality, false },
-			{ ResourceID::GBuffer_NormalsPrev, false },
-			{ ResourceID::GBuffer_SpecularPrev, false },
-			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::ResultTexture, false },
 			{ ResourceID::swapchain, true },
 		};

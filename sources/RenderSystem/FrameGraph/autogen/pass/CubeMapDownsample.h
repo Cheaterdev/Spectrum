@@ -32,9 +32,12 @@ public:
 		// each field's own [Always=X] annotation (further gated by [Optional=X]
 		// when present -- a raw bool expression, e.g. builder.exists(...) or a
 		// context-read flag, deciding whether this specific field is actually
-		// needed this frame). Called by TypedPass::setup() after setup_func
-		// returns true - not a substitute for setup_func's own need()/create()
-		// calls for anything else conditional.
+		// needed this frame), or, for a View-typed field (e.g. `GBuffer
+		// gbuffer;`), every leaf the View itself marks [Always=X] that this
+		// pass's own [Write=...] on that field doesn't already cover. Called
+		// by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own need()/create() calls for anything
+		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.need(data.sky_cubemap, FrameGraph::ResourceFlags::UnorderedAccess);

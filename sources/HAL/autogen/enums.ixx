@@ -243,6 +243,7 @@ export
 		REBLUR_ValidationResources = "REBLUR_ValidationResources"_crc32,
 		Clear_UInt4Resources = "Clear_UInt4Resources"_crc32,
 		NRD_GBufferPackParams = "NRD_GBufferPackParams"_crc32,
+		IndirectGISelectors = "IndirectGISelectors"_crc32,
 		NRD_UnpackDebugParams = "NRD_UnpackDebugParams"_crc32,
 		NRD_IndirectCombineParams = "NRD_IndirectCombineParams"_crc32,
 		TileClassifyData = "TileClassifyData"_crc32,
@@ -307,6 +308,7 @@ export
 		VoxelDebug = "VoxelDebug"_crc32,
 		ReflectionCombine = "ReflectionCombine"_crc32,
 		RTXCombine = "RTXCombine"_crc32,
+		VSMSelectors = "VSMSelectors"_crc32,
 		VSMConstants = "VSMConstants"_crc32,
 		VSMShadowLookup = "VSMShadowLookup"_crc32,
 		VSMPageTableData = "VSMPageTableData"_crc32,
@@ -332,6 +334,16 @@ export
 		TileRecord = "TileRecord"_crc32,
 		WorkGR_ClassifyPixels_NodeEmulation = "WorkGR_ClassifyPixels_NodeEmulation"_crc32,
 		WorkGR_Shadows_NodeEmulation = "WorkGR_Shadows_NodeEmulation"_crc32
+	};
+	enum class IndirectSource : uint
+	{
+		MyVCT,
+		RTXReference
+	};
+	enum class ReflectionSource : uint
+	{
+		MyReflection,
+		RTXReference
 	};
 	enum class TestEnumMode : uint
 	{

@@ -18,11 +18,30 @@ public:
 	struct Context
 	{
 
+		int cascade_index = {};
 
 		Handlers::Texture PSSM_Depths = ResourceID::PSSM_Depths;
 
 		Handlers::StructuredBuffer<Table::Camera> PSSM_Cameras = ResourceID::PSSM_Cameras;
 
+
+		// Resources this pass always needs whenever it runs, generated from
+		// each field's own [Always=X] annotation (further gated by [Optional=X]
+		// when present -- a raw bool expression, e.g. builder.exists(...) or a
+		// context-read flag, deciding whether this specific field is actually
+		// needed this frame), or, for a View-typed field (e.g. `GBuffer
+		// gbuffer;`), every leaf the View itself marks [Always=X] that this
+		// pass's own [Write=...] on that field doesn't already cover. Called
+		// by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own need()/create() calls for anything
+		// else conditional.
+		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			if (data.cascade_index != 0)
+				builder.need(data.PSSM_Depths, FrameGraph::ResourceFlags::DepthStencil);
+			if (data.cascade_index != 0)
+				builder.need(data.PSSM_Cameras, FrameGraph::ResourceFlags::CopyDest);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

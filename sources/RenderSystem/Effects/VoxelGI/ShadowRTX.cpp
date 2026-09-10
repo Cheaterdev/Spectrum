@@ -23,7 +23,6 @@ bool PassDefault<Passes::ShadowRTX>::setup(
 	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
-	GBufferViewDesc::need(builder, data.gbuffer);
 	return true;
 }
 
@@ -32,7 +31,7 @@ void PassDefault<Passes::ShadowRTX>::render(
 {
 	auto& command_list = context.get_list();
 
-	GBuffer gbuffer   = GBufferViewDesc::actualize(data.gbuffer);
+	GBuffer gbuffer   = GBufferViewDesc::actualize(data);
 	auto noisy_output = *data.RTXShadowNoise;
 
 	auto& sceneinfo = context.graph->get_context<SceneInfo>();

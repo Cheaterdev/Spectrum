@@ -818,13 +818,57 @@ ComputePSO NRD_GBufferPack
 	compute = nrd/gbuffer_pack;
 }
 
+# Which raw signal feeds NRD REBLUR_DIFFUSE, set by main.cpp's Indirect Src
+# combobox. MyVCT = VoxelScreen's voxel-cone-traced signal; RTXReference =
+# IndirectRTX's raw RTX reference. Purely a quality/performance comparison --
+# NRD is the only denoiser for either.
+enum IndirectSource
+{
+	MyVCT;
+	RTXReference;
+}
+
+# Same idea for REBLUR_SPECULAR: ScreenReflection's voxel-cone-traced signal
+# vs. ReflectionRTX's raw RTX reference.
+enum ReflectionSource
+{
+	MyReflection;
+	RTXReference;
+}
+
+# SIG-declared (not a hand-written C++ global) so [Optional=`...`] on
+# NRD_GBufferPack's own candidate fields below can read it directly via
+# get_context<Table::IndirectGISelectors>() -- no relay step, this struct
+# *is* the live selection state, read and written through the same object
+# main.cpp's combobox callbacks, VoxelScreen/ScreenReflection's setup(), and
+# this pass all share.
+struct IndirectGISelectors
+{
+	IndirectSource indirect_source = RTXReference;
+	ReflectionSource reflection_source = RTXReference;
+}
+
 [Static]
 PassNode NRD_GBufferPack
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment. GBufferViewDesc::actualize() (Context.ixx) works unmodified
+	# on `data` directly once these are top-level.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
+	[Always = Read] [Optional = `builder.graph->get_context<Table::IndirectGISelectors>().indirect_source != IndirectSource::MyVCT`]
 	Texture RTXIndirectNoise;
+	[Always = Read] [Optional = `builder.graph->get_context<Table::IndirectGISelectors>().reflection_source != ReflectionSource::MyReflection`]
 	Texture RTXReflectionNoise;
+	[Always = Read] [Optional = `builder.graph->get_context<Table::IndirectGISelectors>().indirect_source == IndirectSource::MyVCT`]
 	Texture VoxelIndirectNoiseRaw;
+	[Always = Read] [Optional = `builder.graph->get_context<Table::IndirectGISelectors>().reflection_source == ReflectionSource::MyReflection`]
 	Texture VoxelReflectionNoiseRaw;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R32_FLOAT] Texture NRD_ViewZ;
@@ -900,7 +944,16 @@ ComputePSO NRD_IndirectCombine
 [Compute]
 PassNode NRD_IndirectCombine
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture RTXIndirectDenoised;
 
 	[Always = UnorderedAccess] Texture ResultTexture;

@@ -320,7 +320,19 @@ ComputePSO RTXCombine
 [Compute]
 PassNode GBufferDownsampler
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment. GBuffer_Quality is intentionally NOT [Always] here either --
+	# it still needs its own manual builder.need() in setup() (VoxelGIGraph.
+	# cpp), same reasoning as before flattening (this is the one pass that
+	# actually reads it).
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 
 	# GBuffer_TempColor is the scratch target MipMapGenerator::generate_quality
 	# needs -- a plain top-level field, not a PassView GBuffer leaf (see
@@ -359,7 +371,16 @@ PassNode GBufferDownsampler
 
 PassNode VoxelDebug
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture VoxelDebug;
 	[Always = Read] Texture3D VoxelLighted;
 }
@@ -405,7 +426,16 @@ PassNode ReflectionRTXHalf
 [Compute]
 PassNode ReflectionRTX
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture BlueNoise;
 	[Always = Read] Texture RTXReflectionNoiseHalf;
 	[Always = Read] Texture RTXReflectionDirPdfHalf;
@@ -430,7 +460,16 @@ PassNode ReflectionRTX
 [Compute]
 PassNode ShadowRTX
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXShadowNoise;
 }
@@ -470,7 +509,16 @@ PassNode IndirectRTXHalf
 [Compute]
 PassNode IndirectRTX
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture BlueNoise;
 	[Always = Read] Texture RTXIndirectNoiseHalf;
 	[Always = Read] Texture TileClassifyTiles;
@@ -487,7 +535,16 @@ PassNode IndirectRTX
 [Compute]
 PassNode ReflCombine
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = UnorderedAccess] Texture ResultTexture;
 	# NRD REBLUR_SPECULAR's denoised output (NRD_REBLUR_Execute, see
 	# [[project-nrd-integration]]) -- the only reflection denoiser now.
@@ -508,7 +565,16 @@ PassNode ReflCombine
 # only indirect/reflection inputs now -- no raw/legacy alternative.
 PassNode RTXCombine
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	# Raw, not REBLUR-denoised -- DLSS-RR does its own reconstruction/
 	# denoising on this exact signal (its ColorIn tag), so feeding it
 	# NRD-denoised data would be a redundant double-denoise. NRD isn't even
@@ -561,7 +627,16 @@ PassNode Mipmapping
 [Compute]
 PassNode VoxelScreen
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture3D VoxelLighted;
 	[Always = Read] Texture BlueNoise;
 
@@ -575,7 +650,16 @@ PassNode VoxelScreen
 [Compute]
 PassNode ScreenReflection
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture3D VoxelLighted;
 	[Always = Read] Texture BlueNoise;
 

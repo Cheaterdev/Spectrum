@@ -23,7 +23,6 @@ bool PassDefault<Passes::RTXCombine>::setup(
 	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
-	GBufferViewDesc::need(builder, data.gbuffer);
 	return true;
 }
 
@@ -32,7 +31,7 @@ void PassDefault<Passes::RTXCombine>::render(
 {
 	auto& command_list = context.get_list();
 	auto  target_tex   = *data.ResultTextureRTXNoise;
-	GBuffer gbuffer    = GBufferViewDesc::actualize(data.gbuffer);
+	GBuffer gbuffer    = GBufferViewDesc::actualize(data);
 	auto  sz           = target_tex.get_size();
 	auto& compute      = command_list->get_compute();
 

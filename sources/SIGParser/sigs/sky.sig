@@ -102,17 +102,17 @@ PassNode Sky
 [Compute]
 PassNode CubeSky
 {
-	# Not [Always]: setup() calls data.sky_cubemap.changed() right after
-	# create()'ing it, and downstream passes (CubeMapDownsample,
-	# CubeMapEnviromentProcessor) read is_changed() from their OWN setup() --
-	# same phase, same frame. create_always()/need_always() only run after
-	# setup_func returns, so calling .changed() from render() (tried once,
-	# reverted) is too late: every setup() across the whole graph already
-	# ran by the time any pass's render() executes, so downstream setups
-	# would see is_changed() as permanently false and never re-filter the
-	# cubemap. This has to stay a manual create() + changed() pair, together,
-	# inside setup_func.
-	[Write] TextureCube sky_cubemap;
+	# create_always() runs every frame this pass is enabled (SetupResult::
+	# IgnoreRender on an unchanged frame still runs it -- Static means the
+	# underlying allocation only happens once). Safe now that "did the sky
+	# change" is tracked via SkyInfo::sky_changed (a plain context field
+	# CubeSky's setup() writes and CubeMapDownsample/CubeMapEnviromentProcessor
+	# read from their OWN setup(), same phase) rather than the old resource-
+	# level is_changed()/changed() pair, which needed create() and the mutator
+	# to run in the same function -- see SkyInfo's own comment for why that
+	# ordering constraint no longer applies here.
+	[Always = UnorderedAccess | Static] [Size = 256] [Format = R11G11B10_FLOAT] [MipCount = 0]
+	TextureCube sky_cubemap;
 }
 
 

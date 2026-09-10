@@ -125,18 +125,32 @@ PassNode Profiler
 
 [Static]
 [Compute]
+# Dead: PassDefault<Passes::CopyPrev>::setup() (PassDefaults.cpp) always
+# returns false -- kept disabled until dropped from the .sig entirely (see
+# its own comment there). GBuffer_SpecularPrev dropped already: its history
+# was unused (denoiser roughness-history disabled) and removed along with
+# this pass's real body, per PassDefaults.cpp's own comment.
 PassNode CopyPrev
 {
-	[Write = {GBuffer_DepthPrev, GBuffer_NormalsPrev, GBuffer_SpecularPrev}] GBuffer gbuffer;
+	[Write] Texture GBuffer_DepthPrev;
+	[Write] Texture GBuffer_NormalsPrev;
 }
 
 [Static]
 PassNode Scene
 {
-	[Write = {GBuffer_Albedo, GBuffer_Normals, GBuffer_Depth, GBuffer_Specular, GBuffer_Speed,
-	          GBuffer_DepthMips, GBuffer_Quality,
-	          GBuffer_NormalsPrev, GBuffer_SpecularPrev}]
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment. GBuffer_SpecularPrev dropped (see CopyPrev's own comment,
+	# above) -- Scene never actually created it even before flattening.
+	[Write] Texture GBuffer_Albedo;
+	[Write] Texture GBuffer_Normals;
+	[Write] Texture GBuffer_Depth;
+	[Write] Texture GBuffer_Specular;
+	[Write] Texture GBuffer_Speed;
+	[Write] Texture GBuffer_DepthMips;
+	[Write] Texture GBuffer_Quality;
+	[Write] Texture GBuffer_NormalsPrev;
+	[Always = Read] Texture GBuffer_DepthPrev;
 	# Static: pass 1 of the GPU occlusion culler tests boxes against LAST
 	# frame's HiZ, so the contents must survive across frames (no aliasing).
 	# MipCount=0: full auto mip chain (a Hi-Z pyramid), matching the original

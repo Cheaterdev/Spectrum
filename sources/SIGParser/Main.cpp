@@ -20,6 +20,14 @@ static const std::set<std::string> WRITEABLE_FLAG_NAMES = {
 	"CopyDest", "UnorderedAccess", "RenderTarget", "DepthStencil"
 };
 
+// A PassNode field of one of these types is plain per-frame CPU state (e.g.
+// an index a [Multiple] instance's own setup lambda writes for a later
+// [Optional=...] guard to read), not a FrameGraph resource -- no Handlers::/
+// ResourceID::, not part of resource_accesses[]/get_all_resources().
+static const std::set<std::string> PRIMITIVE_SCALAR_TYPES = {
+	"int", "uint", "bool", "float"
+};
+
 
 using namespace jinja2;
 
@@ -361,7 +369,7 @@ int main()
 						View* view = parsed.views.find(p.class_no_template);
 						if (view)
 							collect(view->params);
-						else
+						else if (PRIMITIVE_SCALAR_TYPES.count(p.class_no_template) == 0)
 						{
 							if (seen.insert(p.name).second)
 								result.emplace_back(p.name);
@@ -413,23 +421,42 @@ int main()
 						}
 						rec(view->params, true, pred);
 					}
+					else if (PRIMITIVE_SCALAR_TYPES.count(p.class_no_template) > 0)
+					{
+						// Plain CPU-side state (e.g. a [Multiple] instance index) --
+						// not a FrameGraph resource, not part of resource_accesses[].
+					}
 					else
 					{
-						bool write;
+						// A leaf's own [Always=X] reflects the View's generic default
+						// for a consumer that doesn't otherwise say -- but the
+						// enclosing pass's own [Write=...] on THIS usage describes
+						// what THIS pass specifically does, and must win: a leaf
+						// marked [Always=Read] at the View level (the common case,
+						// since most consumers only read it) is still a write for
+						// whichever pass's own [Write={leaf,...}] actually creates
+						// it. Checking [Always] first and ignoring parent_is_write
+						// entirely for such leaves is what let a real producer like
+						// AssetGBuffer get recorded as declaring a read on
+						// GBuffer_Albedo, which it write-creates -- verify_declared_
+						// access (FrameGraph.cpp) then ASSERTs the mismatch at
+						// runtime.
+						bool always_write = false;
 						if (const option* always = p.find_option("Always"))
 						{
 							// [Always = A | B]: write if ANY of the OR'd flags is
 							// writeable, matching FrameGraph::ResourceFlags's own
 							// bitwise-OR semantics.
 							if (!always->value_atom.values.empty())
-								write = std::any_of(always->value_atom.values.begin(), always->value_atom.values.end(),
+								always_write = std::any_of(always->value_atom.values.begin(), always->value_atom.values.end(),
 									[](const have_expr& v) { return WRITEABLE_FLAG_NAMES.count(v.expr) > 0; });
 							else
-								write = WRITEABLE_FLAG_NAMES.count(always->value_atom.expr) > 0;
+								always_write = WRITEABLE_FLAG_NAMES.count(always->value_atom.expr) > 0;
 						}
-						else
-							write = inside_view ? parent_is_write(p.name)
-							                    : (p.find_option("Write") != nullptr);
+
+						bool own_write = inside_view ? parent_is_write(p.name)
+						                              : (p.find_option("Write") != nullptr);
+						bool write = always_write || own_write;
 						out.emplace_back(p.name, write);
 						if (p.find_option("Recreate"))
 							out.emplace_back(p.name, true);
@@ -530,6 +557,75 @@ int main()
 					return result;
 				}
 				return "";
+			},
+			ArgInfo{"pass_name"}, ArgInfo{"field_name"}
+		));
+
+		// For a PassNode field whose type is a View (e.g. `GBuffer gbuffer;`),
+		// resolves every leaf the View's OWN declaration marks [Always=X] into
+		// a {name, flags} pair -- EXCEPT leaves this specific pass usage's own
+		// [Write] / [Write={leaves...}] already covers (a leaf being written
+		// elsewhere in this same setup() shouldn't also get a blanket Read
+		// need()). Lets a consumer just declare `GBuffer gbuffer;` (or a
+		// producer declare `[Write={...}] GBuffer gbuffer;`) and get the
+		// equivalent of a hand-written bulk need() call for every common leaf
+		// for free -- same one-source-of-truth reasoning as everything else
+		// [Always] already covers, just recursed one level into a view group.
+		global.AddGlobal("get_view_needs", jinja2::MakeCallable(
+			[&](const std::string& pass_name, const std::string& field_name) -> ValuesList
+			{
+				ValuesList result;
+				Pass* pass = parsed.passes.find(pass_name);
+				if (!pass) return result;
+
+				for (const auto& p : pass->params)
+				{
+					if (p.name != field_name) continue;
+
+					View* view = parsed.views.find(p.class_no_template);
+					if (!view) return result;
+
+					std::set<std::string> write_set;
+					bool write_all = false;
+					if (const option* w = p.find_option("Write"))
+					{
+						if (!w->value_atom.values.empty())
+							for (const auto& v : w->value_atom.values) write_set.insert(v.expr);
+						else if (!w->value_atom.expr.empty())
+							write_set.insert(w->value_atom.expr);
+						else
+							write_all = true;
+					}
+
+					for (const auto& leaf : view->params)
+					{
+						if (write_all || write_set.count(leaf.name)) continue;
+
+						const option* always = leaf.find_option("Always");
+						if (!always) continue;
+
+						std::string flags;
+						if (always->value_atom.values.empty())
+							flags = "FrameGraph::ResourceFlags::" + always->value_atom.expr;
+						else
+						{
+							bool first = true;
+							for (const auto& v : always->value_atom.values)
+							{
+								if (!first) flags += " | ";
+								flags += "FrameGraph::ResourceFlags::" + v.expr;
+								first = false;
+							}
+						}
+
+						ValuesMap m;
+						m["name"] = leaf.name;
+						m["flags"] = flags;
+						result.push_back(std::move(m));
+					}
+					break;
+				}
+				return result;
 			},
 			ArgInfo{"pass_name"}, ArgInfo{"field_name"}
 		));

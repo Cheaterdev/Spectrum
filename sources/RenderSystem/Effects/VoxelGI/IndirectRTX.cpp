@@ -61,7 +61,6 @@ bool PassDefault<Passes::IndirectRTX>::setup(
 	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
-	GBufferViewDesc::need(builder, data.gbuffer);
 	return true;
 }
 
@@ -70,7 +69,7 @@ void PassDefault<Passes::IndirectRTX>::render(
 {
 	auto& command_list = context.get_list();
 
-	GBuffer gbuffer   = GBufferViewDesc::actualize(data.gbuffer);
+	GBuffer gbuffer   = GBufferViewDesc::actualize(data);
 	auto noisy_output = *data.RTXIndirectNoise;
 
 	auto& sceneinfo = context.graph->get_context<SceneInfo>();

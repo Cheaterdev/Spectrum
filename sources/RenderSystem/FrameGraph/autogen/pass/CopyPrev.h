@@ -6,7 +6,7 @@
 // ============================================================================
 #pragma once
 #include "../PassNodeBase.h"
-#include "GBuffer.h"
+
 using namespace FrameGraph;
 
 namespace Passes
@@ -18,21 +18,18 @@ public:
 	struct Context
 	{
 
-		GBuffer gbuffer;
+
+		Handlers::Texture GBuffer_DepthPrev = ResourceID::GBuffer_DepthPrev;
+
+
+		Handlers::Texture GBuffer_NormalsPrev = ResourceID::GBuffer_NormalsPrev;
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::GBuffer_Albedo, false },
-			{ ResourceID::GBuffer_Normals, false },
-			{ ResourceID::GBuffer_Depth, false },
-			{ ResourceID::GBuffer_Specular, false },
-			{ ResourceID::GBuffer_Speed, false },
-			{ ResourceID::GBuffer_DepthMips, false },
-			{ ResourceID::GBuffer_Quality, false },
-			{ ResourceID::GBuffer_NormalsPrev, true },
-			{ ResourceID::GBuffer_SpecularPrev, true },
 			{ ResourceID::GBuffer_DepthPrev, true },
+			{ ResourceID::GBuffer_NormalsPrev, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

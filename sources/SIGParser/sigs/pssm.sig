@@ -141,29 +141,34 @@ ComputePSO GBufferDownsample
 # Scene, GBufferDownsampler) so [Always]/[Size]/[Format] can reach them --
 # the auto-create mechanism only ever sees top-level pass.params, never a
 # view leaf reached through a helper.
-PassView GBuffer
-{
-	Texture GBuffer_Albedo;
-	Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
-	Texture GBuffer_Specular;
-
-	Texture GBuffer_Speed;
-	Texture GBuffer_DepthMips;
-
-
-	Texture GBuffer_Quality;
-
-	Texture GBuffer_NormalsPrev;
-	Texture GBuffer_SpecularPrev;
-	Texture GBuffer_DepthPrev;
-}
+#
+# The `PassView GBuffer` this comment used to document (8 leaves --
+# GBuffer_Albedo/Normals/Depth/Specular/Speed [Always=Read], DepthMips
+# [Always=None], Quality unannotated, plus GBuffer_NormalsPrev/SpecularPrev/
+# DepthPrev for Scene's history [Write]) has been removed entirely: every
+# PassNode that used `GBuffer gbuffer;` now declares the same leaves as
+# plain top-level fields instead, with the same [Always]/[Write] annotations
+# the View leaf carried. GBufferViewDesc::actualize() (Context.ixx) is a
+# template on `auto& context` -- it never actually required the View
+# wrapper, only field names matching `GBuffer_*`, so every call site just
+# changed from `actualize(data.gbuffer)` to `actualize(data)`. `struct
+# GBuffer` (scene.sig, the [Bind]+[RenderTarget] HLSL Table used for
+# shader-visible sampling inside other Bind structs like PSSMLighting) is a
+# completely different, still-live SIG entity -- unrelated to this removed
+# PassView, and untouched by this change.
 
 [Multiple = 6]
 PassNode PSSM_Cascade
 {
-	[Write] Texture PSSM_Depths;
-	[Write] StructuredBuffer<Camera> PSSM_Cameras;
+	# Set by each instance's own setup lambda (PSSM.cpp) to its loop index i.
+	# Instance 0 create()s PSSM_Depths/PSSM_Cameras itself (manual -- their
+	# desc depends on runtime-tunable `size`/`renders_size`, not expressible
+	# as a [Size]/[Format] literal); every other instance just needs the
+	# same two resources, which is exactly what [Always]+[Optional] below
+	# auto-generates instead of the hand-written need() calls it replaces.
+	int cascade_index;
+	[Always = DepthStencil] [Optional = `data.cascade_index != 0`] Texture PSSM_Depths;
+	[Always = CopyDest] [Optional = `data.cascade_index != 0`] StructuredBuffer<Camera> PSSM_Cameras;
 }
 
 PassNode PSSM_GenerateMask
@@ -171,17 +176,41 @@ PassNode PSSM_GenerateMask
 	[Always = Read] Texture PSSM_Depths;
 	[Always = None] StructuredBuffer<Camera> PSSM_Cameras;
 
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see this file's own
+	# GBuffer PassView comment (now removed, kept in git history) for the
+	# reasoning. GBufferViewDesc::actualize() (Context.ixx) is a template on
+	# `auto& context`, so it works unmodified on `data` directly once these
+	# are plain top-level fields.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8_UNORM] Texture LightMask;
 }
 
 [Compute]
 PassNode PSSM_Combine
 {
-	StructuredBuffer<Camera> PSSM_Cameras;
-	GBuffer gbuffer;
-	Texture LightMask;
-	Texture ShadowMask;
+	# A/B selection: ShadowMask (RTXShadow's output) when it exists this
+	# frame, otherwise the LightMask+PSSM_Cameras (VSM-less PSSM) fallback --
+	# see CLAUDE.md's "FrameGraph: A/B resource selection". The two
+	# [Optional] conditions are exact complements by construction, same as
+	# the hand-written if/else they replace.
+	[Always = Read] [Optional = `!builder.exists(data.ShadowMask)`] StructuredBuffer<Camera> PSSM_Cameras;
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
+	[Always = Read] [Optional = `!builder.exists(data.ShadowMask)`] Texture LightMask;
+	[Always = Read] [Optional = `builder.exists(data.ShadowMask)`] Texture ShadowMask;
 	[Always = UnorderedAccess] Texture ResultTexture;
 }
 

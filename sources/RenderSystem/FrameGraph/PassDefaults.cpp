@@ -129,14 +129,6 @@ void PassDefault<Passes::Profiler>::render(
 FrameGraph::SetupResult PassDefault<Passes::RTXShadow>::setup(
     Passes::RTXShadow::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	builder.need(data.gbuffer.GBuffer_Albedo,    ResourceFlags::Read);
-	builder.need(data.gbuffer.GBuffer_Normals,   ResourceFlags::Read);
-	builder.need(data.gbuffer.GBuffer_Depth,     ResourceFlags::Read);
-	builder.need(data.gbuffer.GBuffer_Specular,  ResourceFlags::Read);
-	builder.need(data.gbuffer.GBuffer_Speed,     ResourceFlags::Read);
-	builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::Read);
-	builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::None);
-
 	return RenderSystem::get().device().get_properties().rtx
 		? FrameGraph::SetupResult::NeedsRender
 		: FrameGraph::SetupResult::IgnoreRender;
@@ -159,7 +151,7 @@ void PassDefault<Passes::RTXShadow>::render(
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 	context.graph->set_slot(SlotID::SceneData, compute);
 
-	GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+	GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 	{
 		Slots::Raytracing rtx;

@@ -25,6 +25,12 @@ public:
 	{
 
 {% for v in pass.params -%}
+{%- if v.type == "int" or v.type == "uint" or v.type == "bool" or v.type == "float" -%}
+{#- Plain CPU-side state, not a FrameGraph resource -- e.g. a [Multiple]
+   instance index written by that instance's own setup lambda and read by
+   an [Optional=...] guard on another field. No Handlers::/ResourceID::. -#}
+		{{v.type}} {{v.name}} = {};
+{%- else -%}
 {%- set t =  parsed.tables[v.type] -%}
 {%- if t is undefined -%}
 {%-if parsed.tables[v.template_arg] is defined and parsed.tables[v.template_arg].options.shader_only is undefined -%}
@@ -35,6 +41,7 @@ public:
 {%-else-%}
 		{{v.type}} {{v.name}};
 {%-endif-%}
+{%- endif -%}
 {%- if v.options.Recreate is defined %}
 		Handlers::{{v.type}} {{v.options.Recreate.value_atom.expr}} = {{v.name}};
 {%- endif %}
@@ -42,15 +49,20 @@ public:
 {%- set always_fields = create_list('always_fields') -%}
 {%- for v in pass.params -%}
 {%- if v.options.Always is defined and v.options.Size is undefined and v.options.Format is undefined and v.options.Recreate is undefined -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
+{%- set view = parsed.views[v.type] -%}
+{%- if view is defined and get_view_needs(pass.name, v.name) | length > 0 -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
 {%- endfor -%}
 {%- if get_list('always_fields') | length > 0 %}
 		// Resources this pass always needs whenever it runs, generated from
 		// each field's own [Always=X] annotation (further gated by [Optional=X]
 		// when present -- a raw bool expression, e.g. builder.exists(...) or a
 		// context-read flag, deciding whether this specific field is actually
-		// needed this frame). Called by TypedPass::setup() after setup_func
-		// returns true - not a substitute for setup_func's own need()/create()
-		// calls for anything else conditional.
+		// needed this frame), or, for a View-typed field (e.g. `GBuffer
+		// gbuffer;`), every leaf the View itself marks [Always=X] that this
+		// pass's own [Write=...] on that field doesn't already cover. Called
+		// by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own need()/create() calls for anything
+		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 {%- for v in pass.params %}
@@ -61,6 +73,12 @@ public:
 {%- else %}
 			builder.need(data.{{v.name}}, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- endif %}
+{%- endif %}
+{%- set view = parsed.views[v.type] -%}
+{%- if view is defined %}
+{%- for need in get_view_needs(pass.name, v.name) %}
+			builder.need(data.{{v.name}}.{{need.name}}, {{need.flags}});
+{%- endfor %}
 {%- endif %}
 {%- endfor %}
 		}

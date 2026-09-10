@@ -40,11 +40,6 @@ SkyRender::SkyRender()
 	{
 		auto& sky = builder.graph->get_context<SkyInfo>();
 
-		builder.create(data.sky_cubemap,
-		               { ivec3(256, 256, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 },
-		               FrameGraph::ResourceFlags::UnorderedAccess |
-		               FrameGraph::ResourceFlags::Static);
-
 		sky.sky_changed = ((sky.sunDir - dir).length() > 0.001f);
 		if (sky.sky_changed) dir = sky.sunDir;
 

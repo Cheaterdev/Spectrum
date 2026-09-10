@@ -1171,7 +1171,6 @@ VSM::VSM() : VariableContext(L"VSM")
 		// classify/search/resolve without it.
 		if (!use_vsm_penumbra)
 			return false;
-		GBufferViewDesc::need(builder, data.gbuffer);
 		// VSM-owned, not FrameGraph resources -- created once, pre-initialized
 		// to {0,1,1} (ThreadGroupCountY/Z never change again), same lazy
 		// null-check-and-create shape vsm_atlas_tex already uses. See these
@@ -1198,7 +1197,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	m_blockerclassify_render = [this](Passes::VSM_BlockerClassify::Context& data, FrameGraph::FrameContext& context)
 	{
-		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 		auto& list    = *context.get_list();
 		auto& compute = list.get_compute();
@@ -1292,13 +1291,12 @@ VSM::VSM() : VariableContext(L"VSM")
 	{
 		if (!use_vsm_penumbra)
 			return false;
-		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};
 
 	m_blockersearch_render = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::FrameContext& context)
 	{
-		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 		auto& list    = *context.get_list();
 		auto& compute = list.get_compute();
@@ -1409,7 +1407,6 @@ VSM::VSM() : VariableContext(L"VSM")
 	{
 		if (!use_vsm_penumbra || !use_vsm_contact_shadow)
 			return false;
-		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};
 
@@ -1422,7 +1419,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		auto& compute = list.get_compute();
 		compute.set_signature(Layouts::DefaultLayout);
 
-		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 		// Debug-only (see use_vsm_debug_clear_unwritten's own comment) --
 		// only pixels a non-early-outed wavefront actually resolves get
@@ -1465,19 +1462,21 @@ VSM::VSM() : VariableContext(L"VSM")
 	{
 		if (!use_vsm_penumbra)
 			return false;
-		GBufferViewDesc::need(builder, data.gbuffer);
-		// use_vsm_contact_shadow off -> VSM_ScreenSpaceShadow's own setup()
-		// returns false, so this never exists that frame -- need() only when
-		// it might (same builder.exists() shape RtxReference's own guard
-		// uses elsewhere in this file).
-		if (use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow))
-			builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::Read);
+
+		// VSMSelectors is a static-function-readable snapshot of this frame's
+		// Variable<T> state (vsm.sig's own comment) -- VSM_ContactShadow's
+		// [Optional] guard reads it to reproduce the builder.exists() check
+		// this setup() used to do by hand.
+		auto& vsm_selectors = builder.graph->get_context<Table::VSMSelectors>();
+		vsm_selectors.use_vsm_contact_shadow = use_vsm_contact_shadow;
+		vsm_selectors.vsm_debug_view         = vsm_debug_view;
+
 		return true;
 	};
 
 	m_shadowresolve_render = [this](Passes::VSM_ShadowResolve::Context& data, FrameGraph::FrameContext& context)
 	{
-		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 		auto& list    = *context.get_list();
 		auto& compute = list.get_compute();
@@ -1608,20 +1607,23 @@ VSM::VSM() : VariableContext(L"VSM")
 		// non-penumbra fallback (get_shadow_vsm_simple).
 		if (use_vsm_penumbra)
 			return false;
-		GBufferViewDesc::need(builder, data.gbuffer);
+
 		// RTXShadow runs unconditionally every frame on RTX-capable
 		// hardware, independent of PSSM/VSM -- but its own setup() can
 		// still return false (no RTX hardware), in which case ShadowMask
-		// never gets created this frame. Same defensive builder.exists()
-		// guard PSSM_Combine already uses for the same resource.
-		if (vsm_debug_view == VSMDebugView::RtxReference && builder.exists(data.ShadowMask))
-			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::Read);
+		// never gets created this frame. ShadowMask's [Optional] guard
+		// reproduces this same defensive builder.exists() check, plus the
+		// vsm_debug_view read via VSMSelectors (vsm.sig's own comment).
+		auto& vsm_selectors = builder.graph->get_context<Table::VSMSelectors>();
+		vsm_selectors.use_vsm_contact_shadow = use_vsm_contact_shadow;
+		vsm_selectors.vsm_debug_view         = vsm_debug_view;
+
 		return true;
 	};
 
 	m_combine_render = [this](Passes::VSM_Combine::Context& data, FrameGraph::FrameContext& context)
 	{
-		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 		auto& list    = *context.get_list();
 		auto& compute = list.get_compute();
@@ -1699,17 +1701,16 @@ VSM::VSM() : VariableContext(L"VSM")
 			return false;
 		if (vsm_debug_view == VSMDebugView::None)
 			return false;
-		// Only actually needed for the page-grid/rtx-reference cases (full-
-		// screen, not tile-driven) -- harmless to need() unconditionally
-		// alongside the tile-classify case's own needs below.
-		GBufferViewDesc::need(builder, data.gbuffer);
-		// Same defensive builder.exists() guard VSM_Combine used to use for
-		// this (RTXShadow's own setup() can return false on non-RTX
-		// hardware, in which case this never gets created this frame).
-		if (vsm_debug_view == VSMDebugView::RtxReference && builder.exists(data.ShadowMask))
-			builder.need(data.ShadowMask, FrameGraph::ResourceFlags::Read);
-		if (vsm_debug_view == VSMDebugView::ContactShadow && use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow))
-			builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::Read);
+
+		// ShadowMask/VSM_ContactShadow's [Optional] guards read this same
+		// snapshot to reproduce the defensive builder.exists() checks this
+		// setup() used to do by hand (RTXShadow/VSM_ScreenSpaceShadow's own
+		// setup() can each independently return false) -- see vsm.sig's
+		// VSMSelectors comment.
+		auto& vsm_selectors = builder.graph->get_context<Table::VSMSelectors>();
+		vsm_selectors.use_vsm_contact_shadow = use_vsm_contact_shadow;
+		vsm_selectors.vsm_debug_view         = vsm_debug_view;
+
 		return true;
 	};
 
@@ -1734,7 +1735,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		bool do_contact_shadow = vsm_debug_view == VSMDebugView::ContactShadow && use_vsm_contact_shadow && data.VSM_ContactShadow;
 		if (do_page_grid || do_rtx_reference || do_contact_shadow)
 		{
-			GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+			GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 			auto& caminfo = context.graph->get_context<CameraInfo>();
 			auto  cam     = caminfo.cam;
@@ -1833,14 +1834,13 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	m_depth_analysis_setup = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		GBufferViewDesc::need(builder, data.gbuffer);
 
 		return true;
 	};
 
 	m_depth_analysis_render = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::FrameContext& context)
 	{
-		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 		auto& command_list = context.get_list();
 		auto& compute = command_list->get_compute();

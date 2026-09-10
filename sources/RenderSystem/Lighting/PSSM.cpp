@@ -111,15 +111,12 @@ PSSM::PSSM()
 	{
 		m_cascade_setup[i] = [this, i](Passes::PSSM_Cascade::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 		{
+			data.cascade_index = i;
+
 			if (i == 0)
 			{
 				builder.create(data.PSSM_Depths,  { ivec3(size, 0), HAL::Format::R32_TYPELESS, renders_size, 1 }, FrameGraph::ResourceFlags::DepthStencil);
 				builder.create(data.PSSM_Cameras, { renders_size },                                               FrameGraph::ResourceFlags::CopyDest);
-			}
-			else
-			{
-				builder.need(data.PSSM_Cameras, FrameGraph::ResourceFlags::CopyDest);
-				builder.need(data.PSSM_Depths,  FrameGraph::ResourceFlags::DepthStencil);
 			}
 			return true;
 		};
@@ -204,13 +201,12 @@ PSSM::PSSM()
 
 	m_mask_setup = [this](Passes::PSSM_GenerateMask::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};
 
 	m_mask_render = [this](Passes::PSSM_GenerateMask::Context& data, FrameGraph::FrameContext& context)
 	{
-		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 		auto& list     = *context.get_list();
 		auto& graphics = list.get_graphics();
@@ -260,22 +256,12 @@ PSSM::PSSM()
 
 	m_combine_setup = [this](Passes::PSSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		GBufferViewDesc::need(builder, data.gbuffer);
-
-		if (builder.exists(data.ShadowMask))
-			builder.need(data.ShadowMask,  FrameGraph::ResourceFlags::Read);
-		else
-		{
-			builder.need(data.LightMask, FrameGraph::ResourceFlags::Read);
-			builder.need(data.PSSM_Cameras,  FrameGraph::ResourceFlags::Read);
-
-		}
 		return true;
 	};
 
 	m_combine_render = [this](Passes::PSSM_Combine::Context& data, FrameGraph::FrameContext& context)
 	{
-		GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 		auto& list    = *context.get_list();
 		auto& compute = list.get_compute();

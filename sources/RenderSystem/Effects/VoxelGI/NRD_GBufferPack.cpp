@@ -31,17 +31,6 @@ bool PassDefault<Passes::NRD_GBufferPack>::setup(
 	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
-	// Exactly one need() per channel, matching whichever candidate render()
-	// below actually reads -- see this function's own top comment.
-	if (g_indirect_source == IndirectSource::MyVCT)
-		builder.need(data.VoxelIndirectNoiseRaw, ResourceFlags::Read);
-	else
-		builder.need(data.RTXIndirectNoise, ResourceFlags::Read);
-	if (g_reflection_source == ReflectionSource::MyReflection)
-		builder.need(data.VoxelReflectionNoiseRaw, ResourceFlags::Read);
-	else
-		builder.need(data.RTXReflectionNoise, ResourceFlags::Read);
-	GBufferViewDesc::need(builder, data.gbuffer);
 	return true;
 }
 
@@ -51,7 +40,7 @@ void PassDefault<Passes::NRD_GBufferPack>::render(
 	auto& compute = context.get_list()->get_compute();
 	auto  sz      = context.graph->get_context<ViewportInfo>().frame_size;
 
-	GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+	GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 	// FrameInfo (camera matrices, jitter -- FrameLayout::CameraData) isn't
 	// bound automatically; every other pass reading it (IndirectRTX,
@@ -70,8 +59,9 @@ void PassDefault<Passes::NRD_GBufferPack>::render(
 	// above, matching the same condition. The other is left at its
 	// [Auto = Texture_Null] default; harmless since the shader branches on
 	// the *_use_vct flags, not on which happens to be bound.
-	bool useVctIndirect   = g_indirect_source   == IndirectSource::MyVCT;
-	bool useVctReflection = g_reflection_source == ReflectionSource::MyReflection;
+	auto& selectors = context.graph->get_context<Table::IndirectGISelectors>();
+	bool useVctIndirect   = selectors.indirect_source   == IndirectSource::MyVCT;
+	bool useVctReflection = selectors.reflection_source == ReflectionSource::MyReflection;
 	if (useVctIndirect)   params.GetVoxelIndirectNoiseRaw()   = data.VoxelIndirectNoiseRaw->texture2D;
 	else                  params.GetRTXIndirectNoise()        = data.RTXIndirectNoise->texture2D;
 	if (useVctReflection) params.GetVoxelReflectionNoiseRaw() = data.VoxelReflectionNoiseRaw->texture2D;

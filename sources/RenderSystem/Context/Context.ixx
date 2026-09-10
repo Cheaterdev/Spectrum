@@ -163,64 +163,7 @@ export{
 
 
 	public:
-		static void create(ivec2 size,auto &context, TaskBuilder& builder)
-		{
-			// Previous-frame history links (registered before the current resources
-			// are created, so they get tagged is_history_current and auto-provision
-			// their *Prev). Applies to every GBuffer producer graph (main + asset).
-			builder.link_history(context.GBuffer_Normals.id,   context.GBuffer_NormalsPrev.id);
-			builder.link_history(context.GBuffer_DepthMips.id, context.GBuffer_DepthPrev.id);
-
-			builder.create(context.GBuffer_Albedo, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-			builder.create(context.GBuffer_Normals, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget | ResourceFlags::UnorderedAccess);
-			builder.create(context.GBuffer_Depth, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::DepthStencil);
-			builder.create(context.GBuffer_Specular, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-			builder.create(context.GBuffer_Speed, { ivec3(size,0), HAL::Format::R16G16_FLOAT,1, 1 }, ResourceFlags::RenderTarget);
-
-
-			// GBuffer_DepthPrev is the previous-frame view of GBuffer_DepthMips — the
-			// history link above makes create() below provision and carry it, so it is
-			// not created here and DepthMips is no longer Static (it's carried a frame).
-			builder.create(context.GBuffer_DepthMips, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 },ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget);
-
-			// The *Prev resources are provisioned (chain-only) by the current creates
-			// above; bind this context's local handles to them so actualize() can
-			// dereference them (GBuffer::depth_prev_mips = *context.GBuffer_DepthPrev).
-			builder.bind_history_prev(context.GBuffer_NormalsPrev);
-			builder.bind_history_prev(context.GBuffer_DepthPrev);
-		}
-
-		static void create_quality(ivec2 size, auto &context, TaskBuilder& builder)
-		{
-			builder.create(context.GBuffer_Quality, { ivec3(size,0), HAL::Format::D24_UNORM_S8_UINT,1,1 }, ResourceFlags::DepthStencil);
-		}
-
-		static void create_mips(ivec2 size, auto &context,  TaskBuilder& builder)
-		{
-
-		}
-
-
-		auto create_temp_color(ivec2 size, TaskBuilder& builder)
-		{
-			return builder.create(GBuffer_TempColor, { ivec3(size,0), HAL::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-		}
-
-		static void need(TaskBuilder& builder,auto &context, bool need_quality = false, bool need_mips = false)
-		{
-			builder.need(context.GBuffer_Albedo, ResourceFlags::Read);
-			builder.need(context.GBuffer_Normals, ResourceFlags::Read);
-			builder.need(context.GBuffer_Depth, ResourceFlags::Read);
-			builder.need(context.GBuffer_Specular, ResourceFlags::Read);
-			builder.need(context.GBuffer_Speed, ResourceFlags::Read);
-
-			builder.need(context.GBuffer_DepthPrev, ResourceFlags::Read);
-			if (need_quality) builder.need(context.GBuffer_Quality, ResourceFlags::Read);
-			builder.need(context.GBuffer_DepthMips, ResourceFlags::None);
-
-		}
-
-
+	
 
 
 		static GBuffer actualize(auto& context)
@@ -229,11 +172,20 @@ export{
 
 			result.albedo = *context.GBuffer_Albedo;
 			result.normals = *context.GBuffer_Normals;
-			result.depth = *context.GBuffer_Depth;
 			result.specular = *context.GBuffer_Specular;
 			result.speed = *context.GBuffer_Speed;
 
-			result.depth_prev_mips = *context.GBuffer_DepthPrev;
+			// GBuffer_Depth/GBuffer_DepthPrev are read directly (not through
+			// SetTable(), which only ever touches Albedo/Normals/Specular/
+			// Speed/DepthMips -- see GBuffer::SetTable, Context2.cpp) by the
+			// two producer passes (Scene/AssetGBuffer, for their own RTV
+			// compile) and by RTXShadow alone among consumers. Every other
+			// consumer only ever calls actualize()+SetTable(), so declaring
+			// [Always=Read] on these two per-pass would need() a resource the
+			// pass never reads -- conditional like Quality/DepthMips below,
+			// so those passes can simply not declare the field at all.
+			if (context.GBuffer_Depth)     result.depth = *context.GBuffer_Depth;
+			if (context.GBuffer_DepthPrev) result.depth_prev_mips = *context.GBuffer_DepthPrev;
 
 			if (context.GBuffer_Quality)	result.quality = *context.GBuffer_Quality;
 			if (context.GBuffer_DepthMips)	result.depth_mips = *context.GBuffer_DepthMips;

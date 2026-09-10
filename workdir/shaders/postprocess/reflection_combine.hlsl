@@ -7,7 +7,7 @@
 
 // REBLUR_BackEnd_UnpackRadianceAndNormHitDist, to decode NRD REBLUR_SPECULAR's
 // denoised reflection signal below (see [[project-nrd-integration]]).
-#include "../nrd/NRD.hlsli"
+#include "../nrd/3rdparty/NRD.hlsli"
 
 
 static const Camera camera = GetFrameInfo().GetCamera();

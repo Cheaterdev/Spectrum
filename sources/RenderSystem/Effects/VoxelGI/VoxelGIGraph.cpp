@@ -204,7 +204,10 @@ void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
 bool PassDefault<Passes::GBufferDownsampler>::setup(
 	Passes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	GBufferViewDesc::need(builder, data.gbuffer, true);
+	// Quality isn't in PassView GBuffer's own [Always] set (only this pass
+	// reads it; a blanket auto-need would crash under AssetPipeline, which
+	// never creates it -- see pssm.sig's own comment), so it stays manual.
+	builder.need(data.GBuffer_Quality, ResourceFlags::Read);
 
 	return true;
 }
@@ -234,7 +237,7 @@ void PassDefault<Passes::GBufferDownsampler>::render(
 {
 	auto& command_list = context.get_list();
 	auto tempColor = *data.GBuffer_TempColor;
-	GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
+	GBuffer gbuffer = GBufferViewDesc::actualize(data);
 	auto& graphics = command_list->get_graphics();
 	auto& compute  = command_list->get_compute();
 
@@ -649,7 +652,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		     RenderSystem::get().device().is_rtx_supported() && nvidia::DLSSRR::get().available()))
 			return false;
 
-		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};
 
@@ -657,7 +659,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	{
 		auto& command_list = context.get_list();
 		auto  target_tex   = *data.ResultTexture;
-		GBuffer gbuffer    = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer    = GBufferViewDesc::actualize(data);
 		auto  sz           = target_tex.get_size();
 		auto& compute      = command_list->get_compute();
 
@@ -692,7 +694,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		if (builder.graph->get_context<FrameGraph::DebugContext>().mode != FrameGraph::DebugMode::VoxelTrace)
 			return false;
 
-		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};
 
@@ -705,7 +706,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 		MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
 		auto  target_tex = *data.VoxelDebug;
-		GBuffer gbuffer  = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer  = GBufferViewDesc::actualize(data);
 
 		mesh_ctx->current_time = 0;
 		mesh_ctx->priority     = TaskPriority::HIGH;
@@ -751,12 +752,11 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		// here, not just skipping the pack of its output downstream, is
 		// what actually avoids the wasted GPU work -- a downstream need()
 		// gate alone would still force this pass to run and be discarded.
-		if (g_indirect_source != IndirectSource::MyVCT ||
+		if (builder.graph->get_context<Table::IndirectGISelectors>().indirect_source != IndirectSource::MyVCT ||
 		    g_upscaler_type == UpscalerType::DLSSRR ||
 		    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 			return false;
 
-		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};
 
@@ -764,7 +764,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	{
 		auto& command_list = context.get_list();
 
-		GBuffer gbuffer    = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer    = GBufferViewDesc::actualize(data);
 		auto noisy_output  = *data.VoxelIndirectNoiseRaw;
 		auto voxel_lighted = *data.VoxelLighted;
 
@@ -805,12 +805,11 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		// selected via g_reflection_source (see [[project-nrd-integration]]).
 		// See VoxelScreen's own comment on why this is gated on actual
 		// selection now, not just "RTX pipeline viable".
-		if (g_reflection_source != ReflectionSource::MyReflection ||
+		if (builder.graph->get_context<Table::IndirectGISelectors>().reflection_source != ReflectionSource::MyReflection ||
 		    g_upscaler_type == UpscalerType::DLSSRR ||
 		    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 			return false;
 
-		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};
 
@@ -818,7 +817,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	{
 		auto& command_list = context.get_list();
 
-		GBuffer gbuffer    = GBufferViewDesc::actualize(data.gbuffer);
+		GBuffer gbuffer    = GBufferViewDesc::actualize(data);
 		auto noisy_output  = *data.VoxelReflectionNoiseRaw;
 		auto voxel_lighted = *data.VoxelLighted;
 

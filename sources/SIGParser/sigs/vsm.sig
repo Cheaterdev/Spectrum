@@ -68,6 +68,21 @@ enum VSMDebugView
 	ShadowOnly;
 }
 
+# SIG-declared (not a hand-written C++ global) so [Optional=`...`] on the
+# need()-guards below can read it directly via get_context<Table::
+# VSMSelectors>() -- same pattern as nrd_sig_test.sig's IndirectGISelectors.
+# use_vsm_contact_shadow/vsm_debug_view themselves stay Variable<T> members
+# of VSM (VSM.ixx, GUI-editable) -- this struct isn't a relay target for
+# some other owner, it's a per-frame snapshot each consuming setup() (
+# m_shadowresolve_setup/m_combine_setup/m_debugoverlay_setup, VSM.cpp) writes
+# from `this` before its own need_always() runs, since need_always() is a
+# static function with no `this` to read the Variable<T>s from directly.
+struct VSMSelectors
+{
+	bool use_vsm_contact_shadow = true;
+	VSMDebugView vsm_debug_view = None;
+}
+
 [Bind = DefaultLayout::Instance0]
 struct VSMConstants
 {
@@ -902,7 +917,16 @@ PassNode VSM_HiZRebuild
 [Compute]
 PassNode VSM_BlockerClassify
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture VSM_PageTable;
 	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
 	[Always = Read] Texture VSM_PageHiZ;
@@ -936,7 +960,16 @@ PassNode VSM_BlockerClassify
 [Compute]
 PassNode VSM_BlockerSearch
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture VSM_Atlas;
 	[Always = Read] Texture VSM_PageTable;
 	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
@@ -1025,7 +1058,16 @@ ComputePSO VSMScreenSpaceShadow
 [Compute]
 PassNode VSM_ScreenSpaceShadow
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture VSM_AmbiguousMask;
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8_UNORM] Texture VSM_ContactShadow;
 }
@@ -1054,7 +1096,16 @@ PassNode VSM_ScreenSpaceShadow
 [Compute]
 PassNode VSM_ShadowResolve
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture VSM_Atlas;
 	[Always = Read] Texture VSM_PageTable;
 	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
@@ -1073,10 +1124,12 @@ PassNode VSM_ShadowResolve
 	# VSM_ScreenSpaceShadow's contact-shadow patch -- see its own PassNode
 	# comment. Sampled only by the shadow-blur PSO (CS_SHADOW_BLUR), min()'d
 	# in alongside the real blocker-search/RTX-verify result before the
-	# final PBR combine, same shape as the existing RTX dual-blur. Not
-	# [Always]: use_vsm_contact_shadow off means VSM_ScreenSpaceShadow's own
-	# setup() returns false, so this never exists that frame -- setup()
-	# still guards this one with builder.exists() by hand.
+	# final PBR combine, same shape as the existing RTX dual-blur.
+	# use_vsm_contact_shadow off means VSM_ScreenSpaceShadow's own setup()
+	# returns false, so this never exists that frame -- builder.exists() is
+	# still needed, now folded into the [Optional] guard alongside the
+	# VSMSelectors read (see the struct's own comment).
+	[Always = Read] [Optional = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow)`]
 	Texture VSM_ContactShadow;
 	[Always = UnorderedAccess] Texture ResultTexture;
 }
@@ -1091,7 +1144,16 @@ PassNode VSM_ShadowResolve
 [Compute]
 PassNode VSM_Combine
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture VSM_Atlas;
 	[Always = Read] Texture VSM_PageTable;
 	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
@@ -1099,9 +1161,11 @@ PassNode VSM_Combine
 	# Same resource RTXShadow writes / PSSM_Combine reads -- see
 	# VSMLighting's rtx_shadow_mask field for the full rationale. Not
 	# [Write]: this pass only ever reads it, for the debug-view comparison
-	# toggle (VSM.ixx's use_vsm_debug_rtx_reference). Not [Always] either:
-	# RTXShadow's own setup() can return false on non-RTX hardware, so
-	# setup() guards this one with builder.exists() by hand.
+	# toggle (VSM.ixx's vsm_debug_view == RtxReference). RTXShadow's own
+	# setup() can return false on non-RTX hardware, so the [Optional] guard
+	# below still needs its own builder.exists() alongside the VSMSelectors
+	# read (see the struct's own comment).
+	[Always = Read] [Optional = `builder.graph->get_context<Table::VSMSelectors>().vsm_debug_view == VSMDebugView::RtxReference && builder.exists(data.ShadowMask)`]
 	Texture ShadowMask;
 	[Always = UnorderedAccess] Texture ResultTexture;
 }
@@ -1137,7 +1201,16 @@ PassNode VSM_Combine
 [Compute]
 PassNode VSM_DebugClassifyOverlay
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = Read] StructuredBuffer<uint2> VSM_LitTiles;
 	[Always = Read] StructuredBuffer<uint2> VSM_DarkTiles;
 	[Always = Read] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
@@ -1145,13 +1218,15 @@ PassNode VSM_DebugClassifyOverlay
 	[Always = Read] Texture VSM_BlockerSearchResult;
 	# Same resource RTXShadow writes / PSSM_Combine reads -- see
 	# VSMLighting's rtx_shadow_mask field. Not [Write]: only ever read, for
-	# use_vsm_debug_rtx_reference. Not [Always]: existence-guarded, same
-	# reasoning as VSM_Combine's own ShadowMask field.
+	# vsm_debug_view == RtxReference. Existence-guarded, same reasoning as
+	# VSM_Combine's own ShadowMask field.
+	[Always = Read] [Optional = `builder.graph->get_context<Table::VSMSelectors>().vsm_debug_view == VSMDebugView::RtxReference && builder.exists(data.ShadowMask)`]
 	Texture ShadowMask;
 	# VSM_ScreenSpaceShadow's own output -- see vsm.sig's VSM_ScreenSpaceShadow
-	# PassNode comment. Not [Write]: only ever read, for ContactShadow. Not
-	# [Always]: existence-guarded, same reasoning as VSM_ShadowResolve's own
+	# PassNode comment. Not [Write]: only ever read, for ContactShadow.
+	# Existence-guarded, same reasoning as VSM_ShadowResolve's own
 	# VSM_ContactShadow field.
+	[Always = Read] [Optional = `builder.graph->get_context<Table::VSMSelectors>().vsm_debug_view == VSMDebugView::ContactShadow && builder.graph->get_context<Table::VSMSelectors>().use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow)`]
 	Texture VSM_ContactShadow;
 	[Always = UnorderedAccess] Texture ResultTexture;
 }
@@ -1197,6 +1272,15 @@ ComputePSO VSMDepthAnalysis
 [Required]
 PassNode VSM_DepthAnalysis
 {
-	GBuffer gbuffer;
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	Texture GBuffer_Depth;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	Texture GBuffer_Quality;
+	Texture GBuffer_DepthPrev;
 	[Always = UnorderedAccess | Static] [Size = 1] StructuredBuffer<uint> VSM_DepthAnalysisResult;
 }
