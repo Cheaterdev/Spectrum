@@ -1956,16 +1956,6 @@ namespace FrameGraph
 		return info->is_new;
 	}
 
-	void ResourceHandler::changed()
-	{
-		info->flags = info->flags | ResourceFlags::Changed;
-	}
-
-	bool ResourceHandler::is_changed()
-	{
-		return check(info->flags & ResourceFlags::Changed);
-	}
-
 
 	void SyncState::set_synced(const Pass* pass)
 	{

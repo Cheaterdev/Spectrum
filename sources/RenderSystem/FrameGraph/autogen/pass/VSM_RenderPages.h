@@ -54,7 +54,9 @@ public:
 		// anything whose Desc depends on runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
+			builder.create(data.VSM_PageTable, { ivec3(ivec2(Constants::VSM_PagesPerLevelSide, Constants::VSM_PagesPerLevelSide), 0), HAL::Format::R32_UINT, Constants::MaxLevels, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 			builder.create(data.VSM_PageCameras, { 416 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+			builder.create(data.VSM_PageHiZ, { ivec3(ivec2(Constants::VSM_PageSize, Constants::VSM_PageSize), 0), HAL::Format::R32G32_FLOAT, Constants::VSM_PhysicalPageCount, Constants::VSM_PyramidMipCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's

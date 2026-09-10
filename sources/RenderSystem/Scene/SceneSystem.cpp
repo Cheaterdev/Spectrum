@@ -21,15 +21,6 @@ bool PassDefault<Passes::Scene>::setup(
     GBufferViewDesc::create_mips(size, data.gbuffer, builder);
     GBufferViewDesc::create_quality(size, data.gbuffer, builder);
 
-    // Static: pass 1 of the GPU occlusion culler tests boxes against LAST
-    // frame's HiZ, so the contents must survive across frames (no aliasing).
-    builder.create(data.gbuffer.GBuffer_HiZ,
-                   { ivec3(size / 8, 1), HAL::Format::R32_TYPELESS, 1 },
-                   FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
-    builder.create(data.gbuffer.GBuffer_HiZ_UAV,
-                   { ivec3(size / 8, 1), HAL::Format::R32_FLOAT, 1 },
-                   FrameGraph::ResourceFlags::UnorderedAccess);
-
     return true;
 }
 
@@ -51,8 +42,8 @@ void PassDefault<Passes::Scene>::render(
     command_list->get_compute().set_signature(Layouts::DefaultLayout);
 
     GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
-    gbuffer.HalfBuffer.hiZ_depth     = *(data.gbuffer.GBuffer_HiZ);
-    gbuffer.HalfBuffer.hiZ_depth_uav = *(data.gbuffer.GBuffer_HiZ_UAV);
+    gbuffer.HalfBuffer.hiZ_depth     = *(data.GBuffer_HiZ);
+    gbuffer.HalfBuffer.hiZ_depth_uav = *(data.GBuffer_HiZ_UAV);
 
     command_list->clear_uav(gbuffer.depth_mips.rwTexture2D, vec4(0, 0, 0, 0));
 
@@ -78,7 +69,7 @@ void PassDefault<Passes::Scene>::render(
 
     // Fresh/resized HiZ allocation holds garbage — clear to far (0, reversed-Z)
     // so pass 1 of the occlusion culler can't falsely cull against it.
-    if (data.gbuffer.GBuffer_HiZ.is_new())
+    if (data.GBuffer_HiZ.is_new())
         command_list->get_graphics().set_rtv(
             gbuffer.HalfBuffer.compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearDepth);
 

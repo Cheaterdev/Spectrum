@@ -204,11 +204,7 @@ void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
 bool PassDefault<Passes::GBufferDownsampler>::setup(
 	Passes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-	auto  size  = frame.frame_size;
-
 	GBufferViewDesc::need(builder, data.gbuffer, true);
-	builder.create(data.gbuffer.GBuffer_TempColor, { ivec3(size,0), HAL::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 
 	return true;
 }
@@ -237,7 +233,7 @@ void PassDefault<Passes::GBufferDownsampler>::render(
 	Passes::GBufferDownsampler::Context& data, FrameGraph::FrameContext& context)
 {
 	auto& command_list = context.get_list();
-	auto tempColor = *data.gbuffer.GBuffer_TempColor;
+	auto tempColor = *data.GBuffer_TempColor;
 	GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
 	auto& graphics = command_list->get_graphics();
 	auto& compute  = command_list->get_compute();

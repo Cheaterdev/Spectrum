@@ -22,6 +22,19 @@ const MaxLevels = 26;
 # level count ever exceeds this, entries are clamped and logged once per
 # episode rather than overflowing the buffer.
 const MaxDispatchEntries = `Constants::MaxLevels * 2048`;
+# Fixed page-table shape, shared between VSM.cpp's own page_table setup
+# (VSM::VSM()) and VSM_PageTable/VSM_PageHiZ/VSM_DirtySlots's own [Size=...]
+# below -- same one-source-of-truth reasoning as MaxLevels above.
+# Per-AXIS page-grid count (4 -> a 4x4 grid = 16 pages/level, VSM.ixx's own
+# MaxPagesPerLevel) -- named _Side to keep the two distinct.
+const VSM_PagesPerLevelSide = 4;
+const VSM_PageSize = 512;
+# See VSM::VSM()'s own comment on this exact number (VSM.cpp) for the
+# VRAM-budget reasoning behind 256.
+const VSM_PhysicalPageCount = 256;
+# Mip chain depth down to 1x1 for a VSM_PageSize page -- mirrors the
+# for(s=page_size;s>1;s>>=1) loop VSM.cpp used to compute this by hand.
+const VSM_PyramidMipCount = `[]{ int c = 1; for (int s = Constants::VSM_PageSize; s > 1; s >>= 1) c++; return c; }()`;
 
 # One mutually-exclusive debug-view selector, replacing three separate
 # int flags (debug_page_grid/debug_rtx_reference/debug_hiz_classify) that
@@ -813,19 +826,26 @@ PassNode VSM_GatherDispatch
 PassNode VSM_RenderPages
 {
 	[Always = DepthStencil] Texture VSM_Atlas;
-	[Write] Texture VSM_PageTable;
+	# One texel per (level, page) slot -- a VSM_PagesPerLevelSide square per
+	# level, ArrayCount=MaxLevels slices.
+	[Always = CopyDest | Static] [Size = `ivec2(Constants::VSM_PagesPerLevelSide, Constants::VSM_PagesPerLevelSide)`] [Format = R32_UINT] [ArrayCount = `Constants::MaxLevels`]
+	Texture VSM_PageTable;
 	# MaxPages = MaxLevels(26) * MaxPagesPerLevel(16), both constexpr in
 	# VSM.ixx -- a real test of combined [Always = A | B] flags, not just a
 	# single-value one.
 	[Always = CopyDest | Static] [Size = 416] StructuredBuffer<Camera> VSM_PageCameras;
-	# Still [Write] and still created here (not in VSM_HiZRebuild below):
-	# the once-ever cold-start clear runs in this pass's render(), before
-	# the draw reads it for occlusion, so data.VSM_PageHiZ.is_new() has to
-	# be queryable on THIS pass's own handler -- matching the precedent
-	# that is_new() is not valid on a handler that never create()'d/need()'d
-	# the resource in that pass. VSM_HiZRebuild need()s the same resource
-	# for the actual per-frame rebuild writes.
-	[Write] Texture VSM_PageHiZ;
+	# Still created here (not in VSM_HiZRebuild below): the once-ever
+	# cold-start clear runs in this pass's render(), before the draw reads
+	# it for occlusion, so data.VSM_PageHiZ.is_new() has to be queryable on
+	# THIS pass's own handler -- matching the precedent that is_new() is not
+	# valid on a handler that never create()'d/need()'d the resource in that
+	# pass. VSM_HiZRebuild need()s the same resource for the actual
+	# per-frame rebuild writes. R32G32_FLOAT: .x = min/farthest, .y =
+	# max/closest (Phase 5.18 Part A widened the pyramid to two channels).
+	# ArrayCount=VSM_PhysicalPageCount (one Hi-Z pyramid slice per physical
+	# page), MipCount=VSM_PyramidMipCount (full chain down to 1x1).
+	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::VSM_PageSize, Constants::VSM_PageSize)`] [Format = R32G32_FLOAT] [ArrayCount = `Constants::VSM_PhysicalPageCount`] [MipCount = `Constants::VSM_PyramidMipCount`]
+	Texture VSM_PageHiZ;
 	[Always = Read] StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
 	# Phase 5.19: read here too (not just by VSM_GatherDispatch that wrote
 	# it) -- this pass's render() also dispatches VSMGatherDispatchMaterial
@@ -859,7 +879,11 @@ PassNode VSM_HiZRebuild
 	# and uploaded once, consumed by the batched Hi-Z copy/downsample
 	# dispatches (VSMCopyPageDepthBatch/VSMDownsampleHiZBatch). Moved here
 	# from VSM_RenderPages along with the rest of the per-frame rebuild.
-	[Write] StructuredBuffer<uint> VSM_DirtySlots;
+	# Sized to the whole physical slot budget -- every dirty page occupies a
+	# distinct slot, a hard upper bound on how many entries this can ever
+	# need in one frame.
+	[Always = CopyDest | Static] [Size = `(size_t)Constants::VSM_PhysicalPageCount`]
+	StructuredBuffer<uint> VSM_DirtySlots;
 }
 
 # Stage 1 (Phase 5.18 Part A follow-up, take 4): groupshared tile

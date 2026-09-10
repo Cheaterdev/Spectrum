@@ -102,22 +102,30 @@ PassNode Sky
 [Compute]
 PassNode CubeSky
 {
-	# create_always() runs every frame this pass is enabled, regardless of
-	# whether the sun actually moved (SetupResult::IgnoreRender vs
-	# NeedsRender) -- Static means the underlying allocation only happens
-	# once. The .changed() mutator moved to render(), which only runs on
-	# NeedsRender frames, after create_always() has already linked the
-	# handle -- see Sky.cpp's CubeSky setup/render split.
-	[Always = UnorderedAccess | Static] [Size = 256] [Format = R11G11B10_FLOAT] [MipCount = 0]
-	TextureCube sky_cubemap;
+	# Not [Always]: setup() calls data.sky_cubemap.changed() right after
+	# create()'ing it, and downstream passes (CubeMapDownsample,
+	# CubeMapEnviromentProcessor) read is_changed() from their OWN setup() --
+	# same phase, same frame. create_always()/need_always() only run after
+	# setup_func returns, so calling .changed() from render() (tried once,
+	# reverted) is too late: every setup() across the whole graph already
+	# ran by the time any pass's render() executes, so downstream setups
+	# would see is_changed() as permanently false and never re-filter the
+	# cubemap. This has to stay a manual create() + changed() pair, together,
+	# inside setup_func.
+	[Write] TextureCube sky_cubemap;
 }
 
 
 [Static]
 [Compute]
+# TriState: need_always() must run every frame regardless of whether the sky
+# actually changed (SetupResult::IgnoreRender on unchanged frames still runs
+# it, unlike a plain `false` -> Disabled) -- the mip regeneration itself
+# (render()) only needs to run on changed frames.
+[TriState]
 PassNode CubeMapDownsample
 {
-	[Write] TextureCube sky_cubemap;
+	[Always = UnorderedAccess] TextureCube sky_cubemap;
 	TextureCube sky_cubemap_filtered;
 	TextureCube sky_cubemap_filtered_diffuse;
 }
@@ -131,11 +139,7 @@ PassNode CubeMapDownsample
 [TriState]
 PassNode CubeMapEnviromentProcessor
 {
-	# Not [Always]: setup()'s own return value depends on
-	# data.sky_cubemap.is_changed(), which must be queried after this
-	# field's own need() runs within the SAME setup() call -- see
-	# project_sig_auto_need_and_caching's is_new()/is_changed() exclusion.
-	TextureCube sky_cubemap;
+	[Always = Read] TextureCube sky_cubemap;
 	[Always = UnorderedAccess | Static] [Size = 64] [Format = R11G11B10_FLOAT] [MipCount = 0] TextureCube sky_cubemap_filtered;
 	[Always = UnorderedAccess | Static] [Size = 64] [Format = R11G11B10_FLOAT] [MipCount = 0] TextureCube sky_cubemap_filtered_diffuse;
 }

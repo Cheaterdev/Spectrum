@@ -113,9 +113,14 @@ PassNode PreScene
 
 [Static]
 [Required]
+# TriState: this pass exists purely to keep swapchain graph-tracked -- it
+# never actually renders anything itself (some other UI/overlay pass owns
+# the real profiler drawing), so setup() always returns IgnoreRender, never
+# NeedsRender.
+[TriState]
 PassNode Profiler
 {
-	[Write] Texture swapchain;
+	[Always = Required | RenderTarget] Texture swapchain;
 }
 
 [Static]
@@ -129,8 +134,16 @@ PassNode CopyPrev
 PassNode Scene
 {
 	[Write = {GBuffer_Albedo, GBuffer_Normals, GBuffer_Depth, GBuffer_Specular, GBuffer_Speed,
-	          GBuffer_DepthMips, GBuffer_Quality, GBuffer_HiZ, GBuffer_HiZ_UAV,
+	          GBuffer_DepthMips, GBuffer_Quality,
 	          GBuffer_NormalsPrev, GBuffer_SpecularPrev}]
 	GBuffer gbuffer;
+	# Static: pass 1 of the GPU occlusion culler tests boxes against LAST
+	# frame's HiZ, so the contents must survive across frames (no aliasing).
+	# MipCount=0: full auto mip chain (a Hi-Z pyramid), matching the original
+	# manual create()'s omitted 4th Desc field.
+	[Always = DepthStencil | Static] [Size = `builder.graph->get_context<Table::ViewportContext>().frame_size / 8`] [Format = R32_TYPELESS] [MipCount = 0]
+	Texture GBuffer_HiZ;
+	[Always = UnorderedAccess] [Size = `builder.graph->get_context<Table::ViewportContext>().frame_size / 8`] [Format = R32_FLOAT] [MipCount = 0]
+	Texture GBuffer_HiZ_UAV;
 	[Always = Read] StructuredBuffer<uint> scene;
 }

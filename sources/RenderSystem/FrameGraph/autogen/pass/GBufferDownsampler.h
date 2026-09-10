@@ -20,6 +20,9 @@ public:
 
 		GBuffer gbuffer;
 
+		Handlers::Texture GBuffer_TempColor = ResourceID::GBuffer_TempColor;
+
+
 		Handlers::Texture GBuffer_HalfDepth = ResourceID::GBuffer_HalfDepth;
 
 
@@ -56,6 +59,7 @@ public:
 		// anything whose Desc depends on runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
+			builder.create(data.GBuffer_TempColor, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
 			builder.create(data.GBuffer_HalfDepth, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R32_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 			builder.create(data.GBuffer_HalfNormals, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 			builder.create(data.TileClassifyHi, { (size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true }, FrameGraph::ResourceFlags::UnorderedAccess);
@@ -77,12 +81,10 @@ public:
 			{ ResourceID::GBuffer_Speed, false },
 			{ ResourceID::GBuffer_DepthMips, false },
 			{ ResourceID::GBuffer_Quality, false },
-			{ ResourceID::GBuffer_TempColor, true },
 			{ ResourceID::GBuffer_NormalsPrev, false },
 			{ ResourceID::GBuffer_SpecularPrev, false },
 			{ ResourceID::GBuffer_DepthPrev, false },
-			{ ResourceID::GBuffer_HiZ, false },
-			{ ResourceID::GBuffer_HiZ_UAV, false },
+			{ ResourceID::GBuffer_TempColor, true },
 			{ ResourceID::GBuffer_HalfDepth, true },
 			{ ResourceID::GBuffer_HalfNormals, true },
 			{ ResourceID::TileClassifyHi, true },

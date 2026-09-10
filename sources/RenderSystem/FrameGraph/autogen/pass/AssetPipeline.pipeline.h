@@ -81,7 +81,6 @@ public:
 		L"GBuffer_Speed",
 		L"GBuffer_DepthMips",
 		L"GBuffer_Quality",
-		L"GBuffer_TempColor",
 		L"GBuffer_NormalsPrev",
 		L"GBuffer_SpecularPrev",
 		L"GBuffer_DepthPrev",
@@ -207,15 +206,6 @@ public:
 	static inline const FrameGraph::PrecompiledState GBuffer_Quality_c0_states[] = {
 		{ false, { GBuffer_Quality_c0_pass_refs + 0, 4 } },
 	};
-	static inline const FrameGraph::PassRef GBuffer_TempColor_c0_pass_refs[] = {
-		{ PassID::AssetGBuffer, 0 },
-		{ PassID::PSSM_GenerateMask, 0 },
-		{ PassID::PSSM_Combine, 0 },
-		{ PassID::AssetMip, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState GBuffer_TempColor_c0_states[] = {
-		{ false, { GBuffer_TempColor_c0_pass_refs + 0, 4 } },
-	};
 	static inline const FrameGraph::PassRef GBuffer_NormalsPrev_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
 		{ PassID::PSSM_GenerateMask, 0 },
@@ -245,23 +235,15 @@ public:
 	};
 	static inline const FrameGraph::PassRef GBuffer_HiZ_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
-		{ PassID::PSSM_GenerateMask, 0 },
-		{ PassID::PSSM_Combine, 0 },
-		{ PassID::AssetMip, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_c0_states[] = {
 		{ true, { GBuffer_HiZ_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_HiZ_c0_pass_refs + 1, 3 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HiZ_UAV_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
-		{ PassID::PSSM_GenerateMask, 0 },
-		{ PassID::PSSM_Combine, 0 },
-		{ PassID::AssetMip, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_HiZ_UAV_c0_states[] = {
 		{ true, { GBuffer_HiZ_UAV_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_HiZ_UAV_c0_pass_refs + 1, 3 } },
 	};
 	static inline const FrameGraph::PassRef global_depth_c0_pass_refs[] = {
 		{ PassID::PSSM_Global, 0 },
@@ -403,7 +385,6 @@ public:
 		{ ResourceID::GBuffer_Speed, 0, GBuffer_Speed_c0_states },
 		{ ResourceID::GBuffer_DepthMips, 0, GBuffer_DepthMips_c0_states },
 		{ ResourceID::GBuffer_Quality, 0, GBuffer_Quality_c0_states },
-		{ ResourceID::GBuffer_TempColor, 0, GBuffer_TempColor_c0_states },
 		{ ResourceID::GBuffer_NormalsPrev, 0, GBuffer_NormalsPrev_c0_states },
 		{ ResourceID::GBuffer_SpecularPrev, 0, GBuffer_SpecularPrev_c0_states },
 		{ ResourceID::GBuffer_DepthPrev, 0, GBuffer_DepthPrev_c0_states },

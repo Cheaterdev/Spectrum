@@ -105,7 +105,7 @@ struct PassDefault<Passes::Profiler>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;
-	static bool setup(Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::Profiler::Context& data, FrameGraph::FrameContext& context);
 };
 
@@ -135,7 +135,7 @@ struct PassDefault<Passes::CubeMapDownsample>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-	static bool setup(Passes::CubeMapDownsample::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::CubeMapDownsample::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::CubeMapDownsample::Context& data, FrameGraph::FrameContext& context);
 };
 

@@ -40,20 +40,19 @@ SkyRender::SkyRender()
 	{
 		auto& sky = builder.graph->get_context<SkyInfo>();
 
-		bool changed = ((sky.sunDir - dir).length() > 0.001f);
-		if (changed) dir = sky.sunDir;
+		builder.create(data.sky_cubemap,
+		               { ivec3(256, 256, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 },
+		               FrameGraph::ResourceFlags::UnorderedAccess |
+		               FrameGraph::ResourceFlags::Static);
 
-		return changed ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
+		sky.sky_changed = ((sky.sunDir - dir).length() > 0.001f);
+		if (sky.sky_changed) dir = sky.sunDir;
+
+		return sky.sky_changed ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 	};
 
 	m_cubesky_render = [this](Passes::CubeSky::Context& data, FrameGraph::FrameContext& context)
 	{
-		// Only reached on a NeedsRender frame (sun direction changed) --
-		// create_always() has already run by this point (right after
-		// setup() returns), so the handle is safely linked before this
-		// mutator touches it. See setup()'s own comment.
-		data.sky_cubemap.changed();
-
 		auto& sky     = context.graph->get_context<SkyInfo>();
 		auto& compute = context.get_list()->get_compute();
 
@@ -128,11 +127,12 @@ SkyRender::SkyRender()
 // ---- PassDefault<Passes::CubeMapDownsample> --------------------------------
 // Generates mipmaps for the sky cubemap whenever it has been re-baked.
 
-bool PassDefault<Passes::CubeMapDownsample>::setup(
+FrameGraph::SetupResult PassDefault<Passes::CubeMapDownsample>::setup(
 	Passes::CubeMapDownsample::Context& data, TaskBuilder& builder)
 {
-	builder.need(data.sky_cubemap, ResourceFlags::UnorderedAccess);
-	return data.sky_cubemap.is_changed();
+	return builder.graph->get_context<SkyInfo>().sky_changed
+		? FrameGraph::SetupResult::NeedsRender
+		: FrameGraph::SetupResult::IgnoreRender;
 }
 
 void PassDefault<Passes::CubeMapDownsample>::render(
@@ -148,8 +148,7 @@ void PassDefault<Passes::CubeMapDownsample>::render(
 FrameGraph::SetupResult PassDefault<Passes::CubeMapEnviromentProcessor>::setup(
 	Passes::CubeMapEnviromentProcessor::Context& data, TaskBuilder& builder)
 {
-	builder.need(data.sky_cubemap, ResourceFlags::Read);
-	return data.sky_cubemap.is_changed()
+	return builder.graph->get_context<SkyInfo>().sky_changed
 		? FrameGraph::SetupResult::NeedsRender
 		: FrameGraph::SetupResult::IgnoreRender;
 }

@@ -35,10 +35,6 @@ public:
         pipeline.assetGBuffer.setup_func = [this](auto& data, TaskBuilder& builder) -> bool
         {
             GBufferViewDesc::create(m_size, data.gbuffer, builder);
-
-            // Static: occlusion pass 1 tests against LAST frame's HiZ (see SceneSystem).
-            builder.create(data.gbuffer.GBuffer_HiZ,     { ivec3(m_size / 8, 0), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil | ResourceFlags::Static);
-            builder.create(data.gbuffer.GBuffer_HiZ_UAV, { ivec3(m_size / 8, 0), HAL::Format::R32_FLOAT,    1 }, ResourceFlags::UnorderedAccess);
             return true;
         };
 
@@ -59,8 +55,8 @@ public:
             context->cam          = cam.cam;
 
             GBuffer gbuffer = GBufferViewDesc::actualize(data.gbuffer);
-            gbuffer.HalfBuffer.hiZ_depth     = *data.gbuffer.GBuffer_HiZ;
-            gbuffer.HalfBuffer.hiZ_depth_uav = *data.gbuffer.GBuffer_HiZ_UAV;
+            gbuffer.HalfBuffer.hiZ_depth     = *data.GBuffer_HiZ;
+            gbuffer.HalfBuffer.hiZ_depth_uav = *data.GBuffer_HiZ_UAV;
 
             {
                 RT::GBuffer rtv;
@@ -79,7 +75,7 @@ public:
             }
 
             // Fresh/resized HiZ holds garbage — clear to far (0, reversed-Z).
-            if (data.gbuffer.GBuffer_HiZ.is_new())
+            if (data.GBuffer_HiZ.is_new())
                 command_list->get_graphics().set_rtv(
                     gbuffer.HalfBuffer.compiled, RTOptions::Default | RTOptions::ClearDepth);
 

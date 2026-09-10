@@ -20,6 +20,12 @@ public:
 
 		GBuffer gbuffer;
 
+		Handlers::Texture GBuffer_HiZ = ResourceID::GBuffer_HiZ;
+
+
+		Handlers::Texture GBuffer_HiZ_UAV = ResourceID::GBuffer_HiZ_UAV;
+
+
 		Handlers::StructuredBuffer<uint> scene = ResourceID::scene;
 
 
@@ -30,6 +36,19 @@ public:
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.need(data.scene, FrameGraph::ResourceFlags::Read);
+		}
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.create(data.GBuffer_HiZ, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size / 8, 0), HAL::Format::R32_TYPELESS, 1, 0 }, FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
+			builder.create(data.GBuffer_HiZ_UAV, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size / 8, 0), HAL::Format::R32_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -42,7 +61,6 @@ public:
 			{ ResourceID::GBuffer_Speed, true },
 			{ ResourceID::GBuffer_DepthMips, true },
 			{ ResourceID::GBuffer_Quality, true },
-			{ ResourceID::GBuffer_TempColor, false },
 			{ ResourceID::GBuffer_NormalsPrev, true },
 			{ ResourceID::GBuffer_SpecularPrev, true },
 			{ ResourceID::GBuffer_DepthPrev, false },

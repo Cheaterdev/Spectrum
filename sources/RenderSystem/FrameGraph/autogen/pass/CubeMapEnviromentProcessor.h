@@ -28,6 +28,15 @@ public:
 		Handlers::TextureCube sky_cubemap_filtered_diffuse = ResourceID::sky_cubemap_filtered_diffuse;
 
 
+		// Resources this pass always needs whenever it runs, generated from
+		// each field's own [Always=X] annotation. Called by TypedPass::setup()
+		// after setup_func returns true - not a substitute for setup_func's
+		// own need()/create() calls for anything conditional.
+		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.need(data.sky_cubemap, FrameGraph::ResourceFlags::Read);
+		}
+
 		// Resources this pass always creates with a fixed desc, generated from
 		// each field's own [Size]/[Format] annotation (plus [Always] for the
 		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field

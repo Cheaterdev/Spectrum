@@ -320,12 +320,13 @@ ComputePSO RTXCombine
 [Compute]
 PassNode GBufferDownsampler
 {
-	# GBuffer_TempColor is the scratch target MipMapGenerator::generate_quality
-	# needs -- the only PassView GBuffer field this pass actually writes
-	# (see Scene's own [Write = {...}] on its GBuffer gbuffer for the same
-	# pattern); every other field is genuinely read-only here.
-	[Write = {GBuffer_TempColor}]
 	GBuffer gbuffer;
+
+	# GBuffer_TempColor is the scratch target MipMapGenerator::generate_quality
+	# needs -- a plain top-level field, not a PassView GBuffer leaf (see
+	# pssm.sig's own comment on why those moved out).
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8_UNORM]
+	Texture GBuffer_TempColor;
 
 	# Raw [Size]: no grammar support for arithmetic, so the half-res transform
 	# is pasted as a literal C++ expression -- SIGParser doesn't interpret it,

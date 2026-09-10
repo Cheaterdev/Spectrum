@@ -501,7 +501,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// today's default behavior before any real measurement/z_far arrives.
 	page_table.clipmap.level_count = VSM::MaxLevels;
 	page_table.clipmap.level_zero_slot = VSM::LevelZeroSlot;
-	page_table.clipmap.pages_per_level = 4;
+	page_table.clipmap.pages_per_level = Constants::VSM_PagesPerLevelSide;
 	page_table.clipmap.base_page_world_size = 32.0f;
 	// page_size (texels/page) is the resolution lever. The atlas is an array
 	// of page_size^2 slices, so the old 16-viewport cap on pages_per_level is
@@ -533,8 +533,8 @@ VSM::VSM() : VariableContext(L"VSM")
 	// this backed by a reserved/tiled resource instead (commit memory only
 	// for slices actually in use), not just a bigger committed array -- see
 	// the class comment on VSM_Atlas's creation below.
-	page_table.page_size = 512;
-	page_table.physical_page_count = 256;
+	page_table.page_size = Constants::VSM_PageSize;
+	page_table.physical_page_count = Constants::VSM_PhysicalPageCount;
 
 	const int pages_side       = page_table.clipmap.pages_per_level;
 	const int pages_per_level  = pages_side * pages_side;
@@ -568,14 +568,8 @@ VSM::VSM() : VariableContext(L"VSM")
 		return true;
 	};
 
-	m_renderpages_setup = [this, physical_slots, pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_renderpages_setup = [this](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		builder.create(data.VSM_PageTable, { ivec3(page_table.clipmap.pages_per_level, page_table.clipmap.pages_per_level, 0), HAL::Format::R32_UINT, (UINT)page_table.clipmap.level_count, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
-		// Static like VSM_Atlas: must survive until this page is next dirty.
-		// R32G32_FLOAT, not R32_FLOAT: Phase 5.18 Part A widened the pyramid
-		// to two channels (.x = min/farthest, .y = max/closest -- see
-		// VSMPageHiZ's own comment in vsm.sig).
-		builder.create(data.VSM_PageHiZ, { ivec3(page_table.page_size, page_table.page_size, 0), HAL::Format::R32G32_FLOAT, (UINT)physical_slots, (UINT)pyramid_mip_count }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 		return true;
 	};
 
@@ -585,13 +579,8 @@ VSM::VSM() : VariableContext(L"VSM")
 	// still owns create() for the cold-start clear, see its own setup()).
 	// VSM_DirtySlots moves here entirely since only this pass's dispatches
 	// consume it now.
-	m_hizrebuild_setup = [this, physical_slots](Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_hizrebuild_setup = [this](Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		// Phase 5.14: CPU-built and re-uploaded fresh every frame (like
-		// VSM_PageCameras), sized to the whole physical slot budget -- every
-		// dirty page occupies a distinct slot, so that's a hard upper bound
-		// on how many entries this can ever need in one frame.
-		builder.create(data.VSM_DirtySlots, { (size_t)physical_slots }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		return true;
 	};
 

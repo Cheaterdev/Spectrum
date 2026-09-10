@@ -133,6 +133,14 @@ ComputePSO GBufferDownsample
 }
 
 
+# GBuffer_HiZ/GBuffer_HiZ_UAV/GBuffer_TempColor used to live here too, but
+# GBufferViewDesc (Context.ixx) never actually managed them -- every
+# create()/need() for them was already a separate direct call at the point
+# of use, so view membership bought nothing but namespacing. Pulled out to
+# plain top-level fields on their specific creator PassNodes (AssetGBuffer,
+# Scene, GBufferDownsampler) so [Always]/[Size]/[Format] can reach them --
+# the auto-create mechanism only ever sees top-level pass.params, never a
+# view leaf reached through a helper.
 PassView GBuffer
 {
 	Texture GBuffer_Albedo;
@@ -145,14 +153,10 @@ PassView GBuffer
 
 
 	Texture GBuffer_Quality;
-	Texture GBuffer_TempColor;
 
 	Texture GBuffer_NormalsPrev;
 	Texture GBuffer_SpecularPrev;
 	Texture GBuffer_DepthPrev;
-
-	Texture GBuffer_HiZ;
-	Texture GBuffer_HiZ_UAV;
 }
 
 [Multiple = 6]

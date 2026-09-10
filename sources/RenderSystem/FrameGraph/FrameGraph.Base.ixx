@@ -124,8 +124,6 @@ public:
 		Static = (1 << 11),
 		Required = (1 << 12),
 
-		Changed = (1 << 13),
-
 		// Marks a read that must not be folded into a neighboring canonical-read
 		// window — for passes that manage their own transition to a layout other
 		// passes never request (e.g. PRESENT/COMMON for a Streamline hand-off).
@@ -189,10 +187,6 @@ public:
 	struct ResourceHandler
 	{
 		bool is_new();
-		void changed();
-
-		bool is_changed();
-
 
 	public:
 		friend struct TaskBuilder;

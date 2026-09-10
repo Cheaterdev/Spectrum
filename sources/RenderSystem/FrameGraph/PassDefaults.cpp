@@ -115,12 +115,10 @@ void PassDefault<Passes::CopyPrev>::render(
 
 // ---- Profiler ---------------------------------------------------------------
 
-bool PassDefault<Passes::Profiler>::setup(
+FrameGraph::SetupResult PassDefault<Passes::Profiler>::setup(
 	Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	builder.need(data.swapchain,
-	             FrameGraph::ResourceFlags::Required | FrameGraph::ResourceFlags::RenderTarget);
-	return false;
+	return FrameGraph::SetupResult::IgnoreRender;
 }
 
 void PassDefault<Passes::Profiler>::render(

@@ -20,11 +20,8 @@ namespace Passes
 		Handlers::Texture GBuffer_Speed = ResourceID::GBuffer_Speed;
 		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
 		Handlers::Texture GBuffer_Quality = ResourceID::GBuffer_Quality;
-		Handlers::Texture GBuffer_TempColor = ResourceID::GBuffer_TempColor;
 		Handlers::Texture GBuffer_NormalsPrev = ResourceID::GBuffer_NormalsPrev;
 		Handlers::Texture GBuffer_SpecularPrev = ResourceID::GBuffer_SpecularPrev;
 		Handlers::Texture GBuffer_DepthPrev = ResourceID::GBuffer_DepthPrev;
-		Handlers::Texture GBuffer_HiZ = ResourceID::GBuffer_HiZ;
-		Handlers::Texture GBuffer_HiZ_UAV = ResourceID::GBuffer_HiZ_UAV;
 	};
 }

@@ -37,6 +37,18 @@ public:
 			builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::Read);
 			builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.create(data.VSM_DirtySlots, { (size_t)Constants::VSM_PhysicalPageCount }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

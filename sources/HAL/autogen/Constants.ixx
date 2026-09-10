@@ -16,4 +16,8 @@ export namespace Constants
 {
 	constexpr auto MaxLevels = 26;
 	constexpr auto MaxDispatchEntries = Constants::MaxLevels * 2048;
+	constexpr auto VSM_PagesPerLevelSide = 4;
+	constexpr auto VSM_PageSize = 512;
+	constexpr auto VSM_PhysicalPageCount = 256;
+	constexpr auto VSM_PyramidMipCount = []{ int c = 1; for (int s = Constants::VSM_PageSize; s > 1; s >>= 1) c++; return c; }();
 }

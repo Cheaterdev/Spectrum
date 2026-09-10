@@ -26,6 +26,17 @@ export
 	struct SkyInfo
 	{
 		float3 sunDir;
+		// Set by CubeSky::setup() (Sky.cpp) whenever sunDir moved enough to
+		// warrant a re-bake, read by CubeMapDownsample/CubeMapEnviromentProcessor's
+		// own setup() to decide whether they need to re-run this frame. A
+		// plain context field, not FrameGraph's resource-level is_changed() --
+		// that one required create() and changed() to run in the same
+		// function (create_always() runs after setup_func, so a downstream
+		// pass's setup() -- same phase, same frame -- could never observe a
+		// flag set later, in render()). This field has no such ordering
+		// constraint: CubeSky's setup() runs before the passes that read it,
+		// in the same Graph::setup() pass loop, every frame.
+		bool sky_changed = false;
 	};
 	struct SceneInfo
 	{

@@ -30,12 +30,9 @@ public:
 			{ ResourceID::GBuffer_Speed, false },
 			{ ResourceID::GBuffer_DepthMips, false },
 			{ ResourceID::GBuffer_Quality, false },
-			{ ResourceID::GBuffer_TempColor, false },
 			{ ResourceID::GBuffer_NormalsPrev, true },
 			{ ResourceID::GBuffer_SpecularPrev, true },
 			{ ResourceID::GBuffer_DepthPrev, true },
-			{ ResourceID::GBuffer_HiZ, false },
-			{ ResourceID::GBuffer_HiZ_UAV, false },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

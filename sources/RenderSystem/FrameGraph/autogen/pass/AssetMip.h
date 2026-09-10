@@ -46,12 +46,9 @@ public:
 			{ ResourceID::GBuffer_Speed, false },
 			{ ResourceID::GBuffer_DepthMips, false },
 			{ ResourceID::GBuffer_Quality, false },
-			{ ResourceID::GBuffer_TempColor, false },
 			{ ResourceID::GBuffer_NormalsPrev, false },
 			{ ResourceID::GBuffer_SpecularPrev, false },
 			{ ResourceID::GBuffer_DepthPrev, false },
-			{ ResourceID::GBuffer_HiZ, false },
-			{ ResourceID::GBuffer_HiZ_UAV, false },
 			{ ResourceID::ResultTexture, false },
 			{ ResourceID::swapchain, true },
 		};
