@@ -21,7 +21,7 @@ export namespace HAL
 	{
 		Transition,
 		Draw, DrawIndexed, DispatchMesh,
-		Dispatch, DispatchGraph, DispatchRays,
+		Dispatch, DispatchRays,
 		CopyResource, CopyBuffer, CopyTexture, UpdateTexture, ReadTexture,
 		BuildRAS,
 		SetPipeline, SetRTV, SetTopology, SetIndexBuffer,
@@ -30,7 +30,7 @@ export namespace HAL
 		SetGraphicsSignature, SetComputeSignature,
 		GraphicsSetConstBuffer, ComputeSetConstBuffer,
 		GraphicsSetConstant, ComputeSetConstant,
-		ExecuteIndirect, SetProgram,
+		ExecuteIndirect,
 		InsertTime, ResolveTime,
 		StartEvent, EndEvent,
 		SetDescriptorHeaps, SetStencilRef, Discard,
@@ -122,7 +122,6 @@ export namespace HAL
 				struct { UINT vc, vo, ic, io; }                               draw;
 				struct { UINT ic, ioff, vo, inst, io; }                       draw_indexed;
 				ivec3                                                          dispatch_args;   // Dispatch / DispatchMesh
-				ResourceAddress                                                dispatch_graph;  // DispatchGraph
 				struct { DescriptorHeap* cbv; DescriptorHeap* sampler; }      desc_heaps;
 				struct { UINT i, offset, value; }                              set_constant;    // Gfx/Cmp SetConstant
 				struct { UINT i; ResourceAddress addr; }                       set_cb;          // Gfx/Cmp SetConstBuffer
@@ -136,7 +135,6 @@ export namespace HAL
 				}                                                              set_topology;
 				std::wstring_view                                              event_str;       // StartEvent
 				struct { const QueryHeap* heap; uint32_t count; ResourceAddress dest; } resolve;
-				struct { StateObject* obj; ResourceAddress buf; uint size; bool init; } set_program;
 
 				uint8_t _ensure_size[32]; // keeps union at least 32 bytes
 			};
@@ -173,8 +171,6 @@ export namespace HAL
 
 		void func(std::function<void(API::CommandList&)> f);
 
-		void set_program(StateObject*, ResourceAddress buffer, uint size, bool init);
-		void dispatch_graph(ResourceAddress addr);
 		void global_barrier();
 		void clear_uav(const Handles::UAV& h, vec4 ClearColor = vec4(0, 0, 0, 0));
 		void clear_uav_uint(const Handles::UAV& h, uint4 ClearColor = uint4(0, 0, 0, 0));

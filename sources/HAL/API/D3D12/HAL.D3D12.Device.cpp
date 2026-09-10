@@ -185,20 +185,17 @@ namespace HAL
         D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
         D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7 = {};
         D3D12_FEATURE_DATA_D3D12_OPTIONS16 options16 = {};
-        D3D12_FEATURE_DATA_D3D12_OPTIONS21 options21 = {};
         D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_8 };
 
         tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5));
         tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &options7, sizeof(options7));
         tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS16, &options16, sizeof(options16));
-        tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS21, &options21, sizeof(options21));
         tempDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel));
 
         props.rtx                    = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
         props.mesh_shader            = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1;
         props.full_bindless          = supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6;
         props.direct_gpu_upload_heap = options16.GPUUploadHeapSupported;
-        props.work_graph             = options21.WorkGraphsTier != D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED;
 
         {   // NVIDIA Streamline capability, per adapter.
             auto& sl = nvidia::Streamline::get();
@@ -281,12 +278,8 @@ namespace HAL
             D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7 = {};
             D3D12_FEATURE_DATA_D3D12_OPTIONS12 options12 = {};
             D3D12_FEATURE_DATA_D3D12_OPTIONS16 options16 = {};
-            D3D12_FEATURE_DATA_D3D12_OPTIONS21 options21 = {};
             D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_8 };
 
-            TEST(*this,
-                 native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS21, &options21, sizeof(
-                     options21)));
             TEST(*this,
                  native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS16, &options16, sizeof(
                      options16)));
@@ -309,7 +302,6 @@ namespace HAL
             properties.full_bindless          = supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6;
             properties.mesh_shader            = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1;
             properties.direct_gpu_upload_heap = options16.GPUUploadHeapSupported;
-            properties.work_graph             = options21.WorkGraphsTier != D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED;
 
             if constexpr (HAL::Debug::ValidationErrors)
             {

@@ -35,32 +35,9 @@ namespace HAL
             m_commandList->Close();
         }
 
-        void CommandList::set_program(StateObject* obj, ResourceAddress adress, uint size, bool init)
-        {
-            D3D12_SET_PROGRAM_DESC desc = {};
-            desc.Type = D3D12_PROGRAM_TYPE_WORK_GRAPH;
-            desc.WorkGraph.ProgramIdentifier = obj->id;
-
-            // we need to initialise the backing memory only the first time we run the workgraph
-            desc.WorkGraph.Flags = init ? D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE : D3D12_SET_WORK_GRAPH_FLAG_NONE;
-            desc.WorkGraph.BackingMemory = { to_native(adress), size };
-
-            // bind the workgraph program with the reference to the backing memory
-            m_commandList->SetProgram(&desc);
-        }
-
         void CommandList::discard(const HAL::Resource* resource)
         {
             m_commandList->DiscardResource(resource->native_resource.Get(), nullptr);
-        }
-
-        void CommandList::dispatch_graph(ResourceAddress addr)
-        {
-            D3D12_DISPATCH_GRAPH_DESC desc = {};
-            desc.Mode = D3D12_DISPATCH_MODE_MULTI_NODE_GPU_INPUT;
-            desc.MultiNodeGPUInput = to_native(addr);
-
-            m_commandList->DispatchGraph(&desc);
         }
 
         void CommandList::global_barrier()

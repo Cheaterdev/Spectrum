@@ -1488,29 +1488,6 @@ namespace HAL
 		return *copy.get(); //return reinterpret_cast<ComputeContext&>(*this);
 	}
 
-	void ComputeContext::dispatch_graph(ResourceAddress addr)
-	{
-		PROFILE_GPU(L"dispatch_graph");
-		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
-		list->dispatch_graph(addr);
-		base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
-	}
-
-	void ComputeContext::set_program(StateObject* id, ResourceAddress buffer, uint size, bool init)
-	{
-		// Same batch break a PSO change gets in set_pipeline_internal. This path
-		// assigns current_pipeline directly instead of going through it, so it
-		// used to swap the program under an open operation -- leaving one
-		// operation's entry barriers covering work from two different programs.
-		if (base.current_pipeline != id)
-			base.break_op();
-
-		base.current_pipeline = id;
-		if (id->root_signature)
-			set_signature(id->root_signature);
-		list->set_program(id, buffer, size, init);
-	}
-
 	void ComputeContext::on_set_signature(const RootSignature::ptr& s)
 	{
 		list->set_compute_signature(s);

@@ -1753,10 +1753,10 @@ bool PassDefault<Passes::UI_Render>::setup(
         return false;
     // result_texture_handler already points at the resource for the current
     // DebugContext::mode (set in create_graph), so no branching needed here.
+    // Not a PassNode field (it's on the dynamically-selected UIContext, not
+    // data), so [Always]/[Optional] can't reach it -- stays manual.
     if (builder.exists(ui_ctx.result_texture_handler))
         builder.need(ui_ctx.result_texture_handler, ResourceFlags::Read);
-    if (builder.exists(data.UI_PreDraw_Sync))
-        builder.need(data.UI_PreDraw_Sync, ResourceFlags::Read);
     return true;
 }
 

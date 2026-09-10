@@ -137,7 +137,6 @@ namespace HAL
         props.mesh_shader   = has_ext(VK_EXT_MESH_SHADER_EXTENSION_NAME);
         props.full_bindless = has_ext(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
         props.rtx           = false;
-        props.work_graph    = false;
 
         return props;
     }
@@ -431,7 +430,6 @@ namespace HAL
             p.name = props2.properties.deviceName;
             p.rtx           = false;  // Phase: VK_KHR_ray_tracing_pipeline check
             p.mesh_shader   = has_mesh_shader && (mesh_features.meshShader == VK_TRUE);
-            p.work_graph    = false;  // no Vulkan equivalent yet
             p.min_storage_buffer_offset_alignment =
                 static_cast<uint32_t>(props2.properties.limits.minStorageBufferOffsetAlignment);
             // full_bindless = true whenever the Vulkan device creates successfully.

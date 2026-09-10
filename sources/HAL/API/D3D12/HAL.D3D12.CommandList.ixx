@@ -49,9 +49,6 @@ export namespace HAL {
                 return !!m_commandList;
             }
 
-            void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
-            void dispatch_graph(ResourceAddress addr);
-
             void global_barrier();
 
             void clear_uav(const Handles::UAV& h, vec4 ClearColor);

@@ -201,7 +201,6 @@ namespace HAL
         D3D12_STATE_OBJECT_TYPE type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
 
         if (desc.type == StateObjectType::Collection) type = D3D12_STATE_OBJECT_TYPE_COLLECTION;
-        if (desc.type == StateObjectType::WorkGraph) type = D3D12_STATE_OBJECT_TYPE_EXECUTABLE;
 
         CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ type };
 
@@ -303,52 +302,12 @@ namespace HAL
             debuggable |= c->debuggable;
         }
 
-        const std::wstring workGraphName = L"ShadowMaskClassifier"; // ????
-
-        if (desc.type == StateObjectType::WorkGraph)
-        {
-            if (!desc.global_root->get_device().get_properties().work_graph) return;
-
-            // Add a workgraph subobject
-            auto graph = raytracingPipeline.CreateSubobject<CD3DX12_WORK_GRAPH_SUBOBJECT>();
-            graph->SetProgramName(workGraphName.c_str());
-
-            /*    for (auto& l : desc.libraries)
-                            for (auto& e : l.exports)
-                              graph->CreateNode<>()*/
-            graph->IncludeAllAvailableNodes(); // add all nodes
-        //    graph->Finalize();
-
-            //    auto rootNodeDispatchGridSizeOverride = graph->CreateBroadcastingLaunchNodeOverrides(L"ClassifyPixels_Node");
-            // rootNodeDispatchGridSizeOverride->DispatchGrid(40,40, 1);
-        }
-
         TEST(desc.global_root->get_device(),
             desc.global_root->get_device().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&
                 tracked_info->m_StateObject)));
         TEST(desc.global_root->get_device(), tracked_info->m_StateObject.As(&stateObjectProperties));
         ASSERT(stateObjectProperties);
         event_change();
-
-        if (desc.type == StateObjectType::WorkGraph)
-        {
-            ComPtr<ID3D12WorkGraphProperties> workGraphProperties;
-
-            tracked_info->m_StateObject.As(&workGraphProperties);
-            // find the index of the workgraph program
-            UINT wgIndex = workGraphProperties->GetWorkGraphIndex(workGraphName.c_str());
-
-            // calculate the size of the backing memory buffer
-            D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS memRequirements = {};
-            workGraphProperties->GetWorkGraphMemoryRequirements(wgIndex, &memRequirements);
-
-            buffer_size = memRequirements.MaxSizeInBytes;
-
-            auto entry_align = workGraphProperties->GetEntrypointRecordAlignmentInBytes(0, 0);
-            auto entry_size = workGraphProperties->GetEntrypointRecordSizeInBytes(0, 0);
-
-            id = stateObjectProperties->GetProgramIdentifier(workGraphName.c_str());
-        }
     }
 
     void PipelineState::on_change()

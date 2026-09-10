@@ -36,6 +36,7 @@ public:
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.create(data.ShadowMask, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.WorkGraphBuffer, { (size_t)Constants::WG_TileSection }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's

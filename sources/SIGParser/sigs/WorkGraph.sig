@@ -24,6 +24,13 @@ struct TileRecord
 	uint2 tileXY;
 }
 
+# counter_pad(8) + tile_data(256*256 * sizeof(TileRecord)). Shared between
+# RTXShadow's own WorkGraphBuffer [Size=...] below and PassDefaults.cpp's
+# emulation FlowGraph nodes (ClassifyFlowNode's tile-buffer view), so the
+# two can't drift -- was two separately hand-maintained copies of this same
+# formula before.
+const WG_TileSection = `8u + 256u * 256u * sizeof(Table::TileRecord)`;
+
 [Bind = DefaultLayout::WorkGR_ClassifyPixels_NodeEmulation]
 struct WorkGR_ClassifyPixels_NodeEmulation
 {
@@ -35,7 +42,16 @@ struct WorkGR_ClassifyPixels_NodeEmulation
 [Bind = DefaultLayout::WorkGR_Shadows_NodeEmulation]
 struct WorkGR_Shadows_NodeEmulation
 {
-	ConsumeStructuredBuffer<TileRecord> tiles;
+	# Field must generate a GetInput() accessor -- workgraph_nodes.jinja's
+	# thread-launch wrapper (WGEmul_ThreadInput_T::Get()) hardcodes
+	# .GetInput(), unlike the broadcasting-node case which derives its
+	# getter from the input type name instead. "input" (lowercase) is a SIG
+	# grammar keyword (Node's own `input = Type;` param), so this has to be
+	# capitalized. Never actually compiled before this session (this
+	# emulation path only builds when native D3D12 work graphs are
+	# unavailable, which every dev machine so far has had) -- caught when
+	# native support was removed and the emulation became the only path.
+	ConsumeStructuredBuffer<TileRecord> Input;
 }
 
 [ExcludeVulkan] WorkgraphPSO WorkGR

@@ -819,21 +819,6 @@ export{
 			void dispatch2(ivec2, ivec2 = ivec2(4, 4));
 
 
-			void dispatch_graph(ResourceAddress addr);
-			void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
-
-				 template <class PSO>
-				void set_program(ResourceAddress buffer, bool init)
-				 {
-
-					auto  work_pso = get_base().device.get_engine_pso_holder().GetPSO<PSO>();
-
-					set_program(work_pso.get(),
-						buffer,
-						uint(work_pso->buffer_size),
-						init);
-				 }
-
 			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom);
 			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top);
 

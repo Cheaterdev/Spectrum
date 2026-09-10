@@ -34,10 +34,6 @@ export namespace HAL {
         {
         protected:
             ComPtr<ID3D12StateObjectProperties1> stateObjectProperties;
-
-        public:
-            D3D12_PROGRAM_IDENTIFIER id;
-            uint64 buffer_size;
         };
     }
 }

@@ -304,6 +304,10 @@ PassNode UI_PreDraw
 PassNode UI_Render
 {
 	[Always = RenderTarget] Texture swapchain;
+	# [Optional]: UI_PreDraw_Sync may not exist this frame (its own producer,
+	# UI_PreDraw, can be disabled) -- guarded exactly like the hand-written
+	# builder.exists() check it replaces.
+	[Always = Read] [Optional = `builder.exists(data.UI_PreDraw_Sync)`]
 	StructuredBuffer<uint> UI_PreDraw_Sync;
 }
 

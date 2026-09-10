@@ -915,7 +915,14 @@ int main()
 
 		for (auto& pso : parsed.workgraph_pso)
 		{
-			my_stream(cpp_path + "/pso", pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
+			// No native SimpleWorkgraphPSO (.pso.ixx) generated any more --
+			// this engine only ever runs the emulation path (per-node
+			// ComputePSOs below); native D3D12 work graphs are being phased
+			// out of the API and never built here. workgraph_nodes.jinja
+			// still emits both branches of WG_* HLSL macros (toggled by the
+			// WORKGRAPH_EMULATION compile define, see workgraph_node_pso.jinja),
+			// since dev/workgraph_test.hlsl is shared source either way.
+			std::filesystem::remove(cpp_path + "/pso/" + pso.name + ".pso.ixx");
 			remove_old_pso_h(pso.name);
 			my_stream(hlsl_path + "/workgraph", pso.name + ".h") << hlsl_templates.generate2(L"workgraph_nodes", "pso", pso);
 

@@ -163,24 +163,12 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthDrawConservative>(device, pso[PSO::VSMDepthDrawConservative]));
 	tasks.emplace_back(PSOBase::create<PSOS::VSMDepthDrawMaterial>(device, pso[PSO::VSMDepthDrawMaterial]));
 
-	if (device.get_properties().work_graph)
-	{
-	}
-
 #ifndef HAL_BACKEND_VULKAN
 
 
 
-
-	if (device.get_properties().work_graph)
-	{
-		tasks.emplace_back(PSOBase::create<PSOS::WorkGR>(device, pso[PSO::WorkGR]));
-	}
-	else
-	{
-		tasks.emplace_back(PSOBase::create<PSOS::WorkGR_ClassifyPixels_Node>(device, pso[PSO::WorkGR_ClassifyPixels_Node]));
-		tasks.emplace_back(PSOBase::create<PSOS::WorkGR_Shadows_Node>(device, pso[PSO::WorkGR_Shadows_Node]));
-	}
+	tasks.emplace_back(PSOBase::create<PSOS::WorkGR_ClassifyPixels_Node>(device, pso[PSO::WorkGR_ClassifyPixels_Node]));
+	tasks.emplace_back(PSOBase::create<PSOS::WorkGR_Shadows_Node>(device, pso[PSO::WorkGR_Shadows_Node]));
 #endif // !HAL_BACKEND_VULKAN
 
 	when_all(begin(tasks), end(tasks)).wait();

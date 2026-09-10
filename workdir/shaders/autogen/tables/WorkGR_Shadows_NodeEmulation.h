@@ -10,6 +10,6 @@
 #include "TileRecord.h"
 struct WorkGR_Shadows_NodeEmulation
 {
-	uint tiles; // ConsumeStructuredBuffer<TileRecord>
-	ConsumeStructuredBuffer<TileRecord> GetTiles() { return ResourceDescriptorHeap[tiles]; }
+	uint Input; // ConsumeStructuredBuffer<TileRecord>
+	ConsumeStructuredBuffer<TileRecord> GetInput() { return ResourceDescriptorHeap[Input]; }
 };

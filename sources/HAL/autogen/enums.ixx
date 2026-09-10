@@ -154,7 +154,6 @@ export
 		VSMDepthDraw,
 		VSMDepthDrawConservative,
 		VSMDepthDrawMaterial,
-		WorkGR,
 		WorkGR_ClassifyPixels_Node,
 		WorkGR_Shadows_Node
 	};

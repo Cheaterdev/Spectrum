@@ -27,13 +27,10 @@ export namespace HAL
             std::string get_cache();
         };
 
-        // StateObject: D3D12 work-graph / raytracing state object.
+        // StateObject: D3D12 raytracing state object.
         // Not supported on Vulkan for Phase 0; stub kept for interface compat.
         class StateObject
         {
-        public:
-            D3D12_PROGRAM_IDENTIFIER id{};
-            uint64 buffer_size = 0;
         };
     }
 }

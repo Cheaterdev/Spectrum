@@ -716,7 +716,7 @@ class FrameGraphTimelineCanvas : public dock_base
                         case CT::Draw: case CT::DrawIndexed:
                         case CT::DispatchMesh: case CT::ExecuteIndirect:
                             return { 0.40f, 0.82f, 0.40f, 1.0f };
-                        case CT::Dispatch: case CT::DispatchGraph: case CT::DispatchRays:
+                        case CT::Dispatch: case CT::DispatchRays:
                             return { 0.30f, 0.72f, 0.92f, 1.0f };
                         case CT::CopyResource: case CT::CopyBuffer: case CT::CopyTexture:
                         case CT::UpdateTexture: case CT::ReadTexture: case CT::BuildRAS:

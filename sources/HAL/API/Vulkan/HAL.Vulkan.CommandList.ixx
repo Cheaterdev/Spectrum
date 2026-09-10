@@ -124,10 +124,6 @@ export namespace HAL
 
             operator bool() const { return vk_cmd != VK_NULL_HANDLE; }
 
-            // --- D3D12-only stubs (no-op in Vulkan) ---
-            void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init) {}
-            void dispatch_graph(ResourceAddress addr) {}
-
             // --- Common recording API ---
             void global_barrier();
             void clear_uav(const Handles::UAV& h, vec4 ClearColor);

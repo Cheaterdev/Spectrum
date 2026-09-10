@@ -45,14 +45,22 @@ public:
 {%- endfor -%}
 {%- if get_list('always_fields') | length > 0 %}
 		// Resources this pass always needs whenever it runs, generated from
-		// each field's own [Always=X] annotation. Called by TypedPass::setup()
-		// after setup_func returns true - not a substitute for setup_func's
-		// own need()/create() calls for anything conditional.
+		// each field's own [Always=X] annotation (further gated by [Optional=X]
+		// when present -- a raw bool expression, e.g. builder.exists(...) or a
+		// context-read flag, deciding whether this specific field is actually
+		// needed this frame). Called by TypedPass::setup() after setup_func
+		// returns true - not a substitute for setup_func's own need()/create()
+		// calls for anything else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 {%- for v in pass.params %}
 {%- if v.options.Always is defined and v.options.Size is undefined and v.options.Format is undefined and v.options.Recreate is undefined %}
+{%- if v.options.Optional is defined %}
+			if ({{v.options.Optional.value_atom.expr}})
+				builder.need(data.{{v.name}}, {{ resolve_flags_expr(pass.name, v.name) }});
+{%- else %}
 			builder.need(data.{{v.name}}, {{ resolve_flags_expr(pass.name, v.name) }});
+{%- endif %}
 {%- endif %}
 {%- endfor %}
 		}
@@ -77,6 +85,10 @@ public:
 		{
 {%- for v in pass.params %}
 {%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) and v.options.Recreate is undefined %}
+{%- if v.options.Optional is defined %}
+			if ({{v.options.Optional.value_atom.expr}})
+			{{"{"}}
+{%- endif %}
 {%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
 {%- if v.options.Size.value_atom.is_literal %}
 			builder.create(data.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_flags_expr(pass.name, v.name) }});
@@ -86,8 +98,15 @@ public:
 {%- else %}
 			builder.create(data.{{v.name}}, { {{resolve_size_expr(pass.name, v.name)}} }, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- endif %}
+{%- if v.options.Optional is defined %}
+			{{"}"}}
+{%- endif %}
 {%- endif %}
 {%- if v.options.Always is defined and v.options.Recreate is defined %}
+{%- if v.options.Optional is defined %}
+			if ({{v.options.Optional.value_atom.expr}})
+			{{"{"}}
+{%- endif %}
 			builder.need(data.{{v.name}}, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- if v.options.Size is defined or v.options.Format is defined %}
 {%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
@@ -101,6 +120,9 @@ public:
 {%- endif %}
 {%- else %}
 			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
+{%- endif %}
+{%- if v.options.Optional is defined %}
+			{{"}"}}
 {%- endif %}
 {%- endif %}
 {%- endfor %}

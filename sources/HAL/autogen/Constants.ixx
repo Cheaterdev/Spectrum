@@ -7,6 +7,10 @@
 export module HAL:Autogen.Constants;
 
 import Core;
+// Table types a raw (backtick) const value references -- add an import here
+// (not a generic "all tables" import: consts are compiled early, and most
+// never need a Table type at all) whenever a new raw const needs one.
+import :Autogen.Tables.TileRecord;
 
 // One `const Name = value;` declaration (SIG.g4's const_definition) per line,
 // in .sig declaration order -- a later constant's raw value may reference an
@@ -20,4 +24,5 @@ export namespace Constants
 	constexpr auto VSM_PageSize = 512;
 	constexpr auto VSM_PhysicalPageCount = 256;
 	constexpr auto VSM_PyramidMipCount = []{ int c = 1; for (int s = Constants::VSM_PageSize; s > 1; s >>= 1) c++; return c; }();
+	constexpr auto WG_TileSection = 8u + 256u * 256u * sizeof(Table::TileRecord);
 }

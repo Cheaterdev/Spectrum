@@ -69,10 +69,6 @@ namespace HAL
 					list.dispatch_mesh(cmd.dispatch_args);
 					break;
 
-				case CommandType::DispatchGraph:
-					list.dispatch_graph(cmd.dispatch_graph);
-					break;
-
 				case CommandType::CopyResource:
 					list.copy_resource(cmd.copy_res.dst, cmd.copy_res.src);
 					break;
@@ -120,11 +116,6 @@ namespace HAL
 
 				case CommandType::ResolveTime:
 					list.resolve_times(cmd.resolve.heap, cmd.resolve.count, cmd.resolve.dest);
-					break;
-
-				case CommandType::SetProgram:
-					list.set_program(cmd.set_program.obj, cmd.set_program.buf,
-					                 cmd.set_program.size, cmd.set_program.init);
 					break;
 
 				default:
@@ -273,23 +264,6 @@ namespace HAL
 	void DelayedCommandList::set_name(std::wstring_view name)
 	{
 		this->name = name;
-	}
-
-	void DelayedCommandList::set_program(StateObject* id, ResourceAddress buffer, uint size, bool init)
-	{
-		if constexpr (BuildOptions::Dev)
-			debug_recorder.push_back({CommandType::SetProgram, "SetProgram"});
-		Cmd cmd{}; cmd.type = CommandType::SetProgram;
-		cmd.set_program = {id, buffer, size, init};
-		tasks.push_back(cmd);
-	}
-
-	void DelayedCommandList::dispatch_graph(ResourceAddress addr)
-	{
-		if constexpr (BuildOptions::Dev)
-			debug_recorder.push_back({CommandType::DispatchGraph, "DispatchGraph"});
-		Cmd cmd{}; cmd.type = CommandType::DispatchGraph; cmd.dispatch_graph = addr;
-		tasks.push_back(cmd);
 	}
 
 	void DelayedCommandList::set_descriptor_heaps(DescriptorHeap* cbv, DescriptorHeap* sampler)

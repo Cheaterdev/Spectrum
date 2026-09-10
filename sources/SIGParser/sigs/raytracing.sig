@@ -308,7 +308,7 @@ PassNode RTXShadow
 {
 	GBuffer gbuffer;
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ShadowMask;
-	[Write] ByteAdressBuffer WorkGraphBuffer;
+	[Always = UnorderedAccess] [Size = `(size_t)Constants::WG_TileSection`] ByteAdressBuffer WorkGraphBuffer;
 }
 
 # Debug reference mode for RTXShadow (see RTX::debug_full_reference_shadow

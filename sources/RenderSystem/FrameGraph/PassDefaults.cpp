@@ -14,7 +14,6 @@ using namespace FrameGraph;
 // ── WorkGraph emulation — FlowGraph nodes ──────────────────────────────────
 
 using TileBufView = HAL::StructuredBufferView<Table::TileRecord>;
-constexpr uint64_t WG_TILE_SECTION = 8u + 256u * 256u * sizeof(Table::TileRecord); // 524296
 
 struct WGContext : FlowGraph::GraphContext
 {
@@ -39,7 +38,7 @@ struct ClassifyFlowNode : FlowGraph::GraphNode<WGContext>
 	{
 		auto tile_buf = ctx->wg_buffer->resource->create_view<TileBufView>(
 		    *ctx->frame_ctx.frame,
-		    HAL::StructuredBufferViewDesc{ 0, WG_TILE_SECTION, counterType::SELF });
+		    HAL::StructuredBufferViewDesc{ 0, Constants::WG_TileSection, counterType::SELF });
 
 		ctx->compute.clear_counter(tile_buf);
 
@@ -71,7 +70,7 @@ struct ShadowsFlowNode : FlowGraph::GraphNode<WGContext>
 		    tile_buf.get_counter_buffer().get(), tile_buf.get_counter_offset(), 4);
 
 		Slots::WorkGR_Shadows_NodeEmulation slot;
-		slot.GetTiles() = tile_buf.consumeStructuredBuffer;
+		slot.GetInput() = tile_buf.consumeStructuredBuffer;
 
 		ctx->compute.set_pipeline<PSOS::WorkGR_Shadows_Node>();
 		ctx->compute.set(slot);
@@ -137,18 +136,6 @@ FrameGraph::SetupResult PassDefault<Passes::RTXShadow>::setup(
 	builder.need(data.gbuffer.GBuffer_Speed,     ResourceFlags::Read);
 	builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::Read);
 	builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::None);
-
-	if (RenderSystem::get().device().get_properties().work_graph)
-	{
-		auto work_pso = RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
-		builder.create(data.WorkGraphBuffer, { work_pso->buffer_size }, ResourceFlags::UnorderedAccess);
-	}
-	else
-	{
-		// counter_pad(8) + tile_data(256*256 * sizeof(TileRecord))
-		constexpr uint64_t TILE_SECTION = 8u + 256u * 256u * sizeof(Table::TileRecord); // 524296
-		builder.create(data.WorkGraphBuffer, { TILE_SECTION }, ResourceFlags::UnorderedAccess);
-	}
 
 	return RenderSystem::get().device().get_properties().rtx
 		? FrameGraph::SetupResult::NeedsRender
@@ -234,52 +221,31 @@ void PassDefault<Passes::RTXShadow>::render(
 	dispatchParameters.GetPixelStepScale() = float(frame.frame_size.x) / float(frame.upscale_size.x);
 	compute.set(dispatchParameters);
 
-	if (RenderSystem::get().device().get_properties().work_graph)
+	// Build the emulation FlowGraph once per render call.
+	// graph::start() resets all parameter values on each call, so the same
+	// graph instance is safe to start() once per YZ chunk.
+	FlowGraph::graph wg_graph;
+
+	auto classify = std::make_shared<ClassifyFlowNode>();
+	auto shadows  = std::make_shared<ShadowsFlowNode>();
+
+	wg_graph.register_node(classify);
+	wg_graph.register_node(shadows);
+	classify->get_output(0)->link(shadows->get_input(0));
+
+	// WaveCount[0] is always 64 (fixed wave size). Split YZ into chunks of 16.
+	constexpr int MAX_YZ_CHUNK = 16;
+
+	for (int i = 0; i < res.DispatchCount; i++)
 	{
-		auto& backingBuffer = data.WorkGraphBuffer->resource;
-	
-		compute.set_program<PSOS::WorkGR>(backingBuffer->get_resource_address(), data.WorkGraphBuffer.is_new());
+		auto& e        = res.Dispatch[i];
+		int   total_yz = e.WaveCount[1] * e.WaveCount[2];
 
-		auto ep = create_entry(compute);
-		for (auto i = 0; i < res.DispatchCount; i++)
+		for (int yz_base = 0; yz_base < total_yz; yz_base += MAX_YZ_CHUNK)
 		{
-			auto& e = res.Dispatch[i];
-			Table::GraphInput input;
-			input.GetDispatch_grid() = vec3(e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
-			input.GetWaveOffset()    = int2(e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
-			ep.add(0, input);
-		}
-		if (res.DispatchCount)
-			compute.dispatch_graph(ep.compile());
-	}
-	else
-	{
-		// Build the emulation FlowGraph once per render call.
-		// graph::start() resets all parameter values on each call, so the same
-		// graph instance is safe to start() once per YZ chunk.
-		FlowGraph::graph wg_graph;
-
-		auto classify = std::make_shared<ClassifyFlowNode>();
-		auto shadows  = std::make_shared<ShadowsFlowNode>();
-
-		wg_graph.register_node(classify);
-		wg_graph.register_node(shadows);
-		classify->get_output(0)->link(shadows->get_input(0));
-
-		// WaveCount[0] is always 64 (fixed wave size). Split YZ into chunks of 16.
-		constexpr int MAX_YZ_CHUNK = 16;
-
-		for (int i = 0; i < res.DispatchCount; i++)
-		{
-			auto& e        = res.Dispatch[i];
-			int   total_yz = e.WaveCount[1] * e.WaveCount[2];
-
-			for (int yz_base = 0; yz_base < total_yz; yz_base += MAX_YZ_CHUNK)
-			{
-				int yz_count = std::min(MAX_YZ_CHUNK, total_yz - yz_base);
-				WGContext wg_ctx(context, compute, e, yz_base, yz_count, data.WorkGraphBuffer);
-				wg_graph.start(&wg_ctx);
-			}
+			int yz_count = std::min(MAX_YZ_CHUNK, total_yz - yz_base);
+			WGContext wg_ctx(context, compute, e, yz_base, yz_count, data.WorkGraphBuffer);
+			wg_graph.start(&wg_ctx);
 		}
 	}
 }

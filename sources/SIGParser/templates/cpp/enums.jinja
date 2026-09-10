@@ -33,7 +33,6 @@ export
 		{%- for v in parsed.compute_pso -%}{%- do myappend('all_psos', v) -%}{%- endfor -%}
 		{%- for v in parsed.graphics_pso -%}{%- do myappend('all_psos', v) -%}{%- endfor -%}
 		{%- for v in parsed.workgraph_pso -%}
-		{%- do myappend('all_psos', v) -%}
 		{%- set pso = parsed.workgraph_pso[v] -%}
 		{%- for node_name in pso.nodes -%}
 		{%- do myappend('all_psos', v + '_' + node_name) -%}

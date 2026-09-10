@@ -43,7 +43,6 @@ export namespace HAL
 		bool mesh_shader            = false;
 		bool full_bindless          = false;
 		bool direct_gpu_upload_heap = false;
-		bool work_graph             = false;
 		bool dlss                   = false;   // NVIDIA DLSS Super Resolution
 		bool dlss_rr                = false;   // NVIDIA DLSS Ray Reconstruction
 		uint32_t min_storage_buffer_offset_alignment = 1;

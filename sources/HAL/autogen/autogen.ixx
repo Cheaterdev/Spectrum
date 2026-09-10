@@ -452,7 +452,7 @@ export import :Autogen.PSO.VoxelDebug;
 export import :Autogen.PSO.VSMDepthDraw;
 export import :Autogen.PSO.VSMDepthDrawConservative;
 export import :Autogen.PSO.VSMDepthDrawMaterial;
-export import :Autogen.PSO.WorkGR;
+
 export import :Autogen.PSO.WorkGR_ClassifyPixels_Node;
 
 export import :Autogen.PSO.WorkGR_Shadows_Node;

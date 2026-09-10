@@ -198,8 +198,7 @@ export namespace HAL
 	enum class StateObjectType:uint
 	{
 		Collection,
-		Raytracing,
-		WorkGraph
+		Raytracing
 	};
 	struct StateObjectDesc
 	{

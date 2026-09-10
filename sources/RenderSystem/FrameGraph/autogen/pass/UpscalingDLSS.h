@@ -30,9 +30,12 @@ public:
 		Handlers::Texture ResultTextureNew = ResultTexture;
 
 		// Resources this pass always needs whenever it runs, generated from
-		// each field's own [Always=X] annotation. Called by TypedPass::setup()
-		// after setup_func returns true - not a substitute for setup_func's
-		// own need()/create() calls for anything conditional.
+		// each field's own [Always=X] annotation (further gated by [Optional=X]
+		// when present -- a raw bool expression, e.g. builder.exists(...) or a
+		// context-read flag, deciding whether this specific field is actually
+		// needed this frame). Called by TypedPass::setup() after setup_func
+		// returns true - not a substitute for setup_func's own need()/create()
+		// calls for anything else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.need(data.GBuffer_Depth, FrameGraph::ResourceFlags::Read | FrameGraph::ResourceFlags::ExclusiveRead);

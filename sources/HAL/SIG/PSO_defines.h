@@ -47,24 +47,3 @@
        }                                                                              \
        name() = default;
 #endif
-
-#ifndef GEN_WORKGRAPH_PSO
-#  define GEN_WORKGRAPH_PSO(name, ...)                                                \
-       using ptr      = std::shared_ptr<name>;                                        \
-       using PSOState = HAL::StateObject;                                             \
-       using SimplePSO = SimpleWorkgraphPSO;                                          \
-       static const PSO ID = PSO::name;                                               \
-       std::map<Keys, PSOState::ptr> psos = {};                                       \
-       PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {                    \
-           ASSERT(psos[key.GetKey()]); return psos[key.GetKey()];                     \
-       };                                                                             \
-       name(HAL::Device& device,                                                      \
-            std::function<void(SimplePSO&, Keys&)> modifier = nullptr)                \
-       {                                                                              \
-           PSOBase::shuffle_pairs<name>([&](Keys& key) {                              \
-               auto pso = init_pso(key, modifier);                                    \
-               psos[key] = pso.create(device);                                        \
-           } , ##__VA_ARGS__);                                                        \
-       }                                                                              \
-       name() = default;
-#endif
