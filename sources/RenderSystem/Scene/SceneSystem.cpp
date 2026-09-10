@@ -12,28 +12,8 @@ using namespace FrameGraph;
 bool PassDefault<Passes::Scene>::setup(
     Passes::Scene::Context& data, FrameGraph::TaskBuilder& builder)
 {
-    auto& frame = builder.graph->get_context<ViewportInfo>();
-    auto  size  = frame.frame_size;
-
-    // GBuffer_Albedo/Depth/Specular/Speed/Quality are auto-created (scene.sig's
-    // own [Always]/[Size]/[Format]) -- only GBuffer_Normals/GBuffer_DepthMips
-    // stay hand-written here: each is a builder.link_history()-registered
-    // *Prev chain's trigger, and that link_history() call, then THIS create(),
-    // then bind_history_prev() must all run before create_always() would even
-    // fire (it always runs after setup_func returns) -- see scene.sig's own
-    // comment.
-    builder.link_history(data.GBuffer_Normals.id,   data.GBuffer_NormalsPrev.id);
-    builder.link_history(data.GBuffer_DepthMips.id, data.GBuffer_DepthPrev.id);
-
-    builder.create(data.GBuffer_Normals,   { ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, ResourceFlags::RenderTarget | ResourceFlags::UnorderedAccess);
-    builder.create(data.GBuffer_DepthMips, { ivec3(size, 0), HAL::Format::R32_TYPELESS,   1, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget);
-
-    // The *Prev resources are provisioned (chain-only) by the two creates
-    // above; bind this context's local handles to them so actualize() can
-    // dereference them (GBuffer::depth_prev_mips = *data.GBuffer_DepthPrev).
-    builder.bind_history_prev(data.GBuffer_NormalsPrev);
-    builder.bind_history_prev(data.GBuffer_DepthPrev);
-
+    // Every GBuffer_* field (including the two *Prev-linked ones) is
+    // auto-created now -- see scene.sig's own comment.
     return true;
 }
 

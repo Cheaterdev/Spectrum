@@ -55,6 +55,20 @@ public:
 		Handlers::StructuredBuffer<uint> scene = ResourceID::scene;
 
 
+		// Registers this pass's *Prev history links (builder.link_history()),
+		// generated from each field's own [PrevFor=X] annotation (X being the
+		// current-frame resource this field is the previous-frame view of).
+		// Called by TypedPass::setup() BEFORE setup_func runs -- link_history()
+		// must run before X's own create() (manual or auto via create_always(),
+		// which runs after setup_func), so this is the one hook that covers
+		// both. Pair with builder.create_prev(prev, current) right after
+		// current's own create() to resolve the bound handle.
+		static void link_history_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.link_history(data.GBuffer_Normals.id, data.GBuffer_NormalsPrev.id);
+			builder.link_history(data.GBuffer_DepthMips.id, data.GBuffer_DepthPrev.id);
+		}
+
 		// Resources this pass always needs whenever it runs, generated from
 		// each field's own [Always=X] annotation (further gated by [Optional=X]
 		// when present -- a raw bool expression, e.g. builder.exists(...) or a
@@ -81,9 +95,13 @@ public:
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.create(data.GBuffer_Albedo, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
+			builder.create(data.GBuffer_Normals, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget | FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create_prev(data.GBuffer_NormalsPrev, data.GBuffer_Normals);
 			builder.create(data.GBuffer_Depth, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil);
 			builder.create(data.GBuffer_Specular, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
 			builder.create(data.GBuffer_Speed, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
+			builder.create(data.GBuffer_DepthMips, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::RenderTarget);
+			builder.create_prev(data.GBuffer_DepthPrev, data.GBuffer_DepthMips);
 			builder.create(data.GBuffer_Quality, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::D24_UNORM_S8_UINT, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil);
 			builder.create(data.GBuffer_HiZ, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size / 8, 0), HAL::Format::R32_TYPELESS, 1, 0 }, FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
 			builder.create(data.GBuffer_HiZ_UAV, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size / 8, 0), HAL::Format::R32_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess);

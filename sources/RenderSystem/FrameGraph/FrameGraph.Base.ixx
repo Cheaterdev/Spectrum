@@ -836,6 +836,22 @@ public:
 			result.id = info.id;
 		}
 
+		// bind_history_prev(), plus a check that `result` really is the linked
+		// prev of `current` -- call right after create(current). The link
+		// itself is normally registered by a [PrevFor=...]-generated
+		// link_history_always() (run before setup_func, see TypedPass::setup()),
+		// not by a hand-written link_history() call at this point; this just
+		// verifies that registration actually points at `current` before
+		// resolving the handle, catching a mismatched current/prev pair here
+		// instead of silently binding the wrong chain.
+		template<class T>
+		void create_prev(T& result, T& current)
+		{
+			HistoryLink* link = history_by_current(current.id);
+			ASSERT(link && link->prev == result.id);
+			bind_history_prev(result);
+		}
+
 		template<class T>
 		void provision_history_prev(ResourceID prev_id, const typename T::Desc& desc, ResourceFlags flags)
 		{
@@ -1092,6 +1108,16 @@ public:
 		virtual bool setup(TaskBuilder& builder) override
 		{
 			builder.begin(this);
+			// [PrevFor=X]-generated: registers this pass's *Prev history links
+			// (builder.link_history()) before setup_func runs. link_history()
+			// must run before its current-frame resource's own create() --
+			// manual (inside setup_func) or auto (create_always(), which runs
+			// after setup_func) -- so "before setup_func" is the one hook that
+			// covers both. Unconditional (not gated on touches_resources()):
+			// link_history() only registers metadata, doesn't allocate, and is
+			// documented idempotent -- safe even the frame this pass is disabled.
+			if constexpr (requires { Handler::link_history_always(data, builder); })
+				Handler::link_history_always(data, builder);
 			SetupResult res = setup_func(data, builder);
 			if (res.touches_resources())
 			{
@@ -1101,10 +1127,21 @@ public:
 				// unconditionally would crash the moment a pass bails out.
 				// IgnoreRender still runs these: that's the whole point of
 				// the third state.
-				if constexpr (requires { Handler::need_always(data, builder); })
-					Handler::need_always(data, builder);
+				//
+				// create_always() before need_always(): a [PrevFor=X] *Prev
+				// field can be BOTH auto-created by this same pass's own
+				// create_always() (via create_prev(), e.g. Scene's
+				// GBuffer_DepthPrev) AND auto-needed by this same pass's own
+				// [Always=Read] (e.g. a consumer reading it back later that
+				// frame) -- need_always() running first would need() a
+				// resource this pass's own create_always() hasn't provisioned
+				// yet. No existing [Always] field depends on the reverse order
+				// (need_always() only ever reads resources OTHER passes, or
+				// this pass's OWN create()/create_prev(), already provisioned).
 				if constexpr (requires { Handler::create_always(data, builder); })
 					Handler::create_always(data, builder);
+				if constexpr (requires { Handler::need_always(data, builder); })
+					Handler::need_always(data, builder);
 			}
 			builder.end(this);
 

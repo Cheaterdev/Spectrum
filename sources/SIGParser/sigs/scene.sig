@@ -144,23 +144,23 @@ PassNode Scene
 	# above) -- Scene never actually created it even before flattening.
 	#
 	# Auto-created (ViewportContext-driven, same mechanism as GBuffer_HiZ
-	# elsewhere) wherever the create() has no other ordering dependency.
-	# GBuffer_Normals/GBuffer_DepthMips stay hand-written in setup()
-	# (SceneSystem.cpp) instead: each is the trigger for a builder.
-	# link_history()-registered *Prev chain, and that link_history() call
-	# must run, then THIS create() specifically, then bind_history_prev() --
-	# all before create_always() would even run (it always runs after
-	# setup_func returns), so moving either create() to [Always]/[Size]
-	# would run it too late for its own setup()'s bind_history_prev() call.
+	# elsewhere). GBuffer_Normals/GBuffer_DepthMips are each a [PrevFor=X]
+	# field's linked "current" below -- create_always() (pass.jinja) emits
+	# their builder.create_prev() call immediately after this create(), same
+	# position a hand-written call would need, so no manual setup() code is
+	# needed for GBuffer at all any more. link_history() itself runs even
+	# earlier, auto-generated into link_history_always() (before setup_func)
+	# from each *Prev field's own [PrevFor=X] -- see its own comment
+	# (pass.jinja) for why that ordering works for an auto-created X too.
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Albedo;
-	[Write] Texture GBuffer_Normals;
+	[Always = RenderTarget | UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Normals;
 	[Always = DepthStencil] [Size = ViewportContext::frame_size] [Format = R32_TYPELESS] Texture GBuffer_Depth;
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Specular;
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16_FLOAT] Texture GBuffer_Speed;
-	[Write] Texture GBuffer_DepthMips;
+	[Always = UnorderedAccess | RenderTarget] [Size = ViewportContext::frame_size] [Format = R32_TYPELESS] Texture GBuffer_DepthMips;
 	[Always = DepthStencil] [Size = ViewportContext::frame_size] [Format = D24_UNORM_S8_UINT] Texture GBuffer_Quality;
-	[Write] Texture GBuffer_NormalsPrev;
-	[Always = Read] Texture GBuffer_DepthPrev;
+	[PrevFor = GBuffer_Normals] [Write] Texture GBuffer_NormalsPrev;
+	[PrevFor = GBuffer_DepthMips] [Always = Read] Texture GBuffer_DepthPrev;
 	# Static: pass 1 of the GPU occlusion culler tests boxes against LAST
 	# frame's HiZ, so the contents must survive across frames (no aliasing).
 	# MipCount=0: full auto mip chain (a Hi-Z pyramid), matching the original

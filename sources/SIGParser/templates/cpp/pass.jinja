@@ -46,6 +46,28 @@ public:
 		Handlers::{{v.type}} {{v.options.Recreate.value_atom.expr}} = {{v.name}};
 {%- endif %}
 {% endfor -%}
+{%- set prevfor_fields = create_list('prevfor_fields') -%}
+{%- for v in pass.params -%}
+{%- if v.options.PrevFor is defined -%}{%- do myappend('prevfor_fields', v.name) -%}{%- endif -%}
+{%- endfor -%}
+{%- if get_list('prevfor_fields') | length > 0 %}
+		// Registers this pass's *Prev history links (builder.link_history()),
+		// generated from each field's own [PrevFor=X] annotation (X being the
+		// current-frame resource this field is the previous-frame view of).
+		// Called by TypedPass::setup() BEFORE setup_func runs -- link_history()
+		// must run before X's own create() (manual or auto via create_always(),
+		// which runs after setup_func), so this is the one hook that covers
+		// both. Pair with builder.create_prev(prev, current) right after
+		// current's own create() to resolve the bound handle.
+		static void link_history_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+{%- for v in pass.params %}
+{%- if v.options.PrevFor is defined %}
+			builder.link_history(data.{{v.options.PrevFor.value_atom.expr}}.id, data.{{v.name}}.id);
+{%- endif %}
+{%- endfor %}
+		}
+{% endif -%}
 {%- set always_fields = create_list('always_fields') -%}
 {%- for v in pass.params -%}
 {%- if v.options.Always is defined and v.options.Size is undefined and v.options.Format is undefined and v.options.Recreate is undefined -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
@@ -119,6 +141,11 @@ public:
 {%- if v.options.Optional is defined %}
 			{{"}"}}
 {%- endif %}
+{%- for p in pass.params %}
+{%- if p.options.PrevFor is defined and p.options.PrevFor.value_atom.expr == v.name %}
+			builder.create_prev(data.{{p.name}}, data.{{v.name}});
+{%- endif %}
+{%- endfor %}
 {%- endif %}
 {%- if v.options.Always is defined and v.options.Recreate is defined %}
 {%- if v.options.Optional is defined %}
