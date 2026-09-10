@@ -497,6 +497,43 @@ int main()
 			ArgInfo{"pass_name"}, ArgInfo{"field_name"}
 		));
 
+		// [RecreateFlags = X] or [RecreateFlags = A | B]: the flags for the
+		// builder.recreate() call on a [Recreate=X] field's new chain link,
+		// resolved the same way [Always] is for resolve_flags_expr -- kept as
+		// a separate option because [Always] is already spoken for by the
+		// need() on the field's original chain link (recreate() always needs
+		// a different flags value than the read it replaces).
+		global.AddGlobal("resolve_recreate_flags_expr", jinja2::MakeCallable(
+			[&](const std::string& pass_name, const std::string& field_name) -> std::string
+			{
+				Pass* pass = parsed.passes.find(pass_name);
+				if (!pass) return "";
+
+				for (const auto& p : pass->params)
+				{
+					if (p.name != field_name) continue;
+
+					const option* recreate_flags = p.find_option("RecreateFlags");
+					if (!recreate_flags) return "";
+
+					if (recreate_flags->value_atom.values.empty())
+						return "FrameGraph::ResourceFlags::" + recreate_flags->value_atom.expr;
+
+					std::string result;
+					bool first = true;
+					for (const auto& v : recreate_flags->value_atom.values)
+					{
+						if (!first) result += " | ";
+						result += "FrameGraph::ResourceFlags::" + v.expr;
+						first = false;
+					}
+					return result;
+				}
+				return "";
+			},
+			ArgInfo{"pass_name"}, ArgInfo{"field_name"}
+		));
+
 		// [Size = 128] (a literal) resolves to "128" as-is. [Size =
 		// ViewportContext::frame_size] (owner_name set, not a literal)
 		// resolves to a get_context<Table::Owner>().field call -- the exact
@@ -517,6 +554,12 @@ int main()
 
 					const option* size = p.find_option("Size");
 					if (!size) return "";
+
+					// Raw (backtick) text is pasted verbatim -- the .sig author
+					// already wrote a complete, valid C++ expression, so no
+					// literal/owner-reference resolution applies to it.
+					if (size->value_atom.is_raw)
+						return size->value_atom.expr;
 
 					if (size->value_atom.is_literal || size->value_atom.owner_name.empty())
 						return size->value_atom.expr;
@@ -952,6 +995,8 @@ int main()
 		my_stream(cpp_path_render, "pass_defaults.h") << cpp_templates.generate(L"pass_defaults");
 		my_stream(cpp_path_render, "resource_ids.h") << cpp_templates.generate(L"resource_ids");
 		my_stream(cpp_path_render, "pass_ids.h") << cpp_templates.generate(L"pass_ids");
+
+		my_stream(cpp_path, "Constants.ixx") << cpp_templates.generate(L"constants");
 
 		// includes
 		my_stream(cpp_path, "autogen.ixx") << cpp_templates.generate(L"autogen");

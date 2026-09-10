@@ -327,24 +327,39 @@ PassNode GBufferDownsampler
 	[Write = {GBuffer_TempColor}]
 	GBuffer gbuffer;
 
-	[Write] Texture GBuffer_HalfDepth;
-	[Write] Texture GBuffer_HalfNormals;
+	# Raw [Size]: no grammar support for arithmetic, so the half-res transform
+	# is pasted as a literal C++ expression -- SIGParser doesn't interpret it,
+	# it's exactly the same (size+1)/2 the hand-written code used to compute.
+	[Always = UnorderedAccess] [Size = `ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2)`] [Format = R32_FLOAT]
+	Texture GBuffer_HalfDepth;
+	[Always = UnorderedAccess] [Size = `ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2)`] [Format = R8G8B8A8_UNORM]
+	Texture GBuffer_HalfNormals;
 
-	[Write] StructuredBuffer<uint2> TileClassifyHi;
-	[Write] StructuredBuffer<uint2> TileClassifyLow;
+	# Worst case: every tile lands in the same bucket -- size each list for
+	# the full tile count, same reasoning as VSM's own tile-classification
+	# lists. `true` is the counted flag: GPU-appended (AppendStructuredBuffer),
+	# needs a real counter.
+	[Always = UnorderedAccess] [Size = `(size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true`]
+	StructuredBuffer<uint2> TileClassifyHi;
+	[Always = UnorderedAccess] [Size = `(size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true`]
+	StructuredBuffer<uint2> TileClassifyLow;
 
-	[Write] Texture TileClassifyMask;
-	[Write] Texture TileClassifyTiles;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8_UINT] Texture TileClassifyMask;
+	[Always = UnorderedAccess] [Size = `ivec2(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8), Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8))`] [Format = R8_UINT]
+	Texture TileClassifyTiles;
 
-	[Write] StructuredBuffer<uint2> TileRoughnessHi;
-	[Write] StructuredBuffer<uint2> TileRoughnessLow;
-	[Write] Texture TileRoughnessTiles;
+	[Always = UnorderedAccess] [Size = `(size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true`]
+	StructuredBuffer<uint2> TileRoughnessHi;
+	[Always = UnorderedAccess] [Size = `(size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true`]
+	StructuredBuffer<uint2> TileRoughnessLow;
+	[Always = UnorderedAccess] [Size = `ivec2(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8), Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8))`] [Format = R8_UINT]
+	Texture TileRoughnessTiles;
 }
 
 PassNode VoxelDebug
 {
 	GBuffer gbuffer;
-	[Write] Texture VoxelDebug;
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture VoxelDebug;
 	[Always = Read] Texture3D VoxelLighted;
 }
 
@@ -367,8 +382,10 @@ PassNode ReflectionRTXHalf
 	[Always = Read] TextureCube sky_cubemap_filtered;
 	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 
-	[Write] Texture RTXReflectionNoiseHalf;
-	[Write] Texture RTXReflectionDirPdfHalf;
+	[Always = UnorderedAccess] [Size = `ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2)`] [Format = R16G16B16A16_FLOAT]
+	Texture RTXReflectionNoiseHalf;
+	[Always = UnorderedAccess] [Size = `ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2)`] [Format = R16G16B16A16_FLOAT]
+	Texture RTXReflectionDirPdfHalf;
 }
 
 # Reflection reference signal for both RTXCombine (DLSS-RR) and ReflCombine
@@ -397,8 +414,8 @@ PassNode ReflectionRTX
 	[Always = Read] TextureCube sky_cubemap_filtered;
 	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 
-	[Write] Texture RTXReflectionNoise;
-	[Write] Texture RTXReflectionDirPdf;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionNoise;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionDirPdf;
 }
 
 # RTX-only reference shadow, sibling of ReflectionRTX/IndirectRTX -- same
@@ -414,7 +431,7 @@ PassNode ShadowRTX
 {
 	GBuffer gbuffer;
 
-	[Write] Texture RTXShadowNoise;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXShadowNoise;
 }
 
 # Always-on cheap base layer for IndirectRTX's Low-tile pixels: same trace,
@@ -432,7 +449,8 @@ PassNode IndirectRTXHalf
 	[Always = Read] TextureCube sky_cubemap_filtered;
 	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 
-	[Write] Texture RTXIndirectNoiseHalf;
+	[Always = UnorderedAccess] [Size = `ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2)`] [Format = R16G16B16A16_FLOAT]
+	Texture RTXIndirectNoiseHalf;
 }
 
 # Indirect-GI reference signal, sibling of ReflectionRTX/ShadowRTX. One ray
@@ -459,7 +477,7 @@ PassNode IndirectRTX
 	[Always = Read] TextureCube sky_cubemap_filtered;
 	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 
-	[Write] Texture RTXIndirectNoise;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXIndirectNoise;
 }
 
 # Composites NRD's denoised reflection onto ResultTexture. Does NOT run when
@@ -499,7 +517,7 @@ PassNode RTXCombine
 	[Always = Read] Texture RTXIndirectNoise;
 	[Always = Read] Texture RTXShadowNoise;
 
-	[Write] Texture ResultTextureRTXNoise;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ResultTextureRTXNoise;
 }
 
 PassNode Voxelize
@@ -546,7 +564,7 @@ PassNode VoxelScreen
 	[Always = Read] Texture3D VoxelLighted;
 	[Always = Read] Texture BlueNoise;
 
-	[Write] Texture VoxelIndirectNoiseRaw;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture VoxelIndirectNoiseRaw;
 }
 
 # Voxel-cone-traced reflection signal (MyRaygenShaderReflection,
@@ -560,5 +578,5 @@ PassNode ScreenReflection
 	[Always = Read] Texture3D VoxelLighted;
 	[Always = Read] Texture BlueNoise;
 
-	[Write] Texture VoxelReflectionNoiseRaw;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture VoxelReflectionNoiseRaw;
 }

@@ -168,7 +168,7 @@ PassNode PSSM_GenerateMask
 	[Always = None] StructuredBuffer<Camera> PSSM_Cameras;
 
 	GBuffer gbuffer;
-	[Write] Texture LightMask;
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8_UNORM] Texture LightMask;
 }
 
 [Compute]
@@ -183,6 +183,6 @@ PassNode PSSM_Combine
 
 PassNode PSSM_Global
 {
-	[Write] Texture global_depth;
-	[Write] StructuredBuffer<Camera> global_camera;
+	[Always = DepthStencil] [Size = 1024] [Format = R32_TYPELESS] Texture global_depth;
+	[Always = CopyDest] [Size = 1] StructuredBuffer<Camera> global_camera;
 }

@@ -121,7 +121,7 @@ public:
 		{ true, { ResultTexture_c0_pass_refs + 0, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 1, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 2, 1 } },
-		{ true, { ResultTexture_c0_pass_refs + 3, 1 } },
+		{ false, { ResultTexture_c0_pass_refs + 3, 1 } },
 	};
 	static inline const FrameGraph::PassRef scene_c0_pass_refs[] = {
 		{ PassID::PreScene, 0 },

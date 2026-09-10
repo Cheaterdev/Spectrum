@@ -172,7 +172,10 @@ GraphicsPSO StencilerLast
 [Required]
 PassNode stencil_renderer_before
 {
-	[Write] Texture depth_tex;
+	# 1x1: this pass renders the picking gizmos into a throwaway depth
+	# buffer -- only the stencil/color outputs (stencil_renderer_after)
+	# matter, depth here exists purely to satisfy the graphics pipeline.
+	[Always = DepthStencil] [Size = 1] [Format = R32_TYPELESS] Texture depth_tex;
 
 	[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> id_buffer;
 	[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> axis_id_buffer;
@@ -181,5 +184,5 @@ PassNode stencil_renderer_before
 PassNode stencil_renderer_after
 {
 	[Always = RenderTarget] Texture ResultTexture;
-	[Write] Texture Stencil_color_tex;
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8_SNORM] Texture Stencil_color_tex;
 }

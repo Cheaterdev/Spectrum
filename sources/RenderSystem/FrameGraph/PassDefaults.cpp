@@ -85,14 +85,10 @@ struct ShadowsFlowNode : FlowGraph::GraphNode<WGContext>
 
 // ── ResultCreation -----------------------------------------------------------
 
-bool PassDefault<Passes::ResultCreation>::setup(
+FrameGraph::SetupResult PassDefault<Passes::ResultCreation>::setup(
 	Passes::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-	builder.create(data.ResultTexture,
-		{ uint3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
-		FrameGraph::ResourceFlags::RenderTarget);
-	return false;
+	return FrameGraph::SetupResult::IgnoreRender;
 }
 
 void PassDefault<Passes::ResultCreation>::render(
@@ -133,12 +129,9 @@ void PassDefault<Passes::Profiler>::render(
 
 // ---- RTXShadow --------------------------------------------------------------
 
-bool PassDefault<Passes::RTXShadow>::setup(
+FrameGraph::SetupResult PassDefault<Passes::RTXShadow>::setup(
     Passes::RTXShadow::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-	auto  size  = frame.frame_size;
-
 	builder.need(data.gbuffer.GBuffer_Albedo,    ResourceFlags::Read);
 	builder.need(data.gbuffer.GBuffer_Normals,   ResourceFlags::Read);
 	builder.need(data.gbuffer.GBuffer_Depth,     ResourceFlags::Read);
@@ -146,10 +139,6 @@ bool PassDefault<Passes::RTXShadow>::setup(
 	builder.need(data.gbuffer.GBuffer_Speed,     ResourceFlags::Read);
 	builder.need(data.gbuffer.GBuffer_DepthPrev, ResourceFlags::Read);
 	builder.need(data.gbuffer.GBuffer_DepthMips, ResourceFlags::None);
-
-	builder.create(data.ShadowMask,
-	    { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
-	    ResourceFlags::UnorderedAccess);
 
 	if (RenderSystem::get().device().get_properties().work_graph)
 	{
@@ -163,7 +152,9 @@ bool PassDefault<Passes::RTXShadow>::setup(
 		builder.create(data.WorkGraphBuffer, { TILE_SECTION }, ResourceFlags::UnorderedAccess);
 	}
 
-	return RenderSystem::get().device().get_properties().rtx;
+	return RenderSystem::get().device().get_properties().rtx
+		? FrameGraph::SetupResult::NeedsRender
+		: FrameGraph::SetupResult::IgnoreRender;
 }
 
 void PassDefault<Passes::RTXShadow>::render(
@@ -306,12 +297,6 @@ bool PassDefault<Passes::RTXColorPass>::setup(
 	if (!RenderSystem::get().device().get_properties().rtx)
 		return false;
 
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-	auto  size  = frame.frame_size;
-
-	builder.create(data.ColorOutput,
-	    { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
-	    ResourceFlags::UnorderedAccess);
 	return true;
 }
 

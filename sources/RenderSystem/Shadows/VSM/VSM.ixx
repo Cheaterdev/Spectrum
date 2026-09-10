@@ -183,16 +183,19 @@ public:
 	// are coarser (see VSMClipmap::page_world_size). Keep MaxLevels in step
 	// with VSMConstants::level_info[26] (Phase 5.8: no longer also a
 	// [Multiple=N] PassNode budget -- VSM_RenderPages is a single pass now).
-	static constexpr int MaxLevels = 26;
+	// .sig-declared (vsm.sig's const_definition) so VSM_DispatchCommands'
+	// own [Size=...] in the same .sig, and VSMInvalidationTracker.ixx's own
+	// copy, can't drift from this one.
+	static constexpr int MaxLevels = Constants::MaxLevels;
 	static constexpr int LevelZeroSlot = 12;
 	static constexpr int MaxPagesPerLevel = 16;   // 4x4, matches VSMClipmap::pages_per_level
 	static constexpr int MaxPages = MaxLevels * MaxPagesPerLevel;
-	// Phase 5.8: upper bound on per-frame (active level x scene mesh)
-	// indirect draw entries -- generous, not a measured real number (mirrors
+	// Upper bound on per-frame (active level x scene mesh) indirect draw
+	// entries -- generous, not a measured real number (mirrors
 	// physical_page_count's "moderate bump" philosophy). If a scene's mesh
 	// count x active level count ever exceeds this, entries are clamped and
 	// logged once per episode rather than overflowing the buffer.
-	static constexpr int MaxDispatchEntries = MaxLevels * 2048;
+	static constexpr int MaxDispatchEntries = Constants::MaxDispatchEntries;
 	// VSM_Atlas's logical slice count, decoupled from physical_page_count
 	// (the real, elastic VRAM budget -- see VSMPageTable's map/unmap
 	// tracking). D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION is 2048, the

@@ -35,8 +35,6 @@ SMAA::SMAA()
 		if (g_upscaling_enabled)
 			return false;
 
-		builder.need(data.ResultTexture, FrameGraph::ResourceFlags::Read);
-		builder.recreate(data.ResultTextureNew, FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 

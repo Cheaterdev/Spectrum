@@ -35,7 +35,7 @@ struct PassDefault<Passes::ResultCreation>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-	static bool setup(Passes::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::ResultCreation::Context& data, FrameGraph::FrameContext& context);
 };
 
@@ -75,7 +75,7 @@ struct PassDefault<Passes::RTXShadow>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-	static bool setup(Passes::RTXShadow::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::RTXShadow::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::RTXShadow::Context& data, FrameGraph::FrameContext& context);
 };
 

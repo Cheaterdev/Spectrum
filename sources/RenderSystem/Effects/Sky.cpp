@@ -36,26 +36,24 @@ SkyRender::SkyRender()
 
 	// CubeSky: renders the atmospheric sky into a static cubemap, re-baked only
 	// when the sun direction has changed enough to warrant it.
-	m_cubesky_setup = [this](Passes::CubeSky::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_cubesky_setup = [this](Passes::CubeSky::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		auto& sky = builder.graph->get_context<SkyInfo>();
 
-		builder.create(data.sky_cubemap,
-		               { ivec3(256, 256, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 },
-		               FrameGraph::ResourceFlags::UnorderedAccess |
-		               FrameGraph::ResourceFlags::Static);
-
 		bool changed = ((sky.sunDir - dir).length() > 0.001f);
-		if (changed)
-		{
-			data.sky_cubemap.changed();
-			dir = sky.sunDir;
-		}
-		return changed;
+		if (changed) dir = sky.sunDir;
+
+		return changed ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 	};
 
 	m_cubesky_render = [this](Passes::CubeSky::Context& data, FrameGraph::FrameContext& context)
 	{
+		// Only reached on a NeedsRender frame (sun direction changed) --
+		// create_always() has already run by this point (right after
+		// setup() returns), so the handle is safely linked before this
+		// mutator touches it. See setup()'s own comment.
+		data.sky_cubemap.changed();
+
 		auto& sky     = context.graph->get_context<SkyInfo>();
 		auto& compute = context.get_list()->get_compute();
 

@@ -6,16 +6,35 @@ options
   }
 
 parse
- : (layout_definition|table_definition|rt_definition|workgraph_pso_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|pass_definition|view_definition|pipeline_definition|enum_definition|COMMENT)* EOF
+ : (layout_definition|table_definition|rt_definition|workgraph_pso_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|pass_definition|view_definition|pipeline_definition|enum_definition|const_definition|COMMENT)* EOF
+ ;
+
+// A top-level named constant: `const Name = value;`. Value reuses bind_option
+// (literal, an owner::field context reference, piped flags, or a raw
+// backtick-escaped C++ expression) -- whatever a PassNode field's own option
+// value already supports, so a computed constant (e.g. `const MaxDispatchEntries
+// = \`MaxLevels * 2048\`;`) can reference an earlier const by its generated,
+// unqualified name (see constants.jinja -- all consts land in one namespace,
+// in declaration order, exactly like ordinary C++ initialization order rules).
+const_definition
+ : 'const' name_id options_assign SCOL
  ;
 
 
 bind_option
  : (owner_id '::')? value_id
  | (owner_id '::')? flag_value_holder (PIPE flag_value_holder)+
+ | raw_value
  ;
 
 flag_value_holder: value_id;
+
+// Escape hatch: a backtick-delimited span is captured verbatim (no grammar
+// support for arithmetic/expressions) and pasted into the generated C++ as-is
+// -- e.g. [Size = `(builder.graph->get_context<Table::ViewportContext>().
+// frame_size + ivec2(1)) / 2`]. The .sig author is responsible for writing a
+// fully-qualified, valid C++ expression; SIGParser does not interpret it.
+raw_value: RAWEXPR;
 
 options_assign: ASSIGN bind_option;
 
@@ -363,6 +382,10 @@ FLOAT_SCALAR
 
 STRING
  : '"' (~["\r\n] | '""')* '"'
+ ;
+
+RAWEXPR
+ : '`' ~[`]* '`'
  ;
 
 COMMENT

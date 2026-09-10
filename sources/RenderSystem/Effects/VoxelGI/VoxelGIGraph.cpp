@@ -210,26 +210,6 @@ bool PassDefault<Passes::GBufferDownsampler>::setup(
 	GBufferViewDesc::need(builder, data.gbuffer, true);
 	builder.create(data.gbuffer.GBuffer_TempColor, { ivec3(size,0), HAL::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 
-	ivec2 half_size = { (size.x + 1) / 2, (size.y + 1) / 2 };
-	builder.create(data.GBuffer_HalfDepth,   { ivec3(half_size,0), HAL::Format::R32_FLOAT,     1, 1 }, ResourceFlags::UnorderedAccess);
-	builder.create(data.GBuffer_HalfNormals, { ivec3(half_size,0), HAL::Format::R8G8B8A8_UNORM,1, 1 }, ResourceFlags::UnorderedAccess);
-	builder.create(data.TileClassifyMask,    { ivec3(size,0),      HAL::Format::R8_UINT,       1, 1 }, ResourceFlags::UnorderedAccess);
-
-	// Worst case: every tile lands in the same bucket -- size each list for
-	// the full tile count, same reasoning as VSM's own tile-classification
-	// lists.
-	uint2  tiles_count = uint2(Math::DivideByMultiple(size.x, 8), Math::DivideByMultiple(size.y, 8));
-	size_t max_tiles   = (size_t)tiles_count.x * tiles_count.y;
-	builder.create(data.TileClassifyHi,  { max_tiles, true }, ResourceFlags::UnorderedAccess);
-	builder.create(data.TileClassifyLow, { max_tiles, true }, ResourceFlags::UnorderedAccess);
-	builder.create(data.TileClassifyTiles,
-		{ ivec3((int)tiles_count.x, (int)tiles_count.y, 0), HAL::Format::R8_UINT, 1, 1 }, ResourceFlags::UnorderedAccess);
-
-	builder.create(data.TileRoughnessHi,  { max_tiles, true }, ResourceFlags::UnorderedAccess);
-	builder.create(data.TileRoughnessLow, { max_tiles, true }, ResourceFlags::UnorderedAccess);
-	builder.create(data.TileRoughnessTiles,
-		{ ivec3((int)tiles_count.x, (int)tiles_count.y, 0), HAL::Format::R8_UINT, 1, 1 }, ResourceFlags::UnorderedAccess);
-
 	return true;
 }
 
@@ -635,13 +615,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	{
 		if (g_upscaler_type != UpscalerType::DLSSRR || !nvidia::DLSSRR::get().available()) return false;
 
-		auto& frame = builder.graph->get_context<ViewportInfo>();
-		builder.create(data.NormalRoughness,
-			{ ivec3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
-			ResourceFlags::UnorderedAccess);
-		builder.create(data.SpecularAlbedo,
-			{ ivec3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
-			ResourceFlags::UnorderedAccess);
 		return true;
 	};
 
@@ -723,11 +696,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		if (builder.graph->get_context<FrameGraph::DebugContext>().mode != FrameGraph::DebugMode::VoxelTrace)
 			return false;
 
-		auto& frame = builder.graph->get_context<ViewportInfo>();
-		auto  sz    = frame.frame_size;
-
-		builder.create(data.VoxelDebug,
-			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::RenderTarget);
 		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};
@@ -792,11 +760,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 			return false;
 
-		auto& frame = builder.graph->get_context<ViewportInfo>();
-		auto  sz    = frame.frame_size;
-
-		builder.create(data.VoxelIndirectNoiseRaw,
-			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};
@@ -851,11 +814,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 			return false;
 
-		auto& frame = builder.graph->get_context<ViewportInfo>();
-		auto  sz    = frame.frame_size;
-
-		builder.create(data.VoxelReflectionNoiseRaw,
-			{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};

@@ -300,10 +300,17 @@ struct have_expr: public virtual parsed_type
 	// reference) that codegen needs to resolve rather than paste literally.
 	bool is_literal = false;
 
+	// True for a backtick-delimited raw_value -- expr is opaque C++ text,
+	// captured verbatim and pasted into the generated code as-is (an escape
+	// hatch for calculations the grammar has no operators for). Codegen must
+	// not apply the owner_name context-reference resolution to it.
+	bool is_raw = false;
+
 	SERIALIZE()
 	{
 		ar& NVP(expr);
 		ar& NVP(is_literal);
+		ar& NVP(is_raw);
 	}
 };
 			 
@@ -888,6 +895,12 @@ struct Parsed : public parsed_type
 	my_container<Pipeline> pipelines;
 	my_container<Enum> enums;
 
+	// Top-level `const Name = value;` declarations (SIG.g4's const_definition).
+	// Reuses `option`'s existing name+ValueAtom shape rather than a bespoke
+	// struct -- a const's value supports exactly the same literal/owner-ref/
+	// raw forms a bind_option's value already does.
+	my_container<option> consts;
+
 	Layout* find_layout(std::string name);
 	Table* find_table(std::string name);
 	RaytracePSO* find_rtx(std::string name);
@@ -910,6 +923,7 @@ struct Parsed : public parsed_type
 		passes.merge(r.passes);
 		pipelines.merge(r.pipelines);
 		enums.merge(r.enums);
+		consts.merge(r.consts);
 	}
 
 
@@ -929,5 +943,6 @@ struct Parsed : public parsed_type
 		ar& NVP(passes);
 		ar& NVP(pipelines);
 		ar& NVP(enums);
+		ar& NVP(consts);
 	}
 };

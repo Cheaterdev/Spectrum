@@ -47,6 +47,20 @@ public:
 			builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::Read);
 			builder.need(data.VSM_PageHiZ, FrameGraph::ResourceFlags::Read);
 		}
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.create(data.VSM_LitTiles, { 2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.VSM_DarkTiles, { 2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.VSM_SearchTiles, { 2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

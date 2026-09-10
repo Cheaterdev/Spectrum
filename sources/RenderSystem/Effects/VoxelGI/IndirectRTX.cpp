@@ -18,11 +18,6 @@ bool PassDefault<Passes::IndirectRTXHalf>::setup(
 	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
-	auto& frame      = builder.graph->get_context<ViewportInfo>();
-	ivec2 half_size  = { (frame.frame_size.x + 1) / 2, (frame.frame_size.y + 1) / 2 };
-
-	builder.create(data.RTXIndirectNoiseHalf,
-		{ ivec3(half_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	return true;
 }
 
@@ -66,11 +61,6 @@ bool PassDefault<Passes::IndirectRTX>::setup(
 	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-	auto  sz    = frame.frame_size;
-
-	builder.create(data.RTXIndirectNoise,
-		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	GBufferViewDesc::need(builder, data.gbuffer);
 	return true;
 }

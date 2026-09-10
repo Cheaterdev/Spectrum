@@ -565,19 +565,6 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	m_gatherdispatch_setup = [this](Passes::VSM_GatherDispatch::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		// CPU-built and re-uploaded fresh every frame (like VSM_PageCameras),
-		// but the underlying allocation persists -- Static, sized to the
-		// fixed level-count budget (small, not mesh-count-dependent).
-		builder.create(data.VSM_LevelDispatchInfo, { (size_t)MaxLevels }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
-		// GPU-appended now (Phase 5.12), not CPU-uploaded -- UnorderedAccess,
-		// not CopyDest. Sized to the same generous fixed upper bound as
-		// before (worst case is still bounded by total mesh parts x active
-		// dirty level count, same shape the old CPU loop's own worst case
-		// was).
-		// counted=true: this buffer is GPU-appended (AppendStructuredBuffer in
-		// the gather shader) and needs a real counter -- clear_counter() and
-		// exec_indirect()'s GPU-computed count both read it.
-		builder.create(data.VSM_DispatchCommands, { (size_t)MaxDispatchEntries, true }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 		return true;
 	};
 
@@ -1196,16 +1183,6 @@ VSM::VSM() : VariableContext(L"VSM")
 		if (!use_vsm_penumbra)
 			return false;
 		GBufferViewDesc::need(builder, data.gbuffer);
-		auto& frame = builder.graph->get_context<ViewportInfo>();
-		// Worst case: every screen tile lands in one bucket -- same "count
-		// tiles directly, don't scale by a sub-group factor" sizing
-		// FrameClassification uses for its own lists, just with VSM's own
-		// 16x16 tile size instead of VoxelGI's 32x32.
-		uint2 tiles_count = uint2((frame.frame_size.x + 15) / 16, (frame.frame_size.y + 15) / 16);
-		size_t max_tiles = 2*(size_t)(tiles_count.x * tiles_count.y);
-		builder.create(data.VSM_LitTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
-		builder.create(data.VSM_DarkTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
-		builder.create(data.VSM_SearchTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
 		// VSM-owned, not FrameGraph resources -- created once, pre-initialized
 		// to {0,1,1} (ThreadGroupCountY/Z never change again), same lazy
 		// null-check-and-create shape vsm_atlas_tex already uses. See these
@@ -1327,23 +1304,6 @@ VSM::VSM() : VariableContext(L"VSM")
 		if (!use_vsm_penumbra)
 			return false;
 		GBufferViewDesc::need(builder, data.gbuffer);
-		auto& frame = builder.graph->get_context<ViewportInfo>();
-		builder.create(data.VSM_BlockerSearchResult,
-		    { ivec3(frame.frame_size, 0), HAL::Format::R32G32B32A32_UINT, 1, 1 },
-		    FrameGraph::ResourceFlags::UnorderedAccess);
-		// This pass's OWN post-search verdict lists (see VSMSearchVerdictAppend's
-		// own comment in vsm.sig) -- sized the same worst-case way as stage 1's
-		// own lists, even though in practice they can only ever hold a subset
-		// of VSM_SearchTiles' own appended tiles.
-		uint2 tiles_count = uint2((frame.frame_size.x + 15) / 16, (frame.frame_size.y + 15) / 16);
-		size_t max_tiles = (size_t)(tiles_count.x * tiles_count.y);
-		builder.create(data.VSM_ConfirmedLitTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
-		builder.create(data.VSM_BlurTiles, { max_tiles, true }, FrameGraph::ResourceFlags::UnorderedAccess);
-		// See VSMSearchVerdictAppend's own comment -- one texel per 16x16
-		// screen tile, consumed by VSM_ScreenSpaceShadow's EarlyOutPixel.
-		builder.create(data.VSM_AmbiguousMask,
-		    { ivec3((int)tiles_count.x, (int)tiles_count.y, 0), HAL::Format::R8_UNORM, 1, 1 },
-		    FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 
@@ -1461,10 +1421,6 @@ VSM::VSM() : VariableContext(L"VSM")
 		if (!use_vsm_penumbra || !use_vsm_contact_shadow)
 			return false;
 		GBufferViewDesc::need(builder, data.gbuffer);
-		auto& frame = builder.graph->get_context<ViewportInfo>();
-		builder.create(data.VSM_ContactShadow,
-		    { ivec3(frame.frame_size, 0), HAL::Format::R8_UNORM, 1, 1 },
-		    FrameGraph::ResourceFlags::UnorderedAccess);
 		return true;
 	};
 
@@ -1889,18 +1845,6 @@ VSM::VSM() : VariableContext(L"VSM")
 	m_depth_analysis_setup = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
 		GBufferViewDesc::need(builder, data.gbuffer);
-
-		// Static: cleared and re-measured every frame, but the buffer
-		// itself persists so the readback (issued after this frame's
-		// dispatch, consumed in a later frame's plan_frame()) always has
-		// something valid to read. This is a single, non-Multiple PassNode
-		// (like VSM_RenderPages since Phase 5.8) -- nothing else ever touches this resource,
-		// so it's always the owner and always calls create(); Static is
-		// what keeps the underlying allocation from being torn down and
-		// rebuilt every frame, not a manual is_new()/create()-once branch
-		// (calling .is_new() before anything has ever created/needed this
-		// resource in this pass crashed -- it isn't valid to query cold).
-		builder.create(data.VSM_DepthAnalysisResult, { (size_t)1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 
 		return true;
 	};

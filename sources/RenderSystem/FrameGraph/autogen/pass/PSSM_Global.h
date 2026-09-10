@@ -23,6 +23,19 @@ public:
 
 		Handlers::StructuredBuffer<Table::Camera> global_camera = ResourceID::global_camera;
 
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.create(data.global_depth, { ivec3(1024, 1024, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil);
+			builder.create(data.global_camera, { 1 }, FrameGraph::ResourceFlags::CopyDest);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

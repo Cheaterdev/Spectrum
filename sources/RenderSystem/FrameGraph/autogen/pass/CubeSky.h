@@ -21,6 +21,18 @@ public:
 
 		Handlers::TextureCube sky_cubemap = ResourceID::sky_cubemap;
 
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.create(data.sky_cubemap, { ivec3(256, 256, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

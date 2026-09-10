@@ -103,6 +103,10 @@ ComputePSO DenoiserShadow_Filter
 PassNode ShadowDenoiser_Prepare
 {
 	[Always = Read] Texture ShadowMask;
+	# tileCount = xTiles*yTiles, xTiles/yTiles = DivRoundUp(frame_size, {8,4})
+	# (the shadow-denoiser tile grid, 8x4 px tiles) -- see ShadowDenoiser.cpp's
+	# generate() for the original DivRoundUp helper this mirrors.
+	[Always = UnorderedAccess] [Size = `(size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 7) / 8) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 3) / 4))`]
 	StructuredBuffer<uint> ShadowDenoiser_TileBuffer;
 }
 
@@ -113,11 +117,12 @@ PassNode ShadowDenoiser_TileClassification
 	[Always = Read] Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Normals;
 	[Always = Read] Texture GBuffer_Speed;
+	[Always = UnorderedAccess] [Size = `(size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 7) / 8) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 3) / 4))`]
 	StructuredBuffer<uint> ShadowDenoiser_TileMetaBuffer;
-	Texture ShadowDenoiser_Moments;
-	Texture ShadowDenoiser_MomentsPrev;
-	Texture ShadowDenoiser_Scratch;
-	Texture ShadowDenoiser_Scratch2;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R11G11B10_FLOAT] Texture ShadowDenoiser_Moments;
+	[Always = UnorderedAccess | Static] [Size = ViewportContext::frame_size] [Format = R11G11B10_FLOAT] Texture ShadowDenoiser_MomentsPrev;
+	[Always = UnorderedAccess | Static] [Size = ViewportContext::frame_size] [Format = R16G16_FLOAT] Texture ShadowDenoiser_Scratch;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16_FLOAT] Texture ShadowDenoiser_Scratch2;
 }
 
 PassNode ShadowDenoiser_Filter

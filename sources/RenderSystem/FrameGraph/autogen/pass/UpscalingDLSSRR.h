@@ -43,6 +43,34 @@ public:
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 		Handlers::Texture ResultTextureNew = ResultTexture;
+
+		// Resources this pass always needs whenever it runs, generated from
+		// each field's own [Always=X] annotation. Called by TypedPass::setup()
+		// after setup_func returns true - not a substitute for setup_func's
+		// own need()/create() calls for anything conditional.
+		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.need(data.GBuffer_Depth, FrameGraph::ResourceFlags::Read | FrameGraph::ResourceFlags::ExclusiveRead);
+			builder.need(data.GBuffer_Speed, FrameGraph::ResourceFlags::Read | FrameGraph::ResourceFlags::ExclusiveRead);
+			builder.need(data.GBuffer_Albedo, FrameGraph::ResourceFlags::Read | FrameGraph::ResourceFlags::ExclusiveRead);
+			builder.need(data.NormalRoughness, FrameGraph::ResourceFlags::Read | FrameGraph::ResourceFlags::ExclusiveRead);
+			builder.need(data.SpecularAlbedo, FrameGraph::ResourceFlags::Read | FrameGraph::ResourceFlags::ExclusiveRead);
+			builder.need(data.RTXReflectionNoise, FrameGraph::ResourceFlags::Read | FrameGraph::ResourceFlags::ExclusiveRead);
+			builder.need(data.ResultTextureRTXNoise, FrameGraph::ResourceFlags::Read | FrameGraph::ResourceFlags::ExclusiveRead);
+		}
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::Read);
+			builder.recreate(data.ResultTextureNew, { ivec3(builder.graph->get_context<Table::ViewportContext>().upscale_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
@@ -54,7 +82,7 @@ public:
 			{ ResourceID::SpecularAlbedo, false },
 			{ ResourceID::RTXReflectionNoise, false },
 			{ ResourceID::ResultTextureRTXNoise, false },
-			{ ResourceID::ResultTexture, true },
+			{ ResourceID::ResultTexture, false },
 			{ ResourceID::ResultTexture, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

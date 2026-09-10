@@ -3,29 +3,19 @@ export module Graphics:FrameGraphContext;
 import :Camera;
 import :MeshRenderer;
 import :Scene;
+export import FrameGraph;
 import HAL;
 import Core;
 
 export
 {
-										// Viewport dimensions set once per frame before graph setup.
-	// Lives here (not in Graphics:FrameGraphContext) so it is visible
-	// inside FrameGraph:Passes and pass_defaults.h without creating
-	// circular module dependencies.
-	//
-	// frame_size/upscale_size come from Table::ViewportContext (FrameData.sig)
-	// -- the SIG-declared schema [Size=...] annotations resolve against --
-	// rather than being redeclared here, so the two can never drift apart.
-	// Any field ViewportInfo needs that FrameGraph/SIG has no reason to know
-	// about goes directly on this derived type instead.
-	struct ViewportInfo : Table::ViewportContext
-	{
-	};
-
-	// get_context<Table::ViewportContext>() (what SIG-generated [Size=...]
-	// resolution will call) finds this same live ViewportInfo instance
-	// instead of default-constructing a disconnected, always-zeroed one.
-	template<> struct ContextTypeFor<Table::ViewportContext> { using type = ViewportInfo; };
+	// ViewportInfo itself (frame_size/upscale_size, inherited from the
+	// SIG-declared Table::ViewportContext) lives in FrameGraph:ViewportContext,
+	// not here -- the generated create_always()/need_always() calls resolving
+	// [Size=ViewportContext::frame_size] are compiled as part of the FrameGraph
+	// module and need the ContextTypeFor redirect visible at that point, which
+	// a declaration up here in Graphics could never provide. Re-exported
+	// transitively via `import FrameGraph;` above.
 
 	struct TimeInfo
 	{

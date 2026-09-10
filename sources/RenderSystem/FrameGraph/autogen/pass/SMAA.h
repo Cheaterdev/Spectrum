@@ -31,11 +31,15 @@ public:
 
 		// Resources this pass always creates with a fixed desc, generated from
 		// each field's own [Size]/[Format] annotation (plus [Always] for the
-		// creation flags). Called by TypedPass::setup() after setup_func
-		// returns true - not a substitute for setup_func's own create() calls
-		// for anything whose Desc depends on runtime state.
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
+			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::Read);
+			builder.recreate(data.ResultTextureNew, FrameGraph::ResourceFlags::UnorderedAccess);
 			builder.create(data.SMAA_edges, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 			builder.create(data.SMAA_blend, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
@@ -43,7 +47,7 @@ public:
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::ResultTexture, true },
+			{ ResourceID::ResultTexture, false },
 			{ ResourceID::ResultTexture, true },
 			{ ResourceID::SMAA_edges, true },
 			{ ResourceID::SMAA_blend, true },

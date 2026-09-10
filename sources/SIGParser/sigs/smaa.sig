@@ -102,7 +102,9 @@ ComputePSO BlendingCompute
 [Compute]
 PassNode SMAA
 {
-	[Write] [Recreate = ResultTextureNew]
+	# No [Size]/[Format]: recreate() clones the existing ResultTexture's desc
+	# (native resolution, no upscale happening here).
+	[Always = Read] [Recreate = ResultTextureNew] [RecreateFlags = UnorderedAccess]
 	Texture ResultTexture;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8G8_UNORM] Texture SMAA_edges;

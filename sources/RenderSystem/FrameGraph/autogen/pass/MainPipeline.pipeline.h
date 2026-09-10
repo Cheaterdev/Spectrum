@@ -799,7 +799,7 @@ public:
 		{ true, { ResultTexture_c0_pass_refs + 4, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 5, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 6, 1 } },
-		{ true, { ResultTexture_c0_pass_refs + 7, 1 } },
+		{ false, { ResultTexture_c0_pass_refs + 7, 1 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HalfDepth_c0_pass_refs[] = {
 		{ PassID::GBufferDownsampler, 0 },
@@ -1148,7 +1148,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState ResultTexture_c2_states[] = {
 		{ true, { ResultTexture_c2_pass_refs + 0, 1 } },
-		{ true, { ResultTexture_c2_pass_refs + 1, 1 } },
+		{ false, { ResultTexture_c2_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef FSRTemp_c0_pass_refs[] = {
 		{ PassID::FSR, 0 },
@@ -1162,7 +1162,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState ResultTexture_c3_states[] = {
 		{ true, { ResultTexture_c3_pass_refs + 0, 1 } },
-		{ true, { ResultTexture_c3_pass_refs + 1, 1 } },
+		{ false, { ResultTexture_c3_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef ResultTexture_c4_pass_refs[] = {
 		{ PassID::UpscalingDLSSRR, 0 },

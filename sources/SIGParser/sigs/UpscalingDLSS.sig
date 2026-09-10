@@ -8,9 +8,16 @@
 [Static]
 PassNode UpscalingDLSS
 {
-	Texture GBuffer_Depth;
-	Texture GBuffer_Speed;
+	# ExclusiveRead: this pass transitions these to PRESENT/COMMON for
+	# Streamline, which must not be folded into the shared SRV read-window
+	# every other pass uses for them.
+	[Always = Read | ExclusiveRead] Texture GBuffer_Depth;
+	[Always = Read | ExclusiveRead] Texture GBuffer_Speed;
 
-	[Write] [Recreate = ResultTextureNew]
+	# MipCount=0: full auto mip chain, matching the original manual recreate()
+	# call's omitted 4th Desc field (value-initializes to 0, not the more
+	# common single-mip 1 -- see FrameGraph.cpp's mip_count==0 auto-chain path).
+	[Always = Read] [Recreate = ResultTextureNew] [RecreateFlags = UnorderedAccess]
+	[Size = ViewportContext::upscale_size] [Format = R16G16B16A16_FLOAT] [MipCount = 0]
 	Texture ResultTexture;
 }

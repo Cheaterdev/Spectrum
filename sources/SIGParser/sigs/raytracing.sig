@@ -299,10 +299,15 @@ RaytracePass ColorShadowPass
 
 [Static]
 [Compute]
+# TriState: ShadowMask is create()'d unconditionally, regardless of RTX
+# support, matching the pre-existing behavior (render() only actually
+# writes it under RTX; other passes already guard on builder.exists()
+# before reading it). NeedsRender only when RTX is actually supported.
+[TriState]
 PassNode RTXShadow
 {
 	GBuffer gbuffer;
-	[Write] Texture ShadowMask;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ShadowMask;
 	[Write] ByteAdressBuffer WorkGraphBuffer;
 }
 
@@ -336,5 +341,5 @@ PassNode RTXColorPass
 	[Always = Read] StructuredBuffer<uint> scene;
 	# Force the sky chain to run so FrameInfo.GetSky() is populated for the miss shader.
 	[Always = Read] TextureCube sky_cubemap_filtered;
-	[Write] Texture ColorOutput;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ColorOutput;
 }

@@ -34,14 +34,6 @@ bool PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 	// a no-op once already sized for this resolution.
 	nvidia::NRD::get().ensure_pools(RenderSystem::get().device(), sz);
 
-	builder.create(data.RTXIndirectDenoised,
-		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
-	builder.create(data.RTXReflectionDenoised,
-		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
-	// Debug-view-only unpacked preview (see nrd_sig_test.sig's
-	// NRD_UnpackDebugParams comment) -- not read by RTXCombine.
-	builder.create(data.RTXIndirectDenoisedPreview,
-		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	return true;
 }
 

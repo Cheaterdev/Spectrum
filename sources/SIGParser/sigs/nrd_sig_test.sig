@@ -827,11 +827,11 @@ PassNode NRD_GBufferPack
 	Texture VoxelIndirectNoiseRaw;
 	Texture VoxelReflectionNoiseRaw;
 
-	[Write] Texture NRD_ViewZ;
-	[Write] Texture NRD_NormalRoughness;
-	[Write] Texture NRD_Mv;
-	[Write] Texture NRD_DiffuseRadianceHitDist;
-	[Write] Texture NRD_SpecularRadianceHitDist;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R32_FLOAT] Texture NRD_ViewZ;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture NRD_NormalRoughness;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture NRD_Mv;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture NRD_DiffuseRadianceHitDist;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture NRD_SpecularRadianceHitDist;
 }
 
 # Debug-only: unpacks RTXIndirectDenoised's raw REBLUR encoding (YCoCg +
@@ -871,9 +871,9 @@ PassNode NRD_REBLUR_Execute
 	[Always = Read] Texture NRD_DiffuseRadianceHitDist;
 	[Always = Read] Texture NRD_SpecularRadianceHitDist;
 
-	[Write] Texture RTXIndirectDenoised;
-	[Write] Texture RTXIndirectDenoisedPreview;
-	[Write] Texture RTXReflectionDenoised;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXIndirectDenoised;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXIndirectDenoisedPreview;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionDenoised;
 }
 
 # The FSR/DLSS-side equivalent of the indirect term RTXCombine computes for

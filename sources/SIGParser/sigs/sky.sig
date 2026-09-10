@@ -102,11 +102,14 @@ PassNode Sky
 [Compute]
 PassNode CubeSky
 {
-	# Not [Always]: setup() calls data.sky_cubemap.changed() right after
-	# create()'ing it -- that mutator must run after the resource actually
-	# exists, but create_always() only runs after the whole setup_func
-	# returns, so this stays a manual create().
-	[Write] TextureCube sky_cubemap;
+	# create_always() runs every frame this pass is enabled, regardless of
+	# whether the sun actually moved (SetupResult::IgnoreRender vs
+	# NeedsRender) -- Static means the underlying allocation only happens
+	# once. The .changed() mutator moved to render(), which only runs on
+	# NeedsRender frames, after create_always() has already linked the
+	# handle -- see Sky.cpp's CubeSky setup/render split.
+	[Always = UnorderedAccess | Static] [Size = 256] [Format = R11G11B10_FLOAT] [MipCount = 0]
+	TextureCube sky_cubemap;
 }
 
 

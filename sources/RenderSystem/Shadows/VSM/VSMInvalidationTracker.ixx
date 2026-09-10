@@ -1,6 +1,7 @@
 export module Graphics:VSMInvalidationTracker;
 
 import Core;
+import HAL;
 import :Scene;
 
 export
@@ -18,10 +19,11 @@ export
 	class VSMInvalidationTracker : public Events::prop_handler
 	{
 		std::mutex m;
-		// Must cover VSM::MaxLevels (Phase 5.7: 26, one unified ladder --
-		// any storage slot can become active depending on the current
-		// [active_min, active_max] window, not just a fixed "regular" range).
-		static constexpr int MaxLevels = 26;
+		// Must cover VSM::MaxLevels (one unified ladder -- any storage slot
+		// can become active depending on the current [active_min, active_max]
+		// window, not just a fixed "regular" range). Shared with VSM.ixx's
+		// own MaxLevels via vsm.sig's const_definition, so the two can't drift.
+		static constexpr int MaxLevels = Constants::MaxLevels;
 		std::array<uint32_t, MaxLevels> dirty_masks{};
 
 	public:

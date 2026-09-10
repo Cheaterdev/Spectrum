@@ -19,45 +19,45 @@ public:
     T__26 = 27, T__27 = 28, T__28 = 29, T__29 = 30, T__30 = 31, T__31 = 32, 
     T__32 = 33, T__33 = 34, T__34 = 35, T__35 = 36, T__36 = 37, T__37 = 38, 
     T__38 = 39, T__39 = 40, T__40 = 41, T__41 = 42, T__42 = 43, T__43 = 44, 
-    OR = 45, AND = 46, PIPE = 47, EQ = 48, NEQ = 49, GT = 50, LT = 51, GTEQ = 52, 
-    LTEQ = 53, PLUS = 54, MINUS = 55, DIV = 56, MOD = 57, POW = 58, NOT = 59, 
-    SCOL = 60, ASSIGN = 61, OPAR = 62, CPAR = 63, OBRACE = 64, CBRACE = 65, 
-    OSBRACE = 66, CSBRACE = 67, TRUE = 68, FALSE = 69, LOG = 70, LAYOUT = 71, 
-    STRUCT = 72, COMPUTE_PSO = 73, GRAPHICS_PSO = 74, RAYTRACE_PSO = 75, 
-    WORKGRAPH_PSO = 76, NODE = 77, NODE_OUTPUT = 78, RAYTRACE_RAYGEN = 79, 
-    RAYTRACE_PASS = 80, PASS = 81, VIEW = 82, PIPELINE = 83, SLOT = 84, 
-    RT = 85, RTV = 86, DSV = 87, ROOTSIG = 88, ENUM = 89, ID = 90, INT_SCALAR = 91, 
-    FLOAT_SCALAR = 92, STRING = 93, COMMENT = 94, SPACE = 95, POINTER = 96, 
-    INSERT_START = 97, INSERT_END = 98, INSERT_BLOCK = 99
+    T__44 = 45, OR = 46, AND = 47, PIPE = 48, EQ = 49, NEQ = 50, GT = 51, 
+    LT = 52, GTEQ = 53, LTEQ = 54, PLUS = 55, MINUS = 56, DIV = 57, MOD = 58, 
+    POW = 59, NOT = 60, SCOL = 61, ASSIGN = 62, OPAR = 63, CPAR = 64, OBRACE = 65, 
+    CBRACE = 66, OSBRACE = 67, CSBRACE = 68, TRUE = 69, FALSE = 70, LOG = 71, 
+    LAYOUT = 72, STRUCT = 73, COMPUTE_PSO = 74, GRAPHICS_PSO = 75, RAYTRACE_PSO = 76, 
+    WORKGRAPH_PSO = 77, NODE = 78, NODE_OUTPUT = 79, RAYTRACE_RAYGEN = 80, 
+    RAYTRACE_PASS = 81, PASS = 82, VIEW = 83, PIPELINE = 84, SLOT = 85, 
+    RT = 86, RTV = 87, DSV = 88, ROOTSIG = 89, ENUM = 90, ID = 91, INT_SCALAR = 92, 
+    FLOAT_SCALAR = 93, STRING = 94, RAWEXPR = 95, COMMENT = 96, SPACE = 97, 
+    POINTER = 98, INSERT_START = 99, INSERT_END = 100, INSERT_BLOCK = 101
   };
 
   enum {
-    RuleParse = 0, RuleBind_option = 1, RuleFlag_value_holder = 2, RuleOptions_assign = 3, 
-    RuleOption = 4, RuleOption_block = 5, RuleArray_count_id = 6, RuleArray = 7, 
-    RuleValue_declaration = 8, RuleSlot_declaration = 9, RuleSampler_declaration = 10, 
-    RuleDefine_declaration = 11, RuleRtv_formats_declaration = 12, RuleBlends_declaration = 13, 
-    RulePointer = 14, RulePso_param = 15, RuleClass_no_template = 16, RuleType_with_template = 17, 
-    RuleInherit_id = 18, RuleName_id = 19, RuleOption_id = 20, RuleOwner_id = 21, 
-    RuleTemplate_id = 22, RuleFunction_id = 23, RuleValue_id = 24, RuleValue_id_ignore = 25, 
-    RuleType_id = 26, RuleInsert_block = 27, RulePath_id = 28, RuleInherit = 29, 
-    RuleLayout_stat = 30, RuleLayout_block = 31, RuleLayout_definition = 32, 
-    RuleTable_stat = 33, RuleTable_block = 34, RuleTable_definition = 35, 
-    RuleRt_color_declaration = 36, RuleRt_ds_declaration = 37, RuleRt_stat = 38, 
-    RuleRt_block = 39, RuleRt_definition = 40, RuleArray_value_holder = 41, 
-    RuleArray_value_ids = 42, RuleRoot_sig = 43, RuleShader = 44, RuleCompute_pso_stat = 45, 
-    RuleCompute_pso_block = 46, RuleCompute_pso_definition = 47, RuleGraphics_pso_stat = 48, 
-    RuleGraphics_pso_block = 49, RuleGraphics_pso_definition = 50, RuleRtx_pso_stat = 51, 
-    RuleRtx_pso_block = 52, RuleRtx_pso_definition = 53, RuleNode_param_id = 54, 
-    RuleNode_param = 55, RuleNode_output_decl = 56, RuleNode_stat = 57, 
-    RuleNode_block = 58, RuleNode_definition = 59, RuleWorkgraph_pso_stat = 60, 
-    RuleWorkgraph_pso_block = 61, RuleWorkgraph_pso_definition = 62, RuleRtx_pass_stat = 63, 
-    RuleRtx_pass_block = 64, RuleRtx_pass_definition = 65, RuleRtx_raygen_stat = 66, 
-    RuleRtx_raygen_block = 67, RuleRtx_raygen_definition = 68, RuleView_declaration = 69, 
-    RuleView_stat = 70, RuleView_block = 71, RuleView_definition = 72, RulePass_definition = 73, 
-    RulePipeline_stat = 74, RulePipeline_block = 75, RulePipeline_definition = 76, 
-    RuleEnum_value_declaration = 77, RuleEnum_stat = 78, RuleEnum_block = 79, 
-    RuleEnum_definition = 80, RuleShader_type = 81, RulePso_param_id = 82, 
-    RuleBool_type = 83
+    RuleParse = 0, RuleConst_definition = 1, RuleBind_option = 2, RuleFlag_value_holder = 3, 
+    RuleRaw_value = 4, RuleOptions_assign = 5, RuleOption = 6, RuleOption_block = 7, 
+    RuleArray_count_id = 8, RuleArray = 9, RuleValue_declaration = 10, RuleSlot_declaration = 11, 
+    RuleSampler_declaration = 12, RuleDefine_declaration = 13, RuleRtv_formats_declaration = 14, 
+    RuleBlends_declaration = 15, RulePointer = 16, RulePso_param = 17, RuleClass_no_template = 18, 
+    RuleType_with_template = 19, RuleInherit_id = 20, RuleName_id = 21, 
+    RuleOption_id = 22, RuleOwner_id = 23, RuleTemplate_id = 24, RuleFunction_id = 25, 
+    RuleValue_id = 26, RuleValue_id_ignore = 27, RuleType_id = 28, RuleInsert_block = 29, 
+    RulePath_id = 30, RuleInherit = 31, RuleLayout_stat = 32, RuleLayout_block = 33, 
+    RuleLayout_definition = 34, RuleTable_stat = 35, RuleTable_block = 36, 
+    RuleTable_definition = 37, RuleRt_color_declaration = 38, RuleRt_ds_declaration = 39, 
+    RuleRt_stat = 40, RuleRt_block = 41, RuleRt_definition = 42, RuleArray_value_holder = 43, 
+    RuleArray_value_ids = 44, RuleRoot_sig = 45, RuleShader = 46, RuleCompute_pso_stat = 47, 
+    RuleCompute_pso_block = 48, RuleCompute_pso_definition = 49, RuleGraphics_pso_stat = 50, 
+    RuleGraphics_pso_block = 51, RuleGraphics_pso_definition = 52, RuleRtx_pso_stat = 53, 
+    RuleRtx_pso_block = 54, RuleRtx_pso_definition = 55, RuleNode_param_id = 56, 
+    RuleNode_param = 57, RuleNode_output_decl = 58, RuleNode_stat = 59, 
+    RuleNode_block = 60, RuleNode_definition = 61, RuleWorkgraph_pso_stat = 62, 
+    RuleWorkgraph_pso_block = 63, RuleWorkgraph_pso_definition = 64, RuleRtx_pass_stat = 65, 
+    RuleRtx_pass_block = 66, RuleRtx_pass_definition = 67, RuleRtx_raygen_stat = 68, 
+    RuleRtx_raygen_block = 69, RuleRtx_raygen_definition = 70, RuleView_declaration = 71, 
+    RuleView_stat = 72, RuleView_block = 73, RuleView_definition = 74, RulePass_definition = 75, 
+    RulePipeline_stat = 76, RulePipeline_block = 77, RulePipeline_definition = 78, 
+    RuleEnum_value_declaration = 79, RuleEnum_stat = 80, RuleEnum_block = 81, 
+    RuleEnum_definition = 82, RuleShader_type = 83, RulePso_param_id = 84, 
+    RuleBool_type = 85
   };
 
   explicit SIGParser(antlr4::TokenStream *input);
@@ -78,8 +78,10 @@ public:
 
 
   class ParseContext;
+  class Const_definitionContext;
   class Bind_optionContext;
   class Flag_value_holderContext;
+  class Raw_valueContext;
   class Options_assignContext;
   class OptionContext;
   class Option_blockContext;
@@ -193,6 +195,8 @@ public:
     Pipeline_definitionContext* pipeline_definition(size_t i);
     std::vector<Enum_definitionContext *> enum_definition();
     Enum_definitionContext* enum_definition(size_t i);
+    std::vector<Const_definitionContext *> const_definition();
+    Const_definitionContext* const_definition(size_t i);
     std::vector<antlr4::tree::TerminalNode *> COMMENT();
     antlr4::tree::TerminalNode* COMMENT(size_t i);
 
@@ -205,6 +209,23 @@ public:
 
   ParseContext* parse();
 
+  class  Const_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Const_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Name_idContext *name_id();
+    Options_assignContext *options_assign();
+    antlr4::tree::TerminalNode *SCOL();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Const_definitionContext* const_definition();
+
   class  Bind_optionContext : public antlr4::ParserRuleContext {
   public:
     Bind_optionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
@@ -215,6 +236,7 @@ public:
     Flag_value_holderContext* flag_value_holder(size_t i);
     std::vector<antlr4::tree::TerminalNode *> PIPE();
     antlr4::tree::TerminalNode* PIPE(size_t i);
+    Raw_valueContext *raw_value();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -239,6 +261,21 @@ public:
   };
 
   Flag_value_holderContext* flag_value_holder();
+
+  class  Raw_valueContext : public antlr4::ParserRuleContext {
+  public:
+    Raw_valueContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *RAWEXPR();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Raw_valueContext* raw_value();
 
   class  Options_assignContext : public antlr4::ParserRuleContext {
   public:

@@ -46,6 +46,26 @@ public:
 
 		Handlers::Texture TileRoughnessTiles = ResourceID::TileRoughnessTiles;
 
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.create(data.GBuffer_HalfDepth, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R32_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.GBuffer_HalfNormals, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.TileClassifyHi, { (size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.TileClassifyLow, { (size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.TileClassifyMask, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8_UINT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.TileClassifyTiles, { ivec3(ivec2(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8), Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8)), 0), HAL::Format::R8_UINT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.TileRoughnessHi, { (size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.TileRoughnessLow, { (size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.TileRoughnessTiles, { ivec3(ivec2(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8), Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8)), 0), HAL::Format::R8_UINT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

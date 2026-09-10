@@ -19,11 +19,19 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitConst_definition(SIGParser::Const_definitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitBind_option(SIGParser::Bind_optionContext *ctx) override {
     return visitChildren(ctx);
   }
 
   virtual std::any visitFlag_value_holder(SIGParser::Flag_value_holderContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitRaw_value(SIGParser::Raw_valueContext *ctx) override {
     return visitChildren(ctx);
   }
 

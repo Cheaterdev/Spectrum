@@ -107,6 +107,11 @@ public:
 		setup_map(get_elem<Parsed>().tables);
 	}
 
+	GENERATE(Const_definition)
+	{
+		setup_map(get_elem<Parsed>().consts);
+	}
+
 	GENERATE(Slot_declaration)
 	{
 		setup_map(get_elem<Layout>().slots);
@@ -364,6 +369,14 @@ public:
 		auto& elem = get_elem<have_expr>();
 		elem.expr = ctx->getText();
 		elem.is_literal = ctx->INT_SCALAR() || ctx->FLOAT_SCALAR() || ctx->bool_type();
+	}
+
+	void enterRaw_value(SIGParser::Raw_valueContext* ctx) override
+	{
+		auto& elem = get_elem<have_expr>();
+		std::string text = ctx->getText();
+		elem.expr = text.substr(1, text.size() - 2); // strip the enclosing backticks
+		elem.is_raw = true;
 	}
 
 	void enterPso_param_id(SIGParser::Pso_param_idContext* ctx) override

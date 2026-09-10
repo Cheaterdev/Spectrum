@@ -31,20 +31,6 @@ bool PassDefault<Passes::NRD_GBufferPack>::setup(
 	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-	auto  sz    = frame.frame_size;
-
-	builder.create(data.NRD_ViewZ,
-		{ ivec3(sz, 0), HAL::Format::R32_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
-	builder.create(data.NRD_NormalRoughness,
-		{ ivec3(sz, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, ResourceFlags::UnorderedAccess);
-	builder.create(data.NRD_Mv,
-		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
-	builder.create(data.NRD_DiffuseRadianceHitDist,
-		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
-	builder.create(data.NRD_SpecularRadianceHitDist,
-		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
-
 	// Exactly one need() per channel, matching whichever candidate render()
 	// below actually reads -- see this function's own top comment.
 	if (g_indirect_source == IndirectSource::MyVCT)

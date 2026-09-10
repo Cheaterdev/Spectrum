@@ -31,24 +31,6 @@ bool PassDefault<Passes::UpscalingDLSSRR>::setup(
 	    !nvidia::DLSSRR::get().available() || !RenderSystem::get().device().is_rtx_supported())
 		return false;
 
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-
-	// ResultTexture itself is only needed for the [Recreate]->ResultTextureNew
-	// pairing below -- the actual ColorIn value read in render() comes from
-	// ResultTextureRTXNoise (RTXCombine's output) instead.
-	builder.need(data.ResultTexture,          ResourceFlags::Read);
-	builder.need(data.ResultTextureRTXNoise,  ResourceFlags::Read | ResourceFlags::ExclusiveRead);
-	builder.need(data.GBuffer_Depth,       ResourceFlags::Read | ResourceFlags::ExclusiveRead);
-	builder.need(data.GBuffer_Speed,       ResourceFlags::Read | ResourceFlags::ExclusiveRead);
-	builder.need(data.GBuffer_Albedo,      ResourceFlags::Read | ResourceFlags::ExclusiveRead);
-	builder.need(data.NormalRoughness,     ResourceFlags::Read | ResourceFlags::ExclusiveRead);
-	builder.need(data.SpecularAlbedo,      ResourceFlags::Read | ResourceFlags::ExclusiveRead);
-	builder.need(data.RTXReflectionNoise,  ResourceFlags::Read | ResourceFlags::ExclusiveRead);
-
-	builder.recreate(data.ResultTextureNew,
-		{ uint3(frame.upscale_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
-		ResourceFlags::UnorderedAccess);
-
 	return true;
 }
 

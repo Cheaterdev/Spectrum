@@ -510,7 +510,6 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 		axis_intersect_cam.target = axis_intersect_cam.position + direction;
 		axis_intersect_cam.update();
 
-		builder.create(data.depth_tex,      { { 1,1,0 }, HAL::Format::R32_TYPELESS, 1 }, FrameGraph::ResourceFlags::DepthStencil);
 		return true;
 	};
 
@@ -658,10 +657,6 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	{
 		if (selected.empty())
 			return false;
-		auto& frame = builder.graph->get_context<ViewportInfo>();
-		builder.create(data.Stencil_color_tex,
-			{ ivec3(frame.frame_size, 0), HAL::Format::R8_SNORM, 1, 1 },
-			FrameGraph::ResourceFlags::RenderTarget);
 		return true;
 	};
 

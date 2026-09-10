@@ -45,8 +45,6 @@ PSSM::PSSM()
 
 		scaler = cam->z_far / (exp((float)renders_size));
 
-		builder.create(data.global_depth,  { ivec3(1024, 1024, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil);
-		builder.create(data.global_camera, { 1 },                                                      FrameGraph::ResourceFlags::CopyDest);
 		return true;
 	};
 
@@ -206,8 +204,6 @@ PSSM::PSSM()
 
 	m_mask_setup = [this](Passes::PSSM_GenerateMask::Context& data, FrameGraph::TaskBuilder& builder) -> bool
 	{
-		auto& frame = builder.graph->get_context<ViewportInfo>();
-		builder.create(data.LightMask, { ivec3(frame.frame_size, 0), HAL::Format::R8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
 		GBufferViewDesc::need(builder, data.gbuffer);
 		return true;
 	};

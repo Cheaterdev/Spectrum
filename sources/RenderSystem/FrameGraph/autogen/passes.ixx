@@ -7,6 +7,7 @@
 export module FrameGraph:Passes;
 
 import :Base;
+import :ViewportContext;
 import Core;
 import HAL;
 

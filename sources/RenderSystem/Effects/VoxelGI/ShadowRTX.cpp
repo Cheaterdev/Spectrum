@@ -23,11 +23,6 @@ bool PassDefault<Passes::ShadowRTX>::setup(
 	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-	auto  sz    = frame.frame_size;
-
-	builder.create(data.RTXShadowNoise,
-		{ ivec3(sz, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, ResourceFlags::UnorderedAccess);
 	GBufferViewDesc::need(builder, data.gbuffer);
 	return true;
 }

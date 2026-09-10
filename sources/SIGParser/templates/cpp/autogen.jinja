@@ -20,6 +20,8 @@ import :Enums;
 import :RootSignature;
 import :Types;
 
+export import :Autogen.Constants;
+
 {% for l in parsed.layouts -%}
 export import :Autogen.Layouts.{{l.name}};
 {% endfor -%}

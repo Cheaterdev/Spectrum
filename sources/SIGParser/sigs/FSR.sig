@@ -48,8 +48,12 @@ ComputePSO RCAS
 [Compute]
 PassNode FSR
 {
-	[Write] [Recreate = ResultTextureNew]
+	# MipCount=0: full auto mip chain, matching the original manual recreate()
+	# call's omitted 4th Desc field (value-initializes to 0, not the more
+	# common single-mip 1 -- see FrameGraph.cpp's mip_count==0 auto-chain path).
+	[Always = RenderTarget] [Recreate = ResultTextureNew] [RecreateFlags = UnorderedAccess]
+	[Size = ViewportContext::upscale_size] [Format = R16G16B16A16_FLOAT] [MipCount = 0]
 	Texture ResultTexture;
 
-	[Write] Texture FSRTemp;
+	[Always = UnorderedAccess] [Size = ViewportContext::upscale_size] [Format = R16G16B16A16_FLOAT] Texture FSRTemp;
 }

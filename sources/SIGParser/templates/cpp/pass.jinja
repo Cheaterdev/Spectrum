@@ -41,7 +41,7 @@ public:
 {% endfor -%}
 {%- set always_fields = create_list('always_fields') -%}
 {%- for v in pass.params -%}
-{%- if v.options.Always is defined and v.options.Size is undefined and v.options.Format is undefined -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
+{%- if v.options.Always is defined and v.options.Size is undefined and v.options.Format is undefined and v.options.Recreate is undefined -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
 {%- endfor -%}
 {%- if get_list('always_fields') | length > 0 %}
 		// Resources this pass always needs whenever it runs, generated from
@@ -51,7 +51,7 @@ public:
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 {%- for v in pass.params %}
-{%- if v.options.Always is defined and v.options.Size is undefined and v.options.Format is undefined %}
+{%- if v.options.Always is defined and v.options.Size is undefined and v.options.Format is undefined and v.options.Recreate is undefined %}
 			builder.need(data.{{v.name}}, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- endif %}
 {%- endfor %}
@@ -59,18 +59,24 @@ public:
 {% endif -%}
 {%- set create_fields = create_list('create_fields') -%}
 {%- for v in pass.params -%}
-{%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) -%}{%- do myappend('create_fields', v.name) -%}{%- endif -%}
+{%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) and v.options.Recreate is undefined -%}{%- do myappend('create_fields', v.name) -%}{%- endif -%}
 {%- endfor -%}
-{%- if get_list('create_fields') | length > 0 %}
+{%- set recreate_fields = create_list('recreate_fields') -%}
+{%- for v in pass.params -%}
+{%- if v.options.Always is defined and v.options.Recreate is defined -%}{%- do myappend('recreate_fields', v.name) -%}{%- endif -%}
+{%- endfor -%}
+{%- if get_list('create_fields') | length > 0 or get_list('recreate_fields') | length > 0 %}
 		// Resources this pass always creates with a fixed desc, generated from
 		// each field's own [Size]/[Format] annotation (plus [Always] for the
-		// creation flags). Called by TypedPass::setup() after setup_func
-		// returns true - not a substitute for setup_func's own create() calls
-		// for anything whose Desc depends on runtime state.
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 {%- for v in pass.params %}
-{%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) %}
+{%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) and v.options.Recreate is undefined %}
 {%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
 {%- if v.options.Size.value_atom.is_literal %}
 			builder.create(data.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_flags_expr(pass.name, v.name) }});
@@ -79,6 +85,22 @@ public:
 {%- endif %}
 {%- else %}
 			builder.create(data.{{v.name}}, { {{resolve_size_expr(pass.name, v.name)}} }, {{ resolve_flags_expr(pass.name, v.name) }});
+{%- endif %}
+{%- endif %}
+{%- if v.options.Always is defined and v.options.Recreate is defined %}
+			builder.need(data.{{v.name}}, {{ resolve_flags_expr(pass.name, v.name) }});
+{%- if v.options.Size is defined or v.options.Format is defined %}
+{%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
+{%- if v.options.Size.value_atom.is_literal %}
+			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
+{%- else %}
+			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
+{%- endif %}
+{%- else %}
+			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { {{resolve_size_expr(pass.name, v.name)}} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
+{%- endif %}
+{%- else %}
+			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
 {%- endif %}
 {%- endif %}
 {%- endfor %}

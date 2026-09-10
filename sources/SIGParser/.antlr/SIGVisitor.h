@@ -21,9 +21,13 @@ public:
    */
     virtual std::any visitParse(SIGParser::ParseContext *context) = 0;
 
+    virtual std::any visitConst_definition(SIGParser::Const_definitionContext *context) = 0;
+
     virtual std::any visitBind_option(SIGParser::Bind_optionContext *context) = 0;
 
     virtual std::any visitFlag_value_holder(SIGParser::Flag_value_holderContext *context) = 0;
+
+    virtual std::any visitRaw_value(SIGParser::Raw_valueContext *context) = 0;
 
     virtual std::any visitOptions_assign(SIGParser::Options_assignContext *context) = 0;
 

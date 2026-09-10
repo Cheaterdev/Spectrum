@@ -25,6 +25,20 @@ public:
 
 		Handlers::Texture FSRTemp = ResourceID::FSRTemp;
 
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::RenderTarget);
+			builder.recreate(data.ResultTextureNew, { ivec3(builder.graph->get_context<Table::ViewportContext>().upscale_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.FSRTemp, { ivec3(builder.graph->get_context<Table::ViewportContext>().upscale_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

@@ -23,12 +23,7 @@ bool PassDefault<Passes::RTXCombine>::setup(
 	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
 		return false;
 
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-
 	GBufferViewDesc::need(builder, data.gbuffer);
-	builder.create(data.ResultTextureRTXNoise,
-		{ ivec3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
-		ResourceFlags::UnorderedAccess);
 	return true;
 }
 

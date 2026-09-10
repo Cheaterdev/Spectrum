@@ -11,14 +11,6 @@ using namespace FrameGraph;
 using namespace HAL;
 
 
-namespace
-{
-	constexpr uint32_t DivRoundUp(uint32_t a, uint32_t b)
-	{
-		return (a + b - 1) / b;
-	}
-}
-
 constexpr uint32_t k_tileSizeX = 8;
 constexpr uint32_t k_tileSizeY = 4;
 
@@ -34,17 +26,11 @@ void ShadowDenoiser::generate(Graph& graph)
 
 	auto& frame = graph.get_context<ViewportInfo>();
 	auto size = frame.frame_size;
-	uint32_t const xTiles = DivRoundUp(size.x, k_tileSizeX);
-	uint32_t const yTiles = DivRoundUp(size.y, k_tileSizeY);
-
-	uint32_t const tileCount = xTiles * yTiles;
 
 	//size/=2;
 
 	{
-		graph.add_library_pass<Passes::ShadowDenoiser_Prepare>([this, &graph, tileCount](auto& data, TaskBuilder& builder) {
-			builder.create(data.ShadowDenoiser_TileBuffer, { tileCount }, ResourceFlags::UnorderedAccess);
-
+		graph.add_library_pass<Passes::ShadowDenoiser_Prepare>([this, &graph](auto& data, TaskBuilder& builder) {
 			return true;
 			}, [this, &graph, size](auto& data, FrameContext& _context) {
 				auto& list = *_context.get_list();
@@ -66,13 +52,7 @@ void ShadowDenoiser::generate(Graph& graph)
 
 
 	{
-		graph.add_library_pass<Passes::ShadowDenoiser_TileClassification>([this, &graph, tileCount, size](auto& data, TaskBuilder& builder) {
-			builder.create(data.ShadowDenoiser_TileMetaBuffer, { tileCount }, ResourceFlags::UnorderedAccess);
-			builder.create(data.ShadowDenoiser_Moments, { ivec3(size, 0), HAL::Format::R11G11B10_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess);
-			builder.create(data.ShadowDenoiser_MomentsPrev, { ivec3(size, 0), HAL::Format::R11G11B10_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-			builder.create(data.ShadowDenoiser_Scratch, { ivec3(size, 0), HAL::Format::R16G16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-			builder.create(data.ShadowDenoiser_Scratch2, { ivec3(size, 0), HAL::Format::R16G16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess );
-
+		graph.add_library_pass<Passes::ShadowDenoiser_TileClassification>([this, &graph](auto& data, TaskBuilder& builder) {
 			return true;
 			}, [this, &graph, size](auto& data, FrameContext& _context) {
 				auto& list = *_context.get_list();
@@ -134,7 +114,7 @@ void ShadowDenoiser::generate(Graph& graph)
 			}/*, PassFlags::Compute*/);
 	}
 	{
-		graph.add_library_pass<Passes::ShadowDenoiser_Filter>([this, &graph, tileCount, size](auto& data, TaskBuilder& builder) {
+		graph.add_library_pass<Passes::ShadowDenoiser_Filter>([this, &graph](auto& data, TaskBuilder& builder) {
 			return true;
 			}, [this, &graph,size](auto& data, FrameContext& _context) {
 				auto& list = *_context.get_list();

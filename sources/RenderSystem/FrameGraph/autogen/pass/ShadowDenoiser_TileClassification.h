@@ -61,6 +61,22 @@ public:
 			builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::Read);
 			builder.need(data.GBuffer_Speed, FrameGraph::ResourceFlags::Read);
 		}
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.create(data.ShadowDenoiser_TileMetaBuffer, { (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 7) / 8) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 3) / 4)) }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.ShadowDenoiser_Moments, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R11G11B10_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.ShadowDenoiser_MomentsPrev, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R11G11B10_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+			builder.create(data.ShadowDenoiser_Scratch, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+			builder.create(data.ShadowDenoiser_Scratch2, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
@@ -70,11 +86,11 @@ public:
 			{ ResourceID::GBuffer_Depth, false },
 			{ ResourceID::GBuffer_Normals, false },
 			{ ResourceID::GBuffer_Speed, false },
-			{ ResourceID::ShadowDenoiser_TileMetaBuffer, false },
-			{ ResourceID::ShadowDenoiser_Moments, false },
-			{ ResourceID::ShadowDenoiser_MomentsPrev, false },
-			{ ResourceID::ShadowDenoiser_Scratch, false },
-			{ ResourceID::ShadowDenoiser_Scratch2, false },
+			{ ResourceID::ShadowDenoiser_TileMetaBuffer, true },
+			{ ResourceID::ShadowDenoiser_Moments, true },
+			{ ResourceID::ShadowDenoiser_MomentsPrev, true },
+			{ ResourceID::ShadowDenoiser_Scratch, true },
+			{ ResourceID::ShadowDenoiser_Scratch2, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

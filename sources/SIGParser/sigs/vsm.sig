@@ -11,6 +11,18 @@
 # VSM_Combine, which is fully independent from PSSM_Combine. PSSM is left
 # untouched.
 
+# Fixed clipmap-level storage budget, shared between C++ (VSM.ixx,
+# VSMInvalidationTracker.ixx -- both used to hand-declare their own copy of
+# this same number) and the FrameGraph resource sizing below (VSM_DispatchCommands),
+# via the generated Constants:: namespace (see SIG.g4's const_definition /
+# constants.jinja) -- one source of truth instead of three.
+const MaxLevels = 26;
+# Upper bound on per-frame (active level x scene mesh) indirect draw entries
+# -- generous, not a measured real number. If a scene's mesh count x active
+# level count ever exceeds this, entries are clamped and logged once per
+# episode rather than overflowing the buffer.
+const MaxDispatchEntries = `Constants::MaxLevels * 2048`;
+
 # One mutually-exclusive debug-view selector, replacing three separate
 # int flags (debug_page_grid/debug_rtx_reference/debug_hiz_classify) that
 # were always meant to be single-select in the first place -- every
@@ -778,7 +790,7 @@ ComputePSO VSMGatherDispatchMaterial
 [Compute]
 PassNode VSM_GatherDispatch
 {
-	[Write] StructuredBuffer<VSMLevelDispatchInfo> VSM_LevelDispatchInfo;
+	[Always = CopyDest | Static] [Size = 26] StructuredBuffer<VSMLevelDispatchInfo> VSM_LevelDispatchInfo;
 	# AppendStructuredBuffer here (not just in VSMGatherDispatchData below) is
 	# not supported by FrameGraph's PassNode codegen -- FrameGraph::Handlers
 	# only implements the resource-tracking wrapper for plain
@@ -787,7 +799,12 @@ PassNode VSM_GatherDispatch
 	# already carries both .structuredBuffer and .appendStructuredBuffer
 	# sub-views regardless of which one the FrameGraph field declares --
 	# VSM_GatherDispatch's render() uses ->appendStructuredBuffer directly.
-	[Write] StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
+	# GPU-appended (Phase 5.12), not CPU-uploaded -- UnorderedAccess, not
+	# CopyDest. `true` = counted: clear_counter() and exec_indirect()'s
+	# GPU-computed count both read the real counter an AppendStructuredBuffer
+	# needs.
+	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::MaxDispatchEntries, true`]
+	StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
 }
 
 # Single pass, not [Multiple=N]: VSM_GatherDispatch already decided exactly
@@ -865,9 +882,16 @@ PassNode VSM_BlockerClassify
 	[Always = Read] Texture VSM_PageTable;
 	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
 	[Always = Read] Texture VSM_PageHiZ;
-	[Write] StructuredBuffer<uint2> VSM_LitTiles;
-	[Write] StructuredBuffer<uint2> VSM_DarkTiles;
-	[Write] StructuredBuffer<uint2> VSM_SearchTiles;
+	# Worst case: every screen tile lands in one bucket -- same "count tiles
+	# directly, don't scale by a sub-group factor" sizing FrameClassification
+	# uses, just with VSM's own 16x16 tile size instead of VoxelGI's 32x32.
+	# `true` = counted (AppendStructuredBuffer, needs a real GPU counter).
+	[Always = UnorderedAccess] [Size = `2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true`]
+	StructuredBuffer<uint2> VSM_LitTiles;
+	[Always = UnorderedAccess] [Size = `2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true`]
+	StructuredBuffer<uint2> VSM_DarkTiles;
+	[Always = UnorderedAccess] [Size = `2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true`]
+	StructuredBuffer<uint2> VSM_SearchTiles;
 }
 
 # Stage 2: INDIRECT dispatch over VSM_SearchTiles only -- the tiles stage 1
@@ -902,7 +926,7 @@ PassNode VSM_BlockerSearch
 	# args (like all five lists') are a VSM-owned buffer now, not a
 	# FrameGraph field -- see VSM.ixx's own comment.
 	[Always = Read] StructuredBuffer<uint2> VSM_SearchTiles;
-	[Write] Texture VSM_BlockerSearchResult;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R32G32B32A32_UINT] Texture VSM_BlockerSearchResult;
 	# Stage 2's own post-search verdict lists -- see VSMSearchVerdictAppend's
 	# own comment. VSM_ConfirmedLitTiles feeds a second full-lit dispatch in
 	# stage 3; VSM_BlurTiles replaces VSM_SearchTiles as what stage 3's
@@ -910,11 +934,14 @@ PassNode VSM_BlockerSearch
 	# (and VSM_SearchTiles' own, this pass's own indirect dispatch source)
 	# are VSM-owned buffers now, not FrameGraph fields -- see
 	# VSM_BlockerClassify's own comment for why.
-	[Write] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
-	[Write] StructuredBuffer<uint2> VSM_BlurTiles;
+	[Always = UnorderedAccess] [Size = `(size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true`]
+	StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
+	[Always = UnorderedAccess] [Size = `(size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true`]
+	StructuredBuffer<uint2> VSM_BlurTiles;
 	# See VSMSearchVerdictAppend's own comment -- cleared then written here,
 	# read by VSM_ScreenSpaceShadow.
-	[Write] Texture VSM_AmbiguousMask;
+	[Always = UnorderedAccess] [Size = `ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)`] [Format = R8_UNORM]
+	Texture VSM_AmbiguousMask;
 }
 
 # Screen-space contact-shadow patch, between stage 2 and stage 3. A
@@ -976,7 +1003,7 @@ PassNode VSM_ScreenSpaceShadow
 {
 	GBuffer gbuffer;
 	[Always = Read] Texture VSM_AmbiguousMask;
-	[Write] Texture VSM_ContactShadow;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8_UNORM] Texture VSM_ContactShadow;
 }
 
 # Stage 3: three PSOs (VSMFullLit/VSMFullShadow/VSMShadowBlur), ONE
@@ -1147,5 +1174,5 @@ ComputePSO VSMDepthAnalysis
 PassNode VSM_DepthAnalysis
 {
 	GBuffer gbuffer;
-	[Write] StructuredBuffer<uint> VSM_DepthAnalysisResult;
+	[Always = UnorderedAccess | Static] [Size = 1] StructuredBuffer<uint> VSM_DepthAnalysisResult;
 }

@@ -33,20 +33,6 @@ bool PassDefault<Passes::UpscalingDLSS>::setup(
 	if (!g_upscaling_enabled || g_upscaler_type != UpscalerType::DLSS || !nvidia::DLSS::get().available())
 		return false;
 
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-
-	builder.need(data.ResultTexture, ResourceFlags::Read);
-
-	// ExclusiveRead: this pass transitions these to PRESENT/COMMON for
-	// Streamline (see DLSS::upscale), which must not be folded into the
-	// shared SRV read-window every other pass uses for them.
-	builder.need(data.GBuffer_Depth, ResourceFlags::Read | ResourceFlags::ExclusiveRead);
-	builder.need(data.GBuffer_Speed, ResourceFlags::Read | ResourceFlags::ExclusiveRead);
-
-	builder.recreate(data.ResultTextureNew,
-		{ uint3(frame.upscale_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
-		ResourceFlags::UnorderedAccess);
-
 	return true;
 }
 

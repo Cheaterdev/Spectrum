@@ -26,14 +26,6 @@ bool PassDefault<Passes::FSR>::setup(Passes::FSR::Context& data, TaskBuilder& bu
 	    (g_upscaler_type != UpscalerType::FSR && upscaler_is_available(g_upscaler_type)))
 		return false;
 
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-	builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-	builder.recreate(data.ResultTextureNew,
-		{ uint3(frame.upscale_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
-		ResourceFlags::UnorderedAccess);
-	builder.create(data.FSRTemp,
-		{ uint3(frame.upscale_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
-		ResourceFlags::UnorderedAccess);
 	return true;
 }
 

@@ -20,6 +20,8 @@ import :Enums;
 import :RootSignature;
 import :Types;
 
+export import :Autogen.Constants;
+
 export import :Autogen.Layouts.FrameLayout;
 export import :Autogen.Layouts.DefaultLayout;
 export import :Autogen.Layouts.NoneLayout;

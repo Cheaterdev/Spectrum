@@ -30,9 +30,11 @@ public:
 
 		// Resources this pass always creates with a fixed desc, generated from
 		// each field's own [Size]/[Format] annotation (plus [Always] for the
-		// creation flags). Called by TypedPass::setup() after setup_func
-		// returns true - not a substitute for setup_func's own create() calls
-		// for anything whose Desc depends on runtime state.
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one).
+		// Called by TypedPass::setup() after setup_func returns true - not a
+		// substitute for setup_func's own create()/recreate() calls for
+		// anything whose Desc depends on runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.create(data.sky_cubemap_filtered, { ivec3(64, 64, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
