@@ -183,12 +183,9 @@ PassNode PSSM_GenerateMask
 	# are plain top-level fields.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8_UNORM] Texture LightMask;
 }
 
@@ -203,12 +200,9 @@ PassNode PSSM_Combine
 	[Always = Read] [Optional = `!builder.exists(data.ShadowMask)`] StructuredBuffer<Camera> PSSM_Cameras;
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] [Optional = `!builder.exists(data.ShadowMask)`] Texture LightMask;
 	[Always = Read] [Optional = `builder.exists(data.ShadowMask)`] Texture ShadowMask;
 	[Always = UnorderedAccess] Texture ResultTexture;

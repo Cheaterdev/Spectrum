@@ -80,8 +80,6 @@ public:
 		L"GBuffer_Specular",
 		L"GBuffer_Speed",
 		L"GBuffer_DepthMips",
-		L"GBuffer_Quality",
-		L"GBuffer_DepthPrev",
 		L"GBuffer_HiZ",
 		L"GBuffer_HiZ_UAV",
 		L"global_depth",
@@ -155,13 +153,11 @@ public:
 	};
 	static inline const FrameGraph::PassRef GBuffer_Depth_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
-		{ PassID::PSSM_GenerateMask, 0 },
-		{ PassID::PSSM_Combine, 0 },
 		{ PassID::Sky, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Depth_c0_states[] = {
 		{ true, { GBuffer_Depth_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Depth_c0_pass_refs + 1, 3 } },
+		{ false, { GBuffer_Depth_c0_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
@@ -189,22 +185,6 @@ public:
 	static inline const FrameGraph::PrecompiledState GBuffer_DepthMips_c0_states[] = {
 		{ true, { GBuffer_DepthMips_c0_pass_refs + 0, 1 } },
 		{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 2 } },
-	};
-	static inline const FrameGraph::PassRef GBuffer_Quality_c0_pass_refs[] = {
-		{ PassID::AssetGBuffer, 0 },
-		{ PassID::PSSM_GenerateMask, 0 },
-		{ PassID::PSSM_Combine, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState GBuffer_Quality_c0_states[] = {
-		{ false, { GBuffer_Quality_c0_pass_refs + 0, 3 } },
-	};
-	static inline const FrameGraph::PassRef GBuffer_DepthPrev_c0_pass_refs[] = {
-		{ PassID::AssetGBuffer, 0 },
-		{ PassID::PSSM_GenerateMask, 0 },
-		{ PassID::PSSM_Combine, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState GBuffer_DepthPrev_c0_states[] = {
-		{ false, { GBuffer_DepthPrev_c0_pass_refs + 0, 3 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HiZ_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
@@ -357,8 +337,6 @@ public:
 		{ ResourceID::GBuffer_Specular, 0, GBuffer_Specular_c0_states },
 		{ ResourceID::GBuffer_Speed, 0, GBuffer_Speed_c0_states },
 		{ ResourceID::GBuffer_DepthMips, 0, GBuffer_DepthMips_c0_states },
-		{ ResourceID::GBuffer_Quality, 0, GBuffer_Quality_c0_states },
-		{ ResourceID::GBuffer_DepthPrev, 0, GBuffer_DepthPrev_c0_states },
 		{ ResourceID::GBuffer_HiZ, 0, GBuffer_HiZ_c0_states },
 		{ ResourceID::GBuffer_HiZ_UAV, 0, GBuffer_HiZ_UAV_c0_states },
 		{ ResourceID::global_depth, 0, global_depth_c0_states },

@@ -15,7 +15,7 @@ import HAL;
 
 using namespace FrameGraph;
 
-bool PassDefault<Passes::FSR>::setup(Passes::FSR::Context& data, TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::FSR>::setup(Passes::FSR::Context& data, TaskBuilder& builder)
 {
 	// g_upscaling_enabled: see UpscalingDLSS.cpp's mirrored check. Runs when
 	// explicitly selected, or as the automatic fallback when the selected

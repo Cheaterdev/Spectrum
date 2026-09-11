@@ -455,7 +455,7 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 
 	// ---- Pass function members -----------------------------------------------
 
-	m_before_setup = [this](Passes::stencil_renderer_before::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_before_setup = [this](Passes::stencil_renderer_before::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		process_tasks();
 		debug_scene->update_transforms();
@@ -653,7 +653,7 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 		});
 	};
 
-	m_after_setup = [this](Passes::stencil_renderer_after::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_after_setup = [this](Passes::stencil_renderer_after::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		if (selected.empty())
 			return false;

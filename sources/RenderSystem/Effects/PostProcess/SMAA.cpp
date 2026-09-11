@@ -27,7 +27,7 @@ SMAA::SMAA()
 
 	// ---- Pass function members ------------------------------------------------
 
-	m_smaa_setup = [this](Passes::SMAA::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_smaa_setup = [this](Passes::SMAA::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		// Runs only when upscaling is off entirely (native rendering needs its
 		// own AA) — when it's on, DLSS/FSR each produce ResultTextureNew and

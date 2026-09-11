@@ -327,7 +327,6 @@ PassNode GBufferDownsampler
 	# actually reads it).
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
@@ -373,12 +372,9 @@ PassNode VoxelDebug
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture VoxelDebug;
 	[Always = Read] Texture3D VoxelLighted;
 }
@@ -428,12 +424,9 @@ PassNode ReflectionRTX
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture BlueNoise;
 	[Always = Read] Texture RTXReflectionNoiseHalf;
 	[Always = Read] Texture RTXReflectionDirPdfHalf;
@@ -462,12 +455,9 @@ PassNode ShadowRTX
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXShadowNoise;
 }
@@ -511,12 +501,9 @@ PassNode IndirectRTX
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture BlueNoise;
 	[Always = Read] Texture RTXIndirectNoiseHalf;
 	[Always = Read] Texture TileClassifyTiles;
@@ -537,12 +524,9 @@ PassNode ReflCombine
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = UnorderedAccess] Texture ResultTexture;
 	# NRD REBLUR_SPECULAR's denoised output (NRD_REBLUR_Execute, see
 	# [[project-nrd-integration]]) -- the only reflection denoiser now.
@@ -567,12 +551,9 @@ PassNode RTXCombine
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	# Raw, not REBLUR-denoised -- DLSS-RR does its own reconstruction/
 	# denoising on this exact signal (its ColorIn tag), so feeding it
 	# NRD-denoised data would be a redundant double-denoise. NRD isn't even
@@ -629,12 +610,9 @@ PassNode VoxelScreen
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture3D VoxelLighted;
 	[Always = Read] Texture BlueNoise;
 
@@ -652,12 +630,9 @@ PassNode ScreenReflection
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture3D VoxelLighted;
 	[Always = Read] Texture BlueNoise;
 

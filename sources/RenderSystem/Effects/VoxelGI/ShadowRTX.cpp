@@ -13,7 +13,7 @@ using namespace HAL;
 
 #ifdef HAL_BACKEND_D3D12
 
-bool PassDefault<Passes::ShadowRTX>::setup(
+FrameGraph::SetupResult PassDefault<Passes::ShadowRTX>::setup(
 	Passes::ShadowRTX::Context& data, TaskBuilder& builder)
 {
 	// Feeds RTXCombine, active only when the user has picked DLSS-RR via
@@ -66,7 +66,7 @@ void PassDefault<Passes::ShadowRTX>::render(
 
 #else
 
-bool PassDefault<Passes::ShadowRTX>::setup(Passes::ShadowRTX::Context&, TaskBuilder&) { return false; }
+FrameGraph::SetupResult PassDefault<Passes::ShadowRTX>::setup(Passes::ShadowRTX::Context&, TaskBuilder&) { return false; }
 void PassDefault<Passes::ShadowRTX>::render(Passes::ShadowRTX::Context&, FrameContext&) {}
 
 #endif

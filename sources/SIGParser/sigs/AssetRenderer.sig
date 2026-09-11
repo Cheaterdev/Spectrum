@@ -11,15 +11,15 @@ PassNode AssetGBuffer
 	# comment on why. GBufferViewDesc::actualize() (Context.ixx) is a
 	# template on `auto& context`, so it works unmodified on `data` directly
 	# once these are plain top-level fields, no `.gbuffer` accessor needed.
-	# GBuffer_Quality/GBuffer_DepthPrev exist only because actualize()
-	# (Context.ixx) references them when bound -- both are dereference-
-	# guarded there, and this pass doesn't actually read either back out of
-	# the actualized GBuffer. NOT [Always=Read]: unlike Scene, AssetGBuffer
-	# runs in its own isolated preview-panel graph (AssetRenderer/
-	# SceneTextureRenderer's own FrameGraph::Graph, see AssetRenderer.ixx)
-	# that never runs Scene's history-chain machinery, so GBuffer_DepthPrev
-	# is never actually provisioned there -- auto-need()ing it unconditionally
-	# crashed builder.need()'s own exists() assert the moment this pass ran.
+	# GBuffer_Quality/GBuffer_DepthPrev dropped entirely (not even a bare
+	# placeholder): actualize() (Context.ixx) guards both behind
+	# if constexpr(Has_GBuffer_X<T>), so a Context that never reads either
+	# back out of the actualized GBuffer doesn't need to declare them at
+	# all. AssetGBuffer doesn't -- and DepthPrev specifically could never be
+	# bound here anyway: unlike Scene, AssetGBuffer runs in its own isolated
+	# preview-panel graph (AssetRenderer/SceneTextureRenderer's own
+	# FrameGraph::Graph, see AssetRenderer.ixx) that never runs Scene's
+	# history-chain machinery.
 	# Auto-created (same ViewportContext-driven mechanism as GBuffer_HiZ
 	# below), not hand-written builder.create() calls reading a captured
 	# m_size member -- this reads the real per-frame context directly.
@@ -29,8 +29,6 @@ PassNode AssetGBuffer
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Specular;
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16_FLOAT] Texture GBuffer_Speed;
 	[Always = UnorderedAccess | RenderTarget] [Size = ViewportContext::frame_size] [Format = R32_TYPELESS] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	# Static: occlusion pass 1 tests against LAST frame's HiZ (see SceneSystem).
 	# MipCount=0: full auto mip chain (a Hi-Z pyramid), matching the original
 	# manual create()'s omitted 4th Desc field.

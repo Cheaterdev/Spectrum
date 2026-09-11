@@ -69,7 +69,7 @@ BlueNoise::BlueNoise()
 
 	// ---- Pass function members ------------------------------------------------
 
-	m_bluenoise_setup = [this](Passes::BlueNoise::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_bluenoise_setup = [this](Passes::BlueNoise::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		return true;
 	};

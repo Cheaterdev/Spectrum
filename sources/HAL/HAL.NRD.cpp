@@ -672,33 +672,92 @@ namespace nvidia
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
 
-	// TEMP: force-creates every item-7 PSO once so ComputePipelineState::
-	// on_change()'s slots.empty() assert (HAL.D3D12.PipelineState.cpp) runs
-	// for all 21 kernels, not just Clear (the only one execute()'s dispatch
-	// loop actually issues today) -- see CLAUDE.md, remove once item 7 is
-	// confirmed done.
-	static void force_create_all_psos(HAL::ComputeContext& compute)
+	using DispatchFn = void(*)(nvidia::NRD&, HAL::ComputeContext&, const nrd::DispatchDesc&, const nvidia::NRDFrameInputs&);
+	struct DispatchFnPair { DispatchFn diffuse = nullptr; DispatchFn specular = nullptr; };
+
+	// Resolves dispatch.pipelineIndex -> the dispatch_reblur_* function to
+	// call, once, instead of running the starts_with()/find() chain below
+	// per-dispatch every frame. Safe to cache: idesc.pipelines is a fixed
+	// table for the lifetime of the nrd::Instance (built once in
+	// nrd::CreateInstance(), not regenerated per frame), so pipelineIndex
+	// always names the same shaderIdentifier string for as long as this
+	// Instance lives. is_specular is a separate axis -- NRD reports the SAME
+	// kernel-name prefix for both signals' permutations of a given REBLUR
+	// kernel (see execute()'s own comment on dispatch.identifier) -- hence
+	// the pair instead of one function per pipelineIndex.
+	static std::vector<DispatchFnPair> build_dispatch_table(const nrd::InstanceDesc& idesc)
 	{
-		compute.set_pipeline<PSOS::NRD_Clear_UInt4>();
-		compute.set_pipeline<PSOS::NRD_SIGMA_ClassifyTiles>();
-		compute.set_pipeline<PSOS::NRD_SIGMA_SmoothTiles>();
-		compute.set_pipeline<PSOS::NRD_SIGMA_Copy>();
-		compute.set_pipeline<PSOS::NRD_SIGMA_BlurFirstPass0>();
-		compute.set_pipeline<PSOS::NRD_SIGMA_BlurFirstPass1>();
-		compute.set_pipeline<PSOS::NRD_SIGMA_TemporalStabilization>();
-		compute.set_pipeline<PSOS::NRD_SIGMA_SplitScreen>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_ClassifyTiles>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_HitDistReconstruction>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_HitDistReconstruction5x5>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_PrePass>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_TemporalAccumulation>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_HistoryFix>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_Blur>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_PostBlurTS0>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_PostBlurTS1>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_TemporalStabilization>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_SplitScreen>();
-		compute.set_pipeline<PSOS::NRD_REBLUR_Validation>();
+		std::vector<DispatchFnPair> table(idesc.pipelinesNum);
+
+		for (uint32_t i = 0; i < idesc.pipelinesNum; ++i)
+		{
+			const std::string& identifier = idesc.pipelines[i].shaderIdentifier;
+			DispatchFnPair entry;
+
+			if (identifier == "Clear.cs.hlsl|FLOAT=1")
+			{
+				entry.diffuse = entry.specular = [](nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs&)
+				{
+					dispatch_clear(nrd_hal, compute, dispatch);
+				};
+			}
+			else if (identifier.starts_with("REBLUR_ClassifyTiles.cs.hlsl"))
+			{
+				entry.diffuse = entry.specular = &dispatch_reblur_classifytiles;
+			}
+			else if (identifier.starts_with("REBLUR_HitDistReconstruction.cs.hlsl") && identifier.find("MODE_5X5=1") != std::string::npos)
+			{
+				entry.diffuse  = &dispatch_reblur_hitdistreconstruction<PSOS::NRD_REBLUR_HitDistReconstruction5x5>;
+				entry.specular = &dispatch_reblur_hitdistreconstruction_specular<PSOS::NRD_REBLUR_HitDistReconstruction5x5_Specular>;
+			}
+			else if (identifier.starts_with("REBLUR_HitDistReconstruction.cs.hlsl"))
+			{
+				entry.diffuse  = &dispatch_reblur_hitdistreconstruction<PSOS::NRD_REBLUR_HitDistReconstruction>;
+				entry.specular = &dispatch_reblur_hitdistreconstruction_specular<PSOS::NRD_REBLUR_HitDistReconstruction_Specular>;
+			}
+			else if (identifier.starts_with("REBLUR_PrePass.cs.hlsl"))
+			{
+				entry.diffuse  = &dispatch_reblur_prepass;
+				entry.specular = &dispatch_reblur_prepass_specular;
+			}
+			else if (identifier.starts_with("REBLUR_TemporalAccumulation.cs.hlsl"))
+			{
+				entry.diffuse  = &dispatch_reblur_temporalaccumulation;
+				entry.specular = &dispatch_reblur_temporalaccumulation_specular;
+			}
+			else if (identifier.starts_with("REBLUR_HistoryFix.cs.hlsl"))
+			{
+				entry.diffuse  = &dispatch_reblur_historyfix;
+				entry.specular = &dispatch_reblur_historyfix_specular;
+			}
+			else if (identifier.starts_with("REBLUR_Blur.cs.hlsl"))
+			{
+				entry.diffuse  = &dispatch_reblur_blur;
+				entry.specular = &dispatch_reblur_blur_specular;
+			}
+			else if (identifier.starts_with("REBLUR_PostBlur.cs.hlsl") && identifier.find("TEMPORAL_STABILIZATION=0") != std::string::npos)
+			{
+				entry.diffuse  = &dispatch_reblur_postblur_ts0;
+				entry.specular = &dispatch_reblur_postblur_ts0_specular;
+			}
+			else if (identifier.starts_with("REBLUR_PostBlur.cs.hlsl"))
+			{
+				entry.diffuse  = &dispatch_reblur_postblur_ts1;
+				entry.specular = &dispatch_reblur_postblur_ts1_specular;
+			}
+			else if (identifier.starts_with("REBLUR_TemporalStabilization.cs.hlsl"))
+			{
+				entry.diffuse  = &dispatch_reblur_temporalstabilization;
+				entry.specular = &dispatch_reblur_temporalstabilization_specular;
+			}
+			// else: SIGMA_SHADOW's kernels, and anything else not wired (out of
+			// scope, see [[project-nrd-integration]]) -- entry stays {null,null},
+			// execute() skips those pipelineIndex values.
+
+			table[i] = entry;
+		}
+
+		return table;
 	}
 
 	void NRD::execute(HAL::CommandList& list, const NRDFrameInputs& inputs)
@@ -706,6 +765,12 @@ namespace nvidia
 		if (!resolved || !pools_ready()) return;
 
 		const nrd::InstanceDesc& idesc = *nrd::GetInstanceDesc(*instance);
+
+		// NRD is a Singleton (one nrd::Instance for the process), and
+		// idesc.pipelines never changes after nrd::CreateInstance() -- so
+		// this table is correct to build exactly once and reuse for every
+		// subsequent execute() call/frame.
+		static const std::vector<DispatchFnPair> dispatch_table = build_dispatch_table(idesc);
 
 		nrd::CommonSettings common{};
 		common.resourceSize[0] = common.resourceSizePrev[0] = common.rectSize[0] = common.rectSizePrev[0] = (uint16_t)pools_render_size.x;
@@ -759,88 +824,36 @@ namespace nvidia
 
 		auto& compute = list.get_compute();
 
-		force_create_all_psos(compute);
-
 		uint32_t dispatched = 0;
 		for (uint32_t d = 0; d < dispatches_num; ++d)
 		{
 			const nrd::DispatchDesc& dispatch = dispatches[d];
-			const std::string& identifier = idesc.pipelines[dispatch.pipelineIndex].shaderIdentifier;
 
 			// identifier 1 = REBLUR_DIFFUSE, identifier 2 = REBLUR_SPECULAR
 			// (see the ctor's denoisers[] array) -- NRD reports the SAME
 			// kernel-name prefix for both signals' permutations of a given
 			// REBLUR kernel (the NRD_SIGNAL=DIFF/SPEC marker is a `|`-suffix
-			// on the identifier string, not the prefix these starts_with()
-			// checks match on), so dispatch.identifier is what actually
-			// distinguishes which (differently-shaped, see nrd_sig_test.sig's
-			// per-kernel Specular struct comments) resource list this
-			// dispatch carries.
+			// on the identifier string, not the prefix build_dispatch_table's
+			// starts_with() checks match on), so dispatch.identifier is what
+			// actually distinguishes which (differently-shaped, see
+			// nrd_sig_test.sig's per-kernel Specular struct comments)
+			// resource list this dispatch carries.
 			bool is_specular = dispatch.identifier == 2;
 
-			if (identifier == "Clear.cs.hlsl|FLOAT=1")
-				dispatch_clear(*this, compute, dispatch);
-			else if (identifier.starts_with("REBLUR_ClassifyTiles.cs.hlsl"))
-				dispatch_reblur_classifytiles(*this, compute, dispatch, inputs);
-			else if (identifier.starts_with("REBLUR_HitDistReconstruction.cs.hlsl") && identifier.find("MODE_5X5=1") != std::string::npos)
-			{
-				if (is_specular)
-					dispatch_reblur_hitdistreconstruction_specular<PSOS::NRD_REBLUR_HitDistReconstruction5x5_Specular>(*this, compute, dispatch, inputs);
-				else
-					dispatch_reblur_hitdistreconstruction<PSOS::NRD_REBLUR_HitDistReconstruction5x5>(*this, compute, dispatch, inputs);
-			}
-			else if (identifier.starts_with("REBLUR_HitDistReconstruction.cs.hlsl"))
-			{
-				if (is_specular)
-					dispatch_reblur_hitdistreconstruction_specular<PSOS::NRD_REBLUR_HitDistReconstruction_Specular>(*this, compute, dispatch, inputs);
-				else
-					dispatch_reblur_hitdistreconstruction<PSOS::NRD_REBLUR_HitDistReconstruction>(*this, compute, dispatch, inputs);
-			}
-			else if (identifier.starts_with("REBLUR_PrePass.cs.hlsl"))
-			{
-				if (is_specular) dispatch_reblur_prepass_specular(*this, compute, dispatch, inputs);
-				else              dispatch_reblur_prepass(*this, compute, dispatch, inputs);
-			}
-			else if (identifier.starts_with("REBLUR_TemporalAccumulation.cs.hlsl"))
-			{
-				if (is_specular) dispatch_reblur_temporalaccumulation_specular(*this, compute, dispatch, inputs);
-				else              dispatch_reblur_temporalaccumulation(*this, compute, dispatch, inputs);
-			}
-			else if (identifier.starts_with("REBLUR_HistoryFix.cs.hlsl"))
-			{
-				if (is_specular) dispatch_reblur_historyfix_specular(*this, compute, dispatch, inputs);
-				else              dispatch_reblur_historyfix(*this, compute, dispatch, inputs);
-			}
-			else if (identifier.starts_with("REBLUR_Blur.cs.hlsl"))
-			{
-				if (is_specular) dispatch_reblur_blur_specular(*this, compute, dispatch, inputs);
-				else              dispatch_reblur_blur(*this, compute, dispatch, inputs);
-			}
-			else if (identifier.starts_with("REBLUR_PostBlur.cs.hlsl") && identifier.find("TEMPORAL_STABILIZATION=0") != std::string::npos)
-			{
-				if (is_specular) dispatch_reblur_postblur_ts0_specular(*this, compute, dispatch, inputs);
-				else              dispatch_reblur_postblur_ts0(*this, compute, dispatch, inputs);
-			}
-			else if (identifier.starts_with("REBLUR_PostBlur.cs.hlsl"))
-			{
-				if (is_specular) dispatch_reblur_postblur_ts1_specular(*this, compute, dispatch, inputs);
-				else              dispatch_reblur_postblur_ts1(*this, compute, dispatch, inputs);
-			}
-			else if (identifier.starts_with("REBLUR_TemporalStabilization.cs.hlsl"))
-			{
-				if (is_specular) dispatch_reblur_temporalstabilization_specular(*this, compute, dispatch, inputs);
-				else              dispatch_reblur_temporalstabilization(*this, compute, dispatch, inputs);
-			}
-			else
+			const DispatchFnPair& entry = dispatch_table[dispatch.pipelineIndex];
+			DispatchFn fn = is_specular ? entry.specular : entry.diffuse;
+			if (!fn)
 			{
 				// SIGMA_SHADOW's kernels, and anything else not wired (out of
 				// scope, see [[project-nrd-integration]]) -- skipped, not an
 				// error.
 				continue;
 			}
+
+			fn(*this, compute, dispatch, inputs);
 			++dispatched;
 		}
 
-		Log::get() << "[NRD] execute(): " << dispatched << "/" << dispatches_num << " dispatches issued" << Log::endl;
+		//Log::get() << "[NRD] execute(): " << dispatched << "/" << dispatches_num << " dispatches issued" << Log::endl;
 	}
 }

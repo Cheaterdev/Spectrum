@@ -19,7 +19,7 @@ using namespace HAL;
 // own comment). NRD_GBufferPack (its other input, and now the only place
 // that packs radiance+hitdist for NRD -- see its own comment) uses the same
 // gate.
-bool PassDefault<Passes::NRD_REBLUR_Execute>::setup(
+FrameGraph::SetupResult PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 	Passes::NRD_REBLUR_Execute::Context& data, TaskBuilder& builder)
 {
 	if (g_upscaler_type == UpscalerType::DLSSRR ||

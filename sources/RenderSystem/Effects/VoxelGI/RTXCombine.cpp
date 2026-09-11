@@ -13,7 +13,7 @@ using namespace HAL;
 
 #ifdef HAL_BACKEND_D3D12
 
-bool PassDefault<Passes::RTXCombine>::setup(
+FrameGraph::SetupResult PassDefault<Passes::RTXCombine>::setup(
 	Passes::RTXCombine::Context& data, TaskBuilder& builder)
 {
 	// Same gate as its three producers (ReflectionRTX/IndirectRTX/ShadowRTX)
@@ -55,7 +55,7 @@ void PassDefault<Passes::RTXCombine>::render(
 
 #else
 
-bool PassDefault<Passes::RTXCombine>::setup(Passes::RTXCombine::Context&, TaskBuilder&) { return false; }
+FrameGraph::SetupResult PassDefault<Passes::RTXCombine>::setup(Passes::RTXCombine::Context&, TaskBuilder&) { return false; }
 void PassDefault<Passes::RTXCombine>::render(Passes::RTXCombine::Context&, FrameContext&) {}
 
 #endif

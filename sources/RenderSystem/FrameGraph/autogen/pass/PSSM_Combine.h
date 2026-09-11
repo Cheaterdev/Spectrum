@@ -27,9 +27,6 @@ public:
 		Handlers::Texture GBuffer_Normals = ResourceID::GBuffer_Normals;
 
 
-		Handlers::Texture GBuffer_Depth = ResourceID::GBuffer_Depth;
-
-
 		Handlers::Texture GBuffer_Specular = ResourceID::GBuffer_Specular;
 
 
@@ -37,12 +34,6 @@ public:
 
 
 		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
-
-
-		Handlers::Texture GBuffer_Quality = ResourceID::GBuffer_Quality;
-
-
-		Handlers::Texture GBuffer_DepthPrev = ResourceID::GBuffer_DepthPrev;
 
 
 		Handlers::Texture LightMask = ResourceID::LightMask;
@@ -86,12 +77,9 @@ public:
 			{ ResourceID::PSSM_Cameras, false },
 			{ ResourceID::GBuffer_Albedo, false },
 			{ ResourceID::GBuffer_Normals, false },
-			{ ResourceID::GBuffer_Depth, false },
 			{ ResourceID::GBuffer_Specular, false },
 			{ ResourceID::GBuffer_Speed, false },
 			{ ResourceID::GBuffer_DepthMips, false },
-			{ ResourceID::GBuffer_Quality, false },
-			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::LightMask, false },
 			{ ResourceID::ShadowMask, false },
 			{ ResourceID::ResultTexture, true },

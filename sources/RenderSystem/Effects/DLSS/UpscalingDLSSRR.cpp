@@ -17,7 +17,7 @@ namespace
 	constexpr bool kHDR = true;
 }
 
-bool PassDefault<Passes::UpscalingDLSSRR>::setup(
+FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSSRR>::setup(
 	Passes::UpscalingDLSSRR::Context& data, TaskBuilder& builder)
 {
 	// g_upscaler_type picks which of FSR/DLSS/DLSS-RR runs (see
@@ -84,7 +84,7 @@ void PassDefault<Passes::UpscalingDLSSRR>::render(
 
 #else
 
-bool PassDefault<Passes::UpscalingDLSSRR>::setup(Passes::UpscalingDLSSRR::Context&, TaskBuilder&) { return false; }
+FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSSRR>::setup(Passes::UpscalingDLSSRR::Context&, TaskBuilder&) { return false; }
 void PassDefault<Passes::UpscalingDLSSRR>::render(Passes::UpscalingDLSSRR::Context&, FrameContext&) {}
 
 #endif

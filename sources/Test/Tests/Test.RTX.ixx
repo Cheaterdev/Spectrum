@@ -115,7 +115,7 @@ export namespace Test
 		// Pass 2: primary-ray color pass — no GBuffer, writes to ColorOutput.
 		const ivec2 rtx_size {W, H};
 		graph.add_library_pass<Passes::RTXColorPass>(
-			[](auto& data, FrameGraph::TaskBuilder& builder) -> bool {
+			[](auto& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult {
 				// Depend on PreScene (writes `scene`) so the RTX BVH is ready before tracing.
 				builder.need(data.scene, FrameGraph::ResourceFlags::Read);
 				builder.need(data.ColorOutput, FrameGraph::ResourceFlags::UnorderedAccess);

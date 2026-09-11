@@ -147,6 +147,12 @@ export{
 	};
 
 	template <class T>
+	 concept Has_GBuffer_Depth=	  requires(T& context)
+	 {
+		 context.GBuffer_Depth;
+	 };
+
+	template <class T>
 	 concept Has_GBuffer_DepthPrev=	  requires(T& context)
 	 {
 		 context.GBuffer_DepthPrev;
@@ -200,9 +206,10 @@ export{
 			// compile) and by RTXShadow alone among consumers. Every other
 			// consumer only ever calls actualize()+SetTable(), so declaring
 			// [Always=Read] on these two per-pass would need() a resource the
-			// pass never reads -- conditional like Quality/DepthMips below,
-			// so those passes can simply not declare the field at all.
-			if (context.GBuffer_Depth)     result.depth = *context.GBuffer_Depth;
+			// pass never reads -- conditional (if constexpr, like Quality/
+			// DepthMips below) so those passes don't need to declare the
+			// field at all, not just leave it unbound.
+			if constexpr(Has_GBuffer_Depth<T>)     if (context.GBuffer_Depth)     result.depth = *context.GBuffer_Depth;
 			 if constexpr(Has_GBuffer_DepthPrev<T>) if (context.GBuffer_DepthPrev) result.depth_prev_mips = *context.GBuffer_DepthPrev;
 
 			 if constexpr(Has_GBuffer_Quality<T>) if (context.GBuffer_Quality)	result.quality = *context.GBuffer_Quality;

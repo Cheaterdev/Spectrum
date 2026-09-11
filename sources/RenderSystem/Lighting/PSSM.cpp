@@ -35,7 +35,7 @@ PSSM::PSSM()
 
 	// ---- Global shadow map ---------------------------------------------------
 
-	m_global_setup = [this](Passes::PSSM_Global::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_global_setup = [this](Passes::PSSM_Global::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		auto& sceneinfo = builder.graph->get_context<SceneInfo>();
 		auto& caminfo   = builder.graph->get_context<CameraInfo>();
@@ -109,7 +109,7 @@ PSSM::PSSM()
 
 	for (int i = 0; i < renders_size; i++)
 	{
-		m_cascade_setup[i] = [this, i](Passes::PSSM_Cascade::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+		m_cascade_setup[i] = [this, i](Passes::PSSM_Cascade::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 		{
 			data.cascade_index = i;
 
@@ -199,7 +199,7 @@ PSSM::PSSM()
 
 	// ---- Generate light mask -------------------------------------------------
 
-	m_mask_setup = [this](Passes::PSSM_GenerateMask::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_mask_setup = [this](Passes::PSSM_GenerateMask::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		return true;
 	};
@@ -254,7 +254,7 @@ PSSM::PSSM()
 
 	// ---- Combine lighting ----------------------------------------------------
 
-	m_combine_setup = [this](Passes::PSSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_combine_setup = [this](Passes::PSSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		return true;
 	};

@@ -1742,7 +1742,7 @@ static uint32_t ui_per_thread(uint32_t size)
     return std::max(clamped_per_thread, (size + 7) / 8);
 }
 
-bool PassDefault<Passes::UI_Render>::setup(
+FrameGraph::SetupResult PassDefault<Passes::UI_Render>::setup(
     Passes::UI_Render::Context& data, FrameGraph::TaskBuilder& builder)
 {
     auto& ui_ctx = builder.graph->get_context<GUI::UIContext>();

@@ -37,9 +37,6 @@ public:
 		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
 
 
-		Handlers::Texture GBuffer_Quality = ResourceID::GBuffer_Quality;
-
-
 		Handlers::Texture GBuffer_DepthPrev = ResourceID::GBuffer_DepthPrev;
 
 
@@ -92,7 +89,6 @@ public:
 			{ ResourceID::GBuffer_Specular, false },
 			{ ResourceID::GBuffer_Speed, false },
 			{ ResourceID::GBuffer_DepthMips, false },
-			{ ResourceID::GBuffer_Quality, false },
 			{ ResourceID::GBuffer_DepthPrev, false },
 			{ ResourceID::ShadowMask, true },
 			{ ResourceID::WorkGraphBuffer, true },

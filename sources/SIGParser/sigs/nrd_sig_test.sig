@@ -856,12 +856,9 @@ PassNode NRD_GBufferPack
 	# on `data` directly once these are top-level.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] [Optional = `builder.graph->get_context<Table::IndirectGISelectors>().indirect_source != IndirectSource::MyVCT`]
 	Texture RTXIndirectNoise;
 	[Always = Read] [Optional = `builder.graph->get_context<Table::IndirectGISelectors>().reflection_source != ReflectionSource::MyReflection`]
@@ -948,12 +945,9 @@ PassNode NRD_IndirectCombine
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture RTXIndirectDenoised;
 
 	[Always = UnorderedAccess] Texture ResultTexture;

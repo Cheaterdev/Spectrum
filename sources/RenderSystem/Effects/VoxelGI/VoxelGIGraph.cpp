@@ -201,7 +201,7 @@ void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
 // pipeline (dead: never ran, before or after the compute rewrite). It is
 // fully stateless, so PassDefault<Passes::GBufferDownsampler> + a
 // MainPipeline listing (test.sig) is the right shape, matching IndirectRTX.
-bool PassDefault<Passes::GBufferDownsampler>::setup(
+FrameGraph::SetupResult PassDefault<Passes::GBufferDownsampler>::setup(
 	Passes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder)
 {
 
@@ -355,7 +355,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- Voxelize -------------------------------------------------------
 
-	m_voxelize_setup = [this](Passes::Voxelize::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_voxelize_setup = [this](Passes::Voxelize::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		// Update voxel bounds and info
 		Slots::VoxelInfo& voxel_info = this->scene->voxel_info;
@@ -419,7 +419,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- Lighting -------------------------------------------------------
 
-	m_lighting_setup = [this](Passes::Lighting::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_lighting_setup = [this](Passes::Lighting::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		light_counter = (light_counter + 1) % 5;
 		if (!light_scene) return false;
@@ -523,7 +523,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- Mipmapping -----------------------------------------------------
 
-	m_mipmapping_setup = [this](Passes::Mipmapping::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_mipmapping_setup = [this](Passes::Mipmapping::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		if (!light_scene) return false;
 		return true;
@@ -606,7 +606,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	// this doesn't gate on `reflecton` -- only on DLSS-RR being the user's
 	// selected upscaler (g_upscaler_type) and actually available.
 
-	m_normalroughnessrepack_setup = [this](Passes::NormalRoughnessRepack::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_normalroughnessrepack_setup = [this](Passes::NormalRoughnessRepack::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		if (g_upscaler_type != UpscalerType::DLSSRR || !nvidia::DLSSRR::get().available()) return false;
 
@@ -635,7 +635,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- ReflCombine ----------------------------------------------------
 
-	m_reflcombine_setup = [this](Passes::ReflCombine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_reflcombine_setup = [this](Passes::ReflCombine::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		// RTXCombine (voxel.sig) takes over this job -- reflections plus
 		// indirect GI plus shadow, all three -- whenever the user has picked
@@ -678,7 +678,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- VoxelDebug -----------------------------------------------------
 
-	m_voxeldebug_setup = [this](Passes::VoxelDebug::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_voxeldebug_setup = [this](Passes::VoxelDebug::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		// The only remaining consumer of the 3D voxel-lighting volume (see
 		// [[project-nrd-integration]] -- the old voxel-cone-traced indirect/
@@ -737,7 +737,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- VoxelScreen (voxel-cone-traced indirect GI, NRD source) --------
 
-	m_voxelscreen_setup = [this](Passes::VoxelScreen::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_voxelscreen_setup = [this](Passes::VoxelScreen::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		// Alternative to IndirectRTX as NRD REBLUR_DIFFUSE's input, selected
 		// via g_indirect_source (see [[project-nrd-integration]]). Only runs
@@ -795,7 +795,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- ScreenReflection (voxel-cone-traced reflection, NRD source) ----
 
-	m_screenreflection_setup = [this](Passes::ScreenReflection::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_screenreflection_setup = [this](Passes::ScreenReflection::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		// Alternative to ReflectionRTX as NRD REBLUR_SPECULAR's input,
 		// selected via g_reflection_source (see [[project-nrd-integration]]).

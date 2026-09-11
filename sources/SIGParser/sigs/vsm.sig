@@ -921,12 +921,9 @@ PassNode VSM_BlockerClassify
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture VSM_PageTable;
 	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
 	[Always = Read] Texture VSM_PageHiZ;
@@ -964,12 +961,9 @@ PassNode VSM_BlockerSearch
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture VSM_Atlas;
 	[Always = Read] Texture VSM_PageTable;
 	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
@@ -1062,12 +1056,9 @@ PassNode VSM_ScreenSpaceShadow
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture VSM_AmbiguousMask;
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8_UNORM] Texture VSM_ContactShadow;
 }
@@ -1100,12 +1091,9 @@ PassNode VSM_ShadowResolve
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture VSM_Atlas;
 	[Always = Read] Texture VSM_PageTable;
 	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
@@ -1148,12 +1136,9 @@ PassNode VSM_Combine
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] Texture VSM_Atlas;
 	[Always = Read] Texture VSM_PageTable;
 	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
@@ -1205,12 +1190,9 @@ PassNode VSM_DebugClassifyOverlay
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = Read] StructuredBuffer<uint2> VSM_LitTiles;
 	[Always = Read] StructuredBuffer<uint2> VSM_DarkTiles;
 	[Always = Read] StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
@@ -1276,11 +1258,8 @@ PassNode VSM_DepthAnalysis
 	# comment.
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
-	Texture GBuffer_Depth;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	Texture GBuffer_Quality;
-	Texture GBuffer_DepthPrev;
 	[Always = UnorderedAccess | Static] [Size = 1] StructuredBuffer<uint> VSM_DepthAnalysisResult;
 }

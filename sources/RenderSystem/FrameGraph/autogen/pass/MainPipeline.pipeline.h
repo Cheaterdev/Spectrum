@@ -423,32 +423,14 @@ public:
 	};
 	static inline const FrameGraph::PassRef GBuffer_Depth_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
-		{ PassID::GBufferDownsampler, 0 },
-		{ PassID::ReflectionRTX, 0 },
-		{ PassID::ShadowRTX, 0 },
-		{ PassID::IndirectRTX, 0 },
-		{ PassID::VoxelScreen, 0 },
-		{ PassID::ScreenReflection, 0 },
-		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
-		{ PassID::VSM_DepthAnalysis, 0 },
-		{ PassID::VSM_BlockerClassify, 0 },
-		{ PassID::VSM_BlockerSearch, 0 },
-		{ PassID::VSM_ScreenSpaceShadow, 0 },
-		{ PassID::VSM_ShadowResolve, 0 },
-		{ PassID::VSM_Combine, 0 },
-		{ PassID::VSM_DebugClassifyOverlay, 0 },
-		{ PassID::NRD_IndirectCombine, 0 },
-		{ PassID::ReflCombine, 0 },
-		{ PassID::RTXCombine, 0 },
 		{ PassID::Sky, 0 },
 		{ PassID::UpscalingDLSS, 0 },
 		{ PassID::UpscalingDLSSRR, 0 },
-		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Depth_c0_states[] = {
 		{ true, { GBuffer_Depth_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Depth_c0_pass_refs + 1, 22 } },
+		{ false, { GBuffer_Depth_c0_pass_refs + 1, 4 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -532,28 +514,9 @@ public:
 	};
 	static inline const FrameGraph::PassRef GBuffer_Quality_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
-		{ PassID::ReflectionRTX, 0 },
-		{ PassID::ShadowRTX, 0 },
-		{ PassID::IndirectRTX, 0 },
-		{ PassID::VoxelScreen, 0 },
-		{ PassID::ScreenReflection, 0 },
-		{ PassID::NRD_GBufferPack, 0 },
-		{ PassID::RTXShadow, 0 },
-		{ PassID::VSM_DepthAnalysis, 0 },
-		{ PassID::VSM_BlockerClassify, 0 },
-		{ PassID::VSM_BlockerSearch, 0 },
-		{ PassID::VSM_ScreenSpaceShadow, 0 },
-		{ PassID::VSM_ShadowResolve, 0 },
-		{ PassID::VSM_Combine, 0 },
-		{ PassID::VSM_DebugClassifyOverlay, 0 },
-		{ PassID::NRD_IndirectCombine, 0 },
-		{ PassID::ReflCombine, 0 },
-		{ PassID::RTXCombine, 0 },
-		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Quality_c0_states[] = {
 		{ true, { GBuffer_Quality_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Quality_c0_pass_refs + 1, 18 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_NormalsPrev_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -563,27 +526,10 @@ public:
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthPrev_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
-		{ PassID::ReflectionRTX, 0 },
-		{ PassID::ShadowRTX, 0 },
-		{ PassID::IndirectRTX, 0 },
-		{ PassID::VoxelScreen, 0 },
-		{ PassID::ScreenReflection, 0 },
-		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::RTXShadow, 0 },
-		{ PassID::VSM_DepthAnalysis, 0 },
-		{ PassID::VSM_BlockerClassify, 0 },
-		{ PassID::VSM_BlockerSearch, 0 },
-		{ PassID::VSM_ScreenSpaceShadow, 0 },
-		{ PassID::VSM_ShadowResolve, 0 },
-		{ PassID::VSM_Combine, 0 },
-		{ PassID::VSM_DebugClassifyOverlay, 0 },
-		{ PassID::NRD_IndirectCombine, 0 },
-		{ PassID::ReflCombine, 0 },
-		{ PassID::RTXCombine, 0 },
-		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_DepthPrev_c0_states[] = {
-		{ false, { GBuffer_DepthPrev_c0_pass_refs + 0, 19 } },
+		{ false, { GBuffer_DepthPrev_c0_pass_refs + 0, 2 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_HiZ_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },

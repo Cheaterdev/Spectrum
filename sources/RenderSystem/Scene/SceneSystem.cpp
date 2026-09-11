@@ -9,7 +9,7 @@ import HAL;
 
 using namespace FrameGraph;
 
-bool PassDefault<Passes::Scene>::setup(
+FrameGraph::SetupResult PassDefault<Passes::Scene>::setup(
     Passes::Scene::Context& data, FrameGraph::TaskBuilder& builder)
 {
     // Every GBuffer_* field (including the two *Prev-linked ones) is

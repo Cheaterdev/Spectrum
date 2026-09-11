@@ -12,7 +12,7 @@ using namespace HAL;
 
 #ifdef HAL_BACKEND_D3D12
 
-bool PassDefault<Passes::ReflectionRTXHalf>::setup(
+FrameGraph::SetupResult PassDefault<Passes::ReflectionRTXHalf>::setup(
 	Passes::ReflectionRTXHalf::Context& data, TaskBuilder& builder)
 {
 	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
@@ -53,7 +53,7 @@ void PassDefault<Passes::ReflectionRTXHalf>::render(
 	}
 }
 
-bool PassDefault<Passes::ReflectionRTX>::setup(
+FrameGraph::SetupResult PassDefault<Passes::ReflectionRTX>::setup(
 	Passes::ReflectionRTX::Context& data, TaskBuilder& builder)
 {
 	// Feeds NRD_REBLUR_Execute (REBLUR_SPECULAR, see
@@ -121,10 +121,10 @@ void PassDefault<Passes::ReflectionRTX>::render(
 
 #else
 
-bool PassDefault<Passes::ReflectionRTXHalf>::setup(Passes::ReflectionRTXHalf::Context&, TaskBuilder&) { return false; }
+FrameGraph::SetupResult PassDefault<Passes::ReflectionRTXHalf>::setup(Passes::ReflectionRTXHalf::Context&, TaskBuilder&) { return false; }
 void PassDefault<Passes::ReflectionRTXHalf>::render(Passes::ReflectionRTXHalf::Context&, FrameContext&) {}
 
-bool PassDefault<Passes::ReflectionRTX>::setup(Passes::ReflectionRTX::Context&, TaskBuilder&) { return false; }
+FrameGraph::SetupResult PassDefault<Passes::ReflectionRTX>::setup(Passes::ReflectionRTX::Context&, TaskBuilder&) { return false; }
 void PassDefault<Passes::ReflectionRTX>::render(Passes::ReflectionRTX::Context&, FrameContext&) {}
 
 #endif

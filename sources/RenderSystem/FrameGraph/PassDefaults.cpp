@@ -100,7 +100,7 @@ void PassDefault<Passes::ResultCreation>::render(
 // forward instead of copied. GBuffer_SpecularPrev history was unused and removed.
 // The pass is kept disabled (returns false) until it can be dropped from the .sig.
 
-bool PassDefault<Passes::CopyPrev>::setup(
+FrameGraph::SetupResult PassDefault<Passes::CopyPrev>::setup(
 	Passes::CopyPrev::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return false;
@@ -247,7 +247,7 @@ void PassDefault<Passes::RTXShadow>::render(
 // writes the traced color to ColorOutput. On-demand: only enabled when a
 // consumer (the debug view) needs ColorOutput.
 
-bool PassDefault<Passes::RTXColorPass>::setup(
+FrameGraph::SetupResult PassDefault<Passes::RTXColorPass>::setup(
     Passes::RTXColorPass::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	if (!RenderSystem::get().device().get_properties().rtx)

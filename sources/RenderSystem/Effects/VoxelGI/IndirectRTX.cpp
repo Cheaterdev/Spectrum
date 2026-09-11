@@ -12,7 +12,7 @@ using namespace HAL;
 
 #ifdef HAL_BACKEND_D3D12
 
-bool PassDefault<Passes::IndirectRTXHalf>::setup(
+FrameGraph::SetupResult PassDefault<Passes::IndirectRTXHalf>::setup(
 	Passes::IndirectRTXHalf::Context& data, TaskBuilder& builder)
 {
 	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
@@ -51,7 +51,7 @@ void PassDefault<Passes::IndirectRTXHalf>::render(
 	}
 }
 
-bool PassDefault<Passes::IndirectRTX>::setup(
+FrameGraph::SetupResult PassDefault<Passes::IndirectRTX>::setup(
 	Passes::IndirectRTX::Context& data, TaskBuilder& builder)
 {
 	// Feeds NRD_REBLUR_Execute (REBLUR_DIFFUSE, see
@@ -112,10 +112,10 @@ void PassDefault<Passes::IndirectRTX>::render(
 
 #else
 
-bool PassDefault<Passes::IndirectRTXHalf>::setup(Passes::IndirectRTXHalf::Context&, TaskBuilder&) { return false; }
+FrameGraph::SetupResult PassDefault<Passes::IndirectRTXHalf>::setup(Passes::IndirectRTXHalf::Context&, TaskBuilder&) { return false; }
 void PassDefault<Passes::IndirectRTXHalf>::render(Passes::IndirectRTXHalf::Context&, FrameContext&) {}
 
-bool PassDefault<Passes::IndirectRTX>::setup(Passes::IndirectRTX::Context&, TaskBuilder&) { return false; }
+FrameGraph::SetupResult PassDefault<Passes::IndirectRTX>::setup(Passes::IndirectRTX::Context&, TaskBuilder&) { return false; }
 void PassDefault<Passes::IndirectRTX>::render(Passes::IndirectRTX::Context&, FrameContext&) {}
 
 #endif

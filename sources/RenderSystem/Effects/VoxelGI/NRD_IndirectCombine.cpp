@@ -13,7 +13,7 @@ using namespace HAL;
 // The FSR/DLSS-side equivalent of the indirect term RTXCombine computes for
 // DLSS-RR (see [[project-nrd-integration]]). Runs exactly in the
 // complementary case to RTXCombine (which handles DLSS-RR itself).
-bool PassDefault<Passes::NRD_IndirectCombine>::setup(
+FrameGraph::SetupResult PassDefault<Passes::NRD_IndirectCombine>::setup(
 	Passes::NRD_IndirectCombine::Context& data, TaskBuilder& builder)
 {
 	bool dlssrr_active = g_upscaler_type == UpscalerType::DLSSRR &&

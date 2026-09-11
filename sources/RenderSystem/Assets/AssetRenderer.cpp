@@ -32,7 +32,7 @@ public:
 
     SceneRenderWorkflow() : pipeline(), sky(pipeline), pssm(pipeline)
     {
-        pipeline.assetGBuffer.setup_func = [this](auto& data, TaskBuilder& builder) -> bool
+        pipeline.assetGBuffer.setup_func = [this](auto& data, TaskBuilder& builder) -> FrameGraph::SetupResult
         {
             return true;
         };
@@ -111,7 +111,7 @@ public:
         //	sky.generate(graph);
         //	sky.generate_sky(graph);
 
-        graph.add_library_pass<Passes::AssetMip>([this, &graph](auto& data, TaskBuilder& builder) -> bool {
+        graph.add_library_pass<Passes::AssetMip>([this, &graph](auto& data, TaskBuilder& builder) -> FrameGraph::SetupResult {
             return true;
         }, [](auto& data, FrameContext& _context) {
             MipMapGenerator::get().render_texture_2d_slow(_context.get_list()->get_graphics(), *data.swapchain, *data.ResultTexture);

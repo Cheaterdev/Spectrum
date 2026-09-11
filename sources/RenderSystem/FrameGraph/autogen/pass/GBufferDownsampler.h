@@ -25,9 +25,6 @@ public:
 		Handlers::Texture GBuffer_Normals = ResourceID::GBuffer_Normals;
 
 
-		Handlers::Texture GBuffer_Depth = ResourceID::GBuffer_Depth;
-
-
 		Handlers::Texture GBuffer_Specular = ResourceID::GBuffer_Specular;
 
 
@@ -112,7 +109,6 @@ public:
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
 			{ ResourceID::GBuffer_Albedo, false },
 			{ ResourceID::GBuffer_Normals, false },
-			{ ResourceID::GBuffer_Depth, false },
 			{ ResourceID::GBuffer_Specular, false },
 			{ ResourceID::GBuffer_Speed, false },
 			{ ResourceID::GBuffer_DepthMips, false },

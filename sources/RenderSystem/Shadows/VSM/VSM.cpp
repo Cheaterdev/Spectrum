@@ -563,12 +563,12 @@ VSM::VSM() : VariableContext(L"VSM")
 	// covering every active+dirty level's every mesh, instead of one
 	// Multiple-slot pass per level) ------------------------------------------
 
-	m_gatherdispatch_setup = [this](Passes::VSM_GatherDispatch::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_gatherdispatch_setup = [this](Passes::VSM_GatherDispatch::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		return true;
 	};
 
-	m_renderpages_setup = [this](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_renderpages_setup = [this](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		return true;
 	};
@@ -579,7 +579,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// still owns create() for the cold-start clear, see its own setup()).
 	// VSM_DirtySlots moves here entirely since only this pass's dispatches
 	// consume it now.
-	m_hizrebuild_setup = [this](Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_hizrebuild_setup = [this](Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		return true;
 	};
@@ -1165,7 +1165,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// both in this one render() (an AppendStructuredBuffer's hidden GPU
 	// counter isn't reliably barrier-tracked across a PassNode boundary,
 	// confirmed live earlier this session).
-	m_blockerclassify_setup = [this](Passes::VSM_BlockerClassify::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_blockerclassify_setup = [this](Passes::VSM_BlockerClassify::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		// Same penumbra gate as the other two stages -- there's nothing to
 		// classify/search/resolve without it.
@@ -1287,7 +1287,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// blocker-search result (world_delta/tc/slot, same packed uint4 shape as
 	// before) into its OWN dedicated texture, never a texture VSM_Combine
 	// samples directly.
-	m_blockersearch_setup = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_blockersearch_setup = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		if (!use_vsm_penumbra)
 			return false;
@@ -1403,7 +1403,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// emulation -- this is a handful of plain Dispatch() calls of one PSO,
 	// no classify/compact stage needed since VSM_BlockerSearch already did
 	// the classifying.
-	m_screenspaceshadow_setup = [this](Passes::VSM_ScreenSpaceShadow::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_screenspaceshadow_setup = [this](Passes::VSM_ScreenSpaceShadow::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		if (!use_vsm_penumbra || !use_vsm_contact_shadow)
 			return false;
@@ -1458,7 +1458,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// ONE render() -- see vsm.sig's VSM_ShadowResolve PassNode comment for
 	// why this shape specifically (mirrors VoxelGIGraph's VoxelCombine
 	// issuing its own blur+blur2 exec_indirects together).
-	m_shadowresolve_setup = [this](Passes::VSM_ShadowResolve::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_shadowresolve_setup = [this](Passes::VSM_ShadowResolve::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		if (!use_vsm_penumbra)
 			return false;
@@ -1599,7 +1599,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	// ---- Combine lighting ------------------------------------------------
 
-	m_combine_setup = [this](Passes::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_combine_setup = [this](Passes::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		// Penumbra-on is handled entirely by stage 3 (VSM_ShadowResolve)
 		// writing ResultTexture directly now -- see that PassNode's own
@@ -1691,7 +1691,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// ---- already-shaded ResultTexture; only ever dispatched when the
 	// ---- debug toggle is on.
 
-	m_debugoverlay_setup = [this](Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_debugoverlay_setup = [this](Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 		// Widened from "just HizClassify" now that this pass also owns
 		// PageGrid/RtxReference -- see this PassNode's own comment in
@@ -1832,7 +1832,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	// ---- Depth analysis (feeds active_min's hysteresis, see update_active_window()) --
 
-	m_depth_analysis_setup = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder) -> bool
+	m_depth_analysis_setup = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
 
 		return true;

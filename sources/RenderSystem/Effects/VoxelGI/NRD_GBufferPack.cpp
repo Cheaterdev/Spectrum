@@ -24,7 +24,7 @@ using namespace HAL;
 // there instead, see RTXCombine's own comment), so there's no reason to run
 // this or NRD_REBLUR_Execute (its only real consumer, same gate) while
 // DLSS-RR is selected.
-bool PassDefault<Passes::NRD_GBufferPack>::setup(
+FrameGraph::SetupResult PassDefault<Passes::NRD_GBufferPack>::setup(
 	Passes::NRD_GBufferPack::Context& data, TaskBuilder& builder)
 {
 	if (g_upscaler_type == UpscalerType::DLSSRR ||

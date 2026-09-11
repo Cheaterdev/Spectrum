@@ -10,7 +10,7 @@ import FrameGraph;
 
 using namespace FrameGraph;
 
-bool PassDefault<Passes::PreScene>::setup(
+FrameGraph::SetupResult PassDefault<Passes::PreScene>::setup(
     Passes::PreScene::Context& data, FrameGraph::TaskBuilder& builder)
 {
     if (RenderSystem::get().device().is_rtx_supported())

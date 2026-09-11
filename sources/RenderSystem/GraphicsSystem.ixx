@@ -46,6 +46,8 @@ public:
 
     ~GraphicsSystem() override
     {
+        nvidia::NRD::reset();
+        nvidia::Streamline::reset();
 	    GUI::NinePatch::reset();
     	AssetRenderer::reset();
         Skin::reset();

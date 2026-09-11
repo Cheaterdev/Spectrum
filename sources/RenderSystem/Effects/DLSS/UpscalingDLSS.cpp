@@ -21,7 +21,7 @@ namespace
 	constexpr bool kHDR = true;
 }
 
-bool PassDefault<Passes::UpscalingDLSS>::setup(
+FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSS>::setup(
 	Passes::UpscalingDLSS::Context& data, TaskBuilder& builder)
 {
 	// Exactly one of the producers of ResultTextureNew is active per frame.
@@ -95,7 +95,7 @@ void PassDefault<Passes::UpscalingDLSS>::render(
 
 #else
 
-bool PassDefault<Passes::UpscalingDLSS>::setup(Passes::UpscalingDLSS::Context&, TaskBuilder&) { return false; }
+FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSS>::setup(Passes::UpscalingDLSS::Context&, TaskBuilder&) { return false; }
 void PassDefault<Passes::UpscalingDLSS>::render(Passes::UpscalingDLSS::Context&, FrameContext&) {}
 
 #endif
