@@ -360,6 +360,7 @@ ComputePSO RTXShadowReferenceCompute
 
 [Static]
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported`]
 PassNode RTXColorPass
 {
 	# Read-only dependency on PreScene so the RTX BVH is built/updated before tracing.

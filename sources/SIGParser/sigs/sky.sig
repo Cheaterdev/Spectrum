@@ -1,3 +1,17 @@
+# Mirrors FrameGraphContext.ixx's SkyInfo::sky_changed -- a plain context
+# field CubeSky's setup() writes and CubeMapDownsample/
+# CubeMapEnviromentProcessor's own [RenderCondition] reads, both from the
+# same setup phase, rather than the old resource-level is_changed()/
+# changed() pair (which needed create() and the mutator to run in the same
+# function). Split out as its own Table:: context (instead of just adding
+# a field to SkyInfo) because [RenderCondition]'s generated body lives in
+# autogen/pass_defaults.cpp, which only ever sees SIG-declared Table::
+# contexts, not Graphics-layer structs like SkyInfo.
+struct SkyState
+{
+	bool sky_changed = false;
+}
+
 [Bind = DefaultLayout::Instance0]
 struct SkyData
 {
@@ -105,12 +119,10 @@ PassNode CubeSky
 	# create_always() runs every frame this pass is enabled (SetupResult::
 	# IgnoreRender on an unchanged frame still runs it -- Static means the
 	# underlying allocation only happens once). Safe now that "did the sky
-	# change" is tracked via SkyInfo::sky_changed (a plain context field
-	# CubeSky's setup() writes and CubeMapDownsample/CubeMapEnviromentProcessor
-	# read from their OWN setup(), same phase) rather than the old resource-
-	# level is_changed()/changed() pair, which needed create() and the mutator
-	# to run in the same function -- see SkyInfo's own comment for why that
-	# ordering constraint no longer applies here.
+	# change" is tracked via Table::SkyState::sky_changed (see its own
+	# comment above) rather than the old resource-level is_changed()/
+	# changed() pair, which needed create() and the mutator to run in the
+	# same function.
 	[Always = UnorderedAccess | Static] [Size = 256] [Format = R11G11B10_FLOAT] [MipCount = 0]
 	TextureCube sky_cubemap;
 }
@@ -118,11 +130,11 @@ PassNode CubeSky
 
 [Static]
 [Compute]
-# TriState: need_always() must run every frame regardless of whether the sky
-# actually changed (SetupResult::IgnoreRender on unchanged frames still runs
-# it, unlike a plain `false` -> Disabled) -- the mip regeneration itself
-# (render()) only needs to run on changed frames.
-[TriState]
+# need_always() must run every frame regardless of whether the sky actually
+# changed ([RenderCondition] never returns Disabled, only IgnoreRender/
+# NeedsRender -- unlike a plain `false` -> Disabled) -- the mip regeneration
+# itself (render()) only needs to run on changed frames.
+[RenderCondition = `builder.graph->get_context<Table::SkyState>().sky_changed`]
 PassNode CubeMapDownsample
 {
 	[Always = UnorderedAccess] TextureCube sky_cubemap;
@@ -132,11 +144,11 @@ PassNode CubeMapDownsample
 
 [Static]
 [Compute]
-# TriState: sky_cubemap_filtered/diffuse must be create()'d every frame
-# regardless of whether sky_cubemap actually changed (SetupResult::IgnoreRender
-# on unchanged frames still runs create_always()), while render() -- the
-# actual filter dispatch -- only needs to run on changed frames.
-[TriState]
+# sky_cubemap_filtered/diffuse must be create()'d every frame regardless of
+# whether sky_cubemap actually changed ([RenderCondition] never returns
+# Disabled, so create_always() still runs), while render() -- the actual
+# filter dispatch -- only needs to run on changed frames.
+[RenderCondition = `builder.graph->get_context<Table::SkyState>().sky_changed`]
 PassNode CubeMapEnviromentProcessor
 {
 	[Always = Read] TextureCube sky_cubemap;

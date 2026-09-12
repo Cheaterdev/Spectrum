@@ -1015,6 +1015,14 @@ namespace GUI
         ui_ctx.draw_infos = std::move(draw_infos);
         ui_ctx.pre_draw_infos = std::move(pre_draw_infos);
 
+        // Mirrored into Table::UIState -- see its own comment (ui.sig) for
+        // why this can't just be a UIContext read: UI_PreDraw's
+        // [RenderCondition] reads it from autogen/pass_defaults.cpp, which
+        // only sees Table:: contexts.
+        // ::Table (not GUI::Elements::Table, a widget class) -- both named
+        // Table, ambiguous by unqualified lookup inside module GUI.
+        graph.get_context<::Table::UIState>().UI_Passes_needed = (uint32_t)ui_ctx.pre_draw_infos.size();
+
         ui_ctx.setup_counter = 0;
 
         ui_ctx.dt          = dt;
@@ -1702,20 +1710,13 @@ namespace GUI
 // PassDefault<Passes::UI_PreDraw>
 // ============================================================
 
-FrameGraph::SetupResult PassDefault<Passes::UI_PreDraw>::setup(
-    Passes::UI_PreDraw::Context& data, FrameGraph::TaskBuilder& builder)
-{
-    // UI_PreDraw_Sync's ResourceChain must reset every frame (create() is
-    // the only thing that calls reset_frame()) even with nothing to
-    // pre-draw, or exists() keeps reporting true from a prior frame and
-    // UI_Render's need() keeps appending onto an un-cleared states list --
-    // [Always]/[Size] on the field itself now handles that create()
-    // unconditionally; IgnoreRender just skips render() on empty frames.
-    auto& ui_ctx = builder.graph->get_context<GUI::UIContext>();
-    return ui_ctx.pre_draw_infos.empty()
-        ? FrameGraph::SetupResult::IgnoreRender
-        : FrameGraph::SetupResult::NeedsRender;
-}
+// setup() is fully generated (ui.sig's own [RenderCondition]).
+// UI_PreDraw_Sync's ResourceChain must reset every frame (create() is the
+// only thing that calls reset_frame()) even with nothing to pre-draw, or
+// exists() keeps reporting true from a prior frame and UI_Render's need()
+// keeps appending onto an un-cleared states list -- [Always]/[Size] on the
+// field itself handles that create() unconditionally; [RenderCondition]
+// alone (no [SetupCondition]) just skips render() on empty frames.
 
 void PassDefault<Passes::UI_PreDraw>::render(
     Passes::UI_PreDraw::Context& data, FrameGraph::FrameContext& context)

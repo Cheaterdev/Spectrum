@@ -30,6 +30,15 @@ import HAL;
 using namespace FrameGraph;
 
 
+FrameGraph::SetupResult PassDefault<Passes::FSR>::setup(
+	Passes::FSR::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && !((builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSS && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlss_available) || (builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassDefault<Passes::ResultCreation>::setup(
 	Passes::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder)
 {
@@ -62,6 +71,15 @@ FrameGraph::SetupResult PassDefault<Passes::RTXShadow>::setup(
 }
 
 
+FrameGraph::SetupResult PassDefault<Passes::RTXColorPass>::setup(
+	Passes::RTXColorPass::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassDefault<Passes::Profiler>::setup(
 	Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder)
 {
@@ -82,6 +100,27 @@ FrameGraph::SetupResult PassDefault<Passes::Scene>::setup(
 	Passes::Scene::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::CubeMapDownsample>::setup(
+	Passes::CubeMapDownsample::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return (builder.graph->get_context<Table::SkyState>().sky_changed) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::CubeMapEnviromentProcessor>::setup(
+	Passes::CubeMapEnviromentProcessor::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return (builder.graph->get_context<Table::SkyState>().sky_changed) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::UI_PreDraw>::setup(
+	Passes::UI_PreDraw::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return (builder.graph->get_context<Table::UIState>().UI_Passes_needed > 0) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 }
 
 

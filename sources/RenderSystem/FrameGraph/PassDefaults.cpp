@@ -227,15 +227,7 @@ void PassDefault<Passes::RTXShadow>::render(
 // Casts primary camera rays via the ColorRTX raygen (ColorPass hit/miss) and
 // writes the traced color to ColorOutput. On-demand: only enabled when a
 // consumer (the debug view) needs ColorOutput.
-
-FrameGraph::SetupResult PassDefault<Passes::RTXColorPass>::setup(
-    Passes::RTXColorPass::Context& data, FrameGraph::TaskBuilder& builder)
-{
-	if (!RenderSystem::get().device().get_properties().rtx)
-		return false;
-
-	return true;
-}
+// setup() is fully generated (raytracing.sig's own [SetupCondition]).
 
 void PassDefault<Passes::RTXColorPass>::render(
     Passes::RTXColorPass::Context& data, FrameGraph::FrameContext& context)

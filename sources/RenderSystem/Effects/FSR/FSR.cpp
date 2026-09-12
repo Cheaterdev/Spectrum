@@ -15,19 +15,7 @@ import HAL;
 
 using namespace FrameGraph;
 
-FrameGraph::SetupResult PassDefault<Passes::FSR>::setup(Passes::FSR::Context& data, TaskBuilder& builder)
-{
-	// g_upscaling_enabled: see UpscalingDLSS.cpp's mirrored check. Runs when
-	// explicitly selected, or as the automatic fallback when the selected
-	// type (DLSS/DLSS-RR) isn't actually available on this hardware — FSR
-	// is the only one of the three with no hardware gate. See
-	// UpscalingDLSS.ixx's upscaler_is_available()/g_upscaler_type.
-	if (!g_upscaling_enabled ||
-	    (g_upscaler_type != UpscalerType::FSR && upscaler_is_available(g_upscaler_type)))
-		return false;
-
-	return true;
-}
+// setup() is fully generated (FSR.sig's own [SetupCondition]).
 
 void PassDefault<Passes::FSR>::render(Passes::FSR::Context& data, FrameContext& context)
 {

@@ -40,10 +40,16 @@ SkyRender::SkyRender()
 	{
 		auto& sky = builder.graph->get_context<SkyInfo>();
 
-		sky.sky_changed = ((sky.sunDir - dir).length() > 0.001f);
-		if (sky.sky_changed) dir = sky.sunDir;
+		bool changed = ((sky.sunDir - dir).length() > 0.001f);
+		if (changed) dir = sky.sunDir;
 
-		return sky.sky_changed ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
+		// Mirrored into Table::SkyState -- see its own comment (sky.sig) for
+		// why this can't just be a SkyInfo field: CubeMapDownsample/
+		// CubeMapEnviromentProcessor's [RenderCondition] reads it from
+		// autogen/pass_defaults.cpp, which only sees Table:: contexts.
+		builder.graph->get_context<Table::SkyState>().sky_changed = changed;
+
+		return changed ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 	};
 
 	m_cubesky_render = [this](Passes::CubeSky::Context& data, FrameGraph::FrameContext& context)
@@ -121,14 +127,7 @@ SkyRender::SkyRender()
 
 // ---- PassDefault<Passes::CubeMapDownsample> --------------------------------
 // Generates mipmaps for the sky cubemap whenever it has been re-baked.
-
-FrameGraph::SetupResult PassDefault<Passes::CubeMapDownsample>::setup(
-	Passes::CubeMapDownsample::Context& data, TaskBuilder& builder)
-{
-	return builder.graph->get_context<SkyInfo>().sky_changed
-		? FrameGraph::SetupResult::NeedsRender
-		: FrameGraph::SetupResult::IgnoreRender;
-}
+// setup() is fully generated (sky.sig's own [RenderCondition]).
 
 void PassDefault<Passes::CubeMapDownsample>::render(
 	Passes::CubeMapDownsample::Context& data, FrameContext& context)
@@ -139,14 +138,7 @@ void PassDefault<Passes::CubeMapDownsample>::render(
 
 // ---- PassDefault<Passes::CubeMapEnviromentProcessor> ----------------------
 // Filters the sky cubemap into specular and diffuse IBL targets.
-
-FrameGraph::SetupResult PassDefault<Passes::CubeMapEnviromentProcessor>::setup(
-	Passes::CubeMapEnviromentProcessor::Context& data, TaskBuilder& builder)
-{
-	return builder.graph->get_context<SkyInfo>().sky_changed
-		? FrameGraph::SetupResult::NeedsRender
-		: FrameGraph::SetupResult::IgnoreRender;
-}
+// setup() is fully generated (sky.sig's own [RenderCondition]).
 
 void PassDefault<Passes::CubeMapEnviromentProcessor>::render(
 	Passes::CubeMapEnviromentProcessor::Context& data, FrameContext& context)

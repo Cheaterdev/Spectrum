@@ -1,4 +1,13 @@
 
+# Mirrors GUI::UIContext::pre_draw_infos.size() -- set once per frame right
+# after the UI tree is walked (GUI/Base.cpp), read by UI_PreDraw's own
+# [RenderCondition]. Not a bool: kept as a count so a future consumer that
+# cares how many widgets asked for a pre-draw doesn't need a second field.
+struct UIState
+{
+	uint UI_Passes_needed = 0;
+}
+
 struct vertex_input
 {
 	float2 pos;
@@ -288,12 +297,12 @@ GraphicsPSO StatGraphLines
 
 [Static]
 [Required]
-# TriState: setup() must create() UI_PreDraw_Sync every frame so its
-# ResourceChain resets even when there's nothing to pre-draw, but should
-# still skip render() on those frames -- SetupResult::IgnoreRender says
-# exactly that, instead of the old trick of hand-ordering create() before
-# an early return.
-[TriState]
+# setup() must create() UI_PreDraw_Sync every frame so its ResourceChain
+# resets even when there's nothing to pre-draw, but should still skip
+# render() on those frames -- [RenderCondition] alone (no [SetupCondition])
+# says exactly that: IgnoreRender, never Disabled, so create_always() still
+# runs every frame regardless of UI_Passes_needed.
+[RenderCondition = `builder.graph->get_context<Table::UIState>().UI_Passes_needed > 0`]
 PassNode UI_PreDraw
 {
 	[Always = UnorderedAccess | Required] [Size = 1] StructuredBuffer<uint> UI_PreDraw_Sync;
