@@ -11,20 +11,9 @@ import Core;
 using namespace FrameGraph;
 using namespace HAL;
 
-#ifdef HAL_BACKEND_D3D12
-
-FrameGraph::SetupResult PassDefault<Passes::ShadowRTX>::setup(
-	Passes::ShadowRTX::Context& data, TaskBuilder& builder)
-{
-	// Feeds RTXCombine, active only when the user has picked DLSS-RR via
-	// g_upscaler_type. Gated the same as ReflectionRTX/IndirectRTX/
-	// RTXCombine so all four stay in lockstep.
-	if (g_upscaler_type != UpscalerType::DLSSRR ||
-	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
-		return false;
-
-	return true;
-}
+// setup() is fully generated (voxel.sig's own [SetupCondition]) -- feeds
+// RTXCombine, active only when the user has picked DLSS-RR, gated the same
+// as ReflectionRTX/IndirectRTX/RTXCombine so all four stay in lockstep.
 
 void PassDefault<Passes::ShadowRTX>::render(
 	Passes::ShadowRTX::Context& data, FrameContext& context)
@@ -64,9 +53,3 @@ void PassDefault<Passes::ShadowRTX>::render(
 	}
 }
 
-#else
-
-FrameGraph::SetupResult PassDefault<Passes::ShadowRTX>::setup(Passes::ShadowRTX::Context&, TaskBuilder&) { return false; }
-void PassDefault<Passes::ShadowRTX>::render(Passes::ShadowRTX::Context&, FrameContext&) {}
-
-#endif

@@ -9,11 +9,6 @@ import HAL;
 
 using namespace FrameGraph;
 
-// D3D12-only for now; Vulkan is WIP and out of scope for Streamline (see
-// [[project-streamline-dlss-integration]]) — the #else stub keeps the Vulkan
-// build satisfying pass_defaults.h's declaration.
-#ifdef HAL_BACKEND_D3D12
-
 namespace
 {
 	// ResultTextureNew is R16G16B16A16_FLOAT (see setup() below) — full HDR,
@@ -21,20 +16,7 @@ namespace
 	constexpr bool kHDR = true;
 }
 
-FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSS>::setup(
-	Passes::UpscalingDLSS::Context& data, TaskBuilder& builder)
-{
-	// Exactly one of the producers of ResultTextureNew is active per frame.
-	// g_upscaling_enabled is false when main.cpp's "downsampled" toggle is
-	// off (frame_size == upscale_size already, nothing to upscale) — SMAA
-	// runs instead. Otherwise g_upscaler_type picks which of FSR/DLSS/DLSS-RR
-	// runs (see UpscalingDLSS.ixx's doc comment) — DLSS itself must also
-	// still be available on this hardware.
-	if (!g_upscaling_enabled || g_upscaler_type != UpscalerType::DLSS || !nvidia::DLSS::get().available())
-		return false;
-
-	return true;
-}
+// setup() is fully generated (UpscalingDLSS.sig's own [SetupCondition]).
 
 void PassDefault<Passes::UpscalingDLSS>::render(
 	Passes::UpscalingDLSS::Context& data, FrameContext& context)
@@ -93,9 +75,3 @@ void PassDefault<Passes::UpscalingDLSS>::render(
 	                             result_texture, gbuffer_depth, gbuffer_speed, result_texture_new);
 }
 
-#else
-
-FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSS>::setup(Passes::UpscalingDLSS::Context&, TaskBuilder&) { return false; }
-void PassDefault<Passes::UpscalingDLSS>::render(Passes::UpscalingDLSS::Context&, FrameContext&) {}
-
-#endif

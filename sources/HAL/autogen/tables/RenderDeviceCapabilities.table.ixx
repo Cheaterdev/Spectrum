@@ -18,14 +18,17 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::RenderDeviceCapabilities;
 		bool rtx_supported = false;
+		bool dlss_available = false;
 		bool dlssrr_available = false;
 		bool& GetRtx_supported() { return rtx_supported; }
+		bool& GetDlss_available() { return dlss_available; }
 		bool& GetDlssrr_available() { return dlssrr_available; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(rtx_supported, "RenderDeviceCapabilities::rtx_supported");
+			compiler.compile(dlss_available, "RenderDeviceCapabilities::dlss_available");
 			compiler.compile(dlssrr_available, "RenderDeviceCapabilities::dlssrr_available");
 		}
 		using Compiled = RenderDeviceCapabilities;
@@ -38,6 +41,7 @@ export namespace Table
 		SERIALIZE()
 		{
 			ar& NVP(rtx_supported);
+			ar& NVP(dlss_available);
 			ar& NVP(dlssrr_available);
 		}
 

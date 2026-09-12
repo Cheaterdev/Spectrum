@@ -54,6 +54,7 @@ PassNode NormalRoughnessRepack
 }
 
 [Static]
+[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported`]
 PassNode UpscalingDLSSRR
 {
 	# ExclusiveRead: this pass transitions these to PRESENT/COMMON for

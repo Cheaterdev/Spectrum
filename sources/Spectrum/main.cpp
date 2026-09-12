@@ -418,7 +418,8 @@ public:
 		// raytracing.sig's own comment on RenderDeviceCapabilities for why.
 		{
 			auto& device_caps = graph.get_context<Table::RenderDeviceCapabilities>();
-			device_caps.rtx_supported   = RenderSystem::get().device().get_properties().rtx;
+			device_caps.rtx_supported    = RenderSystem::get().device().is_rtx_supported();
+			device_caps.dlss_available   = nvidia::DLSS::get().available();
 			device_caps.dlssrr_available = nvidia::DLSSRR::get().available();
 		}
 

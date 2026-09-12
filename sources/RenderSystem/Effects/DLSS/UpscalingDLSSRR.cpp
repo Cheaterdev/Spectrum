@@ -10,29 +10,16 @@ import HAL;
 
 using namespace FrameGraph;
 
-#ifdef HAL_BACKEND_D3D12
-
 namespace
 {
 	constexpr bool kHDR = true;
 }
 
-FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSSRR>::setup(
-	Passes::UpscalingDLSSRR::Context& data, TaskBuilder& builder)
-{
-	// g_upscaler_type picks which of FSR/DLSS/DLSS-RR runs (see
-	// UpscalingDLSS.ixx's doc comment) -- DLSS-RR itself must also still be
-	// available on this hardware. is_rtx_supported(): RTXReflectionNoise
-	// only exists when ReflectionRTX (voxel.sig) ran this frame, which
-	// shares this exact same prerequisite (RTX support + DLSSRR::available())
-	// -- keeping both gates identical is what guarantees the resource is
-	// there whenever this pass needs it.
-	if (!g_upscaling_enabled || g_upscaler_type != UpscalerType::DLSSRR ||
-	    !nvidia::DLSSRR::get().available() || !RenderSystem::get().device().is_rtx_supported())
-		return false;
-
-	return true;
-}
+// setup() is fully generated (UpscalingDLSSRR.sig's own [SetupCondition]).
+// is_rtx_supported(): RTXReflectionNoise only exists when ReflectionRTX
+// (voxel.sig) ran this frame, which shares this exact same prerequisite
+// (RTX support + DLSSRR::available()) -- keeping both gates identical is
+// what guarantees the resource is there whenever this pass needs it.
 
 void PassDefault<Passes::UpscalingDLSSRR>::render(
 	Passes::UpscalingDLSSRR::Context& data, FrameContext& context)
@@ -82,9 +69,3 @@ void PassDefault<Passes::UpscalingDLSSRR>::render(
 	                               gbuffer_albedo, normal_roughness, specular_hit_dist, specular_albedo);
 }
 
-#else
-
-FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSSRR>::setup(Passes::UpscalingDLSSRR::Context&, TaskBuilder&) { return false; }
-void PassDefault<Passes::UpscalingDLSSRR>::render(Passes::UpscalingDLSSRR::Context&, FrameContext&) {}
-
-#endif

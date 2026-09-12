@@ -385,6 +385,7 @@ PassNode VoxelDebug
 # GBuffer_HalfDepth/HalfNormals.
 [Static]
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
 PassNode ReflectionRTXHalf
 {
 	[Always = Read] Texture GBuffer_HalfDepth;
@@ -419,6 +420,7 @@ PassNode ReflectionRTXHalf
 # ReflectionRTXUpscale's own comment for why both matter here specifically.
 [Static]
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
 PassNode ReflectionRTX
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -450,6 +452,7 @@ PassNode ReflectionRTX
 # unaffected -- this is a separate signal, not a replacement.
 [Static]
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
 PassNode ShadowRTX
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -469,6 +472,7 @@ PassNode ShadowRTX
 # (this file) for how IndirectRTX consumes RTXIndirectNoiseHalf.
 [Static]
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
 PassNode IndirectRTXHalf
 {
 	[Always = Read] Texture GBuffer_HalfDepth;
@@ -496,6 +500,7 @@ PassNode IndirectRTXHalf
 # pay for a fresh ray.
 [Static]
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
 PassNode IndirectRTX
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -546,6 +551,7 @@ PassNode ReflCombine
 # RTXIndirectDenoised/RTXReflectionDenoised (REBLUR_DIFFUSE/SPECULAR's
 # output, NRD_REBLUR_Execute -- see [[project-nrd-integration]]) are the
 # only indirect/reflection inputs now -- no raw/legacy alternative.
+[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
 PassNode RTXCombine
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

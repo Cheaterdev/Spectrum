@@ -10,16 +10,7 @@ import Core;
 using namespace FrameGraph;
 using namespace HAL;
 
-#ifdef HAL_BACKEND_D3D12
-
-FrameGraph::SetupResult PassDefault<Passes::IndirectRTXHalf>::setup(
-	Passes::IndirectRTXHalf::Context& data, TaskBuilder& builder)
-{
-	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
-		return false;
-
-	return true;
-}
+// setup() is fully generated (voxel.sig's own [SetupCondition]).
 
 void PassDefault<Passes::IndirectRTXHalf>::render(
 	Passes::IndirectRTXHalf::Context& data, FrameContext& context)
@@ -51,18 +42,10 @@ void PassDefault<Passes::IndirectRTXHalf>::render(
 	}
 }
 
-FrameGraph::SetupResult PassDefault<Passes::IndirectRTX>::setup(
-	Passes::IndirectRTX::Context& data, TaskBuilder& builder)
-{
-	// Feeds NRD_REBLUR_Execute (REBLUR_DIFFUSE, see
-	// [[project-nrd-integration]]) and, under DLSS-RR, RTXCombine -- gated
-	// purely on RTX/hardware support now, independent of upscaler (NRD is
-	// the only indirect-GI denoiser).
-	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
-		return false;
-
-	return true;
-}
+// setup() is fully generated (voxel.sig's own [SetupCondition]) -- feeds
+// NRD_REBLUR_Execute (REBLUR_DIFFUSE, see [[project-nrd-integration]]) and,
+// under DLSS-RR, RTXCombine -- gated purely on RTX/hardware support now,
+// independent of upscaler (NRD is the only indirect-GI denoiser).
 
 void PassDefault<Passes::IndirectRTX>::render(
 	Passes::IndirectRTX::Context& data, FrameContext& context)
@@ -110,12 +93,3 @@ void PassDefault<Passes::IndirectRTX>::render(
 	}
 }
 
-#else
-
-FrameGraph::SetupResult PassDefault<Passes::IndirectRTXHalf>::setup(Passes::IndirectRTXHalf::Context&, TaskBuilder&) { return false; }
-void PassDefault<Passes::IndirectRTXHalf>::render(Passes::IndirectRTXHalf::Context&, FrameContext&) {}
-
-FrameGraph::SetupResult PassDefault<Passes::IndirectRTX>::setup(Passes::IndirectRTX::Context&, TaskBuilder&) { return false; }
-void PassDefault<Passes::IndirectRTX>::render(Passes::IndirectRTX::Context&, FrameContext&) {}
-
-#endif

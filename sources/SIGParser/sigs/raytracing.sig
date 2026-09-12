@@ -10,6 +10,7 @@
 struct RenderDeviceCapabilities
 {
 	bool rtx_supported = false;
+	bool dlss_available = false;
 	bool dlssrr_available = false;
 }
 

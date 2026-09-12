@@ -10,16 +10,7 @@ import Core;
 using namespace FrameGraph;
 using namespace HAL;
 
-#ifdef HAL_BACKEND_D3D12
-
-FrameGraph::SetupResult PassDefault<Passes::ReflectionRTXHalf>::setup(
-	Passes::ReflectionRTXHalf::Context& data, TaskBuilder& builder)
-{
-	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
-		return false;
-
-	return true;
-}
+// setup() is fully generated (voxel.sig's own [SetupCondition]).
 
 void PassDefault<Passes::ReflectionRTXHalf>::render(
 	Passes::ReflectionRTXHalf::Context& data, FrameContext& context)
@@ -53,18 +44,10 @@ void PassDefault<Passes::ReflectionRTXHalf>::render(
 	}
 }
 
-FrameGraph::SetupResult PassDefault<Passes::ReflectionRTX>::setup(
-	Passes::ReflectionRTX::Context& data, TaskBuilder& builder)
-{
-	// Feeds NRD_REBLUR_Execute (REBLUR_SPECULAR, see
-	// [[project-nrd-integration]]) and, under DLSS-RR, RTXCombine -- gated
-	// purely on RTX/hardware support now, independent of upscaler (NRD is
-	// the only reflection denoiser).
-	if (!RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
-		return false;
-
-	return true;
-}
+// setup() is fully generated (voxel.sig's own [SetupCondition]) -- feeds
+// NRD_REBLUR_Execute (REBLUR_SPECULAR, see [[project-nrd-integration]]) and,
+// under DLSS-RR, RTXCombine -- gated purely on RTX/hardware support now,
+// independent of upscaler (NRD is the only reflection denoiser).
 
 void PassDefault<Passes::ReflectionRTX>::render(
 	Passes::ReflectionRTX::Context& data, FrameContext& context)
@@ -119,12 +102,3 @@ void PassDefault<Passes::ReflectionRTX>::render(
 	}
 }
 
-#else
-
-FrameGraph::SetupResult PassDefault<Passes::ReflectionRTXHalf>::setup(Passes::ReflectionRTXHalf::Context&, TaskBuilder&) { return false; }
-void PassDefault<Passes::ReflectionRTXHalf>::render(Passes::ReflectionRTXHalf::Context&, FrameContext&) {}
-
-FrameGraph::SetupResult PassDefault<Passes::ReflectionRTX>::setup(Passes::ReflectionRTX::Context&, TaskBuilder&) { return false; }
-void PassDefault<Passes::ReflectionRTX>::render(Passes::ReflectionRTX::Context&, FrameContext&) {}
-
-#endif
