@@ -23,7 +23,14 @@ class {{pass.name}} : public PassNodeBase
 public:
 	struct Context
 	{
-
+{% if pass.options.Multiple is defined %}
+		// [Multiple={{pass.options.Multiple.value_atom.expr}}]: this instance's own
+		// index, written automatically by TypedPass::setup() (FrameGraph.Base.ixx,
+		// from the Pass::pass_index every [Multiple] instance already carries)
+		// before setup_func or any [Optional=...] guard runs -- no per-pass index
+		// field or manual `data.X = i;` assignment needed.
+		uint32_t pass_index = 0;
+{% endif %}
 {% for v in pass.params -%}
 {%- if v.type == "int" or v.type == "uint" or v.type == "bool" or v.type == "float" -%}
 {#- Plain CPU-side state, not a FrameGraph resource -- e.g. a [Multiple]
@@ -71,6 +78,7 @@ public:
 {%- set always_fields = create_list('always_fields') -%}
 {%- for v in pass.params -%}
 {%- if v.options.Always is defined and v.options.Size is undefined and v.options.Format is undefined and v.options.Recreate is undefined -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
+{%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) and v.options.Recreate is undefined and v.options.Optional is defined -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
 {%- set view = parsed.views[v.type] -%}
 {%- if view is defined and get_view_needs(pass.name, v.name) | length > 0 -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
 {%- endfor -%}
@@ -81,8 +89,12 @@ public:
 		// context-read flag, deciding whether this specific field is actually
 		// needed this frame), or, for a View-typed field (e.g. `GBuffer
 		// gbuffer;`), every leaf the View itself marks [Always=X] that this
-		// pass's own [Write=...] on that field doesn't already cover. Called
-		// by TypedPass::setup() after setup_func returns true - not a
+		// pass's own [Write=...] on that field doesn't already cover. A field
+		// that ALSO carries [Size]/[Format] (so create_always() below creates
+		// it under its own [Optional] condition) gets the negated condition
+		// here instead -- "need what some other instance/frame already
+		// created" is the complement of "create it this time." Called by
+		// TypedPass::setup() after setup_func returns true - not a
 		// substitute for setup_func's own need()/create() calls for anything
 		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
@@ -95,6 +107,10 @@ public:
 {%- else %}
 			builder.need(data.{{v.name}}, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- endif %}
+{%- endif %}
+{%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) and v.options.Recreate is undefined and v.options.Optional is defined %}
+			if (!({{v.options.Optional.value_atom.expr}}))
+				builder.need(data.{{v.name}}, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- endif %}
 {%- set view = parsed.views[v.type] -%}
 {%- if view is defined %}
@@ -117,10 +133,16 @@ public:
 		// Resources this pass always creates with a fixed desc, generated from
 		// each field's own [Size]/[Format] annotation (plus [Always] for the
 		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
-		// that needs its original chain link before recreating a new one).
-		// Called by TypedPass::setup() after setup_func returns true - not a
-		// substitute for setup_func's own create()/recreate() calls for
-		// anything whose Desc depends on runtime state.
+		// that needs its original chain link before recreating a new one). A
+		// field that ALSO carries [Optional] creates only under that
+		// condition -- need_always() (above) emits a complementary need() for
+		// the SAME field under the negated condition, using the same
+		// [Always] flags, e.g. a [Multiple] pass where instance 0 creates a
+		// shared resource and every other instance just needs it (see
+		// PSSM_Cascade, pssm.sig). Called by TypedPass::setup() after
+		// setup_func returns true - not a substitute for setup_func's own
+		// create()/recreate() calls for anything whose Desc depends on
+		// runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 {%- for v in pass.params %}

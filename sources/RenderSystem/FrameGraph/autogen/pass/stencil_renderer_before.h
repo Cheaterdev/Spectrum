@@ -31,10 +31,16 @@ public:
 		// Resources this pass always creates with a fixed desc, generated from
 		// each field's own [Size]/[Format] annotation (plus [Always] for the
 		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
-		// that needs its original chain link before recreating a new one).
-		// Called by TypedPass::setup() after setup_func returns true - not a
-		// substitute for setup_func's own create()/recreate() calls for
-		// anything whose Desc depends on runtime state.
+		// that needs its original chain link before recreating a new one). A
+		// field that ALSO carries [Optional] creates only under that
+		// condition -- need_always() (above) emits a complementary need() for
+		// the SAME field under the negated condition, using the same
+		// [Always] flags, e.g. a [Multiple] pass where instance 0 creates a
+		// shared resource and every other instance just needs it (see
+		// PSSM_Cascade, pssm.sig). Called by TypedPass::setup() after
+		// setup_func returns true - not a substitute for setup_func's own
+		// create()/recreate() calls for anything whose Desc depends on
+		// runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.create(data.depth_tex, { ivec3(1, 1, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil);

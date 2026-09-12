@@ -57,8 +57,12 @@ public:
 		// context-read flag, deciding whether this specific field is actually
 		// needed this frame), or, for a View-typed field (e.g. `GBuffer
 		// gbuffer;`), every leaf the View itself marks [Always=X] that this
-		// pass's own [Write=...] on that field doesn't already cover. Called
-		// by TypedPass::setup() after setup_func returns true - not a
+		// pass's own [Write=...] on that field doesn't already cover. A field
+		// that ALSO carries [Size]/[Format] (so create_always() below creates
+		// it under its own [Optional] condition) gets the negated condition
+		// here instead -- "need what some other instance/frame already
+		// created" is the complement of "create it this time." Called by
+		// TypedPass::setup() after setup_func returns true - not a
 		// substitute for setup_func's own need()/create() calls for anything
 		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)

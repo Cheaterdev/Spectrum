@@ -67,8 +67,12 @@ public:
 		// context-read flag, deciding whether this specific field is actually
 		// needed this frame), or, for a View-typed field (e.g. `GBuffer
 		// gbuffer;`), every leaf the View itself marks [Always=X] that this
-		// pass's own [Write=...] on that field doesn't already cover. Called
-		// by TypedPass::setup() after setup_func returns true - not a
+		// pass's own [Write=...] on that field doesn't already cover. A field
+		// that ALSO carries [Size]/[Format] (so create_always() below creates
+		// it under its own [Optional] condition) gets the negated condition
+		// here instead -- "need what some other instance/frame already
+		// created" is the complement of "create it this time." Called by
+		// TypedPass::setup() after setup_func returns true - not a
 		// substitute for setup_func's own need()/create() calls for anything
 		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
@@ -91,10 +95,16 @@ public:
 		// Resources this pass always creates with a fixed desc, generated from
 		// each field's own [Size]/[Format] annotation (plus [Always] for the
 		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
-		// that needs its original chain link before recreating a new one).
-		// Called by TypedPass::setup() after setup_func returns true - not a
-		// substitute for setup_func's own create()/recreate() calls for
-		// anything whose Desc depends on runtime state.
+		// that needs its original chain link before recreating a new one). A
+		// field that ALSO carries [Optional] creates only under that
+		// condition -- need_always() (above) emits a complementary need() for
+		// the SAME field under the negated condition, using the same
+		// [Always] flags, e.g. a [Multiple] pass where instance 0 creates a
+		// shared resource and every other instance just needs it (see
+		// PSSM_Cascade, pssm.sig). Called by TypedPass::setup() after
+		// setup_func returns true - not a substitute for setup_func's own
+		// create()/recreate() calls for anything whose Desc depends on
+		// runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.create(data.NRD_ViewZ, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);

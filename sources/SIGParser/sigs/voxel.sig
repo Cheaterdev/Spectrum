@@ -318,6 +318,7 @@ ComputePSO RTXCombine
 # right shape, matching every other pass here.
 [Static]
 [Compute]
+[RunAlways]
 PassNode GBufferDownsampler
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

@@ -1,3 +1,26 @@
+enum UpscalerType
+{
+	FSR;
+	DLSS;
+	DLSSRR;
+}
+
+# Mirrors UpscalingDLSS.ixx's g_upscaler_type/g_upscaling_enabled globals --
+# synced there every frame (main.cpp's generate()), so [SetupCondition=...]
+# on passes like NRD_GBufferPack/NRD_IndirectCombine (nrd_sig_test.sig) can
+# read the live selection via get_context<Table::UpscalerSelectors>()
+# instead of the raw global. That matters specifically for a [SetupCondition]/
+# [RenderCondition]/[RunAlways] pass: its setup() body is generated into
+# autogen/pass_defaults.cpp (a dedicated TU that imports HAL broadly, so any
+# Table:: context is safe to read there) rather than a hand-written .cpp --
+# see that file's own header comment for why a raw Graphics-layer global
+# instead of a Table:: context wouldn't be safe to reference there.
+struct UpscalerSelectors
+{
+	UpscalerType upscaler_type = FSR;
+	bool upscaling_enabled = true;
+}
+
 # DLSS Super Resolution. Same slot as FSR (reads ResultTexture at frame_size,
 # recreates ResultTextureNew at upscale_size) - the two are mutually exclusive
 # producers, gated by nvidia::DLSS::get().available() in PassDefaults.cpp.

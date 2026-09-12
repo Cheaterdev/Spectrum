@@ -1,4 +1,18 @@
 
+# Mirrors RenderSystem::get().device().get_properties().rtx -- a fixed
+# hardware capability, synced once (main.cpp's generate(), same spot
+# UpscalerSelectors is synced) rather than recomputed by every pass that
+# cares. Exists so [RenderCondition=...]/[SetupCondition=...] (this file's
+# own RTXShadow, e.g.) can read it via get_context<Table::RenderDeviceCapabilities>()
+# -- their generated setup() body lives in autogen/pass_defaults.cpp, a
+# dedicated TU that doesn't import RenderSystem, only HAL (see that file's
+# own comment for why a raw RenderSystem::get() call wouldn't be safe there).
+struct RenderDeviceCapabilities
+{
+	bool rtx_supported = false;
+	bool dlssrr_available = false;
+}
+
 [Bind = DefaultLayout::Instance2]
 struct RaytracingRays
 {
@@ -299,11 +313,13 @@ RaytracePass ColorShadowPass
 
 [Static]
 [Compute]
-# TriState: ShadowMask is create()'d unconditionally, regardless of RTX
-# support, matching the pre-existing behavior (render() only actually
-# writes it under RTX; other passes already guard on builder.exists()
-# before reading it). NeedsRender only when RTX is actually supported.
-[TriState]
+# ShadowMask is create()'d unconditionally (via [Always]/[Size]/[Format]
+# below), regardless of RTX support, matching the pre-existing behavior
+# (render() only actually writes it under RTX; other passes already guard on
+# builder.exists() before reading it). [RenderCondition] alone (no
+# [SetupCondition]): IgnoreRender, not Disabled, when RTX isn't supported --
+# setup() still needs to run every frame so ShadowMask keeps existing.
+[RenderCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported`]
 PassNode RTXShadow
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

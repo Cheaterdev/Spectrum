@@ -113,11 +113,11 @@ PassNode PreScene
 
 [Static]
 [Required]
-# TriState: this pass exists purely to keep swapchain graph-tracked -- it
-# never actually renders anything itself (some other UI/overlay pass owns
-# the real profiler drawing), so setup() always returns IgnoreRender, never
-# NeedsRender.
-[TriState]
+# This pass exists purely to keep swapchain graph-tracked -- it never
+# actually renders anything itself (some other UI/overlay pass owns the real
+# profiler drawing). [RenderCondition = `false`]: setup() still runs every
+# frame, it just never NeedsRender.
+[RenderCondition = `false`]
 PassNode Profiler
 {
 	[Always = Required | RenderTarget] Texture swapchain;
@@ -125,11 +125,13 @@ PassNode Profiler
 
 [Static]
 [Compute]
-# Dead: PassDefault<Passes::CopyPrev>::setup() (PassDefaults.cpp) always
-# returns false -- kept disabled until dropped from the .sig entirely (see
-# its own comment there). GBuffer_SpecularPrev dropped already: its history
-# was unused (denoiser roughness-history disabled) and removed along with
-# this pass's real body, per PassDefaults.cpp's own comment.
+# Dead: kept disabled ([SetupCondition = `false`] below) until dropped from
+# the .sig entirely -- GBuffer_NormalsPrev/GBuffer_DepthPrev are now fed by
+# FrameGraph history links (see Scene's own PassNode, below) instead of
+# copied. GBuffer_SpecularPrev dropped already: its history was unused
+# (denoiser roughness-history disabled) and removed along with this pass's
+# real body.
+[SetupCondition = `false`]
 PassNode CopyPrev
 {
 	[Write] Texture GBuffer_DepthPrev;
@@ -137,6 +139,7 @@ PassNode CopyPrev
 }
 
 [Static]
+[RunAlways]
 PassNode Scene
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

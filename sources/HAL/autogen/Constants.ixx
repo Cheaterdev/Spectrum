@@ -18,6 +18,7 @@ import :Autogen.Tables.TileRecord;
 // rules), e.g. `const MaxDispatchEntries = `MaxLevels * 2048`;`.
 export namespace Constants
 {
+	constexpr auto PSSM_RendersSize = 5;
 	constexpr auto MaxLevels = 26;
 	constexpr auto MaxDispatchEntries = Constants::MaxLevels * 2048;
 	constexpr auto VSM_PagesPerLevelSide = 4;

@@ -157,18 +157,31 @@ ComputePSO GBufferDownsample
 # completely different, still-live SIG entity -- unrelated to this removed
 # PassView, and untouched by this change.
 
+# Single source of truth for "how many cascades actually render" -- shared by
+# PSSM_Cascade's own ArrayCount/buffer-size below and PSSM.ixx's renders_size
+# (a thin C++ mirror: `static const int renders_size = Constants::
+# PSSM_RendersSize;`, since the many loop bounds/scaler math in PSSM.cpp need
+# a plain int, not a SIG field). [Multiple=6] below is deliberately a
+# different, larger literal (headroom for the pipeline's own Names[]/
+# setup_funcs[] arrays; the pipeline.jinja-generated add_passes() already
+# skips any index whose setup_funcs[i] was never assigned) -- SIGParser needs
+# [Multiple] to be a literal it can loop over at generation time, so it can't
+# itself reference this constant.
+const PSSM_RendersSize = 5;
+
 [Multiple = 6]
 PassNode PSSM_Cascade
 {
-	# Set by each instance's own setup lambda (PSSM.cpp) to its loop index i.
-	# Instance 0 create()s PSSM_Depths/PSSM_Cameras itself (manual -- their
-	# desc depends on runtime-tunable `size`/`renders_size`, not expressible
-	# as a [Size]/[Format] literal); every other instance just needs the
-	# same two resources, which is exactly what [Always]+[Optional] below
-	# auto-generates instead of the hand-written need() calls it replaces.
-	int cascade_index;
-	[Always = DepthStencil] [Optional = `data.cascade_index != 0`] Texture PSSM_Depths;
-	[Always = CopyDest] [Optional = `data.cascade_index != 0`] StructuredBuffer<Camera> PSSM_Cameras;
+	# data.pass_index (auto-written by TypedPass::setup(), FrameGraph.Base.ixx,
+	# from this [Multiple] instance's own Pass::pass_index -- see pass.jinja's
+	# own comment) replaces a hand-declared index field here. [Optional] on a
+	# field that also carries [Size]/[Format] means "create() under this
+	# condition, need() the same resource (same [Always] flags) under its
+	# negation" (see create_always()'s own comment, pass.jinja) -- instance 0
+	# creates PSSM_Depths/PSSM_Cameras with the real desc, every other
+	# instance just needs what instance 0 already created.
+	[Always = DepthStencil] [Size = 1024] [Format = R32_TYPELESS] [ArrayCount = `Constants::PSSM_RendersSize`] [Optional = `data.pass_index == 0`] Texture PSSM_Depths;
+	[Always = CopyDest] [Size = `Constants::PSSM_RendersSize`] [Optional = `data.pass_index == 0`] StructuredBuffer<Camera> PSSM_Cameras;
 }
 
 PassNode PSSM_GenerateMask

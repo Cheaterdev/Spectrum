@@ -201,12 +201,7 @@ void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
 // pipeline (dead: never ran, before or after the compute rewrite). It is
 // fully stateless, so PassDefault<Passes::GBufferDownsampler> + a
 // MainPipeline listing (test.sig) is the right shape, matching IndirectRTX.
-FrameGraph::SetupResult PassDefault<Passes::GBufferDownsampler>::setup(
-	Passes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder)
-{
-
-	return true;
-}
+// setup() is fully generated (voxel.sig's own [RunAlways]).
 
 namespace
 {

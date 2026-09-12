@@ -12,12 +12,16 @@ import HAL;
 
 export class PSSM
 {
-	ivec2 size = { 1024, 1024 };
 	float2 pixel_size = float2(1, 1) / float2(1024, 1024);
 
 	float scaler = 1;
 
-	static const int renders_size = 5;
+	// Mirrors pssm.sig's own PSSM_RendersSize (PSSM_Cascade's ArrayCount/
+	// buffer-size there) -- the many loop bounds/scaler math below need a
+	// plain int, not a SIG field, but this keeps both sides reading the
+	// same single source of truth instead of two independently hand-kept
+	// numbers.
+	static const int renders_size = Constants::PSSM_RendersSize;
 
 	std::mutex pos_mutex;
 	float3 position;

@@ -26,11 +26,11 @@ struct SingleColorDepth
 
 
 [Static]
-# TriState: this pass exists solely to create() ResultTexture -- it never
-# renders anything itself, so setup() always returns IgnoreRender rather
-# than the old always-false (which conflated "disabled" with "touches
-# resources but doesn't render" until create_always() could tell them apart).
-[TriState]
+# This pass exists solely to create() ResultTexture -- it never renders
+# anything itself. [RenderCondition = `false`] (not [SetupCondition]): setup()
+# still runs and creates ResultTexture every frame, it just never
+# NeedsRender.
+[RenderCondition = `false`]
 PassNode ResultCreation
 {
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ResultTexture;

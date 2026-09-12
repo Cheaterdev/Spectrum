@@ -849,6 +849,14 @@ struct IndirectGISelectors
 }
 
 [Static]
+# Gated on RTX/hardware support AND upscaler_type != DLSSRR -- NRD isn't
+# used at all under DLSS-RR any more (RTXCombine reads the raw RTX
+# candidates directly there instead, see RTXCombine's own comment), so
+# there's no reason to run this or NRD_REBLUR_Execute (its only real
+# consumer, same gate) while DLSS-RR is selected. All three conditions read
+# from Table:: contexts (UpscalingDLSS.sig/raytracing.sig) rather than raw
+# globals -- see UpscalerSelectors' own comment for why that matters here.
+[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
 PassNode NRD_GBufferPack
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -939,6 +947,12 @@ ComputePSO NRD_IndirectCombine
 
 [Static]
 [Compute]
+# The FSR/DLSS-side equivalent of the indirect term RTXCombine computes for
+# DLSS-RR (see [[project-nrd-integration]]). Runs exactly in the
+# complementary case to RTXCombine (which handles DLSS-RR itself) -- the
+# negation of NRD_GBufferPack's own condition (above), same three Table::
+# contexts.
+[SetupCondition = `!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available)`]
 PassNode NRD_IndirectCombine
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

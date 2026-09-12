@@ -9,13 +9,9 @@ import HAL;
 
 using namespace FrameGraph;
 
-FrameGraph::SetupResult PassDefault<Passes::Scene>::setup(
-    Passes::Scene::Context& data, FrameGraph::TaskBuilder& builder)
-{
-    // Every GBuffer_* field (including the two *Prev-linked ones) is
-    // auto-created now -- see scene.sig's own comment.
-    return true;
-}
+// setup() is fully generated (scene.sig's own [RunAlways]) -- every
+// GBuffer_* field (including the two *Prev-linked ones) is auto-created,
+// see scene.sig's own comment.
 
 void PassDefault<Passes::Scene>::render(
     Passes::Scene::Context& data, FrameGraph::FrameContext& context)

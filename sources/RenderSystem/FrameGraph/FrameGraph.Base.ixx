@@ -1108,6 +1108,17 @@ public:
 		virtual bool setup(TaskBuilder& builder) override
 		{
 			builder.begin(this);
+			// [Multiple=N]-generated: writes this pass instance's own index
+			// (already tracked generically on every Pass, see internal_pass's
+			// own pass_ptr->pass_index assignment) into data.pass_index, before
+			// setup_func or anything else runs -- so a [Multiple] pass's own
+			// setup_func, and any [Optional=`data.pass_index == ...`] guard in
+			// generated need_always()/create_always(), can read it without the
+			// pass author hand-writing their own index field + assignment
+			// (data.cascade_index = i; and equivalents) the way PSSM_Cascade
+			// used to.
+			if constexpr (requires { data.pass_index = pass_index; })
+				data.pass_index = pass_index;
 			// [PrevFor=X]-generated: registers this pass's *Prev history links
 			// (builder.link_history()) before setup_func runs. link_history()
 			// must run before its current-frame resource's own create() --

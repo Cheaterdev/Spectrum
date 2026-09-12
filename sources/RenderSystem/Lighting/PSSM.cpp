@@ -109,15 +109,11 @@ PSSM::PSSM()
 
 	for (int i = 0; i < renders_size; i++)
 	{
-		m_cascade_setup[i] = [this, i](Passes::PSSM_Cascade::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
+		m_cascade_setup[i] = [](Passes::PSSM_Cascade::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 		{
-			data.cascade_index = i;
-
-			if (i == 0)
-			{
-				builder.create(data.PSSM_Depths,  { ivec3(size, 0), HAL::Format::R32_TYPELESS, renders_size, 1 }, FrameGraph::ResourceFlags::DepthStencil);
-				builder.create(data.PSSM_Cameras, { renders_size },                                               FrameGraph::ResourceFlags::CopyDest);
-			}
+			// PSSM_Depths/PSSM_Cameras are fully auto-created/needed now
+			// (pssm.sig's own [Always]+[Size]+[Format]+[Optional] on each,
+			// keyed off data.pass_index) -- nothing left to do here.
 			return true;
 		};
 

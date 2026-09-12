@@ -252,6 +252,7 @@ export
 		PSSMData = "PSSMData"_crc32,
 		PSSMDataGlobal = "PSSMDataGlobal"_crc32,
 		PSSMLighting = "PSSMLighting"_crc32,
+		RenderDeviceCapabilities = "RenderDeviceCapabilities"_crc32,
 		RaytracingRays = "RaytracingRays"_crc32,
 		ColorRTXOutput = "ColorRTXOutput"_crc32,
 		RayCone = "RayCone"_crc32,
@@ -290,6 +291,7 @@ export
 		FrameGraph_Debug_TextureCube = "FrameGraph_Debug_TextureCube"_crc32,
 		StatGraph = "StatGraph"_crc32,
 		StatGraphLine = "StatGraphLine"_crc32,
+		UpscalerSelectors = "UpscalerSelectors"_crc32,
 		NormalRoughnessRepackParams = "NormalRoughnessRepackParams"_crc32,
 		VoxelTilingParams = "VoxelTilingParams"_crc32,
 		VoxelInfo = "VoxelInfo"_crc32,
@@ -350,6 +352,12 @@ export
 		None,
 		FirstMode,
 		SecondMode = 5
+	};
+	enum class UpscalerType : uint
+	{
+		FSR,
+		DLSS,
+		DLSSRR
 	};
 	enum class VSMDebugView : uint
 	{

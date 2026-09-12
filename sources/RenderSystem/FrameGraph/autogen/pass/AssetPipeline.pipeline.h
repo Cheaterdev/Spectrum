@@ -84,7 +84,6 @@ public:
 		L"GBuffer_HiZ_UAV",
 		L"global_depth",
 		L"global_camera",
-		L"cascade_index",
 		L"PSSM_Depths",
 		L"PSSM_Cameras",
 		L"sky_cubemap",

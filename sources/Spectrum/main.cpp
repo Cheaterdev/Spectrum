@@ -407,6 +407,21 @@ public:
 
 		g_upscaling_enabled = downsampled;
 
+		// Mirrors g_upscaler_type/g_upscaling_enabled into the SIG context --
+		// see UpscalingDLSS.sig's own comment on UpscalerSelectors for why.
+		{
+			auto& upscaler_ctx = graph.get_context<Table::UpscalerSelectors>();
+			upscaler_ctx.upscaler_type     = g_upscaler_type;
+			upscaler_ctx.upscaling_enabled = g_upscaling_enabled;
+		}
+		// Mirrors fixed hardware/SDK capabilities into the SIG context -- see
+		// raytracing.sig's own comment on RenderDeviceCapabilities for why.
+		{
+			auto& device_caps = graph.get_context<Table::RenderDeviceCapabilities>();
+			device_caps.rtx_supported   = RenderSystem::get().device().get_properties().rtx;
+			device_caps.dlssrr_available = nvidia::DLSSRR::get().available();
+		}
+
 		if (downsampled)
 		{
 			// Use DLSS's own recommended render resolution for the current

@@ -22,7 +22,10 @@ export
 	// upscale; SMAA gates on the opposite so native rendering still gets AA.
 	bool g_upscaling_enabled = true;
 
-	enum class UpscalerType { FSR, DLSS, DLSSRR };
+	// UpscalerType itself is SIG-declared now (UpscalingDLSS.sig), so it's
+	// visible via plain `import HAL;` -- needed by autogen/pass_defaults.cpp,
+	// a dedicated TU generated [SetupCondition]/[RenderCondition] bodies
+	// compile in (see that file's own comment).
 
 	// Explicit user choice among the upscalers, when g_upscaling_enabled is
 	// on — replaces the old implicit hardware-priority chain (DLSS-RR >

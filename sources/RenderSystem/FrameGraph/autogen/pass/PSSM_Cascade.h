@@ -18,7 +18,13 @@ public:
 	struct Context
 	{
 
-		int cascade_index = {};
+		// [Multiple=6]: this instance's own
+		// index, written automatically by TypedPass::setup() (FrameGraph.Base.ixx,
+		// from the Pass::pass_index every [Multiple] instance already carries)
+		// before setup_func or any [Optional=...] guard runs -- no per-pass index
+		// field or manual `data.X = i;` assignment needed.
+		uint32_t pass_index = 0;
+
 
 		Handlers::Texture PSSM_Depths = ResourceID::PSSM_Depths;
 
@@ -31,16 +37,45 @@ public:
 		// context-read flag, deciding whether this specific field is actually
 		// needed this frame), or, for a View-typed field (e.g. `GBuffer
 		// gbuffer;`), every leaf the View itself marks [Always=X] that this
-		// pass's own [Write=...] on that field doesn't already cover. Called
-		// by TypedPass::setup() after setup_func returns true - not a
+		// pass's own [Write=...] on that field doesn't already cover. A field
+		// that ALSO carries [Size]/[Format] (so create_always() below creates
+		// it under its own [Optional] condition) gets the negated condition
+		// here instead -- "need what some other instance/frame already
+		// created" is the complement of "create it this time." Called by
+		// TypedPass::setup() after setup_func returns true - not a
 		// substitute for setup_func's own need()/create() calls for anything
 		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			if (data.cascade_index != 0)
+			if (!(data.pass_index == 0))
 				builder.need(data.PSSM_Depths, FrameGraph::ResourceFlags::DepthStencil);
-			if (data.cascade_index != 0)
+			if (!(data.pass_index == 0))
 				builder.need(data.PSSM_Cameras, FrameGraph::ResourceFlags::CopyDest);
+		}
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one). A
+		// field that ALSO carries [Optional] creates only under that
+		// condition -- need_always() (above) emits a complementary need() for
+		// the SAME field under the negated condition, using the same
+		// [Always] flags, e.g. a [Multiple] pass where instance 0 creates a
+		// shared resource and every other instance just needs it (see
+		// PSSM_Cascade, pssm.sig). Called by TypedPass::setup() after
+		// setup_func returns true - not a substitute for setup_func's own
+		// create()/recreate() calls for anything whose Desc depends on
+		// runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			if (data.pass_index == 0)
+			{
+			builder.create(data.PSSM_Depths, { ivec3(1024, 1024, 0), HAL::Format::R32_TYPELESS, Constants::PSSM_RendersSize, 1 }, FrameGraph::ResourceFlags::DepthStencil);
+			}
+			if (data.pass_index == 0)
+			{
+			builder.create(data.PSSM_Cameras, { Constants::PSSM_RendersSize }, FrameGraph::ResourceFlags::CopyDest);
+			}
 		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's

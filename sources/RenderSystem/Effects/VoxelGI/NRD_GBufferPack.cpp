@@ -24,15 +24,7 @@ using namespace HAL;
 // there instead, see RTXCombine's own comment), so there's no reason to run
 // this or NRD_REBLUR_Execute (its only real consumer, same gate) while
 // DLSS-RR is selected.
-FrameGraph::SetupResult PassDefault<Passes::NRD_GBufferPack>::setup(
-	Passes::NRD_GBufferPack::Context& data, TaskBuilder& builder)
-{
-	if (g_upscaler_type == UpscalerType::DLSSRR ||
-	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
-		return false;
-
-	return true;
-}
+// setup() is fully generated (nrd_sig_test.sig's own [SetupCondition]).
 
 void PassDefault<Passes::NRD_GBufferPack>::render(
 	Passes::NRD_GBufferPack::Context& data, FrameContext& context)
