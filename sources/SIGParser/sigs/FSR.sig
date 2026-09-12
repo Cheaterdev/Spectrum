@@ -44,16 +44,14 @@ ComputePSO RCAS
 }
 
 
-# Runs when explicitly selected, or as the automatic fallback when the
-# selected type (DLSS/DLSS-RR) isn't actually available on this hardware --
-# FSR is the only one of the three with no hardware gate. Equivalent to the
-# old upscaler_is_available(g_upscaler_type) switch (UpscalingDLSS.ixx),
-# inlined here since [SetupCondition] can only read Table:: contexts:
-# DLSS/DLSSRR each check their own RenderDeviceCapabilities flag, FSR itself
-# has none.
+# Runs when FSR is the selected upscaler -- which, since upscaler_type can
+# only ever hold an available type (see g_upscaler_type's invariant,
+# UpscalingDLSS.ixx), already covers "DLSS/DLSS-RR was asked for but this
+# hardware can't run it": set_upscaler_type() clamped that to FSR at the
+# point of selection, so there is nothing left to re-derive here.
 [Static]
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && !((builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSS && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlss_available) || (builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))`]
+[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::FSR`]
 PassNode FSR
 {
 	# MipCount=0: full auto mip chain, matching the original manual recreate()

@@ -452,7 +452,7 @@ PassNode ReflectionRTX
 # unaffected -- this is a separate signal, not a replacement.
 [Static]
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
+[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR`]
 PassNode ShadowRTX
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -551,7 +551,7 @@ PassNode ReflCombine
 # RTXIndirectDenoised/RTXReflectionDenoised (REBLUR_DIFFUSE/SPECULAR's
 # output, NRD_REBLUR_Execute -- see [[project-nrd-integration]]) are the
 # only indirect/reflection inputs now -- no raw/legacy alternative.
-[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
+[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR`]
 PassNode RTXCombine
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

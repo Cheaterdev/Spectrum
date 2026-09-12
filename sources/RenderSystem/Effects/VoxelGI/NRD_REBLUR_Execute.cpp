@@ -19,22 +19,25 @@ using namespace HAL;
 // own comment). NRD_GBufferPack (its other input, and now the only place
 // that packs radiance+hitdist for NRD -- see its own comment) uses the same
 // gate.
-FrameGraph::SetupResult PassDefault<Passes::NRD_REBLUR_Execute>::setup(
-	Passes::NRD_REBLUR_Execute::Context& data, TaskBuilder& builder)
-{
-	if (g_upscaler_type == UpscalerType::DLSSRR ||
-	    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
-		return false;
+// setup() is fully generated (nrd_sig_test.sig's own [SetupCondition]).
 
-	auto& frame = builder.graph->get_context<ViewportInfo>();
-	auto  sz    = frame.frame_size;
+void PassDefault<Passes::NRD_REBLUR_Execute>::pre_setup(FrameGraph::Graph& graph)
+{
+	// Same gate as [SetupCondition] (nrd_sig_test.sig) -- ensure_pools() is a
+	// real side effect [SetupCondition] can't express, so it runs here,
+	// once per frame before graph.setup(), guarded by the identical
+	// condition repeated (this function's whole reason to exist is that the
+	// condition and the side effect had to be split apart).
+	if (graph.get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR ||
+	    !graph.get_context<Table::RenderDeviceCapabilities>().rtx_supported ||
+	    !graph.get_context<Table::RenderDeviceCapabilities>().dlssrr_available)
+		return;
 
 	// Pool textures are sized off the real render resolution, not the
 	// placeholder 1920x1080 the old one-shot smoke test used -- idempotent,
 	// a no-op once already sized for this resolution.
-	nvidia::NRD::get().ensure_pools(RenderSystem::get().device(), sz);
-
-	return true;
+	auto& frame = graph.get_context<ViewportInfo>();
+	nvidia::NRD::get().ensure_pools(RenderSystem::get().device(), frame.frame_size);
 }
 
 void PassDefault<Passes::NRD_REBLUR_Execute>::render(

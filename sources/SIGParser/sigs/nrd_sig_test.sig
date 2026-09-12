@@ -907,7 +907,12 @@ ComputePSO NRD_UnpackDebug
 # multi-dispatch C++ call (nvidia::NRD::get().execute(), HAL.NRD.cpp) issuing
 # NRD's own returned dispatch list against the 21 kernel PSOs already
 # declared above, not a single shader this engine compiles directly.
+# ensure_pools() is a real side effect (sizes NRD's pool textures), moved to
+# pre_setup() (NRD_REBLUR_Execute.cpp) so [SetupCondition] below can be a
+# pure decision.
 [Static]
+[PreSetup]
+[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
 PassNode NRD_REBLUR_Execute
 {
 	[Always = Read] Texture NRD_ViewZ;
@@ -952,7 +957,7 @@ ComputePSO NRD_IndirectCombine
 # complementary case to RTXCombine (which handles DLSS-RR itself) -- the
 # negation of NRD_GBufferPack's own condition (above), same three Table::
 # contexts.
-[SetupCondition = `!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available)`]
+[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR`]
 PassNode NRD_IndirectCombine
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

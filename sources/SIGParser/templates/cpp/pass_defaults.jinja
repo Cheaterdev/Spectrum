@@ -42,8 +42,25 @@ struct PassDefault<Passes::{{pass_name}}>
 	// separate translation unit, not inlined here).
 	static FrameGraph::SetupResult setup(Passes::{{pass_name}}::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::{{pass_name}}::Context& data, FrameGraph::FrameContext& context);
+{%- if pass_def.options.PreSetup is defined %}
+
+	// [PreSetup]: a real side effect (not a pure enable/render decision, so
+	// [SetupCondition]/[RenderCondition] can't express it) that must run
+	// once per frame regardless of whether THIS pass ends up enabled --
+	// called by autogen/pass_pre_setups.cpp's run_pre_setups(), from
+	// main.cpp before graph.setup() even starts walking passes. Takes
+	// Graph&, not TaskBuilder&/Context&: there is no task, and no per-pass
+	// Context, at that point in the frame.
+	static void pre_setup(FrameGraph::Graph& graph);
+{%- endif %}
 };
 
 {% endif -%}
 {%- endfor %}
+
+// Called once per frame from main.cpp, before graph.setup() -- see each
+// [PreSetup] pass's own pre_setup() comment (pass_defaults.h) for why this
+// exists instead of folding the side effect into that pass's own setup().
+// Defined in autogen/pass_pre_setups.cpp.
+void run_pre_setups(FrameGraph::Graph& graph);
 }

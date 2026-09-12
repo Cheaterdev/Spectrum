@@ -280,6 +280,7 @@ export
 		Color = "Color"_crc32,
 		Test = "Test"_crc32,
 		UIState = "UIState"_crc32,
+		UIRenderState = "UIRenderState"_crc32,
 		vertex_input = "vertex_input"_crc32,
 		NinePatch = "NinePatch"_crc32,
 		ColorRect = "ColorRect"_crc32,

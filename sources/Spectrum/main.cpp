@@ -4,6 +4,7 @@ import HAL;
 
 
 #include "Platform/Window.h"
+#include "RenderSystem/FrameGraph/autogen/pass_defaults.h"
 
 import ppl;
 import Core;
@@ -484,14 +485,13 @@ public:
 
 		// Jitter only matters when something accumulates it temporally (DLSS)
 		// AND DLSS is actually the pass running this frame — g_upscaling_enabled
-		// off (downsampled toggled off), a non-DLSS g_upscaler_type selection,
-		// or DLSS unsupported all mean nothing consumes the jitter, so
-		// applying it would just add visible instability for no benefit.
-		// FSR1/native have no such accumulation either way.
+		// off (downsampled toggled off) or a non-DLSS selection both mean
+		// nothing consumes the jitter, so applying it would just add visible
+		// instability for no benefit. FSR1/native have no such accumulation
+		// either way. No availability re-check: g_upscaler_type can't hold an
+		// unavailable type (see its invariant, UpscalingDLSS.ixx).
 		vec2 jitter_px(0, 0);
-		if (g_upscaling_enabled &&
-		    (g_upscaler_type == UpscalerType::DLSS || g_upscaler_type == UpscalerType::DLSSRR) &&
-		    upscaler_is_available(g_upscaler_type))
+		if (g_upscaling_enabled && g_upscaler_type != UpscalerType::FSR)
 		{
 			// Halton(2,3); phase count per NVIDIA's guidance: 8*(display/render)^2.
 			const float scale_x = float(vp.upscale_size.x) / float(vp.frame_size.x);
@@ -1166,6 +1166,12 @@ public:
 			// captured from passes.size() at resource-creation time.
 			graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, swap_chain->get_current_frame(), swap_chain->get_fence(), ResourceFlags::Required);
 
+			// [PreSetup] passes' real side effects (PreScene's
+			// raytrace_scene->new_frame(), NRD_REBLUR_Execute's
+			// ensure_pools()) run here, unconditionally, before any pass's
+			// own setup() -- see pass_defaults.h's own comment on the option.
+			run_pre_setups(graph);
+
 			graph.setup();
 			graph.compile(swap_chain->m_frameIndex);
 
@@ -1470,7 +1476,7 @@ public:
 							{
 								graph.get_context<FrameGraph::DebugContext>().mode = mode;
 								if (force_non_dlssrr && g_upscaler_type == UpscalerType::DLSSRR)
-									g_upscaler_type = UpscalerType::FSR;
+									set_upscaler_type(UpscalerType::FSR);
 							};
 					}
 					toolbar->add_child(debug_combo);
@@ -1483,9 +1489,11 @@ public:
 					{
 						struct UpscalerOpt { const char* name; UpscalerType type; };
 						std::vector<UpscalerOpt> upscaler_opts = { { "FSR", UpscalerType::FSR } };
-						if (nvidia::DLSS::get().available())
+						// Same predicate set_upscaler_type() clamps with, so the
+						// list can never offer an option the setter would refuse.
+						if (upscaler_is_available(UpscalerType::DLSS))
 							upscaler_opts.push_back({ "DLSS", UpscalerType::DLSS });
-						if (nvidia::DLSSRR::get().available())
+						if (upscaler_is_available(UpscalerType::DLSSRR))
 							upscaler_opts.push_back({ "DLSS-RR", UpscalerType::DLSSRR });
 
 						auto upscaler_combo = std::make_shared<GUI::Elements::combo_box>();
@@ -1500,7 +1508,7 @@ public:
 								{
 									Log::get() << "[Upscaler] type changed " << (int)g_upscaler_type
 										<< " -> " << (int)type << " (" << type_name << ")" << Log::endl;
-									g_upscaler_type = type;
+									set_upscaler_type(type);
 								};
 							if (type == g_upscaler_type)
 								upscaler_combo->get_label()->text = o.name;

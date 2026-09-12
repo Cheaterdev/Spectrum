@@ -226,6 +226,7 @@ export import :Autogen.Tables.Color;
 export import :Autogen.Slots.Test;
 export import :Autogen.Tables.Test;
 export import :Autogen.Tables.UIState;
+export import :Autogen.Tables.UIRenderState;
 export import :Autogen.Tables.vertex_input;
 export import :Autogen.Slots.NinePatch;
 export import :Autogen.Tables.NinePatch;

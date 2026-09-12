@@ -8,6 +8,19 @@ struct UIState
 	uint UI_Passes_needed = 0;
 }
 
+# UI_Render (below) is [Multiple=16]: draw_infos gets split into per_pass-
+# sized chunks, one per instance, and only the first passes_needed instances
+# actually have work. Computed once per frame (GUI/Base.cpp, same block as
+# UIState above) instead of each of the 16 instances recomputing it and
+# instead of the old ui_ctx.setup_counter++ (an ad hoc per-instance ordinal
+# -- data.pass_index, already generated for every [Multiple] pass, is the
+# same value without a hand-rolled counter).
+struct UIRenderState
+{
+	uint passes_needed = 0;
+	uint per_pass = 0;
+}
+
 struct vertex_input
 {
 	float2 pos;

@@ -26,6 +26,14 @@ static const LPCTSTR cursors[] =
     IDC_WAIT,
     IDC_HAND
 };
+
+// Forward-declared here (global scope, matching where it's actually defined
+// below, alongside the other PassDefault<T> specializations) so
+// user_interface::create_graph (namespace GUI, below) can call it before its
+// definition -- unqualified lookup from inside a namespace still finds a
+// global-scope name.
+static uint32_t ui_per_thread(uint32_t size);
+
 namespace GUI
 {
     class dark : public base
@@ -1023,7 +1031,16 @@ namespace GUI
         // Table, ambiguous by unqualified lookup inside module GUI.
         graph.get_context<::Table::UIState>().UI_Passes_needed = (uint32_t)ui_ctx.pre_draw_infos.size();
 
-        ui_ctx.setup_counter = 0;
+        // Mirrored into Table::UIRenderState -- see its own comment (ui.sig)
+        // for why: UI_Render's [Multiple=16] instances read passes_needed
+        // via data.pass_index instead of the old ui_ctx.setup_counter++.
+        {
+            const uint32_t size     = (uint32_t)ui_ctx.draw_infos.size();
+            const uint32_t per_pass = ui_per_thread(size);
+            auto& ui_render_ctx = graph.get_context<::Table::UIRenderState>();
+            ui_render_ctx.per_pass      = per_pass;
+            ui_render_ctx.passes_needed = (size + per_pass - 1) / per_pass;
+        }
 
         ui_ctx.dt          = dt;
         ui_ctx.scaled_size = scaled_size.get();
@@ -1747,10 +1764,10 @@ FrameGraph::SetupResult PassDefault<Passes::UI_Render>::setup(
     Passes::UI_Render::Context& data, FrameGraph::TaskBuilder& builder)
 {
     auto& ui_ctx = builder.graph->get_context<GUI::UIContext>();
-    const uint32_t size       = (uint32_t)ui_ctx.draw_infos.size();
-    const uint32_t per_thread = ui_per_thread(size);
-    const uint32_t slot       = ui_ctx.setup_counter++;
-    if (slot * per_thread >= size)
+    // data.pass_index: this [Multiple=16] instance's own ordinal, generated
+    // by the framework -- see Table::UIRenderState's own comment (ui.sig)
+    // for why this replaced the old ui_ctx.setup_counter++.
+    if (data.pass_index >= builder.graph->get_context<::Table::UIRenderState>().passes_needed)
         return false;
     // result_texture_handler already points at the resource for the current
     // DebugContext::mode (set in create_graph), so no branching needed here.
@@ -1774,12 +1791,10 @@ void PassDefault<Passes::UI_Render>::render(
 
     auto& ui_ctx = context.graph->get_context<GUI::UIContext>();
 
-    uint32_t slot = context.pass->GetPassIndex();
-
-    const uint32_t size       = (uint32_t)ui_ctx.draw_infos.size();
-    const uint32_t per_thread = ui_per_thread(size);
-    const uint32_t start      = slot * per_thread;
-    const uint32_t end        = std::min(start + per_thread, size);
+    const uint32_t size      = (uint32_t)ui_ctx.draw_infos.size();
+    const uint32_t per_pass  = context.graph->get_context<::Table::UIRenderState>().per_pass;
+    const uint32_t start     = data.pass_index * per_pass;
+    const uint32_t end       = std::min(start + per_pass, size);
 
     auto command_list = context.get_list();
     auto texture = (*data.swapchain);
@@ -1788,7 +1803,7 @@ void PassDefault<Passes::UI_Render>::render(
         PROFILE(L"setup_rt");
         RT::SingleColor rt;
         rt.GetColor() = texture.renderTarget;
-        const auto rt_options = (slot == 0)
+        const auto rt_options = (data.pass_index == 0)
             ? HAL::RTOptions::Default | HAL::RTOptions::ClearColor
             : HAL::RTOptions::Default;
         command_list->get_graphics().set_rtv(rt, rt_options);

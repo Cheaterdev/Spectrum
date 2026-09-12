@@ -33,7 +33,7 @@ using namespace FrameGraph;
 FrameGraph::SetupResult PassDefault<Passes::FSR>::setup(
 	Passes::FSR::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && !((builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSS && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlss_available) || (builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))))
+	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::FSR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -55,10 +55,19 @@ FrameGraph::SetupResult PassDefault<Passes::NRD_GBufferPack>::setup(
 }
 
 
+FrameGraph::SetupResult PassDefault<Passes::NRD_REBLUR_Execute>::setup(
+	Passes::NRD_REBLUR_Execute::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassDefault<Passes::NRD_IndirectCombine>::setup(
 	Passes::NRD_IndirectCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available)))
+	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -76,6 +85,13 @@ FrameGraph::SetupResult PassDefault<Passes::RTXColorPass>::setup(
 {
 	if (!(builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::PreScene>::setup(
+	Passes::PreScene::Context& data, FrameGraph::TaskBuilder& builder)
+{
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
@@ -127,7 +143,7 @@ FrameGraph::SetupResult PassDefault<Passes::UI_PreDraw>::setup(
 FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSS>::setup(
 	Passes::UpscalingDLSS::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSS && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlss_available))
+	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSS))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -136,7 +152,7 @@ FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSS>::setup(
 FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSSRR>::setup(
 	Passes::UpscalingDLSSRR::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
+	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -170,7 +186,7 @@ FrameGraph::SetupResult PassDefault<Passes::ReflectionRTX>::setup(
 FrameGraph::SetupResult PassDefault<Passes::ShadowRTX>::setup(
 	Passes::ShadowRTX::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -197,7 +213,7 @@ FrameGraph::SetupResult PassDefault<Passes::IndirectRTX>::setup(
 FrameGraph::SetupResult PassDefault<Passes::RTXCombine>::setup(
 	Passes::RTXCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }

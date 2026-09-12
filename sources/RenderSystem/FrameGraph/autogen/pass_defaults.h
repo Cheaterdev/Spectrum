@@ -81,6 +81,15 @@ struct PassDefault<Passes::NRD_REBLUR_Execute>
 	// separate translation unit, not inlined here).
 	static FrameGraph::SetupResult setup(Passes::NRD_REBLUR_Execute::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::NRD_REBLUR_Execute::Context& data, FrameGraph::FrameContext& context);
+
+	// [PreSetup]: a real side effect (not a pure enable/render decision, so
+	// [SetupCondition]/[RenderCondition] can't express it) that must run
+	// once per frame regardless of whether THIS pass ends up enabled --
+	// called by autogen/pass_pre_setups.cpp's run_pre_setups(), from
+	// main.cpp before graph.setup() even starts walking passes. Takes
+	// Graph&, not TaskBuilder&/Context&: there is no task, and no per-pass
+	// Context, at that point in the frame.
+	static void pre_setup(FrameGraph::Graph& graph);
 };
 
 
@@ -145,6 +154,15 @@ struct PassDefault<Passes::PreScene>
 	// separate translation unit, not inlined here).
 	static FrameGraph::SetupResult setup(Passes::PreScene::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::PreScene::Context& data, FrameGraph::FrameContext& context);
+
+	// [PreSetup]: a real side effect (not a pure enable/render decision, so
+	// [SetupCondition]/[RenderCondition] can't express it) that must run
+	// once per frame regardless of whether THIS pass ends up enabled --
+	// called by autogen/pass_pre_setups.cpp's run_pre_setups(), from
+	// main.cpp before graph.setup() even starts walking passes. Takes
+	// Graph&, not TaskBuilder&/Context&: there is no task, and no per-pass
+	// Context, at that point in the frame.
+	static void pre_setup(FrameGraph::Graph& graph);
 };
 
 
@@ -404,4 +422,10 @@ struct PassDefault<Passes::RTXCombine>
 };
 
 
+
+// Called once per frame from main.cpp, before graph.setup() -- see each
+// [PreSetup] pass's own pre_setup() comment (pass_defaults.h) for why this
+// exists instead of folding the side effect into that pass's own setup().
+// Defined in autogen/pass_pre_setups.cpp.
+void run_pre_setups(FrameGraph::Graph& graph);
 }

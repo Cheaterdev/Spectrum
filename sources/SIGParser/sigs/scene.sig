@@ -103,7 +103,14 @@ GraphicsPSO Voxelization
 
 
 
+# scene.raytrace_scene->new_frame() is a real side effect unconditional on
+# this pass's own render decision (it always ran regardless of what setup()
+# returned) -- moved to pre_setup() (PreSceneSystem.cpp), which runs once per
+# frame before graph.setup() even starts, so setup() itself is trivially
+# [RunAlways].
 [Static]
+[PreSetup]
+[RunAlways]
 PassNode PreScene
 {
 	[Always = UnorderedAccess] [Size = 1] StructuredBuffer<uint> scene;

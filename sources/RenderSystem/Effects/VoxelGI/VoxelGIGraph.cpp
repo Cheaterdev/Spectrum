@@ -599,11 +599,12 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	// evaluate() call (see UpscalingDLSSRR.cpp / HAL.DLSSRR.cpp). Both are
 	// pure GBuffer-derived material properties, not reflection-specific, so
 	// this doesn't gate on `reflecton` -- only on DLSS-RR being the user's
-	// selected upscaler (g_upscaler_type) and actually available.
+	// selected upscaler. No availability re-check: g_upscaler_type can't
+	// hold an unavailable type (see its invariant, UpscalingDLSS.ixx).
 
 	m_normalroughnessrepack_setup = [this](Passes::NormalRoughnessRepack::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
 	{
-		if (g_upscaler_type != UpscalerType::DLSSRR || !nvidia::DLSSRR::get().available()) return false;
+		if (g_upscaler_type != UpscalerType::DLSSRR) return false;
 
 		return true;
 	};
@@ -638,9 +639,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		// lockstep here. NRD REBLUR_SPECULAR is the only reflection denoiser
 		// now (see [[project-nrd-integration]]) -- always used when this
 		// pass runs at all.
-		if (!reflecton ||
-		    (g_upscaler_type == UpscalerType::DLSSRR &&
-		     RenderSystem::get().device().is_rtx_supported() && nvidia::DLSSRR::get().available()))
+		if (!reflecton || g_upscaler_type == UpscalerType::DLSSRR)
 			return false;
 
 		return true;

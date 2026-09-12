@@ -535,7 +535,6 @@ namespace GUI
     {
         std::vector<draw_info> draw_infos;
         std::vector<base*> pre_draw_infos;
-        uint32_t setup_counter = 0; // incremented per slot during graph setup; reset each frame
 
         float dt = 0;
         vec2  scaled_size;
