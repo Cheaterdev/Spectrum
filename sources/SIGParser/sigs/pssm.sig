@@ -170,6 +170,7 @@ ComputePSO GBufferDownsample
 const PSSM_RendersSize = 5;
 
 [Multiple = 6]
+[RunAlways]
 PassNode PSSM_Cascade
 {
 	# data.pass_index (auto-written by TypedPass::setup(), FrameGraph.Base.ixx,
@@ -184,6 +185,7 @@ PassNode PSSM_Cascade
 	[Always = CopyDest] [Size = `Constants::PSSM_RendersSize`] [Optional = `data.pass_index == 0`] StructuredBuffer<Camera> PSSM_Cameras;
 }
 
+[RunAlways]
 PassNode PSSM_GenerateMask
 {
 	[Always = Read] Texture PSSM_Depths;
@@ -203,6 +205,7 @@ PassNode PSSM_GenerateMask
 }
 
 [Compute]
+[RunAlways]
 PassNode PSSM_Combine
 {
 	# A/B selection: ShadowMask (RTXShadow's output) when it exists this
@@ -221,6 +224,7 @@ PassNode PSSM_Combine
 	[Always = UnorderedAccess] Texture ResultTexture;
 }
 
+[RunAlways]
 PassNode PSSM_Global
 {
 	[Always = DepthStencil] [Size = 1024] [Format = R32_TYPELESS] Texture global_depth;

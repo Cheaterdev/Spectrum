@@ -17,9 +17,6 @@ export import "../defines.h";
 #include "pass/AssetGBuffer.h"
 #include "pass/AssetMip.h"
 #include "pass/BlueNoise.h"
-#include "pass/ShadowDenoiser_Prepare.h"
-#include "pass/ShadowDenoiser_TileClassification.h"
-#include "pass/ShadowDenoiser_Filter.h"
 #include "pass/FSR.h"
 #include "pass/ResultCreation.h"
 #include "pass/NRD_GBufferPack.h"
@@ -33,7 +30,6 @@ export import "../defines.h";
 #include "pass/RTXColorPass.h"
 #include "pass/PreScene.h"
 #include "pass/Profiler.h"
-#include "pass/CopyPrev.h"
 #include "pass/Scene.h"
 #include "pass/Sky.h"
 #include "pass/CubeSky.h"
@@ -80,9 +76,6 @@ export namespace Passes
 	using ::Passes::AssetGBuffer;
 	using ::Passes::AssetMip;
 	using ::Passes::BlueNoise;
-	using ::Passes::ShadowDenoiser_Prepare;
-	using ::Passes::ShadowDenoiser_TileClassification;
-	using ::Passes::ShadowDenoiser_Filter;
 	using ::Passes::FSR;
 	using ::Passes::ResultCreation;
 	using ::Passes::NRD_GBufferPack;
@@ -96,7 +89,6 @@ export namespace Passes
 	using ::Passes::RTXColorPass;
 	using ::Passes::PreScene;
 	using ::Passes::Profiler;
-	using ::Passes::CopyPrev;
 	using ::Passes::Scene;
 	using ::Passes::Sky;
 	using ::Passes::CubeSky;

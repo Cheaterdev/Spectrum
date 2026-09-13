@@ -479,10 +479,8 @@ private:
 	// vsm.sig's VSM_HiZRebuild comment).
 	void build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyramid_mip_count);
 
-	Passes::VSM_GatherDispatch::setup_func_type  m_gatherdispatch_setup;
 	Passes::VSM_GatherDispatch::render_func_type m_gatherdispatch_render;
 
-	Passes::VSM_RenderPages::setup_func_type  m_renderpages_setup;
 	Passes::VSM_RenderPages::render_func_type m_renderpages_render;
 
 	// Phase 5.17: split off VSM_RenderPages so the per-frame Hi-Z pyramid
@@ -490,7 +488,6 @@ private:
 	// queue instead of serializing into VSM_RenderPages' own direct-queue
 	// pass -- nothing else this frame reads VSM_PageHiZ, only next frame's
 	// draw does. See vsm.sig's VSM_HiZRebuild PassNode comment.
-	Passes::VSM_HiZRebuild::setup_func_type  m_hizrebuild_setup;
 	Passes::VSM_HiZRebuild::render_func_type m_hizrebuild_render;
 
 	// Phase 5.18 Part A follow-up (take 4): groupshared tile classification,
@@ -499,19 +496,14 @@ private:
 	// root-cause finding (VoxelGIGraph's VoxelCombine precedent) that shaped
 	// it. Registered in order ahead of VSM_Combine in test.sig's pipeline
 	// listing.
-	Passes::VSM_BlockerClassify::setup_func_type  m_blockerclassify_setup;
 	Passes::VSM_BlockerClassify::render_func_type m_blockerclassify_render;
 
-	Passes::VSM_BlockerSearch::setup_func_type  m_blockersearch_setup;
 	Passes::VSM_BlockerSearch::render_func_type m_blockersearch_render;
 
-	Passes::VSM_ScreenSpaceShadow::setup_func_type  m_screenspaceshadow_setup;
 	Passes::VSM_ScreenSpaceShadow::render_func_type m_screenspaceshadow_render;
 
-	Passes::VSM_ShadowResolve::setup_func_type  m_shadowresolve_setup;
 	Passes::VSM_ShadowResolve::render_func_type m_shadowresolve_render;
 
-	Passes::VSM_Combine::setup_func_type  m_combine_setup;
 	Passes::VSM_Combine::render_func_type m_combine_render;
 
 	// Debug tile-classification overlay -- reads stage 1's real
@@ -519,10 +511,8 @@ private:
 	// ResultTexture, only when vsm_debug_view is HizClassify. See vsm.sig's
 	// own PassNode comment for why this replaced the earlier postfactum
 	// "final shadow value happens to equal 1.0/0.0" guess.
-	Passes::VSM_DebugClassifyOverlay::setup_func_type  m_debugoverlay_setup;
 	Passes::VSM_DebugClassifyOverlay::render_func_type m_debugoverlay_render;
 
-	Passes::VSM_DepthAnalysis::setup_func_type  m_depth_analysis_setup;
 	Passes::VSM_DepthAnalysis::render_func_type m_depth_analysis_render;
 
 	// Shared body for planning one storage level (regular or adaptive) --
@@ -568,37 +558,30 @@ public:
 
 	VSM();
 
+	// Once per frame, before graph.setup(): mirrors the Variable<T> toggles
+	// below into Table::VSMSelectors (vsm.sig), which every VSM pass's
+	// generated setup reads. Needs a VSM instance, which a generated static
+	// setup has no way to reach.
+	void update_frame(FrameGraph::Graph& graph);
+
+	// Allocates the penumbra path's five indirect-dispatch argument buffers.
+	// Called from the constructor; idempotent.
+	void init_penumbra_dispatch_buffers();
+
+	// Every VSM pass states its enable condition in vsm.sig and gets a
+	// generated setup (PassSetupDefault<T>), so only render funcs are wired.
 	template<typename TPipeline>
 	explicit VSM(TPipeline& pipeline) : VSM()
 	{
-		pipeline.vSM_GatherDispatch.setup_func  = m_gatherdispatch_setup;
 		pipeline.vSM_GatherDispatch.render_func = m_gatherdispatch_render;
-
-		pipeline.vSM_RenderPages.setup_func  = m_renderpages_setup;
 		pipeline.vSM_RenderPages.render_func = m_renderpages_render;
-
-		pipeline.vSM_HiZRebuild.setup_func  = m_hizrebuild_setup;
 		pipeline.vSM_HiZRebuild.render_func = m_hizrebuild_render;
-
-		pipeline.vSM_BlockerClassify.setup_func  = m_blockerclassify_setup;
 		pipeline.vSM_BlockerClassify.render_func = m_blockerclassify_render;
-
-		pipeline.vSM_BlockerSearch.setup_func  = m_blockersearch_setup;
 		pipeline.vSM_BlockerSearch.render_func = m_blockersearch_render;
-
-		pipeline.vSM_ScreenSpaceShadow.setup_func  = m_screenspaceshadow_setup;
 		pipeline.vSM_ScreenSpaceShadow.render_func = m_screenspaceshadow_render;
-
-		pipeline.vSM_ShadowResolve.setup_func  = m_shadowresolve_setup;
 		pipeline.vSM_ShadowResolve.render_func = m_shadowresolve_render;
-
-		pipeline.vSM_Combine.setup_func  = m_combine_setup;
 		pipeline.vSM_Combine.render_func = m_combine_render;
-
-		pipeline.vSM_DebugClassifyOverlay.setup_func  = m_debugoverlay_setup;
 		pipeline.vSM_DebugClassifyOverlay.render_func = m_debugoverlay_render;
-
-		pipeline.vSM_DepthAnalysis.setup_func  = m_depth_analysis_setup;
 		pipeline.vSM_DepthAnalysis.render_func = m_depth_analysis_render;
 	}
 };

@@ -14,6 +14,13 @@ using namespace FrameGraph;
 float jit = 0;
 import HAL;
 using namespace HAL;
+// exp(renders_size) buckets the view depth range geometrically across the
+// cascades; znear/zfar per cascade are cam->z_near + exp(i) * this.
+float PSSM::cascade_scaler(const camera* cam) const
+{
+	return cam->z_far / (exp((float)renders_size));
+}
+
 float3 PSSM::get_position()
 {
 	pos_mutex.lock();
@@ -35,18 +42,7 @@ PSSM::PSSM()
 
 	// ---- Global shadow map ---------------------------------------------------
 
-	m_global_setup = [this](Passes::PSSM_Global::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		auto& sceneinfo = builder.graph->get_context<SceneInfo>();
-		auto& caminfo   = builder.graph->get_context<CameraInfo>();
-
-		auto scene = sceneinfo.scene;
-		auto cam   = caminfo.cam;
-
-		scaler = cam->z_far / (exp((float)renders_size));
-
-		return true;
-	};
+	// setup() is fully generated (pssm.sig's own [RunAlways]).
 
 	m_global_render = [this](Passes::PSSM_Global::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -109,13 +105,9 @@ PSSM::PSSM()
 
 	for (int i = 0; i < renders_size; i++)
 	{
-		m_cascade_setup[i] = [](Passes::PSSM_Cascade::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-		{
-			// PSSM_Depths/PSSM_Cameras are fully auto-created/needed now
-			// (pssm.sig's own [Always]+[Size]+[Format]+[Optional] on each,
-			// keyed off data.pass_index) -- nothing left to do here.
-			return true;
-		};
+		// setup() is fully generated (pssm.sig's own [RunAlways]): PSSM_Depths/
+		// PSSM_Cameras are auto-created/needed from their own [Always]+[Size]+
+		// [Format]+[Optional], keyed off data.pass_index.
 
 		m_cascade_render[i] = [this, i](Passes::PSSM_Cascade::Context& data, FrameGraph::FrameContext& context)
 		{
@@ -142,6 +134,7 @@ PSSM::PSSM()
 			auto points_all = cam->get_points(min, max);
 			auto bounds_all = points_all.get_bounds_in(light_cam.get_view());
 
+			const float scaler = cascade_scaler(cam);
 			float znear = (i == 0) ? cam->z_near : cam->z_near + exp((float)i)       * scaler;
 			float zfar  =            cam->z_near + exp((float)(i + 1)) * scaler;
 
@@ -195,10 +188,7 @@ PSSM::PSSM()
 
 	// ---- Generate light mask -------------------------------------------------
 
-	m_mask_setup = [this](Passes::PSSM_GenerateMask::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		return true;
-	};
+	// setup() is fully generated (pssm.sig's own [RunAlways]).
 
 	m_mask_render = [this](Passes::PSSM_GenerateMask::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -250,10 +240,7 @@ PSSM::PSSM()
 
 	// ---- Combine lighting ----------------------------------------------------
 
-	m_combine_setup = [this](Passes::PSSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		return true;
-	};
+	// setup() is fully generated (pssm.sig's own [RunAlways]).
 
 	m_combine_render = [this](Passes::PSSM_Combine::Context& data, FrameGraph::FrameContext& context)
 	{

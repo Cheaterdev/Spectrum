@@ -310,6 +310,25 @@ ComputePSO RTXCombine
 }
 
 
+# Per-frame snapshot of VoxelGI's own GUI toggles (VoxelGI.ixx's Variable<bool>
+# voxelize_scene/light_scene/reflecton) plus the one DebugContext::mode test
+# VoxelDebug needs. Mirrored once per frame by VoxelGI::update_frame()
+# (VoxelGIGraph.cpp) rather than read from `this`, because the generated
+# setups below are static functions in autogen/pass_defaults.cpp with no
+# VoxelGI instance to reach -- same reason as VSMSelectors (vsm.sig).
+#
+# debug_voxel_trace mirrors `DebugContext::mode == VoxelTrace` as a bool
+# instead of the mode itself: DebugMode is a plain C++ enum in
+# FrameGraph.Base.ixx, not SIG-declared, so a condition cannot name its
+# enumerators.
+struct VoxelGISelectors
+{
+	bool voxelize_scene = true;
+	bool light_scene = true;
+	bool reflection_enabled = true;
+	bool debug_voxel_trace = false;
+}
+
 # See TileClassifyData's own comment (pssm.sig) for the algorithm. [Static]
 # and listed in MainPipeline (test.sig), same as IndirectRTX -- this used to
 # be a runtime-wired add_library_pass with no actual call site left calling
@@ -367,6 +386,7 @@ PassNode GBufferDownsampler
 	Texture TileRoughnessTiles;
 }
 
+[SetupCondition = `builder.graph->get_context<Table::VoxelGISelectors>().debug_voxel_trace`]
 PassNode VoxelDebug
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -524,6 +544,11 @@ PassNode IndirectRTX
 # RTXCombine will (see RTXCombine's own doc comment below) -- exactly one of
 # the two composites onto ResultTexture each frame.
 [Compute]
+# RTXCombine (below) takes over this job -- reflections plus indirect GI plus
+# shadow, all three -- whenever DLSS-RR is the selected upscaler; same gate as
+# its own, negated. No availability terms: upscaler_type cannot hold an
+# unavailable type (see g_upscaler_type's invariant, UpscalingDLSS.ixx).
+[SetupCondition = `builder.graph->get_context<Table::VoxelGISelectors>().reflection_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR`]
 PassNode ReflCombine
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -573,6 +598,7 @@ PassNode RTXCombine
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ResultTextureRTXNoise;
 }
 
+[SetupCondition = `builder.graph->get_context<Table::VoxelGISelectors>().voxelize_scene`]
 PassNode Voxelize
 {
 	[Always = UnorderedAccess] Texture VoxelAlbedo;
@@ -584,6 +610,7 @@ PassNode Voxelize
 }
 
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::VoxelGISelectors>().light_scene`]
 PassNode Lighting
 {
 	[Always = Read] Texture VSM_Atlas;
@@ -600,6 +627,7 @@ PassNode Lighting
 }
 
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::VoxelGISelectors>().light_scene`]
 PassNode Mipmapping
 {
 	[Always = UnorderedAccess] Texture3D VoxelLighted;
@@ -611,6 +639,12 @@ PassNode Mipmapping
 # [[project-nrd-integration]]). Not [Static]: depends on VoxelLighted, so
 # only runs when VoxelGI's own volume is up to date.
 [Compute]
+# The RTX/DLSS-RR terms are NOT a capability check on this pass -- VCT needs
+# neither -- they mirror the original hand-written gate verbatim so this
+# migration stays behaviour-preserving. It looks like a copy-paste of the RTX
+# gate (it makes the VCT path require DLSS-RR to be available-but-unselected,
+# so it never runs on a non-NVIDIA GPU); revisit separately.
+[SetupCondition = `builder.graph->get_context<Table::IndirectGISelectors>().indirect_source == IndirectSource::MyVCT && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
 PassNode VoxelScreen
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -631,6 +665,8 @@ PassNode VoxelScreen
 # selectable via g_reflection_source as NRD REBLUR_SPECULAR's input (see
 # [[project-nrd-integration]]). Not [Static], same reasoning as VoxelScreen.
 [Compute]
+# Same verbatim-mirror caveat as VoxelScreen above.
+[SetupCondition = `builder.graph->get_context<Table::IndirectGISelectors>().reflection_source == ReflectionSource::MyReflection && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
 PassNode ScreenReflection
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

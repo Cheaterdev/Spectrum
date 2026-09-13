@@ -57,7 +57,6 @@ export import :NRD_GBufferPack;
 export import :NRD_REBLUR_Execute;
 export import :NRD_IndirectCombine;
 export import :RTXCombine;
-export import :ShadowDenoiser;
 export import :BlueNoise;
 
 export import :System;

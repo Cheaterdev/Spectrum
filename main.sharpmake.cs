@@ -460,6 +460,17 @@ namespace Spectrum
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
 
+            // Vendored NVIDIA NRD shader source (workdir/shaders/nrd/3rdparty/,
+            // gitignored -- proprietary, see .gitignore's comment there) is
+            // NOT checked in, and the nrd vcpkg port only installs headers +
+            // libs, not its Shaders/ folder -- so a fresh clone/machine has
+            // nothing there until synced. Runs every build (idempotent
+            // copy-only, never deletes) so a freshly-restored/rebuilt nrd
+            // vcpkg package gets synced automatically with zero extra manual
+            // steps; see sync_nrd_shaders.bat for the actual copy + the
+            // corresponding custom-overlay/nrd/portfile.cmake install step
+            // this depends on.
+            conf.EventPostBuild.Add(@"call ""[project.SharpmakeCsPath]\sync_nrd_shaders.bat""");
 
             conf.AddPublicDependency<RenderSystem>(target);
         }

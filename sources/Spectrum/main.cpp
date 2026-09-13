@@ -4,7 +4,6 @@ import HAL;
 
 
 #include "Platform/Window.h"
-#include "RenderSystem/FrameGraph/autogen/pass_defaults.h"
 
 import ppl;
 import Core;
@@ -128,7 +127,6 @@ public:
 
 	VSM vsm;
 	SkyRender sky;
-	ShadowDenoiser shadow_denoiser;
 
 	BlueNoise blue_noise;
 	VoxelGI::ptr voxel_gi;
@@ -524,9 +522,22 @@ public:
 
 
 	
+		// Per-frame mirrors into the Table:: contexts the generated setups read,
+		// plus the CPU work that used to live in those setups' bodies. All of it
+		// needs an owning instance, which a generated static setup cannot reach.
+		// Must run before graph.setup(), and before run_pre_setups() for the
+		// same reason: nothing orders one pass's setup relative to another's.
+		vsm.update_frame(graph);
+		voxel_gi->update_frame(graph);
+		stenciler->update_frame(graph);
+
 		{
 			PROFILE(L"graph");
 			pipeline.add_passes(graph);
+			// This pipeline's own [PreSetup] hooks: PreScene's
+			// raytrace_scene->new_frame(), NRD_REBLUR_Execute's ensure_pools(),
+			// CubeSky's sun-direction diff.
+			pipeline.run_pre_setups(graph);
 		}
 
 	   	voxel_gi->pass_data(graph.builder);
@@ -1166,11 +1177,12 @@ public:
 			// captured from passes.size() at resource-creation time.
 			graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, swap_chain->get_current_frame(), swap_chain->get_fence(), ResourceFlags::Required);
 
-			// [PreSetup] passes' real side effects (PreScene's
-			// raytrace_scene->new_frame(), NRD_REBLUR_Execute's
-			// ensure_pools()) run here, unconditionally, before any pass's
-			// own setup() -- see pass_defaults.h's own comment on the option.
-			run_pre_setups(graph);
+			// This pipeline's [PreSetup] passes' real side effects (PreScene's
+			// raytrace_scene->new_frame(), NRD_REBLUR_Execute's ensure_pools(),
+			// CubeSky's sun-direction diff) run here, unconditionally, before
+			// any pass's own setup() -- see pass_defaults.h's own comment on
+			// the option.
+			pipeline.run_pre_setups(graph);
 
 			graph.setup();
 			graph.compile(swap_chain->m_frameIndex);

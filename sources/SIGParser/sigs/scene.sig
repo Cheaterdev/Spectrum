@@ -131,27 +131,13 @@ PassNode Profiler
 }
 
 [Static]
-[Compute]
-# Dead: kept disabled ([SetupCondition = `false`] below) until dropped from
-# the .sig entirely -- GBuffer_NormalsPrev/GBuffer_DepthPrev are now fed by
-# FrameGraph history links (see Scene's own PassNode, below) instead of
-# copied. GBuffer_SpecularPrev dropped already: its history was unused
-# (denoiser roughness-history disabled) and removed along with this pass's
-# real body.
-[SetupCondition = `false`]
-PassNode CopyPrev
-{
-	[Write] Texture GBuffer_DepthPrev;
-	[Write] Texture GBuffer_NormalsPrev;
-}
-
-[Static]
 [RunAlways]
 PassNode Scene
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
-	# comment. GBuffer_SpecularPrev dropped (see CopyPrev's own comment,
-	# above) -- Scene never actually created it even before flattening.
+	# comment. GBuffer_SpecularPrev dropped along with the old CopyPrev pass:
+	# its history was unused (denoiser roughness-history disabled), and Scene
+	# never actually created it even before flattening.
 	#
 	# Auto-created (ViewportContext-driven, same mechanism as GBuffer_HiZ
 	# elsewhere). GBuffer_Normals/GBuffer_DepthMips are each a [PrevFor=X]

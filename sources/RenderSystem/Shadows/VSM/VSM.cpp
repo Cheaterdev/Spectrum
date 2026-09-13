@@ -173,6 +173,45 @@ void VSM::build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyrami
 	});
 }
 
+void VSM::update_frame(FrameGraph::Graph& graph)
+{
+	// One write per frame instead of the three that used to sit inside
+	// m_shadowresolve_setup/m_combine_setup/m_debugoverlay_setup: those
+	// mirrored the same values from whichever of the three happened to run
+	// first, which only worked while no OTHER pass's enable decision read them.
+	// Now every VSM pass's generated setup does, and nothing orders one pass's
+	// setup before another's.
+	auto& sel = graph.get_context<Table::VSMSelectors>();
+	sel.use_vsm_penumbra       = use_vsm_penumbra;
+	sel.use_vsm_contact_shadow = use_vsm_contact_shadow;
+	sel.vsm_debug_view         = vsm_debug_view;
+}
+
+// The five indirect-dispatch argument buffers the penumbra path consumes.
+// Allocated once, up front: this used to be a lazy null-check inside
+// VSM_BlockerClassify's setup, which meant an execute_and_wait() on the upload
+// queue in the middle of graph setup on the first penumbra frame.
+void VSM::init_penumbra_dispatch_buffers()
+{
+	if (lit_tiles_dispatch.resource) return;
+
+	auto& device = RenderSystem::get().device();
+	lit_tiles_dispatch           = HAL::StructuredBufferView<DispatchArguments>(device, 1);
+	dark_tiles_dispatch          = HAL::StructuredBufferView<DispatchArguments>(device, 1);
+	search_tiles_dispatch        = HAL::StructuredBufferView<DispatchArguments>(device, 1);
+	confirmed_lit_tiles_dispatch = HAL::StructuredBufferView<DispatchArguments>(device, 1);
+	blur_tiles_dispatch          = HAL::StructuredBufferView<DispatchArguments>(device, 1);
+
+	DispatchArguments init{ 0, 1, 1 };
+	auto upload = device.get_upload_list();
+	upload->get_copy().update(lit_tiles_dispatch, 0, std::span{ &init, 1 });
+	upload->get_copy().update(dark_tiles_dispatch, 0, std::span{ &init, 1 });
+	upload->get_copy().update(search_tiles_dispatch, 0, std::span{ &init, 1 });
+	upload->get_copy().update(confirmed_lit_tiles_dispatch, 0, std::span{ &init, 1 });
+	upload->get_copy().update(blur_tiles_dispatch, 0, std::span{ &init, 1 });
+	upload->execute_and_wait();
+}
+
 void VSM::pass_data(FrameGraph::TaskBuilder& builder)
 {
 	if (!vsm_atlas_tex)
@@ -487,6 +526,8 @@ VSM::VSM() : VariableContext(L"VSM")
 {
 	position = float3(200, 400, 200);
 
+	init_penumbra_dispatch_buffers();
+
 	// Phase 5.7: level_count is now just the fixed storage budget (MaxLevels,
 	// 26 slots) -- which of those slots are actually planned/rendered each
 	// frame is the dynamically-computed [active_min, active_max] window
@@ -563,15 +604,9 @@ VSM::VSM() : VariableContext(L"VSM")
 	// covering every active+dirty level's every mesh, instead of one
 	// Multiple-slot pass per level) ------------------------------------------
 
-	m_gatherdispatch_setup = [this](Passes::VSM_GatherDispatch::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		return true;
-	};
+	// setup() is fully generated (vsm.sig's own [RunAlways]).
 
-	m_renderpages_setup = [this](Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		return true;
-	};
+	// setup() is fully generated (vsm.sig's own [RunAlways]).
 
 	// Phase 5.17: the async-compute Hi-Z rebuild pass. need()s VSM_Atlas
 	// (read, establishes "runs after VSM_RenderPages' draw") and
@@ -579,10 +614,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// still owns create() for the cold-start clear, see its own setup()).
 	// VSM_DirtySlots moves here entirely since only this pass's dispatches
 	// consume it now.
-	m_hizrebuild_setup = [this](Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		return true;
-	};
+	// setup() is fully generated (vsm.sig's own [RunAlways]).
 
 	m_gatherdispatch_render = [this, pages_side, pages_per_level](Passes::VSM_GatherDispatch::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1165,35 +1197,10 @@ VSM::VSM() : VariableContext(L"VSM")
 	// both in this one render() (an AppendStructuredBuffer's hidden GPU
 	// counter isn't reliably barrier-tracked across a PassNode boundary,
 	// confirmed live earlier this session).
-	m_blockerclassify_setup = [this](Passes::VSM_BlockerClassify::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		// Same penumbra gate as the other two stages -- there's nothing to
-		// classify/search/resolve without it.
-		if (!use_vsm_penumbra)
-			return false;
-		// VSM-owned, not FrameGraph resources -- created once, pre-initialized
-		// to {0,1,1} (ThreadGroupCountY/Z never change again), same lazy
-		// null-check-and-create shape vsm_atlas_tex already uses. See these
-		// members' own comment in VSM.ixx.
-		if (!lit_tiles_dispatch.resource)
-		{
-			auto& device = RenderSystem::get().device();
-			lit_tiles_dispatch          = HAL::StructuredBufferView<DispatchArguments>(device, 1);
-			dark_tiles_dispatch         = HAL::StructuredBufferView<DispatchArguments>(device, 1);
-			search_tiles_dispatch       = HAL::StructuredBufferView<DispatchArguments>(device, 1);
-			confirmed_lit_tiles_dispatch = HAL::StructuredBufferView<DispatchArguments>(device, 1);
-			blur_tiles_dispatch         = HAL::StructuredBufferView<DispatchArguments>(device, 1);
-			DispatchArguments init{ 0, 1, 1 };
-			auto upload = device.get_upload_list();
-			upload->get_copy().update(lit_tiles_dispatch, 0, std::span{ &init, 1 });
-			upload->get_copy().update(dark_tiles_dispatch, 0, std::span{ &init, 1 });
-			upload->get_copy().update(search_tiles_dispatch, 0, std::span{ &init, 1 });
-			upload->get_copy().update(confirmed_lit_tiles_dispatch, 0, std::span{ &init, 1 });
-			upload->get_copy().update(blur_tiles_dispatch, 0, std::span{ &init, 1 });
-			upload->execute_and_wait();
-		}
-		return true;
-	};
+	// setup() is fully generated (vsm.sig's own [SetupCondition]); the
+	// one-time dispatch-argument buffers it used to lazily allocate are created
+	// in init_penumbra_dispatch_buffers() instead -- allocating and
+	// execute_and_wait()ing during graph setup was never the right place.
 
 	m_blockerclassify_render = [this](Passes::VSM_BlockerClassify::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1287,12 +1294,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// blocker-search result (world_delta/tc/slot, same packed uint4 shape as
 	// before) into its OWN dedicated texture, never a texture VSM_Combine
 	// samples directly.
-	m_blockersearch_setup = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		if (!use_vsm_penumbra)
-			return false;
-		return true;
-	};
+	// setup() is fully generated (vsm.sig's own [SetupCondition]).
 
 	m_blockersearch_render = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1403,12 +1405,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// emulation -- this is a handful of plain Dispatch() calls of one PSO,
 	// no classify/compact stage needed since VSM_BlockerSearch already did
 	// the classifying.
-	m_screenspaceshadow_setup = [this](Passes::VSM_ScreenSpaceShadow::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		if (!use_vsm_penumbra || !use_vsm_contact_shadow)
-			return false;
-		return true;
-	};
+	// setup() is fully generated (vsm.sig's own [SetupCondition]).
 
 	m_screenspaceshadow_render = [this](Passes::VSM_ScreenSpaceShadow::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1458,21 +1455,8 @@ VSM::VSM() : VariableContext(L"VSM")
 	// ONE render() -- see vsm.sig's VSM_ShadowResolve PassNode comment for
 	// why this shape specifically (mirrors VoxelGIGraph's VoxelCombine
 	// issuing its own blur+blur2 exec_indirects together).
-	m_shadowresolve_setup = [this](Passes::VSM_ShadowResolve::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		if (!use_vsm_penumbra)
-			return false;
-
-		// VSMSelectors is a static-function-readable snapshot of this frame's
-		// Variable<T> state (vsm.sig's own comment) -- VSM_ContactShadow's
-		// [Optional] guard reads it to reproduce the builder.exists() check
-		// this setup() used to do by hand.
-		auto& vsm_selectors = builder.graph->get_context<Table::VSMSelectors>();
-		vsm_selectors.use_vsm_contact_shadow = use_vsm_contact_shadow;
-		vsm_selectors.vsm_debug_view         = vsm_debug_view;
-
-		return true;
-	};
+	// setup() is fully generated (vsm.sig's own [SetupCondition]); the
+	// VSMSelectors mirror it used to also do now runs once in update_frame().
 
 	m_shadowresolve_render = [this](Passes::VSM_ShadowResolve::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1599,27 +1583,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	// ---- Combine lighting ------------------------------------------------
 
-	m_combine_setup = [this](Passes::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		// Penumbra-on is handled entirely by stage 3 (VSM_ShadowResolve)
-		// writing ResultTexture directly now -- see that PassNode's own
-		// comment in vsm.sig. This pass only exists any more for the
-		// non-penumbra fallback (get_shadow_vsm_simple).
-		if (use_vsm_penumbra)
-			return false;
-
-		// RTXShadow runs unconditionally every frame on RTX-capable
-		// hardware, independent of PSSM/VSM -- but its own setup() can
-		// still return false (no RTX hardware), in which case ShadowMask
-		// never gets created this frame. ShadowMask's [Optional] guard
-		// reproduces this same defensive builder.exists() check, plus the
-		// vsm_debug_view read via VSMSelectors (vsm.sig's own comment).
-		auto& vsm_selectors = builder.graph->get_context<Table::VSMSelectors>();
-		vsm_selectors.use_vsm_contact_shadow = use_vsm_contact_shadow;
-		vsm_selectors.vsm_debug_view         = vsm_debug_view;
-
-		return true;
-	};
+	// setup() is fully generated (vsm.sig's own [SetupCondition]).
 
 	m_combine_render = [this](Passes::VSM_Combine::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1691,28 +1655,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// ---- already-shaded ResultTexture; only ever dispatched when the
 	// ---- debug toggle is on.
 
-	m_debugoverlay_setup = [this](Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		// Widened from "just HizClassify" now that this pass also owns
-		// PageGrid/RtxReference -- see this PassNode's own comment in
-		// vsm.sig for why (VSM_Combine no longer runs at all when penumbra
-		// is on, so it can't host those two any more).
-		if (!use_vsm_penumbra)
-			return false;
-		if (vsm_debug_view == VSMDebugView::None)
-			return false;
-
-		// ShadowMask/VSM_ContactShadow's [Optional] guards read this same
-		// snapshot to reproduce the defensive builder.exists() checks this
-		// setup() used to do by hand (RTXShadow/VSM_ScreenSpaceShadow's own
-		// setup() can each independently return false) -- see vsm.sig's
-		// VSMSelectors comment.
-		auto& vsm_selectors = builder.graph->get_context<Table::VSMSelectors>();
-		vsm_selectors.use_vsm_contact_shadow = use_vsm_contact_shadow;
-		vsm_selectors.vsm_debug_view         = vsm_debug_view;
-
-		return true;
-	};
+	// setup() is fully generated (vsm.sig's own [SetupCondition]).
 
 	m_debugoverlay_render = [this](Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1832,11 +1775,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	// ---- Depth analysis (feeds active_min's hysteresis, see update_active_window()) --
 
-	m_depth_analysis_setup = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-
-		return true;
-	};
+	// setup() is fully generated (vsm.sig's own [RunAlways]).
 
 	m_depth_analysis_render = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::FrameContext& context)
 	{

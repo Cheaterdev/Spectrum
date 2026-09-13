@@ -7,10 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct SkyState
+struct VoxelGISelectors
 {
-	float3 prev_sun_dir; // float3
-	bool sky_changed; // bool
-	float3 GetPrev_sun_dir() { return prev_sun_dir; }
-	bool GetSky_changed() { return sky_changed; }
+	bool voxelize_scene; // bool
+	bool light_scene; // bool
+	bool reflection_enabled; // bool
+	bool debug_voxel_trace; // bool
+	bool GetVoxelize_scene() { return voxelize_scene; }
+	bool GetLight_scene() { return light_scene; }
+	bool GetReflection_enabled() { return reflection_enabled; }
+	bool GetDebug_voxel_trace() { return debug_voxel_trace; }
 };

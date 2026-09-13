@@ -7,10 +7,8 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct SkyState
+struct StencilState
 {
-	float3 prev_sun_dir; // float3
-	bool sky_changed; // bool
-	float3 GetPrev_sun_dir() { return prev_sun_dir; }
-	bool GetSky_changed() { return sky_changed; }
+	bool has_selection; // bool
+	bool GetHas_selection() { return has_selection; }
 };

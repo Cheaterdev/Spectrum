@@ -114,6 +114,27 @@ public:
 		return precompiled_passes;
 	}
 
+	// [PreSetup] side effects for the passes IN THIS PIPELINE, run once per
+	// frame after add_passes() and before graph.setup(). Per-pipeline, not
+	// global: a pass can appear in more than one pipeline (CubeSky is in both
+	// MainPipeline and AssetPipeline) driving a different Graph each time, and
+	// a pass in the main pipeline only must not fire while the asset graph is
+	// being built. See PassDefault<T>::pre_setup()'s own comment for what the
+	// hook is for.
+	void run_pre_setups(FrameGraph::Graph& graph)
+	{
+{%- for entry in pipeline.entries %}
+{%- set pass_def = parsed.passes[entry.name] %}
+{%- if pass_def is defined and pass_def.options.PreSetup is defined %}
+{%- if pass_def.options.Static is defined %}
+		PassDefault<Passes::{{entry.name}}>::pre_setup(graph);
+{%- else %}
+		PassSetupDefault<Passes::{{entry.name}}>::pre_setup(graph);
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+	}
+
 	// [Compute] on a PassNode says the pass CAN run on the compute queue; [Async]
 	// on the pipeline entry says it SHOULD here. Async is opt-in per pipeline, so
 	// an untagged compute pass runs inline on the direct queue - no fence pair for
@@ -128,11 +149,22 @@ public:
 		for (uint32_t i = 0; i < Passes::{{entry.name}}::MaxCount; ++i)
 			graph.add_library_pass<Passes::{{entry.name}}>(i, PassDefault<Passes::{{entry.name}}>::setup, PassDefault<Passes::{{entry.name}}>::render, (PassDefault<Passes::{{entry.name}}>::flags{% if entry_is_async2(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute2{% elif entry_is_async3(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute3{% elif entry_is_async(pipeline.name, entry.name) %}{% else %} & ~FrameGraph::PassFlags::Compute{% endif %}));
 {%- elif pass_def.options.Multiple is defined %}
+{%- if pass_def.options.RunAlways is defined or pass_def.options.SetupCondition is defined or pass_def.options.RenderCondition is defined %}
+		for (uint32_t i = 0; i < Passes::{{entry.name}}::MaxCount; ++i)
+			if ({{lowerize(entry.name)}}.render_funcs[i])
+				graph.add_library_pass<Passes::{{entry.name}}>(i, PassSetupDefault<Passes::{{entry.name}}>::setup, {{lowerize(entry.name)}}.render_funcs[i], ({{lowerize(entry.name)}}.flags{% if entry_is_async2(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute2{% elif entry_is_async3(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute3{% elif entry_is_async(pipeline.name, entry.name) %}{% else %} & ~FrameGraph::PassFlags::Compute{% endif %}));
+{%- else %}
 		for (uint32_t i = 0; i < Passes::{{entry.name}}::MaxCount; ++i)
 			if ({{lowerize(entry.name)}}.setup_funcs[i])
 				graph.add_library_pass<Passes::{{entry.name}}>(i, {{lowerize(entry.name)}}.setup_funcs[i], {{lowerize(entry.name)}}.render_funcs[i], ({{lowerize(entry.name)}}.flags{% if entry_is_async2(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute2{% elif entry_is_async3(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute3{% elif entry_is_async(pipeline.name, entry.name) %}{% else %} & ~FrameGraph::PassFlags::Compute{% endif %}));
+{%- endif %}
 {%- elif pass_def.options.Static is defined %}
 		graph.add_library_pass<Passes::{{entry.name}}>(PassDefault<Passes::{{entry.name}}>::setup, PassDefault<Passes::{{entry.name}}>::render, (PassDefault<Passes::{{entry.name}}>::flags{% if entry_is_async2(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute2{% elif entry_is_async3(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute3{% elif entry_is_async(pipeline.name, entry.name) %}{% else %} & ~FrameGraph::PassFlags::Compute{% endif %}));
+{%- elif pass_def.options.RunAlways is defined or pass_def.options.SetupCondition is defined or pass_def.options.RenderCondition is defined %}
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if ({{lowerize(entry.name)}}.render_func)
+			graph.add_library_pass<Passes::{{entry.name}}>(PassSetupDefault<Passes::{{entry.name}}>::setup, {{lowerize(entry.name)}}.render_func, ({{lowerize(entry.name)}}.flags{% if entry_is_async2(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute2{% elif entry_is_async3(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute3{% elif entry_is_async(pipeline.name, entry.name) %}{% else %} & ~FrameGraph::PassFlags::Compute{% endif %}));
 {%- else %}
 		if ({{lowerize(entry.name)}}.setup_func)
 			graph.add_library_pass<Passes::{{entry.name}}>({{lowerize(entry.name)}}.setup_func, {{lowerize(entry.name)}}.render_func, ({{lowerize(entry.name)}}.flags{% if entry_is_async2(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute2{% elif entry_is_async3(pipeline.name, entry.name) %} | FrameGraph::PassFlags::Compute3{% elif entry_is_async(pipeline.name, entry.name) %}{% else %} & ~FrameGraph::PassFlags::Compute{% endif %}));

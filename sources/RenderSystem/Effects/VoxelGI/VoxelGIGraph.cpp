@@ -183,6 +183,58 @@ void Texture3DRefTiles::zero_tiles(HAL::CommandList& list)
 
 // ---- VoxelGI::pass_data -----------------------------------------------------
 
+void VoxelGI::update_frame(FrameGraph::Graph& graph)
+{
+	// Mirror of the GUI toggles for the generated setups (voxel.sig's own
+	// VoxelGISelectors). debug_voxel_trace is DebugContext::mode reduced to the
+	// single test VoxelDebug makes -- DebugMode is a plain C++ enum, so a
+	// generated condition cannot name its enumerators.
+	{
+		auto& sel = graph.get_context<Table::VoxelGISelectors>();
+		sel.voxelize_scene     = voxelize_scene;
+		sel.light_scene        = light_scene;
+		sel.reflection_enabled = reflecton;
+		sel.debug_voxel_trace  =
+			graph.get_context<FrameGraph::DebugContext>().mode == FrameGraph::DebugMode::VoxelTrace;
+	}
+
+	// Voxel bounds / VoxelInfo, previously Voxelize's setup lambda. Runs
+	// unconditionally, exactly as before: the old lambda did all of this and
+	// only then returned false when voxelize_scene was off, and
+	// voxels_compiled/register_slot_setter are read by passes other than
+	// Voxelize.
+	Slots::VoxelInfo& voxel_info = this->scene->voxel_info;
+	min  = this->scene->get_min() - float3(1, 1, 1);
+	size = this->scene->get_max() + float3(1, 1, 1) - this->scene->get_min();
+
+	if (all_scene_regen_counter > 0)
+		all_scene_regen_counter--;
+
+	static bool prev = false;
+	bool cur = !!GetAsyncKeyState('P');
+	if (!cur && prev)
+		need_start_new = true;
+	prev = cur;
+
+	if (need_start_new)
+		all_scene_regen_counter = 3;
+
+	voxel_info.GetMin().xyz  = min;
+	voxel_info.GetSize().xyz = size;
+	voxel_info.GetSize().x = voxel_info.GetSize().y = voxel_info.GetSize().z =
+		std::max(200.0f, voxel_info.GetSize().max_element());
+	voxel_info.GetVoxel_tiles_count().xyz =
+		tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count();
+	voxel_info.GetVoxels_per_tile().xyz =
+		tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
+
+	this->scene->voxels_compiled = this->scene->voxel_info.compile(*graph.builder.current_frame);
+	graph.register_slot_setter(this->scene->voxels_compiled);
+
+	// Was Lighting's setup lambda: a plain per-frame tick the render half reads.
+	light_counter = (light_counter + 1) % 5;
+}
+
 void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
 {
 	// Always register external textures with the frame graph
@@ -350,42 +402,8 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- Voxelize -------------------------------------------------------
 
-	m_voxelize_setup = [this](Passes::Voxelize::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		// Update voxel bounds and info
-		Slots::VoxelInfo& voxel_info = this->scene->voxel_info;
-		min  = this->scene->get_min() - float3(1, 1, 1);
-		size = this->scene->get_max() + float3(1, 1, 1) - this->scene->get_min();
-
-		if (all_scene_regen_counter > 0)
-			all_scene_regen_counter--;
-
-		static bool prev = false;
-		bool cur = !!GetAsyncKeyState('P');
-		if (!cur && prev)
-			need_start_new = true;
-		prev = cur;
-
-		if (need_start_new)
-			all_scene_regen_counter = 3;
-
-		voxel_info.GetMin().xyz  = min;
-		voxel_info.GetSize().xyz = size;
-		voxel_info.GetSize().x = voxel_info.GetSize().y = voxel_info.GetSize().z =
-			std::max(200.0f, voxel_info.GetSize().max_element());
-		voxel_info.GetVoxel_tiles_count().xyz =
-			tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count();
-		voxel_info.GetVoxels_per_tile().xyz =
-			tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
-
-		this->scene->voxels_compiled =
-			this->scene->voxel_info.compile(*builder.graph->builder.current_frame);
-		builder.graph->register_slot_setter(this->scene->voxels_compiled);
-
-		if (!voxelize_scene) return false;
-
-		return true;
-	};
+	// setup() is fully generated (voxel.sig's own [SetupCondition]); the voxel-
+	// bounds/VoxelInfo update it used to also do now runs in update_frame().
 
 	m_voxelize_render = [this](Passes::Voxelize::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -414,13 +432,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- Lighting -------------------------------------------------------
 
-	m_lighting_setup = [this](Passes::Lighting::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		light_counter = (light_counter + 1) % 5;
-		if (!light_scene) return false;
-
-		return true;
-	};
+	// setup() is fully generated (voxel.sig's own [SetupCondition]).
 
 	m_lighting_render = [this](Passes::Lighting::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -518,11 +530,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- Mipmapping -----------------------------------------------------
 
-	m_mipmapping_setup = [this](Passes::Mipmapping::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		if (!light_scene) return false;
-		return true;
-	};
+	// setup() is fully generated (voxel.sig's own [SetupCondition]).
 
 	m_mipmapping_render = [this](Passes::Mipmapping::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -602,12 +610,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	// selected upscaler. No availability re-check: g_upscaler_type can't
 	// hold an unavailable type (see its invariant, UpscalingDLSS.ixx).
 
-	m_normalroughnessrepack_setup = [this](Passes::NormalRoughnessRepack::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		if (g_upscaler_type != UpscalerType::DLSSRR) return false;
-
-		return true;
-	};
+	// setup() is fully generated (UpscalingDLSSRR.sig's own [SetupCondition]).
 
 	m_normalroughnessrepack_render = [this](Passes::NormalRoughnessRepack::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -631,19 +634,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- ReflCombine ----------------------------------------------------
 
-	m_reflcombine_setup = [this](Passes::ReflCombine::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		// RTXCombine (voxel.sig) takes over this job -- reflections plus
-		// indirect GI plus shadow, all three -- whenever the user has picked
-		// DLSS-RR via g_upscaler_type; same gate as its own setup, kept in
-		// lockstep here. NRD REBLUR_SPECULAR is the only reflection denoiser
-		// now (see [[project-nrd-integration]]) -- always used when this
-		// pass runs at all.
-		if (!reflecton || g_upscaler_type == UpscalerType::DLSSRR)
-			return false;
-
-		return true;
-	};
+	// setup() is fully generated (voxel.sig's own [SetupCondition]).
 
 	m_reflcombine_render = [this](Passes::ReflCombine::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -672,20 +663,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- VoxelDebug -----------------------------------------------------
 
-	m_voxeldebug_setup = [this](Passes::VoxelDebug::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		// The only remaining consumer of the 3D voxel-lighting volume (see
-		// [[project-nrd-integration]] -- the old voxel-cone-traced indirect/
-		// reflection denoiser that used to also read it is gone). Gating
-		// this on the debug view actually being selected, rather than
-		// running unconditionally, is what lets Voxelize/Lighting/Mipmapping
-		// go idle automatically the rest of the time -- their own need()s
-		// only fire because this pass needs their output.
-		if (builder.graph->get_context<FrameGraph::DebugContext>().mode != FrameGraph::DebugMode::VoxelTrace)
-			return false;
-
-		return true;
-	};
+	// setup() is fully generated (voxel.sig's own [SetupCondition]).
 
 	m_voxeldebug_render = [this](Passes::VoxelDebug::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -731,24 +709,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- VoxelScreen (voxel-cone-traced indirect GI, NRD source) --------
 
-	m_voxelscreen_setup = [this](Passes::VoxelScreen::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		// Alternative to IndirectRTX as NRD REBLUR_DIFFUSE's input, selected
-		// via g_indirect_source (see [[project-nrd-integration]]). Only runs
-		// when actually selected -- this is a full RTX-primary +
-		// cone-trace-fallback dispatch, not free, and its only consumer
-		// (NRD_GBufferPack -> NRD_REBLUR_Execute) is itself off under
-		// DLSS-RR (see NRD_GBufferPack's own comment). Skipping the dispatch
-		// here, not just skipping the pack of its output downstream, is
-		// what actually avoids the wasted GPU work -- a downstream need()
-		// gate alone would still force this pass to run and be discarded.
-		if (builder.graph->get_context<Table::IndirectGISelectors>().indirect_source != IndirectSource::MyVCT ||
-		    g_upscaler_type == UpscalerType::DLSSRR ||
-		    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
-			return false;
-
-		return true;
-	};
+	// setup() is fully generated (voxel.sig's own [SetupCondition]).
 
 	m_voxelscreen_render = [this](Passes::VoxelScreen::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -789,19 +750,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- ScreenReflection (voxel-cone-traced reflection, NRD source) ----
 
-	m_screenreflection_setup = [this](Passes::ScreenReflection::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		// Alternative to ReflectionRTX as NRD REBLUR_SPECULAR's input,
-		// selected via g_reflection_source (see [[project-nrd-integration]]).
-		// See VoxelScreen's own comment on why this is gated on actual
-		// selection now, not just "RTX pipeline viable".
-		if (builder.graph->get_context<Table::IndirectGISelectors>().reflection_source != ReflectionSource::MyReflection ||
-		    g_upscaler_type == UpscalerType::DLSSRR ||
-		    !RenderSystem::get().device().is_rtx_supported() || !nvidia::DLSSRR::get().available())
-			return false;
-
-		return true;
-	};
+	// setup() is fully generated (voxel.sig's own [SetupCondition]).
 
 	m_screenreflection_render = [this](Passes::ScreenReflection::Context& data, FrameGraph::FrameContext& context)
 	{

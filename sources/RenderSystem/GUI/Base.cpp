@@ -1078,8 +1078,12 @@ namespace GUI
             default:                return FrameGraph::ResourceID::ResultTexture;
             }
         };
+        // Resolved once here so UI_Render's generated [NeedDynamic] (setup) and
+        // its render() both use the one handle -- and stored on DebugContext,
+        // not UIContext, because the generated need runs in a TU that cannot
+        // see GUI types. See DebugContext::result_texture's own comment.
         auto& dbg = graph.get_context<FrameGraph::DebugContext>();
-        ui_ctx.result_texture_handler = Handlers::Texture(debug_source(dbg.mode));
+        dbg.result_texture = Handlers::Texture(debug_source(dbg.mode));
 
         {
             PROFILE(L"process_graph");
@@ -1760,23 +1764,9 @@ static uint32_t ui_per_thread(uint32_t size)
     return std::max(clamped_per_thread, (size + 7) / 8);
 }
 
-FrameGraph::SetupResult PassDefault<Passes::UI_Render>::setup(
-    Passes::UI_Render::Context& data, FrameGraph::TaskBuilder& builder)
-{
-    auto& ui_ctx = builder.graph->get_context<GUI::UIContext>();
-    // data.pass_index: this [Multiple=16] instance's own ordinal, generated
-    // by the framework -- see Table::UIRenderState's own comment (ui.sig)
-    // for why this replaced the old ui_ctx.setup_counter++.
-    if (data.pass_index >= builder.graph->get_context<::Table::UIRenderState>().passes_needed)
-        return false;
-    // result_texture_handler already points at the resource for the current
-    // DebugContext::mode (set in create_graph), so no branching needed here.
-    // Not a PassNode field (it's on the dynamically-selected UIContext, not
-    // data), so [Always]/[Optional] can't reach it -- stays manual.
-    if (builder.exists(ui_ctx.result_texture_handler))
-        builder.need(ui_ctx.result_texture_handler, ResourceFlags::Read);
-    return true;
-}
+// setup() is fully generated (ui.sig's own [SetupCondition] on data.pass_index,
+// plus [NeedDynamic] for the debug-view source -- the one resource here whose
+// identity is picked at runtime).
 
 void PassDefault<Passes::UI_Render>::render(
     Passes::UI_Render::Context& data, FrameGraph::FrameContext& context)
@@ -1814,8 +1804,9 @@ void PassDefault<Passes::UI_Render>::render(
     c.renderer   = &renderer;
     c.command_list = command_list;
     c.delta_time = ui_ctx.dt;
-    if (ui_ctx.result_texture_handler)
-        c.result_texture_srv = *ui_ctx.result_texture_handler;
+    auto& result_texture = context.graph->get_context<FrameGraph::DebugContext>().result_texture;
+    if (result_texture)
+        c.result_texture_srv = *result_texture;
 
     {
         PROFILE(L"draw_elements");

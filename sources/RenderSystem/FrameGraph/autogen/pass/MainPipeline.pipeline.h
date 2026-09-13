@@ -1409,6 +1409,20 @@ public:
 		return precompiled_passes;
 	}
 
+	// [PreSetup] side effects for the passes IN THIS PIPELINE, run once per
+	// frame after add_passes() and before graph.setup(). Per-pipeline, not
+	// global: a pass can appear in more than one pipeline (CubeSky is in both
+	// MainPipeline and AssetPipeline) driving a different Graph each time, and
+	// a pass in the main pipeline only must not fire while the asset graph is
+	// being built. See PassDefault<T>::pre_setup()'s own comment for what the
+	// hook is for.
+	void run_pre_setups(FrameGraph::Graph& graph)
+	{
+		PassDefault<Passes::PreScene>::pre_setup(graph);
+		PassSetupDefault<Passes::CubeSky>::pre_setup(graph);
+		PassDefault<Passes::NRD_REBLUR_Execute>::pre_setup(graph);
+	}
+
 	// [Compute] on a PassNode says the pass CAN run on the compute queue; [Async]
 	// on the pipeline entry says it SHOULD here. Async is opt-in per pipeline, so
 	// an untagged compute pass runs inline on the direct queue - no fence pair for
@@ -1418,73 +1432,121 @@ public:
 		graph.set_pipeline(this);
 
 		graph.add_library_pass<Passes::PreScene>(PassDefault<Passes::PreScene>::setup, PassDefault<Passes::PreScene>::render, (PassDefault<Passes::PreScene>::flags & ~FrameGraph::PassFlags::Compute));
-		if (blueNoise.setup_func)
-			graph.add_library_pass<Passes::BlueNoise>(blueNoise.setup_func, blueNoise.render_func, (blueNoise.flags));
-		if (voxelize.setup_func)
-			graph.add_library_pass<Passes::Voxelize>(voxelize.setup_func, voxelize.render_func, (voxelize.flags & ~FrameGraph::PassFlags::Compute));
-		if (vSM_GatherDispatch.setup_func)
-			graph.add_library_pass<Passes::VSM_GatherDispatch>(vSM_GatherDispatch.setup_func, vSM_GatherDispatch.render_func, (vSM_GatherDispatch.flags & ~FrameGraph::PassFlags::Compute));
-		if (vSM_RenderPages.setup_func)
-			graph.add_library_pass<Passes::VSM_RenderPages>(vSM_RenderPages.setup_func, vSM_RenderPages.render_func, (vSM_RenderPages.flags & ~FrameGraph::PassFlags::Compute));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (blueNoise.render_func)
+			graph.add_library_pass<Passes::BlueNoise>(PassSetupDefault<Passes::BlueNoise>::setup, blueNoise.render_func, (blueNoise.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (voxelize.render_func)
+			graph.add_library_pass<Passes::Voxelize>(PassSetupDefault<Passes::Voxelize>::setup, voxelize.render_func, (voxelize.flags & ~FrameGraph::PassFlags::Compute));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (vSM_GatherDispatch.render_func)
+			graph.add_library_pass<Passes::VSM_GatherDispatch>(PassSetupDefault<Passes::VSM_GatherDispatch>::setup, vSM_GatherDispatch.render_func, (vSM_GatherDispatch.flags & ~FrameGraph::PassFlags::Compute));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (vSM_RenderPages.render_func)
+			graph.add_library_pass<Passes::VSM_RenderPages>(PassSetupDefault<Passes::VSM_RenderPages>::setup, vSM_RenderPages.render_func, (vSM_RenderPages.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::Scene>(PassDefault<Passes::Scene>::setup, PassDefault<Passes::Scene>::render, (PassDefault<Passes::Scene>::flags & ~FrameGraph::PassFlags::Compute));
-		if (cubeSky.setup_func)
-			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, (cubeSky.flags | FrameGraph::PassFlags::Compute2));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (cubeSky.render_func)
+			graph.add_library_pass<Passes::CubeSky>(PassSetupDefault<Passes::CubeSky>::setup, cubeSky.render_func, (cubeSky.flags | FrameGraph::PassFlags::Compute2));
 		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, (PassDefault<Passes::CubeMapDownsample>::flags | FrameGraph::PassFlags::Compute2));
 		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, (PassDefault<Passes::CubeMapEnviromentProcessor>::flags | FrameGraph::PassFlags::Compute2));
-		if (lighting.setup_func)
-			graph.add_library_pass<Passes::Lighting>(lighting.setup_func, lighting.render_func, (lighting.flags));
-		if (mipmapping.setup_func)
-			graph.add_library_pass<Passes::Mipmapping>(mipmapping.setup_func, mipmapping.render_func, (mipmapping.flags));
-		if (stencil_renderer_before.setup_func)
-			graph.add_library_pass<Passes::stencil_renderer_before>(stencil_renderer_before.setup_func, stencil_renderer_before.render_func, (stencil_renderer_before.flags & ~FrameGraph::PassFlags::Compute));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (lighting.render_func)
+			graph.add_library_pass<Passes::Lighting>(PassSetupDefault<Passes::Lighting>::setup, lighting.render_func, (lighting.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (mipmapping.render_func)
+			graph.add_library_pass<Passes::Mipmapping>(PassSetupDefault<Passes::Mipmapping>::setup, mipmapping.render_func, (mipmapping.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (stencil_renderer_before.render_func)
+			graph.add_library_pass<Passes::stencil_renderer_before>(PassSetupDefault<Passes::stencil_renderer_before>::setup, stencil_renderer_before.render_func, (stencil_renderer_before.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, (PassDefault<Passes::ResultCreation>::flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::GBufferDownsampler>(PassDefault<Passes::GBufferDownsampler>::setup, PassDefault<Passes::GBufferDownsampler>::render, (PassDefault<Passes::GBufferDownsampler>::flags & ~FrameGraph::PassFlags::Compute));
-		if (normalRoughnessRepack.setup_func)
-			graph.add_library_pass<Passes::NormalRoughnessRepack>(normalRoughnessRepack.setup_func, normalRoughnessRepack.render_func, (normalRoughnessRepack.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (normalRoughnessRepack.render_func)
+			graph.add_library_pass<Passes::NormalRoughnessRepack>(PassSetupDefault<Passes::NormalRoughnessRepack>::setup, normalRoughnessRepack.render_func, (normalRoughnessRepack.flags));
 		graph.add_library_pass<Passes::ReflectionRTXHalf>(PassDefault<Passes::ReflectionRTXHalf>::setup, PassDefault<Passes::ReflectionRTXHalf>::render, (PassDefault<Passes::ReflectionRTXHalf>::flags));
 		graph.add_library_pass<Passes::ReflectionRTX>(PassDefault<Passes::ReflectionRTX>::setup, PassDefault<Passes::ReflectionRTX>::render, (PassDefault<Passes::ReflectionRTX>::flags));
 		graph.add_library_pass<Passes::ShadowRTX>(PassDefault<Passes::ShadowRTX>::setup, PassDefault<Passes::ShadowRTX>::render, (PassDefault<Passes::ShadowRTX>::flags));
 		graph.add_library_pass<Passes::IndirectRTXHalf>(PassDefault<Passes::IndirectRTXHalf>::setup, PassDefault<Passes::IndirectRTXHalf>::render, (PassDefault<Passes::IndirectRTXHalf>::flags));
 		graph.add_library_pass<Passes::IndirectRTX>(PassDefault<Passes::IndirectRTX>::setup, PassDefault<Passes::IndirectRTX>::render, (PassDefault<Passes::IndirectRTX>::flags));
-		if (voxelScreen.setup_func)
-			graph.add_library_pass<Passes::VoxelScreen>(voxelScreen.setup_func, voxelScreen.render_func, (voxelScreen.flags));
-		if (screenReflection.setup_func)
-			graph.add_library_pass<Passes::ScreenReflection>(screenReflection.setup_func, screenReflection.render_func, (screenReflection.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (voxelScreen.render_func)
+			graph.add_library_pass<Passes::VoxelScreen>(PassSetupDefault<Passes::VoxelScreen>::setup, voxelScreen.render_func, (voxelScreen.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (screenReflection.render_func)
+			graph.add_library_pass<Passes::ScreenReflection>(PassSetupDefault<Passes::ScreenReflection>::setup, screenReflection.render_func, (screenReflection.flags));
 		graph.add_library_pass<Passes::NRD_GBufferPack>(PassDefault<Passes::NRD_GBufferPack>::setup, PassDefault<Passes::NRD_GBufferPack>::render, (PassDefault<Passes::NRD_GBufferPack>::flags));
 		graph.add_library_pass<Passes::RTXShadow>(PassDefault<Passes::RTXShadow>::setup, PassDefault<Passes::RTXShadow>::render, (PassDefault<Passes::RTXShadow>::flags));
-		if (vSM_DepthAnalysis.setup_func)
-			graph.add_library_pass<Passes::VSM_DepthAnalysis>(vSM_DepthAnalysis.setup_func, vSM_DepthAnalysis.render_func, (vSM_DepthAnalysis.flags | FrameGraph::PassFlags::Compute2));
-		if (vSM_HiZRebuild.setup_func)
-			graph.add_library_pass<Passes::VSM_HiZRebuild>(vSM_HiZRebuild.setup_func, vSM_HiZRebuild.render_func, (vSM_HiZRebuild.flags | FrameGraph::PassFlags::Compute2));
-		if (vSM_BlockerClassify.setup_func)
-			graph.add_library_pass<Passes::VSM_BlockerClassify>(vSM_BlockerClassify.setup_func, vSM_BlockerClassify.render_func, (vSM_BlockerClassify.flags | FrameGraph::PassFlags::Compute2));
-		if (vSM_BlockerSearch.setup_func)
-			graph.add_library_pass<Passes::VSM_BlockerSearch>(vSM_BlockerSearch.setup_func, vSM_BlockerSearch.render_func, (vSM_BlockerSearch.flags | FrameGraph::PassFlags::Compute2));
-		if (vSM_ScreenSpaceShadow.setup_func)
-			graph.add_library_pass<Passes::VSM_ScreenSpaceShadow>(vSM_ScreenSpaceShadow.setup_func, vSM_ScreenSpaceShadow.render_func, (vSM_ScreenSpaceShadow.flags | FrameGraph::PassFlags::Compute2));
-		if (vSM_ShadowResolve.setup_func)
-			graph.add_library_pass<Passes::VSM_ShadowResolve>(vSM_ShadowResolve.setup_func, vSM_ShadowResolve.render_func, (vSM_ShadowResolve.flags | FrameGraph::PassFlags::Compute2));
-		if (vSM_Combine.setup_func)
-			graph.add_library_pass<Passes::VSM_Combine>(vSM_Combine.setup_func, vSM_Combine.render_func, (vSM_Combine.flags | FrameGraph::PassFlags::Compute2));
-		if (vSM_DebugClassifyOverlay.setup_func)
-			graph.add_library_pass<Passes::VSM_DebugClassifyOverlay>(vSM_DebugClassifyOverlay.setup_func, vSM_DebugClassifyOverlay.render_func, (vSM_DebugClassifyOverlay.flags | FrameGraph::PassFlags::Compute2));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (vSM_DepthAnalysis.render_func)
+			graph.add_library_pass<Passes::VSM_DepthAnalysis>(PassSetupDefault<Passes::VSM_DepthAnalysis>::setup, vSM_DepthAnalysis.render_func, (vSM_DepthAnalysis.flags | FrameGraph::PassFlags::Compute2));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (vSM_HiZRebuild.render_func)
+			graph.add_library_pass<Passes::VSM_HiZRebuild>(PassSetupDefault<Passes::VSM_HiZRebuild>::setup, vSM_HiZRebuild.render_func, (vSM_HiZRebuild.flags | FrameGraph::PassFlags::Compute2));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (vSM_BlockerClassify.render_func)
+			graph.add_library_pass<Passes::VSM_BlockerClassify>(PassSetupDefault<Passes::VSM_BlockerClassify>::setup, vSM_BlockerClassify.render_func, (vSM_BlockerClassify.flags | FrameGraph::PassFlags::Compute2));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (vSM_BlockerSearch.render_func)
+			graph.add_library_pass<Passes::VSM_BlockerSearch>(PassSetupDefault<Passes::VSM_BlockerSearch>::setup, vSM_BlockerSearch.render_func, (vSM_BlockerSearch.flags | FrameGraph::PassFlags::Compute2));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (vSM_ScreenSpaceShadow.render_func)
+			graph.add_library_pass<Passes::VSM_ScreenSpaceShadow>(PassSetupDefault<Passes::VSM_ScreenSpaceShadow>::setup, vSM_ScreenSpaceShadow.render_func, (vSM_ScreenSpaceShadow.flags | FrameGraph::PassFlags::Compute2));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (vSM_ShadowResolve.render_func)
+			graph.add_library_pass<Passes::VSM_ShadowResolve>(PassSetupDefault<Passes::VSM_ShadowResolve>::setup, vSM_ShadowResolve.render_func, (vSM_ShadowResolve.flags | FrameGraph::PassFlags::Compute2));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (vSM_Combine.render_func)
+			graph.add_library_pass<Passes::VSM_Combine>(PassSetupDefault<Passes::VSM_Combine>::setup, vSM_Combine.render_func, (vSM_Combine.flags | FrameGraph::PassFlags::Compute2));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (vSM_DebugClassifyOverlay.render_func)
+			graph.add_library_pass<Passes::VSM_DebugClassifyOverlay>(PassSetupDefault<Passes::VSM_DebugClassifyOverlay>::setup, vSM_DebugClassifyOverlay.render_func, (vSM_DebugClassifyOverlay.flags | FrameGraph::PassFlags::Compute2));
 		graph.add_library_pass<Passes::NRD_REBLUR_Execute>(PassDefault<Passes::NRD_REBLUR_Execute>::setup, PassDefault<Passes::NRD_REBLUR_Execute>::render, (PassDefault<Passes::NRD_REBLUR_Execute>::flags));
 		graph.add_library_pass<Passes::NRD_IndirectCombine>(PassDefault<Passes::NRD_IndirectCombine>::setup, PassDefault<Passes::NRD_IndirectCombine>::render, (PassDefault<Passes::NRD_IndirectCombine>::flags));
-		if (reflCombine.setup_func)
-			graph.add_library_pass<Passes::ReflCombine>(reflCombine.setup_func, reflCombine.render_func, (reflCombine.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (reflCombine.render_func)
+			graph.add_library_pass<Passes::ReflCombine>(PassSetupDefault<Passes::ReflCombine>::setup, reflCombine.render_func, (reflCombine.flags));
 		graph.add_library_pass<Passes::RTXCombine>(PassDefault<Passes::RTXCombine>::setup, PassDefault<Passes::RTXCombine>::render, (PassDefault<Passes::RTXCombine>::flags));
-		if (sky.setup_func)
-			graph.add_library_pass<Passes::Sky>(sky.setup_func, sky.render_func, (sky.flags));
-		if (sMAA.setup_func)
-			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, (sMAA.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (sky.render_func)
+			graph.add_library_pass<Passes::Sky>(PassSetupDefault<Passes::Sky>::setup, sky.render_func, (sky.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (sMAA.render_func)
+			graph.add_library_pass<Passes::SMAA>(PassSetupDefault<Passes::SMAA>::setup, sMAA.render_func, (sMAA.flags));
 		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, (PassDefault<Passes::FSR>::flags));
 		graph.add_library_pass<Passes::UpscalingDLSS>(PassDefault<Passes::UpscalingDLSS>::setup, PassDefault<Passes::UpscalingDLSS>::render, (PassDefault<Passes::UpscalingDLSS>::flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::UpscalingDLSSRR>(PassDefault<Passes::UpscalingDLSSRR>::setup, PassDefault<Passes::UpscalingDLSSRR>::render, (PassDefault<Passes::UpscalingDLSSRR>::flags & ~FrameGraph::PassFlags::Compute));
-		if (stencil_renderer_after.setup_func)
-			graph.add_library_pass<Passes::stencil_renderer_after>(stencil_renderer_after.setup_func, stencil_renderer_after.render_func, (stencil_renderer_after.flags & ~FrameGraph::PassFlags::Compute));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (stencil_renderer_after.render_func)
+			graph.add_library_pass<Passes::stencil_renderer_after>(PassSetupDefault<Passes::stencil_renderer_after>::setup, stencil_renderer_after.render_func, (stencil_renderer_after.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::RTXColorPass>(PassDefault<Passes::RTXColorPass>::setup, PassDefault<Passes::RTXColorPass>::render, (PassDefault<Passes::RTXColorPass>::flags & ~FrameGraph::PassFlags::Compute));
-		if (voxelDebug.setup_func)
-			graph.add_library_pass<Passes::VoxelDebug>(voxelDebug.setup_func, voxelDebug.render_func, (voxelDebug.flags & ~FrameGraph::PassFlags::Compute));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (voxelDebug.render_func)
+			graph.add_library_pass<Passes::VoxelDebug>(PassSetupDefault<Passes::VoxelDebug>::setup, voxelDebug.render_func, (voxelDebug.flags & ~FrameGraph::PassFlags::Compute));
 	}
 };
 

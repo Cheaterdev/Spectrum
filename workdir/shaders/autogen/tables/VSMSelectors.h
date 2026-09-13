@@ -9,8 +9,10 @@
 #include "enums.h"
 struct VSMSelectors
 {
+	bool use_vsm_penumbra; // bool
 	bool use_vsm_contact_shadow; // bool
 	VSMDebugView vsm_debug_view; // VSMDebugView
+	bool GetUse_vsm_penumbra() { return use_vsm_penumbra; }
 	bool GetUse_vsm_contact_shadow() { return use_vsm_contact_shadow; }
 	VSMDebugView GetVsm_debug_view() { return vsm_debug_view; }
 };

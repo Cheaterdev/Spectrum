@@ -100,6 +100,10 @@ ComputePSO BlendingCompute
 
 
 [Compute]
+# Runs only when upscaling is off entirely (native rendering needs its own AA)
+# -- when it's on, DLSS/FSR each produce ResultTextureNew and DLSS does its own
+# temporal AA, so SMAA on top would double up.
+[SetupCondition = `!builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled`]
 PassNode SMAA
 {
 	# No [Size]/[Format]: recreate() clones the existing ResultTexture's desc

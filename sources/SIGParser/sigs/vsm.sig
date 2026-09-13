@@ -79,6 +79,7 @@ enum VSMDebugView
 # static function with no `this` to read the Variable<T>s from directly.
 struct VSMSelectors
 {
+	bool use_vsm_penumbra = true;
 	bool use_vsm_contact_shadow = true;
 	VSMDebugView vsm_debug_view = None;
 }
@@ -816,6 +817,7 @@ ComputePSO VSMGatherDispatchMaterial
 # it) rather than declaring either as FrameGraph resources here -- neither
 # is owned or created by VSM.
 [Compute]
+[RunAlways]
 PassNode VSM_GatherDispatch
 {
 	[Always = CopyDest | Static] [Size = 26] StructuredBuffer<VSMLevelDispatchInfo> VSM_LevelDispatchInfo;
@@ -838,6 +840,7 @@ PassNode VSM_GatherDispatch
 # Single pass, not [Multiple=N]: VSM_GatherDispatch already decided exactly
 # which (level,mesh) pairs need drawing and appended them; this pass just
 # issues one exec_indirect() call over the resulting (GPU-counted) list.
+[RunAlways]
 PassNode VSM_RenderPages
 {
 	[Always = DepthStencil] Texture VSM_Atlas;
@@ -886,6 +889,7 @@ PassNode VSM_RenderPages
 # VSM_BlockerSearch (and, as before, before NEXT frame's VSM_RenderPages
 # draw).
 [Compute]
+[RunAlways]
 PassNode VSM_HiZRebuild
 {
 	[Always = Read] Texture VSM_Atlas;
@@ -915,6 +919,7 @@ PassNode VSM_HiZRebuild
 # across a PassNode boundary, confirmed live earlier this session), just via
 # a copy instead of a dispatch now.
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra`]
 PassNode VSM_BlockerClassify
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -955,6 +960,7 @@ PassNode VSM_BlockerClassify
 # before stage 1 in test.sig's listing -- the pyramid both stage 1 and
 # stage 2 read must be this frame's freshly-rebuilt one, not last frame's.
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra`]
 PassNode VSM_BlockerSearch
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -1050,6 +1056,7 @@ ComputePSO VSMScreenSpaceShadow
 }
 
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::VSMSelectors>().use_vsm_contact_shadow`]
 PassNode VSM_ScreenSpaceShadow
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -1085,6 +1092,7 @@ PassNode VSM_ScreenSpaceShadow
 # non-penumbra fallback (get_shadow_vsm_simple, no tile pipeline to
 # piggyback on) -- see its own PassNode comment.
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra`]
 PassNode VSM_ShadowResolve
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -1130,6 +1138,9 @@ PassNode VSM_ShadowResolve
 # fallback (get_shadow_vsm_simple, a plain fixed 3x3 hardware-PCF full-
 # screen pass with no tile lists to dispatch over) and nothing else.
 [Compute]
+# The PCSS path's fallback: VSM_ShadowResolve replaces this whenever penumbra
+# is on, so the two are exact complements.
+[SetupCondition = `!builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra`]
 PassNode VSM_Combine
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -1184,6 +1195,7 @@ PassNode VSM_Combine
 # in this PassNode) -- see VSM_DebugTileOverlay.hlsl's own CS_OVERLAY_PAGE_
 # GRID/CS_OVERLAY_RTX_REFERENCE.
 [Compute]
+[SetupCondition = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::VSMSelectors>().vsm_debug_view != VSMDebugView::None`]
 PassNode VSM_DebugClassifyOverlay
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -1252,6 +1264,7 @@ ComputePSO VSMDepthAnalysis
 
 [Compute]
 [Required]
+[RunAlways]
 PassNode VSM_DepthAnalysis
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

@@ -44,6 +44,10 @@ ComputePSO NormalRoughnessRepack
 	compute = gbuffer/normal_roughness_repack;
 }
 
+# Pure GBuffer-derived material properties feeding UpscalingDLSSRR's evaluate()
+# -- not reflection-specific, so no `reflection_enabled` term; only DLSS-RR
+# being the selected upscaler, which already implies it is available.
+[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR`]
 PassNode NormalRoughnessRepack
 {
 	[Always = Read] Texture GBuffer_Normals;

@@ -469,6 +469,19 @@ public:
 		return precompiled_passes;
 	}
 
+	// [PreSetup] side effects for the passes IN THIS PIPELINE, run once per
+	// frame after add_passes() and before graph.setup(). Per-pipeline, not
+	// global: a pass can appear in more than one pipeline (CubeSky is in both
+	// MainPipeline and AssetPipeline) driving a different Graph each time, and
+	// a pass in the main pipeline only must not fire while the asset graph is
+	// being built. See PassDefault<T>::pre_setup()'s own comment for what the
+	// hook is for.
+	void run_pre_setups(FrameGraph::Graph& graph)
+	{
+		PassDefault<Passes::PreScene>::pre_setup(graph);
+		PassSetupDefault<Passes::CubeSky>::pre_setup(graph);
+	}
+
 	// [Compute] on a PassNode says the pass CAN run on the compute queue; [Async]
 	// on the pipeline entry says it SHOULD here. Async is opt-in per pipeline, so
 	// an untagged compute pass runs inline on the direct queue - no fence pair for
@@ -479,30 +492,48 @@ public:
 
 		graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, (PassDefault<Passes::ResultCreation>::flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::PreScene>(PassDefault<Passes::PreScene>::setup, PassDefault<Passes::PreScene>::render, (PassDefault<Passes::PreScene>::flags & ~FrameGraph::PassFlags::Compute));
-		if (blueNoise.setup_func)
-			graph.add_library_pass<Passes::BlueNoise>(blueNoise.setup_func, blueNoise.render_func, (blueNoise.flags));
-		if (assetGBuffer.setup_func)
-			graph.add_library_pass<Passes::AssetGBuffer>(assetGBuffer.setup_func, assetGBuffer.render_func, (assetGBuffer.flags & ~FrameGraph::PassFlags::Compute));
-		if (pSSM_Global.setup_func)
-			graph.add_library_pass<Passes::PSSM_Global>(pSSM_Global.setup_func, pSSM_Global.render_func, (pSSM_Global.flags & ~FrameGraph::PassFlags::Compute));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (blueNoise.render_func)
+			graph.add_library_pass<Passes::BlueNoise>(PassSetupDefault<Passes::BlueNoise>::setup, blueNoise.render_func, (blueNoise.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (assetGBuffer.render_func)
+			graph.add_library_pass<Passes::AssetGBuffer>(PassSetupDefault<Passes::AssetGBuffer>::setup, assetGBuffer.render_func, (assetGBuffer.flags & ~FrameGraph::PassFlags::Compute));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (pSSM_Global.render_func)
+			graph.add_library_pass<Passes::PSSM_Global>(PassSetupDefault<Passes::PSSM_Global>::setup, pSSM_Global.render_func, (pSSM_Global.flags & ~FrameGraph::PassFlags::Compute));
 		for (uint32_t i = 0; i < Passes::PSSM_Cascade::MaxCount; ++i)
-			if (pSSM_Cascade.setup_funcs[i])
-				graph.add_library_pass<Passes::PSSM_Cascade>(i, pSSM_Cascade.setup_funcs[i], pSSM_Cascade.render_funcs[i], (pSSM_Cascade.flags & ~FrameGraph::PassFlags::Compute));
-		if (cubeSky.setup_func)
-			graph.add_library_pass<Passes::CubeSky>(cubeSky.setup_func, cubeSky.render_func, (cubeSky.flags & ~FrameGraph::PassFlags::Compute));
+			if (pSSM_Cascade.render_funcs[i])
+				graph.add_library_pass<Passes::PSSM_Cascade>(i, PassSetupDefault<Passes::PSSM_Cascade>::setup, pSSM_Cascade.render_funcs[i], (pSSM_Cascade.flags & ~FrameGraph::PassFlags::Compute));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (cubeSky.render_func)
+			graph.add_library_pass<Passes::CubeSky>(PassSetupDefault<Passes::CubeSky>::setup, cubeSky.render_func, (cubeSky.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::CubeMapDownsample>(PassDefault<Passes::CubeMapDownsample>::setup, PassDefault<Passes::CubeMapDownsample>::render, (PassDefault<Passes::CubeMapDownsample>::flags));
 		graph.add_library_pass<Passes::CubeMapEnviromentProcessor>(PassDefault<Passes::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::CubeMapEnviromentProcessor>::render, (PassDefault<Passes::CubeMapEnviromentProcessor>::flags & ~FrameGraph::PassFlags::Compute));
-		if (pSSM_GenerateMask.setup_func)
-			graph.add_library_pass<Passes::PSSM_GenerateMask>(pSSM_GenerateMask.setup_func, pSSM_GenerateMask.render_func, (pSSM_GenerateMask.flags & ~FrameGraph::PassFlags::Compute));
-		if (pSSM_Combine.setup_func)
-			graph.add_library_pass<Passes::PSSM_Combine>(pSSM_Combine.setup_func, pSSM_Combine.render_func, (pSSM_Combine.flags));
-		if (sky.setup_func)
-			graph.add_library_pass<Passes::Sky>(sky.setup_func, sky.render_func, (sky.flags));
-		if (sMAA.setup_func)
-			graph.add_library_pass<Passes::SMAA>(sMAA.setup_func, sMAA.render_func, (sMAA.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (pSSM_GenerateMask.render_func)
+			graph.add_library_pass<Passes::PSSM_GenerateMask>(PassSetupDefault<Passes::PSSM_GenerateMask>::setup, pSSM_GenerateMask.render_func, (pSSM_GenerateMask.flags & ~FrameGraph::PassFlags::Compute));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (pSSM_Combine.render_func)
+			graph.add_library_pass<Passes::PSSM_Combine>(PassSetupDefault<Passes::PSSM_Combine>::setup, pSSM_Combine.render_func, (pSSM_Combine.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (sky.render_func)
+			graph.add_library_pass<Passes::Sky>(PassSetupDefault<Passes::Sky>::setup, sky.render_func, (sky.flags));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (sMAA.render_func)
+			graph.add_library_pass<Passes::SMAA>(PassSetupDefault<Passes::SMAA>::setup, sMAA.render_func, (sMAA.flags));
 		graph.add_library_pass<Passes::FSR>(PassDefault<Passes::FSR>::setup, PassDefault<Passes::FSR>::render, (PassDefault<Passes::FSR>::flags));
-		if (assetMip.setup_func)
-			graph.add_library_pass<Passes::AssetMip>(assetMip.setup_func, assetMip.render_func, (assetMip.flags & ~FrameGraph::PassFlags::Compute));
+		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+		// only supplies render_func, so that is what gates registration.
+		if (assetMip.render_func)
+			graph.add_library_pass<Passes::AssetMip>(PassSetupDefault<Passes::AssetMip>::setup, assetMip.render_func, (assetMip.flags & ~FrameGraph::PassFlags::Compute));
 	}
 };
 

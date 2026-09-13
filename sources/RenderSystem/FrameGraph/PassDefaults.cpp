@@ -90,19 +90,6 @@ void PassDefault<Passes::ResultCreation>::render(
 	Passes::ResultCreation::Context&, FrameGraph::FrameContext&) {}
 
 
-// ---- CopyPrev ---------------------------------------------------------------
-// Obsolete: GBuffer_NormalsPrev and GBuffer_DepthPrev are now fed by FrameGraph
-// history links (see Scene::setup) — the previous-frame allocation is carried
-// forward instead of copied. GBuffer_SpecularPrev history was unused and removed.
-// The pass is kept disabled (scene.sig's [SetupCondition = `false`]) until it
-// can be dropped from the .sig entirely.
-
-void PassDefault<Passes::CopyPrev>::render(
-	Passes::CopyPrev::Context& data, FrameGraph::FrameContext& context)
-{
-}
-
-
 // ---- Profiler ---------------------------------------------------------------
 // setup() is fully generated (scene.sig's [RenderCondition = `false`]) --
 // this pass never actually renders itself (some other UI/overlay pass owns

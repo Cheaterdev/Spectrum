@@ -124,6 +124,19 @@ file(INSTALL "${SHADERMAKEBLOB_LIB_PATH}" DESTINATION "${CURRENT_PACKAGES_DIR}/d
 file(GLOB NRD_HEADERS "${NRD_SOURCE_PATH}/Include/*.h")
 file(INSTALL ${NRD_HEADERS} DESTINATION "${CURRENT_PACKAGES_DIR}/include/${PORT}")
 
+# Shader SOURCE (not headers) -- needed at RUNTIME, not by this build: the
+# engine's own HAL::ShaderCompiler loads and compiles these .hlsl/.hlsli
+# files itself (workdir/shaders/nrd/'s sig_*.hlsl shims #include them), it
+# never consumes NRD's own embedded-DXIL blobs. Installed into this package's
+# share/ folder like any other vcpkg artifact (vcpkg_installed/ is itself
+# gitignored) so sync_nrd_shaders.bat (repo root) has a stable, versioned
+# path to copy from into the actually-gitignored workdir/shaders/nrd/
+# 3rdparty/ -- never installed directly into a tracked location here.
+# ml.hlsli lives flat alongside NRD's own Shaders/*, matching the flat layout
+# sync_nrd_shaders.bat mirrors into 3rdparty/ (no separate MathLib subfolder).
+file(INSTALL "${NRD_SOURCE_PATH}/Shaders/" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}/Shaders")
+file(INSTALL "${MATHLIB_SOURCE_PATH}/ml.hlsli" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}/Shaders")
+
 vcpkg_install_copyright(FILE_LIST "${NRD_SOURCE_PATH}/LICENSE.txt")
 
 file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/usage" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}")

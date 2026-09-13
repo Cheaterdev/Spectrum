@@ -72,8 +72,6 @@ public:
 	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
-
-	setup_func_type setup_func;
 	render_func_type render_func;
 
 	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;

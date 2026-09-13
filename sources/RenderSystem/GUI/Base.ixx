@@ -538,7 +538,6 @@ namespace GUI
 
         float dt = 0;
         vec2  scaled_size;
-        FrameGraph::Handlers::Texture result_texture_handler;
     };
 
     class user_interface : public base, public InputHandler, public Events::Runner

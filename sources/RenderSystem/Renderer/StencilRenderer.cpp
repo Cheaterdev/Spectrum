@@ -455,63 +455,8 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 
 	// ---- Pass function members -----------------------------------------------
 
-	m_before_setup = [this](Passes::stencil_renderer_before::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		process_tasks();
-		debug_scene->update_transforms();
-
-		// Size the rotation rings from the arrows' actual (post-import-scale) bounds,
-		// once they are available. The arrows are drawn through the mesh node transform,
-		// so a hardcoded radius in raw model units would not match their rendered size.
-		if (!rings_sized && axis && !axis->rendering.empty())
-		{
-			float ext = 0.0f;
-			auto  fabs2 = [](float v) { return v < 0 ? -v : v; };
-			for (auto& r : axis->rendering)
-			{
-				auto mn = r.primitive->get_min();
-				auto mx = r.primitive->get_max();
-				ext = std::max(ext, std::max(std::max(fabs2(mx.x), fabs2(mx.y)), fabs2(mx.z)));
-				ext = std::max(ext, std::max(std::max(fabs2(mn.x), fabs2(mn.y)), fabs2(mn.z)));
-			}
-			if (ext > 0.0f)
-			{
-				build_rings(ext * 0.9f, ext * 0.12f);
-				rings_sized = true;
-			}
-		}
-
-		auto& caminfo = builder.graph->get_context<CameraInfo>();
-		cam = *caminfo.cam;
-		cam.set_projection_params(0.01f, 1.f, 0.1f, 10000.f);
-		cam.target = cam.position + direction;
-		cam.update();
-
-		axis_cam = *caminfo.cam;
-		vec3 dir = caminfo.cam->target - caminfo.cam->position;
-		dir.normalize();
-		axis_cam.position -= center_pos;
-		axis_cam.position.normalize();
-		// Distance scales with viewport height so the gizmo keeps a constant on-screen
-		// pixel size. Clamp to the known-good base distance so it can't cross the near
-		// plane (or swallow the camera) at small viewport sizes.
-		float frame_h = float(builder.graph->get_context<ViewportInfo>().frame_size.y);
-		float dist    = 200.0f * frame_h / gizmo_ref_height;
-		if (dist < 200.0f) dist = 200.0f;
-		axis_cam.position *= dist;
-		axis_cam.target = axis_cam.position + dir;
-		// near/far track the distance so the gizmo is always bracketed regardless of
-		// how far the camera sits (at dist == 200 this is exactly near=1 / far=1000).
-		axis_cam.set_projection_params(dist * 0.005f, dist * 5.0f);
-		axis_cam.update();
-
-		axis_intersect_cam = axis_cam;
-		axis_intersect_cam.set_projection_params(dist * 0.005f, dist * 5.0f);
-		axis_intersect_cam.target = axis_intersect_cam.position + direction;
-		axis_intersect_cam.update();
-
-		return true;
-	};
+	// setup() is fully generated (stenciler.sig's own [RunAlways]); the camera/
+	// gizmo work it used to do runs in update_frame().
 
 	m_before_render = [this](Passes::stencil_renderer_before::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -653,12 +598,7 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 		});
 	};
 
-	m_after_setup = [this](Passes::stencil_renderer_after::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		if (selected.empty())
-			return false;
-		return true;
-	};
+	// setup() is fully generated (stenciler.sig's own [SetupCondition]).
 
 	m_after_render = [this](Passes::stencil_renderer_after::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -787,4 +727,71 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 			}
 		}
 	};
+}
+
+// Per-frame CPU work that used to be stencil_renderer_before's setup body:
+// pending-task drain, gizmo ring sizing, and the three camera setups the
+// render halves read. None of it is an enable decision, and all of it needs
+// `this`, so it cannot live in a generated setup -- it runs once per frame
+// from triangle_drawer::generate() instead, before graph.setup().
+void stencil_renderer::update_frame(FrameGraph::Graph& graph)
+{
+	process_tasks();
+	debug_scene->update_transforms();
+
+	// Size the rotation rings from the arrows' actual (post-import-scale) bounds,
+	// once they are available. The arrows are drawn through the mesh node transform,
+	// so a hardcoded radius in raw model units would not match their rendered size.
+	if (!rings_sized && axis && !axis->rendering.empty())
+	{
+		float ext = 0.0f;
+		auto  fabs2 = [](float v) { return v < 0 ? -v : v; };
+		for (auto& r : axis->rendering)
+		{
+			auto mn = r.primitive->get_min();
+			auto mx = r.primitive->get_max();
+			ext = std::max(ext, std::max(std::max(fabs2(mx.x), fabs2(mx.y)), fabs2(mx.z)));
+			ext = std::max(ext, std::max(std::max(fabs2(mn.x), fabs2(mn.y)), fabs2(mn.z)));
+		}
+		if (ext > 0.0f)
+		{
+			build_rings(ext * 0.9f, ext * 0.12f);
+			rings_sized = true;
+		}
+	}
+
+	auto& caminfo = graph.get_context<CameraInfo>();
+	cam = *caminfo.cam;
+	cam.set_projection_params(0.01f, 1.f, 0.1f, 10000.f);
+	cam.target = cam.position + direction;
+	cam.update();
+
+	axis_cam = *caminfo.cam;
+	vec3 dir = caminfo.cam->target - caminfo.cam->position;
+	dir.normalize();
+	axis_cam.position -= center_pos;
+	axis_cam.position.normalize();
+	// Distance scales with viewport height so the gizmo keeps a constant on-screen
+	// pixel size. Clamp to the known-good base distance so it can't cross the near
+	// plane (or swallow the camera) at small viewport sizes.
+	float frame_h = float(graph.get_context<ViewportInfo>().frame_size.y);
+	float dist    = 200.0f * frame_h / gizmo_ref_height;
+	if (dist < 200.0f) dist = 200.0f;
+	axis_cam.position *= dist;
+	axis_cam.target = axis_cam.position + dir;
+	// near/far track the distance so the gizmo is always bracketed regardless of
+	// how far the camera sits (at dist == 200 this is exactly near=1 / far=1000).
+	axis_cam.set_projection_params(dist * 0.005f, dist * 5.0f);
+	axis_cam.update();
+
+	axis_intersect_cam = axis_cam;
+	axis_intersect_cam.set_projection_params(dist * 0.005f, dist * 5.0f);
+	axis_intersect_cam.target = axis_intersect_cam.position + direction;
+	axis_intersect_cam.update();
+
+	// Mirror for stencil_renderer_after's generated [SetupCondition]
+	// (stenciler.sig).
+	// ::Table -- GUI::Elements::Table (Table.ixx) is also visible here, so the
+	// unqualified name is ambiguous.
+	graph.get_context<::Table::StencilState>().has_selection = !selected.empty();
 }

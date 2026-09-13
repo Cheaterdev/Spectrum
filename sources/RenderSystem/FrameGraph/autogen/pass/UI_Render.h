@@ -51,6 +51,20 @@ public:
 			builder.need(data.swapchain, FrameGraph::ResourceFlags::RenderTarget);
 			if (builder.exists(data.UI_PreDraw_Sync))
 				builder.need(data.UI_PreDraw_Sync, FrameGraph::ResourceFlags::Read);
+			// [NeedDynamic]: a resource this pass reads whose IDENTITY is chosen
+			// at runtime, so no fixed PassNode field (and therefore no [Always])
+			// can name it -- a debug-view source, a ping-pong history buffer.
+			// The expression must be an LVALUE naming the handler that render()
+			// will dereference, not a temporary: builder.need() resolves the
+			// handler object it is handed, and a temporary would leave the one
+			// render() reads unresolved. Guarded by exists(): the selected
+			// resource may not be produced at all in this graph configuration,
+			// and a hard need() on one no pass writes is a graph-build failure.
+			{
+				auto& dynamic_need = builder.graph->get_context<FrameGraph::DebugContext>().result_texture;
+				if (builder.exists(dynamic_need))
+					builder.need(dynamic_need, ResourceFlags::Read);
+			}
 		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -96,8 +110,6 @@ public:
 	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
-
-	std::array<setup_func_type, MaxCount> setup_funcs;
 	std::array<render_func_type, MaxCount> render_funcs;
 
 	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;

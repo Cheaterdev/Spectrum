@@ -81,19 +81,22 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
         std::vector<std::pair<MeshAssetInstance::ptr, int>> selected;
         vec3 direction;
 
-        Passes::stencil_renderer_before::setup_func_type  m_before_setup;
+        // Both setups are generated (stenciler.sig) -- render halves only.
         Passes::stencil_renderer_before::render_func_type m_before_render;
-        Passes::stencil_renderer_after::setup_func_type   m_after_setup;
         Passes::stencil_renderer_after::render_func_type  m_after_render;
 
         stencil_renderer();
 
+        // Per-frame CPU work (task drain, gizmo ring sizing, the three camera
+        // setups) plus the Table::StencilState mirror -- everything
+        // stencil_renderer_before's setup used to do that isn't an enable
+        // decision. Called once per frame before graph.setup().
+        void update_frame(FrameGraph::Graph& graph);
+
         template<typename TPipeline>
         explicit stencil_renderer(TPipeline& pipeline) : stencil_renderer()
         {
-            pipeline.stencil_renderer_before.setup_func  = m_before_setup;
             pipeline.stencil_renderer_before.render_func = m_before_render;
-            pipeline.stencil_renderer_after.setup_func   = m_after_setup;
             pipeline.stencil_renderer_after.render_func  = m_after_render;
         }
 };

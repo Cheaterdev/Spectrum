@@ -5,6 +5,7 @@ struct TextureRenderer
 	Texture2D<float4> texture;
 }
 
+[RunAlways]
 PassNode AssetGBuffer
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -39,6 +40,7 @@ PassNode AssetGBuffer
 	[Always = Read] StructuredBuffer<uint> scene;
 }
 
+[RunAlways]
 PassNode AssetMip
 {
 	# GBuffer gbuffer; used to live here, but nothing in AssetMip's own

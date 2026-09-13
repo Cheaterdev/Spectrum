@@ -1,14 +1,20 @@
-# Mirrors FrameGraphContext.ixx's SkyInfo::sky_changed -- a plain context
-# field CubeSky's setup() writes and CubeMapDownsample/
-# CubeMapEnviromentProcessor's own [RenderCondition] reads, both from the
-# same setup phase, rather than the old resource-level is_changed()/
-# changed() pair (which needed create() and the mutator to run in the same
-# function). Split out as its own Table:: context (instead of just adding
-# a field to SkyInfo) because [RenderCondition]'s generated body lives in
-# autogen/pass_defaults.cpp, which only ever sees SIG-declared Table::
-# contexts, not Graphics-layer structs like SkyInfo.
+# "Has the sun moved since the last bake?" -- written once per frame by
+# CubeSky's [PreSetup] hook (Sky.cpp), read by CubeSky's own and
+# CubeMapDownsample's/CubeMapEnviromentProcessor's [RenderCondition]. Replaces
+# the old resource-level is_changed()/changed() pair, which needed create()
+# and the mutator to run in the same function.
+#
+# Its own Table:: context rather than a field on SkyInfo because a generated
+# [RenderCondition] body lives in autogen/pass_defaults.cpp, which only ever
+# sees SIG-declared Table:: contexts, not Graphics-layer structs.
+#
+# prev_sun_dir is the comparison state, and it lives HERE rather than as a
+# SkyRender member on purpose: pre_setup() is static, and a Table:: context is
+# per-Graph, so the main and asset pipelines -- each with their own SkyRender
+# instance -- keep separate sun histories exactly as they did before.
 struct SkyState
 {
+	float3 prev_sun_dir;
 	bool sky_changed = false;
 }
 
@@ -106,6 +112,7 @@ ComputePSO CubemapENVDiffuse
 
 
 [Compute]
+[RunAlways]
 PassNode Sky
 {
 	[Always = Read] Texture GBuffer_Depth;
@@ -114,6 +121,12 @@ PassNode Sky
 
 
 [Compute]
+# [PreSetup] does the sun-direction diff into Table::SkyState (Sky.cpp) --
+# a real side effect, and one CubeMapDownsample/CubeMapEnviromentProcessor's
+# own conditions depend on, so it has to run before ANY pass's setup rather
+# than inside this one's.
+[PreSetup]
+[RenderCondition = `builder.graph->get_context<Table::SkyState>().sky_changed`]
 PassNode CubeSky
 {
 	# create_always() runs every frame this pass is enabled (SetupResult::

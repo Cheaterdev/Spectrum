@@ -158,10 +158,8 @@ public:
 		RawDepthMips
 	};
 
-	struct DebugContext
-	{
-		DebugMode mode = DebugMode::Final;
-	};
+	// DebugContext lives further down, after Handlers:: (it holds a
+	// Handlers::Texture).
 
 	//struct BufferDesc
 	//{
@@ -631,6 +629,22 @@ public:
 		using TextureCube = UniversalHandler<CubeDesc>;
 		using Texture3D = UniversalHandler<Texture3DDesc>;
 
+	};
+
+	struct DebugContext
+	{
+		DebugMode mode = DebugMode::Final;
+
+		// The resource `mode` selects, resolved once per frame in
+		// GUI/Base.cpp's create_graph (see the DebugMode switch there) so that
+		// setup and render both use the one handle -- the A/B-selection rule in
+		// CLAUDE.md. Lives here rather than on GUI::UIContext because
+		// UI_Render's generated [NeedDynamic] runs in autogen/pass_defaults.cpp
+		// and pass/UI_Render.h, neither of which can see Graphics/GUI types --
+		// and because it must be an LVALUE: builder.need() resolves the handler
+		// it is given, and UI_Render's render() then dereferences that same
+		// object.
+		Handlers::Texture result_texture;
 	};
 
 	struct TaskBuilderResourceAllocationContext

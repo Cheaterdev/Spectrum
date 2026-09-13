@@ -323,6 +323,16 @@ PassNode UI_PreDraw
 
 [Static]
 [Multiple = 16]
+# data.pass_index is this instance's own ordinal, generated for every
+# [Multiple] pass -- so the "is there work for this instance" test is a plain
+# condition and needs no hand-written setup().
+[SetupCondition = `data.pass_index < builder.graph->get_context<Table::UIRenderState>().passes_needed`]
+# The debug-view source: its ResourceID is picked at runtime from
+# DebugContext::mode (GUI/Base.cpp's create_graph), so no fixed field can name
+# it. See [NeedDynamic]'s generated comment (need_always, pass/UI_Render.h) for
+# why the expression has to be that lvalue specifically.
+[NeedDynamic = `builder.graph->get_context<FrameGraph::DebugContext>().result_texture`]
+[NeedDynamicFlags = Read]
 PassNode UI_Render
 {
 	[Always = RenderTarget] Texture swapchain;

@@ -35,22 +35,9 @@ SkyRender::SkyRender()
 	// ---- Pass function members ------------------------------------------------
 
 	// CubeSky: renders the atmospheric sky into a static cubemap, re-baked only
-	// when the sun direction has changed enough to warrant it.
-	m_cubesky_setup = [this](Passes::CubeSky::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		auto& sky = builder.graph->get_context<SkyInfo>();
-
-		bool changed = ((sky.sunDir - dir).length() > 0.001f);
-		if (changed) dir = sky.sunDir;
-
-		// Mirrored into Table::SkyState -- see its own comment (sky.sig) for
-		// why this can't just be a SkyInfo field: CubeMapDownsample/
-		// CubeMapEnviromentProcessor's [RenderCondition] reads it from
-		// autogen/pass_defaults.cpp, which only sees Table:: contexts.
-		builder.graph->get_context<Table::SkyState>().sky_changed = changed;
-
-		return changed ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
-	};
+	// when the sun direction has changed enough to warrant it -- that decision
+	// is CubeSky's [PreSetup] hook plus [RenderCondition] (sky.sig) now, see
+	// PassSetupDefault<Passes::CubeSky>::pre_setup below.
 
 	m_cubesky_render = [this](Passes::CubeSky::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -96,11 +83,7 @@ SkyRender::SkyRender()
 	};
 
 	// Sky: full-screen sky pass that composites over the GBuffer depth.
-	m_sky_setup = [](Passes::Sky::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		return true;
-	};
-
+	// setup() is fully generated (sky.sig's own [RunAlways]).
 	m_sky_render = [this](Passes::Sky::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& sky     = context.graph->get_context<SkyInfo>();
@@ -124,6 +107,26 @@ SkyRender::SkyRender()
 	};
 }
 
+
+// ---- PassSetupDefault<Passes::CubeSky> -------------------------------------
+// The sun-direction diff, run once per frame before any pass's setup (sky.sig's
+// [PreSetup]). It has to be here rather than inside CubeSky's own setup because
+// CubeMapDownsample and CubeMapEnviromentProcessor read the result in their own
+// [RenderCondition]s, and nothing orders one pass's setup before another's.
+//
+// Static, so there is no SkyRender instance to hold the previous direction --
+// it lives in Table::SkyState instead, which is per-Graph and therefore still
+// separate between the main and asset pipelines (see its own comment, sky.sig).
+
+void PassSetupDefault<Passes::CubeSky>::pre_setup(FrameGraph::Graph& graph)
+{
+	auto& sky   = graph.get_context<SkyInfo>();
+	auto& state = graph.get_context<Table::SkyState>();
+
+	state.sky_changed = ((sky.sunDir - state.prev_sun_dir).length() > 0.001f);
+	if (state.sky_changed)
+		state.prev_sun_dir = sky.sunDir;
+}
 
 // ---- PassDefault<Passes::CubeMapDownsample> --------------------------------
 // Generates mipmaps for the sky cubemap whenever it has been re-baked.

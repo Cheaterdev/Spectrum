@@ -69,10 +69,7 @@ BlueNoise::BlueNoise()
 
 	// ---- Pass function members ------------------------------------------------
 
-	m_bluenoise_setup = [this](Passes::BlueNoise::Context& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult
-	{
-		return true;
-	};
+	// setup() is fully generated (BlueNoise.sig's own [RunAlways]).
 
 	m_bluenoise_render = [this](Passes::BlueNoise::Context& data, FrameGraph::FrameContext& context)
 	{

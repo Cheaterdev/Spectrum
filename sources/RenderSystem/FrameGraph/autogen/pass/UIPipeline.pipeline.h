@@ -343,6 +343,17 @@ public:
 		return precompiled_passes;
 	}
 
+	// [PreSetup] side effects for the passes IN THIS PIPELINE, run once per
+	// frame after add_passes() and before graph.setup(). Per-pipeline, not
+	// global: a pass can appear in more than one pipeline (CubeSky is in both
+	// MainPipeline and AssetPipeline) driving a different Graph each time, and
+	// a pass in the main pipeline only must not fire while the asset graph is
+	// being built. See PassDefault<T>::pre_setup()'s own comment for what the
+	// hook is for.
+	void run_pre_setups(FrameGraph::Graph& graph)
+	{
+	}
+
 	// [Compute] on a PassNode says the pass CAN run on the compute queue; [Async]
 	// on the pipeline entry says it SHOULD here. Async is opt-in per pipeline, so
 	// an untagged compute pass runs inline on the direct queue - no fence pair for

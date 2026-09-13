@@ -111,8 +111,6 @@ public:
 	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
-
-	std::array<setup_func_type, MaxCount> setup_funcs;
 	std::array<render_func_type, MaxCount> render_funcs;
 
 	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;

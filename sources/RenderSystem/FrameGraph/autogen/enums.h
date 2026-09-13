@@ -23,9 +23,6 @@ export
 			Library::AssetGBuffer AssetGBuffer;
 		Library::AssetMip AssetMip;
 		Library::BlueNoise BlueNoise;
-		Library::ShadowDenoiser_Prepare ShadowDenoiser_Prepare;
-		Library::ShadowDenoiser_TileClassification ShadowDenoiser_TileClassification;
-		Library::ShadowDenoiser_Filter ShadowDenoiser_Filter;
 		Library::FSR FSR;
 		Library::ResultCreation ResultCreation;
 		Library::NRD_GBufferPack NRD_GBufferPack;
@@ -39,7 +36,6 @@ export
 		Library::RTXColorPass RTXColorPass;
 		Library::PreScene PreScene;
 		Library::Profiler Profiler;
-		Library::CopyPrev CopyPrev;
 		Library::Scene Scene;
 		Library::Sky Sky;
 		Library::CubeSky CubeSky;

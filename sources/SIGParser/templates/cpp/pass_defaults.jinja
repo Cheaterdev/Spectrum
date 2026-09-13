@@ -47,8 +47,8 @@ struct PassDefault<Passes::{{pass_name}}>
 	// [PreSetup]: a real side effect (not a pure enable/render decision, so
 	// [SetupCondition]/[RenderCondition] can't express it) that must run
 	// once per frame regardless of whether THIS pass ends up enabled --
-	// called by autogen/pass_pre_setups.cpp's run_pre_setups(), from
-	// main.cpp before graph.setup() even starts walking passes. Takes
+	// called by the OWNING PIPELINE's generated run_pre_setups(), after its
+	// add_passes() and before graph.setup() starts walking passes. Takes
 	// Graph&, not TaskBuilder&/Context&: there is no task, and no per-pass
 	// Context, at that point in the frame.
 	static void pre_setup(FrameGraph::Graph& graph);
@@ -58,9 +58,60 @@ struct PassDefault<Passes::{{pass_name}}>
 {% endif -%}
 {%- endfor %}
 
-// Called once per frame from main.cpp, before graph.setup() -- see each
-// [PreSetup] pass's own pre_setup() comment (pass_defaults.h) for why this
-// exists instead of folding the side effect into that pass's own setup().
-// Defined in autogen/pass_pre_setups.cpp.
-void run_pre_setups(FrameGraph::Graph& graph);
+// ---------------------------------------------------------------------------
+// PassSetupDefault<T> -- the setup half of PassDefault<T>, for passes that are
+// NOT [Static].
+//
+// [Static] means two things at once: the setup is generated AND render is a
+// free function. Those are independent, and most passes can only have the
+// first: SkyRender, PSSM, SMAA, BlueNoise, VoxelGI, VSM and stencil_renderer
+// are plain members, and SkyRender/PSSM exist TWICE (triangle_drawer and
+// SceneRenderWorkflow) with different per-instance state, so there is no
+// single object a free render() could reach. Such a pass still declares its
+// whole enable decision in the .sig; the generated setup lands here and the
+// owning pipeline wires it in, so the owner supplies only render_func.
+//
+// A free function or a Passes::T member would not work: Passes::T is attached
+// to module FrameGraph:Passes, and a member of a module-attached class can
+// only be defined inside that module -- autogen/pass_defaults.cpp (module
+// Graphics) could not define it. This template is inside the same extern "C++"
+// block as PassDefault<T> for exactly that reason: language linkage gives it
+// global module attachment, so its members can be defined in whichever TU
+// suits them -- setup() in autogen/pass_defaults.cpp (which imports HAL for
+// the Table:: contexts conditions read), pre_setup() in the owner's own .cpp.
+template<typename TPass>
+struct PassSetupDefault
+{
+	static constexpr bool enabled = false;
+};
+
+{% for pass_name in parsed.passes -%}
+{%- set pass_def = parsed.passes[pass_name] -%}
+{%- if pass_def.options.Static is undefined -%}
+{%- set has_condition = pass_def.options.RunAlways is defined or pass_def.options.SetupCondition is defined or pass_def.options.RenderCondition is defined -%}
+{%- if has_condition or pass_def.options.PreSetup is defined %}
+template<>
+struct PassSetupDefault<Passes::{{pass_name}}>
+{
+	static constexpr bool enabled = {{ "true" if has_condition else "false" }};
+{%- if has_condition %}
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::{{pass_name}}::Context& data, FrameGraph::TaskBuilder& builder);
+{%- endif %}
+{%- if pass_def.options.PreSetup is defined %}
+
+	// [PreSetup]: same contract as PassDefault<T>::pre_setup() above --
+	// hand-written in the owner's .cpp, dispatched by the owning pipeline's
+	// run_pre_setups(). Takes Graph& only, so it cannot close over an owner
+	// instance; keep its state in a Table:: context, which is per-Graph and
+	// therefore already separate between the main and asset pipelines.
+	static void pre_setup(FrameGraph::Graph& graph);
+{%- endif %}
+};
+
+{% endif -%}
+{%- endif -%}
+{%- endfor %}
 }

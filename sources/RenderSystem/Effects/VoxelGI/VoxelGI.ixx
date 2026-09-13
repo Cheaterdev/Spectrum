@@ -108,22 +108,16 @@ private:
 	// private render helpers (defined in VoxelGIGraph.cpp, use <RenderSystem.h> symbols)
 	void voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph& graph);
 
-	// Pass function members — bodies defined in VoxelGIGraph.cpp
-	Passes::Voxelize::setup_func_type                      m_voxelize_setup;
+	// Pass function members — bodies defined in VoxelGIGraph.cpp. Render only:
+	// every one of these passes states its enable condition in voxel.sig and
+	// gets a generated setup (PassSetupDefault<T>, pass_defaults.h).
 	Passes::Voxelize::render_func_type                     m_voxelize_render;
-	Passes::Lighting::setup_func_type                      m_lighting_setup;
 	Passes::Lighting::render_func_type                     m_lighting_render;
-	Passes::Mipmapping::setup_func_type                    m_mipmapping_setup;
 	Passes::Mipmapping::render_func_type                   m_mipmapping_render;
-	Passes::NormalRoughnessRepack::setup_func_type         m_normalroughnessrepack_setup;
 	Passes::NormalRoughnessRepack::render_func_type        m_normalroughnessrepack_render;
-	Passes::ReflCombine::setup_func_type                   m_reflcombine_setup;
 	Passes::ReflCombine::render_func_type                  m_reflcombine_render;
-	Passes::VoxelDebug::setup_func_type                    m_voxeldebug_setup;
 	Passes::VoxelDebug::render_func_type                   m_voxeldebug_render;
-	Passes::VoxelScreen::setup_func_type                   m_voxelscreen_setup;
 	Passes::VoxelScreen::render_func_type                  m_voxelscreen_render;
-	Passes::ScreenReflection::setup_func_type              m_screenreflection_setup;
 	Passes::ScreenReflection::render_func_type             m_screenreflection_render;
 
 public:
@@ -152,6 +146,13 @@ public:
 
 	void pass_data(FrameGraph::TaskBuilder& builder);
 
+	// Once per frame, before graph.setup(): mirrors the Variable<bool> toggles
+	// above into Table::VoxelGISelectors (voxel.sig) for the generated setups
+	// to read, and does the voxel-bounds/VoxelInfo update that used to live in
+	// Voxelize's own setup lambda. Both need a VoxelGI instance, which a
+	// generated static setup has no way to reach.
+	void update_frame(FrameGraph::Graph& graph);
+
 	void resize(ivec2 size);
 	void start_new(HAL::CommandList& list);
 
@@ -161,21 +162,13 @@ public:
 	template<typename TPipeline>
 	explicit VoxelGI(TPipeline& pipeline, Scene::ptr& scene, VSM& vsm) : VoxelGI(scene, vsm)
 	{
-		pipeline.voxelize.setup_func          = m_voxelize_setup;
-		pipeline.voxelize.render_func         = m_voxelize_render;
-		pipeline.lighting.setup_func          = m_lighting_setup;
-		pipeline.lighting.render_func         = m_lighting_render;
-		pipeline.mipmapping.setup_func        = m_mipmapping_setup;
-		pipeline.mipmapping.render_func       = m_mipmapping_render;
-		pipeline.normalRoughnessRepack.setup_func = m_normalroughnessrepack_setup;
+		pipeline.voxelize.render_func              = m_voxelize_render;
+		pipeline.lighting.render_func              = m_lighting_render;
+		pipeline.mipmapping.render_func            = m_mipmapping_render;
 		pipeline.normalRoughnessRepack.render_func = m_normalroughnessrepack_render;
-		pipeline.reflCombine.setup_func       = m_reflcombine_setup;
-		pipeline.reflCombine.render_func      = m_reflcombine_render;
-		pipeline.voxelDebug.setup_func        = m_voxeldebug_setup;
-		pipeline.voxelDebug.render_func       = m_voxeldebug_render;
-		pipeline.voxelScreen.setup_func       = m_voxelscreen_setup;
-		pipeline.voxelScreen.render_func      = m_voxelscreen_render;
-		pipeline.screenReflection.setup_func  = m_screenreflection_setup;
-		pipeline.screenReflection.render_func = m_screenreflection_render;
+		pipeline.reflCombine.render_func           = m_reflcombine_render;
+		pipeline.voxelDebug.render_func            = m_voxeldebug_render;
+		pipeline.voxelScreen.render_func           = m_voxelscreen_render;
+		pipeline.screenReflection.render_func      = m_screenreflection_render;
 	}
 };

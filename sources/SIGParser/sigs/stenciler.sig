@@ -169,7 +169,16 @@ GraphicsPSO StencilerLast
 	blend = { Additive };
 }
 
+# Mirrors stencil_renderer::selected.empty() -- written once per frame by
+# stencil_renderer::update_frame() (StencilRenderer.cpp), which also does the
+# camera/gizmo work that used to live in stencil_renderer_before's setup().
+struct StencilState
+{
+	bool has_selection = false;
+}
+
 [Required]
+[RunAlways]
 PassNode stencil_renderer_before
 {
 	# 1x1: this pass renders the picking gizmos into a throwaway depth
@@ -181,6 +190,7 @@ PassNode stencil_renderer_before
 	[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> axis_id_buffer;
 }
 
+[SetupCondition = `builder.graph->get_context<Table::StencilState>().has_selection`]
 PassNode stencil_renderer_after
 {
 	[Always = RenderTarget] Texture ResultTexture;

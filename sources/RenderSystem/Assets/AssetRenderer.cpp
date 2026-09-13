@@ -32,9 +32,13 @@ public:
 
     SceneRenderWorkflow() : pipeline(), sky(pipeline), pssm(pipeline)
     {
-        pipeline.assetGBuffer.setup_func = [this](auto& data, TaskBuilder& builder) -> FrameGraph::SetupResult
-        {
-            return true;
+        // Both setups are fully generated (AssetRenderer.sig's own [RunAlways]).
+        // AssetMip goes through the pipeline now rather than a raw
+        // add_library_pass in render(): the pipeline registers a pass only when
+        // its render_func is set, so the wiring belongs next to assetGBuffer's.
+        pipeline.assetMip.render_func = [](auto& data, FrameContext& _context) {
+            MipMapGenerator::get().render_texture_2d_slow(_context.get_list()->get_graphics(), *data.swapchain, *data.ResultTexture);
+            MipMapGenerator::get().generate(_context.get_list()->get_compute(), *data.swapchain);
         };
 
         pipeline.assetGBuffer.render_func = [this](auto& data, FrameContext& _context)
@@ -107,16 +111,11 @@ public:
         scene->update(*graph.builder.current_frame);
 
 		pipeline.add_passes(graph);
-        //	pssm.generate(graph);
-        //	sky.generate(graph);
-        //	sky.generate_sky(graph);
+        // This pipeline's own [PreSetup] hooks (CubeSky's sun-direction diff)
+        // -- per-pipeline, so the main pipeline's PreScene/NRD hooks do not
+        // fire while this graph is being built.
+        pipeline.run_pre_setups(graph);
 
-        graph.add_library_pass<Passes::AssetMip>([this, &graph](auto& data, TaskBuilder& builder) -> FrameGraph::SetupResult {
-            return true;
-        }, [](auto& data, FrameContext& _context) {
-            MipMapGenerator::get().render_texture_2d_slow(_context.get_list()->get_graphics(), *data.swapchain, *data.ResultTexture);
-            MipMapGenerator::get().generate(_context.get_list()->get_compute(), *data.swapchain);
-        });
 
         graph.add_slot_generator([this](Graph& graph) {
             auto& time    = graph.get_context<TimeInfo>();
