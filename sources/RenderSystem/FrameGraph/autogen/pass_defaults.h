@@ -575,6 +575,17 @@ struct PassSetupDefault<Passes::stencil_renderer_after>
 
 
 template<>
+struct PassSetupDefault<Passes::AssetPreview>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::AssetPreview::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
 struct PassSetupDefault<Passes::NormalRoughnessRepack>
 {
 	static constexpr bool enabled = true;

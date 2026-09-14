@@ -289,9 +289,72 @@ struct have_owner	  : public virtual parsed_type
 	}
 };
 
+// One token of a parsed option expression (grammar rule cond_term), kept in
+// source order so codegen can render the expression back to C++ verbatim.
+// Rendering is deferred to codegen rather than done while parsing because
+// resolving Qualified -- deciding whether `Owner::name` is a Table:: context
+// field or an enum value -- needs parsed.tables/parsed.enums fully populated,
+// and the struct may be declared in a .sig file parsed after this one.
+struct ExprTerm : public virtual parsed_type
+{
+	enum Kind
+	{
+		Plain,      // literal or bare identifier, pasted as-is
+		Qualified,  // Owner::name -- context field OR enum value (resolved later)
+		Member,     // owner.name  -- pass-local state, e.g. data.pass_index
+		Function,   // exists(X) and friends, captured whole
+		Op          // && || ! == != >= <= > < ( )
+	};
+
+	int         kind = Plain;
+	std::string owner;
+	std::string text;
+
+	SERIALIZE()
+	{
+		ar& NVP(kind);
+		ar& NVP(owner);
+		ar& NVP(text);
+	}
+};
+
+// One Table:: context field named by an option expression. This is the payoff
+// of parsing conditions rather than pasting them: it is what lets a consumer
+// know that e.g. VSM_Combine's enable decision reads exactly
+// VSMSelectors::use_vsm_penumbra and nothing else.
+struct FieldRef : public virtual parsed_type
+{
+	std::string owner;
+	std::string field;
+
+	SERIALIZE()
+	{
+		ar& NVP(owner);
+		ar& NVP(field);
+	}
+};
+
 struct have_expr: public virtual parsed_type
 {
 	std::string expr;
+
+	// The expression as parsed tokens, in source order. Populated for every
+	// option value; codegen only renders FROM it when there is more than one
+	// term, so every single-atom option (`[Always = Read]`,
+	// `[Size = ViewportContext::frame_size]`) keeps taking the exact code path
+	// it always did and cannot regress.
+	std::list<ExprTerm> terms;
+
+	// Table:: context fields this expression reads, filled by codegen's
+	// renderer. Empty until rendered.
+	std::list<FieldRef> field_refs;
+
+	// False once a raw backtick span is rendered: expr is then opaque C++ and
+	// field_refs CANNOT be assumed to list everything it touches. A consumer
+	// that keys a cache off field_refs must treat this as "assume it depends on
+	// everything" -- under-reporting a dependency is the one failure mode that
+	// produces a silently stale result rather than a loud one.
+	bool deps_complete = true;
 
 	// True for a value_id that matched INT_SCALAR/FLOAT_SCALAR/bool_type --
 	// a bare literal, safe to interpolate as-is. False for ID/function_id/
@@ -309,6 +372,9 @@ struct have_expr: public virtual parsed_type
 	SERIALIZE()
 	{
 		ar& NVP(expr);
+		ar& NVP(terms);
+		ar& NVP(field_refs);
+		ar& NVP(deps_complete);
 		ar& NVP(is_literal);
 		ar& NVP(is_raw);
 	}

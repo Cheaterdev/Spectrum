@@ -1,5 +1,10 @@
 #include "autogen/resource_ids.h"
 #include "autogen/pass_ids.h"
+// Per-pass Table:: context-field dependency masks, derived from the parsed
+// [SetupCondition]/[RenderCondition]/[Optional] expressions. Pulls in <bitset>
+// itself; it must therefore stay in this global module fragment rather than
+// move below `export module`, where a #include would attach to the module.
+#include "autogen/context_deps.h"
 
 export module FrameGraph:Base;
 

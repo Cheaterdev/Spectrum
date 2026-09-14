@@ -386,7 +386,7 @@ PassNode GBufferDownsampler
 	Texture TileRoughnessTiles;
 }
 
-[SetupCondition = `builder.graph->get_context<Table::VoxelGISelectors>().debug_voxel_trace`]
+[SetupCondition = VoxelGISelectors::debug_voxel_trace]
 PassNode VoxelDebug
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -405,7 +405,7 @@ PassNode VoxelDebug
 # GBuffer_HalfDepth/HalfNormals.
 [Static]
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
+[SetupCondition = RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 PassNode ReflectionRTXHalf
 {
 	[Always = Read] Texture GBuffer_HalfDepth;
@@ -440,7 +440,7 @@ PassNode ReflectionRTXHalf
 # ReflectionRTXUpscale's own comment for why both matter here specifically.
 [Static]
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
+[SetupCondition = RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 PassNode ReflectionRTX
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -472,7 +472,7 @@ PassNode ReflectionRTX
 # unaffected -- this is a separate signal, not a replacement.
 [Static]
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR`]
+[SetupCondition = UpscalerSelectors::upscaler_type == UpscalerType::DLSSRR]
 PassNode ShadowRTX
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -492,7 +492,7 @@ PassNode ShadowRTX
 # (this file) for how IndirectRTX consumes RTXIndirectNoiseHalf.
 [Static]
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
+[SetupCondition = RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 PassNode IndirectRTXHalf
 {
 	[Always = Read] Texture GBuffer_HalfDepth;
@@ -520,7 +520,7 @@ PassNode IndirectRTXHalf
 # pay for a fresh ray.
 [Static]
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
+[SetupCondition = RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 PassNode IndirectRTX
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -548,7 +548,7 @@ PassNode IndirectRTX
 # shadow, all three -- whenever DLSS-RR is the selected upscaler; same gate as
 # its own, negated. No availability terms: upscaler_type cannot hold an
 # unavailable type (see g_upscaler_type's invariant, UpscalingDLSS.ixx).
-[SetupCondition = `builder.graph->get_context<Table::VoxelGISelectors>().reflection_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR`]
+[SetupCondition = VoxelGISelectors::reflection_enabled && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR]
 PassNode ReflCombine
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -576,7 +576,7 @@ PassNode ReflCombine
 # RTXIndirectDenoised/RTXReflectionDenoised (REBLUR_DIFFUSE/SPECULAR's
 # output, NRD_REBLUR_Execute -- see [[project-nrd-integration]]) are the
 # only indirect/reflection inputs now -- no raw/legacy alternative.
-[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR`]
+[SetupCondition = UpscalerSelectors::upscaler_type == UpscalerType::DLSSRR]
 PassNode RTXCombine
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -598,7 +598,7 @@ PassNode RTXCombine
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ResultTextureRTXNoise;
 }
 
-[SetupCondition = `builder.graph->get_context<Table::VoxelGISelectors>().voxelize_scene`]
+[SetupCondition = VoxelGISelectors::voxelize_scene]
 PassNode Voxelize
 {
 	[Always = UnorderedAccess] Texture VoxelAlbedo;
@@ -610,7 +610,7 @@ PassNode Voxelize
 }
 
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::VoxelGISelectors>().light_scene`]
+[SetupCondition = VoxelGISelectors::light_scene]
 PassNode Lighting
 {
 	[Always = Read] Texture VSM_Atlas;
@@ -627,7 +627,7 @@ PassNode Lighting
 }
 
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::VoxelGISelectors>().light_scene`]
+[SetupCondition = VoxelGISelectors::light_scene]
 PassNode Mipmapping
 {
 	[Always = UnorderedAccess] Texture3D VoxelLighted;
@@ -644,7 +644,7 @@ PassNode Mipmapping
 # migration stays behaviour-preserving. It looks like a copy-paste of the RTX
 # gate (it makes the VCT path require DLSS-RR to be available-but-unselected,
 # so it never runs on a non-NVIDIA GPU); revisit separately.
-[SetupCondition = `builder.graph->get_context<Table::IndirectGISelectors>().indirect_source == IndirectSource::MyVCT && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
+[SetupCondition = IndirectGISelectors::indirect_source == IndirectSource::MyVCT && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 PassNode VoxelScreen
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -666,7 +666,7 @@ PassNode VoxelScreen
 # [[project-nrd-integration]]). Not [Static], same reasoning as VoxelScreen.
 [Compute]
 # Same verbatim-mirror caveat as VoxelScreen above.
-[SetupCondition = `builder.graph->get_context<Table::IndirectGISelectors>().reflection_source == ReflectionSource::MyReflection && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
+[SetupCondition = IndirectGISelectors::reflection_source == ReflectionSource::MyReflection && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 PassNode ScreenReflection
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

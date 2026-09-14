@@ -126,7 +126,7 @@ PassNode Sky
 # own conditions depend on, so it has to run before ANY pass's setup rather
 # than inside this one's.
 [PreSetup]
-[RenderCondition = `builder.graph->get_context<Table::SkyState>().sky_changed`]
+[RenderCondition = SkyState::sky_changed]
 PassNode CubeSky
 {
 	# create_always() runs every frame this pass is enabled (SetupResult::
@@ -147,7 +147,7 @@ PassNode CubeSky
 # changed ([RenderCondition] never returns Disabled, only IgnoreRender/
 # NeedsRender -- unlike a plain `false` -> Disabled) -- the mip regeneration
 # itself (render()) only needs to run on changed frames.
-[RenderCondition = `builder.graph->get_context<Table::SkyState>().sky_changed`]
+[RenderCondition = SkyState::sky_changed]
 PassNode CubeMapDownsample
 {
 	[Always = UnorderedAccess] TextureCube sky_cubemap;
@@ -161,7 +161,7 @@ PassNode CubeMapDownsample
 # whether sky_cubemap actually changed ([RenderCondition] never returns
 # Disabled, so create_always() still runs), while render() -- the actual
 # filter dispatch -- only needs to run on changed frames.
-[RenderCondition = `builder.graph->get_context<Table::SkyState>().sky_changed`]
+[RenderCondition = SkyState::sky_changed]
 PassNode CubeMapEnviromentProcessor
 {
 	[Always = Read] TextureCube sky_cubemap;

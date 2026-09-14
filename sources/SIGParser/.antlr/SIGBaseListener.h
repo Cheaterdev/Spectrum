@@ -25,6 +25,21 @@ public:
   virtual void enterBind_option(SIGParser::Bind_optionContext * /*ctx*/) override { }
   virtual void exitBind_option(SIGParser::Bind_optionContext * /*ctx*/) override { }
 
+  virtual void enterCond_expr(SIGParser::Cond_exprContext * /*ctx*/) override { }
+  virtual void exitCond_expr(SIGParser::Cond_exprContext * /*ctx*/) override { }
+
+  virtual void enterCond_term(SIGParser::Cond_termContext * /*ctx*/) override { }
+  virtual void exitCond_term(SIGParser::Cond_termContext * /*ctx*/) override { }
+
+  virtual void enterQualified_ref(SIGParser::Qualified_refContext * /*ctx*/) override { }
+  virtual void exitQualified_ref(SIGParser::Qualified_refContext * /*ctx*/) override { }
+
+  virtual void enterMember_ref(SIGParser::Member_refContext * /*ctx*/) override { }
+  virtual void exitMember_ref(SIGParser::Member_refContext * /*ctx*/) override { }
+
+  virtual void enterCond_op(SIGParser::Cond_opContext * /*ctx*/) override { }
+  virtual void exitCond_op(SIGParser::Cond_opContext * /*ctx*/) override { }
+
   virtual void enterFlag_value_holder(SIGParser::Flag_value_holderContext * /*ctx*/) override { }
   virtual void exitFlag_value_holder(SIGParser::Flag_value_holderContext * /*ctx*/) override { }
 

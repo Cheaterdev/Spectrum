@@ -6,6 +6,7 @@
 // ============================================================================
 
 #include "Profiler.h"
+#include "AssetPreview.h"
 #include "UI_PreDraw.h"
 #include "UI_Render.h"
 #include "../pass_defaults.h"
@@ -18,9 +19,26 @@ class UIPipeline : public PipelineBase
 {
 public:
 
+	Passes::AssetPreview assetPreview;
 
 	static inline const wchar_t* const pass_names[] = {
 		Passes::Profiler::Name.ptr,
+		Passes::AssetPreview::Names[0].ptr,
+		Passes::AssetPreview::Names[1].ptr,
+		Passes::AssetPreview::Names[2].ptr,
+		Passes::AssetPreview::Names[3].ptr,
+		Passes::AssetPreview::Names[4].ptr,
+		Passes::AssetPreview::Names[5].ptr,
+		Passes::AssetPreview::Names[6].ptr,
+		Passes::AssetPreview::Names[7].ptr,
+		Passes::AssetPreview::Names[8].ptr,
+		Passes::AssetPreview::Names[9].ptr,
+		Passes::AssetPreview::Names[10].ptr,
+		Passes::AssetPreview::Names[11].ptr,
+		Passes::AssetPreview::Names[12].ptr,
+		Passes::AssetPreview::Names[13].ptr,
+		Passes::AssetPreview::Names[14].ptr,
+		Passes::AssetPreview::Names[15].ptr,
 		Passes::UI_PreDraw::Name.ptr,
 		Passes::UI_Render::Names[0].ptr,
 		Passes::UI_Render::Names[1].ptr,
@@ -313,6 +331,22 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledPass precompiled_passes[] = {
 		{ PassID::Profiler, 0, false, {} },
+		{ PassID::AssetPreview, 0, false, {} },
+		{ PassID::AssetPreview, 1, false, {} },
+		{ PassID::AssetPreview, 2, false, {} },
+		{ PassID::AssetPreview, 3, false, {} },
+		{ PassID::AssetPreview, 4, false, {} },
+		{ PassID::AssetPreview, 5, false, {} },
+		{ PassID::AssetPreview, 6, false, {} },
+		{ PassID::AssetPreview, 7, false, {} },
+		{ PassID::AssetPreview, 8, false, {} },
+		{ PassID::AssetPreview, 9, false, {} },
+		{ PassID::AssetPreview, 10, false, {} },
+		{ PassID::AssetPreview, 11, false, {} },
+		{ PassID::AssetPreview, 12, false, {} },
+		{ PassID::AssetPreview, 13, false, {} },
+		{ PassID::AssetPreview, 14, false, {} },
+		{ PassID::AssetPreview, 15, false, {} },
 		{ PassID::UI_PreDraw, 0, false, {} },
 		{ PassID::UI_Render, 0, false, UI_Render_0_prev },
 		{ PassID::UI_Render, 1, false, UI_Render_1_prev },
@@ -363,6 +397,9 @@ public:
 		graph.set_pipeline(this);
 
 		graph.add_library_pass<Passes::Profiler>(PassDefault<Passes::Profiler>::setup, PassDefault<Passes::Profiler>::render, (PassDefault<Passes::Profiler>::flags & ~FrameGraph::PassFlags::Compute));
+		for (uint32_t i = 0; i < Passes::AssetPreview::MaxCount; ++i)
+			if (assetPreview.render_funcs[i])
+				graph.add_library_pass<Passes::AssetPreview>(i, PassSetupDefault<Passes::AssetPreview>::setup, assetPreview.render_funcs[i], (assetPreview.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::UI_PreDraw>(PassDefault<Passes::UI_PreDraw>::setup, PassDefault<Passes::UI_PreDraw>::render, (PassDefault<Passes::UI_PreDraw>::flags & ~FrameGraph::PassFlags::Compute));
 		for (uint32_t i = 0; i < Passes::UI_Render::MaxCount; ++i)
 			graph.add_library_pass<Passes::UI_Render>(i, PassDefault<Passes::UI_Render>::setup, PassDefault<Passes::UI_Render>::render, (PassDefault<Passes::UI_Render>::flags & ~FrameGraph::PassFlags::Compute));

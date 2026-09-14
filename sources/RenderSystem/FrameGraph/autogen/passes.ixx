@@ -40,6 +40,7 @@ export import "../defines.h";
 #include "pass/stencil_renderer_after.h"
 #include "pass/UI_PreDraw.h"
 #include "pass/UI_Render.h"
+#include "pass/AssetPreview.h"
 #include "pass/UpscalingDLSS.h"
 #include "pass/NormalRoughnessRepack.h"
 #include "pass/UpscalingDLSSRR.h"
@@ -99,6 +100,7 @@ export namespace Passes
 	using ::Passes::stencil_renderer_after;
 	using ::Passes::UI_PreDraw;
 	using ::Passes::UI_Render;
+	using ::Passes::AssetPreview;
 	using ::Passes::UpscalingDLSS;
 	using ::Passes::NormalRoughnessRepack;
 	using ::Passes::UpscalingDLSSRR;

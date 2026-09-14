@@ -46,6 +46,7 @@ export
 		Library::stencil_renderer_after stencil_renderer_after;
 		Library::UI_PreDraw UI_PreDraw;
 		Library::UI_Render UI_Render;
+		Library::AssetPreview AssetPreview;
 		Library::UpscalingDLSS UpscalingDLSS;
 		Library::NormalRoughnessRepack NormalRoughnessRepack;
 		Library::UpscalingDLSSRR UpscalingDLSSRR;

@@ -856,7 +856,7 @@ struct IndirectGISelectors
 # consumer, same gate) while DLSS-RR is selected. All three conditions read
 # from Table:: contexts (UpscalingDLSS.sig/raytracing.sig) rather than raw
 # globals -- see UpscalerSelectors' own comment for why that matters here.
-[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
+[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 PassNode NRD_GBufferPack
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -867,13 +867,13 @@ PassNode NRD_GBufferPack
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	[Always = Read] [Optional = `builder.graph->get_context<Table::IndirectGISelectors>().indirect_source != IndirectSource::MyVCT`]
+	[Always = Read] [Optional = IndirectGISelectors::indirect_source != IndirectSource::MyVCT]
 	Texture RTXIndirectNoise;
-	[Always = Read] [Optional = `builder.graph->get_context<Table::IndirectGISelectors>().reflection_source != ReflectionSource::MyReflection`]
+	[Always = Read] [Optional = IndirectGISelectors::reflection_source != ReflectionSource::MyReflection]
 	Texture RTXReflectionNoise;
-	[Always = Read] [Optional = `builder.graph->get_context<Table::IndirectGISelectors>().indirect_source == IndirectSource::MyVCT`]
+	[Always = Read] [Optional = IndirectGISelectors::indirect_source == IndirectSource::MyVCT]
 	Texture VoxelIndirectNoiseRaw;
-	[Always = Read] [Optional = `builder.graph->get_context<Table::IndirectGISelectors>().reflection_source == ReflectionSource::MyReflection`]
+	[Always = Read] [Optional = IndirectGISelectors::reflection_source == ReflectionSource::MyReflection]
 	Texture VoxelReflectionNoiseRaw;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R32_FLOAT] Texture NRD_ViewZ;
@@ -912,7 +912,7 @@ ComputePSO NRD_UnpackDebug
 # pure decision.
 [Static]
 [PreSetup]
-[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available`]
+[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 PassNode NRD_REBLUR_Execute
 {
 	[Always = Read] Texture NRD_ViewZ;
@@ -957,7 +957,7 @@ ComputePSO NRD_IndirectCombine
 # complementary case to RTXCombine (which handles DLSS-RR itself) -- the
 # negation of NRD_GBufferPack's own condition (above), same three Table::
 # contexts.
-[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR`]
+[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR]
 PassNode NRD_IndirectCombine
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

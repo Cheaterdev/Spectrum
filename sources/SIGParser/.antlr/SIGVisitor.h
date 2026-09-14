@@ -25,6 +25,16 @@ public:
 
     virtual std::any visitBind_option(SIGParser::Bind_optionContext *context) = 0;
 
+    virtual std::any visitCond_expr(SIGParser::Cond_exprContext *context) = 0;
+
+    virtual std::any visitCond_term(SIGParser::Cond_termContext *context) = 0;
+
+    virtual std::any visitQualified_ref(SIGParser::Qualified_refContext *context) = 0;
+
+    virtual std::any visitMember_ref(SIGParser::Member_refContext *context) = 0;
+
+    virtual std::any visitCond_op(SIGParser::Cond_opContext *context) = 0;
+
     virtual std::any visitFlag_value_holder(SIGParser::Flag_value_holderContext *context) = 0;
 
     virtual std::any visitRaw_value(SIGParser::Raw_valueContext *context) = 0;

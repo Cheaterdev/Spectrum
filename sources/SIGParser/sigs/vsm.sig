@@ -919,7 +919,7 @@ PassNode VSM_HiZRebuild
 # across a PassNode boundary, confirmed live earlier this session), just via
 # a copy instead of a dispatch now.
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra`]
+[SetupCondition = VSMSelectors::use_vsm_penumbra]
 PassNode VSM_BlockerClassify
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -960,7 +960,7 @@ PassNode VSM_BlockerClassify
 # before stage 1 in test.sig's listing -- the pyramid both stage 1 and
 # stage 2 read must be this frame's freshly-rebuilt one, not last frame's.
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra`]
+[SetupCondition = VSMSelectors::use_vsm_penumbra]
 PassNode VSM_BlockerSearch
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -1056,7 +1056,7 @@ ComputePSO VSMScreenSpaceShadow
 }
 
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::VSMSelectors>().use_vsm_contact_shadow`]
+[SetupCondition = VSMSelectors::use_vsm_penumbra && VSMSelectors::use_vsm_contact_shadow]
 PassNode VSM_ScreenSpaceShadow
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -1092,7 +1092,7 @@ PassNode VSM_ScreenSpaceShadow
 # non-penumbra fallback (get_shadow_vsm_simple, no tile pipeline to
 # piggyback on) -- see its own PassNode comment.
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra`]
+[SetupCondition = VSMSelectors::use_vsm_penumbra]
 PassNode VSM_ShadowResolve
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -1125,7 +1125,7 @@ PassNode VSM_ShadowResolve
 	# returns false, so this never exists that frame -- builder.exists() is
 	# still needed, now folded into the [Optional] guard alongside the
 	# VSMSelectors read (see the struct's own comment).
-	[Always = Read] [Optional = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow)`]
+	[Always = Read] [Optional = VSMSelectors::use_vsm_contact_shadow && exists(VSM_ContactShadow)]
 	Texture VSM_ContactShadow;
 	[Always = UnorderedAccess] Texture ResultTexture;
 }
@@ -1140,7 +1140,7 @@ PassNode VSM_ShadowResolve
 [Compute]
 # The PCSS path's fallback: VSM_ShadowResolve replaces this whenever penumbra
 # is on, so the two are exact complements.
-[SetupCondition = `!builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra`]
+[SetupCondition = !VSMSelectors::use_vsm_penumbra]
 PassNode VSM_Combine
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -1161,7 +1161,7 @@ PassNode VSM_Combine
 	# setup() can return false on non-RTX hardware, so the [Optional] guard
 	# below still needs its own builder.exists() alongside the VSMSelectors
 	# read (see the struct's own comment).
-	[Always = Read] [Optional = `builder.graph->get_context<Table::VSMSelectors>().vsm_debug_view == VSMDebugView::RtxReference && builder.exists(data.ShadowMask)`]
+	[Always = Read] [Optional = VSMSelectors::vsm_debug_view == VSMDebugView::RtxReference && exists(ShadowMask)]
 	Texture ShadowMask;
 	[Always = UnorderedAccess] Texture ResultTexture;
 }
@@ -1195,7 +1195,7 @@ PassNode VSM_Combine
 # in this PassNode) -- see VSM_DebugTileOverlay.hlsl's own CS_OVERLAY_PAGE_
 # GRID/CS_OVERLAY_RTX_REFERENCE.
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::VSMSelectors>().vsm_debug_view != VSMDebugView::None`]
+[SetupCondition = VSMSelectors::use_vsm_penumbra && VSMSelectors::vsm_debug_view != VSMDebugView::None]
 PassNode VSM_DebugClassifyOverlay
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -1214,13 +1214,13 @@ PassNode VSM_DebugClassifyOverlay
 	# VSMLighting's rtx_shadow_mask field. Not [Write]: only ever read, for
 	# vsm_debug_view == RtxReference. Existence-guarded, same reasoning as
 	# VSM_Combine's own ShadowMask field.
-	[Always = Read] [Optional = `builder.graph->get_context<Table::VSMSelectors>().vsm_debug_view == VSMDebugView::RtxReference && builder.exists(data.ShadowMask)`]
+	[Always = Read] [Optional = VSMSelectors::vsm_debug_view == VSMDebugView::RtxReference && exists(ShadowMask)]
 	Texture ShadowMask;
 	# VSM_ScreenSpaceShadow's own output -- see vsm.sig's VSM_ScreenSpaceShadow
 	# PassNode comment. Not [Write]: only ever read, for ContactShadow.
 	# Existence-guarded, same reasoning as VSM_ShadowResolve's own
 	# VSM_ContactShadow field.
-	[Always = Read] [Optional = `builder.graph->get_context<Table::VSMSelectors>().vsm_debug_view == VSMDebugView::ContactShadow && builder.graph->get_context<Table::VSMSelectors>().use_vsm_contact_shadow && builder.exists(data.VSM_ContactShadow)`]
+	[Always = Read] [Optional = VSMSelectors::vsm_debug_view == VSMDebugView::ContactShadow && VSMSelectors::use_vsm_contact_shadow && exists(VSM_ContactShadow)]
 	Texture VSM_ContactShadow;
 	[Always = UnorderedAccess] Texture ResultTexture;
 }

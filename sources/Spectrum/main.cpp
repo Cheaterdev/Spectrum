@@ -824,6 +824,21 @@ public:
 	}
 };
 
+// This frame's asset previews that want a GPU pass, one per claimed
+// Passes::AssetPreview instance slot (ui.sig). asset_preview_content::generate()
+// appends during create_graph; setup_graph drains the list into the pipeline's
+// render_funcs just before add_passes, which then registers exactly the filled
+// slots.
+//
+// A graph context rather than a global: preview widgets only ever drive the UI
+// graph, and a context is already per-Graph. Not on GUI::UIContext (where
+// pre_draw_infos lives) because resource_preview is a FrameGraphDebug type,
+// which is above module GUI.
+struct AssetPreviewContext
+{
+	std::vector<Passes::AssetPreview::render_func_type> renders;
+};
+
 // Window content that previews an asset. Dispatches by type:
 //   TextureAsset -> universal resource_preview (GPU), self-driven via a pass.
 //   BinaryAsset  -> MultiLineLabel (one label per line) in a scroll container.
@@ -964,13 +979,12 @@ public:
 	void generate(FrameGraph::Graph& graph) override
 	{
 		if (!m_view) return; // only the texture preview needs a GPU pass
-		struct empty_pass_data {};
-		// PassFlags::Required — the pass writes no graph-tracked resource, so it
-		// would otherwise be culled; force it to always run.
-		graph.add_pass<empty_pass_data>(L"AssetPreview",
-			[](empty_pass_data&, FrameGraph::TaskBuilder&) { return true; },
-			[this](empty_pass_data&, FrameGraph::FrameContext& ctx) { m_preview->render(&ctx); },
-			FrameGraph::PassFlags::Required);
+
+		// The pass itself is declared in ui.sig (AssetPreview, [Multiple=16],
+		// [Required] because it writes nothing graph-tracked) and its setup is
+		// generated — claiming a slot here is the whole registration.
+		graph.get_context<AssetPreviewContext>().renders.push_back(
+			[this](Passes::AssetPreview::Context&, FrameGraph::FrameContext& ctx) { m_preview->render(&ctx); });
 	}
 };
 
@@ -1168,6 +1182,20 @@ public:
 
 			{
 				PROFILE(L"add_passes");
+
+				// Hand this frame's asset previews (collected in create_graph)
+				// to AssetPreview's instance slots. Every slot is rewritten,
+				// including the empty tail: add_passes registers only the
+				// filled ones, and a slot left from last frame would capture a
+				// widget that may since have been destroyed. More live
+				// previews than MaxCount silently drops the excess.
+				{
+					auto& previews = graph.get_context<AssetPreviewContext>().renders;
+					for (uint32_t i = 0; i < Passes::AssetPreview::MaxCount; ++i)
+						pipeline.assetPreview.render_funcs[i] =
+							i < previews.size() ? previews[i] : Passes::AssetPreview::render_func_type{};
+				}
+
 				pipeline.add_passes(graph);
 
 			}
@@ -1226,7 +1254,12 @@ public:
 	{
 		PROFILE(L"setup_graph");
 		graph.start_new_frame();
-		
+
+		// Rebuilt from scratch every frame by the widget tree below: a context
+		// outlives the frame, so a preview window closed since the last one
+		// would otherwise leave behind a callback capturing its destroyed
+		// `this` for add_passes to register.
+		graph.get_context<AssetPreviewContext>().renders.clear();
 
 		{
 			PROFILE(L"create_graph");

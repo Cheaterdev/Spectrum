@@ -27,6 +27,26 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitCond_expr(SIGParser::Cond_exprContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitCond_term(SIGParser::Cond_termContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitQualified_ref(SIGParser::Qualified_refContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitMember_ref(SIGParser::Member_refContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitCond_op(SIGParser::Cond_opContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitFlag_value_holder(SIGParser::Flag_value_holderContext *ctx) override {
     return visitChildren(ctx);
   }

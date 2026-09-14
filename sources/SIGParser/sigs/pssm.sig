@@ -181,8 +181,8 @@ PassNode PSSM_Cascade
 	# negation" (see create_always()'s own comment, pass.jinja) -- instance 0
 	# creates PSSM_Depths/PSSM_Cameras with the real desc, every other
 	# instance just needs what instance 0 already created.
-	[Always = DepthStencil] [Size = 1024] [Format = R32_TYPELESS] [ArrayCount = `Constants::PSSM_RendersSize`] [Optional = `data.pass_index == 0`] Texture PSSM_Depths;
-	[Always = CopyDest] [Size = `Constants::PSSM_RendersSize`] [Optional = `data.pass_index == 0`] StructuredBuffer<Camera> PSSM_Cameras;
+	[Always = DepthStencil] [Size = 1024] [Format = R32_TYPELESS] [ArrayCount = `Constants::PSSM_RendersSize`] [Optional = data.pass_index == 0] Texture PSSM_Depths;
+	[Always = CopyDest] [Size = `Constants::PSSM_RendersSize`] [Optional = data.pass_index == 0] StructuredBuffer<Camera> PSSM_Cameras;
 }
 
 [RunAlways]
@@ -213,14 +213,14 @@ PassNode PSSM_Combine
 	# see CLAUDE.md's "FrameGraph: A/B resource selection". The two
 	# [Optional] conditions are exact complements by construction, same as
 	# the hand-written if/else they replace.
-	[Always = Read] [Optional = `!builder.exists(data.ShadowMask)`] StructuredBuffer<Camera> PSSM_Cameras;
+	[Always = Read] [Optional = !exists(ShadowMask)] StructuredBuffer<Camera> PSSM_Cameras;
 	[Always = Read] Texture GBuffer_Albedo;
 	[Always = Read] Texture GBuffer_Normals;
 	[Always = Read] Texture GBuffer_Specular;
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
-	[Always = Read] [Optional = `!builder.exists(data.ShadowMask)`] Texture LightMask;
-	[Always = Read] [Optional = `builder.exists(data.ShadowMask)`] Texture ShadowMask;
+	[Always = Read] [Optional = !exists(ShadowMask)] Texture LightMask;
+	[Always = Read] [Optional = exists(ShadowMask)] Texture ShadowMask;
 	[Always = UnorderedAccess] Texture ResultTexture;
 }
 

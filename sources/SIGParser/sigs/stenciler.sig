@@ -190,7 +190,7 @@ PassNode stencil_renderer_before
 	[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> axis_id_buffer;
 }
 
-[SetupCondition = `builder.graph->get_context<Table::StencilState>().has_selection`]
+[SetupCondition = StencilState::has_selection]
 PassNode stencil_renderer_after
 {
 	[Always = RenderTarget] Texture ResultTexture;

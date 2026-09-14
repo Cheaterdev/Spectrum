@@ -22,10 +22,48 @@ const_definition
 
 
 bind_option
- : (owner_id '::')? value_id
- | (owner_id '::')? flag_value_holder (PIPE flag_value_holder)+
+ : (owner_id '::')? flag_value_holder (PIPE flag_value_holder)+
  | raw_value
+ | cond_expr
  ;
+
+// An option value captured as an ORDERED TERM SEQUENCE rather than a
+// precedence-parsed tree. Codegen never evaluates these -- it only renders the
+// terms back to C++ in source order and reports which Table:: context fields
+// were named -- so emitting the author's own tokens verbatim reproduces both
+// their parenthesisation and C++'s precedence exactly. A real expression
+// grammar would buy nothing here and could silently change the meaning of an
+// existing condition, which is the one failure this must not have.
+//
+// A plain `[Always = Read]` is just a one-term sequence, so this subsumes the
+// old `(owner_id '::')? value_id` alternative; the flag alternative stays
+// ahead of it because PIPE is deliberately not a cond_op.
+cond_expr : cond_term+ ;
+
+cond_term
+ : qualified_ref
+ | function_id
+ | member_ref
+ | value_id
+ | cond_op
+ ;
+
+// Owner::name -- either a Table:: context field or an enum value. Which one is
+// NOT decidable here (both are `ID::ID`); codegen resolves it by looking the
+// owner up in parsed.tables vs parsed.enums, and only a tables hit becomes a
+// recorded field dependency.
+qualified_ref : owner_id '::' value_id ;
+
+// owner.name -- pass-local instance state (`data.pass_index`). Contributes no
+// context dependency, but it still has to parse structurally: falling back to a
+// raw backtick for it would mark the whole condition's dependency set
+// unprovable and cost the pass its field data.
+member_ref : name_id DOT name_id ;
+
+// function_id (e.g. `exists(ShadowMask)`) is matched ahead of value_id because
+// value_id's own ID alternative would otherwise win and leave the parentheses
+// to be eaten as cond_ops.
+cond_op : AND | OR | NOT | EQ | NEQ | GTEQ | LTEQ | GT | LT | OPAR | CPAR ;
 
 flag_value_holder: value_id;
 
@@ -291,6 +329,9 @@ POW : '^';
 NOT : '!';
 
 SCOL : ';';
+// Longest-match lexing keeps FLOAT_SCALAR ('1.5', '.5') intact -- DOT only ever
+// wins for a '.' that isn't part of a number, which is exactly member_ref.
+DOT : '.';
 ASSIGN : '=';
 OPAR : '(';
 CPAR : ')';

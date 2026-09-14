@@ -122,9 +122,9 @@ PassNode PreScene
 [Required]
 # This pass exists purely to keep swapchain graph-tracked -- it never
 # actually renders anything itself (some other UI/overlay pass owns the real
-# profiler drawing). [RenderCondition = `false`]: setup() still runs every
+# profiler drawing). [RenderCondition = false]: setup() still runs every
 # frame, it just never NeedsRender.
-[RenderCondition = `false`]
+[RenderCondition = false]
 PassNode Profiler
 {
 	[Always = Required | RenderTarget] Texture swapchain;

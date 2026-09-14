@@ -233,6 +233,13 @@ FrameGraph::SetupResult PassDefault<Passes::UI_Render>::setup(
 }
 
 
+FrameGraph::SetupResult PassSetupDefault<Passes::AssetPreview>::setup(
+	Passes::AssetPreview::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSS>::setup(
 	Passes::UpscalingDLSS::Context& data, FrameGraph::TaskBuilder& builder)
 {

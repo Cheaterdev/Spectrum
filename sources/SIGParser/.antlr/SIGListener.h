@@ -23,6 +23,21 @@ public:
   virtual void enterBind_option(SIGParser::Bind_optionContext *ctx) = 0;
   virtual void exitBind_option(SIGParser::Bind_optionContext *ctx) = 0;
 
+  virtual void enterCond_expr(SIGParser::Cond_exprContext *ctx) = 0;
+  virtual void exitCond_expr(SIGParser::Cond_exprContext *ctx) = 0;
+
+  virtual void enterCond_term(SIGParser::Cond_termContext *ctx) = 0;
+  virtual void exitCond_term(SIGParser::Cond_termContext *ctx) = 0;
+
+  virtual void enterQualified_ref(SIGParser::Qualified_refContext *ctx) = 0;
+  virtual void exitQualified_ref(SIGParser::Qualified_refContext *ctx) = 0;
+
+  virtual void enterMember_ref(SIGParser::Member_refContext *ctx) = 0;
+  virtual void exitMember_ref(SIGParser::Member_refContext *ctx) = 0;
+
+  virtual void enterCond_op(SIGParser::Cond_opContext *ctx) = 0;
+  virtual void exitCond_op(SIGParser::Cond_opContext *ctx) = 0;
+
   virtual void enterFlag_value_holder(SIGParser::Flag_value_holderContext *ctx) = 0;
   virtual void exitFlag_value_holder(SIGParser::Flag_value_holderContext *ctx) = 0;
 

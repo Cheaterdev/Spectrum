@@ -315,7 +315,7 @@ GraphicsPSO StatGraphLines
 # render() on those frames -- [RenderCondition] alone (no [SetupCondition])
 # says exactly that: IgnoreRender, never Disabled, so create_always() still
 # runs every frame regardless of UI_Passes_needed.
-[RenderCondition = `builder.graph->get_context<Table::UIState>().UI_Passes_needed > 0`]
+[RenderCondition = UIState::UI_Passes_needed > 0]
 PassNode UI_PreDraw
 {
 	[Always = UnorderedAccess | Required] [Size = 1] StructuredBuffer<uint> UI_PreDraw_Sync;
@@ -326,7 +326,7 @@ PassNode UI_PreDraw
 # data.pass_index is this instance's own ordinal, generated for every
 # [Multiple] pass -- so the "is there work for this instance" test is a plain
 # condition and needs no hand-written setup().
-[SetupCondition = `data.pass_index < builder.graph->get_context<Table::UIRenderState>().passes_needed`]
+[SetupCondition = data.pass_index < UIRenderState::passes_needed]
 # The debug-view source: its ResourceID is picked at runtime from
 # DebugContext::mode (GUI/Base.cpp's create_graph), so no fixed field can name
 # it. See [NeedDynamic]'s generated comment (need_always, pass/UI_Render.h) for
@@ -339,14 +339,36 @@ PassNode UI_Render
 	# [Optional]: UI_PreDraw_Sync may not exist this frame (its own producer,
 	# UI_PreDraw, can be disabled) -- guarded exactly like the hand-written
 	# builder.exists() check it replaces.
-	[Always = Read] [Optional = `builder.exists(data.UI_PreDraw_Sync)`]
+	[Always = Read] [Optional = exists(UI_PreDraw_Sync)]
 	StructuredBuffer<uint> UI_PreDraw_Sync;
+}
+
+
+[Multiple = 16]
+[Required]
+# One instance per asset-preview widget that asked for a GPU pass this frame --
+# a preview window, or a material graph's embedded output preview, and several
+# can be live at once (main.cpp's asset_preview_content).
+#
+# NOT [Static]: render() is a call into a specific widget instance, so the owner
+# fills render_funcs[i] and registration itself is the per-instance gate -- the
+# pipeline adds only the slots that are filled, which is exactly why the setup
+# half can be an unconditional [RunAlways] rather than a [SetupCondition]
+# counting live previews through a Table:: context.
+[RunAlways]
+# Declares no resources on purpose: the preview reads a standalone asset
+# texture and writes its own, neither of them graph-tracked, so nothing links
+# this pass into the graph -- hence [Required], or it would be culled for
+# writing nothing.
+PassNode AssetPreview
+{
 }
 
 
 Pipeline UIPipeline
 {
 	Profiler;
+	AssetPreview;
 	UI_PreDraw;
 	UI_Render;
 }

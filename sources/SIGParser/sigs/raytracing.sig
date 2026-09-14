@@ -320,7 +320,7 @@ RaytracePass ColorShadowPass
 # builder.exists() before reading it). [RenderCondition] alone (no
 # [SetupCondition]): IgnoreRender, not Disabled, when RTX isn't supported --
 # setup() still needs to run every frame so ShadowMask keeps existing.
-[RenderCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported`]
+[RenderCondition = RenderDeviceCapabilities::rtx_supported]
 PassNode RTXShadow
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -360,7 +360,7 @@ ComputePSO RTXShadowReferenceCompute
 
 [Static]
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported`]
+[SetupCondition = RenderDeviceCapabilities::rtx_supported]
 PassNode RTXColorPass
 {
 	# Read-only dependency on PreScene so the RTX BVH is built/updated before tracing.

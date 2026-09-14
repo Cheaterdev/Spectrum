@@ -51,7 +51,7 @@ ComputePSO RCAS
 # point of selection, so there is nothing left to re-derive here.
 [Static]
 [Compute]
-[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::FSR`]
+[SetupCondition = UpscalerSelectors::upscaling_enabled && UpscalerSelectors::upscaler_type == UpscalerType::FSR]
 PassNode FSR
 {
 	# MipCount=0: full auto mip chain, matching the original manual recreate()

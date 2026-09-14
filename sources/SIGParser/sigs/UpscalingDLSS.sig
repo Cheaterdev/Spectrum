@@ -29,7 +29,7 @@ struct UpscalerSelectors
 # dispatches - it's an opaque call into the Streamline SDK operating on tagged
 # resources via the command list (see PassDefault<Passes::UpscalingDLSS>::render).
 [Static]
-[SetupCondition = `builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSS`]
+[SetupCondition = UpscalerSelectors::upscaling_enabled && UpscalerSelectors::upscaler_type == UpscalerType::DLSS]
 PassNode UpscalingDLSS
 {
 	# ExclusiveRead: this pass transitions these to PRESENT/COMMON for

@@ -379,6 +379,46 @@ public:
 		elem.is_raw = true;
 	}
 
+	// Records each cond_term in source order. Deliberately does NOT touch
+	// expr/owner_name/is_literal: enterValue_id and enterOwner_id still fire for
+	// the leaves inside these terms, so a single-term option value keeps
+	// producing exactly the fields it always did. Codegen renders from terms
+	// only when there is more than one of them, which is what makes this change
+	// incapable of altering any existing option's generated output.
+	void enterCond_term(SIGParser::Cond_termContext* ctx) override
+	{
+		auto& elem = get_elem<have_expr>();
+		auto& term = elem.terms.emplace_back();
+
+		if (auto* q = ctx->qualified_ref())
+		{
+			term.kind  = ExprTerm::Qualified;
+			term.owner = q->owner_id()->getText();
+			term.text  = q->value_id()->getText();
+		}
+		else if (auto* m = ctx->member_ref())
+		{
+			term.kind  = ExprTerm::Member;
+			term.owner = m->name_id(0)->getText();
+			term.text  = m->name_id(1)->getText();
+		}
+		else if (ctx->function_id())
+		{
+			term.kind = ExprTerm::Function;
+			term.text = ctx->getText();
+		}
+		else if (ctx->cond_op())
+		{
+			term.kind = ExprTerm::Op;
+			term.text = ctx->getText();
+		}
+		else
+		{
+			term.kind = ExprTerm::Plain;
+			term.text = ctx->getText();
+		}
+	}
+
 	void enterPso_param_id(SIGParser::Pso_param_idContext* ctx) override
 	{
 		auto& elem = get_elem<have_type>();

@@ -118,6 +118,127 @@ public:
 };
 
 
+// Options whose value is a boolean expression over contexts rather than a
+// single name or flag set. Only these get rendered from ExprTerm; every other
+// option keeps its existing single-atom code path (resolve_size_expr,
+// resolve_flags_expr, ...) untouched, so this cannot regress them.
+static const std::set<std::string> CONDITION_OPTIONS = {
+	"SetupCondition", "RenderCondition", "Optional"
+};
+
+// Renders one parsed expression back to C++ and records which Table:: contexts
+// it read.
+//
+// Spacing is not cosmetic: single spaces around binary operators, none after a
+// prefix '!' or inside parentheses, reproduces byte-for-byte what the
+// hand-written backtick conditions produced. That is what makes "the generated
+// pass_defaults.cpp is unchanged" a usable acceptance test for the migration --
+// any difference in the output is a real difference in meaning, not whitespace.
+static void render_expr(const Parsed& parsed, have_expr& e)
+{
+	// A backtick span is opaque C++: it may read contexts this function cannot
+	// see, so the dependency set stops being provable. Say so rather than
+	// reporting an empty/partial list a cache could trust.
+	if (e.is_raw)
+	{
+		e.deps_complete = false;
+		return;
+	}
+
+	if (e.terms.empty())
+		return;
+
+	std::string out;
+	bool suppress_space = true; // no leading space
+
+	auto append = [&](const std::string& s, bool tight_after)
+	{
+		if (!suppress_space && !out.empty() && s != ")")
+			out += ' ';
+		out += s;
+		suppress_space = tight_after;
+	};
+
+	for (const auto& t : e.terms)
+	{
+		switch (t.kind)
+		{
+		case ExprTerm::Qualified:
+			// Owner::name is a context field only if Owner is a SIG-declared
+			// struct. Anything else (an enum value, a Constants:: entry) names
+			// no runtime state, so it passes through and records no dependency.
+			if (parsed.tables.find(t.owner))
+			{
+				append("builder.graph->get_context<Table::" + t.owner + ">()." + t.text, false);
+				auto& ref = e.field_refs.emplace_back();
+				ref.owner = t.owner;
+				ref.field = t.text;
+			}
+			else
+			{
+				append(t.owner + "::" + t.text, false);
+			}
+			break;
+
+		case ExprTerm::Member:
+			append(t.owner + "." + t.text, false);
+			break;
+
+		case ExprTerm::Function:
+		{
+			// exists(X) is sugar for the builder.exists(data.X) guard that
+			// [Optional] uses constantly; it reads graph structure, not a
+			// context, so it adds no field dependency.
+			const std::string& fn = t.text;
+			if (fn.rfind("exists(", 0) == 0)
+				append("builder." + fn.substr(0, 7) + "data." + fn.substr(7), false);
+			else
+				append(fn, false);
+			break;
+		}
+
+		case ExprTerm::Op:
+			// '!' and '(' bind tight to what follows; ')' to what precedes.
+			append(t.text, t.text == "!" || t.text == "(");
+			break;
+
+		default:
+			append(t.text, false);
+			break;
+		}
+	}
+
+	e.expr = out;
+}
+
+// Walks every condition-valued option on every pass and pass field and renders
+// it. Runs after parsed.setup() so parsed.tables is complete across all .sig
+// files -- a condition may name a context declared in a file parsed later.
+static void render_condition_options(Parsed& parsed)
+{
+	auto do_options = [&](have_options& holder)
+	{
+		for (auto& opt : holder.options)
+			if (CONDITION_OPTIONS.count(opt.name))
+				render_expr(parsed, opt.value_atom);
+	};
+
+	for (auto& pass : parsed.passes)
+	{
+		do_options(pass);
+		for (auto& param : pass.params)
+			do_options(param);
+	}
+
+	for (auto& view : parsed.views)
+	{
+		do_options(view);
+		for (auto& param : view.params)
+			do_options(param);
+	}
+}
+
+
 int main()
 {
 	std::map<std::string, ValuesList> user_lists;
@@ -154,6 +275,11 @@ int main()
 		});
 
 		parsed.setup();
+
+		// Turns parsed condition terms into the C++ the templates paste, and
+		// collects each condition's Table:: field dependencies on the way.
+		render_condition_options(parsed);
+
 		rapidjson::Document parsed_doc = make_map(parsed);
 
 		jinja2::Value parsed_map = Reflect(parsed_doc);
@@ -483,6 +609,121 @@ int main()
 					result.push_back(std::move(m));
 				}
 				return result;
+			},
+			ArgInfo{"pass_name"}
+		));
+
+		// ---- Context-field dependency data -------------------------------
+		// Every Table:: context field named by a condition, plus, per pass,
+		// which of them its enable decision and its resource selection read.
+		// This is what a FrameGraph computation cache keys off: a stage whose
+		// field set is unchanged since last frame cannot have a different
+		// result, so the stage can be reused instead of recomputed.
+		//
+		// Field IDs are assigned in (struct declaration, field declaration)
+		// order over every struct a condition actually references, so the
+		// numbering is deterministic across runs.
+		auto context_field_list = [&]() -> std::vector<std::pair<std::string, std::string>>
+		{
+			std::set<std::string> owners;
+			auto scan = [&](const have_options& holder)
+			{
+				for (const auto& opt : holder.options)
+					if (CONDITION_OPTIONS.count(opt.name))
+						for (const auto& r : opt.value_atom.field_refs)
+							owners.insert(r.owner);
+			};
+			for (const auto& pass : parsed.passes)
+			{
+				scan(pass);
+				for (const auto& param : pass.params) scan(param);
+			}
+
+			std::vector<std::pair<std::string, std::string>> out;
+			for (const auto& table : parsed.tables)
+				if (owners.count(table.name))
+					for (const auto& v : table.values)
+						out.emplace_back(table.name, v.name);
+			return out;
+		}();
+
+		auto field_index = [context_field_list](const std::string& owner, const std::string& field) -> int
+		{
+			for (size_t i = 0; i < context_field_list.size(); ++i)
+				if (context_field_list[i].first == owner && context_field_list[i].second == field)
+					return (int)i;
+			return -1;
+		};
+
+		global.AddGlobal("get_context_fields", jinja2::MakeCallable(
+			[context_field_list]() -> ValuesList
+			{
+				ValuesList result;
+				for (const auto& [owner, field] : context_field_list)
+				{
+					ValuesMap m;
+					m["owner"] = owner;
+					m["field"] = field;
+					m["id"]    = owner + "_" + field;
+					result.push_back(std::move(m));
+				}
+				return result;
+			}
+		));
+
+		global.AddGlobal("get_pass_context_deps", jinja2::MakeCallable(
+			[&, field_index](const std::string& pass_name) -> ValuesMap
+			{
+				ValuesMap out;
+				Pass* pass = parsed.passes.find(pass_name);
+				if (!pass) return out;
+
+				// Two separate sets on purpose. A change to a condition field
+				// can add or remove passes, which invalidates the whole
+				// dependency graph; a change to an Optional field only moves
+				// which resources an already-enabled pass touches. Callers that
+				// cache those two stages separately need to tell them apart.
+				std::set<int> cond, opt_fields;
+				bool cond_complete = true, opt_complete = true;
+
+				auto take = [&](const have_options& holder, std::set<int>& into, bool& complete)
+				{
+					for (const auto& o : holder.options)
+					{
+						if (!CONDITION_OPTIONS.count(o.name)) continue;
+						if (!o.value_atom.deps_complete) complete = false;
+						for (const auto& r : o.value_atom.field_refs)
+						{
+							int i = field_index(r.owner, r.field);
+							if (i >= 0) into.insert(i);
+							else complete = false;
+						}
+					}
+				};
+
+				take(*pass, cond, cond_complete);
+				for (const auto& param : pass->params)
+					take(param, opt_fields, opt_complete);
+
+				// Emits the field NAMES, not indices: the generated table then
+				// reads as the condition it came from instead of as a pile of
+				// shift amounts, and it stops depending on the enum's ordering
+				// -- inserting a field into a struct renumbers every bit after
+				// it, which would silently rewrite every mask below it if the
+				// table stored raw indices.
+				auto to_list = [context_field_list](const std::set<int>& s)
+				{
+					ValuesList l;
+					for (int i : s)
+						l.push_back(context_field_list[i].first + "_" + context_field_list[i].second);
+					return l;
+				};
+
+				out["condition_fields"]   = to_list(cond);
+				out["condition_complete"] = cond_complete;
+				out["optional_fields"]    = to_list(opt_fields);
+				out["optional_complete"]  = opt_complete;
+				return out;
 			},
 			ArgInfo{"pass_name"}
 		));
@@ -1099,6 +1340,7 @@ int main()
 		my_stream(cpp_path_render, "pass_defaults.cpp") << cpp_templates.generate(L"pass_defaults_cpp");
 		my_stream(cpp_path_render, "resource_ids.h") << cpp_templates.generate(L"resource_ids");
 		my_stream(cpp_path_render, "pass_ids.h") << cpp_templates.generate(L"pass_ids");
+		my_stream(cpp_path_render, "context_deps.h") << cpp_templates.generate(L"context_deps");
 
 		my_stream(cpp_path, "Constants.ixx") << cpp_templates.generate(L"constants");
 
