@@ -437,6 +437,9 @@ namespace FrameGraph
 			// (Graph::override_resource), so clearing here means a stale one can
 			// never leak into a frame whose selector stopped asking for it.
 			builder.resource_overrides.clear();
+
+			setup_cache_hits   = 0;
+			setup_cache_misses = 0;
 		}
 	}
 

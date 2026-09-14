@@ -1357,6 +1357,7 @@ int main()
 		my_stream(cpp_path_render, "resource_ids.h") << cpp_templates.generate(L"resource_ids");
 		my_stream(cpp_path_render, "pass_ids.h") << cpp_templates.generate(L"pass_ids");
 		my_stream(cpp_path_render, "context_deps.h") << cpp_templates.generate(L"context_deps");
+		my_stream(cpp_path_render, "context_snapshot.cpp") << cpp_templates.generate(L"context_snapshot_cpp");
 
 		my_stream(cpp_path, "Constants.ixx") << cpp_templates.generate(L"constants");
 

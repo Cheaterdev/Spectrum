@@ -1057,10 +1057,74 @@ public:
 	};
 
 
+	// A plain bool return from setup_func conflates two different questions:
+	// does this pass exist in the graph at all this frame (need()/create()
+	// calls happen, barriers get computed) vs should its render() actually
+	// run. Most passes never need the distinction (false means fully
+	// disabled), but a pass that must touch a resource every frame
+	// regardless of whether there's anything to draw this frame (e.g. a
+	// ResourceChain that has to reset even on an empty frame) needs a third
+	// state -- IgnoreRender -- instead of hand-ordering its own
+	// need()/create() calls before an early return the way that pattern
+	// used to be faked.
+	//
+	// Implicitly convertible both ways with bool (true <-> NeedsRender,
+	// false <-> Disabled), so every existing `return true;`/`return false;`
+	// setup_func keeps compiling and behaving unchanged -- only a pass that
+	// wants the middle state needs to say so explicitly, by having its
+	// setup() declared to return SetupResult instead of bool (see pass_defaults.jinja's
+	// [TriState] option for PassDefault<T>-style passes).
+	struct SetupResult
+	{
+		enum Value
+		{
+			Disabled,     // pass does not exist this frame: no need()/create(), no render()
+			IgnoreRender, // need()/create() run as normal, but render() does not
+			NeedsRender,  // normal case: need()/create() run AND render() runs
+		};
+
+		Value value;
+
+		SetupResult(bool b) : value(b ? NeedsRender : Disabled) {}
+		SetupResult(Value v) : value(v) {}
+
+		// Preserves the existing bool contract every Pass::setup() caller
+		// (Graph's enabled/renderable bookkeeping) already relies on.
+		operator bool() const { return value == NeedsRender; }
+
+		bool touches_resources() const { return value != Disabled; }
+	};
+
+
 	struct Pass
 	{
 		UINT id = 0;
 		PassID type_id = PassID::Count;
+
+		// Last frame's setup decision, reused when none of this pass's
+		// condition_fields changed. Lives on the Pass because Pass objects (and
+		// their Contexts) are recycled per PassID across frames via
+		// TaskBuilder::pass_cache -- a per-frame structure would have nothing to
+		// remember. `valid` guards the case where this object was just allocated
+		// or its pass was absent last frame, when there is no prior result to
+		// trust.
+		bool          setup_result_valid = false;
+		SetupResult   cached_setup_result = false;
+
+		// Frame this pass last actually evaluated its condition. Compared
+		// against the graph's per-field "last changed on frame N" table rather
+		// than against a single last-frame dirty mask: a pass can be ABSENT from
+		// the graph for many frames (an AssetPreview slot nobody claimed, a
+		// PSSM cascade whose render_func is unset), during which a last-frame
+		// mask would report those frames' changes to nobody and then let this
+		// pass reuse a result that predates them.
+		uint64_t      last_setup_frame = 0;
+
+		// Whether this pass may skip re-evaluating its setup condition this
+		// frame. Defined in FrameGraph.cpp: it reads the generated
+		// pass_context_deps table and the graph's dirty mask, neither of which
+		// is reachable from here. Also bumps the graph's hit/miss tally.
+		bool can_reuse_setup(TaskBuilder& builder);
 		UINT call_id;
 		int dependency_level;
 		bool enabled = false;
@@ -1121,43 +1185,6 @@ public:
 	};
 
 
-	// A plain bool return from setup_func conflates two different questions:
-	// does this pass exist in the graph at all this frame (need()/create()
-	// calls happen, barriers get computed) vs should its render() actually
-	// run. Most passes never need the distinction (false means fully
-	// disabled), but a pass that must touch a resource every frame
-	// regardless of whether there's anything to draw this frame (e.g. a
-	// ResourceChain that has to reset even on an empty frame) needs a third
-	// state -- IgnoreRender -- instead of hand-ordering its own
-	// need()/create() calls before an early return the way that pattern
-	// used to be faked.
-	//
-	// Implicitly convertible both ways with bool (true <-> NeedsRender,
-	// false <-> Disabled), so every existing `return true;`/`return false;`
-	// setup_func keeps compiling and behaving unchanged -- only a pass that
-	// wants the middle state needs to say so explicitly, by having its
-	// setup() declared to return SetupResult instead of bool (see pass_defaults.jinja's
-	// [TriState] option for PassDefault<T>-style passes).
-	struct SetupResult
-	{
-		enum Value
-		{
-			Disabled,     // pass does not exist this frame: no need()/create(), no render()
-			IgnoreRender, // need()/create() run as normal, but render() does not
-			NeedsRender,  // normal case: need()/create() run AND render() runs
-		};
-
-		Value value;
-
-		SetupResult(bool b) : value(b ? NeedsRender : Disabled) {}
-		SetupResult(Value v) : value(v) {}
-
-		// Preserves the existing bool contract every Pass::setup() caller
-		// (Graph's enabled/renderable bookkeeping) already relies on.
-		operator bool() const { return value == NeedsRender; }
-
-		bool touches_resources() const { return value != Disabled; }
-	};
 
 	template <class Handler>
 	struct TypedPass : public Pass
@@ -1207,7 +1234,22 @@ public:
 			// documented idempotent -- safe even the frame this pass is disabled.
 			if constexpr (requires { Handler::link_history_always(data, builder); })
 				Handler::link_history_always(data, builder);
-			SetupResult res = setup_func(data, builder);
+
+			// Reuse last frame's decision when nothing this pass's condition
+			// reads has changed. Only the DECISION is cached -- create_always()/
+			// need_always() below still run either way, because they record into
+			// a builder that was reset this frame.
+			SetupResult res = false;
+			if (can_reuse_setup(builder))
+			{
+				res = cached_setup_result;
+			}
+			else
+			{
+				res = setup_func(data, builder);
+				cached_setup_result = res;
+				setup_result_valid   = true;
+			}
 			if (res.touches_resources())
 			{
 				// Only when the pass isn't fully Disabled - a pass can
@@ -1367,6 +1409,34 @@ public:
 		// decisions in create_resources() for unrelated resources too.
 		bool has_resource_overrides() const { return !builder.resource_overrides.empty(); }
 
+		// ---- Setup-result cache ------------------------------------------
+		// Last frame's context values and which fields differ from them, filled
+		// by update_context_dirty_mask() (autogen/context_snapshot.cpp) after
+		// run_pre_setups() and before setup(). A pass whose condition_fields
+		// (autogen/context_deps.h) miss this mask cannot produce a different
+		// SetupResult than it did last frame, so it reuses it instead of
+		// re-evaluating.
+		//
+		// Note what this does NOT skip: create_always()/need_always() still run.
+		// Those record into a builder that is reset every frame, so their effects
+		// have to be reproduced whatever the condition result was. Only the
+		// decision is cached here, not the resource declarations that follow it.
+		ContextSnapshot  prev_context_snapshot;
+		ContextFieldMask dirty_context_fields;
+		bool             has_context_snapshot = false;
+
+		// Frame number each field last changed on, and the running frame count.
+		// This is what makes reuse safe for a pass that skipped frames -- see
+		// Pass::last_setup_frame.
+		uint64_t         context_field_changed_frame[(unsigned int)ContextFieldID::Count] = {};
+		uint64_t         context_frame_index = 0;
+
+		// Per-frame tally, reset in start_new_frame(). Kept as real state rather
+		// than a debug-only counter because the hit rate is the number that says
+		// whether caching more of setup() is worth doing at all.
+		uint32_t setup_cache_hits = 0;
+		uint32_t setup_cache_misses = 0;
+
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class PassT>
 		void internal_pass(LiteralWStr name, auto s, auto r, PassFlags flags = PassFlags::General, uint32_t index = 0, PassID type_id = PassID::Count)
@@ -1493,6 +1563,84 @@ public:
 
 	};
 
+
+	// Defined here rather than in FrameGraph.cpp because it reads
+	// pass_context_deps, which lives in this interface's global module fragment
+	// and is therefore invisible to an implementation unit -- and re-including
+	// context_deps.h there is not an option either: it pulls <bitset>, and a
+	// standard header in an implementation unit's fragment collides with the
+	// same types arriving through `import HAL`/`import Core`.
+	//
+	// Out-of-line rather than inside Pass because it needs Graph complete.
+
+	// Looks this pass up in the generated dependency table. Linear over ~55
+	// entries, only on the decision path; if it ever shows up in a profile the
+	// table is indexable by PassID directly (it is emitted in PassID order).
+	// NOT inline: an inline function in a module interface that references
+	// pass_context_deps (internal linkage, from the global module fragment)
+	// leaves every importing TU with an unresolvable external reference.
+	const PassContextDeps* find_context_deps(PassID id)
+	{
+		for (const auto& d : pass_context_deps)
+			if (d.pass == id)
+				return &d;
+		return nullptr;
+	}
+
+	bool Pass::can_reuse_setup(TaskBuilder& builder)
+	{
+		Graph* graph = builder.graph;
+
+		// Every early-out below is followed by setup_func() actually running, so
+		// stamping here is the same thing as stamping at the call site -- which
+		// TypedPass::setup() cannot do, because Graph is still incomplete there.
+		auto miss = [&]
+		{
+			++graph->setup_cache_misses;
+			last_setup_frame = graph->context_frame_index;
+			return false;
+		};
+
+		// No prior result, or a pass with no PassID at all (a hand-written
+		// add_pass<T>, which has no generated dependency data and therefore no
+		// way to know what it reads).
+		if (!graph)
+			return false;
+
+		if (!setup_result_valid || type_id == PassID::Count)
+			return miss();
+
+		// An override redirects which resource a pass reads, which is not
+		// expressible as a context field -- so the whole frame is uncacheable.
+		// Same contract Graph::has_resource_overrides() documents.
+		if (graph->has_resource_overrides())
+			return miss();
+
+		const PassContextDeps* deps = find_context_deps(type_id);
+
+		// deps_complete == false means the mask is a lower bound, not the full
+		// set: the pass reads something the extractor could not prove. Treat it
+		// as permanently dirty rather than trusting an incomplete mask -- an
+		// under-reported dependency is the one failure here that is silent.
+		if (!deps || !deps->deps_complete)
+			return miss();
+
+		// Any field this pass's condition reads that changed at or after the
+		// frame this pass last evaluated. Not a test against the current frame's
+		// dirty mask: that would miss changes made while this pass was absent
+		// from the graph entirely.
+		for (unsigned int i = 0; i < (unsigned int)ContextFieldID::Count; ++i)
+		{
+			if (!deps->condition_fields.test(i))
+				continue;
+
+			if (graph->context_field_changed_frame[i] >= last_setup_frame)
+				return miss();
+		}
+
+		++graph->setup_cache_hits;
+		return true;
+	}
 
 
 	class GraphGenerator

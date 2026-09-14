@@ -14,6 +14,14 @@ using namespace FrameGraph;
 
 using namespace HAL;
 
+// Declared rather than pulled in via autogen/context_deps.h: that header
+// includes <bitset>, and textually including a standard header in a TU that
+// also imports HAL/Graphics reintroduces the std double-definition this
+// codebase keeps running into. The function has global module attachment (it
+// is declared in a global module fragment and defined in
+// autogen/context_snapshot.cpp), so a plain declaration here matches it.
+namespace FrameGraph { void update_context_dirty_mask(Graph& graph); }
+
 
 
 class tick_timer
@@ -1212,6 +1220,13 @@ public:
 			// any pass's own setup() -- see pass_defaults.h's own comment on
 			// the option.
 			pipeline.run_pre_setups(graph);
+
+			// Snapshots every context field and diffs it against last frame, so
+			// a pass whose condition inputs are unchanged can reuse its previous
+			// SetupResult (autogen/context_deps.h). Must run after
+			// run_pre_setups() -- [PreSetup] hooks write context fields -- and
+			// before setup() reads the mask.
+			FrameGraph::update_context_dirty_mask(graph);
 
 			graph.setup();
 			graph.compile(swap_chain->m_frameIndex);

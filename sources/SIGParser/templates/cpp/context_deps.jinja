@@ -113,4 +113,36 @@ static inline const PassContextDeps pass_context_deps[] = {
 static constexpr unsigned int pass_context_deps_count =
 	sizeof(pass_context_deps) / sizeof(pass_context_deps[0]);
 
+
+// ---------------------------------------------------------------------------
+// Per-frame snapshot of every context field's value, so "did this pass's inputs
+// change?" is answerable without re-running its setup.
+//
+// One opaque 64-bit encoding per field rather than the field's own type: the
+// only question ever asked of it is "same as last frame?", and a uniform array
+// keeps the diff a plain loop instead of generated per-field comparisons.
+struct ContextSnapshot
+{
+	unsigned long long values[(unsigned int)ContextFieldID::Count] = {};
+};
+
+class Graph;
+
+// Reads every context field out of `graph` into `out`. Generated (see
+// autogen/context_snapshot.cpp) because it has to name every Table:: type,
+// which is why it is defined in a Graphics-module TU rather than here -- the
+// same split, and for the same reason, as PassDefault<T>::setup and
+// autogen/pass_defaults.cpp.
+void capture_context_snapshot(Graph& graph, ContextSnapshot& out);
+
+// Which fields differ between two snapshots. A set bit means "this field
+// changed since last frame", which is what a pass's condition_fields mask is
+// tested against.
+ContextFieldMask diff_context_snapshots(const ContextSnapshot& a, const ContextSnapshot& b);
+
+// Captures this frame's snapshot into the graph and updates its dirty mask.
+// Must run AFTER the pipeline's run_pre_setups() -- [PreSetup] hooks write
+// context fields (CubeSky's sun-direction diff is one) -- and before setup().
+void update_context_dirty_mask(Graph& graph);
+
 }
