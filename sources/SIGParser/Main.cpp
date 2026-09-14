@@ -126,6 +126,18 @@ static const std::set<std::string> CONDITION_OPTIONS = {
 	"SetupCondition", "RenderCondition", "Optional"
 };
 
+// Options that feed graph structure but whose value CANNOT be expressed as a
+// set of context fields -- anything resolving a ResourceID at runtime, since
+// there is no finite bit that represents "some arbitrary resource". A pass
+// carrying one of these must report deps_complete = false, or it claims a
+// provable dependency set while its resource set silently varies.
+//
+// Empty right now: [NeedDynamic] was the only member and UI_Render, its only
+// user, moved to a declared field plus Graph::override_resource (ui.sig). Kept
+// so that reintroducing such an option cannot quietly produce a lying mask.
+static const std::set<std::string> UNPROVABLE_STRUCTURAL_OPTIONS = {
+};
+
 // Renders one parsed expression back to C++ and records which Table:: contexts
 // it read.
 //
@@ -704,6 +716,10 @@ int main()
 				take(*pass, cond, cond_complete);
 				for (const auto& param : pass->params)
 					take(param, opt_fields, opt_complete);
+
+				for (const auto& o : pass->options)
+					if (UNPROVABLE_STRUCTURAL_OPTIONS.count(o.name))
+						cond_complete = false;
 
 				// Emits the field NAMES, not indices: the generated table then
 				// reads as the condition it came from instead of as a pile of

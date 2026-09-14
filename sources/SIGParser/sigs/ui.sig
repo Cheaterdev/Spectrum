@@ -327,12 +327,6 @@ PassNode UI_PreDraw
 # [Multiple] pass -- so the "is there work for this instance" test is a plain
 # condition and needs no hand-written setup().
 [SetupCondition = data.pass_index < UIRenderState::passes_needed]
-# The debug-view source: its ResourceID is picked at runtime from
-# DebugContext::mode (GUI/Base.cpp's create_graph), so no fixed field can name
-# it. See [NeedDynamic]'s generated comment (need_always, pass/UI_Render.h) for
-# why the expression has to be that lvalue specifically.
-[NeedDynamic = `builder.graph->get_context<FrameGraph::DebugContext>().result_texture`]
-[NeedDynamicFlags = Read]
 PassNode UI_Render
 {
 	[Always = RenderTarget] Texture swapchain;
@@ -341,6 +335,24 @@ PassNode UI_Render
 	# builder.exists() check it replaces.
 	[Always = Read] [Optional = exists(UI_PreDraw_Sync)]
 	StructuredBuffer<uint> UI_PreDraw_Sync;
+
+	# What the UI composites onto the swapchain. Declared statically even
+	# though the debug-view selector can point it somewhere else: that
+	# redirection is now Graph::override_resource (GUI/Base.cpp's create_graph)
+	# rather than the [NeedDynamic] option this replaced.
+	#
+	# The distinction is not cosmetic. A resource id resolved from a context
+	# every frame is an input to graph structure that no dependency mask can
+	# represent (autogen/context_deps.h), so UI_Render used to report
+	# deps_complete=true while having a resource set that silently varied. As a
+	# declared field plus an explicit override, the normal path -- DebugMode
+	# Final, which is essentially every frame -- is fully static and cacheable,
+	# and the debug path announces itself via Graph::has_resource_overrides().
+	#
+	# [Optional]: ResultTexture's producer lives in MainPipeline, so a UI graph
+	# built without a viewport never creates it. Same guard the old
+	# [NeedDynamic] carried via builder.exists().
+	[Always = Read] [Optional = exists(ResultTexture)] Texture ResultTexture;
 }
 
 

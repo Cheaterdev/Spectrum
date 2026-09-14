@@ -991,6 +991,7 @@ public:
 UINT64 frame_counter = 0;
 
 
+
 class FrameFlowGraph : public ::FlowGraph::graph
 {};
 
@@ -1214,7 +1215,6 @@ public:
 
 			graph.setup();
 			graph.compile(swap_chain->m_frameIndex);
-
 
 			graph.render();
 

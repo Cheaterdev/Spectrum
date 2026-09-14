@@ -407,6 +407,18 @@ namespace FrameGraph
 			context.execute();
 		}
 	}
+	ResourceID TaskBuilder::resolve_override(ResourceID declared) const
+	{
+		if (resource_overrides.empty() || !current_pass)
+			return declared;
+
+		for (const auto& o : resource_overrides)
+			if (o.pass == current_pass->type_id && o.from == declared)
+				return o.to;
+
+		return declared;
+	}
+
 	void Graph::start_new_frame()
 	{
 		{
@@ -420,6 +432,11 @@ namespace FrameGraph
 
 			builder.current_frame = builder.frames.begin_frame();
 			for (auto& chain : builder.alloc_resources) chain.reset_frame();
+
+			// Overrides are re-declared every frame during graph construction
+			// (Graph::override_resource), so clearing here means a stale one can
+			// never leak into a frame whose selector stopped asking for it.
+			builder.resource_overrides.clear();
 		}
 	}
 

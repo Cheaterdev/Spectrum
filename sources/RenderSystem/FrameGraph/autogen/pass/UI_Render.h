@@ -32,6 +32,9 @@ public:
 		Handlers::StructuredBuffer<uint> UI_PreDraw_Sync = ResourceID::UI_PreDraw_Sync;
 
 
+		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
+
+
 		// Resources this pass always needs whenever it runs, generated from
 		// each field's own [Always=X] annotation (further gated by [Optional=X]
 		// when present -- a raw bool expression, e.g. builder.exists(...) or a
@@ -51,20 +54,8 @@ public:
 			builder.need(data.swapchain, FrameGraph::ResourceFlags::RenderTarget);
 			if (builder.exists(data.UI_PreDraw_Sync))
 				builder.need(data.UI_PreDraw_Sync, FrameGraph::ResourceFlags::Read);
-			// [NeedDynamic]: a resource this pass reads whose IDENTITY is chosen
-			// at runtime, so no fixed PassNode field (and therefore no [Always])
-			// can name it -- a debug-view source, a ping-pong history buffer.
-			// The expression must be an LVALUE naming the handler that render()
-			// will dereference, not a temporary: builder.need() resolves the
-			// handler object it is handed, and a temporary would leave the one
-			// render() reads unresolved. Guarded by exists(): the selected
-			// resource may not be produced at all in this graph configuration,
-			// and a hard need() on one no pass writes is a graph-build failure.
-			{
-				auto& dynamic_need = builder.graph->get_context<FrameGraph::DebugContext>().result_texture;
-				if (builder.exists(dynamic_need))
-					builder.need(dynamic_need, ResourceFlags::Read);
-			}
+			if (builder.exists(data.ResultTexture))
+				builder.need(data.ResultTexture, FrameGraph::ResourceFlags::Read);
 		}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
@@ -72,6 +63,7 @@ public:
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
 			{ ResourceID::swapchain, true },
 			{ ResourceID::UI_PreDraw_Sync, false },
+			{ ResourceID::ResultTexture, false },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

@@ -67,6 +67,7 @@ public:
 	static inline const wchar_t* const resource_names[] = {
 		L"swapchain",
 		L"UI_PreDraw_Sync",
+		L"ResultTexture",
 	};
 	static constexpr uint32_t resource_count = std::size(resource_names);
 
@@ -138,9 +139,31 @@ public:
 		{ true, { UI_PreDraw_Sync_c0_pass_refs + 0, 1 } },
 		{ false, { UI_PreDraw_Sync_c0_pass_refs + 1, 16 } },
 	};
+	static inline const FrameGraph::PassRef ResultTexture_c0_pass_refs[] = {
+		{ PassID::UI_Render, 0 },
+		{ PassID::UI_Render, 1 },
+		{ PassID::UI_Render, 2 },
+		{ PassID::UI_Render, 3 },
+		{ PassID::UI_Render, 4 },
+		{ PassID::UI_Render, 5 },
+		{ PassID::UI_Render, 6 },
+		{ PassID::UI_Render, 7 },
+		{ PassID::UI_Render, 8 },
+		{ PassID::UI_Render, 9 },
+		{ PassID::UI_Render, 10 },
+		{ PassID::UI_Render, 11 },
+		{ PassID::UI_Render, 12 },
+		{ PassID::UI_Render, 13 },
+		{ PassID::UI_Render, 14 },
+		{ PassID::UI_Render, 15 },
+	};
+	static inline const FrameGraph::PrecompiledState ResultTexture_c0_states[] = {
+		{ false, { ResultTexture_c0_pass_refs + 0, 16 } },
+	};
 	static inline const FrameGraph::PrecompiledResourceInfo resource_infos[] = {
 		{ ResourceID::swapchain, 0, swapchain_c0_states },
 		{ ResourceID::UI_PreDraw_Sync, 0, UI_PreDraw_Sync_c0_states },
+		{ ResourceID::ResultTexture, 0, ResultTexture_c0_states },
 	};
 	static constexpr uint32_t resource_info_count = std::size(resource_infos);
 	// Precomputed pass instances with queue type and prev-pass dependency edges

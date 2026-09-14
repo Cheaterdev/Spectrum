@@ -82,7 +82,7 @@ public:
 {%- set view = parsed.views[v.type] -%}
 {%- if view is defined and get_view_needs(pass.name, v.name) | length > 0 -%}{%- do myappend('always_fields', v.name) -%}{%- endif -%}
 {%- endfor -%}
-{%- if get_list('always_fields') | length > 0 or pass.options.NeedDynamic is defined %}
+{%- if get_list('always_fields') | length > 0 %}
 		// Resources this pass always needs whenever it runs, generated from
 		// each field's own [Always=X] annotation (further gated by [Optional=X]
 		// when present -- a raw bool expression, e.g. builder.exists(...) or a
@@ -119,22 +119,6 @@ public:
 {%- endfor %}
 {%- endif %}
 {%- endfor %}
-{%- if pass.options.NeedDynamic is defined %}
-			// [NeedDynamic]: a resource this pass reads whose IDENTITY is chosen
-			// at runtime, so no fixed PassNode field (and therefore no [Always])
-			// can name it -- a debug-view source, a ping-pong history buffer.
-			// The expression must be an LVALUE naming the handler that render()
-			// will dereference, not a temporary: builder.need() resolves the
-			// handler object it is handed, and a temporary would leave the one
-			// render() reads unresolved. Guarded by exists(): the selected
-			// resource may not be produced at all in this graph configuration,
-			// and a hard need() on one no pass writes is a graph-build failure.
-			{{"{"}}
-				auto& dynamic_need = {{pass.options.NeedDynamic.value_atom.expr}};
-				if (builder.exists(dynamic_need))
-					builder.need(dynamic_need, ResourceFlags::{{pass.options.NeedDynamicFlags.value_atom.expr if pass.options.NeedDynamicFlags is defined else "Read"}});
-			{{"}"}}
-{%- endif %}
 		}
 {% endif -%}
 {%- set create_fields = create_list('create_fields') -%}

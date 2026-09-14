@@ -640,16 +640,10 @@ public:
 	{
 		DebugMode mode = DebugMode::Final;
 
-		// The resource `mode` selects, resolved once per frame in
-		// GUI/Base.cpp's create_graph (see the DebugMode switch there) so that
-		// setup and render both use the one handle -- the A/B-selection rule in
-		// CLAUDE.md. Lives here rather than on GUI::UIContext because
-		// UI_Render's generated [NeedDynamic] runs in autogen/pass_defaults.cpp
-		// and pass/UI_Render.h, neither of which can see Graphics/GUI types --
-		// and because it must be an LVALUE: builder.need() resolves the handler
-		// it is given, and UI_Render's render() then dereferences that same
-		// object.
-		Handlers::Texture result_texture;
+		// No result_texture handle any more: UI_Render declares ResultTexture as
+		// an ordinary field and GUI/Base.cpp's create_graph redirects it with
+		// Graph::override_resource when `mode` is not Final. Only the selector
+		// itself needs to live on the graph now.
 	};
 
 	struct TaskBuilderResourceAllocationContext
@@ -809,6 +803,27 @@ public:
 
 		bool debug = false;
 		Pass* current_pass = nullptr;
+
+		// Redirects one of a pass's DECLARED resource fields to a different
+		// resource for this frame -- the debug-view selector is the only user
+		// (GUI/Base.cpp): UI_Render declares ResultTexture statically and an
+		// override points it at a GBuffer target instead.
+		//
+		// This replaced a [NeedDynamic] option that resolved the resource id
+		// from a context every frame. The difference that matters is not
+		// ergonomics: a runtime-chosen ResourceID cannot be represented in a
+		// pass's context-field dependency mask (autogen/context_deps.h), so it
+		// was an input to graph structure that no cache key could ever see.
+		// As an override it becomes an explicit, enumerable condition instead --
+		// see has_resource_overrides().
+		struct ResourceOverride
+		{
+			PassID     pass;
+			ResourceID from;
+			ResourceID to;
+		};
+
+		std::vector<ResourceOverride> resource_overrides;
 		Graph* graph = nullptr;
 		void begin(Pass* pass);
 
@@ -932,9 +947,53 @@ public:
 			return chain.created_this_frame;
 		}
 
+		// Which resource the CURRENT pass actually reads for one of its declared
+		// fields, after any active override. See TaskBuilder::resource_overrides.
+		// Defined in FrameGraph.cpp: it reads Pass::type_id, and Pass is still
+		// incomplete here.
+		ResourceID resolve_override(ResourceID declared) const;
+
 		template<class T>
 		void need(T& result, ResourceFlags flags = ResourceFlags::None)
 		{
+			// Overrides are rare (only an active debug-view selection registers
+			// one), so the common path below is left exactly as it was rather
+			// than folding the redirect into it -- no extra work, and nothing
+			// about the un-overridden graph can shift.
+			if (!resource_overrides.empty())
+			{
+				const ResourceID declared = result.id;
+				ResourceID effective = resolve_override(declared);
+
+				if (effective != declared)
+				{
+					// An override naming a resource no pass produced this frame
+					// falls back to the declared one rather than failing the
+					// graph build. The debug views this exists for are genuinely
+					// conditional -- the NRD-denoised targets don't exist under
+					// DLSS-RR -- and showing the normal image beats asserting
+					// because a view was picked that this configuration never
+					// renders.
+					if (alloc_resources[(size_t)effective].created_this_frame)
+					{
+						ResourceAllocInfo& info = alloc_resources[(size_t)effective].active();
+						T& handler = info.get_handler<T>();
+						init_pass(info, flags);
+						result = handler;
+						// id stays DECLARATIVE: `result` belongs to a Context
+						// cached across frames (pass_cache), so stamping the
+						// replacement's id here would make the override sticky --
+						// next frame's need() would start its lookup from the
+						// replacement even after the override was cleared.
+						// render() is unaffected either way, because it
+						// dereferences `info`, which the copy above already
+						// points at the replacement.
+						result.id = declared;
+						return;
+					}
+				}
+			}
+
 			ASSERT(exists(result));
 			auto& chain = alloc_resources[(size_t)result.id];
 			ResourceAllocInfo& info = chain.active();
@@ -1283,6 +1342,30 @@ public:
 		// survives this is not an async/lifetime race but a rogue writer
 		// (out-of-bounds dispatch, wrong descriptor, stale indirect args).
 		Variable<bool> serialize_queues = { false, "serialize_queues", this };
+
+		// Points one of `pass`'s declared resource fields at a different resource
+		// for this frame. Must be called before setup() (graph construction is
+		// the intended place); cleared every frame by start_new_frame().
+		void override_resource(PassID pass, ResourceID from, ResourceID to)
+		{
+			builder.resource_overrides.emplace_back(pass, from, to);
+		}
+
+		// True when any override is active this frame.
+		//
+		// This is the contract for a future setup/allocation cache: an
+		// overridden frame must neither READ nor WRITE the cache. Skipping only
+		// the read while still storing would poison the entry for the next
+		// normal frame that shares its key. Honour both halves and the frame
+		// after an override is removed needs no special case -- it loads the
+		// entry stored before the override, which is still valid precisely
+		// because an override never altered the un-overridden computation.
+		//
+		// Recomputing wholesale is the right response rather than invalidating
+		// just the overridden pass: redirecting a read extends the replacement
+		// resource's used_end to this pass, which moves aliasing and placement
+		// decisions in create_resources() for unrelated resources too.
+		bool has_resource_overrides() const { return !builder.resource_overrides.empty(); }
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class PassT>

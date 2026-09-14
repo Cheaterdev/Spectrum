@@ -1078,12 +1078,20 @@ namespace GUI
             default:                return FrameGraph::ResourceID::ResultTexture;
             }
         };
-        // Resolved once here so UI_Render's generated [NeedDynamic] (setup) and
-        // its render() both use the one handle -- and stored on DebugContext,
-        // not UIContext, because the generated need runs in a TU that cannot
-        // see GUI types. See DebugContext::result_texture's own comment.
+        // UI_Render declares ResultTexture statically (ui.sig); anything other
+        // than Final redirects that one field for this frame. Registered here,
+        // during graph construction, because an override has to be in place
+        // before setup() runs -- and re-registered every frame, since
+        // start_new_frame() clears them.
+        //
+        // Only a non-default selection registers anything, so the normal path
+        // leaves has_resource_overrides() false and stays cacheable. See that
+        // function's comment (FrameGraph.Base.ixx) for what it buys.
         auto& dbg = graph.get_context<FrameGraph::DebugContext>();
-        dbg.result_texture = Handlers::Texture(debug_source(dbg.mode));
+        const auto debug_src = debug_source(dbg.mode);
+        if (debug_src != FrameGraph::ResourceID::ResultTexture)
+            graph.override_resource(FrameGraph::PassID::UI_Render,
+                                    FrameGraph::ResourceID::ResultTexture, debug_src);
 
         {
             PROFILE(L"process_graph");
@@ -1804,9 +1812,12 @@ void PassDefault<Passes::UI_Render>::render(
     c.renderer   = &renderer;
     c.command_list = command_list;
     c.delta_time = ui_ctx.dt;
-    auto& result_texture = context.graph->get_context<FrameGraph::DebugContext>().result_texture;
-    if (result_texture)
-        c.result_texture_srv = *result_texture;
+    // data.ResultTexture, not a context lookup: need() resolved this field to
+    // whatever the override selected (or to ResultTexture itself), so setup and
+    // render read the same resource by construction rather than by both
+    // agreeing to consult the same handle.
+    if (data.ResultTexture)
+        c.result_texture_srv = *data.ResultTexture;
 
     {
         PROFILE(L"draw_elements");
