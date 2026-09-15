@@ -66,6 +66,10 @@ namespace
 
 void capture_context_snapshot(Graph& graph, ContextSnapshot& out)
 {
+	out.values[(unsigned int)ContextFieldID::ViewportContext_frame_size] =
+		encode_context_field(graph.get_context<Table::ViewportContext>().frame_size);
+	out.values[(unsigned int)ContextFieldID::ViewportContext_upscale_size] =
+		encode_context_field(graph.get_context<Table::ViewportContext>().upscale_size);
 	out.values[(unsigned int)ContextFieldID::IndirectGISelectors_indirect_source] =
 		encode_context_field(graph.get_context<Table::IndirectGISelectors>().indirect_source);
 	out.values[(unsigned int)ContextFieldID::IndirectGISelectors_reflection_source] =
@@ -137,6 +141,18 @@ void update_context_dirty_mask(Graph& graph)
 	for (unsigned int i = 0; i < (unsigned int)ContextFieldID::Count; ++i)
 		if (graph.dirty_context_fields.test(i))
 			graph.context_field_changed_frame[i] = graph.context_frame_index;
+
+	// Whole-snapshot hash, for keying a stored graph plan. Deliberately covers
+	// EVERY field, not just the ones some pass's condition reads: a plan key
+	// attributes nothing, so a context only a [Size] expression touches
+	// (ViewportContext) still has to move it.
+	unsigned long long h = 1469598103934665603ull;
+	for (unsigned int i = 0; i < (unsigned int)ContextFieldID::Count; ++i)
+	{
+		h ^= current.values[i];
+		h *= 1099511628211ull;
+	}
+	graph.context_snapshot_hash = h;
 
 	graph.prev_context_snapshot = current;
 	graph.has_context_snapshot  = true;

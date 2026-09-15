@@ -33,6 +33,8 @@ namespace FrameGraph
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
 {
+	ViewportContext_frame_size,
+	ViewportContext_upscale_size,
 	IndirectGISelectors_indirect_source,
 	IndirectGISelectors_reflection_source,
 	RenderDeviceCapabilities_rtx_supported,
@@ -78,6 +80,8 @@ constexpr ContextFieldMask context_field_bit(ContextFieldID f)
 namespace ContextField
 {
 	constexpr ContextFieldMask None = ContextFieldMask{};
+	constexpr ContextFieldMask ViewportContext_frame_size = context_field_bit(ContextFieldID::ViewportContext_frame_size);
+	constexpr ContextFieldMask ViewportContext_upscale_size = context_field_bit(ContextFieldID::ViewportContext_upscale_size);
 	constexpr ContextFieldMask IndirectGISelectors_indirect_source = context_field_bit(ContextFieldID::IndirectGISelectors_indirect_source);
 	constexpr ContextFieldMask IndirectGISelectors_reflection_source = context_field_bit(ContextFieldID::IndirectGISelectors_reflection_source);
 	constexpr ContextFieldMask RenderDeviceCapabilities_rtx_supported = context_field_bit(ContextFieldID::RenderDeviceCapabilities_rtx_supported);

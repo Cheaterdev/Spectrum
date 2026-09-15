@@ -102,6 +102,18 @@ void update_context_dirty_mask(Graph& graph)
 		if (graph.dirty_context_fields.test(i))
 			graph.context_field_changed_frame[i] = graph.context_frame_index;
 
+	// Whole-snapshot hash, for keying a stored graph plan. Deliberately covers
+	// EVERY field, not just the ones some pass's condition reads: a plan key
+	// attributes nothing, so a context only a [Size] expression touches
+	// (ViewportContext) still has to move it.
+	unsigned long long h = 1469598103934665603ull;
+	for (unsigned int i = 0; i < (unsigned int)ContextFieldID::Count; ++i)
+	{
+		h ^= current.values[i];
+		h *= 1099511628211ull;
+	}
+	graph.context_snapshot_hash = h;
+
 	graph.prev_context_snapshot = current;
 	graph.has_context_snapshot  = true;
 }

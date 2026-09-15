@@ -641,9 +641,30 @@ int main()
 			auto scan = [&](const have_options& holder)
 			{
 				for (const auto& opt : holder.options)
+				{
 					if (CONDITION_OPTIONS.count(opt.name))
+					{
 						for (const auto& r : opt.value_atom.field_refs)
 							owners.insert(r.owner);
+					}
+
+					// Descriptor options (`[Size = ViewportContext::frame_size]`)
+					// read contexts too. They feed no pass's condition mask -- a
+					// size change never moves the enable set -- but the SNAPSHOT
+					// has to cover them, because it is what a stored graph plan is
+					// keyed on and a resize does change every sized resource's
+					// desc.
+					//
+					// Only the single-atom form resolves here; an arithmetic
+					// [Size] is still a raw backtick (REFACTOR_TODO item 6). That
+					// costs nothing at this level: the key hashes every field of
+					// an included struct regardless of who reads it, so pulling
+					// ViewportContext in covers the opaque expressions as well.
+					else if (!opt.value_atom.owner_name.empty())
+					{
+						owners.insert(opt.value_atom.owner_name);
+					}
+				}
 			};
 			for (const auto& pass : parsed.passes)
 			{

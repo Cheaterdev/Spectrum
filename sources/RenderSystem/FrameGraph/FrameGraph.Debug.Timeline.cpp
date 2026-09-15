@@ -1532,7 +1532,7 @@ private:
         std::map<std::string, ResourceTrack> track_map;
         for (auto* pass : g.builder.enabled_passes)
         {
-            for (auto& [alloc, flags] : pass->used.resource_flags)
+            for (auto& [alloc, flags] : pass->used.resources)
             {
                 auto& tr = track_map[alloc->name()];
                 tr.name      = alloc->name();
@@ -1552,7 +1552,7 @@ private:
 
             for (auto* alloc : pass->used.resource_deletions_before)
             {
-                if (pass->used.resource_flags.count(alloc)) continue;
+                if (pass->used.resources.count(alloc)) continue;
 
                 auto& tr = track_map[alloc->name()];
                 tr.name  = alloc->name();
@@ -1571,7 +1571,7 @@ private:
             auto it = disabled_col.find(sp.get());
             if (it == disabled_col.end()) continue;
             UINT col = it->second;
-            for (auto& [alloc, flags] : sp->used.resource_flags)
+            for (auto& [alloc, flags] : sp->used.resources)
             {
                 auto& tr    = track_map[alloc->name()];
                 tr.name     = alloc->name();

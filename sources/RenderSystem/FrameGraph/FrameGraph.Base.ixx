@@ -207,11 +207,59 @@ public:
 
 	struct Pass;
 
+	// Identifies one chain link of a resource -- the pair every pointer-keyed
+	// container is being converted to, and the form a serialized graph plan
+	// stores.
+	//
+	// NOT a bare ResourceID: [Recreate] gives one id several chain links, and a
+	// pass legitimately touches two of them in the same frame (reads the old,
+	// writes the new). FSR/SMAA/UpscalingDLSS/UpscalingDLSSRR all do this to
+	// ResultTexture, so collapsing to the id alone would silently merge a read
+	// state with a write state and destroy the ordering between them.
+	//
+	// Stable across frames: ResourceChain::reset_frame() rewinds pos but never
+	// clears items, so link N is the same object next frame. That is what makes
+	// this usable as a persisted key -- given the same generated ID space, which
+	// a plan header must check, since editing a .sig renumbers ResourceID.
+	struct ResourceVersion
+	{
+		ResourceID id      = ResourceID::Count;
+		uint32_t   version = 0;   // chain index; 0 = the original create()
+
+		auto operator<=>(const ResourceVersion&) const = default;
+	};
+
 	struct UsedResources
 	{
 		std::list<HAL::FenceWaiter> fences;
-		std::set<ResourceAllocInfo*> resources;
-		std::map<ResourceAllocInfo*, ResourceFlags> resource_flags;
+		// The flags map IS the touched set -- both were always written together
+		// at every insertion site, so the separate std::set was a second copy of
+		// this map's key set kept in sync by hand.
+		std::map<ResourceAllocInfo*, ResourceFlags> resources;
+
+		// Records one access. Latest access wins, EXCEPT Required, which is
+		// carried forward.
+		//
+		// Capability flags deliberately do not accumulate here: this value feeds
+		// ResourceAllocInfo::add_pass(), i.e. the RW-state timeline, so OR-ing a
+		// stale UnorderedAccess into a later plain read would claim a UAV state
+		// the pass never asks for. Required is different -- it is not a
+		// capability but a "do not cull this" marker, and dropping it on a
+		// second access would let the resource be culled out from under the
+		// first one.
+		//
+		// Note this is NOT the same accumulation as ResourceAllocInfo::flags,
+		// which does OR everything and drives the D3D12 resource desc. That one
+		// is reset each frame by create() (info.flags = flags after
+		// info.reset()), so it already reflects only the passes that ran.
+		void touch(ResourceAllocInfo* info, ResourceFlags flags)
+		{
+			auto it = resources.find(info);
+			if (it == resources.end())
+				resources.emplace(info, flags);
+			else
+				it->second = flags | (it->second & ResourceFlags::Required);
+		}
 		std::set<ResourceAllocInfo*> resource_creations;
 
 
@@ -324,6 +372,11 @@ public:
 	struct ResourceAllocInfo
 	{
 		ResourceID id = ResourceID::Count;
+
+		// This info's index within its ResourceChain; 0 for the original create().
+		// Together with `id` this is its ResourceVersion -- the identity used by
+		// pass containers and by a serialized plan, in place of the pointer.
+		uint32_t chain_index = 0;
 		const char* name() const;
 		// desc
 		//ResourceType type;
@@ -681,7 +734,7 @@ public:
 		void ensure_first()
 		{
 			if (items.empty())
-				items.emplace_back();
+				items.emplace_back().chain_index = 0;
 		}
 
 		// Advance to the next slot, growing the deque if needed.
@@ -690,6 +743,10 @@ public:
 			++pos;
 			if (items.size() <= pos)
 				items.emplace_back();
+			// Stamped once, when the link first appears. items is never cleared
+			// (reset_frame only rewinds pos), so this stays correct for the
+			// lifetime of the chain.
+			items[pos].chain_index = (uint32_t)pos;
 			return items[pos];
 		}
 
@@ -767,7 +824,7 @@ public:
 		// Builds each resource's RW-state timeline after all setups have run —
 		// from the added pipelines' precomputed resource_infos (recreate chains
 		// fall back to add_pass). Setup itself only records resource desc/flags
-		// and what each pass touched (used.resources / used.resource_flags).
+		// and what each pass touched (used.resources).
 		void build_resource_states();
 
 		// Persistent pass cache, indexed by PassID (+ index for [Multiple] passes),
@@ -1023,6 +1080,18 @@ public:
 		Pass* get_pass(uint id) const;
 
 		ResourceAllocInfo* get(ResourceID id);
+
+		// Resolves a ResourceVersion to its chain link. Distinct from get(id)
+		// above on purpose: that one returns chain.active() and nulls out when
+		// the resource is disabled, which is right for its callers but wrong
+		// here -- a [Recreate] pass needs the NON-active link too.
+		ResourceAllocInfo* get(ResourceVersion v);
+
+		// The identity of a link, for storing in pass containers or a plan.
+		static ResourceVersion version_of(const ResourceAllocInfo& info)
+		{
+			return { info.id, info.chain_index };
+		}
 	};
 
 	  class Graph;
@@ -1409,6 +1478,29 @@ public:
 		// decisions in create_resources() for unrelated resources too.
 		bool has_resource_overrides() const { return !builder.resource_overrides.empty(); }
 
+		// Identifies the graph this frame will build, for looking up a stored
+		// plan (DumpGraph/LoadGraph). Valid only AFTER run_pre_setups(), which is
+		// the last thing that may write a context -- every setup_func is
+		// generated and does nothing but read Table:: contexts and return a
+		// SetupResult, so from that point the inputs are frozen.
+		//
+		// The snapshot alone is not enough. Three inputs decide the graph and are
+		// not context fields:
+		//   - WHICH passes were added. add_passes() registers a pass only when its
+		//     render_func is set, so AssetPreview's claimed slots and PSSM's
+		//     cascades change the pass set with no context involved.
+		//   - Graph::optimize, which strips Compute flags inside setup().
+		//   - the pass_texture()'d resources, which arrive from outside the graph.
+		//
+		// Returns 0 when no plan may be used at all -- see has_resource_overrides().
+		uint64_t compute_graph_key() const;
+
+		// Records the graph just built by setup() into a plan keyed by
+		// compute_graph_key(), and replays one instead of running setup().
+		// Recording happens on the dynamic path only, so it costs nothing on a hit.
+		void DumpGraph(uint64_t key);
+		bool LoadGraph(uint64_t key);
+
 		// ---- Setup-result cache ------------------------------------------
 		// Last frame's context values and which fields differ from them, filled
 		// by update_context_dirty_mask() (autogen/context_snapshot.cpp) after
@@ -1430,6 +1522,10 @@ public:
 		// Pass::last_setup_frame.
 		uint64_t         context_field_changed_frame[(unsigned int)ContextFieldID::Count] = {};
 		uint64_t         context_frame_index = 0;
+
+		// Hash of the whole snapshot, updated alongside it. One half of the
+		// stored-plan key; see compute_graph_key().
+		uint64_t         context_snapshot_hash = 0;
 
 		// Per-frame tally, reset in start_new_frame(). Kept as real state rather
 		// than a debug-only counter because the hit rate is the number that says

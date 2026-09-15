@@ -824,6 +824,18 @@ namespace nvidia
 
 		auto& compute = list.get_compute();
 
+		// Denoiser-type buckets for the GPU profiler -- identifier 0/1/2 map
+		// 1:1 onto the ctor's denoisers[] array (SIGMA_SHADOW/REBLUR_DIFFUSE/
+		// REBLUR_SPECULAR), so every dispatch this loop actually issues is
+		// attributed to the NRD instance it belongs to, distinguishable from
+		// the other two denoisers' dispatches in a capture instead of showing
+		// up as one undifferentiated "NRD" block.
+		static constexpr LiteralWStr denoiser_type_names[3] = {
+			L"NRD_SIGMA_SHADOW", L"NRD_REBLUR_DIFFUSE", L"NRD_REBLUR_SPECULAR"
+		};
+
+		PROFILE_GPU(L"NRD");
+
 		uint32_t dispatched = 0;
 		for (uint32_t d = 0; d < dispatches_num; ++d)
 		{
@@ -850,6 +862,7 @@ namespace nvidia
 				continue;
 			}
 
+			PROFILE_GPU(denoiser_type_names[dispatch.identifier < 3 ? dispatch.identifier : 0]);
 			fn(*this, compute, dispatch, inputs);
 			++dispatched;
 		}

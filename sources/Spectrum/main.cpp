@@ -1357,7 +1357,7 @@ public:
 				frameFlowGraph->register_node(node);
 				offset = std::max(offset, uint(node->pos.x));
 
-				for (auto& info : pass->used.resources)
+				for (auto& [info, resource_flags] : pass->used.resources)
 				{
 					if (pass->used.resource_creations.count(info) == 0)
 					{
@@ -1368,8 +1368,6 @@ public:
 						{
 							prev->link(input);
 						}
-						auto resource_flags = pass->used.resource_flags[info];
-
 
 						if (check(resource_flags & FrameGraph::WRITEABLE_FLAGS))
 						{
@@ -1380,7 +1378,7 @@ public:
 				}
 
 
-				for (auto& info : pass->used.resources)
+				for (auto& [info, resource_flags] : pass->used.resources)
 				{
 					if (pass->used.resource_creations.count(info))
 					{
