@@ -232,10 +232,23 @@ public:
 	struct UsedResources
 	{
 		std::list<HAL::FenceWaiter> fences;
-		// The flags map IS the touched set -- both were always written together
-		// at every insertion site, so the separate std::set was a second copy of
-		// this map's key set kept in sync by hand.
-		std::map<ResourceAllocInfo*, ResourceFlags> resources;
+
+		struct Access
+		{
+			ResourceVersion version;
+			ResourceFlags   flags;
+		};
+
+		// Flat vectors keyed by ResourceVersion rather than sets/maps keyed by
+		// ResourceAllocInfo*. Three reasons: a pass touches a handful of the 89
+		// resources so a linear scan over contiguous memory beats a red-black
+		// tree and leaves no per-frame node churn to tear down; iteration order
+		// becomes deterministic instead of heap-address order; and the contents
+		// are directly serializable into a stored graph plan.
+		std::vector<Access>          resources;
+		std::vector<ResourceVersion> resource_creations;
+		std::vector<ResourceVersion> resource_deletions_before;
+		std::vector<ResourceVersion> resource_deletions_after;
 
 		// Records one access. Latest access wins, EXCEPT Required, which is
 		// carried forward.
@@ -248,25 +261,32 @@ public:
 		// second access would let the resource be culled out from under the
 		// first one.
 		//
-		// Note this is NOT the same accumulation as ResourceAllocInfo::flags,
-		// which does OR everything and drives the D3D12 resource desc. That one
-		// is reset each frame by create() (info.flags = flags after
-		// info.reset()), so it already reflects only the passes that ran.
-		void touch(ResourceAllocInfo* info, ResourceFlags flags)
+		// NOT the same accumulation as ResourceAllocInfo::flags, which does OR
+		// everything and drives the D3D12 resource desc. That one is reset each
+		// frame by create(), so it already reflects only the passes that ran.
+		void touch(ResourceVersion v, ResourceFlags flags)
 		{
-			auto it = resources.find(info);
-			if (it == resources.end())
-				resources.emplace(info, flags);
-			else
-				it->second = flags | (it->second & ResourceFlags::Required);
+			for (auto& a : resources)
+				if (a.version == v)
+				{
+					a.flags = flags | (a.flags & ResourceFlags::Required);
+					return;
+				}
+			resources.push_back({ v, flags });
 		}
-		std::set<ResourceAllocInfo*> resource_creations;
 
-
-		std::set<ResourceAllocInfo*> resource_deletions_before;
-		std::set<ResourceAllocInfo*> resource_deletions_after;
-
-
+		// The three lists below stood in for std::set, so they keep its
+		// set-like "insert once" behaviour.
+		static void add_unique(std::vector<ResourceVersion>& v, ResourceVersion x)
+		{
+			for (auto e : v) if (e == x) return;
+			v.push_back(x);
+		}
+		static bool contains(const std::vector<ResourceVersion>& v, ResourceVersion x)
+		{
+			for (auto e : v) if (e == x) return true;
+			return false;
+		}
 	};
 
 
@@ -1085,7 +1105,15 @@ public:
 		// above on purpose: that one returns chain.active() and nulls out when
 		// the resource is disabled, which is right for its callers but wrong
 		// here -- a [Recreate] pass needs the NON-active link too.
-		ResourceAllocInfo* get(ResourceVersion v);
+		//
+		// const, returning a mutable link: the chain OWNS its links and is only
+		// being indexed here, and the read-only consumer this exists for (the
+		// timeline debugger, which takes a const Graph&) still needs the same
+		// mutable ResourceAllocInfo* the pass containers used to hand it
+		// directly. Making it const-correct all the way down would mean
+		// threading constness through ResourceCell and the preview widgets for
+		// no actual safety gain.
+		ResourceAllocInfo* get(ResourceVersion v) const;
 
 		// The identity of a link, for storing in pass containers or a plan.
 		static ResourceVersion version_of(const ResourceAllocInfo& info)

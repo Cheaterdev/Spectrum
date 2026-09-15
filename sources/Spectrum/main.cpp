@@ -1357,9 +1357,12 @@ public:
 				frameFlowGraph->register_node(node);
 				offset = std::max(offset, uint(node->pos.x));
 
-				for (auto& [info, resource_flags] : pass->used.resources)
+				for (auto& [version, resource_flags] : pass->used.resources)
 				{
-					if (pass->used.resource_creations.count(info) == 0)
+					auto* info = graph.builder.get(version);
+					if (!info) continue;
+
+					if (!FrameGraph::UsedResources::contains(pass->used.resource_creations, version))
 					{
 						auto input = node->register_input(info->name());
 						auto prev = resource_stages[info];
@@ -1378,9 +1381,12 @@ public:
 				}
 
 
-				for (auto& [info, resource_flags] : pass->used.resources)
+				for (auto& [version, resource_flags] : pass->used.resources)
 				{
-					if (pass->used.resource_creations.count(info))
+					auto* info = graph.builder.get(version);
+					if (!info) continue;
+
+					if (FrameGraph::UsedResources::contains(pass->used.resource_creations, version))
 					{
 						auto output = node->register_output(info->name());
 						resource_stages[info] = output;

@@ -301,9 +301,10 @@ namespace FrameGraph
 
 			auto& _list = get_list();
 
-			for (auto info : pass->used.resource_deletions_before)
+			for (auto v : pass->used.resource_deletions_before)
 			{
-				if (!info->alloc_ptr.handle) continue;
+				auto* info = graph->builder.get(v);
+				if (!info || !info->alloc_ptr.handle) continue;
 
 				if (!info->enabled)
 					continue;
@@ -311,9 +312,10 @@ namespace FrameGraph
 				list->alias_end(info->resource.get());
 			}
 
-			for (auto info : pass->used.resource_creations)
+			for (auto v : pass->used.resource_creations)
 			{
-				if (!info->alloc_ptr.handle) continue;
+				auto* info = graph->builder.get(v);
+				if (!info || !info->alloc_ptr.handle) continue;
 
 				if (!info->enabled)
 					continue;
@@ -331,8 +333,10 @@ namespace FrameGraph
 		if (list)
 		{
 
-			for (auto [info, flags] : pass->used.resources)
+			for (auto [v, flags] : pass->used.resources)
 			{
+				auto* info = graph->builder.get(v);
+				if (!info) continue;
 				// Debug preview fires on the producing (write) pass. A history `prev`
 				// is never written by a pass — fire it on a reading pass instead so
 				// its thumbnail can be captured from the adopted resource.
@@ -357,9 +361,10 @@ namespace FrameGraph
 					list->transition_to_rest(info->resource.get());
 			}
 
-			for (auto info : pass->used.resource_deletions_after)
+			for (auto v : pass->used.resource_deletions_after)
 			{
-				if (!info->alloc_ptr.handle) continue;
+				auto* info = graph->builder.get(v);
+				if (!info || !info->alloc_ptr.handle) continue;
 
 				if (!info->enabled)
 					continue;
@@ -522,9 +527,10 @@ namespace FrameGraph
 						if (!check(info.flags & ResourceFlags::Static) && pass->id > pass_id) continue;
 						pass->enabled = true;
 
-						for (auto& [info, flags] : pass->used.resources)
+						for (auto& acc : pass->used.resources)
 						{
-							self(*info, pass->id);
+							if (auto* used = builder.get(acc.version))
+								self(*used, pass->id);
 						}
 					}
 				}
@@ -554,9 +560,10 @@ namespace FrameGraph
 			for (auto& pass : builder.required_passes)
 			{
 				pass->enabled = true;
-				for (auto& [info, flags] : pass->used.resources)
+				for (auto& acc : pass->used.resources)
 				{
-					process_resource(*info, pass->id);
+					if (auto* used = builder.get(acc.version))
+						process_resource(*used, pass->id);
 				}
 			}
 
@@ -626,8 +633,8 @@ namespace FrameGraph
 
 			for (auto* alloc : builder.passed_resources)
 			{
-				ext->used.touch(alloc, ResourceFlags::RenderTarget);
-				ext->used.resource_creations.insert(alloc);
+				ext->used.touch(TaskBuilder::version_of(*alloc), ResourceFlags::RenderTarget);
+				UsedResources::add_unique(ext->used.resource_creations, TaskBuilder::version_of(*alloc));
 			}
 
 			for (auto& chain : builder.alloc_resources)
@@ -635,8 +642,8 @@ namespace FrameGraph
 				if (chain.empty()) continue;
 				auto& alloc = chain.active();
 				if (!alloc.is_static()) continue;
-				ext->used.touch(&alloc, ResourceFlags::RenderTarget);
-				ext->used.resource_creations.insert(&alloc);
+				ext->used.touch(TaskBuilder::version_of(alloc), ResourceFlags::RenderTarget);
+				UsedResources::add_unique(ext->used.resource_creations, TaskBuilder::version_of(alloc));
 			}
 
 			if (!ext->used.resources.empty())
@@ -1095,14 +1102,14 @@ namespace FrameGraph
 		if (current_pass) {
 			// Setup only records what the pass touched + the flags; states are
 			// built after all setups (build_resource_states).
-			current_pass->used.touch(&info, flags);
+			current_pass->used.touch(version_of(info), flags);
 		}
 	}
 
 	void TaskBuilder::init_pass(ResourceAllocInfo& info, ResourceFlags flags)
 	{
 		verify_declared_access(current_pass, info.id, flags);
-		current_pass->used.touch(&info, flags);
+		current_pass->used.touch(version_of(info), flags);
 		info.is_new = false;
 		info.flags = info.flags | flags;
 
@@ -1126,10 +1133,10 @@ namespace FrameGraph
 		PROFILE(L"build_resource_states");
 
 		for (auto& pass : passes)
-			for (auto& [info, flags] : pass->used.resources)
-				info->add_pass(pass.get(), flags);
+			for (auto& acc : pass->used.resources)
+				if (auto* info = get(acc.version))
+					info->add_pass(pass.get(), acc.flags);
 	}
-
 
 
 	void TaskBuilder::process_fences()
@@ -1546,7 +1553,7 @@ namespace FrameGraph
 
 			// create - easy
 			events[best_creation_pass->call_id].create.insert(info);
-			best_creation_pass->used.resource_creations.insert(info);
+			UsedResources::add_unique(best_creation_pass->used.resource_creations, version_of(*info));
 			creation_pass_of[info] = best_creation_pass;
 
 
@@ -1582,7 +1589,7 @@ namespace FrameGraph
 						events[best_deletion_pass->call_id].free_before.insert(info);
 
 						if (!alias_ended)
-							best_deletion_pass->used.resource_deletions_before.insert(info);
+							UsedResources::add_unique(best_deletion_pass->used.resource_deletions_before, version_of(*info));
 
 						//	events[best_deletion_pass->call_id].free_after.insert(info);
 						//best_deletion_pass->used.resource_deletions_after.insert(info);
@@ -2358,10 +2365,10 @@ namespace FrameGraph
 		return it != id_to_pass.end() ? it->second : nullptr;
 	}
 
-	ResourceAllocInfo* TaskBuilder::get(ResourceVersion v)
+	ResourceAllocInfo* TaskBuilder::get(ResourceVersion v) const
 	{
 		if (v.id == ResourceID::Count) return nullptr;
-		auto& chain = alloc_resources[(size_t)v.id];
+		auto& chain = const_cast<TaskBuilder*>(this)->alloc_resources[(size_t)v.id];
 		if (v.version >= chain.size()) return nullptr;
 		return &chain.at(v.version);
 	}

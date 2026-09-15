@@ -1532,8 +1532,11 @@ private:
         std::map<std::string, ResourceTrack> track_map;
         for (auto* pass : g.builder.enabled_passes)
         {
-            for (auto& [alloc, flags] : pass->used.resources)
+            for (auto& [version, flags] : pass->used.resources)
             {
+                auto* alloc = g.builder.get(version);
+                if (!alloc) continue;
+
                 auto& tr = track_map[alloc->name()];
                 tr.name      = alloc->name();
                 tr.is_static = alloc->is_static();
@@ -1542,17 +1545,23 @@ private:
                 ResourceCell cell;
                 cell.call_id    = pass->call_id;
                 cell.is_write   = check(flags & FrameGraph::WRITEABLE_FLAGS);
-                cell.is_created = (pass->used.resource_creations.count(alloc) > 0);
-                cell.is_deleted = (pass->used.resource_deletions_after.count(alloc) > 0);
+                cell.is_created = FrameGraph::UsedResources::contains(pass->used.resource_creations, version);
+                cell.is_deleted = FrameGraph::UsedResources::contains(pass->used.resource_deletions_after, version);
                 cell.alloc      = alloc;
                 cell.state_str = resource_flags_to_str(flags);
               
                 tr.cells.push_back(cell);
             }
 
-            for (auto* alloc : pass->used.resource_deletions_before)
+            for (auto version : pass->used.resource_deletions_before)
             {
-                if (pass->used.resources.count(alloc)) continue;
+                bool already_listed = false;
+                for (auto& a : pass->used.resources)
+                    if (a.version == version) { already_listed = true; break; }
+                if (already_listed) continue;
+
+                auto* alloc = g.builder.get(version);
+                if (!alloc) continue;
 
                 auto& tr = track_map[alloc->name()];
                 tr.name  = alloc->name();
@@ -1571,8 +1580,11 @@ private:
             auto it = disabled_col.find(sp.get());
             if (it == disabled_col.end()) continue;
             UINT col = it->second;
-            for (auto& [alloc, flags] : sp->used.resources)
+            for (auto& [version, flags] : sp->used.resources)
             {
+                auto* alloc = g.builder.get(version);
+                if (!alloc) continue;
+
                 auto& tr    = track_map[alloc->name()];
                 tr.name     = alloc->name();
                 tr.is_static = alloc->is_static();
