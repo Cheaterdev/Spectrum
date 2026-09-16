@@ -65,6 +65,39 @@ public:
 		{
 			builder.create(data.VSM_DirtySlots, { (size_t)Constants::VSM_PhysicalPageCount }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		}
+		// Which chain link each handler field resolved to, one named slot per
+		// field. Filled from a live frame's finished Context and applied on a
+		// replayed one, so a replay neither re-runs create_always/need_always nor
+		// depends on the order they made their calls in. The id is not stored:
+		// the field fixes it.
+		struct Cache
+		{
+			FrameGraph::ChainIndex VSM_Atlas = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_PageHiZ = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_DirtySlots = FrameGraph::ChainIndex::Unresolved;
+		};
+
+		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+		{
+			cache.VSM_Atlas = FrameGraph::TaskBuilder::cache_slot(data.VSM_Atlas, ResourceID::VSM_Atlas);
+			cache.VSM_PageHiZ = FrameGraph::TaskBuilder::cache_slot(data.VSM_PageHiZ, ResourceID::VSM_PageHiZ);
+			cache.VSM_DirtySlots = FrameGraph::TaskBuilder::cache_slot(data.VSM_DirtySlots, ResourceID::VSM_DirtySlots);
+		}
+
+		// Replay counterpart of create_always/need_always. A field this pass
+		// creates gets its desc recomputed on the link the cache names, so descs
+		// follow the current context instead of being stored in the plan; every
+		// other field is only pointed at its link. Each link is created by exactly
+		// one pass and nothing here reads another resource's desc, so passes can
+		// load in any order. A [Recreate] without [Size]/[Format] copies the
+		// previous link's desc, which LoadGraph does once every pass has loaded.
+		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+		{
+			builder.load(data.VSM_Atlas, ResourceID::VSM_Atlas, cache.VSM_Atlas);
+			builder.load(data.VSM_PageHiZ, ResourceID::VSM_PageHiZ, cache.VSM_PageHiZ);
+			builder.create_versioned(data.VSM_DirtySlots, cache.VSM_DirtySlots, { (size_t)Constants::VSM_PhysicalPageCount });
+		}
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

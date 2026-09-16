@@ -30,6 +30,13 @@
 namespace FrameGraph
 {
 
+// Fingerprint of this generated ID space (every PassID and ResourceID name, in
+// enum order). A serialized graph plan stores passes and resources by ID; if a
+// .sig edit renumbers those enums, a plan from before the edit would not fail
+// to load, it would misapply -- wrong resource, wrong barriers. A plan whose
+// header does not carry this exact value must be rejected.
+constexpr unsigned long long generated_id_space_hash = 10528059140722396152ull;
+
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
 {
@@ -103,6 +110,19 @@ namespace ContextField
 	constexpr ContextFieldMask VSMSelectors_use_vsm_contact_shadow = context_field_bit(ContextFieldID::VSMSelectors_use_vsm_contact_shadow);
 	constexpr ContextFieldMask VSMSelectors_vsm_debug_view = context_field_bit(ContextFieldID::VSMSelectors_vsm_debug_view);
 }
+
+// Fields that ONLY ever feed a resource descriptor ([Size]/[Format]), never a
+// pass condition.
+//
+// This is what lets the two caches be keyed separately. A resource's geometry
+// is a pure function of these -- every non-literal [Size] in the sigs reads only
+// ViewportContext, and every [Format]/[ArrayCount]/[MipCount] is literal or a
+// Constants:: entry -- while the pass set cannot depend on them at all. Folding
+// both halves into one key would fork a whole topology plan per window size:
+// N enable-set variants x M sizes instead of N + M.
+constexpr ContextFieldMask desc_only_fields =
+	  ContextField::ViewportContext_frame_size
+	| ContextField::ViewportContext_upscale_size;
 
 struct PassContextDeps
 {

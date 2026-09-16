@@ -100,6 +100,78 @@ public:
 				builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::Read);
 			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
+		// Which chain link each handler field resolved to, one named slot per
+		// field. Filled from a live frame's finished Context and applied on a
+		// replayed one, so a replay neither re-runs create_always/need_always nor
+		// depends on the order they made their calls in. The id is not stored:
+		// the field fixes it.
+		struct Cache
+		{
+			FrameGraph::ChainIndex GBuffer_Albedo = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_Normals = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_Specular = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_Speed = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_Atlas = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_PageTable = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_PageCameras = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex BlueNoise = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_LitTiles = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_DarkTiles = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_ConfirmedLitTiles = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_BlurTiles = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_BlockerSearchResult = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_ContactShadow = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
+		};
+
+		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+		{
+			cache.GBuffer_Albedo = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo);
+			cache.GBuffer_Normals = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Normals, ResourceID::GBuffer_Normals);
+			cache.GBuffer_Specular = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Specular, ResourceID::GBuffer_Specular);
+			cache.GBuffer_Speed = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Speed, ResourceID::GBuffer_Speed);
+			cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
+			cache.VSM_Atlas = FrameGraph::TaskBuilder::cache_slot(data.VSM_Atlas, ResourceID::VSM_Atlas);
+			cache.VSM_PageTable = FrameGraph::TaskBuilder::cache_slot(data.VSM_PageTable, ResourceID::VSM_PageTable);
+			cache.VSM_PageCameras = FrameGraph::TaskBuilder::cache_slot(data.VSM_PageCameras, ResourceID::VSM_PageCameras);
+			cache.BlueNoise = FrameGraph::TaskBuilder::cache_slot(data.BlueNoise, ResourceID::BlueNoise);
+			cache.VSM_LitTiles = FrameGraph::TaskBuilder::cache_slot(data.VSM_LitTiles, ResourceID::VSM_LitTiles);
+			cache.VSM_DarkTiles = FrameGraph::TaskBuilder::cache_slot(data.VSM_DarkTiles, ResourceID::VSM_DarkTiles);
+			cache.VSM_ConfirmedLitTiles = FrameGraph::TaskBuilder::cache_slot(data.VSM_ConfirmedLitTiles, ResourceID::VSM_ConfirmedLitTiles);
+			cache.VSM_BlurTiles = FrameGraph::TaskBuilder::cache_slot(data.VSM_BlurTiles, ResourceID::VSM_BlurTiles);
+			cache.VSM_BlockerSearchResult = FrameGraph::TaskBuilder::cache_slot(data.VSM_BlockerSearchResult, ResourceID::VSM_BlockerSearchResult);
+			cache.VSM_ContactShadow = FrameGraph::TaskBuilder::cache_slot(data.VSM_ContactShadow, ResourceID::VSM_ContactShadow);
+			cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
+		}
+
+		// Replay counterpart of create_always/need_always. A field this pass
+		// creates gets its desc recomputed on the link the cache names, so descs
+		// follow the current context instead of being stored in the plan; every
+		// other field is only pointed at its link. Each link is created by exactly
+		// one pass and nothing here reads another resource's desc, so passes can
+		// load in any order. A [Recreate] without [Size]/[Format] copies the
+		// previous link's desc, which LoadGraph does once every pass has loaded.
+		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+		{
+			builder.load(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo, cache.GBuffer_Albedo);
+			builder.load(data.GBuffer_Normals, ResourceID::GBuffer_Normals, cache.GBuffer_Normals);
+			builder.load(data.GBuffer_Specular, ResourceID::GBuffer_Specular, cache.GBuffer_Specular);
+			builder.load(data.GBuffer_Speed, ResourceID::GBuffer_Speed, cache.GBuffer_Speed);
+			builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
+			builder.load(data.VSM_Atlas, ResourceID::VSM_Atlas, cache.VSM_Atlas);
+			builder.load(data.VSM_PageTable, ResourceID::VSM_PageTable, cache.VSM_PageTable);
+			builder.load(data.VSM_PageCameras, ResourceID::VSM_PageCameras, cache.VSM_PageCameras);
+			builder.load(data.BlueNoise, ResourceID::BlueNoise, cache.BlueNoise);
+			builder.load(data.VSM_LitTiles, ResourceID::VSM_LitTiles, cache.VSM_LitTiles);
+			builder.load(data.VSM_DarkTiles, ResourceID::VSM_DarkTiles, cache.VSM_DarkTiles);
+			builder.load(data.VSM_ConfirmedLitTiles, ResourceID::VSM_ConfirmedLitTiles, cache.VSM_ConfirmedLitTiles);
+			builder.load(data.VSM_BlurTiles, ResourceID::VSM_BlurTiles, cache.VSM_BlurTiles);
+			builder.load(data.VSM_BlockerSearchResult, ResourceID::VSM_BlockerSearchResult, cache.VSM_BlockerSearchResult);
+			builder.load(data.VSM_ContactShadow, ResourceID::VSM_ContactShadow, cache.VSM_ContactShadow);
+			builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
+		}
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

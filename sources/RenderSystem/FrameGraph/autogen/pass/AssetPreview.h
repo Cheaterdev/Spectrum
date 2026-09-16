@@ -25,6 +25,30 @@ public:
 		// field or manual `data.X = i;` assignment needed.
 		uint32_t pass_index = 0;
 
+		// Which chain link each handler field resolved to, one named slot per
+		// field. Filled from a live frame's finished Context and applied on a
+		// replayed one, so a replay neither re-runs create_always/need_always nor
+		// depends on the order they made their calls in. The id is not stored:
+		// the field fixes it.
+		struct Cache
+		{
+		};
+
+		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+		{
+		}
+
+		// Replay counterpart of create_always/need_always. A field this pass
+		// creates gets its desc recomputed on the link the cache names, so descs
+		// follow the current context instead of being stored in the plan; every
+		// other field is only pointed at its link. Each link is created by exactly
+		// one pass and nothing here reads another resource's desc, so passes can
+		// load in any order. A [Recreate] without [Size]/[Format] copies the
+		// previous link's desc, which LoadGraph does once every pass has loaded.
+		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+		{
+		}
+
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = { { ResourceID::Count, false } };
 		static constexpr uint resource_count = 0;
 	};

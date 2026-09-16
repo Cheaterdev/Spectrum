@@ -35,6 +35,8 @@ export namespace FrameGraph
 	{
 		PassID   id;
 		uint32_t index;
+
+		bool operator==(const PassRef&) const = default;
 	};
 
 	// One precomputed RW-state in a pipeline's per-resource timeline (mirrors a
@@ -199,6 +201,13 @@ public:
 		virtual void init(ResourceAllocInfo& info) = 0;
 
 		virtual void init_view(ResourceAllocInfo& info, GPUEntityStorageInterface& frame) = 0;
+
+		// Raw access to the handler's Desc, so LoadGraph can copy one link's desc
+		// to the next without knowing the concrete Desc type. Safe because a
+		// resource's handler type is fixed by its .sig declaration and never
+		// changes for a given ResourceID.
+		virtual void*  desc_data() = 0;
+		virtual size_t desc_size() const = 0;
 	};
 
 
@@ -228,6 +237,9 @@ public:
 
 		auto operator<=>(const ResourceVersion&) const = default;
 	};
+
+	// A handler field's chain link as stored in a pass's generated Cache.
+	export enum class ChainIndex : uint32_t { Unresolved = ~0u };
 
 	struct UsedResources
 	{
@@ -323,9 +335,16 @@ public:
 		// True for a state forced open by ResourceFlags::ExclusiveRead — always
 		// a singleton, excluded from process_transitions()'s merge-back.
 		bool exclusive = false;
+		// Passes in this state, by (PassID, instance) rather than by pointer.
+		//
+		// Same move as ResourceVersion for resources: an ID is stable, orders
+		// deterministically, and serializes directly into a stored plan -- which
+		// removes the Pass*<->PassRef translation DumpGraph/LoadGraph used to do
+		// on every recorded state. Resolve with TaskBuilder::get_pass().
+		//
 		// Thread-safe append (populated concurrently in add_pass); all reads
 		// happen single-threaded after the setup/append phase joins.
-		concurrent_vector<Pass*> passes;
+		concurrent_vector<PassRef> passes;
 
 		SyncState from;
 		SyncState to;
@@ -460,6 +479,12 @@ public:
 		bool is_history_prev    = false;
 		bool is_history_current = false;
 
+		// This link's desc was copied from the previous link (a [Recreate]
+		// without its own [Size]/[Format]) rather than computed from context.
+		// Replay has to repeat the copy after every pass has loaded, because the
+		// previous link belongs to another pass.
+		bool desc_from_prev = false;
+
 
 				Events::Event<Pass*, FrameContext*>	process_debug_resource;
 
@@ -469,7 +494,9 @@ public:
 		void add_pass(Pass* pass, ResourceFlags flags);
 		void reset(size_t max_passes);
 
-		void remove_inactive();
+		// Takes the builder because filtering needs to resolve each PassRef back
+		// to its Pass to ask whether it is enabled/active.
+		void remove_inactive(TaskBuilder& builder);
 
 		template<class T = ResourceHandler, class ...Args>
 		T& create_handler(Args...args)
@@ -522,6 +549,22 @@ public:
 			Desc desc;
 
 			ResourceID id = ResourceID::Count;
+
+			// Which chain link this handler last resolved to. Today it is implied
+			// by call order -- create() takes the active link, recreate() advances
+			// pos and takes the next -- which works only because setup() runs one
+			// pass after another.
+			//
+			// Recorded here so resolution can stop depending on that order: a
+			// replayed frame resolves straight to builder.get({id, chain_index}),
+			// which is what lets the resolve half of setup run per-pass in
+			// parallel. Matters specifically for [Recreate], where two fields of
+			// one pass (ResultTexture / ResultTextureNew) share an id and differ
+			// only by this.
+			uint32_t chain_index = 0;
+
+			ResourceVersion version() const { return { id, chain_index }; }
+
 			auto& operator*()
 			{
 				return *static_cast<View*>(info->view.get());
@@ -559,6 +602,9 @@ public:
 			{
 				info.init_view<View>(frame, desc.as_view(info.offset_in_bytes, info.flags));
 			}
+
+			virtual void*  desc_data() override      { return &desc; }
+			virtual size_t desc_size() const override { return sizeof(Desc); }
 		};
 
 		struct ByteBufferDesc
@@ -567,9 +613,9 @@ public:
 			using View = HAL::ByteBufferView;
 			uint64 count;
 
-			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags) const;
 
-			ByteBufferViewDesc as_view(uint64 offset, ResourceFlags resflags);
+			ByteBufferViewDesc as_view(uint64 offset, ResourceFlags resflags) const;
 		};
 
 
@@ -659,9 +705,18 @@ public:
 			UINT array_count;
 			UINT mip_count;
 
-			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
+			// mip_count == 0 means "full chain". Resolving it returns the count
+			// instead of writing it back into this desc: create_resource_desc used
+			// to mutate mip_count in place, which made the desc a hidden state
+			// machine -- 0 before the first create_resources(), the resolved count
+			// after. Nothing noticed while every frame recomputed it, but a cached
+			// desc then restored the pre-resolution 0 and as_view() built a view
+			// over zero mips.
+			UINT resolved_mips() const;
 
-			HAL::TextureViewDesc as_view(uint64 offset,ResourceFlags resflags);
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags) const;
+
+			HAL::TextureViewDesc as_view(uint64 offset,ResourceFlags resflags) const;
 		};
 
 		struct Texture3DDesc
@@ -672,9 +727,12 @@ public:
 			HAL::Format format;
 			UINT mip_count;
 
-			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
+			// See TextureDesc::resolved_mips().
+			UINT resolved_mips() const;
 
-			HAL::Texture3DViewDesc as_view(uint64 offset,ResourceFlags resflags);
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags) const;
+
+			HAL::Texture3DViewDesc as_view(uint64 offset,ResourceFlags resflags) const;
 		};
 
 
@@ -687,9 +745,12 @@ public:
 			UINT array_count;
 			UINT mip_count;
 
-			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags);
+			// See TextureDesc::resolved_mips().
+			UINT resolved_mips() const;
 
-			HAL::CubeViewDesc as_view(uint64 offset,ResourceFlags resflags);
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags) const;
+
+			HAL::CubeViewDesc as_view(uint64 offset,ResourceFlags resflags) const;
 		};
 
 
@@ -778,6 +839,10 @@ public:
 		bool created_this_frame = false;
 
 		void reset_frame() { pos = 0; created_this_frame = false; }
+
+		// Restores the active link when replaying a plan, instead of arriving at
+		// it through a sequence of create()/recreate() calls.
+		void set_pos(size_t p) { pos = p; }
 
 	private:
 		std::deque<ResourceAllocInfo> items;
@@ -901,6 +966,7 @@ public:
 		};
 
 		std::vector<ResourceOverride> resource_overrides;
+
 		Graph* graph = nullptr;
 		void begin(Pass* pass);
 
@@ -915,6 +981,7 @@ public:
 		void create(T& result, const typename T::Desc& desc, ResourceFlags flags = ResourceFlags::None)
 		{
 			auto& chain = alloc_resources[(size_t)result.id];
+
 			chain.reset_frame();
 			chain.ensure_first();
 			chain.created_this_frame = true;
@@ -925,6 +992,7 @@ public:
 			init(info, flags);
 			result = handler;
 			result.id = info.id;
+			result.chain_index = info.chain_index;
 
 			// If this resource is a history `current`, provision its linked `prev`
 			// here — derived from current's desc, marked existing so consumers can
@@ -942,9 +1010,11 @@ public:
 		{
 			auto& chain = alloc_resources[(size_t)result.id];
 			ASSERT(chain.created_this_frame); // provisioned by create(current) already
+
 			ResourceAllocInfo& info = chain.active();
 			result    = info.get_handler<T>();
 			result.id = info.id;
+			result.chain_index = info.chain_index;
 		}
 
 		// bind_history_prev(), plus a check that `result` really is the linked
@@ -967,6 +1037,7 @@ public:
 		void provision_history_prev(ResourceID prev_id, const typename T::Desc& desc, ResourceFlags flags)
 		{
 			auto& chain = alloc_resources[(size_t)prev_id];
+
 			chain.reset_frame();
 			chain.ensure_first();
 			chain.created_this_frame = true;
@@ -987,6 +1058,7 @@ public:
 		void recreate(T& result, ResourceFlags flags = ResourceFlags::None)
 		{
 			auto& chain = alloc_resources[(size_t)result.id];
+
 			ASSERT(chain.created_this_frame);
 			ResourceAllocInfo& old = chain.active();
 			ResourceAllocInfo& info = chain.emplace_back();
@@ -996,14 +1068,17 @@ public:
 			info.id = result.id;
 			T& handler = info.clone_handler<T>(old.handler);
 			init(info, flags);
+			info.desc_from_prev = true;
 			result = handler;
 			result.id = info.id;
+			result.chain_index = info.chain_index;
 		}
 
 		template<class T>
 		void recreate(T& result, const typename T::Desc& desc, ResourceFlags flags = ResourceFlags::None)
 		{
 			auto& chain = alloc_resources[(size_t)result.id];
+
 			ASSERT(chain.created_this_frame);
 			ResourceFlags old_flags = chain.active().flags;
 			ResourceAllocInfo& info = chain.emplace_back();
@@ -1015,6 +1090,7 @@ public:
 			init(info, flags);
 			result = handler;
 			result.id = info.id;
+			result.chain_index = info.chain_index;
 		}
 
 		template<class T>
@@ -1030,6 +1106,61 @@ public:
 		// incomplete here.
 		ResourceID resolve_override(ResourceID declared) const;
 
+		// Generated Cache support (save_to_cache / load_from_cache in each pass
+		// header). Loading reads only the restored chains and writes only the
+		// calling pass's own Context, so passes can load in any order or at once.
+		template<class T>
+		static ChainIndex cache_slot(const T& handler, ResourceID declared)
+		{
+			if (!handler)
+				return ChainIndex::Unresolved;
+			// Replay looks the link up under the field's declared id. A handler
+			// resolved to a different resource can only come from
+			// override_resource, and an overridden frame is never recorded.
+			ASSERT(handler.info->id == declared);
+			return (ChainIndex)handler.info->chain_index;
+		}
+
+		// Points a Context field at its link. Deliberately does NOT copy the
+		// link's handler: another pass may be writing that handler's desc in
+		// create_versioned at the same time, and render code only goes through
+		// info->view anyway.
+		template<class T>
+		void load(T& result, ResourceID id, ChainIndex index) const
+		{
+			if (index == ChainIndex::Unresolved)
+				return;
+			ResourceAllocInfo* info = get(ResourceVersion{ id, (uint32_t)index });
+			ASSERT(info && info->handler);
+			result.info        = info;
+			result.id          = id;
+			result.chain_index = (uint32_t)index;
+		}
+
+		// Replay counterpart of create()/recreate(desc): recomputes the desc of
+		// a link only the calling pass creates. Flags and states were already
+		// restored from the plan, and d3ddesc is derived from the desc later in
+		// create_resources, so the desc is all that is left to write.
+		template<class T>
+		void create_versioned(T& result, ChainIndex index, const typename T::Desc& desc) const
+		{
+			if (index == ChainIndex::Unresolved)
+				return;
+			ResourceAllocInfo* info = get(ResourceVersion{ result.id, (uint32_t)index });
+			ASSERT(info && info->handler);
+			info->get_handler<T>().desc = desc;
+
+			// A history current's prev takes the same desc, as
+			// provision_history_prev does live. The prev chain is written only by
+			// its current's creator, so this stays within the calling pass.
+			for (const auto& link : history_links)
+				if (link.current == result.id)
+					if (ResourceAllocInfo* prev = get(ResourceVersion{ link.prev, 0 }); prev && prev->handler)
+						prev->get_handler<T>().desc = desc;
+
+			load(result, result.id, index);
+		}
+
 		template<class T>
 		void need(T& result, ResourceFlags flags = ResourceFlags::None)
 		{
@@ -1039,7 +1170,8 @@ public:
 			// about the un-overridden graph can shift.
 			if (!resource_overrides.empty())
 			{
-				const ResourceID declared = result.id;
+				const ResourceID declared       = result.id;
+				const uint32_t   declared_chain = result.chain_index;
 				ResourceID effective = resolve_override(declared);
 
 				if (effective != declared)
@@ -1065,7 +1197,8 @@ public:
 						// render() is unaffected either way, because it
 						// dereferences `info`, which the copy above already
 						// points at the replacement.
-						result.id = declared;
+						result.id          = declared;
+						result.chain_index = declared_chain;
 						return;
 					}
 				}
@@ -1073,11 +1206,14 @@ public:
 
 			ASSERT(exists(result));
 			auto& chain = alloc_resources[(size_t)result.id];
+
 			ResourceAllocInfo& info = chain.active();
 			T& handler = info.get_handler<T>();
 			init_pass(info, flags);
+
 			result = handler;
-			result.id = info.id;
+			result.id          = info.id;
+			result.chain_index = info.chain_index;
 		}
 
 		//void free_texture(ResourceHandler* handler);
@@ -1100,6 +1236,18 @@ public:
 		Pass* get_pass(uint id) const;
 
 		ResourceAllocInfo* get(ResourceID id);
+
+		// O(1): pass_cache is indexed by PassID then instance, and holds exactly
+		// the Pass objects add_library_pass reuses each frame.
+		Pass* get_pass(PassRef ref) const
+		{
+			if (ref.id == PassID::Count) return nullptr;
+			auto& slots = const_cast<TaskBuilder*>(this)->pass_cache[(size_t)ref.id];
+			if (ref.index >= slots.size()) return nullptr;
+			return slots[ref.index].get();
+		}
+
+		static PassRef ref_of(const Pass& pass);
 
 		// Resolves a ResourceVersion to its chain link. Distinct from get(id)
 		// above on purpose: that one returns chain.active() and nulls out when
@@ -1259,6 +1407,14 @@ public:
 
 		virtual bool setup(TaskBuilder& builder) = 0;
 
+		// The pass's generated Cache as a flat ChainIndex span, so a plan can pool
+		// every pass's slots without knowing any Context type. load_cache is what
+		// replaces setup() on a replayed frame; it writes only this pass's own
+		// Context, so it has no ordering requirement against other passes.
+		virtual uint32_t cache_slot_count() const { return 0; }
+		virtual void save_cache(std::span<ChainIndex> out) const {}
+		virtual void load_cache(std::span<const ChainIndex> in, const TaskBuilder& builder) {}
+
 		// Static [Write]/read declaration from the pass's SIG (empty for passes
 		// whose Context has no resource_accesses, e.g. custom add_pass<T>).
 		virtual std::span<const ResourceAccess> declared_accesses() const { return {}; }
@@ -1305,6 +1461,41 @@ public:
 
 			setup_func = s;
 			render_func = r;
+		}
+
+		static constexpr uint32_t count_cache_slots()
+		{
+			if constexpr (requires { typename Handler::Cache; })
+				return std::is_empty_v<typename Handler::Cache> ? 0 : uint32_t(sizeof(typename Handler::Cache) / sizeof(ChainIndex));
+			else
+				return 0;
+		}
+		static constexpr uint32_t cache_slots = count_cache_slots();
+
+		virtual uint32_t cache_slot_count() const override { return cache_slots; }
+
+		virtual void save_cache(std::span<ChainIndex> out) const override
+		{
+			if constexpr (cache_slots > 0)
+			{
+				typename Handler::Cache cache;
+				Handler::save_to_cache(data, cache);
+				auto slots = std::bit_cast<std::array<ChainIndex, cache_slots>>(cache);
+				std::ranges::copy(slots, out.begin());
+			}
+		}
+
+		virtual void load_cache(std::span<const ChainIndex> in, const TaskBuilder& builder) override
+		{
+			if constexpr (requires { data.pass_index = pass_index; })
+				data.pass_index = pass_index;
+
+			if constexpr (cache_slots > 0)
+			{
+				std::array<ChainIndex, cache_slots> slots;
+				std::ranges::copy(in.first(cache_slots), slots.begin());
+				Handler::load_from_cache(data, std::bit_cast<typename Handler::Cache>(slots), builder);
+			}
 		}
 
 		virtual bool setup(TaskBuilder& builder) override
@@ -1400,6 +1591,150 @@ public:
 		}
 	};
 
+
+
+	// ---- Stored graph plan --------------------------------------------------
+	// The result of one setup(), flattened to POD keyed by PassID/ResourceVersion
+	// so it can be replayed (and eventually written to disk) instead of
+	// recomputed.
+	//
+	// Deliberately NOT a copy of the live objects: those are dense pointer graphs
+	// (ResourceAllocInfo*, Pass*, spans into per-resource pools), and rebuilding
+	// the pointers on replay would cost about what recomputing costs. Everything
+	// here is an index or an ID, so replay is a flat walk that fills the
+	// persistent objects the builder already owns.
+	//
+	// Shape mirrors the PrecompiledPass/PrecompiledResourceInfo tables SIGParser
+	// already emits per pipeline -- this is the runtime-pruned instance of that
+	// same template, which is why the two use the same vocabulary.
+
+	// Re-exported from the generated header: context_deps.h sits in this
+	// interface's global module fragment, so its constants are invisible to
+	// implementation units and importers. Binding it to an exported constant
+	// here is the cheap fix -- re-including the header in FrameGraph.cpp would
+	// drag <bitset> into a module purview and collide with `import HAL`.
+	inline constexpr uint64_t sig_id_space_hash = generated_id_space_hash;
+
+	// Same reason: ContextFieldID and desc_only_fields live in the global module
+	// fragment, so an implementation unit can hold values of those types but
+	// cannot NAME them. These two give FrameGraph.cpp what it needs without
+	// re-including the header (which would pull <bitset> into a purview).
+	inline constexpr unsigned int sig_context_field_count = (unsigned int)ContextFieldID::Count;
+
+	// Not inline, for the same linkage reason as find_context_deps below: an
+	// inline function in a module interface that reads a GMF-local constant
+	// leaves every importing TU with an unresolvable reference.
+	bool sig_is_desc_only_field(unsigned int i);
+
+	// Whether a field can change graph topology: some pass's condition or
+	// [Optional] guard reads it. A field nothing reads (SkyState::prev_sun_dir is
+	// a pre_setup's own comparison state) must stay out of the graph key, or
+	// every change to it forks a new plan.
+	bool sig_is_graph_key_field(unsigned int i);
+
+	struct PlanAccess
+	{
+		ResourceVersion version;
+		ResourceFlags   flags;
+
+		bool operator==(const PlanAccess&) const = default;
+	};
+
+	struct PlanPass
+	{
+		PassID   type_id;
+		uint32_t pass_index;
+		uint32_t call_id;
+		bool     enabled;
+		bool     renderable;
+
+		// Spans into the plan's flat pools, so a PlanPass stays trivially
+		// copyable and the whole plan serializes as a handful of arrays.
+		//
+		// No creations/deletions here on purpose: those three used.* vectors are
+		// filled by create_resources(), which runs in compile() AFTER the plan is
+		// recorded -- so they were always captured empty, and they are rebuilt on
+		// every frame anyway, replayed or not. Recording them made the plan
+		// unstable without ever being read.
+		uint32_t access_begin = 0,      access_count = 0;
+
+		// Span into GraphPlan::cache_slots: this pass's generated Cache.
+		uint32_t cache_begin = 0,       cache_count = 0;
+
+		bool operator==(const PlanPass&) const = default;
+	};
+
+	struct PlanState
+	{
+		bool     write;
+		bool     exclusive;
+		uint32_t ref_begin, ref_count;   // into GraphPlan::pass_refs
+
+		bool operator==(const PlanState&) const = default;
+	};
+
+	struct PlanResource
+	{
+		ResourceVersion version;
+		bool     enabled;
+
+		// Creation flags OR'd with every access this frame -- topology-dependent
+		// (which passes ran), so it belongs here and not in the viewport-keyed
+		// desc table. Drives the D3D12 resource desc via create_resource_desc.
+		ResourceFlags flags;
+
+		bool     is_history_current;
+		bool     is_history_prev;
+
+
+		// See ResourceAllocInfo::desc_from_prev. Descs themselves are not in the
+		// plan: create_versioned recomputes them from context on every replay, so
+		// a resize reuses the same plan.
+		bool     desc_from_prev;
+
+		uint32_t state_begin, state_count;
+
+		bool operator==(const PlanResource&) const = default;
+	};
+
+	struct GraphPlan
+	{
+		uint64_t key = 0;
+
+		// History links registered this frame ([PrevFor]-generated
+		// link_history_always). Replay has to re-register them: they are consumed
+		// by create()'s provision_history_prev and by roll_history at frame end.
+		std::vector<std::pair<ResourceID, ResourceID>> history_links;
+
+		// Must equal generated_id_space_hash to be usable. A plan recorded before
+		// a .sig edit renumbered PassID/ResourceID would not fail to apply, it
+		// would apply to the WRONG passes and resources -- so this is checked
+		// before anything else, and a mismatch is a miss, not an error.
+		uint64_t id_space_hash = 0;
+
+		std::vector<PlanPass>        passes;
+		std::vector<PlanResource>    resources;
+		std::vector<PlanState>       states;
+		std::vector<PlanAccess>      accesses;
+		std::vector<PassRef>         pass_refs;  // PlanState -> passes pool
+
+		// builder.enabled_resources, in order.
+		//
+		// Recorded explicitly rather than derived from PlanResource::enabled,
+		// because those are not the same set. ResourceAllocInfo::enabled is only
+		// cleared by info.reset() (i.e. by create()), so a resource not created
+		// this frame keeps last frame's flag, while the cull pushes to
+		// enabled_resources only on the false->true transition. Deriving the list
+		// from the flag over-enables -- measured 70 vs 61 -- and the surplus gets
+		// allocated for nothing. Order matters too: create_resources walks this
+		// list, so allocation order follows it.
+		std::vector<ResourceVersion> enabled_resources;
+
+		// Pool for every pass's Cache (PlanPass::cache_begin/count).
+		std::vector<ChainIndex> cache_slots;
+
+		bool operator==(const GraphPlan&) const = default;
+	};
 
 
 	// Fake pass that appears as the creator of resources passed in from outside the graph.
@@ -1528,6 +1863,37 @@ public:
 		// Recording happens on the dynamic path only, so it costs nothing on a hit.
 		void DumpGraph(uint64_t key);
 		bool LoadGraph(uint64_t key);
+
+		// Recorded plans, keyed by compute_graph_key(). Linear lookup over a
+		// handful of entries: distinct keys only appear when something
+		// structural changes (a debug toggle, a resize), which the measured
+		// 99.3% condition-reuse rate says is rare.
+		std::vector<GraphPlan> graph_plans;
+
+		GraphPlan* find_graph_plan(uint64_t key)
+		{
+			if (!key) return nullptr;
+			for (auto& p : graph_plans)
+				if (p.key == key && p.id_space_hash == sig_id_space_hash)
+					return &p;
+			return nullptr;
+		}
+
+		// Records the plan every frame and compares it against the stored one
+		// for the same key, instead of trusting that a key collision implies an
+		// identical graph. Off by default: it defeats the point of the cache
+		// (recording on every frame) and exists to prove the key is sound before
+		// LoadGraph is allowed to skip work on it.
+		Variable<bool> validate_graph_plan = { false, "validate_graph_plan", this };
+
+		// Replay a stored plan instead of running setup(). Off by default: this
+		// is the path that skips the serial declare loop, and it wants proving
+		// against validate_graph_plan before it becomes the default.
+		Variable<bool> use_graph_plan = { false, "use_graph_plan", this };
+
+		// Set when validation found a recorded plan that differs from the stored
+		// one under the same key -- i.e. the key is missing an input.
+		uint32_t graph_plan_mismatches = 0;
 
 		// ---- Setup-result cache ------------------------------------------
 		// Last frame's context values and which fields differ from them, filled
@@ -1678,6 +2044,11 @@ public:
 		void start_new_frame();
 
 		void setup();
+
+		// The derived tail of graph construction, shared by setup() and
+		// LoadGraph(). Nothing here is recorded in a plan -- it all follows from
+		// the enabled set -- so both paths must run it.
+		void finalize_graph();
 		void compile(int frame);
 		void render();
 
@@ -1703,6 +2074,29 @@ public:
 	// NOT inline: an inline function in a module interface that references
 	// pass_context_deps (internal linkage, from the global module fragment)
 	// leaves every importing TU with an unresolvable external reference.
+	bool sig_is_desc_only_field(unsigned int i)
+	{
+		return i < sig_context_field_count && desc_only_fields.test(i);
+	}
+
+	bool sig_is_graph_key_field(unsigned int i)
+	{
+		static const ContextFieldMask key_fields = []
+		{
+			ContextFieldMask m;
+			for (const auto& d : pass_context_deps)
+			{
+				// An incomplete mask is only a lower bound, so no field can be
+				// proven irrelevant: fall back to every non-desc field.
+				if (!d.deps_complete)
+					return ~desc_only_fields;
+				m |= d.condition_fields | d.optional_fields;
+			}
+			return m & ~desc_only_fields;
+		}();
+		return i < sig_context_field_count && key_fields.test(i);
+	}
+
 	const PassContextDeps* find_context_deps(PassID id)
 	{
 		for (const auto& d : pass_context_deps)

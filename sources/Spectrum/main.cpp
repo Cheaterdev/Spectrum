@@ -1067,6 +1067,7 @@ class GraphRender : public Window, public GUI::user_interface
 
 	GUI::Elements::label::ptr label_fps;
 	GUI::Elements::label::ptr label_tiles;
+	GUI::Elements::label::ptr label_graph_cache;
 	GUI::Elements::label::ptr instance_info;
 
 	GUI::Elements::stat_graph::ptr graph_fps;
@@ -1228,9 +1229,35 @@ public:
 			// before setup() reads the mask.
 			FrameGraph::update_context_dirty_mask(graph);
 
-			graph.setup();
-			graph.compile(swap_chain->m_frameIndex);
+			// Contexts are frozen from here: every setup_func is generated and
+			// only reads Table:: contexts, and run_pre_setups() above was the
+			// last thing that could write one. So the graph this frame will
+			// build is fully determined now, which is what makes the key
+			// computable before setup() rather than partway through it.
+			const uint64_t graph_key = graph.compute_graph_key();
 
+			// Replay a stored plan when one matches, otherwise derive the graph
+			// and record it. LoadGraph is what removes the serial per-pass
+			// declare loop; it is gated until validation says the key is sound.
+			const bool replayed = graph.use_graph_plan && graph.LoadGraph(graph_key);
+			label_graph_cache->text = replayed ? "Graph: cached" : "Graph: live";
+			if (!replayed)
+			{
+				graph.setup();
+				graph.DumpGraph(graph_key);
+			}
+			else if (graph.validate_graph_plan)
+			{
+				// Round-trip check: re-dumping the state LoadGraph just restored
+				// must reproduce the very plan it came from. DumpGraph compares
+				// against the stored entry and counts any difference, so a replay
+				// that restored something wrong shows up as a mismatch instead of
+				// as a corrupted barrier several hundred frames later.
+				graph.DumpGraph(graph_key);
+			}
+
+			graph.compile(swap_chain->m_frameIndex);
+				  if (!replayed)	   	graph.DumpGraph(graph_key);
 			graph.render();
 
 
@@ -1941,13 +1968,16 @@ public:
 					label_fps = GUI::Elements::label::ptr(new GUI::Elements::label());
 					instance_info = GUI::Elements::label::ptr(new GUI::Elements::label());
 					label_tiles = GUI::Elements::label::ptr(new GUI::Elements::label());
+					label_graph_cache = GUI::Elements::label::ptr(new GUI::Elements::label());
 
 					bar->add_child(label_fps);
 					bar->add_child(label_tiles);
+					bar->add_child(label_graph_cache);
 
 					bar->add_child(instance_info);
 					instance_info->docking = GUI::dock::RIGHT;
 					label_tiles->margin = { 20, 0, 0, 0 };
+					label_graph_cache->margin = { 20, 0, 0, 0 };
 					add_child(bar);
 				}
 

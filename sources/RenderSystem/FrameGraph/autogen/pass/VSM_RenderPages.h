@@ -74,6 +74,48 @@ public:
 			builder.create(data.VSM_PageCameras, { 416 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 			builder.create(data.VSM_PageHiZ, { ivec3(ivec2(Constants::VSM_PageSize, Constants::VSM_PageSize), 0), HAL::Format::R32G32_FLOAT, Constants::VSM_PhysicalPageCount, Constants::VSM_PyramidMipCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 		}
+		// Which chain link each handler field resolved to, one named slot per
+		// field. Filled from a live frame's finished Context and applied on a
+		// replayed one, so a replay neither re-runs create_always/need_always nor
+		// depends on the order they made their calls in. The id is not stored:
+		// the field fixes it.
+		struct Cache
+		{
+			FrameGraph::ChainIndex VSM_Atlas = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_PageTable = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_PageCameras = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_PageHiZ = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_DispatchCommands = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_LevelDispatchInfo = FrameGraph::ChainIndex::Unresolved;
+		};
+
+		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+		{
+			cache.VSM_Atlas = FrameGraph::TaskBuilder::cache_slot(data.VSM_Atlas, ResourceID::VSM_Atlas);
+			cache.VSM_PageTable = FrameGraph::TaskBuilder::cache_slot(data.VSM_PageTable, ResourceID::VSM_PageTable);
+			cache.VSM_PageCameras = FrameGraph::TaskBuilder::cache_slot(data.VSM_PageCameras, ResourceID::VSM_PageCameras);
+			cache.VSM_PageHiZ = FrameGraph::TaskBuilder::cache_slot(data.VSM_PageHiZ, ResourceID::VSM_PageHiZ);
+			cache.VSM_DispatchCommands = FrameGraph::TaskBuilder::cache_slot(data.VSM_DispatchCommands, ResourceID::VSM_DispatchCommands);
+			cache.VSM_LevelDispatchInfo = FrameGraph::TaskBuilder::cache_slot(data.VSM_LevelDispatchInfo, ResourceID::VSM_LevelDispatchInfo);
+		}
+
+		// Replay counterpart of create_always/need_always. A field this pass
+		// creates gets its desc recomputed on the link the cache names, so descs
+		// follow the current context instead of being stored in the plan; every
+		// other field is only pointed at its link. Each link is created by exactly
+		// one pass and nothing here reads another resource's desc, so passes can
+		// load in any order. A [Recreate] without [Size]/[Format] copies the
+		// previous link's desc, which LoadGraph does once every pass has loaded.
+		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+		{
+			builder.load(data.VSM_Atlas, ResourceID::VSM_Atlas, cache.VSM_Atlas);
+			builder.create_versioned(data.VSM_PageTable, cache.VSM_PageTable, { ivec3(ivec2(Constants::VSM_PagesPerLevelSide, Constants::VSM_PagesPerLevelSide), 0), HAL::Format::R32_UINT, Constants::MaxLevels, 1 });
+			builder.create_versioned(data.VSM_PageCameras, cache.VSM_PageCameras, { 416 });
+			builder.create_versioned(data.VSM_PageHiZ, cache.VSM_PageHiZ, { ivec3(ivec2(Constants::VSM_PageSize, Constants::VSM_PageSize), 0), HAL::Format::R32G32_FLOAT, Constants::VSM_PhysicalPageCount, Constants::VSM_PyramidMipCount });
+			builder.load(data.VSM_DispatchCommands, ResourceID::VSM_DispatchCommands, cache.VSM_DispatchCommands);
+			builder.load(data.VSM_LevelDispatchInfo, ResourceID::VSM_LevelDispatchInfo, cache.VSM_LevelDispatchInfo);
+		}
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

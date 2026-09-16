@@ -522,6 +522,51 @@ int main()
 			}
 		));
 
+		// Fingerprint of the generated ID space -- every PassID and ResourceID
+		// name, in the exact order the enums emit them.
+		//
+		// A stored graph plan records passes and resources by ID, and editing a
+		// .sig renumbers those enums. Loading a plan built against a different ID
+		// space does not fail, it MISAPPLIES: wrong resource, wrong pass, wrong
+		// barriers. Comparing this constant turns that silent corruption into a
+		// plain cache miss.
+		global.AddGlobal("id_space_hash", jinja2::MakeCallable(
+			[&]() -> std::string
+			{
+				unsigned long long h = 1469598103934665603ull;
+				auto mix = [&](const std::string& n)
+				{
+					for (unsigned char c : n) { h ^= c; h *= 1099511628211ull; }
+					h ^= '|'; h *= 1099511628211ull;
+				};
+
+				for (const auto& pass : parsed.passes)
+					mix(pass.name);
+
+				// Same traversal resource_ids.jinja uses, so the two stay in step.
+				std::set<std::string> seen;
+				std::function<void(const std::list<View_Param>&)> collect;
+				collect = [&](const std::list<View_Param>& params)
+				{
+					for (const auto& prm : params)
+					{
+						View* view = parsed.views.find(prm.class_no_template);
+						if (view)
+							collect(view->params);
+						else if (PRIMITIVE_SCALAR_TYPES.count(prm.class_no_template) == 0)
+						{
+							if (seen.insert(prm.name).second)
+								mix(prm.name);
+						}
+					}
+				};
+				for (const auto& pass : parsed.passes)
+					collect(pass.params);
+
+				return std::to_string(h) + "ull";
+			}
+		));
+
 		// Shared source of truth for a pass's ordered (resource_id, write)
 		// accesses. A leaf's write-ness comes from: its own [Write] if declared
 		// directly, or the enclosing view usage's [Write] / [Write = {leaves...}]
@@ -635,6 +680,14 @@ int main()
 		// Field IDs are assigned in (struct declaration, field declaration)
 		// order over every struct a condition actually references, so the
 		// numbering is deterministic across runs.
+		// Owners split by ROLE, not merged: a field that only ever feeds a [Size]
+		// changes a resource's geometry but never the pass set, so keying the
+		// topology plan on it would fork a separate plan per window size --
+		// N enable-set variants x M sizes instead of N + M. Emitted as a mask so
+		// compute_graph_key can hash the two halves separately.
+		std::set<std::string> condition_owners;
+		std::set<std::string> desc_owners;
+
 		auto context_field_list = [&]() -> std::vector<std::pair<std::string, std::string>>
 		{
 			std::set<std::string> owners;
@@ -645,7 +698,10 @@ int main()
 					if (CONDITION_OPTIONS.count(opt.name))
 					{
 						for (const auto& r : opt.value_atom.field_refs)
+						{
 							owners.insert(r.owner);
+							condition_owners.insert(r.owner);
+						}
 					}
 
 					// Descriptor options (`[Size = ViewportContext::frame_size]`)
@@ -663,6 +719,7 @@ int main()
 					else if (!opt.value_atom.owner_name.empty())
 					{
 						owners.insert(opt.value_atom.owner_name);
+						desc_owners.insert(opt.value_atom.owner_name);
 					}
 				}
 			};
@@ -687,6 +744,21 @@ int main()
 					return (int)i;
 			return -1;
 		};
+
+		// Which fields belong to which half of the split cache. A field can be in
+		// both (a struct read by a condition AND a [Size]); it then counts as a
+		// condition input, since anything that can move the pass set has to
+		// invalidate topology.
+		global.AddGlobal("get_desc_only_fields", jinja2::MakeCallable(
+			[context_field_list, condition_owners, desc_owners]() -> ValuesList
+			{
+				ValuesList result;
+				for (const auto& [owner, field] : context_field_list)
+					if (desc_owners.count(owner) && !condition_owners.count(owner))
+						result.push_back(owner + "_" + field);
+				return result;
+			}
+		));
 
 		global.AddGlobal("get_context_fields", jinja2::MakeCallable(
 			[context_field_list]() -> ValuesList

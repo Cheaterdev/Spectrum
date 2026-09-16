@@ -77,6 +77,42 @@ public:
 			builder.create(data.PSSM_Cameras, { Constants::PSSM_RendersSize }, FrameGraph::ResourceFlags::CopyDest);
 			}
 		}
+		// Which chain link each handler field resolved to, one named slot per
+		// field. Filled from a live frame's finished Context and applied on a
+		// replayed one, so a replay neither re-runs create_always/need_always nor
+		// depends on the order they made their calls in. The id is not stored:
+		// the field fixes it.
+		struct Cache
+		{
+			FrameGraph::ChainIndex PSSM_Depths = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex PSSM_Cameras = FrameGraph::ChainIndex::Unresolved;
+		};
+
+		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+		{
+			cache.PSSM_Depths = FrameGraph::TaskBuilder::cache_slot(data.PSSM_Depths, ResourceID::PSSM_Depths);
+			cache.PSSM_Cameras = FrameGraph::TaskBuilder::cache_slot(data.PSSM_Cameras, ResourceID::PSSM_Cameras);
+		}
+
+		// Replay counterpart of create_always/need_always. A field this pass
+		// creates gets its desc recomputed on the link the cache names, so descs
+		// follow the current context instead of being stored in the plan; every
+		// other field is only pointed at its link. Each link is created by exactly
+		// one pass and nothing here reads another resource's desc, so passes can
+		// load in any order. A [Recreate] without [Size]/[Format] copies the
+		// previous link's desc, which LoadGraph does once every pass has loaded.
+		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+		{
+			if (data.pass_index == 0)
+			builder.create_versioned(data.PSSM_Depths, cache.PSSM_Depths, { ivec3(1024, 1024, 0), HAL::Format::R32_TYPELESS, Constants::PSSM_RendersSize, 1 });
+			else
+				builder.load(data.PSSM_Depths, ResourceID::PSSM_Depths, cache.PSSM_Depths);
+			if (data.pass_index == 0)
+			builder.create_versioned(data.PSSM_Cameras, cache.PSSM_Cameras, { Constants::PSSM_RendersSize });
+			else
+				builder.load(data.PSSM_Cameras, ResourceID::PSSM_Cameras, cache.PSSM_Cameras);
+		}
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

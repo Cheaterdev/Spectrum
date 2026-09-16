@@ -121,7 +121,8 @@ public:
 
 					if (!s.write) continue;
 
-					auto pass = s.passes.front();
+					auto* pass = graph.builder.get_pass(s.passes.front());
+					if (!pass) continue;
 
 					auto name = pass->name;	 /// can be dada already
 					passes_list->add_item(convert(name.ptr))->on_select = [this, name](list_element::ptr) {

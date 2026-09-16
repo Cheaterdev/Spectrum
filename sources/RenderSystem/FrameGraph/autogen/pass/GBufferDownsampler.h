@@ -113,6 +113,75 @@ public:
 			builder.create(data.TileRoughnessLow, { (size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true }, FrameGraph::ResourceFlags::UnorderedAccess);
 			builder.create(data.TileRoughnessTiles, { ivec3(ivec2(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8), Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8)), 0), HAL::Format::R8_UINT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
+		// Which chain link each handler field resolved to, one named slot per
+		// field. Filled from a live frame's finished Context and applied on a
+		// replayed one, so a replay neither re-runs create_always/need_always nor
+		// depends on the order they made their calls in. The id is not stored:
+		// the field fixes it.
+		struct Cache
+		{
+			FrameGraph::ChainIndex GBuffer_Albedo = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_Normals = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_Specular = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_Speed = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_TempColor = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_HalfDepth = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_HalfNormals = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex TileClassifyHi = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex TileClassifyLow = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex TileClassifyMask = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex TileClassifyTiles = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex TileRoughnessHi = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex TileRoughnessLow = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex TileRoughnessTiles = FrameGraph::ChainIndex::Unresolved;
+		};
+
+		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+		{
+			cache.GBuffer_Albedo = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo);
+			cache.GBuffer_Normals = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Normals, ResourceID::GBuffer_Normals);
+			cache.GBuffer_Specular = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Specular, ResourceID::GBuffer_Specular);
+			cache.GBuffer_Speed = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Speed, ResourceID::GBuffer_Speed);
+			cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
+			cache.GBuffer_TempColor = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_TempColor, ResourceID::GBuffer_TempColor);
+			cache.GBuffer_HalfDepth = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_HalfDepth, ResourceID::GBuffer_HalfDepth);
+			cache.GBuffer_HalfNormals = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_HalfNormals, ResourceID::GBuffer_HalfNormals);
+			cache.TileClassifyHi = FrameGraph::TaskBuilder::cache_slot(data.TileClassifyHi, ResourceID::TileClassifyHi);
+			cache.TileClassifyLow = FrameGraph::TaskBuilder::cache_slot(data.TileClassifyLow, ResourceID::TileClassifyLow);
+			cache.TileClassifyMask = FrameGraph::TaskBuilder::cache_slot(data.TileClassifyMask, ResourceID::TileClassifyMask);
+			cache.TileClassifyTiles = FrameGraph::TaskBuilder::cache_slot(data.TileClassifyTiles, ResourceID::TileClassifyTiles);
+			cache.TileRoughnessHi = FrameGraph::TaskBuilder::cache_slot(data.TileRoughnessHi, ResourceID::TileRoughnessHi);
+			cache.TileRoughnessLow = FrameGraph::TaskBuilder::cache_slot(data.TileRoughnessLow, ResourceID::TileRoughnessLow);
+			cache.TileRoughnessTiles = FrameGraph::TaskBuilder::cache_slot(data.TileRoughnessTiles, ResourceID::TileRoughnessTiles);
+		}
+
+		// Replay counterpart of create_always/need_always. A field this pass
+		// creates gets its desc recomputed on the link the cache names, so descs
+		// follow the current context instead of being stored in the plan; every
+		// other field is only pointed at its link. Each link is created by exactly
+		// one pass and nothing here reads another resource's desc, so passes can
+		// load in any order. A [Recreate] without [Size]/[Format] copies the
+		// previous link's desc, which LoadGraph does once every pass has loaded.
+		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+		{
+			builder.load(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo, cache.GBuffer_Albedo);
+			builder.load(data.GBuffer_Normals, ResourceID::GBuffer_Normals, cache.GBuffer_Normals);
+			builder.load(data.GBuffer_Specular, ResourceID::GBuffer_Specular, cache.GBuffer_Specular);
+			builder.load(data.GBuffer_Speed, ResourceID::GBuffer_Speed, cache.GBuffer_Speed);
+			builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
+			builder.create_versioned(data.GBuffer_TempColor, cache.GBuffer_TempColor, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8_UNORM, 1, 1 });
+			builder.create_versioned(data.GBuffer_HalfDepth, cache.GBuffer_HalfDepth, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R32_FLOAT, 1, 1 });
+			builder.create_versioned(data.GBuffer_HalfNormals, cache.GBuffer_HalfNormals, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 });
+			builder.create_versioned(data.TileClassifyHi, cache.TileClassifyHi, { (size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true });
+			builder.create_versioned(data.TileClassifyLow, cache.TileClassifyLow, { (size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true });
+			builder.create_versioned(data.TileClassifyMask, cache.TileClassifyMask, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8_UINT, 1, 1 });
+			builder.create_versioned(data.TileClassifyTiles, cache.TileClassifyTiles, { ivec3(ivec2(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8), Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8)), 0), HAL::Format::R8_UINT, 1, 1 });
+			builder.create_versioned(data.TileRoughnessHi, cache.TileRoughnessHi, { (size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true });
+			builder.create_versioned(data.TileRoughnessLow, cache.TileRoughnessLow, { (size_t)Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8) * Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8), true });
+			builder.create_versioned(data.TileRoughnessTiles, cache.TileRoughnessTiles, { ivec3(ivec2(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.x, 8), Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size.y, 8)), 0), HAL::Format::R8_UINT, 1, 1 });
+		}
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

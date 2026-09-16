@@ -81,6 +81,51 @@ public:
 			builder.create(data.RTXReflectionNoiseHalf, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 			builder.create(data.RTXReflectionDirPdfHalf, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
+		// Which chain link each handler field resolved to, one named slot per
+		// field. Filled from a live frame's finished Context and applied on a
+		// replayed one, so a replay neither re-runs create_always/need_always nor
+		// depends on the order they made their calls in. The id is not stored:
+		// the field fixes it.
+		struct Cache
+		{
+			FrameGraph::ChainIndex GBuffer_HalfDepth = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_HalfNormals = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex BlueNoise = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex sky_cubemap_filtered = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex sky_cubemap_filtered_diffuse = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex RTXReflectionNoiseHalf = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex RTXReflectionDirPdfHalf = FrameGraph::ChainIndex::Unresolved;
+		};
+
+		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+		{
+			cache.GBuffer_HalfDepth = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_HalfDepth, ResourceID::GBuffer_HalfDepth);
+			cache.GBuffer_HalfNormals = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_HalfNormals, ResourceID::GBuffer_HalfNormals);
+			cache.BlueNoise = FrameGraph::TaskBuilder::cache_slot(data.BlueNoise, ResourceID::BlueNoise);
+			cache.sky_cubemap_filtered = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered);
+			cache.sky_cubemap_filtered_diffuse = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse);
+			cache.RTXReflectionNoiseHalf = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionNoiseHalf, ResourceID::RTXReflectionNoiseHalf);
+			cache.RTXReflectionDirPdfHalf = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionDirPdfHalf, ResourceID::RTXReflectionDirPdfHalf);
+		}
+
+		// Replay counterpart of create_always/need_always. A field this pass
+		// creates gets its desc recomputed on the link the cache names, so descs
+		// follow the current context instead of being stored in the plan; every
+		// other field is only pointed at its link. Each link is created by exactly
+		// one pass and nothing here reads another resource's desc, so passes can
+		// load in any order. A [Recreate] without [Size]/[Format] copies the
+		// previous link's desc, which LoadGraph does once every pass has loaded.
+		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+		{
+			builder.load(data.GBuffer_HalfDepth, ResourceID::GBuffer_HalfDepth, cache.GBuffer_HalfDepth);
+			builder.load(data.GBuffer_HalfNormals, ResourceID::GBuffer_HalfNormals, cache.GBuffer_HalfNormals);
+			builder.load(data.BlueNoise, ResourceID::BlueNoise, cache.BlueNoise);
+			builder.load(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered, cache.sky_cubemap_filtered);
+			builder.load(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse, cache.sky_cubemap_filtered_diffuse);
+			builder.create_versioned(data.RTXReflectionNoiseHalf, cache.RTXReflectionNoiseHalf, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
+			builder.create_versioned(data.RTXReflectionDirPdfHalf, cache.RTXReflectionDirPdfHalf, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
+		}
+
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).

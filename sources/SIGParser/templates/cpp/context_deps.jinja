@@ -30,6 +30,13 @@
 namespace FrameGraph
 {
 
+// Fingerprint of this generated ID space (every PassID and ResourceID name, in
+// enum order). A serialized graph plan stores passes and resources by ID; if a
+// .sig edit renumbers those enums, a plan from before the edit would not fail
+// to load, it would misapply -- wrong resource, wrong barriers. A plan whose
+// header does not carry this exact value must be rejected.
+constexpr unsigned long long generated_id_space_hash = {{ id_space_hash() }};
+
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
 {
@@ -65,6 +72,25 @@ namespace ContextField
 	constexpr ContextFieldMask {{f.id}} = context_field_bit(ContextFieldID::{{f.id}});
 {%- endfor %}
 }
+
+// Fields that ONLY ever feed a resource descriptor ([Size]/[Format]), never a
+// pass condition.
+//
+// This is what lets the two caches be keyed separately. A resource's geometry
+// is a pure function of these -- every non-literal [Size] in the sigs reads only
+// ViewportContext, and every [Format]/[ArrayCount]/[MipCount] is literal or a
+// Constants:: entry -- while the pass set cannot depend on them at all. Folding
+// both halves into one key would fork a whole topology plan per window size:
+// N enable-set variants x M sizes instead of N + M.
+constexpr ContextFieldMask desc_only_fields =
+{%- set df = get_desc_only_fields() %}
+{%- if df | length > 0 %}
+{%- for f in df %}
+	{% if loop.first %}  {% else %}| {% endif %}ContextField::{{f}}
+{%- endfor %};
+{%- else %}
+	ContextField::None;
+{%- endif %}
 
 struct PassContextDeps
 {

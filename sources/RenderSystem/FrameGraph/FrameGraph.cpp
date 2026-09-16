@@ -31,7 +31,7 @@ namespace FrameGraph
 			states.back().exclusive = is_exclusive;
 		}
 
-		states.back().passes.emplace_back(pass);
+		states.back().passes.emplace_back(TaskBuilder::ref_of(*pass));
 	}
 
 
@@ -44,6 +44,7 @@ namespace FrameGraph
 		used_begin.reset();
 		used_end.reset();
 		enabled = false;
+		desc_from_prev = false;
 	}
 
 	void TaskBuilder::link_history(ResourceID current, ResourceID prev)
@@ -106,7 +107,7 @@ namespace FrameGraph
 		}
 	}
 
-	void ResourceAllocInfo::remove_inactive()
+	void ResourceAllocInfo::remove_inactive(TaskBuilder& builder)
 	{
 
 		// Filter by enabled (reachable), not active() (enabled && renderable).
@@ -117,7 +118,11 @@ namespace FrameGraph
 		// process_transitions() independently filters by context.list nullness,
 		// so passes that never actually got a command list still don't
 		// participate in real GPU barrier scheduling.
-		auto fn = [](Pass* pass) {return !pass->enabled; };
+		auto fn = [&](PassRef ref)
+		{
+			Pass* pass = builder.get_pass(ref);
+			return !pass || !pass->enabled;
+		};
 
 		for (auto& state : states)
 		{
@@ -129,8 +134,10 @@ namespace FrameGraph
 
 
 
-			for (auto p : state.passes)
+			for (auto ref : state.passes)
 			{
+				Pass* p = builder.get_pass(ref);
+				if (!p) continue;
 				// state.passes now keeps enabled-but-not-renderable passes (needed
 				// for resource creation, see fn above) — but sync points must only
 				// ever reference passes that actually execute and signal a fence.
@@ -412,6 +419,11 @@ namespace FrameGraph
 			context.execute();
 		}
 	}
+	PassRef TaskBuilder::ref_of(const Pass& pass)
+	{
+		return { pass.type_id, pass.pass_index };
+	}
+
 	ResourceID TaskBuilder::resolve_override(ResourceID declared) const
 	{
 		if (resource_overrides.empty() || !current_pass)
@@ -422,6 +434,284 @@ namespace FrameGraph
 				return o.to;
 
 		return declared;
+	}
+
+	// Flattens the graph setup() just produced into POD keyed by
+	// PassID/ResourceVersion. Records only -- LoadGraph (replay) is the next
+	// step; this half is landed first so the recording can be proven stable
+	// before anything is allowed to skip work on it.
+	void Graph::DumpGraph(uint64_t key)
+	{
+		PROFILE(L"DumpGraph");
+
+		if (!key)
+			return;   // overrides active: not a cacheable frame, see compute_graph_key
+
+		// No descs in the plan: load_from_cache recomputes them from context, so
+		// a resize replays the same plan instead of invalidating it.
+
+		GraphPlan plan;
+		plan.key           = key;
+		plan.id_space_hash = sig_id_space_hash;
+
+		{
+			PROFILE(L"dump_passes");
+			for (auto& pass : builder.passes)
+			{
+				PlanPass pp{};
+				pp.type_id    = pass->type_id;
+				pp.pass_index = pass->pass_index;
+				pp.call_id    = pass->call_id;
+				pp.enabled    = pass->enabled;
+				pp.renderable = pass->renderable;
+
+				pp.access_begin = (uint32_t)plan.accesses.size();
+				for (auto& acc : pass->used.resources)
+					plan.accesses.push_back({ acc.version, acc.flags });
+				pp.access_count = (uint32_t)plan.accesses.size() - pp.access_begin;
+
+				pp.cache_begin = (uint32_t)plan.cache_slots.size();
+				pp.cache_count = pass->cache_slot_count();
+				plan.cache_slots.resize(plan.cache_slots.size() + pp.cache_count);
+				pass->save_cache(std::span(plan.cache_slots).subspan(pp.cache_begin, pp.cache_count));
+
+				plan.passes.push_back(pp);
+			}
+		}
+
+		for (auto& l : builder.history_links)
+			plan.history_links.emplace_back(l.current, l.prev);
+
+		// Membership of enabled_resources, not the sticky info.enabled flag -- see
+		// GraphPlan::enabled_resources. Using the flag made the recorded plan
+		// depend on what the PREVIOUS frame left behind, which is why re-dumping
+		// the same key could produce a different plan.
+		std::set<const ResourceAllocInfo*> live_enabled;
+		for (const auto* info : builder.enabled_resources)
+		{
+			live_enabled.insert(info);
+			plan.enabled_resources.push_back(TaskBuilder::version_of(*info));
+		}
+
+		{
+			PROFILE(L"dump_resources");
+			// Every live chain link, not just the active one: a [Recreate]
+			// resource has several, and each carries its own state timeline.
+			for (auto& chain : builder.alloc_resources)
+			{
+				for (size_t i = 0; i < chain.active_count(); ++i)
+				{
+					auto& info = chain.at(i);
+
+					PlanResource pr{};
+					pr.version            = TaskBuilder::version_of(info);
+					// A passed resource (the swapchain) is enabled by pass_texture
+					// itself and never enters enabled_resources, so membership
+					// would record it as disabled and replay would skip linking it.
+					pr.enabled            = info.passed ? info.enabled : live_enabled.count(&info) > 0;
+					pr.flags              = info.flags;
+					pr.is_history_current = info.is_history_current;
+					pr.is_history_prev    = info.is_history_prev;
+
+					pr.desc_from_prev     = info.desc_from_prev;
+
+					pr.state_begin        = (uint32_t)plan.states.size();
+
+					for (auto& st : info.states)
+					{
+						PlanState ps{};
+						ps.write     = st.write;
+						ps.exclusive = st.exclusive;
+						ps.ref_begin = (uint32_t)plan.pass_refs.size();
+						// No Pass*->PassRef translation any more: states store the
+						// refs directly, so this is a straight copy.
+						for (auto ref : st.passes)
+							plan.pass_refs.push_back(ref);
+						ps.ref_count = (uint32_t)plan.pass_refs.size() - ps.ref_begin;
+						plan.states.push_back(ps);
+					}
+
+					pr.state_count = (uint32_t)plan.states.size() - pr.state_begin;
+					plan.resources.push_back(pr);
+				}
+			}
+		}
+
+		if (auto* stored = find_graph_plan(key))
+		{
+			// Same key, different graph => the key is missing an input. Counted
+			// rather than asserted: it must be observable in a normal run, since
+			// the whole point of validate_graph_plan is to find this before a
+			// replay is trusted with it.
+			if (validate_graph_plan && !(*stored == plan))
+				++graph_plan_mismatches;
+			return;
+		}
+
+		graph_plans.push_back(std::move(plan));
+	}
+
+	// Restores the graph a stored plan describes, instead of deriving it: no
+	// setup_func, create_always or need_always runs. Each pass's Context is
+	// filled from its generated Cache, which only reads the chains restored here.
+	bool Graph::LoadGraph(uint64_t key)
+	{
+		PROFILE(L"LoadGraph");
+
+		GraphPlan* plan = find_graph_plan(key);
+		if (!plan)
+			return false;
+
+		// (type_id, index) -> the Pass instance added this frame. Passes are
+		// registered by add_passes() before setup, so anything the plan names
+		// must already be here; a miss means the plan does not describe this
+		// frame and replaying it would be wrong.
+		std::map<uint64_t, Pass*> by_ref;
+		for (auto& p : builder.passes)
+			by_ref[((uint64_t)p->type_id << 32) | p->pass_index] = p.get();
+
+		auto find_pass = [&](PassID id, uint32_t index) -> Pass*
+		{
+			auto it = by_ref.find(((uint64_t)id << 32) | index);
+			return it == by_ref.end() ? nullptr : it->second;
+		};
+
+		// Checked before anything is restored: a slot count that differs means
+		// the pass's generated Cache changed since the plan was recorded.
+		for (auto& pp : plan->passes)
+		{
+			Pass* pass = find_pass(pp.type_id, pp.pass_index);
+			if (!pass || pass->cache_slot_count() != pp.cache_count)
+				return false;
+		}
+
+		// load_from_cache writes descs into existing handlers and never creates
+		// one. Chains never shrink, so a plan recorded in this run always finds
+		// them; anything else is not a plan for this run.
+		for (auto& pr : plan->resources)
+		{
+			auto& chain = builder.alloc_resources[(size_t)pr.version.id];
+			if (chain.size() <= pr.version.version || !chain.at(pr.version.version).handler)
+				return false;
+		}
+
+		// ---- resources -------------------------------------------------
+		// NOT cleared first: HistoryLink owns `carried` and `pending_release` --
+		// the resource and allocation carried forward from last frame for prev to
+		// adopt. Dropping the vector discards those, so every replayed frame made
+		// prev fall back to a fresh cleared resource (is_new = true) and leaked
+		// the previous allocation, destroying temporal history. Only visible once
+		// something temporal is running, which is why it looked fine at 100%
+		// upscale and wrong below it.
+		//
+		// link_history() already ignores a duplicate (current, prev), so
+		// re-registering is idempotent and keeps the existing slots.
+		for (auto& [current, prev] : plan->history_links)
+			builder.link_history(current, prev);
+
+		builder.enabled_resources.clear();
+
+		{
+			PROFILE(L"load_resources");
+			for (auto& pr : plan->resources)
+			{
+				auto& chain = builder.alloc_resources[(size_t)pr.version.id];
+				// created_this_frame must be true BEFORE any pass resolves:
+				// exists() reads it, and every [Optional = exists(X)] guard in a
+				// generated need_always would otherwise silently read false and
+				// quietly drop the resource.
+				chain.created_this_frame = true;
+				chain.set_pos(pr.version.version);
+
+				ResourceAllocInfo& info = chain.at(pr.version.version);
+				info.reset(builder.passes.size());
+				info.id                 = pr.version.id;
+				info.enabled            = pr.enabled;
+				info.flags              = pr.flags;
+				info.frame_id           = builder.current_frame->get_frame();
+				info.is_history_current = pr.is_history_current;
+				info.is_history_prev    = pr.is_history_prev;
+				info.desc_from_prev     = pr.desc_from_prev;
+
+				for (uint32_t i = 0; i < pr.state_count; ++i)
+				{
+					const PlanState& ps = plan->states[pr.state_begin + i];
+					auto& st = info.states.push(ps.write, builder.passes.size());
+					st.exclusive = ps.exclusive;
+					for (uint32_t r = 0; r < ps.ref_count; ++r)
+						st.passes.push_back(plan->pass_refs[ps.ref_begin + r]);
+				}
+
+				// enabled_resources is restored from its own recorded list below;
+				// the flag alone is a different (larger) set.
+			}
+		}
+
+		for (auto v : plan->enabled_resources)
+			if (auto* info = builder.get(v))
+				builder.enabled_resources.push_back(info);
+
+		// ---- passes ----------------------------------------------------
+		{
+			PROFILE(L"load_passes");
+			for (auto& pp : plan->passes)
+			{
+				Pass* pass = find_pass(pp.type_id, pp.pass_index);
+				pass->enabled    = pp.enabled;
+				pass->renderable = pp.renderable;
+				pass->call_id    = pp.call_id;
+
+				auto& u = pass->used;
+				u.resources.clear();
+				u.resource_creations.clear();
+				u.resource_deletions_before.clear();
+				u.resource_deletions_after.clear();
+
+				for (uint32_t i = 0; i < pp.access_count; ++i)
+				{
+					const PlanAccess& a = plan->accesses[pp.access_begin + i];
+					u.resources.push_back({ a.version, a.flags });
+				}
+				// creations/deletions are intentionally left empty: create_resources()
+				// fills them later this frame, exactly as it does on the live path.
+			}
+		}
+
+		// ---- contexts (independent per pass) ----------------------------
+		{
+			PROFILE(L"load_contexts");
+			for (auto& pp : plan->passes)
+			{
+				Pass* pass = find_pass(pp.type_id, pp.pass_index);
+				pass->load_cache(std::span(plan->cache_slots).subspan(pp.cache_begin, pp.cache_count), builder);
+			}
+		}
+
+		// Links whose desc is a copy of the previous link's. Serial, and after the
+		// loop above, because the previous link is another pass's resource and
+		// may itself be a copy: plan->resources lists each chain in link order.
+		{
+			PROFILE(L"load_copied_descs");
+			for (auto& pr : plan->resources)
+			{
+				if (!pr.desc_from_prev || pr.version.version == 0)
+					continue;
+				auto& chain = builder.alloc_resources[(size_t)pr.version.id];
+				auto& from  = *chain.at(pr.version.version - 1).handler;
+				auto& to    = *chain.at(pr.version.version).handler;
+				ASSERT(from.desc_size() == to.desc_size());
+				std::memcpy(to.desc_data(), from.desc_data(), to.desc_size());
+			}
+		}
+
+		// Everything derived from the enabled set -- enabled_passes, call_id,
+		// the sync chains, the ExternalPass injection, used_begin/used_end -- is
+		// NOT in the plan and has to be built here exactly as the live path
+		// builds it. Skipping this was why an enabled plan rendered nothing:
+		// enabled_passes stayed empty and render() had no passes to walk.
+		finalize_graph();
+
+		return true;
 	}
 
 	uint64_t Graph::compute_graph_key() const
@@ -439,7 +729,16 @@ namespace FrameGraph
 			return h;
 		};
 
-		uint64_t h = context_snapshot_hash;
+		// Only fields some pass condition or [Optional] guard reads. Fields that
+		// only size a resource are recomputed on replay (load_from_cache), and
+		// fields nothing reads cannot change the graph.
+		uint64_t h = 0;
+		for (unsigned int i = 0; i < sig_context_field_count; ++i)
+		{
+			if (!sig_is_graph_key_field(i)) continue;
+			h = mix(h, prev_context_snapshot.values[i]);
+		}
+
 		h = mix(h, optimize ? 1ull : 2ull);
 
 		// Which passes exist. add_passes() has already run, so builder.passes is
@@ -520,7 +819,8 @@ namespace FrameGraph
 					if (s.write)
 					{
 
-						auto& pass = s.passes.front();
+						Pass* pass = builder.get_pass(s.passes.front());
+						if (!pass) continue;
 
 						if (pass->enabled) continue;
 
@@ -568,6 +868,20 @@ namespace FrameGraph
 			}
 
 		}
+
+		finalize_graph();
+	}
+
+	// The tail of graph construction: everything derived from the enabled set
+	// rather than from running setup functions.
+	//
+	// Shared with LoadGraph on purpose. It was originally inline at the end of
+	// setup(), which meant a replayed frame never built enabled_passes at all --
+	// render() then iterated an empty list and the image froze. Anything here is
+	// derived, not recorded, so both paths must run it.
+	void Graph::finalize_graph()
+	{
+		PROFILE(L"finalize_graph");
 
 		for (auto pass : builder.passes)
 		{
@@ -660,18 +974,19 @@ namespace FrameGraph
 			{
 				if (!info.enabled) continue;
 
-				info.remove_inactive();
+				info.remove_inactive(builder);
 
 
 				for (auto& state : info.states)
 				{
-					for (auto pass : state.passes)
+					for (auto ref : state.passes)
 					{
 						// Same rule as remove_inactive(): state.passes now keeps
 						// enabled-but-not-renderable passes for resource-creation
 						// purposes, but sync/fence state must only ever reference
 						// passes that actually execute and signal something.
-						if (!pass->active()) continue;
+						Pass* pass = builder.get_pass(ref);
+						if (!pass || !pass->active()) continue;
 
 						info.used_begin.min(pass);
 						info.used_end.max(pass);
@@ -683,9 +998,10 @@ namespace FrameGraph
 				{
 
 					if (prev_state)
-						for (auto pass : state.passes)
+						for (auto ref : state.passes)
 						{
-							if (!pass->active()) continue;
+							Pass* pass = builder.get_pass(ref);
+							if (!pass || !pass->active()) continue;
 
 							pass->sync_state.max(prev_state->to);
 
@@ -1279,15 +1595,18 @@ namespace FrameGraph
 
 				for (auto& state : info.states)
 				{
-					std::vector<Pass*> kept;
+					std::vector<PassRef> kept;
 					kept.reserve(state.passes.size());
-					for (auto* pass : state.passes)
-						if (!untouched(pass)) kept.push_back(pass);
+					for (auto ref : state.passes)
+					{
+						Pass* pass = get_pass(ref);
+						if (pass && !untouched(pass)) kept.push_back(ref);
+					}
 
 					if (kept.size() == state.passes.size()) continue;
 
 					state.passes.clear();
-					for (auto* pass : kept) state.passes.push_back(pass);
+					for (auto ref : kept) state.passes.push_back(ref);
 				}
 
 				info.states.remove_if([](const ResourceRWState& s) { return s.passes.empty(); });
@@ -1313,11 +1632,15 @@ namespace FrameGraph
 				// multi-pass phase lands mid-frame with other passes still to
 				// come -- the back buffer went to PRESENT while UI_Render_1..4
 				// were still writing it. call_id is the execution order.
-				auto last_of = [](const auto& passes) -> Pass*
+				auto last_of = [this](const auto& passes) -> Pass*
 				{
 					Pass* best = nullptr;
-					for (auto* p : passes)
+					for (auto ref : passes)
+					{
+						Pass* p = get_pass(ref);
+						if (!p) continue;
 						if (!best || p->call_id > best->call_id) best = p;
+					}
 					return best;
 				};
 
@@ -1335,8 +1658,10 @@ namespace FrameGraph
 					if (state.write || state.exclusive) continue;
 
 					std::optional<HAL::ResourceState> merged;
-					for (auto* pass : state.passes)
+					for (auto ref : state.passes)
 					{
+						Pass* pass = get_pass(ref);
+						if (!pass) continue;
 						auto exit = pass->context.list->get_exit_state(resource.get());
 						if (!exit) continue;
 
@@ -1351,15 +1676,19 @@ namespace FrameGraph
 					// compute list). Then there is no single state to agree on --
 					// leave every reader with its own and pay the extra barrier.
 					bool all_can = true;
-					for (auto* pass : state.passes)
-						if (!supported(pass, *merged)) { all_can = false; break; }
+					for (auto ref : state.passes)
+					{
+						Pass* pass = get_pass(ref);
+						if (pass && !supported(pass, *merged)) { all_can = false; break; }
+					}
 					if (!all_can) continue;
 
 					merged_read[i] = merged;
 
 					// Propagate it back so every reader asks for the same thing.
-					for (auto* pass : state.passes)
-						pass->context.list->add_resource_usage(resource.get(), *merged, HAL::ALL_SUBRESOURCES);
+					for (auto ref : state.passes)
+						if (Pass* pass = get_pass(ref))
+							pass->context.list->add_resource_usage(resource.get(), *merged, HAL::ALL_SUBRESOURCES);
 				}
 
 				// --- 2. link each state to the one before it ---------------------
@@ -1414,8 +1743,10 @@ namespace FrameGraph
 						std::optional<HAL::ResourceState> common;
 						bool agree = true;
 
-						for (auto* pass : cur.passes)
+						for (auto ref : cur.passes)
 						{
+							Pass* pass = get_pass(ref);
+							if (!pass) continue;
 							auto first = pass->context.list->get_first_use_state(resource.get());
 							if (!first) continue;
 
@@ -1434,8 +1765,9 @@ namespace FrameGraph
 
 					producer_list->transition_to(resource.get(), *handoff);
 
-					for (auto* pass : cur.passes)
-						pass->context.list->set_entry_state(resource.get(), *handoff);
+					for (auto ref : cur.passes)
+						if (Pass* pass = get_pass(ref))
+							pass->context.list->set_entry_state(resource.get(), *handoff);
 				}
 
 
@@ -1529,8 +1861,9 @@ namespace FrameGraph
 			ASSERT(info->states[0].write);
 
 
-			Pass* best_creation_pass = info->states.front().passes.front();
+			Pass* best_creation_pass = get_pass(info->states.front().passes.front());
 			Pass* best_deletion_pass = nullptr;
+			ASSERT(best_creation_pass);
 
 			// The creating pass must actually execute. A pass whose setup()
 			// returned false (renderable == false — e.g. ResultCreation, which
@@ -1544,8 +1877,8 @@ namespace FrameGraph
 			{
 				for (auto& st : info->states)
 				{
-					for (auto p : st.passes)
-						if (p->active()) { best_creation_pass = p; break; }
+					for (auto ref : st.passes)
+						if (Pass* p = get_pass(ref); p && p->active()) { best_creation_pass = p; break; }
 
 					if (best_creation_pass->active()) break;
 				}
@@ -2137,7 +2470,7 @@ namespace FrameGraph
 		return !!resource;
 	}
 
-	HAL::ResourceDesc Handlers::ByteBufferDesc::create_resource_desc(ResourceFlags resflags)
+	HAL::ResourceDesc Handlers::ByteBufferDesc::create_resource_desc(ResourceFlags resflags) const
 	{
 		HAL::ResFlags flags = HAL::ResFlags::ShaderResource;
 		if (check(resflags & ResourceFlags::UnorderedAccess))
@@ -2145,12 +2478,26 @@ namespace FrameGraph
 		return HAL::ResourceDesc::Buffer(count, flags);
 	}
 
-	ByteBufferViewDesc Handlers::ByteBufferDesc::as_view(uint64 offset, ResourceFlags resflags)
+	ByteBufferViewDesc Handlers::ByteBufferDesc::as_view(uint64 offset, ResourceFlags resflags) const
 	{
 		return { offset, count };
 	}
 
-	HAL::ResourceDesc Handlers::TextureDesc::create_resource_desc(ResourceFlags resflags)
+	UINT Handlers::TextureDesc::resolved_mips() const
+	{
+		if (mip_count != 0) return mip_count;
+
+		UINT n = 1;
+		auto tsize = size;
+		while (tsize.x != 1 && tsize.y != 1)
+		{
+			tsize = uint3::max(tsize / 2, { 1,1,1 });
+			n++;
+		}
+		return n;
+	}
+
+	HAL::ResourceDesc Handlers::TextureDesc::create_resource_desc(ResourceFlags resflags) const
 	{
 		HAL::ResFlags flags = HAL::ResFlags::None;
 
@@ -2163,24 +2510,29 @@ namespace FrameGraph
 		if (format.is_shader_visible())
 			flags |= HAL::ResFlags::ShaderResource;
 
-		if (mip_count == 0) {
-			mip_count = 1;
-			auto tsize = size;
-			while (tsize.x != 1 && tsize.y != 1)
-			{
-				tsize = uint3::max(tsize / 2, { 1,1,1 });
-				mip_count++;
-			}
-		}
-		return HAL::ResourceDesc::Tex2D(format, size.xy, array_count, mip_count, flags);
+		return HAL::ResourceDesc::Tex2D(format, size.xy, array_count, resolved_mips(), flags);
 	}
 
-	HAL::TextureViewDesc Handlers::TextureDesc::as_view(uint64 offset, ResourceFlags resflags)
+	HAL::TextureViewDesc Handlers::TextureDesc::as_view(uint64 offset, ResourceFlags resflags) const
 	{
-		return { 0, mip_count, 0, array_count };
+		return { 0, resolved_mips(), 0, array_count };
 	}
 
-	HAL::ResourceDesc Handlers::Texture3DDesc::create_resource_desc(ResourceFlags resflags)
+	UINT Handlers::Texture3DDesc::resolved_mips() const
+	{
+		if (mip_count != 0) return mip_count;
+
+		UINT n = 1;
+		auto tsize = size;
+		while (tsize.x != 1 && tsize.y != 1 && tsize.z != 1)
+		{
+			tsize /= 2;
+			n++;
+		}
+		return n;
+	}
+
+	HAL::ResourceDesc Handlers::Texture3DDesc::create_resource_desc(ResourceFlags resflags) const
 	{
 		HAL::ResFlags flags = HAL::ResFlags::None;
 
@@ -2193,24 +2545,29 @@ namespace FrameGraph
 		if (format.is_shader_visible())
 			flags |= HAL::ResFlags::ShaderResource;
 
-		if (mip_count == 0) {
-			mip_count = 1;
-			auto tsize = size;
-			while (tsize.x != 1 && tsize.y != 1 && tsize.z != 1)
-			{
-				tsize /= 2;
-				mip_count++;
-			}
-		}
-		return HAL::ResourceDesc::Tex3D(format, size, mip_count, flags);
+		return HAL::ResourceDesc::Tex3D(format, size, resolved_mips(), flags);
 	}
 
-	HAL::Texture3DViewDesc Handlers::Texture3DDesc::as_view(uint64 offset, ResourceFlags resflags)
+	HAL::Texture3DViewDesc Handlers::Texture3DDesc::as_view(uint64 offset, ResourceFlags resflags) const
 	{
-		return { 0, mip_count };
+		return { 0, resolved_mips() };
 	}
 
-	HAL::ResourceDesc Handlers::CubeDesc::create_resource_desc(ResourceFlags resflags)
+	UINT Handlers::CubeDesc::resolved_mips() const
+	{
+		if (mip_count != 0) return mip_count;
+
+		UINT n = 1;
+		auto tsize = size;
+		while (tsize.x != 1 && tsize.y != 1)
+		{
+			tsize /= 2;
+			n++;
+		}
+		return n;
+	}
+
+	HAL::ResourceDesc Handlers::CubeDesc::create_resource_desc(ResourceFlags resflags) const
 	{
 		HAL::ResFlags flags = HAL::ResFlags::None;
 
@@ -2223,21 +2580,12 @@ namespace FrameGraph
 		if (format.is_shader_visible())
 			flags |= HAL::ResFlags::ShaderResource;
 
-		if (mip_count == 0) {
-			mip_count = 1;
-			auto tsize = size;
-			while (tsize.x != 1 && tsize.y != 1)
-			{
-				tsize /= 2;
-				mip_count++;
-			}
-		}
-		return HAL::ResourceDesc::Tex2D(format, size.xy, array_count * 6, mip_count, flags);
+		return HAL::ResourceDesc::Tex2D(format, size.xy, array_count * 6, resolved_mips(), flags);
 	}
 
-	HAL::CubeViewDesc Handlers::CubeDesc::as_view(uint64 offset, ResourceFlags resflags)
+	HAL::CubeViewDesc Handlers::CubeDesc::as_view(uint64 offset, ResourceFlags resflags) const
 	{
-		return { 0, mip_count, 0, array_count * 6 };
+		return { 0, resolved_mips(), 0, array_count * 6 };
 	}
 
 	uint32_t Pass::GetPassIndex() const { return pass_index; }

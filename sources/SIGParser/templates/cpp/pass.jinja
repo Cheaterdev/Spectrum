@@ -195,7 +195,86 @@ public:
 {%- endfor %}
 		}
 {% endif -%}
-{%- set accesses = get_pass_accesses(pass.name) -%}
+		// Which chain link each handler field resolved to, one named slot per
+		// field. Filled from a live frame's finished Context and applied on a
+		// replayed one, so a replay neither re-runs create_always/need_always nor
+		// depends on the order they made their calls in. The id is not stored:
+		// the field fixes it.
+		struct Cache
+		{
+{%- for v in pass.params %}
+{%- if not (v.type == "int" or v.type == "uint" or v.type == "bool" or v.type == "float") and parsed.tables[v.type] is undefined %}
+			FrameGraph::ChainIndex {{v.name}} = FrameGraph::ChainIndex::Unresolved;
+{%- if v.options.Recreate is defined %}
+			FrameGraph::ChainIndex {{v.options.Recreate.value_atom.expr}} = FrameGraph::ChainIndex::Unresolved;
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+		};
+
+		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+		{
+{%- for v in pass.params %}
+{%- if not (v.type == "int" or v.type == "uint" or v.type == "bool" or v.type == "float") and parsed.tables[v.type] is undefined %}
+			cache.{{v.name}} = FrameGraph::TaskBuilder::cache_slot(data.{{v.name}}, ResourceID::{{v.name}});
+{%- if v.options.Recreate is defined %}
+			cache.{{v.options.Recreate.value_atom.expr}} = FrameGraph::TaskBuilder::cache_slot(data.{{v.options.Recreate.value_atom.expr}}, ResourceID::{{v.name}});
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+		}
+
+		// Replay counterpart of create_always/need_always. A field this pass
+		// creates gets its desc recomputed on the link the cache names, so descs
+		// follow the current context instead of being stored in the plan; every
+		// other field is only pointed at its link. Each link is created by exactly
+		// one pass and nothing here reads another resource's desc, so passes can
+		// load in any order. A [Recreate] without [Size]/[Format] copies the
+		// previous link's desc, which LoadGraph does once every pass has loaded.
+		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+		{
+{%- for v in pass.params %}
+{%- if not (v.type == "int" or v.type == "uint" or v.type == "bool" or v.type == "float") and parsed.tables[v.type] is undefined %}
+{%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) and v.options.Recreate is undefined %}
+{%- if v.options.Optional is defined %}
+			if ({{v.options.Optional.value_atom.expr}})
+{%- endif %}
+{%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
+{%- if v.options.Size.value_atom.is_literal %}
+			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
+{%- else %}
+			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
+{%- endif %}
+{%- else %}
+			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { {{resolve_size_expr(pass.name, v.name)}} });
+{%- endif %}
+{%- if v.options.Optional is defined %}
+			else
+				builder.load(data.{{v.name}}, ResourceID::{{v.name}}, cache.{{v.name}});
+{%- endif %}
+{%- else %}
+			builder.load(data.{{v.name}}, ResourceID::{{v.name}}, cache.{{v.name}});
+{%- endif %}
+{%- if v.options.Recreate is defined %}
+{%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) %}
+{%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
+{%- if v.options.Size.value_atom.is_literal %}
+			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
+{%- else %}
+			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
+{%- endif %}
+{%- else %}
+			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { {{resolve_size_expr(pass.name, v.name)}} });
+{%- endif %}
+{%- else %}
+			builder.load(data.{{v.options.Recreate.value_atom.expr}}, ResourceID::{{v.name}}, cache.{{v.options.Recreate.value_atom.expr}});
+{%- endif %}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+		}
+
+{% set accesses = get_pass_accesses(pass.name) -%}
 {% if accesses | length > 0 -%}
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
