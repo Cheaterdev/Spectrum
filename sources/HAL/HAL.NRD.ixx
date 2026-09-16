@@ -62,6 +62,17 @@ export namespace nvidia
 		HAL::Texture2DView spec_noisy;
 		HAL::Texture2DView spec_denoised;
 
+		// SIGMA_SHADOW inputs/output -- penumbra_noisy is NRD's IN_PENUMBRA
+		// (SIGMA_FrontEnd_PackPenumbra-encoded distance-to-occluder, R16f+),
+		// shadow_denoised is OUT_SHADOW_TRANSLUCENCY (R8+, also reused by NRD
+		// itself as SIGMA's own history -- see HAL.NRD.cpp's resolve_srv
+		// comment). Like diff_noisy/spec_noisy, default-constructed (null
+		// resource) until a real producer packs penumbra_noisy -- execute()
+		// gates SIGMA_SHADOW on it the same way it gates REBLUR on diff_noisy/
+		// spec_noisy.
+		HAL::Texture2DView penumbra_noisy;
+		HAL::Texture2DView shadow_denoised;
+
 		// Column-major, vector-is-a-column, non-jittered (NRD's own
 		// convention, NRDSettings.h) -- raw 16-float dumps of this frame's
 		// and the previous frame's view/projection matrices. Populated from
@@ -131,10 +142,11 @@ export namespace nvidia
 		// resulting compute dispatches via the SIG system, on `list`, using
 		// `inputs` for every named resource. REBLUR_DIFFUSE only dispatches
 		// when inputs.diff_noisy is set (Texture2DView::resource non-null);
-		// REBLUR_SPECULAR likewise on inputs.spec_noisy -- see
-		// [[project-nrd-integration]]'s reflection-denoiser plan. SIGMA_
-		// SHADOW's dispatches are still skipped (unwired, out of scope);
-		// unmatched identifiers are logged and skipped, same as before.
+		// REBLUR_SPECULAR likewise on inputs.spec_noisy; SIGMA_SHADOW
+		// likewise on inputs.penumbra_noisy -- see
+		// [[project-nrd-integration]]'s reflection-denoiser plan. Unmatched
+		// identifiers (e.g. SplitScreen, never requested at default
+		// CommonSettings::splitScreen=0) are logged and skipped.
 		void execute(HAL::CommandList& list, const NRDFrameInputs& inputs);
 	};
 }

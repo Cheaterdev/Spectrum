@@ -268,6 +268,13 @@ namespace nvidia
 		case nrd::ResourceType::OUT_DIFF_RADIANCE_HITDIST: return in.diff_denoised.texture2D;
 		case nrd::ResourceType::IN_SPEC_RADIANCE_HITDIST: return in.spec_noisy.texture2D;
 		case nrd::ResourceType::OUT_SPEC_RADIANCE_HITDIST: return in.spec_denoised.texture2D;
+		case nrd::ResourceType::IN_PENUMBRA:            return in.penumbra_noisy.texture2D;
+		// SIGMA reads its own external output back as history (BlurFirstPass0's
+		// gIn_Shadow_Translucency, TemporalStabilization's gIn_Shadow_Translucency)
+		// whenever stabilizationStrength != 0 -- see NRDDescs.h's own
+		// OUT_SHADOW_TRANSLUCENCY comment -- so this SRV case and OUT_
+		// SHADOW_TRANSLUCENCY's UAV case below both resolve to shadow_denoised.
+		case nrd::ResourceType::OUT_SHADOW_TRANSLUCENCY: return in.shadow_denoised.texture2D;
 		default:
 			ASSERT(!"unhandled named SRV resource type -- see HAL.NRD.cpp's resolve_srv comment");
 			auto h = compute.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
@@ -294,6 +301,7 @@ namespace nvidia
 		case nrd::ResourceType::IN_NORMAL_ROUGHNESS:    return in.normal_roughness.rwTexture2D; // post-blur's gOut_Normal_Roughness copy
 		case nrd::ResourceType::OUT_DIFF_RADIANCE_HITDIST: return in.diff_denoised.rwTexture2D;
 		case nrd::ResourceType::OUT_SPEC_RADIANCE_HITDIST: return in.spec_denoised.rwTexture2D;
+		case nrd::ResourceType::OUT_SHADOW_TRANSLUCENCY: return in.shadow_denoised.rwTexture2D;
 		default:
 			ASSERT(!"unhandled named UAV resource type -- see HAL.NRD.cpp's resolve_uav comment");
 			auto h = compute.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
@@ -301,6 +309,109 @@ namespace nvidia
 			view.create(nrd_hal.dummy_uav_resource(), 0, 0);
 			return view;
 		}
+	}
+
+	// SIGMA_SHADOW dispatch wiring, same resolve_srv/resolve_uav plumbing and
+	// positional dispatch.resources[] -> .sig struct field order convention
+	// as REBLUR above. No shared-constants struct: unlike REBLUR (whose 77
+	// NRD_CONSTANT fields got a real REBLURSharedConstants CBV, see below),
+	// SIGMA_SHARED_CONSTANTS is left as generic zero-initialized locals by
+	// each nrd/sig_sigma_*.hlsl shim (see nrd_sig_test.sig's Item-7 comment)
+	// -- none of the SIGMA_*Resources structs declare a constants field to
+	// copy dispatch.constantBufferData onto, so there is nothing to fill
+	// here. Denoising will run with SIGMA's constants at zero (e.g. radius
+	// 0) until that's wired too; out of scope for this pass (dispatch/
+	// resource routing only).
+	static void dispatch_sigma_classifytiles(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 3);
+		Slots::SIGMA_ClassifyTilesResources slots;
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Penumbra() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGOut_Tiles() = resolve_uav(nrd_hal, compute, dispatch.resources[2], in);
+		compute.set_pipeline<PSOS::NRD_SIGMA_ClassifyTiles>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
+	static void dispatch_sigma_smoothtiles(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 2);
+		Slots::SIGMA_SmoothTilesResources slots;
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGOut_Tiles() = resolve_uav(nrd_hal, compute, dispatch.resources[1], in);
+		compute.set_pipeline<PSOS::NRD_SIGMA_SmoothTiles>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
+	static void dispatch_sigma_copy(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 5);
+		Slots::SIGMA_CopyResources slots;
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_History() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_HistoryLength() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGOut_History() = resolve_uav(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGOut_HistoryLength() = resolve_uav(nrd_hal, compute, dispatch.resources[4], in);
+		compute.set_pipeline<PSOS::NRD_SIGMA_Copy>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
+	// FIRST_PASS=0 permutation of SIGMA_Blur.cs.hlsl -- gIn_Shadow_Translucency
+	// (the previous frame's OUT_SHADOW_TRANSLUCENCY, read back as history) IS
+	// compiled in, see nrd_sig_test.sig's SIGMA_BlurFirstPass0Resources comment.
+	static void dispatch_sigma_blur_firstpass0(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 7);
+		Slots::SIGMA_BlurFirstPass0Resources slots;
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_Penumbra() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGIn_Shadow_Translucency() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
+		slots.GetGOut_Penumbra() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
+		slots.GetGOut_Shadow_Translucency() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
+		compute.set_pipeline<PSOS::NRD_SIGMA_BlurFirstPass0>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
+	// FIRST_PASS=1 permutation -- no gIn_Shadow_Translucency (one fewer input
+	// than FIRST_PASS=0), see nrd_sig_test.sig's SIGMA_BlurFirstPass1Resources
+	// comment.
+	static void dispatch_sigma_blur_firstpass1(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 6);
+		Slots::SIGMA_BlurFirstPass1Resources slots;
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_Penumbra() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGOut_Penumbra() = resolve_uav(nrd_hal, compute, dispatch.resources[4], in);
+		slots.GetGOut_Shadow_Translucency() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
+		compute.set_pipeline<PSOS::NRD_SIGMA_BlurFirstPass1>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
+	static void dispatch_sigma_temporalstabilization(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
+	{
+		ASSERT(dispatch.resourcesNum == 9);
+		Slots::SIGMA_TemporalStabilizationResources slots;
+		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
+		slots.GetGIn_Mv() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
+		slots.GetGIn_Penumbra() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
+		slots.GetGIn_Shadow_Translucency() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
+		slots.GetGIn_History() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
+		slots.GetGIn_HistoryLength() = resolve_srv(nrd_hal, compute, dispatch.resources[5], in);
+		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[6], in);
+		slots.GetGOut_Shadow_Translucency() = resolve_uav(nrd_hal, compute, dispatch.resources[7], in);
+		slots.GetGOut_HistoryLength() = resolve_uav(nrd_hal, compute, dispatch.resources[8], in);
+		compute.set_pipeline<PSOS::NRD_SIGMA_TemporalStabilization>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
 
 	// REBLURSharedConstants is #pragma pack(push,1) with fields in the exact
@@ -750,8 +861,35 @@ namespace nvidia
 				entry.diffuse  = &dispatch_reblur_temporalstabilization;
 				entry.specular = &dispatch_reblur_temporalstabilization_specular;
 			}
-			// else: SIGMA_SHADOW's kernels, and anything else not wired (out of
-			// scope, see [[project-nrd-integration]]) -- entry stays {null,null},
+			else if (identifier.starts_with("SIGMA_ClassifyTiles.cs.hlsl"))
+			{
+				entry.diffuse = entry.specular = &dispatch_sigma_classifytiles;
+			}
+			else if (identifier.starts_with("SIGMA_SmoothTiles.cs.hlsl"))
+			{
+				entry.diffuse = entry.specular = &dispatch_sigma_smoothtiles;
+			}
+			else if (identifier.starts_with("SIGMA_Copy.cs.hlsl"))
+			{
+				entry.diffuse = entry.specular = &dispatch_sigma_copy;
+			}
+			else if (identifier.starts_with("SIGMA_Blur.cs.hlsl") && identifier.find("FIRST_PASS=1") != std::string::npos)
+			{
+				entry.diffuse = entry.specular = &dispatch_sigma_blur_firstpass1;
+			}
+			else if (identifier.starts_with("SIGMA_Blur.cs.hlsl"))
+			{
+				entry.diffuse = entry.specular = &dispatch_sigma_blur_firstpass0;
+			}
+			else if (identifier.starts_with("SIGMA_TemporalStabilization.cs.hlsl"))
+			{
+				entry.diffuse = entry.specular = &dispatch_sigma_temporalstabilization;
+			}
+			// else: SIGMA_SplitScreen (never requested at default
+			// CommonSettings::splitScreen=0, same as REBLUR_SplitScreen/
+			// REBLUR_Validation above -- neither of those is wired either),
+			// and anything else not wired (out of scope, see
+			// [[project-nrd-integration]]) -- entry stays {null,null},
 			// execute() skips those pipelineIndex values.
 
 			table[i] = entry;
@@ -790,18 +928,23 @@ namespace nvidia
 		common.isMotionVectorInWorldSpace = false;
 		nrd::SetCommonSettings(*instance, common);
 
-		nrd::SigmaSettings sigma_settings{};
-		nrd::SetDenoiserSettings(*instance, 0, &sigma_settings);
-
-		// diff_noisy/spec_noisy are default-constructed (null resource, see
-		// Texture2DView::resource) whenever the caller (NRD_REBLUR_Execute)
-		// didn't populate them -- g_indirect_denoiser/g_reflection_denoiser
-		// aren't set to NRD this frame. Only requesting the identifiers whose
-		// signal is actually wanted keeps those denoisers' dispatches out of
-		// GetComputeDispatches() entirely, so resolve_srv/resolve_uav never
-		// need a null-resource fallback for them.
+		// penumbra_noisy/diff_noisy/spec_noisy are default-constructed (null
+		// resource, see Texture2DView::resource) whenever the caller
+		// (NRD_REBLUR_Execute) didn't populate them -- no shadow-noise
+		// producer packs penumbra_noisy yet (SIGMA_SHADOW's own front-end
+		// pack is still unwired, see [[project-nrd-integration]]), same as
+		// g_indirect_denoiser/g_reflection_denoiser not being set to NRD.
+		// Only requesting the identifiers whose signal is actually wanted
+		// keeps those denoisers' dispatches out of GetComputeDispatches()
+		// entirely, so resolve_srv/resolve_uav never need a null-resource
+		// fallback for them.
+		bool want_shadow   = (bool)inputs.penumbra_noisy.resource;
 		bool want_diffuse  = (bool)inputs.diff_noisy.resource;
 		bool want_specular = (bool)inputs.spec_noisy.resource;
+
+		nrd::SigmaSettings sigma_settings{};
+		if (want_shadow)
+			nrd::SetDenoiserSettings(*instance, 0, &sigma_settings);
 
 		// Library defaults throughout (see nrd_sig_test.sig's REBLURSharedConstants
 		// comment and raytracing.hlsl's gHitDistParams -- both must move
@@ -814,7 +957,7 @@ namespace nvidia
 
 		nrd::Identifier identifiers[3];
 		uint32_t identifiers_num = 0;
-		identifiers[identifiers_num++] = 0;
+		if (want_shadow)   identifiers[identifiers_num++] = 0;
 		if (want_diffuse)  identifiers[identifiers_num++] = 1;
 		if (want_specular) identifiers[identifiers_num++] = 2;
 
