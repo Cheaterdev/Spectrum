@@ -1,12 +1,15 @@
 #include "vsm_impl.hlsl"
 
-// Non-penumbra fallback only (VSM.ixx's use_vsm_penumbra toggle off) --
-// fixed single-tap-per-corner 3x3 hardware-PCF, no blocker search/blur at
-// all. When penumbra is ON, VSM_Combine (VSM.hlsl's combine_result, the
-// only caller of this function) doesn't run at all any more -- stage 3
-// (VSM_ShadowResolve.hlsl) does the real per-pixel work AND the PBR combine
-// itself, writing ResultTexture directly. See that file's own PassNode
-// comment in vsm.sig.
+// Non-penumbra fallback (VSM.ixx's use_vsm_penumbra toggle off) -- fixed
+// single-tap-per-corner 3x3 hardware-PCF, no blocker search/blur/denoiser at
+// all. Also used by VoxelGI's Lighting pass (voxel_lighting.hlsl's
+// get_shadow(), via the lean VSMShadowLookup payload -- see that struct's
+// own comment, vsm.sig), which runs before VSM_ShadowResolve/VSM_Combine in
+// the frame (test.sig's MainPipeline ordering) and so has no other shadow
+// signal available yet. When penumbra is ON, VSM_Combine (VSM.hlsl's
+// combine_result, the only other caller) doesn't run at all -- stage 3
+// (VSM_ShadowResolve) does its own per-pixel resolve instead, denoised by
+// NRD_SIGMA_Execute (see vsm_shadow_resolve.hlsl).
 float get_shadow_vsm_simple(VSMConstants c, VSMLighting lighting, float3 wpos, float3 normal, float3 light_dir)
 {
 	// Normal-offset bias (see vsm_normal_offset_pos's own comment) needs a
@@ -32,7 +35,7 @@ float get_shadow_vsm_simple(VSMConstants c, VSMLighting lighting, float3 wpos, f
 		return 1.0;
 
 	int resolved_level = level;
-	uint slot = get_vsm_slot(c, lighting, pos_ls, level, resolved_level);
+	uint slot = get_vsm_slot(c, lighting.GetPage_table(), pos_ls, level, resolved_level);
 	if (slot == VSM_INVALID_SLOT)
 		return 1.0;
 	level = resolved_level;
@@ -91,7 +94,7 @@ float get_vsm_debug_raw_depth(VSMConstants c, VSMLighting lighting, float3 wpos)
 	// Unused here (this debug helper never looks anything up by level after
 	// resolving slot) -- required by get_vsm_slot's signature regardless.
 	int unused_resolved_level = level;
-	uint slot = get_vsm_slot(c, lighting, pos_ls, level, unused_resolved_level);
+	uint slot = get_vsm_slot(c, lighting.GetPage_table(), pos_ls, level, unused_resolved_level);
 	if (slot == VSM_INVALID_SLOT)
 		return 0;
 

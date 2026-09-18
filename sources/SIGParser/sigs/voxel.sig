@@ -73,6 +73,12 @@ struct VoxelOutput
 	# PackForReblurSpecular), written by MyRaygenShader/MyRaygenShaderReflection
 	# (voxel-cone-traced source, see [[project-nrd-integration]]).
 	RWTexture2D<float4> noiseRaw;
+
+	# SIGMA-packed distanceToOccluder (SIGMA_FrontEnd_PackPenumbra), written by
+	# MyRaygenShaderShadowRTXOnly when ShadowSource::RTXReference is selected
+	# (see [[project-nrd-integration]]). Distinct from noise above, which
+	# stores this same pass's binary visibility for DLSS-RR's RTXCombine.
+	RWTexture2D<float> shadow_noise;
 }
 
 # Minimal depth+normal pair for MyRaygenShaderIndirectRTXHalfRes -- deliberately
@@ -468,11 +474,17 @@ PassNode ReflectionRTX
 # toward a jittered direction within the sun's angular disk (same technique
 # ShadowRaygenShader's own 16-sample reference uses, just 1 sample instead
 # of 16 -- genuinely noisy, not averaged), no temporal history. Composited
-# by RTXCombine below; RTXShadow itself (Bend/FFX hybrid denoiser) is
-# unaffected -- this is a separate signal, not a replacement.
+# by RTXCombine below under DLSS-RR; VSM_ShadowNoise (SIGMA-packed distance,
+# see VoxelOutput's own comment) additionally feeds NRD_SIGMA_Execute/
+# NRD_ShadowCombine when ShadowSource::RTXReference is selected outside
+# DLSS-RR (see [[project-nrd-integration]]). RTXShadow itself (Bend/FFX
+# hybrid denoiser) is unaffected -- this is a separate signal, not a
+# replacement. Gate matches ReflectionRTX/IndirectRTX (not DLSS-RR-only
+# anymore): always warm whenever RTX+DLSSRR-capable, since DLSS-RR's
+# RTXCombine needs RTXShadowNoise unconditionally regardless of shadow_source.
 [Static]
 [Compute]
-[SetupCondition = UpscalerSelectors::upscaler_type == UpscalerType::DLSSRR]
+[SetupCondition = RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 PassNode ShadowRTX
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -484,6 +496,7 @@ PassNode ShadowRTX
 	[Always = None] Texture GBuffer_DepthMips;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXShadowNoise;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16_FLOAT] Texture VSM_ShadowNoise;
 }
 
 # Always-on cheap base layer for IndirectRTX's Low-tile pixels: same trace,

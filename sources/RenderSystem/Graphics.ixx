@@ -55,7 +55,9 @@ export import :ShadowRTX;
 export import :IndirectRTX;
 export import :NRD_GBufferPack;
 export import :NRD_REBLUR_Execute;
+export import :NRD_SIGMA_Execute;
 export import :NRD_IndirectCombine;
+export import :NRD_ShadowCombine;
 export import :RTXCombine;
 export import :BlueNoise;
 

@@ -90,10 +90,28 @@ FrameGraph::SetupResult PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 }
 
 
+FrameGraph::SetupResult PassDefault<Passes::NRD_SIGMA_Execute>::setup(
+	Passes::NRD_SIGMA_Execute::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available && builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::RTXReference))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassDefault<Passes::NRD_IndirectCombine>::setup(
 	Passes::NRD_IndirectCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::NRD_ShadowCombine>::setup(
+	Passes::NRD_ShadowCombine::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available && builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::RTXReference))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -304,7 +322,7 @@ FrameGraph::SetupResult PassDefault<Passes::ReflectionRTX>::setup(
 FrameGraph::SetupResult PassDefault<Passes::ShadowRTX>::setup(
 	Passes::ShadowRTX::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR))
+	if (!(builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -442,7 +460,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::VSM_ScreenSpaceShadow>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::VSM_ShadowResolve>::setup(
 	Passes::VSM_ShadowResolve::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra))
+	if (!(builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::VSM))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -451,7 +469,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::VSM_ShadowResolve>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::VSM_Combine>::setup(
 	Passes::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(!builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra))
+	if (!(!builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::VSM))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }

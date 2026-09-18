@@ -11,6 +11,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
+import :Autogen.Tables.SIGMASharedConstants;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -24,6 +25,7 @@ export namespace Table
 		HLSL::Texture2D<float> gIn_Shadow_Translucency;
 		HLSL::RWTexture2D<float> gOut_Penumbra;
 		HLSL::RWTexture2D<float> gOut_Shadow_Translucency;
+		SIGMASharedConstants sharedConstants;
 		HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
 		HLSL::Texture2D<float4>& GetGIn_Normal_Roughness() { return gIn_Normal_Roughness; }
 		HLSL::Texture2D<float>& GetGIn_Penumbra() { return gIn_Penumbra; }
@@ -31,6 +33,7 @@ export namespace Table
 		HLSL::Texture2D<float>& GetGIn_Shadow_Translucency() { return gIn_Shadow_Translucency; }
 		HLSL::RWTexture2D<float>& GetGOut_Penumbra() { return gOut_Penumbra; }
 		HLSL::RWTexture2D<float>& GetGOut_Shadow_Translucency() { return gOut_Shadow_Translucency; }
+		SIGMASharedConstants& GetSharedConstants() { return sharedConstants; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -42,6 +45,7 @@ export namespace Table
 			compiler.compile(gIn_Shadow_Translucency, "SIGMA_BlurFirstPass0Resources::gIn_Shadow_Translucency");
 			compiler.compile(gOut_Penumbra, "SIGMA_BlurFirstPass0Resources::gOut_Penumbra");
 			compiler.compile(gOut_Shadow_Translucency, "SIGMA_BlurFirstPass0Resources::gOut_Shadow_Translucency");
+			compiler.compile(sharedConstants, "SIGMA_BlurFirstPass0Resources::sharedConstants");
 		}
 		struct Compiled
 		{
@@ -52,11 +56,13 @@ export namespace Table
 			uint gIn_Shadow_Translucency; // Texture2D<float>
 			uint gOut_Penumbra; // RWTexture2D<float>
 			uint gOut_Shadow_Translucency; // RWTexture2D<float>
+			SIGMASharedConstants::Compiled sharedConstants; // SIGMASharedConstants
 
 			
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(sharedConstants);
 			}
 
 
@@ -69,6 +75,7 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
+			ar& NVP(sharedConstants);
 		}
 
 	};

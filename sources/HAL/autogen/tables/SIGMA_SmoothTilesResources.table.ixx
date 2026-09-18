@@ -11,6 +11,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
+import :Autogen.Tables.SIGMASharedConstants;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -19,24 +20,29 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::SIGMA_SmoothTilesResources;
 		HLSL::Texture2D<float3> gIn_Tiles;
 		HLSL::RWTexture2D<float2> gOut_Tiles;
+		SIGMASharedConstants sharedConstants;
 		HLSL::Texture2D<float3>& GetGIn_Tiles() { return gIn_Tiles; }
 		HLSL::RWTexture2D<float2>& GetGOut_Tiles() { return gOut_Tiles; }
+		SIGMASharedConstants& GetSharedConstants() { return sharedConstants; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(gIn_Tiles, "SIGMA_SmoothTilesResources::gIn_Tiles");
 			compiler.compile(gOut_Tiles, "SIGMA_SmoothTilesResources::gOut_Tiles");
+			compiler.compile(sharedConstants, "SIGMA_SmoothTilesResources::sharedConstants");
 		}
 		struct Compiled
 		{
 			uint gIn_Tiles; // Texture2D<float3>
 			uint gOut_Tiles; // RWTexture2D<float2>
+			SIGMASharedConstants::Compiled sharedConstants; // SIGMASharedConstants
 
 			
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(sharedConstants);
 			}
 
 
@@ -49,6 +55,7 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
+			ar& NVP(sharedConstants);
 		}
 
 	};

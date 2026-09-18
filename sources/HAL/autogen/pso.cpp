@@ -83,6 +83,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::NRD_GBufferPack>(device, pso[PSO::NRD_GBufferPack]));
 	tasks.emplace_back(PSOBase::create<PSOS::NRD_UnpackDebug>(device, pso[PSO::NRD_UnpackDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::NRD_IndirectCombine>(device, pso[PSO::NRD_IndirectCombine]));
+	tasks.emplace_back(PSOBase::create<PSOS::NRD_ShadowCombine>(device, pso[PSO::NRD_ShadowCombine]));
 	tasks.emplace_back(PSOBase::create<PSOS::PSSMApplyCompute>(device, pso[PSO::PSSMApplyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::GBufferDownsample>(device, pso[PSO::GBufferDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::RTXShadowReferenceCompute>(device, pso[PSO::RTXShadowReferenceCompute]));

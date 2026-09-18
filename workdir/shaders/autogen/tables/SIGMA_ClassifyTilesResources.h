@@ -7,11 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
+#include "SIGMASharedConstants.h"
 struct SIGMA_ClassifyTilesResources
 {
 	uint gIn_ViewZ; // Texture2D<float>
 	uint gIn_Penumbra; // Texture2D<float>
 	uint gOut_Tiles; // RWTexture2D<float4>
+	SIGMASharedConstants sharedConstants; // SIGMASharedConstants
+	SIGMASharedConstants GetSharedConstants() { return sharedConstants; }
 	Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
 	Texture2D<float> GetGIn_Penumbra() { return ResourceDescriptorHeap[gIn_Penumbra]; }
 	RWTexture2D<float4> GetGOut_Tiles() { return ResourceDescriptorHeap[gOut_Tiles]; }

@@ -154,6 +154,28 @@ This is specifically about *temporary* instrumentation. Permanent diagnostics
 that earn their place — the VSM active-window diag, the D3D12 message callback
 — are normal code and stay.
 
+## Visual confirmation
+
+A clean build and 0 D3D12 validation errors prove the pipeline runs without
+crashing — they say nothing about whether a denoiser actually denoises, a
+shadow looks right, or a debug view shows what it's supposed to. Anything
+whose correctness is a visual judgment call, not a log-checkable fact, is not
+something to verify by guessing, screenshotting blind, or declaring success
+off the log alone.
+
+When a change needs that kind of check, stop and ask the user to look at it
+themselves — say exactly which toggle(s)/GUI setting(s) to flip and to what
+value (e.g. "Shadow Src → RTX Ref"), and what to look for. Don't flip runtime
+defaults, rebuild, and run the app repeatedly to eyeball it in their place.
+
+## Editing files
+
+Use the editor's native file-edit tool for changes, not a script (Python,
+sed, etc.) that reads a file and writes back a modified copy. The one
+exception is a genuine multiple-occurrence replacement (renaming a symbol
+throughout a file, etc.) — the native tool's own "replace all" mode is still
+preferred there; reach for a script only when that isn't enough.
+
 ## Comments
 
 Comment sparingly. Prefer code that doesn't need explaining, and don't restate

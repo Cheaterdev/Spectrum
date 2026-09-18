@@ -101,14 +101,7 @@ public:
 	using ptr = std::shared_ptr<triangle_drawer>;
 	//	PostProcessGraph::ptr render_graph;
 
-
-	//Variable<bool> enable_gi = { true, "GI", this };
-	//Variable<bool> enable_fsr = { true, "FSR", this };
 	Variable<bool> downsampled = { true, "downsampled", this };
-	//Variable<bool> enable_denoiser = { true, "denoiser", this };
-
-	//Variable<bool> debug_draw = Variable<bool>(false, "debug_draw",this);
-	//	VoxelGI::ptr voxel_renderer;
 
 	GUI::Elements::circle_selector::ptr sun_direction_circle;
 	Variable<bool> auto_rotate_sun = { false, "Auto rotate sun", this };
@@ -1607,13 +1600,15 @@ public:
 						toolbar->add_child(upscaler_combo);
 					}
 
-					// Indirect/Reflection source selectors, writing
-					// g_indirect_source/g_reflection_source (see
+					// Indirect/Reflection/Shadow source selectors, writing
+					// IndirectGISelectors::indirect_source/reflection_source
+					// and VSMSelectors::shadow_source (see
 					// [[project-nrd-integration]]): which raw signal feeds
-					// NRD -- the voxel-cone-traced one (VoxelScreen/
-					// ScreenReflection) or the raw RTX reference
-					// (IndirectRTX/ReflectionRTX). Purely a quality/
-					// performance comparison; NRD denoises either.
+					// NRD -- the voxel-cone-traced/VSM-clipmap one
+					// (VoxelScreen/ScreenReflection/VSM_ShadowResolve) or the
+					// raw RTX reference (IndirectRTX/ReflectionRTX/
+					// ShadowRTX). Purely a quality/performance comparison;
+					// NRD denoises whichever RTX signal is selected.
 					{
 						struct IndirectSrcOpt { const char* name; IndirectSource src; };
 						static const IndirectSrcOpt indirect_src_opts[] = {
@@ -1658,6 +1653,32 @@ public:
 								reflection_src_combo->get_label()->text = o.name;
 						}
 						toolbar->add_child(reflection_src_combo);
+
+						// Shadow source selector, sibling of the two above --
+						// writes VSMSelectors::shadow_source: VSM's own
+						// clipmap PCSS shadow, or the raw-RTX-then-NRD-SIGMA-
+						// denoised reference (see [[project-nrd-integration]]).
+						struct ShadowSrcOpt { const char* name; ShadowSource src; };
+						static const ShadowSrcOpt shadow_src_opts[] = {
+							{ "VSM",     ShadowSource::VSM },
+							{ "RTX Ref", ShadowSource::RTXReference },
+						};
+
+						auto shadow_src_combo = std::make_shared<GUI::Elements::combo_box>();
+						shadow_src_combo->docking = GUI::dock::TOP;
+						shadow_src_combo->size = { 140, 24 };
+						for (auto& o : shadow_src_opts)
+						{
+							auto src = o.src;
+							shadow_src_combo->add_item(o.name)->on_select =
+								[this, src]()
+								{
+									graph.get_context<Table::VSMSelectors>().shadow_source = src;
+								};
+							if (src == graph.get_context<Table::VSMSelectors>().shadow_source)
+								shadow_src_combo->get_label()->text = o.name;
+						}
+						toolbar->add_child(shadow_src_combo);
 					}
 
 					// DLSS-quality selector, writes g_upscaling_dlss_mode.

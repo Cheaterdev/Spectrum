@@ -110,6 +110,8 @@ void capture_context_snapshot(Graph& graph, ContextSnapshot& out)
 		encode_context_field(graph.get_context<Table::VSMSelectors>().use_vsm_contact_shadow);
 	out.values[(unsigned int)ContextFieldID::VSMSelectors_vsm_debug_view] =
 		encode_context_field(graph.get_context<Table::VSMSelectors>().vsm_debug_view);
+	out.values[(unsigned int)ContextFieldID::VSMSelectors_shadow_source] =
+		encode_context_field(graph.get_context<Table::VSMSelectors>().shadow_source);
 }
 
 ContextFieldMask diff_context_snapshots(const ContextSnapshot& a, const ContextSnapshot& b)

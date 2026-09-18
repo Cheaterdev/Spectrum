@@ -68,6 +68,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "NRD_GBufferPackParams") return SlotID::NRD_GBufferPackParams;
 	if(slot_name == "NRD_UnpackDebugParams") return SlotID::NRD_UnpackDebugParams;
 	if(slot_name == "NRD_IndirectCombineParams") return SlotID::NRD_IndirectCombineParams;
+	if(slot_name == "NRD_ShadowCombineParams") return SlotID::NRD_ShadowCombineParams;
 	if(slot_name == "TileClassifyData") return SlotID::TileClassifyData;
 	if(slot_name == "GBufferQuality") return SlotID::GBufferQuality;
 	if(slot_name == "PSSMConstants") return SlotID::PSSMConstants;
@@ -265,6 +266,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::NRD_UnpackDebugParams) return Slots::NRD_UnpackDebugParams::Slot::ID;
 
 	if(id == SlotID::NRD_IndirectCombineParams) return Slots::NRD_IndirectCombineParams::Slot::ID;
+
+	if(id == SlotID::NRD_ShadowCombineParams) return Slots::NRD_ShadowCombineParams::Slot::ID;
 
 	if(id == SlotID::TileClassifyData) return Slots::TileClassifyData::Slot::ID;
 
@@ -477,6 +480,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::NRD_GBufferPackParams) return "NRD_GBufferPackParams";
 	if(id == SlotID::NRD_UnpackDebugParams) return "NRD_UnpackDebugParams";
 	if(id == SlotID::NRD_IndirectCombineParams) return "NRD_IndirectCombineParams";
+	if(id == SlotID::NRD_ShadowCombineParams) return "NRD_ShadowCombineParams";
 	if(id == SlotID::TileClassifyData) return "TileClassifyData";
 	if(id == SlotID::GBufferQuality) return "GBufferQuality";
 	if(id == SlotID::PSSMConstants) return "PSSMConstants";

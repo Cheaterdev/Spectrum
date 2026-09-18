@@ -87,7 +87,7 @@ VSMBlockerClassifyResult vsm_classify_blocker(VSMConstants c, VSMLighting lighti
 	int level = valid ? level_raw : c.GetActive_min();
 
 	int resolved_level = level;
-	uint slot_raw = valid ? get_vsm_slot(c, lighting, pos_ls, level, resolved_level) : VSM_INVALID_SLOT;
+	uint slot_raw = valid ? get_vsm_slot(c, lighting.GetPage_table(), pos_ls, level, resolved_level) : VSM_INVALID_SLOT;
 	valid = valid && (slot_raw != VSM_INVALID_SLOT);
 	uint slot = valid ? slot_raw : 0;
 	// get_vsm_slot can walk out to a COARSER level than the one just

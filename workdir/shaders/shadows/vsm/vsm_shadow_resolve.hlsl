@@ -279,7 +279,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	}
 
 	int resolved_level = level;
-	uint slot = get_vsm_slot(c, lighting, pos_ls, level, resolved_level);
+	uint slot = get_vsm_slot(c, lighting.GetPage_table(), pos_ls, level, resolved_level);
 	if (slot == VSM_INVALID_SLOT)
 	{
 		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);

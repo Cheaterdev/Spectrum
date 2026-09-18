@@ -7,6 +7,7 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
+#include "SIGMASharedConstants.h"
 struct SIGMA_TemporalStabilizationResources
 {
 	uint gIn_ViewZ; // Texture2D<float>
@@ -18,6 +19,8 @@ struct SIGMA_TemporalStabilizationResources
 	uint gIn_Tiles; // Texture2D<float2>
 	uint gOut_Shadow_Translucency; // RWTexture2D<float>
 	uint gOut_HistoryLength; // RWTexture2D<uint>
+	SIGMASharedConstants sharedConstants; // SIGMASharedConstants
+	SIGMASharedConstants GetSharedConstants() { return sharedConstants; }
 	Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
 	Texture2D<float3> GetGIn_Mv() { return ResourceDescriptorHeap[gIn_Mv]; }
 	Texture2D<float> GetGIn_Penumbra() { return ResourceDescriptorHeap[gIn_Penumbra]; }

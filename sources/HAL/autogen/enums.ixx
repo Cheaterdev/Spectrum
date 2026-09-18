@@ -76,6 +76,7 @@ export
 		NRD_GBufferPack,
 		NRD_UnpackDebug,
 		NRD_IndirectCombine,
+		NRD_ShadowCombine,
 		PSSMApplyCompute,
 		GBufferDownsample,
 		RTXShadowReferenceCompute,
@@ -214,6 +215,7 @@ export
 		DownsampleDepth = "DownsampleDepth"_crc32,
 		DownsampleDepthMip = "DownsampleDepthMip"_crc32,
 		Clear_Constants = "Clear_Constants"_crc32,
+		SIGMASharedConstants = "SIGMASharedConstants"_crc32,
 		SIGMA_ClassifyTilesResources = "SIGMA_ClassifyTilesResources"_crc32,
 		SIGMA_SmoothTilesResources = "SIGMA_SmoothTilesResources"_crc32,
 		SIGMA_CopyResources = "SIGMA_CopyResources"_crc32,
@@ -246,6 +248,7 @@ export
 		IndirectGISelectors = "IndirectGISelectors"_crc32,
 		NRD_UnpackDebugParams = "NRD_UnpackDebugParams"_crc32,
 		NRD_IndirectCombineParams = "NRD_IndirectCombineParams"_crc32,
+		NRD_ShadowCombineParams = "NRD_ShadowCombineParams"_crc32,
 		TileClassifyData = "TileClassifyData"_crc32,
 		GBufferQuality = "GBufferQuality"_crc32,
 		PSSMConstants = "PSSMConstants"_crc32,
@@ -372,5 +375,10 @@ export
 		HizClassify,
 		ContactShadow,
 		ShadowOnly
+	};
+	enum class ShadowSource : uint
+	{
+		VSM,
+		RTXReference
 	};
 }

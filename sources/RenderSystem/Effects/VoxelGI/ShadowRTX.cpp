@@ -12,8 +12,12 @@ using namespace FrameGraph;
 using namespace HAL;
 
 // setup() is fully generated (voxel.sig's own [SetupCondition]) -- feeds
-// RTXCombine, active only when the user has picked DLSS-RR, gated the same
-// as ReflectionRTX/IndirectRTX/RTXCombine so all four stay in lockstep.
+// RTXCombine (DLSS-RR) unconditionally, and additionally feeds
+// NRD_SIGMA_Execute/NRD_ShadowCombine via VSM_ShadowNoise whenever
+// ShadowSource::RTXReference is selected outside DLSS-RR (see
+// [[project-nrd-integration]]). Gated the same as ReflectionRTX/IndirectRTX
+// now -- always warm on RTX+DLSSRR-capable hardware, independent of which
+// shadow source is actually selected.
 
 void PassDefault<Passes::ShadowRTX>::render(
 	Passes::ShadowRTX::Context& data, FrameContext& context)
@@ -47,6 +51,7 @@ void PassDefault<Passes::ShadowRTX>::render(
 		{
 			Slots::VoxelOutput output;
 			output.GetNoise() = noisy_output.rwTexture2D;
+			output.GetShadow_noise() = data.VSM_ShadowNoise->rwTexture2D;
 			compute.set(output);
 		}
 		RTX::get().render<ShadowRTX>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());

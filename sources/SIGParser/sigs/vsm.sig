@@ -77,11 +77,22 @@ enum VSMDebugView
 # m_shadowresolve_setup/m_combine_setup/m_debugoverlay_setup, VSM.cpp) writes
 # from `this` before its own need_always() runs, since need_always() is a
 # static function with no `this` to read the Variable<T>s from directly.
+# Sibling of nrd_sig_test.sig's IndirectSource/ReflectionSource -- picks
+# between VSM's own clipmap shadow (VSM_ShadowResolve/VSM_Combine) and the
+# raw-RTX-then-NRD-SIGMA-denoised reference (ShadowRTX -> NRD_SIGMA_Execute
+# -> NRD_ShadowCombine). See [[project-nrd-integration]].
+enum ShadowSource
+{
+	VSM;
+	RTXReference;
+}
+
 struct VSMSelectors
 {
 	bool use_vsm_penumbra = true;
 	bool use_vsm_contact_shadow = true;
 	VSMDebugView vsm_debug_view = None;
+	ShadowSource shadow_source = VSM;
 }
 
 [Bind = DefaultLayout::Instance0]
@@ -523,9 +534,10 @@ ComputePSO VSMShadowBlur
 	# shadow maps only record the front-most surface per texel, so a closer
 	# blocker can exist without ever being rasterized where the search
 	# looked. Needs RTX hardware; gated at runtime in VSM.cpp, not just by
-	# this define, since VSM must keep working correctly without it. Moved
-	# here from VSMApplyCompute -- this is the PSO that now actually runs
-	# the PCF blur the ray-corrected distance feeds into.
+	# this define, since VSM must keep working correctly without it. This is
+	# the PSO that resolves the real per-pixel occluder distance the
+	# ray-corrected result feeds NRD_SIGMA_Execute's denoise with (see
+	# [[project-nrd-integration]]).
 	[rename = VSM_RTX_VERIFY]
 	[CS, nullable]
 	define VsmRtxVerify;
@@ -1077,9 +1089,9 @@ PassNode VSM_ScreenSpaceShadow
 # a shared output resource, however many indirect dispatches it takes, must
 # come from one PassNode's render(), or FrameGraph's dependency resolution
 # doesn't reliably make every writer's output visible to the resource's
-# other consumers. ResultTexture is written disjointly by all three PSOs
-# (lit_tiles -> flat lit, dark_tiles -> flat black, search_tiles -> the real
-# PCF blur read from VSM_BlockerSearchResult) -- full coverage by
+# other consumers. VSM_ShadowNoise is written disjointly by all three PSOs
+# (lit_tiles -> NRD_FP16_MAX, dark_tiles -> 0.0, search_tiles -> the real
+# per-pixel distance read from VSM_BlockerSearchResult) -- full coverage by
 # construction, same as the three tile lists are disjoint by construction.
 #
 # Used to write an intermediate VSM_ShadowResult scalar for VSM_Combine's
@@ -1091,8 +1103,14 @@ PassNode VSM_ScreenSpaceShadow
 # overhead whenever use_vsm_penumbra is on. VSM_Combine still exists for the
 # non-penumbra fallback (get_shadow_vsm_simple, no tile pipeline to
 # piggyback on) -- see its own PassNode comment.
+#
+# Only the active shadow producer when ShadowSource::VSM is selected (see
+# VSMSelectors::shadow_source, [[project-nrd-integration]]) -- when
+# RTXReference is selected instead, ShadowRTX/NRD_SIGMA_Execute/
+# NRD_ShadowCombine own ResultTexture's shadow term instead, and this
+# PassNode is gated off entirely.
 [Compute]
-[SetupCondition = VSMSelectors::use_vsm_penumbra]
+[SetupCondition = VSMSelectors::use_vsm_penumbra && VSMSelectors::shadow_source == ShadowSource::VSM]
 PassNode VSM_ShadowResolve
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
@@ -1136,11 +1154,14 @@ PassNode VSM_ShadowResolve
 # dispatches already cover every pixel and there's no tile pipeline for
 # this pass to still add value on top of. Kept for the non-penumbra
 # fallback (get_shadow_vsm_simple, a plain fixed 3x3 hardware-PCF full-
-# screen pass with no tile lists to dispatch over) and nothing else.
+# screen pass with no tile lists to dispatch over) and nothing else --
+# confirmed a single hardware-PCF tap has nothing worth denoising, so this
+# path stays independent of NRD entirely (see [[project-nrd-integration]]).
 [Compute]
 # The PCSS path's fallback: VSM_ShadowResolve replaces this whenever penumbra
-# is on, so the two are exact complements.
-[SetupCondition = !VSMSelectors::use_vsm_penumbra]
+# is on, so the two are exact complements. Also gated off by shadow_source,
+# same as VSM_ShadowResolve above.
+[SetupCondition = !VSMSelectors::use_vsm_penumbra && VSMSelectors::shadow_source == ShadowSource::VSM]
 PassNode VSM_Combine
 {
 	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own

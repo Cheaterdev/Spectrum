@@ -66,7 +66,13 @@ int get_vsm_level(VSMConstants c, float2 pos_ls)
 // page, which vsm_search_blocker's level_hiz fallback surfaced live as
 // flatly wrong (not just imprecise) confident_lit/confident_dark bands
 // exactly where residency happened to fall back to a coarser level.
-uint get_vsm_slot(VSMConstants c, VSMLighting lighting, float2 pos_ls, int start_level, out int resolved_level)
+// Takes page_table directly (a plain Texture2DArray<uint>), not a whole
+// VSMLighting -- the only field this ever read from it. Callers not already
+// holding a VSMLighting (e.g. VSM_Combine's own VSMShadowNoiseParams, which
+// has no `GBuffer gbuffer;`/full VSMLighting binding any more, see vsm.sig's
+// VSM_Combine PassNode comment) can pass their own page_table field straight
+// through instead of needing a whole VSMLighting just for this one lookup.
+uint get_vsm_slot(VSMConstants c, Texture2DArray<uint> page_table, float2 pos_ls, int start_level, out int resolved_level)
 {
 	int pages = c.GetPages_per_level();
 	resolved_level = start_level;
@@ -77,7 +83,7 @@ uint get_vsm_slot(VSMConstants c, VSMLighting lighting, float2 pos_ls, int start
 		float2 page_f = (pos_ls - info.xy) / max(info.z, 0.0001);
 		int2 page = clamp(int2(floor(page_f)), int2(0, 0), int2(pages - 1, pages - 1));
 
-		uint slot = lighting.GetPage_table()[uint3(page.x, page.y, level)];
+		uint slot = page_table[uint3(page.x, page.y, level)];
 		if (slot != VSM_INVALID_SLOT)
 		{
 			resolved_level = level;

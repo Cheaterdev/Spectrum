@@ -18,12 +18,15 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::ShadowPayload;
 		bool hit;
+		float dist;
 		bool& GetHit() { return hit; }
+		float& GetDist() { return dist; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(hit, "ShadowPayload::hit");
+			compiler.compile(dist, "ShadowPayload::dist");
 		}
 		using Compiled = ShadowPayload;
 
@@ -35,6 +38,7 @@ export namespace Table
 		SERIALIZE()
 		{
 			ar& NVP(hit);
+			ar& NVP(dist);
 		}
 
 	};

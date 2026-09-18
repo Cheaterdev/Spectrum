@@ -235,6 +235,17 @@ namespace HAL
                 }
 
             debuggable |= l.library && l.library->slots_usage.uses(SlotID::DebugInfo);
+
+            // Every other PSO type (Graphics/Compute) merges its shaders'
+            // reflected slot usage into `slots` here -- that's what
+            // commit_tables() walks to know which bound resources to register
+            // with the barrier tracker. This merge was missing for raytracing
+            // state objects, so nothing a raygen/hit/miss shader touches (e.g.
+            // VoxelOutput's UAV write to RTXReflectionNoise) was ever tracked:
+            // the GPU write still happened, but add_resource_usage() was never
+            // called for it, so no discard was ever scheduled and no entry
+            // state was ever established for a later read.
+            if (l.library) slots.merge(l.library->slots_usage);
         }
 
         if (desc.global_root)
@@ -300,6 +311,17 @@ namespace HAL
             auto sharedCollection = raytracingPipeline.CreateSubobject<CD3DX12_EXISTING_COLLECTION_SUBOBJECT>();
             sharedCollection->SetExistingCollection(c->get_native_state().Get());
             debuggable |= c->debuggable;
+
+            // The top-level pipeline is built from EXISTING COLLECTIONS, not
+            // from desc.libraries directly (that loop above only runs for a
+            // Collection-type StateObject itself) -- so this is the merge that
+            // actually matters for what gets dispatched. Without it, `slots`
+            // stays empty on the object commit_tables() sees as
+            // current_pipeline, and every resource a raygen/hit/miss shader
+            // touches (e.g. VoxelOutput's UAV write) is invisible to the
+            // barrier tracker even though each Collection's OWN slots are
+            // correctly populated.
+            slots.merge(c->slots);
         }
 
         TEST(desc.global_root->get_device(),

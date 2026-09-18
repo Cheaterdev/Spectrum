@@ -20,9 +20,11 @@ export namespace Table
 		bool use_vsm_penumbra = true;
 		bool use_vsm_contact_shadow = true;
 		VSMDebugView vsm_debug_view = VSMDebugView::None;
+		ShadowSource shadow_source = ShadowSource::VSM;
 		bool& GetUse_vsm_penumbra() { return use_vsm_penumbra; }
 		bool& GetUse_vsm_contact_shadow() { return use_vsm_contact_shadow; }
 		VSMDebugView& GetVsm_debug_view() { return vsm_debug_view; }
+		ShadowSource& GetShadow_source() { return shadow_source; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -30,6 +32,7 @@ export namespace Table
 			compiler.compile(use_vsm_penumbra, "VSMSelectors::use_vsm_penumbra");
 			compiler.compile(use_vsm_contact_shadow, "VSMSelectors::use_vsm_contact_shadow");
 			compiler.compile(vsm_debug_view, "VSMSelectors::vsm_debug_view");
+			compiler.compile(shadow_source, "VSMSelectors::shadow_source");
 		}
 		using Compiled = VSMSelectors;
 
@@ -43,6 +46,7 @@ export namespace Table
 			ar& NVP(use_vsm_penumbra);
 			ar& NVP(use_vsm_contact_shadow);
 			ar& NVP(vsm_debug_view);
+			ar& NVP(shadow_source);
 		}
 
 	};

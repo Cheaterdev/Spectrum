@@ -41,6 +41,8 @@
 #include "NRD_IndirectCombine.h"
 #include "ReflCombine.h"
 #include "RTXCombine.h"
+#include "NRD_SIGMA_Execute.h"
+#include "NRD_ShadowCombine.h"
 #include "Sky.h"
 #include "SMAA.h"
 #include "FSR.h"
@@ -121,6 +123,8 @@ public:
 		Passes::NRD_IndirectCombine::Name.ptr,
 		Passes::ReflCombine::Name.ptr,
 		Passes::RTXCombine::Name.ptr,
+		Passes::NRD_SIGMA_Execute::Name.ptr,
+		Passes::NRD_ShadowCombine::Name.ptr,
 		Passes::Sky::Name.ptr,
 		Passes::SMAA::Name.ptr,
 		Passes::FSR::Name.ptr,
@@ -188,6 +192,7 @@ public:
 		L"RTXReflectionNoise",
 		L"RTXReflectionDirPdf",
 		L"RTXShadowNoise",
+		L"VSM_ShadowNoise",
 		L"RTXIndirectNoiseHalf",
 		L"RTXIndirectNoise",
 		L"VoxelIndirectNoiseRaw",
@@ -213,6 +218,7 @@ public:
 		L"RTXIndirectDenoisedPreview",
 		L"RTXReflectionDenoised",
 		L"ResultTextureRTXNoise",
+		L"VSM_ShadowDenoised",
 		L"ResultTextureNew",
 		L"SMAA_edges",
 		L"SMAA_blend",
@@ -387,12 +393,13 @@ public:
 		{ PassID::NRD_IndirectCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::RTXCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::UpscalingDLSSRR, 0 },
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Albedo_c0_states[] = {
 		{ true, { GBuffer_Albedo_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Albedo_c0_pass_refs + 1, 21 } },
+		{ false, { GBuffer_Albedo_c0_pass_refs + 1, 22 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Normals_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -415,11 +422,12 @@ public:
 		{ PassID::NRD_IndirectCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::RTXCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Normals_c0_states[] = {
 		{ true, { GBuffer_Normals_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Normals_c0_pass_refs + 1, 20 } },
+		{ false, { GBuffer_Normals_c0_pass_refs + 1, 21 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Depth_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -452,11 +460,12 @@ public:
 		{ PassID::NRD_IndirectCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::RTXCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Specular_c0_states[] = {
 		{ true, { GBuffer_Specular_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Specular_c0_pass_refs + 1, 19 } },
+		{ false, { GBuffer_Specular_c0_pass_refs + 1, 20 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Speed_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -478,13 +487,14 @@ public:
 		{ PassID::NRD_IndirectCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::RTXCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::UpscalingDLSS, 0 },
 		{ PassID::UpscalingDLSSRR, 0 },
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
 		{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Speed_c0_pass_refs + 1, 21 } },
+		{ false, { GBuffer_Speed_c0_pass_refs + 1, 22 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -506,11 +516,12 @@ public:
 		{ PassID::NRD_IndirectCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::RTXCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::VoxelDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_DepthMips_c0_states[] = {
 		{ true, { GBuffer_DepthMips_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 19 } },
+		{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 20 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Quality_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -618,6 +629,7 @@ public:
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
 		{ PassID::NRD_IndirectCombine, 0 },
 		{ PassID::ReflCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::Sky, 0 },
 		{ PassID::SMAA, 0 },
 	};
@@ -629,7 +641,8 @@ public:
 		{ true, { ResultTexture_c0_pass_refs + 4, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 5, 1 } },
 		{ true, { ResultTexture_c0_pass_refs + 6, 1 } },
-		{ false, { ResultTexture_c0_pass_refs + 7, 1 } },
+		{ true, { ResultTexture_c0_pass_refs + 7, 1 } },
+		{ false, { ResultTexture_c0_pass_refs + 8, 1 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_TempColor_c0_pass_refs[] = {
 		{ PassID::GBufferDownsampler, 0 },
@@ -758,6 +771,14 @@ public:
 		{ true, { RTXShadowNoise_c0_pass_refs + 0, 1 } },
 		{ false, { RTXShadowNoise_c0_pass_refs + 1, 1 } },
 	};
+	static inline const FrameGraph::PassRef VSM_ShadowNoise_c0_pass_refs[] = {
+		{ PassID::ShadowRTX, 0 },
+		{ PassID::NRD_SIGMA_Execute, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_ShadowNoise_c0_states[] = {
+		{ true, { VSM_ShadowNoise_c0_pass_refs + 0, 1 } },
+		{ false, { VSM_ShadowNoise_c0_pass_refs + 1, 1 } },
+	};
 	static inline const FrameGraph::PassRef RTXIndirectNoiseHalf_c0_pass_refs[] = {
 		{ PassID::IndirectRTXHalf, 0 },
 		{ PassID::IndirectRTX, 0 },
@@ -794,26 +815,29 @@ public:
 	static inline const FrameGraph::PassRef NRD_ViewZ_c0_pass_refs[] = {
 		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::NRD_REBLUR_Execute, 0 },
+		{ PassID::NRD_SIGMA_Execute, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState NRD_ViewZ_c0_states[] = {
 		{ true, { NRD_ViewZ_c0_pass_refs + 0, 1 } },
-		{ false, { NRD_ViewZ_c0_pass_refs + 1, 1 } },
+		{ false, { NRD_ViewZ_c0_pass_refs + 1, 2 } },
 	};
 	static inline const FrameGraph::PassRef NRD_NormalRoughness_c0_pass_refs[] = {
 		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::NRD_REBLUR_Execute, 0 },
+		{ PassID::NRD_SIGMA_Execute, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState NRD_NormalRoughness_c0_states[] = {
 		{ true, { NRD_NormalRoughness_c0_pass_refs + 0, 1 } },
-		{ false, { NRD_NormalRoughness_c0_pass_refs + 1, 1 } },
+		{ false, { NRD_NormalRoughness_c0_pass_refs + 1, 2 } },
 	};
 	static inline const FrameGraph::PassRef NRD_Mv_c0_pass_refs[] = {
 		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::NRD_REBLUR_Execute, 0 },
+		{ PassID::NRD_SIGMA_Execute, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState NRD_Mv_c0_states[] = {
 		{ true, { NRD_Mv_c0_pass_refs + 0, 1 } },
-		{ false, { NRD_Mv_c0_pass_refs + 1, 1 } },
+		{ false, { NRD_Mv_c0_pass_refs + 1, 2 } },
 	};
 	static inline const FrameGraph::PassRef NRD_DiffuseRadianceHitDist_c0_pass_refs[] = {
 		{ PassID::NRD_GBufferPack, 0 },
@@ -958,6 +982,14 @@ public:
 		{ true, { ResultTextureRTXNoise_c0_pass_refs + 0, 1 } },
 		{ false, { ResultTextureRTXNoise_c0_pass_refs + 1, 1 } },
 	};
+	static inline const FrameGraph::PassRef VSM_ShadowDenoised_c0_pass_refs[] = {
+		{ PassID::NRD_SIGMA_Execute, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_ShadowDenoised_c0_states[] = {
+		{ true, { VSM_ShadowDenoised_c0_pass_refs + 0, 1 } },
+		{ false, { VSM_ShadowDenoised_c0_pass_refs + 1, 1 } },
+	};
 	static inline const FrameGraph::PassRef ResultTexture_c1_pass_refs[] = {
 		{ PassID::SMAA, 0 },
 		{ PassID::FSR, 0 },
@@ -1077,6 +1109,7 @@ public:
 		{ ResourceID::RTXReflectionNoise, 0, RTXReflectionNoise_c0_states },
 		{ ResourceID::RTXReflectionDirPdf, 0, RTXReflectionDirPdf_c0_states },
 		{ ResourceID::RTXShadowNoise, 0, RTXShadowNoise_c0_states },
+		{ ResourceID::VSM_ShadowNoise, 0, VSM_ShadowNoise_c0_states },
 		{ ResourceID::RTXIndirectNoiseHalf, 0, RTXIndirectNoiseHalf_c0_states },
 		{ ResourceID::RTXIndirectNoise, 0, RTXIndirectNoise_c0_states },
 		{ ResourceID::VoxelIndirectNoiseRaw, 0, VoxelIndirectNoiseRaw_c0_states },
@@ -1102,6 +1135,7 @@ public:
 		{ ResourceID::RTXIndirectDenoisedPreview, 0, RTXIndirectDenoisedPreview_c0_states },
 		{ ResourceID::RTXReflectionDenoised, 0, RTXReflectionDenoised_c0_states },
 		{ ResourceID::ResultTextureRTXNoise, 0, ResultTextureRTXNoise_c0_states },
+		{ ResourceID::VSM_ShadowDenoised, 0, VSM_ShadowDenoised_c0_states },
 		{ ResourceID::ResultTexture, 1, ResultTexture_c1_states },
 		{ ResourceID::SMAA_edges, 0, SMAA_edges_c0_states },
 		{ ResourceID::SMAA_blend, 0, SMAA_blend_c0_states },
@@ -1272,8 +1306,23 @@ public:
 		{ PassID::Scene, 0 },
 		{ PassID::ShadowRTX, 0 },
 	};
+	static inline const FrameGraph::PassRef NRD_SIGMA_Execute_0_prev[] = {
+		{ PassID::NRD_GBufferPack, 0 },
+		{ PassID::ShadowRTX, 0 },
+	};
+	static inline const FrameGraph::PassRef NRD_ShadowCombine_0_prev[] = {
+		{ PassID::NRD_IndirectCombine, 0 },
+		{ PassID::NRD_SIGMA_Execute, 0 },
+		{ PassID::ReflCombine, 0 },
+		{ PassID::ResultCreation, 0 },
+		{ PassID::Scene, 0 },
+		{ PassID::VSM_Combine, 0 },
+		{ PassID::VSM_DebugClassifyOverlay, 0 },
+		{ PassID::VSM_ShadowResolve, 0 },
+	};
 	static inline const FrameGraph::PassRef Sky_0_prev[] = {
 		{ PassID::NRD_IndirectCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Scene, 0 },
@@ -1283,6 +1332,7 @@ public:
 	};
 	static inline const FrameGraph::PassRef SMAA_0_prev[] = {
 		{ PassID::NRD_IndirectCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Sky, 0 },
@@ -1292,6 +1342,7 @@ public:
 	};
 	static inline const FrameGraph::PassRef FSR_0_prev[] = {
 		{ PassID::NRD_IndirectCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::SMAA, 0 },
@@ -1303,6 +1354,7 @@ public:
 	static inline const FrameGraph::PassRef UpscalingDLSS_0_prev[] = {
 		{ PassID::FSR, 0 },
 		{ PassID::NRD_IndirectCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::SMAA, 0 },
@@ -1315,6 +1367,7 @@ public:
 	static inline const FrameGraph::PassRef UpscalingDLSSRR_0_prev[] = {
 		{ PassID::FSR, 0 },
 		{ PassID::NRD_IndirectCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::NormalRoughnessRepack, 0 },
 		{ PassID::RTXCombine, 0 },
 		{ PassID::ReflCombine, 0 },
@@ -1331,6 +1384,7 @@ public:
 	static inline const FrameGraph::PassRef stencil_renderer_after_0_prev[] = {
 		{ PassID::FSR, 0 },
 		{ PassID::NRD_IndirectCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::ReflCombine, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::SMAA, 0 },
@@ -1388,6 +1442,8 @@ public:
 		{ PassID::NRD_IndirectCombine, 0, true, NRD_IndirectCombine_0_prev },
 		{ PassID::ReflCombine, 0, true, ReflCombine_0_prev },
 		{ PassID::RTXCombine, 0, true, RTXCombine_0_prev },
+		{ PassID::NRD_SIGMA_Execute, 0, false, NRD_SIGMA_Execute_0_prev },
+		{ PassID::NRD_ShadowCombine, 0, true, NRD_ShadowCombine_0_prev },
 		{ PassID::Sky, 0, true, Sky_0_prev },
 		{ PassID::SMAA, 0, true, SMAA_0_prev },
 		{ PassID::FSR, 0, true, FSR_0_prev },
@@ -1421,6 +1477,7 @@ public:
 		PassDefault<Passes::PreScene>::pre_setup(graph);
 		PassSetupDefault<Passes::CubeSky>::pre_setup(graph);
 		PassDefault<Passes::NRD_REBLUR_Execute>::pre_setup(graph);
+		PassDefault<Passes::NRD_SIGMA_Execute>::pre_setup(graph);
 	}
 
 	// [Compute] on a PassNode says the pass CAN run on the compute queue; [Async]
@@ -1527,6 +1584,8 @@ public:
 		if (reflCombine.render_func)
 			graph.add_library_pass<Passes::ReflCombine>(PassSetupDefault<Passes::ReflCombine>::setup, reflCombine.render_func, (reflCombine.flags));
 		graph.add_library_pass<Passes::RTXCombine>(PassDefault<Passes::RTXCombine>::setup, PassDefault<Passes::RTXCombine>::render, (PassDefault<Passes::RTXCombine>::flags));
+		graph.add_library_pass<Passes::NRD_SIGMA_Execute>(PassDefault<Passes::NRD_SIGMA_Execute>::setup, PassDefault<Passes::NRD_SIGMA_Execute>::render, (PassDefault<Passes::NRD_SIGMA_Execute>::flags));
+		graph.add_library_pass<Passes::NRD_ShadowCombine>(PassDefault<Passes::NRD_ShadowCombine>::setup, PassDefault<Passes::NRD_ShadowCombine>::render, (PassDefault<Passes::NRD_ShadowCombine>::flags));
 		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 		// only supplies render_func, so that is what gates registration.
 		if (sky.render_func)

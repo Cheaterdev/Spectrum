@@ -11,6 +11,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
+import :Autogen.Tables.SIGMASharedConstants;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -26,6 +27,7 @@ export namespace Table
 		HLSL::Texture2D<float2> gIn_Tiles;
 		HLSL::RWTexture2D<float> gOut_Shadow_Translucency;
 		HLSL::RWTexture2D<uint> gOut_HistoryLength;
+		SIGMASharedConstants sharedConstants;
 		HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
 		HLSL::Texture2D<float3>& GetGIn_Mv() { return gIn_Mv; }
 		HLSL::Texture2D<float>& GetGIn_Penumbra() { return gIn_Penumbra; }
@@ -35,6 +37,7 @@ export namespace Table
 		HLSL::Texture2D<float2>& GetGIn_Tiles() { return gIn_Tiles; }
 		HLSL::RWTexture2D<float>& GetGOut_Shadow_Translucency() { return gOut_Shadow_Translucency; }
 		HLSL::RWTexture2D<uint>& GetGOut_HistoryLength() { return gOut_HistoryLength; }
+		SIGMASharedConstants& GetSharedConstants() { return sharedConstants; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -48,6 +51,7 @@ export namespace Table
 			compiler.compile(gIn_Tiles, "SIGMA_TemporalStabilizationResources::gIn_Tiles");
 			compiler.compile(gOut_Shadow_Translucency, "SIGMA_TemporalStabilizationResources::gOut_Shadow_Translucency");
 			compiler.compile(gOut_HistoryLength, "SIGMA_TemporalStabilizationResources::gOut_HistoryLength");
+			compiler.compile(sharedConstants, "SIGMA_TemporalStabilizationResources::sharedConstants");
 		}
 		struct Compiled
 		{
@@ -60,11 +64,13 @@ export namespace Table
 			uint gIn_Tiles; // Texture2D<float2>
 			uint gOut_Shadow_Translucency; // RWTexture2D<float>
 			uint gOut_HistoryLength; // RWTexture2D<uint>
+			SIGMASharedConstants::Compiled sharedConstants; // SIGMASharedConstants
 
 			
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(sharedConstants);
 			}
 
 
@@ -77,6 +83,7 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
+			ar& NVP(sharedConstants);
 		}
 
 	};

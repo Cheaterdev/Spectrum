@@ -2024,6 +2024,15 @@ private:
                         }
                         else if (auto* source = dynamic_cast<HAL::Texture3DView*>(info->view.get()))
                         {
+                            // Same class of bug as the Texture2D srv_ok check above: a
+                            // UAV-only volume (no ResFlags::ShaderResource, e.g. voxel GI
+                            // volumes) never has texture3D.create() called, so the slot is
+                            // allocated but unwritten -- sampling it shows whatever
+                            // unrelated resource last occupied that heap slot, a different
+                            // one each frame, which is the flickering-garbage symptom.
+                            if (!source->texture3D.is_written())
+                                return; // nothing sampleable -- leave the thumbnail blank
+
                             compute.set_pipeline<PSOS::FrameGraph_Debug_Texture3D>();
                             cam->set_projection_params(Math::pi / 4,
                                 float(preview_size.x) / float(preview_size.y), 1.0f, 1500.0f);
@@ -2037,6 +2046,10 @@ private:
                         }
                         else if (auto* source = dynamic_cast<HAL::CubeView*>(info->view.get()))
                         {
+                            // Same as above: textureCube is only created under ShaderResource.
+                            if (!source->textureCube.is_written())
+                                return; // nothing sampleable -- leave the thumbnail blank
+
                             compute.set_pipeline<PSOS::FrameGraph_Debug_TextureCube>();
                             Slots::FrameGraph_Debug_TextureCube cube;
                             cube.GetSource()     = source->textureCube;

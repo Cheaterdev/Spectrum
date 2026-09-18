@@ -71,6 +71,12 @@ namespace nvidia
 		}
 	}
 
+	// See HAL.NRD.ixx's own comment on active_permanent_pool/active_transient_pool
+	// for why these must be thread_local (a genuine cross-queue data race
+	// otherwise, not a hypothetical one).
+	thread_local std::vector<HAL::TextureResource::ptr>* NRD::active_permanent_pool = nullptr;
+	thread_local std::vector<HAL::TextureResource::ptr>* NRD::active_transient_pool = nullptr;
+
 	NRD::NRD()
 	{
 		const nrd::LibraryDesc& lib = *nrd::GetLibraryDesc();
@@ -78,58 +84,81 @@ namespace nvidia
 		           << "." << (int)lib.versionBuild << ", " << lib.supportedDenoisersNum
 		           << " denoisers supported" << Log::endl;
 
-		// SIGMA_SHADOW for RTXShadowNoise (ShadowRTX, voxel.sig). REBLUR_DIFFUSE
-		// for indirect GI (RTXIndirectNoise, IndirectRTX, voxel.sig).
-		// REBLUR_SPECULAR for reflections (RTXReflectionNoise/
-		// VoxelReflectionNoise) -- a separate instance rather than the
+		// Two independent Instances, not one shared 3-denoiser Instance -- see
+		// HAL.NRD.ixx's own comment on why (independent SetupConditions,
+		// NRD's one-frameIndex-increment-per-Instance-per-frame requirement).
+		//
+		// REBLUR_DIFFUSE for indirect GI (RTXIndirectNoise, IndirectRTX,
+		// voxel.sig). REBLUR_SPECULAR for reflections (RTXReflectionNoise/
+		// VoxelReflectionNoise) -- a separate denoiser rather than the
 		// combined REBLUR_DIFFUSE_SPECULAR method, so either signal can be
 		// denoised independently of the other (g_indirect_denoiser and
 		// g_reflection_denoiser are independent toggles, see
 		// [[project-nrd-integration]]).
-		static const nrd::DenoiserDesc denoisers[] = {
-			{ 0, nrd::Denoiser::SIGMA_SHADOW },
-			{ 1, nrd::Denoiser::REBLUR_DIFFUSE },
-			{ 2, nrd::Denoiser::REBLUR_SPECULAR }
+		static const nrd::DenoiserDesc reblur_denoisers[] = {
+			{ 0, nrd::Denoiser::REBLUR_DIFFUSE },
+			{ 1, nrd::Denoiser::REBLUR_SPECULAR }
 		};
+		nrd::InstanceCreationDesc reblur_desc{};
+		reblur_desc.denoisers = reblur_denoisers;
+		reblur_desc.denoisersNum = 2;
 
-		nrd::InstanceCreationDesc desc{};
-		desc.denoisers = denoisers;
-		desc.denoisersNum = 3;
+		const nrd::Result reblur_res = nrd::CreateInstance(reblur_desc, reblur_instance);
+		reblur_resolved = reblur_res == nrd::Result::SUCCESS;
+		if (reblur_resolved)
+			Log::get() << "[NRD] REBLUR instance created" << Log::endl;
+		else
+			Log::get() << "[NRD] REBLUR CreateInstance failed (" << (int)reblur_res << ")" << Log::endl;
 
-		const nrd::Result res = nrd::CreateInstance(desc, instance);
-		if (res != nrd::Result::SUCCESS)
-		{
-			Log::get() << "[NRD] CreateInstance failed (" << (int)res << ")" << Log::endl;
-			return;
-		}
+		// SIGMA_SHADOW for VSM's non-penumbra fallback (VSM_Combine/
+		// NRD_SIGMA_Execute, vsm.sig/nrd_sig_test.sig).
+		static const nrd::DenoiserDesc sigma_denoisers[] = {
+			{ 0, nrd::Denoiser::SIGMA_SHADOW }
+		};
+		nrd::InstanceCreationDesc sigma_desc{};
+		sigma_desc.denoisers = sigma_denoisers;
+		sigma_desc.denoisersNum = 1;
 
-		resolved = true;
-		Log::get() << "[NRD] instance created" << Log::endl;
+		const nrd::Result sigma_res = nrd::CreateInstance(sigma_desc, sigma_instance);
+		sigma_resolved = sigma_res == nrd::Result::SUCCESS;
+		if (sigma_resolved)
+			Log::get() << "[NRD] SIGMA instance created" << Log::endl;
+		else
+			Log::get() << "[NRD] SIGMA CreateInstance failed (" << (int)sigma_res << ")" << Log::endl;
 	}
 
 	NRD::~NRD()
 	{
-		if (instance)
-			nrd::DestroyInstance(*instance);
+		if (reblur_instance)
+			nrd::DestroyInstance(*reblur_instance);
+		if (sigma_instance)
+			nrd::DestroyInstance(*sigma_instance);
 	}
 
 	void NRD::smoke_test() const
 	{
-		if (!resolved) return;
-
-		const nrd::InstanceDesc& idesc = *nrd::GetInstanceDesc(*instance);
-		Log::get() << "[NRD] instance desc: " << idesc.pipelinesNum << " pipelines, "
-		           << idesc.permanentPoolSize << " permanent pool textures, "
-		           << idesc.transientPoolSize << " transient pool textures, "
-		           << idesc.constantBufferMaxDataSize << " max CB bytes" << Log::endl;
+		if (reblur_resolved)
+		{
+			const nrd::InstanceDesc& idesc = *nrd::GetInstanceDesc(*reblur_instance);
+			Log::get() << "[NRD] REBLUR instance desc: " << idesc.pipelinesNum << " pipelines, "
+			           << idesc.permanentPoolSize << " permanent pool textures, "
+			           << idesc.transientPoolSize << " transient pool textures, "
+			           << idesc.constantBufferMaxDataSize << " max CB bytes" << Log::endl;
+		}
+		if (sigma_resolved)
+		{
+			const nrd::InstanceDesc& idesc = *nrd::GetInstanceDesc(*sigma_instance);
+			Log::get() << "[NRD] SIGMA instance desc: " << idesc.pipelinesNum << " pipelines, "
+			           << idesc.permanentPoolSize << " permanent pool textures, "
+			           << idesc.transientPoolSize << " transient pool textures, "
+			           << idesc.constantBufferMaxDataSize << " max CB bytes" << Log::endl;
+		}
 	}
 
 	void NRD::ensure_pools(HAL::Device& device, uint2 render_size)
 	{
-		if (!resolved) return;
+		if (!available()) return;
 		if (pools_render_size == render_size && pools_ready()) return;
-
-		const nrd::InstanceDesc& idesc = *nrd::GetInstanceDesc(*instance);
 
 		auto make_pool = [&](const nrd::TextureDesc* descs, uint32_t count, std::vector<HAL::TextureResource::ptr>& out)
 		{
@@ -156,8 +185,23 @@ namespace nvidia
 			}
 		};
 
-		make_pool(idesc.permanentPool, idesc.permanentPoolSize, permanent_pool);
-		make_pool(idesc.transientPool, idesc.transientPoolSize, transient_pool);
+		uint32_t total_permanent = 0, total_transient = 0;
+		if (reblur_resolved)
+		{
+			const nrd::InstanceDesc& idesc = *nrd::GetInstanceDesc(*reblur_instance);
+			make_pool(idesc.permanentPool, idesc.permanentPoolSize, reblur_permanent_pool);
+			make_pool(idesc.transientPool, idesc.transientPoolSize, reblur_transient_pool);
+			total_permanent += (uint32_t)reblur_permanent_pool.size();
+			total_transient += (uint32_t)reblur_transient_pool.size();
+		}
+		if (sigma_resolved)
+		{
+			const nrd::InstanceDesc& idesc = *nrd::GetInstanceDesc(*sigma_instance);
+			make_pool(idesc.permanentPool, idesc.permanentPoolSize, sigma_permanent_pool);
+			make_pool(idesc.transientPool, idesc.transientPoolSize, sigma_transient_pool);
+			total_permanent += (uint32_t)sigma_permanent_pool.size();
+			total_transient += (uint32_t)sigma_transient_pool.size();
+		}
 
 		if (!dummy_srv)
 		{
@@ -172,20 +216,24 @@ namespace nvidia
 		}
 
 		pools_render_size = render_size;
+		reblur_needs_history_reset = true;
+		sigma_needs_history_reset = true;
 
-		Log::get() << "[NRD] pools allocated: " << permanent_pool.size() << " permanent, "
-		           << transient_pool.size() << " transient, at " << render_size.x << "x" << render_size.y << Log::endl;
+		Log::get() << "[NRD] pools allocated: " << total_permanent << " permanent, "
+		           << total_transient << " transient, at " << render_size.x << "x" << render_size.y << Log::endl;
 	}
 
-	// PERMANENT_POOL/TRANSIENT_POOL resolve to the real pool textures. Every
-	// other (named) resource type has no real engine-side producer yet --
-	// per-kernel dispatch code below routes those to a dummy directly.
+	// PERMANENT_POOL/TRANSIENT_POOL resolve to the real pool textures, from
+	// whichever pool pair execute_reblur()/execute_shadow() most recently made
+	// active (see HAL.NRD.ixx's own comment on active_permanent_pool/
+	// active_transient_pool). Every other (named) resource type this
+	// integration doesn't wire routes to a dummy directly.
 	HAL::TextureResource::ptr NRD::resolve_pool_resource(const nrd::ResourceDesc& r) const
 	{
 		if (r.type == nrd::ResourceType::PERMANENT_POOL)
-			return permanent_pool[r.indexInPool];
+			return (*active_permanent_pool)[r.indexInPool];
 		if (r.type == nrd::ResourceType::TRANSIENT_POOL)
-			return transient_pool[r.indexInPool];
+			return (*active_transient_pool)[r.indexInPool];
 
 		return r.descriptorType == nrd::DescriptorType::TEXTURE ? dummy_srv : dummy_uav;
 	}
@@ -226,6 +274,34 @@ namespace nvidia
 		slots.GetGOut() = view;
 
 		compute.set_pipeline<PSOS::NRD_Clear_Test>();
+		compute.set(slots);
+		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
+	}
+
+	// Clear.cs.hlsl|FLOAT=0 -- the uint4 permutation (nrd_sig_test.sig's
+	// Clear_UInt4Resources/NRD_Clear_UInt4, sig_clear_uint4.hlsl), for
+	// integer-format pool resources (e.g. SIGMA's gOut_HistoryLength,
+	// RWTexture2D<uint>) that dispatch_clear's float4-typed view can't
+	// correctly target. Otherwise identical to dispatch_clear -- the view's
+	// actual UAV format always comes from the resource's own native format
+	// (RWTexture2D<T>::create(), HAL.HLSL.ixx), not from T, so the only
+	// reason this needs a separate function is HLSL-side type matching
+	// (gOut[pixelPos] = 0 must compile against the shader's declared uint4
+	// vs float4 element type).
+	static void dispatch_clear_uint4(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch)
+	{
+		ASSERT(dispatch.resourcesNum == 1);
+		HAL::TextureResource::ptr output = nrd_hal.resolve_pool_resource(dispatch.resources[0]);
+
+		ASSERT(dispatch.constantBufferDataSize == 0);
+		Slots::Clear_UInt4Resources slots;
+
+		auto h = compute.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
+		HLSL::RWTexture2D<uint4> view(h);
+		view.create(output, 0, 0);
+		slots.GetGOut() = view;
+
+		compute.set_pipeline<PSOS::NRD_Clear_UInt4>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -311,21 +387,35 @@ namespace nvidia
 		}
 	}
 
+	// SIGMASharedConstants is #pragma pack(push,1) with fields in the exact
+	// order/type of SIGMA_Config.hlsli's SIGMA_SHARED_CONSTANTS macro (see
+	// nrd_sig_test.sig's comment) -- verified by hand against HLSL's default
+	// cbuffer packing rules (no field here straddles a 16-byte boundary), so
+	// NRD's own raw constantBufferData blob can be copied onto it directly.
+	// The size assert is the real safety net, same reasoning as
+	// fill_reblur_shared_constants below.
+	static void fill_sigma_shared_constants(Table::SIGMASharedConstants& dst, const nrd::DispatchDesc& dispatch)
+	{
+		// Tightly-packed sizeof is 516 bytes; NRD's raw blob is padded to a
+		// 16-byte multiple (528, confirmed at runtime -- matches
+		// idesc.constantBufferMaxDataSize logged at instance creation).
+		ASSERT(dispatch.constantBufferDataSize >= sizeof(Table::SIGMASharedConstants)
+			&& dispatch.constantBufferDataSize < sizeof(Table::SIGMASharedConstants) + 16);
+		memcpy(&dst, dispatch.constantBufferData, sizeof(Table::SIGMASharedConstants));
+	}
+
 	// SIGMA_SHADOW dispatch wiring, same resolve_srv/resolve_uav plumbing and
 	// positional dispatch.resources[] -> .sig struct field order convention
-	// as REBLUR above. No shared-constants struct: unlike REBLUR (whose 77
-	// NRD_CONSTANT fields got a real REBLURSharedConstants CBV, see below),
-	// SIGMA_SHARED_CONSTANTS is left as generic zero-initialized locals by
-	// each nrd/sig_sigma_*.hlsl shim (see nrd_sig_test.sig's Item-7 comment)
-	// -- none of the SIGMA_*Resources structs declare a constants field to
-	// copy dispatch.constantBufferData onto, so there is nothing to fill
-	// here. Denoising will run with SIGMA's constants at zero (e.g. radius
-	// 0) until that's wired too; out of scope for this pass (dispatch/
-	// resource routing only).
+	// as REBLUR above, now with real shared constants too (see
+	// fill_sigma_shared_constants above -- every SIGMA kernel's own
+	// .resources.hlsli includes the same SIGMA_SHARED_CONSTANTS block
+	// unconditionally, confirmed against NRD's vendored source, so every
+	// dispatch function below fills it the same way).
 	static void dispatch_sigma_classifytiles(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 3);
 		Slots::SIGMA_ClassifyTilesResources slots;
+		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Penumbra() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
 		slots.GetGOut_Tiles() = resolve_uav(nrd_hal, compute, dispatch.resources[2], in);
@@ -338,6 +428,7 @@ namespace nvidia
 	{
 		ASSERT(dispatch.resourcesNum == 2);
 		Slots::SIGMA_SmoothTilesResources slots;
+		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGOut_Tiles() = resolve_uav(nrd_hal, compute, dispatch.resources[1], in);
 		compute.set_pipeline<PSOS::NRD_SIGMA_SmoothTiles>();
@@ -349,6 +440,7 @@ namespace nvidia
 	{
 		ASSERT(dispatch.resourcesNum == 5);
 		Slots::SIGMA_CopyResources slots;
+		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_History() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
 		slots.GetGIn_HistoryLength() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
@@ -366,6 +458,7 @@ namespace nvidia
 	{
 		ASSERT(dispatch.resourcesNum == 7);
 		Slots::SIGMA_BlurFirstPass0Resources slots;
+		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
 		slots.GetGIn_Penumbra() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
@@ -385,6 +478,7 @@ namespace nvidia
 	{
 		ASSERT(dispatch.resourcesNum == 6);
 		Slots::SIGMA_BlurFirstPass1Resources slots;
+		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
 		slots.GetGIn_Penumbra() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
@@ -400,6 +494,7 @@ namespace nvidia
 	{
 		ASSERT(dispatch.resourcesNum == 9);
 		Slots::SIGMA_TemporalStabilizationResources slots;
+		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Mv() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
 		slots.GetGIn_Penumbra() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
@@ -812,6 +907,13 @@ namespace nvidia
 					dispatch_clear(nrd_hal, compute, dispatch);
 				};
 			}
+			else if (identifier == "Clear.cs.hlsl|FLOAT=0")
+			{
+				entry.diffuse = entry.specular = [](nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs&)
+				{
+					dispatch_clear_uint4(nrd_hal, compute, dispatch);
+				};
+			}
 			else if (identifier.starts_with("REBLUR_ClassifyTiles.cs.hlsl"))
 			{
 				entry.diffuse = entry.specular = &dispatch_reblur_classifytiles;
@@ -898,19 +1000,8 @@ namespace nvidia
 		return table;
 	}
 
-	void NRD::execute(HAL::CommandList& list, const NRDFrameInputs& inputs)
+	static void fill_common_settings(nrd::CommonSettings& common, const nvidia::NRDFrameInputs& inputs, uint2 pools_render_size, uint32_t frame_index, bool history_reset)
 	{
-		if (!resolved || !pools_ready()) return;
-
-		const nrd::InstanceDesc& idesc = *nrd::GetInstanceDesc(*instance);
-
-		// NRD is a Singleton (one nrd::Instance for the process), and
-		// idesc.pipelines never changes after nrd::CreateInstance() -- so
-		// this table is correct to build exactly once and reuse for every
-		// subsequent execute() call/frame.
-		static const std::vector<DispatchFnPair> dispatch_table = build_dispatch_table(idesc);
-
-		nrd::CommonSettings common{};
 		common.resourceSize[0] = common.resourceSizePrev[0] = common.rectSize[0] = common.rectSizePrev[0] = (uint16_t)pools_render_size.x;
 		common.resourceSize[1] = common.resourceSizePrev[1] = common.rectSize[1] = common.rectSizePrev[1] = (uint16_t)pools_render_size.y;
 		memcpy(common.worldToViewMatrix, inputs.world_to_view, sizeof(common.worldToViewMatrix));
@@ -924,92 +1015,153 @@ namespace nvidia
 		common.cameraJitter[1] = inputs.jitter.y;
 		common.cameraJitterPrev[0] = inputs.jitter_prev.x;
 		common.cameraJitterPrev[1] = inputs.jitter_prev.y;
-		common.frameIndex = frame_counter++;
+		common.frameIndex = frame_index;
 		common.isMotionVectorInWorldSpace = false;
-		nrd::SetCommonSettings(*instance, common);
+		// Pool textures were just (re)allocated this frame (ensure_pools()'s
+		// reblur_needs_history_reset/sigma_needs_history_reset) -- undefined
+		// GPU memory, not zero-initialized, so tell NRD to discard whatever
+		// history it thinks it has and clear its own pool resources rather
+		// than reproject/blend against garbage. SetCommonSettings() (NRD's
+		// own InstanceImpl.cpp) additionally forces resourceSizePrev/
+		// worldToViewMatrixPrev/cameraJitterPrev to match this frame's
+		// current values whenever accumulationMode != CONTINUE, so the
+		// resourceSizePrev/rectSizePrev set to the CURRENT (not real
+		// previous) size above is only ever wrong on this same reset frame,
+		// where NRD immediately overwrites it anyway.
+		common.accumulationMode = history_reset ? nrd::AccumulationMode::CLEAR_AND_RESTART : nrd::AccumulationMode::CONTINUE;
+	}
 
-		// penumbra_noisy/diff_noisy/spec_noisy are default-constructed (null
-		// resource, see Texture2DView::resource) whenever the caller
-		// (NRD_REBLUR_Execute) didn't populate them -- no shadow-noise
-		// producer packs penumbra_noisy yet (SIGMA_SHADOW's own front-end
-		// pack is still unwired, see [[project-nrd-integration]]), same as
-		// g_indirect_denoiser/g_reflection_denoiser not being set to NRD.
-		// Only requesting the identifiers whose signal is actually wanted
-		// keeps those denoisers' dispatches out of GetComputeDispatches()
-		// entirely, so resolve_srv/resolve_uav never need a null-resource
-		// fallback for them.
-		bool want_shadow   = (bool)inputs.penumbra_noisy.resource;
+	void NRD::execute_reblur(HAL::CommandList& list, const NRDFrameInputs& inputs)
+	{
+		if (!reblur_resolved || !pools_ready()) return;
+
+		// diff_noisy/spec_noisy are default-constructed (null resource, see
+		// Texture2DView::resource) whenever the caller (NRD_REBLUR_Execute)
+		// didn't populate them -- g_indirect_denoiser/g_reflection_denoiser
+		// aren't set to NRD this frame. Only requesting the identifiers whose
+		// signal is actually wanted keeps those denoisers' dispatches out of
+		// GetComputeDispatches() entirely, so resolve_srv/resolve_uav never
+		// need a null-resource fallback for them.
 		bool want_diffuse  = (bool)inputs.diff_noisy.resource;
 		bool want_specular = (bool)inputs.spec_noisy.resource;
+		if (!want_diffuse && !want_specular) return;
 
-		nrd::SigmaSettings sigma_settings{};
-		if (want_shadow)
-			nrd::SetDenoiserSettings(*instance, 0, &sigma_settings);
+		PROFILE_GPU(L"NRD_REBLUR");
+
+		const nrd::InstanceDesc& idesc = *nrd::GetInstanceDesc(*reblur_instance);
+
+		// idesc.pipelines never changes after nrd::CreateInstance() -- so this
+		// table is correct to build exactly once and reuse for every
+		// subsequent execute_reblur() call/frame.
+		static const std::vector<DispatchFnPair> dispatch_table = build_dispatch_table(idesc);
+
+		nrd::CommonSettings common{};
+		fill_common_settings(common, inputs, pools_render_size, reblur_frame_counter++, reblur_needs_history_reset);
+		reblur_needs_history_reset = false;
+		nrd::SetCommonSettings(*reblur_instance, common);
 
 		// Library defaults throughout (see nrd_sig_test.sig's REBLURSharedConstants
 		// comment and raytracing.hlsl's gHitDistParams -- both must move
 		// together with hitDistanceParameters if this is ever tuned).
 		nrd::ReblurSettings reblur_settings{};
 		if (want_diffuse)
-			nrd::SetDenoiserSettings(*instance, 1, &reblur_settings);
+			nrd::SetDenoiserSettings(*reblur_instance, 0, &reblur_settings);
 		if (want_specular)
-			nrd::SetDenoiserSettings(*instance, 2, &reblur_settings);
+			nrd::SetDenoiserSettings(*reblur_instance, 1, &reblur_settings);
 
-		nrd::Identifier identifiers[3];
+		nrd::Identifier identifiers[2];
 		uint32_t identifiers_num = 0;
-		if (want_shadow)   identifiers[identifiers_num++] = 0;
-		if (want_diffuse)  identifiers[identifiers_num++] = 1;
-		if (want_specular) identifiers[identifiers_num++] = 2;
+		if (want_diffuse)  identifiers[identifiers_num++] = 0;
+		if (want_specular) identifiers[identifiers_num++] = 1;
 
 		const nrd::DispatchDesc* dispatches = nullptr;
 		uint32_t dispatches_num = 0;
-		nrd::GetComputeDispatches(*instance, identifiers, identifiers_num, dispatches, dispatches_num);
+		nrd::GetComputeDispatches(*reblur_instance, identifiers, identifiers_num, dispatches, dispatches_num);
 
 		auto& compute = list.get_compute();
+		active_permanent_pool = &reblur_permanent_pool;
+		active_transient_pool = &reblur_transient_pool;
 
-		// Denoiser-type buckets for the GPU profiler -- identifier 0/1/2 map
-		// 1:1 onto the ctor's denoisers[] array (SIGMA_SHADOW/REBLUR_DIFFUSE/
-		// REBLUR_SPECULAR), so every dispatch this loop actually issues is
-		// attributed to the NRD instance it belongs to, distinguishable from
-		// the other two denoisers' dispatches in a capture instead of showing
-		// up as one undifferentiated "NRD" block.
-		static constexpr LiteralWStr denoiser_type_names[3] = {
-			L"NRD_SIGMA_SHADOW", L"NRD_REBLUR_DIFFUSE", L"NRD_REBLUR_SPECULAR"
-		};
-
-		PROFILE_GPU(L"NRD");
-
-		uint32_t dispatched = 0;
 		for (uint32_t d = 0; d < dispatches_num; ++d)
 		{
 			const nrd::DispatchDesc& dispatch = dispatches[d];
 
-			// identifier 1 = REBLUR_DIFFUSE, identifier 2 = REBLUR_SPECULAR
-			// (see the ctor's denoisers[] array) -- NRD reports the SAME
-			// kernel-name prefix for both signals' permutations of a given
-			// REBLUR kernel (the NRD_SIGNAL=DIFF/SPEC marker is a `|`-suffix
-			// on the identifier string, not the prefix build_dispatch_table's
-			// starts_with() checks match on), so dispatch.identifier is what
-			// actually distinguishes which (differently-shaped, see
-			// nrd_sig_test.sig's per-kernel Specular struct comments)
-			// resource list this dispatch carries.
-			bool is_specular = dispatch.identifier == 2;
+			// identifier 0 = REBLUR_DIFFUSE, identifier 1 = REBLUR_SPECULAR
+			// (see the ctor's reblur_denoisers[] array) -- NRD reports the
+			// SAME kernel-name prefix for both signals' permutations of a
+			// given REBLUR kernel (the NRD_SIGNAL=DIFF/SPEC marker is a
+			// `|`-suffix on the identifier string, not the prefix
+			// build_dispatch_table's starts_with() checks match on), so
+			// dispatch.identifier is what actually distinguishes which
+			// (differently-shaped, see nrd_sig_test.sig's per-kernel
+			// Specular struct comments) resource list this dispatch carries.
+			bool is_specular = dispatch.identifier == 1;
 
 			const DispatchFnPair& entry = dispatch_table[dispatch.pipelineIndex];
 			DispatchFn fn = is_specular ? entry.specular : entry.diffuse;
 			if (!fn)
 			{
-				// SIGMA_SHADOW's kernels, and anything else not wired (out of
+				// Anything not wired (REBLUR_SplitScreen/Validation, out of
 				// scope, see [[project-nrd-integration]]) -- skipped, not an
 				// error.
 				continue;
 			}
 
-			PROFILE_GPU(denoiser_type_names[dispatch.identifier < 3 ? dispatch.identifier : 0]);
 			fn(*this, compute, dispatch, inputs);
-			++dispatched;
 		}
+	}
 
-		//Log::get() << "[NRD] execute(): " << dispatched << "/" << dispatches_num << " dispatches issued" << Log::endl;
+	void NRD::execute_shadow(HAL::CommandList& list, const NRDFrameInputs& inputs)
+	{
+		if (!sigma_resolved || !pools_ready()) return;
+
+		bool want_shadow = (bool)inputs.penumbra_noisy.resource;
+		if (!want_shadow) return;
+
+		PROFILE_GPU(L"NRD_SIGMA");
+
+		const nrd::InstanceDesc& idesc = *nrd::GetInstanceDesc(*sigma_instance);
+
+		static const std::vector<DispatchFnPair> dispatch_table = build_dispatch_table(idesc);
+
+		nrd::CommonSettings common{};
+		fill_common_settings(common, inputs, pools_render_size, sigma_frame_counter++, sigma_needs_history_reset);
+		sigma_needs_history_reset = false;
+		nrd::SetCommonSettings(*sigma_instance, common);
+
+		nrd::SigmaSettings sigma_settings{};
+		sigma_settings.lightDirection[0] = inputs.sun_direction.x;
+		sigma_settings.lightDirection[1] = inputs.sun_direction.y;
+		sigma_settings.lightDirection[2] = inputs.sun_direction.z;
+		nrd::SetDenoiserSettings(*sigma_instance, 0, &sigma_settings);
+
+		nrd::Identifier identifiers[1] = { 0 };
+		const nrd::DispatchDesc* dispatches = nullptr;
+		uint32_t dispatches_num = 0;
+		nrd::GetComputeDispatches(*sigma_instance, identifiers, 1, dispatches, dispatches_num);
+
+		auto& compute = list.get_compute();
+		active_permanent_pool = &sigma_permanent_pool;
+		active_transient_pool = &sigma_transient_pool;
+
+		for (uint32_t d = 0; d < dispatches_num; ++d)
+		{
+			const nrd::DispatchDesc& dispatch = dispatches[d];
+
+			// Single identifier (0 = SIGMA_SHADOW) -- no diffuse/specular
+			// split, always the .diffuse slot.
+			const DispatchFnPair& entry = dispatch_table[dispatch.pipelineIndex];
+			DispatchFn fn = entry.diffuse;
+			if (!fn)
+			{
+				// SIGMA_SplitScreen (never requested at default
+				// CommonSettings::splitScreen=0), and anything else not
+				// wired (out of scope, see [[project-nrd-integration]]) --
+				// skipped, not an error.
+				continue;
+			}
+
+			fn(*this, compute, dispatch, inputs);
+		}
 	}
 }

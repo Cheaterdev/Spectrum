@@ -35,25 +35,67 @@ ComputePSO NRD_Clear_Test
 
 # Item 7 (see [[project-nrd-integration]]): the rest of NRD's SIGMA_SHADOW +
 # REBLUR_DIFFUSE kernel set, ported to SIG the same way as Clear_Constants
-# above -- one .sig struct + ComputePSO + shim per kernel/permutation. Scoped
-# to compiling + PSO creation only (item 7), not correct dispatch (item 8):
-# each struct declares ONLY the Texture2D/RWTexture2D resource fields (the
-# things that genuinely need a real, valid, type-matched descriptor slot to
-# avoid GPU-visible undefined behavior); the many NRD_CONSTANT-declared
-# scalar/matrix constants (SIGMA_SHARED_CONSTANTS/REBLUR_SHARED_CONSTANTS,
-# 32/65 fields respectively) are left as generic zero-initialized locals by
-# each shim rather than routed through a .sig CBV -- wiring their real values
-# from GetComputeDispatches()'s constantBufferData is item 8's job, kernel by
-# kernel, not this pass's.
+# above -- one .sig struct + ComputePSO + shim per kernel/permutation.
 #
 # Resource lists below are for this instance's ACTUAL compiled permutation
 # only (NRD_SIGNAL=DIFF, NRD_MODE=RADIANCE, TRANSLUCENCY=0 -- REBLUR_DIFFUSE
 # is diffuse-only, SIGMA_SHADOW is the non-translucent variant), read
 # directly off each kernel's .resources.hlsli #if branches -- not the union
 # of every possible permutation.
+#
+# SIGMA_SHARED_CONSTANTS (SIGMA_Config.hlsli:44-78, verbatim field-for-field/
+# order-for-order, same reasoning as REBLURSharedConstants below) -- every
+# SIGMA kernel's own .resources.hlsli includes this same macro unconditionally
+# (confirmed: ClassifyTiles/SmoothTiles/Copy/Blur/TemporalStabilization/
+# SplitScreen all start `NRD_CONSTANTS_START(...) SIGMA_SHARED_CONSTANTS`),
+# so every SIGMA_*Resources struct below embeds it. Originally left as
+# generic zero-initialized locals by each shim (Item 7) -- that's what made
+# SIGMA denoise with gDenoisingRange/gRectSize/etc. all 0, visually a mostly-
+# black frame with a small correctly-processed corner (whatever survived
+# purely on non-constant-dependent math). Wiring this (Item 8, same as
+# REBLURSharedConstants already got) is what fixes that.
+struct SIGMASharedConstants
+{
+	float4x4 gWorldToView;
+	float4x4 gViewToClip;
+	float4x4 gWorldToClipPrev;
+	float4x4 gWorldToViewPrev;
+	float4 gRotator;
+	float4 gRotatorPost;
+	float4 gViewVectorWorld;
+	float4 gLightDirectionView;
+	float4 gFrustum;
+	float4 gFrustumPrev;
+	float4 gCameraDelta;
+	float4 gMvScale;
+	float2 gResourceSizeInv;
+	float2 gResourceSizeInvPrev;
+	float2 gRectSize;
+	float2 gRectSizeInv;
+	float2 gRectSizePrev;
+	float2 gResolutionScale;
+	float2 gRectOffset;
+	uint2 gPrintfAt;
+	uint2 gRectOrigin;
+	int2 gRectSizeMinusOne;
+	int2 gTilesSizeMinusOne;
+	float gOrthoMode;
+	float gUnproject;
+	float gDenoisingRange;
+	float gPlaneDistSensitivity;
+	float gStabilizationStrength;
+	float gDebug;
+	float gSplitScreen;
+	float gViewZScale;
+	float gMinRectDimMulUnproject;
+	uint gFrameIndex;
+	uint gIsRectChanged;
+}
+
 [Bind = DefaultLayout::Instance2]
 struct SIGMA_ClassifyTilesResources
 {
+	SIGMASharedConstants sharedConstants;
 	Texture2D<float> gIn_ViewZ;
 	Texture2D<float> gIn_Penumbra;
 	RWTexture2D<float4> gOut_Tiles;
@@ -69,6 +111,7 @@ ComputePSO NRD_SIGMA_ClassifyTiles
 [Bind = DefaultLayout::Instance2]
 struct SIGMA_SmoothTilesResources
 {
+	SIGMASharedConstants sharedConstants;
 	Texture2D<float3> gIn_Tiles;
 	RWTexture2D<float2> gOut_Tiles;
 }
@@ -83,6 +126,7 @@ ComputePSO NRD_SIGMA_SmoothTiles
 [Bind = DefaultLayout::Instance2]
 struct SIGMA_CopyResources
 {
+	SIGMASharedConstants sharedConstants;
 	Texture2D<float2> gIn_Tiles;
 	Texture2D<float4> gIn_History;
 	Texture2D<uint> gIn_HistoryLength;
@@ -102,6 +146,7 @@ ComputePSO NRD_SIGMA_Copy
 [Bind = DefaultLayout::Instance2]
 struct SIGMA_BlurFirstPass1Resources
 {
+	SIGMASharedConstants sharedConstants;
 	Texture2D<float> gIn_ViewZ;
 	Texture2D<float4> gIn_Normal_Roughness;
 	Texture2D<float> gIn_Penumbra;
@@ -121,6 +166,7 @@ ComputePSO NRD_SIGMA_BlurFirstPass1
 [Bind = DefaultLayout::Instance2]
 struct SIGMA_BlurFirstPass0Resources
 {
+	SIGMASharedConstants sharedConstants;
 	Texture2D<float> gIn_ViewZ;
 	Texture2D<float4> gIn_Normal_Roughness;
 	Texture2D<float> gIn_Penumbra;
@@ -140,6 +186,7 @@ ComputePSO NRD_SIGMA_BlurFirstPass0
 [Bind = DefaultLayout::Instance2]
 struct SIGMA_TemporalStabilizationResources
 {
+	SIGMASharedConstants sharedConstants;
 	Texture2D<float> gIn_ViewZ;
 	Texture2D<float3> gIn_Mv;
 	Texture2D<float> gIn_Penumbra;
@@ -904,7 +951,7 @@ ComputePSO NRD_UnpackDebug
 
 # Real per-frame REBLUR_DIFFUSE execution (see [[project-nrd-integration]]).
 # No ComputePSO of its own -- like UpscalingDLSSRR, this is an opaque
-# multi-dispatch C++ call (nvidia::NRD::get().execute(), HAL.NRD.cpp) issuing
+# multi-dispatch C++ call (nvidia::NRD::get().execute_reblur(), HAL.NRD.cpp) issuing
 # NRD's own returned dispatch list against the 21 kernel PSOs already
 # declared above, not a single shader this engine compiles directly.
 # ensure_pools() is a real side effect (sizes NRD's pool textures), moved to
@@ -928,6 +975,42 @@ PassNode NRD_REBLUR_Execute
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXIndirectDenoised;
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXIndirectDenoisedPreview;
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionDenoised;
+}
+
+# Real per-frame SIGMA_SHADOW execution -- denoises ShadowRTX's raw
+# distanceToOccluder (voxel.sig's VoxelOutput::shadow_noise -> VSM_ShadowNoise,
+# the RTX-reference shadow source, see [[project-nrd-integration]]), same
+# "opaque multi-dispatch C++ call" shape as NRD_REBLUR_Execute above
+# (nvidia::NRD::get().execute_shadow(), HAL.NRD.cpp) issuing the SIGMA kernel
+# PSOs already declared above. A SEPARATE nrd::Instance from REBLUR's (see
+# HAL.NRD.ixx's own comment on why: independent gates, and NRD requires
+# CommonSettings::frameIndex to increment exactly once per real frame per
+# Instance, which two totally independent Instances make trivially true
+# without any cross-pass coordination). Gated exactly like NRD_REBLUR_Execute
+# plus the shadow_source selector: only has real work when ShadowRTX is
+# running (RTX+DLSSRR-capable) AND RTXReference is the selected shadow
+# source AND DLSS-RR itself isn't active (DLSS-RR's RTXCombine consumes
+# ShadowRTX's raw output directly, no NRD involved -- see ShadowRTX's own
+# PassNode comment). ensure_pools() is a real side effect, moved to
+# pre_setup() (NRD_SIGMA_Execute.cpp) so [SetupCondition] stays a pure
+# decision, same reasoning as NRD_REBLUR_Execute's own pre_setup().
+[Static]
+[PreSetup]
+[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available && VSMSelectors::shadow_source == ShadowSource::RTXReference]
+PassNode NRD_SIGMA_Execute
+{
+	# Same three common inputs NRD_REBLUR_Execute reads (produced by
+	# NRD_GBufferPack, which shares this pass's own base gate -- always
+	# already created whenever this PassNode can run) -- SIGMA's spatial
+	# blur/temporal-stabilization kernels need view-space depth, normal, and
+	# motion vectors the same way REBLUR's do; without them the denoiser has
+	# nothing to reject/reproject against and passes the raw signal through
+	# essentially unfiltered.
+	[Always = Read] Texture NRD_ViewZ;
+	[Always = Read] Texture NRD_NormalRoughness;
+	[Always = Read] Texture NRD_Mv;
+	[Always = Read] Texture VSM_ShadowNoise;
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8_UNORM] Texture VSM_ShadowDenoised;
 }
 
 # The FSR/DLSS-side equivalent of the indirect term RTXCombine computes for
@@ -968,6 +1051,47 @@ PassNode NRD_IndirectCombine
 	[Always = Read] Texture GBuffer_Speed;
 	[Always = None] Texture GBuffer_DepthMips;
 	[Always = Read] Texture RTXIndirectDenoised;
+
+	[Always = UnorderedAccess] Texture ResultTexture;
+}
+
+# Composites NRD's denoised RTX-reference shadow onto ResultTexture --
+# sibling of NRD_IndirectCombine, but OVERWRITES the shadow term (not += like
+# indirect GI) since it's redoing the same direct-lighting term VSM's own
+# passes would otherwise have written; exactly one of NRD_ShadowCombine/
+# VSM_ShadowResolve/VSM_Combine writes it each frame (see
+# VSMSelectors::shadow_source, [[project-nrd-integration]]).
+[Bind = DefaultLayout::Instance0]
+struct NRD_ShadowCombineParams
+{
+	GBuffer gbuffer;
+	Texture2D<float> shadow_denoised;
+
+	RWTexture2D<float4> target;
+}
+
+ComputePSO NRD_ShadowCombine
+{
+	root = DefaultLayout;
+	[EntryPoint = CS]
+	compute = nrd/nrd_shadow_combine;
+}
+
+[Static]
+[Compute]
+# Same gate as NRD_SIGMA_Execute (above) -- runs only when that pass actually
+# produced VSM_ShadowDenoised this frame.
+[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available && VSMSelectors::shadow_source == ShadowSource::RTXReference]
+PassNode NRD_ShadowCombine
+{
+	# Flat fields, not the (removed) GBuffer PassView -- see pssm.sig's own
+	# comment.
+	[Always = Read] Texture GBuffer_Albedo;
+	[Always = Read] Texture GBuffer_Normals;
+	[Always = Read] Texture GBuffer_Specular;
+	[Always = Read] Texture GBuffer_Speed;
+	[Always = None] Texture GBuffer_DepthMips;
+	[Always = Read] Texture VSM_ShadowDenoised;
 
 	[Always = UnorderedAccess] Texture ResultTexture;
 }

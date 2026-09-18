@@ -12,32 +12,26 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class ShadowRTX : public PassNodeBase
+class NRD_SIGMA_Execute : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
 
-		Handlers::Texture GBuffer_Albedo = ResourceID::GBuffer_Albedo;
+		Handlers::Texture NRD_ViewZ = ResourceID::NRD_ViewZ;
 
 
-		Handlers::Texture GBuffer_Normals = ResourceID::GBuffer_Normals;
+		Handlers::Texture NRD_NormalRoughness = ResourceID::NRD_NormalRoughness;
 
 
-		Handlers::Texture GBuffer_Specular = ResourceID::GBuffer_Specular;
-
-
-		Handlers::Texture GBuffer_Speed = ResourceID::GBuffer_Speed;
-
-
-		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
-
-
-		Handlers::Texture RTXShadowNoise = ResourceID::RTXShadowNoise;
+		Handlers::Texture NRD_Mv = ResourceID::NRD_Mv;
 
 
 		Handlers::Texture VSM_ShadowNoise = ResourceID::VSM_ShadowNoise;
+
+
+		Handlers::Texture VSM_ShadowDenoised = ResourceID::VSM_ShadowDenoised;
 
 
 		// Resources this pass always needs whenever it runs, generated from
@@ -56,11 +50,10 @@ public:
 		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.need(data.GBuffer_Albedo, FrameGraph::ResourceFlags::Read);
-			builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::Read);
-			builder.need(data.GBuffer_Specular, FrameGraph::ResourceFlags::Read);
-			builder.need(data.GBuffer_Speed, FrameGraph::ResourceFlags::Read);
-			builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::None);
+			builder.need(data.NRD_ViewZ, FrameGraph::ResourceFlags::Read);
+			builder.need(data.NRD_NormalRoughness, FrameGraph::ResourceFlags::Read);
+			builder.need(data.NRD_Mv, FrameGraph::ResourceFlags::Read);
+			builder.need(data.VSM_ShadowNoise, FrameGraph::ResourceFlags::Read);
 		}
 
 		// Resources this pass always creates with a fixed desc, generated from
@@ -78,8 +71,7 @@ public:
 		// runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.create(data.RTXShadowNoise, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.create(data.VSM_ShadowNoise, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.VSM_ShadowDenoised, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -88,24 +80,20 @@ public:
 		// the field fixes it.
 		struct Cache
 		{
-			FrameGraph::ChainIndex GBuffer_Albedo = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex GBuffer_Normals = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex GBuffer_Specular = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex GBuffer_Speed = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex RTXShadowNoise = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex NRD_ViewZ = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex NRD_NormalRoughness = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex NRD_Mv = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex VSM_ShadowNoise = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_ShadowDenoised = FrameGraph::ChainIndex::Unresolved;
 		};
 
 		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 		{
-			cache.GBuffer_Albedo = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo);
-			cache.GBuffer_Normals = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Normals, ResourceID::GBuffer_Normals);
-			cache.GBuffer_Specular = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Specular, ResourceID::GBuffer_Specular);
-			cache.GBuffer_Speed = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Speed, ResourceID::GBuffer_Speed);
-			cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
-			cache.RTXShadowNoise = FrameGraph::TaskBuilder::cache_slot(data.RTXShadowNoise, ResourceID::RTXShadowNoise);
+			cache.NRD_ViewZ = FrameGraph::TaskBuilder::cache_slot(data.NRD_ViewZ, ResourceID::NRD_ViewZ);
+			cache.NRD_NormalRoughness = FrameGraph::TaskBuilder::cache_slot(data.NRD_NormalRoughness, ResourceID::NRD_NormalRoughness);
+			cache.NRD_Mv = FrameGraph::TaskBuilder::cache_slot(data.NRD_Mv, ResourceID::NRD_Mv);
 			cache.VSM_ShadowNoise = FrameGraph::TaskBuilder::cache_slot(data.VSM_ShadowNoise, ResourceID::VSM_ShadowNoise);
+			cache.VSM_ShadowDenoised = FrameGraph::TaskBuilder::cache_slot(data.VSM_ShadowDenoised, ResourceID::VSM_ShadowDenoised);
 		}
 
 		// Replay counterpart of create_always/need_always. A field this pass
@@ -117,26 +105,22 @@ public:
 		// previous link's desc, which LoadGraph does once every pass has loaded.
 		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 		{
-			builder.load(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo, cache.GBuffer_Albedo);
-			builder.load(data.GBuffer_Normals, ResourceID::GBuffer_Normals, cache.GBuffer_Normals);
-			builder.load(data.GBuffer_Specular, ResourceID::GBuffer_Specular, cache.GBuffer_Specular);
-			builder.load(data.GBuffer_Speed, ResourceID::GBuffer_Speed, cache.GBuffer_Speed);
-			builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
-			builder.create_versioned(data.RTXShadowNoise, cache.RTXShadowNoise, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
-			builder.create_versioned(data.VSM_ShadowNoise, cache.VSM_ShadowNoise, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16_FLOAT, 1, 1 });
+			builder.load(data.NRD_ViewZ, ResourceID::NRD_ViewZ, cache.NRD_ViewZ);
+			builder.load(data.NRD_NormalRoughness, ResourceID::NRD_NormalRoughness, cache.NRD_NormalRoughness);
+			builder.load(data.NRD_Mv, ResourceID::NRD_Mv, cache.NRD_Mv);
+			builder.load(data.VSM_ShadowNoise, ResourceID::VSM_ShadowNoise, cache.VSM_ShadowNoise);
+			builder.create_versioned(data.VSM_ShadowDenoised, cache.VSM_ShadowDenoised, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8_UNORM, 1, 1 });
 		}
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::GBuffer_Albedo, false },
-			{ ResourceID::GBuffer_Normals, false },
-			{ ResourceID::GBuffer_Specular, false },
-			{ ResourceID::GBuffer_Speed, false },
-			{ ResourceID::GBuffer_DepthMips, false },
-			{ ResourceID::RTXShadowNoise, true },
-			{ ResourceID::VSM_ShadowNoise, true },
+			{ ResourceID::NRD_ViewZ, false },
+			{ ResourceID::NRD_NormalRoughness, false },
+			{ ResourceID::NRD_Mv, false },
+			{ ResourceID::VSM_ShadowNoise, false },
+			{ ResourceID::VSM_ShadowDenoised, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -147,9 +131,9 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"ShadowRTX"};
+	static constexpr LiteralWStr Name{L"NRD_SIGMA_Execute"};
 
-	static constexpr PassID ID = PassID::ShadowRTX;
+	static constexpr PassID ID = PassID::NRD_SIGMA_Execute;
 
 
 	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
@@ -157,7 +141,7 @@ public:
 
 	render_func_type render_func;
 
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
 };
 
 }

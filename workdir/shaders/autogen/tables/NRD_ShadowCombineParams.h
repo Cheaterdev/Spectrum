@@ -7,14 +7,13 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct VSMSelectors
+#include "GBuffer.h"
+struct NRD_ShadowCombineParams
 {
-	bool use_vsm_penumbra; // bool
-	bool use_vsm_contact_shadow; // bool
-	VSMDebugView vsm_debug_view; // VSMDebugView
-	ShadowSource shadow_source; // ShadowSource
-	bool GetUse_vsm_penumbra() { return use_vsm_penumbra; }
-	bool GetUse_vsm_contact_shadow() { return use_vsm_contact_shadow; }
-	VSMDebugView GetVsm_debug_view() { return vsm_debug_view; }
-	ShadowSource GetShadow_source() { return shadow_source; }
+	uint shadow_denoised; // Texture2D<float>
+	uint target; // RWTexture2D<float4>
+	GBuffer gbuffer; // GBuffer
+	GBuffer GetGbuffer() { return gbuffer; }
+	Texture2D<float> GetShadow_denoised() { return ResourceDescriptorHeap[shadow_denoised]; }
+	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
 };

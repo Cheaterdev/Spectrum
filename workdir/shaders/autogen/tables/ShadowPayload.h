@@ -11,5 +11,7 @@
 struct [raypayload] ShadowPayload
 {
 	bool hit : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+	float dist : read(closesthit,miss,caller) : write(closesthit,miss,caller);
 	bool GetHit() { return hit; }
+	float GetDist() { return dist; }
 };

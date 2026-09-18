@@ -11,6 +11,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
+import :Autogen.Tables.SIGMASharedConstants;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -20,9 +21,11 @@ export namespace Table
 		HLSL::Texture2D<float> gIn_ViewZ;
 		HLSL::Texture2D<float> gIn_Penumbra;
 		HLSL::RWTexture2D<float4> gOut_Tiles;
+		SIGMASharedConstants sharedConstants;
 		HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
 		HLSL::Texture2D<float>& GetGIn_Penumbra() { return gIn_Penumbra; }
 		HLSL::RWTexture2D<float4>& GetGOut_Tiles() { return gOut_Tiles; }
+		SIGMASharedConstants& GetSharedConstants() { return sharedConstants; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -30,17 +33,20 @@ export namespace Table
 			compiler.compile(gIn_ViewZ, "SIGMA_ClassifyTilesResources::gIn_ViewZ");
 			compiler.compile(gIn_Penumbra, "SIGMA_ClassifyTilesResources::gIn_Penumbra");
 			compiler.compile(gOut_Tiles, "SIGMA_ClassifyTilesResources::gOut_Tiles");
+			compiler.compile(sharedConstants, "SIGMA_ClassifyTilesResources::sharedConstants");
 		}
 		struct Compiled
 		{
 			uint gIn_ViewZ; // Texture2D<float>
 			uint gIn_Penumbra; // Texture2D<float>
 			uint gOut_Tiles; // RWTexture2D<float4>
+			SIGMASharedConstants::Compiled sharedConstants; // SIGMASharedConstants
 
 			
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(sharedConstants);
 			}
 
 
@@ -53,6 +59,7 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
+			ar& NVP(sharedConstants);
 		}
 
 	};

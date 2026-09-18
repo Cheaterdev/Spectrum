@@ -94,6 +94,31 @@ struct PassDefault<Passes::NRD_REBLUR_Execute>
 
 
 template<>
+struct PassDefault<Passes::NRD_SIGMA_Execute>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::NRD_SIGMA_Execute::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::NRD_SIGMA_Execute::Context& data, FrameGraph::FrameContext& context);
+
+	// [PreSetup]: a real side effect (not a pure enable/render decision, so
+	// [SetupCondition]/[RenderCondition] can't express it) that must run
+	// once per frame regardless of whether THIS pass ends up enabled --
+	// called by the OWNING PIPELINE's generated run_pre_setups(), after its
+	// add_passes() and before graph.setup() starts walking passes. Takes
+	// Graph&, not TaskBuilder&/Context&: there is no task, and no per-pass
+	// Context, at that point in the frame.
+	static void pre_setup(FrameGraph::Graph& graph);
+};
+
+
+template<>
 struct PassDefault<Passes::NRD_IndirectCombine>
 {
 	static constexpr bool enabled = true;
@@ -106,6 +131,22 @@ struct PassDefault<Passes::NRD_IndirectCombine>
 	// separate translation unit, not inlined here).
 	static FrameGraph::SetupResult setup(Passes::NRD_IndirectCombine::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::NRD_IndirectCombine::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::NRD_ShadowCombine>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::NRD_ShadowCombine::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::NRD_ShadowCombine::Context& data, FrameGraph::FrameContext& context);
 };
 
 

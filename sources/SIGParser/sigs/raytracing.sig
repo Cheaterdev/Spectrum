@@ -109,6 +109,13 @@ struct ShadowPayload
 	[read = {anyhit,closesthit,miss,caller}]
 	[write = {anyhit,closesthit,miss,caller}]
 	bool hit;
+
+	# Distance to the occluder hit (RayTCurrent() at closesthit); < 0 signals
+	# a miss. Used to pack a real SIGMA distanceToOccluder for NRD when the
+	# RTX shadow reference is selected (see [[project-nrd-integration]]).
+	[read = {closesthit,miss,caller}]
+	[write = {closesthit,miss,caller}]
+	float dist;
 }
 
 [nobind]

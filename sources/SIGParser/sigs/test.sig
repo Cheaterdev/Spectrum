@@ -95,9 +95,9 @@ Pipeline MainPipeline
 											[Async2]VSM_ScreenSpaceShadow;
 											[Async2]VSM_ShadowResolve;
 											[Async2]VSM_Combine;
-											# Debug-only overlay, after VSM_Combine so it paints on top of
-											# the already-shaded result -- see its own PassNode comment in
-											# vsm.sig.
+											# Debug-only overlay, after VSM_ShadowResolve/VSM_Combine so it
+											# paints on top of whichever one actually shaded the result -- see
+											# its own PassNode comment in vsm.sig.
 											[Async2]VSM_DebugClassifyOverlay;
 
 		[Async]NRD_REBLUR_Execute;
@@ -107,6 +107,12 @@ Pipeline MainPipeline
 		[Async]NRD_IndirectCombine;
 		[Async]ReflCombine;
 		[Async]RTXCombine;
+		# RTX-reference shadow (see vsm.sig's own VSMSelectors::shadow_source
+		# comment, [[project-nrd-integration]]) -- runs after VSM's own chain
+		# above so its overwrite of ResultTexture's shadow term is the last
+		# word whenever RTXReference is selected.
+		[Async]NRD_SIGMA_Execute;
+		[Async]NRD_ShadowCombine;
 
 	# sky + post
 		[Async]Sky;

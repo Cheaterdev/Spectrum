@@ -37,5 +37,10 @@ enum class VSMDebugView : uint
 	ContactShadow,
 	ShadowOnly
 };
+enum class ShadowSource : uint
+{
+	VSM,
+	RTXReference
+};
 
 #endif

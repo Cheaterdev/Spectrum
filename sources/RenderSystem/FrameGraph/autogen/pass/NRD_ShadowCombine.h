@@ -12,7 +12,7 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class ShadowRTX : public PassNodeBase
+class NRD_ShadowCombine : public PassNodeBase
 {
 public:
 	struct Context
@@ -34,10 +34,10 @@ public:
 		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
 
 
-		Handlers::Texture RTXShadowNoise = ResourceID::RTXShadowNoise;
+		Handlers::Texture VSM_ShadowDenoised = ResourceID::VSM_ShadowDenoised;
 
 
-		Handlers::Texture VSM_ShadowNoise = ResourceID::VSM_ShadowNoise;
+		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 
 		// Resources this pass always needs whenever it runs, generated from
@@ -61,25 +61,8 @@ public:
 			builder.need(data.GBuffer_Specular, FrameGraph::ResourceFlags::Read);
 			builder.need(data.GBuffer_Speed, FrameGraph::ResourceFlags::Read);
 			builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::None);
-		}
-
-		// Resources this pass always creates with a fixed desc, generated from
-		// each field's own [Size]/[Format] annotation (plus [Always] for the
-		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
-		// that needs its original chain link before recreating a new one). A
-		// field that ALSO carries [Optional] creates only under that
-		// condition -- need_always() (above) emits a complementary need() for
-		// the SAME field under the negated condition, using the same
-		// [Always] flags, e.g. a [Multiple] pass where instance 0 creates a
-		// shared resource and every other instance just needs it (see
-		// PSSM_Cascade, pssm.sig). Called by TypedPass::setup() after
-		// setup_func returns true - not a substitute for setup_func's own
-		// create()/recreate() calls for anything whose Desc depends on
-		// runtime state.
-		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
-		{
-			builder.create(data.RTXShadowNoise, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.create(data.VSM_ShadowNoise, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.need(data.VSM_ShadowDenoised, FrameGraph::ResourceFlags::Read);
+			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -93,8 +76,8 @@ public:
 			FrameGraph::ChainIndex GBuffer_Specular = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex GBuffer_Speed = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex RTXShadowNoise = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex VSM_ShadowNoise = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_ShadowDenoised = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
 		};
 
 		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
@@ -104,8 +87,8 @@ public:
 			cache.GBuffer_Specular = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Specular, ResourceID::GBuffer_Specular);
 			cache.GBuffer_Speed = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Speed, ResourceID::GBuffer_Speed);
 			cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
-			cache.RTXShadowNoise = FrameGraph::TaskBuilder::cache_slot(data.RTXShadowNoise, ResourceID::RTXShadowNoise);
-			cache.VSM_ShadowNoise = FrameGraph::TaskBuilder::cache_slot(data.VSM_ShadowNoise, ResourceID::VSM_ShadowNoise);
+			cache.VSM_ShadowDenoised = FrameGraph::TaskBuilder::cache_slot(data.VSM_ShadowDenoised, ResourceID::VSM_ShadowDenoised);
+			cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
 		}
 
 		// Replay counterpart of create_always/need_always. A field this pass
@@ -122,8 +105,8 @@ public:
 			builder.load(data.GBuffer_Specular, ResourceID::GBuffer_Specular, cache.GBuffer_Specular);
 			builder.load(data.GBuffer_Speed, ResourceID::GBuffer_Speed, cache.GBuffer_Speed);
 			builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
-			builder.create_versioned(data.RTXShadowNoise, cache.RTXShadowNoise, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
-			builder.create_versioned(data.VSM_ShadowNoise, cache.VSM_ShadowNoise, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16_FLOAT, 1, 1 });
+			builder.load(data.VSM_ShadowDenoised, ResourceID::VSM_ShadowDenoised, cache.VSM_ShadowDenoised);
+			builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
 		}
 
 		// Resources this pass touches, in declaration order, each paired with
@@ -135,8 +118,8 @@ public:
 			{ ResourceID::GBuffer_Specular, false },
 			{ ResourceID::GBuffer_Speed, false },
 			{ ResourceID::GBuffer_DepthMips, false },
-			{ ResourceID::RTXShadowNoise, true },
-			{ ResourceID::VSM_ShadowNoise, true },
+			{ ResourceID::VSM_ShadowDenoised, false },
+			{ ResourceID::ResultTexture, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -147,9 +130,9 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"ShadowRTX"};
+	static constexpr LiteralWStr Name{L"NRD_ShadowCombine"};
 
-	static constexpr PassID ID = PassID::ShadowRTX;
+	static constexpr PassID ID = PassID::NRD_ShadowCombine;
 
 
 	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;

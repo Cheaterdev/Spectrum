@@ -11,6 +11,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
+import :Autogen.Tables.SIGMASharedConstants;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -22,11 +23,13 @@ export namespace Table
 		HLSL::Texture2D<uint> gIn_HistoryLength;
 		HLSL::RWTexture2D<float4> gOut_History;
 		HLSL::RWTexture2D<uint> gOut_HistoryLength;
+		SIGMASharedConstants sharedConstants;
 		HLSL::Texture2D<float2>& GetGIn_Tiles() { return gIn_Tiles; }
 		HLSL::Texture2D<float4>& GetGIn_History() { return gIn_History; }
 		HLSL::Texture2D<uint>& GetGIn_HistoryLength() { return gIn_HistoryLength; }
 		HLSL::RWTexture2D<float4>& GetGOut_History() { return gOut_History; }
 		HLSL::RWTexture2D<uint>& GetGOut_HistoryLength() { return gOut_HistoryLength; }
+		SIGMASharedConstants& GetSharedConstants() { return sharedConstants; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -36,6 +39,7 @@ export namespace Table
 			compiler.compile(gIn_HistoryLength, "SIGMA_CopyResources::gIn_HistoryLength");
 			compiler.compile(gOut_History, "SIGMA_CopyResources::gOut_History");
 			compiler.compile(gOut_HistoryLength, "SIGMA_CopyResources::gOut_HistoryLength");
+			compiler.compile(sharedConstants, "SIGMA_CopyResources::sharedConstants");
 		}
 		struct Compiled
 		{
@@ -44,11 +48,13 @@ export namespace Table
 			uint gIn_HistoryLength; // Texture2D<uint>
 			uint gOut_History; // RWTexture2D<float4>
 			uint gOut_HistoryLength; // RWTexture2D<uint>
+			SIGMASharedConstants::Compiled sharedConstants; // SIGMASharedConstants
 
 			
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(sharedConstants);
 			}
 
 
@@ -61,6 +67,7 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
+			ar& NVP(sharedConstants);
 		}
 
 	};

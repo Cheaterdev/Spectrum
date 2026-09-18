@@ -35,7 +35,7 @@ namespace FrameGraph
 // .sig edit renumbers those enums, a plan from before the edit would not fail
 // to load, it would misapply -- wrong resource, wrong barriers. A plan whose
 // header does not carry this exact value must be rejected.
-constexpr unsigned long long generated_id_space_hash = 10528059140722396152ull;
+constexpr unsigned long long generated_id_space_hash = 9057334629957600673ull;
 
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
@@ -62,6 +62,7 @@ enum class ContextFieldID : unsigned int
 	VSMSelectors_use_vsm_penumbra,
 	VSMSelectors_use_vsm_contact_shadow,
 	VSMSelectors_vsm_debug_view,
+	VSMSelectors_shadow_source,
 	Count
 };
 
@@ -109,6 +110,7 @@ namespace ContextField
 	constexpr ContextFieldMask VSMSelectors_use_vsm_penumbra = context_field_bit(ContextFieldID::VSMSelectors_use_vsm_penumbra);
 	constexpr ContextFieldMask VSMSelectors_use_vsm_contact_shadow = context_field_bit(ContextFieldID::VSMSelectors_use_vsm_contact_shadow);
 	constexpr ContextFieldMask VSMSelectors_vsm_debug_view = context_field_bit(ContextFieldID::VSMSelectors_vsm_debug_view);
+	constexpr ContextFieldMask VSMSelectors_shadow_source = context_field_bit(ContextFieldID::VSMSelectors_shadow_source);
 }
 
 // Fields that ONLY ever feed a resource descriptor ([Size]/[Format]), never a
@@ -181,8 +183,22 @@ static inline const PassContextDeps pass_context_deps[] = {
 		| ContextField::UpscalerSelectors_upscaler_type,
 		  ContextField::None,
 		true },
+	{ PassID::NRD_SIGMA_Execute,
+		  ContextField::RenderDeviceCapabilities_rtx_supported
+		| ContextField::RenderDeviceCapabilities_dlssrr_available
+		| ContextField::UpscalerSelectors_upscaler_type
+		| ContextField::VSMSelectors_shadow_source,
+		  ContextField::None,
+		true },
 	{ PassID::NRD_IndirectCombine,
 		  ContextField::UpscalerSelectors_upscaler_type,
+		  ContextField::None,
+		true },
+	{ PassID::NRD_ShadowCombine,
+		  ContextField::RenderDeviceCapabilities_rtx_supported
+		| ContextField::RenderDeviceCapabilities_dlssrr_available
+		| ContextField::UpscalerSelectors_upscaler_type
+		| ContextField::VSMSelectors_shadow_source,
 		  ContextField::None,
 		true },
 	{ PassID::PSSM_Cascade,
@@ -294,7 +310,8 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		true },
 	{ PassID::ShadowRTX,
-		  ContextField::UpscalerSelectors_upscaler_type,
+		  ContextField::RenderDeviceCapabilities_rtx_supported
+		| ContextField::RenderDeviceCapabilities_dlssrr_available,
 		  ContextField::None,
 		true },
 	{ PassID::IndirectRTXHalf,
@@ -368,11 +385,13 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		true },
 	{ PassID::VSM_ShadowResolve,
-		  ContextField::VSMSelectors_use_vsm_penumbra,
+		  ContextField::VSMSelectors_use_vsm_penumbra
+		| ContextField::VSMSelectors_shadow_source,
 		  ContextField::VSMSelectors_use_vsm_contact_shadow,
 		true },
 	{ PassID::VSM_Combine,
-		  ContextField::VSMSelectors_use_vsm_penumbra,
+		  ContextField::VSMSelectors_use_vsm_penumbra
+		| ContextField::VSMSelectors_shadow_source,
 		  ContextField::VSMSelectors_vsm_debug_view,
 		true },
 	{ PassID::VSM_DebugClassifyOverlay,

@@ -22,11 +22,13 @@ export namespace Table
 		HLSL::RWTexture2D<float> frames;
 		HLSL::RWTexture2D<float4> DirAndPdf;
 		HLSL::RWTexture2D<float4> noiseRaw;
+		HLSL::RWTexture2D<float> shadow_noise;
 		HLSL::RWTexture2D<float4>& GetNoise() { return noise; }
 		HLSL::RWTexture2D<float>& GetFrames() { return frames; }
 		HLSL::RWTexture2D<float4>& GetDirAndPdf() { return DirAndPdf; }
 		HLSL::Texture2D<float2>& GetBlueNoise() { return blueNoise; }
 		HLSL::RWTexture2D<float4>& GetNoiseRaw() { return noiseRaw; }
+		HLSL::RWTexture2D<float>& GetShadow_noise() { return shadow_noise; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -36,6 +38,7 @@ export namespace Table
 			compiler.compile(frames, "VoxelOutput::frames");
 			compiler.compile(DirAndPdf, "VoxelOutput::DirAndPdf");
 			compiler.compile(noiseRaw, "VoxelOutput::noiseRaw");
+			compiler.compile(shadow_noise, "VoxelOutput::shadow_noise");
 		}
 		struct Compiled
 		{
@@ -44,6 +47,7 @@ export namespace Table
 			uint frames; // RWTexture2D<float>
 			uint DirAndPdf; // RWTexture2D<float4>
 			uint noiseRaw; // RWTexture2D<float4>
+			uint shadow_noise; // RWTexture2D<float>
 
 			
 			private:

@@ -62,7 +62,7 @@ void PassDefault<Passes::NRD_REBLUR_Execute>::render(
 	inputs.jitter      = float2(cam->camera_cb.current.jitter.x, cam->camera_cb.current.jitter.y);
 	inputs.jitter_prev = float2(cam->camera_cb.prev.jitter.x, cam->camera_cb.prev.jitter.y);
 
-	nvidia::NRD::get().execute(*context.get_list(), inputs);
+	nvidia::NRD::get().execute_reblur(*context.get_list(), inputs);
 
 	// Debug-view-only unpack (see setup()'s comment) -- decodes REBLUR's
 	// packed YCoCg+hitdist output into plain RGB for a true-color preview.

@@ -22,6 +22,7 @@
 #include "../autogen/tables/ColorShadowPayload.h"
 #include "../autogen/VoxelScreen.h"
 #include "../autogen/VoxelInfo.h"
+#include "../nrd/3rdparty/NRD.hlsli"
 
 
 #include "../autogen/VoxelOutput.h"
@@ -244,7 +245,7 @@ void ShadowRaygenShader()
 		{
 			float3 dir = GetRandomDir(tc, frame.GetSunDir(), 0.02, frame.GetTime() + float(i) / 10);
 
-			ShadowPayload payload_shadow = { false };
+			ShadowPayload payload_shadow = { false, 0 };
 
 			RayDesc ray;
 			ray.Origin = pos;
@@ -281,12 +282,13 @@ void ShadowRaygenShader()
 
 // Independent RTX-only reference shadow for ShadowRTX (see voxel.sig's
 // PassNode ShadowRTX). Deliberately NOT sharing code with ShadowRaygenShader
-// above -- that one stays untouched, still used by RTXShadowReference's
-// 16-sample ground truth. This one is genuinely raw: one ray per pixel
-// toward a jittered direction within the sun's angular disk (same
-// GetRandomDir technique, just 1 sample instead of 16, so the result is
-// actually noisy), no temporal history -- a real reference signal, cheap
-// enough to eventually feed a denoiser rather than being one itself.
+// above -- that one stays untouched, still used by RTXShadowReference's own
+// 16-sample ground truth. This one is still 16 taps per pixel (1 tap left
+// visible bright spikes even after SIGMA denoising -- too high a per-sample
+// variance for the spatial/temporal filter to absorb), but genuinely noisy
+// still: no temporal history of its own, unlike ShadowRaygenShader's
+// reprojected accumulation -- a real reference signal, cheap enough to feed
+// a real denoiser (NRD SIGMA_SHADOW) rather than being one itself.
 [shader("raygeneration")]
 void MyRaygenShaderShadowRTXOnly()
 {
@@ -301,27 +303,79 @@ void MyRaygenShaderShadowRTXOnly()
 
 	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
 
+	// Matches VSM's own tuned VSM_SUN_ANGULAR_RADIUS (vsm_shadow_resolve.hlsl)
+	// -- NOT the physically-accurate real sun size (~0.00465 rad). SIGMA's
+	// blur radius is directly proportional to this angle
+	// (SIGMA_FrontEnd_PackPenumbra), so a smaller value here produces a
+	// visibly under-blurred penumbra relative to what VSM's own PCSS path
+	// already found necessary for a soft-looking shadow.
+	static const float SHADOW_RTX_SUN_ANGULAR_RADIUS = 0.02;
+
 	float raw_z = voxel_screen.GetGbuffer().GetDepth()[itc];
 	if (raw_z == 0)
 	{
 		tex_noise[itc] = 0;
+		voxel_output.GetShadow_noise()[itc] = SIGMA_FrontEnd_PackPenumbra(NRD_FP16_MAX, SHADOW_RTX_SUN_ANGULAR_RADIUS);
 		return;
 	}
 	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
 
-	float3 dir = GetRandomDir(tc, frame.GetSunDir(), 0.02, frame.GetTime());
+	// 16 taps within the sun's angular disk, same technique/loop shape as
+	// ShadowRaygenShader's own ground-truth reference above -- one ray alone
+	// left visible bright spikes even after SIGMA denoising: a single
+	// stochastic hit/miss sample's variance is too high for SIGMA's spatial/
+	// temporal filter to fully absorb, especially at fast-moving penumbra
+	// edges. hit_rate feeds RTXShadowNoise (unchanged consumer: DLSS-RR's
+	// RTXCombine reads this raw, independent of SIGMA). min_hit_dist -- the
+	// closest occluder found across all 16 samples, not an average -- is
+	// what SIGMA actually wants: a representative distanceToOccluder, same
+	// "closer occluder wins" reasoning VSM's own blocker search uses, but
+	// far more stable sample-to-sample than a single ray's binary hit
+	// distance would be.
+	//
+	// Deliberately NOT seeded with frame.GetTime() (unlike ShadowRaygenShader
+	// above, whose own reference use of this same GetRandomDir/GetRandom
+	// technique is fine there -- it's a static debug view, not fed into a
+	// temporal denoiser): GetRandom's sin(time*220 + ...) turns even one
+	// frame's worth of elapsed time (~16ms) into a phase shift of several
+	// radians, so the whole 16-sample cluster re-randomizes essentially
+	// independently every real frame. SIGMA's temporal stabilization can
+	// only partially absorb an input that has zero frame-to-frame
+	// correlation to accumulate -- this was the actual cause of visible
+	// shimmer on static geometry, not the tap count. The golden-ratio step
+	// below is a low-discrepancy sequence (frac(i * golden_ratio_conjugate)
+	// is well-distributed and collision-free for any sample count, unlike a
+	// naive i/10 step which wraps and repeats past i=10) -- purely a
+	// function of sample index and pixel (via tc, inside GetRandom's own
+	// hash), so the same pixel traces the same 16 directions every frame:
+	// stable output for SIGMA to actually accumulate, no residual temporal
+	// noise left for it to fight.
+	float hit_rate = 0;
+	float min_hit_dist = NRD_FP16_MAX;
+	int samples = 16;
+	for (int i = 0; i < samples; i++)
+	{
+		float3 dir = GetRandomDir(tc, frame.GetSunDir(), 0.02, float(i) * 0.6180339887);
 
-	ShadowPayload payload_shadow = { false };
+		ShadowPayload payload_shadow = { false, 0 };
 
-	RayDesc ray;
-	ray.Origin = pos;
-	ray.Direction = dir;
-	ray.TMin = 0.1;
-	ray.TMax = 10000.0;
-	ShadowPass(raytracing.GetScene(), ray, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, payload_shadow);
+		RayDesc ray;
+		ray.Origin = pos;
+		ray.Direction = dir;
+		ray.TMin = 0.1;
+		ray.TMax = 10000.0;
+		ShadowPass(raytracing.GetScene(), ray, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, payload_shadow);
 
-	float shadow = payload_shadow.hit ? 0.0 : 1.0;
+		if (payload_shadow.hit)
+		{
+			hit_rate += 1.0f;
+			min_hit_dist = min(min_hit_dist, payload_shadow.dist);
+		}
+	}
+	float shadow = 1.0 - hit_rate / samples;
 	tex_noise[itc] = float4(shadow.xxx, 1);
+
+	voxel_output.GetShadow_noise()[itc] = SIGMA_FrontEnd_PackPenumbra(min_hit_dist, SHADOW_RTX_SUN_ANGULAR_RADIUS);
 }
 
 
@@ -365,7 +419,7 @@ void ColorPass()
 
 
 
-	//ShadowPayload payload_shadow = { false };
+	//ShadowPayload payload_shadow = { false, 0 };
 
 	//TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 0, 0, 0, ray, payload_shadow);
 
@@ -720,6 +774,7 @@ void ShadowClosestHitShader([raypayload] inout
 ShadowPayload payload, in MyAttributes attr)
 {
 	payload.hit = true;
+	payload.dist = RayTCurrent();
 }
 
 
@@ -728,6 +783,7 @@ void ShadowMissShader([raypayload] inout
 ShadowPayload payload)
 {
 	payload.hit = false;
+	payload.dist = -1;
 }
 
 
