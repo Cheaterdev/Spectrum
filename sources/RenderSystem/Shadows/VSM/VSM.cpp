@@ -1487,6 +1487,13 @@ VSM::VSM() : VariableContext(L"VSM")
 			// its own full PBR combine and writes here, instead of a bare
 			// shadow scalar VSM_Combine used to read separately.
 			lighting.GetResult()       = data.ResultTexture->rwTexture2D;
+			// Diagnostic-only (see [[project-nrd-integration]] and
+			// vsm_shadow_resolve.hlsl's own top comment) -- each dispatch
+			// ADDITIONALLY packs its raw distanceToOccluder here for
+			// NRD_SIGMA_Execute to denoise (when ShadowSource::VSM is
+			// selected), alongside (not instead of) the real blur/combine
+			// writing `result` above.
+			lighting.GetShadow_noise() = data.VSM_PCSS_ShadowNoise->rwTexture2D;
 			compute.set(lighting);
 		}
 

@@ -12,7 +12,9 @@ using namespace FrameGraph;
 using namespace HAL;
 
 // Real per-frame SIGMA_SHADOW execution (see [[project-nrd-integration]]) --
-// denoises ShadowRTX's raw RTX-reference shadow, same shape as
+// denoises whichever raw penumbra signal matches the selected shadow source
+// (ShadowRTX's, or VSM_ShadowResolve's own -- diagnostic-only for the VSM
+// case, see nrd_sig_test.sig's own PassNode comment), same shape as
 // NRD_REBLUR_Execute.cpp but against nvidia::NRD's separate sigma_instance
 // (HAL.NRD.ixx's own comment on why REBLUR and SIGMA are two independent
 // nrd::Instance objects, not one shared one).
@@ -24,10 +26,14 @@ void PassDefault<Passes::NRD_SIGMA_Execute>::pre_setup(FrameGraph::Graph& graph)
 	// real side effect [SetupCondition] can't express, so it runs here, once
 	// per frame before graph.setup(), guarded by the identical condition
 	// repeated, same reasoning as NRD_REBLUR_Execute's own pre_setup().
+	auto shadow_source = graph.get_context<Table::VSMSelectors>().shadow_source;
+	bool wants_sigma = shadow_source == ShadowSource::RTXReference
+		|| (shadow_source == ShadowSource::VSM && graph.get_context<Table::VSMSelectors>().use_vsm_penumbra);
+
 	if (graph.get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR ||
 	    !graph.get_context<Table::RenderDeviceCapabilities>().rtx_supported ||
 	    !graph.get_context<Table::RenderDeviceCapabilities>().dlssrr_available ||
-	    graph.get_context<Table::VSMSelectors>().shadow_source != ShadowSource::RTXReference)
+	    !wants_sigma)
 		return;
 
 	auto& frame = graph.get_context<ViewportInfo>();
@@ -44,7 +50,11 @@ void PassDefault<Passes::NRD_SIGMA_Execute>::render(
 	inputs.view_z            = *data.NRD_ViewZ;
 	inputs.normal_roughness  = *data.NRD_NormalRoughness;
 	inputs.mv                = *data.NRD_Mv;
-	inputs.penumbra_noisy    = *data.VSM_ShadowNoise;
+	// Exactly one of these is linked this frame (see nrd_sig_test.sig's own
+	// [Optional] guards on both fields, keyed off the same shadow_source).
+	inputs.penumbra_noisy    = context.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::VSM
+		? *data.VSM_PCSS_ShadowNoise
+		: *data.VSM_ShadowNoise;
 	inputs.shadow_denoised   = *data.VSM_ShadowDenoised;
 	inputs.sun_direction     = context.graph->get_context<SkyInfo>().sunDir;
 

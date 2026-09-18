@@ -26,6 +26,7 @@ export namespace Table
 		HLSL::Texture2D<float> rtx_shadow_mask;
 		HLSL::Texture2D<float> contact_shadow;
 		HLSL::RWTexture2D<float4> result;
+		HLSL::RWTexture2D<float> shadow_noise;
 		GBuffer gbuffer;
 		HLSL::Texture2DArray<float>& GetVsm_atlas() { return vsm_atlas; }
 		HLSL::Texture2DArray<uint>& GetPage_table() { return page_table; }
@@ -34,6 +35,7 @@ export namespace Table
 		HLSL::Texture2D<float2>& GetBlue_noise() { return blue_noise; }
 		HLSL::Texture2D<float>& GetRtx_shadow_mask() { return rtx_shadow_mask; }
 		HLSL::Texture2D<float>& GetContact_shadow() { return contact_shadow; }
+		HLSL::RWTexture2D<float>& GetShadow_noise() { return shadow_noise; }
 		GBuffer& GetGbuffer() { return gbuffer; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
@@ -46,6 +48,7 @@ export namespace Table
 			compiler.compile(rtx_shadow_mask, "VSMLighting::rtx_shadow_mask");
 			compiler.compile(contact_shadow, "VSMLighting::contact_shadow");
 			compiler.compile(result, "VSMLighting::result");
+			compiler.compile(shadow_noise, "VSMLighting::shadow_noise");
 			compiler.compile(gbuffer, "VSMLighting::gbuffer");
 		}
 		struct Compiled
@@ -57,6 +60,7 @@ export namespace Table
 			uint rtx_shadow_mask; // Texture2D<float>
 			uint contact_shadow; // Texture2D<float>
 			uint result; // RWTexture2D<float4>
+			uint shadow_noise; // RWTexture2D<float>
 			GBuffer::Compiled gbuffer; // GBuffer
 
 			

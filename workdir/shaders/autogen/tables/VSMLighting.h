@@ -18,6 +18,7 @@ struct VSMLighting
 	uint rtx_shadow_mask; // Texture2D<float>
 	uint contact_shadow; // Texture2D<float>
 	uint result; // RWTexture2D<float4>
+	uint shadow_noise; // RWTexture2D<float>
 	GBuffer gbuffer; // GBuffer
 	GBuffer GetGbuffer() { return gbuffer; }
 	Texture2DArray<float> GetVsm_atlas() { return ResourceDescriptorHeap[vsm_atlas]; }
@@ -27,4 +28,5 @@ struct VSMLighting
 	Texture2D<float2> GetBlue_noise() { return ResourceDescriptorHeap[blue_noise]; }
 	Texture2D<float> GetRtx_shadow_mask() { return ResourceDescriptorHeap[rtx_shadow_mask]; }
 	Texture2D<float> GetContact_shadow() { return ResourceDescriptorHeap[contact_shadow]; }
+	RWTexture2D<float> GetShadow_noise() { return ResourceDescriptorHeap[shadow_noise]; }
 };

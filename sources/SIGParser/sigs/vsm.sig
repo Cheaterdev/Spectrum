@@ -354,6 +354,15 @@ struct VSMLighting
 	# VSM_ScreenSpaceShadow's contact-shadow patch -- see VSM_ShadowResolve's
 	# own PassNode comment. Only bound/read by the shadow-blur PSO.
 	Texture2D<float> contact_shadow;
+	# Diagnostic-only (see [[project-nrd-integration]]): packs the same raw
+	# distanceToOccluder each of CS_FULL_LIT/CS_FULL_SHADOW/CS_SHADOW_BLUR
+	# already resolves into VSM_PCSS_ShadowNoise, purely so NRD_SIGMA_Execute
+	# can denoise VSM's own signal for comparison when ShadowSource::VSM is
+	# selected. Does NOT touch `result` -- the real PCSS blur/combine above
+	# is completely unaffected; nothing reads the denoised output back into
+	# ResultTexture for this source (see NRD_ShadowCombine's own PassNode
+	# comment, gated to ShadowSource::RTXReference only).
+	RWTexture2D<float> shadow_noise;
 }
 
 # Phase 5.18 Part A follow-up (take 4): groupshared tile classification,
@@ -1146,6 +1155,13 @@ PassNode VSM_ShadowResolve
 	[Always = Read] [Optional = VSMSelectors::use_vsm_contact_shadow && exists(VSM_ContactShadow)]
 	Texture VSM_ContactShadow;
 	[Always = UnorderedAccess] Texture ResultTexture;
+	# Diagnostic-only (see VSMLighting's own shadow_noise comment,
+	# [[project-nrd-integration]]) -- separate resource from ShadowRTX's own
+	# VSM_ShadowNoise (voxel.sig) so the two producers, which can both be
+	# active the same frame (ShadowRTX runs unconditionally on RTX-capable
+	# hardware regardless of shadow_source), never write the same resource.
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16_FLOAT]
+	Texture VSM_PCSS_ShadowNoise;
 }
 
 # Only runs when use_vsm_penumbra is OFF now (see m_combine_setup's own

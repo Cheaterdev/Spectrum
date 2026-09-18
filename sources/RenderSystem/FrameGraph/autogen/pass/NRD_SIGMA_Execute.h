@@ -31,6 +31,9 @@ public:
 		Handlers::Texture VSM_ShadowNoise = ResourceID::VSM_ShadowNoise;
 
 
+		Handlers::Texture VSM_PCSS_ShadowNoise = ResourceID::VSM_PCSS_ShadowNoise;
+
+
 		Handlers::Texture VSM_ShadowDenoised = ResourceID::VSM_ShadowDenoised;
 
 
@@ -53,7 +56,10 @@ public:
 			builder.need(data.NRD_ViewZ, FrameGraph::ResourceFlags::Read);
 			builder.need(data.NRD_NormalRoughness, FrameGraph::ResourceFlags::Read);
 			builder.need(data.NRD_Mv, FrameGraph::ResourceFlags::Read);
-			builder.need(data.VSM_ShadowNoise, FrameGraph::ResourceFlags::Read);
+			if (builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::RTXReference && builder.exists(data.VSM_ShadowNoise))
+				builder.need(data.VSM_ShadowNoise, FrameGraph::ResourceFlags::Read);
+			if (builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::VSM && builder.exists(data.VSM_PCSS_ShadowNoise))
+				builder.need(data.VSM_PCSS_ShadowNoise, FrameGraph::ResourceFlags::Read);
 		}
 
 		// Resources this pass always creates with a fixed desc, generated from
@@ -84,6 +90,7 @@ public:
 			FrameGraph::ChainIndex NRD_NormalRoughness = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex NRD_Mv = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex VSM_ShadowNoise = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_PCSS_ShadowNoise = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex VSM_ShadowDenoised = FrameGraph::ChainIndex::Unresolved;
 		};
 
@@ -93,6 +100,7 @@ public:
 			cache.NRD_NormalRoughness = FrameGraph::TaskBuilder::cache_slot(data.NRD_NormalRoughness, ResourceID::NRD_NormalRoughness);
 			cache.NRD_Mv = FrameGraph::TaskBuilder::cache_slot(data.NRD_Mv, ResourceID::NRD_Mv);
 			cache.VSM_ShadowNoise = FrameGraph::TaskBuilder::cache_slot(data.VSM_ShadowNoise, ResourceID::VSM_ShadowNoise);
+			cache.VSM_PCSS_ShadowNoise = FrameGraph::TaskBuilder::cache_slot(data.VSM_PCSS_ShadowNoise, ResourceID::VSM_PCSS_ShadowNoise);
 			cache.VSM_ShadowDenoised = FrameGraph::TaskBuilder::cache_slot(data.VSM_ShadowDenoised, ResourceID::VSM_ShadowDenoised);
 		}
 
@@ -109,6 +117,7 @@ public:
 			builder.load(data.NRD_NormalRoughness, ResourceID::NRD_NormalRoughness, cache.NRD_NormalRoughness);
 			builder.load(data.NRD_Mv, ResourceID::NRD_Mv, cache.NRD_Mv);
 			builder.load(data.VSM_ShadowNoise, ResourceID::VSM_ShadowNoise, cache.VSM_ShadowNoise);
+			builder.load(data.VSM_PCSS_ShadowNoise, ResourceID::VSM_PCSS_ShadowNoise, cache.VSM_PCSS_ShadowNoise);
 			builder.create_versioned(data.VSM_ShadowDenoised, cache.VSM_ShadowDenoised, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8_UNORM, 1, 1 });
 		}
 
@@ -120,6 +129,7 @@ public:
 			{ ResourceID::NRD_NormalRoughness, false },
 			{ ResourceID::NRD_Mv, false },
 			{ ResourceID::VSM_ShadowNoise, false },
+			{ ResourceID::VSM_PCSS_ShadowNoise, false },
 			{ ResourceID::VSM_ShadowDenoised, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

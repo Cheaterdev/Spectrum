@@ -12,8 +12,20 @@
 // Also VSM_RTX_VERIFY-only: RaytraceInstanceInfo/MaterialCommandData for the
 // inline candidate-opacity check (see the VSM_RTX_VERIFY block below).
 #include "../../autogen/SceneData.h"
+// NRD_FP16_MAX, SIGMA_FrontEnd_PackPenumbra -- diagnostic-only (see
+// [[project-nrd-integration]] and VSMLighting's own shadow_noise comment):
+// pure math utilities from NRD's own vendored header, safe to include
+// directly outside the per-kernel shim/binding-macro pattern the
+// sig_sigma_*.hlsl files use.
+#include "../../nrd/3rdparty/NRD.hlsli"
 
 static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
+
+// Real value the shadow uses (vsm_pcf_shadow below); moved up here (from just
+// above vsm_pcf_shadow, where it used to live) so CS_FULL_LIT/CS_FULL_SHADOW
+// can also use it for their own diagnostic-only shadow_noise packing --
+// same value, no change to the real blur.
+static const float VSM_SUN_ANGULAR_RADIUS = 0.02; // ~17 deg -- hardcoded, tune to taste.
 
 // Shared level/slot/tap helpers (get_vsm_level, get_vsm_slot, vsm_tap,
 // vsm_rotate, VSM_POISSON_DISK) -- NOT VSM_impl_search.hlsl (this file never
@@ -85,12 +97,17 @@ void CS_FULL_LIT(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupThrea
 	if (raw_z == 0)
 	{
 		GetVSMLighting().GetResult()[pixel] = 0;
+		// Diagnostic-only (see this file's own top comment) -- NRD_FP16_MAX
+		// ("fully lit") is a safe sentinel for pixels nothing real reads.
+		GetVSMLighting().GetShadow_noise()[pixel] = NRD_FP16_MAX;
 		return;
 	}
 
 	float4 packed_0 = gbuffer.GetAlbedo().SampleLevel(pointClampSampler, tc, 0);
 	float3 normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
 	GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(packed_0.rgb, packed_0.w, normal, 1.0);
+	// Diagnostic-only: confidently lit == no occluder.
+	GetVSMLighting().GetShadow_noise()[pixel] = NRD_FP16_MAX;
 }
 
 // full-shadow: same tile-to-pixel reconstruction as full-lit, opposite
@@ -110,9 +127,11 @@ void CS_FULL_SHADOW(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	float2 tc = (float2(pixel) + 0.5) / float2(dims);
 	float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, tc, 0);
 	GetVSMLighting().GetResult()[pixel] = raw_z == 0 ? float4(0, 0, 0, 0) : float4(0, 0, 0, 1);
+	// Diagnostic-only (see this file's own top comment) -- sky still gets
+	// the "fully lit" sentinel (it isn't genuinely shadowed), real
+	// confidently-dark pixels get an occluder at distance 0.
+	GetVSMLighting().GetShadow_noise()[pixel] = raw_z == 0 ? NRD_FP16_MAX : 0.0;
 }
-
-static const float VSM_SUN_ANGULAR_RADIUS = 0.02; // ~17 deg -- hardcoded, tune to taste.
 
 // Confidence-weighted PCF blur (see the old inline version's comments in git
 // history for the full weighting rationale) -- moved here verbatim from the
@@ -232,6 +251,8 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 		// because SOME other pixel in it was ambiguous, not because every
 		// pixel has geometry).
 		GetVSMLighting().GetResult()[pixel] = 0;
+		// Diagnostic-only (see this file's own top comment).
+		lighting.GetShadow_noise()[pixel] = NRD_FP16_MAX;
 		return;
 	}
 
@@ -275,6 +296,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	if (level < 0)
 	{
 		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);
+		lighting.GetShadow_noise()[pixel] = NRD_FP16_MAX;
 		return;
 	}
 
@@ -283,6 +305,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	if (slot == VSM_INVALID_SLOT)
 	{
 		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);
+		lighting.GetShadow_noise()[pixel] = NRD_FP16_MAX;
 		return;
 	}
 	level = resolved_level;
@@ -294,6 +317,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	if (pos_l.z < 0 || pos_l.z > 1 || any(light_tc < 0) || any(light_tc > 1))
 	{
 		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);
+		lighting.GetShadow_noise()[pixel] = NRD_FP16_MAX;
 		return;
 	}
 
@@ -322,6 +346,11 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	float world_delta_or_sentinel = asfloat(blocker_packed.x);
 
 	float shadow;
+	// Diagnostic-only, parallel to `shadow` (see this file's own top
+	// comment) -- the raw distanceToOccluder NRD_SIGMA_Execute denoises,
+	// packed and written to VSM_PCSS_ShadowNoise below regardless of which
+	// branch `shadow` itself took.
+	float distance_to_occluder;
 	// [branch]: the final else below is the expensive path (an RTX trace
 	// plus up to two 16-tap vsm_pcf_shadow calls) -- the whole point of the
 	// sentinel buckets above it is to skip that work entirely for
@@ -331,15 +360,30 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	// silently defeat the sentinel shortcut.
 	[branch]
 	if (world_delta_or_sentinel <= -4.5 && world_delta_or_sentinel > -5.5)
+	{
 		shadow = 0.0; // confident_dark via a coarser level.
+		distance_to_occluder = 0.0;
+	}
 	else if (world_delta_or_sentinel <= -3.5 && world_delta_or_sentinel > -4.5)
+	{
 		shadow = 1.0; // confident_lit via a coarser level.
+		distance_to_occluder = NRD_FP16_MAX;
+	}
 	else if (world_delta_or_sentinel <= -2.5 && world_delta_or_sentinel > -3.5)
+	{
 		shadow = 1.0; // confident_lit sentinel.
+		distance_to_occluder = NRD_FP16_MAX;
+	}
 	else if (world_delta_or_sentinel <= -1.5)
+	{
 		shadow = 0.0; // confident_dark sentinel.
+		distance_to_occluder = 0.0;
+	}
 	else if (world_delta_or_sentinel < 0)
+	{
 		shadow = 1.0; // no blocker found.
+		distance_to_occluder = NRD_FP16_MAX;
+	}
 	else
 	{
 		float  world_delta = world_delta_or_sentinel;
@@ -465,14 +509,31 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 			float shadow_vsm = vsm_pcf_shadow(c, lighting, level, pos_ls, pos_l.z, texel_world_size, depth_range, noise_angle, world_delta);
 			float shadow_rtx = vsm_pcf_shadow(c, lighting, level, pos_ls, pos_l.z, texel_world_size, depth_range, noise_angle, rtx_world_delta);
 			shadow = min(shadow_vsm, shadow_rtx);
+			// Diagnostic-only: SIGMA's own IsLit() (SIGMA_Common.hlsli) treats
+			// ANY non-NRD_FP16_MAX distance as "occluded" -- it has no notion
+			// of a partial/blurred hit. Reporting the raw found-blocker
+			// distance unconditionally (as this used to) meant every pixel
+			// that reached this branch read as "shadowed" to SIGMA even when
+			// vsm_pcf_shadow's own weighted blur decided it was mostly lit,
+			// which is nearly every penumbra/edge pixel in a scene --
+			// systematically biasing SIGMA's denoised result toward black.
+			// Threshold on the real blurred verdict instead, matching what a
+			// single Monte-Carlo shadow ray (SIGMA's actual design target)
+			// would have reported at this pixel.
+			distance_to_occluder = shadow >= 0.5 ? NRD_FP16_MAX : min(world_delta, rtx_world_delta);
 		}
 		else
 		{
 			float chosen_delta = rtx_hit ? rtx_world_delta : world_delta;
 			shadow = vsm_pcf_shadow(c, lighting, level, pos_ls, pos_l.z, texel_world_size, depth_range, noise_angle, chosen_delta);
+			// Diagnostic-only -- see the dual-blur branch's own comment above.
+			distance_to_occluder = shadow >= 0.5 ? NRD_FP16_MAX : chosen_delta;
 		}
 #else
 		shadow = vsm_pcf_shadow(c, lighting, level, pos_ls, pos_l.z, texel_world_size, depth_range, noise_angle, world_delta);
+		// Diagnostic-only -- see the dual-blur branch's own comment above
+		// (VSM_RTX_VERIFY block).
+		distance_to_occluder = shadow >= 0.5 ? NRD_FP16_MAX : world_delta;
 #endif
 	}
 
@@ -490,4 +551,9 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 		shadow = min(shadow, lighting.GetContact_shadow()[pixel]);
 
 	GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, shadow);
+
+	// Diagnostic-only (see this file's own top comment) -- packed and
+	// written regardless of the contact-shadow blend above, which only
+	// applies to the real, already-blurred `shadow` value.
+	lighting.GetShadow_noise()[pixel] = SIGMA_FrontEnd_PackPenumbra(distance_to_occluder, VSM_SUN_ANGULAR_RADIUS);
 }

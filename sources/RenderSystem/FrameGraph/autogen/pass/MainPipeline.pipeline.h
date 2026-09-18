@@ -214,6 +214,7 @@ public:
 		L"VSM_BlurTiles",
 		L"VSM_AmbiguousMask",
 		L"VSM_ContactShadow",
+		L"VSM_PCSS_ShadowNoise",
 		L"RTXIndirectDenoised",
 		L"RTXIndirectDenoisedPreview",
 		L"RTXReflectionDenoised",
@@ -952,6 +953,14 @@ public:
 		{ true, { VSM_ContactShadow_c0_pass_refs + 0, 1 } },
 		{ false, { VSM_ContactShadow_c0_pass_refs + 1, 2 } },
 	};
+	static inline const FrameGraph::PassRef VSM_PCSS_ShadowNoise_c0_pass_refs[] = {
+		{ PassID::VSM_ShadowResolve, 0 },
+		{ PassID::NRD_SIGMA_Execute, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState VSM_PCSS_ShadowNoise_c0_states[] = {
+		{ true, { VSM_PCSS_ShadowNoise_c0_pass_refs + 0, 1 } },
+		{ false, { VSM_PCSS_ShadowNoise_c0_pass_refs + 1, 1 } },
+	};
 	static inline const FrameGraph::PassRef RTXIndirectDenoised_c0_pass_refs[] = {
 		{ PassID::NRD_REBLUR_Execute, 0 },
 		{ PassID::NRD_IndirectCombine, 0 },
@@ -1131,6 +1140,7 @@ public:
 		{ ResourceID::VSM_BlurTiles, 0, VSM_BlurTiles_c0_states },
 		{ ResourceID::VSM_AmbiguousMask, 0, VSM_AmbiguousMask_c0_states },
 		{ ResourceID::VSM_ContactShadow, 0, VSM_ContactShadow_c0_states },
+		{ ResourceID::VSM_PCSS_ShadowNoise, 0, VSM_PCSS_ShadowNoise_c0_states },
 		{ ResourceID::RTXIndirectDenoised, 0, RTXIndirectDenoised_c0_states },
 		{ ResourceID::RTXIndirectDenoisedPreview, 0, RTXIndirectDenoisedPreview_c0_states },
 		{ ResourceID::RTXReflectionDenoised, 0, RTXReflectionDenoised_c0_states },
@@ -1309,6 +1319,7 @@ public:
 	static inline const FrameGraph::PassRef NRD_SIGMA_Execute_0_prev[] = {
 		{ PassID::NRD_GBufferPack, 0 },
 		{ PassID::ShadowRTX, 0 },
+		{ PassID::VSM_ShadowResolve, 0 },
 	};
 	static inline const FrameGraph::PassRef NRD_ShadowCombine_0_prev[] = {
 		{ PassID::NRD_IndirectCombine, 0 },

@@ -977,26 +977,30 @@ PassNode NRD_REBLUR_Execute
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionDenoised;
 }
 
-# Real per-frame SIGMA_SHADOW execution -- denoises ShadowRTX's raw
-# distanceToOccluder (voxel.sig's VoxelOutput::shadow_noise -> VSM_ShadowNoise,
-# the RTX-reference shadow source, see [[project-nrd-integration]]), same
-# "opaque multi-dispatch C++ call" shape as NRD_REBLUR_Execute above
+# Real per-frame SIGMA_SHADOW execution -- denoises whichever raw penumbra
+# signal matches the selected shadow source (see [[project-nrd-integration]]):
+# ShadowRTX's raw distanceToOccluder (voxel.sig's VoxelOutput::shadow_noise ->
+# VSM_ShadowNoise) when RTXReference is selected, or VSM_ShadowResolve's own
+# raw blocker-search distance (VSM_PCSS_ShadowNoise, vsm.sig) when VSM is
+# selected -- the latter is diagnostic-only, feeding NRD_ShadowCombine
+# nothing (that pass stays gated to RTXReference only, see its own PassNode
+# comment), purely so VSM's own signal can be inspected/compared denoised.
+# Same "opaque multi-dispatch C++ call" shape as NRD_REBLUR_Execute above
 # (nvidia::NRD::get().execute_shadow(), HAL.NRD.cpp) issuing the SIGMA kernel
 # PSOs already declared above. A SEPARATE nrd::Instance from REBLUR's (see
 # HAL.NRD.ixx's own comment on why: independent gates, and NRD requires
 # CommonSettings::frameIndex to increment exactly once per real frame per
 # Instance, which two totally independent Instances make trivially true
-# without any cross-pass coordination). Gated exactly like NRD_REBLUR_Execute
-# plus the shadow_source selector: only has real work when ShadowRTX is
-# running (RTX+DLSSRR-capable) AND RTXReference is the selected shadow
-# source AND DLSS-RR itself isn't active (DLSS-RR's RTXCombine consumes
-# ShadowRTX's raw output directly, no NRD involved -- see ShadowRTX's own
-# PassNode comment). ensure_pools() is a real side effect, moved to
-# pre_setup() (NRD_SIGMA_Execute.cpp) so [SetupCondition] stays a pure
-# decision, same reasoning as NRD_REBLUR_Execute's own pre_setup().
+# without any cross-pass coordination). Both branches still require
+# RTX+DLSSRR-capable/non-DLSSRR (same as NRD_REBLUR_Execute) regardless of
+# which raw signal is selected -- NRD_ViewZ/NRD_NormalRoughness/NRD_Mv below
+# only exist when NRD_GBufferPack ran, and that pass shares this same base
+# gate. ensure_pools() is a real side effect, moved to pre_setup()
+# (NRD_SIGMA_Execute.cpp) so [SetupCondition] stays a pure decision, same
+# reasoning as NRD_REBLUR_Execute's own pre_setup().
 [Static]
 [PreSetup]
-[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available && VSMSelectors::shadow_source == ShadowSource::RTXReference]
+[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available && (VSMSelectors::shadow_source == ShadowSource::RTXReference || (VSMSelectors::shadow_source == ShadowSource::VSM && VSMSelectors::use_vsm_penumbra))]
 PassNode NRD_SIGMA_Execute
 {
 	# Same three common inputs NRD_REBLUR_Execute reads (produced by
@@ -1009,7 +1013,17 @@ PassNode NRD_SIGMA_Execute
 	[Always = Read] Texture NRD_ViewZ;
 	[Always = Read] Texture NRD_NormalRoughness;
 	[Always = Read] Texture NRD_Mv;
-	[Always = Read] Texture VSM_ShadowNoise;
+	# Exactly one of these two exists/is linked each frame, per
+	# VSMSelectors::shadow_source -- see this PassNode's own comment above.
+	# exists() guards them (VSM_DepthAnalysis's/UI_PreDraw's own comments,
+	# vsm.sig/ui.sig -- CLAUDE.md's "FrameGraph: A/B resource selection")
+	# since each producer's own gate (ShadowRTX/VSM_ShadowResolve) is a
+	# separate, independently-evaluated condition, not guaranteed identical
+	# to the copy here.
+	[Always = Read] [Optional = VSMSelectors::shadow_source == ShadowSource::RTXReference && exists(VSM_ShadowNoise)]
+	Texture VSM_ShadowNoise;
+	[Always = Read] [Optional = VSMSelectors::shadow_source == ShadowSource::VSM && exists(VSM_PCSS_ShadowNoise)]
+	Texture VSM_PCSS_ShadowNoise;
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R8_UNORM] Texture VSM_ShadowDenoised;
 }
 

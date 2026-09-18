@@ -93,7 +93,7 @@ FrameGraph::SetupResult PassDefault<Passes::NRD_REBLUR_Execute>::setup(
 FrameGraph::SetupResult PassDefault<Passes::NRD_SIGMA_Execute>::setup(
 	Passes::NRD_SIGMA_Execute::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available && builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::RTXReference))
+	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available && (builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::RTXReference || (builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::VSM && builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra))))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }

@@ -66,6 +66,9 @@ public:
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 
+		Handlers::Texture VSM_PCSS_ShadowNoise = ResourceID::VSM_PCSS_ShadowNoise;
+
+
 		// Resources this pass always needs whenever it runs, generated from
 		// each field's own [Always=X] annotation (further gated by [Optional=X]
 		// when present -- a raw bool expression, e.g. builder.exists(...) or a
@@ -100,6 +103,24 @@ public:
 				builder.need(data.VSM_ContactShadow, FrameGraph::ResourceFlags::Read);
 			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
+
+		// Resources this pass always creates with a fixed desc, generated from
+		// each field's own [Size]/[Format] annotation (plus [Always] for the
+		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+		// that needs its original chain link before recreating a new one). A
+		// field that ALSO carries [Optional] creates only under that
+		// condition -- need_always() (above) emits a complementary need() for
+		// the SAME field under the negated condition, using the same
+		// [Always] flags, e.g. a [Multiple] pass where instance 0 creates a
+		// shared resource and every other instance just needs it (see
+		// PSSM_Cascade, pssm.sig). Called by TypedPass::setup() after
+		// setup_func returns true - not a substitute for setup_func's own
+		// create()/recreate() calls for anything whose Desc depends on
+		// runtime state.
+		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+		{
+			builder.create(data.VSM_PCSS_ShadowNoise, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
 		// replayed one, so a replay neither re-runs create_always/need_always nor
@@ -123,6 +144,7 @@ public:
 			FrameGraph::ChainIndex VSM_BlockerSearchResult = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex VSM_ContactShadow = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_PCSS_ShadowNoise = FrameGraph::ChainIndex::Unresolved;
 		};
 
 		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
@@ -143,6 +165,7 @@ public:
 			cache.VSM_BlockerSearchResult = FrameGraph::TaskBuilder::cache_slot(data.VSM_BlockerSearchResult, ResourceID::VSM_BlockerSearchResult);
 			cache.VSM_ContactShadow = FrameGraph::TaskBuilder::cache_slot(data.VSM_ContactShadow, ResourceID::VSM_ContactShadow);
 			cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
+			cache.VSM_PCSS_ShadowNoise = FrameGraph::TaskBuilder::cache_slot(data.VSM_PCSS_ShadowNoise, ResourceID::VSM_PCSS_ShadowNoise);
 		}
 
 		// Replay counterpart of create_always/need_always. A field this pass
@@ -170,6 +193,7 @@ public:
 			builder.load(data.VSM_BlockerSearchResult, ResourceID::VSM_BlockerSearchResult, cache.VSM_BlockerSearchResult);
 			builder.load(data.VSM_ContactShadow, ResourceID::VSM_ContactShadow, cache.VSM_ContactShadow);
 			builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
+			builder.create_versioned(data.VSM_PCSS_ShadowNoise, cache.VSM_PCSS_ShadowNoise, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16_FLOAT, 1, 1 });
 		}
 
 		// Resources this pass touches, in declaration order, each paired with
@@ -192,6 +216,7 @@ public:
 			{ ResourceID::VSM_BlockerSearchResult, false },
 			{ ResourceID::VSM_ContactShadow, false },
 			{ ResourceID::ResultTexture, true },
+			{ ResourceID::VSM_PCSS_ShadowNoise, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
