@@ -216,7 +216,7 @@ if (raw_z == 0) return 0;
 info.pos = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
 
 //info.specular = GetGbuffer().[2].SampleLevel(pointClampSampler, tc, 0);
-info.roughness = max(0.04, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w);// GetGbuffer().[2][tc.xy].w;
+info.roughness = pow(max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w), 2);// GetGbuffer().[2][tc.xy].w;
 
 info.view_z = camera.GetProj()._34 * raw_z / (raw_z - camera.GetProj()._33);
 info.view = normalize(camera.GetPosition() - info.pos);
@@ -266,7 +266,7 @@ EnvBRDF = 0;*/
 //float3 refl = CookTorrance_GGX_sample(light_dir, info,Fk);
 
 //return float4(info.pos, 1);
-return  float4(shadow * (saturate(EnvBRDF.x) * info.albedo * (1 - info.metallic)), 1);
+return  float4(shadow * (saturate(NL) * info.albedo * (1 - info.metallic)), 1);
 
 //return  float4(PBR(direct, reflection, info.albedo, info.normal, info.view, 0.2, info.roughness, packed_0.w), 1);
 }

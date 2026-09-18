@@ -58,6 +58,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float4 albedo = gbuffer.GetAlbedo()[tc];
 	float roughness = pow(max(MIN_ROUGHNESS, gbuffer.GetNormals()[tc].w), 2);
 	float metallic = albedo.w;
+	float3 glow = gbuffer.GetSpecular()[tc].rgb;
 
 	float3 pos = depth_to_wpos(raw_z, itc, camera.GetInvViewProj());
 	float3 v = normalize(pos - camera.GetPosition());
@@ -71,7 +72,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float3 sun_dir = normalize(GetFrameInfo().GetSunDir().xyz);
 	float NdotL = saturate(dot(normal, sun_dir));
 	float shadow = GetRTXCombine().GetShadow()[tc].r;
-	float3 direct = albedo.rgb * NdotL * shadow;
+	float3 direct = albedo.rgb * NdotL * shadow * (1 - metallic);
 
 	// Reflections: identical weighting to ReflectionCombine. Raw RTX trace
 	// output now (RGB=hit color, A=hit distance, not REBLUR-packed) -- NRD
@@ -88,5 +89,10 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float3 indirect = GetRTXCombine().GetIndirect()[tc].rgb;
 	float3 gi_color = albedo.rgb * indirect * (1 - metallic);
 
-	GetRTXCombine().GetTarget()[tc] = float4(direct + refl_color + gi_color, 1);
+	// Self-emission: not shadowed, not weighted by any BRDF -- a glowing
+	// surface looks the same lit or unlit. Indirect GI/reflection rays get
+	// this for free via MyClosestHitShader's own payload.color (see its
+	// comment) -- this is only needed here for direct visibility, since this
+	// pass reads the GBuffer rather than recomputing the material.
+	GetRTXCombine().GetTarget()[tc] = float4(direct + refl_color + gi_color + glow, 1);
 }

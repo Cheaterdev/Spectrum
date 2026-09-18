@@ -243,7 +243,13 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	}
 
 	float NdotL = saturate(dot(t.v.normal, normalize(frame.GetSunDir().xyz)));
-	payload.color = float4(color.rgb * NdotL * sun_vis, 1.0);
+	// Self-emission: additive, not shadowed or BRDF-weighted -- same
+	// convention as rtx_combine.hlsl's own direct-visibility glow term.
+	// This is what makes indirect GI bounces and reflection rays pick up
+	// glowing surfaces at all: both just forward this payload.color through
+	// denoise + combine (rtx_combine.hlsl / reflection_combine.hlsl), which
+	// weight it as arriving radiance without caring where it came from.
+	payload.color = float4(color.rgb * NdotL * sun_vis * (1 - metallic) + glow.rgb, 1.0);
 	payload.dist  = RayTCurrent();
 
 //#ifdef TRANSPARENT

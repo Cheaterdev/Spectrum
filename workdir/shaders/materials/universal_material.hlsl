@@ -1,3 +1,5 @@
+#include "common/common.hlsl"
+
 #include "autogen/FrameInfo.h"
 #include "autogen/MaterialInfo.h"
 #include "autogen/SceneData.h"
@@ -79,8 +81,8 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     GBuffer result;
 
     result.albedo = float4(albedo.rgb, metallic);
-    result.normals = float4(GetFrameInfo().compress_normals(normal), (roughness));
-	result.specular = 0;// float4(metallic, roughness); 
+    result.normals = float4(GetFrameInfo().compress_normals(normal), max(MIN_ROUGHNESS, roughness));
+	result.specular = float4(saturate(glow.rgb), 0);
       
 
     float2 cur_p = float2(0.5, 0.5) + float2(0.5, -0.5)*(i.cur_pos.xy / i.cur_pos.w);

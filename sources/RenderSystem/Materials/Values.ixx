@@ -490,7 +490,7 @@ class MaterialGraph : public MaterialFunction
             ar& NVP(i_refraction);
             i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
             i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
-			i_roughness->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+			i_roughness->default_value = shader_parameter("0.5", ShaderParams::get().FLOAT1);
        //     i_specular->default_value = shader_parameter("float4(0,0,0,0)", ShaderParams::get().FLOAT4);
             i_normal->default_value = shader_parameter("float4(0.5,0.5,1,0)", ShaderParams::get().FLOAT4);
             i_glow->default_value = shader_parameter("float4(0.0,0.0,0,0)", ShaderParams::get().FLOAT4);

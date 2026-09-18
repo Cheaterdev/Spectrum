@@ -293,7 +293,7 @@ float GGX_Specular(in float m, in float3 n, in float3 h, in float3 v, in float3 
 	float nDotV = saturate(dot(n, v));
 
 	float nDotH2 = nDotH * nDotH;
-	float m2 = m;// *m;
+	float m2 = m * m;
 
 	// Calculate the distribution term
 	float d = m2 / (PI * pow(nDotH * nDotH * (m2 - 1) + 1, 2.0f));

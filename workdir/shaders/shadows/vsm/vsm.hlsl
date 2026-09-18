@@ -45,7 +45,7 @@ float4 combine_result(float2 tc, uint2 pixel)
 	if (raw_z == 0) return 0;
 	info.pos = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
 
-	info.roughness = max(0.04, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w);
+	info.roughness = pow(max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w), 2);
 	info.view = normalize(camera.GetPosition() - info.pos);
 
 	VSMConstants constants = GetVSMConstants();
