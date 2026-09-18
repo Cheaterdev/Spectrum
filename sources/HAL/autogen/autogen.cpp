@@ -12,6 +12,10 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "TextureRenderer") return SlotID::TextureRenderer;
 	if(slot_name == "BlueNoise") return SlotID::BlueNoise;
 	if(slot_name == "BRDF") return SlotID::BRDF;
+	if(slot_name == "DDGIInfo") return SlotID::DDGIInfo;
+	if(slot_name == "DDGIProbeSelectData") return SlotID::DDGIProbeSelectData;
+	if(slot_name == "DDGIProbeTraceData") return SlotID::DDGIProbeTraceData;
+	if(slot_name == "DDGIProbeConvolveData") return SlotID::DDGIProbeConvolveData;
 	if(slot_name == "DebugInfo") return SlotID::DebugInfo;
 	if(slot_name == "DenoiserShadow_Prepare") return SlotID::DenoiserShadow_Prepare;
 	if(slot_name == "DenoiserShadow_TileClassification") return SlotID::DenoiserShadow_TileClassification;
@@ -154,6 +158,14 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::BlueNoise) return Slots::BlueNoise::Slot::ID;
 
 	if(id == SlotID::BRDF) return Slots::BRDF::Slot::ID;
+
+	if(id == SlotID::DDGIInfo) return Slots::DDGIInfo::Slot::ID;
+
+	if(id == SlotID::DDGIProbeSelectData) return Slots::DDGIProbeSelectData::Slot::ID;
+
+	if(id == SlotID::DDGIProbeTraceData) return Slots::DDGIProbeTraceData::Slot::ID;
+
+	if(id == SlotID::DDGIProbeConvolveData) return Slots::DDGIProbeConvolveData::Slot::ID;
 
 	if(id == SlotID::DebugInfo) return Slots::DebugInfo::Slot::ID;
 
@@ -424,6 +436,10 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::TextureRenderer) return "TextureRenderer";
 	if(id == SlotID::BlueNoise) return "BlueNoise";
 	if(id == SlotID::BRDF) return "BRDF";
+	if(id == SlotID::DDGIInfo) return "DDGIInfo";
+	if(id == SlotID::DDGIProbeSelectData) return "DDGIProbeSelectData";
+	if(id == SlotID::DDGIProbeTraceData) return "DDGIProbeTraceData";
+	if(id == SlotID::DDGIProbeConvolveData) return "DDGIProbeConvolveData";
 	if(id == SlotID::DebugInfo) return "DebugInfo";
 	if(id == SlotID::DenoiserShadow_Prepare) return "DenoiserShadow_Prepare";
 	if(id == SlotID::DenoiserShadow_TileClassification) return "DenoiserShadow_TileClassification";

@@ -35,11 +35,12 @@ namespace FrameGraph
 // .sig edit renumbers those enums, a plan from before the edit would not fail
 // to load, it would misapply -- wrong resource, wrong barriers. A plan whose
 // header does not carry this exact value must be rejected.
-constexpr unsigned long long generated_id_space_hash = 10822949871967079796ull;
+constexpr unsigned long long generated_id_space_hash = 13355320583587303357ull;
 
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
 {
+	DDGISelectors_enabled,
 	ViewportContext_frame_size,
 	ViewportContext_upscale_size,
 	IndirectGISelectors_indirect_source,
@@ -88,6 +89,7 @@ constexpr ContextFieldMask context_field_bit(ContextFieldID f)
 namespace ContextField
 {
 	constexpr ContextFieldMask None = ContextFieldMask{};
+	constexpr ContextFieldMask DDGISelectors_enabled = context_field_bit(ContextFieldID::DDGISelectors_enabled);
 	constexpr ContextFieldMask ViewportContext_frame_size = context_field_bit(ContextFieldID::ViewportContext_frame_size);
 	constexpr ContextFieldMask ViewportContext_upscale_size = context_field_bit(ContextFieldID::ViewportContext_upscale_size);
 	constexpr ContextFieldMask IndirectGISelectors_indirect_source = context_field_bit(ContextFieldID::IndirectGISelectors_indirect_source);
@@ -159,6 +161,20 @@ static inline const PassContextDeps pass_context_deps[] = {
 		true },
 	{ PassID::BlueNoise,
 		  ContextField::None,
+		  ContextField::None,
+		true },
+	{ PassID::DDGIProbeSelect,
+		  ContextField::DDGISelectors_enabled,
+		  ContextField::None,
+		true },
+	{ PassID::DDGIProbeTrace,
+		  ContextField::DDGISelectors_enabled
+		| ContextField::RenderDeviceCapabilities_rtx_supported,
+		  ContextField::None,
+		true },
+	{ PassID::DDGIProbeConvolve,
+		  ContextField::DDGISelectors_enabled
+		| ContextField::RenderDeviceCapabilities_rtx_supported,
 		  ContextField::None,
 		true },
 	{ PassID::FSR,

@@ -23,6 +23,9 @@ export
 			Library::AssetGBuffer AssetGBuffer;
 		Library::AssetMip AssetMip;
 		Library::BlueNoise BlueNoise;
+		Library::DDGIProbeSelect DDGIProbeSelect;
+		Library::DDGIProbeTrace DDGIProbeTrace;
+		Library::DDGIProbeConvolve DDGIProbeConvolve;
 		Library::FSR FSR;
 		Library::ResultCreation ResultCreation;
 		Library::NRD_GBufferPack NRD_GBufferPack;

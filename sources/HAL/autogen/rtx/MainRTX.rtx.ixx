@@ -24,11 +24,12 @@ export {
 #include "IndirectRTXHalf.h"
 #include "Indirect.h"
 #include "ColorRTX.h"
+#include "DDGIProbeTrace.h"
 #include "ShadowPass.h"
 #include "ColorPass.h"
 #include "ColorShadowPass.h"
 
-struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass, ColorShadowPass>, Typelist<Shadow, ShadowRTX, ReflectionRTX, ReflectionRTXHalf, Reflection, IndirectRTX, IndirectRTXHalf, Indirect, ColorRTX>>
+struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass, ColorShadowPass>, Typelist<Shadow, ShadowRTX, ReflectionRTX, ReflectionRTXHalf, Reflection, IndirectRTX, IndirectRTXHalf, Indirect, ColorRTX, DDGIProbeTrace>>
 {
 	using RTXPSO::RTXPSO;
 	static const constexpr Layouts global_sig = Layouts::DefaultLayout;

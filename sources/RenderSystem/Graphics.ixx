@@ -53,6 +53,7 @@ export import :RTX;
 export import :ReflectionRTX;
 export import :ShadowRTX;
 export import :IndirectRTX;
+export import :DDGI;
 export import :NRD_GBufferPack;
 export import :NRD_REBLUR_Execute;
 export import :NRD_SIGMA_Execute;

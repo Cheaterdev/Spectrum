@@ -17,6 +17,9 @@ export import "../defines.h";
 #include "pass/AssetGBuffer.h"
 #include "pass/AssetMip.h"
 #include "pass/BlueNoise.h"
+#include "pass/DDGIProbeSelect.h"
+#include "pass/DDGIProbeTrace.h"
+#include "pass/DDGIProbeConvolve.h"
 #include "pass/FSR.h"
 #include "pass/ResultCreation.h"
 #include "pass/NRD_GBufferPack.h"
@@ -79,6 +82,9 @@ export namespace Passes
 	using ::Passes::AssetGBuffer;
 	using ::Passes::AssetMip;
 	using ::Passes::BlueNoise;
+	using ::Passes::DDGIProbeSelect;
+	using ::Passes::DDGIProbeTrace;
+	using ::Passes::DDGIProbeConvolve;
 	using ::Passes::FSR;
 	using ::Passes::ResultCreation;
 	using ::Passes::NRD_GBufferPack;

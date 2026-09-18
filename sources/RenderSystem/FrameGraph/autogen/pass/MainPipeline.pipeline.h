@@ -23,6 +23,9 @@
 #include "ReflectionRTXHalf.h"
 #include "ReflectionRTX.h"
 #include "ShadowRTX.h"
+#include "DDGIProbeSelect.h"
+#include "DDGIProbeTrace.h"
+#include "DDGIProbeConvolve.h"
 #include "IndirectRTXHalf.h"
 #include "IndirectRTX.h"
 #include "VoxelScreen.h"
@@ -105,6 +108,9 @@ public:
 		Passes::ReflectionRTXHalf::Name.ptr,
 		Passes::ReflectionRTX::Name.ptr,
 		Passes::ShadowRTX::Name.ptr,
+		Passes::DDGIProbeSelect::Name.ptr,
+		Passes::DDGIProbeTrace::Name.ptr,
+		Passes::DDGIProbeConvolve::Name.ptr,
 		Passes::IndirectRTXHalf::Name.ptr,
 		Passes::IndirectRTX::Name.ptr,
 		Passes::VoxelScreen::Name.ptr,
@@ -193,6 +199,11 @@ public:
 		L"RTXReflectionDirPdf",
 		L"RTXShadowNoise",
 		L"VSM_ShadowNoise",
+		L"DDGI_Probes",
+		L"DDGI_ProbeRadiance",
+		L"DDGI_ProbeGBuffer",
+		L"DDGI_ProbeIrradiance",
+		L"DDGI_ProbeVisibility",
 		L"RTXIndirectNoiseHalf",
 		L"RTXIndirectNoise",
 		L"VoxelIndirectNoiseRaw",
@@ -240,11 +251,12 @@ public:
 	static inline const FrameGraph::PassRef scene_c0_pass_refs[] = {
 		{ PassID::PreScene, 0 },
 		{ PassID::Scene, 0 },
+		{ PassID::DDGIProbeTrace, 0 },
 		{ PassID::RTXColorPass, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState scene_c0_states[] = {
 		{ true, { scene_c0_pass_refs + 0, 1 } },
-		{ false, { scene_c0_pass_refs + 1, 2 } },
+		{ false, { scene_c0_pass_refs + 1, 3 } },
 	};
 	static inline const FrameGraph::PassRef BlueNoise_c0_pass_refs[] = {
 		{ PassID::BlueNoise, 0 },
@@ -571,6 +583,7 @@ public:
 		{ PassID::Lighting, 0 },
 		{ PassID::ReflectionRTXHalf, 0 },
 		{ PassID::ReflectionRTX, 0 },
+		{ PassID::DDGIProbeTrace, 0 },
 		{ PassID::IndirectRTXHalf, 0 },
 		{ PassID::IndirectRTX, 0 },
 		{ PassID::RTXColorPass, 0 },
@@ -578,7 +591,7 @@ public:
 	static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_c0_states[] = {
 		{ false, { sky_cubemap_filtered_c0_pass_refs + 0, 1 } },
 		{ true, { sky_cubemap_filtered_c0_pass_refs + 1, 1 } },
-		{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 6 } },
+		{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 7 } },
 	};
 	static inline const FrameGraph::PassRef sky_cubemap_filtered_diffuse_c0_pass_refs[] = {
 		{ PassID::CubeMapDownsample, 0 },
@@ -779,6 +792,40 @@ public:
 	static inline const FrameGraph::PrecompiledState VSM_ShadowNoise_c0_states[] = {
 		{ true, { VSM_ShadowNoise_c0_pass_refs + 0, 1 } },
 		{ false, { VSM_ShadowNoise_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef DDGI_Probes_c0_pass_refs[] = {
+		{ PassID::DDGIProbeSelect, 0 },
+		{ PassID::DDGIProbeTrace, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState DDGI_Probes_c0_states[] = {
+		{ true, { DDGI_Probes_c0_pass_refs + 0, 1 } },
+		{ false, { DDGI_Probes_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef DDGI_ProbeRadiance_c0_pass_refs[] = {
+		{ PassID::DDGIProbeTrace, 0 },
+		{ PassID::DDGIProbeConvolve, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState DDGI_ProbeRadiance_c0_states[] = {
+		{ true, { DDGI_ProbeRadiance_c0_pass_refs + 0, 1 } },
+		{ false, { DDGI_ProbeRadiance_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef DDGI_ProbeGBuffer_c0_pass_refs[] = {
+		{ PassID::DDGIProbeTrace, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState DDGI_ProbeGBuffer_c0_states[] = {
+		{ true, { DDGI_ProbeGBuffer_c0_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef DDGI_ProbeIrradiance_c0_pass_refs[] = {
+		{ PassID::DDGIProbeConvolve, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState DDGI_ProbeIrradiance_c0_states[] = {
+		{ true, { DDGI_ProbeIrradiance_c0_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef DDGI_ProbeVisibility_c0_pass_refs[] = {
+		{ PassID::DDGIProbeConvolve, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState DDGI_ProbeVisibility_c0_states[] = {
+		{ true, { DDGI_ProbeVisibility_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef RTXIndirectNoiseHalf_c0_pass_refs[] = {
 		{ PassID::IndirectRTXHalf, 0 },
@@ -1119,6 +1166,11 @@ public:
 		{ ResourceID::RTXReflectionDirPdf, 0, RTXReflectionDirPdf_c0_states },
 		{ ResourceID::RTXShadowNoise, 0, RTXShadowNoise_c0_states },
 		{ ResourceID::VSM_ShadowNoise, 0, VSM_ShadowNoise_c0_states },
+		{ ResourceID::DDGI_Probes, 0, DDGI_Probes_c0_states },
+		{ ResourceID::DDGI_ProbeRadiance, 0, DDGI_ProbeRadiance_c0_states },
+		{ ResourceID::DDGI_ProbeGBuffer, 0, DDGI_ProbeGBuffer_c0_states },
+		{ ResourceID::DDGI_ProbeIrradiance, 0, DDGI_ProbeIrradiance_c0_states },
+		{ ResourceID::DDGI_ProbeVisibility, 0, DDGI_ProbeVisibility_c0_states },
 		{ ResourceID::RTXIndirectNoiseHalf, 0, RTXIndirectNoiseHalf_c0_states },
 		{ ResourceID::RTXIndirectNoise, 0, RTXIndirectNoise_c0_states },
 		{ ResourceID::VoxelIndirectNoiseRaw, 0, VoxelIndirectNoiseRaw_c0_states },
@@ -1204,6 +1256,15 @@ public:
 	};
 	static inline const FrameGraph::PassRef ShadowRTX_0_prev[] = {
 		{ PassID::Scene, 0 },
+	};
+	static inline const FrameGraph::PassRef DDGIProbeTrace_0_prev[] = {
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::DDGIProbeSelect, 0 },
+		{ PassID::PreScene, 0 },
+	};
+	static inline const FrameGraph::PassRef DDGIProbeConvolve_0_prev[] = {
+		{ PassID::DDGIProbeTrace, 0 },
 	};
 	static inline const FrameGraph::PassRef IndirectRTXHalf_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
@@ -1435,6 +1496,9 @@ public:
 		{ PassID::ReflectionRTXHalf, 0, true, ReflectionRTXHalf_0_prev },
 		{ PassID::ReflectionRTX, 0, true, ReflectionRTX_0_prev },
 		{ PassID::ShadowRTX, 0, true, ShadowRTX_0_prev },
+		{ PassID::DDGIProbeSelect, 0, true, {} },
+		{ PassID::DDGIProbeTrace, 0, true, DDGIProbeTrace_0_prev },
+		{ PassID::DDGIProbeConvolve, 0, true, DDGIProbeConvolve_0_prev },
 		{ PassID::IndirectRTXHalf, 0, true, IndirectRTXHalf_0_prev },
 		{ PassID::IndirectRTX, 0, true, IndirectRTX_0_prev },
 		{ PassID::VoxelScreen, 0, true, VoxelScreen_0_prev },
@@ -1544,6 +1608,9 @@ public:
 		graph.add_library_pass<Passes::ReflectionRTXHalf>(PassDefault<Passes::ReflectionRTXHalf>::setup, PassDefault<Passes::ReflectionRTXHalf>::render, (PassDefault<Passes::ReflectionRTXHalf>::flags));
 		graph.add_library_pass<Passes::ReflectionRTX>(PassDefault<Passes::ReflectionRTX>::setup, PassDefault<Passes::ReflectionRTX>::render, (PassDefault<Passes::ReflectionRTX>::flags));
 		graph.add_library_pass<Passes::ShadowRTX>(PassDefault<Passes::ShadowRTX>::setup, PassDefault<Passes::ShadowRTX>::render, (PassDefault<Passes::ShadowRTX>::flags));
+		graph.add_library_pass<Passes::DDGIProbeSelect>(PassDefault<Passes::DDGIProbeSelect>::setup, PassDefault<Passes::DDGIProbeSelect>::render, (PassDefault<Passes::DDGIProbeSelect>::flags));
+		graph.add_library_pass<Passes::DDGIProbeTrace>(PassDefault<Passes::DDGIProbeTrace>::setup, PassDefault<Passes::DDGIProbeTrace>::render, (PassDefault<Passes::DDGIProbeTrace>::flags));
+		graph.add_library_pass<Passes::DDGIProbeConvolve>(PassDefault<Passes::DDGIProbeConvolve>::setup, PassDefault<Passes::DDGIProbeConvolve>::render, (PassDefault<Passes::DDGIProbeConvolve>::flags));
 		graph.add_library_pass<Passes::IndirectRTXHalf>(PassDefault<Passes::IndirectRTXHalf>::setup, PassDefault<Passes::IndirectRTXHalf>::render, (PassDefault<Passes::IndirectRTXHalf>::flags));
 		graph.add_library_pass<Passes::IndirectRTX>(PassDefault<Passes::IndirectRTX>::setup, PassDefault<Passes::IndirectRTX>::render, (PassDefault<Passes::IndirectRTX>::flags));
 		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner

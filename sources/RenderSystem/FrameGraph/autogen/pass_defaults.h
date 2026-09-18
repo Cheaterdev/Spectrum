@@ -21,6 +21,54 @@ struct PassDefault
 
 
 template<>
+struct PassDefault<Passes::DDGIProbeSelect>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::DDGIProbeSelect::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::DDGIProbeSelect::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::DDGIProbeTrace>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::DDGIProbeTrace::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::DDGIProbeTrace::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::DDGIProbeConvolve>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::DDGIProbeConvolve::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::DDGIProbeConvolve::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::FSR>
 {
 	static constexpr bool enabled = true;

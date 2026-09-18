@@ -18,6 +18,14 @@ import :Autogen.Tables.TileRecord;
 // rules), e.g. `const MaxDispatchEntries = `MaxLevels * 2048`;`.
 export namespace Constants
 {
+	constexpr auto DDGI_ProbeCountX = 16;
+	constexpr auto DDGI_ProbeCountY = 8;
+	constexpr auto DDGI_ProbeCountZ = 16;
+	constexpr auto DDGI_ProbeCount = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY * Constants::DDGI_ProbeCountZ;
+	constexpr auto DDGI_ProbeTexelSize = 8;
+	constexpr auto DDGI_AtlasWidth = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountZ * Constants::DDGI_ProbeTexelSize;
+	constexpr auto DDGI_AtlasHeight = Constants::DDGI_ProbeCountY * Constants::DDGI_ProbeTexelSize;
+	constexpr auto DDGI_MaxProbesPerFrame = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY;
 	constexpr auto PSSM_RendersSize = 5;
 	constexpr auto MaxLevels = 26;
 	constexpr auto MaxDispatchEntries = Constants::MaxLevels * 2048;

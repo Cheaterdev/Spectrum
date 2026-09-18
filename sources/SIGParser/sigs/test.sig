@@ -60,6 +60,13 @@ Pipeline MainPipeline
 	[Async]ReflectionRTXHalf;
 	[Async]ReflectionRTX;
 	[Async]ShadowRTX;
+	# DDGI probe volume (ddgi.sig) -- must finish before IndirectRTX below
+	# once its raygen starts sampling DDGI_ProbeIrradiance (not wired yet in
+	# the v1 scaffold, see [[project-ddgi]]); placed here now so the ordering
+	# is already correct when that wiring lands.
+	[Async]DDGIProbeSelect;
+	[Async]DDGIProbeTrace;
+	[Async]DDGIProbeConvolve;
 	[Async]IndirectRTXHalf;
 	[Async]IndirectRTX;
 	# Voxel-cone-traced alternative sources for NRD_REBLUR_Execute below
