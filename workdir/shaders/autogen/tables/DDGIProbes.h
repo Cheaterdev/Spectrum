@@ -56,5 +56,26 @@ struct DDGIProbes
 		return origin;
 	}
 
+	// Inverse of ddgi_atlas_origin: which probe (and which texel-center UV
+	// within that probe's octahedral cell, in [-1,1]) a given atlas texel
+	// belongs to. Used by DDGIProbeTrace to know which probe to trace from
+	// and which direction that texel represents (via octahedral decode of
+	// the returned UV, see octahedral.hlsl).
+	uint3 ddgi_atlas_probe_coord(uint2 atlas_texel, uint texel_size, uint probe_counts_x)
+	{
+		uint2 cell = atlas_texel / texel_size;
+		uint3 coord;
+		coord.x = cell.x % probe_counts_x;
+		coord.z = cell.x / probe_counts_x;
+		coord.y = cell.y;
+		return coord;
+	}
+
+	float2 ddgi_atlas_local_uv(uint2 atlas_texel, uint texel_size)
+	{
+		uint2 local = atlas_texel % texel_size;
+		return (float2(local) + 0.5) / float(texel_size) * 2.0 - 1.0;
+	}
+
 	
 };

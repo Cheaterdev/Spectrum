@@ -49,6 +49,12 @@ public:
 		Handlers::TextureCube sky_cubemap_filtered_diffuse = ResourceID::sky_cubemap_filtered_diffuse;
 
 
+		Handlers::Texture DDGI_ProbeIrradiance = ResourceID::DDGI_ProbeIrradiance;
+
+
+		Handlers::Texture DDGI_ProbeVisibility = ResourceID::DDGI_ProbeVisibility;
+
+
 		Handlers::Texture RTXIndirectNoise = ResourceID::RTXIndirectNoise;
 
 
@@ -78,6 +84,8 @@ public:
 			builder.need(data.TileClassifyTiles, FrameGraph::ResourceFlags::Read);
 			builder.need(data.sky_cubemap_filtered, FrameGraph::ResourceFlags::Read);
 			builder.need(data.sky_cubemap_filtered_diffuse, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::Read);
 		}
 
 		// Resources this pass always creates with a fixed desc, generated from
@@ -114,6 +122,8 @@ public:
 			FrameGraph::ChainIndex TileClassifyTiles = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex sky_cubemap_filtered = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex sky_cubemap_filtered_diffuse = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex RTXIndirectNoise = FrameGraph::ChainIndex::Unresolved;
 		};
 
@@ -129,6 +139,8 @@ public:
 			cache.TileClassifyTiles = FrameGraph::TaskBuilder::cache_slot(data.TileClassifyTiles, ResourceID::TileClassifyTiles);
 			cache.sky_cubemap_filtered = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered);
 			cache.sky_cubemap_filtered_diffuse = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse);
+			cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
+			cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
 			cache.RTXIndirectNoise = FrameGraph::TaskBuilder::cache_slot(data.RTXIndirectNoise, ResourceID::RTXIndirectNoise);
 		}
 
@@ -151,6 +163,8 @@ public:
 			builder.load(data.TileClassifyTiles, ResourceID::TileClassifyTiles, cache.TileClassifyTiles);
 			builder.load(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered, cache.sky_cubemap_filtered);
 			builder.load(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse, cache.sky_cubemap_filtered_diffuse);
+			builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
+			builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
 			builder.create_versioned(data.RTXIndirectNoise, cache.RTXIndirectNoise, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 		}
 
@@ -168,6 +182,8 @@ public:
 			{ ResourceID::TileClassifyTiles, false },
 			{ ResourceID::sky_cubemap_filtered, false },
 			{ ResourceID::sky_cubemap_filtered_diffuse, false },
+			{ ResourceID::DDGI_ProbeIrradiance, false },
+			{ ResourceID::DDGI_ProbeVisibility, false },
 			{ ResourceID::RTXIndirectNoise, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

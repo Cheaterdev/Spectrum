@@ -7,18 +7,33 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
+#include "DDGIInfo.h"
 struct VoxelOutput
 {
 	uint blueNoise; // Texture2D<float2>
+	uint ddgi_irradiance; // Texture2D<float4>
+	uint ddgi_visibility; // Texture2D<float2>
 	uint noise; // RWTexture2D<float4>
 	uint frames; // RWTexture2D<float>
 	uint DirAndPdf; // RWTexture2D<float4>
 	uint noiseRaw; // RWTexture2D<float4>
 	uint shadow_noise; // RWTexture2D<float>
+	DDGIInfo ddgi_cascade0; // DDGIInfo
+	DDGIInfo ddgi_cascade1; // DDGIInfo
+	DDGIInfo ddgi_cascade2; // DDGIInfo
+	DDGIInfo ddgi_cascade3; // DDGIInfo
+	DDGIInfo ddgi_cascade4; // DDGIInfo
+	DDGIInfo GetDdgi_cascade0() { return ddgi_cascade0; }
+	DDGIInfo GetDdgi_cascade1() { return ddgi_cascade1; }
+	DDGIInfo GetDdgi_cascade2() { return ddgi_cascade2; }
+	DDGIInfo GetDdgi_cascade3() { return ddgi_cascade3; }
+	DDGIInfo GetDdgi_cascade4() { return ddgi_cascade4; }
 	RWTexture2D<float4> GetNoise() { return ResourceDescriptorHeap[noise]; }
 	RWTexture2D<float> GetFrames() { return ResourceDescriptorHeap[frames]; }
 	RWTexture2D<float4> GetDirAndPdf() { return ResourceDescriptorHeap[DirAndPdf]; }
 	Texture2D<float2> GetBlueNoise() { return ResourceDescriptorHeap[blueNoise]; }
 	RWTexture2D<float4> GetNoiseRaw() { return ResourceDescriptorHeap[noiseRaw]; }
 	RWTexture2D<float> GetShadow_noise() { return ResourceDescriptorHeap[shadow_noise]; }
+	Texture2D<float4> GetDdgi_irradiance() { return ResourceDescriptorHeap[ddgi_irradiance]; }
+	Texture2D<float2> GetDdgi_visibility() { return ResourceDescriptorHeap[ddgi_visibility]; }
 };

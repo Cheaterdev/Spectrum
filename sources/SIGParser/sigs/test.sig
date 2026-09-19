@@ -67,6 +67,7 @@ Pipeline MainPipeline
 	[Async]DDGIProbeSelect;
 	[Async]DDGIProbeTrace;
 	[Async]DDGIProbeConvolve;
+	[Async]DDGIIndirectDebug;
 	[Async]IndirectRTXHalf;
 	[Async]IndirectRTX;
 	# Voxel-cone-traced alternative sources for NRD_REBLUR_Execute below
@@ -120,6 +121,15 @@ Pipeline MainPipeline
 		# word whenever RTXReference is selected.
 		[Async]NRD_SIGMA_Execute;
 		[Async]NRD_ShadowCombine;
+
+		# DDGI probe-volume debug splat (see [[project-ddgi]] planning notes,
+		# DDGISelectors::show_probes) -- reads/writes ResultTexture, which
+		# under DLSS-RR is never written this frame (RTXCombine writes
+		# ResultTextureRTXNoise instead, see its own comment, voxel.sig) --
+		# known limitation, not wired to fall back the way DebugMode's own
+		# switch (Base.cpp) does for other debug views. Revisit if the splat
+		# doesn't show up under DLSS-RR.
+		DDGIDebug;
 
 	# sky + post
 		[Async]Sky;

@@ -12,26 +12,17 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class DDGIProbeTrace : public PassNodeBase
+class DDGIIndirectDebug : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
-		// [Multiple=5]: this instance's own
-		// index, written automatically by TypedPass::setup() (FrameGraph.Base.ixx,
-		// from the Pass::pass_index every [Multiple] instance already carries)
-		// before setup_func or any [Optional=...] guard runs -- no per-pass index
-		// field or manual `data.X = i;` assignment needed.
-		uint32_t pass_index = 0;
+
+		Handlers::Texture GBuffer_Normals = ResourceID::GBuffer_Normals;
 
 
-		Handlers::StructuredBuffer<uint> scene = ResourceID::scene;
-
-
-		Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
-
-		Handlers::StructuredBuffer<Table::DDGIProbeMetadata> DDGI_Probes = ResourceID::DDGI_Probes;
+		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
 
 
 		Handlers::Texture DDGI_ProbeIrradiance = ResourceID::DDGI_ProbeIrradiance;
@@ -40,10 +31,7 @@ public:
 		Handlers::Texture DDGI_ProbeVisibility = ResourceID::DDGI_ProbeVisibility;
 
 
-		Handlers::Texture DDGI_ProbeRadiance = ResourceID::DDGI_ProbeRadiance;
-
-
-		Handlers::Texture DDGI_ProbeGBuffer = ResourceID::DDGI_ProbeGBuffer;
+		Handlers::Texture DDGIIndirectDebug = ResourceID::DDGIIndirectDebug;
 
 
 		// Resources this pass always needs whenever it runs, generated from
@@ -62,15 +50,10 @@ public:
 		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.need(data.scene, FrameGraph::ResourceFlags::Read);
-			builder.need(data.sky_cubemap_filtered, FrameGraph::ResourceFlags::Read);
-			builder.need(data.DDGI_Probes, FrameGraph::ResourceFlags::Read);
+			builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::Read);
+			builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::Read);
-			if (!(data.pass_index == 0))
-				builder.need(data.DDGI_ProbeRadiance, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			if (!(data.pass_index == 0))
-				builder.need(data.DDGI_ProbeGBuffer, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 		}
 
 		// Resources this pass always creates with a fixed desc, generated from
@@ -88,14 +71,7 @@ public:
 		// runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			if (data.pass_index == 0)
-			{
-			builder.create(data.DDGI_ProbeRadiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
-			if (data.pass_index == 0)
-			{
-			builder.create(data.DDGI_ProbeGBuffer, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
+			builder.create(data.DDGIIndirectDebug, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -104,24 +80,20 @@ public:
 		// the field fixes it.
 		struct Cache
 		{
-			FrameGraph::ChainIndex scene = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex sky_cubemap_filtered = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_Probes = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_Normals = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeRadiance = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeGBuffer = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGIIndirectDebug = FrameGraph::ChainIndex::Unresolved;
 		};
 
 		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 		{
-			cache.scene = FrameGraph::TaskBuilder::cache_slot(data.scene, ResourceID::scene);
-			cache.sky_cubemap_filtered = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered);
-			cache.DDGI_Probes = FrameGraph::TaskBuilder::cache_slot(data.DDGI_Probes, ResourceID::DDGI_Probes);
+			cache.GBuffer_Normals = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Normals, ResourceID::GBuffer_Normals);
+			cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
 			cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
 			cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
-			cache.DDGI_ProbeRadiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeRadiance, ResourceID::DDGI_ProbeRadiance);
-			cache.DDGI_ProbeGBuffer = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeGBuffer, ResourceID::DDGI_ProbeGBuffer);
+			cache.DDGIIndirectDebug = FrameGraph::TaskBuilder::cache_slot(data.DDGIIndirectDebug, ResourceID::DDGIIndirectDebug);
 		}
 
 		// Replay counterpart of create_always/need_always. A field this pass
@@ -133,32 +105,22 @@ public:
 		// previous link's desc, which LoadGraph does once every pass has loaded.
 		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 		{
-			builder.load(data.scene, ResourceID::scene, cache.scene);
-			builder.load(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered, cache.sky_cubemap_filtered);
-			builder.load(data.DDGI_Probes, ResourceID::DDGI_Probes, cache.DDGI_Probes);
+			builder.load(data.GBuffer_Normals, ResourceID::GBuffer_Normals, cache.GBuffer_Normals);
+			builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
 			builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
 			builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
-			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeRadiance, cache.DDGI_ProbeRadiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
-			else
-				builder.load(data.DDGI_ProbeRadiance, ResourceID::DDGI_ProbeRadiance, cache.DDGI_ProbeRadiance);
-			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeGBuffer, cache.DDGI_ProbeGBuffer, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
-			else
-				builder.load(data.DDGI_ProbeGBuffer, ResourceID::DDGI_ProbeGBuffer, cache.DDGI_ProbeGBuffer);
+			builder.create_versioned(data.DDGIIndirectDebug, cache.DDGIIndirectDebug, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 		}
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::scene, false },
-			{ ResourceID::sky_cubemap_filtered, false },
-			{ ResourceID::DDGI_Probes, false },
+			{ ResourceID::GBuffer_Normals, false },
+			{ ResourceID::GBuffer_DepthMips, false },
 			{ ResourceID::DDGI_ProbeIrradiance, false },
 			{ ResourceID::DDGI_ProbeVisibility, false },
-			{ ResourceID::DDGI_ProbeRadiance, true },
-			{ ResourceID::DDGI_ProbeGBuffer, true },
+			{ ResourceID::DDGIIndirectDebug, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -169,24 +131,15 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"DDGIProbeTrace"};
+	static constexpr LiteralWStr Name{L"DDGIIndirectDebug"};
 
-	static constexpr uint32_t MaxCount = 5;
-	static constexpr LiteralWStr Names[MaxCount] = {
-		LiteralWStr{L"DDGIProbeTrace_0"},
-		LiteralWStr{L"DDGIProbeTrace_1"},
-		LiteralWStr{L"DDGIProbeTrace_2"},
-		LiteralWStr{L"DDGIProbeTrace_3"},
-		LiteralWStr{L"DDGIProbeTrace_4"},
-	};
-
-	static constexpr PassID ID = PassID::DDGIProbeTrace;
+	static constexpr PassID ID = PassID::DDGIIndirectDebug;
 
 
 	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
-	std::array<render_func_type, MaxCount> render_funcs;
+	render_func_type render_func;
 
 	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
 };

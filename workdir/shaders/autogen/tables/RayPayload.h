@@ -11,7 +11,8 @@
 struct [raypayload] RayPayload
 {
 	float4 color : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
-	float3 dir : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+	float3 hit_normal : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+	float3 albedo : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
 	uint recursion : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
 	float dist : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
 
@@ -19,7 +20,8 @@ struct [raypayload] RayPayload
 
 	RayCone GetCone() { return cone; }
 	float4 GetColor() { return color; }
-	float3 GetDir() { return dir; }
+	float3 GetHit_normal() { return hit_normal; }
+	float3 GetAlbedo() { return albedo; }
 	uint GetRecursion() { return recursion; }
 	float GetDist() { return dist; }
 
@@ -32,7 +34,7 @@ struct [raypayload] RayPayload
 		result.recursion = recursion + 1;
 
 		result.cone = cone.propagate(surfaceSpreadAngle, hitT);
-		
+
 		return result;
 	}
 
@@ -40,10 +42,11 @@ struct [raypayload] RayPayload
 	void init()
 	{
 		color = 0;
+		albedo = 0;
 		recursion = 0;
 		dist = 0;
 		cone.angle = 0;
-		cone.width = 0; 
+		cone.width = 0;
 	}
 
 	

@@ -33,6 +33,7 @@
 #include "../autogen/rtx/ColorPass.h"
 #include "../common/pbr.hlsl"
 #include "../common/common.hlsl"
+#include "../ddgi/ddgi_sample.hlsl"
 
 // No PackForReblurDiffuse()/PackForReblurSpecular() calls in this file any
 // more -- every raygen below (RTX-reference and VCT alike) writes plain
@@ -467,13 +468,41 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 	ray.TMax = 10000.0;
 	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
 
+	// DDGI probe-volume feedback term (see [[project-ddgi]] planning notes):
+	// this is the same probe-irradiance sample DDGIProbeTrace's own hit
+	// shading adds, applied here to the screen's own primary GI ray so the
+	// probe volume's accumulated multi-bounce light actually reaches the
+	// rendered frame, not just the probes' own atlas. Uses THIS frame's
+	// freshly convolved DDGI_ProbeIrradiance/Visibility (DDGIProbeConvolve
+	// runs earlier in test.sig's MainPipeline), unlike DDGIProbeTrace's own
+	// read of the same resources which needs last frame's (see that
+	// PassNode's own comment, ddgi.sig, for why). No pi/BRDF normalization
+	// on the added term yet (tuning item, not structural).
+	if (payload_gi.dist > 0.0)
+	{
+		const VoxelOutput voxel_output = CreateVoxelOutput();
+		DDGIInfo ddgi_cascade0 = voxel_output.GetDdgi_cascade0();
+		// Master on/off, mirrored identically into every cascade's own
+		// DDGIInfo (DDGIGraph.cpp's ddgi_make_info) -- see DDGIInfo::flags'
+		// own comment (ddgi.sig).
+		if (ddgi_cascade0.GetFlags().x != 0)
+		{
+			float3 hit_pos = pos + dir * payload_gi.dist;
+			float3 indirect = ddgi_sample_irradiance_cascaded(hit_pos, payload_gi.hit_normal,
+				ddgi_cascade0, voxel_output.GetDdgi_cascade1(), voxel_output.GetDdgi_cascade2(),
+				voxel_output.GetDdgi_cascade3(), voxel_output.GetDdgi_cascade4(),
+				voxel_output.GetDdgi_irradiance(), voxel_output.GetDdgi_visibility());
+			payload_gi.color.rgb += payload_gi.albedo * indirect;
+		}
+	}
+
 	// Plain (RGB=hit color, A=hit distance), NOT REBLUR-packed -- this feeds
 	// both NRD_GBufferPack (which does the NRD-specific pack itself now,
 	// when NRD is actually running) and RTXCombine/DLSS-RR directly (which
 	// wants exactly this shape for its ColorIn/SpecularHitDistance tags, see
 	// HAL.DLSSRR.ixx's own comment). See NRD_GBufferPack's comment
 	// (nrd_sig_test.sig) for why packing moved out of this raygen.
-	tex_noise[itc] = float4(payload_gi.color.rgb*4, payload_gi.dist);
+	tex_noise[itc] = float4(payload_gi.color.rgb*2, payload_gi.dist);
 }
 
 [shader("raygeneration")]

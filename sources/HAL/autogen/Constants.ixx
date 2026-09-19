@@ -18,6 +18,7 @@ import :Autogen.Tables.TileRecord;
 // rules), e.g. `const MaxDispatchEntries = `MaxLevels * 2048`;`.
 export namespace Constants
 {
+	constexpr auto DDGI_CascadeCount = 5;
 	constexpr auto DDGI_ProbeCountX = 16;
 	constexpr auto DDGI_ProbeCountY = 8;
 	constexpr auto DDGI_ProbeCountZ = 16;

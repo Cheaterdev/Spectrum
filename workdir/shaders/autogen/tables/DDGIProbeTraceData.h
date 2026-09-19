@@ -11,6 +11,8 @@
 #include "DDGIProbes.h"
 struct DDGIProbeTraceData
 {
+	uint prev_irradiance; // Texture2D<float4>
+	uint prev_visibility; // Texture2D<float2>
 	uint probe_radiance; // RWTexture2D<float4>
 	uint probe_gbuffer; // RWTexture2D<float4>
 	DDGIInfo info; // DDGIInfo
@@ -19,4 +21,6 @@ struct DDGIProbeTraceData
 	DDGIProbes GetProbes() { return probes; }
 	RWTexture2D<float4> GetProbe_radiance() { return ResourceDescriptorHeap[probe_radiance]; }
 	RWTexture2D<float4> GetProbe_gbuffer() { return ResourceDescriptorHeap[probe_gbuffer]; }
+	Texture2D<float4> GetPrev_irradiance() { return ResourceDescriptorHeap[prev_irradiance]; }
+	Texture2D<float2> GetPrev_visibility() { return ResourceDescriptorHeap[prev_visibility]; }
 };

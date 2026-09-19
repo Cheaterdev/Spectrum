@@ -251,6 +251,10 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	// weight it as arriving radiance without caring where it came from.
 	payload.color = float4(color.rgb * NdotL * sun_vis * (1 - metallic) + glow.rgb, 1.0);
 	payload.dist  = RayTCurrent();
+	// DDGIProbeTrace's own feedback-term consumer -- see this payload
+	// field's own comment (raytracing.sig) for why these two exist.
+	payload.hit_normal = t.v.normal;
+	payload.albedo      = color.rgb * (1 - metallic);
 
 //#ifdef TRANSPARENT
 //	// Transparent surface: continue a refracted color ray through the surface

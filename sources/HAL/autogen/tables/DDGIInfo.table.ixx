@@ -21,10 +21,16 @@ export namespace Table
 		float4 probe_spacing;
 		uint4 probe_counts;
 		uint4 rays_per_probe;
+		uint4 atlas_info;
+		uint4 cascade_info;
+		uint4 flags;
 		float4& GetGrid_min() { return grid_min; }
 		float4& GetProbe_spacing() { return probe_spacing; }
 		uint4& GetProbe_counts() { return probe_counts; }
 		uint4& GetRays_per_probe() { return rays_per_probe; }
+		uint4& GetAtlas_info() { return atlas_info; }
+		uint4& GetCascade_info() { return cascade_info; }
+		uint4& GetFlags() { return flags; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -33,6 +39,9 @@ export namespace Table
 			compiler.compile(probe_spacing, "DDGIInfo::probe_spacing");
 			compiler.compile(probe_counts, "DDGIInfo::probe_counts");
 			compiler.compile(rays_per_probe, "DDGIInfo::rays_per_probe");
+			compiler.compile(atlas_info, "DDGIInfo::atlas_info");
+			compiler.compile(cascade_info, "DDGIInfo::cascade_info");
+			compiler.compile(flags, "DDGIInfo::flags");
 		}
 		using Compiled = DDGIInfo;
 
@@ -47,6 +56,9 @@ export namespace Table
 			ar& NVP(probe_spacing);
 			ar& NVP(probe_counts);
 			ar& NVP(rays_per_probe);
+			ar& NVP(atlas_info);
+			ar& NVP(cascade_info);
+			ar& NVP(flags);
 		}
 
 	};

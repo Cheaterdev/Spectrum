@@ -330,6 +330,10 @@ public:
 
 
 		voxel_gi = std::make_shared<VoxelGI>(pipeline,scene,vsm);
+
+		// DDGI's [Multiple=5] passes (ddgi.sig) are runtime-wired, not
+		// [Static] -- see DDGI.ixx's own comment on ddgi_register_passes.
+		ddgi_register_passes(pipeline);
 	}
 
 	float scale_speed = 0;
@@ -530,6 +534,7 @@ public:
 		// same reason: nothing orders one pass's setup relative to another's.
 		vsm.update_frame(graph);
 		voxel_gi->update_frame(graph);
+		ddgi_update_selectors(graph);
 		stenciler->update_frame(graph);
 
 		{
@@ -1539,6 +1544,7 @@ public:
 						{ "NRD ViewZ",             FrameGraph::DebugMode::NRDViewZ, true },
 						{ "NRD Normal/Roughness",  FrameGraph::DebugMode::NRDNormalRoughness, true },
 						{ "Raw Depth Mips",        FrameGraph::DebugMode::RawDepthMips },
+						{ "DDGI Indirect",         FrameGraph::DebugMode::DDGIIndirect },
 					};
 
 					auto toolbar = std::make_shared<debug_toolbar_panel>();

@@ -68,6 +68,8 @@ void capture_context_snapshot(Graph& graph, ContextSnapshot& out)
 {
 	out.values[(unsigned int)ContextFieldID::DDGISelectors_enabled] =
 		encode_context_field(graph.get_context<Table::DDGISelectors>().enabled);
+	out.values[(unsigned int)ContextFieldID::DDGISelectors_show_probes] =
+		encode_context_field(graph.get_context<Table::DDGISelectors>().show_probes);
 	out.values[(unsigned int)ContextFieldID::ViewportContext_frame_size] =
 		encode_context_field(graph.get_context<Table::ViewportContext>().frame_size);
 	out.values[(unsigned int)ContextFieldID::ViewportContext_upscale_size] =

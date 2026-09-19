@@ -79,6 +79,23 @@ struct VoxelOutput
 	# (see [[project-nrd-integration]]). Distinct from noise above, which
 	# stores this same pass's binary visibility for DLSS-RR's RTXCombine.
 	RWTexture2D<float> shadow_noise;
+
+	# DDGI probe-volume feedback term (see [[project-ddgi]] planning notes) --
+	# folded into this already-shared struct rather than a new [Bind] slot:
+	# raytracing.hlsl has one struct per DefaultLayout instance slot (0-5),
+	# all spoken for (see IndirectRTXHalfGBuffer's own comment, this file).
+	# Only TraceIndirectDiffuse's raygens (IndirectRTX/IndirectRTXHalf) read
+	# these; every other VoxelOutput consumer leaves them unbound, same as
+	# this struct's other pass-specific fields above. One DDGIInfo per
+	# cascade -- see DDGIIndirectDebugData's own comment (ddgi.sig) for why
+	# named fields, not an array.
+	DDGIInfo ddgi_cascade0;
+	DDGIInfo ddgi_cascade1;
+	DDGIInfo ddgi_cascade2;
+	DDGIInfo ddgi_cascade3;
+	DDGIInfo ddgi_cascade4;
+	Texture2D<float4> ddgi_irradiance;
+	Texture2D<float2> ddgi_visibility;
 }
 
 # Minimal depth+normal pair for MyRaygenShaderIndirectRTXHalfRes -- deliberately
@@ -514,6 +531,14 @@ PassNode IndirectRTXHalf
 	# See ReflectionRTXHalf's own comment on the same two fields.
 	[Always = Read] TextureCube sky_cubemap_filtered;
 	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
+	# DDGI probe-volume feedback term (see [[project-ddgi]] planning notes),
+	# sampled by TraceIndirectDiffuse (raytracing.hlsl), shared with
+	# IndirectRTX below. DDGIProbeSelect (ddgi.sig) is their sole [Size]
+	# creator and always runs earlier in test.sig's MainPipeline -- not
+	# gated on DDGISelectors::enabled here yet since that toggle has no real
+	# control path today (always true); revisit once it does.
+	[Always = Read] Texture DDGI_ProbeIrradiance;
+	[Always = Read] Texture DDGI_ProbeVisibility;
 
 	[Always = UnorderedAccess] [Size = `ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2)`] [Format = R16G16B16A16_FLOAT]
 	Texture RTXIndirectNoiseHalf;
@@ -549,6 +574,9 @@ PassNode IndirectRTX
 	# See ReflectionRTXHalf's own comment on the same two fields.
 	[Always = Read] TextureCube sky_cubemap_filtered;
 	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
+	# See IndirectRTXHalf's own comment on the same two fields.
+	[Always = Read] Texture DDGI_ProbeIrradiance;
+	[Always = Read] Texture DDGI_ProbeVisibility;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXIndirectNoise;
 }

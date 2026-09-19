@@ -26,6 +26,8 @@ export
 		Library::DDGIProbeSelect DDGIProbeSelect;
 		Library::DDGIProbeTrace DDGIProbeTrace;
 		Library::DDGIProbeConvolve DDGIProbeConvolve;
+		Library::DDGIDebug DDGIDebug;
+		Library::DDGIIndirectDebug DDGIIndirectDebug;
 		Library::FSR FSR;
 		Library::ResultCreation ResultCreation;
 		Library::NRD_GBufferPack NRD_GBufferPack;

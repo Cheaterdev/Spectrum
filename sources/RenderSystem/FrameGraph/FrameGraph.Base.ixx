@@ -162,7 +162,14 @@ public:
 		// Raw depth, bypassing NRD_GBufferPack's shader entirely -- to
 		// isolate whether GBuffer_DepthMips itself has real content by the
 		// time this pass runs, vs. a compute-shader-specific read issue.
-		RawDepthMips
+		RawDepthMips,
+		// DDGI probe-volume indirect term (see [[project-ddgi]] planning
+		// notes) -- full-screen ddgi_sample_irradiance() at every pixel's
+		// real surface normal, isolated from direct lighting. Distinct from
+		// DDGISelectors::show_probes (the discrete probe-marker overlay,
+		// which composites onto ResultTexture directly rather than going
+		// through this DebugMode switch).
+		DDGIIndirect
 	};
 
 	// DebugContext lives further down, after Handlers:: (it holds a

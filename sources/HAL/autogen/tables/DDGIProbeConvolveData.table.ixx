@@ -12,7 +12,6 @@ import :Types;
 import :HLSL;
 import :Enums;
 import :Autogen.Tables.DDGIInfo;
-import :Autogen.Tables.DDGIProbes;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -20,39 +19,38 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::DDGIProbeConvolveData;
 		HLSL::Texture2D<float4> probe_radiance;
+		HLSL::Texture2D<float4> probe_gbuffer;
 		HLSL::RWTexture2D<float4> probe_irradiance;
 		HLSL::RWTexture2D<float2> probe_visibility;
 		DDGIInfo info;
-		DDGIProbes probes;
 		HLSL::Texture2D<float4>& GetProbe_radiance() { return probe_radiance; }
+		HLSL::Texture2D<float4>& GetProbe_gbuffer() { return probe_gbuffer; }
 		HLSL::RWTexture2D<float4>& GetProbe_irradiance() { return probe_irradiance; }
 		HLSL::RWTexture2D<float2>& GetProbe_visibility() { return probe_visibility; }
 		DDGIInfo& GetInfo() { return info; }
-		DDGIProbes& GetProbes() { return probes; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(probe_radiance, "DDGIProbeConvolveData::probe_radiance");
+			compiler.compile(probe_gbuffer, "DDGIProbeConvolveData::probe_gbuffer");
 			compiler.compile(probe_irradiance, "DDGIProbeConvolveData::probe_irradiance");
 			compiler.compile(probe_visibility, "DDGIProbeConvolveData::probe_visibility");
 			compiler.compile(info, "DDGIProbeConvolveData::info");
-			compiler.compile(probes, "DDGIProbeConvolveData::probes");
 		}
 		struct Compiled
 		{
 			uint probe_radiance; // Texture2D<float4>
+			uint probe_gbuffer; // Texture2D<float4>
 			uint probe_irradiance; // RWTexture2D<float4>
 			uint probe_visibility; // RWTexture2D<float2>
 			DDGIInfo::Compiled info; // DDGIInfo
-			DDGIProbes::Compiled probes; // DDGIProbes
 
 			
 			private:
 			SERIALIZE()
 			{
 				ar& NVP(info);
-				ar& NVP(probes);
 			}
 
 
@@ -66,7 +64,6 @@ export namespace Table
 		SERIALIZE()
 		{
 			ar& NVP(info);
-			ar& NVP(probes);
 		}
 
 	};

@@ -19,12 +19,14 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::RayPayload;
 		float4 color;
-		float3 dir;
+		float3 hit_normal;
+		float3 albedo;
 		uint recursion;
 		float dist;
 		RayCone cone;
 		float4& GetColor() { return color; }
-		float3& GetDir() { return dir; }
+		float3& GetHit_normal() { return hit_normal; }
+		float3& GetAlbedo() { return albedo; }
 		uint& GetRecursion() { return recursion; }
 		float& GetDist() { return dist; }
 		RayCone& GetCone() { return cone; }
@@ -33,7 +35,8 @@ export namespace Table
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(color, "RayPayload::color");
-			compiler.compile(dir, "RayPayload::dir");
+			compiler.compile(hit_normal, "RayPayload::hit_normal");
+			compiler.compile(albedo, "RayPayload::albedo");
 			compiler.compile(recursion, "RayPayload::recursion");
 			compiler.compile(dist, "RayPayload::dist");
 			compiler.compile(cone, "RayPayload::cone");
@@ -49,7 +52,8 @@ export namespace Table
 		{
 			ar& NVP(cone);
 			ar& NVP(color);
-			ar& NVP(dir);
+			ar& NVP(hit_normal);
+			ar& NVP(albedo);
 			ar& NVP(recursion);
 			ar& NVP(dist);
 		}

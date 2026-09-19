@@ -36,6 +36,20 @@ void PassDefault<Passes::IndirectRTXHalf>::render(
 			Slots::VoxelOutput output;
 			output.GetNoise()     = noisy_output.rwTexture2D;
 			output.GetBlueNoise() = data.BlueNoise->texture2D;
+			// DDGI probe-volume feedback term, sampled by TraceIndirectDiffuse
+			// (raytracing.hlsl) -- see [[project-ddgi]] planning notes. One
+			// DDGIInfo per cascade; TraceIndirectDiffuse picks the finest one
+			// that actually contains each hit point.
+			{
+				float3 cam_pos = context.graph->get_context<CameraInfo>().cam->position;
+				output.GetDdgi_cascade0() = ddgi_make_info(cam_pos, 0);
+				output.GetDdgi_cascade1() = ddgi_make_info(cam_pos, 1);
+				output.GetDdgi_cascade2() = ddgi_make_info(cam_pos, 2);
+				output.GetDdgi_cascade3() = ddgi_make_info(cam_pos, 3);
+				output.GetDdgi_cascade4() = ddgi_make_info(cam_pos, 4);
+			}
+			output.GetDdgi_irradiance()  = data.DDGI_ProbeIrradiance->texture2D;
+			output.GetDdgi_visibility()  = data.DDGI_ProbeVisibility->texture2D;
 			compute.set(output);
 		}
 		RTX::get().render<IndirectRTXHalf>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
@@ -87,6 +101,20 @@ void PassDefault<Passes::IndirectRTX>::render(
 			Slots::VoxelOutput output;
 			output.GetNoise()     = noisy_output.rwTexture2D;
 			output.GetBlueNoise() = data.BlueNoise->texture2D;
+			// DDGI probe-volume feedback term, sampled by TraceIndirectDiffuse
+			// (raytracing.hlsl) -- see [[project-ddgi]] planning notes. One
+			// DDGIInfo per cascade; TraceIndirectDiffuse picks the finest one
+			// that actually contains each hit point.
+			{
+				float3 cam_pos = context.graph->get_context<CameraInfo>().cam->position;
+				output.GetDdgi_cascade0() = ddgi_make_info(cam_pos, 0);
+				output.GetDdgi_cascade1() = ddgi_make_info(cam_pos, 1);
+				output.GetDdgi_cascade2() = ddgi_make_info(cam_pos, 2);
+				output.GetDdgi_cascade3() = ddgi_make_info(cam_pos, 3);
+				output.GetDdgi_cascade4() = ddgi_make_info(cam_pos, 4);
+			}
+			output.GetDdgi_irradiance()  = data.DDGI_ProbeIrradiance->texture2D;
+			output.GetDdgi_visibility()  = data.DDGI_ProbeVisibility->texture2D;
 			compute.set(output);
 		}
 		RTX::get().render<IndirectRTX>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());

@@ -1075,6 +1075,7 @@ namespace GUI
             case DM::NRDViewZ:            return FrameGraph::ResourceID::NRD_ViewZ;
             case DM::NRDNormalRoughness:  return FrameGraph::ResourceID::NRD_NormalRoughness;
             case DM::RawDepthMips:        return FrameGraph::ResourceID::GBuffer_DepthMips;
+            case DM::DDGIIndirect:        return FrameGraph::ResourceID::DDGIIndirectDebug;
             default:                return FrameGraph::ResourceID::ResultTexture;
             }
         };

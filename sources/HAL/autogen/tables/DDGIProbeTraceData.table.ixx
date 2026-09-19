@@ -19,18 +19,24 @@ export namespace Table
 	struct DDGIProbeTraceData
 	{
 		static constexpr SlotID ID = SlotID::DDGIProbeTraceData;
+		HLSL::Texture2D<float4> prev_irradiance;
+		HLSL::Texture2D<float2> prev_visibility;
 		HLSL::RWTexture2D<float4> probe_radiance;
 		HLSL::RWTexture2D<float4> probe_gbuffer;
 		DDGIInfo info;
 		DDGIProbes probes;
 		HLSL::RWTexture2D<float4>& GetProbe_radiance() { return probe_radiance; }
 		HLSL::RWTexture2D<float4>& GetProbe_gbuffer() { return probe_gbuffer; }
+		HLSL::Texture2D<float4>& GetPrev_irradiance() { return prev_irradiance; }
+		HLSL::Texture2D<float2>& GetPrev_visibility() { return prev_visibility; }
 		DDGIInfo& GetInfo() { return info; }
 		DDGIProbes& GetProbes() { return probes; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
+			compiler.compile(prev_irradiance, "DDGIProbeTraceData::prev_irradiance");
+			compiler.compile(prev_visibility, "DDGIProbeTraceData::prev_visibility");
 			compiler.compile(probe_radiance, "DDGIProbeTraceData::probe_radiance");
 			compiler.compile(probe_gbuffer, "DDGIProbeTraceData::probe_gbuffer");
 			compiler.compile(info, "DDGIProbeTraceData::info");
@@ -38,6 +44,8 @@ export namespace Table
 		}
 		struct Compiled
 		{
+			uint prev_irradiance; // Texture2D<float4>
+			uint prev_visibility; // Texture2D<float2>
 			uint probe_radiance; // RWTexture2D<float4>
 			uint probe_gbuffer; // RWTexture2D<float4>
 			DDGIInfo::Compiled info; // DDGIInfo

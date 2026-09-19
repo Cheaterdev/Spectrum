@@ -56,14 +56,14 @@ FrameGraph::SetupResult PassSetupDefault<Passes::BlueNoise>::setup(
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::DDGIProbeSelect>::setup(
+FrameGraph::SetupResult PassSetupDefault<Passes::DDGIProbeSelect>::setup(
 	Passes::DDGIProbeSelect::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::DDGIProbeTrace>::setup(
+FrameGraph::SetupResult PassSetupDefault<Passes::DDGIProbeTrace>::setup(
 	Passes::DDGIProbeTrace::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	if (!(builder.graph->get_context<Table::DDGISelectors>().enabled && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
@@ -72,8 +72,26 @@ FrameGraph::SetupResult PassDefault<Passes::DDGIProbeTrace>::setup(
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::DDGIProbeConvolve>::setup(
+FrameGraph::SetupResult PassSetupDefault<Passes::DDGIProbeConvolve>::setup(
 	Passes::DDGIProbeConvolve::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::DDGISelectors>().enabled && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::DDGIDebug>::setup(
+	Passes::DDGIDebug::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::DDGISelectors>().enabled && builder.graph->get_context<Table::DDGISelectors>().show_probes))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::DDGIIndirectDebug>::setup(
+	Passes::DDGIIndirectDebug::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	if (!(builder.graph->get_context<Table::DDGISelectors>().enabled && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;

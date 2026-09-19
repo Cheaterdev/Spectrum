@@ -62,12 +62,26 @@ struct RayPayload
 	[write = {anyhit,closesthit,miss,caller}]    
 	float4 color;
 
+	# Was `dir` -- confirmed unused anywhere (write-only, no read site) before
+	# this repurposing, so renamed rather than adding a new field. Set by
+	# MyClosestHitShader to the hit surface's shading normal; consumed by
+	# DDGIProbeTrace to sample the probe-irradiance feedback term at the hit
+	# point (see [[project-ddgi]] planning notes) -- not read anywhere else.
 	[read = {anyhit,closesthit,miss,caller}]
-	[write = {anyhit,closesthit,miss,caller}]	
-	float3 dir;
+	[write = {anyhit,closesthit,miss,caller}]
+	float3 hit_normal;
+
+	# Hit surface's diffuse albedo (post-metallic), same modulation
+	# payload.color itself applies. Lets a caller add an indirect term
+	# (irradiance * albedo) on top of payload.color's direct-only lighting
+	# without payload.color already baking in NdotL/shadow terms that would
+	# double-count. Only consumer today is DDGIProbeTrace's feedback sample.
+	[read = {anyhit,closesthit,miss,caller}]
+	[write = {anyhit,closesthit,miss,caller}]
+	float3 albedo;
 
 	[read = {anyhit,closesthit,miss,caller}]
-	[write = {anyhit,closesthit,miss,caller}]	
+	[write = {anyhit,closesthit,miss,caller}]
 	uint recursion;
 
 	[read = {anyhit,closesthit,miss,caller}]
@@ -85,7 +99,7 @@ struct RayPayload
 		result.recursion = recursion + 1;
 
 		result.cone = cone.propagate(surfaceSpreadAngle, hitT);
-		
+
 		return result;
 	}
 
@@ -93,10 +107,11 @@ struct RayPayload
 	void init()
 	{
 		color = 0;
+		albedo = 0;
 		recursion = 0;
 		dist = 0;
 		cone.angle = 0;
-		cone.width = 0; 
+		cone.width = 0;
 	}
 
 	}%

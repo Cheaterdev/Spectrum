@@ -11,6 +11,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
+import :Autogen.Tables.DDGIInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -18,41 +19,74 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::VoxelOutput;
 		HLSL::Texture2D<float2> blueNoise;
+		HLSL::Texture2D<float4> ddgi_irradiance;
+		HLSL::Texture2D<float2> ddgi_visibility;
 		HLSL::RWTexture2D<float4> noise;
 		HLSL::RWTexture2D<float> frames;
 		HLSL::RWTexture2D<float4> DirAndPdf;
 		HLSL::RWTexture2D<float4> noiseRaw;
 		HLSL::RWTexture2D<float> shadow_noise;
+		DDGIInfo ddgi_cascade0;
+		DDGIInfo ddgi_cascade1;
+		DDGIInfo ddgi_cascade2;
+		DDGIInfo ddgi_cascade3;
+		DDGIInfo ddgi_cascade4;
 		HLSL::RWTexture2D<float4>& GetNoise() { return noise; }
 		HLSL::RWTexture2D<float>& GetFrames() { return frames; }
 		HLSL::RWTexture2D<float4>& GetDirAndPdf() { return DirAndPdf; }
 		HLSL::Texture2D<float2>& GetBlueNoise() { return blueNoise; }
 		HLSL::RWTexture2D<float4>& GetNoiseRaw() { return noiseRaw; }
 		HLSL::RWTexture2D<float>& GetShadow_noise() { return shadow_noise; }
+		HLSL::Texture2D<float4>& GetDdgi_irradiance() { return ddgi_irradiance; }
+		HLSL::Texture2D<float2>& GetDdgi_visibility() { return ddgi_visibility; }
+		DDGIInfo& GetDdgi_cascade0() { return ddgi_cascade0; }
+		DDGIInfo& GetDdgi_cascade1() { return ddgi_cascade1; }
+		DDGIInfo& GetDdgi_cascade2() { return ddgi_cascade2; }
+		DDGIInfo& GetDdgi_cascade3() { return ddgi_cascade3; }
+		DDGIInfo& GetDdgi_cascade4() { return ddgi_cascade4; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(blueNoise, "VoxelOutput::blueNoise");
+			compiler.compile(ddgi_irradiance, "VoxelOutput::ddgi_irradiance");
+			compiler.compile(ddgi_visibility, "VoxelOutput::ddgi_visibility");
 			compiler.compile(noise, "VoxelOutput::noise");
 			compiler.compile(frames, "VoxelOutput::frames");
 			compiler.compile(DirAndPdf, "VoxelOutput::DirAndPdf");
 			compiler.compile(noiseRaw, "VoxelOutput::noiseRaw");
 			compiler.compile(shadow_noise, "VoxelOutput::shadow_noise");
+			compiler.compile(ddgi_cascade0, "VoxelOutput::ddgi_cascade0");
+			compiler.compile(ddgi_cascade1, "VoxelOutput::ddgi_cascade1");
+			compiler.compile(ddgi_cascade2, "VoxelOutput::ddgi_cascade2");
+			compiler.compile(ddgi_cascade3, "VoxelOutput::ddgi_cascade3");
+			compiler.compile(ddgi_cascade4, "VoxelOutput::ddgi_cascade4");
 		}
 		struct Compiled
 		{
 			uint blueNoise; // Texture2D<float2>
+			uint ddgi_irradiance; // Texture2D<float4>
+			uint ddgi_visibility; // Texture2D<float2>
 			uint noise; // RWTexture2D<float4>
 			uint frames; // RWTexture2D<float>
 			uint DirAndPdf; // RWTexture2D<float4>
 			uint noiseRaw; // RWTexture2D<float4>
 			uint shadow_noise; // RWTexture2D<float>
+			DDGIInfo::Compiled ddgi_cascade0; // DDGIInfo
+			DDGIInfo::Compiled ddgi_cascade1; // DDGIInfo
+			DDGIInfo::Compiled ddgi_cascade2; // DDGIInfo
+			DDGIInfo::Compiled ddgi_cascade3; // DDGIInfo
+			DDGIInfo::Compiled ddgi_cascade4; // DDGIInfo
 
 			
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(ddgi_cascade0);
+				ar& NVP(ddgi_cascade1);
+				ar& NVP(ddgi_cascade2);
+				ar& NVP(ddgi_cascade3);
+				ar& NVP(ddgi_cascade4);
 			}
 
 
@@ -65,6 +99,11 @@ export namespace Table
 		private:
 		SERIALIZE()
 		{
+			ar& NVP(ddgi_cascade0);
+			ar& NVP(ddgi_cascade1);
+			ar& NVP(ddgi_cascade2);
+			ar& NVP(ddgi_cascade3);
+			ar& NVP(ddgi_cascade4);
 		}
 
 	};

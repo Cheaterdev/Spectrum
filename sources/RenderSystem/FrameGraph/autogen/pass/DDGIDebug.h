@@ -12,30 +12,22 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class DDGIProbeConvolve : public PassNodeBase
+class DDGIDebug : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
-		// [Multiple=5]: this instance's own
-		// index, written automatically by TypedPass::setup() (FrameGraph.Base.ixx,
-		// from the Pass::pass_index every [Multiple] instance already carries)
-		// before setup_func or any [Optional=...] guard runs -- no per-pass index
-		// field or manual `data.X = i;` assignment needed.
-		uint32_t pass_index = 0;
 
+		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
 
-		Handlers::Texture DDGI_ProbeRadiance = ResourceID::DDGI_ProbeRadiance;
-
-
-		Handlers::Texture DDGI_ProbeGBuffer = ResourceID::DDGI_ProbeGBuffer;
+		Handlers::StructuredBuffer<Table::DDGIProbeMetadata> DDGI_Probes = ResourceID::DDGI_Probes;
 
 
 		Handlers::Texture DDGI_ProbeIrradiance = ResourceID::DDGI_ProbeIrradiance;
 
 
-		Handlers::Texture DDGI_ProbeVisibility = ResourceID::DDGI_ProbeVisibility;
+		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 
 		// Resources this pass always needs whenever it runs, generated from
@@ -54,10 +46,10 @@ public:
 		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.need(data.DDGI_ProbeRadiance, FrameGraph::ResourceFlags::Read);
-			builder.need(data.DDGI_ProbeGBuffer, FrameGraph::ResourceFlags::Read);
-			builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_Probes, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::Read);
+			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -66,18 +58,18 @@ public:
 		// the field fixes it.
 		struct Cache
 		{
-			FrameGraph::ChainIndex DDGI_ProbeRadiance = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeGBuffer = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_Probes = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
 		};
 
 		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 		{
-			cache.DDGI_ProbeRadiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeRadiance, ResourceID::DDGI_ProbeRadiance);
-			cache.DDGI_ProbeGBuffer = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeGBuffer, ResourceID::DDGI_ProbeGBuffer);
+			cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
+			cache.DDGI_Probes = FrameGraph::TaskBuilder::cache_slot(data.DDGI_Probes, ResourceID::DDGI_Probes);
 			cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
-			cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
+			cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
 		}
 
 		// Replay counterpart of create_always/need_always. A field this pass
@@ -89,20 +81,20 @@ public:
 		// previous link's desc, which LoadGraph does once every pass has loaded.
 		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 		{
-			builder.load(data.DDGI_ProbeRadiance, ResourceID::DDGI_ProbeRadiance, cache.DDGI_ProbeRadiance);
-			builder.load(data.DDGI_ProbeGBuffer, ResourceID::DDGI_ProbeGBuffer, cache.DDGI_ProbeGBuffer);
+			builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
+			builder.load(data.DDGI_Probes, ResourceID::DDGI_Probes, cache.DDGI_Probes);
 			builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
-			builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
+			builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
 		}
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::DDGI_ProbeRadiance, false },
-			{ ResourceID::DDGI_ProbeGBuffer, false },
-			{ ResourceID::DDGI_ProbeIrradiance, true },
-			{ ResourceID::DDGI_ProbeVisibility, true },
+			{ ResourceID::GBuffer_DepthMips, false },
+			{ ResourceID::DDGI_Probes, false },
+			{ ResourceID::DDGI_ProbeIrradiance, false },
+			{ ResourceID::ResultTexture, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -113,24 +105,15 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"DDGIProbeConvolve"};
+	static constexpr LiteralWStr Name{L"DDGIDebug"};
 
-	static constexpr uint32_t MaxCount = 5;
-	static constexpr LiteralWStr Names[MaxCount] = {
-		LiteralWStr{L"DDGIProbeConvolve_0"},
-		LiteralWStr{L"DDGIProbeConvolve_1"},
-		LiteralWStr{L"DDGIProbeConvolve_2"},
-		LiteralWStr{L"DDGIProbeConvolve_3"},
-		LiteralWStr{L"DDGIProbeConvolve_4"},
-	};
-
-	static constexpr PassID ID = PassID::DDGIProbeConvolve;
+	static constexpr PassID ID = PassID::DDGIDebug;
 
 
 	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
 	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
 
-	std::array<render_func_type, MaxCount> render_funcs;
+	render_func_type render_func;
 
 	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
 };

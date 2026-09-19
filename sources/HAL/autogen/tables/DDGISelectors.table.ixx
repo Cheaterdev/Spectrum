@@ -18,12 +18,15 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::DDGISelectors;
 		bool enabled = true;
+		bool show_probes = false;
 		bool& GetEnabled() { return enabled; }
+		bool& GetShow_probes() { return show_probes; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(enabled, "DDGISelectors::enabled");
+			compiler.compile(show_probes, "DDGISelectors::show_probes");
 		}
 		using Compiled = DDGISelectors;
 
@@ -35,6 +38,7 @@ export namespace Table
 		SERIALIZE()
 		{
 			ar& NVP(enabled);
+			ar& NVP(show_probes);
 		}
 
 	};
