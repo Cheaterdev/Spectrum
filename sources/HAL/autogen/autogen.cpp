@@ -82,6 +82,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "PSSMData") return SlotID::PSSMData;
 	if(slot_name == "PSSMDataGlobal") return SlotID::PSSMDataGlobal;
 	if(slot_name == "PSSMLighting") return SlotID::PSSMLighting;
+	if(slot_name == "DispatchRaysArgsBuildData") return SlotID::DispatchRaysArgsBuildData;
 	if(slot_name == "RaytracingRays") return SlotID::RaytracingRays;
 	if(slot_name == "ColorRTXOutput") return SlotID::ColorRTXOutput;
 	if(slot_name == "Raytracing") return SlotID::Raytracing;
@@ -302,6 +303,8 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::PSSMLighting) return Slots::PSSMLighting::Slot::ID;
 
+	if(id == SlotID::DispatchRaysArgsBuildData) return Slots::DispatchRaysArgsBuildData::Slot::ID;
+
 	if(id == SlotID::RaytracingRays) return Slots::RaytracingRays::Slot::ID;
 
 	if(id == SlotID::ColorRTXOutput) return Slots::ColorRTXOutput::Slot::ID;
@@ -515,6 +518,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::PSSMData) return "PSSMData";
 	if(id == SlotID::PSSMDataGlobal) return "PSSMDataGlobal";
 	if(id == SlotID::PSSMLighting) return "PSSMLighting";
+	if(id == SlotID::DispatchRaysArgsBuildData) return "DispatchRaysArgsBuildData";
 	if(id == SlotID::RaytracingRays) return "RaytracingRays";
 	if(id == SlotID::ColorRTXOutput) return "ColorRTXOutput";
 	if(id == SlotID::Raytracing) return "Raytracing";

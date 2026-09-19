@@ -66,6 +66,7 @@ Pipeline MainPipeline
 	# is already correct when that wiring lands.
 	[Async]DDGIProbeSelect;
 	[Async]DDGIProbeResidencyMark;
+	[Async]DDGIProbeDispatchArgsBuild;
 	[Async]DDGIProbeTrace;
 	[Async]DDGIProbeConvolve;
 	[Async]DDGIIndirectDebug;

@@ -38,6 +38,15 @@ namespace
 	// excludes/includes the contribution from actual lighting, for an A/B
 	// comparison against plain 1-bounce RTX.
 	Variable<bool> g_ddgi_use_fallback = { true, "Use probe fallback", &ddgi_debug_context() };
+	// A/B toggle: real GPU-driven ExecuteIndirect(DISPATCH_RAYS) (raytracing.sig's
+	// DispatchRaysArguments/DispatchRaysArgsBuild) vs. the original CPU-recorded
+	// fixed-size dispatch_rays. v1 wiring makes both launch the identical
+	// Width/Height (this cascade's full atlas), so toggling this should be a
+	// no-op visually -- it only proves the ExecuteIndirect path itself is
+	// correct before Width/Height get wired to a real residency-compacted
+	// count (stream compaction, not yet implemented -- see [[project-ddgi]]
+	// planning notes).
+	Variable<bool> g_ddgi_use_indirect_dispatch = { false, "Use indirect DispatchRays", &ddgi_debug_context() };
 }
 
 void ddgi_update_selectors(FrameGraph::Graph& graph)
@@ -94,7 +103,9 @@ Slots::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index)
 	info.GetCascade_info().x = cascade_index * probe_count;
 	info.GetCascade_info().y = cascade_index * Constants::DDGI_AtlasWidth;
 	info.GetCascade_info().z = cascade_index;
+	info.GetCascade_info().w = (cascade_index == Constants::DDGI_CascadeCount - 1) ? 1 : 0;
 	info.GetFlags().x = g_ddgi_use_fallback ? 1 : 0;
+	info.GetFlags().y = g_ddgi_use_indirect_dispatch ? 1 : 0;
 
 	return info;
 }
@@ -145,15 +156,85 @@ void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& d
 
 	Slots::DDGIInfo info = ddgi_make_info(ddgi_camera_pos(context), cascade);
 
+	compute.set_pipeline<PSOS::DDGIProbeResidencyMark>();
+
+	// First dispatch: zero this cascade's own compacted-count slot -- see
+	// ddgi_probe_residency_mark.hlsl's own comment for why this can't be
+	// folded into the marking dispatch below.
 	{
 		Slots::DDGIProbeResidencyMarkData params;
 		params.GetInfo() = info;
-		params.GetProbe_residency() = data.DDGI_ProbeResidency->rwStructuredBuffer;
+		params.GetProbe_residency()  = data.DDGI_ProbeResidency->rwStructuredBuffer;
+		params.GetCompacted_list()   = data.DDGI_CompactedProbeList->rwStructuredBuffer;
+		params.GetCompacted_count()  = data.DDGI_CompactedProbeCount->rwStructuredBuffer;
+		params.GetPending()          = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
+		params.GetReset_only() = 1;
 		compute.set(params);
+		compute.dispatch(1, 1, 1);
 	}
 
-	compute.set_pipeline<PSOS::DDGIProbeResidencyMark>();
-	compute.dispatch(uint3(Constants::DDGI_ProbeCount, 1, 1), uint3(64, 1, 1));
+	// Second dispatch: mark + stream-compact.
+	{
+		Slots::DDGIProbeResidencyMarkData params;
+		params.GetInfo() = info;
+		params.GetProbe_residency()  = data.DDGI_ProbeResidency->rwStructuredBuffer;
+		params.GetCompacted_list()   = data.DDGI_CompactedProbeList->rwStructuredBuffer;
+		params.GetCompacted_count()  = data.DDGI_CompactedProbeCount->rwStructuredBuffer;
+		params.GetPending()          = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
+		params.GetReset_only() = 0;
+		compute.set(params);
+		compute.dispatch(uint3(Constants::DDGI_ProbeCount, 1, 1), uint3(64, 1, 1));
+	}
+}
+
+// Packs this cascade's DDGI_DispatchRaysArgs record (DispatchRaysArguments,
+// raytracing.sig) from the RTXPSO's own shader-table addresses plus this
+// cascade's dispatch size, so DDGIProbeTrace's own render() (below) can
+// optionally issue a real ExecuteIndirect(DISPATCH_RAYS) instead of a fixed
+// dispatch_rays call -- see g_ddgi_use_indirect_dispatch's own comment for
+// why both still launch identically for now. Shader-table addresses are
+// re-read every frame (cheap: a few resource-address lookups, no upload)
+// rather than cached, since materials can hot-reload and rebuild them.
+// Plain free function -- see ddgi_probe_select_render's own comment on why.
+void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::Context& data, FrameContext& context)
+{
+	uint32_t cascade = data.pass_index;
+
+	auto& compute = context.get_list()->get_compute();
+	compute.set_signature(Layouts::DefaultLayout);
+	context.graph->set_slot(SlotID::FrameInfo, compute);
+
+	auto& rtx = RTX::get().rtx;
+	auto split_address = [](HAL::GPUAddressPtr v) {
+		return uint2(static_cast<uint>(v & 0xFFFFFFFFull), static_cast<uint>(v >> 32));
+	};
+
+	Slots::DispatchRaysArgsBuildData params;
+	params.GetHit_addr()    = split_address(rtx.hitgroup_ids->buffer.get_resource_address().get_ptr());
+	params.GetHit_stride()  = static_cast<uint>(sizeof(std::remove_cvref_t<decltype(rtx)>::hit_type));
+	params.GetHit_count()   = static_cast<uint>(rtx.hitgroup_ids->max_size());
+	params.GetMiss_addr()   = split_address(rtx.miss_ids.get_resource_address().get_ptr());
+	params.GetMiss_stride() = static_cast<uint>(sizeof(HAL::shader_identifier));
+	params.GetMiss_count()  = static_cast<uint>(rtx.miss_ids.get_count());
+	// DDGIProbeTrace here names the RaytraceRaygen<> tag type (raytracing.sig),
+	// the same unqualified name RTX::get().render<DDGIProbeTrace>() below uses
+	// -- not the Passes::DDGIProbeTrace FrameGraph PassNode type.
+	params.GetRaygen_addr() = split_address(rtx.raygen_address<DDGIProbeTrace>().get_ptr());
+	params.GetRaygen_size() = static_cast<uint>(sizeof(HAL::shader_identifier));
+	// Width = DDGI_CompactedProbeCount[cascade] * texels/probe -- a real
+	// GPU-computed launch size (DDGIProbeResidencyMark's own stream
+	// compaction), not a CPU literal, though numerically identical to the
+	// old fixed atlas size today since residency marking is still the
+	// "mark everything" placeholder (see that PassNode's own comment).
+	params.GetWidth_multiplier() = Constants::DDGI_ProbeTexelSize * Constants::DDGI_ProbeTexelSize;
+	params.GetCount_index()      = cascade;
+	params.GetCompacted_count()  = data.DDGI_CompactedProbeCount->structuredBuffer;
+	params.GetDest_index()  = cascade;
+	params.GetArgs()        = data.DDGI_DispatchRaysArgs->rwStructuredBuffer;
+	compute.set(params);
+
+	compute.set_pipeline<PSOS::DispatchRaysArgsBuild>();
+	compute.dispatch(1, 1, 1);
 }
 
 // Traces one ray per DDGI_ProbeRadiance/DDGI_ProbeGBuffer atlas texel,
@@ -187,11 +268,31 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 		params.GetPrev_irradiance() = data.DDGI_ProbeIrradiance->texture2D;
 		params.GetPrev_visibility() = data.DDGI_ProbeVisibility->texture2D;
 		params.GetProbe_residency() = data.DDGI_ProbeResidency->rwStructuredBuffer;
+		params.GetCompacted_list()  = data.DDGI_CompactedProbeList->structuredBuffer;
 		compute.set(params);
 	}
 
-	ivec2 atlas_size = { Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight };
-	RTX::get().render<DDGIProbeTrace>(compute, sceneinfo.scene->raytrace_scene, atlas_size);
+	if (g_ddgi_use_indirect_dispatch)
+	{
+		// Real GPU-driven ExecuteIndirect(DISPATCH_RAYS) -- DDGIProbeDispatchArgsBuild
+		// (above) already packed this cascade's DDGI_DispatchRaysArgs record
+		// this frame. Mirrors what RTX::render<T>()/RTXPSO::dispatch<T>() do
+		// for the fixed-size path: bind the scene, set the DXR state object,
+		// then launch -- exec_indirect<DispatchRaysArguments> just reads its
+		// dispatch dimensions (and shader-table addresses) from that buffer
+		// instead of from template/call-site arguments.
+		Slots::Raytracing raytracing;
+		raytracing.GetScene() = sceneinfo.scene->raytrace_scene->get_handle();
+		compute.set(raytracing);
+
+		compute.set_pipeline(RTX::get().rtx.m_dxrStateObject);
+		compute.exec_indirect<DispatchRaysArguments>(*data.DDGI_DispatchRaysArgs, 1);
+	}
+	else
+	{
+		ivec2 atlas_size = { Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight };
+		RTX::get().render<DDGIProbeTrace>(compute, sceneinfo.scene->raytrace_scene, atlas_size);
+	}
 }
 
 // Cosine-weighted convolution of each probe's own traced radiance into its
@@ -249,6 +350,7 @@ void PassDefault<Passes::DDGIDebug>::render(
 		params.GetProbes().GetProbes()        = data.DDGI_Probes->rwStructuredBuffer;
 		params.GetDepth()            = data.GBuffer_DepthMips->texture2D;
 		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->texture2D;
+		params.GetProbe_residency()  = data.DDGI_ProbeResidency->structuredBuffer;
 		params.GetTarget()           = data.ResultTexture->rwTexture2D;
 		compute.set(params);
 	}

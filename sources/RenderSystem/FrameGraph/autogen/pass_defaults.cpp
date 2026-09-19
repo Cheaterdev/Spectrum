@@ -72,6 +72,15 @@ FrameGraph::SetupResult PassSetupDefault<Passes::DDGIProbeResidencyMark>::setup(
 }
 
 
+FrameGraph::SetupResult PassSetupDefault<Passes::DDGIProbeDispatchArgsBuild>::setup(
+	Passes::DDGIProbeDispatchArgsBuild::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::DDGISelectors>().enabled && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassSetupDefault<Passes::DDGIProbeTrace>::setup(
 	Passes::DDGIProbeTrace::Context& data, FrameGraph::TaskBuilder& builder)
 {

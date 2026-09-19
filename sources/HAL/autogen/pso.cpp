@@ -23,6 +23,7 @@ void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HA
 	commands[IndirectCommands::DispatchMeshArguments] = AutoGenIndirectCommand<DispatchMeshArguments>(device).create_command();
 	commands[IndirectCommands::DispatchArguments] = AutoGenIndirectCommand<DispatchArguments>(device).create_command();
 	commands[IndirectCommands::CommandData] = AutoGenIndirectCommand<Table::CommandData>(device).create_command();	
+	commands[IndirectCommands::DispatchRaysArguments] = AutoGenIndirectCommand<DispatchRaysArguments>(device).create_command();
 	commands[IndirectCommands::VSMDispatchCommandData] = AutoGenIndirectCommand<Table::VSMDispatchCommandData>(device).create_command();	
 }
 
@@ -91,6 +92,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::NRD_ShadowCombine>(device, pso[PSO::NRD_ShadowCombine]));
 	tasks.emplace_back(PSOBase::create<PSOS::PSSMApplyCompute>(device, pso[PSO::PSSMApplyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::GBufferDownsample>(device, pso[PSO::GBufferDownsample]));
+	tasks.emplace_back(PSOBase::create<PSOS::DispatchRaysArgsBuild>(device, pso[PSO::DispatchRaysArgsBuild]));
 	tasks.emplace_back(PSOBase::create<PSOS::RTXShadowReferenceCompute>(device, pso[PSO::RTXShadowReferenceCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::SkyCompute>(device, pso[PSO::SkyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::SkyCube>(device, pso[PSO::SkyCube]));

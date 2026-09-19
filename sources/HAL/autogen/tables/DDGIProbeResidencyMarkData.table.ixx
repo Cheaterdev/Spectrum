@@ -18,20 +18,36 @@ export namespace Table
 	struct DDGIProbeResidencyMarkData
 	{
 		static constexpr SlotID ID = SlotID::DDGIProbeResidencyMarkData;
+		uint reset_only;
 		HLSL::RWStructuredBuffer<uint> probe_residency;
+		HLSL::RWStructuredBuffer<uint> compacted_list;
+		HLSL::RWStructuredBuffer<uint> compacted_count;
+		HLSL::RWStructuredBuffer<uint> pending;
 		DDGIInfo info;
 		HLSL::RWStructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
+		HLSL::RWStructuredBuffer<uint>& GetCompacted_list() { return compacted_list; }
+		HLSL::RWStructuredBuffer<uint>& GetCompacted_count() { return compacted_count; }
+		HLSL::RWStructuredBuffer<uint>& GetPending() { return pending; }
+		uint& GetReset_only() { return reset_only; }
 		DDGIInfo& GetInfo() { return info; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
+			compiler.compile(reset_only, "DDGIProbeResidencyMarkData::reset_only");
 			compiler.compile(probe_residency, "DDGIProbeResidencyMarkData::probe_residency");
+			compiler.compile(compacted_list, "DDGIProbeResidencyMarkData::compacted_list");
+			compiler.compile(compacted_count, "DDGIProbeResidencyMarkData::compacted_count");
+			compiler.compile(pending, "DDGIProbeResidencyMarkData::pending");
 			compiler.compile(info, "DDGIProbeResidencyMarkData::info");
 		}
 		struct Compiled
 		{
+			uint reset_only; // uint
 			uint probe_residency; // RWStructuredBuffer<uint>
+			uint compacted_list; // RWStructuredBuffer<uint>
+			uint compacted_count; // RWStructuredBuffer<uint>
+			uint pending; // RWStructuredBuffer<uint>
 			DDGIInfo::Compiled info; // DDGIInfo
 
 			
@@ -39,6 +55,7 @@ export namespace Table
 			SERIALIZE()
 			{
 				ar& NVP(info);
+				ar& NVP(reset_only);
 			}
 
 
@@ -52,6 +69,7 @@ export namespace Table
 		SERIALIZE()
 		{
 			ar& NVP(info);
+			ar& NVP(reset_only);
 		}
 
 	};

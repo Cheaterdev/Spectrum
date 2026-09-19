@@ -32,6 +32,21 @@ namespace HAL
         return desc;
     }
 
+    // DXR Tier 1.1. DispatchRaysArguments (SIG.ixx) is laid out byte-for-byte
+    // as D3D12_DISPATCH_RAYS_DESC, which is what this argument type requires
+    // ExecuteIndirect to read directly off the GPU buffer -- if this ever
+    // fails, DispatchRaysArguments' field list has drifted from the real
+    // struct (a padding change, a new SDK member) and ByteStride would be
+    // silently wrong.
+    static_assert(sizeof(DispatchRaysArguments) == sizeof(D3D12_DISPATCH_RAYS_DESC));
+
+    inline D3D12_INDIRECT_ARGUMENT_DESC create_indirect_for(DispatchRaysArguments*)
+    {
+        D3D12_INDIRECT_ARGUMENT_DESC desc;
+        desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS;
+        return desc;
+    }
+
     // Fallback for slot types that still carry their own create_indirect()
     template<class T>
     D3D12_INDIRECT_ARGUMENT_DESC create_indirect_for(T*)

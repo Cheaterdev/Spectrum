@@ -15,6 +15,7 @@ namespace FrameGraph
 		BlueNoise,
 		DDGIProbeSelect,
 		DDGIProbeResidencyMark,
+		DDGIProbeDispatchArgsBuild,
 		DDGIProbeTrace,
 		DDGIProbeConvolve,
 		DDGIDebug,

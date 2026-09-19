@@ -10,8 +10,16 @@
 #include "DDGIInfo.h"
 struct DDGIProbeResidencyMarkData
 {
+	uint reset_only; // uint
 	uint probe_residency; // RWStructuredBuffer<uint>
+	uint compacted_list; // RWStructuredBuffer<uint>
+	uint compacted_count; // RWStructuredBuffer<uint>
+	uint pending; // RWStructuredBuffer<uint>
 	DDGIInfo info; // DDGIInfo
 	DDGIInfo GetInfo() { return info; }
+	uint GetReset_only() { return reset_only; }
 	RWStructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
+	RWStructuredBuffer<uint> GetCompacted_list() { return ResourceDescriptorHeap[compacted_list]; }
+	RWStructuredBuffer<uint> GetCompacted_count() { return ResourceDescriptorHeap[compacted_count]; }
+	RWStructuredBuffer<uint> GetPending() { return ResourceDescriptorHeap[pending]; }
 };

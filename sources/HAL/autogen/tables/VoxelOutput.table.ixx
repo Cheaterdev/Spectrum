@@ -26,6 +26,7 @@ export namespace Table
 		HLSL::RWTexture2D<float4> DirAndPdf;
 		HLSL::RWTexture2D<float4> noiseRaw;
 		HLSL::RWTexture2D<float> shadow_noise;
+		HLSL::RWStructuredBuffer<uint> ddgi_residency_pending;
 		DDGIInfo ddgi_cascade0;
 		DDGIInfo ddgi_cascade1;
 		DDGIInfo ddgi_cascade2;
@@ -39,6 +40,7 @@ export namespace Table
 		HLSL::RWTexture2D<float>& GetShadow_noise() { return shadow_noise; }
 		HLSL::Texture2D<float4>& GetDdgi_irradiance() { return ddgi_irradiance; }
 		HLSL::Texture2D<float2>& GetDdgi_visibility() { return ddgi_visibility; }
+		HLSL::RWStructuredBuffer<uint>& GetDdgi_residency_pending() { return ddgi_residency_pending; }
 		DDGIInfo& GetDdgi_cascade0() { return ddgi_cascade0; }
 		DDGIInfo& GetDdgi_cascade1() { return ddgi_cascade1; }
 		DDGIInfo& GetDdgi_cascade2() { return ddgi_cascade2; }
@@ -56,6 +58,7 @@ export namespace Table
 			compiler.compile(DirAndPdf, "VoxelOutput::DirAndPdf");
 			compiler.compile(noiseRaw, "VoxelOutput::noiseRaw");
 			compiler.compile(shadow_noise, "VoxelOutput::shadow_noise");
+			compiler.compile(ddgi_residency_pending, "VoxelOutput::ddgi_residency_pending");
 			compiler.compile(ddgi_cascade0, "VoxelOutput::ddgi_cascade0");
 			compiler.compile(ddgi_cascade1, "VoxelOutput::ddgi_cascade1");
 			compiler.compile(ddgi_cascade2, "VoxelOutput::ddgi_cascade2");
@@ -72,6 +75,7 @@ export namespace Table
 			uint DirAndPdf; // RWTexture2D<float4>
 			uint noiseRaw; // RWTexture2D<float4>
 			uint shadow_noise; // RWTexture2D<float>
+			uint ddgi_residency_pending; // RWStructuredBuffer<uint>
 			DDGIInfo::Compiled ddgi_cascade0; // DDGIInfo
 			DDGIInfo::Compiled ddgi_cascade1; // DDGIInfo
 			DDGIInfo::Compiled ddgi_cascade2; // DDGIInfo

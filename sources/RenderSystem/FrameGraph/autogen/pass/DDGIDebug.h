@@ -27,6 +27,9 @@ public:
 		Handlers::Texture DDGI_ProbeIrradiance = ResourceID::DDGI_ProbeIrradiance;
 
 
+		Handlers::StructuredBuffer<uint> DDGI_ProbeResidency = ResourceID::DDGI_ProbeResidency;
+
+
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 
@@ -49,6 +52,7 @@ public:
 			builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_Probes, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::Read);
 			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
@@ -61,6 +65,7 @@ public:
 			FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_Probes = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_ProbeResidency = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
 		};
 
@@ -69,6 +74,7 @@ public:
 			cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
 			cache.DDGI_Probes = FrameGraph::TaskBuilder::cache_slot(data.DDGI_Probes, ResourceID::DDGI_Probes);
 			cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
+			cache.DDGI_ProbeResidency = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency);
 			cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
 		}
 
@@ -84,6 +90,7 @@ public:
 			builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
 			builder.load(data.DDGI_Probes, ResourceID::DDGI_Probes, cache.DDGI_Probes);
 			builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
+			builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
 			builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
 		}
 
@@ -94,6 +101,7 @@ public:
 			{ ResourceID::GBuffer_DepthMips, false },
 			{ ResourceID::DDGI_Probes, false },
 			{ ResourceID::DDGI_ProbeIrradiance, false },
+			{ ResourceID::DDGI_ProbeResidency, false },
 			{ ResourceID::ResultTexture, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

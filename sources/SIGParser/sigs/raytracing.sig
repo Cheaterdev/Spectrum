@@ -14,6 +14,77 @@ struct RenderDeviceCapabilities
 	bool dlssrr_available = false;
 }
 
+# GPU-driven indirect ray dispatch (D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS,
+# DXR Tier 1.1). [shader_only]: the real C++ type is the hand-written mirror
+# of D3D12_DISPATCH_RAYS_DESC in HAL/SIG/SIG.ixx (DispatchRaysArguments) --
+# this declaration only drives the HLSL-side struct DispatchRaysArgsBuild
+# writes into. Field names/types here don't need to match the C++ side
+# (they never do for [shader_only] IndirectCommand types, see
+# DispatchArguments/DispatchMeshArguments above this file's own sibling
+# meshrender.sig), only total byte layout does -- three GPU-address ranges
+# (uint2 = 8 bytes, matching a UINT64) then Width/Height/Depth.
+[IndirectCommand]
+[shader_only]
+struct DispatchRaysArguments
+{
+	uint2 raygen_addr;
+	uint2 raygen_size;
+	uint2 miss_addr;
+	uint2 miss_size;
+	uint2 miss_stride;
+	uint2 hit_addr;
+	uint2 hit_size;
+	uint2 hit_stride;
+	uint2 callable_addr;
+	uint2 callable_size;
+	uint2 callable_stride;
+	uint width;
+	uint height;
+	uint depth;
+}
+
+# Packs one DispatchRaysArguments record: shader-table addresses/sizes/
+# strides come from the RTXPSO's own tables (constant for the PSO's
+# lifetime -- see RTX.ixx's get_dispatch_rays_addresses<T>()). Width is
+# read from a GPU-side count (compacted_count[count_index]) rather than a
+# CPU-supplied literal -- that's the whole point of going through
+# ExecuteIndirect: the launch size can depend on something the GPU computed
+# this frame (e.g. DDGI's residency stream compaction, ddgi.sig) without a
+# CPU readback. width_multiplier scales that count up to a thread count for
+# a caller like DDGI that needs several rays per compacted list entry
+# (texel_size*texel_size per probe); pass 1 for a caller whose count IS the
+# thread count. Height/Depth are always 1 -- a caller needing more than a
+# 1D launch isn't supported yet. One thread: this is 100 bytes of
+# bookkeeping, not a workload.
+[Bind = DefaultLayout::Instance0]
+struct DispatchRaysArgsBuildData
+{
+	uint2 hit_addr;
+	uint  hit_stride;
+	uint  hit_count;
+	uint2 miss_addr;
+	uint  miss_stride;
+	uint  miss_count;
+	uint2 raygen_addr;
+	uint  raygen_size;
+	uint  width_multiplier;
+	uint  count_index;
+	StructuredBuffer<uint> compacted_count;
+	# Which element of `args` this call writes -- callers sharing one args
+	# buffer across several cascades/variants (DDGIProbeDispatchArgsBuild,
+	# ddgi.sig) each write their own slice of it.
+	uint  dest_index;
+	RWStructuredBuffer<DispatchRaysArguments> args;
+}
+
+ComputePSO DispatchRaysArgsBuild
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = rtx/dispatch_rays_args_build;
+}
+
 [Bind = DefaultLayout::Instance2]
 struct RaytracingRays
 {

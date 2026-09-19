@@ -23,6 +23,7 @@ export
 		DispatchMeshArguments,
 		DispatchArguments,
 		CommandData,
+		DispatchRaysArguments,
 		VSMDispatchCommandData
 	};
 
@@ -84,6 +85,7 @@ export
 		NRD_ShadowCombine,
 		PSSMApplyCompute,
 		GBufferDownsample,
+		DispatchRaysArgsBuild,
 		RTXShadowReferenceCompute,
 		SkyCompute,
 		SkyCube,
@@ -271,6 +273,8 @@ export
 		PSSMDataGlobal = "PSSMDataGlobal"_crc32,
 		PSSMLighting = "PSSMLighting"_crc32,
 		RenderDeviceCapabilities = "RenderDeviceCapabilities"_crc32,
+		DispatchRaysArguments = "DispatchRaysArguments"_crc32,
+		DispatchRaysArgsBuildData = "DispatchRaysArgsBuildData"_crc32,
 		RaytracingRays = "RaytracingRays"_crc32,
 		ColorRTXOutput = "ColorRTXOutput"_crc32,
 		RayCone = "RayCone"_crc32,

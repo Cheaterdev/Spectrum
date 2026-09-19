@@ -74,7 +74,11 @@ const DDGI_MaxProbesPerFrame = `Constants::DDGI_ProbeCountX * Constants::DDGI_Pr
 # (DDGI_CascadeCount-times-wider) atlas textures; .z is the cascade index
 # itself (informational/debug only). All precomputed in C++
 # (DDGIGraph.cpp's ddgi_make_info) since HLSL can't reach Constants:: to
-# derive them itself, same reasoning atlas_info.x already documents.
+# derive them itself, same reasoning atlas_info.x already documents. .w is
+# 1 for the coarsest cascade (DDGI_CascadeCount-1), 0 otherwise -- the
+# coarsest level is exempt from residency culling (nowhere further to fall
+# back to, so it must stay fully resident as the guaranteed-valid floor
+# other cascades lean on), see DDGIProbeResidencyMark's own comment.
 [Bind = DefaultLayout::Instance0]
 struct DDGIInfo
 {
@@ -90,7 +94,13 @@ struct DDGIInfo
 	# DDGIGraph.cpp's Variable<bool> "Use probe fallback". Lets the DDGI
 	# system keep tracing/convolving (so re-enabling doesn't start from cold)
 	# while its contribution is excluded from actual lighting, for an A/B
-	# comparison against plain 1-bounce RTX. yzw unused.
+	# comparison against plain 1-bounce RTX.
+	# .y = use_indirect_dispatch (0/1), mirrored from DDGIGraph.cpp's
+	# Variable<bool> "Use indirect DispatchRays" -- selects which addressing
+	# scheme ddgi_probe_trace.hlsl's raygen shader uses (DispatchRaysIndex().xy
+	# directly into the atlas vs. a compacted linear index through
+	# DDGIProbeTraceData::compacted_list), matching whichever dispatch shape
+	# DDGIGraph.cpp's own render() actually issued this frame. zw unused.
 	uint4 flags;
 }
 
@@ -241,12 +251,18 @@ struct DDGIProbeTraceData
 	Texture2D<float2> prev_visibility;
 
 	# This cascade's own residency flags -- read at the top of
-	# ddgi_probe_trace.hlsl to early-out (skip the TraceRay call entirely)
-	# for probes DDGIProbeResidencyMark didn't mark needed this frame. See
-	# that PassNode's own comment for why this is a shader early-out rather
-	# than a shrunk dispatch (no GPU-driven indirect DispatchRays in this
-	# codebase's HAL).
+	# ddgi_probe_trace.hlsl as a belt-and-suspenders early-out. Redundant when
+	# g_ddgi_use_indirect_dispatch is on (every probe reached via
+	# compacted_list below was already marked needed to get there), but still
+	# the only thing skipping the TraceRay call when that toggle is off and
+	# this pass still launches the full fixed-size dispatch.
 	RWStructuredBuffer<uint> probe_residency;
+
+	# Maps a compacted (indirect-dispatch) linear index back to which probe
+	# it belongs to -- see ddgi_probe_trace.hlsl's own comment. Unused when
+	# g_ddgi_use_indirect_dispatch is off (DispatchRaysIndex().xy addresses
+	# the atlas directly in that mode, same as before this existed).
+	StructuredBuffer<uint> compacted_list;
 }
 
 [Bind = DefaultLayout::Instance0]
@@ -331,6 +347,41 @@ PassNode DDGIProbeSelect
 	# and why. Same sole-creator reasoning as Irradiance/Visibility above.
 	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
 	StructuredBuffer<uint> DDGI_ProbeResidency;
+
+	# One DispatchRaysArguments (raytracing.sig) record per cascade -- the
+	# GPU-driven indirect-DispatchRays args buffer DDGIProbeDispatchArgsBuild
+	# (below) fills and DDGIProbeTrace's own ExecuteIndirect reads. Same
+	# sole-creator reasoning as the other shared buffers above.
+	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	StructuredBuffer<DispatchRaysArguments> DDGI_DispatchRaysArgs;
+
+	# Stream-compacted list of this cascade's needed probes (dense, from index
+	# 0) plus a per-cascade needed-count -- DDGIProbeResidencyMark (below)
+	# appends into it (same pass that sets DDGI_ProbeResidency), and
+	# DDGIProbeDispatchArgsBuild/DDGIProbeTrace read the count/list to launch
+	# exactly as many rays as there are needed probes instead of the full
+	# fixed atlas size. Worst case (every probe needed) is the same size as
+	# DDGI_ProbeResidency -- same sole-creator reasoning as the buffers above.
+	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	StructuredBuffer<uint> DDGI_CompactedProbeList;
+	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	StructuredBuffer<uint> DDGI_CompactedProbeCount;
+
+	# Hit-point-driven marking's one-frame-lagged inbox (see
+	# [[project-ddgi]] planning notes and DDGIProbeResidencyMark's own
+	# comment): TraceIndirectDiffuse (IndirectRTX/IndirectRTXHalf,
+	# raytracing.hlsl) writes 1s here at its own per-pixel indirect ray's hit
+	# point, every frame, for whichever probe cell contains it. Nothing
+	# resets this buffer -- DDGIProbeResidencyMark both consumes it (copies
+	# into DDGI_ProbeResidency) AND clears it back to 0 in the same pass, so
+	# a mark survives from the frame IndirectRTX writes it to the very next
+	# frame's residency compaction, then is gone -- exactly the "next frame
+	# it will be loaded" propagation this system relies on instead of a
+	# same-frame chicken-and-egg (IndirectRTX itself runs AFTER this frame's
+	# DDGIProbeResidencyMark/Trace/Convolve, so its own hits can only ever
+	# affect NEXT frame's residency, never this one's).
+	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 }
 
 [Bind = DefaultLayout::Instance0]
@@ -338,6 +389,13 @@ struct DDGIProbeResidencyMarkData
 {
 	DDGIInfo info;
 	RWStructuredBuffer<uint> probe_residency;
+	RWStructuredBuffer<uint> compacted_list;
+	RWStructuredBuffer<uint> compacted_count;
+	RWStructuredBuffer<uint> pending;
+	# Selects which of this shader's two jobs to run this dispatch -- see
+	# ddgi_probe_residency_mark.hlsl's own comment for why they can't be one
+	# dispatch.
+	uint reset_only;
 }
 
 ComputePSO DDGIProbeResidencyMark
@@ -349,20 +407,52 @@ ComputePSO DDGIProbeResidencyMark
 }
 
 # Marks which probes (this cascade's own DDGI_ProbeResidency slice) are
-# actually needed this frame -- see [[project-ddgi]] planning notes. v1
-# placeholder: marks every probe needed unconditionally, matching today's
-# "trace everything" behavior exactly, so the buffer/binding plumbing
-# (this pass + DDGIProbeTrace/Convolve's read side) is provably correct
-# before the real hit-point-driven marking + dilation logic replaces this
-# body. [Multiple=5]: one instance per cascade, same mechanism
-# DDGIProbeSelect/Trace/Convolve already use (see DDGIProbeSelect's own
-# comment for why [Multiple], not [Static]).
+# actually needed this frame -- see [[project-ddgi]] planning notes. Real
+# marking now: consumes DDGI_ProbeResidencyPending (whatever TraceIndirectDiffuse
+# wrote at its own per-pixel indirect ray's hit points LAST frame -- see that
+# buffer's own comment, above, for why one frame lagged rather than
+# same-frame) into DDGI_ProbeResidency, clearing pending back to 0 as it
+# goes, except the coarsest cascade (DDGIInfo::cascade_info.w), which is
+# forced fully resident regardless -- it has nowhere further to fall back to
+# (cross-cascade fallback for a probe that isn't resident is a later step,
+# not yet implemented). Still no dilation (a probe several hops back in the
+# multi-bounce feedback chain, never directly hit by a screen ray, can drop
+# out the frame it stops being directly visible) -- start simple, revisit if
+# that's visible in practice. ALSO stream-compacts the (now real) marked set
+# into DDGI_CompactedProbeList/DDGI_CompactedProbeCount (see DDGIProbeSelect's
+# own comment on those). Renders TWO dispatches: the first zeroes this
+# cascade's own counter slot (can't be folded into the marking dispatch
+# itself -- InterlockedAdd from 2048 threads across many groups has no safe
+# way to guarantee a zeroing write from one thread happens before another
+# thread's add without a separate pass/dispatch boundary). [Multiple=5]: one
+# instance per cascade, same mechanism DDGIProbeSelect/Trace/Convolve already
+# use (see DDGIProbeSelect's own comment for why [Multiple], not [Static]).
 [Multiple = 5]
 [Compute]
 [SetupCondition = DDGISelectors::enabled && RenderDeviceCapabilities::rtx_supported]
 PassNode DDGIProbeResidencyMark
 {
 	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidency;
+	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_CompactedProbeList;
+	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_CompactedProbeCount;
+	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
+}
+
+# Packs this cascade's DDGI_DispatchRaysArgs record for DDGIProbeTrace's
+# ExecuteIndirect (DispatchRaysArgsBuild PSO, raytracing.sig). Width is now
+# read from DDGI_CompactedProbeCount (DDGIProbeResidencyMark, above) instead
+# of the fixed atlas size -- a genuine GPU-computed dispatch size, though
+# still numerically identical to the old fixed size today since residency
+# marking itself is still the "mark everything" placeholder (see that
+# PassNode's own comment). [Multiple=5]: same per-cascade mechanism as
+# DDGIProbeSelect/ResidencyMark/Trace/Convolve.
+[Multiple = 5]
+[Compute]
+[SetupCondition = DDGISelectors::enabled && RenderDeviceCapabilities::rtx_supported]
+PassNode DDGIProbeDispatchArgsBuild
+{
+	[Always = Read] StructuredBuffer<uint> DDGI_CompactedProbeCount;
+	[Always = UnorderedAccess] StructuredBuffer<DispatchRaysArguments> DDGI_DispatchRaysArgs;
 }
 
 # Traces DDGIInfo::rays_per_probe rays per selected probe over the sphere
@@ -392,6 +482,17 @@ PassNode DDGIProbeTrace
 	[Always = Read] Texture DDGI_ProbeIrradiance;
 	[Always = Read] Texture DDGI_ProbeVisibility;
 	[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
+	# Not bound to the raygen shader -- read directly as a raw HAL::Resource
+	# by this pass's own render() for ExecuteIndirect (DispatchRaysArgsBuild,
+	# raytracing.sig, populates it earlier this frame). Declared here purely
+	# so FrameGraph orders DDGIProbeDispatchArgsBuild before this pass and
+	# tracks the buffer's UAV-write -> indirect-arg-read hazard.
+	[Always = Read] StructuredBuffer<DispatchRaysArguments> DDGI_DispatchRaysArgs;
+	# The compacted dispatch launches a flat 1D grid over (needed probes x
+	# texels/probe) rather than the full atlas -- this is what the raygen
+	# shader looks a needed probe's grid coord up from, given only a linear
+	# dispatch index (see ddgi_probe_trace.hlsl's own comment).
+	[Always = Read] StructuredBuffer<uint> DDGI_CompactedProbeList;
 
 	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight)`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
 	Texture DDGI_ProbeRadiance;
@@ -441,6 +542,10 @@ struct DDGIDebugData
 	# shows that probe's irradiance on its viewer-facing side -- a rough but
 	# intuitive "is this probe actually receiving light" check.
 	Texture2D<float4> probe_irradiance;
+	# Drawn solid red instead of its irradiance color when 0 -- see
+	# [[project-ddgi]] planning notes and DDGIProbeResidencyMark's own
+	# comment (this file) for what marks/clears this.
+	StructuredBuffer<uint> probe_residency;
 	RWTexture2D<float4> target;
 }
 
@@ -471,6 +576,7 @@ PassNode DDGIDebug
 	[Always = Read] Texture GBuffer_DepthMips;
 	[Always = Read] StructuredBuffer<DDGIProbeMetadata> DDGI_Probes;
 	[Always = Read] Texture DDGI_ProbeIrradiance;
+	[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
 	[Always = UnorderedAccess] Texture ResultTexture;
 }
 

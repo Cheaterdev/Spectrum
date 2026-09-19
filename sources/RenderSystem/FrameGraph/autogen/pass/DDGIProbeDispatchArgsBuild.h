@@ -12,7 +12,7 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class DDGIProbeResidencyMark : public PassNodeBase
+class DDGIProbeDispatchArgsBuild : public PassNodeBase
 {
 public:
 	struct Context
@@ -26,16 +26,10 @@ public:
 		uint32_t pass_index = 0;
 
 
-		Handlers::StructuredBuffer<uint> DDGI_ProbeResidency = ResourceID::DDGI_ProbeResidency;
-
-
-		Handlers::StructuredBuffer<uint> DDGI_CompactedProbeList = ResourceID::DDGI_CompactedProbeList;
-
-
 		Handlers::StructuredBuffer<uint> DDGI_CompactedProbeCount = ResourceID::DDGI_CompactedProbeCount;
 
 
-		Handlers::StructuredBuffer<uint> DDGI_ProbeResidencyPending = ResourceID::DDGI_ProbeResidencyPending;
+		Handlers::StructuredBuffer<DispatchRaysArguments> DDGI_DispatchRaysArgs = ResourceID::DDGI_DispatchRaysArgs;
 
 
 		// Resources this pass always needs whenever it runs, generated from
@@ -54,10 +48,8 @@ public:
 		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.DDGI_CompactedProbeList, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.DDGI_CompactedProbeCount, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.need(data.DDGI_CompactedProbeCount, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_DispatchRaysArgs, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -66,18 +58,14 @@ public:
 		// the field fixes it.
 		struct Cache
 		{
-			FrameGraph::ChainIndex DDGI_ProbeResidency = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_CompactedProbeList = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_CompactedProbeCount = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeResidencyPending = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_DispatchRaysArgs = FrameGraph::ChainIndex::Unresolved;
 		};
 
 		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 		{
-			cache.DDGI_ProbeResidency = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency);
-			cache.DDGI_CompactedProbeList = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList);
 			cache.DDGI_CompactedProbeCount = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount);
-			cache.DDGI_ProbeResidencyPending = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending);
+			cache.DDGI_DispatchRaysArgs = FrameGraph::TaskBuilder::cache_slot(data.DDGI_DispatchRaysArgs, ResourceID::DDGI_DispatchRaysArgs);
 		}
 
 		// Replay counterpart of create_always/need_always. A field this pass
@@ -89,20 +77,16 @@ public:
 		// previous link's desc, which LoadGraph does once every pass has loaded.
 		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 		{
-			builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
-			builder.load(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList, cache.DDGI_CompactedProbeList);
 			builder.load(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount, cache.DDGI_CompactedProbeCount);
-			builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
+			builder.load(data.DDGI_DispatchRaysArgs, ResourceID::DDGI_DispatchRaysArgs, cache.DDGI_DispatchRaysArgs);
 		}
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::DDGI_ProbeResidency, true },
-			{ ResourceID::DDGI_CompactedProbeList, true },
-			{ ResourceID::DDGI_CompactedProbeCount, true },
-			{ ResourceID::DDGI_ProbeResidencyPending, true },
+			{ ResourceID::DDGI_CompactedProbeCount, false },
+			{ ResourceID::DDGI_DispatchRaysArgs, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -113,18 +97,18 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"DDGIProbeResidencyMark"};
+	static constexpr LiteralWStr Name{L"DDGIProbeDispatchArgsBuild"};
 
 	static constexpr uint32_t MaxCount = 5;
 	static constexpr LiteralWStr Names[MaxCount] = {
-		LiteralWStr{L"DDGIProbeResidencyMark_0"},
-		LiteralWStr{L"DDGIProbeResidencyMark_1"},
-		LiteralWStr{L"DDGIProbeResidencyMark_2"},
-		LiteralWStr{L"DDGIProbeResidencyMark_3"},
-		LiteralWStr{L"DDGIProbeResidencyMark_4"},
+		LiteralWStr{L"DDGIProbeDispatchArgsBuild_0"},
+		LiteralWStr{L"DDGIProbeDispatchArgsBuild_1"},
+		LiteralWStr{L"DDGIProbeDispatchArgsBuild_2"},
+		LiteralWStr{L"DDGIProbeDispatchArgsBuild_3"},
+		LiteralWStr{L"DDGIProbeDispatchArgsBuild_4"},
 	};
 
-	static constexpr PassID ID = PassID::DDGIProbeResidencyMark;
+	static constexpr PassID ID = PassID::DDGIProbeDispatchArgsBuild;
 
 
 	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;

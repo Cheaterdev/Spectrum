@@ -25,6 +25,7 @@ export
 		Library::BlueNoise BlueNoise;
 		Library::DDGIProbeSelect DDGIProbeSelect;
 		Library::DDGIProbeResidencyMark DDGIProbeResidencyMark;
+		Library::DDGIProbeDispatchArgsBuild DDGIProbeDispatchArgsBuild;
 		Library::DDGIProbeTrace DDGIProbeTrace;
 		Library::DDGIProbeConvolve DDGIProbeConvolve;
 		Library::DDGIDebug DDGIDebug;

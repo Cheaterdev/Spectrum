@@ -482,12 +482,48 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 	{
 		const VoxelOutput voxel_output = CreateVoxelOutput();
 		DDGIInfo ddgi_cascade0 = voxel_output.GetDdgi_cascade0();
+		float3 hit_pos = pos + dir * payload_gi.dist;
+
+		// Residency marking (see [[project-ddgi]] planning notes and
+		// DDGI_ProbeResidencyPending's own comment, ddgi.sig): this screen
+		// ray's hit point is exactly the "what does the screen actually need
+		// lit right now" signal DDGIProbeResidencyMark consumes NEXT frame to
+		// decide which probes to keep tracing. Independent of the use_fallback
+		// toggle below -- marking drives what gets traced, not what gets
+		// sampled, so probes stay warm even while the sampled contribution is
+		// switched off. Only cascades 0..3: the coarsest (4) is always
+		// resident regardless (DDGIProbeResidencyMark's own comment), so
+		// marking it would be wasted work. One probe cell per cascade (the
+		// nearest one to hit_pos), not the full 8-probe trilinear neighborhood
+		// ddgi_sample_irradiance blends over -- a v1 simplification, revisit
+		// if a probe right at a cell boundary visibly flickers in and out of
+		// residency.
+		{
+			DDGIInfo ddgi_cascades[4] = {
+				ddgi_cascade0, voxel_output.GetDdgi_cascade1(),
+				voxel_output.GetDdgi_cascade2(), voxel_output.GetDdgi_cascade3()
+			};
+			DDGIProbes probes;
+			[unroll]
+			for (int c = 0; c < 4; c++)
+			{
+				float3 local = (hit_pos - ddgi_cascades[c].GetGrid_min().xyz) / ddgi_cascades[c].GetProbe_spacing().xyz;
+				int3 cell = int3(round(local));
+				int3 probe_counts = int3(ddgi_cascades[c].GetProbe_counts().xyz);
+				if (all(cell >= 0) && all(cell < probe_counts))
+				{
+					uint linear_index = probes.ddgi_probe_linear_index(uint3(cell), uint3(probe_counts));
+					uint offset = ddgi_cascades[c].GetCascade_info().x;
+					voxel_output.GetDdgi_residency_pending()[offset + linear_index] = 1;
+				}
+			}
+		}
+
 		// Master on/off, mirrored identically into every cascade's own
 		// DDGIInfo (DDGIGraph.cpp's ddgi_make_info) -- see DDGIInfo::flags'
 		// own comment (ddgi.sig).
 		if (ddgi_cascade0.GetFlags().x != 0)
 		{
-			float3 hit_pos = pos + dir * payload_gi.dist;
 			float3 indirect = ddgi_sample_irradiance_cascaded(hit_pos, payload_gi.hit_normal,
 				ddgi_cascade0, voxel_output.GetDdgi_cascade1(), voxel_output.GetDdgi_cascade2(),
 				voxel_output.GetDdgi_cascade3(), voxel_output.GetDdgi_cascade4(),

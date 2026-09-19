@@ -346,6 +346,18 @@ struct SelectLocal<T>
 				miss_ids.get_resource_address(), static_cast<UINT>(miss_ids.get_count()),
 				raygen_ids.get_resource_address(generator));
 		}
+
+		// Same generator-index lookup dispatch<T>() uses, exposed on its own
+		// for callers building a DispatchRaysArguments record (raytracing.sig)
+		// for GPU-driven ExecuteIndirect instead of a direct dispatch_rays call
+		// (DDGIProbeDispatchArgsBuild, ddgi.sig, is the first user).
+		template<class T>
+		HAL::ResourceAddress raygen_address() const
+		{
+			constexpr size_t generator = tuple_element_index<T, std::tuple<Raygens...> >();
+			static_assert(static_cast<UINT>(generator) == T::ID);
+			return raygen_ids.get_resource_address(generator);
+		}
 	};
 
 	template <class Desc>

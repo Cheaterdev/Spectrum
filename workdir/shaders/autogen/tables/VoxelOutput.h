@@ -18,6 +18,7 @@ struct VoxelOutput
 	uint DirAndPdf; // RWTexture2D<float4>
 	uint noiseRaw; // RWTexture2D<float4>
 	uint shadow_noise; // RWTexture2D<float>
+	uint ddgi_residency_pending; // RWStructuredBuffer<uint>
 	DDGIInfo ddgi_cascade0; // DDGIInfo
 	DDGIInfo ddgi_cascade1; // DDGIInfo
 	DDGIInfo ddgi_cascade2; // DDGIInfo
@@ -36,4 +37,5 @@ struct VoxelOutput
 	RWTexture2D<float> GetShadow_noise() { return ResourceDescriptorHeap[shadow_noise]; }
 	Texture2D<float4> GetDdgi_irradiance() { return ResourceDescriptorHeap[ddgi_irradiance]; }
 	Texture2D<float2> GetDdgi_visibility() { return ResourceDescriptorHeap[ddgi_visibility]; }
+	RWStructuredBuffer<uint> GetDdgi_residency_pending() { return ResourceDescriptorHeap[ddgi_residency_pending]; }
 };

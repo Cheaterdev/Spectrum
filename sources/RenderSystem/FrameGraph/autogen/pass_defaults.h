@@ -564,6 +564,17 @@ struct PassSetupDefault<Passes::DDGIProbeResidencyMark>
 
 
 template<>
+struct PassSetupDefault<Passes::DDGIProbeDispatchArgsBuild>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::DDGIProbeDispatchArgsBuild::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
 struct PassSetupDefault<Passes::DDGIProbeTrace>
 {
 	static constexpr bool enabled = true;

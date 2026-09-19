@@ -42,19 +42,51 @@ void DDGIProbeTraceRaygenShader()
 	const DDGIProbes probes = trace_data.GetProbes();
 	const Raytracing raytracing = CreateRaytracing();
 
-	uint2 atlas_texel = DispatchRaysIndex().xy;
 	uint texel_size = info.GetAtlas_info().x;
+
+	// Two addressing schemes, matching whichever dispatch shape
+	// DDGIGraph.cpp's render() actually issued this frame (info.GetFlags().y,
+	// mirrored from g_ddgi_use_indirect_dispatch): the fixed-size path
+	// launches WxH over the full atlas and DispatchRaysIndex().xy addresses
+	// it directly, same as always. The indirect path (real ExecuteIndirect,
+	// see DDGIProbeDispatchArgsBuild/DispatchRaysArgsBuild) launches a flat
+	// 1D grid sized to exactly (needed probes x texels/probe) -- there is no
+	// atlas position to decode directly from a 1D index, so instead: divide
+	// out which compacted-list entry (which probe) and which texel within
+	// that probe's own cell, look the probe's grid coord up from
+	// DDGI_CompactedProbeList, then reconstruct its atlas origin
+	// (ddgi_atlas_origin, the exact inverse of ddgi_atlas_probe_coord below)
+	// and add the local texel back on.
+	uint2 atlas_texel;
+	if (info.GetFlags().y != 0)
+	{
+		uint texels_per_probe = texel_size * texel_size;
+		uint linear_id = DispatchRaysIndex().x;
+		uint list_index = linear_id / texels_per_probe;
+		uint local_texel_linear = linear_id % texels_per_probe;
+		uint2 local_texel = uint2(local_texel_linear % texel_size, local_texel_linear / texel_size);
+
+		uint probe_linear_index = trace_data.GetCompacted_list()[info.GetCascade_info().x + list_index];
+		uint3 probe_coord = probes.ddgi_probe_grid_coord(probe_linear_index, info.GetProbe_counts().xyz);
+		atlas_texel = probes.ddgi_atlas_origin(probe_coord, info.GetProbe_counts().x, texel_size) + local_texel;
+	}
+	else
+	{
+		atlas_texel = DispatchRaysIndex().xy;
+	}
 
 	uint3 probe_coord = probes.ddgi_atlas_probe_coord(atlas_texel, texel_size, info.GetProbe_counts().x);
 
-	// Residency early-out (see [[project-ddgi]] planning notes, DDGIProbeResidencyMark's
-	// own comment): skip the TraceRay entirely for a probe nothing needs
-	// this frame. No GPU-driven indirect DispatchRays exists in this
-	// codebase's HAL, so this is a per-thread skip, not a shrunk dispatch --
-	// still avoids the expensive part (the trace + hit shading). Leaves the
-	// probe's existing radiance/gbuffer texels untouched rather than writing
-	// zero, so a probe that stops being needed keeps its last valid value
-	// for the cross-cascade fallback / for whenever it's reactivated.
+	// Residency early-out (see [[project-ddgi]] planning notes,
+	// DDGIProbeResidencyMark's own comment): skip the TraceRay for a probe
+	// nothing needs this frame. Redundant in the indirect-dispatch branch
+	// above (every entry in DDGI_CompactedProbeList was already marked
+	// needed to get there) but still load-bearing in the fixed-dispatch
+	// branch, which always launches over the full atlas regardless of
+	// residency. Leaves the probe's existing radiance/gbuffer texels
+	// untouched rather than writing zero, so a probe that stops being needed
+	// keeps its last valid value for the cross-cascade fallback / for
+	// whenever it's reactivated.
 	uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, info.GetProbe_counts().xyz);
 	uint probe_buffer_index = info.GetCascade_info().x + probe_linear_index;
 	if (trace_data.GetProbe_residency()[probe_buffer_index] == 0)

@@ -96,6 +96,13 @@ struct VoxelOutput
 	DDGIInfo ddgi_cascade4;
 	Texture2D<float4> ddgi_irradiance;
 	Texture2D<float2> ddgi_visibility;
+	# Hit-point-driven residency marking's inbox (see [[project-ddgi]]
+	# planning notes and DDGI_ProbeResidencyPending's own comment, ddgi.sig):
+	# TraceIndirectDiffuse writes 1 here at its own ray's hit point, one
+	# probe cell per cascade (skipping the coarsest, which is always
+	# resident regardless). Shared across all DDGI_CascadeCount cascades in
+	# one buffer, same offset convention DDGI_ProbeResidency itself uses.
+	RWStructuredBuffer<uint> ddgi_residency_pending;
 }
 
 # Minimal depth+normal pair for MyRaygenShaderIndirectRTXHalfRes -- deliberately
@@ -539,6 +546,10 @@ PassNode IndirectRTXHalf
 	# control path today (always true); revisit once it does.
 	[Always = Read] Texture DDGI_ProbeIrradiance;
 	[Always = Read] Texture DDGI_ProbeVisibility;
+	# Written at this pass's own ray hit points -- see VoxelOutput's own
+	# comment on ddgi_residency_pending and DDGI_ProbeResidencyPending's
+	# (ddgi.sig).
+	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 	[Always = UnorderedAccess] [Size = `ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2)`] [Format = R16G16B16A16_FLOAT]
 	Texture RTXIndirectNoiseHalf;
@@ -577,6 +588,8 @@ PassNode IndirectRTX
 	# See IndirectRTXHalf's own comment on the same two fields.
 	[Always = Read] Texture DDGI_ProbeIrradiance;
 	[Always = Read] Texture DDGI_ProbeVisibility;
+	# See IndirectRTXHalf's own comment.
+	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXIndirectNoise;
 }

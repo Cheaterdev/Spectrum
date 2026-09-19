@@ -38,6 +38,13 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	uint3 probe_coord = probes.ddgi_probe_grid_coord(probe_index, probe_counts);
 	float3 world_pos = probes.ddgi_probe_world_pos(probe_coord, info.GetGrid_min().xyz, info.GetProbe_spacing().xyz, float3(0, 0, 0));
 
+	// Not being traced/convolved this frame (DDGIProbeResidencyMark, ddgi.sig,
+	// didn't mark it needed) -- skip entirely rather than draw a stale
+	// marker, same as this probe just isn't there right now.
+	uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, probe_counts);
+	if (data.GetProbe_residency()[info.GetCascade_info().x + probe_linear_index] == 0)
+		return;
+
 	const FrameInfo frame = GetFrameInfo();
 	// mul(matrix, vector), not mul(vector, matrix) -- this codebase's
 	// convention throughout (see depth_to_wpos, common.hlsl, doing the

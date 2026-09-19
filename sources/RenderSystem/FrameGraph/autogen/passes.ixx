@@ -19,6 +19,7 @@ export import "../defines.h";
 #include "pass/BlueNoise.h"
 #include "pass/DDGIProbeSelect.h"
 #include "pass/DDGIProbeResidencyMark.h"
+#include "pass/DDGIProbeDispatchArgsBuild.h"
 #include "pass/DDGIProbeTrace.h"
 #include "pass/DDGIProbeConvolve.h"
 #include "pass/DDGIDebug.h"
@@ -87,6 +88,7 @@ export namespace Passes
 	using ::Passes::BlueNoise;
 	using ::Passes::DDGIProbeSelect;
 	using ::Passes::DDGIProbeResidencyMark;
+	using ::Passes::DDGIProbeDispatchArgsBuild;
 	using ::Passes::DDGIProbeTrace;
 	using ::Passes::DDGIProbeConvolve;
 	using ::Passes::DDGIDebug;

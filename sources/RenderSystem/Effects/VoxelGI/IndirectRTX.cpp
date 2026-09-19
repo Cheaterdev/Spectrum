@@ -50,6 +50,7 @@ void PassDefault<Passes::IndirectRTXHalf>::render(
 			}
 			output.GetDdgi_irradiance()  = data.DDGI_ProbeIrradiance->texture2D;
 			output.GetDdgi_visibility()  = data.DDGI_ProbeVisibility->texture2D;
+			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 			compute.set(output);
 		}
 		RTX::get().render<IndirectRTXHalf>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
@@ -115,6 +116,7 @@ void PassDefault<Passes::IndirectRTX>::render(
 			}
 			output.GetDdgi_irradiance()  = data.DDGI_ProbeIrradiance->texture2D;
 			output.GetDdgi_visibility()  = data.DDGI_ProbeVisibility->texture2D;
+			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 			compute.set(output);
 		}
 		RTX::get().render<IndirectRTX>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
