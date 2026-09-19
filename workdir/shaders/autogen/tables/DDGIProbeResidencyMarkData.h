@@ -8,18 +8,10 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "DDGIInfo.h"
-struct DDGIProbeConvolveData
+struct DDGIProbeResidencyMarkData
 {
-	uint probe_radiance; // Texture2D<float4>
-	uint probe_gbuffer; // Texture2D<float4>
-	uint probe_irradiance; // RWTexture2D<float4>
-	uint probe_visibility; // RWTexture2D<float2>
 	uint probe_residency; // RWStructuredBuffer<uint>
 	DDGIInfo info; // DDGIInfo
 	DDGIInfo GetInfo() { return info; }
-	Texture2D<float4> GetProbe_radiance() { return ResourceDescriptorHeap[probe_radiance]; }
-	Texture2D<float4> GetProbe_gbuffer() { return ResourceDescriptorHeap[probe_gbuffer]; }
-	RWTexture2D<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
-	RWTexture2D<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
 	RWStructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
 };

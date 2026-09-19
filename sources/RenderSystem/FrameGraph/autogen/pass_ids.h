@@ -14,6 +14,7 @@ namespace FrameGraph
 		AssetMip,
 		BlueNoise,
 		DDGIProbeSelect,
+		DDGIProbeResidencyMark,
 		DDGIProbeTrace,
 		DDGIProbeConvolve,
 		DDGIDebug,

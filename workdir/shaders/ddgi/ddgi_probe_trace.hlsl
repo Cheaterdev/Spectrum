@@ -46,6 +46,20 @@ void DDGIProbeTraceRaygenShader()
 	uint texel_size = info.GetAtlas_info().x;
 
 	uint3 probe_coord = probes.ddgi_atlas_probe_coord(atlas_texel, texel_size, info.GetProbe_counts().x);
+
+	// Residency early-out (see [[project-ddgi]] planning notes, DDGIProbeResidencyMark's
+	// own comment): skip the TraceRay entirely for a probe nothing needs
+	// this frame. No GPU-driven indirect DispatchRays exists in this
+	// codebase's HAL, so this is a per-thread skip, not a shrunk dispatch --
+	// still avoids the expensive part (the trace + hit shading). Leaves the
+	// probe's existing radiance/gbuffer texels untouched rather than writing
+	// zero, so a probe that stops being needed keeps its last valid value
+	// for the cross-cascade fallback / for whenever it's reactivated.
+	uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, info.GetProbe_counts().xyz);
+	uint probe_buffer_index = info.GetCascade_info().x + probe_linear_index;
+	if (trace_data.GetProbe_residency()[probe_buffer_index] == 0)
+		return;
+
 	float2 local_uv = probes.ddgi_atlas_local_uv(atlas_texel, texel_size);
 	float3 dir = ddgi_oct_decode(local_uv);
 

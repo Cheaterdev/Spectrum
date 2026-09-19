@@ -24,6 +24,7 @@ export
 		Library::AssetMip AssetMip;
 		Library::BlueNoise BlueNoise;
 		Library::DDGIProbeSelect DDGIProbeSelect;
+		Library::DDGIProbeResidencyMark DDGIProbeResidencyMark;
 		Library::DDGIProbeTrace DDGIProbeTrace;
 		Library::DDGIProbeConvolve DDGIProbeConvolve;
 		Library::DDGIDebug DDGIDebug;

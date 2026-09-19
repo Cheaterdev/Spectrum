@@ -35,7 +35,7 @@ namespace FrameGraph
 // .sig edit renumbers those enums, a plan from before the edit would not fail
 // to load, it would misapply -- wrong resource, wrong barriers. A plan whose
 // header does not carry this exact value must be rejected.
-constexpr unsigned long long generated_id_space_hash = 7986093507123456630ull;
+constexpr unsigned long long generated_id_space_hash = 5159667621488749156ull;
 
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
@@ -167,6 +167,11 @@ static inline const PassContextDeps pass_context_deps[] = {
 		true },
 	{ PassID::DDGIProbeSelect,
 		  ContextField::DDGISelectors_enabled,
+		  ContextField::None,
+		true },
+	{ PassID::DDGIProbeResidencyMark,
+		  ContextField::DDGISelectors_enabled
+		| ContextField::RenderDeviceCapabilities_rtx_supported,
 		  ContextField::None,
 		true },
 	{ PassID::DDGIProbeTrace,

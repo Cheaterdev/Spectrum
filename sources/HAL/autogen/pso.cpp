@@ -40,6 +40,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::BRDF>(device, pso[PSO::BRDF]));
 	tasks.emplace_back(PSOBase::create<PSOS::DDGIProbeSelect>(device, pso[PSO::DDGIProbeSelect]));
 	tasks.emplace_back(PSOBase::create<PSOS::DDGIProbeConvolve>(device, pso[PSO::DDGIProbeConvolve]));
+	tasks.emplace_back(PSOBase::create<PSOS::DDGIProbeResidencyMark>(device, pso[PSO::DDGIProbeResidencyMark]));
 	tasks.emplace_back(PSOBase::create<PSOS::DDGIDebug>(device, pso[PSO::DDGIDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::DDGIIndirectDebug>(device, pso[PSO::DDGIIndirectDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_Prepare>(device, pso[PSO::DenoiserShadow_Prepare]));

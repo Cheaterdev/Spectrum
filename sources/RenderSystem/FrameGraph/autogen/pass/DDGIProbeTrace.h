@@ -40,6 +40,9 @@ public:
 		Handlers::Texture DDGI_ProbeVisibility = ResourceID::DDGI_ProbeVisibility;
 
 
+		Handlers::StructuredBuffer<uint> DDGI_ProbeResidency = ResourceID::DDGI_ProbeResidency;
+
+
 		Handlers::Texture DDGI_ProbeRadiance = ResourceID::DDGI_ProbeRadiance;
 
 
@@ -67,6 +70,7 @@ public:
 			builder.need(data.DDGI_Probes, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::Read);
 			if (!(data.pass_index == 0))
 				builder.need(data.DDGI_ProbeRadiance, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 			if (!(data.pass_index == 0))
@@ -109,6 +113,7 @@ public:
 			FrameGraph::ChainIndex DDGI_Probes = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_ProbeResidency = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeRadiance = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeGBuffer = FrameGraph::ChainIndex::Unresolved;
 		};
@@ -120,6 +125,7 @@ public:
 			cache.DDGI_Probes = FrameGraph::TaskBuilder::cache_slot(data.DDGI_Probes, ResourceID::DDGI_Probes);
 			cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
 			cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
+			cache.DDGI_ProbeResidency = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency);
 			cache.DDGI_ProbeRadiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeRadiance, ResourceID::DDGI_ProbeRadiance);
 			cache.DDGI_ProbeGBuffer = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeGBuffer, ResourceID::DDGI_ProbeGBuffer);
 		}
@@ -138,6 +144,7 @@ public:
 			builder.load(data.DDGI_Probes, ResourceID::DDGI_Probes, cache.DDGI_Probes);
 			builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
 			builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
+			builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
 			if (data.pass_index == 0)
 			builder.create_versioned(data.DDGI_ProbeRadiance, cache.DDGI_ProbeRadiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 			else
@@ -157,6 +164,7 @@ public:
 			{ ResourceID::DDGI_Probes, false },
 			{ ResourceID::DDGI_ProbeIrradiance, false },
 			{ ResourceID::DDGI_ProbeVisibility, false },
+			{ ResourceID::DDGI_ProbeResidency, false },
 			{ ResourceID::DDGI_ProbeRadiance, true },
 			{ ResourceID::DDGI_ProbeGBuffer, true },
 		};

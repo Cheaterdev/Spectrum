@@ -26,6 +26,17 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// neither reads `this`), see DDGIProbeConvolveData's own comment (ddgi.sig)
 	// for why the actual probe buffer isn't plumbed into this pass at all.
 	DDGIProbes probes;
+
+	// Residency early-out -- see ddgi_probe_trace.hlsl's own comment on the
+	// same check. Skips the O(texel_size^2) convolution loop entirely for a
+	// probe nothing needs this frame, leaving its irradiance/visibility
+	// texels at their last valid value.
+	uint3 probe_coord = probes.ddgi_atlas_probe_coord(local_texel, texel_size, data.GetInfo().GetProbe_counts().x);
+	uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, data.GetInfo().GetProbe_counts().xyz);
+	uint probe_buffer_index = data.GetInfo().GetCascade_info().x + probe_linear_index;
+	if (data.GetProbe_residency()[probe_buffer_index] == 0)
+		return;
+
 	float2 out_uv = probes.ddgi_atlas_local_uv(local_texel, texel_size);
 	float3 out_dir = ddgi_oct_decode(out_uv);
 

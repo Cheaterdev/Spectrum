@@ -239,6 +239,14 @@ struct DDGIProbeTraceData
 	# the multi-bounce feedback term (ddgi_sample.hlsl).
 	Texture2D<float4> prev_irradiance;
 	Texture2D<float2> prev_visibility;
+
+	# This cascade's own residency flags -- read at the top of
+	# ddgi_probe_trace.hlsl to early-out (skip the TraceRay call entirely)
+	# for probes DDGIProbeResidencyMark didn't mark needed this frame. See
+	# that PassNode's own comment for why this is a shader early-out rather
+	# than a shrunk dispatch (no GPU-driven indirect DispatchRays in this
+	# codebase's HAL).
+	RWStructuredBuffer<uint> probe_residency;
 }
 
 [Bind = DefaultLayout::Instance0]
@@ -260,6 +268,11 @@ struct DDGIProbeConvolveData
 	Texture2D<float4> probe_gbuffer;
 	RWTexture2D<float4> probe_irradiance;
 	RWTexture2D<float2> probe_visibility;
+
+	# See DDGIProbeTraceData's own comment on the same field -- same
+	# early-out reasoning, applied to the convolution loop instead of a
+	# TraceRay call.
+	RWStructuredBuffer<uint> probe_residency;
 }
 
 ComputePSO DDGIProbeConvolve
@@ -312,6 +325,44 @@ PassNode DDGIProbeSelect
 	Texture DDGI_ProbeIrradiance;
 	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight)`] [Format = R16G16_FLOAT] [Optional = data.pass_index == 0]
 	Texture DDGI_ProbeVisibility;
+
+	# Per-probe-per-cascade residency flag (0/1) -- see
+	# DDGIProbeResidencyMark's own PassNode comment below for what sets it
+	# and why. Same sole-creator reasoning as Irradiance/Visibility above.
+	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	StructuredBuffer<uint> DDGI_ProbeResidency;
+}
+
+[Bind = DefaultLayout::Instance0]
+struct DDGIProbeResidencyMarkData
+{
+	DDGIInfo info;
+	RWStructuredBuffer<uint> probe_residency;
+}
+
+ComputePSO DDGIProbeResidencyMark
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = ddgi/ddgi_probe_residency_mark;
+}
+
+# Marks which probes (this cascade's own DDGI_ProbeResidency slice) are
+# actually needed this frame -- see [[project-ddgi]] planning notes. v1
+# placeholder: marks every probe needed unconditionally, matching today's
+# "trace everything" behavior exactly, so the buffer/binding plumbing
+# (this pass + DDGIProbeTrace/Convolve's read side) is provably correct
+# before the real hit-point-driven marking + dilation logic replaces this
+# body. [Multiple=5]: one instance per cascade, same mechanism
+# DDGIProbeSelect/Trace/Convolve already use (see DDGIProbeSelect's own
+# comment for why [Multiple], not [Static]).
+[Multiple = 5]
+[Compute]
+[SetupCondition = DDGISelectors::enabled && RenderDeviceCapabilities::rtx_supported]
+PassNode DDGIProbeResidencyMark
+{
+	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidency;
 }
 
 # Traces DDGIInfo::rays_per_probe rays per selected probe over the sphere
@@ -340,6 +391,7 @@ PassNode DDGIProbeTrace
 	[Always = Read] StructuredBuffer<DDGIProbeMetadata> DDGI_Probes;
 	[Always = Read] Texture DDGI_ProbeIrradiance;
 	[Always = Read] Texture DDGI_ProbeVisibility;
+	[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
 
 	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight)`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
 	Texture DDGI_ProbeRadiance;
@@ -360,6 +412,7 @@ PassNode DDGIProbeConvolve
 {
 	[Always = Read] Texture DDGI_ProbeRadiance;
 	[Always = Read] Texture DDGI_ProbeGBuffer;
+	[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
 
 	# No [Size]/[Format]/[Static] here -- DDGIProbeSelect is the sole creator
 	# (see its own comment for why). Plain [Always=UnorderedAccess] just

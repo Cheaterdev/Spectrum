@@ -23,12 +23,14 @@ export namespace Table
 		HLSL::Texture2D<float2> prev_visibility;
 		HLSL::RWTexture2D<float4> probe_radiance;
 		HLSL::RWTexture2D<float4> probe_gbuffer;
+		HLSL::RWStructuredBuffer<uint> probe_residency;
 		DDGIInfo info;
 		DDGIProbes probes;
 		HLSL::RWTexture2D<float4>& GetProbe_radiance() { return probe_radiance; }
 		HLSL::RWTexture2D<float4>& GetProbe_gbuffer() { return probe_gbuffer; }
 		HLSL::Texture2D<float4>& GetPrev_irradiance() { return prev_irradiance; }
 		HLSL::Texture2D<float2>& GetPrev_visibility() { return prev_visibility; }
+		HLSL::RWStructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
 		DDGIInfo& GetInfo() { return info; }
 		DDGIProbes& GetProbes() { return probes; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -39,6 +41,7 @@ export namespace Table
 			compiler.compile(prev_visibility, "DDGIProbeTraceData::prev_visibility");
 			compiler.compile(probe_radiance, "DDGIProbeTraceData::probe_radiance");
 			compiler.compile(probe_gbuffer, "DDGIProbeTraceData::probe_gbuffer");
+			compiler.compile(probe_residency, "DDGIProbeTraceData::probe_residency");
 			compiler.compile(info, "DDGIProbeTraceData::info");
 			compiler.compile(probes, "DDGIProbeTraceData::probes");
 		}
@@ -48,6 +51,7 @@ export namespace Table
 			uint prev_visibility; // Texture2D<float2>
 			uint probe_radiance; // RWTexture2D<float4>
 			uint probe_gbuffer; // RWTexture2D<float4>
+			uint probe_residency; // RWStructuredBuffer<uint>
 			DDGIInfo::Compiled info; // DDGIInfo
 			DDGIProbes::Compiled probes; // DDGIProbes
 

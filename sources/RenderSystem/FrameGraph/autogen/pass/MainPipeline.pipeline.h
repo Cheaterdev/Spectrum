@@ -24,6 +24,7 @@
 #include "ReflectionRTX.h"
 #include "ShadowRTX.h"
 #include "DDGIProbeSelect.h"
+#include "DDGIProbeResidencyMark.h"
 #include "DDGIProbeTrace.h"
 #include "DDGIProbeConvolve.h"
 #include "DDGIIndirectDebug.h"
@@ -76,6 +77,7 @@ public:
 	Passes::stencil_renderer_before stencil_renderer_before;
 	Passes::NormalRoughnessRepack normalRoughnessRepack;
 	Passes::DDGIProbeSelect dDGIProbeSelect;
+	Passes::DDGIProbeResidencyMark dDGIProbeResidencyMark;
 	Passes::DDGIProbeTrace dDGIProbeTrace;
 	Passes::DDGIProbeConvolve dDGIProbeConvolve;
 	Passes::VoxelScreen voxelScreen;
@@ -118,6 +120,11 @@ public:
 		Passes::DDGIProbeSelect::Names[2].ptr,
 		Passes::DDGIProbeSelect::Names[3].ptr,
 		Passes::DDGIProbeSelect::Names[4].ptr,
+		Passes::DDGIProbeResidencyMark::Names[0].ptr,
+		Passes::DDGIProbeResidencyMark::Names[1].ptr,
+		Passes::DDGIProbeResidencyMark::Names[2].ptr,
+		Passes::DDGIProbeResidencyMark::Names[3].ptr,
+		Passes::DDGIProbeResidencyMark::Names[4].ptr,
 		Passes::DDGIProbeTrace::Names[0].ptr,
 		Passes::DDGIProbeTrace::Names[1].ptr,
 		Passes::DDGIProbeTrace::Names[2].ptr,
@@ -221,6 +228,7 @@ public:
 		L"DDGI_Probes",
 		L"DDGI_ProbeIrradiance",
 		L"DDGI_ProbeVisibility",
+		L"DDGI_ProbeResidency",
 		L"DDGI_ProbeRadiance",
 		L"DDGI_ProbeGBuffer",
 		L"DDGIIndirectDebug",
@@ -916,6 +924,41 @@ public:
 		{ true, { DDGI_ProbeVisibility_c0_pass_refs + 14, 1 } },
 		{ false, { DDGI_ProbeVisibility_c0_pass_refs + 15, 3 } },
 	};
+	static inline const FrameGraph::PassRef DDGI_ProbeResidency_c0_pass_refs[] = {
+		{ PassID::DDGIProbeSelect, 0 },
+		{ PassID::DDGIProbeSelect, 1 },
+		{ PassID::DDGIProbeSelect, 2 },
+		{ PassID::DDGIProbeSelect, 3 },
+		{ PassID::DDGIProbeSelect, 4 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
+		{ PassID::DDGIProbeTrace, 0 },
+		{ PassID::DDGIProbeTrace, 1 },
+		{ PassID::DDGIProbeTrace, 2 },
+		{ PassID::DDGIProbeTrace, 3 },
+		{ PassID::DDGIProbeTrace, 4 },
+		{ PassID::DDGIProbeConvolve, 0 },
+		{ PassID::DDGIProbeConvolve, 1 },
+		{ PassID::DDGIProbeConvolve, 2 },
+		{ PassID::DDGIProbeConvolve, 3 },
+		{ PassID::DDGIProbeConvolve, 4 },
+	};
+	static inline const FrameGraph::PrecompiledState DDGI_ProbeResidency_c0_states[] = {
+		{ true, { DDGI_ProbeResidency_c0_pass_refs + 0, 1 } },
+		{ true, { DDGI_ProbeResidency_c0_pass_refs + 1, 1 } },
+		{ true, { DDGI_ProbeResidency_c0_pass_refs + 2, 1 } },
+		{ true, { DDGI_ProbeResidency_c0_pass_refs + 3, 1 } },
+		{ true, { DDGI_ProbeResidency_c0_pass_refs + 4, 1 } },
+		{ true, { DDGI_ProbeResidency_c0_pass_refs + 5, 1 } },
+		{ true, { DDGI_ProbeResidency_c0_pass_refs + 6, 1 } },
+		{ true, { DDGI_ProbeResidency_c0_pass_refs + 7, 1 } },
+		{ true, { DDGI_ProbeResidency_c0_pass_refs + 8, 1 } },
+		{ true, { DDGI_ProbeResidency_c0_pass_refs + 9, 1 } },
+		{ false, { DDGI_ProbeResidency_c0_pass_refs + 10, 10 } },
+	};
 	static inline const FrameGraph::PassRef DDGI_ProbeRadiance_c0_pass_refs[] = {
 		{ PassID::DDGIProbeTrace, 0 },
 		{ PassID::DDGIProbeTrace, 1 },
@@ -1304,6 +1347,7 @@ public:
 		{ ResourceID::DDGI_Probes, 0, DDGI_Probes_c0_states },
 		{ ResourceID::DDGI_ProbeIrradiance, 0, DDGI_ProbeIrradiance_c0_states },
 		{ ResourceID::DDGI_ProbeVisibility, 0, DDGI_ProbeVisibility_c0_states },
+		{ ResourceID::DDGI_ProbeResidency, 0, DDGI_ProbeResidency_c0_states },
 		{ ResourceID::DDGI_ProbeRadiance, 0, DDGI_ProbeRadiance_c0_states },
 		{ ResourceID::DDGI_ProbeGBuffer, 0, DDGI_ProbeGBuffer_c0_states },
 		{ ResourceID::DDGIIndirectDebug, 0, DDGIIndirectDebug_c0_states },
@@ -1411,9 +1455,59 @@ public:
 		{ PassID::DDGIProbeSelect, 2 },
 		{ PassID::DDGIProbeSelect, 3 },
 	};
+	static inline const FrameGraph::PassRef DDGIProbeResidencyMark_0_prev[] = {
+		{ PassID::DDGIProbeSelect, 0 },
+		{ PassID::DDGIProbeSelect, 1 },
+		{ PassID::DDGIProbeSelect, 2 },
+		{ PassID::DDGIProbeSelect, 3 },
+		{ PassID::DDGIProbeSelect, 4 },
+	};
+	static inline const FrameGraph::PassRef DDGIProbeResidencyMark_1_prev[] = {
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeSelect, 0 },
+		{ PassID::DDGIProbeSelect, 1 },
+		{ PassID::DDGIProbeSelect, 2 },
+		{ PassID::DDGIProbeSelect, 3 },
+		{ PassID::DDGIProbeSelect, 4 },
+	};
+	static inline const FrameGraph::PassRef DDGIProbeResidencyMark_2_prev[] = {
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeSelect, 0 },
+		{ PassID::DDGIProbeSelect, 1 },
+		{ PassID::DDGIProbeSelect, 2 },
+		{ PassID::DDGIProbeSelect, 3 },
+		{ PassID::DDGIProbeSelect, 4 },
+	};
+	static inline const FrameGraph::PassRef DDGIProbeResidencyMark_3_prev[] = {
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeSelect, 0 },
+		{ PassID::DDGIProbeSelect, 1 },
+		{ PassID::DDGIProbeSelect, 2 },
+		{ PassID::DDGIProbeSelect, 3 },
+		{ PassID::DDGIProbeSelect, 4 },
+	};
+	static inline const FrameGraph::PassRef DDGIProbeResidencyMark_4_prev[] = {
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeSelect, 0 },
+		{ PassID::DDGIProbeSelect, 1 },
+		{ PassID::DDGIProbeSelect, 2 },
+		{ PassID::DDGIProbeSelect, 3 },
+		{ PassID::DDGIProbeSelect, 4 },
+	};
 	static inline const FrameGraph::PassRef DDGIProbeTrace_0_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
 		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
 		{ PassID::DDGIProbeSelect, 0 },
 		{ PassID::DDGIProbeSelect, 1 },
 		{ PassID::DDGIProbeSelect, 2 },
@@ -1424,6 +1518,11 @@ public:
 	static inline const FrameGraph::PassRef DDGIProbeTrace_1_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
 		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
 		{ PassID::DDGIProbeSelect, 0 },
 		{ PassID::DDGIProbeSelect, 1 },
 		{ PassID::DDGIProbeSelect, 2 },
@@ -1435,6 +1534,11 @@ public:
 	static inline const FrameGraph::PassRef DDGIProbeTrace_2_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
 		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
 		{ PassID::DDGIProbeSelect, 0 },
 		{ PassID::DDGIProbeSelect, 1 },
 		{ PassID::DDGIProbeSelect, 2 },
@@ -1447,6 +1551,11 @@ public:
 	static inline const FrameGraph::PassRef DDGIProbeTrace_3_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
 		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
 		{ PassID::DDGIProbeSelect, 0 },
 		{ PassID::DDGIProbeSelect, 1 },
 		{ PassID::DDGIProbeSelect, 2 },
@@ -1460,6 +1569,11 @@ public:
 	static inline const FrameGraph::PassRef DDGIProbeTrace_4_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
 		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
 		{ PassID::DDGIProbeSelect, 0 },
 		{ PassID::DDGIProbeSelect, 1 },
 		{ PassID::DDGIProbeSelect, 2 },
@@ -1472,6 +1586,11 @@ public:
 		{ PassID::PreScene, 0 },
 	};
 	static inline const FrameGraph::PassRef DDGIProbeConvolve_0_prev[] = {
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
 		{ PassID::DDGIProbeSelect, 0 },
 		{ PassID::DDGIProbeSelect, 1 },
 		{ PassID::DDGIProbeSelect, 2 },
@@ -1485,6 +1604,11 @@ public:
 	};
 	static inline const FrameGraph::PassRef DDGIProbeConvolve_1_prev[] = {
 		{ PassID::DDGIProbeConvolve, 0 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
 		{ PassID::DDGIProbeSelect, 0 },
 		{ PassID::DDGIProbeSelect, 1 },
 		{ PassID::DDGIProbeSelect, 2 },
@@ -1499,6 +1623,11 @@ public:
 	static inline const FrameGraph::PassRef DDGIProbeConvolve_2_prev[] = {
 		{ PassID::DDGIProbeConvolve, 0 },
 		{ PassID::DDGIProbeConvolve, 1 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
 		{ PassID::DDGIProbeSelect, 0 },
 		{ PassID::DDGIProbeSelect, 1 },
 		{ PassID::DDGIProbeSelect, 2 },
@@ -1514,6 +1643,11 @@ public:
 		{ PassID::DDGIProbeConvolve, 0 },
 		{ PassID::DDGIProbeConvolve, 1 },
 		{ PassID::DDGIProbeConvolve, 2 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
 		{ PassID::DDGIProbeSelect, 0 },
 		{ PassID::DDGIProbeSelect, 1 },
 		{ PassID::DDGIProbeSelect, 2 },
@@ -1530,6 +1664,11 @@ public:
 		{ PassID::DDGIProbeConvolve, 1 },
 		{ PassID::DDGIProbeConvolve, 2 },
 		{ PassID::DDGIProbeConvolve, 3 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
 		{ PassID::DDGIProbeSelect, 0 },
 		{ PassID::DDGIProbeSelect, 1 },
 		{ PassID::DDGIProbeSelect, 2 },
@@ -1855,6 +1994,11 @@ public:
 		{ PassID::DDGIProbeSelect, 2, true, DDGIProbeSelect_2_prev },
 		{ PassID::DDGIProbeSelect, 3, true, DDGIProbeSelect_3_prev },
 		{ PassID::DDGIProbeSelect, 4, true, DDGIProbeSelect_4_prev },
+		{ PassID::DDGIProbeResidencyMark, 0, true, DDGIProbeResidencyMark_0_prev },
+		{ PassID::DDGIProbeResidencyMark, 1, true, DDGIProbeResidencyMark_1_prev },
+		{ PassID::DDGIProbeResidencyMark, 2, true, DDGIProbeResidencyMark_2_prev },
+		{ PassID::DDGIProbeResidencyMark, 3, true, DDGIProbeResidencyMark_3_prev },
+		{ PassID::DDGIProbeResidencyMark, 4, true, DDGIProbeResidencyMark_4_prev },
 		{ PassID::DDGIProbeTrace, 0, true, DDGIProbeTrace_0_prev },
 		{ PassID::DDGIProbeTrace, 1, true, DDGIProbeTrace_1_prev },
 		{ PassID::DDGIProbeTrace, 2, true, DDGIProbeTrace_2_prev },
@@ -1979,6 +2123,9 @@ public:
 		for (uint32_t i = 0; i < Passes::DDGIProbeSelect::MaxCount; ++i)
 			if (dDGIProbeSelect.render_funcs[i])
 				graph.add_library_pass<Passes::DDGIProbeSelect>(i, PassSetupDefault<Passes::DDGIProbeSelect>::setup, dDGIProbeSelect.render_funcs[i], (dDGIProbeSelect.flags));
+		for (uint32_t i = 0; i < Passes::DDGIProbeResidencyMark::MaxCount; ++i)
+			if (dDGIProbeResidencyMark.render_funcs[i])
+				graph.add_library_pass<Passes::DDGIProbeResidencyMark>(i, PassSetupDefault<Passes::DDGIProbeResidencyMark>::setup, dDGIProbeResidencyMark.render_funcs[i], (dDGIProbeResidencyMark.flags));
 		for (uint32_t i = 0; i < Passes::DDGIProbeTrace::MaxCount; ++i)
 			if (dDGIProbeTrace.render_funcs[i])
 				graph.add_library_pass<Passes::DDGIProbeTrace>(i, PassSetupDefault<Passes::DDGIProbeTrace>::setup, dDGIProbeTrace.render_funcs[i], (dDGIProbeTrace.flags));

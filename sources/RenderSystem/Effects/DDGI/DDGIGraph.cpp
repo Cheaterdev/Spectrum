@@ -130,6 +130,32 @@ void ddgi_probe_select_render(Passes::DDGIProbeSelect::Context& data, FrameConte
 	compute.dispatch(uint3(Constants::DDGI_ProbeCount, 1, 1), uint3(64, 1, 1));
 }
 
+// v1 placeholder (see [[project-ddgi]] planning notes): marks every probe
+// needed unconditionally -- proves the residency buffer's create/read/write
+// plumbing before the real hit-point-driven marking + neighbor dilation
+// replaces this body. Plain free function -- see ddgi_probe_select_render's
+// own comment on why.
+void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& data, FrameContext& context)
+{
+	uint32_t cascade = data.pass_index;
+
+	auto& compute = context.get_list()->get_compute();
+	compute.set_signature(Layouts::DefaultLayout);
+	context.graph->set_slot(SlotID::FrameInfo, compute);
+
+	Slots::DDGIInfo info = ddgi_make_info(ddgi_camera_pos(context), cascade);
+
+	{
+		Slots::DDGIProbeResidencyMarkData params;
+		params.GetInfo() = info;
+		params.GetProbe_residency() = data.DDGI_ProbeResidency->rwStructuredBuffer;
+		compute.set(params);
+	}
+
+	compute.set_pipeline<PSOS::DDGIProbeResidencyMark>();
+	compute.dispatch(uint3(Constants::DDGI_ProbeCount, 1, 1), uint3(64, 1, 1));
+}
+
 // Traces one ray per DDGI_ProbeRadiance/DDGI_ProbeGBuffer atlas texel,
 // reusing the same ColorPass hit group (MyClosestHitShader) IndirectRTX's
 // own per-pixel GI ray uses, and samples DDGI_ProbeIrradiance/
@@ -160,6 +186,7 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 		params.GetProbe_gbuffer()   = data.DDGI_ProbeGBuffer->rwTexture2D;
 		params.GetPrev_irradiance() = data.DDGI_ProbeIrradiance->texture2D;
 		params.GetPrev_visibility() = data.DDGI_ProbeVisibility->texture2D;
+		params.GetProbe_residency() = data.DDGI_ProbeResidency->rwStructuredBuffer;
 		compute.set(params);
 	}
 
@@ -186,6 +213,7 @@ void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameC
 		params.GetProbe_gbuffer()    = data.DDGI_ProbeGBuffer->texture2D;
 		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->rwTexture2D;
 		params.GetProbe_visibility() = data.DDGI_ProbeVisibility->rwTexture2D;
+		params.GetProbe_residency()  = data.DDGI_ProbeResidency->rwStructuredBuffer;
 		compute.set(params);
 	}
 

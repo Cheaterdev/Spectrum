@@ -93,6 +93,16 @@ Nothing checks that names resolve. Concrete holes, all currently silent:
   accepted, stored, and then never read by any template, so the pass silently
   loses its condition and runs unconditionally. **This one can change rendering
   behaviour without any compile error at all.**
+- **`#` inside a `%{ }%` inline-HLSL block is emitted verbatim, not treated as
+  a `.sig` comment.** `%{ }%` content is raw HLSL text, so a `#`-prefixed line
+  written out of `.sig`-comment habit becomes a literal HLSL preprocessor
+  directive (`error: invalid preprocessing directive`). Hit twice writing
+  `ddgi.sig`'s inline probe-coordinate helpers. `sigparser.exe` reports success
+  either way — the failure only surfaces later, as an HLSL compile error when
+  the engine loads the shader, which is a confusing place to trace a `.sig`
+  mistake back to. A validator could reject a `%{ }%` block whose trimmed line
+  starts with `#` outside a string literal — cheap, and it turns a
+  runtime-shader-load failure into a generation-time one.
 
 **Do:** add a `validate(Parsed&)` between `parsed.setup()` and codegen in
 `main()`. Walk passes, views, tables and pipelines; resolve every name against
@@ -226,17 +236,132 @@ known-generated directories, and only files carrying the DO-NOT-EDIT banner.
 - **`generate_sigs.bat` regenerates the ANTLR parser, not the sig output.** The
   actual generator is `sigparser.exe` run from this directory. The name invites
   the wrong assumption; either rename it or have it do both.
+- **`[Static]` vs `[Multiple]` require different C++ wiring shapes, and
+  nothing says so.** A `[Static]` `PassNode` gets a generated
+  `PassDefault<T>::render` specialization to define; a `[Multiple=N]` one
+  instead needs a plain free function registered into a runtime
+  `render_funcs[N]` array (see `PSSM_Cascade`/`PSSM.ixx`'s template-ctor
+  registration for the only worked example in the tree). Converting a pass
+  from one to the other silently changes which C++ shape is expected, with no
+  hint from the grammar, a template comment, or a generator diagnostic — the
+  only way to find out is to already know to go read `PSSM_Cascade`. Worth a
+  line in whichever doc explains `[Multiple]`, or a generated comment in the
+  pass header pointing at the reference example.
+- **A regen run doesn't say what changed.** `sigparser.exe`'s output lists the
+  `.sig` files it read, not which output files were added, removed, or
+  modified — the only way to know whether `generate_project.bat` is needed
+  (new files) versus not (content-only changes) is to `git status` three
+  separate `autogen/` directories by hand after every run. A three-line
+  summary (`N added, M removed, K modified`) at the end of a run would remove
+  that manual step entirely.
+
+---
+
+## 9. Confirmed template bugs producing silently-wrong output on valid input
+
+Distinct from item 3's "no validation pass" (which is about *rejecting bad
+`.sig` input*): these are cases where the `.sig` input is completely valid and
+the generator still emits incorrect C++, every time, unconditionally. Both
+were hit — repeatedly — implementing the DDGI probe-volume feature.
+
+- **`autogen.ixx`'s PSO/RT/RTX partition imports come out `import`, not
+  `export import`, with the preceding comment's newline fused into the first
+  import statement.** Concretely:
+  ```cpp
+  // Note: PSO modules are imported privately...
+  // module interface bloat. Helper functions access them internally.import :Autogen.PSO.BlueNoise;
+  import :Autogen.PSO.BRDF;
+  ...
+  ```
+  The missing `export` breaks every other module that expects `PSOS::X`/
+  `RT::X` through `import HAL;` (e.g. `Context.ixx`); the fused newline
+  swallows the first import into the comment, dropping that one symbol
+  entirely. This reproduced on **every single `sigparser.exe` run** across an
+  entire session (15+ regenerations) — it is not intermittent, it is the
+  template's unconditional output. Needs a mechanical fix in whichever jinja
+  template emits this block (adds `export ` to each `import :Autogen.(PSO|RT|
+  RTX).*` line, and a newline before the first one).
+- **A nested (non-`[Bind]`) struct whose only field is a resource type
+  (`StructuredBuffer<T>`/`RWStructuredBuffer<T>`) is silently dropped from
+  the generated struct entirely** — no error, no warning, the field and its
+  accessor simply don't exist in the output. Reproduced with:
+  ```
+  struct DDGIProbes
+  {
+      RWStructuredBuffer<DDGIProbeMetadata> probes;
+      %{ /* helper functions */ }%
+  }
+  ```
+  Adding one plain scalar field *before* the resource field makes it appear
+  correctly — smells like an off-by-one in whatever jinja loop walks a
+  struct's field list (possibly the same family as the list-accumulation
+  bugs [[project_jinja2cpp_issues]] already tracks; worth checking if this is
+  one of the same six). Confirmed by diffing generated output with and
+  without the leading field, on an otherwise-identical `.sig` struct.
+
+Both were found by trial and error during feature work, not by inspecting the
+templates — a snapshot-based template test suite (generate a small fixture
+`.sig` covering "nested struct, resource-only field" and "PSO import block",
+assert exact output) would have caught both at the time the templates were
+last touched, rather than at the time some unrelated feature happened to
+exercise the exact shape that triggers them.
+
+---
+
+## 10. Cross-file name/ID assignment scope is inconsistent and undocumented
+
+Related to item 8's `Parsed::merge` collision note, but a distinct failure
+shape: not two declarations sharing one *name*, but two declarations getting
+the same *auto-assigned numeric ID* because the counter that assigns it
+resets per source file instead of being global across the merged model.
+
+Concretely: `RaytraceRaygen::ID` is assigned sequentially within whichever
+`.sig` file declares it. A `RaytraceRaygen` declared in a new file (`ddgi.sig`)
+got `ID = 0`, colliding with an unrelated pre-existing raygen (`Shadow`,
+`ID = 0` in `raytracing.sig`) that happens to be the first one declared in
+its own file. Both compile silently; the collision only surfaces via
+`RTX.ixx`'s `dispatch<T>()` `static_assert(generator == T::ID)` failing for
+**every** RTX pass sharing that RTPSO, not just the newly-added one — because
+the `Typelist<...>` tuple order (assembled from declaration order across all
+merged files) and the per-file ID counter disagree about which raygen is
+"first" once more than one file contributes to the same RTPSO.
+
+Meanwhile most other cross-file references (a struct type like `DDGIInfo`
+used from a different file with no explicit import, `ResourceID` names
+matched by string across every `PassNode` in every file) *are* resolved
+globally across the whole merged model. Nothing documents which declarations
+get global identity and which get a fresh per-file counter — a contributor
+has to discover the difference by hitting exactly this class of bug.
+
+**Do:** either make ID assignment for `RaytraceRaygen` (and anything else
+using the same per-file-counter pattern) happen after `Parsed::merge`, over
+the fully merged model, so it's consistent with everything else's global
+scoping — or, if per-file scoping is intentional for some reason, add a
+validation step that detects an ID collision across the merged `Typelist` a
+given RTPSO actually assembles and fails the run with both source locations
+named, the same shape item 3 already proposes for name collisions.
 
 ---
 
 ## Suggested order
 
-1. **Item 1** (error listener + fail the run) — ten lines, removes the worst
+1. **Item 9's private-import bug** — fix first, ahead of everything else
+   below. It is not latent or occasional: it reproduced on every single regen
+   in a real session (15+ times) and breaks the build unconditionally.
+   Smallest, most mechanical fix in this entire document relative to how much
+   time it has already cost.
+2. **Item 1** (error listener + fail the run) — ten lines, removes the worst
    failure shape.
-2. **Item 2** (source locations) — unblocks all diagnostics.
-3. **Item 3** (validate pass), starting with the option-name whitelist, which
+3. **Item 2** (source locations) — unblocks all diagnostics.
+4. **Item 3** (validate pass), starting with the option-name whitelist, which
    catches the one class of mistake that can change rendering with no compile
-   error.
-4. **Item 4** (`get_elem` assert) — one line, prevents the next contributor
+   error. Fold in the `%{ }%`-block `#`-comment check and item 9's dropped-
+   field bug (as a self-consistency check: every declared field should have a
+   corresponding accessor in the generated output) while this is being built.
+5. **Item 4** (`get_elem` assert) — one line, prevents the next contributor
    from hitting a null deref.
-5. Items 5–8 as they become relevant.
+6. **Item 10** (cross-file ID scoping) — real, but narrower blast radius than
+   1–4; do once the validation pass exists, since detecting the collision is
+   the pragmatic fix even if the ID-assignment algorithm itself doesn't
+   change.
+7. Items 5–8 as they become relevant.

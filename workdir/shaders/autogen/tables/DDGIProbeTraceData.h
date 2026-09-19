@@ -15,6 +15,7 @@ struct DDGIProbeTraceData
 	uint prev_visibility; // Texture2D<float2>
 	uint probe_radiance; // RWTexture2D<float4>
 	uint probe_gbuffer; // RWTexture2D<float4>
+	uint probe_residency; // RWStructuredBuffer<uint>
 	DDGIInfo info; // DDGIInfo
 	DDGIProbes probes; // DDGIProbes
 	DDGIInfo GetInfo() { return info; }
@@ -23,4 +24,5 @@ struct DDGIProbeTraceData
 	RWTexture2D<float4> GetProbe_gbuffer() { return ResourceDescriptorHeap[probe_gbuffer]; }
 	Texture2D<float4> GetPrev_irradiance() { return ResourceDescriptorHeap[prev_irradiance]; }
 	Texture2D<float2> GetPrev_visibility() { return ResourceDescriptorHeap[prev_visibility]; }
+	RWStructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
 };

@@ -34,6 +34,7 @@ export void ddgi_update_selectors(FrameGraph::Graph& graph);
 // needed -- each call reads its own cascade index from data.pass_index --
 // so the same function is assigned into every array slot.
 export void ddgi_probe_select_render(Passes::DDGIProbeSelect::Context& data, FrameGraph::FrameContext& context);
+export void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& data, FrameGraph::FrameContext& context);
 export void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameGraph::FrameContext& context);
 export void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameGraph::FrameContext& context);
 
@@ -47,8 +48,9 @@ void ddgi_register_passes(TPipeline& pipeline)
 {
 	for (uint32_t i = 0; i < 5; i++)
 	{
-		pipeline.dDGIProbeSelect.render_funcs[i]   = ddgi_probe_select_render;
-		pipeline.dDGIProbeTrace.render_funcs[i]    = ddgi_probe_trace_render;
-		pipeline.dDGIProbeConvolve.render_funcs[i] = ddgi_probe_convolve_render;
+		pipeline.dDGIProbeSelect.render_funcs[i]         = ddgi_probe_select_render;
+		pipeline.dDGIProbeResidencyMark.render_funcs[i]  = ddgi_probe_residency_mark_render;
+		pipeline.dDGIProbeTrace.render_funcs[i]          = ddgi_probe_trace_render;
+		pipeline.dDGIProbeConvolve.render_funcs[i]       = ddgi_probe_convolve_render;
 	}
 }

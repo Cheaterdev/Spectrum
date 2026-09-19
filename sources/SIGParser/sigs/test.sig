@@ -65,6 +65,7 @@ Pipeline MainPipeline
 	# the v1 scaffold, see [[project-ddgi]]); placed here now so the ordering
 	# is already correct when that wiring lands.
 	[Async]DDGIProbeSelect;
+	[Async]DDGIProbeResidencyMark;
 	[Async]DDGIProbeTrace;
 	[Async]DDGIProbeConvolve;
 	[Async]DDGIIndirectDebug;
