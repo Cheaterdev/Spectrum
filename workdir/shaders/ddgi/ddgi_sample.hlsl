@@ -12,8 +12,10 @@
 // instead of bleeding into the next probe's unrelated data). Needed because
 // each probe's map is only texel_size^2 texels -- nearest-sampling it made
 // the result visibly blocky ("mosaic") as the shading direction/position
-// moved smoothly across it.
-float4 ddgi_bilinear_texel4(Texture2D<float4> tex, uint2 origin, uint texel_size, float2 uv01)
+// moved smoothly across it. `slice` selects the array layer (probe_y +
+// cascade offset, see ddgi_atlas_array_slice, ddgi.sig) -- the 2D atlas
+// plane only ever holds (probe_x, probe_z).
+float4 ddgi_bilinear_texel4(Texture2DArray<float4> tex, uint2 origin, uint slice, uint texel_size, float2 uv01)
 {
 	float2 texel_f = uv01 * texel_size - 0.5;
 	float2 base = floor(texel_f);
@@ -25,12 +27,12 @@ float4 ddgi_bilinear_texel4(Texture2D<float4> tex, uint2 origin, uint texel_size
 	uint2 t01 = origin + (uint2)clamp(int2(base) + int2(0, 1), 0, max_index);
 	uint2 t11 = origin + (uint2)clamp(int2(base) + int2(1, 1), 0, max_index);
 
-	float4 top = lerp(tex[t00], tex[t10], frac.x);
-	float4 bot = lerp(tex[t01], tex[t11], frac.x);
+	float4 top = lerp(tex[uint3(t00, slice)], tex[uint3(t10, slice)], frac.x);
+	float4 bot = lerp(tex[uint3(t01, slice)], tex[uint3(t11, slice)], frac.x);
 	return lerp(top, bot, frac.y);
 }
 
-float2 ddgi_bilinear_texel2(Texture2D<float2> tex, uint2 origin, uint texel_size, float2 uv01)
+float2 ddgi_bilinear_texel2(Texture2DArray<float2> tex, uint2 origin, uint slice, uint texel_size, float2 uv01)
 {
 	float2 texel_f = uv01 * texel_size - 0.5;
 	float2 base = floor(texel_f);
@@ -42,8 +44,8 @@ float2 ddgi_bilinear_texel2(Texture2D<float2> tex, uint2 origin, uint texel_size
 	uint2 t01 = origin + (uint2)clamp(int2(base) + int2(0, 1), 0, max_index);
 	uint2 t11 = origin + (uint2)clamp(int2(base) + int2(1, 1), 0, max_index);
 
-	float2 top = lerp(tex[t00], tex[t10], frac.x);
-	float2 bot = lerp(tex[t01], tex[t11], frac.x);
+	float2 top = lerp(tex[uint3(t00, slice)], tex[uint3(t10, slice)], frac.x);
+	float2 bot = lerp(tex[uint3(t01, slice)], tex[uint3(t11, slice)], frac.x);
 	return lerp(top, bot, frac.y);
 }
 
@@ -55,8 +57,8 @@ float2 ddgi_bilinear_texel2(Texture2D<float2> tex, uint2 origin, uint texel_size
 float3 ddgi_sample_irradiance(
 	float3 world_pos, float3 normal,
 	DDGIInfo info,
-	Texture2D<float4> probe_irradiance,
-	Texture2D<float2> probe_visibility)
+	Texture2DArray<float4> probe_irradiance,
+	Texture2DArray<float2> probe_visibility)
 {
 	uint texel_size = info.GetAtlas_info().x;
 	uint3 probe_counts = info.GetProbe_counts().xyz;
@@ -91,11 +93,12 @@ float3 ddgi_sample_irradiance(
 
 		uint3 probe_coord = uint3(coord);
 		float3 probe_pos = probes.ddgi_probe_world_pos(probe_coord, grid_min, spacing, float3(0, 0, 0));
-		// ddgi_atlas_origin is cascade-LOCAL (0..DDGI_AtlasWidth-1); add this
-		// cascade's own X-offset (DDGIInfo::cascade_info.y) to land in its
-		// slice of the shared, DDGI_CascadeCount-times-wider atlas.
-		uint2 origin = probes.ddgi_atlas_origin(probe_coord, probe_counts.x, texel_size);
-		origin.x += info.GetCascade_info().y;
+		// ddgi_atlas_origin gives the (x,z) plane position; probe_coord.y
+		// plus this cascade's own slice offset (DDGIInfo::cascade_info.y)
+		// gives which array slice of the shared atlas holds it -- see
+		// ddgi_atlas_array_slice's own comment (ddgi.sig).
+		uint2 origin = probes.ddgi_atlas_origin(probe_coord, texel_size);
+		uint slice = probes.ddgi_atlas_array_slice(probe_coord.y, info.GetCascade_info().y);
 
 		float3 to_point = world_pos - probe_pos;
 		float dist_to_point = length(to_point);
@@ -121,7 +124,7 @@ float3 ddgi_sample_irradiance(
 		// occlusion test barely rejected anything, which is what let light
 		// leak through walls.
 		float2 vis_uv = ddgi_oct_encode(dir_to_point) * 0.5 + 0.5;
-		float2 vis = ddgi_bilinear_texel2(probe_visibility, origin, texel_size, vis_uv);
+		float2 vis = ddgi_bilinear_texel2(probe_visibility, origin, slice, texel_size, vis_uv);
 
 		float mean     = vis.x;
 		float mean2    = vis.y;
@@ -134,7 +137,7 @@ float3 ddgi_sample_irradiance(
 		}
 		weight *= chebyshev;
 
-		result += ddgi_bilinear_texel4(probe_irradiance, origin, texel_size, sample_uv).rgb * weight;
+		result += ddgi_bilinear_texel4(probe_irradiance, origin, slice, texel_size, sample_uv).rgb * weight;
 		weight_sum += weight;
 	}
 
@@ -153,8 +156,8 @@ float3 ddgi_sample_irradiance(
 float3 ddgi_sample_irradiance_cascaded(
 	float3 world_pos, float3 normal,
 	DDGIInfo c0, DDGIInfo c1, DDGIInfo c2, DDGIInfo c3, DDGIInfo c4,
-	Texture2D<float4> probe_irradiance,
-	Texture2D<float2> probe_visibility)
+	Texture2DArray<float4> probe_irradiance,
+	Texture2DArray<float2> probe_visibility)
 {
 	DDGIInfo cascades[5] = { c0, c1, c2, c3, c4 };
 

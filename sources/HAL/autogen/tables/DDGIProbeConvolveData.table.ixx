@@ -18,16 +18,16 @@ export namespace Table
 	struct DDGIProbeConvolveData
 	{
 		static constexpr SlotID ID = SlotID::DDGIProbeConvolveData;
-		HLSL::Texture2D<float4> probe_radiance;
-		HLSL::Texture2D<float4> probe_gbuffer;
-		HLSL::RWTexture2D<float4> probe_irradiance;
-		HLSL::RWTexture2D<float2> probe_visibility;
+		HLSL::Texture2DArray<float4> probe_radiance;
+		HLSL::Texture2DArray<float4> probe_gbuffer;
+		HLSL::RWTexture2DArray<float4> probe_irradiance;
+		HLSL::RWTexture2DArray<float2> probe_visibility;
 		HLSL::RWStructuredBuffer<uint> probe_residency;
 		DDGIInfo info;
-		HLSL::Texture2D<float4>& GetProbe_radiance() { return probe_radiance; }
-		HLSL::Texture2D<float4>& GetProbe_gbuffer() { return probe_gbuffer; }
-		HLSL::RWTexture2D<float4>& GetProbe_irradiance() { return probe_irradiance; }
-		HLSL::RWTexture2D<float2>& GetProbe_visibility() { return probe_visibility; }
+		HLSL::Texture2DArray<float4>& GetProbe_radiance() { return probe_radiance; }
+		HLSL::Texture2DArray<float4>& GetProbe_gbuffer() { return probe_gbuffer; }
+		HLSL::RWTexture2DArray<float4>& GetProbe_irradiance() { return probe_irradiance; }
+		HLSL::RWTexture2DArray<float2>& GetProbe_visibility() { return probe_visibility; }
 		HLSL::RWStructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
 		DDGIInfo& GetInfo() { return info; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -43,10 +43,10 @@ export namespace Table
 		}
 		struct Compiled
 		{
-			uint probe_radiance; // Texture2D<float4>
-			uint probe_gbuffer; // Texture2D<float4>
-			uint probe_irradiance; // RWTexture2D<float4>
-			uint probe_visibility; // RWTexture2D<float2>
+			uint probe_radiance; // Texture2DArray<float4>
+			uint probe_gbuffer; // Texture2DArray<float4>
+			uint probe_irradiance; // RWTexture2DArray<float4>
+			uint probe_visibility; // RWTexture2DArray<float2>
 			uint probe_residency; // RWStructuredBuffer<uint>
 			DDGIInfo::Compiled info; // DDGIInfo
 

@@ -823,7 +823,7 @@ export{
 			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top);
 
 			template<class Hit, class Miss, class Raygen>
-			void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
+			void dispatch_rays(ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
 			{
 				base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 

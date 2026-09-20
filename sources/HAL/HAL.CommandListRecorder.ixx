@@ -222,10 +222,10 @@ export namespace HAL
 		std::vector<CommandRecord> take_debug_records();
 
 		template<class Hit, class Miss, class Raygen>
-		void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer) {
+		void dispatch_rays(ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer) {
 			if constexpr (BuildOptions::Dev)
 				debug_recorder.push_back({CommandType::DispatchRays,
-					"DispatchRays " + std::to_string(size.x) + "x" + std::to_string(size.y)});
+					"DispatchRays " + std::to_string(size.x) + "x" + std::to_string(size.y) + "x" + std::to_string(size.z)});
 			Cmd cmd; cmd.type = CommandType::DispatchRays;
 			cmd.fn_idx = static_cast<uint32_t>(fn_pool.size());
 			fn_pool.emplace_back([=](API::CommandList& list) {

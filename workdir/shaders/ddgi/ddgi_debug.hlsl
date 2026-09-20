@@ -85,13 +85,13 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	uint texel_size = info.GetAtlas_info().x;
 	float3 view_dir = normalize(frame.GetCamera().GetPosition().xyz - world_pos);
 	float2 uv = ddgi_oct_encode(view_dir) * 0.5 + 0.5;
-	// ddgi_atlas_origin is cascade-LOCAL -- add this cascade's own X-offset
-	// into the shared, DDGI_CascadeCount-times-wider atlas (same fix
+	// ddgi_atlas_origin gives the (x,z) plane position; probe_coord.y plus
+	// this cascade's own slice offset gives the array slice (same fix
 	// ddgi_sample_irradiance itself needed, ddgi_sample.hlsl).
-	uint2 atlas_origin = probes.ddgi_atlas_origin(probe_coord, probe_counts.x, texel_size);
-	atlas_origin.x += info.GetCascade_info().y;
+	uint2 atlas_origin = probes.ddgi_atlas_origin(probe_coord, texel_size);
+	uint slice = probes.ddgi_atlas_array_slice(probe_coord.y, info.GetCascade_info().y);
 	uint2 sample_texel = atlas_origin + min(uint2(uv * texel_size), texel_size - 1);
-	float3 irradiance = data.GetProbe_irradiance()[sample_texel].rgb;
+	float3 irradiance = data.GetProbe_irradiance()[uint3(sample_texel, slice)].rgb;
 
 	// Debug-only boost + floor so a genuinely dim/zero probe still shows up
 	// as a visible (dark grey, not invisible-black) marker -- not

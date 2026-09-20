@@ -29,10 +29,12 @@ const DDGI_CascadeCount = 5;
 
 # Single-cascade grid size, shared between DDGI.ixx's grid bookkeeping and
 # every [Size=...] below -- one source of truth, same reasoning as vsm.sig's
-# MaxLevels/VSM_PagesPerLevelSide.
-const DDGI_ProbeCountX = 16;
-const DDGI_ProbeCountY = 8;
-const DDGI_ProbeCountZ = 16;
+# MaxLevels/VSM_PagesPerLevelSide. 4x/dimension over the original v1 scaffold
+# (was 16x8x16) -- affordable now that residency culling (DDGIProbeResidencyMark)
+# means most of this grid is never actually traced/convolved, only stored.
+const DDGI_ProbeCountX = 64;
+const DDGI_ProbeCountY = 32;
+const DDGI_ProbeCountZ = 64;
 const DDGI_ProbeCount = `Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY * Constants::DDGI_ProbeCountZ`;
 
 # Octahedral atlas texel budget per probe. v1 uses the same texel size for
@@ -41,15 +43,19 @@ const DDGI_ProbeCount = `Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCoun
 # visibility, all with borders) to trade memory for filtering quality; right-
 # sizing each independently is a follow-up, not a correctness requirement.
 const DDGI_ProbeTexelSize = 8;
-# Flattens (probe_x, probe_z) into the atlas' horizontal axis, probe_y into
-# the vertical axis -- see DDGIProbes' ddgi_atlas_origin() helper below for
-# the addressing this implies. Single-cascade width/height -- the actual
-# allocated atlas is DDGI_CascadeCount times wider (see PassNode comments
-# above); this constant stays the per-cascade size so ddgi_atlas_origin's
-# LOCAL (cascade-relative) math doesn't need to change, only the final
-# global-texel offset added at each actual texture read/write.
-const DDGI_AtlasWidth  = `Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountZ * Constants::DDGI_ProbeTexelSize`;
-const DDGI_AtlasHeight = `Constants::DDGI_ProbeCountY * Constants::DDGI_ProbeTexelSize`;
+# Atlas layout: the 2D plane holds (probe_x, probe_z) only -- probe_y AND
+# the cascade both live in the ARRAY dimension instead (DDGI_AtlasArraySlices,
+# below), via a Texture2DArray. This is why: at 4x/dimension, folding
+# (probe_x, probe_z) alone into width like the original v1 scaffold did
+# already reaches 64*64*8 = 32768px, over D3D12's 16384 max texture
+# dimension -- before even multiplying by DDGI_CascadeCount the way the v1
+# scaffold additionally did. Moving probe_y AND cascade into array slices
+# instead keeps both the plane (512x512) and the array count (32*5=160)
+# comfortably within limits. See DDGIProbes' ddgi_atlas_origin()/
+# ddgi_atlas_array_slice() helpers below for the addressing this implies.
+const DDGI_AtlasWidth  = `Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeTexelSize`;
+const DDGI_AtlasHeight = `Constants::DDGI_ProbeCountZ * Constants::DDGI_ProbeTexelSize`;
+const DDGI_AtlasArraySlices = `Constants::DDGI_ProbeCountY * Constants::DDGI_CascadeCount`;
 
 # Per-frame probe-update budget (DDGI.ixx's Variable<int> probes_per_frame_budget
 # mirrors into DDGISelectors below); this constant is only the storage-independent
@@ -70,11 +76,13 @@ const DDGI_MaxProbesPerFrame = `Constants::DDGI_ProbeCountX * Constants::DDGI_Pr
 # coordinate to a probe grid coordinate (DDGIProbes::ddgi_atlas_probe_coord/
 # ddgi_atlas_local_uv, below) read it from here instead. cascade_info.x is
 # this cascade's linear offset into the (DDGI_CascadeCount-times-larger)
-# shared DDGI_Probes buffer; .y is its X-texel offset into the shared
-# (DDGI_CascadeCount-times-wider) atlas textures; .z is the cascade index
-# itself (informational/debug only). All precomputed in C++
-# (DDGIGraph.cpp's ddgi_make_info) since HLSL can't reach Constants:: to
-# derive them itself, same reasoning atlas_info.x already documents. .w is
+# shared DDGI_Probes buffer; .y is its array-slice offset into the shared
+# (DDGI_AtlasArraySlices-deep) atlas array textures -- this cascade's probes
+# occupy slices [.y, .y+DDGI_ProbeCountY), see ddgi_atlas_array_slice()
+# below; .z is the cascade index itself (informational/debug only). All
+# precomputed in C++ (DDGIGraph.cpp's ddgi_make_info) since HLSL can't reach
+# Constants:: to derive them itself, same reasoning atlas_info.x already
+# documents. .w is
 # 1 for the coarsest cascade (DDGI_CascadeCount-1), 0 otherwise -- the
 # coarsest level is exempt from residency culling (nowhere further to fall
 # back to, so it must stay fully resident as the guaranteed-valid floor
@@ -100,7 +108,16 @@ struct DDGIInfo
 	# scheme ddgi_probe_trace.hlsl's raygen shader uses (DispatchRaysIndex().xy
 	# directly into the atlas vs. a compacted linear index through
 	# DDGIProbeTraceData::compacted_list), matching whichever dispatch shape
-	# DDGIGraph.cpp's own render() actually issued this frame. zw unused.
+	# DDGIGraph.cpp's own render() actually issued this frame.
+	# .z = cull_coarsest_cascade (0/1), mirrored from DDGIGraph.cpp's
+	# Variable<bool> "Cull coarsest cascade" -- when 1, DDGIProbeResidencyMark
+	# drops the coarsest cascade's blanket exemption and culls it by pending
+	# hit-marks exactly like every other cascade (see that PassNode's own
+	# comment for why the exemption exists and what turning it off risks:
+	# ddgi_sample_irradiance_cascaded's fallback-to-coarsest path has no
+	# residency check yet, so a coarsest-cascade probe this drops can be read
+	# back stale/uninitialized wherever nothing else is marking it). Default
+	# off (0) preserves the original always-resident floor. w unused.
 	uint4 flags;
 }
 
@@ -163,31 +180,44 @@ struct DDGIProbes
 		return grid_min + float3(probe_grid_coord) * probe_spacing + probe_offset;
 	}
 
-	// Texel-space origin (top-left corner) of a probe's cell in any of the
-	// DDGI_Probe*/atlas textures -- all three share the same flattened
-	// (x,z)-then-y layout (see DDGI_AtlasWidth/Height above), so one helper
-	// serves radiance, irradiance and visibility lookups alike.
-	uint2 ddgi_atlas_origin(uint3 probe_grid_coord, uint probe_counts_x, uint texel_size)
+	// Texel-space origin (top-left corner) of a probe's cell within the 2D
+	// (x,z) plane of any of the DDGI_Probe*/atlas array textures -- probe_y
+	// doesn't participate here at all, it's an array-slice offset instead
+	// (ddgi_atlas_array_slice, below). All three atlas textures share this
+	// same plane layout, so one helper serves radiance, irradiance and
+	// visibility lookups alike.
+	uint2 ddgi_atlas_origin(uint3 probe_grid_coord, uint texel_size)
 	{
 		uint2 origin;
-		origin.x = (probe_grid_coord.x + probe_grid_coord.z * probe_counts_x) * texel_size;
-		origin.y = probe_grid_coord.y * texel_size;
+		origin.x = probe_grid_coord.x * texel_size;
+		origin.y = probe_grid_coord.z * texel_size;
 		return origin;
 	}
 
-	// Inverse of ddgi_atlas_origin: which probe (and which texel-center UV
-	// within that probe's octahedral cell, in [-1,1]) a given atlas texel
-	// belongs to. Used by DDGIProbeTrace to know which probe to trace from
-	// and which direction that texel represents (via octahedral decode of
-	// the returned UV, see octahedral.hlsl).
-	uint3 ddgi_atlas_probe_coord(uint2 atlas_texel, uint texel_size, uint probe_counts_x)
+	// Inverse of ddgi_atlas_origin: which probe (x,z) a given atlas-plane
+	// texel belongs to. probe_grid_coord.y is NOT recovered here -- callers
+	// that dispatch per-cascade already know their own probe.y directly
+	// (the dispatch's own 3rd dimension, or ddgi_atlas_array_slice's
+	// inverse below when only an array slice is in hand), so it's passed in
+	// rather than re-derived.
+	uint3 ddgi_atlas_probe_coord(uint2 atlas_texel, uint texel_size, uint probe_grid_y)
 	{
 		uint2 cell = atlas_texel / texel_size;
 		uint3 coord;
-		coord.x = cell.x % probe_counts_x;
-		coord.z = cell.x / probe_counts_x;
-		coord.y = cell.y;
+		coord.x = cell.x;
+		coord.z = cell.y;
+		coord.y = probe_grid_y;
 		return coord;
+	}
+
+	// Which array slice of the shared, DDGI_AtlasArraySlices-deep atlas
+	// array a probe's own (probe_y, cascade) pair lives in -- this cascade's
+	// own DDGIInfo::cascade_info.y (precomputed in C++, ddgi_make_info) is
+	// its slice range's own start, so this is just that plus the probe's
+	// local y. Inverse (slice -> probe_y) is `slice - cascade_slice_offset`.
+	uint ddgi_atlas_array_slice(uint probe_grid_y, uint cascade_slice_offset)
+	{
+		return cascade_slice_offset + probe_grid_y;
 	}
 
 	float2 ddgi_atlas_local_uv(uint2 atlas_texel, uint texel_size)
@@ -237,18 +267,18 @@ struct DDGIProbeTraceData
 	DDGIInfo info;
 	DDGIProbes probes;
 
-	RWTexture2D<float4> probe_radiance;
+	RWTexture2DArray<float4> probe_radiance;
 	# Packed (normal.xyz, hit distance) per traced direction -- lets
 	# DDGIProbeSelect's future lighting-only refresh (deferred, see plan)
 	# relight without retracing, same rationale as AC Shadows' own kept
 	# probe G-buffer.
-	RWTexture2D<float4> probe_gbuffer;
+	RWTexture2DArray<float4> probe_gbuffer;
 
 	# Last frame's convolved output -- see this PassNode's own doc comment
 	# above for why reading them here is safe. Sampled at each hit point for
 	# the multi-bounce feedback term (ddgi_sample.hlsl).
-	Texture2D<float4> prev_irradiance;
-	Texture2D<float2> prev_visibility;
+	Texture2DArray<float4> prev_irradiance;
+	Texture2DArray<float2> prev_visibility;
 
 	# This cascade's own residency flags -- read at the top of
 	# ddgi_probe_trace.hlsl as a belt-and-suspenders early-out. Redundant when
@@ -277,13 +307,13 @@ struct DDGIProbeConvolveData
 	# this pass at all.
 	DDGIInfo info;
 
-	Texture2D<float4> probe_radiance;
+	Texture2DArray<float4> probe_radiance;
 	# Hit distance (its .w) feeds the chebyshev visibility mean/mean-square
 	# below -- same reason DDGIProbeTrace packs it here instead of only in
 	# probe_radiance's alpha.
-	Texture2D<float4> probe_gbuffer;
-	RWTexture2D<float4> probe_irradiance;
-	RWTexture2D<float2> probe_visibility;
+	Texture2DArray<float4> probe_gbuffer;
+	RWTexture2DArray<float4> probe_irradiance;
+	RWTexture2DArray<float2> probe_visibility;
 
 	# See DDGIProbeTraceData's own comment on the same field -- same
 	# early-out reasoning, applied to the convolution loop instead of a
@@ -337,9 +367,9 @@ PassNode DDGIProbeSelect
 	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
 	StructuredBuffer<DDGIProbeMetadata> DDGI_Probes;
 
-	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight)`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight)`] [ArrayCount = `Constants::DDGI_AtlasArraySlices`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
 	Texture DDGI_ProbeIrradiance;
-	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight)`] [Format = R16G16_FLOAT] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight)`] [ArrayCount = `Constants::DDGI_AtlasArraySlices`] [Format = R16G16_FLOAT] [Optional = data.pass_index == 0]
 	Texture DDGI_ProbeVisibility;
 
 	# Per-probe-per-cascade residency flag (0/1) -- see
@@ -494,9 +524,9 @@ PassNode DDGIProbeTrace
 	# dispatch index (see ddgi_probe_trace.hlsl's own comment).
 	[Always = Read] StructuredBuffer<uint> DDGI_CompactedProbeList;
 
-	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight)`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight)`] [ArrayCount = `Constants::DDGI_AtlasArraySlices`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
 	Texture DDGI_ProbeRadiance;
-	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight)`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight)`] [ArrayCount = `Constants::DDGI_AtlasArraySlices`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
 	Texture DDGI_ProbeGBuffer;
 }
 
@@ -541,7 +571,7 @@ struct DDGIDebugData
 	# Sampled toward the camera at each probe's own position, so the marker
 	# shows that probe's irradiance on its viewer-facing side -- a rough but
 	# intuitive "is this probe actually receiving light" check.
-	Texture2D<float4> probe_irradiance;
+	Texture2DArray<float4> probe_irradiance;
 	# Drawn solid red instead of its irradiance color when 0 -- see
 	# [[project-ddgi]] planning notes and DDGIProbeResidencyMark's own
 	# comment (this file) for what marks/clears this.
@@ -597,8 +627,8 @@ struct DDGIIndirectDebugData
 	DDGIInfo cascade4;
 	Texture2D<float> depth;
 	Texture2D<float4> normals;
-	Texture2D<float4> probe_irradiance;
-	Texture2D<float2> probe_visibility;
+	Texture2DArray<float4> probe_irradiance;
+	Texture2DArray<float2> probe_visibility;
 	RWTexture2D<float4> target;
 }
 

@@ -139,7 +139,7 @@ export namespace HAL
 
             // Raytracing — no-op stubs for Vulkan Phase 0
             void dispatch_rays(uint hit_size, uint miss_size, uint raygen_size,
-                               ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count,
+                               ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count,
                                HAL::ResourceAddress miss_buffer, UINT miss_count,
                                HAL::ResourceAddress raygen_buffer) {}
 

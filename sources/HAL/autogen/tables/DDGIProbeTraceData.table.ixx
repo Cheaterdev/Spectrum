@@ -19,18 +19,18 @@ export namespace Table
 	struct DDGIProbeTraceData
 	{
 		static constexpr SlotID ID = SlotID::DDGIProbeTraceData;
-		HLSL::Texture2D<float4> prev_irradiance;
-		HLSL::Texture2D<float2> prev_visibility;
+		HLSL::Texture2DArray<float4> prev_irradiance;
+		HLSL::Texture2DArray<float2> prev_visibility;
 		HLSL::StructuredBuffer<uint> compacted_list;
-		HLSL::RWTexture2D<float4> probe_radiance;
-		HLSL::RWTexture2D<float4> probe_gbuffer;
+		HLSL::RWTexture2DArray<float4> probe_radiance;
+		HLSL::RWTexture2DArray<float4> probe_gbuffer;
 		HLSL::RWStructuredBuffer<uint> probe_residency;
 		DDGIInfo info;
 		DDGIProbes probes;
-		HLSL::RWTexture2D<float4>& GetProbe_radiance() { return probe_radiance; }
-		HLSL::RWTexture2D<float4>& GetProbe_gbuffer() { return probe_gbuffer; }
-		HLSL::Texture2D<float4>& GetPrev_irradiance() { return prev_irradiance; }
-		HLSL::Texture2D<float2>& GetPrev_visibility() { return prev_visibility; }
+		HLSL::RWTexture2DArray<float4>& GetProbe_radiance() { return probe_radiance; }
+		HLSL::RWTexture2DArray<float4>& GetProbe_gbuffer() { return probe_gbuffer; }
+		HLSL::Texture2DArray<float4>& GetPrev_irradiance() { return prev_irradiance; }
+		HLSL::Texture2DArray<float2>& GetPrev_visibility() { return prev_visibility; }
 		HLSL::RWStructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
 		HLSL::StructuredBuffer<uint>& GetCompacted_list() { return compacted_list; }
 		DDGIInfo& GetInfo() { return info; }
@@ -50,11 +50,11 @@ export namespace Table
 		}
 		struct Compiled
 		{
-			uint prev_irradiance; // Texture2D<float4>
-			uint prev_visibility; // Texture2D<float2>
+			uint prev_irradiance; // Texture2DArray<float4>
+			uint prev_visibility; // Texture2DArray<float2>
 			uint compacted_list; // StructuredBuffer<uint>
-			uint probe_radiance; // RWTexture2D<float4>
-			uint probe_gbuffer; // RWTexture2D<float4>
+			uint probe_radiance; // RWTexture2DArray<float4>
+			uint probe_gbuffer; // RWTexture2DArray<float4>
 			uint probe_residency; // RWStructuredBuffer<uint>
 			DDGIInfo::Compiled info; // DDGIInfo
 			DDGIProbes::Compiled probes; // DDGIProbes

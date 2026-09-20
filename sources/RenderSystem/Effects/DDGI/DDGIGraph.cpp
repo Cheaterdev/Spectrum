@@ -47,6 +47,20 @@ namespace
 	// count (stream compaction, not yet implemented -- see [[project-ddgi]]
 	// planning notes).
 	Variable<bool> g_ddgi_use_indirect_dispatch = { false, "Use indirect DispatchRays", &ddgi_debug_context() };
+	// Off by default: the coarsest cascade (DDGI_CascadeCount-1) is normally
+	// exempt from residency culling -- always fully resident, since it's the
+	// floor everything else falls back to and there's nowhere further for
+	// IT to fall back to. Since the 4x/dimension probe density bump it's the
+	// same size as every other cascade (131,072 probes) and never shrinks no
+	// matter how good hit-point culling gets elsewhere, so this exists to
+	// actually observe the cost/quality tradeoff of culling it too. Real
+	// risk turning it on: ddgi_sample_irradiance_cascaded's fallback-to-
+	// coarsest path (ddgi_sample.hlsl) has no residency check of its own
+	// yet, so a probe this drops can be sampled back stale/never-traced
+	// wherever nothing else in the scene is marking it -- watch for that
+	// with DDGI's own "Show probes" debug view before trusting this in a
+	// real scene.
+	Variable<bool> g_ddgi_cull_coarsest_cascade = { false, "Cull coarsest cascade", &ddgi_debug_context() };
 }
 
 void ddgi_update_selectors(FrameGraph::Graph& graph)
@@ -101,11 +115,12 @@ Slots::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index)
 	info.GetAtlas_info().x     = Constants::DDGI_ProbeTexelSize;
 	// See DDGIInfo's own comment (ddgi.sig) for what these offsets are.
 	info.GetCascade_info().x = cascade_index * probe_count;
-	info.GetCascade_info().y = cascade_index * Constants::DDGI_AtlasWidth;
+	info.GetCascade_info().y = cascade_index * Constants::DDGI_ProbeCountY;
 	info.GetCascade_info().z = cascade_index;
 	info.GetCascade_info().w = (cascade_index == Constants::DDGI_CascadeCount - 1) ? 1 : 0;
 	info.GetFlags().x = g_ddgi_use_fallback ? 1 : 0;
 	info.GetFlags().y = g_ddgi_use_indirect_dispatch ? 1 : 0;
+	info.GetFlags().z = g_ddgi_cull_coarsest_cascade ? 1 : 0;
 
 	return info;
 }
@@ -263,10 +278,10 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 		params.GetInfo() = info;
 		params.GetProbes().GetProbe_counts() = info.GetProbe_counts();
 		params.GetProbes().GetProbes()       = data.DDGI_Probes->rwStructuredBuffer;
-		params.GetProbe_radiance()  = data.DDGI_ProbeRadiance->rwTexture2D;
-		params.GetProbe_gbuffer()   = data.DDGI_ProbeGBuffer->rwTexture2D;
-		params.GetPrev_irradiance() = data.DDGI_ProbeIrradiance->texture2D;
-		params.GetPrev_visibility() = data.DDGI_ProbeVisibility->texture2D;
+		params.GetProbe_radiance()  = data.DDGI_ProbeRadiance->rwTexture2DArray;
+		params.GetProbe_gbuffer()   = data.DDGI_ProbeGBuffer->rwTexture2DArray;
+		params.GetPrev_irradiance() = data.DDGI_ProbeIrradiance->texture2DArray;
+		params.GetPrev_visibility() = data.DDGI_ProbeVisibility->texture2DArray;
 		params.GetProbe_residency() = data.DDGI_ProbeResidency->rwStructuredBuffer;
 		params.GetCompacted_list()  = data.DDGI_CompactedProbeList->structuredBuffer;
 		compute.set(params);
@@ -290,7 +305,11 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 	}
 	else
 	{
-		ivec2 atlas_size = { Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight };
+		// 3D: the array dimension (DDGI_ProbeCountY worth of slices for this
+		// cascade) is no longer folded into a 2D width/height, so a full
+		// (non-indirect) dispatch must cover it as an actual 3rd dispatch
+		// dimension -- see ddgi_probe_trace.hlsl's own comment.
+		ivec3 atlas_size = { Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight, Constants::DDGI_ProbeCountY };
 		RTX::get().render<DDGIProbeTrace>(compute, sceneinfo.scene->raytrace_scene, atlas_size);
 	}
 }
@@ -310,16 +329,19 @@ void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameC
 	{
 		Slots::DDGIProbeConvolveData params;
 		params.GetInfo() = ddgi_make_info(ddgi_camera_pos(context), cascade);
-		params.GetProbe_radiance()   = data.DDGI_ProbeRadiance->texture2D;
-		params.GetProbe_gbuffer()    = data.DDGI_ProbeGBuffer->texture2D;
-		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->rwTexture2D;
-		params.GetProbe_visibility() = data.DDGI_ProbeVisibility->rwTexture2D;
+		params.GetProbe_radiance()   = data.DDGI_ProbeRadiance->texture2DArray;
+		params.GetProbe_gbuffer()    = data.DDGI_ProbeGBuffer->texture2DArray;
+		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->rwTexture2DArray;
+		params.GetProbe_visibility() = data.DDGI_ProbeVisibility->rwTexture2DArray;
 		params.GetProbe_residency()  = data.DDGI_ProbeResidency->rwStructuredBuffer;
 		compute.set(params);
 	}
 
 	compute.set_pipeline<PSOS::DDGIProbeConvolve>();
-	compute.dispatch(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), ivec2{ 8, 8 });
+	// 3D: the array dimension (this cascade's own DDGI_ProbeCountY slice
+	// range) is a real dispatch dimension now, same reasoning as
+	// ddgi_probe_trace_render's own fixed-dispatch path.
+	compute.dispatch(ivec3(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight, Constants::DDGI_ProbeCountY), ivec3{ 8, 8, 1 });
 }
 
 // Debug-only screen-space probe splat (DDGISelectors::show_probes, toggled
@@ -349,7 +371,7 @@ void PassDefault<Passes::DDGIDebug>::render(
 		params.GetProbes().GetProbe_counts()  = info0.GetProbe_counts();
 		params.GetProbes().GetProbes()        = data.DDGI_Probes->rwStructuredBuffer;
 		params.GetDepth()            = data.GBuffer_DepthMips->texture2D;
-		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->texture2D;
+		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->texture2DArray;
 		params.GetProbe_residency()  = data.DDGI_ProbeResidency->structuredBuffer;
 		params.GetTarget()           = data.ResultTexture->rwTexture2D;
 		compute.set(params);
@@ -382,8 +404,8 @@ void PassDefault<Passes::DDGIIndirectDebug>::render(
 		params.GetCascade4()         = ddgi_make_info(cam_pos, 4);
 		params.GetDepth()            = data.GBuffer_DepthMips->texture2D;
 		params.GetNormals()          = data.GBuffer_Normals->texture2D;
-		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->texture2D;
-		params.GetProbe_visibility() = data.DDGI_ProbeVisibility->texture2D;
+		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->texture2DArray;
+		params.GetProbe_visibility() = data.DDGI_ProbeVisibility->texture2DArray;
 		params.GetTarget()           = data.DDGIIndirectDebug->rwTexture2D;
 		compute.set(params);
 	}

@@ -104,11 +104,11 @@ public:
 			}
 			if (data.pass_index == 0)
 			{
-			builder.create(data.DDGI_ProbeIrradiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+			builder.create(data.DDGI_ProbeIrradiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 			}
 			if (data.pass_index == 0)
 			{
-			builder.create(data.DDGI_ProbeVisibility, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+			builder.create(data.DDGI_ProbeVisibility, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 			}
 			if (data.pass_index == 0)
 			{
@@ -174,11 +174,11 @@ public:
 			else
 				builder.load(data.DDGI_Probes, ResourceID::DDGI_Probes, cache.DDGI_Probes);
 			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
+			builder.create_versioned(data.DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 });
 			else
 				builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
 			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16_FLOAT, 1, 1 });
+			builder.create_versioned(data.DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 });
 			else
 				builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
 			if (data.pass_index == 0)

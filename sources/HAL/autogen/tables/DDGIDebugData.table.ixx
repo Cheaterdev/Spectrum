@@ -20,7 +20,7 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::DDGIDebugData;
 		HLSL::Texture2D<float> depth;
-		HLSL::Texture2D<float4> probe_irradiance;
+		HLSL::Texture2DArray<float4> probe_irradiance;
 		HLSL::StructuredBuffer<uint> probe_residency;
 		HLSL::RWTexture2D<float4> target;
 		DDGIInfo cascade0;
@@ -30,7 +30,7 @@ export namespace Table
 		DDGIInfo cascade4;
 		DDGIProbes probes;
 		HLSL::Texture2D<float>& GetDepth() { return depth; }
-		HLSL::Texture2D<float4>& GetProbe_irradiance() { return probe_irradiance; }
+		HLSL::Texture2DArray<float4>& GetProbe_irradiance() { return probe_irradiance; }
 		HLSL::StructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
 		HLSL::RWTexture2D<float4>& GetTarget() { return target; }
 		DDGIInfo& GetCascade0() { return cascade0; }
@@ -57,7 +57,7 @@ export namespace Table
 		struct Compiled
 		{
 			uint depth; // Texture2D<float>
-			uint probe_irradiance; // Texture2D<float4>
+			uint probe_irradiance; // Texture2DArray<float4>
 			uint probe_residency; // StructuredBuffer<uint>
 			uint target; // RWTexture2D<float4>
 			DDGIInfo::Compiled cascade0; // DDGIInfo

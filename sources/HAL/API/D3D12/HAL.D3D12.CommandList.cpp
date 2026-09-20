@@ -410,7 +410,7 @@ namespace HAL
             m_commandList->CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
         }
 
-        void CommandList::dispatch_rays(uint hit_size, uint miss_size, uint raygen_sige, ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
+        void CommandList::dispatch_rays(uint hit_size, uint miss_size, uint raygen_sige, ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
         {
             D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
             dispatchDesc.HitGroupTable.StartAddress   = to_native(hit_buffer);
@@ -425,7 +425,7 @@ namespace HAL
             dispatchDesc.RayGenerationShaderRecord.SizeInBytes  = raygen_sige;
             dispatchDesc.Width  = size.x;
             dispatchDesc.Height = size.y;
-            dispatchDesc.Depth  = 1;
+            dispatchDesc.Depth  = size.z;
 
             m_commandList->DispatchRays(&dispatchDesc);
         }

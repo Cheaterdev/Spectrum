@@ -7,12 +7,18 @@
 // buffer's own comment (ddgi.sig) for why one frame lagged -- into
 // DDGI_ProbeResidency, clearing pending back to 0 as it's consumed so each
 // mark is used exactly once. The coarsest cascade (DDGIInfo::cascade_info.w)
-// is exempt: forced fully resident regardless of pending, since it has
-// nowhere further to fall back to. No dilation yet (a probe several hops
-// back in the multi-bounce feedback chain can drop out the frame it stops
-// being directly hit) and no cross-cascade fallback for a probe that isn't
-// resident -- both later steps, not yet implemented; start with direct
-// hit-marking alone and observe whether either is visibly needed.
+// is exempt by default: forced fully resident regardless of pending, since
+// it has nowhere further to fall back to -- DDGIInfo::flags.z
+// (cull_coarsest_cascade, mirrored from DDGIGraph.cpp's own Variable<bool>)
+// turns that exemption off, culling it the same as every other cascade.
+// See that flag's own comment (ddgi.sig) for what turning it off risks:
+// the coarsest-cascade sampling fallback has no residency check of its own
+// yet, so a probe this drops can be read back stale. No dilation yet (a
+// probe several hops back in the multi-bounce feedback chain can drop out
+// the frame it stops being directly hit) and no cross-cascade fallback for
+// a probe that isn't resident -- both later steps, not yet implemented;
+// start with direct hit-marking alone and observe whether either is
+// visibly needed.
 //
 // ALSO stream-compacts the marked set into DDGI_CompactedProbeList (dense
 // list of needed probes' linear indices, from index 0) and
@@ -51,7 +57,8 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	uint buffer_index = probe_offset + linear_index;
 
 	bool is_coarsest = data.GetInfo().GetCascade_info().w != 0;
-	bool needed = is_coarsest || (data.GetPending()[buffer_index] != 0);
+	bool coarsest_exempt = is_coarsest && data.GetInfo().GetFlags().z == 0;
+	bool needed = coarsest_exempt || (data.GetPending()[buffer_index] != 0);
 
 	data.GetProbe_residency()[buffer_index] = needed ? 1 : 0;
 	data.GetPending()[buffer_index] = 0;

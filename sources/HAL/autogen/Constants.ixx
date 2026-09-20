@@ -19,13 +19,14 @@ import :Autogen.Tables.TileRecord;
 export namespace Constants
 {
 	constexpr auto DDGI_CascadeCount = 5;
-	constexpr auto DDGI_ProbeCountX = 16;
-	constexpr auto DDGI_ProbeCountY = 8;
-	constexpr auto DDGI_ProbeCountZ = 16;
+	constexpr auto DDGI_ProbeCountX = 64;
+	constexpr auto DDGI_ProbeCountY = 32;
+	constexpr auto DDGI_ProbeCountZ = 64;
 	constexpr auto DDGI_ProbeCount = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY * Constants::DDGI_ProbeCountZ;
 	constexpr auto DDGI_ProbeTexelSize = 8;
-	constexpr auto DDGI_AtlasWidth = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountZ * Constants::DDGI_ProbeTexelSize;
-	constexpr auto DDGI_AtlasHeight = Constants::DDGI_ProbeCountY * Constants::DDGI_ProbeTexelSize;
+	constexpr auto DDGI_AtlasWidth = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeTexelSize;
+	constexpr auto DDGI_AtlasHeight = Constants::DDGI_ProbeCountZ * Constants::DDGI_ProbeTexelSize;
+	constexpr auto DDGI_AtlasArraySlices = Constants::DDGI_ProbeCountY * Constants::DDGI_CascadeCount;
 	constexpr auto DDGI_MaxProbesPerFrame = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY;
 	constexpr auto PSSM_RendersSize = 5;
 	constexpr auto MaxLevels = 26;

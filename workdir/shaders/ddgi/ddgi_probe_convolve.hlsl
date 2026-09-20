@@ -12,14 +12,17 @@
 void CS(uint3 dispatchID : SV_DispatchThreadID)
 {
 	const DDGIProbeConvolveData data = GetDDGIProbeConvolveData();
-	// Dispatch size is one cascade's own DDGI_AtlasWidth x DDGI_AtlasHeight
-	// -- LOCAL to this cascade's slice of the shared, wider atlas. All the
-	// octahedral/probe-cell math below stays in this local space; only the
-	// final texture reads/writes add this cascade's own X-offset
-	// (DDGIInfo::cascade_info.y, see its own comment, ddgi.sig).
+	// Dispatch size is one cascade's own DDGI_AtlasWidth x DDGI_AtlasHeight x
+	// DDGI_ProbeCountY -- xy is the (probe_x, probe_z) plane, z is probe_y
+	// directly (see DDGIProbeSelect's own comment, ddgi.sig, on why probe_y
+	// and the cascade both live in the array dimension instead of a folded
+	// 2D width/height). All the octahedral/probe-cell math below stays in
+	// plane-local space; only the final texture reads/writes add the array
+	// slice (this cascade's own offset, DDGIInfo::cascade_info.y, plus
+	// probe_y).
 	uint2 local_texel = dispatchID.xy;
+	uint probe_y = dispatchID.z;
 	uint texel_size = data.GetInfo().GetAtlas_info().x;
-	uint atlas_x_offset = data.GetInfo().GetCascade_info().y;
 
 	// No bound buffer -- DDGIProbes here is only ever used for its pure
 	// coordinate-math helpers (ddgi_atlas_probe_coord/ddgi_atlas_local_uv,
@@ -27,11 +30,13 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// for why the actual probe buffer isn't plumbed into this pass at all.
 	DDGIProbes probes;
 
+	uint3 probe_coord = probes.ddgi_atlas_probe_coord(local_texel, texel_size, probe_y);
+	uint slice = probes.ddgi_atlas_array_slice(probe_y, data.GetInfo().GetCascade_info().y);
+
 	// Residency early-out -- see ddgi_probe_trace.hlsl's own comment on the
 	// same check. Skips the O(texel_size^2) convolution loop entirely for a
 	// probe nothing needs this frame, leaving its irradiance/visibility
 	// texels at their last valid value.
-	uint3 probe_coord = probes.ddgi_atlas_probe_coord(local_texel, texel_size, data.GetInfo().GetProbe_counts().x);
 	uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, data.GetInfo().GetProbe_counts().xyz);
 	uint probe_buffer_index = data.GetInfo().GetCascade_info().x + probe_linear_index;
 	if (data.GetProbe_residency()[probe_buffer_index] == 0)
@@ -61,8 +66,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 			if (weight <= 0.0)
 				continue;
 
-			uint2 global_sample_texel = local_sample_texel + uint2(atlas_x_offset, 0);
-			radiance_sum += data.GetProbe_radiance()[global_sample_texel].rgb * weight;
+			radiance_sum += data.GetProbe_radiance()[uint3(local_sample_texel, slice)].rgb * weight;
 			weight_sum += weight;
 
 			// Distance/visibility needs a much SHARPER, direction-specific
@@ -76,7 +80,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 			// leaks, not just the probe/backface weighting. pow(.,64) is
 			// the standard DDGI-paper sharpening exponent for this.
 			float depth_weight = pow(saturate(cos_theta), 64.0);
-			float hit_dist = data.GetProbe_gbuffer()[global_sample_texel].w;
+			float hit_dist = data.GetProbe_gbuffer()[uint3(local_sample_texel, slice)].w;
 			dist_sum  += hit_dist * depth_weight;
 			dist2_sum += hit_dist * hit_dist * depth_weight;
 			depth_weight_sum += depth_weight;
@@ -87,7 +91,6 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float mean_dist   = depth_weight_sum > 0.0 ? dist_sum / depth_weight_sum : 0.0;
 	float mean_dist2  = depth_weight_sum > 0.0 ? dist2_sum / depth_weight_sum : 0.0;
 
-	uint2 global_texel = local_texel + uint2(atlas_x_offset, 0);
-	data.GetProbe_irradiance()[global_texel] = float4(irradiance, 1);
-	data.GetProbe_visibility()[global_texel] = float2(mean_dist, mean_dist2);
+	data.GetProbe_irradiance()[uint3(local_texel, slice)] = float4(irradiance, 1);
+	data.GetProbe_visibility()[uint3(local_texel, slice)] = float2(mean_dist, mean_dist2);
 }

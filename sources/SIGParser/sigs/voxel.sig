@@ -94,8 +94,8 @@ struct VoxelOutput
 	DDGIInfo ddgi_cascade2;
 	DDGIInfo ddgi_cascade3;
 	DDGIInfo ddgi_cascade4;
-	Texture2D<float4> ddgi_irradiance;
-	Texture2D<float2> ddgi_visibility;
+	Texture2DArray<float4> ddgi_irradiance;
+	Texture2DArray<float2> ddgi_visibility;
 	# Hit-point-driven residency marking's inbox (see [[project-ddgi]]
 	# planning notes and DDGI_ProbeResidencyPending's own comment, ddgi.sig):
 	# TraceIndirectDiffuse writes 1 here at its own ray's hit point, one

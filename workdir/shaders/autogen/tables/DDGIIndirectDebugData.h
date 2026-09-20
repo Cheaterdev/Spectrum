@@ -12,8 +12,8 @@ struct DDGIIndirectDebugData
 {
 	uint depth; // Texture2D<float>
 	uint normals; // Texture2D<float4>
-	uint probe_irradiance; // Texture2D<float4>
-	uint probe_visibility; // Texture2D<float2>
+	uint probe_irradiance; // Texture2DArray<float4>
+	uint probe_visibility; // Texture2DArray<float2>
 	uint target; // RWTexture2D<float4>
 	DDGIInfo cascade0; // DDGIInfo
 	DDGIInfo cascade1; // DDGIInfo
@@ -27,7 +27,7 @@ struct DDGIIndirectDebugData
 	DDGIInfo GetCascade4() { return cascade4; }
 	Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
 	Texture2D<float4> GetNormals() { return ResourceDescriptorHeap[normals]; }
-	Texture2D<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
-	Texture2D<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
+	Texture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
+	Texture2DArray<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
 	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
 };

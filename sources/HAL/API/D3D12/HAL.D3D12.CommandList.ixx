@@ -61,7 +61,7 @@ export namespace HAL {
             void set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST, bool adjusted = false, uint controlpoints = 0);
             void set_stencil_ref(UINT ref);
 
-            void dispatch_rays(uint hit_size, uint miss_size, uint raygen_sige, ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer);
+            void dispatch_rays(uint hit_size, uint miss_size, uint raygen_sige, ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer);
             void set_name(std::wstring_view name);
 
             void discard(const HAL::Resource* resource);

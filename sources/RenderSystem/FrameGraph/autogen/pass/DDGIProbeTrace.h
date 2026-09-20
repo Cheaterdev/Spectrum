@@ -102,11 +102,11 @@ public:
 		{
 			if (data.pass_index == 0)
 			{
-			builder.create(data.DDGI_ProbeRadiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+			builder.create(data.DDGI_ProbeRadiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 			}
 			if (data.pass_index == 0)
 			{
-			builder.create(data.DDGI_ProbeGBuffer, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+			builder.create(data.DDGI_ProbeGBuffer, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 			}
 		}
 		// Which chain link each handler field resolved to, one named slot per
@@ -160,11 +160,11 @@ public:
 			builder.load(data.DDGI_DispatchRaysArgs, ResourceID::DDGI_DispatchRaysArgs, cache.DDGI_DispatchRaysArgs);
 			builder.load(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList, cache.DDGI_CompactedProbeList);
 			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeRadiance, cache.DDGI_ProbeRadiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
+			builder.create_versioned(data.DDGI_ProbeRadiance, cache.DDGI_ProbeRadiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 });
 			else
 				builder.load(data.DDGI_ProbeRadiance, ResourceID::DDGI_ProbeRadiance, cache.DDGI_ProbeRadiance);
 			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeGBuffer, cache.DDGI_ProbeGBuffer, { ivec3(ivec2(Constants::DDGI_AtlasWidth * Constants::DDGI_CascadeCount, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
+			builder.create_versioned(data.DDGI_ProbeGBuffer, cache.DDGI_ProbeGBuffer, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 });
 			else
 				builder.load(data.DDGI_ProbeGBuffer, ResourceID::DDGI_ProbeGBuffer, cache.DDGI_ProbeGBuffer);
 		}

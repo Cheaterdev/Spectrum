@@ -19,8 +19,8 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::VoxelOutput;
 		HLSL::Texture2D<float2> blueNoise;
-		HLSL::Texture2D<float4> ddgi_irradiance;
-		HLSL::Texture2D<float2> ddgi_visibility;
+		HLSL::Texture2DArray<float4> ddgi_irradiance;
+		HLSL::Texture2DArray<float2> ddgi_visibility;
 		HLSL::RWTexture2D<float4> noise;
 		HLSL::RWTexture2D<float> frames;
 		HLSL::RWTexture2D<float4> DirAndPdf;
@@ -38,8 +38,8 @@ export namespace Table
 		HLSL::Texture2D<float2>& GetBlueNoise() { return blueNoise; }
 		HLSL::RWTexture2D<float4>& GetNoiseRaw() { return noiseRaw; }
 		HLSL::RWTexture2D<float>& GetShadow_noise() { return shadow_noise; }
-		HLSL::Texture2D<float4>& GetDdgi_irradiance() { return ddgi_irradiance; }
-		HLSL::Texture2D<float2>& GetDdgi_visibility() { return ddgi_visibility; }
+		HLSL::Texture2DArray<float4>& GetDdgi_irradiance() { return ddgi_irradiance; }
+		HLSL::Texture2DArray<float2>& GetDdgi_visibility() { return ddgi_visibility; }
 		HLSL::RWStructuredBuffer<uint>& GetDdgi_residency_pending() { return ddgi_residency_pending; }
 		DDGIInfo& GetDdgi_cascade0() { return ddgi_cascade0; }
 		DDGIInfo& GetDdgi_cascade1() { return ddgi_cascade1; }
@@ -68,8 +68,8 @@ export namespace Table
 		struct Compiled
 		{
 			uint blueNoise; // Texture2D<float2>
-			uint ddgi_irradiance; // Texture2D<float4>
-			uint ddgi_visibility; // Texture2D<float2>
+			uint ddgi_irradiance; // Texture2DArray<float4>
+			uint ddgi_visibility; // Texture2DArray<float2>
 			uint noise; // RWTexture2D<float4>
 			uint frames; // RWTexture2D<float>
 			uint DirAndPdf; // RWTexture2D<float4>

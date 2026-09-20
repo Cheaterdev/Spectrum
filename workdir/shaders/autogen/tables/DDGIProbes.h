@@ -44,31 +44,44 @@ struct DDGIProbes
 		return grid_min + float3(probe_grid_coord) * probe_spacing + probe_offset;
 	}
 
-	// Texel-space origin (top-left corner) of a probe's cell in any of the
-	// DDGI_Probe*/atlas textures -- all three share the same flattened
-	// (x,z)-then-y layout (see DDGI_AtlasWidth/Height above), so one helper
-	// serves radiance, irradiance and visibility lookups alike.
-	uint2 ddgi_atlas_origin(uint3 probe_grid_coord, uint probe_counts_x, uint texel_size)
+	// Texel-space origin (top-left corner) of a probe's cell within the 2D
+	// (x,z) plane of any of the DDGI_Probe*/atlas array textures -- probe_y
+	// doesn't participate here at all, it's an array-slice offset instead
+	// (ddgi_atlas_array_slice, below). All three atlas textures share this
+	// same plane layout, so one helper serves radiance, irradiance and
+	// visibility lookups alike.
+	uint2 ddgi_atlas_origin(uint3 probe_grid_coord, uint texel_size)
 	{
 		uint2 origin;
-		origin.x = (probe_grid_coord.x + probe_grid_coord.z * probe_counts_x) * texel_size;
-		origin.y = probe_grid_coord.y * texel_size;
+		origin.x = probe_grid_coord.x * texel_size;
+		origin.y = probe_grid_coord.z * texel_size;
 		return origin;
 	}
 
-	// Inverse of ddgi_atlas_origin: which probe (and which texel-center UV
-	// within that probe's octahedral cell, in [-1,1]) a given atlas texel
-	// belongs to. Used by DDGIProbeTrace to know which probe to trace from
-	// and which direction that texel represents (via octahedral decode of
-	// the returned UV, see octahedral.hlsl).
-	uint3 ddgi_atlas_probe_coord(uint2 atlas_texel, uint texel_size, uint probe_counts_x)
+	// Inverse of ddgi_atlas_origin: which probe (x,z) a given atlas-plane
+	// texel belongs to. probe_grid_coord.y is NOT recovered here -- callers
+	// that dispatch per-cascade already know their own probe.y directly
+	// (the dispatch's own 3rd dimension, or ddgi_atlas_array_slice's
+	// inverse below when only an array slice is in hand), so it's passed in
+	// rather than re-derived.
+	uint3 ddgi_atlas_probe_coord(uint2 atlas_texel, uint texel_size, uint probe_grid_y)
 	{
 		uint2 cell = atlas_texel / texel_size;
 		uint3 coord;
-		coord.x = cell.x % probe_counts_x;
-		coord.z = cell.x / probe_counts_x;
-		coord.y = cell.y;
+		coord.x = cell.x;
+		coord.z = cell.y;
+		coord.y = probe_grid_y;
 		return coord;
+	}
+
+	// Which array slice of the shared, DDGI_AtlasArraySlices-deep atlas
+	// array a probe's own (probe_y, cascade) pair lives in -- this cascade's
+	// own DDGIInfo::cascade_info.y (precomputed in C++, ddgi_make_info) is
+	// its slice range's own start, so this is just that plus the probe's
+	// local y. Inverse (slice -> probe_y) is `slice - cascade_slice_offset`.
+	uint ddgi_atlas_array_slice(uint probe_grid_y, uint cascade_slice_offset)
+	{
+		return cascade_slice_offset + probe_grid_y;
 	}
 
 	float2 ddgi_atlas_local_uv(uint2 atlas_texel, uint texel_size)
