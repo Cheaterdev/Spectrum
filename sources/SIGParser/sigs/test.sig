@@ -57,19 +57,27 @@ Pipeline MainPipeline
 	# GBuffer directly.
 	GBufferDownsampler;
 	[Async]NormalRoughnessRepack;
-	[Async]ReflectionRTXHalf;
-	[Async]ReflectionRTX;
 	[Async]ShadowRTX;
-	# DDGI probe volume (ddgi.sig) -- must finish before IndirectRTX below
-	# once its raygen starts sampling DDGI_ProbeIrradiance (not wired yet in
-	# the v1 scaffold, see [[project-ddgi]]); placed here now so the ordering
-	# is already correct when that wiring lands.
+	# DDGI probe volume (ddgi.sig) -- must finish before ReflectionRTX/
+	# IndirectRTX below, both of which sample DDGI_ProbeIrradiance/
+	# Visibility/Residency/ResidencyPending (see IndirectRTX.cpp/
+	# ReflectionRTX.cpp's own binding comments). ReflectionRTXHalf/
+	# ReflectionRTX used to sit above this block, before it read any DDGI
+	# resource -- once they started reading DDGI_ProbeIrradiance too, that
+	# ordering crashed in ResourceChain::active() (null-deref, PassNode
+	# reads a resource its own creator pass hasn't created yet) the same
+	# way NRD_GBufferPack's own comment below already documents for a
+	# different pass. Any future PassNode that starts reading a DDGI
+	# resource must be placed after this block too, not just declare the
+	# field.
 	[Async]DDGIProbeSelect;
 	[Async]DDGIProbeResidencyMark;
 	[Async]DDGIProbeDispatchArgsBuild;
 	[Async]DDGIProbeTrace;
 	[Async]DDGIProbeConvolve;
 	[Async]DDGIIndirectDebug;
+	[Async]ReflectionRTXHalf;
+	[Async]ReflectionRTX;
 	[Async]IndirectRTXHalf;
 	[Async]IndirectRTX;
 	# Voxel-cone-traced alternative sources for NRD_REBLUR_Execute below

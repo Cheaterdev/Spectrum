@@ -364,6 +364,17 @@ export
 		WorkGR_ClassifyPixels_NodeEmulation = "WorkGR_ClassifyPixels_NodeEmulation"_crc32,
 		WorkGR_Shadows_NodeEmulation = "WorkGR_Shadows_NodeEmulation"_crc32
 	};
+	enum class DDGIControlFlags : uint
+	{
+		CullCoarsestCascade = 1,
+		DisableResidencyCulling = 2,
+		JitterRays = 4,
+		DisableTraceFeedback = 8
+	};
+	enum class RTXDebugFlags : uint
+	{
+		DisableSkyFallback = 1
+	};
 	enum class IndirectSource : uint
 	{
 		MyVCT,

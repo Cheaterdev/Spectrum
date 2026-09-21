@@ -91,6 +91,30 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float mean_dist   = depth_weight_sum > 0.0 ? dist_sum / depth_weight_sum : 0.0;
 	float mean_dist2  = depth_weight_sum > 0.0 ? dist2_sum / depth_weight_sum : 0.0;
 
-	data.GetProbe_irradiance()[uint3(local_texel, slice)] = float4(irradiance, 1);
-	data.GetProbe_visibility()[uint3(local_texel, slice)] = float2(mean_dist, mean_dist2);
+	// Temporal blend toward last frame's convolved value (see
+	// ddgi_probe_trace.hlsl's own comment on ray jitter): now that the 64
+	// traced directions feeding this convolution shift slightly every frame,
+	// a single frame's result carries that jitter's own variance. Blending
+	// it in gradually instead of overwriting outright turns that per-frame
+	// variance into something the eye integrates over several frames rather
+	// than a visible per-frame wobble -- exactly what the jitter is for
+	// (spreading an occasional grazing-ray leak across time) actually
+	// requires something downstream to average it, which nothing did
+	// before this. probe_irradiance/probe_visibility are the same physical
+	// resource DDGIProbeTrace reads as prev_irradiance/prev_visibility, so
+	// reading them here before overwriting is exactly last frame's value --
+	// no separate history buffer needed. A probe's first frame back from
+	// being non-resident blends toward whatever its texels last held (its
+	// own last valid value, or zero if truly never traced before), so it
+	// ramps in over a handful of frames rather than snapping instantly --
+	// an acceptable, self-correcting cost given how small the jitter is.
+	const float blend_alpha = 0.15;
+	float3 prev_irradiance  = data.GetProbe_irradiance()[uint3(local_texel, slice)].rgb;
+	float2 prev_visibility  = data.GetProbe_visibility()[uint3(local_texel, slice)];
+
+	float3 blended_irradiance = lerp(prev_irradiance, irradiance, blend_alpha);
+	float2 blended_visibility = lerp(prev_visibility, float2(mean_dist, mean_dist2), blend_alpha);
+
+	data.GetProbe_irradiance()[uint3(local_texel, slice)] = float4(blended_irradiance, 1);
+	data.GetProbe_visibility()[uint3(local_texel, slice)] = blended_visibility;
 }

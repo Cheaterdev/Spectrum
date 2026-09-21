@@ -107,6 +107,63 @@ export namespace GUI
 		}
 
 
+		// Same shape as Variable<float>'s constrained branch -- reuses
+		// float_slider (there's no dedicated integer slider widget) and just
+		// rounds at the float<->int boundary on both read and write. Only
+		// the constrained case is handled: an unconstrained Variable<int> has
+		// no natural free-form-text-box equivalent of Variable<float>'s
+		// std::stof path worth building until something actually needs one.
+		inline base::ptr create_property_internal(Variable<int>& elem)
+		{
+			auto row = std::make_shared<GUI::Elements::layouts::horizontal>();
+			row->docking = GUI::dock::TOP;
+			row->x_type = GUI::pos_x_type::LEFT;
+
+			auto label = std::make_shared<GUI::Elements::label>();
+			label->text = elem.get_name();
+			row->add_child(label);
+
+			if (elem.has_range())
+			{
+				auto slider = std::make_shared<GUI::Elements::float_slider>();
+				slider->min = (float)elem.get_min();
+				slider->max = (float)elem.get_max();
+				slider->value = (float)(int)elem;
+				slider->on_change = [&elem](float value) { elem = (int)std::lround(value); };
+				// Keep the thumb in sync if elem changes from elsewhere (revert
+				// button, other code) -- same reasoning as Variable<float>'s own
+				// row above, EXCEPT that reasoning doesn't hold as-is here: the
+				// float<->int rounding is lossy, so a raw drag position like 6.7
+				// (still sitting in slider->value while its own on_change handler
+				// above is what's currently running) rounds to elem=7, and writing
+				// slider->value=7.0f back unconditionally is a genuine change from
+				// 6.7 -- property<float>::operator='s own "skip if unchanged" guard
+				// doesn't catch it, so it fires the slider's on_change AGAIN
+				// synchronously, which re-enters Events::Event<float>::operator()'s
+				// mutex from the same thread and deadlocks (confirmed live: hung
+				// exactly in that lock_guard, dragging this exact slider). Guarding
+				// the write ourselves -- skip it when the slider's current value
+				// already rounds to the same int -- breaks the cycle at its actual
+				// source instead of relying on an equality check that can't work
+				// across a lossy conversion.
+				elem.on_change.register_handler(row.get(), [slider](int v) {
+					if ((int)std::lround((float)slider->value) != v)
+						slider->value = (float)v;
+				});
+				row->add_child(slider);
+			}
+			else
+			{
+				auto label2 = std::make_shared<GUI::Elements::label>();
+				label2->text = std::to_string((int)elem);
+				row->add_child(label2);
+			}
+
+			add_revert_button(row, elem);
+
+			return row;
+		}
+
 		template<class T>
 		inline base::ptr create_property_internal(T& elem)
 		{
@@ -122,6 +179,7 @@ export namespace GUI
 		{
 
 			CHECK_PROPERTY(bool);
+			CHECK_PROPERTY(int);
 			CHECK_PROPERTY(float);
 
 			// Enums: dispatched through VariableBase's virtuals, not CHECK_PROPERTY

@@ -1,3 +1,15 @@
+# Debug-only bitmask, shared FrameInfo-wide rather than living on any one
+# system's own struct (RTX ray-miss behavior isn't DDGI-, IndirectRTX-, or
+# ReflectionRTX-exclusive -- MyMissShader (raytracing.hlsl) services all of
+# them through one shared miss shader with no way to know which). Real SIG
+# enum instead of a raw uint + hand-typed magic numbers, same reasoning
+# DDGIControlFlags (ddgi.sig) already established -- explicit power-of-two
+# values since these combine as a bitmask, not picked one-at-a-time.
+enum RTXDebugFlags
+{
+	DisableSkyFallback = 1;
+}
+
 struct ViewportContext
 {
 	int2 frame_size;
@@ -61,6 +73,12 @@ struct FrameInfo
 	# false and nothing is culled, which is what "no Hi-Z available" means.
 	[Auto = Texture_Null]
 	Texture2D<float> mainHiZ;
+
+	# RTXDebugFlags bitmask (above). Mirrored from DDGI.ixx's own
+	# ddgi_sky_fallback_disabled(), the one place DisableSkyFallback is
+	# actually toggled from today, even though its effect isn't
+	# DDGI-exclusive -- see that flag's own comment.
+	uint debugFlags = 0;
 
 
 	%{

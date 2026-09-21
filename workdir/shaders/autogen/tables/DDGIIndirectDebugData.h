@@ -14,6 +14,8 @@ struct DDGIIndirectDebugData
 	uint normals; // Texture2D<float4>
 	uint probe_irradiance; // Texture2DArray<float4>
 	uint probe_visibility; // Texture2DArray<float2>
+	uint probe_residency; // StructuredBuffer<uint>
+	uint residency_pending; // RWStructuredBuffer<uint>
 	uint target; // RWTexture2D<float4>
 	DDGIInfo cascade0; // DDGIInfo
 	DDGIInfo cascade1; // DDGIInfo
@@ -29,5 +31,7 @@ struct DDGIIndirectDebugData
 	Texture2D<float4> GetNormals() { return ResourceDescriptorHeap[normals]; }
 	Texture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
 	Texture2DArray<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
+	StructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
+	RWStructuredBuffer<uint> GetResidency_pending() { return ResourceDescriptorHeap[residency_pending]; }
 	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
 };

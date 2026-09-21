@@ -15,6 +15,7 @@ struct DDGIProbeResidencyMarkData
 	uint compacted_list; // RWStructuredBuffer<uint>
 	uint compacted_count; // RWStructuredBuffer<uint>
 	uint pending; // RWStructuredBuffer<uint>
+	uint miss_streak; // RWStructuredBuffer<uint>
 	DDGIInfo info; // DDGIInfo
 	DDGIInfo GetInfo() { return info; }
 	uint GetReset_only() { return reset_only; }
@@ -22,4 +23,5 @@ struct DDGIProbeResidencyMarkData
 	RWStructuredBuffer<uint> GetCompacted_list() { return ResourceDescriptorHeap[compacted_list]; }
 	RWStructuredBuffer<uint> GetCompacted_count() { return ResourceDescriptorHeap[compacted_count]; }
 	RWStructuredBuffer<uint> GetPending() { return ResourceDescriptorHeap[pending]; }
+	RWStructuredBuffer<uint> GetMiss_streak() { return ResourceDescriptorHeap[miss_streak]; }
 };

@@ -133,6 +133,19 @@ export
 	// reason to go through ExecuteIndirect instead of a fixed CPU-recorded
 	// dispatch is that the latter can be computed on the GPU (e.g. a
 	// residency-compacted probe count) without a CPU readback.
+	// D3D12 REQUIRES a command signature's ByteStride for a
+	// D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS argument to be at least 104
+	// bytes (confirmed the hard way: CreateCommandSignature D3D12 ERROR #743,
+	// "Command signature byte stride (100 bytes) is not large enough.
+	// Required size is (104 bytes)." when this was tried packed to the
+	// tight 100-byte sum of its real fields) -- natural C++ alignment
+	// (GPUAddress = uint64_t forces 8-byte struct alignment, rounding 100 up
+	// to 104) already gives the right size; do NOT #pragma pack(1) this.
+	// The GPU-side mirror (DispatchRaysArguments in ddgi.sig /
+	// dispatch_rays_args_build.hlsl) must match this 104-byte stride
+	// exactly -- see its own comment for the explicit trailing pad field
+	// that keeps it there, since HLSL has no equivalent automatic alignment
+	// padding for structured-buffer elements.
 	class DispatchRaysArguments
 	{
 	public:

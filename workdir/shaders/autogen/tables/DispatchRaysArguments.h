@@ -23,6 +23,7 @@ struct DispatchRaysArguments
 	uint width; // uint
 	uint height; // uint
 	uint depth; // uint
+	uint _pad; // uint
 	uint2 GetRaygen_addr() { return raygen_addr; }
 	uint2 GetRaygen_size() { return raygen_size; }
 	uint2 GetMiss_addr() { return miss_addr; }
@@ -37,4 +38,5 @@ struct DispatchRaysArguments
 	uint GetWidth() { return width; }
 	uint GetHeight() { return height; }
 	uint GetDepth() { return depth; }
+	uint Get_pad() { return _pad; }
 };

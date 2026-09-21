@@ -23,11 +23,13 @@ export namespace Table
 		HLSL::RWStructuredBuffer<uint> compacted_list;
 		HLSL::RWStructuredBuffer<uint> compacted_count;
 		HLSL::RWStructuredBuffer<uint> pending;
+		HLSL::RWStructuredBuffer<uint> miss_streak;
 		DDGIInfo info;
 		HLSL::RWStructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
 		HLSL::RWStructuredBuffer<uint>& GetCompacted_list() { return compacted_list; }
 		HLSL::RWStructuredBuffer<uint>& GetCompacted_count() { return compacted_count; }
 		HLSL::RWStructuredBuffer<uint>& GetPending() { return pending; }
+		HLSL::RWStructuredBuffer<uint>& GetMiss_streak() { return miss_streak; }
 		uint& GetReset_only() { return reset_only; }
 		DDGIInfo& GetInfo() { return info; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -39,6 +41,7 @@ export namespace Table
 			compiler.compile(compacted_list, "DDGIProbeResidencyMarkData::compacted_list");
 			compiler.compile(compacted_count, "DDGIProbeResidencyMarkData::compacted_count");
 			compiler.compile(pending, "DDGIProbeResidencyMarkData::pending");
+			compiler.compile(miss_streak, "DDGIProbeResidencyMarkData::miss_streak");
 			compiler.compile(info, "DDGIProbeResidencyMarkData::info");
 		}
 		struct Compiled
@@ -48,6 +51,7 @@ export namespace Table
 			uint compacted_list; // RWStructuredBuffer<uint>
 			uint compacted_count; // RWStructuredBuffer<uint>
 			uint pending; // RWStructuredBuffer<uint>
+			uint miss_streak; // RWStructuredBuffer<uint>
 			DDGIInfo::Compiled info; // DDGIInfo
 
 			

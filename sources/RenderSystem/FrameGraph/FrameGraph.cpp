@@ -14,6 +14,19 @@ namespace FrameGraph
 {
 	const char* ResourceAllocInfo::name() const { return resource_id_name(id); }
 
+	// See TaskBuilder::need()'s own comment (FrameGraph.Base.ixx) for why
+	// this exists and is out-of-line. Pass is fully defined here, unlike at
+	// need()'s point in that header.
+	void report_resource_not_created(ResourceID id, Pass* requesting_pass)
+	{
+		char message[320];
+		std::snprintf(message, sizeof(message),
+			"FrameGraph::TaskBuilder::need(): resource '%s' needed by pass '%ls' before it was created this frame -- move '%ls' after whichever pass creates/writes '%s' in the Pipeline block (test.sig)",
+			resource_id_name(id), requesting_pass ? requesting_pass->name.ptr : L"?",
+			requesting_pass ? requesting_pass->name.ptr : L"?", resource_id_name(id));
+		::Core::assert_fail(message, __FILE__, __LINE__);
+	}
+
 	// Stage 1: record this pass's touch against the resource's RW-state timeline.
 	void ResourceAllocInfo::add_pass(Pass* pass, ResourceFlags flags)
 	{

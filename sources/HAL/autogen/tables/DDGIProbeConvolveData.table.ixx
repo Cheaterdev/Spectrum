@@ -20,15 +20,15 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::DDGIProbeConvolveData;
 		HLSL::Texture2DArray<float4> probe_radiance;
 		HLSL::Texture2DArray<float4> probe_gbuffer;
+		HLSL::StructuredBuffer<uint> probe_residency;
 		HLSL::RWTexture2DArray<float4> probe_irradiance;
 		HLSL::RWTexture2DArray<float2> probe_visibility;
-		HLSL::RWStructuredBuffer<uint> probe_residency;
 		DDGIInfo info;
 		HLSL::Texture2DArray<float4>& GetProbe_radiance() { return probe_radiance; }
 		HLSL::Texture2DArray<float4>& GetProbe_gbuffer() { return probe_gbuffer; }
 		HLSL::RWTexture2DArray<float4>& GetProbe_irradiance() { return probe_irradiance; }
 		HLSL::RWTexture2DArray<float2>& GetProbe_visibility() { return probe_visibility; }
-		HLSL::RWStructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
+		HLSL::StructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
 		DDGIInfo& GetInfo() { return info; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
@@ -36,18 +36,18 @@ export namespace Table
 		{
 			compiler.compile(probe_radiance, "DDGIProbeConvolveData::probe_radiance");
 			compiler.compile(probe_gbuffer, "DDGIProbeConvolveData::probe_gbuffer");
+			compiler.compile(probe_residency, "DDGIProbeConvolveData::probe_residency");
 			compiler.compile(probe_irradiance, "DDGIProbeConvolveData::probe_irradiance");
 			compiler.compile(probe_visibility, "DDGIProbeConvolveData::probe_visibility");
-			compiler.compile(probe_residency, "DDGIProbeConvolveData::probe_residency");
 			compiler.compile(info, "DDGIProbeConvolveData::info");
 		}
 		struct Compiled
 		{
 			uint probe_radiance; // Texture2DArray<float4>
 			uint probe_gbuffer; // Texture2DArray<float4>
+			uint probe_residency; // StructuredBuffer<uint>
 			uint probe_irradiance; // RWTexture2DArray<float4>
 			uint probe_visibility; // RWTexture2DArray<float2>
-			uint probe_residency; // RWStructuredBuffer<uint>
 			DDGIInfo::Compiled info; // DDGIInfo
 
 			

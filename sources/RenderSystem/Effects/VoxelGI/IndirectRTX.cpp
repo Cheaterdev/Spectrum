@@ -50,6 +50,7 @@ void PassDefault<Passes::IndirectRTXHalf>::render(
 			}
 			output.GetDdgi_irradiance()  = data.DDGI_ProbeIrradiance->texture2DArray;
 			output.GetDdgi_visibility()  = data.DDGI_ProbeVisibility->texture2DArray;
+			output.GetDdgi_residency()   = data.DDGI_ProbeResidency->structuredBuffer;
 			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 			compute.set(output);
 		}
@@ -116,6 +117,7 @@ void PassDefault<Passes::IndirectRTX>::render(
 			}
 			output.GetDdgi_irradiance()  = data.DDGI_ProbeIrradiance->texture2DArray;
 			output.GetDdgi_visibility()  = data.DDGI_ProbeVisibility->texture2DArray;
+			output.GetDdgi_residency()   = data.DDGI_ProbeResidency->structuredBuffer;
 			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 			compute.set(output);
 		}

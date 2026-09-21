@@ -27,6 +27,22 @@
 # atlas_info.x/DDGI_ProbeTexelSize already documents).
 const DDGI_CascadeCount = 5;
 
+# Bit values for DDGIInfo::flags.z (below) -- a real SIG enum instead of
+# hand-typed magic numbers (1u/2u/4u/8u) at every call/check site, C++ and
+# HLSL alike. Explicit power-of-two values since these are combined as a
+# bitmask (DDGIGraph.cpp OR's the ones whose toggle is on into flags.z),
+# not picked one-at-a-time the way every other SIG enum in this codebase is
+# (a dropdown/[Optional] condition) -- there's no built-in "this enum is a
+# flag set" concept, so the bitwise OR/AND still has to be written by hand
+# at each site; only the magic numbers themselves are replaced.
+enum DDGIControlFlags
+{
+	CullCoarsestCascade = 1;
+	DisableResidencyCulling = 2;
+	JitterRays = 4;
+	DisableTraceFeedback = 8;
+}
+
 # Single-cascade grid size, shared between DDGI.ixx's grid bookkeeping and
 # every [Size=...] below -- one source of truth, same reasoning as vsm.sig's
 # MaxLevels/VSM_PagesPerLevelSide. 4x/dimension over the original v1 scaffold
@@ -91,6 +107,16 @@ const DDGI_MaxProbesPerFrame = `Constants::DDGI_ProbeCountX * Constants::DDGI_Pr
 struct DDGIInfo
 {
 	float4 grid_min;
+	# .xyz = probe spacing for this cascade. .w = feedback_strength, mirrored
+	# from DDGIGraph.cpp's Variable<float> "Feedback strength" -- scales the
+	# multi-bounce term DDGIProbeTrace's own hit-point sample adds on top of
+	# direct-lit shading (ddgi_probe_trace.hlsl), separate from flags.x
+	# (use_fallback, the final per-pixel screen term's own master on/off).
+	# Two probes whose traced rays land near each other feed each other's
+	# irradiance back across frames (see [[project-ddgi]] planning notes) --
+	# this scalar is a knob on how strongly that loop reinforces itself
+	# before it's fully squashed by the built-in albedo attenuation each hop
+	# already provides.
 	float4 probe_spacing;
 	uint4 probe_counts;
 	uint4 rays_per_probe;
@@ -109,15 +135,18 @@ struct DDGIInfo
 	# directly into the atlas vs. a compacted linear index through
 	# DDGIProbeTraceData::compacted_list), matching whichever dispatch shape
 	# DDGIGraph.cpp's own render() actually issued this frame.
-	# .z = cull_coarsest_cascade (0/1), mirrored from DDGIGraph.cpp's
-	# Variable<bool> "Cull coarsest cascade" -- when 1, DDGIProbeResidencyMark
-	# drops the coarsest cascade's blanket exemption and culls it by pending
-	# hit-marks exactly like every other cascade (see that PassNode's own
-	# comment for why the exemption exists and what turning it off risks:
-	# ddgi_sample_irradiance_cascaded's fallback-to-coarsest path has no
-	# residency check yet, so a coarsest-cascade probe this drops can be read
-	# back stale/uninitialized wherever nothing else is marking it). Default
-	# off (0) preserves the original always-resident floor. w unused.
+	# .z = DDGIControlFlags bitmask (above), mirrored from DDGIGraph.cpp's
+	# Variable<bool>s -- see each flag's own comment there for what it does
+	# and why; this field is just the OR of whichever toggles are on
+	# (default: all off, bitmask 0).
+	# .w = eviction_grace_frames, mirrored from DDGIGraph.cpp's Variable<int>
+	# "Eviction grace (frames)" -- not a 0/1 flag like the others, a small
+	# integer. A resident probe that goes unhit rides out up to this many
+	# CONSECUTIVE missed frames (DDGI_ProbeMissStreak, DDGIProbeSelect) before
+	# DDGIProbeResidencyMark actually evicts it, instead of dropping the
+	# instant one frame's pending bit comes back 0 -- a single frame's worth
+	# of screen-ray noise/occlusion flicker was observed causing probes to
+	# visibly flicker in and out of residency at 0 grace.
 	uint4 flags;
 }
 
@@ -281,18 +310,27 @@ struct DDGIProbeTraceData
 	Texture2DArray<float2> prev_visibility;
 
 	# This cascade's own residency flags -- read at the top of
-	# ddgi_probe_trace.hlsl as a belt-and-suspenders early-out. Redundant when
-	# g_ddgi_use_indirect_dispatch is on (every probe reached via
-	# compacted_list below was already marked needed to get there), but still
-	# the only thing skipping the TraceRay call when that toggle is off and
-	# this pass still launches the full fixed-size dispatch.
-	RWStructuredBuffer<uint> probe_residency;
+	# ddgi_probe_trace.hlsl as a belt-and-suspenders early-out (and again by
+	# its own multi-bounce feedback sample, ddgi_sample_irradiance). Redundant
+	# for the early-out when g_ddgi_use_indirect_dispatch is on (every probe
+	# reached via compacted_list below was already marked needed to get
+	# there), but still the only thing skipping the TraceRay call when that
+	# toggle is off and this pass still launches the full fixed-size
+	# dispatch. StructuredBuffer, not RW -- this pass never writes it (a
+	# mismatch against this same buffer's RW declaration as an actual
+	# UnorderedAccess resource elsewhere is fine, HLSL just needs the
+	# parameter type it's actually used as to match at each call site).
+	StructuredBuffer<uint> probe_residency;
 
 	# Maps a compacted (indirect-dispatch) linear index back to which probe
 	# it belongs to -- see ddgi_probe_trace.hlsl's own comment. Unused when
 	# g_ddgi_use_indirect_dispatch is off (DispatchRaysIndex().xy addresses
 	# the atlas directly in that mode, same as before this existed).
 	StructuredBuffer<uint> compacted_list;
+
+	# Dilation target -- see the PassNode's own comment (below) on
+	# DDGI_ProbeResidencyPending.
+	RWStructuredBuffer<uint> residency_pending;
 }
 
 [Bind = DefaultLayout::Instance0]
@@ -316,9 +354,9 @@ struct DDGIProbeConvolveData
 	RWTexture2DArray<float2> probe_visibility;
 
 	# See DDGIProbeTraceData's own comment on the same field -- same
-	# early-out reasoning, applied to the convolution loop instead of a
-	# TraceRay call.
-	RWStructuredBuffer<uint> probe_residency;
+	# early-out reasoning (and same StructuredBuffer-not-RW note), applied to
+	# the convolution loop instead of a TraceRay call.
+	StructuredBuffer<uint> probe_residency;
 }
 
 ComputePSO DDGIProbeConvolve
@@ -412,6 +450,15 @@ PassNode DDGIProbeSelect
 	# affect NEXT frame's residency, never this one's).
 	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
 	StructuredBuffer<uint> DDGI_ProbeResidencyPending;
+
+	# Consecutive frames a currently-resident probe has gone unhit -- lets
+	# DDGIProbeResidencyMark ride out a short gap (missed by one frame's
+	# worth of screen-ray noise/occlusion flicker, not actually gone) instead
+	# of evicting the instant a single frame's pending bit comes back 0. See
+	# DDGIInfo::flags.w (eviction_grace_frames) and DDGIProbeResidencyMark's
+	# own comment for the exact rule.
+	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	StructuredBuffer<uint> DDGI_ProbeMissStreak;
 }
 
 [Bind = DefaultLayout::Instance0]
@@ -422,6 +469,7 @@ struct DDGIProbeResidencyMarkData
 	RWStructuredBuffer<uint> compacted_list;
 	RWStructuredBuffer<uint> compacted_count;
 	RWStructuredBuffer<uint> pending;
+	RWStructuredBuffer<uint> miss_streak;
 	# Selects which of this shader's two jobs to run this dispatch -- see
 	# ddgi_probe_residency_mark.hlsl's own comment for why they can't be one
 	# dispatch.
@@ -466,6 +514,7 @@ PassNode DDGIProbeResidencyMark
 	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_CompactedProbeList;
 	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_CompactedProbeCount;
 	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
+	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeMissStreak;
 }
 
 # Packs this cascade's DDGI_DispatchRaysArgs record for DDGIProbeTrace's
@@ -523,6 +572,12 @@ PassNode DDGIProbeTrace
 	# shader looks a needed probe's grid coord up from, given only a linear
 	# dispatch index (see ddgi_probe_trace.hlsl's own comment).
 	[Always = Read] StructuredBuffer<uint> DDGI_CompactedProbeList;
+	# Dilation: marks the 8 corner probes this probe's OWN multi-bounce
+	# feedback sample reads from as needed too (see ddgi_probe_trace.hlsl's
+	# own comment) -- otherwise a probe that's ONLY ever read as a feedback
+	# source, never itself hit by a screen ray, has nothing keeping it
+	# resident and silently drops out from under whatever's still reading it.
+	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight)`] [ArrayCount = `Constants::DDGI_AtlasArraySlices`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
 	Texture DDGI_ProbeRadiance;
@@ -629,6 +684,13 @@ struct DDGIIndirectDebugData
 	Texture2D<float4> normals;
 	Texture2DArray<float4> probe_irradiance;
 	Texture2DArray<float2> probe_visibility;
+	# Gates ddgi_sample_irradiance's trilinear blend -- see
+	# VoxelOutput::ddgi_residency's own comment (voxel.sig).
+	StructuredBuffer<uint> probe_residency;
+	# Written at this pass's own per-pixel hit point -- see the PassNode's
+	# own comment (below) on why this view marks residency itself instead of
+	# only ever reading whatever IndirectRTX marked.
+	RWStructuredBuffer<uint> residency_pending;
 	RWTexture2D<float4> target;
 }
 
@@ -658,6 +720,19 @@ PassNode DDGIIndirectDebug
 	[Always = Read] Texture GBuffer_DepthMips;
 	[Always = Read] Texture DDGI_ProbeIrradiance;
 	[Always = Read] Texture DDGI_ProbeVisibility;
+	[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
+	# Read-only dependency on PreScene so the RTX BVH is built/updated before
+	# this pass's own inline-ray-traced occlusion test (ddgi_sample.hlsl's
+	# ddgi_sample_irradiance_cascaded_inline_traced) -- same pattern
+	# DDGIProbeTrace's own `scene` field uses.
+	[Always = Read] StructuredBuffer<uint> scene;
+	# Marks residency at each pixel's own hit point, same as TraceIndirectDiffuse's
+	# own marking block (raytracing.hlsl) -- lets this debug view stay
+	# accurate under real residency culling (leaving it ON, at full
+	# performance) instead of needing "Enable residency culling" turned off
+	# just to inspect a given area, which traces/convolves every probe in
+	# the whole grid regardless of whether this view is even looking at it.
+	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture DDGIIndirectDebug;
 }

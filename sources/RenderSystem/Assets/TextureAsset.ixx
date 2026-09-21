@@ -57,7 +57,8 @@ export{
 				texture = HAL::Texture::null;
 
 			if constexpr (Archive::is_loading::value)
-			texture->resource->set_name(convert(name));
+				if (texture->resource)
+					texture->resource->set_name(convert(name));
 
 		}
 

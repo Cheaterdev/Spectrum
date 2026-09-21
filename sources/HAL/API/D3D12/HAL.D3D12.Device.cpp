@@ -1,4 +1,9 @@
 ﻿module;
+// DXGI_ERROR_DEVICE_* are #defines (winerror.h) -- macros don't cross the
+// `import d3d12` module boundary even though that module's global fragment
+// already includes headers that define them, so this TU needs its own
+// #include to see them (process_result's own DRED diagnostic, below).
+#include <winerror.h>
 
 module HAL:Device;
 import :Debug;
@@ -131,7 +136,27 @@ namespace HAL
             {
                 std::string message = std::system_category().message(hr);
                 Log::get().crash_error(hr, line);
-                hr = get_device_removed_reason();
+
+                // A failed call after the device is actually gone (TDR/hang,
+                // a bad ExecuteIndirect argument, an OOB UAV write) returns
+                // one of these three regardless of which API call happened
+                // to be the one that noticed -- that call site is rarely the
+                // real cause, since the GPU had already stopped processing
+                // commands earlier. DRED's breadcrumb trail is what actually
+                // names the last GPU command that made progress, so log the
+                // removed-reason HRESULT itself (previously computed and
+                // silently discarded -- see the old dead store below) and the
+                // breadcrumbs before ASSERT/__debugbreak() below stops
+                // everything, or this diagnostic never makes it to log.txt.
+                HRESULT removed_reason = get_device_removed_reason();
+                if (removed_reason == DXGI_ERROR_DEVICE_REMOVED || removed_reason == DXGI_ERROR_DEVICE_HUNG
+                    || removed_reason == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DEVICE_REMOVED
+                    || hr == DXGI_ERROR_DEVICE_HUNG || hr == DXGI_ERROR_DEVICE_RESET)
+                {
+                    Log::get() << "D3D12 DEVICE REMOVED: reason = " << std::system_category().message(removed_reason) << Log::endl;
+                    const_cast<Device*>(this)->dump_dred();
+                }
+
                 __debugbreak();
                 ASSERT(false);
             }

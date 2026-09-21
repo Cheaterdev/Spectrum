@@ -61,11 +61,56 @@ namespace
 	// with DDGI's own "Show probes" debug view before trusting this in a
 	// real scene.
 	Variable<bool> g_ddgi_cull_coarsest_cascade = { false, "Cull coarsest cascade", &ddgi_debug_context() };
+	// How many CONSECUTIVE frames a resident probe can go unhit before
+	// DDGIProbeResidencyMark actually evicts it (DDGI_ProbeMissStreak) --
+	// see that shader's own comment. At 0, a single frame's worth of
+	// screen-ray noise/occlusion flicker was enough to visibly flip probes
+	// in and out of residency even with no real change in what's needed.
+	Variable<int> g_ddgi_eviction_grace_frames = { 6, "Eviction grace (frames)", &ddgi_debug_context(), 0, 60 };
+	// Master on/off for residency culling as a whole, independent of the
+	// coarsest-cascade toggle above -- off means every probe traces/
+	// convolves every frame regardless of pending marks (the original
+	// pre-culling behavior), for an A/B comparison of full density against
+	// culled.
+	Variable<bool> g_ddgi_enable_residency_culling = { true, "Enable residency culling", &ddgi_debug_context() };
+	// See ddgi_probe_trace.hlsl's own comment: without this, a probe's
+	// traced directions are byte-for-byte identical every frame it's
+	// resident, so a single ray grazing past geometry into the sky is a
+	// permanent bias rather than noise the multi-bounce feedback loop can
+	// average away over time.
+	Variable<bool> g_ddgi_jitter_rays = { true, "Jitter probe rays", &ddgi_debug_context() };
+	// Diagnostic: independent of "Use probe fallback" above (which also
+	// gates TraceIndirectDiffuse's own final per-pixel screen term), this
+	// one only stops DDGIProbeTrace's own multi-bounce self-feedback sample
+	// while probes are actually being (re)traced -- isolates whether a leak
+	// comes from direct-lit shading alone or is introduced/amplified by the
+	// recursive probe-to-probe feedback loop across frames.
+	Variable<bool> g_ddgi_fallback_while_generating = { true, "Use fallback while generating probes", &ddgi_debug_context() };
+	// See ddgi_sky_fallback_disabled's own comment (DDGI.ixx) -- affects
+	// every RayPayload-based ColorPass consumer in the engine, not just
+	// DDGI, since they all share one miss shader (MyMissShader,
+	// raytracing.hlsl).
+	Variable<bool> g_ddgi_disable_sky_fallback = { false, "Disable sky fallback (all RTX)", &ddgi_debug_context() };
+	// Scales DDGIProbeTrace's own multi-bounce self-feedback term (see
+	// DDGIInfo::probe_spacing.w's own comment, ddgi.sig) -- turns two probes
+	// feeding each other's irradiance back across frames into a dial rather
+	// than an all-or-nothing switch (that's "Use fallback while generating
+	// probes" above). 1.0 = unscaled (the original behavior); lower values
+	// damp how strongly that loop reinforces itself per hop, on top of the
+	// existing albedo attenuation. Only affects DDGIProbeTrace's own read --
+	// TraceIndirectDiffuse/TraceReflection's final per-pixel screen term is
+	// untouched.
+	Variable<float> g_ddgi_feedback_strength = { 1.0f, "Feedback strength", &ddgi_debug_context(), 0.0f, 2.0f };
 }
 
 void ddgi_update_selectors(FrameGraph::Graph& graph)
 {
 	graph.get_context<Table::DDGISelectors>().show_probes = g_ddgi_show_probes;
+}
+
+bool ddgi_sky_fallback_disabled()
+{
+	return g_ddgi_disable_sky_fallback;
 }
 
 namespace
@@ -107,6 +152,7 @@ Slots::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index)
 
 	info.GetGrid_min().xyz      = snapped_center - half_extent;
 	info.GetProbe_spacing().xyz = float3(spacing, spacing, spacing);
+	info.GetProbe_spacing().w   = g_ddgi_feedback_strength;
 	info.GetProbe_counts().xyz  = counts;
 	// Informational only in v1 -- DDGIProbeTrace currently dispatches one
 	// ray per radiance-atlas texel instead of a fixed per-probe ray count
@@ -120,7 +166,12 @@ Slots::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index)
 	info.GetCascade_info().w = (cascade_index == Constants::DDGI_CascadeCount - 1) ? 1 : 0;
 	info.GetFlags().x = g_ddgi_use_fallback ? 1 : 0;
 	info.GetFlags().y = g_ddgi_use_indirect_dispatch ? 1 : 0;
-	info.GetFlags().z = g_ddgi_cull_coarsest_cascade ? 1 : 0;
+	// See DDGIInfo::flags' own comment (ddgi.sig) for the bit layout.
+	info.GetFlags().z = (g_ddgi_cull_coarsest_cascade ? (uint32_t)DDGIControlFlags::CullCoarsestCascade : 0u)
+		| (g_ddgi_enable_residency_culling ? 0u : (uint32_t)DDGIControlFlags::DisableResidencyCulling)
+		| (g_ddgi_jitter_rays ? (uint32_t)DDGIControlFlags::JitterRays : 0u)
+		| (g_ddgi_fallback_while_generating ? 0u : (uint32_t)DDGIControlFlags::DisableTraceFeedback);
+	info.GetFlags().w = static_cast<uint32_t>(g_ddgi_eviction_grace_frames);
 
 	return info;
 }
@@ -156,14 +207,27 @@ void ddgi_probe_select_render(Passes::DDGIProbeSelect::Context& data, FrameConte
 	compute.dispatch(uint3(Constants::DDGI_ProbeCount, 1, 1), uint3(64, 1, 1));
 }
 
-// v1 placeholder (see [[project-ddgi]] planning notes): marks every probe
-// needed unconditionally -- proves the residency buffer's create/read/write
-// plumbing before the real hit-point-driven marking + neighbor dilation
-// replaces this body. Plain free function -- see ddgi_probe_select_render's
-// own comment on why.
+// Real hit-point-driven marking with an eviction grace period -- see
+// ddgi_probe_residency_mark.hlsl's own comment. Plain free function -- see
+// ddgi_probe_select_render's own comment on why.
 void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& data, FrameContext& context)
 {
 	uint32_t cascade = data.pass_index;
+
+	// TEMPORARY (see ddgi_probe_trace_render's own diagnostic comment, ask
+	// before removing once this is sorted): confirms this render body is
+	// actually invoked for every one of the 5 [Multiple] instances, every
+	// frame -- DDGI_CompactedProbeCount reading 0 for EVERY cascade
+	// including the unconditionally-resident coarsest one (cascade 4) means
+	// either this never runs for some pass_index values, or it runs but its
+	// writes never take effect / never survive to ArgsBuild's own read.
+	if (FILE* f = std::fopen("ddgi_residency_mark_invoked.temp", "a"))
+	{
+		Slots::DDGIInfo probe_info = ddgi_make_info(ddgi_camera_pos(context), cascade);
+		std::fprintf(f, "ddgi_probe_residency_mark_render: pass_index=%u cascade_info.z=%u cascade_info.w(is_coarsest)=%u flags.z=%u\n",
+			cascade, probe_info.GetCascade_info().z, probe_info.GetCascade_info().w, probe_info.GetFlags().z);
+		std::fclose(f);
+	}
 
 	auto& compute = context.get_list()->get_compute();
 	compute.set_signature(Layouts::DefaultLayout);
@@ -183,9 +247,39 @@ void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& d
 		params.GetCompacted_list()   = data.DDGI_CompactedProbeList->rwStructuredBuffer;
 		params.GetCompacted_count()  = data.DDGI_CompactedProbeCount->rwStructuredBuffer;
 		params.GetPending()          = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
+		params.GetMiss_streak()      = data.DDGI_ProbeMissStreak->rwStructuredBuffer;
 		params.GetReset_only() = 1;
 		compute.set(params);
 		compute.dispatch(1, 1, 1);
+	}
+
+	// TEMPORARY (see the other ddgi_*.temp diagnostics' own comments, ask
+	// before removing once this is sorted). Reads DDGI_ProbeResidencyPending
+	// HERE, before the mark dispatch below consumes it (sets it back to 0 as
+	// it reads it -- see this shader's own comment) -- reading it after
+	// would always show 0 regardless of whether anything was actually
+	// pending. Cascade 0 only, all-zero here would mean nothing marked a hit
+	// point last frame at all (e.g. the active GI path isn't actually
+	// IndirectRTX/ReflectionRTX right now), which would explain every
+	// cascade never accumulating residency.
+	if (cascade == 0)
+	{
+		auto& copy = context.get_list()->get_copy();
+		uint64_t byte_offset = (uint64_t)info.GetCascade_info().x * sizeof(uint32_t);
+		uint64_t byte_size   = (uint64_t)Constants::DDGI_ProbeCount * sizeof(uint32_t);
+		copy.read_buffer(data.DDGI_ProbeResidencyPending->resource.get(), byte_offset, byte_size,
+			[](std::span<std::byte> memory)
+			{
+				const uint32_t* v = reinterpret_cast<const uint32_t*>(memory.data());
+				size_t count = memory.size() / sizeof(uint32_t);
+				size_t ones = 0;
+				for (size_t i = 0; i < count; i++) ones += (v[i] != 0);
+				if (FILE* f = std::fopen("ddgi_cascade0_pending.temp", "a"))
+				{
+					std::fprintf(f, "cascade 0 DDGI_ProbeResidencyPending (pre-consume): %zu / %zu ones\n", ones, count);
+					std::fclose(f);
+				}
+			});
 	}
 
 	// Second dispatch: mark + stream-compact.
@@ -196,9 +290,37 @@ void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& d
 		params.GetCompacted_list()   = data.DDGI_CompactedProbeList->rwStructuredBuffer;
 		params.GetCompacted_count()  = data.DDGI_CompactedProbeCount->rwStructuredBuffer;
 		params.GetPending()          = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
+		params.GetMiss_streak()      = data.DDGI_ProbeMissStreak->rwStructuredBuffer;
 		params.GetReset_only() = 0;
 		compute.set(params);
 		compute.dispatch(uint3(Constants::DDGI_ProbeCount, 1, 1), uint3(64, 1, 1));
+	}
+
+	// TEMPORARY (see the other ddgi_*.temp diagnostics' own comments, ask
+	// before removing once this is sorted). Cascade 4 (coarsest, exempt from
+	// culling by default -- see this shader's own comment on
+	// coarsest_exempt) should show its OWN DDGI_ProbeResidency range as 100%
+	// ones after the mark dispatch above, unconditionally, regardless of any
+	// hit. If it doesn't, the mark write itself (not just compaction/count)
+	// isn't taking effect for that cascade.
+	if (cascade == 4)
+	{
+		auto& copy = context.get_list()->get_copy();
+		uint64_t byte_offset = (uint64_t)info.GetCascade_info().x * sizeof(uint32_t);
+		uint64_t byte_size   = (uint64_t)Constants::DDGI_ProbeCount * sizeof(uint32_t);
+		copy.read_buffer(data.DDGI_ProbeResidency->resource.get(), byte_offset, byte_size,
+			[](std::span<std::byte> memory)
+			{
+				const uint32_t* v = reinterpret_cast<const uint32_t*>(memory.data());
+				size_t count = memory.size() / sizeof(uint32_t);
+				size_t ones = 0;
+				for (size_t i = 0; i < count; i++) ones += (v[i] != 0);
+				if (FILE* f = std::fopen("ddgi_cascade4_residency.temp", "a"))
+				{
+					std::fprintf(f, "cascade 4 DDGI_ProbeResidency: %zu / %zu ones\n", ones, count);
+					std::fclose(f);
+				}
+			});
 	}
 }
 
@@ -250,6 +372,40 @@ void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::C
 
 	compute.set_pipeline<PSOS::DispatchRaysArgsBuild>();
 	compute.dispatch(1, 1, 1);
+
+	// TEMPORARY (see ddgi_probe_trace_render's own comment on why its
+	// ExecuteIndirect is disabled right now -- ask before removing this once
+	// that's sorted). Reads this cascade's own DDGI_CompactedProbeCount back
+	// to the CPU and appends it to ddgi_compacted_count.temp, so we can see
+	// the actual per-cascade Width the disabled indirect launch would have
+	// used, without needing a debugger or a GPU capture.
+	{
+		auto& copy = context.get_list()->get_copy();
+		// Offset was hardcoded 0 here -- always read cascade 0's own slot
+		// regardless of `cascade`, which is exactly why every cascade
+		// (including the unconditionally-full cascade 4, independently
+		// confirmed via ddgi_probe_residency_mark_render's own diagnostic)
+		// misleadingly logged 0: this was reading the SAME slot 5 times,
+		// never the requesting cascade's actual one.
+		copy.read_buffer(data.DDGI_CompactedProbeCount->resource.get(), (uint64_t)cascade * sizeof(uint32_t), sizeof(uint32_t),
+			[cascade](std::span<std::byte> memory)
+			{
+				uint32_t count = *reinterpret_cast<const uint32_t*>(memory.data());
+				// std::fopen/fprintf, not std::ofstream -- matches
+				// Core::assert_fail's own pattern (Core/Defines.h), the only
+				// other ad-hoc file write in this codebase; <cstdio> is
+				// already force-included via Core/Defines.h so this needs no
+				// extra header.
+				if (FILE* f = std::fopen("ddgi_compacted_count.temp", "a"))
+				{
+					std::fprintf(f, "cascade %u: DDGI_CompactedProbeCount = %u (DDGI_ProbeCount = %u, width_multiplier = %u, would-be Width = %llu)\n",
+						cascade, count, (unsigned)Constants::DDGI_ProbeCount,
+						(unsigned)(Constants::DDGI_ProbeTexelSize * Constants::DDGI_ProbeTexelSize),
+						(unsigned long long)count * (Constants::DDGI_ProbeTexelSize * Constants::DDGI_ProbeTexelSize));
+					std::fclose(f);
+				}
+			});
+	}
 }
 
 // Traces one ray per DDGI_ProbeRadiance/DDGI_ProbeGBuffer atlas texel,
@@ -282,12 +438,38 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 		params.GetProbe_gbuffer()   = data.DDGI_ProbeGBuffer->rwTexture2DArray;
 		params.GetPrev_irradiance() = data.DDGI_ProbeIrradiance->texture2DArray;
 		params.GetPrev_visibility() = data.DDGI_ProbeVisibility->texture2DArray;
-		params.GetProbe_residency() = data.DDGI_ProbeResidency->rwStructuredBuffer;
+		params.GetProbe_residency() = data.DDGI_ProbeResidency->structuredBuffer;
 		params.GetCompacted_list()  = data.DDGI_CompactedProbeList->structuredBuffer;
+		params.GetResidency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 		compute.set(params);
 	}
 
-	if (g_ddgi_use_indirect_dispatch)
+	// The coarsest cascade is exempt from residency culling by default (see
+	// DDGIControlFlags::CullCoarsestCascade's own comment, ddgi.sig) --
+	// unconditionally, 100% of its probes, every frame, so compaction never
+	// actually drops anything for it. Confirmed via a temporary CPU readback
+	// (ddgi_compacted_count.temp / ddgi_cascade4_residency.temp, ask before
+	// removing those diagnostics once this is settled): cascade 4's
+	// DDGI_CompactedProbeCount really is the full 131072 every frame, giving
+	// an indirect ExecuteIndirect(DISPATCH_RAYS) a single 1D dispatch with
+	// Width = 8,388,608 -- the exact same TOTAL ray count the fixed 3D
+	// dispatch below already launches for it (512x512x32 = 8,388,608) and
+	// runs fine, but reshaped into one flat 1D width instead of a 3D shape.
+	// That reshaping is the prime suspect for the device-removed/hang seen
+	// after fixing the cascade-offset bug above (see exec_indirect's own
+	// comment): DXR ray schedulers lean on 2D/3D dispatch tiling for BVH-
+	// traversal locality, and a single enormous 1D width is a much less
+	// common, apparently much slower path for hardware/driver to take, easily
+	// enough to trip the OS's ~2s TDR timeout on identical total work.
+	// Since indirect dispatch buys zero benefit here anyway (nothing is ever
+	// culled from an always-fully-resident cascade), route it through the
+	// same safe fixed 3D dispatch the non-indirect path uses instead of
+	// through ExecuteIndirect, regardless of the toggle -- only cascades
+	// that can actually have probes culled take the indirect path.
+	bool is_coarsest_and_exempt = info.GetCascade_info().w != 0
+		&& (info.GetFlags().z & (uint32_t)DDGIControlFlags::CullCoarsestCascade) == 0;
+
+	if (g_ddgi_use_indirect_dispatch && !is_coarsest_and_exempt)
 	{
 		// Real GPU-driven ExecuteIndirect(DISPATCH_RAYS) -- DDGIProbeDispatchArgsBuild
 		// (above) already packed this cascade's DDGI_DispatchRaysArgs record
@@ -301,7 +483,12 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 		compute.set(raytracing);
 
 		compute.set_pipeline(RTX::get().rtx.m_dxrStateObject);
-		compute.exec_indirect<DispatchRaysArguments>(*data.DDGI_DispatchRaysArgs, 1);
+		// `offset` (element index into DDGI_DispatchRaysArgs, one record per
+		// cascade -- ddgi.sig's own comment) -- missing this made every
+		// cascade read element 0 regardless of which cascade was actually
+		// tracing: cascades 1-4 launched with cascade 0's own needed-probe
+		// count instead of their own.
+		compute.exec_indirect<DispatchRaysArguments>(*data.DDGI_DispatchRaysArgs, 1, cascade);
 	}
 	else
 	{
@@ -333,7 +520,7 @@ void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameC
 		params.GetProbe_gbuffer()    = data.DDGI_ProbeGBuffer->texture2DArray;
 		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->rwTexture2DArray;
 		params.GetProbe_visibility() = data.DDGI_ProbeVisibility->rwTexture2DArray;
-		params.GetProbe_residency()  = data.DDGI_ProbeResidency->rwStructuredBuffer;
+		params.GetProbe_residency()  = data.DDGI_ProbeResidency->structuredBuffer;
 		compute.set(params);
 	}
 
@@ -389,9 +576,21 @@ void PassDefault<Passes::DDGIDebug>::render(
 void PassDefault<Passes::DDGIIndirectDebug>::render(
 	Passes::DDGIIndirectDebug::Context& data, FrameContext& context)
 {
-	auto& compute = context.get_list()->get_compute();
+	auto& compute   = context.get_list()->get_compute();
+	auto& sceneinfo = context.graph->get_context<SceneInfo>();
 	compute.set_signature(Layouts::DefaultLayout);
 	context.graph->set_slot(SlotID::FrameInfo, compute);
+
+	// Inline-ray-traced occlusion (DDGIProbeDispatchArgsBuild-style scene
+	// binding, see ddgi_sample.hlsl's ddgi_sample_irradiance_cascaded_inline_traced)
+	// -- explicitly bound here rather than relying on the RTX-signature
+	// passes earlier in the pipeline having left it set, since this pass
+	// uses the plain DefaultLayout signature, not RTX::get().rtx.m_root_sig.
+	{
+		Slots::Raytracing raytracing;
+		raytracing.GetScene() = sceneinfo.scene->raytrace_scene->get_handle();
+		compute.set(raytracing);
+	}
 
 	float3 cam_pos = ddgi_camera_pos(context);
 
@@ -406,6 +605,8 @@ void PassDefault<Passes::DDGIIndirectDebug>::render(
 		params.GetNormals()          = data.GBuffer_Normals->texture2D;
 		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->texture2DArray;
 		params.GetProbe_visibility() = data.DDGI_ProbeVisibility->texture2DArray;
+		params.GetProbe_residency()  = data.DDGI_ProbeResidency->structuredBuffer;
+		params.GetResidency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 		params.GetTarget()           = data.DDGIIndirectDebug->rwTexture2D;
 		compute.set(params);
 	}

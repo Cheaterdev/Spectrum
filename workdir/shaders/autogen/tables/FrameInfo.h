@@ -13,6 +13,7 @@ struct FrameInfo
 	float4 time; // float4
 	float4 sunDir; // float4
 	float mipBias; // float
+	uint debugFlags; // uint
 	uint bestFitNormals; // Texture2D<float4>
 	uint brdf; // Texture3D<float4>
 	uint sky; // TextureCube<float4>
@@ -24,6 +25,7 @@ struct FrameInfo
 	Camera GetPrevCamera() { return prevCamera; }
 	float4 GetSunDir() { return sunDir; }
 	float GetMipBias() { return mipBias; }
+	uint GetDebugFlags() { return debugFlags; }
 	Texture2D<float4> GetBestFitNormals() { return ResourceDescriptorHeap[bestFitNormals]; }
 	Texture3D<float4> GetBrdf() { return ResourceDescriptorHeap[brdf]; }
 	TextureCube<float4> GetSky() { return ResourceDescriptorHeap[sky]; }

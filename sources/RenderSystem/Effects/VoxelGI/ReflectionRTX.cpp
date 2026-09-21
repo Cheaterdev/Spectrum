@@ -38,6 +38,21 @@ void PassDefault<Passes::ReflectionRTXHalf>::render(
 			output.GetNoise()     = noisy_output.rwTexture2D;
 			output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
 			output.GetBlueNoise() = data.BlueNoise->texture2D;
+			// DDGI probe-volume feedback term, sampled by TraceReflection
+			// (raytracing.hlsl) -- see IndirectRTX.cpp's own comment on the
+			// same binding block.
+			{
+				float3 cam_pos = context.graph->get_context<CameraInfo>().cam->position;
+				output.GetDdgi_cascade0() = ddgi_make_info(cam_pos, 0);
+				output.GetDdgi_cascade1() = ddgi_make_info(cam_pos, 1);
+				output.GetDdgi_cascade2() = ddgi_make_info(cam_pos, 2);
+				output.GetDdgi_cascade3() = ddgi_make_info(cam_pos, 3);
+				output.GetDdgi_cascade4() = ddgi_make_info(cam_pos, 4);
+			}
+			output.GetDdgi_irradiance()  = data.DDGI_ProbeIrradiance->texture2DArray;
+			output.GetDdgi_visibility()  = data.DDGI_ProbeVisibility->texture2DArray;
+			output.GetDdgi_residency()   = data.DDGI_ProbeResidency->structuredBuffer;
+			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 			compute.set(output);
 		}
 		RTX::get().render<ReflectionRTXHalf>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
@@ -96,6 +111,19 @@ void PassDefault<Passes::ReflectionRTX>::render(
 			output.GetNoise()     = noisy_output.rwTexture2D;
 			output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
 			output.GetBlueNoise() = data.BlueNoise->texture2D;
+			// See ReflectionRTXHalf's own comment on the same binding block.
+			{
+				float3 cam_pos = context.graph->get_context<CameraInfo>().cam->position;
+				output.GetDdgi_cascade0() = ddgi_make_info(cam_pos, 0);
+				output.GetDdgi_cascade1() = ddgi_make_info(cam_pos, 1);
+				output.GetDdgi_cascade2() = ddgi_make_info(cam_pos, 2);
+				output.GetDdgi_cascade3() = ddgi_make_info(cam_pos, 3);
+				output.GetDdgi_cascade4() = ddgi_make_info(cam_pos, 4);
+			}
+			output.GetDdgi_irradiance()  = data.DDGI_ProbeIrradiance->texture2DArray;
+			output.GetDdgi_visibility()  = data.DDGI_ProbeVisibility->texture2DArray;
+			output.GetDdgi_residency()   = data.DDGI_ProbeResidency->structuredBuffer;
+			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 			compute.set(output);
 		}
 		RTX::get().render<ReflectionRTX>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());

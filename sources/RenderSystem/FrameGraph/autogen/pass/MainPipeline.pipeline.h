@@ -20,8 +20,6 @@
 #include "ResultCreation.h"
 #include "GBufferDownsampler.h"
 #include "NormalRoughnessRepack.h"
-#include "ReflectionRTXHalf.h"
-#include "ReflectionRTX.h"
 #include "ShadowRTX.h"
 #include "DDGIProbeSelect.h"
 #include "DDGIProbeResidencyMark.h"
@@ -29,6 +27,8 @@
 #include "DDGIProbeTrace.h"
 #include "DDGIProbeConvolve.h"
 #include "DDGIIndirectDebug.h"
+#include "ReflectionRTXHalf.h"
+#include "ReflectionRTX.h"
 #include "IndirectRTXHalf.h"
 #include "IndirectRTX.h"
 #include "VoxelScreen.h"
@@ -114,8 +114,6 @@ public:
 		Passes::ResultCreation::Name.ptr,
 		Passes::GBufferDownsampler::Name.ptr,
 		Passes::NormalRoughnessRepack::Name.ptr,
-		Passes::ReflectionRTXHalf::Name.ptr,
-		Passes::ReflectionRTX::Name.ptr,
 		Passes::ShadowRTX::Name.ptr,
 		Passes::DDGIProbeSelect::Names[0].ptr,
 		Passes::DDGIProbeSelect::Names[1].ptr,
@@ -143,6 +141,8 @@ public:
 		Passes::DDGIProbeConvolve::Names[3].ptr,
 		Passes::DDGIProbeConvolve::Names[4].ptr,
 		Passes::DDGIIndirectDebug::Name.ptr,
+		Passes::ReflectionRTXHalf::Name.ptr,
+		Passes::ReflectionRTX::Name.ptr,
 		Passes::IndirectRTXHalf::Name.ptr,
 		Passes::IndirectRTX::Name.ptr,
 		Passes::VoxelScreen::Name.ptr,
@@ -226,10 +226,6 @@ public:
 		L"TileRoughnessTiles",
 		L"NormalRoughness",
 		L"SpecularAlbedo",
-		L"RTXReflectionNoiseHalf",
-		L"RTXReflectionDirPdfHalf",
-		L"RTXReflectionNoise",
-		L"RTXReflectionDirPdf",
 		L"RTXShadowNoise",
 		L"VSM_ShadowNoise",
 		L"DDGI_Probes",
@@ -240,9 +236,14 @@ public:
 		L"DDGI_CompactedProbeList",
 		L"DDGI_CompactedProbeCount",
 		L"DDGI_ProbeResidencyPending",
+		L"DDGI_ProbeMissStreak",
 		L"DDGI_ProbeRadiance",
 		L"DDGI_ProbeGBuffer",
 		L"DDGIIndirectDebug",
+		L"RTXReflectionNoiseHalf",
+		L"RTXReflectionDirPdfHalf",
+		L"RTXReflectionNoise",
+		L"RTXReflectionDirPdf",
 		L"RTXIndirectNoiseHalf",
 		L"RTXIndirectNoise",
 		L"VoxelIndirectNoiseRaw",
@@ -295,11 +296,12 @@ public:
 		{ PassID::DDGIProbeTrace, 2 },
 		{ PassID::DDGIProbeTrace, 3 },
 		{ PassID::DDGIProbeTrace, 4 },
+		{ PassID::DDGIIndirectDebug, 0 },
 		{ PassID::RTXColorPass, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState scene_c0_states[] = {
 		{ true, { scene_c0_pass_refs + 0, 1 } },
-		{ false, { scene_c0_pass_refs + 1, 7 } },
+		{ false, { scene_c0_pass_refs + 1, 8 } },
 	};
 	static inline const FrameGraph::PassRef BlueNoise_c0_pass_refs[] = {
 		{ PassID::BlueNoise, 0 },
@@ -432,8 +434,8 @@ public:
 		{ PassID::Scene, 0 },
 		{ PassID::GBufferDownsampler, 0 },
 		{ PassID::NormalRoughnessRepack, 0 },
-		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
+		{ PassID::ReflectionRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::ScreenReflection, 0 },
@@ -461,9 +463,9 @@ public:
 		{ PassID::Scene, 0 },
 		{ PassID::GBufferDownsampler, 0 },
 		{ PassID::NormalRoughnessRepack, 0 },
-		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::DDGIIndirectDebug, 0 },
+		{ PassID::ReflectionRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::ScreenReflection, 0 },
@@ -500,8 +502,8 @@ public:
 	static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
 		{ PassID::GBufferDownsampler, 0 },
-		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
+		{ PassID::ReflectionRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::ScreenReflection, 0 },
@@ -527,8 +529,8 @@ public:
 	static inline const FrameGraph::PassRef GBuffer_Speed_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
 		{ PassID::GBufferDownsampler, 0 },
-		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
+		{ PassID::ReflectionRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::ScreenReflection, 0 },
@@ -556,9 +558,9 @@ public:
 	static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
 		{ PassID::GBufferDownsampler, 0 },
-		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::DDGIIndirectDebug, 0 },
+		{ PassID::ReflectionRTX, 0 },
 		{ PassID::IndirectRTX, 0 },
 		{ PassID::VoxelScreen, 0 },
 		{ PassID::ScreenReflection, 0 },
@@ -627,13 +629,13 @@ public:
 		{ PassID::CubeMapDownsample, 0 },
 		{ PassID::CubeMapEnviromentProcessor, 0 },
 		{ PassID::Lighting, 0 },
-		{ PassID::ReflectionRTXHalf, 0 },
-		{ PassID::ReflectionRTX, 0 },
 		{ PassID::DDGIProbeTrace, 0 },
 		{ PassID::DDGIProbeTrace, 1 },
 		{ PassID::DDGIProbeTrace, 2 },
 		{ PassID::DDGIProbeTrace, 3 },
 		{ PassID::DDGIProbeTrace, 4 },
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
 		{ PassID::IndirectRTXHalf, 0 },
 		{ PassID::IndirectRTX, 0 },
 		{ PassID::RTXColorPass, 0 },
@@ -797,38 +799,6 @@ public:
 		{ true, { SpecularAlbedo_c0_pass_refs + 0, 1 } },
 		{ false, { SpecularAlbedo_c0_pass_refs + 1, 1 } },
 	};
-	static inline const FrameGraph::PassRef RTXReflectionNoiseHalf_c0_pass_refs[] = {
-		{ PassID::ReflectionRTXHalf, 0 },
-		{ PassID::ReflectionRTX, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState RTXReflectionNoiseHalf_c0_states[] = {
-		{ true, { RTXReflectionNoiseHalf_c0_pass_refs + 0, 1 } },
-		{ false, { RTXReflectionNoiseHalf_c0_pass_refs + 1, 1 } },
-	};
-	static inline const FrameGraph::PassRef RTXReflectionDirPdfHalf_c0_pass_refs[] = {
-		{ PassID::ReflectionRTXHalf, 0 },
-		{ PassID::ReflectionRTX, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState RTXReflectionDirPdfHalf_c0_states[] = {
-		{ true, { RTXReflectionDirPdfHalf_c0_pass_refs + 0, 1 } },
-		{ false, { RTXReflectionDirPdfHalf_c0_pass_refs + 1, 1 } },
-	};
-	static inline const FrameGraph::PassRef RTXReflectionNoise_c0_pass_refs[] = {
-		{ PassID::ReflectionRTX, 0 },
-		{ PassID::NRD_GBufferPack, 0 },
-		{ PassID::RTXCombine, 0 },
-		{ PassID::UpscalingDLSSRR, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState RTXReflectionNoise_c0_states[] = {
-		{ true, { RTXReflectionNoise_c0_pass_refs + 0, 1 } },
-		{ false, { RTXReflectionNoise_c0_pass_refs + 1, 3 } },
-	};
-	static inline const FrameGraph::PassRef RTXReflectionDirPdf_c0_pass_refs[] = {
-		{ PassID::ReflectionRTX, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState RTXReflectionDirPdf_c0_states[] = {
-		{ true, { RTXReflectionDirPdf_c0_pass_refs + 0, 1 } },
-	};
 	static inline const FrameGraph::PassRef RTXShadowNoise_c0_pass_refs[] = {
 		{ PassID::ShadowRTX, 0 },
 		{ PassID::RTXCombine, 0 },
@@ -883,6 +853,8 @@ public:
 		{ PassID::DDGIProbeConvolve, 3 },
 		{ PassID::DDGIProbeConvolve, 4 },
 		{ PassID::DDGIIndirectDebug, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
 		{ PassID::IndirectRTXHalf, 0 },
 		{ PassID::IndirectRTX, 0 },
 		{ PassID::DDGIDebug, 0 },
@@ -899,7 +871,7 @@ public:
 		{ true, { DDGI_ProbeIrradiance_c0_pass_refs + 12, 1 } },
 		{ true, { DDGI_ProbeIrradiance_c0_pass_refs + 13, 1 } },
 		{ true, { DDGI_ProbeIrradiance_c0_pass_refs + 14, 1 } },
-		{ false, { DDGI_ProbeIrradiance_c0_pass_refs + 15, 4 } },
+		{ false, { DDGI_ProbeIrradiance_c0_pass_refs + 15, 6 } },
 	};
 	static inline const FrameGraph::PassRef DDGI_ProbeVisibility_c0_pass_refs[] = {
 		{ PassID::DDGIProbeSelect, 0 },
@@ -918,6 +890,8 @@ public:
 		{ PassID::DDGIProbeConvolve, 3 },
 		{ PassID::DDGIProbeConvolve, 4 },
 		{ PassID::DDGIIndirectDebug, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
 		{ PassID::IndirectRTXHalf, 0 },
 		{ PassID::IndirectRTX, 0 },
 	};
@@ -933,7 +907,7 @@ public:
 		{ true, { DDGI_ProbeVisibility_c0_pass_refs + 12, 1 } },
 		{ true, { DDGI_ProbeVisibility_c0_pass_refs + 13, 1 } },
 		{ true, { DDGI_ProbeVisibility_c0_pass_refs + 14, 1 } },
-		{ false, { DDGI_ProbeVisibility_c0_pass_refs + 15, 3 } },
+		{ false, { DDGI_ProbeVisibility_c0_pass_refs + 15, 5 } },
 	};
 	static inline const FrameGraph::PassRef DDGI_ProbeResidency_c0_pass_refs[] = {
 		{ PassID::DDGIProbeSelect, 0 },
@@ -956,6 +930,11 @@ public:
 		{ PassID::DDGIProbeConvolve, 2 },
 		{ PassID::DDGIProbeConvolve, 3 },
 		{ PassID::DDGIProbeConvolve, 4 },
+		{ PassID::DDGIIndirectDebug, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
+		{ PassID::IndirectRTXHalf, 0 },
+		{ PassID::IndirectRTX, 0 },
 		{ PassID::DDGIDebug, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState DDGI_ProbeResidency_c0_states[] = {
@@ -969,7 +948,7 @@ public:
 		{ true, { DDGI_ProbeResidency_c0_pass_refs + 7, 1 } },
 		{ true, { DDGI_ProbeResidency_c0_pass_refs + 8, 1 } },
 		{ true, { DDGI_ProbeResidency_c0_pass_refs + 9, 1 } },
-		{ false, { DDGI_ProbeResidency_c0_pass_refs + 10, 11 } },
+		{ false, { DDGI_ProbeResidency_c0_pass_refs + 10, 16 } },
 	};
 	static inline const FrameGraph::PassRef DDGI_DispatchRaysArgs_c0_pass_refs[] = {
 		{ PassID::DDGIProbeSelect, 0 },
@@ -1072,6 +1051,14 @@ public:
 		{ PassID::DDGIProbeResidencyMark, 2 },
 		{ PassID::DDGIProbeResidencyMark, 3 },
 		{ PassID::DDGIProbeResidencyMark, 4 },
+		{ PassID::DDGIProbeTrace, 0 },
+		{ PassID::DDGIProbeTrace, 1 },
+		{ PassID::DDGIProbeTrace, 2 },
+		{ PassID::DDGIProbeTrace, 3 },
+		{ PassID::DDGIProbeTrace, 4 },
+		{ PassID::DDGIIndirectDebug, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
 		{ PassID::IndirectRTXHalf, 0 },
 		{ PassID::IndirectRTX, 0 },
 	};
@@ -1088,6 +1075,38 @@ public:
 		{ true, { DDGI_ProbeResidencyPending_c0_pass_refs + 9, 1 } },
 		{ true, { DDGI_ProbeResidencyPending_c0_pass_refs + 10, 1 } },
 		{ true, { DDGI_ProbeResidencyPending_c0_pass_refs + 11, 1 } },
+		{ true, { DDGI_ProbeResidencyPending_c0_pass_refs + 12, 1 } },
+		{ true, { DDGI_ProbeResidencyPending_c0_pass_refs + 13, 1 } },
+		{ true, { DDGI_ProbeResidencyPending_c0_pass_refs + 14, 1 } },
+		{ true, { DDGI_ProbeResidencyPending_c0_pass_refs + 15, 1 } },
+		{ true, { DDGI_ProbeResidencyPending_c0_pass_refs + 16, 1 } },
+		{ true, { DDGI_ProbeResidencyPending_c0_pass_refs + 17, 1 } },
+		{ true, { DDGI_ProbeResidencyPending_c0_pass_refs + 18, 1 } },
+		{ true, { DDGI_ProbeResidencyPending_c0_pass_refs + 19, 1 } },
+	};
+	static inline const FrameGraph::PassRef DDGI_ProbeMissStreak_c0_pass_refs[] = {
+		{ PassID::DDGIProbeSelect, 0 },
+		{ PassID::DDGIProbeSelect, 1 },
+		{ PassID::DDGIProbeSelect, 2 },
+		{ PassID::DDGIProbeSelect, 3 },
+		{ PassID::DDGIProbeSelect, 4 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
+	};
+	static inline const FrameGraph::PrecompiledState DDGI_ProbeMissStreak_c0_states[] = {
+		{ true, { DDGI_ProbeMissStreak_c0_pass_refs + 0, 1 } },
+		{ true, { DDGI_ProbeMissStreak_c0_pass_refs + 1, 1 } },
+		{ true, { DDGI_ProbeMissStreak_c0_pass_refs + 2, 1 } },
+		{ true, { DDGI_ProbeMissStreak_c0_pass_refs + 3, 1 } },
+		{ true, { DDGI_ProbeMissStreak_c0_pass_refs + 4, 1 } },
+		{ true, { DDGI_ProbeMissStreak_c0_pass_refs + 5, 1 } },
+		{ true, { DDGI_ProbeMissStreak_c0_pass_refs + 6, 1 } },
+		{ true, { DDGI_ProbeMissStreak_c0_pass_refs + 7, 1 } },
+		{ true, { DDGI_ProbeMissStreak_c0_pass_refs + 8, 1 } },
+		{ true, { DDGI_ProbeMissStreak_c0_pass_refs + 9, 1 } },
 	};
 	static inline const FrameGraph::PassRef DDGI_ProbeRadiance_c0_pass_refs[] = {
 		{ PassID::DDGIProbeTrace, 0 },
@@ -1134,6 +1153,38 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState DDGIIndirectDebug_c0_states[] = {
 		{ true, { DDGIIndirectDebug_c0_pass_refs + 0, 1 } },
+	};
+	static inline const FrameGraph::PassRef RTXReflectionNoiseHalf_c0_pass_refs[] = {
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState RTXReflectionNoiseHalf_c0_states[] = {
+		{ true, { RTXReflectionNoiseHalf_c0_pass_refs + 0, 1 } },
+		{ false, { RTXReflectionNoiseHalf_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef RTXReflectionDirPdfHalf_c0_pass_refs[] = {
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState RTXReflectionDirPdfHalf_c0_states[] = {
+		{ true, { RTXReflectionDirPdfHalf_c0_pass_refs + 0, 1 } },
+		{ false, { RTXReflectionDirPdfHalf_c0_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef RTXReflectionNoise_c0_pass_refs[] = {
+		{ PassID::ReflectionRTX, 0 },
+		{ PassID::NRD_GBufferPack, 0 },
+		{ PassID::RTXCombine, 0 },
+		{ PassID::UpscalingDLSSRR, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState RTXReflectionNoise_c0_states[] = {
+		{ true, { RTXReflectionNoise_c0_pass_refs + 0, 1 } },
+		{ false, { RTXReflectionNoise_c0_pass_refs + 1, 3 } },
+	};
+	static inline const FrameGraph::PassRef RTXReflectionDirPdf_c0_pass_refs[] = {
+		{ PassID::ReflectionRTX, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState RTXReflectionDirPdf_c0_states[] = {
+		{ true, { RTXReflectionDirPdf_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef RTXIndirectNoiseHalf_c0_pass_refs[] = {
 		{ PassID::IndirectRTXHalf, 0 },
@@ -1468,10 +1519,6 @@ public:
 		{ ResourceID::TileRoughnessTiles, 0, TileRoughnessTiles_c0_states },
 		{ ResourceID::NormalRoughness, 0, NormalRoughness_c0_states },
 		{ ResourceID::SpecularAlbedo, 0, SpecularAlbedo_c0_states },
-		{ ResourceID::RTXReflectionNoiseHalf, 0, RTXReflectionNoiseHalf_c0_states },
-		{ ResourceID::RTXReflectionDirPdfHalf, 0, RTXReflectionDirPdfHalf_c0_states },
-		{ ResourceID::RTXReflectionNoise, 0, RTXReflectionNoise_c0_states },
-		{ ResourceID::RTXReflectionDirPdf, 0, RTXReflectionDirPdf_c0_states },
 		{ ResourceID::RTXShadowNoise, 0, RTXShadowNoise_c0_states },
 		{ ResourceID::VSM_ShadowNoise, 0, VSM_ShadowNoise_c0_states },
 		{ ResourceID::DDGI_Probes, 0, DDGI_Probes_c0_states },
@@ -1482,9 +1529,14 @@ public:
 		{ ResourceID::DDGI_CompactedProbeList, 0, DDGI_CompactedProbeList_c0_states },
 		{ ResourceID::DDGI_CompactedProbeCount, 0, DDGI_CompactedProbeCount_c0_states },
 		{ ResourceID::DDGI_ProbeResidencyPending, 0, DDGI_ProbeResidencyPending_c0_states },
+		{ ResourceID::DDGI_ProbeMissStreak, 0, DDGI_ProbeMissStreak_c0_states },
 		{ ResourceID::DDGI_ProbeRadiance, 0, DDGI_ProbeRadiance_c0_states },
 		{ ResourceID::DDGI_ProbeGBuffer, 0, DDGI_ProbeGBuffer_c0_states },
 		{ ResourceID::DDGIIndirectDebug, 0, DDGIIndirectDebug_c0_states },
+		{ ResourceID::RTXReflectionNoiseHalf, 0, RTXReflectionNoiseHalf_c0_states },
+		{ ResourceID::RTXReflectionDirPdfHalf, 0, RTXReflectionDirPdfHalf_c0_states },
+		{ ResourceID::RTXReflectionNoise, 0, RTXReflectionNoise_c0_states },
+		{ ResourceID::RTXReflectionDirPdf, 0, RTXReflectionDirPdf_c0_states },
 		{ ResourceID::RTXIndirectNoiseHalf, 0, RTXIndirectNoiseHalf_c0_states },
 		{ ResourceID::RTXIndirectNoise, 0, RTXIndirectNoise_c0_states },
 		{ ResourceID::VoxelIndirectNoiseRaw, 0, VoxelIndirectNoiseRaw_c0_states },
@@ -1552,20 +1604,6 @@ public:
 		{ PassID::Scene, 0 },
 	};
 	static inline const FrameGraph::PassRef NormalRoughnessRepack_0_prev[] = {
-		{ PassID::Scene, 0 },
-	};
-	static inline const FrameGraph::PassRef ReflectionRTXHalf_0_prev[] = {
-		{ PassID::BlueNoise, 0 },
-		{ PassID::CubeMapDownsample, 0 },
-		{ PassID::CubeMapEnviromentProcessor, 0 },
-		{ PassID::GBufferDownsampler, 0 },
-	};
-	static inline const FrameGraph::PassRef ReflectionRTX_0_prev[] = {
-		{ PassID::BlueNoise, 0 },
-		{ PassID::CubeMapDownsample, 0 },
-		{ PassID::CubeMapEnviromentProcessor, 0 },
-		{ PassID::GBufferDownsampler, 0 },
-		{ PassID::ReflectionRTXHalf, 0 },
 		{ PassID::Scene, 0 },
 	};
 	static inline const FrameGraph::PassRef ShadowRTX_0_prev[] = {
@@ -1915,6 +1953,11 @@ public:
 		{ PassID::DDGIProbeConvolve, 2 },
 		{ PassID::DDGIProbeConvolve, 3 },
 		{ PassID::DDGIProbeConvolve, 4 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
 		{ PassID::DDGIProbeSelect, 0 },
 		{ PassID::DDGIProbeSelect, 1 },
 		{ PassID::DDGIProbeSelect, 2 },
@@ -1925,12 +1968,14 @@ public:
 		{ PassID::DDGIProbeTrace, 2 },
 		{ PassID::DDGIProbeTrace, 3 },
 		{ PassID::DDGIProbeTrace, 4 },
+		{ PassID::PreScene, 0 },
 		{ PassID::Scene, 0 },
 	};
-	static inline const FrameGraph::PassRef IndirectRTXHalf_0_prev[] = {
+	static inline const FrameGraph::PassRef ReflectionRTXHalf_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
 		{ PassID::CubeMapDownsample, 0 },
 		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::DDGIIndirectDebug, 0 },
 		{ PassID::DDGIProbeConvolve, 0 },
 		{ PassID::DDGIProbeConvolve, 1 },
 		{ PassID::DDGIProbeConvolve, 2 },
@@ -1953,10 +1998,69 @@ public:
 		{ PassID::DDGIProbeTrace, 4 },
 		{ PassID::GBufferDownsampler, 0 },
 	};
+	static inline const FrameGraph::PassRef ReflectionRTX_0_prev[] = {
+		{ PassID::BlueNoise, 0 },
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::DDGIIndirectDebug, 0 },
+		{ PassID::DDGIProbeConvolve, 0 },
+		{ PassID::DDGIProbeConvolve, 1 },
+		{ PassID::DDGIProbeConvolve, 2 },
+		{ PassID::DDGIProbeConvolve, 3 },
+		{ PassID::DDGIProbeConvolve, 4 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
+		{ PassID::DDGIProbeSelect, 0 },
+		{ PassID::DDGIProbeSelect, 1 },
+		{ PassID::DDGIProbeSelect, 2 },
+		{ PassID::DDGIProbeSelect, 3 },
+		{ PassID::DDGIProbeSelect, 4 },
+		{ PassID::DDGIProbeTrace, 0 },
+		{ PassID::DDGIProbeTrace, 1 },
+		{ PassID::DDGIProbeTrace, 2 },
+		{ PassID::DDGIProbeTrace, 3 },
+		{ PassID::DDGIProbeTrace, 4 },
+		{ PassID::GBufferDownsampler, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::Scene, 0 },
+	};
+	static inline const FrameGraph::PassRef IndirectRTXHalf_0_prev[] = {
+		{ PassID::BlueNoise, 0 },
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::DDGIIndirectDebug, 0 },
+		{ PassID::DDGIProbeConvolve, 0 },
+		{ PassID::DDGIProbeConvolve, 1 },
+		{ PassID::DDGIProbeConvolve, 2 },
+		{ PassID::DDGIProbeConvolve, 3 },
+		{ PassID::DDGIProbeConvolve, 4 },
+		{ PassID::DDGIProbeResidencyMark, 0 },
+		{ PassID::DDGIProbeResidencyMark, 1 },
+		{ PassID::DDGIProbeResidencyMark, 2 },
+		{ PassID::DDGIProbeResidencyMark, 3 },
+		{ PassID::DDGIProbeResidencyMark, 4 },
+		{ PassID::DDGIProbeSelect, 0 },
+		{ PassID::DDGIProbeSelect, 1 },
+		{ PassID::DDGIProbeSelect, 2 },
+		{ PassID::DDGIProbeSelect, 3 },
+		{ PassID::DDGIProbeSelect, 4 },
+		{ PassID::DDGIProbeTrace, 0 },
+		{ PassID::DDGIProbeTrace, 1 },
+		{ PassID::DDGIProbeTrace, 2 },
+		{ PassID::DDGIProbeTrace, 3 },
+		{ PassID::DDGIProbeTrace, 4 },
+		{ PassID::GBufferDownsampler, 0 },
+		{ PassID::ReflectionRTX, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
+	};
 	static inline const FrameGraph::PassRef IndirectRTX_0_prev[] = {
 		{ PassID::BlueNoise, 0 },
 		{ PassID::CubeMapDownsample, 0 },
 		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::DDGIIndirectDebug, 0 },
 		{ PassID::DDGIProbeConvolve, 0 },
 		{ PassID::DDGIProbeConvolve, 1 },
 		{ PassID::DDGIProbeConvolve, 2 },
@@ -1979,6 +2083,8 @@ public:
 		{ PassID::DDGIProbeTrace, 4 },
 		{ PassID::GBufferDownsampler, 0 },
 		{ PassID::IndirectRTXHalf, 0 },
+		{ PassID::ReflectionRTX, 0 },
+		{ PassID::ReflectionRTXHalf, 0 },
 		{ PassID::Scene, 0 },
 	};
 	static inline const FrameGraph::PassRef VoxelScreen_0_prev[] = {
@@ -2230,8 +2336,6 @@ public:
 		{ PassID::ResultCreation, 0, false, {} },
 		{ PassID::GBufferDownsampler, 0, false, GBufferDownsampler_0_prev },
 		{ PassID::NormalRoughnessRepack, 0, false, NormalRoughnessRepack_0_prev },
-		{ PassID::ReflectionRTXHalf, 0, true, ReflectionRTXHalf_0_prev },
-		{ PassID::ReflectionRTX, 0, true, ReflectionRTX_0_prev },
 		{ PassID::ShadowRTX, 0, true, ShadowRTX_0_prev },
 		{ PassID::DDGIProbeSelect, 0, true, {} },
 		{ PassID::DDGIProbeSelect, 1, true, DDGIProbeSelect_1_prev },
@@ -2259,6 +2363,8 @@ public:
 		{ PassID::DDGIProbeConvolve, 3, true, DDGIProbeConvolve_3_prev },
 		{ PassID::DDGIProbeConvolve, 4, true, DDGIProbeConvolve_4_prev },
 		{ PassID::DDGIIndirectDebug, 0, true, DDGIIndirectDebug_0_prev },
+		{ PassID::ReflectionRTXHalf, 0, true, ReflectionRTXHalf_0_prev },
+		{ PassID::ReflectionRTX, 0, true, ReflectionRTX_0_prev },
 		{ PassID::IndirectRTXHalf, 0, true, IndirectRTXHalf_0_prev },
 		{ PassID::IndirectRTX, 0, true, IndirectRTX_0_prev },
 		{ PassID::VoxelScreen, 0, true, VoxelScreen_0_prev },
@@ -2366,8 +2472,6 @@ public:
 		// only supplies render_func, so that is what gates registration.
 		if (normalRoughnessRepack.render_func)
 			graph.add_library_pass<Passes::NormalRoughnessRepack>(PassSetupDefault<Passes::NormalRoughnessRepack>::setup, normalRoughnessRepack.render_func, (normalRoughnessRepack.flags));
-		graph.add_library_pass<Passes::ReflectionRTXHalf>(PassDefault<Passes::ReflectionRTXHalf>::setup, PassDefault<Passes::ReflectionRTXHalf>::render, (PassDefault<Passes::ReflectionRTXHalf>::flags));
-		graph.add_library_pass<Passes::ReflectionRTX>(PassDefault<Passes::ReflectionRTX>::setup, PassDefault<Passes::ReflectionRTX>::render, (PassDefault<Passes::ReflectionRTX>::flags));
 		graph.add_library_pass<Passes::ShadowRTX>(PassDefault<Passes::ShadowRTX>::setup, PassDefault<Passes::ShadowRTX>::render, (PassDefault<Passes::ShadowRTX>::flags));
 		for (uint32_t i = 0; i < Passes::DDGIProbeSelect::MaxCount; ++i)
 			if (dDGIProbeSelect.render_funcs[i])
@@ -2385,6 +2489,8 @@ public:
 			if (dDGIProbeConvolve.render_funcs[i])
 				graph.add_library_pass<Passes::DDGIProbeConvolve>(i, PassSetupDefault<Passes::DDGIProbeConvolve>::setup, dDGIProbeConvolve.render_funcs[i], (dDGIProbeConvolve.flags));
 		graph.add_library_pass<Passes::DDGIIndirectDebug>(PassDefault<Passes::DDGIIndirectDebug>::setup, PassDefault<Passes::DDGIIndirectDebug>::render, (PassDefault<Passes::DDGIIndirectDebug>::flags));
+		graph.add_library_pass<Passes::ReflectionRTXHalf>(PassDefault<Passes::ReflectionRTXHalf>::setup, PassDefault<Passes::ReflectionRTXHalf>::render, (PassDefault<Passes::ReflectionRTXHalf>::flags));
+		graph.add_library_pass<Passes::ReflectionRTX>(PassDefault<Passes::ReflectionRTX>::setup, PassDefault<Passes::ReflectionRTX>::render, (PassDefault<Passes::ReflectionRTX>::flags));
 		graph.add_library_pass<Passes::IndirectRTXHalf>(PassDefault<Passes::IndirectRTXHalf>::setup, PassDefault<Passes::IndirectRTXHalf>::render, (PassDefault<Passes::IndirectRTXHalf>::flags));
 		graph.add_library_pass<Passes::IndirectRTX>(PassDefault<Passes::IndirectRTX>::setup, PassDefault<Passes::IndirectRTX>::render, (PassDefault<Passes::IndirectRTX>::flags));
 		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner

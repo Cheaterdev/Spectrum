@@ -12,14 +12,14 @@ struct DDGIProbeConvolveData
 {
 	uint probe_radiance; // Texture2DArray<float4>
 	uint probe_gbuffer; // Texture2DArray<float4>
+	uint probe_residency; // StructuredBuffer<uint>
 	uint probe_irradiance; // RWTexture2DArray<float4>
 	uint probe_visibility; // RWTexture2DArray<float2>
-	uint probe_residency; // RWStructuredBuffer<uint>
 	DDGIInfo info; // DDGIInfo
 	DDGIInfo GetInfo() { return info; }
 	Texture2DArray<float4> GetProbe_radiance() { return ResourceDescriptorHeap[probe_radiance]; }
 	Texture2DArray<float4> GetProbe_gbuffer() { return ResourceDescriptorHeap[probe_gbuffer]; }
 	RWTexture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
 	RWTexture2DArray<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
-	RWStructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
+	StructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
 };

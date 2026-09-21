@@ -601,6 +601,11 @@ public:
 						frameInfo.GetMainHiZ() = hiz->get_handler<Handlers::Texture>()->texture2D;
 				}
 
+				// RTXDebugFlags bitmask -- see DDGI.ixx's ddgi_sky_fallback_disabled
+				// comment for why this DDGI-owned toggle is mirrored here instead of
+				// living on DDGIInfo (its effect isn't DDGI-exclusive).
+				frameInfo.GetDebugFlags() = ddgi_sky_fallback_disabled() ? (uint32_t)RTXDebugFlags::DisableSkyFallback : 0u;
+
 				auto compiled = frameInfo.compile(*graph.builder.current_frame);
 				graph.register_slot_setter(compiled);
 			});

@@ -49,6 +49,9 @@ public:
 		Handlers::StructuredBuffer<uint> DDGI_CompactedProbeList = ResourceID::DDGI_CompactedProbeList;
 
 
+		Handlers::StructuredBuffer<uint> DDGI_ProbeResidencyPending = ResourceID::DDGI_ProbeResidencyPending;
+
+
 		Handlers::Texture DDGI_ProbeRadiance = ResourceID::DDGI_ProbeRadiance;
 
 
@@ -79,6 +82,7 @@ public:
 			builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_DispatchRaysArgs, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_CompactedProbeList, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
 			if (!(data.pass_index == 0))
 				builder.need(data.DDGI_ProbeRadiance, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 			if (!(data.pass_index == 0))
@@ -124,6 +128,7 @@ public:
 			FrameGraph::ChainIndex DDGI_ProbeResidency = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_DispatchRaysArgs = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_CompactedProbeList = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_ProbeResidencyPending = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeRadiance = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeGBuffer = FrameGraph::ChainIndex::Unresolved;
 		};
@@ -138,6 +143,7 @@ public:
 			cache.DDGI_ProbeResidency = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency);
 			cache.DDGI_DispatchRaysArgs = FrameGraph::TaskBuilder::cache_slot(data.DDGI_DispatchRaysArgs, ResourceID::DDGI_DispatchRaysArgs);
 			cache.DDGI_CompactedProbeList = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList);
+			cache.DDGI_ProbeResidencyPending = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending);
 			cache.DDGI_ProbeRadiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeRadiance, ResourceID::DDGI_ProbeRadiance);
 			cache.DDGI_ProbeGBuffer = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeGBuffer, ResourceID::DDGI_ProbeGBuffer);
 		}
@@ -159,6 +165,7 @@ public:
 			builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
 			builder.load(data.DDGI_DispatchRaysArgs, ResourceID::DDGI_DispatchRaysArgs, cache.DDGI_DispatchRaysArgs);
 			builder.load(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList, cache.DDGI_CompactedProbeList);
+			builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
 			if (data.pass_index == 0)
 			builder.create_versioned(data.DDGI_ProbeRadiance, cache.DDGI_ProbeRadiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 });
 			else
@@ -181,6 +188,7 @@ public:
 			{ ResourceID::DDGI_ProbeResidency, false },
 			{ ResourceID::DDGI_DispatchRaysArgs, false },
 			{ ResourceID::DDGI_CompactedProbeList, false },
+			{ ResourceID::DDGI_ProbeResidencyPending, true },
 			{ ResourceID::DDGI_ProbeRadiance, true },
 			{ ResourceID::DDGI_ProbeGBuffer, true },
 		};

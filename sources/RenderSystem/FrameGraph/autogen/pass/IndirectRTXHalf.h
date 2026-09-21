@@ -40,6 +40,9 @@ public:
 		Handlers::Texture DDGI_ProbeVisibility = ResourceID::DDGI_ProbeVisibility;
 
 
+		Handlers::StructuredBuffer<uint> DDGI_ProbeResidency = ResourceID::DDGI_ProbeResidency;
+
+
 		Handlers::StructuredBuffer<uint> DDGI_ProbeResidencyPending = ResourceID::DDGI_ProbeResidencyPending;
 
 
@@ -69,6 +72,7 @@ public:
 			builder.need(data.sky_cubemap_filtered_diffuse, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 
@@ -103,6 +107,7 @@ public:
 			FrameGraph::ChainIndex sky_cubemap_filtered_diffuse = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_ProbeResidency = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeResidencyPending = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex RTXIndirectNoiseHalf = FrameGraph::ChainIndex::Unresolved;
 		};
@@ -116,6 +121,7 @@ public:
 			cache.sky_cubemap_filtered_diffuse = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse);
 			cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
 			cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
+			cache.DDGI_ProbeResidency = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency);
 			cache.DDGI_ProbeResidencyPending = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending);
 			cache.RTXIndirectNoiseHalf = FrameGraph::TaskBuilder::cache_slot(data.RTXIndirectNoiseHalf, ResourceID::RTXIndirectNoiseHalf);
 		}
@@ -136,6 +142,7 @@ public:
 			builder.load(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse, cache.sky_cubemap_filtered_diffuse);
 			builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
 			builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
+			builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
 			builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
 			builder.create_versioned(data.RTXIndirectNoiseHalf, cache.RTXIndirectNoiseHalf, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 		}
@@ -151,6 +158,7 @@ public:
 			{ ResourceID::sky_cubemap_filtered_diffuse, false },
 			{ ResourceID::DDGI_ProbeIrradiance, false },
 			{ ResourceID::DDGI_ProbeVisibility, false },
+			{ ResourceID::DDGI_ProbeResidency, false },
 			{ ResourceID::DDGI_ProbeResidencyPending, true },
 			{ ResourceID::RTXIndirectNoiseHalf, true },
 		};

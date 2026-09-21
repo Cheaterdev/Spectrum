@@ -96,6 +96,13 @@ struct VoxelOutput
 	DDGIInfo ddgi_cascade4;
 	Texture2DArray<float4> ddgi_irradiance;
 	Texture2DArray<float2> ddgi_visibility;
+	# Gates ddgi_sample_irradiance's 8-probe trilinear blend (ddgi_sample.hlsl)
+	# -- without this, a non-resident corner's stale/never-written atlas
+	# texels get blended in as if current, which is exactly what surfaced as
+	# visible artifacts in the DDGI Indirect debug view once real residency
+	# culling actually started dropping probes. Read-only here; DDGIProbeResidencyMark
+	# (ddgi.sig) is the sole writer.
+	StructuredBuffer<uint> ddgi_residency;
 	# Hit-point-driven residency marking's inbox (see [[project-ddgi]]
 	# planning notes and DDGI_ProbeResidencyPending's own comment, ddgi.sig):
 	# TraceIndirectDiffuse writes 1 here at its own ray's hit point, one
@@ -449,6 +456,14 @@ PassNode ReflectionRTXHalf
 	# uses for its own miss shader, see its comment (this file).
 	[Always = Read] TextureCube sky_cubemap_filtered;
 	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
+	# DDGI probe-volume feedback term (see [[project-ddgi]] planning notes),
+	# same rationale as IndirectRTXHalf's own comment on these four fields --
+	# a reflection ray that misses everything else falls back to the probe
+	# grid instead of pure sky/black.
+	[Always = Read] Texture DDGI_ProbeIrradiance;
+	[Always = Read] Texture DDGI_ProbeVisibility;
+	[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
+	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 	[Always = UnorderedAccess] [Size = `ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2)`] [Format = R16G16B16A16_FLOAT]
 	Texture RTXReflectionNoiseHalf;
@@ -488,6 +503,11 @@ PassNode ReflectionRTX
 	# See ReflectionRTXHalf's own comment on the same two fields.
 	[Always = Read] TextureCube sky_cubemap_filtered;
 	[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
+	# See ReflectionRTXHalf's own comment on the same four fields.
+	[Always = Read] Texture DDGI_ProbeIrradiance;
+	[Always = Read] Texture DDGI_ProbeVisibility;
+	[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
+	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionNoise;
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionDirPdf;
@@ -546,6 +566,9 @@ PassNode IndirectRTXHalf
 	# control path today (always true); revisit once it does.
 	[Always = Read] Texture DDGI_ProbeIrradiance;
 	[Always = Read] Texture DDGI_ProbeVisibility;
+	# Gates ddgi_sample_irradiance's trilinear blend -- see VoxelOutput's own
+	# comment on ddgi_residency.
+	[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
 	# Written at this pass's own ray hit points -- see VoxelOutput's own
 	# comment on ddgi_residency_pending and DDGI_ProbeResidencyPending's
 	# (ddgi.sig).
@@ -588,6 +611,8 @@ PassNode IndirectRTX
 	# See IndirectRTXHalf's own comment on the same two fields.
 	[Always = Read] Texture DDGI_ProbeIrradiance;
 	[Always = Read] Texture DDGI_ProbeVisibility;
+	# See IndirectRTXHalf's own comment on the same field.
+	[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
 	# See IndirectRTXHalf's own comment.
 	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 

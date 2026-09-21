@@ -6,7 +6,12 @@
 #include "../autogen/rtx/ColorPass.h"
 #include "../autogen/DDGIProbeTraceData.h"
 #include "octahedral.hlsl"
+// Real traced probe-to-point occlusion instead of the chebyshev heuristic --
+// see ddgi_sample.hlsl's own comment on ddgi_sample_irradiance_traced for
+// why. Raygen shader, so TraceRay is valid here.
+#define DDGI_SAMPLE_ENABLE_TRACED_VISIBILITY
 #include "ddgi_sample.hlsl"
+#include "../common/common.hlsl"
 
 // v1 (see [[project-ddgi]] planning notes): one ray per radiance-atlas texel
 // (dispatch dims = DDGI_AtlasWidth x DDGI_AtlasHeight x DDGI_ProbeCountY in
@@ -42,6 +47,7 @@ void DDGIProbeTraceRaygenShader()
 	const DDGIInfo info = trace_data.GetInfo();
 	const DDGIProbes probes = trace_data.GetProbes();
 	const Raytracing raytracing = CreateRaytracing();
+	const FrameInfo frame = CreateFrameInfo();
 
 	uint texel_size = info.GetAtlas_info().x;
 
@@ -105,6 +111,31 @@ void DDGIProbeTraceRaygenShader()
 		return;
 
 	float2 local_uv = probes.ddgi_atlas_local_uv(atlas_texel, texel_size);
+
+	// Ray jitter (DDGIInfo::flags.z bit 2, "Jitter probe rays"): without
+	// this, a texel always traces the exact same fixed direction every
+	// frame it's resident -- if that direction happens to graze past a wall
+	// edge or through a small gap into the sky, that leak is a permanent,
+	// unchanging bias baked into the probe's stored radiance, not noise
+	// that would ever average out (unlike IndirectRTX's own per-pixel rays,
+	// which already jitter via blue noise). Nudging the sampled UV by a
+	// small FRACTION of a texel (not a whole one) means each frame samples
+	// a slightly different direction near the same nominal one, so an
+	// occasional grazing leak gets diluted by the multi-bounce feedback
+	// loop's own frame-to-frame blending instead of persisting exactly.
+	// Deliberately small: DDGIProbeConvolve's cosine-weighted convolution
+	// still treats each texel as if it were sampled at its exact nominal
+	// (unjittered) direction, so a large jitter would bias that weighting;
+	// a fraction of a texel keeps the actual sample close enough to nominal
+	// for that approximation to hold.
+	if ((info.GetFlags().z & (uint)DDGIControlFlags::JitterRays) != 0)
+	{
+		float2 seed = float2(atlas_texel) + float2(slice * 97u, slice * 131u);
+		float2 rand = GetRandom2(seed, frame.GetTime());
+		float2 jitter = (rand - 0.5) * (0.7 / texel_size);
+		local_uv = clamp(local_uv + jitter, -1.0, 1.0);
+	}
+
 	float3 dir = ddgi_oct_decode(local_uv);
 
 	float3 probe_pos = probes.ddgi_probe_world_pos(probe_coord, info.GetGrid_min().xyz, info.GetProbe_spacing().xyz, float3(0, 0, 0));
@@ -115,17 +146,65 @@ void DDGIProbeTraceRaygenShader()
 	RayDesc ray;
 	ray.Origin = probe_pos;
 	ray.Direction = dir;
-	ray.TMin = 0.05;
+	ray.TMin = 0.0001;
 	ray.TMax = 10000.0;
 	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
 
+	// Trace-time self-feedback has its own on/off (DDGIInfo::flags.z bit 3,
+	// "Use fallback while generating probes"), separate from flags.x (the
+	// final per-pixel screen term, TraceIndirectDiffuse) -- turning THIS one
+	// off stops a probe's own multi-bounce term from ever reading back into
+	// itself/its neighbors while probes are being generated, isolating
+	// whether a leak is coming from direct-lit shading alone or being
+	// amplified/introduced by the recursive feedback loop across frames.
+	bool trace_feedback_disabled = (info.GetFlags().z & (uint)DDGIControlFlags::DisableTraceFeedback) != 0;
+
 	float3 result_color = payload_gi.color.rgb;
-	if (payload_gi.dist > 0.0 && info.GetFlags().x != 0)
+	if (payload_gi.dist > 0.0 && info.GetFlags().x != 0 && !trace_feedback_disabled)
 	{
 		float3 hit_pos = ray.Origin + ray.Direction * payload_gi.dist;
-		float3 indirect = ddgi_sample_irradiance(hit_pos, payload_gi.hit_normal, info,
-			trace_data.GetPrev_irradiance(), trace_data.GetPrev_visibility());
-		result_color += payload_gi.albedo * indirect;
+
+		// Dilation (see [[project-ddgi]] planning notes and
+		// DDGI_ProbeResidencyPending's own comment, ddgi.sig): marks the same
+		// 8 corner probes the feedback sample right below is about to read as
+		// needed too, one cascade at a time (this probe's own -- unlike
+		// TraceIndirectDiffuse's marking block, which doesn't know which
+		// cascade will end up serving a given point, this call is already
+		// scoped to exactly one). Without this, a probe that's ONLY ever
+		// read as a feedback source -- never itself hit by a screen ray --
+		// has nothing keeping it resident, so it can silently drop out from
+		// under whatever's still reading it, which is what made "Enable
+		// residency culling" visibly change the result: some of what a
+		// sample blended in when culling was off had never been marked in
+		// the first place.
+		{
+			float3 local = (hit_pos - info.GetGrid_min().xyz) / info.GetProbe_spacing().xyz;
+			int3 dilate_base = int3(floor(local));
+			int3 dilate_counts = int3(info.GetProbe_counts().xyz);
+			uint dilate_offset = info.GetCascade_info().x;
+
+			[unroll]
+			for (uint di = 0; di < 8; di++)
+			{
+				int3 corner = int3(di & 1, (di >> 1) & 1, (di >> 2) & 1);
+				int3 cell = dilate_base + corner;
+				if (all(cell >= 0) && all(cell < dilate_counts))
+				{
+					uint dilate_linear_index = probes.ddgi_probe_linear_index(uint3(cell), uint3(dilate_counts));
+					trace_data.GetResidency_pending()[dilate_offset + dilate_linear_index] = 1;
+				}
+			}
+		}
+
+		float3 indirect = ddgi_sample_irradiance_traced(hit_pos, payload_gi.hit_normal, info,
+			trace_data.GetPrev_irradiance(), trace_data.GetPrev_visibility(), trace_data.GetProbe_residency(),
+			raytracing.GetScene());
+		// Feedback strength (DDGIInfo::probe_spacing.w, DDGIGraph.cpp's
+		// "Feedback strength") -- damps how strongly this probe's own
+		// multi-bounce self-feedback loop reinforces itself per hop, on top
+		// of the existing albedo attenuation. Does not touch
+		// TraceIndirectDiffuse/TraceReflection's own final per-pixel term.
+		result_color += payload_gi.albedo * indirect * info.GetProbe_spacing().w;
 	}
 
 	// atlas_texel is already the correct (x,z)-plane position -- slice

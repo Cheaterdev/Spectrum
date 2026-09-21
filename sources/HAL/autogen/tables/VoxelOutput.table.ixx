@@ -21,6 +21,7 @@ export namespace Table
 		HLSL::Texture2D<float2> blueNoise;
 		HLSL::Texture2DArray<float4> ddgi_irradiance;
 		HLSL::Texture2DArray<float2> ddgi_visibility;
+		HLSL::StructuredBuffer<uint> ddgi_residency;
 		HLSL::RWTexture2D<float4> noise;
 		HLSL::RWTexture2D<float> frames;
 		HLSL::RWTexture2D<float4> DirAndPdf;
@@ -40,6 +41,7 @@ export namespace Table
 		HLSL::RWTexture2D<float>& GetShadow_noise() { return shadow_noise; }
 		HLSL::Texture2DArray<float4>& GetDdgi_irradiance() { return ddgi_irradiance; }
 		HLSL::Texture2DArray<float2>& GetDdgi_visibility() { return ddgi_visibility; }
+		HLSL::StructuredBuffer<uint>& GetDdgi_residency() { return ddgi_residency; }
 		HLSL::RWStructuredBuffer<uint>& GetDdgi_residency_pending() { return ddgi_residency_pending; }
 		DDGIInfo& GetDdgi_cascade0() { return ddgi_cascade0; }
 		DDGIInfo& GetDdgi_cascade1() { return ddgi_cascade1; }
@@ -53,6 +55,7 @@ export namespace Table
 			compiler.compile(blueNoise, "VoxelOutput::blueNoise");
 			compiler.compile(ddgi_irradiance, "VoxelOutput::ddgi_irradiance");
 			compiler.compile(ddgi_visibility, "VoxelOutput::ddgi_visibility");
+			compiler.compile(ddgi_residency, "VoxelOutput::ddgi_residency");
 			compiler.compile(noise, "VoxelOutput::noise");
 			compiler.compile(frames, "VoxelOutput::frames");
 			compiler.compile(DirAndPdf, "VoxelOutput::DirAndPdf");
@@ -70,6 +73,7 @@ export namespace Table
 			uint blueNoise; // Texture2D<float2>
 			uint ddgi_irradiance; // Texture2DArray<float4>
 			uint ddgi_visibility; // Texture2DArray<float2>
+			uint ddgi_residency; // StructuredBuffer<uint>
 			uint noise; // RWTexture2D<float4>
 			uint frames; // RWTexture2D<float>
 			uint DirAndPdf; // RWTexture2D<float4>

@@ -38,6 +38,18 @@ namespace HAL
     // fails, DispatchRaysArguments' field list has drifted from the real
     // struct (a padding change, a new SDK member) and ByteStride would be
     // silently wrong.
+    //
+    // This assert was never the problem -- it always correctly passed at
+    // 104 bytes (natural C++ alignment from GPUAddress = uint64_t). The
+    // actual bug was on the GPU/HLSL side: dispatch_rays_args_build.hlsl's
+    // own DispatchRaysArguments mirror (ddgi.sig) tightly packed to 100
+    // bytes with no trailing pad, 4 short of the 104 D3D12 itself requires
+    // for a DISPATCH_RAYS command signature's ByteStride (confirmed via
+    // CreateCommandSignature's own D3D12 ERROR #743 when the C++ side was
+    // experimentally packed down to 100 to "match" -- D3D12 flatly refused
+    // that stride, proving 104 is the real, required, non-negotiable size).
+    // See ddgi.sig's own comment on DispatchRaysArguments' trailing pad
+    // field for the actual fix.
     static_assert(sizeof(DispatchRaysArguments) == sizeof(D3D12_DISPATCH_RAYS_DESC));
 
     inline D3D12_INDIRECT_ARGUMENT_DESC create_indirect_for(DispatchRaysArguments*)

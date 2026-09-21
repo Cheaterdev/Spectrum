@@ -22,7 +22,24 @@ struct RenderDeviceCapabilities
 # (they never do for [shader_only] IndirectCommand types, see
 # DispatchArguments/DispatchMeshArguments above this file's own sibling
 # meshrender.sig), only total byte layout does -- three GPU-address ranges
-# (uint2 = 8 bytes, matching a UINT64) then Width/Height/Depth.
+# (uint2 = 8 bytes, matching a UINT64) then Width/Height/Depth, PLUS this
+# struct's trailing _pad: the 11 uint2 + 3 uint fields above sum to exactly
+# 100 bytes, tightly packed (HLSL has no C++-style trailing struct-size
+# alignment padding for structured-buffer elements) -- but D3D12 flatly
+# requires a DISPATCH_RAYS command signature's ByteStride to be at least 104
+# bytes (confirmed the hard way: CreateCommandSignature's own D3D12 ERROR
+# #743, "Command signature byte stride (100 bytes) is not large enough.
+# Required size is (104 bytes)."), matching the C++ side's OWN natural
+# 104-byte size (GPUAddress = uint64_t forces 8-byte struct alignment,
+# rounding 100 up to 104 there automatically -- see SIG.ixx's own comment,
+# and do NOT #pragma pack(1) that struct to "fix" this mismatch, which is
+# backwards). Without this pad, every non-zero cascade index read via
+# exec_indirect<DispatchRaysArguments>(buffer, 1, cascade) (DDGIGraph.cpp)
+# -- whose offset math is `cascade * sizeof(DispatchRaysArguments)` = 104 --
+# read 4*cascade bytes into the wrong place in a buffer GPU-written at a
+# 100-byte stride, splicing one cascade's real record with the next's into a
+# garbled D3D12_DISPATCH_RAYS_DESC and hanging the GPU (DRED:
+# DXGI_ERROR_DEVICE_HUNG on DDGIProbeTrace's own indirect dispatch).
 [IndirectCommand]
 [shader_only]
 struct DispatchRaysArguments
@@ -41,6 +58,7 @@ struct DispatchRaysArguments
 	uint width;
 	uint height;
 	uint depth;
+	uint _pad;
 }
 
 # Packs one DispatchRaysArguments record: shader-table addresses/sizes/

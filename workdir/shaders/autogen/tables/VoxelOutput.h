@@ -13,6 +13,7 @@ struct VoxelOutput
 	uint blueNoise; // Texture2D<float2>
 	uint ddgi_irradiance; // Texture2DArray<float4>
 	uint ddgi_visibility; // Texture2DArray<float2>
+	uint ddgi_residency; // StructuredBuffer<uint>
 	uint noise; // RWTexture2D<float4>
 	uint frames; // RWTexture2D<float>
 	uint DirAndPdf; // RWTexture2D<float4>
@@ -37,5 +38,6 @@ struct VoxelOutput
 	RWTexture2D<float> GetShadow_noise() { return ResourceDescriptorHeap[shadow_noise]; }
 	Texture2DArray<float4> GetDdgi_irradiance() { return ResourceDescriptorHeap[ddgi_irradiance]; }
 	Texture2DArray<float2> GetDdgi_visibility() { return ResourceDescriptorHeap[ddgi_visibility]; }
+	StructuredBuffer<uint> GetDdgi_residency() { return ResourceDescriptorHeap[ddgi_residency]; }
 	RWStructuredBuffer<uint> GetDdgi_residency_pending() { return ResourceDescriptorHeap[ddgi_residency_pending]; }
 };

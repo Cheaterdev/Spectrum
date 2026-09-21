@@ -26,6 +26,15 @@ export Slots::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index)
 // from main.cpp next to voxel_gi->update_frame(graph).
 export void ddgi_update_selectors(FrameGraph::Graph& graph);
 
+// Diagnostic (see [[project-ddgi]] planning notes): "Disable sky fallback"
+// -- read by main.cpp when filling the shared FrameInfo (FrameData.sig's
+// debugFlags, RTXDebugFlags::DisableSkyFallback bit) each frame, so
+// MyMissShader (raytracing.hlsl) can return flat black instead of the sky
+// cubemap on a miss. Lives here (a DDGI-motivated toggle) even though its
+// effect isn't DDGI-exclusive -- every RayPayload-based ColorPass consumer
+// in the engine shares the one miss shader.
+export bool ddgi_sky_fallback_disabled();
+
 // [Multiple=5] pass render bodies (ddgi.sig) -- plain free functions, not
 // PassDefault<T>::render specializations, because [Multiple] passes are
 // runtime-wired via render_funcs[N] arrays, not the [Static] generated-

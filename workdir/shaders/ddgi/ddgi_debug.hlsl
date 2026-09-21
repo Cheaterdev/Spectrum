@@ -96,7 +96,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// Debug-only boost + floor so a genuinely dim/zero probe still shows up
 	// as a visible (dark grey, not invisible-black) marker -- not
 	// representative of the real irradiance magnitude.
-	float3 debug_color = irradiance * 4.0 + float3(0.03, 0.03, 0.03);
+	float3 debug_color = irradiance  + float3(0.01, 0.01, 0.01)/4;
 
 	// Bigger markers for coarser cascades -- with all 5 drawn at once, size
 	// is what actually lets you tell which cascade a given dot belongs to

@@ -22,6 +22,8 @@ export namespace Table
 		HLSL::Texture2D<float4> normals;
 		HLSL::Texture2DArray<float4> probe_irradiance;
 		HLSL::Texture2DArray<float2> probe_visibility;
+		HLSL::StructuredBuffer<uint> probe_residency;
+		HLSL::RWStructuredBuffer<uint> residency_pending;
 		HLSL::RWTexture2D<float4> target;
 		DDGIInfo cascade0;
 		DDGIInfo cascade1;
@@ -32,6 +34,8 @@ export namespace Table
 		HLSL::Texture2D<float4>& GetNormals() { return normals; }
 		HLSL::Texture2DArray<float4>& GetProbe_irradiance() { return probe_irradiance; }
 		HLSL::Texture2DArray<float2>& GetProbe_visibility() { return probe_visibility; }
+		HLSL::StructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
+		HLSL::RWStructuredBuffer<uint>& GetResidency_pending() { return residency_pending; }
 		HLSL::RWTexture2D<float4>& GetTarget() { return target; }
 		DDGIInfo& GetCascade0() { return cascade0; }
 		DDGIInfo& GetCascade1() { return cascade1; }
@@ -46,6 +50,8 @@ export namespace Table
 			compiler.compile(normals, "DDGIIndirectDebugData::normals");
 			compiler.compile(probe_irradiance, "DDGIIndirectDebugData::probe_irradiance");
 			compiler.compile(probe_visibility, "DDGIIndirectDebugData::probe_visibility");
+			compiler.compile(probe_residency, "DDGIIndirectDebugData::probe_residency");
+			compiler.compile(residency_pending, "DDGIIndirectDebugData::residency_pending");
 			compiler.compile(target, "DDGIIndirectDebugData::target");
 			compiler.compile(cascade0, "DDGIIndirectDebugData::cascade0");
 			compiler.compile(cascade1, "DDGIIndirectDebugData::cascade1");
@@ -59,6 +65,8 @@ export namespace Table
 			uint normals; // Texture2D<float4>
 			uint probe_irradiance; // Texture2DArray<float4>
 			uint probe_visibility; // Texture2DArray<float2>
+			uint probe_residency; // StructuredBuffer<uint>
+			uint residency_pending; // RWStructuredBuffer<uint>
 			uint target; // RWTexture2D<float4>
 			DDGIInfo::Compiled cascade0; // DDGIInfo
 			DDGIInfo::Compiled cascade1; // DDGIInfo

@@ -223,6 +223,14 @@ public:
 
 	struct Pass;
 
+	// Fatal diagnostic for TaskBuilder::need() finding a resource its own
+	// chain hasn't created this frame -- see that call site's own comment for
+	// why this exists (the ASSERT it replaced is a no-op outside DEV builds).
+	// Out-of-line because `Pass` is only forward-declared at need()'s point
+	// in this file; defined in FrameGraph.cpp, which sees Pass's full
+	// definition.
+	[[noreturn]] void report_resource_not_created(ResourceID id, Pass* requesting_pass);
+
 	// Identifies one chain link of a resource -- the pair every pointer-keyed
 	// container is being converted to, and the form a serialized graph plan
 	// stores.
@@ -1211,8 +1219,23 @@ public:
 				}
 			}
 
-			ASSERT(exists(result));
 			auto& chain = alloc_resources[(size_t)result.id];
+
+			// Unconditional, not the ASSERT(exists(result)) this replaced --
+			// ASSERT compiles to ((void)0) outside DEV builds (Core/Defines.h),
+			// so in an ordinary Debug-D3D12 build that check was silently a
+			// no-op and this exact failure fell straight through to
+			// ResourceChain::active() indexing an empty deque, which
+			// null-derefed several calls later inside HAL code with an access
+			// violation address that named neither the resource nor the pass.
+			// Usual cause: this pass is registered in the Pipeline block
+			// (test.sig) BEFORE whichever pass creates/writes this resource --
+			// Graph::setup() runs every pass's setup() in pipeline declaration
+			// order, so a resource's creator must appear earlier in that block
+			// than anything that need()s it. Fix the pipeline order, not this
+			// check.
+			if (!chain.created_this_frame)
+				report_resource_not_created(result.id, current_pass);
 
 			ResourceAllocInfo& info = chain.active();
 			T& handler = info.get_handler<T>();

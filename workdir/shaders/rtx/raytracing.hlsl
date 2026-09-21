@@ -33,6 +33,10 @@
 #include "../autogen/rtx/ColorPass.h"
 #include "../common/pbr.hlsl"
 #include "../common/common.hlsl"
+// Real traced probe-to-point occlusion instead of the chebyshev heuristic --
+// see ddgi_sample.hlsl's own comment on ddgi_sample_irradiance_traced for
+// why. Raygen shader, so TraceRay is valid here.
+#define DDGI_SAMPLE_ENABLE_TRACED_VISIBILITY
 #include "../ddgi/ddgi_sample.hlsl"
 
 // No PackForReblurDiffuse()/PackForReblurSpecular() calls in this file any
@@ -363,7 +367,7 @@ void MyRaygenShaderShadowRTXOnly()
 		RayDesc ray;
 		ray.Origin = pos;
 		ray.Direction = dir;
-		ray.TMin = 0.1;
+		ray.TMin = 0.001;
 		ray.TMax = 10000.0;
 		ShadowPass(raytracing.GetScene(), ray, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, payload_shadow);
 
@@ -404,7 +408,7 @@ void ColorPass()
 	RayDesc ray;
 	ray.Origin = frame.GetCamera().GetPosition();
 	ray.Direction = normalize(pos - frame.GetCamera().GetPosition());
-	ray.TMin = 0.1;
+	ray.TMin = 0.001;
 	ray.TMax = 10000.0;
 
 
@@ -493,11 +497,18 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 		// sampled, so probes stay warm even while the sampled contribution is
 		// switched off. Only cascades 0..3: the coarsest (4) is always
 		// resident regardless (DDGIProbeResidencyMark's own comment), so
-		// marking it would be wasted work. One probe cell per cascade (the
-		// nearest one to hit_pos), not the full 8-probe trilinear neighborhood
-		// ddgi_sample_irradiance blends over -- a v1 simplification, revisit
-		// if a probe right at a cell boundary visibly flickers in and out of
-		// residency.
+		// marking it would be wasted work.
+		//
+		// Marks all 8 trilinear-neighbor cells per cascade (floor(local) +
+		// every combination of 0/1 offset), matching ddgi_sample_irradiance's
+		// own blend footprint exactly (ddgi_sample.hlsl) -- an earlier v1
+		// marked only the single nearest cell, which meant residency culling
+		// (correctly) dropped 7 of the 8 corners a real sample needed,
+		// degrading the blend to near-nearest-neighbor and leaving whichever
+		// one probe survived to dominate the result on its own. Confirmed by
+		// disabling residency culling and seeing the result change
+		// noticeably -- it shouldn't, if marking actually covered what
+		// sampling needs.
 		{
 			DDGIInfo ddgi_cascades[4] = {
 				ddgi_cascade0, voxel_output.GetDdgi_cascade1(),
@@ -508,13 +519,20 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 			for (int c = 0; c < 4; c++)
 			{
 				float3 local = (hit_pos - ddgi_cascades[c].GetGrid_min().xyz) / ddgi_cascades[c].GetProbe_spacing().xyz;
-				int3 cell = int3(round(local));
+				int3 base = int3(floor(local));
 				int3 probe_counts = int3(ddgi_cascades[c].GetProbe_counts().xyz);
-				if (all(cell >= 0) && all(cell < probe_counts))
+				uint cascade_offset = ddgi_cascades[c].GetCascade_info().x;
+
+				[unroll]
+				for (uint i = 0; i < 8; i++)
 				{
-					uint linear_index = probes.ddgi_probe_linear_index(uint3(cell), uint3(probe_counts));
-					uint offset = ddgi_cascades[c].GetCascade_info().x;
-					voxel_output.GetDdgi_residency_pending()[offset + linear_index] = 1;
+					int3 corner = int3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
+					int3 cell = base + corner;
+					if (all(cell >= 0) && all(cell < probe_counts))
+					{
+						uint linear_index = probes.ddgi_probe_linear_index(uint3(cell), uint3(probe_counts));
+						voxel_output.GetDdgi_residency_pending()[cascade_offset + linear_index] = 1;
+					}
 				}
 			}
 		}
@@ -524,10 +542,11 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 		// own comment (ddgi.sig).
 		if (ddgi_cascade0.GetFlags().x != 0)
 		{
-			float3 indirect = ddgi_sample_irradiance_cascaded(hit_pos, payload_gi.hit_normal,
+			float3 indirect = ddgi_sample_irradiance_cascaded_traced(hit_pos, payload_gi.hit_normal,
 				ddgi_cascade0, voxel_output.GetDdgi_cascade1(), voxel_output.GetDdgi_cascade2(),
 				voxel_output.GetDdgi_cascade3(), voxel_output.GetDdgi_cascade4(),
-				voxel_output.GetDdgi_irradiance(), voxel_output.GetDdgi_visibility());
+				voxel_output.GetDdgi_irradiance(), voxel_output.GetDdgi_visibility(),
+				voxel_output.GetDdgi_residency(), raytracing.GetScene());
 			payload_gi.color.rgb += payload_gi.albedo * indirect;
 		}
 	}
@@ -639,6 +658,56 @@ void TraceReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, R
 	// (ShadowRaygenShader/ColorRTXRaygenShader) -- no voxel grid involved.
 	ray.TMax = 10000.0;
 	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload);
+
+	// DDGI probe-volume feedback term -- same rationale and marking pattern
+	// as TraceIndirectDiffuse's own DDGI block above (see its comment); a
+	// reflection ray that hits something otherwise unlit (no direct sun
+	// visibility, no other GI term reaching it) picks up the probe grid's
+	// accumulated multi-bounce light too, instead of coming back flat black.
+	if (payload.dist > 0.0)
+	{
+		const VoxelOutput voxel_output = CreateVoxelOutput();
+		DDGIInfo ddgi_cascade0 = voxel_output.GetDdgi_cascade0();
+		float3 hit_pos = pos + dir * payload.dist;
+
+		{
+			DDGIInfo ddgi_cascades[4] = {
+				ddgi_cascade0, voxel_output.GetDdgi_cascade1(),
+				voxel_output.GetDdgi_cascade2(), voxel_output.GetDdgi_cascade3()
+			};
+			DDGIProbes probes;
+			[unroll]
+			for (int c = 0; c < 4; c++)
+			{
+				float3 local = (hit_pos - ddgi_cascades[c].GetGrid_min().xyz) / ddgi_cascades[c].GetProbe_spacing().xyz;
+				int3 base = int3(floor(local));
+				int3 probe_counts = int3(ddgi_cascades[c].GetProbe_counts().xyz);
+				uint cascade_offset = ddgi_cascades[c].GetCascade_info().x;
+
+				[unroll]
+				for (uint i = 0; i < 8; i++)
+				{
+					int3 corner = int3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
+					int3 cell = base + corner;
+					if (all(cell >= 0) && all(cell < probe_counts))
+					{
+						uint linear_index = probes.ddgi_probe_linear_index(uint3(cell), uint3(probe_counts));
+						voxel_output.GetDdgi_residency_pending()[cascade_offset + linear_index] = 1;
+					}
+				}
+			}
+		}
+
+		if (ddgi_cascade0.GetFlags().x != 0)
+		{
+			float3 indirect = ddgi_sample_irradiance_cascaded_traced(hit_pos, payload.hit_normal,
+				ddgi_cascade0, voxel_output.GetDdgi_cascade1(), voxel_output.GetDdgi_cascade2(),
+				voxel_output.GetDdgi_cascade3(), voxel_output.GetDdgi_cascade4(),
+				voxel_output.GetDdgi_irradiance(), voxel_output.GetDdgi_visibility(),
+				voxel_output.GetDdgi_residency(), raytracing.GetScene());
+			payload.color.rgb += payload.albedo * indirect;
+		}
+	}
 
 	float3 refl_pos = pos + view * clamp(payload.dist, 0, 1000);
 	tex_dir_pdf[itc] = float4(refl_pos, 1);
@@ -825,9 +894,22 @@ void MyRaygenShaderReflection()
 void MyMissShader([raypayload]inout
 RayPayload payload)
 {
-	// Missed all geometry -> sample the sky cubemap in the ray direction so
-	// reflections/refractions and primary rays show the real environment.
-	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()), 0);
+	// Sky fallback toggle (RTXDebugFlags::DisableSkyFallback, FrameInfo's
+	// debugFlags -- see DDGI.ixx's ddgi_sky_fallback_disabled comment).
+	// Affects every RayPayload-based ColorPass consumer (DDGIProbeTrace,
+	// IndirectRTX, ReflectionRTX, primary GI), not just DDGI, since they
+	// all share this one miss shader -- useful when isolating whether a
+	// "sky color inside buildings" artifact is sky data leaking through a
+	// grazing ray/gap versus something else.
+	const FrameInfo frame = CreateFrameInfo();
+	if ((frame.GetDebugFlags() & (uint)RTXDebugFlags::DisableSkyFallback) != 0)
+	{
+		payload.color = float4(0, 0, 0, 1.0);
+		payload.dist = 100000;
+		return;
+	}
+
+	float3 sky = frame.GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()), 0);
 	payload.color = float4(sky, 1.0);
 	payload.dist = 100000;
 }

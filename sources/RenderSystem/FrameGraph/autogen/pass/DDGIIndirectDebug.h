@@ -31,6 +31,15 @@ public:
 		Handlers::Texture DDGI_ProbeVisibility = ResourceID::DDGI_ProbeVisibility;
 
 
+		Handlers::StructuredBuffer<uint> DDGI_ProbeResidency = ResourceID::DDGI_ProbeResidency;
+
+
+		Handlers::StructuredBuffer<uint> scene = ResourceID::scene;
+
+
+		Handlers::StructuredBuffer<uint> DDGI_ProbeResidencyPending = ResourceID::DDGI_ProbeResidencyPending;
+
+
 		Handlers::Texture DDGIIndirectDebug = ResourceID::DDGIIndirectDebug;
 
 
@@ -54,6 +63,9 @@ public:
 			builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::Read);
+			builder.need(data.scene, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 
 		// Resources this pass always creates with a fixed desc, generated from
@@ -84,6 +96,9 @@ public:
 			FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_ProbeResidency = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex scene = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_ProbeResidencyPending = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGIIndirectDebug = FrameGraph::ChainIndex::Unresolved;
 		};
 
@@ -93,6 +108,9 @@ public:
 			cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
 			cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
 			cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
+			cache.DDGI_ProbeResidency = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency);
+			cache.scene = FrameGraph::TaskBuilder::cache_slot(data.scene, ResourceID::scene);
+			cache.DDGI_ProbeResidencyPending = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending);
 			cache.DDGIIndirectDebug = FrameGraph::TaskBuilder::cache_slot(data.DDGIIndirectDebug, ResourceID::DDGIIndirectDebug);
 		}
 
@@ -109,6 +127,9 @@ public:
 			builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
 			builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
 			builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
+			builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
+			builder.load(data.scene, ResourceID::scene, cache.scene);
+			builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
 			builder.create_versioned(data.DDGIIndirectDebug, cache.DDGIIndirectDebug, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 		}
 
@@ -120,6 +141,9 @@ public:
 			{ ResourceID::GBuffer_DepthMips, false },
 			{ ResourceID::DDGI_ProbeIrradiance, false },
 			{ ResourceID::DDGI_ProbeVisibility, false },
+			{ ResourceID::DDGI_ProbeResidency, false },
+			{ ResourceID::scene, false },
+			{ ResourceID::DDGI_ProbeResidencyPending, true },
 			{ ResourceID::DDGIIndirectDebug, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
