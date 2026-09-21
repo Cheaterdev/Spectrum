@@ -27,6 +27,7 @@ export namespace Constants
 	constexpr auto DDGI_AtlasWidth = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeTexelSize;
 	constexpr auto DDGI_AtlasHeight = Constants::DDGI_ProbeCountZ * Constants::DDGI_ProbeTexelSize;
 	constexpr auto DDGI_AtlasArraySlices = Constants::DDGI_ProbeCountY * Constants::DDGI_CascadeCount;
+	constexpr auto DDGI_ProbeRayCount = 32;
 	constexpr auto DDGI_MaxProbesPerFrame = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY;
 	constexpr auto PSSM_RendersSize = 5;
 	constexpr auto MaxLevels = 26;

@@ -121,27 +121,58 @@ namespace
 	Variable<float> g_ddgi_depth_test_bias = { 0.05f, "Depth test bias (x spacing)", &ddgi_debug_context(), 0.0f, 1.0f };
 
 	// Amortize probe refresh over time instead of retracing every cascade
-	// every frame: cascade N refreshes every base^N frames, so cascade 0 stays
+	// every frame: cascade N refreshes over base^N frames, so cascade 0 stays
 	// per-frame and the coarse (largest, least locally relevant) levels cost a
-	// fraction of what they used to. Refresh is skipped on the GPU, by building
-	// a zero-width DispatchRays for that cascade, so the graph itself is
-	// identical every frame and stays cacheable -- gating it with a pass
-	// condition instead would put the schedule phase in the graph key and fork
-	// a stored plan per phase.
-	Variable<bool> g_ddgi_stagger_updates = { false, "Stagger cascade updates", &ddgi_debug_context() };
-	// Interval base: 2 gives 1, 2, 4, 8, 16 frames for cascades 0..4. 1 is
-	// every cascade every frame, i.e. the toggle off.
-	Variable<int>  g_ddgi_stagger_base = { 2, "Stagger interval base", &ddgi_debug_context(), 1, 8 };
+	// fraction of what they used to.
+	//
+	// NOT an all-or-nothing per-cascade skip (that was the original v1 of
+	// this -- see the plan/git history): a cascade either firing its FULL
+	// probe count on its one "due" frame or nothing at all on the other
+	// base^N-1 frames is exactly the frame-time SPIKE this exists to avoid,
+	// it just moves the spike from "every frame" to "every base^N frames"
+	// instead of removing it. Rotating bucket instead: cascade N's own
+	// probe_count is split into base^N equal buckets by `linear_index %
+	// stagger_k`, and exactly ONE bucket is due each frame (`frame %
+	// stagger_k`, cycling through all of them over stagger_k frames) -- so
+	// every cascade retraces some (~1/stagger_k) of its own probes on EVERY
+	// frame, and the same total work happens over the same base^N-frame
+	// window, just spread flat instead of bunched onto one frame in every
+	// base^N. Consumed by DDGIProbeResidencyMark's own compaction step
+	// (ddgi_probe_residency_mark.hlsl) -- a probe can be `needed` (resident,
+	// sampled, kept alive) but not `due` this exact frame, in which case it
+	// keeps contributing its last traced value and simply waits its turn
+	// instead of being evicted or read as stale.
+	Variable<bool> g_ddgi_stagger_updates = { true, "Stagger cascade updates", &ddgi_debug_context() };
+	// Interval base: 2 gives 1, 2, 4, 8, 16 buckets (frames to fully cycle)
+	// for cascades 0..4. 1 is every probe every frame, i.e. the toggle off.
+	// Cascade 0 is exempt from this (always k=1 here) regardless of the
+	// setting -- see g_ddgi_stagger_cascade0's own comment for why it gets a
+	// separate control instead of just folding it into base^0.
+	Variable<int>  g_ddgi_stagger_base = { 8, "Stagger interval base", &ddgi_debug_context(), 1, 8 };
 
-	// Which cascades refresh this frame, one bit each. Computed once per frame
+	// Cascade 0 (finest spacing, densest and most frequently relevant probe
+	// set) is the single most expensive cascade to retrace -- 3-4ms/frame
+	// observed, dwarfing the coarser cascades the base^cascade progression
+	// above already staggers. It's deliberately excluded from that
+	// progression (base^0 is always 1, i.e. never staggered) because it was
+	// designed around "cascade 0 stays fully live, only the coarse levels
+	// amortize" -- but that assumption is exactly what's being revisited
+	// here, so it gets its OWN toggle/interval instead of just changing what
+	// base^0 means (which would force it to inherit the same cycle length as
+	// whatever's tuned for the coarse cascades, which have very different
+	// cost/relevance characteristics).
+	Variable<bool> g_ddgi_stagger_cascade0 = { false, "Stagger level 0 too", &ddgi_debug_context() };
+	// Cycle length in frames -- e.g. 4 means 1/4 of cascade 0's probes
+	// retrace each frame, cycling through all of them every 4 frames.
+	Variable<int>  g_ddgi_cascade0_stagger_k = { 4, "Level 0 stagger interval (frames)", &ddgi_debug_context(), 1, 32 };
+
+	// This frame's per-cascade (stagger_k, stagger_bucket) -- computed once
 	// in ddgi_update_selectors (before any pass runs) rather than per render
-	// call, so every pass of one cascade agrees on it.
-	uint32_t g_ddgi_due_mask = ~0u;
-
-	bool ddgi_cascade_due(uint32_t cascade)
-	{
-		return ((g_ddgi_due_mask >> cascade) & 1u) != 0;
-	}
+	// call, so every pass of one cascade agrees on it. Mirrored into
+	// DDGIInfo::rays_per_probe.yz (ddgi_make_info) -- see that field's own
+	// comment (ddgi.sig) for why those two lanes were free to reuse.
+	uint32_t g_ddgi_stagger_k[Constants::DDGI_CascadeCount]      = { 1, 1, 1, 1, 1 };
+	uint32_t g_ddgi_stagger_bucket[Constants::DDGI_CascadeCount] = { 0, 0, 0, 0, 0 };
 
 	// Toroidal-scroll tracking (see [[project-ddgi]] planning notes and
 	// DDGIProbeResidencyMarkData's own comment, ddgi.sig): the grid's window
@@ -176,26 +207,32 @@ void ddgi_update_selectors(FrameGraph::Graph& graph)
 	++frame;
 
 	const uint32_t base = (uint32_t)std::max(1, (int)g_ddgi_stagger_base);
+	const bool stagger_upper = g_ddgi_stagger_updates && base > 1;
 
-	if (!g_ddgi_stagger_updates || base == 1)
-	{
-		g_ddgi_due_mask = ~0u;
-		return;
-	}
-
-	g_ddgi_due_mask = 0;
-	uint64_t interval = 1;
+	// k tracks base^cascade as the loop advances (1, base, base^2, ...) --
+	// same exponential scaling the old due-mask used for cascades 1-4.
+	// Cascade 0 is computed from its own independent toggle/interval instead
+	// (see g_ddgi_stagger_cascade0's own comment), so k's value at cascade 0
+	// is never actually used for it, only carried forward so cascade 1 still
+	// starts its own progression at base^1.
+	uint64_t k = 1;
 	for (uint32_t cascade = 0; cascade < Constants::DDGI_CascadeCount; ++cascade)
 	{
-		// Phase each cascade half an interval apart instead of refreshing them
-		// all on frame 0: otherwise every cascade's period divides the longest
-		// one and they all land on the same frame, which is the spike this
-		// exists to avoid.
-		const uint64_t phase = interval / 2;
-		if (frame % interval == phase)
-			g_ddgi_due_mask |= 1u << cascade;
+		uint64_t cascade_k = 1;
+		if (cascade == 0)
+		{
+			if (g_ddgi_stagger_cascade0)
+				cascade_k = (uint64_t)std::max(1, (int)g_ddgi_cascade0_stagger_k);
+		}
+		else if (stagger_upper)
+		{
+			cascade_k = k;
+		}
 
-		interval *= base;
+		g_ddgi_stagger_k[cascade]      = (uint32_t)cascade_k;
+		g_ddgi_stagger_bucket[cascade] = (uint32_t)(frame % cascade_k);
+
+		k *= base;
 	}
 }
 
@@ -214,11 +251,15 @@ namespace
 
 // Recenters on the camera every frame, snapped to whole probe_spacing steps
 // so the grid doesn't jitter continuously as the camera moves -- only steps
-// when the camera crosses a spacing-sized cell boundary. No toroidal
-// wraparound / relight-only-the-new-ring preservation yet (deferred, see
-// ddgi.sig's DDGIProbes comment on ddgi_toroidal_wrap): when the grid steps,
-// every probe just retraces fresh next frame, which v1 already does anyway
-// (every probe retraces every frame regardless of whether the grid moved).
+// when the camera crosses a spacing-sized cell boundary. Toroidal (ring-
+// buffer) addressing is real now (ddgi_wrap/ddgi_probe_world_pos/
+// ddgi_world_to_slot, ddgi.sig): a probe's atlas slot is a fixed function of
+// its own absolute world-cell, independent of where this window currently
+// sits, so most probes keep their exact stored history across a step instead
+// of every probe's slot meaning a different world position each time the
+// grid moves. ddgi_probe_select_render (below) tracks the per-cascade scroll
+// delta and forces only the newly-scrolled-in slice to evict/retrace fresh
+// -- see its own comment for the eviction-range derivation.
 // cascade_index's spacing is g_ddgi_probe_spacing * 2^cascade_index (0 =
 // finest). Exported (DDGI.ixx) so IndirectRTX.cpp's per-pixel feedback
 // sample uses the exact same grids every frame that DDGIProbeTrace/
@@ -246,10 +287,18 @@ Slots::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index)
 	info.GetProbe_spacing().xyz = float3(spacing, spacing, spacing);
 	info.GetProbe_spacing().w   = g_ddgi_feedback_strength;
 	info.GetProbe_counts().xyz  = counts;
-	// Informational only in v1 -- DDGIProbeTrace currently dispatches one
-	// ray per radiance-atlas texel instead of a fixed per-probe ray count
-	// (see its own doc comment).
-	info.GetRays_per_probe().x = Constants::DDGI_ProbeTexelSize * Constants::DDGI_ProbeTexelSize;
+	// The real per-probe ray budget now -- DDGIProbeTrace dispatches exactly
+	// this many spherical-fibonacci rays per probe, independent of the
+	// output atlas's own texel resolution (see DDGI_ProbeRayCount's own
+	// comment, ddgi.sig, for why that decoupling replaced the old 1-ray-
+	// per-texel scheme).
+	info.GetRays_per_probe().x = Constants::DDGI_ProbeRayCount;
+	// This cascade's rotating retrace subset -- see g_ddgi_stagger_k/
+	// g_ddgi_stagger_bucket's own comment and rays_per_probe's field comment
+	// (ddgi.sig) for what these drive (DDGIProbeResidencyMark's compaction
+	// gate).
+	info.GetRays_per_probe().y = g_ddgi_stagger_k[cascade_index];
+	info.GetRays_per_probe().z = g_ddgi_stagger_bucket[cascade_index];
 	info.GetAtlas_info().x     = Constants::DDGI_ProbeTexelSize;
 	// See DDGIInfo's own comment (ddgi.sig) for what these offsets are.
 	info.GetCascade_info().x = cascade_index * probe_count;
@@ -434,18 +483,17 @@ void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::C
 	// -- not the Passes::DDGIProbeTrace FrameGraph PassNode type.
 	params.GetRaygen_addr() = split_address(rtx.raygen_address<DDGIProbeTrace>().get_ptr());
 	params.GetRaygen_size() = static_cast<uint>(sizeof(HAL::shader_identifier));
-	// Width = DDGI_CompactedProbeCount[cascade] * texels/probe -- a real
+	// Width = DDGI_CompactedProbeCount[cascade] * rays/probe -- a real
 	// GPU-computed launch size (DDGIProbeResidencyMark's own stream
-	// compaction), not a CPU literal, though numerically identical to the
-	// old fixed atlas size today since residency marking is still the
-	// "mark everything" placeholder (see that PassNode's own comment).
-	// 0 for a cascade that isn't due this frame: DDGIProbeTrace's
-	// ExecuteIndirect then launches a zero-width DispatchRays and traces
-	// nothing, without the graph having to change shape (see
-	// g_ddgi_stagger_updates).
-	params.GetWidth_multiplier() = ddgi_cascade_due(cascade)
-		? Constants::DDGI_ProbeTexelSize * Constants::DDGI_ProbeTexelSize
-		: 0;
+	// compaction). Unconditional: staggering no longer zeroes a whole
+	// cascade's width on its off frames (see g_ddgi_stagger_k's own
+	// comment) -- the compacted count itself already shrinks to only the
+	// probes that are both needed AND due this frame, via the same
+	// compaction gate that residency culling uses. rays/probe is
+	// DDGI_ProbeRayCount now, not DDGI_ProbeTexelSize^2 -- see that
+	// constant's own comment (ddgi.sig) for the ray-count/texel-resolution
+	// decoupling.
+	params.GetWidth_multiplier() = Constants::DDGI_ProbeRayCount;
 	params.GetCount_index()      = cascade;
 	params.GetCompacted_count()  = data.DDGI_CompactedProbeCount->structuredBuffer;
 	params.GetDest_index()  = cascade;
@@ -456,14 +504,16 @@ void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::C
 	compute.dispatch(1, 1, 1);
 }
 
-// Traces one ray per DDGI_ProbeRadiance/DDGI_ProbeGBuffer atlas texel,
-// reusing the same ColorPass hit group (MyClosestHitShader) IndirectRTX's
-// own per-pixel GI ray uses, and samples DDGI_ProbeIrradiance/
-// DDGI_ProbeVisibility (LAST frame's convolved output -- see
-// ddgi_probe_trace.hlsl's own doc comment for why reading them here is
-// exactly the multi-bounce feedback mechanism). Still deferred: real
-// per-probe ray budget, retrace skip. Plain free function -- see
-// ddgi_probe_select_render's own comment on why.
+// Traces DDGI_ProbeRayCount rays per selected probe, reusing the same
+// ColorPass hit group (MyClosestHitShader) IndirectRTX's own per-pixel GI ray
+// uses, and samples DDGI_ProbeIrradiance/DDGI_ProbeVisibility (LAST frame's
+// convolved output -- see ddgi_probe_trace.hlsl's own doc comment for why
+// reading them here is exactly the multi-bounce feedback mechanism). Retrace
+// skip is real now (residency culling + the rotating per-probe stagger gate,
+// both in ddgi_probe_trace.hlsl); ray count is now a real, independently
+// tunable budget too (DDGI_ProbeRayCount, decoupled from the output atlas's
+// own texel resolution -- see that constant's own comment, ddgi.sig). Plain
+// free function -- see ddgi_probe_select_render's own comment on why.
 void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext& context)
 {
 	uint32_t cascade = data.pass_index;
@@ -482,8 +532,7 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 		params.GetInfo() = info;
 		params.GetProbes().GetProbe_counts() = info.GetProbe_counts();
 		params.GetProbes().GetProbes()       = data.DDGI_Probes->rwStructuredBuffer;
-		params.GetProbe_radiance()  = data.DDGI_ProbeRadiance->rwTexture2DArray;
-		params.GetProbe_gbuffer()   = data.DDGI_ProbeGBuffer->rwTexture2DArray;
+		params.GetProbe_ray_radiance() = data.DDGI_ProbeRayRadiance->rwStructuredBuffer;
 		params.GetPrev_irradiance() = data.DDGI_ProbeIrradiance->texture2DArray;
 		params.GetPrev_visibility() = data.DDGI_ProbeVisibility->texture2DArray;
 		params.GetProbe_residency() = data.DDGI_ProbeResidency->structuredBuffer;
@@ -500,15 +549,16 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 	// removing those diagnostics once this is settled): cascade 4's
 	// DDGI_CompactedProbeCount really is the full 131072 every frame, giving
 	// an indirect ExecuteIndirect(DISPATCH_RAYS) a single 1D dispatch with
-	// Width = 8,388,608 -- the exact same TOTAL ray count the fixed 3D
-	// dispatch below already launches for it (512x512x32 = 8,388,608) and
-	// runs fine, but reshaped into one flat 1D width instead of a 3D shape.
-	// That reshaping is the prime suspect for the device-removed/hang seen
-	// after fixing the cascade-offset bug above (see exec_indirect's own
-	// comment): DXR ray schedulers lean on 2D/3D dispatch tiling for BVH-
-	// traversal locality, and a single enormous 1D width is a much less
-	// common, apparently much slower path for hardware/driver to take, easily
-	// enough to trip the OS's ~2s TDR timeout on identical total work.
+	// Width = DDGI_ProbeCount * DDGI_ProbeRayCount (131072 * 32 = 4,194,304)
+	// -- the exact same TOTAL ray count the fixed 3D dispatch below already
+	// launches for it (2048x64x32 = 4,194,304) and runs fine, but reshaped
+	// into one flat 1D width instead of a 3D shape. That reshaping is the
+	// prime suspect for the device-removed/hang seen after fixing the
+	// cascade-offset bug above (see exec_indirect's own comment): DXR ray
+	// schedulers lean on 2D/3D dispatch tiling for BVH-traversal locality,
+	// and a single enormous 1D width is a much less common, apparently much
+	// slower path for hardware/driver to take, easily enough to trip the
+	// OS's ~2s TDR timeout on identical total work.
 	// Since indirect dispatch buys zero benefit here anyway (nothing is ever
 	// culled from an always-fully-resident cascade), route it through the
 	// same safe fixed 3D dispatch the non-indirect path uses instead of
@@ -540,30 +590,34 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 	}
 	else
 	{
-		// 3D: the array dimension (DDGI_ProbeCountY worth of slices for this
-		// cascade) is no longer folded into a 2D width/height, so a full
-		// (non-indirect) dispatch must cover it as an actual 3rd dispatch
-		// dimension -- see ddgi_probe_trace.hlsl's own comment.
-		ivec3 atlas_size = { Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight, Constants::DDGI_ProbeCountY };
-		RTX::get().render<DDGIProbeTrace>(compute, sceneinfo.scene->raytrace_scene, atlas_size);
+		// 3D, not one flat width -- see this function's own comment above on
+		// why a single enormous 1D DispatchRays width is the specific thing
+		// to avoid here. X folds in the ray dimension (probe_x*RayCount +
+		// ray_index, see ddgi_probe_trace.hlsl's own decode); Y/Z stay real
+		// dispatch dimensions the same way DDGI_ProbeCountY already did
+		// before rays were their own axis.
+		ivec3 dispatch_size = {
+			Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeRayCount,
+			Constants::DDGI_ProbeCountZ,
+			Constants::DDGI_ProbeCountY
+		};
+		RTX::get().render<DDGIProbeTrace>(compute, sceneinfo.scene->raytrace_scene, dispatch_size);
 	}
 }
 
-// Cosine-weighted convolution of each probe's own traced radiance into its
-// irradiance/visibility atlas texels -- see ddgi_probe_convolve.hlsl for the
-// per-texel math. Plain free function -- see ddgi_probe_select_render's own
-// comment on why.
+// Cosine-weight-resamples each probe's own fixed DDGI_ProbeRayRadiance ray
+// set into its irradiance/visibility atlas texels -- see
+// ddgi_probe_convolve.hlsl for the per-texel math. Plain free function --
+// see ddgi_probe_select_render's own comment on why.
 void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameContext& context)
 {
 	uint32_t cascade = data.pass_index;
 
-	// Nothing retraced this cascade's radiance this frame, so convolving it
-	// again would reproduce the irradiance it already holds. Unlike the trace,
-	// this is a direct dispatch with no indirect args to zero, so the skip is
-	// simply not recording it.
-	if (!ddgi_cascade_due(cascade))
-		return;
-
+	// No more cascade-level skip here (see g_ddgi_stagger_k's own comment)
+	// -- the dispatch always runs at full size, and each thread's own
+	// per-probe due-check (ddgi_probe_convolve.hlsl, alongside its existing
+	// residency early-out) decides whether that probe's texels get
+	// reconvolved this frame.
 	auto& compute = context.get_list()->get_compute();
 	compute.set_signature(Layouts::DefaultLayout);
 	context.graph->set_slot(SlotID::FrameInfo, compute);
@@ -571,8 +625,7 @@ void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameC
 	{
 		Slots::DDGIProbeConvolveData params;
 		params.GetInfo() = ddgi_make_info(ddgi_camera_pos(context), cascade);
-		params.GetProbe_radiance()   = data.DDGI_ProbeRadiance->texture2DArray;
-		params.GetProbe_gbuffer()    = data.DDGI_ProbeGBuffer->texture2DArray;
+		params.GetProbe_ray_radiance() = data.DDGI_ProbeRayRadiance->structuredBuffer;
 		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->rwTexture2DArray;
 		params.GetProbe_visibility() = data.DDGI_ProbeVisibility->rwTexture2DArray;
 		params.GetProbe_residency()  = data.DDGI_ProbeResidency->structuredBuffer;

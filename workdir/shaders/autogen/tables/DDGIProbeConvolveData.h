@@ -10,15 +10,13 @@
 #include "DDGIInfo.h"
 struct DDGIProbeConvolveData
 {
-	uint probe_radiance; // Texture2DArray<float4>
-	uint probe_gbuffer; // Texture2DArray<float4>
+	uint probe_ray_radiance; // StructuredBuffer<float4>
 	uint probe_residency; // StructuredBuffer<uint>
 	uint probe_irradiance; // RWTexture2DArray<float4>
 	uint probe_visibility; // RWTexture2DArray<float2>
 	DDGIInfo info; // DDGIInfo
 	DDGIInfo GetInfo() { return info; }
-	Texture2DArray<float4> GetProbe_radiance() { return ResourceDescriptorHeap[probe_radiance]; }
-	Texture2DArray<float4> GetProbe_gbuffer() { return ResourceDescriptorHeap[probe_gbuffer]; }
+	StructuredBuffer<float4> GetProbe_ray_radiance() { return ResourceDescriptorHeap[probe_ray_radiance]; }
 	RWTexture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
 	RWTexture2DArray<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
 	StructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }

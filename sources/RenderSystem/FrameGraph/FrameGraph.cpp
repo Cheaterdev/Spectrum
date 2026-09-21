@@ -846,7 +846,9 @@ namespace FrameGraph
 						// frame, whether or not anything consumes its own output.
 						if (pass->skips_enablement_for(TaskBuilder::version_of(info))) continue;
 
-						pass->enabled = true;
+						pass->enabled                  = true;
+						pass->enabled_via_resource      = &info;
+						pass->enabled_via_consumer_id   = pass_id;
 
 						for (auto& acc : pass->used.resources)
 						{
@@ -880,7 +882,8 @@ namespace FrameGraph
 
 			for (auto& pass : builder.required_passes)
 			{
-				pass->enabled = true;
+				pass->enabled            = true;
+				pass->required_pass_root = true;
 				for (auto& acc : pass->used.resources)
 				{
 					if (auto* used = builder.get(acc.version))
@@ -2734,6 +2737,24 @@ namespace FrameGraph
 	{
 		auto it = id_to_pass.find(id);
 		return it != id_to_pass.end() ? it->second : nullptr;
+	}
+
+	std::vector<Pass*> TaskBuilder::enablement_chain(Pass* pass) const
+	{
+		std::vector<Pass*> chain;
+		std::set<Pass*> seen;
+
+		while (pass && seen.insert(pass).second)
+		{
+			chain.push_back(pass);
+
+			if (pass->required_pass_root || !pass->enabled_via_resource)
+				break;
+
+			pass = get_pass(pass->enabled_via_consumer_id);
+		}
+
+		return chain;
 	}
 
 	ResourceAllocInfo* TaskBuilder::get(ResourceVersion v) const

@@ -102,6 +102,25 @@ const DDGI_AtlasWidth  = `Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeTex
 const DDGI_AtlasHeight = `Constants::DDGI_ProbeCountZ * Constants::DDGI_ProbeTexelSize`;
 const DDGI_AtlasArraySlices = `Constants::DDGI_ProbeCountY * Constants::DDGI_CascadeCount`;
 
+# Fixed ray budget PER PROBE, decoupled from DDGI_ProbeTexelSize -- v1 traced
+# exactly one ray per eventual octahedral output texel (64 = 8x8), which
+# tied ray count to atlas resolution for no real reason: DDGIProbeTrace now
+# fires DDGI_ProbeRayCount spherical-fibonacci directions per probe
+# (ddgi_sphere_fibonacci, octahedral.hlsl -- deterministic from index/count
+# alone, no direction table needed) into a flat per-ray buffer
+# (DDGI_ProbeRayRadiance, below), and DDGIProbeConvolve cosine-weight-
+# resamples that same fixed ray set into all DDGI_ProbeTexelSize^2 output
+# texels instead of reading a 1:1 traced value per texel -- same "real DDGI
+# implementations decouple ray count from texel resolution" plan item this
+# file's own top comment already called out. 32 (half of the old 64) is a
+# starting point: fewer independent directional samples per probe means a
+# thin occluder is statistically less likely to have a ray land on it, so
+# watch for increased light leaking relative to before if this needs
+# retuning -- there's no free lunch here, just spending the same ray budget
+# on trading (texel-resolution-tied count) for (a number you can actually
+# tune independently of the output atlas).
+const DDGI_ProbeRayCount = 32;
+
 # Per-frame probe-update budget (DDGI.ixx's Variable<int> probes_per_frame_budget
 # mirrors into DDGISelectors below); this constant is only the storage-independent
 # upper bound used to size nothing in particular yet -- kept for parity with
@@ -112,10 +131,17 @@ const DDGI_MaxProbesPerFrame = `Constants::DDGI_ProbeCountX * Constants::DDGI_Pr
 # Mirrored once per frame by DDGI::update_frame() (DDGIGraph.cpp), same
 # reasoning as VoxelInfo (voxel.sig): grid_min is the world-space corner of
 # probe (0,0,0), probe_spacing the world-space distance between adjacent
-# probes along each axis. rays_per_probe.x is the actual per-probe ray count
-# (informational only in v1 -- DDGIProbeTrace's raygen currently dispatches
-# one ray per radiance-atlas texel instead, see its own doc comment); the
-# rest of rays_per_probe is padding to a float4-friendly size. atlas_info.x
+# probes along each axis. rays_per_probe.x is the real per-probe ray count
+# now (DDGI_ProbeRayCount, mirrored rather than read directly from HLSL's
+# generated Constants:: namespace the same reason atlas_info.x is below) --
+# DDGIProbeTrace's raygen dispatches exactly this many spherical-fibonacci
+# rays per probe, decoupled from the output atlas's own texel resolution
+# (see DDGI_ProbeRayCount's own comment for why).
+# rays_per_probe.y/.z carry this cascade's own stagger_k/stagger_bucket (see
+# DDGIGraph.cpp's g_ddgi_stagger_k/g_ddgi_stagger_bucket) -- which rotating
+# 1/stagger_k-sized subset of this cascade's probes is due for retrace this
+# frame, per DDGIProbeResidencyMark's own compaction gate below. .w remains
+# unused padding. atlas_info.x
 # is DDGI_ProbeTexelSize -- HLSL has no access to the generated Constants::
 # namespace (C++-only), so shaders that need to convert an atlas texel
 # coordinate to a probe grid coordinate (DDGIProbes::ddgi_atlas_probe_coord/
@@ -385,12 +411,11 @@ struct DDGIProbeTraceData
 	DDGIInfo info;
 	DDGIProbes probes;
 
-	RWTexture2DArray<float4> probe_radiance;
-	# Packed (normal.xyz, hit distance) per traced direction -- lets
-	# DDGIProbeSelect's future lighting-only refresh (deferred, see plan)
-	# relight without retracing, same rationale as AC Shadows' own kept
-	# probe G-buffer.
-	RWTexture2DArray<float4> probe_gbuffer;
+	# xyz = shaded radiance, w = hit distance, one entry per traced ray (NOT
+	# per atlas texel any more) -- see this PassNode's own comment on
+	# DDGI_ProbeRayRadiance for the flat indexing and why there's no texel to
+	# write into directly.
+	RWStructuredBuffer<float4> probe_ray_radiance;
 
 	# Last frame's convolved output -- see this PassNode's own doc comment
 	# above for why reading them here is safe. Sampled at each hit point for
@@ -434,11 +459,10 @@ struct DDGIProbeConvolveData
 	# this pass at all.
 	DDGIInfo info;
 
-	Texture2DArray<float4> probe_radiance;
-	# Hit distance (its .w) feeds the chebyshev visibility mean/mean-square
-	# below -- same reason DDGIProbeTrace packs it here instead of only in
-	# probe_radiance's alpha.
-	Texture2DArray<float4> probe_gbuffer;
+	# xyz = shaded radiance, w = hit distance (feeds the visibility mean/
+	# mean-square below), one entry per traced ray -- see DDGI_ProbeRayRadiance's
+	# own comment (PassNode DDGIProbeTrace) for the flat indexing.
+	StructuredBuffer<float4> probe_ray_radiance;
 	RWTexture2DArray<float4> probe_irradiance;
 	RWTexture2DArray<float2> probe_visibility;
 
@@ -604,10 +628,15 @@ ComputePSO DDGIProbeResidencyMark
 # goes, except the coarsest cascade (DDGIInfo::cascade_info.w), which is
 # forced fully resident regardless -- it has nowhere further to fall back to
 # (cross-cascade fallback for a probe that isn't resident is a later step,
-# not yet implemented). Still no dilation (a probe several hops back in the
-# multi-bounce feedback chain, never directly hit by a screen ray, can drop
-# out the frame it stops being directly visible) -- start simple, revisit if
-# that's visible in practice. ALSO stream-compacts the (now real) marked set
+# still not yet implemented -- see ddgi_sample_irradiance_cascaded's own
+# comment, ddgi_sample.hlsl). Dilation IS implemented (a probe several hops
+# back in the multi-bounce feedback chain marking its own 8 feedback-read
+# neighbors needed too, so it doesn't drop the frame it stops being directly
+# hit) -- handled at the mark sites themselves (TraceIndirectDiffuse/
+# TraceReflection/DDGIProbeTrace's own feedback read), not here; this pass
+# only consumes what they wrote. Also toroidal-scroll forced eviction
+# (scroll_lo/scroll_count, DDGIProbeResidencyMarkData below) -- see that
+# struct's own comment. ALSO stream-compacts the (now real) marked set
 # into DDGI_CompactedProbeList/DDGI_CompactedProbeCount (see DDGIProbeSelect's
 # own comment on those). Renders TWO dispatches: the first zeroes this
 # cascade's own counter slot (can't be folded into the marking dispatch
@@ -649,17 +678,24 @@ PassNode DDGIProbeDispatchArgsBuild
 	[Always = UnorderedAccess] StructuredBuffer<DispatchRaysArguments> DDGI_DispatchRaysArgs;
 }
 
-# Traces DDGIInfo::rays_per_probe rays per selected probe over the sphere
-# (spherical-fibonacci directions -- no precomputed direction table needed),
-# shading each hit with the existing direct-sun material path
-# (MyClosestHitShader, universal_material_raytracing.hlsl), PLUS the
-# probe-irradiance feedback term: DDGI_ProbeIrradiance/DDGI_ProbeVisibility
-# are read here even though DDGIProbeConvolve (below) is the one that writes
-# them -- safe because DDGIProbeSelect (above) is their sole creator (see its
-# own comment for why) and runs before both. What Trace reads here is always
-# LAST frame's convolved result (Convolve hasn't run yet THIS frame), never a
-# same-frame value -- exactly the temporal feedback that produces
-# multi-bounce GI (see ddgi_probe_trace.hlsl's own doc comment).
+# Traces DDGIInfo::rays_per_probe.x (= DDGI_ProbeRayCount) rays per selected
+# probe over the sphere (ddgi_sphere_fibonacci, octahedral.hlsl -- no
+# precomputed direction table needed), shading each hit with the existing
+# direct-sun material path (MyClosestHitShader, universal_material_raytracing.hlsl),
+# PLUS the probe-irradiance feedback term: DDGI_ProbeIrradiance/
+# DDGI_ProbeVisibility are read here even though DDGIProbeConvolve (below) is
+# the one that writes them -- safe because DDGIProbeSelect (above) is their
+# sole creator (see its own comment for why) and runs before both. What Trace
+# reads here is always LAST frame's convolved result (Convolve hasn't run yet
+# THIS frame), never a same-frame value -- exactly the temporal feedback that
+# produces multi-bounce GI (see ddgi_probe_trace.hlsl's own doc comment).
+#
+# Each traced ray's fully-shaded result (direct + feedback) lands in
+# DDGI_ProbeRayRadiance -- a flat per-ray buffer, NOT an atlas texture: ray
+# count is independent of (and, at 32 vs. the atlas's own 8x8=64 texel
+# budget, smaller than) the octahedral output resolution, so there's no 1:1
+# texel to write into any more. DDGIProbeConvolve (below) resamples this
+# fixed ray set into the actual texel_size^2 output map.
 [Multiple = 5]
 [Compute]
 [SetupCondition = DDGISelectors::enabled && RenderDeviceCapabilities::rtx_supported]
@@ -694,25 +730,39 @@ PassNode DDGIProbeTrace
 	# resident and silently drops out from under whatever's still reading it.
 	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
-	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight)`] [ArrayCount = `Constants::DDGI_AtlasArraySlices`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
-	Texture DDGI_ProbeRadiance;
-	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight)`] [ArrayCount = `Constants::DDGI_AtlasArraySlices`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
-	Texture DDGI_ProbeGBuffer;
+	# xyz = fully-shaded radiance for this ray (direct + multi-bounce
+	# feedback), w = hit distance (feeds DDGIProbeConvolve's visibility mean/
+	# mean-square, same reason the old per-texel DDGI_ProbeGBuffer packed hit
+	# distance into its own .w instead of a separate buffer). Indexed by
+	# (this cascade's own probe_offset + probe_linear_index) * DDGI_ProbeRayCount
+	# + ray_index -- flat, not atlas-shaped, since a ray has no texel of its
+	# own any more (see this PassNode's own comment for why). Sole creator,
+	# same [Optional = pass_index == 0] pattern the old radiance/gbuffer
+	# textures used.
+	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount * Constants::DDGI_ProbeRayCount`] [Optional = data.pass_index == 0]
+	StructuredBuffer<float4> DDGI_ProbeRayRadiance;
 }
 
-# Cosine-convolves DDGI_ProbeRadiance into DDGI_ProbeIrradiance -- this is
-# the texture the per-pixel indirect-diffuse pass will eventually sample
-# (IndirectRTX's raygen, see plan step 5; not wired yet in this scaffold) --
-# and updates DDGI_ProbeVisibility (chebyshev depth-test weights for the
-# same 8-probe interpolation). v1: naive per-texel convolution loop, not AC
-# Shadows' LDS-prefiltered version (deferred, see plan).
+# Cosine-weight-resamples DDGI_ProbeRayRadiance's fixed DDGI_ProbeRayCount
+# directions per probe into DDGI_ProbeIrradiance -- the texture
+# IndirectRTX/ReflectionRTX's own raygens (raytracing.hlsl) and
+# DDGIProbeTrace's own multi-bounce feedback all sample -- and updates
+# DDGI_ProbeVisibility (hit-distance moments; the untraced chebyshev/variance
+# occlusion test that used to read it was replaced by DDGIOcclusionMode's
+# ProbeDepthTest/RTXRay modes, ddgi_sample.hlsl). Each of the
+# DDGI_ProbeTexelSize^2 (64) output texels blends ALL DDGI_ProbeRayCount (32)
+# rays weighted by cos(angle) between that texel's own octahedral direction
+# and each ray's ddgi_sphere_fibonacci direction -- a resample, not the old
+# 1:1 read, since there are fewer traced rays than output texels now. LDS-
+# prefiltered (ddgi_probe_convolve.hlsl's own comment): one input load per
+# probe's own ray set, shared across all 64 output threads via groupshared
+# memory, not a naive per-output-texel re-fetch.
 [Multiple = 5]
 [Compute]
 [SetupCondition = DDGISelectors::enabled && RenderDeviceCapabilities::rtx_supported]
 PassNode DDGIProbeConvolve
 {
-	[Always = Read] Texture DDGI_ProbeRadiance;
-	[Always = Read] Texture DDGI_ProbeGBuffer;
+	[Always = Read] StructuredBuffer<float4> DDGI_ProbeRayRadiance;
 	[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
 
 	# No [Size]/[Format]/[Static] here -- DDGIProbeSelect is the sole creator
@@ -852,7 +902,12 @@ PassNode DDGIIndirectDebug
 	# enables every writer of a Static resource regardless of pass order -- so
 	# without this, writing it here would keep this debug pass (and everything
 	# it reads) alive every frame, even when nothing displays DDGIIndirectDebug.
-	[Always = UnorderedAccess] [SkipEnablement] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
+	# Single bracket, not two -- a second separate [...] group on the same
+	# field silently lost its options to a SIGParser codegen bug (traced via
+	# the FrameGraph debugger's enablement-chain view: this pass was showing
+	# as enabled by its own write to this buffer, meaning SkipEnablement
+	# never made it into the generated builder.need() call at all).
+	[Always = UnorderedAccess, SkipEnablement] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture DDGIIndirectDebug;
 }

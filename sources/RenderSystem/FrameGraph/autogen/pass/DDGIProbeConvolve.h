@@ -26,10 +26,7 @@ public:
 		uint32_t pass_index = 0;
 
 
-		Handlers::Texture DDGI_ProbeRadiance = ResourceID::DDGI_ProbeRadiance;
-
-
-		Handlers::Texture DDGI_ProbeGBuffer = ResourceID::DDGI_ProbeGBuffer;
+		Handlers::StructuredBuffer<float4> DDGI_ProbeRayRadiance = ResourceID::DDGI_ProbeRayRadiance;
 
 
 		Handlers::StructuredBuffer<uint> DDGI_ProbeResidency = ResourceID::DDGI_ProbeResidency;
@@ -57,8 +54,7 @@ public:
 		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.need(data.DDGI_ProbeRadiance, FrameGraph::ResourceFlags::Read);
-			builder.need(data.DDGI_ProbeGBuffer, FrameGraph::ResourceFlags::Read);
+			builder.need(data.DDGI_ProbeRayRadiance, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::UnorderedAccess);
 			builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::UnorderedAccess);
@@ -70,8 +66,7 @@ public:
 		// the field fixes it.
 		struct Cache
 		{
-			FrameGraph::ChainIndex DDGI_ProbeRadiance = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeGBuffer = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_ProbeRayRadiance = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeResidency = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
@@ -79,8 +74,7 @@ public:
 
 		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 		{
-			cache.DDGI_ProbeRadiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeRadiance, ResourceID::DDGI_ProbeRadiance);
-			cache.DDGI_ProbeGBuffer = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeGBuffer, ResourceID::DDGI_ProbeGBuffer);
+			cache.DDGI_ProbeRayRadiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeRayRadiance, ResourceID::DDGI_ProbeRayRadiance);
 			cache.DDGI_ProbeResidency = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency);
 			cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
 			cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
@@ -95,8 +89,7 @@ public:
 		// previous link's desc, which LoadGraph does once every pass has loaded.
 		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 		{
-			builder.load(data.DDGI_ProbeRadiance, ResourceID::DDGI_ProbeRadiance, cache.DDGI_ProbeRadiance);
-			builder.load(data.DDGI_ProbeGBuffer, ResourceID::DDGI_ProbeGBuffer, cache.DDGI_ProbeGBuffer);
+			builder.load(data.DDGI_ProbeRayRadiance, ResourceID::DDGI_ProbeRayRadiance, cache.DDGI_ProbeRayRadiance);
 			builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
 			builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
 			builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
@@ -106,8 +99,7 @@ public:
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::DDGI_ProbeRadiance, false },
-			{ ResourceID::DDGI_ProbeGBuffer, false },
+			{ ResourceID::DDGI_ProbeRayRadiance, false },
 			{ ResourceID::DDGI_ProbeResidency, false },
 			{ ResourceID::DDGI_ProbeIrradiance, true },
 			{ ResourceID::DDGI_ProbeVisibility, true },

@@ -9,16 +9,15 @@
 #include "ddgi_sample.hlsl"
 #include "../common/common.hlsl"
 
-// v1 (see [[project-ddgi]] planning notes): one ray per radiance-atlas texel
-// (dispatch dims = DDGI_AtlasWidth x DDGI_AtlasHeight x DDGI_ProbeCountY in
-// the fixed-size path, see below), direction from octahedral-decoding that
-// texel's own local UV within its probe's cell.
-// Real DDGI implementations decouple ray count from texel resolution (trace
-// a small fixed set of directions per probe, then resample into the
-// octahedral map) -- this 1:1 mapping is a v1 simplification, not the final
-// design, but it does trace and shade for real: same ColorPass hit group
-// (MyClosestHitShader) IndirectRTX's own per-pixel GI ray uses, so a probe's
-// radiance texel gets genuine direct-sun-lit material shading.
+// Traces DDGI_ProbeRayCount (info.GetRays_per_probe().x) spherical-fibonacci
+// directions per probe -- decoupled from the octahedral output atlas's own
+// texel resolution (was 1 ray per radiance-atlas texel, i.e. hard-tied to
+// DDGI_ProbeTexelSize^2; see ddgi.sig's DDGI_ProbeRayCount comment for why
+// that changed). Each ray's fully-shaded result lands in a flat
+// DDGI_ProbeRayRadiance entry, not an atlas texel -- DDGIProbeConvolve
+// resamples this fixed ray set into the actual texel grid. Real material
+// shading either way: same ColorPass hit group (MyClosestHitShader)
+// IndirectRTX's own per-pixel GI ray uses.
 //
 // Multi-bounce feedback: on a real hit, samples DDGI_ProbeIrradiance/
 // DDGI_ProbeVisibility -- LAST frame's convolved output, see
@@ -28,9 +27,14 @@
 // (AC Shadows talk: "using values from the previous frame ... multi-bounce
 // global illumination"): light keeps propagating probe-to-probe over
 // successive frames instead of needing more bounces traced per frame. No pi/
-// BRDF normalization on the added term yet (tuning item, not structural) and
-// no round-robin budget skip -- every probe retraces every frame for now
-// (both deferred, see plan).
+// BRDF normalization on the added term yet (tuning item, not structural).
+// Retrace skip is real now, just not the AC Shadows per-probe greedy-
+// priority scheme the plan called for: residency culling (DDGIProbeResidencyMark)
+// skips a probe entirely once nothing marks it needed, and the rotating
+// stagger gate (DDGIGraph.cpp's g_ddgi_stagger_k/g_ddgi_stagger_bucket)
+// retraces only a rotating fraction of each cascade's probes per frame.
+// DDGIProbeSelect itself, the pass meant to own the real per-probe budget,
+// is still the original v1 scaffold -- see its own comment.
 [shader("raygeneration")]
 void DDGIProbeTraceRaygenShader()
 {
@@ -45,94 +49,109 @@ void DDGIProbeTraceRaygenShader()
 	const Raytracing raytracing = CreateRaytracing();
 	const FrameInfo frame = CreateFrameInfo();
 
-	uint texel_size = info.GetAtlas_info().x;
+	uint ray_count = max(info.GetRays_per_probe().x, 1);
 
 	// Two addressing schemes, matching whichever dispatch shape
 	// DDGIGraph.cpp's render() actually issued this frame (info.GetFlags().y,
-	// mirrored from g_ddgi_use_indirect_dispatch). Either way the atlas is a
-	// Texture2DArray: the 2D plane only ever holds (probe_x, probe_z);
-	// probe_y and the cascade both live in the array dimension instead
-	// (DDGIProbeSelect's own comment, ddgi.sig, on why -- D3D12's 16384 max
-	// texture dimension).
+	// mirrored from g_ddgi_use_indirect_dispatch). Neither touches the
+	// octahedral atlas at all any more -- a ray has no texel of its own
+	// (ddgi.sig's DDGI_ProbeRayRadiance comment) -- both just need to end up
+	// with (probe_coord, ray_index).
 	//
-	// Fixed-size path: launches a 3D WxHxDDGI_ProbeCountY grid over the full
-	// atlas -- xy is DispatchRaysIndex().xy (the plane), z is probe_y
-	// directly.
+	// Fixed-size path: launches a 3D grid of
+	// (DDGI_ProbeCountX*DDGI_ProbeRayCount) x DDGI_ProbeCountZ x DDGI_ProbeCountY.
+	// Deliberately kept 3D (probe_x/ray folded into the X dimension only, Z
+	// and Y kept as real dispatch dimensions) rather than one flat 1D width
+	// covering the whole cascade -- see ddgi_probe_trace_render's own
+	// comment (DDGIGraph.cpp) for why a single enormous 1D DispatchRays width
+	// already caused a real device-removed hang on this hardware/driver.
 	//
 	// Indirect path (real ExecuteIndirect, see DDGIProbeDispatchArgsBuild/
 	// DispatchRaysArgsBuild): launches a flat 1D grid sized to exactly
-	// (needed probes x texels/probe) -- there is no atlas position to decode
-	// directly from a 1D index, so instead: divide out which compacted-list
-	// entry (which probe) and which texel within that probe's own cell,
-	// look the probe's full grid coord (including its own y) up from
-	// DDGI_CompactedProbeList, then reconstruct its atlas-plane origin
-	// (ddgi_atlas_origin, the exact inverse of ddgi_atlas_probe_coord below)
-	// and add the local texel back on.
-	uint2 atlas_texel;
+	// (needed probes x rays/probe) -- safe as flat 1D specifically because
+	// residency+stagger compaction keeps its actual width far below the
+	// pathological case above.
 	uint3 probe_coord;
+	uint ray_index;
 	if (info.GetFlags().y != 0)
 	{
-		uint texels_per_probe = texel_size * texel_size;
 		uint linear_id = DispatchRaysIndex().x;
-		uint list_index = linear_id / texels_per_probe;
-		uint local_texel_linear = linear_id % texels_per_probe;
-		uint2 local_texel = uint2(local_texel_linear % texel_size, local_texel_linear / texel_size);
+		uint list_index = linear_id / ray_count;
+		ray_index = linear_id % ray_count;
 
 		uint probe_linear_index = trace_data.GetCompacted_list()[info.GetCascade_info().x + list_index];
 		probe_coord = probes.ddgi_probe_grid_coord(probe_linear_index, info.GetProbe_counts().xyz);
-		atlas_texel = probes.ddgi_atlas_origin(probe_coord, texel_size) + local_texel;
 	}
 	else
 	{
-		atlas_texel = DispatchRaysIndex().xy;
-		uint probe_y = DispatchRaysIndex().z;
-		probe_coord = probes.ddgi_atlas_probe_coord(atlas_texel, texel_size, probe_y);
+		uint probe_x = DispatchRaysIndex().x / ray_count;
+		ray_index = DispatchRaysIndex().x % ray_count;
+		probe_coord = uint3(probe_x, DispatchRaysIndex().z, DispatchRaysIndex().y);
 	}
-
-	uint slice = probes.ddgi_atlas_array_slice(probe_coord.y, info.GetCascade_info().y);
 
 	// Residency early-out (see [[project-ddgi]] planning notes,
 	// DDGIProbeResidencyMark's own comment): skip the TraceRay for a probe
 	// nothing needs this frame. Redundant in the indirect-dispatch branch
 	// above (every entry in DDGI_CompactedProbeList was already marked
 	// needed to get there) but still load-bearing in the fixed-dispatch
-	// branch, which always launches over the full atlas regardless of
-	// residency. Leaves the probe's existing radiance/gbuffer texels
-	// untouched rather than writing zero, so a probe that stops being needed
-	// keeps its last valid value for the cross-cascade fallback / for
-	// whenever it's reactivated.
+	// branch, which always launches over the full grid regardless of
+	// residency. Leaves the probe's existing ray radiance untouched rather
+	// than writing zero, so a probe that stops being needed keeps its last
+	// valid value for the cross-cascade fallback / for whenever it's
+	// reactivated.
 	uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, info.GetProbe_counts().xyz);
 	uint probe_buffer_index = info.GetCascade_info().x + probe_linear_index;
 	if (trace_data.GetProbe_residency()[probe_buffer_index] == 0)
 		return;
 
-	float2 local_uv = probes.ddgi_atlas_local_uv(atlas_texel, texel_size);
+	// Stagger early-out (see DDGIGraph.cpp's g_ddgi_stagger_k/
+	// g_ddgi_stagger_bucket and DDGIProbeResidencyMark's own identical gate
+	// on stream compaction). Redundant in the indirect-dispatch branch above
+	// -- every DDGI_CompactedProbeList entry was already both needed AND due
+	// to get compacted -- but load-bearing in the fixed-dispatch branch,
+	// which, like the residency check just above, always launches over the
+	// full grid regardless of whose turn it is this frame.
+	uint stagger_k = max(info.GetRays_per_probe().y, 1);
+	uint stagger_bucket = info.GetRays_per_probe().z;
+	if ((probe_linear_index % stagger_k) != stagger_bucket)
+		return;
+
+	float3 dir = ddgi_sphere_fibonacci(ray_index, ray_count);
 
 	// Ray jitter (DDGIInfo::flags.z bit 2, "Jitter probe rays"): without
-	// this, a texel always traces the exact same fixed direction every
-	// frame it's resident -- if that direction happens to graze past a wall
-	// edge or through a small gap into the sky, that leak is a permanent,
-	// unchanging bias baked into the probe's stored radiance, not noise
-	// that would ever average out (unlike IndirectRTX's own per-pixel rays,
-	// which already jitter via blue noise). Nudging the sampled UV by a
-	// small FRACTION of a texel (not a whole one) means each frame samples
-	// a slightly different direction near the same nominal one, so an
-	// occasional grazing leak gets diluted by the multi-bounce feedback
-	// loop's own frame-to-frame blending instead of persisting exactly.
-	// Deliberately small: DDGIProbeConvolve's cosine-weighted convolution
-	// still treats each texel as if it were sampled at its exact nominal
-	// (unjittered) direction, so a large jitter would bias that weighting;
-	// a fraction of a texel keeps the actual sample close enough to nominal
-	// for that approximation to hold.
+	// this, a ray always traces the exact same fixed direction every frame
+	// it's resident -- if that direction happens to graze past a wall edge
+	// or through a small gap into the sky, that leak is a permanent,
+	// unchanging bias baked into the probe's stored radiance, not noise that
+	// would ever average out (unlike IndirectRTX's own per-pixel rays, which
+	// already jitter via blue noise). Nudging the traced direction by a
+	// small FRACTION of the inter-ray spacing (not a whole ray-width) means
+	// each frame samples a slightly different direction near the same
+	// nominal one, so an occasional grazing leak gets diluted by the multi-
+	// bounce feedback loop's own frame-to-frame blending instead of
+	// persisting exactly. Deliberately small: DDGIProbeConvolve's cosine-
+	// weighted resample still treats this ray as if it landed at its exact
+	// nominal (unjittered) ddgi_sphere_fibonacci direction, so a large
+	// jitter would bias that weighting; a fraction of the spacing keeps the
+	// actual sample close enough to nominal for that approximation to hold.
 	if ((info.GetFlags().z & (uint)DDGIControlFlags::JitterRays) != 0)
 	{
-		float2 seed = float2(atlas_texel) + float2(slice * 97u, slice * 131u);
+		float2 seed = float2(float(probe_buffer_index), float(ray_index));
 		float2 rand = GetRandom2(seed, frame.GetTime());
-		float2 jitter = (rand - 0.5) * (0.7 / texel_size);
-		local_uv = clamp(local_uv + jitter, -1.0, 1.0);
+		// Perturb within the plane tangent to `dir` -- rotating a unit vector
+		// by a small offset along two axes orthogonal to it, then
+		// renormalizing, same shape as any small-angle direction jitter.
+		// Average inter-ray angular spacing on a unit sphere with `ray_count`
+		// roughly-uniform points is ~sqrt(4*PI/ray_count); nudging by a
+		// fraction of THAT (not a fixed constant) keeps the jitter
+		// proportional to however dense/sparse the ray set actually is.
+		float3 up = abs(dir.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
+		float3 tangent = normalize(cross(up, dir));
+		float3 bitangent = cross(dir, tangent);
+		float spacing = sqrt(4.0 * PI / float(ray_count));
+		float2 jitter = (rand - 0.5) * (0.35 * spacing);
+		dir = normalize(dir + tangent * jitter.x + bitangent * jitter.y);
 	}
-
-	float3 dir = ddgi_oct_decode(local_uv);
 
 	float3 probe_pos = probes.ddgi_probe_world_pos(probe_coord, info.GetGrid_min().xyz, info.GetProbe_spacing().xyz, float3(0, 0, 0), info.GetProbe_counts().xyz);
 
@@ -231,16 +250,13 @@ void DDGIProbeTraceRaygenShader()
 	// system -- the feedback term above reads OTHER probes' stored
 	// irradiance, so if one of them is already bad, `indirect` (and hence
 	// `result_color`) inherits it here and would otherwise carry it forward
-	// into DDGI_ProbeRadiance, letting DDGIProbeConvolve read it as if it
+	// into DDGI_ProbeRayRadiance, letting DDGIProbeConvolve read it as if it
 	// were legitimate. Catching it at the write means a poisoned neighbor
 	// can't use THIS probe to spread further, even before Convolve's own
 	// guard heals the neighbor itself.
 	if (any(isnan(result_color)) || any(isinf(result_color)))
 		result_color = payload_gi.color.rgb;
 
-	// atlas_texel is already the correct (x,z)-plane position -- slice
-	// (computed above) is what lands the write in this probe's own layer of
-	// the shared atlas array.
-	trace_data.GetProbe_radiance()[uint3(atlas_texel, slice)] = float4(result_color, 1);
-	trace_data.GetProbe_gbuffer()[uint3(atlas_texel, slice)] = float4(dir, payload_gi.dist);
+	uint ray_buffer_index = probe_buffer_index * ray_count + ray_index;
+	trace_data.GetProbe_ray_radiance()[ray_buffer_index] = float4(result_color, payload_gi.dist);
 }

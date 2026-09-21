@@ -51,6 +51,12 @@ class FrameGraphTimelineCanvas : public dock_base
         std::vector<std::pair<HAL::CommandListType, UINT>> cross_queue_deps;
         // Copied from Pass::debug_commands during rebuild(); barrier_point == nullptr.
         std::vector<HAL::CommandRecord> debug_commands;
+
+        // One formatted line per hop of FrameGraph::TaskBuilder::enablement_chain(),
+        // this pass first, root last. Built once at rebuild() time (not a live
+        // Pass* — those get recycled via pass_cache across frames, same reason
+        // every other PassInfo field is a copy, not a pointer).
+        std::vector<std::string> enablement_chain;
     };
 
     struct ResourceCell
@@ -693,6 +699,18 @@ class FrameGraphTimelineCanvas : public dock_base
             }
             if (info.cross_queue_deps.empty())
                 add_row("Sync:   none");
+
+            // Why this pass is enabled: the resource/consumer chain
+            // TaskBuilder::enablement_chain() walked back from this pass to a
+            // root (an unconditionally-required pass, or a resource that was
+            // itself [Required]). This pass first, root last.
+            y += 6.0f;
+            add_row("-- Enablement chain --", col_dim);
+            if (info.enablement_chain.empty())
+                add_row("  (none recorded)", col_dim);
+            else
+                for (auto& line : info.enablement_chain)
+                    add_row("  " + line);
 
             if constexpr (!BuildOptions::Dev)
             {
@@ -1435,6 +1453,22 @@ private:
             info.queue          = pass->get_type();
             info.put_fence      = pass->put_fence;
             info.debug_commands = pass->debug_commands;
+            for (auto* hop : g.builder.enablement_chain(pass))
+            {
+                if (hop->required_pass_root)
+                {
+                    info.enablement_chain.push_back(to_str(hop->name) + "  (always required -- required_passes)");
+                    continue;
+                }
+                if (!hop->enabled_via_resource)
+                    break; // shouldn't happen once enabled, but don't fabricate a line
+
+                auto* consumer = g.builder.get_pass(hop->enabled_via_consumer_id);
+                std::string consumed_by = consumer ? to_str(consumer->name) : "required output (no consumer pass)";
+                info.enablement_chain.push_back(
+                    to_str(hop->name) + "  writes " + hop->enabled_via_resource->name() +
+                    "  ->  needed by " + consumed_by);
+            }
             static const HAL::CommandListType all_types[] = {
                 HAL::CommandListType::DIRECT,
                 HAL::CommandListType::COMPUTE,

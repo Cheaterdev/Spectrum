@@ -243,8 +243,7 @@ public:
 		L"RTXReflectionDirPdf",
 		L"RTXIndirectNoiseHalf",
 		L"RTXIndirectNoise",
-		L"DDGI_ProbeRadiance",
-		L"DDGI_ProbeGBuffer",
+		L"DDGI_ProbeRayRadiance",
 		L"DDGIIndirectDebug",
 		L"VoxelIndirectNoiseRaw",
 		L"VoxelReflectionNoiseRaw",
@@ -1180,7 +1179,7 @@ public:
 		{ true, { RTXIndirectNoise_c0_pass_refs + 0, 1 } },
 		{ false, { RTXIndirectNoise_c0_pass_refs + 1, 2 } },
 	};
-	static inline const FrameGraph::PassRef DDGI_ProbeRadiance_c0_pass_refs[] = {
+	static inline const FrameGraph::PassRef DDGI_ProbeRayRadiance_c0_pass_refs[] = {
 		{ PassID::DDGIProbeTrace, 0 },
 		{ PassID::DDGIProbeTrace, 1 },
 		{ PassID::DDGIProbeTrace, 2 },
@@ -1192,33 +1191,13 @@ public:
 		{ PassID::DDGIProbeConvolve, 3 },
 		{ PassID::DDGIProbeConvolve, 4 },
 	};
-	static inline const FrameGraph::PrecompiledState DDGI_ProbeRadiance_c0_states[] = {
-		{ true, { DDGI_ProbeRadiance_c0_pass_refs + 0, 1 } },
-		{ true, { DDGI_ProbeRadiance_c0_pass_refs + 1, 1 } },
-		{ true, { DDGI_ProbeRadiance_c0_pass_refs + 2, 1 } },
-		{ true, { DDGI_ProbeRadiance_c0_pass_refs + 3, 1 } },
-		{ true, { DDGI_ProbeRadiance_c0_pass_refs + 4, 1 } },
-		{ false, { DDGI_ProbeRadiance_c0_pass_refs + 5, 5 } },
-	};
-	static inline const FrameGraph::PassRef DDGI_ProbeGBuffer_c0_pass_refs[] = {
-		{ PassID::DDGIProbeTrace, 0 },
-		{ PassID::DDGIProbeTrace, 1 },
-		{ PassID::DDGIProbeTrace, 2 },
-		{ PassID::DDGIProbeTrace, 3 },
-		{ PassID::DDGIProbeTrace, 4 },
-		{ PassID::DDGIProbeConvolve, 0 },
-		{ PassID::DDGIProbeConvolve, 1 },
-		{ PassID::DDGIProbeConvolve, 2 },
-		{ PassID::DDGIProbeConvolve, 3 },
-		{ PassID::DDGIProbeConvolve, 4 },
-	};
-	static inline const FrameGraph::PrecompiledState DDGI_ProbeGBuffer_c0_states[] = {
-		{ true, { DDGI_ProbeGBuffer_c0_pass_refs + 0, 1 } },
-		{ true, { DDGI_ProbeGBuffer_c0_pass_refs + 1, 1 } },
-		{ true, { DDGI_ProbeGBuffer_c0_pass_refs + 2, 1 } },
-		{ true, { DDGI_ProbeGBuffer_c0_pass_refs + 3, 1 } },
-		{ true, { DDGI_ProbeGBuffer_c0_pass_refs + 4, 1 } },
-		{ false, { DDGI_ProbeGBuffer_c0_pass_refs + 5, 5 } },
+	static inline const FrameGraph::PrecompiledState DDGI_ProbeRayRadiance_c0_states[] = {
+		{ true, { DDGI_ProbeRayRadiance_c0_pass_refs + 0, 1 } },
+		{ true, { DDGI_ProbeRayRadiance_c0_pass_refs + 1, 1 } },
+		{ true, { DDGI_ProbeRayRadiance_c0_pass_refs + 2, 1 } },
+		{ true, { DDGI_ProbeRayRadiance_c0_pass_refs + 3, 1 } },
+		{ true, { DDGI_ProbeRayRadiance_c0_pass_refs + 4, 1 } },
+		{ false, { DDGI_ProbeRayRadiance_c0_pass_refs + 5, 5 } },
 	};
 	static inline const FrameGraph::PassRef DDGIIndirectDebug_c0_pass_refs[] = {
 		{ PassID::DDGIIndirectDebug, 0 },
@@ -1559,8 +1538,7 @@ public:
 		{ ResourceID::RTXReflectionDirPdf, 0, RTXReflectionDirPdf_c0_states },
 		{ ResourceID::RTXIndirectNoiseHalf, 0, RTXIndirectNoiseHalf_c0_states },
 		{ ResourceID::RTXIndirectNoise, 0, RTXIndirectNoise_c0_states },
-		{ ResourceID::DDGI_ProbeRadiance, 0, DDGI_ProbeRadiance_c0_states },
-		{ ResourceID::DDGI_ProbeGBuffer, 0, DDGI_ProbeGBuffer_c0_states },
+		{ ResourceID::DDGI_ProbeRayRadiance, 0, DDGI_ProbeRayRadiance_c0_states },
 		{ ResourceID::DDGIIndirectDebug, 0, DDGIIndirectDebug_c0_states },
 		{ ResourceID::VoxelIndirectNoiseRaw, 0, VoxelIndirectNoiseRaw_c0_states },
 		{ ResourceID::VoxelReflectionNoiseRaw, 0, VoxelReflectionNoiseRaw_c0_states },

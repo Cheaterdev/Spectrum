@@ -134,7 +134,21 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 		}
 	}
 
-	if (needed)
+	// Stagger gate: which rotating 1/stagger_k-sized subset of THIS cascade's
+	// probes is due for actual retrace this frame (DDGIGraph.cpp's
+	// g_ddgi_stagger_k/g_ddgi_stagger_bucket, mirrored here via
+	// DDGIInfo::rays_per_probe.yz -- see that field's own comment, ddgi.sig).
+	// Deliberately NOT folded into `needed`/probe_residency above: a probe
+	// that's needed but simply hasn't had its turn this frame stays resident
+	// (still sampled, still contributing its last traced value) -- only
+	// whether it gets RE-COMPACTED for an actual trace/convolve this frame is
+	// gated here. stagger_k=1 (staggering off, or this cascade not yet
+	// ramped up) always passes: bucket 0 of a 1-sized cycle is every frame.
+	uint stagger_k = max(data.GetInfo().GetRays_per_probe().y, 1);
+	uint stagger_bucket = data.GetInfo().GetRays_per_probe().z;
+	bool due_this_frame = (linear_index % stagger_k) == stagger_bucket;
+
+	if (needed && due_this_frame)
 	{
 		uint dest_index;
 		InterlockedAdd(data.GetCompacted_count()[cascade_index], 1, dest_index);

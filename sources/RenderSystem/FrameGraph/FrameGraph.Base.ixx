@@ -1291,6 +1291,18 @@ public:
 
 		static PassRef ref_of(const Pass& pass);
 
+		// Walks Pass::enabled_via_consumer_id backward from `pass` to a root,
+		// following each hop's "who consumed the resource I write" link
+		// recorded during Graph::setup()'s reachability walk. Returns the
+		// chain starting with `pass` itself; the last entry is either a
+		// required_pass_root (enabled unconditionally, no resource behind it)
+		// or a pass whose own enabled_via_resource was [Required] directly
+		// (enabled_via_consumer_id points past the end of `passes`, so the
+		// walk can't resolve a further consumer and stops there). Loop-safe:
+		// bails out if a pass is revisited, which should never happen since
+		// the reachability walk only ever assigns enabled_via_* once per pass.
+		std::vector<Pass*> enablement_chain(Pass* pass) const;
+
 		// Resolves a ResourceVersion to its chain link. Distinct from get(id)
 		// above on purpose: that one returns chain.active() and nulls out when
 		// the resource is disabled, which is right for its callers but wrong
@@ -1416,6 +1428,26 @@ public:
 		int dependency_level;
 		bool enabled = false;
 		bool renderable = true;
+
+		// Why `enabled` became true: the FIRST resource/consumer pair the
+		// reachability walk (Graph::setup()'s process_resource) discovered for
+		// this pass, before it short-circuits on already-enabled passes. Not
+		// necessarily the ONLY path that would have enabled it, just the one
+		// the walk happened to find first -- enough to answer "why is this
+		// here" for the debugger without re-deriving the whole graph.
+		//
+		// required_pass_root: this pass is in TaskBuilder::required_passes,
+		// unconditionally enabled with no resource behind it -- a real root,
+		// not a hop.
+		// enabled_via_resource: the resource this pass writes that some
+		// consumer needed. Null if not yet enabled, or a required_pass_root.
+		// enabled_via_consumer_id: the pass that read enabled_via_resource.
+		// Out of range (>= builder.passes.size()) for a resource that was
+		// itself [Required] directly (the other kind of root) -- get_pass()
+		// on it returns null, which is what ends the chain walk.
+		bool                 required_pass_root       = false;
+		ResourceAllocInfo*   enabled_via_resource      = nullptr;
+		UINT                 enabled_via_consumer_id   = 0;
 		PassFlags flags;
 		LiteralWStr name{L""};				  
 
