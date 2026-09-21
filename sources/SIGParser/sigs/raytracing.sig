@@ -177,6 +177,22 @@ struct RayPayload
 	[write = {anyhit,closesthit,miss,caller}]
 	float dist;
 
+	# Opt-in per-ray shadow technique (see [[project-ddgi]] planning notes):
+	# 0 (default, set by init() below) = MyClosestHitShader's own real
+	# recursive shadow ray (ColorShadowPass), unchanged for every existing
+	# caller. 1 = a single cheap VSM lookup (FrameInfo::vsm,
+	# get_shadow_vsm_simple) instead -- one less BVH traversal per hit.
+	# DDGIProbeTrace (ddgi_probe_trace.hlsl) is the only caller that sets
+	# this today, since a probe texel's own shadow term doesn't need the
+	# same precision a primary screen ray's does, and DDGI traces FAR more
+	# rays per frame than any other single RTX consumer. Callers that build
+	# their own payload field-by-field instead of calling init() (see this
+	# file's own raytracing.hlsl callers) must set this explicitly too, or
+	# MyClosestHitShader reads whatever garbage was left in the payload.
+	[read = {anyhit,closesthit,miss,caller}]
+	[write = {anyhit,closesthit,miss,caller}]
+	uint use_vsm_shadow;
+
 	%{
 
 	RayPayload propagate(float surfaceSpreadAngle = 0, float hitT = 0)
@@ -186,6 +202,12 @@ struct RayPayload
 		result.color = 0;
 		result.dist = 0;
 		result.recursion = recursion + 1;
+		// Inherited, not reset -- a recursive bounce spawned from a
+		// VSM-shadowed ray should keep using VSM too, same as every other
+		// field here is otherwise left for MyClosestHitShader to fill in
+		// fresh on the next hit (unlike init(), which is a top-level ray's
+		// own first-use default).
+		result.use_vsm_shadow = use_vsm_shadow;
 
 		result.cone = cone.propagate(surfaceSpreadAngle, hitT);
 
@@ -201,6 +223,7 @@ struct RayPayload
 		dist = 0;
 		cone.angle = 0;
 		cone.width = 0;
+		use_vsm_shadow = 0;
 	}
 
 	}%

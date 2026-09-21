@@ -58,28 +58,44 @@ Pipeline MainPipeline
 	GBufferDownsampler;
 	[Async]NormalRoughnessRepack;
 	[Async]ShadowRTX;
-	# DDGI probe volume (ddgi.sig) -- must finish before ReflectionRTX/
-	# IndirectRTX below, both of which sample DDGI_ProbeIrradiance/
-	# Visibility/Residency/ResidencyPending (see IndirectRTX.cpp/
-	# ReflectionRTX.cpp's own binding comments). ReflectionRTXHalf/
-	# ReflectionRTX used to sit above this block, before it read any DDGI
-	# resource -- once they started reading DDGI_ProbeIrradiance too, that
-	# ordering crashed in ResourceChain::active() (null-deref, PassNode
-	# reads a resource its own creator pass hasn't created yet) the same
-	# way NRD_GBufferPack's own comment below already documents for a
-	# different pass. Any future PassNode that starts reading a DDGI
-	# resource must be placed after this block too, not just declare the
-	# field.
+	# DDGIProbeSelect ONLY (not the rest of the DDGI block -- see below):
+	# sole creator of DDGI_ProbeIrradiance/Visibility/Residency/
+	# ResidencyPending/etc (ddgi.sig's own comment on [Optional =
+	# data.pass_index == 0]), so it must still run before ReflectionRTX/
+	# IndirectRTX below, which read those resources -- a PassNode reading a
+	# resource its own creator pass hasn't created THIS FRAME null-derefs in
+	# ResourceChain::active() (crashed here once already; see
+	# TaskBuilder::need()'s own diagnostic, FrameGraph.Base.ixx, added after
+	# that). Creating it here is enough even though the REST of the DDGI
+	# chain now runs after ReflectionRTX/IndirectRTX (below) -- what
+	# ReflectionRTX/IndirectRTX actually read is last frame's convolved
+	# values, same one-frame-lagged read DDGIProbeTrace's own feedback
+	# sample already relied on before this reorder (ddgi_probe_trace.hlsl's
+	# own comment) -- so the buffer merely needs to EXIST this frame, not be
+	# freshly written yet.
 	[Async]DDGIProbeSelect;
-	[Async]DDGIProbeResidencyMark;
-	[Async]DDGIProbeDispatchArgsBuild;
-	[Async]DDGIProbeTrace;
-	[Async]DDGIProbeConvolve;
-	[Async]DDGIIndirectDebug;
 	[Async]ReflectionRTXHalf;
 	[Async]ReflectionRTX;
 	[Async]IndirectRTXHalf;
 	[Async]IndirectRTX;
+	# Rest of the DDGI chain (see [[project-ddgi]] planning notes): moved
+	# here, after ReflectionRTX/IndirectRTX have already read this frame's
+	# (one-frame-stale) probe data, and onto [Async2] -- the same queue
+	# VSM's own long async chain (below) uses -- instead of [Async], so this
+	# frame's probe retrace/convolve overlaps with the REST of the frame
+	# (NRD/SMAA/FSR/DLSS/UI, further down) on the graphics queue, rather
+	# than sitting in the critical path IndirectRTX/ReflectionRTX used to
+	# block on waiting for it. Its own output (DDGI_ProbeIrradiance etc.) is
+	# not read again by anything else this frame -- only next frame's
+	# ReflectionRTX/IndirectRTX (above) and DDGIProbeTrace's own feedback
+	# read it -- so nothing downstream needs to wait for this chain to
+	# finish before the frame can present; it just needs to be done before
+	# next frame's own DDGIProbeSelect/ReflectionRTX/IndirectRTX run.
+	[Async2]DDGIProbeResidencyMark;
+	[Async2]DDGIProbeDispatchArgsBuild;
+	[Async2]DDGIProbeTrace;
+	[Async2]DDGIProbeConvolve;
+	[Async2]DDGIIndirectDebug;
 	# Voxel-cone-traced alternative sources for NRD_REBLUR_Execute below
 	# (selected via g_indirect_source/g_reflection_source, see
 	# [[project-nrd-integration]]) -- run after Mipmapping (VoxelLighted is
@@ -95,28 +111,28 @@ Pipeline MainPipeline
 
 											[Async]
 											RTXShadow;
-											[Async2]VSM_DepthAnalysis;
+											[Async]VSM_DepthAnalysis;
 											# Phase 5.18 Part A: must run before VSM_BlockerClassify/VSM_BlockerSearch
 											# now (both read VSM_PageHiZ) -- same [Async2] queue so that
 											# ordering is ordinary same-queue in-order execution, not a new
 											# cross-queue fence. See VSM_HiZRebuild's own comment in
 											# vsm.sig. Moved here from its previous spot near the end of
 											# the pipeline.
-											[Async2]VSM_HiZRebuild;
+											[Async]VSM_HiZRebuild;
 											# Phase 5.18 Part A follow-up (take 4): three stages, in order --
 											# classify builds the tile lists, search runs indirectly over
 											# just the ambiguous ones, resolve issues the three per-tile PSOs
 											# (full-lit/full-shadow/shadow-blur) that write the final shadow
 											# value. See vsm.sig's own PassNode comments.
-											[Async2]VSM_BlockerClassify;
-											[Async2]VSM_BlockerSearch;
-											[Async2]VSM_ScreenSpaceShadow;
-											[Async2]VSM_ShadowResolve;
-											[Async2]VSM_Combine;
+											[Async]VSM_BlockerClassify;
+											[Async]VSM_BlockerSearch;
+											[Async]VSM_ScreenSpaceShadow;
+											[Async]VSM_ShadowResolve;
+											[Async]VSM_Combine;
 											# Debug-only overlay, after VSM_ShadowResolve/VSM_Combine so it
 											# paints on top of whichever one actually shaded the result -- see
 											# its own PassNode comment in vsm.sig.
-											[Async2]VSM_DebugClassifyOverlay;
+											[Async]VSM_DebugClassifyOverlay;
 
 		[Async]NRD_REBLUR_Execute;
 		# FSR/DLSS-side equivalent of the indirect term RTXCombine computes

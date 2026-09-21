@@ -360,8 +360,11 @@ export import :Autogen.Tables.WorkGR_ClassifyPixels_NodeEmulation;
 export import :Autogen.Slots.WorkGR_Shadows_NodeEmulation;
 export import :Autogen.Tables.WorkGR_Shadows_NodeEmulation;
 
-// Note: PSO modules are imported privately instead of exported to reduce
-// module interface bloat. Helper functions access them internally.
+// PSOS::, RTX:: and RT:: are named directly by RenderSystem (pass render
+// functions, Context.ixx's RT::GBuffer::Compiled), so these partitions are
+// re-exported. A bare `import` here compiles HAL fine and fails only in the
+// importing layer, with "RT is not a class or namespace name".
+
 export import :Autogen.PSO.BlueNoise;
 export import :Autogen.PSO.BRDF;
 export import :Autogen.PSO.DDGIProbeSelect;

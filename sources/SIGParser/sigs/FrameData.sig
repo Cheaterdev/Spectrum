@@ -80,6 +80,22 @@ struct FrameInfo
 	# DDGI-exclusive -- see that flag's own comment.
 	uint debugFlags = 0;
 
+	# VSM's lean world-position shadow lookup (vsm.sig's own struct, used
+	# outside VSM's own passes -- see its doc comment there), bound globally
+	# here rather than per-pass like VoxelGI::Lighting's own VSMShadowLookup
+	# field: the one reader that actually needs it, MyClosestHitShader
+	# (universal_material_raytracing.hlsl), is a SHARED hit-group shader
+	# reached from many differently-shaped binding structs (DDGIProbeTraceData,
+	# VoxelOutput, GBuffer...), so there's no single caller-owned struct to
+	# embed it in the way Lighting could. Filled once per frame in main.cpp's
+	# own FrameInfo-population lambda (same spot mainHiZ/debugFlags are),
+	# from VSM::fill_shadow_lookup_constants -- see RayPayload::use_vsm_shadow
+	# (raytracing.sig) for who actually opts into reading it (DDGIProbeTrace,
+	# ddgi_probe_trace.hlsl, as of this comment -- see [[project-ddgi]]
+	# planning notes for why: replaces a second recursive RTX shadow ray per
+	# probe texel with one cheap 3x3 hardware-PCF tap).
+	VSMShadowLookup vsm;
+
 
 	%{
 		float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)

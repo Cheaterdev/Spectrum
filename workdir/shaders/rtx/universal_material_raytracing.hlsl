@@ -14,6 +14,16 @@
 #include "autogen/rtx/ColorPass.h"
 #include "autogen/tables/ColorShadowPayload.h"
 #include "autogen/rtx/ColorShadowPass.h"
+// RayPayload::use_vsm_shadow's own opt-in cheap path (see its comment,
+// raytracing.sig) -- get_shadow_vsm_simple, the same lean lookup VoxelGI's
+// own Lighting pass uses (voxel_lighting.hlsl) for exactly the same reason
+// (runs before VSM_BlockerClassify/VSM_ShadowResolve, so only the raw
+// atlas+page-table lookup is available). No "../" here despite this file
+// physically living in rtx/ -- every other include above is already
+// relative to workdir/shaders/ directly, not to this file's own directory
+// (material shaders preprocess this file as a virtual/synthetic buffer, not
+// a real on-disk path, so directory-relative "../" resolution overshoots).
+#include "shadows/vsm/vsm_impl_resolve.hlsl"
 
 #include "common/common.hlsl"
 //#define REFRACTION
@@ -83,6 +93,40 @@ void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity)
 	float  metallic = 1, roughness = 1, refraction = 1;
 	float4 normal = 0, glow = 0;
 	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, t.lod);
+}
+
+
+// RayPayload::use_vsm_shadow's own cheap path (see its comment,
+// raytracing.sig): bridges FrameInfo::vsm (a lean VSMShadowLookup, filled
+// once per frame in main.cpp) into the VSMConstants/VSMLighting shapes
+// get_shadow_vsm_simple actually takes -- exactly the same field-by-field
+// copy voxel_lighting.hlsl's own get_shadow() already does, for the same
+// reason (a caller outside VSM's own passes only has the lean lookup
+// available, not the full per-pass VSMConstants/VSMLighting tables).
+float3 vsm_shadow_lookup(float3 wpos, float3 normal, float3 light_dir)
+{
+	VSMShadowLookup vsm_lookup = CreateFrameInfo().GetVsm();
+
+	VSMConstants c = (VSMConstants)0;
+	c.active_min      = vsm_lookup.active_min;
+	c.active_max      = vsm_lookup.active_max;
+	c.page_size       = vsm_lookup.page_size;
+	c.pages_per_level = vsm_lookup.pages_per_level;
+	c.light_view      = vsm_lookup.light_view;
+	[unroll]
+	for (int li = 0; li < 26; li++)
+		c.level_info[li] = vsm_lookup.level_info[li];
+
+	VSMLighting lighting = (VSMLighting)0;
+	lighting.vsm_atlas    = vsm_lookup.vsm_atlas;
+	lighting.page_table   = vsm_lookup.page_table;
+	lighting.page_cameras = vsm_lookup.page_cameras;
+
+	// get_shadow_vsm_simple returns a scalar (0/1 hardware-PCF average, no
+	// transparency) -- broadcast to float3 to match sun_vis's own
+	// transparent-aware float3 transmittance shape below.
+	float shadow = get_shadow_vsm_simple(c, lighting, wpos, normal, light_dir);
+	return float3(shadow, shadow, shadow);
 }
 
 
@@ -213,7 +257,16 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	// many glass layers there are it costs only one level. Gated at shallow color
 	// recursion so deep refraction bounces don't spawn shadow rays.
 	float3 sun_vis = 1.0;
-	if (payload.recursion < 2)
+	if (payload.use_vsm_shadow)
+	{
+		// Cheap path (RayPayload::use_vsm_shadow's own comment, raytracing.sig):
+		// one VSM lookup instead of a real recursive shadow ray -- no
+		// transparent-occluder iteration (VSM's own shadow atlas doesn't
+		// carry per-material transmittance the way ColorShadowPass does),
+		// but DDGI's own probe texels don't need that precision.
+		sun_vis = vsm_shadow_lookup(t.v.pos, t.v.normal, normalize(frame.GetSunDir().xyz));
+	}
+	else if (payload.recursion < 2)
 	{
 		float3 s_origin = t.v.pos;
 		float3 s_dir    = normalize(frame.GetSunDir().xyz);

@@ -13,6 +13,12 @@ enum class DDGIControlFlags : uint
 	JitterRays = 4,
 	DisableTraceFeedback = 8
 };
+enum class DDGIOcclusionMode : uint
+{
+	NoOcclusionTest = 0,
+	ProbeDepthTest = 1,
+	RTXRay = 2
+};
 enum class RTXDebugFlags : uint
 {
 	DisableSkyFallback = 1

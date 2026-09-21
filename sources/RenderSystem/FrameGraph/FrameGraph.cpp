@@ -838,6 +838,14 @@ namespace FrameGraph
 						if (pass->enabled) continue;
 
 						if (!check(info.flags & ResourceFlags::Static) && pass->id > pass_id) continue;
+
+						// [SkipEnablement]: this pass writes the resource but must not
+						// be kept alive by that write alone. Without it a debug pass
+						// that annotates a shared Static buffer enables itself (and,
+						// through the recursion below, everything it reads) on every
+						// frame, whether or not anything consumes its own output.
+						if (pass->skips_enablement_for(TaskBuilder::version_of(info))) continue;
+
 						pass->enabled = true;
 
 						for (auto& acc : pass->used.resources)
@@ -1440,7 +1448,9 @@ namespace FrameGraph
 		verify_declared_access(current_pass, info.id, flags);
 		current_pass->used.touch(version_of(info), flags);
 		info.is_new = false;
-		info.flags = info.flags | flags;
+		// SkipEnablement describes this access, not the resource, so it stays on
+		// the pass's own record (used.touch above) and out of info.flags.
+		info.flags = info.flags | (ResourceFlags)((int)flags & ~(int)ResourceFlags::SkipEnablement);
 
 		if (info.fence)
 		{

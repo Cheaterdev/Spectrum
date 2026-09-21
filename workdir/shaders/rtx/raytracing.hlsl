@@ -33,10 +33,6 @@
 #include "../autogen/rtx/ColorPass.h"
 #include "../common/pbr.hlsl"
 #include "../common/common.hlsl"
-// Real traced probe-to-point occlusion instead of the chebyshev heuristic --
-// see ddgi_sample.hlsl's own comment on ddgi_sample_irradiance_traced for
-// why. Raygen shader, so TraceRay is valid here.
-#define DDGI_SAMPLE_ENABLE_TRACED_VISIBILITY
 #include "../ddgi/ddgi_sample.hlsl"
 
 // No PackForReblurDiffuse()/PackForReblurSpecular() calls in this file any
@@ -419,6 +415,7 @@ void ColorPass()
 	payload_gi.dist = 0;
 	payload_gi.cone.angle = 0;
 	payload_gi.cone.width = 0;
+	payload_gi.use_vsm_shadow = 0;
 
 	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 1, 0, 1, ray, payload_gi);
 
@@ -464,9 +461,9 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 	payload_gi.init();
 
 	RayDesc ray;
-	ray.Origin = pos;
+	ray.Origin = pos+normal/10;
 	ray.Direction = dir;
-	ray.TMin = 0.01;
+	ray.TMin = 0.1;
 	// Fixed reach, same convention as this file's other plain-RTX raygens --
 	// no voxel grid involved.
 	ray.TMax = 10000.0;
@@ -476,12 +473,16 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 	// this is the same probe-irradiance sample DDGIProbeTrace's own hit
 	// shading adds, applied here to the screen's own primary GI ray so the
 	// probe volume's accumulated multi-bounce light actually reaches the
-	// rendered frame, not just the probes' own atlas. Uses THIS frame's
-	// freshly convolved DDGI_ProbeIrradiance/Visibility (DDGIProbeConvolve
-	// runs earlier in test.sig's MainPipeline), unlike DDGIProbeTrace's own
-	// read of the same resources which needs last frame's (see that
-	// PassNode's own comment, ddgi.sig, for why). No pi/BRDF normalization
-	// on the added term yet (tuning item, not structural).
+	// rendered frame, not just the probes' own atlas. Reads LAST frame's
+	// convolved DDGI_ProbeIrradiance/Visibility -- DDGIProbeTrace/Convolve
+	// for THIS frame now run AFTER IndirectRTX/ReflectionRTX (test.sig's
+	// MainPipeline), on [Async2], overlapping with the rest of the frame
+	// instead of gating this read, so what's actually in the buffer here is
+	// one frame stale (same one-frame lag DDGIProbeTrace's own feedback
+	// read already had, see that PassNode's own comment, ddgi.sig, for why
+	// that's fine given the multi-bounce loop is already inherently
+	// multi-frame). No pi/BRDF normalization on the added term yet (tuning
+	// item, not structural).
 	if (payload_gi.dist > 0.0)
 	{
 		const VoxelOutput voxel_output = CreateVoxelOutput();
@@ -553,7 +554,7 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 		// own comment (ddgi.sig).
 		if (ddgi_cascade0.GetFlags().x != 0)
 		{
-			float3 indirect = ddgi_sample_irradiance_cascaded_traced(hit_pos, payload_gi.hit_normal,
+			float3 indirect = ddgi_sample_irradiance_cascaded(hit_pos, payload_gi.hit_normal,
 				ddgi_cascade0, voxel_output.GetDdgi_cascade1(), voxel_output.GetDdgi_cascade2(),
 				voxel_output.GetDdgi_cascade3(), voxel_output.GetDdgi_cascade4(),
 				voxel_output.GetDdgi_irradiance(), voxel_output.GetDdgi_visibility(),
@@ -660,6 +661,7 @@ void TraceReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, R
 	payload.dist = 0;
 	payload.cone.angle = 0;
 	payload.cone.width = 0;
+	payload.use_vsm_shadow = 0;
 
 	RayDesc ray;
 	ray.Origin = pos;
@@ -715,7 +717,7 @@ void TraceReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, R
 
 		if (ddgi_cascade0.GetFlags().x != 0)
 		{
-			float3 indirect = ddgi_sample_irradiance_cascaded_traced(hit_pos, payload.hit_normal,
+			float3 indirect = ddgi_sample_irradiance_cascaded(hit_pos, payload.hit_normal,
 				ddgi_cascade0, voxel_output.GetDdgi_cascade1(), voxel_output.GetDdgi_cascade2(),
 				voxel_output.GetDdgi_cascade3(), voxel_output.GetDdgi_cascade4(),
 				voxel_output.GetDdgi_irradiance(), voxel_output.GetDdgi_visibility(),
@@ -883,6 +885,7 @@ void MyRaygenShaderReflection()
 	payload_gi.dist = 0;
 	payload_gi.cone.angle = 0;
 	payload_gi.cone.width = 0;
+	payload_gi.use_vsm_shadow = 0;
 
 	float3 oneVoxelSize = voxel_info.GetSize().xyz / (voxel_info.GetVoxel_tiles_count().xyz * voxel_info.GetVoxels_per_tile().xyz);
 

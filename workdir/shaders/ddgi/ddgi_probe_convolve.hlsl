@@ -91,6 +91,21 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float mean_dist   = depth_weight_sum > 0.0 ? dist_sum / depth_weight_sum : 0.0;
 	float mean_dist2  = depth_weight_sum > 0.0 ? dist2_sum / depth_weight_sum : 0.0;
 
+	// NaN/Inf guard (see [[project-ddgi]] planning notes -- "use fallback
+	// while generating probes" was observed poisoning the whole grid black
+	// with no way back). A single corrupted value here, once blended into
+	// probe_irradiance/probe_visibility below, propagates forever:
+	// lerp(NaN, anything, alpha) is NaN regardless of alpha, every later
+	// reader (this probe's own next trace, any sample that blends this
+	// probe in) inherits it, and DDGIProbeTrace's own multi-bounce feedback
+	// then carries it to OTHER probes that read this one -- an epidemic
+	// spread, not a local glitch. Replacing with 0 instead of blending in
+	// heals on the NEXT good frame rather than poisoning the history
+	// permanently.
+	if (any(isnan(irradiance)) || any(isinf(irradiance))) irradiance = 0;
+	if (isnan(mean_dist)  || isinf(mean_dist))  mean_dist  = 0;
+	if (isnan(mean_dist2) || isinf(mean_dist2)) mean_dist2 = 0;
+
 	// Temporal blend toward last frame's convolved value (see
 	// ddgi_probe_trace.hlsl's own comment on ray jitter): now that the 64
 	// traced directions feeding this convolution shift slightly every frame,
@@ -111,6 +126,14 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	const float blend_alpha = 0.15;
 	float3 prev_irradiance  = data.GetProbe_irradiance()[uint3(local_texel, slice)].rgb;
 	float2 prev_visibility  = data.GetProbe_visibility()[uint3(local_texel, slice)];
+
+	// Same guard on the READ side -- self-heals an already-poisoned texel
+	// (e.g. from before this fix landed, or from any other future source of
+	// a bad value this doesn't otherwise catch) by refusing to blend TOWARD
+	// a bad previous value at all; the fresh, already-verified-finite value
+	// replaces it outright instead of lerping into a NaN sink forever.
+	if (any(isnan(prev_irradiance)) || any(isinf(prev_irradiance))) prev_irradiance = irradiance;
+	if (any(isnan(prev_visibility)) || any(isinf(prev_visibility))) prev_visibility = float2(mean_dist, mean_dist2);
 
 	float3 blended_irradiance = lerp(prev_irradiance, irradiance, blend_alpha);
 	float2 blended_visibility = lerp(prev_visibility, float2(mean_dist, mean_dist2), blend_alpha);

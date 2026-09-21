@@ -6,10 +6,6 @@
 #include "../autogen/rtx/ColorPass.h"
 #include "../autogen/DDGIProbeTraceData.h"
 #include "octahedral.hlsl"
-// Real traced probe-to-point occlusion instead of the chebyshev heuristic --
-// see ddgi_sample.hlsl's own comment on ddgi_sample_irradiance_traced for
-// why. Raygen shader, so TraceRay is valid here.
-#define DDGI_SAMPLE_ENABLE_TRACED_VISIBILITY
 #include "ddgi_sample.hlsl"
 #include "../common/common.hlsl"
 
@@ -142,6 +138,12 @@ void DDGIProbeTraceRaygenShader()
 
 	[raypayload] RayPayload payload_gi;
 	payload_gi.init();
+	// Swap the real recursive RTX shadow ray MyClosestHitShader normally
+	// fires for a single cheap VSM lookup instead (see RayPayload::
+	// use_vsm_shadow's own comment, raytracing.sig) -- DDGI traces far more
+	// rays per frame than any other RTX consumer, and a probe's own shadow
+	// term doesn't need a primary screen ray's precision.
+	payload_gi.use_vsm_shadow = 1;
 
 	RayDesc ray;
 	ray.Origin = probe_pos;
@@ -213,7 +215,7 @@ void DDGIProbeTraceRaygenShader()
 			}
 		}
 
-		float3 indirect = ddgi_sample_irradiance_traced(hit_pos, payload_gi.hit_normal, info,
+		float3 indirect = ddgi_sample_irradiance(hit_pos, payload_gi.hit_normal, info,
 			trace_data.GetPrev_irradiance(), trace_data.GetPrev_visibility(), trace_data.GetProbe_residency(),
 			raytracing.GetScene());
 		// Feedback strength (DDGIInfo::probe_spacing.w, DDGIGraph.cpp's
@@ -223,6 +225,18 @@ void DDGIProbeTraceRaygenShader()
 		// TraceIndirectDiffuse/TraceReflection's own final per-pixel term.
 		result_color += payload_gi.albedo * indirect * info.GetProbe_spacing().w;
 	}
+
+	// NaN/Inf guard (see ddgi_probe_convolve.hlsl's own comment for the full
+	// story): this is the actual entry point for a bad value into the whole
+	// system -- the feedback term above reads OTHER probes' stored
+	// irradiance, so if one of them is already bad, `indirect` (and hence
+	// `result_color`) inherits it here and would otherwise carry it forward
+	// into DDGI_ProbeRadiance, letting DDGIProbeConvolve read it as if it
+	// were legitimate. Catching it at the write means a poisoned neighbor
+	// can't use THIS probe to spread further, even before Convolve's own
+	// guard heals the neighbor itself.
+	if (any(isnan(result_color)) || any(isinf(result_color)))
+		result_color = payload_gi.color.rgb;
 
 	// atlas_texel is already the correct (x,z)-plane position -- slice
 	// (computed above) is what lands the write in this probe's own layer of

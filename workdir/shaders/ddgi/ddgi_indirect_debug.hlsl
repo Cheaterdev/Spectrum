@@ -2,11 +2,6 @@
 #include "../autogen/Raytracing.h"
 #include "../autogen/DDGIIndirectDebugData.h"
 #include "../common/common.hlsl"
-// Real inline-ray-traced probe occlusion instead of the chebyshev heuristic
-// -- see ddgi_sample.hlsl's own comment on ddgi_sample_irradiance_inline_traced.
-// This is a plain compute shader (can't call classic TraceRay at all), which
-// is exactly what the INLINE (RayQuery) variant is for.
-#define DDGI_SAMPLE_ENABLE_INLINE_TRACED_VISIBILITY
 #include "ddgi_sample.hlsl"
 
 // Full-screen debug view (FrameGraph::DebugMode::DDGIIndirect, see
@@ -84,7 +79,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 		}
 	}
 
-	float3 indirect = ddgi_sample_irradiance_cascaded_inline_traced(pos, normal,
+	float3 indirect = ddgi_sample_irradiance_cascaded(pos, normal,
 		data.GetCascade0(), data.GetCascade1(), data.GetCascade2(), data.GetCascade3(), data.GetCascade4(),
 		data.GetProbe_irradiance(), data.GetProbe_visibility(), data.GetProbe_residency(),
 		GetRaytracing().GetScene());

@@ -8,6 +8,7 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "Camera.h"
+#include "VSMShadowLookup.h"
 struct FrameInfo
 {
 	float4 time; // float4
@@ -20,12 +21,14 @@ struct FrameInfo
 	uint mainHiZ; // Texture2D<float>
 	Camera camera; // Camera
 	Camera prevCamera; // Camera
+	VSMShadowLookup vsm; // VSMShadowLookup
 	float4 GetTime() { return time; }
 	Camera GetCamera() { return camera; }
 	Camera GetPrevCamera() { return prevCamera; }
 	float4 GetSunDir() { return sunDir; }
 	float GetMipBias() { return mipBias; }
 	uint GetDebugFlags() { return debugFlags; }
+	VSMShadowLookup GetVsm() { return vsm; }
 	Texture2D<float4> GetBestFitNormals() { return ResourceDescriptorHeap[bestFitNormals]; }
 	Texture3D<float4> GetBrdf() { return ResourceDescriptorHeap[brdf]; }
 	TextureCube<float4> GetSky() { return ResourceDescriptorHeap[sky]; }

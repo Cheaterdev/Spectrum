@@ -23,12 +23,14 @@ export namespace Table
 		float3 albedo;
 		uint recursion;
 		float dist;
+		uint use_vsm_shadow;
 		RayCone cone;
 		float4& GetColor() { return color; }
 		float3& GetHit_normal() { return hit_normal; }
 		float3& GetAlbedo() { return albedo; }
 		uint& GetRecursion() { return recursion; }
 		float& GetDist() { return dist; }
+		uint& GetUse_vsm_shadow() { return use_vsm_shadow; }
 		RayCone& GetCone() { return cone; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
@@ -39,6 +41,7 @@ export namespace Table
 			compiler.compile(albedo, "RayPayload::albedo");
 			compiler.compile(recursion, "RayPayload::recursion");
 			compiler.compile(dist, "RayPayload::dist");
+			compiler.compile(use_vsm_shadow, "RayPayload::use_vsm_shadow");
 			compiler.compile(cone, "RayPayload::cone");
 		}
 		using Compiled = RayPayload;
@@ -56,6 +59,7 @@ export namespace Table
 			ar& NVP(albedo);
 			ar& NVP(recursion);
 			ar& NVP(dist);
+			ar& NVP(use_vsm_shadow);
 		}
 
 	};

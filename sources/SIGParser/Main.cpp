@@ -856,8 +856,14 @@ int main()
 					const option* always = p.find_option("Always");
 					if (!always) return "";
 
+					// [SkipEnablement]: an access flag rather than a usage, so it is
+					// appended to whatever [Always] declared instead of replacing it.
+					// See ResourceFlags::SkipEnablement.
+					const std::string tail = p.find_option("SkipEnablement")
+						? " | FrameGraph::ResourceFlags::SkipEnablement" : "";
+
 					if (always->value_atom.values.empty())
-						return "FrameGraph::ResourceFlags::" + always->value_atom.expr;
+						return "FrameGraph::ResourceFlags::" + always->value_atom.expr + tail;
 
 					std::string result;
 					bool first = true;
@@ -867,7 +873,7 @@ int main()
 						result += "FrameGraph::ResourceFlags::" + v.expr;
 						first = false;
 					}
-					return result;
+					return result + tail;
 				}
 				return "";
 			},

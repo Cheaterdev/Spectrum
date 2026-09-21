@@ -37,40 +37,43 @@ export import :Autogen.Tables.{{t.name}};
 {%endif-%}
 {%endfor -%}
 
-// Note: PSO modules are imported privately instead of exported to reduce
-// module interface bloat. Helper functions access them internally.
-{%- for v in parsed.compute_pso -%}
+// PSOS::, RTX:: and RT:: are named directly by RenderSystem (pass render
+// functions, Context.ixx's RT::GBuffer::Compiled), so these partitions are
+// re-exported. A bare `import` here compiles HAL fine and fails only in the
+// importing layer, with "RT is not a class or namespace name".
+
+{% for v in parsed.compute_pso -%}
 {%- set t =  parsed.compute_pso[v] -%}
-import :Autogen.PSO.{{t.name}};
+export import :Autogen.PSO.{{t.name}};
 {% endfor -%}
 
 {%- for v in parsed.graphics_pso -%}
 {%- set t =  parsed.graphics_pso[v] -%}
-import :Autogen.PSO.{{t.name}};
+export import :Autogen.PSO.{{t.name}};
 {% endfor -%}
 
 {%- for v in parsed.workgraph_pso -%}
 {%- set t =  parsed.workgraph_pso[v] -%}
 {%- for node_name in t.nodes %}
-import :Autogen.PSO.{{t.name}}_{{node_name}};
+export import :Autogen.PSO.{{t.name}}_{{node_name}};
 {% endfor %}
 {% endfor -%}
 
 {%- for v in parsed.raytrace_pso -%}
 {%- set t =  parsed.raytrace_pso[v] -%}
-import :Autogen.RTX.{{t.name}};
+export import :Autogen.RTX.{{t.name}};
 {% endfor -%}
 
 {%- for v in parsed.tables -%}
 {%- set t = parsed.tables[v] -%}
 {%- if t.options["RenderTarget"] is defined %}
-import :Autogen.RT.{{t.name}};
+export import :Autogen.RT.{{t.name}};
 {%- endif %}
 {%- endfor %}
 
 {%- for v in parsed.rt -%}
 {%- set t = parsed.rt[v] -%}
-import :Autogen.RT.{{t.name}};
+export import :Autogen.RT.{{t.name}};
 {% endfor -%}
 
 export {

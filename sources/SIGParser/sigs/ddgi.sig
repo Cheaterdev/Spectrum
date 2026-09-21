@@ -43,6 +43,35 @@ enum DDGIControlFlags
 	DisableTraceFeedback = 8;
 }
 
+# Single-select (not a bitmask, unlike DDGIControlFlags above -- sequential
+# values, not powers of two), mirrored from DDGIGraph.cpp's Variable<
+# DDGIOcclusionMode> "Occlusion test" combo box. Packed into DDGIInfo::
+# flags.z bits 4-5 (DDGIControlFlags only uses bits 0-3) -- see that field's
+# own comment for the extraction shift/mask. Controls how ddgi_sample_irradiance
+# (ddgi_sample.hlsl) weights each of its 8 trilinear probe corners against
+# occlusion between the probe and the shading point:
+#   NoOcclusionTest -- skip the test entirely (fastest, most light leaking
+#     through walls/thin occluders -- an A/B baseline more than something to
+#     actually ship with).
+#   ProbeDepthTest -- read the probe's own stored visibility texel (mean hit
+#     distance in the direction from probe to shading point, same moments
+#     DDGIProbeTrace/DDGIProbeConvolve already write) and compare directly:
+#     is the shading point closer than what the probe last saw in that
+#     direction? A plain depth-map-style comparison, not the statistical
+#     chebyshev/variance test this replaced -- cheap (one more texture read,
+#     no extra ray) and avoids chebyshev's own well-known "light bleeding"
+#     failure mode from bilinearly interpolating raw moments before deriving
+#     variance.
+#   RTXRay -- fire an actual inline (RayQuery) ray per corner between the
+#     shading point and the probe (ddgi_probe_visibility_ray, ddgi_sample.hlsl)
+#     -- correct, but real added cost.
+enum DDGIOcclusionMode
+{
+	NoOcclusionTest = 0;
+	ProbeDepthTest = 1;
+	RTXRay = 2;
+}
+
 # Single-cascade grid size, shared between DDGI.ixx's grid bookkeeping and
 # every [Size=...] below -- one source of truth, same reasoning as vsm.sig's
 # MaxLevels/VSM_PagesPerLevelSide. 4x/dimension over the original v1 scaffold
@@ -106,6 +135,15 @@ const DDGI_MaxProbesPerFrame = `Constants::DDGI_ProbeCountX * Constants::DDGI_Pr
 [Bind = DefaultLayout::Instance0]
 struct DDGIInfo
 {
+	# .xyz = this cascade's grid minimum corner (world space). .w =
+	# depth_test_bias, mirrored from DDGIGraph.cpp's Variable<float> "Depth
+	# test bias" -- ddgi_probe_depth_test's own comment (ddgi_sample.hlsl)
+	# explains why DDGIOcclusionMode::ProbeDepthTest needs a bias at all;
+	# this is that bias's own SCALE, expressed as a fraction of this
+	# cascade's own probe spacing (so the same fraction gives a
+	# proportionally larger bias in coarser, wider-spaced cascades instead
+	# of a single world-space constant being too tight or too loose
+	# depending on which cascade is sampled).
 	float4 grid_min;
 	# .xyz = probe spacing for this cascade. .w = feedback_strength, mirrored
 	# from DDGIGraph.cpp's Variable<float> "Feedback strength" -- scales the
@@ -135,10 +173,12 @@ struct DDGIInfo
 	# directly into the atlas vs. a compacted linear index through
 	# DDGIProbeTraceData::compacted_list), matching whichever dispatch shape
 	# DDGIGraph.cpp's own render() actually issued this frame.
-	# .z = DDGIControlFlags bitmask (above), mirrored from DDGIGraph.cpp's
-	# Variable<bool>s -- see each flag's own comment there for what it does
-	# and why; this field is just the OR of whichever toggles are on
-	# (default: all off, bitmask 0).
+	# .z = bits 0-3: DDGIControlFlags bitmask (above), mirrored from
+	# DDGIGraph.cpp's Variable<bool>s -- see each flag's own comment there
+	# for what it does and why; just the OR of whichever toggles are on
+	# (default: all off). Bits 4-5: DDGIOcclusionMode (above), mirrored from
+	# DDGIGraph.cpp's Variable<DDGIOcclusionMode> "Occlusion test" -- extract
+	# via `(flags.z >> 4) & 0x3`.
 	# .w = eviction_grace_frames, mirrored from DDGIGraph.cpp's Variable<int>
 	# "Eviction grace (frames)" -- not a 0/1 flag like the others, a small
 	# integer. A resident probe that goes unhit rides out up to this many
@@ -807,7 +847,12 @@ PassNode DDGIIndirectDebug
 	# performance) instead of needing "Enable residency culling" turned off
 	# just to inspect a given area, which traces/convolves every probe in
 	# the whole grid regardless of whether this view is even looking at it.
-	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
+	#
+	# [SkipEnablement]: DDGI_ProbeResidencyPending is Static, and the cull
+	# enables every writer of a Static resource regardless of pass order -- so
+	# without this, writing it here would keep this debug pass (and everything
+	# it reads) alive every frame, even when nothing displays DDGIIndirectDebug.
+	[Always = UnorderedAccess] [SkipEnablement] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture DDGIIndirectDebug;
 }

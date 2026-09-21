@@ -49,21 +49,90 @@ float2 ddgi_bilinear_texel2(Texture2DArray<float2> tex, uint2 origin, uint slice
 	return lerp(top, bot, frac.y);
 }
 
+// Inline (RayQuery, DXR Tier 1.1) occlusion test between a shading point and
+// a probe -- usable from ANY shader stage (raygen or compute), unlike
+// classic TraceRay/ShadowPass, which only works inside a raygen/hit/miss
+// pipeline. This used to have a classic-TraceRay sibling purely because
+// ddgi_indirect_debug.hlsl (a compute shader) couldn't call TraceRay at
+// all; RayQuery works everywhere DXR 1.1 does, which this codebase already
+// requires for ExecuteIndirect(DISPATCH_RAYS), so the second copy bought
+// nothing and was dropped once DDGIOcclusionMode unified every caller onto
+// one code path. No any-hit/alpha-test handling -- COMMITTED_TRIANGLE_HIT
+// treats every triangle as instantly opaque, same simplifying assumption
+// RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH already implies for a fast
+// approximate occlusion test.
+float ddgi_probe_visibility_ray(RaytracingAccelerationStructure scene, float3 world_pos, float3 probe_pos)
+{
+	float3 to_probe = probe_pos - world_pos;
+	float dist = length(to_probe);
+	if (dist < 0.001)
+		return 1.0;
+	float3 dir = to_probe / dist;
+
+	// Small bias off the surface on both ends so the ray doesn't
+	// self-intersect the shading point's own geometry or overshoot past
+	// the probe.
+	RayDesc ray;
+	ray.Origin = world_pos + dir * 0.02;
+	ray.Direction = dir;
+	ray.TMin = 0.0;
+	ray.TMax = max(dist - 0.04, 0.0);
+
+	RayQuery<RAY_FLAG_NONE> q;
+	q.TraceRayInline(scene, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, ray);
+	q.Proceed();
+
+	return (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) ? 0.0 : 1.0;
+}
+
+// Depth-comparison occlusion test (DDGIOcclusionMode::ProbeDepthTest, see
+// its own comment, ddgi.sig): reads the probe's own stored visibility texel
+// -- mean hit distance in the direction from the probe toward the shading
+// point, the same moment DDGIProbeTrace/DDGIProbeConvolve already write --
+// and compares it directly against the shading point's own distance,
+// instead of the statistical chebyshev/variance test this replaced. Plain
+// depth-map-style comparison: closer than what the probe last saw in that
+// direction means visible. Floored rather than zeroed (matching backface
+// rejection's own convention below) so a probe just past the threshold
+// doesn't produce a hard, visible weight seam.
+//
+// Bias is ADDED: a point slightly beyond the recorded surface still counts
+// as visible, the classic shadow-map acne bias direction -- widens the
+// visible zone instead of shrinking it, to stop a probe self-occluding its
+// own just-recorded surface at dist_to_point == mean. Hard zero when
+// occluded (not floored like backface rejection) -- unlike a geometric
+// misclassification, an occluded probe's stored radiance is a real light
+// leak if blended in at all, so there's no "still slightly useful" case to
+// preserve.
+float ddgi_probe_depth_test(float2 vis, float dist_to_point, float bias)
+{
+	return (dist_to_point <= vis.x - bias*4 ) ? 1.0 : 0.0;
+}
+
 // v1 (see [[project-ddgi]] planning notes): samples the probe-volume
 // irradiance field at a world position + surface normal, trilinearly
-// blending the 8 surrounding probes with a simplified chebyshev visibility
-// weight AND a backface weight (Majercik et al., "Dynamic Diffuse Global
-// Illumination") to reduce light leaking through walls/thin occluders.
+// blending the 8 surrounding probes, weighted by backface rejection
+// (Majercik et al., "Dynamic Diffuse Global Illumination") and one of three
+// occlusion tests (DDGIOcclusionMode, DDGIGraph.cpp's "Occlusion test"
+// combo box, ddgi.sig's own comment on each value): none (fastest, most
+// light leaking through walls/thin occluders), a depth-map-style comparison
+// against the probe's own stored hit-distance moment (cheap, no extra ray),
+// or a real traced visibility ray per corner (correct, real added cost).
+// `scene` is only actually read in RTXRay mode -- harmless to pass
+// unconditionally in the other two.
 float3 ddgi_sample_irradiance(
 	float3 world_pos, float3 normal,
 	DDGIInfo info,
 	Texture2DArray<float4> probe_irradiance,
 	Texture2DArray<float2> probe_visibility,
-	StructuredBuffer<uint> probe_residency)
+	StructuredBuffer<uint> probe_residency,
+	RaytracingAccelerationStructure scene)
 {
 	uint texel_size = info.GetAtlas_info().x;
 	uint3 probe_counts = info.GetProbe_counts().xyz;
 	float3 spacing  = info.GetProbe_spacing().xyz;
+	// See DDGIInfo::flags' own comment (ddgi.sig) for the bit layout.
+	uint occlusion_mode = (info.GetFlags().z >> 4) & 0x3;
 
 	// No bound buffer -- only used for its pure coordinate-math helpers, same
 	// reasoning as DDGIProbeConvolveData's own comment (ddgi.sig).
@@ -82,6 +151,10 @@ float3 ddgi_sample_irradiance(
 	float3 frac_part = probe_space - base;
 
 	float2 sample_uv = ddgi_oct_encode(normalize(normal)) * 0.5 + 0.5;
+	// DDGIInfo::grid_min.w (see its own comment, ddgi.sig) -- a runtime-tunable
+	// fraction of this cascade's own spacing, not a fixed constant, so the
+	// same bias scales sensibly across cascades of very different spacing.
+	float depth_bias = max(spacing.x, max(spacing.y, spacing.z)) * info.GetGrid_min().w;
 
 	float3 result = float3(0, 0, 0);
 	float weight_sum = 0;
@@ -119,12 +192,6 @@ float3 ddgi_sample_irradiance(
 		// reconstruct it back from the wrapped slot (ddgi_probe_world_pos's
 		// own job, for callers that start from a bare slot instead).
 		float3 probe_pos = absolute_corner * spacing;
-		// ddgi_atlas_origin gives the (x,z) plane position; probe_coord.y
-		// plus this cascade's own slice offset (DDGIInfo::cascade_info.y)
-		// gives which array slice of the shared atlas holds it -- see
-		// ddgi_atlas_array_slice's own comment (ddgi.sig).
-		uint2 origin = probes.ddgi_atlas_origin(probe_coord, texel_size);
-		uint slice = probes.ddgi_atlas_array_slice(probe_coord.y, info.GetCascade_info().y);
 
 		float3 to_point = world_pos - probe_pos;
 		float dist_to_point = length(to_point);
@@ -134,34 +201,37 @@ float3 ddgi_sample_irradiance(
 		// the surface from its own normal -- e.g. a probe in the next room
 		// through a thin wall is geometrically one of the 8 trilinear
 		// corners even though it can never legitimately light this point.
-		// Floored, not zeroed, matching the visibility floor below (a hard
-		// cutoff produces a visible seam where a probe's weight snaps to 0).
-		float backface = saturate(dot(normal, -dir_to_point) <0);
-	//weight *= max(backface, 0.05);
+		// Floored, not zeroed -- a hard cutoff produces a visible seam where
+		// a probe's weight snaps to 0.
+		float backface = saturate(dot(normal, -dir_to_point) * 0.5 + 0.5);
+		weight *= max(backface, 0.05);
+		if (weight <= 0.0001)
+			continue;
 
-		// Visibility must be sampled in the direction FROM the probe TO the
-		// shading point -- that's what DDGIProbeTrace's own visibility
-		// texel actually measures (mean/mean-square hit distance of rays
-		// the probe traced outward in ddgi_oct_decode(local_uv) directions,
-		// same convention). Sampling it at the surface normal's direction
-		// instead (an earlier bug here) tests "what did the probe see
-		// looking the same way this surface faces", not "is there a wall
-		// between the probe and this specific point" -- the actual
-		// occlusion test barely rejected anything, which is what let light
-		// leak through walls.
-		float2 vis_uv = ddgi_oct_encode(dir_to_point) * 0.5 + 0.5;
-		float2 vis = ddgi_bilinear_texel2(probe_visibility, origin, slice, texel_size, vis_uv);
+		uint2 origin = probes.ddgi_atlas_origin(probe_coord, texel_size);
+		uint slice = probes.ddgi_atlas_array_slice(probe_coord.y, info.GetCascade_info().y);
 
-		float mean     = vis.x;
-		float mean2    = vis.y;
-		float variance = max(mean2 - mean * mean, 0.0001);
-		float chebyshev = 1.0;
-		if (dist_to_point > mean)
+		if (occlusion_mode == (uint)DDGIOcclusionMode::RTXRay)
 		{
-			float diff = dist_to_point - mean;
-			chebyshev = max(variance / (variance + diff * diff), 0.05);
+			weight *= ddgi_probe_visibility_ray(scene, world_pos, probe_pos);
 		}
-		//weight *= chebyshev;
+		else if (occlusion_mode == (uint)DDGIOcclusionMode::ProbeDepthTest)
+		{
+			// Visibility must be sampled in the direction FROM the probe TO
+			// the shading point -- that's what the probe's own visibility
+			// texel actually measures (mean/mean-square hit distance of
+			// rays the probe traced outward in ddgi_oct_decode(local_uv)
+			// directions, same convention). Sampling it at the surface
+			// normal's direction instead tests "what did the probe see
+			// looking the same way this surface faces", not "is there a
+			// wall between the probe and this specific point".
+			float2 vis_uv = ddgi_oct_encode(dir_to_point) * 0.5 + 0.5;
+			float2 vis = ddgi_bilinear_texel2(probe_visibility, origin, slice, texel_size, vis_uv);
+			weight *= ddgi_probe_depth_test(vis, dist_to_point, depth_bias);
+		}
+		// else NoOcclusionTest: no visibility weighting at all.
+		if (weight <= 0.0001)
+			continue;
 
 		result += ddgi_bilinear_texel4(probe_irradiance, origin, slice, texel_size, sample_uv).rgb * weight;
 		weight_sum += weight;
@@ -184,145 +254,6 @@ float3 ddgi_sample_irradiance_cascaded(
 	DDGIInfo c0, DDGIInfo c1, DDGIInfo c2, DDGIInfo c3, DDGIInfo c4,
 	Texture2DArray<float4> probe_irradiance,
 	Texture2DArray<float2> probe_visibility,
-	StructuredBuffer<uint> probe_residency)
-{
-	DDGIInfo cascades[5] = { c0, c1, c2, c3, c4 };
-
-	for (uint i = 0; i < 5; i++)
-	{
-		DDGIInfo info = cascades[i];
-		float3 probe_space = (world_pos - info.GetGrid_min().xyz) / info.GetProbe_spacing().xyz;
-		float3 counts = float3(info.GetProbe_counts().xyz);
-
-		if (all(probe_space >= 1.0) && all(probe_space <= counts - 2.0))
-			return ddgi_sample_irradiance(world_pos, normal, info, probe_irradiance, probe_visibility, probe_residency);
-	}
-
-	return ddgi_sample_irradiance(world_pos, normal, c4, probe_irradiance, probe_visibility, probe_residency);
-}
-
-// Real occlusion test between a shading point and a probe, in place of the
-// chebyshev/variance heuristic above -- that heuristic bilinearly
-// interpolates raw (mean, mean^2) moments across 4 texels before computing
-// variance from the interpolated pair (ddgi_bilinear_texel2), which is a
-// well-known "light bleeding" failure mode right at any boundary where two
-// texels see meaningfully different hit distances -- exactly where
-// occlusion correctness matters most. This fires an actual ray instead:
-// correct, but real cost -- one extra TraceRay per trilinear corner per
-// sample, unlike the heuristic's plain texture read. Only usable from a
-// raygen shader (TraceRay isn't valid syntax anywhere else) -- a caller
-// must `#define DDGI_SAMPLE_ENABLE_TRACED_VISIBILITY` before including this
-// file to get it; ddgi_indirect_debug.hlsl (a compute shader, can't call
-// TraceRay at all) doesn't define it and only ever sees the untraced
-// functions above.
-#ifdef DDGI_SAMPLE_ENABLE_TRACED_VISIBILITY
-#include "../autogen/tables/ShadowPayload.h"
-#include "../autogen/rtx/ShadowPass.h"
-
-float ddgi_probe_visibility_ray(RaytracingAccelerationStructure scene, float3 world_pos, float3 probe_pos)
-{
-	float3 to_probe = probe_pos - world_pos;
-	float dist = length(to_probe);
-	if (dist < 0.001)
-		return 1.0;
-	float3 dir = to_probe / dist;
-
-	// Small bias off the surface on both ends so the ray doesn't
-	// self-intersect the shading point's own geometry or overshoot past
-	// the probe.
-	ShadowPayload payload_shadow = { false, 0 };
-
-	RayDesc ray;
-	ray.Origin = world_pos + dir * 0.02;
-	ray.Direction = dir;
-	ray.TMin = 0.0;
-	ray.TMax = max(dist - 0.04, 0.0);
-	ShadowPass(scene, ray, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, payload_shadow);
-
-	return payload_shadow.hit ? 0.0 : 1.0;
-}
-
-// Same 8-probe trilinear blend as ddgi_sample_irradiance above, but weights
-// each corner by a real traced visibility ray instead of the chebyshev
-// heuristic -- probe_visibility is kept in the signature purely so callers
-// can switch between this and the untraced version without reshaping their
-// own call site, even though this version never reads it.
-float3 ddgi_sample_irradiance_traced(
-	float3 world_pos, float3 normal,
-	DDGIInfo info,
-	Texture2DArray<float4> probe_irradiance,
-	Texture2DArray<float2> probe_visibility,
-	StructuredBuffer<uint> probe_residency,
-	RaytracingAccelerationStructure scene)
-{
-	uint texel_size = info.GetAtlas_info().x;
-	uint3 probe_counts = info.GetProbe_counts().xyz;
-	float3 spacing  = info.GetProbe_spacing().xyz;
-
-	DDGIProbes probes;
-
-	// Absolute cell + fractional part -- see ddgi_sample_irradiance's own
-	// comment on the identical block (this file) for why this must NOT
-	// subtract grid_min first.
-	float3 probe_space = world_pos / spacing;
-	float3 base = floor(probe_space);
-	float3 frac_part = probe_space - base;
-
-	float2 sample_uv = ddgi_oct_encode(normalize(normal)) * 0.5 + 0.5;
-
-	float3 result = float3(0, 0, 0);
-	float weight_sum = 0;
-
-	for (uint i = 0; i < 8; i++)
-	{
-		float3 offset = float3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
-		float3 absolute_corner = base + offset;
-
-		float3 trilinear = lerp(1.0 - frac_part, frac_part, offset);
-		float weight = trilinear.x * trilinear.y * trilinear.z;
-		if (weight <= 0.0001)
-			continue;
-
-		// Toroidal wrap of the absolute cell -- see ddgi_sample_irradiance's
-		// own comment on the identical block (this file).
-		uint3 probe_coord = uint3(probes.ddgi_wrap(int3(absolute_corner), probe_counts));
-
-		uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, probe_counts);
-		if (probe_residency[info.GetCascade_info().x + probe_linear_index] == 0)
-			continue;
-
-		float3 probe_pos = absolute_corner * spacing;
-
-		float3 to_point = world_pos - probe_pos;
-		float dist_to_point = length(to_point);
-		float3 dir_to_point = to_point / max(dist_to_point, 0.0001);
-
-		// Backface rejection stays as a cheap pre-filter -- skip firing a
-		// ray at all for a probe already known to be on the wrong side.
-		float backface = saturate(dot(normal, -dir_to_point) * 0.5 + 0.5);
-		weight *= max(backface, 0.05);
-		if (weight <= 0.0001)
-			continue;
-
-		weight *= ddgi_probe_visibility_ray(scene, world_pos, probe_pos);
-		if (weight <= 0.0001)
-			continue;
-
-		uint2 origin = probes.ddgi_atlas_origin(probe_coord, texel_size);
-		uint slice = probes.ddgi_atlas_array_slice(probe_coord.y, info.GetCascade_info().y);
-
-		result += ddgi_bilinear_texel4(probe_irradiance, origin, slice, texel_size, sample_uv).rgb * weight;
-		weight_sum += weight;
-	}
-
-	return weight_sum > 0.0001 ? result / weight_sum : float3(0, 0, 0);
-}
-
-float3 ddgi_sample_irradiance_cascaded_traced(
-	float3 world_pos, float3 normal,
-	DDGIInfo c0, DDGIInfo c1, DDGIInfo c2, DDGIInfo c3, DDGIInfo c4,
-	Texture2DArray<float4> probe_irradiance,
-	Texture2DArray<float2> probe_visibility,
 	StructuredBuffer<uint> probe_residency,
 	RaytracingAccelerationStructure scene)
 {
@@ -335,137 +266,8 @@ float3 ddgi_sample_irradiance_cascaded_traced(
 		float3 counts = float3(info.GetProbe_counts().xyz);
 
 		if (all(probe_space >= 1.0) && all(probe_space <= counts - 2.0))
-			return ddgi_sample_irradiance_traced(world_pos, normal, info, probe_irradiance, probe_visibility, probe_residency, scene);
+			return ddgi_sample_irradiance(world_pos, normal, info, probe_irradiance, probe_visibility, probe_residency, scene);
 	}
 
-	return ddgi_sample_irradiance_traced(world_pos, normal, c4, probe_irradiance, probe_visibility, probe_residency, scene);
+	return ddgi_sample_irradiance(world_pos, normal, c4, probe_irradiance, probe_visibility, probe_residency, scene);
 }
-#endif // DDGI_SAMPLE_ENABLE_TRACED_VISIBILITY
-
-// Same occlusion test as ddgi_probe_visibility_ray above, but via DXR Tier
-// 1.1 inline ray tracing (RayQuery) instead of classic TraceRay -- usable
-// from ANY shader stage, including a plain compute shader like
-// ddgi_indirect_debug.hlsl, which can't call TraceRay/use ShadowPass at all
-// (no raygen/hit/miss pipeline to run it in). Kept separate from
-// ddgi_probe_visibility_ray/ddgi_sample_irradiance_traced above rather than
-// replacing them, so the already-validated raygen call sites (DDGIProbeTrace,
-// TraceIndirectDiffuse) aren't touched by this. No any-hit/alpha-test
-// handling -- COMMITTED_TRIANGLE_HIT treats every triangle as instantly
-// opaque, same simplifying assumption RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
-// already implies for a fast approximate occlusion test.
-#ifdef DDGI_SAMPLE_ENABLE_INLINE_TRACED_VISIBILITY
-float ddgi_probe_visibility_ray_inline(RaytracingAccelerationStructure scene, float3 world_pos, float3 probe_pos)
-{
-	float3 to_probe = probe_pos - world_pos;
-	float dist = length(to_probe);
-	if (dist < 0.001)
-		return 1.0;
-	float3 dir = to_probe / dist;
-
-	RayDesc ray;
-	ray.Origin = world_pos + dir * 0.02;
-	ray.Direction = dir;
-	ray.TMin = 0.0;
-	ray.TMax = max(dist - 0.04, 0.0);
-
-	RayQuery<RAY_FLAG_NONE> q;
-	q.TraceRayInline(scene, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, ray);
-	q.Proceed();
-
-	return (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) ? 0.0 : 1.0;
-}
-
-// Same shape as ddgi_sample_irradiance_traced above, just calling the
-// inline-query occlusion test instead of the classic-TraceRay one.
-float3 ddgi_sample_irradiance_inline_traced(
-	float3 world_pos, float3 normal,
-	DDGIInfo info,
-	Texture2DArray<float4> probe_irradiance,
-	Texture2DArray<float2> probe_visibility,
-	StructuredBuffer<uint> probe_residency,
-	RaytracingAccelerationStructure scene)
-{
-	uint texel_size = info.GetAtlas_info().x;
-	uint3 probe_counts = info.GetProbe_counts().xyz;
-	float3 spacing  = info.GetProbe_spacing().xyz;
-
-	DDGIProbes probes;
-
-	// Absolute cell + fractional part -- see ddgi_sample_irradiance's own
-	// comment on the identical block (this file) for why this must NOT
-	// subtract grid_min first.
-	float3 probe_space = world_pos / spacing;
-	float3 base = floor(probe_space);
-	float3 frac_part = probe_space - base;
-
-	float2 sample_uv = ddgi_oct_encode(normalize(normal)) * 0.5 + 0.5;
-
-	float3 result = float3(0, 0, 0);
-	float weight_sum = 0;
-
-	for (uint i = 0; i < 8; i++)
-	{
-		float3 offset = float3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
-		float3 absolute_corner = base + offset;
-
-		float3 trilinear = lerp(1.0 - frac_part, frac_part, offset);
-		float weight = trilinear.x * trilinear.y * trilinear.z;
-		if (weight <= 0.0001)
-			continue;
-
-		// Toroidal wrap of the absolute cell -- see ddgi_sample_irradiance's
-		// own comment on the identical block (this file).
-		uint3 probe_coord = uint3(probes.ddgi_wrap(int3(absolute_corner), probe_counts));
-
-		uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, probe_counts);
-		if (probe_residency[info.GetCascade_info().x + probe_linear_index] == 0)
-			continue;
-
-		float3 probe_pos = absolute_corner * spacing;
-
-		float3 to_point = world_pos - probe_pos;
-		float dist_to_point = length(to_point);
-		float3 dir_to_point = to_point / max(dist_to_point, 0.0001);
-
-		float backface = saturate(dot(normal, -dir_to_point) * 0.5 + 0.5);
-		weight *= max(backface, 0.05);
-		if (weight <= 0.0001)
-			continue;
-
-		weight *= ddgi_probe_visibility_ray_inline(scene, world_pos, probe_pos);
-		if (weight <= 0.0001)
-			continue;
-
-		uint2 origin = probes.ddgi_atlas_origin(probe_coord, texel_size);
-		uint slice = probes.ddgi_atlas_array_slice(probe_coord.y, info.GetCascade_info().y);
-
-		result += ddgi_bilinear_texel4(probe_irradiance, origin, slice, texel_size, sample_uv).rgb * weight;
-		weight_sum += weight;
-	}
-
-	return weight_sum > 0.0001 ? result / weight_sum : float3(0, 0, 0);
-}
-
-float3 ddgi_sample_irradiance_cascaded_inline_traced(
-	float3 world_pos, float3 normal,
-	DDGIInfo c0, DDGIInfo c1, DDGIInfo c2, DDGIInfo c3, DDGIInfo c4,
-	Texture2DArray<float4> probe_irradiance,
-	Texture2DArray<float2> probe_visibility,
-	StructuredBuffer<uint> probe_residency,
-	RaytracingAccelerationStructure scene)
-{
-	DDGIInfo cascades[5] = { c0, c1, c2, c3, c4 };
-
-	for (uint i = 0; i < 5; i++)
-	{
-		DDGIInfo info = cascades[i];
-		float3 probe_space = (world_pos - info.GetGrid_min().xyz) / info.GetProbe_spacing().xyz;
-		float3 counts = float3(info.GetProbe_counts().xyz);
-
-		if (all(probe_space >= 1.0) && all(probe_space <= counts - 2.0))
-			return ddgi_sample_irradiance_inline_traced(world_pos, normal, info, probe_irradiance, probe_visibility, probe_residency, scene);
-	}
-
-	return ddgi_sample_irradiance_inline_traced(world_pos, normal, c4, probe_irradiance, probe_visibility, probe_residency, scene);
-}
-#endif // DDGI_SAMPLE_ENABLE_INLINE_TRACED_VISIBILITY

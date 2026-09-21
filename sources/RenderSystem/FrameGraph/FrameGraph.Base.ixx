@@ -134,7 +134,19 @@ public:
 		// Marks a read that must not be folded into a neighboring canonical-read
 		// window — for passes that manage their own transition to a layout other
 		// passes never request (e.g. PRESENT/COMMON for a Streamline hand-off).
-		ExclusiveRead = (1 << 14)
+		ExclusiveRead = (1 << 14),
+
+		// This access must not make the graph enable the pass that performs it
+		// ([SkipEnablement] in the .sig). The cull enables every writer of an
+		// enabled resource, and for a Static resource it does so regardless of
+		// pass order — so a debug pass that only annotates a shared buffer
+		// (DDGIIndirectDebug writing DDGI_ProbeResidencyPending) would keep
+		// itself alive through that write alone. The write still participates in
+		// states and barriers whenever the pass IS enabled for its own reasons.
+		//
+		// Access-only: init_pass keeps it out of the resource's own flags, since
+		// it says nothing about the resource.
+		SkipEnablement = (1 << 15)
 	};
 
 	 constexpr ResourceFlags WRITEABLE_FLAGS =ResourceFlags::CopyDest |  ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil;// | ResourceFlags::GenCPU;
@@ -1457,6 +1469,16 @@ public:
 		void execute();
 
 		bool active();
+
+		// Whether this pass's own access to `version` carries SkipEnablement, so
+		// the cull must not enable the pass on account of that write.
+		bool skips_enablement_for(ResourceVersion version) const
+		{
+			for (const auto& acc : used.resources)
+				if (acc.version == version)
+					return check(acc.flags & ResourceFlags::SkipEnablement);
+			return false;
+		}
 
 		// optimization
 		bool inserted = false;
