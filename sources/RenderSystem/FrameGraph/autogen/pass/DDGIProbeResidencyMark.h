@@ -41,6 +41,12 @@ public:
 		Handlers::StructuredBuffer<uint> DDGI_ProbeMissStreak = ResourceID::DDGI_ProbeMissStreak;
 
 
+		Handlers::Texture DDGI_ProbeIrradiance = ResourceID::DDGI_ProbeIrradiance;
+
+
+		Handlers::Texture DDGI_ProbeVisibility = ResourceID::DDGI_ProbeVisibility;
+
+
 		// Resources this pass always needs whenever it runs, generated from
 		// each field's own [Always=X] annotation (further gated by [Optional=X]
 		// when present -- a raw bool expression, e.g. builder.exists(...) or a
@@ -62,6 +68,8 @@ public:
 			builder.need(data.DDGI_CompactedProbeCount, FrameGraph::ResourceFlags::UnorderedAccess);
 			builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
 			builder.need(data.DDGI_ProbeMissStreak, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -75,6 +83,8 @@ public:
 			FrameGraph::ChainIndex DDGI_CompactedProbeCount = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeResidencyPending = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeMissStreak = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
 		};
 
 		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
@@ -84,6 +94,8 @@ public:
 			cache.DDGI_CompactedProbeCount = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount);
 			cache.DDGI_ProbeResidencyPending = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending);
 			cache.DDGI_ProbeMissStreak = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeMissStreak, ResourceID::DDGI_ProbeMissStreak);
+			cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
+			cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
 		}
 
 		// Replay counterpart of create_always/need_always. A field this pass
@@ -100,6 +112,8 @@ public:
 			builder.load(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount, cache.DDGI_CompactedProbeCount);
 			builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
 			builder.load(data.DDGI_ProbeMissStreak, ResourceID::DDGI_ProbeMissStreak, cache.DDGI_ProbeMissStreak);
+			builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
+			builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
 		}
 
 		// Resources this pass touches, in declaration order, each paired with
@@ -111,6 +125,8 @@ public:
 			{ ResourceID::DDGI_CompactedProbeCount, true },
 			{ ResourceID::DDGI_ProbeResidencyPending, true },
 			{ ResourceID::DDGI_ProbeMissStreak, true },
+			{ ResourceID::DDGI_ProbeIrradiance, true },
+			{ ResourceID::DDGI_ProbeVisibility, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};

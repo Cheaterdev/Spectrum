@@ -1,4 +1,5 @@
 #include "../autogen/DDGIProbeResidencyMarkData.h"
+#include "../autogen/tables/DDGIProbes.h"
 
 // Real hit-point-driven marking (see [[project-ddgi]] planning notes):
 // consumes DDGI_ProbeResidencyPending -- whatever TraceIndirectDiffuse
@@ -21,12 +22,14 @@
 // flags.w CONSECUTIVE missed frames. At 0 grace, a single frame's worth of
 // screen-ray noise/occlusion made probes visibly flicker in and out of
 // residency (and therefore in and out of being traced/convolved) even
-// though the actual need for them hadn't changed. No dilation yet (a probe
-// several hops back in the multi-bounce feedback chain can drop out the
-// frame it stops being directly hit, independent of this grace period,
-// since it was never itself hit to begin with) and no cross-cascade
-// fallback for a probe that isn't resident -- both later steps, not yet
-// implemented.
+// though the actual need for them hadn't changed. Dilation (a probe several
+// hops back in the multi-bounce feedback chain marking its own 8 feedback-
+// read neighbors needed too, so it doesn't drop the frame it stops being
+// directly hit) is handled at the mark sites themselves (TraceIndirectDiffuse/
+// TraceReflection/DDGIProbeTrace's own feedback read, raytracing.hlsl/
+// ddgi_probe_trace.hlsl) -- this pass only consumes what they wrote. No
+// cross-cascade fallback yet for a probe that isn't resident -- still
+// deferred.
 //
 // ALSO stream-compacts the marked set into DDGI_CompactedProbeList (dense
 // list of needed probes' linear indices, from index 0) and
@@ -54,7 +57,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 		return;
 	}
 
-	uint4 probe_counts = data.GetInfo().GetProbe_counts();
+	uint3 probe_counts = data.GetInfo().GetProbe_counts().xyz;
 	uint probe_count = probe_counts.x * probe_counts.y * probe_counts.z;
 
 	uint linear_index = dispatchID.x;
@@ -71,8 +74,25 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	bool is_coarsest = data.GetInfo().GetCascade_info().w != 0;
 	bool coarsest_exempt = is_coarsest && !cull_coarsest;
 
-	bool hit_this_cycle = data.GetPending()[buffer_index] != 0;
-	bool was_resident = data.GetProbe_residency()[buffer_index] != 0;
+	// Toroidal-scroll forced eviction (see DDGIProbeResidencyMarkData's own
+	// comment, ddgi.sig, for the derivation): a probe's slot on axis A is
+	// being re-tenanted this frame -- its stored data is for whatever cell
+	// USED to alias here, not the one that does now -- iff
+	// wrap(slot[A] - scroll_lo[A], counts[A]) < scroll_count[A]. Checked per
+	// axis since the window can (rarely) move on more than one axis in the
+	// same frame; ANY axis matching means this exact probe just changed
+	// meaning. Overrides everything below (including the coarsest-cascade
+	// exemption -- an evicted coarsest-cascade probe still needs a real
+	// retrace before its old data can be trusted again, exemption or not).
+	DDGIProbes probes;
+	uint3 slot = probes.ddgi_probe_grid_coord(linear_index, probe_counts);
+	int3 scroll_lo = data.GetScroll_lo();
+	uint3 scroll_count = data.GetScroll_count();
+	uint3 scroll_offset = uint3(probes.ddgi_wrap(int3(slot) - scroll_lo, probe_counts));
+	bool scroll_evicted = any(scroll_offset < scroll_count);
+
+	bool hit_this_cycle = !scroll_evicted && data.GetPending()[buffer_index] != 0;
+	bool was_resident = !scroll_evicted && data.GetProbe_residency()[buffer_index] != 0;
 	uint grace_frames = data.GetInfo().GetFlags().w;
 
 	uint streak = data.GetMiss_streak()[buffer_index];
@@ -85,12 +105,34 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 
 	// culling_disabled forces every probe needed, matching the original
 	// pre-culling "trace everything" behavior -- an A/B lever independent
-	// of the coarsest-cascade bit above.
-	bool needed = culling_disabled || coarsest_exempt || hit_this_cycle || (was_resident && streak <= grace_frames);
+	// of the coarsest-cascade bit above. scroll_evicted overrides all of
+	// these: forced non-resident this frame regardless of hits/exemptions.
+	bool needed = !scroll_evicted && (culling_disabled || coarsest_exempt || hit_this_cycle || (was_resident && streak <= grace_frames));
 
-	data.GetMiss_streak()[buffer_index] = streak;
+	data.GetMiss_streak()[buffer_index] = scroll_evicted ? 0 : streak;
 	data.GetProbe_residency()[buffer_index] = needed ? 1 : 0;
 	data.GetPending()[buffer_index] = 0;
+
+	if (scroll_evicted)
+	{
+		// Zero this probe's own atlas cell (all texel_size^2 texels) so its
+		// next activation -- whenever a screen ray next hits near it -- ramps
+		// in from a clean history instead of DDGIProbeConvolve's temporal
+		// blend mixing fresh light with the previous tenant's unrelated one
+		// (see this struct's own comment, ddgi.sig).
+		uint texel_size = data.GetInfo().GetAtlas_info().x;
+		uint2 origin = probes.ddgi_atlas_origin(slot, texel_size);
+		uint slice = probes.ddgi_atlas_array_slice(slot.y, data.GetInfo().GetCascade_info().y);
+		for (uint ty = 0; ty < texel_size; ty++)
+		{
+			for (uint tx = 0; tx < texel_size; tx++)
+			{
+				uint3 texel = uint3(origin + uint2(tx, ty), slice);
+				data.GetProbe_irradiance()[texel] = float4(0, 0, 0, 1);
+				data.GetProbe_visibility()[texel] = float2(0, 0);
+			}
+		}
+	}
 
 	if (needed)
 	{

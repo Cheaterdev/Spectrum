@@ -36,7 +36,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 
 	DDGIProbes probes = data.GetProbes();
 	uint3 probe_coord = probes.ddgi_probe_grid_coord(probe_index, probe_counts);
-	float3 world_pos = probes.ddgi_probe_world_pos(probe_coord, info.GetGrid_min().xyz, info.GetProbe_spacing().xyz, float3(0, 0, 0));
+	float3 world_pos = probes.ddgi_probe_world_pos(probe_coord, info.GetGrid_min().xyz, info.GetProbe_spacing().xyz, float3(0, 0, 0), probe_counts);
 
 	// Not being traced/convolved this frame (DDGIProbeResidencyMark, ddgi.sig,
 	// didn't mark it needed) -- skip entirely rather than draw a stale

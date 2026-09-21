@@ -194,19 +194,68 @@ struct DDGIProbes
 		return probe_grid_coord.x + probe_grid_coord.y * probe_counts.x + probe_grid_coord.z * probe_counts.x * probe_counts.y;
 	}
 
-	// Toroidal wraparound, same formula the AC Shadows talk gives for its own
-	// atlas addressing: index = (position/probeSize) % numGridElements. v1's
-	// grid never actually moves yet (no recentering, see DDGI.ixx's own
-	// comment), so this is currently equivalent to an identity wrap -- kept
-	// now so recentering is a pure C++ change later, not a shader rewrite.
-	uint3 ddgi_toroidal_wrap(uint3 probe_grid_coord, uint3 probe_counts)
+	// Non-negative modulo (HLSL/C++ % can return negative results for a
+	// negative dividend) -- the building block every wrap/toroidal lookup
+	// below needs, since a probe's cell coordinate relative to some origin
+	// is routinely negative (a corner one cell below the window's own
+	// origin, or a slot minus the window's origin when the slot is "before"
+	// it in wrapped space).
+	int3 ddgi_wrap(int3 v, uint3 counts)
 	{
-		return probe_grid_coord % probe_counts;
+		int3 c = int3(counts);
+		return ((v % c) + c) % c;
 	}
 
-	float3 ddgi_probe_world_pos(uint3 probe_grid_coord, float3 grid_min, float3 probe_spacing, float3 probe_offset)
+	// Toroidal (ring-buffer) addressing (see [[project-ddgi]] planning
+	// notes): the grid recenters on the camera every frame by snapping
+	// grid_min to the nearest whole probe-spacing step (ddgi_make_info,
+	// DDGIGraph.cpp), but a probe's ATLAS SLOT (its grid_coord within
+	// [0, probe_counts)) is a fixed, unchanging function of its own
+	// absolute world-cell position -- NOT of grid_min. Two world cells
+	// exactly probe_counts apart alias to the same slot, which is safe
+	// precisely because grid_min/probe_counts/spacing together bound the
+	// cascade's current working volume to one such cell per residue class
+	// (ddgi_sample_irradiance_cascaded's own margin check already enforces
+	// this precondition, unchanged by this file).
+	//
+	// Given grid_min is always an exact multiple of spacing (by
+	// construction), window_origin = round(grid_min / spacing) is the
+	// window's own minimum corner in integer probe-cell units -- the one
+	// piece of state every wrap/unwrap direction below is built from.
+	int3 ddgi_window_origin(float3 grid_min, float3 spacing)
 	{
-		return grid_min + float3(probe_grid_coord) * probe_spacing + probe_offset;
+		return int3(round(grid_min / spacing));
+	}
+
+	// slot -> world position. `probe_grid_coord` is a bare atlas slot with
+	// no known relation to any particular world cell (DDGIProbeTrace's own
+	// dispatch-derived slot, or an 8-corner sample offset already wrapped
+	// into a valid slot by the caller) -- recovers the UNIQUE absolute
+	// world-cell in [window_origin, window_origin+probe_counts) that
+	// currently maps to it. Reduces to the old direct `grid_min +
+	// coord*spacing` when the grid has never scrolled (window_origin's own
+	// wrap of a slot already in range is a no-op), so this is a strict
+	// superset of the pre-toroidal behavior, not a special case of it.
+	float3 ddgi_probe_world_pos(uint3 probe_grid_coord, float3 grid_min, float3 probe_spacing, float3 probe_offset, uint3 probe_counts)
+	{
+		int3 window_origin = ddgi_window_origin(grid_min, probe_spacing);
+		int3 absolute_cell = window_origin + ddgi_wrap(int3(probe_grid_coord) - window_origin, probe_counts);
+		return float3(absolute_cell) * probe_spacing + probe_offset;
+	}
+
+	// world position -> atlas slot. Pure function of the world cell alone
+	// (no grid_min/window_origin involved) -- this is what makes a probe's
+	// slot assignment independent of how far the window has scrolled, the
+	// entire point of toroidal addressing. Only valid for a world_pos
+	// already known to fall within the cascade's current working volume
+	// (ddgi_sample_irradiance_cascaded's own margin check, or a hit point a
+	// caller has already cascade-selected) -- outside that volume this
+	// still returns SOME slot (wrapping never fails), it just may not be
+	// the slot the caller actually meant.
+	uint3 ddgi_world_to_slot(float3 world_pos, float3 probe_spacing, uint3 probe_counts)
+	{
+		int3 absolute_cell = int3(floor(world_pos / probe_spacing));
+		return uint3(ddgi_wrap(absolute_cell, probe_counts));
 	}
 
 	// Texel-space origin (top-left corner) of a probe's cell within the 2D
@@ -474,6 +523,28 @@ struct DDGIProbeResidencyMarkData
 	# ddgi_probe_residency_mark.hlsl's own comment for why they can't be one
 	# dispatch.
 	uint reset_only;
+
+	# Toroidal-scroll forced eviction (see [[project-ddgi]] planning notes
+	# and ddgi_probe_world_pos/ddgi_world_to_slot's own comments, above):
+	# computed once per cascade per frame in ddgi_probe_select_render
+	# (DDGIGraph.cpp, which runs first in the pipeline for this cascade)
+	# from the delta between this frame's and last frame's window_origin,
+	# then handed to this pass. A probe's slot is forcibly evicted on axis A
+	# this frame iff `ddgi_wrap(slot[A] - scroll_lo[A], counts[A]) <
+	# scroll_count[A]` -- see ddgi_probe_residency_mark.hlsl's own comment
+	# for the derivation. scroll_count is pre-clamped to probe_counts on the
+	# C++ side, so a jump larger than the grid itself (a teleport/cut)
+	# naturally forces every slot on that axis to evict, rather than needing
+	# a separate "full reset" code path.
+	int3 scroll_lo;
+	uint3 scroll_count;
+	# Zeroed for an evicted probe's own texel_size^2 cells (see this pass's
+	# own comment) so DDGIProbeTrace's next feedback read and
+	# DDGIProbeConvolve's next temporal blend see a clean history instead of
+	# the previous tenant's unrelated light -- the same "ramp in from zero"
+	# a never-before-resident probe already gets, not a blend toward it.
+	RWTexture2DArray<float4> probe_irradiance;
+	RWTexture2DArray<float2> probe_visibility;
 }
 
 ComputePSO DDGIProbeResidencyMark
@@ -515,6 +586,10 @@ PassNode DDGIProbeResidencyMark
 	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_CompactedProbeCount;
 	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeMissStreak;
+	# Zeroed for a toroidal-scroll-evicted probe's own texels -- see
+	# DDGIProbeResidencyMarkData's own comment (this file).
+	[Always = UnorderedAccess] Texture DDGI_ProbeIrradiance;
+	[Always = UnorderedAccess] Texture DDGI_ProbeVisibility;
 }
 
 # Packs this cascade's DDGI_DispatchRaysArgs record for DDGIProbeTrace's

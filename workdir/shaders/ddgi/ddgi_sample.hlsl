@@ -63,14 +63,21 @@ float3 ddgi_sample_irradiance(
 {
 	uint texel_size = info.GetAtlas_info().x;
 	uint3 probe_counts = info.GetProbe_counts().xyz;
-	float3 grid_min = info.GetGrid_min().xyz;
 	float3 spacing  = info.GetProbe_spacing().xyz;
 
 	// No bound buffer -- only used for its pure coordinate-math helpers, same
 	// reasoning as DDGIProbeConvolveData's own comment (ddgi.sig).
 	DDGIProbes probes;
 
-	float3 probe_space = (world_pos - grid_min) / spacing;
+	// Absolute (grid_min-independent) cell + fractional part -- see
+	// ddgi_world_to_slot's own comment (ddgi.sig) for why this must be a
+	// pure function of world_pos/spacing alone, not (world_pos-grid_min)/
+	// spacing: subtracting grid_min first doesn't change the fractional
+	// part (floor(x-n) = floor(x)-n for integer n, so frac is identical
+	// either way), but it WOULD change which absolute cell a wrapped slot
+	// reconstructs to depending on the window's current position -- exactly
+	// the bug toroidal addressing exists to avoid.
+	float3 probe_space = world_pos / spacing;
 	float3 base = floor(probe_space);
 	float3 frac_part = probe_space - base;
 
@@ -82,17 +89,20 @@ float3 ddgi_sample_irradiance(
 	for (uint i = 0; i < 8; i++)
 	{
 		float3 offset = float3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
-		float3 coord = base + offset;
-
-		if (any(coord < 0) || any(coord >= float3(probe_counts)))
-			continue;
+		float3 absolute_corner = base + offset;
 
 		float3 trilinear = lerp(1.0 - frac_part, frac_part, offset);
 		float weight = trilinear.x * trilinear.y * trilinear.z;
 		if (weight <= 0.0001)
 			continue;
 
-		uint3 probe_coord = uint3(coord);
+		// Toroidal wrap of the ABSOLUTE cell (see ddgi_wrap/ddgi_world_to_slot's
+		// own comments, ddgi.sig) -- always valid, no in-grid check needed:
+		// ddgi_sample_irradiance_cascaded's own margin check already
+		// guarantees world_pos (and therefore every one of its 8 corners)
+		// sits well inside this cascade's current window before this
+		// function is ever called.
+		uint3 probe_coord = uint3(probes.ddgi_wrap(int3(absolute_corner), probe_counts));
 
 		// Skip a probe DDGIProbeResidencyMark hasn't marked needed -- its
 		// atlas texels are stale (last valid value before it was culled) or
@@ -100,13 +110,15 @@ float3 ddgi_sample_irradiance(
 		// not something to blend in as if it were current. Not counting its
 		// weight toward weight_sum means the remaining resident corners'
 		// weights renormalize on their own (see the final result/weight_sum
-		// below) -- same mechanism the existing out-of-grid skip above
-		// already relies on.
+		// below).
 		uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, probe_counts);
 		if (probe_residency[info.GetCascade_info().x + probe_linear_index] == 0)
 			continue;
 
-		float3 probe_pos = probes.ddgi_probe_world_pos(probe_coord, grid_min, spacing, float3(0, 0, 0));
+		// Exact -- already have the real absolute cell in hand, no need to
+		// reconstruct it back from the wrapped slot (ddgi_probe_world_pos's
+		// own job, for callers that start from a bare slot instead).
+		float3 probe_pos = absolute_corner * spacing;
 		// ddgi_atlas_origin gives the (x,z) plane position; probe_coord.y
 		// plus this cascade's own slice offset (DDGIInfo::cascade_info.y)
 		// gives which array slice of the shared atlas holds it -- see
@@ -245,12 +257,14 @@ float3 ddgi_sample_irradiance_traced(
 {
 	uint texel_size = info.GetAtlas_info().x;
 	uint3 probe_counts = info.GetProbe_counts().xyz;
-	float3 grid_min = info.GetGrid_min().xyz;
 	float3 spacing  = info.GetProbe_spacing().xyz;
 
 	DDGIProbes probes;
 
-	float3 probe_space = (world_pos - grid_min) / spacing;
+	// Absolute cell + fractional part -- see ddgi_sample_irradiance's own
+	// comment on the identical block (this file) for why this must NOT
+	// subtract grid_min first.
+	float3 probe_space = world_pos / spacing;
 	float3 base = floor(probe_space);
 	float3 frac_part = probe_space - base;
 
@@ -262,23 +276,22 @@ float3 ddgi_sample_irradiance_traced(
 	for (uint i = 0; i < 8; i++)
 	{
 		float3 offset = float3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
-		float3 coord = base + offset;
-
-		if (any(coord < 0) || any(coord >= float3(probe_counts)))
-			continue;
+		float3 absolute_corner = base + offset;
 
 		float3 trilinear = lerp(1.0 - frac_part, frac_part, offset);
 		float weight = trilinear.x * trilinear.y * trilinear.z;
 		if (weight <= 0.0001)
 			continue;
 
-		uint3 probe_coord = uint3(coord);
+		// Toroidal wrap of the absolute cell -- see ddgi_sample_irradiance's
+		// own comment on the identical block (this file).
+		uint3 probe_coord = uint3(probes.ddgi_wrap(int3(absolute_corner), probe_counts));
 
 		uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, probe_counts);
 		if (probe_residency[info.GetCascade_info().x + probe_linear_index] == 0)
 			continue;
 
-		float3 probe_pos = probes.ddgi_probe_world_pos(probe_coord, grid_min, spacing, float3(0, 0, 0));
+		float3 probe_pos = absolute_corner * spacing;
 
 		float3 to_point = world_pos - probe_pos;
 		float dist_to_point = length(to_point);
@@ -374,12 +387,14 @@ float3 ddgi_sample_irradiance_inline_traced(
 {
 	uint texel_size = info.GetAtlas_info().x;
 	uint3 probe_counts = info.GetProbe_counts().xyz;
-	float3 grid_min = info.GetGrid_min().xyz;
 	float3 spacing  = info.GetProbe_spacing().xyz;
 
 	DDGIProbes probes;
 
-	float3 probe_space = (world_pos - grid_min) / spacing;
+	// Absolute cell + fractional part -- see ddgi_sample_irradiance's own
+	// comment on the identical block (this file) for why this must NOT
+	// subtract grid_min first.
+	float3 probe_space = world_pos / spacing;
 	float3 base = floor(probe_space);
 	float3 frac_part = probe_space - base;
 
@@ -391,23 +406,22 @@ float3 ddgi_sample_irradiance_inline_traced(
 	for (uint i = 0; i < 8; i++)
 	{
 		float3 offset = float3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
-		float3 coord = base + offset;
-
-		if (any(coord < 0) || any(coord >= float3(probe_counts)))
-			continue;
+		float3 absolute_corner = base + offset;
 
 		float3 trilinear = lerp(1.0 - frac_part, frac_part, offset);
 		float weight = trilinear.x * trilinear.y * trilinear.z;
 		if (weight <= 0.0001)
 			continue;
 
-		uint3 probe_coord = uint3(coord);
+		// Toroidal wrap of the absolute cell -- see ddgi_sample_irradiance's
+		// own comment on the identical block (this file).
+		uint3 probe_coord = uint3(probes.ddgi_wrap(int3(absolute_corner), probe_counts));
 
 		uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, probe_counts);
 		if (probe_residency[info.GetCascade_info().x + probe_linear_index] == 0)
 			continue;
 
-		float3 probe_pos = probes.ddgi_probe_world_pos(probe_coord, grid_min, spacing, float3(0, 0, 0));
+		float3 probe_pos = absolute_corner * spacing;
 
 		float3 to_point = world_pos - probe_pos;
 		float dist_to_point = length(to_point);

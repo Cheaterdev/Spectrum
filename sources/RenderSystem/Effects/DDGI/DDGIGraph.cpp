@@ -46,7 +46,7 @@ namespace
 	// correct before Width/Height get wired to a real residency-compacted
 	// count (stream compaction, not yet implemented -- see [[project-ddgi]]
 	// planning notes).
-	Variable<bool> g_ddgi_use_indirect_dispatch = { false, "Use indirect DispatchRays", &ddgi_debug_context() };
+	Variable<bool> g_ddgi_use_indirect_dispatch = { true, "Use indirect DispatchRays", &ddgi_debug_context() };
 	// Off by default: the coarsest cascade (DDGI_CascadeCount-1) is normally
 	// exempt from residency culling -- always fully resident, since it's the
 	// floor everything else falls back to and there's nowhere further for
@@ -60,7 +60,7 @@ namespace
 	// wherever nothing else in the scene is marking it -- watch for that
 	// with DDGI's own "Show probes" debug view before trusting this in a
 	// real scene.
-	Variable<bool> g_ddgi_cull_coarsest_cascade = { false, "Cull coarsest cascade", &ddgi_debug_context() };
+	Variable<bool> g_ddgi_cull_coarsest_cascade = { true, "Cull coarsest cascade", &ddgi_debug_context() };
 	// How many CONSECUTIVE frames a resident probe can go unhit before
 	// DDGIProbeResidencyMark actually evicts it (DDGI_ProbeMissStreak) --
 	// see that shader's own comment. At 0, a single frame's worth of
@@ -85,7 +85,7 @@ namespace
 	// while probes are actually being (re)traced -- isolates whether a leak
 	// comes from direct-lit shading alone or is introduced/amplified by the
 	// recursive probe-to-probe feedback loop across frames.
-	Variable<bool> g_ddgi_fallback_while_generating = { true, "Use fallback while generating probes", &ddgi_debug_context() };
+	Variable<bool> g_ddgi_fallback_while_generating = { false, "Use fallback while generating probes", &ddgi_debug_context() };
 	// See ddgi_sky_fallback_disabled's own comment (DDGI.ixx) -- affects
 	// every RayPayload-based ColorPass consumer in the engine, not just
 	// DDGI, since they all share one miss shader (MyMissShader,
@@ -101,6 +101,27 @@ namespace
 	// TraceIndirectDiffuse/TraceReflection's final per-pixel screen term is
 	// untouched.
 	Variable<float> g_ddgi_feedback_strength = { 1.0f, "Feedback strength", &ddgi_debug_context(), 0.0f, 2.0f };
+
+	// Toroidal-scroll tracking (see [[project-ddgi]] planning notes and
+	// DDGIProbeResidencyMarkData's own comment, ddgi.sig): the grid's window
+	// origin (in integer probe-cell units) remembered per cascade across
+	// frames, so ddgi_probe_select_render -- which runs once per cascade per
+	// frame, first in the pipeline among DDGI's own passes -- can compute
+	// this frame's scroll delta exactly once and hand the result to
+	// ddgi_probe_residency_mark_render (which runs right after it for the
+	// same cascade). ddgi_make_info() itself can't own this: it's called
+	// fresh, independently, several times per frame per cascade (Select,
+	// ResidencyMark, ArgsBuild, Trace, Convolve, IndirectRTX, ReflectionRTX
+	// all call it), so tracking "the previous frame's origin" inside it would
+	// treat each of those calls as its own frame.
+	ivec3 g_ddgi_prev_window_origin[Constants::DDGI_CascadeCount];
+	bool  g_ddgi_scroll_initialized[Constants::DDGI_CascadeCount] = { false, false, false, false, false };
+	// This frame's per-cascade eviction range, in the same (lo, count) shape
+	// DDGIProbeResidencyMarkData carries to the shader -- see that struct's
+	// own comment for the wrap-test derivation. count=0 on every axis when
+	// the window didn't move on that axis (or hasn't been established yet).
+	ivec3 g_ddgi_scroll_lo[Constants::DDGI_CascadeCount];
+	uint3 g_ddgi_scroll_count[Constants::DDGI_CascadeCount];
 }
 
 void ddgi_update_selectors(FrameGraph::Graph& graph)
@@ -195,6 +216,50 @@ void ddgi_probe_select_render(Passes::DDGIProbeSelect::Context& data, FrameConte
 
 	Slots::DDGIInfo info = ddgi_make_info(ddgi_camera_pos(context), cascade);
 
+	// Toroidal-scroll delta, computed exactly once per cascade per frame
+	// here (see g_ddgi_prev_window_origin's own comment) -- grid_min is
+	// always an exact multiple of spacing (ddgi_make_info's own snapping),
+	// so dividing back out and rounding recovers the window's origin in
+	// whole probe-cell units.
+	{
+		vec4 grid_min = info.GetGrid_min();
+		vec4 spacing  = info.GetProbe_spacing();
+		ivec3 window_origin;
+		window_origin.x = (int)std::lround(grid_min.x / spacing.x);
+		window_origin.y = (int)std::lround(grid_min.y / spacing.y);
+		window_origin.z = (int)std::lround(grid_min.z / spacing.z);
+
+		uint4 probe_counts = info.GetProbe_counts();
+		ivec3 lo(0, 0, 0);
+		uint3 count(0, 0, 0);
+
+		if (g_ddgi_scroll_initialized[cascade])
+		{
+			ivec3 prev = g_ddgi_prev_window_origin[cascade];
+			int delta_x = window_origin.x - prev.x;
+			int delta_y = window_origin.y - prev.y;
+			int delta_z = window_origin.z - prev.z;
+
+			// See DDGIProbeResidencyMarkData's own comment (ddgi.sig) for
+			// the derivation: lo = min(old_origin, new_origin) on this axis,
+			// count = |delta| clamped to this axis's own probe count --
+			// clamping to the grid size is what turns a large jump
+			// (teleport/cut) into "evict everything on this axis" instead
+			// of needing a separate full-reset code path (a wrap test with
+			// count == counts is unconditionally true for every slot).
+			if (delta_x != 0) { lo.x = prev.x + std::min(0, delta_x); count.x = (uint32_t)std::min(std::abs(delta_x), (int)probe_counts.x); }
+			if (delta_y != 0) { lo.y = prev.y + std::min(0, delta_y); count.y = (uint32_t)std::min(std::abs(delta_y), (int)probe_counts.y); }
+			if (delta_z != 0) { lo.z = prev.z + std::min(0, delta_z); count.z = (uint32_t)std::min(std::abs(delta_z), (int)probe_counts.z); }
+		}
+		// else: first frame this cascade has ever run -- nothing to evict
+		// yet (count stays 0 on every axis), just establish the baseline.
+
+		g_ddgi_scroll_lo[cascade] = lo;
+		g_ddgi_scroll_count[cascade] = count;
+		g_ddgi_prev_window_origin[cascade] = window_origin;
+		g_ddgi_scroll_initialized[cascade] = true;
+	}
+
 	{
 		Slots::DDGIProbeSelectData params;
 		params.GetInfo() = info;
@@ -213,21 +278,6 @@ void ddgi_probe_select_render(Passes::DDGIProbeSelect::Context& data, FrameConte
 void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& data, FrameContext& context)
 {
 	uint32_t cascade = data.pass_index;
-
-	// TEMPORARY (see ddgi_probe_trace_render's own diagnostic comment, ask
-	// before removing once this is sorted): confirms this render body is
-	// actually invoked for every one of the 5 [Multiple] instances, every
-	// frame -- DDGI_CompactedProbeCount reading 0 for EVERY cascade
-	// including the unconditionally-resident coarsest one (cascade 4) means
-	// either this never runs for some pass_index values, or it runs but its
-	// writes never take effect / never survive to ArgsBuild's own read.
-	if (FILE* f = std::fopen("ddgi_residency_mark_invoked.temp", "a"))
-	{
-		Slots::DDGIInfo probe_info = ddgi_make_info(ddgi_camera_pos(context), cascade);
-		std::fprintf(f, "ddgi_probe_residency_mark_render: pass_index=%u cascade_info.z=%u cascade_info.w(is_coarsest)=%u flags.z=%u\n",
-			cascade, probe_info.GetCascade_info().z, probe_info.GetCascade_info().w, probe_info.GetFlags().z);
-		std::fclose(f);
-	}
 
 	auto& compute = context.get_list()->get_compute();
 	compute.set_signature(Layouts::DefaultLayout);
@@ -248,41 +298,18 @@ void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& d
 		params.GetCompacted_count()  = data.DDGI_CompactedProbeCount->rwStructuredBuffer;
 		params.GetPending()          = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 		params.GetMiss_streak()      = data.DDGI_ProbeMissStreak->rwStructuredBuffer;
+		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->rwTexture2DArray;
+		params.GetProbe_visibility() = data.DDGI_ProbeVisibility->rwTexture2DArray;
+		params.GetScroll_lo()    = g_ddgi_scroll_lo[cascade];
+		params.GetScroll_count() = g_ddgi_scroll_count[cascade];
 		params.GetReset_only() = 1;
 		compute.set(params);
 		compute.dispatch(1, 1, 1);
 	}
 
-	// TEMPORARY (see the other ddgi_*.temp diagnostics' own comments, ask
-	// before removing once this is sorted). Reads DDGI_ProbeResidencyPending
-	// HERE, before the mark dispatch below consumes it (sets it back to 0 as
-	// it reads it -- see this shader's own comment) -- reading it after
-	// would always show 0 regardless of whether anything was actually
-	// pending. Cascade 0 only, all-zero here would mean nothing marked a hit
-	// point last frame at all (e.g. the active GI path isn't actually
-	// IndirectRTX/ReflectionRTX right now), which would explain every
-	// cascade never accumulating residency.
-	if (cascade == 0)
-	{
-		auto& copy = context.get_list()->get_copy();
-		uint64_t byte_offset = (uint64_t)info.GetCascade_info().x * sizeof(uint32_t);
-		uint64_t byte_size   = (uint64_t)Constants::DDGI_ProbeCount * sizeof(uint32_t);
-		copy.read_buffer(data.DDGI_ProbeResidencyPending->resource.get(), byte_offset, byte_size,
-			[](std::span<std::byte> memory)
-			{
-				const uint32_t* v = reinterpret_cast<const uint32_t*>(memory.data());
-				size_t count = memory.size() / sizeof(uint32_t);
-				size_t ones = 0;
-				for (size_t i = 0; i < count; i++) ones += (v[i] != 0);
-				if (FILE* f = std::fopen("ddgi_cascade0_pending.temp", "a"))
-				{
-					std::fprintf(f, "cascade 0 DDGI_ProbeResidencyPending (pre-consume): %zu / %zu ones\n", ones, count);
-					std::fclose(f);
-				}
-			});
-	}
-
-	// Second dispatch: mark + stream-compact.
+	// Second dispatch: mark + stream-compact + toroidal-scroll eviction (see
+	// ddgi_probe_select_render's own comment on where scroll_lo/scroll_count
+	// come from, and this shader's own comment for how it uses them).
 	{
 		Slots::DDGIProbeResidencyMarkData params;
 		params.GetInfo() = info;
@@ -291,36 +318,13 @@ void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& d
 		params.GetCompacted_count()  = data.DDGI_CompactedProbeCount->rwStructuredBuffer;
 		params.GetPending()          = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 		params.GetMiss_streak()      = data.DDGI_ProbeMissStreak->rwStructuredBuffer;
+		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->rwTexture2DArray;
+		params.GetProbe_visibility() = data.DDGI_ProbeVisibility->rwTexture2DArray;
+		params.GetScroll_lo()    = g_ddgi_scroll_lo[cascade];
+		params.GetScroll_count() = g_ddgi_scroll_count[cascade];
 		params.GetReset_only() = 0;
 		compute.set(params);
 		compute.dispatch(uint3(Constants::DDGI_ProbeCount, 1, 1), uint3(64, 1, 1));
-	}
-
-	// TEMPORARY (see the other ddgi_*.temp diagnostics' own comments, ask
-	// before removing once this is sorted). Cascade 4 (coarsest, exempt from
-	// culling by default -- see this shader's own comment on
-	// coarsest_exempt) should show its OWN DDGI_ProbeResidency range as 100%
-	// ones after the mark dispatch above, unconditionally, regardless of any
-	// hit. If it doesn't, the mark write itself (not just compaction/count)
-	// isn't taking effect for that cascade.
-	if (cascade == 4)
-	{
-		auto& copy = context.get_list()->get_copy();
-		uint64_t byte_offset = (uint64_t)info.GetCascade_info().x * sizeof(uint32_t);
-		uint64_t byte_size   = (uint64_t)Constants::DDGI_ProbeCount * sizeof(uint32_t);
-		copy.read_buffer(data.DDGI_ProbeResidency->resource.get(), byte_offset, byte_size,
-			[](std::span<std::byte> memory)
-			{
-				const uint32_t* v = reinterpret_cast<const uint32_t*>(memory.data());
-				size_t count = memory.size() / sizeof(uint32_t);
-				size_t ones = 0;
-				for (size_t i = 0; i < count; i++) ones += (v[i] != 0);
-				if (FILE* f = std::fopen("ddgi_cascade4_residency.temp", "a"))
-				{
-					std::fprintf(f, "cascade 4 DDGI_ProbeResidency: %zu / %zu ones\n", ones, count);
-					std::fclose(f);
-				}
-			});
 	}
 }
 
@@ -372,40 +376,6 @@ void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::C
 
 	compute.set_pipeline<PSOS::DispatchRaysArgsBuild>();
 	compute.dispatch(1, 1, 1);
-
-	// TEMPORARY (see ddgi_probe_trace_render's own comment on why its
-	// ExecuteIndirect is disabled right now -- ask before removing this once
-	// that's sorted). Reads this cascade's own DDGI_CompactedProbeCount back
-	// to the CPU and appends it to ddgi_compacted_count.temp, so we can see
-	// the actual per-cascade Width the disabled indirect launch would have
-	// used, without needing a debugger or a GPU capture.
-	{
-		auto& copy = context.get_list()->get_copy();
-		// Offset was hardcoded 0 here -- always read cascade 0's own slot
-		// regardless of `cascade`, which is exactly why every cascade
-		// (including the unconditionally-full cascade 4, independently
-		// confirmed via ddgi_probe_residency_mark_render's own diagnostic)
-		// misleadingly logged 0: this was reading the SAME slot 5 times,
-		// never the requesting cascade's actual one.
-		copy.read_buffer(data.DDGI_CompactedProbeCount->resource.get(), (uint64_t)cascade * sizeof(uint32_t), sizeof(uint32_t),
-			[cascade](std::span<std::byte> memory)
-			{
-				uint32_t count = *reinterpret_cast<const uint32_t*>(memory.data());
-				// std::fopen/fprintf, not std::ofstream -- matches
-				// Core::assert_fail's own pattern (Core/Defines.h), the only
-				// other ad-hoc file write in this codebase; <cstdio> is
-				// already force-included via Core/Defines.h so this needs no
-				// extra header.
-				if (FILE* f = std::fopen("ddgi_compacted_count.temp", "a"))
-				{
-					std::fprintf(f, "cascade %u: DDGI_CompactedProbeCount = %u (DDGI_ProbeCount = %u, width_multiplier = %u, would-be Width = %llu)\n",
-						cascade, count, (unsigned)Constants::DDGI_ProbeCount,
-						(unsigned)(Constants::DDGI_ProbeTexelSize * Constants::DDGI_ProbeTexelSize),
-						(unsigned long long)count * (Constants::DDGI_ProbeTexelSize * Constants::DDGI_ProbeTexelSize));
-					std::fclose(f);
-				}
-			});
-	}
 }
 
 // Traces one ray per DDGI_ProbeRadiance/DDGI_ProbeGBuffer atlas texel,

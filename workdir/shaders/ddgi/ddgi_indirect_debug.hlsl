@@ -62,17 +62,22 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 		{
 			float3 local = (pos - ddgi_cascades[c].GetGrid_min().xyz) / ddgi_cascades[c].GetProbe_spacing().xyz;
 			int3 base = int3(floor(local));
-			int3 probe_counts = int3(ddgi_cascades[c].GetProbe_counts().xyz);
+			uint3 probe_counts = ddgi_cascades[c].GetProbe_counts().xyz;
 			uint cascade_offset = ddgi_cascades[c].GetCascade_info().x;
+			int3 window_origin = probes.ddgi_window_origin(ddgi_cascades[c].GetGrid_min().xyz, ddgi_cascades[c].GetProbe_spacing().xyz);
 
+			// Absolute-cell addressing, still bounds-checked -- see
+			// TraceIndirectDiffuse's own comment on the identical block
+			// (raytracing.hlsl).
 			[unroll]
 			for (uint i = 0; i < 8; i++)
 			{
 				int3 corner = int3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
 				int3 cell = base + corner;
-				if (all(cell >= 0) && all(cell < probe_counts))
+				if (all(cell >= 0) && all(cell < int3(probe_counts)))
 				{
-					uint linear_index = probes.ddgi_probe_linear_index(uint3(cell), uint3(probe_counts));
+					uint3 wrapped = uint3(probes.ddgi_wrap(window_origin + cell, probe_counts));
+					uint linear_index = probes.ddgi_probe_linear_index(wrapped, probe_counts);
 					data.GetResidency_pending()[cascade_offset + linear_index] = 1;
 				}
 			}

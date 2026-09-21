@@ -138,7 +138,7 @@ void DDGIProbeTraceRaygenShader()
 
 	float3 dir = ddgi_oct_decode(local_uv);
 
-	float3 probe_pos = probes.ddgi_probe_world_pos(probe_coord, info.GetGrid_min().xyz, info.GetProbe_spacing().xyz, float3(0, 0, 0));
+	float3 probe_pos = probes.ddgi_probe_world_pos(probe_coord, info.GetGrid_min().xyz, info.GetProbe_spacing().xyz, float3(0, 0, 0), info.GetProbe_counts().xyz);
 
 	[raypayload] RayPayload payload_gi;
 	payload_gi.init();
@@ -180,17 +180,34 @@ void DDGIProbeTraceRaygenShader()
 		{
 			float3 local = (hit_pos - info.GetGrid_min().xyz) / info.GetProbe_spacing().xyz;
 			int3 dilate_base = int3(floor(local));
-			int3 dilate_counts = int3(info.GetProbe_counts().xyz);
+			uint3 dilate_counts = info.GetProbe_counts().xyz;
 			uint dilate_offset = info.GetCascade_info().x;
+			// Absolute-cell offset for this cascade's current window -- see
+			// ddgi_sample_irradiance's own comment (ddgi_sample.hlsl) for why
+			// marking must address by ABSOLUTE (wrapped) cell, not the local
+			// (window-relative) one: two different local coordinates for the
+			// same probe alias to different slots depending on where the
+			// window currently sits, which is exactly the bug toroidal
+			// addressing exists to avoid.
+			int3 dilate_window_origin = probes.ddgi_window_origin(info.GetGrid_min().xyz, info.GetProbe_spacing().xyz);
 
+			// Still bounds-checked (not unconditionally wrapped): hit_pos is
+			// an arbitrary traced hit with no margin guarantee against THIS
+			// cascade's grid the way a sample point already has (that
+			// guarantee comes from ddgi_sample_irradiance_cascaded's own
+			// cascade-selection check, which nothing here goes through) --
+			// wrapping an out-of-window corner unconditionally would alias
+			// it onto a real, unrelated probe on the opposite side of the
+			// grid instead of just skipping it.
 			[unroll]
 			for (uint di = 0; di < 8; di++)
 			{
 				int3 corner = int3(di & 1, (di >> 1) & 1, (di >> 2) & 1);
 				int3 cell = dilate_base + corner;
-				if (all(cell >= 0) && all(cell < dilate_counts))
+				if (all(cell >= 0) && all(cell < int3(dilate_counts)))
 				{
-					uint dilate_linear_index = probes.ddgi_probe_linear_index(uint3(cell), uint3(dilate_counts));
+					uint3 wrapped = uint3(probes.ddgi_wrap(dilate_window_origin + cell, dilate_counts));
+					uint dilate_linear_index = probes.ddgi_probe_linear_index(wrapped, dilate_counts);
 					trace_data.GetResidency_pending()[dilate_offset + dilate_linear_index] = 1;
 				}
 			}

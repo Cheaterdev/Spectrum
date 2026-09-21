@@ -520,17 +520,28 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 			{
 				float3 local = (hit_pos - ddgi_cascades[c].GetGrid_min().xyz) / ddgi_cascades[c].GetProbe_spacing().xyz;
 				int3 base = int3(floor(local));
-				int3 probe_counts = int3(ddgi_cascades[c].GetProbe_counts().xyz);
+				uint3 probe_counts = ddgi_cascades[c].GetProbe_counts().xyz;
 				uint cascade_offset = ddgi_cascades[c].GetCascade_info().x;
+				// Absolute-cell addressing -- see ddgi_sample_irradiance's own
+				// comment (ddgi_sample.hlsl) for why marking must wrap the
+				// ABSOLUTE cell, not the local (window-relative) one.
+				int3 window_origin = probes.ddgi_window_origin(ddgi_cascades[c].GetGrid_min().xyz, ddgi_cascades[c].GetProbe_spacing().xyz);
 
+				// Still bounds-checked, not unconditionally wrapped: this
+				// loop tries ALL 4 cascades speculatively for one hit point
+				// with no idea in advance which (if any) actually contain
+				// it -- wrapping an out-of-window corner would alias it onto
+				// a real, unrelated probe in a cascade the hit point isn't
+				// even near, instead of correctly skipping that cascade.
 				[unroll]
 				for (uint i = 0; i < 8; i++)
 				{
 					int3 corner = int3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
 					int3 cell = base + corner;
-					if (all(cell >= 0) && all(cell < probe_counts))
+					if (all(cell >= 0) && all(cell < int3(probe_counts)))
 					{
-						uint linear_index = probes.ddgi_probe_linear_index(uint3(cell), uint3(probe_counts));
+						uint3 wrapped = uint3(probes.ddgi_wrap(window_origin + cell, probe_counts));
+						uint linear_index = probes.ddgi_probe_linear_index(wrapped, probe_counts);
 						voxel_output.GetDdgi_residency_pending()[cascade_offset + linear_index] = 1;
 					}
 				}
@@ -681,17 +692,21 @@ void TraceReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, R
 			{
 				float3 local = (hit_pos - ddgi_cascades[c].GetGrid_min().xyz) / ddgi_cascades[c].GetProbe_spacing().xyz;
 				int3 base = int3(floor(local));
-				int3 probe_counts = int3(ddgi_cascades[c].GetProbe_counts().xyz);
+				uint3 probe_counts = ddgi_cascades[c].GetProbe_counts().xyz;
 				uint cascade_offset = ddgi_cascades[c].GetCascade_info().x;
+				int3 window_origin = probes.ddgi_window_origin(ddgi_cascades[c].GetGrid_min().xyz, ddgi_cascades[c].GetProbe_spacing().xyz);
 
+				// Absolute-cell addressing, still bounds-checked -- see the
+				// identical block's own comment in TraceIndirectDiffuse above.
 				[unroll]
 				for (uint i = 0; i < 8; i++)
 				{
 					int3 corner = int3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
 					int3 cell = base + corner;
-					if (all(cell >= 0) && all(cell < probe_counts))
+					if (all(cell >= 0) && all(cell < int3(probe_counts)))
 					{
-						uint linear_index = probes.ddgi_probe_linear_index(uint3(cell), uint3(probe_counts));
+						uint3 wrapped = uint3(probes.ddgi_wrap(window_origin + cell, probe_counts));
+						uint linear_index = probes.ddgi_probe_linear_index(wrapped, probe_counts);
 						voxel_output.GetDdgi_residency_pending()[cascade_offset + linear_index] = 1;
 					}
 				}
