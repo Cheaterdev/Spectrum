@@ -43,28 +43,6 @@ Texture2D get_texture(uint i)
     return GetMaterialInfo().GetTextures(i);
 }
 
-void spec_to_metallic(float4 albedo, float3 specular,out float4 mat_albedo, out float metallic)
-{
-//albedo = pow(albedo, 2.2);
-//specular = pow(specular, 2.2);
-
-//	float spec_avg = dot(albedo.rgb / specular, float3(1,1,1))/3;
-//	metallic = 1.0 / (albedo.rgb / specular + 1); 
-
-
-
-	float3 metal_rgb = (float3(1, 1, 1) / (albedo.rgb / specular + 1));
-	metallic = (metal_rgb.x + metal_rgb.y + metal_rgb.z) / 3;
-
-
-	mat_albedo.rgb = specular / metal_rgb;// albedo.rgb / (1 - metal_rgb);// albedo / (1 - metal_rgb);// specular / metal_rgb;
-
-	//metallic = w;// specular / mat_albedo.rgb;
-
-	mat_albedo.w = albedo.w;  
-}
-
-
 #ifdef BUILD_FUNC_PS
 
 

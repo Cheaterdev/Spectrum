@@ -307,6 +307,29 @@ float GGX_Specular(in float m, in float3 n, in float3 h, in float3 v, in float3 
 }
 
 
+// Spec/gloss -> metallic-roughness conversion (SpecToMetNode's own HLSL
+// callout, Materials/Values.cpp). Lives here rather than universal_material.hlsl
+// so it's reachable from every generated shader variant that can call it --
+// universal_material_raytracing.hlsl includes common.hlsl too but not
+// universal_material.hlsl, so a material using SpecToMetNode failed to
+// compile for its raytracing variant ("undeclared identifier") when this
+// lived only in the raster header.
+void spec_to_metallic(float4 albedo, float3 specular, out float4 mat_albedo, out float metallic)
+{
+	// Direct form of metal_rgb = 1/((albedo/specular)+1), algebraically
+	// identical for well-defined inputs but without dividing by specular
+	// first -- that path produced metal_rgb = 0 whenever specular was
+	// exactly black (a normal, common case: a plain non-specular/matte
+	// dielectric), and then mat_albedo.rgb = specular/metal_rgb = 0/0 = NaN,
+	// which clamps to fully black once written into the UNORM albedo
+	// GBuffer channel. The max() guards the one remaining degenerate case
+	// (albedo and specular both exactly black).
+	float3 metal_rgb = specular / max(albedo.rgb + specular, 1e-4);
+	metallic = (metal_rgb.x + metal_rgb.y + metal_rgb.z) / 3;
+
+	mat_albedo.rgb = albedo.rgb + specular;
+	mat_albedo.w = albedo.w;
+}
 
 
 // http://jcgt.org/published/0007/04/01/paper.pdf by Eric Heitz

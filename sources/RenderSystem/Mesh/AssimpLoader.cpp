@@ -5,6 +5,9 @@
 #define AI_MATKEY_SHININESS     "$mat.shininess", 0, 0
 #define AI_MATKEY_REFLECTIVITY  "$mat.reflectivity", 0, 0
 #define AI_MATKEY_OPACITY       "$mat.opacity", 0, 0
+#define AI_MATKEY_EMISSIVE_INTENSITY "$mat.emissiveIntensity", 0, 0
+#define AI_MATKEY_COLOR_SPECULAR "$clr.specular", 0, 0
+#define AI_MATKEY_GLOSSINESS_FACTOR "$mat.glossinessFactor", 0, 0
 // material.h defines aiGetMaterialFloat as static inline; static functions from
 // exported headers don't cross the module boundary into this TU, so include it
 // explicitly in the global module fragment to keep the definition reachable.
@@ -23,11 +26,96 @@ import assimp;
 #include "Simplifyer/Simplifyer.h"
 #include "Mesh/MeshletGeneration.h"
 
+// BC5/R8G8 are the standard 2-channel encodings for a tangent-space normal
+// map (X/Y only -- Z is always the larger, positive, reconstructible
+// component, so it's dropped to save space). A texture in one of these
+// formats linked as a normal map needs ReconstructNormalZNode instead of a
+// raw sample, since there's no blue channel to read.
+static bool is_two_channel_normal_format(HAL::Format format)
+{
+    return format == HAL::Format::BC5_UNORM  || format == HAL::Format::BC5_SNORM
+        || format == HAL::Format::R8G8_UNORM || format == HAL::Format::R8G8_SNORM;
+}
+
+// A texture stored with only 1 or 2 channels can't hold a real RGB tint --
+// whatever the tool that authored it meant, it's a single scalar's worth of
+// information (a factor/intensity/mask), not a color. Sampling it as .rgb
+// reads whichever channels exist and hardware-zeroes the rest, which for a
+// property like specular easily reads as a nonsense colored tint (e.g. a
+// 2-channel texture with its real value in G alone reads back pure green).
+static bool is_scalar_mask_format(HAL::Format format)
+{
+    return format == HAL::Format::R8_UNORM    || format == HAL::Format::R8_SNORM
+        || format == HAL::Format::R16_UNORM   || format == HAL::Format::R16_SNORM
+        || format == HAL::Format::BC4_UNORM   || format == HAL::Format::BC4_SNORM
+        || is_two_channel_normal_format(format);
+}
+
+// Most GPU formats are nominally 4-component even for RGB-only content (a
+// plain "RGB, no alpha" DXGI format barely exists), so a blanket "does this
+// format have an alpha channel at all" check would fire for nearly every
+// texture and needlessly flip otherwise-fully-opaque materials into the
+// transparent render path (see get_opacity()'s own "only wire when != 1"
+// comment below for why that's worth avoiding). Restrict to formats that are
+// specifically *chosen* because their alpha carries real data -- BC1 in
+// particular is the conventional "opaque color, don't bother with alpha"
+// compressed format, so it's deliberately excluded here.
+static bool format_likely_has_real_alpha(HAL::Format format)
+{
+    return format == HAL::Format::BC2_UNORM || format == HAL::Format::BC2_UNORM_SRGB
+        || format == HAL::Format::BC3_UNORM || format == HAL::Format::BC3_UNORM_SRGB
+        || format == HAL::Format::BC7_UNORM || format == HAL::Format::BC7_UNORM_SRGB
+        || format == HAL::Format::R8G8B8A8_UNORM || format == HAL::Format::R8G8B8A8_UNORM_SRGB
+        || format == HAL::Format::B8G8R8A8_UNORM || format == HAL::Format::B8G8R8A8_UNORM_SRGB
+        || format == HAL::Format::R16G16B16A16_UNORM || format == HAL::Format::R16G16B16A16_FLOAT
+        || format == HAL::Format::R32G32B32A32_FLOAT;
+}
+
+// link() returns false rather than throwing on an incompatible/already-
+// connected graph parameter (e.g. a node registering an output with no
+// explicit type -- defaults to strict_parameter -- linked into a strictly
+// typed MaterialGraph slot like base_color/metallic; see SpecToMetNode's own
+// fix for a concrete case of this). A material with a link that silently
+// failed imports "successfully" but with a slot quietly left unset, so
+// material-graph wiring in this file throws instead of ignoring the result.
+static void link_or_throw(const FlowGraph::parameter::ptr& from, const FlowGraph::parameter::ptr& to, const char* description)
+{
+    if (!from->link(to))
+        throw std::runtime_error(std::string("AssimpLoader: failed to link ") + description + " -- incompatible or already-connected graph parameter");
+}
+
+// Different scenes pack completely different data into a legacy FBX
+// "Specular" texture slot -- some really are a spec/gloss RGB tint, others
+// (e.g. Amazon Lumberyard Bistro: R=Occlusion, G=Roughness, B=Metalness) are
+// a packed ORM texture filed there instead of METALNESS/DIFFUSE_ROUGHNESS.
+// There's no reliable way to auto-detect which convention a given asset
+// uses, so it's a per-import choice (see LoadingWindow's "Specular" section).
+enum class SpecularChannelUse { Ignore, SpecularColor, Metalness, Roughness };
+
+static const char* to_string(SpecularChannelUse v)
+{
+	switch (v)
+	{
+	case SpecularChannelUse::Ignore:        return "Ignore";
+	case SpecularChannelUse::SpecularColor: return "Specular Color";
+	case SpecularChannelUse::Metalness:     return "Metalness";
+	case SpecularChannelUse::Roughness:     return "Roughness";
+	}
+	return "Ignore";
+}
+
 struct MeshLoadingSettings
 {
 	float scale = 1;
 	bool materials_remove = true;
+	bool load_specular_textures = true;
+	SpecularChannelUse specular_r = SpecularChannelUse::SpecularColor;
+	SpecularChannelUse specular_g = SpecularChannelUse::SpecularColor;
+	SpecularChannelUse specular_b = SpecularChannelUse::SpecularColor;
 	std::map<std::filesystem::path, AssetStorage::ptr> load_textures;
+	// Set during the pre-scan (before LoadingWindow is constructed) -- gates
+	// whether the Specular UI section shows at all.
+	bool any_specular_source = false;
 
 };
 class LoadingWindow : public GUI::Elements::window
@@ -54,7 +142,7 @@ public:
 		docking     = GUI::dock::FILL;
 		width_size  = GUI::size_type::FIXED;
 		height_size = GUI::size_type::FIXED;
-		size        = {420, 200};
+		size        = {420, 400};
 
 		contents->width_size  = GUI::size_type::MATCH_PARENT;
 		contents->height_size = GUI::size_type::MATCH_PARENT;
@@ -147,6 +235,68 @@ public:
 				};
 				list->add_child(item);
 			}
+		}
+
+		// ---- Specular section ----
+		// Only shown when the scene actually has a specular texture/color
+		// somewhere -- see SpecularChannelUse's own comment for why this
+		// needs to be a per-import choice rather than something auto-detected.
+		if (settings.any_specular_source)
+		{
+			add_child(std::make_shared<GUI::Elements::separator>());
+
+			auto spec_section = std::make_shared<GUI::Elements::collapsible_section>("Specular");
+			add_child(spec_section);
+
+			auto load_row = std::make_shared<GUI::Elements::check_box_text>();
+			load_row->docking = GUI::dock::TOP;
+			load_row->x_type  = GUI::pos_x_type::LEFT;
+			load_row->get_label()->text = "Load specular textures";
+			load_row->get_check()->size = {30, 16};
+			load_row->get_check()->set_checked(settings.load_specular_textures);
+			load_row->on_check = [this](bool v) { settings.load_specular_textures = v; };
+			spec_section->content->add_child(load_row);
+
+			auto add_channel_row = [this, &spec_section](std::string_view label_text, SpecularChannelUse& field)
+			{
+				auto row = std::make_shared<GUI::Elements::layouts::horizontal>();
+				row->docking = GUI::dock::TOP;
+				row->x_type  = GUI::pos_x_type::LEFT;
+
+				auto label = std::make_shared<GUI::Elements::label>();
+				label->text = std::string(label_text);
+				row->add_child(label);
+
+				static const std::pair<const char*, SpecularChannelUse> options[] = {
+					{"Ignore",         SpecularChannelUse::Ignore},
+					{"Specular Color", SpecularChannelUse::SpecularColor},
+					{"Metalness",      SpecularChannelUse::Metalness},
+					{"Roughness",      SpecularChannelUse::Roughness},
+				};
+
+				auto combo = std::make_shared<GUI::Elements::combo_box>();
+				combo->size = {120, combo->size->y};
+				for (auto& opt : options)
+				{
+					auto item = combo->add_item(opt.first);
+					auto value = opt.second;
+					auto combo_wptr = GUI::Elements::combo_box::wptr(combo);
+					item->on_select = [this, &field, value, combo_wptr]()
+					{
+						field = value;
+						if (auto c = combo_wptr.lock())
+							c->get_label()->text = to_string(value);
+					};
+				}
+				combo->get_label()->text = to_string(field);
+				row->add_child(combo);
+
+				spec_section->content->add_child(row);
+			};
+
+			add_channel_row("Specular R", settings.specular_r);
+			add_channel_row("Specular G", settings.specular_g);
+			add_channel_row("Specular B", settings.specular_b);
 		}
 
 		// ---- OK button ----
@@ -414,7 +564,13 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			check_assimp_texture(native_material, aiTextureType_EMISSION_COLOR);
 			check_assimp_texture(native_material, aiTextureType_EMISSIVE);
 			check_assimp_texture(native_material, aiTextureType_OPACITY);
+			check_assimp_texture(native_material, aiTextureType_SPECULAR);
 
+			aiString spec_path_probe;
+			aiColor3D spec_color_probe;
+			if (AI_SUCCESS == native_material->GetTexture(aiTextureType_SPECULAR, 0, &spec_path_probe)
+			 || AI_SUCCESS == native_material->Get(AI_MATKEY_COLOR_SPECULAR, spec_color_probe))
+				settings.any_specular_source = true;
 		}
 
 
@@ -501,7 +657,36 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
         index_count = 0;
         auto get_texture = [&load_textures, &m](std::filesystem::path name)->TextureAsset::ptr
         {
-            return load_textures[name]->get_asset()->get_ptr<TextureAsset>();
+            // Any of these can legitimately be null: a texture type referenced
+            // by a material but never passed to check_assimp_texture() above
+            // leaves `name` out of load_textures entirely (operator[] would
+            // silently default-construct a null entry rather than report
+            // that); find_storage_by_name() (populating load_textures) returns
+            // null when no asset matches that filename at all; and
+            // AssetStorage::get_asset() returns null when the backing file
+            // exists as a registered asset but fails to actually load. Fall
+            // back to the engine's own missing-texture placeholder rather than
+            // crashing on a null dereference either way, so one bad/absent
+            // texture reference doesn't fail the whole mesh import.
+            auto it = load_textures.find(name);
+            auto storage = (it != load_textures.end()) ? it->second : nullptr;
+            auto asset = storage ? storage->get_asset() : nullptr;
+            auto tex = asset ? asset->get_ptr<TextureAsset>() : nullptr;
+
+            if (!tex)
+            {
+                const char* reason = it == load_textures.end() ? "never registered (missing check_assimp_texture call for its texture type?)"
+                                    : !storage             ? "no matching asset found for this filename"
+                                    : !asset                ? "asset storage found but failed to load"
+                                    :                          "asset found but isn't a TextureAsset";
+
+                Log::get() << Log::LEVEL_WARNING << "AssimpLoader: texture \"" << name.string()
+                    << "\" could not be loaded (" << reason << ") -- using missing_texture placeholder" << Log::endl;
+
+                tex = EngineAssets::missing_texture.get_asset();
+            }
+
+            return tex;
         };
         std::vector<std::future<bool>> tasks;
 
@@ -513,20 +698,66 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
         for (unsigned int i = 0; i < scene->mNumMaterials; i++)
         {
-            tasks.emplace_back(thread_pool::get().enqueue([&materials ,scene,i,directory, &get_texture]()
+            bool load_specular_textures = settings.load_specular_textures;
+            SpecularChannelUse specular_r = settings.specular_r;
+            SpecularChannelUse specular_g = settings.specular_g;
+            SpecularChannelUse specular_b = settings.specular_b;
+
+            tasks.emplace_back(thread_pool::get().enqueue([&materials ,scene,i,directory, &get_texture,
+                load_specular_textures, specular_r, specular_g, specular_b]()
             {
+              try
+              {
                 auto& native_material = scene->mMaterials[i];
                 aiString path;
                 MaterialGraph::ptr graph(new MaterialGraph);
                 SamplingNode::ptr  tex_node;
+                TextureAsset::ptr  albedo_tex;
+
+                // glTF-style metallic-roughness texture presence (used below to
+                // decide the workflow) and the PBR Specular/Glossiness workflow
+                // (3ds Max Phong/Blinn, Substance Painter spec/gloss exports,
+                // glTF's KHR_materials_pbrSpecularGlossiness) -- decided up front
+                // since base_color/metallic are single-input graph outputs and
+                // must be linked exactly once, whichever workflow supplies them.
+                aiString metal_path, rough_path, spec_path;
+                bool has_metal_tex = AI_SUCCESS == native_material->GetTexture(aiTextureType_METALNESS, 0, &metal_path);
+                bool has_rough_tex = AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &rough_path);
+                bool packed = has_metal_tex && has_rough_tex && std::strcmp(metal_path.C_Str(), rough_path.C_Str()) == 0;
+
+                bool has_spec_tex = load_specular_textures
+                    && AI_SUCCESS == native_material->GetTexture(aiTextureType_SPECULAR, 0, &spec_path);
+                aiColor3D spec_color;
+                bool has_spec_color = AI_SUCCESS == native_material->Get(AI_MATKEY_COLOR_SPECULAR, spec_color);
+
+                // Whether the Specular texture's R/G/B are all still meant as a
+                // literal tint (the default, and the only shape SpecToMetNode's
+                // conversion can meaningfully work from -- see the per-channel
+                // routing further down for the alternative). Different scenes
+                // pack completely different data into this legacy FBX slot (see
+                // SpecularChannelUse's own comment), so this is a per-import UI
+                // choice, not something auto-detected.
+                bool spec_tex_all_color = specular_r == SpecularChannelUse::SpecularColor
+                                        && specular_g == SpecularChannelUse::SpecularColor
+                                        && specular_b == SpecularChannelUse::SpecularColor;
+                bool use_specular_texture_as_color = has_spec_tex && spec_tex_all_color;
+                bool use_scalar_specular_color = !has_spec_tex && has_spec_color;
+
+                // Only take the spec/gloss (SpecToMetNode) path when the (more
+                // precise, glTF-native) metallic-roughness workflow above didn't
+                // already provide coverage.
+                bool use_specgloss = !has_metal_tex && !has_rough_tex && (use_specular_texture_as_color || use_scalar_specular_color);
+
+                FlowGraph::output::ptr albedo_source;
 
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE, 0, &path)
                  || AI_SUCCESS == native_material->GetTexture(aiTextureType_BASE_COLOR, 0, &path))
                 {
                    auto native_path = resolve_texture_path(directory, path.C_Str());
                     auto diff = get_texture(native_path);
+                    albedo_tex = diff;
                     tex_node = make_sampling_node(graph.get(), diff, true);
-                    tex_node->get_output(0)->link(graph->get_base_color());
+                    albedo_source = tex_node->get_output(0);
                 }
 
                 else
@@ -535,32 +766,84 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     native_material->Get(AI_MATKEY_COLOR_DIFFUSE, albedo);
                     auto value_node = std::make_shared<VectorNode>(vec4(albedo.r, albedo.g, albedo.b, 1));
                     graph->register_node(value_node);
-                    value_node->get_output(0)->link(graph->get_base_color());
+                    albedo_source = value_node->get_output(0);
                 }
+
+                // Spec/gloss's own SpecToMetNode conversion below supplies
+                // base_color instead, from this same albedo_source.
+                if (!use_specgloss)
+                    link_or_throw(albedo_source, graph->get_base_color(), "base color");
+
+                // BC5/R8G8-encoded normal maps (the common FBX/DDS convention) only
+                // store X/Y -- reconstruct Z via ReconstructNormalZNode instead of
+                // linking the raw (meaningless-blue-channel) sample straight through.
+                auto link_normal_texture = [&graph](TextureAsset::ptr diff)
+                {
+                    auto tex_node = make_sampling_node(graph.get(), diff);
+
+                    if (is_two_channel_normal_format(diff->get_texture()->get_desc().as_texture().Format))
+                    {
+                        auto recon = std::make_shared<ReconstructNormalZNode>();
+                        graph->register_node(recon);
+                        link_or_throw(tex_node->get_output(1), recon->get_input(0), "normal texture r -> ReconstructNormalZNode");
+                        link_or_throw(tex_node->get_output(2), recon->get_input(1), "normal texture g -> ReconstructNormalZNode");
+                        link_or_throw(recon->get_output(0), graph->get_normals(), "reconstructed normal");
+                    }
+                    else
+                    {
+                        link_or_throw(tex_node->get_output(0), graph->get_normals(), "normal texture");
+                    }
+                };
 
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_NORMALS, 0, &path))
                 {
 					auto native_path = resolve_texture_path(directory, path.C_Str());
-					auto diff = get_texture(native_path);
-                    auto tex_node = make_sampling_node(graph.get(), diff);
-                    tex_node->get_output(0)->link(graph->get_normals());
+					link_normal_texture(get_texture(native_path));
                 }
 
                 else if (AI_SUCCESS == native_material->GetTexture(aiTextureType_HEIGHT, 0, &path))
                 {
 					auto native_path = resolve_texture_path(directory, path.C_Str());
-					auto diff = get_texture(native_path);
-                    auto tex_node = make_sampling_node(graph.get(), diff);
-                    tex_node->get_output(0)->link(graph->get_normals());
+					link_normal_texture(get_texture(native_path));
+                }
+
+                // If the specular texture isn't a uniform tint (spec_tex_all_color
+                // false), individual channels can still carry real
+                // metalness/roughness data -- Bistro's own README documents its
+                // "Specular" texture as R=Occlusion (dropped, no AO channel exists
+                // in this engine yet), G=Roughness, B=Metalness, filed under the
+                // legacy FBX Specular slot instead of METALNESS/DIFFUSE_ROUGHNESS.
+                // Sample once and route whichever channels the user explicitly
+                // assigned those meanings to (see LoadingWindow's Specular
+                // section) -- same priority as the glTF metallic-roughness
+                // texture below: a real dedicated texture always wins over this.
+                bool spec_provides_roughness = false;
+                bool spec_provides_metallic = false;
+
+                if (has_spec_tex && !spec_tex_all_color)
+                {
+                    auto spec_channel_node = make_sampling_node(graph.get(), get_texture(resolve_texture_path(directory, spec_path.C_Str())));
+                    SpecularChannelUse channel_uses[3] = { specular_r, specular_g, specular_b };
+
+                    for (int c = 0; c < 3; c++)
+                    {
+                        if (channel_uses[c] == SpecularChannelUse::Roughness && !has_rough_tex)
+                        {
+                            link_or_throw(spec_channel_node->get_output(1 + c), graph->get_roughness(), "specular channel -> roughness");
+                            spec_provides_roughness = true;
+                        }
+                        else if (channel_uses[c] == SpecularChannelUse::Metalness && !has_metal_tex)
+                        {
+                            link_or_throw(spec_channel_node->get_output(1 + c), graph->get_mettalic(), "specular channel -> metallic");
+                            spec_provides_metallic = true;
+                        }
+                    }
                 }
 
                 // glTF packs metallic-roughness into one texture: G = roughness, B = metallic.
                 // Standalone (grayscale) maps are sampled from R instead.
-                aiString metal_path, rough_path;
-                bool has_metal_tex = AI_SUCCESS == native_material->GetTexture(aiTextureType_METALNESS, 0, &metal_path);
-                bool has_rough_tex = AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &rough_path);
-                bool packed = has_metal_tex && has_rough_tex && std::strcmp(metal_path.C_Str(), rough_path.C_Str()) == 0;
-
+                // (has_metal_tex/has_rough_tex/packed computed earlier, alongside
+                // the spec/gloss workflow decision.)
                 SamplingNode::ptr metal_rough_node;
 
                 if (has_rough_tex)
@@ -569,7 +852,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     metal_rough_node->get_output(packed ? 2 : 1)->link(graph->get_roughness());
                 }
 
-                else
+                else if (!use_specgloss && !spec_provides_roughness)
                 {
 					float albedo;
 
@@ -585,7 +868,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 						value_node->get_output(0)->link(graph->get_roughness());
 					}
                 }
-				
+
                 if (has_metal_tex)
                 {
                     auto node = metal_rough_node;
@@ -596,20 +879,100 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     node->get_output(packed ? 3 : 1)->link(graph->get_mettalic());
                 }
 
-                else
+                else if (!use_specgloss && !spec_provides_metallic)
                 {
-                    float albedo;
+                    float reflectivity;
 
-                    if (AI_SUCCESS == native_material->Get(AI_MATKEY_REFLECTIVITY, albedo))
+                    // AI_MATKEY_REFLECTIVITY ($mat.reflectivity, FBX's own
+                    // ReflectionFactor) is already a [0,1] fraction -- unlike
+                    // AI_MATKEY_SHININESS's Phong exponent above, it needs no
+                    // /255 normalization (dividing it crushed any material with
+                    // ReflectionFactor above ~0.4 down to near-zero metallic).
+                    if (AI_SUCCESS == native_material->Get(AI_MATKEY_REFLECTIVITY, reflectivity))
                     {
-                        albedo /= 255;
+                        if (reflectivity > 1)
+                            reflectivity = 1;
 
-                        if (albedo > 1)
-                            albedo = 1;
-
-                        auto value_node = std::make_shared<ScalarNode>(albedo);
+                        auto value_node = std::make_shared<ScalarNode>(reflectivity);
                         graph->register_node(value_node);
                         value_node->get_output(0)->link(graph->get_mettalic());
+                    }
+                }
+
+                // PBR Specular/Glossiness -> metallic-roughness, via the same
+                // spec_to_metallic() conversion the material editor's own
+                // SpecToMetNode uses (universal_material.hlsl). Supplies both
+                // base_color and metallic together, since the conversion needs
+                // diffuse+specular jointly to separate them.
+                if (use_specgloss)
+                {
+                    FlowGraph::output::ptr specular_source;
+
+                    // A 1x1 "texture" is never real per-pixel data -- some DCC
+                    // exporters bake a "read channel X of some other texture"
+                    // node into a flat solid-color swatch when they can't
+                    // preserve that channel-selection through FBX export,
+                    // which reads back here as an arbitrary, meaningless tint
+                    // (confirmed on real content: a solid green 1x1 "specular"
+                    // texture that was actually some other property's channel
+                    // mask). Sampling a 1x1 texture is numerically identical
+                    // to using a flat color everywhere, so there's no reason
+                    // to prefer it over AI_MATKEY_COLOR_SPECULAR when both
+                    // exist -- only fall through to using it if that's all
+                    // there is.
+                    bool spec_tex_is_degenerate = false;
+                    bool spec_tex_is_scalar = false;
+                    TextureAsset::ptr spec_tex;
+
+                    if (has_spec_tex)
+                    {
+                        spec_tex = get_texture(resolve_texture_path(directory, spec_path.C_Str()));
+                        auto desc = spec_tex->get_texture()->get_desc().as_texture();
+                        spec_tex_is_degenerate = desc.Dimensions.x <= 1 && desc.Dimensions.y <= 1;
+                        spec_tex_is_scalar = is_scalar_mask_format(desc.Format);
+
+                        if (spec_tex_is_degenerate || spec_tex_is_scalar)
+                            Log::get() << Log::LEVEL_WARNING << "AssimpLoader: specular texture \"" << spec_path.C_Str()
+                                << "\" is " << desc.Dimensions.x << "x" << desc.Dimensions.y << ", format " << desc.Format.to_string()
+                                << (spec_tex_is_degenerate ? " (degenerate)" : "")
+                                << (spec_tex_is_scalar ? " (1-2 channel -- treating as scalar, not color)" : "")
+                                << (spec_tex_is_degenerate && has_spec_color ? " -- using AI_MATKEY_COLOR_SPECULAR instead" : "")
+                                << Log::endl;
+                    }
+
+                    if (has_spec_tex && !(spec_tex_is_degenerate && has_spec_color))
+                    {
+                        auto spec_node = make_sampling_node(graph.get(), spec_tex, true);
+
+                        // A 1-2 channel format can't hold a real tint -- use the
+                        // scalar R channel instead of the raw .rgb sample (HLSL
+                        // auto-splats a scalar argument to spec_to_metallic's
+                        // float3 specular parameter, so no explicit broadcast
+                        // node is needed).
+                        specular_source = spec_tex_is_scalar ? spec_node->get_output(1) : spec_node->get_output(0);
+                    }
+                    else
+                    {
+                        auto value_node = std::make_shared<VectorNode>(vec4(spec_color.r, spec_color.g, spec_color.b, 1));
+                        graph->register_node(value_node);
+                        specular_source = value_node->get_output(0);
+                    }
+
+                    auto conv = std::make_shared<SpecToMetNode>();
+                    graph->register_node(conv);
+                    link_or_throw(albedo_source, conv->get_input(0), "spec/gloss albedo -> SpecToMetNode");
+                    link_or_throw(specular_source, conv->get_input(1), "spec/gloss specular -> SpecToMetNode");
+                    link_or_throw(conv->get_output(0), graph->get_base_color(), "spec/gloss-derived base color");
+                    link_or_throw(conv->get_output(1), graph->get_mettalic(), "spec/gloss-derived metallic");
+
+                    // AI_MATKEY_GLOSSINESS_FACTOR: 0 = completely rough, 1 =
+                    // perfectly smooth -- inverse of the engine's roughness.
+                    float glossiness;
+                    if (AI_SUCCESS == native_material->Get(AI_MATKEY_GLOSSINESS_FACTOR, glossiness))
+                    {
+                        auto value_node = std::make_shared<ScalarNode>(1.0f - glossiness);
+                        graph->register_node(value_node);
+                        link_or_throw(value_node->get_output(0), graph->get_roughness(), "spec/gloss-derived roughness");
                     }
                 }
 
@@ -617,7 +980,27 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                  || AI_SUCCESS == native_material->GetTexture(aiTextureType_EMISSIVE, 0, &path))
                 {
                     auto node = make_sampling_node(graph.get(), get_texture(resolve_texture_path(directory, path.C_Str())), true);
-                    node->get_output(0)->link(graph->get_glow());
+
+                    // KHR_materials_emissive_strength (glTF) / Maya Stingray-PBR
+                    // emissive_intensity (FBX) -- an HDR multiplier on top of the
+                    // [0,1] emissive texture, not present for most FBX materials.
+                    float intensity;
+                    if (AI_SUCCESS == native_material->Get(AI_MATKEY_EMISSIVE_INTENSITY, intensity))
+                    {
+                        auto intensity_node = std::make_shared<ScalarNode>(intensity);
+                        graph->register_node(intensity_node);
+
+                        auto mul_node = std::make_shared<MulNode>();
+                        graph->register_node(mul_node);
+
+                        link_or_throw(node->get_output(0), mul_node->get_input(0), "emissive texture -> intensity MulNode");
+                        link_or_throw(intensity_node->get_output(0), mul_node->get_input(1), "emissive intensity -> MulNode");
+                        link_or_throw(mul_node->get_output(0), graph->get_glow(), "intensity-scaled glow");
+                    }
+                    else
+                    {
+                        link_or_throw(node->get_output(0), graph->get_glow(), "emissive texture -> glow");
+                    }
                 }
 
                 // Standalone grayscale map (R channel), same convention as the
@@ -641,6 +1024,19 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                         graph->register_node(value_node);
                         value_node->get_output(0)->link(graph->get_opacity());
                     }
+
+                    // Neither a dedicated opacity texture nor a scalar factor --
+                    // fall back to the base color texture's own alpha channel,
+                    // the standard glTF/Bistro convention ("BaseColor: RGB =
+                    // color, Alpha = Opacity"). Gated on the texture's format
+                    // actually being one that's chosen for real alpha content
+                    // (see format_likely_has_real_alpha's own comment), so a
+                    // plain opaque color texture doesn't get needlessly wired
+                    // into the transparent render path.
+                    else if (albedo_tex && format_likely_has_real_alpha(albedo_tex->get_texture()->get_desc().as_texture().Format))
+                    {
+                        link_or_throw(tex_node->get_output(4), graph->get_opacity(), "base color alpha -> opacity");
+                    }
                 }
 
                 //  m->shader = HAL::pixel_shader::get_resource({ "material.hlsl", "PS", 0, {} });
@@ -656,6 +1052,23 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 m->register_new();
 				materials[i] = m->get_ptr<MaterialAsset>();
                 return true;
+              }
+              catch (const std::exception& e)
+              {
+                  // link_or_throw() above is what actually throws here (a
+                  // material-graph parameter type mismatch, e.g. the
+                  // SpecToMetNode output-type bug this guarded against) --
+                  // caught per-material rather than left to propagate: this
+                  // runs on a thread_pool task and the caller only .wait()s
+                  // the future, never .get()s it, so an uncaught exception
+                  // here would silently vanish instead of surfacing at all.
+                  // materials[i] stays null (its default from materials.
+                  // resize() above) -- better one material missing than the
+                  // whole import crashing or silently losing the error.
+                  Log::get() << Log::LEVEL_ERROR << "AssimpLoader: material [" << i << "] in mesh ["
+                      << directory.string() << "] failed to build: " << e.what() << Log::endl;
+                  return false;
+              }
             }));
         }
 

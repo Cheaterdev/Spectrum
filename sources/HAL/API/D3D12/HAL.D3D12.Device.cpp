@@ -61,8 +61,10 @@ namespace HAL
 
         UINT rows_count = box.y;
 
-        if (desc.Format == Format::BC7_UNORM_SRGB || desc.Format == Format::BC7_UNORM)
-            rows_count /= 4;
+        // box.y is in texels; every block-compressed format packs rows in
+        // groups of 4 texels per block row, not just BC7.
+        if (desc.Format.is_compressed())
+            rows_count = (rows_count + 3) / 4;
         UINT64 RequiredSize = 0;
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
         UINT NumRows;

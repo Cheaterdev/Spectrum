@@ -630,6 +630,7 @@ REGISTER_MATERIAL_NODE(VectorNode);
 REGISTER_MATERIAL_NODE(TiledTextureNode);
 REGISTER_MATERIAL_NODE(MaterialGraph);
 REGISTER_MATERIAL_NODE(SpecToMetNode);
+REGISTER_MATERIAL_NODE(ReconstructNormalZNode);
 
 
 
@@ -644,6 +645,7 @@ REGISTER_TYPE(VectorNode);
 REGISTER_TYPE(TiledTextureNode);
 REGISTER_TYPE(MaterialGraph);
 REGISTER_TYPE(SpecToMetNode);
+REGISTER_TYPE(ReconstructNormalZNode);
 //REGISTER_TYPE(TextureSRVParams);
 REGISTER_TYPE(ShaderParamType);
 REGISTER_TYPE(VectorType);
@@ -657,6 +659,7 @@ CEREAL_FORCE_REGISTER(VectorNode);
 CEREAL_FORCE_REGISTER(TiledTextureNode);
 CEREAL_FORCE_REGISTER(MaterialGraph);
 CEREAL_FORCE_REGISTER(SpecToMetNode);
+CEREAL_FORCE_REGISTER(ReconstructNormalZNode);
 CEREAL_FORCE_REGISTER(ShaderParamType);
 CEREAL_FORCE_REGISTER(VectorType);
 
@@ -673,6 +676,7 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::Node, MulNode);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialNode,      ScalarNode);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialNode,      VectorNode);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialNode,      SpecToMetNode);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialNode,      ReconstructNormalZNode);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialNode,      TiledTextureNode);
 // MaterialGraph chain (FlowGraph::graph→MaterialGraph, transitive Node→graph already in FlowGraph.cpp)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(::FlowGraph::graph, MaterialGraph);
@@ -689,6 +693,7 @@ CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::Node,  MulNode);
 CEREAL_FORCE_REGISTER_RELATION(MaterialNode,       ScalarNode);
 CEREAL_FORCE_REGISTER_RELATION(MaterialNode,       VectorNode);
 CEREAL_FORCE_REGISTER_RELATION(MaterialNode,       SpecToMetNode);
+CEREAL_FORCE_REGISTER_RELATION(MaterialNode,       ReconstructNormalZNode);
 CEREAL_FORCE_REGISTER_RELATION(MaterialNode,       TiledTextureNode);
 CEREAL_FORCE_REGISTER_RELATION(::FlowGraph::graph, MaterialGraph);
 
@@ -1016,6 +1021,30 @@ void MulNode::operator()(MaterialContext* c)
 	 auto res = c->create_value(v);*/
 	o_value->put(res);
 }
+
+ReconstructNormalZNode::ReconstructNormalZNode()
+{
+	name = "ReconstructNormalZNode";
+	i_r = register_input("r", ShaderParams::get().FLOAT1);
+	i_g = register_input("g", ShaderParams::get().FLOAT1);
+	o_normal = register_output("normal", ShaderParams::get().FLOAT4);
+}
+
+void ReconstructNormalZNode::operator()(MaterialContext* c)
+{
+	auto mat_graph = static_cast<MaterialFunction*>(owner);
+	auto r = i_r->get<shader_parameter>();
+	auto g = i_g->get<shader_parameter>();
+
+	auto x = mat_graph->add_value(ShaderParams::get().FLOAT1, r.name + " * 2 - 1");
+	auto y = mat_graph->add_value(ShaderParams::get().FLOAT1, g.name + " * 2 - 1");
+	auto z = mat_graph->add_value(ShaderParams::get().FLOAT1,
+		"sqrt(saturate(1 - " + x.name + "*" + x.name + " - " + y.name + "*" + y.name + "))");
+	auto packed = mat_graph->add_value(ShaderParams::get().FLOAT4,
+		"float4(float3(" + x.name + "," + y.name + "," + z.name + ") * 0.5 + 0.5, 1)");
+
+	o_normal->put(packed);
+}
 /*
 TiledTextureNode::TiledTextureNode(TiledTexture::ptr _Asset) : asset(this)
 {
@@ -1174,11 +1203,20 @@ TextureSRVParams::TextureSRVParams(Asset::ref&& asset, bool to_linear)
 
 SpecToMetNode::SpecToMetNode()
 {
-    inputs.albedo   = register_input("albedo");
-    inputs.specular = register_input("specular");
+    // Explicit types are required here, not cosmetic: register_input/
+    // register_output default to strict_parameter when omitted, and
+    // strict_parameter::can_cast() is permissive as a *source* type (any
+    // destination accepts it) but ShaderParamType::can_cast() -- which runs
+    // when THIS node's outputs are the source being linked INTO a strictly
+    // typed destination like MaterialGraph's base_color/metallic -- only
+    // recognizes VectorType/ShaderParamType sources, so an untyped
+    // strict_parameter output there silently fails can_link() (link()
+    // returns false, no exception, no connection made).
+    inputs.albedo   = register_input("albedo", ShaderParams::get().VECTOR);
+    inputs.specular = register_input("specular", ShaderParams::get().VECTOR);
 
-    outputs.albedo   = register_output("albedo");
-    outputs.metallic = register_output("metallic");
+    outputs.albedo   = register_output("albedo", ShaderParams::get().FLOAT4);
+    outputs.metallic = register_output("metallic", ShaderParams::get().FLOAT1);
 }
 
 void SpecToMetNode::operator()(MaterialContext* c)

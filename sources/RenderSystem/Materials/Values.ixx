@@ -712,7 +712,35 @@ class MulNode : public MaterialNode
         }
 
 };
-                    
+
+// Reconstructs Z for a 2-channel (BC5/R8G8-encoded) tangent-space normal map
+// -- such maps only store X/Y since Z is always the larger, positive,
+// reconstructible component. Inserted automatically by AssimpLoader when the
+// imported normal texture's format is detected as 2-channel; also available
+// by hand in the material editor's node picker (REGISTER_MATERIAL_NODE below).
+class ReconstructNormalZNode : public MaterialNode
+{
+        FlowGraph::input::ptr i_r, i_g;
+        FlowGraph::output::ptr o_normal;
+    public:
+        using ptr = s_ptr<ReconstructNormalZNode>;
+
+        ReconstructNormalZNode();
+             	static ptr create_default() {
+			return std::make_shared<ReconstructNormalZNode>();
+		}
+        void operator()(MaterialContext* c) override;
+    private:
+        SERIALIZE()
+        {
+            SAVE_PARENT(::FlowGraph::Node);
+            ar& NVP(i_r);
+            ar& NVP(i_g);
+            ar& NVP(o_normal);
+        }
+
+};
+
 template <class T>
 void MaterialTNode<T>::operator()(::FlowGraph::GraphContext* c)
 {
