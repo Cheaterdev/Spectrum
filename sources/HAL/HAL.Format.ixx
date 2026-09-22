@@ -142,6 +142,7 @@ export namespace HAL
 
 
 		bool is_blendable() const;
+		bool is_compressed() const;
 		Format to_typeless() const;
 
 		Format to_dsv() const;

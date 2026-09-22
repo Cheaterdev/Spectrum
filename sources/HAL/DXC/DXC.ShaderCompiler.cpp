@@ -155,7 +155,7 @@ namespace HAL
 	static std::string rewrite_debug_log_strings(std::string text, std::unordered_map<uint32_t, std::string>& found_formats)
 	{
 		const std::string needle = "Log(";
-		if (text.find(needle) == std::string::npos)
+		if (!text.contains(needle))
 			return text;
 
 		std::string result;
@@ -223,7 +223,7 @@ namespace HAL
 	// textually below it (DXC resolves identifiers top-to-bottom like C).
 	static bool has_debug_info(const std::string& text)
 	{
-		return text.find("GetDebugInfo()") != std::string::npos;
+		return text.contains("GetDebugInfo()");
 	}
 
 	// Gives shader authors a bare Log("fmt", args...) call -- no

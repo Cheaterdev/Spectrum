@@ -593,7 +593,7 @@ private:
 
 		uint3 get_size(uint subres) const
 		{
-			return uint3::max({1,1,1}, Dimensions/std::pow(2,subres));
+			return uint3::max({1,1,1}, Dimensions / std::pow(2, get_mip(subres)));
 		}
 
 		uint get_mip(uint subres) const
@@ -756,6 +756,18 @@ struct texture_layout
 	uint alignment;
 
 	Format format;
+};
+
+// Layout of several consecutive subresources packed into one combined
+// buffer, used to compress/decompress a texture's full subresource range as
+// a single DirectStorage-decodable blob instead of one request per
+// subresource (see HAL::TextureResource::SERIALIZE and DirectStorageQueue::
+// execute's MULTIPLE_SUBRESOURCES_RANGE comment -- a single-subresource BC
+// tail mip below the 4x4 compression block trips D3D12 error #858).
+struct texture_range_layout
+{
+	uint64 total_size;
+	std::vector<uint64> subresource_offsets; // one entry per subresource in the range
 };
 
 

@@ -22,6 +22,10 @@ export{
 			void init();
 		//	std::vector<std::byte> read();
 		std::vector<std::byte> read(uint i);
+		// Reads [first_subresource, first_subresource+count) into one buffer laid
+		// out per Device::get_texture_range_layout, so the whole range can be
+		// compressed as a single blob (see SERIALIZE below).
+		std::vector<std::byte> read_range(uint first_subresource, uint count);
 		public:
 			using ptr = std::shared_ptr<TextureResource>;
 			TextureResource() = default; // NULL texture
@@ -51,14 +55,19 @@ export{
 					_init(device, desc, HeapType::DEFAULT, TextureLayout::COPY_QUEUE);
 					set_name("TextureResource::deserializing ");
 
-						load_subresources.resize(desc.as_texture().Subresources());
-						for (uint i = 0; i < desc.as_texture().Subresources(); i++)
+						// One combined blob per array slice (its full mip chain), not one
+						// per subresource: a lone single-subresource DirectStorage request
+						// for a BC tail mip below the 4x4 compression block trips D3D12
+						// error #858 (see DirectStorageQueue::execute's
+						// MULTIPLE_SUBRESOURCES_RANGE comment). Batching the whole mip
+						// chain keeps DirectStorage on the "whole range" placement path.
+						const uint array_size = desc.as_texture().ArraySize;
+						load_subresources.resize(array_size);
+						for (uint a = 0; a < array_size; a++)
 						{
-							//GPUBinaryData<true> binary;
-
-							ar& NVP(load_subresources[i]);
+							ar& NVP(load_subresources[a]);
 							if (!desc.is_virtual())
-								Resource::write(load_subresources[i]);
+								Resource::write(load_subresources[a]);
 
 						}
 
@@ -74,11 +83,14 @@ export{
 				else
 				{
 					
-						for (uint i = 0; i < desc.as_texture().Subresources(); i++)
+						const uint mip_levels = desc.as_texture().MipLevels;
+						const uint array_size = desc.as_texture().ArraySize;
+						for (uint a = 0; a < array_size; a++)
 						{
-							auto data = read(i);
+							uint first_subresource = a * mip_levels;
+							auto data = read_range(first_subresource, mip_levels);
 
-							GPUBinaryData<false> binary(GPUBinaryData<false>::Texture{ i,1 }, data, get_device());
+							GPUBinaryData<false> binary(GPUBinaryData<false>::Texture{ first_subresource, mip_levels }, data, get_device());
 
 							ar& NVP(binary);
 						}

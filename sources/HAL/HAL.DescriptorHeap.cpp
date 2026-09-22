@@ -98,7 +98,7 @@ namespace HAL {
 									f(v.Resource, desc.CalcSubresource(mip, arr, 0));
 					},
 					[&](const HAL::Views::ShaderResource::Raytracing&) { f(v.Resource, ALL_SUBRESOURCES); },
-					[&](auto) { ASSERT(false); }
+					[&](auto) { ASSERT(false); std::unreachable(); }
 				}, v.View);
 			},
 			[&](const HAL::Views::UnorderedAccess& v) {
@@ -129,7 +129,7 @@ namespace HAL {
 						else
 							f(v.Resource, desc.CalcSubresource(t.MipSlice, 0, 0));
 					},
-					[&](auto) { ASSERT(false); }
+					[&](auto) { ASSERT(false); std::unreachable(); }
 				}, v.View);
 			},
 			[&](const HAL::Views::RenderTarget& v) {
@@ -146,7 +146,7 @@ namespace HAL {
 						for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
 							f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, t.PlaneSlice));
 					},
-					[&](auto) { ASSERT(false); }
+					[&](auto) { ASSERT(false); std::unreachable(); }
 				}, v.View);
 			},
 			[&](const HAL::Views::DepthStencil& v) {
@@ -160,11 +160,11 @@ namespace HAL {
 						for (auto arr = t.FirstArraySlice; arr < t.FirstArraySlice + t.ArraySize; arr++)
 							f(v.Resource, desc.CalcSubresource(t.MipSlice, arr, 0));
 					},
-					[&](auto) { ASSERT(false); }
+					[&](auto) { ASSERT(false); std::unreachable(); }
 				}, v.View);
 			},
 			[&](const HAL::Views::ConstantBuffer& v) { f(v.Resource, ALL_SUBRESOURCES); },
-			[&](auto) { ASSERT(false); }
+			[&](auto) { ASSERT(false); std::unreachable(); }
 		}, view);
 	}
 
@@ -177,7 +177,7 @@ namespace HAL {
 			[&](const HAL::Views::RenderTarget& v)     { result = v.Resource.get(); },
 			[&](const HAL::Views::DepthStencil& v)     { result = v.Resource.get(); },
 			[&](const HAL::Views::ConstantBuffer& v)   { result = v.Resource.get(); },
-			[&](auto) { ASSERT(false); }
+			[&](auto) { ASSERT(false); std::unreachable(); }
 		}, view);
 		return result;
 	}

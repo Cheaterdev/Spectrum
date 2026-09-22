@@ -394,20 +394,20 @@ namespace GUI
 							auto asset = (new TextureAsset(convert(s)));
 							asset->try_register();
 
-							if (s.find("albedo") != std::string::npos || s.find("diff") != std::string::npos || s.find("alb") != std::string::npos || s.find("base") != std::string::npos || s.find("color") != std::string::npos)
+							if (s.contains("albedo") || s.contains("diff") || s.contains("alb") || s.contains("base") || s.contains("color"))
 								mat_info->albedo = asset->get_ptr<TextureAsset>();
 
-							if (s.find("metal") != std::string::npos)
+							if (s.contains("metal"))
 								mat_info->metallic = asset->get_ptr<TextureAsset>();
 
-							if (s.find("rough") != std::string::npos)
+							if (s.contains("rough"))
 								mat_info->roughness = asset->get_ptr<TextureAsset>();
 
 
-							if (s.find("height") != std::string::npos)
+							if (s.contains("height"))
 								mat_info->height = asset->get_ptr<TextureAsset>();
 
-							if (s.find("normal") != std::string::npos)
+							if (s.contains("normal"))
 								mat_info->normals = asset->get_ptr<TextureAsset>();
 
 

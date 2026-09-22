@@ -90,6 +90,26 @@ namespace HAL
         };
     }
 
+    texture_range_layout Device::get_texture_range_layout(const ResourceDesc& rdesc, UINT first_subresource, UINT count)
+    {
+        // No GPU-decompression placement constraint on this backend (Vulkan's
+        // compress() is a no-op -- see below), so subresources are packed
+        // contiguously here rather than mirroring D3D12's GetCopyableFootprints1
+        // alignment. Save and load both go through this same function, so the
+        // exact packing scheme only has to be self-consistent, not bit-exact
+        // with the other backend.
+        texture_range_layout result;
+        result.subresource_offsets.resize(count);
+        uint64 offset = 0;
+        for (UINT i = 0; i < count; i++)
+        {
+            result.subresource_offsets[i] = offset;
+            offset += Math::AlignUp(get_texture_layout(rdesc, first_subresource + i).size, 256ull);
+        }
+        result.total_size = offset;
+        return result;
+    }
+
     texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_resource, ivec3 box)
     {
         auto& desc = rdesc.as_texture();

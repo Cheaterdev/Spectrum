@@ -918,7 +918,7 @@ namespace nvidia
 			{
 				entry.diffuse = entry.specular = &dispatch_reblur_classifytiles;
 			}
-			else if (identifier.starts_with("REBLUR_HitDistReconstruction.cs.hlsl") && identifier.find("MODE_5X5=1") != std::string::npos)
+			else if (identifier.starts_with("REBLUR_HitDistReconstruction.cs.hlsl") && identifier.contains("MODE_5X5=1"))
 			{
 				entry.diffuse  = &dispatch_reblur_hitdistreconstruction<PSOS::NRD_REBLUR_HitDistReconstruction5x5>;
 				entry.specular = &dispatch_reblur_hitdistreconstruction_specular<PSOS::NRD_REBLUR_HitDistReconstruction5x5_Specular>;
@@ -948,7 +948,7 @@ namespace nvidia
 				entry.diffuse  = &dispatch_reblur_blur;
 				entry.specular = &dispatch_reblur_blur_specular;
 			}
-			else if (identifier.starts_with("REBLUR_PostBlur.cs.hlsl") && identifier.find("TEMPORAL_STABILIZATION=0") != std::string::npos)
+			else if (identifier.starts_with("REBLUR_PostBlur.cs.hlsl") && identifier.contains("TEMPORAL_STABILIZATION=0"))
 			{
 				entry.diffuse  = &dispatch_reblur_postblur_ts0;
 				entry.specular = &dispatch_reblur_postblur_ts0_specular;
@@ -975,7 +975,7 @@ namespace nvidia
 			{
 				entry.diffuse = entry.specular = &dispatch_sigma_copy;
 			}
-			else if (identifier.starts_with("SIGMA_Blur.cs.hlsl") && identifier.find("FIRST_PASS=1") != std::string::npos)
+			else if (identifier.starts_with("SIGMA_Blur.cs.hlsl") && identifier.contains("FIRST_PASS=1"))
 			{
 				entry.diffuse = entry.specular = &dispatch_sigma_blur_firstpass1;
 			}

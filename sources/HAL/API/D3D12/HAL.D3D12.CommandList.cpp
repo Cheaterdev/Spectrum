@@ -9,6 +9,27 @@ namespace HAL
 {
     namespace API
     {
+        // Mirrors the D3D12 debug layer's own subresource-extent check
+        // (validation error #858) on the CPU side, before the call, so a DEV
+        // build ASSERTs and __debugbreak()s here with a real call stack
+        // instead of only failing later inside ExecuteCommandLists.
+        static void assert_copy_fits_subresource(ID3D12Resource* native, UINT sub_resource, ivec3 offset, ivec3 box)
+        {
+            auto native_desc = native->GetDesc();
+            UINT mip_levels = native_desc.MipLevels ? native_desc.MipLevels : 1;
+            UINT mip_slice = sub_resource % mip_levels;
+            UINT dst_w = ((UINT)native_desc.Width >> mip_slice) ? ((UINT)native_desc.Width >> mip_slice) : 1u;
+            UINT dst_h = (native_desc.Height >> mip_slice) ? (native_desc.Height >> mip_slice) : 1u;
+            UINT dst_d = (native_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D)
+                ? (((UINT)native_desc.DepthOrArraySize >> mip_slice) ? ((UINT)native_desc.DepthOrArraySize >> mip_slice) : 1u)
+                : 1u;
+
+            bool fits = (UINT)offset.x + (UINT)box.x <= dst_w
+                     && (UINT)offset.y + (UINT)box.y <= dst_h
+                     && (UINT)offset.z + (UINT)box.z <= dst_d;
+
+            ASSERT(fits);
+        }
 
         void CommandList::create(CommandListType type, Device& device)
         {
@@ -352,6 +373,22 @@ namespace HAL
 
         void CommandList::copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres)
         {
+            // Full-subresource copy (implicit box = the whole source subresource),
+            // so what must fit is that same extent inside the destination subresource.
+            {
+                auto src_native = source->get_dx();
+                auto src_desc = src_native->GetDesc();
+                UINT src_mip_levels = src_desc.MipLevels ? src_desc.MipLevels : 1;
+                UINT src_mip_slice = (UINT)source_subres % src_mip_levels;
+                ivec3 src_size(
+                    (int)(((UINT)src_desc.Width >> src_mip_slice) ? ((UINT)src_desc.Width >> src_mip_slice) : 1u),
+                    (int)((src_desc.Height >> src_mip_slice) ? (src_desc.Height >> src_mip_slice) : 1u),
+                    (int)((src_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D)
+                        ? (((UINT)src_desc.DepthOrArraySize >> src_mip_slice) ? ((UINT)src_desc.DepthOrArraySize >> src_mip_slice) : 1u)
+                        : 1u));
+                assert_copy_fits_subresource(dest->get_dx(), (UINT)dest_subres, ivec3(0, 0, 0), src_size);
+            }
+
             CD3DX12_TEXTURE_COPY_LOCATION Dst(dest->get_dx(), dest_subres);
             CD3DX12_TEXTURE_COPY_LOCATION Src(source->get_dx(), source_subres);
             m_commandList->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
@@ -359,6 +396,8 @@ namespace HAL
 
         void CommandList::copy_texture(const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& from, ivec3 from_pos, ivec3 size)
         {
+            assert_copy_fits_subresource(to->get_dx(), 0, to_pos, size);
+
             CD3DX12_TEXTURE_COPY_LOCATION Dst(to->get_dx(), 0);
             CD3DX12_TEXTURE_COPY_LOCATION Src(from->get_dx(), 0);
 
@@ -379,6 +418,9 @@ namespace HAL
 
             ASSERT(address.resource_offset + size <= buffer_desc.SizeInBytes);
             ASSERT(box.z > 0);
+
+            assert_copy_fits_subresource(resource->get_dx(), sub_resource, offset, box);
+
             CD3DX12_TEXTURE_COPY_LOCATION Dst(resource->get_dx(), sub_resource);
             CD3DX12_TEXTURE_COPY_LOCATION Src;
             Src.pResource                         = address.resource->get_dx();
@@ -398,6 +440,8 @@ namespace HAL
             CD3DX12_TEXTURE_COPY_LOCATION dest;
             if (box.z == 0) box.z = 1;
             if (box.y == 0) box.y = 1;
+
+            assert_copy_fits_subresource(resource->get_dx(), sub_resource, offset, box);
 
             dest.pResource                         = target.resource->get_dx();
             dest.Type                              = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;

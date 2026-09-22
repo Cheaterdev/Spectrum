@@ -85,7 +85,7 @@ export namespace Test
 				std::string lf(filter), lful(full);
 				std::transform(lf.begin(),   lf.end(),   lf.begin(),   [](unsigned char c){ return std::tolower(c); });
 				std::transform(lful.begin(), lful.end(), lful.begin(), [](unsigned char c){ return std::tolower(c); });
-				return lful.find(lf) != std::string::npos;
+				return lful.contains(lf);
 			};
 
 			auto matchCount = std::count_if(tests.begin(), tests.end(), matches);

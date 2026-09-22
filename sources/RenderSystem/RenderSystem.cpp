@@ -19,7 +19,7 @@ std::shared_ptr<HAL::Device> RenderSystem::select_adapter()
 
 
         if (!result && props.mesh_shader && props.full_bindless &&
-            std::wstring(desc.Description).find(L"Basic") == std::wstring::npos)
+			!std::wstring(desc.Description).contains(L"Basic"))
         {
             result = adapter;
             result_name = props.name;

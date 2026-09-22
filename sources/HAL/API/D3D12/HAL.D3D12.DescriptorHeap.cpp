@@ -142,6 +142,7 @@ namespace HAL
             },
             [&](auto other) {
                 ASSERT(false);
+                std::unreachable();
             }
             }, view.View);
 
@@ -224,6 +225,7 @@ namespace HAL
             },
             [&](auto other) {
                 ASSERT(false);
+                std::unreachable();
             }
             }, view.View);
 
@@ -298,6 +300,7 @@ namespace HAL
             },
             [&](auto other) {
                 ASSERT(false);
+                std::unreachable();
             }
             }, view.View);
 
@@ -381,6 +384,7 @@ namespace HAL
             },
             [&](auto other) {
                 ASSERT(false);
+                std::unreachable();
             }
             }, view.View);
 

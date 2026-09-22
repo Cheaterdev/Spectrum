@@ -146,19 +146,17 @@ export
 	template<EnumType Enum>
 	Enum operator ~(const Enum l)
 	{
-		using underlying = typename std::underlying_type<Enum>::type;
 		return static_cast<Enum> (
-			~static_cast<underlying>(l)
+			~std::to_underlying(l)
 			);
 	}
 
 	template<EnumType Enum>
 	constexpr Enum operator |(Enum lhs, Enum rhs)
 	{
-		using underlying = typename std::underlying_type<Enum>::type;
 		return static_cast<Enum> (
-			static_cast<underlying>(lhs) |
-			static_cast<underlying>(rhs)
+			std::to_underlying(lhs) |
+			std::to_underlying(rhs)
 			);
 	}
 
@@ -167,10 +165,9 @@ export
 	template<EnumType Enum>
 	Enum operator &(const Enum lhs, const Enum rhs)
 	{
-		using underlying = typename std::underlying_type<Enum>::type;
 		return static_cast<Enum> (
-			static_cast<underlying>(lhs) &
-			static_cast<underlying>(rhs)
+			std::to_underlying(lhs) &
+			std::to_underlying(rhs)
 			);
 	}
 
@@ -178,10 +175,9 @@ export
 	template<EnumType Enum>
 	bool operator &&(const Enum lhs, const Enum rhs)
 	{
-		using underlying = typename std::underlying_type<Enum>::type;
 		return static_cast<Enum> (
-			static_cast<underlying>(lhs) &&
-			static_cast<underlying>(rhs)
+			std::to_underlying(lhs) &&
+			std::to_underlying(rhs)
 			);
 	}
 
@@ -190,29 +186,26 @@ export
 	template<EnumType Enum>
 	bool operator ==(const Enum lhs, const Enum rhs)
 	{
-		using underlying = typename std::underlying_type<Enum>::type;
 		return static_cast<Enum> (
-			static_cast<underlying>(lhs) ==
-			static_cast<underlying>(rhs)
+			std::to_underlying(lhs) ==
+			std::to_underlying(rhs)
 			);
 	}
 
 	template<EnumType Enum>
 	bool operator !=(const Enum lhs, const Enum rhs)
 	{
-		using underlying = typename std::underlying_type<Enum>::type;
 		return static_cast<Enum> (
-			static_cast<underlying>(lhs) !=
-			static_cast<underlying>(rhs)
+			std::to_underlying(lhs) !=
+			std::to_underlying(rhs)
 			);
 	}
 	template<EnumType Enum>
 	Enum& operator |=(Enum& lhs, const Enum rhs)
 	{
-		using underlying = typename std::underlying_type<Enum>::type;
 		lhs = static_cast<Enum> (
-			static_cast<underlying>(lhs) |
-			static_cast<underlying>(rhs)
+			std::to_underlying(lhs) |
+			std::to_underlying(rhs)
 			);
 
 		return lhs;
@@ -220,10 +213,9 @@ export
 	template<EnumType Enum>
 	Enum& operator &=(Enum& lhs, const Enum rhs)
 	{
-		using underlying = typename std::underlying_type<Enum>::type;
 		lhs = static_cast<Enum> (
-			static_cast<underlying>(lhs) &
-			static_cast<underlying>(rhs)
+			std::to_underlying(lhs) &
+			std::to_underlying(rhs)
 			);
 
 		return lhs;
@@ -231,19 +223,17 @@ export
 	template<EnumType Enum>
 	bool operator <=(const Enum lhs, const Enum rhs)
 	{
-		using underlying = typename std::underlying_type<Enum>::type;
 		return static_cast<Enum> (
-			static_cast<underlying>(lhs) <=
-			static_cast<underlying>(rhs)
+			std::to_underlying(lhs) <=
+			std::to_underlying(rhs)
 			);
 	}
 
 	template<EnumType Enum>
 	bool check(Enum lhs)
 	{
-		using underlying = typename std::underlying_type<Enum>::type;
 		return  (
-			static_cast<underlying>(lhs)
+			std::to_underlying(lhs)
 			) != 0;
 	}
 

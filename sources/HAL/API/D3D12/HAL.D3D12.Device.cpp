@@ -36,6 +36,25 @@ namespace HAL
         };
     }
 
+    texture_range_layout Device::get_texture_range_layout(const ResourceDesc& rdesc, UINT first_subresource, UINT count)
+    {
+        std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints(count);
+        std::vector<UINT> numRows(count);
+        std::vector<UINT64> rowSizes(count);
+        UINT64 totalSize = 0;
+        D3D::ResourceDesc Desc = ::to_native(rdesc);
+        get_native_device()->GetCopyableFootprints1(&Desc, first_subresource, count, 0, footprints.data(), numRows.data(),
+                                                    rowSizes.data(), &totalSize);
+
+        texture_range_layout result;
+        result.total_size = totalSize;
+        result.subresource_offsets.resize(count);
+        for (UINT i = 0; i < count; i++)
+            result.subresource_offsets[i] = footprints[i].Offset;
+
+        return result;
+    }
+
     texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_resource, ivec3 box)
     {
         auto& desc = rdesc.as_texture();

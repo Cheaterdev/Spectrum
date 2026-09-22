@@ -136,7 +136,7 @@ namespace HAL
 			for (unsigned int a = 0; a < data.array_size; a++)
 				for (unsigned int m = 0; m < data.mip_maps; m++)
 				{
-					int i = m * data.array_size + a;
+					const int i = HAL::calc_subresource(m, a, 0, data.mip_maps, data.array_size);
 
 					list->get_copy().update_texture(resource, { 0, 0, 0 }, { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, (const char*)data.array[a]->mips[m]->data.data(), data.array[a]->mips[m]->width_stride, data.array[a]->mips[m]->slice_stride);
 				}

@@ -173,6 +173,7 @@ namespace HAL
     HAL::FenceWaiter DirectStorageQueue::execute(StorageRequest srequest)
     {
         PROFILE(L"DirectStorageQueue::execute");
+
         D3D::StorageFile file;
 
         HRESULT hr = factory->OpenFile(srequest.file.wstring().c_str(), IID_PPV_ARGS(&file));
@@ -214,20 +215,17 @@ namespace HAL
             },
             [&](const StorageRequest::Texture& texture)
             {
-                request.Options.DestinationType               = DSTORAGE_REQUEST_DESTINATION_TEXTURE_REGION;
-                request.Destination.Texture.Resource          = srequest.resource->get_dx();
-                request.Destination.Texture.SubresourceIndex  = texture.subresource;
+                // Serialized texture payloads are complete copyable footprints,
+                // never partial regions.  The full-subresource path is also
+                // required for BC tail mips: region copies expand a 2x2 mip to
+                // its 4x4 compression block, which exceeds that mip's bounds.
+                request.Options.DestinationType = DSTORAGE_REQUEST_DESTINATION_MULTIPLE_SUBRESOURCES_RANGE;
+                request.Destination.MultipleSubresourcesRange.Resource = srequest.resource->get_dx();
+                request.Destination.MultipleSubresourcesRange.FirstSubresource = texture.subresource;
+                request.Destination.MultipleSubresourcesRange.NumSubresources = texture.count;
 
-                auto size = srequest.resource->get_desc().as_texture().get_size(texture.subresource);
-                D3D12_BOX destBox{};
-                destBox.right  = size.x;
-                destBox.bottom = size.y;
-                destBox.back   = size.z;
-
-                request.Destination.Texture.Region = destBox;
-
-                auto l = device.get_texture_layout(srequest.resource->get_desc(), texture.subresource);
-                ASSERT(l.size == srequest.uncompressed_size);
+                auto l = device.get_texture_range_layout(srequest.resource->get_desc(), texture.subresource, texture.count);
+                ASSERT(l.total_size == srequest.uncompressed_size);
             },
             [&](auto other)
             {
@@ -236,6 +234,24 @@ namespace HAL
         }, srequest.operation);
 
         std::lock_guard<std::mutex> g(queue_mutex);
+
+        if (const auto* texture = std::get_if<StorageRequest::Texture>(&srequest.operation))
+        {
+            const auto desc = srequest.resource->get_desc().as_texture();
+            const auto size = desc.get_size(texture->subresource);
+            // TEMP (texture_upload.temp) -- remove after the BC3 upload investigation.
+            static std::string trace;
+            trace += "file=" + srequest.file.generic_string()
+                  + " subresource=" + std::to_string(texture->subresource)
+                  + " mip=" + std::to_string(desc.get_mip(texture->subresource))
+                  + " array=" + std::to_string(desc.get_array(texture->subresource))
+                  + " resource=" + std::to_string(desc.Dimensions.x) + "x" + std::to_string(desc.Dimensions.y) + "x" + std::to_string(desc.Dimensions.z)
+                  + " mips=" + std::to_string(desc.MipLevels) + " arrays=" + std::to_string(desc.ArraySize)
+                  + " destination=" + std::to_string(size.x) + "x" + std::to_string(size.y) + "x" + std::to_string(size.z)
+                  + " compressed_bytes=" + std::to_string(srequest.size)
+                  + " unpacked_bytes=" + std::to_string(srequest.uncompressed_size) + "\n";
+            FileSystem::get().save_data("texture_upload.temp", trace);
+        }
 
         native->EnqueueRequest(&request);
 

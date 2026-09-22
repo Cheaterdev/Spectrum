@@ -8,7 +8,7 @@ namespace HAL::Debug
 	{
 		struct BreakKeyHash
 		{
-			size_t operator()(const BreakKey& k) const
+			static size_t operator()(const BreakKey& k)
 			{
 				auto combine = [](size_t h, size_t v) -> size_t {
 					return h ^ (v * 2654435761u + 0x9e3779b9u + (h << 6) + (h >> 2));

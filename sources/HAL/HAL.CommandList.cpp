@@ -59,7 +59,7 @@ static void visit_subres(const HAL::ResourceInfo& info, F&& f)
 						f(v.Resource, SubresRange{ t.MostDetailedMip, t.MipLevels, 0, 6, 0, 1 });
 				},
 				[&](const HAL::Views::ShaderResource::Raytracing&) { f(v.Resource, SubresRange::all()); },
-				[&](auto) { ASSERT(false); }
+				[&](auto) { ASSERT(false); std::unreachable(); }
 			}, v.View);
 		},
 		[&](const HAL::Views::UnorderedAccess& v) {
@@ -89,7 +89,7 @@ static void visit_subres(const HAL::ResourceInfo& info, F&& f)
 					else
 						f(v.Resource, SubresRange{ t.MipSlice, 1, 0, 1, 0, 1 });
 				},
-				[&](auto) { ASSERT(false); }
+				[&](auto) { ASSERT(false); std::unreachable(); }
 			}, v.View);
 		},
 		[&](const HAL::Views::RenderTarget& v) {
@@ -104,7 +104,7 @@ static void visit_subres(const HAL::ResourceInfo& info, F&& f)
 				[&](const HAL::Views::RenderTarget::Texture2DArray& t) {
 					f(v.Resource, SubresRange{ t.MipSlice, 1, t.FirstArraySlice, t.ArraySize, t.PlaneSlice, 1 });
 				},
-				[&](auto) { ASSERT(false); }
+				[&](auto) { ASSERT(false); std::unreachable(); }
 			}, v.View);
 		},
 		[&](const HAL::Views::DepthStencil& v) {
@@ -115,11 +115,11 @@ static void visit_subres(const HAL::ResourceInfo& info, F&& f)
 				[&](const HAL::Views::DepthStencil::Texture2DArray& t) {
 					f(v.Resource, SubresRange{ t.MipSlice, 1, t.FirstArraySlice, t.ArraySize, 0, 1 });
 				},
-				[&](auto) { ASSERT(false); }
+				[&](auto) { ASSERT(false); std::unreachable(); }
 			}, v.View);
 		},
 		[&](const HAL::Views::ConstantBuffer& v) { f(v.Resource, SubresRange::all()); },
-		[&](auto) { ASSERT(false); }
+		[&](auto) { ASSERT(false); std::unreachable(); }
 	}, info.view);
 }
 
@@ -588,9 +588,10 @@ namespace HAL
 
 			std::visit(overloaded{
 				           [&](const HAL::Views::RenderTarget::Buffer& Buffer)
-				           {
+					           {
 					           ASSERT(false);
-				           },
+					           std::unreachable();
+					           },
 				           [&](const HAL::Views::RenderTarget::Texture1D& Texture1D)
 				           {
 					           size = view.Resource->get_desc().as_texture().get_size(Texture1D.MipSlice).xy;
@@ -612,17 +613,20 @@ namespace HAL
 					           size = view.Resource->get_desc().as_texture().get_size(Texture3D.MipSlice).xy;
 				           },
 				           [&](const HAL::Views::RenderTarget::Texture2DMS& Texture2DMS)
-				           {
+					           {
 					           ASSERT(false);
-				           },
+					           std::unreachable();
+					           },
 				           [&](const HAL::Views::RenderTarget::Texture2DMSArray& Texture2DMSArray)
-				           {
+					           {
 					           ASSERT(false);
-				           },
+					           std::unreachable();
+					           },
 				           [&](auto other)
-				           {
+					           {
 					           ASSERT(false);
-				           }
+					           std::unreachable();
+					           }
 			           }, view.View);
 		}
 		else if (table_dsv)
@@ -647,17 +651,20 @@ namespace HAL
 					           size = view.Resource->get_desc().as_texture().get_size(Texture2DArray.MipSlice).xy;
 				           },
 				           [&](const HAL::Views::DepthStencil::Texture2DMS& Texture2DMS)
-				           {
+					           {
 					           ASSERT(false);
-				           },
+					           std::unreachable();
+					           },
 				           [&](const HAL::Views::DepthStencil::Texture2DMSArray& Texture2DMSArray)
-				           {
+					           {
 					           ASSERT(false);
-				           },
+					           std::unreachable();
+					           },
 				           [&](auto other)
-				           {
+					           {
 					           ASSERT(false);
-				           }
+					           std::unreachable();
+					           }
 			           }, view.View);
 		}
 
@@ -2417,12 +2424,9 @@ namespace HAL
 						pending.clear();
 						wanted.visit(range, [&](SubresRange piece, const ResourceState* cur)
 						{
-							ResourceState result = state;
-							if (cur)
-							{
-								auto merged = merge_state(*cur, state);
-								result = merged ? *merged : state;
-							}
+							ResourceState result = cur
+								? merge_state(*cur, state).value_or(state)
+								: state;
 							pending.emplace_back(piece, result);
 						});
 

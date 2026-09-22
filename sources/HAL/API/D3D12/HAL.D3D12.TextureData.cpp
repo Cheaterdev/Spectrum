@@ -1,5 +1,4 @@
-﻿
-module HAL:TextureData;
+﻿module HAL:TextureData;
 
 import :Utils;
 import :Types;
@@ -88,6 +87,31 @@ namespace HAL
     texture_data::ptr generate_tex_data(DirectXTex::ScratchImage& image)
     {
         DirectXTex::TexMetadata metadata = image.GetMetadata();
+
+        // Block-compressed formats store a minimum of one full 4x4 block, in
+        // both the base level and every mip: a *base* resolution below 4x4
+        // (a tiny 1x1/2x2 placeholder texture) is stored as one full block
+        // just like a small tail mip is, so it hits the same D3D12 error
+        // #858 ("effective SrcBox width is 4 ... but the destination
+        // subresource only has 1 width") on its own mip 0 -- there's no
+        // smaller mip to drop. Round the base dimensions up to the block
+        // size so every subresource this function goes on to build (mip::mip
+        // halves down from here) is representable; the extra padding is
+        // never visibly sampled since normalized UVs cover the block
+        // regardless of the texture's true logical size.
+        if (from_native(metadata.format).is_compressed())
+        {
+            if (metadata.width < 4)  metadata.width  = 4;
+            if (metadata.height < 4) metadata.height = 4;
+
+            size_t max_mips = 1;
+            while ((metadata.width >> max_mips) >= 4 && (metadata.height >> max_mips) >= 4)
+                max_mips++;
+
+            if (metadata.mipLevels > max_mips)
+                metadata.mipLevels = max_mips;
+        }
+
         texture_data::ptr tex_data;
 
         // Fill out subresource array

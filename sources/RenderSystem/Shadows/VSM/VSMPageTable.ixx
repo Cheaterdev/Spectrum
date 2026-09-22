@@ -22,7 +22,7 @@ export
 
 	struct VSMPageKeyHash
 	{
-		size_t operator()(const VSMPageKey& k) const
+		static size_t operator()(const VSMPageKey& k)
 		{
 			size_t h = std::hash<int>()(k.level);
 			h = h * 1000003u ^ std::hash<int>()(k.x);

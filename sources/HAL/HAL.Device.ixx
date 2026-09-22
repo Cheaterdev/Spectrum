@@ -108,6 +108,8 @@ export namespace HAL
 
 		texture_layout get_texture_layout(const ResourceDesc& rdesc, UINT sub_resource);
 
+		texture_range_layout get_texture_range_layout(const ResourceDesc& rdesc, UINT first_subresource, UINT count);
+
 		std::vector<std::byte> compress(std::span<std::byte>);
 
 

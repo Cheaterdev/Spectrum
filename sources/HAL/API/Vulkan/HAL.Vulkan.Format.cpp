@@ -28,6 +28,37 @@ namespace HAL
         }
     }
 
+    bool Format::is_compressed() const
+    {
+        switch (native_format)
+        {
+        case BC1_TYPELESS:
+        case BC1_UNORM:
+        case BC1_UNORM_SRGB:
+        case BC2_TYPELESS:
+        case BC2_UNORM:
+        case BC2_UNORM_SRGB:
+        case BC3_TYPELESS:
+        case BC3_UNORM:
+        case BC3_UNORM_SRGB:
+        case BC4_TYPELESS:
+        case BC4_UNORM:
+        case BC4_SNORM:
+        case BC5_TYPELESS:
+        case BC5_UNORM:
+        case BC5_SNORM:
+        case BC6H_TYPELESS:
+        case BC6H_UF16:
+        case BC6H_SF16:
+        case BC7_TYPELESS:
+        case BC7_UNORM:
+        case BC7_UNORM_SRGB:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     bool Format::is_srgb() const
     {
         switch (native_format)
@@ -247,7 +278,7 @@ namespace HAL
 
         default:
             ASSERT(FALSE);
-            return 0;
+            std::unreachable();
         }
     }
 

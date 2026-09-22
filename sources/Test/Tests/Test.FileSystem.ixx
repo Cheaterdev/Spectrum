@@ -104,7 +104,7 @@ export namespace Test
 	{
 		std::filesystem::path file_path = "/home/user/documents/file.txt";
 		std::filesystem::path parent = file_path.parent_path();
-		ASSERT_TRUE(parent.string().find("documents") != std::string::npos);
+		ASSERT_TRUE(parent.string().contains("documents"));
 	}
 
 	TEST(Core.FileSystem, PathCombine)
@@ -113,7 +113,7 @@ export namespace Test
 		std::filesystem::path filename = "test.txt";
 		std::filesystem::path full_path = dir / filename;
 
-		ASSERT_TRUE(full_path.string().find("test.txt") != std::string::npos);
+		ASSERT_TRUE(full_path.string().contains("test.txt"));
 	}
 
 	TEST(Core.FileSystem, PathAbsolute)

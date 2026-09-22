@@ -54,7 +54,7 @@ bool resource_file_depender::depends_on(std::string v) const
     auto wstr = convert(v);
     for (auto& f : files)
     {
-        if (f.file_name.wstring().find(wstr) != std::string::npos)
+        if (f.file_name.wstring().contains(wstr))
         {
             return true;
         }
