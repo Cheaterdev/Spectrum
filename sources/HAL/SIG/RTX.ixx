@@ -344,7 +344,14 @@ struct SelectLocal<T>
 			compute.dispatch_rays<hit_type, HAL::shader_identifier, HAL::shader_identifier>(size,
 				hitgroup_ids->buffer.get_resource_address(), static_cast<UINT>(hitgroup_ids->max_size()),
 				miss_ids.get_resource_address(), static_cast<UINT>(miss_ids.get_count()),
-				raygen_ids.get_resource_address(generator));
+				raygen_ids.get_resource_address(generator),
+				&raygen_slots<T>());
+		}
+
+		template<class T>
+		const UsedSlots& raygen_slots() const
+		{
+			return std::get<T>(raygen).slots;
 		}
 
 		// Same generator-index lookup dispatch<T>() uses, exposed on its own
@@ -366,6 +373,14 @@ struct SelectLocal<T>
 		HAL::StateObject::ptr m_Collection;
 		HAL::shader_identifier raygen_id;
 
+		// This raygen's own reflected slots -- the null-slot check scope for
+		// its dispatches (see commit_tables' check_scope). Hit/miss slots are
+		// deliberately excluded: which of those a dispatch reaches depends on
+		// its payload (e.g. RayPayload::use_vsm_shadow), which reflection
+		// cannot see.
+		UsedSlots slots;
+		HAL::library_shader::ptr library;
+
 		template<class RTX>
 		void init(RTX& rtx)
 		{
@@ -379,11 +394,62 @@ struct SelectLocal<T>
 			lib.export_shader(std::wstring(Desc::raygen));
 			raytracingPipeline.libraries.emplace_back(lib);
 
+			library = lib.library;
+			update_slots();
+
 			m_Collection = std::make_shared<HAL::StateObject>(raytracingPipeline);
+		}
+
+		void update_slots()
+		{
+			slots.clear();
+
+			// TEMP diagnostic (raygen_slots.temp): per-function reflection for this raygen.
+			{
+				std::wofstream tf("raygen_slots.temp", std::ios::app);
+				tf << L"raygen " << Desc::raygen << L" lib_funcs=" << library->blob.functions.size() << L"\n";
+				for (auto& f : library->blob.functions)
+				{
+					tf << L"  fn '" << f.wname << L"' match=" << (f.wname == Desc::raygen) << L" slots=";
+					for (auto s : f.slots.slots_usage) tf << static_cast<int>(s) << L",";
+					tf << L"\n";
+				}
+			}
+
+			for (auto& f : library->blob.functions)
+				if (is_function(f.wname, Desc::raygen))
+				{
+					slots.merge(f.slots);
+					return;
+				}
+
+			// Not found by name: fall back to the whole library, which is
+			// what the check used before scoping existed.
+			slots.merge(library->slots_usage);
+		}
+
+		// DXIL library reflection reports functions by their MSVC-mangled
+		// name ("\x01?MyRaygenShader@@YAXXZ"), not the plain export name.
+		static bool is_function(std::wstring_view reflected, std::wstring_view name)
+		{
+			if (reflected == name)
+				return true;
+
+			if (!reflected.empty() && reflected.front() == L'\x01')
+				reflected.remove_prefix(1);
+			if (reflected.empty() || reflected.front() != L'?')
+				return false;
+			reflected.remove_prefix(1);
+
+			return reflected.starts_with(name) && reflected.substr(name.size()).starts_with(L"@@");
 		}
 
 		void init_ids(HAL::StateObject::ptr& state, std::vector<raygen_type>& raygen_ids)
 		{
+			// Also runs after a hot reload rebuilt the state object, so
+			// refresh the scope from the reloaded library here too.
+			update_slots();
+
 			raygen_id = state->get_shader_id(std::wstring(Desc::raygen));
 
 			raygen_type gen;

@@ -378,7 +378,7 @@ export{
 			void set_pipeline_internal(PipelineStateBase* pipeline);
 
 			template<bool compute, bool graphics, class T>
-			void pre_command(T& context, BarrierSync operation, UsedSlots* slots = nullptr)
+			void pre_command(T& context, BarrierSync operation, UsedSlots* slots = nullptr, const UsedSlots* check_scope = nullptr)
 			{
 				// Operation batching: open (or continue) a batch of this class
 				// instead of bracketing every op with its own usage point.
@@ -386,7 +386,7 @@ export{
 				if constexpr (compute || graphics)
 				{
 					setup_debug(&context);
-					context.commit_tables(operation, slots);
+					context.commit_tables(operation, slots, check_scope);
 					if constexpr (graphics) context.validate();
 				}
 			}
@@ -608,7 +608,11 @@ export{
 
 			void reset_tables();
 
-			void commit_tables(BarrierSync operation, UsedSlots* slots = nullptr);
+			// check_scope narrows only the null-slot diagnostic, never usage
+			// tracking: a DXR state object's slot set is the union of every
+			// raygen/hit/miss in it, so checking a dispatch against that
+			// reports every other raygen's slots as unbound.
+			void commit_tables(BarrierSync operation, UsedSlots* slots = nullptr, const UsedSlots* check_scope = nullptr);
 			virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
 
 			void set_cb(UINT index, const Handles::CBV& cb, BarrierSync operation);
@@ -793,7 +797,7 @@ export{
 
 			void on_set_signature(const RootSignature::ptr&) override;
 
-			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0, BarrierSync operation = BarrierSync::COMPUTE_SHADING);
+			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0, BarrierSync operation = BarrierSync::COMPUTE_SHADING, const UsedSlots* check_scope = nullptr);
 
 		public:
 
@@ -829,9 +833,9 @@ export{
 			// for them before the next transition -- DDGIProbeTrace hung the
 			// GPU on exactly that barrier (DRED, ExecuteIndirect DISPATCH_RAYS).
 			template<class Hit, class Miss, class Raygen>
-			void dispatch_rays(ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
+			void dispatch_rays(ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer, const UsedSlots* check_scope = nullptr)
 			{
-				base.pre_command<true, false>(*this, BarrierSync::RAYTRACING);
+				base.pre_command<true, false>(*this, BarrierSync::RAYTRACING, nullptr, check_scope);
 
 				base.add_resource_usage(hit_buffer.resource, { BarrierSync::RAYTRACING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
 				base.add_resource_usage(miss_buffer.resource, { BarrierSync::RAYTRACING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
@@ -844,7 +848,7 @@ export{
 
 
 			template<class T>
-			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0)
+			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0, const UsedSlots* check_scope = nullptr)
 			{
 				constexpr BarrierSync operation = T::CommandID == IndirectCommands::DispatchRaysArguments
 					? BarrierSync::RAYTRACING : BarrierSync::COMPUTE_SHADING;
@@ -856,7 +860,8 @@ export{
 						buffer.get_data_offset_in_bytes(offset),
 						buffer.get_counter_buffer().get(),
 						buffer.get_counter_offset(),
-						operation
+						operation,
+						check_scope
 					);
 			}
 

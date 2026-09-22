@@ -1699,13 +1699,14 @@ namespace HAL
 	}
 
 	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer,
-	                                      UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset, BarrierSync operation)
+	                                      UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset, BarrierSync operation,
+	                                      const UsedSlots* check_scope)
 	{
 		ASSERT(command_buffer);
 		PROFILE_GPU(L"execute_indirect");
 
 		{ PROFILE(L"pre_command");
-		  base.pre_command<true, false>(*this, operation); }
+		  base.pre_command<true, false>(*this, operation, nullptr, check_scope); }
 
 		{ PROFILE(L"transitions");
 		  if (command_buffer) get_base().add_resource_usage(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
@@ -1800,7 +1801,7 @@ namespace HAL
 		used_resources.clear();
 	}
 
-	void SignatureDataSetter::commit_tables(BarrierSync operation, UsedSlots* slots)
+	void SignatureDataSetter::commit_tables(BarrierSync operation, UsedSlots* slots, const UsedSlots* check_scope)
 	{
 		PROFILE(L"commit_tables");
 
@@ -1913,7 +1914,8 @@ namespace HAL
 		if constexpr (Debug::CheckErrors)
 		{
 			auto pipeline = get_base().current_pipeline;
-			for (auto& slot : pipeline->slots.slots_usage)
+			const UsedSlots& checked = check_scope ? *check_scope : pipeline->slots;
+			for (auto& slot : checked.slots_usage)
 			{
 				auto id = get_table_index(slot);
 
@@ -1931,8 +1933,14 @@ namespace HAL
 					}
 
 					if (!found)
+					{
+						// The list name is the pass name for FrameGraph lists --
+						// the only way to attribute this for a DXR state object,
+						// whose pipeline name is empty.
+						const wchar_t* list_name = static_cast<CommandListBase&>(get_base()).get_name().ptr;
 						Log::get() << "Possible null slot " << get_slot_name(slot) << " for pipeline " << pipeline->name
-							<< Log::endl;
+							<< " in list " << std::wstring_view(list_name ? list_name : L"<unnamed>") << Log::endl;
+					}
 				}
 			}
 		}

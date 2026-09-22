@@ -602,7 +602,8 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 		// cascade read element 0 regardless of which cascade was actually
 		// tracing: cascades 1-4 launched with cascade 0's own needed-probe
 		// count instead of their own.
-		compute.exec_indirect<DispatchRaysArguments>(*data.DDGI_DispatchRaysArgs, 1, cascade);
+		compute.exec_indirect<DispatchRaysArguments>(*data.DDGI_DispatchRaysArgs, 1, cascade,
+			&RTX::get().rtx.raygen_slots<DDGIProbeTrace>());
 	}
 	else
 	{
