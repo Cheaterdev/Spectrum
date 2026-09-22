@@ -180,8 +180,10 @@ struct RayPayload
 	# Opt-in per-ray shadow technique (see [[project-ddgi]] planning notes):
 	# 0 (default, set by init() below) = MyClosestHitShader's own real
 	# recursive shadow ray (ColorShadowPass), unchanged for every existing
-	# caller. 1 = a single cheap VSM lookup (FrameInfo::vsm,
-	# get_shadow_vsm_simple) instead -- one less BVH traversal per hit.
+	# caller. 1 = a single cheap VSM lookup (VSMShadowLookupData, vsm.sig,
+	# get_shadow_vsm_simple) instead -- one less BVH traversal per hit. A
+	# caller setting 1 must bind VSMShadowLookupData and declare the VSM
+	# resource reads on its PassNode.
 	# DDGIProbeTrace (ddgi_probe_trace.hlsl) is the only caller that sets
 	# this today, since a probe texel's own shadow term doesn't need the
 	# same precision a primary screen ray's does, and DDGI traces FAR more

@@ -149,6 +149,25 @@ namespace HAL
                 parse_node(*node);
                 node = node->pNext;
             }
+
+            // PageFaultVA == 0 with no allocation nodes means the removal was
+            // a hang/TDR rather than a fault -- that distinction is itself the
+            // first thing to know when reading a DRED dump.
+            Log::get() << "DRED page fault VA = 0x" << std::format("{:016X}", DredPageFaultOutput.PageFaultVA) << Log::endl;
+
+            auto log_allocations = [](const char* title, auto* alloc)
+            {
+                for (; alloc; alloc = alloc->pNext)
+                {
+                    if (alloc->ObjectNameW)
+                        Log::get() << title << " " << alloc->AllocationType << " " << std::wstring_view(alloc->ObjectNameW) << Log::endl;
+                    else
+                        Log::get() << title << " " << alloc->AllocationType << " " << std::string_view(alloc->ObjectNameA ? alloc->ObjectNameA : "<unnamed>") << Log::endl;
+                }
+            };
+
+            log_allocations("DRED existing allocation at fault VA:", DredPageFaultOutput.pHeadExistingAllocationNode);
+            log_allocations("DRED recently freed allocation at fault VA:", DredPageFaultOutput.pHeadRecentFreedAllocationNode);
         }
 
         void Device::process_result(HRESULT hr, std::string_view line) const

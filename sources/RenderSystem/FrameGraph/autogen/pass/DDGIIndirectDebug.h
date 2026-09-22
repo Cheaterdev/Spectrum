@@ -65,7 +65,7 @@ public:
 			builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::Read);
 			builder.need(data.scene, FrameGraph::ResourceFlags::Read);
-			builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::SkipEnablement);
 		}
 
 		// Resources this pass always creates with a fixed desc, generated from

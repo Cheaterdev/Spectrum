@@ -317,6 +317,8 @@ export import :Autogen.Tables.VSMSelectors;
 export import :Autogen.Slots.VSMConstants;
 export import :Autogen.Tables.VSMConstants;
 export import :Autogen.Tables.VSMShadowLookup;
+export import :Autogen.Slots.VSMShadowLookupData;
+export import :Autogen.Tables.VSMShadowLookupData;
 export import :Autogen.Slots.VSMPageTableData;
 export import :Autogen.Tables.VSMPageTableData;
 export import :Autogen.Slots.VSMPageHiZ;

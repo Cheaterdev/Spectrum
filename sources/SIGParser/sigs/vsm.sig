@@ -194,6 +194,20 @@ struct VSMShadowLookup
 	StructuredBuffer<Camera> page_cameras;
 }
 
+# VSMShadowLookup for the shared RTX hit shader (MyClosestHitShader's
+# RayPayload::use_vsm_shadow path). Bound per pass by whichever pass opts
+# into that path, which must also declare VSM_Atlas/VSM_PageTable/
+# VSM_PageCameras reads so the graph orders it after VSM and keeps VSM alive
+# -- DDGIProbeTrace is the only one today. This used to live on FrameInfo,
+# filled only when VSM happened to be in the graph; in views that culled VSM
+# the hit shader read uninitialized active_min/active_max and looped until
+# TDR.
+[Bind = DefaultLayout::VSMShadow]
+struct VSMShadowLookupData
+{
+	VSMShadowLookup lookup;
+}
+
 # Instance3, not Instance1: mesh_shader_vsm.hlsl needs this alongside MeshInfo
 # (a fixed non-Instance slot), and MeshInfo happens to land on the same raw
 # slot number as Instance1 -- Instance3 avoids the collision.

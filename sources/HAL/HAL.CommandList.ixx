@@ -793,7 +793,7 @@ export{
 
 			void on_set_signature(const RootSignature::ptr&) override;
 
-			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
+			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0, BarrierSync operation = BarrierSync::COMPUTE_SHADING);
 
 		public:
 
@@ -822,31 +822,41 @@ export{
 			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom);
 			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top);
 
+			// DXR shaders execute under SYNC_RAYTRACING, not COMPUTE_SHADING. A
+			// ray dispatch recorded as COMPUTE_SHADING also merged into the
+			// surrounding compute operation, so the barriers bracketing it
+			// neither held the rays back until earlier writes landed nor waited
+			// for them before the next transition -- DDGIProbeTrace hung the
+			// GPU on exactly that barrier (DRED, ExecuteIndirect DISPATCH_RAYS).
 			template<class Hit, class Miss, class Raygen>
 			void dispatch_rays(ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
 			{
-				base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
+				base.pre_command<true, false>(*this, BarrierSync::RAYTRACING);
 
-				base.add_resource_usage(hit_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
-				base.add_resource_usage(miss_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
-				base.add_resource_usage(raygen_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
+				base.add_resource_usage(hit_buffer.resource, { BarrierSync::RAYTRACING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
+				base.add_resource_usage(miss_buffer.resource, { BarrierSync::RAYTRACING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
+				base.add_resource_usage(raygen_buffer.resource, { BarrierSync::RAYTRACING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
 
 				list->dispatch_rays<Hit, Miss, Raygen>(size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
 
-				base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
+				base.post_command<true, false>(*this, BarrierSync::RAYTRACING);
 			}
 
 
 			template<class T>
 			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0)
 			{
+				constexpr BarrierSync operation = T::CommandID == IndirectCommands::DispatchRaysArguments
+					? BarrierSync::RAYTRACING : BarrierSync::COMPUTE_SHADING;
+
 				execute_indirect(
 						base.get_device().get_engine_pso_holder().GetCommand(T::CommandID),
 						max_commands,
 						buffer.resource.get(),
 						buffer.get_data_offset_in_bytes(offset),
 						buffer.get_counter_buffer().get(),
-						buffer.get_counter_offset()
+						buffer.get_counter_offset(),
+						operation
 					);
 			}
 

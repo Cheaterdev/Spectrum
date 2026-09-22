@@ -123,7 +123,7 @@ namespace HAL
 		if (check(get_desc().Flags & HAL::ResFlags::ShaderResource))
 		{
 			if (desc.is2D() && view_desc.ArraySize == 1)
-				texture2D.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice);
+				texture2D.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice, view_desc.format);
 			else if (desc.is2D())
 				texture2DArray.create(resource, view_desc.MipSlice, view_desc.MipLevels,
 				                      view_desc.FirstArraySlice, view_desc.ArraySize);

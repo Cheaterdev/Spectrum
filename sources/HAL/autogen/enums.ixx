@@ -340,6 +340,7 @@ export
 		VSMSelectors = "VSMSelectors"_crc32,
 		VSMConstants = "VSMConstants"_crc32,
 		VSMShadowLookup = "VSMShadowLookup"_crc32,
+		VSMShadowLookupData = "VSMShadowLookupData"_crc32,
 		VSMPageTableData = "VSMPageTableData"_crc32,
 		VSMPageHiZ = "VSMPageHiZ"_crc32,
 		VSMCopyPageDepth = "VSMCopyPageDepth"_crc32,

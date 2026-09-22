@@ -14,13 +14,17 @@ export
 	{
 		struct TextureViewDesc
 		{
-			//Format format;
-
 			//	uint PlaneSlice;
 			uint MipSlice = 0;
 			uint MipLevels = 0;
 			uint FirstArraySlice = 0;
 			uint ArraySize = 0;
+			// UNKNOWN (default) means "use the resource's own format" -- set
+			// explicitly to reinterpret the view (e.g. Format::to_srgb()),
+			// see Texture2D<T>::create()'s own format_override parameter.
+			// Kept last so existing positional {MipSlice, MipLevels, ...}
+			// brace-inits elsewhere stay correct with this field defaulted.
+			Format format = Format::UNKNOWN;
 		};
 
 		struct CubeViewDesc

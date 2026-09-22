@@ -48,6 +48,11 @@ export
 			Format original_format;
 
 			Texture2DView texture_2d_view;
+			// Lazily built on first texture_2d_srgb() call -- most textures
+			// (normal/roughness/metallic/...) never need this second view, so
+			// building it eagerly for every texture would waste a descriptor-
+			// heap slot per texture for a view that usually goes unused.
+			Texture2DView texture_2d_view_srgb;
 			Texture3DView texture_3d_view;
 			CubeView cube_view;
 
@@ -61,6 +66,12 @@ export
 
 			ivec3 get_size(int mip = 0);
 			Texture2DView& texture_2d();
+			// Same underlying resource as texture_2d(), reinterpreted through
+			// Format::to_srgb() so hardware sRGB-decodes on every Sample() --
+			// for a color texture (albedo/specular tint/emissive) whose bytes
+			// are gamma-encoded, as opposed to normal/roughness/metallic data
+			// which must stay linear and should keep using texture_2d().
+			Texture2DView& texture_2d_srgb();
 			Texture3DView& texture_3d();
 			CubeView& cube();
 

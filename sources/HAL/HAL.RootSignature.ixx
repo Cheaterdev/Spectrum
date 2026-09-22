@@ -132,10 +132,21 @@ export namespace HAL
 	{
 		
 
+		// Register space for the placeholders below; no shader declares
+		// anything this high.
+		static constexpr uint LocalSlotPlaceholderSpace = 1000;
+
+		// A local slot must leave the global signature, but not by erasing it:
+		// parameters are flattened in key order into the native signature, so
+		// an erased slot shifts every later slot one native index down while
+		// binding still addresses them by slot ID. That was latent while only
+		// never-bound slots followed MaterialData, and surfaced as D3D12 #709
+		// once VSMShadow was added after it. A never-set 1-DWORD constant in
+		// its own register space keeps slot ID == native index.
 		template<class T>
 		void process_one_sig(RootSignatureDesc& desc) const
 		{
-				desc.remove(T::Slot::ID);
+			desc[T::Slot::ID] = DescriptorConstants(0, 1, ShaderVisibility::ALL, LocalSlotPlaceholderSpace + T::Slot::ID);
 		}
 
 		template<>

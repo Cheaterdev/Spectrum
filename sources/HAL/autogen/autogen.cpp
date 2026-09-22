@@ -132,6 +132,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "ReflectionCombine") return SlotID::ReflectionCombine;
 	if(slot_name == "RTXCombine") return SlotID::RTXCombine;
 	if(slot_name == "VSMConstants") return SlotID::VSMConstants;
+	if(slot_name == "VSMShadowLookupData") return SlotID::VSMShadowLookupData;
 	if(slot_name == "VSMPageTableData") return SlotID::VSMPageTableData;
 	if(slot_name == "VSMPageHiZ") return SlotID::VSMPageHiZ;
 	if(slot_name == "VSMCopyPageDepth") return SlotID::VSMCopyPageDepth;
@@ -403,6 +404,8 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::VSMConstants) return Slots::VSMConstants::Slot::ID;
 
+	if(id == SlotID::VSMShadowLookupData) return Slots::VSMShadowLookupData::Slot::ID;
+
 	if(id == SlotID::VSMPageTableData) return Slots::VSMPageTableData::Slot::ID;
 
 	if(id == SlotID::VSMPageHiZ) return Slots::VSMPageHiZ::Slot::ID;
@@ -568,6 +571,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::ReflectionCombine) return "ReflectionCombine";
 	if(id == SlotID::RTXCombine) return "RTXCombine";
 	if(id == SlotID::VSMConstants) return "VSMConstants";
+	if(id == SlotID::VSMShadowLookupData) return "VSMShadowLookupData";
 	if(id == SlotID::VSMPageTableData) return "VSMPageTableData";
 	if(id == SlotID::VSMPageHiZ) return "VSMPageHiZ";
 	if(id == SlotID::VSMCopyPageDepth) return "VSMCopyPageDepth";

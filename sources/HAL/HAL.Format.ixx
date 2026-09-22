@@ -147,6 +147,12 @@ export namespace HAL
 
 		Format to_dsv() const;
 		Format to_srv() const;
+		// UNORM -> its _SRGB sibling, for reinterpreting an SRV of an
+		// already-loaded texture as sRGB-encoded without reloading/recreating
+		// the underlying resource (D3D12 supports this UNORM<->UNORM_SRGB
+		// format-family reinterpretation on non-typeless resources). Identity
+		// for formats with no _SRGB sibling (BC4/BC5, R8/R8G8/R16, ...).
+		Format to_srgb() const;
 		uint get_default_mapping() const;
 
 		SurfaceInfo  surface_info(uint2 size)const;

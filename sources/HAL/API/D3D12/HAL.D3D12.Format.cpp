@@ -171,6 +171,38 @@ namespace HAL
         }
     }
 
+    Format Format::to_srgb() const
+    {
+        switch (native_format)
+        {
+        // Concrete UNORM inputs.
+        case DXGI_FORMAT_R8G8B8A8_UNORM:    return HAL::Format::R8G8B8A8_UNORM_SRGB;
+        case DXGI_FORMAT_B8G8R8A8_UNORM:    return HAL::Format::B8G8R8A8_UNORM_SRGB;
+        case DXGI_FORMAT_B8G8R8X8_UNORM:    return HAL::Format::B8G8R8X8_UNORM_SRGB;
+        case DXGI_FORMAT_BC1_UNORM:         return HAL::Format::BC1_UNORM_SRGB;
+        case DXGI_FORMAT_BC2_UNORM:         return HAL::Format::BC2_UNORM_SRGB;
+        case DXGI_FORMAT_BC3_UNORM:         return HAL::Format::BC3_UNORM_SRGB;
+        case DXGI_FORMAT_BC7_UNORM:         return HAL::Format::BC7_UNORM_SRGB;
+
+        // TYPELESS inputs -- loaded textures are commonly stored typeless
+        // (see to_srv(), which resolves these to their plain UNORM sibling
+        // the same way); resolve straight to the _SRGB concrete format here
+        // rather than leaving TYPELESS to fall through to `default`, which
+        // produced an invalid (TYPELESS) SRV format ("not a fully qualified
+        // Format castable from the Format of the Resource").
+        case DXGI_FORMAT_R8G8B8A8_TYPELESS: return HAL::Format::R8G8B8A8_UNORM_SRGB;
+        case DXGI_FORMAT_B8G8R8A8_TYPELESS: return HAL::Format::B8G8R8A8_UNORM_SRGB;
+        case DXGI_FORMAT_B8G8R8X8_TYPELESS: return HAL::Format::B8G8R8X8_UNORM_SRGB;
+        case DXGI_FORMAT_BC1_TYPELESS:      return HAL::Format::BC1_UNORM_SRGB;
+        case DXGI_FORMAT_BC2_TYPELESS:      return HAL::Format::BC2_UNORM_SRGB;
+        case DXGI_FORMAT_BC3_TYPELESS:      return HAL::Format::BC3_UNORM_SRGB;
+        case DXGI_FORMAT_BC7_TYPELESS:      return HAL::Format::BC7_UNORM_SRGB;
+
+        default:
+            return *this;
+        }
+    }
+
     uint Format::size()const
     {
         switch (native_format)

@@ -333,7 +333,7 @@ public:
 
 		// DDGI's [Multiple=5] passes (ddgi.sig) are runtime-wired, not
 		// [Static] -- see DDGI.ixx's own comment on ddgi_register_passes.
-		ddgi_register_passes(pipeline);
+		ddgi_register_passes(pipeline, vsm);
 	}
 
 	float scale_speed = 0;
@@ -605,29 +605,6 @@ public:
 				// comment for why this DDGI-owned toggle is mirrored here instead of
 				// living on DDGIInfo (its effect isn't DDGI-exclusive).
 				frameInfo.GetDebugFlags() = ddgi_sky_fallback_disabled() ? (uint32_t)RTXDebugFlags::DisableSkyFallback : 0u;
-
-				// VSM's lean world-position shadow lookup -- see FrameData.sig's own
-				// comment on why this lives globally on FrameInfo rather than on any
-				// one pass's own binding struct (MyClosestHitShader, the actual
-				// reader, is a shared hit-group shader with no per-pass Context of
-				// its own to read from). VSM_RenderPages/VSM_GatherDispatch (this
-				// frame's page writes) already ran earlier in the pipeline than
-				// anything that could read this, same ordering guarantee sky/brdf/
-				// mainHiZ above already rely on for their own blind FrameInfo reads.
-				{
-					auto vsm_atlas = graph.builder.get(FrameGraph::ResourceID::VSM_Atlas);
-					auto vsm_page_table = graph.builder.get(FrameGraph::ResourceID::VSM_PageTable);
-					auto vsm_page_cameras = graph.builder.get(FrameGraph::ResourceID::VSM_PageCameras);
-					if (vsm_atlas && vsm_atlas->resource && vsm_page_table && vsm_page_table->resource
-						&& vsm_page_cameras && vsm_page_cameras->resource)
-					{
-						auto& vsm_lookup = frameInfo.GetVsm();
-						vsm.fill_shadow_lookup_constants(vsm_lookup, cam.cam->position);
-						vsm_lookup.GetVsm_atlas()    = vsm_atlas->get_handler<Handlers::Texture>()->texture2DArray;
-						vsm_lookup.GetPage_table()   = vsm_page_table->get_handler<Handlers::Texture>()->texture2DArray;
-						vsm_lookup.GetPage_cameras() = vsm_page_cameras->get_handler<Handlers::StructuredBuffer<Table::Camera>>()->structuredBuffer;
-					}
-				}
 
 				auto compiled = frameInfo.compile(*graph.builder.current_frame);
 				graph.register_slot_setter(compiled);

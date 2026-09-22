@@ -52,6 +52,14 @@ public:
 		Handlers::StructuredBuffer<uint> DDGI_ProbeResidencyPending = ResourceID::DDGI_ProbeResidencyPending;
 
 
+		Handlers::Texture VSM_Atlas = ResourceID::VSM_Atlas;
+
+
+		Handlers::Texture VSM_PageTable = ResourceID::VSM_PageTable;
+
+		Handlers::StructuredBuffer<Table::Camera> VSM_PageCameras = ResourceID::VSM_PageCameras;
+
+
 		Handlers::StructuredBuffer<float4> DDGI_ProbeRayRadiance = ResourceID::DDGI_ProbeRayRadiance;
 
 
@@ -80,6 +88,9 @@ public:
 			builder.need(data.DDGI_DispatchRaysArgs, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_CompactedProbeList, FrameGraph::ResourceFlags::Read);
 			builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::Read);
+			builder.need(data.VSM_PageTable, FrameGraph::ResourceFlags::Read);
+			builder.need(data.VSM_PageCameras, FrameGraph::ResourceFlags::Read);
 			if (!(data.pass_index == 0))
 				builder.need(data.DDGI_ProbeRayRadiance, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 		}
@@ -120,6 +131,9 @@ public:
 			FrameGraph::ChainIndex DDGI_DispatchRaysArgs = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_CompactedProbeList = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeResidencyPending = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_Atlas = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_PageTable = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex VSM_PageCameras = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex DDGI_ProbeRayRadiance = FrameGraph::ChainIndex::Unresolved;
 		};
 
@@ -134,6 +148,9 @@ public:
 			cache.DDGI_DispatchRaysArgs = FrameGraph::TaskBuilder::cache_slot(data.DDGI_DispatchRaysArgs, ResourceID::DDGI_DispatchRaysArgs);
 			cache.DDGI_CompactedProbeList = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList);
 			cache.DDGI_ProbeResidencyPending = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending);
+			cache.VSM_Atlas = FrameGraph::TaskBuilder::cache_slot(data.VSM_Atlas, ResourceID::VSM_Atlas);
+			cache.VSM_PageTable = FrameGraph::TaskBuilder::cache_slot(data.VSM_PageTable, ResourceID::VSM_PageTable);
+			cache.VSM_PageCameras = FrameGraph::TaskBuilder::cache_slot(data.VSM_PageCameras, ResourceID::VSM_PageCameras);
 			cache.DDGI_ProbeRayRadiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeRayRadiance, ResourceID::DDGI_ProbeRayRadiance);
 		}
 
@@ -155,6 +172,9 @@ public:
 			builder.load(data.DDGI_DispatchRaysArgs, ResourceID::DDGI_DispatchRaysArgs, cache.DDGI_DispatchRaysArgs);
 			builder.load(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList, cache.DDGI_CompactedProbeList);
 			builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
+			builder.load(data.VSM_Atlas, ResourceID::VSM_Atlas, cache.VSM_Atlas);
+			builder.load(data.VSM_PageTable, ResourceID::VSM_PageTable, cache.VSM_PageTable);
+			builder.load(data.VSM_PageCameras, ResourceID::VSM_PageCameras, cache.VSM_PageCameras);
 			if (data.pass_index == 0)
 			builder.create_versioned(data.DDGI_ProbeRayRadiance, cache.DDGI_ProbeRayRadiance, { (size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount * Constants::DDGI_ProbeRayCount });
 			else
@@ -174,6 +194,9 @@ public:
 			{ ResourceID::DDGI_DispatchRaysArgs, false },
 			{ ResourceID::DDGI_CompactedProbeList, false },
 			{ ResourceID::DDGI_ProbeResidencyPending, true },
+			{ ResourceID::VSM_Atlas, false },
+			{ ResourceID::VSM_PageTable, false },
+			{ ResourceID::VSM_PageCameras, false },
 			{ ResourceID::DDGI_ProbeRayRadiance, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);

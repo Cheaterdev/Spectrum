@@ -122,8 +122,18 @@ export struct DefaultLayout: public FrameLayout
 		static inline const std::vector<uint> tables = { 43, 45 };
 	};
 
+	struct VSMShadow
+	{
+		static const uint ID = 14;
+		static const uint CB = 31;
+		static const uint CB_ID = 46;
+		static const uint SRV = 3;
+		static const uint SRV_ID = 48;
+		static inline const std::vector<uint> tables = { 46, 48 };
+	};
+
 	template<class Processor> static void for_each(Processor& processor)
 	{
-		processor.template process<CameraData, SceneData, PassData, DebugInfo, Instance0, Instance1, Instance2, Instance3, Instance4, Instance5, Raytracing, MaterialData, WorkGR_ClassifyPixels_NodeEmulation, WorkGR_Shadows_NodeEmulation>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc, HAL::Samplers::SamplerShadowComparisonDesc });
+		processor.template process<CameraData, SceneData, PassData, DebugInfo, Instance0, Instance1, Instance2, Instance3, Instance4, Instance5, Raytracing, MaterialData, WorkGR_ClassifyPixels_NodeEmulation, WorkGR_Shadows_NodeEmulation, VSMShadow>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc, HAL::Samplers::SamplerShadowComparisonDesc });
 	}
 };

@@ -5,6 +5,7 @@ export module Graphics:DDGI;
 import HAL;
 import FrameGraph;
 import Core;
+import :VSM;
 
 // Shared by DDGIGraph.cpp's own passes and IndirectRTX.cpp's per-pixel
 // feedback sample (raytracing.hlsl's TraceIndirectDiffuse) -- both need the
@@ -45,7 +46,7 @@ export bool ddgi_sky_fallback_disabled();
 export void ddgi_probe_select_render(Passes::DDGIProbeSelect::Context& data, FrameGraph::FrameContext& context);
 export void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& data, FrameGraph::FrameContext& context);
 export void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::Context& data, FrameGraph::FrameContext& context);
-export void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameGraph::FrameContext& context);
+export void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameGraph::FrameContext& context, const VSM& vsm);
 export void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameGraph::FrameContext& context);
 
 // Called once at startup (main.cpp, next to VoxelGI's own construction) to
@@ -53,15 +54,20 @@ export void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data,
 // concrete Pipeline type for the same reason VoxelGI/PSSM's own registration
 // constructors are (that type is only known in main.cpp's own translation
 // unit, via the generated pipeline header it includes).
+// `vsm` must outlive the pipeline: DDGIProbeTrace fills its
+// VSMShadowLookupData from it every frame.
 export template<typename TPipeline>
-void ddgi_register_passes(TPipeline& pipeline)
+void ddgi_register_passes(TPipeline& pipeline, const VSM& vsm)
 {
 	for (uint32_t i = 0; i < 5; i++)
 	{
 		pipeline.dDGIProbeSelect.render_funcs[i]             = ddgi_probe_select_render;
 		pipeline.dDGIProbeResidencyMark.render_funcs[i]      = ddgi_probe_residency_mark_render;
 		pipeline.dDGIProbeDispatchArgsBuild.render_funcs[i]  = ddgi_probe_dispatch_args_build_render;
-		pipeline.dDGIProbeTrace.render_funcs[i]              = ddgi_probe_trace_render;
+		pipeline.dDGIProbeTrace.render_funcs[i]              = [&vsm](Passes::DDGIProbeTrace::Context& data, FrameGraph::FrameContext& context)
+		{
+			ddgi_probe_trace_render(data, context, vsm);
+		};
 		pipeline.dDGIProbeConvolve.render_funcs[i]           = ddgi_probe_convolve_render;
 	}
 }

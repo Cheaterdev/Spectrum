@@ -282,7 +282,7 @@ export
 			}
 
 
-			void create(const Resource::ptr& resource, uint first_mip = 1, uint mip_levels = 0, uint array_offset = 0);
+			void create(const Resource::ptr& resource, uint first_mip = 1, uint mip_levels = 0, uint array_offset = 0, Format format_override = Format::UNKNOWN);
 		};
 
 
@@ -612,16 +612,20 @@ namespace HLSL
 
 
 	template<class T>
-	void Texture2D<T>::create(const Resource::ptr& resource, uint first_mip, uint mip_levels, uint array_offset)
+	void Texture2D<T>::create(const Resource::ptr& resource, uint first_mip, uint mip_levels, uint array_offset, Format format_override)
 	{
 		auto texture_desc = resource->get_desc().as_texture();
+		// UNKNOWN (the default) means "use the resource's own format" -- an
+		// explicit override lets a caller reinterpret the SRV as the format's
+		// _SRGB sibling (see Format::to_srgb()) without touching the resource.
+		Format format = (format_override == Format::UNKNOWN) ? texture_desc.Format.to_srv() : format_override;
 
 		bool is_array = texture_desc.ArraySize > 1;
 		if (is_array)
 		{
 			auto desc = HAL::Views::ShaderResource{
 				.Resource = resource,
-				.Format = texture_desc.Format.to_srv(),
+				.Format = format,
 				.View = HAL::Views::ShaderResource::Texture2DArray
 					{
 						.MostDetailedMip = first_mip,
@@ -638,7 +642,7 @@ namespace HLSL
 		{
 			auto desc = HAL::Views::ShaderResource{
 				.Resource = resource,
-				.Format = texture_desc.Format.to_srv(),
+				.Format = format,
 				.View = HAL::Views::ShaderResource::Texture2D
 					{
 						.MostDetailedMip = first_mip,

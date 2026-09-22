@@ -1145,17 +1145,22 @@ namespace HAL
 				if (!info.is_valid()) return;
 				ResourceState target_state;//= ResourceState::COMMON;
 
+				// The queue-wide shading class below would otherwise erase it:
+				// HAL's ALL_SHADING does not include RAYTRACING, and a DXR
+				// dispatch's bindings synced as compute are not waited on.
+				const bool raytracing = operation == BarrierSync::RAYTRACING;
+
 
 				if (std::holds_alternative<HAL::Views::ShaderResource>(info.view))
 				{
 					if (type == CommandListType::DIRECT)
 					{
-						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
+						operation = raytracing ? BarrierSync::RAYTRACING : BarrierSync::ALL_SHADING;
 					}
 
 					if (is_compute_queue(type))
 					{
-						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+						operation = raytracing ? BarrierSync::RAYTRACING : BarrierSync::COMPUTE_SHADING;
 					}
 
 					target_state = { operation, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };  //TODO BarrierSync::ALL
@@ -1167,12 +1172,12 @@ namespace HAL
 
 					if (type == CommandListType::DIRECT)
 					{
-						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
+						operation = raytracing ? BarrierSync::RAYTRACING : BarrierSync::ALL_SHADING;
 					}
 
 					if (is_compute_queue(type))
 					{
-						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+						operation = raytracing ? BarrierSync::RAYTRACING : BarrierSync::COMPUTE_SHADING;
 					}
 
 					target_state = { operation, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNORDERED_ACCESS };  //TODO BarrierSync::ALL
@@ -1190,12 +1195,12 @@ namespace HAL
 				{
 					if (type == CommandListType::DIRECT)
 					{
-						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
+						operation = raytracing ? BarrierSync::RAYTRACING : BarrierSync::ALL_SHADING;
 					}
 
 					if (is_compute_queue(type))
 					{
-						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+						operation = raytracing ? BarrierSync::RAYTRACING : BarrierSync::COMPUTE_SHADING;
 					}
 
 					target_state = { operation, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED };  //TODO BarrierSync::ALL
@@ -1694,13 +1699,13 @@ namespace HAL
 	}
 
 	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer,
-	                                      UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
+	                                      UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset, BarrierSync operation)
 	{
 		ASSERT(command_buffer);
 		PROFILE_GPU(L"execute_indirect");
 
 		{ PROFILE(L"pre_command");
-		  base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING); }
+		  base.pre_command<true, false>(*this, operation); }
 
 		{ PROFILE(L"transitions");
 		  if (command_buffer) get_base().add_resource_usage(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
@@ -1716,7 +1721,7 @@ namespace HAL
 			counter_offset);
 
 		{ PROFILE(L"post_command");
-		  base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING); }
+		  base.post_command<true, false>(*this, operation); }
 	}
 
 	void ComputeContext::build_ras(const HAL::RaytracingBuildDescStructure& build_desc,

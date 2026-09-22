@@ -730,6 +730,12 @@ PassNode DDGIProbeTrace
 	# resident and silently drops out from under whatever's still reading it.
 	[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
+	# Probe rays shade hits with VSMShadowLookupData (vsm.sig) instead of a
+	# recursive shadow ray, so VSM has to run whenever this pass does.
+	[Always = Read] Texture VSM_Atlas;
+	[Always = Read] Texture VSM_PageTable;
+	[Always = Read] StructuredBuffer<Camera> VSM_PageCameras;
+
 	# xyz = fully-shaded radiance for this ray (direct + multi-bounce
 	# feedback), w = hit distance (feeds DDGIProbeConvolve's visibility mean/
 	# mean-square, same reason the old per-texel DDGI_ProbeGBuffer packed hit

@@ -39,8 +39,8 @@ namespace HAL
                 // and #939/#940 (unbound slot or member reading descriptor 0)
                 // were found. The CPU layer only checks declared state at bind
                 // time and sees none of it.
-                //  if (spDebugController1)
-                //      spDebugController1->SetEnableGPUBasedValidation(true);
+                if (spDebugController1)
+                    spDebugController1->SetEnableGPUBasedValidation(true);
             }
 
     }

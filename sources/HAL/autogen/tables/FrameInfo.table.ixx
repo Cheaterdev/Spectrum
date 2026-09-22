@@ -12,7 +12,6 @@ import :Types;
 import :HLSL;
 import :Enums;
 import :Autogen.Tables.Camera;
-import :Autogen.Tables.VSMShadowLookup;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -29,7 +28,6 @@ export namespace Table
 		HLSL::Texture2D<float> mainHiZ;
 		Camera camera;
 		Camera prevCamera;
-		VSMShadowLookup vsm;
 		float4& GetTime() { return time; }
 		HLSL::Texture2D<float4>& GetBestFitNormals() { return bestFitNormals; }
 		HLSL::Texture3D<float4>& GetBrdf() { return brdf; }
@@ -40,7 +38,6 @@ export namespace Table
 		uint& GetDebugFlags() { return debugFlags; }
 		Camera& GetCamera() { return camera; }
 		Camera& GetPrevCamera() { return prevCamera; }
-		VSMShadowLookup& GetVsm() { return vsm; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -55,7 +52,6 @@ export namespace Table
 			compiler.compile_auto(mainHiZ, "FrameInfo::mainHiZ");
 			compiler.compile(camera, "FrameInfo::camera");
 			compiler.compile(prevCamera, "FrameInfo::prevCamera");
-			compiler.compile(vsm, "FrameInfo::vsm");
 		}
 		struct Compiled
 		{
@@ -69,7 +65,6 @@ export namespace Table
 			uint mainHiZ; // Texture2D<float>
 			Camera::Compiled camera; // Camera
 			Camera::Compiled prevCamera; // Camera
-			VSMShadowLookup::Compiled vsm; // VSMShadowLookup
 
 			
 			private:
@@ -81,7 +76,6 @@ export namespace Table
 				ar& NVP(sunDir);
 				ar& NVP(mipBias);
 				ar& NVP(debugFlags);
-				ar& NVP(vsm);
 			}
 
 
@@ -100,7 +94,6 @@ export namespace Table
 			ar& NVP(sunDir);
 			ar& NVP(mipBias);
 			ar& NVP(debugFlags);
-			ar& NVP(vsm);
 		}
 
 	};

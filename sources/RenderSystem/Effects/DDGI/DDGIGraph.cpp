@@ -47,7 +47,10 @@ namespace
 	// count (stream compaction, not yet implemented -- see [[project-ddgi]]
 	// planning notes).
 	Variable<bool> g_ddgi_use_indirect_dispatch = { true, "Use indirect DispatchRays", &ddgi_debug_context() };
-	// Off by default: the coarsest cascade (DDGI_CascadeCount-1) is normally
+	// Skips DDGIProbeTrace and DDGIProbeConvolve entirely -- no probe ray
+	// dispatch at all, atlases keep whatever they last held. Isolates whether
+	// a GPU hang comes from probe tracing or from something else in the frame.
+	Variable<bool> g_ddgi_freeze_probes = { false, "Freeze probe updates", &ddgi_debug_context() };	// Off by default: the coarsest cascade (DDGI_CascadeCount-1) is normally
 	// exempt from residency culling -- always fully resident, since it's the
 	// floor everything else falls back to and there's nowhere further for
 	// IT to fall back to. Since the 4x/dimension probe density bump it's the
@@ -298,8 +301,7 @@ Slots::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index)
 	// (ddgi.sig) for what these drive (DDGIProbeResidencyMark's compaction
 	// gate).
 	info.GetRays_per_probe().y = g_ddgi_stagger_k[cascade_index];
-	info.GetRays_per_probe().z = g_ddgi_stagger_bucket[cascade_index];
-	info.GetAtlas_info().x     = Constants::DDGI_ProbeTexelSize;
+	info.GetRays_per_probe().z = g_ddgi_stagger_bucket[cascade_index];	info.GetAtlas_info().x     = Constants::DDGI_ProbeTexelSize;
 	// See DDGIInfo's own comment (ddgi.sig) for what these offsets are.
 	info.GetCascade_info().x = cascade_index * probe_count;
 	info.GetCascade_info().y = cascade_index * Constants::DDGI_ProbeCountY;
@@ -514,8 +516,11 @@ void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::C
 // tunable budget too (DDGI_ProbeRayCount, decoupled from the output atlas's
 // own texel resolution -- see that constant's own comment, ddgi.sig). Plain
 // free function -- see ddgi_probe_select_render's own comment on why.
-void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext& context)
+void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext& context, const VSM& vsm)
 {
+	if (g_ddgi_freeze_probes)
+		return;
+
 	uint32_t cascade = data.pass_index;
 
 	auto& compute   = context.get_list()->get_compute();
@@ -539,6 +544,17 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 		params.GetCompacted_list()  = data.DDGI_CompactedProbeList->structuredBuffer;
 		params.GetResidency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 		compute.set(params);
+	}
+
+	{
+		PROFILE(L"ddgi_trace_vsm_lookup");
+		Slots::VSMShadowLookupData vsm_data;
+		auto& lookup = vsm_data.GetLookup();
+		vsm.fill_shadow_lookup_constants(lookup, ddgi_camera_pos(context));
+		lookup.GetVsm_atlas()    = data.VSM_Atlas->texture2DArray;
+		lookup.GetPage_table()   = data.VSM_PageTable->texture2DArray;
+		lookup.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
+		compute.set(vsm_data);
 	}
 
 	// The coarsest cascade is exempt from residency culling by default (see
@@ -611,6 +627,9 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 // see ddgi_probe_select_render's own comment on why.
 void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameContext& context)
 {
+	if (g_ddgi_freeze_probes)
+		return;
+
 	uint32_t cascade = data.pass_index;
 
 	// No more cascade-level skip here (see g_ddgi_stagger_k's own comment)

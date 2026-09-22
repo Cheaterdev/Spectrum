@@ -141,6 +141,12 @@ export namespace materials
 		/*----------------------------------------------------------*/
 
 		std::vector<TextureAsset::ref> textures;
+		// Parallel to `textures` -- whether each slot's SRV should be bound
+		// through its sRGB-reinterpreted view (see HAL::Texture::texture_2d_srgb())
+		// or the plain linear one. Populated from MaterialContext's own
+		// per-texture to_linear (TextureSRVParams), which generate_material()
+		// otherwise drops on the floor when building `textures` from it.
+		std::vector<bool> texture_to_linear;
 
 		std::vector<Uniform::ptr> tess_uniforms;
 		std::list<Events::prop_handler> handlers;
@@ -271,6 +277,7 @@ export namespace materials
 		SERIALIZE() {
 			SAVE_PARENT(MaterialAsset);
 			ar& NVP(textures);
+			ar& NVP(texture_to_linear);
 			////////////////////////////////////////////////////////////////////////////	ar& NVP(passes);
 			ar& NVP(graph);
 			ar& NVP(include_file);

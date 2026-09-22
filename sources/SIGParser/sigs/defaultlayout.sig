@@ -29,6 +29,11 @@ layout DefaultLayout: FrameLayout
 
 	slot WorkGR_ClassifyPixels_NodeEmulation;
 	slot WorkGR_Shadows_NodeEmulation;
+
+	# VSMShadowLookupData (vsm.sig). Its own slot because the reader is the
+	# shared RTX hit shader, and every Instance0-5 slot is already taken
+	# inside that one library.
+	slot VSMShadow;
 }
 
 struct DebugStruct

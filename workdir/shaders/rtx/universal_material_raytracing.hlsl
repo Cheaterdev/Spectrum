@@ -9,6 +9,7 @@
 #include "autogen/tables/Triangle.h"
 #include "autogen/VoxelScreen.h"
 #include "autogen/VoxelInfo.h"
+#include "autogen/VSMShadowLookupData.h"
 
 #include "autogen/rtx/ShadowPass.h"
 #include "autogen/rtx/ColorPass.h"
@@ -97,15 +98,15 @@ void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity)
 
 
 // RayPayload::use_vsm_shadow's own cheap path (see its comment,
-// raytracing.sig): bridges FrameInfo::vsm (a lean VSMShadowLookup, filled
-// once per frame in main.cpp) into the VSMConstants/VSMLighting shapes
+// raytracing.sig): bridges VSMShadowLookupData (vsm.sig, bound by the pass
+// that opted in) into the VSMConstants/VSMLighting shapes
 // get_shadow_vsm_simple actually takes -- exactly the same field-by-field
 // copy voxel_lighting.hlsl's own get_shadow() already does, for the same
 // reason (a caller outside VSM's own passes only has the lean lookup
 // available, not the full per-pass VSMConstants/VSMLighting tables).
 float3 vsm_shadow_lookup(float3 wpos, float3 normal, float3 light_dir)
 {
-	VSMShadowLookup vsm_lookup = CreateFrameInfo().GetVsm();
+	VSMShadowLookup vsm_lookup = CreateVSMShadowLookupData().GetLookup();
 
 	VSMConstants c = (VSMConstants)0;
 	c.active_min      = vsm_lookup.active_min;

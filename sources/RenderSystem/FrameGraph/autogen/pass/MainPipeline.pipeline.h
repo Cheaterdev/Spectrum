@@ -385,6 +385,11 @@ public:
 	static inline const FrameGraph::PassRef VSM_Atlas_c0_pass_refs[] = {
 		{ PassID::VSM_RenderPages, 0 },
 		{ PassID::Lighting, 0 },
+		{ PassID::DDGIProbeTrace, 0 },
+		{ PassID::DDGIProbeTrace, 1 },
+		{ PassID::DDGIProbeTrace, 2 },
+		{ PassID::DDGIProbeTrace, 3 },
+		{ PassID::DDGIProbeTrace, 4 },
 		{ PassID::VSM_HiZRebuild, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
@@ -392,11 +397,16 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState VSM_Atlas_c0_states[] = {
 		{ true, { VSM_Atlas_c0_pass_refs + 0, 1 } },
-		{ false, { VSM_Atlas_c0_pass_refs + 1, 5 } },
+		{ false, { VSM_Atlas_c0_pass_refs + 1, 10 } },
 	};
 	static inline const FrameGraph::PassRef VSM_PageTable_c0_pass_refs[] = {
 		{ PassID::VSM_RenderPages, 0 },
 		{ PassID::Lighting, 0 },
+		{ PassID::DDGIProbeTrace, 0 },
+		{ PassID::DDGIProbeTrace, 1 },
+		{ PassID::DDGIProbeTrace, 2 },
+		{ PassID::DDGIProbeTrace, 3 },
+		{ PassID::DDGIProbeTrace, 4 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
@@ -404,11 +414,16 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState VSM_PageTable_c0_states[] = {
 		{ true, { VSM_PageTable_c0_pass_refs + 0, 1 } },
-		{ false, { VSM_PageTable_c0_pass_refs + 1, 5 } },
+		{ false, { VSM_PageTable_c0_pass_refs + 1, 10 } },
 	};
 	static inline const FrameGraph::PassRef VSM_PageCameras_c0_pass_refs[] = {
 		{ PassID::VSM_RenderPages, 0 },
 		{ PassID::Lighting, 0 },
+		{ PassID::DDGIProbeTrace, 0 },
+		{ PassID::DDGIProbeTrace, 1 },
+		{ PassID::DDGIProbeTrace, 2 },
+		{ PassID::DDGIProbeTrace, 3 },
+		{ PassID::DDGIProbeTrace, 4 },
 		{ PassID::VSM_BlockerClassify, 0 },
 		{ PassID::VSM_BlockerSearch, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
@@ -416,7 +431,7 @@ public:
 	};
 	static inline const FrameGraph::PrecompiledState VSM_PageCameras_c0_states[] = {
 		{ true, { VSM_PageCameras_c0_pass_refs + 0, 1 } },
-		{ false, { VSM_PageCameras_c0_pass_refs + 1, 5 } },
+		{ false, { VSM_PageCameras_c0_pass_refs + 1, 10 } },
 	};
 	static inline const FrameGraph::PassRef VSM_PageHiZ_c0_pass_refs[] = {
 		{ PassID::VSM_RenderPages, 0 },
@@ -1838,6 +1853,7 @@ public:
 		{ PassID::PreScene, 0 },
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::VSM_RenderPages, 0 },
 	};
 	static inline const FrameGraph::PassRef DDGIProbeTrace_1_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
@@ -1863,6 +1879,7 @@ public:
 		{ PassID::PreScene, 0 },
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::VSM_RenderPages, 0 },
 	};
 	static inline const FrameGraph::PassRef DDGIProbeTrace_2_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
@@ -1889,6 +1906,7 @@ public:
 		{ PassID::PreScene, 0 },
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::VSM_RenderPages, 0 },
 	};
 	static inline const FrameGraph::PassRef DDGIProbeTrace_3_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
@@ -1916,6 +1934,7 @@ public:
 		{ PassID::PreScene, 0 },
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::VSM_RenderPages, 0 },
 	};
 	static inline const FrameGraph::PassRef DDGIProbeTrace_4_prev[] = {
 		{ PassID::CubeMapDownsample, 0 },
@@ -1944,6 +1963,7 @@ public:
 		{ PassID::PreScene, 0 },
 		{ PassID::ReflectionRTX, 0 },
 		{ PassID::ReflectionRTXHalf, 0 },
+		{ PassID::VSM_RenderPages, 0 },
 	};
 	static inline const FrameGraph::PassRef DDGIProbeConvolve_0_prev[] = {
 		{ PassID::DDGIProbeResidencyMark, 0 },

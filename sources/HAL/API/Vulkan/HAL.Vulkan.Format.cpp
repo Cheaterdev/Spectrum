@@ -155,6 +155,31 @@ namespace HAL
         }
     }
 
+    Format Format::to_srgb() const
+    {
+        switch (native_format)
+        {
+        case R8G8B8A8_UNORM:    return R8G8B8A8_UNORM_SRGB;
+        case B8G8R8A8_UNORM:    return B8G8R8A8_UNORM_SRGB;
+        case B8G8R8X8_UNORM:    return B8G8R8X8_UNORM_SRGB;
+        case BC1_UNORM:         return BC1_UNORM_SRGB;
+        case BC2_UNORM:         return BC2_UNORM_SRGB;
+        case BC3_UNORM:         return BC3_UNORM_SRGB;
+        case BC7_UNORM:         return BC7_UNORM_SRGB;
+
+        // TYPELESS inputs -- see the D3D12 implementation's own comment.
+        case R8G8B8A8_TYPELESS: return R8G8B8A8_UNORM_SRGB;
+        case B8G8R8A8_TYPELESS: return B8G8R8A8_UNORM_SRGB;
+        case B8G8R8X8_TYPELESS: return B8G8R8X8_UNORM_SRGB;
+        case BC1_TYPELESS:      return BC1_UNORM_SRGB;
+        case BC2_TYPELESS:      return BC2_UNORM_SRGB;
+        case BC3_TYPELESS:      return BC3_UNORM_SRGB;
+        case BC7_TYPELESS:      return BC7_UNORM_SRGB;
+
+        default:                return *this;
+        }
+    }
+
     uint Format::size() const
     {
         switch (native_format)
