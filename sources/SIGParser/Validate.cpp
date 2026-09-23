@@ -47,16 +47,71 @@ namespace
 		{ "pipeline entry", { "Async", "Async2", "Async3" } },
 	};
 
+	// Case-insensitive Levenshtein distance.
+	size_t edit_distance(std::string_view a, std::string_view b)
+	{
+		std::vector<size_t> row(b.size() + 1);
+		std::iota(row.begin(), row.end(), size_t(0));
+		for (size_t i = 1; i <= a.size(); ++i)
+		{
+			size_t diag = row[0];
+			row[0] = i;
+			for (size_t j = 1; j <= b.size(); ++j)
+			{
+				size_t up = row[j];
+				bool same = std::tolower((unsigned char)a[i - 1]) == std::tolower((unsigned char)b[j - 1]);
+				row[j] = std::min({ row[j] + 1, row[j - 1] + 1, diag + (same ? 0 : 1) });
+				diag = up;
+			}
+		}
+		return row[b.size()];
+	}
+
+	std::optional<std::string> closest(const std::string& bad, const std::vector<std::string>& candidates)
+	{
+		// Loose enough for a typo or two, tight enough not to suggest an unrelated name.
+		size_t limit = std::max<size_t>(2, bad.size() / 3);
+		std::optional<std::string> best;
+		size_t best_distance = limit + 1;
+		for (const auto& c : candidates)
+		{
+			size_t d = edit_distance(bad, c);
+			if (d < best_distance && c != bad)
+			{
+				best = c;
+				best_distance = d;
+			}
+		}
+		return best;
+	}
+
+	// An unknown name at `loc`: adds "did you mean" and a fix when a candidate is close.
+	void unknown_name(const SourceLocation& loc, std::string message, const std::string& bad, const std::vector<std::string>& candidates)
+	{
+		if (auto best = closest(bad, candidates))
+			diagnostics().error(loc, message + std::format("; did you mean '{}'?", *best), Diagnostics::Fix{ bad.size(), *best });
+		else
+			diagnostics().error(loc, std::move(message));
+	}
+
+	const SourceLocation& name_loc_of(const have_name& n)
+	{
+		return n.name_loc.line ? n.name_loc : n.loc;
+	}
+
 	void check_options(const have_options& holder, const std::string& kind, const std::string& owner_name)
 	{
 		auto known = KNOWN_OPTIONS.find(kind);
+		std::vector<std::string> names;
+		if (known != KNOWN_OPTIONS.end())
+			names.assign(known->second.begin(), known->second.end());
 
 		for (const auto& opt : holder.options)
 		{
 			if (known != KNOWN_OPTIONS.end() && known->second.count(opt.name))
 				continue;
 
-			diagnostics().error(opt, std::format("unknown option [{}] on {} '{}'", opt.name, kind, owner_name));
+			unknown_name(name_loc_of(opt), std::format("unknown option [{}] on {} '{}'", opt.name, kind, owner_name), opt.name, names);
 		}
 	}
 
@@ -101,6 +156,27 @@ namespace
 		return nullptr;
 	}
 
+	void table_field_names(const Parsed& parsed, const std::string& table_name, std::vector<std::string>& out, int depth = 0)
+	{
+		const Table* table = parsed.tables.find(table_name);
+		if (!table || depth > 16)
+			return;
+		for (const auto& v : table->values)
+			out.push_back(v.name);
+		for (const auto& parent : table->parent)
+			table_field_names(parsed, parent, out, depth + 1);
+	}
+
+	std::vector<std::string> param_names(const View& owner)
+	{
+		std::vector<std::string> out;
+		for (const auto& p : owner.params)
+			out.push_back(p.name);
+		if (owner.find_option("Multiple"))
+			out.push_back("pass_index");
+		return out;
+	}
+
 	// Mirrors CONDITION_OPTIONS in Main.cpp.
 	const std::set<std::string> CONDITION_OPTIONS = { "SetupCondition", "RenderCondition", "Optional" };
 
@@ -119,30 +195,45 @@ namespace
 				if (parsed.tables.find(t.owner))
 				{
 					if (!find_table_field(parsed, t.owner, t.text))
-						diagnostics().error(opt, std::format("[{}] on '{}': struct '{}' has no field '{}'",
-							opt.name, owner.name, t.owner, t.text));
+					{
+						std::vector<std::string> fields;
+						table_field_names(parsed, t.owner, fields);
+						unknown_name(t.text_loc, std::format("[{}] on '{}': struct '{}' has no field '{}'",
+							opt.name, owner.name, t.owner, t.text), t.text, fields);
+					}
 				}
 				else if (const Enum* e = parsed.enums.find(t.owner))
 				{
 					bool found = std::any_of(e->values.begin(), e->values.end(), [&](const EnumValue& v) { return v.name == t.text; });
 					if (!found)
-						diagnostics().error(opt, std::format("[{}] on '{}': enum '{}' has no value '{}'",
-							opt.name, owner.name, t.owner, t.text));
+					{
+						std::vector<std::string> values;
+						for (const auto& v : e->values)
+							values.push_back(v.name);
+						unknown_name(t.text_loc, std::format("[{}] on '{}': enum '{}' has no value '{}'",
+							opt.name, owner.name, t.owner, t.text), t.text, values);
+					}
 				}
 				else if (!KNOWN_CPP_SCOPES.count(t.owner))
 				{
-					diagnostics().error(opt, std::format("[{}] on '{}': '{}::{}' names no struct, enum or known C++ scope",
-						opt.name, owner.name, t.owner, t.text));
+					std::vector<std::string> scopes;
+					for (const auto& table : parsed.tables)
+						scopes.push_back(table.name);
+					for (const auto& e : parsed.enums)
+						scopes.push_back(e.name);
+					unknown_name(t.owner_loc, std::format("[{}] on '{}': '{}::{}' names no struct, enum or known C++ scope",
+						opt.name, owner.name, t.owner, t.text), t.owner, scopes);
 				}
 				break;
 
 			case ExprTerm::Member:
 				if (t.owner != "data")
-					diagnostics().error(opt, std::format("[{}] on '{}': '{}.{}' -- only 'data.<field>' is available in a condition",
+					diagnostics().error(t.owner_loc, std::format("[{}] on '{}': '{}.{}' -- only 'data.<field>' is available in a condition",
 						opt.name, owner.name, t.owner, t.text));
 				else if (!find_param(owner.params, t.text)
 					&& !(t.text == "pass_index" && owner.find_option("Multiple"))) // implicit, see pass.jinja
-					diagnostics().error(opt, std::format("[{}] on '{}': no field '{}'", opt.name, owner.name, t.text));
+					unknown_name(t.text_loc, std::format("[{}] on '{}': no field '{}'", opt.name, owner.name, t.text),
+						t.text, param_names(owner));
 				break;
 
 			case ExprTerm::Function:
@@ -150,8 +241,8 @@ namespace
 				{
 					std::string field = t.text.substr(7, t.text.size() - 8);
 					if (!find_param(owner.params, field))
-						diagnostics().error(opt, std::format("[{}] on '{}': exists({}) names no field of this pass",
-							opt.name, owner.name, field));
+						unknown_name(t.text_loc, std::format("[{}] on '{}': exists({}) names no field of this pass",
+							opt.name, owner.name, field), field, param_names(owner));
 				}
 				break;
 
@@ -247,13 +338,38 @@ namespace
 		}
 	}
 
+	void check_shader_path(const Shader& s, const std::string& owner_name)
+	{
+		if (!s.path_quoted)
+		{
+			if (s.path_literal != "none" && s.path_literal != "null")
+				diagnostics().error(s.path_loc, std::format("{}.{}: shader must be a quoted path such as \"dir/file.hlsl\" "
+					"(bare words are only for `none` / `null`)", owner_name, s.name));
+			return;
+		}
+
+		if (!s.path_literal.ends_with(".hlsl"))
+		{
+			diagnostics().error(s.path_loc, std::format("{}.{}: shader path \"{}\" must end with .hlsl", owner_name, s.name, s.path_literal));
+			return;
+		}
+
+		std::filesystem::path shaders = shaders_root(s.path_loc.file);
+		if (!shaders.empty() && !std::filesystem::exists(shaders / s.path_literal))
+			diagnostics().error(s.path_loc, std::format("{}.{}: no shader file \"{}\" in {}", owner_name, s.name,
+				s.path_literal, shaders.lexically_normal().string()));
+	}
+
 	template <class T>
 	void check_pso(const T& pso, const std::string& kind)
 	{
 		check_options(pso, kind, pso.name);
 
 		for (const auto& s : pso.shaders)
+		{
 			check_options(s, "shader", pso.name + "." + s.name);
+			check_shader_path(s, pso.name);
+		}
 
 		for (const auto& d : pso.defines)
 			check_options(d, "define", pso.name + "." + d.name);
@@ -272,6 +388,31 @@ namespace
 		else if (!parsed.raytrace_pso.find(bind->value_atom.expr))
 			diagnostics().error(*bind, std::format("{} '{}': [Bind = {}] names no RaytracePSO", kind, item.name, bind->value_atom.expr));
 	}
+}
+
+std::filesystem::path shaders_root(const std::string& sig_file)
+{
+	std::error_code ec;
+	for (auto p = std::filesystem::absolute(sig_file, ec).parent_path(); !p.empty() && p != p.root_path(); p = p.parent_path())
+		if (std::filesystem::is_directory(p / "workdir" / "shaders", ec))
+			return p / "workdir" / "shaders";
+	return {};
+}
+
+const std::set<std::string>& known_options(const std::string& kind)
+{
+	static const std::set<std::string> none;
+	auto it = KNOWN_OPTIONS.find(kind);
+	return it != KNOWN_OPTIONS.end() ? it->second : none;
+}
+
+std::vector<std::string> option_kinds(const std::string& option_name)
+{
+	std::vector<std::string> out;
+	for (const auto& [kind, names] : KNOWN_OPTIONS)
+		if (names.count(option_name))
+			out.push_back(kind);
+	return out;
 }
 
 void validate(Parsed& parsed)
@@ -362,6 +503,10 @@ void validate(Parsed& parsed)
 		check_view_fields(parsed, pass);
 	}
 
+	std::vector<std::string> pass_names;
+	for (const auto& pass : parsed.passes)
+		pass_names.push_back(pass.name);
+
 	for (const auto& pipeline : parsed.pipelines)
 	{
 		check_duplicates(pipeline.entries, "pipeline entry");
@@ -369,7 +514,8 @@ void validate(Parsed& parsed)
 		{
 			check_options(entry, "pipeline entry", pipeline.name + "." + entry.name);
 			if (!parsed.passes.find(entry.name))
-				diagnostics().error(entry, std::format("Pipeline '{}' names unknown PassNode '{}'", pipeline.name, entry.name));
+				unknown_name(name_loc_of(entry), std::format("Pipeline '{}' names unknown PassNode '{}'", pipeline.name, entry.name),
+					entry.name, pass_names);
 		}
 	}
 }

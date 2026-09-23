@@ -83,7 +83,7 @@ ComputePSO SS_Shadow
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = denoiser/ss_shadow;
+	compute = "denoiser/ss_shadow.hlsl";
 }
 
 

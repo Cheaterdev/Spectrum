@@ -100,7 +100,7 @@ ComputePSO DispatchRaysArgsBuild
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = rtx/dispatch_rays_args_build;
+	compute = "rtx/dispatch_rays_args_build.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -305,7 +305,7 @@ RaytracePSO MainRTX
 RaytraceRaygen Shadow
 {
 	[EntryPoint = ShadowRaygenShader]
-	raygen = rtx/raytracing;
+	raygen = "rtx/raytracing.hlsl";
 }
 
 # Independent RTX-only reference: 1 ray per pixel, genuinely noisy soft
@@ -316,7 +316,7 @@ RaytraceRaygen Shadow
 RaytraceRaygen ShadowRTX
 {
 	[EntryPoint = MyRaygenShaderShadowRTXOnly]
-	raygen = rtx/raytracing;
+	raygen = "rtx/raytracing.hlsl";
 }
 
 
@@ -326,7 +326,7 @@ RaytraceRaygen ShadowRTX
 RaytraceRaygen ReflectionRTX
 {
 	[EntryPoint = MyRaygenShaderReflectionRTXOnly]
-	raygen = rtx/raytracing;
+	raygen = "rtx/raytracing.hlsl";
 }
 
 # Half-res sibling for PassNode ReflectionRTXHalf (voxel.sig) -- same trace
@@ -336,7 +336,7 @@ RaytraceRaygen ReflectionRTX
 RaytraceRaygen ReflectionRTXHalf
 {
 	[EntryPoint = MyRaygenShaderReflectionRTXHalfRes]
-	raygen = rtx/raytracing;
+	raygen = "rtx/raytracing.hlsl";
 }
 
 # Voxel-cone-traced reflection signal, selectable against ReflectionRTX as
@@ -346,7 +346,7 @@ RaytraceRaygen ReflectionRTXHalf
 RaytraceRaygen Reflection
 {
 	[EntryPoint = MyRaygenShaderReflection]
-	raygen = rtx/raytracing;
+	raygen = "rtx/raytracing.hlsl";
 }
 
 # RTX-only reference: 1 ray per pixel, genuinely noisy diffuse
@@ -357,7 +357,7 @@ RaytraceRaygen Reflection
 RaytraceRaygen IndirectRTX
 {
 	[EntryPoint = MyRaygenShaderIndirectRTXOnly]
-	raygen = rtx/raytracing;
+	raygen = "rtx/raytracing.hlsl";
 }
 
 # Half-res sibling for PassNode IndirectRTXHalf (voxel.sig) -- same trace
@@ -367,7 +367,7 @@ RaytraceRaygen IndirectRTX
 RaytraceRaygen IndirectRTXHalf
 {
 	[EntryPoint = MyRaygenShaderIndirectRTXHalfRes]
-	raygen = rtx/raytracing;
+	raygen = "rtx/raytracing.hlsl";
 }
 
 # Voxel-cone-traced indirect-GI signal, selectable against IndirectRTX as
@@ -377,14 +377,14 @@ RaytraceRaygen IndirectRTXHalf
 RaytraceRaygen Indirect
 {
 	[EntryPoint = MyRaygenShader]
-	raygen = rtx/raytracing;
+	raygen = "rtx/raytracing.hlsl";
 }
 
 [Bind = MainRTX]
 RaytraceRaygen ColorRTX
 {
 	[EntryPoint = ColorRTXRaygenShader]
-	raygen = rtx/raytracing_debug;
+	raygen = "rtx/raytracing_debug.hlsl";
 }
 
 # DDGI probe-volume trace raygen (ddgi.sig, see [[project-ddgi]] planning
@@ -396,17 +396,17 @@ RaytraceRaygen ColorRTX
 RaytraceRaygen DDGIProbeTrace
 {
 	[EntryPoint = DDGIProbeTraceRaygenShader]
-	raygen = ddgi/ddgi_probe_trace;
+	raygen = "ddgi/ddgi_probe_trace.hlsl";
 }
 
 [Bind = MainRTX]
 RaytracePass ShadowPass
 {
 	[EntryPoint = ShadowMissShader]
-	miss = rtx/raytracing;
+	miss = "rtx/raytracing.hlsl";
 
 	[EntryPoint = ShadowClosestHitShader]
-	closest_hit = rtx/raytracing;
+	closest_hit = "rtx/raytracing.hlsl";
 
 	payload = ShadowPayload;
 }
@@ -415,7 +415,7 @@ RaytracePass ShadowPass
 RaytracePass ColorPass
 {
 	[EntryPoint = MyMissShader]
-	miss = rtx/raytracing;
+	miss = "rtx/raytracing.hlsl";
 
 	[EntryPoint = MyClosestHitShader]
 	closest_hit = none;
@@ -442,7 +442,7 @@ RaytracePass ColorPass
 RaytracePass ColorShadowPass
 {
 	[EntryPoint = ColorShadowMissShader]
-	miss = rtx/raytracing;
+	miss = "rtx/raytracing.hlsl";
 
 	[EntryPoint = ColorShadowClosestHitShader]
 	closest_hit = none;
@@ -503,7 +503,7 @@ ComputePSO RTXShadowReferenceCompute
 	root = DefaultLayout;
 
 	[EntryPoint = CS_REFERENCE]
-	compute = rtx/rtx_shadow_reference;
+	compute = "rtx/rtx_shadow_reference.hlsl";
 }
 
 [Static]

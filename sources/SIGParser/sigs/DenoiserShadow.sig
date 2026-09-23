@@ -13,7 +13,7 @@ ComputePSO DenoiserShadow_Prepare
 	root = DefaultLayout;
 
 	[EntryPoint = main]
-	compute = denoiser/prepare_shadow_mask_d3d12;
+	compute = "denoiser/prepare_shadow_mask_d3d12.hlsl";
 }
 
 
@@ -53,7 +53,7 @@ ComputePSO DenoiserShadow_TileClassification
 	root = DefaultLayout;
 
 	[EntryPoint = main]
-	compute = denoiser/tile_classification_d3d12;
+	compute = "denoiser/tile_classification_d3d12.hlsl";
 }
 
 
@@ -93,7 +93,7 @@ ComputePSO DenoiserShadow_Filter
 
 	[EntryPoint = main]
 	[Enable16bits]
-	compute = denoiser/filter_soft_shadows_pass_d3d12;
+	compute = "denoiser/filter_soft_shadows_pass_d3d12.hlsl";
 
 	[CS]
 	define Pass = {0,1,2};

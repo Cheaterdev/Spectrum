@@ -68,10 +68,10 @@ GraphicsPSO NinePatch
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gui/ninepatch;
+	vertex = "gui/ninepatch.hlsl";
 
 	[EntryPoint = PS]
-	pixel = gui/ninepatch;
+	pixel = "gui/ninepatch.hlsl";
 
 	rtv = { B8G8R8A8_UNORM };
 	blend = { AlphaBlend };
@@ -85,10 +85,10 @@ GraphicsPSO SimpleRect
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gui/rect;
+	vertex = "gui/rect.hlsl";
 
 	[EntryPoint = PS_COLOR]
-	pixel = gui/rect;
+	pixel = "gui/rect.hlsl";
 
 	rtv = { B8G8R8A8_UNORM };
 	blend = { AlphaBlend };
@@ -100,10 +100,10 @@ GraphicsPSO CanvasBack
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gui/ninepatch;
+	vertex = "gui/ninepatch.hlsl";
 
 	[EntryPoint = PS]
-	pixel = gui/canvas;
+	pixel = "gui/canvas.hlsl";
 
 	enable_depth = false;
 	cull = None;
@@ -131,19 +131,19 @@ GraphicsPSO CanvasLines
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gui/flow_line;
+	vertex = "gui/flow_line.hlsl";
 
 	[EntryPoint = PS]
-	pixel = gui/flow_line;
+	pixel = "gui/flow_line.hlsl";
 
 	[EntryPoint = GS]
-	geometry = gui/flow_line;
+	geometry = "gui/flow_line.hlsl";
 
 	[EntryPoint = DS]
-	domain = gui/flow_line;
+	domain = "gui/flow_line.hlsl";
 
 	[EntryPoint = HS]
-	hull = gui/flow_line;
+	hull = "gui/flow_line.hlsl";
 
 	enable_depth = false;
 	cull = None;
@@ -179,7 +179,7 @@ ComputePSO FrameGraph_Debug_Texture2D
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = framegraph/draw_texture_2d;
+	compute = "framegraph/draw_texture_2d.hlsl";
 }
 
 [Bind = DefaultLayout::Instance1]
@@ -196,7 +196,7 @@ ComputePSO FrameGraph_Debug_Texture2DArray
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = framegraph/draw_texture_2d_array;
+	compute = "framegraph/draw_texture_2d_array.hlsl";
 }
 
 
@@ -214,7 +214,7 @@ ComputePSO FrameGraph_Debug_Texture3D
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = framegraph/draw_texture_3d;
+	compute = "framegraph/draw_texture_3d.hlsl";
 }
 
 
@@ -230,7 +230,7 @@ ComputePSO FrameGraph_Debug_TextureCube
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = framegraph/draw_texture_cube;
+	compute = "framegraph/draw_texture_cube.hlsl";
 }
 
 
@@ -240,7 +240,7 @@ ComputePSO FrameGraph_Debug_NotImplemented
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = framegraph/draw_not_implemented;
+	compute = "framegraph/draw_not_implemented.hlsl";
 }
 
 
@@ -267,7 +267,7 @@ ComputePSO StatGraph
 {
 	root = DefaultLayout;
 	[EntryPoint = CS]
-	compute = gui/stat_graph;
+	compute = "gui/stat_graph.hlsl";
 }
 
 [Bind = DefaultLayout::Instance0]
@@ -292,13 +292,13 @@ GraphicsPSO StatGraphLines
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gui/stat_graph_lines;
+	vertex = "gui/stat_graph_lines.hlsl";
 
 	[EntryPoint = GS]
-	geometry = gui/stat_graph_lines;
+	geometry = "gui/stat_graph_lines.hlsl";
 
 	[EntryPoint = PS]
-	pixel = gui/stat_graph_lines;
+	pixel = "gui/stat_graph_lines.hlsl";
 
 	rtv = { R8G8B8A8_UNORM };
 	blend = { AlphaBlend };

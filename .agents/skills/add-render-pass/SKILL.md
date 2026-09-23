@@ -35,7 +35,8 @@ struct MyEffectData
 }
 ```
 
-**PSO** — `compute = <name>` refers to `workdir/shaders/<name>.hlsl`, and
+**PSO** — `compute = "<dir>/<name>.hlsl"` is a quoted path relative to
+`workdir/shaders`, extension included (the generator rejects a missing file), and
 `[EntryPoint = X]` selects the function within it. One shader file can back
 several PSOs through different entry points:
 
@@ -45,7 +46,7 @@ ComputePSO MyEffectCompute
     root = DefaultLayout;
 
     [EntryPoint = CS]
-    compute = my_effect;
+    compute = "my_effect.hlsl";
 }
 ```
 
@@ -148,8 +149,8 @@ no D3D12 output at all. In that pass, use the owning `HAL::Texture` directly.
 
 ## 4. Write the shader
 
-Create `workdir/shaders/<name>.hlsl` matching the PSO's `compute =`/`vertex =`/
-`pixel =` value, with a function named by `[EntryPoint = ...]`. Include the
+Create the file the PSO's `compute =`/`vertex =`/`pixel =` string names under
+`workdir/shaders/`, with a function named by `[EntryPoint = ...]`. Include the
 generated binding header so the struct layout stays in sync with the `.sig`.
 
 ## 5. Register in a pipeline

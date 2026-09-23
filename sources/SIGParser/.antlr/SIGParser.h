@@ -41,7 +41,7 @@ public:
     RulePointer = 21, RulePso_param = 22, RuleClass_no_template = 23, RuleType_with_template = 24, 
     RuleInherit_id = 25, RuleName_id = 26, RuleOption_id = 27, RuleOwner_id = 28, 
     RuleTemplate_id = 29, RuleFunction_id = 30, RuleValue_id = 31, RuleValue_id_ignore = 32, 
-    RuleType_id = 33, RuleInsert_block = 34, RulePath_id = 35, RuleInherit = 36, 
+    RuleType_id = 33, RuleInsert_block = 34, RuleShader_path = 35, RuleInherit = 36, 
     RuleLayout_stat = 37, RuleLayout_block = 38, RuleLayout_definition = 39, 
     RuleTable_stat = 40, RuleTable_block = 41, RuleTable_definition = 42, 
     RuleRt_color_declaration = 43, RuleRt_ds_declaration = 44, RuleRt_stat = 45, 
@@ -114,7 +114,7 @@ public:
   class Value_id_ignoreContext;
   class Type_idContext;
   class Insert_blockContext;
-  class Path_idContext;
+  class Shader_pathContext;
   class InheritContext;
   class Layout_statContext;
   class Layout_blockContext;
@@ -807,14 +807,12 @@ public:
 
   Insert_blockContext* insert_block();
 
-  class  Path_idContext : public antlr4::ParserRuleContext {
+  class  Shader_pathContext : public antlr4::ParserRuleContext {
   public:
-    Path_idContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    Shader_pathContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    std::vector<antlr4::tree::TerminalNode *> ID();
-    antlr4::tree::TerminalNode* ID(size_t i);
-    std::vector<antlr4::tree::TerminalNode *> DIV();
-    antlr4::tree::TerminalNode* DIV(size_t i);
+    antlr4::tree::TerminalNode *STRING();
+    antlr4::tree::TerminalNode *ID();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -823,7 +821,7 @@ public:
    
   };
 
-  Path_idContext* path_id();
+  Shader_pathContext* shader_path();
 
   class  InheritContext : public antlr4::ParserRuleContext {
   public:
@@ -1092,7 +1090,7 @@ public:
     virtual size_t getRuleIndex() const override;
     Shader_typeContext *shader_type();
     antlr4::tree::TerminalNode *ASSIGN();
-    Path_idContext *path_id();
+    Shader_pathContext *shader_path();
     antlr4::tree::TerminalNode *SCOL();
     std::vector<Option_blockContext *> option_block();
     Option_blockContext* option_block(size_t i);

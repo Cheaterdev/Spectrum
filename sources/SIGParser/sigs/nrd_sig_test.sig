@@ -30,7 +30,7 @@ ComputePSO NRD_Clear_Test
 	root = DefaultLayout;
 
 	[EntryPoint = main]
-	compute = nrd/sig_clear;
+	compute = "nrd/sig_clear.hlsl";
 }
 
 # Item 7 (see [[project-nrd-integration]]): the rest of NRD's SIGMA_SHADOW +
@@ -105,7 +105,7 @@ ComputePSO NRD_SIGMA_ClassifyTiles
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_sigma_classifytiles;
+	compute = "nrd/sig_sigma_classifytiles.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -120,7 +120,7 @@ ComputePSO NRD_SIGMA_SmoothTiles
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_sigma_smoothtiles;
+	compute = "nrd/sig_sigma_smoothtiles.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -138,7 +138,7 @@ ComputePSO NRD_SIGMA_Copy
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_sigma_copy;
+	compute = "nrd/sig_sigma_copy.hlsl";
 }
 
 # FIRST_PASS=1: no gIn_Shadow_Translucency (only compiled in when
@@ -159,7 +159,7 @@ ComputePSO NRD_SIGMA_BlurFirstPass1
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_sigma_blur_fp1;
+	compute = "nrd/sig_sigma_blur_fp1.hlsl";
 }
 
 # FIRST_PASS=0: gIn_Shadow_Translucency IS compiled in.
@@ -180,7 +180,7 @@ ComputePSO NRD_SIGMA_BlurFirstPass0
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_sigma_blur_fp0;
+	compute = "nrd/sig_sigma_blur_fp0.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -202,7 +202,7 @@ ComputePSO NRD_SIGMA_TemporalStabilization
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_sigma_temporalstabilization;
+	compute = "nrd/sig_sigma_temporalstabilization.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -217,7 +217,7 @@ ComputePSO NRD_SIGMA_SplitScreen
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_sigma_splitscreen;
+	compute = "nrd/sig_sigma_splitscreen.hlsl";
 }
 
 # Item 8 (see [[project-nrd-integration]]): REBLUR_SHARED_CONSTANTS
@@ -324,7 +324,7 @@ ComputePSO NRD_REBLUR_ClassifyTiles
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_classifytiles;
+	compute = "nrd/sig_reblur_classifytiles.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -342,7 +342,7 @@ ComputePSO NRD_REBLUR_HitDistReconstruction
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_hitdistreconstruction;
+	compute = "nrd/sig_reblur_hitdistreconstruction.hlsl";
 }
 
 # MODE_5X5=1 permutation -- same resource layout as MODE_5X5=0 (the #if only
@@ -352,7 +352,7 @@ ComputePSO NRD_REBLUR_HitDistReconstruction5x5
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_hitdistreconstruction_5x5;
+	compute = "nrd/sig_reblur_hitdistreconstruction_5x5.hlsl";
 }
 
 # REBLUR_SPECULAR's permutation of the same kernel (see
@@ -374,14 +374,14 @@ ComputePSO NRD_REBLUR_HitDistReconstruction_Specular
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_hitdistreconstruction_specular;
+	compute = "nrd/sig_reblur_hitdistreconstruction_specular.hlsl";
 }
 
 ComputePSO NRD_REBLUR_HitDistReconstruction5x5_Specular
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_hitdistreconstruction_5x5_specular;
+	compute = "nrd/sig_reblur_hitdistreconstruction_5x5_specular.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -399,7 +399,7 @@ ComputePSO NRD_REBLUR_PrePass
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_prepass;
+	compute = "nrd/sig_reblur_prepass.hlsl";
 }
 
 # REBLUR_SPECULAR's permutation -- one extra output (gOut_SpecHitDistForTracking,
@@ -421,7 +421,7 @@ ComputePSO NRD_REBLUR_PrePass_Specular
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_prepass_specular;
+	compute = "nrd/sig_reblur_prepass_specular.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -450,7 +450,7 @@ ComputePSO NRD_REBLUR_TemporalAccumulation
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_temporalaccumulation;
+	compute = "nrd/sig_reblur_temporalaccumulation.hlsl";
 }
 
 # REBLUR_SPECULAR's permutation -- per
@@ -489,7 +489,7 @@ ComputePSO NRD_REBLUR_TemporalAccumulation_Specular
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_temporalaccumulation_specular;
+	compute = "nrd/sig_reblur_temporalaccumulation_specular.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -510,7 +510,7 @@ ComputePSO NRD_REBLUR_HistoryFix
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_historyfix;
+	compute = "nrd/sig_reblur_historyfix.hlsl";
 }
 
 # REBLUR_SPECULAR's permutation -- one extra input (gIn_SpecHitDistForTracking,
@@ -535,7 +535,7 @@ ComputePSO NRD_REBLUR_HistoryFix_Specular
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_historyfix_specular;
+	compute = "nrd/sig_reblur_historyfix_specular.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -555,7 +555,7 @@ ComputePSO NRD_REBLUR_Blur
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_blur;
+	compute = "nrd/sig_reblur_blur.hlsl";
 }
 
 # REBLUR_SPECULAR's permutation -- same resource count as diffuse (5 in + 2
@@ -578,7 +578,7 @@ ComputePSO NRD_REBLUR_Blur_Specular
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_blur_specular;
+	compute = "nrd/sig_reblur_blur_specular.hlsl";
 }
 
 # TEMPORAL_STABILIZATION=0: PostBlur also emits gOut_InternalData/gOut_DiffCopy
@@ -603,7 +603,7 @@ ComputePSO NRD_REBLUR_PostBlurTS0
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_postblur_ts0;
+	compute = "nrd/sig_reblur_postblur_ts0.hlsl";
 }
 
 # REBLUR_SPECULAR's permutation -- same resource count as diffuse (5 in + 4
@@ -628,7 +628,7 @@ ComputePSO NRD_REBLUR_PostBlurTS0_Specular
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_postblur_ts0_specular;
+	compute = "nrd/sig_reblur_postblur_ts0_specular.hlsl";
 }
 
 # TEMPORAL_STABILIZATION=1: the TemporalStabilization pass runs afterward and
@@ -650,7 +650,7 @@ ComputePSO NRD_REBLUR_PostBlurTS1
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_postblur_ts1;
+	compute = "nrd/sig_reblur_postblur_ts1.hlsl";
 }
 
 # REBLUR_SPECULAR's permutation -- same resource count as diffuse (5 in + 2
@@ -673,7 +673,7 @@ ComputePSO NRD_REBLUR_PostBlurTS1_Specular
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_postblur_ts1_specular;
+	compute = "nrd/sig_reblur_postblur_ts1_specular.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -697,7 +697,7 @@ ComputePSO NRD_REBLUR_TemporalStabilization
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_temporalstabilization;
+	compute = "nrd/sig_reblur_temporalstabilization.hlsl";
 }
 
 # REBLUR_SPECULAR's permutation -- per
@@ -726,7 +726,7 @@ ComputePSO NRD_REBLUR_TemporalStabilization_Specular
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_temporalstabilization_specular;
+	compute = "nrd/sig_reblur_temporalstabilization_specular.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -742,7 +742,7 @@ ComputePSO NRD_REBLUR_SplitScreen
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_splitscreen;
+	compute = "nrd/sig_reblur_splitscreen.hlsl";
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -765,7 +765,7 @@ ComputePSO NRD_REBLUR_Validation
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_reblur_validation;
+	compute = "nrd/sig_reblur_validation.hlsl";
 }
 
 # Clear.cs.hlsl|FLOAT=0 -- the uint4 permutation of the kernel already ported
@@ -781,7 +781,7 @@ ComputePSO NRD_Clear_UInt4
 {
 	root = DefaultLayout;
 	[EntryPoint = main]
-	compute = nrd/sig_clear_uint4;
+	compute = "nrd/sig_clear_uint4.hlsl";
 }
 
 # Front-end packing for NRD REBLUR_DIFFUSE (see [[project-nrd-integration]]):
@@ -862,7 +862,7 @@ ComputePSO NRD_GBufferPack
 {
 	root = DefaultLayout;
 	[EntryPoint = CS]
-	compute = nrd/gbuffer_pack;
+	compute = "nrd/gbuffer_pack.hlsl";
 }
 
 # Which raw signal feeds NRD REBLUR_DIFFUSE, set by main.cpp's Indirect Src
@@ -946,7 +946,7 @@ ComputePSO NRD_UnpackDebug
 {
 	root = DefaultLayout;
 	[EntryPoint = CS]
-	compute = nrd/unpack_debug;
+	compute = "nrd/unpack_debug.hlsl";
 }
 
 # Real per-frame REBLUR_DIFFUSE execution (see [[project-nrd-integration]]).
@@ -1044,7 +1044,7 @@ ComputePSO NRD_IndirectCombine
 {
 	root = DefaultLayout;
 	[EntryPoint = CS]
-	compute = nrd/nrd_indirect_combine;
+	compute = "nrd/nrd_indirect_combine.hlsl";
 }
 
 [Static]
@@ -1088,7 +1088,7 @@ ComputePSO NRD_ShadowCombine
 {
 	root = DefaultLayout;
 	[EntryPoint = CS]
-	compute = nrd/nrd_shadow_combine;
+	compute = "nrd/nrd_shadow_combine.hlsl";
 }
 
 [Static]

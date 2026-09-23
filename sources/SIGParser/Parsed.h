@@ -55,6 +55,7 @@ struct have_name : public virtual parsed_type
 {
 	std::string name;
 	std::string source_file; // path of the .sig file that defined this item
+	SourceLocation name_loc; // the name token itself; loc may point at a leading [option]
 
 	~have_name() override = default;
 
@@ -318,6 +319,11 @@ struct ExprTerm : public virtual parsed_type
 	int         kind = Plain;
 	std::string owner;
 	std::string text;
+
+	// Diagnostics only, not serialized: where `owner` and `text` start. For
+	// Function terms text_loc is where the argument of exists(...) starts.
+	SourceLocation owner_loc;
+	SourceLocation text_loc;
 
 	SERIALIZE()
 	{
@@ -596,7 +602,12 @@ struct Enum : public have_name
 
 struct Shader : public have_name, have_options
 {
-	std::string path;
+	std::string path; // relative to workdir/shaders, without ".hlsl" -- what the templates paste
+
+	// As written, for validation and editor support; not serialized.
+	std::string path_literal;   // contents of the quoted string, or the bare sentinel
+	bool path_quoted = false;
+	SourceLocation path_loc;    // first character inside the quotes
 
 
 	SERIALIZE()

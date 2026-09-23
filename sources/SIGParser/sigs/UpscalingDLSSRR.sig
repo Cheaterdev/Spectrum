@@ -41,7 +41,7 @@ ComputePSO NormalRoughnessRepack
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = gbuffer/normal_roughness_repack;
+	compute = "gbuffer/normal_roughness_repack.hlsl";
 }
 
 # Pure GBuffer-derived material properties feeding UpscalingDLSSRR's evaluate()

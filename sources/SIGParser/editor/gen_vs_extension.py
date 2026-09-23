@@ -114,7 +114,14 @@ THEME = [
     ("support.type.shader-stage.sig", "preprocessor keyword"),
     ("variable.parameter.sig", "local name"),
     ("punctuation.definition.attribute, punctuation.section.embedded", "operator"),
+    # The colour VS gives #define macros; registered by the C++ language service.
+    ("constant.other.format.sig", "cppMacro"),
 ]
+
+# DXGI format names (R16G16B16A16_FLOAT, D32_FLOAT_S8X24_UINT, BC7_UNORM_SRGB):
+# channel/size groups followed by one or more _SUFFIX parts ending in a type.
+FORMAT_REGEX = (r"\b(?:(?:[RGBAXDSE][0-9]+)+|BC[0-9]+H?)(?:_[A-Z0-9]+)*"
+                r"_(?:FLOAT|UNORM|SNORM|UINT|SINT|TYPELESS|SRGB|SHAREDEXP|UF16|SF16)\b")
 
 DECL_KEYWORD_SCOPE = "storage.type.sig"
 OTHER_KEYWORD_SCOPE = "keyword.other.sig"
@@ -460,7 +467,8 @@ def build_grammar(rules, a):
                               "match": r"\b(?:" + scalars + r")(?:[1-4](?:x[1-4])?)?\b"}
     repo["builtin_keyword_type"] = {"name": "storage.type.primitive.sig", "match": words_regex(BUILTIN_KEYWORD_TYPES)}
     repo["builtin_resource"] = {"name": "support.type.resource.sig", "match": words_regex(BUILTIN_RESOURCES)}
-    kw = ["builtin_scalar", "builtin_keyword_type", "builtin_resource"] + kw
+    repo["format"] = {"name": "constant.other.format.sig", "match": FORMAT_REGEX}
+    kw = ["format", "builtin_scalar", "builtin_keyword_type", "builtin_resource"] + kw
 
     repo["kw_decl"] = {"name": DECL_KEYWORD_SCOPE, "match": words_regex(a["decl"])}
     repo["kw_other"] = {"name": OTHER_KEYWORD_SCOPE, "match": words_regex(a["other"])}
@@ -480,6 +488,11 @@ def build_grammar(rules, a):
         "patterns": [
             {"include": "#comment"},
             {"include": "#option_values"},
+            # [rename = HIZ_OCCLUSION] names the HLSL #define a `define` becomes.
+            {"match": r"\b(rename)\s*(=)\s*(" + ident + ")",
+             "captures": {"1": {"name": "entity.other.attribute-name.sig"},
+                          "2": {"name": "keyword.operator.sig"},
+                          "3": {"name": "constant.other.format.sig"}}},
             {"match": r"(?<=" + re_escape(osb) + r"|,)\s*(" + ident + ")",
              "captures": {"1": {"name": "entity.other.attribute-name.sig"}}},
             {"include": "#values"},

@@ -44,7 +44,7 @@ ComputePSO DownsampleDepth
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = occlusion/downsample_depth;
+	compute = "occlusion/downsample_depth.hlsl";
 }
 
 
@@ -62,7 +62,7 @@ ComputePSO DownsampleDepthMip
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = occlusion/downsample_depth_mip;
+	compute = "occlusion/downsample_depth_mip.hlsl";
 }
 
 
@@ -72,7 +72,7 @@ ComputePSO MipMapping
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = postprocess/generate_mips;
+	compute = "postprocess/generate_mips.hlsl";
 
 	[rename = NON_POWER_OF_TWO]
 	[CS]
@@ -95,10 +95,10 @@ GraphicsPSO RenderToDS
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gbuffer/depth_render;
+	vertex = "gbuffer/depth_render.hlsl";
 
 	[EntryPoint = PS]
-	pixel = gbuffer/depth_render;
+	pixel = "gbuffer/depth_render.hlsl";
 
 
 	ds = D32_FLOAT;
@@ -112,10 +112,10 @@ GraphicsPSO QualityColor
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gbuffer/gbuffer_quality;
+	vertex = "gbuffer/gbuffer_quality.hlsl";
 
 	[EntryPoint = PS]
-	pixel = gbuffer/gbuffer_quality;
+	pixel = "gbuffer/gbuffer_quality.hlsl";
 
 	rtv = { R8G8_UNORM };
 	depth_write = false;
@@ -128,10 +128,10 @@ GraphicsPSO QualityToStencil
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gbuffer/gbuffer_quality;
+	vertex = "gbuffer/gbuffer_quality.hlsl";
 
 	[EntryPoint = PS_STENCIL]
-	pixel = gbuffer/gbuffer_quality;
+	pixel = "gbuffer/gbuffer_quality.hlsl";
 
 	enable_stencil = true;
 	enable_depth = false;
@@ -153,10 +153,10 @@ GraphicsPSO QualityToStencilREfl
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = gbuffer/gbuffer_quality;
+	vertex = "gbuffer/gbuffer_quality.hlsl";
 
 	[EntryPoint = PS_STENCIL]
-	pixel = gbuffer/gbuffer_quality;
+	pixel = "gbuffer/gbuffer_quality.hlsl";
 
 	enable_stencil = true;
 	enable_depth = false;
@@ -179,10 +179,10 @@ GraphicsPSO CopyTexture
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = postprocess/copy_texture;
+	vertex = "postprocess/copy_texture.hlsl";
 
 	[EntryPoint = PS]
-	pixel = postprocess/copy_texture;
+	pixel = "postprocess/copy_texture.hlsl";
 
 	enable_depth = false;
 

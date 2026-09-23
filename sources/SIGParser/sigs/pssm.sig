@@ -94,10 +94,10 @@ GraphicsPSO PSSMMask
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = shadows/pssm/pssm;
+	vertex = "shadows/pssm/pssm.hlsl";
 
 	[EntryPoint = PS]
-	pixel = shadows/pssm/pssm;
+	pixel = "shadows/pssm/pssm.hlsl";
 
 	rtv = { R8_UNORM };
 }
@@ -107,10 +107,10 @@ GraphicsPSO PSSMApply
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = shadows/pssm/pssm;
+	vertex = "shadows/pssm/pssm.hlsl";
 
 	[EntryPoint = PS_RESULT]
-	pixel = shadows/pssm/pssm;
+	pixel = "shadows/pssm/pssm.hlsl";
 
 	rtv = { R16G16B16A16_FLOAT };
 }
@@ -120,7 +120,7 @@ ComputePSO PSSMApplyCompute
 	root = DefaultLayout;
 
 	[EntryPoint = CS_RESULT]
-	compute = shadows/pssm/pssm;
+	compute = "shadows/pssm/pssm.hlsl";
 }
 
 
@@ -129,7 +129,7 @@ ComputePSO GBufferDownsample
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = postprocess/downsample;
+	compute = "postprocess/downsample.hlsl";
 }
 
 

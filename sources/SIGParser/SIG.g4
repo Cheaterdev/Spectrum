@@ -134,7 +134,10 @@ type_id: type_with_template ;
 insert_block: INSERT_BLOCK;
 
 
-path_id: (ID '/' )*? ID; 
+// A shader file, relative to workdir/shaders and with its extension:
+// "rtx/raytracing.hlsl". The bare-ID form is only for the sentinels that name
+// no file: `none` (a per-material hit shader) and `null` (with [Erase]).
+shader_path: STRING | ID;
 
 inherit
  : ':' inherit_id (',' inherit_id)*?
@@ -201,7 +204,7 @@ array_value_ids: '{' array_value_holder (',' array_value_holder)* '}';
 
 root_sig: ROOTSIG ASSIGN name_id SCOL;
 
-shader: option_block*? shader_type ASSIGN path_id SCOL;
+shader: option_block*? shader_type ASSIGN shader_path SCOL;
 
 compute_pso_stat
  : root_sig

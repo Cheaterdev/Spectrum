@@ -155,7 +155,7 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual std::any visitPath_id(SIGParser::Path_idContext *ctx) override {
+  virtual std::any visitShader_path(SIGParser::Shader_pathContext *ctx) override {
     return visitChildren(ctx);
   }
 

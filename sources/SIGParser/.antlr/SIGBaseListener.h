@@ -121,8 +121,8 @@ public:
   virtual void enterInsert_block(SIGParser::Insert_blockContext * /*ctx*/) override { }
   virtual void exitInsert_block(SIGParser::Insert_blockContext * /*ctx*/) override { }
 
-  virtual void enterPath_id(SIGParser::Path_idContext * /*ctx*/) override { }
-  virtual void exitPath_id(SIGParser::Path_idContext * /*ctx*/) override { }
+  virtual void enterShader_path(SIGParser::Shader_pathContext * /*ctx*/) override { }
+  virtual void exitShader_path(SIGParser::Shader_pathContext * /*ctx*/) override { }
 
   virtual void enterInherit(SIGParser::InheritContext * /*ctx*/) override { }
   virtual void exitInherit(SIGParser::InheritContext * /*ctx*/) override { }

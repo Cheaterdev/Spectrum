@@ -31,13 +31,13 @@ GraphicsPSO FontRender
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = font/vs_simple;
+	vertex = "font/vs_simple.hlsl";
 
 	[EntryPoint = PS]
-	pixel = font/ps_simple;
+	pixel = "font/ps_simple.hlsl";
 
 	[EntryPoint = GS]
-	geometry = font/gs_simple;
+	geometry = "font/gs_simple.hlsl";
 
 	topology = POINT;
 

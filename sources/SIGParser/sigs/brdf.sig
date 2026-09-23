@@ -11,5 +11,5 @@ ComputePSO BRDF
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = common/brdf;
+	compute = "common/brdf.hlsl";
 }

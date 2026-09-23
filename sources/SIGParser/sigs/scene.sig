@@ -32,10 +32,10 @@ GraphicsPSO GBufferDraw
 	root = DefaultLayout;
 	
 	[EntryPoint = VS]
-	mesh  = gbuffer/mesh_shader;
+	mesh  = "gbuffer/mesh_shader.hlsl";
 
 	[EntryPoint = AS]
-	amplification  = gbuffer/mesh_shader;
+	amplification  = "gbuffer/mesh_shader.hlsl";
 
 	# Per-meshlet Hi-Z occlusion in the AS. Off for the occlusion culler's
 	# stage 1 (it would test against last frame's pyramid with this frame's
@@ -61,10 +61,10 @@ GraphicsPSO DepthDraw
 	pixel = null;
 
 	[EntryPoint = VS]
-	mesh  = gbuffer/mesh_shader;
+	mesh  = "gbuffer/mesh_shader.hlsl";
 
 	[EntryPoint = AS]
-	amplification  = gbuffer/mesh_shader;
+	amplification  = "gbuffer/mesh_shader.hlsl";
 
 	# See GBufferDraw.
 	[rename = HIZ_OCCLUSION]
@@ -85,10 +85,10 @@ GraphicsPSO Voxelization
 	root = DefaultLayout;
 	
 	[EntryPoint = VS]
-	mesh  = voxelgi/mesh_shader_voxel;
+	mesh  = "voxelgi/mesh_shader_voxel.hlsl";
 
 	[EntryPoint = AS]
-	amplification  = voxelgi/mesh_shader_voxel;
+	amplification  = "voxelgi/mesh_shader_voxel.hlsl";
 
 	[rename = VOXEL_DYNAMIC]
 	[PS]

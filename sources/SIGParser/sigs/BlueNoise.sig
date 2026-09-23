@@ -16,7 +16,7 @@ ComputePSO BlueNoise
 
 	[EntryPoint = CS]
 	[Enable16bits]
-	compute = postprocess/blue_noise;
+	compute = "postprocess/blue_noise.hlsl";
 }
 
 [Compute]

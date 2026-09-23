@@ -7,10 +7,18 @@
 class Diagnostics
 {
 public:
+	// Replace `length` characters at the entry's loc with `replacement`.
+	struct Fix
+	{
+		size_t length = 0;
+		std::string replacement;
+	};
+
 	struct Entry
 	{
 		SourceLocation loc;
 		std::string message;
+		std::optional<Fix> fix;
 	};
 
 private:
@@ -28,9 +36,9 @@ public:
 		errors.clear();
 	}
 
-	void error(const SourceLocation& loc, std::string message)
+	void error(const SourceLocation& loc, std::string message, std::optional<Fix> fix = {})
 	{
-		errors.push_back({ loc, std::move(message) });
+		errors.push_back({ loc, std::move(message), std::move(fix) });
 	}
 
 	void error(const parsed_type& at, std::string message)

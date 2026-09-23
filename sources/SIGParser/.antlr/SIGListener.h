@@ -119,8 +119,8 @@ public:
   virtual void enterInsert_block(SIGParser::Insert_blockContext *ctx) = 0;
   virtual void exitInsert_block(SIGParser::Insert_blockContext *ctx) = 0;
 
-  virtual void enterPath_id(SIGParser::Path_idContext *ctx) = 0;
-  virtual void exitPath_id(SIGParser::Path_idContext *ctx) = 0;
+  virtual void enterShader_path(SIGParser::Shader_pathContext *ctx) = 0;
+  virtual void exitShader_path(SIGParser::Shader_pathContext *ctx) = 0;
 
   virtual void enterInherit(SIGParser::InheritContext *ctx) = 0;
   virtual void exitInherit(SIGParser::InheritContext *ctx) = 0;

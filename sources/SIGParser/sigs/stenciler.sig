@@ -38,13 +38,13 @@ GraphicsPSO DrawStencil
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	mesh = gbuffer/mesh_shader;
+	mesh = "gbuffer/mesh_shader.hlsl";
 
 	[EntryPoint = AS]
-	amplification = gbuffer/mesh_shader;
+	amplification = "gbuffer/mesh_shader.hlsl";
 
 	[EntryPoint = PS]
-	pixel = postprocess/stencil;
+	pixel = "postprocess/stencil.hlsl";
 
 	ds = D32_FLOAT;
 	cull = None;
@@ -59,13 +59,13 @@ GraphicsPSO DrawSelected
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	mesh = gbuffer/mesh_shader;
+	mesh = "gbuffer/mesh_shader.hlsl";
 
 	[EntryPoint = AS]
-	amplification = gbuffer/mesh_shader;
+	amplification = "gbuffer/mesh_shader.hlsl";
 
 	[EntryPoint = PS_RESULT]
-	pixel = postprocess/stencil;
+	pixel = "postprocess/stencil.hlsl";
 	
 	
 
@@ -84,10 +84,10 @@ GraphicsPSO DrawBox
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = postprocess/triangle_stencil;
+	vertex = "postprocess/triangle_stencil.hlsl";
 
 	[EntryPoint = PS]
-	pixel = postprocess/triangle_stencil;
+	pixel = "postprocess/triangle_stencil.hlsl";
 	
 	enable_depth = false;
 	cull = None;
@@ -103,14 +103,14 @@ GraphicsPSO DrawAxis
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	mesh = gbuffer/mesh_shader;
+	mesh = "gbuffer/mesh_shader.hlsl";
 
 	[EntryPoint = AS]
-	amplification = gbuffer/mesh_shader;
+	amplification = "gbuffer/mesh_shader.hlsl";
 
 
 	[EntryPoint = PS_COLOR]
-	pixel = postprocess/stencil;
+	pixel = "postprocess/stencil.hlsl";
 	
 	enable_depth = false;
 	cull = None;
@@ -124,10 +124,10 @@ GraphicsPSO DrawRing
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = postprocess/ring;
+	vertex = "postprocess/ring.hlsl";
 
 	[EntryPoint = PS_COLOR]
-	pixel = postprocess/ring;
+	pixel = "postprocess/ring.hlsl";
 
 	enable_depth = false;
 	cull = None;
@@ -141,10 +141,10 @@ GraphicsPSO DrawRingPick
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = postprocess/ring;
+	vertex = "postprocess/ring.hlsl";
 
 	[EntryPoint = PS]
-	pixel = postprocess/ring;
+	pixel = "postprocess/ring.hlsl";
 
 	ds = D32_FLOAT;
 	cull = None;
@@ -157,10 +157,10 @@ GraphicsPSO StencilerLast
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = postprocess/contour;
+	vertex = "postprocess/contour.hlsl";
 
 	[EntryPoint = PS]
-	pixel = postprocess/contour;
+	pixel = "postprocess/contour.hlsl";
 	
 	enable_depth = false;
 	cull = None;

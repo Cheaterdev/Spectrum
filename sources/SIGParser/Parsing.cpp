@@ -333,14 +333,31 @@ public:
 	{
 		auto& elem = get_elem<have_name>();
 		elem.name = ctx->children[0]->getText();
+		elem.name_loc = SourceLocation{ file, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine() + 1 };
 	}
 
-	void enterPath_id(SIGParser::Path_idContext* ctx) override
+	void enterShader_path(SIGParser::Shader_pathContext* ctx) override
 	{
 		auto& elem = get_elem<Shader>();
+		auto* start = ctx->getStart();
 
-		for (auto c : ctx->children)
-			elem.path += c->getText();
+		if (ctx->STRING())
+		{
+			std::string text = ctx->getText();
+			elem.path_literal = text.substr(1, text.size() - 2);
+			elem.path_quoted = true;
+			elem.path_loc = SourceLocation{ file, start->getLine(), start->getCharPositionInLine() + 2 };
+
+			constexpr std::string_view ext = ".hlsl";
+			elem.path = elem.path_literal.ends_with(ext)
+				? elem.path_literal.substr(0, elem.path_literal.size() - ext.size())
+				: elem.path_literal; // validate() rejects it
+		}
+		else
+		{
+			elem.path = elem.path_literal = ctx->getText();
+			elem.path_loc = SourceLocation{ file, start->getLine(), start->getCharPositionInLine() + 1 };
+		}
 	}
 
 	void enterInherit_id(SIGParser::Inherit_idContext* ctx) override
@@ -413,23 +430,34 @@ public:
 	{
 		auto& elem = get_elem<have_expr>();
 		auto& term = elem.terms.emplace_back();
+		auto loc_of = [&](antlr4::ParserRuleContext* c, size_t shift = 0)
+		{
+			return SourceLocation{ file, c->getStart()->getLine(), c->getStart()->getCharPositionInLine() + 1 + shift };
+		};
+		term.text_loc = loc_of(ctx);
 
 		if (auto* q = ctx->qualified_ref())
 		{
 			term.kind  = ExprTerm::Qualified;
 			term.owner = q->owner_id()->getText();
 			term.text  = q->value_id()->getText();
+			term.owner_loc = loc_of(q->owner_id());
+			term.text_loc  = loc_of(q->value_id());
 		}
 		else if (auto* m = ctx->member_ref())
 		{
 			term.kind  = ExprTerm::Member;
 			term.owner = m->name_id(0)->getText();
 			term.text  = m->name_id(1)->getText();
+			term.owner_loc = loc_of(m->name_id(0));
+			term.text_loc  = loc_of(m->name_id(1));
 		}
 		else if (ctx->function_id())
 		{
 			term.kind = ExprTerm::Function;
 			term.text = ctx->getText();
+			if (term.text.rfind("exists(", 0) == 0)
+				term.text_loc = loc_of(ctx, 7);
 		}
 		else if (ctx->cond_op())
 		{
@@ -564,4 +592,21 @@ Parsed parse_text(const std::string& text, const std::string& file)
 {
 	ANTLRInputStream input(text);
 	return parse_input(input, file);
+}
+
+std::vector<std::string> sig_keywords()
+{
+	ANTLRInputStream input("");
+	SIGLexer lexer(&input);
+	const auto& vocabulary = lexer.getVocabulary();
+
+	// Literal names come back quoted ("'struct'"); symbolic tokens such as ID have none.
+	std::vector<std::string> out;
+	for (size_t t = 1; t <= vocabulary.getMaxTokenType(); ++t)
+	{
+		std::string lit(vocabulary.getLiteralName(t));
+		if (lit.size() > 2 && std::isalpha((unsigned char)lit[1]))
+			out.push_back(lit.substr(1, lit.size() - 2));
+	}
+	return out;
 }

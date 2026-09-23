@@ -39,10 +39,10 @@ GraphicsPSO EdgeDetect
 	root = DefaultLayout;
 
 	[EntryPoint = DX10_SMAAEdgeDetectionVS]
-	vertex = postprocess/smaa;
+	vertex = "postprocess/smaa.hlsl";
 
 	[EntryPoint = DX10_SMAALumaEdgeDetectionPS]
-	pixel = postprocess/smaa;
+	pixel = "postprocess/smaa.hlsl";
 
 	rtv = { R8G8_UNORM };
 }
@@ -52,10 +52,10 @@ GraphicsPSO BlendWeight
 	root = DefaultLayout;
 
 	[EntryPoint = DX10_SMAABlendingWeightCalculationVS]
-	vertex = postprocess/smaa;
+	vertex = "postprocess/smaa.hlsl";
 
 	[EntryPoint = DX10_SMAABlendingWeightCalculationPS]
-	pixel = postprocess/smaa;
+	pixel = "postprocess/smaa.hlsl";
 
 	rtv = { R8G8B8A8_UNORM };
 }
@@ -66,10 +66,10 @@ GraphicsPSO Blending
 	root = DefaultLayout;
 
 	[EntryPoint = DX10_SMAANeighborhoodBlendingVS]
-	vertex = postprocess/smaa;
+	vertex = "postprocess/smaa.hlsl";
 
 	[EntryPoint = DX10_SMAANeighborhoodBlendingPS]
-	pixel = postprocess/smaa;
+	pixel = "postprocess/smaa.hlsl";
 
 	rtv = { R16G16B16A16_FLOAT };
 }
@@ -79,7 +79,7 @@ ComputePSO EdgeDetectCompute
 	root = DefaultLayout;
 
 	[EntryPoint = CS_EdgeDetect]
-	compute = postprocess/smaa;
+	compute = "postprocess/smaa.hlsl";
 }
 
 ComputePSO BlendWeightCompute
@@ -87,7 +87,7 @@ ComputePSO BlendWeightCompute
 	root = DefaultLayout;
 
 	[EntryPoint = CS_BlendWeight]
-	compute = postprocess/smaa;
+	compute = "postprocess/smaa.hlsl";
 }
 
 ComputePSO BlendingCompute
@@ -95,7 +95,7 @@ ComputePSO BlendingCompute
 	root = DefaultLayout;
 
 	[EntryPoint = CS_Blending]
-	compute = postprocess/smaa;
+	compute = "postprocess/smaa.hlsl";
 }
 
 

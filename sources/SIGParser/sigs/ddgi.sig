@@ -402,7 +402,7 @@ ComputePSO DDGIProbeSelect
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = ddgi/ddgi_probe_select;
+	compute = "ddgi/ddgi_probe_select.hlsl";
 }
 
 [Bind = DefaultLayout::Instance0]
@@ -477,7 +477,7 @@ ComputePSO DDGIProbeConvolve
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = ddgi/ddgi_probe_convolve;
+	compute = "ddgi/ddgi_probe_convolve.hlsl";
 }
 
 # Budgeted probe selection -- v1 is a naive round-robin over
@@ -616,7 +616,7 @@ ComputePSO DDGIProbeResidencyMark
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = ddgi/ddgi_probe_residency_mark;
+	compute = "ddgi/ddgi_probe_residency_mark.hlsl";
 }
 
 # Marks which probes (this cascade's own DDGI_ProbeResidency slice) are
@@ -810,7 +810,7 @@ ComputePSO DDGIDebug
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = ddgi/ddgi_debug;
+	compute = "ddgi/ddgi_debug.hlsl";
 }
 
 # Debug-only screen-space probe visualization (see DDGISelectors::show_probes
@@ -870,7 +870,7 @@ ComputePSO DDGIIndirectDebug
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = ddgi/ddgi_indirect_debug;
+	compute = "ddgi/ddgi_indirect_debug.hlsl";
 }
 
 # Full-screen debug view (selected via FrameGraph::DebugMode::DDGIIndirect,

@@ -238,7 +238,7 @@ ComputePSO Lighting
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = voxelgi/voxel_lighting;
+	compute = "voxelgi/voxel_lighting.hlsl";
 
 	[rename = SECOND_BOUNCE]
 	[CS, nullable]
@@ -251,7 +251,7 @@ ComputePSO VoxelDownsample
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = voxelgi/voxel_mipmap;
+	compute = "voxelgi/voxel_mipmap.hlsl";
 
 	[rename = COUNT]
 	[CS]
@@ -265,7 +265,7 @@ ComputePSO VoxelCopy
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = voxelgi/voxel_copy;
+	compute = "voxelgi/voxel_copy.hlsl";
 }
 
 
@@ -274,7 +274,7 @@ ComputePSO VoxelZero
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = voxelgi/voxel_zero;
+	compute = "voxelgi/voxel_zero.hlsl";
 }
 
 ComputePSO VoxelVisibility
@@ -282,7 +282,7 @@ ComputePSO VoxelVisibility
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = voxelgi/voxel_visibility;
+	compute = "voxelgi/voxel_visibility.hlsl";
 }
 
 GraphicsPSO VoxelDebug
@@ -290,10 +290,10 @@ GraphicsPSO VoxelDebug
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = voxelgi/voxel_screen;
+	vertex = "voxelgi/voxel_screen.hlsl";
 
 	[EntryPoint = Debug]
-	pixel = voxelgi/voxel_screen_debug;
+	pixel = "voxelgi/voxel_screen_debug.hlsl";
 
 	rtv = {R16G16B16A16_FLOAT};
 	enable_depth = false;
@@ -316,7 +316,7 @@ ComputePSO ReflectionCombine
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = postprocess/reflection_combine;
+	compute = "postprocess/reflection_combine.hlsl";
 }
 
 # Computes full lighting on its own -- NOT a composite over ResultTexture
@@ -343,7 +343,7 @@ ComputePSO RTXCombine
 	root = DefaultLayout;
 
 	[EntryPoint = CS]
-	compute = rtx/rtx_combine;
+	compute = "rtx/rtx_combine.hlsl";
 }
 
 

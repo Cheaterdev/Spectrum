@@ -89,7 +89,7 @@ public:
 
     virtual std::any visitInsert_block(SIGParser::Insert_blockContext *context) = 0;
 
-    virtual std::any visitPath_id(SIGParser::Path_idContext *context) = 0;
+    virtual std::any visitShader_path(SIGParser::Shader_pathContext *context) = 0;
 
     virtual std::any visitInherit(SIGParser::InheritContext *context) = 0;
 
