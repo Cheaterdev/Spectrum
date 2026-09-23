@@ -152,13 +152,13 @@ public:
 			{{"{"}}
 {%- endif %}
 {%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
-{%- if v.options.Size.value_atom.is_literal %}
+{%- if size_is_scalar(pass.name, v.name) %}
 			builder.create(data.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- else %}
 			builder.create(data.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- endif %}
 {%- else %}
-			builder.create(data.{{v.name}}, { {{resolve_size_expr(pass.name, v.name)}} }, {{ resolve_flags_expr(pass.name, v.name) }});
+			builder.create(data.{{v.name}}, { {{resolve_size_expr(pass.name, v.name)}}{{ ", true" if v.options.Counted is defined }} }, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- endif %}
 {%- if v.options.Optional is defined %}
 			{{"}"}}
@@ -177,13 +177,13 @@ public:
 			builder.need(data.{{v.name}}, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- if v.options.Size is defined or v.options.Format is defined %}
 {%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
-{%- if v.options.Size.value_atom.is_literal %}
+{%- if size_is_scalar(pass.name, v.name) %}
 			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
 {%- else %}
 			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
 {%- endif %}
 {%- else %}
-			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { {{resolve_size_expr(pass.name, v.name)}} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
+			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { {{resolve_size_expr(pass.name, v.name)}}{{ ", true" if v.options.Counted is defined }} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
 {%- endif %}
 {%- else %}
 			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
@@ -240,13 +240,13 @@ public:
 			if ({{v.options.Optional.value_atom.expr}})
 {%- endif %}
 {%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
-{%- if v.options.Size.value_atom.is_literal %}
+{%- if size_is_scalar(pass.name, v.name) %}
 			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
 {%- else %}
 			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
 {%- endif %}
 {%- else %}
-			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { {{resolve_size_expr(pass.name, v.name)}} });
+			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { {{resolve_size_expr(pass.name, v.name)}}{{ ", true" if v.options.Counted is defined }} });
 {%- endif %}
 {%- if v.options.Optional is defined %}
 			else
@@ -258,13 +258,13 @@ public:
 {%- if v.options.Recreate is defined %}
 {%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) %}
 {%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
-{%- if v.options.Size.value_atom.is_literal %}
+{%- if size_is_scalar(pass.name, v.name) %}
 			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
 {%- else %}
 			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
 {%- endif %}
 {%- else %}
-			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { {{resolve_size_expr(pass.name, v.name)}} });
+			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { {{resolve_size_expr(pass.name, v.name)}}{{ ", true" if v.options.Counted is defined }} });
 {%- endif %}
 {%- else %}
 			builder.load(data.{{v.options.Recreate.value_atom.expr}}, ResourceID::{{v.name}}, cache.{{v.options.Recreate.value_atom.expr}});

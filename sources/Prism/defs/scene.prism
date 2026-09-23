@@ -161,9 +161,9 @@ PassNode Scene
 	# frame's HiZ, so the contents must survive across frames (no aliasing).
 	# MipCount=0: full auto mip chain (a Hi-Z pyramid), matching the original
 	# manual create()'s omitted 4th Desc field.
-	[Always = DepthStencil | Static] [Size = `builder.graph->get_context<Table::ViewportContext>().frame_size / 8`] [Format = R32_TYPELESS] [MipCount = 0]
+	[Always = DepthStencil | Static] [Size = ViewportContext::frame_size / 8] [Format = R32_TYPELESS] [MipCount = 0]
 	Texture GBuffer_HiZ;
-	[Always = UnorderedAccess] [Size = `builder.graph->get_context<Table::ViewportContext>().frame_size / 8`] [Format = R32_FLOAT] [MipCount = 0]
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size / 8] [Format = R32_FLOAT] [MipCount = 0]
 	Texture GBuffer_HiZ_UAV;
 	[Always = Read] StructuredBuffer<uint> scene;
 }

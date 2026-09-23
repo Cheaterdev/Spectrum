@@ -91,7 +91,7 @@ public:
 		// runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.create(data.RTXIndirectNoiseHalf, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.RTXIndirectNoiseHalf, { ivec3(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 2), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -144,7 +144,7 @@ public:
 			builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
 			builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
 			builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
-			builder.create_versioned(data.RTXIndirectNoiseHalf, cache.RTXIndirectNoiseHalf, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 1) / 2, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 1) / 2), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
+			builder.create_versioned(data.RTXIndirectNoiseHalf, cache.RTXIndirectNoiseHalf, { ivec3(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 2), 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 		}
 
 		// Resources this pass touches, in declaration order, each paired with

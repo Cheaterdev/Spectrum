@@ -70,10 +70,19 @@ cond_expr : cond_term+ ;
 cond_term
  : qualified_ref
  | function_id
+ | call
  | member_ref
  | value_id
  | cond_op
  ;
+
+// A call whose arguments are themselves expressions:
+// `area(tiles(ViewportContext::frame_size, 16))`. The arguments are bounded by
+// the call's own parentheses, which keeps their commas from being read as the
+// commas between options. function_id stays ahead of it, so `exists(X)` and
+// other plain-argument calls parse exactly as before.
+call : ID OPAR call_arg (',' call_arg)* CPAR ;
+call_arg : cond_term+ ;
 
 // Owner::name -- either a Table:: context field or an enum value. Which one is
 // NOT decidable here (both are `ID::ID`); codegen resolves it by looking the
@@ -90,7 +99,8 @@ member_ref : name_id DOT name_id ;
 // function_id (e.g. `exists(ShadowMask)`) is matched ahead of value_id because
 // value_id's own ID alternative would otherwise win and leave the parentheses
 // to be eaten as cond_ops.
-cond_op : AND | OR | NOT | EQ | NEQ | GTEQ | LTEQ | GT | LT | OPAR | CPAR ;
+// Arithmetic is for [Size] expressions (POINTER is the lexer's '*').
+cond_op : AND | OR | NOT | EQ | NEQ | GTEQ | LTEQ | GT | LT | OPAR | CPAR | PLUS | MINUS | POINTER | DIV | MOD ;
 
 flag_value_holder: value_id;
 

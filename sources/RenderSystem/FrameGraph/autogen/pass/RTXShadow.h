@@ -87,7 +87,7 @@ public:
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.create(data.ShadowMask, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.create(data.WorkGraphBuffer, { (size_t)Constants::WG_TileSection }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.WorkGraphBuffer, { Constants::WG_TileSection }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -137,7 +137,7 @@ public:
 			builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
 			builder.load(data.GBuffer_DepthPrev, ResourceID::GBuffer_DepthPrev, cache.GBuffer_DepthPrev);
 			builder.create_versioned(data.ShadowMask, cache.ShadowMask, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
-			builder.create_versioned(data.WorkGraphBuffer, cache.WorkGraphBuffer, { (size_t)Constants::WG_TileSection });
+			builder.create_versioned(data.WorkGraphBuffer, cache.WorkGraphBuffer, { Constants::WG_TileSection });
 		}
 
 		// Resources this pass touches, in declaration order, each paired with

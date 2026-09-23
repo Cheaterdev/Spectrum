@@ -8,9 +8,13 @@ cannot say -- which TextMate scope a token gets, and which spans embed another
 language -- is the small table in SCOPES below.
 
 The VSIX also carries the language server: PrismLanguageClient.cs (compiled here
-with the csc and VS assemblies from the local install) starts the bundled
-bin/profile/prismc.exe with --lsp, which reports the same errors a generator
-run would, live, in the Error List.
+with the csc and VS assemblies from the local install) starts prismc.exe --lsp,
+which reports the same errors a generator run would, live, in the Error List.
+That prismc.exe is a COPY of bin/profile/prismc.exe taken when this script runs
+(so VS never locks the build output): a server change -- diagnostics,
+completion, colouring -- reaches VS only after rebuilding Prism, re-running this
+script and reinstalling the VSIX. Set PRISM_LSP_SERVER to test a build without
+reinstalling.
 
 Outputs (bin/editor/):
   prism.vsix                         install by double-clicking
@@ -505,6 +509,18 @@ def build_grammar(rules, a):
              "captures": {"1": {"name": "entity.other.attribute-name.prism"},
                           "2": {"name": "keyword.operator.prism"},
                           "3": {"name": "constant.other.format.prism"}}},
+            # [Always = Read | ExclusiveRead]: FrameGraph::ResourceFlags names, in
+            # the same #define colour as formats. Every name up to the next ] or
+            # , is coloured; whether it's a real flag is the language server's
+            # squiggle (option_enum in Validate.cpp has the list). Listed before
+            # the option-name rule below, which would otherwise win the tie.
+            {"begin": r"(?<=" + re_escape(osb) + r"|,)\s*(Always|RecreateFlags)\s*(=)",
+             "end": r"(?=" + re_escape(csb) + r"|,)",
+             "beginCaptures": {"1": {"name": "entity.other.attribute-name.prism"},
+                               "2": {"name": "keyword.operator.prism"}},
+             "patterns": [{"include": "#comment"},
+                          {"name": "constant.other.format.prism", "match": ident},
+                          {"include": "#operator"}]},
             {"match": r"(?<=" + re_escape(osb) + r"|,)\s*(" + ident + ")",
              "captures": {"1": {"name": "entity.other.attribute-name.prism"}}},
             {"include": "#values"},

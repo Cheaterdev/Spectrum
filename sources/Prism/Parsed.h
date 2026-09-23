@@ -22,6 +22,11 @@ struct my_stream
 	std::stringstream& operator<<(const T& data);
 };
 
+// Deletes generated files under `roots` that this run didn't write. Only files
+// carrying the DO-NOT-EDIT banner are touched: hand-written files live in these
+// directories too (FrameGraph/autogen/PassNodeBase.h). Returns the removed paths.
+std::vector<std::string> remove_stale_outputs(const std::vector<std::string>& roots);
+
 template <class T>
 std::stringstream& my_stream::operator<<(const T& data)
 {
@@ -314,7 +319,9 @@ struct ExprTerm : public virtual parsed_type
 		Qualified,  // Owner::name -- context field OR enum value (resolved later)
 		Member,     // owner.name  -- pass-local state, e.g. data.pass_index
 		Function,   // exists(X) and friends, captured whole
-		Op          // && || ! == != >= <= > < ( )
+		Op,         // && || ! == != >= <= > < ( ) + - * / % and a call's `,`
+		Call        // name( of a call with expression arguments; its argument
+		            // terms, `,` and `)` follow as ordinary terms
 	};
 
 	int         kind = Plain;

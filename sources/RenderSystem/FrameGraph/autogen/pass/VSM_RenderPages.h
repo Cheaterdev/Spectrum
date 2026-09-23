@@ -70,9 +70,9 @@ public:
 		// runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.create(data.VSM_PageTable, { ivec3(ivec2(Constants::VSM_PagesPerLevelSide, Constants::VSM_PagesPerLevelSide), 0), HAL::Format::R32_UINT, Constants::MaxLevels, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+			builder.create(data.VSM_PageTable, { ivec3(Constants::VSM_PagesPerLevelSide, Constants::VSM_PagesPerLevelSide, 0), HAL::Format::R32_UINT, Constants::MaxLevels, 1 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 			builder.create(data.VSM_PageCameras, { 416 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
-			builder.create(data.VSM_PageHiZ, { ivec3(ivec2(Constants::VSM_PageSize, Constants::VSM_PageSize), 0), HAL::Format::R32G32_FLOAT, Constants::VSM_PhysicalPageCount, Constants::VSM_PyramidMipCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+			builder.create(data.VSM_PageHiZ, { ivec3(Constants::VSM_PageSize, Constants::VSM_PageSize, 0), HAL::Format::R32G32_FLOAT, Constants::VSM_PhysicalPageCount, Constants::VSM_PyramidMipCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -109,9 +109,9 @@ public:
 		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 		{
 			builder.load(data.VSM_Atlas, ResourceID::VSM_Atlas, cache.VSM_Atlas);
-			builder.create_versioned(data.VSM_PageTable, cache.VSM_PageTable, { ivec3(ivec2(Constants::VSM_PagesPerLevelSide, Constants::VSM_PagesPerLevelSide), 0), HAL::Format::R32_UINT, Constants::MaxLevels, 1 });
+			builder.create_versioned(data.VSM_PageTable, cache.VSM_PageTable, { ivec3(Constants::VSM_PagesPerLevelSide, Constants::VSM_PagesPerLevelSide, 0), HAL::Format::R32_UINT, Constants::MaxLevels, 1 });
 			builder.create_versioned(data.VSM_PageCameras, cache.VSM_PageCameras, { 416 });
-			builder.create_versioned(data.VSM_PageHiZ, cache.VSM_PageHiZ, { ivec3(ivec2(Constants::VSM_PageSize, Constants::VSM_PageSize), 0), HAL::Format::R32G32_FLOAT, Constants::VSM_PhysicalPageCount, Constants::VSM_PyramidMipCount });
+			builder.create_versioned(data.VSM_PageHiZ, cache.VSM_PageHiZ, { ivec3(Constants::VSM_PageSize, Constants::VSM_PageSize, 0), HAL::Format::R32G32_FLOAT, Constants::VSM_PhysicalPageCount, Constants::VSM_PyramidMipCount });
 			builder.load(data.VSM_DispatchCommands, ResourceID::VSM_DispatchCommands, cache.VSM_DispatchCommands);
 			builder.load(data.VSM_LevelDispatchInfo, ResourceID::VSM_LevelDispatchInfo, cache.VSM_LevelDispatchInfo);
 		}

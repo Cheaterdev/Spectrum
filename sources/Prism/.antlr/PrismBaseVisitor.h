@@ -35,6 +35,14 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitCall(PrismParser::CallContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitCall_arg(PrismParser::Call_argContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitQualified_ref(PrismParser::Qualified_refContext *ctx) override {
     return visitChildren(ctx);
   }

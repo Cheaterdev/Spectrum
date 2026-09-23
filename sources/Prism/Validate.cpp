@@ -16,7 +16,8 @@ namespace
 	const std::set<std::string> PSO_OPTIONS = { "Template", "ExcludeVulkan" };
 	const std::set<std::string> RESOURCE_FIELD_OPTIONS = {
 		"Always", "ArrayCount", "Format", "MipCount", "Optional", "PrevFor", "Recreate", "RecreateFlags",
-		"Size", "SkipEnablement", "Write"
+		"Size", "SkipEnablement", "Write",
+		"Counted", // buffer gets a counter (StructuredDesc::counted)
 	};
 
 	const std::map<std::string, std::set<std::string>> KNOWN_OPTIONS = {
@@ -254,6 +255,159 @@ namespace
 		}
 	}
 
+	// A [Size]/[ArrayCount]/[MipCount] expression: every Owner::name must resolve
+	// (a struct field, an enum value or a const) and every call must be a known
+	// size function.
+	void check_size_expression(const Parsed& parsed, const option& opt, const std::string& where)
+	{
+		const std::string& o = opt.name;
+
+		std::vector<std::string> functions;
+		for (const auto& [name, cpp] : size_functions())
+			functions.push_back(name);
+
+		auto check_function = [&](const std::string& name, const SourceLocation& loc)
+		{
+			if (!size_functions().count(name))
+				unknown_name(loc, std::format("[{}] on '{}': unknown function '{}'", o, where, name), name, functions);
+		};
+
+		for (const auto& t : opt.value_atom.terms)
+		{
+			switch (t.kind)
+			{
+			case ExprTerm::Qualified:
+				if (parsed.tables.find(t.owner))
+				{
+					if (!find_table_field(parsed, t.owner, t.text))
+					{
+						std::vector<std::string> fields;
+						table_field_names(parsed, t.owner, fields);
+						unknown_name(t.text_loc, std::format("[{}] on '{}': struct '{}' has no field '{}'", o, where, t.owner, t.text),
+							t.text, fields);
+					}
+				}
+				else if (t.owner == "Constants")
+				{
+					if (!parsed.consts.find(t.text))
+					{
+						std::vector<std::string> consts;
+						for (const auto& c : parsed.consts)
+							consts.push_back(c.name);
+						unknown_name(t.text_loc, std::format("[{}] on '{}': no const '{}'", o, where, t.text), t.text, consts);
+					}
+				}
+				else if (!parsed.enums.find(t.owner))
+				{
+					std::vector<std::string> owners{ "Constants" };
+					for (const auto& table : parsed.tables)
+						owners.push_back(table.name);
+					unknown_name(t.owner_loc, std::format("[{}] on '{}': '{}::{}' names no struct, enum or Constants",
+						o, where, t.owner, t.text), t.owner, owners);
+				}
+				break;
+
+			case ExprTerm::Call:
+				check_function(t.text, t.text_loc);
+				break;
+
+			case ExprTerm::Function:
+				check_function(t.text.substr(0, t.text.find('(')), t.text_loc);
+				break;
+
+			case ExprTerm::Member:
+				diagnostics().error(t.owner_loc, std::format("[{}] on '{}': '{}.{}' -- a size can't depend on pass state",
+					o, where, t.owner, t.text));
+				break;
+
+			default:
+				break;
+			}
+		}
+	}
+
+	// The generator pastes these after "FrameGraph::ResourceFlags::" or
+	// "HAL::Format::", so a bad name is otherwise a C++ compile error far from
+	// the .prism line that caused it.
+	void check_enum_option(const option& opt, const std::string& where)
+	{
+		const auto& atom = opt.value_atom;
+		const CppEnum* e = option_enum(opt.name, opt.loc.file);
+		if (!e || atom.is_raw)
+			return;
+
+		if (e->names.empty())
+		{
+			static std::set<std::filesystem::path> reported;
+			if (reported.insert(e->source).second)
+				diagnostics().error(opt, std::format("[{}] values can't be checked: no {} enum found in {}",
+					opt.name, e->cpp_name, std::filesystem::path(e->source).make_preferred().string()));
+			return;
+		}
+
+		auto check = [&](const std::string& value, const SourceLocation& loc)
+		{
+			if (std::find(e->names.begin(), e->names.end(), value) == e->names.end())
+				unknown_name(loc, std::format("[{}] on '{}': '{}' is not a {} value", opt.name, where, value, e->cpp_name),
+					value, e->names);
+		};
+
+		if (!atom.values.empty())
+		{
+			if (opt.name == "Format")
+				diagnostics().error(opt, std::format("[Format] on '{}' takes a single {} value", where, e->cpp_name));
+			for (const auto& v : atom.values)
+				check(v.expr, v.loc);
+		}
+		else if (!atom.owner_name.empty() || atom.terms.size() > 1)
+			diagnostics().error(opt, std::format("[{}] on '{}' takes a bare {} name{}", opt.name, where, e->cpp_name,
+				opt.name == "Format" ? "" : ", or several joined with |"));
+		else
+			check(atom.expr, atom.terms.empty() ? opt.loc : atom.terms.front().text_loc);
+	}
+
+	// `const A = Constants::B * 2;`. A const is a constexpr in Constants.ixx, so it
+	// can read only consts declared before it (C++ declaration order) and no
+	// runtime state at all.
+	void check_const_values(const Parsed& parsed)
+	{
+		std::vector<std::string> earlier;
+		for (const auto& c : parsed.consts)
+		{
+			for (const auto& t : c.value_atom.is_raw ? std::list<ExprTerm>{} : c.value_atom.terms)
+			{
+				if (t.kind == ExprTerm::Qualified)
+				{
+					if (t.owner != "Constants")
+						unknown_name(t.owner_loc, std::format("const '{}': '{}::{}' -- a const can only use Constants::",
+							c.name, t.owner, t.text), t.owner, { "Constants" });
+					else if (std::find(earlier.begin(), earlier.end(), t.text) == earlier.end())
+					{
+						if (parsed.consts.find(t.text))
+							diagnostics().error(t.text_loc, std::format("const '{}': Constants::{} is declared after it", c.name, t.text));
+						else
+							unknown_name(t.text_loc, std::format("const '{}': no const '{}'", c.name, t.text), t.text, earlier);
+					}
+				}
+				else if (t.kind == ExprTerm::Member)
+					diagnostics().error(t.owner_loc, std::format("const '{}': '{}.{}' -- a const can't read pass state",
+						c.name, t.owner, t.text));
+				else if (t.kind == ExprTerm::Call || t.kind == ExprTerm::Function)
+				{
+					std::string name = t.text.substr(0, t.text.find('('));
+					if (!size_functions().count(name))
+					{
+						std::vector<std::string> functions;
+						for (const auto& [f, cpp] : size_functions())
+							functions.push_back(f);
+						unknown_name(t.text_loc, std::format("const '{}': unknown function '{}'", c.name, name), name, functions);
+					}
+				}
+			}
+			earlier.push_back(c.name);
+		}
+	}
+
 	void check_view_fields(const Parsed& parsed, const View& owner)
 	{
 		for (const auto& opt : owner.options)
@@ -263,19 +417,15 @@ namespace
 		for (const auto& p : owner.params)
 		{
 			for (const auto& opt : p.options)
+			{
 				if (CONDITION_OPTIONS.count(opt.name))
 					check_condition(parsed, opt, owner);
-
-			// resolve_size_expr turns Owner::field into get_context<Table::Owner>().field
-			// unconditionally, so the owner has to be a Prism struct.
-			if (const option* size = p.find_option("Size"))
-			{
-				const auto& atom = size->value_atom;
-				if (!atom.is_raw && !atom.is_literal && !atom.owner_name.empty()
-					&& !find_table_field(parsed, atom.owner_name, atom.expr))
-					diagnostics().error(*size, std::format("[Size] on '{}.{}': '{}::{}' is not a field of a Prism struct",
-						owner.name, p.name, atom.owner_name, atom.expr));
+				check_enum_option(opt, owner.name + "." + p.name);
 			}
+
+			for (const char* name : { "Size", "ArrayCount", "MipCount" })
+				if (const option* o = p.find_option(name); o && !o->value_atom.is_raw)
+					check_size_expression(parsed, *o, owner.name + "." + p.name);
 
 			if (const View* view = parsed.views.find(p.class_no_template))
 			{
@@ -393,13 +543,80 @@ namespace
 	}
 }
 
-std::filesystem::path shaders_root(const std::string& sig_file)
+static std::filesystem::path checkout_root(const std::string& sig_file)
 {
 	std::error_code ec;
 	for (auto p = std::filesystem::absolute(sig_file, ec).parent_path(); !p.empty() && p != p.root_path(); p = p.parent_path())
 		if (std::filesystem::is_directory(p / "workdir" / "shaders", ec))
-			return p / "workdir" / "shaders";
+			return p;
 	return {};
+}
+
+std::filesystem::path shaders_root(const std::string& sig_file)
+{
+	auto root = checkout_root(sig_file);
+	return root.empty() ? root : root / "workdir" / "shaders";
+}
+
+// The enumerator names between the braces following `header`. Enough for the
+// plain enums this reads: no nested braces, comments allowed, `= value` ignored.
+static std::vector<std::string> read_cpp_enum(const std::filesystem::path& file, const std::string& header)
+{
+	std::ifstream f(file, std::ios::binary);
+	std::string text(std::istreambuf_iterator<char>{f}, {});
+
+	size_t at = text.find(header);
+	if (at == std::string::npos) return {};
+	size_t open = text.find('{', at);
+	size_t close = open == std::string::npos ? open : text.find('}', open);
+	if (close == std::string::npos) return {};
+	std::string body = text.substr(open + 1, close - open - 1);
+
+	std::string code;
+	for (size_t i = 0; i < body.size(); ++i)
+	{
+		if (body.compare(i, 2, "//") == 0)
+			i = std::min(body.find('\n', i), body.size()) - 1;
+		else if (body.compare(i, 2, "/*") == 0)
+			i = std::min(body.find("*/", i), body.size() - 2) + 1;
+		else
+			code += body[i];
+	}
+
+	std::vector<std::string> names;
+	std::stringstream entries(code);
+	for (std::string entry; std::getline(entries, entry, ',');)
+	{
+		auto is_ident = [](char c) { return std::isalnum((unsigned char)c) || c == '_'; };
+		auto begin = std::find_if(entry.begin(), entry.end(), is_ident);
+		auto end = std::find_if_not(begin, entry.end(), is_ident);
+		if (begin != end)
+			names.emplace_back(begin, end);
+	}
+	return names;
+}
+
+const CppEnum* option_enum(const std::string& option_name, const std::string& sig_file)
+{
+	struct Source { const char* cpp_name; const char* file; const char* header; };
+	static const Source flags  = { "FrameGraph::ResourceFlags", "sources/RenderSystem/FrameGraph/FrameGraph.Base.ixx", "enum class ResourceFlags" };
+	static const Source format = { "HAL::Format", "sources/HAL/HAL.Format.ixx", "enum Formats" };
+
+	const Source* src = option_name == "Always" || option_name == "RecreateFlags" ? &flags
+		: option_name == "Format" ? &format : nullptr;
+	if (!src) return nullptr;
+
+	// Keyed on the write time too: the language server lives for a whole VS
+	// session, during which the enum can gain a value.
+	struct Entry { std::filesystem::file_time_type time; CppEnum e; };
+	static std::map<std::filesystem::path, Entry> cache;
+	auto path = checkout_root(sig_file) / src->file;
+	std::error_code ec;
+	auto time = std::filesystem::last_write_time(path, ec);
+	auto& entry = cache[path];
+	if (entry.e.cpp_name.empty() || entry.time != time)
+		entry = { time, CppEnum{ src->cpp_name, path, read_cpp_enum(path, src->header) } };
+	return &entry.e;
 }
 
 const std::set<std::string>& known_options(const std::string& kind)
@@ -407,6 +624,16 @@ const std::set<std::string>& known_options(const std::string& kind)
 	static const std::set<std::string> none;
 	auto it = KNOWN_OPTIONS.find(kind);
 	return it != KNOWN_OPTIONS.end() ? it->second : none;
+}
+
+const std::map<std::string, std::string>& size_functions()
+{
+	static const std::map<std::string, std::string> functions = {
+		{ "tiles", "Math::DivideByMultiple" }, // tiles(v, n): n-sized tiles covering v, per component, rounded up
+		{ "area",  "Math::Area" },             // area(v): element count of a grid of size v
+		{ "ivec2", "ivec2" },                  // ivec2(w, h): a non-square 2D size
+	};
+	return functions;
 }
 
 std::vector<std::string> option_kinds(const std::string& option_name)
@@ -434,6 +661,7 @@ void validate(Parsed& parsed)
 	check_duplicates(parsed.pipelines, "Pipeline");
 	check_duplicates(parsed.enums, "enum");
 	check_duplicates(parsed.consts, "const");
+	check_const_values(parsed);
 
 	for (const auto& table : parsed.tables)
 	{

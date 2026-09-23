@@ -168,10 +168,17 @@ static void render_expr(const Parsed& parsed, have_expr& e)
 
 	auto append = [&](const std::string& s, bool tight_after)
 	{
-		if (!suppress_space && !out.empty() && s != ")")
+		if (!suppress_space && !out.empty() && s != ")" && s != ",")
 			out += ' ';
 		out += s;
 		suppress_space = tight_after;
+	};
+
+	// tiles(...) -> Math::DivideByMultiple(...) etc.; anything else unchanged.
+	auto cpp_function = [](const std::string& name)
+	{
+		auto it = size_functions().find(name);
+		return it != size_functions().end() ? it->second : name;
 	};
 
 	for (const auto& t : e.terms)
@@ -208,12 +215,19 @@ static void render_expr(const Parsed& parsed, have_expr& e)
 			if (fn.rfind("exists(", 0) == 0)
 				append("builder." + fn.substr(0, 7) + "data." + fn.substr(7), false);
 			else
-				append(fn, false);
+			{
+				size_t paren = fn.find('(');
+				append(cpp_function(fn.substr(0, paren)) + fn.substr(paren), false);
+			}
 			break;
 		}
 
+		case ExprTerm::Call:
+			append(cpp_function(t.text) + "(", true);
+			break;
+
 		case ExprTerm::Op:
-			// '!' and '(' bind tight to what follows; ')' to what precedes.
+			// '!' and '(' bind tight to what follows; ')' and ',' to what precedes.
 			append(t.text, t.text == "!" || t.text == "(");
 			break;
 
@@ -251,6 +265,83 @@ static void render_condition_options(Parsed& parsed)
 		for (auto& param : view.params)
 			do_options(param);
 	}
+}
+
+// Whether a [Size] is one number (N -> an N x N texture) or a 2D vector. Vectors
+// come from ivec2(...) and from vector-typed struct fields (int2 frame_size);
+// tiles() keeps its argument's shape and area() collapses it back to a number.
+static bool size_is_scalar(const Parsed& parsed, const have_expr& e)
+{
+	if (e.is_raw)
+		return false;
+
+	auto vector_field = [&](const std::string& owner, const std::string& field)
+	{
+		std::function<bool(const Table*)> find = [&](const Table* t) -> bool
+		{
+			if (!t) return false;
+			for (const auto& v : t->values)
+				if (v.name == field)
+					return !v.class_no_template.empty() && std::isdigit((unsigned char)v.class_no_template.back());
+			for (const auto& p : t->parent)
+				if (find(parsed.tables.find(p))) return true;
+			return false;
+		};
+		return find(parsed.tables.find(owner));
+	};
+
+	// Open calls and parentheses; a vector under an open area() doesn't count.
+	std::vector<std::string> open;
+	auto in_area = [&] { return std::find(open.begin(), open.end(), "area") != open.end(); };
+
+	for (const auto& t : e.terms)
+	{
+		bool vector = false;
+		if (t.kind == ExprTerm::Qualified)
+			vector = vector_field(t.owner, t.text);
+		else if (t.kind == ExprTerm::Function)
+			vector = t.text.starts_with("ivec2(");
+		else if (t.kind == ExprTerm::Call)
+		{
+			vector = t.text == "ivec2";
+			open.push_back(t.text);
+		}
+		else if (t.kind == ExprTerm::Op && t.text == "(")
+			open.push_back("(");
+		else if (t.kind == ExprTerm::Op && t.text == ")" && !open.empty())
+			open.pop_back();
+
+		if (vector && !in_area())
+			return false;
+	}
+	return true;
+}
+
+// [Size], [ArrayCount] and [MipCount] are rendered like conditions, so a Table::
+// read lands in field_refs and Constants::X keeps its prefix (the listeners
+// store it as owner_name + expr). A single literal or Owner::field renders to
+// exactly what resolve_size_expr used to build from those. The leaf listeners
+// also stamp owner_name and is_literal from whichever leaf came last; cleared
+// here so templates and resolve_size_expr take the rendered expression as-is.
+static void render_size_options(Parsed& parsed)
+{
+	auto do_params = [&](std::list<View_Param>& params)
+	{
+		for (auto& param : params)
+			for (auto& opt : param.options)
+				if ((opt.name == "Size" || opt.name == "ArrayCount" || opt.name == "MipCount")
+					&& !opt.value_atom.is_raw && !opt.value_atom.terms.empty())
+				{
+					render_expr(parsed, opt.value_atom);
+					opt.value_atom.is_literal = false;
+					opt.value_atom.owner_name.clear();
+				}
+	};
+
+	for (auto& pass : parsed.passes)
+		do_params(pass.params);
+	for (auto& view : parsed.views)
+		do_params(view.params);
 }
 
 
@@ -337,6 +428,13 @@ int main(int argc, char** argv)
 		// Turns parsed condition terms into the C++ the templates paste, and
 		// collects each condition's Table:: field dependencies on the way.
 		render_condition_options(parsed);
+		render_size_options(parsed);
+		// `const A = Constants::B * 2;`: the listeners leave only the last leaf in
+		// expr, so a multi-term value has to be rendered before constants.jinja
+		// pastes it.
+		for (auto& c : parsed.consts)
+			if (!c.value_atom.is_raw && !c.value_atom.terms.empty())
+				render_expr(parsed, c.value_atom);
 
 		rapidjson::Document parsed_doc = make_map(parsed);
 
@@ -762,6 +860,16 @@ int main(int argc, char** argv)
 					// costs nothing at this level: the key hashes every field of
 					// an included struct regardless of who reads it, so pulling
 					// ViewportContext in covers the opaque expressions as well.
+					// A [Size] expression names its contexts in field_refs
+					// (render_size_options), possibly several.
+					else if (!opt.value_atom.field_refs.empty())
+					{
+						for (const auto& r : opt.value_atom.field_refs)
+						{
+							owners.insert(r.owner);
+							desc_owners.insert(r.owner);
+						}
+					}
 					else if (!opt.value_atom.owner_name.empty())
 					{
 						owners.insert(opt.value_atom.owner_name);
@@ -1065,6 +1173,19 @@ int main(int argc, char** argv)
 					return "builder.graph->get_context<Table::" + size->value_atom.owner_name + ">()." + size->value_atom.expr;
 				}
 				return "";
+			},
+			ArgInfo{"pass_name"}, ArgInfo{"field_name"}
+		));
+
+		global.AddGlobal("size_is_scalar", jinja2::MakeCallable(
+			[&](const std::string& pass_name, const std::string& field_name) -> bool
+			{
+				if (Pass* pass = parsed.passes.find(pass_name))
+					for (const auto& p : pass->params)
+						if (p.name == field_name)
+							if (const option* size = p.find_option("Size"))
+								return size_is_scalar(parsed, size->value_atom);
+				return false;
 			},
 			ArgInfo{"pass_name"}, ArgInfo{"field_name"}
 		));
@@ -1518,6 +1639,11 @@ int main(int argc, char** argv)
 
 		my_stream(cpp_path_render, "enums.h") << cpp_templates.generate(L"pass_enums");
 		my_stream(cpp_path_render, "passes.ixx") << cpp_templates.generate(L"passes");
+
+		// shaders_path itself is not swept: it holds hand-written shaders, and
+		// its one generated file (enums.h) is always written.
+		for (auto& f : remove_stale_outputs({ cpp_path, cpp_path_render, hlsl_path }))
+			std::cout << "removed stale " << f << std::endl;
 	}
 	catch (std::exception& e)
 	{

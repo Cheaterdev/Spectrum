@@ -108,9 +108,9 @@ public:
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.create(data.VSM_BlockerSearchResult, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32G32B32A32_UINT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.create(data.VSM_ConfirmedLitTiles, { (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.create(data.VSM_BlurTiles, { (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.create(data.VSM_AmbiguousMask, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16), 0), HAL::Format::R8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.VSM_ConfirmedLitTiles, { Math::Area(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.VSM_BlurTiles, { Math::Area(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.VSM_AmbiguousMask, { ivec3(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16), 0), HAL::Format::R8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -176,9 +176,9 @@ public:
 			builder.load(data.BlueNoise, ResourceID::BlueNoise, cache.BlueNoise);
 			builder.load(data.VSM_SearchTiles, ResourceID::VSM_SearchTiles, cache.VSM_SearchTiles);
 			builder.create_versioned(data.VSM_BlockerSearchResult, cache.VSM_BlockerSearchResult, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32G32B32A32_UINT, 1, 1 });
-			builder.create_versioned(data.VSM_ConfirmedLitTiles, cache.VSM_ConfirmedLitTiles, { (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true });
-			builder.create_versioned(data.VSM_BlurTiles, cache.VSM_BlurTiles, { (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true });
-			builder.create_versioned(data.VSM_AmbiguousMask, cache.VSM_AmbiguousMask, { ivec3(ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16), 0), HAL::Format::R8_UNORM, 1, 1 });
+			builder.create_versioned(data.VSM_ConfirmedLitTiles, cache.VSM_ConfirmedLitTiles, { Math::Area(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16)), true });
+			builder.create_versioned(data.VSM_BlurTiles, cache.VSM_BlurTiles, { Math::Area(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16)), true });
+			builder.create_versioned(data.VSM_AmbiguousMask, cache.VSM_AmbiguousMask, { ivec3(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16), 0), HAL::Format::R8_UNORM, 1, 1 });
 		}
 
 		// Resources this pass touches, in declaration order, each paired with

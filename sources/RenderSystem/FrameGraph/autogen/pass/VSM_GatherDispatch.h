@@ -39,7 +39,7 @@ public:
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 			builder.create(data.VSM_LevelDispatchInfo, { 26 }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
-			builder.create(data.VSM_DispatchCommands, { (size_t)Constants::MaxDispatchEntries, true }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+			builder.create(data.VSM_DispatchCommands, { Constants::MaxDispatchEntries, true }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -68,7 +68,7 @@ public:
 		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 		{
 			builder.create_versioned(data.VSM_LevelDispatchInfo, cache.VSM_LevelDispatchInfo, { 26 });
-			builder.create_versioned(data.VSM_DispatchCommands, cache.VSM_DispatchCommands, { (size_t)Constants::MaxDispatchEntries, true });
+			builder.create_versioned(data.VSM_DispatchCommands, cache.VSM_DispatchCommands, { Constants::MaxDispatchEntries, true });
 		}
 
 		// Resources this pass touches, in declaration order, each paired with

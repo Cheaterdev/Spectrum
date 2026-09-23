@@ -92,9 +92,9 @@ public:
 		// runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.create(data.VSM_LitTiles, { 2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.create(data.VSM_DarkTiles, { 2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.create(data.VSM_SearchTiles, { 2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.VSM_LitTiles, { 2 * Math::Area(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.VSM_DarkTiles, { 2 * Math::Area(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
+			builder.create(data.VSM_SearchTiles, { 2 * Math::Area(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16)), true }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -148,9 +148,9 @@ public:
 			builder.load(data.VSM_PageTable, ResourceID::VSM_PageTable, cache.VSM_PageTable);
 			builder.load(data.VSM_PageCameras, ResourceID::VSM_PageCameras, cache.VSM_PageCameras);
 			builder.load(data.VSM_PageHiZ, ResourceID::VSM_PageHiZ, cache.VSM_PageHiZ);
-			builder.create_versioned(data.VSM_LitTiles, cache.VSM_LitTiles, { 2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true });
-			builder.create_versioned(data.VSM_DarkTiles, cache.VSM_DarkTiles, { 2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true });
-			builder.create_versioned(data.VSM_SearchTiles, cache.VSM_SearchTiles, { 2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true });
+			builder.create_versioned(data.VSM_LitTiles, cache.VSM_LitTiles, { 2 * Math::Area(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16)), true });
+			builder.create_versioned(data.VSM_DarkTiles, cache.VSM_DarkTiles, { 2 * Math::Area(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16)), true });
+			builder.create_versioned(data.VSM_SearchTiles, cache.VSM_SearchTiles, { 2 * Math::Area(Math::DivideByMultiple(builder.graph->get_context<Table::ViewportContext>().frame_size, 16)), true });
 		}
 
 		// Resources this pass touches, in declaration order, each paired with

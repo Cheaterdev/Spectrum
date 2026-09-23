@@ -839,6 +839,9 @@ namespace
 			if (const Enum* e = model.enums.find(owner))
 				for (const auto& v : e->values)
 					out.push_back({ v.name, owner, K_EnumMember, v.name_loc });
+			if (owner == "Constants")
+				for (const auto& c : model.consts)
+					out.push_back({ c.name, "const = " + c.value_atom.expr, K_Constant, c.name_loc });
 			if (const Layout* l = model.layouts.find(owner))
 			{
 				for (const auto& s : l->slots)
@@ -1270,6 +1273,7 @@ namespace
 			const std::string* text = doc_text(params["textDocument"]["uri"].text);
 			if (!text)
 				return R"({"data":[]})";
+			const std::string path = uri_to_path(params["textDocument"]["uri"].text);
 
 			std::map<std::string, int> types;
 			for (const auto& d : declarations())
@@ -1332,6 +1336,12 @@ namespace
 							emit(b, id.size(), T_Property);
 						continue;
 					}
+
+					// No token inside [Always]/[RecreateFlags]/[Format]: the grammar
+					// gives those values the #define colour, and a token here would
+					// paint over it.
+					if (auto option = option_value_at(t, b); option && option_enum(*option, path))
+						continue;
 
 					if (auto it = types.find(id); it != types.end())
 						emit(b, id.size(), it->second);
@@ -1441,8 +1451,24 @@ namespace
 			}
 			else if (auto option = option_value_at(*text, offset))
 			{
-				for (const auto& v : values_used_for(*option))
-					items.push_back({ v, "used for [" + *option + "]", K_Constant, {} });
+				const CppEnum* e = option_enum(*option, uri_to_path(uri));
+				if (e && !e->names.empty())
+					for (const auto& v : e->names)
+						items.push_back({ v, e->cpp_name, K_Constant, {} });
+				else
+					for (const auto& v : values_used_for(*option))
+						items.push_back({ v, "used for [" + *option + "]", K_Constant, {} });
+
+				// These are expressions built from size functions, Owner::field
+				// reads and Constants::X rather than reused values.
+				if (*option == "Size" || *option == "ArrayCount" || *option == "MipCount")
+				{
+					for (const auto& [name, cpp] : size_functions())
+						items.push_back({ name, "size function -> " + cpp, K_Method, {} });
+					items.push_back({ "Constants", "Prism consts", K_Module, {} });
+					for (const auto& table : model.tables)
+						items.push_back({ table.name, "struct", K_Struct, table.name_loc });
+				}
 			}
 			else
 			{

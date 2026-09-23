@@ -181,8 +181,8 @@ PassNode PSSM_Cascade
 	# negation" (see create_always()'s own comment, pass.jinja) -- instance 0
 	# creates PSSM_Depths/PSSM_Cameras with the real desc, every other
 	# instance just needs what instance 0 already created.
-	[Always = DepthStencil] [Size = 1024] [Format = R32_TYPELESS] [ArrayCount = `Constants::PSSM_RendersSize`] [Optional = data.pass_index == 0] Texture PSSM_Depths;
-	[Always = CopyDest] [Size = `Constants::PSSM_RendersSize`] [Optional = data.pass_index == 0] StructuredBuffer<Camera> PSSM_Cameras;
+	[Always = DepthStencil] [Size = 1024] [Format = R32_TYPELESS] [ArrayCount = Constants::PSSM_RendersSize] [Optional = data.pass_index == 0] Texture PSSM_Depths;
+	[Always = CopyDest] [Size = Constants::PSSM_RendersSize] [Optional = data.pass_index == 0] StructuredBuffer<Camera> PSSM_Cameras;
 }
 
 [RunAlways]

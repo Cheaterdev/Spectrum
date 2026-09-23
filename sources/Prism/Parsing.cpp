@@ -498,6 +498,13 @@ public:
 			if (term.text.rfind("exists(", 0) == 0)
 				term.text_loc = loc_of(ctx, 7);
 		}
+		else if (auto* c = ctx->call())
+		{
+			// The argument terms follow via their own enterCond_term; the
+			// separators and closing paren come from the two listeners below.
+			term.kind = ExprTerm::Call;
+			term.text = c->ID()->getText();
+		}
 		else if (ctx->cond_op())
 		{
 			term.kind = ExprTerm::Op;
@@ -508,6 +515,24 @@ public:
 			term.kind = ExprTerm::Plain;
 			term.text = ctx->getText();
 		}
+	}
+
+	void enterCall_arg(PrismParser::Call_argContext* ctx) override
+	{
+		auto* call = static_cast<PrismParser::CallContext*>(ctx->parent);
+		if (call->call_arg(0) != ctx)
+		{
+			auto& term = get_elem<have_expr>().terms.emplace_back();
+			term.kind = ExprTerm::Op;
+			term.text = ",";
+		}
+	}
+
+	void exitCall(PrismParser::CallContext* ctx) override
+	{
+		auto& term = get_elem<have_expr>().terms.emplace_back();
+		term.kind = ExprTerm::Op;
+		term.text = ")";
 	}
 
 	void enterPso_param_id(PrismParser::Pso_param_idContext* ctx) override

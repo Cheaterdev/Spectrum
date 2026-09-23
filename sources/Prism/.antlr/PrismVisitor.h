@@ -29,6 +29,10 @@ public:
 
     virtual std::any visitCond_term(PrismParser::Cond_termContext *context) = 0;
 
+    virtual std::any visitCall(PrismParser::CallContext *context) = 0;
+
+    virtual std::any visitCall_arg(PrismParser::Call_argContext *context) = 0;
+
     virtual std::any visitQualified_ref(PrismParser::Qualified_refContext *context) = 0;
 
     virtual std::any visitMember_ref(PrismParser::Member_refContext *context) = 0;

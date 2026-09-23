@@ -210,10 +210,14 @@ Shared C++ (enums.ixx) and HLSL (enums.h) enum. Usable as a field type and
 in conditions (ShadowSource::VSM).
 
     const DDGI_CascadeCount = 5;
+    const DDGI_ProbeCount = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY;
     const WG_TileSection = `8u + 256u * 256u * sizeof(Table::TileRecord)`;
 
 A named constant in C++ namespace Constants (Constants.ixx), in declaration
-order, so a later raw value may reference an earlier one.
+order. The value is an expression like a [Size] (literals, + - * / % and
+parentheses, size functions) over consts declared EARLIER, as Constants::NAME;
+a forward reference or anything that isn't a const is an error. Backticks
+remain for what the expression language can't say (sizeof, a lambda).
 
 
 --------------------------------------------------------------------------------
@@ -371,9 +375,12 @@ Field options
                         RenderTarget, DepthStencil, Static, Required,
                         ExclusiveRead ...). A write flag makes it a write.
   [Size = ...]          with [Always], CREATE the resource instead of just
-                        needing it. Literal N (N×N texture or N-element
-                        buffer), Owner::field (read from that context each
-                        frame, e.g. ViewportContext::frame_size) or backticks.
+                        needing it. A literal N (N×N texture or N-element
+                        buffer), an Owner::field read from that context each
+                        frame (ViewportContext::frame_size), or an expression
+                        over those — see SIZE EXPRESSIONS below.
+  [Counted]             the created buffer gets a counter
+                        (StructuredDesc::counted).
   [Format = F]          creation format (HAL::Format); with [Always], also
                         means create.
   [MipCount = N], [ArrayCount = N]
@@ -391,6 +398,11 @@ Field options
                         history link that survives resizes).
   [SkipEnablement]      appended to [Always]'s flags
                         (ResourceFlags::SkipEnablement).
+
+[Always]/[RecreateFlags] values must be FrameGraph::ResourceFlags names and
+[Format] a HAL::Format name (checked, with completion in VS). Prism reads both
+lists straight from FrameGraph.Base.ixx and HAL.Format.ixx, so a value added to
+either enum is accepted with no Prism change.
 
 Pass options
   [Compute]             may run on a compute queue (actually does only when
@@ -442,6 +454,51 @@ boolean expression, but parsed and checked by Prism:
 Because conditions are parsed, Prism knows exactly which context fields each
 pass's enable decision reads (context_deps.h) — the basis for caching graph
 plans. A backtick condition works but makes that dependency set unknown.
+
+
+--------------------------------------------------------------------------------
+  SIZE EXPRESSIONS
+--------------------------------------------------------------------------------
+
+[Size], [ArrayCount] and [MipCount] accept an expression: literals,
+Owner::field, Constants::NAME, + - * / % and parentheses, and these size
+functions:
+
+  tiles(v, n)    how many n-sized tiles cover v, per component, rounded up
+                 (renders to Math::DivideByMultiple; works on ivec2 or scalars)
+  area(v)        element count of a grid of size v, x*y (Math::Area)
+  ivec2(w, h)    a non-square 2D size
+
+A texture [Size] that is a single number, whether a literal or a const, is
+square: [Size = Constants::VSM_PageSize] is VSM_PageSize x VSM_PageSize.
+Prism tells the two apart from the terms: ivec2(...) and vector-typed struct
+fields (int2 frame_size) make a 2D size, tiles() keeps its argument's shape,
+and area() turns it back into a number.
+
+    # texture with one texel per 16x16 screen tile
+    [Always = UnorderedAccess] [Size = tiles(ViewportContext::frame_size, 16)]
+    [Format = R8_UNORM]
+    Texture VSM_AmbiguousMask;
+
+    # counted buffer with two entries per 16x16 screen tile
+    [Always = UnorderedAccess] [Size = 2 * area(tiles(ViewportContext::frame_size, 16))]
+    [Counted]
+    StructuredBuffer<uint2> VSM_LitTiles;
+
+    # half resolution
+    [Size = tiles(ViewportContext::frame_size, 2)]
+
+    # square array texture sized by consts
+    [Size = Constants::VSM_PageSize] [Format = R32G32_FLOAT]
+    [ArrayCount = Constants::VSM_PhysicalPageCount] [MipCount = Constants::VSM_PyramidMipCount]
+    Texture VSM_PageHiZ;
+
+A buffer's size is an element count. Unlike a backtick, an expression is checked (unknown functions,
+structs, fields and consts are errors with suggestions) and Prism records
+which context fields it reads, so a resize correctly invalidates cached
+graph plans. Backticks still work for anything the expression language can't
+say; prefer extending it (size_functions() in Validate.cpp) over new
+backticks.
 
 
 --------------------------------------------------------------------------------
@@ -508,16 +565,19 @@ Install bin/editor/prism.vsix (built by
 "Visual Studio extension development" workload). It provides:
 
   - syntax highlighting (generated from Prism.g4: keywords, built-in types,
-    formats, options, user-declared names via the language server) with the
-    C++ grammar inside HLSL bodies
+    formats and [Always]/[RecreateFlags] flags in the #define colour, options,
+    user-declared names via the language server) with the C++ grammar inside
+    HLSL bodies
   - live errors in the Error List as you type, with quick fixes (Ctrl+.)
   - go-to-definition (F12): structs, fields, enum values, layouts/slots,
     passes, functions, and shader paths (opens the .hlsl)
   - hover: struct bodies, field types, function signatures (all overloads),
     where an option is accepted and which values are in use
-  - completion: Owner:: members, data. fields, option names valid at that
-    position, option values already used elsewhere, shader files inside
-    the quotes of `compute = "..."`
+  - completion: Owner:: members (Constants:: lists the consts), data.
+    fields, option names valid at that position, every ResourceFlags /
+    HAL::Format name for [Always]/[RecreateFlags]/[Format], other option
+    values already used elsewhere, shader files inside the quotes of
+    `compute = "..."`
   - outline (navigation bar) and Ctrl+T symbol search
   - Tools > Regenerate Prism code / the Prism toolbar
 
@@ -553,15 +613,16 @@ Make a pass optional
 
 - Two structs on the same [Bind] slot overwrite each other in one draw — the
   symptom is geometry that draws but is invisible or wrong.
-- A nested (non-[Bind]) struct whose ONLY field is a resource is dropped from
-  the generated struct without any error (REFACTOR_TODO item 9); give it a
-  leading plain field.
 - A PSO whose shader never touches its bound resources asserts
   (!slots.empty()) at startup rather than being a no-op.
 - A stale prismc.exe generates output that disagrees with the current
   templates: rebuild the Prism project after changing the generator.
 - A new generated file is invisible to the build until generate_project.bat
-  runs (the VS button detects this and offers to run it).
+  runs (the VS button detects this and offers to run it). The same goes for a
+  removed one: prismc deletes generated files it no longer produces (printed
+  as "removed stale ..."), and the projects still list them until regenerated.
+  Only files with the DO-NOT-EDIT banner are deleted, so a hand-written file
+  in an autogen/ directory is safe.
 - Backtick expressions and HLSL bodies are not checked by Prism: their errors
   surface as C++ compile errors or at shader compile time.
 

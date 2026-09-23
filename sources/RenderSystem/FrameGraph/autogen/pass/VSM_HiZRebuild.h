@@ -63,7 +63,7 @@ public:
 		// runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.create(data.VSM_DirtySlots, { (size_t)Constants::VSM_PhysicalPageCount }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
+			builder.create(data.VSM_DirtySlots, { Constants::VSM_PhysicalPageCount }, FrameGraph::ResourceFlags::CopyDest | FrameGraph::ResourceFlags::Static);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -95,7 +95,7 @@ public:
 		{
 			builder.load(data.VSM_Atlas, ResourceID::VSM_Atlas, cache.VSM_Atlas);
 			builder.load(data.VSM_PageHiZ, ResourceID::VSM_PageHiZ, cache.VSM_PageHiZ);
-			builder.create_versioned(data.VSM_DirtySlots, cache.VSM_DirtySlots, { (size_t)Constants::VSM_PhysicalPageCount });
+			builder.create_versioned(data.VSM_DirtySlots, cache.VSM_DirtySlots, { Constants::VSM_PhysicalPageCount });
 		}
 
 		// Resources this pass touches, in declaration order, each paired with

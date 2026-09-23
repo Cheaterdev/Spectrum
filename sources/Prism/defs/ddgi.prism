@@ -80,7 +80,7 @@ enum DDGIOcclusionMode
 const DDGI_ProbeCountX = 64;
 const DDGI_ProbeCountY = 32;
 const DDGI_ProbeCountZ = 64;
-const DDGI_ProbeCount = `Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY * Constants::DDGI_ProbeCountZ`;
+const DDGI_ProbeCount = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY * Constants::DDGI_ProbeCountZ;
 
 # Octahedral atlas texel budget per probe. v1 uses the same texel size for
 # radiance/irradiance/visibility for scaffold simplicity -- AC Shadows uses
@@ -98,9 +98,9 @@ const DDGI_ProbeTexelSize = 8;
 # instead keeps both the plane (512x512) and the array count (32*5=160)
 # comfortably within limits. See DDGIProbes' ddgi_atlas_origin()/
 # ddgi_atlas_array_slice() helpers below for the addressing this implies.
-const DDGI_AtlasWidth  = `Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeTexelSize`;
-const DDGI_AtlasHeight = `Constants::DDGI_ProbeCountZ * Constants::DDGI_ProbeTexelSize`;
-const DDGI_AtlasArraySlices = `Constants::DDGI_ProbeCountY * Constants::DDGI_CascadeCount`;
+const DDGI_AtlasWidth  = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeTexelSize;
+const DDGI_AtlasHeight = Constants::DDGI_ProbeCountZ * Constants::DDGI_ProbeTexelSize;
+const DDGI_AtlasArraySlices = Constants::DDGI_ProbeCountY * Constants::DDGI_CascadeCount;
 
 # Fixed ray budget PER PROBE, decoupled from DDGI_ProbeTexelSize -- v1 traced
 # exactly one ray per eventual octahedral output texel (64 = 8x8), which
@@ -126,7 +126,7 @@ const DDGI_ProbeRayCount = 32;
 # upper bound used to size nothing in particular yet -- kept for parity with
 # vsm.prism's MaxDispatchEntries pattern in case a future selection pass needs a
 # GPU-side counted append buffer sized off it.
-const DDGI_MaxProbesPerFrame = `Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY`;
+const DDGI_MaxProbesPerFrame = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY;
 
 # Mirrored once per frame by DDGI::update_frame() (DDGIGraph.cpp), same
 # reasoning as VoxelInfo (voxel.prism): grid_min is the world-space corner of
@@ -511,25 +511,25 @@ ComputePSO DDGIProbeConvolve
 [SetupCondition = DDGISelectors::enabled]
 PassNode DDGIProbeSelect
 {
-	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount] [Optional = data.pass_index == 0]
 	StructuredBuffer<DDGIProbeMetadata> DDGI_Probes;
 
-	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight)`] [ArrayCount = `Constants::DDGI_AtlasArraySlices`] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight)] [ArrayCount = Constants::DDGI_AtlasArraySlices] [Format = R16G16B16A16_FLOAT] [Optional = data.pass_index == 0]
 	Texture DDGI_ProbeIrradiance;
-	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight)`] [ArrayCount = `Constants::DDGI_AtlasArraySlices`] [Format = R16G16_FLOAT] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight)] [ArrayCount = Constants::DDGI_AtlasArraySlices] [Format = R16G16_FLOAT] [Optional = data.pass_index == 0]
 	Texture DDGI_ProbeVisibility;
 
 	# Per-probe-per-cascade residency flag (0/1) -- see
 	# DDGIProbeResidencyMark's own PassNode comment below for what sets it
 	# and why. Same sole-creator reasoning as Irradiance/Visibility above.
-	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount] [Optional = data.pass_index == 0]
 	StructuredBuffer<uint> DDGI_ProbeResidency;
 
 	# One DispatchRaysArguments (raytracing.prism) record per cascade -- the
 	# GPU-driven indirect-DispatchRays args buffer DDGIProbeDispatchArgsBuild
 	# (below) fills and DDGIProbeTrace's own ExecuteIndirect reads. Same
 	# sole-creator reasoning as the other shared buffers above.
-	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = Constants::DDGI_CascadeCount] [Optional = data.pass_index == 0]
 	StructuredBuffer<DispatchRaysArguments> DDGI_DispatchRaysArgs;
 
 	# Stream-compacted list of this cascade's needed probes (dense, from index
@@ -539,9 +539,9 @@ PassNode DDGIProbeSelect
 	# exactly as many rays as there are needed probes instead of the full
 	# fixed atlas size. Worst case (every probe needed) is the same size as
 	# DDGI_ProbeResidency -- same sole-creator reasoning as the buffers above.
-	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount] [Optional = data.pass_index == 0]
 	StructuredBuffer<uint> DDGI_CompactedProbeList;
-	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = Constants::DDGI_CascadeCount] [Optional = data.pass_index == 0]
 	StructuredBuffer<uint> DDGI_CompactedProbeCount;
 
 	# Hit-point-driven marking's one-frame-lagged inbox (see
@@ -557,7 +557,7 @@ PassNode DDGIProbeSelect
 	# same-frame chicken-and-egg (IndirectRTX itself runs AFTER this frame's
 	# DDGIProbeResidencyMark/Trace/Convolve, so its own hits can only ever
 	# affect NEXT frame's residency, never this one's).
-	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount] [Optional = data.pass_index == 0]
 	StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 	# Consecutive frames a currently-resident probe has gone unhit -- lets
@@ -566,7 +566,7 @@ PassNode DDGIProbeSelect
 	# of evicting the instant a single frame's pending bit comes back 0. See
 	# DDGIInfo::flags.w (eviction_grace_frames) and DDGIProbeResidencyMark's
 	# own comment for the exact rule.
-	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount] [Optional = data.pass_index == 0]
 	StructuredBuffer<uint> DDGI_ProbeMissStreak;
 }
 
@@ -741,7 +741,7 @@ PassNode DDGIProbeTrace
 	# own any more (see this PassNode's own comment for why). Sole creator,
 	# same [Optional = pass_index == 0] pattern the old radiance/gbuffer
 	# textures used.
-	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount * Constants::DDGI_ProbeRayCount`] [Optional = data.pass_index == 0]
+	[Always = UnorderedAccess | Static] [Size = Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount * Constants::DDGI_ProbeRayCount] [Optional = data.pass_index == 0]
 	StructuredBuffer<float4> DDGI_ProbeRayRadiance;
 }
 

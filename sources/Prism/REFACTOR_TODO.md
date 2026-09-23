@@ -19,13 +19,13 @@ mistake and the message about it.
 
 ## Status (2026-09-23)
 
-Done: items 1, 2, 4, 10, 9's private-import bug, and most of 3 plus 8's merge
+Done: items 1, 2, 4, 6, 7, 9, 10, and most of 3 plus 8's merge
 collisions. A `.prism` error now prints `file(line,col): error: ...`, exits 1,
 and writes nothing. Verified by regenerating with a byte-identical `autogen/`
 diff, then breaking a `.prism` on purpose in each way below and confirming each
 one is reported.
 
-Open: 3's remaining checks, 5, 6, 7, most of 8, 9's dropped-field bug.
+Open: 3's remaining checks, 5, most of 8.
 
 Also since then: HLSL functions are struct members (`function_definition`,
 lexer token `FUNC_BODY`), taking `[options]`. `[HLSL]` is the default, so
@@ -125,10 +125,14 @@ error messages that say *what* is wrong but not *where*, which in a 14-file
 - that every `Pipeline` entry names an existing `PassNode`
 - that every `RaytraceRaygen`/`RaytracePass` has a `[Bind]` naming a `RaytracePSO`
 - `#` lines in `%{ }%` that aren't preprocessor directives
+- that `[Always]`/`[RecreateFlags]` values are `FrameGraph::ResourceFlags` names
+  and `[Format]` a single `HAL::Format` name. `option_enum` (`Validate.cpp`)
+  reads both enums from the engine source (`FrameGraph.Base.ixx`,
+  `HAL.Format.ixx`), so there is no copy to drift; if an enum can't be found,
+  that is itself an error rather than a silently skipped check. LSP completion
+  offers the same names.
 
-Still open: values of `[Always]`/`[Format]`/`[RecreateFlags]` are not checked
-against `ResourceFlags`/formats (they fail at C++ compile time instead, which
-is loud). Also, `KNOWN_CPP_SCOPES` is empty, because no current condition
+Still open: `KNOWN_CPP_SCOPES` is empty, because no current condition
 names a non-Prism scope. Add to it rather than weakening the check.
 
 Three options are accepted but **read by nothing**, and are marked `unread`
@@ -241,7 +245,37 @@ Not breaking anything today; all of it is latent.
 
 ---
 
-## 6. `[Size]` expressions are still opaque
+## 6. `[Size]` expressions are still opaque — DONE
+
+`[Size]` is now a parsed expression. The grammar gained arithmetic (`+ - * /
+%`) in `cond_op` and a `call` rule whose arguments are expressions. Size
+functions (`tiles`, `area`; `size_functions()` in Validate.cpp) render to
+`Math::DivideByMultiple` / `Math::Area`, which gained vector overloads in
+Core/Math/Types/Vectors.ixx. `[Counted]` replaces the `, true` backtick
+suffix. `render_size_options` renders a multi-term size and records its
+field_refs, which now feed `desc_owners`. All 21 backtick sizes that read
+`frame_size` were migrated. Each old/new pair was checked numerically
+equivalent for every width and height from 1 to 4096, and the generated diff
+touched only those 34 lines. Four `frame_size / 8` sizes (Hi-Z pyramids)
+keep their floor division as written.
+
+Follow-up: `[ArrayCount]` and `[MipCount]` are expressions too, and every
+`[Size]` is rendered as one, single terms included. A single number, literal
+or const, is a square texture: `size_is_scalar` (Main.cpp) replaces the old
+`is_literal` test in `pass.jinja`. `ivec2(w, h)` is a size function for
+non-square sizes. The remaining 22 backtick values, all built from
+`Constants::`, were migrated, so no `[Size]`/`[ArrayCount]`/`[MipCount]` uses
+a backtick any more. Generated output was byte-identical before the
+migration. After it, the only changes are dropped `(size_t)` casts and
+`ivec3(ivec2(N, N), 0)` becoming `ivec3(N, N, 0)`, and RenderSystem builds.
+
+`const` values are expressions too, rendered in Main.cpp before constants.jinja
+pastes them; `check_const_values` (Validate.cpp) allows only consts declared
+earlier. Six backtick consts were migrated with byte-identical output. Two keep
+backticks: `WG_TileSection` (sizeof, `u` suffixes) and `VSM_PyramidMipCount`
+(a lambda).
+
+Original notes:
 
 Conditions are fully structured, so `context_deps.h` can prove the field
 dependencies of every pass's *enable* decision (`deps_complete` is currently
@@ -271,8 +305,20 @@ output is a real difference in meaning rather than whitespace.
 
 ---
 
-## 7. Stale output is never cleaned
+## 7. Stale output is never cleaned — DONE
 
+`my_stream` records every path it writes. After a successful run,
+`remove_stale_outputs` (`Parsed.cpp`) deletes the files under the three
+`autogen/` roots that weren't written, but only those carrying the DO-NOT-EDIT
+banner, and prints each one as `removed stale <path>`. `workdir/shaders`
+itself is not swept. A failed run never reaches the sweep. The first run
+removed 9 orphans (old `GraphInput` slot files from before it became
+`[nobind]`, and `CullingArgsReset`, `DeviceCapabilities`,
+`VSM*InitDispatch`). Four old orphans from before the banner existed stay,
+because they don't carry it: `DenoiserShadow_Fileter.h` (two copies),
+`layout/None.h` and `tables/PSSMGlobal.h` under `workdir/shaders/autogen`.
+
+Original note:
 The generator writes files but never removes ones it no longer produces.
 Deleting a `PassNode` leaves its `autogen/pass/<Name>.h` behind forever; seven
 such orphans accumulated (`CopyPrev.h`, `GBuffer.h`, `RTXPass.h`,
@@ -331,12 +377,12 @@ known-generated directories, and only files carrying the DO-NOT-EDIT banner.
 
 ---
 
-## 9. Confirmed template bugs producing silently-wrong output on valid input
+## 9. Confirmed template bugs producing silently-wrong output on valid input — DONE
 
 Distinct from item 3's "no validation pass" (which is about *rejecting bad
 `.prism` input*): these are cases where the `.prism` input is completely valid and
-the generator still emits incorrect C++, every time, unconditionally. Both
-were hit — repeatedly — implementing the DDGI probe-volume feature.
+the generator still emits incorrect C++, every time, unconditionally. Hit
+repeatedly while implementing the DDGI probe-volume feature.
 
 - **FIXED** in `templates/cpp/autogen.jinja`, which now emits `export import`.
   Confirmed on 2026-09-23 when a regen from current source reproduced the
@@ -358,30 +404,11 @@ were hit — repeatedly — implementing the DDGI probe-volume feature.
   template's unconditional output. Needs a mechanical fix in whichever jinja
   template emits this block (adds `export ` to each `import :Autogen.(PSO|RT|
   RTX).*` line, and a newline before the first one).
-- **A nested (non-`[Bind]`) struct whose only field is a resource type
-  (`StructuredBuffer<T>`/`RWStructuredBuffer<T>`) is silently dropped from
-  the generated struct entirely** — no error, no warning, the field and its
-  accessor simply don't exist in the output. Reproduced with:
-  ```
-  struct DDGIProbes
-  {
-      RWStructuredBuffer<DDGIProbeMetadata> probes;
-      %{ /* helper functions */ }%
-  }
-  ```
-  Adding one plain scalar field *before* the resource field makes it appear
-  correctly — smells like an off-by-one in whatever jinja loop walks a
-  struct's field list (possibly the same family as the list-accumulation
-  bugs [[project_jinja2cpp_issues]] already tracks; worth checking if this is
-  one of the same six). Confirmed by diffing generated output with and
-  without the leading field, on an otherwise-identical `.prism` struct.
 
-Both were found by trial and error during feature work, not by inspecting the
+It was found by trial and error during feature work, not by inspecting the
 templates — a snapshot-based template test suite (generate a small fixture
-`.prism` covering "nested struct, resource-only field" and "PSO import block",
-assert exact output) would have caught both at the time the templates were
-last touched, rather than at the time some unrelated feature happened to
-exercise the exact shape that triggers them.
+`.prism` covering the PSO import block, assert exact output) would have caught
+it at the time the templates were last touched.
 
 ---
 
@@ -431,11 +458,9 @@ named, the same shape item 3 already proposes for name collisions.
 
 ## Suggested order
 
-Items 1, 2, 4, 10 and 9's import bug are done, and most of 3. What remains:
+Items 1, 2, 4, 6, 7, 9 and 10 are done, and most of 3. What remains:
 
-1. **Item 9's dropped-field bug**: find the root cause in the template, and
-   add the fixture-based snapshot test described there.
-2. **Item 7** (clean stale output), together with 8's "N added / M removed /
-   K modified" summary. Both need the same list of paths written in a run.
-3. **Resolve the three `unread` options** listed in item 3.
-4. Items 5, 6 and the rest of 8 as they become relevant.
+1. 8's "N added / M removed / K modified" summary for command-line runs. The
+   written-path set from item 7 is already there to build it from.
+2. **Resolve the three `unread` options** listed in item 3.
+3. Item 5 and the rest of 8 as they become relevant.

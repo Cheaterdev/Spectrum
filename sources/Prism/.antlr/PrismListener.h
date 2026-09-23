@@ -29,6 +29,12 @@ public:
   virtual void enterCond_term(PrismParser::Cond_termContext *ctx) = 0;
   virtual void exitCond_term(PrismParser::Cond_termContext *ctx) = 0;
 
+  virtual void enterCall(PrismParser::CallContext *ctx) = 0;
+  virtual void exitCall(PrismParser::CallContext *ctx) = 0;
+
+  virtual void enterCall_arg(PrismParser::Call_argContext *ctx) = 0;
+  virtual void exitCall_arg(PrismParser::Call_argContext *ctx) = 0;
+
   virtual void enterQualified_ref(PrismParser::Qualified_refContext *ctx) = 0;
   virtual void exitQualified_ref(PrismParser::Qualified_refContext *ctx) = 0;
 

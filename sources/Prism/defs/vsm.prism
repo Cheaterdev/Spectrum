@@ -21,7 +21,7 @@ const MaxLevels = 26;
 # -- generous, not a measured real number. If a scene's mesh count x active
 # level count ever exceeds this, entries are clamped and logged once per
 # episode rather than overflowing the buffer.
-const MaxDispatchEntries = `Constants::MaxLevels * 2048`;
+const MaxDispatchEntries = Constants::MaxLevels * 2048;
 # Fixed page-table shape, shared between VSM.cpp's own page_table setup
 # (VSM::VSM()) and VSM_PageTable/VSM_PageHiZ/VSM_DirtySlots's own [Size=...]
 # below -- same one-source-of-truth reasoning as MaxLevels above.
@@ -868,7 +868,7 @@ PassNode VSM_GatherDispatch
 	# CopyDest. `true` = counted: clear_counter() and exec_indirect()'s
 	# GPU-computed count both read the real counter an AppendStructuredBuffer
 	# needs.
-	[Always = UnorderedAccess | Static] [Size = `(size_t)Constants::MaxDispatchEntries, true`]
+	[Always = UnorderedAccess | Static] [Size = Constants::MaxDispatchEntries] [Counted]
 	StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
 }
 
@@ -881,7 +881,7 @@ PassNode VSM_RenderPages
 	[Always = DepthStencil] Texture VSM_Atlas;
 	# One texel per (level, page) slot -- a VSM_PagesPerLevelSide square per
 	# level, ArrayCount=MaxLevels slices.
-	[Always = CopyDest | Static] [Size = `ivec2(Constants::VSM_PagesPerLevelSide, Constants::VSM_PagesPerLevelSide)`] [Format = R32_UINT] [ArrayCount = `Constants::MaxLevels`]
+	[Always = CopyDest | Static] [Size = Constants::VSM_PagesPerLevelSide] [Format = R32_UINT] [ArrayCount = Constants::MaxLevels]
 	Texture VSM_PageTable;
 	# MaxPages = MaxLevels(26) * MaxPagesPerLevel(16), both constexpr in
 	# VSM.ixx -- a real test of combined [Always = A | B] flags, not just a
@@ -897,7 +897,7 @@ PassNode VSM_RenderPages
 	# max/closest (Phase 5.18 Part A widened the pyramid to two channels).
 	# ArrayCount=VSM_PhysicalPageCount (one Hi-Z pyramid slice per physical
 	# page), MipCount=VSM_PyramidMipCount (full chain down to 1x1).
-	[Always = UnorderedAccess | Static] [Size = `ivec2(Constants::VSM_PageSize, Constants::VSM_PageSize)`] [Format = R32G32_FLOAT] [ArrayCount = `Constants::VSM_PhysicalPageCount`] [MipCount = `Constants::VSM_PyramidMipCount`]
+	[Always = UnorderedAccess | Static] [Size = Constants::VSM_PageSize] [Format = R32G32_FLOAT] [ArrayCount = Constants::VSM_PhysicalPageCount] [MipCount = Constants::VSM_PyramidMipCount]
 	Texture VSM_PageHiZ;
 	[Always = Read] StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
 	# Phase 5.19: read here too (not just by VSM_GatherDispatch that wrote
@@ -936,7 +936,7 @@ PassNode VSM_HiZRebuild
 	# Sized to the whole physical slot budget -- every dirty page occupies a
 	# distinct slot, a hard upper bound on how many entries this can ever
 	# need in one frame.
-	[Always = CopyDest | Static] [Size = `(size_t)Constants::VSM_PhysicalPageCount`]
+	[Always = CopyDest | Static] [Size = Constants::VSM_PhysicalPageCount]
 	StructuredBuffer<uint> VSM_DirtySlots;
 }
 
@@ -971,11 +971,11 @@ PassNode VSM_BlockerClassify
 	# directly, don't scale by a sub-group factor" sizing FrameClassification
 	# uses, just with VSM's own 16x16 tile size instead of VoxelGI's 32x32.
 	# `true` = counted (AppendStructuredBuffer, needs a real GPU counter).
-	[Always = UnorderedAccess] [Size = `2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true`]
+	[Always = UnorderedAccess] [Size = 2 * area(tiles(ViewportContext::frame_size, 16))] [Counted]
 	StructuredBuffer<uint2> VSM_LitTiles;
-	[Always = UnorderedAccess] [Size = `2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true`]
+	[Always = UnorderedAccess] [Size = 2 * area(tiles(ViewportContext::frame_size, 16))] [Counted]
 	StructuredBuffer<uint2> VSM_DarkTiles;
-	[Always = UnorderedAccess] [Size = `2 * (size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true`]
+	[Always = UnorderedAccess] [Size = 2 * area(tiles(ViewportContext::frame_size, 16))] [Counted]
 	StructuredBuffer<uint2> VSM_SearchTiles;
 }
 
@@ -1026,13 +1026,13 @@ PassNode VSM_BlockerSearch
 	# (and VSM_SearchTiles' own, this pass's own indirect dispatch source)
 	# are VSM-owned buffers now, not FrameGraph fields -- see
 	# VSM_BlockerClassify's own comment for why.
-	[Always = UnorderedAccess] [Size = `(size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true`]
+	[Always = UnorderedAccess] [Size = area(tiles(ViewportContext::frame_size, 16))] [Counted]
 	StructuredBuffer<uint2> VSM_ConfirmedLitTiles;
-	[Always = UnorderedAccess] [Size = `(size_t)(((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16) * ((builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)), true`]
+	[Always = UnorderedAccess] [Size = area(tiles(ViewportContext::frame_size, 16))] [Counted]
 	StructuredBuffer<uint2> VSM_BlurTiles;
 	# See VSMSearchVerdictAppend's own comment -- cleared then written here,
 	# read by VSM_ScreenSpaceShadow.
-	[Always = UnorderedAccess] [Size = `ivec2((builder.graph->get_context<Table::ViewportContext>().frame_size.x + 15) / 16, (builder.graph->get_context<Table::ViewportContext>().frame_size.y + 15) / 16)`] [Format = R8_UNORM]
+	[Always = UnorderedAccess] [Size = tiles(ViewportContext::frame_size, 16)] [Format = R8_UNORM]
 	Texture VSM_AmbiguousMask;
 }
 

@@ -112,7 +112,7 @@ public:
 		{
 			if (data.pass_index == 0)
 			{
-			builder.create(data.DDGI_ProbeRayRadiance, { (size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount * Constants::DDGI_ProbeRayCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+			builder.create(data.DDGI_ProbeRayRadiance, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount * Constants::DDGI_ProbeRayCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 			}
 		}
 		// Which chain link each handler field resolved to, one named slot per
@@ -176,7 +176,7 @@ public:
 			builder.load(data.VSM_PageTable, ResourceID::VSM_PageTable, cache.VSM_PageTable);
 			builder.load(data.VSM_PageCameras, ResourceID::VSM_PageCameras, cache.VSM_PageCameras);
 			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeRayRadiance, cache.DDGI_ProbeRayRadiance, { (size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount * Constants::DDGI_ProbeRayCount });
+			builder.create_versioned(data.DDGI_ProbeRayRadiance, cache.DDGI_ProbeRayRadiance, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount * Constants::DDGI_ProbeRayCount });
 			else
 				builder.load(data.DDGI_ProbeRayRadiance, ResourceID::DDGI_ProbeRayRadiance, cache.DDGI_ProbeRayRadiance);
 		}

@@ -31,6 +31,12 @@ public:
   virtual void enterCond_term(PrismParser::Cond_termContext * /*ctx*/) override { }
   virtual void exitCond_term(PrismParser::Cond_termContext * /*ctx*/) override { }
 
+  virtual void enterCall(PrismParser::CallContext * /*ctx*/) override { }
+  virtual void exitCall(PrismParser::CallContext * /*ctx*/) override { }
+
+  virtual void enterCall_arg(PrismParser::Call_argContext * /*ctx*/) override { }
+  virtual void exitCall_arg(PrismParser::Call_argContext * /*ctx*/) override { }
+
   virtual void enterQualified_ref(PrismParser::Qualified_refContext * /*ctx*/) override { }
   virtual void exitQualified_ref(PrismParser::Qualified_refContext * /*ctx*/) override { }
 

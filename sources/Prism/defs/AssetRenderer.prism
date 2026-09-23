@@ -33,9 +33,9 @@ PassNode AssetGBuffer
 	# Static: occlusion pass 1 tests against LAST frame's HiZ (see SceneSystem).
 	# MipCount=0: full auto mip chain (a Hi-Z pyramid), matching the original
 	# manual create()'s omitted 4th Desc field.
-	[Always = DepthStencil | Static] [Size = `builder.graph->get_context<Table::ViewportContext>().frame_size / 8`] [Format = R32_TYPELESS] [MipCount = 0]
+	[Always = DepthStencil | Static] [Size = ViewportContext::frame_size / 8] [Format = R32_TYPELESS] [MipCount = 0]
 	Texture GBuffer_HiZ;
-	[Always = UnorderedAccess] [Size = `builder.graph->get_context<Table::ViewportContext>().frame_size / 8`] [Format = R32_FLOAT] [MipCount = 0]
+	[Always = UnorderedAccess] [Size = ViewportContext::frame_size / 8] [Format = R32_FLOAT] [MipCount = 0]
 	Texture GBuffer_HiZ_UAV;
 	[Always = Read] StructuredBuffer<uint> scene;
 }
