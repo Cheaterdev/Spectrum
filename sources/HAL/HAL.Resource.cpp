@@ -56,6 +56,7 @@ namespace HAL
 			},
 			[&](auto other) {
 				ASSERT(false);
+				std::unreachable();
 			}
 			}, data.desc);
 

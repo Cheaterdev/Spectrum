@@ -579,7 +579,7 @@ namespace FrameGraph
 		// registered by add_passes() before setup, so anything the plan names
 		// must already be here; a miss means the plan does not describe this
 		// frame and replaying it would be wrong.
-		std::map<uint64_t, Pass*> by_ref;
+		std::flat_map<uint64_t, Pass*> by_ref;
 		for (auto& p : builder.passes)
 			by_ref[((uint64_t)p->type_id << 32) | p->pass_index] = p.get();
 
@@ -1119,7 +1119,7 @@ namespace FrameGraph
 		// groups are filled) and BEFORE it is submitted: barrier_point points
 		// into the list's `operations`, which Transitions::on_execute clears as
 		// soon as the list finishes executing on the submit thread.
-		std::map<HAL::CommandList*, Pass*> pass_of_list;
+		std::flat_map<HAL::CommandList*, Pass*> pass_of_list;
 		if constexpr (BuildOptions::Dev)
 			for (auto& pass : builder.enabled_passes)
 				if (pass->context.list)
@@ -1844,14 +1844,14 @@ namespace FrameGraph
 
 		};
 
-		std::map<int, Events> events;
+		std::flat_map<int, Events> events;
 		std::set<ResourceAllocInfo*> non_deleted;
 
 		// Which pass actually writes each resource first (after the active()
 		// fall-forward below). The aliasing validation needs this pass's
 		// sync_state: it is the one that touches recycled memory, and it is NOT
 		// the pass the free-side guard is checked against.
-		std::map<ResourceAllocInfo*, Pass*> creation_pass_of;
+		std::flat_map<ResourceAllocInfo*, Pass*> creation_pass_of;
 
 		for (auto* info : enabled_resources)
 		{

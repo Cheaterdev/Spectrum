@@ -15,6 +15,8 @@
 #include <functional>
 
 #include <map>
+#include <flat_map>
+#include <mdspan>
 #include <unordered_map>
 #include <set>
 #include <unordered_set>

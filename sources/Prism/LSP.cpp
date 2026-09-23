@@ -786,7 +786,7 @@ namespace
 			std::string_view seg = before.substr(open + 1);
 			if (size_t comma = seg.rfind(','); comma != std::string_view::npos)
 				seg = seg.substr(comma + 1);
-			return seg.find('=') == std::string_view::npos && seg.find('{') == std::string_view::npos;
+			return !seg.contains('=') && !seg.contains('{');
 		}
 
 		static bool in_comment(const std::string& text, size_t offset)
@@ -1252,7 +1252,7 @@ namespace
 			{
 				std::string lower = d.name;
 				std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return (char)std::tolower(c); });
-				if (!d.name_loc.line || lower.find(query) == std::string::npos)
+				if (!d.name_loc.line || !lower.contains(query))
 					continue;
 				list += (list.empty() ? "" : ",") + std::format(R"({{"name":"{}","kind":{},"containerName":"{}","location":{}}})",
 					json_escape(d.name), d.kind, d.detail, location_json(d.name_loc, d.name.size()));

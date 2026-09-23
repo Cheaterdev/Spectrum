@@ -89,7 +89,7 @@ namespace HAL
                     save_layout.row_stride,
                     0);
             },
-            [](auto) { ASSERT(false); }
+            [](auto) { ASSERT(false); std::unreachable(); }
         }, srequest.operation);
 
         list->execute_and_wait();

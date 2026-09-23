@@ -88,17 +88,18 @@ namespace HAL
 			for (unsigned int m = 0; m < desc.MipLevels; m++)
 			{
 				int i = HAL::calc_subresource(m, a, 0, desc.MipLevels, desc.ArraySize);
-				tasks.emplace_back(list->get_copy().read_texture(resource, ivec3(0, 0, 0), { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, [desc, &data, a, m](std::span<std::byte> memory,texture_layout layout)
+				tasks.emplace_back(list->get_copy().read_texture(resource, ivec3(0, 0, 0), { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, [&data, a, m](std::span<std::byte> memory,texture_layout layout)
 					{
-						auto c = desc;
+						auto& mip = *data.array[a]->mips[m];
 
-						for (unsigned int z = 0; z < data.array[a]->mips[m]->depth; z++)
-						{
-							for (unsigned int w = 0; w < data.array[a]->mips[m]->num_rows; w++)
-								std::memcpy(data.array[a]->mips[m]->data.data() + w * data.array[a]->mips[m]->width_stride + z * data.array[a]->mips[m]->slice_stride
-									, memory.data() + w * layout.row_stride + z * layout.slice_stride,
-									data.array[a]->mips[m]->width_stride);
-						}
+						using strided = std::layout_stride;
+						const std::dextents<size_t, 3> extents(mip.depth, mip.num_rows, mip.width_stride);
+						std::mdspan dst(mip.data.data(), strided::mapping(extents, std::array<size_t, 3>{ mip.slice_stride, mip.width_stride, 1 }));
+						std::mdspan src(memory.data(), strided::mapping(extents, std::array<size_t, 3>{ layout.slice_stride, layout.row_stride, 1 }));
+
+						for (size_t z = 0; z < extents.extent(0); z++)
+							for (size_t w = 0; w < extents.extent(1); w++)
+								std::copy_n(&src[z, w, 0], extents.extent(2), &dst[z, w, 0]);
 					}));
 			}
 
