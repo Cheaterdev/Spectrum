@@ -404,18 +404,6 @@ struct SelectLocal<T>
 		{
 			slots.clear();
 
-			// TEMP diagnostic (raygen_slots.temp): per-function reflection for this raygen.
-			{
-				std::wofstream tf("raygen_slots.temp", std::ios::app);
-				tf << L"raygen " << Desc::raygen << L" lib_funcs=" << library->blob.functions.size() << L"\n";
-				for (auto& f : library->blob.functions)
-				{
-					tf << L"  fn '" << f.wname << L"' match=" << (f.wname == Desc::raygen) << L" slots=";
-					for (auto s : f.slots.slots_usage) tf << static_cast<int>(s) << L",";
-					tf << L"\n";
-				}
-			}
-
 			for (auto& f : library->blob.functions)
 				if (is_function(f.wname, Desc::raygen))
 				{

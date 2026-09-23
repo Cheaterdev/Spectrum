@@ -37,9 +37,17 @@ struct table_offsets : public std::vector<int>
 	}
 };
 
+struct SourceLocation
+{
+	std::string file;
+	size_t line = 0;
+	size_t column = 0;
+};
+
 struct parsed_type
 {
 	bool debug = false;
+	SourceLocation loc; // for diagnostics only; not serialized, so it cannot reach generated output
 	virtual ~parsed_type() = default;
 };
 
@@ -62,6 +70,7 @@ struct have_name : public virtual parsed_type
 struct have_hlsl		  : public virtual parsed_type
 {
 	std::string hlsl;
+	SourceLocation hlsl_loc; // where the %{ }% block starts; diagnostics only
 
 	SERIALIZE()
 	{

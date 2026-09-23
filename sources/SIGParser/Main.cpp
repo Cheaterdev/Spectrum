@@ -5,6 +5,8 @@ import cereal.json;
 
 #include "Parsed.h"
 #include "Parsing.h"
+#include "Diagnostics.h"
+#include "Validate.h"
 
 static const std::string cpp_path = "../../sources/HAL/autogen";
 static const std::string shaders_path = "../../workdir/shaders";
@@ -251,9 +253,29 @@ static void render_condition_options(Parsed& parsed)
 }
 
 
+// RaytraceRaygen/RaytracePass ::ID must equal the item's position in its
+// RaytracePSO's gens/passes list -- RTX.ixx static_asserts it against the
+// Typelist index. Counting per bound PSO over the merged model is what makes
+// that hold regardless of which .sig file declares the item; a per-file
+// counter gave a raygen in a second file ID 0, colliding with the first one.
+static void assign_rtx_ids(Parsed& parsed)
+{
+	auto assign = [](auto& container)
+	{
+		std::map<std::string, int> next;
+		for (auto& item : container)
+			if (const option* bind = item.find_option("Bind"))
+				item.index = next[bind->value_atom.expr]++;
+	};
+
+	assign(parsed.raytrace_gen);
+	assign(parsed.raytrace_pass);
+}
+
 int main()
 {
 	std::map<std::string, ValuesList> user_lists;
+	int result = 0;
 
 	try
 	{
@@ -286,6 +308,25 @@ int main()
 			parsed.merge(p);
 		});
 
+		auto fail_on_errors = [&]()
+		{
+			if (diagnostics().empty())
+				return false;
+
+			diagnostics().print();
+			std::cout << diagnostics().count() << " error(s); nothing was generated." << std::endl;
+			return true;
+		};
+
+		if (fail_on_errors())
+			return 1;
+
+		validate(parsed);
+
+		if (fail_on_errors())
+			return 1;
+
+		assign_rtx_ids(parsed);
 		parsed.setup();
 
 		// Turns parsed condition terms into the C++ the templates paste, and
@@ -1476,7 +1517,8 @@ int main()
 	catch (std::exception& e)
 	{
 		std::cout << "Error: " << e.what() << std::endl;
+		result = 1;
 	}
 
-	return 0;
+	return result;
 }

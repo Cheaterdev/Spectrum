@@ -8,15 +8,39 @@ import antlr4;
 
 using namespace antlr4;
 #include "Parsing.h"
+#include "Diagnostics.h"
+
+// ANTLR's default listener prints to stderr and then recovers, so a malformed
+// .sig would otherwise yield a half-built model that generates plausible output.
+class CollectingErrorListener : public BaseErrorListener
+{
+	std::string file;
+
+public:
+	explicit CollectingErrorListener(std::string file) : file(std::move(file)) {}
+
+	void syntaxError(Recognizer*, Token*, size_t line, size_t column, const std::string& msg, std::exception_ptr) override
+	{
+		diagnostics().error(SourceLocation{ file, line, column + 1 }, msg);
+	}
+};
 
 class TreeShapeListener : public SIGBaseListener
 {
 public:
 	Parsed& parsed;
+	std::string file;
 
-	TreeShapeListener(Parsed& parsed) : parsed(parsed)
+	TreeShapeListener(Parsed& parsed, std::string file) : parsed(parsed), file(std::move(file))
 	{
+		parsed.loc.file = this->file;
 		setup_elem(parsed);
+	}
+
+	void stamp(antlr4::ParserRuleContext* ctx)
+	{
+		auto* start = ctx->getStart();
+		elems.back().elem->loc = SourceLocation{ file, start->getLine(), start->getCharPositionInLine() + 1 };
 	}
 
 	struct elem_info
@@ -60,34 +84,44 @@ public:
 		elems.pop_back();
 	}
 
-		template <class T>
+	template <class T>
 	bool check()
 	{
-		parsed_type* e = elems.back().elem;
-		return !!dynamic_cast<T*>(e);
+		return find_elem<T>() != nullptr;
 	}
+
+	// For traits that are genuinely optional at a given rule (e.g. an RTV has a
+	// type but no options).
+	template <class T>
+	T* find_elem()
+	{
+		return dynamic_cast<T*>(elems.back().elem);
+	}
+
+	// Only the top of the stack is inspected, deliberately: silently attaching a
+	// leaf to some ancestor that happens to have the trait would be a quieter
+	// version of the same bug. A grammar change that breaks the nesting a leaf
+	// listener relies on fails here, naming the trait and the location.
 	template <class T>
 	T& get_elem()
 	{
-		parsed_type* e = elems.back().elem;
-		return *dynamic_cast<T*>(e);
-	}
+		if (T* e = find_elem<T>())
+			return *e;
 
-	template <class T>
-	T& get_parent()
-	{
-		auto last = std::prev(elems.end());
-		auto prelast = std::prev(last);
-
-		parsed_type* e = (*prelast).elem;
-		return *dynamic_cast<T*>(e);
+		const auto& loc = elems.back().elem->loc;
+		throw std::logic_error(std::format("{}({},{}): internal: element on top of the parse stack is not a {}",
+			loc.file, loc.line, loc.column, typeid(T).name()));
 	}
 
 #define GENERATE(x) \
 	virtual void exit##x##(SIGParser::##x##Context * ctx) override { \
 		end_elem();\
 	}\
-	virtual void enter##x##(SIGParser::##x##Context* ctx) override
+	virtual void enter##x##(SIGParser::##x##Context* ctx) override { \
+		enter_body_##x(ctx);\
+		stamp(ctx);\
+	}\
+	void enter_body_##x(SIGParser::##x##Context* ctx)
 
 
 #define EXIT(x) \
@@ -180,6 +214,7 @@ public:
 	ENTER(Node_output_decl)
 	{
 		setup_list(get_elem<WorkgraphNode>().outputs);
+		stamp(ctx);
 	}
 
 	EXIT(Node_output_decl)
@@ -196,20 +231,15 @@ public:
 	}
 
 
+	// index is assigned after all files are merged (assign_rtx_ids in Main.cpp).
 	GENERATE(Rtx_pass_definition)
 	{
-		auto index = get_elem<Parsed>().raytrace_pass.size();
-		auto& rtx = setup_map(get_elem<Parsed>().raytrace_pass);
-
-		rtx.index = index;
+		setup_map(get_elem<Parsed>().raytrace_pass);
 	}
 
 	GENERATE(Rtx_raygen_definition)
 	{
-		auto index = get_elem<Parsed>().raytrace_gen.size();
-		auto& rtx = setup_map(get_elem<Parsed>().raytrace_gen);
-
-		rtx.index = index;
+		setup_map(get_elem<Parsed>().raytrace_gen);
 	}
 
 
@@ -321,9 +351,6 @@ public:
 
 	void enterType_id(SIGParser::Type_idContext* ctx) override
 	{
-		auto& elem = get_elem<have_type>();
-		auto& options = get_elem<have_options>();
-
 		//elem.type = ctx->children[0]->getText();
 		//	elem.detect_type(&options);
 	}
@@ -339,10 +366,9 @@ public:
 	void enterClass_no_template(SIGParser::Class_no_templateContext* ctx) override
 	{
 		auto& elem = get_elem<have_type>();
-		auto& options = get_elem<have_options>();
 
 		elem.class_no_template = ctx->children[0]->getText();
-		elem.detect_type(&options);
+		elem.detect_type(find_elem<have_options>());
 	}
 
 	void enterOwner_id(SIGParser::Owner_idContext* ctx) override
@@ -359,9 +385,7 @@ public:
 			elem.template_arg += ' ';
 		elem.template_arg += ctx->children[0]->getText();
 
-
-		auto& options = get_elem<have_options>();
-		elem.detect_type(&options);
+		elem.detect_type(find_elem<have_options>());
 	}
 
 	void enterValue_id(SIGParser::Value_idContext* ctx) override
@@ -422,19 +446,17 @@ public:
 	void enterPso_param_id(SIGParser::Pso_param_idContext* ctx) override
 	{
 		auto& elem = get_elem<have_type>();
-		auto& options = get_elem<have_options>();
 
 		elem.class_no_template = ctx->children[0]->getText();
-		elem.detect_type(&options);
+		elem.detect_type(find_elem<have_options>());
 	}
 
 	void enterNode_param_id(SIGParser::Node_param_idContext* ctx) override
 	{
 		auto& elem = get_elem<have_type>();
-		auto& options = get_elem<have_options>();
 
 		elem.class_no_template = ctx->children[0]->getText();
-		elem.detect_type(&options);
+		elem.detect_type(find_elem<have_options>());
 	}
 
 	void enterArray(SIGParser::ArrayContext* ctx) override
@@ -456,10 +478,7 @@ public:
 			auto& elem = get_elem<have_type>();
 			elem.pointer = true;
 
-
-			auto& options = get_elem<have_options>();
-
-			elem.detect_type(&options);
+			elem.detect_type(find_elem<have_options>());
 		}
 	}
 
@@ -476,8 +495,7 @@ public:
 
 		{
 			auto& elem = get_elem<have_type>();
-			auto& options = get_elem<have_options>();
-			elem.detect_type(&options);
+			elem.detect_type(find_elem<have_options>());
 		}
 	}
 
@@ -487,20 +505,14 @@ public:
 		auto str = ctx->children[0]->getText();
 		auto& elem = get_elem<have_hlsl>();
 		elem.hlsl = str.substr(2, str.size() - 4);
+		elem.hlsl_loc = SourceLocation{ file, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine() + 1 };
 	}
 
 
 	void enterShader_type(SIGParser::Shader_typeContext* ctx) override
 	{
-		auto str = ctx->children[0]->getText();
-		if(check<Shader>())
-		{
-						 auto& shader = get_elem<Shader>();
-		auto& pso = get_parent<PSO>();
-
-		shader.name = str;
-		}
-		
+		if (auto* shader = find_elem<Shader>())
+			shader->name = ctx->children[0]->getText();
 	}
 };
 
@@ -508,22 +520,40 @@ Parsed parse(std::wstring filename)
 {
 	std::wcout << ((filename + L"\n")) << std::endl;
 	Parsed parsed;
+	std::string file = std::filesystem::absolute(filename).string();
 	{
 		std::ifstream stream;
 		stream.open(filename);
 
 		if (!stream.is_open())
+		{
+			diagnostics().error(SourceLocation{ file }, "cannot open file");
 			return parsed;
+		}
+
+		CollectingErrorListener errors(file);
 
 		ANTLRInputStream input(stream);
 		SIGLexer lexer(&input);
+		lexer.removeErrorListeners();
+		lexer.addErrorListener(&errors);
+
 		CommonTokenStream tokens(&lexer);
 		SIGParser parser(&tokens);
-		SIGParser::ParseContext* tree = parser.parse();
-		TreeShapeListener listener(parsed);
-		antlr4::tree::ParseTreeWalker walker;
+		parser.removeErrorListeners();
+		parser.addErrorListener(&errors);
 
-		walker.walk(&listener, tree);
+		SIGParser::ParseContext* tree = parser.parse();
+
+		// Walking an error-recovered tree only builds a misleading partial model
+		// for the validator to complain about; the syntax errors are the report.
+		if (lexer.getNumberOfSyntaxErrors() == 0 && parser.getNumberOfSyntaxErrors() == 0)
+		{
+			TreeShapeListener listener(parsed, file);
+			antlr4::tree::ParseTreeWalker walker;
+
+			walker.walk(&listener, tree);
+		}
 
 		stream.close();
 	}

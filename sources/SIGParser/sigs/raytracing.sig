@@ -388,12 +388,10 @@ RaytraceRaygen ColorRTX
 }
 
 # DDGI probe-volume trace raygen (ddgi.sig, see [[project-ddgi]] planning
-# notes) -- declared here rather than in ddgi.sig itself: RaytraceRaygen::ID
-# is assigned per-.sig-file by the generator, not globally, so a raygen
-# declared in a separate file collides with an existing ID (confirmed the
-# hard way: DDGIProbeTrace and Shadow both got ID=0, which fails RTX.ixx's
-# dispatch<T> static_assert for every RTX pass, not just this one). Keep any
-# future raygen in this same file for the same reason.
+# notes). Declared here for historical reasons: RaytraceRaygen::ID used to be
+# assigned per .sig file, so a raygen in another file collided with Shadow's
+# ID 0. IDs are now assigned per bound RaytracePSO after all files are merged
+# (assign_rtx_ids in Main.cpp), so a raygen can live in any file.
 [Bind = MainRTX]
 RaytraceRaygen DDGIProbeTrace
 {

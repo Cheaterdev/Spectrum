@@ -17,6 +17,18 @@ mistake and the message about it.
 
 ---
 
+## Status (2026-09-23)
+
+Done: items 1, 2, 4, 10, 9's private-import bug, and most of 3 plus 8's merge
+collisions. A `.sig` error now prints `file(line,col): error: ...`, exits 1,
+and writes nothing. Verified by regenerating with a byte-identical `autogen/`
+diff, then breaking a `.sig` on purpose in each way below and confirming each
+one is reported.
+
+Open: 3's remaining checks, 5, 6, 7, most of 8, 9's dropped-field bug.
+
+---
+
 ## 0. Where things are
 
 | Concern | Location |
@@ -29,10 +41,21 @@ mistake and the message about it.
 | Multi-file merge | `Main.cpp:250` → `Parsed::merge` (`Parsed.h:977`) |
 | Condition rendering | `Main.cpp:137` (`render_expr`) |
 | Codegen entry | `Main.cpp` (`main`), templates in `templates/` |
+| Diagnostics | `Diagnostics.h` (`diagnostics()`) |
+| Validation pass | `Validate.cpp` (`validate()`, `KNOWN_OPTIONS`) |
 
 ---
 
-## 1. Syntax errors are not detected (highest value)
+## 1. Syntax errors are not detected (highest value) — DONE
+
+`parse()` installs `CollectingErrorListener` on the lexer and parser, skips the
+tree walk for a file with syntax errors, and `main()` stops before
+`parsed.setup()` if any were recorded. `main()` now returns 1 on any error,
+including an exception during codegen. That last case can still leave a
+partial write, because files are emitted one at a time as each `my_stream` is
+destroyed.
+
+Original notes:
 
 `parse()` (`Parsing.cpp:507`) installs no error listener and never checks
 `parser.getNumberOfSyntaxErrors()`. ANTLR's default listener prints to stderr
@@ -58,7 +81,13 @@ seriously.
 
 ---
 
-## 2. No source locations
+## 2. No source locations — DONE
+
+`parsed_type::loc` (file/line/column) is stamped by every `GENERATE` rule via
+`TreeShapeListener::stamp()`. `have_hlsl::hlsl_loc` records where a `%{ }%`
+block starts. Neither is serialized, so neither can reach generated output.
+
+Original notes:
 
 `getLine()` / `getCharPositionInLine()` appear nowhere in `Parsing.cpp`. ANTLR
 hands these out for free on every token and they are discarded.
@@ -75,7 +104,33 @@ error messages that say *what* is wrong but not *where*, which in a 14-file
 
 ---
 
-## 3. No validation / resolve pass
+## 3. No validation / resolve pass — MOSTLY DONE
+
+`validate()` runs after the merge and before `parsed.setup()`. It checks:
+
+- option names against a per-declaration-kind whitelist (`KNOWN_OPTIONS`)
+- in `[SetupCondition]`/`[RenderCondition]`/`[Optional]`: that `Owner::x`
+  names a real struct field (parents included) or enum value, that
+  `data.x` is a field of the pass (or the implicit `pass_index` of a
+  `[Multiple]` pass), and that `exists(x)` names a field of the pass
+- that `[Size = Owner::field]` names a real struct field
+- that the leaves in `[Write = {...}]` on a view-typed field exist in that view
+- that every `Pipeline` entry names an existing `PassNode`
+- that every `RaytraceRaygen`/`RaytracePass` has a `[Bind]` naming a `RaytracePSO`
+- `#` lines in `%{ }%` that aren't preprocessor directives
+
+Still open: values of `[Always]`/`[Format]`/`[RecreateFlags]` are not checked
+against `ResourceFlags`/formats (they fail at C++ compile time instead, which
+is loud). Also, `KNOWN_CPP_SCOPES` is empty, because no current condition
+names a non-SIG scope. Add to it rather than weakening the check.
+
+Three options are accepted but **read by nothing**, and are marked `unread`
+in `KNOWN_OPTIONS`: `[Base]` on GraphicsPSO (`scene.sig`), `nullable` on
+defines (`meshrender.sig`, `scene.sig`, `voxel.sig`), and `[Write]` on struct
+fields (`vsm.sig`). Either give them a consumer or delete them from the
+`.sig` files and the whitelist.
+
+Original notes:
 
 Nothing checks that names resolve. Concrete holes, all currently silent:
 
@@ -114,7 +169,17 @@ part of this, and catches the misspelling case above.
 
 ---
 
-## 4. `get_elem<T>()` relies on an unwritten invariant
+## 4. `get_elem<T>()` relies on an unwritten invariant — DONE
+
+`get_elem<T>()` throws, naming the trait and location, when the top of the
+stack lacks `T`. It still inspects only the top: walking up would attach a
+leaf to the wrong ancestor silently, which is a quieter form of the same bug.
+Sites where the trait is genuinely optional (`have_options` for
+`detect_type`, since an RTV has a type but no options) use `find_elem<T>()`,
+which returns a pointer. Before this change they relied on binding a
+reference to a null `dynamic_cast` result.
+
+Original notes:
 
 ```cpp
 template <class T> T& get_elem()
@@ -218,7 +283,9 @@ known-generated directories, and only files carrying the DO-NOT-EDIT banner.
 
 ## 8. Smaller items
 
-- **`Parsed::merge` (`Parsed.h:977`) does not detect collisions.** It is a plain
+- **DONE:** `validate()` reports duplicate names per top-level container (and
+  per pipeline's entries), naming both locations. Original note:
+  **`Parsed::merge` (`Parsed.h:977`) does not detect collisions.** It is a plain
   `container.splice` (`my_container::merge`, `Parsed.h:170`), and `find()`
   returns the *first* match — so two `.sig` files declaring the same struct or
   pass name both end up in the list and the winner is decided by directory
@@ -264,7 +331,10 @@ Distinct from item 3's "no validation pass" (which is about *rejecting bad
 the generator still emits incorrect C++, every time, unconditionally. Both
 were hit — repeatedly — implementing the DDGI probe-volume feature.
 
-- **`autogen.ixx`'s PSO/RT/RTX partition imports come out `import`, not
+- **FIXED** in `templates/cpp/autogen.jinja`, which now emits `export import`.
+  Confirmed on 2026-09-23 when a regen from current source reproduced the
+  committed `autogen/` byte for byte. Original note:
+  **`autogen.ixx`'s PSO/RT/RTX partition imports come out `import`, not
   `export import`, with the preceding comment's newline fused into the first
   import statement.** Concretely:
   ```cpp
@@ -308,7 +378,16 @@ exercise the exact shape that triggers them.
 
 ---
 
-## 10. Cross-file name/ID assignment scope is inconsistent and undocumented
+## 10. Cross-file name/ID assignment scope is inconsistent and undocumented — DONE
+
+`assign_rtx_ids()` (`Main.cpp`) numbers `RaytraceRaygen`/`RaytracePass` per
+bound `RaytracePSO` over the merged model, which is exactly the Typelist index
+that `RTX.ixx` static_asserts against. Verified by moving `DDGIProbeTrace`
+into `ddgi.sig`: its Typelist position and ID both became 0, and every other
+raygen shifted consistently. The raygens are still all in `raytracing.sig`,
+but they no longer need to be.
+
+Original notes:
 
 Related to item 8's `Parsed::merge` collision note, but a distinct failure
 shape: not two declarations sharing one *name*, but two declarations getting
@@ -345,23 +424,11 @@ named, the same shape item 3 already proposes for name collisions.
 
 ## Suggested order
 
-1. **Item 9's private-import bug** — fix first, ahead of everything else
-   below. It is not latent or occasional: it reproduced on every single regen
-   in a real session (15+ times) and breaks the build unconditionally.
-   Smallest, most mechanical fix in this entire document relative to how much
-   time it has already cost.
-2. **Item 1** (error listener + fail the run) — ten lines, removes the worst
-   failure shape.
-3. **Item 2** (source locations) — unblocks all diagnostics.
-4. **Item 3** (validate pass), starting with the option-name whitelist, which
-   catches the one class of mistake that can change rendering with no compile
-   error. Fold in the `%{ }%`-block `#`-comment check and item 9's dropped-
-   field bug (as a self-consistency check: every declared field should have a
-   corresponding accessor in the generated output) while this is being built.
-5. **Item 4** (`get_elem` assert) — one line, prevents the next contributor
-   from hitting a null deref.
-6. **Item 10** (cross-file ID scoping) — real, but narrower blast radius than
-   1–4; do once the validation pass exists, since detecting the collision is
-   the pragmatic fix even if the ID-assignment algorithm itself doesn't
-   change.
-7. Items 5–8 as they become relevant.
+Items 1, 2, 4, 10 and 9's import bug are done, and most of 3. What remains:
+
+1. **Item 9's dropped-field bug**: find the root cause in the template, and
+   add the fixture-based snapshot test described there.
+2. **Item 7** (clean stale output), together with 8's "N added / M removed /
+   K modified" summary. Both need the same list of paths written in a run.
+3. **Resolve the three `unread` options** listed in item 3.
+4. Items 5, 6 and the rest of 8 as they become relevant.
