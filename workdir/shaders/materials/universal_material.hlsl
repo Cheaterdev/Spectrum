@@ -3,6 +3,7 @@
 #include "autogen/FrameInfo.h"
 #include "autogen/MaterialInfo.h"
 #include "autogen/SceneData.h"
+#include "autogen/MeshInfo.h"
 #include "autogen/rt/GBuffer.h"
 
 static const Camera camera = GetFrameInfo().GetCamera();
@@ -68,6 +69,7 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
 	   
     // Cancels the jitter baked into cur_p/prev_p, so motion stays unjittered.
     result.motion = -(cur_p - prev_p)+ float2(1, -1) * (camera.jitter - prev_camera.jitter);
+    result.object_id = GetMeshInfo().GetObject_id();
     return result;       
 }    
 

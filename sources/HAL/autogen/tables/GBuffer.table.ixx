@@ -21,11 +21,13 @@ export namespace Table
 		HLSL::Texture2D<float4> normals;
 		HLSL::Texture2D<float4> specular;
 		HLSL::Texture2D<float2> motion;
+		HLSL::Texture2D<uint> object_id;
 		HLSL::Texture2D<float> depth;
 		HLSL::Texture2D<float4>& GetAlbedo() { return albedo; }
 		HLSL::Texture2D<float4>& GetNormals() { return normals; }
 		HLSL::Texture2D<float4>& GetSpecular() { return specular; }
 		HLSL::Texture2D<float2>& GetMotion() { return motion; }
+		HLSL::Texture2D<uint>& GetObject_id() { return object_id; }
 		HLSL::Texture2D<float>& GetDepth() { return depth; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
@@ -35,6 +37,7 @@ export namespace Table
 			compiler.compile(normals, "GBuffer::normals");
 			compiler.compile(specular, "GBuffer::specular");
 			compiler.compile(motion, "GBuffer::motion");
+			compiler.compile(object_id, "GBuffer::object_id");
 			compiler.compile(depth, "GBuffer::depth");
 		}
 		struct Compiled
@@ -43,6 +46,7 @@ export namespace Table
 			uint normals; // RenderTarget<float4>
 			uint specular; // RenderTarget<float4>
 			uint motion; // RenderTarget<float2>
+			uint object_id; // RenderTarget<uint>
 			uint depth; // DepthStencil<float>
 
 			

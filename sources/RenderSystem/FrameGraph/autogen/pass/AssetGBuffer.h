@@ -34,6 +34,9 @@ public:
 		Handlers::Texture GBuffer_Speed = ResourceID::GBuffer_Speed;
 
 
+		Handlers::Texture GBuffer_ObjectID = ResourceID::GBuffer_ObjectID;
+
+
 		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
 
 
@@ -85,6 +88,7 @@ public:
 			builder.create(data.GBuffer_Depth, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil);
 			builder.create(data.GBuffer_Specular, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
 			builder.create(data.GBuffer_Speed, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
+			builder.create(data.GBuffer_ObjectID, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32_UINT, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
 			builder.create(data.GBuffer_DepthMips, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::RenderTarget);
 			builder.create(data.GBuffer_HiZ, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size / 8, 0), HAL::Format::R32_TYPELESS, 1, 0 }, FrameGraph::ResourceFlags::DepthStencil | FrameGraph::ResourceFlags::Static);
 			builder.create(data.GBuffer_HiZ_UAV, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size / 8, 0), HAL::Format::R32_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess);
@@ -101,6 +105,7 @@ public:
 			FrameGraph::ChainIndex GBuffer_Depth = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex GBuffer_Specular = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex GBuffer_Speed = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex GBuffer_ObjectID = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex GBuffer_HiZ = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex GBuffer_HiZ_UAV = FrameGraph::ChainIndex::Unresolved;
@@ -114,6 +119,7 @@ public:
 			cache.GBuffer_Depth = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Depth, ResourceID::GBuffer_Depth);
 			cache.GBuffer_Specular = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Specular, ResourceID::GBuffer_Specular);
 			cache.GBuffer_Speed = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Speed, ResourceID::GBuffer_Speed);
+			cache.GBuffer_ObjectID = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_ObjectID, ResourceID::GBuffer_ObjectID);
 			cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
 			cache.GBuffer_HiZ = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_HiZ, ResourceID::GBuffer_HiZ);
 			cache.GBuffer_HiZ_UAV = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_HiZ_UAV, ResourceID::GBuffer_HiZ_UAV);
@@ -134,6 +140,7 @@ public:
 			builder.create_versioned(data.GBuffer_Depth, cache.GBuffer_Depth, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32_TYPELESS, 1, 1 });
 			builder.create_versioned(data.GBuffer_Specular, cache.GBuffer_Specular, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 });
 			builder.create_versioned(data.GBuffer_Speed, cache.GBuffer_Speed, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R16G16_FLOAT, 1, 1 });
+			builder.create_versioned(data.GBuffer_ObjectID, cache.GBuffer_ObjectID, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32_UINT, 1, 1 });
 			builder.create_versioned(data.GBuffer_DepthMips, cache.GBuffer_DepthMips, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R32_TYPELESS, 1, 1 });
 			builder.create_versioned(data.GBuffer_HiZ, cache.GBuffer_HiZ, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size / 8, 0), HAL::Format::R32_TYPELESS, 1, 0 });
 			builder.create_versioned(data.GBuffer_HiZ_UAV, cache.GBuffer_HiZ_UAV, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size / 8, 0), HAL::Format::R32_FLOAT, 1, 0 });
@@ -149,6 +156,7 @@ public:
 			{ ResourceID::GBuffer_Depth, true },
 			{ ResourceID::GBuffer_Specular, true },
 			{ ResourceID::GBuffer_Speed, true },
+			{ ResourceID::GBuffer_ObjectID, true },
 			{ ResourceID::GBuffer_DepthMips, true },
 			{ ResourceID::GBuffer_HiZ, true },
 			{ ResourceID::GBuffer_HiZ_UAV, true },

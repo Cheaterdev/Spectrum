@@ -21,6 +21,7 @@ struct GBuffer
 	RenderTarget<float4> normals;
 	RenderTarget<float4> specular;
 	RenderTarget<float2> motion;
+	RenderTarget<uint> object_id;
 
 	DepthStencil<float> depth;
 }
@@ -44,7 +45,7 @@ GraphicsPSO GBufferDraw
 	[AS, nullable]
 	define HiZOcclusion;
 
-	rtv = { R8G8B8A8_UNORM, R8G8B8A8_UNORM, R8G8B8A8_UNORM, R16G16_FLOAT };
+	rtv = { R8G8B8A8_UNORM, R8G8B8A8_UNORM, R8G8B8A8_UNORM, R16G16_FLOAT, R32_UINT };
 
 	ds = D32_FLOAT;
 	cull = None;
@@ -153,6 +154,7 @@ PassNode Scene
 	[Always = DepthStencil] [Size = ViewportContext::frame_size] [Format = R32_TYPELESS] Texture GBuffer_Depth;
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Specular;
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16_FLOAT] Texture GBuffer_Speed;
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R32_UINT] Texture GBuffer_ObjectID;
 	[Always = UnorderedAccess | RenderTarget] [Size = ViewportContext::frame_size] [Format = R32_TYPELESS] Texture GBuffer_DepthMips;
 	[Always = DepthStencil] [Size = ViewportContext::frame_size] [Format = D24_UNORM_S8_UINT] Texture GBuffer_Quality;
 	[PrevFor = GBuffer_Normals] [Write] Texture GBuffer_NormalsPrev;

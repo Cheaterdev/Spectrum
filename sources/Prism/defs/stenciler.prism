@@ -2,7 +2,8 @@
 struct Countour
 {
 	float4 color;
-	Texture2D<float4> tex;
+	Texture2D<uint> object_ids;
+	uint selected_id;
 }
 
 [Bind = DefaultLayout::Instance5]
@@ -11,10 +12,14 @@ struct DrawStencil
 	StructuredBuffer<float4> vertices;
 }
 
+# Gizmo picking: every gizmo pixel under mouse_pos InterlockedMax()es a key
+# of (depth bits | handle id) into viewBuffer[0], so the nearest handle wins
+# without a depth buffer. See gizmo_pick() in postprocess/gizmo_pick.hlsl.
 [Bind = DefaultLayout::Instance0]
 struct PickerBuffer
 {
 	RWStructuredBuffer<uint> viewBuffer;
+	uint2 mouse_pos;
 }
 
 [Bind = DefaultLayout::Instance3]
@@ -31,54 +36,6 @@ struct Color
 }
 
 
-
-
-GraphicsPSO DrawStencil
-{
-	root = DefaultLayout;
-
-	[EntryPoint = VS]
-	mesh = "gbuffer/mesh_shader.hlsl";
-
-	[EntryPoint = AS]
-	amplification = "gbuffer/mesh_shader.hlsl";
-
-	[EntryPoint = PS]
-	pixel = "postprocess/stencil.hlsl";
-
-	ds = D32_FLOAT;
-	cull = None;
-	depth_func = GREATER;
-}
-
-
-
-
-GraphicsPSO DrawSelected
-{
-	root = DefaultLayout;
-
-	[EntryPoint = VS]
-	mesh = "gbuffer/mesh_shader.hlsl";
-
-	[EntryPoint = AS]
-	amplification = "gbuffer/mesh_shader.hlsl";
-
-	[EntryPoint = PS_RESULT]
-	pixel = "postprocess/stencil.hlsl";
-	
-	
-
-	rtv = { R8_SNORM };
-
-	enable_depth = false;
-	cull = None;
-	depth_func = ALWAYS;
-}
-
-
-
-
 GraphicsPSO DrawBox
 {
 	root = DefaultLayout;
@@ -88,7 +45,7 @@ GraphicsPSO DrawBox
 
 	[EntryPoint = PS]
 	pixel = "postprocess/triangle_stencil.hlsl";
-	
+
 	enable_depth = false;
 	cull = None;
 
@@ -111,7 +68,7 @@ GraphicsPSO DrawAxis
 
 	[EntryPoint = PS_COLOR]
 	pixel = "postprocess/stencil.hlsl";
-	
+
 	enable_depth = false;
 	cull = None;
 
@@ -136,22 +93,6 @@ GraphicsPSO DrawRing
 }
 
 
-GraphicsPSO DrawRingPick
-{
-	root = DefaultLayout;
-
-	[EntryPoint = VS]
-	vertex = "postprocess/ring.hlsl";
-
-	[EntryPoint = PS]
-	pixel = "postprocess/ring.hlsl";
-
-	ds = D32_FLOAT;
-	cull = None;
-	depth_func = GREATER;
-}
-
-
 GraphicsPSO StencilerLast
 {
 	root = DefaultLayout;
@@ -161,7 +102,7 @@ GraphicsPSO StencilerLast
 
 	[EntryPoint = PS]
 	pixel = "postprocess/contour.hlsl";
-	
+
 	enable_depth = false;
 	cull = None;
 
@@ -169,30 +110,15 @@ GraphicsPSO StencilerLast
 	blend = { Additive };
 }
 
-# Mirrors stencil_renderer::selected.empty() -- written once per frame by
-# stencil_renderer::update_frame() (StencilRenderer.cpp), which also does the
-# camera/gizmo work that used to live in stencil_renderer_before's setup().
-struct StencilState
-{
-	bool has_selection = false;
-}
-
+# Scene picking reads GBuffer_ObjectID (written by the GBuffer pass, see
+# MeshInfo::object_id) back under the mouse; the selection outline is an
+# edge-detect on the same texture. Gizmo handles are drawn on top and pick
+# themselves through PickerBuffer.
 [Required]
 [RunAlways]
-PassNode stencil_renderer_before
+PassNode stencil_renderer
 {
-	# 1x1: this pass renders the picking gizmos into a throwaway depth
-	# buffer -- only the stencil/color outputs (stencil_renderer_after)
-	# matter, depth here exists purely to satisfy the graphics pipeline.
-	[Always = DepthStencil] [Size = 1] [Format = R32_TYPELESS] Texture depth_tex;
-
-	[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> id_buffer;
-	[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> axis_id_buffer;
-}
-
-[SetupCondition = StencilState::has_selection]
-PassNode stencil_renderer_after
-{
+	[Always = Read] Texture GBuffer_ObjectID;
 	[Always = RenderTarget] Texture ResultTexture;
-	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8_SNORM] Texture Stencil_color_tex;
+	[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> axis_id_buffer;
 }

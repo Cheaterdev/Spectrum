@@ -9,6 +9,8 @@
 #include "enums.h"
 struct PickerBuffer
 {
+	uint2 mouse_pos; // uint2
 	uint viewBuffer; // RWStructuredBuffer<uint>
+	uint2 GetMouse_pos() { return mouse_pos; }
 	RWStructuredBuffer<uint> GetViewBuffer() { return ResourceDescriptorHeap[viewBuffer]; }
 };

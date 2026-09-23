@@ -21,11 +21,13 @@ export namespace RT
 		HLSL::RenderTarget<float4> normals;
 		HLSL::RenderTarget<float4> specular;
 		HLSL::RenderTarget<float2> motion;
+		HLSL::RenderTarget<uint> object_id;
 		HLSL::DepthStencil<float> depth;
 		HLSL::RenderTarget<float4>& GetAlbedo() { return albedo; }
 		HLSL::RenderTarget<float4>& GetNormals() { return normals; }
 		HLSL::RenderTarget<float4>& GetSpecular() { return specular; }
 		HLSL::RenderTarget<float2>& GetMotion() { return motion; }
+		HLSL::RenderTarget<uint>& GetObject_Id() { return object_id; }
 		HLSL::DepthStencil<float>& GetDepth() { return depth; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -34,6 +36,7 @@ export namespace RT
 			compiler.compile(normals);
 			compiler.compile(specular);
 			compiler.compile(motion);
+			compiler.compile(object_id);
 			compiler.compile(depth);
 		}
 	};

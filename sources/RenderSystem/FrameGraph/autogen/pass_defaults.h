@@ -681,24 +681,13 @@ struct PassSetupDefault<Passes::SMAA>
 
 
 template<>
-struct PassSetupDefault<Passes::stencil_renderer_before>
+struct PassSetupDefault<Passes::stencil_renderer>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::stencil_renderer_before::Context& data, FrameGraph::TaskBuilder& builder);
-};
-
-
-template<>
-struct PassSetupDefault<Passes::stencil_renderer_after>
-{
-	static constexpr bool enabled = true;
-
-	// Generated from this pass's [RunAlways]/[SetupCondition]/
-	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::stencil_renderer_after::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::stencil_renderer::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 

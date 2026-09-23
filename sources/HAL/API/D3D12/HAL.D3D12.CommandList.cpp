@@ -451,7 +451,10 @@ namespace HAL
             dest.PlacedFootprint.Footprint.Depth   = box.z;
             dest.PlacedFootprint.Footprint.RowPitch = static_cast<UINT>(layout.row_stride);
             dest.PlacedFootprint.Footprint.Format  = ::to_native(layout.format.to_srv());
-            m_commandList->CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
+
+            D3D12_BOX src_box = { (UINT)offset.x, (UINT)offset.y, (UINT)offset.z,
+                                  (UINT)(offset.x + box.x), (UINT)(offset.y + box.y), (UINT)(offset.z + box.z) };
+            m_commandList->CopyTextureRegion(&dest, 0, 0, 0, &source, &src_box);
         }
 
         void CommandList::dispatch_rays(uint hit_size, uint miss_size, uint raygen_sige, ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)

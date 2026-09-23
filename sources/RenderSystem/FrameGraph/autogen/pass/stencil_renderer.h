@@ -12,17 +12,20 @@ using namespace FrameGraph;
 namespace Passes
 {
 
-class stencil_renderer_after : public PassNodeBase
+class stencil_renderer : public PassNodeBase
 {
 public:
 	struct Context
 	{
 
 
+		Handlers::Texture GBuffer_ObjectID = ResourceID::GBuffer_ObjectID;
+
+
 		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 
-		Handlers::Texture Stencil_color_tex = ResourceID::Stencil_color_tex;
+		Handlers::StructuredBuffer<UINT> axis_id_buffer = ResourceID::axis_id_buffer;
 
 
 		// Resources this pass always needs whenever it runs, generated from
@@ -41,6 +44,7 @@ public:
 		// else conditional.
 		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
+			builder.need(data.GBuffer_ObjectID, FrameGraph::ResourceFlags::Read);
 			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::RenderTarget);
 		}
 
@@ -59,7 +63,7 @@ public:
 		// runtime state.
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
-			builder.create(data.Stencil_color_tex, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8_SNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
+			builder.create(data.axis_id_buffer, { 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 		}
 		// Which chain link each handler field resolved to, one named slot per
 		// field. Filled from a live frame's finished Context and applied on a
@@ -68,14 +72,16 @@ public:
 		// the field fixes it.
 		struct Cache
 		{
+			FrameGraph::ChainIndex GBuffer_ObjectID = FrameGraph::ChainIndex::Unresolved;
 			FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex Stencil_color_tex = FrameGraph::ChainIndex::Unresolved;
+			FrameGraph::ChainIndex axis_id_buffer = FrameGraph::ChainIndex::Unresolved;
 		};
 
 		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 		{
+			cache.GBuffer_ObjectID = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_ObjectID, ResourceID::GBuffer_ObjectID);
 			cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
-			cache.Stencil_color_tex = FrameGraph::TaskBuilder::cache_slot(data.Stencil_color_tex, ResourceID::Stencil_color_tex);
+			cache.axis_id_buffer = FrameGraph::TaskBuilder::cache_slot(data.axis_id_buffer, ResourceID::axis_id_buffer);
 		}
 
 		// Replay counterpart of create_always/need_always. A field this pass
@@ -87,16 +93,18 @@ public:
 		// previous link's desc, which LoadGraph does once every pass has loaded.
 		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 		{
+			builder.load(data.GBuffer_ObjectID, ResourceID::GBuffer_ObjectID, cache.GBuffer_ObjectID);
 			builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
-			builder.create_versioned(data.Stencil_color_tex, cache.Stencil_color_tex, { ivec3(builder.graph->get_context<Table::ViewportContext>().frame_size, 0), HAL::Format::R8_SNORM, 1, 1 });
+			builder.create_versioned(data.axis_id_buffer, cache.axis_id_buffer, { 1 });
 		}
 
 		// Resources this pass touches, in declaration order, each paired with
 		// whether the pass writes it (own [Write], or the view usage's
 		// [Write] / [Write = {leaves...}] for resources inside a view group).
 		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+			{ ResourceID::GBuffer_ObjectID, false },
 			{ ResourceID::ResultTexture, true },
-			{ ResourceID::Stencil_color_tex, true },
+			{ ResourceID::axis_id_buffer, true },
 		};
 		static constexpr uint resource_count = std::size(resource_accesses);
 	};
@@ -107,9 +115,9 @@ public:
 		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
 
-	static constexpr LiteralWStr Name{L"stencil_renderer_after"};
+	static constexpr LiteralWStr Name{L"stencil_renderer"};
 
-	static constexpr PassID ID = PassID::stencil_renderer_after;
+	static constexpr PassID ID = PassID::stencil_renderer;
 
 
 	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
@@ -117,7 +125,7 @@ public:
 
 	render_func_type render_func;
 
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
+	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;
 };
 
 }

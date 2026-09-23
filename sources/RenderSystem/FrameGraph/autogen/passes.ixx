@@ -45,8 +45,7 @@ export import "../defines.h";
 #include "pass/CubeMapDownsample.h"
 #include "pass/CubeMapEnviromentProcessor.h"
 #include "pass/SMAA.h"
-#include "pass/stencil_renderer_before.h"
-#include "pass/stencil_renderer_after.h"
+#include "pass/stencil_renderer.h"
 #include "pass/UI_PreDraw.h"
 #include "pass/UI_Render.h"
 #include "pass/AssetPreview.h"
@@ -114,8 +113,7 @@ export namespace Passes
 	using ::Passes::CubeMapDownsample;
 	using ::Passes::CubeMapEnviromentProcessor;
 	using ::Passes::SMAA;
-	using ::Passes::stencil_renderer_before;
-	using ::Passes::stencil_renderer_after;
+	using ::Passes::stencil_renderer;
 	using ::Passes::UI_PreDraw;
 	using ::Passes::UI_Render;
 	using ::Passes::AssetPreview;

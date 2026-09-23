@@ -16,7 +16,6 @@
 #include "CubeMapEnviromentProcessor.h"
 #include "Lighting.h"
 #include "Mipmapping.h"
-#include "stencil_renderer_before.h"
 #include "ResultCreation.h"
 #include "GBufferDownsampler.h"
 #include "NormalRoughnessRepack.h"
@@ -55,7 +54,7 @@
 #include "FSR.h"
 #include "UpscalingDLSS.h"
 #include "UpscalingDLSSRR.h"
-#include "stencil_renderer_after.h"
+#include "stencil_renderer.h"
 #include "RTXColorPass.h"
 #include "VoxelDebug.h"
 #include "../pass_defaults.h"
@@ -75,7 +74,6 @@ public:
 	Passes::CubeSky cubeSky;
 	Passes::Lighting lighting;
 	Passes::Mipmapping mipmapping;
-	Passes::stencil_renderer_before stencil_renderer_before;
 	Passes::NormalRoughnessRepack normalRoughnessRepack;
 	Passes::DDGIProbeSelect dDGIProbeSelect;
 	Passes::DDGIProbeResidencyMark dDGIProbeResidencyMark;
@@ -95,7 +93,7 @@ public:
 	Passes::ReflCombine reflCombine;
 	Passes::Sky sky;
 	Passes::SMAA sMAA;
-	Passes::stencil_renderer_after stencil_renderer_after;
+	Passes::stencil_renderer stencil_renderer;
 	Passes::VoxelDebug voxelDebug;
 
 	static inline const wchar_t* const pass_names[] = {
@@ -110,7 +108,6 @@ public:
 		Passes::CubeMapEnviromentProcessor::Name.ptr,
 		Passes::Lighting::Name.ptr,
 		Passes::Mipmapping::Name.ptr,
-		Passes::stencil_renderer_before::Name.ptr,
 		Passes::ResultCreation::Name.ptr,
 		Passes::GBufferDownsampler::Name.ptr,
 		Passes::NormalRoughnessRepack::Name.ptr,
@@ -169,7 +166,7 @@ public:
 		Passes::FSR::Name.ptr,
 		Passes::UpscalingDLSS::Name.ptr,
 		Passes::UpscalingDLSSRR::Name.ptr,
-		Passes::stencil_renderer_after::Name.ptr,
+		Passes::stencil_renderer::Name.ptr,
 		Passes::RTXColorPass::Name.ptr,
 		Passes::VoxelDebug::Name.ptr,
 	};
@@ -200,6 +197,7 @@ public:
 		L"GBuffer_Depth",
 		L"GBuffer_Specular",
 		L"GBuffer_Speed",
+		L"GBuffer_ObjectID",
 		L"GBuffer_DepthMips",
 		L"GBuffer_Quality",
 		L"GBuffer_NormalsPrev",
@@ -210,9 +208,6 @@ public:
 		L"sky_cubemap_filtered",
 		L"sky_cubemap_filtered_diffuse",
 		L"VoxelLighted",
-		L"depth_tex",
-		L"id_buffer",
-		L"axis_id_buffer",
 		L"ResultTexture",
 		L"GBuffer_TempColor",
 		L"GBuffer_HalfDepth",
@@ -274,7 +269,7 @@ public:
 		L"SMAA_edges",
 		L"SMAA_blend",
 		L"FSRTemp",
-		L"Stencil_color_tex",
+		L"axis_id_buffer",
 		L"ColorOutput",
 		L"VoxelDebug",
 	};
@@ -569,6 +564,14 @@ public:
 		{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
 		{ false, { GBuffer_Speed_c0_pass_refs + 1, 22 } },
 	};
+	static inline const FrameGraph::PassRef GBuffer_ObjectID_c0_pass_refs[] = {
+		{ PassID::Scene, 0 },
+		{ PassID::stencil_renderer, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_ObjectID_c0_states[] = {
+		{ true, { GBuffer_ObjectID_c0_pass_refs + 0, 1 } },
+		{ false, { GBuffer_ObjectID_c0_pass_refs + 1, 1 } },
+	};
 	static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
 		{ PassID::GBufferDownsampler, 0 },
@@ -683,24 +686,6 @@ public:
 		{ true, { VoxelLighted_c0_pass_refs + 0, 1 } },
 		{ true, { VoxelLighted_c0_pass_refs + 1, 1 } },
 		{ false, { VoxelLighted_c0_pass_refs + 2, 3 } },
-	};
-	static inline const FrameGraph::PassRef depth_tex_c0_pass_refs[] = {
-		{ PassID::stencil_renderer_before, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState depth_tex_c0_states[] = {
-		{ true, { depth_tex_c0_pass_refs + 0, 1 } },
-	};
-	static inline const FrameGraph::PassRef id_buffer_c0_pass_refs[] = {
-		{ PassID::stencil_renderer_before, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState id_buffer_c0_states[] = {
-		{ true, { id_buffer_c0_pass_refs + 0, 1 } },
-	};
-	static inline const FrameGraph::PassRef axis_id_buffer_c0_pass_refs[] = {
-		{ PassID::stencil_renderer_before, 0 },
-	};
-	static inline const FrameGraph::PrecompiledState axis_id_buffer_c0_states[] = {
-		{ true, { axis_id_buffer_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef ResultTexture_c0_pass_refs[] = {
 		{ PassID::ResultCreation, 0 },
@@ -1466,17 +1451,17 @@ public:
 	};
 	static inline const FrameGraph::PassRef ResultTexture_c4_pass_refs[] = {
 		{ PassID::UpscalingDLSSRR, 0 },
-		{ PassID::stencil_renderer_after, 0 },
+		{ PassID::stencil_renderer, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState ResultTexture_c4_states[] = {
 		{ true, { ResultTexture_c4_pass_refs + 0, 1 } },
 		{ true, { ResultTexture_c4_pass_refs + 1, 1 } },
 	};
-	static inline const FrameGraph::PassRef Stencil_color_tex_c0_pass_refs[] = {
-		{ PassID::stencil_renderer_after, 0 },
+	static inline const FrameGraph::PassRef axis_id_buffer_c0_pass_refs[] = {
+		{ PassID::stencil_renderer, 0 },
 	};
-	static inline const FrameGraph::PrecompiledState Stencil_color_tex_c0_states[] = {
-		{ true, { Stencil_color_tex_c0_pass_refs + 0, 1 } },
+	static inline const FrameGraph::PrecompiledState axis_id_buffer_c0_states[] = {
+		{ true, { axis_id_buffer_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef ColorOutput_c0_pass_refs[] = {
 		{ PassID::RTXColorPass, 0 },
@@ -1510,6 +1495,7 @@ public:
 		{ ResourceID::GBuffer_Depth, 0, GBuffer_Depth_c0_states },
 		{ ResourceID::GBuffer_Specular, 0, GBuffer_Specular_c0_states },
 		{ ResourceID::GBuffer_Speed, 0, GBuffer_Speed_c0_states },
+		{ ResourceID::GBuffer_ObjectID, 0, GBuffer_ObjectID_c0_states },
 		{ ResourceID::GBuffer_DepthMips, 0, GBuffer_DepthMips_c0_states },
 		{ ResourceID::GBuffer_Quality, 0, GBuffer_Quality_c0_states },
 		{ ResourceID::GBuffer_NormalsPrev, 0, GBuffer_NormalsPrev_c0_states },
@@ -1520,9 +1506,6 @@ public:
 		{ ResourceID::sky_cubemap_filtered, 0, sky_cubemap_filtered_c0_states },
 		{ ResourceID::sky_cubemap_filtered_diffuse, 0, sky_cubemap_filtered_diffuse_c0_states },
 		{ ResourceID::VoxelLighted, 0, VoxelLighted_c0_states },
-		{ ResourceID::depth_tex, 0, depth_tex_c0_states },
-		{ ResourceID::id_buffer, 0, id_buffer_c0_states },
-		{ ResourceID::axis_id_buffer, 0, axis_id_buffer_c0_states },
 		{ ResourceID::ResultTexture, 0, ResultTexture_c0_states },
 		{ ResourceID::GBuffer_TempColor, 0, GBuffer_TempColor_c0_states },
 		{ ResourceID::GBuffer_HalfDepth, 0, GBuffer_HalfDepth_c0_states },
@@ -1587,7 +1570,7 @@ public:
 		{ ResourceID::FSRTemp, 0, FSRTemp_c0_states },
 		{ ResourceID::ResultTexture, 3, ResultTexture_c3_states },
 		{ ResourceID::ResultTexture, 4, ResultTexture_c4_states },
-		{ ResourceID::Stencil_color_tex, 0, Stencil_color_tex_c0_states },
+		{ ResourceID::axis_id_buffer, 0, axis_id_buffer_c0_states },
 		{ ResourceID::ColorOutput, 0, ColorOutput_c0_states },
 		{ ResourceID::VoxelDebug, 0, VoxelDebug_c0_states },
 	};
@@ -2320,7 +2303,7 @@ public:
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 	};
-	static inline const FrameGraph::PassRef stencil_renderer_after_0_prev[] = {
+	static inline const FrameGraph::PassRef stencil_renderer_0_prev[] = {
 		{ PassID::DDGIDebug, 0 },
 		{ PassID::FSR, 0 },
 		{ PassID::NRD_IndirectCombine, 0 },
@@ -2328,6 +2311,7 @@ public:
 		{ PassID::ReflCombine, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::SMAA, 0 },
+		{ PassID::Scene, 0 },
 		{ PassID::Sky, 0 },
 		{ PassID::UpscalingDLSS, 0 },
 		{ PassID::UpscalingDLSSRR, 0 },
@@ -2357,7 +2341,6 @@ public:
 		{ PassID::CubeMapEnviromentProcessor, 0, true, CubeMapEnviromentProcessor_0_prev },
 		{ PassID::Lighting, 0, true, Lighting_0_prev },
 		{ PassID::Mipmapping, 0, true, Mipmapping_0_prev },
-		{ PassID::stencil_renderer_before, 0, false, {} },
 		{ PassID::ResultCreation, 0, false, {} },
 		{ PassID::GBufferDownsampler, 0, false, GBufferDownsampler_0_prev },
 		{ PassID::NormalRoughnessRepack, 0, false, NormalRoughnessRepack_0_prev },
@@ -2416,7 +2399,7 @@ public:
 		{ PassID::FSR, 0, true, FSR_0_prev },
 		{ PassID::UpscalingDLSS, 0, false, UpscalingDLSS_0_prev },
 		{ PassID::UpscalingDLSSRR, 0, false, UpscalingDLSSRR_0_prev },
-		{ PassID::stencil_renderer_after, 0, false, stencil_renderer_after_0_prev },
+		{ PassID::stencil_renderer, 0, false, stencil_renderer_0_prev },
 		{ PassID::RTXColorPass, 0, false, RTXColorPass_0_prev },
 		{ PassID::VoxelDebug, 0, false, VoxelDebug_0_prev },
 	};
@@ -2487,10 +2470,6 @@ public:
 		// only supplies render_func, so that is what gates registration.
 		if (mipmapping.render_func)
 			graph.add_library_pass<Passes::Mipmapping>(PassSetupDefault<Passes::Mipmapping>::setup, mipmapping.render_func, (mipmapping.flags));
-		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
-		// only supplies render_func, so that is what gates registration.
-		if (stencil_renderer_before.render_func)
-			graph.add_library_pass<Passes::stencil_renderer_before>(PassSetupDefault<Passes::stencil_renderer_before>::setup, stencil_renderer_before.render_func, (stencil_renderer_before.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::ResultCreation>(PassDefault<Passes::ResultCreation>::setup, PassDefault<Passes::ResultCreation>::render, (PassDefault<Passes::ResultCreation>::flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::GBufferDownsampler>(PassDefault<Passes::GBufferDownsampler>::setup, PassDefault<Passes::GBufferDownsampler>::render, (PassDefault<Passes::GBufferDownsampler>::flags & ~FrameGraph::PassFlags::Compute));
 		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
@@ -2583,8 +2562,8 @@ public:
 		graph.add_library_pass<Passes::UpscalingDLSSRR>(PassDefault<Passes::UpscalingDLSSRR>::setup, PassDefault<Passes::UpscalingDLSSRR>::render, (PassDefault<Passes::UpscalingDLSSRR>::flags & ~FrameGraph::PassFlags::Compute));
 		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 		// only supplies render_func, so that is what gates registration.
-		if (stencil_renderer_after.render_func)
-			graph.add_library_pass<Passes::stencil_renderer_after>(PassSetupDefault<Passes::stencil_renderer_after>::setup, stencil_renderer_after.render_func, (stencil_renderer_after.flags & ~FrameGraph::PassFlags::Compute));
+		if (stencil_renderer.render_func)
+			graph.add_library_pass<Passes::stencil_renderer>(PassSetupDefault<Passes::stencil_renderer>::setup, stencil_renderer.render_func, (stencil_renderer.flags & ~FrameGraph::PassFlags::Compute));
 		graph.add_library_pass<Passes::RTXColorPass>(PassDefault<Passes::RTXColorPass>::setup, PassDefault<Passes::RTXColorPass>::render, (PassDefault<Passes::RTXColorPass>::flags & ~FrameGraph::PassFlags::Compute));
 		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 		// only supplies render_func, so that is what gates registration.

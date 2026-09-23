@@ -50,7 +50,7 @@ export namespace PSOS
 			
 			HiZOcclusion.Apply(mpso, key);
 
-			mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R16G16_FLOAT };	
+			mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R16G16_FLOAT, HAL::Format::R32_UINT };	
 			mpso.blend = {  };
 
 			mpso.ds =HAL::Format::D32_FLOAT;

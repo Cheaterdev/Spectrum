@@ -29,6 +29,7 @@ PassNode AssetGBuffer
 	[Always = DepthStencil] [Size = ViewportContext::frame_size] [Format = R32_TYPELESS] Texture GBuffer_Depth;
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Specular;
 	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16_FLOAT] Texture GBuffer_Speed;
+	[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R32_UINT] Texture GBuffer_ObjectID;
 	[Always = UnorderedAccess | RenderTarget] [Size = ViewportContext::frame_size] [Format = R32_TYPELESS] Texture GBuffer_DepthMips;
 	# Static: occlusion pass 1 tests against LAST frame's HiZ (see SceneSystem).
 	# MipCount=0: full auto mip chain (a Hi-Z pyramid), matching the original

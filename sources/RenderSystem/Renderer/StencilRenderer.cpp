@@ -209,6 +209,7 @@ bool stencil_renderer::on_mouse_move(vec2 pos)
 	}
 
 	vec2 local = (pos - get_render_bounds().pos) / vec2(get_render_bounds().size);
+	mouse_uv  = local;
 	direction = player_cam->to_direction(local);
 	prev_mouse_pos = mouse_pos;
 	mouse_pos = get_current_pos();
@@ -415,7 +416,6 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	clickable = true;
 
 	cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
-	axis_intersect_cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
 
 	axis = EngineAssets::axis.get_asset()->create_instance();
 
@@ -455,188 +455,44 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 
 	// ---- Pass function members -----------------------------------------------
 
-	// setup() is fully generated (stenciler.prism's own [RunAlways]); the camera/
-	// gizmo work it used to do runs in update_frame().
-
-	m_before_render = [this](Passes::stencil_renderer_before::Context& data, FrameGraph::FrameContext& context)
+	m_render = [this](Passes::stencil_renderer::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& list     = *context.get_list();
 		auto& graphics = list.get_graphics();
 		auto& compute  = list.get_compute();
 		auto& copy     = list.get_copy();
 
-		auto obj = context.graph->get_context<SceneInfo>().scene;
+		vec2 uv = mouse_uv;
+		bool mouse_inside = uv.x >= 0 && uv.y >= 0 && uv.x < 1 && uv.y < 1;
 
-		RT::DepthOnly::Compiled rtv;
 		{
-			RT::DepthOnly rt;
-			rt.GetDepth() = data.depth_tex->depthStencil;
-			rtv = rt.compile(list);
+			PROFILE(L"stencil_object_pick");
+			if (mouse_inside)
+			{
+				ivec2 size = data.GBuffer_ObjectID->get_size();
+				ivec3 px   = { int(uv.x * size.x), int(uv.y * size.y), 0 };
+				copy.read_texture(data.GBuffer_ObjectID->resource.get(), px, { 1, 1, 1 }, 0,
+					[this](std::span<std::byte> memory, texture_layout)
+				{
+					uint id = *reinterpret_cast<const uint*>(memory.data());
+					run([this, id]() { mouse_on_object = find_object(id); });
+				});
+			}
+			else
+				run([this]() { mouse_on_object = {}; });
 		}
 
-		std::vector<std::pair<MeshAssetInstance::ptr, int>> current;
-		auto mesh_func = [&](MeshAssetInstance* l)
-		{
-			for (unsigned int i = 0; i < l->rendering.size(); i++)
-			{
-				auto& m = l->rendering[i];
-				if (intersect(cam, m.primitive_global.get()) == INTERSECT_TYPE::FULL_OUT)
-					continue;
-				current.emplace_back(l->get_ptr<MeshAssetInstance>(), i);
-				graphics.set(m.compiled_mesh_info);
-				graphics.set(m.mesh_instance_info);
-				{
-					Slots::Instance instance;
-					instance.GetInstanceId() = (UINT)current.size();
-					graphics.set(instance);
-				}
-				graphics.dispatch_mesh(m.dispatch_mesh_arguments);
-			}
-		};
-
-		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-		graphics.set_pipeline<PSOS::DrawStencil>();
-		graphics.set(scene->compiledScene);
-
-		compute.clear(*data.id_buffer);
+		// Cleared every frame so the readback below reports "no handle" while
+		// nothing is selected and the gizmo isn't drawn.
 		compute.clear(*data.axis_id_buffer);
 
+		auto selection = selected.empty() ? std::pair<MeshAssetInstance::ptr, int>{} : selected[0];
+		if (selection.first)
 		{
-			Slots::FrameInfo frameInfo;
-			frameInfo.GetCamera() = cam.camera_cb.current;
-			graphics.set(frameInfo);
-		}
-		{
-			Slots::PickerBuffer buffer;
-			buffer.GetViewBuffer() = *data.id_buffer;
-			graphics.set(buffer);
-		}
+			graphics.set_signature(Layouts::DefaultLayout);
+			graphics.set(scene->compiledScene);
+			context.graph->set_slot(SlotID::FrameInfo, graphics);
 
-		graphics.set_rtv(rtv, RTOptions::Default | RTOptions::ClearDepth);
-
-		obj->iterate([&](scene_object* node)
-		{
-			auto render_object = dynamic_cast<Graphics::renderable*>(node);
-			if (render_object)
-				mesh_func(dynamic_cast<MeshAssetInstance*>(render_object));
-			return true;
-		});
-
-		graphics.set_rtv(rtv, RTOptions::ClearDepth);
-
-		{
-			Slots::FrameInfo frameInfo;
-			frameInfo.GetCamera() = axis_intersect_cam.camera_cb.current;
-			graphics.set(frameInfo);
-		}
-		{
-			Slots::PickerBuffer buffer;
-			buffer.GetViewBuffer() = *data.axis_id_buffer;
-			graphics.set(buffer);
-		}
-
-		axis->iterate([&](scene_object* node)
-		{
-			auto render_object = dynamic_cast<Graphics::renderable*>(node);
-			if (render_object)
-			{
-				auto l = dynamic_cast<MeshAssetInstance*>(render_object);
-				for (unsigned int i = 0; i < (UINT)l->rendering.size(); i++)
-				{
-					auto& m = l->rendering[i];
-					graphics.set(m.compiled_mesh_info);
-					graphics.set(m.mesh_instance_info);
-					{
-						Slots::Instance instance;
-						instance.GetInstanceId() = i + 1;
-						graphics.set(instance);
-					}
-					graphics.dispatch_mesh(m.dispatch_mesh_arguments);
-				}
-			}
-			return true;
-		});
-
-		// pick rotation rings (ids 4/5/6 -> mouse_on_axis 3/4/5); shares the depth
-		// buffer with the arrows so the nearest handle along the ray wins.
-		if (rings_sized)
-		{
-			graphics.set_pipeline<PSOS::DrawRingPick>();
-			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-			graphics.set_index_buffer(ring_index_buffer.get_index_buffer_view());
-			{
-				Slots::DrawStencil draw;
-				draw.GetVertices() = ring_vertex_buffer;
-				graphics.set(draw);
-			}
-			for (int a = 0; a < 3; a++)
-			{
-				{
-					Slots::Instance instance;
-					instance.GetInstanceId() = 4 + a;
-					graphics.set(instance);
-				}
-				graphics.draw_indexed(ring_ranges[a].count, ring_ranges[a].offset, 0);
-			}
-		}
-
-		copy.read<uint>(*data.id_buffer, 0, 1, [current, this](std::span<uint> memory)
-		{
-			auto result = *memory.data() - 1;
-			run([result, this, current]()
-			{
-				mouse_on_object.first = nullptr;
-				if (result < current.size())
-					mouse_on_object = current[result];
-			});
-		});
-
-		copy.read<uint>(*data.axis_id_buffer, 0, 1, [this](std::span<uint> memory)
-		{
-			auto result = *memory.data() - 1;
-			run([this, result]() { mouse_on_axis = result; });
-		});
-	};
-
-	// setup() is fully generated (stenciler.prism's own [SetupCondition]).
-
-	m_after_render = [this](Passes::stencil_renderer_after::Context& data, FrameGraph::FrameContext& context)
-	{
-		auto& list     = *context.get_list();
-		auto& graphics = list.get_graphics();
-
-		graphics.set_signature(Layouts::DefaultLayout);
-		graphics.set(scene->compiledScene);
-
-		{
-			RT::SingleColor rt;
-			rt.GetColor() = data.Stencil_color_tex->renderTarget;
-			graphics.set_rtv(rt, RTOptions::Default | RTOptions::ClearAll);
-		}
-
-		graphics.set_pipeline<PSOS::DrawSelected>();
-		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-
-		context.graph->set_slot(SlotID::FrameInfo, graphics);
-
-		for (auto& sel : selected)
-		{
-			auto& m = sel.first->rendering[sel.second];
-			graphics.set(m.compiled_mesh_info);
-			graphics.set(m.mesh_instance_info);
-			graphics.dispatch_mesh(m.dispatch_mesh_arguments);
-		}
-
-		// apply color mask
-		{
-			graphics.set_pipeline<PSOS::StencilerLast>();
-			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-			{
-				Slots::Countour contour;
-				contour.GetColor() = { 1, 0.5f, 0, 1 };
-				contour.GetTex()   = *data.Stencil_color_tex;
-				graphics.set(contour);
-			}
 			graphics.set_viewport(data.ResultTexture->get_viewport());
 			graphics.set_scissor(data.ResultTexture->get_scissor());
 			{
@@ -644,94 +500,152 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 				rt.GetColor() = data.ResultTexture->renderTarget;
 				graphics.set_rtv(rt);
 			}
-			graphics.draw(4);
-		}
 
-		{
-			RT::SingleColor rt;
-			rt.GetColor() = data.ResultTexture->renderTarget;
-			graphics.set_rtv(rt);
-		}
-
-		if (draw_aabb)
-		{
-			graphics.set_pipeline<PSOS::DrawBox>();
-			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-			graphics.set_index_buffer(index_buffer.get_index_buffer_view());
 			{
-				Slots::DrawStencil draw;
-				draw.GetVertices() = vertex_buffer;
-				graphics.set(draw);
-			}
-			for (auto& sel : selected)
-			{
-				auto& m = sel.first->rendering[sel.second];
-				graphics.set(m.compiled_mesh_info);
-				graphics.set(m.mesh_instance_info);
-				graphics.draw_indexed(36, 0, 0);
-			}
-		}
-
-		// draw axis
-		{
-			graphics.set_index_buffer(HAL::Views::IndexBuffer());
-			{
-				Slots::FrameInfo frameInfo;
-				frameInfo.GetCamera() = axis_cam.camera_cb.current;
-				graphics.set(frameInfo);
-			}
-			graphics.set_pipeline<PSOS::DrawAxis>();
-			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-
-			int i = 0;
-			for (auto& m : axis->rendering)
-			{
-				float lighted = (mouse_on_axis == i) * 0.7f;
+				PROFILE(L"stencil_outline");
+				graphics.set_pipeline<PSOS::StencilerLast>();
+				graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 				{
-					Slots::Color color;
-					color.GetColor() = { i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted, 1 };
-					graphics.set(color);
+					Slots::Countour contour;
+					contour.GetColor()       = { 1, 0.5f, 0, 1 };
+					contour.GetObject_ids()  = *data.GBuffer_ObjectID;
+					contour.GetSelected_id() = object_id_of(selection);
+					graphics.set(contour);
 				}
-				graphics.set(m.compiled_mesh_info);
-				graphics.set(m.mesh_instance_info);
-				graphics.dispatch_mesh(m.dispatch_mesh_arguments);
-				i++;
+				graphics.draw(4);
 			}
+
+			// Countour shares Instance0 with PickerBuffer; the outline draw above
+			// is done with it, so rebinding here is safe.
+			{
+				ivec2 size = data.ResultTexture->get_size();
+				Slots::PickerBuffer picker;
+				picker.GetViewBuffer() = *data.axis_id_buffer;
+				picker.GetMouse_pos()  = mouse_inside ? uint2(uint(uv.x * size.x), uint(uv.y * size.y)) : uint2(~0u, ~0u);
+				graphics.set(picker);
+			}
+
+			draw_gizmo(graphics);
 		}
 
-		// draw rotation rings (camera-facing half; back half discarded in the PS)
-		if (rings_sized)
+		copy.read<uint>(*data.axis_id_buffer, 0, 1, [this](std::span<uint> memory)
 		{
-			graphics.set_pipeline<PSOS::DrawRing>();
-			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-			graphics.set_index_buffer(ring_index_buffer.get_index_buffer_view());
-			{
-				Slots::FrameInfo frameInfo;
-				frameInfo.GetCamera() = axis_cam.camera_cb.current;
-				graphics.set(frameInfo);
-			}
-			{
-				Slots::DrawStencil draw;
-				draw.GetVertices() = ring_vertex_buffer;
-				graphics.set(draw);
-			}
-			for (int a = 0; a < 3; a++)
-			{
-				float lighted = (mouse_on_axis == 3 + a) * 0.7f;
-				{
-					Slots::Color color;
-					color.GetColor() = { a == 0 ? 1.0f : lighted, a == 1 ? 1.0f : lighted, a == 2 ? 1.0f : lighted, 1 };
-					graphics.set(color);
-				}
-				graphics.draw_indexed(ring_ranges[a].count, ring_ranges[a].offset, 0);
-			}
-		}
+			uint key = *memory.data();
+			int axis = int(key & 0xF) - 1;
+			run([this, axis]() { mouse_on_axis = axis; });
+		});
 	};
 }
 
-// Per-frame CPU work that used to be stencil_renderer_before's setup body:
-// pending-task drain, gizmo ring sizing, and the three camera setups the
-// render halves read. None of it is an enable decision, and all of it needs
+void stencil_renderer::draw_gizmo(HAL::GraphicsContext& graphics)
+{
+	PROFILE(L"stencil_gizmo");
+
+	if (draw_aabb)
+	{
+		graphics.set_pipeline<PSOS::DrawBox>();
+		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+		graphics.set_index_buffer(index_buffer.get_index_buffer_view());
+		{
+			Slots::DrawStencil draw;
+			draw.GetVertices() = vertex_buffer;
+			graphics.set(draw);
+		}
+		for (auto& sel : selected)
+		{
+			auto& m = sel.first->rendering[sel.second];
+			graphics.set(m.compiled_mesh_info);
+			graphics.set(m.mesh_instance_info);
+			graphics.draw_indexed(36, 0, 0);
+		}
+	}
+
+	// Handle ids: arrows 1..3, rings 4..6 (mouse_on_axis = id - 1).
+	{
+		graphics.set_index_buffer(HAL::Views::IndexBuffer());
+		{
+			Slots::FrameInfo frameInfo;
+			frameInfo.GetCamera() = axis_cam.camera_cb.current;
+			graphics.set(frameInfo);
+		}
+		graphics.set_pipeline<PSOS::DrawAxis>();
+		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+
+		int i = 0;
+		for (auto& m : axis->rendering)
+		{
+			float lighted = (mouse_on_axis == i) * 0.7f;
+			{
+				Slots::Color color;
+				color.GetColor() = { i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted, 1 };
+				graphics.set(color);
+			}
+			{
+				Slots::Instance instance;
+				instance.GetInstanceId() = i + 1;
+				graphics.set(instance);
+			}
+			graphics.set(m.compiled_mesh_info);
+			graphics.set(m.mesh_instance_info);
+			graphics.dispatch_mesh(m.dispatch_mesh_arguments);
+			i++;
+		}
+	}
+
+	// camera-facing half only; the back half is discarded in the PS
+	if (rings_sized)
+	{
+		graphics.set_pipeline<PSOS::DrawRing>();
+		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+		graphics.set_index_buffer(ring_index_buffer.get_index_buffer_view());
+		{
+			Slots::DrawStencil draw;
+			draw.GetVertices() = ring_vertex_buffer;
+			graphics.set(draw);
+		}
+		for (int a = 0; a < 3; a++)
+		{
+			float lighted = (mouse_on_axis == 3 + a) * 0.7f;
+			{
+				Slots::Color color;
+				color.GetColor() = { a == 0 ? 1.0f : lighted, a == 1 ? 1.0f : lighted, a == 2 ? 1.0f : lighted, 1 };
+				graphics.set(color);
+			}
+			{
+				Slots::Instance instance;
+				instance.GetInstanceId() = 4 + a;
+				graphics.set(instance);
+			}
+			graphics.draw_indexed(ring_ranges[a].count, ring_ranges[a].offset, 0);
+		}
+	}
+}
+
+uint stencil_renderer::object_id_of(const std::pair<MeshAssetInstance::ptr, int>& obj)
+{
+	return obj.first->rendering[obj.second].mesh_info.GetObject_id();
+}
+
+// Ids are contiguous per instance (meshpart slot + part index + 1, see
+// MeshAssetInstance::on_add), so only each instance's first id is checked.
+std::pair<MeshAssetInstance::ptr, int> stencil_renderer::find_object(uint object_id)
+{
+	if (object_id == 0 || !scene)
+		return {};
+
+	for (auto* m : scene->mesh_objects)
+	{
+		if (m->rendering.empty())
+			continue;
+		uint first = m->rendering[0].mesh_info.GetObject_id();
+		if (first && object_id >= first && object_id - first < m->rendering.size())
+			return { m->get_ptr<MeshAssetInstance>(), int(object_id - first) };
+	}
+	return {};
+}
+
+// Per-frame CPU work: pending-task drain, gizmo ring sizing, and the camera
+// setups the render function reads. None of it is an enable decision, and all of it needs
 // `this`, so it cannot live in a generated setup -- it runs once per frame
 // from triangle_drawer::generate() instead, before graph.setup().
 void stencil_renderer::update_frame(FrameGraph::Graph& graph)
@@ -783,15 +697,4 @@ void stencil_renderer::update_frame(FrameGraph::Graph& graph)
 	// how far the camera sits (at dist == 200 this is exactly near=1 / far=1000).
 	axis_cam.set_projection_params(dist * 0.005f, dist * 5.0f);
 	axis_cam.update();
-
-	axis_intersect_cam = axis_cam;
-	axis_intersect_cam.set_projection_params(dist * 0.005f, dist * 5.0f);
-	axis_intersect_cam.target = axis_intersect_cam.position + direction;
-	axis_intersect_cam.update();
-
-	// Mirror for stencil_renderer_after's generated [SetupCondition]
-	// (stenciler.prism).
-	// ::Table -- GUI::Elements::Table (Table.ixx) is also visible here, so the
-	// unqualified name is ambiguous.
-	graph.get_context<::Table::StencilState>().has_selection = !selected.empty();
 }

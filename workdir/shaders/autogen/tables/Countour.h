@@ -10,7 +10,9 @@
 struct Countour
 {
 	float4 color; // float4
-	uint tex; // Texture2D<float4>
+	uint selected_id; // uint
+	uint object_ids; // Texture2D<uint>
 	float4 GetColor() { return color; }
-	Texture2D<float4> GetTex() { return ResourceDescriptorHeap[tex]; }
+	uint GetSelected_id() { return selected_id; }
+	Texture2D<uint> GetObject_ids() { return ResourceDescriptorHeap[object_ids]; }
 };

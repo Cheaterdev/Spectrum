@@ -280,18 +280,9 @@ FrameGraph::SetupResult PassSetupDefault<Passes::SMAA>::setup(
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::stencil_renderer_before>::setup(
-	Passes::stencil_renderer_before::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::stencil_renderer>::setup(
+	Passes::stencil_renderer::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	return FrameGraph::SetupResult::NeedsRender;
-}
-
-
-FrameGraph::SetupResult PassSetupDefault<Passes::stencil_renderer_after>::setup(
-	Passes::stencil_renderer_after::Context& data, FrameGraph::TaskBuilder& builder)
-{
-	if (!(builder.graph->get_context<Table::StencilState>().has_selection))
-		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 

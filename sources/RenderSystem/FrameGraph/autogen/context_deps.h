@@ -35,7 +35,7 @@ namespace FrameGraph
 // .prism edit renumbers those enums, a plan from before the edit would not fail
 // to load, it would misapply -- wrong resource, wrong barriers. A plan whose
 // header does not carry this exact value must be rejected.
-constexpr unsigned long long generated_id_space_hash = 6219244375456147750ull;
+constexpr unsigned long long generated_id_space_hash = 16941113399082406360ull;
 
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
@@ -51,7 +51,6 @@ enum class ContextFieldID : unsigned int
 	RenderDeviceCapabilities_dlssrr_available,
 	SkyState_prev_sun_dir,
 	SkyState_sky_changed,
-	StencilState_has_selection,
 	UIState_UI_Passes_needed,
 	UIRenderState_passes_needed,
 	UIRenderState_per_pass,
@@ -101,7 +100,6 @@ namespace ContextField
 	constexpr ContextFieldMask RenderDeviceCapabilities_dlssrr_available = context_field_bit(ContextFieldID::RenderDeviceCapabilities_dlssrr_available);
 	constexpr ContextFieldMask SkyState_prev_sun_dir = context_field_bit(ContextFieldID::SkyState_prev_sun_dir);
 	constexpr ContextFieldMask SkyState_sky_changed = context_field_bit(ContextFieldID::SkyState_sky_changed);
-	constexpr ContextFieldMask StencilState_has_selection = context_field_bit(ContextFieldID::StencilState_has_selection);
 	constexpr ContextFieldMask UIState_UI_Passes_needed = context_field_bit(ContextFieldID::UIState_UI_Passes_needed);
 	constexpr ContextFieldMask UIRenderState_passes_needed = context_field_bit(ContextFieldID::UIRenderState_passes_needed);
 	constexpr ContextFieldMask UIRenderState_per_pass = context_field_bit(ContextFieldID::UIRenderState_per_pass);
@@ -296,12 +294,8 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::UpscalerSelectors_upscaling_enabled,
 		  ContextField::None,
 		true },
-	{ PassID::stencil_renderer_before,
+	{ PassID::stencil_renderer,
 		  ContextField::None,
-		  ContextField::None,
-		true },
-	{ PassID::stencil_renderer_after,
-		  ContextField::StencilState_has_selection,
 		  ContextField::None,
 		true },
 	{ PassID::UI_PreDraw,

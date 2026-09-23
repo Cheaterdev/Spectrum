@@ -88,8 +88,6 @@ void capture_context_snapshot(Graph& graph, ContextSnapshot& out)
 		encode_context_field(graph.get_context<Table::SkyState>().prev_sun_dir);
 	out.values[(unsigned int)ContextFieldID::SkyState_sky_changed] =
 		encode_context_field(graph.get_context<Table::SkyState>().sky_changed);
-	out.values[(unsigned int)ContextFieldID::StencilState_has_selection] =
-		encode_context_field(graph.get_context<Table::StencilState>().has_selection);
 	out.values[(unsigned int)ContextFieldID::UIState_UI_Passes_needed] =
 		encode_context_field(graph.get_context<Table::UIState>().UI_Passes_needed);
 	out.values[(unsigned int)ContextFieldID::UIRenderState_passes_needed] =

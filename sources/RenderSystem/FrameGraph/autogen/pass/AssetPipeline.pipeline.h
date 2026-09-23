@@ -79,6 +79,7 @@ public:
 		L"GBuffer_Depth",
 		L"GBuffer_Specular",
 		L"GBuffer_Speed",
+		L"GBuffer_ObjectID",
 		L"GBuffer_DepthMips",
 		L"GBuffer_HiZ",
 		L"GBuffer_HiZ_UAV",
@@ -175,6 +176,12 @@ public:
 	static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
 		{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
 		{ false, { GBuffer_Speed_c0_pass_refs + 1, 2 } },
+	};
+	static inline const FrameGraph::PassRef GBuffer_ObjectID_c0_pass_refs[] = {
+		{ PassID::AssetGBuffer, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState GBuffer_ObjectID_c0_states[] = {
+		{ true, { GBuffer_ObjectID_c0_pass_refs + 0, 1 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 		{ PassID::AssetGBuffer, 0 },
@@ -335,6 +342,7 @@ public:
 		{ ResourceID::GBuffer_Depth, 0, GBuffer_Depth_c0_states },
 		{ ResourceID::GBuffer_Specular, 0, GBuffer_Specular_c0_states },
 		{ ResourceID::GBuffer_Speed, 0, GBuffer_Speed_c0_states },
+		{ ResourceID::GBuffer_ObjectID, 0, GBuffer_ObjectID_c0_states },
 		{ ResourceID::GBuffer_DepthMips, 0, GBuffer_DepthMips_c0_states },
 		{ ResourceID::GBuffer_HiZ, 0, GBuffer_HiZ_c0_states },
 		{ ResourceID::GBuffer_HiZ_UAV, 0, GBuffer_HiZ_UAV_c0_states },

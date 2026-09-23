@@ -46,6 +46,10 @@ struct MeshInfo
 
     uint node_offset;
 	uint meshlet_count;
+
+	# SceneData.meshes index + 1 (0 = not a scene mesh), written into
+	# GBuffer_ObjectID for editor picking/selection outline.
+	uint object_id;
 }
 
 

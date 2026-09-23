@@ -44,7 +44,6 @@ Pipeline MainPipeline
 											Lighting;
 											[Async]
 											Mipmapping;
-	stencil_renderer_before;
 
 
 	# result target
@@ -165,7 +164,7 @@ Pipeline MainPipeline
 	UpscalingDLSS;
 	UpscalingDLSSRR;
 
-	stencil_renderer_after;
+	stencil_renderer;
 
 	#Debug stuff
 

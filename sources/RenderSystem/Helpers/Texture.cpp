@@ -95,7 +95,7 @@ namespace HAL
 						using strided = std::layout_stride;
 						const std::dextents<size_t, 3> extents(mip.depth, mip.num_rows, mip.width_stride);
 						std::mdspan dst(mip.data.data(), strided::mapping(extents, std::array<size_t, 3>{ mip.slice_stride, mip.width_stride, 1 }));
-						std::mdspan src(memory.data(), strided::mapping(extents, std::array<size_t, 3>{ layout.slice_stride, layout.row_stride, 1 }));
+						std::mdspan src(reinterpret_cast<const unsigned char*>(memory.data()), strided::mapping(extents, std::array<size_t, 3>{ layout.slice_stride, layout.row_stride, 1 }));
 
 						for (size_t z = 0; z < extents.extent(0); z++)
 							for (size_t w = 0; w < extents.extent(1); w++)

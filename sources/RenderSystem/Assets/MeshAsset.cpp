@@ -479,6 +479,10 @@ void MeshAssetInstance::on_add(scene_object* parent)
 		int i = 0;
 		for (auto& info : rendering)
 		{
+			// The id is the meshpart slot, only known once allocated above, so
+			// the MeshInfo compiled in update_nodes() has to be rebuilt here.
+			info.mesh_info.GetObject_id() = static_cast<UINT>(meshpart_handle.get_offset()) + i + 1;
+			info.compiled_mesh_info = info.mesh_info.compile(RenderSystem::get().device().get_static_gpu_data());
 
 			meshpart[i].mesh_cb = info.compiled_mesh_info.compiled();
 			meshpart[i].meshinstance_cb = mesh_instance_info.compiled();
@@ -717,6 +721,7 @@ void MeshAssetInstance::update_nodes()
 			info.mesh_info.GetNode_offset() = static_cast<UINT>(nodes_handle.get_offset() + nodes.size() - 1);
 
 			info.mesh_info.GetMeshlet_count() = static_cast<UINT>(mesh_asset->meshes[m].meshet_view.desc.size/sizeof(Table::Meshlet));
+			info.mesh_info.GetObject_id() = 0; // assigned in on_add()
 
 			info.meshlet_offset = info.mesh_info.GetMeshlet_offset_local();
 			info.meshlet_count = info.mesh_info.GetMeshlet_count();
