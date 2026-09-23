@@ -45,7 +45,7 @@
 - Runtime-tunable properties (`Variable<T>`) with an in-app debug panel
 - CPU/GPU profiling (scoped `PROFILE`/`PROFILE_GPU` markers)
 - FrameGraph live debugger: pass/resource inspector, GPU pass timeline with barrier visualization, and a pannable/zoomable resource preview (2D/array/3D/cube textures and buffers)
-- SIG shader-binding code generation (ANTLR4-driven, generates HLSL + C++ from a shared `.sig` DSL)
+- Prism, a declaration language for GPU/CPU structs, bindings, PSOs and FrameGraph passes (ANTLR4-driven `prismc` generates HLSL + C++ from `.prism` files), with a Visual Studio extension for highlighting, live diagnostics and navigation
 
 ## Build system
 
@@ -62,10 +62,16 @@
 
 ## Code generation
 
-Large parts of the engine are generated rather than hand-written, and live under `autogen/` directories that are checked in but should not be edited by hand:
-- **SIG → HLSL/C++**: `sources/SIGParser` (ANTLR4 grammar `SIG.g4`) parses `.sig` files into shared GPU/CPU structs and resource-binding tables, emitting HLSL and C++ into `sources/HAL/SIG/autogen/` and `sources/HAL/autogen/` (binding tables, PSOs, enums)
-- **FrameGraph passes**: pass declarations, resource IDs, and context plumbing are generated into `sources/RenderSystem/FrameGraph/autogen/` (`pass_ids.h`, `resource_ids.h`, `pass_defaults.*`, `context_snapshot.cpp`, per-pass headers under `autogen/pass/`)
-- **Work Graph nodes**: PSOs for DX12 Work Graph nodes are generated from Jinja templates (`workgraph_node_pso.jinja`, `workgraph_nodes.jinja`)
+Large parts of the engine are generated rather than hand-written. The source of truth is **Prism**, the engine's declaration language: `.prism` files in `sources/Prism/defs/` declare GPU/CPU shared structs and their slot bindings, root layouts, graphics/compute/raytracing/work-graph PSOs, FrameGraph passes and pipelines, enums, constants and HLSL helper functions. The `prismc` compiler (`sources/Prism/`, ANTLR4 grammar `Prism.g4`, Jinja2 templates) validates them and generates, into `autogen/` directories that are checked in but never edited by hand:
+- **HAL** (`sources/HAL/autogen/`): binding tables and slots, root layouts, PSOs with permutation keys, raytracing PSOs, enums, constants
+- **FrameGraph** (`sources/RenderSystem/FrameGraph/autogen/`): per-pass headers with generated setup (resource creation/needs, enable conditions), pipelines, `pass_ids.h`, `resource_ids.h`, `pass_defaults.*`, context dependency tables
+- **HLSL** (`workdir/shaders/autogen/`): the matching shader-side structs, layouts, raytracing and work-graph node headers
+
+Regenerate after editing a `.prism` file with **Tools → Regenerate Prism code** in Visual Studio, or `cd sources/Prism && ../../bin/profile/prismc.exe`; run `generate_project.bat` when generated files were added or removed. A mistake in a `.prism` file stops generation with `file(line,col): error:` messages and writes nothing.
+
+The Visual Studio extension (`bin/editor/prism.vsix`, built by `sources/Prism/editor/gen_vs_extension.py`) adds highlighting, live errors with quick fixes, go-to-definition, hover, completion, outline and the regenerate command.
+
+Language reference for developers: [`overview/Prism.txt`](overview/Prism.txt).
 
 ![img](https://cheater.dev/Spectrum.png)
 https://cheater.dev

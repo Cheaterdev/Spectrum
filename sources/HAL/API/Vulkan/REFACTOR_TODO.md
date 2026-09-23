@@ -142,7 +142,7 @@ Audit checklist (per ixx file):
   `OpAccessChain`. Fixed by splitting into `float4 pos_a; float4 pos_b;` (same binary
   layout) and replacing `(float2[4])GetColorRect().pos` with explicit swizzles in
   `rect.hlsl`. **Note:** the SIG template (`templates/hlsl/table.jinja`) will
-  regenerate `float4 pos[2]` if `ui.sig` is re-parsed — the template needs the same
+  regenerate `float4 pos[2]` if `ui.prism` is re-parsed — the template needs the same
   fix as `gather_pipeline` (emit individual fields instead of packed arrays, or use
   scalar layout). The shader change in `rect.hlsl` must also be re-applied after
   any regeneration.

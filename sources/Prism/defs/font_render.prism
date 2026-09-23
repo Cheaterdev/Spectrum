@@ -1,0 +1,53 @@
+
+[Bind = DefaultLayout::Instance0]
+struct FontRendering
+{
+	Texture2D<float> tex0;
+	StructuredBuffer<float4> positions;
+}
+
+[Bind = DefaultLayout::Instance1]
+struct FontRenderingConstants
+{
+	float4x4 TransformMatrix;
+	float4 ClipRect;
+}
+
+struct Glyph
+{
+	float2 pos;
+	uint index;
+	float4 color;
+}
+
+[Bind = DefaultLayout::Instance2]
+struct FontRenderingGlyphs
+{
+	StructuredBuffer<Glyph> data;
+}
+
+GraphicsPSO FontRender
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = "font/vs_simple.hlsl";
+
+	[EntryPoint = PS]
+	pixel = "font/ps_simple.hlsl";
+
+	[EntryPoint = GS]
+	geometry = "font/gs_simple.hlsl";
+
+	topology = POINT;
+
+	[type = Format]
+	[PS]
+	define Format = { ALL_RT_BLENDING_FORMATS };
+
+	rtv = { Format };
+
+	enable_depth = false;
+	cull = None;
+	#	blend = { AlphaBlend };
+}

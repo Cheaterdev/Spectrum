@@ -1,6 +1,6 @@
 // REBLUR_SPECULAR sibling of sig_reblur_historyfix.hlsl (see
 // [[project-nrd-integration]]) -- routed via
-// REBLUR_HistoryFixSpecularResources (see nrd_sig_test.sig's comment on that
+// REBLUR_HistoryFixSpecularResources (see nrd_sig_test.prism's comment on that
 // struct for the field-list difference vs diffuse -- one extra input,
 // gIn_SpecHitDistForTracking).
 #define NRD_INTERNAL

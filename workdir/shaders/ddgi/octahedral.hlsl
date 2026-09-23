@@ -5,7 +5,7 @@
 // per-probe radiance/irradiance/visibility out as flat 2D atlas texels (see
 // [[project-ddgi]] planning notes). uv is in [-1,1], not [0,1] -- callers
 // convert to/from texel space themselves (DDGIProbes::ddgi_atlas_origin /
-// ddgi_atlas_local_uv, ddgi.sig).
+// ddgi_atlas_local_uv, ddgi.prism).
 
 float3 ddgi_oct_decode(float2 uv)
 {
@@ -32,7 +32,7 @@ float2 ddgi_oct_encode(float3 n)
 // Mapping") -- a deterministic, near-uniform distribution of `count`
 // directions over the sphere, computed purely from `index`/`count`: no
 // precomputed direction table, no per-probe storage. DDGIProbeTrace fires
-// exactly one ray per index (ddgi.sig's DDGI_ProbeRayCount comment on why
+// exactly one ray per index (ddgi.prism's DDGI_ProbeRayCount comment on why
 // this replaced 1-ray-per-octahedral-texel), and DDGIProbeConvolve
 // recomputes the SAME direction from the same index when resampling that
 // ray's stored radiance into the octahedral output map -- the two must stay

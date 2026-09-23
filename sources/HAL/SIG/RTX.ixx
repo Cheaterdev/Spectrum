@@ -355,9 +355,9 @@ struct SelectLocal<T>
 		}
 
 		// Same generator-index lookup dispatch<T>() uses, exposed on its own
-		// for callers building a DispatchRaysArguments record (raytracing.sig)
+		// for callers building a DispatchRaysArguments record (raytracing.prism)
 		// for GPU-driven ExecuteIndirect instead of a direct dispatch_rays call
-		// (DDGIProbeDispatchArgsBuild, ddgi.sig, is the first user).
+		// (DDGIProbeDispatchArgsBuild, ddgi.prism, is the first user).
 		template<class T>
 		HAL::ResourceAddress raygen_address() const
 		{

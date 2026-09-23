@@ -19,11 +19,11 @@ using namespace HAL;
 // own comment). NRD_GBufferPack (its other input, and now the only place
 // that packs radiance+hitdist for NRD -- see its own comment) uses the same
 // gate.
-// setup() is fully generated (nrd_sig_test.sig's own [SetupCondition]).
+// setup() is fully generated (nrd_sig_test.prism's own [SetupCondition]).
 
 void PassDefault<Passes::NRD_REBLUR_Execute>::pre_setup(FrameGraph::Graph& graph)
 {
-	// Same gate as [SetupCondition] (nrd_sig_test.sig) -- ensure_pools() is a
+	// Same gate as [SetupCondition] (nrd_sig_test.prism) -- ensure_pools() is a
 	// real side effect [SetupCondition] can't express, so it runs here,
 	// once per frame before graph.setup(), guarded by the identical
 	// condition repeated (this function's whole reason to exist is that the

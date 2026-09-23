@@ -1,1 +1,0 @@
-java -cp ./antlr-4.11.1-complete.jar org.antlr.v4.Tool -o ./.antlr SIG.g4 

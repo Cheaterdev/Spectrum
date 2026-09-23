@@ -4,8 +4,8 @@
 // single-tap-per-corner 3x3 hardware-PCF, no blocker search/blur/denoiser at
 // all. Also used by VoxelGI's Lighting pass (voxel_lighting.hlsl's
 // get_shadow(), via the lean VSMShadowLookup payload -- see that struct's
-// own comment, vsm.sig), which runs before VSM_ShadowResolve/VSM_Combine in
-// the frame (test.sig's MainPipeline ordering) and so has no other shadow
+// own comment, vsm.prism), which runs before VSM_ShadowResolve/VSM_Combine in
+// the frame (test.prism's MainPipeline ordering) and so has no other shadow
 // signal available yet. When penumbra is ON, VSM_Combine (VSM.hlsl's
 // combine_result, the only other caller) doesn't run at all -- stage 3
 // (VSM_ShadowResolve) does its own per-pixel resolve instead, denoised by

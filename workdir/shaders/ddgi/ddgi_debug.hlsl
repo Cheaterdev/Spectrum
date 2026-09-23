@@ -38,7 +38,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	uint3 probe_coord = probes.ddgi_probe_grid_coord(probe_index, probe_counts);
 	float3 world_pos = probes.ddgi_probe_world_pos(probe_coord, info.GetGrid_min().xyz, info.GetProbe_spacing().xyz, float3(0, 0, 0), probe_counts);
 
-	// Not being traced/convolved this frame (DDGIProbeResidencyMark, ddgi.sig,
+	// Not being traced/convolved this frame (DDGIProbeResidencyMark, ddgi.prism,
 	// didn't mark it needed) -- skip entirely rather than draw a stale
 	// marker, same as this probe just isn't there right now.
 	uint probe_linear_index = probes.ddgi_probe_linear_index(probe_coord, probe_counts);
@@ -80,7 +80,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 		return;
 
 	// Color by this probe's own convolved irradiance, sampled toward the
-	// camera -- see DDGIDebugData's own comment (ddgi.sig) for why that
+	// camera -- see DDGIDebugData's own comment (ddgi.prism) for why that
 	// direction, not the surface-facing one a real shading point would use.
 	uint texel_size = info.GetAtlas_info().x;
 	float3 view_dir = normalize(frame.GetCamera().GetPosition().xyz - world_pos);

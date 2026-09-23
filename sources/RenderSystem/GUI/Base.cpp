@@ -1023,7 +1023,7 @@ namespace GUI
         ui_ctx.draw_infos = std::move(draw_infos);
         ui_ctx.pre_draw_infos = std::move(pre_draw_infos);
 
-        // Mirrored into Table::UIState -- see its own comment (ui.sig) for
+        // Mirrored into Table::UIState -- see its own comment (ui.prism) for
         // why this can't just be a UIContext read: UI_PreDraw's
         // [RenderCondition] reads it from autogen/pass_defaults.cpp, which
         // only sees Table:: contexts.
@@ -1031,7 +1031,7 @@ namespace GUI
         // Table, ambiguous by unqualified lookup inside module GUI.
         graph.get_context<::Table::UIState>().UI_Passes_needed = (uint32_t)ui_ctx.pre_draw_infos.size();
 
-        // Mirrored into Table::UIRenderState -- see its own comment (ui.sig)
+        // Mirrored into Table::UIRenderState -- see its own comment (ui.prism)
         // for why: UI_Render's [Multiple=16] instances read passes_needed
         // via data.pass_index instead of the old ui_ctx.setup_counter++.
         {
@@ -1079,7 +1079,7 @@ namespace GUI
             default:                return FrameGraph::ResourceID::ResultTexture;
             }
         };
-        // UI_Render declares ResultTexture statically (ui.sig); anything other
+        // UI_Render declares ResultTexture statically (ui.prism); anything other
         // than Final redirects that one field for this frame. Registered here,
         // during graph construction, because an override has to be in place
         // before setup() runs -- and re-registered every frame, since
@@ -1740,7 +1740,7 @@ namespace GUI
 // PassDefault<Passes::UI_PreDraw>
 // ============================================================
 
-// setup() is fully generated (ui.sig's own [RenderCondition]).
+// setup() is fully generated (ui.prism's own [RenderCondition]).
 // UI_PreDraw_Sync's ResourceChain must reset every frame (create() is the
 // only thing that calls reset_frame()) even with nothing to pre-draw, or
 // exists() keeps reporting true from a prior frame and UI_Render's need()
@@ -1773,7 +1773,7 @@ static uint32_t ui_per_thread(uint32_t size)
     return std::max(clamped_per_thread, (size + 7) / 8);
 }
 
-// setup() is fully generated (ui.sig's own [SetupCondition] on data.pass_index,
+// setup() is fully generated (ui.prism's own [SetupCondition] on data.pass_index,
 // plus [NeedDynamic] for the debug-view source -- the one resource here whose
 // identity is picked at runtime).
 

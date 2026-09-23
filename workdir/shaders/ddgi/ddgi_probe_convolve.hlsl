@@ -3,7 +3,7 @@
 #include "octahedral.hlsl"
 
 // Cosine-weighted RESAMPLE of a probe's own fixed traced ray set
-// (DDGI_ProbeRayRadiance, ddgi_sphere_fibonacci directions -- see ddgi.sig's
+// (DDGI_ProbeRayRadiance, ddgi_sphere_fibonacci directions -- see ddgi.prism's
 // DDGI_ProbeRayCount comment) into one irradiance texel per output direction,
 // plus a mean/mean-square hit-distance visibility texel (depth-test input for
 // DDGIOcclusionMode::ProbeDepthTest, ddgi_sample.hlsl). Not a 1:1 read any
@@ -35,7 +35,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID, uint3 gtid : SV_GroupThreadID)
 	const DDGIProbeConvolveData data = GetDDGIProbeConvolveData();
 	// Dispatch size is one cascade's own DDGI_AtlasWidth x DDGI_AtlasHeight x
 	// DDGI_ProbeCountY -- xy is the (probe_x, probe_z) plane, z is probe_y
-	// directly (see DDGIProbeSelect's own comment, ddgi.sig, on why probe_y
+	// directly (see DDGIProbeSelect's own comment, ddgi.prism, on why probe_y
 	// and the cascade both live in the array dimension instead of a folded
 	// 2D width/height). All the octahedral/probe-cell math below stays in
 	// plane-local space; only the final texture writes add the array slice
@@ -47,7 +47,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID, uint3 gtid : SV_GroupThreadID)
 
 	// No bound buffer -- DDGIProbes here is only ever used for its pure
 	// coordinate-math helpers (ddgi_atlas_probe_coord/ddgi_atlas_local_uv,
-	// neither reads `this`), see DDGIProbeConvolveData's own comment (ddgi.sig)
+	// neither reads `this`), see DDGIProbeConvolveData's own comment (ddgi.prism)
 	// for why the actual probe buffer isn't plumbed into this pass at all.
 	DDGIProbes probes;
 

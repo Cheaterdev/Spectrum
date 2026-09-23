@@ -69,7 +69,7 @@ BlueNoise::BlueNoise()
 
 	// ---- Pass function members ------------------------------------------------
 
-	// setup() is fully generated (BlueNoise.sig's own [RunAlways]).
+	// setup() is fully generated (BlueNoise.prism's own [RunAlways]).
 
 	m_bluenoise_render = [this](Passes::BlueNoise::Context& data, FrameGraph::FrameContext& context)
 	{

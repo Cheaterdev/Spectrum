@@ -5,14 +5,14 @@
 // consumes DDGI_ProbeResidencyPending -- whatever TraceIndirectDiffuse
 // (IndirectRTX/IndirectRTXHalf, raytracing.hlsl) wrote at its own per-pixel
 // indirect ray's hit points LAST frame, one probe cell per hit, see that
-// buffer's own comment (ddgi.sig) for why one frame lagged -- into
+// buffer's own comment (ddgi.prism) for why one frame lagged -- into
 // DDGI_ProbeResidency, clearing pending back to 0 as it's consumed so each
 // mark is used exactly once. The coarsest cascade (DDGIInfo::cascade_info.w)
 // is exempt by default: forced fully resident regardless of pending, since
 // it has nowhere further to fall back to -- DDGIInfo::flags.z
 // (cull_coarsest_cascade, mirrored from DDGIGraph.cpp's own Variable<bool>)
 // turns that exemption off, culling it the same as every other cascade.
-// See that flag's own comment (ddgi.sig) for what turning it off risks:
+// See that flag's own comment (ddgi.prism) for what turning it off risks:
 // the coarsest-cascade sampling fallback has no residency check of its own
 // yet, so a probe this drops can be read back stale.
 //
@@ -75,7 +75,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	bool coarsest_exempt = is_coarsest && !cull_coarsest;
 
 	// Toroidal-scroll forced eviction (see DDGIProbeResidencyMarkData's own
-	// comment, ddgi.sig, for the derivation): a probe's slot on axis A is
+	// comment, ddgi.prism, for the derivation): a probe's slot on axis A is
 	// being re-tenanted this frame -- its stored data is for whatever cell
 	// USED to alias here, not the one that does now -- iff
 	// wrap(slot[A] - scroll_lo[A], counts[A]) < scroll_count[A]. Checked per
@@ -119,7 +119,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 		// next activation -- whenever a screen ray next hits near it -- ramps
 		// in from a clean history instead of DDGIProbeConvolve's temporal
 		// blend mixing fresh light with the previous tenant's unrelated one
-		// (see this struct's own comment, ddgi.sig).
+		// (see this struct's own comment, ddgi.prism).
 		uint texel_size = data.GetInfo().GetAtlas_info().x;
 		uint2 origin = probes.ddgi_atlas_origin(slot, texel_size);
 		uint slice = probes.ddgi_atlas_array_slice(slot.y, data.GetInfo().GetCascade_info().y);
@@ -137,7 +137,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// Stagger gate: which rotating 1/stagger_k-sized subset of THIS cascade's
 	// probes is due for actual retrace this frame (DDGIGraph.cpp's
 	// g_ddgi_stagger_k/g_ddgi_stagger_bucket, mirrored here via
-	// DDGIInfo::rays_per_probe.yz -- see that field's own comment, ddgi.sig).
+	// DDGIInfo::rays_per_probe.yz -- see that field's own comment, ddgi.prism).
 	// Deliberately NOT folded into `needed`/probe_residency above: a probe
 	// that's needed but simply hasn't had its turn this frame stays resident
 	// (still sampled, still contributing its last traced value) -- only

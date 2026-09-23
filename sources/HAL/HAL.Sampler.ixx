@@ -95,7 +95,7 @@ namespace HAL
 		// the compare value (current fragment depth) is >= the sampled
 		// texel. Was LESS_EQUAL -- correct for direct-Z, never updated when
 		// this project switched to reversed-Z, and unused anywhere until
-		// now (confirmed: no .sig file referenced it), so safe to flip in
+		// now (confirmed: no .prism file referenced it), so safe to flip in
 		// place rather than add a second desc.
 		SamplerDesc SamplerShadowComparisonDesc = SamplerDesc{ Filter::LINEAR, Filter::LINEAR, Filter::LINEAR, TextureAddressMode::CLAMP, TextureAddressMode::CLAMP ,
 			TextureAddressMode::CLAMP,0.0f,16, ComparisonFunc::GREATER_EQUAL, float4(1,1,1,1), 0, std::numeric_limits<float>::max() };

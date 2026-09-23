@@ -285,7 +285,7 @@ class MaterialContext : public FlowGraph::GraphContext
 
         std::string text;
 
-        // Per-node preview capture (see material_preview.sig / Materials.cpp).
+        // Per-node preview capture (see material_preview.prism / Materials.cpp).
         // Only populated while generating preview_shader.
         //
         // Node outputs are transient here -- put() triggers send_next()

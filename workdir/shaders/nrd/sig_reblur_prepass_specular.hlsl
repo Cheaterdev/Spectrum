@@ -1,7 +1,7 @@
 // REBLUR_SPECULAR sibling of sig_reblur_prepass.hlsl (see
 // [[project-nrd-integration]]) -- routed via REBLUR_PrePassSpecularResources
 // (Diff->Spec renamed, plus gOut_SpecHitDistForTracking with no diffuse
-// equivalent -- see nrd_sig_test.sig's comment on that struct).
+// equivalent -- see nrd_sig_test.prism's comment on that struct).
 #define NRD_INTERNAL
 #define NRD_SIGNAL SPEC
 #define NRD_MODE RADIANCE

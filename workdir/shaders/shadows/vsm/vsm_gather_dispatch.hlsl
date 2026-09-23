@@ -9,7 +9,7 @@
 //
 // Phase 5.19: CS below now skips alpha-cutout materials (routed instead to
 // CS_MATERIAL's per-pipeline buckets, see VSMGatherDispatchMaterialData's
-// own comment in vsm.sig) -- everything else (the common, opaque case)
+// own comment in vsm.prism) -- everything else (the common, opaque case)
 // still goes through this single default list/dispatch exactly as before.
 
 #include "../../autogen/GatherPipelineGlobal.h"
@@ -28,7 +28,7 @@ static const VSMGatherDispatchData gatherData = GetVSMGatherDispatchData();
 #elif defined(BUILD_FUNC_CS_MATERIAL)
 #include "../../autogen/VSMGatherDispatchMaterialData.h"
 static const VSMGatherDispatchMaterialData gatherData = GetVSMGatherDispatchMaterialData();
-// Same packed-8-ids convention as meshrender.sig's GatherPipeline.pip_ids /
+// Same packed-8-ids convention as meshrender.prism's GatherPipeline.pip_ids /
 // gather_pipeline.hlsl's ids[8] -- see vsm_append_to_bucket below. Direct
 // field access (not GetMaterial_pip_ids(), which is the per-index accessor
 // generated for a fixed-size array field), matching gather_pipeline.hlsl's
@@ -81,7 +81,7 @@ void aabb_light_space_bounds(AABB aabb, float4x4 node_mat, float4x4 light_view, 
 //
 // material_cb is populated here unconditionally (not just for CS_MATERIAL's
 // alpha-cutout entries) -- see VSMDispatchCommandData's own comment in
-// vsm.sig for why the default/opaque list needs it wired too, even though
+// vsm.prism for why the default/opaque list needs it wired too, even though
 // VSMDepthDraw's shader never reads it.
 bool vsm_try_build_entry(MeshCommandData mesh, MaterialCommandData material, VSMLevelDispatchInfo level, float4x4 light_view, out VSMDispatchCommandData entry)
 {

@@ -27,7 +27,7 @@ SMAA::SMAA()
 
 	// ---- Pass function members ------------------------------------------------
 
-	// setup() is fully generated (smaa.sig's own [SetupCondition]).
+	// setup() is fully generated (smaa.prism's own [SetupCondition]).
 
 	m_smaa_render = [this](Passes::SMAA::Context& data, FrameGraph::FrameContext& context)
 	{

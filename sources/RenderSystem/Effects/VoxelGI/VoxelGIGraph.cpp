@@ -185,7 +185,7 @@ void Texture3DRefTiles::zero_tiles(HAL::CommandList& list)
 
 void VoxelGI::update_frame(FrameGraph::Graph& graph)
 {
-	// Mirror of the GUI toggles for the generated setups (voxel.sig's own
+	// Mirror of the GUI toggles for the generated setups (voxel.prism's own
 	// VoxelGISelectors). debug_voxel_trace is DebugContext::mode reduced to the
 	// single test VoxelDebug makes -- DebugMode is a plain C++ enum, so a
 	// generated condition cannot name its enumerators.
@@ -248,12 +248,12 @@ void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
 }
 
 
-// [Static] (see voxel.sig) -- this used to be a runtime-wired
+// [Static] (see voxel.prism) -- this used to be a runtime-wired
 // add_library_pass with no call site left anywhere assigning it into a
 // pipeline (dead: never ran, before or after the compute rewrite). It is
 // fully stateless, so PassDefault<Passes::GBufferDownsampler> + a
-// MainPipeline listing (test.sig) is the right shape, matching IndirectRTX.
-// setup() is fully generated (voxel.sig's own [RunAlways]).
+// MainPipeline listing (test.prism) is the right shape, matching IndirectRTX.
+// setup() is fully generated (voxel.prism's own [RunAlways]).
 
 namespace
 {
@@ -270,7 +270,7 @@ namespace
 	}
 
 	// Pure eyeball-tuned values -- see TileClassifyData's own comment
-	// (pssm.sig) for what they gate.
+	// (pssm.prism) for what they gate.
 	Variable<float> g_roughness_threshold = { 0.5f,  "Reflection roughness threshold", &tile_classify_context(), 0.0f, 1.0f };
 	Variable<float> g_metallic_threshold  = { 0.05f, "Reflection metallic threshold",  &tile_classify_context(), 0.0f, 1.0f };
 }
@@ -402,7 +402,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- Voxelize -------------------------------------------------------
 
-	// setup() is fully generated (voxel.sig's own [SetupCondition]); the voxel-
+	// setup() is fully generated (voxel.prism's own [SetupCondition]); the voxel-
 	// bounds/VoxelInfo update it used to also do now runs in update_frame().
 
 	m_voxelize_render = [this](Passes::Voxelize::Context& data, FrameGraph::FrameContext& context)
@@ -432,7 +432,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- Lighting -------------------------------------------------------
 
-	// setup() is fully generated (voxel.sig's own [SetupCondition]).
+	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
 	m_lighting_render = [this](Passes::Lighting::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -530,7 +530,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- Mipmapping -----------------------------------------------------
 
-	// setup() is fully generated (voxel.sig's own [SetupCondition]).
+	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
 	m_mipmapping_render = [this](Passes::Mipmapping::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -610,7 +610,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	// selected upscaler. No availability re-check: g_upscaler_type can't
 	// hold an unavailable type (see its invariant, UpscalingDLSS.ixx).
 
-	// setup() is fully generated (UpscalingDLSSRR.sig's own [SetupCondition]).
+	// setup() is fully generated (UpscalingDLSSRR.prism's own [SetupCondition]).
 
 	m_normalroughnessrepack_render = [this](Passes::NormalRoughnessRepack::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -634,7 +634,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- ReflCombine ----------------------------------------------------
 
-	// setup() is fully generated (voxel.sig's own [SetupCondition]).
+	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
 	m_reflcombine_render = [this](Passes::ReflCombine::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -663,7 +663,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- VoxelDebug -----------------------------------------------------
 
-	// setup() is fully generated (voxel.sig's own [SetupCondition]).
+	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
 	m_voxeldebug_render = [this](Passes::VoxelDebug::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -709,7 +709,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- VoxelScreen (voxel-cone-traced indirect GI, NRD source) --------
 
-	// setup() is fully generated (voxel.sig's own [SetupCondition]).
+	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
 	m_voxelscreen_render = [this](Passes::VoxelScreen::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -750,7 +750,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// ---- ScreenReflection (voxel-cone-traced reflection, NRD source) ----
 
-	// setup() is fully generated (voxel.sig's own [SetupCondition]).
+	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
 	m_screenreflection_render = [this](Passes::ScreenReflection::Context& data, FrameGraph::FrameContext& context)
 	{

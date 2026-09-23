@@ -83,7 +83,7 @@ struct ShadowsFlowNode : FlowGraph::GraphNode<WGContext>
 };
 
 // ── ResultCreation -----------------------------------------------------------
-// setup() is fully generated (helpers.sig's [RenderCondition = `false`]) --
+// setup() is fully generated (helpers.prism's [RenderCondition = `false`]) --
 // this pass exists purely to keep swapchain graph-tracked, never renders.
 
 void PassDefault<Passes::ResultCreation>::render(
@@ -91,7 +91,7 @@ void PassDefault<Passes::ResultCreation>::render(
 
 
 // ---- Profiler ---------------------------------------------------------------
-// setup() is fully generated (scene.sig's [RenderCondition = `false`]) --
+// setup() is fully generated (scene.prism's [RenderCondition = `false`]) --
 // this pass never actually renders itself (some other UI/overlay pass owns
 // the real profiler drawing), it exists purely to keep itself graph-tracked.
 
@@ -100,7 +100,7 @@ void PassDefault<Passes::Profiler>::render(
 
 
 // ---- RTXShadow --------------------------------------------------------------
-// setup() is fully generated (raytracing.sig's own [RenderCondition]).
+// setup() is fully generated (raytracing.prism's own [RenderCondition]).
 
 void PassDefault<Passes::RTXShadow>::render(
     Passes::RTXShadow::Context& data, FrameGraph::FrameContext& context)
@@ -177,7 +177,7 @@ void PassDefault<Passes::RTXShadow>::render(
 	// render_size / upscale_size - keeps the shadow's screen-space search
 	// reach a constant fraction of the DISPLAY resolution, regardless of
 	// DLSS's current render scale (frame.frame_size varies, upscale_size
-	// doesn't). See PixelStepScale's doc comment in SS_Shadow.sig.
+	// doesn't). See PixelStepScale's doc comment in SS_Shadow.prism.
 	dispatchParameters.GetPixelStepScale() = float(frame.frame_size.x) / float(frame.upscale_size.x);
 	compute.set(dispatchParameters);
 
@@ -214,7 +214,7 @@ void PassDefault<Passes::RTXShadow>::render(
 // Casts primary camera rays via the ColorRTX raygen (ColorPass hit/miss) and
 // writes the traced color to ColorOutput. On-demand: only enabled when a
 // consumer (the debug view) needs ColorOutput.
-// setup() is fully generated (raytracing.sig's own [SetupCondition]).
+// setup() is fully generated (raytracing.prism's own [SetupCondition]).
 
 void PassDefault<Passes::RTXColorPass>::render(
     Passes::RTXColorPass::Context& data, FrameGraph::FrameContext& context)

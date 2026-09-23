@@ -20,7 +20,7 @@ static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 // hi/low-tile-list pattern -- one 16x16 group per screen tile, each thread
 // classifies its own pixel via vsm_classify_blocker, and a groupshared
 // reduction decides the WHOLE tile's verdict. Writes NOTHING pixel-shaped
-// -- purely classification and bucketing; see vsm.sig's own PassNode
+// -- purely classification and bucketing; see vsm.prism's own PassNode
 // comment for why (a resource written by several independent downstream
 // passes with no data dependency between them isn't reliably visible to
 // FrameGraph's dependency resolution -- confirmed live, twice, earlier this

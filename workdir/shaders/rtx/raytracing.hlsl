@@ -40,7 +40,7 @@
 // (RGB=hit color, A=hit distance) now; NRD_GBufferPack (gbuffer_pack.hlsl)
 // does the REBLUR-specific front-end pack for whichever candidate NRD
 // actually needs, and only when NRD is actually running (see its own
-// comment, nrd_sig_test.sig, for why this moved).
+// comment, nrd_sig_test.prism, for why this moved).
 
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
@@ -281,7 +281,7 @@ void ShadowRaygenShader()
 	tex_noise[itc] = float4(shadow.xxx, float(reprojected.frames) / FRAMES);// lerp(tex_noise[itc], shadow, 0.01);// !payload_shadow.hit;
 }
 
-// Independent RTX-only reference shadow for ShadowRTX (see voxel.sig's
+// Independent RTX-only reference shadow for ShadowRTX (see voxel.prism's
 // PassNode ShadowRTX). Deliberately NOT sharing code with ShadowRaygenShader
 // above -- that one stays untouched, still used by RTXShadowReference's own
 // 16-sample ground truth. This one is still 16 taps per pixel (1 tap left
@@ -430,7 +430,7 @@ void ColorPass()
 
 
 // Shared body for MyRaygenShaderIndirectRTXOnly/MyRaygenShaderIndirectRTXHalfRes
-// (see voxel.sig's PassNode IndirectRTX/IndirectRTXHalf): one ray per pixel,
+// (see voxel.prism's PassNode IndirectRTX/IndirectRTXHalf): one ray per pixel,
 // GGX-importance-sampled hemisphere direction, fixed reach, no voxel grid
 // involved, no history blend. Denoised by NRD REBLUR_DIFFUSE (see
 // [[project-nrd-integration]]). Parameterized on depth/normals/output/blue-
@@ -475,11 +475,11 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 	// probe volume's accumulated multi-bounce light actually reaches the
 	// rendered frame, not just the probes' own atlas. Reads LAST frame's
 	// convolved DDGI_ProbeIrradiance/Visibility -- DDGIProbeTrace/Convolve
-	// for THIS frame now run AFTER IndirectRTX/ReflectionRTX (test.sig's
+	// for THIS frame now run AFTER IndirectRTX/ReflectionRTX (test.prism's
 	// MainPipeline), on [Async2], overlapping with the rest of the frame
 	// instead of gating this read, so what's actually in the buffer here is
 	// one frame stale (same one-frame lag DDGIProbeTrace's own feedback
-	// read already had, see that PassNode's own comment, ddgi.sig, for why
+	// read already had, see that PassNode's own comment, ddgi.prism, for why
 	// that's fine given the multi-bounce loop is already inherently
 	// multi-frame). No pi/BRDF normalization on the added term yet (tuning
 	// item, not structural).
@@ -490,7 +490,7 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 		float3 hit_pos = pos + dir * payload_gi.dist;
 
 		// Residency marking (see [[project-ddgi]] planning notes and
-		// DDGI_ProbeResidencyPending's own comment, ddgi.sig): this screen
+		// DDGI_ProbeResidencyPending's own comment, ddgi.prism): this screen
 		// ray's hit point is exactly the "what does the screen actually need
 		// lit right now" signal DDGIProbeResidencyMark consumes NEXT frame to
 		// decide which probes to keep tracing. Independent of the use_fallback
@@ -551,7 +551,7 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 
 		// Master on/off, mirrored identically into every cascade's own
 		// DDGIInfo (DDGIGraph.cpp's ddgi_make_info) -- see DDGIInfo::flags'
-		// own comment (ddgi.sig).
+		// own comment (ddgi.prism).
 		if (ddgi_cascade0.GetFlags().x != 0)
 		{
 			float3 indirect = ddgi_sample_irradiance_cascaded(hit_pos, payload_gi.hit_normal,
@@ -568,7 +568,7 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 	// when NRD is actually running) and RTXCombine/DLSS-RR directly (which
 	// wants exactly this shape for its ColorIn/SpecularHitDistance tags, see
 	// HAL.DLSSRR.ixx's own comment). See NRD_GBufferPack's comment
-	// (nrd_sig_test.sig) for why packing moved out of this raygen.
+	// (nrd_sig_test.prism) for why packing moved out of this raygen.
 	tex_noise[itc] = float4(payload_gi.color.rgb*2, payload_gi.dist);
 }
 
@@ -585,8 +585,8 @@ void MyRaygenShaderIndirectRTXOnly()
 
 	// Low-tile pixels reuse IndirectRTXHalf's always-on half-res trace
 	// instead of firing their own ray -- see TileClassifyData's own comment
-	// (pssm.sig) for the classifier, and IndirectRTXUpscale's (this file's
-	// autogen source, voxel.sig) for why a direct bilinear sample of the
+	// (pssm.prism) for the classifier, and IndirectRTXUpscale's (this file's
+	// autogen source, voxel.prism) for why a direct bilinear sample of the
 	// packed half-res buffer is safe here. Only Hi tiles below pay for a
 	// real TraceRay call.
 	uint hi = upscale.GetTileFlags()[itc / 8];
@@ -601,7 +601,7 @@ void MyRaygenShaderIndirectRTXOnly()
 	TraceIndirectDiffuse(voxel_screen.GetGbuffer().GetDepth(), voxel_screen.GetGbuffer().GetNormals(), tex_noise, voxel_output.GetBlueNoise());
 }
 
-// Always-on half-res base layer for IndirectRTXHalf (see voxel.sig's
+// Always-on half-res base layer for IndirectRTXHalf (see voxel.prism's
 // PassNode IndirectRTXHalf) -- same trace as MyRaygenShaderIndirectRTXOnly's
 // Hi-tile path, just over GBuffer_HalfDepth/HalfNormals (a quarter the
 // rays), consumed by MyRaygenShaderIndirectRTXOnly above for its Low tiles.
@@ -615,7 +615,7 @@ void MyRaygenShaderIndirectRTXHalfRes()
 }
 
 // Shared body for MyRaygenShaderReflectionRTXOnly/MyRaygenShaderReflectionRTXHalfRes
-// (see voxel.sig's PassNode ReflectionRTX/ReflectionRTXHalf): pure DXR, one
+// (see voxel.prism's PassNode ReflectionRTX/ReflectionRTXHalf): pure DXR, one
 // ray per pixel, blue-noise-jittered direction (SampleReflectionVector --
 // this is what makes the output genuinely noisy rather than a perfect
 // mirror, which is what a denoiser is meant to clean up), fixed TMax, no
@@ -752,7 +752,7 @@ void MyRaygenShaderReflectionRTXOnly()
 	// Skip the fresh ray only when BOTH tile axes say Low -- a geometric
 	// edge makes the half-res buffer untrustworthy regardless of material,
 	// and a glossy+metallic surface needs real detail regardless of how
-	// flat it is (see ReflectionRTXUpscale's own comment, voxel.sig).
+	// flat it is (see ReflectionRTXUpscale's own comment, voxel.prism).
 	uint2 tile = itc / 8;
 	bool needs_trace = upscale.GetTileFlags()[tile] || upscale.GetRoughnessTileFlags()[tile];
 	if (!needs_trace)
@@ -766,7 +766,7 @@ void MyRaygenShaderReflectionRTXOnly()
 	TraceReflection(voxel_screen.GetGbuffer().GetDepth(), voxel_screen.GetGbuffer().GetNormals(), tex_noise, tex_dir_pdf, voxel_output.GetBlueNoise());
 }
 
-// Always-on half-res base layer for ReflectionRTXHalf (see voxel.sig's
+// Always-on half-res base layer for ReflectionRTXHalf (see voxel.prism's
 // PassNode ReflectionRTXHalf) -- same trace as MyRaygenShaderReflectionRTXOnly's
 // Hi-tile path, just over GBuffer_HalfDepth/HalfNormals (a quarter the
 // rays), consumed by MyRaygenShaderReflectionRTXOnly above for its Low tiles.
@@ -780,7 +780,7 @@ void MyRaygenShaderReflectionRTXHalfRes()
 }
 
 
-// Indirect-GI voxel-cone-traced signal for VoxelScreen (see voxel.sig's
+// Indirect-GI voxel-cone-traced signal for VoxelScreen (see voxel.prism's
 // PassNode VoxelScreen): RTX primary ray (GGX-importance-sampled hemisphere
 // direction, same as MyRaygenShaderIndirectRTXOnly) with a short reach,
 // falling back to a cone-trace through the 3D voxel volume on miss. An
@@ -839,7 +839,7 @@ void MyRaygenShader()
 	tex_noise_raw[itc] = float4(payload_gi.color.rgb, payload_gi.dist);
 }
 
-// Reflection voxel-cone-traced signal for ScreenReflection (see voxel.sig's
+// Reflection voxel-cone-traced signal for ScreenReflection (see voxel.prism's
 // PassNode ScreenReflection): RTX primary ray (SampleReflectionVector, same
 // as MyRaygenShaderReflectionRTXOnly) with a roughness-dependent short reach,
 // falling back to a cone-trace through the 3D voxel volume on miss. An

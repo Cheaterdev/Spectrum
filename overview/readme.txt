@@ -18,9 +18,10 @@ It is structured as several layers:
                   Contains the frame graph, scene management, effects, assets,
                   materials, and all render pass logic.
 
-  SIGParser/    — A code-generation tool that reads .sig files and emits C++
-                  headers (pass structs, slot bindings, PSO declarations,
-                  pipeline classes, pass_defaults.h) via Jinja2 templates.
+  Prism/        — The Prism declaration language and its compiler (prismc):
+                  reads .prism files and generates C++ and HLSL (structs and
+                  slot bindings, PSOs, pass structs and setups, pipeline
+                  classes). See overview/Prism.txt.
 
   Spectrum/     — The application layer (main.cpp and friends). Wires the
                   engine together, owns the window/swap chain, and hosts any
@@ -86,48 +87,35 @@ PassFlags:  General | Compute | Required
 
 
 --------------------------------------------------------------------------------
-  SIG FILES AND CODE GENERATION
+  PRISM FILES AND CODE GENERATION
 --------------------------------------------------------------------------------
 
-.sig files define the data contracts for GPU resources, PSOs, slots, and passes.
-SIGParser reads them and emits C++ via Jinja2 templates.
+Full reference: overview/Prism.txt (every declaration, option, generated file,
+check and editor feature).
 
-Key .sig constructs:
+.prism files in sources/Prism/defs/ declare GPU/CPU shared structs and their
+slot bindings, root layouts, graphics/compute/raytracing/work-graph PSOs,
+FrameGraph passes, pipelines, enums, constants and HLSL helper functions.
+prismc (sources/Prism/) validates them and generates C++ and HLSL through
+Jinja2 templates:
 
-  struct Foo { ... }          — GPU-visible buffer layout; generates slot/table
-                                binding code.
-  GraphicsPSO / ComputePSO / WorkgraphPSO / RaytracePSO  — pipeline state
-                                objects; generates PSOS:: entries and wrappers.
-  PassNode Foo { ... }        — declares a render pass and its resource handles.
-                                Generates Passes::Foo, Passes::Foo::Context.
+  struct Foo { ... }          — Table::Foo + Slots::Foo (with [Bind]) and the
+                                matching HLSL struct.
+  ComputePSO / GraphicsPSO / WorkgraphPSO / RaytracePSO — PSOS:: entries with
+                                permutation keys from their `define`s.
+  PassNode Foo { ... }        — Passes::Foo with a Context handle per resource
+                                field and a generated setup (need/create per
+                                field options).
+  Pipeline Foo { ... }        — Pipelines::Foo with add_passes(Graph&).
 
-PassNode options:
-  [Static]       — pass has no pipeline member; setup/render come from
-                   PassDefault<Passes::Foo>; pipeline.jinja emits an
-                   unconditional PassDefault<> call.
-  [Multiple = N] — pass can be instanced up to N times; generates MaxCount,
-                   Names[N], setup_funcs[N], render_funcs[N].
-  [Static] + [Multiple] — unconditional loop over MaxCount slots using
-                           PassDefault<>; setup gates inactive slots via a
-                           counter in a graph context.
-  [Flags = X]    — sets PassDefault<>::flags (e.g. Compute, Required).
+Main pass options: [Static] (render is PassDefault<T>::render), [Multiple=N]
+(N instances, data.pass_index), [SetupCondition]/[RenderCondition]/
+[RunAlways] (setup generated into pass_defaults.cpp), [Compute] (+ [Async] on
+the pipeline entry), [Required], [PreSetup].
 
-Generated files (autogen/):
-  pass/<Name>.h              — Passes::Name struct with Context, handle fields,
-                               setup_func / render_func members (if not Static).
-  pass/<Pipeline>.pipeline.h — Pipelines::Pipeline class with pass members and
-                               add_passes(Graph&).
-  pass_defaults.h            — PassDefault<> specialization declarations for
-                               every [Static] pass. Bodies are written by hand
-                               in separate .ixx files.
-
-Templates (SIGParser/templates/cpp/):
-  pipeline.jinja      — generates the pipeline class; handles Static,
-                        Multiple, Static+Multiple branches.
-  pass_defaults.jinja — generates pass_defaults.h declarations from [Static]
-                        passes; the implementation bodies are NOT generated.
-  pass.jinja          — generates per-pass structs.
-  slot.jinja / layout.jinja / pso.jinja / etc.
+Regenerate: Tools > Regenerate Prism code in Visual Studio, or
+`cd sources/Prism && ../../bin/profile/prismc.exe`; run generate_project.bat
+when generated files were added or removed.
 
 
 --------------------------------------------------------------------------------
@@ -184,8 +172,8 @@ Populated once per frame before graph setup, consumed by any pass:
   MAIN PIPELINE  (Pipelines::MainPipeline)
 --------------------------------------------------------------------------------
 
-Defined in test.sig, generated into MainPipeline.pipeline.h.
-Pass execution order (from test.sig comments):
+Defined in test.prism, generated into MainPipeline.pipeline.h.
+Pass execution order (from test.prism comments):
 
   PreScene                          [Static]
   BlueNoise

@@ -43,7 +43,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// just against `pos` (this view's own sample point) instead of a
 	// secondary bounce hit point, since that's what this view actually reads
 	// from. Lets this debug view stay accurate under real residency culling
-	// (see the PassNode's own comment, ddgi.sig) instead of needing "Enable
+	// (see the PassNode's own comment, ddgi.prism) instead of needing "Enable
 	// residency culling" turned off globally just to inspect one area, which
 	// traces/convolves every probe in the whole grid regardless of whether
 	// this view is even pointed at it.

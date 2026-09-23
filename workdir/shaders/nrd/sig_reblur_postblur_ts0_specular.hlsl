@@ -3,7 +3,7 @@
 // emits gOut_InternalData/gOut_SpecCopy since the TemporalStabilization pass
 // is disabled and won't produce them itself. Routed via
 // REBLUR_PostBlurTS0SpecularResources (Diff->Spec renamed, same resource
-// count -- see nrd_sig_test.sig's comment on that struct).
+// count -- see nrd_sig_test.prism's comment on that struct).
 #define NRD_INTERNAL
 #define NRD_SIGNAL SPEC
 #define NRD_MODE RADIANCE

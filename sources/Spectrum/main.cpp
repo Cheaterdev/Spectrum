@@ -331,7 +331,7 @@ public:
 
 		voxel_gi = std::make_shared<VoxelGI>(pipeline,scene,vsm);
 
-		// DDGI's [Multiple=5] passes (ddgi.sig) are runtime-wired, not
+		// DDGI's [Multiple=5] passes (ddgi.prism) are runtime-wired, not
 		// [Static] -- see DDGI.ixx's own comment on ddgi_register_passes.
 		ddgi_register_passes(pipeline, vsm);
 	}
@@ -412,14 +412,14 @@ public:
 		g_upscaling_enabled = downsampled;
 
 		// Mirrors g_upscaler_type/g_upscaling_enabled into the SIG context --
-		// see UpscalingDLSS.sig's own comment on UpscalerSelectors for why.
+		// see UpscalingDLSS.prism's own comment on UpscalerSelectors for why.
 		{
 			auto& upscaler_ctx = graph.get_context<Table::UpscalerSelectors>();
 			upscaler_ctx.upscaler_type     = g_upscaler_type;
 			upscaler_ctx.upscaling_enabled = g_upscaling_enabled;
 		}
 		// Mirrors fixed hardware/SDK capabilities into the SIG context -- see
-		// raytracing.sig's own comment on RenderDeviceCapabilities for why.
+		// raytracing.prism's own comment on RenderDeviceCapabilities for why.
 		{
 			auto& device_caps = graph.get_context<Table::RenderDeviceCapabilities>();
 			device_caps.rtx_supported    = RenderSystem::get().device().is_rtx_supported();
@@ -585,7 +585,7 @@ public:
 				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d();
 				frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d();
 
-				// Material texture LOD bias — see FrameData.sig's mipBias comment.
+				// Material texture LOD bias — see FrameData.prism's mipBias comment.
 				{
 					auto& vp = graph.get_context<ViewportInfo>();
 					frameInfo.GetMipBias() = downsampled
@@ -594,7 +594,7 @@ public:
 				}
 
 				// Hi-Z pyramid for per-meshlet occlusion; the PSO permutation
-				// decides whether it is sampled (scene.sig's HiZOcclusion).
+				// decides whether it is sampled (scene.prism's HiZOcclusion).
 				{
 					auto hiz = graph.builder.get(FrameGraph::ResourceID::GBuffer_HiZ_UAV);
 					if (hiz && hiz->resource)
@@ -836,7 +836,7 @@ public:
 };
 
 // This frame's asset previews that want a GPU pass, one per claimed
-// Passes::AssetPreview instance slot (ui.sig). asset_preview_content::generate()
+// Passes::AssetPreview instance slot (ui.prism). asset_preview_content::generate()
 // appends during create_graph; setup_graph drains the list into the pipeline's
 // render_funcs just before add_passes, which then registers exactly the filled
 // slots.
@@ -991,7 +991,7 @@ public:
 	{
 		if (!m_view) return; // only the texture preview needs a GPU pass
 
-		// The pass itself is declared in ui.sig (AssetPreview, [Multiple=16],
+		// The pass itself is declared in ui.prism (AssetPreview, [Multiple=16],
 		// [Required] because it writes nothing graph-tracked) and its setup is
 		// generated — claiming a slot here is the whole registration.
 		graph.get_context<AssetPreviewContext>().renders.push_back(

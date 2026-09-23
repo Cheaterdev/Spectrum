@@ -13,7 +13,7 @@ export class BlueNoise
 	HAL::StructuredBufferView<int32_t> ranking_buffer_view;
 	HAL::StructuredBufferView<int32_t> scrambling_buffer_view;
 
-	// setup() is generated (BlueNoise.sig's own [RunAlways]) -- render only.
+	// setup() is generated (BlueNoise.prism's own [RunAlways]) -- render only.
 	Passes::BlueNoise::render_func_type m_bluenoise_render;
 
 public:

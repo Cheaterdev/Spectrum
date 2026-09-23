@@ -109,7 +109,7 @@ private:
 	void voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph& graph);
 
 	// Pass function members — bodies defined in VoxelGIGraph.cpp. Render only:
-	// every one of these passes states its enable condition in voxel.sig and
+	// every one of these passes states its enable condition in voxel.prism and
 	// gets a generated setup (PassSetupDefault<T>, pass_defaults.h).
 	Passes::Voxelize::render_func_type                     m_voxelize_render;
 	Passes::Lighting::render_func_type                     m_lighting_render;
@@ -147,7 +147,7 @@ public:
 	void pass_data(FrameGraph::TaskBuilder& builder);
 
 	// Once per frame, before graph.setup(): mirrors the Variable<bool> toggles
-	// above into Table::VoxelGISelectors (voxel.sig) for the generated setups
+	// above into Table::VoxelGISelectors (voxel.prism) for the generated setups
 	// to read, and does the voxel-bounds/VoxelInfo update that used to live in
 	// Voxelize's own setup lambda. Both need a VoxelGI instance, which a
 	// generated static setup has no way to reach.

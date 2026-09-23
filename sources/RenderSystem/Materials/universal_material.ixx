@@ -226,7 +226,7 @@ export namespace materials
 		void on_graph_changed();
 		void generate_material();
 
-		// Per-node preview capture (editor-only; see material_preview.sig).
+		// Per-node preview capture (editor-only; see material_preview.prism).
 		// Just the raw ingredients -- building/compiling/dispatching the
 		// actual preview PSO and results texture is materials::
 		// MaterialPreviewSession's job (owned by the graph editor's canvas

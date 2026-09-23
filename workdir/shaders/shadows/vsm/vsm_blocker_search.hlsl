@@ -21,7 +21,7 @@ static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 // appended tile count, one 16x16 group per tile. Writes the raw
 // blocker-search result to VSMBlockerSearchOutput's own dedicated texture
 // (NOT a texture VSM_Combine samples directly any more) for stage 3's
-// shadow-blur PSO to read back -- see that struct's own comment in vsm.sig.
+// shadow-blur PSO to read back -- see that struct's own comment in vsm.prism.
 //
 // Still does its own per-pixel classification internally
 // (vsm_search_blocker calls vsm_classify_blocker itself) even though stage

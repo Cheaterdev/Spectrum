@@ -22,7 +22,7 @@ export
 		// Must cover VSM::MaxLevels (one unified ladder -- any storage slot
 		// can become active depending on the current [active_min, active_max]
 		// window, not just a fixed "regular" range). Shared with VSM.ixx's
-		// own MaxLevels via vsm.sig's const_definition, so the two can't drift.
+		// own MaxLevels via vsm.prism's const_definition, so the two can't drift.
 		static constexpr int MaxLevels = Constants::MaxLevels;
 		std::array<uint32_t, MaxLevels> dirty_masks{};
 

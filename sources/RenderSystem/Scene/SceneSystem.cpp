@@ -9,9 +9,9 @@ import HAL;
 
 using namespace FrameGraph;
 
-// setup() is fully generated (scene.sig's own [RunAlways]) -- every
+// setup() is fully generated (scene.prism's own [RunAlways]) -- every
 // GBuffer_* field (including the two *Prev-linked ones) is auto-created,
-// see scene.sig's own comment.
+// see scene.prism's own comment.
 
 void PassDefault<Passes::Scene>::render(
     Passes::Scene::Context& data, FrameGraph::FrameContext& context)

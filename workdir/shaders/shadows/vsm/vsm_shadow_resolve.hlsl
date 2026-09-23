@@ -36,7 +36,7 @@ static const float VSM_SUN_ANGULAR_RADIUS = 0.02; // ~17 deg -- hardcoded, tune 
 #include "vsm_impl.hlsl"
 
 // Stage 3 (Phase 5.18 Part A follow-up, take 4): three PSOs sharing this one
-// file, one PassNode, one render() -- see vsm.sig's VSM_ShadowResolve
+// file, one PassNode, one render() -- see vsm.prism's VSM_ShadowResolve
 // PassNode comment for why all three must be issued from the same render()
 // (mirrors VoxelGIGraph's VoxelCombine issuing its own blur+blur2
 // exec_indirects together -- the root-cause fix for two separate
@@ -55,11 +55,11 @@ uint2 resolve_pixel(uint3 groupID, uint3 groupThreadID)
 // writes ResultTexture directly with the real shaded pixel now, instead of
 // a bare shadow scalar VSM_Combine's own separate full-screen pass used to
 // read and apply afterward (see this file's own PassNode comment in
-// vsm.sig for why that intermediate step went away). Mirrors VSM.hlsl's
+// vsm.prism for why that intermediate step went away). Mirrors VSM.hlsl's
 // combine_result formula exactly -- shadow * NL * albedo * (1-metallic);
 // EnvBRDF is computed there but never actually used in its return, so it's
 // not replicated here either.
-// VSMDebugView::ShadowOnly (see vsm.sig's own enum comment): grayscale the
+// VSMDebugView::ShadowOnly (see vsm.prism's own enum comment): grayscale the
 // real per-pixel shadow scalar directly instead of the PBR combine, so it
 // stays legible over dark/black albedo. Reads GetVSMConstants() directly
 // rather than threading a param through every one of this function's
@@ -451,7 +451,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 			// so this evaluates opacity directly off MaterialCommandData's
 			// flat opacity_texture_index rather than the material's real
 			// compiled shader graph (see that field's own comment in
-			// meshrender.sig for why, and its limits: only the common
+			// meshrender.prism for why, and its limits: only the common
 			// single-texture-drives-opacity case is recognized -- anything
 			// else reads ~0u and is treated as opaque, same as today).
 			RayQuery<RAY_FLAG_NONE> rayQuery;
@@ -537,7 +537,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 #endif
 	}
 
-	// VSM_ScreenSpaceShadow's contact-shadow patch (see vsm.sig's own
+	// VSM_ScreenSpaceShadow's contact-shadow patch (see vsm.prism's own
 	// PassNode comment) -- min(), same reasoning as the RTX dual-blur above:
 	// whichever method actually caught the true occluder wins, rather than
 	// diluting toward the wrong answer. Only ever meaningfully written for

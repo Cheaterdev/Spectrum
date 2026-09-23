@@ -21,9 +21,9 @@
 // ensure_pools() rather than folding this into create_pipelines()).
 //
 // Phase 4: the GetComputeDispatches() execution loop (execute()), SIG-driven.
-// Each NRD kernel gets its own .sig struct + ComputePSO (ordinary SIG
-// declarations -- ../custom-overlay/nrd's usage notes, sources/SIGParser/sigs/
-// nrd_sig_test.sig for the first one, Clear_Constants/NRD_Clear_Test) plus a
+// Each NRD kernel gets its own .prism struct + ComputePSO (ordinary SIG
+// declarations -- ../custom-overlay/nrd's usage notes, sources/Prism/defs/
+// nrd_sig_test.prism for the first one, Clear_Constants/NRD_Clear_Test) plus a
 // small shim .hlsl (workdir/shaders/nrd/sig_*.hlsl) that predefines NRD.hlsli's
 // 12 binding macros to route through that struct's generated bindless
 // accessors instead of raw register()s -- NRD.hlsli's own documented "custom
@@ -31,7 +31,7 @@
 // resource list are copied field-by-field into the matching Slots::X struct,
 // and compute.set_pipeline<PSOS::X>()/set()/dispatch() do the rest (bindless
 // index resolution, CBV upload, root signature/table binding) exactly like
-// every other compute pass in the engine. Only kernels with a ported .sig
+// every other compute pass in the engine. Only kernels with a ported .prism
 // struct actually dispatch; the rest are skipped (logged) until ported.
 export module HAL:NRD;
 
@@ -131,7 +131,7 @@ export namespace nvidia
 		// the top of execute_reblur()/execute_shadow(), before that call's
 		// dispatch loop runs. MUST be thread_local, not a plain member: the
 		// two callers run on different FrameGraph queues (NRD_REBLUR_Execute
-		// is [Async], NRD_SIGMA_Execute is [Async2], test.sig) whose command
+		// is [Async], NRD_SIGMA_Execute is [Async2], test.prism) whose command
 		// lists can be recorded concurrently on different worker threads, and
 		// a plain shared pointer here is a genuine data race -- confirmed
 		// live as an intermittent out-of-bounds pool access (one thread's

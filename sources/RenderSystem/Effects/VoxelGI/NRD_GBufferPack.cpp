@@ -14,7 +14,7 @@ using namespace HAL;
 // Front-end packing for NRD REBLUR_DIFFUSE/REBLUR_SPECULAR (see
 // [[project-nrd-integration]]), including the radiance+hitdist pack --
 // exactly one candidate per channel, whichever g_indirect_source/
-// g_reflection_source actually selects (see this pass's own .sig comment
+// g_reflection_source actually selects (see this pass's own .prism comment
 // for the full reasoning: packing/needing the OTHER candidate too was
 // either a wasted write (RTX side, since IndirectRTX runs regardless of
 // selection) or a crash (VCT side, since VoxelScreen/ScreenReflection only
@@ -24,7 +24,7 @@ using namespace HAL;
 // there instead, see RTXCombine's own comment), so there's no reason to run
 // this or NRD_REBLUR_Execute (its only real consumer, same gate) while
 // DLSS-RR is selected.
-// setup() is fully generated (nrd_sig_test.sig's own [SetupCondition]).
+// setup() is fully generated (nrd_sig_test.prism's own [SetupCondition]).
 
 void PassDefault<Passes::NRD_GBufferPack>::render(
 	Passes::NRD_GBufferPack::Context& data, FrameContext& context)

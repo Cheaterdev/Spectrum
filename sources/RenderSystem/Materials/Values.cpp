@@ -106,7 +106,7 @@ shader_parameter MaterialContext::create_value(Uniform::ptr f)
 	uniform_struct += ")";*/
 
 	// The preview build binds MaterialPreviewInfo (its own SIG table, see
-	// material_preview.sig), not the production MaterialInfo -- same CB
+	// material_preview.prism), not the production MaterialInfo -- same CB
 	// layout/shader_name, different accessor.
 	auto accessor = capture_preview ? "GetMaterialPreviewInfo()" : "GetMaterialInfo()";
 	auto result = graph->add_value(f->type, std::string(accessor) + ".GetData()." + shader_name);
@@ -335,7 +335,7 @@ int MaterialContext::get_preview_slot_count()
 
 namespace
 {
-	// Preview slices are always float4 (see material_preview.sig); node values
+	// Preview slices are always float4 (see material_preview.prism); node values
 	// can be narrower (scalars, float2/3), so pad/broadcast into one. Alpha is
 	// always forced to 1 (even for genuine float4 values) -- the GUI draws
 	// this alpha-blended, and a node's own .w (opacity/pack/whatever) isn't

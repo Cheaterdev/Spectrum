@@ -21,7 +21,7 @@ namespace FrameGraph
 	{
 		char message[320];
 		std::snprintf(message, sizeof(message),
-			"FrameGraph::TaskBuilder::need(): resource '%s' needed by pass '%ls' before it was created this frame -- move '%ls' after whichever pass creates/writes '%s' in the Pipeline block (test.sig)",
+			"FrameGraph::TaskBuilder::need(): resource '%s' needed by pass '%ls' before it was created this frame -- move '%ls' after whichever pass creates/writes '%s' in the Pipeline block (test.prism)",
 			resource_id_name(id), requesting_pass ? requesting_pass->name.ptr : L"?",
 			requesting_pass ? requesting_pass->name.ptr : L"?", resource_id_name(id));
 		::Core::assert_fail(message, __FILE__, __LINE__);

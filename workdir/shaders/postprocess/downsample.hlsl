@@ -1,5 +1,5 @@
 // Fused GBuffer half-res downsample + generic 8x8-tile Hi/Low classification.
-// See TileClassifyData's own comment (pssm.sig) for the algorithm summary.
+// See TileClassifyData's own comment (pssm.prism) for the algorithm summary.
 //
 // One 8x8 thread group per full-res screen tile (= one 4x4 patch of the
 // half-res output). Everything is derived from a single cooperative load of
@@ -124,13 +124,13 @@ void CS(
 
         // Point-queryable form of the same verdict, for a consumer that
         // just wants "is my tile Hi" without indirect-dispatch machinery
-        // (IndirectRTX's raygen -- see its own comment, voxel.sig).
+        // (IndirectRTX's raygen -- see its own comment, voxel.prism).
         params.GetTile_flags()[groupID.xy] = hi;
 
         // Second, independent axis: worth a full-res specular trace only if
         // some pixel is both glossy enough to show detail AND metallic
         // enough for that detail to survive the downstream multiply (see
-        // TileClassifyData's own comment, pssm.sig).
+        // TileClassifyData's own comment, pssm.prism).
         uint roughness_hi = (min_roughness < params.GetRoughness_threshold() &&
                               max_metallic  > params.GetMetallic_threshold()) ? 1 : 0;
         if (roughness_hi)

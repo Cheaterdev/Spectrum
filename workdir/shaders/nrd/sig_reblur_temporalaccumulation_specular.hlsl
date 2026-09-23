@@ -1,6 +1,6 @@
 // REBLUR_SPECULAR sibling of sig_reblur_temporalaccumulation.hlsl (see
 // [[project-nrd-integration]]) -- routed via
-// REBLUR_TemporalAccumulationSpecularResources (see nrd_sig_test.sig's
+// REBLUR_TemporalAccumulationSpecularResources (see nrd_sig_test.prism's
 // comment on that struct for the field-list differences vs diffuse).
 #define NRD_INTERNAL
 #define NRD_SIGNAL SPEC

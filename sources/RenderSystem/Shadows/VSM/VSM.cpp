@@ -14,7 +14,7 @@ import Graphics;
 // RTXShadow already includes unmodified, same "#include after the imports it
 // needs, no global module fragment" shape). VSM_ScreenSpaceShadow's own GPU
 // shader is a deliberately separate copy, not shared -- see its own comment
-// in vsm.sig.
+// in vsm.prism.
 #include "../../FrameGraph/bend_sss_cpu.h"
 
 using namespace FrameGraph;
@@ -246,7 +246,7 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	// this must keep updating every frame regardless of debug mode or
 	// whether VSM_Combine itself runs this frame -- VSM_Combine no longer
 	// runs at all when use_vsm_penumbra is on (see its own PassNode comment
-	// in vsm.sig), which used to be the only place this was set.
+	// in vsm.prism), which used to be the only place this was set.
 	RTX::get().debug_full_reference_shadow = (vsm_debug_view == VSMDebugView::RtxReference);
 
 	// Single-threaded, once per frame, strictly before any level's render()
@@ -604,9 +604,9 @@ VSM::VSM() : VariableContext(L"VSM")
 	// covering every active+dirty level's every mesh, instead of one
 	// Multiple-slot pass per level) ------------------------------------------
 
-	// setup() is fully generated (vsm.sig's own [RunAlways]).
+	// setup() is fully generated (vsm.prism's own [RunAlways]).
 
-	// setup() is fully generated (vsm.sig's own [RunAlways]).
+	// setup() is fully generated (vsm.prism's own [RunAlways]).
 
 	// Phase 5.17: the async-compute Hi-Z rebuild pass. need()s VSM_Atlas
 	// (read, establishes "runs after VSM_RenderPages' draw") and
@@ -614,7 +614,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// still owns create() for the cold-start clear, see its own setup()).
 	// VSM_DirtySlots moves here entirely since only this pass's dispatches
 	// consume it now.
-	// setup() is fully generated (vsm.sig's own [RunAlways]).
+	// setup() is fully generated (vsm.prism's own [RunAlways]).
 
 	m_gatherdispatch_render = [this, pages_side, pages_per_level](Passes::VSM_GatherDispatch::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1072,7 +1072,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		}
 	};
 
-	// ---- Hi-Z pyramid rebuild (Phase 5.17: async compute, see vsm.sig's
+	// ---- Hi-Z pyramid rebuild (Phase 5.17: async compute, see vsm.prism's
 	// VSM_HiZRebuild comment) -----------------------------------------------
 
 	m_hizrebuild_render = [this, pages_per_level, pyramid_mip_count](Passes::VSM_HiZRebuild::Context& data, FrameGraph::FrameContext& context)
@@ -1125,7 +1125,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 		// No manual transitions here any more. VSM_Atlas (DSV -> SRV for
 		// the copy shader) and VSM_PageHiZ's per-mip UAV/SRV binds are
-		// declared [Barrier = ALL] in vsm.sig, so each bind records one
+		// declared [Barrier = ALL] in vsm.prism, so each bind records one
 		// whole-resource use instead of expanding into its
 		// physical_page_count-slice range -- which is exactly what the
 		// bare add_resource_usage() calls that used to sit here were
@@ -1168,7 +1168,7 @@ VSM::VSM() : VariableContext(L"VSM")
 					// pyramid_mip_count-1 times per frame, not once.
 					// src is a UAV, not an SRV, even though it's only ever
 					// read -- see VSMDownsampleHiZBatch's own comment in
-					// vsm.sig for why. src_mip is no longer needed for
+					// vsm.prism for why. src_mip is no longer needed for
 					// addressing (the view itself is already narrowed to
 					// that mip) but is kept for parity with the entry's own
 					// bookkeeping.
@@ -1187,7 +1187,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	// ---- Blocker classification/search/resolve, Phase 5.18 Part A follow-up
 	// ---- (take 4): three stages, single writer per shared resource -- see
-	// ---- vsm.sig's own PassNode comments for the full rationale (root-cause
+	// ---- vsm.prism's own PassNode comments for the full rationale (root-cause
 	// ---- finding from VoxelGIGraph's own VoxelCombine precedent, after two
 	// ---- separate completely-black-screen bugs from splitting a shared
 	// ---- output resource's writes across independent PassNodes). -----------
@@ -1197,7 +1197,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// both in this one render() (an AppendStructuredBuffer's hidden GPU
 	// counter isn't reliably barrier-tracked across a PassNode boundary,
 	// confirmed live earlier this session).
-	// setup() is fully generated (vsm.sig's own [SetupCondition]); the
+	// setup() is fully generated (vsm.prism's own [SetupCondition]); the
 	// one-time dispatch-argument buffers it used to lazily allocate are created
 	// in init_penumbra_dispatch_buffers() instead -- allocating and
 	// execute_and_wait()ing during graph setup was never the right place.
@@ -1294,7 +1294,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// blocker-search result (world_delta/tc/slot, same packed uint4 shape as
 	// before) into its OWN dedicated texture, never a texture VSM_Combine
 	// samples directly.
-	// setup() is fully generated (vsm.sig's own [SetupCondition]).
+	// setup() is fully generated (vsm.prism's own [SetupCondition]).
 
 	m_blockersearch_render = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1397,7 +1397,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	};
 
 	// Screen-space contact-shadow patch, between stage 2 and stage 3 -- see
-	// vsm.sig's own VSMScreenSpaceShadowParams comment for the design (a
+	// vsm.prism's own VSMScreenSpaceShadowParams comment for the design (a
 	// deliberately separate copy of Bend's algorithm, gated by
 	// VSM_AmbiguousMask instead of a tile-indirect dispatch). CPU-side
 	// dispatch planning mirrors PassDefaults.cpp's own RTXShadow render()
@@ -1405,7 +1405,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// emulation -- this is a handful of plain Dispatch() calls of one PSO,
 	// no classify/compact stage needed since VSM_BlockerSearch already did
 	// the classifying.
-	// setup() is fully generated (vsm.sig's own [SetupCondition]).
+	// setup() is fully generated (vsm.prism's own [SetupCondition]).
 
 	m_screenspaceshadow_render = [this](Passes::VSM_ScreenSpaceShadow::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1452,10 +1452,10 @@ VSM::VSM() : VariableContext(L"VSM")
 	};
 
 	// Stage 3: three PSOs (full-lit/full-shadow/shadow-blur), ONE PassNode,
-	// ONE render() -- see vsm.sig's VSM_ShadowResolve PassNode comment for
+	// ONE render() -- see vsm.prism's VSM_ShadowResolve PassNode comment for
 	// why this shape specifically (mirrors VoxelGIGraph's VoxelCombine
 	// issuing its own blur+blur2 exec_indirects together).
-	// setup() is fully generated (vsm.sig's own [SetupCondition]); the
+	// setup() is fully generated (vsm.prism's own [SetupCondition]); the
 	// VSMSelectors mirror it used to also do now runs once in update_frame().
 
 	m_shadowresolve_render = [this](Passes::VSM_ShadowResolve::Context& data, FrameGraph::FrameContext& context)
@@ -1567,7 +1567,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		// dispatch (same PSO as above, just a different list stage 2 built
 		// after running the real search) for search_tiles that turned out
 		// to need no work after all. See VSMSearchVerdictAppend's own
-		// comment in vsm.sig.
+		// comment in vsm.prism.
 		{
 			Slots::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_ConfirmedLitTiles->structuredBuffer;
@@ -1590,7 +1590,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	// ---- Combine lighting ------------------------------------------------
 
-	// setup() is fully generated (vsm.sig's own [SetupCondition]).
+	// setup() is fully generated (vsm.prism's own [SetupCondition]).
 
 	m_combine_render = [this](Passes::VSM_Combine::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1657,12 +1657,12 @@ VSM::VSM() : VariableContext(L"VSM")
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 
-	// ---- Debug tile-classification overlay (see vsm.sig's own PassNode
+	// ---- Debug tile-classification overlay (see vsm.prism's own PassNode
 	// ---- comment) -- reads stage 1's real tile lists and paints over the
 	// ---- already-shaded ResultTexture; only ever dispatched when the
 	// ---- debug toggle is on.
 
-	// setup() is fully generated (vsm.sig's own [SetupCondition]).
+	// setup() is fully generated (vsm.prism's own [SetupCondition]).
 
 	m_debugoverlay_render = [this](Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -1671,7 +1671,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		compute.set_signature(Layouts::DefaultLayout);
 
 		// Moved here from VSM_Combine's own combine_result -- see this
-		// PassNode's own comment in vsm.sig. Full-screen, not tile-driven
+		// PassNode's own comment in vsm.prism. Full-screen, not tile-driven
 		// (these two don't care which classify bucket a pixel landed in).
 		// RtxReference only actually fires when ShadowMask exists this frame
 		// (same builder.exists()-guarded case VSM_Combine used to handle) --
@@ -1782,7 +1782,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	// ---- Depth analysis (feeds active_min's hysteresis, see update_active_window()) --
 
-	// setup() is fully generated (vsm.sig's own [RunAlways]).
+	// setup() is fully generated (vsm.prism's own [RunAlways]).
 
 	m_depth_analysis_render = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::FrameContext& context)
 	{

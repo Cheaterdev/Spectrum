@@ -29,7 +29,7 @@ export namespace Test
 		// Uses the same indirect-CBV boilerplate as the autogen Color.h header so
 		// the binding matches the Color slot. NOTE: the register/push index must
 		// stay in sync with workdir/shaders/autogen/Color.h — the SIG layout can
-		// shift slot indices when .sig files change. Color currently lives at
+		// shift slot indices when .prism files change. Color currently lives at
 		// slot 8 → b8/space8 (D3D12) / _hal_push.s8 (SPIR-V).
 		static constexpr const char* kSigColorHLSL = R"hlsl(
 struct CB { uint offset; };

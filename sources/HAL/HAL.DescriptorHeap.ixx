@@ -37,7 +37,7 @@ export
 		{
 			ResourceInfo* info = nullptr;
 
-			// [Barrier = ALL] on the .sig member. Transition the WHOLE resource
+			// [Barrier = ALL] on the .prism member. Transition the WHOLE resource
 			// instead of the mip/array range this view names.
 			//
 			// For a view narrowed to one mip of a big array (a Hi-Z pyramid

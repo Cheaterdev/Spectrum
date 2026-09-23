@@ -42,7 +42,7 @@ PSSM::PSSM()
 
 	// ---- Global shadow map ---------------------------------------------------
 
-	// setup() is fully generated (pssm.sig's own [RunAlways]).
+	// setup() is fully generated (pssm.prism's own [RunAlways]).
 
 	m_global_render = [this](Passes::PSSM_Global::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -105,7 +105,7 @@ PSSM::PSSM()
 
 	for (int i = 0; i < renders_size; i++)
 	{
-		// setup() is fully generated (pssm.sig's own [RunAlways]): PSSM_Depths/
+		// setup() is fully generated (pssm.prism's own [RunAlways]): PSSM_Depths/
 		// PSSM_Cameras are auto-created/needed from their own [Always]+[Size]+
 		// [Format]+[Optional], keyed off data.pass_index.
 
@@ -188,7 +188,7 @@ PSSM::PSSM()
 
 	// ---- Generate light mask -------------------------------------------------
 
-	// setup() is fully generated (pssm.sig's own [RunAlways]).
+	// setup() is fully generated (pssm.prism's own [RunAlways]).
 
 	m_mask_render = [this](Passes::PSSM_GenerateMask::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -240,7 +240,7 @@ PSSM::PSSM()
 
 	// ---- Combine lighting ----------------------------------------------------
 
-	// setup() is fully generated (pssm.sig's own [RunAlways]).
+	// setup() is fully generated (pssm.prism's own [RunAlways]).
 
 	m_combine_render = [this](Passes::PSSM_Combine::Context& data, FrameGraph::FrameContext& context)
 	{

@@ -449,6 +449,29 @@ export
 		return v;
 	}
 
+	namespace Math
+	{
+		// Per-component DivideByMultiple: how many n-sized tiles cover v in
+		// each dimension (rounding up). Same arithmetic as the scalar version.
+		template<typename T>
+		Vector<T> DivideByMultiple(Vector<T> v, size_t n)
+		{
+			for (int i = 0; i < T::N; i++)
+				v[i] = static_cast<typename T::Format>((static_cast<size_t>(v[i]) + n - 1) / n);
+			return v;
+		}
+
+		// Element count of a grid of that size, e.g. tiles covering the screen.
+		template<typename T>
+		size_t Area(const Vector<T>& v)
+		{
+			size_t area = 1;
+			for (int i = 0; i < T::N; i++)
+				area *= static_cast<size_t>(v[i]);
+			return area;
+		}
+	}
+
 	// Linear intERPolation
 	template <typename T>
 	T lerp(T& p0, T& p1, float t)

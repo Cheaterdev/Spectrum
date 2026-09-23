@@ -24,7 +24,7 @@ static const float3 dir = normalize(GetFrameInfo().GetSunDir().xyz);
 // Simple atlas+page-table lookup only (VSM_impl_resolve.hlsl's
 // get_shadow_vsm_simple, no penumbra/PCSS) -- Lighting runs before
 // VSM_BlockerClassify/VSM_BlockerSearch/VSM_ShadowResolve in the frame (see
-// test.sig's MainPipeline ordering), so that's all that's available here.
+// test.prism's MainPipeline ordering), so that's all that's available here.
 float get_shadow(float3 wpos, float3 normal)
 {
 	VSMConstants c = (VSMConstants)0;

@@ -98,7 +98,7 @@ public:
 	Variable<bool> use_vsm_hiz_blocker_classify = { true, "Hi-Z blocker classify", this };
 
 	// Runtime A/B switch between VSMDepthDraw and VSMDepthDrawConservative
-	// (vsm.sig) -- conservative rasterization is a PSO-creation-time
+	// (vsm.prism) -- conservative rasterization is a PSO-creation-time
 	// rasterizer-state field, not settable per-draw, so the toggle picks
 	// between two compiled PSOs at bind time (m_renderpages_render) rather
 	// than a shader #define permutation. Aimed at thin/sparse geometry
@@ -119,24 +119,24 @@ public:
 	Variable<bool> use_vsm_debug_clear_unwritten = { false, "Debug: clear unwritten buffers", this };
 
 	// Master switch for VSM_ScreenSpaceShadow (see its own comment in
-	// vsm.sig). Off: the pass doesn't run at all (its own setup() returns
+	// vsm.prism). Off: the pass doesn't run at all (its own setup() returns
 	// false, matching use_vsm_penumbra's own gate) -- no dispatch, no
 	// VSM_ContactShadow resource created, no descriptor bound in
 	// CS_SHADOW_BLUR. On by default now that it's validated.
 	Variable<bool> use_vsm_contact_shadow = { true, "Contact shadows", this };
 
 	// VSMScreenSpaceShadowParams::surface_thickness -- Bend's own
-	// SurfaceThickness (see SS_Shadow.sig's own field comment): assumed
+	// SurfaceThickness (see SS_Shadow.prism's own field comment): assumed
 	// thickness of each pixel for shadow-casting, as a fraction of the
 	// sample-to-far-clip depth range. Controls how wide/far a contact
 	// shadow reads -- scene-depth-scale-sensitive enough to want live
-	// tuning rather than a rebuild. Same starting value as SS_Shadow.sig's
+	// tuning rather than a rebuild. Same starting value as SS_Shadow.prism's
 	// own documented default.
 	Variable<float> vsm_contact_shadow_thickness = { 0.005f, "Contact shadow thickness", this, 0.001f, 0.01f };
 
 	// Single-select debug view (VSMDebugView, a SIG enum shared verbatim
 	// with the shader side -- see VSMConstants.debug_view's own comment in
-	// vsm.sig). Replaces three separate bools that were always meant to be
+	// vsm.prism). Replaces three separate bools that were always meant to be
 	// mutually exclusive:
 	//   None         -- normal shading, no debug view.
 	//   PageGrid      -- colors every pixel by clipmap level (one flat hue
@@ -183,8 +183,8 @@ public:
 	// are coarser (see VSMClipmap::page_world_size). Keep MaxLevels in step
 	// with VSMConstants::level_info[26] (Phase 5.8: no longer also a
 	// [Multiple=N] PassNode budget -- VSM_RenderPages is a single pass now).
-	// .sig-declared (vsm.sig's const_definition) so VSM_DispatchCommands'
-	// own [Size=...] in the same .sig, and VSMInvalidationTracker.ixx's own
+	// .prism-declared (vsm.prism's const_definition) so VSM_DispatchCommands'
+	// own [Size=...] in the same .prism, and VSMInvalidationTracker.ixx's own
 	// copy, can't drift from this one.
 	static constexpr int MaxLevels = Constants::MaxLevels;
 	static constexpr int LevelZeroSlot = 12;
@@ -476,7 +476,7 @@ private:
 	// Builds page_hiz_mip_array_views from VSM_HiZRebuild's OWN Context
 	// (that PassNode need()s VSM_PageHiZ too, alongside VSM_RenderPages,
 	// which still create()s it for the once-ever cold-start clear -- see
-	// vsm.sig's VSM_HiZRebuild comment).
+	// vsm.prism's VSM_HiZRebuild comment).
 	void build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyramid_mip_count);
 
 	Passes::VSM_GatherDispatch::render_func_type m_gatherdispatch_render;
@@ -487,14 +487,14 @@ private:
 	// rebuild (copy + downsample dispatches) runs on the async compute
 	// queue instead of serializing into VSM_RenderPages' own direct-queue
 	// pass -- nothing else this frame reads VSM_PageHiZ, only next frame's
-	// draw does. See vsm.sig's VSM_HiZRebuild PassNode comment.
+	// draw does. See vsm.prism's VSM_HiZRebuild PassNode comment.
 	Passes::VSM_HiZRebuild::render_func_type m_hizrebuild_render;
 
 	// Phase 5.18 Part A follow-up (take 4): groupshared tile classification,
-	// three stages -- see vsm.sig's own PassNode comments (VSM_BlockerClassify,
+	// three stages -- see vsm.prism's own PassNode comments (VSM_BlockerClassify,
 	// VSM_BlockerSearch, VSM_ShadowResolve) for the full design and the
 	// root-cause finding (VoxelGIGraph's VoxelCombine precedent) that shaped
-	// it. Registered in order ahead of VSM_Combine in test.sig's pipeline
+	// it. Registered in order ahead of VSM_Combine in test.prism's pipeline
 	// listing.
 	Passes::VSM_BlockerClassify::render_func_type m_blockerclassify_render;
 
@@ -508,7 +508,7 @@ private:
 
 	// Debug tile-classification overlay -- reads stage 1's real
 	// VSM_LitTiles/VSM_DarkTiles lists and paints over the already-shaded
-	// ResultTexture, only when vsm_debug_view is HizClassify. See vsm.sig's
+	// ResultTexture, only when vsm_debug_view is HizClassify. See vsm.prism's
 	// own PassNode comment for why this replaced the earlier postfactum
 	// "final shadow value happens to equal 1.0/0.0" guess.
 	Passes::VSM_DebugClassifyOverlay::render_func_type m_debugoverlay_render;
@@ -547,7 +547,7 @@ public:
 	// depth-compare sample (VSMShadowLookup/get_shadow_vsm_simple), not the
 	// full penumbra/PCSS pipeline -- e.g. VoxelGI's Lighting pass, which
 	// runs before VSM_BlockerClassify/Search/ShadowResolve in the frame (see
-	// test.sig's MainPipeline ordering). Fills only the scalar level-lookup
+	// test.prism's MainPipeline ordering). Fills only the scalar level-lookup
 	// fields (active_min/max/page_size/pages_per_level/light_view/
 	// level_info) -- every VSM render() function rebuilds this same block
 	// inline today (see VSM.cpp), this is that block factored out for reuse.
@@ -559,7 +559,7 @@ public:
 	VSM();
 
 	// Once per frame, before graph.setup(): mirrors the Variable<T> toggles
-	// below into Table::VSMSelectors (vsm.sig), which every VSM pass's
+	// below into Table::VSMSelectors (vsm.prism), which every VSM pass's
 	// generated setup reads. Needs a VSM instance, which a generated static
 	// setup has no way to reach.
 	void update_frame(FrameGraph::Graph& graph);
@@ -568,7 +568,7 @@ public:
 	// Called from the constructor; idempotent.
 	void init_penumbra_dispatch_buffers();
 
-	// Every VSM pass states its enable condition in vsm.sig and gets a
+	// Every VSM pass states its enable condition in vsm.prism and gets a
 	// generated setup (PassSetupDefault<T>), so only render funcs are wired.
 	template<typename TPipeline>
 	explicit VSM(TPipeline& pipeline) : VSM()

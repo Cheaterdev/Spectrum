@@ -290,7 +290,7 @@ PassDefault<T>  (traits struct; declared in pass_defaults.h, bodies handwritten)
   MAIN PIPELINE  (Pipelines::MainPipeline)
 ================================================================================
 
-Defined in test.sig. Execution order:
+Defined in test.prism. Execution order:
 
   [Static]  PreScene                  TLAS update + RTX::prepare
             BlueNoise                 supply blue noise textures

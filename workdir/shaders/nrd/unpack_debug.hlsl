@@ -1,6 +1,6 @@
 // Debug-only unpack of REBLUR's packed output (YCoCg + normalized hit
 // distance) into plain RGB, for the "RTX Indirect (REBLUR), Unpacked" debug
-// view (see [[project-nrd-integration]], nrd_sig_test.sig's comment). Not
+// view (see [[project-nrd-integration]], nrd_sig_test.prism's comment). Not
 // used by the real consumer (RTXCombine unpacks inline in rtx_combine.hlsl).
 #include "../autogen/NRD_UnpackDebugParams.h"
 #include "3rdparty/NRD.hlsli"

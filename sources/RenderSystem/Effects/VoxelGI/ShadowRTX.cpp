@@ -11,7 +11,7 @@ import Core;
 using namespace FrameGraph;
 using namespace HAL;
 
-// setup() is fully generated (voxel.sig's own [SetupCondition]) -- feeds
+// setup() is fully generated (voxel.prism's own [SetupCondition]) -- feeds
 // RTXCombine (DLSS-RR) unconditionally, and additionally feeds
 // NRD_SIGMA_Execute/NRD_ShadowCombine via VSM_ShadowNoise whenever
 // ShadowSource::RTXReference is selected outside DLSS-RR (see

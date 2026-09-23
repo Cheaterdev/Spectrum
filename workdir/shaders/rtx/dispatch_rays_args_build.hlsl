@@ -5,7 +5,7 @@
 // with D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS. Shader-table
 // addresses/sizes/strides are constant for the RTXPSO's lifetime; width/
 // height are this frame's caller-supplied dispatch size (see this PSO's
-// own .sig comment). One thread -- 104 bytes of bookkeeping, not a workload.
+// own .prism comment). One thread -- 104 bytes of bookkeeping, not a workload.
 [numthreads(1, 1, 1)]
 void CS(uint3 dispatchID : SV_DispatchThreadID)
 {
@@ -33,7 +33,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// Never read -- exists purely so this struct's HLSL stride (104 bytes)
 	// matches what D3D12 requires for a DISPATCH_RAYS command signature's
 	// ByteStride, and what the C++-side mirror's own natural alignment
-	// already gives it (see this struct's own comment, raytracing.sig).
+	// already gives it (see this struct's own comment, raytracing.prism).
 	args._pad = 0;
 
 	data.GetArgs()[data.GetDest_index()] = args;

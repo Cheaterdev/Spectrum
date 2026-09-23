@@ -126,7 +126,7 @@ export
 	// followed by Width/Height/Depth -- because ExecuteIndirect reads this
 	// buffer's raw bytes straight off the GPU using that exact layout; field
 	// order and width (GPUAddress = UINT64) must match, not just total size.
-	// A shader populates it (see ddgi.sig's DDGIProbeDispatchArgsBuild): the
+	// A shader populates it (see ddgi.prism's DDGIProbeDispatchArgsBuild): the
 	// three shader-table addresses/sizes/strides come from the RTXPSO's own
 	// tables (constant for the PSO's lifetime), Width/Height/Depth from
 	// whatever this frame's actual dispatch size should be -- the whole
@@ -141,7 +141,7 @@ export
 	// tight 100-byte sum of its real fields) -- natural C++ alignment
 	// (GPUAddress = uint64_t forces 8-byte struct alignment, rounding 100 up
 	// to 104) already gives the right size; do NOT #pragma pack(1) this.
-	// The GPU-side mirror (DispatchRaysArguments in ddgi.sig /
+	// The GPU-side mirror (DispatchRaysArguments in ddgi.prism /
 	// dispatch_rays_args_build.hlsl) must match this 104-byte stride
 	// exactly -- see its own comment for the explicit trailing pad field
 	// that keeps it there, since HLSL has no equivalent automatic alignment

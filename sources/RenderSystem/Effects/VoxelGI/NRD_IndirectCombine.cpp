@@ -13,7 +13,7 @@ using namespace HAL;
 // The FSR/DLSS-side equivalent of the indirect term RTXCombine computes for
 // DLSS-RR (see [[project-nrd-integration]]). Runs exactly in the
 // complementary case to RTXCombine (which handles DLSS-RR itself).
-// setup() is fully generated (nrd_sig_test.sig's own [SetupCondition]).
+// setup() is fully generated (nrd_sig_test.prism's own [SetupCondition]).
 
 void PassDefault<Passes::NRD_IndirectCombine>::render(
 	Passes::NRD_IndirectCombine::Context& data, FrameContext& context)

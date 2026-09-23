@@ -18,7 +18,7 @@ static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 #include "vsm_impl_resolve.hlsl"
 
 // Debug view (VSM.ixx's vsm_debug_view == HizClassify) -- see this PassNode's
-// own comment in vsm.sig for why this reads the REAL tile lists directly
+// own comment in vsm.prism for why this reads the REAL tile lists directly
 // instead of guessing from the final shadow value. Only ever dispatched
 // when the toggle is on; paints a flat color onto VSMLighting's `result`
 // field (the same RWTexture2D<float4> ResultTexture VSM_Combine already
@@ -48,7 +48,7 @@ void CS_OVERLAY_DARK(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupT
 }
 
 // Stage 2's own post-search verdict (see VSMSearchVerdictAppend's own
-// comment in vsm.sig) -- confirmed_lit_tiles: every pixel individually
+// comment in vsm.prism) -- confirmed_lit_tiles: every pixel individually
 // resolved lit after the REAL search ran, distinct color (cyan) from
 // lit_tiles' green so it's visible how much of the frame stage 1's cheap
 // classify alone couldn't prove, but the real search still confirmed lit.
@@ -61,7 +61,7 @@ void CS_OVERLAY_CONFIRMED_LIT(uint3 groupID : SV_GroupID, uint3 groupThreadID : 
 // blur_tiles: PER-PIXEL treatment, not a flat color -- a tile lands here
 // because SOME pixel in it was genuinely ambiguous, but most of the OTHERS
 // still resolved via a sentinel (see VSMSearchVerdictAppend's own comment
-// in vsm.sig) even though the whole tile still had to dispatch. Reads the
+// in vsm.prism) even though the whole tile still had to dispatch. Reads the
 // same packed VSM_BlockerSearchResult data CS_SHADOW_BLUR itself decodes
 // (VSM_ShadowResolve.hlsl) and mirrors its exact sentinel buckets -- dark
 // green/blue (half brightness of lit_tiles/dark_tiles' own colors) for a
@@ -104,7 +104,7 @@ void CS_OVERLAY_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupT
 
 // Moved here from VSM.hlsl's combine_result now that VSM_Combine no longer
 // runs at all when use_vsm_penumbra is on (see this PassNode's own comment
-// in vsm.sig) -- both full-screen, not tile-list-driven, since these debug
+// in vsm.prism) -- both full-screen, not tile-list-driven, since these debug
 // views don't care which classify bucket a pixel landed in. Mutually
 // exclusive with each other and with the tile-classify overlay above (see
 // VSM.cpp's m_debugoverlay_render for the precedence).

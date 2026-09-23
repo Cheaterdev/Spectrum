@@ -51,7 +51,7 @@ inline void report_unbound_slot(const char* member)
 // ---- [Auto = ...] ----------------------------------------------------------
 //
 // Which null descriptor a table member wants when nothing was assigned to it.
-// The .sig names the kind; the member's C++ type supplies the view dimension
+// The .prism names the kind; the member's C++ type supplies the view dimension
 // and format, because the descriptor has to agree with what the shader
 // declares -- see get_null_descriptor.
 
@@ -119,14 +119,14 @@ public:
 	std::vector<HAL::BoundResource> resources;
 	std::set<std::shared_ptr<HAL::DescriptorHeapStorage>> descriptors;
 
-	// Set for the duration of one member's compile() when the .sig declared it
+	// Set for the duration of one member's compile() when the .prism declared it
 	// [Barrier = ALL]. A flag rather than a parameter because a member can be a
 	// scalar handle, a fixed array, or a vector, each with its own compile()
 	// overload and its own push_back -- all of which inherit the scope this way
 	// without every overload having to forward it.
 	bool bind_whole_resource = false;
 
-	// compile() for a member the .sig marked [Barrier = ALL]. Generated table
+	// compile() for a member the .prism marked [Barrier = ALL]. Generated table
 	// code calls this instead of compile(); everything else is identical, so
 	// the layout it writes is unchanged.
 	template<class T>
@@ -143,7 +143,7 @@ public:
 
 	}
 
-	// compile() for a member the .sig marked [Auto = ..._Null]. When the member
+	// compile() for a member the .prism marked [Auto = ..._Null]. When the member
 	// was assigned, this is exactly compile(). When it was not, it writes the
 	// offset of a shared null descriptor instead of leaving the slot at index 0.
 	//
