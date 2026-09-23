@@ -50,6 +50,7 @@
 #include "NRD_ShadowCombine.h"
 #include "DDGIDebug.h"
 #include "Sky.h"
+#include "TranslucentRTX.h"
 #include "SMAA.h"
 #include "FSR.h"
 #include "UpscalingDLSS.h"
@@ -162,6 +163,7 @@ public:
 		Passes::NRD_ShadowCombine::Name.ptr,
 		Passes::DDGIDebug::Name.ptr,
 		Passes::Sky::Name.ptr,
+		Passes::TranslucentRTX::Name.ptr,
 		Passes::SMAA::Name.ptr,
 		Passes::FSR::Name.ptr,
 		Passes::UpscalingDLSS::Name.ptr,
@@ -291,11 +293,12 @@ public:
 		{ PassID::DDGIProbeTrace, 3 },
 		{ PassID::DDGIProbeTrace, 4 },
 		{ PassID::DDGIIndirectDebug, 0 },
+		{ PassID::TranslucentRTX, 0 },
 		{ PassID::RTXColorPass, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState scene_c0_states[] = {
 		{ true, { scene_c0_pass_refs + 0, 1 } },
-		{ false, { scene_c0_pass_refs + 1, 8 } },
+		{ false, { scene_c0_pass_refs + 1, 9 } },
 	};
 	static inline const FrameGraph::PassRef BlueNoise_c0_pass_refs[] = {
 		{ PassID::BlueNoise, 0 },
@@ -501,12 +504,13 @@ public:
 		{ PassID::Scene, 0 },
 		{ PassID::RTXShadow, 0 },
 		{ PassID::Sky, 0 },
+		{ PassID::TranslucentRTX, 0 },
 		{ PassID::UpscalingDLSS, 0 },
 		{ PassID::UpscalingDLSSRR, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState GBuffer_Depth_c0_states[] = {
 		{ true, { GBuffer_Depth_c0_pass_refs + 0, 1 } },
-		{ false, { GBuffer_Depth_c0_pass_refs + 1, 4 } },
+		{ false, { GBuffer_Depth_c0_pass_refs + 1, 5 } },
 	};
 	static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 		{ PassID::Scene, 0 },
@@ -655,12 +659,13 @@ public:
 		{ PassID::DDGIProbeTrace, 2 },
 		{ PassID::DDGIProbeTrace, 3 },
 		{ PassID::DDGIProbeTrace, 4 },
+		{ PassID::TranslucentRTX, 0 },
 		{ PassID::RTXColorPass, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_c0_states[] = {
 		{ false, { sky_cubemap_filtered_c0_pass_refs + 0, 1 } },
 		{ true, { sky_cubemap_filtered_c0_pass_refs + 1, 1 } },
-		{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 11 } },
+		{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 12 } },
 	};
 	static inline const FrameGraph::PassRef sky_cubemap_filtered_diffuse_c0_pass_refs[] = {
 		{ PassID::CubeMapDownsample, 0 },
@@ -697,7 +702,7 @@ public:
 		{ PassID::NRD_ShadowCombine, 0 },
 		{ PassID::DDGIDebug, 0 },
 		{ PassID::Sky, 0 },
-		{ PassID::SMAA, 0 },
+		{ PassID::TranslucentRTX, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState ResultTexture_c0_states[] = {
 		{ true, { ResultTexture_c0_pass_refs + 0, 1 } },
@@ -1408,12 +1413,20 @@ public:
 		{ false, { VSM_ShadowDenoised_c0_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef ResultTexture_c1_pass_refs[] = {
+		{ PassID::TranslucentRTX, 0 },
 		{ PassID::SMAA, 0 },
-		{ PassID::FSR, 0 },
 	};
 	static inline const FrameGraph::PrecompiledState ResultTexture_c1_states[] = {
 		{ true, { ResultTexture_c1_pass_refs + 0, 1 } },
-		{ true, { ResultTexture_c1_pass_refs + 1, 1 } },
+		{ false, { ResultTexture_c1_pass_refs + 1, 1 } },
+	};
+	static inline const FrameGraph::PassRef ResultTexture_c2_pass_refs[] = {
+		{ PassID::SMAA, 0 },
+		{ PassID::FSR, 0 },
+	};
+	static inline const FrameGraph::PrecompiledState ResultTexture_c2_states[] = {
+		{ true, { ResultTexture_c2_pass_refs + 0, 1 } },
+		{ true, { ResultTexture_c2_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef SMAA_edges_c0_pass_refs[] = {
 		{ PassID::SMAA, 0 },
@@ -1427,13 +1440,13 @@ public:
 	static inline const FrameGraph::PrecompiledState SMAA_blend_c0_states[] = {
 		{ true, { SMAA_blend_c0_pass_refs + 0, 1 } },
 	};
-	static inline const FrameGraph::PassRef ResultTexture_c2_pass_refs[] = {
+	static inline const FrameGraph::PassRef ResultTexture_c3_pass_refs[] = {
 		{ PassID::FSR, 0 },
 		{ PassID::UpscalingDLSS, 0 },
 	};
-	static inline const FrameGraph::PrecompiledState ResultTexture_c2_states[] = {
-		{ true, { ResultTexture_c2_pass_refs + 0, 1 } },
-		{ false, { ResultTexture_c2_pass_refs + 1, 1 } },
+	static inline const FrameGraph::PrecompiledState ResultTexture_c3_states[] = {
+		{ true, { ResultTexture_c3_pass_refs + 0, 1 } },
+		{ false, { ResultTexture_c3_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef FSRTemp_c0_pass_refs[] = {
 		{ PassID::FSR, 0 },
@@ -1441,21 +1454,21 @@ public:
 	static inline const FrameGraph::PrecompiledState FSRTemp_c0_states[] = {
 		{ true, { FSRTemp_c0_pass_refs + 0, 1 } },
 	};
-	static inline const FrameGraph::PassRef ResultTexture_c3_pass_refs[] = {
+	static inline const FrameGraph::PassRef ResultTexture_c4_pass_refs[] = {
 		{ PassID::UpscalingDLSS, 0 },
 		{ PassID::UpscalingDLSSRR, 0 },
 	};
-	static inline const FrameGraph::PrecompiledState ResultTexture_c3_states[] = {
-		{ true, { ResultTexture_c3_pass_refs + 0, 1 } },
-		{ false, { ResultTexture_c3_pass_refs + 1, 1 } },
+	static inline const FrameGraph::PrecompiledState ResultTexture_c4_states[] = {
+		{ true, { ResultTexture_c4_pass_refs + 0, 1 } },
+		{ false, { ResultTexture_c4_pass_refs + 1, 1 } },
 	};
-	static inline const FrameGraph::PassRef ResultTexture_c4_pass_refs[] = {
+	static inline const FrameGraph::PassRef ResultTexture_c5_pass_refs[] = {
 		{ PassID::UpscalingDLSSRR, 0 },
 		{ PassID::stencil_renderer, 0 },
 	};
-	static inline const FrameGraph::PrecompiledState ResultTexture_c4_states[] = {
-		{ true, { ResultTexture_c4_pass_refs + 0, 1 } },
-		{ true, { ResultTexture_c4_pass_refs + 1, 1 } },
+	static inline const FrameGraph::PrecompiledState ResultTexture_c5_states[] = {
+		{ true, { ResultTexture_c5_pass_refs + 0, 1 } },
+		{ true, { ResultTexture_c5_pass_refs + 1, 1 } },
 	};
 	static inline const FrameGraph::PassRef axis_id_buffer_c0_pass_refs[] = {
 		{ PassID::stencil_renderer, 0 },
@@ -1564,12 +1577,13 @@ public:
 		{ ResourceID::ResultTextureRTXNoise, 0, ResultTextureRTXNoise_c0_states },
 		{ ResourceID::VSM_ShadowDenoised, 0, VSM_ShadowDenoised_c0_states },
 		{ ResourceID::ResultTexture, 1, ResultTexture_c1_states },
+		{ ResourceID::ResultTexture, 2, ResultTexture_c2_states },
 		{ ResourceID::SMAA_edges, 0, SMAA_edges_c0_states },
 		{ ResourceID::SMAA_blend, 0, SMAA_blend_c0_states },
-		{ ResourceID::ResultTexture, 2, ResultTexture_c2_states },
-		{ ResourceID::FSRTemp, 0, FSRTemp_c0_states },
 		{ ResourceID::ResultTexture, 3, ResultTexture_c3_states },
+		{ ResourceID::FSRTemp, 0, FSRTemp_c0_states },
 		{ ResourceID::ResultTexture, 4, ResultTexture_c4_states },
+		{ ResourceID::ResultTexture, 5, ResultTexture_c5_states },
 		{ ResourceID::axis_id_buffer, 0, axis_id_buffer_c0_states },
 		{ ResourceID::ColorOutput, 0, ColorOutput_c0_states },
 		{ ResourceID::VoxelDebug, 0, VoxelDebug_c0_states },
@@ -2248,6 +2262,21 @@ public:
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
 	};
+	static inline const FrameGraph::PassRef TranslucentRTX_0_prev[] = {
+		{ PassID::CubeMapDownsample, 0 },
+		{ PassID::CubeMapEnviromentProcessor, 0 },
+		{ PassID::DDGIDebug, 0 },
+		{ PassID::NRD_IndirectCombine, 0 },
+		{ PassID::NRD_ShadowCombine, 0 },
+		{ PassID::PreScene, 0 },
+		{ PassID::ReflCombine, 0 },
+		{ PassID::ResultCreation, 0 },
+		{ PassID::Scene, 0 },
+		{ PassID::Sky, 0 },
+		{ PassID::VSM_Combine, 0 },
+		{ PassID::VSM_DebugClassifyOverlay, 0 },
+		{ PassID::VSM_ShadowResolve, 0 },
+	};
 	static inline const FrameGraph::PassRef SMAA_0_prev[] = {
 		{ PassID::DDGIDebug, 0 },
 		{ PassID::NRD_IndirectCombine, 0 },
@@ -2255,6 +2284,7 @@ public:
 		{ PassID::ReflCombine, 0 },
 		{ PassID::ResultCreation, 0 },
 		{ PassID::Sky, 0 },
+		{ PassID::TranslucentRTX, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
@@ -2267,6 +2297,7 @@ public:
 		{ PassID::ResultCreation, 0 },
 		{ PassID::SMAA, 0 },
 		{ PassID::Sky, 0 },
+		{ PassID::TranslucentRTX, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
@@ -2281,6 +2312,7 @@ public:
 		{ PassID::SMAA, 0 },
 		{ PassID::Scene, 0 },
 		{ PassID::Sky, 0 },
+		{ PassID::TranslucentRTX, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
 		{ PassID::VSM_ShadowResolve, 0 },
@@ -2298,6 +2330,7 @@ public:
 		{ PassID::SMAA, 0 },
 		{ PassID::Scene, 0 },
 		{ PassID::Sky, 0 },
+		{ PassID::TranslucentRTX, 0 },
 		{ PassID::UpscalingDLSS, 0 },
 		{ PassID::VSM_Combine, 0 },
 		{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -2313,6 +2346,7 @@ public:
 		{ PassID::SMAA, 0 },
 		{ PassID::Scene, 0 },
 		{ PassID::Sky, 0 },
+		{ PassID::TranslucentRTX, 0 },
 		{ PassID::UpscalingDLSS, 0 },
 		{ PassID::UpscalingDLSSRR, 0 },
 		{ PassID::VSM_Combine, 0 },
@@ -2395,6 +2429,7 @@ public:
 		{ PassID::NRD_ShadowCombine, 0, true, NRD_ShadowCombine_0_prev },
 		{ PassID::DDGIDebug, 0, false, DDGIDebug_0_prev },
 		{ PassID::Sky, 0, true, Sky_0_prev },
+		{ PassID::TranslucentRTX, 0, false, TranslucentRTX_0_prev },
 		{ PassID::SMAA, 0, true, SMAA_0_prev },
 		{ PassID::FSR, 0, true, FSR_0_prev },
 		{ PassID::UpscalingDLSS, 0, false, UpscalingDLSS_0_prev },
@@ -2553,6 +2588,7 @@ public:
 		// only supplies render_func, so that is what gates registration.
 		if (sky.render_func)
 			graph.add_library_pass<Passes::Sky>(PassSetupDefault<Passes::Sky>::setup, sky.render_func, (sky.flags));
+		graph.add_library_pass<Passes::TranslucentRTX>(PassDefault<Passes::TranslucentRTX>::setup, PassDefault<Passes::TranslucentRTX>::render, (PassDefault<Passes::TranslucentRTX>::flags & ~FrameGraph::PassFlags::Compute));
 		// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 		// only supplies render_func, so that is what gates registration.
 		if (sMAA.render_func)

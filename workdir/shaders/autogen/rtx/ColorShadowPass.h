@@ -5,7 +5,12 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 
+void ColorShadowPass(RaytracingAccelerationStructure scene, RayDesc ray, RAY_FLAG flag, uint instance_mask, inout ColorShadowPayload payload)
+{
+	TraceRay(scene, flag, instance_mask, 2, 0, 2, ray, payload);
+}
+
 void ColorShadowPass(RaytracingAccelerationStructure scene, RayDesc ray, RAY_FLAG flag, inout ColorShadowPayload payload)
 {
-	TraceRay(scene, flag, ~0, 2, 0, 2, ray, payload);
-};
+	ColorShadowPass(scene, ray, flag, ~0u, payload);
+}

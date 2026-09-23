@@ -455,7 +455,9 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 			// single-texture-drives-opacity case is recognized -- anything
 			// else reads ~0u and is treated as opaque, same as today).
 			RayQuery<RAY_FLAG_NONE> rayQuery;
-			rayQuery.TraceRayInline(GetRaytracing().GetScene(), RAY_FLAG_NONE, 0xFF, ray);
+			// Opaque mask: translucent instances are FORCE_OPAQUE (so they'd
+			// be auto-committed here) and cast no VSM shadow anyway.
+			rayQuery.TraceRayInline(GetRaytracing().GetScene(), RAY_FLAG_NONE, (uint)RTInstanceMask::Opaque, ray);
 
 			while (rayQuery.Proceed())
 			{

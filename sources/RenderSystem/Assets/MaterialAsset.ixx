@@ -24,17 +24,14 @@ export namespace materials
 
 		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) = 0;
 
-		// Whether this pipeline's material graph actually drives opacity (see
-		// universal_material::is_transparent()). VSM's alpha-cutout depth pass
-		// only needs to know this per pipeline, not the material graph itself
-		// -- default false so non-material pipelines (PipelineSimple, used for
-		// UI/preview-style draws) don't need to care.
-		virtual bool is_transparent() const { return false; }
+		// Per pipeline, not per material: the GPU gather routes draws by
+		// pipeline id, so this is what decides which passes a mesh reaches
+		// (Masked -> VSM's cutout depth PSO, Translucent -> no raster pass at
+		// all). Default Opaque so non-material pipelines (PipelineSimple, used
+		// for UI/preview-style draws) don't need to care.
+		virtual TransparencyMode get_transparency_mode() const { return TransparencyMode::Opaque; }
 
-		// Non-null only for a PipelinePasses whose is_transparent() is true
-		// (see PipelinePasses' constructor) -- a virtual accessor here, not a
-		// cast at the VSM.cpp call site, since only pipelines that already
-		// pass is_transparent() ever get asked for this.
+		// Non-null only for a Masked PipelinePasses (see its constructor).
 		virtual PSOS::VSMDepthDrawMaterial::ptr get_vsm_depth_draw() const { return nullptr; }
 
         uint get_id();

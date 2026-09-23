@@ -82,6 +82,7 @@ Pipeline AssetPipeline
 	# sky + post
 	[Async]
 	Sky;
+	TranslucentRTX;
 	[Async]
 	SMAA;
 	[Async]

@@ -49,8 +49,9 @@ Texture2D get_texture(uint i)
 
 GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness, float4 bump, float4 glow)
 { 
+#ifdef ALPHA_CLIP
    clip(albedo.w-0.5);
-   // clip(albedo.a - 0.2);  
+#endif
     bump.xyz = normalize(bump.xyz * 2.0 - 1.0);
     //float3 bump = xy.x > 0 ? normalize(tex_normal.Sample(point_sampler, i.tc).xyz * 2.0 - 1.0) : float3(0, 0, 1);
 	float3 normal =  normalize(-bump.x * i.tangent + bump.y * i.binormal + bump.z * i.normal);
@@ -73,7 +74,7 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     return result;       
 }    
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
 GBuffer PS(vertex_output i)
 {
 	float4 color = 1;
@@ -82,9 +83,9 @@ GBuffer PS(vertex_output i)
 	float4 normal = 0;
     float4 glow = 0;
     float opacity = 1;
-    float refraction = 1;
+    float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1;
 
-    COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, 0);
+    COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, 0);
 
 color.w=opacity;
 	return universal(i, color, metallic, roughness, normal, glow);
@@ -107,7 +108,7 @@ struct vsm_depth_vertex_output
 	float2 tc : TEXCOORD;
 };
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
 void PS_VSM_DEPTH(vsm_depth_vertex_output i)
 {
 	float4 color = 1;
@@ -116,9 +117,9 @@ void PS_VSM_DEPTH(vsm_depth_vertex_output i)
 	float4 normal = 0;
 	float4 glow = 0;
 	float opacity = 1;
-	float refraction = 1;
+	float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1;
 
-	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, 0);
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, 0);
 
 	clip(opacity - 0.5);
 }
@@ -150,7 +151,7 @@ void universal_voxel(vertex_output i, float4 albedo, float metallic, float rough
 #endif
     
 }
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
 void PS_VOXEL(vertex_output i)
 {
 	float4 color = 1;
@@ -159,9 +160,9 @@ void PS_VOXEL(vertex_output i)
 	float4 normal = 0;
     float4 glow = 0;
     float opacity = 1;
-    float refraction = 1;
+    float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1;
 
-	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, 1);
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, 1);
     color.w = opacity;
 
 	universal_voxel(i, color, metallic, roughness, normal, glow);

@@ -158,7 +158,10 @@ Pipeline MainPipeline
 
 	# sky + post
 		[Async]Sky;
-	
+		# After Sky: glass composites over the fully lit scene including sky,
+		# and before AA/upscalers so they resolve it with everything else.
+		TranslucentRTX;
+
 	[Async]SMAA;
 	[Async]FSR;
 	UpscalingDLSS;

@@ -45,7 +45,7 @@ float4 tile_sample(Texture2D<float4> tex, SamplerState s, float2 tc, Texture2D<f
 
 #define sample(tex, s, tc, lod) get_texture(tex).SampleLevel(s, tc, lod);
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
 
 // vertex_output (pos/wpos/normal/binormal/tangent/tc/...) comes from
 // mesh_shader.hlsl, concatenated ahead of this file for MaterialPreview3D's
@@ -82,7 +82,7 @@ void PS_PREVIEW(vertex_output i)
     float4 normal      = 0;
     float4 glow        = 0;
     float  opacity     = 1;
-    float  refraction  = 1;
+    float  refraction  = 1, thickness = 0, transmission = 1, absorption_distance = 1;
 
-    COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, 0);
+    COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, 0);
 }

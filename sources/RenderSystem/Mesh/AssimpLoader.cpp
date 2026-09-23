@@ -12,6 +12,18 @@
 // exported headers don't cross the module boundary into this TU, so include it
 // explicitly in the global module fragment to keep the definition reachable.
 #include <assimp/material.h>
+#ifndef AI_MATKEY_REFRACTI
+#define AI_MATKEY_REFRACTI "$mat.refracti", 0, 0
+#endif
+#ifndef AI_MATKEY_TRANSMISSION_FACTOR
+#define AI_MATKEY_TRANSMISSION_FACTOR "$mat.transmission.factor", 0, 0
+#endif
+#ifndef AI_MATKEY_VOLUME_THICKNESS_FACTOR
+#define AI_MATKEY_VOLUME_THICKNESS_FACTOR "$mat.volume.thicknessFactor", 0, 0
+#endif
+#ifndef AI_MATKEY_VOLUME_ATTENUATION_DISTANCE
+#define AI_MATKEY_VOLUME_ATTENUATION_DISTANCE "$mat.volume.attenuationDistance", 0, 0
+#endif
 // config.h is macro-only (importer property name strings), so it also has to be
 // included here rather than relied on through `import assimp`.
 #include <assimp/config.h>
@@ -1003,6 +1015,55 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     }
                 }
 
+                // Translucency (glass/water) vs. cutout: a per-pixel opacity
+                // map means cutout; a flat opacity factor < 1 or a glTF
+                // transmission factor means a see-through surface. The mode
+                // follows from the wiring (universal_material::
+                // resolve_transparency_mode): linked opacity -> Masked, linked
+                // refraction (IOR) -> Translucent.
+                bool translucent = false;
+                {
+                    auto link_scalar = [&](float value, auto target, const char* what)
+                    {
+                        auto node = std::make_shared<ScalarNode>(value);
+                        graph->register_node(node);
+                        link_or_throw(node->get_output(0), target, what);
+                    };
+
+                    float transmission = 1.0f, transmission_factor = 0, opacity_factor = 1;
+                    bool has_opacity_texture = AI_SUCCESS == native_material->GetTexture(aiTextureType_OPACITY, 0, &path);
+
+                    if (AI_SUCCESS == native_material->Get(AI_MATKEY_TRANSMISSION_FACTOR, transmission_factor) && transmission_factor > 0.0f)
+                    {
+                        translucent = true;
+                        transmission = transmission_factor;
+                    }
+                    else if (!has_opacity_texture && AI_SUCCESS == native_material->Get(AI_MATKEY_OPACITY, opacity_factor) && opacity_factor < 1.0f)
+                    {
+                        translucent = true;
+                        transmission = 1.0f - opacity_factor;
+                    }
+
+                    if (translucent)
+                    {
+                        float ior = 1.5f;
+                        float file_ior;
+                        if (AI_SUCCESS == native_material->Get(AI_MATKEY_REFRACTI, file_ior) && file_ior > 1.0f)
+                            ior = file_ior;
+                        link_scalar(ior, graph->get_refraction(), "IOR -> refraction");
+                        link_scalar(transmission, graph->get_transmission(), "transmission");
+
+                        // glTF KHR_materials_volume: 0 = thin-walled, same convention as ours.
+                        float thickness;
+                        if (AI_SUCCESS == native_material->Get(AI_MATKEY_VOLUME_THICKNESS_FACTOR, thickness) && thickness > 0.0f)
+                            link_scalar(thickness, graph->get_thickness(), "thickness");
+
+                        float attenuation_distance;
+                        if (AI_SUCCESS == native_material->Get(AI_MATKEY_VOLUME_ATTENUATION_DISTANCE, attenuation_distance) && attenuation_distance > 0.0f)
+                            link_scalar(attenuation_distance, graph->get_absorption_distance(), "absorption distance");
+                    }
+                }
+
                 // Standalone grayscale map (R channel), same convention as the
                 // roughness/metalness standalone case above.
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_OPACITY, 0, &path))
@@ -1010,21 +1071,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     auto node = make_sampling_node(graph.get(), get_texture(resolve_texture_path(directory, path.C_Str())));
                     node->get_output(1)->link(graph->get_opacity());
                 }
-                else
+                else if (!translucent)
                 {
-                    float opacity;
-
-                    // Only wire a constant when it's actually < 1: linking anything
-                    // into get_opacity() flips the material to transparent (see
-                    // universal_material's has_input() check), so a virgin 1.0
-                    // (fully opaque) material must stay unlinked.
-                    if (AI_SUCCESS == native_material->Get(AI_MATKEY_OPACITY, opacity) && opacity < 1.0f)
-                    {
-                        auto value_node = std::make_shared<ScalarNode>(opacity);
-                        graph->register_node(value_node);
-                        value_node->get_output(0)->link(graph->get_opacity());
-                    }
-
                     // Neither a dedicated opacity texture nor a scalar factor --
                     // fall back to the base color texture's own alpha channel,
                     // the standard glTF/Bistro convention ("BaseColor: RGB =
@@ -1033,7 +1081,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     // (see format_likely_has_real_alpha's own comment), so a
                     // plain opaque color texture doesn't get needlessly wired
                     // into the transparent render path.
-                    else if (albedo_tex && format_likely_has_real_alpha(albedo_tex->get_texture()->get_desc().as_texture().Format))
+                    if (albedo_tex && format_likely_has_real_alpha(albedo_tex->get_texture()->get_desc().as_texture().Format))
                     {
                         link_or_throw(tex_node->get_output(4), graph->get_opacity(), "base color alpha -> opacity");
                     }

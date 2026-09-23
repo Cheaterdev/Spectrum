@@ -13,6 +13,7 @@ import :Types;
 import :Autogen.Tables.ShadowPayload;
 import :Autogen.Tables.RayPayload;
 import :Autogen.Tables.ColorShadowPayload;
+import :Autogen.Tables.TranslucentPayload;
 import :Autogen.Slots.MaterialInfo;
 export {
 #include "Shadow.h"
@@ -24,12 +25,14 @@ export {
 #include "IndirectRTXHalf.h"
 #include "Indirect.h"
 #include "ColorRTX.h"
+#include "TranslucentRaygen.h"
 #include "DDGIProbeTrace.h"
 #include "ShadowPass.h"
 #include "ColorPass.h"
 #include "ColorShadowPass.h"
+#include "TranslucentPass.h"
 
-struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass, ColorShadowPass>, Typelist<Shadow, ShadowRTX, ReflectionRTX, ReflectionRTXHalf, Reflection, IndirectRTX, IndirectRTXHalf, Indirect, ColorRTX, DDGIProbeTrace>>
+struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass, ColorShadowPass, TranslucentPass>, Typelist<Shadow, ShadowRTX, ReflectionRTX, ReflectionRTXHalf, Reflection, IndirectRTX, IndirectRTXHalf, Indirect, ColorRTX, TranslucentRaygen, DDGIProbeTrace>>
 {
 	using RTXPSO::RTXPSO;
 	static const constexpr Layouts global_sig = Layouts::DefaultLayout;

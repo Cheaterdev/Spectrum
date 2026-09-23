@@ -43,6 +43,7 @@ export
 		Library::PSSM_Global PSSM_Global;
 		Library::RTXShadow RTXShadow;
 		Library::RTXColorPass RTXColorPass;
+		Library::TranslucentRTX TranslucentRTX;
 		Library::PreScene PreScene;
 		Library::Profiler Profiler;
 		Library::Scene Scene;

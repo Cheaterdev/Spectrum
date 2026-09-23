@@ -234,3 +234,31 @@ void PassDefault<Passes::RTXColorPass>::render(
 
 	RTX::get().render<ColorRTX>(compute, sceneinfo.scene->raytrace_scene, data.ColorOutput->get_size());
 }
+
+// ── TranslucentRTX — glass/water over the lit scene ────────────────────────
+// setup() is fully generated (raytracing.prism's own [SetupCondition]).
+
+void PassDefault<Passes::TranslucentRTX>::render(
+    Passes::TranslucentRTX::Context& data, FrameGraph::FrameContext& context)
+{
+	auto& sceneinfo = context.graph->get_context<SceneInfo>();
+	auto& compute   = context.get_list()->get_compute();
+
+	{
+		PROFILE(L"translucent_rtx_bind");
+		compute.set_signature(RTX::get().rtx.m_root_sig);
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+		context.graph->set_slot(SlotID::SceneData, compute);
+
+		Slots::TranslucentRTXData params;
+		params.GetDepth()       = data.GBuffer_Depth->texture2D;
+		params.GetScene_color() = data.ResultTexture->texture2D;
+		params.GetOutput()      = data.ResultTextureNew->rwTexture2D;
+		compute.set(params);
+	}
+
+	{
+		PROFILE_GPU(L"translucent_rtx_trace");
+		RTX::get().render<TranslucentRaygen>(compute, sceneinfo.scene->raytrace_scene, data.ResultTextureNew->get_size());
+	}
+}

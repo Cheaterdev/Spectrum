@@ -122,9 +122,9 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// Alpha-cutout materials are routed to CS_MATERIAL's per-pipeline
 	// buckets instead (see this file's own top comment) -- skip them here
 	// so they aren't drawn twice (once opaque via this list, once properly
-	// alpha-tested via theirs).
+	// alpha-tested via theirs). Translucent materials cast no VSM shadow.
 	MaterialCommandData material = GetSceneData().GetMaterials()[mesh.GetMaterial_id()];
-	if (material.GetIs_transparent()) return;
+	if (material.GetTransparency_mode() != TransparencyMode::Opaque) return;
 
 	VSMLevelDispatchInfo level = gatherData.GetLevels()[dispatchID.y];
 
@@ -140,7 +140,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 // lists matches the mesh's material pipeline -- same linear-check shape as
 // gather_pipeline.hlsl's get_index. A pipeline_id not present in this
 // batch (handled by a different batch, or genuinely opaque -- shouldn't
-// reach here, CS_MATERIAL already checked is_transparent) silently drops,
+// reach here, CS_MATERIAL already checked the mode) silently drops,
 // same as get_index's own behavior.
 void vsm_append_to_bucket(uint pipeline_id, in VSMDispatchCommandData entry)
 {
@@ -166,7 +166,7 @@ void CS_MATERIAL(uint3 dispatchID : SV_DispatchThreadID)
 	MeshCommandData mesh = GetSceneData().GetMeshes()[id];
 
 	MaterialCommandData material = GetSceneData().GetMaterials()[mesh.GetMaterial_id()];
-	if (!material.GetIs_transparent()) return;
+	if (material.GetTransparency_mode() != TransparencyMode::Masked) return;
 
 	VSMLevelDispatchInfo level = gatherData.GetLevels()[dispatchID.y];
 

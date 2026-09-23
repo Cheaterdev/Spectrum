@@ -433,6 +433,10 @@ void MeshAssetInstance::on_asset_change(Asset::ptr asset)
 			else
 				changed.push_back(nullptr);
 		}
+
+		// A transparency-mode change alters this instance's TLAS mask/flags.
+		if (scene)
+			update_rtx_instance();
 	}
 	if (scene)
 		scene->on_changed(this);
@@ -545,10 +549,13 @@ void MeshAssetInstance::update_rtx_instance()
 
 			instanceDesc.transform = to_transform3x4(global_transform);
 
-			instanceDesc.mask = 1;
+			auto material = static_cast<materials::universal_material*>(info.material);
+			auto mode = material->get_transparency_mode();
+
+			instanceDesc.mask = (uint)(mode == TransparencyMode::Translucent ? RTInstanceMask::Translucent : RTInstanceMask::Opaque);
 			instanceDesc.acceleration_structure = info.ras->get_gpu_address().get_ptr();
 			instanceDesc.instance_id = info.node_id;
-			instanceDesc.hit_group_index = RTX::get().rtx.get_index(static_cast<materials::universal_material*>(info.material));
+			instanceDesc.hit_group_index = RTX::get().rtx.get_index(material);
 
 			// Phase 5.19: the BLAS geometry itself is always built OPAQUE
 			// (see init_gpu() above -- one BLAS per raw mesh part, shared
@@ -558,9 +565,11 @@ void MeshAssetInstance::update_rtx_instance()
 			// non-opaque candidate hit actually reach a RayQuery's
 			// CandidateType() check instead of being auto-committed --
 			// needed for VSM's blocker-search verify ray to see cutout
-			// materials as anything other than solid.
-			instanceDesc.flags = static_cast<materials::universal_material*>(info.material)->is_transparent()
-				? (uint)HAL::RaytracingInstanceFlags::FORCE_NON_OPAQUE
+			// materials as anything other than solid. Translucent is forced
+			// opaque instead: glass must never reach the Masked any-hit
+			// (which would IgnoreHit() it wherever opacity < 0.5).
+			instanceDesc.flags = mode == TransparencyMode::Masked ? (uint)HAL::RaytracingInstanceFlags::FORCE_NON_OPAQUE
+				: mode == TransparencyMode::Translucent ? (uint)HAL::RaytracingInstanceFlags::FORCE_OPAQUE
 				: (uint)HAL::RaytracingInstanceFlags::NONE;
 
 
@@ -750,6 +759,7 @@ void MeshAssetInstance::update_nodes()
 			my_instance.vertexes = info.vertex_buffer_view.structuredBuffer.get_offset();
 			my_instance.indices = info.index_buffer_view.structuredBuffer.get_offset();
 			my_instance.material_id = static_cast<materials::universal_material*>(info.material)->get_material_id();
+			my_instance.node_offset = static_cast<UINT>(info.mesh_info.GetNode_offset());
 
 			rendering.push_back(info);
 		}

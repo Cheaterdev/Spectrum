@@ -111,6 +111,10 @@ public:
 
         scene->update(*graph.builder.current_frame);
 
+        // TranslucentRTX's generated [SetupCondition] reads this; left unset,
+        // translucent materials would be invisible in previews.
+        graph.get_context<Table::RenderDeviceCapabilities>().rtx_supported = RenderSystem::get().device().is_rtx_supported();
+
 		pipeline.add_passes(graph);
         // This pipeline's own [PreSetup] hooks (CubeSky's sun-direction diff)
         // -- per-pipeline, so the main pipeline's PreScene/NRD hooks do not

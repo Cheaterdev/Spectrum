@@ -42,12 +42,18 @@ CEREAL_FORCE_REGISTER_RELATION(materials::Pipeline, materials::PipelineSimple);
 // PipelinePasses
 // ---------------------------------------------------------------------------
 
-materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context) :Pipeline(id)
+materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, TransparencyMode mode) :Pipeline(id), transparency_mode(mode)
 {
+	// clip() only in Masked PSOs: a discard anywhere in the pixel shader turns
+	// off early depth for every draw using it, even when opacity is always 1.
+	auto pixel_macros = context->get_pixel_result().macros;
+	if (mode == TransparencyMode::Masked)
+		pixel_macros.emplace_back("ALPHA_CLIP", "1");
+
 	depth_draw = std::make_shared<PSOS::DepthDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::DepthDraw::Keys& )
 	{
 		target.name += std::to_string(id);
-		target.pixel = { pixel, "PS", HAL::ShaderOptions::None,context->get_pixel_result().macros, true };
+		target.pixel = { pixel, "PS", HAL::ShaderOptions::None, pixel_macros, true };
 
 		if (!tess.empty()) {
 			target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
@@ -63,7 +69,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 	gbuffer = std::make_shared<PSOS::GBufferDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::GBufferDraw::Keys& )
 	{
 		target.name += std::to_string(id);
-		target.pixel = { pixel, "PS", HAL::ShaderOptions::None,context->get_pixel_result().macros, true };
+		target.pixel = { pixel, "PS", HAL::ShaderOptions::None, pixel_macros, true };
 
 		if (!tess.empty()) {
 			target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
@@ -92,8 +98,6 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		}
 	});
 
-	transparent = context->transparent;
-
 	// Only for alpha-cutout materials -- see vsm_depth_draw's own comment.
 	// VSM has no tessellation support (mesh_shader_vsm.hlsl is mesh-shader-
 	// only, no HS/DS stage), so unlike depth_draw/gbuffer above this never
@@ -101,7 +105,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 	// cutout material simply keeps its VSM shadow un-displaced, same
 	// limitation VSM already has for tessellated opaque materials via the
 	// plain VSMDepthDraw PSO.
-	if (transparent)
+	if (mode == TransparencyMode::Masked)
 	{
 		vsm_depth_draw = std::make_shared<PSOS::VSMDepthDrawMaterial>(RenderSystem::get().device(), [&](SimpleGraphicsPSO& target, PSOS::VSMDepthDrawMaterial::Keys&)
 		{
@@ -148,15 +152,18 @@ materials::Pipeline::ptr materials::PipelineManager::get_pipeline(Pipeline::ptr 
 	return pip;
 }
 
-materials::Pipeline::ptr materials::PipelineManager::get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context)
+materials::Pipeline::ptr materials::PipelineManager::get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, TransparencyMode mode)
 {
 	std::lock_guard<std::mutex> g(m);
-	auto hash = crc32(pixel + tess);
+	// The mode is part of the key: the GPU gather routes draws per pipeline,
+	// so two materials with identical shader text but different modes must
+	// not share one.
+	auto hash = crc32(pixel + tess + std::to_string((uint)mode));
 	auto&& pip = pipelines[hash];
 
 	if (!pip)
 	{
-		auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), pixel,tess,voxel,raytracing,context);
+		auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), pixel,tess,voxel,raytracing,context,mode);
 		pipeline->hash = hash;
 		pip = pipeline;
 	}
@@ -280,6 +287,7 @@ void materials::universal_material::update()
 			auto elem = info_handle.map();// universal_material_info_part_manager::get().map_elements(info_handle.get_offset(), 1);
 			elem[0].pipeline_id = pipeline->get_id();
 			elem[0].material_cb = compiled_material_info.compiled().get_offset();
+			elem[0].transparency_mode = transparency_mode;
 
 			info_handle.write(0, elem);
 
@@ -342,6 +350,9 @@ void materials::universal_material::compile()
 {
 	start_changing_contents();
 
+	// Also the load path: generate_material() doesn't run for a deserialized material.
+	resolve_transparency_mode();
+
 	handlers.clear();
 
 	texture_srvs.resize(textures.size());
@@ -397,7 +408,7 @@ void materials::universal_material::compile()
 	auto elem = info_handle.map();
 	elem[0].pipeline_id = pipeline->get_id();
 	elem[0].material_cb = compiled_material_info.compiled().get_offset();
-	elem[0].is_transparent = transparent ? 1 : 0;
+	elem[0].transparency_mode = transparency_mode;
 
 	// ~0u ("unknown") unless find_opacity_texture() recognizes a simple
 	// direct texture->opacity wiring -- see its own comment. Stored as the
@@ -412,7 +423,8 @@ void materials::universal_material::compile()
 	// that entirely -- ResourceDescriptorHeap[opacity_texture_index] is a
 	// plain Texture2D, unconditionally, from anywhere.
 	elem[0].opacity_texture_index = ~0u;
-	if (auto opacity_tex = find_opacity_texture(graph.get().get()))
+	auto opacity_tex = transparency_mode == TransparencyMode::Masked ? find_opacity_texture(graph.get().get()) : nullptr;
+	if (opacity_tex)
 	{
 		auto srv_list = context->get_textures();
 		auto it = std::find(srv_list.begin(), srv_list.end(), opacity_tex);
@@ -438,6 +450,18 @@ void materials::universal_material::generate_texture_handles()
 
 }
 
+// Refraction (IOR) wired -> Translucent; else opacity wired -> Masked; else Opaque.
+void materials::universal_material::resolve_transparency_mode()
+{
+	auto g = graph.get();
+	if (g && g->get_refraction()->has_input())
+		transparency_mode = TransparencyMode::Translucent;
+	else if (g && g->get_opacity()->has_input())
+		transparency_mode = TransparencyMode::Masked;
+	else
+		transparency_mode = TransparencyMode::Opaque;
+}
+
 void materials::universal_material::generate_material()
 {
 #ifdef HAL_BACKEND_VULKAN
@@ -459,8 +483,13 @@ void materials::universal_material::generate_material()
 
 	context->start(include_file->get_data(), graph.get().get());
 
-	// Whether the graph drives opacity — used later by RTXColorPass.
-	transparent = context->transparent;
+	// Masked: any-hit alpha test + tinting ColorShadowPass closest-hit.
+	// Translucent: TranslucentPass closest-hit, transmission-tinted shadows.
+	resolve_transparency_mode();
+	if (transparency_mode == TransparencyMode::Masked)
+		context->hit_shader.macros.emplace_back("TRANSPARENT", "1");
+	else if (transparency_mode == TransparencyMode::Translucent)
+		context->hit_shader.macros.emplace_back("TRANSLUCENT", "1");
 
 
 	auto ps_str = context->get_pixel_result().uniforms + include_file->get_data() + context->get_pixel_result().text;
@@ -474,7 +503,7 @@ void materials::universal_material::generate_material()
 
 
 	raytracing_lib = HAL::library_shader::get_resource({ raytracing_str, "" , ShaderOptions::None, context->hit_shader.macros, true });
-	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, raytracing_str, context);
+	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, raytracing_str, context, transparency_mode);
 	++universal_material::pipeline_epoch;
 	ps_uniforms = context->uniforms_ps;
 
@@ -519,8 +548,6 @@ void materials::universal_material::generate_material()
 
 materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this), include_file_raytacing(this)
 {
-
-
 	include_file = EngineAssets::material_header.get_asset();
 	include_file_raytacing = EngineAssets::material_raytracing_header.get_asset();
 	this->graph = BinaryData<MaterialGraph>(graph);

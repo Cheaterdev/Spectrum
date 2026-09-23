@@ -65,6 +65,10 @@ struct RaytraceInstanceInfo
 	# table binding (see raytracing.prism's ColorShadowPass) isn't reachable
 	# from inline ray tracing at all -- this is the one path that is.
 	uint material_id;
+	# SceneData.nodes index. The BLAS bakes the node's mesh_matrix into its
+	# geometry, so ObjectToWorld3x4() (the instance transform) alone does not
+	# take vertex normals to world space; node_global_matrix does.
+	uint node_offset;
 }
 
 struct Meshlet
@@ -138,22 +142,42 @@ struct MeshCommandData
 	uint meshlet_count;
 }
 
+enum TransparencyMode
+{
+	# Fully opaque: no clip(), BLAS geometry stays opaque (no any-hit).
+	Opaque;
+	# Alpha-cutout (foliage, fences): drawn into the GBuffer with clip() on
+	# opacity, any-hit alpha test in RT, VSM's material depth PSO.
+	Masked;
+	# Glass/water: kept out of GBuffer/VSM/voxelization entirely and drawn by
+	# TranslucentRTX (raytracing.prism) on top of the lit scene instead.
+	Translucent;
+}
+
+# TLAS instance masks. Translucent instances are separated so TranslucentRTX
+# can trace them alone, and so opaque-only queries (VSM's blocker verify ray,
+# TranslucentRTX's "what's behind the glass" rays) skip them.
+enum RTInstanceMask
+{
+	Opaque = 1;
+	Translucent = 2;
+}
+
 struct MaterialCommandData
 {
 	uint material_cb;
 	uint pipeline_id;
-	# Set from universal_material::is_transparent() (the material graph's
-	# opacity output is actually driven) at the same site material_cb/
-	# pipeline_id are populated. Lets a GPU-side gather pass (e.g. VSM's
-	# vsm_gather_dispatch.hlsl) route a mesh differently -- alpha-cutout
-	# materials need a depth pass with a real pixel shader (clip()), opaque
-	# ones don't -- without decoding the material graph itself.
-	uint is_transparent;
+	# Set from universal_material's transparency mode at the same site
+	# material_cb/pipeline_id are populated. Lets GPU-side passes (VSM's
+	# vsm_gather_dispatch.hlsl, VSM_ShadowResolve's inline RayQuery,
+	# TranslucentRTX) route a mesh without decoding the material graph.
+	TransparencyMode transparency_mode;
 	# RAW bindless descriptor-heap index (ResourceDescriptorHeap[this] is a
 	# plain Texture2D, from anywhere) of whichever texture directly drives
 	# this material's opacity graph output, or ~0u ("unknown") if there
 	# isn't a simple single-texture answer (universal_material.cpp's
 	# find_opacity_texture() only recognizes the common direct-wiring case).
+	# Only set for Masked materials.
 	# Deliberately NOT an index into MaterialInfo.textures[] -- that array
 	# sits after MaterialInfo's own [dynamic] MaterialCB data, whose byte
 	# size varies per material, so it's only readable from the material's

@@ -222,6 +222,15 @@ FrameGraph::SetupResult PassDefault<Passes::RTXColorPass>::setup(
 }
 
 
+FrameGraph::SetupResult PassDefault<Passes::TranslucentRTX>::setup(
+	Passes::TranslucentRTX::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassDefault<Passes::PreScene>::setup(
 	Passes::PreScene::Context& data, FrameGraph::TaskBuilder& builder)
 {

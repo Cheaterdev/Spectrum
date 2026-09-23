@@ -278,9 +278,11 @@ export
 		RayPayload = "RayPayload"_crc32,
 		ShadowPayload = "ShadowPayload"_crc32,
 		ColorShadowPayload = "ColorShadowPayload"_crc32,
+		TranslucentPayload = "TranslucentPayload"_crc32,
 		Triangle = "Triangle"_crc32,
 		Raytracing = "Raytracing"_crc32,
 		RTXShadowReference = "RTXShadowReference"_crc32,
+		TranslucentRTXData = "TranslucentRTXData"_crc32,
 		SceneData = "SceneData"_crc32,
 		GBuffer = "GBuffer"_crc32,
 		SkyState = "SkyState"_crc32,
@@ -377,6 +379,17 @@ export
 	enum class RTXDebugFlags : uint
 	{
 		DisableSkyFallback = 1
+	};
+	enum class TransparencyMode : uint
+	{
+		Opaque,
+		Masked,
+		Translucent
+	};
+	enum class RTInstanceMask : uint
+	{
+		Opaque = 1,
+		Translucent = 2
 	};
 	enum class IndirectSource : uint
 	{

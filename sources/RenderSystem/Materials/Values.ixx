@@ -328,8 +328,9 @@ class MaterialContext : public FlowGraph::GraphContext
     public:
 		ShaderSource hit_shader;
 
-        // Set during start(): true when the graph's opacity output is driven,
-        // i.e. the material is (partially) transparent. Consumed CPU-side.
+        // Set during start(): true when the graph's opacity output is driven.
+        // Informational only -- how opacity is used is universal_material's
+        // TransparencySettings::mode, not this.
         bool transparent = false;
 
         std::vector<Uniform::ptr> uniforms_ps;
@@ -440,6 +441,11 @@ class MaterialGraph : public MaterialFunction
         // COMPILED_FUNC output list (keeps existing output order stable).
         FlowGraph::output::ptr i_opacity;
         FlowGraph::output::ptr i_refraction;
+        FlowGraph::output::ptr i_thickness;
+        FlowGraph::output::ptr i_transmission;
+        FlowGraph::output::ptr i_absorption_distance;
+
+        void set_translucent_defaults();
 
     public:
         using ptr = s_ptr<MaterialGraph>;
@@ -471,6 +477,10 @@ class MaterialGraph : public MaterialFunction
     FlowGraph::output::ptr get_tess_displacement();
         FlowGraph::output::ptr get_opacity();
         FlowGraph::output::ptr get_refraction();
+        FlowGraph::output::ptr get_thickness();
+        FlowGraph::output::ptr get_transmission();
+        FlowGraph::output::ptr get_absorption_distance();
+        void set_translucent_outputs_enabled(bool enabled);
         virtual void start(MaterialContext* context);
     private:
         SERIALIZE()
@@ -488,6 +498,9 @@ class MaterialGraph : public MaterialFunction
             ar& NVP(i_tess_displacement);
             ar& NVP(i_opacity);
             ar& NVP(i_refraction);
+            ar& NVP(i_thickness);
+            ar& NVP(i_transmission);
+            ar& NVP(i_absorption_distance);
             i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
             i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 			i_roughness->default_value = shader_parameter("0.5", ShaderParams::get().FLOAT1);
@@ -498,6 +511,7 @@ class MaterialGraph : public MaterialFunction
             // 1.0 opacity = fully opaque; 1.0 IOR = no refraction (air).
             i_opacity->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
             i_refraction->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
+            set_translucent_defaults();
         }
 
 };

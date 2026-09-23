@@ -241,28 +241,25 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 	Slots::GatherPipeline gather;
 
-	auto begin = pipelines.begin();
-	auto end = begin;
-
-
-
+	// Translucent pipelines are left out of every raster pass (GBuffer, depth,
+	// voxelization): the gather drops draws whose pipeline id isn't listed,
+	// and TranslucentRTX draws them instead.
+	std::vector<materials::Pipeline*> batch_pipelines;
+	for (auto& [id, pip] : pipelines)
+		if (pip->get_transparency_mode() != TransparencyMode::Translucent)
+			batch_pipelines.push_back(pip.get());
 
 	graphics.set_index_buffer(HAL::Views::IndexBuffer());// universal_index_manager::get().buffer->get_index_buffer_view(true));
-	while (end != pipelines.end())
+	for (size_t batch_start = 0; batch_start < batch_pipelines.size(); batch_start += 8)
 	{
-		begin = end;
-
-		int total = 0;
+		int total = (int)std::min<size_t>(8, batch_pipelines.size() - batch_start);
 		{
 			PROFILE_GPU(L"first 8");
-			 while (total < 8)
-		{
-			((UINT*)gather.GetPip_ids())[total] = end->second->get_id();
-			gather.GetCommands()[total] = commands_buffer[total]->buffer;
-			end++; total++;
-			if (end == pipelines.end()) break;
-		}
-		
+			for (int i = 0; i < total; i++)
+			{
+				((UINT*)gather.GetPip_ids())[i] = batch_pipelines[batch_start + i]->get_id();
+				gather.GetCommands()[i] = commands_buffer[i]->buffer;
+			}
 		}
 		
 				   {
@@ -314,12 +311,12 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 						graphics.set(mesh_render_context->voxelization_compiled);
 				}
 
-			for (auto it = begin; it != end; it++)
+			for (int i = 0; i < total; i++)
 			{
 				{
 					PROFILE_GPU(L"flush");
-			
-					it->second->set(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics, hiz_occlusion);
+
+					batch_pipelines[batch_start + i]->set(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics, hiz_occlusion);
 				}
 
 				{

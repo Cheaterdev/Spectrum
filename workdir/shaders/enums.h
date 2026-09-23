@@ -23,6 +23,17 @@ enum class RTXDebugFlags : uint
 {
 	DisableSkyFallback = 1
 };
+enum class TransparencyMode : uint
+{
+	Opaque,
+	Masked,
+	Translucent
+};
+enum class RTInstanceMask : uint
+{
+	Opaque = 1,
+	Translucent = 2
+};
 enum class IndirectSource : uint
 {
 	MyVCT,

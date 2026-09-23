@@ -8,7 +8,7 @@
 
 struct DDGIProbeTrace: public RaytraceRaygen<DDGIProbeTrace>
 {
-	static const constexpr uint ID = 9;
+	static const constexpr uint ID = 10;
 	static const constexpr std::string_view shader = "shaders\\ddgi/ddgi_probe_trace.hlsl";
 	static const constexpr std::wstring_view raygen = L"DDGIProbeTraceRaygenShader";
 };

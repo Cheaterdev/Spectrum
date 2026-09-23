@@ -257,6 +257,55 @@ struct ColorShadowPayload
 	float dist;
 }
 
+# Surface record for TranslucentRTX: the per-material closest-hit only
+# evaluates the material, the raygen owns all refraction/absorption logic
+# (iterative, so glass depth never costs recursion depth).
+[nobind]
+[raypayload]
+struct TranslucentPayload
+{
+	# < 0 on miss.
+	[read = {closesthit,miss,caller}]
+	[write = {closesthit,miss,caller}]
+	float dist;
+
+	# World-space shading normal, NOT flipped toward the ray -- the caller
+	# uses front_face to know whether it is entering or leaving the volume.
+	[read = {closesthit,caller}]
+	[write = {closesthit,caller}]
+	float3 normal;
+
+	[read = {closesthit,caller}]
+	[write = {closesthit,caller}]
+	float3 albedo;
+
+	[read = {closesthit,caller}]
+	[write = {closesthit,caller}]
+	float roughness;
+
+	# Material graph outputs: refraction (IOR), thickness, transmission,
+	# absorption distance.
+	[read = {closesthit,caller}]
+	[write = {closesthit,caller}]
+	float ior;
+
+	[read = {closesthit,caller}]
+	[write = {closesthit,caller}]
+	float thickness;
+
+	[read = {closesthit,caller}]
+	[write = {closesthit,caller}]
+	float transmission;
+
+	[read = {closesthit,caller}]
+	[write = {closesthit,caller}]
+	float absorption_distance;
+
+	[read = {closesthit,caller}]
+	[write = {closesthit,caller}]
+	uint front_face;
+}
+
 [nobind]
 struct Triangle
 {
@@ -384,6 +433,13 @@ RaytraceRaygen ColorRTX
 # ID 0. IDs are now assigned per bound RaytracePSO after all files are merged
 # (assign_rtx_ids in Main.cpp), so a raygen can live in any file.
 [Bind = MainRTX]
+RaytraceRaygen TranslucentRaygen
+{
+	[EntryPoint = TranslucentRaygenShader]
+	raygen = "rtx/translucency.hlsl";
+}
+
+[Bind = MainRTX]
 RaytraceRaygen DDGIProbeTrace
 {
 	[EntryPoint = DDGIProbeTraceRaygenShader]
@@ -449,6 +505,23 @@ RaytracePass ColorShadowPass
 	per_material = true;
 }
 
+# Surface query for TranslucentRTX -- only ever traced with
+# RTInstanceMask::Translucent, whose instances are FORCE_OPAQUE, so no any-hit.
+[Bind = MainRTX]
+RaytracePass TranslucentPass
+{
+	[EntryPoint = TranslucentMissShader]
+	miss = "rtx/translucency.hlsl";
+
+	[EntryPoint = TranslucentClosestHitShader]
+	closest_hit = none;
+
+	payload = TranslucentPayload;
+
+	local = MaterialInfo;
+	per_material = true;
+}
+
 
 
 [Static]
@@ -507,4 +580,34 @@ PassNode RTXColorPass
 	# Force the sky chain to run so FrameInfo.GetSky() is populated for the miss shader.
 	[Always = Read] TextureCube sky_cubemap_filtered;
 	[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ColorOutput;
+}
+
+[Bind = DefaultLayout::Instance2]
+struct TranslucentRTXData
+{
+	Texture2D<float> depth;
+	# Lit scene before glass: what thin glass shows straight through, and the
+	# screen-space answer for bent/reflected rays whose hit is on screen.
+	Texture2D<float4> scene_color;
+	RWTexture2D<float4> output;
+}
+
+# Translucent materials (TransparencyMode::Translucent, meshrender.prism) are
+# not in the GBuffer; this traces them per pixel against the translucent-only
+# instance mask, bounded by opaque depth, and composites onto the lit scene.
+# Full-screen raygen for now -- a raster coverage prepass to trace only covered
+# pixels is the planned follow-up. Not under DLSS-RR, which never writes
+# ResultTexture (RTXCombine writes ResultTextureRTXNoise instead).
+[Static]
+[Compute]
+[SetupCondition = RenderDeviceCapabilities::rtx_supported && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR]
+PassNode TranslucentRTX
+{
+	# PreScene: the BVH must be built before tracing.
+	[Always = Read] StructuredBuffer<uint> scene;
+	# ColorPass's miss shader reads FrameInfo.GetSky().
+	[Always = Read] TextureCube sky_cubemap_filtered;
+	[Always = Read] Texture GBuffer_Depth;
+	[Always = Read] [Recreate = ResultTextureNew] [RecreateFlags = UnorderedAccess]
+	Texture ResultTexture;
 }

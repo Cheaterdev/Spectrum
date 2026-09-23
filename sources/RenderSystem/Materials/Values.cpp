@@ -191,17 +191,12 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 	graph->get_roughness()->set_enabled(true);
 	graph->get_opacity()->set_enabled(true);
 	graph->get_refraction()->set_enabled(true);
+	graph->set_translucent_outputs_enabled(true);
 
 	graph->get_tess_displacement()->set_enabled(false);
 	graph->start(this);
 
-	// The material is transparent iff its opacity output is actually driven.
 	transparent = graph->get_opacity()->has_input();
-
-	// Transparent materials compile the refraction/continuation-ray path in the
-	// raytracing hit shader (see UniversalMaterialRaytracing.hlsl).
-	if (transparent)
-		hit_shader.macros.emplace_back("TRANSPARENT", "1");
 
 
 
@@ -245,6 +240,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		graph->get_roughness()->set_enabled(false);
 		graph->get_opacity()->set_enabled(false);
 		graph->get_refraction()->set_enabled(false);
+		graph->set_translucent_outputs_enabled(false);
 
 		graph->get_base_color()->set_enabled(false);
 		graph->get_tess_displacement()->set_enabled(true);
@@ -278,6 +274,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		graph->get_roughness()->set_enabled(true);
 		graph->get_opacity()->set_enabled(true);
 		graph->get_refraction()->set_enabled(true);
+		graph->set_translucent_outputs_enabled(true);
 		graph->get_tess_displacement()->set_enabled(false);
 
 		// Unlike the pixel/tess passes above, the preview pass wants a value
@@ -711,6 +708,10 @@ MaterialGraph::MaterialGraph()
 	// Registered after glow so they append to the end of the COMPILED_FUNC output list.
 	i_opacity = register_output("opacity", ShaderParams::get().FLOAT1);
 	i_refraction = register_output("refraction", ShaderParams::get().FLOAT1);
+	// Translucent-only (refraction wired): see TranslucentRTX, raytracing.prism.
+	i_thickness = register_output("thickness", ShaderParams::get().FLOAT1);
+	i_transmission = register_output("transmission", ShaderParams::get().FLOAT1);
+	i_absorption_distance = register_output("absorption distance", ShaderParams::get().FLOAT1);
 
 	i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
 	i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
@@ -724,6 +725,15 @@ MaterialGraph::MaterialGraph()
 	// 1.0 opacity = fully opaque; 1.0 IOR = no refraction (air).
 	i_opacity->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
 	i_refraction->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
+	set_translucent_defaults();
+}
+
+void MaterialGraph::set_translucent_defaults()
+{
+	// Thin-walled, fully transmissive, absorbing to albedo over 1 unit.
+	i_thickness->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_transmission->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
+	i_absorption_distance->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
 }
 
 MaterialGraph::~MaterialGraph()
@@ -777,6 +787,28 @@ FlowGraph::output::ptr MaterialGraph::get_opacity()
 FlowGraph::output::ptr MaterialGraph::get_refraction()
 {
 	return i_refraction;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_thickness()
+{
+	return i_thickness;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_transmission()
+{
+	return i_transmission;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_absorption_distance()
+{
+	return i_absorption_distance;
+}
+
+void MaterialGraph::set_translucent_outputs_enabled(bool enabled)
+{
+	i_thickness->set_enabled(enabled);
+	i_transmission->set_enabled(enabled);
+	i_absorption_distance->set_enabled(enabled);
 }
 
 void MaterialGraph::start(MaterialContext* context)

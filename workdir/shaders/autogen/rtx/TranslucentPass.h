@@ -5,12 +5,12 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 
-void ColorPass(RaytracingAccelerationStructure scene, RayDesc ray, RAY_FLAG flag, uint instance_mask, inout RayPayload payload)
+void TranslucentPass(RaytracingAccelerationStructure scene, RayDesc ray, RAY_FLAG flag, uint instance_mask, inout TranslucentPayload payload)
 {
-	TraceRay(scene, flag, instance_mask, 1, 0, 1, ray, payload);
+	TraceRay(scene, flag, instance_mask, 3, 0, 3, ray, payload);
 }
 
-void ColorPass(RaytracingAccelerationStructure scene, RayDesc ray, RAY_FLAG flag, inout RayPayload payload)
+void TranslucentPass(RaytracingAccelerationStructure scene, RayDesc ray, RAY_FLAG flag, inout TranslucentPayload payload)
 {
-	ColorPass(scene, ray, flag, ~0u, payload);
+	TranslucentPass(scene, ray, flag, ~0u, payload);
 }

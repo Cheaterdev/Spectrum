@@ -1001,7 +1001,7 @@ VSM::VSM() : VariableContext(L"VSM")
 					int total = 0;
 					while (total < 8 && it != end)
 					{
-						if (it->second->is_transparent())
+						if (it->second->get_transparency_mode() == TransparencyMode::Masked)
 							batch[total++] = it->second;
 						++it;
 					}

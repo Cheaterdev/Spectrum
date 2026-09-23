@@ -15,6 +15,7 @@
 #include "autogen/rtx/ColorPass.h"
 #include "autogen/tables/ColorShadowPayload.h"
 #include "autogen/rtx/ColorShadowPass.h"
+#include "autogen/tables/TranslucentPayload.h"
 // RayPayload::use_vsm_shadow's own opt-in cheap path (see its comment,
 // raytracing.prism) -- get_shadow_vsm_simple, the same lean lookup VoxelGI's
 // own Lighting pass uses (voxel_lighting.hlsl) for exactly the same reason
@@ -66,12 +67,12 @@ float4 sample(uint itex, SamplerState s, float2 tc, float lod)
 }
 #endif 
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
 
 
 // Evaluate the material at the current hit and return just what a shadow ray
 // needs: surface colour (tint) and opacity. Mirrors the setup in the color hit.
-void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity)
+void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity, out float surface_transmission)
 {
 	SceneData sceneData = CreateSceneData();
 	RaytraceInstanceInfo instance = sceneData.GetRaytraceInstanceInfo()[InstanceID()];
@@ -91,9 +92,10 @@ void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity)
 	t.v.pos = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
 
 	color = 1; opacity = 1;
-	float  metallic = 1, roughness = 1, refraction = 1;
+	float  metallic = 1, roughness = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1;
 	float4 normal = 0, glow = 0;
-	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, t.lod);
+	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, t.lod);
+	surface_transmission = transmission;
 }
 
 
@@ -145,24 +147,14 @@ float3 vsm_shadow_lookup(float3 wpos, float3 normal, float3 light_dir)
 // and VSM's own cutout paths already use, so a hole reads identically
 // everywhere in the engine. Only ever actually invoked for instances built
 // with D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE (MeshAssetInstance::
-// update_rtx_instance(), set for transparent materials) -- opaque materials'
-// geometry stays flagged opaque at the BLAS level, so any-hit is skipped
-// for them entirely by the hardware, not just by this check.
-//
-// Note this reuses the SAME is_transparent()/opacity signal the existing
-// TRANSPARENT blend path below (Fresnel reflection/refraction) already
-// keys off of -- for a true cutout material (opacity effectively 0 or 1)
-// the two compose cleanly (any-hit removes the holes, closest-hit's blend
-// math degenerates to fully-opaque for the opacity=1 remainder). A material
-// that's genuinely translucent across a continuous opacity range (frosted
-// glass, not cutout foliage) will now also lose its sub-0.5-opacity regions
-// to IgnoreHit() instead of a faint blend -- not exercised by anything in
-// this codebase today, but worth knowing if that changes.
+// update_rtx_instance(), set only for TransparencyMode::Masked) -- opaque
+// geometry stays flagged opaque at the BLAS level and Translucent instances
+// are FORCE_OPAQUE, so any-hit is skipped for them entirely by the hardware.
 [shader("anyhit")]
 void MyAnyHitShader(inout RayPayload payload, in MyAttributes attr)
 {
-	float4 color; float opacity;
-	ShadowSurface(attr, color, opacity);
+	float4 color; float opacity, surface_transmission;
+	ShadowSurface(attr, color, opacity, surface_transmission);
 
 	if (opacity < 0.5)
 		IgnoreHit();
@@ -171,8 +163,8 @@ void MyAnyHitShader(inout RayPayload payload, in MyAttributes attr)
 [shader("anyhit")]
 void ColorShadowAnyHitShader([raypayload] inout ColorShadowPayload payload, in MyAttributes attr)
 {
-	float4 color; float opacity;
-	ShadowSurface(attr, color, opacity);
+	float4 color; float opacity, surface_transmission;
+	ShadowSurface(attr, color, opacity, surface_transmission);
 
 	if (opacity < 0.5)
 		IgnoreHit();
@@ -187,9 +179,14 @@ void ColorShadowClosestHitShader([raypayload] inout ColorShadowPayload payload, 
 {
 	payload.dist = RayTCurrent(); // report the occluder distance to the caller.
 
-#ifdef TRANSPARENT
-	float4 color; float opacity;
-	ShadowSurface(attr, color, opacity);
+#if defined(TRANSLUCENT)
+	float4 color; float opacity, surface_transmission;
+	ShadowSurface(attr, color, opacity, surface_transmission);
+
+	payload.transmittance *= saturate(color.rgb) * saturate(surface_transmission);
+#elif defined(TRANSPARENT)
+	float4 color; float opacity, surface_transmission;
+	ShadowSurface(attr, color, opacity, surface_transmission);
 
 	// Light through the glass is tinted by its colour; opacity darkens it (full
 	// opacity == opaque == blocks). The caller advances past and keeps tracing.
@@ -200,6 +197,48 @@ void ColorShadowClosestHitShader([raypayload] inout ColorShadowPayload payload, 
 }
 
 
+
+// TranslucentRTX's surface query: evaluate the material, hand the result back.
+// All refraction/absorption logic lives in the raygen (rtx/translucency.hlsl).
+[shader("closesthit")]
+void TranslucentClosestHitShader([raypayload] inout TranslucentPayload payload, in MyAttributes attr)
+{
+	SceneData sceneData = CreateSceneData();
+	RaytraceInstanceInfo instance = sceneData.GetRaytraceInstanceInfo()[InstanceID()];
+
+	float3 barycentrics = float3(1 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);
+
+	uint id0 = instance.GetIndices()[PrimitiveIndex() * 3];
+	uint id1 = instance.GetIndices()[PrimitiveIndex() * 3 + 1];
+	uint id2 = instance.GetIndices()[PrimitiveIndex() * 3 + 2];
+
+	Triangle t;
+	t.init(instance.GetVertexes()[id0], instance.GetVertexes()[id1], instance.GetVertexes()[id2], barycentrics);
+	t.v.pos = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+
+	float4 color = 1;
+	float metallic = 0, roughness = 0, opacity = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1;
+	float4 normal = 0, glow = 0;
+	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, t.lod);
+
+	// Inverse-transpose of the node's full local->world matrix (row-vector
+	// multiply by the inverse), so non-uniform scale doesn't skew it either.
+	node_data node = sceneData.GetNodes()[instance.GetNode_offset()];
+	float3 world_normal = normalize(mul(t.v.normal, (float3x3)node.GetNode_inverse_matrix()));
+
+	payload.dist        = RayTCurrent();
+	payload.normal      = world_normal;
+	payload.albedo      = color.rgb;
+	payload.roughness   = roughness;
+	payload.ior                 = refraction;
+	payload.thickness           = thickness;
+	payload.transmission        = transmission;
+	payload.absorption_distance = absorption_distance;
+	// From the interpolated normal rather than HitKind(): front-face winding
+	// depends on the asset's triangle order, the normals are what the artist
+	// actually authored as "outside".
+	payload.front_face  = dot(WorldRayDirection(), world_normal) < 0 ? 1 : 0;
+}
 
 [shader("closesthit")]
 void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
@@ -242,14 +281,14 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	float4 normal = 0;
 	float4 glow = 0;
 	float opacity = 1;
-	float refraction = 1;
+	float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1;
 
 
 	t.lod += log2(abs(payload.cone.width + payload.cone.angle * RayTCurrent()));
 	t.lod -= log2(abs(dot(normalize(WorldRayDirection()), t.v.normal)));
 
 
-	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, t.lod);
+	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, t.lod);
 
 	// Transparent-aware sun visibility (float3 transmittance instead of a bool).
 	// Iterate the shadow ray through transparent occluders (advancing past each

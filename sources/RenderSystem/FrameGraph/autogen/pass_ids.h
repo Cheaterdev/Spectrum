@@ -33,6 +33,7 @@ namespace FrameGraph
 		PSSM_Global,
 		RTXShadow,
 		RTXColorPass,
+		TranslucentRTX,
 		PreScene,
 		Profiler,
 		Scene,
