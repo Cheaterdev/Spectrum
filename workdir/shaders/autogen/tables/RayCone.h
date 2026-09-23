@@ -19,9 +19,8 @@ struct [raypayload] RayCone
 		RayCone result;
 		result.width = width + angle* hitT;
 		result.angle = angle + surfaceSpreadAngle;
-		
+
 		return result;
 	}
 
-	
 };

@@ -551,7 +551,7 @@ namespace
 			SourceLocation loc;
 		};
 
-		static constexpr int K_Field = 5, K_Class = 7, K_Module = 9, K_Property = 10, K_Enum = 13,
+		static constexpr int K_Method = 2, K_Field = 5, K_Class = 7, K_Module = 9, K_Property = 10, K_Enum = 13,
 		                     K_Keyword = 14, K_File = 17, K_EnumMember = 20, K_Constant = 21, K_Struct = 22;
 
 		// Declaration keyword -> KNOWN_OPTIONS kind of that declaration.
@@ -698,16 +698,16 @@ namespace
 			return depth > 0 ? current : std::pair<std::string, std::string>{};
 		}
 
-		// The first word after the option block(s) at `offset`: what those
-		// options are attached to.
-		static std::string word_after_options(const std::string& text, size_t offset)
+		// Where the declaration that the option block(s) at `offset` belong to
+		// starts; npos if there is none.
+		static size_t after_options(const std::string& text, size_t offset)
 		{
 			// While typing, the block at the cursor is usually still unclosed; a
 			// plain find(']') would jump to the next block and read the wrong
 			// declaration. Stop at the end of the line instead.
 			size_t i = text.find_first_of("]\n", offset);
 			if (i == std::string::npos)
-				return {};
+				return std::string::npos;
 			for (++i; i < text.size();)
 			{
 				char c = text[i];
@@ -720,18 +720,25 @@ namespace
 				{
 					size_t end = text.find(']', i);
 					if (end == std::string::npos)
-						return {};
+						return std::string::npos;
 					i = end + 1;
 				}
 				else
-				{
-					size_t b = i;
-					while (i < text.size() && is_ident(text[i]))
-						++i;
-					return text.substr(b, i - b);
-				}
+					return i;
 			}
-			return {};
+			return std::string::npos;
+		}
+
+		// The first word of that declaration.
+		static std::string word_after_options(const std::string& text, size_t offset)
+		{
+			size_t b = after_options(text, offset);
+			if (b == std::string::npos)
+				return {};
+			size_t e = b;
+			while (e < text.size() && is_ident(text[e]))
+				++e;
+			return text.substr(b, e - b);
 		}
 
 		// KNOWN_OPTIONS kind for an option name typed at `offset`.
@@ -744,6 +751,14 @@ namespace
 			{
 				auto it = DECL_KIND.find(next);
 				return it != DECL_KIND.end() ? it->second : "";
+			}
+			if (keyword == "struct")
+			{
+				// `ret name(` is a function; a field reaches `;` first.
+				size_t b = after_options(text, offset);
+				size_t stop = b == std::string::npos ? std::string::npos : text.find_first_of("(;{}", b);
+				if (stop != std::string::npos && text[stop] == '(')
+					return "function";
 			}
 			if (auto it = BODY_KIND.find(keyword); it != BODY_KIND.end())
 				return it->second;
@@ -815,6 +830,9 @@ namespace
 			{
 				for (const auto& v : t->values)
 					out.push_back({ v.name, v.get_type(), K_Field, v.name_loc });
+				// Functions carry their whole signature as detail.
+				for (const auto& f : t->functions)
+					out.push_back({ f.name, f.get_type() + " " + f.name + "(" + f.params + ")", K_Method, f.name_loc });
 				for (const auto& parent : t->parent)
 					collect_members(parent, out, depth + 1);
 			}
@@ -1023,7 +1041,8 @@ namespace
 					out += std::format("\n... {} more", members.size() - 40);
 					break;
 				}
-				out += "\n" + (m.detail.empty() || m.kind == K_EnumMember ? m.name : m.detail + " " + m.name);
+				out += "\n" + (m.kind == K_Method ? m.detail + ";"
+				             : m.detail.empty() || m.kind == K_EnumMember ? m.name : m.detail + " " + m.name);
 			}
 			return out;
 		}
@@ -1081,12 +1100,21 @@ namespace
 			std::vector<Symbol> members;
 			if (w.separator == ':')
 				collect_members(w.owner, members);
-			else if ((w.separator == '.' && w.owner == "data") || (w.begin >= 7 && text->compare(w.begin - 7, 7, "exists(") == 0))
-				collect_members(enclosing_decl(*text, offset).second, members);
+			else
+				collect_members(enclosing_decl(*text, offset).second, members); // data.x, exists(x), and plain names in a struct
 
+			// Every match, so all overloads of a function show together.
+			std::string lines, first_where;
 			for (const auto& m : members)
 				if (m.name == w.text)
-					return reply(std::format("```\n{}{}\n```\n{}", m.kind == K_EnumMember ? "" : m.detail + " ", m.name, where(m.loc)));
+				{
+					lines += (lines.empty() ? "" : "\n") + (m.kind == K_Method ? m.detail
+						: (m.kind == K_EnumMember ? "" : m.detail + " ") + m.name);
+					if (first_where.empty())
+						first_where = where(m.loc);
+				}
+			if (!lines.empty())
+				return reply(std::format("```\n{}\n```\n{}", lines, first_where));
 
 			for (const auto& s : top_level_symbols())
 				if (s.name == w.text)
@@ -1198,7 +1226,7 @@ namespace
 						continue;
 					size_t ml = m.loc.line - 1, mc = m.loc.column - 1;
 					children += (children.empty() ? "" : ",") + std::format(R"({{"name":"{}","detail":"{}","kind":{},"range":{},"selectionRange":{}}})",
-						json_escape(m.name), json_escape(m.detail), m.kind == K_EnumMember ? 22 : 8,
+						json_escape(m.name), json_escape(m.detail), m.kind == K_EnumMember ? 22 : m.kind == K_Method ? 6 : 8,
 						range_json(ml, mc, ml, mc + m.name.size()), range_json(ml, mc, ml, mc + m.name.size()));
 				}
 
@@ -1269,8 +1297,9 @@ namespace
 					++line;
 					line_start = i + 1;
 				}
-				else if (c == '#')
+				else if (c == '#' || (c == '/' && i + 1 < t.size() && t[i + 1] == '/'))
 				{
+					// # comments in SIG, // comments inside HLSL function bodies.
 					while (i + 1 < t.size() && t[i + 1] != '\n')
 						++i;
 				}
@@ -1353,7 +1382,13 @@ namespace
 			else if (w.begin >= 7 && text->compare(w.begin - 7, 7, "exists(") == 0)
 				collect_members(enclosing_decl(*text, offset).second, candidates);
 			else
-				candidates = top_level_symbols();
+			{
+				// Innermost scope first: inside a struct, a function body naming
+				// another member (LogWrite, voxels_per_tile) means that member.
+				collect_members(enclosing_decl(*text, offset).second, candidates);
+				auto top = top_level_symbols();
+				candidates.insert(candidates.end(), top.begin(), top.end());
+			}
 
 			std::string found = first_located(candidates);
 			return found.empty() ? "null" : found;

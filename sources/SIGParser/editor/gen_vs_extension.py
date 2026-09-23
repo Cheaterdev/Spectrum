@@ -74,7 +74,9 @@ BUILTIN_SCALARS = [
     "int16_t", "uint16_t", "int32_t", "uint32_t", "int64_t", "uint64_t",
     "float16_t", "float32_t", "float64_t",
 ]
-BUILTIN_KEYWORD_TYPES = ["matrix", "vector", "unorm", "snorm", "mat4x4"]  # mat4x4: detect_type
+BUILTIN_KEYWORD_TYPES = ["matrix", "vector", "unorm", "snorm", "mat4x4",  # mat4x4: detect_type
+                         # HLSL function signatures
+                         "void", "in", "out", "inout", "const", "static", "inline", "uniform"]
 BUILTIN_RESOURCES = [
     # HLSL
     "Texture1D", "Texture1DArray", "Texture2D", "Texture2DArray", "Texture2DMS", "Texture2DMSArray",
@@ -157,6 +159,16 @@ def split_rules(text):
     text = strip_g4_comments(text)
     text = re.sub(r"^\s*grammar\s+\w+\s*;", "", text, flags=re.M)
     text = re.sub(r"options\s*\{[^}]*\}", "", text)
+
+    # @lexer::members { C++ } and similar named actions: code, not rules.
+    while (m := re.search(r"@\w+(?:::\w+)?\s*\{", text)):
+        depth, k = 1, m.end()
+        while k < len(text) and depth:
+            depth += {"{": 1, "}": -1}.get(text[k], 0)
+            k += 1
+        text = text[:m.start()] + text[k:]
+    # Inline {predicate}? and {action} blocks inside rules.
+    text = re.sub(r"\{[^{}']*\}\??", "", text)
 
     rules, i, n = {}, 0, len(text)
     while i < n:
@@ -505,8 +517,32 @@ def build_grammar(rules, a):
     repo["values"] = {"patterns": [{"include": "#" + p} for p in
                                    values + ["qualified"] + kw + ["function", "identifier", "operator"]]}
 
+    # An HLSL function member: `ret name(params) : SEMANTIC { body }`. Begins
+    # zero-width at such a line so the return type and name keep their own
+    # colours; ends right after the body's closing brace. The body is C++ (the
+    # closest shipped grammar to HLSL); nested braces are tracked here rather
+    # than trusted to it, and the leading \s* on the end is the same fix as %{ }%.
+    ob_re, cb_re = re_escape(ob), re_escape(cb)
+    repo["function_braces"] = {"begin": ob_re, "end": cb_re,
+                               "patterns": [{"include": "#function_braces"}, {"include": "source.cpp"}]}
+    repo["function_body"] = {
+        "name": "meta.embedded.block.hlsl.sig", "begin": ob_re, "end": r"\s*" + cb_re,
+        "beginCaptures": {"0": {"name": "punctuation.section.embedded.begin.sig"}},
+        "endCaptures": {"0": {"name": "punctuation.section.embedded.end.sig"}},
+        "contentName": "meta.embedded.cpp.sig",
+        "patterns": [{"include": "#function_braces"}, {"include": "source.cpp"}],
+    }
+    repo["function_definition"] = {
+        "begin": r"^\s*(?=" + ident + r"(?:\s*<[^>]*>)?\s+" + ident + r"\s*\()",
+        "end": r"(?<=" + cb_re + ")",
+        "patterns": [{"include": "#comment"}, {"include": "#function_body"}]
+                    + [{"include": "#" + k} for k in kw]
+                    + [{"include": "#function"}, {"include": "#float_scalar"}, {"include": "#int_scalar"},
+                       {"include": "#identifier"}, {"include": "#operator"}],
+    }
+
     # Keywords and built-in types before `function`, so `uint2(` stays a type.
-    top = token_patterns + ["option_block", "declaration", "qualified"] + kw + ["function", "identifier", "operator"]
+    top = token_patterns + ["option_block", "function_definition", "declaration", "qualified"] + kw + ["function", "identifier", "operator"]
 
     return {
         "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
@@ -557,25 +593,61 @@ def build_theme():
 
 VS_ROOT = r"C:\Program Files\Microsoft Visual Studio\18\Community"
 SERVER_EXE = os.path.normpath(os.path.join(HERE, "..", "..", "..", "bin", "profile", "sigparser.exe"))
-CLIENT_SOURCE = os.path.join(HERE, "SigLanguageClient.cs")
+CLIENT_SOURCES = [os.path.join(HERE, "SigLanguageClient.cs"), os.path.join(HERE, "SigPackage.cs")]
+COMMANDS_VSCT = os.path.join(HERE, "SigCommands.vsct")
+VSSDK = os.path.join(VS_ROOT, r"VSSDK\VisualStudioIntegration")
+
+# Must match SigPackage.PackageGuid / guidSigPackage in SigCommands.vsct.
+PACKAGE_GUID = "{ffdc10aa-ef2c-4958-b04a-0472de298aaa}"
+
+
+def compile_commands(out_dir):
+    """SigCommands.vsct -> .cto, the binary menu resource VS loads. Needs the
+    VS Installer's "Visual Studio extension development" workload."""
+    vsct = os.path.join(VSSDK, r"Tools\Bin\VSCT.exe")
+    if not os.path.exists(vsct):
+        sys.exit(f"missing {vsct}: install the 'Visual Studio extension development' workload")
+    cto = os.path.join(out_dir, "SigCommands.cto")
+    subprocess.run([vsct, COMMANDS_VSCT, cto, "-I" + os.path.join(VSSDK, r"Common\Inc")],
+                   check=True, stdout=subprocess.DEVNULL)
+
+    # VS reads the menu table as the entry "Menus.ctmenu" of one of the
+    # package assembly's .resources sets -- what the VSSDK's MergeWithCTO
+    # produces. Embedding the .cto as a plain manifest resource of that name
+    # fails with "Resource not found: Menus.ctmenu" in ActivityLog and no menu.
+    resources = os.path.join(out_dir, "SigLanguageClient.VSPackage.resources")
+    script = ("$w = New-Object System.Resources.ResourceWriter('{0}'); "
+              "$w.AddResource('Menus.ctmenu', [IO.File]::ReadAllBytes('{1}')); $w.Generate(); $w.Close()"
+              ).format(resources.replace("'", "''"), cto.replace("'", "''"))
+    subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", script], check=True)
+    return resources
 
 
 def compile_client(out_dir):
     ide = os.path.join(VS_ROOT, "Common7", "IDE")
     ref = r"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8"
     refs = [
-        os.path.join(ref, n) for n in ("mscorlib.dll", "System.dll", "System.Core.dll",
+        os.path.join(ref, n) for n in ("mscorlib.dll", "System.dll", "System.Core.dll", "System.Design.dll",
                                        "System.ComponentModel.Composition.dll", r"Facades\netstandard.dll",
                                        r"Facades\System.Runtime.dll", r"Facades\System.Threading.Tasks.dll")
     ] + [
         os.path.join(ide, r"CommonExtensions\Microsoft\LanguageServer\Microsoft.VisualStudio.LanguageServer.Client.dll"),
         os.path.join(ide, r"CommonExtensions\Microsoft\Editor\Microsoft.VisualStudio.CoreUtility.dll"),
         os.path.join(ide, r"PublicAssemblies\Microsoft.VisualStudio.Threading.17.x\Microsoft.VisualStudio.Threading.dll"),
+        # SigPackage: the command, output pane, status bar and DTE.
+        os.path.join(ide, r"PublicAssemblies\Microsoft.VisualStudio.Shell.15.0.dll"),
+        os.path.join(ide, r"PublicAssemblies\Microsoft.VisualStudio.Shell.Framework.dll"),
+        os.path.join(ide, r"PublicAssemblies\Microsoft.VisualStudio.Interop.dll"),
+        os.path.join(ide, r"PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.dll"),
+        os.path.join(ide, r"PublicAssemblies\Microsoft.VisualStudio.OLE.Interop.dll"),
+        os.path.join(ide, r"PublicAssemblies\envdte.dll"),
+        os.path.join(ide, r"PublicAssemblies\envdte80.dll"),
     ]
     out = os.path.join(out_dir, "SigLanguageClient.dll")
     csc = os.path.join(VS_ROOT, r"MSBuild\Current\Bin\Roslyn\csc.exe")
     # CS0067: StopAsync is required by ILanguageClient but never raised.
-    cmd = [csc, "-nologo", "-noconfig", "-nostdlib", "-target:library", "-nowarn:67", "-out:" + out, CLIENT_SOURCE]
+    cmd = [csc, "-nologo", "-noconfig", "-nostdlib", "-target:library", "-nowarn:67", "-out:" + out,
+           "-resource:" + compile_commands(out_dir) + ",SigLanguageClient.VSPackage.resources"] + CLIENT_SOURCES
     cmd += ["-r:" + r for r in refs]
     subprocess.run(cmd, check=True)
     return out
@@ -601,6 +673,7 @@ def dll_closure(exe):
 
 
 def vsix_files(version, grammar_json, langcfg_json, theme_xml, binaries):
+    menu_version = int(time.time()) // 60 % 2_000_000_000
     pkgdef = (
         "// Generated by gen_vs_extension.py\r\n"
         "[$RootKey$\\TextMate\\Repositories]\r\n"
@@ -608,6 +681,24 @@ def vsix_files(version, grammar_json, langcfg_json, theme_xml, binaries):
         "\r\n"
         "[$RootKey$\\TextMate\\LanguageConfiguration\\GrammarMapping]\r\n"
         f"\"{SCOPE}\"=\"$PackageFolder$\\language-configuration.json\"\r\n"
+        "\r\n"
+        # SigPackage: what the VSSDK's RegPkg would otherwise write from its attributes.
+        f"[$RootKey$\\Packages\\{PACKAGE_GUID}]\r\n"
+        "@=\"Spectrum.Sig.SigPackage\"\r\n"
+        "\"InprocServer32\"=\"$WinDir$\\SYSTEM32\\MSCOREE.DLL\"\r\n"
+        "\"Class\"=\"Spectrum.Sig.SigPackage\"\r\n"
+        "\"CodeBase\"=\"$PackageFolder$\\SigLanguageClient.dll\"\r\n"
+        "\"AllowsBackgroundLoad\"=dword:00000001\r\n"
+        "\r\n"
+        f"[$RootKey$\\BindingPaths\\{PACKAGE_GUID}]\r\n"
+        "\"$PackageFolder$\"=\"\"\r\n"
+        "\r\n"
+        # The last field is the menu resource version. VS caches merged menus
+        # and re-merges an updated extension's reliably only when it changes,
+        # so every build gets a new one; a fixed 1 left an upgraded install
+        # showing no command at all.
+        "[$RootKey$\\Menus]\r\n"
+        f"\"{PACKAGE_GUID}\"=\", Menus.ctmenu, {menu_version}\"\r\n"
     )
     manifest = f"""<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">

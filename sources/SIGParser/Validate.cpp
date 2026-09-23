@@ -23,6 +23,8 @@ namespace
 		{ "struct", { "Bind", "IndirectCommand", "RenderTarget", "nobind", "raypayload", "serialize", "shader_only", "Template" } },
 		{ "struct field", { "Auto", "Barrier", "DispatchSize", "dynamic", "read", "write",
 			"Write" /* unread */ } },
+		// [HLSL] is also the default; [CPP] (emit into the C++ struct) is not implemented yet.
+		{ "function", { "HLSL" } },
 		{ "layout", {} },
 		{ "slot", {} },
 		{ "render target", {} },
@@ -312,14 +314,15 @@ namespace
 		return false;
 	}
 
-	// %{ }% is pasted into HLSL verbatim, so a `# note` written out of .sig
-	// habit becomes an invalid preprocessor directive. Without this the error
-	// surfaces only when the engine compiles the shader at load time.
-	void check_hlsl_block(const have_hlsl& holder, const std::string& owner_name)
+	// %{ }% blocks and function bodies are pasted into HLSL verbatim, so a
+	// `# note` written out of .sig habit becomes an invalid preprocessor
+	// directive. Without this the error surfaces only when the engine compiles
+	// the shader at load time.
+	void check_hlsl_text(const std::string& text, const SourceLocation& start, const std::string& owner_name)
 	{
-		std::istringstream lines(holder.hlsl);
+		std::istringstream lines(text);
 		std::string line;
-		size_t line_no = holder.hlsl_loc.line; // the block text starts right after '%{' on this line
+		size_t line_no = start.line; // the text starts on this line
 
 		for (; std::getline(lines, line); ++line_no)
 		{
@@ -332,8 +335,8 @@ namespace
 			}
 
 			if (trimmed.starts_with('#') && !is_preprocessor_directive(trimmed))
-				diagnostics().error(SourceLocation{ holder.hlsl_loc.file, line_no, indent + 1 },
-					std::format("'{}': %{{ }}% is raw HLSL, so this '#' line is an invalid preprocessor directive; use // for comments",
+				diagnostics().error(SourceLocation{ start.file, line_no, indent + 1 },
+					std::format("'{}': this is HLSL, so a '#' line is a preprocessor directive, and this one is invalid; use // for comments",
 						owner_name));
 		}
 	}
@@ -437,7 +440,12 @@ void validate(Parsed& parsed)
 		check_options(table, "struct", table.name);
 		for (const auto& v : table.values)
 			check_options(v, "struct field", table.name + "." + v.name);
-		check_hlsl_block(table, table.name);
+		check_hlsl_text(table.inserted, table.hlsl_loc, table.name);
+		for (const auto& f : table.functions)
+		{
+			check_options(f, "function", table.name + "." + f.name);
+			check_hlsl_text(f.source.substr(f.source.find('{')), f.body_loc, table.name + "." + f.name);
+		}
 	}
 
 	for (const auto& layout : parsed.layouts)

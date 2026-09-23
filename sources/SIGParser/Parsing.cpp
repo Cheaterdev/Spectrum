@@ -146,6 +146,45 @@ public:
 		setup_map(get_elem<Parsed>().consts);
 	}
 
+	ENTER(Function_definition)
+	{
+		setup_list(get_elem<Table>().functions);
+		stamp(ctx);
+	}
+
+	EXIT(Function_definition)
+	{
+		auto& fn = get_elem<Function>();
+		auto* input = ctx->getStart()->getInputStream();
+		auto text = [&](size_t a, size_t b) { return input->getText(antlr4::misc::Interval(a, b)); };
+
+		auto* params = ctx->function_params();
+		if (params->getStop() && params->getStop()->getStopIndex() + 1 > params->getStart()->getStartIndex())
+			fn.params = text(params->getStart()->getStartIndex(), params->getStop()->getStopIndex());
+
+		// From the start of the return type's line, so the pasted text keeps the
+		// indentation its first line was written with.
+		size_t begin = ctx->type_id()->getStart()->getStartIndex();
+		size_t line_start = begin;
+		while (line_start > 0)
+		{
+			std::string prev = text(line_start - 1, line_start - 1);
+			if (prev != " " && prev != "\t")
+				break;
+			--line_start;
+		}
+		fn.source = text(line_start, ctx->getStop()->getStopIndex());
+
+		auto* body = ctx->FUNC_BODY()->getSymbol();
+		fn.body_loc = SourceLocation{ file, body->getLine(), body->getCharPositionInLine() + 1 };
+
+		end_elem();
+
+		// [HLSL] is the default; a function marked only [CPP] stays out of the shader.
+		if (!fn.find_option("CPP") || fn.find_option("HLSL"))
+			get_elem<Table>().hlsl += "\n" + fn.source + "\n";
+	}
+
 	GENERATE(Slot_declaration)
 	{
 		setup_map(get_elem<Layout>().slots);
@@ -532,7 +571,8 @@ public:
 	{
 		auto str = ctx->children[0]->getText();
 		auto& elem = get_elem<have_hlsl>();
-		elem.hlsl = str.substr(2, str.size() - 4);
+		elem.hlsl += str.substr(2, str.size() - 4);
+		elem.inserted = str.substr(2, str.size() - 4);
 		elem.hlsl_loc = SourceLocation{ file, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine() + 1 };
 	}
 

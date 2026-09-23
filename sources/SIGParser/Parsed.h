@@ -70,7 +70,8 @@ struct have_name : public virtual parsed_type
 
 struct have_hlsl		  : public virtual parsed_type
 {
-	std::string hlsl;
+	std::string hlsl;        // everything pasted into the generated HLSL: %{ }% text and [HLSL] functions
+	std::string inserted;    // only the %{ }% text, for diagnostics; not serialized
 	SourceLocation hlsl_loc; // where the %{ }% block starts; diagnostics only
 
 	SERIALIZE()
@@ -892,8 +893,20 @@ void Layout::recursive_samplers(T f)
 
 struct Parsed;
 
+// An HLSL function declared in a struct body. Only the signature is
+// understood; `source` is the function exactly as written, pasted into the
+// generated HLSL. Not serialized: templates see it through Table::hlsl.
+struct Function : public have_name, public have_options, public have_type
+{
+	std::string params;  // parameter list as written, without the parentheses
+	std::string source;  // the whole function from its return type to the closing brace, first-line indentation included
+	SourceLocation body_loc; // the opening brace
+};
+
 struct Table : public inherited, have_options, have_name, have_hlsl
 {
+	std::list<Function> functions;
+
 	Slot* slot = nullptr;
 	std::string path;
 	std::list<Value> values;

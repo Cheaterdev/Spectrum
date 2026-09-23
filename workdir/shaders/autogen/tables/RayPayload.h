@@ -26,7 +26,6 @@ struct [raypayload] RayPayload
 	uint GetRecursion() { return recursion; }
 	float GetDist() { return dist; }
 	uint GetUse_vsm_shadow() { return use_vsm_shadow; }
-
 	RayPayload propagate(float surfaceSpreadAngle = 0, float hitT = 0)
 	{
 		RayPayload result;
@@ -46,7 +45,6 @@ struct [raypayload] RayPayload
 		return result;
 	}
 
-
 	void init()
 	{
 		color = 0;
@@ -58,5 +56,4 @@ struct [raypayload] RayPayload
 		use_vsm_shadow = 0;
 	}
 
-	
 };

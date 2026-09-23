@@ -19,16 +19,17 @@ public:
     T__26 = 27, T__27 = 28, T__28 = 29, T__29 = 30, T__30 = 31, T__31 = 32, 
     T__32 = 33, T__33 = 34, T__34 = 35, T__35 = 36, T__36 = 37, T__37 = 38, 
     T__38 = 39, T__39 = 40, T__40 = 41, T__41 = 42, T__42 = 43, T__43 = 44, 
-    T__44 = 45, OR = 46, AND = 47, PIPE = 48, EQ = 49, NEQ = 50, GT = 51, 
-    LT = 52, GTEQ = 53, LTEQ = 54, PLUS = 55, MINUS = 56, DIV = 57, MOD = 58, 
-    POW = 59, NOT = 60, SCOL = 61, DOT = 62, ASSIGN = 63, OPAR = 64, CPAR = 65, 
+    OR = 45, AND = 46, PIPE = 47, EQ = 48, NEQ = 49, GT = 50, LT = 51, GTEQ = 52, 
+    LTEQ = 53, PLUS = 54, MINUS = 55, DIV = 56, MOD = 57, POW = 58, NOT = 59, 
+    SCOL = 60, COLON = 61, DOT = 62, ASSIGN = 63, OPAR = 64, CPAR = 65, 
     OBRACE = 66, CBRACE = 67, OSBRACE = 68, CSBRACE = 69, TRUE = 70, FALSE = 71, 
     LOG = 72, LAYOUT = 73, STRUCT = 74, COMPUTE_PSO = 75, GRAPHICS_PSO = 76, 
     RAYTRACE_PSO = 77, WORKGRAPH_PSO = 78, NODE = 79, NODE_OUTPUT = 80, 
     RAYTRACE_RAYGEN = 81, RAYTRACE_PASS = 82, PASS = 83, VIEW = 84, PIPELINE = 85, 
     SLOT = 86, RT = 87, RTV = 88, DSV = 89, ROOTSIG = 90, ENUM = 91, ID = 92, 
     INT_SCALAR = 93, FLOAT_SCALAR = 94, STRING = 95, RAWEXPR = 96, COMMENT = 97, 
-    SPACE = 98, POINTER = 99, INSERT_START = 100, INSERT_END = 101, INSERT_BLOCK = 102
+    SPACE = 98, POINTER = 99, FUNC_BODY = 100, INSERT_START = 101, INSERT_END = 102, 
+    INSERT_BLOCK = 103
   };
 
   enum {
@@ -43,23 +44,24 @@ public:
     RuleTemplate_id = 29, RuleFunction_id = 30, RuleValue_id = 31, RuleValue_id_ignore = 32, 
     RuleType_id = 33, RuleInsert_block = 34, RuleShader_path = 35, RuleInherit = 36, 
     RuleLayout_stat = 37, RuleLayout_block = 38, RuleLayout_definition = 39, 
-    RuleTable_stat = 40, RuleTable_block = 41, RuleTable_definition = 42, 
-    RuleRt_color_declaration = 43, RuleRt_ds_declaration = 44, RuleRt_stat = 45, 
-    RuleRt_block = 46, RuleRt_definition = 47, RuleArray_value_holder = 48, 
-    RuleArray_value_ids = 49, RuleRoot_sig = 50, RuleShader = 51, RuleCompute_pso_stat = 52, 
-    RuleCompute_pso_block = 53, RuleCompute_pso_definition = 54, RuleGraphics_pso_stat = 55, 
-    RuleGraphics_pso_block = 56, RuleGraphics_pso_definition = 57, RuleRtx_pso_stat = 58, 
-    RuleRtx_pso_block = 59, RuleRtx_pso_definition = 60, RuleNode_param_id = 61, 
-    RuleNode_param = 62, RuleNode_output_decl = 63, RuleNode_stat = 64, 
-    RuleNode_block = 65, RuleNode_definition = 66, RuleWorkgraph_pso_stat = 67, 
-    RuleWorkgraph_pso_block = 68, RuleWorkgraph_pso_definition = 69, RuleRtx_pass_stat = 70, 
-    RuleRtx_pass_block = 71, RuleRtx_pass_definition = 72, RuleRtx_raygen_stat = 73, 
-    RuleRtx_raygen_block = 74, RuleRtx_raygen_definition = 75, RuleView_declaration = 76, 
-    RuleView_stat = 77, RuleView_block = 78, RuleView_definition = 79, RulePass_definition = 80, 
-    RulePipeline_stat = 81, RulePipeline_block = 82, RulePipeline_definition = 83, 
-    RuleEnum_value_declaration = 84, RuleEnum_stat = 85, RuleEnum_block = 86, 
-    RuleEnum_definition = 87, RuleShader_type = 88, RulePso_param_id = 89, 
-    RuleBool_type = 90
+    RuleTable_stat = 40, RuleFunction_definition = 41, RuleFunction_params = 42, 
+    RuleFunction_semantic = 43, RuleTable_block = 44, RuleTable_definition = 45, 
+    RuleRt_color_declaration = 46, RuleRt_ds_declaration = 47, RuleRt_stat = 48, 
+    RuleRt_block = 49, RuleRt_definition = 50, RuleArray_value_holder = 51, 
+    RuleArray_value_ids = 52, RuleRoot_sig = 53, RuleShader = 54, RuleCompute_pso_stat = 55, 
+    RuleCompute_pso_block = 56, RuleCompute_pso_definition = 57, RuleGraphics_pso_stat = 58, 
+    RuleGraphics_pso_block = 59, RuleGraphics_pso_definition = 60, RuleRtx_pso_stat = 61, 
+    RuleRtx_pso_block = 62, RuleRtx_pso_definition = 63, RuleNode_param_id = 64, 
+    RuleNode_param = 65, RuleNode_output_decl = 66, RuleNode_stat = 67, 
+    RuleNode_block = 68, RuleNode_definition = 69, RuleWorkgraph_pso_stat = 70, 
+    RuleWorkgraph_pso_block = 71, RuleWorkgraph_pso_definition = 72, RuleRtx_pass_stat = 73, 
+    RuleRtx_pass_block = 74, RuleRtx_pass_definition = 75, RuleRtx_raygen_stat = 76, 
+    RuleRtx_raygen_block = 77, RuleRtx_raygen_definition = 78, RuleView_declaration = 79, 
+    RuleView_stat = 80, RuleView_block = 81, RuleView_definition = 82, RulePass_definition = 83, 
+    RulePipeline_stat = 84, RulePipeline_block = 85, RulePipeline_definition = 86, 
+    RuleEnum_value_declaration = 87, RuleEnum_stat = 88, RuleEnum_block = 89, 
+    RuleEnum_definition = 90, RuleShader_type = 91, RulePso_param_id = 92, 
+    RuleBool_type = 93
   };
 
   explicit SIGParser(antlr4::TokenStream *input);
@@ -120,6 +122,9 @@ public:
   class Layout_blockContext;
   class Layout_definitionContext;
   class Table_statContext;
+  class Function_definitionContext;
+  class Function_paramsContext;
+  class Function_semanticContext;
   class Table_blockContext;
   class Table_definitionContext;
   class Rt_color_declarationContext;
@@ -827,6 +832,7 @@ public:
   public:
     InheritContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *COLON();
     std::vector<Inherit_idContext *> inherit_id();
     Inherit_idContext* inherit_id(size_t i);
 
@@ -897,6 +903,7 @@ public:
     Table_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     Value_declarationContext *value_declaration();
+    Function_definitionContext *function_definition();
     Insert_blockContext *insert_block();
     antlr4::tree::TerminalNode *COMMENT();
 
@@ -908,6 +915,65 @@ public:
   };
 
   Table_statContext* table_stat();
+
+  class  Function_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Function_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Type_idContext *type_id();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *OPAR();
+    Function_paramsContext *function_params();
+    antlr4::tree::TerminalNode *CPAR();
+    antlr4::tree::TerminalNode *FUNC_BODY();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
+    Function_semanticContext *function_semantic();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Function_definitionContext* function_definition();
+
+  class  Function_paramsContext : public antlr4::ParserRuleContext {
+  public:
+    Function_paramsContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<antlr4::tree::TerminalNode *> OPAR();
+    antlr4::tree::TerminalNode* OPAR(size_t i);
+    std::vector<Function_paramsContext *> function_params();
+    Function_paramsContext* function_params(size_t i);
+    std::vector<antlr4::tree::TerminalNode *> CPAR();
+    antlr4::tree::TerminalNode* CPAR(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Function_paramsContext* function_params();
+
+  class  Function_semanticContext : public antlr4::ParserRuleContext {
+  public:
+    Function_semanticContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *COLON();
+    antlr4::tree::TerminalNode *ID();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Function_semanticContext* function_semantic();
 
   class  Table_blockContext : public antlr4::ParserRuleContext {
   public:

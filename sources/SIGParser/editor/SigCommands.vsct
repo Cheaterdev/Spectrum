@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Menu and toolbar commands of the SIG extension. Compiled by
+     gen_vs_extension.py with the VSSDK's VSCT.exe and embedded into
+     SigLanguageClient.dll as the Menus.ctmenu resource. -->
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <Extern href="stdidcmd.h"/>
+  <Extern href="vsshlids.h"/>
+  <Include href="KnownImageIds.vsct"/>
+
+  <Commands package="guidSigPackage">
+    <Menus>
+      <!-- View > Toolbars > SIG -->
+      <Menu guid="guidSigCmdSet" id="SigToolbar" type="Toolbar">
+        <CommandFlag>DefaultDocked</CommandFlag>
+        <Strings>
+          <ButtonText>SIG</ButtonText>
+          <CommandName>SIG</CommandName>
+        </Strings>
+      </Menu>
+    </Menus>
+
+    <Groups>
+      <Group guid="guidSigCmdSet" id="SigToolsGroup" priority="0x0100">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
+      </Group>
+      <Group guid="guidSigCmdSet" id="SigToolbarGroup" priority="0x0100">
+        <Parent guid="guidSigCmdSet" id="SigToolbar"/>
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <Button guid="guidSigCmdSet" id="cmdRegenerate" priority="0x0100" type="Button">
+        <Parent guid="guidSigCmdSet" id="SigToolsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Refresh"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings>
+          <ButtonText>Regenerate SIG code</ButtonText>
+          <!-- What Tools > Options > Keyboard lists, for binding a shortcut. -->
+          <CanonicalName>.Tools.RegenerateSIGCode</CanonicalName>
+          <LocCanonicalName>.Tools.RegenerateSIGCode</LocCanonicalName>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+
+  <CommandPlacements>
+    <CommandPlacement guid="guidSigCmdSet" id="cmdRegenerate" priority="0x0100">
+      <Parent guid="guidSigCmdSet" id="SigToolbarGroup"/>
+    </CommandPlacement>
+  </CommandPlacements>
+
+  <Symbols>
+    <GuidSymbol name="guidSigPackage" value="{ffdc10aa-ef2c-4958-b04a-0472de298aaa}"/>
+    <GuidSymbol name="guidSigCmdSet" value="{922623a0-3f03-48f5-baa7-9e37559a407f}">
+      <IDSymbol name="cmdRegenerate" value="0x0100"/>
+      <IDSymbol name="SigToolbar" value="0x1000"/>
+      <IDSymbol name="SigToolsGroup" value="0x1020"/>
+      <IDSymbol name="SigToolbarGroup" value="0x1030"/>
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>

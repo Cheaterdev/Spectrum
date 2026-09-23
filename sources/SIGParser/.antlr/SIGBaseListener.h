@@ -139,6 +139,15 @@ public:
   virtual void enterTable_stat(SIGParser::Table_statContext * /*ctx*/) override { }
   virtual void exitTable_stat(SIGParser::Table_statContext * /*ctx*/) override { }
 
+  virtual void enterFunction_definition(SIGParser::Function_definitionContext * /*ctx*/) override { }
+  virtual void exitFunction_definition(SIGParser::Function_definitionContext * /*ctx*/) override { }
+
+  virtual void enterFunction_params(SIGParser::Function_paramsContext * /*ctx*/) override { }
+  virtual void exitFunction_params(SIGParser::Function_paramsContext * /*ctx*/) override { }
+
+  virtual void enterFunction_semantic(SIGParser::Function_semanticContext * /*ctx*/) override { }
+  virtual void exitFunction_semantic(SIGParser::Function_semanticContext * /*ctx*/) override { }
+
   virtual void enterTable_block(SIGParser::Table_blockContext * /*ctx*/) override { }
   virtual void exitTable_block(SIGParser::Table_blockContext * /*ctx*/) override { }
 

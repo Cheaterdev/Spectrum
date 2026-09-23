@@ -101,6 +101,12 @@ public:
 
     virtual std::any visitTable_stat(SIGParser::Table_statContext *context) = 0;
 
+    virtual std::any visitFunction_definition(SIGParser::Function_definitionContext *context) = 0;
+
+    virtual std::any visitFunction_params(SIGParser::Function_paramsContext *context) = 0;
+
+    virtual std::any visitFunction_semantic(SIGParser::Function_semanticContext *context) = 0;
+
     virtual std::any visitTable_block(SIGParser::Table_blockContext *context) = 0;
 
     virtual std::any visitTable_definition(SIGParser::Table_definitionContext *context) = 0;

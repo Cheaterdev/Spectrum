@@ -1,9 +1,36 @@
 grammar SIG;
 
-options  
-  {  
+options
+  {
   	language = Cpp;
   }
+
+// FUNC_BODY is only lexable right after a function signature: `)` or
+// `) : SEMANTIC`. That position is unambiguous in SIG -- struct/PSO/enum bodies
+// follow a name and value lists follow `=` -- so the lexer can decide it alone
+// by remembering the last few tokens, without splitting this into separate
+// lexer/parser grammars for a lexical mode.
+@lexer::members {
+	size_t last_types[3] = { 0, 0, 0 };
+
+	bool at_function_body() const
+	{
+		return last_types[0] == CPAR
+		    || (last_types[0] == ID && last_types[1] == COLON && last_types[2] == CPAR);
+	}
+
+	std::unique_ptr<antlr4::Token> nextToken() override
+	{
+		auto token = antlr4::Lexer::nextToken();
+		if (token->getChannel() == antlr4::Token::DEFAULT_CHANNEL)
+		{
+			last_types[2] = last_types[1];
+			last_types[1] = last_types[0];
+			last_types[0] = token->getType();
+		}
+		return token;
+	}
+}
 
 parse
  : (layout_definition|table_definition|rt_definition|workgraph_pso_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|pass_definition|view_definition|pipeline_definition|enum_definition|const_definition|COMMENT)* EOF
@@ -160,9 +187,26 @@ layout_definition
 
 table_stat
  :  value_declaration
+ | function_definition
  | insert_block
  | COMMENT
 
+ ;
+
+// An HLSL function member: `[options] ret name(params) : SEMANTIC { body }`.
+// The body is one opaque FUNC_BODY token and the parameters are kept as source
+// text; SIG only needs the signature to know the function exists. Emitted into
+// the struct's generated HLSL by default ([HLSL]).
+function_definition
+ : option_block*? type_id name_id OPAR function_params CPAR function_semantic? FUNC_BODY
+ ;
+
+function_params
+ : ( OPAR function_params CPAR | ~( OPAR | CPAR ) )*
+ ;
+
+function_semantic
+ : COLON ID
  ;
  
 table_block
@@ -332,6 +376,7 @@ POW : '^';
 NOT : '!';
 
 SCOL : ';';
+COLON : ':';
 // Longest-match lexing keeps FLOAT_SCALAR ('1.5', '.5') intact -- DOT only ever
 // wins for a '.' that isn't part of a number, which is exactly member_ref.
 DOT : '.';
@@ -443,6 +488,23 @@ SPACE
  POINTER
  :
  '*'
+ ;
+
+// The predicate sits after the '{', not at the rule's left edge: a left-edge
+// predicate takes part in every token's start decision, which stops the lexer
+// caching DFA states and made lexing ~30x slower (0.03s -> 0.95s per full
+// revalidation). Here it only affects the decision at a '{'.
+FUNC_BODY
+ : '{' {at_function_body()}? FUNC_BLOCK_TAIL
+ ;
+
+// Balanced braces, skipping braces inside HLSL comments and string literals.
+fragment FUNC_BLOCK
+ : '{' FUNC_BLOCK_TAIL
+ ;
+
+fragment FUNC_BLOCK_TAIL
+ : ( FUNC_BLOCK | '//' ~[\r\n]* | '/*' .*? '*/' | '"' ( ~["\\\r\n] | '\\' . )* '"' | ~[{}/"] | '/' )* '}'
  ;
 
 INSERT_START: '%{';

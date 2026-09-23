@@ -61,25 +61,23 @@ struct DebugInfo
 	RWStructuredBuffer<DebugStruct> debug;
 	RWStructuredBuffer<uint> logCount;
 
-	%{
-		void LogWrite(uint id, uint4 args)
+	void LogWrite(uint id, uint4 args)
+	{
+		uint slot;
+		InterlockedAdd(GetLogCount()[0], 1, slot);
+
+		if (slot < 64)
 		{
-			uint slot;
-			InterlockedAdd(GetLogCount()[0], 1, slot);
-
-			if (slot < 64)
-			{
-				DebugStruct e;
-				e.format_id = id;
-				e.args = args;
-				GetDebug()[slot] = e;
-			}
+			DebugStruct e;
+			e.format_id = id;
+			e.args = args;
+			GetDebug()[slot] = e;
 		}
+	}
 
-		void Log(uint id) { LogWrite(id, uint4(0, 0, 0, 0)); }
-		void Log(uint id, uint a0) { LogWrite(id, uint4(a0, 0, 0, 0)); }
-		void Log(uint id, uint a0, uint a1) { LogWrite(id, uint4(a0, a1, 0, 0)); }
-		void Log(uint id, uint a0, uint a1, uint a2) { LogWrite(id, uint4(a0, a1, a2, 0)); }
-		void Log(uint id, uint a0, uint a1, uint a2, uint a3) { LogWrite(id, uint4(a0, a1, a2, a3)); }
-	}%
+	void Log(uint id) { LogWrite(id, uint4(0, 0, 0, 0)); }
+	void Log(uint id, uint a0) { LogWrite(id, uint4(a0, 0, 0, 0)); }
+	void Log(uint id, uint a0, uint a1) { LogWrite(id, uint4(a0, a1, 0, 0)); }
+	void Log(uint id, uint a0, uint a1, uint a2) { LogWrite(id, uint4(a0, a1, a2, 0)); }
+	void Log(uint id, uint a0, uint a1, uint a2, uint a3) { LogWrite(id, uint4(a0, a1, a2, a3)); }
 }

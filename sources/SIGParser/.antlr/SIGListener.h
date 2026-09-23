@@ -137,6 +137,15 @@ public:
   virtual void enterTable_stat(SIGParser::Table_statContext *ctx) = 0;
   virtual void exitTable_stat(SIGParser::Table_statContext *ctx) = 0;
 
+  virtual void enterFunction_definition(SIGParser::Function_definitionContext *ctx) = 0;
+  virtual void exitFunction_definition(SIGParser::Function_definitionContext *ctx) = 0;
+
+  virtual void enterFunction_params(SIGParser::Function_paramsContext *ctx) = 0;
+  virtual void exitFunction_params(SIGParser::Function_paramsContext *ctx) = 0;
+
+  virtual void enterFunction_semantic(SIGParser::Function_semanticContext *ctx) = 0;
+  virtual void exitFunction_semantic(SIGParser::Function_semanticContext *ctx) = 0;
+
   virtual void enterTable_block(SIGParser::Table_blockContext *ctx) = 0;
   virtual void exitTable_block(SIGParser::Table_blockContext *ctx) = 0;
 

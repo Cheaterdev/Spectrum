@@ -179,6 +179,18 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitFunction_definition(SIGParser::Function_definitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitFunction_params(SIGParser::Function_paramsContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitFunction_semantic(SIGParser::Function_semanticContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitTable_block(SIGParser::Table_blockContext *ctx) override {
     return visitChildren(ctx);
   }

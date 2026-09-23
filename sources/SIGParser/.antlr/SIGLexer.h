@@ -19,21 +19,43 @@ public:
     T__26 = 27, T__27 = 28, T__28 = 29, T__29 = 30, T__30 = 31, T__31 = 32, 
     T__32 = 33, T__33 = 34, T__34 = 35, T__35 = 36, T__36 = 37, T__37 = 38, 
     T__38 = 39, T__39 = 40, T__40 = 41, T__41 = 42, T__42 = 43, T__43 = 44, 
-    T__44 = 45, OR = 46, AND = 47, PIPE = 48, EQ = 49, NEQ = 50, GT = 51, 
-    LT = 52, GTEQ = 53, LTEQ = 54, PLUS = 55, MINUS = 56, DIV = 57, MOD = 58, 
-    POW = 59, NOT = 60, SCOL = 61, DOT = 62, ASSIGN = 63, OPAR = 64, CPAR = 65, 
+    OR = 45, AND = 46, PIPE = 47, EQ = 48, NEQ = 49, GT = 50, LT = 51, GTEQ = 52, 
+    LTEQ = 53, PLUS = 54, MINUS = 55, DIV = 56, MOD = 57, POW = 58, NOT = 59, 
+    SCOL = 60, COLON = 61, DOT = 62, ASSIGN = 63, OPAR = 64, CPAR = 65, 
     OBRACE = 66, CBRACE = 67, OSBRACE = 68, CSBRACE = 69, TRUE = 70, FALSE = 71, 
     LOG = 72, LAYOUT = 73, STRUCT = 74, COMPUTE_PSO = 75, GRAPHICS_PSO = 76, 
     RAYTRACE_PSO = 77, WORKGRAPH_PSO = 78, NODE = 79, NODE_OUTPUT = 80, 
     RAYTRACE_RAYGEN = 81, RAYTRACE_PASS = 82, PASS = 83, VIEW = 84, PIPELINE = 85, 
     SLOT = 86, RT = 87, RTV = 88, DSV = 89, ROOTSIG = 90, ENUM = 91, ID = 92, 
     INT_SCALAR = 93, FLOAT_SCALAR = 94, STRING = 95, RAWEXPR = 96, COMMENT = 97, 
-    SPACE = 98, POINTER = 99, INSERT_START = 100, INSERT_END = 101, INSERT_BLOCK = 102
+    SPACE = 98, POINTER = 99, FUNC_BODY = 100, INSERT_START = 101, INSERT_END = 102, 
+    INSERT_BLOCK = 103
   };
 
   explicit SIGLexer(antlr4::CharStream *input);
 
   ~SIGLexer() override;
+
+
+  	size_t last_types[3] = { 0, 0, 0 };
+
+  	bool at_function_body() const
+  	{
+  		return last_types[0] == CPAR
+  		    || (last_types[0] == ID && last_types[1] == COLON && last_types[2] == CPAR);
+  	}
+
+  	std::unique_ptr<antlr4::Token> nextToken() override
+  	{
+  		auto token = antlr4::Lexer::nextToken();
+  		if (token->getChannel() == antlr4::Token::DEFAULT_CHANNEL)
+  		{
+  			last_types[2] = last_types[1];
+  			last_types[1] = last_types[0];
+  			last_types[0] = token->getType();
+  		}
+  		return token;
+  	}
 
 
   std::string getGrammarFileName() const override;
@@ -50,6 +72,8 @@ public:
 
   const antlr4::atn::ATN& getATN() const override;
 
+  bool sempred(antlr4::RuleContext *_localctx, size_t ruleIndex, size_t predicateIndex) override;
+
   // By default the static state used to implement the lexer is lazily initialized during the first
   // call to the constructor. You can call this function if you wish to initialize the static state
   // ahead of time.
@@ -60,6 +84,7 @@ private:
   // Individual action functions triggered by action() above.
 
   // Individual semantic predicate functions triggered by sempred() above.
+  bool FUNC_BODYSempred(antlr4::RuleContext *_localctx, size_t predicateIndex);
 
 };
 

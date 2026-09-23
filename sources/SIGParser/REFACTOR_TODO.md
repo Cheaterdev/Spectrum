@@ -27,6 +27,13 @@ one is reported.
 
 Open: 3's remaining checks, 5, 6, 7, most of 8, 9's dropped-field bug.
 
+Also since then: HLSL functions are struct members (`function_definition`,
+lexer token `FUNC_BODY`), taking `[options]`. `[HLSL]` is the default, so
+they go into the generated HLSL. `[CPP]` (emit into the C++ struct as well)
+is designed but not implemented. All former `%{ }%` blocks have been
+migrated; `%{ }%` still works. Shader paths are quoted `"dir/file.hlsl"`
+strings, checked against workdir/shaders.
+
 ---
 
 ## 0. Where things are
