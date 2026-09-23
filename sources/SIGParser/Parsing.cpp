@@ -516,46 +516,52 @@ public:
 	}
 };
 
+static Parsed parse_input(ANTLRInputStream& input, const std::string& file)
+{
+	Parsed parsed;
+	CollectingErrorListener errors(file);
+
+	SIGLexer lexer(&input);
+	lexer.removeErrorListeners();
+	lexer.addErrorListener(&errors);
+
+	CommonTokenStream tokens(&lexer);
+	SIGParser parser(&tokens);
+	parser.removeErrorListeners();
+	parser.addErrorListener(&errors);
+
+	SIGParser::ParseContext* tree = parser.parse();
+
+	// Walking an error-recovered tree only builds a misleading partial model
+	// for the validator to complain about; the syntax errors are the report.
+	if (lexer.getNumberOfSyntaxErrors() == 0 && parser.getNumberOfSyntaxErrors() == 0)
+	{
+		TreeShapeListener listener(parsed, file);
+		antlr4::tree::ParseTreeWalker walker;
+
+		walker.walk(&listener, tree);
+	}
+
+	return parsed;
+}
+
 Parsed parse(std::wstring filename)
 {
-	std::wcout << ((filename + L"\n")) << std::endl;
-	Parsed parsed;
 	std::string file = std::filesystem::absolute(filename).string();
+
+	std::ifstream stream(filename);
+	if (!stream.is_open())
 	{
-		std::ifstream stream;
-		stream.open(filename);
-
-		if (!stream.is_open())
-		{
-			diagnostics().error(SourceLocation{ file }, "cannot open file");
-			return parsed;
-		}
-
-		CollectingErrorListener errors(file);
-
-		ANTLRInputStream input(stream);
-		SIGLexer lexer(&input);
-		lexer.removeErrorListeners();
-		lexer.addErrorListener(&errors);
-
-		CommonTokenStream tokens(&lexer);
-		SIGParser parser(&tokens);
-		parser.removeErrorListeners();
-		parser.addErrorListener(&errors);
-
-		SIGParser::ParseContext* tree = parser.parse();
-
-		// Walking an error-recovered tree only builds a misleading partial model
-		// for the validator to complain about; the syntax errors are the report.
-		if (lexer.getNumberOfSyntaxErrors() == 0 && parser.getNumberOfSyntaxErrors() == 0)
-		{
-			TreeShapeListener listener(parsed, file);
-			antlr4::tree::ParseTreeWalker walker;
-
-			walker.walk(&listener, tree);
-		}
-
-		stream.close();
+		diagnostics().error(SourceLocation{ file }, "cannot open file");
+		return {};
 	}
-	return parsed;
+
+	ANTLRInputStream input(stream);
+	return parse_input(input, file);
+}
+
+Parsed parse_text(const std::string& text, const std::string& file)
+{
+	ANTLRInputStream input(text);
+	return parse_input(input, file);
 }

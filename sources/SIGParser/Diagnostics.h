@@ -6,15 +6,28 @@
 // tree is internally inconsistent and worse than a stale one.
 class Diagnostics
 {
+public:
 	struct Entry
 	{
 		SourceLocation loc;
 		std::string message;
 	};
 
+private:
 	std::vector<Entry> errors;
 
 public:
+	const std::vector<Entry>& entries() const
+	{
+		return errors;
+	}
+
+	// The language server revalidates in one long-lived process.
+	void clear()
+	{
+		errors.clear();
+	}
+
 	void error(const SourceLocation& loc, std::string message)
 	{
 		errors.push_back({ loc, std::move(message) });

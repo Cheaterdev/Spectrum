@@ -7,6 +7,7 @@ import cereal.json;
 #include "Parsing.h"
 #include "Diagnostics.h"
 #include "Validate.h"
+#include "LSP.h"
 
 static const std::string cpp_path = "../../sources/HAL/autogen";
 static const std::string shaders_path = "../../workdir/shaders";
@@ -272,8 +273,11 @@ static void assign_rtx_ids(Parsed& parsed)
 	assign(parsed.raytrace_pass);
 }
 
-int main()
+int main(int argc, char** argv)
 {
+	if (argc > 1 && std::string_view(argv[1]) == "--lsp")
+		return run_lsp();
+
 	std::map<std::string, ValuesList> user_lists;
 	int result = 0;
 
@@ -283,6 +287,7 @@ int main()
 
 		iterate_files("sigs/", [&](std::wstring filename)
 		{
+			std::wcout << ((filename + L"\n")) << std::endl;
 			auto p = parse(filename);
 
 			// Stamp every top-level named item with its source .sig path so
