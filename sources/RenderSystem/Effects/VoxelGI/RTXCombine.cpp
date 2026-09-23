@@ -11,7 +11,7 @@ import Core;
 using namespace FrameGraph;
 using namespace HAL;
 
-// setup() is fully generated (voxel.sig's own [SetupCondition]) -- same
+// setup() is fully generated (voxel.prism's own [SetupCondition]) -- same
 // gate as its three producers (ReflectionRTX/IndirectRTX/ShadowRTX), runs
 // instead of ReflCombine whenever the user has picked DLSS-RR (and it's
 // actually available).

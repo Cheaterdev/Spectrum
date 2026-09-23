@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Menu and toolbar commands of the Prism extension. Compiled by
+     gen_vs_extension.py with the VSSDK's VSCT.exe and embedded into
+     PrismLanguageClient.dll as the Menus.ctmenu resource. -->
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <Extern href="stdidcmd.h"/>
+  <Extern href="vsshlids.h"/>
+  <Include href="KnownImageIds.vsct"/>
+
+  <Commands package="guidPrismPackage">
+    <Menus>
+      <!-- View > Toolbars > Prism -->
+      <Menu guid="guidPrismCmdSet" id="PrismToolbar" type="Toolbar">
+        <CommandFlag>DefaultDocked</CommandFlag>
+        <Strings>
+          <ButtonText>Prism</ButtonText>
+          <CommandName>Prism</CommandName>
+        </Strings>
+      </Menu>
+    </Menus>
+
+    <Groups>
+      <Group guid="guidPrismCmdSet" id="PrismToolsGroup" priority="0x0100">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
+      </Group>
+      <Group guid="guidPrismCmdSet" id="PrismToolbarGroup" priority="0x0100">
+        <Parent guid="guidPrismCmdSet" id="PrismToolbar"/>
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <Button guid="guidPrismCmdSet" id="cmdRegenerate" priority="0x0100" type="Button">
+        <Parent guid="guidPrismCmdSet" id="PrismToolsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Refresh"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings>
+          <ButtonText>Regenerate Prism code</ButtonText>
+          <!-- What Tools > Options > Keyboard lists, for binding a shortcut. -->
+          <CanonicalName>.Tools.RegeneratePrismCode</CanonicalName>
+          <LocCanonicalName>.Tools.RegeneratePrismCode</LocCanonicalName>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+
+  <CommandPlacements>
+    <CommandPlacement guid="guidPrismCmdSet" id="cmdRegenerate" priority="0x0100">
+      <Parent guid="guidPrismCmdSet" id="PrismToolbarGroup"/>
+    </CommandPlacement>
+  </CommandPlacements>
+
+  <Symbols>
+    <GuidSymbol name="guidPrismPackage" value="{40863436-2fa7-4ea3-9809-55aa6ce8b482}"/>
+    <GuidSymbol name="guidPrismCmdSet" value="{c5413801-5494-47f5-8ba9-1fc5983af154}">
+      <IDSymbol name="cmdRegenerate" value="0x0100"/>
+      <IDSymbol name="PrismToolbar" value="0x1000"/>
+      <IDSymbol name="PrismToolsGroup" value="0x1020"/>
+      <IDSymbol name="PrismToolbarGroup" value="0x1030"/>
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>

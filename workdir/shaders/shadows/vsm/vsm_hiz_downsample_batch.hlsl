@@ -11,7 +11,7 @@ static const VSMDownsampleHiZBatch data = GetVSMDownsampleHiZBatch();
 // per-bind cost proportional to one mip's worth of subresources instead of
 // the whole pyramid's). src is a UAV (RWTexture2DArray), not an SRV, even
 // though this shader only ever reads it -- see VSMDownsampleHiZBatch's own
-// comment in vsm.sig for why (keeps the whole VSM_PageHiZ resource in one
+// comment in vsm.prism for why (keeps the whole VSM_PageHiZ resource in one
 // layout for this entire pass, avoiding a real barrier-layout conflict
 // confirmed via GPU-Based Validation).
 [numthreads(8, 8, 1)]

@@ -2,7 +2,7 @@
 // direct (non-indirect) dispatch_mesh -- see MaterialPreviewSession::dispatch
 // -- instead of the flat/analytic-sphere compute dispatch in
 // UniversalMaterialPreview.hlsl. Reuses mesh_shader.hlsl's generic VS/AS (the
-// same ones GBufferDraw/DepthDraw/DrawAxis use -- see material_preview.sig's
+// same ones GBufferDraw/DepthDraw/DrawAxis use -- see material_preview.prism's
 // MaterialPreview3D) for real interpolated position/normal/UV, and the
 // *same* capture-injected COMPILED_FUNC body (see MaterialContext::
 // capture_value in Values.cpp) that the compute path uses -- only the

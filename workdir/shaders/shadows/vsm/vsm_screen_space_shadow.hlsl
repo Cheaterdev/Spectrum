@@ -15,7 +15,7 @@
 // Adapted from Bend Studio's public screen-space shadow projection code
 // (../../denoiser/ss_shadow.hlsl, used unmodified by RTXShadow elsewhere in
 // this engine) -- a deliberately SEPARATE copy, not a shared #include. See
-// vsm.sig's own VSMScreenSpaceShadowParams comment for why: this copy's
+// vsm.prism's own VSMScreenSpaceShadowParams comment for why: this copy's
 // EarlyOutPixel reads VSM_BlockerSearch's own per-tile ambiguity verdict
 // instead of a generic depth-bounds check, and VSM's own quality knobs
 // (SurfaceThickness/BilinearThreshold/ShadowContrast/SAMPLE_COUNT below) are
@@ -39,7 +39,7 @@
 // surface_thickness field, VSM::vsm_contact_shadow_thickness) -- the reach/
 // width a contact shadow reads as is sensitive enough to scene depth scale
 // that it needs to be tunable without a rebuild, unlike the others. Same
-// starting values SS_Shadow.sig documents as its own defaults.
+// starting values SS_Shadow.prism documents as its own defaults.
 static const float VSM_SS_BILINEAR_THRESHOLD = 0.02;
 static const float VSM_SS_SHADOW_CONTRAST = 4.0;
 

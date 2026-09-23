@@ -229,7 +229,7 @@ namespace HAL
 	// Gives shader authors a bare Log("fmt", args...) call -- no
 	// GetDebugInfo() prefix, no manual #include, no manual asuint() -- by
 	// forwarding to DebugInfo's own member Log() overloads
-	// (sources/SIGParser/sigs/defaultlayout.sig). Called on text that
+	// (sources/Prism/defs/defaultlayout.prism). Called on text that
 	// Compile_Shader has already made sure contains "GetDebugInfo()" (see
 	// has_debug_info and the retry-with-#include-then-reflatten path
 	// around the preprocess pass below) -- inserting the wrapper is the

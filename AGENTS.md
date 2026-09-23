@@ -16,9 +16,12 @@ setup.bat          # Init Sharpmake submodule + build it, then generates VS proj
 generate_project.bat
 ```
 
-### Regenerate SIG parser (after changing .sig files or SIG.g4 grammar)
+### Regenerate code from .prism files
+Tools → Regenerate Prism code in VS (Prism extension), or run `bin/profile/prismc.exe` from `sources/Prism/`.
+
+### Regenerate the Prism parser (only after changing the Prism.g4 grammar)
 ```bat
-generate_sigs.bat
+generate_prism_parser.bat
 ```
 
 ### Build
@@ -42,8 +45,8 @@ Each layer has a `Defines.h` that chains upward (e.g. `RenderSystem/Defines.h` i
 ### C++ Modules (.ixx)
 The codebase uses **C++23 modules** (`.ixx` files) extensively. Each subsystem exposes a module interface — for example `HAL.Device.ixx` exports `module HAL:Device`. Headers (`.h`) are used for things that can't be modules (forced includes, third-party interop).
 
-### SIG System
-`.sig` files define shared GPU/CPU data structures and resource bindings. `SIGParser` (an ANTLR4-based tool) parses them and generates HLSL and C++ binding code. SIG files live in `sources/SIGParser/sigs/`. Generated output goes to `sources/HAL/SIG/autogen/` and `sources/RenderSystem/FrameGraph/autogen/`.
+### Prism
+Prism is the engine's declaration language: `.prism` files in `sources/Prism/defs/` declare shared GPU/CPU structs and their resource bindings, PSOs, raytracing PSOs, FrameGraph passes, pipelines, enums, constants and HLSL helper functions. `prismc` (an ANTLR4-based compiler, `sources/Prism/`) generates HLSL and C++ from them into `sources/HAL/autogen/`, `sources/RenderSystem/FrameGraph/autogen/` and `workdir/shaders/autogen/`. The language was called SIG (shader input groups) before it grew beyond bindings; the engine-side binding code keeps that name (`HAL/SIG/`, `SlotID`, `Table::`).
 
 ### FrameGraph
 The `RenderSystem/FrameGraph` subsystem manages render pass scheduling, automatic resource transitions, and async compute. Render passes declare their resource reads/writes; the FrameGraph resolves barriers and execution order.

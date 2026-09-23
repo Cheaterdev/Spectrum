@@ -479,7 +479,7 @@ DebugLogStrings  (in-memory registry, id -> format string)
                                    happen -- the shader had to compile to
                                    run) falls back to raw id + args
 
-SIG side (sources/SIGParser/sigs/defaultlayout.sig):
+Prism side (sources/Prism/defs/defaultlayout.prism):
   DebugStruct { uint format_id; uint4 args; }
   DebugInfo [Bind = FrameLayout::DebugInfo]
     RWStructuredBuffer<DebugStruct> debug        -- 64-entry ring

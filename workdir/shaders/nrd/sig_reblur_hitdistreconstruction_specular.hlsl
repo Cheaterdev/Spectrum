@@ -1,7 +1,7 @@
 // REBLUR_SPECULAR sibling of sig_reblur_hitdistreconstruction.hlsl (see
 // [[project-nrd-integration]]) -- same shim pattern, NRD_SIGNAL SPEC instead
 // of DIFF, routed via REBLUR_HitDistReconstructionSpecularResources
-// (Diff->Spec renamed fields, same resource count -- see nrd_sig_test.sig's
+// (Diff->Spec renamed fields, same resource count -- see nrd_sig_test.prism's
 // comment on that struct).
 #define NRD_INTERNAL
 #define NRD_SIGNAL SPEC

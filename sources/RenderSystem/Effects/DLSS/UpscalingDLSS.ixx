@@ -25,7 +25,7 @@ export
 	// upscale; SMAA gates on the opposite so native rendering still gets AA.
 	bool g_upscaling_enabled = true;
 
-	// UpscalerType itself is SIG-declared now (UpscalingDLSS.sig), so it's
+	// UpscalerType itself is SIG-declared now (UpscalingDLSS.prism), so it's
 	// visible via plain `import HAL;` -- needed by autogen/pass_defaults.cpp,
 	// a dedicated TU generated [SetupCondition]/[RenderCondition] bodies
 	// compile in (see that file's own comment).
@@ -68,8 +68,8 @@ export
 	// Every reader may therefore test the selection ALONE -- `upscaler_type ==
 	// DLSSRR` already implies dlssrr_available && rtx_supported, and
 	// `!= DLSSRR` already covers "RR was asked for but can't run". That is
-	// what keeps the generated [SetupCondition] expressions (FSR.sig,
-	// UpscalingDLSS*.sig, voxel.sig, nrd_sig_test.sig) down to one context
+	// what keeps the generated [SetupCondition] expressions (FSR.prism,
+	// UpscalingDLSS*.prism, voxel.prism, nrd_sig_test.prism) down to one context
 	// read instead of three, and it is why this is a read-only reference:
 	// assigning to it is a compile error, so the clamp in set_upscaler_type()
 	// cannot be bypassed by a new write site.

@@ -10,7 +10,7 @@ import FrameGraph;
 
 using namespace FrameGraph;
 
-// setup() is fully generated (scene.sig's own [RunAlways]).
+// setup() is fully generated (scene.prism's own [RunAlways]).
 
 void PassDefault<Passes::PreScene>::pre_setup(FrameGraph::Graph& graph)
 {

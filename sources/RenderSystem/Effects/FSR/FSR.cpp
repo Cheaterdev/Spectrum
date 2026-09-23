@@ -15,7 +15,7 @@ import HAL;
 
 using namespace FrameGraph;
 
-// setup() is fully generated (FSR.sig's own [SetupCondition]).
+// setup() is fully generated (FSR.prism's own [SetupCondition]).
 
 void PassDefault<Passes::FSR>::render(Passes::FSR::Context& data, FrameContext& context)
 {

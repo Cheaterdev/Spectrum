@@ -11,7 +11,7 @@ export class SMAA
 	HAL::Texture::ptr area_tex;
 	HAL::Texture::ptr search_tex;
 
-	// setup() is generated (smaa.sig's own [SetupCondition]) -- render only.
+	// setup() is generated (smaa.prism's own [SetupCondition]) -- render only.
 	Passes::SMAA::render_func_type m_smaa_render;
 
 public:

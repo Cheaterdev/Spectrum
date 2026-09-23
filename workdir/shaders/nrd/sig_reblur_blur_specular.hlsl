@@ -1,6 +1,6 @@
 // REBLUR_SPECULAR sibling of sig_reblur_blur.hlsl (see
 // [[project-nrd-integration]]) -- routed via REBLUR_BlurSpecularResources
-// (Diff->Spec renamed, same resource count -- see nrd_sig_test.sig's comment
+// (Diff->Spec renamed, same resource count -- see nrd_sig_test.prism's comment
 // on that struct).
 #define NRD_INTERNAL
 #define NRD_SIGNAL SPEC

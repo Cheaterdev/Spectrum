@@ -235,7 +235,7 @@ export{
 
 			// whole_resource: record the use as ALL_SUBRESOURCES instead of the
 			// mip/array range the view names. Set by a table member declared
-			// [Barrier = ALL] in its .sig -- see HAL::BoundResource.
+			// [Barrier = ALL] in its .prism -- see HAL::BoundResource.
 			void add_resource_usage(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE, bool whole_resource = false);
 		};
 

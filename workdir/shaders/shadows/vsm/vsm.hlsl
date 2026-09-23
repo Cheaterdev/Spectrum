@@ -51,7 +51,7 @@ float4 combine_result(float2 tc, uint2 pixel)
 	VSMConstants constants = GetVSMConstants();
 
 	// This pass (VSM_Combine) only runs any more when use_vsm_penumbra is
-	// off -- see its own PassNode comment in vsm.sig. The penumbra-on case
+	// off -- see its own PassNode comment in vsm.prism. The penumbra-on case
 	// (classify -> search -> blur, Phase 5.18 Part A follow-up) moved
 	// entirely into stage 3 (VSM_ShadowResolve), which now does this same
 	// PBR combine itself and writes ResultTexture directly instead of an
@@ -63,7 +63,7 @@ float4 combine_result(float2 tc, uint2 pixel)
 
 	// Debug view (VSM.ixx's vsm_debug_view, a single-select enum shared
 	// verbatim with the C++ side -- see VSMConstants.debug_view's own
-	// comment in vsm.sig): flat per-level color, checkerboard-darkened by
+	// comment in vsm.prism): flat per-level color, checkerboard-darkened by
 	// page position within that level, so page/level seams are directly
 	// visible -- used to check whether a visual artifact actually lines up
 	// with a real boundary. Only reachable in non-penumbra mode (this pass

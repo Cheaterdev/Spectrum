@@ -78,7 +78,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// output now (RGB=hit color, A=hit distance, not REBLUR-packed) -- NRD
 	// doesn't run under DLSS-RR any more, DLSS-RR does its own
 	// reconstruction/denoising on this exact signal (see RTXCombine's own
-	// comment, voxel.sig).
+	// comment, voxel.prism).
 	float3 reflection = GetRTXCombine().GetReflection()[tc].rgb;
 	float3 refl_color = get_PBR(albedo.rgb, reflection, normal, v, roughness, metallic);
 

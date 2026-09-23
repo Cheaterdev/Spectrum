@@ -16,7 +16,7 @@
 #include "autogen/tables/ColorShadowPayload.h"
 #include "autogen/rtx/ColorShadowPass.h"
 // RayPayload::use_vsm_shadow's own opt-in cheap path (see its comment,
-// raytracing.sig) -- get_shadow_vsm_simple, the same lean lookup VoxelGI's
+// raytracing.prism) -- get_shadow_vsm_simple, the same lean lookup VoxelGI's
 // own Lighting pass uses (voxel_lighting.hlsl) for exactly the same reason
 // (runs before VSM_BlockerClassify/VSM_ShadowResolve, so only the raw
 // atlas+page-table lookup is available). No "../" here despite this file
@@ -98,7 +98,7 @@ void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity)
 
 
 // RayPayload::use_vsm_shadow's own cheap path (see its comment,
-// raytracing.sig): bridges VSMShadowLookupData (vsm.sig, bound by the pass
+// raytracing.prism): bridges VSMShadowLookupData (vsm.prism, bound by the pass
 // that opted in) into the VSMConstants/VSMLighting shapes
 // get_shadow_vsm_simple actually takes -- exactly the same field-by-field
 // copy voxel_lighting.hlsl's own get_shadow() already does, for the same
@@ -260,7 +260,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	float3 sun_vis = 1.0;
 	if (payload.use_vsm_shadow)
 	{
-		// Cheap path (RayPayload::use_vsm_shadow's own comment, raytracing.sig):
+		// Cheap path (RayPayload::use_vsm_shadow's own comment, raytracing.prism):
 		// one VSM lookup instead of a real recursive shadow ray -- no
 		// transparent-occluder iteration (VSM's own shadow atlas doesn't
 		// carry per-material transmittance the way ColorShadowPass does),
@@ -306,7 +306,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	payload.color = float4(color.rgb * NdotL * sun_vis * (1 - metallic) + glow.rgb, 1.0);
 	payload.dist  = RayTCurrent();
 	// DDGIProbeTrace's own feedback-term consumer -- see this payload
-	// field's own comment (raytracing.sig) for why these two exist.
+	// field's own comment (raytracing.prism) for why these two exist.
 	payload.hit_normal = t.v.normal;
 	payload.albedo      = color.rgb * (1 - metallic);
 

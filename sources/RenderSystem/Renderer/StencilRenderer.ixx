@@ -81,7 +81,7 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
         std::vector<std::pair<MeshAssetInstance::ptr, int>> selected;
         vec3 direction;
 
-        // Both setups are generated (stenciler.sig) -- render halves only.
+        // Both setups are generated (stenciler.prism) -- render halves only.
         Passes::stencil_renderer_before::render_func_type m_before_render;
         Passes::stencil_renderer_after::render_func_type  m_after_render;
 

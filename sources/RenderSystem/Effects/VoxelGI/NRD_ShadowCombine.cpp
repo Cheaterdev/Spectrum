@@ -16,7 +16,7 @@ using namespace HAL;
 // direct-lighting term VSM's own passes would otherwise have written. Runs
 // only when ShadowSource::RTXReference is selected outside DLSS-RR (see
 // [[project-nrd-integration]]).
-// setup() is fully generated (nrd_sig_test.sig's own [SetupCondition]).
+// setup() is fully generated (nrd_sig_test.prism's own [SetupCondition]).
 
 void PassDefault<Passes::NRD_ShadowCombine>::render(
 	Passes::NRD_ShadowCombine::Context& data, FrameContext& context)

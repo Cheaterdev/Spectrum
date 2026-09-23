@@ -36,7 +36,7 @@ SkyRender::SkyRender()
 
 	// CubeSky: renders the atmospheric sky into a static cubemap, re-baked only
 	// when the sun direction has changed enough to warrant it -- that decision
-	// is CubeSky's [PreSetup] hook plus [RenderCondition] (sky.sig) now, see
+	// is CubeSky's [PreSetup] hook plus [RenderCondition] (sky.prism) now, see
 	// PassSetupDefault<Passes::CubeSky>::pre_setup below.
 
 	m_cubesky_render = [this](Passes::CubeSky::Context& data, FrameGraph::FrameContext& context)
@@ -83,7 +83,7 @@ SkyRender::SkyRender()
 	};
 
 	// Sky: full-screen sky pass that composites over the GBuffer depth.
-	// setup() is fully generated (sky.sig's own [RunAlways]).
+	// setup() is fully generated (sky.prism's own [RunAlways]).
 	m_sky_render = [this](Passes::Sky::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& sky     = context.graph->get_context<SkyInfo>();
@@ -109,14 +109,14 @@ SkyRender::SkyRender()
 
 
 // ---- PassSetupDefault<Passes::CubeSky> -------------------------------------
-// The sun-direction diff, run once per frame before any pass's setup (sky.sig's
+// The sun-direction diff, run once per frame before any pass's setup (sky.prism's
 // [PreSetup]). It has to be here rather than inside CubeSky's own setup because
 // CubeMapDownsample and CubeMapEnviromentProcessor read the result in their own
 // [RenderCondition]s, and nothing orders one pass's setup before another's.
 //
 // Static, so there is no SkyRender instance to hold the previous direction --
 // it lives in Table::SkyState instead, which is per-Graph and therefore still
-// separate between the main and asset pipelines (see its own comment, sky.sig).
+// separate between the main and asset pipelines (see its own comment, sky.prism).
 
 void PassSetupDefault<Passes::CubeSky>::pre_setup(FrameGraph::Graph& graph)
 {
@@ -130,7 +130,7 @@ void PassSetupDefault<Passes::CubeSky>::pre_setup(FrameGraph::Graph& graph)
 
 // ---- PassDefault<Passes::CubeMapDownsample> --------------------------------
 // Generates mipmaps for the sky cubemap whenever it has been re-baked.
-// setup() is fully generated (sky.sig's own [RenderCondition]).
+// setup() is fully generated (sky.prism's own [RenderCondition]).
 
 void PassDefault<Passes::CubeMapDownsample>::render(
 	Passes::CubeMapDownsample::Context& data, FrameContext& context)
@@ -141,7 +141,7 @@ void PassDefault<Passes::CubeMapDownsample>::render(
 
 // ---- PassDefault<Passes::CubeMapEnviromentProcessor> ----------------------
 // Filters the sky cubemap into specular and diffuse IBL targets.
-// setup() is fully generated (sky.sig's own [RenderCondition]).
+// setup() is fully generated (sky.prism's own [RenderCondition]).
 
 void PassDefault<Passes::CubeMapEnviromentProcessor>::render(
 	Passes::CubeMapEnviromentProcessor::Context& data, FrameContext& context)

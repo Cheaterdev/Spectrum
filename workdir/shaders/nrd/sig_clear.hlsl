@@ -1,6 +1,6 @@
 // Prototype (see [[project-nrd-integration]]): routes NRD's real,
 // unmodified Clear.cs.hlsl through this engine's SIG-generated bindless
-// accessors (sources/SIGParser/sigs/nrd_sig_test.sig's Clear_Constants
+// accessors (sources/Prism/defs/nrd_sig_test.prism's Clear_Constants
 // struct) instead of NRD.hlsli's normal raw register()-bound globals.
 //
 // NRD.hlsli's own DXC branch is skipped entirely once NRD_CONSTANTS_START/

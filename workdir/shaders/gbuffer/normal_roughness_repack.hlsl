@@ -14,7 +14,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 
 	float4 encoded = Normals.Load(uint3(dispatchID.xy, 0));
 
-	// compress_normals() (FrameData.sig) always scales the unit normal by a
+	// compress_normals() (FrameData.prism) always scales the unit normal by a
 	// POSITIVE scalar (best-fit LUT value / cube-face projection factor)
 	// before biasing to [0,1] -- so re-normalizing the decoded value recovers
 	// the original direction exactly, without needing the LUT a second time.

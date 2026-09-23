@@ -3,7 +3,7 @@
 // TemporalStabilization pass runs afterward and owns gOut_InternalData
 // itself, so PostBlur skips producing it here. Routed via
 // REBLUR_PostBlurTS1SpecularResources (Diff->Spec renamed, same resource
-// count -- see nrd_sig_test.sig's comment on that struct).
+// count -- see nrd_sig_test.prism's comment on that struct).
 #define NRD_INTERNAL
 #define NRD_SIGNAL SPEC
 #define NRD_MODE RADIANCE

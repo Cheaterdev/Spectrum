@@ -137,7 +137,7 @@ public:
 		ExclusiveRead = (1 << 14),
 
 		// This access must not make the graph enable the pass that performs it
-		// ([SkipEnablement] in the .sig). The cull enables every writer of an
+		// ([SkipEnablement] in the .prism). The cull enables every writer of an
 		// enabled resource, and for a Static resource it does so regardless of
 		// pass order — so a debug pass that only annotates a shared buffer
 		// (DDGIIndirectDebug writing DDGI_ProbeResidencyPending) would keep
@@ -223,7 +223,7 @@ public:
 
 		// Raw access to the handler's Desc, so LoadGraph can copy one link's desc
 		// to the next without knowing the concrete Desc type. Safe because a
-		// resource's handler type is fixed by its .sig declaration and never
+		// resource's handler type is fixed by its .prism declaration and never
 		// changes for a given ResourceID.
 		virtual void*  desc_data() = 0;
 		virtual size_t desc_size() const = 0;
@@ -256,7 +256,7 @@ public:
 	// Stable across frames: ResourceChain::reset_frame() rewinds pos but never
 	// clears items, so link N is the same object next frame. That is what makes
 	// this usable as a persisted key -- given the same generated ID space, which
-	// a plan header must check, since editing a .sig renumbers ResourceID.
+	// a plan header must check, since editing a .prism renumbers ResourceID.
 	struct ResourceVersion
 	{
 		ResourceID id      = ResourceID::Count;
@@ -1241,7 +1241,7 @@ public:
 			// null-derefed several calls later inside HAL code with an access
 			// violation address that named neither the resource nor the pass.
 			// Usual cause: this pass is registered in the Pipeline block
-			// (test.sig) BEFORE whichever pass creates/writes this resource --
+			// (test.prism) BEFORE whichever pass creates/writes this resource --
 			// Graph::setup() runs every pass's setup() in pipeline declaration
 			// order, so a resource's creator must appear earlier in that block
 			// than anything that need()s it. Fix the pipeline order, not this
@@ -1688,7 +1688,7 @@ public:
 	// here is an index or an ID, so replay is a flat walk that fills the
 	// persistent objects the builder already owns.
 	//
-	// Shape mirrors the PrecompiledPass/PrecompiledResourceInfo tables SIGParser
+	// Shape mirrors the PrecompiledPass/PrecompiledResourceInfo tables Prism
 	// already emits per pipeline -- this is the runtime-pruned instance of that
 	// same template, which is why the two use the same vocabulary.
 
@@ -1791,7 +1791,7 @@ public:
 		std::vector<std::pair<ResourceID, ResourceID>> history_links;
 
 		// Must equal generated_id_space_hash to be usable. A plan recorded before
-		// a .sig edit renumbered PassID/ResourceID would not fail to apply, it
+		// a .prism edit renumbered PassID/ResourceID would not fail to apply, it
 		// would apply to the WRONG passes and resources -- so this is checked
 		// before anything else, and a mismatch is a miss, not an error.
 		uint64_t id_space_hash = 0;

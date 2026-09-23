@@ -13,7 +13,7 @@
 // each probe's map is only texel_size^2 texels -- nearest-sampling it made
 // the result visibly blocky ("mosaic") as the shading direction/position
 // moved smoothly across it. `slice` selects the array layer (probe_y +
-// cascade offset, see ddgi_atlas_array_slice, ddgi.sig) -- the 2D atlas
+// cascade offset, see ddgi_atlas_array_slice, ddgi.prism) -- the 2D atlas
 // plane only ever holds (probe_x, probe_z).
 float4 ddgi_bilinear_texel4(Texture2DArray<float4> tex, uint2 origin, uint slice, uint texel_size, float2 uv01)
 {
@@ -86,7 +86,7 @@ float ddgi_probe_visibility_ray(RaytracingAccelerationStructure scene, float3 wo
 }
 
 // Depth-comparison occlusion test (DDGIOcclusionMode::ProbeDepthTest, see
-// its own comment, ddgi.sig): reads the probe's own stored visibility texel
+// its own comment, ddgi.prism): reads the probe's own stored visibility texel
 // -- mean hit distance in the direction from the probe toward the shading
 // point, the same moment DDGIProbeTrace/DDGIProbeConvolve already write --
 // and compares it directly against the shading point's own distance,
@@ -114,7 +114,7 @@ float ddgi_probe_depth_test(float2 vis, float dist_to_point, float bias)
 // blending the 8 surrounding probes, weighted by backface rejection
 // (Majercik et al., "Dynamic Diffuse Global Illumination") and one of three
 // occlusion tests (DDGIOcclusionMode, DDGIGraph.cpp's "Occlusion test"
-// combo box, ddgi.sig's own comment on each value): none (fastest, most
+// combo box, ddgi.prism's own comment on each value): none (fastest, most
 // light leaking through walls/thin occluders), a depth-map-style comparison
 // against the probe's own stored hit-distance moment (cheap, no extra ray),
 // or a real traced visibility ray per corner (correct, real added cost).
@@ -131,15 +131,15 @@ float3 ddgi_sample_irradiance(
 	uint texel_size = info.GetAtlas_info().x;
 	uint3 probe_counts = info.GetProbe_counts().xyz;
 	float3 spacing  = info.GetProbe_spacing().xyz;
-	// See DDGIInfo::flags' own comment (ddgi.sig) for the bit layout.
+	// See DDGIInfo::flags' own comment (ddgi.prism) for the bit layout.
 	uint occlusion_mode = (info.GetFlags().z >> 4) & 0x3;
 
 	// No bound buffer -- only used for its pure coordinate-math helpers, same
-	// reasoning as DDGIProbeConvolveData's own comment (ddgi.sig).
+	// reasoning as DDGIProbeConvolveData's own comment (ddgi.prism).
 	DDGIProbes probes;
 
 	// Absolute (grid_min-independent) cell + fractional part -- see
-	// ddgi_world_to_slot's own comment (ddgi.sig) for why this must be a
+	// ddgi_world_to_slot's own comment (ddgi.prism) for why this must be a
 	// pure function of world_pos/spacing alone, not (world_pos-grid_min)/
 	// spacing: subtracting grid_min first doesn't change the fractional
 	// part (floor(x-n) = floor(x)-n for integer n, so frac is identical
@@ -151,7 +151,7 @@ float3 ddgi_sample_irradiance(
 	float3 frac_part = probe_space - base;
 
 	float2 sample_uv = ddgi_oct_encode(normalize(normal)) * 0.5 + 0.5;
-	// DDGIInfo::grid_min.w (see its own comment, ddgi.sig) -- a runtime-tunable
+	// DDGIInfo::grid_min.w (see its own comment, ddgi.prism) -- a runtime-tunable
 	// fraction of this cascade's own spacing, not a fixed constant, so the
 	// same bias scales sensibly across cascades of very different spacing.
 	float depth_bias = max(spacing.x, max(spacing.y, spacing.z)) * info.GetGrid_min().w;
@@ -170,7 +170,7 @@ float3 ddgi_sample_irradiance(
 			continue;
 
 		// Toroidal wrap of the ABSOLUTE cell (see ddgi_wrap/ddgi_world_to_slot's
-		// own comments, ddgi.sig) -- always valid, no in-grid check needed:
+		// own comments, ddgi.prism) -- always valid, no in-grid check needed:
 		// ddgi_sample_irradiance_cascaded's own margin check already
 		// guarantees world_pos (and therefore every one of its 8 corners)
 		// sits well inside this cascade's current window before this

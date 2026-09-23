@@ -38,7 +38,7 @@ export namespace nvidia
 		// open, mirroring DLSS::upscale(). Output size is read from
 		// `color_out`'s own resource description, like DLSS::upscale().
 		// `normal_roughness` is the packed buffer NormalRoughnessRepack
-		// produces (see UpscalingDLSSRR.sig); `specular_hit_distance` reuses
+		// produces (see UpscalingDLSSRR.prism); `specular_hit_distance` reuses
 		// VoxelReflectionNoise's alpha channel (RGB=hit color, A=hit distance).
 		void denoise(HAL::CommandList& list, const FrameToken& frame, const FrameConstants& constants,
 		             const mat4x4& world_to_view, DLSSMode mode, bool hdr, uint32_t viewport,

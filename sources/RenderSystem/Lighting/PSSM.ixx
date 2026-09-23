@@ -20,7 +20,7 @@ export class PSSM
 	// read anyway.
 	float cascade_scaler(const camera* cam) const;
 
-	// Mirrors pssm.sig's own PSSM_RendersSize (PSSM_Cascade's ArrayCount/
+	// Mirrors pssm.prism's own PSSM_RendersSize (PSSM_Cascade's ArrayCount/
 	// buffer-size there) -- the many loop bounds/scaler math below need a
 	// plain int, not a SIG field, but this keeps both sides reading the
 	// same single source of truth instead of two independently hand-kept
@@ -31,7 +31,7 @@ export class PSSM
 	float3 position;
 	size_t counter = 0;
 
-	// Every PSSM pass is [RunAlways] (pssm.sig), so all four setups are
+	// Every PSSM pass is [RunAlways] (pssm.prism), so all four setups are
 	// generated and only the render halves live here.
 	Passes::PSSM_Global::render_func_type m_global_render;
 	std::array<Passes::PSSM_Cascade::render_func_type, renders_size> m_cascade_render;

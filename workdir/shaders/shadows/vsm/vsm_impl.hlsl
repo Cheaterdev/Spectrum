@@ -15,7 +15,7 @@
 
 // level_info[] holds MaxLevels (26) slots, one geometric ladder, no
 // regular/adaptive split (see VSMClipmap::page_world_size, VSM.ixx's
-// LevelZeroSlot). Keep this literal 26 in sync with vsm.sig's level_info[26]
+// LevelZeroSlot). Keep this literal 26 in sync with vsm.prism's level_info[26]
 // if that ever changes -- only used as an array-bound sanity check now, the
 // actual sweep range each frame is c.GetActive_min()/GetActive_max().
 #define VSM_MAX_LEVELS 26
@@ -69,7 +69,7 @@ int get_vsm_level(VSMConstants c, float2 pos_ls)
 // Takes page_table directly (a plain Texture2DArray<uint>), not a whole
 // VSMLighting -- the only field this ever read from it. Callers not already
 // holding a VSMLighting (e.g. VSM_Combine's own VSMShadowNoiseParams, which
-// has no `GBuffer gbuffer;`/full VSMLighting binding any more, see vsm.sig's
+// has no `GBuffer gbuffer;`/full VSMLighting binding any more, see vsm.prism's
 // VSM_Combine PassNode comment) can pass their own page_table field straight
 // through instead of needing a whole VSMLighting just for this one lookup.
 uint get_vsm_slot(VSMConstants c, Texture2DArray<uint> page_table, float2 pos_ls, int start_level, out int resolved_level)

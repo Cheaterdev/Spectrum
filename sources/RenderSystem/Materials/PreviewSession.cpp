@@ -21,7 +21,7 @@ void materials::MaterialPreviewSession::rebuild_pso()
 	// Same reasoning as the old PipelinePasses ctor: drive init_pso() +
 	// override + create() manually rather than the PSOS type's normal
 	// (device, modifier) ctor, since the generated init_pso() re-clobbers
-	// the overridden stage's file_name/entry_point to the .sig's static
+	// the overridden stage's file_name/entry_point to the .prism's static
 	// default right after any modifier callback runs.
 	if (want_3d)
 	{
@@ -173,7 +173,7 @@ void materials::MaterialPreviewSession::dispatch()
 
 		// Real depth test/write -- overlapping front/back geometry on the
 		// mesh has nothing else to resolve visibility per pixel (no rtv,
-		// UAV-only PS -- see material_preview.sig).
+		// UAV-only PS -- see material_preview.prism).
 		{
 			RT::DepthOnly rt;
 			rt.GetDepth() = preview_depth->texture_2d().depthStencil;

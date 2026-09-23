@@ -1,0 +1,568 @@
+================================================================================
+  PRISM — DECLARATION LANGUAGE AND CODE GENERATOR
+  Developer reference: what you can declare, what it generates, how to use it
+================================================================================
+
+Prism is Spectrum's declaration language. A .prism file describes things that
+must agree between the GPU and the CPU, or that are pure boilerplate to write
+by hand:
+
+  - GPU/CPU shared structs and how they bind to root-signature slots
+  - root layouts (slots and static samplers)
+  - graphics, compute, raytracing and work-graph pipeline state objects
+  - FrameGraph passes: their resources, how those are created/read/written,
+    and when the pass runs
+  - pipelines (ordered pass lists, with async-compute placement)
+  - enums, constants and HLSL helper functions shared by those declarations
+
+`prismc` compiles every .prism file into C++ modules/headers and HLSL headers.
+You write the declaration once; the C++ binding code, the HLSL struct, the PSO
+setup, the FrameGraph setup() body and the ID tables all follow from it.
+
+History: the language started as "SIG" (shader input groups, after Ubisoft's
+talk on binding shader inputs in groups). It grew well beyond bindings and was
+renamed Prism. The engine-side binding code keeps the old name — HAL/SIG/,
+`import :SIG;`, SlotID, Table:: — because that part still is shader input
+groups.
+
+
+--------------------------------------------------------------------------------
+  WHERE THINGS ARE
+--------------------------------------------------------------------------------
+
+  sources/Prism/defs/*.prism     the declarations (one file per subsystem)
+  sources/Prism/Prism.g4         ANTLR grammar
+  sources/Prism/templates/       Jinja templates: cpp/ and hlsl/ output
+  sources/Prism/Main.cpp         generator: parse, validate, render templates
+  sources/Prism/Validate.cpp     every semantic check (and the option lists)
+  sources/Prism/LSP.cpp          language server (prismc --lsp)
+  sources/Prism/editor/          Visual Studio extension (built by a script)
+  sources/Prism/REFACTOR_TODO.md known issues and planned work
+
+  bin/profile/prismc.exe         the compiler (Sharpmake project "Prism")
+  bin/editor/prism.vsix          the Visual Studio extension
+
+Generated output (checked in, never edited by hand — every file carries a
+DO-NOT-EDIT banner and is overwritten on the next run):
+
+  sources/HAL/autogen/                    C++: tables, slots, layouts, PSOs,
+                                          RTX PSOs, enums, Constants.ixx,
+                                          autogen.ixx (the HAL:Autogen module)
+  sources/RenderSystem/FrameGraph/autogen/ C++: per-pass headers (pass/*.h),
+                                          pipelines (*.pipeline.h),
+                                          pass_defaults.h/.cpp, resource_ids.h,
+                                          pass_ids.h, context_deps.h,
+                                          context_snapshot.cpp, passes.ixx
+  workdir/shaders/autogen/                HLSL: tables, layouts, RTX passes,
+                                          work-graph node macros
+  workdir/shaders/enums.h                 HLSL enums
+
+
+--------------------------------------------------------------------------------
+  WORKFLOW
+--------------------------------------------------------------------------------
+
+1. Edit a .prism file in sources/Prism/defs/.
+2. Regenerate:
+     - Visual Studio: Tools > Regenerate Prism code (or the Prism toolbar,
+       View > Toolbars > Prism). Saves open .prism files first; the Output
+       window's "Prism" pane lists every file added/removed/modified.
+     - Shell:  cd sources/Prism && ../../bin/profile/prismc.exe
+       (the working directory matters: it reads defs/ and writes ../../...)
+3. If files were ADDED or REMOVED, run generate_project.bat — Sharpmake lists
+   generated files explicitly, so a new one won't compile until the projects
+   know about it. (The VS button offers to do this for you.) Content-only
+   changes need nothing.
+4. Build.
+
+prismc refuses to write anything if any .prism file has an error. Errors are
+printed as `file(line,col): error: message` (clickable in the VS Output
+window) and the exit code is 1. Many come with a suggestion:
+    ddgi.prism(515,2): error: unknown option [SetupConditon] on PassNode
+    'DDGIProbeSelect'; did you mean 'SetupCondition'?
+
+generate_prism_parser.bat is NOT a regeneration step — it rebuilds the ANTLR
+parser from Prism.g4 and is only needed after a grammar change.
+
+
+--------------------------------------------------------------------------------
+  LANGUAGE BASICS
+--------------------------------------------------------------------------------
+
+Comments        # to end of line. (Inside HLSL function bodies and %{ }%
+                blocks the text is HLSL, so use // there — a stray `# note`
+                there is reported as an error.)
+
+Declarations    <kind> Name [: Parent, ...] { body }
+                struct, layout, enum, ComputePSO, GraphicsPSO, WorkgraphPSO,
+                RaytracePSO, RaytraceRaygen, RaytracePass, PassNode, PassView,
+                Pipeline, rt, plus top-level `const`.
+
+Options         [Name] or [Name = value], stackable: [A] [B = 1] or [A, B = 1].
+                They attach to the declaration or statement that follows.
+                Every option name is checked against a per-kind list — an
+                unknown or misspelled option is an error, never silently
+                ignored.
+
+Option values
+  literal              [Size = 128]  [MipCount = 1]
+  name                 [Format = R16G16B16A16_FLOAT]  [EntryPoint = CS]
+  Owner::name          [Size = ViewportContext::frame_size]
+                       [Bind = DefaultLayout::Instance0]
+  flag set             [Always = UnorderedAccess | Static]
+  list                 [Write = {albedo, normals}]
+  raw C++ (backticks)  [Size = `(size_t)Constants::DDGI_ProbeCount * 4`]
+                       Pasted verbatim into generated C++. Escape hatch only:
+                       Prism can't check it or track what it reads.
+  condition            see CONDITIONS below
+
+Types (fields)  HLSL scalars/vectors/matrices (uint, float3, float4x4, int2,
+                float16_t2 ...), resource types (Texture2D<float4>,
+                RWStructuredBuffer<T>, RaytracingAccelerationStructure ...),
+                other Prism structs by name, enums by name.
+                Arrays: `T name[4];` fixed, `T name[];` bindless.
+
+
+--------------------------------------------------------------------------------
+  struct — GPU/CPU SHARED DATA AND BINDINGS
+--------------------------------------------------------------------------------
+
+    [Bind = DefaultLayout::Instance0]
+    struct VoxelTilingParams
+    {
+        uint4 voxels_per_tile;
+        StructuredBuffer<int3> tiles;
+
+        uint3 get_voxel_pos(uint3 dispatchID)
+        {
+            uint tile_index = dispatchID.x / voxels_per_tile.x;
+            return GetTiles()[tile_index] * voxels_per_tile.xyz;
+        }
+    }
+
+Generates a C++ Table::VoxelTilingParams (fields, Get<Field>() accessors,
+compile() into the bound slot) and a matching HLSL struct with Get<Field>()
+accessors. Fields of another struct type nest; `struct B : A` inherits A's
+fields.
+
+Struct options
+  [Bind = Layout::slot]   bind to that root-signature slot (Slots::Name in
+                          C++). Two structs on the SAME slot overwrite each
+                          other within one draw/dispatch — give each struct
+                          used together its own InstanceN slot.
+  [nobind]                not bound to a slot: a plain data type (payloads,
+                          records, nested helpers). C++ is still generated
+                          unless [shader_only].
+  [shader_only]           no C++ table is generated (HLSL-side only).
+  [RenderTarget]          a render-target set: fields are
+                          RenderTarget<T>/DepthStencil<T>; also generates RT::X.
+  [IndirectCommand]       layout of an ExecuteIndirect argument record.
+  [raypayload]            DXR payload struct; fields need access qualifiers:
+                          [read = {anyhit,closesthit,miss,caller}]
+                          [write = {anyhit,closesthit,miss,caller}]
+  [Template = T]          a C++/HLSL template struct parameterised on T.
+  [serialize]             with [RenderTarget]: generates serialization of the
+                          set's constant/struct members.
+
+Field options
+  [dynamic]               variable-size CPU-filled data (DynamicData).
+  [Auto]                  if left unassigned, binds a shared null descriptor
+                          instead of descriptor 0.
+  [Barrier = ALL]         binding records a whole-resource use instead of the
+                          view's own mip/array range (same layout, different
+                          barrier scope).
+  [DispatchSize]          HLSL SV_DispatchGrid (work-graph records).
+  read / write            DXR payload access qualifiers (see [raypayload]).
+
+HLSL functions
+  A function inside a struct body is written out into the struct's generated
+  HLSL, so shaders can call it as a member: `voxels.get_voxel_pos(id)`. It
+  can use the struct's fields and Get<Field>() accessors directly. Overloads
+  are allowed. Only the signature is parsed; the body is HLSL, so it is only
+  checked when the shader compiles.
+    [HLSL]   emit into HLSL — the default, may be omitted.
+    [CPP]    emit into the C++ struct as well: designed, NOT implemented yet
+             (currently reported as an unknown option).
+  %{ ... }% is the older raw-HLSL block with the same effect; it still
+  works, but prefer function members (they take options, show in the
+  outline, and support go-to-definition and hover).
+
+
+--------------------------------------------------------------------------------
+  layout, enum, const
+--------------------------------------------------------------------------------
+
+    layout FrameLayout
+    {
+        slot CameraData;
+        slot SceneData;
+        Sampler linearSampler = SamplerLinearWrapDesc;
+    }
+    layout DefaultLayout : FrameLayout { slot Instance0; ... }
+
+A layout is a root signature: its slots (which structs bind to with
+[Bind = Layout::slot]) and static samplers. `: Parent` inherits the parent's
+slots first. Generates Layouts::Name, SlotID values, and HLSL layout headers.
+
+    enum ShadowSource { VSM; RTXReference; }
+
+Shared C++ (enums.ixx) and HLSL (enums.h) enum. Usable as a field type and
+in conditions (ShadowSource::VSM).
+
+    const DDGI_CascadeCount = 5;
+    const WG_TileSection = `8u + 256u * 256u * sizeof(Table::TileRecord)`;
+
+A named constant in C++ namespace Constants (Constants.ixx), in declaration
+order, so a later raw value may reference an earlier one.
+
+
+--------------------------------------------------------------------------------
+  ComputePSO / GraphicsPSO
+--------------------------------------------------------------------------------
+
+    ComputePSO MipMapping
+    {
+        root = DefaultLayout;
+
+        [EntryPoint = CS]
+        compute = "postprocess/generate_mips.hlsl";
+
+        [rename = NON_POWER_OF_TWO]
+        [CS]
+        define NonPowerOfTwo = {0,1,2,3};
+    }
+
+    GraphicsPSO GBufferDraw
+    {
+        root = DefaultLayout;
+        [EntryPoint = VS] mesh = "gbuffer/mesh_shader.hlsl";
+        [EntryPoint = AS] amplification = "gbuffer/mesh_shader.hlsl";
+        rtv = { R8G8B8A8_UNORM, R8G8B8A8_UNORM, R16G16_FLOAT };
+        ds = D32_FLOAT;
+        cull = None;
+    }
+
+Generates PSOS::Name with a Keys struct (one member per define) and the
+code that fills in a SimplePSO, and registers the PSO in the PSO enum.
+
+root = Layout              the root signature to use.
+
+Shaders   <stage> = "path.hlsl";   path relative to workdir/shaders, extension
+          included. The file must exist (checked). Stages: compute, vertex,
+          pixel, geometry, hull, domain, mesh, amplification.
+          Options: [EntryPoint = fn] (required), [Enable16bits] (FP16),
+                   [Erase] (remove a stage inherited from a parent PSO; used
+                   with the sentinel `pixel = null;`).
+
+Defines   `define Name;` is an on/off permutation key.
+          `define Name = {0,1,2,3};` has one variant per listed value.
+          Each define becomes a member of PSOS::Name::Keys; the runtime picks
+          (and caches) the variant for the key values it's given.
+          Options: [CS]/[PS]/[VS]/[GS]/[HS]/[MS]/[AS] — the stages that see
+                   the define; [rename = MACRO] — HLSL macro name (defaults to
+                   the define's name); [type = Format] — the key holds that
+                   type instead of int; [indirect] — C++ selects the variant
+                   by index into the listed values instead of by the value.
+
+Graphics-only
+  rtv = { formats... };    render-target formats; an entry may name a define,
+                           so the format becomes part of the key.
+  blend = { modes... };    HAL::Blends per render target.
+  ds, cull, depth_func, depth_write, enable_depth, depth_bias,
+  depth_bias_clamp, slope_scaled_depth_bias, conservative, topology,
+  enable_stencil, stencil_func, stencil_pass_op, stencil_read_mask,
+  stencil_write_mask       fixed-function state (HAL enums/values).
+
+Options on the PSO: [Template] (generated only as a base for others, not
+registered), [ExcludeVulkan] (D3D12 only). Inheritance: `ComputePSO B : A`.
+
+
+--------------------------------------------------------------------------------
+  RaytracePSO / RaytraceRaygen / RaytracePass
+--------------------------------------------------------------------------------
+
+    RaytracePSO MainRTX { root = DefaultLayout; }
+
+    [Bind = MainRTX]
+    RaytraceRaygen Shadow
+    {
+        [EntryPoint = ShadowRaygenShader]
+        raygen = "rtx/raytracing.hlsl";
+    }
+
+    [Bind = MainRTX]
+    RaytracePass ColorPass
+    {
+        [EntryPoint = MyMissShader]        miss = "rtx/raytracing.hlsl";
+        [EntryPoint = MyClosestHitShader]  closest_hit = none;
+        [EntryPoint = MyAnyHitShader]      any_hit = none;
+        payload = RayPayload;
+        local = MaterialInfo;
+        per_material = true;
+    }
+
+A RaytracePSO collects every raygen and pass whose [Bind] names it (required,
+and checked). Raygens/passes get their ::ID from their position within that
+PSO, across all .prism files, so they can live in any file.
+`closest_hit = none;` / `any_hit = none;` declare a per-material hit shader
+(compiled per material rather than from one file). Pass params: payload
+(the [raypayload] struct), local (local root-signature struct),
+per_material, recursion_depth.
+
+
+--------------------------------------------------------------------------------
+  WorkgraphPSO
+--------------------------------------------------------------------------------
+
+    [ExcludeVulkan] WorkgraphPSO WorkGR
+    {
+        root = DefaultLayout;
+        shader = "dev/workgraph_test.hlsl";
+
+        Node ClassifyPixels_Node
+        {
+            launch = broadcasting;
+            entry = true;
+            num_threads = { 64, 1, 1 };
+            max_dispatch_grid = { 256, 64, 64 };
+            input = GraphInput;
+            [MaxRecords = 64]
+            NodeOutput TileRecord Shadows_Node;
+        }
+        Node Shadows_Node { launch = thread; input = TileRecord; }
+    }
+
+Work graphs run through the emulation path: each node becomes its own
+compute PSO (PSOS::Graph_Node) plus HLSL WG_* macros. Node params: launch,
+entry, num_threads, max_dispatch_grid, input. Outputs: NodeOutput <record>
+<target node>, with [MaxRecords = N].
+
+
+--------------------------------------------------------------------------------
+  PassNode — FRAMEGRAPH PASSES
+--------------------------------------------------------------------------------
+
+    [SetupCondition = DDGISelectors::enabled]
+    [Compute] [Multiple = 5]
+    PassNode DDGIProbeSelect
+    {
+        [Always = UnorderedAccess | Static]
+        [Size = `(size_t)Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount`]
+        [Optional = data.pass_index == 0]
+        StructuredBuffer<DDGIProbeMetadata> DDGI_Probes;
+
+        [Always = Read] Texture GBuffer_Depth;
+        [Write] Texture ResultTexture;
+    }
+
+Each field is a FrameGraph resource, named by its field name — the same name
+in any pass is the same resource (ResourceID::Name). Field types are
+FrameGraph handler types: Texture, TextureCube, Texture3D,
+StructuredBuffer<T>, FormattedBuffer, ByteAdressBuffer (spelled that way in
+FrameGraph.Base.ixx), or a PassView name (a group of fields). A field of type
+int/uint/bool/float is plain per-frame CPU state instead, not a resource.
+
+Generates Passes::Name { Context with a handle per field, flags, ID, and a
+generated setup that performs every need()/create() below }.
+
+Field options
+  [Always = Flags]      need() the resource with those ResourceFlags every
+                        frame the pass runs (Read, UnorderedAccess, CopyDest,
+                        RenderTarget, DepthStencil, Static, Required,
+                        ExclusiveRead ...). A write flag makes it a write.
+  [Size = ...]          with [Always], CREATE the resource instead of just
+                        needing it. Literal N (N×N texture or N-element
+                        buffer), Owner::field (read from that context each
+                        frame, e.g. ViewportContext::frame_size) or backticks.
+  [Format = F]          creation format (HAL::Format); with [Always], also
+                        means create.
+  [MipCount = N], [ArrayCount = N]
+                        creation mip/array counts.
+  [Write]               this pass writes the field (explicit, without
+                        [Always]). On a PassView-typed field: [Write] writes
+                        the whole group, [Write = {a, b}] writes those leaves.
+  [Optional = cond]     the need()/create() only happens when cond is true
+                        (see CONDITIONS).
+  [Recreate = NewName]  after this pass, the resource continues as a new
+                        version called NewName (a separate ResourceID) — for
+                        in-place update chains. [RecreateFlags = Flags] gives
+                        the new version's flags.
+  [PrevFor = X]         this field is last frame's copy of resource X (a
+                        history link that survives resizes).
+  [SkipEnablement]      appended to [Always]'s flags
+                        (ResourceFlags::SkipEnablement).
+
+Pass options
+  [Compute]             may run on a compute queue (actually does only when
+                        the pipeline entry says [Async]).
+  [Required]            PassFlags::Required.
+  [Multiple = N]        N instances of the pass (Names[N], per-instance
+                        render_funcs); each instance gets data.pass_index.
+  [Static]              render() is a hand-written free function,
+                        PassDefault<Passes::Name>::render (declared in
+                        pass_defaults.h); the pipeline calls it instead of
+                        the pass's render_func.
+  [SetupCondition = c]  the pass is disabled for the frame when c is false.
+  [RenderCondition = c] the pass is set up (its resources stay alive) but its
+                        render is skipped when c is false.
+  [RunAlways]           always enabled.
+  [PreSetup]            adds PassDefault<T>::pre_setup(Graph&), run once per
+                        frame before graph setup whether or not the pass ends
+                        up enabled — for real side effects.
+
+  With any of RunAlways/SetupCondition/RenderCondition the whole setup() is
+  generated (into pass_defaults.cpp) and you supply only render. Without
+  them, the owner supplies setup_func as well.
+
+  Converting a pass between [Static] and [Multiple] changes the C++ shape you
+  must provide (PassDefault<T>::render vs render_funcs[N]); see PSSM_Cascade
+  in PSSM.ixx for the [Multiple] pattern.
+
+
+--------------------------------------------------------------------------------
+  CONDITIONS
+--------------------------------------------------------------------------------
+
+Used by [SetupCondition], [RenderCondition] and [Optional]. Written like a C++
+boolean expression, but parsed and checked by Prism:
+
+  Owner::field            a field of a context struct: becomes
+                          builder.graph->get_context<Table::Owner>().field.
+                          Owner must be a struct and field must exist.
+  Enum::Value             an enum value (checked to exist).
+  data.field              a field of this pass (including data.pass_index on
+                          [Multiple] passes).
+  exists(field)           the resource field is produced by some pass this
+                          frame (builder.exists(data.field)).
+  literals, && || ! == != < <= > >= ( )
+
+    [Optional = VSMSelectors::shadow_source == ShadowSource::VSM
+                && exists(VSM_PCSS_ShadowNoise)]
+
+Because conditions are parsed, Prism knows exactly which context fields each
+pass's enable decision reads (context_deps.h) — the basis for caching graph
+plans. A backtick condition works but makes that dependency set unknown.
+
+
+--------------------------------------------------------------------------------
+  PassView, Pipeline, rt
+--------------------------------------------------------------------------------
+
+    PassView GBuffer { [Always = Read] Texture GBuffer_Albedo; ... }
+
+A named group of pass fields, used as a field type in a PassNode
+(`GBuffer gbuffer;`); its leaves are declared as if written in the pass.
+[Always] on a leaf is the default for every consumer. (Supported by the
+grammar and generator; no current .prism file declares one.)
+
+    Pipeline MainPipeline
+    {
+        PreScene;
+        [Async] BlueNoise;
+        Voxelize;
+        ...
+    }
+
+An ordered pass list. Generates Pipelines::Name with a member per pass,
+add_passes(Graph&), and precomputed resource-state timelines and pass
+dependencies. Entry options: [Async] / [Async2] / [Async3] — run this
+[Compute] pass on async compute queue 1/2/3. Every entry must name an existing PassNode
+(checked).
+
+    rt Name { float4 color; DSV depth; }
+
+Older render-target declaration; [RenderTarget] structs replaced it in
+current files.
+
+
+--------------------------------------------------------------------------------
+  WHAT prismc CHECKS
+--------------------------------------------------------------------------------
+
+Syntax errors, with the exact position; a file with a syntax error produces
+no output and stops the run.
+
+Semantic checks (Validate.cpp):
+  - every option name, per declaration kind (with "did you mean")
+  - condition references: Owner::field, Enum::Value, data.field, exists(field)
+  - [Size = Owner::field] names a real struct field
+  - [Write = {leaves}] names fields of that PassView
+  - Pipeline entries name existing PassNodes
+  - RaytraceRaygen/RaytracePass have a [Bind] naming a RaytracePSO
+  - shader paths: quoted, end in .hlsl, file exists under workdir/shaders
+  - duplicate declarations of the same kind across all files
+  - `#` lines in HLSL function bodies / %{ }% that aren't preprocessor
+    directives
+
+Adding a new option to the language means: teach a template or Main.cpp to
+read it, AND add it to KNOWN_OPTIONS in Validate.cpp — otherwise every use of
+it is rejected as unknown.
+
+
+--------------------------------------------------------------------------------
+  EDITOR SUPPORT (Visual Studio)
+--------------------------------------------------------------------------------
+
+Install bin/editor/prism.vsix (built by
+`python sources/Prism/editor/gen_vs_extension.py`; needs the VS Installer's
+"Visual Studio extension development" workload). It provides:
+
+  - syntax highlighting (generated from Prism.g4: keywords, built-in types,
+    formats, options, user-declared names via the language server) with the
+    C++ grammar inside HLSL bodies
+  - live errors in the Error List as you type, with quick fixes (Ctrl+.)
+  - go-to-definition (F12): structs, fields, enum values, layouts/slots,
+    passes, functions, and shader paths (opens the .hlsl)
+  - hover: struct bodies, field types, function signatures (all overloads),
+    where an option is accepted and which values are in use
+  - completion: Owner:: members, data. fields, option names valid at that
+    position, option values already used elsewhere, shader files inside
+    the quotes of `compute = "..."`
+  - outline (navigation bar) and Ctrl+T symbol search
+  - Tools > Regenerate Prism code / the Prism toolbar
+
+Rebuild the VSIX after changing the grammar or the compiler: it bundles the
+prismc.exe it was built with. Set PRISM_LSP_SERVER to another prismc.exe to try
+a server without reinstalling.
+
+
+--------------------------------------------------------------------------------
+  COMMON TASKS
+--------------------------------------------------------------------------------
+
+Add shader data a pass binds
+  1. `[Bind = DefaultLayout::InstanceN] struct MyParams { ... }` — pick a
+     slot no other struct used in the same draw/dispatch occupies.
+  2. Regenerate; fill Slots::MyParams in C++ and set it on the list.
+  3. In HLSL include the generated header and read GetMyParams().
+
+Add a compute pass
+  Use the add-render-pass skill (.claude/skills/add-render-pass). In short:
+  ComputePSO with `compute = "dir/file.hlsl"`, a PassNode with the resources
+  it reads/writes, an entry in the Pipeline, regenerate, then implement the
+  render function and the shader.
+
+Make a pass optional
+  Put the switch in a context struct (Variable<bool> on the C++ side, a
+  field in a Prism struct) and use [SetupCondition = MyContext::enabled].
+
+
+--------------------------------------------------------------------------------
+  PITFALLS
+--------------------------------------------------------------------------------
+
+- Two structs on the same [Bind] slot overwrite each other in one draw — the
+  symptom is geometry that draws but is invisible or wrong.
+- A nested (non-[Bind]) struct whose ONLY field is a resource is dropped from
+  the generated struct without any error (REFACTOR_TODO item 9); give it a
+  leading plain field.
+- A PSO whose shader never touches its bound resources asserts
+  (!slots.empty()) at startup rather than being a no-op.
+- A stale prismc.exe generates output that disagrees with the current
+  templates: rebuild the Prism project after changing the generator.
+- A new generated file is invisible to the build until generate_project.bat
+  runs (the VS button detects this and offers to run it).
+- Backtick expressions and HLSL bodies are not checked by Prism: their errors
+  surface as C++ compile errors or at shader compile time.
+
+================================================================================

@@ -89,7 +89,7 @@ namespace nvidia
 		// NRD's one-frameIndex-increment-per-Instance-per-frame requirement).
 		//
 		// REBLUR_DIFFUSE for indirect GI (RTXIndirectNoise, IndirectRTX,
-		// voxel.sig). REBLUR_SPECULAR for reflections (RTXReflectionNoise/
+		// voxel.prism). REBLUR_SPECULAR for reflections (RTXReflectionNoise/
 		// VoxelReflectionNoise) -- a separate denoiser rather than the
 		// combined REBLUR_DIFFUSE_SPECULAR method, so either signal can be
 		// denoised independently of the other (g_indirect_denoiser and
@@ -111,7 +111,7 @@ namespace nvidia
 			Log::get() << "[NRD] REBLUR CreateInstance failed (" << (int)reblur_res << ")" << Log::endl;
 
 		// SIGMA_SHADOW for VSM's non-penumbra fallback (VSM_Combine/
-		// NRD_SIGMA_Execute, vsm.sig/nrd_sig_test.sig).
+		// NRD_SIGMA_Execute, vsm.prism/nrd_sig_test.prism).
 		static const nrd::DenoiserDesc sigma_denoisers[] = {
 			{ 0, nrd::Denoiser::SIGMA_SHADOW }
 		};
@@ -238,7 +238,7 @@ namespace nvidia
 		return r.descriptorType == nrd::DescriptorType::TEXTURE ? dummy_srv : dummy_uav;
 	}
 
-	// Clear.cs.hlsl|FLOAT=1 -- first ported kernel (see nrd_sig_test.sig,
+	// Clear.cs.hlsl|FLOAT=1 -- first ported kernel (see nrd_sig_test.prism,
 	// workdir/shaders/nrd/sig_clear.hlsl). Clear.resources.hlsli declares
 	// gDebug/gViewZScale/gDenoisingRange only "for availability in
 	// Common.hlsl" -- Clear.cs.hlsl's actual body (gOut[pixelPos] = 0;) never
@@ -278,7 +278,7 @@ namespace nvidia
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
 
-	// Clear.cs.hlsl|FLOAT=0 -- the uint4 permutation (nrd_sig_test.sig's
+	// Clear.cs.hlsl|FLOAT=0 -- the uint4 permutation (nrd_sig_test.prism's
 	// Clear_UInt4Resources/NRD_Clear_UInt4, sig_clear_uint4.hlsl), for
 	// integer-format pool resources (e.g. SIGMA's gOut_HistoryLength,
 	// RWTexture2D<uint>) that dispatch_clear's float4-typed view can't
@@ -309,7 +309,7 @@ namespace nvidia
 	// Item 8 (see [[project-nrd-integration]]): real REBLUR_DIFFUSE dispatch
 	// wiring. resolve_srv/resolve_uav resolve one nrd::ResourceDesc entry
 	// (from a DispatchDesc::resources[] array, walked position-for-position
-	// against each kernel's .sig struct field order below -- both are
+	// against each kernel's .prism struct field order below -- both are
 	// derived from the same source, that kernel's real resources.hlsli
 	// NRD_INPUTS/NRD_OUTPUTS declaration order, so position i in one matches
 	// field i in the other) into a bindable view: PERMANENT_POOL/
@@ -389,7 +389,7 @@ namespace nvidia
 
 	// SIGMASharedConstants is #pragma pack(push,1) with fields in the exact
 	// order/type of SIGMA_Config.hlsli's SIGMA_SHARED_CONSTANTS macro (see
-	// nrd_sig_test.sig's comment) -- verified by hand against HLSL's default
+	// nrd_sig_test.prism's comment) -- verified by hand against HLSL's default
 	// cbuffer packing rules (no field here straddles a 16-byte boundary), so
 	// NRD's own raw constantBufferData blob can be copied onto it directly.
 	// The size assert is the real safety net, same reasoning as
@@ -405,7 +405,7 @@ namespace nvidia
 	}
 
 	// SIGMA_SHADOW dispatch wiring, same resolve_srv/resolve_uav plumbing and
-	// positional dispatch.resources[] -> .sig struct field order convention
+	// positional dispatch.resources[] -> .prism struct field order convention
 	// as REBLUR above, now with real shared constants too (see
 	// fill_sigma_shared_constants above -- every SIGMA kernel's own
 	// .resources.hlsli includes the same SIGMA_SHARED_CONSTANTS block
@@ -453,7 +453,7 @@ namespace nvidia
 
 	// FIRST_PASS=0 permutation of SIGMA_Blur.cs.hlsl -- gIn_Shadow_Translucency
 	// (the previous frame's OUT_SHADOW_TRANSLUCENCY, read back as history) IS
-	// compiled in, see nrd_sig_test.sig's SIGMA_BlurFirstPass0Resources comment.
+	// compiled in, see nrd_sig_test.prism's SIGMA_BlurFirstPass0Resources comment.
 	static void dispatch_sigma_blur_firstpass0(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 7);
@@ -472,7 +472,7 @@ namespace nvidia
 	}
 
 	// FIRST_PASS=1 permutation -- no gIn_Shadow_Translucency (one fewer input
-	// than FIRST_PASS=0), see nrd_sig_test.sig's SIGMA_BlurFirstPass1Resources
+	// than FIRST_PASS=0), see nrd_sig_test.prism's SIGMA_BlurFirstPass1Resources
 	// comment.
 	static void dispatch_sigma_blur_firstpass1(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
@@ -511,7 +511,7 @@ namespace nvidia
 
 	// REBLURSharedConstants is #pragma pack(push,1) with fields in the exact
 	// order/type of REBLUR_Config.hlsli's REBLUR_SHARED_CONSTANTS macro (see
-	// nrd_sig_test.sig's comment) -- verified by hand against HLSL's default
+	// nrd_sig_test.prism's comment) -- verified by hand against HLSL's default
 	// cbuffer packing rules (no field here straddles a 16-byte boundary, so
 	// zero implicit padding is needed at any point in this exact sequence),
 	// so NRD's own raw constantBufferData blob can be copied onto it
@@ -547,7 +547,7 @@ namespace nvidia
 	}
 
 	// Shared by both HitDistReconstruction PSOs (MODE_5X5=0/1 -- identical
-	// resource layout, see nrd_sig_test.sig's comment on the 5x5 PSO).
+	// resource layout, see nrd_sig_test.prism's comment on the 5x5 PSO).
 	template<typename PSO>
 	static void dispatch_reblur_hitdistreconstruction(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
@@ -566,7 +566,7 @@ namespace nvidia
 
 	// REBLUR_SPECULAR sibling of dispatch_reblur_hitdistreconstruction --
 	// same resource count/layout (4 in + 1 out, Diff->Spec renamed), see
-	// nrd_sig_test.sig's REBLUR_HitDistReconstructionSpecularResources
+	// nrd_sig_test.prism's REBLUR_HitDistReconstructionSpecularResources
 	// comment.
 	template<typename PSO>
 	static void dispatch_reblur_hitdistreconstruction_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
@@ -601,7 +601,7 @@ namespace nvidia
 
 	// REBLUR_SPECULAR sibling of dispatch_reblur_prepass -- one extra output
 	// (gOut_SpecHitDistForTracking, no diffuse equivalent), see
-	// nrd_sig_test.sig's REBLUR_PrePassSpecularResources comment.
+	// nrd_sig_test.prism's REBLUR_PrePassSpecularResources comment.
 	static void dispatch_reblur_prepass_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 6);
@@ -645,7 +645,7 @@ namespace nvidia
 	}
 
 	// REBLUR_SPECULAR sibling of dispatch_reblur_temporalaccumulation -- see
-	// nrd_sig_test.sig's REBLUR_TemporalAccumulationSpecularResources comment
+	// nrd_sig_test.prism's REBLUR_TemporalAccumulationSpecularResources comment
 	// for the field-list differences vs diffuse (14 in + 5 out here, vs
 	// diffuse's 12 in + 4 out).
 	static void dispatch_reblur_temporalaccumulation_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
@@ -697,7 +697,7 @@ namespace nvidia
 
 	// REBLUR_SPECULAR sibling of dispatch_reblur_historyfix -- one extra input
 	// (gIn_SpecHitDistForTracking, no diffuse equivalent), see
-	// nrd_sig_test.sig's REBLUR_HistoryFixSpecularResources comment.
+	// nrd_sig_test.prism's REBLUR_HistoryFixSpecularResources comment.
 	static void dispatch_reblur_historyfix_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 9);
@@ -735,7 +735,7 @@ namespace nvidia
 	}
 
 	// REBLUR_SPECULAR sibling of dispatch_reblur_blur -- same resource count
-	// (5 in + 2 out, Diff->Spec renamed), see nrd_sig_test.sig's
+	// (5 in + 2 out, Diff->Spec renamed), see nrd_sig_test.prism's
 	// REBLUR_BlurSpecularResources comment.
 	static void dispatch_reblur_blur_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
@@ -775,7 +775,7 @@ namespace nvidia
 
 	// REBLUR_SPECULAR sibling of dispatch_reblur_postblur_ts0 -- same
 	// resource count (5 in + 4 out, Diff->Spec renamed), see
-	// nrd_sig_test.sig's REBLUR_PostBlurTS0SpecularResources comment.
+	// nrd_sig_test.prism's REBLUR_PostBlurTS0SpecularResources comment.
 	static void dispatch_reblur_postblur_ts0_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 9);
@@ -814,7 +814,7 @@ namespace nvidia
 
 	// REBLUR_SPECULAR sibling of dispatch_reblur_postblur_ts1 -- same
 	// resource count (5 in + 2 out, Diff->Spec renamed), see
-	// nrd_sig_test.sig's REBLUR_PostBlurTS1SpecularResources comment.
+	// nrd_sig_test.prism's REBLUR_PostBlurTS1SpecularResources comment.
 	static void dispatch_reblur_postblur_ts1_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 7);
@@ -855,7 +855,7 @@ namespace nvidia
 
 	// REBLUR_SPECULAR sibling of dispatch_reblur_temporalstabilization -- one
 	// extra input (gIn_SpecHitDistForTracking, no diffuse equivalent), see
-	// nrd_sig_test.sig's REBLUR_TemporalStabilizationSpecularResources comment.
+	// nrd_sig_test.prism's REBLUR_TemporalStabilizationSpecularResources comment.
 	static void dispatch_reblur_temporalstabilization_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 12);
@@ -1060,7 +1060,7 @@ namespace nvidia
 		reblur_needs_history_reset = false;
 		nrd::SetCommonSettings(*reblur_instance, common);
 
-		// Library defaults throughout (see nrd_sig_test.sig's REBLURSharedConstants
+		// Library defaults throughout (see nrd_sig_test.prism's REBLURSharedConstants
 		// comment and raytracing.hlsl's gHitDistParams -- both must move
 		// together with hitDistanceParameters if this is ever tuned).
 		nrd::ReblurSettings reblur_settings{};
@@ -1093,7 +1093,7 @@ namespace nvidia
 			// `|`-suffix on the identifier string, not the prefix
 			// build_dispatch_table's starts_with() checks match on), so
 			// dispatch.identifier is what actually distinguishes which
-			// (differently-shaped, see nrd_sig_test.sig's per-kernel
+			// (differently-shaped, see nrd_sig_test.prism's per-kernel
 			// Specular struct comments) resource list this dispatch carries.
 			bool is_specular = dispatch.identifier == 1;
 

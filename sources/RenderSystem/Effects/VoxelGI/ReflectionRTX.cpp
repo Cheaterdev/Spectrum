@@ -10,7 +10,7 @@ import Core;
 using namespace FrameGraph;
 using namespace HAL;
 
-// setup() is fully generated (voxel.sig's own [SetupCondition]).
+// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
 void PassDefault<Passes::ReflectionRTXHalf>::render(
 	Passes::ReflectionRTXHalf::Context& data, FrameContext& context)
@@ -59,7 +59,7 @@ void PassDefault<Passes::ReflectionRTXHalf>::render(
 	}
 }
 
-// setup() is fully generated (voxel.sig's own [SetupCondition]) -- feeds
+// setup() is fully generated (voxel.prism's own [SetupCondition]) -- feeds
 // NRD_REBLUR_Execute (REBLUR_SPECULAR, see [[project-nrd-integration]]) and,
 // under DLSS-RR, RTXCombine -- gated purely on RTX/hardware support now,
 // independent of upscaler (NRD is the only reflection denoiser).
@@ -86,7 +86,7 @@ void PassDefault<Passes::ReflectionRTX>::render(
 	// binding path (RTXShadow reuses it the same way, GBuffer only) -- its
 	// voxel-texture/cubemap fields are left unset (reads descriptor 0, an
 	// established pattern for fields no bound shader ever samples, see the
-	// struct's own comment in voxel.sig). MyRaygenShaderReflectionRTXOnly
+	// struct's own comment in voxel.prism). MyRaygenShaderReflectionRTXOnly
 	// never calls GetVoxels()/GetTex_cube(), and SlotID::VoxelInfo is never
 	// bound at all -- this pass touches no voxel data whatsoever.
 	{

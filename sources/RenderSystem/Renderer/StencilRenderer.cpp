@@ -455,7 +455,7 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 
 	// ---- Pass function members -----------------------------------------------
 
-	// setup() is fully generated (stenciler.sig's own [RunAlways]); the camera/
+	// setup() is fully generated (stenciler.prism's own [RunAlways]); the camera/
 	// gizmo work it used to do runs in update_frame().
 
 	m_before_render = [this](Passes::stencil_renderer_before::Context& data, FrameGraph::FrameContext& context)
@@ -598,7 +598,7 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 		});
 	};
 
-	// setup() is fully generated (stenciler.sig's own [SetupCondition]).
+	// setup() is fully generated (stenciler.prism's own [SetupCondition]).
 
 	m_after_render = [this](Passes::stencil_renderer_after::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -790,7 +790,7 @@ void stencil_renderer::update_frame(FrameGraph::Graph& graph)
 	axis_intersect_cam.update();
 
 	// Mirror for stencil_renderer_after's generated [SetupCondition]
-	// (stenciler.sig).
+	// (stenciler.prism).
 	// ::Table -- GUI::Elements::Table (Table.ixx) is also visible here, so the
 	// unqualified name is ambiguous.
 	graph.get_context<::Table::StencilState>().has_selection = !selected.empty();

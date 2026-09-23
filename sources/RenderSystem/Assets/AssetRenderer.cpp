@@ -32,7 +32,7 @@ public:
 
     SceneRenderWorkflow() : pipeline(), sky(pipeline), pssm(pipeline)
     {
-        // Both setups are fully generated (AssetRenderer.sig's own [RunAlways]).
+        // Both setups are fully generated (AssetRenderer.prism's own [RunAlways]).
         // AssetMip goes through the pipeline now rather than a raw
         // add_library_pass in render(): the pipeline registers a pass only when
         // its render_func is set, so the wiring belongs next to assetGBuffer's.

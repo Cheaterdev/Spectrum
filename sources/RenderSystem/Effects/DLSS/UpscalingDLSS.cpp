@@ -16,7 +16,7 @@ namespace
 	constexpr bool kHDR = true;
 }
 
-// setup() is fully generated (UpscalingDLSS.sig's own [SetupCondition]).
+// setup() is fully generated (UpscalingDLSS.prism's own [SetupCondition]).
 
 void PassDefault<Passes::UpscalingDLSS>::render(
 	Passes::UpscalingDLSS::Context& data, FrameContext& context)

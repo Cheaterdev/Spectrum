@@ -18,7 +18,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 		return;
 
 	// This cascade's own linear offset into the shared (DDGI_CascadeCount-
-	// times-larger) probe buffer -- see DDGIInfo's own comment (ddgi.sig).
+	// times-larger) probe buffer -- see DDGIInfo's own comment (ddgi.prism).
 	uint probe_offset = GetDDGIProbeSelectData().GetInfo().GetCascade_info().x;
 	GetDDGIProbeSelectData().GetProbes().GetProbes()[probe_offset + linear_index].last_full_update_frame = 0;
 }

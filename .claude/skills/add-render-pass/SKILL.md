@@ -1,25 +1,25 @@
 ---
 name: add-render-pass
-description: Add a new render or compute pass to the FrameGraph end to end — the .sig PassNode and PSO declaration, code generation, the setup/render implementation, the HLSL shader, and pipeline registration. Use this skill whenever adding a new rendering effect, post-process, compute dispatch, shadow, or GBuffer stage, whenever a new PassNode or ComputePSO/GraphicsPSO is needed, or when an existing pass needs new resource reads/writes wired through the FrameGraph. Also use it when a newly added pass never executes, since that is usually a pipeline registration or setup-return problem rather than a bug in the render body.
+description: Add a new render or compute pass to the FrameGraph end to end — the .prism PassNode and PSO declaration, code generation, the setup/render implementation, the HLSL shader, and pipeline registration. Use this skill whenever adding a new rendering effect, post-process, compute dispatch, shadow, or GBuffer stage, whenever a new PassNode or ComputePSO/GraphicsPSO is needed, or when an existing pass needs new resource reads/writes wired through the FrameGraph. Also use it when a newly added pass never executes, since that is usually a pipeline registration or setup-return problem rather than a bug in the render body.
 ---
 
 # Adding a FrameGraph pass
 
-A pass is declared in a `.sig` file and implemented in C++, with the generator
+A pass is declared in a `.prism` file and implemented in C++, with the generator
 producing the glue between them. Getting the declaration right matters more
 than the render body — the declaration is what the FrameGraph uses to schedule
 the pass and to compute its barriers, so a wrong read/write flag produces
 validation errors or corrupt results that look like shader bugs.
 
-Read `sources/RenderSystem/Effects/Sky.cpp` alongside `sources/SIGParser/sigs/sky.sig`
+Read `sources/RenderSystem/Effects/Sky.cpp` alongside `sources/Prism/defs/sky.prism`
 before starting. Between them they show both wiring styles, a graphics PSO and
 several compute PSOs, resource creation, and per-mip view handling — it is the
 best single reference in the tree.
 
-## 1. Declare in a `.sig` file
+## 1. Declare in a `.prism` file
 
-Put the declaration in an existing `.sig` that matches the subsystem, or a new
-one in `sources/SIGParser/sigs/`.
+Put the declaration in an existing `.prism` that matches the subsystem, or a new
+one in `sources/Prism/defs/`.
 
 **Binding struct** — the shader-visible parameters. `[Bind = DefaultLayout::InstanceN]`
 selects the root-signature slot; distinct structs bound in the same pass need
@@ -75,7 +75,7 @@ resource; introducing a new spelling silently creates an unrelated resource.
   `PassDefault<Passes::X>` specialization declaring `setup` and `render`, which
   you then define out-of-line. Without `[Static]` no such specialization exists
   and the pass must be wired at runtime by assigning `setup_func`/`render_func`.
-  See `sources/SIGParser/templates/cpp/pass_defaults.jinja` for the exact rule.
+  See `sources/Prism/templates/cpp/pass_defaults.jinja` for the exact rule.
 
 Choose `[Static]` when the pass is self-contained. Choose runtime wiring when
 the pass needs state owned by a C++ object — loaded textures, cached history
@@ -83,7 +83,7 @@ buffers, persistent settings.
 
 ## 2. Regenerate
 
-Use the `sig-regen` skill. In short: run the generator from `sources/SIGParser`,
+Use the `prism-regen` skill. In short: run the generator from `sources/Prism`,
 then run `generate_project.bat` because a new `PassNode` and PSO create new
 files that the projects don't yet list.
 
@@ -151,7 +151,7 @@ no D3D12 output at all. In that pass, use the owning `HAL::Texture` directly.
 
 Create the file the PSO's `compute =`/`vertex =`/`pixel =` string names under
 `workdir/shaders/`, with a function named by `[EntryPoint = ...]`. Include the
-generated binding header so the struct layout stays in sync with the `.sig`.
+generated binding header so the struct layout stays in sync with the `.prism`.
 
 ## 5. Register in a pipeline
 
@@ -170,7 +170,7 @@ Pipeline AssetPipeline
 ```
 
 Add it to every pipeline that should run it — `AssetPipeline` and the pipeline
-in `test.sig` are separate graphs and adding to one does not affect the other.
+in `test.prism` are separate graphs and adding to one does not affect the other.
 Then regenerate again, since the pipeline block changed.
 
 ## 6. Verify

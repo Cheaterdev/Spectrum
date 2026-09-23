@@ -1,10 +1,10 @@
 // Front-end packing for NRD REBLUR_DIFFUSE/REBLUR_SPECULAR (see
-// [[project-nrd-integration]] and nrd_sig_test.sig's NRD_GBufferPack
+// [[project-nrd-integration]] and nrd_sig_test.prism's NRD_GBufferPack
 // comment). Derives IN_VIEWZ (linear view-space Z), IN_NORMAL_ROUGHNESS
 // (NRD_FrontEnd_PackNormalAndRoughness encoding) and IN_MV from the existing
 // GBuffer, and packs IN_DIFF/SPEC_RADIANCE_HITDIST from whichever raw
 // candidate (RTX or VCT) indirect_use_vct/reflection_use_vct selects -- see
-// this pass's .sig comment for why packing lives here now instead of at
+// this pass's .prism comment for why packing lives here now instead of at
 // each raygen, and why only the selected candidate, not both.
 #include "../autogen/NRD_GBufferPackParams.h"
 #include "../autogen/FrameInfo.h"
@@ -53,7 +53,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	}
     Out_ViewZ[dispatchID.xy] = viewZ;
 
-	// compress_normals() (FrameData.sig) always scales the unit normal by a
+	// compress_normals() (FrameData.prism) always scales the unit normal by a
 	// positive scalar before biasing to [0,1] -- re-normalizing recovers the
 	// original direction exactly (same decode as normal_roughness_repack.hlsl).
 	float4 encoded = GBuffer_Normals[dispatchID.xy];
@@ -67,7 +67,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	Out_NormalRoughness[dispatchID.xy] = NRD_FrontEnd_PackNormalAndRoughness(normal, roughness, 0);
 
 	// REBLUR's gIn_Mv is hardcoded Texture2D<float3> regardless of 2D/3D
-	// mode (see this pass's .sig comment) -- GBuffer_Speed is only 2D
+	// mode (see this pass's .prism comment) -- GBuffer_Speed is only 2D
 	// screen-space, so z is a constant 0 pad, matching
 	// CommonSettings::motionVectorScale.z = 0 (set in HAL.NRD.cpp).
 	Out_Mv[dispatchID.xy] = float4(GBuffer_Speed[dispatchID.xy], 0, 0);

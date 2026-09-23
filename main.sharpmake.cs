@@ -53,7 +53,7 @@ namespace Spectrum
         {
             
            
-            SourceFilesExtensions.Add(".sig");
+            SourceFilesExtensions.Add(".prism");
             SourceFilesExtensions.Add(".hlsl");
 			SourceFilesExtensions.Add(".ixx");
 	        SourceFilesExtensions.Add(".g4");
@@ -414,12 +414,12 @@ namespace Spectrum
     }
 
     [Sharpmake.Generate]
-    public class SIGParser : Application
+    public class Prism : Application
     {
-        public SIGParser()
+        public Prism()
         {
-            SourceRootPath = @"[project.SharpmakeCsPath]\sources\SIGParser";
-            AssemblyName = "SIGParser";
+            SourceRootPath = @"[project.SharpmakeCsPath]\sources\Prism";
+            AssemblyName = "Prism";
         }
 
         public override void ConfigureAll(Configuration conf, CustomTarget target)
@@ -427,14 +427,16 @@ namespace Spectrum
             base.ConfigureAll(conf, target);
             conf.Options.Remove(Options.Vc.Linker.SubSystem.Windows);
             conf.Options.Add(Options.Vc.General.CharacterSet.Unicode);
-            conf.Options.Remove(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors    
+            conf.Options.Remove(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
             conf.Options.Add(Options.Vc.General.WarningLevel.Level0);        // hate warnings, love errors
           //  conf.Options.Remove(Options.Vc.Compiler.CppLanguageStandard.Latest);
           //  conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.CPP14);
 
+            // "Prism compiler"; the editor extension and docs refer to prismc.exe.
+            conf.TargetFileName = "prismc";
 
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
-            conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\sources\SIGParser";
+            conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\sources\Prism";
 
             conf.AddPublicDependency<Core>(target);	
         }
@@ -559,7 +561,7 @@ namespace Spectrum
             conf.Name = platformName;
 
             conf.AddProject<Spectrum>(target);
-            conf.AddProject<SIGParser>(target);
+            conf.AddProject<Prism>(target);
             conf.AddProject<Test>(target);
             conf.AddProject<Resources>(target);
         }

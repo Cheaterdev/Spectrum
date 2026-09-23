@@ -12,7 +12,7 @@
 // Traces DDGI_ProbeRayCount (info.GetRays_per_probe().x) spherical-fibonacci
 // directions per probe -- decoupled from the octahedral output atlas's own
 // texel resolution (was 1 ray per radiance-atlas texel, i.e. hard-tied to
-// DDGI_ProbeTexelSize^2; see ddgi.sig's DDGI_ProbeRayCount comment for why
+// DDGI_ProbeTexelSize^2; see ddgi.prism's DDGI_ProbeRayCount comment for why
 // that changed). Each ray's fully-shaded result lands in a flat
 // DDGI_ProbeRayRadiance entry, not an atlas texel -- DDGIProbeConvolve
 // resamples this fixed ray set into the actual texel grid. Real material
@@ -21,7 +21,7 @@
 //
 // Multi-bounce feedback: on a real hit, samples DDGI_ProbeIrradiance/
 // DDGI_ProbeVisibility -- LAST frame's convolved output, see
-// DDGIProbeTrace's own PassNode comment (ddgi.sig) for why reading them here
+// DDGIProbeTrace's own PassNode comment (ddgi.prism) for why reading them here
 // is safe -- at the hit point/normal and adds albedo * irradiance on top of
 // the direct-lit result. This is the actual multi/infinite-bounce mechanism
 // (AC Shadows talk: "using values from the previous frame ... multi-bounce
@@ -55,7 +55,7 @@ void DDGIProbeTraceRaygenShader()
 	// DDGIGraph.cpp's render() actually issued this frame (info.GetFlags().y,
 	// mirrored from g_ddgi_use_indirect_dispatch). Neither touches the
 	// octahedral atlas at all any more -- a ray has no texel of its own
-	// (ddgi.sig's DDGI_ProbeRayRadiance comment) -- both just need to end up
+	// (ddgi.prism's DDGI_ProbeRayRadiance comment) -- both just need to end up
 	// with (probe_coord, ray_index).
 	//
 	// Fixed-size path: launches a 3D grid of
@@ -159,7 +159,7 @@ void DDGIProbeTraceRaygenShader()
 	payload_gi.init();
 	// Swap the real recursive RTX shadow ray MyClosestHitShader normally
 	// fires for a single cheap VSM lookup instead (see RayPayload::
-	// use_vsm_shadow's own comment, raytracing.sig) -- DDGI traces far more
+	// use_vsm_shadow's own comment, raytracing.prism) -- DDGI traces far more
 	// rays per frame than any other RTX consumer, and a probe's own shadow
 	// term doesn't need a primary screen ray's precision.
 	payload_gi.use_vsm_shadow = 1;
@@ -186,7 +186,7 @@ void DDGIProbeTraceRaygenShader()
 		float3 hit_pos = ray.Origin + ray.Direction * payload_gi.dist;
 
 		// Dilation (see [[project-ddgi]] planning notes and
-		// DDGI_ProbeResidencyPending's own comment, ddgi.sig): marks the same
+		// DDGI_ProbeResidencyPending's own comment, ddgi.prism): marks the same
 		// 8 corner probes the feedback sample right below is about to read as
 		// needed too, one cascade at a time (this probe's own -- unlike
 		// TraceIndirectDiffuse's marking block, which doesn't know which
