@@ -23,7 +23,7 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
         void select_current();
         virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
         virtual bool on_mouse_move(vec2 pos) override;
-        virtual void on_key_action(key_action action, long key) override; // camera move
+        virtual void on_key_action(key_action action, long key, key_mods mods) override; // camera move
 
         // Camera fly-controls (active only while this viewport is focused).
         bool camera_keys[256] = {};

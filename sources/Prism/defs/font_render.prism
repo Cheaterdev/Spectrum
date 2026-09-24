@@ -30,6 +30,41 @@ namespace UI
 			StructuredBuffer<Glyph> data;
 		}
 
+		# One Skribidi atlas quad; pos is NDC (x0, y0, x1, y1), uv is (u0, v0, u1, v1).
+		struct GlyphQuad
+		{
+			float4 pos;
+			float4 uv;
+			float4 color;
+			uint atlas;
+			# Non-zero: RGBA premultiplied color glyph (emoji); zero: R8 coverage.
+			uint is_color;
+		}
+
+		[Bind = DefaultLayout::Instance0]
+		struct GlyphRender
+		{
+			StructuredBuffer<GlyphQuad> quads;
+
+			[Auto = Texture_Null]
+			Texture2D<float4> textures[];
+		}
+
+		GraphicsPSO GlyphRender
+		{
+			root = DefaultLayout;
+
+			[EntryPoint = VS]
+			vertex = "gui/glyph.hlsl";
+
+			[EntryPoint = PS]
+			pixel = "gui/glyph.hlsl";
+
+			rtv = { R16G16B16A16_FLOAT };
+			blend = { AlphaBlend };
+			cull = None;
+		}
+
 		GraphicsPSO FontRender
 		{
 			root = DefaultLayout;

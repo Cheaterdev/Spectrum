@@ -22,9 +22,9 @@ class c_contents : public GUI::base
         {
         	return 	owner->on_mouse_action(action, button, pos);
         }
-        virtual void on_key_action(key_action action, long key) override
+        virtual void on_key_action(key_action action, long key, key_mods mods) override
         {
-        	owner->on_key_action(action, key);
+        	owner->on_key_action(action, key, mods);
         }
         virtual bool on_mouse_move(vec2 pos) override
         {
@@ -92,7 +92,7 @@ class mover : public GUI::base
         }
 
 
-        virtual void on_key_action(key_action action, long key) override
+        virtual void on_key_action(key_action action, long key, key_mods mods) override
         {
         }
 

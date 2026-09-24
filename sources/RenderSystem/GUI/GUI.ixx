@@ -37,6 +37,7 @@ export import :Tooltip;
 export import :ToggleSwitch;
 export import :Tree;
 export import :Table;
+export import :TextLabel;
 export import :ValueBox;
 export import :Window;
 

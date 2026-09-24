@@ -3,6 +3,7 @@
   "version-string": "1.0.0",
   "dependencies": [
     "freetype",
+    "skribidi",
     "zlib",
     "directxtex",
     {"name" :"assimp", "version>=":"6.0.4#3"},

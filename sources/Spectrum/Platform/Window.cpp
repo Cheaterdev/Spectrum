@@ -17,11 +17,11 @@ void TrackMouse(HWND hwnd)
 LRESULT CALLBACK MyWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     // Recover the pointer to our class, don't forget to type cast it back
-    Window* winptr = (Window*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    Window* winptr = (Window*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
     // Check if the pointer is NULL and call the Default WndProc
     if (winptr == NULL)
-        return DefWindowProc(hwnd, message, wParam, lParam);
+        return DefWindowProcW(hwnd, message, wParam, lParam);
     else
     {
         // Call the Message Handler for my class (MsgProc in my case)
@@ -36,8 +36,13 @@ LRESULT CALLBACK MyWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 
 void Window::InitWindow(int width, int height, LPCTSTR name)
 {
-    WNDCLASSEX wc = { 0 };
-    wc.cbSize = sizeof(WNDCLASSEX);
+    // The project builds as _MBCS, but the window is registered as Unicode
+    // explicitly: an ANSI window gets WM_CHAR as code-page bytes, so anything
+    // outside the active code page can't be typed.
+    const std::wstring wname = convert(std::string_view(name));
+
+    WNDCLASSEXW wc = { 0 };
+    wc.cbSize = sizeof(WNDCLASSEXW);
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = (WNDPROC)MyWndProc;
     wc.cbClsExtra = NULL;
@@ -47,11 +52,11 @@ void Window::InitWindow(int width, int height, LPCTSTR name)
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
     wc.lpszMenuName = NULL;
-    wc.lpszClassName = name;
+    wc.lpszClassName = wname.c_str();
     wc.hIconSm = NULL;
-    RegisterClassEx(&wc);
-    HWND hWindow = CreateWindowEx((WS_EX_WINDOWEDGE) , name, name, WS_OVERLAPPEDWINDOW, -1, -1, width, height, NULL, NULL, GetModuleHandle(NULL), NULL);
-    SetWindowLongPtr(hWindow, GWLP_USERDATA, (LONG_PTR)this);
+    RegisterClassExW(&wc);
+    HWND hWindow = CreateWindowExW((WS_EX_WINDOWEDGE) , wname.c_str(), wname.c_str(), WS_OVERLAPPEDWINDOW, -1, -1, width, height, NULL, NULL, GetModuleHandle(NULL), NULL);
+    SetWindowLongPtrW(hWindow, GWLP_USERDATA, (LONG_PTR)this);
     hwnd = hWindow;
     ShowWindow(hWindow, SW_SHOWNORMAL);
     UpdateWindow(hWindow);
@@ -72,7 +77,7 @@ Window::~Window()
 
 void Window::on_destroy()
 {
-    SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)0);
+    SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)0);
     ::DestroyWindow(hwnd);
     hwnd = 0;
 }
@@ -175,13 +180,37 @@ LRESULT Window::MsgProc(MSG msg)
 
         case  WM_KEYDOWN:
         {
-			if(input_handler)input_handler->key_action_event(key_action::DOWN, (long)msg.wParam);
+			if(input_handler)input_handler->key_action_event(key_action::DOWN, (long)msg.wParam, current_key_mods());
             break;
         }
 
         case  WM_KEYUP:
         {
-			if(input_handler)input_handler->key_action_event(key_action::UP, (long)msg.wParam);
+			if(input_handler)input_handler->key_action_event(key_action::UP, (long)msg.wParam, current_key_mods());
+            break;
+        }
+
+        case WM_CHAR:
+        {
+            const wchar_t unit = (wchar_t)msg.wParam;
+
+            // Characters outside the BMP arrive as two WM_CHARs (surrogate pair).
+            if (IS_HIGH_SURROGATE(unit))
+            {
+                high_surrogate = unit;
+                break;
+            }
+
+            char32_t ch = unit;
+            if (IS_LOW_SURROGATE(unit))
+            {
+                if (!high_surrogate)
+                    break;
+                ch = 0x10000 + ((char32_t(high_surrogate) - 0xD800) << 10) + (char32_t(unit) - 0xDC00);
+            }
+            high_surrogate = 0;
+
+            if (input_handler)input_handler->char_event(ch);
             break;
         }
 
@@ -212,7 +241,7 @@ LRESULT Window::MsgProc(MSG msg)
             return 0;
 
         case WM_SETCURSOR:
-            return DefWindowProc(msg.hwnd, msg.message, msg.wParam, msg.lParam);
+            return DefWindowProcW(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 
         case WM_GETMINMAXINFO:
             LPMINMAXINFO pMaxInfo = (LPMINMAXINFO)msg.lParam;
@@ -223,19 +252,71 @@ LRESULT Window::MsgProc(MSG msg)
             break;
     }
 
-    return DefWindowProc(msg.hwnd, msg.message, msg.wParam, msg.lParam);
+    return DefWindowProcW(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 }
 
 void Window::process_messages()
 {
     MSG msg;
 
-    while (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE) != 0)
+    // W variants: the A pump would convert WM_CHAR back to code-page bytes.
+    while (PeekMessageW(&msg, NULL, 0U, 0U, PM_REMOVE) != 0)
     {
-        // Translate and dispatch the message
         TranslateMessage(&msg);
-        DispatchMessage(&msg);
+        DispatchMessageW(&msg);
     }
+}
+
+std::wstring Window::get_clipboard_text() const
+{
+    std::wstring result;
+    if (!OpenClipboard(hwnd))
+        return result;
+
+    if (HANDLE data = GetClipboardData(CF_UNICODETEXT))
+    {
+        if (auto text = static_cast<const wchar_t*>(GlobalLock(data)))
+        {
+            result = text;
+            GlobalUnlock(data);
+        }
+    }
+
+    CloseClipboard();
+    return result;
+}
+
+void Window::set_clipboard_text(std::wstring_view text) const
+{
+    // Needs a real owner window: after OpenClipboard(nullptr), EmptyClipboard
+    // leaves the clipboard ownerless and SetClipboardData fails.
+    if (!OpenClipboard(hwnd))
+        return;
+
+    EmptyClipboard();
+
+    const size_t bytes = (text.size() + 1) * sizeof(wchar_t);
+    if (HGLOBAL mem = GlobalAlloc(GMEM_MOVEABLE, bytes))
+    {
+        auto dst = static_cast<wchar_t*>(GlobalLock(mem));
+        std::memcpy(dst, text.data(), text.size() * sizeof(wchar_t));
+        dst[text.size()] = 0;
+        GlobalUnlock(mem);
+
+        if (!SetClipboardData(CF_UNICODETEXT, mem))
+            GlobalFree(mem);
+    }
+
+    CloseClipboard();
+}
+
+key_mods Window::current_key_mods()
+{
+    key_mods mods;
+    mods.shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+    mods.ctrl  = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+    mods.alt   = (GetKeyState(VK_MENU) & 0x8000) != 0;
+    return mods;
 }
 
 void Window::redraw()

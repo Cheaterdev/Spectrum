@@ -97,7 +97,9 @@ export namespace GUI
 				{
 					try { elem = std::stof(text); } catch (...) {}
 				};
-				elem.on_change.register_handler(row.get(), [edit](float v) { edit->set_text(std::to_string(v)); });
+				// Skipped while focused: the edit's own on_change writes elem, which
+				// echoes back here and would reformat "1." to "1.000000" mid-typing.
+				elem.on_change.register_handler(row.get(), [edit](float v) { if (!edit->is_focused()) edit->set_text(std::to_string(v)); });
 				row->add_child(edit);
 			}
 

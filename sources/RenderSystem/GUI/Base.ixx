@@ -50,6 +50,15 @@ enum class key_action : int
     UP
 };
 
+// Captured on the window thread with the key message: key state queried later
+// on the UI thread would be the state at processing time, not at the keypress.
+struct key_mods
+{
+    bool shift = false;
+    bool ctrl  = false;
+    bool alt   = false;
+};
+
 
 enum class mouse_wheel : int
 {
@@ -65,7 +74,8 @@ struct InputHandler
 	virtual	void mouse_action_event(mouse_action action, mouse_button button, vec2 pos) = 0;
 	virtual	void mouse_wheel_event(mouse_wheel wheel, float value, vec2 pos) = 0;
 
-	virtual	void key_action_event(key_action action, long key) = 0;
+	virtual	void key_action_event(key_action action, long key, key_mods mods) = 0;
+	virtual	void char_event(char32_t ch) = 0;
 };
 
 namespace GUI
@@ -347,7 +357,8 @@ namespace GUI
 
 
         public:
-            virtual void on_key_action(key_action action, long key);
+            virtual void on_key_action(key_action action, long key, key_mods mods);
+            virtual void on_char(char32_t ch);
             virtual bool on_mouse_move(vec2 pos);
             virtual void on_mouse_enter(vec2 pos);
             virtual void on_mouse_leave(vec2 pos);
@@ -582,6 +593,8 @@ namespace GUI
             std::mutex m;
 
             std::function<void(bool)> set_capture;
+            std::function<std::wstring()> get_clipboard;
+            std::function<void(std::wstring_view)> set_clipboard;
             user_interface();
             ~user_interface();
 
@@ -591,13 +604,15 @@ namespace GUI
             void mouse_move_event_internal(vec2 pos);
             void mouse_action_event_internal(mouse_action action, mouse_button button, vec2 pos);
             void mouse_wheel_event_internal(mouse_wheel type, float value, vec2 pos);
-            void key_action_event_internal(key_action action, long key);
+            void key_action_event_internal(key_action action, long key, key_mods mods);
+            void char_event_internal(char32_t ch);
 
 
             virtual void mouse_move_event(vec2 pos);
             virtual void mouse_action_event(mouse_action action, mouse_button button, vec2 pos);
             virtual void mouse_wheel_event(mouse_wheel type, float value, vec2 pos);
-            virtual void key_action_event(key_action action, long key);
+            virtual void key_action_event(key_action action, long key, key_mods mods);
+            virtual void char_event(char32_t ch);
 
          //   virtual void draw_ui(Context&);
 

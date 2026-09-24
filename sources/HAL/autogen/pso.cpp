@@ -149,6 +149,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 
 
+	tasks.emplace_back(PSOBase::create<PSOS::UI::Text::GlyphRender>(device, pso[PSO::GlyphRender]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::Text::FontRender>(device, pso[PSO::FontRender]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::RenderBoxes>(device, pso[PSO::RenderBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::Utility::RenderToDS>(device, pso[PSO::RenderToDS]));

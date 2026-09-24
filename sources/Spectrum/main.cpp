@@ -215,6 +215,17 @@ public:
 		info->x_type = GUI::pos_x_type::LEFT;
 		info->magnet_text = FW1_LEFT;
 		base::add_child(info);
+
+		// Skribidi bring-up check (Phase 4); removed once label moves to Text::Engine.
+		{
+			auto skb_test = std::make_shared<GUI::Elements::text_label>();
+			skb_test->docking = GUI::dock::TOP;
+			skb_test->x_type = GUI::pos_x_type::LEFT;
+			skb_test->font_size = 20;
+			skb_test->text = "Skribidi: Hello, \xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD0\xB5\xD1\x82, \xCE\x93\xCE\xB5\xCE\xB9\xCE\xB1, "
+			                 "\xD9\x85\xD8\xB1\xD8\xAD\xD8\xA8\xD8\xA7 \xF0\x9F\x98\x80\xF0\x9F\x9A\x80 fi fl -> 1.5";
+			base::add_child(skb_test);
+		}
 		base::ptr props(new base);
 		props->docking = GUI::dock::FILL;
 		props->x_type = GUI::pos_x_type::LEFT;
@@ -1496,6 +1507,9 @@ public:
 				else
 					ReleaseCapture();
 			};
+
+		get_clipboard = [this]() { return get_clipboard_text(); };
+		set_clipboard = [this](std::wstring_view text) { set_clipboard_text(text); };
 
 		on_resize(get_size());
 

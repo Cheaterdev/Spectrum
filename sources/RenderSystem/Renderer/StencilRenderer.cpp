@@ -257,7 +257,7 @@ bool stencil_renderer::on_mouse_move(vec2 pos)
 	return base::on_mouse_move(pos) | true;;
 }
 
-void stencil_renderer::on_key_action(key_action action, long key)
+void stencil_renderer::on_key_action(key_action action, long key, key_mods mods)
 {
 	if (key >= 0 && key < 256) camera_keys[key] = (action == key_action::DOWN);
 	update_move_input();

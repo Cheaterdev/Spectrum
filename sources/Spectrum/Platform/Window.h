@@ -8,8 +8,10 @@ import <windows/windows.h>;
 class Window : public HAL::hwnd_provider
 {
 	HWND hwnd;
+	wchar_t high_surrogate = 0;
 
 	void InitWindow(int width, int height, LPCTSTR name);
+	static key_mods current_key_mods();
 protected:
 	Window(ivec2 size = { 1024, 768 }, std::string name = "Spectrum");
 	~Window();
@@ -34,6 +36,9 @@ public:
 	virtual LRESULT MsgProc(MSG msg);
 
 	static void process_messages();
+
+	std::wstring get_clipboard_text() const;
+	void set_clipboard_text(std::wstring_view text) const;
 
 
 	static std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension);

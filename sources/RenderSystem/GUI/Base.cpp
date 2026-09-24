@@ -8,6 +8,7 @@ import windows;
 
 import HAL;
 import FrameGraph;
+import TextEngine;
 
 #include "../FrameGraph/autogen/pass_defaults.h"
 
@@ -720,7 +721,11 @@ namespace GUI
             parent->set_update_layout();
     }
 
-    void base::on_key_action(key_action action, long key)
+    void base::on_key_action(key_action action, long key, key_mods mods)
+    {
+    }
+
+    void base::on_char(char32_t ch)
     {
     }
 
@@ -1010,6 +1015,9 @@ namespace GUI
          c.window_size = scaled_size.get();
          c.scale = 1;
          c.delta_time = dt;
+
+        // Before the tree walk: widgets request atlas glyphs from on_pre_render.
+        Text::Engine::get().begin_frame();
 
         {
             PROFILE(L"collect_draw_infos");
@@ -1344,12 +1352,20 @@ namespace GUI
         if (frame_gen)
             frame_generators.insert(frame_gen);
     }
-	void user_interface::key_action_event_internal(key_action action, long key)
+	void user_interface::key_action_event_internal(key_action action, long key, key_mods mods)
 	{
 		auto really_focused = focused.lock();
 
 		if (really_focused)
-			really_focused->on_key_action(action, key);
+			really_focused->on_key_action(action, key, mods);
+	}
+
+	void user_interface::char_event_internal(char32_t ch)
+	{
+		auto really_focused = focused.lock();
+
+		if (really_focused)
+			really_focused->on_char(ch);
 	}
     
 	void user_interface::mouse_move_event(vec2 pos)
@@ -1380,11 +1396,19 @@ namespace GUI
 		::SetCursor(LoadCursor(nullptr, cursors[static_cast<int>(cursor)]));
 	}
 
-    void user_interface::key_action_event(key_action action, long key)
+    void user_interface::key_action_event(key_action action, long key, key_mods mods)
     {
-        run_on_ui([this, action, key]()
+        run_on_ui([this, action, key, mods]()
         {
-                key_action_event_internal(action, key);
+                key_action_event_internal(action, key, mods);
+        });
+    }
+
+    void user_interface::char_event(char32_t ch)
+    {
+        run_on_ui([this, ch]()
+        {
+                char_event_internal(ch);
         });
     }
 

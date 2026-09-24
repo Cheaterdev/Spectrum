@@ -1,0 +1,8 @@
+skribidi provides bidirectional text layout, editing and glyph/icon
+rasterization (https://github.com/memononen/skribidi).
+
+    // headers: <skribidi/skb_*.h>
+    // library: skribidi.lib (static, /MD), links against harfbuzz
+
+SheenBidi, libunibreak and budouxc are compiled into skribidi.lib at the
+commits Skribidi pins; they are not installed as separate packages.
