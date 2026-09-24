@@ -51,6 +51,18 @@ namespace Dev
 	};
 }
 using Dev::RTXDebugFlags;
+namespace Post
+{
+	enum class FlareStreaks : uint
+	{
+		None,
+		Anamorphic,
+		Star4,
+		Star6,
+		Star8
+	};
+}
+using Post::FlareStreaks;
 namespace Meshes
 {
 	enum class TransparencyMode : uint

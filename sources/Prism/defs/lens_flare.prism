@@ -1,0 +1,118 @@
+namespace Post
+{
+	# Streak pattern (Kawase 2003 streak filter). Directions are spread evenly
+	# over 360 deg, each a one-sided blur, so StarN gives N spikes.
+	enum FlareStreaks
+	{
+		None;
+		Anamorphic;
+		Star4;
+		Star6;
+		Star8;
+	}
+
+	# Mirrors LensFlare.cpp's Variable<>s for the generated [SetupCondition].
+	struct LensFlareSelectors
+	{
+		bool enabled = true;
+	}
+
+	# Ghosts + halo (image-based, Chapman-style): the thresholded bloom level
+	# mirrored through the screen center at several scales, plus a chromatic
+	# ring sampled toward the center. Every bright source flares.
+	[Bind = DefaultLayout::Instance0]
+	struct LensFlareGhosts
+	{
+		Texture2D<float4> source;
+		RWTexture2D<float4> target;
+		float ghost_intensity;
+		float halo_intensity;
+		# Halo ring radius, in screen-height units.
+		float halo_radius;
+		# Per-channel scale spread (chromatic fringing).
+		float chromatic;
+		# width / height of the output.
+		float aspect;
+	}
+
+	# One Kawase iteration: a 4-tap box along direction at `step` texel
+	# spacing, reading the previous iteration, so each level reaches 4x
+	# further. Every level is also summed into accum (like Bloom's Sum mode):
+	# equal energy over 4x the length per level gives a bright core and a tail
+	# that runs to the screen edge.
+	[Bind = DefaultLayout::Instance0]
+	struct LensFlareStreak
+	{
+		Texture2D<float4> source;
+		RWTexture2D<float4> target;
+		RWTexture2D<float4> accum;
+		# Unit direction, in target texels.
+		float2 direction;
+		float2 texel;
+		float step;
+		# Weight of this level in accum (Streak falloff ^ level).
+		float accum_weight;
+		# Non-zero: accum += result; zero: overwrite (first write of the frame).
+		uint accumulate;
+	}
+
+	[Bind = DefaultLayout::Instance0]
+	struct LensFlareComposite
+	{
+		Texture2D<float4> ghosts;
+		Texture2D<float4> streaks;
+		RWTexture2D<float4> color;
+		float streak_intensity;
+		# Zero when FlareStreaks::None (streaks texture unused).
+		uint use_streaks;
+	}
+
+	ComputePSO LensFlareGhosts
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Ghosts]
+		compute = "postprocess/lens_flare.hlsl";
+	}
+
+	ComputePSO LensFlareStreak
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Streak]
+		compute = "postprocess/lens_flare.hlsl";
+	}
+
+	ComputePSO LensFlareComposite
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Composite]
+		compute = "postprocess/lens_flare.hlsl";
+	}
+
+	# Image-based lens flare. Reads Bloom's thresholded downsample chain, so it
+	# requires Bloom and follows its threshold; runs at quarter resolution and
+	# adds into the HDR result before Tonemap.
+	[Static]
+	[Compute]
+	[SetupCondition = LensFlareSelectors::enabled && BloomSelectors::enabled]
+	PassNode LensFlare
+	{
+		[Always = Read] Texture BloomDown;
+		[Always = UnorderedAccess] Texture ResultTexture;
+
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareGhosts;
+
+		# Kawase ping-pong pair and the per-direction accumulator. Created even
+		# with FlareStreaks::None: [Optional] on a sized field means "create,
+		# else need()", not "skip", and they are small transient textures.
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareStreakA;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareStreakB;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareStreaks;
+	}
+}

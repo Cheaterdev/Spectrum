@@ -52,6 +52,9 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::Denoise::DenoiserShadow_Filter>(device, pso[PSO::DenoiserShadow_Filter]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::Upscale::FSR>(device, pso[PSO::FSR]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::Upscale::RCAS>(device, pso[PSO::RCAS]));
+	tasks.emplace_back(PSOBase::create<PSOS::Post::LensFlareGhosts>(device, pso[PSO::LensFlareGhosts]));
+	tasks.emplace_back(PSOBase::create<PSOS::Post::LensFlareStreak>(device, pso[PSO::LensFlareStreak]));
+	tasks.emplace_back(PSOBase::create<PSOS::Post::LensFlareComposite>(device, pso[PSO::LensFlareComposite]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GatherPipeline>(device, pso[PSO::GatherPipeline]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GatherBoxes>(device, pso[PSO::GatherBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::InitDispatch>(device, pso[PSO::InitDispatch]));

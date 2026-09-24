@@ -33,6 +33,9 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FontRenderingGlyphs") return SlotID::FontRenderingGlyphs;
 	if(slot_name == "FrameInfo") return SlotID::FrameInfo;
 	if(slot_name == "FSR") return SlotID::FSR;
+	if(slot_name == "LensFlareGhosts") return SlotID::LensFlareGhosts;
+	if(slot_name == "LensFlareStreak") return SlotID::LensFlareStreak;
+	if(slot_name == "LensFlareComposite") return SlotID::LensFlareComposite;
 	if(slot_name == "MaterialInfo") return SlotID::MaterialInfo;
 	if(slot_name == "MaterialPreviewInfo") return SlotID::MaterialPreviewInfo;
 	if(slot_name == "MeshInstanceInfo") return SlotID::MeshInstanceInfo;
@@ -211,6 +214,12 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::FrameInfo) return Slots::Frame::FrameInfo::Slot::ID;
 
 	if(id == SlotID::FSR) return Slots::Post::Upscale::FSR::Slot::ID;
+
+	if(id == SlotID::LensFlareGhosts) return Slots::Post::LensFlareGhosts::Slot::ID;
+
+	if(id == SlotID::LensFlareStreak) return Slots::Post::LensFlareStreak::Slot::ID;
+
+	if(id == SlotID::LensFlareComposite) return Slots::Post::LensFlareComposite::Slot::ID;
 
 	if(id == SlotID::MaterialInfo) return Slots::Meshes::MaterialInfo::Slot::ID;
 
@@ -490,6 +499,9 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FontRenderingGlyphs) return "FontRenderingGlyphs";
 	if(id == SlotID::FrameInfo) return "FrameInfo";
 	if(id == SlotID::FSR) return "FSR";
+	if(id == SlotID::LensFlareGhosts) return "LensFlareGhosts";
+	if(id == SlotID::LensFlareStreak) return "LensFlareStreak";
+	if(id == SlotID::LensFlareComposite) return "LensFlareComposite";
 	if(id == SlotID::MaterialInfo) return "MaterialInfo";
 	if(id == SlotID::MaterialPreviewInfo) return "MaterialPreviewInfo";
 	if(id == SlotID::MeshInstanceInfo) return "MeshInstanceInfo";

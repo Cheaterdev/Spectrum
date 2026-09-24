@@ -101,6 +101,22 @@ struct PassDefault<Passes::Frame::ResultCreation>
 
 
 template<>
+struct PassDefault<Passes::Post::LensFlare>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Post::LensFlare::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Post::LensFlare::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::Denoise::NRD::NRD_GBufferPack>
 {
 	static constexpr bool enabled = true;

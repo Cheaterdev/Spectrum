@@ -142,6 +142,15 @@ FrameGraph::SetupResult PassDefault<Passes::Frame::ResultCreation>::setup(
 }
 
 
+FrameGraph::SetupResult PassDefault<Passes::Post::LensFlare>::setup(
+	Passes::Post::LensFlare::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Post::LensFlareSelectors>().enabled && builder.graph->get_context<Table::Post::BloomSelectors>().enabled))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_GBufferPack>::setup(
 	Passes::Denoise::NRD::NRD_GBufferPack::Context& data, FrameGraph::TaskBuilder& builder)
 {

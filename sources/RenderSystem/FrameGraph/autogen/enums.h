@@ -33,6 +33,7 @@ export
 		Library::DDGIIndirectDebug DDGIIndirectDebug;
 		Library::FSR FSR;
 		Library::ResultCreation ResultCreation;
+		Library::LensFlare LensFlare;
 		Library::NRD_GBufferPack NRD_GBufferPack;
 		Library::NRD_REBLUR_Execute NRD_REBLUR_Execute;
 		Library::NRD_SIGMA_Execute NRD_SIGMA_Execute;

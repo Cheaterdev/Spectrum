@@ -24,11 +24,7 @@ static const float ISun = 20.0;
 // get_sky_only(), which omits the disk, so this cannot leak into reflections/GI.
 // Large on purpose: the disk should saturate to the display peak in HDR.
 static const float SunDiskScale = 50.0;
-// Mean angular radius of the Sun seen from Earth (0.2666 deg), times an
-// artistic enlargement: at true size the disk is only a few pixels at render
-// resolution.
-static const float SunSizeScale = 2.5;
-static const float SunAngularRadius = 0.004653 * SunSizeScale;
+#include "sun.hlsl"
 // Linear limb-darkening law I(mu) = 1 - u(1 - mu); u ~ 0.6 for the Sun in
 // the visible band.
 static const float SunLimbDarkening = 0.6;

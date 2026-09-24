@@ -76,6 +76,8 @@ void capture_context_snapshot(Graph& graph, ContextSnapshot& out)
 		encode_context_field(graph.get_context<Table::Frame::ViewportContext>().frame_size);
 	out.values[(unsigned int)ContextFieldID::ViewportContext_upscale_size] =
 		encode_context_field(graph.get_context<Table::Frame::ViewportContext>().upscale_size);
+	out.values[(unsigned int)ContextFieldID::LensFlareSelectors_enabled] =
+		encode_context_field(graph.get_context<Table::Post::LensFlareSelectors>().enabled);
 	out.values[(unsigned int)ContextFieldID::IndirectGISelectors_indirect_source] =
 		encode_context_field(graph.get_context<Table::Denoise::NRD::IndirectGISelectors>().indirect_source);
 	out.values[(unsigned int)ContextFieldID::IndirectGISelectors_reflection_source] =

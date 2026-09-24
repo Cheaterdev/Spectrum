@@ -44,6 +44,9 @@ export
 		DenoiserShadow_Filter,
 		FSR,
 		RCAS,
+		LensFlareGhosts,
+		LensFlareStreak,
+		LensFlareComposite,
 		MaterialPreview,
 		GatherPipeline,
 		GatherBoxes,
@@ -210,6 +213,10 @@ export
 		NoOutput = "NoOutput"_crc32,
 		DepthOnly = "DepthOnly"_crc32,
 		SingleColorDepth = "SingleColorDepth"_crc32,
+		LensFlareSelectors = "LensFlareSelectors"_crc32,
+		LensFlareGhosts = "LensFlareGhosts"_crc32,
+		LensFlareStreak = "LensFlareStreak"_crc32,
+		LensFlareComposite = "LensFlareComposite"_crc32,
 		MaterialInfo = "MaterialInfo"_crc32,
 		MaterialPreviewInfo = "MaterialPreviewInfo"_crc32,
 		mesh_vertex_input = "mesh_vertex_input"_crc32,
@@ -417,6 +424,17 @@ namespace Dev
 		enum class RTXDebugFlags : uint
 		{
 			DisableSkyFallback = 1
+		};
+}
+namespace Post
+{
+		enum class FlareStreaks : uint
+		{
+			None,
+			Anamorphic,
+			Star4,
+			Star6,
+			Star8
 		};
 }
 namespace Meshes

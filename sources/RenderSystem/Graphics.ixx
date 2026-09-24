@@ -47,6 +47,7 @@ export import :Sky;
 export import :SMAA;
 export import :Tonemap;
 export import :Bloom;
+export import :LensFlare;
 export import :FSR;
 export import :UpscalingDLSS;
 export import :UpscalingDLSSRR;

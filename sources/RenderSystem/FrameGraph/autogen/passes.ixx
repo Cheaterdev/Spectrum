@@ -27,6 +27,7 @@ export import "../defines.h";
 #include "pass/GI/DDGI/Dev/DDGIIndirectDebug.h"
 #include "pass/Post/Upscale/FSR.h"
 #include "pass/Frame/ResultCreation.h"
+#include "pass/Post/LensFlare.h"
 #include "pass/Denoise/NRD/NRD_GBufferPack.h"
 #include "pass/Denoise/NRD/NRD_REBLUR_Execute.h"
 #include "pass/Denoise/NRD/NRD_SIGMA_Execute.h"
@@ -166,6 +167,10 @@ export namespace Passes
 	namespace Frame
 	{
 		using ::Passes::Frame::ResultCreation;
+	}
+	namespace Post
+	{
+		using ::Passes::Post::LensFlare;
 	}
 	namespace Denoise
 	{

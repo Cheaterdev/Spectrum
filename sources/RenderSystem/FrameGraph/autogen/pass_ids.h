@@ -23,6 +23,7 @@ namespace FrameGraph
 		DDGIIndirectDebug,
 		FSR,
 		ResultCreation,
+		LensFlare,
 		NRD_GBufferPack,
 		NRD_REBLUR_Execute,
 		NRD_SIGMA_Execute,
