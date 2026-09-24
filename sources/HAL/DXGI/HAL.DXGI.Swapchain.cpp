@@ -49,6 +49,22 @@ namespace HAL
 
 		m_swapChain->GetDesc(&desc);
 
+		// FP16 backbuffers are scRGB: linear Rec.709, 1.0 = 80 nits, values
+		// above 1 reach into HDR. DWM converts this for SDR displays too, so the
+		// same buffer works whether or not the monitor is in HDR mode.
+		if (swapChainDesc.Format == DXGI_FORMAT_R16G16B16A16_FLOAT)
+		{
+			UINT support = 0;
+			if (SUCCEEDED(m_swapChain->CheckColorSpaceSupport(DXGI::COLOR_SPACE_RGB_FULL_G10_NONE_P709, &support))
+				&& (support & DXGI::SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT))
+				m_swapChain->SetColorSpace1(DXGI::COLOR_SPACE_RGB_FULL_G10_NONE_P709);
+			else
+				Log::get() << Log::LEVEL_WARNING << "[SwapChain] scRGB color space not supported for present" << Log::endl;
+		}
+
+		hwnd = c_desc.window->get_hwnd();
+		refresh_display_info();
+
 		frames.resize(desc.BufferCount);
 		on_change();
 		  
@@ -96,6 +112,113 @@ namespace HAL
 		frames[0].m_renderTarget->debug=true;
 
 			m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+	}
+
+	namespace
+	{
+		// Windows' per-display "SDR content brightness", via DisplayConfig
+		// (DXGI does not expose it). Matches the DXGI output by GDI device name.
+		float query_sdr_white_nits(const wchar_t* gdi_device_name)
+		{
+			UINT32 path_count = 0, mode_count = 0;
+			if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &path_count, &mode_count) != ERROR_SUCCESS)
+				return 80.0f;
+
+			std::vector<DISPLAYCONFIG_PATH_INFO> paths(path_count);
+			std::vector<DISPLAYCONFIG_MODE_INFO> modes(mode_count);
+			if (QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &path_count, paths.data(), &mode_count, modes.data(), nullptr) != ERROR_SUCCESS)
+				return 80.0f;
+
+			for (UINT32 i = 0; i < path_count; ++i)
+			{
+				DISPLAYCONFIG_SOURCE_DEVICE_NAME source = {};
+				source.header.type      = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
+				source.header.size      = sizeof(source);
+				source.header.adapterId = paths[i].sourceInfo.adapterId;
+				source.header.id        = paths[i].sourceInfo.id;
+				if (DisplayConfigGetDeviceInfo(&source.header) != ERROR_SUCCESS)
+					continue;
+				if (wcscmp(source.viewGdiDeviceName, gdi_device_name) != 0)
+					continue;
+
+				DISPLAYCONFIG_SDR_WHITE_LEVEL white = {};
+				white.header.type      = DISPLAYCONFIG_DEVICE_INFO_GET_SDR_WHITE_LEVEL;
+				white.header.size      = sizeof(white);
+				white.header.adapterId = paths[i].targetInfo.adapterId;
+				white.header.id        = paths[i].targetInfo.id;
+				if (DisplayConfigGetDeviceInfo(&white.header) != ERROR_SUCCESS)
+					return 80.0f;
+
+				// Documented encoding: 1000 == 80 nits.
+				return white.SDRWhiteLevel / 1000.0f * 80.0f;
+			}
+			return 80.0f;
+		}
+	}
+
+	void SwapChain::refresh_display_info()
+	{
+		PROFILE(L"refresh_display_info");
+
+		// A fresh factory every time: an existing one keeps reporting the
+		// output state from when it was created (IsCurrent() goes false but
+		// GetDesc1 stays stale), so HDR being toggled in Windows would be missed.
+		ComPtr<IDXGIFactory7> factory;
+		if (FAILED(CreateDXGIFactory2(0, IID_PPV_ARGS(&factory))))
+			return;
+
+		RECT wr;
+		if (!GetWindowRect(hwnd, &wr))
+			return;
+
+		ComPtr<IDXGIOutput6> best;
+		long best_area = -1;
+
+		ComPtr<IDXGIAdapter1> adapter;
+		for (UINT a = 0; SUCCEEDED(factory->EnumAdapters1(a, &adapter)); ++a)
+		{
+			ComPtr<IDXGIOutput> output;
+			for (UINT o = 0; SUCCEEDED(adapter->EnumOutputs(o, &output)); ++o)
+			{
+				DXGI_OUTPUT_DESC od;
+				output->GetDesc(&od);
+				const RECT& r = od.DesktopCoordinates;
+				long w = std::max(0L, std::min(wr.right, r.right) - std::max(wr.left, r.left));
+				long h = std::max(0L, std::min(wr.bottom, r.bottom) - std::max(wr.top, r.top));
+				if (w * h > best_area)
+				{
+					ComPtr<IDXGIOutput6> o6;
+					if (SUCCEEDED(output.As(&o6)))
+					{
+						best_area = w * h;
+						best = o6;
+					}
+				}
+			}
+		}
+
+		DisplayInfo info;
+		if (best)
+		{
+			DXGI_OUTPUT_DESC1 d;
+			if (SUCCEEDED(best->GetDesc1(&d)))
+			{
+				info.hdr                 = d.ColorSpace == DXGI::COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
+				info.min_nits            = d.MinLuminance;
+				info.max_nits            = d.MaxLuminance;
+				info.max_full_frame_nits = d.MaxFullFrameLuminance;
+				info.sdr_white_nits      = info.hdr ? query_sdr_white_nits(d.DeviceName) : 80.0f;
+			}
+		}
+
+		if (!(info == display_info))
+		{
+			Log::get() << "[SwapChain] display: hdr=" << info.hdr
+				<< " max_nits=" << info.max_nits
+				<< " max_full_frame_nits=" << info.max_full_frame_nits
+				<< " sdr_white_nits=" << info.sdr_white_nits << Log::endl;
+			display_info = info;
+		}
 	}
 
 	void SwapChain::resize(ivec2 size)

@@ -1808,6 +1808,13 @@ void PassDefault<Passes::UI::UI_Render>::render(
         command_list->get_graphics().set_rtv(rt, rt_options);
     }
 
+    {
+        const auto& display = context.graph->get_context<::Table::UI::DisplayState>();
+        Slots::UI::DisplayOutput output;
+        output.GetUi_scale() = display.hdr ? display.sdr_white_nits / 80.0f : 1.0f;
+        command_list->get_graphics().set(output);
+    }
+
     Renderer renderer;
     GUIInfo c;
     c.renderer   = &renderer;

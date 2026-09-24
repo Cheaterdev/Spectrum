@@ -33,6 +33,9 @@ export namespace Table
 			uint auto_exposure;
 			float manual_ev;
 			::Post::TonemapOperator tonemap_operator;
+			uint hdr;
+			float paper_white;
+			float peak;
 			HLSL::RWStructuredBuffer<uint> histogram;
 			HLSL::RWStructuredBuffer<float4> exposure_state;
 			HLSL::RWTexture2D<float4> color;
@@ -50,6 +53,9 @@ export namespace Table
 			uint& GetAuto_exposure() { return auto_exposure; }
 			float& GetManual_ev() { return manual_ev; }
 			::Post::TonemapOperator& GetTonemap_operator() { return tonemap_operator; }
+			uint& GetHdr() { return hdr; }
+			float& GetPaper_white() { return paper_white; }
+			float& GetPeak() { return peak; }
 			HLSL::RWStructuredBuffer<uint>& GetHistogram() { return histogram; }
 			HLSL::RWStructuredBuffer<float4>& GetExposure_state() { return exposure_state; }
 			HLSL::RWTexture2D<float4>& GetColor() { return color; }
@@ -71,6 +77,9 @@ export namespace Table
 				compiler.compile(auto_exposure, "TonemapData::auto_exposure");
 				compiler.compile(manual_ev, "TonemapData::manual_ev");
 				compiler.compile(tonemap_operator, "TonemapData::tonemap_operator");
+				compiler.compile(hdr, "TonemapData::hdr");
+				compiler.compile(paper_white, "TonemapData::paper_white");
+				compiler.compile(peak, "TonemapData::peak");
 				compiler.compile(histogram, "TonemapData::histogram");
 				compiler.compile(exposure_state, "TonemapData::exposure_state");
 				compiler.compile(color, "TonemapData::color");
@@ -91,6 +100,9 @@ export namespace Table
 				uint auto_exposure; // uint
 				float manual_ev; // float
 				::Post::TonemapOperator tonemap_operator; // TonemapOperator
+				uint hdr; // uint
+				float paper_white; // float
+				float peak; // float
 				uint histogram; // RWStructuredBuffer<uint>
 				uint exposure_state; // RWStructuredBuffer<float4>
 				uint color; // RWTexture2D<float4>
@@ -113,6 +125,9 @@ export namespace Table
 					ar& NVP(auto_exposure);
 					ar& NVP(manual_ev);
 					ar& NVP(tonemap_operator);
+					ar& NVP(hdr);
+					ar& NVP(paper_white);
+					ar& NVP(peak);
 				}
 
 
@@ -139,6 +154,9 @@ export namespace Table
 				ar& NVP(auto_exposure);
 				ar& NVP(manual_ev);
 				ar& NVP(tonemap_operator);
+				ar& NVP(hdr);
+				ar& NVP(paper_white);
+				ar& NVP(peak);
 			}
 
 		};

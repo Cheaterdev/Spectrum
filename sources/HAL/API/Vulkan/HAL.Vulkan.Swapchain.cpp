@@ -132,27 +132,26 @@ namespace HAL
             api_dev.vk_physical, vk_surface, &fmt_count, formats.data());
 
         // Pick the best available surface format.
-        // Priority: BGRA8_UNORM → RGBA8_UNORM → BGRA8_SRGB → RGBA8_SRGB → first.
-        // BGRA8_UNORM matches the D3D12/DXGI convention (DXGI promotes R8G8B8A8 to
-        // B8G8R8A8 anyway) and is the native Windows DWM format, so it is first.
-        // UI PSOs are compiled with B8G8R8A8_UNORM to match both backends.
+        // The UI PSOs are compiled for R16G16B16A16_FLOAT and write scRGB
+        // (linear, 1.0 = 80 nits) -- the same as the DXGI swapchain -- so FP16
+        // with EXTENDED_SRGB_LINEAR (VK_EXT_swapchain_colorspace) is required
+        // to match. The 8-bit fallbacks only keep the app presenting on a
+        // driver without it; the UI PSOs will not match that target.
         vk_format      = formats[0].format;
         vk_color_space = formats[0].colorSpace;
         VkColorSpaceKHR color_space = formats[0].colorSpace;
         {
-            constexpr VkFormat preferred[] = {
-                VK_FORMAT_B8G8R8A8_UNORM,
-                VK_FORMAT_R8G8B8A8_UNORM,
-                VK_FORMAT_B8G8R8A8_SRGB,
-                VK_FORMAT_R8G8B8A8_SRGB,
+            constexpr std::pair<VkFormat, VkColorSpaceKHR> preferred[] = {
+                { VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT },
+                { VK_FORMAT_B8G8R8A8_UNORM,      VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
+                { VK_FORMAT_R8G8B8A8_UNORM,      VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
             };
             bool found = false;
-            for (VkFormat want : preferred)
+            for (auto [want_format, want_space] : preferred)
             {
                 for (auto& f : formats)
                 {
-                    if (f.format == want &&
-                        f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+                    if (f.format == want_format && f.colorSpace == want_space)
                     {
                         vk_format      = f.format;
                         vk_color_space = f.colorSpace;
@@ -162,6 +161,9 @@ namespace HAL
                 }
                 if (found) break;
             }
+            if (vk_format != VK_FORMAT_R16G16B16A16_SFLOAT)
+                Log::get() << Log::LEVEL_ERROR
+                    << "[Vulkan swapchain] FP16 scRGB surface format unavailable; UI PSOs expect R16G16B16A16_FLOAT" << Log::endl;
         }
         Log::get() << "[Vulkan swapchain] " << fmt_count << " surface formats available"
                    << "; selected format=" << vk_format << Log::endl;
@@ -642,6 +644,12 @@ namespace HAL
         // previous synchronous do_acquire() (it waits on image availability), but now
         // it also guarantees the render submit precedes the present on the GPU timeline.
         idx_future.wait();
+    }
+
+    // HDR metadata is not queried on the Vulkan backend yet: it always reports
+    // an SDR display, so the scRGB output stays in [0,1].
+    void SwapChain::refresh_display_info()
+    {
     }
 
     void SwapChain::resize(ivec2 size)

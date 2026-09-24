@@ -29,9 +29,29 @@ namespace UI
 		float2 tc;
 		float4 mulColor;
 		float4 addColor;
-		# Linear -> gamma encode (pow(x, 1/2.2)) for this draw. Used by the main
-		# viewport image, which is fed a linear HDR render result.
-		float gammaEncode;
+		# Non-zero: the texture holds linear light (the main viewport's tonemapped
+		# result, asset previews) rather than sRGB-encoded UI art, so it skips the
+		# sRGB decode on its way to the scRGB swapchain.
+		float linearSource;
+	}
+
+	# The display the window is on (HAL::SwapChain::get_display_info()),
+	# mirrored every frame by main.cpp. Read by Tonemap for the HDR curve and by
+	# UI_Render to fill DisplayOutput.
+	struct DisplayState
+	{
+		bool hdr = false;
+		float max_nits = 80;
+		float sdr_white_nits = 80;
+	}
+
+	# Every UI pixel shader writes the scRGB swapchain (linear, 1.0 = 80 nits)
+	# through ui_output() (gui/display_output.hlsl), which scales SDR white to
+	# ui_scale: 1 on an SDR display, sdr_white_nits / 80 in HDR.
+	[Bind = FrameLayout::PassData]
+	struct DisplayOutput
+	{
+		float ui_scale;
 	}
 
 	[Bind = DefaultLayout::Instance0]
@@ -75,7 +95,7 @@ namespace UI
 		[EntryPoint = PS]
 		pixel = "gui/ninepatch.hlsl";
 
-		rtv = { B8G8R8A8_UNORM };
+		rtv = { R16G16B16A16_FLOAT };
 		blend = { AlphaBlend };
 
 		cull = None;
@@ -92,7 +112,7 @@ namespace UI
 		[EntryPoint = PS_COLOR]
 		pixel = "gui/rect.hlsl";
 
-		rtv = { B8G8R8A8_UNORM };
+		rtv = { R16G16B16A16_FLOAT };
 		blend = { AlphaBlend };
 		cull = None;
 	}
@@ -111,7 +131,7 @@ namespace UI
 		cull = None;
 		topology = TRIANGLE;
 
-		rtv = { B8G8R8A8_UNORM };
+		rtv = { R16G16B16A16_FLOAT };
 		blend = { AlphaBlend };
 	}
 
@@ -151,7 +171,7 @@ namespace UI
 		cull = None;
 		topology = PATCH;
 
-		rtv = { B8G8R8A8_UNORM };
+		rtv = { R16G16B16A16_FLOAT };
 		blend = { AlphaBlend };
 	}
 }

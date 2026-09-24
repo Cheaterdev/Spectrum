@@ -135,7 +135,7 @@ void GS(line DS_OUTPUT input[2], inout TriangleStream<GS_OUTPUT> TriStream)
 #endif
 ////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef BUILD_FUNC_PS
-
+#include "display_output.hlsl"
 
 float4 PS(GS_OUTPUT i): SV_TARGET0
 {
@@ -152,6 +152,6 @@ float4 PS(GS_OUTPUT i): SV_TARGET0
     r.a *= 1 - a;
 
     r.a *= saturate(s / offset_scale.z);
-    return r;
+    return ui_output(r);
 }
 #endif

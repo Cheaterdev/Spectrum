@@ -20,6 +20,22 @@ float3 depth_to_wpos_center(float d, float2 tc, matrix mat)
 #include "sky_common.hlsl"
 
 static const float ISun = 20.0;
+// Visible sun disk only (the sky pass); the environment cubemap goes through
+// get_sky_only(), which omits the disk, so this cannot leak into reflections/GI.
+// Large on purpose: the disk should saturate to the display peak in HDR.
+static const float SunDiskScale = 50.0;
+// Mean angular radius of the Sun seen from Earth (0.2666 deg), times an
+// artistic enlargement: at true size the disk is only a few pixels at render
+// resolution.
+static const float SunSizeScale = 2.5;
+static const float SunAngularRadius = 0.004653 * SunSizeScale;
+// Linear limb-darkening law I(mu) = 1 - u(1 - mu); u ~ 0.6 for the Sun in
+// the visible band.
+static const float SunLimbDarkening = 0.6;
+
+// Angular size of one output pixel, set by the entry point before get_sky();
+// the disk edge is anti-aliased over this width.
+static float g_pixel_angle = 0.0005;
 
 static const float Scaler = 0.00001;
 //inscattered light along ray x+tv, when sun in direction s (=S[L]-T(x,x0)S[L]|x0)
@@ -169,8 +185,19 @@ float3 sunColor(float3 x, float t, float3 v, float3 s, float r, float mu)
     else
     {
         float3 transmittance = r <= Rt ? transmittanceWithShadow(r, mu) : float3(1.0, 1, 1); // T(x,xo)
-        float isun = step(cos(M_PI / 180.0), dot(v, s)) * ISun; // Lsun
-        return transmittance * isun; // Eq (9)
+
+        // Chord length, not acos(dot(v, s)): at this scale dot() sits within
+        // float epsilon of 1 and acos() of it is off by more than the disk radius.
+        float theta = length(normalize(v) - normalize(s));
+        float coverage = saturate((SunAngularRadius - theta) / max(g_pixel_angle, 1e-6) + 0.5);
+        if (coverage <= 0)
+            return 0;
+
+        float rr = saturate(theta / SunAngularRadius);
+        float limb_mu = sqrt(1.0 - rr * rr);
+        float limb = 1.0 - SunLimbDarkening * (1.0 - limb_mu);
+
+        return transmittance * (ISun * SunDiskScale * limb * coverage); // Eq (9)
     }
 }
 
@@ -291,6 +318,7 @@ float4 sky_result(float2 tc, float3 ray)
 
 float4 PS(quad_output i): SV_Target0
 {
+    g_pixel_angle = length(fwidth(normalize(i.ray)));
     return sky_result(i.tc, i.ray);
 }
 
@@ -309,6 +337,11 @@ void CS(uint3 DTid : SV_DispatchThreadID)
     float2 clip = tc * float2(2, -2) + float2(-1, 1);
     float4 r = mul(camera.GetInvProj(), float4(clip, 1, 1));
     float3 ray = mul(camera.GetInvView(), r.xyz);
+
+    float2 clip_next = clip + float2(2.0 / dims.x, 0);
+    float4 r_next = mul(camera.GetInvProj(), float4(clip_next, 1, 1));
+    float3 ray_next = mul(camera.GetInvView(), r_next.xyz);
+    g_pixel_angle = length(normalize(ray_next) - normalize(ray));
 
     GetSkyData().GetResult()[DTid.xy] += sky_result(tc, ray);
 }

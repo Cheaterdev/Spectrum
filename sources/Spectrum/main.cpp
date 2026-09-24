@@ -167,10 +167,7 @@ public:
 
 		texture.mul_color = { 1, 1, 1, 0 };
 		texture.add_color = { 0, 0, 0, 1 };
-		// SMAA used to bake this in (pow(x, 1/2.2)) when it ran; now applied
-		// here so the viewport looks the same whether SMAA, FSR, or DLSS
-		// produced ResultTextureNew.
-		texture.gamma = true;
+		texture.linear_source = true;
 
 
 		auto t = CounterManager::get().start_count<triangle_drawer>();
@@ -1191,6 +1188,21 @@ public:
 
 			swap_chain->wait_for_free();
 
+			{
+				static float display_poll = 0.0f;
+				display_poll += frame_dt;
+				if (display_poll >= 0.5f)
+				{
+					display_poll = 0.0f;
+					swap_chain->refresh_display_info();
+				}
+				const auto& info = swap_chain->get_display_info();
+				auto& display = graph.get_context<Table::UI::DisplayState>();
+				display.hdr            = info.hdr;
+				display.max_nits       = info.max_nits;
+				display.sdr_white_nits = info.sdr_white_nits;
+			}
+
 			PROFILE(L"CPU FRAME");
 			setup_graph();
 
@@ -1469,7 +1481,8 @@ public:
 		//scale = 1.25f;
 		Window::input_handler = this;
 		HAL::swap_chain_desc desc;
-		desc.format = HAL::Format::B8G8R8A8_UNORM;
+		// scRGB; the UI PSOs (ui.prism) are compiled for this format.
+		desc.format = HAL::Format::R16G16B16A16_FLOAT;
 		desc.fullscreen = nullptr;
 		desc.stereo = false;
 		desc.window = this;

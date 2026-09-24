@@ -9,18 +9,14 @@
 #include "enums.h"
 namespace UI
 {
-	struct vertex_input
+	struct DisplayState
 	{
-		float2 pos; // float2
-		float2 tc; // float2
-		float4 mulColor; // float4
-		float4 addColor; // float4
-		float linearSource; // float
-		float2 GetPos() { return pos; }
-		float2 GetTc() { return tc; }
-		float4 GetMulColor() { return mulColor; }
-		float4 GetAddColor() { return addColor; }
-		float GetLinearSource() { return linearSource; }
+		bool hdr; // bool
+		float max_nits; // float
+		float sdr_white_nits; // float
+		bool GetHdr() { return hdr; }
+		float GetMax_nits() { return max_nits; }
+		float GetSdr_white_nits() { return sdr_white_nits; }
 	};
 }
-using UI::vertex_input;
+using UI::DisplayState;

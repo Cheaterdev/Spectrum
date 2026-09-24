@@ -25,6 +25,9 @@ namespace Post
 		uint auto_exposure; // uint
 		float manual_ev; // float
 		TonemapOperator tonemap_operator; // TonemapOperator
+		uint hdr; // uint
+		float paper_white; // float
+		float peak; // float
 		uint histogram; // RWStructuredBuffer<uint>
 		uint exposure_state; // RWStructuredBuffer<float4>
 		uint color; // RWTexture2D<float4>
@@ -42,6 +45,9 @@ namespace Post
 		uint GetAuto_exposure() { return auto_exposure; }
 		float GetManual_ev() { return manual_ev; }
 		TonemapOperator GetTonemap_operator() { return tonemap_operator; }
+		uint GetHdr() { return hdr; }
+		float GetPaper_white() { return paper_white; }
+		float GetPeak() { return peak; }
 		RWStructuredBuffer<uint> GetHistogram() { return ResourceDescriptorHeap[histogram]; }
 		RWStructuredBuffer<float4> GetExposure_state() { return ResourceDescriptorHeap[exposure_state]; }
 		RWTexture2D<float4> GetColor() { return ResourceDescriptorHeap[color]; }

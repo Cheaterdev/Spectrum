@@ -24,6 +24,8 @@ export namespace HAL
 
 		std::vector<Frame> frames;
 		Device& device;
+		HWND hwnd = nullptr;
+		DisplayInfo display_info;
 	public:
 		using ptr = std::shared_ptr<SwapChain>;
 
@@ -36,5 +38,11 @@ export namespace HAL
 		const std::shared_ptr<TextureResource>& get_prev_frame();
 		void resize(ivec2 size);
 		void wait_for_free();
+
+		// Re-queries the display under the window (HDR on/off, luminance,
+		// SDR white level). Cheap enough to call a few times a second; picks up
+		// the window moving to another monitor or HDR being toggled in Windows.
+		void refresh_display_info();
+		const DisplayInfo& get_display_info() const { return display_info; }
 	};
 }

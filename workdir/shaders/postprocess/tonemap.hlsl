@@ -188,6 +188,30 @@ float3 tonemap_pbr_neutral(float3 c)
 	return lerp(c, new_peak.xxx, g);
 }
 
+// PBR Neutral generalized to a display peak above SDR white: identity up to
+// 76% of peak, then the same rational shoulder and desaturation toward white.
+// peak == 1 reproduces tonemap_pbr_neutral exactly.
+float3 tonemap_neutral_hdr(float3 c, float peak_out)
+{
+	const float desaturation = 0.15;
+	const float start_compression = 0.76 * peak_out;
+
+	float x = min(c.r, min(c.g, c.b));
+	float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+	c -= offset;
+
+	float peak = max(c.r, max(c.g, c.b));
+	if (peak < start_compression)
+		return c;
+
+	const float d = peak_out - start_compression;
+	float new_peak = peak_out - d * d / (peak + d - start_compression);
+	c *= new_peak / peak;
+
+	float g = 1.0 - 1.0 / (desaturation * (peak - new_peak) / peak_out + 1.0);
+	return lerp(c, new_peak.xxx, g);
+}
+
 [numthreads(8, 8, 1)]
 void CS_Apply(uint3 id : SV_DispatchThreadID)
 {
@@ -201,6 +225,18 @@ void CS_Apply(uint3 id : SV_DispatchThreadID)
 
 	float4 c = color[id.xy];
 	float3 rgb = max(c.rgb, 0) * data.GetExposure_state()[0].y;
+
+	if (data.GetHdr() != 0)
+	{
+		// AgX has no HDR form here; both curve choices use the neutral shoulder.
+		rgb *= data.GetPaper_white();
+		if (data.GetTonemap_operator() == TonemapOperator::Clamp)
+			rgb = min(rgb, data.GetPeak());
+		else
+			rgb = tonemap_neutral_hdr(rgb, data.GetPeak());
+		color[id.xy] = float4(max(rgb, 0), c.a);
+		return;
+	}
 
 	if (data.GetTonemap_operator() == TonemapOperator::AgX)
 		rgb = tonemap_agx(rgb);

@@ -153,6 +153,8 @@ export
     using DXGI_SWAP_CHAIN_DESC1                             = ::DXGI_SWAP_CHAIN_DESC1;
     using DXGI_ADAPTER_DESC                                 = ::DXGI_ADAPTER_DESC;
     using DXGI_OUTPUT_DESC                                  = ::DXGI_OUTPUT_DESC;
+    using DXGI_OUTPUT_DESC1                                 = ::DXGI_OUTPUT_DESC1;
+    using DXGI_COLOR_SPACE_TYPE                             = ::DXGI_COLOR_SPACE_TYPE;
 
     // ---- D3D12 interfaces ----------------------------------------------------
     using ID3D12CommandList             = ::ID3D12CommandList;
@@ -199,6 +201,7 @@ export
     using IDXGISurface2                 = ::IDXGISurface2;
     using IDXGIDevice2                  = ::IDXGIDevice2;
     using IDXGIFactory7                 = ::IDXGIFactory7;
+    using IDXGIAdapter1                 = ::IDXGIAdapter1;
     using IDXGIOutput                   = ::IDXGIOutput;
     using IDXGIOutput6                  = ::IDXGIOutput6;
     using IDXGIDebug                    = ::IDXGIDebug;
@@ -241,6 +244,9 @@ export namespace DXGI
     inline constexpr HRESULT  ERROR_NOT_FOUND            = static_cast<HRESULT>(0x887A0002L);
     inline constexpr unsigned USAGE_RENDER_TARGET_OUTPUT = 0x00000020u;
     inline constexpr unsigned USAGE_BACK_BUFFER          = 0x00000040u;
+    inline constexpr DXGI_COLOR_SPACE_TYPE COLOR_SPACE_RGB_FULL_G10_NONE_P709    = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
+    inline constexpr DXGI_COLOR_SPACE_TYPE COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 = DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
+    inline constexpr unsigned SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT = DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT;
     // GUIDs — defined by value to avoid external symbol dependency on dxguid.lib
     // Values from dxgidebug.h: DEFINE_GUID(DXGI_DEBUG_ALL, 0xe48ae283,0xda80,0x490b,0x87,0xe6,0x43,0xe9,0xa9,0xcf,0xda,0x08)
     inline constexpr GUID    DEBUG_ALL     = { 0xe48ae283, 0xda80, 0x490b, { 0x87, 0xe6, 0x43, 0xe9, 0xa9, 0xcf, 0xda, 0x08 } };

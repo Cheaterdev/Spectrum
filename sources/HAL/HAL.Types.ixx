@@ -974,6 +974,21 @@ PROCEDURAL
 		virtual	HWND get_hwnd() const = 0;
 	};
 
+	// Capabilities of the display the swapchain's window is on. Defaults describe
+	// a plain SDR display (80 nits = scRGB 1.0).
+	struct DisplayInfo
+	{
+		bool  hdr = false;
+		float min_nits = 0.0f;
+		float max_nits = 80.0f;
+		float max_full_frame_nits = 80.0f;
+		// Windows' "SDR content brightness" for this display; what SDR white
+		// (UI, scRGB 1.0 in SDR terms) should be shown at while in HDR.
+		float sdr_white_nits = 80.0f;
+
+		bool operator==(const DisplayInfo&) const = default;
+	};
+
 	struct swap_chain_desc
 	{
 		int max_fps;

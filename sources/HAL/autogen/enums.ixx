@@ -309,6 +309,8 @@ export
 		UIState = "UIState"_crc32,
 		UIRenderState = "UIRenderState"_crc32,
 		vertex_input = "vertex_input"_crc32,
+		DisplayState = "DisplayState"_crc32,
+		DisplayOutput = "DisplayOutput"_crc32,
 		NinePatch = "NinePatch"_crc32,
 		ColorRect = "ColorRect"_crc32,
 		FlowGraph = "FlowGraph"_crc32,

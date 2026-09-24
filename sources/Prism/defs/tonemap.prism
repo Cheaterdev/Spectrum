@@ -48,6 +48,13 @@ namespace Post
 
 		TonemapOperator tonemap_operator;
 
+		# HDR output (UI::DisplayState::hdr). Output stays relative to SDR white
+		# (1.0) either way; in HDR, scene middle grey is placed at paper_white
+		# and highlights roll off to peak -- both in SDR-white units.
+		uint hdr;
+		float paper_white;
+		float peak;
+
 		RWStructuredBuffer<uint> histogram;
 		# x = adapted scene log2 luminance, y = linear exposure multiplier.
 		RWStructuredBuffer<float4> exposure_state;
@@ -89,8 +96,8 @@ namespace Post
 	# Histogram auto-exposure + display tonemap, in place on the final
 	# ResultTexture. Runs after every AA/upscaler producer (SMAA/FSR/DLSS/DLSS-RR
 	# all expect scene-referred HDR input) and before the UI composite. Output is
-	# linear display-referred [0,1]: the viewport widget applies the sRGB-ish
-	# encode itself (main.cpp, texture.gamma).
+	# linear display-referred, 1.0 = SDR white ([0,1] on an SDR display); the
+	# viewport widget scales it into the scRGB swapchain (ui_output_linear).
 	[Static]
 	[Compute]
 	[SetupCondition = TonemapSelectors::enabled]

@@ -5,6 +5,7 @@ struct quad_output
     float4 color : COLOR0;
 };
 #include "../autogen/ColorRect.h"
+#include "display_output.hlsl"
 static const ColorRect _cr = GetColorRect();
 static const float2 pos[4] = { _cr.pos[0].xy, _cr.pos[0].zw, _cr.pos[1].xy, _cr.pos[1].zw };
 
@@ -21,7 +22,7 @@ quad_output VS(uint index : SV_VERTEXID)
 #ifdef BUILD_FUNC_PS_COLOR
 float4 PS_COLOR(quad_output i) : SV_TARGET0
 {
-    return i.color;
+    return ui_output(i.color);
 }
 #endif
 

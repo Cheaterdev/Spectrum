@@ -12,6 +12,7 @@ struct quad_output
 
 
 #include "../autogen/FlowGraph.h"
+#include "display_output.hlsl"
 
 static const   float4 size = GetFlowGraph().GetSize();
 static const float4 offset_scale = GetFlowGraph().GetOffset_size();
@@ -44,7 +45,7 @@ float4 PS(quad_output i) : SV_TARGET0
 
     float r = max(res.x, res.y);
     float r2 = max(center.x, center.y) * saturate(s / scale);
-    return float4(vignette * float(20 + r * 5 / saturate(scale) + r2 * 20).xxx, 200) / 255;
+    return ui_output(float4(vignette * float(20 + r * 5 / saturate(scale) + r2 * 20).xxx, 200) / 255);
 
 }
 #endif

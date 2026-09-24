@@ -105,6 +105,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "Color") return SlotID::Color;
 	if(slot_name == "Test") return SlotID::Test;
 	if(slot_name == "TonemapData") return SlotID::TonemapData;
+	if(slot_name == "DisplayOutput") return SlotID::DisplayOutput;
 	if(slot_name == "NinePatch") return SlotID::NinePatch;
 	if(slot_name == "ColorRect") return SlotID::ColorRect;
 	if(slot_name == "FlowGraph") return SlotID::FlowGraph;
@@ -352,6 +353,8 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::TonemapData) return Slots::Post::TonemapData::Slot::ID;
 
+	if(id == SlotID::DisplayOutput) return Slots::UI::DisplayOutput::Slot::ID;
+
 	if(id == SlotID::NinePatch) return Slots::UI::NinePatch::Slot::ID;
 
 	if(id == SlotID::ColorRect) return Slots::UI::ColorRect::Slot::ID;
@@ -550,6 +553,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::Color) return "Color";
 	if(id == SlotID::Test) return "Test";
 	if(id == SlotID::TonemapData) return "TonemapData";
+	if(id == SlotID::DisplayOutput) return "DisplayOutput";
 	if(id == SlotID::NinePatch) return "NinePatch";
 	if(id == SlotID::ColorRect) return "ColorRect";
 	if(id == SlotID::FlowGraph) return "FlowGraph";

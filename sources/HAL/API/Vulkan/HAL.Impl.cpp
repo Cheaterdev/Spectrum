@@ -85,6 +85,10 @@ namespace HAL
             return false;
         };
 
+        // Required for the FP16 scRGB swapchain (EXTENDED_SRGB_LINEAR color space).
+        if (inst_ext_available(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME))
+            extensions.push_back(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME);
+
         // ---- Layers + debug messenger ---------------------------------------
         std::vector<const char*> layers;
         VkDebugUtilsMessengerCreateInfoEXT debug_info{

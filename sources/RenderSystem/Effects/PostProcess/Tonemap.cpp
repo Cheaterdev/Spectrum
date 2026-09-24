@@ -30,6 +30,13 @@ namespace
 	Variable<float>           g_min_ev         = { -10.0f, "Min scene EV", &tonemap_context(), -16.0f, 16.0f };
 	Variable<float>           g_max_ev         = { 12.0f, "Max scene EV", &tonemap_context(), -16.0f, 20.0f };
 
+	// HDR output only applies when the window's display is in HDR mode.
+	Variable<bool>            g_hdr_output     = { true, "HDR output", &tonemap_context() };
+	// Where the scene's diffuse white lands; 203 nits is the BT.2408 reference.
+	Variable<float>           g_paper_white    = { 203.0f, "HDR paper white (nits)", &tonemap_context(), 80.0f, 600.0f };
+	// 0 = the display's reported peak.
+	Variable<float>           g_peak_override  = { 0.0f, "HDR peak override (nits)", &tonemap_context(), 0.0f, 4000.0f };
+
 	// Histogram coverage in log2 luminance; wider than the min/max EV clamp so
 	// the clamp, not the bin range, is what limits adaptation.
 	constexpr float c_min_log_lum   = -16.0f;
@@ -56,6 +63,14 @@ void PassDefault<Passes::Post::Tonemap>::render(Passes::Post::Tonemap::Context& 
 
 	const ivec2 size = context.graph->get_context<ViewportInfo>().upscale_size;
 
+	const auto& display = context.graph->get_context<Table::UI::DisplayState>();
+	const bool  hdr         = display.hdr && g_hdr_output;
+	const float sdr_white   = std::max(display.sdr_white_nits, 1.0f);
+	const float peak_nits   = g_peak_override > 0.0f ? float(g_peak_override) : display.max_nits;
+	// Never below 1: the curve's peak can't sit under SDR white.
+	const float peak        = std::max(peak_nits / sdr_white, 1.0f);
+	const float paper_white = std::min(g_paper_white / sdr_white, peak);
+
 	// Every dispatch rebinds the full struct so each one records its own UAV
 	// usages -- that is what makes the HAL insert the UAV barriers between
 	// clear -> build -> adapt -> apply.
@@ -76,6 +91,9 @@ void PassDefault<Passes::Post::Tonemap>::render(Passes::Post::Tonemap::Context& 
 		params.GetAuto_exposure()         = g_auto_exposure ? 1u : 0u;
 		params.GetManual_ev()             = g_manual_ev;
 		params.GetTonemap_operator()      = g_operator;
+		params.GetHdr()                   = hdr ? 1u : 0u;
+		params.GetPaper_white()           = paper_white;
+		params.GetPeak()                  = peak;
 		params.GetHistogram()             = data.ExposureHistogram->rwStructuredBuffer;
 		params.GetExposure_state()        = data.ExposureState->rwStructuredBuffer;
 		params.GetColor()                 = data.ResultTexture->rwTexture2D;

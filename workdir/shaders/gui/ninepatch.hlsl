@@ -6,11 +6,12 @@ float4 mulColor:TEXCOORD0;
 float4 addColor:TEXCOORD1;
 float2 tc: TEXCOORD2;
 nointerpolation uint texture_offset : TEXCOORD3;
-nointerpolation float gammaEncode : TEXCOORD4;
+nointerpolation float linearSource : TEXCOORD4;
 };
 
 
 #include "../autogen/NinePatch.h"
+#include "display_output.hlsl"
 static const StructuredBuffer<vertex_input> vb = GetNinePatch().GetVb();
 
 #ifdef BUILD_FUNC_VS
@@ -24,7 +25,7 @@ quad_output VS(uint index : SV_VERTEXID, uint instance : SV_INSTANCEID)
 	Output.texture_offset = instance;// texture_offset[instance];
     Output.mulColor = input.GetMulColor();
     Output.addColor = input.GetAddColor();
-    Output.gammaEncode = input.GetGammaEncode();
+    Output.linearSource = input.GetLinearSource();
 
     return Output;
 }
@@ -36,8 +37,8 @@ float4 PS(quad_output i) : SV_TARGET0
     float4 col = GetNinePatch().GetTextures(i.texture_offset).Sample(anisoBordeSampler , i.tc);
     //col.xyz/=col.w;
     float4 result = i.addColor + i.mulColor * col;
-    if (i.gammaEncode > 0.5)
-        result.rgb = pow(result.rgb, 1.0 / 2.2);
-    return result;
+    if (i.linearSource > 0.5)
+        return ui_output_linear(result);
+    return ui_output(result);
 }
 #endif

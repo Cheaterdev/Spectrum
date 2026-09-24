@@ -253,10 +253,9 @@ namespace GUI
         sizer tc;
 		bool tiled = false;
 
-		// Linear -> gamma encode (pow(x, 1/2.2)) on this draw. Needed by the
-		// main viewport image: it's fed a linear HDR render result, unlike
-		// ordinary UI textures which are already display-ready.
-		bool gamma = false;
+		// The texture holds linear light (the main viewport's tonemapped
+		// result) rather than sRGB-encoded UI art; see vertex_input::linearSource.
+		bool linear_source = false;
 
         float4 mul_color;
         float4 add_color;
