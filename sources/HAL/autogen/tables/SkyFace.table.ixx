@@ -14,40 +14,43 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct SkyFace
+	namespace Environment
 	{
-		static constexpr SlotID ID = SlotID::SkyFace;
-		HLSL::RWTexture2DArray<float4> faces;
-		HLSL::RWTexture2DArray<float4>& GetFaces() { return faces; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct SkyFace
 		{
-			compiler.compile(faces, "SkyFace::faces");
-		}
-		struct Compiled
-		{
-			uint faces; // RWTexture2DArray<float4>
+			static constexpr SlotID ID = SlotID::SkyFace;
+			HLSL::RWTexture2DArray<float4> faces;
+			HLSL::RWTexture2DArray<float4>& GetFaces() { return faces; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(faces, "SkyFace::faces");
+			}
+			struct Compiled
+			{
+				uint faces; // RWTexture2DArray<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::SkyFace";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::SkyFace";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

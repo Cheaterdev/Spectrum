@@ -7,10 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct BoxInfo
+namespace Meshes
 {
-	uint node_offset; // uint
-	uint mesh_id; // uint
-	uint GetNode_offset() { return node_offset; }
-	uint GetMesh_id() { return mesh_id; }
-};
+	struct BoxInfo
+	{
+		uint node_offset; // uint
+		uint mesh_id; // uint
+		uint GetNode_offset() { return node_offset; }
+		uint GetMesh_id() { return mesh_id; }
+	};
+}
+using Meshes::BoxInfo;

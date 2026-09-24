@@ -14,50 +14,56 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DenoiserShadow_Prepare
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::DenoiserShadow_Prepare;
-		int2 BufferDimensions;
-		HLSL::Texture2D<uint> t2d_hitMaskResults;
-		HLSL::RWStructuredBuffer<uint> rwsb_shadowMask;
-		int2& GetBufferDimensions() { return BufferDimensions; }
-		HLSL::Texture2D<uint>& GetT2d_hitMaskResults() { return t2d_hitMaskResults; }
-		HLSL::RWStructuredBuffer<uint>& GetRwsb_shadowMask() { return rwsb_shadowMask; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Denoise
 		{
-			compiler.compile(BufferDimensions, "DenoiserShadow_Prepare::BufferDimensions");
-			compiler.compile(t2d_hitMaskResults, "DenoiserShadow_Prepare::t2d_hitMaskResults");
-			compiler.compile(rwsb_shadowMask, "DenoiserShadow_Prepare::rwsb_shadowMask");
-		}
-		struct Compiled
-		{
-			int2 BufferDimensions; // int2
-			uint t2d_hitMaskResults; // Texture2D<uint>
-			uint rwsb_shadowMask; // RWStructuredBuffer<uint>
+			struct DenoiserShadow_Prepare
+			{
+				static constexpr SlotID ID = SlotID::DenoiserShadow_Prepare;
+				int2 BufferDimensions;
+				HLSL::Texture2D<uint> t2d_hitMaskResults;
+				HLSL::RWStructuredBuffer<uint> rwsb_shadowMask;
+				int2& GetBufferDimensions() { return BufferDimensions; }
+				HLSL::Texture2D<uint>& GetT2d_hitMaskResults() { return t2d_hitMaskResults; }
+				HLSL::RWStructuredBuffer<uint>& GetRwsb_shadowMask() { return rwsb_shadowMask; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(BufferDimensions, "DenoiserShadow_Prepare::BufferDimensions");
+					compiler.compile(t2d_hitMaskResults, "DenoiserShadow_Prepare::t2d_hitMaskResults");
+					compiler.compile(rwsb_shadowMask, "DenoiserShadow_Prepare::rwsb_shadowMask");
+				}
+				struct Compiled
+				{
+					int2 BufferDimensions; // int2
+					uint t2d_hitMaskResults; // Texture2D<uint>
+					uint rwsb_shadowMask; // RWStructuredBuffer<uint>
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(BufferDimensions);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(BufferDimensions);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::DenoiserShadow_Prepare";
+				static std::string get_typename()
+				{
+					return "Tables::DenoiserShadow_Prepare";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(BufferDimensions);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(BufferDimensions);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

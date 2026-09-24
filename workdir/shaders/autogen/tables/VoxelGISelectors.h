@@ -7,14 +7,21 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct VoxelGISelectors
+namespace GI
 {
-	bool voxelize_scene; // bool
-	bool light_scene; // bool
-	bool reflection_enabled; // bool
-	bool debug_voxel_trace; // bool
-	bool GetVoxelize_scene() { return voxelize_scene; }
-	bool GetLight_scene() { return light_scene; }
-	bool GetReflection_enabled() { return reflection_enabled; }
-	bool GetDebug_voxel_trace() { return debug_voxel_trace; }
-};
+	namespace Voxel
+	{
+		struct VoxelGISelectors
+		{
+			bool voxelize_scene; // bool
+			bool light_scene; // bool
+			bool reflection_enabled; // bool
+			bool debug_voxel_trace; // bool
+			bool GetVoxelize_scene() { return voxelize_scene; }
+			bool GetLight_scene() { return light_scene; }
+			bool GetReflection_enabled() { return reflection_enabled; }
+			bool GetDebug_voxel_trace() { return debug_voxel_trace; }
+		};
+	}
+}
+using GI::Voxel::VoxelGISelectors;

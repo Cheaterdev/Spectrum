@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct DenoiserShadow_Prepare :public DataHolder<DenoiserShadow_Prepare, SlotID::DenoiserShadow_Prepare, Table::DenoiserShadow_Prepare, DefaultLayout::Instance0>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		DenoiserShadow_Prepare() = default;
-	};
+		namespace Denoise
+		{
+			struct DenoiserShadow_Prepare :public DataHolder<DenoiserShadow_Prepare, SlotID::DenoiserShadow_Prepare, Table::Shadows::Denoise::DenoiserShadow_Prepare, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				DenoiserShadow_Prepare() = default;
+			};
+		}
+	}
 }

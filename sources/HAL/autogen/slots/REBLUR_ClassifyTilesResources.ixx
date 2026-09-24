@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct REBLUR_ClassifyTilesResources :public DataHolder<REBLUR_ClassifyTilesResources, SlotID::REBLUR_ClassifyTilesResources, Table::REBLUR_ClassifyTilesResources, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		REBLUR_ClassifyTilesResources() = default;
-	};
+		namespace NRD
+		{
+			struct REBLUR_ClassifyTilesResources :public DataHolder<REBLUR_ClassifyTilesResources, SlotID::REBLUR_ClassifyTilesResources, Table::Denoise::NRD::REBLUR_ClassifyTilesResources, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				REBLUR_ClassifyTilesResources() = default;
+			};
+		}
+	}
 }

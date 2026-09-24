@@ -19,8 +19,15 @@ import :Autogen.Tables.{{t}};
 import :Autogen.Slots.{{s}};
 {%- endfor %}
 
-{%- set gens = pso.gens|list| map(attribute='name') | join(', ') -%}
-{%- set passes = pso.passes|list| map(attribute='name') | join(', ') -%}
+{#- Raygens and passes are declared at global scope, so anchored with ::.
+    gens/passes are maps keyed by name, hence the lookup for qn. Order is the
+    Typelist order RTX.ixx static_asserts each ::ID against. -#}
+{%- set _ = create_list('gen_names') -%}
+{%- for g in pso.gens -%}{%- do myappend('gen_names', '::' + pso.gens[g].qn) -%}{%- endfor -%}
+{%- set _ = create_list('pass_names') -%}
+{%- for p in pso.passes -%}{%- do myappend('pass_names', '::' + pso.passes[p].qn) -%}{%- endfor -%}
+{%- set gens = get_list('gen_names') | join(', ') -%}
+{%- set passes = get_list('pass_names') | join(', ') -%}
 
 export {
 {%- for e in pso.gens %}
@@ -29,11 +36,11 @@ export {
 {%- for e in pso.passes %}
 #include "{{e.name}}.h"
 {%- endfor %}
-
+{{ pso.ns_open }}
 struct {{ pso.name }}: public RTXPSO<{{ pso.name }}, Typelist<{{ passes }}>, Typelist<{{ gens }}>>
 {
 	using RTXPSO::RTXPSO;
 	static const constexpr Layouts global_sig = Layouts::{{pso.root_sig.name}};
 	static const constexpr uint MaxTraceRecursionDepth = 8;
-};
+};{{ pso.ns_braces }}
 }

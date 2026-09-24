@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMBlockerTilesAppend :public DataHolder<VSMBlockerTilesAppend, SlotID::VSMBlockerTilesAppend, Table::VSMBlockerTilesAppend, DefaultLayout::Instance1>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMBlockerTilesAppend() = default;
-	};
+		namespace VSM
+		{
+			struct VSMBlockerTilesAppend :public DataHolder<VSMBlockerTilesAppend, SlotID::VSMBlockerTilesAppend, Table::Shadows::VSM::VSMBlockerTilesAppend, ::Frame::DefaultLayout::Instance1>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMBlockerTilesAppend() = default;
+			};
+		}
+	}
 }

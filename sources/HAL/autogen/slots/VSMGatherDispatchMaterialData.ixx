@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMGatherDispatchMaterialData :public DataHolder<VSMGatherDispatchMaterialData, SlotID::VSMGatherDispatchMaterialData, Table::VSMGatherDispatchMaterialData, DefaultLayout::Instance1>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMGatherDispatchMaterialData() = default;
-	};
+		namespace VSM
+		{
+			struct VSMGatherDispatchMaterialData :public DataHolder<VSMGatherDispatchMaterialData, SlotID::VSMGatherDispatchMaterialData, Table::Shadows::VSM::VSMGatherDispatchMaterialData, ::Frame::DefaultLayout::Instance1>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMGatherDispatchMaterialData() = default;
+			};
+		}
+	}
 }

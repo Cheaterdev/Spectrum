@@ -15,40 +15,46 @@ import :Autogen.Tables.Glyph;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct FontRenderingGlyphs
+	namespace UI
 	{
-		static constexpr SlotID ID = SlotID::FontRenderingGlyphs;
-		HLSL::StructuredBuffer<Glyph> data;
-		HLSL::StructuredBuffer<Glyph>& GetData() { return data; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Text
 		{
-			compiler.compile(data, "FontRenderingGlyphs::data");
-		}
-		struct Compiled
-		{
-			uint data; // StructuredBuffer<Glyph>
+			struct FontRenderingGlyphs
+			{
+				static constexpr SlotID ID = SlotID::FontRenderingGlyphs;
+				HLSL::StructuredBuffer<Table::UI::Text::Glyph> data;
+				HLSL::StructuredBuffer<Table::UI::Text::Glyph>& GetData() { return data; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(data, "FontRenderingGlyphs::data");
+				}
+				struct Compiled
+				{
+					uint data; // StructuredBuffer<Glyph>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::FontRenderingGlyphs";
+				static std::string get_typename()
+				{
+					return "Tables::FontRenderingGlyphs";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

@@ -14,39 +14,45 @@ import :Types;
 
 export namespace PSOS
 {
-	struct VSMGatherDispatch: public PSOBase
+	namespace Shadows
 	{
-		struct Keys {
-			GEN_DEF_COMP(Keys);
-		private:
-			SERIALIZE()
+		namespace VSM
+		{
+			struct VSMGatherDispatch: public PSOBase
 			{
-			}
-		};
+				struct Keys {
+					GEN_DEF_COMP(Keys);
+				private:
+					SERIALIZE()
+					{
+					}
+				};
 
-		GEN_COMPUTE_PSO(VSMGatherDispatch)
+				GEN_COMPUTE_PSO(VSMGatherDispatch)
 
 
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
+				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+				{
 
 
-			SimplePSO mpso("VSMGatherDispatch");
-			if(f) f(mpso,key);
+					SimplePSO mpso("VSMGatherDispatch");
+					if(f) f(mpso,key);
 
-			mpso.root_signature = Layouts::DefaultLayout;
+					mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/shadows/vsm/vsm_gather_dispatch.hlsl";
-			mpso.compute.entry_point = "CS";
-			mpso.compute.flags = HAL::ShaderOptions::None;
+					mpso.compute.file_name = "shaders/shadows/vsm/vsm_gather_dispatch.hlsl";
+					mpso.compute.entry_point = "CS";
+					mpso.compute.flags = HAL::ShaderOptions::None;
 			
-			return mpso;
-		}
+					return mpso;
+				}
 
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
+				private:
+				SERIALIZE()
+				{
+					ar&NVP(wrap(psos));
+				}
+			};
 		}
-	};
+	}
 }

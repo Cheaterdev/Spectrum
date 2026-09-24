@@ -14,44 +14,47 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct IndirectRTXHalfGBuffer
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::IndirectRTXHalfGBuffer;
-		HLSL::Texture2D<float> depth;
-		HLSL::Texture2D<float4> normals;
-		HLSL::Texture2D<float>& GetDepth() { return depth; }
-		HLSL::Texture2D<float4>& GetNormals() { return normals; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct IndirectRTXHalfGBuffer
 		{
-			compiler.compile(depth, "IndirectRTXHalfGBuffer::depth");
-			compiler.compile(normals, "IndirectRTXHalfGBuffer::normals");
-		}
-		struct Compiled
-		{
-			uint depth; // Texture2D<float>
-			uint normals; // Texture2D<float4>
+			static constexpr SlotID ID = SlotID::IndirectRTXHalfGBuffer;
+			HLSL::Texture2D<float> depth;
+			HLSL::Texture2D<float4> normals;
+			HLSL::Texture2D<float>& GetDepth() { return depth; }
+			HLSL::Texture2D<float4>& GetNormals() { return normals; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(depth, "IndirectRTXHalfGBuffer::depth");
+				compiler.compile(normals, "IndirectRTXHalfGBuffer::normals");
+			}
+			struct Compiled
+			{
+				uint depth; // Texture2D<float>
+				uint normals; // Texture2D<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::IndirectRTXHalfGBuffer";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::IndirectRTXHalfGBuffer";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

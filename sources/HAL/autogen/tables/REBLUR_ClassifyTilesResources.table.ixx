@@ -15,50 +15,56 @@ import :Autogen.Tables.REBLURSharedConstants;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct REBLUR_ClassifyTilesResources
+	namespace Denoise
 	{
-		static constexpr SlotID ID = SlotID::REBLUR_ClassifyTilesResources;
-		HLSL::Texture2D<float> gIn_ViewZ;
-		HLSL::RWTexture2D<float> gOut_Tiles;
-		REBLURSharedConstants sharedConstants;
-		HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
-		HLSL::RWTexture2D<float>& GetGOut_Tiles() { return gOut_Tiles; }
-		REBLURSharedConstants& GetSharedConstants() { return sharedConstants; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace NRD
 		{
-			compiler.compile(gIn_ViewZ, "REBLUR_ClassifyTilesResources::gIn_ViewZ");
-			compiler.compile(gOut_Tiles, "REBLUR_ClassifyTilesResources::gOut_Tiles");
-			compiler.compile(sharedConstants, "REBLUR_ClassifyTilesResources::sharedConstants");
-		}
-		struct Compiled
-		{
-			uint gIn_ViewZ; // Texture2D<float>
-			uint gOut_Tiles; // RWTexture2D<float>
-			REBLURSharedConstants::Compiled sharedConstants; // REBLURSharedConstants
+			struct REBLUR_ClassifyTilesResources
+			{
+				static constexpr SlotID ID = SlotID::REBLUR_ClassifyTilesResources;
+				HLSL::Texture2D<float> gIn_ViewZ;
+				HLSL::RWTexture2D<float> gOut_Tiles;
+				Table::Denoise::NRD::REBLURSharedConstants sharedConstants;
+				HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
+				HLSL::RWTexture2D<float>& GetGOut_Tiles() { return gOut_Tiles; }
+				Table::Denoise::NRD::REBLURSharedConstants& GetSharedConstants() { return sharedConstants; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(gIn_ViewZ, "REBLUR_ClassifyTilesResources::gIn_ViewZ");
+					compiler.compile(gOut_Tiles, "REBLUR_ClassifyTilesResources::gOut_Tiles");
+					compiler.compile(sharedConstants, "REBLUR_ClassifyTilesResources::sharedConstants");
+				}
+				struct Compiled
+				{
+					uint gIn_ViewZ; // Texture2D<float>
+					uint gOut_Tiles; // RWTexture2D<float>
+					Table::Denoise::NRD::REBLURSharedConstants::Compiled sharedConstants; // REBLURSharedConstants
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(sharedConstants);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(sharedConstants);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::REBLUR_ClassifyTilesResources";
+				static std::string get_typename()
+				{
+					return "Tables::REBLUR_ClassifyTilesResources";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(sharedConstants);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(sharedConstants);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

@@ -31,11 +31,13 @@ export {
 #include "ColorPass.h"
 #include "ColorShadowPass.h"
 #include "TranslucentPass.h"
-
-struct MainRTX: public RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass, ColorShadowPass, TranslucentPass>, Typelist<Shadow, ShadowRTX, ReflectionRTX, ReflectionRTXHalf, Reflection, IndirectRTX, IndirectRTXHalf, Indirect, ColorRTX, TranslucentRaygen, DDGIProbeTrace>>
+namespace Raytrace
 {
-	using RTXPSO::RTXPSO;
-	static const constexpr Layouts global_sig = Layouts::DefaultLayout;
-	static const constexpr uint MaxTraceRecursionDepth = 8;
-};
+	struct MainRTX: public RTXPSO<MainRTX, Typelist<::Shadows::ShadowPass, ::Raytrace::ColorPass, ::Raytrace::ColorShadowPass, ::Raytrace::TranslucentPass>, Typelist<::Shadows::Shadow, ::Shadows::ShadowRTX, ::Reflections::ReflectionRTX, ::Reflections::ReflectionRTXHalf, ::Reflections::Reflection, ::GI::IndirectRTX, ::GI::IndirectRTXHalf, ::GI::Indirect, ::Raytrace::Dev::ColorRTX, ::Raytrace::TranslucentRaygen, ::GI::DDGI::DDGIProbeTrace>>
+	{
+		using RTXPSO::RTXPSO;
+		static const constexpr Layouts global_sig = Layouts::DefaultLayout;
+		static const constexpr uint MaxTraceRecursionDepth = 8;
+	};
+}
 }

@@ -403,7 +403,7 @@ export{
 			void setup_debug(SignatureDataSetter*);
 			void print_debug();
 			bool first_debug_log = true;
-			StructuredBufferView<Table::DebugStruct> debug_buffer;
+			StructuredBufferView<Table::Dev::DebugStruct> debug_buffer;
 			StructuredBufferView<uint> debug_log_count;
 
 			GraphicsContext& get_graphics();

@@ -14,39 +14,42 @@ import :Types;
 
 export namespace PSOS
 {
-	struct RTXShadowReferenceCompute: public PSOBase
+	namespace Shadows
 	{
-		struct Keys {
-			GEN_DEF_COMP(Keys);
-		private:
+		struct RTXShadowReferenceCompute: public PSOBase
+		{
+			struct Keys {
+				GEN_DEF_COMP(Keys);
+			private:
+				SERIALIZE()
+				{
+				}
+			};
+
+			GEN_COMPUTE_PSO(RTXShadowReferenceCompute)
+
+
+			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+			{
+
+
+				SimplePSO mpso("RTXShadowReferenceCompute");
+				if(f) f(mpso,key);
+
+				mpso.root_signature = Layouts::DefaultLayout;
+
+				mpso.compute.file_name = "shaders/rtx/rtx_shadow_reference.hlsl";
+				mpso.compute.entry_point = "CS_REFERENCE";
+				mpso.compute.flags = HAL::ShaderOptions::None;
+			
+				return mpso;
+			}
+
+			private:
 			SERIALIZE()
 			{
+				ar&NVP(wrap(psos));
 			}
 		};
-
-		GEN_COMPUTE_PSO(RTXShadowReferenceCompute)
-
-
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
-
-
-			SimplePSO mpso("RTXShadowReferenceCompute");
-			if(f) f(mpso,key);
-
-			mpso.root_signature = Layouts::DefaultLayout;
-
-			mpso.compute.file_name = "shaders/rtx/rtx_shadow_reference.hlsl";
-			mpso.compute.entry_point = "CS_REFERENCE";
-			mpso.compute.flags = HAL::ShaderOptions::None;
-			
-			return mpso;
-		}
-
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
-		}
-	};
+	}
 }

@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct Instance
+namespace Editor
 {
-	uint instanceId; // uint
-	uint GetInstanceId() { return instanceId; }
-};
+	struct Instance
+	{
+		uint instanceId; // uint
+		uint GetInstanceId() { return instanceId; }
+	};
+}
+using Editor::Instance;

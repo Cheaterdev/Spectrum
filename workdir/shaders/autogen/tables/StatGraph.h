@@ -7,30 +7,34 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct StatGraph
+namespace Dev
 {
-	uint Count; // uint
-	uint Width; // uint
-	uint Height; // uint
-	float Vmin; // float
-	float Vmax; // float
-	float4 LineColor; // float4
-	float4 FillTop; // float4
-	float4 FillBot; // float4
-	float4 BgTop; // float4
-	float4 BgBot; // float4
-	uint Samples; // StructuredBuffer<float>
-	uint Output; // RWTexture2D<float4>
-	uint GetCount() { return Count; }
-	uint GetWidth() { return Width; }
-	uint GetHeight() { return Height; }
-	float GetVmin() { return Vmin; }
-	float GetVmax() { return Vmax; }
-	float4 GetLineColor() { return LineColor; }
-	float4 GetFillTop() { return FillTop; }
-	float4 GetFillBot() { return FillBot; }
-	float4 GetBgTop() { return BgTop; }
-	float4 GetBgBot() { return BgBot; }
-	StructuredBuffer<float> GetSamples() { return ResourceDescriptorHeap[Samples]; }
-	RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[Output]; }
-};
+	struct StatGraph
+	{
+		uint Count; // uint
+		uint Width; // uint
+		uint Height; // uint
+		float Vmin; // float
+		float Vmax; // float
+		float4 LineColor; // float4
+		float4 FillTop; // float4
+		float4 FillBot; // float4
+		float4 BgTop; // float4
+		float4 BgBot; // float4
+		uint Samples; // StructuredBuffer<float>
+		uint Output; // RWTexture2D<float4>
+		uint GetCount() { return Count; }
+		uint GetWidth() { return Width; }
+		uint GetHeight() { return Height; }
+		float GetVmin() { return Vmin; }
+		float GetVmax() { return Vmax; }
+		float4 GetLineColor() { return LineColor; }
+		float4 GetFillTop() { return FillTop; }
+		float4 GetFillBot() { return FillBot; }
+		float4 GetBgTop() { return BgTop; }
+		float4 GetBgBot() { return BgBot; }
+		StructuredBuffer<float> GetSamples() { return ResourceDescriptorHeap[Samples]; }
+		RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[Output]; }
+	};
+}
+using Dev::StatGraph;

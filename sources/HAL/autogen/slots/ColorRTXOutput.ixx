@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct ColorRTXOutput :public DataHolder<ColorRTXOutput, SlotID::ColorRTXOutput, Table::ColorRTXOutput, DefaultLayout::Instance3>
+	namespace Raytrace
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		ColorRTXOutput() = default;
-	};
+		struct ColorRTXOutput :public DataHolder<ColorRTXOutput, SlotID::ColorRTXOutput, Table::Raytrace::ColorRTXOutput, ::Frame::DefaultLayout::Instance3>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			ColorRTXOutput() = default;
+		};
+	}
 }

@@ -14,46 +14,52 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VoxelTilingParams
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::VoxelTilingParams;
-		uint4 voxels_per_tile;
-		HLSL::StructuredBuffer<int3> tiles;
-		uint4& GetVoxels_per_tile() { return voxels_per_tile; }
-		HLSL::StructuredBuffer<int3>& GetTiles() { return tiles; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Voxel
 		{
-			compiler.compile(voxels_per_tile, "VoxelTilingParams::voxels_per_tile");
-			compiler.compile(tiles, "VoxelTilingParams::tiles");
-		}
-		struct Compiled
-		{
-			uint4 voxels_per_tile; // uint4
-			uint tiles; // StructuredBuffer<int3>
+			struct VoxelTilingParams
+			{
+				static constexpr SlotID ID = SlotID::VoxelTilingParams;
+				uint4 voxels_per_tile;
+				HLSL::StructuredBuffer<int3> tiles;
+				uint4& GetVoxels_per_tile() { return voxels_per_tile; }
+				HLSL::StructuredBuffer<int3>& GetTiles() { return tiles; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(voxels_per_tile, "VoxelTilingParams::voxels_per_tile");
+					compiler.compile(tiles, "VoxelTilingParams::tiles");
+				}
+				struct Compiled
+				{
+					uint4 voxels_per_tile; // uint4
+					uint tiles; // StructuredBuffer<int3>
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(voxels_per_tile);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(voxels_per_tile);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VoxelTilingParams";
+				static std::string get_typename()
+				{
+					return "Tables::VoxelTilingParams";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(voxels_per_tile);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(voxels_per_tile);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

@@ -18,50 +18,56 @@ import :Autogen.Slots.VSMPageBatch;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMDispatchCommandData
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMDispatchCommandData;
-		Pointer<VSMPageBatch> page_batch_cb;
-		Pointer<MeshInfo> mesh_cb;
-		Pointer<MeshInstanceInfo> meshinstance_cb;
-		Pointer<MaterialInfo> material_cb;
-		DispatchMeshArguments draw_commands;
-		Pointer<VSMPageBatch>& GetPage_batch_cb() { return page_batch_cb; }
-		Pointer<MeshInfo>& GetMesh_cb() { return mesh_cb; }
-		Pointer<MeshInstanceInfo>& GetMeshinstance_cb() { return meshinstance_cb; }
-		Pointer<MaterialInfo>& GetMaterial_cb() { return material_cb; }
-		DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(page_batch_cb, "VSMDispatchCommandData::page_batch_cb");
-			compiler.compile(mesh_cb, "VSMDispatchCommandData::mesh_cb");
-			compiler.compile(meshinstance_cb, "VSMDispatchCommandData::meshinstance_cb");
-			compiler.compile(material_cb, "VSMDispatchCommandData::material_cb");
-			compiler.compile(draw_commands, "VSMDispatchCommandData::draw_commands");
-		}
-		using Compiled = VSMDispatchCommandData;
-		static const IndirectCommands CommandID = IndirectCommands::VSMDispatchCommandData;
-		template<class Processor> static void for_each(Processor& processor)
-		{
-			processor.template process<Slots::VSMPageBatch, Slots::MeshInfo, Slots::MeshInstanceInfo, Slots::MaterialInfo, DispatchMeshArguments>();
-		}
-		static std::string get_typename()
-		{
-			return "Tables::VSMDispatchCommandData";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(page_batch_cb);
-			ar& NVP(mesh_cb);
-			ar& NVP(meshinstance_cb);
-			ar& NVP(material_cb);
-			ar& NVP(draw_commands);
-		}
+			struct VSMDispatchCommandData
+			{
+				static constexpr SlotID ID = SlotID::VSMDispatchCommandData;
+				Pointer<Table::Shadows::VSM::VSMPageBatch> page_batch_cb;
+				Pointer<Table::Meshes::MeshInfo> mesh_cb;
+				Pointer<Table::Meshes::MeshInstanceInfo> meshinstance_cb;
+				Pointer<Table::Meshes::MaterialInfo> material_cb;
+				DispatchMeshArguments draw_commands;
+				Pointer<Table::Shadows::VSM::VSMPageBatch>& GetPage_batch_cb() { return page_batch_cb; }
+				Pointer<Table::Meshes::MeshInfo>& GetMesh_cb() { return mesh_cb; }
+				Pointer<Table::Meshes::MeshInstanceInfo>& GetMeshinstance_cb() { return meshinstance_cb; }
+				Pointer<Table::Meshes::MaterialInfo>& GetMaterial_cb() { return material_cb; }
+				DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(page_batch_cb, "VSMDispatchCommandData::page_batch_cb");
+					compiler.compile(mesh_cb, "VSMDispatchCommandData::mesh_cb");
+					compiler.compile(meshinstance_cb, "VSMDispatchCommandData::meshinstance_cb");
+					compiler.compile(material_cb, "VSMDispatchCommandData::material_cb");
+					compiler.compile(draw_commands, "VSMDispatchCommandData::draw_commands");
+				}
+				using Compiled = VSMDispatchCommandData;
+				static const IndirectCommands CommandID = IndirectCommands::VSMDispatchCommandData;
+				template<class Processor> static void for_each(Processor& processor)
+				{
+					processor.template process<Slots::Shadows::VSM::VSMPageBatch, Slots::Meshes::MeshInfo, Slots::Meshes::MeshInstanceInfo, Slots::Meshes::MaterialInfo, DispatchMeshArguments>();
+				}
+				static std::string get_typename()
+				{
+					return "Tables::VSMDispatchCommandData";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(page_batch_cb);
+					ar& NVP(mesh_cb);
+					ar& NVP(meshinstance_cb);
+					ar& NVP(material_cb);
+					ar& NVP(draw_commands);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

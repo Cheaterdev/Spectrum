@@ -69,7 +69,7 @@ public:
 
  
 	static const int MAX_COMMANDS_SIZE = 1024 * 1024 * 64;
-    HAL::virtual_gpu_buffer<Table::MeshCommandData>::ptr mesh_infos;// (MAX_COMMANDS_SIZE)
+    HAL::virtual_gpu_buffer<Table::Meshes::MeshCommandData>::ptr mesh_infos;// (MAX_COMMANDS_SIZE)
     HAL::virtual_gpu_buffer<HAL::InstanceDesc>::ptr raytrace;
 
 	my_unique_vector<UINT> command_ids[10];
@@ -83,14 +83,14 @@ public:
 	// pipeline changes are picked up via universal_material::pipeline_epoch.
 	void invalidate_scene_caches();
 
-	Slots::SceneData::Compiled compiledScene;
+	Slots::Frame::SceneData::Compiled compiledScene;
 
-    Slots::GatherPipelineGlobal::Compiled compiledGather[8];
+    Slots::Meshes::GatherPipelineGlobal::Compiled compiledGather[8];
 
 
-	Slots::VoxelInfo::Compiled voxels_compiled;
+	Slots::GI::Voxel::VoxelInfo::Compiled voxels_compiled;
    
-	Slots::VoxelInfo voxel_info;
+	Slots::GI::Voxel::VoxelInfo voxel_info;
 
 
    bool init_ras(CommandList::ptr& list);

@@ -5,7 +5,11 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 #pragma once
-
-struct NoOutput
+namespace Frame
 {
-};
+
+	struct NoOutput
+	{
+	};
+}
+using Frame::NoOutput;

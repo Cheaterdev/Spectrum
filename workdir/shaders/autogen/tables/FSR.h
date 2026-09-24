@@ -8,12 +8,19 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "FSRConstants.h"
-struct FSR
+namespace Post
 {
-	uint source; // Texture2D<float4>
-	uint target; // RWTexture2D<float4>
-	FSRConstants constants; // FSRConstants
-	FSRConstants GetConstants() { return constants; }
-	Texture2D<float4> GetSource() { return ResourceDescriptorHeap[source]; }
-	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
-};
+	namespace Upscale
+	{
+		struct FSR
+		{
+			uint source; // Texture2D<float4>
+			uint target; // RWTexture2D<float4>
+			FSRConstants constants; // FSRConstants
+			FSRConstants GetConstants() { return constants; }
+			Texture2D<float4> GetSource() { return ResourceDescriptorHeap[source]; }
+			RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
+		};
+	}
+}
+using Post::Upscale::FSR;

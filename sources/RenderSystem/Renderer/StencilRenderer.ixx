@@ -87,7 +87,7 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
         vec3 direction;
 
         // Setup is generated (stenciler.prism) -- render only.
-        Passes::stencil_renderer::render_func_type m_render;
+        Passes::Editor::stencil_renderer::render_func_type m_render;
 
         stencil_renderer();
 

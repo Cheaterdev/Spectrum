@@ -8,10 +8,17 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "Camera.h"
-struct PSSMDataGlobal
+namespace Shadows
 {
-	uint light_buffer; // Texture2D<float>
-	uint light_camera; // StructuredBuffer<Camera>
-	Texture2D<float> GetLight_buffer() { return ResourceDescriptorHeap[light_buffer]; }
-	StructuredBuffer<Camera> GetLight_camera() { return ResourceDescriptorHeap[light_camera]; }
-};
+	namespace PSSM
+	{
+		struct PSSMDataGlobal
+		{
+			uint light_buffer; // Texture2D<float>
+			uint light_camera; // StructuredBuffer<Camera>
+			Texture2D<float> GetLight_buffer() { return ResourceDescriptorHeap[light_buffer]; }
+			StructuredBuffer<Camera> GetLight_camera() { return ResourceDescriptorHeap[light_camera]; }
+		};
+	}
+}
+using Shadows::PSSM::PSSMDataGlobal;

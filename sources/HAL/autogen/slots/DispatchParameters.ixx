@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct DispatchParameters :public DataHolder<DispatchParameters, SlotID::DispatchParameters, Table::DispatchParameters, DefaultLayout::Instance2>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		DispatchParameters() = default;
-	};
+		namespace Screen
+		{
+			struct DispatchParameters :public DataHolder<DispatchParameters, SlotID::DispatchParameters, Table::Shadows::Screen::DispatchParameters, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				DispatchParameters() = default;
+			};
+		}
+	}
 }

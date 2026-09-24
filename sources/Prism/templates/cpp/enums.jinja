@@ -50,12 +50,12 @@ export
 	};
 
 {%- for e in parsed.enums %}
-{%- set enum = parsed.enums[e] %}
+{%- set enum = parsed.enums[e] %}{{ enum.ns_open }}
 	enum class {{enum.name}} : uint
 	{
 		{%- for v in enum.values %}
 		{{v.name}}{% if v.expr %} = {{v.expr}}{% endif %}{% if not loop.last %},{% endif %}
 		{%- endfor %}
-	};
+	};{{ enum.ns_braces }}
 {%- endfor %}
 }

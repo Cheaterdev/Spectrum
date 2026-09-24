@@ -21,6 +21,12 @@ public:
    */
     virtual std::any visitParse(PrismParser::ParseContext *context) = 0;
 
+    virtual std::any visitDefinition(PrismParser::DefinitionContext *context) = 0;
+
+    virtual std::any visitNamespace_definition(PrismParser::Namespace_definitionContext *context) = 0;
+
+    virtual std::any visitNamespace_header(PrismParser::Namespace_headerContext *context) = 0;
+
     virtual std::any visitConst_definition(PrismParser::Const_definitionContext *context) = 0;
 
     virtual std::any visitBind_option(PrismParser::Bind_optionContext *context) = 0;

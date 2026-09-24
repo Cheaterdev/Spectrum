@@ -14,44 +14,50 @@ import :Types;
 
 export namespace PSOS
 {
-	struct VSMShadowBlur: public PSOBase
+	namespace Shadows
 	{
-		struct Keys {
-			KeyValue<int, Nullable> VsmRtxVerify;
-			GEN_DEF_COMP(Keys);
-		private:
-			SERIALIZE()
+		namespace VSM
+		{
+			struct VSMShadowBlur: public PSOBase
 			{
-				ar&NVP(VsmRtxVerify);
-			}
-		};
+				struct Keys {
+					KeyValue<int, Nullable> VsmRtxVerify;
+					GEN_DEF_COMP(Keys);
+				private:
+					SERIALIZE()
+					{
+						ar&NVP(VsmRtxVerify);
+					}
+				};
 
-		GEN_COMPUTE_PSO(VSMShadowBlur, VsmRtxVerify)
-		GEN_KEY(VsmRtxVerify, true);
+				GEN_COMPUTE_PSO(VSMShadowBlur, VsmRtxVerify)
+				GEN_KEY(VsmRtxVerify, true);
 
 
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
-			static const ShaderDefine<&Keys::VsmRtxVerify,&SimpleComputePSO::compute> VsmRtxVerify = "VSM_RTX_VERIFY";
+				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+				{
+					static const ShaderDefine<&Keys::VsmRtxVerify,&SimpleComputePSO::compute> VsmRtxVerify = "VSM_RTX_VERIFY";
 
 
-			SimplePSO mpso("VSMShadowBlur");
-			if(f) f(mpso,key);
+					SimplePSO mpso("VSMShadowBlur");
+					if(f) f(mpso,key);
 
-			mpso.root_signature = Layouts::DefaultLayout;
+					mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/shadows/vsm/vsm_shadow_resolve.hlsl";
-			mpso.compute.entry_point = "CS_SHADOW_BLUR";
-			mpso.compute.flags = HAL::ShaderOptions::None;
+					mpso.compute.file_name = "shaders/shadows/vsm/vsm_shadow_resolve.hlsl";
+					mpso.compute.entry_point = "CS_SHADOW_BLUR";
+					mpso.compute.flags = HAL::ShaderOptions::None;
 			
-			VsmRtxVerify.Apply(mpso, key);
-			return mpso;
-		}
+					VsmRtxVerify.Apply(mpso, key);
+					return mpso;
+				}
 
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
+				private:
+				SERIALIZE()
+				{
+					ar&NVP(wrap(psos));
+				}
+			};
 		}
-	};
+	}
 }

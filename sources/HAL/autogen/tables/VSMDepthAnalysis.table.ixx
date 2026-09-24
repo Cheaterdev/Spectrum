@@ -15,46 +15,52 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMDepthAnalysis
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMDepthAnalysis;
-		HLSL::RWStructuredBuffer<uint> result;
-		GBuffer gbuffer;
-		HLSL::RWStructuredBuffer<uint>& GetResult() { return result; }
-		GBuffer& GetGbuffer() { return gbuffer; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(result, "VSMDepthAnalysis::result");
-			compiler.compile(gbuffer, "VSMDepthAnalysis::gbuffer");
-		}
-		struct Compiled
-		{
-			uint result; // RWStructuredBuffer<uint>
-			GBuffer::Compiled gbuffer; // GBuffer
+			struct VSMDepthAnalysis
+			{
+				static constexpr SlotID ID = SlotID::VSMDepthAnalysis;
+				HLSL::RWStructuredBuffer<uint> result;
+				Table::Meshes::GBuffer gbuffer;
+				HLSL::RWStructuredBuffer<uint>& GetResult() { return result; }
+				Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(result, "VSMDepthAnalysis::result");
+					compiler.compile(gbuffer, "VSMDepthAnalysis::gbuffer");
+				}
+				struct Compiled
+				{
+					uint result; // RWStructuredBuffer<uint>
+					Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(gbuffer);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(gbuffer);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMDepthAnalysis";
+				static std::string get_typename()
+				{
+					return "Tables::VSMDepthAnalysis";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(gbuffer);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(gbuffer);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

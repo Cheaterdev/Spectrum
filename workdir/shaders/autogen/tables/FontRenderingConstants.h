@@ -7,10 +7,17 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct FontRenderingConstants
+namespace UI
 {
-	float4x4 TransformMatrix; // float4x4
-	float4 ClipRect; // float4
-	float4x4 GetTransformMatrix() { return TransformMatrix; }
-	float4 GetClipRect() { return ClipRect; }
-};
+	namespace Text
+	{
+		struct FontRenderingConstants
+		{
+			float4x4 TransformMatrix; // float4x4
+			float4 ClipRect; // float4
+			float4x4 GetTransformMatrix() { return TransformMatrix; }
+			float4 GetClipRect() { return ClipRect; }
+		};
+	}
+}
+using UI::Text::FontRenderingConstants;

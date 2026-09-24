@@ -7,8 +7,15 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct VSMShadowResolveIO
+namespace Shadows
 {
-	uint blocker_search_result; // Texture2D<uint4>
-	Texture2D<uint4> GetBlocker_search_result() { return ResourceDescriptorHeap[blocker_search_result]; }
-};
+	namespace VSM
+	{
+		struct VSMShadowResolveIO
+		{
+			uint blocker_search_result; // Texture2D<uint4>
+			Texture2D<uint4> GetBlocker_search_result() { return ResourceDescriptorHeap[blocker_search_result]; }
+		};
+	}
+}
+using Shadows::VSM::VSMShadowResolveIO;

@@ -8,77 +8,84 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "DDGIProbeMetadata.h"
-struct DDGIProbes
+namespace GI
 {
-	uint4 probe_counts; // uint4
-	uint probes; // RWStructuredBuffer<DDGIProbeMetadata>
-	uint4 GetProbe_counts() { return probe_counts; }
-	RWStructuredBuffer<DDGIProbeMetadata> GetProbes() { return ResourceDescriptorHeap[probes]; }
-	uint3 ddgi_probe_grid_coord(uint linear_index, uint3 probe_counts)
+	namespace DDGI
 	{
-		uint3 coord;
-		coord.x = linear_index % probe_counts.x;
-		coord.y = (linear_index / probe_counts.x) % probe_counts.y;
-		coord.z = linear_index / (probe_counts.x * probe_counts.y);
-		return coord;
-	}
+		struct DDGIProbes
+		{
+			uint4 probe_counts; // uint4
+			uint probes; // RWStructuredBuffer<DDGIProbeMetadata>
+			uint4 GetProbe_counts() { return probe_counts; }
+			RWStructuredBuffer<DDGIProbeMetadata> GetProbes() { return ResourceDescriptorHeap[probes]; }
+					uint3 ddgi_probe_grid_coord(uint linear_index, uint3 probe_counts)
+					{
+						uint3 coord;
+						coord.x = linear_index % probe_counts.x;
+						coord.y = (linear_index / probe_counts.x) % probe_counts.y;
+						coord.z = linear_index / (probe_counts.x * probe_counts.y);
+						return coord;
+					}
 
-	uint ddgi_probe_linear_index(uint3 probe_grid_coord, uint3 probe_counts)
-	{
-		return probe_grid_coord.x + probe_grid_coord.y * probe_counts.x + probe_grid_coord.z * probe_counts.x * probe_counts.y;
-	}
+					uint ddgi_probe_linear_index(uint3 probe_grid_coord, uint3 probe_counts)
+					{
+						return probe_grid_coord.x + probe_grid_coord.y * probe_counts.x + probe_grid_coord.z * probe_counts.x * probe_counts.y;
+					}
 
-	int3 ddgi_wrap(int3 v, uint3 counts)
-	{
-		int3 c = int3(counts);
-		return ((v % c) + c) % c;
-	}
+					int3 ddgi_wrap(int3 v, uint3 counts)
+					{
+						int3 c = int3(counts);
+						return ((v % c) + c) % c;
+					}
 
-	int3 ddgi_window_origin(float3 grid_min, float3 spacing)
-	{
-		return int3(round(grid_min / spacing));
-	}
+					int3 ddgi_window_origin(float3 grid_min, float3 spacing)
+					{
+						return int3(round(grid_min / spacing));
+					}
 
-	float3 ddgi_probe_world_pos(uint3 probe_grid_coord, float3 grid_min, float3 probe_spacing, float3 probe_offset, uint3 probe_counts)
-	{
-		int3 window_origin = ddgi_window_origin(grid_min, probe_spacing);
-		int3 absolute_cell = window_origin + ddgi_wrap(int3(probe_grid_coord) - window_origin, probe_counts);
-		return float3(absolute_cell) * probe_spacing + probe_offset;
-	}
+					float3 ddgi_probe_world_pos(uint3 probe_grid_coord, float3 grid_min, float3 probe_spacing, float3 probe_offset, uint3 probe_counts)
+					{
+						int3 window_origin = ddgi_window_origin(grid_min, probe_spacing);
+						int3 absolute_cell = window_origin + ddgi_wrap(int3(probe_grid_coord) - window_origin, probe_counts);
+						return float3(absolute_cell) * probe_spacing + probe_offset;
+					}
 
-	uint3 ddgi_world_to_slot(float3 world_pos, float3 probe_spacing, uint3 probe_counts)
-	{
-		int3 absolute_cell = int3(floor(world_pos / probe_spacing));
-		return uint3(ddgi_wrap(absolute_cell, probe_counts));
-	}
+					uint3 ddgi_world_to_slot(float3 world_pos, float3 probe_spacing, uint3 probe_counts)
+					{
+						int3 absolute_cell = int3(floor(world_pos / probe_spacing));
+						return uint3(ddgi_wrap(absolute_cell, probe_counts));
+					}
 
-	uint2 ddgi_atlas_origin(uint3 probe_grid_coord, uint texel_size)
-	{
-		uint2 origin;
-		origin.x = probe_grid_coord.x * texel_size;
-		origin.y = probe_grid_coord.z * texel_size;
-		return origin;
-	}
+					uint2 ddgi_atlas_origin(uint3 probe_grid_coord, uint texel_size)
+					{
+						uint2 origin;
+						origin.x = probe_grid_coord.x * texel_size;
+						origin.y = probe_grid_coord.z * texel_size;
+						return origin;
+					}
 
-	uint3 ddgi_atlas_probe_coord(uint2 atlas_texel, uint texel_size, uint probe_grid_y)
-	{
-		uint2 cell = atlas_texel / texel_size;
-		uint3 coord;
-		coord.x = cell.x;
-		coord.z = cell.y;
-		coord.y = probe_grid_y;
-		return coord;
-	}
+					uint3 ddgi_atlas_probe_coord(uint2 atlas_texel, uint texel_size, uint probe_grid_y)
+					{
+						uint2 cell = atlas_texel / texel_size;
+						uint3 coord;
+						coord.x = cell.x;
+						coord.z = cell.y;
+						coord.y = probe_grid_y;
+						return coord;
+					}
 
-	uint ddgi_atlas_array_slice(uint probe_grid_y, uint cascade_slice_offset)
-	{
-		return cascade_slice_offset + probe_grid_y;
-	}
+					uint ddgi_atlas_array_slice(uint probe_grid_y, uint cascade_slice_offset)
+					{
+						return cascade_slice_offset + probe_grid_y;
+					}
 
-	float2 ddgi_atlas_local_uv(uint2 atlas_texel, uint texel_size)
-	{
-		uint2 local = atlas_texel % texel_size;
-		return (float2(local) + 0.5) / float(texel_size) * 2.0 - 1.0;
-	}
+					float2 ddgi_atlas_local_uv(uint2 atlas_texel, uint texel_size)
+					{
+						uint2 local = atlas_texel % texel_size;
+						return (float2(local) + 0.5) / float(texel_size) * 2.0 - 1.0;
+					}
 
-};
+		};
+	}
+}
+using GI::DDGI::DDGIProbes;

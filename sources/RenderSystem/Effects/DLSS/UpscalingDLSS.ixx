@@ -25,7 +25,7 @@ export
 	// upscale; SMAA gates on the opposite so native rendering still gets AA.
 	bool g_upscaling_enabled = true;
 
-	// UpscalerType itself is SIG-declared now (UpscalingDLSS.prism), so it's
+	// Post::Upscale::UpscalerType itself is SIG-declared now (UpscalingDLSS.prism), so it's
 	// visible via plain `import HAL;` -- needed by autogen/pass_defaults.cpp,
 	// a dedicated TU generated [SetupCondition]/[RenderCondition] bodies
 	// compile in (see that file's own comment).
@@ -39,14 +39,14 @@ export
 	// lets every RR-gated pass test the selection alone (`upscaler_type ==
 	// DLSSRR`) instead of re-ANDing rtx_supported && dlssrr_available at each
 	// site -- see set_upscaler_type()'s invariant below.
-	bool upscaler_is_available(UpscalerType type)
+	bool upscaler_is_available(Post::Upscale::UpscalerType type)
 	{
 		switch (type)
 		{
-		case UpscalerType::DLSS:   return nvidia::DLSS::get().available();
-		case UpscalerType::DLSSRR: return RenderSystem::get().device().is_rtx_supported() &&
+		case Post::Upscale::UpscalerType::DLSS:   return nvidia::DLSS::get().available();
+		case Post::Upscale::UpscalerType::DLSSRR: return RenderSystem::get().device().is_rtx_supported() &&
 		                                  nvidia::DLSSRR::get().available();
-		case UpscalerType::FSR:
+		case Post::Upscale::UpscalerType::FSR:
 		default:                   return true;
 		}
 	}
@@ -54,7 +54,7 @@ export
 
 namespace UpscalerDetail
 {
-	UpscalerType g_selected = UpscalerType::FSR;
+	Post::Upscale::UpscalerType g_selected = Post::Upscale::UpscalerType::FSR;
 }
 
 export
@@ -73,12 +73,12 @@ export
 	// read instead of three, and it is why this is a read-only reference:
 	// assigning to it is a compile error, so the clamp in set_upscaler_type()
 	// cannot be bypassed by a new write site.
-	const UpscalerType& g_upscaler_type = UpscalerDetail::g_selected;
+	const Post::Upscale::UpscalerType& g_upscaler_type = UpscalerDetail::g_selected;
 
 	// The one mutation point. An unavailable request falls back to FSR rather
 	// than being stored and re-checked downstream.
-	void set_upscaler_type(UpscalerType type)
+	void set_upscaler_type(Post::Upscale::UpscalerType type)
 	{
-		UpscalerDetail::g_selected = upscaler_is_available(type) ? type : UpscalerType::FSR;
+		UpscalerDetail::g_selected = upscaler_is_available(type) ? type : Post::Upscale::UpscalerType::FSR;
 	}
 }

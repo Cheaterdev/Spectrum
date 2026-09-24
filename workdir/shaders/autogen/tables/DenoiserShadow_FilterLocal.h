@@ -7,10 +7,17 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct DenoiserShadow_FilterLocal
+namespace Shadows
 {
-	uint rqt2d_input; // Texture2D<float16_t2>
-	uint rwt2d_output; // RWTexture2D<float2>
-	Texture2D<float16_t2> GetRqt2d_input() { return ResourceDescriptorHeap[rqt2d_input]; }
-	RWTexture2D<float2> GetRwt2d_output() { return ResourceDescriptorHeap[rwt2d_output]; }
-};
+	namespace Denoise
+	{
+		struct DenoiserShadow_FilterLocal
+		{
+			uint rqt2d_input; // Texture2D<float16_t2>
+			uint rwt2d_output; // RWTexture2D<float2>
+			Texture2D<float16_t2> GetRqt2d_input() { return ResourceDescriptorHeap[rqt2d_input]; }
+			RWTexture2D<float2> GetRwt2d_output() { return ResourceDescriptorHeap[rwt2d_output]; }
+		};
+	}
+}
+using Shadows::Denoise::DenoiserShadow_FilterLocal;

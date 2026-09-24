@@ -15,9 +15,18 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VoxelDebug :public DataHolder<VoxelDebug, SlotID::VoxelDebug, Table::VoxelDebug, DefaultLayout::Instance1>
+	namespace GI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VoxelDebug() = default;
-	};
+		namespace Voxel
+		{
+			namespace Dev
+			{
+				struct VoxelDebug :public DataHolder<VoxelDebug, SlotID::VoxelDebug, Table::GI::Voxel::Dev::VoxelDebug, ::Frame::DefaultLayout::Instance1>
+				{
+					static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+					VoxelDebug() = default;
+				};
+			}
+		}
+	}
 }

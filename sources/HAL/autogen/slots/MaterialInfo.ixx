@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct MaterialInfo :public DataHolder<MaterialInfo, SlotID::MaterialInfo, Table::MaterialInfo, DefaultLayout::MaterialData>
+	namespace Meshes
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		MaterialInfo() = default;
-	};
+		struct MaterialInfo :public DataHolder<MaterialInfo, SlotID::MaterialInfo, Table::Meshes::MaterialInfo, ::Frame::DefaultLayout::MaterialData>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			MaterialInfo() = default;
+		};
+	}
 }

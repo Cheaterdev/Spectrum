@@ -11,152 +11,158 @@ using namespace FrameGraph;
 
 namespace Passes
 {
-
-class DDGIProbeResidencyMark : public PassNodeBase
+namespace GI
 {
-public:
-	struct Context
+	namespace DDGI
 	{
 
-		// [Multiple=5]: this instance's own
-		// index, written automatically by TypedPass::setup() (FrameGraph.Base.ixx,
-		// from the Pass::pass_index every [Multiple] instance already carries)
-		// before setup_func or any [Optional=...] guard runs -- no per-pass index
-		// field or manual `data.X = i;` assignment needed.
-		uint32_t pass_index = 0;
-
-
-		Handlers::StructuredBuffer<uint> DDGI_ProbeResidency = ResourceID::DDGI_ProbeResidency;
-
-
-		Handlers::StructuredBuffer<uint> DDGI_CompactedProbeList = ResourceID::DDGI_CompactedProbeList;
-
-
-		Handlers::StructuredBuffer<uint> DDGI_CompactedProbeCount = ResourceID::DDGI_CompactedProbeCount;
-
-
-		Handlers::StructuredBuffer<uint> DDGI_ProbeResidencyPending = ResourceID::DDGI_ProbeResidencyPending;
-
-
-		Handlers::StructuredBuffer<uint> DDGI_ProbeMissStreak = ResourceID::DDGI_ProbeMissStreak;
-
-
-		Handlers::Texture DDGI_ProbeIrradiance = ResourceID::DDGI_ProbeIrradiance;
-
-
-		Handlers::Texture DDGI_ProbeVisibility = ResourceID::DDGI_ProbeVisibility;
-
-
-		// Resources this pass always needs whenever it runs, generated from
-		// each field's own [Always=X] annotation (further gated by [Optional=X]
-		// when present -- a raw bool expression, e.g. builder.exists(...) or a
-		// context-read flag, deciding whether this specific field is actually
-		// needed this frame), or, for a View-typed field (e.g. `GBuffer
-		// gbuffer;`), every leaf the View itself marks [Always=X] that this
-		// pass's own [Write=...] on that field doesn't already cover. A field
-		// that ALSO carries [Size]/[Format] (so create_always() below creates
-		// it under its own [Optional] condition) gets the negated condition
-		// here instead -- "need what some other instance/frame already
-		// created" is the complement of "create it this time." Called by
-		// TypedPass::setup() after setup_func returns true - not a
-		// substitute for setup_func's own need()/create() calls for anything
-		// else conditional.
-		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+		class DDGIProbeResidencyMark : public PassNodeBase
 		{
-			builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.DDGI_CompactedProbeList, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.DDGI_CompactedProbeCount, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.DDGI_ProbeMissStreak, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::UnorderedAccess);
-		}
-		// Which chain link each handler field resolved to, one named slot per
-		// field. Filled from a live frame's finished Context and applied on a
-		// replayed one, so a replay neither re-runs create_always/need_always nor
-		// depends on the order they made their calls in. The id is not stored:
-		// the field fixes it.
-		struct Cache
-		{
-			FrameGraph::ChainIndex DDGI_ProbeResidency = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_CompactedProbeList = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_CompactedProbeCount = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeResidencyPending = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeMissStreak = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
+		public:
+			struct Context
+			{
+
+				// [Multiple=5]: this instance's own
+				// index, written automatically by TypedPass::setup() (FrameGraph.Base.ixx,
+				// from the Pass::pass_index every [Multiple] instance already carries)
+				// before setup_func or any [Optional=...] guard runs -- no per-pass index
+				// field or manual `data.X = i;` assignment needed.
+				uint32_t pass_index = 0;
+
+
+				Handlers::StructuredBuffer<uint> DDGI_ProbeResidency = ResourceID::DDGI_ProbeResidency;
+
+
+				Handlers::StructuredBuffer<uint> DDGI_CompactedProbeList = ResourceID::DDGI_CompactedProbeList;
+
+
+				Handlers::StructuredBuffer<uint> DDGI_CompactedProbeCount = ResourceID::DDGI_CompactedProbeCount;
+
+
+				Handlers::StructuredBuffer<uint> DDGI_ProbeResidencyPending = ResourceID::DDGI_ProbeResidencyPending;
+
+
+				Handlers::StructuredBuffer<uint> DDGI_ProbeMissStreak = ResourceID::DDGI_ProbeMissStreak;
+
+
+				Handlers::Texture DDGI_ProbeIrradiance = ResourceID::DDGI_ProbeIrradiance;
+
+
+				Handlers::Texture DDGI_ProbeVisibility = ResourceID::DDGI_ProbeVisibility;
+
+
+				// Resources this pass always needs whenever it runs, generated from
+				// each field's own [Always=X] annotation (further gated by [Optional=X]
+				// when present -- a raw bool expression, e.g. builder.exists(...) or a
+				// context-read flag, deciding whether this specific field is actually
+				// needed this frame), or, for a View-typed field (e.g. `GBuffer
+				// gbuffer;`), every leaf the View itself marks [Always=X] that this
+				// pass's own [Write=...] on that field doesn't already cover. A field
+				// that ALSO carries [Size]/[Format] (so create_always() below creates
+				// it under its own [Optional] condition) gets the negated condition
+				// here instead -- "need what some other instance/frame already
+				// created" is the complement of "create it this time." Called by
+				// TypedPass::setup() after setup_func returns true - not a
+				// substitute for setup_func's own need()/create() calls for anything
+				// else conditional.
+				static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+				{
+					builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::UnorderedAccess);
+					builder.need(data.DDGI_CompactedProbeList, FrameGraph::ResourceFlags::UnorderedAccess);
+					builder.need(data.DDGI_CompactedProbeCount, FrameGraph::ResourceFlags::UnorderedAccess);
+					builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
+					builder.need(data.DDGI_ProbeMissStreak, FrameGraph::ResourceFlags::UnorderedAccess);
+					builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::UnorderedAccess);
+					builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::UnorderedAccess);
+				}
+				// Which chain link each handler field resolved to, one named slot per
+				// field. Filled from a live frame's finished Context and applied on a
+				// replayed one, so a replay neither re-runs create_always/need_always nor
+				// depends on the order they made their calls in. The id is not stored:
+				// the field fixes it.
+				struct Cache
+				{
+					FrameGraph::ChainIndex DDGI_ProbeResidency = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_CompactedProbeList = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_CompactedProbeCount = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_ProbeResidencyPending = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_ProbeMissStreak = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
+				};
+
+				static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+				{
+					cache.DDGI_ProbeResidency = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency);
+					cache.DDGI_CompactedProbeList = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList);
+					cache.DDGI_CompactedProbeCount = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount);
+					cache.DDGI_ProbeResidencyPending = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending);
+					cache.DDGI_ProbeMissStreak = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeMissStreak, ResourceID::DDGI_ProbeMissStreak);
+					cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
+					cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
+				}
+
+				// Replay counterpart of create_always/need_always. A field this pass
+				// creates gets its desc recomputed on the link the cache names, so descs
+				// follow the current context instead of being stored in the plan; every
+				// other field is only pointed at its link. Each link is created by exactly
+				// one pass and nothing here reads another resource's desc, so passes can
+				// load in any order. A [Recreate] without [Size]/[Format] copies the
+				// previous link's desc, which LoadGraph does once every pass has loaded.
+				static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+				{
+					builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
+					builder.load(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList, cache.DDGI_CompactedProbeList);
+					builder.load(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount, cache.DDGI_CompactedProbeCount);
+					builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
+					builder.load(data.DDGI_ProbeMissStreak, ResourceID::DDGI_ProbeMissStreak, cache.DDGI_ProbeMissStreak);
+					builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
+					builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
+				}
+
+				// Resources this pass touches, in declaration order, each paired with
+				// whether the pass writes it (own [Write], or the view usage's
+				// [Write] / [Write = {leaves...}] for resources inside a view group).
+				static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+					{ ResourceID::DDGI_ProbeResidency, true },
+					{ ResourceID::DDGI_CompactedProbeList, true },
+					{ ResourceID::DDGI_CompactedProbeCount, true },
+					{ ResourceID::DDGI_ProbeResidencyPending, true },
+					{ ResourceID::DDGI_ProbeMissStreak, true },
+					{ ResourceID::DDGI_ProbeIrradiance, true },
+					{ ResourceID::DDGI_ProbeVisibility, true },
+				};
+				static constexpr uint resource_count = std::size(resource_accesses);
+			};
+
+
+			std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
+			{
+				return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
+			}
+
+			static constexpr LiteralWStr Name{L"DDGIProbeResidencyMark"};
+
+			static constexpr uint32_t MaxCount = 5;
+			static constexpr LiteralWStr Names[MaxCount] = {
+				LiteralWStr{L"DDGIProbeResidencyMark_0"},
+				LiteralWStr{L"DDGIProbeResidencyMark_1"},
+				LiteralWStr{L"DDGIProbeResidencyMark_2"},
+				LiteralWStr{L"DDGIProbeResidencyMark_3"},
+				LiteralWStr{L"DDGIProbeResidencyMark_4"},
+			};
+
+			static constexpr PassID ID = PassID::DDGIProbeResidencyMark;
+
+
+			using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
+			using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
+
+			std::array<render_func_type, MaxCount> render_funcs;
+
+			const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
 		};
-
-		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
-		{
-			cache.DDGI_ProbeResidency = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency);
-			cache.DDGI_CompactedProbeList = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList);
-			cache.DDGI_CompactedProbeCount = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount);
-			cache.DDGI_ProbeResidencyPending = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending);
-			cache.DDGI_ProbeMissStreak = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeMissStreak, ResourceID::DDGI_ProbeMissStreak);
-			cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
-			cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
-		}
-
-		// Replay counterpart of create_always/need_always. A field this pass
-		// creates gets its desc recomputed on the link the cache names, so descs
-		// follow the current context instead of being stored in the plan; every
-		// other field is only pointed at its link. Each link is created by exactly
-		// one pass and nothing here reads another resource's desc, so passes can
-		// load in any order. A [Recreate] without [Size]/[Format] copies the
-		// previous link's desc, which LoadGraph does once every pass has loaded.
-		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
-		{
-			builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
-			builder.load(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList, cache.DDGI_CompactedProbeList);
-			builder.load(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount, cache.DDGI_CompactedProbeCount);
-			builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
-			builder.load(data.DDGI_ProbeMissStreak, ResourceID::DDGI_ProbeMissStreak, cache.DDGI_ProbeMissStreak);
-			builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
-			builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
-		}
-
-		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass writes it (own [Write], or the view usage's
-		// [Write] / [Write = {leaves...}] for resources inside a view group).
-		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::DDGI_ProbeResidency, true },
-			{ ResourceID::DDGI_CompactedProbeList, true },
-			{ ResourceID::DDGI_CompactedProbeCount, true },
-			{ ResourceID::DDGI_ProbeResidencyPending, true },
-			{ ResourceID::DDGI_ProbeMissStreak, true },
-			{ ResourceID::DDGI_ProbeIrradiance, true },
-			{ ResourceID::DDGI_ProbeVisibility, true },
-		};
-		static constexpr uint resource_count = std::size(resource_accesses);
-	};
-
-
-	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
-	{
-		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
-
-	static constexpr LiteralWStr Name{L"DDGIProbeResidencyMark"};
-
-	static constexpr uint32_t MaxCount = 5;
-	static constexpr LiteralWStr Names[MaxCount] = {
-		LiteralWStr{L"DDGIProbeResidencyMark_0"},
-		LiteralWStr{L"DDGIProbeResidencyMark_1"},
-		LiteralWStr{L"DDGIProbeResidencyMark_2"},
-		LiteralWStr{L"DDGIProbeResidencyMark_3"},
-		LiteralWStr{L"DDGIProbeResidencyMark_4"},
-	};
-
-	static constexpr PassID ID = PassID::DDGIProbeResidencyMark;
-
-
-	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
-	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
-
-	std::array<render_func_type, MaxCount> render_funcs;
-
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-};
+}
 
 }

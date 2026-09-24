@@ -12,7 +12,7 @@ import RenderSystem;
 export namespace Test
 {
 	// Render a single centered rectangle via the production SimpleRect PSO and
-	// Slots::ColorRect.  Positions are clip-space float2 pairs packed into
+	// Slots::UI::ColorRect.  Positions are clip-space float2 pairs packed into
 	// float4[2]: pos[0] = (v0.x, v0.y, v1.x, v1.y), pos[1] = (v2.x, v2.y, v3.x, v3.y).
 	// Draw(4) with TRIANGLE_STRIP forms two triangles that cover the quad.
 	TEST(Core.HAL, UIRect_Solid)
@@ -35,7 +35,7 @@ export namespace Test
 		compiled.table_rtv = view.renderTarget;
 
 		// A centered 50%-of-screen green rectangle (clip-space ±0.5)
-		Slots::ColorRect rect_slot;
+		Slots::UI::ColorRect rect_slot;
 		auto* p = rect_slot.GetPos();
 		p[0] = float4(-0.5f,  0.5f,  0.5f,  0.5f); // v0=TL, v1=TR
 		p[1] = float4(-0.5f, -0.5f,  0.5f, -0.5f); // v2=BL, v3=BR
@@ -46,7 +46,7 @@ export namespace Test
 
 		auto& gfx = list->get_graphics();
 		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0.05f, 0.05f, 0.1f, 1.0f));
-		gfx.set_pipeline<PSOS::SimpleRect>();
+		gfx.set_pipeline<PSOS::UI::SimpleRect>();
 		gfx.set(rect_slot);
 		gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 		gfx.draw(4);
@@ -81,12 +81,12 @@ export namespace Test
 
 		auto& gfx = list->get_graphics();
 		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0.05f, 0.05f, 0.1f, 1.0f));
-		gfx.set_pipeline<PSOS::SimpleRect>();
+		gfx.set_pipeline<PSOS::UI::SimpleRect>();
 		gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 		// Pass 1: opaque blue full-screen quad
 		{
-			Slots::ColorRect blue;
+			Slots::UI::ColorRect blue;
 			auto* p = blue.GetPos();
 			p[0] = float4(-1.0f,  1.0f,  1.0f,  1.0f);
 			p[1] = float4(-1.0f, -1.0f,  1.0f, -1.0f);
@@ -100,7 +100,7 @@ export namespace Test
 
 		// Pass 2: semi-transparent red over the right half
 		{
-			Slots::ColorRect red;
+			Slots::UI::ColorRect red;
 			auto* p = red.GetPos();
 			p[0] = float4(0.0f,  1.0f,  1.0f,  1.0f);
 			p[1] = float4(0.0f, -1.0f,  1.0f, -1.0f);
@@ -139,12 +139,12 @@ export namespace Test
 
 		auto& gfx = list->get_graphics();
 		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0.05f, 0.05f, 0.1f, 1.0f));
-		gfx.set_pipeline<PSOS::SimpleRect>();
+		gfx.set_pipeline<PSOS::UI::SimpleRect>();
 		gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 		// Left-third red
 		{
-			Slots::ColorRect r;
+			Slots::UI::ColorRect r;
 			auto* p = r.GetPos();
 			p[0] = float4(-1.0f,  0.8f, -0.35f,  0.8f);
 			p[1] = float4(-1.0f, -0.8f, -0.35f, -0.8f);
@@ -157,7 +157,7 @@ export namespace Test
 
 		// Center green
 		{
-			Slots::ColorRect r;
+			Slots::UI::ColorRect r;
 			auto* p = r.GetPos();
 			p[0] = float4(-0.3f,  0.8f,  0.3f,  0.8f);
 			p[1] = float4(-0.3f, -0.8f,  0.3f, -0.8f);
@@ -170,7 +170,7 @@ export namespace Test
 
 		// Right-third blue
 		{
-			Slots::ColorRect r;
+			Slots::UI::ColorRect r;
 			auto* p = r.GetPos();
 			p[0] = float4(0.35f,  0.8f,  1.0f,  0.8f);
 			p[1] = float4(0.35f, -0.8f,  1.0f, -0.8f);

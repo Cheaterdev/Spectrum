@@ -8,10 +8,14 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "GBuffer.h"
-struct RTXShadowReference
+namespace Shadows
 {
-	uint output; // RWTexture2D<float4>
-	GBuffer gbuffer; // GBuffer
-	GBuffer GetGbuffer() { return gbuffer; }
-	RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
-};
+	struct RTXShadowReference
+	{
+		uint output; // RWTexture2D<float4>
+		GBuffer gbuffer; // GBuffer
+		GBuffer GetGbuffer() { return gbuffer; }
+		RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
+	};
+}
+using Shadows::RTXShadowReference;

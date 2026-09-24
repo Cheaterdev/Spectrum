@@ -7,10 +7,17 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct FontRendering
+namespace UI
 {
-	uint tex0; // Texture2D<float>
-	uint positions; // StructuredBuffer<float4>
-	Texture2D<float> GetTex0() { return ResourceDescriptorHeap[tex0]; }
-	StructuredBuffer<float4> GetPositions() { return ResourceDescriptorHeap[positions]; }
-};
+	namespace Text
+	{
+		struct FontRendering
+		{
+			uint tex0; // Texture2D<float>
+			uint positions; // StructuredBuffer<float4>
+			Texture2D<float> GetTex0() { return ResourceDescriptorHeap[tex0]; }
+			StructuredBuffer<float4> GetPositions() { return ResourceDescriptorHeap[positions]; }
+		};
+	}
+}
+using UI::Text::FontRendering;

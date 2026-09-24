@@ -96,7 +96,8 @@ Comments        # to end of line. (Inside HLSL function bodies and %{ }%
 Declarations    <kind> Name [: Parent, ...] { body }
                 struct, layout, enum, ComputePSO, GraphicsPSO, WorkgraphPSO,
                 RaytracePSO, RaytraceRaygen, RaytracePass, PassNode, PassView,
-                Pipeline, rt, plus top-level `const`.
+                Pipeline, rt, plus top-level `const`, all of which may sit
+                inside a `namespace` block (see NAMESPACES).
 
 Options         [Name] or [Name = value], stackable: [A] [B = 1] or [A, B = 1].
                 They attach to the declaration or statement that follows.
@@ -111,7 +112,7 @@ Option values
                        [Bind = DefaultLayout::Instance0]
   flag set             [Always = UnorderedAccess | Static]
   list                 [Write = {albedo, normals}]
-  raw C++ (backticks)  [Size = `(size_t)Constants::DDGI_ProbeCount * 4`]
+  raw C++ (backticks)  [Size = `sizeof(Table::TileRecord) * 256`]
                        Pasted verbatim into generated C++. Escape hatch only:
                        Prism can't check it or track what it reads.
   condition            see CONDITIONS below
@@ -218,6 +219,56 @@ order. The value is an expression like a [Size] (literals, + - * / % and
 parentheses, size functions) over consts declared EARLIER, as Constants::NAME;
 a forward reference or anything that isn't a const is an error. Backticks
 remain for what the expression language can't say (sizeof, a lambda).
+
+
+--------------------------------------------------------------------------------
+  NAMESPACES
+--------------------------------------------------------------------------------
+
+    namespace UI
+    {
+        struct NinePatch { ... }
+        GraphicsPSO NinePatch { ... }
+
+        namespace Text { struct Glyph { ... } }
+    }
+
+Groups declarations by system. Any declaration can go inside, blocks nest,
+and a namespace can be reopened in the same or another file (ui.prism and
+font_render.prism can both add to UI).
+
+Generated C++ and HLSL use the namespace: a struct Glyph in UI::Text becomes
+Table::UI::Text::Glyph and Slots::UI::Text::Glyph in C++ (PSOS::, RT::,
+Passes::, Pipelines::, Constants:: likewise) and UI::Text::Glyph in HLSL.
+Enums, layouts and RTX raygens/passes are declared at global scope, so in C++
+they are Shadows::VSM::ShadowSource, Frame::DefaultLayout, GI::DDGI::DDGIProbeTrace.
+
+C++ has only the full names -- engine code writes PSOS::Environment::
+CubemapENVDiffuse, not PSOS::CubemapENVDiffuse. HLSL additionally gets a flat
+alias (`using UI::Text::Glyph;`), so shaders keep using the short name.
+Because of that alias, declaration names must still be unique across all
+namespaces. References inside .prism files stay unqualified, except inside
+raw backtick C++, which is pasted as written and needs the full name
+(`sizeof(Table::Dev::TileRecord)`).
+
+The flat enum values of the generated ID enums are unaffected: PSO::X,
+SlotID::X, Layouts::X, PassID::X, ResourceID::X, IndirectCommands::X.
+
+A namespace can't be named after a declaration, or after a scope the
+generated code qualifies names with (HAL, FrameGraph, Table, Slots, PSOS,
+Constants, Math, std, ...): from inside Table::X, a namespace Table::HAL
+would hide ::HAL. Both are errors.
+
+What else it adds:
+  - options on the namespace, inherited by everything inside. None exist
+    yet: [Load] (PSO load phase) and [Build] (build-config gating) are
+    planned, each added together with the code that reads it. Until then
+    any option on a namespace is an error.
+  - when a namespace is reopened, the blocks must agree on options: write
+    them on one block, or repeat them exactly.
+  - in VS: the outline nests declarations under their namespace; hover and
+    Ctrl+T show a declaration's namespace; hovering a namespace name lists
+    its blocks and how many declarations it holds.
 
 
 --------------------------------------------------------------------------------

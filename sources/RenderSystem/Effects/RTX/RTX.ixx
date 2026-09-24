@@ -30,7 +30,7 @@ public:
 	// each frame) is harmless for a debug comparison feature.
 	bool debug_full_reference_shadow = false;
 
-	MainRTX rtx{RenderSystem::get().device()};
+	Raytrace::MainRTX rtx{RenderSystem::get().device()};
 
 	void prepare(HAL::CommandList::ptr& list);
    	void update();
@@ -50,7 +50,7 @@ public:
 		if (!RenderSystem::get().device().is_rtx_supported()) return;
 		
 		{
-			Slots::Raytracing rtx;
+			Slots::Raytrace::Raytracing rtx;
 			rtx.GetScene() = scene_as->get_handle();
 			compute.set(rtx);
 		}

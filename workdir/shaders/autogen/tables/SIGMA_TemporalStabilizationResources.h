@@ -8,26 +8,33 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "SIGMASharedConstants.h"
-struct SIGMA_TemporalStabilizationResources
+namespace Denoise
 {
-	uint gIn_ViewZ; // Texture2D<float>
-	uint gIn_Mv; // Texture2D<float3>
-	uint gIn_Penumbra; // Texture2D<float>
-	uint gIn_Shadow_Translucency; // Texture2D<float>
-	uint gIn_History; // Texture2D<float>
-	uint gIn_HistoryLength; // Texture2D<uint>
-	uint gIn_Tiles; // Texture2D<float2>
-	uint gOut_Shadow_Translucency; // RWTexture2D<float>
-	uint gOut_HistoryLength; // RWTexture2D<uint>
-	SIGMASharedConstants sharedConstants; // SIGMASharedConstants
-	SIGMASharedConstants GetSharedConstants() { return sharedConstants; }
-	Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
-	Texture2D<float3> GetGIn_Mv() { return ResourceDescriptorHeap[gIn_Mv]; }
-	Texture2D<float> GetGIn_Penumbra() { return ResourceDescriptorHeap[gIn_Penumbra]; }
-	Texture2D<float> GetGIn_Shadow_Translucency() { return ResourceDescriptorHeap[gIn_Shadow_Translucency]; }
-	Texture2D<float> GetGIn_History() { return ResourceDescriptorHeap[gIn_History]; }
-	Texture2D<uint> GetGIn_HistoryLength() { return ResourceDescriptorHeap[gIn_HistoryLength]; }
-	Texture2D<float2> GetGIn_Tiles() { return ResourceDescriptorHeap[gIn_Tiles]; }
-	RWTexture2D<float> GetGOut_Shadow_Translucency() { return ResourceDescriptorHeap[gOut_Shadow_Translucency]; }
-	RWTexture2D<uint> GetGOut_HistoryLength() { return ResourceDescriptorHeap[gOut_HistoryLength]; }
-};
+	namespace NRD
+	{
+		struct SIGMA_TemporalStabilizationResources
+		{
+			uint gIn_ViewZ; // Texture2D<float>
+			uint gIn_Mv; // Texture2D<float3>
+			uint gIn_Penumbra; // Texture2D<float>
+			uint gIn_Shadow_Translucency; // Texture2D<float>
+			uint gIn_History; // Texture2D<float>
+			uint gIn_HistoryLength; // Texture2D<uint>
+			uint gIn_Tiles; // Texture2D<float2>
+			uint gOut_Shadow_Translucency; // RWTexture2D<float>
+			uint gOut_HistoryLength; // RWTexture2D<uint>
+			SIGMASharedConstants sharedConstants; // SIGMASharedConstants
+			SIGMASharedConstants GetSharedConstants() { return sharedConstants; }
+			Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
+			Texture2D<float3> GetGIn_Mv() { return ResourceDescriptorHeap[gIn_Mv]; }
+			Texture2D<float> GetGIn_Penumbra() { return ResourceDescriptorHeap[gIn_Penumbra]; }
+			Texture2D<float> GetGIn_Shadow_Translucency() { return ResourceDescriptorHeap[gIn_Shadow_Translucency]; }
+			Texture2D<float> GetGIn_History() { return ResourceDescriptorHeap[gIn_History]; }
+			Texture2D<uint> GetGIn_HistoryLength() { return ResourceDescriptorHeap[gIn_HistoryLength]; }
+			Texture2D<float2> GetGIn_Tiles() { return ResourceDescriptorHeap[gIn_Tiles]; }
+			RWTexture2D<float> GetGOut_Shadow_Translucency() { return ResourceDescriptorHeap[gOut_Shadow_Translucency]; }
+			RWTexture2D<uint> GetGOut_HistoryLength() { return ResourceDescriptorHeap[gOut_HistoryLength]; }
+		};
+	}
+}
+using Denoise::NRD::SIGMA_TemporalStabilizationResources;

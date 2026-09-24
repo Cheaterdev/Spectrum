@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct FrameGraph_Debug_Texture2DArray :public DataHolder<FrameGraph_Debug_Texture2DArray, SlotID::FrameGraph_Debug_Texture2DArray, Table::FrameGraph_Debug_Texture2DArray, DefaultLayout::Instance1>
+	namespace Dev
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		FrameGraph_Debug_Texture2DArray() = default;
-	};
+		struct FrameGraph_Debug_Texture2DArray :public DataHolder<FrameGraph_Debug_Texture2DArray, SlotID::FrameGraph_Debug_Texture2DArray, Table::Dev::FrameGraph_Debug_Texture2DArray, ::Frame::DefaultLayout::Instance1>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			FrameGraph_Debug_Texture2DArray() = default;
+		};
+	}
 }

@@ -11,128 +11,134 @@ using namespace FrameGraph;
 
 namespace Passes
 {
-
-class Voxelize : public PassNodeBase
+namespace GI
 {
-public:
-	struct Context
+	namespace Voxel
 	{
 
-
-		Handlers::Texture VoxelAlbedo = ResourceID::VoxelAlbedo;
-
-
-		Handlers::Texture VoxelNormal = ResourceID::VoxelNormal;
-
-
-		Handlers::Texture VoxelAlbedoStatic = ResourceID::VoxelAlbedoStatic;
-
-
-		Handlers::Texture VoxelNormalStatic = ResourceID::VoxelNormalStatic;
-
-
-		Handlers::Texture VoxelAlbedoDynamic = ResourceID::VoxelAlbedoDynamic;
-
-
-		Handlers::Texture VoxelNormalDynamic = ResourceID::VoxelNormalDynamic;
-
-
-		// Resources this pass always needs whenever it runs, generated from
-		// each field's own [Always=X] annotation (further gated by [Optional=X]
-		// when present -- a raw bool expression, e.g. builder.exists(...) or a
-		// context-read flag, deciding whether this specific field is actually
-		// needed this frame), or, for a View-typed field (e.g. `GBuffer
-		// gbuffer;`), every leaf the View itself marks [Always=X] that this
-		// pass's own [Write=...] on that field doesn't already cover. A field
-		// that ALSO carries [Size]/[Format] (so create_always() below creates
-		// it under its own [Optional] condition) gets the negated condition
-		// here instead -- "need what some other instance/frame already
-		// created" is the complement of "create it this time." Called by
-		// TypedPass::setup() after setup_func returns true - not a
-		// substitute for setup_func's own need()/create() calls for anything
-		// else conditional.
-		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+		class Voxelize : public PassNodeBase
 		{
-			builder.need(data.VoxelAlbedo, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.VoxelNormal, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.VoxelAlbedoStatic, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.VoxelNormalStatic, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.VoxelAlbedoDynamic, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.VoxelNormalDynamic, FrameGraph::ResourceFlags::UnorderedAccess);
-		}
-		// Which chain link each handler field resolved to, one named slot per
-		// field. Filled from a live frame's finished Context and applied on a
-		// replayed one, so a replay neither re-runs create_always/need_always nor
-		// depends on the order they made their calls in. The id is not stored:
-		// the field fixes it.
-		struct Cache
-		{
-			FrameGraph::ChainIndex VoxelAlbedo = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex VoxelNormal = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex VoxelAlbedoStatic = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex VoxelNormalStatic = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex VoxelAlbedoDynamic = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex VoxelNormalDynamic = FrameGraph::ChainIndex::Unresolved;
+		public:
+			struct Context
+			{
+
+
+				Handlers::Texture VoxelAlbedo = ResourceID::VoxelAlbedo;
+
+
+				Handlers::Texture VoxelNormal = ResourceID::VoxelNormal;
+
+
+				Handlers::Texture VoxelAlbedoStatic = ResourceID::VoxelAlbedoStatic;
+
+
+				Handlers::Texture VoxelNormalStatic = ResourceID::VoxelNormalStatic;
+
+
+				Handlers::Texture VoxelAlbedoDynamic = ResourceID::VoxelAlbedoDynamic;
+
+
+				Handlers::Texture VoxelNormalDynamic = ResourceID::VoxelNormalDynamic;
+
+
+				// Resources this pass always needs whenever it runs, generated from
+				// each field's own [Always=X] annotation (further gated by [Optional=X]
+				// when present -- a raw bool expression, e.g. builder.exists(...) or a
+				// context-read flag, deciding whether this specific field is actually
+				// needed this frame), or, for a View-typed field (e.g. `GBuffer
+				// gbuffer;`), every leaf the View itself marks [Always=X] that this
+				// pass's own [Write=...] on that field doesn't already cover. A field
+				// that ALSO carries [Size]/[Format] (so create_always() below creates
+				// it under its own [Optional] condition) gets the negated condition
+				// here instead -- "need what some other instance/frame already
+				// created" is the complement of "create it this time." Called by
+				// TypedPass::setup() after setup_func returns true - not a
+				// substitute for setup_func's own need()/create() calls for anything
+				// else conditional.
+				static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+				{
+					builder.need(data.VoxelAlbedo, FrameGraph::ResourceFlags::UnorderedAccess);
+					builder.need(data.VoxelNormal, FrameGraph::ResourceFlags::UnorderedAccess);
+					builder.need(data.VoxelAlbedoStatic, FrameGraph::ResourceFlags::UnorderedAccess);
+					builder.need(data.VoxelNormalStatic, FrameGraph::ResourceFlags::UnorderedAccess);
+					builder.need(data.VoxelAlbedoDynamic, FrameGraph::ResourceFlags::UnorderedAccess);
+					builder.need(data.VoxelNormalDynamic, FrameGraph::ResourceFlags::UnorderedAccess);
+				}
+				// Which chain link each handler field resolved to, one named slot per
+				// field. Filled from a live frame's finished Context and applied on a
+				// replayed one, so a replay neither re-runs create_always/need_always nor
+				// depends on the order they made their calls in. The id is not stored:
+				// the field fixes it.
+				struct Cache
+				{
+					FrameGraph::ChainIndex VoxelAlbedo = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex VoxelNormal = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex VoxelAlbedoStatic = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex VoxelNormalStatic = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex VoxelAlbedoDynamic = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex VoxelNormalDynamic = FrameGraph::ChainIndex::Unresolved;
+				};
+
+				static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+				{
+					cache.VoxelAlbedo = FrameGraph::TaskBuilder::cache_slot(data.VoxelAlbedo, ResourceID::VoxelAlbedo);
+					cache.VoxelNormal = FrameGraph::TaskBuilder::cache_slot(data.VoxelNormal, ResourceID::VoxelNormal);
+					cache.VoxelAlbedoStatic = FrameGraph::TaskBuilder::cache_slot(data.VoxelAlbedoStatic, ResourceID::VoxelAlbedoStatic);
+					cache.VoxelNormalStatic = FrameGraph::TaskBuilder::cache_slot(data.VoxelNormalStatic, ResourceID::VoxelNormalStatic);
+					cache.VoxelAlbedoDynamic = FrameGraph::TaskBuilder::cache_slot(data.VoxelAlbedoDynamic, ResourceID::VoxelAlbedoDynamic);
+					cache.VoxelNormalDynamic = FrameGraph::TaskBuilder::cache_slot(data.VoxelNormalDynamic, ResourceID::VoxelNormalDynamic);
+				}
+
+				// Replay counterpart of create_always/need_always. A field this pass
+				// creates gets its desc recomputed on the link the cache names, so descs
+				// follow the current context instead of being stored in the plan; every
+				// other field is only pointed at its link. Each link is created by exactly
+				// one pass and nothing here reads another resource's desc, so passes can
+				// load in any order. A [Recreate] without [Size]/[Format] copies the
+				// previous link's desc, which LoadGraph does once every pass has loaded.
+				static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+				{
+					builder.load(data.VoxelAlbedo, ResourceID::VoxelAlbedo, cache.VoxelAlbedo);
+					builder.load(data.VoxelNormal, ResourceID::VoxelNormal, cache.VoxelNormal);
+					builder.load(data.VoxelAlbedoStatic, ResourceID::VoxelAlbedoStatic, cache.VoxelAlbedoStatic);
+					builder.load(data.VoxelNormalStatic, ResourceID::VoxelNormalStatic, cache.VoxelNormalStatic);
+					builder.load(data.VoxelAlbedoDynamic, ResourceID::VoxelAlbedoDynamic, cache.VoxelAlbedoDynamic);
+					builder.load(data.VoxelNormalDynamic, ResourceID::VoxelNormalDynamic, cache.VoxelNormalDynamic);
+				}
+
+				// Resources this pass touches, in declaration order, each paired with
+				// whether the pass writes it (own [Write], or the view usage's
+				// [Write] / [Write = {leaves...}] for resources inside a view group).
+				static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+					{ ResourceID::VoxelAlbedo, true },
+					{ ResourceID::VoxelNormal, true },
+					{ ResourceID::VoxelAlbedoStatic, true },
+					{ ResourceID::VoxelNormalStatic, true },
+					{ ResourceID::VoxelAlbedoDynamic, true },
+					{ ResourceID::VoxelNormalDynamic, true },
+				};
+				static constexpr uint resource_count = std::size(resource_accesses);
+			};
+
+
+			std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
+			{
+				return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
+			}
+
+			static constexpr LiteralWStr Name{L"Voxelize"};
+
+			static constexpr PassID ID = PassID::Voxelize;
+
+
+			using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
+			using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
+
+			render_func_type render_func;
+
+			const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
 		};
-
-		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
-		{
-			cache.VoxelAlbedo = FrameGraph::TaskBuilder::cache_slot(data.VoxelAlbedo, ResourceID::VoxelAlbedo);
-			cache.VoxelNormal = FrameGraph::TaskBuilder::cache_slot(data.VoxelNormal, ResourceID::VoxelNormal);
-			cache.VoxelAlbedoStatic = FrameGraph::TaskBuilder::cache_slot(data.VoxelAlbedoStatic, ResourceID::VoxelAlbedoStatic);
-			cache.VoxelNormalStatic = FrameGraph::TaskBuilder::cache_slot(data.VoxelNormalStatic, ResourceID::VoxelNormalStatic);
-			cache.VoxelAlbedoDynamic = FrameGraph::TaskBuilder::cache_slot(data.VoxelAlbedoDynamic, ResourceID::VoxelAlbedoDynamic);
-			cache.VoxelNormalDynamic = FrameGraph::TaskBuilder::cache_slot(data.VoxelNormalDynamic, ResourceID::VoxelNormalDynamic);
-		}
-
-		// Replay counterpart of create_always/need_always. A field this pass
-		// creates gets its desc recomputed on the link the cache names, so descs
-		// follow the current context instead of being stored in the plan; every
-		// other field is only pointed at its link. Each link is created by exactly
-		// one pass and nothing here reads another resource's desc, so passes can
-		// load in any order. A [Recreate] without [Size]/[Format] copies the
-		// previous link's desc, which LoadGraph does once every pass has loaded.
-		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
-		{
-			builder.load(data.VoxelAlbedo, ResourceID::VoxelAlbedo, cache.VoxelAlbedo);
-			builder.load(data.VoxelNormal, ResourceID::VoxelNormal, cache.VoxelNormal);
-			builder.load(data.VoxelAlbedoStatic, ResourceID::VoxelAlbedoStatic, cache.VoxelAlbedoStatic);
-			builder.load(data.VoxelNormalStatic, ResourceID::VoxelNormalStatic, cache.VoxelNormalStatic);
-			builder.load(data.VoxelAlbedoDynamic, ResourceID::VoxelAlbedoDynamic, cache.VoxelAlbedoDynamic);
-			builder.load(data.VoxelNormalDynamic, ResourceID::VoxelNormalDynamic, cache.VoxelNormalDynamic);
-		}
-
-		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass writes it (own [Write], or the view usage's
-		// [Write] / [Write = {leaves...}] for resources inside a view group).
-		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::VoxelAlbedo, true },
-			{ ResourceID::VoxelNormal, true },
-			{ ResourceID::VoxelAlbedoStatic, true },
-			{ ResourceID::VoxelNormalStatic, true },
-			{ ResourceID::VoxelAlbedoDynamic, true },
-			{ ResourceID::VoxelNormalDynamic, true },
-		};
-		static constexpr uint resource_count = std::size(resource_accesses);
-	};
-
-
-	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
-	{
-		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
-
-	static constexpr LiteralWStr Name{L"Voxelize"};
-
-	static constexpr PassID ID = PassID::Voxelize;
-
-
-	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
-	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
-
-	render_func_type render_func;
-
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
-};
+}
 
 }

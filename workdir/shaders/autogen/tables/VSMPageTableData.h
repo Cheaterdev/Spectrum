@@ -8,10 +8,17 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "Camera.h"
-struct VSMPageTableData
+namespace Shadows
 {
-	uint page_table; // Texture2DArray<uint>
-	uint page_cameras; // StructuredBuffer<Camera>
-	Texture2DArray<uint> GetPage_table() { return ResourceDescriptorHeap[page_table]; }
-	StructuredBuffer<Camera> GetPage_cameras() { return ResourceDescriptorHeap[page_cameras]; }
-};
+	namespace VSM
+	{
+		struct VSMPageTableData
+		{
+			uint page_table; // Texture2DArray<uint>
+			uint page_cameras; // StructuredBuffer<Camera>
+			Texture2DArray<uint> GetPage_table() { return ResourceDescriptorHeap[page_table]; }
+			StructuredBuffer<Camera> GetPage_cameras() { return ResourceDescriptorHeap[page_cameras]; }
+		};
+	}
+}
+using Shadows::VSM::VSMPageTableData;

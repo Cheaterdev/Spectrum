@@ -7,7 +7,7 @@ export namespace GUI
 
 	class NinePatch
 	{
-		using Vertex = Table::vertex_input;
+		using Vertex = Table::UI::vertex_input;
 
 		std::vector<Vertex> vertexes;
 		std::vector<HLSL::Texture2D<float4>> textures_handles;

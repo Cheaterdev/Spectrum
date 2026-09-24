@@ -14,34 +14,37 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct RayCone
+	namespace Raytrace
 	{
-		static constexpr SlotID ID = SlotID::RayCone;
-		float width;
-		float angle;
-		float& GetWidth() { return width; }
-		float& GetAngle() { return angle; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct RayCone
 		{
-			compiler.compile(width, "RayCone::width");
-			compiler.compile(angle, "RayCone::angle");
-		}
-		using Compiled = RayCone;
+			static constexpr SlotID ID = SlotID::RayCone;
+			float width;
+			float angle;
+			float& GetWidth() { return width; }
+			float& GetAngle() { return angle; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(width, "RayCone::width");
+				compiler.compile(angle, "RayCone::angle");
+			}
+			using Compiled = RayCone;
 
-		static std::string get_typename()
-		{
-			return "Tables::RayCone";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(width);
-			ar& NVP(angle);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::RayCone";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(width);
+				ar& NVP(angle);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

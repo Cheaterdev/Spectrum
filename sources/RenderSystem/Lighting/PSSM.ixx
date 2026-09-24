@@ -25,7 +25,7 @@ export class PSSM
 	// plain int, not a SIG field, but this keeps both sides reading the
 	// same single source of truth instead of two independently hand-kept
 	// numbers.
-	static const int renders_size = Constants::PSSM_RendersSize;
+	static const int renders_size = Constants::Shadows::PSSM::PSSM_RendersSize;
 
 	std::mutex pos_mutex;
 	float3 position;
@@ -33,10 +33,10 @@ export class PSSM
 
 	// Every PSSM pass is [RunAlways] (pssm.prism), so all four setups are
 	// generated and only the render halves live here.
-	Passes::PSSM_Global::render_func_type m_global_render;
-	std::array<Passes::PSSM_Cascade::render_func_type, renders_size> m_cascade_render;
-	Passes::PSSM_GenerateMask::render_func_type m_mask_render;
-	Passes::PSSM_Combine::render_func_type m_combine_render;
+	Passes::Shadows::PSSM::PSSM_Global::render_func_type m_global_render;
+	std::array<Passes::Shadows::PSSM::PSSM_Cascade::render_func_type, renders_size> m_cascade_render;
+	Passes::Shadows::PSSM::PSSM_GenerateMask::render_func_type m_mask_render;
+	Passes::Shadows::PSSM::PSSM_Combine::render_func_type m_combine_render;
 
 public:
 

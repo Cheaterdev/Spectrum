@@ -14,52 +14,58 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct NormalRoughnessRepackParams
+	namespace Post
 	{
-		static constexpr SlotID ID = SlotID::NormalRoughnessRepackParams;
-		HLSL::Texture2D<float4> GBuffer_Normals;
-		HLSL::Texture2D<float4> GBuffer_Albedo;
-		HLSL::RWTexture2D<float4> Output;
-		HLSL::RWTexture2D<float4> SpecularAlbedoOutput;
-		HLSL::Texture2D<float4>& GetGBuffer_Normals() { return GBuffer_Normals; }
-		HLSL::Texture2D<float4>& GetGBuffer_Albedo() { return GBuffer_Albedo; }
-		HLSL::RWTexture2D<float4>& GetOutput() { return Output; }
-		HLSL::RWTexture2D<float4>& GetSpecularAlbedoOutput() { return SpecularAlbedoOutput; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Upscale
 		{
-			compiler.compile(GBuffer_Normals, "NormalRoughnessRepackParams::GBuffer_Normals");
-			compiler.compile(GBuffer_Albedo, "NormalRoughnessRepackParams::GBuffer_Albedo");
-			compiler.compile(Output, "NormalRoughnessRepackParams::Output");
-			compiler.compile(SpecularAlbedoOutput, "NormalRoughnessRepackParams::SpecularAlbedoOutput");
-		}
-		struct Compiled
-		{
-			uint GBuffer_Normals; // Texture2D<float4>
-			uint GBuffer_Albedo; // Texture2D<float4>
-			uint Output; // RWTexture2D<float4>
-			uint SpecularAlbedoOutput; // RWTexture2D<float4>
+			struct NormalRoughnessRepackParams
+			{
+				static constexpr SlotID ID = SlotID::NormalRoughnessRepackParams;
+				HLSL::Texture2D<float4> GBuffer_Normals;
+				HLSL::Texture2D<float4> GBuffer_Albedo;
+				HLSL::RWTexture2D<float4> Output;
+				HLSL::RWTexture2D<float4> SpecularAlbedoOutput;
+				HLSL::Texture2D<float4>& GetGBuffer_Normals() { return GBuffer_Normals; }
+				HLSL::Texture2D<float4>& GetGBuffer_Albedo() { return GBuffer_Albedo; }
+				HLSL::RWTexture2D<float4>& GetOutput() { return Output; }
+				HLSL::RWTexture2D<float4>& GetSpecularAlbedoOutput() { return SpecularAlbedoOutput; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(GBuffer_Normals, "NormalRoughnessRepackParams::GBuffer_Normals");
+					compiler.compile(GBuffer_Albedo, "NormalRoughnessRepackParams::GBuffer_Albedo");
+					compiler.compile(Output, "NormalRoughnessRepackParams::Output");
+					compiler.compile(SpecularAlbedoOutput, "NormalRoughnessRepackParams::SpecularAlbedoOutput");
+				}
+				struct Compiled
+				{
+					uint GBuffer_Normals; // Texture2D<float4>
+					uint GBuffer_Albedo; // Texture2D<float4>
+					uint Output; // RWTexture2D<float4>
+					uint SpecularAlbedoOutput; // RWTexture2D<float4>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::NormalRoughnessRepackParams";
+				static std::string get_typename()
+				{
+					return "Tables::NormalRoughnessRepackParams";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

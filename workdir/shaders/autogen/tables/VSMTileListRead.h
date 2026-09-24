@@ -7,8 +7,15 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct VSMTileListRead
+namespace Shadows
 {
-	uint tiles; // StructuredBuffer<uint2>
-	StructuredBuffer<uint2> GetTiles() { return ResourceDescriptorHeap[tiles]; }
-};
+	namespace VSM
+	{
+		struct VSMTileListRead
+		{
+			uint tiles; // StructuredBuffer<uint2>
+			StructuredBuffer<uint2> GetTiles() { return ResourceDescriptorHeap[tiles]; }
+		};
+	}
+}
+using Shadows::VSM::VSMTileListRead;

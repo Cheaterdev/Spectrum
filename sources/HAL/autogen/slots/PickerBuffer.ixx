@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct PickerBuffer :public DataHolder<PickerBuffer, SlotID::PickerBuffer, Table::PickerBuffer, DefaultLayout::Instance0>
+	namespace Editor
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		PickerBuffer() = default;
-	};
+		struct PickerBuffer :public DataHolder<PickerBuffer, SlotID::PickerBuffer, Table::Editor::PickerBuffer, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			PickerBuffer() = default;
+		};
+	}
 }

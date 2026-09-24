@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct WorkGR_ClassifyPixels_NodeEmulation :public DataHolder<WorkGR_ClassifyPixels_NodeEmulation, SlotID::WorkGR_ClassifyPixels_NodeEmulation, Table::WorkGR_ClassifyPixels_NodeEmulation, DefaultLayout::WorkGR_ClassifyPixels_NodeEmulation>
+	namespace Dev
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		WorkGR_ClassifyPixels_NodeEmulation() = default;
-	};
+		struct WorkGR_ClassifyPixels_NodeEmulation :public DataHolder<WorkGR_ClassifyPixels_NodeEmulation, SlotID::WorkGR_ClassifyPixels_NodeEmulation, Table::Dev::WorkGR_ClassifyPixels_NodeEmulation, ::Frame::DefaultLayout::WorkGR_ClassifyPixels_NodeEmulation>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			WorkGR_ClassifyPixels_NodeEmulation() = default;
+		};
+	}
 }

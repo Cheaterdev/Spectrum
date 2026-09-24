@@ -8,10 +8,17 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "GBuffer.h"
-struct VSMDepthAnalysis
+namespace Shadows
 {
-	uint result; // RWStructuredBuffer<uint>
-	GBuffer gbuffer; // GBuffer
-	GBuffer GetGbuffer() { return gbuffer; }
-	RWStructuredBuffer<uint> GetResult() { return ResourceDescriptorHeap[result]; }
-};
+	namespace VSM
+	{
+		struct VSMDepthAnalysis
+		{
+			uint result; // RWStructuredBuffer<uint>
+			GBuffer gbuffer; // GBuffer
+			GBuffer GetGbuffer() { return gbuffer; }
+			RWStructuredBuffer<uint> GetResult() { return ResourceDescriptorHeap[result]; }
+		};
+	}
+}
+using Shadows::VSM::VSMDepthAnalysis;

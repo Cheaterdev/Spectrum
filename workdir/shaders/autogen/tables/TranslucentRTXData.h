@@ -7,12 +7,16 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct TranslucentRTXData
+namespace Raytrace
 {
-	uint depth; // Texture2D<float>
-	uint scene_color; // Texture2D<float4>
-	uint output; // RWTexture2D<float4>
-	Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
-	Texture2D<float4> GetScene_color() { return ResourceDescriptorHeap[scene_color]; }
-	RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
-};
+	struct TranslucentRTXData
+	{
+		uint depth; // Texture2D<float>
+		uint scene_color; // Texture2D<float4>
+		uint output; // RWTexture2D<float4>
+		Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
+		Texture2D<float4> GetScene_color() { return ResourceDescriptorHeap[scene_color]; }
+		RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
+	};
+}
+using Raytrace::TranslucentRTXData;

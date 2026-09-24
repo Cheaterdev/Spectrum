@@ -5,25 +5,28 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 #pragma once
-
-struct ColorPass: public RaytracePass<ColorPass>
+namespace Raytrace
 {
-	using Payload = Table::RayPayload;
 
-	using LocalData =  Slots::MaterialInfo;
+	struct ColorPass: public RaytracePass<ColorPass>
+	{
+		using Payload = Table::Raytrace::RayPayload;
+
+		using LocalData =  Slots::Meshes::MaterialInfo;
 
 
-	static const constexpr uint ID = 1;
+		static const constexpr uint ID = 1;
 
-	static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
-	static const constexpr std::wstring_view name = L"ColorPass_GROUP";
-	static const constexpr std::wstring_view hit_name = L"MyClosestHitShader";
-	static const constexpr std::wstring_view miss_name = L"MyMissShader";
-	// Empty when this pass doesn't declare an any_hit stage -- always emitted
-	// (rather than conditionally, per pass) so RaytracePass<Desc>'s init()/
-	// init_for_material() can check Desc::any_hit_name.empty() uniformly
-	// instead of needing per-Desc SFINAE for a member that may not exist.
-	static const constexpr std::wstring_view any_hit_name = L"MyAnyHitShader";
+		static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
+		static const constexpr std::wstring_view name = L"ColorPass_GROUP";
+		static const constexpr std::wstring_view hit_name = L"MyClosestHitShader";
+		static const constexpr std::wstring_view miss_name = L"MyMissShader";
+		// Empty when this pass doesn't declare an any_hit stage -- always emitted
+		// (rather than conditionally, per pass) so RaytracePass<Desc>'s init()/
+		// init_for_material() can check Desc::any_hit_name.empty() uniformly
+		// instead of needing per-Desc SFINAE for a member that may not exist.
+		static const constexpr std::wstring_view any_hit_name = L"MyAnyHitShader";
 
-	static const constexpr bool per_material = true;
-};
+		static const constexpr bool per_material = true;
+	};
+}

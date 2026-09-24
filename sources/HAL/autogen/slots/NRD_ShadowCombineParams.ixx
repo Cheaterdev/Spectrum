@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct NRD_ShadowCombineParams :public DataHolder<NRD_ShadowCombineParams, SlotID::NRD_ShadowCombineParams, Table::NRD_ShadowCombineParams, DefaultLayout::Instance0>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		NRD_ShadowCombineParams() = default;
-	};
+		namespace NRD
+		{
+			struct NRD_ShadowCombineParams :public DataHolder<NRD_ShadowCombineParams, SlotID::NRD_ShadowCombineParams, Table::Denoise::NRD::NRD_ShadowCombineParams, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				NRD_ShadowCombineParams() = default;
+			};
+		}
+	}
 }

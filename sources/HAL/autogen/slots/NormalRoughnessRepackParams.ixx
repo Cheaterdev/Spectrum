@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct NormalRoughnessRepackParams :public DataHolder<NormalRoughnessRepackParams, SlotID::NormalRoughnessRepackParams, Table::NormalRoughnessRepackParams, DefaultLayout::Instance2>
+	namespace Post
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		NormalRoughnessRepackParams() = default;
-	};
+		namespace Upscale
+		{
+			struct NormalRoughnessRepackParams :public DataHolder<NormalRoughnessRepackParams, SlotID::NormalRoughnessRepackParams, Table::Post::Upscale::NormalRoughnessRepackParams, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				NormalRoughnessRepackParams() = default;
+			};
+		}
+	}
 }

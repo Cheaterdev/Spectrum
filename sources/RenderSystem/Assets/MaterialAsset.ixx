@@ -29,10 +29,10 @@ export namespace materials
 		// (Masked -> VSM's cutout depth PSO, Translucent -> no raster pass at
 		// all). Default Opaque so non-material pipelines (PipelineSimple, used
 		// for UI/preview-style draws) don't need to care.
-		virtual TransparencyMode get_transparency_mode() const { return TransparencyMode::Opaque; }
+		virtual Meshes::TransparencyMode get_transparency_mode() const { return Meshes::TransparencyMode::Opaque; }
 
 		// Non-null only for a Masked PipelinePasses (see its constructor).
-		virtual PSOS::VSMDepthDrawMaterial::ptr get_vsm_depth_draw() const { return nullptr; }
+		virtual PSOS::Shadows::VSM::VSMDepthDrawMaterial::ptr get_vsm_depth_draw() const { return nullptr; }
 
         uint get_id();
 	private:

@@ -15,34 +15,50 @@ import :Autogen.Tables.MeshInstanceInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct Test
+	namespace Dev
 	{
-		static constexpr SlotID ID = SlotID::Test;
-		float data[16];
-		TestEnumMode mode = TestEnumMode::None;
-		std::vector<HLSL::StructuredBuffer<MeshInstanceInfo>> instances;
-		std::vector<HLSL::Texture2D<float4>> tex;
-		float* GetData() { return data; }
-		TestEnumMode& GetMode() { return mode; }
-		std::vector<HLSL::StructuredBuffer<MeshInstanceInfo>>& GetInstances() { return instances; }
-		std::vector<HLSL::Texture2D<float4>>& GetTex() { return tex; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct Test
 		{
-			compiler.compile(data, "Test::data");
-			compiler.compile(mode, "Test::mode");
-			compiler.compile(instances, "Test::instances");
-			compiler.compile(tex, "Test::tex");
-		}
-		struct Compiled
-		{
-			float data[16]; // float
-			TestEnumMode mode; // TestEnumMode
-			uint instances; // StructuredBuffer<MeshInstanceInfo>
-			uint tex; // Texture2D<float4>
+			static constexpr SlotID ID = SlotID::Test;
+			float data[16];
+			::Dev::TestEnumMode mode = ::Dev::TestEnumMode::None;
+			std::vector<HLSL::StructuredBuffer<Table::Meshes::MeshInstanceInfo>> instances;
+			std::vector<HLSL::Texture2D<float4>> tex;
+			float* GetData() { return data; }
+			::Dev::TestEnumMode& GetMode() { return mode; }
+			std::vector<HLSL::StructuredBuffer<Table::Meshes::MeshInstanceInfo>>& GetInstances() { return instances; }
+			std::vector<HLSL::Texture2D<float4>>& GetTex() { return tex; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(data, "Test::data");
+				compiler.compile(mode, "Test::mode");
+				compiler.compile(instances, "Test::instances");
+				compiler.compile(tex, "Test::tex");
+			}
+			struct Compiled
+			{
+				float data[16]; // float
+				::Dev::TestEnumMode mode; // TestEnumMode
+				uint instances; // StructuredBuffer<MeshInstanceInfo>
+				uint tex; // Texture2D<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(data);
+					ar& NVP(mode);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::Test";
+			}
 			private:
 			SERIALIZE()
 			{
@@ -50,21 +66,8 @@ export namespace Table
 				ar& NVP(mode);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::Test";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(data);
-			ar& NVP(mode);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

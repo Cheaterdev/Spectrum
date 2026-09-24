@@ -14,44 +14,50 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DenoiserShadow_FilterLocal
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::DenoiserShadow_FilterLocal;
-		HLSL::Texture2D<float16_t2> rqt2d_input;
-		HLSL::RWTexture2D<float2> rwt2d_output;
-		HLSL::Texture2D<float16_t2>& GetRqt2d_input() { return rqt2d_input; }
-		HLSL::RWTexture2D<float2>& GetRwt2d_output() { return rwt2d_output; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Denoise
 		{
-			compiler.compile(rqt2d_input, "DenoiserShadow_FilterLocal::rqt2d_input");
-			compiler.compile(rwt2d_output, "DenoiserShadow_FilterLocal::rwt2d_output");
-		}
-		struct Compiled
-		{
-			uint rqt2d_input; // Texture2D<float16_t2>
-			uint rwt2d_output; // RWTexture2D<float2>
+			struct DenoiserShadow_FilterLocal
+			{
+				static constexpr SlotID ID = SlotID::DenoiserShadow_FilterLocal;
+				HLSL::Texture2D<float16_t2> rqt2d_input;
+				HLSL::RWTexture2D<float2> rwt2d_output;
+				HLSL::Texture2D<float16_t2>& GetRqt2d_input() { return rqt2d_input; }
+				HLSL::RWTexture2D<float2>& GetRwt2d_output() { return rwt2d_output; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(rqt2d_input, "DenoiserShadow_FilterLocal::rqt2d_input");
+					compiler.compile(rwt2d_output, "DenoiserShadow_FilterLocal::rwt2d_output");
+				}
+				struct Compiled
+				{
+					uint rqt2d_input; // Texture2D<float16_t2>
+					uint rwt2d_output; // RWTexture2D<float2>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::DenoiserShadow_FilterLocal";
+				static std::string get_typename()
+				{
+					return "Tables::DenoiserShadow_FilterLocal";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

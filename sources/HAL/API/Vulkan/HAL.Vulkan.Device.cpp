@@ -489,7 +489,7 @@ namespace HAL
                 constexpr uint32_t SMP_BASE = 384; // s-shift
 
                 // Embedded static samplers s0..s4 — create-infos kept alive so the
-                // mapping's pEmbeddedSampler stays valid.  Order matches FrameLayout.h:
+                // mapping's pEmbeddedSampler stays valid.  Order matches Frame::FrameLayout.h:
                 //   s0=linearWrap, s1=pointClamp, s2=linearClamp, s3=anisoBorder, s4=pointBorder
                 const SamplerDesc* descs[NUM_INLINE_SMP] = {
                     &Samplers::SamplerLinearWrapDesc,

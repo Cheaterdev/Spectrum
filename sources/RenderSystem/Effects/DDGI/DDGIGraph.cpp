@@ -105,18 +105,18 @@ namespace
 	// untouched.
 	Variable<float> g_ddgi_feedback_strength = { 1.0f, "Feedback strength", &ddgi_debug_context(), 0.0f, 2.0f };
 	// Which occlusion test ddgi_sample_irradiance (ddgi_sample.hlsl) uses per
-	// trilinear probe corner -- see DDGIOcclusionMode's own comment (ddgi.prism)
+	// trilinear probe corner -- see GI::DDGI::DDGIOcclusionMode's own comment (ddgi.prism)
 	// for what each value does. Enum-typed Variable renders as a combo box
 	// (ParameterWindow.ixx's magic_enum-driven dropdown, same as any other
 	// enum Variable in this codebase) -- no separate bool toggles needed.
 	// RTXRay default matches this session's own prior behavior (every real
 	// call site always used a traced visibility ray before this toggle
 	// existed).
-	Variable<DDGIOcclusionMode> g_ddgi_occlusion_mode = { DDGIOcclusionMode::RTXRay, "Occlusion test", &ddgi_debug_context() };
+	Variable<GI::DDGI::DDGIOcclusionMode> g_ddgi_occlusion_mode = { GI::DDGI::DDGIOcclusionMode::RTXRay, "Occlusion test", &ddgi_debug_context() };
 	// See DDGIInfo::grid_min.w's own comment (ddgi.prism) -- fraction of this
 	// cascade's own probe spacing added on top of a probe's stored hit
 	// distance before ddgi_probe_depth_test (ddgi_sample.hlsl,
-	// DDGIOcclusionMode::ProbeDepthTest) calls a shading point occluded.
+	// GI::DDGI::DDGIOcclusionMode::ProbeDepthTest) calls a shading point occluded.
 	// Too small and the depth test self-occludes on the very surface the
 	// probe itself measured (the classic shadow-acne failure mode); too
 	// large and it stops rejecting real occluders. 0.05 is a starting point,
@@ -174,8 +174,8 @@ namespace
 	// call, so every pass of one cascade agrees on it. Mirrored into
 	// DDGIInfo::rays_per_probe.yz (ddgi_make_info) -- see that field's own
 	// comment (ddgi.prism) for why those two lanes were free to reuse.
-	uint32_t g_ddgi_stagger_k[Constants::DDGI_CascadeCount]      = { 1, 1, 1, 1, 1 };
-	uint32_t g_ddgi_stagger_bucket[Constants::DDGI_CascadeCount] = { 0, 0, 0, 0, 0 };
+	uint32_t g_ddgi_stagger_k[Constants::GI::DDGI::DDGI_CascadeCount]      = { 1, 1, 1, 1, 1 };
+	uint32_t g_ddgi_stagger_bucket[Constants::GI::DDGI::DDGI_CascadeCount] = { 0, 0, 0, 0, 0 };
 
 	// Toroidal-scroll tracking (see [[project-ddgi]] planning notes and
 	// DDGIProbeResidencyMarkData's own comment, ddgi.prism): the grid's window
@@ -189,19 +189,19 @@ namespace
 	// ResidencyMark, ArgsBuild, Trace, Convolve, IndirectRTX, ReflectionRTX
 	// all call it), so tracking "the previous frame's origin" inside it would
 	// treat each of those calls as its own frame.
-	ivec3 g_ddgi_prev_window_origin[Constants::DDGI_CascadeCount];
-	bool  g_ddgi_scroll_initialized[Constants::DDGI_CascadeCount] = { false, false, false, false, false };
+	ivec3 g_ddgi_prev_window_origin[Constants::GI::DDGI::DDGI_CascadeCount];
+	bool  g_ddgi_scroll_initialized[Constants::GI::DDGI::DDGI_CascadeCount] = { false, false, false, false, false };
 	// This frame's per-cascade eviction range, in the same (lo, count) shape
 	// DDGIProbeResidencyMarkData carries to the shader -- see that struct's
 	// own comment for the wrap-test derivation. count=0 on every axis when
 	// the window didn't move on that axis (or hasn't been established yet).
-	ivec3 g_ddgi_scroll_lo[Constants::DDGI_CascadeCount];
-	uint3 g_ddgi_scroll_count[Constants::DDGI_CascadeCount];
+	ivec3 g_ddgi_scroll_lo[Constants::GI::DDGI::DDGI_CascadeCount];
+	uint3 g_ddgi_scroll_count[Constants::GI::DDGI::DDGI_CascadeCount];
 }
 
 void ddgi_update_selectors(FrameGraph::Graph& graph)
 {
-	graph.get_context<Table::DDGISelectors>().show_probes = g_ddgi_show_probes;
+	graph.get_context<Table::GI::DDGI::DDGISelectors>().show_probes = g_ddgi_show_probes;
 
 	// Runs once per frame, before setup, so this is the one place a frame
 	// counter can live without being bumped several times per frame (every
@@ -219,7 +219,7 @@ void ddgi_update_selectors(FrameGraph::Graph& graph)
 	// is never actually used for it, only carried forward so cascade 1 still
 	// starts its own progression at base^1.
 	uint64_t k = 1;
-	for (uint32_t cascade = 0; cascade < Constants::DDGI_CascadeCount; ++cascade)
+	for (uint32_t cascade = 0; cascade < Constants::GI::DDGI::DDGI_CascadeCount; ++cascade)
 	{
 		uint64_t cascade_k = 1;
 		if (cascade == 0)
@@ -270,12 +270,12 @@ namespace
 // once and bound via a global SlotID (VoxelInfo's own pattern,
 // VoxelGIGraph.cpp) because the call sites don't share a single render pass
 // to compile it once in.
-Slots::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index)
+Slots::GI::DDGI::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index)
 {
-	Slots::DDGIInfo info;
+	Slots::GI::DDGI::DDGIInfo info;
 
 	float spacing = g_ddgi_probe_spacing * (float)(1u << cascade_index);
-	uint3 counts = uint3(Constants::DDGI_ProbeCountX, Constants::DDGI_ProbeCountY, Constants::DDGI_ProbeCountZ);
+	uint3 counts = uint3(Constants::GI::DDGI::DDGI_ProbeCountX, Constants::GI::DDGI::DDGI_ProbeCountY, Constants::GI::DDGI::DDGI_ProbeCountZ);
 	uint32_t probe_count = counts.x * counts.y * counts.z;
 
 	float3 half_extent = float3(counts) * spacing * 0.5f;
@@ -295,26 +295,26 @@ Slots::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index)
 	// output atlas's own texel resolution (see DDGI_ProbeRayCount's own
 	// comment, ddgi.prism, for why that decoupling replaced the old 1-ray-
 	// per-texel scheme).
-	info.GetRays_per_probe().x = Constants::DDGI_ProbeRayCount;
+	info.GetRays_per_probe().x = Constants::GI::DDGI::DDGI_ProbeRayCount;
 	// This cascade's rotating retrace subset -- see g_ddgi_stagger_k/
 	// g_ddgi_stagger_bucket's own comment and rays_per_probe's field comment
 	// (ddgi.prism) for what these drive (DDGIProbeResidencyMark's compaction
 	// gate).
 	info.GetRays_per_probe().y = g_ddgi_stagger_k[cascade_index];
-	info.GetRays_per_probe().z = g_ddgi_stagger_bucket[cascade_index];	info.GetAtlas_info().x     = Constants::DDGI_ProbeTexelSize;
+	info.GetRays_per_probe().z = g_ddgi_stagger_bucket[cascade_index];	info.GetAtlas_info().x     = Constants::GI::DDGI::DDGI_ProbeTexelSize;
 	// See DDGIInfo's own comment (ddgi.prism) for what these offsets are.
 	info.GetCascade_info().x = cascade_index * probe_count;
-	info.GetCascade_info().y = cascade_index * Constants::DDGI_ProbeCountY;
+	info.GetCascade_info().y = cascade_index * Constants::GI::DDGI::DDGI_ProbeCountY;
 	info.GetCascade_info().z = cascade_index;
-	info.GetCascade_info().w = (cascade_index == Constants::DDGI_CascadeCount - 1) ? 1 : 0;
+	info.GetCascade_info().w = (cascade_index == Constants::GI::DDGI::DDGI_CascadeCount - 1) ? 1 : 0;
 	info.GetFlags().x = g_ddgi_use_fallback ? 1 : 0;
 	info.GetFlags().y = g_ddgi_use_indirect_dispatch ? 1 : 0;
 	// See DDGIInfo::flags' own comment (ddgi.prism) for the bit layout.
-	info.GetFlags().z = (g_ddgi_cull_coarsest_cascade ? (uint32_t)DDGIControlFlags::CullCoarsestCascade : 0u)
-		| (g_ddgi_enable_residency_culling ? 0u : (uint32_t)DDGIControlFlags::DisableResidencyCulling)
-		| (g_ddgi_jitter_rays ? (uint32_t)DDGIControlFlags::JitterRays : 0u)
-		| (g_ddgi_fallback_while_generating ? 0u : (uint32_t)DDGIControlFlags::DisableTraceFeedback)
-		| (static_cast<uint32_t>((DDGIOcclusionMode)g_ddgi_occlusion_mode) << 4);
+	info.GetFlags().z = (g_ddgi_cull_coarsest_cascade ? (uint32_t)GI::DDGI::DDGIControlFlags::CullCoarsestCascade : 0u)
+		| (g_ddgi_enable_residency_culling ? 0u : (uint32_t)GI::DDGI::DDGIControlFlags::DisableResidencyCulling)
+		| (g_ddgi_jitter_rays ? (uint32_t)GI::DDGI::DDGIControlFlags::JitterRays : 0u)
+		| (g_ddgi_fallback_while_generating ? 0u : (uint32_t)GI::DDGI::DDGIControlFlags::DisableTraceFeedback)
+		| (static_cast<uint32_t>((GI::DDGI::DDGIOcclusionMode)g_ddgi_occlusion_mode) << 4);
 	info.GetFlags().w = static_cast<uint32_t>(g_ddgi_eviction_grace_frames);
 
 	return info;
@@ -329,7 +329,7 @@ Slots::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index)
 // -- see DDGI.ixx's own comment on why [Multiple=5] passes are wired this
 // way (ddgi_register_passes). setup() is still fully generated (ddgi.prism's
 // own [SetupCondition]).
-void ddgi_probe_select_render(Passes::DDGIProbeSelect::Context& data, FrameContext& context)
+void ddgi_probe_select_render(Passes::GI::DDGI::DDGIProbeSelect::Context& data, FrameContext& context)
 {
 	uint32_t cascade = data.pass_index;
 
@@ -337,7 +337,7 @@ void ddgi_probe_select_render(Passes::DDGIProbeSelect::Context& data, FrameConte
 	compute.set_signature(Layouts::DefaultLayout);
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 
-	Slots::DDGIInfo info = ddgi_make_info(ddgi_camera_pos(context), cascade);
+	Slots::GI::DDGI::DDGIInfo info = ddgi_make_info(ddgi_camera_pos(context), cascade);
 
 	// Toroidal-scroll delta, computed exactly once per cascade per frame
 	// here (see g_ddgi_prev_window_origin's own comment) -- grid_min is
@@ -384,21 +384,21 @@ void ddgi_probe_select_render(Passes::DDGIProbeSelect::Context& data, FrameConte
 	}
 
 	{
-		Slots::DDGIProbeSelectData params;
+		Slots::GI::DDGI::DDGIProbeSelectData params;
 		params.GetInfo() = info;
 		params.GetProbes().GetProbe_counts() = info.GetProbe_counts();
 		params.GetProbes().GetProbes()       = data.DDGI_Probes->rwStructuredBuffer;
 		compute.set(params);
 	}
 
-	compute.set_pipeline<PSOS::DDGIProbeSelect>();
-	compute.dispatch(uint3(Constants::DDGI_ProbeCount, 1, 1), uint3(64, 1, 1));
+	compute.set_pipeline<PSOS::GI::DDGI::DDGIProbeSelect>();
+	compute.dispatch(uint3(Constants::GI::DDGI::DDGI_ProbeCount, 1, 1), uint3(64, 1, 1));
 }
 
 // Real hit-point-driven marking with an eviction grace period -- see
 // ddgi_probe_residency_mark.hlsl's own comment. Plain free function -- see
 // ddgi_probe_select_render's own comment on why.
-void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& data, FrameContext& context)
+void ddgi_probe_residency_mark_render(Passes::GI::DDGI::DDGIProbeResidencyMark::Context& data, FrameContext& context)
 {
 	uint32_t cascade = data.pass_index;
 
@@ -406,15 +406,15 @@ void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& d
 	compute.set_signature(Layouts::DefaultLayout);
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 
-	Slots::DDGIInfo info = ddgi_make_info(ddgi_camera_pos(context), cascade);
+	Slots::GI::DDGI::DDGIInfo info = ddgi_make_info(ddgi_camera_pos(context), cascade);
 
-	compute.set_pipeline<PSOS::DDGIProbeResidencyMark>();
+	compute.set_pipeline<PSOS::GI::DDGI::DDGIProbeResidencyMark>();
 
 	// First dispatch: zero this cascade's own compacted-count slot -- see
 	// ddgi_probe_residency_mark.hlsl's own comment for why this can't be
 	// folded into the marking dispatch below.
 	{
-		Slots::DDGIProbeResidencyMarkData params;
+		Slots::GI::DDGI::DDGIProbeResidencyMarkData params;
 		params.GetInfo() = info;
 		params.GetProbe_residency()  = data.DDGI_ProbeResidency->rwStructuredBuffer;
 		params.GetCompacted_list()   = data.DDGI_CompactedProbeList->rwStructuredBuffer;
@@ -434,7 +434,7 @@ void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& d
 	// ddgi_probe_select_render's own comment on where scroll_lo/scroll_count
 	// come from, and this shader's own comment for how it uses them).
 	{
-		Slots::DDGIProbeResidencyMarkData params;
+		Slots::GI::DDGI::DDGIProbeResidencyMarkData params;
 		params.GetInfo() = info;
 		params.GetProbe_residency()  = data.DDGI_ProbeResidency->rwStructuredBuffer;
 		params.GetCompacted_list()   = data.DDGI_CompactedProbeList->rwStructuredBuffer;
@@ -447,7 +447,7 @@ void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& d
 		params.GetScroll_count() = g_ddgi_scroll_count[cascade];
 		params.GetReset_only() = 0;
 		compute.set(params);
-		compute.dispatch(uint3(Constants::DDGI_ProbeCount, 1, 1), uint3(64, 1, 1));
+		compute.dispatch(uint3(Constants::GI::DDGI::DDGI_ProbeCount, 1, 1), uint3(64, 1, 1));
 	}
 }
 
@@ -460,7 +460,7 @@ void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& d
 // re-read every frame (cheap: a few resource-address lookups, no upload)
 // rather than cached, since materials can hot-reload and rebuild them.
 // Plain free function -- see ddgi_probe_select_render's own comment on why.
-void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::Context& data, FrameContext& context)
+void ddgi_probe_dispatch_args_build_render(Passes::GI::DDGI::DDGIProbeDispatchArgsBuild::Context& data, FrameContext& context)
 {
 	uint32_t cascade = data.pass_index;
 
@@ -473,7 +473,7 @@ void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::C
 		return uint2(static_cast<uint>(v & 0xFFFFFFFFull), static_cast<uint>(v >> 32));
 	};
 
-	Slots::DispatchRaysArgsBuildData params;
+	Slots::Raytrace::DispatchRaysArgsBuildData params;
 	params.GetHit_addr()    = split_address(rtx.hitgroup_ids->buffer.get_resource_address().get_ptr());
 	params.GetHit_stride()  = static_cast<uint>(sizeof(std::remove_cvref_t<decltype(rtx)>::hit_type));
 	params.GetHit_count()   = static_cast<uint>(rtx.hitgroup_ids->max_size());
@@ -482,8 +482,8 @@ void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::C
 	params.GetMiss_count()  = static_cast<uint>(rtx.miss_ids.get_count());
 	// DDGIProbeTrace here names the RaytraceRaygen<> tag type (raytracing.prism),
 	// the same unqualified name RTX::get().render<DDGIProbeTrace>() below uses
-	// -- not the Passes::DDGIProbeTrace FrameGraph PassNode type.
-	params.GetRaygen_addr() = split_address(rtx.raygen_address<DDGIProbeTrace>().get_ptr());
+	// -- not the Passes::GI::DDGI::DDGIProbeTrace FrameGraph PassNode type.
+	params.GetRaygen_addr() = split_address(rtx.raygen_address<GI::DDGI::DDGIProbeTrace>().get_ptr());
 	params.GetRaygen_size() = static_cast<uint>(sizeof(HAL::shader_identifier));
 	// Width = DDGI_CompactedProbeCount[cascade] * rays/probe -- a real
 	// GPU-computed launch size (DDGIProbeResidencyMark's own stream
@@ -495,14 +495,14 @@ void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::C
 	// DDGI_ProbeRayCount now, not DDGI_ProbeTexelSize^2 -- see that
 	// constant's own comment (ddgi.prism) for the ray-count/texel-resolution
 	// decoupling.
-	params.GetWidth_multiplier() = Constants::DDGI_ProbeRayCount;
+	params.GetWidth_multiplier() = Constants::GI::DDGI::DDGI_ProbeRayCount;
 	params.GetCount_index()      = cascade;
 	params.GetCompacted_count()  = data.DDGI_CompactedProbeCount->structuredBuffer;
 	params.GetDest_index()  = cascade;
 	params.GetArgs()        = data.DDGI_DispatchRaysArgs->rwStructuredBuffer;
 	compute.set(params);
 
-	compute.set_pipeline<PSOS::DispatchRaysArgsBuild>();
+	compute.set_pipeline<PSOS::Raytrace::DispatchRaysArgsBuild>();
 	compute.dispatch(1, 1, 1);
 }
 
@@ -516,7 +516,7 @@ void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::C
 // tunable budget too (DDGI_ProbeRayCount, decoupled from the output atlas's
 // own texel resolution -- see that constant's own comment, ddgi.prism). Plain
 // free function -- see ddgi_probe_select_render's own comment on why.
-void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext& context, const VSM& vsm)
+void ddgi_probe_trace_render(Passes::GI::DDGI::DDGIProbeTrace::Context& data, FrameContext& context, const VSM& vsm)
 {
 	if (g_ddgi_freeze_probes)
 		return;
@@ -530,10 +530,10 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 	context.graph->set_slot(SlotID::SceneData, compute);
 
-	Slots::DDGIInfo info = ddgi_make_info(ddgi_camera_pos(context), cascade);
+	Slots::GI::DDGI::DDGIInfo info = ddgi_make_info(ddgi_camera_pos(context), cascade);
 
 	{
-		Slots::DDGIProbeTraceData params;
+		Slots::GI::DDGI::DDGIProbeTraceData params;
 		params.GetInfo() = info;
 		params.GetProbes().GetProbe_counts() = info.GetProbe_counts();
 		params.GetProbes().GetProbes()       = data.DDGI_Probes->rwStructuredBuffer;
@@ -548,7 +548,7 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 
 	{
 		PROFILE(L"ddgi_trace_vsm_lookup");
-		Slots::VSMShadowLookupData vsm_data;
+		Slots::Shadows::VSM::VSMShadowLookupData vsm_data;
 		auto& lookup = vsm_data.GetLookup();
 		vsm.fill_shadow_lookup_constants(lookup, ddgi_camera_pos(context));
 		lookup.GetVsm_atlas()    = data.VSM_Atlas->texture2DArray;
@@ -558,7 +558,7 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 	}
 
 	// The coarsest cascade is exempt from residency culling by default (see
-	// DDGIControlFlags::CullCoarsestCascade's own comment, ddgi.prism) --
+	// GI::DDGI::DDGIControlFlags::CullCoarsestCascade's own comment, ddgi.prism) --
 	// unconditionally, 100% of its probes, every frame, so compaction never
 	// actually drops anything for it. Confirmed via a temporary CPU readback
 	// (ddgi_compacted_count.temp / ddgi_cascade4_residency.temp, ask before
@@ -581,7 +581,7 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 	// through ExecuteIndirect, regardless of the toggle -- only cascades
 	// that can actually have probes culled take the indirect path.
 	bool is_coarsest_and_exempt = info.GetCascade_info().w != 0
-		&& (info.GetFlags().z & (uint32_t)DDGIControlFlags::CullCoarsestCascade) == 0;
+		&& (info.GetFlags().z & (uint32_t)GI::DDGI::DDGIControlFlags::CullCoarsestCascade) == 0;
 
 	if (g_ddgi_use_indirect_dispatch && !is_coarsest_and_exempt)
 	{
@@ -592,7 +592,7 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 		// then launch -- exec_indirect<DispatchRaysArguments> just reads its
 		// dispatch dimensions (and shader-table addresses) from that buffer
 		// instead of from template/call-site arguments.
-		Slots::Raytracing raytracing;
+		Slots::Raytrace::Raytracing raytracing;
 		raytracing.GetScene() = sceneinfo.scene->raytrace_scene->get_handle();
 		compute.set(raytracing);
 
@@ -603,7 +603,7 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 		// tracing: cascades 1-4 launched with cascade 0's own needed-probe
 		// count instead of their own.
 		compute.exec_indirect<DispatchRaysArguments>(*data.DDGI_DispatchRaysArgs, 1, cascade,
-			&RTX::get().rtx.raygen_slots<DDGIProbeTrace>());
+			&RTX::get().rtx.raygen_slots<GI::DDGI::DDGIProbeTrace>());
 	}
 	else
 	{
@@ -614,11 +614,11 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 		// dispatch dimensions the same way DDGI_ProbeCountY already did
 		// before rays were their own axis.
 		ivec3 dispatch_size = {
-			Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeRayCount,
-			Constants::DDGI_ProbeCountZ,
-			Constants::DDGI_ProbeCountY
+			Constants::GI::DDGI::DDGI_ProbeCountX * Constants::GI::DDGI::DDGI_ProbeRayCount,
+			Constants::GI::DDGI::DDGI_ProbeCountZ,
+			Constants::GI::DDGI::DDGI_ProbeCountY
 		};
-		RTX::get().render<DDGIProbeTrace>(compute, sceneinfo.scene->raytrace_scene, dispatch_size);
+		RTX::get().render<GI::DDGI::DDGIProbeTrace>(compute, sceneinfo.scene->raytrace_scene, dispatch_size);
 	}
 }
 
@@ -626,7 +626,7 @@ void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameContext
 // set into its irradiance/visibility atlas texels -- see
 // ddgi_probe_convolve.hlsl for the per-texel math. Plain free function --
 // see ddgi_probe_select_render's own comment on why.
-void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameContext& context)
+void ddgi_probe_convolve_render(Passes::GI::DDGI::DDGIProbeConvolve::Context& data, FrameContext& context)
 {
 	if (g_ddgi_freeze_probes)
 		return;
@@ -643,7 +643,7 @@ void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameC
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 
 	{
-		Slots::DDGIProbeConvolveData params;
+		Slots::GI::DDGI::DDGIProbeConvolveData params;
 		params.GetInfo() = ddgi_make_info(ddgi_camera_pos(context), cascade);
 		params.GetProbe_ray_radiance() = data.DDGI_ProbeRayRadiance->structuredBuffer;
 		params.GetProbe_irradiance() = data.DDGI_ProbeIrradiance->rwTexture2DArray;
@@ -652,11 +652,11 @@ void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameC
 		compute.set(params);
 	}
 
-	compute.set_pipeline<PSOS::DDGIProbeConvolve>();
+	compute.set_pipeline<PSOS::GI::DDGI::DDGIProbeConvolve>();
 	// 3D: the array dimension (this cascade's own DDGI_ProbeCountY slice
 	// range) is a real dispatch dimension now, same reasoning as
 	// ddgi_probe_trace_render's own fixed-dispatch path.
-	compute.dispatch(ivec3(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight, Constants::DDGI_ProbeCountY), ivec3{ 8, 8, 1 });
+	compute.dispatch(ivec3(Constants::GI::DDGI::DDGI_AtlasWidth, Constants::GI::DDGI::DDGI_AtlasHeight, Constants::GI::DDGI::DDGI_ProbeCountY), ivec3{ 8, 8, 1 });
 }
 
 // Debug-only screen-space probe splat (DDGISelectors::show_probes, toggled
@@ -666,18 +666,18 @@ void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameC
 // DDGI_ProbeCount*DDGI_CascadeCount; the shader decodes which cascade each
 // dispatch index belongs to from the shared per-cascade probe count).
 // setup() is fully generated (ddgi.prism's own [SetupCondition]).
-void PassDefault<Passes::DDGIDebug>::render(
-	Passes::DDGIDebug::Context& data, FrameContext& context)
+void PassDefault<Passes::GI::DDGI::Dev::DDGIDebug>::render(
+	Passes::GI::DDGI::Dev::DDGIDebug::Context& data, FrameContext& context)
 {
 	auto& compute = context.get_list()->get_compute();
 	compute.set_signature(Layouts::DefaultLayout);
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 
 	float3 cam_pos = ddgi_camera_pos(context);
-	Slots::DDGIInfo info0 = ddgi_make_info(cam_pos, 0);
+	Slots::GI::DDGI::DDGIInfo info0 = ddgi_make_info(cam_pos, 0);
 
 	{
-		Slots::DDGIDebugData params;
+		Slots::GI::DDGI::Dev::DDGIDebugData params;
 		params.GetCascade0() = info0;
 		params.GetCascade1() = ddgi_make_info(cam_pos, 1);
 		params.GetCascade2() = ddgi_make_info(cam_pos, 2);
@@ -692,8 +692,8 @@ void PassDefault<Passes::DDGIDebug>::render(
 		compute.set(params);
 	}
 
-	compute.set_pipeline<PSOS::DDGIDebug>();
-	compute.dispatch(uint3(Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount, 1, 1), uint3(64, 1, 1));
+	compute.set_pipeline<PSOS::GI::DDGI::Dev::DDGIDebug>();
+	compute.dispatch(uint3(Constants::GI::DDGI::DDGI_ProbeCount * Constants::GI::DDGI::DDGI_CascadeCount, 1, 1), uint3(64, 1, 1));
 }
 
 // Full-screen debug view of the exact per-pixel feedback sample
@@ -701,8 +701,8 @@ void PassDefault<Passes::DDGIDebug>::render(
 // see ddgi_indirect_debug.hlsl for the per-pixel math (picks the finest of
 // all 5 cascades that actually contains each pixel's world position).
 // setup() is fully generated (ddgi.prism's own [SetupCondition]).
-void PassDefault<Passes::DDGIIndirectDebug>::render(
-	Passes::DDGIIndirectDebug::Context& data, FrameContext& context)
+void PassDefault<Passes::GI::DDGI::Dev::DDGIIndirectDebug>::render(
+	Passes::GI::DDGI::Dev::DDGIIndirectDebug::Context& data, FrameContext& context)
 {
 	auto& compute   = context.get_list()->get_compute();
 	auto& sceneinfo = context.graph->get_context<SceneInfo>();
@@ -713,9 +713,9 @@ void PassDefault<Passes::DDGIIndirectDebug>::render(
 	// binding, see ddgi_sample.hlsl's ddgi_sample_irradiance_cascaded_inline_traced)
 	// -- explicitly bound here rather than relying on the RTX-signature
 	// passes earlier in the pipeline having left it set, since this pass
-	// uses the plain DefaultLayout signature, not RTX::get().rtx.m_root_sig.
+	// uses the plain Frame::DefaultLayout signature, not RTX::get().rtx.m_root_sig.
 	{
-		Slots::Raytracing raytracing;
+		Slots::Raytrace::Raytracing raytracing;
 		raytracing.GetScene() = sceneinfo.scene->raytrace_scene->get_handle();
 		compute.set(raytracing);
 	}
@@ -723,7 +723,7 @@ void PassDefault<Passes::DDGIIndirectDebug>::render(
 	float3 cam_pos = ddgi_camera_pos(context);
 
 	{
-		Slots::DDGIIndirectDebugData params;
+		Slots::GI::DDGI::Dev::DDGIIndirectDebugData params;
 		params.GetCascade0()         = ddgi_make_info(cam_pos, 0);
 		params.GetCascade1()         = ddgi_make_info(cam_pos, 1);
 		params.GetCascade2()         = ddgi_make_info(cam_pos, 2);
@@ -739,6 +739,6 @@ void PassDefault<Passes::DDGIIndirectDebug>::render(
 		compute.set(params);
 	}
 
-	compute.set_pipeline<PSOS::DDGIIndirectDebug>();
+	compute.set_pipeline<PSOS::GI::DDGI::Dev::DDGIIndirectDebug>();
 	compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 8, 8 });
 }

@@ -8,16 +8,20 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "vertex_input.h"
-struct NinePatch
+namespace UI
 {
-	uint vb; // StructuredBuffer<vertex_input>
-	uint textures; // Texture2D<float4>
-	StructuredBuffer<vertex_input> GetVb() { return ResourceDescriptorHeap[vb]; }
-	Texture2D<float4> GetTextures(int i)
+	struct NinePatch
 	{
-		StructuredBuffer<uint> indirection = ResourceDescriptorHeap[textures];
-		uint id = indirection[NonUniformResourceIndex(i)];
-		return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
-	}
+		uint vb; // StructuredBuffer<vertex_input>
+		uint textures; // Texture2D<float4>
+		StructuredBuffer<vertex_input> GetVb() { return ResourceDescriptorHeap[vb]; }
+		Texture2D<float4> GetTextures(int i)
+		{
+			StructuredBuffer<uint> indirection = ResourceDescriptorHeap[textures];
+			uint id = indirection[NonUniformResourceIndex(i)];
+			return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
+		}
 
-};
+	};
+}
+using UI::NinePatch;

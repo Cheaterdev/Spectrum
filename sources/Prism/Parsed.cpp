@@ -80,9 +80,138 @@ static std::string to_crlf(const std::string& s)
 	return out;
 }
 
+// Expands the /*@ns+A::B*/ ... /*@ns-A::B|Name|export*/ markers templates put
+// around a namespaced definition (set_namespace_text, Main.cpp) into
+//     namespace A
+//     {
+//         namespace B
+//         {
+//             <definition, indented one tab per level>
+//         }
+//     }
+//     using A::B::Name;
+// at the indentation of the definition itself. A marker may share a line with
+// other text: text before an opening marker stays outside, text after it is a
+// line of the definition, and whitespace-only text before it is the
+// indentation to use. Without markers the text is returned unchanged.
+static std::string layout_namespaces(const std::string& with_cr)
+{
+	if (with_cr.find("/*@ns") == std::string::npos)
+		return with_cr;
+
+	// Templates can carry \r; to_crlf re-adds them after this.
+	std::string text;
+	for (char c : with_cr)
+		if (c != '\r') text += c;
+
+	auto split = [](const std::string& s, char sep)
+	{
+		std::vector<std::string> parts;
+		for (size_t b = 0;;)
+		{
+			size_t e = s.find(sep, b);
+			parts.push_back(s.substr(b, e == std::string::npos ? std::string::npos : e - b));
+			if (e == std::string::npos) return parts;
+			b = e + 1;
+		}
+	};
+	auto indent_of = [](const std::string& s) { return s.substr(0, std::min(s.find_first_not_of(" \t"), s.size())); };
+	auto blank = [](const std::string& s) { return s.find_first_not_of(" \t") == std::string::npos; };
+
+	// Lines, with each marker cut out into an item of its own.
+	struct Item
+	{
+		enum { Text, Open, Close } kind = Text;
+		std::string text;       // Text: the line; Open/Close: the marker body
+		bool detached = false;  // Text that followed a marker on its line, so has no indentation of its own
+		std::optional<std::string> indent; // Open: whitespace that preceded it on its line
+	};
+	std::vector<Item> items;
+	for (auto& line : split(text, '\n'))
+	{
+		bool detached = false;
+		std::optional<std::string> pending_indent;
+		for (size_t m; (m = line.find("/*@ns")) != std::string::npos;)
+		{
+			size_t e = line.find("*/", m);
+			std::string before = line.substr(0, m);
+			std::string body = line.substr(m + 5, e - m - 5);
+			line = line.substr(e + 2);
+
+			if (!blank(before))
+				items.push_back({ Item::Text, before, detached });
+			else if (body[0] == '+')
+				pending_indent = before;
+			if (body[0] == '+')
+				items.push_back({ Item::Open, body.substr(1), false, pending_indent });
+			else
+				items.push_back({ Item::Close, body.substr(1) });
+			detached = true;
+			pending_indent.reset();
+		}
+		if (!detached || !blank(line))
+			items.push_back({ Item::Text, line, detached });
+	}
+
+	struct Scope { std::string indent; size_t depth; };
+	std::vector<Scope> open;
+	size_t depth = 0;
+	std::string out;
+	auto emit = [&](const std::string& l) { out += l + "\n"; };
+	for (size_t i = 0; i < items.size(); ++i)
+	{
+		const Item& it = items[i];
+		if (it.kind == Item::Text)
+		{
+			if (!depth || blank(it.text))
+				emit(it.text);
+			else
+				emit((it.detached ? open.back().indent : "") + std::string(depth, '\t') + it.text);
+		}
+		else if (it.kind == Item::Open)
+		{
+			// The definition's own indentation: given on the marker's line, or
+			// that of the first line of the definition.
+			std::string indent;
+			if (it.indent)
+				indent = *it.indent;
+			else
+				for (size_t j = i + 1; j < items.size(); ++j)
+					if (items[j].kind == Item::Text && !blank(items[j].text))
+					{
+						indent = items[j].detached ? "" : indent_of(items[j].text);
+						break;
+					}
+			std::vector<std::string> parts;
+			for (auto& p : split(it.text, ':'))
+				if (!p.empty()) parts.push_back(p);
+			for (size_t k = 0; k < parts.size(); ++k)
+			{
+				emit(indent + std::string(depth + k, '\t') + "namespace " + parts[k]);
+				emit(indent + std::string(depth + k, '\t') + "{");
+			}
+			open.push_back({ indent, parts.size() });
+			depth += parts.size();
+		}
+		else
+		{
+			auto fields = split(it.text, '|'); // ns, alias name, "export"
+			Scope s = open.back();
+			open.pop_back();
+			depth -= s.depth;
+			for (size_t k = s.depth; k-- > 0;)
+				emit(s.indent + std::string(depth + k, '\t') + "}");
+			if (!fields[1].empty())
+				emit(s.indent + std::string(depth, '\t') + (fields[2] == "export" ? "export " : "") + "using " + fields[0] + "::" + fields[1] + ";");
+		}
+	}
+	out.pop_back(); // emit() adds a newline after every line; the input had one fewer
+	return out;
+}
+
 my_stream::~my_stream()
 {
-	auto result = to_crlf(stream.str());
+	auto result = to_crlf(layout_namespaces(stream.str()));
 	bool same = false;
 	{
 		// Binary, not text mode: relying on a text-mode ifstream/ofstream

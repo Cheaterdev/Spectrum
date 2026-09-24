@@ -14,34 +14,37 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct ColorShadowPayload
+	namespace Raytrace
 	{
-		static constexpr SlotID ID = SlotID::ColorShadowPayload;
-		float3 transmittance;
-		float dist;
-		float3& GetTransmittance() { return transmittance; }
-		float& GetDist() { return dist; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct ColorShadowPayload
 		{
-			compiler.compile(transmittance, "ColorShadowPayload::transmittance");
-			compiler.compile(dist, "ColorShadowPayload::dist");
-		}
-		using Compiled = ColorShadowPayload;
+			static constexpr SlotID ID = SlotID::ColorShadowPayload;
+			float3 transmittance;
+			float dist;
+			float3& GetTransmittance() { return transmittance; }
+			float& GetDist() { return dist; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(transmittance, "ColorShadowPayload::transmittance");
+				compiler.compile(dist, "ColorShadowPayload::dist");
+			}
+			using Compiled = ColorShadowPayload;
 
-		static std::string get_typename()
-		{
-			return "Tables::ColorShadowPayload";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(transmittance);
-			ar& NVP(dist);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::ColorShadowPayload";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(transmittance);
+				ar& NVP(dist);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

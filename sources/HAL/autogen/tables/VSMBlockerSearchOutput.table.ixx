@@ -14,40 +14,46 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMBlockerSearchOutput
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMBlockerSearchOutput;
-		HLSL::RWTexture2D<uint4> blocker_search_result;
-		HLSL::RWTexture2D<uint4>& GetBlocker_search_result() { return blocker_search_result; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(blocker_search_result, "VSMBlockerSearchOutput::blocker_search_result");
-		}
-		struct Compiled
-		{
-			uint blocker_search_result; // RWTexture2D<uint4>
+			struct VSMBlockerSearchOutput
+			{
+				static constexpr SlotID ID = SlotID::VSMBlockerSearchOutput;
+				HLSL::RWTexture2D<uint4> blocker_search_result;
+				HLSL::RWTexture2D<uint4>& GetBlocker_search_result() { return blocker_search_result; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(blocker_search_result, "VSMBlockerSearchOutput::blocker_search_result");
+				}
+				struct Compiled
+				{
+					uint blocker_search_result; // RWTexture2D<uint4>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMBlockerSearchOutput";
+				static std::string get_typename()
+				{
+					return "Tables::VSMBlockerSearchOutput";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

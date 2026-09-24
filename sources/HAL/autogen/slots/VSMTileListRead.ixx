@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMTileListRead :public DataHolder<VSMTileListRead, SlotID::VSMTileListRead, Table::VSMTileListRead, DefaultLayout::Instance1>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMTileListRead() = default;
-	};
+		namespace VSM
+		{
+			struct VSMTileListRead :public DataHolder<VSMTileListRead, SlotID::VSMTileListRead, Table::Shadows::VSM::VSMTileListRead, ::Frame::DefaultLayout::Instance1>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMTileListRead() = default;
+			};
+		}
+	}
 }

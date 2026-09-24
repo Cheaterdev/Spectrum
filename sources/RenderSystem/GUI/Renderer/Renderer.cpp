@@ -77,7 +77,7 @@ namespace GUI
 
     void SimpleRect::draw(base::Context& c, float4 tl, float4 bl, float4 tr, float4 br, rect r)
 	{
-		Slots::ColorRect color_data;
+		Slots::UI::ColorRect color_data;
 
         auto vertexes = (vec2*)color_data.GetPos();
 
@@ -110,7 +110,7 @@ namespace GUI
         c.command_list->get_graphics().set(color_data);
 
         c.command_list->get_graphics().set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-        c.command_list->get_graphics().set_pipeline<PSOS::SimpleRect>();
+        c.command_list->get_graphics().set_pipeline<PSOS::UI::SimpleRect>();
         c.command_list->get_graphics().draw(4);
     }
 

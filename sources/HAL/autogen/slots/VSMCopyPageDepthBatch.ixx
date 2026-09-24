@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMCopyPageDepthBatch :public DataHolder<VSMCopyPageDepthBatch, SlotID::VSMCopyPageDepthBatch, Table::VSMCopyPageDepthBatch, DefaultLayout::Instance0>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMCopyPageDepthBatch() = default;
-	};
+		namespace VSM
+		{
+			struct VSMCopyPageDepthBatch :public DataHolder<VSMCopyPageDepthBatch, SlotID::VSMCopyPageDepthBatch, Table::Shadows::VSM::VSMCopyPageDepthBatch, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMCopyPageDepthBatch() = default;
+			};
+		}
+	}
 }

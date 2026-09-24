@@ -18,8 +18,8 @@ namespace
 
 // setup() is fully generated (UpscalingDLSS.prism's own [SetupCondition]).
 
-void PassDefault<Passes::UpscalingDLSS>::render(
-	Passes::UpscalingDLSS::Context& data, FrameContext& context)
+void PassDefault<Passes::Post::Upscale::UpscalingDLSS>::render(
+	Passes::Post::Upscale::UpscalingDLSS::Context& data, FrameContext& context)
 {
 	auto& frame = context.graph->get_context<ViewportInfo>();
 	auto& sl    = nvidia::Streamline::get();

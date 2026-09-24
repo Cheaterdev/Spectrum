@@ -7,6 +7,10 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct NoOutput
+namespace Frame
 {
-};
+	struct NoOutput
+	{
+	};
+}
+using Frame::NoOutput;

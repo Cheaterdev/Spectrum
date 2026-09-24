@@ -14,34 +14,40 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DDGISelectors
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::DDGISelectors;
-		bool enabled = true;
-		bool show_probes = false;
-		bool& GetEnabled() { return enabled; }
-		bool& GetShow_probes() { return show_probes; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace DDGI
 		{
-			compiler.compile(enabled, "DDGISelectors::enabled");
-			compiler.compile(show_probes, "DDGISelectors::show_probes");
-		}
-		using Compiled = DDGISelectors;
+			struct DDGISelectors
+			{
+				static constexpr SlotID ID = SlotID::DDGISelectors;
+				bool enabled = true;
+				bool show_probes = false;
+				bool& GetEnabled() { return enabled; }
+				bool& GetShow_probes() { return show_probes; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(enabled, "DDGISelectors::enabled");
+					compiler.compile(show_probes, "DDGISelectors::show_probes");
+				}
+				using Compiled = DDGISelectors;
 
-		static std::string get_typename()
-		{
-			return "Tables::DDGISelectors";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(enabled);
-			ar& NVP(show_probes);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::DDGISelectors";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(enabled);
+					ar& NVP(show_probes);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

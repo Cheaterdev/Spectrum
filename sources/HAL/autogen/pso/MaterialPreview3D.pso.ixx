@@ -14,54 +14,57 @@ import :Types;
 
 export namespace PSOS
 {
-	struct MaterialPreview3D: public PSOBase
+	namespace Editor
 	{
-		struct Keys {
-			GEN_DEF_COMP(Keys);
-		private:
+		struct MaterialPreview3D: public PSOBase
+		{
+			struct Keys {
+				GEN_DEF_COMP(Keys);
+			private:
+				SERIALIZE()
+				{
+				}
+			};
+
+			GEN_GRAPHICS_PSO(MaterialPreview3D)
+
+
+			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+			{
+
+
+				SimplePSO mpso("MaterialPreview3D");
+				if(f) f(mpso,key);
+
+				mpso.root_signature = Layouts::DefaultLayout;
+
+				mpso.mesh.file_name = "shaders/gbuffer/mesh_shader.hlsl";
+				mpso.mesh.entry_point = "VS";
+				mpso.mesh.flags = HAL::ShaderOptions::None;
+			
+				mpso.amplification.file_name = "shaders/gbuffer/mesh_shader.hlsl";
+				mpso.amplification.entry_point = "AS";
+				mpso.amplification.flags = HAL::ShaderOptions::None;
+			
+				mpso.pixel.file_name = "shaders/materials/material_preview_3d_stub.hlsl";
+				mpso.pixel.entry_point = "PS_PREVIEW";
+				mpso.pixel.flags = HAL::ShaderOptions::None;
+			
+
+				mpso.rtv_formats = {  };	
+				mpso.blend = {  };
+
+				mpso.ds =HAL::Format::D32_FLOAT;
+				mpso.cull =HAL::CullMode::Back;
+				mpso.depth_func =HAL::ComparisonFunc::GREATER;
+				return mpso;
+			}
+
+			private:
 			SERIALIZE()
 			{
+				ar&NVP(wrap(psos));
 			}
 		};
-
-		GEN_GRAPHICS_PSO(MaterialPreview3D)
-
-
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
-
-
-			SimplePSO mpso("MaterialPreview3D");
-			if(f) f(mpso,key);
-
-			mpso.root_signature = Layouts::DefaultLayout;
-
-			mpso.mesh.file_name = "shaders/gbuffer/mesh_shader.hlsl";
-			mpso.mesh.entry_point = "VS";
-			mpso.mesh.flags = HAL::ShaderOptions::None;
-			
-			mpso.amplification.file_name = "shaders/gbuffer/mesh_shader.hlsl";
-			mpso.amplification.entry_point = "AS";
-			mpso.amplification.flags = HAL::ShaderOptions::None;
-			
-			mpso.pixel.file_name = "shaders/materials/material_preview_3d_stub.hlsl";
-			mpso.pixel.entry_point = "PS_PREVIEW";
-			mpso.pixel.flags = HAL::ShaderOptions::None;
-			
-
-			mpso.rtv_formats = {  };	
-			mpso.blend = {  };
-
-			mpso.ds =HAL::Format::D32_FLOAT;
-			mpso.cull =HAL::CullMode::Back;
-			mpso.depth_func =HAL::ComparisonFunc::GREATER;
-			return mpso;
-		}
-
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
-		}
-	};
+	}
 }

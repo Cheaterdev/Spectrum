@@ -8,12 +8,16 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "GBuffer.h"
-struct WorkGraphTest
+namespace Dev
 {
-	uint output; // RWTexture2D<float4>
-	uint target; // RWTexture2D<float4>
-	GBuffer gbuffer; // GBuffer
-	GBuffer GetGbuffer() { return gbuffer; }
-	RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
-	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
-};
+	struct WorkGraphTest
+	{
+		uint output; // RWTexture2D<float4>
+		uint target; // RWTexture2D<float4>
+		GBuffer gbuffer; // GBuffer
+		GBuffer GetGbuffer() { return gbuffer; }
+		RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
+		RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
+	};
+}
+using Dev::WorkGraphTest;

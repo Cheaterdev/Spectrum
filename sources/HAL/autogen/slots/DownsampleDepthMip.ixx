@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct DownsampleDepthMip :public DataHolder<DownsampleDepthMip, SlotID::DownsampleDepthMip, Table::DownsampleDepthMip, DefaultLayout::Instance0>
+	namespace Utility
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		DownsampleDepthMip() = default;
-	};
+		struct DownsampleDepthMip :public DataHolder<DownsampleDepthMip, SlotID::DownsampleDepthMip, Table::Utility::DownsampleDepthMip, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			DownsampleDepthMip() = default;
+		};
+	}
 }

@@ -32,7 +32,7 @@
 {%- endfor -%}
 {%- endmacro -%}
 
-struct{{" [raypayload]" if table.options.raypayload }} {{table.name}}
+{{ table.ns_open }}struct{{" [raypayload]" if table.options.raypayload }} {{table.name}}
 {
 	{{-declare_func(ValueType.CB)}}
 
@@ -50,4 +50,4 @@ struct{{" [raypayload]" if table.options.raypayload }} {{table.name}}
 {%-endif-%}
 {%-endfor-%}
 	{{- table.hlsl }}
-};
+};{{ table.ns_close }}

@@ -14,44 +14,47 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct SingleColorDepth
+	namespace Frame
 	{
-		static constexpr SlotID ID = SlotID::SingleColorDepth;
-		HLSL::Texture2D<float4> color;
-		HLSL::Texture2D<float> depth;
-		HLSL::Texture2D<float4>& GetColor() { return color; }
-		HLSL::Texture2D<float>& GetDepth() { return depth; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct SingleColorDepth
 		{
-			compiler.compile(color, "SingleColorDepth::color");
-			compiler.compile(depth, "SingleColorDepth::depth");
-		}
-		struct Compiled
-		{
-			uint color; // RenderTarget<float4>
-			uint depth; // DepthStencil<float>
+			static constexpr SlotID ID = SlotID::SingleColorDepth;
+			HLSL::Texture2D<float4> color;
+			HLSL::Texture2D<float> depth;
+			HLSL::Texture2D<float4>& GetColor() { return color; }
+			HLSL::Texture2D<float>& GetDepth() { return depth; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(color, "SingleColorDepth::color");
+				compiler.compile(depth, "SingleColorDepth::depth");
+			}
+			struct Compiled
+			{
+				uint color; // RenderTarget<float4>
+				uint depth; // DepthStencil<float>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::SingleColorDepth";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::SingleColorDepth";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

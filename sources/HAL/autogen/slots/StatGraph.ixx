@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct StatGraph :public DataHolder<StatGraph, SlotID::StatGraph, Table::StatGraph, DefaultLayout::Instance0>
+	namespace Dev
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		StatGraph() = default;
-	};
+		struct StatGraph :public DataHolder<StatGraph, SlotID::StatGraph, Table::Dev::StatGraph, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			StatGraph() = default;
+		};
+	}
 }

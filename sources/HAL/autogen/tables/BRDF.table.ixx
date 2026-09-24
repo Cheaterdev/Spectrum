@@ -14,40 +14,43 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct BRDF
+	namespace Environment
 	{
-		static constexpr SlotID ID = SlotID::BRDF;
-		HLSL::RWTexture3D<float4> output;
-		HLSL::RWTexture3D<float4>& GetOutput() { return output; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct BRDF
 		{
-			compiler.compile(output, "BRDF::output");
-		}
-		struct Compiled
-		{
-			uint output; // RWTexture3D<float4>
+			static constexpr SlotID ID = SlotID::BRDF;
+			HLSL::RWTexture3D<float4> output;
+			HLSL::RWTexture3D<float4>& GetOutput() { return output; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(output, "BRDF::output");
+			}
+			struct Compiled
+			{
+				uint output; // RWTexture3D<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::BRDF";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::BRDF";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

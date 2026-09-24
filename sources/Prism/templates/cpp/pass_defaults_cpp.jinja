@@ -38,11 +38,11 @@ using namespace FrameGraph;
 {%- set pass_def = parsed.passes[pass_name] -%}
 {%- if pass_def.options.RunAlways is defined or pass_def.options.SetupCondition is defined or pass_def.options.RenderCondition is defined %}
 {%- if pass_def.options.Static is defined %}
-FrameGraph::SetupResult PassDefault<Passes::{{pass_name}}>::setup(
-	Passes::{{pass_name}}::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::{{parsed.passes[pass_name].qn}}>::setup(
+	Passes::{{parsed.passes[pass_name].qn}}::Context& data, FrameGraph::TaskBuilder& builder)
 {%- else %}
-FrameGraph::SetupResult PassSetupDefault<Passes::{{pass_name}}>::setup(
-	Passes::{{pass_name}}::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::{{parsed.passes[pass_name].qn}}>::setup(
+	Passes::{{parsed.passes[pass_name].qn}}::Context& data, FrameGraph::TaskBuilder& builder)
 {%- endif %}
 {
 {%- if pass_def.options.RunAlways is defined %}

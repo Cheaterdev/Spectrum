@@ -438,7 +438,7 @@ float4 PS(vertex_output i) : SV_Target { return float4(i.normal * 0.5 + 0.5, 1);
 
 		gfx.set(scene->compiledScene);
 		{
-			Slots::FrameInfo frameInfo;
+			Slots::Frame::FrameInfo frameInfo;
 			frameInfo.GetCamera() = cam.camera_cb.current;
 			gfx.set(frameInfo);
 		}

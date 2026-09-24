@@ -97,7 +97,7 @@ void BinaryAsset::update_preview(HAL::Texture::ptr preview)
 
 
 	{
-				RT::SingleColor rt;
+				RT::Frame::SingleColor rt;
 				rt.GetColor() =preview->texture_2d().renderTarget;
 				list->get_graphics().set_rtv(rt, HAL::RTOptions::Default| HAL::RTOptions::ClearColor);
 	}

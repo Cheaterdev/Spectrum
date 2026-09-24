@@ -18,56 +18,59 @@ import :Autogen.Tables.node_data;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct SceneData
+	namespace Frame
 	{
-		static constexpr SlotID ID = SlotID::SceneData;
-		HLSL::StructuredBuffer<node_data> nodes;
-		HLSL::StructuredBuffer<MeshCommandData> meshes;
-		HLSL::StructuredBuffer<MaterialCommandData> materials;
-		HLSL::StructuredBuffer<RaytraceInstanceInfo> raytraceInstanceInfo;
-		HLSL::RaytracingAccelerationStructure scene;
-		HLSL::StructuredBuffer<node_data>& GetNodes() { return nodes; }
-		HLSL::StructuredBuffer<MeshCommandData>& GetMeshes() { return meshes; }
-		HLSL::StructuredBuffer<MaterialCommandData>& GetMaterials() { return materials; }
-		HLSL::StructuredBuffer<RaytraceInstanceInfo>& GetRaytraceInstanceInfo() { return raytraceInstanceInfo; }
-		HLSL::RaytracingAccelerationStructure& GetScene() { return scene; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct SceneData
 		{
-			compiler.compile(nodes, "SceneData::nodes");
-			compiler.compile(meshes, "SceneData::meshes");
-			compiler.compile(materials, "SceneData::materials");
-			compiler.compile(raytraceInstanceInfo, "SceneData::raytraceInstanceInfo");
-			compiler.compile(scene, "SceneData::scene");
-		}
-		struct Compiled
-		{
-			uint nodes; // StructuredBuffer<node_data>
-			uint meshes; // StructuredBuffer<MeshCommandData>
-			uint materials; // StructuredBuffer<MaterialCommandData>
-			uint raytraceInstanceInfo; // StructuredBuffer<RaytraceInstanceInfo>
-			uint scene; // RaytracingAccelerationStructure
+			static constexpr SlotID ID = SlotID::SceneData;
+			HLSL::StructuredBuffer<Table::Meshes::node_data> nodes;
+			HLSL::StructuredBuffer<Table::Meshes::MeshCommandData> meshes;
+			HLSL::StructuredBuffer<Table::Meshes::MaterialCommandData> materials;
+			HLSL::StructuredBuffer<Table::Meshes::RaytraceInstanceInfo> raytraceInstanceInfo;
+			HLSL::RaytracingAccelerationStructure scene;
+			HLSL::StructuredBuffer<Table::Meshes::node_data>& GetNodes() { return nodes; }
+			HLSL::StructuredBuffer<Table::Meshes::MeshCommandData>& GetMeshes() { return meshes; }
+			HLSL::StructuredBuffer<Table::Meshes::MaterialCommandData>& GetMaterials() { return materials; }
+			HLSL::StructuredBuffer<Table::Meshes::RaytraceInstanceInfo>& GetRaytraceInstanceInfo() { return raytraceInstanceInfo; }
+			HLSL::RaytracingAccelerationStructure& GetScene() { return scene; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(nodes, "SceneData::nodes");
+				compiler.compile(meshes, "SceneData::meshes");
+				compiler.compile(materials, "SceneData::materials");
+				compiler.compile(raytraceInstanceInfo, "SceneData::raytraceInstanceInfo");
+				compiler.compile(scene, "SceneData::scene");
+			}
+			struct Compiled
+			{
+				uint nodes; // StructuredBuffer<node_data>
+				uint meshes; // StructuredBuffer<MeshCommandData>
+				uint materials; // StructuredBuffer<MaterialCommandData>
+				uint raytraceInstanceInfo; // StructuredBuffer<RaytraceInstanceInfo>
+				uint scene; // RaytracingAccelerationStructure
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::SceneData";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::SceneData";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

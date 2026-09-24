@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VoxelCopy :public DataHolder<VoxelCopy, SlotID::VoxelCopy, Table::VoxelCopy, DefaultLayout::Instance1>
+	namespace GI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VoxelCopy() = default;
-	};
+		namespace Voxel
+		{
+			struct VoxelCopy :public DataHolder<VoxelCopy, SlotID::VoxelCopy, Table::GI::Voxel::VoxelCopy, ::Frame::DefaultLayout::Instance1>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VoxelCopy() = default;
+			};
+		}
+	}
 }

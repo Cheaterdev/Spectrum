@@ -8,28 +8,35 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "DDGIInfo.h"
-struct DDGIProbeResidencyMarkData
+namespace GI
 {
-	uint reset_only; // uint
-	int3 scroll_lo; // int3
-	uint3 scroll_count; // uint3
-	uint probe_residency; // RWStructuredBuffer<uint>
-	uint compacted_list; // RWStructuredBuffer<uint>
-	uint compacted_count; // RWStructuredBuffer<uint>
-	uint pending; // RWStructuredBuffer<uint>
-	uint miss_streak; // RWStructuredBuffer<uint>
-	uint probe_irradiance; // RWTexture2DArray<float4>
-	uint probe_visibility; // RWTexture2DArray<float2>
-	DDGIInfo info; // DDGIInfo
-	DDGIInfo GetInfo() { return info; }
-	uint GetReset_only() { return reset_only; }
-	int3 GetScroll_lo() { return scroll_lo; }
-	uint3 GetScroll_count() { return scroll_count; }
-	RWStructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
-	RWStructuredBuffer<uint> GetCompacted_list() { return ResourceDescriptorHeap[compacted_list]; }
-	RWStructuredBuffer<uint> GetCompacted_count() { return ResourceDescriptorHeap[compacted_count]; }
-	RWStructuredBuffer<uint> GetPending() { return ResourceDescriptorHeap[pending]; }
-	RWStructuredBuffer<uint> GetMiss_streak() { return ResourceDescriptorHeap[miss_streak]; }
-	RWTexture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
-	RWTexture2DArray<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
-};
+	namespace DDGI
+	{
+		struct DDGIProbeResidencyMarkData
+		{
+			uint reset_only; // uint
+			int3 scroll_lo; // int3
+			uint3 scroll_count; // uint3
+			uint probe_residency; // RWStructuredBuffer<uint>
+			uint compacted_list; // RWStructuredBuffer<uint>
+			uint compacted_count; // RWStructuredBuffer<uint>
+			uint pending; // RWStructuredBuffer<uint>
+			uint miss_streak; // RWStructuredBuffer<uint>
+			uint probe_irradiance; // RWTexture2DArray<float4>
+			uint probe_visibility; // RWTexture2DArray<float2>
+			DDGIInfo info; // DDGIInfo
+			DDGIInfo GetInfo() { return info; }
+			uint GetReset_only() { return reset_only; }
+			int3 GetScroll_lo() { return scroll_lo; }
+			uint3 GetScroll_count() { return scroll_count; }
+			RWStructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
+			RWStructuredBuffer<uint> GetCompacted_list() { return ResourceDescriptorHeap[compacted_list]; }
+			RWStructuredBuffer<uint> GetCompacted_count() { return ResourceDescriptorHeap[compacted_count]; }
+			RWStructuredBuffer<uint> GetPending() { return ResourceDescriptorHeap[pending]; }
+			RWStructuredBuffer<uint> GetMiss_streak() { return ResourceDescriptorHeap[miss_streak]; }
+			RWTexture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
+			RWTexture2DArray<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
+		};
+	}
+}
+using GI::DDGI::DDGIProbeResidencyMarkData;

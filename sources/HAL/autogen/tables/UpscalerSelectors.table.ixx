@@ -14,34 +14,40 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct UpscalerSelectors
+	namespace Post
 	{
-		static constexpr SlotID ID = SlotID::UpscalerSelectors;
-		UpscalerType upscaler_type = UpscalerType::FSR;
-		bool upscaling_enabled = true;
-		UpscalerType& GetUpscaler_type() { return upscaler_type; }
-		bool& GetUpscaling_enabled() { return upscaling_enabled; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Upscale
 		{
-			compiler.compile(upscaler_type, "UpscalerSelectors::upscaler_type");
-			compiler.compile(upscaling_enabled, "UpscalerSelectors::upscaling_enabled");
-		}
-		using Compiled = UpscalerSelectors;
+			struct UpscalerSelectors
+			{
+				static constexpr SlotID ID = SlotID::UpscalerSelectors;
+				::Post::Upscale::UpscalerType upscaler_type = ::Post::Upscale::UpscalerType::FSR;
+				bool upscaling_enabled = true;
+				::Post::Upscale::UpscalerType& GetUpscaler_type() { return upscaler_type; }
+				bool& GetUpscaling_enabled() { return upscaling_enabled; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(upscaler_type, "UpscalerSelectors::upscaler_type");
+					compiler.compile(upscaling_enabled, "UpscalerSelectors::upscaling_enabled");
+				}
+				using Compiled = UpscalerSelectors;
 
-		static std::string get_typename()
-		{
-			return "Tables::UpscalerSelectors";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(upscaler_type);
-			ar& NVP(upscaling_enabled);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::UpscalerSelectors";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(upscaler_type);
+					ar& NVP(upscaling_enabled);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

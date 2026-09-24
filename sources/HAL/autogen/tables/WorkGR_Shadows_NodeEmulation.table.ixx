@@ -15,40 +15,43 @@ import :Autogen.Tables.TileRecord;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct WorkGR_Shadows_NodeEmulation
+	namespace Dev
 	{
-		static constexpr SlotID ID = SlotID::WorkGR_Shadows_NodeEmulation;
-		HLSL::ConsumeStructuredBuffer<TileRecord> Input;
-		HLSL::ConsumeStructuredBuffer<TileRecord>& GetInput() { return Input; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct WorkGR_Shadows_NodeEmulation
 		{
-			compiler.compile(Input, "WorkGR_Shadows_NodeEmulation::Input");
-		}
-		struct Compiled
-		{
-			uint Input; // ConsumeStructuredBuffer<TileRecord>
+			static constexpr SlotID ID = SlotID::WorkGR_Shadows_NodeEmulation;
+			HLSL::ConsumeStructuredBuffer<Table::Dev::TileRecord> Input;
+			HLSL::ConsumeStructuredBuffer<Table::Dev::TileRecord>& GetInput() { return Input; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(Input, "WorkGR_Shadows_NodeEmulation::Input");
+			}
+			struct Compiled
+			{
+				uint Input; // ConsumeStructuredBuffer<TileRecord>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::WorkGR_Shadows_NodeEmulation";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::WorkGR_Shadows_NodeEmulation";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

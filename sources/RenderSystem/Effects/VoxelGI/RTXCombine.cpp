@@ -16,8 +16,8 @@ using namespace HAL;
 // instead of ReflCombine whenever the user has picked DLSS-RR (and it's
 // actually available).
 
-void PassDefault<Passes::RTXCombine>::render(
-	Passes::RTXCombine::Context& data, FrameContext& context)
+void PassDefault<Passes::GI::RTXCombine>::render(
+	Passes::GI::RTXCombine::Context& data, FrameContext& context)
 {
 	auto& command_list = context.get_list();
 	auto  target_tex   = *data.ResultTextureRTXNoise;
@@ -28,10 +28,10 @@ void PassDefault<Passes::RTXCombine>::render(
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 	context.graph->set_slot(SlotID::SceneData, compute);
 
-	compute.set_pipeline<PSOS::RTXCombine>();
+	compute.set_pipeline<PSOS::GI::RTXCombine>();
 
 	{
-		Slots::RTXCombine combine;
+		Slots::GI::RTXCombine combine;
 		gbuffer.SetTable(combine.GetGbuffer());
 		combine.GetReflection() = data.RTXReflectionNoise->texture2D;
 		combine.GetIndirect()   = data.RTXIndirectNoise->texture2D;

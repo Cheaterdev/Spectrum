@@ -15,34 +15,50 @@ import :Autogen.Tables.mesh_vertex_input;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct RaytraceInstanceInfo
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::RaytraceInstanceInfo;
-		uint material_id;
-		uint node_offset;
-		HLSL::StructuredBuffer<mesh_vertex_input> vertexes;
-		HLSL::StructuredBuffer<uint> indices;
-		HLSL::StructuredBuffer<mesh_vertex_input>& GetVertexes() { return vertexes; }
-		HLSL::StructuredBuffer<uint>& GetIndices() { return indices; }
-		uint& GetMaterial_id() { return material_id; }
-		uint& GetNode_offset() { return node_offset; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct RaytraceInstanceInfo
 		{
-			compiler.compile(material_id, "RaytraceInstanceInfo::material_id");
-			compiler.compile(node_offset, "RaytraceInstanceInfo::node_offset");
-			compiler.compile(vertexes, "RaytraceInstanceInfo::vertexes");
-			compiler.compile(indices, "RaytraceInstanceInfo::indices");
-		}
-		struct Compiled
-		{
-			uint material_id; // uint
-			uint node_offset; // uint
-			uint vertexes; // StructuredBuffer<mesh_vertex_input>
-			uint indices; // StructuredBuffer<uint>
+			static constexpr SlotID ID = SlotID::RaytraceInstanceInfo;
+			uint material_id;
+			uint node_offset;
+			HLSL::StructuredBuffer<Table::Meshes::mesh_vertex_input> vertexes;
+			HLSL::StructuredBuffer<uint> indices;
+			HLSL::StructuredBuffer<Table::Meshes::mesh_vertex_input>& GetVertexes() { return vertexes; }
+			HLSL::StructuredBuffer<uint>& GetIndices() { return indices; }
+			uint& GetMaterial_id() { return material_id; }
+			uint& GetNode_offset() { return node_offset; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(material_id, "RaytraceInstanceInfo::material_id");
+				compiler.compile(node_offset, "RaytraceInstanceInfo::node_offset");
+				compiler.compile(vertexes, "RaytraceInstanceInfo::vertexes");
+				compiler.compile(indices, "RaytraceInstanceInfo::indices");
+			}
+			struct Compiled
+			{
+				uint material_id; // uint
+				uint node_offset; // uint
+				uint vertexes; // StructuredBuffer<mesh_vertex_input>
+				uint indices; // StructuredBuffer<uint>
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(material_id);
+					ar& NVP(node_offset);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::RaytraceInstanceInfo";
+			}
 			private:
 			SERIALIZE()
 			{
@@ -50,21 +66,8 @@ export namespace Table
 				ar& NVP(node_offset);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::RaytraceInstanceInfo";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(material_id);
-			ar& NVP(node_offset);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

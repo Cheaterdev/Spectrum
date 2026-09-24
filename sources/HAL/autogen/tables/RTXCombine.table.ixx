@@ -15,58 +15,61 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct RTXCombine
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::RTXCombine;
-		HLSL::Texture2D<float4> reflection;
-		HLSL::Texture2D<float4> indirect;
-		HLSL::Texture2D<float4> shadow;
-		HLSL::RWTexture2D<float4> target;
-		GBuffer gbuffer;
-		HLSL::Texture2D<float4>& GetReflection() { return reflection; }
-		HLSL::Texture2D<float4>& GetIndirect() { return indirect; }
-		HLSL::Texture2D<float4>& GetShadow() { return shadow; }
-		HLSL::RWTexture2D<float4>& GetTarget() { return target; }
-		GBuffer& GetGbuffer() { return gbuffer; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct RTXCombine
 		{
-			compiler.compile(reflection, "RTXCombine::reflection");
-			compiler.compile(indirect, "RTXCombine::indirect");
-			compiler.compile(shadow, "RTXCombine::shadow");
-			compiler.compile(target, "RTXCombine::target");
-			compiler.compile(gbuffer, "RTXCombine::gbuffer");
-		}
-		struct Compiled
-		{
-			uint reflection; // Texture2D<float4>
-			uint indirect; // Texture2D<float4>
-			uint shadow; // Texture2D<float4>
-			uint target; // RWTexture2D<float4>
-			GBuffer::Compiled gbuffer; // GBuffer
+			static constexpr SlotID ID = SlotID::RTXCombine;
+			HLSL::Texture2D<float4> reflection;
+			HLSL::Texture2D<float4> indirect;
+			HLSL::Texture2D<float4> shadow;
+			HLSL::RWTexture2D<float4> target;
+			Table::Meshes::GBuffer gbuffer;
+			HLSL::Texture2D<float4>& GetReflection() { return reflection; }
+			HLSL::Texture2D<float4>& GetIndirect() { return indirect; }
+			HLSL::Texture2D<float4>& GetShadow() { return shadow; }
+			HLSL::RWTexture2D<float4>& GetTarget() { return target; }
+			Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(reflection, "RTXCombine::reflection");
+				compiler.compile(indirect, "RTXCombine::indirect");
+				compiler.compile(shadow, "RTXCombine::shadow");
+				compiler.compile(target, "RTXCombine::target");
+				compiler.compile(gbuffer, "RTXCombine::gbuffer");
+			}
+			struct Compiled
+			{
+				uint reflection; // Texture2D<float4>
+				uint indirect; // Texture2D<float4>
+				uint shadow; // Texture2D<float4>
+				uint target; // RWTexture2D<float4>
+				Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(gbuffer);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::RTXCombine";
+			}
 			private:
 			SERIALIZE()
 			{
 				ar& NVP(gbuffer);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::RTXCombine";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(gbuffer);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

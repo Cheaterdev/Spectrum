@@ -12,8 +12,8 @@ using namespace HAL;
 
 // setup() is fully generated (voxel.prism's own [SetupCondition]).
 
-void PassDefault<Passes::ReflectionRTXHalf>::render(
-	Passes::ReflectionRTXHalf::Context& data, FrameContext& context)
+void PassDefault<Passes::Reflections::ReflectionRTXHalf>::render(
+	Passes::Reflections::ReflectionRTXHalf::Context& data, FrameContext& context)
 {
 	auto noisy_output = *data.RTXReflectionNoiseHalf;
 	auto dir_and_pdf  = *data.RTXReflectionDirPdfHalf;
@@ -25,7 +25,7 @@ void PassDefault<Passes::ReflectionRTXHalf>::render(
 	context.graph->set_slot(SlotID::SceneData, compute);
 
 	{
-		Slots::IndirectRTXHalfGBuffer half_gbuffer;
+		Slots::GI::IndirectRTXHalfGBuffer half_gbuffer;
 		half_gbuffer.GetDepth()   = data.GBuffer_HalfDepth->texture2D;
 		half_gbuffer.GetNormals() = data.GBuffer_HalfNormals->texture2D;
 		compute.set(half_gbuffer);
@@ -34,7 +34,7 @@ void PassDefault<Passes::ReflectionRTXHalf>::render(
 	{
 		PROFILE_GPU(L"reflection_rtx_half");
 		{
-			Slots::VoxelOutput output;
+			Slots::GI::Voxel::VoxelOutput output;
 			output.GetNoise()     = noisy_output.rwTexture2D;
 			output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
 			output.GetBlueNoise() = data.BlueNoise->texture2D;
@@ -55,7 +55,7 @@ void PassDefault<Passes::ReflectionRTXHalf>::render(
 			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 			compute.set(output);
 		}
-		RTX::get().render<ReflectionRTXHalf>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
+		RTX::get().render<Reflections::ReflectionRTXHalf>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
 	}
 }
 
@@ -64,8 +64,8 @@ void PassDefault<Passes::ReflectionRTXHalf>::render(
 // under DLSS-RR, RTXCombine -- gated purely on RTX/hardware support now,
 // independent of upscaler (NRD is the only reflection denoiser).
 
-void PassDefault<Passes::ReflectionRTX>::render(
-	Passes::ReflectionRTX::Context& data, FrameContext& context)
+void PassDefault<Passes::Reflections::ReflectionRTX>::render(
+	Passes::Reflections::ReflectionRTX::Context& data, FrameContext& context)
 {
 	auto& command_list = context.get_list();
 
@@ -82,7 +82,7 @@ void PassDefault<Passes::ReflectionRTX>::render(
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 	context.graph->set_slot(SlotID::SceneData, compute);
 
-	// Slots::VoxelScreen is this codebase's only GBuffer-to-raytracing
+	// Slots::GI::Voxel::VoxelScreen is this codebase's only GBuffer-to-raytracing
 	// binding path (RTXShadow reuses it the same way, GBuffer only) -- its
 	// voxel-texture/cubemap fields are left unset (reads descriptor 0, an
 	// established pattern for fields no bound shader ever samples, see the
@@ -90,13 +90,13 @@ void PassDefault<Passes::ReflectionRTX>::render(
 	// never calls GetVoxels()/GetTex_cube(), and SlotID::VoxelInfo is never
 	// bound at all -- this pass touches no voxel data whatsoever.
 	{
-		Slots::VoxelScreen voxelScreen;
+		Slots::GI::Voxel::VoxelScreen voxelScreen;
 		gbuffer.SetTable(voxelScreen.GetGbuffer());
 		compute.set(voxelScreen);
 	}
 
 	{
-		Slots::ReflectionRTXUpscale upscale;
+		Slots::Reflections::ReflectionRTXUpscale upscale;
 		upscale.GetNoiseHalf()          = data.RTXReflectionNoiseHalf->texture2D;
 		upscale.GetDirPdfHalf()         = data.RTXReflectionDirPdfHalf->texture2D;
 		upscale.GetTileFlags()          = data.TileClassifyTiles->texture2D;
@@ -107,7 +107,7 @@ void PassDefault<Passes::ReflectionRTX>::render(
 	{
 		PROFILE_GPU(L"reflection_rtx_only");
 		{
-			Slots::VoxelOutput output;
+			Slots::GI::Voxel::VoxelOutput output;
 			output.GetNoise()     = noisy_output.rwTexture2D;
 			output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
 			output.GetBlueNoise() = data.BlueNoise->texture2D;
@@ -126,7 +126,7 @@ void PassDefault<Passes::ReflectionRTX>::render(
 			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 			compute.set(output);
 		}
-		RTX::get().render<ReflectionRTX>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
+		RTX::get().render<Reflections::ReflectionRTX>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
 	}
 }
 

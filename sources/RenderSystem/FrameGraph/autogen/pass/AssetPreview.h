@@ -11,85 +11,88 @@ using namespace FrameGraph;
 
 namespace Passes
 {
-
-class AssetPreview : public PassNodeBase
+namespace Editor
 {
-public:
-	struct Context
+
+	class AssetPreview : public PassNodeBase
 	{
-
-		// [Multiple=16]: this instance's own
-		// index, written automatically by TypedPass::setup() (FrameGraph.Base.ixx,
-		// from the Pass::pass_index every [Multiple] instance already carries)
-		// before setup_func or any [Optional=...] guard runs -- no per-pass index
-		// field or manual `data.X = i;` assignment needed.
-		uint32_t pass_index = 0;
-
-		// Which chain link each handler field resolved to, one named slot per
-		// field. Filled from a live frame's finished Context and applied on a
-		// replayed one, so a replay neither re-runs create_always/need_always nor
-		// depends on the order they made their calls in. The id is not stored:
-		// the field fixes it.
-		struct Cache
+	public:
+		struct Context
 		{
+
+			// [Multiple=16]: this instance's own
+			// index, written automatically by TypedPass::setup() (FrameGraph.Base.ixx,
+			// from the Pass::pass_index every [Multiple] instance already carries)
+			// before setup_func or any [Optional=...] guard runs -- no per-pass index
+			// field or manual `data.X = i;` assignment needed.
+			uint32_t pass_index = 0;
+
+			// Which chain link each handler field resolved to, one named slot per
+			// field. Filled from a live frame's finished Context and applied on a
+			// replayed one, so a replay neither re-runs create_always/need_always nor
+			// depends on the order they made their calls in. The id is not stored:
+			// the field fixes it.
+			struct Cache
+			{
+			};
+
+			static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+			{
+			}
+
+			// Replay counterpart of create_always/need_always. A field this pass
+			// creates gets its desc recomputed on the link the cache names, so descs
+			// follow the current context instead of being stored in the plan; every
+			// other field is only pointed at its link. Each link is created by exactly
+			// one pass and nothing here reads another resource's desc, so passes can
+			// load in any order. A [Recreate] without [Size]/[Format] copies the
+			// previous link's desc, which LoadGraph does once every pass has loaded.
+			static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+			{
+			}
+
+			static inline const FrameGraph::ResourceAccess resource_accesses[] = { { ResourceID::Count, false } };
+			static constexpr uint resource_count = 0;
 		};
 
-		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+
+		std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
 		{
+			return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 		}
 
-		// Replay counterpart of create_always/need_always. A field this pass
-		// creates gets its desc recomputed on the link the cache names, so descs
-		// follow the current context instead of being stored in the plan; every
-		// other field is only pointed at its link. Each link is created by exactly
-		// one pass and nothing here reads another resource's desc, so passes can
-		// load in any order. A [Recreate] without [Size]/[Format] copies the
-		// previous link's desc, which LoadGraph does once every pass has loaded.
-		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
-		{
-		}
+		static constexpr LiteralWStr Name{L"AssetPreview"};
 
-		static inline const FrameGraph::ResourceAccess resource_accesses[] = { { ResourceID::Count, false } };
-		static constexpr uint resource_count = 0;
+		static constexpr uint32_t MaxCount = 16;
+		static constexpr LiteralWStr Names[MaxCount] = {
+			LiteralWStr{L"AssetPreview_0"},
+			LiteralWStr{L"AssetPreview_1"},
+			LiteralWStr{L"AssetPreview_2"},
+			LiteralWStr{L"AssetPreview_3"},
+			LiteralWStr{L"AssetPreview_4"},
+			LiteralWStr{L"AssetPreview_5"},
+			LiteralWStr{L"AssetPreview_6"},
+			LiteralWStr{L"AssetPreview_7"},
+			LiteralWStr{L"AssetPreview_8"},
+			LiteralWStr{L"AssetPreview_9"},
+			LiteralWStr{L"AssetPreview_10"},
+			LiteralWStr{L"AssetPreview_11"},
+			LiteralWStr{L"AssetPreview_12"},
+			LiteralWStr{L"AssetPreview_13"},
+			LiteralWStr{L"AssetPreview_14"},
+			LiteralWStr{L"AssetPreview_15"},
+		};
+
+		static constexpr PassID ID = PassID::AssetPreview;
+
+
+		using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
+		using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
+
+		std::array<render_func_type, MaxCount> render_funcs;
+
+		const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;
 	};
-
-
-	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
-	{
-		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
-	}
-
-	static constexpr LiteralWStr Name{L"AssetPreview"};
-
-	static constexpr uint32_t MaxCount = 16;
-	static constexpr LiteralWStr Names[MaxCount] = {
-		LiteralWStr{L"AssetPreview_0"},
-		LiteralWStr{L"AssetPreview_1"},
-		LiteralWStr{L"AssetPreview_2"},
-		LiteralWStr{L"AssetPreview_3"},
-		LiteralWStr{L"AssetPreview_4"},
-		LiteralWStr{L"AssetPreview_5"},
-		LiteralWStr{L"AssetPreview_6"},
-		LiteralWStr{L"AssetPreview_7"},
-		LiteralWStr{L"AssetPreview_8"},
-		LiteralWStr{L"AssetPreview_9"},
-		LiteralWStr{L"AssetPreview_10"},
-		LiteralWStr{L"AssetPreview_11"},
-		LiteralWStr{L"AssetPreview_12"},
-		LiteralWStr{L"AssetPreview_13"},
-		LiteralWStr{L"AssetPreview_14"},
-		LiteralWStr{L"AssetPreview_15"},
-	};
-
-	static constexpr PassID ID = PassID::AssetPreview;
-
-
-	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
-	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
-
-	std::array<render_func_type, MaxCount> render_funcs;
-
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;
-};
+}
 
 }

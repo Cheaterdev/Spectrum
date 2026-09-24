@@ -24,14 +24,14 @@ import :Autogen.{{"Slots" if table.options.IndirectCommand is defined else "Tabl
 {%- macro declare_func(type) -%}
 {%- for v in (table.values|unique|selectattr('value_type','==', type)) -%}
 {%-if v.options.dynamic is undefined %}
-		{{v.cpp_type}} {{v.name}}{{v.array}}{%if v.expr%} = {{(v.type + "::" + v.expr) if parsed.enums[v.type] is defined else v.expr}}{%endif%};
+		{{v.cpp_type}} {{v.name}}{{v.array}}{%if v.expr%} = {{(v.qtype + "::" + v.expr) if parsed.enums[v.type] is defined else v.expr}}{%endif%};
 {%-endif-%}
 {%- endfor -%}
 {%- endmacro -%}
 
 export namespace Table
 {
-	#pragma pack(push, 1)
+	#pragma pack(push, 1){{ table.ns_open }}
 
 {%- if table.options.Template is defined %}
 	template<class {{table.options.Template.value_atom.expr}}>
@@ -97,9 +97,9 @@ export namespace Table
 {%- macro compile_func2(type) -%}
 {%- for v in (table.values|unique|selectattr('value_type','==', type)) %}
 {%if v.value_type == ValueType.CB -%}
-			{{v.type}} {{v.name}}{{v.array}}; // {{v.type}}
+			{{v.qtype}} {{v.name}}{{v.array}}; // {{v.type}}
 {%-elif v.value_type == ValueType.STRUCT-%}
-			{{v.type}}::Compiled {{v.name}}{{v.array}}; // {{v.type}}
+			{{v.qtype}}::Compiled {{v.name}}{{v.array}}; // {{v.type}}
 {%-else-%}
 			uint {{v.name}}{{"" if v.bindless else v.array}}; // {{v.type}}
 {%-endif-%}
@@ -140,7 +140,7 @@ export namespace Table
 		{
 {%- set values = create_list('values') -%}
 {%- for v in (table.values) -%}
-{%- do myappend('values',("Slots::" if (parsed.tables[v.type] is defined) and (parsed.tables[v.type].options.shader_only is undefined) else "") +v.type)-%}
+{%- do myappend('values',("Slots::" + parsed.tables[v.type].qn) if (parsed.tables[v.type] is defined) and (parsed.tables[v.type].options.shader_only is undefined) else v.type)-%}
 {%- endfor %}
 			processor.template process<{{get_list('values')|join(', ')}}>();
 		}
@@ -160,7 +160,7 @@ export namespace Table
 {%- endfor %}
 		}
 
-	};
+	};{{ table.ns_braces }}
 	#pragma pack(pop)
 }
 

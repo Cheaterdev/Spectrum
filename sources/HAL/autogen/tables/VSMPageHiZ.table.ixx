@@ -14,40 +14,46 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMPageHiZ
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMPageHiZ;
-		HLSL::Texture2DArray<float2> page_hiz;
-		HLSL::Texture2DArray<float2>& GetPage_hiz() { return page_hiz; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(page_hiz, "VSMPageHiZ::page_hiz");
-		}
-		struct Compiled
-		{
-			uint page_hiz; // Texture2DArray<float2>
+			struct VSMPageHiZ
+			{
+				static constexpr SlotID ID = SlotID::VSMPageHiZ;
+				HLSL::Texture2DArray<float2> page_hiz;
+				HLSL::Texture2DArray<float2>& GetPage_hiz() { return page_hiz; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(page_hiz, "VSMPageHiZ::page_hiz");
+				}
+				struct Compiled
+				{
+					uint page_hiz; // Texture2DArray<float2>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMPageHiZ";
+				static std::string get_typename()
+				{
+					return "Tables::VSMPageHiZ";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

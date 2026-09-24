@@ -7,14 +7,21 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct VSMDownsampleHiZBatch
+namespace Shadows
 {
-	uint src_mip; // uint
-	uint dirty_slots; // StructuredBuffer<uint>
-	uint src; // RWTexture2DArray<float2>
-	uint dst_mip; // RWTexture2DArray<float2>
-	uint GetSrc_mip() { return src_mip; }
-	RWTexture2DArray<float2> GetSrc() { return ResourceDescriptorHeap[src]; }
-	RWTexture2DArray<float2> GetDst_mip() { return ResourceDescriptorHeap[dst_mip]; }
-	StructuredBuffer<uint> GetDirty_slots() { return ResourceDescriptorHeap[dirty_slots]; }
-};
+	namespace VSM
+	{
+		struct VSMDownsampleHiZBatch
+		{
+			uint src_mip; // uint
+			uint dirty_slots; // StructuredBuffer<uint>
+			uint src; // RWTexture2DArray<float2>
+			uint dst_mip; // RWTexture2DArray<float2>
+			uint GetSrc_mip() { return src_mip; }
+			RWTexture2DArray<float2> GetSrc() { return ResourceDescriptorHeap[src]; }
+			RWTexture2DArray<float2> GetDst_mip() { return ResourceDescriptorHeap[dst_mip]; }
+			StructuredBuffer<uint> GetDirty_slots() { return ResourceDescriptorHeap[dirty_slots]; }
+		};
+	}
+}
+using Shadows::VSM::VSMDownsampleHiZBatch;

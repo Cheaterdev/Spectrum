@@ -12,7 +12,7 @@ void MeshRenderContext::begin()
     draw_count = 0;
 }
 
-void GBuffer::SetTable(Table::GBuffer& table)
+void GBuffer::SetTable(Table::Meshes::GBuffer& table)
 {
     table.GetAlbedo() = albedo.texture2D;
     table.GetNormals() = normals.texture2D;

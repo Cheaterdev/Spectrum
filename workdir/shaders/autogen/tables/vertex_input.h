@@ -7,16 +7,20 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct vertex_input
+namespace UI
 {
-	float2 pos; // float2
-	float2 tc; // float2
-	float4 mulColor; // float4
-	float4 addColor; // float4
-	float gammaEncode; // float
-	float2 GetPos() { return pos; }
-	float2 GetTc() { return tc; }
-	float4 GetMulColor() { return mulColor; }
-	float4 GetAddColor() { return addColor; }
-	float GetGammaEncode() { return gammaEncode; }
-};
+	struct vertex_input
+	{
+		float2 pos; // float2
+		float2 tc; // float2
+		float4 mulColor; // float4
+		float4 addColor; // float4
+		float gammaEncode; // float
+		float2 GetPos() { return pos; }
+		float2 GetTc() { return tc; }
+		float4 GetMulColor() { return mulColor; }
+		float4 GetAddColor() { return addColor; }
+		float GetGammaEncode() { return gammaEncode; }
+	};
+}
+using UI::vertex_input;

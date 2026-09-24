@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct FSR :public DataHolder<FSR, SlotID::FSR, Table::FSR, DefaultLayout::Instance0>
+	namespace Post
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		FSR() = default;
-	};
+		namespace Upscale
+		{
+			struct FSR :public DataHolder<FSR, SlotID::FSR, Table::Post::Upscale::FSR, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				FSR() = default;
+			};
+		}
+	}
 }

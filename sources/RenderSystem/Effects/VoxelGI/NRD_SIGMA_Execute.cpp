@@ -20,19 +20,19 @@ using namespace HAL;
 // nrd::Instance objects, not one shared one).
 // setup() is fully generated (nrd_sig_test.prism's own [SetupCondition]).
 
-void PassDefault<Passes::NRD_SIGMA_Execute>::pre_setup(FrameGraph::Graph& graph)
+void PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::pre_setup(FrameGraph::Graph& graph)
 {
 	// Same gate as [SetupCondition] (nrd_sig_test.prism) -- ensure_pools() is a
 	// real side effect [SetupCondition] can't express, so it runs here, once
 	// per frame before graph.setup(), guarded by the identical condition
 	// repeated, same reasoning as NRD_REBLUR_Execute's own pre_setup().
-	auto shadow_source = graph.get_context<Table::VSMSelectors>().shadow_source;
-	bool wants_sigma = shadow_source == ShadowSource::RTXReference
-		|| (shadow_source == ShadowSource::VSM && graph.get_context<Table::VSMSelectors>().use_vsm_penumbra);
+	auto shadow_source = graph.get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source;
+	bool wants_sigma = shadow_source == Shadows::VSM::ShadowSource::RTXReference
+		|| (shadow_source == Shadows::VSM::ShadowSource::VSM && graph.get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra);
 
-	if (graph.get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR ||
-	    !graph.get_context<Table::RenderDeviceCapabilities>().rtx_supported ||
-	    !graph.get_context<Table::RenderDeviceCapabilities>().dlssrr_available ||
+	if (graph.get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == Post::Upscale::UpscalerType::DLSSRR ||
+	    !graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported ||
+	    !graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available ||
 	    !wants_sigma)
 		return;
 
@@ -40,8 +40,8 @@ void PassDefault<Passes::NRD_SIGMA_Execute>::pre_setup(FrameGraph::Graph& graph)
 	nvidia::NRD::get().ensure_pools(RenderSystem::get().device(), frame.frame_size);
 }
 
-void PassDefault<Passes::NRD_SIGMA_Execute>::render(
-	Passes::NRD_SIGMA_Execute::Context& data, FrameContext& context)
+void PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::render(
+	Passes::Denoise::NRD::NRD_SIGMA_Execute::Context& data, FrameContext& context)
 {
 	auto& cam_info = context.graph->get_context<CameraInfo>();
 	camera* cam = cam_info.cam;
@@ -52,7 +52,7 @@ void PassDefault<Passes::NRD_SIGMA_Execute>::render(
 	inputs.mv                = *data.NRD_Mv;
 	// Exactly one of these is linked this frame (see nrd_sig_test.prism's own
 	// [Optional] guards on both fields, keyed off the same shadow_source).
-	inputs.penumbra_noisy    = context.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::VSM
+	inputs.penumbra_noisy    = context.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == Shadows::VSM::ShadowSource::VSM
 		? *data.VSM_PCSS_ShadowNoise
 		: *data.VSM_ShadowNoise;
 	inputs.shadow_denoised   = *data.VSM_ShadowDenoised;

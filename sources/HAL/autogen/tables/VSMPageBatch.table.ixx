@@ -14,38 +14,44 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMPageBatch
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMPageBatch;
-		int level;
-		int dirty_mask;
-		int skip_occlusion;
-		int& GetLevel() { return level; }
-		int& GetDirty_mask() { return dirty_mask; }
-		int& GetSkip_occlusion() { return skip_occlusion; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(level, "VSMPageBatch::level");
-			compiler.compile(dirty_mask, "VSMPageBatch::dirty_mask");
-			compiler.compile(skip_occlusion, "VSMPageBatch::skip_occlusion");
-		}
-		using Compiled = VSMPageBatch;
+			struct VSMPageBatch
+			{
+				static constexpr SlotID ID = SlotID::VSMPageBatch;
+				int level;
+				int dirty_mask;
+				int skip_occlusion;
+				int& GetLevel() { return level; }
+				int& GetDirty_mask() { return dirty_mask; }
+				int& GetSkip_occlusion() { return skip_occlusion; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(level, "VSMPageBatch::level");
+					compiler.compile(dirty_mask, "VSMPageBatch::dirty_mask");
+					compiler.compile(skip_occlusion, "VSMPageBatch::skip_occlusion");
+				}
+				using Compiled = VSMPageBatch;
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMPageBatch";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(level);
-			ar& NVP(dirty_mask);
-			ar& NVP(skip_occlusion);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::VSMPageBatch";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(level);
+					ar& NVP(dirty_mask);
+					ar& NVP(skip_occlusion);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

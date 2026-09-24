@@ -15,90 +15,96 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct NRD_GBufferPackParams
+	namespace Denoise
 	{
-		static constexpr SlotID ID = SlotID::NRD_GBufferPackParams;
-		uint indirect_use_vct;
-		uint reflection_use_vct;
-		HLSL::Texture2D<float4> RTXIndirectNoise;
-		HLSL::Texture2D<float4> RTXReflectionNoise;
-		HLSL::Texture2D<float4> VoxelIndirectNoiseRaw;
-		HLSL::Texture2D<float4> VoxelReflectionNoiseRaw;
-		HLSL::RWTexture2D<float> NRD_ViewZ;
-		HLSL::RWTexture2D<float4> NRD_NormalRoughness;
-		HLSL::RWTexture2D<float4> NRD_Mv;
-		HLSL::RWTexture2D<float4> NRD_DiffuseRadianceHitDist;
-		HLSL::RWTexture2D<float4> NRD_SpecularRadianceHitDist;
-		GBuffer gbuffer;
-		HLSL::Texture2D<float4>& GetRTXIndirectNoise() { return RTXIndirectNoise; }
-		HLSL::Texture2D<float4>& GetRTXReflectionNoise() { return RTXReflectionNoise; }
-		HLSL::Texture2D<float4>& GetVoxelIndirectNoiseRaw() { return VoxelIndirectNoiseRaw; }
-		HLSL::Texture2D<float4>& GetVoxelReflectionNoiseRaw() { return VoxelReflectionNoiseRaw; }
-		uint& GetIndirect_use_vct() { return indirect_use_vct; }
-		uint& GetReflection_use_vct() { return reflection_use_vct; }
-		HLSL::RWTexture2D<float>& GetNRD_ViewZ() { return NRD_ViewZ; }
-		HLSL::RWTexture2D<float4>& GetNRD_NormalRoughness() { return NRD_NormalRoughness; }
-		HLSL::RWTexture2D<float4>& GetNRD_Mv() { return NRD_Mv; }
-		HLSL::RWTexture2D<float4>& GetNRD_DiffuseRadianceHitDist() { return NRD_DiffuseRadianceHitDist; }
-		HLSL::RWTexture2D<float4>& GetNRD_SpecularRadianceHitDist() { return NRD_SpecularRadianceHitDist; }
-		GBuffer& GetGbuffer() { return gbuffer; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace NRD
 		{
-			compiler.compile(indirect_use_vct, "NRD_GBufferPackParams::indirect_use_vct");
-			compiler.compile(reflection_use_vct, "NRD_GBufferPackParams::reflection_use_vct");
-			compiler.compile_auto(RTXIndirectNoise, "NRD_GBufferPackParams::RTXIndirectNoise");
-			compiler.compile_auto(RTXReflectionNoise, "NRD_GBufferPackParams::RTXReflectionNoise");
-			compiler.compile_auto(VoxelIndirectNoiseRaw, "NRD_GBufferPackParams::VoxelIndirectNoiseRaw");
-			compiler.compile_auto(VoxelReflectionNoiseRaw, "NRD_GBufferPackParams::VoxelReflectionNoiseRaw");
-			compiler.compile(NRD_ViewZ, "NRD_GBufferPackParams::NRD_ViewZ");
-			compiler.compile(NRD_NormalRoughness, "NRD_GBufferPackParams::NRD_NormalRoughness");
-			compiler.compile(NRD_Mv, "NRD_GBufferPackParams::NRD_Mv");
-			compiler.compile(NRD_DiffuseRadianceHitDist, "NRD_GBufferPackParams::NRD_DiffuseRadianceHitDist");
-			compiler.compile(NRD_SpecularRadianceHitDist, "NRD_GBufferPackParams::NRD_SpecularRadianceHitDist");
-			compiler.compile(gbuffer, "NRD_GBufferPackParams::gbuffer");
-		}
-		struct Compiled
-		{
-			uint indirect_use_vct; // uint
-			uint reflection_use_vct; // uint
-			uint RTXIndirectNoise; // Texture2D<float4>
-			uint RTXReflectionNoise; // Texture2D<float4>
-			uint VoxelIndirectNoiseRaw; // Texture2D<float4>
-			uint VoxelReflectionNoiseRaw; // Texture2D<float4>
-			uint NRD_ViewZ; // RWTexture2D<float>
-			uint NRD_NormalRoughness; // RWTexture2D<float4>
-			uint NRD_Mv; // RWTexture2D<float4>
-			uint NRD_DiffuseRadianceHitDist; // RWTexture2D<float4>
-			uint NRD_SpecularRadianceHitDist; // RWTexture2D<float4>
-			GBuffer::Compiled gbuffer; // GBuffer
+			struct NRD_GBufferPackParams
+			{
+				static constexpr SlotID ID = SlotID::NRD_GBufferPackParams;
+				uint indirect_use_vct;
+				uint reflection_use_vct;
+				HLSL::Texture2D<float4> RTXIndirectNoise;
+				HLSL::Texture2D<float4> RTXReflectionNoise;
+				HLSL::Texture2D<float4> VoxelIndirectNoiseRaw;
+				HLSL::Texture2D<float4> VoxelReflectionNoiseRaw;
+				HLSL::RWTexture2D<float> NRD_ViewZ;
+				HLSL::RWTexture2D<float4> NRD_NormalRoughness;
+				HLSL::RWTexture2D<float4> NRD_Mv;
+				HLSL::RWTexture2D<float4> NRD_DiffuseRadianceHitDist;
+				HLSL::RWTexture2D<float4> NRD_SpecularRadianceHitDist;
+				Table::Meshes::GBuffer gbuffer;
+				HLSL::Texture2D<float4>& GetRTXIndirectNoise() { return RTXIndirectNoise; }
+				HLSL::Texture2D<float4>& GetRTXReflectionNoise() { return RTXReflectionNoise; }
+				HLSL::Texture2D<float4>& GetVoxelIndirectNoiseRaw() { return VoxelIndirectNoiseRaw; }
+				HLSL::Texture2D<float4>& GetVoxelReflectionNoiseRaw() { return VoxelReflectionNoiseRaw; }
+				uint& GetIndirect_use_vct() { return indirect_use_vct; }
+				uint& GetReflection_use_vct() { return reflection_use_vct; }
+				HLSL::RWTexture2D<float>& GetNRD_ViewZ() { return NRD_ViewZ; }
+				HLSL::RWTexture2D<float4>& GetNRD_NormalRoughness() { return NRD_NormalRoughness; }
+				HLSL::RWTexture2D<float4>& GetNRD_Mv() { return NRD_Mv; }
+				HLSL::RWTexture2D<float4>& GetNRD_DiffuseRadianceHitDist() { return NRD_DiffuseRadianceHitDist; }
+				HLSL::RWTexture2D<float4>& GetNRD_SpecularRadianceHitDist() { return NRD_SpecularRadianceHitDist; }
+				Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(indirect_use_vct, "NRD_GBufferPackParams::indirect_use_vct");
+					compiler.compile(reflection_use_vct, "NRD_GBufferPackParams::reflection_use_vct");
+					compiler.compile_auto(RTXIndirectNoise, "NRD_GBufferPackParams::RTXIndirectNoise");
+					compiler.compile_auto(RTXReflectionNoise, "NRD_GBufferPackParams::RTXReflectionNoise");
+					compiler.compile_auto(VoxelIndirectNoiseRaw, "NRD_GBufferPackParams::VoxelIndirectNoiseRaw");
+					compiler.compile_auto(VoxelReflectionNoiseRaw, "NRD_GBufferPackParams::VoxelReflectionNoiseRaw");
+					compiler.compile(NRD_ViewZ, "NRD_GBufferPackParams::NRD_ViewZ");
+					compiler.compile(NRD_NormalRoughness, "NRD_GBufferPackParams::NRD_NormalRoughness");
+					compiler.compile(NRD_Mv, "NRD_GBufferPackParams::NRD_Mv");
+					compiler.compile(NRD_DiffuseRadianceHitDist, "NRD_GBufferPackParams::NRD_DiffuseRadianceHitDist");
+					compiler.compile(NRD_SpecularRadianceHitDist, "NRD_GBufferPackParams::NRD_SpecularRadianceHitDist");
+					compiler.compile(gbuffer, "NRD_GBufferPackParams::gbuffer");
+				}
+				struct Compiled
+				{
+					uint indirect_use_vct; // uint
+					uint reflection_use_vct; // uint
+					uint RTXIndirectNoise; // Texture2D<float4>
+					uint RTXReflectionNoise; // Texture2D<float4>
+					uint VoxelIndirectNoiseRaw; // Texture2D<float4>
+					uint VoxelReflectionNoiseRaw; // Texture2D<float4>
+					uint NRD_ViewZ; // RWTexture2D<float>
+					uint NRD_NormalRoughness; // RWTexture2D<float4>
+					uint NRD_Mv; // RWTexture2D<float4>
+					uint NRD_DiffuseRadianceHitDist; // RWTexture2D<float4>
+					uint NRD_SpecularRadianceHitDist; // RWTexture2D<float4>
+					Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(gbuffer);
-				ar& NVP(indirect_use_vct);
-				ar& NVP(reflection_use_vct);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(gbuffer);
+						ar& NVP(indirect_use_vct);
+						ar& NVP(reflection_use_vct);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::NRD_GBufferPackParams";
+				static std::string get_typename()
+				{
+					return "Tables::NRD_GBufferPackParams";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(gbuffer);
+					ar& NVP(indirect_use_vct);
+					ar& NVP(reflection_use_vct);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(gbuffer);
-			ar& NVP(indirect_use_vct);
-			ar& NVP(reflection_use_vct);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

@@ -14,12 +14,12 @@ using namespace HAL;
 // of NRD_IndirectCombine.cpp -- OVERWRITES the shadow term (see
 // nrd_shadow_combine.hlsl) rather than adding, since it's redoing the same
 // direct-lighting term VSM's own passes would otherwise have written. Runs
-// only when ShadowSource::RTXReference is selected outside DLSS-RR (see
+// only when Shadows::VSM::ShadowSource::RTXReference is selected outside DLSS-RR (see
 // [[project-nrd-integration]]).
 // setup() is fully generated (nrd_sig_test.prism's own [SetupCondition]).
 
-void PassDefault<Passes::NRD_ShadowCombine>::render(
-	Passes::NRD_ShadowCombine::Context& data, FrameContext& context)
+void PassDefault<Passes::Denoise::NRD::NRD_ShadowCombine>::render(
+	Passes::Denoise::NRD::NRD_ShadowCombine::Context& data, FrameContext& context)
 {
 	auto& command_list = context.get_list();
 	GBuffer gbuffer     = GBufferViewDesc::actualize(data);
@@ -29,10 +29,10 @@ void PassDefault<Passes::NRD_ShadowCombine>::render(
 
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 
-	compute.set_pipeline<PSOS::NRD_ShadowCombine>();
+	compute.set_pipeline<PSOS::Denoise::NRD::NRD_ShadowCombine>();
 
 	{
-		Slots::NRD_ShadowCombineParams params;
+		Slots::Denoise::NRD::NRD_ShadowCombineParams params;
 		gbuffer.SetTable(params.GetGbuffer());
 		params.GetShadow_denoised() = data.VSM_ShadowDenoised->texture2D;
 		params.GetTarget()          = data.ResultTexture->rwTexture2D;

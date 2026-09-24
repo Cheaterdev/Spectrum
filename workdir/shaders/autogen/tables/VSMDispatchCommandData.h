@@ -11,16 +11,23 @@
 #include "MeshInfo.h"
 #include "MeshInstanceInfo.h"
 #include "VSMPageBatch.h"
-struct VSMDispatchCommandData
+namespace Shadows
 {
-	uint page_batch_cb; // VSMPageBatch
-	uint mesh_cb; // MeshInfo
-	uint meshinstance_cb; // MeshInstanceInfo
-	uint material_cb; // MaterialInfo
-	DispatchMeshArguments draw_commands; // DispatchMeshArguments
-	uint GetPage_batch_cb() { return page_batch_cb; }
-	uint GetMesh_cb() { return mesh_cb; }
-	uint GetMeshinstance_cb() { return meshinstance_cb; }
-	uint GetMaterial_cb() { return material_cb; }
-	DispatchMeshArguments GetDraw_commands() { return draw_commands; }
-};
+	namespace VSM
+	{
+		struct VSMDispatchCommandData
+		{
+			uint page_batch_cb; // VSMPageBatch
+			uint mesh_cb; // MeshInfo
+			uint meshinstance_cb; // MeshInstanceInfo
+			uint material_cb; // MaterialInfo
+			DispatchMeshArguments draw_commands; // DispatchMeshArguments
+			uint GetPage_batch_cb() { return page_batch_cb; }
+			uint GetMesh_cb() { return mesh_cb; }
+			uint GetMeshinstance_cb() { return meshinstance_cb; }
+			uint GetMaterial_cb() { return material_cb; }
+			DispatchMeshArguments GetDraw_commands() { return draw_commands; }
+		};
+	}
+}
+using Shadows::VSM::VSMDispatchCommandData;

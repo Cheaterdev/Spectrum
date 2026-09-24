@@ -111,14 +111,14 @@ private:
 	// Pass function members — bodies defined in VoxelGIGraph.cpp. Render only:
 	// every one of these passes states its enable condition in voxel.prism and
 	// gets a generated setup (PassSetupDefault<T>, pass_defaults.h).
-	Passes::Voxelize::render_func_type                     m_voxelize_render;
-	Passes::Lighting::render_func_type                     m_lighting_render;
-	Passes::Mipmapping::render_func_type                   m_mipmapping_render;
-	Passes::NormalRoughnessRepack::render_func_type        m_normalroughnessrepack_render;
-	Passes::ReflCombine::render_func_type                  m_reflcombine_render;
-	Passes::VoxelDebug::render_func_type                   m_voxeldebug_render;
-	Passes::VoxelScreen::render_func_type                  m_voxelscreen_render;
-	Passes::ScreenReflection::render_func_type             m_screenreflection_render;
+	Passes::GI::Voxel::Voxelize::render_func_type                     m_voxelize_render;
+	Passes::GI::Voxel::Lighting::render_func_type                     m_lighting_render;
+	Passes::GI::Voxel::Mipmapping::render_func_type                   m_mipmapping_render;
+	Passes::Post::Upscale::NormalRoughnessRepack::render_func_type        m_normalroughnessrepack_render;
+	Passes::Reflections::ReflCombine::render_func_type                  m_reflcombine_render;
+	Passes::GI::Voxel::Dev::VoxelDebug::render_func_type                   m_voxeldebug_render;
+	Passes::GI::Voxel::VoxelScreen::render_func_type                  m_voxelscreen_render;
+	Passes::Reflections::ScreenReflection::render_func_type             m_screenreflection_render;
 
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
@@ -147,7 +147,7 @@ public:
 	void pass_data(FrameGraph::TaskBuilder& builder);
 
 	// Once per frame, before graph.setup(): mirrors the Variable<bool> toggles
-	// above into Table::VoxelGISelectors (voxel.prism) for the generated setups
+	// above into Table::GI::Voxel::VoxelGISelectors (voxel.prism) for the generated setups
 	// to read, and does the voxel-bounds/VoxelInfo update that used to live in
 	// Voxelize's own setup lambda. Both need a VoxelGI instance, which a
 	// generated static setup has no way to reach.

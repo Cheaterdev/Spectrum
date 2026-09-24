@@ -8,14 +8,18 @@
 #include "enums.h"
 
 
-struct GraphInput
+namespace Dev
 {
-	uint3 dispatch_grid: SV_DispatchGrid;
-	uint unused;
-	int2 WaveOffset;
-	uint2 unused2;
-	uint3 GetDispatch_grid() { return dispatch_grid; }
-	uint GetUnused() { return unused; }
-	int2 GetWaveOffset() { return WaveOffset; }
-	uint2 GetUnused2() { return unused2; }
-};
+	struct GraphInput
+	{
+		uint3 dispatch_grid: SV_DispatchGrid;
+		uint unused;
+		int2 WaveOffset;
+		uint2 unused2;
+		uint3 GetDispatch_grid() { return dispatch_grid; }
+		uint GetUnused() { return unused; }
+		int2 GetWaveOffset() { return WaveOffset; }
+		uint2 GetUnused2() { return unused2; }
+	};
+}
+using Dev::GraphInput;

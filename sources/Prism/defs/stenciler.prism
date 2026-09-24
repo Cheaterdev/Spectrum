@@ -1,124 +1,127 @@
-[Bind = DefaultLayout::Instance0]
-struct Countour
+namespace Editor
 {
-	float4 color;
-	Texture2D<uint> object_ids;
-	uint selected_id;
-}
+	[Bind = DefaultLayout::Instance0]
+	struct Countour
+	{
+		float4 color;
+		Texture2D<uint> object_ids;
+		uint selected_id;
+	}
 
-[Bind = DefaultLayout::Instance5]
-struct DrawStencil
-{
-	StructuredBuffer<float4> vertices;
-}
+	[Bind = DefaultLayout::Instance5]
+	struct DrawStencil
+	{
+		StructuredBuffer<float4> vertices;
+	}
 
-# Gizmo picking: every gizmo pixel under mouse_pos InterlockedMax()es a key
-# of (depth bits | handle id) into viewBuffer[0], so the nearest handle wins
-# without a depth buffer. See gizmo_pick() in postprocess/gizmo_pick.hlsl.
-[Bind = DefaultLayout::Instance0]
-struct PickerBuffer
-{
-	RWStructuredBuffer<uint> viewBuffer;
-	uint2 mouse_pos;
-}
+	# Gizmo picking: every gizmo pixel under mouse_pos InterlockedMax()es a key
+	# of (depth bits | handle id) into viewBuffer[0], so the nearest handle wins
+	# without a depth buffer. See gizmo_pick() in postprocess/gizmo_pick.hlsl.
+	[Bind = DefaultLayout::Instance0]
+	struct PickerBuffer
+	{
+		RWStructuredBuffer<uint> viewBuffer;
+		uint2 mouse_pos;
+	}
 
-[Bind = DefaultLayout::Instance3]
-struct Instance
-{
-	uint instanceId;
-}
-
-
-[Bind = DefaultLayout::Instance4]
-struct Color
-{
-	float4 color;
-}
+	[Bind = DefaultLayout::Instance3]
+	struct Instance
+	{
+		uint instanceId;
+	}
 
 
-GraphicsPSO DrawBox
-{
-	root = DefaultLayout;
-
-	[EntryPoint = VS]
-	vertex = "postprocess/triangle_stencil.hlsl";
-
-	[EntryPoint = PS]
-	pixel = "postprocess/triangle_stencil.hlsl";
-
-	enable_depth = false;
-	cull = None;
-
-	rtv = { R16G16B16A16_FLOAT };
-	blend = { Additive };
-}
+	[Bind = DefaultLayout::Instance4]
+	struct Color
+	{
+		float4 color;
+	}
 
 
+	GraphicsPSO DrawBox
+	{
+		root = DefaultLayout;
 
-GraphicsPSO DrawAxis
-{
-	root = DefaultLayout;
+		[EntryPoint = VS]
+		vertex = "postprocess/triangle_stencil.hlsl";
 
-	[EntryPoint = VS]
-	mesh = "gbuffer/mesh_shader.hlsl";
+		[EntryPoint = PS]
+		pixel = "postprocess/triangle_stencil.hlsl";
 
-	[EntryPoint = AS]
-	amplification = "gbuffer/mesh_shader.hlsl";
+		enable_depth = false;
+		cull = None;
 
-
-	[EntryPoint = PS_COLOR]
-	pixel = "postprocess/stencil.hlsl";
-
-	enable_depth = false;
-	cull = None;
-
-	rtv = { R16G16B16A16_FLOAT };
-}
+		rtv = { R16G16B16A16_FLOAT };
+		blend = { Additive };
+	}
 
 
-GraphicsPSO DrawRing
-{
-	root = DefaultLayout;
 
-	[EntryPoint = VS]
-	vertex = "postprocess/ring.hlsl";
+	GraphicsPSO DrawAxis
+	{
+		root = DefaultLayout;
 
-	[EntryPoint = PS_COLOR]
-	pixel = "postprocess/ring.hlsl";
+		[EntryPoint = VS]
+		mesh = "gbuffer/mesh_shader.hlsl";
 
-	enable_depth = false;
-	cull = None;
-
-	rtv = { R16G16B16A16_FLOAT };
-}
+		[EntryPoint = AS]
+		amplification = "gbuffer/mesh_shader.hlsl";
 
 
-GraphicsPSO StencilerLast
-{
-	root = DefaultLayout;
+		[EntryPoint = PS_COLOR]
+		pixel = "postprocess/stencil.hlsl";
 
-	[EntryPoint = VS]
-	vertex = "postprocess/contour.hlsl";
+		enable_depth = false;
+		cull = None;
 
-	[EntryPoint = PS]
-	pixel = "postprocess/contour.hlsl";
+		rtv = { R16G16B16A16_FLOAT };
+	}
 
-	enable_depth = false;
-	cull = None;
 
-	rtv = { R16G16B16A16_FLOAT };
-	blend = { Additive };
-}
+	GraphicsPSO DrawRing
+	{
+		root = DefaultLayout;
 
-# Scene picking reads GBuffer_ObjectID (written by the GBuffer pass, see
-# MeshInfo::object_id) back under the mouse; the selection outline is an
-# edge-detect on the same texture. Gizmo handles are drawn on top and pick
-# themselves through PickerBuffer.
-[Required]
-[RunAlways]
-PassNode stencil_renderer
-{
-	[Always = Read] Texture GBuffer_ObjectID;
-	[Always = RenderTarget] Texture ResultTexture;
-	[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> axis_id_buffer;
+		[EntryPoint = VS]
+		vertex = "postprocess/ring.hlsl";
+
+		[EntryPoint = PS_COLOR]
+		pixel = "postprocess/ring.hlsl";
+
+		enable_depth = false;
+		cull = None;
+
+		rtv = { R16G16B16A16_FLOAT };
+	}
+
+
+	GraphicsPSO StencilerLast
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "postprocess/contour.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "postprocess/contour.hlsl";
+
+		enable_depth = false;
+		cull = None;
+
+		rtv = { R16G16B16A16_FLOAT };
+		blend = { Additive };
+	}
+
+	# Scene picking reads GBuffer_ObjectID (written by the GBuffer pass, see
+	# MeshInfo::object_id) back under the mouse; the selection outline is an
+	# edge-detect on the same texture. Gizmo handles are drawn on top and pick
+	# themselves through PickerBuffer.
+	[Required]
+	[RunAlways]
+	PassNode stencil_renderer
+	{
+		[Always = Read] Texture GBuffer_ObjectID;
+		[Always = RenderTarget] Texture ResultTexture;
+		[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> axis_id_buffer;
+	}
 }

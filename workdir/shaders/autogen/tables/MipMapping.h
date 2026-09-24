@@ -7,22 +7,26 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct MipMapping
+namespace Utility
 {
-	uint SrcMipLevel; // uint
-	uint NumMipLevels; // uint
-	float2 TexelSize; // float2
-	uint SrcMip; // Texture2D<float4>
-	uint SrcMipArray; // Texture2DArray<float4>
-	uint OutMip[4]; // RWTexture2D<float4>
-	uint OutMipArray[4]; // RWTexture2DArray<float4>
-	uint GetSrcMipLevel() { return SrcMipLevel; }
-	uint GetNumMipLevels() { return NumMipLevels; }
-	float2 GetTexelSize() { return TexelSize; }
-	RWTexture2D<float4> GetOutMip(int i) { return ResourceDescriptorHeap[OutMip[i]]; }
+	struct MipMapping
+	{
+		uint SrcMipLevel; // uint
+		uint NumMipLevels; // uint
+		float2 TexelSize; // float2
+		uint SrcMip; // Texture2D<float4>
+		uint SrcMipArray; // Texture2DArray<float4>
+		uint OutMip[4]; // RWTexture2D<float4>
+		uint OutMipArray[4]; // RWTexture2DArray<float4>
+		uint GetSrcMipLevel() { return SrcMipLevel; }
+		uint GetNumMipLevels() { return NumMipLevels; }
+		float2 GetTexelSize() { return TexelSize; }
+		RWTexture2D<float4> GetOutMip(int i) { return ResourceDescriptorHeap[OutMip[i]]; }
 
-	Texture2D<float4> GetSrcMip() { return ResourceDescriptorHeap[SrcMip]; }
-	RWTexture2DArray<float4> GetOutMipArray(int i) { return ResourceDescriptorHeap[OutMipArray[i]]; }
+		Texture2D<float4> GetSrcMip() { return ResourceDescriptorHeap[SrcMip]; }
+		RWTexture2DArray<float4> GetOutMipArray(int i) { return ResourceDescriptorHeap[OutMipArray[i]]; }
 
-	Texture2DArray<float4> GetSrcMipArray() { return ResourceDescriptorHeap[SrcMipArray]; }
-};
+		Texture2DArray<float4> GetSrcMipArray() { return ResourceDescriptorHeap[SrcMipArray]; }
+	};
+}
+using Utility::MipMapping;

@@ -8,10 +8,20 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "GBuffer.h"
-struct VoxelDebug
+namespace GI
 {
-	uint volume; // Texture3D<float4>
-	GBuffer gbuffer; // GBuffer
-	GBuffer GetGbuffer() { return gbuffer; }
-	Texture3D<float4> GetVolume() { return ResourceDescriptorHeap[volume]; }
-};
+	namespace Voxel
+	{
+		namespace Dev
+		{
+			struct VoxelDebug
+			{
+				uint volume; // Texture3D<float4>
+				GBuffer gbuffer; // GBuffer
+				GBuffer GetGbuffer() { return gbuffer; }
+				Texture3D<float4> GetVolume() { return ResourceDescriptorHeap[volume]; }
+			};
+		}
+	}
+}
+using GI::Voxel::Dev::VoxelDebug;

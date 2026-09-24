@@ -8,12 +8,19 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "GBuffer.h"
-struct NRD_IndirectCombineParams
+namespace Denoise
 {
-	uint indirect; // Texture2D<float4>
-	uint target; // RWTexture2D<float4>
-	GBuffer gbuffer; // GBuffer
-	GBuffer GetGbuffer() { return gbuffer; }
-	Texture2D<float4> GetIndirect() { return ResourceDescriptorHeap[indirect]; }
-	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
-};
+	namespace NRD
+	{
+		struct NRD_IndirectCombineParams
+		{
+			uint indirect; // Texture2D<float4>
+			uint target; // RWTexture2D<float4>
+			GBuffer gbuffer; // GBuffer
+			GBuffer GetGbuffer() { return gbuffer; }
+			Texture2D<float4> GetIndirect() { return ResourceDescriptorHeap[indirect]; }
+			RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
+		};
+	}
+}
+using Denoise::NRD::NRD_IndirectCombineParams;

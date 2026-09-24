@@ -9,22 +9,29 @@
 #include "enums.h"
 #include "DDGIInfo.h"
 #include "DDGIProbes.h"
-struct DDGIProbeTraceData
+namespace GI
 {
-	uint prev_irradiance; // Texture2DArray<float4>
-	uint prev_visibility; // Texture2DArray<float2>
-	uint probe_residency; // StructuredBuffer<uint>
-	uint compacted_list; // StructuredBuffer<uint>
-	uint probe_ray_radiance; // RWStructuredBuffer<float4>
-	uint residency_pending; // RWStructuredBuffer<uint>
-	DDGIInfo info; // DDGIInfo
-	DDGIProbes probes; // DDGIProbes
-	DDGIInfo GetInfo() { return info; }
-	DDGIProbes GetProbes() { return probes; }
-	RWStructuredBuffer<float4> GetProbe_ray_radiance() { return ResourceDescriptorHeap[probe_ray_radiance]; }
-	Texture2DArray<float4> GetPrev_irradiance() { return ResourceDescriptorHeap[prev_irradiance]; }
-	Texture2DArray<float2> GetPrev_visibility() { return ResourceDescriptorHeap[prev_visibility]; }
-	StructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
-	StructuredBuffer<uint> GetCompacted_list() { return ResourceDescriptorHeap[compacted_list]; }
-	RWStructuredBuffer<uint> GetResidency_pending() { return ResourceDescriptorHeap[residency_pending]; }
-};
+	namespace DDGI
+	{
+		struct DDGIProbeTraceData
+		{
+			uint prev_irradiance; // Texture2DArray<float4>
+			uint prev_visibility; // Texture2DArray<float2>
+			uint probe_residency; // StructuredBuffer<uint>
+			uint compacted_list; // StructuredBuffer<uint>
+			uint probe_ray_radiance; // RWStructuredBuffer<float4>
+			uint residency_pending; // RWStructuredBuffer<uint>
+			DDGIInfo info; // DDGIInfo
+			DDGIProbes probes; // DDGIProbes
+			DDGIInfo GetInfo() { return info; }
+			DDGIProbes GetProbes() { return probes; }
+			RWStructuredBuffer<float4> GetProbe_ray_radiance() { return ResourceDescriptorHeap[probe_ray_radiance]; }
+			Texture2DArray<float4> GetPrev_irradiance() { return ResourceDescriptorHeap[prev_irradiance]; }
+			Texture2DArray<float2> GetPrev_visibility() { return ResourceDescriptorHeap[prev_visibility]; }
+			StructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
+			StructuredBuffer<uint> GetCompacted_list() { return ResourceDescriptorHeap[compacted_list]; }
+			RWStructuredBuffer<uint> GetResidency_pending() { return ResourceDescriptorHeap[residency_pending]; }
+		};
+	}
+}
+using GI::DDGI::DDGIProbeTraceData;

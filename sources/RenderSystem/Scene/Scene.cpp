@@ -57,7 +57,7 @@ Scene::Scene()
 		invalidate_scene_caches();
 		});
 
-	mesh_infos = std::make_shared< virtual_gpu_buffer<Table::MeshCommandData>>(RenderSystem::get().device(), 1024 * 1024);
+	mesh_infos = std::make_shared< virtual_gpu_buffer<Table::Meshes::MeshCommandData>>(RenderSystem::get().device(), 1024 * 1024);
 	raytrace = std::make_shared<virtual_gpu_buffer<HAL::InstanceDesc>>(RenderSystem::get().device(), 1024 * 1024);
 
 
@@ -155,7 +155,7 @@ void Scene::update(HAL::FrameResources& frame)
 
 	{
 		PROFILE(L"SceneData");
-		Slots::SceneData sceneData;
+		Slots::Frame::SceneData sceneData;
 		sceneData.GetNodes() = universal_nodes_manager::get().buffer;
 		sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer;
 		sceneData.GetMeshes() = scene->mesh_infos->buffer;
@@ -165,13 +165,13 @@ sceneData.GetRaytraceInstanceInfo() = universal_rtx_manager::get().buffer;
 	}
 
 
-	auto build = [&](my_unique_vector<UINT>& data, Slots::GatherPipelineGlobal::Compiled& target) {
+	auto build = [&](my_unique_vector<UINT>& data, Slots::Meshes::GatherPipelineGlobal::Compiled& target) {
 
 
 
 		{
 			//	auto timer = list.start(L"GatherMat");
-			Slots::GatherPipelineGlobal gather_global;
+			Slots::Meshes::GatherPipelineGlobal gather_global;
 			{
 				PROFILE(L"gather_count_view");
 				//	gather_global.GetMeshes_count() = data.size();

@@ -15,46 +15,49 @@ import :Autogen.Tables.CommandData;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct GatherPipeline
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::GatherPipeline;
-		uint4 pip_ids[2];
-		HLSL::AppendStructuredBuffer<CommandData> commands[8];
-		uint4* GetPip_ids() { return pip_ids; }
-		HLSL::AppendStructuredBuffer<CommandData>* GetCommands() { return commands; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct GatherPipeline
 		{
-			compiler.compile(pip_ids, "GatherPipeline::pip_ids");
-			compiler.compile(commands, "GatherPipeline::commands");
-		}
-		struct Compiled
-		{
-			uint4 pip_ids[2]; // uint4
-			uint commands[8]; // AppendStructuredBuffer<CommandData>
+			static constexpr SlotID ID = SlotID::GatherPipeline;
+			uint4 pip_ids[2];
+			HLSL::AppendStructuredBuffer<Table::Meshes::CommandData> commands[8];
+			uint4* GetPip_ids() { return pip_ids; }
+			HLSL::AppendStructuredBuffer<Table::Meshes::CommandData>* GetCommands() { return commands; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(pip_ids, "GatherPipeline::pip_ids");
+				compiler.compile(commands, "GatherPipeline::commands");
+			}
+			struct Compiled
+			{
+				uint4 pip_ids[2]; // uint4
+				uint commands[8]; // AppendStructuredBuffer<CommandData>
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(pip_ids);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::GatherPipeline";
+			}
 			private:
 			SERIALIZE()
 			{
 				ar& NVP(pip_ids);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::GatherPipeline";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(pip_ids);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

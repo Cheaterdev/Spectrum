@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct CopyTexture
+namespace Utility
 {
-	uint srcTex; // Texture2D<float4>
-	Texture2D<float4> GetSrcTex() { return ResourceDescriptorHeap[srcTex]; }
-};
+	struct CopyTexture
+	{
+		uint srcTex; // Texture2D<float4>
+		Texture2D<float4> GetSrcTex() { return ResourceDescriptorHeap[srcTex]; }
+	};
+}
+using Utility::CopyTexture;

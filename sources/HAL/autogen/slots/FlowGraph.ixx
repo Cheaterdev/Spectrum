@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct FlowGraph :public DataHolder<FlowGraph, SlotID::FlowGraph, Table::FlowGraph, DefaultLayout::Instance1>
+	namespace UI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		FlowGraph() = default;
-	};
+		struct FlowGraph :public DataHolder<FlowGraph, SlotID::FlowGraph, Table::UI::FlowGraph, ::Frame::DefaultLayout::Instance1>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			FlowGraph() = default;
+		};
+	}
 }

@@ -11,136 +11,139 @@ using namespace FrameGraph;
 
 namespace Passes
 {
-
-class ReflCombine : public PassNodeBase
+namespace Reflections
 {
-public:
-	struct Context
+
+	class ReflCombine : public PassNodeBase
 	{
-
-
-		Handlers::Texture GBuffer_Albedo = ResourceID::GBuffer_Albedo;
-
-
-		Handlers::Texture GBuffer_Normals = ResourceID::GBuffer_Normals;
-
-
-		Handlers::Texture GBuffer_Specular = ResourceID::GBuffer_Specular;
-
-
-		Handlers::Texture GBuffer_Speed = ResourceID::GBuffer_Speed;
-
-
-		Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
-
-
-		Handlers::Texture ResultTexture = ResourceID::ResultTexture;
-
-
-		Handlers::Texture RTXReflectionDenoised = ResourceID::RTXReflectionDenoised;
-
-
-		// Resources this pass always needs whenever it runs, generated from
-		// each field's own [Always=X] annotation (further gated by [Optional=X]
-		// when present -- a raw bool expression, e.g. builder.exists(...) or a
-		// context-read flag, deciding whether this specific field is actually
-		// needed this frame), or, for a View-typed field (e.g. `GBuffer
-		// gbuffer;`), every leaf the View itself marks [Always=X] that this
-		// pass's own [Write=...] on that field doesn't already cover. A field
-		// that ALSO carries [Size]/[Format] (so create_always() below creates
-		// it under its own [Optional] condition) gets the negated condition
-		// here instead -- "need what some other instance/frame already
-		// created" is the complement of "create it this time." Called by
-		// TypedPass::setup() after setup_func returns true - not a
-		// substitute for setup_func's own need()/create() calls for anything
-		// else conditional.
-		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+	public:
+		struct Context
 		{
-			builder.need(data.GBuffer_Albedo, FrameGraph::ResourceFlags::Read);
-			builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::Read);
-			builder.need(data.GBuffer_Specular, FrameGraph::ResourceFlags::Read);
-			builder.need(data.GBuffer_Speed, FrameGraph::ResourceFlags::Read);
-			builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::None);
-			builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
-			builder.need(data.RTXReflectionDenoised, FrameGraph::ResourceFlags::Read);
-		}
-		// Which chain link each handler field resolved to, one named slot per
-		// field. Filled from a live frame's finished Context and applied on a
-		// replayed one, so a replay neither re-runs create_always/need_always nor
-		// depends on the order they made their calls in. The id is not stored:
-		// the field fixes it.
-		struct Cache
-		{
-			FrameGraph::ChainIndex GBuffer_Albedo = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex GBuffer_Normals = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex GBuffer_Specular = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex GBuffer_Speed = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex RTXReflectionDenoised = FrameGraph::ChainIndex::Unresolved;
+
+
+			Handlers::Texture GBuffer_Albedo = ResourceID::GBuffer_Albedo;
+
+
+			Handlers::Texture GBuffer_Normals = ResourceID::GBuffer_Normals;
+
+
+			Handlers::Texture GBuffer_Specular = ResourceID::GBuffer_Specular;
+
+
+			Handlers::Texture GBuffer_Speed = ResourceID::GBuffer_Speed;
+
+
+			Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
+
+
+			Handlers::Texture ResultTexture = ResourceID::ResultTexture;
+
+
+			Handlers::Texture RTXReflectionDenoised = ResourceID::RTXReflectionDenoised;
+
+
+			// Resources this pass always needs whenever it runs, generated from
+			// each field's own [Always=X] annotation (further gated by [Optional=X]
+			// when present -- a raw bool expression, e.g. builder.exists(...) or a
+			// context-read flag, deciding whether this specific field is actually
+			// needed this frame), or, for a View-typed field (e.g. `GBuffer
+			// gbuffer;`), every leaf the View itself marks [Always=X] that this
+			// pass's own [Write=...] on that field doesn't already cover. A field
+			// that ALSO carries [Size]/[Format] (so create_always() below creates
+			// it under its own [Optional] condition) gets the negated condition
+			// here instead -- "need what some other instance/frame already
+			// created" is the complement of "create it this time." Called by
+			// TypedPass::setup() after setup_func returns true - not a
+			// substitute for setup_func's own need()/create() calls for anything
+			// else conditional.
+			static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+			{
+				builder.need(data.GBuffer_Albedo, FrameGraph::ResourceFlags::Read);
+				builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::Read);
+				builder.need(data.GBuffer_Specular, FrameGraph::ResourceFlags::Read);
+				builder.need(data.GBuffer_Speed, FrameGraph::ResourceFlags::Read);
+				builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::None);
+				builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
+				builder.need(data.RTXReflectionDenoised, FrameGraph::ResourceFlags::Read);
+			}
+			// Which chain link each handler field resolved to, one named slot per
+			// field. Filled from a live frame's finished Context and applied on a
+			// replayed one, so a replay neither re-runs create_always/need_always nor
+			// depends on the order they made their calls in. The id is not stored:
+			// the field fixes it.
+			struct Cache
+			{
+				FrameGraph::ChainIndex GBuffer_Albedo = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex GBuffer_Normals = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex GBuffer_Specular = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex GBuffer_Speed = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex RTXReflectionDenoised = FrameGraph::ChainIndex::Unresolved;
+			};
+
+			static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+			{
+				cache.GBuffer_Albedo = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo);
+				cache.GBuffer_Normals = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Normals, ResourceID::GBuffer_Normals);
+				cache.GBuffer_Specular = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Specular, ResourceID::GBuffer_Specular);
+				cache.GBuffer_Speed = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Speed, ResourceID::GBuffer_Speed);
+				cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
+				cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
+				cache.RTXReflectionDenoised = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionDenoised, ResourceID::RTXReflectionDenoised);
+			}
+
+			// Replay counterpart of create_always/need_always. A field this pass
+			// creates gets its desc recomputed on the link the cache names, so descs
+			// follow the current context instead of being stored in the plan; every
+			// other field is only pointed at its link. Each link is created by exactly
+			// one pass and nothing here reads another resource's desc, so passes can
+			// load in any order. A [Recreate] without [Size]/[Format] copies the
+			// previous link's desc, which LoadGraph does once every pass has loaded.
+			static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+			{
+				builder.load(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo, cache.GBuffer_Albedo);
+				builder.load(data.GBuffer_Normals, ResourceID::GBuffer_Normals, cache.GBuffer_Normals);
+				builder.load(data.GBuffer_Specular, ResourceID::GBuffer_Specular, cache.GBuffer_Specular);
+				builder.load(data.GBuffer_Speed, ResourceID::GBuffer_Speed, cache.GBuffer_Speed);
+				builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
+				builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
+				builder.load(data.RTXReflectionDenoised, ResourceID::RTXReflectionDenoised, cache.RTXReflectionDenoised);
+			}
+
+			// Resources this pass touches, in declaration order, each paired with
+			// whether the pass writes it (own [Write], or the view usage's
+			// [Write] / [Write = {leaves...}] for resources inside a view group).
+			static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+				{ ResourceID::GBuffer_Albedo, false },
+				{ ResourceID::GBuffer_Normals, false },
+				{ ResourceID::GBuffer_Specular, false },
+				{ ResourceID::GBuffer_Speed, false },
+				{ ResourceID::GBuffer_DepthMips, false },
+				{ ResourceID::ResultTexture, true },
+				{ ResourceID::RTXReflectionDenoised, false },
+			};
+			static constexpr uint resource_count = std::size(resource_accesses);
 		};
 
-		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+
+		std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
 		{
-			cache.GBuffer_Albedo = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo);
-			cache.GBuffer_Normals = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Normals, ResourceID::GBuffer_Normals);
-			cache.GBuffer_Specular = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Specular, ResourceID::GBuffer_Specular);
-			cache.GBuffer_Speed = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Speed, ResourceID::GBuffer_Speed);
-			cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
-			cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
-			cache.RTXReflectionDenoised = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionDenoised, ResourceID::RTXReflectionDenoised);
+			return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 		}
 
-		// Replay counterpart of create_always/need_always. A field this pass
-		// creates gets its desc recomputed on the link the cache names, so descs
-		// follow the current context instead of being stored in the plan; every
-		// other field is only pointed at its link. Each link is created by exactly
-		// one pass and nothing here reads another resource's desc, so passes can
-		// load in any order. A [Recreate] without [Size]/[Format] copies the
-		// previous link's desc, which LoadGraph does once every pass has loaded.
-		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
-		{
-			builder.load(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo, cache.GBuffer_Albedo);
-			builder.load(data.GBuffer_Normals, ResourceID::GBuffer_Normals, cache.GBuffer_Normals);
-			builder.load(data.GBuffer_Specular, ResourceID::GBuffer_Specular, cache.GBuffer_Specular);
-			builder.load(data.GBuffer_Speed, ResourceID::GBuffer_Speed, cache.GBuffer_Speed);
-			builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
-			builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
-			builder.load(data.RTXReflectionDenoised, ResourceID::RTXReflectionDenoised, cache.RTXReflectionDenoised);
-		}
+		static constexpr LiteralWStr Name{L"ReflCombine"};
 
-		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass writes it (own [Write], or the view usage's
-		// [Write] / [Write = {leaves...}] for resources inside a view group).
-		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::GBuffer_Albedo, false },
-			{ ResourceID::GBuffer_Normals, false },
-			{ ResourceID::GBuffer_Specular, false },
-			{ ResourceID::GBuffer_Speed, false },
-			{ ResourceID::GBuffer_DepthMips, false },
-			{ ResourceID::ResultTexture, true },
-			{ ResourceID::RTXReflectionDenoised, false },
-		};
-		static constexpr uint resource_count = std::size(resource_accesses);
+		static constexpr PassID ID = PassID::ReflCombine;
+
+
+		using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
+		using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
+
+		render_func_type render_func;
+
+		const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
 	};
-
-
-	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
-	{
-		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
-	}
-
-	static constexpr LiteralWStr Name{L"ReflCombine"};
-
-	static constexpr PassID ID = PassID::ReflCombine;
-
-
-	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
-	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
-
-	render_func_type render_func;
-
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-};
+}
 
 }

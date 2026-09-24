@@ -167,7 +167,7 @@ public:
 							rendered_image->visible = true;
 							buffer_info->visible = false;
 							{
-								Slots::FrameGraph_Debug_Common common;
+								Slots::Dev::FrameGraph_Debug_Common common;
 								common.GetTarget() = rendered_image->texture.texture->texture_2d().rwTexture2D;
 								common.GetTargetSize() = rendered_image->texture.texture->get_desc().as_texture().Dimensions.xy;
 								compute.set(common);
@@ -177,9 +177,9 @@ public:
 
 							if (auto source = dynamic_cast<HAL::Texture2DView*>(info->view.get()))
 							{
-								compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
+								compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Texture2D>();
 								{
-									Slots::FrameGraph_Debug_Texture2D tex2d;
+									Slots::Dev::FrameGraph_Debug_Texture2D tex2d;
 									tex2d.GetSource() = *source;
 									tex2d.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions.xy;
 									tex2d.GetOffset() = offset;
@@ -190,7 +190,7 @@ public:
 							}
 							else if (auto source = dynamic_cast<HAL::Texture3DView*>(info->view.get()))
 							{
-								compute.set_pipeline<PSOS::FrameGraph_Debug_Texture3D>();
+								compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Texture3D>();
 
 
 								mat4x4 view;
@@ -200,7 +200,7 @@ public:
 								camera_3d.frame_move(0.1f);
 								camera_3d.update();
 								{
-									Slots::FrameGraph_Debug_Texture3D tex3d;
+									Slots::Dev::FrameGraph_Debug_Texture3D tex3d;
 									tex3d.GetSource() = *source;
 									tex3d.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions;
 									tex3d.GetCamera() = camera_3d.camera_cb.current;
@@ -211,7 +211,7 @@ public:
 
 							else
 							{
-								compute.set_pipeline<PSOS::FrameGraph_Debug_NotImplemented>();
+								compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_NotImplemented>();
 							}
 
 
@@ -561,7 +561,7 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 
 		auto& compute = context->get_list()->get_compute();
 		{
-			Slots::FrameGraph_Debug_Common common;
+			Slots::Dev::FrameGraph_Debug_Common common;
 			common.GetTarget()             = m_current_tex->texture_2d().rwTexture2D;
 			common.GetTargetSize()         = SZ;
 			common.GetSelectedMip()        = (UINT)m_sel_mip;
@@ -594,8 +594,8 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 
 			if (array_size > 1)
 			{
-				compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2DArray>();
-				Slots::FrameGraph_Debug_Texture2DArray tex2darr;
+				compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Texture2DArray>();
+				Slots::Dev::FrameGraph_Debug_Texture2DArray tex2darr;
 				tex2darr.GetSource()     = *src;
 				tex2darr.GetSourceSize() = res_desc.as_texture().Dimensions.xy;
 				tex2darr.GetOffset()     = snap_pan;
@@ -604,8 +604,8 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 			}
 			else
 			{
-				compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
-				Slots::FrameGraph_Debug_Texture2D tex2d;
+				compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Texture2D>();
+				Slots::Dev::FrameGraph_Debug_Texture2D tex2d;
 				tex2d.GetSource()     = *src;
 				tex2d.GetSourceSize() = res_desc.as_texture().Dimensions.xy;
 				tex2d.GetOffset()     = snap_pan;
@@ -632,8 +632,8 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 				m_cam_3d.update();
 				return m_cam_3d.camera_cb.current;
 			}();
-			compute.set_pipeline<PSOS::FrameGraph_Debug_Texture3D>();
-			Slots::FrameGraph_Debug_Texture3D tex3d;
+			compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Texture3D>();
+			Slots::Dev::FrameGraph_Debug_Texture3D tex3d;
 			tex3d.GetSource()     = *src;
 			tex3d.GetSourceSize() = res_desc.as_texture().Dimensions;
 			tex3d.GetCamera()     = snap_cam_cb;
@@ -645,15 +645,15 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 			if (!src->textureCube.is_written())
 				return;
 
-			compute.set_pipeline<PSOS::FrameGraph_Debug_TextureCube>();
-			Slots::FrameGraph_Debug_TextureCube cube;
+			compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_TextureCube>();
+			Slots::Dev::FrameGraph_Debug_TextureCube cube;
 			cube.GetSource()     = src->textureCube;
 			cube.GetSourceSize() = res_desc.as_texture().Dimensions.xy;
 			compute.set(cube);
 		}
 		else
 		{
-			compute.set_pipeline<PSOS::FrameGraph_Debug_NotImplemented>();
+			compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_NotImplemented>();
 		}
 		compute.dispatch(uint3(SZ, 1));
 	}

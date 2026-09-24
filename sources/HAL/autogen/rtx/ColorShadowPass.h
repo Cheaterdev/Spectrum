@@ -5,25 +5,28 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 #pragma once
-
-struct ColorShadowPass: public RaytracePass<ColorShadowPass>
+namespace Raytrace
 {
-	using Payload = Table::ColorShadowPayload;
 
-	using LocalData =  Slots::MaterialInfo;
+	struct ColorShadowPass: public RaytracePass<ColorShadowPass>
+	{
+		using Payload = Table::Raytrace::ColorShadowPayload;
+
+		using LocalData =  Slots::Meshes::MaterialInfo;
 
 
-	static const constexpr uint ID = 2;
+		static const constexpr uint ID = 2;
 
-	static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
-	static const constexpr std::wstring_view name = L"ColorShadowPass_GROUP";
-	static const constexpr std::wstring_view hit_name = L"ColorShadowClosestHitShader";
-	static const constexpr std::wstring_view miss_name = L"ColorShadowMissShader";
-	// Empty when this pass doesn't declare an any_hit stage -- always emitted
-	// (rather than conditionally, per pass) so RaytracePass<Desc>'s init()/
-	// init_for_material() can check Desc::any_hit_name.empty() uniformly
-	// instead of needing per-Desc SFINAE for a member that may not exist.
-	static const constexpr std::wstring_view any_hit_name = L"ColorShadowAnyHitShader";
+		static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
+		static const constexpr std::wstring_view name = L"ColorShadowPass_GROUP";
+		static const constexpr std::wstring_view hit_name = L"ColorShadowClosestHitShader";
+		static const constexpr std::wstring_view miss_name = L"ColorShadowMissShader";
+		// Empty when this pass doesn't declare an any_hit stage -- always emitted
+		// (rather than conditionally, per pass) so RaytracePass<Desc>'s init()/
+		// init_for_material() can check Desc::any_hit_name.empty() uniformly
+		// instead of needing per-Desc SFINAE for a member that may not exist.
+		static const constexpr std::wstring_view any_hit_name = L"ColorShadowAnyHitShader";
 
-	static const constexpr bool per_material = true;
-};
+		static const constexpr bool per_material = true;
+	};
+}

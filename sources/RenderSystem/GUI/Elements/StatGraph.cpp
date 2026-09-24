@@ -314,12 +314,12 @@ namespace GUI
                 auto& graphics = list->get_graphics();
                 graphics.set_signature(Layouts::DefaultLayout);
 
-                RT::SingleColor rt;
+                RT::Frame::SingleColor rt;
                 rt.GetColor() = gpu->output_view.renderTarget;
                 graphics.set_rtv(rt, HAL::RTOptions::Default | HAL::RTOptions::ClearColor,
                                  0, 0, background_color);
 
-                Slots::StatGraphLine sl;
+                Slots::Dev::StatGraphLine sl;
                 sl.GetCount()     = (uint32_t)count;
                 sl.GetWidth()     = (uint32_t)tex_size.x;
                 sl.GetHeight()    = (uint32_t)tex_size.y;
@@ -332,7 +332,7 @@ namespace GUI
                 sl.GetSamples()   = samples_view.structuredBuffer;
 
                 graphics.set(sl);
-                graphics.set_pipeline<PSOS::StatGraphLines>();
+                graphics.set_pipeline<PSOS::Dev::StatGraphLines>();
                 graphics.set_topology(HAL::PrimitiveTopologyType::LINE, HAL::PrimitiveTopologyFeed::STRIP);
                 graphics.draw((uint32_t)count);
             }
@@ -342,7 +342,7 @@ namespace GUI
                 auto& compute = list->get_compute();
                 compute.set_signature(Layouts::DefaultLayout);
 
-                Slots::StatGraph sg;
+                Slots::Dev::StatGraph sg;
                 sg.GetCount()     = (uint32_t)count;
                 sg.GetWidth()     = (uint32_t)tex_size.x;
                 sg.GetHeight()    = (uint32_t)tex_size.y;
@@ -357,7 +357,7 @@ namespace GUI
                 sg.GetOutput()    = gpu->output_view.rwTexture2D;
 
                 compute.set(sg);
-                compute.set_pipeline<PSOS::StatGraph>();
+                compute.set_pipeline<PSOS::Dev::StatGraph>();
                 compute.dispatch(tex_size, ivec2(8, 8));
             }
 

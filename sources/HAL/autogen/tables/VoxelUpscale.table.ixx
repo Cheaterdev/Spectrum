@@ -14,48 +14,54 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VoxelUpscale
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::VoxelUpscale;
-		HLSL::Texture2D<float4> tex_downsampled;
-		HLSL::Texture2D<float4> tex_gi_prev;
-		HLSL::Texture2D<float> tex_depth_prev;
-		HLSL::Texture2D<float4>& GetTex_downsampled() { return tex_downsampled; }
-		HLSL::Texture2D<float4>& GetTex_gi_prev() { return tex_gi_prev; }
-		HLSL::Texture2D<float>& GetTex_depth_prev() { return tex_depth_prev; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Voxel
 		{
-			compiler.compile(tex_downsampled, "VoxelUpscale::tex_downsampled");
-			compiler.compile(tex_gi_prev, "VoxelUpscale::tex_gi_prev");
-			compiler.compile(tex_depth_prev, "VoxelUpscale::tex_depth_prev");
-		}
-		struct Compiled
-		{
-			uint tex_downsampled; // Texture2D<float4>
-			uint tex_gi_prev; // Texture2D<float4>
-			uint tex_depth_prev; // Texture2D<float>
+			struct VoxelUpscale
+			{
+				static constexpr SlotID ID = SlotID::VoxelUpscale;
+				HLSL::Texture2D<float4> tex_downsampled;
+				HLSL::Texture2D<float4> tex_gi_prev;
+				HLSL::Texture2D<float> tex_depth_prev;
+				HLSL::Texture2D<float4>& GetTex_downsampled() { return tex_downsampled; }
+				HLSL::Texture2D<float4>& GetTex_gi_prev() { return tex_gi_prev; }
+				HLSL::Texture2D<float>& GetTex_depth_prev() { return tex_depth_prev; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(tex_downsampled, "VoxelUpscale::tex_downsampled");
+					compiler.compile(tex_gi_prev, "VoxelUpscale::tex_gi_prev");
+					compiler.compile(tex_depth_prev, "VoxelUpscale::tex_depth_prev");
+				}
+				struct Compiled
+				{
+					uint tex_downsampled; // Texture2D<float4>
+					uint tex_gi_prev; // Texture2D<float4>
+					uint tex_depth_prev; // Texture2D<float>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VoxelUpscale";
+				static std::string get_typename()
+				{
+					return "Tables::VoxelUpscale";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

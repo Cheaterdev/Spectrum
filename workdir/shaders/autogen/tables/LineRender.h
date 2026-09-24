@@ -8,8 +8,12 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "VSLine.h"
-struct LineRender
+namespace UI
 {
-	uint vb; // StructuredBuffer<VSLine>
-	StructuredBuffer<VSLine> GetVb() { return ResourceDescriptorHeap[vb]; }
-};
+	struct LineRender
+	{
+		uint vb; // StructuredBuffer<VSLine>
+		StructuredBuffer<VSLine> GetVb() { return ResourceDescriptorHeap[vb]; }
+	};
+}
+using UI::LineRender;

@@ -20,6 +20,6 @@ export namespace Constants
 {
 {% for v in parsed.consts -%}
 {%- set c = parsed.consts[v] -%}
-	constexpr auto {{c.name}} = {{c.value_atom.expr}};
+	{{ c.ns_open }}constexpr auto {{c.name}} = {{c.value_atom.expr}};{{ c.ns_braces }}
 {% endfor -%}
 }

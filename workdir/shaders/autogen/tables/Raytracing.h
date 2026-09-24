@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct Raytracing
+namespace Raytrace
 {
-	uint scene; // RaytracingAccelerationStructure
-	RaytracingAccelerationStructure GetScene() { return ResourceDescriptorHeap[scene]; }
-};
+	struct Raytracing
+	{
+		uint scene; // RaytracingAccelerationStructure
+		RaytracingAccelerationStructure GetScene() { return ResourceDescriptorHeap[scene]; }
+	};
+}
+using Raytrace::Raytracing;

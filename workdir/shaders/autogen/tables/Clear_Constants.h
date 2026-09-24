@@ -7,14 +7,21 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct Clear_Constants
+namespace Denoise
 {
-	float gDebug; // float
-	float gViewZScale; // float
-	float gDenoisingRange; // float
-	uint gOut; // RWTexture2D<float4>
-	float GetGDebug() { return gDebug; }
-	float GetGViewZScale() { return gViewZScale; }
-	float GetGDenoisingRange() { return gDenoisingRange; }
-	RWTexture2D<float4> GetGOut() { return ResourceDescriptorHeap[gOut]; }
-};
+	namespace NRD
+	{
+		struct Clear_Constants
+		{
+			float gDebug; // float
+			float gViewZScale; // float
+			float gDenoisingRange; // float
+			uint gOut; // RWTexture2D<float4>
+			float GetGDebug() { return gDebug; }
+			float GetGViewZScale() { return gViewZScale; }
+			float GetGDenoisingRange() { return gDenoisingRange; }
+			RWTexture2D<float4> GetGOut() { return ResourceDescriptorHeap[gOut]; }
+		};
+	}
+}
+using Denoise::NRD::Clear_Constants;

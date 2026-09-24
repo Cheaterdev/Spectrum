@@ -26,10 +26,10 @@ void BRDF::create_new()
 
 	HAL::ComputeContext& compute_context = list->get_compute();
 
-	compute_context.set_pipeline<PSOS::BRDF>();
+	compute_context.set_pipeline<PSOS::Environment::BRDF>();
 
 	{
-		Slots::BRDF data;
+		Slots::Environment::BRDF data;
 		data.GetOutput() = texture->texture_3d().mips[0].rwTexture3D;
 		compute_context.set(data);
 	}

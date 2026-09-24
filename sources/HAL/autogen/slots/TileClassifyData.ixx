@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct TileClassifyData :public DataHolder<TileClassifyData, SlotID::TileClassifyData, Table::TileClassifyData, DefaultLayout::Instance0>
+	namespace Meshes
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		TileClassifyData() = default;
-	};
+		struct TileClassifyData :public DataHolder<TileClassifyData, SlotID::TileClassifyData, Table::Meshes::TileClassifyData, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			TileClassifyData() = default;
+		};
+	}
 }

@@ -16,72 +16,78 @@ import :Autogen.Tables.DDGIProbes;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DDGIProbeTraceData
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::DDGIProbeTraceData;
-		HLSL::Texture2DArray<float4> prev_irradiance;
-		HLSL::Texture2DArray<float2> prev_visibility;
-		HLSL::StructuredBuffer<uint> probe_residency;
-		HLSL::StructuredBuffer<uint> compacted_list;
-		HLSL::RWStructuredBuffer<float4> probe_ray_radiance;
-		HLSL::RWStructuredBuffer<uint> residency_pending;
-		DDGIInfo info;
-		DDGIProbes probes;
-		HLSL::RWStructuredBuffer<float4>& GetProbe_ray_radiance() { return probe_ray_radiance; }
-		HLSL::Texture2DArray<float4>& GetPrev_irradiance() { return prev_irradiance; }
-		HLSL::Texture2DArray<float2>& GetPrev_visibility() { return prev_visibility; }
-		HLSL::StructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
-		HLSL::StructuredBuffer<uint>& GetCompacted_list() { return compacted_list; }
-		HLSL::RWStructuredBuffer<uint>& GetResidency_pending() { return residency_pending; }
-		DDGIInfo& GetInfo() { return info; }
-		DDGIProbes& GetProbes() { return probes; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace DDGI
 		{
-			compiler.compile(prev_irradiance, "DDGIProbeTraceData::prev_irradiance");
-			compiler.compile(prev_visibility, "DDGIProbeTraceData::prev_visibility");
-			compiler.compile(probe_residency, "DDGIProbeTraceData::probe_residency");
-			compiler.compile(compacted_list, "DDGIProbeTraceData::compacted_list");
-			compiler.compile(probe_ray_radiance, "DDGIProbeTraceData::probe_ray_radiance");
-			compiler.compile(residency_pending, "DDGIProbeTraceData::residency_pending");
-			compiler.compile(info, "DDGIProbeTraceData::info");
-			compiler.compile(probes, "DDGIProbeTraceData::probes");
-		}
-		struct Compiled
-		{
-			uint prev_irradiance; // Texture2DArray<float4>
-			uint prev_visibility; // Texture2DArray<float2>
-			uint probe_residency; // StructuredBuffer<uint>
-			uint compacted_list; // StructuredBuffer<uint>
-			uint probe_ray_radiance; // RWStructuredBuffer<float4>
-			uint residency_pending; // RWStructuredBuffer<uint>
-			DDGIInfo::Compiled info; // DDGIInfo
-			DDGIProbes::Compiled probes; // DDGIProbes
+			struct DDGIProbeTraceData
+			{
+				static constexpr SlotID ID = SlotID::DDGIProbeTraceData;
+				HLSL::Texture2DArray<float4> prev_irradiance;
+				HLSL::Texture2DArray<float2> prev_visibility;
+				HLSL::StructuredBuffer<uint> probe_residency;
+				HLSL::StructuredBuffer<uint> compacted_list;
+				HLSL::RWStructuredBuffer<float4> probe_ray_radiance;
+				HLSL::RWStructuredBuffer<uint> residency_pending;
+				Table::GI::DDGI::DDGIInfo info;
+				Table::GI::DDGI::DDGIProbes probes;
+				HLSL::RWStructuredBuffer<float4>& GetProbe_ray_radiance() { return probe_ray_radiance; }
+				HLSL::Texture2DArray<float4>& GetPrev_irradiance() { return prev_irradiance; }
+				HLSL::Texture2DArray<float2>& GetPrev_visibility() { return prev_visibility; }
+				HLSL::StructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
+				HLSL::StructuredBuffer<uint>& GetCompacted_list() { return compacted_list; }
+				HLSL::RWStructuredBuffer<uint>& GetResidency_pending() { return residency_pending; }
+				Table::GI::DDGI::DDGIInfo& GetInfo() { return info; }
+				Table::GI::DDGI::DDGIProbes& GetProbes() { return probes; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(prev_irradiance, "DDGIProbeTraceData::prev_irradiance");
+					compiler.compile(prev_visibility, "DDGIProbeTraceData::prev_visibility");
+					compiler.compile(probe_residency, "DDGIProbeTraceData::probe_residency");
+					compiler.compile(compacted_list, "DDGIProbeTraceData::compacted_list");
+					compiler.compile(probe_ray_radiance, "DDGIProbeTraceData::probe_ray_radiance");
+					compiler.compile(residency_pending, "DDGIProbeTraceData::residency_pending");
+					compiler.compile(info, "DDGIProbeTraceData::info");
+					compiler.compile(probes, "DDGIProbeTraceData::probes");
+				}
+				struct Compiled
+				{
+					uint prev_irradiance; // Texture2DArray<float4>
+					uint prev_visibility; // Texture2DArray<float2>
+					uint probe_residency; // StructuredBuffer<uint>
+					uint compacted_list; // StructuredBuffer<uint>
+					uint probe_ray_radiance; // RWStructuredBuffer<float4>
+					uint residency_pending; // RWStructuredBuffer<uint>
+					Table::GI::DDGI::DDGIInfo::Compiled info; // DDGIInfo
+					Table::GI::DDGI::DDGIProbes::Compiled probes; // DDGIProbes
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(info);
-				ar& NVP(probes);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(info);
+						ar& NVP(probes);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::DDGIProbeTraceData";
+				static std::string get_typename()
+				{
+					return "Tables::DDGIProbeTraceData";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(info);
+					ar& NVP(probes);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(info);
-			ar& NVP(probes);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

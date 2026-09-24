@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct SIGMA_SplitScreenResources :public DataHolder<SIGMA_SplitScreenResources, SlotID::SIGMA_SplitScreenResources, Table::SIGMA_SplitScreenResources, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		SIGMA_SplitScreenResources() = default;
-	};
+		namespace NRD
+		{
+			struct SIGMA_SplitScreenResources :public DataHolder<SIGMA_SplitScreenResources, SlotID::SIGMA_SplitScreenResources, Table::Denoise::NRD::SIGMA_SplitScreenResources, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				SIGMA_SplitScreenResources() = default;
+			};
+		}
+	}
 }

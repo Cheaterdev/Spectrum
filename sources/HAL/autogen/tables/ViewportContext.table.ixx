@@ -14,34 +14,37 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct ViewportContext
+	namespace Frame
 	{
-		static constexpr SlotID ID = SlotID::ViewportContext;
-		int2 frame_size;
-		int2 upscale_size;
-		int2& GetFrame_size() { return frame_size; }
-		int2& GetUpscale_size() { return upscale_size; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct ViewportContext
 		{
-			compiler.compile(frame_size, "ViewportContext::frame_size");
-			compiler.compile(upscale_size, "ViewportContext::upscale_size");
-		}
-		using Compiled = ViewportContext;
+			static constexpr SlotID ID = SlotID::ViewportContext;
+			int2 frame_size;
+			int2 upscale_size;
+			int2& GetFrame_size() { return frame_size; }
+			int2& GetUpscale_size() { return upscale_size; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(frame_size, "ViewportContext::frame_size");
+				compiler.compile(upscale_size, "ViewportContext::upscale_size");
+			}
+			using Compiled = ViewportContext;
 
-		static std::string get_typename()
-		{
-			return "Tables::ViewportContext";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(frame_size);
-			ar& NVP(upscale_size);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::ViewportContext";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(frame_size);
+				ar& NVP(upscale_size);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

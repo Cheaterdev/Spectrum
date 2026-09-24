@@ -14,30 +14,33 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct Instance
+	namespace Editor
 	{
-		static constexpr SlotID ID = SlotID::Instance;
-		uint instanceId;
-		uint& GetInstanceId() { return instanceId; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct Instance
 		{
-			compiler.compile(instanceId, "Instance::instanceId");
-		}
-		using Compiled = Instance;
+			static constexpr SlotID ID = SlotID::Instance;
+			uint instanceId;
+			uint& GetInstanceId() { return instanceId; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(instanceId, "Instance::instanceId");
+			}
+			using Compiled = Instance;
 
-		static std::string get_typename()
-		{
-			return "Tables::Instance";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(instanceId);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::Instance";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(instanceId);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

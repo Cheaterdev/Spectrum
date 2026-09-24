@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct DispatchArguments
+namespace Meshes
 {
-	uint3 counts; // uint3
-	uint3 GetCounts() { return counts; }
-};
+	struct DispatchArguments
+	{
+		uint3 counts; // uint3
+		uint3 GetCounts() { return counts; }
+	};
+}
+using Meshes::DispatchArguments;

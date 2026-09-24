@@ -7,12 +7,19 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct VSMCopyPageDepthBatch
+namespace Shadows
 {
-	uint atlas; // Texture2DArray<float>
-	uint dirty_slots; // StructuredBuffer<uint>
-	uint dst_mip0; // RWTexture2DArray<float2>
-	Texture2DArray<float> GetAtlas() { return ResourceDescriptorHeap[atlas]; }
-	RWTexture2DArray<float2> GetDst_mip0() { return ResourceDescriptorHeap[dst_mip0]; }
-	StructuredBuffer<uint> GetDirty_slots() { return ResourceDescriptorHeap[dirty_slots]; }
-};
+	namespace VSM
+	{
+		struct VSMCopyPageDepthBatch
+		{
+			uint atlas; // Texture2DArray<float>
+			uint dirty_slots; // StructuredBuffer<uint>
+			uint dst_mip0; // RWTexture2DArray<float2>
+			Texture2DArray<float> GetAtlas() { return ResourceDescriptorHeap[atlas]; }
+			RWTexture2DArray<float2> GetDst_mip0() { return ResourceDescriptorHeap[dst_mip0]; }
+			StructuredBuffer<uint> GetDirty_slots() { return ResourceDescriptorHeap[dirty_slots]; }
+		};
+	}
+}
+using Shadows::VSM::VSMCopyPageDepthBatch;

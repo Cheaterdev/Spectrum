@@ -7,10 +7,17 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct NRD_UnpackDebugParams
+namespace Denoise
 {
-	uint Packed; // Texture2D<float4>
-	uint Unpacked; // RWTexture2D<float4>
-	Texture2D<float4> GetPacked() { return ResourceDescriptorHeap[Packed]; }
-	RWTexture2D<float4> GetUnpacked() { return ResourceDescriptorHeap[Unpacked]; }
-};
+	namespace NRD
+	{
+		struct NRD_UnpackDebugParams
+		{
+			uint Packed; // Texture2D<float4>
+			uint Unpacked; // RWTexture2D<float4>
+			Texture2D<float4> GetPacked() { return ResourceDescriptorHeap[Packed]; }
+			RWTexture2D<float4> GetUnpacked() { return ResourceDescriptorHeap[Unpacked]; }
+		};
+	}
+}
+using Denoise::NRD::NRD_UnpackDebugParams;

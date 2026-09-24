@@ -7,20 +7,27 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct DDGIInfo
+namespace GI
 {
-	float4 grid_min; // float4
-	float4 probe_spacing; // float4
-	uint4 probe_counts; // uint4
-	uint4 rays_per_probe; // uint4
-	uint4 atlas_info; // uint4
-	uint4 cascade_info; // uint4
-	uint4 flags; // uint4
-	float4 GetGrid_min() { return grid_min; }
-	float4 GetProbe_spacing() { return probe_spacing; }
-	uint4 GetProbe_counts() { return probe_counts; }
-	uint4 GetRays_per_probe() { return rays_per_probe; }
-	uint4 GetAtlas_info() { return atlas_info; }
-	uint4 GetCascade_info() { return cascade_info; }
-	uint4 GetFlags() { return flags; }
-};
+	namespace DDGI
+	{
+		struct DDGIInfo
+		{
+			float4 grid_min; // float4
+			float4 probe_spacing; // float4
+			uint4 probe_counts; // uint4
+			uint4 rays_per_probe; // uint4
+			uint4 atlas_info; // uint4
+			uint4 cascade_info; // uint4
+			uint4 flags; // uint4
+			float4 GetGrid_min() { return grid_min; }
+			float4 GetProbe_spacing() { return probe_spacing; }
+			uint4 GetProbe_counts() { return probe_counts; }
+			uint4 GetRays_per_probe() { return rays_per_probe; }
+			uint4 GetAtlas_info() { return atlas_info; }
+			uint4 GetCascade_info() { return cascade_info; }
+			uint4 GetFlags() { return flags; }
+		};
+	}
+}
+using GI::DDGI::DDGIInfo;

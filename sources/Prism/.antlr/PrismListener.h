@@ -17,6 +17,15 @@ public:
   virtual void enterParse(PrismParser::ParseContext *ctx) = 0;
   virtual void exitParse(PrismParser::ParseContext *ctx) = 0;
 
+  virtual void enterDefinition(PrismParser::DefinitionContext *ctx) = 0;
+  virtual void exitDefinition(PrismParser::DefinitionContext *ctx) = 0;
+
+  virtual void enterNamespace_definition(PrismParser::Namespace_definitionContext *ctx) = 0;
+  virtual void exitNamespace_definition(PrismParser::Namespace_definitionContext *ctx) = 0;
+
+  virtual void enterNamespace_header(PrismParser::Namespace_headerContext *ctx) = 0;
+  virtual void exitNamespace_header(PrismParser::Namespace_headerContext *ctx) = 0;
+
   virtual void enterConst_definition(PrismParser::Const_definitionContext *ctx) = 0;
   virtual void exitConst_definition(PrismParser::Const_definitionContext *ctx) = 0;
 

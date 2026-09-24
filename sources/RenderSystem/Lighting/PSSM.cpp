@@ -44,7 +44,7 @@ PSSM::PSSM()
 
 	// setup() is fully generated (pssm.prism's own [RunAlways]).
 
-	m_global_render = [this](Passes::PSSM_Global::Context& data, FrameGraph::FrameContext& context)
+	m_global_render = [this](Passes::Shadows::PSSM::PSSM_Global::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& command_list = context.get_list();
 		auto& graphics     = command_list->get_graphics();
@@ -85,13 +85,13 @@ PSSM::PSSM()
 		 command_list->get_copy().update(*data.global_camera,0, std::span{&light_cam.camera_cb.current, 1});
 		
 		{
-			RT::DepthOnly rt;
+			RT::Frame::DepthOnly rt;
 			rt.GetDepth() = data.global_depth->depthStencil;
 			command_list->get_graphics().set_rtv(rt, RTOptions::Default | RTOptions::ClearDepth);
 		}
 
 		{
-			Slots::FrameInfo frameInfo;
+			Slots::Frame::FrameInfo frameInfo;
 			frameInfo.GetBrdf()   = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
 			frameInfo.GetCamera() = light_cam.camera_cb.current;
 			graphics.set(frameInfo);
@@ -109,7 +109,7 @@ PSSM::PSSM()
 		// PSSM_Cameras are auto-created/needed from their own [Always]+[Size]+
 		// [Format]+[Optional], keyed off data.pass_index.
 
-		m_cascade_render[i] = [this, i](Passes::PSSM_Cascade::Context& data, FrameGraph::FrameContext& context)
+		m_cascade_render[i] = [this, i](Passes::Shadows::PSSM::PSSM_Cascade::Context& data, FrameGraph::FrameContext& context)
 		{
 			auto& command_list = context.get_list();
 			auto& graphics     = command_list->get_graphics();
@@ -165,16 +165,16 @@ PSSM::PSSM()
 
 
 			//data.PSSM_Cameras->write(i * sizeof(camera::shader_params),
-			//	reinterpret_cast<Table::Camera*>(&light_cam.camera_cb.current), 1);
+			//	reinterpret_cast<Table::Frame::Camera*>(&light_cam.camera_cb.current), 1);
 
 			{
-				RT::DepthOnly rt;
+				RT::Frame::DepthOnly rt;
 				rt.GetDepth() = depth_tex.depthStencil;
 				command_list->get_graphics().set_rtv(rt, RTOptions::Default | RTOptions::ClearDepth);
 			}
 
 			{
-				Slots::FrameInfo frameInfo;
+				Slots::Frame::FrameInfo frameInfo;
 				frameInfo.GetBrdf()   = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
 				frameInfo.GetCamera() = light_cam.camera_cb.current;
 				graphics.set(frameInfo);
@@ -190,7 +190,7 @@ PSSM::PSSM()
 
 	// setup() is fully generated (pssm.prism's own [RunAlways]).
 
-	m_mask_render = [this](Passes::PSSM_GenerateMask::Context& data, FrameGraph::FrameContext& context)
+	m_mask_render = [this](Passes::Shadows::PSSM::PSSM_GenerateMask::Context& data, FrameGraph::FrameContext& context)
 	{
 		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
@@ -202,7 +202,7 @@ PSSM::PSSM()
 		context.graph->set_slot(SlotID::FrameInfo, compute);
 
 		{
-			Slots::PSSMLighting lighting;
+			Slots::Shadows::PSSM::PSSMLighting lighting;
 			gbuffer.SetTable(lighting.GetGbuffer());
 			graphics.set(lighting);
 		}
@@ -212,15 +212,15 @@ PSSM::PSSM()
 		graphics.set_scissor(data.LightMask->get_scissor());
 
 		{
-			RT::SingleColor rt;
+			RT::Frame::SingleColor rt;
 			rt.GetColor() = data.LightMask->renderTarget;
 			graphics.set_rtv(rt);
 		}
 
-		graphics.set_pipeline<PSOS::PSSMMask>();
+		graphics.set_pipeline<PSOS::Shadows::PSSM::PSSMMask>();
 
 		{
-			Slots::PSSMData pssmdata;
+			Slots::Shadows::PSSM::PSSMData pssmdata;
 			pssmdata.GetLight_buffer()  = data.PSSM_Depths->texture2DArray;
 			pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
 			graphics.set(pssmdata);
@@ -229,7 +229,7 @@ PSSM::PSSM()
 		for (int i = renders_size - 1; i >= 0; i--)
 		{
 			{
-				Slots::PSSMConstants constants;
+				Slots::Shadows::PSSM::PSSMConstants constants;
 				constants.GetLevel() = i;
 				constants.GetTime()  = 0;
 				graphics.set(constants);
@@ -242,7 +242,7 @@ PSSM::PSSM()
 
 	// setup() is fully generated (pssm.prism's own [RunAlways]).
 
-	m_combine_render = [this](Passes::PSSM_Combine::Context& data, FrameGraph::FrameContext& context)
+	m_combine_render = [this](Passes::Shadows::PSSM::PSSM_Combine::Context& data, FrameGraph::FrameContext& context)
 	{
 		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
@@ -252,7 +252,7 @@ PSSM::PSSM()
 		context.graph->set_slot(SlotID::FrameInfo, compute);
 
 		{
-			Slots::PSSMLighting lighting;
+			Slots::Shadows::PSSM::PSSMLighting lighting;
 			gbuffer.SetTable(lighting.GetGbuffer());
 			if (data.ShadowMask)
 				lighting.GetLight_mask() = data.ShadowMask->texture2D;
@@ -262,7 +262,7 @@ PSSM::PSSM()
 			compute.set(lighting);
 		}
 
-		compute.set_pipeline<PSOS::PSSMApplyCompute>();
+		compute.set_pipeline<PSOS::Shadows::PSSM::PSSMApplyCompute>();
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 }

@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct GBufferQuality :public DataHolder<GBufferQuality, SlotID::GBufferQuality, Table::GBufferQuality, DefaultLayout::Instance2>
+	namespace Meshes
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		GBufferQuality() = default;
-	};
+		struct GBufferQuality :public DataHolder<GBufferQuality, SlotID::GBufferQuality, Table::Meshes::GBufferQuality, ::Frame::DefaultLayout::Instance2>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			GBufferQuality() = default;
+		};
+	}
 }

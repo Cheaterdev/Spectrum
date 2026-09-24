@@ -14,34 +14,37 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DebugStruct
+	namespace Dev
 	{
-		static constexpr SlotID ID = SlotID::DebugStruct;
-		uint format_id;
-		uint4 args;
-		uint& GetFormat_id() { return format_id; }
-		uint4& GetArgs() { return args; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct DebugStruct
 		{
-			compiler.compile(format_id, "DebugStruct::format_id");
-			compiler.compile(args, "DebugStruct::args");
-		}
-		using Compiled = DebugStruct;
+			static constexpr SlotID ID = SlotID::DebugStruct;
+			uint format_id;
+			uint4 args;
+			uint& GetFormat_id() { return format_id; }
+			uint4& GetArgs() { return args; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(format_id, "DebugStruct::format_id");
+				compiler.compile(args, "DebugStruct::args");
+			}
+			using Compiled = DebugStruct;
 
-		static std::string get_typename()
-		{
-			return "Tables::DebugStruct";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(format_id);
-			ar& NVP(args);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::DebugStruct";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(format_id);
+				ar& NVP(args);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

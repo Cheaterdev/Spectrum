@@ -7,10 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct DownsampleDepthMip
+namespace Utility
 {
-	uint srcMip; // Texture2D<float>
-	uint dstMip; // RWTexture2D<float>
-	Texture2D<float> GetSrcMip() { return ResourceDescriptorHeap[srcMip]; }
-	RWTexture2D<float> GetDstMip() { return ResourceDescriptorHeap[dstMip]; }
-};
+	struct DownsampleDepthMip
+	{
+		uint srcMip; // Texture2D<float>
+		uint dstMip; // RWTexture2D<float>
+		Texture2D<float> GetSrcMip() { return ResourceDescriptorHeap[srcMip]; }
+		RWTexture2D<float> GetDstMip() { return ResourceDescriptorHeap[dstMip]; }
+	};
+}
+using Utility::DownsampleDepthMip;

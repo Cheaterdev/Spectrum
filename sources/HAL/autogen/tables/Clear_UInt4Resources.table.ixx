@@ -14,40 +14,46 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct Clear_UInt4Resources
+	namespace Denoise
 	{
-		static constexpr SlotID ID = SlotID::Clear_UInt4Resources;
-		HLSL::RWTexture2D<uint4> gOut;
-		HLSL::RWTexture2D<uint4>& GetGOut() { return gOut; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace NRD
 		{
-			compiler.compile(gOut, "Clear_UInt4Resources::gOut");
-		}
-		struct Compiled
-		{
-			uint gOut; // RWTexture2D<uint4>
+			struct Clear_UInt4Resources
+			{
+				static constexpr SlotID ID = SlotID::Clear_UInt4Resources;
+				HLSL::RWTexture2D<uint4> gOut;
+				HLSL::RWTexture2D<uint4>& GetGOut() { return gOut; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(gOut, "Clear_UInt4Resources::gOut");
+				}
+				struct Compiled
+				{
+					uint gOut; // RWTexture2D<uint4>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::Clear_UInt4Resources";
+				static std::string get_typename()
+				{
+					return "Tables::Clear_UInt4Resources";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

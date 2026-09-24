@@ -23,7 +23,7 @@ export{
 		std::vector<T> UniqueVertexIndices;
 		std::vector<T> PrimitiveIndices;
 
-		Table::MeshletCullData cull_data;
+		Table::Meshes::MeshletCullData cull_data;
 
 	private:
 		SERIALIZE()
@@ -104,9 +104,9 @@ export{
 	public:
 		HAL::RaytracingAccelerationStructure::ptr ras;
 
-		HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
+		HAL::StructuredBufferView<Table::Meshes::mesh_vertex_input> vertex_buffer_view;
 		HAL::StructuredBufferView<UINT32> index_buffer_view;
-	HAL::StructuredBufferView<Table::Meshlet> meshet_view;
+	HAL::StructuredBufferView<Table::Meshes::Meshlet> meshet_view;
 
 		DrawIndexedArguments draw_arguments;
 		DispatchMeshArguments dispatch_mesh_arguments;
@@ -132,7 +132,7 @@ export{
 	{
 	public:
 		using ptr = std::shared_ptr<MeshData>;
-		std::vector<Table::mesh_vertex_input::Compiled> vertex_buffer;
+		std::vector<Table::Meshes::mesh_vertex_input::Compiled> vertex_buffer;
 		std::vector<UINT32> index_buffer;
 
 		std::vector<MeshInfo> meshes;
@@ -163,12 +163,12 @@ export{
 		TypedHandle<HAL::InstanceDesc> ras_handle;
 
 
-		HAL::StructuredBufferView<Table::mesh_vertex_input>		vertex_buffer_view;
+		HAL::StructuredBufferView<Table::Meshes::mesh_vertex_input>		vertex_buffer_view;
 		HAL::StructuredBufferView<UINT32>						index_buffer_view;
 		HAL::StructuredBufferView<UINT32>						unique_indices;
 		HAL::StructuredBufferView<UINT32>						primitive_indices;
-		HAL::StructuredBufferView<Table::Meshlet>				meshlets;
-		HAL::StructuredBufferView<Table::MeshletCullData>		meshlet_cull_datas;
+		HAL::StructuredBufferView<Table::Meshes::Meshlet>				meshlets;
+		HAL::StructuredBufferView<Table::Meshes::MeshletCullData>		meshlet_cull_datas;
 
 		std::vector<CompiledMeshInfo>	meshes;
 		std::vector<MaterialAsset::ref> materials;
@@ -239,7 +239,7 @@ export{
 
 		friend class stencil_renderer;
 
-			Slots::MeshInstanceInfo::Compiled mesh_instance_info;
+			Slots::Meshes::MeshInstanceInfo::Compiled mesh_instance_info;
 		std::mutex m;
 		void init_asset();
 		void update_nodes();
@@ -248,13 +248,13 @@ export{
 		bool ras_inited = false;
 		//std::vector<RaytracingAccelerationStructure::ptr> raytracing_as;
 
-		TypedHandle<Table::MeshCommandData::Compiled> meshpart_handle;
-		TypedHandle<Table::RaytraceInstanceInfo::Compiled> instance_handle;
+		TypedHandle<Table::Meshes::MeshCommandData::Compiled> meshpart_handle;
+		TypedHandle<Table::Meshes::RaytraceInstanceInfo::Compiled> instance_handle;
 		TypedHandle<HAL::InstanceDesc> ras_handle;
 
 		size_t nodes_count;
 		size_t rendering_count;
-		HAL::StructuredBufferView<Table::node_data> nodes_buffer_view;
+		HAL::StructuredBufferView<Table::Meshes::node_data> nodes_buffer_view;
 		bool need_update_mats = false;
 	public:
 		MESH_TYPE type = MESH_TYPE::STATIC;
@@ -268,13 +268,13 @@ export{
 		};
 
 
-		TypedHandle<Table::node_data::Compiled> nodes_handle;
+		TypedHandle<Table::Meshes::node_data::Compiled> nodes_handle;
 		struct render_info
 		{
 
 			std::shared_ptr<Primitive> primitive;
 			std::shared_ptr<Primitive> primitive_global;
-			Slots::MeshInfo mesh_info;
+			Slots::Meshes::MeshInfo mesh_info;
 
 			DrawIndexedArguments draw_arguments;
 			DispatchMeshArguments dispatch_mesh_arguments;
@@ -286,11 +286,11 @@ export{
 			mat4x4 global_mat;
 
 			//compiled
-			Slots::MeshInfo::Compiled compiled_mesh_info;
-			Slots::MeshInstanceInfo::Compiled mesh_instance_info;
+			Slots::Meshes::MeshInfo::Compiled compiled_mesh_info;
+			Slots::Meshes::MeshInstanceInfo::Compiled mesh_instance_info;
 			HAL::RaytracingAccelerationStructure::ptr ras;
 
-			HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
+			HAL::StructuredBufferView<Table::Meshes::mesh_vertex_input> vertex_buffer_view;
 			HAL::StructuredBufferView<UINT32> index_buffer_view;
 
 		};
@@ -331,32 +331,32 @@ export{
 
 	};
 
-	class universal_rtx_manager :public Singleton<universal_rtx_manager>, public HAL::virtual_gpu_buffer<Table::RaytraceInstanceInfo>
+	class universal_rtx_manager :public Singleton<universal_rtx_manager>, public HAL::virtual_gpu_buffer<Table::Meshes::RaytraceInstanceInfo>
 	{
-		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::RaytraceInstanceInfo);
+		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::Meshes::RaytraceInstanceInfo);
 	public:
 		universal_rtx_manager();
 	};
 
-	class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public HAL::virtual_gpu_buffer<Table::MeshInstanceInfo>
+	class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public HAL::virtual_gpu_buffer<Table::Meshes::MeshInstanceInfo>
 	{
-		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::MeshInstanceInfo);
+		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::Meshes::MeshInstanceInfo);
 	public:
 		universal_mesh_instance_manager();
 	};
 
 
-	class universal_nodes_manager :public Singleton<universal_nodes_manager>, public HAL::virtual_gpu_buffer<Table::node_data>
+	class universal_nodes_manager :public Singleton<universal_nodes_manager>, public HAL::virtual_gpu_buffer<Table::Meshes::node_data>
 	{
-		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::node_data);
+		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::Meshes::node_data);
 	public:
 		universal_nodes_manager();
 	};
 
 
-	class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public HAL::virtual_gpu_buffer<Table::MaterialCommandData>
+	class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public HAL::virtual_gpu_buffer<Table::Meshes::MaterialCommandData>
 	{
-		static const size_t MAX_COMMANDS_SIZE = 100_mb / sizeof(Table::MaterialCommandData);
+		static const size_t MAX_COMMANDS_SIZE = 100_mb / sizeof(Table::Meshes::MaterialCommandData);
 	public:
 		universal_material_info_part_manager();
 	};

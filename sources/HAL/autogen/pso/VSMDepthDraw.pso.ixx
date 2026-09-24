@@ -14,52 +14,58 @@ import :Types;
 
 export namespace PSOS
 {
-	struct VSMDepthDraw: public PSOBase
+	namespace Shadows
 	{
-		struct Keys {
-			GEN_DEF_COMP(Keys);
-		private:
-			SERIALIZE()
+		namespace VSM
+		{
+			struct VSMDepthDraw: public PSOBase
 			{
-			}
-		};
+				struct Keys {
+					GEN_DEF_COMP(Keys);
+				private:
+					SERIALIZE()
+					{
+					}
+				};
 
-		GEN_GRAPHICS_PSO(VSMDepthDraw)
+				GEN_GRAPHICS_PSO(VSMDepthDraw)
 
 
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
+				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+				{
 
 
-			SimplePSO mpso("VSMDepthDraw");
-			if(f) f(mpso,key);
+					SimplePSO mpso("VSMDepthDraw");
+					if(f) f(mpso,key);
 
-			mpso.root_signature = Layouts::DefaultLayout;
+					mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.pixel.file_name = "";
-			mpso.pixel.entry_point = "";
-			mpso.pixel.flags = HAL::ShaderOptions::None;
-			mpso.mesh.file_name = "shaders/shadows/vsm/mesh_shader_vsm.hlsl";
-			mpso.mesh.entry_point = "VS";
-			mpso.mesh.flags = HAL::ShaderOptions::None;
+					mpso.pixel.file_name = "";
+					mpso.pixel.entry_point = "";
+					mpso.pixel.flags = HAL::ShaderOptions::None;
+					mpso.mesh.file_name = "shaders/shadows/vsm/mesh_shader_vsm.hlsl";
+					mpso.mesh.entry_point = "VS";
+					mpso.mesh.flags = HAL::ShaderOptions::None;
 			
-			mpso.amplification.file_name = "shaders/shadows/vsm/mesh_shader_vsm.hlsl";
-			mpso.amplification.entry_point = "AS";
-			mpso.amplification.flags = HAL::ShaderOptions::None;
+					mpso.amplification.file_name = "shaders/shadows/vsm/mesh_shader_vsm.hlsl";
+					mpso.amplification.entry_point = "AS";
+					mpso.amplification.flags = HAL::ShaderOptions::None;
 			
 
-			mpso.rtv_formats = {  };	
-			mpso.blend = {  };
+					mpso.rtv_formats = {  };	
+					mpso.blend = {  };
 
-			mpso.ds =HAL::Format::D32_FLOAT;
-			mpso.cull =HAL::CullMode::Front;
-			return mpso;
-		}
+					mpso.ds =HAL::Format::D32_FLOAT;
+					mpso.cull =HAL::CullMode::Front;
+					return mpso;
+				}
 
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
+				private:
+				SERIALIZE()
+				{
+					ar&NVP(wrap(psos));
+				}
+			};
 		}
-	};
+	}
 }

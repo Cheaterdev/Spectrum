@@ -15,54 +15,60 @@ import :Autogen.Tables.SIGMASharedConstants;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct SIGMA_ClassifyTilesResources
+	namespace Denoise
 	{
-		static constexpr SlotID ID = SlotID::SIGMA_ClassifyTilesResources;
-		HLSL::Texture2D<float> gIn_ViewZ;
-		HLSL::Texture2D<float> gIn_Penumbra;
-		HLSL::RWTexture2D<float4> gOut_Tiles;
-		SIGMASharedConstants sharedConstants;
-		HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
-		HLSL::Texture2D<float>& GetGIn_Penumbra() { return gIn_Penumbra; }
-		HLSL::RWTexture2D<float4>& GetGOut_Tiles() { return gOut_Tiles; }
-		SIGMASharedConstants& GetSharedConstants() { return sharedConstants; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace NRD
 		{
-			compiler.compile(gIn_ViewZ, "SIGMA_ClassifyTilesResources::gIn_ViewZ");
-			compiler.compile(gIn_Penumbra, "SIGMA_ClassifyTilesResources::gIn_Penumbra");
-			compiler.compile(gOut_Tiles, "SIGMA_ClassifyTilesResources::gOut_Tiles");
-			compiler.compile(sharedConstants, "SIGMA_ClassifyTilesResources::sharedConstants");
-		}
-		struct Compiled
-		{
-			uint gIn_ViewZ; // Texture2D<float>
-			uint gIn_Penumbra; // Texture2D<float>
-			uint gOut_Tiles; // RWTexture2D<float4>
-			SIGMASharedConstants::Compiled sharedConstants; // SIGMASharedConstants
+			struct SIGMA_ClassifyTilesResources
+			{
+				static constexpr SlotID ID = SlotID::SIGMA_ClassifyTilesResources;
+				HLSL::Texture2D<float> gIn_ViewZ;
+				HLSL::Texture2D<float> gIn_Penumbra;
+				HLSL::RWTexture2D<float4> gOut_Tiles;
+				Table::Denoise::NRD::SIGMASharedConstants sharedConstants;
+				HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
+				HLSL::Texture2D<float>& GetGIn_Penumbra() { return gIn_Penumbra; }
+				HLSL::RWTexture2D<float4>& GetGOut_Tiles() { return gOut_Tiles; }
+				Table::Denoise::NRD::SIGMASharedConstants& GetSharedConstants() { return sharedConstants; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(gIn_ViewZ, "SIGMA_ClassifyTilesResources::gIn_ViewZ");
+					compiler.compile(gIn_Penumbra, "SIGMA_ClassifyTilesResources::gIn_Penumbra");
+					compiler.compile(gOut_Tiles, "SIGMA_ClassifyTilesResources::gOut_Tiles");
+					compiler.compile(sharedConstants, "SIGMA_ClassifyTilesResources::sharedConstants");
+				}
+				struct Compiled
+				{
+					uint gIn_ViewZ; // Texture2D<float>
+					uint gIn_Penumbra; // Texture2D<float>
+					uint gOut_Tiles; // RWTexture2D<float4>
+					Table::Denoise::NRD::SIGMASharedConstants::Compiled sharedConstants; // SIGMASharedConstants
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(sharedConstants);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(sharedConstants);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::SIGMA_ClassifyTilesResources";
+				static std::string get_typename()
+				{
+					return "Tables::SIGMA_ClassifyTilesResources";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(sharedConstants);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(sharedConstants);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

@@ -14,50 +14,53 @@ import :Types;
 
 export namespace PSOS
 {
-	struct CanvasBack: public PSOBase
+	namespace UI
 	{
-		struct Keys {
-			GEN_DEF_COMP(Keys);
-		private:
+		struct CanvasBack: public PSOBase
+		{
+			struct Keys {
+				GEN_DEF_COMP(Keys);
+			private:
+				SERIALIZE()
+				{
+				}
+			};
+
+			GEN_GRAPHICS_PSO(CanvasBack)
+
+
+			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+			{
+
+
+				SimplePSO mpso("CanvasBack");
+				if(f) f(mpso,key);
+
+				mpso.root_signature = Layouts::DefaultLayout;
+
+				mpso.vertex.file_name = "shaders/gui/ninepatch.hlsl";
+				mpso.vertex.entry_point = "VS";
+				mpso.vertex.flags = HAL::ShaderOptions::None;
+			
+				mpso.pixel.file_name = "shaders/gui/canvas.hlsl";
+				mpso.pixel.entry_point = "PS";
+				mpso.pixel.flags = HAL::ShaderOptions::None;
+			
+
+				mpso.rtv_formats = { HAL::Format::B8G8R8A8_UNORM };	
+				mpso.blend = { HAL::Blends::AlphaBlend };
+
+				mpso.enable_depth =false;
+				mpso.cull =HAL::CullMode::None;
+				mpso.topology =HAL::PrimitiveTopologyType::TRIANGLE;
+				return mpso;
+			}
+
+			private:
 			SERIALIZE()
 			{
+				ar&NVP(wrap(psos));
 			}
 		};
-
-		GEN_GRAPHICS_PSO(CanvasBack)
-
-
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
-
-
-			SimplePSO mpso("CanvasBack");
-			if(f) f(mpso,key);
-
-			mpso.root_signature = Layouts::DefaultLayout;
-
-			mpso.vertex.file_name = "shaders/gui/ninepatch.hlsl";
-			mpso.vertex.entry_point = "VS";
-			mpso.vertex.flags = HAL::ShaderOptions::None;
-			
-			mpso.pixel.file_name = "shaders/gui/canvas.hlsl";
-			mpso.pixel.entry_point = "PS";
-			mpso.pixel.flags = HAL::ShaderOptions::None;
-			
-
-			mpso.rtv_formats = { HAL::Format::B8G8R8A8_UNORM };	
-			mpso.blend = { HAL::Blends::AlphaBlend };
-
-			mpso.enable_depth =false;
-			mpso.cull =HAL::CullMode::None;
-			mpso.topology =HAL::PrimitiveTopologyType::TRIANGLE;
-			return mpso;
-		}
-
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
-		}
-	};
+	}
 }

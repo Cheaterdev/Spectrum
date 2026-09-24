@@ -14,48 +14,54 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMBlockerTilesAppend
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMBlockerTilesAppend;
-		HLSL::AppendStructuredBuffer<uint2> lit_tiles;
-		HLSL::AppendStructuredBuffer<uint2> dark_tiles;
-		HLSL::AppendStructuredBuffer<uint2> search_tiles;
-		HLSL::AppendStructuredBuffer<uint2>& GetLit_tiles() { return lit_tiles; }
-		HLSL::AppendStructuredBuffer<uint2>& GetDark_tiles() { return dark_tiles; }
-		HLSL::AppendStructuredBuffer<uint2>& GetSearch_tiles() { return search_tiles; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(lit_tiles, "VSMBlockerTilesAppend::lit_tiles");
-			compiler.compile(dark_tiles, "VSMBlockerTilesAppend::dark_tiles");
-			compiler.compile(search_tiles, "VSMBlockerTilesAppend::search_tiles");
-		}
-		struct Compiled
-		{
-			uint lit_tiles; // AppendStructuredBuffer<uint2>
-			uint dark_tiles; // AppendStructuredBuffer<uint2>
-			uint search_tiles; // AppendStructuredBuffer<uint2>
+			struct VSMBlockerTilesAppend
+			{
+				static constexpr SlotID ID = SlotID::VSMBlockerTilesAppend;
+				HLSL::AppendStructuredBuffer<uint2> lit_tiles;
+				HLSL::AppendStructuredBuffer<uint2> dark_tiles;
+				HLSL::AppendStructuredBuffer<uint2> search_tiles;
+				HLSL::AppendStructuredBuffer<uint2>& GetLit_tiles() { return lit_tiles; }
+				HLSL::AppendStructuredBuffer<uint2>& GetDark_tiles() { return dark_tiles; }
+				HLSL::AppendStructuredBuffer<uint2>& GetSearch_tiles() { return search_tiles; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(lit_tiles, "VSMBlockerTilesAppend::lit_tiles");
+					compiler.compile(dark_tiles, "VSMBlockerTilesAppend::dark_tiles");
+					compiler.compile(search_tiles, "VSMBlockerTilesAppend::search_tiles");
+				}
+				struct Compiled
+				{
+					uint lit_tiles; // AppendStructuredBuffer<uint2>
+					uint dark_tiles; // AppendStructuredBuffer<uint2>
+					uint search_tiles; // AppendStructuredBuffer<uint2>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMBlockerTilesAppend";
+				static std::string get_typename()
+				{
+					return "Tables::VSMBlockerTilesAppend";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

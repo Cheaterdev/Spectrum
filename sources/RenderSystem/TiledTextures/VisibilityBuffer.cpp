@@ -41,14 +41,14 @@ std::future<visibility_update> VisibilityBuffer::update(HAL::CommandList::ptr& l
 
 
 	{
-		Slots::VoxelVisibility data;
+		Slots::GI::Voxel::VoxelVisibility data;
 
 		data.GetVisibility() = buffer->resource->create_view<HAL::Texture3DView>(*list);
 		data.GetVisible_tiles() = load_tiles_buffer;
 		compute.set(data);
 	}
 
-	compute.set_pipeline<PSOS::VoxelVisibility>();
+	compute.set_pipeline<PSOS::GI::Voxel::VoxelVisibility>();
 	compute.dispatch(ivec3(sizes));
 
 

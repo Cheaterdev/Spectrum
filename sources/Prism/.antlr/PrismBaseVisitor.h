@@ -19,6 +19,18 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitDefinition(PrismParser::DefinitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitNamespace_definition(PrismParser::Namespace_definitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitNamespace_header(PrismParser::Namespace_headerContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitConst_definition(PrismParser::Const_definitionContext *ctx) override {
     return visitChildren(ctx);
   }

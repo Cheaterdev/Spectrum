@@ -141,6 +141,36 @@ static const std::set<std::string> CONDITION_OPTIONS = {
 static const std::set<std::string> UNPROVABLE_STRUCTURAL_OPTIONS = {
 };
 
+// Full C++ names of the declarations generated code refers to by name, filled by
+// set_namespace_text. Each is anchored: a table is Table::<qn>; an enum lives at
+// global scope and is ::<qn>, because an unanchored Shadows::VSM::X written
+// inside namespace Table would find Table::Shadows first and stop there.
+static std::map<std::string, std::string> cpp_table_names, cpp_enum_names, cpp_const_names;
+
+// A C++ type string with each table or enum name in it replaced by its full
+// name: "HLSL::StructuredBuffer<Glyph>" -> "HLSL::StructuredBuffer<Table::UI::Text::Glyph>".
+static std::string qualify_cpp_type(const std::string& type)
+{
+	std::string out;
+	for (size_t i = 0; i < type.size();)
+	{
+		if (!std::isalpha((unsigned char)type[i]) && type[i] != '_')
+		{
+			out += type[i++];
+			continue;
+		}
+		size_t e = i;
+		while (e < type.size() && (std::isalnum((unsigned char)type[e]) || type[e] == '_')) ++e;
+		std::string word = type.substr(i, e - i);
+		bool qualified = i >= 2 && type.compare(i - 2, 2, "::") == 0;
+		if (!qualified && cpp_table_names.count(word)) out += cpp_table_names[word];
+		else if (!qualified && cpp_enum_names.count(word)) out += cpp_enum_names[word];
+		else out += word;
+		i = e;
+	}
+	return out;
+}
+
 // Renders one parsed expression back to C++ and records which Table:: contexts
 // it read.
 //
@@ -191,15 +221,15 @@ static void render_expr(const Parsed& parsed, have_expr& e)
 			// no runtime state, so it passes through and records no dependency.
 			if (parsed.tables.find(t.owner))
 			{
-				append("builder.graph->get_context<Table::" + t.owner + ">()." + t.text, false);
+				append("builder.graph->get_context<" + qualify_cpp_type(t.owner) + ">()." + t.text, false);
 				auto& ref = e.field_refs.emplace_back();
 				ref.owner = t.owner;
 				ref.field = t.text;
 			}
+			else if (t.owner == "Constants" && cpp_const_names.count(t.text))
+				append(cpp_const_names[t.text], false);
 			else
-			{
-				append(t.owner + "::" + t.text, false);
-			}
+				append(qualify_cpp_type(t.owner) + "::" + t.text, false);
 			break;
 
 		case ExprTerm::Member:
@@ -345,6 +375,63 @@ static void render_size_options(Parsed& parsed)
 }
 
 
+// A declaration inside `namespace UI::Text { }` is generated as
+// Table::UI::Text::Name in C++ (PSOS::..., Slots::... likewise) and referenced
+// only by that full name. HLSL gets UI::Text::Name plus a flat
+// `using UI::Text::Name;`, so shaders can keep the short name -- which is also
+// why names stay unique across namespaces. The ns_* fields are markers, not the
+// final text: my_stream expands them into one namespace per line and indents
+// what's between (layout_namespaces, Parsed.cpp), which a template can't do for
+// a body it doesn't know the extent of.
+static void set_namespace_text(Parsed& parsed)
+{
+	auto set = [](have_name& d)
+	{
+		d.qn = d.ns.empty() ? d.name : d.ns + "::" + d.name;
+		if (d.ns.empty())
+			return;
+		d.ns_open = "/*@ns+" + d.ns + "*/";
+		d.ns_close = "/*@ns-" + d.ns + "|" + d.name + "|*/";
+		d.ns_braces = "/*@ns-" + d.ns + "||*/";
+	};
+	auto all = [&](auto& container) { for (auto& d : container) set(d); };
+	all(parsed.tables);
+	all(parsed.layouts);
+	all(parsed.rt);
+	all(parsed.compute_pso);
+	all(parsed.graphics_pso);
+	all(parsed.workgraph_pso);
+	all(parsed.raytrace_pso);
+	all(parsed.raytrace_pass);
+	all(parsed.raytrace_gen);
+	all(parsed.views);
+	all(parsed.passes);
+	all(parsed.pipelines);
+	all(parsed.enums);
+	all(parsed.consts);
+
+	// A [shader_only] struct's C++ side is a hand-written HAL type at global scope
+	// (e.g. DispatchArguments), not a generated Table:: one, so it keeps its name.
+	for (const auto& t : parsed.tables)
+		if (!t.find_option("shader_only"))
+			cpp_table_names[t.name] = "Table::" + t.qn;
+	for (const auto& e : parsed.enums) cpp_enum_names[e.name] = "::" + e.qn;
+	for (const auto& c : parsed.consts) cpp_const_names[c.name] = "Constants::" + c.qn;
+}
+
+// Qualifies the type strings table.jinja pastes: cpp_type (field declarations)
+// and qtype (a struct field's ::Compiled, an enum field's default value). Runs
+// after parsed.setup(), which is what computes cpp_type.
+static void qualify_field_types(Parsed& parsed)
+{
+	for (auto& t : parsed.tables)
+		for (auto& v : t.values)
+		{
+			v.cpp_type = qualify_cpp_type(v.cpp_type);
+			v.qtype = qualify_cpp_type(v.get_type());
+		}
+}
+
 // RaytraceRaygen/RaytracePass ::ID must equal the item's position in its
 // RaytracePSO's gens/passes list -- RTX.ixx static_asserts it against the
 // Typelist index. Counting per bound PSO over the merged model is what makes
@@ -423,7 +510,9 @@ int main(int argc, char** argv)
 			return 1;
 
 		assign_rtx_ids(parsed);
+		set_namespace_text(parsed);
 		parsed.setup();
+		qualify_field_types(parsed);
 
 		// Turns parsed condition terms into the C++ the templates paste, and
 		// collects each condition's Table:: field dependencies on the way.
@@ -1170,7 +1259,7 @@ int main(int argc, char** argv)
 					if (size->value_atom.is_literal || size->value_atom.owner_name.empty())
 						return size->value_atom.expr;
 
-					return "builder.graph->get_context<Table::" + size->value_atom.owner_name + ">()." + size->value_atom.expr;
+					return "builder.graph->get_context<" + qualify_cpp_type(size->value_atom.owner_name) + ">()." + size->value_atom.expr;
 				}
 				return "";
 			},

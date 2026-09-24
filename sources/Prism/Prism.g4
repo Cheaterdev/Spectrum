@@ -33,7 +33,23 @@ options
 }
 
 parse
- : (layout_definition|table_definition|rt_definition|workgraph_pso_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|pass_definition|view_definition|pipeline_definition|enum_definition|const_definition|COMMENT)* EOF
+ : definition* EOF
+ ;
+
+definition
+ : layout_definition|table_definition|rt_definition|workgraph_pso_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|pass_definition|view_definition|pipeline_definition|enum_definition|const_definition|namespace_definition|COMMENT
+ ;
+
+// `[options] namespace Name { definitions }`: groups declarations without
+// renaming them (generated names stay global). The header is its own rule so
+// the listener can drop the Namespace element before the body's declarations,
+// which attach to the Parsed at the top of its stack.
+namespace_definition
+ : namespace_header OBRACE definition* CBRACE
+ ;
+
+namespace_header
+ : option_block*? NAMESPACE name_id
  ;
 
 // A top-level named constant: `const Name = value;`. Value reuses bind_option
@@ -405,6 +421,7 @@ LOG : 'log';
 
 LAYOUT: 'layout';
 STRUCT: 'struct';
+NAMESPACE: 'namespace';
 COMPUTE_PSO: 'ComputePSO';
 GRAPHICS_PSO: 'GraphicsPSO';
 RAYTRACE_PSO: 'RaytracePSO';

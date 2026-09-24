@@ -14,44 +14,47 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct InitDispatch
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::InitDispatch;
-		HLSL::RWStructuredBuffer<uint> counter;
-		HLSL::RWStructuredBuffer<DispatchArguments> dispatch_data;
-		HLSL::RWStructuredBuffer<uint>& GetCounter() { return counter; }
-		HLSL::RWStructuredBuffer<DispatchArguments>& GetDispatch_data() { return dispatch_data; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct InitDispatch
 		{
-			compiler.compile(counter, "InitDispatch::counter");
-			compiler.compile(dispatch_data, "InitDispatch::dispatch_data");
-		}
-		struct Compiled
-		{
-			uint counter; // RWStructuredBuffer<uint>
-			uint dispatch_data; // RWStructuredBuffer<DispatchArguments>
+			static constexpr SlotID ID = SlotID::InitDispatch;
+			HLSL::RWStructuredBuffer<uint> counter;
+			HLSL::RWStructuredBuffer<DispatchArguments> dispatch_data;
+			HLSL::RWStructuredBuffer<uint>& GetCounter() { return counter; }
+			HLSL::RWStructuredBuffer<DispatchArguments>& GetDispatch_data() { return dispatch_data; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(counter, "InitDispatch::counter");
+				compiler.compile(dispatch_data, "InitDispatch::dispatch_data");
+			}
+			struct Compiled
+			{
+				uint counter; // RWStructuredBuffer<uint>
+				uint dispatch_data; // RWStructuredBuffer<DispatchArguments>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::InitDispatch";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::InitDispatch";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

@@ -14,70 +14,95 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DispatchRaysArgsBuildData
+	namespace Raytrace
 	{
-		static constexpr SlotID ID = SlotID::DispatchRaysArgsBuildData;
-		uint2 hit_addr;
-		uint hit_stride;
-		uint hit_count;
-		uint2 miss_addr;
-		uint miss_stride;
-		uint miss_count;
-		uint2 raygen_addr;
-		uint raygen_size;
-		uint width_multiplier;
-		uint count_index;
-		uint dest_index;
-		HLSL::StructuredBuffer<uint> compacted_count;
-		HLSL::RWStructuredBuffer<DispatchRaysArguments> args;
-		uint2& GetHit_addr() { return hit_addr; }
-		uint& GetHit_stride() { return hit_stride; }
-		uint& GetHit_count() { return hit_count; }
-		uint2& GetMiss_addr() { return miss_addr; }
-		uint& GetMiss_stride() { return miss_stride; }
-		uint& GetMiss_count() { return miss_count; }
-		uint2& GetRaygen_addr() { return raygen_addr; }
-		uint& GetRaygen_size() { return raygen_size; }
-		uint& GetWidth_multiplier() { return width_multiplier; }
-		uint& GetCount_index() { return count_index; }
-		HLSL::StructuredBuffer<uint>& GetCompacted_count() { return compacted_count; }
-		uint& GetDest_index() { return dest_index; }
-		HLSL::RWStructuredBuffer<DispatchRaysArguments>& GetArgs() { return args; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct DispatchRaysArgsBuildData
 		{
-			compiler.compile(hit_addr, "DispatchRaysArgsBuildData::hit_addr");
-			compiler.compile(hit_stride, "DispatchRaysArgsBuildData::hit_stride");
-			compiler.compile(hit_count, "DispatchRaysArgsBuildData::hit_count");
-			compiler.compile(miss_addr, "DispatchRaysArgsBuildData::miss_addr");
-			compiler.compile(miss_stride, "DispatchRaysArgsBuildData::miss_stride");
-			compiler.compile(miss_count, "DispatchRaysArgsBuildData::miss_count");
-			compiler.compile(raygen_addr, "DispatchRaysArgsBuildData::raygen_addr");
-			compiler.compile(raygen_size, "DispatchRaysArgsBuildData::raygen_size");
-			compiler.compile(width_multiplier, "DispatchRaysArgsBuildData::width_multiplier");
-			compiler.compile(count_index, "DispatchRaysArgsBuildData::count_index");
-			compiler.compile(dest_index, "DispatchRaysArgsBuildData::dest_index");
-			compiler.compile(compacted_count, "DispatchRaysArgsBuildData::compacted_count");
-			compiler.compile(args, "DispatchRaysArgsBuildData::args");
-		}
-		struct Compiled
-		{
-			uint2 hit_addr; // uint2
-			uint hit_stride; // uint
-			uint hit_count; // uint
-			uint2 miss_addr; // uint2
-			uint miss_stride; // uint
-			uint miss_count; // uint
-			uint2 raygen_addr; // uint2
-			uint raygen_size; // uint
-			uint width_multiplier; // uint
-			uint count_index; // uint
-			uint dest_index; // uint
-			uint compacted_count; // StructuredBuffer<uint>
-			uint args; // RWStructuredBuffer<DispatchRaysArguments>
+			static constexpr SlotID ID = SlotID::DispatchRaysArgsBuildData;
+			uint2 hit_addr;
+			uint hit_stride;
+			uint hit_count;
+			uint2 miss_addr;
+			uint miss_stride;
+			uint miss_count;
+			uint2 raygen_addr;
+			uint raygen_size;
+			uint width_multiplier;
+			uint count_index;
+			uint dest_index;
+			HLSL::StructuredBuffer<uint> compacted_count;
+			HLSL::RWStructuredBuffer<DispatchRaysArguments> args;
+			uint2& GetHit_addr() { return hit_addr; }
+			uint& GetHit_stride() { return hit_stride; }
+			uint& GetHit_count() { return hit_count; }
+			uint2& GetMiss_addr() { return miss_addr; }
+			uint& GetMiss_stride() { return miss_stride; }
+			uint& GetMiss_count() { return miss_count; }
+			uint2& GetRaygen_addr() { return raygen_addr; }
+			uint& GetRaygen_size() { return raygen_size; }
+			uint& GetWidth_multiplier() { return width_multiplier; }
+			uint& GetCount_index() { return count_index; }
+			HLSL::StructuredBuffer<uint>& GetCompacted_count() { return compacted_count; }
+			uint& GetDest_index() { return dest_index; }
+			HLSL::RWStructuredBuffer<DispatchRaysArguments>& GetArgs() { return args; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(hit_addr, "DispatchRaysArgsBuildData::hit_addr");
+				compiler.compile(hit_stride, "DispatchRaysArgsBuildData::hit_stride");
+				compiler.compile(hit_count, "DispatchRaysArgsBuildData::hit_count");
+				compiler.compile(miss_addr, "DispatchRaysArgsBuildData::miss_addr");
+				compiler.compile(miss_stride, "DispatchRaysArgsBuildData::miss_stride");
+				compiler.compile(miss_count, "DispatchRaysArgsBuildData::miss_count");
+				compiler.compile(raygen_addr, "DispatchRaysArgsBuildData::raygen_addr");
+				compiler.compile(raygen_size, "DispatchRaysArgsBuildData::raygen_size");
+				compiler.compile(width_multiplier, "DispatchRaysArgsBuildData::width_multiplier");
+				compiler.compile(count_index, "DispatchRaysArgsBuildData::count_index");
+				compiler.compile(dest_index, "DispatchRaysArgsBuildData::dest_index");
+				compiler.compile(compacted_count, "DispatchRaysArgsBuildData::compacted_count");
+				compiler.compile(args, "DispatchRaysArgsBuildData::args");
+			}
+			struct Compiled
+			{
+				uint2 hit_addr; // uint2
+				uint hit_stride; // uint
+				uint hit_count; // uint
+				uint2 miss_addr; // uint2
+				uint miss_stride; // uint
+				uint miss_count; // uint
+				uint2 raygen_addr; // uint2
+				uint raygen_size; // uint
+				uint width_multiplier; // uint
+				uint count_index; // uint
+				uint dest_index; // uint
+				uint compacted_count; // StructuredBuffer<uint>
+				uint args; // RWStructuredBuffer<DispatchRaysArguments>
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(hit_addr);
+					ar& NVP(hit_stride);
+					ar& NVP(hit_count);
+					ar& NVP(miss_addr);
+					ar& NVP(miss_stride);
+					ar& NVP(miss_count);
+					ar& NVP(raygen_addr);
+					ar& NVP(raygen_size);
+					ar& NVP(width_multiplier);
+					ar& NVP(count_index);
+					ar& NVP(dest_index);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::DispatchRaysArgsBuildData";
+			}
 			private:
 			SERIALIZE()
 			{
@@ -94,30 +119,8 @@ export namespace Table
 				ar& NVP(dest_index);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::DispatchRaysArgsBuildData";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(hit_addr);
-			ar& NVP(hit_stride);
-			ar& NVP(hit_count);
-			ar& NVP(miss_addr);
-			ar& NVP(miss_stride);
-			ar& NVP(miss_count);
-			ar& NVP(raygen_addr);
-			ar& NVP(raygen_size);
-			ar& NVP(width_multiplier);
-			ar& NVP(count_index);
-			ar& NVP(dest_index);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

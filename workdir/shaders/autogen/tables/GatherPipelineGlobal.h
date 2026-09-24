@@ -7,10 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct GatherPipelineGlobal
+namespace Meshes
 {
-	uint meshes_count; // StructuredBuffer<uint>
-	uint commands; // Buffer<uint>
-	StructuredBuffer<uint> GetMeshes_count() { return ResourceDescriptorHeap[meshes_count]; }
-	Buffer<uint> GetCommands() { return ResourceDescriptorHeap[commands]; }
-};
+	struct GatherPipelineGlobal
+	{
+		uint meshes_count; // StructuredBuffer<uint>
+		uint commands; // Buffer<uint>
+		StructuredBuffer<uint> GetMeshes_count() { return ResourceDescriptorHeap[meshes_count]; }
+		Buffer<uint> GetCommands() { return ResourceDescriptorHeap[commands]; }
+	};
+}
+using Meshes::GatherPipelineGlobal;

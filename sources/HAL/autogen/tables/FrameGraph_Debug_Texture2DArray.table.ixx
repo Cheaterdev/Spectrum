@@ -14,34 +14,51 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct FrameGraph_Debug_Texture2DArray
+	namespace Dev
 	{
-		static constexpr SlotID ID = SlotID::FrameGraph_Debug_Texture2DArray;
-		uint2 sourceSize;
-		float2 scale;
-		float2 offset;
-		HLSL::Texture2DArray<float4> source;
-		HLSL::Texture2DArray<float4>& GetSource() { return source; }
-		uint2& GetSourceSize() { return sourceSize; }
-		float2& GetScale() { return scale; }
-		float2& GetOffset() { return offset; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct FrameGraph_Debug_Texture2DArray
 		{
-			compiler.compile(sourceSize, "FrameGraph_Debug_Texture2DArray::sourceSize");
-			compiler.compile(scale, "FrameGraph_Debug_Texture2DArray::scale");
-			compiler.compile(offset, "FrameGraph_Debug_Texture2DArray::offset");
-			compiler.compile(source, "FrameGraph_Debug_Texture2DArray::source");
-		}
-		struct Compiled
-		{
-			uint2 sourceSize; // uint2
-			float2 scale; // float2
-			float2 offset; // float2
-			uint source; // Texture2DArray<float4>
+			static constexpr SlotID ID = SlotID::FrameGraph_Debug_Texture2DArray;
+			uint2 sourceSize;
+			float2 scale;
+			float2 offset;
+			HLSL::Texture2DArray<float4> source;
+			HLSL::Texture2DArray<float4>& GetSource() { return source; }
+			uint2& GetSourceSize() { return sourceSize; }
+			float2& GetScale() { return scale; }
+			float2& GetOffset() { return offset; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(sourceSize, "FrameGraph_Debug_Texture2DArray::sourceSize");
+				compiler.compile(scale, "FrameGraph_Debug_Texture2DArray::scale");
+				compiler.compile(offset, "FrameGraph_Debug_Texture2DArray::offset");
+				compiler.compile(source, "FrameGraph_Debug_Texture2DArray::source");
+			}
+			struct Compiled
+			{
+				uint2 sourceSize; // uint2
+				float2 scale; // float2
+				float2 offset; // float2
+				uint source; // Texture2DArray<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(sourceSize);
+					ar& NVP(scale);
+					ar& NVP(offset);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::FrameGraph_Debug_Texture2DArray";
+			}
 			private:
 			SERIALIZE()
 			{
@@ -50,22 +67,8 @@ export namespace Table
 				ar& NVP(offset);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::FrameGraph_Debug_Texture2DArray";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(sourceSize);
-			ar& NVP(scale);
-			ar& NVP(offset);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

@@ -14,59 +14,65 @@ import :Types;
 
 export namespace PSOS
 {
-	struct FontRender: public PSOBase
+	namespace UI
 	{
-		struct Keys {
-			KeyValue<Underlying<HAL::Format>, NonNullable, ALL_RT_BLENDING_FORMATS> Format;
-			GEN_DEF_COMP(Keys);
-		private:
-			SERIALIZE()
+		namespace Text
+		{
+			struct FontRender: public PSOBase
 			{
-				ar&NVP(Format);
-			}
-		};
+				struct Keys {
+					KeyValue<Underlying<HAL::Format>, NonNullable, ALL_RT_BLENDING_FORMATS> Format;
+					GEN_DEF_COMP(Keys);
+				private:
+					SERIALIZE()
+					{
+						ar&NVP(Format);
+					}
+				};
 
-		GEN_GRAPHICS_PSO(FontRender, Format)
-		GEN_KEY(Format, true);
+				GEN_GRAPHICS_PSO(FontRender, Format)
+				GEN_KEY(Format, true);
 
 
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
-			static const ShaderDefine<&Keys::Format,&SimpleGraphicsPSO::pixel> Format = "Format";
+				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+				{
+					static const ShaderDefine<&Keys::Format,&SimpleGraphicsPSO::pixel> Format = "Format";
 
 
-			SimplePSO mpso("FontRender");
-			if(f) f(mpso,key);
+					SimplePSO mpso("FontRender");
+					if(f) f(mpso,key);
 
-			mpso.root_signature = Layouts::DefaultLayout;
+					mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.vertex.file_name = "shaders/font/vs_simple.hlsl";
-			mpso.vertex.entry_point = "VS";
-			mpso.vertex.flags = HAL::ShaderOptions::None;
+					mpso.vertex.file_name = "shaders/font/vs_simple.hlsl";
+					mpso.vertex.entry_point = "VS";
+					mpso.vertex.flags = HAL::ShaderOptions::None;
 			
-			mpso.pixel.file_name = "shaders/font/ps_simple.hlsl";
-			mpso.pixel.entry_point = "PS";
-			mpso.pixel.flags = HAL::ShaderOptions::None;
+					mpso.pixel.file_name = "shaders/font/ps_simple.hlsl";
+					mpso.pixel.entry_point = "PS";
+					mpso.pixel.flags = HAL::ShaderOptions::None;
 			
-			mpso.geometry.file_name = "shaders/font/gs_simple.hlsl";
-			mpso.geometry.entry_point = "GS";
-			mpso.geometry.flags = HAL::ShaderOptions::None;
+					mpso.geometry.file_name = "shaders/font/gs_simple.hlsl";
+					mpso.geometry.entry_point = "GS";
+					mpso.geometry.flags = HAL::ShaderOptions::None;
 			
-			Format.Apply(mpso, key);
+					Format.Apply(mpso, key);
 
-			mpso.rtv_formats = { Format.get_value(mpso, key) };	
-			mpso.blend = {  };
+					mpso.rtv_formats = { Format.get_value(mpso, key) };	
+					mpso.blend = {  };
 
-			mpso.topology =HAL::PrimitiveTopologyType::POINT;
-			mpso.enable_depth =false;
-			mpso.cull =HAL::CullMode::None;
-			return mpso;
+					mpso.topology =HAL::PrimitiveTopologyType::POINT;
+					mpso.enable_depth =false;
+					mpso.cull =HAL::CullMode::None;
+					return mpso;
+				}
+
+				private:
+				SERIALIZE()
+				{
+					ar&NVP(wrap(psos));
+				}
+			};
 		}
-
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
-		}
-	};
+	}
 }

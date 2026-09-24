@@ -61,6 +61,17 @@ struct have_name : public virtual parsed_type
 	std::string name;
 	std::string source_file; // path of the .prism file that defined this item
 	SourceLocation name_loc; // the name token itself; loc may point at a leading [option]
+	// Enclosing namespace path of a top-level declaration ("UI", "Debug::Tools");
+	// empty at file scope. qn is the name qualified by it ("UI::Text::Glyph");
+	// generated C++ names a declaration only through qn, since there is no flat
+	// alias on the C++ side.
+	std::string ns, qn;
+	// Markers a template puts around a definition (set_namespace_text in
+	// Main.cpp); my_stream expands them (layout_namespaces, Parsed.cpp).
+	// ns_close adds the HLSL flat alias `using UI::Text::Name;`, ns_braces
+	// (C++) none. All empty at file scope, so a file without namespaces
+	// renders byte-identically.
+	std::string ns_open, ns_close, ns_braces;
 
 	~have_name() override = default;
 
@@ -69,6 +80,11 @@ struct have_name : public virtual parsed_type
 	{
 		ar& NVP(name);
 		ar& NVP(source_file);
+		ar& NVP(ns);
+		ar& NVP(qn);
+		ar& NVP(ns_open);
+		ar& NVP(ns_close);
+		ar& NVP(ns_braces);
 	}
 };
 
@@ -459,6 +475,7 @@ struct Value : public have_name, have_options, have_type, have_expr, have_array,
 	int offset = 0;
 	int size = 0;
 	std::string cpp_type;
+	std::string qtype; // get_type() with table/enum names fully qualified, for C++ (qualify_field_types)
 	void detect_type(have_options* options) override;
 
 
@@ -473,6 +490,7 @@ struct Value : public have_name, have_options, have_type, have_expr, have_array,
 		ar& NVP(offset);
 		ar& NVP(size);
 		ar& NVP(cpp_type);
+		ar& NVP(qtype);
 	}
 };
 
@@ -979,8 +997,19 @@ struct Pipeline : public have_name
 	}
 };
 
+// One `[options] namespace Name { ... }` block. A namespace may be reopened, in
+// the same file or another, so there can be several with the same path; the
+// declarations inside record the path in have_name::ns.
+struct Namespace : public have_options, have_name
+{
+	std::string path; // ns + "::" + name, or just name at file scope
+};
+
 struct Parsed : public parsed_type
 {
+	// Not serialized: templates only need each declaration's own ns.
+	my_container<Namespace> namespaces;
+
 	my_container<Layout> layouts;
 	my_container<Table> tables;
 	std::list<Layout*> root_layouts;
@@ -1016,6 +1045,7 @@ struct Parsed : public parsed_type
 
 	void merge(Parsed& r)
 	{
+		namespaces.merge(r.namespaces);
 		layouts.merge(r.layouts);
 		tables.merge(r.tables);
 		rt.merge(r.rt);

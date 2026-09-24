@@ -15,86 +15,92 @@ import :Autogen.Tables.REBLURSharedConstants;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct REBLUR_TemporalStabilizationResources
+	namespace Denoise
 	{
-		static constexpr SlotID ID = SlotID::REBLUR_TemporalStabilizationResources;
-		HLSL::Texture2D<float> gIn_Tiles;
-		HLSL::Texture2D<float4> gIn_Normal_Roughness;
-		HLSL::Texture2D<float> gIn_ViewZ;
-		HLSL::Texture2D<float2> gIn_Data1;
-		HLSL::Texture2D<uint> gIn_Data2;
-		HLSL::Texture2D<float4> gIn_Diff;
-		HLSL::Texture2D<float> gHistory_DiffLumaStabilized;
-		HLSL::RWTexture2D<float4> gInOut_Mv;
-		HLSL::RWTexture2D<uint> gOut_InternalData;
-		HLSL::RWTexture2D<float4> gOut_Diff;
-		HLSL::RWTexture2D<float> gOut_DiffLumaStabilized;
-		REBLURSharedConstants sharedConstants;
-		HLSL::Texture2D<float>& GetGIn_Tiles() { return gIn_Tiles; }
-		HLSL::Texture2D<float4>& GetGIn_Normal_Roughness() { return gIn_Normal_Roughness; }
-		HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
-		HLSL::Texture2D<float2>& GetGIn_Data1() { return gIn_Data1; }
-		HLSL::Texture2D<uint>& GetGIn_Data2() { return gIn_Data2; }
-		HLSL::Texture2D<float4>& GetGIn_Diff() { return gIn_Diff; }
-		HLSL::Texture2D<float>& GetGHistory_DiffLumaStabilized() { return gHistory_DiffLumaStabilized; }
-		HLSL::RWTexture2D<float4>& GetGInOut_Mv() { return gInOut_Mv; }
-		HLSL::RWTexture2D<uint>& GetGOut_InternalData() { return gOut_InternalData; }
-		HLSL::RWTexture2D<float4>& GetGOut_Diff() { return gOut_Diff; }
-		HLSL::RWTexture2D<float>& GetGOut_DiffLumaStabilized() { return gOut_DiffLumaStabilized; }
-		REBLURSharedConstants& GetSharedConstants() { return sharedConstants; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace NRD
 		{
-			compiler.compile(gIn_Tiles, "REBLUR_TemporalStabilizationResources::gIn_Tiles");
-			compiler.compile(gIn_Normal_Roughness, "REBLUR_TemporalStabilizationResources::gIn_Normal_Roughness");
-			compiler.compile(gIn_ViewZ, "REBLUR_TemporalStabilizationResources::gIn_ViewZ");
-			compiler.compile(gIn_Data1, "REBLUR_TemporalStabilizationResources::gIn_Data1");
-			compiler.compile(gIn_Data2, "REBLUR_TemporalStabilizationResources::gIn_Data2");
-			compiler.compile(gIn_Diff, "REBLUR_TemporalStabilizationResources::gIn_Diff");
-			compiler.compile(gHistory_DiffLumaStabilized, "REBLUR_TemporalStabilizationResources::gHistory_DiffLumaStabilized");
-			compiler.compile(gInOut_Mv, "REBLUR_TemporalStabilizationResources::gInOut_Mv");
-			compiler.compile(gOut_InternalData, "REBLUR_TemporalStabilizationResources::gOut_InternalData");
-			compiler.compile(gOut_Diff, "REBLUR_TemporalStabilizationResources::gOut_Diff");
-			compiler.compile(gOut_DiffLumaStabilized, "REBLUR_TemporalStabilizationResources::gOut_DiffLumaStabilized");
-			compiler.compile(sharedConstants, "REBLUR_TemporalStabilizationResources::sharedConstants");
-		}
-		struct Compiled
-		{
-			uint gIn_Tiles; // Texture2D<float>
-			uint gIn_Normal_Roughness; // Texture2D<float4>
-			uint gIn_ViewZ; // Texture2D<float>
-			uint gIn_Data1; // Texture2D<float2>
-			uint gIn_Data2; // Texture2D<uint>
-			uint gIn_Diff; // Texture2D<float4>
-			uint gHistory_DiffLumaStabilized; // Texture2D<float>
-			uint gInOut_Mv; // RWTexture2D<float4>
-			uint gOut_InternalData; // RWTexture2D<uint>
-			uint gOut_Diff; // RWTexture2D<float4>
-			uint gOut_DiffLumaStabilized; // RWTexture2D<float>
-			REBLURSharedConstants::Compiled sharedConstants; // REBLURSharedConstants
+			struct REBLUR_TemporalStabilizationResources
+			{
+				static constexpr SlotID ID = SlotID::REBLUR_TemporalStabilizationResources;
+				HLSL::Texture2D<float> gIn_Tiles;
+				HLSL::Texture2D<float4> gIn_Normal_Roughness;
+				HLSL::Texture2D<float> gIn_ViewZ;
+				HLSL::Texture2D<float2> gIn_Data1;
+				HLSL::Texture2D<uint> gIn_Data2;
+				HLSL::Texture2D<float4> gIn_Diff;
+				HLSL::Texture2D<float> gHistory_DiffLumaStabilized;
+				HLSL::RWTexture2D<float4> gInOut_Mv;
+				HLSL::RWTexture2D<uint> gOut_InternalData;
+				HLSL::RWTexture2D<float4> gOut_Diff;
+				HLSL::RWTexture2D<float> gOut_DiffLumaStabilized;
+				Table::Denoise::NRD::REBLURSharedConstants sharedConstants;
+				HLSL::Texture2D<float>& GetGIn_Tiles() { return gIn_Tiles; }
+				HLSL::Texture2D<float4>& GetGIn_Normal_Roughness() { return gIn_Normal_Roughness; }
+				HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
+				HLSL::Texture2D<float2>& GetGIn_Data1() { return gIn_Data1; }
+				HLSL::Texture2D<uint>& GetGIn_Data2() { return gIn_Data2; }
+				HLSL::Texture2D<float4>& GetGIn_Diff() { return gIn_Diff; }
+				HLSL::Texture2D<float>& GetGHistory_DiffLumaStabilized() { return gHistory_DiffLumaStabilized; }
+				HLSL::RWTexture2D<float4>& GetGInOut_Mv() { return gInOut_Mv; }
+				HLSL::RWTexture2D<uint>& GetGOut_InternalData() { return gOut_InternalData; }
+				HLSL::RWTexture2D<float4>& GetGOut_Diff() { return gOut_Diff; }
+				HLSL::RWTexture2D<float>& GetGOut_DiffLumaStabilized() { return gOut_DiffLumaStabilized; }
+				Table::Denoise::NRD::REBLURSharedConstants& GetSharedConstants() { return sharedConstants; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(gIn_Tiles, "REBLUR_TemporalStabilizationResources::gIn_Tiles");
+					compiler.compile(gIn_Normal_Roughness, "REBLUR_TemporalStabilizationResources::gIn_Normal_Roughness");
+					compiler.compile(gIn_ViewZ, "REBLUR_TemporalStabilizationResources::gIn_ViewZ");
+					compiler.compile(gIn_Data1, "REBLUR_TemporalStabilizationResources::gIn_Data1");
+					compiler.compile(gIn_Data2, "REBLUR_TemporalStabilizationResources::gIn_Data2");
+					compiler.compile(gIn_Diff, "REBLUR_TemporalStabilizationResources::gIn_Diff");
+					compiler.compile(gHistory_DiffLumaStabilized, "REBLUR_TemporalStabilizationResources::gHistory_DiffLumaStabilized");
+					compiler.compile(gInOut_Mv, "REBLUR_TemporalStabilizationResources::gInOut_Mv");
+					compiler.compile(gOut_InternalData, "REBLUR_TemporalStabilizationResources::gOut_InternalData");
+					compiler.compile(gOut_Diff, "REBLUR_TemporalStabilizationResources::gOut_Diff");
+					compiler.compile(gOut_DiffLumaStabilized, "REBLUR_TemporalStabilizationResources::gOut_DiffLumaStabilized");
+					compiler.compile(sharedConstants, "REBLUR_TemporalStabilizationResources::sharedConstants");
+				}
+				struct Compiled
+				{
+					uint gIn_Tiles; // Texture2D<float>
+					uint gIn_Normal_Roughness; // Texture2D<float4>
+					uint gIn_ViewZ; // Texture2D<float>
+					uint gIn_Data1; // Texture2D<float2>
+					uint gIn_Data2; // Texture2D<uint>
+					uint gIn_Diff; // Texture2D<float4>
+					uint gHistory_DiffLumaStabilized; // Texture2D<float>
+					uint gInOut_Mv; // RWTexture2D<float4>
+					uint gOut_InternalData; // RWTexture2D<uint>
+					uint gOut_Diff; // RWTexture2D<float4>
+					uint gOut_DiffLumaStabilized; // RWTexture2D<float>
+					Table::Denoise::NRD::REBLURSharedConstants::Compiled sharedConstants; // REBLURSharedConstants
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(sharedConstants);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(sharedConstants);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::REBLUR_TemporalStabilizationResources";
+				static std::string get_typename()
+				{
+					return "Tables::REBLUR_TemporalStabilizationResources";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(sharedConstants);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(sharedConstants);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

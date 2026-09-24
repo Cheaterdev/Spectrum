@@ -15,44 +15,47 @@ import :Autogen.Tables.vertex_input;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct NinePatch
+	namespace UI
 	{
-		static constexpr SlotID ID = SlotID::NinePatch;
-		HLSL::StructuredBuffer<vertex_input> vb;
-		std::vector<HLSL::Texture2D<float4>> textures;
-		HLSL::StructuredBuffer<vertex_input>& GetVb() { return vb; }
-		std::vector<HLSL::Texture2D<float4>>& GetTextures() { return textures; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct NinePatch
 		{
-			compiler.compile(vb, "NinePatch::vb");
-			compiler.compile_auto(textures, "NinePatch::textures");
-		}
-		struct Compiled
-		{
-			uint vb; // StructuredBuffer<vertex_input>
-			uint textures; // Texture2D<float4>
+			static constexpr SlotID ID = SlotID::NinePatch;
+			HLSL::StructuredBuffer<Table::UI::vertex_input> vb;
+			std::vector<HLSL::Texture2D<float4>> textures;
+			HLSL::StructuredBuffer<Table::UI::vertex_input>& GetVb() { return vb; }
+			std::vector<HLSL::Texture2D<float4>>& GetTextures() { return textures; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(vb, "NinePatch::vb");
+				compiler.compile_auto(textures, "NinePatch::textures");
+			}
+			struct Compiled
+			{
+				uint vb; // StructuredBuffer<vertex_input>
+				uint textures; // Texture2D<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::NinePatch";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::NinePatch";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

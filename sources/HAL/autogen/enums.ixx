@@ -95,6 +95,10 @@ export
 		BlendWeightCompute,
 		BlendingCompute,
 		SS_Shadow,
+		TonemapHistogramClear,
+		TonemapHistogramBuild,
+		TonemapExposureAdapt,
+		TonemapApply,
 		FrameGraph_Debug_Texture2D,
 		FrameGraph_Debug_Texture2DArray,
 		FrameGraph_Debug_Texture3D,
@@ -300,6 +304,8 @@ export
 		Instance = "Instance"_crc32,
 		Color = "Color"_crc32,
 		Test = "Test"_crc32,
+		TonemapSelectors = "TonemapSelectors"_crc32,
+		TonemapData = "TonemapData"_crc32,
 		UIState = "UIState"_crc32,
 		UIRenderState = "UIRenderState"_crc32,
 		vertex_input = "vertex_input"_crc32,
@@ -363,68 +369,125 @@ export
 		WorkGR_ClassifyPixels_NodeEmulation = "WorkGR_ClassifyPixels_NodeEmulation"_crc32,
 		WorkGR_Shadows_NodeEmulation = "WorkGR_Shadows_NodeEmulation"_crc32
 	};
-	enum class DDGIControlFlags : uint
+	namespace GI
 	{
-		CullCoarsestCascade = 1,
-		DisableResidencyCulling = 2,
-		JitterRays = 4,
-		DisableTraceFeedback = 8
-	};
-	enum class DDGIOcclusionMode : uint
+		namespace DDGI
+		{
+			enum class DDGIControlFlags : uint
+			{
+				CullCoarsestCascade = 1,
+				DisableResidencyCulling = 2,
+				JitterRays = 4,
+				DisableTraceFeedback = 8
+			};
+		}
+	}
+namespace GI
+{
+	namespace DDGI
 	{
-		NoOcclusionTest = 0,
-		ProbeDepthTest = 1,
-		RTXRay = 2
-	};
-	enum class RTXDebugFlags : uint
+			enum class DDGIOcclusionMode : uint
+			{
+				NoOcclusionTest = 0,
+				ProbeDepthTest = 1,
+				RTXRay = 2
+			};
+	}
+}
+namespace Dev
+{
+		enum class RTXDebugFlags : uint
+		{
+			DisableSkyFallback = 1
+		};
+}
+namespace Meshes
+{
+		enum class TransparencyMode : uint
+		{
+			Opaque,
+			Masked,
+			Translucent
+		};
+}
+namespace Meshes
+{
+		enum class RTInstanceMask : uint
+		{
+			Opaque = 1,
+			Translucent = 2
+		};
+}
+namespace GI
+{
+		enum class IndirectSource : uint
+		{
+			MyVCT,
+			RTXReference
+		};
+}
+namespace Reflections
+{
+		enum class ReflectionSource : uint
+		{
+			MyReflection,
+			RTXReference
+		};
+}
+namespace Dev
+{
+		enum class TestEnumMode : uint
+		{
+			None,
+			FirstMode,
+			SecondMode = 5
+		};
+}
+namespace Post
+{
+		enum class TonemapOperator : uint
+		{
+			AgX,
+			PBRNeutral,
+			Clamp
+		};
+}
+namespace Post
+{
+	namespace Upscale
 	{
-		DisableSkyFallback = 1
-	};
-	enum class TransparencyMode : uint
+			enum class UpscalerType : uint
+			{
+				FSR,
+				DLSS,
+				DLSSRR
+			};
+	}
+}
+namespace Shadows
+{
+	namespace VSM
 	{
-		Opaque,
-		Masked,
-		Translucent
-	};
-	enum class RTInstanceMask : uint
+			enum class VSMDebugView : uint
+			{
+				None,
+				PageGrid,
+				RtxReference,
+				HizClassify,
+				ContactShadow,
+				ShadowOnly
+			};
+	}
+}
+namespace Shadows
+{
+	namespace VSM
 	{
-		Opaque = 1,
-		Translucent = 2
-	};
-	enum class IndirectSource : uint
-	{
-		MyVCT,
-		RTXReference
-	};
-	enum class ReflectionSource : uint
-	{
-		MyReflection,
-		RTXReference
-	};
-	enum class TestEnumMode : uint
-	{
-		None,
-		FirstMode,
-		SecondMode = 5
-	};
-	enum class UpscalerType : uint
-	{
-		FSR,
-		DLSS,
-		DLSSRR
-	};
-	enum class VSMDebugView : uint
-	{
-		None,
-		PageGrid,
-		RtxReference,
-		HizClassify,
-		ContactShadow,
-		ShadowOnly
-	};
-	enum class ShadowSource : uint
-	{
-		VSM,
-		RTXReference
-	};
+			enum class ShadowSource : uint
+			{
+				VSM,
+				RTXReference
+			};
+	}
+}
 }

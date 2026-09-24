@@ -14,56 +14,62 @@ import :Types;
 
 export namespace PSOS
 {
-	struct Voxelization: public PSOBase
+	namespace GI
 	{
-		struct Keys {
-			KeyValue<int, Nullable> Dynamic;
-			GEN_DEF_COMP(Keys);
-		private:
-			SERIALIZE()
+		namespace Voxel
+		{
+			struct Voxelization: public PSOBase
 			{
-				ar&NVP(Dynamic);
-			}
-		};
+				struct Keys {
+					KeyValue<int, Nullable> Dynamic;
+					GEN_DEF_COMP(Keys);
+				private:
+					SERIALIZE()
+					{
+						ar&NVP(Dynamic);
+					}
+				};
 
-		GEN_GRAPHICS_PSO(Voxelization, Dynamic)
-		GEN_KEY(Dynamic, true);
+				GEN_GRAPHICS_PSO(Voxelization, Dynamic)
+				GEN_KEY(Dynamic, true);
 
 
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
-			static const ShaderDefine<&Keys::Dynamic,&SimpleGraphicsPSO::pixel> Dynamic = "VOXEL_DYNAMIC";
+				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+				{
+					static const ShaderDefine<&Keys::Dynamic,&SimpleGraphicsPSO::pixel> Dynamic = "VOXEL_DYNAMIC";
 
 
-			SimplePSO mpso("Voxelization");
-			if(f) f(mpso,key);
+					SimplePSO mpso("Voxelization");
+					if(f) f(mpso,key);
 
-			mpso.root_signature = Layouts::DefaultLayout;
+					mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.mesh.file_name = "shaders/voxelgi/mesh_shader_voxel.hlsl";
-			mpso.mesh.entry_point = "VS";
-			mpso.mesh.flags = HAL::ShaderOptions::None;
+					mpso.mesh.file_name = "shaders/voxelgi/mesh_shader_voxel.hlsl";
+					mpso.mesh.entry_point = "VS";
+					mpso.mesh.flags = HAL::ShaderOptions::None;
 			
-			mpso.amplification.file_name = "shaders/voxelgi/mesh_shader_voxel.hlsl";
-			mpso.amplification.entry_point = "AS";
-			mpso.amplification.flags = HAL::ShaderOptions::None;
+					mpso.amplification.file_name = "shaders/voxelgi/mesh_shader_voxel.hlsl";
+					mpso.amplification.entry_point = "AS";
+					mpso.amplification.flags = HAL::ShaderOptions::None;
 			
-			Dynamic.Apply(mpso, key);
+					Dynamic.Apply(mpso, key);
 
-			mpso.rtv_formats = {  };	
-			mpso.blend = {  };
+					mpso.rtv_formats = {  };	
+					mpso.blend = {  };
 
-			mpso.enable_depth =false;
-			mpso.enable_stencil =false;
-			mpso.cull =HAL::CullMode::None;
-			mpso.conservative =true;
-			return mpso;
+					mpso.enable_depth =false;
+					mpso.enable_stencil =false;
+					mpso.cull =HAL::CullMode::None;
+					mpso.conservative =true;
+					return mpso;
+				}
+
+				private:
+				SERIALIZE()
+				{
+					ar&NVP(wrap(psos));
+				}
+			};
 		}
-
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
-		}
-	};
+	}
 }

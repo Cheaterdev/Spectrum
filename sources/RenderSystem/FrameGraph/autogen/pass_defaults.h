@@ -21,7 +21,7 @@ struct PassDefault
 
 
 template<>
-struct PassDefault<Passes::DDGIDebug>
+struct PassDefault<Passes::GI::DDGI::Dev::DDGIDebug>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -31,13 +31,13 @@ struct PassDefault<Passes::DDGIDebug>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::DDGIDebug::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::DDGIDebug::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::GI::DDGI::Dev::DDGIDebug::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::GI::DDGI::Dev::DDGIDebug::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::DDGIIndirectDebug>
+struct PassDefault<Passes::GI::DDGI::Dev::DDGIIndirectDebug>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -47,13 +47,13 @@ struct PassDefault<Passes::DDGIIndirectDebug>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::DDGIIndirectDebug::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::DDGIIndirectDebug::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::GI::DDGI::Dev::DDGIIndirectDebug::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::GI::DDGI::Dev::DDGIIndirectDebug::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::FSR>
+struct PassDefault<Passes::Post::Upscale::FSR>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -63,13 +63,13 @@ struct PassDefault<Passes::FSR>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::FSR::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::FSR::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Post::Upscale::FSR::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Post::Upscale::FSR::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::ResultCreation>
+struct PassDefault<Passes::Frame::ResultCreation>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
@@ -79,13 +79,13 @@ struct PassDefault<Passes::ResultCreation>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::ResultCreation::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Frame::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Frame::ResultCreation::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::NRD_GBufferPack>
+struct PassDefault<Passes::Denoise::NRD::NRD_GBufferPack>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
@@ -95,13 +95,13 @@ struct PassDefault<Passes::NRD_GBufferPack>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::NRD_GBufferPack::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::NRD_GBufferPack::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Denoise::NRD::NRD_GBufferPack::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Denoise::NRD::NRD_GBufferPack::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::NRD_REBLUR_Execute>
+struct PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
@@ -111,8 +111,8 @@ struct PassDefault<Passes::NRD_REBLUR_Execute>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::NRD_REBLUR_Execute::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::NRD_REBLUR_Execute::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Denoise::NRD::NRD_REBLUR_Execute::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Denoise::NRD::NRD_REBLUR_Execute::Context& data, FrameGraph::FrameContext& context);
 
 	// [PreSetup]: a real side effect (not a pure enable/render decision, so
 	// [SetupCondition]/[RenderCondition] can't express it) that must run
@@ -126,7 +126,7 @@ struct PassDefault<Passes::NRD_REBLUR_Execute>
 
 
 template<>
-struct PassDefault<Passes::NRD_SIGMA_Execute>
+struct PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
@@ -136,8 +136,8 @@ struct PassDefault<Passes::NRD_SIGMA_Execute>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::NRD_SIGMA_Execute::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::NRD_SIGMA_Execute::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Denoise::NRD::NRD_SIGMA_Execute::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Denoise::NRD::NRD_SIGMA_Execute::Context& data, FrameGraph::FrameContext& context);
 
 	// [PreSetup]: a real side effect (not a pure enable/render decision, so
 	// [SetupCondition]/[RenderCondition] can't express it) that must run
@@ -151,7 +151,7 @@ struct PassDefault<Passes::NRD_SIGMA_Execute>
 
 
 template<>
-struct PassDefault<Passes::NRD_IndirectCombine>
+struct PassDefault<Passes::Denoise::NRD::NRD_IndirectCombine>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -161,13 +161,13 @@ struct PassDefault<Passes::NRD_IndirectCombine>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::NRD_IndirectCombine::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::NRD_IndirectCombine::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Denoise::NRD::NRD_IndirectCombine::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Denoise::NRD::NRD_IndirectCombine::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::NRD_ShadowCombine>
+struct PassDefault<Passes::Denoise::NRD::NRD_ShadowCombine>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -177,13 +177,13 @@ struct PassDefault<Passes::NRD_ShadowCombine>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::NRD_ShadowCombine::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::NRD_ShadowCombine::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Denoise::NRD::NRD_ShadowCombine::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Denoise::NRD::NRD_ShadowCombine::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::RTXShadow>
+struct PassDefault<Passes::Shadows::RTXShadow>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -193,13 +193,13 @@ struct PassDefault<Passes::RTXShadow>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::RTXShadow::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::RTXShadow::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Shadows::RTXShadow::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Shadows::RTXShadow::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::RTXColorPass>
+struct PassDefault<Passes::Raytrace::Dev::RTXColorPass>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -209,13 +209,13 @@ struct PassDefault<Passes::RTXColorPass>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::RTXColorPass::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::RTXColorPass::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Raytrace::Dev::RTXColorPass::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Raytrace::Dev::RTXColorPass::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::TranslucentRTX>
+struct PassDefault<Passes::Raytrace::TranslucentRTX>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -225,13 +225,13 @@ struct PassDefault<Passes::TranslucentRTX>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::TranslucentRTX::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::TranslucentRTX::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Raytrace::TranslucentRTX::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Raytrace::TranslucentRTX::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::PreScene>
+struct PassDefault<Passes::Frame::PreScene>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
@@ -241,8 +241,8 @@ struct PassDefault<Passes::PreScene>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::PreScene::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::PreScene::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Frame::PreScene::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Frame::PreScene::Context& data, FrameGraph::FrameContext& context);
 
 	// [PreSetup]: a real side effect (not a pure enable/render decision, so
 	// [SetupCondition]/[RenderCondition] can't express it) that must run
@@ -256,7 +256,7 @@ struct PassDefault<Passes::PreScene>
 
 
 template<>
-struct PassDefault<Passes::Profiler>
+struct PassDefault<Passes::Dev::Profiler>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;
@@ -266,13 +266,13 @@ struct PassDefault<Passes::Profiler>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::Profiler::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Dev::Profiler::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Dev::Profiler::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::Scene>
+struct PassDefault<Passes::Meshes::Scene>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
@@ -282,13 +282,13 @@ struct PassDefault<Passes::Scene>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::Scene::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::Scene::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Meshes::Scene::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Meshes::Scene::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::CubeMapDownsample>
+struct PassDefault<Passes::Environment::CubeMapDownsample>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -298,13 +298,13 @@ struct PassDefault<Passes::CubeMapDownsample>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::CubeMapDownsample::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::CubeMapDownsample::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Environment::CubeMapDownsample::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Environment::CubeMapDownsample::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::CubeMapEnviromentProcessor>
+struct PassDefault<Passes::Environment::CubeMapEnviromentProcessor>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -314,13 +314,29 @@ struct PassDefault<Passes::CubeMapEnviromentProcessor>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::CubeMapEnviromentProcessor::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::CubeMapEnviromentProcessor::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Environment::CubeMapEnviromentProcessor::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Environment::CubeMapEnviromentProcessor::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::UI_PreDraw>
+struct PassDefault<Passes::Post::Tonemap>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Post::Tonemap::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Post::Tonemap::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::UI::UI_PreDraw>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Required;
@@ -330,13 +346,13 @@ struct PassDefault<Passes::UI_PreDraw>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::UI_PreDraw::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::UI_PreDraw::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::UI::UI_PreDraw::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::UI::UI_PreDraw::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::UI_Render>
+struct PassDefault<Passes::UI::UI_Render>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
@@ -346,13 +362,13 @@ struct PassDefault<Passes::UI_Render>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::UI_Render::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::UI_Render::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::UI::UI_Render::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::UI::UI_Render::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::UpscalingDLSS>
+struct PassDefault<Passes::Post::Upscale::UpscalingDLSS>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
@@ -362,13 +378,13 @@ struct PassDefault<Passes::UpscalingDLSS>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::UpscalingDLSS::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::UpscalingDLSS::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Post::Upscale::UpscalingDLSS::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Post::Upscale::UpscalingDLSS::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::UpscalingDLSSRR>
+struct PassDefault<Passes::Post::Upscale::UpscalingDLSSRR>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
@@ -378,13 +394,13 @@ struct PassDefault<Passes::UpscalingDLSSRR>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::UpscalingDLSSRR::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::UpscalingDLSSRR::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Post::Upscale::UpscalingDLSSRR::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Post::Upscale::UpscalingDLSSRR::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::GBufferDownsampler>
+struct PassDefault<Passes::Meshes::GBufferDownsampler>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -394,13 +410,13 @@ struct PassDefault<Passes::GBufferDownsampler>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::GBufferDownsampler::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Meshes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Meshes::GBufferDownsampler::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::ReflectionRTXHalf>
+struct PassDefault<Passes::Reflections::ReflectionRTXHalf>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -410,13 +426,13 @@ struct PassDefault<Passes::ReflectionRTXHalf>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::ReflectionRTXHalf::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::ReflectionRTXHalf::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Reflections::ReflectionRTXHalf::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Reflections::ReflectionRTXHalf::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::ReflectionRTX>
+struct PassDefault<Passes::Reflections::ReflectionRTX>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -426,13 +442,13 @@ struct PassDefault<Passes::ReflectionRTX>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::ReflectionRTX::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::ReflectionRTX::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Reflections::ReflectionRTX::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Reflections::ReflectionRTX::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::ShadowRTX>
+struct PassDefault<Passes::Shadows::ShadowRTX>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -442,13 +458,13 @@ struct PassDefault<Passes::ShadowRTX>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::ShadowRTX::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::ShadowRTX::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Shadows::ShadowRTX::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Shadows::ShadowRTX::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::IndirectRTXHalf>
+struct PassDefault<Passes::GI::IndirectRTXHalf>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -458,13 +474,13 @@ struct PassDefault<Passes::IndirectRTXHalf>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::IndirectRTXHalf::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::IndirectRTXHalf::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::GI::IndirectRTXHalf::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::GI::IndirectRTXHalf::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::IndirectRTX>
+struct PassDefault<Passes::GI::IndirectRTX>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -474,13 +490,13 @@ struct PassDefault<Passes::IndirectRTX>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::IndirectRTX::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::IndirectRTX::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::GI::IndirectRTX::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::GI::IndirectRTX::Context& data, FrameGraph::FrameContext& context);
 };
 
 
 template<>
-struct PassDefault<Passes::RTXCombine>
+struct PassDefault<Passes::GI::RTXCombine>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -490,8 +506,8 @@ struct PassDefault<Passes::RTXCombine>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::RTXCombine::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::RTXCombine::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::GI::RTXCombine::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::GI::RTXCombine::Context& data, FrameGraph::FrameContext& context);
 };
 
 
@@ -525,156 +541,156 @@ struct PassSetupDefault
 
 
 template<>
-struct PassSetupDefault<Passes::AssetGBuffer>
+struct PassSetupDefault<Passes::Editor::AssetGBuffer>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::AssetGBuffer::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Editor::AssetGBuffer::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::AssetMip>
+struct PassSetupDefault<Passes::Editor::AssetMip>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::AssetMip::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Editor::AssetMip::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::BlueNoise>
+struct PassSetupDefault<Passes::Utility::BlueNoise>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::BlueNoise::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Utility::BlueNoise::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::DDGIProbeSelect>
+struct PassSetupDefault<Passes::GI::DDGI::DDGIProbeSelect>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::DDGIProbeSelect::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::GI::DDGI::DDGIProbeSelect::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::DDGIProbeResidencyMark>
+struct PassSetupDefault<Passes::GI::DDGI::DDGIProbeResidencyMark>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::DDGIProbeResidencyMark::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::GI::DDGI::DDGIProbeResidencyMark::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::DDGIProbeDispatchArgsBuild>
+struct PassSetupDefault<Passes::GI::DDGI::DDGIProbeDispatchArgsBuild>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::DDGIProbeDispatchArgsBuild::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::GI::DDGI::DDGIProbeDispatchArgsBuild::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::DDGIProbeTrace>
+struct PassSetupDefault<Passes::GI::DDGI::DDGIProbeTrace>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::DDGIProbeTrace::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::GI::DDGI::DDGIProbeTrace::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::DDGIProbeConvolve>
+struct PassSetupDefault<Passes::GI::DDGI::DDGIProbeConvolve>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::DDGIProbeConvolve::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::GI::DDGI::DDGIProbeConvolve::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::PSSM_Cascade>
+struct PassSetupDefault<Passes::Shadows::PSSM::PSSM_Cascade>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::PSSM_Cascade::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::PSSM::PSSM_Cascade::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::PSSM_GenerateMask>
+struct PassSetupDefault<Passes::Shadows::PSSM::PSSM_GenerateMask>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::PSSM_GenerateMask::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::PSSM::PSSM_GenerateMask::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::PSSM_Combine>
+struct PassSetupDefault<Passes::Shadows::PSSM::PSSM_Combine>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::PSSM_Combine::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::PSSM::PSSM_Combine::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::PSSM_Global>
+struct PassSetupDefault<Passes::Shadows::PSSM::PSSM_Global>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::PSSM_Global::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::PSSM::PSSM_Global::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::Sky>
+struct PassSetupDefault<Passes::Environment::Sky>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::Sky::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Environment::Sky::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::CubeSky>
+struct PassSetupDefault<Passes::Environment::CubeSky>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::CubeSky::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Environment::CubeSky::Context& data, FrameGraph::TaskBuilder& builder);
 
 	// [PreSetup]: same contract as PassDefault<T>::pre_setup() above --
 	// hand-written in the owner's .cpp, dispatched by the owning pipeline's
@@ -686,233 +702,233 @@ struct PassSetupDefault<Passes::CubeSky>
 
 
 template<>
-struct PassSetupDefault<Passes::SMAA>
+struct PassSetupDefault<Passes::Post::AA::SMAA>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::SMAA::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Post::AA::SMAA::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::stencil_renderer>
+struct PassSetupDefault<Passes::Editor::stencil_renderer>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::stencil_renderer::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Editor::stencil_renderer::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::AssetPreview>
+struct PassSetupDefault<Passes::Editor::AssetPreview>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::AssetPreview::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Editor::AssetPreview::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::NormalRoughnessRepack>
+struct PassSetupDefault<Passes::Post::Upscale::NormalRoughnessRepack>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::NormalRoughnessRepack::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Post::Upscale::NormalRoughnessRepack::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VoxelDebug>
+struct PassSetupDefault<Passes::GI::Voxel::Dev::VoxelDebug>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VoxelDebug::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::GI::Voxel::Dev::VoxelDebug::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::ReflCombine>
+struct PassSetupDefault<Passes::Reflections::ReflCombine>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::ReflCombine::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Reflections::ReflCombine::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::Voxelize>
+struct PassSetupDefault<Passes::GI::Voxel::Voxelize>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::Voxelize::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::GI::Voxel::Voxelize::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::Lighting>
+struct PassSetupDefault<Passes::GI::Voxel::Lighting>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::Lighting::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::GI::Voxel::Lighting::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::Mipmapping>
+struct PassSetupDefault<Passes::GI::Voxel::Mipmapping>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::Mipmapping::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::GI::Voxel::Mipmapping::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VoxelScreen>
+struct PassSetupDefault<Passes::GI::Voxel::VoxelScreen>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VoxelScreen::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::GI::Voxel::VoxelScreen::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::ScreenReflection>
+struct PassSetupDefault<Passes::Reflections::ScreenReflection>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::ScreenReflection::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Reflections::ScreenReflection::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VSM_GatherDispatch>
+struct PassSetupDefault<Passes::Shadows::VSM::VSM_GatherDispatch>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VSM_GatherDispatch::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::VSM::VSM_GatherDispatch::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VSM_RenderPages>
+struct PassSetupDefault<Passes::Shadows::VSM::VSM_RenderPages>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::VSM::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VSM_HiZRebuild>
+struct PassSetupDefault<Passes::Shadows::VSM::VSM_HiZRebuild>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::VSM::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VSM_BlockerClassify>
+struct PassSetupDefault<Passes::Shadows::VSM::VSM_BlockerClassify>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VSM_BlockerClassify::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::VSM::VSM_BlockerClassify::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VSM_BlockerSearch>
+struct PassSetupDefault<Passes::Shadows::VSM::VSM_BlockerSearch>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VSM_BlockerSearch::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::VSM::VSM_BlockerSearch::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VSM_ScreenSpaceShadow>
+struct PassSetupDefault<Passes::Shadows::VSM::VSM_ScreenSpaceShadow>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VSM_ScreenSpaceShadow::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::VSM::VSM_ScreenSpaceShadow::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VSM_ShadowResolve>
+struct PassSetupDefault<Passes::Shadows::VSM::VSM_ShadowResolve>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VSM_ShadowResolve::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::VSM::VSM_ShadowResolve::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VSM_Combine>
+struct PassSetupDefault<Passes::Shadows::VSM::VSM_Combine>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::VSM::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VSM_DebugClassifyOverlay>
+struct PassSetupDefault<Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 
 template<>
-struct PassSetupDefault<Passes::VSM_DepthAnalysis>
+struct PassSetupDefault<Passes::Shadows::VSM::VSM_DepthAnalysis>
 {
 	static constexpr bool enabled = true;
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::Shadows::VSM::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 

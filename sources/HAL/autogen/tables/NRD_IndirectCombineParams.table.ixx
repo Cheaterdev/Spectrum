@@ -15,50 +15,56 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct NRD_IndirectCombineParams
+	namespace Denoise
 	{
-		static constexpr SlotID ID = SlotID::NRD_IndirectCombineParams;
-		HLSL::Texture2D<float4> indirect;
-		HLSL::RWTexture2D<float4> target;
-		GBuffer gbuffer;
-		HLSL::Texture2D<float4>& GetIndirect() { return indirect; }
-		HLSL::RWTexture2D<float4>& GetTarget() { return target; }
-		GBuffer& GetGbuffer() { return gbuffer; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace NRD
 		{
-			compiler.compile(indirect, "NRD_IndirectCombineParams::indirect");
-			compiler.compile(target, "NRD_IndirectCombineParams::target");
-			compiler.compile(gbuffer, "NRD_IndirectCombineParams::gbuffer");
-		}
-		struct Compiled
-		{
-			uint indirect; // Texture2D<float4>
-			uint target; // RWTexture2D<float4>
-			GBuffer::Compiled gbuffer; // GBuffer
+			struct NRD_IndirectCombineParams
+			{
+				static constexpr SlotID ID = SlotID::NRD_IndirectCombineParams;
+				HLSL::Texture2D<float4> indirect;
+				HLSL::RWTexture2D<float4> target;
+				Table::Meshes::GBuffer gbuffer;
+				HLSL::Texture2D<float4>& GetIndirect() { return indirect; }
+				HLSL::RWTexture2D<float4>& GetTarget() { return target; }
+				Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(indirect, "NRD_IndirectCombineParams::indirect");
+					compiler.compile(target, "NRD_IndirectCombineParams::target");
+					compiler.compile(gbuffer, "NRD_IndirectCombineParams::gbuffer");
+				}
+				struct Compiled
+				{
+					uint indirect; // Texture2D<float4>
+					uint target; // RWTexture2D<float4>
+					Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(gbuffer);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(gbuffer);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::NRD_IndirectCombineParams";
+				static std::string get_typename()
+				{
+					return "Tables::NRD_IndirectCombineParams";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(gbuffer);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(gbuffer);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

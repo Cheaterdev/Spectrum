@@ -11,256 +11,262 @@ using namespace FrameGraph;
 
 namespace Passes
 {
-
-class DDGIProbeSelect : public PassNodeBase
+namespace GI
 {
-public:
-	struct Context
+	namespace DDGI
 	{
 
-		// [Multiple=5]: this instance's own
-		// index, written automatically by TypedPass::setup() (FrameGraph.Base.ixx,
-		// from the Pass::pass_index every [Multiple] instance already carries)
-		// before setup_func or any [Optional=...] guard runs -- no per-pass index
-		// field or manual `data.X = i;` assignment needed.
-		uint32_t pass_index = 0;
-
-		Handlers::StructuredBuffer<Table::DDGIProbeMetadata> DDGI_Probes = ResourceID::DDGI_Probes;
-
-
-		Handlers::Texture DDGI_ProbeIrradiance = ResourceID::DDGI_ProbeIrradiance;
-
-
-		Handlers::Texture DDGI_ProbeVisibility = ResourceID::DDGI_ProbeVisibility;
-
-
-		Handlers::StructuredBuffer<uint> DDGI_ProbeResidency = ResourceID::DDGI_ProbeResidency;
-
-
-		Handlers::StructuredBuffer<DispatchRaysArguments> DDGI_DispatchRaysArgs = ResourceID::DDGI_DispatchRaysArgs;
-
-
-		Handlers::StructuredBuffer<uint> DDGI_CompactedProbeList = ResourceID::DDGI_CompactedProbeList;
-
-
-		Handlers::StructuredBuffer<uint> DDGI_CompactedProbeCount = ResourceID::DDGI_CompactedProbeCount;
-
-
-		Handlers::StructuredBuffer<uint> DDGI_ProbeResidencyPending = ResourceID::DDGI_ProbeResidencyPending;
-
-
-		Handlers::StructuredBuffer<uint> DDGI_ProbeMissStreak = ResourceID::DDGI_ProbeMissStreak;
-
-
-		// Resources this pass always needs whenever it runs, generated from
-		// each field's own [Always=X] annotation (further gated by [Optional=X]
-		// when present -- a raw bool expression, e.g. builder.exists(...) or a
-		// context-read flag, deciding whether this specific field is actually
-		// needed this frame), or, for a View-typed field (e.g. `GBuffer
-		// gbuffer;`), every leaf the View itself marks [Always=X] that this
-		// pass's own [Write=...] on that field doesn't already cover. A field
-		// that ALSO carries [Size]/[Format] (so create_always() below creates
-		// it under its own [Optional] condition) gets the negated condition
-		// here instead -- "need what some other instance/frame already
-		// created" is the complement of "create it this time." Called by
-		// TypedPass::setup() after setup_func returns true - not a
-		// substitute for setup_func's own need()/create() calls for anything
-		// else conditional.
-		static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+		class DDGIProbeSelect : public PassNodeBase
 		{
-			if (!(data.pass_index == 0))
-				builder.need(data.DDGI_Probes, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			if (!(data.pass_index == 0))
-				builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			if (!(data.pass_index == 0))
-				builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			if (!(data.pass_index == 0))
-				builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			if (!(data.pass_index == 0))
-				builder.need(data.DDGI_DispatchRaysArgs, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			if (!(data.pass_index == 0))
-				builder.need(data.DDGI_CompactedProbeList, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			if (!(data.pass_index == 0))
-				builder.need(data.DDGI_CompactedProbeCount, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			if (!(data.pass_index == 0))
-				builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			if (!(data.pass_index == 0))
-				builder.need(data.DDGI_ProbeMissStreak, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-		}
+		public:
+			struct Context
+			{
 
-		// Resources this pass always creates with a fixed desc, generated from
-		// each field's own [Size]/[Format] annotation (plus [Always] for the
-		// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
-		// that needs its original chain link before recreating a new one). A
-		// field that ALSO carries [Optional] creates only under that
-		// condition -- need_always() (above) emits a complementary need() for
-		// the SAME field under the negated condition, using the same
-		// [Always] flags, e.g. a [Multiple] pass where instance 0 creates a
-		// shared resource and every other instance just needs it (see
-		// PSSM_Cascade, pssm.prism). Called by TypedPass::setup() after
-		// setup_func returns true - not a substitute for setup_func's own
-		// create()/recreate() calls for anything whose Desc depends on
-		// runtime state.
-		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
-		{
-			if (data.pass_index == 0)
+				// [Multiple=5]: this instance's own
+				// index, written automatically by TypedPass::setup() (FrameGraph.Base.ixx,
+				// from the Pass::pass_index every [Multiple] instance already carries)
+				// before setup_func or any [Optional=...] guard runs -- no per-pass index
+				// field or manual `data.X = i;` assignment needed.
+				uint32_t pass_index = 0;
+
+				Handlers::StructuredBuffer<Table::GI::DDGI::DDGIProbeMetadata> DDGI_Probes = ResourceID::DDGI_Probes;
+
+
+				Handlers::Texture DDGI_ProbeIrradiance = ResourceID::DDGI_ProbeIrradiance;
+
+
+				Handlers::Texture DDGI_ProbeVisibility = ResourceID::DDGI_ProbeVisibility;
+
+
+				Handlers::StructuredBuffer<uint> DDGI_ProbeResidency = ResourceID::DDGI_ProbeResidency;
+
+
+				Handlers::StructuredBuffer<DispatchRaysArguments> DDGI_DispatchRaysArgs = ResourceID::DDGI_DispatchRaysArgs;
+
+
+				Handlers::StructuredBuffer<uint> DDGI_CompactedProbeList = ResourceID::DDGI_CompactedProbeList;
+
+
+				Handlers::StructuredBuffer<uint> DDGI_CompactedProbeCount = ResourceID::DDGI_CompactedProbeCount;
+
+
+				Handlers::StructuredBuffer<uint> DDGI_ProbeResidencyPending = ResourceID::DDGI_ProbeResidencyPending;
+
+
+				Handlers::StructuredBuffer<uint> DDGI_ProbeMissStreak = ResourceID::DDGI_ProbeMissStreak;
+
+
+				// Resources this pass always needs whenever it runs, generated from
+				// each field's own [Always=X] annotation (further gated by [Optional=X]
+				// when present -- a raw bool expression, e.g. builder.exists(...) or a
+				// context-read flag, deciding whether this specific field is actually
+				// needed this frame), or, for a View-typed field (e.g. `GBuffer
+				// gbuffer;`), every leaf the View itself marks [Always=X] that this
+				// pass's own [Write=...] on that field doesn't already cover. A field
+				// that ALSO carries [Size]/[Format] (so create_always() below creates
+				// it under its own [Optional] condition) gets the negated condition
+				// here instead -- "need what some other instance/frame already
+				// created" is the complement of "create it this time." Called by
+				// TypedPass::setup() after setup_func returns true - not a
+				// substitute for setup_func's own need()/create() calls for anything
+				// else conditional.
+				static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+				{
+					if (!(data.pass_index == 0))
+						builder.need(data.DDGI_Probes, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					if (!(data.pass_index == 0))
+						builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					if (!(data.pass_index == 0))
+						builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					if (!(data.pass_index == 0))
+						builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					if (!(data.pass_index == 0))
+						builder.need(data.DDGI_DispatchRaysArgs, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					if (!(data.pass_index == 0))
+						builder.need(data.DDGI_CompactedProbeList, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					if (!(data.pass_index == 0))
+						builder.need(data.DDGI_CompactedProbeCount, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					if (!(data.pass_index == 0))
+						builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					if (!(data.pass_index == 0))
+						builder.need(data.DDGI_ProbeMissStreak, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+				}
+
+				// Resources this pass always creates with a fixed desc, generated from
+				// each field's own [Size]/[Format] annotation (plus [Always] for the
+				// creation flags, or [Always]+[Recreate]+[RecreateFlags] for a field
+				// that needs its original chain link before recreating a new one). A
+				// field that ALSO carries [Optional] creates only under that
+				// condition -- need_always() (above) emits a complementary need() for
+				// the SAME field under the negated condition, using the same
+				// [Always] flags, e.g. a [Multiple] pass where instance 0 creates a
+				// shared resource and every other instance just needs it (see
+				// PSSM_Cascade, pssm.prism). Called by TypedPass::setup() after
+				// setup_func returns true - not a substitute for setup_func's own
+				// create()/recreate() calls for anything whose Desc depends on
+				// runtime state.
+				static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
+				{
+					if (data.pass_index == 0)
+					{
+					builder.create(data.DDGI_Probes, { Constants::GI::DDGI::DDGI_ProbeCount * Constants::GI::DDGI::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					}
+					if (data.pass_index == 0)
+					{
+					builder.create(data.DDGI_ProbeIrradiance, { ivec3(ivec2(Constants::GI::DDGI::DDGI_AtlasWidth, Constants::GI::DDGI::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, Constants::GI::DDGI::DDGI_AtlasArraySlices, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					}
+					if (data.pass_index == 0)
+					{
+					builder.create(data.DDGI_ProbeVisibility, { ivec3(ivec2(Constants::GI::DDGI::DDGI_AtlasWidth, Constants::GI::DDGI::DDGI_AtlasHeight), 0), HAL::Format::R16G16_FLOAT, Constants::GI::DDGI::DDGI_AtlasArraySlices, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					}
+					if (data.pass_index == 0)
+					{
+					builder.create(data.DDGI_ProbeResidency, { Constants::GI::DDGI::DDGI_ProbeCount * Constants::GI::DDGI::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					}
+					if (data.pass_index == 0)
+					{
+					builder.create(data.DDGI_DispatchRaysArgs, { Constants::GI::DDGI::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					}
+					if (data.pass_index == 0)
+					{
+					builder.create(data.DDGI_CompactedProbeList, { Constants::GI::DDGI::DDGI_ProbeCount * Constants::GI::DDGI::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					}
+					if (data.pass_index == 0)
+					{
+					builder.create(data.DDGI_CompactedProbeCount, { Constants::GI::DDGI::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					}
+					if (data.pass_index == 0)
+					{
+					builder.create(data.DDGI_ProbeResidencyPending, { Constants::GI::DDGI::DDGI_ProbeCount * Constants::GI::DDGI::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					}
+					if (data.pass_index == 0)
+					{
+					builder.create(data.DDGI_ProbeMissStreak, { Constants::GI::DDGI::DDGI_ProbeCount * Constants::GI::DDGI::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+					}
+				}
+				// Which chain link each handler field resolved to, one named slot per
+				// field. Filled from a live frame's finished Context and applied on a
+				// replayed one, so a replay neither re-runs create_always/need_always nor
+				// depends on the order they made their calls in. The id is not stored:
+				// the field fixes it.
+				struct Cache
+				{
+					FrameGraph::ChainIndex DDGI_Probes = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_ProbeResidency = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_DispatchRaysArgs = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_CompactedProbeList = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_CompactedProbeCount = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_ProbeResidencyPending = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex DDGI_ProbeMissStreak = FrameGraph::ChainIndex::Unresolved;
+				};
+
+				static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
+				{
+					cache.DDGI_Probes = FrameGraph::TaskBuilder::cache_slot(data.DDGI_Probes, ResourceID::DDGI_Probes);
+					cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
+					cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
+					cache.DDGI_ProbeResidency = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency);
+					cache.DDGI_DispatchRaysArgs = FrameGraph::TaskBuilder::cache_slot(data.DDGI_DispatchRaysArgs, ResourceID::DDGI_DispatchRaysArgs);
+					cache.DDGI_CompactedProbeList = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList);
+					cache.DDGI_CompactedProbeCount = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount);
+					cache.DDGI_ProbeResidencyPending = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending);
+					cache.DDGI_ProbeMissStreak = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeMissStreak, ResourceID::DDGI_ProbeMissStreak);
+				}
+
+				// Replay counterpart of create_always/need_always. A field this pass
+				// creates gets its desc recomputed on the link the cache names, so descs
+				// follow the current context instead of being stored in the plan; every
+				// other field is only pointed at its link. Each link is created by exactly
+				// one pass and nothing here reads another resource's desc, so passes can
+				// load in any order. A [Recreate] without [Size]/[Format] copies the
+				// previous link's desc, which LoadGraph does once every pass has loaded.
+				static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
+				{
+					if (data.pass_index == 0)
+					builder.create_versioned(data.DDGI_Probes, cache.DDGI_Probes, { Constants::GI::DDGI::DDGI_ProbeCount * Constants::GI::DDGI::DDGI_CascadeCount });
+					else
+						builder.load(data.DDGI_Probes, ResourceID::DDGI_Probes, cache.DDGI_Probes);
+					if (data.pass_index == 0)
+					builder.create_versioned(data.DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance, { ivec3(ivec2(Constants::GI::DDGI::DDGI_AtlasWidth, Constants::GI::DDGI::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, Constants::GI::DDGI::DDGI_AtlasArraySlices, 1 });
+					else
+						builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
+					if (data.pass_index == 0)
+					builder.create_versioned(data.DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility, { ivec3(ivec2(Constants::GI::DDGI::DDGI_AtlasWidth, Constants::GI::DDGI::DDGI_AtlasHeight), 0), HAL::Format::R16G16_FLOAT, Constants::GI::DDGI::DDGI_AtlasArraySlices, 1 });
+					else
+						builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
+					if (data.pass_index == 0)
+					builder.create_versioned(data.DDGI_ProbeResidency, cache.DDGI_ProbeResidency, { Constants::GI::DDGI::DDGI_ProbeCount * Constants::GI::DDGI::DDGI_CascadeCount });
+					else
+						builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
+					if (data.pass_index == 0)
+					builder.create_versioned(data.DDGI_DispatchRaysArgs, cache.DDGI_DispatchRaysArgs, { Constants::GI::DDGI::DDGI_CascadeCount });
+					else
+						builder.load(data.DDGI_DispatchRaysArgs, ResourceID::DDGI_DispatchRaysArgs, cache.DDGI_DispatchRaysArgs);
+					if (data.pass_index == 0)
+					builder.create_versioned(data.DDGI_CompactedProbeList, cache.DDGI_CompactedProbeList, { Constants::GI::DDGI::DDGI_ProbeCount * Constants::GI::DDGI::DDGI_CascadeCount });
+					else
+						builder.load(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList, cache.DDGI_CompactedProbeList);
+					if (data.pass_index == 0)
+					builder.create_versioned(data.DDGI_CompactedProbeCount, cache.DDGI_CompactedProbeCount, { Constants::GI::DDGI::DDGI_CascadeCount });
+					else
+						builder.load(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount, cache.DDGI_CompactedProbeCount);
+					if (data.pass_index == 0)
+					builder.create_versioned(data.DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending, { Constants::GI::DDGI::DDGI_ProbeCount * Constants::GI::DDGI::DDGI_CascadeCount });
+					else
+						builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
+					if (data.pass_index == 0)
+					builder.create_versioned(data.DDGI_ProbeMissStreak, cache.DDGI_ProbeMissStreak, { Constants::GI::DDGI::DDGI_ProbeCount * Constants::GI::DDGI::DDGI_CascadeCount });
+					else
+						builder.load(data.DDGI_ProbeMissStreak, ResourceID::DDGI_ProbeMissStreak, cache.DDGI_ProbeMissStreak);
+				}
+
+				// Resources this pass touches, in declaration order, each paired with
+				// whether the pass writes it (own [Write], or the view usage's
+				// [Write] / [Write = {leaves...}] for resources inside a view group).
+				static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+					{ ResourceID::DDGI_Probes, true },
+					{ ResourceID::DDGI_ProbeIrradiance, true },
+					{ ResourceID::DDGI_ProbeVisibility, true },
+					{ ResourceID::DDGI_ProbeResidency, true },
+					{ ResourceID::DDGI_DispatchRaysArgs, true },
+					{ ResourceID::DDGI_CompactedProbeList, true },
+					{ ResourceID::DDGI_CompactedProbeCount, true },
+					{ ResourceID::DDGI_ProbeResidencyPending, true },
+					{ ResourceID::DDGI_ProbeMissStreak, true },
+				};
+				static constexpr uint resource_count = std::size(resource_accesses);
+			};
+
+
+			std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
 			{
-			builder.create(data.DDGI_Probes, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+				return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 			}
-			if (data.pass_index == 0)
-			{
-			builder.create(data.DDGI_ProbeIrradiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
-			if (data.pass_index == 0)
-			{
-			builder.create(data.DDGI_ProbeVisibility, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
-			if (data.pass_index == 0)
-			{
-			builder.create(data.DDGI_ProbeResidency, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
-			if (data.pass_index == 0)
-			{
-			builder.create(data.DDGI_DispatchRaysArgs, { Constants::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
-			if (data.pass_index == 0)
-			{
-			builder.create(data.DDGI_CompactedProbeList, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
-			if (data.pass_index == 0)
-			{
-			builder.create(data.DDGI_CompactedProbeCount, { Constants::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
-			if (data.pass_index == 0)
-			{
-			builder.create(data.DDGI_ProbeResidencyPending, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
-			if (data.pass_index == 0)
-			{
-			builder.create(data.DDGI_ProbeMissStreak, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
-		}
-		// Which chain link each handler field resolved to, one named slot per
-		// field. Filled from a live frame's finished Context and applied on a
-		// replayed one, so a replay neither re-runs create_always/need_always nor
-		// depends on the order they made their calls in. The id is not stored:
-		// the field fixes it.
-		struct Cache
-		{
-			FrameGraph::ChainIndex DDGI_Probes = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeIrradiance = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeVisibility = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeResidency = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_DispatchRaysArgs = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_CompactedProbeList = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_CompactedProbeCount = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeResidencyPending = FrameGraph::ChainIndex::Unresolved;
-			FrameGraph::ChainIndex DDGI_ProbeMissStreak = FrameGraph::ChainIndex::Unresolved;
+
+			static constexpr LiteralWStr Name{L"DDGIProbeSelect"};
+
+			static constexpr uint32_t MaxCount = 5;
+			static constexpr LiteralWStr Names[MaxCount] = {
+				LiteralWStr{L"DDGIProbeSelect_0"},
+				LiteralWStr{L"DDGIProbeSelect_1"},
+				LiteralWStr{L"DDGIProbeSelect_2"},
+				LiteralWStr{L"DDGIProbeSelect_3"},
+				LiteralWStr{L"DDGIProbeSelect_4"},
+			};
+
+			static constexpr PassID ID = PassID::DDGIProbeSelect;
+
+
+			using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
+			using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
+
+			std::array<render_func_type, MaxCount> render_funcs;
+
+			const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
 		};
-
-		static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
-		{
-			cache.DDGI_Probes = FrameGraph::TaskBuilder::cache_slot(data.DDGI_Probes, ResourceID::DDGI_Probes);
-			cache.DDGI_ProbeIrradiance = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance);
-			cache.DDGI_ProbeVisibility = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility);
-			cache.DDGI_ProbeResidency = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency);
-			cache.DDGI_DispatchRaysArgs = FrameGraph::TaskBuilder::cache_slot(data.DDGI_DispatchRaysArgs, ResourceID::DDGI_DispatchRaysArgs);
-			cache.DDGI_CompactedProbeList = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList);
-			cache.DDGI_CompactedProbeCount = FrameGraph::TaskBuilder::cache_slot(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount);
-			cache.DDGI_ProbeResidencyPending = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending);
-			cache.DDGI_ProbeMissStreak = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeMissStreak, ResourceID::DDGI_ProbeMissStreak);
-		}
-
-		// Replay counterpart of create_always/need_always. A field this pass
-		// creates gets its desc recomputed on the link the cache names, so descs
-		// follow the current context instead of being stored in the plan; every
-		// other field is only pointed at its link. Each link is created by exactly
-		// one pass and nothing here reads another resource's desc, so passes can
-		// load in any order. A [Recreate] without [Size]/[Format] copies the
-		// previous link's desc, which LoadGraph does once every pass has loaded.
-		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
-		{
-			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_Probes, cache.DDGI_Probes, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount });
-			else
-				builder.load(data.DDGI_Probes, ResourceID::DDGI_Probes, cache.DDGI_Probes);
-			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16B16A16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 });
-			else
-				builder.load(data.DDGI_ProbeIrradiance, ResourceID::DDGI_ProbeIrradiance, cache.DDGI_ProbeIrradiance);
-			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility, { ivec3(ivec2(Constants::DDGI_AtlasWidth, Constants::DDGI_AtlasHeight), 0), HAL::Format::R16G16_FLOAT, Constants::DDGI_AtlasArraySlices, 1 });
-			else
-				builder.load(data.DDGI_ProbeVisibility, ResourceID::DDGI_ProbeVisibility, cache.DDGI_ProbeVisibility);
-			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeResidency, cache.DDGI_ProbeResidency, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount });
-			else
-				builder.load(data.DDGI_ProbeResidency, ResourceID::DDGI_ProbeResidency, cache.DDGI_ProbeResidency);
-			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_DispatchRaysArgs, cache.DDGI_DispatchRaysArgs, { Constants::DDGI_CascadeCount });
-			else
-				builder.load(data.DDGI_DispatchRaysArgs, ResourceID::DDGI_DispatchRaysArgs, cache.DDGI_DispatchRaysArgs);
-			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_CompactedProbeList, cache.DDGI_CompactedProbeList, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount });
-			else
-				builder.load(data.DDGI_CompactedProbeList, ResourceID::DDGI_CompactedProbeList, cache.DDGI_CompactedProbeList);
-			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_CompactedProbeCount, cache.DDGI_CompactedProbeCount, { Constants::DDGI_CascadeCount });
-			else
-				builder.load(data.DDGI_CompactedProbeCount, ResourceID::DDGI_CompactedProbeCount, cache.DDGI_CompactedProbeCount);
-			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount });
-			else
-				builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
-			if (data.pass_index == 0)
-			builder.create_versioned(data.DDGI_ProbeMissStreak, cache.DDGI_ProbeMissStreak, { Constants::DDGI_ProbeCount * Constants::DDGI_CascadeCount });
-			else
-				builder.load(data.DDGI_ProbeMissStreak, ResourceID::DDGI_ProbeMissStreak, cache.DDGI_ProbeMissStreak);
-		}
-
-		// Resources this pass touches, in declaration order, each paired with
-		// whether the pass writes it (own [Write], or the view usage's
-		// [Write] / [Write = {leaves...}] for resources inside a view group).
-		static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-			{ ResourceID::DDGI_Probes, true },
-			{ ResourceID::DDGI_ProbeIrradiance, true },
-			{ ResourceID::DDGI_ProbeVisibility, true },
-			{ ResourceID::DDGI_ProbeResidency, true },
-			{ ResourceID::DDGI_DispatchRaysArgs, true },
-			{ ResourceID::DDGI_CompactedProbeList, true },
-			{ ResourceID::DDGI_CompactedProbeCount, true },
-			{ ResourceID::DDGI_ProbeResidencyPending, true },
-			{ ResourceID::DDGI_ProbeMissStreak, true },
-		};
-		static constexpr uint resource_count = std::size(resource_accesses);
-	};
-
-
-	std::span<const FrameGraph::ResourceAccess> GetUsedResourcesList() const override
-	{
-		return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 	}
-
-	static constexpr LiteralWStr Name{L"DDGIProbeSelect"};
-
-	static constexpr uint32_t MaxCount = 5;
-	static constexpr LiteralWStr Names[MaxCount] = {
-		LiteralWStr{L"DDGIProbeSelect_0"},
-		LiteralWStr{L"DDGIProbeSelect_1"},
-		LiteralWStr{L"DDGIProbeSelect_2"},
-		LiteralWStr{L"DDGIProbeSelect_3"},
-		LiteralWStr{L"DDGIProbeSelect_4"},
-	};
-
-	static constexpr PassID ID = PassID::DDGIProbeSelect;
-
-
-	using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
-	using render_func_type = std::function<void(Context&, FrameGraph::FrameContext&)>;
-
-	std::array<render_func_type, MaxCount> render_funcs;
-
-	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-};
+}
 
 }

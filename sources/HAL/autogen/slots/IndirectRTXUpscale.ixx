@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct IndirectRTXUpscale :public DataHolder<IndirectRTXUpscale, SlotID::IndirectRTXUpscale, Table::IndirectRTXUpscale, DefaultLayout::Instance3>
+	namespace GI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		IndirectRTXUpscale() = default;
-	};
+		struct IndirectRTXUpscale :public DataHolder<IndirectRTXUpscale, SlotID::IndirectRTXUpscale, Table::GI::IndirectRTXUpscale, ::Frame::DefaultLayout::Instance3>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			IndirectRTXUpscale() = default;
+		};
+	}
 }

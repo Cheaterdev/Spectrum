@@ -14,40 +14,43 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct CopyTexture
+	namespace Utility
 	{
-		static constexpr SlotID ID = SlotID::CopyTexture;
-		HLSL::Texture2D<float4> srcTex;
-		HLSL::Texture2D<float4>& GetSrcTex() { return srcTex; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct CopyTexture
 		{
-			compiler.compile(srcTex, "CopyTexture::srcTex");
-		}
-		struct Compiled
-		{
-			uint srcTex; // Texture2D<float4>
+			static constexpr SlotID ID = SlotID::CopyTexture;
+			HLSL::Texture2D<float4> srcTex;
+			HLSL::Texture2D<float4>& GetSrcTex() { return srcTex; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(srcTex, "CopyTexture::srcTex");
+			}
+			struct Compiled
+			{
+				uint srcTex; // Texture2D<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::CopyTexture";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::CopyTexture";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

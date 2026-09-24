@@ -65,14 +65,14 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		// gatherData supplies the shader-side bound check; dispatch_args (when
 		// non-null) drives an indirect dispatch, otherwise direct_count is used
 		// for a CPU-sized direct dispatch (count known on CPU — no indirect).
-		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion);
+		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion);
 		void  draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene);
-		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
+		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
 		void  gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, bool invisibleToo);
 
 
-		virtual_gpu_buffer<Table::BoxInfo>::ptr commands_boxes;
-		virtual_gpu_buffer<Table::CommandData>::ptr commands_buffer[8];
+		virtual_gpu_buffer<Table::Meshes::BoxInfo>::ptr commands_boxes;
+		virtual_gpu_buffer<Table::Meshes::CommandData>::ptr commands_buffer[8];
 
 
 		// Indirect args written by the producer shaders (InterlockedMax) and
@@ -90,14 +90,14 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		virtual_gpu_buffer<UINT>::ptr meshes_ids;
 		virtual_gpu_buffer<UINT>::ptr meshes_invisible_ids;
 
-		Slots::GatherPipelineGlobal::Compiled gather_visible;
-		Slots::GatherPipelineGlobal::Compiled gather_invisible;
-		Slots::GatherPipelineGlobal::Compiled gather_boxes_commands;
+		Slots::Meshes::GatherPipelineGlobal::Compiled gather_visible;
+		Slots::Meshes::GatherPipelineGlobal::Compiled gather_invisible;
+		Slots::Meshes::GatherPipelineGlobal::Compiled gather_boxes_commands;
 
-		Slots::GatherMeshesBoxes::Compiled gather_neshes_boxes_compiled;
+		Slots::Meshes::GatherMeshesBoxes::Compiled gather_neshes_boxes_compiled;
 
-		Slots::DrawBoxes::Compiled draw_boxes_compiled;
-		Slots::GatherBoxes::Compiled gather_boxes_compiled;
+		Slots::Meshes::DrawBoxes::Compiled draw_boxes_compiled;
+		Slots::Meshes::GatherBoxes::Compiled gather_boxes_compiled;
     public:
         unsigned int rendered_simple;
         unsigned int rendered_instanced;

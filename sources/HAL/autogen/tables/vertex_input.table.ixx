@@ -14,46 +14,49 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct vertex_input
+	namespace UI
 	{
-		static constexpr SlotID ID = SlotID::vertex_input;
-		float2 pos;
-		float2 tc;
-		float4 mulColor;
-		float4 addColor;
-		float gammaEncode;
-		float2& GetPos() { return pos; }
-		float2& GetTc() { return tc; }
-		float4& GetMulColor() { return mulColor; }
-		float4& GetAddColor() { return addColor; }
-		float& GetGammaEncode() { return gammaEncode; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct vertex_input
 		{
-			compiler.compile(pos, "vertex_input::pos");
-			compiler.compile(tc, "vertex_input::tc");
-			compiler.compile(mulColor, "vertex_input::mulColor");
-			compiler.compile(addColor, "vertex_input::addColor");
-			compiler.compile(gammaEncode, "vertex_input::gammaEncode");
-		}
-		using Compiled = vertex_input;
+			static constexpr SlotID ID = SlotID::vertex_input;
+			float2 pos;
+			float2 tc;
+			float4 mulColor;
+			float4 addColor;
+			float gammaEncode;
+			float2& GetPos() { return pos; }
+			float2& GetTc() { return tc; }
+			float4& GetMulColor() { return mulColor; }
+			float4& GetAddColor() { return addColor; }
+			float& GetGammaEncode() { return gammaEncode; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(pos, "vertex_input::pos");
+				compiler.compile(tc, "vertex_input::tc");
+				compiler.compile(mulColor, "vertex_input::mulColor");
+				compiler.compile(addColor, "vertex_input::addColor");
+				compiler.compile(gammaEncode, "vertex_input::gammaEncode");
+			}
+			using Compiled = vertex_input;
 
-		static std::string get_typename()
-		{
-			return "Tables::vertex_input";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(pos);
-			ar& NVP(tc);
-			ar& NVP(mulColor);
-			ar& NVP(addColor);
-			ar& NVP(gammaEncode);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::vertex_input";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(pos);
+				ar& NVP(tc);
+				ar& NVP(mulColor);
+				ar& NVP(addColor);
+				ar& NVP(gammaEncode);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

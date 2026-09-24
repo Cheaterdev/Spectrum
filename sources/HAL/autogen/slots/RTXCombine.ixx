@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct RTXCombine :public DataHolder<RTXCombine, SlotID::RTXCombine, Table::RTXCombine, DefaultLayout::Instance0>
+	namespace GI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		RTXCombine() = default;
-	};
+		struct RTXCombine :public DataHolder<RTXCombine, SlotID::RTXCombine, Table::GI::RTXCombine, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			RTXCombine() = default;
+		};
+	}
 }

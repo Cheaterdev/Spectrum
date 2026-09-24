@@ -19,6 +19,15 @@ public:
   virtual void enterParse(PrismParser::ParseContext * /*ctx*/) override { }
   virtual void exitParse(PrismParser::ParseContext * /*ctx*/) override { }
 
+  virtual void enterDefinition(PrismParser::DefinitionContext * /*ctx*/) override { }
+  virtual void exitDefinition(PrismParser::DefinitionContext * /*ctx*/) override { }
+
+  virtual void enterNamespace_definition(PrismParser::Namespace_definitionContext * /*ctx*/) override { }
+  virtual void exitNamespace_definition(PrismParser::Namespace_definitionContext * /*ctx*/) override { }
+
+  virtual void enterNamespace_header(PrismParser::Namespace_headerContext * /*ctx*/) override { }
+  virtual void exitNamespace_header(PrismParser::Namespace_headerContext * /*ctx*/) override { }
+
   virtual void enterConst_definition(PrismParser::Const_definitionContext * /*ctx*/) override { }
   virtual void exitConst_definition(PrismParser::Const_definitionContext * /*ctx*/) override { }
 

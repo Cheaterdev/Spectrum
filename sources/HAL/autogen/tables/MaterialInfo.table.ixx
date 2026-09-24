@@ -14,37 +14,40 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct MaterialInfo
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::MaterialInfo;
-		std::vector<HLSL::Texture2D<float4>> textures;
-		HLSL::FeedbackTexture2DMip texture_feedbacks;
-		DynamicData data;
-
-		HLSL::FeedbackTexture2DMip& GetTexture_feedbacks() { return texture_feedbacks; }
-		std::vector<HLSL::Texture2D<float4>>& GetTextures() { return textures; }
-		DynamicData& GetData() { return data; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct MaterialInfo
 		{
-			compiler.compile(data, "MaterialInfo::data");
-			compiler.compile(textures, "MaterialInfo::textures");
-			compiler.compile(texture_feedbacks, "MaterialInfo::texture_feedbacks");
-		}
+			static constexpr SlotID ID = SlotID::MaterialInfo;
+			std::vector<HLSL::Texture2D<float4>> textures;
+			HLSL::FeedbackTexture2DMip texture_feedbacks;
+			DynamicData data;
+
+			HLSL::FeedbackTexture2DMip& GetTexture_feedbacks() { return texture_feedbacks; }
+			std::vector<HLSL::Texture2D<float4>>& GetTextures() { return textures; }
+			DynamicData& GetData() { return data; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(data, "MaterialInfo::data");
+				compiler.compile(textures, "MaterialInfo::textures");
+				compiler.compile(texture_feedbacks, "MaterialInfo::texture_feedbacks");
+			}
 
 
-		static std::string get_typename()
-		{
-			return "Tables::MaterialInfo";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(data);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::MaterialInfo";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(data);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

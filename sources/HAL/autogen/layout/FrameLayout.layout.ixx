@@ -8,49 +8,52 @@ export module HAL:Autogen.Layouts.FrameLayout;
 import Core;
 import :Types;
 import :Sampler;
-
-export struct FrameLayout
+namespace Frame
 {
-	struct CameraData
-	{
-		static const uint ID = 0;
-		static const uint CB = 36;
-		static const uint CB_ID = 0;
-		static const uint SRV = 4;
-		static const uint SRV_ID = 2;
-		static inline const std::vector<uint> tables = { 0, 2 };
-	};
 
-	struct SceneData
+	export struct FrameLayout
 	{
-		static const uint ID = 1;
-		static const uint CB = 2;
-		static const uint CB_ID = 3;
-		static const uint SRV = 5;
-		static const uint SRV_ID = 5;
-		static inline const std::vector<uint> tables = { 3, 5 };
-	};
+		struct CameraData
+		{
+			static const uint ID = 0;
+			static const uint CB = 36;
+			static const uint CB_ID = 0;
+			static const uint SRV = 4;
+			static const uint SRV_ID = 2;
+			static inline const std::vector<uint> tables = { 0, 2 };
+		};
 
-	struct PassData
-	{
-		static const uint ID = 2;
-		static const uint CB = 2;
-		static const uint CB_ID = 6;
-		static inline const std::vector<uint> tables = { 6 };
-	};
+		struct SceneData
+		{
+			static const uint ID = 1;
+			static const uint CB = 2;
+			static const uint CB_ID = 3;
+			static const uint SRV = 5;
+			static const uint SRV_ID = 5;
+			static inline const std::vector<uint> tables = { 3, 5 };
+		};
 
-	struct DebugInfo
-	{
-		static const uint ID = 3;
-		static const uint CB = 2;
-		static const uint CB_ID = 8;
-		static const uint UAV = 2;
-		static const uint UAV_ID = 10;
-		static inline const std::vector<uint> tables = { 8, 10 };
-	};
+		struct PassData
+		{
+			static const uint ID = 2;
+			static const uint CB = 2;
+			static const uint CB_ID = 6;
+			static inline const std::vector<uint> tables = { 6 };
+		};
 
-	template<class Processor> static void for_each(Processor& processor)
-	{
-		processor.template process<CameraData, SceneData, PassData, DebugInfo>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc, HAL::Samplers::SamplerShadowComparisonDesc });
-	}
-};
+		struct DebugInfo
+		{
+			static const uint ID = 3;
+			static const uint CB = 2;
+			static const uint CB_ID = 8;
+			static const uint UAV = 2;
+			static const uint UAV_ID = 10;
+			static inline const std::vector<uint> tables = { 8, 10 };
+		};
+
+		template<class Processor> static void for_each(Processor& processor)
+		{
+			processor.template process<CameraData, SceneData, PassData, DebugInfo>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc, HAL::Samplers::SamplerShadowComparisonDesc });
+		}
+	};
+}

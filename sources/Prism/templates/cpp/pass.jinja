@@ -16,7 +16,7 @@
 using namespace FrameGraph;
 
 namespace Passes
-{
+{{ "{" }}{{ pass.ns_open }}
 
 class {{pass.name}} : public PassNodeBase
 {
@@ -41,12 +41,12 @@ public:
 {%- set t =  parsed.tables[v.type] -%}
 {%- if t is undefined -%}
 {%-if parsed.tables[v.template_arg] is defined and parsed.tables[v.template_arg].options.shader_only is undefined -%}
-		Handlers::{{v.type | replace("<", "<Table::")}} {{v.name}} = ResourceID::{{v.name}};
+		Handlers::{{v.type | replace("<" + v.template_arg, "<Table::" + parsed.tables[v.template_arg].qn)}} {{v.name}} = ResourceID::{{v.name}};
 {%else%}
 		Handlers::{{v.type}} {{v.name}} = ResourceID::{{v.name}};
 {%endif%}
 {%-else-%}
-		{{v.type}} {{v.name}};
+		Table::{{t.qn}} {{v.name}};
 {%-endif-%}
 {%- endif -%}
 {%- if v.options.Recreate is defined %}
@@ -335,6 +335,6 @@ public:
 {%- else %}
 	const FrameGraph::PassFlags flags = FrameGraph::PassFlags::General;
 {%- endif %}
-};
+};{{ pass.ns_braces }}
 
 }

@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMPageBatch :public DataHolder<VSMPageBatch, SlotID::VSMPageBatch, Table::VSMPageBatch, DefaultLayout::Instance0>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMPageBatch() = default;
-	};
+		namespace VSM
+		{
+			struct VSMPageBatch :public DataHolder<VSMPageBatch, SlotID::VSMPageBatch, Table::Shadows::VSM::VSMPageBatch, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMPageBatch() = default;
+			};
+		}
+	}
 }

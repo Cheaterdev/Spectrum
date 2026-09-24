@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct MipMapping :public DataHolder<MipMapping, SlotID::MipMapping, Table::MipMapping, DefaultLayout::Instance0>
+	namespace Utility
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		MipMapping() = default;
-	};
+		struct MipMapping :public DataHolder<MipMapping, SlotID::MipMapping, Table::Utility::MipMapping, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			MipMapping() = default;
+		};
+	}
 }

@@ -47,6 +47,7 @@ export import "../defines.h";
 #include "pass/CubeMapEnviromentProcessor.h"
 #include "pass/SMAA.h"
 #include "pass/stencil_renderer.h"
+#include "pass/Tonemap.h"
 #include "pass/UI_PreDraw.h"
 #include "pass/UI_Render.h"
 #include "pass/AssetPreview.h"
@@ -83,74 +84,399 @@ export import "../defines.h";
 
 export namespace Passes
 {
-	using ::Passes::AssetGBuffer;
-	using ::Passes::AssetMip;
-	using ::Passes::BlueNoise;
-	using ::Passes::DDGIProbeSelect;
-	using ::Passes::DDGIProbeResidencyMark;
-	using ::Passes::DDGIProbeDispatchArgsBuild;
-	using ::Passes::DDGIProbeTrace;
-	using ::Passes::DDGIProbeConvolve;
-	using ::Passes::DDGIDebug;
-	using ::Passes::DDGIIndirectDebug;
-	using ::Passes::FSR;
-	using ::Passes::ResultCreation;
-	using ::Passes::NRD_GBufferPack;
-	using ::Passes::NRD_REBLUR_Execute;
-	using ::Passes::NRD_SIGMA_Execute;
-	using ::Passes::NRD_IndirectCombine;
-	using ::Passes::NRD_ShadowCombine;
-	using ::Passes::PSSM_Cascade;
-	using ::Passes::PSSM_GenerateMask;
-	using ::Passes::PSSM_Combine;
-	using ::Passes::PSSM_Global;
-	using ::Passes::RTXShadow;
-	using ::Passes::RTXColorPass;
-	using ::Passes::TranslucentRTX;
-	using ::Passes::PreScene;
-	using ::Passes::Profiler;
-	using ::Passes::Scene;
-	using ::Passes::Sky;
-	using ::Passes::CubeSky;
-	using ::Passes::CubeMapDownsample;
-	using ::Passes::CubeMapEnviromentProcessor;
-	using ::Passes::SMAA;
-	using ::Passes::stencil_renderer;
-	using ::Passes::UI_PreDraw;
-	using ::Passes::UI_Render;
-	using ::Passes::AssetPreview;
-	using ::Passes::UpscalingDLSS;
-	using ::Passes::NormalRoughnessRepack;
-	using ::Passes::UpscalingDLSSRR;
-	using ::Passes::GBufferDownsampler;
-	using ::Passes::VoxelDebug;
-	using ::Passes::ReflectionRTXHalf;
-	using ::Passes::ReflectionRTX;
-	using ::Passes::ShadowRTX;
-	using ::Passes::IndirectRTXHalf;
-	using ::Passes::IndirectRTX;
-	using ::Passes::ReflCombine;
-	using ::Passes::RTXCombine;
-	using ::Passes::Voxelize;
-	using ::Passes::Lighting;
-	using ::Passes::Mipmapping;
-	using ::Passes::VoxelScreen;
-	using ::Passes::ScreenReflection;
-	using ::Passes::VSM_GatherDispatch;
-	using ::Passes::VSM_RenderPages;
-	using ::Passes::VSM_HiZRebuild;
-	using ::Passes::VSM_BlockerClassify;
-	using ::Passes::VSM_BlockerSearch;
-	using ::Passes::VSM_ScreenSpaceShadow;
-	using ::Passes::VSM_ShadowResolve;
-	using ::Passes::VSM_Combine;
-	using ::Passes::VSM_DebugClassifyOverlay;
-	using ::Passes::VSM_DepthAnalysis;
+	namespace Editor
+	{
+		using ::Passes::Editor::AssetGBuffer;
+	}
+	namespace Editor
+	{
+		using ::Passes::Editor::AssetMip;
+	}
+	namespace Utility
+	{
+		using ::Passes::Utility::BlueNoise;
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			using ::Passes::GI::DDGI::DDGIProbeSelect;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			using ::Passes::GI::DDGI::DDGIProbeResidencyMark;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			using ::Passes::GI::DDGI::DDGIProbeDispatchArgsBuild;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			using ::Passes::GI::DDGI::DDGIProbeTrace;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			using ::Passes::GI::DDGI::DDGIProbeConvolve;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			namespace Dev
+			{
+				using ::Passes::GI::DDGI::Dev::DDGIDebug;
+			}
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			namespace Dev
+			{
+				using ::Passes::GI::DDGI::Dev::DDGIIndirectDebug;
+			}
+		}
+	}
+	namespace Post
+	{
+		namespace Upscale
+		{
+			using ::Passes::Post::Upscale::FSR;
+		}
+	}
+	namespace Frame
+	{
+		using ::Passes::Frame::ResultCreation;
+	}
+	namespace Denoise
+	{
+		namespace NRD
+		{
+			using ::Passes::Denoise::NRD::NRD_GBufferPack;
+		}
+	}
+	namespace Denoise
+	{
+		namespace NRD
+		{
+			using ::Passes::Denoise::NRD::NRD_REBLUR_Execute;
+		}
+	}
+	namespace Denoise
+	{
+		namespace NRD
+		{
+			using ::Passes::Denoise::NRD::NRD_SIGMA_Execute;
+		}
+	}
+	namespace Denoise
+	{
+		namespace NRD
+		{
+			using ::Passes::Denoise::NRD::NRD_IndirectCombine;
+		}
+	}
+	namespace Denoise
+	{
+		namespace NRD
+		{
+			using ::Passes::Denoise::NRD::NRD_ShadowCombine;
+		}
+	}
+	namespace Shadows
+	{
+		namespace PSSM
+		{
+			using ::Passes::Shadows::PSSM::PSSM_Cascade;
+		}
+	}
+	namespace Shadows
+	{
+		namespace PSSM
+		{
+			using ::Passes::Shadows::PSSM::PSSM_GenerateMask;
+		}
+	}
+	namespace Shadows
+	{
+		namespace PSSM
+		{
+			using ::Passes::Shadows::PSSM::PSSM_Combine;
+		}
+	}
+	namespace Shadows
+	{
+		namespace PSSM
+		{
+			using ::Passes::Shadows::PSSM::PSSM_Global;
+		}
+	}
+	namespace Shadows
+	{
+		using ::Passes::Shadows::RTXShadow;
+	}
+	namespace Raytrace
+	{
+		namespace Dev
+		{
+			using ::Passes::Raytrace::Dev::RTXColorPass;
+		}
+	}
+	namespace Raytrace
+	{
+		using ::Passes::Raytrace::TranslucentRTX;
+	}
+	namespace Frame
+	{
+		using ::Passes::Frame::PreScene;
+	}
+	namespace Dev
+	{
+		using ::Passes::Dev::Profiler;
+	}
+	namespace Meshes
+	{
+		using ::Passes::Meshes::Scene;
+	}
+	namespace Environment
+	{
+		using ::Passes::Environment::Sky;
+	}
+	namespace Environment
+	{
+		using ::Passes::Environment::CubeSky;
+	}
+	namespace Environment
+	{
+		using ::Passes::Environment::CubeMapDownsample;
+	}
+	namespace Environment
+	{
+		using ::Passes::Environment::CubeMapEnviromentProcessor;
+	}
+	namespace Post
+	{
+		namespace AA
+		{
+			using ::Passes::Post::AA::SMAA;
+		}
+	}
+	namespace Editor
+	{
+		using ::Passes::Editor::stencil_renderer;
+	}
+	namespace Post
+	{
+		using ::Passes::Post::Tonemap;
+	}
+	namespace UI
+	{
+		using ::Passes::UI::UI_PreDraw;
+	}
+	namespace UI
+	{
+		using ::Passes::UI::UI_Render;
+	}
+	namespace Editor
+	{
+		using ::Passes::Editor::AssetPreview;
+	}
+	namespace Post
+	{
+		namespace Upscale
+		{
+			using ::Passes::Post::Upscale::UpscalingDLSS;
+		}
+	}
+	namespace Post
+	{
+		namespace Upscale
+		{
+			using ::Passes::Post::Upscale::NormalRoughnessRepack;
+		}
+	}
+	namespace Post
+	{
+		namespace Upscale
+		{
+			using ::Passes::Post::Upscale::UpscalingDLSSRR;
+		}
+	}
+	namespace Meshes
+	{
+		using ::Passes::Meshes::GBufferDownsampler;
+	}
+	namespace GI
+	{
+		namespace Voxel
+		{
+			namespace Dev
+			{
+				using ::Passes::GI::Voxel::Dev::VoxelDebug;
+			}
+		}
+	}
+	namespace Reflections
+	{
+		using ::Passes::Reflections::ReflectionRTXHalf;
+	}
+	namespace Reflections
+	{
+		using ::Passes::Reflections::ReflectionRTX;
+	}
+	namespace Shadows
+	{
+		using ::Passes::Shadows::ShadowRTX;
+	}
+	namespace GI
+	{
+		using ::Passes::GI::IndirectRTXHalf;
+	}
+	namespace GI
+	{
+		using ::Passes::GI::IndirectRTX;
+	}
+	namespace Reflections
+	{
+		using ::Passes::Reflections::ReflCombine;
+	}
+	namespace GI
+	{
+		using ::Passes::GI::RTXCombine;
+	}
+	namespace GI
+	{
+		namespace Voxel
+		{
+			using ::Passes::GI::Voxel::Voxelize;
+		}
+	}
+	namespace GI
+	{
+		namespace Voxel
+		{
+			using ::Passes::GI::Voxel::Lighting;
+		}
+	}
+	namespace GI
+	{
+		namespace Voxel
+		{
+			using ::Passes::GI::Voxel::Mipmapping;
+		}
+	}
+	namespace GI
+	{
+		namespace Voxel
+		{
+			using ::Passes::GI::Voxel::VoxelScreen;
+		}
+	}
+	namespace Reflections
+	{
+		using ::Passes::Reflections::ScreenReflection;
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			using ::Passes::Shadows::VSM::VSM_GatherDispatch;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			using ::Passes::Shadows::VSM::VSM_RenderPages;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			using ::Passes::Shadows::VSM::VSM_HiZRebuild;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			using ::Passes::Shadows::VSM::VSM_BlockerClassify;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			using ::Passes::Shadows::VSM::VSM_BlockerSearch;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			using ::Passes::Shadows::VSM::VSM_ScreenSpaceShadow;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			using ::Passes::Shadows::VSM::VSM_ShadowResolve;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			using ::Passes::Shadows::VSM::VSM_Combine;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			namespace Dev
+			{
+				using ::Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay;
+			}
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			using ::Passes::Shadows::VSM::VSM_DepthAnalysis;
+		}
+	}
 }
 
 export namespace Pipelines
 {
-	using ::Pipelines::AssetPipeline;
-	using ::Pipelines::MainPipeline;
-	using ::Pipelines::UIPipeline;
+	namespace Editor
+	{
+		using ::Pipelines::Editor::AssetPipeline;
+	}
+	namespace Frame
+	{
+		using ::Pipelines::Frame::MainPipeline;
+	}
+	namespace UI
+	{
+		using ::Pipelines::UI::UIPipeline;
+	}
 }

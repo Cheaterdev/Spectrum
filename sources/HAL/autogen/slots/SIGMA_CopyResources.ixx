@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct SIGMA_CopyResources :public DataHolder<SIGMA_CopyResources, SlotID::SIGMA_CopyResources, Table::SIGMA_CopyResources, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		SIGMA_CopyResources() = default;
-	};
+		namespace NRD
+		{
+			struct SIGMA_CopyResources :public DataHolder<SIGMA_CopyResources, SlotID::SIGMA_CopyResources, Table::Denoise::NRD::SIGMA_CopyResources, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				SIGMA_CopyResources() = default;
+			};
+		}
+	}
 }

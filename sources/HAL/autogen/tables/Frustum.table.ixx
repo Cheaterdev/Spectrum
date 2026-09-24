@@ -14,30 +14,33 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct Frustum
+	namespace Frame
 	{
-		static constexpr SlotID ID = SlotID::Frustum;
-		float4 planes[6];
-		float4* GetPlanes() { return planes; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct Frustum
 		{
-			compiler.compile(planes, "Frustum::planes");
-		}
-		using Compiled = Frustum;
+			static constexpr SlotID ID = SlotID::Frustum;
+			float4 planes[6];
+			float4* GetPlanes() { return planes; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(planes, "Frustum::planes");
+			}
+			using Compiled = Frustum;
 
-		static std::string get_typename()
-		{
-			return "Tables::Frustum";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(planes);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::Frustum";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(planes);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

@@ -25,8 +25,11 @@ export import "../defines.h";
 
 export namespace Passes
 {
-{%- for pass in parsed.passes %}
-	using ::Passes::{{pass.name}};
+{#- Iterating a map yields its keys (names), and jinja2cpp returns the string
+    itself for any attribute of a string -- so look each one up. -#}
+{%- for name in parsed.passes %}
+{%- set pass = parsed.passes[name] %}
+	{{ pass.ns_open }}using ::Passes::{{pass.qn}};{{ pass.ns_braces }}
 {%- endfor %}
 }
 
@@ -34,8 +37,9 @@ export namespace Passes
 
 export namespace Pipelines
 {
-{%- for pipeline in parsed.pipelines %}
-	using ::Pipelines::{{pipeline.name}};
+{%- for name in parsed.pipelines %}
+{%- set pipeline = parsed.pipelines[name] %}
+	{{ pipeline.ns_open }}using ::Pipelines::{{pipeline.qn}};{{ pipeline.ns_braces }}
 {%- endfor %}
 }
 {%- endif %}

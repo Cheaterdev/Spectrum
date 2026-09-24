@@ -14,34 +14,37 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct MeshInstance
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::MeshInstance;
-		uint vertex_offset;
-		uint index_offset;
-		uint& GetVertex_offset() { return vertex_offset; }
-		uint& GetIndex_offset() { return index_offset; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct MeshInstance
 		{
-			compiler.compile(vertex_offset, "MeshInstance::vertex_offset");
-			compiler.compile(index_offset, "MeshInstance::index_offset");
-		}
-		using Compiled = MeshInstance;
+			static constexpr SlotID ID = SlotID::MeshInstance;
+			uint vertex_offset;
+			uint index_offset;
+			uint& GetVertex_offset() { return vertex_offset; }
+			uint& GetIndex_offset() { return index_offset; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(vertex_offset, "MeshInstance::vertex_offset");
+				compiler.compile(index_offset, "MeshInstance::index_offset");
+			}
+			using Compiled = MeshInstance;
 
-		static std::string get_typename()
-		{
-			return "Tables::MeshInstance";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(vertex_offset);
-			ar& NVP(index_offset);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::MeshInstance";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(vertex_offset);
+				ar& NVP(index_offset);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

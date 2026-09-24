@@ -31,7 +31,7 @@
 	uint {{v.name}}{{v.array if not v.bindless }}; // {{v.type}}
 	{%-endif -%}
 {%- endfor -%}
-{%- endmacro -%}
+{%- endmacro -%}{{ table.ns_open }}
 
 {%- if table.options.Template is defined %}
 template<class {{table.options.Template.value_atom.expr}}>
@@ -76,4 +76,4 @@ struct {{"[raypayload]" if table.options.raypayload is defined}}{{table.name}}
 {%-endif-%}
 {%-endfor%}
 {{-table.hlsl}}
-};
+};{{ table.ns_close }}

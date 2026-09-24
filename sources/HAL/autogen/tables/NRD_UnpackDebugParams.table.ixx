@@ -14,44 +14,50 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct NRD_UnpackDebugParams
+	namespace Denoise
 	{
-		static constexpr SlotID ID = SlotID::NRD_UnpackDebugParams;
-		HLSL::Texture2D<float4> Packed;
-		HLSL::RWTexture2D<float4> Unpacked;
-		HLSL::Texture2D<float4>& GetPacked() { return Packed; }
-		HLSL::RWTexture2D<float4>& GetUnpacked() { return Unpacked; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace NRD
 		{
-			compiler.compile(Packed, "NRD_UnpackDebugParams::Packed");
-			compiler.compile(Unpacked, "NRD_UnpackDebugParams::Unpacked");
-		}
-		struct Compiled
-		{
-			uint Packed; // Texture2D<float4>
-			uint Unpacked; // RWTexture2D<float4>
+			struct NRD_UnpackDebugParams
+			{
+				static constexpr SlotID ID = SlotID::NRD_UnpackDebugParams;
+				HLSL::Texture2D<float4> Packed;
+				HLSL::RWTexture2D<float4> Unpacked;
+				HLSL::Texture2D<float4>& GetPacked() { return Packed; }
+				HLSL::RWTexture2D<float4>& GetUnpacked() { return Unpacked; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(Packed, "NRD_UnpackDebugParams::Packed");
+					compiler.compile(Unpacked, "NRD_UnpackDebugParams::Unpacked");
+				}
+				struct Compiled
+				{
+					uint Packed; // Texture2D<float4>
+					uint Unpacked; // RWTexture2D<float4>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::NRD_UnpackDebugParams";
+				static std::string get_typename()
+				{
+					return "Tables::NRD_UnpackDebugParams";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

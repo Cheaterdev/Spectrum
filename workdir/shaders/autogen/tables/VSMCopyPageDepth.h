@@ -7,10 +7,17 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct VSMCopyPageDepth
+namespace Shadows
 {
-	uint atlas; // Texture2D<float>
-	uint dst_mip0; // RWTexture2D<float>
-	Texture2D<float> GetAtlas() { return ResourceDescriptorHeap[atlas]; }
-	RWTexture2D<float> GetDst_mip0() { return ResourceDescriptorHeap[dst_mip0]; }
-};
+	namespace VSM
+	{
+		struct VSMCopyPageDepth
+		{
+			uint atlas; // Texture2D<float>
+			uint dst_mip0; // RWTexture2D<float>
+			Texture2D<float> GetAtlas() { return ResourceDescriptorHeap[atlas]; }
+			RWTexture2D<float> GetDst_mip0() { return ResourceDescriptorHeap[dst_mip0]; }
+		};
+	}
+}
+using Shadows::VSM::VSMCopyPageDepth;

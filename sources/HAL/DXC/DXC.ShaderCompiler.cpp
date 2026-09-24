@@ -216,7 +216,7 @@ namespace HAL
 	// True once `text` contains DebugInfo's own accessor -- pulled in
 	// either directly (a shader that calls GetDebugInfo() itself, old
 	// style) or transitively through something else the shader includes
-	// (e.g. any table bound under the FrameLayout tree the DebugInfo slot
+	// (e.g. any table bound under the Frame::FrameLayout tree the DebugInfo slot
 	// itself lives in). Its own definition, wherever it came from, is
 	// necessarily the first occurrence of the text "GetDebugInfo()" --
 	// anything else referencing it, this shim included, has to already be

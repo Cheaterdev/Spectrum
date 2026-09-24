@@ -15,44 +15,50 @@ import :Autogen.Tables.Camera;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMPageTableData
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMPageTableData;
-		HLSL::Texture2DArray<uint> page_table;
-		HLSL::StructuredBuffer<Camera> page_cameras;
-		HLSL::Texture2DArray<uint>& GetPage_table() { return page_table; }
-		HLSL::StructuredBuffer<Camera>& GetPage_cameras() { return page_cameras; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(page_table, "VSMPageTableData::page_table");
-			compiler.compile(page_cameras, "VSMPageTableData::page_cameras");
-		}
-		struct Compiled
-		{
-			uint page_table; // Texture2DArray<uint>
-			uint page_cameras; // StructuredBuffer<Camera>
+			struct VSMPageTableData
+			{
+				static constexpr SlotID ID = SlotID::VSMPageTableData;
+				HLSL::Texture2DArray<uint> page_table;
+				HLSL::StructuredBuffer<Table::Frame::Camera> page_cameras;
+				HLSL::Texture2DArray<uint>& GetPage_table() { return page_table; }
+				HLSL::StructuredBuffer<Table::Frame::Camera>& GetPage_cameras() { return page_cameras; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(page_table, "VSMPageTableData::page_table");
+					compiler.compile(page_cameras, "VSMPageTableData::page_cameras");
+				}
+				struct Compiled
+				{
+					uint page_table; // Texture2DArray<uint>
+					uint page_cameras; // StructuredBuffer<Camera>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMPageTableData";
+				static std::string get_typename()
+				{
+					return "Tables::VSMPageTableData";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

@@ -54,7 +54,7 @@ namespace GUI
 			added = true;
 			textures_handles.emplace_back(item.texture.texture2D);
 		}
-		if (!added && current_state == RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::NinePatch>())
+		if (!added && current_state == RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::UI::NinePatch>())
 		{
 			return;
 		}
@@ -296,10 +296,10 @@ namespace GUI
 		c.command_list->write<Vertex>(data, vertexes);
 
 
-		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::vertex_input>>(*c.command_list, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,counterType::NONE });
+		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::UI::vertex_input>>(*c.command_list, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,counterType::NONE });
 
 		{
-			Slots::NinePatch patch_data;
+			Slots::UI::NinePatch patch_data;
 			patch_data.GetVb() = view;
 			patch_data.GetTextures() = textures_handles;
 			graphics.set(patch_data);
@@ -315,7 +315,7 @@ namespace GUI
 
 	void NinePatch::draw(base::Context& c, GUI::Texture& item, rect r)
 	{
-		draw(c, item, r, RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::NinePatch>());
+		draw(c, item, r, RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::UI::NinePatch>());
 	}
 
 	void NinePatch::draw(base::Context& c, HAL::PipelineState::ptr pipeline_state, rect r)

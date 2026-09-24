@@ -9,12 +9,16 @@
 #include "enums.h"
 #include "GraphInput.h"
 #include "TileRecord.h"
-struct WorkGR_ClassifyPixels_NodeEmulation
+namespace Dev
 {
-	uint YZBase; // uint
-	uint Shadows_Node; // AppendStructuredBuffer<TileRecord>
-	GraphInput graphInput; // GraphInput
-	GraphInput GetGraphInput() { return graphInput; }
-	uint GetYZBase() { return YZBase; }
-	AppendStructuredBuffer<TileRecord> GetShadows_Node() { return ResourceDescriptorHeap[Shadows_Node]; }
-};
+	struct WorkGR_ClassifyPixels_NodeEmulation
+	{
+		uint YZBase; // uint
+		uint Shadows_Node; // AppendStructuredBuffer<TileRecord>
+		GraphInput graphInput; // GraphInput
+		GraphInput GetGraphInput() { return graphInput; }
+		uint GetYZBase() { return YZBase; }
+		AppendStructuredBuffer<TileRecord> GetShadows_Node() { return ResourceDescriptorHeap[Shadows_Node]; }
+	};
+}
+using Dev::WorkGR_ClassifyPixels_NodeEmulation;

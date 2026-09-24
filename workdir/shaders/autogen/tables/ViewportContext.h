@@ -7,10 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct ViewportContext
+namespace Frame
 {
-	int2 frame_size; // int2
-	int2 upscale_size; // int2
-	int2 GetFrame_size() { return frame_size; }
-	int2 GetUpscale_size() { return upscale_size; }
-};
+	struct ViewportContext
+	{
+		int2 frame_size; // int2
+		int2 upscale_size; // int2
+		int2 GetFrame_size() { return frame_size; }
+		int2 GetUpscale_size() { return upscale_size; }
+	};
+}
+using Frame::ViewportContext;

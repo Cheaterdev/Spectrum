@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMSearchVerdictAppend :public DataHolder<VSMSearchVerdictAppend, SlotID::VSMSearchVerdictAppend, Table::VSMSearchVerdictAppend, DefaultLayout::Instance5>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMSearchVerdictAppend() = default;
-	};
+		namespace VSM
+		{
+			struct VSMSearchVerdictAppend :public DataHolder<VSMSearchVerdictAppend, SlotID::VSMSearchVerdictAppend, Table::Shadows::VSM::VSMSearchVerdictAppend, ::Frame::DefaultLayout::Instance5>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMSearchVerdictAppend() = default;
+			};
+		}
+	}
 }

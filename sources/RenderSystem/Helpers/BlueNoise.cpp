@@ -71,13 +71,13 @@ BlueNoise::BlueNoise()
 
 	// setup() is fully generated (BlueNoise.prism's own [RunAlways]).
 
-	m_bluenoise_render = [this](Passes::BlueNoise::Context& data, FrameGraph::FrameContext& context)
+	m_bluenoise_render = [this](Passes::Utility::BlueNoise::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& compute = context.get_list()->get_compute();
-		compute.set_pipeline<PSOS::BlueNoise>();
+		compute.set_pipeline<PSOS::Utility::BlueNoise>();
 
 		static uint index = 0;
-		Slots::BlueNoise blue_data;
+		Slots::Utility::BlueNoise blue_data;
 		blue_data.GetFrame_index()            = index++;
 		blue_data.GetSobol_buffer()           = HLSL::Buffer<uint>(sobol_buffer_view.structuredBuffer);
 		blue_data.GetRanking_tile_buffer()    = HLSL::Buffer<uint>(ranking_buffer_view.structuredBuffer);

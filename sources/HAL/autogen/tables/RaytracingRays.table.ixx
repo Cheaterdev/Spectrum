@@ -15,30 +15,46 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct RaytracingRays
+	namespace Raytrace
 	{
-		static constexpr SlotID ID = SlotID::RaytracingRays;
-		float pixelAngle;
-		HLSL::RWTexture2D<float4> output;
-		GBuffer gbuffer;
-		HLSL::RWTexture2D<float4>& GetOutput() { return output; }
-		float& GetPixelAngle() { return pixelAngle; }
-		GBuffer& GetGbuffer() { return gbuffer; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct RaytracingRays
 		{
-			compiler.compile(pixelAngle, "RaytracingRays::pixelAngle");
-			compiler.compile(output, "RaytracingRays::output");
-			compiler.compile(gbuffer, "RaytracingRays::gbuffer");
-		}
-		struct Compiled
-		{
-			float pixelAngle; // float
-			uint output; // RWTexture2D<float4>
-			GBuffer::Compiled gbuffer; // GBuffer
+			static constexpr SlotID ID = SlotID::RaytracingRays;
+			float pixelAngle;
+			HLSL::RWTexture2D<float4> output;
+			Table::Meshes::GBuffer gbuffer;
+			HLSL::RWTexture2D<float4>& GetOutput() { return output; }
+			float& GetPixelAngle() { return pixelAngle; }
+			Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(pixelAngle, "RaytracingRays::pixelAngle");
+				compiler.compile(output, "RaytracingRays::output");
+				compiler.compile(gbuffer, "RaytracingRays::gbuffer");
+			}
+			struct Compiled
+			{
+				float pixelAngle; // float
+				uint output; // RWTexture2D<float4>
+				Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(gbuffer);
+					ar& NVP(pixelAngle);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::RaytracingRays";
+			}
 			private:
 			SERIALIZE()
 			{
@@ -46,21 +62,8 @@ export namespace Table
 				ar& NVP(pixelAngle);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::RaytracingRays";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(gbuffer);
-			ar& NVP(pixelAngle);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

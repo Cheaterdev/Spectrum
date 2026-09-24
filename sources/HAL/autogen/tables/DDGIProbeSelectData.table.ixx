@@ -16,34 +16,40 @@ import :Autogen.Tables.DDGIProbes;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DDGIProbeSelectData
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::DDGIProbeSelectData;
-		DDGIInfo info;
-		DDGIProbes probes;
-		DDGIInfo& GetInfo() { return info; }
-		DDGIProbes& GetProbes() { return probes; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace DDGI
 		{
-			compiler.compile(info, "DDGIProbeSelectData::info");
-			compiler.compile(probes, "DDGIProbeSelectData::probes");
-		}
-		using Compiled = DDGIProbeSelectData;
+			struct DDGIProbeSelectData
+			{
+				static constexpr SlotID ID = SlotID::DDGIProbeSelectData;
+				Table::GI::DDGI::DDGIInfo info;
+				Table::GI::DDGI::DDGIProbes probes;
+				Table::GI::DDGI::DDGIInfo& GetInfo() { return info; }
+				Table::GI::DDGI::DDGIProbes& GetProbes() { return probes; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(info, "DDGIProbeSelectData::info");
+					compiler.compile(probes, "DDGIProbeSelectData::probes");
+				}
+				using Compiled = DDGIProbeSelectData;
 
-		static std::string get_typename()
-		{
-			return "Tables::DDGIProbeSelectData";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(info);
-			ar& NVP(probes);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::DDGIProbeSelectData";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(info);
+					ar& NVP(probes);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

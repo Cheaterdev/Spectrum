@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct FrameInfo :public DataHolder<FrameInfo, SlotID::FrameInfo, Table::FrameInfo, FrameLayout::CameraData>
+	namespace Frame
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		FrameInfo() = default;
-	};
+		struct FrameInfo :public DataHolder<FrameInfo, SlotID::FrameInfo, Table::Frame::FrameInfo, ::Frame::FrameLayout::CameraData>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			FrameInfo() = default;
+		};
+	}
 }

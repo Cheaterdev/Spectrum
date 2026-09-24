@@ -10,7 +10,7 @@ import Core;
 export
 {
 	// ViewportInfo itself (frame_size/upscale_size, inherited from the
-	// SIG-declared Table::ViewportContext) lives in FrameGraph:ViewportContext,
+	// SIG-declared Table::Frame::ViewportContext) lives in FrameGraph:ViewportContext,
 	// not here -- the generated create_always()/need_always() calls resolving
 	// [Size=ViewportContext::frame_size] are compiled as part of the FrameGraph
 	// module and need the ContextTypeFor redirect visible at that point, which

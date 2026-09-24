@@ -13,7 +13,7 @@ import :Types;
 
 
 export namespace PSOS
-{
+{{ "{" }}{{ pso.ns_open }}
 	struct {{pso.name}}_{{node.name}}: public PSOBase
 	{
 		struct Keys {
@@ -50,5 +50,5 @@ export namespace PSOS
 		{
 			ar&NVP(wrap(psos));
 		}
-	};
+	};{{ pso.ns_braces }}
 }

@@ -14,34 +14,37 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct SkyState
+	namespace Environment
 	{
-		static constexpr SlotID ID = SlotID::SkyState;
-		float3 prev_sun_dir;
-		bool sky_changed = false;
-		float3& GetPrev_sun_dir() { return prev_sun_dir; }
-		bool& GetSky_changed() { return sky_changed; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct SkyState
 		{
-			compiler.compile(prev_sun_dir, "SkyState::prev_sun_dir");
-			compiler.compile(sky_changed, "SkyState::sky_changed");
-		}
-		using Compiled = SkyState;
+			static constexpr SlotID ID = SlotID::SkyState;
+			float3 prev_sun_dir;
+			bool sky_changed = false;
+			float3& GetPrev_sun_dir() { return prev_sun_dir; }
+			bool& GetSky_changed() { return sky_changed; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(prev_sun_dir, "SkyState::prev_sun_dir");
+				compiler.compile(sky_changed, "SkyState::sky_changed");
+			}
+			using Compiled = SkyState;
 
-		static std::string get_typename()
-		{
-			return "Tables::SkyState";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(prev_sun_dir);
-			ar& NVP(sky_changed);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::SkyState";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(prev_sun_dir);
+				ar& NVP(sky_changed);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

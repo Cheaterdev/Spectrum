@@ -15,46 +15,52 @@ import :Autogen.Tables.VoxelTilingParams;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VoxelZero
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::VoxelZero;
-		HLSL::RWTexture3D<float4> Target;
-		VoxelTilingParams params;
-		HLSL::RWTexture3D<float4>& GetTarget() { return Target; }
-		VoxelTilingParams& GetParams() { return params; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Voxel
 		{
-			compiler.compile(Target, "VoxelZero::Target");
-			compiler.compile(params, "VoxelZero::params");
-		}
-		struct Compiled
-		{
-			uint Target; // RWTexture3D<float4>
-			VoxelTilingParams::Compiled params; // VoxelTilingParams
+			struct VoxelZero
+			{
+				static constexpr SlotID ID = SlotID::VoxelZero;
+				HLSL::RWTexture3D<float4> Target;
+				Table::GI::Voxel::VoxelTilingParams params;
+				HLSL::RWTexture3D<float4>& GetTarget() { return Target; }
+				Table::GI::Voxel::VoxelTilingParams& GetParams() { return params; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(Target, "VoxelZero::Target");
+					compiler.compile(params, "VoxelZero::params");
+				}
+				struct Compiled
+				{
+					uint Target; // RWTexture3D<float4>
+					Table::GI::Voxel::VoxelTilingParams::Compiled params; // VoxelTilingParams
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(params);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(params);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VoxelZero";
+				static std::string get_typename()
+				{
+					return "Tables::VoxelZero";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(params);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(params);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

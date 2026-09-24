@@ -14,18 +14,21 @@ import :Types;
 export namespace RT
 {
 	#pragma pack(push, 1)
-	struct _NoOutput
+	namespace Frame
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct _NoOutput
 		{
-		}
-	};
-	#pragma pack(pop)
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+			}
+		};
+		#pragma pack(pop)
 
-	struct NoOutput:public RTHolder<_NoOutput>
-	{
-		NoOutput() = default;
-	};
+		struct NoOutput:public RTHolder<_NoOutput>
+		{
+			NoOutput() = default;
+		};
+	}
 }

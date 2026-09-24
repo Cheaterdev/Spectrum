@@ -374,10 +374,11 @@ def analyse(rules):
         if rule in rules:
             groups.setdefault(scope, set()).update(words_in(rules[rule], lit_rules))
 
-    # A declaration keyword is the word that opens a *_definition rule.
+    # A declaration keyword is the word that opens a *_definition rule, or its
+    # *_header rule when the definition is split (namespace_header).
     decl = set()
     for name, body in rules.items():
-        if not is_lexer(name) and name.endswith("_definition"):
+        if not is_lexer(name) and name.endswith(("_definition", "_header")):
             for alt in body.split("|"):
                 ws = [w for w in words_in(alt, lit_rules)]
                 if ws:

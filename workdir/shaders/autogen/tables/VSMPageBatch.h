@@ -7,12 +7,19 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct VSMPageBatch
+namespace Shadows
 {
-	int level; // int
-	int dirty_mask; // int
-	int skip_occlusion; // int
-	int GetLevel() { return level; }
-	int GetDirty_mask() { return dirty_mask; }
-	int GetSkip_occlusion() { return skip_occlusion; }
-};
+	namespace VSM
+	{
+		struct VSMPageBatch
+		{
+			int level; // int
+			int dirty_mask; // int
+			int skip_occlusion; // int
+			int GetLevel() { return level; }
+			int GetDirty_mask() { return dirty_mask; }
+			int GetSkip_occlusion() { return skip_occlusion; }
+		};
+	}
+}
+using Shadows::VSM::VSMPageBatch;

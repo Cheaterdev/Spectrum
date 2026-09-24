@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMDepthAnalysis :public DataHolder<VSMDepthAnalysis, SlotID::VSMDepthAnalysis, Table::VSMDepthAnalysis, DefaultLayout::Instance0>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMDepthAnalysis() = default;
-	};
+		namespace VSM
+		{
+			struct VSMDepthAnalysis :public DataHolder<VSMDepthAnalysis, SlotID::VSMDepthAnalysis, Table::Shadows::VSM::VSMDepthAnalysis, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMDepthAnalysis() = default;
+			};
+		}
+	}
 }

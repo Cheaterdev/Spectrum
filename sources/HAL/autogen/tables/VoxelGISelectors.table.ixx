@@ -14,42 +14,48 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VoxelGISelectors
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::VoxelGISelectors;
-		bool voxelize_scene = true;
-		bool light_scene = true;
-		bool reflection_enabled = true;
-		bool debug_voxel_trace = false;
-		bool& GetVoxelize_scene() { return voxelize_scene; }
-		bool& GetLight_scene() { return light_scene; }
-		bool& GetReflection_enabled() { return reflection_enabled; }
-		bool& GetDebug_voxel_trace() { return debug_voxel_trace; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Voxel
 		{
-			compiler.compile(voxelize_scene, "VoxelGISelectors::voxelize_scene");
-			compiler.compile(light_scene, "VoxelGISelectors::light_scene");
-			compiler.compile(reflection_enabled, "VoxelGISelectors::reflection_enabled");
-			compiler.compile(debug_voxel_trace, "VoxelGISelectors::debug_voxel_trace");
-		}
-		using Compiled = VoxelGISelectors;
+			struct VoxelGISelectors
+			{
+				static constexpr SlotID ID = SlotID::VoxelGISelectors;
+				bool voxelize_scene = true;
+				bool light_scene = true;
+				bool reflection_enabled = true;
+				bool debug_voxel_trace = false;
+				bool& GetVoxelize_scene() { return voxelize_scene; }
+				bool& GetLight_scene() { return light_scene; }
+				bool& GetReflection_enabled() { return reflection_enabled; }
+				bool& GetDebug_voxel_trace() { return debug_voxel_trace; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(voxelize_scene, "VoxelGISelectors::voxelize_scene");
+					compiler.compile(light_scene, "VoxelGISelectors::light_scene");
+					compiler.compile(reflection_enabled, "VoxelGISelectors::reflection_enabled");
+					compiler.compile(debug_voxel_trace, "VoxelGISelectors::debug_voxel_trace");
+				}
+				using Compiled = VoxelGISelectors;
 
-		static std::string get_typename()
-		{
-			return "Tables::VoxelGISelectors";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(voxelize_scene);
-			ar& NVP(light_scene);
-			ar& NVP(reflection_enabled);
-			ar& NVP(debug_voxel_trace);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::VoxelGISelectors";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(voxelize_scene);
+					ar& NVP(light_scene);
+					ar& NVP(reflection_enabled);
+					ar& NVP(debug_voxel_trace);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

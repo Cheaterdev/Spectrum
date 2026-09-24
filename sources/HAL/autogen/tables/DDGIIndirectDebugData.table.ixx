@@ -15,94 +15,103 @@ import :Autogen.Tables.DDGIInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DDGIIndirectDebugData
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::DDGIIndirectDebugData;
-		HLSL::Texture2D<float> depth;
-		HLSL::Texture2D<float4> normals;
-		HLSL::Texture2DArray<float4> probe_irradiance;
-		HLSL::Texture2DArray<float2> probe_visibility;
-		HLSL::StructuredBuffer<uint> probe_residency;
-		HLSL::RWStructuredBuffer<uint> residency_pending;
-		HLSL::RWTexture2D<float4> target;
-		DDGIInfo cascade0;
-		DDGIInfo cascade1;
-		DDGIInfo cascade2;
-		DDGIInfo cascade3;
-		DDGIInfo cascade4;
-		HLSL::Texture2D<float>& GetDepth() { return depth; }
-		HLSL::Texture2D<float4>& GetNormals() { return normals; }
-		HLSL::Texture2DArray<float4>& GetProbe_irradiance() { return probe_irradiance; }
-		HLSL::Texture2DArray<float2>& GetProbe_visibility() { return probe_visibility; }
-		HLSL::StructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
-		HLSL::RWStructuredBuffer<uint>& GetResidency_pending() { return residency_pending; }
-		HLSL::RWTexture2D<float4>& GetTarget() { return target; }
-		DDGIInfo& GetCascade0() { return cascade0; }
-		DDGIInfo& GetCascade1() { return cascade1; }
-		DDGIInfo& GetCascade2() { return cascade2; }
-		DDGIInfo& GetCascade3() { return cascade3; }
-		DDGIInfo& GetCascade4() { return cascade4; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace DDGI
 		{
-			compiler.compile(depth, "DDGIIndirectDebugData::depth");
-			compiler.compile(normals, "DDGIIndirectDebugData::normals");
-			compiler.compile(probe_irradiance, "DDGIIndirectDebugData::probe_irradiance");
-			compiler.compile(probe_visibility, "DDGIIndirectDebugData::probe_visibility");
-			compiler.compile(probe_residency, "DDGIIndirectDebugData::probe_residency");
-			compiler.compile(residency_pending, "DDGIIndirectDebugData::residency_pending");
-			compiler.compile(target, "DDGIIndirectDebugData::target");
-			compiler.compile(cascade0, "DDGIIndirectDebugData::cascade0");
-			compiler.compile(cascade1, "DDGIIndirectDebugData::cascade1");
-			compiler.compile(cascade2, "DDGIIndirectDebugData::cascade2");
-			compiler.compile(cascade3, "DDGIIndirectDebugData::cascade3");
-			compiler.compile(cascade4, "DDGIIndirectDebugData::cascade4");
-		}
-		struct Compiled
-		{
-			uint depth; // Texture2D<float>
-			uint normals; // Texture2D<float4>
-			uint probe_irradiance; // Texture2DArray<float4>
-			uint probe_visibility; // Texture2DArray<float2>
-			uint probe_residency; // StructuredBuffer<uint>
-			uint residency_pending; // RWStructuredBuffer<uint>
-			uint target; // RWTexture2D<float4>
-			DDGIInfo::Compiled cascade0; // DDGIInfo
-			DDGIInfo::Compiled cascade1; // DDGIInfo
-			DDGIInfo::Compiled cascade2; // DDGIInfo
-			DDGIInfo::Compiled cascade3; // DDGIInfo
-			DDGIInfo::Compiled cascade4; // DDGIInfo
+			namespace Dev
+			{
+				struct DDGIIndirectDebugData
+				{
+					static constexpr SlotID ID = SlotID::DDGIIndirectDebugData;
+					HLSL::Texture2D<float> depth;
+					HLSL::Texture2D<float4> normals;
+					HLSL::Texture2DArray<float4> probe_irradiance;
+					HLSL::Texture2DArray<float2> probe_visibility;
+					HLSL::StructuredBuffer<uint> probe_residency;
+					HLSL::RWStructuredBuffer<uint> residency_pending;
+					HLSL::RWTexture2D<float4> target;
+					Table::GI::DDGI::DDGIInfo cascade0;
+					Table::GI::DDGI::DDGIInfo cascade1;
+					Table::GI::DDGI::DDGIInfo cascade2;
+					Table::GI::DDGI::DDGIInfo cascade3;
+					Table::GI::DDGI::DDGIInfo cascade4;
+					HLSL::Texture2D<float>& GetDepth() { return depth; }
+					HLSL::Texture2D<float4>& GetNormals() { return normals; }
+					HLSL::Texture2DArray<float4>& GetProbe_irradiance() { return probe_irradiance; }
+					HLSL::Texture2DArray<float2>& GetProbe_visibility() { return probe_visibility; }
+					HLSL::StructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
+					HLSL::RWStructuredBuffer<uint>& GetResidency_pending() { return residency_pending; }
+					HLSL::RWTexture2D<float4>& GetTarget() { return target; }
+					Table::GI::DDGI::DDGIInfo& GetCascade0() { return cascade0; }
+					Table::GI::DDGI::DDGIInfo& GetCascade1() { return cascade1; }
+					Table::GI::DDGI::DDGIInfo& GetCascade2() { return cascade2; }
+					Table::GI::DDGI::DDGIInfo& GetCascade3() { return cascade3; }
+					Table::GI::DDGI::DDGIInfo& GetCascade4() { return cascade4; }
+					static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+					template<class Compiler>
+					void compile(Compiler& compiler) const
+					{
+						compiler.compile(depth, "DDGIIndirectDebugData::depth");
+						compiler.compile(normals, "DDGIIndirectDebugData::normals");
+						compiler.compile(probe_irradiance, "DDGIIndirectDebugData::probe_irradiance");
+						compiler.compile(probe_visibility, "DDGIIndirectDebugData::probe_visibility");
+						compiler.compile(probe_residency, "DDGIIndirectDebugData::probe_residency");
+						compiler.compile(residency_pending, "DDGIIndirectDebugData::residency_pending");
+						compiler.compile(target, "DDGIIndirectDebugData::target");
+						compiler.compile(cascade0, "DDGIIndirectDebugData::cascade0");
+						compiler.compile(cascade1, "DDGIIndirectDebugData::cascade1");
+						compiler.compile(cascade2, "DDGIIndirectDebugData::cascade2");
+						compiler.compile(cascade3, "DDGIIndirectDebugData::cascade3");
+						compiler.compile(cascade4, "DDGIIndirectDebugData::cascade4");
+					}
+					struct Compiled
+					{
+						uint depth; // Texture2D<float>
+						uint normals; // Texture2D<float4>
+						uint probe_irradiance; // Texture2DArray<float4>
+						uint probe_visibility; // Texture2DArray<float2>
+						uint probe_residency; // StructuredBuffer<uint>
+						uint residency_pending; // RWStructuredBuffer<uint>
+						uint target; // RWTexture2D<float4>
+						Table::GI::DDGI::DDGIInfo::Compiled cascade0; // DDGIInfo
+						Table::GI::DDGI::DDGIInfo::Compiled cascade1; // DDGIInfo
+						Table::GI::DDGI::DDGIInfo::Compiled cascade2; // DDGIInfo
+						Table::GI::DDGI::DDGIInfo::Compiled cascade3; // DDGIInfo
+						Table::GI::DDGI::DDGIInfo::Compiled cascade4; // DDGIInfo
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(cascade0);
-				ar& NVP(cascade1);
-				ar& NVP(cascade2);
-				ar& NVP(cascade3);
-				ar& NVP(cascade4);
+						private:
+						SERIALIZE()
+						{
+							ar& NVP(cascade0);
+							ar& NVP(cascade1);
+							ar& NVP(cascade2);
+							ar& NVP(cascade3);
+							ar& NVP(cascade4);
+						}
+
+
+					};
+
+					static std::string get_typename()
+					{
+						return "Tables::DDGIIndirectDebugData";
+					}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(cascade0);
+						ar& NVP(cascade1);
+						ar& NVP(cascade2);
+						ar& NVP(cascade3);
+						ar& NVP(cascade4);
+					}
+
+				};
 			}
-
-
-		};
-
-		static std::string get_typename()
-		{
-			return "Tables::DDGIIndirectDebugData";
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(cascade0);
-			ar& NVP(cascade1);
-			ar& NVP(cascade2);
-			ar& NVP(cascade3);
-			ar& NVP(cascade4);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

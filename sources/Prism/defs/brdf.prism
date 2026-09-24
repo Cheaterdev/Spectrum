@@ -1,15 +1,18 @@
-
-[Bind = DefaultLayout::Instance0]
-struct BRDF
+namespace Environment
 {
-	RWTexture3D<float4> output;	
-}
+
+	[Bind = DefaultLayout::Instance0]
+	struct BRDF
+	{
+		RWTexture3D<float4> output;	
+	}
 
 
-ComputePSO BRDF
-{
-	root = DefaultLayout;
+	ComputePSO BRDF
+	{
+		root = DefaultLayout;
 
-	[EntryPoint = CS]
-	compute = "common/brdf.hlsl";
+		[EntryPoint = CS]
+		compute = "common/brdf.hlsl";
+	}
 }

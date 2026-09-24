@@ -14,39 +14,45 @@ import :Types;
 
 export namespace PSOS
 {
-	struct VSMScreenSpaceShadow: public PSOBase
+	namespace Shadows
 	{
-		struct Keys {
-			GEN_DEF_COMP(Keys);
-		private:
-			SERIALIZE()
+		namespace VSM
+		{
+			struct VSMScreenSpaceShadow: public PSOBase
 			{
-			}
-		};
+				struct Keys {
+					GEN_DEF_COMP(Keys);
+				private:
+					SERIALIZE()
+					{
+					}
+				};
 
-		GEN_COMPUTE_PSO(VSMScreenSpaceShadow)
+				GEN_COMPUTE_PSO(VSMScreenSpaceShadow)
 
 
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
+				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+				{
 
 
-			SimplePSO mpso("VSMScreenSpaceShadow");
-			if(f) f(mpso,key);
+					SimplePSO mpso("VSMScreenSpaceShadow");
+					if(f) f(mpso,key);
 
-			mpso.root_signature = Layouts::DefaultLayout;
+					mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/shadows/vsm/vsm_screen_space_shadow.hlsl";
-			mpso.compute.entry_point = "CS";
-			mpso.compute.flags = HAL::ShaderOptions::None;
+					mpso.compute.file_name = "shaders/shadows/vsm/vsm_screen_space_shadow.hlsl";
+					mpso.compute.entry_point = "CS";
+					mpso.compute.flags = HAL::ShaderOptions::None;
 			
-			return mpso;
-		}
+					return mpso;
+				}
 
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
+				private:
+				SERIALIZE()
+				{
+					ar&NVP(wrap(psos));
+				}
+			};
 		}
-	};
+	}
 }

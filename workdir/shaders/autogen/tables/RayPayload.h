@@ -8,52 +8,56 @@
 #include "enums.h"
 
 #include "RayCone.h"
-struct [raypayload] RayPayload
+namespace Raytrace
 {
-	float4 color : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
-	float3 hit_normal : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
-	float3 albedo : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
-	uint recursion : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
-	float dist : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
-	uint use_vsm_shadow : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
-
-	RayCone cone;
-
-	RayCone GetCone() { return cone; }
-	float4 GetColor() { return color; }
-	float3 GetHit_normal() { return hit_normal; }
-	float3 GetAlbedo() { return albedo; }
-	uint GetRecursion() { return recursion; }
-	float GetDist() { return dist; }
-	uint GetUse_vsm_shadow() { return use_vsm_shadow; }
-	RayPayload propagate(float surfaceSpreadAngle = 0, float hitT = 0)
+	struct [raypayload] RayPayload
 	{
-		RayPayload result;
+		float4 color : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+		float3 hit_normal : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+		float3 albedo : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+		uint recursion : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+		float dist : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+		uint use_vsm_shadow : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
 
-		result.color = 0;
-		result.dist = 0;
-		result.recursion = recursion + 1;
-		// Inherited, not reset -- a recursive bounce spawned from a
-		// VSM-shadowed ray should keep using VSM too, same as every other
-		// field here is otherwise left for MyClosestHitShader to fill in
-		// fresh on the next hit (unlike init(), which is a top-level ray's
-		// own first-use default).
-		result.use_vsm_shadow = use_vsm_shadow;
+		RayCone cone;
 
-		result.cone = cone.propagate(surfaceSpreadAngle, hitT);
+		RayCone GetCone() { return cone; }
+		float4 GetColor() { return color; }
+		float3 GetHit_normal() { return hit_normal; }
+		float3 GetAlbedo() { return albedo; }
+		uint GetRecursion() { return recursion; }
+		float GetDist() { return dist; }
+		uint GetUse_vsm_shadow() { return use_vsm_shadow; }
+			RayPayload propagate(float surfaceSpreadAngle = 0, float hitT = 0)
+			{
+				RayPayload result;
 
-		return result;
-	}
+				result.color = 0;
+				result.dist = 0;
+				result.recursion = recursion + 1;
+				// Inherited, not reset -- a recursive bounce spawned from a
+				// VSM-shadowed ray should keep using VSM too, same as every other
+				// field here is otherwise left for MyClosestHitShader to fill in
+				// fresh on the next hit (unlike init(), which is a top-level ray's
+				// own first-use default).
+				result.use_vsm_shadow = use_vsm_shadow;
 
-	void init()
-	{
-		color = 0;
-		albedo = 0;
-		recursion = 0;
-		dist = 0;
-		cone.angle = 0;
-		cone.width = 0;
-		use_vsm_shadow = 0;
-	}
+				result.cone = cone.propagate(surfaceSpreadAngle, hitT);
 
-};
+				return result;
+			}
+
+			void init()
+			{
+				color = 0;
+				albedo = 0;
+				recursion = 0;
+				dist = 0;
+				cone.angle = 0;
+				cone.width = 0;
+				use_vsm_shadow = 0;
+			}
+
+	};
+}
+using Raytrace::RayPayload;

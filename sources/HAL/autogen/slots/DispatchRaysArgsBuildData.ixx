@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct DispatchRaysArgsBuildData :public DataHolder<DispatchRaysArgsBuildData, SlotID::DispatchRaysArgsBuildData, Table::DispatchRaysArgsBuildData, DefaultLayout::Instance0>
+	namespace Raytrace
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		DispatchRaysArgsBuildData() = default;
-	};
+		struct DispatchRaysArgsBuildData :public DataHolder<DispatchRaysArgsBuildData, SlotID::DispatchRaysArgsBuildData, Table::Raytrace::DispatchRaysArgsBuildData, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			DispatchRaysArgsBuildData() = default;
+		};
+	}
 }

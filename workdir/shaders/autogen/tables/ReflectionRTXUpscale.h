@@ -7,14 +7,18 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct ReflectionRTXUpscale
+namespace Reflections
 {
-	uint noiseHalf; // Texture2D<float4>
-	uint dirPdfHalf; // Texture2D<float4>
-	uint tileFlags; // Texture2D<uint>
-	uint roughnessTileFlags; // Texture2D<uint>
-	Texture2D<float4> GetNoiseHalf() { return ResourceDescriptorHeap[noiseHalf]; }
-	Texture2D<float4> GetDirPdfHalf() { return ResourceDescriptorHeap[dirPdfHalf]; }
-	Texture2D<uint> GetTileFlags() { return ResourceDescriptorHeap[tileFlags]; }
-	Texture2D<uint> GetRoughnessTileFlags() { return ResourceDescriptorHeap[roughnessTileFlags]; }
-};
+	struct ReflectionRTXUpscale
+	{
+		uint noiseHalf; // Texture2D<float4>
+		uint dirPdfHalf; // Texture2D<float4>
+		uint tileFlags; // Texture2D<uint>
+		uint roughnessTileFlags; // Texture2D<uint>
+		Texture2D<float4> GetNoiseHalf() { return ResourceDescriptorHeap[noiseHalf]; }
+		Texture2D<float4> GetDirPdfHalf() { return ResourceDescriptorHeap[dirPdfHalf]; }
+		Texture2D<uint> GetTileFlags() { return ResourceDescriptorHeap[tileFlags]; }
+		Texture2D<uint> GetRoughnessTileFlags() { return ResourceDescriptorHeap[roughnessTileFlags]; }
+	};
+}
+using Reflections::ReflectionRTXUpscale;

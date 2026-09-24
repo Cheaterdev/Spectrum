@@ -16,62 +16,68 @@ import :Autogen.Tables.VSMLevelDispatchInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMGatherDispatchMaterialData
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMGatherDispatchMaterialData;
-		uint level_count;
-		float4x4 light_view;
-		uint4 material_pip_ids[2];
-		HLSL::StructuredBuffer<VSMLevelDispatchInfo> levels;
-		HLSL::AppendStructuredBuffer<VSMDispatchCommandData> material_commands[8];
-		HLSL::StructuredBuffer<VSMLevelDispatchInfo>& GetLevels() { return levels; }
-		uint& GetLevel_count() { return level_count; }
-		float4x4& GetLight_view() { return light_view; }
-		uint4* GetMaterial_pip_ids() { return material_pip_ids; }
-		HLSL::AppendStructuredBuffer<VSMDispatchCommandData>* GetMaterial_commands() { return material_commands; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(level_count, "VSMGatherDispatchMaterialData::level_count");
-			compiler.compile(light_view, "VSMGatherDispatchMaterialData::light_view");
-			compiler.compile(material_pip_ids, "VSMGatherDispatchMaterialData::material_pip_ids");
-			compiler.compile(levels, "VSMGatherDispatchMaterialData::levels");
-			compiler.compile(material_commands, "VSMGatherDispatchMaterialData::material_commands");
-		}
-		struct Compiled
-		{
-			uint level_count; // uint
-			float4x4 light_view; // float4x4
-			uint4 material_pip_ids[2]; // uint4
-			uint levels; // StructuredBuffer<VSMLevelDispatchInfo>
-			uint material_commands[8]; // AppendStructuredBuffer<VSMDispatchCommandData>
+			struct VSMGatherDispatchMaterialData
+			{
+				static constexpr SlotID ID = SlotID::VSMGatherDispatchMaterialData;
+				uint level_count;
+				float4x4 light_view;
+				uint4 material_pip_ids[2];
+				HLSL::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo> levels;
+				HLSL::AppendStructuredBuffer<Table::Shadows::VSM::VSMDispatchCommandData> material_commands[8];
+				HLSL::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo>& GetLevels() { return levels; }
+				uint& GetLevel_count() { return level_count; }
+				float4x4& GetLight_view() { return light_view; }
+				uint4* GetMaterial_pip_ids() { return material_pip_ids; }
+				HLSL::AppendStructuredBuffer<Table::Shadows::VSM::VSMDispatchCommandData>* GetMaterial_commands() { return material_commands; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(level_count, "VSMGatherDispatchMaterialData::level_count");
+					compiler.compile(light_view, "VSMGatherDispatchMaterialData::light_view");
+					compiler.compile(material_pip_ids, "VSMGatherDispatchMaterialData::material_pip_ids");
+					compiler.compile(levels, "VSMGatherDispatchMaterialData::levels");
+					compiler.compile(material_commands, "VSMGatherDispatchMaterialData::material_commands");
+				}
+				struct Compiled
+				{
+					uint level_count; // uint
+					float4x4 light_view; // float4x4
+					uint4 material_pip_ids[2]; // uint4
+					uint levels; // StructuredBuffer<VSMLevelDispatchInfo>
+					uint material_commands[8]; // AppendStructuredBuffer<VSMDispatchCommandData>
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(level_count);
-				ar& NVP(light_view);
-				ar& NVP(material_pip_ids);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(level_count);
+						ar& NVP(light_view);
+						ar& NVP(material_pip_ids);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMGatherDispatchMaterialData";
+				static std::string get_typename()
+				{
+					return "Tables::VSMGatherDispatchMaterialData";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(level_count);
+					ar& NVP(light_view);
+					ar& NVP(material_pip_ids);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(level_count);
-			ar& NVP(light_view);
-			ar& NVP(material_pip_ids);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

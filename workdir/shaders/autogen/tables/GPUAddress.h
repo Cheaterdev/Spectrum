@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct GPUAddress
+namespace Meshes
 {
-	uint2 data; // uint2
-	uint2 GetData() { return data; }
-};
+	struct GPUAddress
+	{
+		uint2 data; // uint2
+		uint2 GetData() { return data; }
+	};
+}
+using Meshes::GPUAddress;

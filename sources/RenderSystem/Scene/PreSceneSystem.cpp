@@ -12,7 +12,7 @@ using namespace FrameGraph;
 
 // setup() is fully generated (scene.prism's own [RunAlways]).
 
-void PassDefault<Passes::PreScene>::pre_setup(FrameGraph::Graph& graph)
+void PassDefault<Passes::Frame::PreScene>::pre_setup(FrameGraph::Graph& graph)
 {
     if (RenderSystem::get().device().is_rtx_supported())
     {
@@ -21,8 +21,8 @@ void PassDefault<Passes::PreScene>::pre_setup(FrameGraph::Graph& graph)
     }
 }
 
-void PassDefault<Passes::PreScene>::render(
-    Passes::PreScene::Context& data, FrameGraph::FrameContext& context)
+void PassDefault<Passes::Frame::PreScene>::render(
+    Passes::Frame::PreScene::Context& data, FrameGraph::FrameContext& context)
 {
     auto& command_list = context.get_list();
     auto& scene = *context.graph->get_context<SceneInfo>().scene;

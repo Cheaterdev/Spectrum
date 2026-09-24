@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct NRD_UnpackDebugParams :public DataHolder<NRD_UnpackDebugParams, SlotID::NRD_UnpackDebugParams, Table::NRD_UnpackDebugParams, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		NRD_UnpackDebugParams() = default;
-	};
+		namespace NRD
+		{
+			struct NRD_UnpackDebugParams :public DataHolder<NRD_UnpackDebugParams, SlotID::NRD_UnpackDebugParams, Table::Denoise::NRD::NRD_UnpackDebugParams, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				NRD_UnpackDebugParams() = default;
+			};
+		}
+	}
 }

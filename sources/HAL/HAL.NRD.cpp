@@ -266,14 +266,14 @@ namespace nvidia
 		HAL::TextureResource::ptr output = nrd_hal.resolve_pool_resource(dispatch.resources[0]);
 
 		ASSERT(dispatch.constantBufferDataSize == 0);
-		Slots::Clear_Constants slots;
+		Slots::Denoise::NRD::Clear_Constants slots;
 
 		auto h = compute.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 		HLSL::RWTexture2D<float4> view(h);
 		view.create(output, 0, 0);
 		slots.GetGOut() = view;
 
-		compute.set_pipeline<PSOS::NRD_Clear_Test>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_Clear_Test>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -294,14 +294,14 @@ namespace nvidia
 		HAL::TextureResource::ptr output = nrd_hal.resolve_pool_resource(dispatch.resources[0]);
 
 		ASSERT(dispatch.constantBufferDataSize == 0);
-		Slots::Clear_UInt4Resources slots;
+		Slots::Denoise::NRD::Clear_UInt4Resources slots;
 
 		auto h = compute.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 		HLSL::RWTexture2D<uint4> view(h);
 		view.create(output, 0, 0);
 		slots.GetGOut() = view;
 
-		compute.set_pipeline<PSOS::NRD_Clear_UInt4>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_Clear_UInt4>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -394,14 +394,14 @@ namespace nvidia
 	// NRD's own raw constantBufferData blob can be copied onto it directly.
 	// The size assert is the real safety net, same reasoning as
 	// fill_reblur_shared_constants below.
-	static void fill_sigma_shared_constants(Table::SIGMASharedConstants& dst, const nrd::DispatchDesc& dispatch)
+	static void fill_sigma_shared_constants(Table::Denoise::NRD::SIGMASharedConstants& dst, const nrd::DispatchDesc& dispatch)
 	{
 		// Tightly-packed sizeof is 516 bytes; NRD's raw blob is padded to a
 		// 16-byte multiple (528, confirmed at runtime -- matches
 		// idesc.constantBufferMaxDataSize logged at instance creation).
-		ASSERT(dispatch.constantBufferDataSize >= sizeof(Table::SIGMASharedConstants)
-			&& dispatch.constantBufferDataSize < sizeof(Table::SIGMASharedConstants) + 16);
-		memcpy(&dst, dispatch.constantBufferData, sizeof(Table::SIGMASharedConstants));
+		ASSERT(dispatch.constantBufferDataSize >= sizeof(Table::Denoise::NRD::SIGMASharedConstants)
+			&& dispatch.constantBufferDataSize < sizeof(Table::Denoise::NRD::SIGMASharedConstants) + 16);
+		memcpy(&dst, dispatch.constantBufferData, sizeof(Table::Denoise::NRD::SIGMASharedConstants));
 	}
 
 	// SIGMA_SHADOW dispatch wiring, same resolve_srv/resolve_uav plumbing and
@@ -414,12 +414,12 @@ namespace nvidia
 	static void dispatch_sigma_classifytiles(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 3);
-		Slots::SIGMA_ClassifyTilesResources slots;
+		Slots::Denoise::NRD::SIGMA_ClassifyTilesResources slots;
 		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Penumbra() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
 		slots.GetGOut_Tiles() = resolve_uav(nrd_hal, compute, dispatch.resources[2], in);
-		compute.set_pipeline<PSOS::NRD_SIGMA_ClassifyTiles>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_SIGMA_ClassifyTiles>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -427,11 +427,11 @@ namespace nvidia
 	static void dispatch_sigma_smoothtiles(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 2);
-		Slots::SIGMA_SmoothTilesResources slots;
+		Slots::Denoise::NRD::SIGMA_SmoothTilesResources slots;
 		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGOut_Tiles() = resolve_uav(nrd_hal, compute, dispatch.resources[1], in);
-		compute.set_pipeline<PSOS::NRD_SIGMA_SmoothTiles>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_SIGMA_SmoothTiles>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -439,14 +439,14 @@ namespace nvidia
 	static void dispatch_sigma_copy(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 5);
-		Slots::SIGMA_CopyResources slots;
+		Slots::Denoise::NRD::SIGMA_CopyResources slots;
 		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_History() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
 		slots.GetGIn_HistoryLength() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
 		slots.GetGOut_History() = resolve_uav(nrd_hal, compute, dispatch.resources[3], in);
 		slots.GetGOut_HistoryLength() = resolve_uav(nrd_hal, compute, dispatch.resources[4], in);
-		compute.set_pipeline<PSOS::NRD_SIGMA_Copy>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_SIGMA_Copy>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -457,7 +457,7 @@ namespace nvidia
 	static void dispatch_sigma_blur_firstpass0(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 7);
-		Slots::SIGMA_BlurFirstPass0Resources slots;
+		Slots::Denoise::NRD::SIGMA_BlurFirstPass0Resources slots;
 		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -466,7 +466,7 @@ namespace nvidia
 		slots.GetGIn_Shadow_Translucency() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
 		slots.GetGOut_Penumbra() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
 		slots.GetGOut_Shadow_Translucency() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
-		compute.set_pipeline<PSOS::NRD_SIGMA_BlurFirstPass0>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_SIGMA_BlurFirstPass0>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -477,7 +477,7 @@ namespace nvidia
 	static void dispatch_sigma_blur_firstpass1(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 6);
-		Slots::SIGMA_BlurFirstPass1Resources slots;
+		Slots::Denoise::NRD::SIGMA_BlurFirstPass1Resources slots;
 		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -485,7 +485,7 @@ namespace nvidia
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
 		slots.GetGOut_Penumbra() = resolve_uav(nrd_hal, compute, dispatch.resources[4], in);
 		slots.GetGOut_Shadow_Translucency() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
-		compute.set_pipeline<PSOS::NRD_SIGMA_BlurFirstPass1>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_SIGMA_BlurFirstPass1>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -493,7 +493,7 @@ namespace nvidia
 	static void dispatch_sigma_temporalstabilization(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 9);
-		Slots::SIGMA_TemporalStabilizationResources slots;
+		Slots::Denoise::NRD::SIGMA_TemporalStabilizationResources slots;
 		fill_sigma_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Mv() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -504,7 +504,7 @@ namespace nvidia
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[6], in);
 		slots.GetGOut_Shadow_Translucency() = resolve_uav(nrd_hal, compute, dispatch.resources[7], in);
 		slots.GetGOut_HistoryLength() = resolve_uav(nrd_hal, compute, dispatch.resources[8], in);
-		compute.set_pipeline<PSOS::NRD_SIGMA_TemporalStabilization>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_SIGMA_TemporalStabilization>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -519,7 +519,7 @@ namespace nvidia
 	// the real safety net: if it ever fires, the packing assumption above is
 	// wrong for some field ordering and needs revisiting, not the assert
 	// weakened away.
-	static void fill_reblur_shared_constants(Table::REBLURSharedConstants& dst, const nrd::DispatchDesc& dispatch)
+	static void fill_reblur_shared_constants(Table::Denoise::NRD::REBLURSharedConstants& dst, const nrd::DispatchDesc& dispatch)
 	{
 		// HLSL cbuffers are sized in multiples of 16 bytes overall; NRD's
 		// raw blob is padded to that (864 bytes, confirmed at runtime),
@@ -529,19 +529,19 @@ namespace nvidia
 		// comment) still match field-for-field, only the very end differs.
 		// Only copy this struct's own byte count; the trailing pad is
 		// unused on the C++ side either way.
-		ASSERT(dispatch.constantBufferDataSize >= sizeof(Table::REBLURSharedConstants)
-			&& dispatch.constantBufferDataSize < sizeof(Table::REBLURSharedConstants) + 16);
-		memcpy(&dst, dispatch.constantBufferData, sizeof(Table::REBLURSharedConstants));
+		ASSERT(dispatch.constantBufferDataSize >= sizeof(Table::Denoise::NRD::REBLURSharedConstants)
+			&& dispatch.constantBufferDataSize < sizeof(Table::Denoise::NRD::REBLURSharedConstants) + 16);
+		memcpy(&dst, dispatch.constantBufferData, sizeof(Table::Denoise::NRD::REBLURSharedConstants));
 	}
 
 	static void dispatch_reblur_classifytiles(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 2);
-		Slots::REBLUR_ClassifyTilesResources slots;
+		Slots::Denoise::NRD::REBLUR_ClassifyTilesResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGOut_Tiles() = resolve_uav(nrd_hal, compute, dispatch.resources[1], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_ClassifyTiles>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_ClassifyTiles>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -552,7 +552,7 @@ namespace nvidia
 	static void dispatch_reblur_hitdistreconstruction(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 5);
-		Slots::REBLUR_HitDistReconstructionResources slots;
+		Slots::Denoise::NRD::REBLUR_HitDistReconstructionResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -572,7 +572,7 @@ namespace nvidia
 	static void dispatch_reblur_hitdistreconstruction_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 5);
-		Slots::REBLUR_HitDistReconstructionSpecularResources slots;
+		Slots::Denoise::NRD::REBLUR_HitDistReconstructionSpecularResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -587,14 +587,14 @@ namespace nvidia
 	static void dispatch_reblur_prepass(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 5);
-		Slots::REBLUR_PrePassResources slots;
+		Slots::Denoise::NRD::REBLUR_PrePassResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
 		slots.GetGIn_ViewZ() = resolve_srv(nrd_hal, compute, dispatch.resources[2], in);
 		slots.GetGIn_Diff() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
 		slots.GetGOut_Diff() = resolve_uav(nrd_hal, compute, dispatch.resources[4], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_PrePass>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_PrePass>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -605,7 +605,7 @@ namespace nvidia
 	static void dispatch_reblur_prepass_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 6);
-		Slots::REBLUR_PrePassSpecularResources slots;
+		Slots::Denoise::NRD::REBLUR_PrePassSpecularResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -613,7 +613,7 @@ namespace nvidia
 		slots.GetGIn_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[3], in);
 		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[4], in);
 		slots.GetGOut_SpecHitDistForTracking() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_PrePass_Specular>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_PrePass_Specular>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -621,7 +621,7 @@ namespace nvidia
 	static void dispatch_reblur_temporalaccumulation(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 16);
-		Slots::REBLUR_TemporalAccumulationResources slots;
+		Slots::Denoise::NRD::REBLUR_TemporalAccumulationResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -639,7 +639,7 @@ namespace nvidia
 		slots.GetGOut_Diff() = resolve_uav(nrd_hal, compute, dispatch.resources[13], in);
 		slots.GetGOut_DiffFast() = resolve_uav(nrd_hal, compute, dispatch.resources[14], in);
 		slots.GetGOut_Data2() = resolve_uav(nrd_hal, compute, dispatch.resources[15], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_TemporalAccumulation>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_TemporalAccumulation>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -651,7 +651,7 @@ namespace nvidia
 	static void dispatch_reblur_temporalaccumulation_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 19);
-		Slots::REBLUR_TemporalAccumulationSpecularResources slots;
+		Slots::Denoise::NRD::REBLUR_TemporalAccumulationSpecularResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -672,7 +672,7 @@ namespace nvidia
 		slots.GetGOut_SpecFast() = resolve_uav(nrd_hal, compute, dispatch.resources[16], in);
 		slots.GetGOut_SpecHitDistForTracking() = resolve_uav(nrd_hal, compute, dispatch.resources[17], in);
 		slots.GetGOut_Data2() = resolve_uav(nrd_hal, compute, dispatch.resources[18], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_TemporalAccumulation_Specular>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_TemporalAccumulation_Specular>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -680,7 +680,7 @@ namespace nvidia
 	static void dispatch_reblur_historyfix(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 8);
-		Slots::REBLUR_HistoryFixResources slots;
+		Slots::Denoise::NRD::REBLUR_HistoryFixResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -690,7 +690,7 @@ namespace nvidia
 		slots.GetGIn_DiffFast() = resolve_srv(nrd_hal, compute, dispatch.resources[5], in);
 		slots.GetGOut_Diff() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
 		slots.GetGOut_DiffFast() = resolve_uav(nrd_hal, compute, dispatch.resources[7], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_HistoryFix>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_HistoryFix>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -701,7 +701,7 @@ namespace nvidia
 	static void dispatch_reblur_historyfix_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 9);
-		Slots::REBLUR_HistoryFixSpecularResources slots;
+		Slots::Denoise::NRD::REBLUR_HistoryFixSpecularResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -712,7 +712,7 @@ namespace nvidia
 		slots.GetGIn_SpecHitDistForTracking() = resolve_srv(nrd_hal, compute, dispatch.resources[6], in);
 		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[7], in);
 		slots.GetGOut_SpecFast() = resolve_uav(nrd_hal, compute, dispatch.resources[8], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_HistoryFix_Specular>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_HistoryFix_Specular>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -720,7 +720,7 @@ namespace nvidia
 	static void dispatch_reblur_blur(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 7);
-		Slots::REBLUR_BlurResources slots;
+		Slots::Denoise::NRD::REBLUR_BlurResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -729,7 +729,7 @@ namespace nvidia
 		slots.GetGIn_Diff() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
 		slots.GetGOut_ViewZ() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
 		slots.GetGOut_Diff() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_Blur>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_Blur>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -740,7 +740,7 @@ namespace nvidia
 	static void dispatch_reblur_blur_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 7);
-		Slots::REBLUR_BlurSpecularResources slots;
+		Slots::Denoise::NRD::REBLUR_BlurSpecularResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -749,7 +749,7 @@ namespace nvidia
 		slots.GetGIn_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
 		slots.GetGOut_ViewZ() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
 		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_Blur_Specular>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_Blur_Specular>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -757,7 +757,7 @@ namespace nvidia
 	static void dispatch_reblur_postblur_ts0(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 9);
-		Slots::REBLUR_PostBlurTS0Resources slots;
+		Slots::Denoise::NRD::REBLUR_PostBlurTS0Resources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -768,7 +768,7 @@ namespace nvidia
 		slots.GetGOut_Diff() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
 		slots.GetGOut_InternalData() = resolve_uav(nrd_hal, compute, dispatch.resources[7], in);
 		slots.GetGOut_DiffCopy() = resolve_uav(nrd_hal, compute, dispatch.resources[8], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_PostBlurTS0>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_PostBlurTS0>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -779,7 +779,7 @@ namespace nvidia
 	static void dispatch_reblur_postblur_ts0_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 9);
-		Slots::REBLUR_PostBlurTS0SpecularResources slots;
+		Slots::Denoise::NRD::REBLUR_PostBlurTS0SpecularResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -790,7 +790,7 @@ namespace nvidia
 		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
 		slots.GetGOut_InternalData() = resolve_uav(nrd_hal, compute, dispatch.resources[7], in);
 		slots.GetGOut_SpecCopy() = resolve_uav(nrd_hal, compute, dispatch.resources[8], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_PostBlurTS0_Specular>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_PostBlurTS0_Specular>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -798,7 +798,7 @@ namespace nvidia
 	static void dispatch_reblur_postblur_ts1(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 7);
-		Slots::REBLUR_PostBlurTS1Resources slots;
+		Slots::Denoise::NRD::REBLUR_PostBlurTS1Resources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -807,7 +807,7 @@ namespace nvidia
 		slots.GetGIn_Diff() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
 		slots.GetGOut_Normal_Roughness() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
 		slots.GetGOut_Diff() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_PostBlurTS1>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_PostBlurTS1>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -818,7 +818,7 @@ namespace nvidia
 	static void dispatch_reblur_postblur_ts1_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 7);
-		Slots::REBLUR_PostBlurTS1SpecularResources slots;
+		Slots::Denoise::NRD::REBLUR_PostBlurTS1SpecularResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -827,7 +827,7 @@ namespace nvidia
 		slots.GetGIn_Spec() = resolve_srv(nrd_hal, compute, dispatch.resources[4], in);
 		slots.GetGOut_Normal_Roughness() = resolve_uav(nrd_hal, compute, dispatch.resources[5], in);
 		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[6], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_PostBlurTS1_Specular>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_PostBlurTS1_Specular>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -835,7 +835,7 @@ namespace nvidia
 	static void dispatch_reblur_temporalstabilization(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 11);
-		Slots::REBLUR_TemporalStabilizationResources slots;
+		Slots::Denoise::NRD::REBLUR_TemporalStabilizationResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -848,7 +848,7 @@ namespace nvidia
 		slots.GetGOut_InternalData() = resolve_uav(nrd_hal, compute, dispatch.resources[8], in);
 		slots.GetGOut_Diff() = resolve_uav(nrd_hal, compute, dispatch.resources[9], in);
 		slots.GetGOut_DiffLumaStabilized() = resolve_uav(nrd_hal, compute, dispatch.resources[10], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_TemporalStabilization>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_TemporalStabilization>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -859,7 +859,7 @@ namespace nvidia
 	static void dispatch_reblur_temporalstabilization_specular(nvidia::NRD& nrd_hal, HAL::ComputeContext& compute, const nrd::DispatchDesc& dispatch, const nvidia::NRDFrameInputs& in)
 	{
 		ASSERT(dispatch.resourcesNum == 12);
-		Slots::REBLUR_TemporalStabilizationSpecularResources slots;
+		Slots::Denoise::NRD::REBLUR_TemporalStabilizationSpecularResources slots;
 		fill_reblur_shared_constants(slots.GetSharedConstants(), dispatch);
 		slots.GetGIn_Tiles() = resolve_srv(nrd_hal, compute, dispatch.resources[0], in);
 		slots.GetGIn_Normal_Roughness() = resolve_srv(nrd_hal, compute, dispatch.resources[1], in);
@@ -873,7 +873,7 @@ namespace nvidia
 		slots.GetGOut_InternalData() = resolve_uav(nrd_hal, compute, dispatch.resources[9], in);
 		slots.GetGOut_Spec() = resolve_uav(nrd_hal, compute, dispatch.resources[10], in);
 		slots.GetGOut_SpecLumaStabilized() = resolve_uav(nrd_hal, compute, dispatch.resources[11], in);
-		compute.set_pipeline<PSOS::NRD_REBLUR_TemporalStabilization_Specular>();
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_REBLUR_TemporalStabilization_Specular>();
 		compute.set(slots);
 		compute.dispatch((int)dispatch.gridWidth, (int)dispatch.gridHeight, 1);
 	}
@@ -920,13 +920,13 @@ namespace nvidia
 			}
 			else if (identifier.starts_with("REBLUR_HitDistReconstruction.cs.hlsl") && identifier.contains("MODE_5X5=1"))
 			{
-				entry.diffuse  = &dispatch_reblur_hitdistreconstruction<PSOS::NRD_REBLUR_HitDistReconstruction5x5>;
-				entry.specular = &dispatch_reblur_hitdistreconstruction_specular<PSOS::NRD_REBLUR_HitDistReconstruction5x5_Specular>;
+				entry.diffuse  = &dispatch_reblur_hitdistreconstruction<PSOS::Denoise::NRD::NRD_REBLUR_HitDistReconstruction5x5>;
+				entry.specular = &dispatch_reblur_hitdistreconstruction_specular<PSOS::Denoise::NRD::NRD_REBLUR_HitDistReconstruction5x5_Specular>;
 			}
 			else if (identifier.starts_with("REBLUR_HitDistReconstruction.cs.hlsl"))
 			{
-				entry.diffuse  = &dispatch_reblur_hitdistreconstruction<PSOS::NRD_REBLUR_HitDistReconstruction>;
-				entry.specular = &dispatch_reblur_hitdistreconstruction_specular<PSOS::NRD_REBLUR_HitDistReconstruction_Specular>;
+				entry.diffuse  = &dispatch_reblur_hitdistreconstruction<PSOS::Denoise::NRD::NRD_REBLUR_HitDistReconstruction>;
+				entry.specular = &dispatch_reblur_hitdistreconstruction_specular<PSOS::Denoise::NRD::NRD_REBLUR_HitDistReconstruction_Specular>;
 			}
 			else if (identifier.starts_with("REBLUR_PrePass.cs.hlsl"))
 			{

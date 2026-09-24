@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct FontRendering :public DataHolder<FontRendering, SlotID::FontRendering, Table::FontRendering, DefaultLayout::Instance0>
+	namespace UI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		FontRendering() = default;
-	};
+		namespace Text
+		{
+			struct FontRendering :public DataHolder<FontRendering, SlotID::FontRendering, Table::UI::Text::FontRendering, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				FontRendering() = default;
+			};
+		}
+	}
 }

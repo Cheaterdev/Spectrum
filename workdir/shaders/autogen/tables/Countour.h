@@ -7,12 +7,16 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct Countour
+namespace Editor
 {
-	float4 color; // float4
-	uint selected_id; // uint
-	uint object_ids; // Texture2D<uint>
-	float4 GetColor() { return color; }
-	uint GetSelected_id() { return selected_id; }
-	Texture2D<uint> GetObject_ids() { return ResourceDescriptorHeap[object_ids]; }
-};
+	struct Countour
+	{
+		float4 color; // float4
+		uint selected_id; // uint
+		uint object_ids; // Texture2D<uint>
+		float4 GetColor() { return color; }
+		uint GetSelected_id() { return selected_id; }
+		Texture2D<uint> GetObject_ids() { return ResourceDescriptorHeap[object_ids]; }
+	};
+}
+using Editor::Countour;

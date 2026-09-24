@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct BRDF
+namespace Environment
 {
-	uint output; // RWTexture3D<float4>
-	RWTexture3D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
-};
+	struct BRDF
+	{
+		uint output; // RWTexture3D<float4>
+		RWTexture3D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
+	};
+}
+using Environment::BRDF;

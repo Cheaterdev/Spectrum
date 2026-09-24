@@ -15,40 +15,43 @@ import :Autogen.Tables.VSLine;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct LineRender
+	namespace UI
 	{
-		static constexpr SlotID ID = SlotID::LineRender;
-		HLSL::StructuredBuffer<VSLine> vb;
-		HLSL::StructuredBuffer<VSLine>& GetVb() { return vb; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct LineRender
 		{
-			compiler.compile(vb, "LineRender::vb");
-		}
-		struct Compiled
-		{
-			uint vb; // StructuredBuffer<VSLine>
+			static constexpr SlotID ID = SlotID::LineRender;
+			HLSL::StructuredBuffer<Table::UI::VSLine> vb;
+			HLSL::StructuredBuffer<Table::UI::VSLine>& GetVb() { return vb; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(vb, "LineRender::vb");
+			}
+			struct Compiled
+			{
+				uint vb; // StructuredBuffer<VSLine>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::LineRender";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::LineRender";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

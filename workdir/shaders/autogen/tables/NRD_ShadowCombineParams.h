@@ -8,12 +8,19 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "GBuffer.h"
-struct NRD_ShadowCombineParams
+namespace Denoise
 {
-	uint shadow_denoised; // Texture2D<float>
-	uint target; // RWTexture2D<float4>
-	GBuffer gbuffer; // GBuffer
-	GBuffer GetGbuffer() { return gbuffer; }
-	Texture2D<float> GetShadow_denoised() { return ResourceDescriptorHeap[shadow_denoised]; }
-	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
-};
+	namespace NRD
+	{
+		struct NRD_ShadowCombineParams
+		{
+			uint shadow_denoised; // Texture2D<float>
+			uint target; // RWTexture2D<float4>
+			GBuffer gbuffer; // GBuffer
+			GBuffer GetGbuffer() { return gbuffer; }
+			Texture2D<float> GetShadow_denoised() { return ResourceDescriptorHeap[shadow_denoised]; }
+			RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
+		};
+	}
+}
+using Denoise::NRD::NRD_ShadowCombineParams;

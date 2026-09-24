@@ -14,39 +14,45 @@ import :Types;
 
 export namespace PSOS
 {
-	struct FSR: public PSOBase
+	namespace Post
 	{
-		struct Keys {
-			GEN_DEF_COMP(Keys);
-		private:
-			SERIALIZE()
+		namespace Upscale
+		{
+			struct FSR: public PSOBase
 			{
-			}
-		};
+				struct Keys {
+					GEN_DEF_COMP(Keys);
+				private:
+					SERIALIZE()
+					{
+					}
+				};
 
-		GEN_COMPUTE_PSO(FSR)
+				GEN_COMPUTE_PSO(FSR)
 
 
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
+				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+				{
 
 
-			SimplePSO mpso("FSR");
-			if(f) f(mpso,key);
+					SimplePSO mpso("FSR");
+					if(f) f(mpso,key);
 
-			mpso.root_signature = Layouts::DefaultLayout;
+					mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/postprocess/fsr.hlsl";
-			mpso.compute.entry_point = "CS";
-			mpso.compute.flags = HAL::ShaderOptions::None;
+					mpso.compute.file_name = "shaders/postprocess/fsr.hlsl";
+					mpso.compute.entry_point = "CS";
+					mpso.compute.flags = HAL::ShaderOptions::None;
 			
-			return mpso;
-		}
+					return mpso;
+				}
 
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
+				private:
+				SERIALIZE()
+				{
+					ar&NVP(wrap(psos));
+				}
+			};
 		}
-	};
+	}
 }

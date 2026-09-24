@@ -14,52 +14,55 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct ReflectionRTXUpscale
+	namespace Reflections
 	{
-		static constexpr SlotID ID = SlotID::ReflectionRTXUpscale;
-		HLSL::Texture2D<float4> noiseHalf;
-		HLSL::Texture2D<float4> dirPdfHalf;
-		HLSL::Texture2D<uint> tileFlags;
-		HLSL::Texture2D<uint> roughnessTileFlags;
-		HLSL::Texture2D<float4>& GetNoiseHalf() { return noiseHalf; }
-		HLSL::Texture2D<float4>& GetDirPdfHalf() { return dirPdfHalf; }
-		HLSL::Texture2D<uint>& GetTileFlags() { return tileFlags; }
-		HLSL::Texture2D<uint>& GetRoughnessTileFlags() { return roughnessTileFlags; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct ReflectionRTXUpscale
 		{
-			compiler.compile(noiseHalf, "ReflectionRTXUpscale::noiseHalf");
-			compiler.compile(dirPdfHalf, "ReflectionRTXUpscale::dirPdfHalf");
-			compiler.compile(tileFlags, "ReflectionRTXUpscale::tileFlags");
-			compiler.compile(roughnessTileFlags, "ReflectionRTXUpscale::roughnessTileFlags");
-		}
-		struct Compiled
-		{
-			uint noiseHalf; // Texture2D<float4>
-			uint dirPdfHalf; // Texture2D<float4>
-			uint tileFlags; // Texture2D<uint>
-			uint roughnessTileFlags; // Texture2D<uint>
+			static constexpr SlotID ID = SlotID::ReflectionRTXUpscale;
+			HLSL::Texture2D<float4> noiseHalf;
+			HLSL::Texture2D<float4> dirPdfHalf;
+			HLSL::Texture2D<uint> tileFlags;
+			HLSL::Texture2D<uint> roughnessTileFlags;
+			HLSL::Texture2D<float4>& GetNoiseHalf() { return noiseHalf; }
+			HLSL::Texture2D<float4>& GetDirPdfHalf() { return dirPdfHalf; }
+			HLSL::Texture2D<uint>& GetTileFlags() { return tileFlags; }
+			HLSL::Texture2D<uint>& GetRoughnessTileFlags() { return roughnessTileFlags; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(noiseHalf, "ReflectionRTXUpscale::noiseHalf");
+				compiler.compile(dirPdfHalf, "ReflectionRTXUpscale::dirPdfHalf");
+				compiler.compile(tileFlags, "ReflectionRTXUpscale::tileFlags");
+				compiler.compile(roughnessTileFlags, "ReflectionRTXUpscale::roughnessTileFlags");
+			}
+			struct Compiled
+			{
+				uint noiseHalf; // Texture2D<float4>
+				uint dirPdfHalf; // Texture2D<float4>
+				uint tileFlags; // Texture2D<uint>
+				uint roughnessTileFlags; // Texture2D<uint>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::ReflectionRTXUpscale";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::ReflectionRTXUpscale";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

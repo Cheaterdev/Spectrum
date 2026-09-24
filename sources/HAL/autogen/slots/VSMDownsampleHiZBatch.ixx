@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMDownsampleHiZBatch :public DataHolder<VSMDownsampleHiZBatch, SlotID::VSMDownsampleHiZBatch, Table::VSMDownsampleHiZBatch, DefaultLayout::Instance0>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMDownsampleHiZBatch() = default;
-	};
+		namespace VSM
+		{
+			struct VSMDownsampleHiZBatch :public DataHolder<VSMDownsampleHiZBatch, SlotID::VSMDownsampleHiZBatch, Table::Shadows::VSM::VSMDownsampleHiZBatch, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMDownsampleHiZBatch() = default;
+			};
+		}
+	}
 }

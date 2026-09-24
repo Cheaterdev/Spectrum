@@ -53,6 +53,7 @@ export
 		Library::CubeMapEnviromentProcessor CubeMapEnviromentProcessor;
 		Library::SMAA SMAA;
 		Library::stencil_renderer stencil_renderer;
+		Library::Tonemap Tonemap;
 		Library::UI_PreDraw UI_PreDraw;
 		Library::UI_Render UI_Render;
 		Library::AssetPreview AssetPreview;

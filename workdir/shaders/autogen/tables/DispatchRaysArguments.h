@@ -7,36 +7,40 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct DispatchRaysArguments
+namespace Raytrace
 {
-	uint2 raygen_addr; // uint2
-	uint2 raygen_size; // uint2
-	uint2 miss_addr; // uint2
-	uint2 miss_size; // uint2
-	uint2 miss_stride; // uint2
-	uint2 hit_addr; // uint2
-	uint2 hit_size; // uint2
-	uint2 hit_stride; // uint2
-	uint2 callable_addr; // uint2
-	uint2 callable_size; // uint2
-	uint2 callable_stride; // uint2
-	uint width; // uint
-	uint height; // uint
-	uint depth; // uint
-	uint _pad; // uint
-	uint2 GetRaygen_addr() { return raygen_addr; }
-	uint2 GetRaygen_size() { return raygen_size; }
-	uint2 GetMiss_addr() { return miss_addr; }
-	uint2 GetMiss_size() { return miss_size; }
-	uint2 GetMiss_stride() { return miss_stride; }
-	uint2 GetHit_addr() { return hit_addr; }
-	uint2 GetHit_size() { return hit_size; }
-	uint2 GetHit_stride() { return hit_stride; }
-	uint2 GetCallable_addr() { return callable_addr; }
-	uint2 GetCallable_size() { return callable_size; }
-	uint2 GetCallable_stride() { return callable_stride; }
-	uint GetWidth() { return width; }
-	uint GetHeight() { return height; }
-	uint GetDepth() { return depth; }
-	uint Get_pad() { return _pad; }
-};
+	struct DispatchRaysArguments
+	{
+		uint2 raygen_addr; // uint2
+		uint2 raygen_size; // uint2
+		uint2 miss_addr; // uint2
+		uint2 miss_size; // uint2
+		uint2 miss_stride; // uint2
+		uint2 hit_addr; // uint2
+		uint2 hit_size; // uint2
+		uint2 hit_stride; // uint2
+		uint2 callable_addr; // uint2
+		uint2 callable_size; // uint2
+		uint2 callable_stride; // uint2
+		uint width; // uint
+		uint height; // uint
+		uint depth; // uint
+		uint _pad; // uint
+		uint2 GetRaygen_addr() { return raygen_addr; }
+		uint2 GetRaygen_size() { return raygen_size; }
+		uint2 GetMiss_addr() { return miss_addr; }
+		uint2 GetMiss_size() { return miss_size; }
+		uint2 GetMiss_stride() { return miss_stride; }
+		uint2 GetHit_addr() { return hit_addr; }
+		uint2 GetHit_size() { return hit_size; }
+		uint2 GetHit_stride() { return hit_stride; }
+		uint2 GetCallable_addr() { return callable_addr; }
+		uint2 GetCallable_size() { return callable_size; }
+		uint2 GetCallable_stride() { return callable_stride; }
+		uint GetWidth() { return width; }
+		uint GetHeight() { return height; }
+		uint GetDepth() { return depth; }
+		uint Get_pad() { return _pad; }
+	};
+}
+using Raytrace::DispatchRaysArguments;

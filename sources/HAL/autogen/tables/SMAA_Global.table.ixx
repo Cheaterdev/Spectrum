@@ -14,56 +14,62 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct SMAA_Global
+	namespace Post
 	{
-		static constexpr SlotID ID = SlotID::SMAA_Global;
-		float4 subsampleIndices;
-		float4 SMAA_RT_METRICS;
-		HLSL::Texture2D<float4> colorTex;
-		HLSL::RWTexture2D<float2> edgesOut;
-		HLSL::Texture2D<float4>& GetColorTex() { return colorTex; }
-		float4& GetSubsampleIndices() { return subsampleIndices; }
-		float4& GetSMAA_RT_METRICS() { return SMAA_RT_METRICS; }
-		HLSL::RWTexture2D<float2>& GetEdgesOut() { return edgesOut; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace AA
 		{
-			compiler.compile(subsampleIndices, "SMAA_Global::subsampleIndices");
-			compiler.compile(SMAA_RT_METRICS, "SMAA_Global::SMAA_RT_METRICS");
-			compiler.compile(colorTex, "SMAA_Global::colorTex");
-			compiler.compile(edgesOut, "SMAA_Global::edgesOut");
-		}
-		struct Compiled
-		{
-			float4 subsampleIndices; // float4
-			float4 SMAA_RT_METRICS; // float4
-			uint colorTex; // Texture2D<float4>
-			uint edgesOut; // RWTexture2D<float2>
+			struct SMAA_Global
+			{
+				static constexpr SlotID ID = SlotID::SMAA_Global;
+				float4 subsampleIndices;
+				float4 SMAA_RT_METRICS;
+				HLSL::Texture2D<float4> colorTex;
+				HLSL::RWTexture2D<float2> edgesOut;
+				HLSL::Texture2D<float4>& GetColorTex() { return colorTex; }
+				float4& GetSubsampleIndices() { return subsampleIndices; }
+				float4& GetSMAA_RT_METRICS() { return SMAA_RT_METRICS; }
+				HLSL::RWTexture2D<float2>& GetEdgesOut() { return edgesOut; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(subsampleIndices, "SMAA_Global::subsampleIndices");
+					compiler.compile(SMAA_RT_METRICS, "SMAA_Global::SMAA_RT_METRICS");
+					compiler.compile(colorTex, "SMAA_Global::colorTex");
+					compiler.compile(edgesOut, "SMAA_Global::edgesOut");
+				}
+				struct Compiled
+				{
+					float4 subsampleIndices; // float4
+					float4 SMAA_RT_METRICS; // float4
+					uint colorTex; // Texture2D<float4>
+					uint edgesOut; // RWTexture2D<float2>
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(subsampleIndices);
-				ar& NVP(SMAA_RT_METRICS);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(subsampleIndices);
+						ar& NVP(SMAA_RT_METRICS);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::SMAA_Global";
+				static std::string get_typename()
+				{
+					return "Tables::SMAA_Global";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(subsampleIndices);
+					ar& NVP(SMAA_RT_METRICS);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(subsampleIndices);
-			ar& NVP(SMAA_RT_METRICS);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

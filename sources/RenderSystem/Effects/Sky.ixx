@@ -14,12 +14,12 @@ export class SkyRender
 	HAL::Texture::ptr inscatter;
 
 	// No `dir` member any more: the previous sun direction lives in
-	// Table::SkyState (sky.prism), which is per-Graph -- so the main and asset
+	// Table::Environment::SkyState (sky.prism), which is per-Graph -- so the main and asset
 	// pipelines still keep separate histories even though the diff now runs in
 	// a static [PreSetup] hook. Both passes' setups are generated, so only the
 	// render halves are members.
-	Passes::CubeSky::render_func_type m_cubesky_render;
-	Passes::Sky::render_func_type     m_sky_render;
+	Passes::Environment::CubeSky::render_func_type m_cubesky_render;
+	Passes::Environment::Sky::render_func_type     m_sky_render;
 
 public:
 	using ptr = std::shared_ptr<SkyRender>;

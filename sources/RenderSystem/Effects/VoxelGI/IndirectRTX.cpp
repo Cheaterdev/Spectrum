@@ -12,8 +12,8 @@ using namespace HAL;
 
 // setup() is fully generated (voxel.prism's own [SetupCondition]).
 
-void PassDefault<Passes::IndirectRTXHalf>::render(
-	Passes::IndirectRTXHalf::Context& data, FrameContext& context)
+void PassDefault<Passes::GI::IndirectRTXHalf>::render(
+	Passes::GI::IndirectRTXHalf::Context& data, FrameContext& context)
 {
 	auto noisy_output = *data.RTXIndirectNoiseHalf;
 	auto& sceneinfo   = context.graph->get_context<SceneInfo>();
@@ -24,7 +24,7 @@ void PassDefault<Passes::IndirectRTXHalf>::render(
 	context.graph->set_slot(SlotID::SceneData, compute);
 
 	{
-		Slots::IndirectRTXHalfGBuffer half_gbuffer;
+		Slots::GI::IndirectRTXHalfGBuffer half_gbuffer;
 		half_gbuffer.GetDepth()   = data.GBuffer_HalfDepth->texture2D;
 		half_gbuffer.GetNormals() = data.GBuffer_HalfNormals->texture2D;
 		compute.set(half_gbuffer);
@@ -33,7 +33,7 @@ void PassDefault<Passes::IndirectRTXHalf>::render(
 	{
 		PROFILE_GPU(L"indirect_rtx_half");
 		{
-			Slots::VoxelOutput output;
+			Slots::GI::Voxel::VoxelOutput output;
 			output.GetNoise()     = noisy_output.rwTexture2D;
 			output.GetBlueNoise() = data.BlueNoise->texture2D;
 			// DDGI probe-volume feedback term, sampled by TraceIndirectDiffuse
@@ -54,7 +54,7 @@ void PassDefault<Passes::IndirectRTXHalf>::render(
 			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 			compute.set(output);
 		}
-		RTX::get().render<IndirectRTXHalf>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
+		RTX::get().render<GI::IndirectRTXHalf>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
 	}
 }
 
@@ -63,8 +63,8 @@ void PassDefault<Passes::IndirectRTXHalf>::render(
 // under DLSS-RR, RTXCombine -- gated purely on RTX/hardware support now,
 // independent of upscaler (NRD is the only indirect-GI denoiser).
 
-void PassDefault<Passes::IndirectRTX>::render(
-	Passes::IndirectRTX::Context& data, FrameContext& context)
+void PassDefault<Passes::GI::IndirectRTX>::render(
+	Passes::GI::IndirectRTX::Context& data, FrameContext& context)
 {
 	auto& command_list = context.get_list();
 
@@ -80,18 +80,18 @@ void PassDefault<Passes::IndirectRTX>::render(
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 	context.graph->set_slot(SlotID::SceneData, compute);
 
-	// Slots::VoxelScreen is this codebase's only GBuffer-to-raytracing
+	// Slots::GI::Voxel::VoxelScreen is this codebase's only GBuffer-to-raytracing
 	// binding path -- see ReflectionRTX.cpp's comment on the same. Its
 	// voxel-texture/cubemap fields are left unset; MyRaygenShaderIndirectRTXOnly
 	// never reads them.
 	{
-		Slots::VoxelScreen voxelScreen;
+		Slots::GI::Voxel::VoxelScreen voxelScreen;
 		gbuffer.SetTable(voxelScreen.GetGbuffer());
 		compute.set(voxelScreen);
 	}
 
 	{
-		Slots::IndirectRTXUpscale upscale;
+		Slots::GI::IndirectRTXUpscale upscale;
 		upscale.GetNoiseHalf()  = data.RTXIndirectNoiseHalf->texture2D;
 		upscale.GetTileFlags()  = data.TileClassifyTiles->texture2D;
 		compute.set(upscale);
@@ -100,7 +100,7 @@ void PassDefault<Passes::IndirectRTX>::render(
 	{
 		PROFILE_GPU(L"indirect_rtx_only");
 		{
-			Slots::VoxelOutput output;
+			Slots::GI::Voxel::VoxelOutput output;
 			output.GetNoise()     = noisy_output.rwTexture2D;
 			output.GetBlueNoise() = data.BlueNoise->texture2D;
 			// DDGI probe-volume feedback term, sampled by TraceIndirectDiffuse
@@ -121,7 +121,7 @@ void PassDefault<Passes::IndirectRTX>::render(
 			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
 			compute.set(output);
 		}
-		RTX::get().render<IndirectRTX>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
+		RTX::get().render<GI::IndirectRTX>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
 	}
 }
 

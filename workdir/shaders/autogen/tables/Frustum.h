@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct Frustum
+namespace Frame
 {
-	float4 planes[6]; // float4
-	float4 GetPlanes(int i) { return planes[i]; }
-};
+	struct Frustum
+	{
+		float4 planes[6]; // float4
+		float4 GetPlanes(int i) { return planes[i]; }
+	};
+}
+using Frame::Frustum;

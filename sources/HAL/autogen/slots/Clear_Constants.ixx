@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct Clear_Constants :public DataHolder<Clear_Constants, SlotID::Clear_Constants, Table::Clear_Constants, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		Clear_Constants() = default;
-	};
+		namespace NRD
+		{
+			struct Clear_Constants :public DataHolder<Clear_Constants, SlotID::Clear_Constants, Table::Denoise::NRD::Clear_Constants, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				Clear_Constants() = default;
+			};
+		}
+	}
 }

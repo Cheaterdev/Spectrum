@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct WorkGR_Shadows_NodeEmulation :public DataHolder<WorkGR_Shadows_NodeEmulation, SlotID::WorkGR_Shadows_NodeEmulation, Table::WorkGR_Shadows_NodeEmulation, DefaultLayout::WorkGR_Shadows_NodeEmulation>
+	namespace Dev
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		WorkGR_Shadows_NodeEmulation() = default;
-	};
+		struct WorkGR_Shadows_NodeEmulation :public DataHolder<WorkGR_Shadows_NodeEmulation, SlotID::WorkGR_Shadows_NodeEmulation, Table::Dev::WorkGR_Shadows_NodeEmulation, ::Frame::DefaultLayout::WorkGR_Shadows_NodeEmulation>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			WorkGR_Shadows_NodeEmulation() = default;
+		};
+	}
 }

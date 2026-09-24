@@ -14,62 +14,65 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct TranslucentPayload
+	namespace Raytrace
 	{
-		static constexpr SlotID ID = SlotID::TranslucentPayload;
-		float dist;
-		float3 normal;
-		float3 albedo;
-		float roughness;
-		float ior;
-		float thickness;
-		float transmission;
-		float absorption_distance;
-		uint front_face;
-		float& GetDist() { return dist; }
-		float3& GetNormal() { return normal; }
-		float3& GetAlbedo() { return albedo; }
-		float& GetRoughness() { return roughness; }
-		float& GetIor() { return ior; }
-		float& GetThickness() { return thickness; }
-		float& GetTransmission() { return transmission; }
-		float& GetAbsorption_distance() { return absorption_distance; }
-		uint& GetFront_face() { return front_face; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct TranslucentPayload
 		{
-			compiler.compile(dist, "TranslucentPayload::dist");
-			compiler.compile(normal, "TranslucentPayload::normal");
-			compiler.compile(albedo, "TranslucentPayload::albedo");
-			compiler.compile(roughness, "TranslucentPayload::roughness");
-			compiler.compile(ior, "TranslucentPayload::ior");
-			compiler.compile(thickness, "TranslucentPayload::thickness");
-			compiler.compile(transmission, "TranslucentPayload::transmission");
-			compiler.compile(absorption_distance, "TranslucentPayload::absorption_distance");
-			compiler.compile(front_face, "TranslucentPayload::front_face");
-		}
-		using Compiled = TranslucentPayload;
+			static constexpr SlotID ID = SlotID::TranslucentPayload;
+			float dist;
+			float3 normal;
+			float3 albedo;
+			float roughness;
+			float ior;
+			float thickness;
+			float transmission;
+			float absorption_distance;
+			uint front_face;
+			float& GetDist() { return dist; }
+			float3& GetNormal() { return normal; }
+			float3& GetAlbedo() { return albedo; }
+			float& GetRoughness() { return roughness; }
+			float& GetIor() { return ior; }
+			float& GetThickness() { return thickness; }
+			float& GetTransmission() { return transmission; }
+			float& GetAbsorption_distance() { return absorption_distance; }
+			uint& GetFront_face() { return front_face; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(dist, "TranslucentPayload::dist");
+				compiler.compile(normal, "TranslucentPayload::normal");
+				compiler.compile(albedo, "TranslucentPayload::albedo");
+				compiler.compile(roughness, "TranslucentPayload::roughness");
+				compiler.compile(ior, "TranslucentPayload::ior");
+				compiler.compile(thickness, "TranslucentPayload::thickness");
+				compiler.compile(transmission, "TranslucentPayload::transmission");
+				compiler.compile(absorption_distance, "TranslucentPayload::absorption_distance");
+				compiler.compile(front_face, "TranslucentPayload::front_face");
+			}
+			using Compiled = TranslucentPayload;
 
-		static std::string get_typename()
-		{
-			return "Tables::TranslucentPayload";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(dist);
-			ar& NVP(normal);
-			ar& NVP(albedo);
-			ar& NVP(roughness);
-			ar& NVP(ior);
-			ar& NVP(thickness);
-			ar& NVP(transmission);
-			ar& NVP(absorption_distance);
-			ar& NVP(front_face);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::TranslucentPayload";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(dist);
+				ar& NVP(normal);
+				ar& NVP(albedo);
+				ar& NVP(roughness);
+				ar& NVP(ior);
+				ar& NVP(thickness);
+				ar& NVP(transmission);
+				ar& NVP(absorption_distance);
+				ar& NVP(front_face);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

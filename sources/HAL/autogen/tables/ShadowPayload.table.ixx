@@ -14,34 +14,37 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct ShadowPayload
+	namespace Raytrace
 	{
-		static constexpr SlotID ID = SlotID::ShadowPayload;
-		bool hit;
-		float dist;
-		bool& GetHit() { return hit; }
-		float& GetDist() { return dist; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct ShadowPayload
 		{
-			compiler.compile(hit, "ShadowPayload::hit");
-			compiler.compile(dist, "ShadowPayload::dist");
-		}
-		using Compiled = ShadowPayload;
+			static constexpr SlotID ID = SlotID::ShadowPayload;
+			bool hit;
+			float dist;
+			bool& GetHit() { return hit; }
+			float& GetDist() { return dist; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(hit, "ShadowPayload::hit");
+				compiler.compile(dist, "ShadowPayload::dist");
+			}
+			using Compiled = ShadowPayload;
 
-		static std::string get_typename()
-		{
-			return "Tables::ShadowPayload";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(hit);
-			ar& NVP(dist);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::ShadowPayload";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(hit);
+				ar& NVP(dist);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

@@ -8,26 +8,30 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "MeshInstanceInfo.h"
-struct Test
+namespace Dev
 {
-	float data[16]; // float
-	TestEnumMode mode; // TestEnumMode
-	uint instances; // StructuredBuffer<MeshInstanceInfo>
-	uint tex; // Texture2D<float4>
-	float GetData(int i) { return data[i]; }
-	TestEnumMode GetMode() { return mode; }
-	StructuredBuffer<MeshInstanceInfo> GetInstances(int i)
+	struct Test
 	{
-		StructuredBuffer<uint> indirection = ResourceDescriptorHeap[instances];
-		uint id = indirection[NonUniformResourceIndex(i)];
-		return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
-	}
+		float data[16]; // float
+		TestEnumMode mode; // TestEnumMode
+		uint instances; // StructuredBuffer<MeshInstanceInfo>
+		uint tex; // Texture2D<float4>
+		float GetData(int i) { return data[i]; }
+		TestEnumMode GetMode() { return mode; }
+		StructuredBuffer<MeshInstanceInfo> GetInstances(int i)
+		{
+			StructuredBuffer<uint> indirection = ResourceDescriptorHeap[instances];
+			uint id = indirection[NonUniformResourceIndex(i)];
+			return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
+		}
 
-	Texture2D<float4> GetTex(int i)
-	{
-		StructuredBuffer<uint> indirection = ResourceDescriptorHeap[tex];
-		uint id = indirection[NonUniformResourceIndex(i)];
-		return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
-	}
+		Texture2D<float4> GetTex(int i)
+		{
+			StructuredBuffer<uint> indirection = ResourceDescriptorHeap[tex];
+			uint id = indirection[NonUniformResourceIndex(i)];
+			return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
+		}
 
-};
+	};
+}
+using Dev::Test;

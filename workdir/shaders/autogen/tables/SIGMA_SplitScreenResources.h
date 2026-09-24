@@ -7,12 +7,19 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct SIGMA_SplitScreenResources
+namespace Denoise
 {
-	uint gIn_ViewZ; // Texture2D<float>
-	uint gIn_Penumbra; // Texture2D<float>
-	uint gOut_Shadow_Translucency; // RWTexture2D<float>
-	Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
-	Texture2D<float> GetGIn_Penumbra() { return ResourceDescriptorHeap[gIn_Penumbra]; }
-	RWTexture2D<float> GetGOut_Shadow_Translucency() { return ResourceDescriptorHeap[gOut_Shadow_Translucency]; }
-};
+	namespace NRD
+	{
+		struct SIGMA_SplitScreenResources
+		{
+			uint gIn_ViewZ; // Texture2D<float>
+			uint gIn_Penumbra; // Texture2D<float>
+			uint gOut_Shadow_Translucency; // RWTexture2D<float>
+			Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
+			Texture2D<float> GetGIn_Penumbra() { return ResourceDescriptorHeap[gIn_Penumbra]; }
+			RWTexture2D<float> GetGOut_Shadow_Translucency() { return ResourceDescriptorHeap[gOut_Shadow_Translucency]; }
+		};
+	}
+}
+using Denoise::NRD::SIGMA_SplitScreenResources;

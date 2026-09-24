@@ -8,24 +8,31 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "REBLURSharedConstants.h"
-struct REBLUR_HistoryFixResources
+namespace Denoise
 {
-	uint gIn_Tiles; // Texture2D<float>
-	uint gIn_Normal_Roughness; // Texture2D<float4>
-	uint gIn_Data1; // Texture2D<float2>
-	uint gIn_ViewZ; // Texture2D<float>
-	uint gIn_Diff; // Texture2D<float4>
-	uint gIn_DiffFast; // Texture2D<float>
-	uint gOut_Diff; // RWTexture2D<float4>
-	uint gOut_DiffFast; // RWTexture2D<float>
-	REBLURSharedConstants sharedConstants; // REBLURSharedConstants
-	REBLURSharedConstants GetSharedConstants() { return sharedConstants; }
-	Texture2D<float> GetGIn_Tiles() { return ResourceDescriptorHeap[gIn_Tiles]; }
-	Texture2D<float4> GetGIn_Normal_Roughness() { return ResourceDescriptorHeap[gIn_Normal_Roughness]; }
-	Texture2D<float2> GetGIn_Data1() { return ResourceDescriptorHeap[gIn_Data1]; }
-	Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
-	Texture2D<float4> GetGIn_Diff() { return ResourceDescriptorHeap[gIn_Diff]; }
-	Texture2D<float> GetGIn_DiffFast() { return ResourceDescriptorHeap[gIn_DiffFast]; }
-	RWTexture2D<float4> GetGOut_Diff() { return ResourceDescriptorHeap[gOut_Diff]; }
-	RWTexture2D<float> GetGOut_DiffFast() { return ResourceDescriptorHeap[gOut_DiffFast]; }
-};
+	namespace NRD
+	{
+		struct REBLUR_HistoryFixResources
+		{
+			uint gIn_Tiles; // Texture2D<float>
+			uint gIn_Normal_Roughness; // Texture2D<float4>
+			uint gIn_Data1; // Texture2D<float2>
+			uint gIn_ViewZ; // Texture2D<float>
+			uint gIn_Diff; // Texture2D<float4>
+			uint gIn_DiffFast; // Texture2D<float>
+			uint gOut_Diff; // RWTexture2D<float4>
+			uint gOut_DiffFast; // RWTexture2D<float>
+			REBLURSharedConstants sharedConstants; // REBLURSharedConstants
+			REBLURSharedConstants GetSharedConstants() { return sharedConstants; }
+			Texture2D<float> GetGIn_Tiles() { return ResourceDescriptorHeap[gIn_Tiles]; }
+			Texture2D<float4> GetGIn_Normal_Roughness() { return ResourceDescriptorHeap[gIn_Normal_Roughness]; }
+			Texture2D<float2> GetGIn_Data1() { return ResourceDescriptorHeap[gIn_Data1]; }
+			Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
+			Texture2D<float4> GetGIn_Diff() { return ResourceDescriptorHeap[gIn_Diff]; }
+			Texture2D<float> GetGIn_DiffFast() { return ResourceDescriptorHeap[gIn_DiffFast]; }
+			RWTexture2D<float4> GetGOut_Diff() { return ResourceDescriptorHeap[gOut_Diff]; }
+			RWTexture2D<float> GetGOut_DiffFast() { return ResourceDescriptorHeap[gOut_DiffFast]; }
+		};
+	}
+}
+using Denoise::NRD::REBLUR_HistoryFixResources;

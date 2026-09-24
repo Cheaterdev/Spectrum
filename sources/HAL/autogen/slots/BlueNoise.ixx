@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct BlueNoise :public DataHolder<BlueNoise, SlotID::BlueNoise, Table::BlueNoise, DefaultLayout::Instance0>
+	namespace Utility
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		BlueNoise() = default;
-	};
+		struct BlueNoise :public DataHolder<BlueNoise, SlotID::BlueNoise, Table::Utility::BlueNoise, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			BlueNoise() = default;
+		};
+	}
 }

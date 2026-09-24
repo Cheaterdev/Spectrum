@@ -44,8 +44,8 @@ export namespace materials
 
 		HAL::Texture::ptr results;
 		std::vector<HAL::Texture2DView> slice_views;
-		PSOS::MaterialPreview::ptr pso;
-		PSOS::MaterialPreview3D::ptr pso3d;
+		PSOS::Editor::MaterialPreview::ptr pso;
+		PSOS::Editor::MaterialPreview3D::ptr pso3d;
 
 		// 3D mode only: real hidden-surface removal for the rasterized mesh
 		// (there's no other visibility resolution -- no rtv, UAV-only PS).

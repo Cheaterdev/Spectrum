@@ -14,42 +14,45 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct GraphInput
+	namespace Dev
 	{
-		static constexpr SlotID ID = SlotID::GraphInput;
-		uint3 dispatch_grid;
-		uint unused;
-		int2 WaveOffset;
-		uint2 unused2;
-		uint3& GetDispatch_grid() { return dispatch_grid; }
-		uint& GetUnused() { return unused; }
-		int2& GetWaveOffset() { return WaveOffset; }
-		uint2& GetUnused2() { return unused2; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct GraphInput
 		{
-			compiler.compile(dispatch_grid, "GraphInput::dispatch_grid");
-			compiler.compile(unused, "GraphInput::unused");
-			compiler.compile(WaveOffset, "GraphInput::WaveOffset");
-			compiler.compile(unused2, "GraphInput::unused2");
-		}
-		using Compiled = GraphInput;
+			static constexpr SlotID ID = SlotID::GraphInput;
+			uint3 dispatch_grid;
+			uint unused;
+			int2 WaveOffset;
+			uint2 unused2;
+			uint3& GetDispatch_grid() { return dispatch_grid; }
+			uint& GetUnused() { return unused; }
+			int2& GetWaveOffset() { return WaveOffset; }
+			uint2& GetUnused2() { return unused2; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(dispatch_grid, "GraphInput::dispatch_grid");
+				compiler.compile(unused, "GraphInput::unused");
+				compiler.compile(WaveOffset, "GraphInput::WaveOffset");
+				compiler.compile(unused2, "GraphInput::unused2");
+			}
+			using Compiled = GraphInput;
 
-		static std::string get_typename()
-		{
-			return "Tables::GraphInput";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(dispatch_grid);
-			ar& NVP(unused);
-			ar& NVP(WaveOffset);
-			ar& NVP(unused2);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::GraphInput";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(dispatch_grid);
+				ar& NVP(unused);
+				ar& NVP(WaveOffset);
+				ar& NVP(unused2);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

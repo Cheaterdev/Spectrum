@@ -14,40 +14,43 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct TextureRenderer
+	namespace Editor
 	{
-		static constexpr SlotID ID = SlotID::TextureRenderer;
-		HLSL::Texture2D<float4> texture;
-		HLSL::Texture2D<float4>& GetTexture() { return texture; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct TextureRenderer
 		{
-			compiler.compile(texture, "TextureRenderer::texture");
-		}
-		struct Compiled
-		{
-			uint texture; // Texture2D<float4>
+			static constexpr SlotID ID = SlotID::TextureRenderer;
+			HLSL::Texture2D<float4> texture;
+			HLSL::Texture2D<float4>& GetTexture() { return texture; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(texture, "TextureRenderer::texture");
+			}
+			struct Compiled
+			{
+				uint texture; // Texture2D<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::TextureRenderer";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::TextureRenderer";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

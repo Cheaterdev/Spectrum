@@ -68,7 +68,7 @@ void capture_context_snapshot(Graph& graph, ContextSnapshot& out)
 {
 {%- for f in get_context_fields() %}
 	out.values[(unsigned int)ContextFieldID::{{f.id}}] =
-		encode_context_field(graph.get_context<Table::{{f.owner}}>().{{f.field}});
+		encode_context_field(graph.get_context<Table::{{parsed.tables[f.owner].qn}}>().{{f.field}});
 {%- endfor %}
 }
 

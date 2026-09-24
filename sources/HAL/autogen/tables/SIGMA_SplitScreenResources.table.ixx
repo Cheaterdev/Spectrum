@@ -14,48 +14,54 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct SIGMA_SplitScreenResources
+	namespace Denoise
 	{
-		static constexpr SlotID ID = SlotID::SIGMA_SplitScreenResources;
-		HLSL::Texture2D<float> gIn_ViewZ;
-		HLSL::Texture2D<float> gIn_Penumbra;
-		HLSL::RWTexture2D<float> gOut_Shadow_Translucency;
-		HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
-		HLSL::Texture2D<float>& GetGIn_Penumbra() { return gIn_Penumbra; }
-		HLSL::RWTexture2D<float>& GetGOut_Shadow_Translucency() { return gOut_Shadow_Translucency; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace NRD
 		{
-			compiler.compile(gIn_ViewZ, "SIGMA_SplitScreenResources::gIn_ViewZ");
-			compiler.compile(gIn_Penumbra, "SIGMA_SplitScreenResources::gIn_Penumbra");
-			compiler.compile(gOut_Shadow_Translucency, "SIGMA_SplitScreenResources::gOut_Shadow_Translucency");
-		}
-		struct Compiled
-		{
-			uint gIn_ViewZ; // Texture2D<float>
-			uint gIn_Penumbra; // Texture2D<float>
-			uint gOut_Shadow_Translucency; // RWTexture2D<float>
+			struct SIGMA_SplitScreenResources
+			{
+				static constexpr SlotID ID = SlotID::SIGMA_SplitScreenResources;
+				HLSL::Texture2D<float> gIn_ViewZ;
+				HLSL::Texture2D<float> gIn_Penumbra;
+				HLSL::RWTexture2D<float> gOut_Shadow_Translucency;
+				HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
+				HLSL::Texture2D<float>& GetGIn_Penumbra() { return gIn_Penumbra; }
+				HLSL::RWTexture2D<float>& GetGOut_Shadow_Translucency() { return gOut_Shadow_Translucency; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(gIn_ViewZ, "SIGMA_SplitScreenResources::gIn_ViewZ");
+					compiler.compile(gIn_Penumbra, "SIGMA_SplitScreenResources::gIn_Penumbra");
+					compiler.compile(gOut_Shadow_Translucency, "SIGMA_SplitScreenResources::gOut_Shadow_Translucency");
+				}
+				struct Compiled
+				{
+					uint gIn_ViewZ; // Texture2D<float>
+					uint gIn_Penumbra; // Texture2D<float>
+					uint gOut_Shadow_Translucency; // RWTexture2D<float>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::SIGMA_SplitScreenResources";
+				static std::string get_typename()
+				{
+					return "Tables::SIGMA_SplitScreenResources";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

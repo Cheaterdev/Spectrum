@@ -76,7 +76,7 @@ export namespace nvidia
 		// Column-major, vector-is-a-column, non-jittered (NRD's own
 		// convention, NRDSettings.h) -- raw 16-float dumps of this frame's
 		// and the previous frame's view/projection matrices. Populated from
-		// camera::camera_cb.current/prev (Table::Camera) by the caller,
+		// camera::camera_cb.current/prev (Table::Frame::Camera) by the caller,
 		// which already carries both in the layout this engine's own HLSL
 		// mul(M,v) convention expects -- unverified against NRD's exact
         // convention beyond that; see the plan's "Known risks" (matrix

@@ -15,30 +15,46 @@ import :Autogen.Tables.Camera;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct FrameGraph_Debug_Texture3D
+	namespace Dev
 	{
-		static constexpr SlotID ID = SlotID::FrameGraph_Debug_Texture3D;
-		uint3 sourceSize;
-		HLSL::Texture3D<float4> source;
-		Camera camera;
-		HLSL::Texture3D<float4>& GetSource() { return source; }
-		uint3& GetSourceSize() { return sourceSize; }
-		Camera& GetCamera() { return camera; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct FrameGraph_Debug_Texture3D
 		{
-			compiler.compile(sourceSize, "FrameGraph_Debug_Texture3D::sourceSize");
-			compiler.compile(source, "FrameGraph_Debug_Texture3D::source");
-			compiler.compile(camera, "FrameGraph_Debug_Texture3D::camera");
-		}
-		struct Compiled
-		{
-			uint3 sourceSize; // uint3
-			uint source; // Texture3D<float4>
-			Camera::Compiled camera; // Camera
+			static constexpr SlotID ID = SlotID::FrameGraph_Debug_Texture3D;
+			uint3 sourceSize;
+			HLSL::Texture3D<float4> source;
+			Table::Frame::Camera camera;
+			HLSL::Texture3D<float4>& GetSource() { return source; }
+			uint3& GetSourceSize() { return sourceSize; }
+			Table::Frame::Camera& GetCamera() { return camera; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(sourceSize, "FrameGraph_Debug_Texture3D::sourceSize");
+				compiler.compile(source, "FrameGraph_Debug_Texture3D::source");
+				compiler.compile(camera, "FrameGraph_Debug_Texture3D::camera");
+			}
+			struct Compiled
+			{
+				uint3 sourceSize; // uint3
+				uint source; // Texture3D<float4>
+				Table::Frame::Camera::Compiled camera; // Camera
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(sourceSize);
+					ar& NVP(camera);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::FrameGraph_Debug_Texture3D";
+			}
 			private:
 			SERIALIZE()
 			{
@@ -46,21 +62,8 @@ export namespace Table
 				ar& NVP(camera);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::FrameGraph_Debug_Texture3D";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(sourceSize);
-			ar& NVP(camera);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

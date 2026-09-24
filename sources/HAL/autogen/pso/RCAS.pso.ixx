@@ -14,44 +14,50 @@ import :Types;
 
 export namespace PSOS
 {
-	struct RCAS: public PSOBase
+	namespace Post
 	{
-		struct Keys {
-			KeyValue<int, Nullable> cas;
-			GEN_DEF_COMP(Keys);
-		private:
-			SERIALIZE()
+		namespace Upscale
+		{
+			struct RCAS: public PSOBase
 			{
-				ar&NVP(cas);
-			}
-		};
+				struct Keys {
+					KeyValue<int, Nullable> cas;
+					GEN_DEF_COMP(Keys);
+				private:
+					SERIALIZE()
+					{
+						ar&NVP(cas);
+					}
+				};
 
-		GEN_COMPUTE_PSO(RCAS, cas)
-		GEN_KEY(cas, true);
+				GEN_COMPUTE_PSO(RCAS, cas)
+				GEN_KEY(cas, true);
 
 
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
-			static const ShaderDefine<&Keys::cas,&SimpleComputePSO::compute> cas = "RCAS";
+				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+				{
+					static const ShaderDefine<&Keys::cas,&SimpleComputePSO::compute> cas = "RCAS";
 
 
-			SimplePSO mpso("RCAS");
-			if(f) f(mpso,key);
+					SimplePSO mpso("RCAS");
+					if(f) f(mpso,key);
 
-			mpso.root_signature = Layouts::DefaultLayout;
+					mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/postprocess/fsr.hlsl";
-			mpso.compute.entry_point = "CS";
-			mpso.compute.flags = HAL::ShaderOptions::None;
+					mpso.compute.file_name = "shaders/postprocess/fsr.hlsl";
+					mpso.compute.entry_point = "CS";
+					mpso.compute.flags = HAL::ShaderOptions::None;
 			
-			cas.Apply(mpso, key);
-			return mpso;
-		}
+					cas.Apply(mpso, key);
+					return mpso;
+				}
 
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
+				private:
+				SERIALIZE()
+				{
+					ar&NVP(wrap(psos));
+				}
+			};
 		}
-	};
+	}
 }

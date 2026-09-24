@@ -42,8 +42,8 @@ export
 
 	// Redirects get_context<T>() to the real context type actually stored,
 	// for a T that is a base a hand-written context inherits from (e.g. a
-	// SIG-declared schema struct like Table::ViewportContext, with
-	// ViewportInfo : Table::ViewportContext holding the live instance).
+	// SIG-declared schema struct like Table::Frame::ViewportContext, with
+	// ViewportInfo : Table::Frame::ViewportContext holding the live instance).
 	// Default is identity -- get_context<T>() behaves exactly as before for
 	// every T with no specialization. A one-line specialization at the
 	// point where the inheritance is declared (next to the derived type)

@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct DDGIProbeConvolveData :public DataHolder<DDGIProbeConvolveData, SlotID::DDGIProbeConvolveData, Table::DDGIProbeConvolveData, DefaultLayout::Instance0>
+	namespace GI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		DDGIProbeConvolveData() = default;
-	};
+		namespace DDGI
+		{
+			struct DDGIProbeConvolveData :public DataHolder<DDGIProbeConvolveData, SlotID::DDGIProbeConvolveData, Table::GI::DDGI::DDGIProbeConvolveData, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				DDGIProbeConvolveData() = default;
+			};
+		}
+	}
 }

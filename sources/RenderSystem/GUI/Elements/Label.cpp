@@ -246,7 +246,7 @@ for (const auto& token : parsed) {
 		   geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
 		
 			{
-				RT::SingleColor rt;
+				RT::Frame::SingleColor rt;
 				rt.GetColor() = cache.texture.renderTarget;
 				command_list->get_graphics().set_rtv(rt,RTOptions::Default| RTOptions::ClearAll);
 			}

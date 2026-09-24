@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct RaytracingRays :public DataHolder<RaytracingRays, SlotID::RaytracingRays, Table::RaytracingRays, DefaultLayout::Instance2>
+	namespace Raytrace
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		RaytracingRays() = default;
-	};
+		struct RaytracingRays :public DataHolder<RaytracingRays, SlotID::RaytracingRays, Table::Raytrace::RaytracingRays, ::Frame::DefaultLayout::Instance2>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			RaytracingRays() = default;
+		};
+	}
 }

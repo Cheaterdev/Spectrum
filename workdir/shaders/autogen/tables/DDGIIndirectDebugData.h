@@ -8,30 +8,40 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "DDGIInfo.h"
-struct DDGIIndirectDebugData
+namespace GI
 {
-	uint depth; // Texture2D<float>
-	uint normals; // Texture2D<float4>
-	uint probe_irradiance; // Texture2DArray<float4>
-	uint probe_visibility; // Texture2DArray<float2>
-	uint probe_residency; // StructuredBuffer<uint>
-	uint residency_pending; // RWStructuredBuffer<uint>
-	uint target; // RWTexture2D<float4>
-	DDGIInfo cascade0; // DDGIInfo
-	DDGIInfo cascade1; // DDGIInfo
-	DDGIInfo cascade2; // DDGIInfo
-	DDGIInfo cascade3; // DDGIInfo
-	DDGIInfo cascade4; // DDGIInfo
-	DDGIInfo GetCascade0() { return cascade0; }
-	DDGIInfo GetCascade1() { return cascade1; }
-	DDGIInfo GetCascade2() { return cascade2; }
-	DDGIInfo GetCascade3() { return cascade3; }
-	DDGIInfo GetCascade4() { return cascade4; }
-	Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
-	Texture2D<float4> GetNormals() { return ResourceDescriptorHeap[normals]; }
-	Texture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
-	Texture2DArray<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
-	StructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
-	RWStructuredBuffer<uint> GetResidency_pending() { return ResourceDescriptorHeap[residency_pending]; }
-	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
-};
+	namespace DDGI
+	{
+		namespace Dev
+		{
+			struct DDGIIndirectDebugData
+			{
+				uint depth; // Texture2D<float>
+				uint normals; // Texture2D<float4>
+				uint probe_irradiance; // Texture2DArray<float4>
+				uint probe_visibility; // Texture2DArray<float2>
+				uint probe_residency; // StructuredBuffer<uint>
+				uint residency_pending; // RWStructuredBuffer<uint>
+				uint target; // RWTexture2D<float4>
+				DDGIInfo cascade0; // DDGIInfo
+				DDGIInfo cascade1; // DDGIInfo
+				DDGIInfo cascade2; // DDGIInfo
+				DDGIInfo cascade3; // DDGIInfo
+				DDGIInfo cascade4; // DDGIInfo
+				DDGIInfo GetCascade0() { return cascade0; }
+				DDGIInfo GetCascade1() { return cascade1; }
+				DDGIInfo GetCascade2() { return cascade2; }
+				DDGIInfo GetCascade3() { return cascade3; }
+				DDGIInfo GetCascade4() { return cascade4; }
+				Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
+				Texture2D<float4> GetNormals() { return ResourceDescriptorHeap[normals]; }
+				Texture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
+				Texture2DArray<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
+				StructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
+				RWStructuredBuffer<uint> GetResidency_pending() { return ResourceDescriptorHeap[residency_pending]; }
+				RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
+			};
+		}
+	}
+}
+using GI::DDGI::Dev::DDGIIndirectDebugData;

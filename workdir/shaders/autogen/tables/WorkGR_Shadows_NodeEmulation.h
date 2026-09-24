@@ -8,8 +8,12 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "TileRecord.h"
-struct WorkGR_Shadows_NodeEmulation
+namespace Dev
 {
-	uint Input; // ConsumeStructuredBuffer<TileRecord>
-	ConsumeStructuredBuffer<TileRecord> GetInput() { return ResourceDescriptorHeap[Input]; }
-};
+	struct WorkGR_Shadows_NodeEmulation
+	{
+		uint Input; // ConsumeStructuredBuffer<TileRecord>
+		ConsumeStructuredBuffer<TileRecord> GetInput() { return ResourceDescriptorHeap[Input]; }
+	};
+}
+using Dev::WorkGR_Shadows_NodeEmulation;

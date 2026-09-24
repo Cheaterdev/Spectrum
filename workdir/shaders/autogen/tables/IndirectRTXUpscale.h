@@ -7,10 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct IndirectRTXUpscale
+namespace GI
 {
-	uint noiseHalf; // Texture2D<float4>
-	uint tileFlags; // Texture2D<uint>
-	Texture2D<float4> GetNoiseHalf() { return ResourceDescriptorHeap[noiseHalf]; }
-	Texture2D<uint> GetTileFlags() { return ResourceDescriptorHeap[tileFlags]; }
-};
+	struct IndirectRTXUpscale
+	{
+		uint noiseHalf; // Texture2D<float4>
+		uint tileFlags; // Texture2D<uint>
+		Texture2D<float4> GetNoiseHalf() { return ResourceDescriptorHeap[noiseHalf]; }
+		Texture2D<uint> GetTileFlags() { return ResourceDescriptorHeap[tileFlags]; }
+	};
+}
+using GI::IndirectRTXUpscale;

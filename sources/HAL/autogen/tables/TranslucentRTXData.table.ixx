@@ -14,48 +14,51 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct TranslucentRTXData
+	namespace Raytrace
 	{
-		static constexpr SlotID ID = SlotID::TranslucentRTXData;
-		HLSL::Texture2D<float> depth;
-		HLSL::Texture2D<float4> scene_color;
-		HLSL::RWTexture2D<float4> output;
-		HLSL::Texture2D<float>& GetDepth() { return depth; }
-		HLSL::Texture2D<float4>& GetScene_color() { return scene_color; }
-		HLSL::RWTexture2D<float4>& GetOutput() { return output; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct TranslucentRTXData
 		{
-			compiler.compile(depth, "TranslucentRTXData::depth");
-			compiler.compile(scene_color, "TranslucentRTXData::scene_color");
-			compiler.compile(output, "TranslucentRTXData::output");
-		}
-		struct Compiled
-		{
-			uint depth; // Texture2D<float>
-			uint scene_color; // Texture2D<float4>
-			uint output; // RWTexture2D<float4>
+			static constexpr SlotID ID = SlotID::TranslucentRTXData;
+			HLSL::Texture2D<float> depth;
+			HLSL::Texture2D<float4> scene_color;
+			HLSL::RWTexture2D<float4> output;
+			HLSL::Texture2D<float>& GetDepth() { return depth; }
+			HLSL::Texture2D<float4>& GetScene_color() { return scene_color; }
+			HLSL::RWTexture2D<float4>& GetOutput() { return output; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(depth, "TranslucentRTXData::depth");
+				compiler.compile(scene_color, "TranslucentRTXData::scene_color");
+				compiler.compile(output, "TranslucentRTXData::output");
+			}
+			struct Compiled
+			{
+				uint depth; // Texture2D<float>
+				uint scene_color; // Texture2D<float4>
+				uint output; // RWTexture2D<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::TranslucentRTXData";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::TranslucentRTXData";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

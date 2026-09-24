@@ -7,14 +7,18 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct MaterialCommandData
+namespace Meshes
 {
-	uint material_cb; // uint
-	uint pipeline_id; // uint
-	TransparencyMode transparency_mode; // TransparencyMode
-	uint opacity_texture_index; // uint
-	uint GetMaterial_cb() { return material_cb; }
-	uint GetPipeline_id() { return pipeline_id; }
-	TransparencyMode GetTransparency_mode() { return transparency_mode; }
-	uint GetOpacity_texture_index() { return opacity_texture_index; }
-};
+	struct MaterialCommandData
+	{
+		uint material_cb; // uint
+		uint pipeline_id; // uint
+		TransparencyMode transparency_mode; // TransparencyMode
+		uint opacity_texture_index; // uint
+		uint GetMaterial_cb() { return material_cb; }
+		uint GetPipeline_id() { return pipeline_id; }
+		TransparencyMode GetTransparency_mode() { return transparency_mode; }
+		uint GetOpacity_texture_index() { return opacity_texture_index; }
+	};
+}
+using Meshes::MaterialCommandData;

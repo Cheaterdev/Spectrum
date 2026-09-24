@@ -14,42 +14,48 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMSelectors
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMSelectors;
-		bool use_vsm_penumbra = true;
-		bool use_vsm_contact_shadow = true;
-		VSMDebugView vsm_debug_view = VSMDebugView::None;
-		ShadowSource shadow_source = ShadowSource::VSM;
-		bool& GetUse_vsm_penumbra() { return use_vsm_penumbra; }
-		bool& GetUse_vsm_contact_shadow() { return use_vsm_contact_shadow; }
-		VSMDebugView& GetVsm_debug_view() { return vsm_debug_view; }
-		ShadowSource& GetShadow_source() { return shadow_source; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(use_vsm_penumbra, "VSMSelectors::use_vsm_penumbra");
-			compiler.compile(use_vsm_contact_shadow, "VSMSelectors::use_vsm_contact_shadow");
-			compiler.compile(vsm_debug_view, "VSMSelectors::vsm_debug_view");
-			compiler.compile(shadow_source, "VSMSelectors::shadow_source");
-		}
-		using Compiled = VSMSelectors;
+			struct VSMSelectors
+			{
+				static constexpr SlotID ID = SlotID::VSMSelectors;
+				bool use_vsm_penumbra = true;
+				bool use_vsm_contact_shadow = true;
+				::Shadows::VSM::VSMDebugView vsm_debug_view = ::Shadows::VSM::VSMDebugView::None;
+				::Shadows::VSM::ShadowSource shadow_source = ::Shadows::VSM::ShadowSource::VSM;
+				bool& GetUse_vsm_penumbra() { return use_vsm_penumbra; }
+				bool& GetUse_vsm_contact_shadow() { return use_vsm_contact_shadow; }
+				::Shadows::VSM::VSMDebugView& GetVsm_debug_view() { return vsm_debug_view; }
+				::Shadows::VSM::ShadowSource& GetShadow_source() { return shadow_source; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(use_vsm_penumbra, "VSMSelectors::use_vsm_penumbra");
+					compiler.compile(use_vsm_contact_shadow, "VSMSelectors::use_vsm_contact_shadow");
+					compiler.compile(vsm_debug_view, "VSMSelectors::vsm_debug_view");
+					compiler.compile(shadow_source, "VSMSelectors::shadow_source");
+				}
+				using Compiled = VSMSelectors;
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMSelectors";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(use_vsm_penumbra);
-			ar& NVP(use_vsm_contact_shadow);
-			ar& NVP(vsm_debug_view);
-			ar& NVP(shadow_source);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::VSMSelectors";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(use_vsm_penumbra);
+					ar& NVP(use_vsm_contact_shadow);
+					ar& NVP(vsm_debug_view);
+					ar& NVP(shadow_source);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

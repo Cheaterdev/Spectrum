@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct IndirectRTXHalfGBuffer :public DataHolder<IndirectRTXHalfGBuffer, SlotID::IndirectRTXHalfGBuffer, Table::IndirectRTXHalfGBuffer, DefaultLayout::Instance4>
+	namespace GI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		IndirectRTXHalfGBuffer() = default;
-	};
+		struct IndirectRTXHalfGBuffer :public DataHolder<IndirectRTXHalfGBuffer, SlotID::IndirectRTXHalfGBuffer, Table::GI::IndirectRTXHalfGBuffer, ::Frame::DefaultLayout::Instance4>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			IndirectRTXHalfGBuffer() = default;
+		};
+	}
 }

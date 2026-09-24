@@ -48,6 +48,7 @@ namespace
 		{ "PassNode", { "Compute", "Multiple", "PreSetup", "RenderCondition", "Required", "RunAlways", "SetupCondition", "Static" } },
 		{ "PassNode field", RESOURCE_FIELD_OPTIONS },
 		{ "pipeline entry", { "Async", "Async2", "Async3" } },
+		{ "namespace", {} },
 	};
 
 	// Case-insensitive Levenshtein distance.
@@ -366,6 +367,60 @@ namespace
 			check(atom.expr, atom.terms.empty() ? opt.loc : atom.terms.front().text_loc);
 	}
 
+	// A namespace reopened in several blocks has one set of options: a block
+	// either repeats them exactly or writes none, so which block a member is in
+	// can never change how it's treated.
+	void check_namespaces(const Parsed& parsed)
+	{
+		auto text = [](const Namespace& n)
+		{
+			std::string s;
+			for (const auto& o : n.options)
+				s += "[" + o.name + "=" + o.value_atom.expr + "]";
+			return s;
+		};
+
+		// A namespace becomes Table::<ns>, PSOS::<ns>, ..., so from inside any
+		// generated body it hides a same-named outer scope: a namespace `HAL`
+		// makes every `HAL::RWStructuredBuffer` in Table resolve to Table::HAL.
+		// These are the scopes the templates qualify names with; a declaration
+		// name counts too (DefaultLayout::Instance0, Constants-style owners).
+		static const std::set<std::string> RESERVED = {
+			"Constants", "Context", "ContextField", "Core", "FrameGraph", "HAL", "HLSL", "Handlers",
+			"IndirectCommands", "Layouts", "Math", "PSO", "PSOS", "PassID", "Passes", "Pipelines",
+			"RT", "RTX", "ResourceFlags", "ResourceID", "SlotID", "Slots", "Table", "Tables",
+			"concurrency", "std",
+		};
+		std::set<std::string> declared;
+		auto add = [&](const auto& container) { for (const auto& d : container) declared.insert(d.name); };
+		add(parsed.tables); add(parsed.layouts); add(parsed.rt); add(parsed.compute_pso); add(parsed.graphics_pso);
+		add(parsed.workgraph_pso); add(parsed.raytrace_pso); add(parsed.raytrace_pass); add(parsed.raytrace_gen);
+		add(parsed.views); add(parsed.passes); add(parsed.pipelines); add(parsed.enums); add(parsed.consts);
+
+		std::map<std::string, const Namespace*> with_options;
+		for (const auto& n : parsed.namespaces)
+		{
+			if (RESERVED.count(n.name))
+				diagnostics().error(name_loc_of(n), std::format("namespace '{}': the name is used by generated code "
+					"(it would hide {}:: inside every generated type); pick another", n.name, n.name));
+			else if (declared.count(n.name))
+				diagnostics().error(name_loc_of(n), std::format("namespace '{}' has the same name as a declaration; "
+					"generated code would mistake one for the other", n.name));
+
+			check_options(n, "namespace", n.path);
+			if (n.options.size() == 0)
+				continue;
+
+			auto [it, inserted] = with_options.emplace(n.path, &n);
+			if (!inserted && text(*it->second) != text(n))
+			{
+				const auto& prev = it->second->loc;
+				diagnostics().error(n, std::format("namespace '{}' is reopened with different options than at {}({},{}); "
+					"write them on one block, or repeat them exactly", n.path, prev.file, prev.line, prev.column));
+			}
+		}
+	}
+
 	// `const A = Constants::B * 2;`. A const is a constexpr in Constants.ixx, so it
 	// can read only consts declared before it (C++ declaration order) and no
 	// runtime state at all.
@@ -662,6 +717,7 @@ void validate(Parsed& parsed)
 	check_duplicates(parsed.enums, "enum");
 	check_duplicates(parsed.consts, "const");
 	check_const_values(parsed);
+	check_namespaces(parsed);
 
 	for (const auto& table : parsed.tables)
 	{

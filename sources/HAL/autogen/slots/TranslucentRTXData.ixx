@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct TranslucentRTXData :public DataHolder<TranslucentRTXData, SlotID::TranslucentRTXData, Table::TranslucentRTXData, DefaultLayout::Instance2>
+	namespace Raytrace
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		TranslucentRTXData() = default;
-	};
+		struct TranslucentRTXData :public DataHolder<TranslucentRTXData, SlotID::TranslucentRTXData, Table::Raytrace::TranslucentRTXData, ::Frame::DefaultLayout::Instance2>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			TranslucentRTXData() = default;
+		};
+	}
 }

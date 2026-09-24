@@ -5,7 +5,11 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 #pragma once
-
-struct DepthOnly
+namespace Frame
 {
-};
+
+	struct DepthOnly
+	{
+	};
+}
+using Frame::DepthOnly;

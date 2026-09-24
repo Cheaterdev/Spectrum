@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMConstants :public DataHolder<VSMConstants, SlotID::VSMConstants, Table::VSMConstants, DefaultLayout::Instance0>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMConstants() = default;
-	};
+		namespace VSM
+		{
+			struct VSMConstants :public DataHolder<VSMConstants, SlotID::VSMConstants, Table::Shadows::VSM::VSMConstants, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMConstants() = default;
+			};
+		}
+	}
 }

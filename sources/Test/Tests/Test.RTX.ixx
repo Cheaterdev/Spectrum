@@ -88,7 +88,7 @@ export namespace Test
 			auto& ti  = g.get_context<TimeInfo>();
 			auto& ci  = g.get_context<CameraInfo>();
 
-			Slots::FrameInfo fi;
+			Slots::Frame::FrameInfo fi;
 			fi.GetSunDir().xyz = sky.sunDir;
 			fi.GetTime()       = {ti.time, ti.totalTime, 0, 0};
 			fi.GetCamera()     = ci.cam->camera_cb.current;
@@ -107,14 +107,14 @@ export namespace Test
 		RTX::get().update();
 			  	
 		// Pass 1: build TLAS + prepare RTX hit-group table.
-		graph.add_library_pass<Passes::PreScene>(
-			PassDefault<Passes::PreScene>::setup,
-			PassDefault<Passes::PreScene>::render,
-			PassDefault<Passes::PreScene>::flags);
+		graph.add_library_pass<Passes::Frame::PreScene>(
+			PassDefault<Passes::Frame::PreScene>::setup,
+			PassDefault<Passes::Frame::PreScene>::render,
+			PassDefault<Passes::Frame::PreScene>::flags);
 				 
 		// Pass 2: primary-ray color pass — no GBuffer, writes to ColorOutput.
 		const ivec2 rtx_size {W, H};
-		graph.add_library_pass<Passes::RTXColorPass>(
+		graph.add_library_pass<Passes::Raytrace::Dev::RTXColorPass>(
 			[](auto& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult {
 				// Depend on PreScene (writes `scene`) so the RTX BVH is ready before tracing.
 				builder.need(data.scene, FrameGraph::ResourceFlags::Read);
@@ -133,12 +133,12 @@ export namespace Test
 				ctx.graph->set_slot(SlotID::SceneData,  compute);
 
 				// Bind the output UAV through the dedicated ColorRTXOutput slot.
-				Slots::ColorRTXOutput output;
+				Slots::Raytrace::ColorRTXOutput output;
 				output.GetOutput() = data.ColorOutput->rwTexture2D;
 				compute.set(output);
 
 				// Dispatch primary rays using ColorRTX raygen.
-				RTX::get().render<ColorRTX>(compute,
+				RTX::get().render<Raytrace::Dev::ColorRTX>(compute,
 					scene_info.scene->raytrace_scene, rtx_size);
 			},
 			FrameGraph::PassFlags::Compute);

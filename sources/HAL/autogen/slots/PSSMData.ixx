@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct PSSMData :public DataHolder<PSSMData, SlotID::PSSMData, Table::PSSMData, DefaultLayout::Instance1>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		PSSMData() = default;
-	};
+		namespace PSSM
+		{
+			struct PSSMData :public DataHolder<PSSMData, SlotID::PSSMData, Table::Shadows::PSSM::PSSMData, ::Frame::DefaultLayout::Instance1>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				PSSMData() = default;
+			};
+		}
+	}
 }

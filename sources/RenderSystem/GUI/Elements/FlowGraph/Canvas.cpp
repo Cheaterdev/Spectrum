@@ -192,13 +192,13 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 	auto clip = c.scissors;
 	c.command_list->get_graphics().set_scissors(c.ui_clipping);
 
-	Slots::FlowGraph graph_data;
+	Slots::UI::FlowGraph graph_data;
 	graph_data.GetSize() = vec4(render_bounds->size, user_ui->size.get());
 	graph_data.GetOffset_size() = vec4(contents->pos.get(), 1.0f / contents->scale, 0);
 	graph_data.GetInv_pixel() = vec2(1, 1) / user_ui->size.get();
 	c.command_list->get_graphics().set(graph_data);
 
-	c.renderer->draw(c, RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::CanvasBack>(), get_render_bounds());
+	c.renderer->draw(c, RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::UI::CanvasBack>(), get_render_bounds());
 
 
 	if (linking.size())
@@ -208,7 +208,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 		//	auto& b = *line_vertex;
 		int count = 0;
 
-		std::vector<Table::VSLine> vertexes;
+		std::vector<Table::UI::VSLine> vertexes;
 		vertexes.resize(4 * linking.size());
 
 		for (auto& l : linking)
@@ -226,15 +226,15 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 			count++;
 		}
 
-		c.command_list->get_graphics().set_pipeline<PSOS::CanvasLines>();
+		c.command_list->get_graphics().set_pipeline<PSOS::UI::CanvasLines>();
 		c.command_list->get_graphics().set_topology(HAL::PrimitiveTopologyType::PATCH, HAL::PrimitiveTopologyFeed::LIST, false, 4);
 
-		auto data = c.command_list->place_data(sizeof(Table::VSLine) * vertexes.size(), sizeof(Table::VSLine));
-		c.command_list->write<Table::VSLine>(data, vertexes);
+		auto data = c.command_list->place_data(sizeof(Table::UI::VSLine) * vertexes.size(), sizeof(Table::UI::VSLine));
+		c.command_list->write<Table::UI::VSLine>(data, vertexes);
 
-		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::VSLine>>(*c.command_list, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,counterType::NONE });
+		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::UI::VSLine>>(*c.command_list, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,counterType::NONE });
 		{
-			Slots::LineRender linedata;
+			Slots::UI::LineRender linedata;
 			linedata.GetVb() = view;
 			c.command_list->get_graphics().set(linedata);
 		}

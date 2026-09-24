@@ -15,44 +15,50 @@ import :Autogen.Tables.Camera;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct PSSMDataGlobal
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::PSSMDataGlobal;
-		HLSL::Texture2D<float> light_buffer;
-		HLSL::StructuredBuffer<Camera> light_camera;
-		HLSL::Texture2D<float>& GetLight_buffer() { return light_buffer; }
-		HLSL::StructuredBuffer<Camera>& GetLight_camera() { return light_camera; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace PSSM
 		{
-			compiler.compile(light_buffer, "PSSMDataGlobal::light_buffer");
-			compiler.compile(light_camera, "PSSMDataGlobal::light_camera");
-		}
-		struct Compiled
-		{
-			uint light_buffer; // Texture2D<float>
-			uint light_camera; // StructuredBuffer<Camera>
+			struct PSSMDataGlobal
+			{
+				static constexpr SlotID ID = SlotID::PSSMDataGlobal;
+				HLSL::Texture2D<float> light_buffer;
+				HLSL::StructuredBuffer<Table::Frame::Camera> light_camera;
+				HLSL::Texture2D<float>& GetLight_buffer() { return light_buffer; }
+				HLSL::StructuredBuffer<Table::Frame::Camera>& GetLight_camera() { return light_camera; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(light_buffer, "PSSMDataGlobal::light_buffer");
+					compiler.compile(light_camera, "PSSMDataGlobal::light_camera");
+				}
+				struct Compiled
+				{
+					uint light_buffer; // Texture2D<float>
+					uint light_camera; // StructuredBuffer<Camera>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::PSSMDataGlobal";
+				static std::string get_typename()
+				{
+					return "Tables::PSSMDataGlobal";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

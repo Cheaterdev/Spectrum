@@ -7,10 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct ColorRect
+namespace UI
 {
-	float4 pos[2]; // float4
-	float4 color[4]; // float4
-	float4 GetPos(int i) { return pos[i]; }
-	float4 GetColor(int i) { return color[i]; }
-};
+	struct ColorRect
+	{
+		float4 pos[2]; // float4
+		float4 color[4]; // float4
+		float4 GetPos(int i) { return pos[i]; }
+		float4 GetColor(int i) { return color[i]; }
+	};
+}
+using UI::ColorRect;

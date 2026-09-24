@@ -7,14 +7,21 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct NormalRoughnessRepackParams
+namespace Post
 {
-	uint GBuffer_Normals; // Texture2D<float4>
-	uint GBuffer_Albedo; // Texture2D<float4>
-	uint Output; // RWTexture2D<float4>
-	uint SpecularAlbedoOutput; // RWTexture2D<float4>
-	Texture2D<float4> GetGBuffer_Normals() { return ResourceDescriptorHeap[GBuffer_Normals]; }
-	Texture2D<float4> GetGBuffer_Albedo() { return ResourceDescriptorHeap[GBuffer_Albedo]; }
-	RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[Output]; }
-	RWTexture2D<float4> GetSpecularAlbedoOutput() { return ResourceDescriptorHeap[SpecularAlbedoOutput]; }
-};
+	namespace Upscale
+	{
+		struct NormalRoughnessRepackParams
+		{
+			uint GBuffer_Normals; // Texture2D<float4>
+			uint GBuffer_Albedo; // Texture2D<float4>
+			uint Output; // RWTexture2D<float4>
+			uint SpecularAlbedoOutput; // RWTexture2D<float4>
+			Texture2D<float4> GetGBuffer_Normals() { return ResourceDescriptorHeap[GBuffer_Normals]; }
+			Texture2D<float4> GetGBuffer_Albedo() { return ResourceDescriptorHeap[GBuffer_Albedo]; }
+			RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[Output]; }
+			RWTexture2D<float4> GetSpecularAlbedoOutput() { return ResourceDescriptorHeap[SpecularAlbedoOutput]; }
+		};
+	}
+}
+using Post::Upscale::NormalRoughnessRepackParams;

@@ -8,14 +8,18 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "mesh_vertex_input.h"
-struct RaytraceInstanceInfo
+namespace Meshes
 {
-	uint material_id; // uint
-	uint node_offset; // uint
-	uint vertexes; // StructuredBuffer<mesh_vertex_input>
-	uint indices; // StructuredBuffer<uint>
-	uint GetMaterial_id() { return material_id; }
-	uint GetNode_offset() { return node_offset; }
-	StructuredBuffer<mesh_vertex_input> GetVertexes() { return ResourceDescriptorHeap[vertexes]; }
-	StructuredBuffer<uint> GetIndices() { return ResourceDescriptorHeap[indices]; }
-};
+	struct RaytraceInstanceInfo
+	{
+		uint material_id; // uint
+		uint node_offset; // uint
+		uint vertexes; // StructuredBuffer<mesh_vertex_input>
+		uint indices; // StructuredBuffer<uint>
+		uint GetMaterial_id() { return material_id; }
+		uint GetNode_offset() { return node_offset; }
+		StructuredBuffer<mesh_vertex_input> GetVertexes() { return ResourceDescriptorHeap[vertexes]; }
+		StructuredBuffer<uint> GetIndices() { return ResourceDescriptorHeap[indices]; }
+	};
+}
+using Meshes::RaytraceInstanceInfo;

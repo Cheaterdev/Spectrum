@@ -15,8 +15,8 @@ using namespace HAL;
 // complementary case to RTXCombine (which handles DLSS-RR itself).
 // setup() is fully generated (nrd_sig_test.prism's own [SetupCondition]).
 
-void PassDefault<Passes::NRD_IndirectCombine>::render(
-	Passes::NRD_IndirectCombine::Context& data, FrameContext& context)
+void PassDefault<Passes::Denoise::NRD::NRD_IndirectCombine>::render(
+	Passes::Denoise::NRD::NRD_IndirectCombine::Context& data, FrameContext& context)
 {
 	auto& command_list = context.get_list();
 	GBuffer gbuffer     = GBufferViewDesc::actualize(data);
@@ -26,10 +26,10 @@ void PassDefault<Passes::NRD_IndirectCombine>::render(
 
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 
-	compute.set_pipeline<PSOS::NRD_IndirectCombine>();
+	compute.set_pipeline<PSOS::Denoise::NRD::NRD_IndirectCombine>();
 
 	{
-		Slots::NRD_IndirectCombineParams params;
+		Slots::Denoise::NRD::NRD_IndirectCombineParams params;
 		gbuffer.SetTable(params.GetGbuffer());
 		params.GetIndirect() = data.RTXIndirectDenoised->texture2D;
 		params.GetTarget()   = data.ResultTexture->rwTexture2D;

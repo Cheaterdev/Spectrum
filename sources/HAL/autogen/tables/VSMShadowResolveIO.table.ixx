@@ -14,40 +14,46 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMShadowResolveIO
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMShadowResolveIO;
-		HLSL::Texture2D<uint4> blocker_search_result;
-		HLSL::Texture2D<uint4>& GetBlocker_search_result() { return blocker_search_result; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(blocker_search_result, "VSMShadowResolveIO::blocker_search_result");
-		}
-		struct Compiled
-		{
-			uint blocker_search_result; // Texture2D<uint4>
+			struct VSMShadowResolveIO
+			{
+				static constexpr SlotID ID = SlotID::VSMShadowResolveIO;
+				HLSL::Texture2D<uint4> blocker_search_result;
+				HLSL::Texture2D<uint4>& GetBlocker_search_result() { return blocker_search_result; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(blocker_search_result, "VSMShadowResolveIO::blocker_search_result");
+				}
+				struct Compiled
+				{
+					uint blocker_search_result; // Texture2D<uint4>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMShadowResolveIO";
+				static std::string get_typename()
+				{
+					return "Tables::VSMShadowResolveIO";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

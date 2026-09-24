@@ -8,10 +8,17 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "VoxelTilingParams.h"
-struct VoxelZero
+namespace GI
 {
-	uint Target; // RWTexture3D<float4>
-	VoxelTilingParams params; // VoxelTilingParams
-	VoxelTilingParams GetParams() { return params; }
-	RWTexture3D<float4> GetTarget() { return ResourceDescriptorHeap[Target]; }
-};
+	namespace Voxel
+	{
+		struct VoxelZero
+		{
+			uint Target; // RWTexture3D<float4>
+			VoxelTilingParams params; // VoxelTilingParams
+			VoxelTilingParams GetParams() { return params; }
+			RWTexture3D<float4> GetTarget() { return ResourceDescriptorHeap[Target]; }
+		};
+	}
+}
+using GI::Voxel::VoxelZero;

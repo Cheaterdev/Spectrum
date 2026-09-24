@@ -8,12 +8,19 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "VSMPageBatch.h"
-struct VSMLevelDispatchInfo
+namespace Shadows
 {
-	uint page_batch_cb; // VSMPageBatch
-	float2 bounds_min; // float2
-	float2 bounds_max; // float2
-	uint GetPage_batch_cb() { return page_batch_cb; }
-	float2 GetBounds_min() { return bounds_min; }
-	float2 GetBounds_max() { return bounds_max; }
-};
+	namespace VSM
+	{
+		struct VSMLevelDispatchInfo
+		{
+			uint page_batch_cb; // VSMPageBatch
+			float2 bounds_min; // float2
+			float2 bounds_max; // float2
+			uint GetPage_batch_cb() { return page_batch_cb; }
+			float2 GetBounds_min() { return bounds_min; }
+			float2 GetBounds_max() { return bounds_max; }
+		};
+	}
+}
+using Shadows::VSM::VSMLevelDispatchInfo;

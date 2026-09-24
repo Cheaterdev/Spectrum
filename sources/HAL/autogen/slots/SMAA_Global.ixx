@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct SMAA_Global :public DataHolder<SMAA_Global, SlotID::SMAA_Global, Table::SMAA_Global, DefaultLayout::Instance0>
+	namespace Post
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		SMAA_Global() = default;
-	};
+		namespace AA
+		{
+			struct SMAA_Global :public DataHolder<SMAA_Global, SlotID::SMAA_Global, Table::Post::AA::SMAA_Global, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				SMAA_Global() = default;
+			};
+		}
+	}
 }

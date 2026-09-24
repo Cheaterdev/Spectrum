@@ -1,0 +1,108 @@
+namespace Post
+{
+	enum TonemapOperator
+	{
+		AgX;
+		PBRNeutral;
+		Clamp;
+	}
+
+	# Mirrors Tonemap.cpp's Variable<>s into a Table:: context so the generated
+	# [SetupCondition] below can read them (same shape as DDGISelectors).
+	struct TonemapSelectors
+	{
+		bool enabled = true;
+	}
+
+	[Bind = DefaultLayout::Instance0]
+	struct TonemapData
+	{
+		# log2-luminance range covered by histogram bins 1..255; bin 0 collects
+		# (near-)black pixels.
+		float min_log_lum;
+		float log_lum_range;
+
+		# Percentile window (0..1) of the histogram that is averaged: pixels
+		# darker than low_percent or brighter than high_percent do not meter.
+		float low_percent;
+		float high_percent;
+
+		# Adaptation rates (1/s) in EV space, separate for brightening and
+		# darkening; delta_time is seconds since the previous frame.
+		float speed_up;
+		float speed_down;
+		float delta_time;
+
+		# EV added on top of the metered (or manual) exposure; clamps apply to the
+		# metered scene EV before compensation.
+		float exposure_compensation;
+		float min_ev;
+		float max_ev;
+
+		# Non-zero: skip adaptation and snap to the metered value (first frame,
+		# or after toggling auto exposure back on).
+		uint reset;
+		# Zero: ignore the histogram and use manual_ev.
+		uint auto_exposure;
+		float manual_ev;
+
+		TonemapOperator tonemap_operator;
+
+		RWStructuredBuffer<uint> histogram;
+		# x = adapted scene log2 luminance, y = linear exposure multiplier.
+		RWStructuredBuffer<float4> exposure_state;
+		RWTexture2D<float4> color;
+	}
+
+	ComputePSO TonemapHistogramClear
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Clear]
+		compute = "postprocess/tonemap.hlsl";
+	}
+
+	ComputePSO TonemapHistogramBuild
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Histogram]
+		compute = "postprocess/tonemap.hlsl";
+	}
+
+	ComputePSO TonemapExposureAdapt
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Adapt]
+		compute = "postprocess/tonemap.hlsl";
+	}
+
+	ComputePSO TonemapApply
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Apply]
+		compute = "postprocess/tonemap.hlsl";
+	}
+
+	# Histogram auto-exposure + display tonemap, in place on the final
+	# ResultTexture. Runs after every AA/upscaler producer (SMAA/FSR/DLSS/DLSS-RR
+	# all expect scene-referred HDR input) and before the UI composite. Output is
+	# linear display-referred [0,1]: the viewport widget applies the sRGB-ish
+	# encode itself (main.cpp, texture.gamma).
+	[Static]
+	[Compute]
+	[SetupCondition = TonemapSelectors::enabled]
+	PassNode Tonemap
+	{
+		[Always = UnorderedAccess] Texture ResultTexture;
+
+		[Always = UnorderedAccess] [Size = 256]
+		StructuredBuffer<uint> ExposureHistogram;
+
+		# Static: adaptation integrates over frames.
+		[Always = UnorderedAccess | Static] [Size = 1]
+		StructuredBuffer<float4> ExposureState;
+	}
+}

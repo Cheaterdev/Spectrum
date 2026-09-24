@@ -15,66 +15,83 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct TileClassifyData
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::TileClassifyData;
-		float roughness_threshold;
-		float metallic_threshold;
-		HLSL::RWTexture2D<float> half_depth;
-		HLSL::RWTexture2D<float4> half_normals;
-		HLSL::AppendStructuredBuffer<uint2> tile_hi;
-		HLSL::AppendStructuredBuffer<uint2> tile_low;
-		HLSL::RWTexture2D<uint> tile_mask;
-		HLSL::RWTexture2D<uint> tile_flags;
-		HLSL::AppendStructuredBuffer<uint2> tile_roughness_hi;
-		HLSL::AppendStructuredBuffer<uint2> tile_roughness_low;
-		HLSL::RWTexture2D<uint> tile_roughness_flags;
-		GBuffer gbuffer;
-		HLSL::RWTexture2D<float>& GetHalf_depth() { return half_depth; }
-		HLSL::RWTexture2D<float4>& GetHalf_normals() { return half_normals; }
-		HLSL::AppendStructuredBuffer<uint2>& GetTile_hi() { return tile_hi; }
-		HLSL::AppendStructuredBuffer<uint2>& GetTile_low() { return tile_low; }
-		HLSL::RWTexture2D<uint>& GetTile_mask() { return tile_mask; }
-		HLSL::RWTexture2D<uint>& GetTile_flags() { return tile_flags; }
-		HLSL::AppendStructuredBuffer<uint2>& GetTile_roughness_hi() { return tile_roughness_hi; }
-		HLSL::AppendStructuredBuffer<uint2>& GetTile_roughness_low() { return tile_roughness_low; }
-		HLSL::RWTexture2D<uint>& GetTile_roughness_flags() { return tile_roughness_flags; }
-		float& GetRoughness_threshold() { return roughness_threshold; }
-		float& GetMetallic_threshold() { return metallic_threshold; }
-		GBuffer& GetGbuffer() { return gbuffer; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct TileClassifyData
 		{
-			compiler.compile(roughness_threshold, "TileClassifyData::roughness_threshold");
-			compiler.compile(metallic_threshold, "TileClassifyData::metallic_threshold");
-			compiler.compile(half_depth, "TileClassifyData::half_depth");
-			compiler.compile(half_normals, "TileClassifyData::half_normals");
-			compiler.compile(tile_hi, "TileClassifyData::tile_hi");
-			compiler.compile(tile_low, "TileClassifyData::tile_low");
-			compiler.compile(tile_mask, "TileClassifyData::tile_mask");
-			compiler.compile(tile_flags, "TileClassifyData::tile_flags");
-			compiler.compile(tile_roughness_hi, "TileClassifyData::tile_roughness_hi");
-			compiler.compile(tile_roughness_low, "TileClassifyData::tile_roughness_low");
-			compiler.compile(tile_roughness_flags, "TileClassifyData::tile_roughness_flags");
-			compiler.compile(gbuffer, "TileClassifyData::gbuffer");
-		}
-		struct Compiled
-		{
-			float roughness_threshold; // float
-			float metallic_threshold; // float
-			uint half_depth; // RWTexture2D<float>
-			uint half_normals; // RWTexture2D<float4>
-			uint tile_hi; // AppendStructuredBuffer<uint2>
-			uint tile_low; // AppendStructuredBuffer<uint2>
-			uint tile_mask; // RWTexture2D<uint>
-			uint tile_flags; // RWTexture2D<uint>
-			uint tile_roughness_hi; // AppendStructuredBuffer<uint2>
-			uint tile_roughness_low; // AppendStructuredBuffer<uint2>
-			uint tile_roughness_flags; // RWTexture2D<uint>
-			GBuffer::Compiled gbuffer; // GBuffer
+			static constexpr SlotID ID = SlotID::TileClassifyData;
+			float roughness_threshold;
+			float metallic_threshold;
+			HLSL::RWTexture2D<float> half_depth;
+			HLSL::RWTexture2D<float4> half_normals;
+			HLSL::AppendStructuredBuffer<uint2> tile_hi;
+			HLSL::AppendStructuredBuffer<uint2> tile_low;
+			HLSL::RWTexture2D<uint> tile_mask;
+			HLSL::RWTexture2D<uint> tile_flags;
+			HLSL::AppendStructuredBuffer<uint2> tile_roughness_hi;
+			HLSL::AppendStructuredBuffer<uint2> tile_roughness_low;
+			HLSL::RWTexture2D<uint> tile_roughness_flags;
+			Table::Meshes::GBuffer gbuffer;
+			HLSL::RWTexture2D<float>& GetHalf_depth() { return half_depth; }
+			HLSL::RWTexture2D<float4>& GetHalf_normals() { return half_normals; }
+			HLSL::AppendStructuredBuffer<uint2>& GetTile_hi() { return tile_hi; }
+			HLSL::AppendStructuredBuffer<uint2>& GetTile_low() { return tile_low; }
+			HLSL::RWTexture2D<uint>& GetTile_mask() { return tile_mask; }
+			HLSL::RWTexture2D<uint>& GetTile_flags() { return tile_flags; }
+			HLSL::AppendStructuredBuffer<uint2>& GetTile_roughness_hi() { return tile_roughness_hi; }
+			HLSL::AppendStructuredBuffer<uint2>& GetTile_roughness_low() { return tile_roughness_low; }
+			HLSL::RWTexture2D<uint>& GetTile_roughness_flags() { return tile_roughness_flags; }
+			float& GetRoughness_threshold() { return roughness_threshold; }
+			float& GetMetallic_threshold() { return metallic_threshold; }
+			Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(roughness_threshold, "TileClassifyData::roughness_threshold");
+				compiler.compile(metallic_threshold, "TileClassifyData::metallic_threshold");
+				compiler.compile(half_depth, "TileClassifyData::half_depth");
+				compiler.compile(half_normals, "TileClassifyData::half_normals");
+				compiler.compile(tile_hi, "TileClassifyData::tile_hi");
+				compiler.compile(tile_low, "TileClassifyData::tile_low");
+				compiler.compile(tile_mask, "TileClassifyData::tile_mask");
+				compiler.compile(tile_flags, "TileClassifyData::tile_flags");
+				compiler.compile(tile_roughness_hi, "TileClassifyData::tile_roughness_hi");
+				compiler.compile(tile_roughness_low, "TileClassifyData::tile_roughness_low");
+				compiler.compile(tile_roughness_flags, "TileClassifyData::tile_roughness_flags");
+				compiler.compile(gbuffer, "TileClassifyData::gbuffer");
+			}
+			struct Compiled
+			{
+				float roughness_threshold; // float
+				float metallic_threshold; // float
+				uint half_depth; // RWTexture2D<float>
+				uint half_normals; // RWTexture2D<float4>
+				uint tile_hi; // AppendStructuredBuffer<uint2>
+				uint tile_low; // AppendStructuredBuffer<uint2>
+				uint tile_mask; // RWTexture2D<uint>
+				uint tile_flags; // RWTexture2D<uint>
+				uint tile_roughness_hi; // AppendStructuredBuffer<uint2>
+				uint tile_roughness_low; // AppendStructuredBuffer<uint2>
+				uint tile_roughness_flags; // RWTexture2D<uint>
+				Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(gbuffer);
+					ar& NVP(roughness_threshold);
+					ar& NVP(metallic_threshold);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::TileClassifyData";
+			}
 			private:
 			SERIALIZE()
 			{
@@ -83,22 +100,8 @@ export namespace Table
 				ar& NVP(metallic_threshold);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::TileClassifyData";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(gbuffer);
-			ar& NVP(roughness_threshold);
-			ar& NVP(metallic_threshold);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

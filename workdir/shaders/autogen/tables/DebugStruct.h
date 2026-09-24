@@ -7,10 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct DebugStruct
+namespace Dev
 {
-	uint format_id; // uint
-	uint4 args; // uint4
-	uint GetFormat_id() { return format_id; }
-	uint4 GetArgs() { return args; }
-};
+	struct DebugStruct
+	{
+		uint format_id; // uint
+		uint4 args; // uint4
+		uint GetFormat_id() { return format_id; }
+		uint4 GetArgs() { return args; }
+	};
+}
+using Dev::DebugStruct;

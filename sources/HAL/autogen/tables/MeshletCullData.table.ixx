@@ -14,38 +14,41 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct MeshletCullData
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::MeshletCullData;
-		float4 BoundingSphere;
-		uint NormalCone;
-		float ApexOffset;
-		float4& GetBoundingSphere() { return BoundingSphere; }
-		uint& GetNormalCone() { return NormalCone; }
-		float& GetApexOffset() { return ApexOffset; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct MeshletCullData
 		{
-			compiler.compile(BoundingSphere, "MeshletCullData::BoundingSphere");
-			compiler.compile(NormalCone, "MeshletCullData::NormalCone");
-			compiler.compile(ApexOffset, "MeshletCullData::ApexOffset");
-		}
-		using Compiled = MeshletCullData;
+			static constexpr SlotID ID = SlotID::MeshletCullData;
+			float4 BoundingSphere;
+			uint NormalCone;
+			float ApexOffset;
+			float4& GetBoundingSphere() { return BoundingSphere; }
+			uint& GetNormalCone() { return NormalCone; }
+			float& GetApexOffset() { return ApexOffset; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(BoundingSphere, "MeshletCullData::BoundingSphere");
+				compiler.compile(NormalCone, "MeshletCullData::NormalCone");
+				compiler.compile(ApexOffset, "MeshletCullData::ApexOffset");
+			}
+			using Compiled = MeshletCullData;
 
-		static std::string get_typename()
-		{
-			return "Tables::MeshletCullData";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(BoundingSphere);
-			ar& NVP(NormalCone);
-			ar& NVP(ApexOffset);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::MeshletCullData";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(BoundingSphere);
+				ar& NVP(NormalCone);
+				ar& NVP(ApexOffset);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

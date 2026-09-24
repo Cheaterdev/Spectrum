@@ -28,7 +28,7 @@ import :Autogen.RT.{{t.name}};
 
 export namespace RT
 {
-	#pragma pack(push, 1)
+	#pragma pack(push, 1){{ rt.ns_open }}
 	struct _{{rt.name}}
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
@@ -82,5 +82,5 @@ export namespace RT
 	struct {{rt.name}}:public RTHolder<_{{rt.name}}>
 	{
 		{{rt.name}}() = default;
-	};
+	};{{ rt.ns_braces }}
 }

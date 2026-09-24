@@ -21,16 +21,16 @@ using namespace HAL;
 // gate.
 // setup() is fully generated (nrd_sig_test.prism's own [SetupCondition]).
 
-void PassDefault<Passes::NRD_REBLUR_Execute>::pre_setup(FrameGraph::Graph& graph)
+void PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>::pre_setup(FrameGraph::Graph& graph)
 {
 	// Same gate as [SetupCondition] (nrd_sig_test.prism) -- ensure_pools() is a
 	// real side effect [SetupCondition] can't express, so it runs here,
 	// once per frame before graph.setup(), guarded by the identical
 	// condition repeated (this function's whole reason to exist is that the
 	// condition and the side effect had to be split apart).
-	if (graph.get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR ||
-	    !graph.get_context<Table::RenderDeviceCapabilities>().rtx_supported ||
-	    !graph.get_context<Table::RenderDeviceCapabilities>().dlssrr_available)
+	if (graph.get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == Post::Upscale::UpscalerType::DLSSRR ||
+	    !graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported ||
+	    !graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available)
 		return;
 
 	// Pool textures are sized off the real render resolution, not the
@@ -40,8 +40,8 @@ void PassDefault<Passes::NRD_REBLUR_Execute>::pre_setup(FrameGraph::Graph& graph
 	nvidia::NRD::get().ensure_pools(RenderSystem::get().device(), frame.frame_size);
 }
 
-void PassDefault<Passes::NRD_REBLUR_Execute>::render(
-	Passes::NRD_REBLUR_Execute::Context& data, FrameContext& context)
+void PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>::render(
+	Passes::Denoise::NRD::NRD_REBLUR_Execute::Context& data, FrameContext& context)
 {
 	auto& cam_info = context.graph->get_context<CameraInfo>();
 	camera* cam = cam_info.cam;
@@ -68,8 +68,8 @@ void PassDefault<Passes::NRD_REBLUR_Execute>::render(
 	// packed YCoCg+hitdist output into plain RGB for a true-color preview.
 	{
 		auto& compute = context.get_list()->get_compute();
-		compute.set_pipeline<PSOS::NRD_UnpackDebug>();
-		Slots::NRD_UnpackDebugParams params;
+		compute.set_pipeline<PSOS::Denoise::NRD::NRD_UnpackDebug>();
+		Slots::Denoise::NRD::NRD_UnpackDebugParams params;
 		params.GetPacked() = data.RTXIndirectDenoised->texture2D;
 		params.GetUnpacked() = data.RTXIndirectDenoisedPreview->rwTexture2D;
 		compute.set(params);

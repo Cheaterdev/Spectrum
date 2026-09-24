@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct EnvFilter :public DataHolder<EnvFilter, SlotID::EnvFilter, Table::EnvFilter, DefaultLayout::Instance1>
+	namespace Environment
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		EnvFilter() = default;
-	};
+		struct EnvFilter :public DataHolder<EnvFilter, SlotID::EnvFilter, Table::Environment::EnvFilter, ::Frame::DefaultLayout::Instance1>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			EnvFilter() = default;
+		};
+	}
 }

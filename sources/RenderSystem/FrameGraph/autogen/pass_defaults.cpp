@@ -35,518 +35,527 @@ import HAL;
 using namespace FrameGraph;
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::AssetGBuffer>::setup(
-	Passes::AssetGBuffer::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Editor::AssetGBuffer>::setup(
+	Passes::Editor::AssetGBuffer::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::AssetMip>::setup(
-	Passes::AssetMip::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Editor::AssetMip>::setup(
+	Passes::Editor::AssetMip::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::BlueNoise>::setup(
-	Passes::BlueNoise::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Utility::BlueNoise>::setup(
+	Passes::Utility::BlueNoise::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::DDGIProbeSelect>::setup(
-	Passes::DDGIProbeSelect::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::GI::DDGI::DDGIProbeSelect>::setup(
+	Passes::GI::DDGI::DDGIProbeSelect::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::DDGIProbeResidencyMark>::setup(
-	Passes::DDGIProbeResidencyMark::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::GI::DDGI::DDGIProbeResidencyMark>::setup(
+	Passes::GI::DDGI::DDGIProbeResidencyMark::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::DDGISelectors>().enabled && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
+	if (!(builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::DDGIProbeDispatchArgsBuild>::setup(
-	Passes::DDGIProbeDispatchArgsBuild::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::GI::DDGI::DDGIProbeDispatchArgsBuild>::setup(
+	Passes::GI::DDGI::DDGIProbeDispatchArgsBuild::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::DDGISelectors>().enabled && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
+	if (!(builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::DDGIProbeTrace>::setup(
-	Passes::DDGIProbeTrace::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::GI::DDGI::DDGIProbeTrace>::setup(
+	Passes::GI::DDGI::DDGIProbeTrace::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::DDGISelectors>().enabled && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
+	if (!(builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::DDGIProbeConvolve>::setup(
-	Passes::DDGIProbeConvolve::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::GI::DDGI::DDGIProbeConvolve>::setup(
+	Passes::GI::DDGI::DDGIProbeConvolve::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::DDGISelectors>().enabled && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
+	if (!(builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::DDGIDebug>::setup(
-	Passes::DDGIDebug::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::GI::DDGI::Dev::DDGIDebug>::setup(
+	Passes::GI::DDGI::Dev::DDGIDebug::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::DDGISelectors>().enabled && builder.graph->get_context<Table::DDGISelectors>().show_probes))
+	if (!(builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled && builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().show_probes))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::DDGIIndirectDebug>::setup(
-	Passes::DDGIIndirectDebug::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::GI::DDGI::Dev::DDGIIndirectDebug>::setup(
+	Passes::GI::DDGI::Dev::DDGIIndirectDebug::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::DDGISelectors>().enabled && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
+	if (!(builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::FSR>::setup(
-	Passes::FSR::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Post::Upscale::FSR>::setup(
+	Passes::Post::Upscale::FSR::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::FSR))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::FSR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::ResultCreation>::setup(
-	Passes::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Frame::ResultCreation>::setup(
+	Passes::Frame::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return (false) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::NRD_GBufferPack>::setup(
-	Passes::NRD_GBufferPack::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_GBufferPack>::setup(
+	Passes::Denoise::NRD::NRD_GBufferPack::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::NRD_REBLUR_Execute>::setup(
-	Passes::NRD_REBLUR_Execute::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>::setup(
+	Passes::Denoise::NRD::NRD_REBLUR_Execute::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::NRD_SIGMA_Execute>::setup(
-	Passes::NRD_SIGMA_Execute::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::setup(
+	Passes::Denoise::NRD::NRD_SIGMA_Execute::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available && (builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::RTXReference || (builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::VSM && builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra))))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available && (builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::RTXReference || (builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::VSM && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra))))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::NRD_IndirectCombine>::setup(
-	Passes::NRD_IndirectCombine::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_IndirectCombine>::setup(
+	Passes::Denoise::NRD::NRD_IndirectCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::NRD_ShadowCombine>::setup(
-	Passes::NRD_ShadowCombine::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_ShadowCombine>::setup(
+	Passes::Denoise::NRD::NRD_ShadowCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available && builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::RTXReference))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::RTXReference))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::PSSM_Cascade>::setup(
-	Passes::PSSM_Cascade::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::PSSM::PSSM_Cascade>::setup(
+	Passes::Shadows::PSSM::PSSM_Cascade::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::PSSM_GenerateMask>::setup(
-	Passes::PSSM_GenerateMask::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::PSSM::PSSM_GenerateMask>::setup(
+	Passes::Shadows::PSSM::PSSM_GenerateMask::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::PSSM_Combine>::setup(
-	Passes::PSSM_Combine::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::PSSM::PSSM_Combine>::setup(
+	Passes::Shadows::PSSM::PSSM_Combine::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::PSSM_Global>::setup(
-	Passes::PSSM_Global::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::PSSM::PSSM_Global>::setup(
+	Passes::Shadows::PSSM::PSSM_Global::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::RTXShadow>::setup(
-	Passes::RTXShadow::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Shadows::RTXShadow>::setup(
+	Passes::Shadows::RTXShadow::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	return (builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
+	return (builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::RTXColorPass>::setup(
-	Passes::RTXColorPass::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Raytrace::Dev::RTXColorPass>::setup(
+	Passes::Raytrace::Dev::RTXColorPass::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::TranslucentRTX>::setup(
-	Passes::TranslucentRTX::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Raytrace::TranslucentRTX>::setup(
+	Passes::Raytrace::TranslucentRTX::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::PreScene>::setup(
-	Passes::PreScene::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Frame::PreScene>::setup(
+	Passes::Frame::PreScene::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::Profiler>::setup(
-	Passes::Profiler::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Dev::Profiler>::setup(
+	Passes::Dev::Profiler::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return (false) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::Scene>::setup(
-	Passes::Scene::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Meshes::Scene>::setup(
+	Passes::Meshes::Scene::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::Sky>::setup(
-	Passes::Sky::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Environment::Sky>::setup(
+	Passes::Environment::Sky::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::CubeSky>::setup(
-	Passes::CubeSky::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Environment::CubeSky>::setup(
+	Passes::Environment::CubeSky::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	return (builder.graph->get_context<Table::SkyState>().sky_changed) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
+	return (builder.graph->get_context<Table::Environment::SkyState>().sky_changed) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::CubeMapDownsample>::setup(
-	Passes::CubeMapDownsample::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Environment::CubeMapDownsample>::setup(
+	Passes::Environment::CubeMapDownsample::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	return (builder.graph->get_context<Table::SkyState>().sky_changed) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
+	return (builder.graph->get_context<Table::Environment::SkyState>().sky_changed) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::CubeMapEnviromentProcessor>::setup(
-	Passes::CubeMapEnviromentProcessor::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Environment::CubeMapEnviromentProcessor>::setup(
+	Passes::Environment::CubeMapEnviromentProcessor::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	return (builder.graph->get_context<Table::SkyState>().sky_changed) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
+	return (builder.graph->get_context<Table::Environment::SkyState>().sky_changed) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::SMAA>::setup(
-	Passes::SMAA::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Post::AA::SMAA>::setup(
+	Passes::Post::AA::SMAA::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(!builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled))
+	if (!(!builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::stencil_renderer>::setup(
-	Passes::stencil_renderer::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Editor::stencil_renderer>::setup(
+	Passes::Editor::stencil_renderer::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::UI_PreDraw>::setup(
-	Passes::UI_PreDraw::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Post::Tonemap>::setup(
+	Passes::Post::Tonemap::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	return (builder.graph->get_context<Table::UIState>().UI_Passes_needed > 0) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
-}
-
-
-FrameGraph::SetupResult PassDefault<Passes::UI_Render>::setup(
-	Passes::UI_Render::Context& data, FrameGraph::TaskBuilder& builder)
-{
-	if (!(data.pass_index < builder.graph->get_context<Table::UIRenderState>().passes_needed))
+	if (!(builder.graph->get_context<Table::Post::TonemapSelectors>().enabled))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::AssetPreview>::setup(
-	Passes::AssetPreview::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::UI::UI_PreDraw>::setup(
+	Passes::UI::UI_PreDraw::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	return FrameGraph::SetupResult::NeedsRender;
+	return (builder.graph->get_context<Table::UI::UIState>().UI_Passes_needed > 0) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSS>::setup(
-	Passes::UpscalingDLSS::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::UI::UI_Render>::setup(
+	Passes::UI::UI_Render::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSS))
+	if (!(data.pass_index < builder.graph->get_context<Table::UI::UIRenderState>().passes_needed))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::NormalRoughnessRepack>::setup(
-	Passes::NormalRoughnessRepack::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Editor::AssetPreview>::setup(
+	Passes::Editor::AssetPreview::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR))
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::Post::Upscale::UpscalingDLSS>::setup(
+	Passes::Post::Upscale::UpscalingDLSS::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSS))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::UpscalingDLSSRR>::setup(
-	Passes::UpscalingDLSSRR::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Post::Upscale::NormalRoughnessRepack>::setup(
+	Passes::Post::Upscale::NormalRoughnessRepack::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSSRR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::GBufferDownsampler>::setup(
-	Passes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Post::Upscale::UpscalingDLSSRR>::setup(
+	Passes::Post::Upscale::UpscalingDLSSRR::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	return FrameGraph::SetupResult::NeedsRender;
-}
-
-
-FrameGraph::SetupResult PassSetupDefault<Passes::VoxelDebug>::setup(
-	Passes::VoxelDebug::Context& data, FrameGraph::TaskBuilder& builder)
-{
-	if (!(builder.graph->get_context<Table::VoxelGISelectors>().debug_voxel_trace))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSSRR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::ReflectionRTXHalf>::setup(
-	Passes::ReflectionRTXHalf::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Meshes::GBufferDownsampler>::setup(
+	Passes::Meshes::GBufferDownsampler::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Dev::VoxelDebug>::setup(
+	Passes::GI::Voxel::Dev::VoxelDebug::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().debug_voxel_trace))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::ReflectionRTX>::setup(
-	Passes::ReflectionRTX::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Reflections::ReflectionRTXHalf>::setup(
+	Passes::Reflections::ReflectionRTXHalf::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::ShadowRTX>::setup(
-	Passes::ShadowRTX::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Reflections::ReflectionRTX>::setup(
+	Passes::Reflections::ReflectionRTX::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::IndirectRTXHalf>::setup(
-	Passes::IndirectRTXHalf::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Shadows::ShadowRTX>::setup(
+	Passes::Shadows::ShadowRTX::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::IndirectRTX>::setup(
-	Passes::IndirectRTX::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::GI::IndirectRTXHalf>::setup(
+	Passes::GI::IndirectRTXHalf::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::ReflCombine>::setup(
-	Passes::ReflCombine::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::GI::IndirectRTX>::setup(
+	Passes::GI::IndirectRTX::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::VoxelGISelectors>().reflection_enabled && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::RTXCombine>::setup(
-	Passes::RTXCombine::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Reflections::ReflCombine>::setup(
+	Passes::Reflections::ReflCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type == UpscalerType::DLSSRR))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().reflection_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::Voxelize>::setup(
-	Passes::Voxelize::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::GI::RTXCombine>::setup(
+	Passes::GI::RTXCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::VoxelGISelectors>().voxelize_scene))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSSRR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::Lighting>::setup(
-	Passes::Lighting::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Voxelize>::setup(
+	Passes::GI::Voxel::Voxelize::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::VoxelGISelectors>().light_scene))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().voxelize_scene))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::Mipmapping>::setup(
-	Passes::Mipmapping::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Lighting>::setup(
+	Passes::GI::Voxel::Lighting::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::VoxelGISelectors>().light_scene))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().light_scene))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::VoxelScreen>::setup(
-	Passes::VoxelScreen::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Mipmapping>::setup(
+	Passes::GI::Voxel::Mipmapping::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::IndirectGISelectors>().indirect_source == IndirectSource::MyVCT && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().light_scene))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::ScreenReflection>::setup(
-	Passes::ScreenReflection::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::VoxelScreen>::setup(
+	Passes::GI::Voxel::VoxelScreen::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::IndirectGISelectors>().reflection_source == ReflectionSource::MyReflection && builder.graph->get_context<Table::UpscalerSelectors>().upscaler_type != UpscalerType::DLSSRR && builder.graph->get_context<Table::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Denoise::NRD::IndirectGISelectors>().indirect_source == ::GI::IndirectSource::MyVCT && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::VSM_GatherDispatch>::setup(
-	Passes::VSM_GatherDispatch::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Reflections::ScreenReflection>::setup(
+	Passes::Reflections::ScreenReflection::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	return FrameGraph::SetupResult::NeedsRender;
-}
-
-
-FrameGraph::SetupResult PassSetupDefault<Passes::VSM_RenderPages>::setup(
-	Passes::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder)
-{
-	return FrameGraph::SetupResult::NeedsRender;
-}
-
-
-FrameGraph::SetupResult PassSetupDefault<Passes::VSM_HiZRebuild>::setup(
-	Passes::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder)
-{
-	return FrameGraph::SetupResult::NeedsRender;
-}
-
-
-FrameGraph::SetupResult PassSetupDefault<Passes::VSM_BlockerClassify>::setup(
-	Passes::VSM_BlockerClassify::Context& data, FrameGraph::TaskBuilder& builder)
-{
-	if (!(builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra))
+	if (!(builder.graph->get_context<Table::Denoise::NRD::IndirectGISelectors>().reflection_source == ::Reflections::ReflectionSource::MyReflection && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::VSM_BlockerSearch>::setup(
-	Passes::VSM_BlockerSearch::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_GatherDispatch>::setup(
+	Passes::Shadows::VSM::VSM_GatherDispatch::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra))
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_RenderPages>::setup(
+	Passes::Shadows::VSM::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_HiZRebuild>::setup(
+	Passes::Shadows::VSM::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_BlockerClassify>::setup(
+	Passes::Shadows::VSM::VSM_BlockerClassify::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::VSM_ScreenSpaceShadow>::setup(
-	Passes::VSM_ScreenSpaceShadow::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_BlockerSearch>::setup(
+	Passes::Shadows::VSM::VSM_BlockerSearch::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::VSMSelectors>().use_vsm_contact_shadow))
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::VSM_ShadowResolve>::setup(
-	Passes::VSM_ShadowResolve::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_ScreenSpaceShadow>::setup(
+	Passes::Shadows::VSM::VSM_ScreenSpaceShadow::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::VSM))
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_contact_shadow))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::VSM_Combine>::setup(
-	Passes::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_ShadowResolve>::setup(
+	Passes::Shadows::VSM::VSM_ShadowResolve::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(!builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::VSMSelectors>().shadow_source == ShadowSource::VSM))
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::VSM))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::VSM_DebugClassifyOverlay>::setup(
-	Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_Combine>::setup(
+	Passes::Shadows::VSM::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::VSMSelectors>().vsm_debug_view != VSMDebugView::None))
+	if (!(!builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::VSM))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
 
-FrameGraph::SetupResult PassSetupDefault<Passes::VSM_DepthAnalysis>::setup(
-	Passes::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay>::setup(
+	Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().vsm_debug_view != ::Shadows::VSM::VSMDebugView::None))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_DepthAnalysis>::setup(
+	Passes::Shadows::VSM::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }

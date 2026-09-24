@@ -15,50 +15,56 @@ import :Autogen.Tables.VoxelTilingParams;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VoxelCopy
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::VoxelCopy;
-		HLSL::Texture3D<float4> Source[2];
-		HLSL::RWTexture3D<float4> Target[2];
-		VoxelTilingParams params;
-		HLSL::RWTexture3D<float4>* GetTarget() { return Target; }
-		HLSL::Texture3D<float4>* GetSource() { return Source; }
-		VoxelTilingParams& GetParams() { return params; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Voxel
 		{
-			compiler.compile(Source, "VoxelCopy::Source");
-			compiler.compile(Target, "VoxelCopy::Target");
-			compiler.compile(params, "VoxelCopy::params");
-		}
-		struct Compiled
-		{
-			uint Source[2]; // Texture3D<float4>
-			uint Target[2]; // RWTexture3D<float4>
-			VoxelTilingParams::Compiled params; // VoxelTilingParams
+			struct VoxelCopy
+			{
+				static constexpr SlotID ID = SlotID::VoxelCopy;
+				HLSL::Texture3D<float4> Source[2];
+				HLSL::RWTexture3D<float4> Target[2];
+				Table::GI::Voxel::VoxelTilingParams params;
+				HLSL::RWTexture3D<float4>* GetTarget() { return Target; }
+				HLSL::Texture3D<float4>* GetSource() { return Source; }
+				Table::GI::Voxel::VoxelTilingParams& GetParams() { return params; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(Source, "VoxelCopy::Source");
+					compiler.compile(Target, "VoxelCopy::Target");
+					compiler.compile(params, "VoxelCopy::params");
+				}
+				struct Compiled
+				{
+					uint Source[2]; // Texture3D<float4>
+					uint Target[2]; // RWTexture3D<float4>
+					Table::GI::Voxel::VoxelTilingParams::Compiled params; // VoxelTilingParams
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(params);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(params);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VoxelCopy";
+				static std::string get_typename()
+				{
+					return "Tables::VoxelCopy";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(params);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(params);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

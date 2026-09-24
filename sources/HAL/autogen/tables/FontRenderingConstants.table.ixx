@@ -14,34 +14,40 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct FontRenderingConstants
+	namespace UI
 	{
-		static constexpr SlotID ID = SlotID::FontRenderingConstants;
-		float4x4 TransformMatrix;
-		float4 ClipRect;
-		float4x4& GetTransformMatrix() { return TransformMatrix; }
-		float4& GetClipRect() { return ClipRect; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Text
 		{
-			compiler.compile(TransformMatrix, "FontRenderingConstants::TransformMatrix");
-			compiler.compile(ClipRect, "FontRenderingConstants::ClipRect");
-		}
-		using Compiled = FontRenderingConstants;
+			struct FontRenderingConstants
+			{
+				static constexpr SlotID ID = SlotID::FontRenderingConstants;
+				float4x4 TransformMatrix;
+				float4 ClipRect;
+				float4x4& GetTransformMatrix() { return TransformMatrix; }
+				float4& GetClipRect() { return ClipRect; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(TransformMatrix, "FontRenderingConstants::TransformMatrix");
+					compiler.compile(ClipRect, "FontRenderingConstants::ClipRect");
+				}
+				using Compiled = FontRenderingConstants;
 
-		static std::string get_typename()
-		{
-			return "Tables::FontRenderingConstants";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(TransformMatrix);
-			ar& NVP(ClipRect);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::FontRenderingConstants";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(TransformMatrix);
+					ar& NVP(ClipRect);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

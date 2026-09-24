@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct REBLUR_BlurResources :public DataHolder<REBLUR_BlurResources, SlotID::REBLUR_BlurResources, Table::REBLUR_BlurResources, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		REBLUR_BlurResources() = default;
-	};
+		namespace NRD
+		{
+			struct REBLUR_BlurResources :public DataHolder<REBLUR_BlurResources, SlotID::REBLUR_BlurResources, Table::Denoise::NRD::REBLUR_BlurResources, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				REBLUR_BlurResources() = default;
+			};
+		}
+	}
 }

@@ -7,8 +7,15 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct Clear_UInt4Resources
+namespace Denoise
 {
-	uint gOut; // RWTexture2D<uint4>
-	RWTexture2D<uint4> GetGOut() { return ResourceDescriptorHeap[gOut]; }
-};
+	namespace NRD
+	{
+		struct Clear_UInt4Resources
+		{
+			uint gOut; // RWTexture2D<uint4>
+			RWTexture2D<uint4> GetGOut() { return ResourceDescriptorHeap[gOut]; }
+		};
+	}
+}
+using Denoise::NRD::Clear_UInt4Resources;

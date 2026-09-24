@@ -5,10 +5,13 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 #pragma once
-
-struct IndirectRTXHalf: public RaytraceRaygen<IndirectRTXHalf>
+namespace GI
 {
-	static const constexpr uint ID = 6;
-	static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
-	static const constexpr std::wstring_view raygen = L"MyRaygenShaderIndirectRTXHalfRes";
-};
+
+	struct IndirectRTXHalf: public RaytraceRaygen<IndirectRTXHalf>
+	{
+		static const constexpr uint ID = 6;
+		static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
+		static const constexpr std::wstring_view raygen = L"MyRaygenShaderIndirectRTXHalfRes";
+	};
+}

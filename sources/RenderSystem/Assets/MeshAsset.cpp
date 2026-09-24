@@ -97,8 +97,8 @@ void MeshAsset::init_gpu()
 			geometryDesc.Transform3x4 = mat;
 			geometryDesc.VertexFormat = Format::R32G32B32_FLOAT;
 			geometryDesc.VertexBuffer = mesh.vertex_buffer_view.get_resource_address();
-			geometryDesc.VertexCount = static_cast<uint>(mesh.vertex_buffer_view.desc.size / sizeof(Table::mesh_vertex_input));
-			geometryDesc.VertexStrideInBytes = sizeof(Table::mesh_vertex_input);
+			geometryDesc.VertexCount = static_cast<uint>(mesh.vertex_buffer_view.desc.size / sizeof(Table::Meshes::mesh_vertex_input));
+			geometryDesc.VertexStrideInBytes = sizeof(Table::Meshes::mesh_vertex_input);
 			geometryDesc.Flags = HAL::GeometryFlags::OPAQUE;
 			std::vector<GeometryDesc > descs;
 			descs.push_back(geometryDesc);
@@ -149,8 +149,8 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	std::vector<UINT32> priimitive_ids_buffer;
 
 
-	std::vector<Table::Meshlet> meshlets;
-	std::vector<Table::MeshletCullData> meshlet_cull;
+	std::vector<Table::Meshes::Meshlet> meshlets;
+	std::vector<Table::Meshes::MeshletCullData> meshlet_cull;
 	
 	for (auto& mesh : data->meshes)
 	{
@@ -161,7 +161,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		for (auto& meshet : mesh.meshlets)
 		{
 
-			Table::Meshlet::Compiled meshlet_row;
+			Table::Meshes::Meshlet::Compiled meshlet_row;
 			meshlet_row.primitiveCount = static_cast<UINT>(meshet.PrimitiveIndices.size() / 3);
 			meshlet_row.primitiveOffset = primitive_ids / 3;
 
@@ -184,19 +184,19 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 
 	LinearAllocator allocator;
 
-	auto vertex_handle = allocator.Allocate<Table::mesh_vertex_input>(data->vertex_buffer.size());
+	auto vertex_handle = allocator.Allocate<Table::Meshes::mesh_vertex_input>(data->vertex_buffer.size());
 	auto index_handle = allocator.Allocate<uint>(data->index_buffer.size());
 	auto unique_index_handle = allocator.Allocate<uint>(unique_ids_buffer.size());
 	auto primitive_index_handle = allocator.Allocate<uint>(priimitive_ids_buffer.size());
-	auto meshlet_handle = allocator.Allocate<Table::Meshlet>(meshlets.size());
-	auto meshlet_cull_handle = allocator.Allocate<Table::MeshletCullData>(meshlet_cull.size());
+	auto meshlet_handle = allocator.Allocate<Table::Meshes::Meshlet>(meshlets.size());
+	auto meshlet_cull_handle = allocator.Allocate<Table::Meshes::MeshletCullData>(meshlet_cull.size());
 
 
 	buffer = std::make_shared<HAL::Buffer>(RenderSystem::get().device(), HAL::ResourceDesc::Buffer(allocator.get_max_usage(), HAL::ResFlags::ShaderResource | HAL::ResFlags::Immutable), HAL::HeapType::DEFAULT);
 
 
 
-	vertex_buffer_view = buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
+	vertex_buffer_view = buffer->create_view<HAL::StructuredBufferView<Table::Meshes::mesh_vertex_input>>(
 		RenderSystem::get().device().get_static_gpu_data(),
 		StructuredBufferViewDesc{
 			vertex_handle.get_offset(),
@@ -213,14 +213,14 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 			counterType::NONE
 		});
 
-	this->meshlets = buffer->create_view<HAL::StructuredBufferView<Table::Meshlet>>(
+	this->meshlets = buffer->create_view<HAL::StructuredBufferView<Table::Meshes::Meshlet>>(
 		RenderSystem::get().device().get_static_gpu_data(),
 		StructuredBufferViewDesc{
 			meshlet_handle.get_offset(),
 			meshlet_handle.get_size(),
 			counterType::NONE
 		});
-	meshlet_cull_datas = buffer->create_view<HAL::StructuredBufferView<Table::MeshletCullData>>(
+	meshlet_cull_datas = buffer->create_view<HAL::StructuredBufferView<Table::Meshes::MeshletCullData>>(
 		RenderSystem::get().device().get_static_gpu_data(),
 		StructuredBufferViewDesc{
 			meshlet_cull_handle.get_offset(),
@@ -246,10 +246,10 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 
 
 	auto list = (RenderSystem::get().device().get_upload_list());
-	list->get_copy().update<Table::mesh_vertex_input>(vertex_buffer_view, 0, data->vertex_buffer);
+	list->get_copy().update<Table::Meshes::mesh_vertex_input>(vertex_buffer_view, 0, data->vertex_buffer);
 	list->get_copy().update<UINT32>(index_buffer_view, 0, data->index_buffer);
-	list->get_copy().update<Table::Meshlet>(this->meshlets, 0, meshlets);
-	list->get_copy().update<Table::MeshletCullData>(meshlet_cull_datas, 0, meshlet_cull);
+	list->get_copy().update<Table::Meshes::Meshlet>(this->meshlets, 0, meshlets);
+	list->get_copy().update<Table::Meshes::MeshletCullData>(meshlet_cull_datas, 0, meshlet_cull);
 	list->get_copy().update<UINT32>(unique_indices, 0, unique_ids_buffer);
 	list->get_copy().update<UINT32>(primitive_indices, 0, priimitive_ids_buffer);
 
@@ -265,11 +265,11 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		compiled.primitive = mesh.primitive->clone();
 	compiled.material = mesh.material;
 
-			compiled.vertex_buffer_view = buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
+			compiled.vertex_buffer_view = buffer->create_view<HAL::StructuredBufferView<Table::Meshes::mesh_vertex_input>>(
 				RenderSystem::get().device().get_static_gpu_data(),
 				StructuredBufferViewDesc{
-					vertex_buffer_view.desc.offset + mesh.vertex_offset * sizeof(Table::mesh_vertex_input),
-					mesh.vertex_count * sizeof(Table::mesh_vertex_input),
+					vertex_buffer_view.desc.offset + mesh.vertex_offset * sizeof(Table::Meshes::mesh_vertex_input),
+					mesh.vertex_count * sizeof(Table::Meshes::mesh_vertex_input),
 					counterType::NONE
 				});
 
@@ -281,11 +281,11 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 					mesh.index_count * sizeof(UINT32),
 					counterType::NONE
 				});
-			compiled.meshet_view = buffer->create_view<HAL::StructuredBufferView<Table::Meshlet>>(
+			compiled.meshet_view = buffer->create_view<HAL::StructuredBufferView<Table::Meshes::Meshlet>>(
 				RenderSystem::get().device().get_static_gpu_data(),
 				StructuredBufferViewDesc{
-					this->meshlets.desc.offset  + meshlets_offset* sizeof(Table::Meshlet),
-					mesh.meshlets.size() * sizeof(Table::Meshlet),
+					this->meshlets.desc.offset  + meshlets_offset* sizeof(Table::Meshes::Meshlet),
+					mesh.meshlets.size() * sizeof(Table::Meshes::Meshlet),
 					counterType::NONE
 				});
 
@@ -483,11 +483,6 @@ void MeshAssetInstance::on_add(scene_object* parent)
 		int i = 0;
 		for (auto& info : rendering)
 		{
-			// The id is the meshpart slot, only known once allocated above, so
-			// the MeshInfo compiled in update_nodes() has to be rebuilt here.
-			info.mesh_info.GetObject_id() = static_cast<UINT>(meshpart_handle.get_offset()) + i + 1;
-			info.compiled_mesh_info = info.mesh_info.compile(RenderSystem::get().device().get_static_gpu_data());
-
 			meshpart[i].mesh_cb = info.compiled_mesh_info.compiled();
 			meshpart[i].meshinstance_cb = mesh_instance_info.compiled();
 
@@ -526,7 +521,7 @@ void MeshAssetInstance::on_remove()
 			i++;
 		}
 		meshpart_handle.Free();
-		meshpart_handle = TypedHandle<Table::MeshCommandData>();
+		meshpart_handle = TypedHandle<Table::Meshes::MeshCommandData>();
 	}
 }
 
@@ -552,7 +547,7 @@ void MeshAssetInstance::update_rtx_instance()
 			auto material = static_cast<materials::universal_material*>(info.material);
 			auto mode = material->get_transparency_mode();
 
-			instanceDesc.mask = (uint)(mode == TransparencyMode::Translucent ? RTInstanceMask::Translucent : RTInstanceMask::Opaque);
+			instanceDesc.mask = (uint)(mode == Meshes::TransparencyMode::Translucent ? Meshes::RTInstanceMask::Translucent : Meshes::RTInstanceMask::Opaque);
 			instanceDesc.acceleration_structure = info.ras->get_gpu_address().get_ptr();
 			instanceDesc.instance_id = info.node_id;
 			instanceDesc.hit_group_index = RTX::get().rtx.get_index(material);
@@ -568,8 +563,8 @@ void MeshAssetInstance::update_rtx_instance()
 			// materials as anything other than solid. Translucent is forced
 			// opaque instead: glass must never reach the Masked any-hit
 			// (which would IgnoreHit() it wherever opacity < 0.5).
-			instanceDesc.flags = mode == TransparencyMode::Masked ? (uint)HAL::RaytracingInstanceFlags::FORCE_NON_OPAQUE
-				: mode == TransparencyMode::Translucent ? (uint)HAL::RaytracingInstanceFlags::FORCE_OPAQUE
+			instanceDesc.flags = mode == Meshes::TransparencyMode::Masked ? (uint)HAL::RaytracingInstanceFlags::FORCE_NON_OPAQUE
+				: mode == Meshes::TransparencyMode::Translucent ? (uint)HAL::RaytracingInstanceFlags::FORCE_OPAQUE
 				: (uint)HAL::RaytracingInstanceFlags::NONE;
 
 
@@ -653,19 +648,26 @@ void MeshAssetInstance::update_nodes()
 
 	mesh_asset->root_node.iterate([&](MeshNode* m) {nodes_count++; rendering_count += (m->mesh_id != -1); return true; });
 
+	// One contiguous id block per instance, fixed for its lifetime. It must not
+	// depend on scene membership: recompiling compiled_mesh_info on add/remove
+	// frees the old CB while in-flight GPU work (asset previews re-add their
+	// object every draw) still reads it.
+	static std::atomic<uint> next_object_id = 1;
+	uint first_object_id = next_object_id.fetch_add(static_cast<uint>(rendering_count));
+
 
 	universal_nodes_manager::get().allocate(nodes_handle, nodes_count);
 	universal_rtx_manager::get().allocate(instance_handle, rendering_count);
 
 
-	nodes_buffer_view = universal_nodes_manager::get().buffer.resource->create_view<HAL::StructuredBufferView<Table::node_data>>(
+	nodes_buffer_view = universal_nodes_manager::get().buffer.resource->create_view<HAL::StructuredBufferView<Table::Meshes::node_data>>(
 		RenderSystem::get().device().get_static_gpu_data(),
 		StructuredBufferViewDesc{
 			(uint)nodes_handle.get_offset_in_bytes(),
 			(uint)nodes_handle.get_size_in_bytes(),
 			counterType::NONE
 		});
-	Slots::MeshInstanceInfo instance_info;
+	Slots::Meshes::MeshInstanceInfo instance_info;
 
 	instance_info.GetVertexes() = mesh_asset->vertex_buffer_view;
 	instance_info.GetIndices() = mesh_asset->index_buffer_view;
@@ -719,9 +721,9 @@ void MeshAssetInstance::update_nodes()
 			//	node_buffer[node->index] = mat;
 				//if(nodes_ptr) 
 
-			info.mesh_info.GetVertex_offset_local() = static_cast<UINT>(info.vertex_buffer_view.desc.offset/sizeof(Table::mesh_vertex_input));
+			info.mesh_info.GetVertex_offset_local() = static_cast<UINT>(info.vertex_buffer_view.desc.offset/sizeof(Table::Meshes::mesh_vertex_input));
 
-			info.mesh_info.GetMeshlet_offset_local() = static_cast<UINT>((mesh_asset->meshes[m].meshet_view.desc.offset-mesh_asset->meshlets.desc.offset)/sizeof(Table::Meshlet));
+			info.mesh_info.GetMeshlet_offset_local() = static_cast<UINT>((mesh_asset->meshes[m].meshet_view.desc.offset-mesh_asset->meshlets.desc.offset)/sizeof(Table::Meshes::Meshlet));
 
 
 
@@ -729,8 +731,8 @@ void MeshAssetInstance::update_nodes()
 
 			info.mesh_info.GetNode_offset() = static_cast<UINT>(nodes_handle.get_offset() + nodes.size() - 1);
 
-			info.mesh_info.GetMeshlet_count() = static_cast<UINT>(mesh_asset->meshes[m].meshet_view.desc.size/sizeof(Table::Meshlet));
-			info.mesh_info.GetObject_id() = 0; // assigned in on_add()
+			info.mesh_info.GetMeshlet_count() = static_cast<UINT>(mesh_asset->meshes[m].meshet_view.desc.size/sizeof(Table::Meshes::Meshlet));
+			info.mesh_info.GetObject_id() = first_object_id + static_cast<uint>(rendering.size());
 
 			info.meshlet_offset = info.mesh_info.GetMeshlet_offset_local();
 			info.meshlet_count = info.mesh_info.GetMeshlet_count();
@@ -818,19 +820,19 @@ MeshAssetInstance::mesh_asset_node::mesh_asset_node(MeshNode* node)
 	asset_node = node;
 }
 
-universal_rtx_manager::universal_rtx_manager() : HAL::virtual_gpu_buffer<Table::RaytraceInstanceInfo>(RenderSystem::get().device(), MAX_NODES_SIZE)
+universal_rtx_manager::universal_rtx_manager() : HAL::virtual_gpu_buffer<Table::Meshes::RaytraceInstanceInfo>(RenderSystem::get().device(), MAX_NODES_SIZE)
 {
 }
 
-universal_mesh_instance_manager::universal_mesh_instance_manager() : HAL::virtual_gpu_buffer<Table::MeshInstanceInfo>(RenderSystem::get().device(), MAX_NODES_SIZE)
+universal_mesh_instance_manager::universal_mesh_instance_manager() : HAL::virtual_gpu_buffer<Table::Meshes::MeshInstanceInfo>(RenderSystem::get().device(), MAX_NODES_SIZE)
 {
 }
 
-universal_nodes_manager::universal_nodes_manager() : HAL::virtual_gpu_buffer<Table::node_data>(RenderSystem::get().device(), MAX_NODES_SIZE)
+universal_nodes_manager::universal_nodes_manager() : HAL::virtual_gpu_buffer<Table::Meshes::node_data>(RenderSystem::get().device(), MAX_NODES_SIZE)
 {
 }
 
-universal_material_info_part_manager::universal_material_info_part_manager() : HAL::virtual_gpu_buffer<Table::MaterialCommandData>(RenderSystem::get().device(), MAX_COMMANDS_SIZE)
+universal_material_info_part_manager::universal_material_info_part_manager() : HAL::virtual_gpu_buffer<Table::Meshes::MaterialCommandData>(RenderSystem::get().device(), MAX_COMMANDS_SIZE)
 {
 }
 

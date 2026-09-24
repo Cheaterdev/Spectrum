@@ -14,58 +14,64 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct Clear_Constants
+	namespace Denoise
 	{
-		static constexpr SlotID ID = SlotID::Clear_Constants;
-		float gDebug;
-		float gViewZScale;
-		float gDenoisingRange;
-		HLSL::RWTexture2D<float4> gOut;
-		float& GetGDebug() { return gDebug; }
-		float& GetGViewZScale() { return gViewZScale; }
-		float& GetGDenoisingRange() { return gDenoisingRange; }
-		HLSL::RWTexture2D<float4>& GetGOut() { return gOut; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace NRD
 		{
-			compiler.compile(gDebug, "Clear_Constants::gDebug");
-			compiler.compile(gViewZScale, "Clear_Constants::gViewZScale");
-			compiler.compile(gDenoisingRange, "Clear_Constants::gDenoisingRange");
-			compiler.compile(gOut, "Clear_Constants::gOut");
-		}
-		struct Compiled
-		{
-			float gDebug; // float
-			float gViewZScale; // float
-			float gDenoisingRange; // float
-			uint gOut; // RWTexture2D<float4>
+			struct Clear_Constants
+			{
+				static constexpr SlotID ID = SlotID::Clear_Constants;
+				float gDebug;
+				float gViewZScale;
+				float gDenoisingRange;
+				HLSL::RWTexture2D<float4> gOut;
+				float& GetGDebug() { return gDebug; }
+				float& GetGViewZScale() { return gViewZScale; }
+				float& GetGDenoisingRange() { return gDenoisingRange; }
+				HLSL::RWTexture2D<float4>& GetGOut() { return gOut; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(gDebug, "Clear_Constants::gDebug");
+					compiler.compile(gViewZScale, "Clear_Constants::gViewZScale");
+					compiler.compile(gDenoisingRange, "Clear_Constants::gDenoisingRange");
+					compiler.compile(gOut, "Clear_Constants::gOut");
+				}
+				struct Compiled
+				{
+					float gDebug; // float
+					float gViewZScale; // float
+					float gDenoisingRange; // float
+					uint gOut; // RWTexture2D<float4>
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(gDebug);
-				ar& NVP(gViewZScale);
-				ar& NVP(gDenoisingRange);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(gDebug);
+						ar& NVP(gViewZScale);
+						ar& NVP(gDenoisingRange);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::Clear_Constants";
+				static std::string get_typename()
+				{
+					return "Tables::Clear_Constants";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(gDebug);
+					ar& NVP(gViewZScale);
+					ar& NVP(gDenoisingRange);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(gDebug);
-			ar& NVP(gViewZScale);
-			ar& NVP(gDenoisingRange);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

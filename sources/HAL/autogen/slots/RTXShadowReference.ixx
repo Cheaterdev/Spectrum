@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct RTXShadowReference :public DataHolder<RTXShadowReference, SlotID::RTXShadowReference, Table::RTXShadowReference, DefaultLayout::Instance2>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		RTXShadowReference() = default;
-	};
+		struct RTXShadowReference :public DataHolder<RTXShadowReference, SlotID::RTXShadowReference, Table::Shadows::RTXShadowReference, ::Frame::DefaultLayout::Instance2>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			RTXShadowReference() = default;
+		};
+	}
 }

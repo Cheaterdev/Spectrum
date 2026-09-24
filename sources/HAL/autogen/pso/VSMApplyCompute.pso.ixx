@@ -14,39 +14,45 @@ import :Types;
 
 export namespace PSOS
 {
-	struct VSMApplyCompute: public PSOBase
+	namespace Shadows
 	{
-		struct Keys {
-			GEN_DEF_COMP(Keys);
-		private:
-			SERIALIZE()
+		namespace VSM
+		{
+			struct VSMApplyCompute: public PSOBase
 			{
-			}
-		};
+				struct Keys {
+					GEN_DEF_COMP(Keys);
+				private:
+					SERIALIZE()
+					{
+					}
+				};
 
-		GEN_COMPUTE_PSO(VSMApplyCompute)
+				GEN_COMPUTE_PSO(VSMApplyCompute)
 
 
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
+				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+				{
 
 
-			SimplePSO mpso("VSMApplyCompute");
-			if(f) f(mpso,key);
+					SimplePSO mpso("VSMApplyCompute");
+					if(f) f(mpso,key);
 
-			mpso.root_signature = Layouts::DefaultLayout;
+					mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/shadows/vsm/vsm.hlsl";
-			mpso.compute.entry_point = "CS_RESULT";
-			mpso.compute.flags = HAL::ShaderOptions::None;
+					mpso.compute.file_name = "shaders/shadows/vsm/vsm.hlsl";
+					mpso.compute.entry_point = "CS_RESULT";
+					mpso.compute.flags = HAL::ShaderOptions::None;
 			
-			return mpso;
-		}
+					return mpso;
+				}
 
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
+				private:
+				SERIALIZE()
+				{
+					ar&NVP(wrap(psos));
+				}
+			};
 		}
-	};
+	}
 }

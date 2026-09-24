@@ -15,50 +15,53 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct WorkGraphTest
+	namespace Dev
 	{
-		static constexpr SlotID ID = SlotID::WorkGraphTest;
-		HLSL::RWTexture2D<float4> output;
-		HLSL::RWTexture2D<float4> target;
-		GBuffer gbuffer;
-		HLSL::RWTexture2D<float4>& GetOutput() { return output; }
-		HLSL::RWTexture2D<float4>& GetTarget() { return target; }
-		GBuffer& GetGbuffer() { return gbuffer; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct WorkGraphTest
 		{
-			compiler.compile(output, "WorkGraphTest::output");
-			compiler.compile(target, "WorkGraphTest::target");
-			compiler.compile(gbuffer, "WorkGraphTest::gbuffer");
-		}
-		struct Compiled
-		{
-			uint output; // RWTexture2D<float4>
-			uint target; // RWTexture2D<float4>
-			GBuffer::Compiled gbuffer; // GBuffer
+			static constexpr SlotID ID = SlotID::WorkGraphTest;
+			HLSL::RWTexture2D<float4> output;
+			HLSL::RWTexture2D<float4> target;
+			Table::Meshes::GBuffer gbuffer;
+			HLSL::RWTexture2D<float4>& GetOutput() { return output; }
+			HLSL::RWTexture2D<float4>& GetTarget() { return target; }
+			Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(output, "WorkGraphTest::output");
+				compiler.compile(target, "WorkGraphTest::target");
+				compiler.compile(gbuffer, "WorkGraphTest::gbuffer");
+			}
+			struct Compiled
+			{
+				uint output; // RWTexture2D<float4>
+				uint target; // RWTexture2D<float4>
+				Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(gbuffer);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::WorkGraphTest";
+			}
 			private:
 			SERIALIZE()
 			{
 				ar& NVP(gbuffer);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::WorkGraphTest";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(gbuffer);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct ColorRect :public DataHolder<ColorRect, SlotID::ColorRect, Table::ColorRect, DefaultLayout::Instance0>
+	namespace UI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		ColorRect() = default;
-	};
+		struct ColorRect :public DataHolder<ColorRect, SlotID::ColorRect, Table::UI::ColorRect, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			ColorRect() = default;
+		};
+	}
 }

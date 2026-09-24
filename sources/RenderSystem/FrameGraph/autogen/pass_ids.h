@@ -43,6 +43,7 @@ namespace FrameGraph
 		CubeMapEnviromentProcessor,
 		SMAA,
 		stencil_renderer,
+		Tonemap,
 		UI_PreDraw,
 		UI_Render,
 		AssetPreview,

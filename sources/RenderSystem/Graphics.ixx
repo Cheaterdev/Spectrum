@@ -45,6 +45,7 @@ export import :VSM;
 export import :BRDF;
 export import :Sky;
 export import :SMAA;
+export import :Tonemap;
 export import :FSR;
 export import :UpscalingDLSS;
 export import :UpscalingDLSSRR;

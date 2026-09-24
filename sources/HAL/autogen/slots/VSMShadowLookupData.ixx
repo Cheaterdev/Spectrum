@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMShadowLookupData :public DataHolder<VSMShadowLookupData, SlotID::VSMShadowLookupData, Table::VSMShadowLookupData, DefaultLayout::VSMShadow>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMShadowLookupData() = default;
-	};
+		namespace VSM
+		{
+			struct VSMShadowLookupData :public DataHolder<VSMShadowLookupData, SlotID::VSMShadowLookupData, Table::Shadows::VSM::VSMShadowLookupData, ::Frame::DefaultLayout::VSMShadow>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMShadowLookupData() = default;
+			};
+		}
+	}
 }

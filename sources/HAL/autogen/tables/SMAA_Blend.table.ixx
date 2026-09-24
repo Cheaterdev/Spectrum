@@ -14,44 +14,50 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct SMAA_Blend
+	namespace Post
 	{
-		static constexpr SlotID ID = SlotID::SMAA_Blend;
-		HLSL::Texture2D<float4> blendTex;
-		HLSL::RWTexture2D<float4> resultOut;
-		HLSL::Texture2D<float4>& GetBlendTex() { return blendTex; }
-		HLSL::RWTexture2D<float4>& GetResultOut() { return resultOut; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace AA
 		{
-			compiler.compile(blendTex, "SMAA_Blend::blendTex");
-			compiler.compile(resultOut, "SMAA_Blend::resultOut");
-		}
-		struct Compiled
-		{
-			uint blendTex; // Texture2D<float4>
-			uint resultOut; // RWTexture2D<float4>
+			struct SMAA_Blend
+			{
+				static constexpr SlotID ID = SlotID::SMAA_Blend;
+				HLSL::Texture2D<float4> blendTex;
+				HLSL::RWTexture2D<float4> resultOut;
+				HLSL::Texture2D<float4>& GetBlendTex() { return blendTex; }
+				HLSL::RWTexture2D<float4>& GetResultOut() { return resultOut; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(blendTex, "SMAA_Blend::blendTex");
+					compiler.compile(resultOut, "SMAA_Blend::resultOut");
+				}
+				struct Compiled
+				{
+					uint blendTex; // Texture2D<float4>
+					uint resultOut; // RWTexture2D<float4>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::SMAA_Blend";
+				static std::string get_typename()
+				{
+					return "Tables::SMAA_Blend";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

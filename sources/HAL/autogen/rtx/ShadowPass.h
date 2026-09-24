@@ -5,23 +5,26 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 #pragma once
-
-struct ShadowPass: public RaytracePass<ShadowPass>
+namespace Shadows
 {
-	using Payload = Table::ShadowPayload;
+
+	struct ShadowPass: public RaytracePass<ShadowPass>
+	{
+		using Payload = Table::Raytrace::ShadowPayload;
 
 
-	static const constexpr uint ID = 0;
+		static const constexpr uint ID = 0;
 
-	static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
-	static const constexpr std::wstring_view name = L"ShadowPass_GROUP";
-	static const constexpr std::wstring_view hit_name = L"ShadowClosestHitShader";
-	static const constexpr std::wstring_view miss_name = L"ShadowMissShader";
-	// Empty when this pass doesn't declare an any_hit stage -- always emitted
-	// (rather than conditionally, per pass) so RaytracePass<Desc>'s init()/
-	// init_for_material() can check Desc::any_hit_name.empty() uniformly
-	// instead of needing per-Desc SFINAE for a member that may not exist.
-	static const constexpr std::wstring_view any_hit_name = L"";
+		static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
+		static const constexpr std::wstring_view name = L"ShadowPass_GROUP";
+		static const constexpr std::wstring_view hit_name = L"ShadowClosestHitShader";
+		static const constexpr std::wstring_view miss_name = L"ShadowMissShader";
+		// Empty when this pass doesn't declare an any_hit stage -- always emitted
+		// (rather than conditionally, per pass) so RaytracePass<Desc>'s init()/
+		// init_for_material() can check Desc::any_hit_name.empty() uniformly
+		// instead of needing per-Desc SFINAE for a member that may not exist.
+		static const constexpr std::wstring_view any_hit_name = L"";
 
-	static const constexpr bool per_material = false;
-};
+		static const constexpr bool per_material = false;
+	};
+}

@@ -7,10 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct UIRenderState
+namespace UI
 {
-	uint passes_needed; // uint
-	uint per_pass; // uint
-	uint GetPasses_needed() { return passes_needed; }
-	uint GetPer_pass() { return per_pass; }
-};
+	struct UIRenderState
+	{
+		uint passes_needed; // uint
+		uint per_pass; // uint
+		uint GetPasses_needed() { return passes_needed; }
+		uint GetPer_pass() { return per_pass; }
+	};
+}
+using UI::UIRenderState;

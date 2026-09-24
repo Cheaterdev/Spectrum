@@ -69,9 +69,17 @@ public:
 		return l;
 	}
 
+	// Paths of the namespace blocks currently open, innermost last.
+	std::vector<std::string> ns_stack;
+
 	template <class T>
 	void setup_elem(T& e, std::function<void()> f = nullptr)
 	{
+		// With the Parsed on top, `e` is a top-level declaration (a Namespace
+		// header included, which records its parent).
+		if (!elems.empty() && !ns_stack.empty() && dynamic_cast<Parsed*>(elems.back().elem))
+			if (auto* named = dynamic_cast<have_name*>(static_cast<parsed_type*>(&e)))
+				named->ns = ns_stack.back();
 		elems.emplace_back(&e, f);
 	}
 
@@ -130,6 +138,25 @@ public:
 #define ENTER(x) \
 	virtual void enter##x##(PrismParser::##x##Context* ctx) override
 
+
+	ENTER(Namespace_header)
+	{
+		setup_map(get_elem<Parsed>().namespaces);
+		stamp(ctx);
+	}
+
+	EXIT(Namespace_header)
+	{
+		auto& ns = get_elem<Namespace>();
+		ns.path = ns.ns.empty() ? ns.name : ns.ns + "::" + ns.name;
+		end_elem();
+		ns_stack.push_back(ns.path);
+	}
+
+	EXIT(Namespace_definition)
+	{
+		ns_stack.pop_back();
+	}
 
 	GENERATE(Layout_definition)
 	{

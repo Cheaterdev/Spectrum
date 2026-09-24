@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct MaterialPreviewInfo :public DataHolder<MaterialPreviewInfo, SlotID::MaterialPreviewInfo, Table::MaterialPreviewInfo, DefaultLayout::Instance0>
+	namespace Editor
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		MaterialPreviewInfo() = default;
-	};
+		struct MaterialPreviewInfo :public DataHolder<MaterialPreviewInfo, SlotID::MaterialPreviewInfo, Table::Editor::MaterialPreviewInfo, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			MaterialPreviewInfo() = default;
+		};
+	}
 }

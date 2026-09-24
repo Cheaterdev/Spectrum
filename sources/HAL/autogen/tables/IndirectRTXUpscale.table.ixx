@@ -14,44 +14,47 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct IndirectRTXUpscale
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::IndirectRTXUpscale;
-		HLSL::Texture2D<float4> noiseHalf;
-		HLSL::Texture2D<uint> tileFlags;
-		HLSL::Texture2D<float4>& GetNoiseHalf() { return noiseHalf; }
-		HLSL::Texture2D<uint>& GetTileFlags() { return tileFlags; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct IndirectRTXUpscale
 		{
-			compiler.compile(noiseHalf, "IndirectRTXUpscale::noiseHalf");
-			compiler.compile(tileFlags, "IndirectRTXUpscale::tileFlags");
-		}
-		struct Compiled
-		{
-			uint noiseHalf; // Texture2D<float4>
-			uint tileFlags; // Texture2D<uint>
+			static constexpr SlotID ID = SlotID::IndirectRTXUpscale;
+			HLSL::Texture2D<float4> noiseHalf;
+			HLSL::Texture2D<uint> tileFlags;
+			HLSL::Texture2D<float4>& GetNoiseHalf() { return noiseHalf; }
+			HLSL::Texture2D<uint>& GetTileFlags() { return tileFlags; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(noiseHalf, "IndirectRTXUpscale::noiseHalf");
+				compiler.compile(tileFlags, "IndirectRTXUpscale::tileFlags");
+			}
+			struct Compiled
+			{
+				uint noiseHalf; // Texture2D<float4>
+				uint tileFlags; // Texture2D<uint>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::IndirectRTXUpscale";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::IndirectRTXUpscale";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

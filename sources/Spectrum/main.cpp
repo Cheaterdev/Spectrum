@@ -76,7 +76,7 @@ public:
 
 class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext
 {
-		Pipelines::MainPipeline pipeline;
+		Pipelines::Frame::MainPipeline pipeline;
 	main_renderer::ptr scene_renderer;
 	main_renderer::ptr gpu_scene_renderer;
 	stencil_renderer::ptr stenciler;
@@ -414,14 +414,14 @@ public:
 		// Mirrors g_upscaler_type/g_upscaling_enabled into the SIG context --
 		// see UpscalingDLSS.prism's own comment on UpscalerSelectors for why.
 		{
-			auto& upscaler_ctx = graph.get_context<Table::UpscalerSelectors>();
+			auto& upscaler_ctx = graph.get_context<Table::Post::Upscale::UpscalerSelectors>();
 			upscaler_ctx.upscaler_type     = g_upscaler_type;
 			upscaler_ctx.upscaling_enabled = g_upscaling_enabled;
 		}
 		// Mirrors fixed hardware/SDK capabilities into the SIG context -- see
 		// raytracing.prism's own comment on RenderDeviceCapabilities for why.
 		{
-			auto& device_caps = graph.get_context<Table::RenderDeviceCapabilities>();
+			auto& device_caps = graph.get_context<Table::Raytrace::RenderDeviceCapabilities>();
 			device_caps.rtx_supported    = RenderSystem::get().device().is_rtx_supported();
 			device_caps.dlss_available   = nvidia::DLSS::get().available();
 			device_caps.dlssrr_available = nvidia::DLSSRR::get().available();
@@ -494,7 +494,7 @@ public:
 		// either way. No availability re-check: g_upscaler_type can't hold an
 		// unavailable type (see its invariant, UpscalingDLSS.ixx).
 		vec2 jitter_px(0, 0);
-		if (g_upscaling_enabled && g_upscaler_type != UpscalerType::FSR)
+		if (g_upscaling_enabled && g_upscaler_type != Post::Upscale::UpscalerType::FSR)
 		{
 			// Halton(2,3); phase count per NVIDIA's guidance: 8*(display/render)^2.
 			const float scale_x = float(vp.upscale_size.x) / float(vp.frame_size.x);
@@ -535,6 +535,7 @@ public:
 		vsm.update_frame(graph);
 		voxel_gi->update_frame(graph);
 		ddgi_update_selectors(graph);
+		tonemap_update_selectors(graph);
 		stenciler->update_frame(graph);
 
 		{
@@ -568,7 +569,7 @@ public:
 				auto& cam = graph.get_context<CameraInfo>();
 
 
-				Slots::FrameInfo frameInfo;
+				Slots::Frame::FrameInfo frameInfo;
 				//// hack zone
 				auto sky = graph.builder.get(FrameGraph::ResourceID::sky_cubemap_filtered);
 				if (sky && sky->resource)
@@ -601,10 +602,10 @@ public:
 						frameInfo.GetMainHiZ() = hiz->get_handler<Handlers::Texture>()->texture2D;
 				}
 
-				// RTXDebugFlags bitmask -- see DDGI.ixx's ddgi_sky_fallback_disabled
+				// Dev::RTXDebugFlags bitmask -- see DDGI.ixx's ddgi_sky_fallback_disabled
 				// comment for why this DDGI-owned toggle is mirrored here instead of
 				// living on DDGIInfo (its effect isn't DDGI-exclusive).
-				frameInfo.GetDebugFlags() = ddgi_sky_fallback_disabled() ? (uint32_t)RTXDebugFlags::DisableSkyFallback : 0u;
+				frameInfo.GetDebugFlags() = ddgi_sky_fallback_disabled() ? (uint32_t)Dev::RTXDebugFlags::DisableSkyFallback : 0u;
 
 				auto compiled = frameInfo.compile(*graph.builder.current_frame);
 				graph.register_slot_setter(compiled);
@@ -836,7 +837,7 @@ public:
 };
 
 // This frame's asset previews that want a GPU pass, one per claimed
-// Passes::AssetPreview instance slot (ui.prism). asset_preview_content::generate()
+// Passes::Editor::AssetPreview instance slot (ui.prism). asset_preview_content::generate()
 // appends during create_graph; setup_graph drains the list into the pipeline's
 // render_funcs just before add_passes, which then registers exactly the filled
 // slots.
@@ -847,7 +848,7 @@ public:
 // which is above module GUI.
 struct AssetPreviewContext
 {
-	std::vector<Passes::AssetPreview::render_func_type> renders;
+	std::vector<Passes::Editor::AssetPreview::render_func_type> renders;
 };
 
 // Window content that previews an asset. Dispatches by type:
@@ -995,7 +996,7 @@ public:
 		// [Required] because it writes nothing graph-tracked) and its setup is
 		// generated — claiming a slot here is the whole registration.
 		graph.get_context<AssetPreviewContext>().renders.push_back(
-			[this](Passes::AssetPreview::Context&, FrameGraph::FrameContext& ctx) { m_preview->render(&ctx); });
+			[this](Passes::Editor::AssetPreview::Context&, FrameGraph::FrameContext& ctx) { m_preview->render(&ctx); });
 	}
 };
 
@@ -1086,7 +1087,7 @@ class GraphRender : public Window, public GUI::user_interface
 
 
 	size_t graph_usage = 0;
-		Pipelines::UIPipeline pipeline;
+		Pipelines::UI::UIPipeline pipeline;
 public:
 	void on_destroy() override
 	{
@@ -1204,9 +1205,9 @@ public:
 				// previews than MaxCount silently drops the excess.
 				{
 					auto& previews = graph.get_context<AssetPreviewContext>().renders;
-					for (uint32_t i = 0; i < Passes::AssetPreview::MaxCount; ++i)
+					for (uint32_t i = 0; i < Passes::Editor::AssetPreview::MaxCount; ++i)
 						pipeline.assetPreview.render_funcs[i] =
-							i < previews.size() ? previews[i] : Passes::AssetPreview::render_func_type{};
+							i < previews.size() ? previews[i] : Passes::Editor::AssetPreview::render_func_type{};
 				}
 
 				pipeline.add_passes(graph);
@@ -1570,8 +1571,8 @@ public:
 							[this, mode, force_non_dlssrr]()
 							{
 								graph.get_context<FrameGraph::DebugContext>().mode = mode;
-								if (force_non_dlssrr && g_upscaler_type == UpscalerType::DLSSRR)
-									set_upscaler_type(UpscalerType::FSR);
+								if (force_non_dlssrr && g_upscaler_type == Post::Upscale::UpscalerType::DLSSRR)
+									set_upscaler_type(Post::Upscale::UpscalerType::FSR);
 							};
 					}
 					toolbar->add_child(debug_combo);
@@ -1582,14 +1583,14 @@ public:
 					// "downsampled" toggle (g_upscaling_enabled), not an
 					// option here.
 					{
-						struct UpscalerOpt { const char* name; UpscalerType type; };
-						std::vector<UpscalerOpt> upscaler_opts = { { "FSR", UpscalerType::FSR } };
+						struct UpscalerOpt { const char* name; Post::Upscale::UpscalerType type; };
+						std::vector<UpscalerOpt> upscaler_opts = { { "FSR", Post::Upscale::UpscalerType::FSR } };
 						// Same predicate set_upscaler_type() clamps with, so the
 						// list can never offer an option the setter would refuse.
-						if (upscaler_is_available(UpscalerType::DLSS))
-							upscaler_opts.push_back({ "DLSS", UpscalerType::DLSS });
-						if (upscaler_is_available(UpscalerType::DLSSRR))
-							upscaler_opts.push_back({ "DLSS-RR", UpscalerType::DLSSRR });
+						if (upscaler_is_available(Post::Upscale::UpscalerType::DLSS))
+							upscaler_opts.push_back({ "DLSS", Post::Upscale::UpscalerType::DLSS });
+						if (upscaler_is_available(Post::Upscale::UpscalerType::DLSSRR))
+							upscaler_opts.push_back({ "DLSS-RR", Post::Upscale::UpscalerType::DLSSRR });
 
 						auto upscaler_combo = std::make_shared<GUI::Elements::combo_box>();
 						upscaler_combo->docking = GUI::dock::TOP;
@@ -1621,10 +1622,10 @@ public:
 					// ShadowRTX). Purely a quality/performance comparison;
 					// NRD denoises whichever RTX signal is selected.
 					{
-						struct IndirectSrcOpt { const char* name; IndirectSource src; };
+						struct IndirectSrcOpt { const char* name; GI::IndirectSource src; };
 						static const IndirectSrcOpt indirect_src_opts[] = {
-							{ "My VCT",   IndirectSource::MyVCT },
-							{ "RTX Ref",  IndirectSource::RTXReference },
+							{ "My VCT",   GI::IndirectSource::MyVCT },
+							{ "RTX Ref",  GI::IndirectSource::RTXReference },
 						};
 
 						auto indirect_src_combo = std::make_shared<GUI::Elements::combo_box>();
@@ -1636,17 +1637,17 @@ public:
 							indirect_src_combo->add_item(o.name)->on_select =
 								[this, src]()
 								{
-									graph.get_context<Table::IndirectGISelectors>().indirect_source = src;
+									graph.get_context<Table::Denoise::NRD::IndirectGISelectors>().indirect_source = src;
 								};
-							if (src == graph.get_context<Table::IndirectGISelectors>().indirect_source)
+							if (src == graph.get_context<Table::Denoise::NRD::IndirectGISelectors>().indirect_source)
 								indirect_src_combo->get_label()->text = o.name;
 						}
 						toolbar->add_child(indirect_src_combo);
 
-						struct ReflectionSrcOpt { const char* name; ReflectionSource src; };
+						struct ReflectionSrcOpt { const char* name; Reflections::ReflectionSource src; };
 						static const ReflectionSrcOpt reflection_src_opts[] = {
-							{ "My Reflection", ReflectionSource::MyReflection },
-							{ "RTX Ref",       ReflectionSource::RTXReference },
+							{ "My Reflection", Reflections::ReflectionSource::MyReflection },
+							{ "RTX Ref",       Reflections::ReflectionSource::RTXReference },
 						};
 
 						auto reflection_src_combo = std::make_shared<GUI::Elements::combo_box>();
@@ -1658,9 +1659,9 @@ public:
 							reflection_src_combo->add_item(o.name)->on_select =
 								[this, src]()
 								{
-									graph.get_context<Table::IndirectGISelectors>().reflection_source = src;
+									graph.get_context<Table::Denoise::NRD::IndirectGISelectors>().reflection_source = src;
 								};
-							if (src == graph.get_context<Table::IndirectGISelectors>().reflection_source)
+							if (src == graph.get_context<Table::Denoise::NRD::IndirectGISelectors>().reflection_source)
 								reflection_src_combo->get_label()->text = o.name;
 						}
 						toolbar->add_child(reflection_src_combo);
@@ -1669,10 +1670,10 @@ public:
 						// writes VSMSelectors::shadow_source: VSM's own
 						// clipmap PCSS shadow, or the raw-RTX-then-NRD-SIGMA-
 						// denoised reference (see [[project-nrd-integration]]).
-						struct ShadowSrcOpt { const char* name; ShadowSource src; };
+						struct ShadowSrcOpt { const char* name; Shadows::VSM::ShadowSource src; };
 						static const ShadowSrcOpt shadow_src_opts[] = {
-							{ "VSM",     ShadowSource::VSM },
-							{ "RTX Ref", ShadowSource::RTXReference },
+							{ "VSM",     Shadows::VSM::ShadowSource::VSM },
+							{ "RTX Ref", Shadows::VSM::ShadowSource::RTXReference },
 						};
 
 						auto shadow_src_combo = std::make_shared<GUI::Elements::combo_box>();
@@ -1684,9 +1685,9 @@ public:
 							shadow_src_combo->add_item(o.name)->on_select =
 								[this, src]()
 								{
-									graph.get_context<Table::VSMSelectors>().shadow_source = src;
+									graph.get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source = src;
 								};
-							if (src == graph.get_context<Table::VSMSelectors>().shadow_source)
+							if (src == graph.get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source)
 								shadow_src_combo->get_label()->text = o.name;
 						}
 						toolbar->add_child(shadow_src_combo);

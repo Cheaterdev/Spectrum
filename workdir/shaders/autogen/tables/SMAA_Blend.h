@@ -7,10 +7,17 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct SMAA_Blend
+namespace Post
 {
-	uint blendTex; // Texture2D<float4>
-	uint resultOut; // RWTexture2D<float4>
-	Texture2D<float4> GetBlendTex() { return ResourceDescriptorHeap[blendTex]; }
-	RWTexture2D<float4> GetResultOut() { return ResourceDescriptorHeap[resultOut]; }
-};
+	namespace AA
+	{
+		struct SMAA_Blend
+		{
+			uint blendTex; // Texture2D<float4>
+			uint resultOut; // RWTexture2D<float4>
+			Texture2D<float4> GetBlendTex() { return ResourceDescriptorHeap[blendTex]; }
+			RWTexture2D<float4> GetResultOut() { return ResourceDescriptorHeap[resultOut]; }
+		};
+	}
+}
+using Post::AA::SMAA_Blend;

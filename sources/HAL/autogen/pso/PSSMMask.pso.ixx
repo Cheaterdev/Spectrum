@@ -14,47 +14,53 @@ import :Types;
 
 export namespace PSOS
 {
-	struct PSSMMask: public PSOBase
+	namespace Shadows
 	{
-		struct Keys {
-			GEN_DEF_COMP(Keys);
-		private:
-			SERIALIZE()
+		namespace PSSM
+		{
+			struct PSSMMask: public PSOBase
 			{
-			}
-		};
+				struct Keys {
+					GEN_DEF_COMP(Keys);
+				private:
+					SERIALIZE()
+					{
+					}
+				};
 
-		GEN_GRAPHICS_PSO(PSSMMask)
+				GEN_GRAPHICS_PSO(PSSMMask)
 
 
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
+				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+				{
 
 
-			SimplePSO mpso("PSSMMask");
-			if(f) f(mpso,key);
+					SimplePSO mpso("PSSMMask");
+					if(f) f(mpso,key);
 
-			mpso.root_signature = Layouts::DefaultLayout;
+					mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.vertex.file_name = "shaders/shadows/pssm/pssm.hlsl";
-			mpso.vertex.entry_point = "VS";
-			mpso.vertex.flags = HAL::ShaderOptions::None;
+					mpso.vertex.file_name = "shaders/shadows/pssm/pssm.hlsl";
+					mpso.vertex.entry_point = "VS";
+					mpso.vertex.flags = HAL::ShaderOptions::None;
 			
-			mpso.pixel.file_name = "shaders/shadows/pssm/pssm.hlsl";
-			mpso.pixel.entry_point = "PS";
-			mpso.pixel.flags = HAL::ShaderOptions::None;
+					mpso.pixel.file_name = "shaders/shadows/pssm/pssm.hlsl";
+					mpso.pixel.entry_point = "PS";
+					mpso.pixel.flags = HAL::ShaderOptions::None;
 			
 
-			mpso.rtv_formats = { HAL::Format::R8_UNORM };	
-			mpso.blend = {  };
+					mpso.rtv_formats = { HAL::Format::R8_UNORM };	
+					mpso.blend = {  };
 
-			return mpso;
-		}
+					return mpso;
+				}
 
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
+				private:
+				SERIALIZE()
+				{
+					ar&NVP(wrap(psos));
+				}
+			};
 		}
-	};
+	}
 }

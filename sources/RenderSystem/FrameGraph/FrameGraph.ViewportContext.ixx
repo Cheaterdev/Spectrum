@@ -11,18 +11,18 @@ export
 	// belongs) because the SIG-generated create_always()/need_always() calls
 	// resolving [Size=ViewportContext::frame_size] live in FrameGraph:Passes
 	// (compiled as part of this module, from the pass/*.h headers included
-	// into passes.ixx) and call get_context<Table::ViewportContext>()
+	// into passes.ixx) and call get_context<Table::Frame::ViewportContext>()
 	// directly. ContextTypeFor's specialization below must be visible AT
 	// THE POINT that template is instantiated -- which is here, inside
 	// FrameGraph's own compiled module interface -- or the primary (identity)
 	// template silently wins instead, handing create_always() a disconnected,
-	// always-zeroed Table::ViewportContext instead of the live ViewportInfo
+	// always-zeroed Table::Frame::ViewportContext instead of the live ViewportInfo
 	// Graphics-level code populates. A specialization declared up in
 	// Graphics (where this used to live) is never seen from here: FrameGraph
 	// does not and must not import Graphics.
-	struct ViewportInfo : Table::ViewportContext
+	struct ViewportInfo : Table::Frame::ViewportContext
 	{
 	};
 
-	template<> struct ContextTypeFor<Table::ViewportContext> { using type = ViewportInfo; };
+	template<> struct ContextTypeFor<Table::Frame::ViewportContext> { using type = ViewportInfo; };
 }

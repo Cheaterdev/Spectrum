@@ -8,10 +8,14 @@
 #include "enums.h"
 
 
-struct [raypayload] ColorShadowPayload
+namespace Raytrace
 {
-	float3 transmittance : read(closesthit,miss,caller) : write(closesthit,miss,caller);
-	float dist : read(closesthit,miss,caller) : write(closesthit,miss,caller);
-	float3 GetTransmittance() { return transmittance; }
-	float GetDist() { return dist; }
-};
+	struct [raypayload] ColorShadowPayload
+	{
+		float3 transmittance : read(closesthit,miss,caller) : write(closesthit,miss,caller);
+		float dist : read(closesthit,miss,caller) : write(closesthit,miss,caller);
+		float3 GetTransmittance() { return transmittance; }
+		float GetDist() { return dist; }
+	};
+}
+using Raytrace::ColorShadowPayload;

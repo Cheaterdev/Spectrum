@@ -7,12 +7,19 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct DDGIProbeMetadata
+namespace GI
 {
-	float3 offset; // float3
-	uint flags; // uint
-	uint last_full_update_frame; // uint
-	float3 GetOffset() { return offset; }
-	uint GetFlags() { return flags; }
-	uint GetLast_full_update_frame() { return last_full_update_frame; }
-};
+	namespace DDGI
+	{
+		struct DDGIProbeMetadata
+		{
+			float3 offset; // float3
+			uint flags; // uint
+			uint last_full_update_frame; // uint
+			float3 GetOffset() { return offset; }
+			uint GetFlags() { return flags; }
+			uint GetLast_full_update_frame() { return last_full_update_frame; }
+		};
+	}
+}
+using GI::DDGI::DDGIProbeMetadata;

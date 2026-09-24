@@ -7,10 +7,17 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct UpscalerSelectors
+namespace Post
 {
-	UpscalerType upscaler_type; // UpscalerType
-	bool upscaling_enabled; // bool
-	UpscalerType GetUpscaler_type() { return upscaler_type; }
-	bool GetUpscaling_enabled() { return upscaling_enabled; }
-};
+	namespace Upscale
+	{
+		struct UpscalerSelectors
+		{
+			UpscalerType upscaler_type; // UpscalerType
+			bool upscaling_enabled; // bool
+			UpscalerType GetUpscaler_type() { return upscaler_type; }
+			bool GetUpscaling_enabled() { return upscaling_enabled; }
+		};
+	}
+}
+using Post::Upscale::UpscalerSelectors;

@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct SIGMA_SmoothTilesResources :public DataHolder<SIGMA_SmoothTilesResources, SlotID::SIGMA_SmoothTilesResources, Table::SIGMA_SmoothTilesResources, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		SIGMA_SmoothTilesResources() = default;
-	};
+		namespace NRD
+		{
+			struct SIGMA_SmoothTilesResources :public DataHolder<SIGMA_SmoothTilesResources, SlotID::SIGMA_SmoothTilesResources, Table::Denoise::NRD::SIGMA_SmoothTilesResources, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				SIGMA_SmoothTilesResources() = default;
+			};
+		}
+	}
 }

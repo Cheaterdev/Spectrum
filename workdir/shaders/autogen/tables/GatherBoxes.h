@@ -10,22 +10,26 @@
 #include "BoxInfo.h"
 #include "DispatchArguments.h"
 #include "DrawIndexedArguments.h"
-struct GatherBoxes
+namespace Meshes
 {
-	uint culledMeshes; // RWStructuredBuffer<BoxInfo>
-	uint culledCount; // RWStructuredBuffer<uint>
-	uint visible_boxes; // RWStructuredBuffer<uint>
-	uint drawBoxesArgs; // RWStructuredBuffer<DrawIndexedArguments>
-	uint gatherMeshesArgs; // RWStructuredBuffer<DispatchArguments>
-	uint visibleMeshes; // RWStructuredBuffer<uint>
-	uint visibleCount; // RWStructuredBuffer<uint>
-	uint renderArgs; // RWStructuredBuffer<DispatchArguments>
-	RWStructuredBuffer<BoxInfo> GetCulledMeshes() { return ResourceDescriptorHeap[culledMeshes]; }
-	RWStructuredBuffer<uint> GetCulledCount() { return ResourceDescriptorHeap[culledCount]; }
-	RWStructuredBuffer<uint> GetVisible_boxes() { return ResourceDescriptorHeap[visible_boxes]; }
-	RWStructuredBuffer<DrawIndexedArguments> GetDrawBoxesArgs() { return ResourceDescriptorHeap[drawBoxesArgs]; }
-	RWStructuredBuffer<DispatchArguments> GetGatherMeshesArgs() { return ResourceDescriptorHeap[gatherMeshesArgs]; }
-	RWStructuredBuffer<uint> GetVisibleMeshes() { return ResourceDescriptorHeap[visibleMeshes]; }
-	RWStructuredBuffer<uint> GetVisibleCount() { return ResourceDescriptorHeap[visibleCount]; }
-	RWStructuredBuffer<DispatchArguments> GetRenderArgs() { return ResourceDescriptorHeap[renderArgs]; }
-};
+	struct GatherBoxes
+	{
+		uint culledMeshes; // RWStructuredBuffer<BoxInfo>
+		uint culledCount; // RWStructuredBuffer<uint>
+		uint visible_boxes; // RWStructuredBuffer<uint>
+		uint drawBoxesArgs; // RWStructuredBuffer<DrawIndexedArguments>
+		uint gatherMeshesArgs; // RWStructuredBuffer<DispatchArguments>
+		uint visibleMeshes; // RWStructuredBuffer<uint>
+		uint visibleCount; // RWStructuredBuffer<uint>
+		uint renderArgs; // RWStructuredBuffer<DispatchArguments>
+		RWStructuredBuffer<BoxInfo> GetCulledMeshes() { return ResourceDescriptorHeap[culledMeshes]; }
+		RWStructuredBuffer<uint> GetCulledCount() { return ResourceDescriptorHeap[culledCount]; }
+		RWStructuredBuffer<uint> GetVisible_boxes() { return ResourceDescriptorHeap[visible_boxes]; }
+		RWStructuredBuffer<DrawIndexedArguments> GetDrawBoxesArgs() { return ResourceDescriptorHeap[drawBoxesArgs]; }
+		RWStructuredBuffer<DispatchArguments> GetGatherMeshesArgs() { return ResourceDescriptorHeap[gatherMeshesArgs]; }
+		RWStructuredBuffer<uint> GetVisibleMeshes() { return ResourceDescriptorHeap[visibleMeshes]; }
+		RWStructuredBuffer<uint> GetVisibleCount() { return ResourceDescriptorHeap[visibleCount]; }
+		RWStructuredBuffer<DispatchArguments> GetRenderArgs() { return ResourceDescriptorHeap[renderArgs]; }
+	};
+}
+using Meshes::GatherBoxes;

@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VoxelVisibility :public DataHolder<VoxelVisibility, SlotID::VoxelVisibility, Table::VoxelVisibility, DefaultLayout::Instance1>
+	namespace GI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VoxelVisibility() = default;
-	};
+		namespace Voxel
+		{
+			struct VoxelVisibility :public DataHolder<VoxelVisibility, SlotID::VoxelVisibility, Table::GI::Voxel::VoxelVisibility, ::Frame::DefaultLayout::Instance1>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VoxelVisibility() = default;
+			};
+		}
+	}
 }

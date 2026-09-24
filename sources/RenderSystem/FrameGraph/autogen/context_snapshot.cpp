@@ -67,53 +67,55 @@ namespace
 void capture_context_snapshot(Graph& graph, ContextSnapshot& out)
 {
 	out.values[(unsigned int)ContextFieldID::DDGISelectors_enabled] =
-		encode_context_field(graph.get_context<Table::DDGISelectors>().enabled);
+		encode_context_field(graph.get_context<Table::GI::DDGI::DDGISelectors>().enabled);
 	out.values[(unsigned int)ContextFieldID::DDGISelectors_show_probes] =
-		encode_context_field(graph.get_context<Table::DDGISelectors>().show_probes);
+		encode_context_field(graph.get_context<Table::GI::DDGI::DDGISelectors>().show_probes);
 	out.values[(unsigned int)ContextFieldID::ViewportContext_frame_size] =
-		encode_context_field(graph.get_context<Table::ViewportContext>().frame_size);
+		encode_context_field(graph.get_context<Table::Frame::ViewportContext>().frame_size);
 	out.values[(unsigned int)ContextFieldID::ViewportContext_upscale_size] =
-		encode_context_field(graph.get_context<Table::ViewportContext>().upscale_size);
+		encode_context_field(graph.get_context<Table::Frame::ViewportContext>().upscale_size);
 	out.values[(unsigned int)ContextFieldID::IndirectGISelectors_indirect_source] =
-		encode_context_field(graph.get_context<Table::IndirectGISelectors>().indirect_source);
+		encode_context_field(graph.get_context<Table::Denoise::NRD::IndirectGISelectors>().indirect_source);
 	out.values[(unsigned int)ContextFieldID::IndirectGISelectors_reflection_source] =
-		encode_context_field(graph.get_context<Table::IndirectGISelectors>().reflection_source);
+		encode_context_field(graph.get_context<Table::Denoise::NRD::IndirectGISelectors>().reflection_source);
 	out.values[(unsigned int)ContextFieldID::RenderDeviceCapabilities_rtx_supported] =
-		encode_context_field(graph.get_context<Table::RenderDeviceCapabilities>().rtx_supported);
+		encode_context_field(graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported);
 	out.values[(unsigned int)ContextFieldID::RenderDeviceCapabilities_dlss_available] =
-		encode_context_field(graph.get_context<Table::RenderDeviceCapabilities>().dlss_available);
+		encode_context_field(graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().dlss_available);
 	out.values[(unsigned int)ContextFieldID::RenderDeviceCapabilities_dlssrr_available] =
-		encode_context_field(graph.get_context<Table::RenderDeviceCapabilities>().dlssrr_available);
+		encode_context_field(graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available);
 	out.values[(unsigned int)ContextFieldID::SkyState_prev_sun_dir] =
-		encode_context_field(graph.get_context<Table::SkyState>().prev_sun_dir);
+		encode_context_field(graph.get_context<Table::Environment::SkyState>().prev_sun_dir);
 	out.values[(unsigned int)ContextFieldID::SkyState_sky_changed] =
-		encode_context_field(graph.get_context<Table::SkyState>().sky_changed);
+		encode_context_field(graph.get_context<Table::Environment::SkyState>().sky_changed);
+	out.values[(unsigned int)ContextFieldID::TonemapSelectors_enabled] =
+		encode_context_field(graph.get_context<Table::Post::TonemapSelectors>().enabled);
 	out.values[(unsigned int)ContextFieldID::UIState_UI_Passes_needed] =
-		encode_context_field(graph.get_context<Table::UIState>().UI_Passes_needed);
+		encode_context_field(graph.get_context<Table::UI::UIState>().UI_Passes_needed);
 	out.values[(unsigned int)ContextFieldID::UIRenderState_passes_needed] =
-		encode_context_field(graph.get_context<Table::UIRenderState>().passes_needed);
+		encode_context_field(graph.get_context<Table::UI::UIRenderState>().passes_needed);
 	out.values[(unsigned int)ContextFieldID::UIRenderState_per_pass] =
-		encode_context_field(graph.get_context<Table::UIRenderState>().per_pass);
+		encode_context_field(graph.get_context<Table::UI::UIRenderState>().per_pass);
 	out.values[(unsigned int)ContextFieldID::UpscalerSelectors_upscaler_type] =
-		encode_context_field(graph.get_context<Table::UpscalerSelectors>().upscaler_type);
+		encode_context_field(graph.get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type);
 	out.values[(unsigned int)ContextFieldID::UpscalerSelectors_upscaling_enabled] =
-		encode_context_field(graph.get_context<Table::UpscalerSelectors>().upscaling_enabled);
+		encode_context_field(graph.get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled);
 	out.values[(unsigned int)ContextFieldID::VoxelGISelectors_voxelize_scene] =
-		encode_context_field(graph.get_context<Table::VoxelGISelectors>().voxelize_scene);
+		encode_context_field(graph.get_context<Table::GI::Voxel::VoxelGISelectors>().voxelize_scene);
 	out.values[(unsigned int)ContextFieldID::VoxelGISelectors_light_scene] =
-		encode_context_field(graph.get_context<Table::VoxelGISelectors>().light_scene);
+		encode_context_field(graph.get_context<Table::GI::Voxel::VoxelGISelectors>().light_scene);
 	out.values[(unsigned int)ContextFieldID::VoxelGISelectors_reflection_enabled] =
-		encode_context_field(graph.get_context<Table::VoxelGISelectors>().reflection_enabled);
+		encode_context_field(graph.get_context<Table::GI::Voxel::VoxelGISelectors>().reflection_enabled);
 	out.values[(unsigned int)ContextFieldID::VoxelGISelectors_debug_voxel_trace] =
-		encode_context_field(graph.get_context<Table::VoxelGISelectors>().debug_voxel_trace);
+		encode_context_field(graph.get_context<Table::GI::Voxel::VoxelGISelectors>().debug_voxel_trace);
 	out.values[(unsigned int)ContextFieldID::VSMSelectors_use_vsm_penumbra] =
-		encode_context_field(graph.get_context<Table::VSMSelectors>().use_vsm_penumbra);
+		encode_context_field(graph.get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra);
 	out.values[(unsigned int)ContextFieldID::VSMSelectors_use_vsm_contact_shadow] =
-		encode_context_field(graph.get_context<Table::VSMSelectors>().use_vsm_contact_shadow);
+		encode_context_field(graph.get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_contact_shadow);
 	out.values[(unsigned int)ContextFieldID::VSMSelectors_vsm_debug_view] =
-		encode_context_field(graph.get_context<Table::VSMSelectors>().vsm_debug_view);
+		encode_context_field(graph.get_context<Table::Shadows::VSM::VSMSelectors>().vsm_debug_view);
 	out.values[(unsigned int)ContextFieldID::VSMSelectors_shadow_source] =
-		encode_context_field(graph.get_context<Table::VSMSelectors>().shadow_source);
+		encode_context_field(graph.get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source);
 }
 
 ContextFieldMask diff_context_snapshots(const ContextSnapshot& a, const ContextSnapshot& b)

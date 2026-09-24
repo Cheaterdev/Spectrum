@@ -37,19 +37,19 @@ SkyRender::SkyRender()
 	// CubeSky: renders the atmospheric sky into a static cubemap, re-baked only
 	// when the sun direction has changed enough to warrant it -- that decision
 	// is CubeSky's [PreSetup] hook plus [RenderCondition] (sky.prism) now, see
-	// PassSetupDefault<Passes::CubeSky>::pre_setup below.
+	// PassSetupDefault<Passes::Environment::CubeSky>::pre_setup below.
 
-	m_cubesky_render = [this](Passes::CubeSky::Context& data, FrameGraph::FrameContext& context)
+	m_cubesky_render = [this](Passes::Environment::CubeSky::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& sky     = context.graph->get_context<SkyInfo>();
 		auto& compute = context.get_list()->get_compute();
 
-		compute.set_pipeline<PSOS::SkyCube>();
+		compute.set_pipeline<PSOS::Environment::SkyCube>();
 
 		{
 			PROFILE(L"cube_sky_setup");
 
-			Slots::SkyData skydata;
+			Slots::Environment::SkyData skydata;
 			skydata.GetInscatter()     = inscatter->texture_3d().texture3D;
 			skydata.GetIrradiance()    = irradiance->texture_2d().texture2D;
 			skydata.GetTransmittance() = transmittance->texture_2d().texture2D;
@@ -73,7 +73,7 @@ SkyRender::SkyRender()
 			subres.FirstArraySlice = 0;
 			subres.ArraySize       = 6;
 
-			Slots::SkyFace skyFace;
+			Slots::Environment::SkyFace skyFace;
 			skyFace.GetFaces() = cube.resource->create_view<HAL::Texture2DView>(
 				compute.get_base(), subres).rwTexture2DArray;
 			compute.set(skyFace);
@@ -84,7 +84,7 @@ SkyRender::SkyRender()
 
 	// Sky: full-screen sky pass that composites over the GBuffer depth.
 	// setup() is fully generated (sky.prism's own [RunAlways]).
-	m_sky_render = [this](Passes::Sky::Context& data, FrameGraph::FrameContext& context)
+	m_sky_render = [this](Passes::Environment::Sky::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& sky     = context.graph->get_context<SkyInfo>();
 		auto& compute = context.get_list()->get_compute();
@@ -92,7 +92,7 @@ SkyRender::SkyRender()
 		context.graph->set_slot(SlotID::FrameInfo, compute);
 
 		{
-			Slots::SkyData skydata;
+			Slots::Environment::SkyData skydata;
 			skydata.GetInscatter()     = inscatter->texture_3d().texture3D;
 			skydata.GetIrradiance()    = irradiance->texture_2d().texture2D;
 			skydata.GetTransmittance() = transmittance->texture_2d().texture2D;
@@ -102,56 +102,56 @@ SkyRender::SkyRender()
 			compute.set(skydata);
 		}
 
-		compute.set_pipeline<PSOS::SkyCompute>();
+		compute.set_pipeline<PSOS::Environment::SkyCompute>();
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 }
 
 
-// ---- PassSetupDefault<Passes::CubeSky> -------------------------------------
+// ---- PassSetupDefault<Passes::Environment::CubeSky> -------------------------------------
 // The sun-direction diff, run once per frame before any pass's setup (sky.prism's
 // [PreSetup]). It has to be here rather than inside CubeSky's own setup because
 // CubeMapDownsample and CubeMapEnviromentProcessor read the result in their own
 // [RenderCondition]s, and nothing orders one pass's setup before another's.
 //
 // Static, so there is no SkyRender instance to hold the previous direction --
-// it lives in Table::SkyState instead, which is per-Graph and therefore still
+// it lives in Table::Environment::SkyState instead, which is per-Graph and therefore still
 // separate between the main and asset pipelines (see its own comment, sky.prism).
 
-void PassSetupDefault<Passes::CubeSky>::pre_setup(FrameGraph::Graph& graph)
+void PassSetupDefault<Passes::Environment::CubeSky>::pre_setup(FrameGraph::Graph& graph)
 {
 	auto& sky   = graph.get_context<SkyInfo>();
-	auto& state = graph.get_context<Table::SkyState>();
+	auto& state = graph.get_context<Table::Environment::SkyState>();
 
 	state.sky_changed = ((sky.sunDir - state.prev_sun_dir).length() > 0.001f);
 	if (state.sky_changed)
 		state.prev_sun_dir = sky.sunDir;
 }
 
-// ---- PassDefault<Passes::CubeMapDownsample> --------------------------------
+// ---- PassDefault<Passes::Environment::CubeMapDownsample> --------------------------------
 // Generates mipmaps for the sky cubemap whenever it has been re-baked.
 // setup() is fully generated (sky.prism's own [RenderCondition]).
 
-void PassDefault<Passes::CubeMapDownsample>::render(
-	Passes::CubeMapDownsample::Context& data, FrameContext& context)
+void PassDefault<Passes::Environment::CubeMapDownsample>::render(
+	Passes::Environment::CubeMapDownsample::Context& data, FrameContext& context)
 {
 	MipMapGenerator::get().generate_cube(context.get_list()->get_compute(), *data.sky_cubemap);
 }
 
 
-// ---- PassDefault<Passes::CubeMapEnviromentProcessor> ----------------------
+// ---- PassDefault<Passes::Environment::CubeMapEnviromentProcessor> ----------------------
 // Filters the sky cubemap into specular and diffuse IBL targets.
 // setup() is fully generated (sky.prism's own [RenderCondition]).
 
-void PassDefault<Passes::CubeMapEnviromentProcessor>::render(
-	Passes::CubeMapEnviromentProcessor::Context& data, FrameContext& context)
+void PassDefault<Passes::Environment::CubeMapEnviromentProcessor>::render(
+	Passes::Environment::CubeMapEnviromentProcessor::Context& data, FrameContext& context)
 {
 	auto& compute = context.get_list()->get_compute();
 
 	compute.set_signature(Layouts::DefaultLayout);
 
 	{
-		Slots::EnvSource downsample;
+		Slots::Environment::EnvSource downsample;
 		downsample.GetSourceTex() = data.sky_cubemap->textureCube;
 		compute.set(downsample);
 	}
@@ -182,10 +182,10 @@ void PassDefault<Passes::CubeMapEnviromentProcessor>::render(
 		// EnvFilter carries one array UAV per mip; the 64^2 cubemap is 7 mips.
 		ASSERT(count <= 8);
 
-		compute.set_pipeline<PSOS::CubemapENV>();
+		compute.set_pipeline<PSOS::Environment::CubemapENV>();
 
 		// Value-initialised: only the first `count` targets are filled.
-		Slots::EnvFilter filter{};
+		Slots::Environment::EnvFilter filter{};
 		filter.GetSize().x = (UINT)data.sky_cubemap->resource->get_desc().as_texture().Dimensions.x;
 		filter.GetSize().y = count;
 		filter.GetSize().z = base;
@@ -210,9 +210,9 @@ void PassDefault<Passes::CubeMapEnviromentProcessor>::render(
 		auto& diffuse = *data.sky_cubemap_filtered_diffuse;
 		auto  size    = diffuse.get_size();
 
-		compute.set_pipeline<PSOS::CubemapENVDiffuse>();
+		compute.set_pipeline<PSOS::Environment::CubemapENVDiffuse>();
 
-		Slots::EnvFilter filter{};
+		Slots::Environment::EnvFilter filter{};
 		filter.GetSize().x     = (UINT)size.x;
 		filter.GetSize().y     = 1;
 		filter.GetSize().z     = (UINT)size.x;

@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct TextureRenderer
+namespace Editor
 {
-	uint texture; // Texture2D<float4>
-	Texture2D<float4> GetTexture() { return ResourceDescriptorHeap[texture]; }
-};
+	struct TextureRenderer
+	{
+		uint texture; // Texture2D<float4>
+		Texture2D<float4> GetTexture() { return ResourceDescriptorHeap[texture]; }
+	};
+}
+using Editor::TextureRenderer;

@@ -16,30 +16,46 @@ import :Autogen.Tables.TileRecord;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct WorkGR_ClassifyPixels_NodeEmulation
+	namespace Dev
 	{
-		static constexpr SlotID ID = SlotID::WorkGR_ClassifyPixels_NodeEmulation;
-		uint YZBase;
-		HLSL::AppendStructuredBuffer<TileRecord> Shadows_Node;
-		GraphInput graphInput;
-		uint& GetYZBase() { return YZBase; }
-		HLSL::AppendStructuredBuffer<TileRecord>& GetShadows_Node() { return Shadows_Node; }
-		GraphInput& GetGraphInput() { return graphInput; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct WorkGR_ClassifyPixels_NodeEmulation
 		{
-			compiler.compile(YZBase, "WorkGR_ClassifyPixels_NodeEmulation::YZBase");
-			compiler.compile(Shadows_Node, "WorkGR_ClassifyPixels_NodeEmulation::Shadows_Node");
-			compiler.compile(graphInput, "WorkGR_ClassifyPixels_NodeEmulation::graphInput");
-		}
-		struct Compiled
-		{
-			uint YZBase; // uint
-			uint Shadows_Node; // AppendStructuredBuffer<TileRecord>
-			GraphInput::Compiled graphInput; // GraphInput
+			static constexpr SlotID ID = SlotID::WorkGR_ClassifyPixels_NodeEmulation;
+			uint YZBase;
+			HLSL::AppendStructuredBuffer<Table::Dev::TileRecord> Shadows_Node;
+			Table::Dev::GraphInput graphInput;
+			uint& GetYZBase() { return YZBase; }
+			HLSL::AppendStructuredBuffer<Table::Dev::TileRecord>& GetShadows_Node() { return Shadows_Node; }
+			Table::Dev::GraphInput& GetGraphInput() { return graphInput; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(YZBase, "WorkGR_ClassifyPixels_NodeEmulation::YZBase");
+				compiler.compile(Shadows_Node, "WorkGR_ClassifyPixels_NodeEmulation::Shadows_Node");
+				compiler.compile(graphInput, "WorkGR_ClassifyPixels_NodeEmulation::graphInput");
+			}
+			struct Compiled
+			{
+				uint YZBase; // uint
+				uint Shadows_Node; // AppendStructuredBuffer<TileRecord>
+				Table::Dev::GraphInput::Compiled graphInput; // GraphInput
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(graphInput);
+					ar& NVP(YZBase);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::WorkGR_ClassifyPixels_NodeEmulation";
+			}
 			private:
 			SERIALIZE()
 			{
@@ -47,21 +63,8 @@ export namespace Table
 				ar& NVP(YZBase);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::WorkGR_ClassifyPixels_NodeEmulation";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(graphInput);
-			ar& NVP(YZBase);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

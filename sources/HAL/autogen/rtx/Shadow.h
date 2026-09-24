@@ -5,10 +5,13 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 #pragma once
-
-struct Shadow: public RaytraceRaygen<Shadow>
+namespace Shadows
 {
-	static const constexpr uint ID = 0;
-	static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
-	static const constexpr std::wstring_view raygen = L"ShadowRaygenShader";
-};
+
+	struct Shadow: public RaytraceRaygen<Shadow>
+	{
+		static const constexpr uint ID = 0;
+		static const constexpr std::string_view shader = "shaders\\rtx/raytracing.hlsl";
+		static const constexpr std::wstring_view raygen = L"ShadowRaygenShader";
+	};
+}

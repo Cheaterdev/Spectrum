@@ -8,12 +8,19 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "SIGMASharedConstants.h"
-struct SIGMA_SmoothTilesResources
+namespace Denoise
 {
-	uint gIn_Tiles; // Texture2D<float3>
-	uint gOut_Tiles; // RWTexture2D<float2>
-	SIGMASharedConstants sharedConstants; // SIGMASharedConstants
-	SIGMASharedConstants GetSharedConstants() { return sharedConstants; }
-	Texture2D<float3> GetGIn_Tiles() { return ResourceDescriptorHeap[gIn_Tiles]; }
-	RWTexture2D<float2> GetGOut_Tiles() { return ResourceDescriptorHeap[gOut_Tiles]; }
-};
+	namespace NRD
+	{
+		struct SIGMA_SmoothTilesResources
+		{
+			uint gIn_Tiles; // Texture2D<float3>
+			uint gOut_Tiles; // RWTexture2D<float2>
+			SIGMASharedConstants sharedConstants; // SIGMASharedConstants
+			SIGMASharedConstants GetSharedConstants() { return sharedConstants; }
+			Texture2D<float3> GetGIn_Tiles() { return ResourceDescriptorHeap[gIn_Tiles]; }
+			RWTexture2D<float2> GetGOut_Tiles() { return ResourceDescriptorHeap[gOut_Tiles]; }
+		};
+	}
+}
+using Denoise::NRD::SIGMA_SmoothTilesResources;

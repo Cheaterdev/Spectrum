@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct SkyFace :public DataHolder<SkyFace, SlotID::SkyFace, Table::SkyFace, DefaultLayout::Instance1>
+	namespace Environment
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		SkyFace() = default;
-	};
+		struct SkyFace :public DataHolder<SkyFace, SlotID::SkyFace, Table::Environment::SkyFace, ::Frame::DefaultLayout::Instance1>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			SkyFace() = default;
+		};
+	}
 }

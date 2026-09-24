@@ -7,10 +7,17 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct IndirectGISelectors
+namespace Denoise
 {
-	IndirectSource indirect_source; // IndirectSource
-	ReflectionSource reflection_source; // ReflectionSource
-	IndirectSource GetIndirect_source() { return indirect_source; }
-	ReflectionSource GetReflection_source() { return reflection_source; }
-};
+	namespace NRD
+	{
+		struct IndirectGISelectors
+		{
+			IndirectSource indirect_source; // IndirectSource
+			ReflectionSource reflection_source; // ReflectionSource
+			IndirectSource GetIndirect_source() { return indirect_source; }
+			ReflectionSource GetReflection_source() { return reflection_source; }
+		};
+	}
+}
+using Denoise::NRD::IndirectGISelectors;

@@ -14,38 +14,44 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct Glyph
+	namespace UI
 	{
-		static constexpr SlotID ID = SlotID::Glyph;
-		float2 pos;
-		uint index;
-		float4 color;
-		float2& GetPos() { return pos; }
-		uint& GetIndex() { return index; }
-		float4& GetColor() { return color; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Text
 		{
-			compiler.compile(pos, "Glyph::pos");
-			compiler.compile(index, "Glyph::index");
-			compiler.compile(color, "Glyph::color");
-		}
-		using Compiled = Glyph;
+			struct Glyph
+			{
+				static constexpr SlotID ID = SlotID::Glyph;
+				float2 pos;
+				uint index;
+				float4 color;
+				float2& GetPos() { return pos; }
+				uint& GetIndex() { return index; }
+				float4& GetColor() { return color; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(pos, "Glyph::pos");
+					compiler.compile(index, "Glyph::index");
+					compiler.compile(color, "Glyph::color");
+				}
+				using Compiled = Glyph;
 
-		static std::string get_typename()
-		{
-			return "Tables::Glyph";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(pos);
-			ar& NVP(index);
-			ar& NVP(color);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::Glyph";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(pos);
+					ar& NVP(index);
+					ar& NVP(color);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

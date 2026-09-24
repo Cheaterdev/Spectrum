@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct FrameGraph_Debug_TextureCube :public DataHolder<FrameGraph_Debug_TextureCube, SlotID::FrameGraph_Debug_TextureCube, Table::FrameGraph_Debug_TextureCube, DefaultLayout::Instance1>
+	namespace Dev
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		FrameGraph_Debug_TextureCube() = default;
-	};
+		struct FrameGraph_Debug_TextureCube :public DataHolder<FrameGraph_Debug_TextureCube, SlotID::FrameGraph_Debug_TextureCube, Table::Dev::FrameGraph_Debug_TextureCube, ::Frame::DefaultLayout::Instance1>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			FrameGraph_Debug_TextureCube() = default;
+		};
+	}
 }

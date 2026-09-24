@@ -15,88 +15,94 @@ import :Autogen.Tables.DDGIInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DDGIProbeResidencyMarkData
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::DDGIProbeResidencyMarkData;
-		uint reset_only;
-		int3 scroll_lo;
-		uint3 scroll_count;
-		HLSL::RWStructuredBuffer<uint> probe_residency;
-		HLSL::RWStructuredBuffer<uint> compacted_list;
-		HLSL::RWStructuredBuffer<uint> compacted_count;
-		HLSL::RWStructuredBuffer<uint> pending;
-		HLSL::RWStructuredBuffer<uint> miss_streak;
-		HLSL::RWTexture2DArray<float4> probe_irradiance;
-		HLSL::RWTexture2DArray<float2> probe_visibility;
-		DDGIInfo info;
-		HLSL::RWStructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
-		HLSL::RWStructuredBuffer<uint>& GetCompacted_list() { return compacted_list; }
-		HLSL::RWStructuredBuffer<uint>& GetCompacted_count() { return compacted_count; }
-		HLSL::RWStructuredBuffer<uint>& GetPending() { return pending; }
-		HLSL::RWStructuredBuffer<uint>& GetMiss_streak() { return miss_streak; }
-		uint& GetReset_only() { return reset_only; }
-		int3& GetScroll_lo() { return scroll_lo; }
-		uint3& GetScroll_count() { return scroll_count; }
-		HLSL::RWTexture2DArray<float4>& GetProbe_irradiance() { return probe_irradiance; }
-		HLSL::RWTexture2DArray<float2>& GetProbe_visibility() { return probe_visibility; }
-		DDGIInfo& GetInfo() { return info; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace DDGI
 		{
-			compiler.compile(reset_only, "DDGIProbeResidencyMarkData::reset_only");
-			compiler.compile(scroll_lo, "DDGIProbeResidencyMarkData::scroll_lo");
-			compiler.compile(scroll_count, "DDGIProbeResidencyMarkData::scroll_count");
-			compiler.compile(probe_residency, "DDGIProbeResidencyMarkData::probe_residency");
-			compiler.compile(compacted_list, "DDGIProbeResidencyMarkData::compacted_list");
-			compiler.compile(compacted_count, "DDGIProbeResidencyMarkData::compacted_count");
-			compiler.compile(pending, "DDGIProbeResidencyMarkData::pending");
-			compiler.compile(miss_streak, "DDGIProbeResidencyMarkData::miss_streak");
-			compiler.compile(probe_irradiance, "DDGIProbeResidencyMarkData::probe_irradiance");
-			compiler.compile(probe_visibility, "DDGIProbeResidencyMarkData::probe_visibility");
-			compiler.compile(info, "DDGIProbeResidencyMarkData::info");
-		}
-		struct Compiled
-		{
-			uint reset_only; // uint
-			int3 scroll_lo; // int3
-			uint3 scroll_count; // uint3
-			uint probe_residency; // RWStructuredBuffer<uint>
-			uint compacted_list; // RWStructuredBuffer<uint>
-			uint compacted_count; // RWStructuredBuffer<uint>
-			uint pending; // RWStructuredBuffer<uint>
-			uint miss_streak; // RWStructuredBuffer<uint>
-			uint probe_irradiance; // RWTexture2DArray<float4>
-			uint probe_visibility; // RWTexture2DArray<float2>
-			DDGIInfo::Compiled info; // DDGIInfo
+			struct DDGIProbeResidencyMarkData
+			{
+				static constexpr SlotID ID = SlotID::DDGIProbeResidencyMarkData;
+				uint reset_only;
+				int3 scroll_lo;
+				uint3 scroll_count;
+				HLSL::RWStructuredBuffer<uint> probe_residency;
+				HLSL::RWStructuredBuffer<uint> compacted_list;
+				HLSL::RWStructuredBuffer<uint> compacted_count;
+				HLSL::RWStructuredBuffer<uint> pending;
+				HLSL::RWStructuredBuffer<uint> miss_streak;
+				HLSL::RWTexture2DArray<float4> probe_irradiance;
+				HLSL::RWTexture2DArray<float2> probe_visibility;
+				Table::GI::DDGI::DDGIInfo info;
+				HLSL::RWStructuredBuffer<uint>& GetProbe_residency() { return probe_residency; }
+				HLSL::RWStructuredBuffer<uint>& GetCompacted_list() { return compacted_list; }
+				HLSL::RWStructuredBuffer<uint>& GetCompacted_count() { return compacted_count; }
+				HLSL::RWStructuredBuffer<uint>& GetPending() { return pending; }
+				HLSL::RWStructuredBuffer<uint>& GetMiss_streak() { return miss_streak; }
+				uint& GetReset_only() { return reset_only; }
+				int3& GetScroll_lo() { return scroll_lo; }
+				uint3& GetScroll_count() { return scroll_count; }
+				HLSL::RWTexture2DArray<float4>& GetProbe_irradiance() { return probe_irradiance; }
+				HLSL::RWTexture2DArray<float2>& GetProbe_visibility() { return probe_visibility; }
+				Table::GI::DDGI::DDGIInfo& GetInfo() { return info; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(reset_only, "DDGIProbeResidencyMarkData::reset_only");
+					compiler.compile(scroll_lo, "DDGIProbeResidencyMarkData::scroll_lo");
+					compiler.compile(scroll_count, "DDGIProbeResidencyMarkData::scroll_count");
+					compiler.compile(probe_residency, "DDGIProbeResidencyMarkData::probe_residency");
+					compiler.compile(compacted_list, "DDGIProbeResidencyMarkData::compacted_list");
+					compiler.compile(compacted_count, "DDGIProbeResidencyMarkData::compacted_count");
+					compiler.compile(pending, "DDGIProbeResidencyMarkData::pending");
+					compiler.compile(miss_streak, "DDGIProbeResidencyMarkData::miss_streak");
+					compiler.compile(probe_irradiance, "DDGIProbeResidencyMarkData::probe_irradiance");
+					compiler.compile(probe_visibility, "DDGIProbeResidencyMarkData::probe_visibility");
+					compiler.compile(info, "DDGIProbeResidencyMarkData::info");
+				}
+				struct Compiled
+				{
+					uint reset_only; // uint
+					int3 scroll_lo; // int3
+					uint3 scroll_count; // uint3
+					uint probe_residency; // RWStructuredBuffer<uint>
+					uint compacted_list; // RWStructuredBuffer<uint>
+					uint compacted_count; // RWStructuredBuffer<uint>
+					uint pending; // RWStructuredBuffer<uint>
+					uint miss_streak; // RWStructuredBuffer<uint>
+					uint probe_irradiance; // RWTexture2DArray<float4>
+					uint probe_visibility; // RWTexture2DArray<float2>
+					Table::GI::DDGI::DDGIInfo::Compiled info; // DDGIInfo
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(info);
-				ar& NVP(reset_only);
-				ar& NVP(scroll_lo);
-				ar& NVP(scroll_count);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(info);
+						ar& NVP(reset_only);
+						ar& NVP(scroll_lo);
+						ar& NVP(scroll_count);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::DDGIProbeResidencyMarkData";
+				static std::string get_typename()
+				{
+					return "Tables::DDGIProbeResidencyMarkData";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(info);
+					ar& NVP(reset_only);
+					ar& NVP(scroll_lo);
+					ar& NVP(scroll_count);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(info);
-			ar& NVP(reset_only);
-			ar& NVP(scroll_lo);
-			ar& NVP(scroll_count);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

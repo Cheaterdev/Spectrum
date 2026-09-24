@@ -15,106 +15,112 @@ import :Autogen.Tables.REBLURSharedConstants;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct REBLUR_TemporalAccumulationResources
+	namespace Denoise
 	{
-		static constexpr SlotID ID = SlotID::REBLUR_TemporalAccumulationResources;
-		HLSL::Texture2D<float> gIn_Tiles;
-		HLSL::Texture2D<float4> gIn_Normal_Roughness;
-		HLSL::Texture2D<float> gIn_ViewZ;
-		HLSL::Texture2D<float3> gIn_Mv;
-		HLSL::Texture2D<float> gPrev_ViewZ;
-		HLSL::Texture2D<float4> gPrev_Normal_Roughness;
-		HLSL::Texture2D<uint> gPrev_InternalData;
-		HLSL::Texture2D<float> gIn_DisocclusionThresholdMix;
-		HLSL::Texture2D<float> gIn_DiffConfidence;
-		HLSL::Texture2D<float4> gIn_Diff;
-		HLSL::Texture2D<float4> gHistory_Diff;
-		HLSL::Texture2D<float> gHistory_DiffFast;
-		HLSL::RWTexture2D<float2> gOut_Data1;
-		HLSL::RWTexture2D<float4> gOut_Diff;
-		HLSL::RWTexture2D<float> gOut_DiffFast;
-		HLSL::RWTexture2D<uint> gOut_Data2;
-		REBLURSharedConstants sharedConstants;
-		HLSL::Texture2D<float>& GetGIn_Tiles() { return gIn_Tiles; }
-		HLSL::Texture2D<float4>& GetGIn_Normal_Roughness() { return gIn_Normal_Roughness; }
-		HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
-		HLSL::Texture2D<float3>& GetGIn_Mv() { return gIn_Mv; }
-		HLSL::Texture2D<float>& GetGPrev_ViewZ() { return gPrev_ViewZ; }
-		HLSL::Texture2D<float4>& GetGPrev_Normal_Roughness() { return gPrev_Normal_Roughness; }
-		HLSL::Texture2D<uint>& GetGPrev_InternalData() { return gPrev_InternalData; }
-		HLSL::Texture2D<float>& GetGIn_DisocclusionThresholdMix() { return gIn_DisocclusionThresholdMix; }
-		HLSL::Texture2D<float>& GetGIn_DiffConfidence() { return gIn_DiffConfidence; }
-		HLSL::Texture2D<float4>& GetGIn_Diff() { return gIn_Diff; }
-		HLSL::Texture2D<float4>& GetGHistory_Diff() { return gHistory_Diff; }
-		HLSL::Texture2D<float>& GetGHistory_DiffFast() { return gHistory_DiffFast; }
-		HLSL::RWTexture2D<float2>& GetGOut_Data1() { return gOut_Data1; }
-		HLSL::RWTexture2D<float4>& GetGOut_Diff() { return gOut_Diff; }
-		HLSL::RWTexture2D<float>& GetGOut_DiffFast() { return gOut_DiffFast; }
-		HLSL::RWTexture2D<uint>& GetGOut_Data2() { return gOut_Data2; }
-		REBLURSharedConstants& GetSharedConstants() { return sharedConstants; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace NRD
 		{
-			compiler.compile(gIn_Tiles, "REBLUR_TemporalAccumulationResources::gIn_Tiles");
-			compiler.compile(gIn_Normal_Roughness, "REBLUR_TemporalAccumulationResources::gIn_Normal_Roughness");
-			compiler.compile(gIn_ViewZ, "REBLUR_TemporalAccumulationResources::gIn_ViewZ");
-			compiler.compile(gIn_Mv, "REBLUR_TemporalAccumulationResources::gIn_Mv");
-			compiler.compile(gPrev_ViewZ, "REBLUR_TemporalAccumulationResources::gPrev_ViewZ");
-			compiler.compile(gPrev_Normal_Roughness, "REBLUR_TemporalAccumulationResources::gPrev_Normal_Roughness");
-			compiler.compile(gPrev_InternalData, "REBLUR_TemporalAccumulationResources::gPrev_InternalData");
-			compiler.compile(gIn_DisocclusionThresholdMix, "REBLUR_TemporalAccumulationResources::gIn_DisocclusionThresholdMix");
-			compiler.compile(gIn_DiffConfidence, "REBLUR_TemporalAccumulationResources::gIn_DiffConfidence");
-			compiler.compile(gIn_Diff, "REBLUR_TemporalAccumulationResources::gIn_Diff");
-			compiler.compile(gHistory_Diff, "REBLUR_TemporalAccumulationResources::gHistory_Diff");
-			compiler.compile(gHistory_DiffFast, "REBLUR_TemporalAccumulationResources::gHistory_DiffFast");
-			compiler.compile(gOut_Data1, "REBLUR_TemporalAccumulationResources::gOut_Data1");
-			compiler.compile(gOut_Diff, "REBLUR_TemporalAccumulationResources::gOut_Diff");
-			compiler.compile(gOut_DiffFast, "REBLUR_TemporalAccumulationResources::gOut_DiffFast");
-			compiler.compile(gOut_Data2, "REBLUR_TemporalAccumulationResources::gOut_Data2");
-			compiler.compile(sharedConstants, "REBLUR_TemporalAccumulationResources::sharedConstants");
-		}
-		struct Compiled
-		{
-			uint gIn_Tiles; // Texture2D<float>
-			uint gIn_Normal_Roughness; // Texture2D<float4>
-			uint gIn_ViewZ; // Texture2D<float>
-			uint gIn_Mv; // Texture2D<float3>
-			uint gPrev_ViewZ; // Texture2D<float>
-			uint gPrev_Normal_Roughness; // Texture2D<float4>
-			uint gPrev_InternalData; // Texture2D<uint>
-			uint gIn_DisocclusionThresholdMix; // Texture2D<float>
-			uint gIn_DiffConfidence; // Texture2D<float>
-			uint gIn_Diff; // Texture2D<float4>
-			uint gHistory_Diff; // Texture2D<float4>
-			uint gHistory_DiffFast; // Texture2D<float>
-			uint gOut_Data1; // RWTexture2D<float2>
-			uint gOut_Diff; // RWTexture2D<float4>
-			uint gOut_DiffFast; // RWTexture2D<float>
-			uint gOut_Data2; // RWTexture2D<uint>
-			REBLURSharedConstants::Compiled sharedConstants; // REBLURSharedConstants
+			struct REBLUR_TemporalAccumulationResources
+			{
+				static constexpr SlotID ID = SlotID::REBLUR_TemporalAccumulationResources;
+				HLSL::Texture2D<float> gIn_Tiles;
+				HLSL::Texture2D<float4> gIn_Normal_Roughness;
+				HLSL::Texture2D<float> gIn_ViewZ;
+				HLSL::Texture2D<float3> gIn_Mv;
+				HLSL::Texture2D<float> gPrev_ViewZ;
+				HLSL::Texture2D<float4> gPrev_Normal_Roughness;
+				HLSL::Texture2D<uint> gPrev_InternalData;
+				HLSL::Texture2D<float> gIn_DisocclusionThresholdMix;
+				HLSL::Texture2D<float> gIn_DiffConfidence;
+				HLSL::Texture2D<float4> gIn_Diff;
+				HLSL::Texture2D<float4> gHistory_Diff;
+				HLSL::Texture2D<float> gHistory_DiffFast;
+				HLSL::RWTexture2D<float2> gOut_Data1;
+				HLSL::RWTexture2D<float4> gOut_Diff;
+				HLSL::RWTexture2D<float> gOut_DiffFast;
+				HLSL::RWTexture2D<uint> gOut_Data2;
+				Table::Denoise::NRD::REBLURSharedConstants sharedConstants;
+				HLSL::Texture2D<float>& GetGIn_Tiles() { return gIn_Tiles; }
+				HLSL::Texture2D<float4>& GetGIn_Normal_Roughness() { return gIn_Normal_Roughness; }
+				HLSL::Texture2D<float>& GetGIn_ViewZ() { return gIn_ViewZ; }
+				HLSL::Texture2D<float3>& GetGIn_Mv() { return gIn_Mv; }
+				HLSL::Texture2D<float>& GetGPrev_ViewZ() { return gPrev_ViewZ; }
+				HLSL::Texture2D<float4>& GetGPrev_Normal_Roughness() { return gPrev_Normal_Roughness; }
+				HLSL::Texture2D<uint>& GetGPrev_InternalData() { return gPrev_InternalData; }
+				HLSL::Texture2D<float>& GetGIn_DisocclusionThresholdMix() { return gIn_DisocclusionThresholdMix; }
+				HLSL::Texture2D<float>& GetGIn_DiffConfidence() { return gIn_DiffConfidence; }
+				HLSL::Texture2D<float4>& GetGIn_Diff() { return gIn_Diff; }
+				HLSL::Texture2D<float4>& GetGHistory_Diff() { return gHistory_Diff; }
+				HLSL::Texture2D<float>& GetGHistory_DiffFast() { return gHistory_DiffFast; }
+				HLSL::RWTexture2D<float2>& GetGOut_Data1() { return gOut_Data1; }
+				HLSL::RWTexture2D<float4>& GetGOut_Diff() { return gOut_Diff; }
+				HLSL::RWTexture2D<float>& GetGOut_DiffFast() { return gOut_DiffFast; }
+				HLSL::RWTexture2D<uint>& GetGOut_Data2() { return gOut_Data2; }
+				Table::Denoise::NRD::REBLURSharedConstants& GetSharedConstants() { return sharedConstants; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(gIn_Tiles, "REBLUR_TemporalAccumulationResources::gIn_Tiles");
+					compiler.compile(gIn_Normal_Roughness, "REBLUR_TemporalAccumulationResources::gIn_Normal_Roughness");
+					compiler.compile(gIn_ViewZ, "REBLUR_TemporalAccumulationResources::gIn_ViewZ");
+					compiler.compile(gIn_Mv, "REBLUR_TemporalAccumulationResources::gIn_Mv");
+					compiler.compile(gPrev_ViewZ, "REBLUR_TemporalAccumulationResources::gPrev_ViewZ");
+					compiler.compile(gPrev_Normal_Roughness, "REBLUR_TemporalAccumulationResources::gPrev_Normal_Roughness");
+					compiler.compile(gPrev_InternalData, "REBLUR_TemporalAccumulationResources::gPrev_InternalData");
+					compiler.compile(gIn_DisocclusionThresholdMix, "REBLUR_TemporalAccumulationResources::gIn_DisocclusionThresholdMix");
+					compiler.compile(gIn_DiffConfidence, "REBLUR_TemporalAccumulationResources::gIn_DiffConfidence");
+					compiler.compile(gIn_Diff, "REBLUR_TemporalAccumulationResources::gIn_Diff");
+					compiler.compile(gHistory_Diff, "REBLUR_TemporalAccumulationResources::gHistory_Diff");
+					compiler.compile(gHistory_DiffFast, "REBLUR_TemporalAccumulationResources::gHistory_DiffFast");
+					compiler.compile(gOut_Data1, "REBLUR_TemporalAccumulationResources::gOut_Data1");
+					compiler.compile(gOut_Diff, "REBLUR_TemporalAccumulationResources::gOut_Diff");
+					compiler.compile(gOut_DiffFast, "REBLUR_TemporalAccumulationResources::gOut_DiffFast");
+					compiler.compile(gOut_Data2, "REBLUR_TemporalAccumulationResources::gOut_Data2");
+					compiler.compile(sharedConstants, "REBLUR_TemporalAccumulationResources::sharedConstants");
+				}
+				struct Compiled
+				{
+					uint gIn_Tiles; // Texture2D<float>
+					uint gIn_Normal_Roughness; // Texture2D<float4>
+					uint gIn_ViewZ; // Texture2D<float>
+					uint gIn_Mv; // Texture2D<float3>
+					uint gPrev_ViewZ; // Texture2D<float>
+					uint gPrev_Normal_Roughness; // Texture2D<float4>
+					uint gPrev_InternalData; // Texture2D<uint>
+					uint gIn_DisocclusionThresholdMix; // Texture2D<float>
+					uint gIn_DiffConfidence; // Texture2D<float>
+					uint gIn_Diff; // Texture2D<float4>
+					uint gHistory_Diff; // Texture2D<float4>
+					uint gHistory_DiffFast; // Texture2D<float>
+					uint gOut_Data1; // RWTexture2D<float2>
+					uint gOut_Diff; // RWTexture2D<float4>
+					uint gOut_DiffFast; // RWTexture2D<float>
+					uint gOut_Data2; // RWTexture2D<uint>
+					Table::Denoise::NRD::REBLURSharedConstants::Compiled sharedConstants; // REBLURSharedConstants
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(sharedConstants);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(sharedConstants);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::REBLUR_TemporalAccumulationResources";
+				static std::string get_typename()
+				{
+					return "Tables::REBLUR_TemporalAccumulationResources";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(sharedConstants);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(sharedConstants);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

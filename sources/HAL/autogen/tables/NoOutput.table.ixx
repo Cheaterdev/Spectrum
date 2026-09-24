@@ -14,26 +14,29 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct NoOutput
+	namespace Frame
 	{
-		static constexpr SlotID ID = SlotID::NoOutput;
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct NoOutput
 		{
-		}
-		using Compiled = NoOutput;
+			static constexpr SlotID ID = SlotID::NoOutput;
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+			}
+			using Compiled = NoOutput;
 
-		static std::string get_typename()
-		{
-			return "Tables::NoOutput";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
+			static std::string get_typename()
+			{
+				return "Tables::NoOutput";
+			}
+			private:
+			SERIALIZE()
+			{
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

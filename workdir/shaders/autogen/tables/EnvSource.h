@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct EnvSource
+namespace Environment
 {
-	uint sourceTex; // TextureCube<float4>
-	TextureCube<float4> GetSourceTex() { return ResourceDescriptorHeap[sourceTex]; }
-};
+	struct EnvSource
+	{
+		uint sourceTex; // TextureCube<float4>
+		TextureCube<float4> GetSourceTex() { return ResourceDescriptorHeap[sourceTex]; }
+	};
+}
+using Environment::EnvSource;

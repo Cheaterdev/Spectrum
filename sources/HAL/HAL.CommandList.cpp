@@ -195,7 +195,7 @@ namespace HAL
 		compiler.set_name(L"SpectrumCommandList");
 
 
-		debug_buffer = StructuredBufferView<Table::DebugStruct>(device, 64, HAL::counterType::NONE,
+		debug_buffer = StructuredBufferView<Table::Dev::DebugStruct>(device, 64, HAL::counterType::NONE,
 			HAL::ResFlags::ShaderResource |
 			HAL::ResFlags::UnorderedAccess);
 		// Claimed by Log()'s InterlockedAdd to hand out a distinct slot per
@@ -210,7 +210,7 @@ namespace HAL
 	void CommandList::setup_debug(SignatureDataSetter* setter)
 	{
 		if (!current_pipeline || !current_pipeline->debuggable) return;
-		Slots::DebugInfo info;
+		Slots::Dev::DebugInfo info;
 		info.debug = debug_buffer;
 		info.logCount = debug_log_count;
 		setter->set(info);
@@ -243,7 +243,7 @@ namespace HAL
 		{
 			std::mutex m;
 			std::optional<uint32_t> count;
-			std::vector<Table::DebugStruct> entries;
+			std::vector<Table::Dev::DebugStruct> entries;
 			bool entries_ready = false;
 		};
 		auto pending = std::make_shared<PendingDebug>();
@@ -280,7 +280,7 @@ namespace HAL
 				try_print();
 			});
 
-		get_copy().read<Table::DebugStruct>(debug_buffer, 0, 64, [pending, try_print](std::span<Table::DebugStruct> result)
+		get_copy().read<Table::Dev::DebugStruct>(debug_buffer, 0, 64, [pending, try_print](std::span<Table::Dev::DebugStruct> result)
 			{
 				{
 					std::lock_guard<std::mutex> g(pending->m);

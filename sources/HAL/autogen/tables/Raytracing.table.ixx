@@ -14,40 +14,43 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct Raytracing
+	namespace Raytrace
 	{
-		static constexpr SlotID ID = SlotID::Raytracing;
-		HLSL::RaytracingAccelerationStructure scene;
-		HLSL::RaytracingAccelerationStructure& GetScene() { return scene; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct Raytracing
 		{
-			compiler.compile(scene, "Raytracing::scene");
-		}
-		struct Compiled
-		{
-			uint scene; // RaytracingAccelerationStructure
+			static constexpr SlotID ID = SlotID::Raytracing;
+			HLSL::RaytracingAccelerationStructure scene;
+			HLSL::RaytracingAccelerationStructure& GetScene() { return scene; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(scene, "Raytracing::scene");
+			}
+			struct Compiled
+			{
+				uint scene; // RaytracingAccelerationStructure
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::Raytracing";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::Raytracing";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

@@ -14,44 +14,50 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct FontRendering
+	namespace UI
 	{
-		static constexpr SlotID ID = SlotID::FontRendering;
-		HLSL::Texture2D<float> tex0;
-		HLSL::StructuredBuffer<float4> positions;
-		HLSL::Texture2D<float>& GetTex0() { return tex0; }
-		HLSL::StructuredBuffer<float4>& GetPositions() { return positions; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Text
 		{
-			compiler.compile(tex0, "FontRendering::tex0");
-			compiler.compile(positions, "FontRendering::positions");
-		}
-		struct Compiled
-		{
-			uint tex0; // Texture2D<float>
-			uint positions; // StructuredBuffer<float4>
+			struct FontRendering
+			{
+				static constexpr SlotID ID = SlotID::FontRendering;
+				HLSL::Texture2D<float> tex0;
+				HLSL::StructuredBuffer<float4> positions;
+				HLSL::Texture2D<float>& GetTex0() { return tex0; }
+				HLSL::StructuredBuffer<float4>& GetPositions() { return positions; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(tex0, "FontRendering::tex0");
+					compiler.compile(positions, "FontRendering::positions");
+				}
+				struct Compiled
+				{
+					uint tex0; // Texture2D<float>
+					uint positions; // StructuredBuffer<float4>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::FontRendering";
+				static std::string get_typename()
+				{
+					return "Tables::FontRendering";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

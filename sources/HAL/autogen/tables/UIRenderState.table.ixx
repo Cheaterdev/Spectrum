@@ -14,34 +14,37 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct UIRenderState
+	namespace UI
 	{
-		static constexpr SlotID ID = SlotID::UIRenderState;
-		uint passes_needed = 0;
-		uint per_pass = 0;
-		uint& GetPasses_needed() { return passes_needed; }
-		uint& GetPer_pass() { return per_pass; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct UIRenderState
 		{
-			compiler.compile(passes_needed, "UIRenderState::passes_needed");
-			compiler.compile(per_pass, "UIRenderState::per_pass");
-		}
-		using Compiled = UIRenderState;
+			static constexpr SlotID ID = SlotID::UIRenderState;
+			uint passes_needed = 0;
+			uint per_pass = 0;
+			uint& GetPasses_needed() { return passes_needed; }
+			uint& GetPer_pass() { return per_pass; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(passes_needed, "UIRenderState::passes_needed");
+				compiler.compile(per_pass, "UIRenderState::per_pass");
+			}
+			using Compiled = UIRenderState;
 
-		static std::string get_typename()
-		{
-			return "Tables::UIRenderState";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(passes_needed);
-			ar& NVP(per_pass);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::UIRenderState";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(passes_needed);
+				ar& NVP(per_pass);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

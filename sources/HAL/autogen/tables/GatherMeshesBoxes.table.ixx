@@ -15,68 +15,71 @@ import :Autogen.Tables.BoxInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct GatherMeshesBoxes
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::GatherMeshesBoxes;
-		HLSL::StructuredBuffer<BoxInfo> input_meshes;
-		HLSL::StructuredBuffer<uint> visible_boxes;
-		HLSL::RWStructuredBuffer<uint> visibleMeshes;
-		HLSL::RWStructuredBuffer<uint> visibleCount;
-		HLSL::RWStructuredBuffer<DispatchArguments> renderArgs;
-		HLSL::RWStructuredBuffer<uint> invisibleMeshes;
-		HLSL::RWStructuredBuffer<uint> invisibleCount;
-		HLSL::RWStructuredBuffer<DispatchArguments> retestArgs;
-		HLSL::StructuredBuffer<BoxInfo>& GetInput_meshes() { return input_meshes; }
-		HLSL::StructuredBuffer<uint>& GetVisible_boxes() { return visible_boxes; }
-		HLSL::RWStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
-		HLSL::RWStructuredBuffer<uint>& GetVisibleCount() { return visibleCount; }
-		HLSL::RWStructuredBuffer<DispatchArguments>& GetRenderArgs() { return renderArgs; }
-		HLSL::RWStructuredBuffer<uint>& GetInvisibleMeshes() { return invisibleMeshes; }
-		HLSL::RWStructuredBuffer<uint>& GetInvisibleCount() { return invisibleCount; }
-		HLSL::RWStructuredBuffer<DispatchArguments>& GetRetestArgs() { return retestArgs; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct GatherMeshesBoxes
 		{
-			compiler.compile(input_meshes, "GatherMeshesBoxes::input_meshes");
-			compiler.compile(visible_boxes, "GatherMeshesBoxes::visible_boxes");
-			compiler.compile(visibleMeshes, "GatherMeshesBoxes::visibleMeshes");
-			compiler.compile(visibleCount, "GatherMeshesBoxes::visibleCount");
-			compiler.compile(renderArgs, "GatherMeshesBoxes::renderArgs");
-			compiler.compile(invisibleMeshes, "GatherMeshesBoxes::invisibleMeshes");
-			compiler.compile(invisibleCount, "GatherMeshesBoxes::invisibleCount");
-			compiler.compile(retestArgs, "GatherMeshesBoxes::retestArgs");
-		}
-		struct Compiled
-		{
-			uint input_meshes; // StructuredBuffer<BoxInfo>
-			uint visible_boxes; // StructuredBuffer<uint>
-			uint visibleMeshes; // RWStructuredBuffer<uint>
-			uint visibleCount; // RWStructuredBuffer<uint>
-			uint renderArgs; // RWStructuredBuffer<DispatchArguments>
-			uint invisibleMeshes; // RWStructuredBuffer<uint>
-			uint invisibleCount; // RWStructuredBuffer<uint>
-			uint retestArgs; // RWStructuredBuffer<DispatchArguments>
+			static constexpr SlotID ID = SlotID::GatherMeshesBoxes;
+			HLSL::StructuredBuffer<Table::Meshes::BoxInfo> input_meshes;
+			HLSL::StructuredBuffer<uint> visible_boxes;
+			HLSL::RWStructuredBuffer<uint> visibleMeshes;
+			HLSL::RWStructuredBuffer<uint> visibleCount;
+			HLSL::RWStructuredBuffer<DispatchArguments> renderArgs;
+			HLSL::RWStructuredBuffer<uint> invisibleMeshes;
+			HLSL::RWStructuredBuffer<uint> invisibleCount;
+			HLSL::RWStructuredBuffer<DispatchArguments> retestArgs;
+			HLSL::StructuredBuffer<Table::Meshes::BoxInfo>& GetInput_meshes() { return input_meshes; }
+			HLSL::StructuredBuffer<uint>& GetVisible_boxes() { return visible_boxes; }
+			HLSL::RWStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
+			HLSL::RWStructuredBuffer<uint>& GetVisibleCount() { return visibleCount; }
+			HLSL::RWStructuredBuffer<DispatchArguments>& GetRenderArgs() { return renderArgs; }
+			HLSL::RWStructuredBuffer<uint>& GetInvisibleMeshes() { return invisibleMeshes; }
+			HLSL::RWStructuredBuffer<uint>& GetInvisibleCount() { return invisibleCount; }
+			HLSL::RWStructuredBuffer<DispatchArguments>& GetRetestArgs() { return retestArgs; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(input_meshes, "GatherMeshesBoxes::input_meshes");
+				compiler.compile(visible_boxes, "GatherMeshesBoxes::visible_boxes");
+				compiler.compile(visibleMeshes, "GatherMeshesBoxes::visibleMeshes");
+				compiler.compile(visibleCount, "GatherMeshesBoxes::visibleCount");
+				compiler.compile(renderArgs, "GatherMeshesBoxes::renderArgs");
+				compiler.compile(invisibleMeshes, "GatherMeshesBoxes::invisibleMeshes");
+				compiler.compile(invisibleCount, "GatherMeshesBoxes::invisibleCount");
+				compiler.compile(retestArgs, "GatherMeshesBoxes::retestArgs");
+			}
+			struct Compiled
+			{
+				uint input_meshes; // StructuredBuffer<BoxInfo>
+				uint visible_boxes; // StructuredBuffer<uint>
+				uint visibleMeshes; // RWStructuredBuffer<uint>
+				uint visibleCount; // RWStructuredBuffer<uint>
+				uint renderArgs; // RWStructuredBuffer<DispatchArguments>
+				uint invisibleMeshes; // RWStructuredBuffer<uint>
+				uint invisibleCount; // RWStructuredBuffer<uint>
+				uint retestArgs; // RWStructuredBuffer<DispatchArguments>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::GatherMeshesBoxes";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::GatherMeshesBoxes";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

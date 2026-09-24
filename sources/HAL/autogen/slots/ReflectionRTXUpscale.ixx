@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct ReflectionRTXUpscale :public DataHolder<ReflectionRTXUpscale, SlotID::ReflectionRTXUpscale, Table::ReflectionRTXUpscale, DefaultLayout::Instance5>
+	namespace Reflections
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		ReflectionRTXUpscale() = default;
-	};
+		struct ReflectionRTXUpscale :public DataHolder<ReflectionRTXUpscale, SlotID::ReflectionRTXUpscale, Table::Reflections::ReflectionRTXUpscale, ::Frame::DefaultLayout::Instance5>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			ReflectionRTXUpscale() = default;
+		};
+	}
 }

@@ -74,26 +74,26 @@ export namespace materials
 	};
 	class PipelinePasses : public Pipeline
 	{
-		PSOS::GBufferDraw::ptr gbuffer;
-		PSOS::Voxelization::ptr voxelization;
-		PSOS::DepthDraw::ptr depth_draw;
+		PSOS::Meshes::GBufferDraw::ptr gbuffer;
+		PSOS::GI::Voxel::Voxelization::ptr voxelization;
+		PSOS::Meshes::DepthDraw::ptr depth_draw;
 		// Only compiled for Masked pipelines (see the constructor) -- opaque
 		// materials (the vast majority) never pay for this PSO at all and keep
 		// using VSM's single shared VSMDepthDraw (no pixel shader).
-		PSOS::VSMDepthDrawMaterial::ptr vsm_depth_draw;
-		TransparencyMode transparency_mode = TransparencyMode::Opaque;
+		PSOS::Shadows::VSM::VSMDepthDrawMaterial::ptr vsm_depth_draw;
+		Meshes::TransparencyMode transparency_mode = Meshes::TransparencyMode::Opaque;
 	public:
 		using ptr = std::shared_ptr<PipelinePasses>;
 		PipelinePasses() = default;
-		PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, TransparencyMode mode);
+		PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, Meshes::TransparencyMode mode);
 
 		HAL::library_shader::ptr  raytrace_lib;
 
 		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) override;
-		TransparencyMode get_transparency_mode() const override { return transparency_mode; }
+		Meshes::TransparencyMode get_transparency_mode() const override { return transparency_mode; }
 		// nullptr unless Masked -- callers (VSM.cpp) must check the mode
 		// first, or just null-check this directly.
-		PSOS::VSMDepthDrawMaterial::ptr get_vsm_depth_draw() const override { return vsm_depth_draw; }
+		PSOS::Shadows::VSM::VSMDepthDrawMaterial::ptr get_vsm_depth_draw() const override { return vsm_depth_draw; }
 	private:
 
 		SERIALIZE()
@@ -115,7 +115,7 @@ export namespace materials
 		std::mutex m;
 	public:
 		Pipeline::ptr get_pipeline(Pipeline::ptr orig);
-		Pipeline::ptr get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, TransparencyMode mode);
+		Pipeline::ptr get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, Meshes::TransparencyMode mode);
 
 	};
 	
@@ -125,7 +125,7 @@ export namespace materials
 
 	};
 
-	class universal_material : public MaterialAsset, ::FlowGraph::graph_listener, public MainRTX::material
+	class universal_material : public MaterialAsset, ::FlowGraph::graph_listener, public Raytrace::MainRTX::material
 	{
 			/*----------------------------------------------------------*/
 			virtual	void on_register(::FlowGraph::window*)override;
@@ -178,12 +178,12 @@ export namespace materials
 		// From the graph's wiring (see resolve_transparency_mode()); it picks
 		// PSOs, raster passes and RT instance flags, so it is per material,
 		// unlike the per-pixel graph values it is derived from.
-		TransparencyMode transparency_mode = TransparencyMode::Opaque;
+		Meshes::TransparencyMode transparency_mode = Meshes::TransparencyMode::Opaque;
 		void resolve_transparency_mode();
 
 		void generate_texture_handles();
 
-		Slots::MaterialInfo material_info;
+		Slots::Meshes::MaterialInfo material_info;
 
 		std::vector<HLSL::Texture2D<float4>> texture_srvs;
 		std::vector<HLSL::FeedbackTexture2DMip> texture_feedbacks;
@@ -197,9 +197,9 @@ export namespace materials
 
 	//		HAL::library_shader::ptr raytracing_lib;
 		universal_material(MaterialGraph::ptr graph);
-		Slots::MaterialInfo::Compiled compiled_material_info;
+		Slots::Meshes::MaterialInfo::Compiled compiled_material_info;
 
-		::TypedHandle<Table::MaterialCommandData::Compiled> info_handle;
+		::TypedHandle<Table::Meshes::MaterialCommandData::Compiled> info_handle;
 
 		void update_rtx();
 		void test();
@@ -208,7 +208,7 @@ export namespace materials
 
 		UINT get_material_id();
 
-		TransparencyMode get_transparency_mode() const { return transparency_mode; }
+		Meshes::TransparencyMode get_transparency_mode() const { return transparency_mode; }
 
 		Pipeline::ptr get_pipeline();
 
@@ -223,7 +223,7 @@ export namespace materials
 
 		MaterialGraph::ptr get_graph();
 
-		Slots::MaterialInfo& get_render_info();
+		Slots::Meshes::MaterialInfo& get_render_info();
 
 
 		void on_graph_changed();
@@ -266,13 +266,13 @@ export namespace materials
 		// into results using the caller-supplied preview PSO (owned by
 		// whoever is hosting the preview, e.g. MaterialPreviewSession -- this
 		// material only knows how to feed itself into one).
-		void render_preview(HAL::ComputeContext& compute, PSOS::MaterialPreview::ptr preview_pso, HLSL::RWTexture2DArray<float4> results, ivec2 res);
+		void render_preview(HAL::ComputeContext& compute, PSOS::Editor::MaterialPreview::ptr preview_pso, HLSL::RWTexture2DArray<float4> results, ivec2 res);
 
 		// Same idea, 3D mode: binds this material's data for a direct
 		// dispatch_mesh draw (see MaterialPreviewSession::dispatch) instead
 		// of a compute dispatch -- the PSO/mesh submission is the caller's
 		// job, this only binds MaterialPreviewInfo onto the graphics context.
-		void render_preview_3d(HAL::GraphicsContext& graphics, PSOS::MaterialPreview3D::ptr preview_pso, HLSL::RWTexture2DArray<float4> results);
+		void render_preview_3d(HAL::GraphicsContext& graphics, PSOS::Editor::MaterialPreview3D::ptr preview_pso, HLSL::RWTexture2DArray<float4> results);
 
 		virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override;
 		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) override;

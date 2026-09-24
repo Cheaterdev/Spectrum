@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct REBLUR_ValidationResources :public DataHolder<REBLUR_ValidationResources, SlotID::REBLUR_ValidationResources, Table::REBLUR_ValidationResources, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		REBLUR_ValidationResources() = default;
-	};
+		namespace NRD
+		{
+			struct REBLUR_ValidationResources :public DataHolder<REBLUR_ValidationResources, SlotID::REBLUR_ValidationResources, Table::Denoise::NRD::REBLUR_ValidationResources, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				REBLUR_ValidationResources() = default;
+			};
+		}
+	}
 }

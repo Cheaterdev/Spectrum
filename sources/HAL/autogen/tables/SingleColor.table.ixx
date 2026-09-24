@@ -14,40 +14,43 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct SingleColor
+	namespace Frame
 	{
-		static constexpr SlotID ID = SlotID::SingleColor;
-		HLSL::Texture2D<float4> color;
-		HLSL::Texture2D<float4>& GetColor() { return color; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct SingleColor
 		{
-			compiler.compile(color, "SingleColor::color");
-		}
-		struct Compiled
-		{
-			uint color; // RenderTarget<float4>
+			static constexpr SlotID ID = SlotID::SingleColor;
+			HLSL::Texture2D<float4> color;
+			HLSL::Texture2D<float4>& GetColor() { return color; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(color, "SingleColor::color");
+			}
+			struct Compiled
+			{
+				uint color; // RenderTarget<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::SingleColor";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::SingleColor";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

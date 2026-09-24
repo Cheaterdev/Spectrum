@@ -18,18 +18,18 @@ import :VSM;
 // doubles per level (cascade 0 = finest, cascade 4 = coarsest), all centered
 // on the same camera_pos; see ddgi.prism's own comment on DDGIInfo::cascade_info
 // for the buffer/atlas offsets this also fills in.
-export Slots::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index);
+export Slots::GI::DDGI::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index);
 
 // Mirrors DDGIGraph.cpp's own free-standing Variable<bool>s (no owning DDGI
 // instance exists yet, see DDGISelectors' own comment, ddgi.prism) into
-// Table::DDGISelectors for the generated setups below to read. Must run
+// Table::GI::DDGI::DDGISelectors for the generated setups below to read. Must run
 // before graph.setup(), same reasoning as VoxelGI::update_frame() -- called
 // from main.cpp next to voxel_gi->update_frame(graph).
 export void ddgi_update_selectors(FrameGraph::Graph& graph);
 
 // Diagnostic (see [[project-ddgi]] planning notes): "Disable sky fallback"
 // -- read by main.cpp when filling the shared FrameInfo (FrameData.prism's
-// debugFlags, RTXDebugFlags::DisableSkyFallback bit) each frame, so
+// debugFlags, Dev::RTXDebugFlags::DisableSkyFallback bit) each frame, so
 // MyMissShader (raytracing.hlsl) can return flat black instead of the sky
 // cubemap on a miss. Lives here (a DDGI-motivated toggle) even though its
 // effect isn't DDGI-exclusive -- every RayPayload-based ColorPass consumer
@@ -43,11 +43,11 @@ export bool ddgi_sky_fallback_disabled();
 // reference for this exact pattern). No per-instance captured state is
 // needed -- each call reads its own cascade index from data.pass_index --
 // so the same function is assigned into every array slot.
-export void ddgi_probe_select_render(Passes::DDGIProbeSelect::Context& data, FrameGraph::FrameContext& context);
-export void ddgi_probe_residency_mark_render(Passes::DDGIProbeResidencyMark::Context& data, FrameGraph::FrameContext& context);
-export void ddgi_probe_dispatch_args_build_render(Passes::DDGIProbeDispatchArgsBuild::Context& data, FrameGraph::FrameContext& context);
-export void ddgi_probe_trace_render(Passes::DDGIProbeTrace::Context& data, FrameGraph::FrameContext& context, const VSM& vsm);
-export void ddgi_probe_convolve_render(Passes::DDGIProbeConvolve::Context& data, FrameGraph::FrameContext& context);
+export void ddgi_probe_select_render(Passes::GI::DDGI::DDGIProbeSelect::Context& data, FrameGraph::FrameContext& context);
+export void ddgi_probe_residency_mark_render(Passes::GI::DDGI::DDGIProbeResidencyMark::Context& data, FrameGraph::FrameContext& context);
+export void ddgi_probe_dispatch_args_build_render(Passes::GI::DDGI::DDGIProbeDispatchArgsBuild::Context& data, FrameGraph::FrameContext& context);
+export void ddgi_probe_trace_render(Passes::GI::DDGI::DDGIProbeTrace::Context& data, FrameGraph::FrameContext& context, const VSM& vsm);
+export void ddgi_probe_convolve_render(Passes::GI::DDGI::DDGIProbeConvolve::Context& data, FrameGraph::FrameContext& context);
 
 // Called once at startup (main.cpp, next to VoxelGI's own construction) to
 // wire the three [Multiple=5] passes' render_funcs arrays. Templated on the
@@ -64,7 +64,7 @@ void ddgi_register_passes(TPipeline& pipeline, const VSM& vsm)
 		pipeline.dDGIProbeSelect.render_funcs[i]             = ddgi_probe_select_render;
 		pipeline.dDGIProbeResidencyMark.render_funcs[i]      = ddgi_probe_residency_mark_render;
 		pipeline.dDGIProbeDispatchArgsBuild.render_funcs[i]  = ddgi_probe_dispatch_args_build_render;
-		pipeline.dDGIProbeTrace.render_funcs[i]              = [&vsm](Passes::DDGIProbeTrace::Context& data, FrameGraph::FrameContext& context)
+		pipeline.dDGIProbeTrace.render_funcs[i]              = [&vsm](Passes::GI::DDGI::DDGIProbeTrace::Context& data, FrameGraph::FrameContext& context)
 		{
 			ddgi_probe_trace_render(data, context, vsm);
 		};

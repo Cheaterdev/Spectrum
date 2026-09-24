@@ -14,40 +14,43 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DepthOnly
+	namespace Frame
 	{
-		static constexpr SlotID ID = SlotID::DepthOnly;
-		HLSL::Texture2D<float> depth;
-		HLSL::Texture2D<float>& GetDepth() { return depth; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct DepthOnly
 		{
-			compiler.compile(depth, "DepthOnly::depth");
-		}
-		struct Compiled
-		{
-			uint depth; // DepthStencil<float>
+			static constexpr SlotID ID = SlotID::DepthOnly;
+			HLSL::Texture2D<float> depth;
+			HLSL::Texture2D<float>& GetDepth() { return depth; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(depth, "DepthOnly::depth");
+			}
+			struct Compiled
+			{
+				uint depth; // DepthStencil<float>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::DepthOnly";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::DepthOnly";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

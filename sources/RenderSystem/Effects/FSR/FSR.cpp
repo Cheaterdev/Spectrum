@@ -17,14 +17,14 @@ using namespace FrameGraph;
 
 // setup() is fully generated (FSR.prism's own [SetupCondition]).
 
-void PassDefault<Passes::FSR>::render(Passes::FSR::Context& data, FrameContext& context)
+void PassDefault<Passes::Post::Upscale::FSR>::render(Passes::Post::Upscale::FSR::Context& data, FrameContext& context)
 {
 	auto& frame   = context.graph->get_context<ViewportInfo>();
 	auto& compute = context.get_list()->get_compute();
 
-	compute.set_pipeline<PSOS::FSR>();
+	compute.set_pipeline<PSOS::Post::Upscale::FSR>();
 	{
-		Slots::FSR fsr;
+		Slots::Post::Upscale::FSR fsr;
 		auto& constants = fsr.GetConstants();
 		FsrEasuCon(
 			reinterpret_cast<AU1*>(&constants.GetConst0()),
@@ -40,9 +40,9 @@ void PassDefault<Passes::FSR>::render(Passes::FSR::Context& data, FrameContext& 
 	}
 	compute.dispatch(ivec2{ frame.upscale_size }, ivec2{ 16, 16 });
 
-	compute.set_pipeline<PSOS::RCAS>(PSOS::RCAS::cas());
+	compute.set_pipeline<PSOS::Post::Upscale::RCAS>(PSOS::Post::Upscale::RCAS::cas());
 	{
-		Slots::FSR fsr;
+		Slots::Post::Upscale::FSR fsr;
 		auto& constants = fsr.GetConstants();
 		FsrRcasCon(reinterpret_cast<AU1*>(&constants.GetConst0()), 0.5);
 		fsr.GetSource() = data.FSRTemp->texture2D;

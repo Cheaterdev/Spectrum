@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct DrawBoxes :public DataHolder<DrawBoxes, SlotID::DrawBoxes, Table::DrawBoxes, DefaultLayout::Instance1>
+	namespace Meshes
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		DrawBoxes() = default;
-	};
+		struct DrawBoxes :public DataHolder<DrawBoxes, SlotID::DrawBoxes, Table::Meshes::DrawBoxes, ::Frame::DefaultLayout::Instance1>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			DrawBoxes() = default;
+		};
+	}
 }

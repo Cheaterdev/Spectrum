@@ -8,14 +8,18 @@
 #include "enums.h"
 
 
-struct mesh_vertex_input
+namespace Meshes
 {
-	float3 pos;
-	float3 normal;
-	float2 tc;
-	float4 tangent;
-	float3 GetPos() { return pos; }
-	float3 GetNormal() { return normal; }
-	float2 GetTc() { return tc; }
-	float4 GetTangent() { return tangent; }
-};
+	struct mesh_vertex_input
+	{
+		float3 pos;
+		float3 normal;
+		float2 tc;
+		float4 tangent;
+		float3 GetPos() { return pos; }
+		float3 GetNormal() { return normal; }
+		float2 GetTc() { return tc; }
+		float4 GetTangent() { return tangent; }
+	};
+}
+using Meshes::mesh_vertex_input;

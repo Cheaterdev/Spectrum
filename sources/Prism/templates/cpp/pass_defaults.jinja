@@ -23,7 +23,7 @@ struct PassDefault
 {%- set pass_def = parsed.passes[pass_name] -%}
 {%- if pass_def.options.Static is defined %}
 template<>
-struct PassDefault<Passes::{{pass_name}}>
+struct PassDefault<Passes::{{parsed.passes[pass_name].qn}}>
 {
 	static constexpr bool enabled = true;
 {%- set parts = create_list('parts') -%}
@@ -40,8 +40,8 @@ struct PassDefault<Passes::{{pass_name}}>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::{{pass_name}}::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::{{pass_name}}::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::{{parsed.passes[pass_name].qn}}::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::{{parsed.passes[pass_name].qn}}::Context& data, FrameGraph::FrameContext& context);
 {%- if pass_def.options.PreSetup is defined %}
 
 	// [PreSetup]: a real side effect (not a pure enable/render decision, so
@@ -91,14 +91,14 @@ struct PassSetupDefault
 {%- set has_condition = pass_def.options.RunAlways is defined or pass_def.options.SetupCondition is defined or pass_def.options.RenderCondition is defined -%}
 {%- if has_condition or pass_def.options.PreSetup is defined %}
 template<>
-struct PassSetupDefault<Passes::{{pass_name}}>
+struct PassSetupDefault<Passes::{{parsed.passes[pass_name].qn}}>
 {
 	static constexpr bool enabled = {{ "true" if has_condition else "false" }};
 {%- if has_condition %}
 
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
-	static FrameGraph::SetupResult setup(Passes::{{pass_name}}::Context& data, FrameGraph::TaskBuilder& builder);
+	static FrameGraph::SetupResult setup(Passes::{{parsed.passes[pass_name].qn}}::Context& data, FrameGraph::TaskBuilder& builder);
 {%- endif %}
 {%- if pass_def.options.PreSetup is defined %}
 

@@ -15,46 +15,49 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct RTXShadowReference
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::RTXShadowReference;
-		HLSL::RWTexture2D<float4> output;
-		GBuffer gbuffer;
-		HLSL::RWTexture2D<float4>& GetOutput() { return output; }
-		GBuffer& GetGbuffer() { return gbuffer; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct RTXShadowReference
 		{
-			compiler.compile(output, "RTXShadowReference::output");
-			compiler.compile(gbuffer, "RTXShadowReference::gbuffer");
-		}
-		struct Compiled
-		{
-			uint output; // RWTexture2D<float4>
-			GBuffer::Compiled gbuffer; // GBuffer
+			static constexpr SlotID ID = SlotID::RTXShadowReference;
+			HLSL::RWTexture2D<float4> output;
+			Table::Meshes::GBuffer gbuffer;
+			HLSL::RWTexture2D<float4>& GetOutput() { return output; }
+			Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(output, "RTXShadowReference::output");
+				compiler.compile(gbuffer, "RTXShadowReference::gbuffer");
+			}
+			struct Compiled
+			{
+				uint output; // RWTexture2D<float4>
+				Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(gbuffer);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::RTXShadowReference";
+			}
 			private:
 			SERIALIZE()
 			{
 				ar& NVP(gbuffer);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::RTXShadowReference";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(gbuffer);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

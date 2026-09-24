@@ -5,12 +5,16 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 #pragma once
-
-struct GBuffer
+namespace Meshes
 {
-    float4 albedo: SV_Target0;
-    float4 normals: SV_Target1;
-    float4 specular: SV_Target2;
-    float2 motion: SV_Target3;
-    uint object_id: SV_Target4;
-};
+
+	struct GBuffer
+	{
+	    float4 albedo: SV_Target0;
+	    float4 normals: SV_Target1;
+	    float4 specular: SV_Target2;
+	    float2 motion: SV_Target3;
+	    uint object_id: SV_Target4;
+	};
+}
+using Meshes::GBuffer;

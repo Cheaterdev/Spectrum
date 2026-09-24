@@ -1991,7 +1991,7 @@ private:
 
                         auto& compute = context->get_list()->get_compute();
                         {
-                            Slots::FrameGraph_Debug_Common common;
+                            Slots::Dev::FrameGraph_Debug_Common common;
                             common.GetTarget()      = thumb_tex->texture_2d().rwTexture2D;
                             common.GetTargetSize()  = preview_size;
                             common.GetSelectedMip() = 0;
@@ -2033,8 +2033,8 @@ private:
 
                             if (srv_ok && is_array)
                             {
-                                compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2DArray>();
-                                Slots::FrameGraph_Debug_Texture2DArray tex2darr;
+                                compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Texture2DArray>();
+                                Slots::Dev::FrameGraph_Debug_Texture2DArray tex2darr;
                                 tex2darr.GetSource()     = *source;
                                 tex2darr.GetSourceSize() = src_dim;
                                 tex2darr.GetOffset()     = offset;
@@ -2043,8 +2043,8 @@ private:
                             }
                             else if (srv_ok)
                             {
-                                compute.set_pipeline<PSOS::FrameGraph_Debug_Texture2D>();
-                                Slots::FrameGraph_Debug_Texture2D tex2d;
+                                compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Texture2D>();
+                                Slots::Dev::FrameGraph_Debug_Texture2D tex2d;
                                 tex2d.GetSource()     = *source;
                                 tex2d.GetSourceSize() = src_dim;
                                 tex2d.GetOffset()     = offset;
@@ -2067,12 +2067,12 @@ private:
                             if (!source->texture3D.is_written())
                                 return; // nothing sampleable -- leave the thumbnail blank
 
-                            compute.set_pipeline<PSOS::FrameGraph_Debug_Texture3D>();
+                            compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Texture3D>();
                             cam->set_projection_params(Math::pi / 4,
                                 float(preview_size.x) / float(preview_size.y), 1.0f, 1500.0f);
                             cam->frame_move(0.1f);
                             cam->update();
-                            Slots::FrameGraph_Debug_Texture3D tex3d;
+                            Slots::Dev::FrameGraph_Debug_Texture3D tex3d;
                             tex3d.GetSource()     = *source;
                             tex3d.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions;
                             tex3d.GetCamera()     = cam->camera_cb.current;
@@ -2084,15 +2084,15 @@ private:
                             if (!source->textureCube.is_written())
                                 return; // nothing sampleable -- leave the thumbnail blank
 
-                            compute.set_pipeline<PSOS::FrameGraph_Debug_TextureCube>();
-                            Slots::FrameGraph_Debug_TextureCube cube;
+                            compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_TextureCube>();
+                            Slots::Dev::FrameGraph_Debug_TextureCube cube;
                             cube.GetSource()     = source->textureCube;
                             cube.GetSourceSize() = info->resource->get_desc().as_texture().Dimensions.xy;
                             compute.set(cube);
                         }
                         else
                         {
-                            compute.set_pipeline<PSOS::FrameGraph_Debug_NotImplemented>();
+                            compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_NotImplemented>();
                         }
                         compute.dispatch(uint3(preview_size, 1));
                     });
@@ -2252,13 +2252,13 @@ private:
 
         c.renderer->flush(c);
 
-        Slots::FlowGraph graph_data;
+        Slots::UI::FlowGraph graph_data;
         graph_data.GetSize()        = vec4(float2(get_render_bounds().w, get_render_bounds().h), screen_sz);
         graph_data.GetOffset_size() = { 0.0f, 0.0f, 1.0f, 0.0f };
         graph_data.GetInv_pixel()   = vec2(1.0f, 1.0f) / screen_sz;
         c.command_list->get_graphics().set(graph_data);
 
-        std::vector<::Table::VSLine> verts;
+        std::vector<::Table::UI::VSLine> verts;
         verts.reserve(curves.size() * 4);
 
         for (auto& [from, to] : curves)
@@ -2275,20 +2275,20 @@ private:
             verts.push_back({ p4, color });
         }
 
-        c.command_list->get_graphics().set_pipeline<PSOS::CanvasLines>();
+        c.command_list->get_graphics().set_pipeline<PSOS::UI::CanvasLines>();
         c.command_list->get_graphics().set_topology(
             HAL::PrimitiveTopologyType::PATCH, HAL::PrimitiveTopologyFeed::LIST, false, 4);
 
-        auto data = c.command_list->place_data(sizeof(::Table::VSLine) * verts.size(),
-                                               sizeof(::Table::VSLine));
-        c.command_list->write<::Table::VSLine>(data, verts);
+        auto data = c.command_list->place_data(sizeof(::Table::UI::VSLine) * verts.size(),
+                                               sizeof(::Table::UI::VSLine));
+        c.command_list->write<::Table::UI::VSLine>(data, verts);
 
-        auto view = data.resource->create_view<HAL::StructuredBufferView<::Table::VSLine>>(
+        auto view = data.resource->create_view<HAL::StructuredBufferView<::Table::UI::VSLine>>(
             *c.command_list,
             StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,
                                       counterType::NONE });
 
-        Slots::LineRender linedata;
+        Slots::UI::LineRender linedata;
         linedata.GetVb() = view;
         c.command_list->get_graphics().set(linedata);
 

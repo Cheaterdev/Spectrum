@@ -14,40 +14,43 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct EnvSource
+	namespace Environment
 	{
-		static constexpr SlotID ID = SlotID::EnvSource;
-		HLSL::TextureCube<float4> sourceTex;
-		HLSL::TextureCube<float4>& GetSourceTex() { return sourceTex; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct EnvSource
 		{
-			compiler.compile(sourceTex, "EnvSource::sourceTex");
-		}
-		struct Compiled
-		{
-			uint sourceTex; // TextureCube<float4>
+			static constexpr SlotID ID = SlotID::EnvSource;
+			HLSL::TextureCube<float4> sourceTex;
+			HLSL::TextureCube<float4>& GetSourceTex() { return sourceTex; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(sourceTex, "EnvSource::sourceTex");
+			}
+			struct Compiled
+			{
+				uint sourceTex; // TextureCube<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::EnvSource";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::EnvSource";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

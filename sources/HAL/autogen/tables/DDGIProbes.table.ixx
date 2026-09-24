@@ -15,46 +15,52 @@ import :Autogen.Tables.DDGIProbeMetadata;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DDGIProbes
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::DDGIProbes;
-		uint4 probe_counts;
-		HLSL::RWStructuredBuffer<DDGIProbeMetadata> probes;
-		uint4& GetProbe_counts() { return probe_counts; }
-		HLSL::RWStructuredBuffer<DDGIProbeMetadata>& GetProbes() { return probes; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace DDGI
 		{
-			compiler.compile(probe_counts, "DDGIProbes::probe_counts");
-			compiler.compile(probes, "DDGIProbes::probes");
-		}
-		struct Compiled
-		{
-			uint4 probe_counts; // uint4
-			uint probes; // RWStructuredBuffer<DDGIProbeMetadata>
+			struct DDGIProbes
+			{
+				static constexpr SlotID ID = SlotID::DDGIProbes;
+				uint4 probe_counts;
+				HLSL::RWStructuredBuffer<Table::GI::DDGI::DDGIProbeMetadata> probes;
+				uint4& GetProbe_counts() { return probe_counts; }
+				HLSL::RWStructuredBuffer<Table::GI::DDGI::DDGIProbeMetadata>& GetProbes() { return probes; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(probe_counts, "DDGIProbes::probe_counts");
+					compiler.compile(probes, "DDGIProbes::probes");
+				}
+				struct Compiled
+				{
+					uint4 probe_counts; // uint4
+					uint probes; // RWStructuredBuffer<DDGIProbeMetadata>
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(probe_counts);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(probe_counts);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::DDGIProbes";
+				static std::string get_typename()
+				{
+					return "Tables::DDGIProbes";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(probe_counts);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(probe_counts);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

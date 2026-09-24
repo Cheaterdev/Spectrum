@@ -5,8 +5,12 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 #pragma once
-
-struct SingleColorDepth
+namespace Frame
 {
-    float4 color: SV_Target0;
-};
+
+	struct SingleColorDepth
+	{
+	    float4 color: SV_Target0;
+	};
+}
+using Frame::SingleColorDepth;

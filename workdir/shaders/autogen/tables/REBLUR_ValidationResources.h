@@ -8,28 +8,35 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "REBLURSharedConstants.h"
-struct REBLUR_ValidationResources
+namespace Denoise
 {
-	uint gHasDiffuse; // uint
-	uint gHasSpecular; // uint
-	uint gIn_Normal_Roughness; // Texture2D<float4>
-	uint gIn_ViewZ; // Texture2D<float>
-	uint gIn_Mv; // Texture2D<float3>
-	uint gIn_Data1; // Texture2D<float2>
-	uint gIn_Data2; // Texture2D<uint>
-	uint gIn_Diff; // Texture2D<float4>
-	uint gIn_Spec; // Texture2D<float4>
-	uint gOut_Validation; // RWTexture2D<float4>
-	REBLURSharedConstants sharedConstants; // REBLURSharedConstants
-	REBLURSharedConstants GetSharedConstants() { return sharedConstants; }
-	uint GetGHasDiffuse() { return gHasDiffuse; }
-	uint GetGHasSpecular() { return gHasSpecular; }
-	Texture2D<float4> GetGIn_Normal_Roughness() { return ResourceDescriptorHeap[gIn_Normal_Roughness]; }
-	Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
-	Texture2D<float3> GetGIn_Mv() { return ResourceDescriptorHeap[gIn_Mv]; }
-	Texture2D<float2> GetGIn_Data1() { return ResourceDescriptorHeap[gIn_Data1]; }
-	Texture2D<uint> GetGIn_Data2() { return ResourceDescriptorHeap[gIn_Data2]; }
-	Texture2D<float4> GetGIn_Diff() { return ResourceDescriptorHeap[gIn_Diff]; }
-	Texture2D<float4> GetGIn_Spec() { return ResourceDescriptorHeap[gIn_Spec]; }
-	RWTexture2D<float4> GetGOut_Validation() { return ResourceDescriptorHeap[gOut_Validation]; }
-};
+	namespace NRD
+	{
+		struct REBLUR_ValidationResources
+		{
+			uint gHasDiffuse; // uint
+			uint gHasSpecular; // uint
+			uint gIn_Normal_Roughness; // Texture2D<float4>
+			uint gIn_ViewZ; // Texture2D<float>
+			uint gIn_Mv; // Texture2D<float3>
+			uint gIn_Data1; // Texture2D<float2>
+			uint gIn_Data2; // Texture2D<uint>
+			uint gIn_Diff; // Texture2D<float4>
+			uint gIn_Spec; // Texture2D<float4>
+			uint gOut_Validation; // RWTexture2D<float4>
+			REBLURSharedConstants sharedConstants; // REBLURSharedConstants
+			REBLURSharedConstants GetSharedConstants() { return sharedConstants; }
+			uint GetGHasDiffuse() { return gHasDiffuse; }
+			uint GetGHasSpecular() { return gHasSpecular; }
+			Texture2D<float4> GetGIn_Normal_Roughness() { return ResourceDescriptorHeap[gIn_Normal_Roughness]; }
+			Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
+			Texture2D<float3> GetGIn_Mv() { return ResourceDescriptorHeap[gIn_Mv]; }
+			Texture2D<float2> GetGIn_Data1() { return ResourceDescriptorHeap[gIn_Data1]; }
+			Texture2D<uint> GetGIn_Data2() { return ResourceDescriptorHeap[gIn_Data2]; }
+			Texture2D<float4> GetGIn_Diff() { return ResourceDescriptorHeap[gIn_Diff]; }
+			Texture2D<float4> GetGIn_Spec() { return ResourceDescriptorHeap[gIn_Spec]; }
+			RWTexture2D<float4> GetGOut_Validation() { return ResourceDescriptorHeap[gOut_Validation]; }
+		};
+	}
+}
+using Denoise::NRD::REBLUR_ValidationResources;

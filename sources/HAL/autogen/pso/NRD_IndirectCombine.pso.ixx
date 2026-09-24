@@ -14,39 +14,45 @@ import :Types;
 
 export namespace PSOS
 {
-	struct NRD_IndirectCombine: public PSOBase
+	namespace Denoise
 	{
-		struct Keys {
-			GEN_DEF_COMP(Keys);
-		private:
-			SERIALIZE()
+		namespace NRD
+		{
+			struct NRD_IndirectCombine: public PSOBase
 			{
-			}
-		};
+				struct Keys {
+					GEN_DEF_COMP(Keys);
+				private:
+					SERIALIZE()
+					{
+					}
+				};
 
-		GEN_COMPUTE_PSO(NRD_IndirectCombine)
+				GEN_COMPUTE_PSO(NRD_IndirectCombine)
 
 
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
+				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+				{
 
 
-			SimplePSO mpso("NRD_IndirectCombine");
-			if(f) f(mpso,key);
+					SimplePSO mpso("NRD_IndirectCombine");
+					if(f) f(mpso,key);
 
-			mpso.root_signature = Layouts::DefaultLayout;
+					mpso.root_signature = Layouts::DefaultLayout;
 
-			mpso.compute.file_name = "shaders/nrd/nrd_indirect_combine.hlsl";
-			mpso.compute.entry_point = "CS";
-			mpso.compute.flags = HAL::ShaderOptions::None;
+					mpso.compute.file_name = "shaders/nrd/nrd_indirect_combine.hlsl";
+					mpso.compute.entry_point = "CS";
+					mpso.compute.flags = HAL::ShaderOptions::None;
 			
-			return mpso;
-		}
+					return mpso;
+				}
 
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
+				private:
+				SERIALIZE()
+				{
+					ar&NVP(wrap(psos));
+				}
+			};
 		}
-	};
+	}
 }

@@ -14,38 +14,44 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DDGIProbeMetadata
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::DDGIProbeMetadata;
-		float3 offset;
-		uint flags;
-		uint last_full_update_frame;
-		float3& GetOffset() { return offset; }
-		uint& GetFlags() { return flags; }
-		uint& GetLast_full_update_frame() { return last_full_update_frame; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace DDGI
 		{
-			compiler.compile(offset, "DDGIProbeMetadata::offset");
-			compiler.compile(flags, "DDGIProbeMetadata::flags");
-			compiler.compile(last_full_update_frame, "DDGIProbeMetadata::last_full_update_frame");
-		}
-		using Compiled = DDGIProbeMetadata;
+			struct DDGIProbeMetadata
+			{
+				static constexpr SlotID ID = SlotID::DDGIProbeMetadata;
+				float3 offset;
+				uint flags;
+				uint last_full_update_frame;
+				float3& GetOffset() { return offset; }
+				uint& GetFlags() { return flags; }
+				uint& GetLast_full_update_frame() { return last_full_update_frame; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(offset, "DDGIProbeMetadata::offset");
+					compiler.compile(flags, "DDGIProbeMetadata::flags");
+					compiler.compile(last_full_update_frame, "DDGIProbeMetadata::last_full_update_frame");
+				}
+				using Compiled = DDGIProbeMetadata;
 
-		static std::string get_typename()
-		{
-			return "Tables::DDGIProbeMetadata";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(offset);
-			ar& NVP(flags);
-			ar& NVP(last_full_update_frame);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::DDGIProbeMetadata";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(offset);
+					ar& NVP(flags);
+					ar& NVP(last_full_update_frame);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

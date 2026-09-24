@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct GatherBoxes :public DataHolder<GatherBoxes, SlotID::GatherBoxes, Table::GatherBoxes, DefaultLayout::Instance1>
+	namespace Meshes
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		GatherBoxes() = default;
-	};
+		struct GatherBoxes :public DataHolder<GatherBoxes, SlotID::GatherBoxes, Table::Meshes::GatherBoxes, ::Frame::DefaultLayout::Instance1>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			GatherBoxes() = default;
+		};
+	}
 }

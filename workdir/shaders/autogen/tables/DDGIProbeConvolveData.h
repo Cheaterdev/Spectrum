@@ -8,16 +8,23 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "DDGIInfo.h"
-struct DDGIProbeConvolveData
+namespace GI
 {
-	uint probe_ray_radiance; // StructuredBuffer<float4>
-	uint probe_residency; // StructuredBuffer<uint>
-	uint probe_irradiance; // RWTexture2DArray<float4>
-	uint probe_visibility; // RWTexture2DArray<float2>
-	DDGIInfo info; // DDGIInfo
-	DDGIInfo GetInfo() { return info; }
-	StructuredBuffer<float4> GetProbe_ray_radiance() { return ResourceDescriptorHeap[probe_ray_radiance]; }
-	RWTexture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
-	RWTexture2DArray<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
-	StructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
-};
+	namespace DDGI
+	{
+		struct DDGIProbeConvolveData
+		{
+			uint probe_ray_radiance; // StructuredBuffer<float4>
+			uint probe_residency; // StructuredBuffer<uint>
+			uint probe_irradiance; // RWTexture2DArray<float4>
+			uint probe_visibility; // RWTexture2DArray<float2>
+			DDGIInfo info; // DDGIInfo
+			DDGIInfo GetInfo() { return info; }
+			StructuredBuffer<float4> GetProbe_ray_radiance() { return ResourceDescriptorHeap[probe_ray_radiance]; }
+			RWTexture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
+			RWTexture2DArray<float2> GetProbe_visibility() { return ResourceDescriptorHeap[probe_visibility]; }
+			StructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
+		};
+	}
+}
+using GI::DDGI::DDGIProbeConvolveData;

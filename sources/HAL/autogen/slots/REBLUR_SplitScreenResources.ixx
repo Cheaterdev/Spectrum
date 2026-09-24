@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct REBLUR_SplitScreenResources :public DataHolder<REBLUR_SplitScreenResources, SlotID::REBLUR_SplitScreenResources, Table::REBLUR_SplitScreenResources, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		REBLUR_SplitScreenResources() = default;
-	};
+		namespace NRD
+		{
+			struct REBLUR_SplitScreenResources :public DataHolder<REBLUR_SplitScreenResources, SlotID::REBLUR_SplitScreenResources, Table::Denoise::NRD::REBLUR_SplitScreenResources, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				REBLUR_SplitScreenResources() = default;
+			};
+		}
+	}
 }

@@ -14,30 +14,46 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct Countour
+	namespace Editor
 	{
-		static constexpr SlotID ID = SlotID::Countour;
-		float4 color;
-		uint selected_id;
-		HLSL::Texture2D<uint> object_ids;
-		float4& GetColor() { return color; }
-		HLSL::Texture2D<uint>& GetObject_ids() { return object_ids; }
-		uint& GetSelected_id() { return selected_id; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct Countour
 		{
-			compiler.compile(color, "Countour::color");
-			compiler.compile(selected_id, "Countour::selected_id");
-			compiler.compile(object_ids, "Countour::object_ids");
-		}
-		struct Compiled
-		{
-			float4 color; // float4
-			uint selected_id; // uint
-			uint object_ids; // Texture2D<uint>
+			static constexpr SlotID ID = SlotID::Countour;
+			float4 color;
+			uint selected_id;
+			HLSL::Texture2D<uint> object_ids;
+			float4& GetColor() { return color; }
+			HLSL::Texture2D<uint>& GetObject_ids() { return object_ids; }
+			uint& GetSelected_id() { return selected_id; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(color, "Countour::color");
+				compiler.compile(selected_id, "Countour::selected_id");
+				compiler.compile(object_ids, "Countour::object_ids");
+			}
+			struct Compiled
+			{
+				float4 color; // float4
+				uint selected_id; // uint
+				uint object_ids; // Texture2D<uint>
 
 			
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(color);
+					ar& NVP(selected_id);
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::Countour";
+			}
 			private:
 			SERIALIZE()
 			{
@@ -45,21 +61,8 @@ export namespace Table
 				ar& NVP(selected_id);
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::Countour";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(color);
-			ar& NVP(selected_id);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

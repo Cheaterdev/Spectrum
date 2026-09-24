@@ -9,26 +9,36 @@
 #include "enums.h"
 #include "DDGIInfo.h"
 #include "DDGIProbes.h"
-struct DDGIDebugData
+namespace GI
 {
-	uint depth; // Texture2D<float>
-	uint probe_irradiance; // Texture2DArray<float4>
-	uint probe_residency; // StructuredBuffer<uint>
-	uint target; // RWTexture2D<float4>
-	DDGIInfo cascade0; // DDGIInfo
-	DDGIInfo cascade1; // DDGIInfo
-	DDGIInfo cascade2; // DDGIInfo
-	DDGIInfo cascade3; // DDGIInfo
-	DDGIInfo cascade4; // DDGIInfo
-	DDGIProbes probes; // DDGIProbes
-	DDGIInfo GetCascade0() { return cascade0; }
-	DDGIInfo GetCascade1() { return cascade1; }
-	DDGIInfo GetCascade2() { return cascade2; }
-	DDGIInfo GetCascade3() { return cascade3; }
-	DDGIInfo GetCascade4() { return cascade4; }
-	DDGIProbes GetProbes() { return probes; }
-	Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
-	Texture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
-	StructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
-	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
-};
+	namespace DDGI
+	{
+		namespace Dev
+		{
+			struct DDGIDebugData
+			{
+				uint depth; // Texture2D<float>
+				uint probe_irradiance; // Texture2DArray<float4>
+				uint probe_residency; // StructuredBuffer<uint>
+				uint target; // RWTexture2D<float4>
+				DDGIInfo cascade0; // DDGIInfo
+				DDGIInfo cascade1; // DDGIInfo
+				DDGIInfo cascade2; // DDGIInfo
+				DDGIInfo cascade3; // DDGIInfo
+				DDGIInfo cascade4; // DDGIInfo
+				DDGIProbes probes; // DDGIProbes
+				DDGIInfo GetCascade0() { return cascade0; }
+				DDGIInfo GetCascade1() { return cascade1; }
+				DDGIInfo GetCascade2() { return cascade2; }
+				DDGIInfo GetCascade3() { return cascade3; }
+				DDGIInfo GetCascade4() { return cascade4; }
+				DDGIProbes GetProbes() { return probes; }
+				Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
+				Texture2DArray<float4> GetProbe_irradiance() { return ResourceDescriptorHeap[probe_irradiance]; }
+				StructuredBuffer<uint> GetProbe_residency() { return ResourceDescriptorHeap[probe_residency]; }
+				RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
+			};
+		}
+	}
+}
+using GI::DDGI::Dev::DDGIDebugData;

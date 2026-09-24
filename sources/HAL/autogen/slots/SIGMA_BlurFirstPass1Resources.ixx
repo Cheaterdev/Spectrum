@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct SIGMA_BlurFirstPass1Resources :public DataHolder<SIGMA_BlurFirstPass1Resources, SlotID::SIGMA_BlurFirstPass1Resources, Table::SIGMA_BlurFirstPass1Resources, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		SIGMA_BlurFirstPass1Resources() = default;
-	};
+		namespace NRD
+		{
+			struct SIGMA_BlurFirstPass1Resources :public DataHolder<SIGMA_BlurFirstPass1Resources, SlotID::SIGMA_BlurFirstPass1Resources, Table::Denoise::NRD::SIGMA_BlurFirstPass1Resources, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				SIGMA_BlurFirstPass1Resources() = default;
+			};
+		}
+	}
 }

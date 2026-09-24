@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct DrawStencil
+namespace Editor
 {
-	uint vertices; // StructuredBuffer<float4>
-	StructuredBuffer<float4> GetVertices() { return ResourceDescriptorHeap[vertices]; }
-};
+	struct DrawStencil
+	{
+		uint vertices; // StructuredBuffer<float4>
+		StructuredBuffer<float4> GetVertices() { return ResourceDescriptorHeap[vertices]; }
+	};
+}
+using Editor::DrawStencil;

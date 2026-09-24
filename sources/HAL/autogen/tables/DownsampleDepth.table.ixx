@@ -14,44 +14,47 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DownsampleDepth
+	namespace Utility
 	{
-		static constexpr SlotID ID = SlotID::DownsampleDepth;
-		HLSL::Texture2D<float> srcTex;
-		HLSL::RWTexture2D<float> targetTex;
-		HLSL::Texture2D<float>& GetSrcTex() { return srcTex; }
-		HLSL::RWTexture2D<float>& GetTargetTex() { return targetTex; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct DownsampleDepth
 		{
-			compiler.compile(srcTex, "DownsampleDepth::srcTex");
-			compiler.compile(targetTex, "DownsampleDepth::targetTex");
-		}
-		struct Compiled
-		{
-			uint srcTex; // Texture2D<float>
-			uint targetTex; // RWTexture2D<float>
+			static constexpr SlotID ID = SlotID::DownsampleDepth;
+			HLSL::Texture2D<float> srcTex;
+			HLSL::RWTexture2D<float> targetTex;
+			HLSL::Texture2D<float>& GetSrcTex() { return srcTex; }
+			HLSL::RWTexture2D<float>& GetTargetTex() { return targetTex; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(srcTex, "DownsampleDepth::srcTex");
+				compiler.compile(targetTex, "DownsampleDepth::targetTex");
+			}
+			struct Compiled
+			{
+				uint srcTex; // Texture2D<float>
+				uint targetTex; // RWTexture2D<float>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::DownsampleDepth";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::DownsampleDepth";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

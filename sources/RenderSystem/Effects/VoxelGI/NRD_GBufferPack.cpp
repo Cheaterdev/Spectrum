@@ -26,15 +26,15 @@ using namespace HAL;
 // DLSS-RR is selected.
 // setup() is fully generated (nrd_sig_test.prism's own [SetupCondition]).
 
-void PassDefault<Passes::NRD_GBufferPack>::render(
-	Passes::NRD_GBufferPack::Context& data, FrameContext& context)
+void PassDefault<Passes::Denoise::NRD::NRD_GBufferPack>::render(
+	Passes::Denoise::NRD::NRD_GBufferPack::Context& data, FrameContext& context)
 {
 	auto& compute = context.get_list()->get_compute();
 	auto  sz      = context.graph->get_context<ViewportInfo>().frame_size;
 
 	GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
-	// FrameInfo (camera matrices, jitter -- FrameLayout::CameraData) isn't
+	// FrameInfo (camera matrices, jitter -- Frame::FrameLayout::CameraData) isn't
 	// bound automatically; every other pass reading it (IndirectRTX,
 	// RTXCombine) sets it explicitly first. Missed this originally --
 	// CreateFrameInfo() in gbuffer_pack.hlsl was reading whatever the root
@@ -43,17 +43,17 @@ void PassDefault<Passes::NRD_GBufferPack>::render(
 	// frame's real camera.
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 
-	compute.set_pipeline<PSOS::NRD_GBufferPack>();
-	Slots::NRD_GBufferPackParams params;
+	compute.set_pipeline<PSOS::Denoise::NRD::NRD_GBufferPack>();
+	Slots::Denoise::NRD::NRD_GBufferPackParams params;
 	gbuffer.SetTable(params.GetGbuffer());
 	// Exactly one of each pair set -- data.X is only a valid,
 	// dereferenceable handle when it was actually need()'d in setup()
 	// above, matching the same condition. The other is left at its
 	// [Auto = Texture_Null] default; harmless since the shader branches on
 	// the *_use_vct flags, not on which happens to be bound.
-	auto& selectors = context.graph->get_context<Table::IndirectGISelectors>();
-	bool useVctIndirect   = selectors.indirect_source   == IndirectSource::MyVCT;
-	bool useVctReflection = selectors.reflection_source == ReflectionSource::MyReflection;
+	auto& selectors = context.graph->get_context<Table::Denoise::NRD::IndirectGISelectors>();
+	bool useVctIndirect   = selectors.indirect_source   == GI::IndirectSource::MyVCT;
+	bool useVctReflection = selectors.reflection_source == Reflections::ReflectionSource::MyReflection;
 	if (useVctIndirect)   params.GetVoxelIndirectNoiseRaw()   = data.VoxelIndirectNoiseRaw->texture2D;
 	else                  params.GetRTXIndirectNoise()        = data.RTXIndirectNoise->texture2D;
 	if (useVctReflection) params.GetVoxelReflectionNoiseRaw() = data.VoxelReflectionNoiseRaw->texture2D;

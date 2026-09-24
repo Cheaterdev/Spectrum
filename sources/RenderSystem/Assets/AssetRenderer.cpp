@@ -16,7 +16,7 @@ using namespace HAL;
 
 class SceneRenderWorkflow
 {
-    Pipelines::AssetPipeline pipeline;
+    Pipelines::Editor::AssetPipeline pipeline;
 
     PSSM      pssm;
     SkyRender sky;
@@ -62,7 +62,7 @@ public:
             gbuffer.HalfBuffer.hiZ_depth_uav = *data.GBuffer_HiZ_UAV;
 
             {
-                RT::GBuffer rtv;
+                RT::Meshes::GBuffer rtv;
                 rtv.GetAlbedo()   = gbuffer.albedo.renderTarget;
                 rtv.GetNormals()  = gbuffer.normals.renderTarget;
                 rtv.GetSpecular() = gbuffer.specular.renderTarget;
@@ -73,7 +73,7 @@ public:
             }
 
             {
-                RT::DepthOnly rtv;
+                RT::Frame::DepthOnly rtv;
                 rtv.GetDepth()              = gbuffer.HalfBuffer.hiZ_depth.depthStencil;
                 gbuffer.HalfBuffer.compiled = rtv.compile(*command_list);
             }
@@ -113,7 +113,7 @@ public:
 
         // TranslucentRTX's generated [SetupCondition] reads this; left unset,
         // translucent materials would be invisible in previews.
-        graph.get_context<Table::RenderDeviceCapabilities>().rtx_supported = RenderSystem::get().device().is_rtx_supported();
+        graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported = RenderSystem::get().device().is_rtx_supported();
 
 		pipeline.add_passes(graph);
         // This pipeline's own [PreSetup] hooks (CubeSky's sun-direction diff)
@@ -127,7 +127,7 @@ public:
             auto& skyinfo = graph.get_context<SkyInfo>();
             auto& cam     = graph.get_context<CameraInfo>();
             PROFILE(L"FrameInfo");
-            Slots::FrameInfo frameInfo;
+            Slots::Frame::FrameInfo frameInfo;
             //// hack zone
             auto sky = graph.builder.get(FrameGraph::ResourceID::sky_cubemap_filtered);
             if (sky && sky->resource)

@@ -17,46 +17,49 @@ import :Autogen.Slots.MeshInstanceInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct CommandData
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::CommandData;
-		Pointer<MeshInfo> mesh_cb;
-		Pointer<MeshInstanceInfo> meshinstance_cb;
-		Pointer<MaterialInfo> material_cb;
-		DispatchMeshArguments draw_commands;
-		Pointer<MeshInfo>& GetMesh_cb() { return mesh_cb; }
-		Pointer<MeshInstanceInfo>& GetMeshinstance_cb() { return meshinstance_cb; }
-		Pointer<MaterialInfo>& GetMaterial_cb() { return material_cb; }
-		DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct CommandData
 		{
-			compiler.compile(mesh_cb, "CommandData::mesh_cb");
-			compiler.compile(meshinstance_cb, "CommandData::meshinstance_cb");
-			compiler.compile(material_cb, "CommandData::material_cb");
-			compiler.compile(draw_commands, "CommandData::draw_commands");
-		}
-		using Compiled = CommandData;
-		static const IndirectCommands CommandID = IndirectCommands::CommandData;
-		template<class Processor> static void for_each(Processor& processor)
-		{
-			processor.template process<Slots::MeshInfo, Slots::MeshInstanceInfo, Slots::MaterialInfo, DispatchMeshArguments>();
-		}
-		static std::string get_typename()
-		{
-			return "Tables::CommandData";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(mesh_cb);
-			ar& NVP(meshinstance_cb);
-			ar& NVP(material_cb);
-			ar& NVP(draw_commands);
-		}
+			static constexpr SlotID ID = SlotID::CommandData;
+			Pointer<Table::Meshes::MeshInfo> mesh_cb;
+			Pointer<Table::Meshes::MeshInstanceInfo> meshinstance_cb;
+			Pointer<Table::Meshes::MaterialInfo> material_cb;
+			DispatchMeshArguments draw_commands;
+			Pointer<Table::Meshes::MeshInfo>& GetMesh_cb() { return mesh_cb; }
+			Pointer<Table::Meshes::MeshInstanceInfo>& GetMeshinstance_cb() { return meshinstance_cb; }
+			Pointer<Table::Meshes::MaterialInfo>& GetMaterial_cb() { return material_cb; }
+			DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(mesh_cb, "CommandData::mesh_cb");
+				compiler.compile(meshinstance_cb, "CommandData::meshinstance_cb");
+				compiler.compile(material_cb, "CommandData::material_cb");
+				compiler.compile(draw_commands, "CommandData::draw_commands");
+			}
+			using Compiled = CommandData;
+			static const IndirectCommands CommandID = IndirectCommands::CommandData;
+			template<class Processor> static void for_each(Processor& processor)
+			{
+				processor.template process<Slots::Meshes::MeshInfo, Slots::Meshes::MeshInstanceInfo, Slots::Meshes::MaterialInfo, DispatchMeshArguments>();
+			}
+			static std::string get_typename()
+			{
+				return "Tables::CommandData";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(mesh_cb);
+				ar& NVP(meshinstance_cb);
+				ar& NVP(material_cb);
+				ar& NVP(draw_commands);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

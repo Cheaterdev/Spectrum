@@ -14,52 +14,58 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct SMAA_Weights
+	namespace Post
 	{
-		static constexpr SlotID ID = SlotID::SMAA_Weights;
-		HLSL::Texture2D<float4> areaTex;
-		HLSL::Texture2D<float4> searchTex;
-		HLSL::Texture2D<float4> edgesTex;
-		HLSL::RWTexture2D<float4> blendOut;
-		HLSL::Texture2D<float4>& GetAreaTex() { return areaTex; }
-		HLSL::Texture2D<float4>& GetSearchTex() { return searchTex; }
-		HLSL::Texture2D<float4>& GetEdgesTex() { return edgesTex; }
-		HLSL::RWTexture2D<float4>& GetBlendOut() { return blendOut; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace AA
 		{
-			compiler.compile(areaTex, "SMAA_Weights::areaTex");
-			compiler.compile(searchTex, "SMAA_Weights::searchTex");
-			compiler.compile(edgesTex, "SMAA_Weights::edgesTex");
-			compiler.compile(blendOut, "SMAA_Weights::blendOut");
-		}
-		struct Compiled
-		{
-			uint areaTex; // Texture2D<float4>
-			uint searchTex; // Texture2D<float4>
-			uint edgesTex; // Texture2D<float4>
-			uint blendOut; // RWTexture2D<float4>
+			struct SMAA_Weights
+			{
+				static constexpr SlotID ID = SlotID::SMAA_Weights;
+				HLSL::Texture2D<float4> areaTex;
+				HLSL::Texture2D<float4> searchTex;
+				HLSL::Texture2D<float4> edgesTex;
+				HLSL::RWTexture2D<float4> blendOut;
+				HLSL::Texture2D<float4>& GetAreaTex() { return areaTex; }
+				HLSL::Texture2D<float4>& GetSearchTex() { return searchTex; }
+				HLSL::Texture2D<float4>& GetEdgesTex() { return edgesTex; }
+				HLSL::RWTexture2D<float4>& GetBlendOut() { return blendOut; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(areaTex, "SMAA_Weights::areaTex");
+					compiler.compile(searchTex, "SMAA_Weights::searchTex");
+					compiler.compile(edgesTex, "SMAA_Weights::edgesTex");
+					compiler.compile(blendOut, "SMAA_Weights::blendOut");
+				}
+				struct Compiled
+				{
+					uint areaTex; // Texture2D<float4>
+					uint searchTex; // Texture2D<float4>
+					uint edgesTex; // Texture2D<float4>
+					uint blendOut; // RWTexture2D<float4>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::SMAA_Weights";
+				static std::string get_typename()
+				{
+					return "Tables::SMAA_Weights";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

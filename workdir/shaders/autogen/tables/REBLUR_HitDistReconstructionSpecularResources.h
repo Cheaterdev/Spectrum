@@ -8,18 +8,25 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "REBLURSharedConstants.h"
-struct REBLUR_HitDistReconstructionSpecularResources
+namespace Denoise
 {
-	uint gIn_Tiles; // Texture2D<float>
-	uint gIn_Normal_Roughness; // Texture2D<float4>
-	uint gIn_ViewZ; // Texture2D<float>
-	uint gIn_Spec; // Texture2D<float4>
-	uint gOut_Spec; // RWTexture2D<float4>
-	REBLURSharedConstants sharedConstants; // REBLURSharedConstants
-	REBLURSharedConstants GetSharedConstants() { return sharedConstants; }
-	Texture2D<float> GetGIn_Tiles() { return ResourceDescriptorHeap[gIn_Tiles]; }
-	Texture2D<float4> GetGIn_Normal_Roughness() { return ResourceDescriptorHeap[gIn_Normal_Roughness]; }
-	Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
-	Texture2D<float4> GetGIn_Spec() { return ResourceDescriptorHeap[gIn_Spec]; }
-	RWTexture2D<float4> GetGOut_Spec() { return ResourceDescriptorHeap[gOut_Spec]; }
-};
+	namespace NRD
+	{
+		struct REBLUR_HitDistReconstructionSpecularResources
+		{
+			uint gIn_Tiles; // Texture2D<float>
+			uint gIn_Normal_Roughness; // Texture2D<float4>
+			uint gIn_ViewZ; // Texture2D<float>
+			uint gIn_Spec; // Texture2D<float4>
+			uint gOut_Spec; // RWTexture2D<float4>
+			REBLURSharedConstants sharedConstants; // REBLURSharedConstants
+			REBLURSharedConstants GetSharedConstants() { return sharedConstants; }
+			Texture2D<float> GetGIn_Tiles() { return ResourceDescriptorHeap[gIn_Tiles]; }
+			Texture2D<float4> GetGIn_Normal_Roughness() { return ResourceDescriptorHeap[gIn_Normal_Roughness]; }
+			Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
+			Texture2D<float4> GetGIn_Spec() { return ResourceDescriptorHeap[gIn_Spec]; }
+			RWTexture2D<float4> GetGOut_Spec() { return ResourceDescriptorHeap[gOut_Spec]; }
+		};
+	}
+}
+using Denoise::NRD::REBLUR_HitDistReconstructionSpecularResources;

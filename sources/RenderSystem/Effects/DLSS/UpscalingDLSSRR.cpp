@@ -21,8 +21,8 @@ namespace
 // (RTX support + DLSSRR::available()) -- keeping both gates identical is
 // what guarantees the resource is there whenever this pass needs it.
 
-void PassDefault<Passes::UpscalingDLSSRR>::render(
-	Passes::UpscalingDLSSRR::Context& data, FrameContext& context)
+void PassDefault<Passes::Post::Upscale::UpscalingDLSSRR>::render(
+	Passes::Post::Upscale::UpscalingDLSSRR::Context& data, FrameContext& context)
 {
 	auto& frame = context.graph->get_context<ViewportInfo>();
 	auto& sl    = nvidia::Streamline::get();

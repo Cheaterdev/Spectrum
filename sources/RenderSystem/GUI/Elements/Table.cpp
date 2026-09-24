@@ -156,7 +156,7 @@ namespace GUI
 
         void Table::InitTest()
         {
-            ::Table::Camera cam;
+            ::Table::Frame::Camera cam;
 
             AddColumn("Name");
             AddColumn("Time");

@@ -8,26 +8,33 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "REBLURSharedConstants.h"
-struct REBLUR_HistoryFixSpecularResources
+namespace Denoise
 {
-	uint gIn_Tiles; // Texture2D<float>
-	uint gIn_Normal_Roughness; // Texture2D<float4>
-	uint gIn_Data1; // Texture2D<float2>
-	uint gIn_ViewZ; // Texture2D<float>
-	uint gIn_Spec; // Texture2D<float4>
-	uint gIn_SpecFast; // Texture2D<float>
-	uint gIn_SpecHitDistForTracking; // Texture2D<float>
-	uint gOut_Spec; // RWTexture2D<float4>
-	uint gOut_SpecFast; // RWTexture2D<float>
-	REBLURSharedConstants sharedConstants; // REBLURSharedConstants
-	REBLURSharedConstants GetSharedConstants() { return sharedConstants; }
-	Texture2D<float> GetGIn_Tiles() { return ResourceDescriptorHeap[gIn_Tiles]; }
-	Texture2D<float4> GetGIn_Normal_Roughness() { return ResourceDescriptorHeap[gIn_Normal_Roughness]; }
-	Texture2D<float2> GetGIn_Data1() { return ResourceDescriptorHeap[gIn_Data1]; }
-	Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
-	Texture2D<float4> GetGIn_Spec() { return ResourceDescriptorHeap[gIn_Spec]; }
-	Texture2D<float> GetGIn_SpecFast() { return ResourceDescriptorHeap[gIn_SpecFast]; }
-	Texture2D<float> GetGIn_SpecHitDistForTracking() { return ResourceDescriptorHeap[gIn_SpecHitDistForTracking]; }
-	RWTexture2D<float4> GetGOut_Spec() { return ResourceDescriptorHeap[gOut_Spec]; }
-	RWTexture2D<float> GetGOut_SpecFast() { return ResourceDescriptorHeap[gOut_SpecFast]; }
-};
+	namespace NRD
+	{
+		struct REBLUR_HistoryFixSpecularResources
+		{
+			uint gIn_Tiles; // Texture2D<float>
+			uint gIn_Normal_Roughness; // Texture2D<float4>
+			uint gIn_Data1; // Texture2D<float2>
+			uint gIn_ViewZ; // Texture2D<float>
+			uint gIn_Spec; // Texture2D<float4>
+			uint gIn_SpecFast; // Texture2D<float>
+			uint gIn_SpecHitDistForTracking; // Texture2D<float>
+			uint gOut_Spec; // RWTexture2D<float4>
+			uint gOut_SpecFast; // RWTexture2D<float>
+			REBLURSharedConstants sharedConstants; // REBLURSharedConstants
+			REBLURSharedConstants GetSharedConstants() { return sharedConstants; }
+			Texture2D<float> GetGIn_Tiles() { return ResourceDescriptorHeap[gIn_Tiles]; }
+			Texture2D<float4> GetGIn_Normal_Roughness() { return ResourceDescriptorHeap[gIn_Normal_Roughness]; }
+			Texture2D<float2> GetGIn_Data1() { return ResourceDescriptorHeap[gIn_Data1]; }
+			Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
+			Texture2D<float4> GetGIn_Spec() { return ResourceDescriptorHeap[gIn_Spec]; }
+			Texture2D<float> GetGIn_SpecFast() { return ResourceDescriptorHeap[gIn_SpecFast]; }
+			Texture2D<float> GetGIn_SpecHitDistForTracking() { return ResourceDescriptorHeap[gIn_SpecHitDistForTracking]; }
+			RWTexture2D<float4> GetGOut_Spec() { return ResourceDescriptorHeap[gOut_Spec]; }
+			RWTexture2D<float> GetGOut_SpecFast() { return ResourceDescriptorHeap[gOut_SpecFast]; }
+		};
+	}
+}
+using Denoise::NRD::REBLUR_HistoryFixSpecularResources;

@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMBlockerSearchOutput :public DataHolder<VSMBlockerSearchOutput, SlotID::VSMBlockerSearchOutput, Table::VSMBlockerSearchOutput, DefaultLayout::Instance3>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMBlockerSearchOutput() = default;
-	};
+		namespace VSM
+		{
+			struct VSMBlockerSearchOutput :public DataHolder<VSMBlockerSearchOutput, SlotID::VSMBlockerSearchOutput, Table::Shadows::VSM::VSMBlockerSearchOutput, ::Frame::DefaultLayout::Instance3>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMBlockerSearchOutput() = default;
+			};
+		}
+	}
 }

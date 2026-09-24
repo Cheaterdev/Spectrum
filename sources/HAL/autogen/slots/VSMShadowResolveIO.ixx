@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMShadowResolveIO :public DataHolder<VSMShadowResolveIO, SlotID::VSMShadowResolveIO, Table::VSMShadowResolveIO, DefaultLayout::Instance3>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMShadowResolveIO() = default;
-	};
+		namespace VSM
+		{
+			struct VSMShadowResolveIO :public DataHolder<VSMShadowResolveIO, SlotID::VSMShadowResolveIO, Table::Shadows::VSM::VSMShadowResolveIO, ::Frame::DefaultLayout::Instance3>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMShadowResolveIO() = default;
+			};
+		}
+	}
 }

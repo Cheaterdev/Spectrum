@@ -14,57 +14,60 @@ import :Types;
 
 export namespace PSOS
 {
-	struct DepthDraw: public PSOBase
+	namespace Meshes
 	{
-		struct Keys {
-			KeyValue<int, Nullable> HiZOcclusion;
-			GEN_DEF_COMP(Keys);
-		private:
+		struct DepthDraw: public PSOBase
+		{
+			struct Keys {
+				KeyValue<int, Nullable> HiZOcclusion;
+				GEN_DEF_COMP(Keys);
+			private:
+				SERIALIZE()
+				{
+					ar&NVP(HiZOcclusion);
+				}
+			};
+
+			GEN_GRAPHICS_PSO(DepthDraw, HiZOcclusion)
+			GEN_KEY(HiZOcclusion, true);
+
+
+			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+			{
+				static const ShaderDefine<&Keys::HiZOcclusion,&SimpleGraphicsPSO::amplification> HiZOcclusion = "HIZ_OCCLUSION";
+
+
+				SimplePSO mpso("DepthDraw");
+				if(f) f(mpso,key);
+
+				mpso.root_signature = Layouts::DefaultLayout;
+
+				mpso.pixel.file_name = "";
+				mpso.pixel.entry_point = "";
+				mpso.pixel.flags = HAL::ShaderOptions::None;
+				mpso.mesh.file_name = "shaders/gbuffer/mesh_shader.hlsl";
+				mpso.mesh.entry_point = "VS";
+				mpso.mesh.flags = HAL::ShaderOptions::None;
+			
+				mpso.amplification.file_name = "shaders/gbuffer/mesh_shader.hlsl";
+				mpso.amplification.entry_point = "AS";
+				mpso.amplification.flags = HAL::ShaderOptions::None;
+			
+				HiZOcclusion.Apply(mpso, key);
+
+				mpso.rtv_formats = {  };	
+				mpso.blend = {  };
+
+				mpso.ds =HAL::Format::D32_FLOAT;
+				mpso.cull =HAL::CullMode::Front;
+				return mpso;
+			}
+
+			private:
 			SERIALIZE()
 			{
-				ar&NVP(HiZOcclusion);
+				ar&NVP(wrap(psos));
 			}
 		};
-
-		GEN_GRAPHICS_PSO(DepthDraw, HiZOcclusion)
-		GEN_KEY(HiZOcclusion, true);
-
-
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
-			static const ShaderDefine<&Keys::HiZOcclusion,&SimpleGraphicsPSO::amplification> HiZOcclusion = "HIZ_OCCLUSION";
-
-
-			SimplePSO mpso("DepthDraw");
-			if(f) f(mpso,key);
-
-			mpso.root_signature = Layouts::DefaultLayout;
-
-			mpso.pixel.file_name = "";
-			mpso.pixel.entry_point = "";
-			mpso.pixel.flags = HAL::ShaderOptions::None;
-			mpso.mesh.file_name = "shaders/gbuffer/mesh_shader.hlsl";
-			mpso.mesh.entry_point = "VS";
-			mpso.mesh.flags = HAL::ShaderOptions::None;
-			
-			mpso.amplification.file_name = "shaders/gbuffer/mesh_shader.hlsl";
-			mpso.amplification.entry_point = "AS";
-			mpso.amplification.flags = HAL::ShaderOptions::None;
-			
-			HiZOcclusion.Apply(mpso, key);
-
-			mpso.rtv_formats = {  };	
-			mpso.blend = {  };
-
-			mpso.ds =HAL::Format::D32_FLOAT;
-			mpso.cull =HAL::CullMode::Front;
-			return mpso;
-		}
-
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
-		}
-	};
+	}
 }

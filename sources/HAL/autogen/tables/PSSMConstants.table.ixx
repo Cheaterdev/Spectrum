@@ -14,34 +14,40 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct PSSMConstants
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::PSSMConstants;
-		int level;
-		float time;
-		int& GetLevel() { return level; }
-		float& GetTime() { return time; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace PSSM
 		{
-			compiler.compile(level, "PSSMConstants::level");
-			compiler.compile(time, "PSSMConstants::time");
-		}
-		using Compiled = PSSMConstants;
+			struct PSSMConstants
+			{
+				static constexpr SlotID ID = SlotID::PSSMConstants;
+				int level;
+				float time;
+				int& GetLevel() { return level; }
+				float& GetTime() { return time; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(level, "PSSMConstants::level");
+					compiler.compile(time, "PSSMConstants::time");
+				}
+				using Compiled = PSSMConstants;
 
-		static std::string get_typename()
-		{
-			return "Tables::PSSMConstants";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(level);
-			ar& NVP(time);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::PSSMConstants";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(level);
+					ar& NVP(time);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

@@ -14,48 +14,54 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMCopyPageDepthBatch
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMCopyPageDepthBatch;
-		HLSL::Texture2DArray<float> atlas;
-		HLSL::StructuredBuffer<uint> dirty_slots;
-		HLSL::RWTexture2DArray<float2> dst_mip0;
-		HLSL::Texture2DArray<float>& GetAtlas() { return atlas; }
-		HLSL::RWTexture2DArray<float2>& GetDst_mip0() { return dst_mip0; }
-		HLSL::StructuredBuffer<uint>& GetDirty_slots() { return dirty_slots; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile_whole(atlas, "VSMCopyPageDepthBatch::atlas");
-			compiler.compile(dirty_slots, "VSMCopyPageDepthBatch::dirty_slots");
-			compiler.compile_whole(dst_mip0, "VSMCopyPageDepthBatch::dst_mip0");
-		}
-		struct Compiled
-		{
-			uint atlas; // Texture2DArray<float>
-			uint dirty_slots; // StructuredBuffer<uint>
-			uint dst_mip0; // RWTexture2DArray<float2>
+			struct VSMCopyPageDepthBatch
+			{
+				static constexpr SlotID ID = SlotID::VSMCopyPageDepthBatch;
+				HLSL::Texture2DArray<float> atlas;
+				HLSL::StructuredBuffer<uint> dirty_slots;
+				HLSL::RWTexture2DArray<float2> dst_mip0;
+				HLSL::Texture2DArray<float>& GetAtlas() { return atlas; }
+				HLSL::RWTexture2DArray<float2>& GetDst_mip0() { return dst_mip0; }
+				HLSL::StructuredBuffer<uint>& GetDirty_slots() { return dirty_slots; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile_whole(atlas, "VSMCopyPageDepthBatch::atlas");
+					compiler.compile(dirty_slots, "VSMCopyPageDepthBatch::dirty_slots");
+					compiler.compile_whole(dst_mip0, "VSMCopyPageDepthBatch::dst_mip0");
+				}
+				struct Compiled
+				{
+					uint atlas; // Texture2DArray<float>
+					uint dirty_slots; // StructuredBuffer<uint>
+					uint dst_mip0; // RWTexture2DArray<float2>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMCopyPageDepthBatch";
+				static std::string get_typename()
+				{
+					return "Tables::VSMCopyPageDepthBatch";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

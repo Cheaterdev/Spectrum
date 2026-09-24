@@ -7,8 +7,15 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct VSMPageHiZ
+namespace Shadows
 {
-	uint page_hiz; // Texture2DArray<float2>
-	Texture2DArray<float2> GetPage_hiz() { return ResourceDescriptorHeap[page_hiz]; }
-};
+	namespace VSM
+	{
+		struct VSMPageHiZ
+		{
+			uint page_hiz; // Texture2DArray<float2>
+			Texture2DArray<float2> GetPage_hiz() { return ResourceDescriptorHeap[page_hiz]; }
+		};
+	}
+}
+using Shadows::VSM::VSMPageHiZ;

@@ -6,69 +6,138 @@
 // ============================================================================
 #ifndef SIG_ENUMS_H
 #define SIG_ENUMS_H
-enum class DDGIControlFlags : uint
+namespace GI
 {
-	CullCoarsestCascade = 1,
-	DisableResidencyCulling = 2,
-	JitterRays = 4,
-	DisableTraceFeedback = 8
-};
-enum class DDGIOcclusionMode : uint
+	namespace DDGI
+	{
+		enum class DDGIControlFlags : uint
+		{
+			CullCoarsestCascade = 1,
+			DisableResidencyCulling = 2,
+			JitterRays = 4,
+			DisableTraceFeedback = 8
+		};
+	}
+}
+using GI::DDGI::DDGIControlFlags;
+namespace GI
 {
-	NoOcclusionTest = 0,
-	ProbeDepthTest = 1,
-	RTXRay = 2
-};
-enum class RTXDebugFlags : uint
+	namespace DDGI
+	{
+		enum class DDGIOcclusionMode : uint
+		{
+			NoOcclusionTest = 0,
+			ProbeDepthTest = 1,
+			RTXRay = 2
+		};
+	}
+}
+using GI::DDGI::DDGIOcclusionMode;
+namespace Dev
 {
-	DisableSkyFallback = 1
-};
-enum class TransparencyMode : uint
+	enum class RTXDebugFlags : uint
+	{
+		DisableSkyFallback = 1
+	};
+}
+using Dev::RTXDebugFlags;
+namespace Meshes
 {
-	Opaque,
-	Masked,
-	Translucent
-};
-enum class RTInstanceMask : uint
+	enum class TransparencyMode : uint
+	{
+		Opaque,
+		Masked,
+		Translucent
+	};
+}
+using Meshes::TransparencyMode;
+namespace Meshes
 {
-	Opaque = 1,
-	Translucent = 2
-};
-enum class IndirectSource : uint
+	enum class RTInstanceMask : uint
+	{
+		Opaque = 1,
+		Translucent = 2
+	};
+}
+using Meshes::RTInstanceMask;
+namespace GI
 {
-	MyVCT,
-	RTXReference
-};
-enum class ReflectionSource : uint
+	enum class IndirectSource : uint
+	{
+		MyVCT,
+		RTXReference
+	};
+}
+using GI::IndirectSource;
+namespace Reflections
 {
-	MyReflection,
-	RTXReference
-};
-enum class TestEnumMode : uint
+	enum class ReflectionSource : uint
+	{
+		MyReflection,
+		RTXReference
+	};
+}
+using Reflections::ReflectionSource;
+namespace Dev
 {
-	None,
-	FirstMode,
-	SecondMode = 5
-};
-enum class UpscalerType : uint
+	enum class TestEnumMode : uint
+	{
+		None,
+		FirstMode,
+		SecondMode = 5
+	};
+}
+using Dev::TestEnumMode;
+namespace Post
 {
-	FSR,
-	DLSS,
-	DLSSRR
-};
-enum class VSMDebugView : uint
+	enum class TonemapOperator : uint
+	{
+		AgX,
+		PBRNeutral,
+		Clamp
+	};
+}
+using Post::TonemapOperator;
+namespace Post
 {
-	None,
-	PageGrid,
-	RtxReference,
-	HizClassify,
-	ContactShadow,
-	ShadowOnly
-};
-enum class ShadowSource : uint
+	namespace Upscale
+	{
+		enum class UpscalerType : uint
+		{
+			FSR,
+			DLSS,
+			DLSSRR
+		};
+	}
+}
+using Post::Upscale::UpscalerType;
+namespace Shadows
 {
-	VSM,
-	RTXReference
-};
+	namespace VSM
+	{
+		enum class VSMDebugView : uint
+		{
+			None,
+			PageGrid,
+			RtxReference,
+			HizClassify,
+			ContactShadow,
+			ShadowOnly
+		};
+	}
+}
+using Shadows::VSM::VSMDebugView;
+namespace Shadows
+{
+	namespace VSM
+	{
+		enum class ShadowSource : uint
+		{
+			VSM,
+			RTXReference
+		};
+	}
+}
+using Shadows::VSM::ShadowSource;
 
 #endif

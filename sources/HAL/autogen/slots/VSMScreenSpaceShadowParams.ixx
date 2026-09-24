@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMScreenSpaceShadowParams :public DataHolder<VSMScreenSpaceShadowParams, SlotID::VSMScreenSpaceShadowParams, Table::VSMScreenSpaceShadowParams, DefaultLayout::Instance0>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMScreenSpaceShadowParams() = default;
-	};
+		namespace VSM
+		{
+			struct VSMScreenSpaceShadowParams :public DataHolder<VSMScreenSpaceShadowParams, SlotID::VSMScreenSpaceShadowParams, Table::Shadows::VSM::VSMScreenSpaceShadowParams, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMScreenSpaceShadowParams() = default;
+			};
+		}
+	}
 }

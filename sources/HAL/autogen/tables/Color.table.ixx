@@ -14,30 +14,33 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct Color
+	namespace Editor
 	{
-		static constexpr SlotID ID = SlotID::Color;
-		float4 color;
-		float4& GetColor() { return color; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct Color
 		{
-			compiler.compile(color, "Color::color");
-		}
-		using Compiled = Color;
+			static constexpr SlotID ID = SlotID::Color;
+			float4 color;
+			float4& GetColor() { return color; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(color, "Color::color");
+			}
+			using Compiled = Color;
 
-		static std::string get_typename()
-		{
-			return "Tables::Color";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(color);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::Color";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(color);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

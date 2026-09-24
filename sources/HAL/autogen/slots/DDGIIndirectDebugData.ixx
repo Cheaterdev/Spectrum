@@ -15,9 +15,18 @@ import :Slots;
 
 export namespace Slots
 {
-	struct DDGIIndirectDebugData :public DataHolder<DDGIIndirectDebugData, SlotID::DDGIIndirectDebugData, Table::DDGIIndirectDebugData, DefaultLayout::Instance0>
+	namespace GI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		DDGIIndirectDebugData() = default;
-	};
+		namespace DDGI
+		{
+			namespace Dev
+			{
+				struct DDGIIndirectDebugData :public DataHolder<DDGIIndirectDebugData, SlotID::DDGIIndirectDebugData, Table::GI::DDGI::Dev::DDGIIndirectDebugData, ::Frame::DefaultLayout::Instance0>
+				{
+					static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+					DDGIIndirectDebugData() = default;
+				};
+			}
+		}
+	}
 }

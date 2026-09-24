@@ -8,8 +8,15 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "Glyph.h"
-struct FontRenderingGlyphs
+namespace UI
 {
-	uint data; // StructuredBuffer<Glyph>
-	StructuredBuffer<Glyph> GetData() { return ResourceDescriptorHeap[data]; }
-};
+	namespace Text
+	{
+		struct FontRenderingGlyphs
+		{
+			uint data; // StructuredBuffer<Glyph>
+			StructuredBuffer<Glyph> GetData() { return ResourceDescriptorHeap[data]; }
+		};
+	}
+}
+using UI::Text::FontRenderingGlyphs;

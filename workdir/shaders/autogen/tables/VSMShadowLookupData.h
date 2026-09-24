@@ -8,8 +8,15 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "VSMShadowLookup.h"
-struct VSMShadowLookupData
+namespace Shadows
 {
-	VSMShadowLookup lookup; // VSMShadowLookup
-	VSMShadowLookup GetLookup() { return lookup; }
-};
+	namespace VSM
+	{
+		struct VSMShadowLookupData
+		{
+			VSMShadowLookup lookup; // VSMShadowLookup
+			VSMShadowLookup GetLookup() { return lookup; }
+		};
+	}
+}
+using Shadows::VSM::VSMShadowLookupData;

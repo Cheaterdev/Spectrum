@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct GBufferQuality
+namespace Meshes
 {
-	uint ref; // Texture2D<float4>
-	Texture2D<float4> GetRef() { return ResourceDescriptorHeap[ref]; }
-};
+	struct GBufferQuality
+	{
+		uint ref; // Texture2D<float4>
+		Texture2D<float4> GetRef() { return ResourceDescriptorHeap[ref]; }
+	};
+}
+using Meshes::GBufferQuality;

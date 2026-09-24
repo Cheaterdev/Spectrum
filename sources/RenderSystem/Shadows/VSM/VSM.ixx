@@ -24,7 +24,7 @@ import HAL;
 //
 // Phase 5.8: VSM_RenderPages is a SINGLE pass, not one per level -- plan_frame()
 // builds a flat list of per-(level,mesh) indirect draw entries
-// (Table::VSMDispatchCommandData, one DispatchMesh's worth of threadgroups
+// (Table::Shadows::VSM::VSMDispatchCommandData, one DispatchMesh's worth of threadgroups
 // each) and the pass issues exactly one exec_indirect() call over all of
 // them, replacing the old "for level { for mesh { dispatch_mesh() } }" CPU
 // loop. MaxLevels (26) is still the fixed, generously-sized STORAGE budget
@@ -134,7 +134,7 @@ public:
 	// own documented default.
 	Variable<float> vsm_contact_shadow_thickness = { 0.005f, "Contact shadow thickness", this, 0.001f, 0.01f };
 
-	// Single-select debug view (VSMDebugView, a SIG enum shared verbatim
+	// Single-select debug view (Shadows::VSM::VSMDebugView, a SIG enum shared verbatim
 	// with the shader side -- see VSMConstants.debug_view's own comment in
 	// vsm.prism). Replaces three separate bools that were always meant to be
 	// mutually exclusive:
@@ -169,7 +169,7 @@ public:
 	//                    permanent view since it's generally useful for
 	//                    judging how much of the frame each stage of the
 	//                    optimization actually covers.
-	Variable<VSMDebugView> vsm_debug_view = { VSMDebugView::None, "Debug view", this };
+	Variable<Shadows::VSM::VSMDebugView> vsm_debug_view = { Shadows::VSM::VSMDebugView::None, "Debug view", this };
 private:
 	// Tracks the previous frame's toggle state so plan_frame() can detect
 	// an off->on transition and force a full pyramid rebuild -- see its
@@ -186,7 +186,7 @@ public:
 	// .prism-declared (vsm.prism's const_definition) so VSM_DispatchCommands'
 	// own [Size=...] in the same .prism, and VSMInvalidationTracker.ixx's own
 	// copy, can't drift from this one.
-	static constexpr int MaxLevels = Constants::MaxLevels;
+	static constexpr int MaxLevels = Constants::Shadows::VSM::MaxLevels;
 	static constexpr int LevelZeroSlot = 12;
 	static constexpr int MaxPagesPerLevel = 16;   // 4x4, matches VSMClipmap::pages_per_level
 	static constexpr int MaxPages = MaxLevels * MaxPagesPerLevel;
@@ -195,7 +195,7 @@ public:
 	// physical_page_count's "moderate bump" philosophy). If a scene's mesh
 	// count x active level count ever exceeds this, entries are clamped and
 	// logged once per episode rather than overflowing the buffer.
-	static constexpr int MaxDispatchEntries = Constants::MaxDispatchEntries;
+	static constexpr int MaxDispatchEntries = Constants::Shadows::VSM::MaxDispatchEntries;
 	// VSM_Atlas's logical slice count, decoupled from physical_page_count
 	// (the real, elastic VRAM budget -- see VSMPageTable's map/unmap
 	// tracking). D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION is 2048, the
@@ -233,7 +233,7 @@ private:
 	// pool. Sized much smaller than MaxDispatchEntries: scoped to whichever
 	// meshes belong to ONE material at a time, not the whole scene.
 	static constexpr int MaxMaterialDispatchEntries = 512;
-	HAL::StructuredBufferView<Table::VSMDispatchCommandData> vsm_material_commands_buffer[8];
+	HAL::StructuredBufferView<Table::Shadows::VSM::VSMDispatchCommandData> vsm_material_commands_buffer[8];
 
 	VSMPageTable page_table;
 	VSMInvalidationTracker tracker;
@@ -411,7 +411,7 @@ private:
 	// actual per-(level,mesh) VSMDispatchCommandData entries itself.
 	// Rebuilt fresh every frame, same as the old m_dispatch_entries it
 	// replaces.
-	std::vector<Table::VSMLevelDispatchInfo> m_level_dispatch_info;
+	std::vector<Table::Shadows::VSM::VSMLevelDispatchInfo> m_level_dispatch_info;
 
 	// Phase 5.13: every per-slot view VSM_RenderPages' render() would
 	// otherwise call create_2d_slice() for -- once per dirty page, every
@@ -477,18 +477,18 @@ private:
 	// (that PassNode need()s VSM_PageHiZ too, alongside VSM_RenderPages,
 	// which still create()s it for the once-ever cold-start clear -- see
 	// vsm.prism's VSM_HiZRebuild comment).
-	void build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyramid_mip_count);
+	void build_page_hiz_views(Passes::Shadows::VSM::VSM_HiZRebuild::Context& data, int pyramid_mip_count);
 
-	Passes::VSM_GatherDispatch::render_func_type m_gatherdispatch_render;
+	Passes::Shadows::VSM::VSM_GatherDispatch::render_func_type m_gatherdispatch_render;
 
-	Passes::VSM_RenderPages::render_func_type m_renderpages_render;
+	Passes::Shadows::VSM::VSM_RenderPages::render_func_type m_renderpages_render;
 
 	// Phase 5.17: split off VSM_RenderPages so the per-frame Hi-Z pyramid
 	// rebuild (copy + downsample dispatches) runs on the async compute
 	// queue instead of serializing into VSM_RenderPages' own direct-queue
 	// pass -- nothing else this frame reads VSM_PageHiZ, only next frame's
 	// draw does. See vsm.prism's VSM_HiZRebuild PassNode comment.
-	Passes::VSM_HiZRebuild::render_func_type m_hizrebuild_render;
+	Passes::Shadows::VSM::VSM_HiZRebuild::render_func_type m_hizrebuild_render;
 
 	// Phase 5.18 Part A follow-up (take 4): groupshared tile classification,
 	// three stages -- see vsm.prism's own PassNode comments (VSM_BlockerClassify,
@@ -496,24 +496,24 @@ private:
 	// root-cause finding (VoxelGIGraph's VoxelCombine precedent) that shaped
 	// it. Registered in order ahead of VSM_Combine in test.prism's pipeline
 	// listing.
-	Passes::VSM_BlockerClassify::render_func_type m_blockerclassify_render;
+	Passes::Shadows::VSM::VSM_BlockerClassify::render_func_type m_blockerclassify_render;
 
-	Passes::VSM_BlockerSearch::render_func_type m_blockersearch_render;
+	Passes::Shadows::VSM::VSM_BlockerSearch::render_func_type m_blockersearch_render;
 
-	Passes::VSM_ScreenSpaceShadow::render_func_type m_screenspaceshadow_render;
+	Passes::Shadows::VSM::VSM_ScreenSpaceShadow::render_func_type m_screenspaceshadow_render;
 
-	Passes::VSM_ShadowResolve::render_func_type m_shadowresolve_render;
+	Passes::Shadows::VSM::VSM_ShadowResolve::render_func_type m_shadowresolve_render;
 
-	Passes::VSM_Combine::render_func_type m_combine_render;
+	Passes::Shadows::VSM::VSM_Combine::render_func_type m_combine_render;
 
 	// Debug tile-classification overlay -- reads stage 1's real
 	// VSM_LitTiles/VSM_DarkTiles lists and paints over the already-shaded
 	// ResultTexture, only when vsm_debug_view is HizClassify. See vsm.prism's
 	// own PassNode comment for why this replaced the earlier postfactum
 	// "final shadow value happens to equal 1.0/0.0" guess.
-	Passes::VSM_DebugClassifyOverlay::render_func_type m_debugoverlay_render;
+	Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay::render_func_type m_debugoverlay_render;
 
-	Passes::VSM_DepthAnalysis::render_func_type m_depth_analysis_render;
+	Passes::Shadows::VSM::VSM_DepthAnalysis::render_func_type m_depth_analysis_render;
 
 	// Shared body for planning one storage level (regular or adaptive) --
 	// see plan_frame()'s definition for the full walkthrough of what this
@@ -554,12 +554,12 @@ public:
 	// The caller still fills VSMShadowLookup's own vsm_atlas/page_table/
 	// page_cameras fields itself from its own FrameGraph-bound resources
 	// (VSM doesn't own those FrameGraph handles outside its own passes).
-	void fill_shadow_lookup_constants(Table::VSMShadowLookup& out, float3 cam_world_pos) const;
+	void fill_shadow_lookup_constants(Table::Shadows::VSM::VSMShadowLookup& out, float3 cam_world_pos) const;
 
 	VSM();
 
 	// Once per frame, before graph.setup(): mirrors the Variable<T> toggles
-	// below into Table::VSMSelectors (vsm.prism), which every VSM pass's
+	// below into Table::Shadows::VSM::VSMSelectors (vsm.prism), which every VSM pass's
 	// generated setup reads. Needs a VSM instance, which a generated static
 	// setup has no way to reach.
 	void update_frame(FrameGraph::Graph& graph);

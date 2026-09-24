@@ -14,40 +14,43 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct ColorRTXOutput
+	namespace Raytrace
 	{
-		static constexpr SlotID ID = SlotID::ColorRTXOutput;
-		HLSL::RWTexture2D<float4> output;
-		HLSL::RWTexture2D<float4>& GetOutput() { return output; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct ColorRTXOutput
 		{
-			compiler.compile(output, "ColorRTXOutput::output");
-		}
-		struct Compiled
-		{
-			uint output; // RWTexture2D<float4>
+			static constexpr SlotID ID = SlotID::ColorRTXOutput;
+			HLSL::RWTexture2D<float4> output;
+			HLSL::RWTexture2D<float4>& GetOutput() { return output; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(output, "ColorRTXOutput::output");
+			}
+			struct Compiled
+			{
+				uint output; // RWTexture2D<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::ColorRTXOutput";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::ColorRTXOutput";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

@@ -8,12 +8,19 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "REBLURSharedConstants.h"
-struct REBLUR_ClassifyTilesResources
+namespace Denoise
 {
-	uint gIn_ViewZ; // Texture2D<float>
-	uint gOut_Tiles; // RWTexture2D<float>
-	REBLURSharedConstants sharedConstants; // REBLURSharedConstants
-	REBLURSharedConstants GetSharedConstants() { return sharedConstants; }
-	Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
-	RWTexture2D<float> GetGOut_Tiles() { return ResourceDescriptorHeap[gOut_Tiles]; }
-};
+	namespace NRD
+	{
+		struct REBLUR_ClassifyTilesResources
+		{
+			uint gIn_ViewZ; // Texture2D<float>
+			uint gOut_Tiles; // RWTexture2D<float>
+			REBLURSharedConstants sharedConstants; // REBLURSharedConstants
+			REBLURSharedConstants GetSharedConstants() { return sharedConstants; }
+			Texture2D<float> GetGIn_ViewZ() { return ResourceDescriptorHeap[gIn_ViewZ]; }
+			RWTexture2D<float> GetGOut_Tiles() { return ResourceDescriptorHeap[gOut_Tiles]; }
+		};
+	}
+}
+using Denoise::NRD::REBLUR_ClassifyTilesResources;

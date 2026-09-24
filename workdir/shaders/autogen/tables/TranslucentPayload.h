@@ -8,24 +8,28 @@
 #include "enums.h"
 
 
-struct [raypayload] TranslucentPayload
+namespace Raytrace
 {
-	float dist : read(closesthit,miss,caller) : write(closesthit,miss,caller);
-	float3 normal : read(closesthit,caller) : write(closesthit,caller);
-	float3 albedo : read(closesthit,caller) : write(closesthit,caller);
-	float roughness : read(closesthit,caller) : write(closesthit,caller);
-	float ior : read(closesthit,caller) : write(closesthit,caller);
-	float thickness : read(closesthit,caller) : write(closesthit,caller);
-	float transmission : read(closesthit,caller) : write(closesthit,caller);
-	float absorption_distance : read(closesthit,caller) : write(closesthit,caller);
-	uint front_face : read(closesthit,caller) : write(closesthit,caller);
-	float GetDist() { return dist; }
-	float3 GetNormal() { return normal; }
-	float3 GetAlbedo() { return albedo; }
-	float GetRoughness() { return roughness; }
-	float GetIor() { return ior; }
-	float GetThickness() { return thickness; }
-	float GetTransmission() { return transmission; }
-	float GetAbsorption_distance() { return absorption_distance; }
-	uint GetFront_face() { return front_face; }
-};
+	struct [raypayload] TranslucentPayload
+	{
+		float dist : read(closesthit,miss,caller) : write(closesthit,miss,caller);
+		float3 normal : read(closesthit,caller) : write(closesthit,caller);
+		float3 albedo : read(closesthit,caller) : write(closesthit,caller);
+		float roughness : read(closesthit,caller) : write(closesthit,caller);
+		float ior : read(closesthit,caller) : write(closesthit,caller);
+		float thickness : read(closesthit,caller) : write(closesthit,caller);
+		float transmission : read(closesthit,caller) : write(closesthit,caller);
+		float absorption_distance : read(closesthit,caller) : write(closesthit,caller);
+		uint front_face : read(closesthit,caller) : write(closesthit,caller);
+		float GetDist() { return dist; }
+		float3 GetNormal() { return normal; }
+		float3 GetAlbedo() { return albedo; }
+		float GetRoughness() { return roughness; }
+		float GetIor() { return ior; }
+		float GetThickness() { return thickness; }
+		float GetTransmission() { return transmission; }
+		float GetAbsorption_distance() { return absorption_distance; }
+		uint GetFront_face() { return front_face; }
+	};
+}
+using Raytrace::TranslucentPayload;

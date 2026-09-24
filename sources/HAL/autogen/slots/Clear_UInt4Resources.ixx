@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct Clear_UInt4Resources :public DataHolder<Clear_UInt4Resources, SlotID::Clear_UInt4Resources, Table::Clear_UInt4Resources, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		Clear_UInt4Resources() = default;
-	};
+		namespace NRD
+		{
+			struct Clear_UInt4Resources :public DataHolder<Clear_UInt4Resources, SlotID::Clear_UInt4Resources, Table::Denoise::NRD::Clear_UInt4Resources, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				Clear_UInt4Resources() = default;
+			};
+		}
+	}
 }

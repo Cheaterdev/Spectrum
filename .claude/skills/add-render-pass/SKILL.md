@@ -19,7 +19,11 @@ best single reference in the tree.
 ## 1. Declare in a `.prism` file
 
 Put the declaration in an existing `.prism` that matches the subsystem, or a new
-one in `sources/Prism/defs/`.
+one in `sources/Prism/defs/`, inside the namespace block of the system it belongs
+to (`namespace Post { ... }`; see NAMESPACES in `overview/Prism.txt`). The C++
+names include that namespace: a `MyEffect` declared in `Post` is
+`Passes::Post::MyEffect`, `PSOS::Post::MyEffectCompute`, `Slots::Post::MyEffectData`.
+HLSL keeps the short name.
 
 **Binding struct** — the shader-visible parameters. `[Bind = DefaultLayout::InstanceN]`
 selects the root-signature slot; distinct structs bound in the same pass need
@@ -117,21 +121,21 @@ a validation error whose message points at the barrier, not at the declaration.
 **render** records the work:
 
 ```cpp
-void PassDefault<Passes::MyEffect>::render(
-    Passes::MyEffect::Context& data, FrameContext& context)
+void PassDefault<Passes::Post::MyEffect>::render(
+    Passes::Post::MyEffect::Context& data, FrameContext& context)
 {
     auto& compute = context.get_list()->get_compute();
 
     context.graph->set_slot(SlotID::FrameInfo, compute);
 
     {
-        Slots::MyEffectData params;
+        Slots::Post::MyEffectData params;
         params.GetDepthBuffer() = data.GBuffer_Depth->texture2D;
         params.GetResult()      = data.ResultTexture->rwTexture2D;
         compute.set(params);
     }
 
-    compute.set_pipeline<PSOS::MyEffectCompute>();
+    compute.set_pipeline<PSOS::Post::MyEffectCompute>();
     compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 }
 ```

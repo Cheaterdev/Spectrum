@@ -13,7 +13,7 @@ using namespace FrameGraph;
 
 // ── WorkGraph emulation — FlowGraph nodes ──────────────────────────────────
 
-using TileBufView = HAL::StructuredBufferView<Table::TileRecord>;
+using TileBufView = HAL::StructuredBufferView<Table::Dev::TileRecord>;
 
 struct WGContext : FlowGraph::GraphContext
 {
@@ -38,17 +38,17 @@ struct ClassifyFlowNode : FlowGraph::GraphNode<WGContext>
 	{
 		auto tile_buf = ctx->wg_buffer->resource->create_view<TileBufView>(
 		    *ctx->frame_ctx.frame,
-		    HAL::StructuredBufferViewDesc{ 0, Constants::WG_TileSection, counterType::SELF });
+		    HAL::StructuredBufferViewDesc{ 0, Constants::Dev::WG_TileSection, counterType::SELF });
 
 		ctx->compute.clear_counter(tile_buf);
 
-		Slots::WorkGR_ClassifyPixels_NodeEmulation slot;
+		Slots::Dev::WorkGR_ClassifyPixels_NodeEmulation slot;
 		slot.GetGraphInput().GetDispatch_grid() = vec3(ctx->entry.WaveCount[0], ctx->entry.WaveCount[1], ctx->entry.WaveCount[2]);
 		slot.GetGraphInput().GetWaveOffset()    = int2(ctx->entry.WaveOffset_Shader[0], ctx->entry.WaveOffset_Shader[1]);
 		slot.GetYZBase()                        = ctx->yz_base;
 		slot.GetShadows_Node()                  = tile_buf.appendStructuredBuffer;
 
-		ctx->compute.set_pipeline<PSOS::WorkGR_ClassifyPixels_Node>();
+		ctx->compute.set_pipeline<PSOS::Dev::WorkGR_ClassifyPixels_Node>();
 		ctx->compute.set(slot);
 		ctx->compute.dispatch(ctx->entry.WaveCount[0], ctx->yz_count, 1);
 
@@ -69,10 +69,10 @@ struct ShadowsFlowNode : FlowGraph::GraphNode<WGContext>
 		    disp_args.resource.get(), 0,
 		    tile_buf.get_counter_buffer().get(), tile_buf.get_counter_offset(), 4);
 
-		Slots::WorkGR_Shadows_NodeEmulation slot;
+		Slots::Dev::WorkGR_Shadows_NodeEmulation slot;
 		slot.GetInput() = tile_buf.consumeStructuredBuffer;
 
-		ctx->compute.set_pipeline<PSOS::WorkGR_Shadows_Node>();
+		ctx->compute.set_pipeline<PSOS::Dev::WorkGR_Shadows_Node>();
 		ctx->compute.set(slot);
 		ctx->compute.exec_indirect(disp_args, 1);
 
@@ -86,8 +86,8 @@ struct ShadowsFlowNode : FlowGraph::GraphNode<WGContext>
 // setup() is fully generated (helpers.prism's [RenderCondition = `false`]) --
 // this pass exists purely to keep swapchain graph-tracked, never renders.
 
-void PassDefault<Passes::ResultCreation>::render(
-	Passes::ResultCreation::Context&, FrameGraph::FrameContext&) {}
+void PassDefault<Passes::Frame::ResultCreation>::render(
+	Passes::Frame::ResultCreation::Context&, FrameGraph::FrameContext&) {}
 
 
 // ---- Profiler ---------------------------------------------------------------
@@ -95,15 +95,15 @@ void PassDefault<Passes::ResultCreation>::render(
 // this pass never actually renders itself (some other UI/overlay pass owns
 // the real profiler drawing), it exists purely to keep itself graph-tracked.
 
-void PassDefault<Passes::Profiler>::render(
-	Passes::Profiler::Context&, FrameGraph::FrameContext&) {}
+void PassDefault<Passes::Dev::Profiler>::render(
+	Passes::Dev::Profiler::Context&, FrameGraph::FrameContext&) {}
 
 
 // ---- RTXShadow --------------------------------------------------------------
 // setup() is fully generated (raytracing.prism's own [RenderCondition]).
 
-void PassDefault<Passes::RTXShadow>::render(
-    Passes::RTXShadow::Context& data, FrameGraph::FrameContext& context)
+void PassDefault<Passes::Shadows::RTXShadow>::render(
+    Passes::Shadows::RTXShadow::Context& data, FrameGraph::FrameContext& context)
 {
 	auto& scene_ctx  = context.graph->get_context<SceneInfo>();
 	auto& camera_ctx = context.graph->get_context<CameraInfo>();
@@ -122,12 +122,12 @@ void PassDefault<Passes::RTXShadow>::render(
 	GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 	{
-		Slots::Raytracing rtx;
+		Slots::Raytrace::Raytracing rtx;
 		rtx.GetScene() = scene_ctx.scene->raytrace_scene->get_handle();
 		compute.set(rtx);
 	}
 	{
-		Slots::VoxelScreen voxelScreen;
+		Slots::GI::Voxel::VoxelScreen voxelScreen;
 		gbuffer.SetTable(voxelScreen.GetGbuffer());
 		voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
 		compute.set(voxelScreen);
@@ -142,12 +142,12 @@ void PassDefault<Passes::RTXShadow>::render(
 	// normal path needs them.
 	if (RTX::get().debug_full_reference_shadow)
 	{
-		Slots::RTXShadowReference reference;
+		Slots::Shadows::RTXShadowReference reference;
 		gbuffer.SetTable(reference.GetGbuffer());
 		reference.GetOutput() = data.ShadowMask->rwTexture2D;
 		compute.set(reference);
 
-		compute.set_pipeline<PSOS::RTXShadowReferenceCompute>();
+		compute.set_pipeline<PSOS::Shadows::RTXShadowReferenceCompute>();
 		compute.dispatch(ivec2(data.ShadowMask->get_size().x, data.ShadowMask->get_size().y), ivec2{ 16, 16 });
 		return;
 	}
@@ -161,7 +161,7 @@ void PassDefault<Passes::RTXShadow>::render(
 	    { data.ShadowMask->get_size().x, data.ShadowMask->get_size().y },
 	    false, 64);
 
-	Slots::DispatchParameters dispatchParameters;
+	Slots::Shadows::Screen::DispatchParameters dispatchParameters;
 	dispatchParameters.GetDepthTexture()    = gbuffer.depth.texture2D;
 	dispatchParameters.GetOutputTexture()   = data.ShadowMask->rwTexture2D;
 	dispatchParameters.GetLightCoordinate() = float4(
@@ -216,8 +216,8 @@ void PassDefault<Passes::RTXShadow>::render(
 // consumer (the debug view) needs ColorOutput.
 // setup() is fully generated (raytracing.prism's own [SetupCondition]).
 
-void PassDefault<Passes::RTXColorPass>::render(
-    Passes::RTXColorPass::Context& data, FrameGraph::FrameContext& context)
+void PassDefault<Passes::Raytrace::Dev::RTXColorPass>::render(
+    Passes::Raytrace::Dev::RTXColorPass::Context& data, FrameGraph::FrameContext& context)
 {
 	auto& sceneinfo = context.graph->get_context<SceneInfo>();
 	auto& compute   = context.get_list()->get_compute();
@@ -227,19 +227,19 @@ void PassDefault<Passes::RTXColorPass>::render(
 	context.graph->set_slot(SlotID::SceneData, compute);
 
 	{
-		Slots::ColorRTXOutput output;
+		Slots::Raytrace::ColorRTXOutput output;
 		output.GetOutput() = data.ColorOutput->rwTexture2D;
 		compute.set(output);
 	}
 
-	RTX::get().render<ColorRTX>(compute, sceneinfo.scene->raytrace_scene, data.ColorOutput->get_size());
+	RTX::get().render<Raytrace::Dev::ColorRTX>(compute, sceneinfo.scene->raytrace_scene, data.ColorOutput->get_size());
 }
 
 // ── TranslucentRTX — glass/water over the lit scene ────────────────────────
 // setup() is fully generated (raytracing.prism's own [SetupCondition]).
 
-void PassDefault<Passes::TranslucentRTX>::render(
-    Passes::TranslucentRTX::Context& data, FrameGraph::FrameContext& context)
+void PassDefault<Passes::Raytrace::TranslucentRTX>::render(
+    Passes::Raytrace::TranslucentRTX::Context& data, FrameGraph::FrameContext& context)
 {
 	auto& sceneinfo = context.graph->get_context<SceneInfo>();
 	auto& compute   = context.get_list()->get_compute();
@@ -250,7 +250,7 @@ void PassDefault<Passes::TranslucentRTX>::render(
 		context.graph->set_slot(SlotID::FrameInfo, compute);
 		context.graph->set_slot(SlotID::SceneData, compute);
 
-		Slots::TranslucentRTXData params;
+		Slots::Raytrace::TranslucentRTXData params;
 		params.GetDepth()       = data.GBuffer_Depth->texture2D;
 		params.GetScene_color() = data.ResultTexture->texture2D;
 		params.GetOutput()      = data.ResultTextureNew->rwTexture2D;
@@ -259,6 +259,6 @@ void PassDefault<Passes::TranslucentRTX>::render(
 
 	{
 		PROFILE_GPU(L"translucent_rtx_trace");
-		RTX::get().render<TranslucentRaygen>(compute, sceneinfo.scene->raytrace_scene, data.ResultTextureNew->get_size());
+		RTX::get().render<Raytrace::TranslucentRaygen>(compute, sceneinfo.scene->raytrace_scene, data.ResultTextureNew->get_size());
 	}
 }

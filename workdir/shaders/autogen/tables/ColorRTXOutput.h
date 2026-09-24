@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct ColorRTXOutput
+namespace Raytrace
 {
-	uint output; // RWTexture2D<float4>
-	RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
-};
+	struct ColorRTXOutput
+	{
+		uint output; // RWTexture2D<float4>
+		RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[output]; }
+	};
+}
+using Raytrace::ColorRTXOutput;

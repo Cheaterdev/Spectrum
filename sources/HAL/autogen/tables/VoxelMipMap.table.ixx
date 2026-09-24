@@ -15,50 +15,56 @@ import :Autogen.Tables.VoxelTilingParams;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VoxelMipMap
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::VoxelMipMap;
-		HLSL::Texture3D<float4> SrcMip;
-		HLSL::RWTexture3D<float4> OutMips[3];
-		VoxelTilingParams params;
-		HLSL::RWTexture3D<float4>* GetOutMips() { return OutMips; }
-		HLSL::Texture3D<float4>& GetSrcMip() { return SrcMip; }
-		VoxelTilingParams& GetParams() { return params; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Voxel
 		{
-			compiler.compile(SrcMip, "VoxelMipMap::SrcMip");
-			compiler.compile(OutMips, "VoxelMipMap::OutMips");
-			compiler.compile(params, "VoxelMipMap::params");
-		}
-		struct Compiled
-		{
-			uint SrcMip; // Texture3D<float4>
-			uint OutMips[3]; // RWTexture3D<float4>
-			VoxelTilingParams::Compiled params; // VoxelTilingParams
+			struct VoxelMipMap
+			{
+				static constexpr SlotID ID = SlotID::VoxelMipMap;
+				HLSL::Texture3D<float4> SrcMip;
+				HLSL::RWTexture3D<float4> OutMips[3];
+				Table::GI::Voxel::VoxelTilingParams params;
+				HLSL::RWTexture3D<float4>* GetOutMips() { return OutMips; }
+				HLSL::Texture3D<float4>& GetSrcMip() { return SrcMip; }
+				Table::GI::Voxel::VoxelTilingParams& GetParams() { return params; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(SrcMip, "VoxelMipMap::SrcMip");
+					compiler.compile(OutMips, "VoxelMipMap::OutMips");
+					compiler.compile(params, "VoxelMipMap::params");
+				}
+				struct Compiled
+				{
+					uint SrcMip; // Texture3D<float4>
+					uint OutMips[3]; // RWTexture3D<float4>
+					Table::GI::Voxel::VoxelTilingParams::Compiled params; // VoxelTilingParams
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(params);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(params);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VoxelMipMap";
+				static std::string get_typename()
+				{
+					return "Tables::VoxelMipMap";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(params);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(params);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

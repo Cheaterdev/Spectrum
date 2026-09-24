@@ -7,26 +7,30 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct StatGraphLine
+namespace Dev
 {
-	uint Count; // uint
-	uint Width; // uint
-	uint Height; // uint
-	float Vmin; // float
-	float Vmax; // float
-	float4 LineColor; // float4
-	float4 FillColor; // float4
-	float4 BgTop; // float4
-	float4 BgBot; // float4
-	uint Samples; // StructuredBuffer<float>
-	uint GetCount() { return Count; }
-	uint GetWidth() { return Width; }
-	uint GetHeight() { return Height; }
-	float GetVmin() { return Vmin; }
-	float GetVmax() { return Vmax; }
-	float4 GetLineColor() { return LineColor; }
-	float4 GetFillColor() { return FillColor; }
-	float4 GetBgTop() { return BgTop; }
-	float4 GetBgBot() { return BgBot; }
-	StructuredBuffer<float> GetSamples() { return ResourceDescriptorHeap[Samples]; }
-};
+	struct StatGraphLine
+	{
+		uint Count; // uint
+		uint Width; // uint
+		uint Height; // uint
+		float Vmin; // float
+		float Vmax; // float
+		float4 LineColor; // float4
+		float4 FillColor; // float4
+		float4 BgTop; // float4
+		float4 BgBot; // float4
+		uint Samples; // StructuredBuffer<float>
+		uint GetCount() { return Count; }
+		uint GetWidth() { return Width; }
+		uint GetHeight() { return Height; }
+		float GetVmin() { return Vmin; }
+		float GetVmax() { return Vmax; }
+		float4 GetLineColor() { return LineColor; }
+		float4 GetFillColor() { return FillColor; }
+		float4 GetBgTop() { return BgTop; }
+		float4 GetBgBot() { return BgBot; }
+		StructuredBuffer<float> GetSamples() { return ResourceDescriptorHeap[Samples]; }
+	};
+}
+using Dev::StatGraphLine;

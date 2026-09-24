@@ -240,7 +240,7 @@ public:
     // Bind the atlas texture and coord buffer to the FontRendering slot
     void bind(HAL::CommandList::ptr& list)
     {
-        Slots::FontRendering rendering;
+        Slots::UI::Text::FontRendering rendering;
         rendering.GetTex0() = m_texture->texture_2d().texture2D;
         rendering.GetPositions() =
             m_coord_buf.resource->create_view<
@@ -338,14 +338,14 @@ static std::string resolve_font_path(const std::string& font_name)
 //  Text layout helper types
 // ---------------------------------------------------------------------------
 
-// A single glyph vertex — layout must match Table::Glyph exactly.
+// A single glyph vertex — layout must match Table::UI::Text::Glyph exactly.
 struct GlyphVtx
 {
     float2   pos;         // pen position (pixel space)
     uint32_t atlas_idx;   // index into the atlas coord buffer
     float4   color;
 };
-static_assert(sizeof(GlyphVtx) == sizeof(Table::Glyph));
+static_assert(sizeof(GlyphVtx) == sizeof(Table::UI::Text::Glyph));
 
 // ---------------------------------------------------------------------------
 //  layout_text
@@ -484,14 +484,14 @@ done:
 }
 
 // ---------------------------------------------------------------------------
-//  ShaderConstants  — matches Table::FontRenderingConstants layout
+//  ShaderConstants  — matches Table::UI::Text::FontRenderingConstants layout
 // ---------------------------------------------------------------------------
 struct ShaderConstants
 {
     float TransformMatrix[16];
     float ClipRect[4];
 };
-static_assert(sizeof(ShaderConstants) == sizeof(Table::FontRenderingConstants));
+static_assert(sizeof(ShaderConstants) == sizeof(Table::UI::Text::FontRenderingConstants));
 
 // ---------------------------------------------------------------------------
 //  draw_vertices  — uploads vertices and issues the draw call
@@ -515,13 +515,13 @@ static void draw_vertices(
     // 3. Set pipeline state and topology
     auto formats = list->get_graphics().get_formats();
     if (formats.empty()) return;
-    list->get_graphics().set_pipeline<PSOS::FontRender>(
-        PSOS::FontRender::Format(formats[0]));
+    list->get_graphics().set_pipeline<PSOS::UI::Text::FontRender>(
+        PSOS::UI::Text::FontRender::Format(formats[0]));
     list->get_graphics().set_topology(HAL::PrimitiveTopologyType::POINT,
                                       HAL::PrimitiveTopologyFeed::LIST);
     {
-        auto pipeline = RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::FontRender>(
-            PSOS::FontRender::Format(formats[0]));
+        auto pipeline = RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::UI::Text::FontRender>(
+            PSOS::UI::Text::FontRender::Format(formats[0]));
 
     }
 
@@ -564,7 +564,7 @@ static void draw_vertices(
         sc.ClipRect[0] = sc.ClipRect[1] = sc.ClipRect[2] = sc.ClipRect[3] = INF;
     }
 
-    Slots::FontRenderingConstants gpu_consts;
+    Slots::UI::Text::FontRenderingConstants gpu_consts;
     std::memcpy(&gpu_consts, &sc, sizeof(sc));
     list->get_graphics().set(gpu_consts);
 
@@ -573,20 +573,20 @@ static void draw_vertices(
     // minStorageBufferOffsetAlignment so buf_info.offset in the Vulkan descriptor
     // is legal.  lcm(stride, device_limit) is the minimal safe alignment.
     uint32_t count = static_cast<uint32_t>(verts.size());
-    const uint32_t stride_align = sizeof(Table::Glyph);
+    const uint32_t stride_align = sizeof(Table::UI::Text::Glyph);
     const uint32_t vk_align     = RenderSystem::get().device().get_properties().min_storage_buffer_offset_alignment;
     const uint32_t buf_align    = std::lcm(stride_align, vk_align);
-    auto placed = list->place_data(sizeof(Table::Glyph) * count, buf_align);
+    auto placed = list->place_data(sizeof(Table::UI::Text::Glyph) * count, buf_align);
     list->write(placed, std::span{verts.data(), count});
 
-    auto view = placed.resource->create_view<HAL::StructuredBufferView<Table::Glyph>>(
+    auto view = placed.resource->create_view<HAL::StructuredBufferView<Table::UI::Text::Glyph>>(
         *list,
         HAL::StructuredBufferViewDesc{
             static_cast<uint>(placed.resource_offset),
             static_cast<uint>(placed.size),
             HAL::counterType::NONE});
 
-    Slots::FontRenderingGlyphs glyphs_slot;
+    Slots::UI::Text::FontRenderingGlyphs glyphs_slot;
     glyphs_slot.GetData() = view;
     list->get_graphics().set(glyphs_slot);
 
@@ -730,8 +730,8 @@ void Font::set_states(HAL::CommandList::ptr& list)
     // Set the font render PSO and point topology
     auto formats = list->get_graphics().get_formats();
     if (formats.empty()) return;
-    list->get_graphics().set_pipeline<PSOS::FontRender>(
-        PSOS::FontRender::Format(formats[0]));
+    list->get_graphics().set_pipeline<PSOS::UI::Text::FontRender>(
+        PSOS::UI::Text::FontRender::Format(formats[0]));
     list->get_graphics().set_topology(HAL::PrimitiveTopologyType::POINT,
                                       HAL::PrimitiveTopologyFeed::LIST);
 }

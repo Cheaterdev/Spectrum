@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct SIGMA_ClassifyTilesResources :public DataHolder<SIGMA_ClassifyTilesResources, SlotID::SIGMA_ClassifyTilesResources, Table::SIGMA_ClassifyTilesResources, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		SIGMA_ClassifyTilesResources() = default;
-	};
+		namespace NRD
+		{
+			struct SIGMA_ClassifyTilesResources :public DataHolder<SIGMA_ClassifyTilesResources, SlotID::SIGMA_ClassifyTilesResources, Table::Denoise::NRD::SIGMA_ClassifyTilesResources, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				SIGMA_ClassifyTilesResources() = default;
+			};
+		}
+	}
 }

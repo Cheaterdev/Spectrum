@@ -7,10 +7,14 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct IndirectRTXHalfGBuffer
+namespace GI
 {
-	uint depth; // Texture2D<float>
-	uint normals; // Texture2D<float4>
-	Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
-	Texture2D<float4> GetNormals() { return ResourceDescriptorHeap[normals]; }
-};
+	struct IndirectRTXHalfGBuffer
+	{
+		uint depth; // Texture2D<float>
+		uint normals; // Texture2D<float4>
+		Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
+		Texture2D<float4> GetNormals() { return ResourceDescriptorHeap[normals]; }
+	};
+}
+using GI::IndirectRTXHalfGBuffer;

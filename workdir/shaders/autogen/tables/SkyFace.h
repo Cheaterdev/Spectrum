@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct SkyFace
+namespace Environment
 {
-	uint faces; // RWTexture2DArray<float4>
-	RWTexture2DArray<float4> GetFaces() { return ResourceDescriptorHeap[faces]; }
-};
+	struct SkyFace
+	{
+		uint faces; // RWTexture2DArray<float4>
+		RWTexture2DArray<float4> GetFaces() { return ResourceDescriptorHeap[faces]; }
+	};
+}
+using Environment::SkyFace;

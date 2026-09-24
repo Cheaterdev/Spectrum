@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct REBLUR_PrePassSpecularResources :public DataHolder<REBLUR_PrePassSpecularResources, SlotID::REBLUR_PrePassSpecularResources, Table::REBLUR_PrePassSpecularResources, DefaultLayout::Instance2>
+	namespace Denoise
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		REBLUR_PrePassSpecularResources() = default;
-	};
+		namespace NRD
+		{
+			struct REBLUR_PrePassSpecularResources :public DataHolder<REBLUR_PrePassSpecularResources, SlotID::REBLUR_PrePassSpecularResources, Table::Denoise::NRD::REBLUR_PrePassSpecularResources, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				REBLUR_PrePassSpecularResources() = default;
+			};
+		}
+	}
 }

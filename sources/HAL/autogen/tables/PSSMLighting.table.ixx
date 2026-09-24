@@ -15,50 +15,56 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct PSSMLighting
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::PSSMLighting;
-		HLSL::Texture2D<float> light_mask;
-		HLSL::RWTexture2D<float4> result;
-		GBuffer gbuffer;
-		HLSL::Texture2D<float>& GetLight_mask() { return light_mask; }
-		HLSL::RWTexture2D<float4>& GetResult() { return result; }
-		GBuffer& GetGbuffer() { return gbuffer; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace PSSM
 		{
-			compiler.compile(light_mask, "PSSMLighting::light_mask");
-			compiler.compile(result, "PSSMLighting::result");
-			compiler.compile(gbuffer, "PSSMLighting::gbuffer");
-		}
-		struct Compiled
-		{
-			uint light_mask; // Texture2D<float>
-			uint result; // RWTexture2D<float4>
-			GBuffer::Compiled gbuffer; // GBuffer
+			struct PSSMLighting
+			{
+				static constexpr SlotID ID = SlotID::PSSMLighting;
+				HLSL::Texture2D<float> light_mask;
+				HLSL::RWTexture2D<float4> result;
+				Table::Meshes::GBuffer gbuffer;
+				HLSL::Texture2D<float>& GetLight_mask() { return light_mask; }
+				HLSL::RWTexture2D<float4>& GetResult() { return result; }
+				Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(light_mask, "PSSMLighting::light_mask");
+					compiler.compile(result, "PSSMLighting::result");
+					compiler.compile(gbuffer, "PSSMLighting::gbuffer");
+				}
+				struct Compiled
+				{
+					uint light_mask; // Texture2D<float>
+					uint result; // RWTexture2D<float4>
+					Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(gbuffer);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(gbuffer);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::PSSMLighting";
+				static std::string get_typename()
+				{
+					return "Tables::PSSMLighting";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(gbuffer);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(gbuffer);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

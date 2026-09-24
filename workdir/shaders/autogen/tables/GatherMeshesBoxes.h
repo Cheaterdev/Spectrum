@@ -9,22 +9,26 @@
 #include "enums.h"
 #include "BoxInfo.h"
 #include "DispatchArguments.h"
-struct GatherMeshesBoxes
+namespace Meshes
 {
-	uint input_meshes; // StructuredBuffer<BoxInfo>
-	uint visible_boxes; // StructuredBuffer<uint>
-	uint visibleMeshes; // RWStructuredBuffer<uint>
-	uint visibleCount; // RWStructuredBuffer<uint>
-	uint renderArgs; // RWStructuredBuffer<DispatchArguments>
-	uint invisibleMeshes; // RWStructuredBuffer<uint>
-	uint invisibleCount; // RWStructuredBuffer<uint>
-	uint retestArgs; // RWStructuredBuffer<DispatchArguments>
-	StructuredBuffer<BoxInfo> GetInput_meshes() { return ResourceDescriptorHeap[input_meshes]; }
-	StructuredBuffer<uint> GetVisible_boxes() { return ResourceDescriptorHeap[visible_boxes]; }
-	RWStructuredBuffer<uint> GetVisibleMeshes() { return ResourceDescriptorHeap[visibleMeshes]; }
-	RWStructuredBuffer<uint> GetVisibleCount() { return ResourceDescriptorHeap[visibleCount]; }
-	RWStructuredBuffer<DispatchArguments> GetRenderArgs() { return ResourceDescriptorHeap[renderArgs]; }
-	RWStructuredBuffer<uint> GetInvisibleMeshes() { return ResourceDescriptorHeap[invisibleMeshes]; }
-	RWStructuredBuffer<uint> GetInvisibleCount() { return ResourceDescriptorHeap[invisibleCount]; }
-	RWStructuredBuffer<DispatchArguments> GetRetestArgs() { return ResourceDescriptorHeap[retestArgs]; }
-};
+	struct GatherMeshesBoxes
+	{
+		uint input_meshes; // StructuredBuffer<BoxInfo>
+		uint visible_boxes; // StructuredBuffer<uint>
+		uint visibleMeshes; // RWStructuredBuffer<uint>
+		uint visibleCount; // RWStructuredBuffer<uint>
+		uint renderArgs; // RWStructuredBuffer<DispatchArguments>
+		uint invisibleMeshes; // RWStructuredBuffer<uint>
+		uint invisibleCount; // RWStructuredBuffer<uint>
+		uint retestArgs; // RWStructuredBuffer<DispatchArguments>
+		StructuredBuffer<BoxInfo> GetInput_meshes() { return ResourceDescriptorHeap[input_meshes]; }
+		StructuredBuffer<uint> GetVisible_boxes() { return ResourceDescriptorHeap[visible_boxes]; }
+		RWStructuredBuffer<uint> GetVisibleMeshes() { return ResourceDescriptorHeap[visibleMeshes]; }
+		RWStructuredBuffer<uint> GetVisibleCount() { return ResourceDescriptorHeap[visibleCount]; }
+		RWStructuredBuffer<DispatchArguments> GetRenderArgs() { return ResourceDescriptorHeap[renderArgs]; }
+		RWStructuredBuffer<uint> GetInvisibleMeshes() { return ResourceDescriptorHeap[invisibleMeshes]; }
+		RWStructuredBuffer<uint> GetInvisibleCount() { return ResourceDescriptorHeap[invisibleCount]; }
+		RWStructuredBuffer<DispatchArguments> GetRetestArgs() { return ResourceDescriptorHeap[retestArgs]; }
+	};
+}
+using Meshes::GatherMeshesBoxes;

@@ -15,30 +15,36 @@ import :Autogen.Tables.VSMShadowLookup;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMShadowLookupData
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMShadowLookupData;
-		VSMShadowLookup lookup;
-		VSMShadowLookup& GetLookup() { return lookup; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(lookup, "VSMShadowLookupData::lookup");
-		}
-		using Compiled = VSMShadowLookupData;
+			struct VSMShadowLookupData
+			{
+				static constexpr SlotID ID = SlotID::VSMShadowLookupData;
+				Table::Shadows::VSM::VSMShadowLookup lookup;
+				Table::Shadows::VSM::VSMShadowLookup& GetLookup() { return lookup; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(lookup, "VSMShadowLookupData::lookup");
+				}
+				using Compiled = VSMShadowLookupData;
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMShadowLookupData";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(lookup);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::VSMShadowLookupData";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(lookup);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

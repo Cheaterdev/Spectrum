@@ -15,20 +15,20 @@ import :Enums;
 import :Slots;
 
 export namespace Slots
-{
+{{ "{" }}{{ table.ns_open }}
 {%- if table.options.Template is defined %}
 {%- set T = table.options.Template.value_atom.expr %}
 	template<class {{T}}>
-	struct {{table.name}} :public DataHolder<{{table.name}}<{{T}}>, SlotID::{{table.name}}, Table::{{table.name}}<{{T}}>, {{slot.layout}}::{{slot.name}}>
+	struct {{table.name}} :public DataHolder<{{table.name}}<{{T}}>, SlotID::{{table.name}}, Table::{{table.qn}}<{{T}}>, ::{{parsed.layouts[slot.layout].qn}}::{{slot.name}}>
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		{{table.name}}() = default;
-	};
+	};{{ table.ns_braces }}
 {%- else %}
-	struct {{table.name}} :public DataHolder<{{table.name}}, SlotID::{{table.name}}, Table::{{table.name}}, {{slot.layout}}::{{slot.name}}>
+	struct {{table.name}} :public DataHolder<{{table.name}}, SlotID::{{table.name}}, Table::{{table.qn}}, ::{{parsed.layouts[slot.layout].qn}}::{{slot.name}}>
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		{{table.name}}() = default;
-	};
+	};{{ table.ns_braces }}
 {%- endif %}
 }

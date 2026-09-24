@@ -14,30 +14,33 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct TileRecord
+	namespace Dev
 	{
-		static constexpr SlotID ID = SlotID::TileRecord;
-		uint2 tileXY;
-		uint2& GetTileXY() { return tileXY; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct TileRecord
 		{
-			compiler.compile(tileXY, "TileRecord::tileXY");
-		}
-		using Compiled = TileRecord;
+			static constexpr SlotID ID = SlotID::TileRecord;
+			uint2 tileXY;
+			uint2& GetTileXY() { return tileXY; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(tileXY, "TileRecord::tileXY");
+			}
+			using Compiled = TileRecord;
 
-		static std::string get_typename()
-		{
-			return "Tables::TileRecord";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(tileXY);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::TileRecord";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(tileXY);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

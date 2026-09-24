@@ -99,13 +99,13 @@ export{
 		// HAL::Handle set_4_table;
 		vec2 screen_subsample = { 0,0 };
 		GBuffer* g_buffer = nullptr;
-		//RT::GBuffer::Compiled gbuffer_compiled;
+		//RT::Meshes::GBuffer::Compiled gbuffer_compiled;
 
 		HAL::Texture::ptr target_tex;
 
 
 		FrameGraph::SlotContext* slot_context = nullptr;
-		Slots::Voxelization::Compiled voxelization_compiled;
+		Slots::GI::Voxel::Voxelization::Compiled voxelization_compiled;
 		vec3 sky_dir;
 		MeshRenderContext();
 
@@ -129,7 +129,7 @@ export{
 		HAL::Texture2DView depth_mips;
 		HAL::Texture2DView depth_prev_mips;
 
-		RT::GBuffer::Compiled compiled;
+		RT::Meshes::GBuffer::Compiled compiled;
 
 	//	RenderTargetTable rtv_table;
 
@@ -137,12 +137,12 @@ export{
 		struct {
 			HAL::Texture2DView hiZ_depth, hiZ_depth_uav;
 			//RenderTargetTable hiZ_table;
-				RT::DepthOnly::Compiled compiled;
+				RT::Frame::DepthOnly::Compiled compiled;
 
 		}HalfBuffer;
 
 
-		void SetTable(Table::GBuffer& table);
+		void SetTable(Table::Meshes::GBuffer& table);
 
 
 	};

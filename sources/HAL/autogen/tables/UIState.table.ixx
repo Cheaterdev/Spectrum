@@ -14,30 +14,33 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct UIState
+	namespace UI
 	{
-		static constexpr SlotID ID = SlotID::UIState;
-		uint UI_Passes_needed = 0;
-		uint& GetUI_Passes_needed() { return UI_Passes_needed; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct UIState
 		{
-			compiler.compile(UI_Passes_needed, "UIState::UI_Passes_needed");
-		}
-		using Compiled = UIState;
+			static constexpr SlotID ID = SlotID::UIState;
+			uint UI_Passes_needed = 0;
+			uint& GetUI_Passes_needed() { return UI_Passes_needed; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(UI_Passes_needed, "UIState::UI_Passes_needed");
+			}
+			using Compiled = UIState;
 
-		static std::string get_typename()
-		{
-			return "Tables::UIState";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(UI_Passes_needed);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::UIState";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(UI_Passes_needed);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

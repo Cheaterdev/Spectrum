@@ -11,8 +11,8 @@ import RenderSystem;
 
 export namespace Test
 {
-	// Verifies that Slots::Color (a plain float4 CBV) round-trips through the
-	// DefaultLayout SIG pipeline: compile the slot via the graphics context, bind
+	// Verifies that Slots::Editor::Color (a plain float4 CBV) round-trips through the
+	// Frame::DefaultLayout SIG pipeline: compile the slot via the graphics context, bind
 	// it, draw a full-screen triangle that reads the CBV and writes the color to
 	// the render target, and compare the result against the golden image.
 	TEST(Core.HAL, SIGColor)
@@ -77,7 +77,7 @@ float4 PS() : SV_Target
 		HAL::CompiledRT compiled;
 		compiled.table_rtv = view.renderTarget;
 
-		Slots::Color color_slot;
+		Slots::Editor::Color color_slot;
 		color_slot.GetColor() = float4(0.4f, 0.2f, 0.8f, 1.0f);
 
 		auto& gfx = list->get_graphics();
@@ -93,7 +93,7 @@ float4 PS() : SV_Target
 	}
 
 	// Verifies the SRV (Texture2D) path of the SIG system: upload a solid-color
-	// source texture, bind it via Slots::CopyTexture, render a full-screen quad
+	// source texture, bind it via Slots::Utility::CopyTexture, render a full-screen quad
 	// that loads each texel by pixel position, and compare the copy output.
 	TEST(Core.HAL, SIGCopyTexture)
 	{
@@ -127,7 +127,7 @@ float4 PS() : SV_Target
 				HAL::ResFlags::RenderTarget),
 			HAL::HeapType::DEFAULT);
 
-		// Full-screen triangle that reads each pixel from srcTex via Slots::CopyTexture.
+		// Full-screen triangle that reads each pixel from srcTex via Slots::Utility::CopyTexture.
 		// The indirect-CBV boilerplate mirrors autogen/CopyTexture.h.
 		static constexpr const char* kSigCopyHLSL = R"hlsl(
 struct CB { uint offset; };
@@ -177,7 +177,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 		HAL::CompiledRT compiled_rt;
 		compiled_rt.table_rtv = dst_view.renderTarget;
 
-		Slots::CopyTexture copy_slot;
+		Slots::Utility::CopyTexture copy_slot;
 		copy_slot.GetSrcTex() = src_view.texture2D;
 
 		auto& gfx = list->get_graphics();

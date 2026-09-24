@@ -7,10 +7,17 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct PSSMConstants
+namespace Shadows
 {
-	int level; // int
-	float time; // float
-	int GetLevel() { return level; }
-	float GetTime() { return time; }
-};
+	namespace PSSM
+	{
+		struct PSSMConstants
+		{
+			int level; // int
+			float time; // float
+			int GetLevel() { return level; }
+			float GetTime() { return time; }
+		};
+	}
+}
+using Shadows::PSSM::PSSMConstants;

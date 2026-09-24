@@ -14,24 +14,27 @@ import :Types;
 export namespace RT
 {
 	#pragma pack(push, 1)
-	struct _SingleColorDepth
+	namespace Frame
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
-		HLSL::RenderTarget<float4> color;
-		HLSL::DepthStencil<float> depth;
-		HLSL::RenderTarget<float4>& GetColor() { return color; }
-		HLSL::DepthStencil<float>& GetDepth() { return depth; }
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct _SingleColorDepth
 		{
-			compiler.compile(color);
-			compiler.compile(depth);
-		}
-	};
-	#pragma pack(pop)
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
+			HLSL::RenderTarget<float4> color;
+			HLSL::DepthStencil<float> depth;
+			HLSL::RenderTarget<float4>& GetColor() { return color; }
+			HLSL::DepthStencil<float>& GetDepth() { return depth; }
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(color);
+				compiler.compile(depth);
+			}
+		};
+		#pragma pack(pop)
 
-	struct SingleColorDepth:public RTHolder<_SingleColorDepth>
-	{
-		SingleColorDepth() = default;
-	};
+		struct SingleColorDepth:public RTHolder<_SingleColorDepth>
+		{
+			SingleColorDepth() = default;
+		};
+	}
 }

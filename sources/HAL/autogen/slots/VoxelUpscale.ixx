@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VoxelUpscale :public DataHolder<VoxelUpscale, SlotID::VoxelUpscale, Table::VoxelUpscale, DefaultLayout::Instance2>
+	namespace GI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VoxelUpscale() = default;
-	};
+		namespace Voxel
+		{
+			struct VoxelUpscale :public DataHolder<VoxelUpscale, SlotID::VoxelUpscale, Table::GI::Voxel::VoxelUpscale, ::Frame::DefaultLayout::Instance2>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VoxelUpscale() = default;
+			};
+		}
+	}
 }

@@ -7,10 +7,17 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct DDGISelectors
+namespace GI
 {
-	bool enabled; // bool
-	bool show_probes; // bool
-	bool GetEnabled() { return enabled; }
-	bool GetShow_probes() { return show_probes; }
-};
+	namespace DDGI
+	{
+		struct DDGISelectors
+		{
+			bool enabled; // bool
+			bool show_probes; // bool
+			bool GetEnabled() { return enabled; }
+			bool GetShow_probes() { return show_probes; }
+		};
+	}
+}
+using GI::DDGI::DDGISelectors;

@@ -14,40 +14,43 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DrawStencil
+	namespace Editor
 	{
-		static constexpr SlotID ID = SlotID::DrawStencil;
-		HLSL::StructuredBuffer<float4> vertices;
-		HLSL::StructuredBuffer<float4>& GetVertices() { return vertices; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct DrawStencil
 		{
-			compiler.compile(vertices, "DrawStencil::vertices");
-		}
-		struct Compiled
-		{
-			uint vertices; // StructuredBuffer<float4>
+			static constexpr SlotID ID = SlotID::DrawStencil;
+			HLSL::StructuredBuffer<float4> vertices;
+			HLSL::StructuredBuffer<float4>& GetVertices() { return vertices; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(vertices, "DrawStencil::vertices");
+			}
+			struct Compiled
+			{
+				uint vertices; // StructuredBuffer<float4>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::DrawStencil";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::DrawStencil";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

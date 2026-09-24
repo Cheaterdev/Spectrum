@@ -15,44 +15,47 @@ import :Autogen.Tables.DebugStruct;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DebugInfo
+	namespace Dev
 	{
-		static constexpr SlotID ID = SlotID::DebugInfo;
-		HLSL::RWStructuredBuffer<DebugStruct> debug;
-		HLSL::RWStructuredBuffer<uint> logCount;
-		HLSL::RWStructuredBuffer<DebugStruct>& GetDebug() { return debug; }
-		HLSL::RWStructuredBuffer<uint>& GetLogCount() { return logCount; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct DebugInfo
 		{
-			compiler.compile(debug, "DebugInfo::debug");
-			compiler.compile(logCount, "DebugInfo::logCount");
-		}
-		struct Compiled
-		{
-			uint debug; // RWStructuredBuffer<DebugStruct>
-			uint logCount; // RWStructuredBuffer<uint>
+			static constexpr SlotID ID = SlotID::DebugInfo;
+			HLSL::RWStructuredBuffer<Table::Dev::DebugStruct> debug;
+			HLSL::RWStructuredBuffer<uint> logCount;
+			HLSL::RWStructuredBuffer<Table::Dev::DebugStruct>& GetDebug() { return debug; }
+			HLSL::RWStructuredBuffer<uint>& GetLogCount() { return logCount; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(debug, "DebugInfo::debug");
+				compiler.compile(logCount, "DebugInfo::logCount");
+			}
+			struct Compiled
+			{
+				uint debug; // RWStructuredBuffer<DebugStruct>
+				uint logCount; // RWStructuredBuffer<uint>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::DebugInfo";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::DebugInfo";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

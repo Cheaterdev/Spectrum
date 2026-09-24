@@ -15,34 +15,37 @@ import :Autogen.Tables.mesh_vertex_input;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct Triangle
+	namespace Raytrace
 	{
-		static constexpr SlotID ID = SlotID::Triangle;
-		float lod;
-		mesh_vertex_input v;
-		float& GetLod() { return lod; }
-		mesh_vertex_input& GetV() { return v; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct Triangle
 		{
-			compiler.compile(lod, "Triangle::lod");
-			compiler.compile(v, "Triangle::v");
-		}
-		using Compiled = Triangle;
+			static constexpr SlotID ID = SlotID::Triangle;
+			float lod;
+			Table::Meshes::mesh_vertex_input v;
+			float& GetLod() { return lod; }
+			Table::Meshes::mesh_vertex_input& GetV() { return v; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(lod, "Triangle::lod");
+				compiler.compile(v, "Triangle::v");
+			}
+			using Compiled = Triangle;
 
-		static std::string get_typename()
-		{
-			return "Tables::Triangle";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(v);
-			ar& NVP(lod);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::Triangle";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(v);
+				ar& NVP(lod);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

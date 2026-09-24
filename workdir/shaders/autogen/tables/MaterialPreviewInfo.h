@@ -7,18 +7,22 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct MaterialPreviewInfo
+namespace Editor
 {
-	MaterialCB data; // MaterialCB
-	uint textures; // Texture2D<float4>
-	uint results; // RWTexture2DArray<float4>
-	MaterialCB GetData() { return data; }
-	RWTexture2DArray<float4> GetResults() { return ResourceDescriptorHeap[results]; }
-	Texture2D<float4> GetTextures(int i)
+	struct MaterialPreviewInfo
 	{
-		StructuredBuffer<uint> indirection = ResourceDescriptorHeap[textures];
-		uint id = indirection[NonUniformResourceIndex(i)];
-		return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
-	}
+		MaterialCB data; // MaterialCB
+		uint textures; // Texture2D<float4>
+		uint results; // RWTexture2DArray<float4>
+		MaterialCB GetData() { return data; }
+		RWTexture2DArray<float4> GetResults() { return ResourceDescriptorHeap[results]; }
+		Texture2D<float4> GetTextures(int i)
+		{
+			StructuredBuffer<uint> indirection = ResourceDescriptorHeap[textures];
+			uint id = indirection[NonUniformResourceIndex(i)];
+			return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
+		}
 
-};
+	};
+}
+using Editor::MaterialPreviewInfo;

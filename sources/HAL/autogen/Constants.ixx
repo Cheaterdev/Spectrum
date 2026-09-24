@@ -18,23 +18,134 @@ import :Autogen.Tables.TileRecord;
 // rules), e.g. `const MaxDispatchEntries = `MaxLevels * 2048`;`.
 export namespace Constants
 {
-	constexpr auto DDGI_CascadeCount = 5;
-	constexpr auto DDGI_ProbeCountX = 64;
-	constexpr auto DDGI_ProbeCountY = 32;
-	constexpr auto DDGI_ProbeCountZ = 64;
-	constexpr auto DDGI_ProbeCount = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY * Constants::DDGI_ProbeCountZ;
-	constexpr auto DDGI_ProbeTexelSize = 8;
-	constexpr auto DDGI_AtlasWidth = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeTexelSize;
-	constexpr auto DDGI_AtlasHeight = Constants::DDGI_ProbeCountZ * Constants::DDGI_ProbeTexelSize;
-	constexpr auto DDGI_AtlasArraySlices = Constants::DDGI_ProbeCountY * Constants::DDGI_CascadeCount;
-	constexpr auto DDGI_ProbeRayCount = 32;
-	constexpr auto DDGI_MaxProbesPerFrame = Constants::DDGI_ProbeCountX * Constants::DDGI_ProbeCountY;
-	constexpr auto PSSM_RendersSize = 5;
-	constexpr auto MaxLevels = 26;
-	constexpr auto MaxDispatchEntries = Constants::MaxLevels * 2048;
-	constexpr auto VSM_PagesPerLevelSide = 4;
-	constexpr auto VSM_PageSize = 512;
-	constexpr auto VSM_PhysicalPageCount = 256;
-	constexpr auto VSM_PyramidMipCount = []{ int c = 1; for (int s = Constants::VSM_PageSize; s > 1; s >>= 1) c++; return c; }();
-	constexpr auto WG_TileSection = 8u + 256u * 256u * sizeof(Table::TileRecord);
+	namespace GI
+	{
+		namespace DDGI
+		{
+			constexpr auto DDGI_CascadeCount = 5;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			constexpr auto DDGI_ProbeCountX = 64;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			constexpr auto DDGI_ProbeCountY = 32;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			constexpr auto DDGI_ProbeCountZ = 64;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			constexpr auto DDGI_ProbeCount = Constants::GI::DDGI::DDGI_ProbeCountX * Constants::GI::DDGI::DDGI_ProbeCountY * Constants::GI::DDGI::DDGI_ProbeCountZ;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			constexpr auto DDGI_ProbeTexelSize = 8;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			constexpr auto DDGI_AtlasWidth = Constants::GI::DDGI::DDGI_ProbeCountX * Constants::GI::DDGI::DDGI_ProbeTexelSize;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			constexpr auto DDGI_AtlasHeight = Constants::GI::DDGI::DDGI_ProbeCountZ * Constants::GI::DDGI::DDGI_ProbeTexelSize;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			constexpr auto DDGI_AtlasArraySlices = Constants::GI::DDGI::DDGI_ProbeCountY * Constants::GI::DDGI::DDGI_CascadeCount;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			constexpr auto DDGI_ProbeRayCount = 32;
+		}
+	}
+	namespace GI
+	{
+		namespace DDGI
+		{
+			constexpr auto DDGI_MaxProbesPerFrame = Constants::GI::DDGI::DDGI_ProbeCountX * Constants::GI::DDGI::DDGI_ProbeCountY;
+		}
+	}
+	namespace Shadows
+	{
+		namespace PSSM
+		{
+			constexpr auto PSSM_RendersSize = 5;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			constexpr auto MaxLevels = 26;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			constexpr auto MaxDispatchEntries = Constants::Shadows::VSM::MaxLevels * 2048;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			constexpr auto VSM_PagesPerLevelSide = 4;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			constexpr auto VSM_PageSize = 512;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			constexpr auto VSM_PhysicalPageCount = 256;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			constexpr auto VSM_PyramidMipCount = []{ int c = 1; for (int s = Constants::Shadows::VSM::VSM_PageSize; s > 1; s >>= 1) c++; return c; }();
+		}
+	}
+	namespace Dev
+	{
+		constexpr auto WG_TileSection = 8u + 256u * 256u * sizeof(Table::Dev::TileRecord);
+	}
 }

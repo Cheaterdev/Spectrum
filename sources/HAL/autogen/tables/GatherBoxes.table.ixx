@@ -15,68 +15,71 @@ import :Autogen.Tables.BoxInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct GatherBoxes
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::GatherBoxes;
-		HLSL::RWStructuredBuffer<BoxInfo> culledMeshes;
-		HLSL::RWStructuredBuffer<uint> culledCount;
-		HLSL::RWStructuredBuffer<uint> visible_boxes;
-		HLSL::RWStructuredBuffer<DrawIndexedArguments> drawBoxesArgs;
-		HLSL::RWStructuredBuffer<DispatchArguments> gatherMeshesArgs;
-		HLSL::RWStructuredBuffer<uint> visibleMeshes;
-		HLSL::RWStructuredBuffer<uint> visibleCount;
-		HLSL::RWStructuredBuffer<DispatchArguments> renderArgs;
-		HLSL::RWStructuredBuffer<BoxInfo>& GetCulledMeshes() { return culledMeshes; }
-		HLSL::RWStructuredBuffer<uint>& GetCulledCount() { return culledCount; }
-		HLSL::RWStructuredBuffer<uint>& GetVisible_boxes() { return visible_boxes; }
-		HLSL::RWStructuredBuffer<DrawIndexedArguments>& GetDrawBoxesArgs() { return drawBoxesArgs; }
-		HLSL::RWStructuredBuffer<DispatchArguments>& GetGatherMeshesArgs() { return gatherMeshesArgs; }
-		HLSL::RWStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
-		HLSL::RWStructuredBuffer<uint>& GetVisibleCount() { return visibleCount; }
-		HLSL::RWStructuredBuffer<DispatchArguments>& GetRenderArgs() { return renderArgs; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct GatherBoxes
 		{
-			compiler.compile(culledMeshes, "GatherBoxes::culledMeshes");
-			compiler.compile(culledCount, "GatherBoxes::culledCount");
-			compiler.compile(visible_boxes, "GatherBoxes::visible_boxes");
-			compiler.compile(drawBoxesArgs, "GatherBoxes::drawBoxesArgs");
-			compiler.compile(gatherMeshesArgs, "GatherBoxes::gatherMeshesArgs");
-			compiler.compile(visibleMeshes, "GatherBoxes::visibleMeshes");
-			compiler.compile(visibleCount, "GatherBoxes::visibleCount");
-			compiler.compile(renderArgs, "GatherBoxes::renderArgs");
-		}
-		struct Compiled
-		{
-			uint culledMeshes; // RWStructuredBuffer<BoxInfo>
-			uint culledCount; // RWStructuredBuffer<uint>
-			uint visible_boxes; // RWStructuredBuffer<uint>
-			uint drawBoxesArgs; // RWStructuredBuffer<DrawIndexedArguments>
-			uint gatherMeshesArgs; // RWStructuredBuffer<DispatchArguments>
-			uint visibleMeshes; // RWStructuredBuffer<uint>
-			uint visibleCount; // RWStructuredBuffer<uint>
-			uint renderArgs; // RWStructuredBuffer<DispatchArguments>
+			static constexpr SlotID ID = SlotID::GatherBoxes;
+			HLSL::RWStructuredBuffer<Table::Meshes::BoxInfo> culledMeshes;
+			HLSL::RWStructuredBuffer<uint> culledCount;
+			HLSL::RWStructuredBuffer<uint> visible_boxes;
+			HLSL::RWStructuredBuffer<DrawIndexedArguments> drawBoxesArgs;
+			HLSL::RWStructuredBuffer<DispatchArguments> gatherMeshesArgs;
+			HLSL::RWStructuredBuffer<uint> visibleMeshes;
+			HLSL::RWStructuredBuffer<uint> visibleCount;
+			HLSL::RWStructuredBuffer<DispatchArguments> renderArgs;
+			HLSL::RWStructuredBuffer<Table::Meshes::BoxInfo>& GetCulledMeshes() { return culledMeshes; }
+			HLSL::RWStructuredBuffer<uint>& GetCulledCount() { return culledCount; }
+			HLSL::RWStructuredBuffer<uint>& GetVisible_boxes() { return visible_boxes; }
+			HLSL::RWStructuredBuffer<DrawIndexedArguments>& GetDrawBoxesArgs() { return drawBoxesArgs; }
+			HLSL::RWStructuredBuffer<DispatchArguments>& GetGatherMeshesArgs() { return gatherMeshesArgs; }
+			HLSL::RWStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
+			HLSL::RWStructuredBuffer<uint>& GetVisibleCount() { return visibleCount; }
+			HLSL::RWStructuredBuffer<DispatchArguments>& GetRenderArgs() { return renderArgs; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(culledMeshes, "GatherBoxes::culledMeshes");
+				compiler.compile(culledCount, "GatherBoxes::culledCount");
+				compiler.compile(visible_boxes, "GatherBoxes::visible_boxes");
+				compiler.compile(drawBoxesArgs, "GatherBoxes::drawBoxesArgs");
+				compiler.compile(gatherMeshesArgs, "GatherBoxes::gatherMeshesArgs");
+				compiler.compile(visibleMeshes, "GatherBoxes::visibleMeshes");
+				compiler.compile(visibleCount, "GatherBoxes::visibleCount");
+				compiler.compile(renderArgs, "GatherBoxes::renderArgs");
+			}
+			struct Compiled
+			{
+				uint culledMeshes; // RWStructuredBuffer<BoxInfo>
+				uint culledCount; // RWStructuredBuffer<uint>
+				uint visible_boxes; // RWStructuredBuffer<uint>
+				uint drawBoxesArgs; // RWStructuredBuffer<DrawIndexedArguments>
+				uint gatherMeshesArgs; // RWStructuredBuffer<DispatchArguments>
+				uint visibleMeshes; // RWStructuredBuffer<uint>
+				uint visibleCount; // RWStructuredBuffer<uint>
+				uint renderArgs; // RWStructuredBuffer<DispatchArguments>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::GatherBoxes";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::GatherBoxes";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

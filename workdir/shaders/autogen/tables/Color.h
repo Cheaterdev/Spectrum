@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct Color
+namespace Editor
 {
-	float4 color; // float4
-	float4 GetColor() { return color; }
-};
+	struct Color
+	{
+		float4 color; // float4
+		float4 GetColor() { return color; }
+	};
+}
+using Editor::Color;

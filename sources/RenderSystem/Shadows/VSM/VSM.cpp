@@ -161,7 +161,7 @@ void VSM::build_atlas_views()
 	});
 }
 
-void VSM::build_page_hiz_views(Passes::VSM_HiZRebuild::Context& data, int pyramid_mip_count)
+void VSM::build_page_hiz_views(Passes::Shadows::VSM::VSM_HiZRebuild::Context& data, int pyramid_mip_count)
 {
 	std::call_once(page_hiz_views_once, [this, &data, pyramid_mip_count]
 	{
@@ -181,7 +181,7 @@ void VSM::update_frame(FrameGraph::Graph& graph)
 	// first, which only worked while no OTHER pass's enable decision read them.
 	// Now every VSM pass's generated setup does, and nothing orders one pass's
 	// setup before another's.
-	auto& sel = graph.get_context<Table::VSMSelectors>();
+	auto& sel = graph.get_context<Table::Shadows::VSM::VSMSelectors>();
 	sel.use_vsm_penumbra       = use_vsm_penumbra;
 	sel.use_vsm_contact_shadow = use_vsm_contact_shadow;
 	sel.vsm_debug_view         = vsm_debug_view;
@@ -219,7 +219,7 @@ void VSM::pass_data(FrameGraph::TaskBuilder& builder)
 	builder.pass_texture(FrameGraph::ResourceID::VSM_Atlas, vsm_atlas_tex->resource);
 }
 
-void VSM::fill_shadow_lookup_constants(Table::VSMShadowLookup& out, float3 cam_world_pos) const
+void VSM::fill_shadow_lookup_constants(Table::Shadows::VSM::VSMShadowLookup& out, float3 cam_world_pos) const
 {
 	out.GetActive_min()      = active_min;
 	out.GetActive_max()      = active_max;
@@ -247,7 +247,7 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	// whether VSM_Combine itself runs this frame -- VSM_Combine no longer
 	// runs at all when use_vsm_penumbra is on (see its own PassNode comment
 	// in vsm.prism), which used to be the only place this was set.
-	RTX::get().debug_full_reference_shadow = (vsm_debug_view == VSMDebugView::RtxReference);
+	RTX::get().debug_full_reference_shadow = (vsm_debug_view == Shadows::VSM::VSMDebugView::RtxReference);
 
 	// Single-threaded, once per frame, strictly before any level's render()
 	// is dispatched (see the LevelPlan comment in VSM.ixx for why this has
@@ -542,7 +542,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// today's default behavior before any real measurement/z_far arrives.
 	page_table.clipmap.level_count = VSM::MaxLevels;
 	page_table.clipmap.level_zero_slot = VSM::LevelZeroSlot;
-	page_table.clipmap.pages_per_level = Constants::VSM_PagesPerLevelSide;
+	page_table.clipmap.pages_per_level = Constants::Shadows::VSM::VSM_PagesPerLevelSide;
 	page_table.clipmap.base_page_world_size = 32.0f;
 	// page_size (texels/page) is the resolution lever. The atlas is an array
 	// of page_size^2 slices, so the old 16-viewport cap on pages_per_level is
@@ -574,8 +574,8 @@ VSM::VSM() : VariableContext(L"VSM")
 	// this backed by a reserved/tiled resource instead (commit memory only
 	// for slices actually in use), not just a bigger committed array -- see
 	// the class comment on VSM_Atlas's creation below.
-	page_table.page_size = Constants::VSM_PageSize;
-	page_table.physical_page_count = Constants::VSM_PhysicalPageCount;
+	page_table.page_size = Constants::Shadows::VSM::VSM_PageSize;
+	page_table.physical_page_count = Constants::Shadows::VSM::VSM_PhysicalPageCount;
 
 	const int pages_side       = page_table.clipmap.pages_per_level;
 	const int pages_per_level  = pages_side * pages_side;
@@ -616,7 +616,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// consume it now.
 	// setup() is fully generated (vsm.prism's own [RunAlways]).
 
-	m_gatherdispatch_render = [this, pages_side, pages_per_level](Passes::VSM_GatherDispatch::Context& data, FrameGraph::FrameContext& context)
+	m_gatherdispatch_render = [this, pages_side, pages_per_level](Passes::Shadows::VSM::VSM_GatherDispatch::Context& data, FrameGraph::FrameContext& context)
 	{
 		// GPU-driven replacement (Phase 5.12) for the old CPU
 		// scene->iterate_meshes() walk -- builds one small per-level info
@@ -655,7 +655,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			// exec_indirect later this same frame (a compiled CB is just an
 			// index into per-frame dynamic-constant storage, valid from
 			// either context).
-			Slots::VSMPageBatch batch;
+			Slots::Shadows::VSM::VSMPageBatch batch;
 			batch.GetLevel()          = level;
 			batch.GetDirty_mask()     = (int)plan.dirty_mask;
 			batch.GetSkip_occlusion() = (int)plan.skip_occlusion_mask;
@@ -668,7 +668,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			float2 level_min = page_table.clipmap.page_min(level, ivec2(0, 0), plan.origin);
 			float2 level_max = level_min + float2(page_table.clipmap.page_world_size(level) * pages_side);
 
-			Table::VSMLevelDispatchInfo info;
+			Table::Shadows::VSM::VSMLevelDispatchInfo info;
 			info.page_batch_cb = compiled_batch.compiled();
 			info.bounds_min = level_min;
 			info.bounds_max = level_max;
@@ -685,7 +685,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			return;
 
 		{
-			Slots::VSMGatherDispatchData gatherData;
+			Slots::Shadows::VSM::VSMGatherDispatchData gatherData;
 			gatherData.GetLevels()            = data.VSM_LevelDispatchInfo->structuredBuffer;
 			gatherData.GetLevel_count()       = (uint)m_level_dispatch_info.size();
 			gatherData.GetDispatch_commands() = data.VSM_DispatchCommands->appendStructuredBuffer;
@@ -699,11 +699,11 @@ VSM::VSM() : VariableContext(L"VSM")
 		compute.set(scene->compiledGather[(int)MESH_TYPE::ALL]);
 		compute.set(scene->compiledScene);
 
-		compute.set_pipeline<PSOS::VSMGatherDispatch>();
+		compute.set_pipeline<PSOS::Shadows::VSM::VSMGatherDispatch>();
 		compute.dispatch(ivec2((int)mesh_count, (int)m_level_dispatch_info.size()), ivec2(64, 1));
 	};
 
-	m_renderpages_render = [this, pages_side, pages_per_level, pyramid_mip_count](Passes::VSM_RenderPages::Context& data, FrameGraph::FrameContext& context)
+	m_renderpages_render = [this, pages_side, pages_per_level, pyramid_mip_count](Passes::Shadows::VSM::VSM_RenderPages::Context& data, FrameGraph::FrameContext& context)
 	{
 		// All the decision-making (which pages get a slot, priority
 		// stealing, dirty tracking) already happened in plan_frame(),
@@ -885,11 +885,11 @@ VSM::VSM() : VariableContext(L"VSM")
 			// VSM_DispatchCommands' own append counter, MaxDispatchEntries
 			// is only the upper bound.
 			if (use_vsm_conservative_raster)
-				graphics.set_pipeline<PSOS::VSMDepthDrawConservative>();
+				graphics.set_pipeline<PSOS::Shadows::VSM::VSMDepthDrawConservative>();
 			else
-				graphics.set_pipeline<PSOS::VSMDepthDraw>();
+				graphics.set_pipeline<PSOS::Shadows::VSM::VSMDepthDraw>();
 			{
-				Slots::VSMPageTableData pageTableData;
+				Slots::Shadows::VSM::VSMPageTableData pageTableData;
 				pageTableData.GetPage_table()   = data.VSM_PageTable->texture2DArray;
 				pageTableData.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
 				graphics.set(pageTableData);
@@ -897,7 +897,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			// No manual transition needed: like VSM_PageTable, graphics.set()
 			// tracks the read state for this SRV bind itself.
 			{
-				Slots::VSMPageHiZ pageHiZ;
+				Slots::Shadows::VSM::VSMPageHiZ pageHiZ;
 				pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
 				graphics.set(pageHiZ);
 			}
@@ -916,7 +916,7 @@ VSM::VSM() : VariableContext(L"VSM")
 				// in the bound DSV's range on every draw -- this is the same
 				// stop_using()-adjacent cost class as the Hi-Z batch binds,
 				// just for the draw pass instead of the compute passes.
-				RT::DepthOnly rt;
+				RT::Frame::DepthOnly rt;
 				rt.GetDepth() = atlas_array_view.depthStencil;
 				graphics.set_rtv(rt, RTOptions::Default);
 			}
@@ -963,7 +963,7 @@ VSM::VSM() : VariableContext(L"VSM")
 				if (!vsm_material_commands_buffer[0].resource)
 				{
 					for (int i = 0; i < 8; i++)
-						vsm_material_commands_buffer[i] = HAL::StructuredBufferView<Table::VSMDispatchCommandData>(
+						vsm_material_commands_buffer[i] = HAL::StructuredBufferView<Table::Shadows::VSM::VSMDispatchCommandData>(
 							RenderSystem::get().device(), (size_t)MaxMaterialDispatchEntries, HAL::counterType::SELF,
 							HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 				}
@@ -987,7 +987,7 @@ VSM::VSM() : VariableContext(L"VSM")
 				// fine -- there's no single "the VSM camera" the way PSSM
 				// has one, since VSM pages each carry their own.
 				{
-					Slots::FrameInfo frameInfo;
+					Slots::Frame::FrameInfo frameInfo;
 					frameInfo.GetBrdf()   = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
 					frameInfo.GetCamera() = context.graph->get_context<CameraInfo>().cam->camera_cb.current;
 					graphics.set(frameInfo);
@@ -1001,7 +1001,7 @@ VSM::VSM() : VariableContext(L"VSM")
 					int total = 0;
 					while (total < 8 && it != end)
 					{
-						if (it->second->get_transparency_mode() == TransparencyMode::Masked)
+						if (it->second->get_transparency_mode() == Meshes::TransparencyMode::Masked)
 							batch[total++] = it->second;
 						++it;
 					}
@@ -1012,7 +1012,7 @@ VSM::VSM() : VariableContext(L"VSM")
 						compute.clear_counter(vsm_material_commands_buffer[i]);
 
 					{
-						Slots::VSMGatherDispatchMaterialData gatherData;
+						Slots::Shadows::VSM::VSMGatherDispatchMaterialData gatherData;
 						gatherData.GetLevels()      = data.VSM_LevelDispatchInfo->structuredBuffer;
 						gatherData.GetLevel_count() = (uint)m_level_dispatch_info.size();
 						gatherData.GetLight_view()  = light_view;
@@ -1029,7 +1029,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 					compute.set(scene->compiledGather[(int)MESH_TYPE::ALL]);
 					compute.set(scene->compiledScene);
-					compute.set_pipeline<PSOS::VSMGatherDispatchMaterial>();
+					compute.set_pipeline<PSOS::Shadows::VSM::VSMGatherDispatchMaterial>();
 					compute.dispatch(ivec2((int)mesh_count, (int)m_level_dispatch_info.size()), ivec2(64, 1));
 
 					for (int i = 0; i < total; i++)
@@ -1054,13 +1054,13 @@ VSM::VSM() : VariableContext(L"VSM")
 
 						graphics.set_pipeline(real_pso);
 						{
-							Slots::VSMPageTableData pageTableData;
+							Slots::Shadows::VSM::VSMPageTableData pageTableData;
 							pageTableData.GetPage_table()   = data.VSM_PageTable->texture2DArray;
 							pageTableData.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
 							graphics.set(pageTableData);
 						}
 						{
-							Slots::VSMPageHiZ pageHiZ;
+							Slots::Shadows::VSM::VSMPageHiZ pageHiZ;
 							pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
 							graphics.set(pageHiZ);
 						}
@@ -1075,7 +1075,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// ---- Hi-Z pyramid rebuild (Phase 5.17: async compute, see vsm.prism's
 	// VSM_HiZRebuild comment) -----------------------------------------------
 
-	m_hizrebuild_render = [this, pages_per_level, pyramid_mip_count](Passes::VSM_HiZRebuild::Context& data, FrameGraph::FrameContext& context)
+	m_hizrebuild_render = [this, pages_per_level, pyramid_mip_count](Passes::Shadows::VSM::VSM_HiZRebuild::Context& data, FrameGraph::FrameContext& context)
 	{
 		// Rebuilds each just-redrawn page's pyramid for next time it's dirty
 		// -- skipped entirely when hiz_culling_enabled is false, not just
@@ -1137,14 +1137,14 @@ VSM::VSM() : VariableContext(L"VSM")
 
 			{
 				PROFILE(L"vsm_hiz_copy");
-				compute.set_pipeline<PSOS::VSMCopyPageDepthBatch>();
+				compute.set_pipeline<PSOS::Shadows::VSM::VSMCopyPageDepthBatch>();
 				{
 					// Narrowed views (atlas_array_view/page_hiz_mip_array_views,
 					// VSM's own members, built just above), not the base
 					// handlers' full-array/full-mip-chain ones. dirty_slots.
 					// Load(z) still picks which physical slice each Z-group
 					// touches.
-					Slots::VSMCopyPageDepthBatch copy;
+					Slots::Shadows::VSM::VSMCopyPageDepthBatch copy;
 					copy.GetAtlas()       = atlas_array_view.texture2DArray;
 					copy.GetDst_mip0()    = page_hiz_mip_array_views[0].rwTexture2DArray;
 					copy.GetDirty_slots() = data.VSM_DirtySlots->structuredBuffer;
@@ -1155,12 +1155,12 @@ VSM::VSM() : VariableContext(L"VSM")
 
 			{
 				PROFILE(L"vsm_hiz_downsample");
-				compute.set_pipeline<PSOS::VSMDownsampleHiZBatch>();
+				compute.set_pipeline<PSOS::Shadows::VSM::VSMDownsampleHiZBatch>();
 				for (int mip = 0; mip < pyramid_mip_count - 1; mip++)
 				{
 					int dst_size = std::max(1, page_table.page_size >> (mip + 1));
 
-					Slots::VSMDownsampleHiZBatch down;
+					Slots::Shadows::VSM::VSMDownsampleHiZBatch down;
 					// Both sides narrowed to exactly one mip (array-spanning,
 					// physical_page_count slices) instead of the base
 					// handler's whole 7-mip-chain SRV -- same narrowing
@@ -1202,7 +1202,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// in init_penumbra_dispatch_buffers() instead -- allocating and
 	// execute_and_wait()ing during graph setup was never the right place.
 
-	m_blockerclassify_render = [this](Passes::VSM_BlockerClassify::Context& data, FrameGraph::FrameContext& context)
+	m_blockerclassify_render = [this](Passes::Shadows::VSM::VSM_BlockerClassify::Context& data, FrameGraph::FrameContext& context)
 	{
 		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
@@ -1223,7 +1223,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		compute.clear_counter(*data.VSM_SearchTiles);
 
 		{
-			Slots::VSMLighting lighting;
+			Slots::Shadows::VSM::VSMLighting lighting;
 			gbuffer.SetTable(lighting.GetGbuffer());
 			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
 			lighting.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
@@ -1234,13 +1234,13 @@ VSM::VSM() : VariableContext(L"VSM")
 		}
 
 		{
-			Slots::VSMPageHiZ pageHiZ;
+			Slots::Shadows::VSM::VSMPageHiZ pageHiZ;
 			pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
 			compute.set(pageHiZ);
 		}
 
 		{
-			Slots::VSMBlockerTilesAppend tiles;
+			Slots::Shadows::VSM::VSMBlockerTilesAppend tiles;
 			tiles.GetLit_tiles()    = data.VSM_LitTiles->appendStructuredBuffer;
 			tiles.GetDark_tiles()   = data.VSM_DarkTiles->appendStructuredBuffer;
 			tiles.GetSearch_tiles() = data.VSM_SearchTiles->appendStructuredBuffer;
@@ -1248,7 +1248,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		}
 
 		{
-			Slots::VSMConstants constants;
+			Slots::Shadows::VSM::VSMConstants constants;
 			constants.GetActive_min()           = active_min;
 			constants.GetActive_max()           = active_max;
 			constants.GetPage_size()            = page_table.page_size;
@@ -1269,7 +1269,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(constants);
 		}
 
-		compute.set_pipeline<PSOS::VSMBlockerClassify>();
+		compute.set_pipeline<PSOS::Shadows::VSM::VSMBlockerClassify>();
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 
 		// Same render() as the append above (no PassNode boundary -- see
@@ -1296,7 +1296,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// samples directly.
 	// setup() is fully generated (vsm.prism's own [SetupCondition]).
 
-	m_blockersearch_render = [this](Passes::VSM_BlockerSearch::Context& data, FrameGraph::FrameContext& context)
+	m_blockersearch_render = [this](Passes::Shadows::VSM::VSM_BlockerSearch::Context& data, FrameGraph::FrameContext& context)
 	{
 		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
@@ -1313,7 +1313,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		float2 cam_pos_ls = (float4(cam->position, 1) * light_cam.get_view()).xy;
 
 		{
-			Slots::VSMLighting lighting;
+			Slots::Shadows::VSM::VSMLighting lighting;
 			gbuffer.SetTable(lighting.GetGbuffer());
 			lighting.GetVsm_atlas()    = data.VSM_Atlas->texture2DArray;
 			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
@@ -1323,19 +1323,19 @@ VSM::VSM() : VariableContext(L"VSM")
 		}
 
 		{
-			Slots::VSMPageHiZ pageHiZ;
+			Slots::Shadows::VSM::VSMPageHiZ pageHiZ;
 			pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
 			compute.set(pageHiZ);
 		}
 
 		{
-			Slots::VSMTileListRead tiles;
+			Slots::Shadows::VSM::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_SearchTiles->structuredBuffer;
 			compute.set(tiles);
 		}
 
 		{
-			Slots::VSMBlockerSearchOutput output;
+			Slots::Shadows::VSM::VSMBlockerSearchOutput output;
 			output.GetBlocker_search_result() = data.VSM_BlockerSearchResult->rwTexture2D;
 			compute.set(output);
 		}
@@ -1350,7 +1350,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		list.clear_uav(data.VSM_AmbiguousMask->rwTexture2D, vec4(0, 0, 0, 0));
 
 		{
-			Slots::VSMSearchVerdictAppend verdict;
+			Slots::Shadows::VSM::VSMSearchVerdictAppend verdict;
 			verdict.GetConfirmed_lit_tiles() = data.VSM_ConfirmedLitTiles->appendStructuredBuffer;
 			verdict.GetBlur_tiles()          = data.VSM_BlurTiles->appendStructuredBuffer;
 			verdict.GetAmbiguous_mask()      = data.VSM_AmbiguousMask->rwTexture2D;
@@ -1358,7 +1358,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		}
 
 		{
-			Slots::VSMConstants constants;
+			Slots::Shadows::VSM::VSMConstants constants;
 			constants.GetActive_min()           = active_min;
 			constants.GetActive_max()           = active_max;
 			constants.GetPage_size()            = page_table.page_size;
@@ -1383,7 +1383,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		if (use_vsm_debug_clear_unwritten)
 			list.clear_uav_uint(data.VSM_BlockerSearchResult->rwTexture2D);
 
-		compute.set_pipeline<PSOS::VSMBlockerSearchCompute>();
+		compute.set_pipeline<PSOS::Shadows::VSM::VSMBlockerSearchCompute>();
 		compute.exec_indirect(search_tiles_dispatch, 1);
 
 		// Same render() as the append above (no PassNode boundary -- see
@@ -1407,7 +1407,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// the classifying.
 	// setup() is fully generated (vsm.prism's own [SetupCondition]).
 
-	m_screenspaceshadow_render = [this](Passes::VSM_ScreenSpaceShadow::Context& data, FrameGraph::FrameContext& context)
+	m_screenspaceshadow_render = [this](Passes::Shadows::VSM::VSM_ScreenSpaceShadow::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& sky_ctx    = context.graph->get_context<SkyInfo>();
 		auto& camera_ctx = context.graph->get_context<CameraInfo>();
@@ -1433,7 +1433,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 		for (int i = 0; i < res.DispatchCount; i++)
 		{
-			Slots::VSMScreenSpaceShadowParams params;
+			Slots::Shadows::VSM::VSMScreenSpaceShadowParams params;
 			gbuffer.SetTable(params.GetGbuffer());
 			params.GetAmbiguous_mask()   = data.VSM_AmbiguousMask->texture2D;
 			params.GetOutput()           = data.VSM_ContactShadow->rwTexture2D;
@@ -1446,7 +1446,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			params.GetSurface_thickness() = vsm_contact_shadow_thickness;
 			compute.set(params);
 
-			compute.set_pipeline<PSOS::VSMScreenSpaceShadow>();
+			compute.set_pipeline<PSOS::Shadows::VSM::VSMScreenSpaceShadow>();
 			compute.dispatch(res.Dispatch[i].WaveCount[0], res.Dispatch[i].WaveCount[1], res.Dispatch[i].WaveCount[2]);
 		}
 	};
@@ -1458,7 +1458,7 @@ VSM::VSM() : VariableContext(L"VSM")
 	// setup() is fully generated (vsm.prism's own [SetupCondition]); the
 	// VSMSelectors mirror it used to also do now runs once in update_frame().
 
-	m_shadowresolve_render = [this](Passes::VSM_ShadowResolve::Context& data, FrameGraph::FrameContext& context)
+	m_shadowresolve_render = [this](Passes::Shadows::VSM::VSM_ShadowResolve::Context& data, FrameGraph::FrameContext& context)
 	{
 		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
@@ -1475,7 +1475,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		float2 cam_pos_ls = (float4(cam->position, 1) * light_cam.get_view()).xy;
 
 		{
-			Slots::VSMLighting lighting;
+			Slots::Shadows::VSM::VSMLighting lighting;
 			gbuffer.SetTable(lighting.GetGbuffer());
 			lighting.GetVsm_atlas()    = data.VSM_Atlas->texture2DArray;
 			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
@@ -1490,7 +1490,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			// Diagnostic-only (see [[project-nrd-integration]] and
 			// vsm_shadow_resolve.hlsl's own top comment) -- each dispatch
 			// ADDITIONALLY packs its raw distanceToOccluder here for
-			// NRD_SIGMA_Execute to denoise (when ShadowSource::VSM is
+			// NRD_SIGMA_Execute to denoise (when Shadows::VSM::ShadowSource::VSM is
 			// selected), alongside (not instead of) the real blur/combine
 			// writing `result` above.
 			lighting.GetShadow_noise() = data.VSM_PCSS_ShadowNoise->rwTexture2D;
@@ -1508,7 +1508,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		context.graph->set_slot(SlotID::SceneData, compute);
 
 		{
-			Slots::VSMShadowResolveIO io;
+			Slots::Shadows::VSM::VSMShadowResolveIO io;
 			io.GetBlocker_search_result() = data.VSM_BlockerSearchResult->texture2D;
 			compute.set(io);
 		}
@@ -1517,7 +1517,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		bool rtx_verify  = rtx_capable && use_vsm_rtx_verify;
 
 		{
-			Slots::VSMConstants constants;
+			Slots::Shadows::VSM::VSMConstants constants;
 			constants.GetActive_min()      = active_min;
 			constants.GetActive_max()      = active_max;
 			constants.GetPage_size()       = page_table.page_size;
@@ -1538,29 +1538,29 @@ VSM::VSM() : VariableContext(L"VSM")
 		if (rtx_verify)
 		{
 			// Same binding PassDefaults.cpp's RTXShadow::render uses --
-			// Raytracing has its own dedicated DefaultLayout root-signature
+			// Raytracing has its own dedicated Frame::DefaultLayout root-signature
 			// slot, so this doesn't need a FrameGraph-tracked field on
 			// VSM_ShadowResolve's own PassNode.
 			auto& scene_ctx = context.graph->get_context<SceneInfo>();
-			Slots::Raytracing rtx;
+			Slots::Raytrace::Raytracing rtx;
 			rtx.GetScene() = scene_ctx.scene->raytrace_scene->get_handle();
 			compute.set(rtx);
 		}
 
 		{
-			Slots::VSMTileListRead tiles;
+			Slots::Shadows::VSM::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_LitTiles->structuredBuffer;
 			compute.set(tiles);
 		}
-		compute.set_pipeline<PSOS::VSMFullLit>();
+		compute.set_pipeline<PSOS::Shadows::VSM::VSMFullLit>();
 		compute.exec_indirect(lit_tiles_dispatch, 1);
 
 		{
-			Slots::VSMTileListRead tiles;
+			Slots::Shadows::VSM::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_DarkTiles->structuredBuffer;
 			compute.set(tiles);
 		}
-		compute.set_pipeline<PSOS::VSMFullShadow>();
+		compute.set_pipeline<PSOS::Shadows::VSM::VSMFullShadow>();
 		compute.exec_indirect(dark_tiles_dispatch, 1);
 
 		// Stage 2's own post-search confirmation -- a second, cheap full-lit
@@ -1569,22 +1569,22 @@ VSM::VSM() : VariableContext(L"VSM")
 		// to need no work after all. See VSMSearchVerdictAppend's own
 		// comment in vsm.prism.
 		{
-			Slots::VSMTileListRead tiles;
+			Slots::Shadows::VSM::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_ConfirmedLitTiles->structuredBuffer;
 			compute.set(tiles);
 		}
-		compute.set_pipeline<PSOS::VSMFullLit>();
+		compute.set_pipeline<PSOS::Shadows::VSM::VSMFullLit>();
 		compute.exec_indirect(confirmed_lit_tiles_dispatch, 1);
 
 		// The real blur target is VSM_BlurTiles now, not VSM_SearchTiles --
 		// stage 2 already carved out whatever turned out fully confirmed
 		// lit above, so this only ever launches over what's left.
 		{
-			Slots::VSMTileListRead tiles;
+			Slots::Shadows::VSM::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_BlurTiles->structuredBuffer;
 			compute.set(tiles);
 		}
-		compute.set_pipeline<PSOS::VSMShadowBlur>(PSOS::VSMShadowBlur::VsmRtxVerify.Use(rtx_verify));
+		compute.set_pipeline<PSOS::Shadows::VSM::VSMShadowBlur>(PSOS::Shadows::VSM::VSMShadowBlur::VsmRtxVerify.Use(rtx_verify));
 		compute.exec_indirect(blur_tiles_dispatch, 1);
 	};
 
@@ -1592,7 +1592,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	// setup() is fully generated (vsm.prism's own [SetupCondition]).
 
-	m_combine_render = [this](Passes::VSM_Combine::Context& data, FrameGraph::FrameContext& context)
+	m_combine_render = [this](Passes::Shadows::VSM::VSM_Combine::Context& data, FrameGraph::FrameContext& context)
 	{
 		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
@@ -1608,7 +1608,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		float2 cam_pos_ls = (float4(cam->position, 1) * light_cam.get_view()).xy;
 
 		{
-			Slots::VSMLighting lighting;
+			Slots::Shadows::VSM::VSMLighting lighting;
 			gbuffer.SetTable(lighting.GetGbuffer());
 			lighting.GetVsm_atlas()    = data.VSM_Atlas->texture2DArray;
 			lighting.GetPage_table()   = data.VSM_PageTable->texture2DArray;
@@ -1621,7 +1621,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		}
 
 		{
-			Slots::VSMConstants constants;
+			Slots::Shadows::VSM::VSMConstants constants;
 			// Phase 5.7: the active window is two scalars, computed once per
 			// frame in plan_frame() (via update_active_window()) -- get_vsm_level
 			// walks exactly this contiguous range, finest (active_min) first.
@@ -1636,9 +1636,9 @@ VSM::VSM() : VariableContext(L"VSM")
 			// shader can't actually act on. HizClassify has no meaning here
 			// at all (see VSMConstants.debug_view's own comment) -- send
 			// None for that case too.
-			constants.GetDebug_view() = (vsm_debug_view == VSMDebugView::RtxReference && !data.ShadowMask)
-				|| vsm_debug_view == VSMDebugView::HizClassify
-				? VSMDebugView::None : vsm_debug_view;
+			constants.GetDebug_view() = (vsm_debug_view == Shadows::VSM::VSMDebugView::RtxReference && !data.ShadowMask)
+				|| vsm_debug_view == Shadows::VSM::VSMDebugView::HizClassify
+				? Shadows::VSM::VSMDebugView::None : vsm_debug_view;
 			constants.GetLight_view()           = light_cam.get_view();
 
 			for (int level = 0; level < page_table.clipmap.level_count; level++)
@@ -1653,7 +1653,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		// This pass only ever runs now when use_vsm_penumbra is off (see
 		// m_combine_setup's own early-out), so VSMApplyCompute has only one
 		// permutation left -- no VsmPenumbra selection needed any more.
-		compute.set_pipeline<PSOS::VSMApplyCompute>();
+		compute.set_pipeline<PSOS::Shadows::VSM::VSMApplyCompute>();
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 	};
 
@@ -1664,7 +1664,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	// setup() is fully generated (vsm.prism's own [SetupCondition]).
 
-	m_debugoverlay_render = [this](Passes::VSM_DebugClassifyOverlay::Context& data, FrameGraph::FrameContext& context)
+	m_debugoverlay_render = [this](Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& list    = *context.get_list();
 		auto& compute = list.get_compute();
@@ -1680,9 +1680,9 @@ VSM::VSM() : VariableContext(L"VSM")
 		// an unbound texture on non-RTX hardware. vsm_debug_view being a
 		// single-select enum makes do_page_grid/do_rtx_reference mutually
 		// exclusive by construction now, not by convention.
-		bool do_page_grid      = vsm_debug_view == VSMDebugView::PageGrid;
-		bool do_rtx_reference  = vsm_debug_view == VSMDebugView::RtxReference && data.ShadowMask;
-		bool do_contact_shadow = vsm_debug_view == VSMDebugView::ContactShadow && use_vsm_contact_shadow && data.VSM_ContactShadow;
+		bool do_page_grid      = vsm_debug_view == Shadows::VSM::VSMDebugView::PageGrid;
+		bool do_rtx_reference  = vsm_debug_view == Shadows::VSM::VSMDebugView::RtxReference && data.ShadowMask;
+		bool do_contact_shadow = vsm_debug_view == Shadows::VSM::VSMDebugView::ContactShadow && use_vsm_contact_shadow && data.VSM_ContactShadow;
 		if (do_page_grid || do_rtx_reference || do_contact_shadow)
 		{
 			GBuffer gbuffer = GBufferViewDesc::actualize(data);
@@ -1695,7 +1695,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			float2 cam_pos_ls = (float4(cam->position, 1) * light_cam.get_view()).xy;
 
 			{
-				Slots::VSMLighting lighting;
+				Slots::Shadows::VSM::VSMLighting lighting;
 				gbuffer.SetTable(lighting.GetGbuffer());
 				lighting.GetResult() = data.ResultTexture->rwTexture2D;
 				if (data.ShadowMask)
@@ -1705,7 +1705,7 @@ VSM::VSM() : VariableContext(L"VSM")
 				compute.set(lighting);
 			}
 			{
-				Slots::VSMConstants constants;
+				Slots::Shadows::VSM::VSMConstants constants;
 				constants.GetActive_min()      = active_min;
 				constants.GetActive_max()      = active_max;
 				constants.GetPage_size()       = page_table.page_size;
@@ -1720,50 +1720,50 @@ VSM::VSM() : VariableContext(L"VSM")
 			}
 
 			if (do_page_grid)
-				compute.set_pipeline<PSOS::VSMDebugOverlayPageGrid>();
+				compute.set_pipeline<PSOS::Shadows::VSM::Dev::VSMDebugOverlayPageGrid>();
 			else if (do_contact_shadow)
-				compute.set_pipeline<PSOS::VSMDebugOverlayContactShadow>();
+				compute.set_pipeline<PSOS::Shadows::VSM::Dev::VSMDebugOverlayContactShadow>();
 			else
-				compute.set_pipeline<PSOS::VSMDebugOverlayRtxReference>();
+				compute.set_pipeline<PSOS::Shadows::VSM::Dev::VSMDebugOverlayRtxReference>();
 			compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 			return;
 		}
 
-		if (vsm_debug_view != VSMDebugView::HizClassify)
+		if (vsm_debug_view != Shadows::VSM::VSMDebugView::HizClassify)
 			return;
 
 		{
-			Slots::VSMLighting lighting;
+			Slots::Shadows::VSM::VSMLighting lighting;
 			lighting.GetResult() = data.ResultTexture->rwTexture2D;
 			compute.set(lighting);
 		}
 
 		{
-			Slots::VSMTileListRead tiles;
+			Slots::Shadows::VSM::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_LitTiles->structuredBuffer;
 			compute.set(tiles);
 		}
-		compute.set_pipeline<PSOS::VSMDebugOverlayLit>();
+		compute.set_pipeline<PSOS::Shadows::VSM::Dev::VSMDebugOverlayLit>();
 		compute.exec_indirect(lit_tiles_dispatch, 1);
 
 		{
-			Slots::VSMTileListRead tiles;
+			Slots::Shadows::VSM::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_DarkTiles->structuredBuffer;
 			compute.set(tiles);
 		}
-		compute.set_pipeline<PSOS::VSMDebugOverlayDark>();
+		compute.set_pipeline<PSOS::Shadows::VSM::Dev::VSMDebugOverlayDark>();
 		compute.exec_indirect(dark_tiles_dispatch, 1);
 
 		{
-			Slots::VSMTileListRead tiles;
+			Slots::Shadows::VSM::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_ConfirmedLitTiles->structuredBuffer;
 			compute.set(tiles);
 		}
-		compute.set_pipeline<PSOS::VSMDebugOverlayConfirmedLit>();
+		compute.set_pipeline<PSOS::Shadows::VSM::Dev::VSMDebugOverlayConfirmedLit>();
 		compute.exec_indirect(confirmed_lit_tiles_dispatch, 1);
 
 		{
-			Slots::VSMTileListRead tiles;
+			Slots::Shadows::VSM::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_BlurTiles->structuredBuffer;
 			compute.set(tiles);
 		}
@@ -1772,11 +1772,11 @@ VSM::VSM() : VariableContext(L"VSM")
 			// writes shadow_result, it writes through VSMLighting's own
 			// `result` field instead (bound above), same as every other
 			// entry point in this file.
-			Slots::VSMShadowResolveIO io;
+			Slots::Shadows::VSM::VSMShadowResolveIO io;
 			io.GetBlocker_search_result() = data.VSM_BlockerSearchResult->texture2D;
 			compute.set(io);
 		}
-		compute.set_pipeline<PSOS::VSMDebugOverlayBlur>();
+		compute.set_pipeline<PSOS::Shadows::VSM::Dev::VSMDebugOverlayBlur>();
 		compute.exec_indirect(blur_tiles_dispatch, 1);
 	};
 
@@ -1784,7 +1784,7 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	// setup() is fully generated (vsm.prism's own [RunAlways]).
 
-	m_depth_analysis_render = [this](Passes::VSM_DepthAnalysis::Context& data, FrameGraph::FrameContext& context)
+	m_depth_analysis_render = [this](Passes::Shadows::VSM::VSM_DepthAnalysis::Context& data, FrameGraph::FrameContext& context)
 	{
 		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
@@ -1825,12 +1825,12 @@ VSM::VSM() : VariableContext(L"VSM")
 		}
 
 		{
-			Slots::VSMDepthAnalysis analysis;
+			Slots::Shadows::VSM::VSMDepthAnalysis analysis;
 			gbuffer.SetTable(analysis.GetGbuffer());
 			analysis.GetResult() = data.VSM_DepthAnalysisResult->rwStructuredBuffer;
 			compute.set(analysis);
 		}
-		compute.set_pipeline<PSOS::VSMDepthAnalysis>();
+		compute.set_pipeline<PSOS::Shadows::VSM::VSMDepthAnalysis>();
 
 		// Full-frame-covering dispatch; the shader's own bounds check keeps
 		// only the central 50% region's threads doing real work, so this

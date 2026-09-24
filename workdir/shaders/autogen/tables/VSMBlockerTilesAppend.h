@@ -7,12 +7,19 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct VSMBlockerTilesAppend
+namespace Shadows
 {
-	uint lit_tiles; // AppendStructuredBuffer<uint2>
-	uint dark_tiles; // AppendStructuredBuffer<uint2>
-	uint search_tiles; // AppendStructuredBuffer<uint2>
-	AppendStructuredBuffer<uint2> GetLit_tiles() { return ResourceDescriptorHeap[lit_tiles]; }
-	AppendStructuredBuffer<uint2> GetDark_tiles() { return ResourceDescriptorHeap[dark_tiles]; }
-	AppendStructuredBuffer<uint2> GetSearch_tiles() { return ResourceDescriptorHeap[search_tiles]; }
-};
+	namespace VSM
+	{
+		struct VSMBlockerTilesAppend
+		{
+			uint lit_tiles; // AppendStructuredBuffer<uint2>
+			uint dark_tiles; // AppendStructuredBuffer<uint2>
+			uint search_tiles; // AppendStructuredBuffer<uint2>
+			AppendStructuredBuffer<uint2> GetLit_tiles() { return ResourceDescriptorHeap[lit_tiles]; }
+			AppendStructuredBuffer<uint2> GetDark_tiles() { return ResourceDescriptorHeap[dark_tiles]; }
+			AppendStructuredBuffer<uint2> GetSearch_tiles() { return ResourceDescriptorHeap[search_tiles]; }
+		};
+	}
+}
+using Shadows::VSM::VSMBlockerTilesAppend;

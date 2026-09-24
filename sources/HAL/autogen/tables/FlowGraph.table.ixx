@@ -14,38 +14,41 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct FlowGraph
+	namespace UI
 	{
-		static constexpr SlotID ID = SlotID::FlowGraph;
-		float4 size;
-		float4 offset_size;
-		float2 inv_pixel;
-		float4& GetSize() { return size; }
-		float4& GetOffset_size() { return offset_size; }
-		float2& GetInv_pixel() { return inv_pixel; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct FlowGraph
 		{
-			compiler.compile(size, "FlowGraph::size");
-			compiler.compile(offset_size, "FlowGraph::offset_size");
-			compiler.compile(inv_pixel, "FlowGraph::inv_pixel");
-		}
-		using Compiled = FlowGraph;
+			static constexpr SlotID ID = SlotID::FlowGraph;
+			float4 size;
+			float4 offset_size;
+			float2 inv_pixel;
+			float4& GetSize() { return size; }
+			float4& GetOffset_size() { return offset_size; }
+			float2& GetInv_pixel() { return inv_pixel; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(size, "FlowGraph::size");
+				compiler.compile(offset_size, "FlowGraph::offset_size");
+				compiler.compile(inv_pixel, "FlowGraph::inv_pixel");
+			}
+			using Compiled = FlowGraph;
 
-		static std::string get_typename()
-		{
-			return "Tables::FlowGraph";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(size);
-			ar& NVP(offset_size);
-			ar& NVP(inv_pixel);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::FlowGraph";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(size);
+				ar& NVP(offset_size);
+				ar& NVP(inv_pixel);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

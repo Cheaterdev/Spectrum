@@ -16,68 +16,74 @@ import :Autogen.Tables.VoxelTilingParams;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VoxelLighting
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::VoxelLighting;
-		HLSL::Texture3D<float4> albedo;
-		HLSL::Texture3D<float4> normals;
-		HLSL::Texture3D<float4> lower;
-		HLSL::TextureCube<float4> tex_cube;
-		HLSL::RWTexture3D<float4> output;
-		VSMShadowLookup vsm;
-		VoxelTilingParams params;
-		HLSL::RWTexture3D<float4>& GetOutput() { return output; }
-		HLSL::Texture3D<float4>& GetAlbedo() { return albedo; }
-		HLSL::Texture3D<float4>& GetNormals() { return normals; }
-		HLSL::Texture3D<float4>& GetLower() { return lower; }
-		HLSL::TextureCube<float4>& GetTex_cube() { return tex_cube; }
-		VSMShadowLookup& GetVsm() { return vsm; }
-		VoxelTilingParams& GetParams() { return params; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Voxel
 		{
-			compiler.compile(albedo, "VoxelLighting::albedo");
-			compiler.compile(normals, "VoxelLighting::normals");
-			compiler.compile(lower, "VoxelLighting::lower");
-			compiler.compile(tex_cube, "VoxelLighting::tex_cube");
-			compiler.compile(output, "VoxelLighting::output");
-			compiler.compile(vsm, "VoxelLighting::vsm");
-			compiler.compile(params, "VoxelLighting::params");
-		}
-		struct Compiled
-		{
-			uint albedo; // Texture3D<float4>
-			uint normals; // Texture3D<float4>
-			uint lower; // Texture3D<float4>
-			uint tex_cube; // TextureCube<float4>
-			uint output; // RWTexture3D<float4>
-			VSMShadowLookup::Compiled vsm; // VSMShadowLookup
-			VoxelTilingParams::Compiled params; // VoxelTilingParams
+			struct VoxelLighting
+			{
+				static constexpr SlotID ID = SlotID::VoxelLighting;
+				HLSL::Texture3D<float4> albedo;
+				HLSL::Texture3D<float4> normals;
+				HLSL::Texture3D<float4> lower;
+				HLSL::TextureCube<float4> tex_cube;
+				HLSL::RWTexture3D<float4> output;
+				Table::Shadows::VSM::VSMShadowLookup vsm;
+				Table::GI::Voxel::VoxelTilingParams params;
+				HLSL::RWTexture3D<float4>& GetOutput() { return output; }
+				HLSL::Texture3D<float4>& GetAlbedo() { return albedo; }
+				HLSL::Texture3D<float4>& GetNormals() { return normals; }
+				HLSL::Texture3D<float4>& GetLower() { return lower; }
+				HLSL::TextureCube<float4>& GetTex_cube() { return tex_cube; }
+				Table::Shadows::VSM::VSMShadowLookup& GetVsm() { return vsm; }
+				Table::GI::Voxel::VoxelTilingParams& GetParams() { return params; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(albedo, "VoxelLighting::albedo");
+					compiler.compile(normals, "VoxelLighting::normals");
+					compiler.compile(lower, "VoxelLighting::lower");
+					compiler.compile(tex_cube, "VoxelLighting::tex_cube");
+					compiler.compile(output, "VoxelLighting::output");
+					compiler.compile(vsm, "VoxelLighting::vsm");
+					compiler.compile(params, "VoxelLighting::params");
+				}
+				struct Compiled
+				{
+					uint albedo; // Texture3D<float4>
+					uint normals; // Texture3D<float4>
+					uint lower; // Texture3D<float4>
+					uint tex_cube; // TextureCube<float4>
+					uint output; // RWTexture3D<float4>
+					Table::Shadows::VSM::VSMShadowLookup::Compiled vsm; // VSMShadowLookup
+					Table::GI::Voxel::VoxelTilingParams::Compiled params; // VoxelTilingParams
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(vsm);
-				ar& NVP(params);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(vsm);
+						ar& NVP(params);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VoxelLighting";
+				static std::string get_typename()
+				{
+					return "Tables::VoxelLighting";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(vsm);
+					ar& NVP(params);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(vsm);
-			ar& NVP(params);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

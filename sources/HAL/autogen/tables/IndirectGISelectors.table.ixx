@@ -14,34 +14,40 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct IndirectGISelectors
+	namespace Denoise
 	{
-		static constexpr SlotID ID = SlotID::IndirectGISelectors;
-		IndirectSource indirect_source = IndirectSource::RTXReference;
-		ReflectionSource reflection_source = ReflectionSource::RTXReference;
-		IndirectSource& GetIndirect_source() { return indirect_source; }
-		ReflectionSource& GetReflection_source() { return reflection_source; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace NRD
 		{
-			compiler.compile(indirect_source, "IndirectGISelectors::indirect_source");
-			compiler.compile(reflection_source, "IndirectGISelectors::reflection_source");
-		}
-		using Compiled = IndirectGISelectors;
+			struct IndirectGISelectors
+			{
+				static constexpr SlotID ID = SlotID::IndirectGISelectors;
+				::GI::IndirectSource indirect_source = ::GI::IndirectSource::RTXReference;
+				::Reflections::ReflectionSource reflection_source = ::Reflections::ReflectionSource::RTXReference;
+				::GI::IndirectSource& GetIndirect_source() { return indirect_source; }
+				::Reflections::ReflectionSource& GetReflection_source() { return reflection_source; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(indirect_source, "IndirectGISelectors::indirect_source");
+					compiler.compile(reflection_source, "IndirectGISelectors::reflection_source");
+				}
+				using Compiled = IndirectGISelectors;
 
-		static std::string get_typename()
-		{
-			return "Tables::IndirectGISelectors";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(indirect_source);
-			ar& NVP(reflection_source);
-		}
+				static std::string get_typename()
+				{
+					return "Tables::IndirectGISelectors";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(indirect_source);
+					ar& NVP(reflection_source);
+				}
 
-	};
+			};
+		}
+	}
 	#pragma pack(pop)
 }
 

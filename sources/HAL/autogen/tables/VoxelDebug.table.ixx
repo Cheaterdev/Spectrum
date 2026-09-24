@@ -15,46 +15,55 @@ import :Autogen.Tables.GBuffer;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VoxelDebug
+	namespace GI
 	{
-		static constexpr SlotID ID = SlotID::VoxelDebug;
-		HLSL::Texture3D<float4> volume;
-		GBuffer gbuffer;
-		HLSL::Texture3D<float4>& GetVolume() { return volume; }
-		GBuffer& GetGbuffer() { return gbuffer; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Voxel
 		{
-			compiler.compile(volume, "VoxelDebug::volume");
-			compiler.compile(gbuffer, "VoxelDebug::gbuffer");
-		}
-		struct Compiled
-		{
-			uint volume; // Texture3D<float4>
-			GBuffer::Compiled gbuffer; // GBuffer
+			namespace Dev
+			{
+				struct VoxelDebug
+				{
+					static constexpr SlotID ID = SlotID::VoxelDebug;
+					HLSL::Texture3D<float4> volume;
+					Table::Meshes::GBuffer gbuffer;
+					HLSL::Texture3D<float4>& GetVolume() { return volume; }
+					Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
+					static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+					template<class Compiler>
+					void compile(Compiler& compiler) const
+					{
+						compiler.compile(volume, "VoxelDebug::volume");
+						compiler.compile(gbuffer, "VoxelDebug::gbuffer");
+					}
+					struct Compiled
+					{
+						uint volume; // Texture3D<float4>
+						Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(gbuffer);
+						private:
+						SERIALIZE()
+						{
+							ar& NVP(gbuffer);
+						}
+
+
+					};
+
+					static std::string get_typename()
+					{
+						return "Tables::VoxelDebug";
+					}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(gbuffer);
+					}
+
+				};
 			}
-
-
-		};
-
-		static std::string get_typename()
-		{
-			return "Tables::VoxelDebug";
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(gbuffer);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

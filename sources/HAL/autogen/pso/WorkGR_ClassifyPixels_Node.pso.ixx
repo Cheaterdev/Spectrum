@@ -14,38 +14,41 @@ import :Types;
 
 export namespace PSOS
 {
-	struct WorkGR_ClassifyPixels_Node: public PSOBase
+	namespace Dev
 	{
-		struct Keys {
-			GEN_DEF_COMP(Keys);
-		private:
+		struct WorkGR_ClassifyPixels_Node: public PSOBase
+		{
+			struct Keys {
+				GEN_DEF_COMP(Keys);
+			private:
+				SERIALIZE()
+				{
+				}
+			};
+
+			GEN_COMPUTE_PSO(WorkGR_ClassifyPixels_Node)
+
+
+			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+			{
+
+				SimplePSO mpso("WorkGR_ClassifyPixels_Node");
+				if(f) f(mpso,key);
+
+				mpso.root_signature = Layouts::DefaultLayout;
+				mpso.compute.file_name = "shaders/dev/workgraph_test.hlsl";
+				mpso.compute.entry_point = "ClassifyPixels_Node";
+				mpso.compute.flags = HAL::ShaderOptions::None;
+				mpso.compute.macros.emplace_back("WORKGRAPH_EMULATION", "1");
+
+				return mpso;
+			}
+
+			private:
 			SERIALIZE()
 			{
+				ar&NVP(wrap(psos));
 			}
 		};
-
-		GEN_COMPUTE_PSO(WorkGR_ClassifyPixels_Node)
-
-
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
-
-			SimplePSO mpso("WorkGR_ClassifyPixels_Node");
-			if(f) f(mpso,key);
-
-			mpso.root_signature = Layouts::DefaultLayout;
-			mpso.compute.file_name = "shaders/dev/workgraph_test.hlsl";
-			mpso.compute.entry_point = "ClassifyPixels_Node";
-			mpso.compute.flags = HAL::ShaderOptions::None;
-			mpso.compute.macros.emplace_back("WORKGRAPH_EMULATION", "1");
-
-			return mpso;
-		}
-
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
-		}
-	};
+	}
 }

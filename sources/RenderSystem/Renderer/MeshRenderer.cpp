@@ -23,7 +23,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		
 	mesh_render_context->begin();
 
-	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
+	Slots::Frame::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
@@ -124,7 +124,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	auto& copy = mesh_render_context->list->get_copy();
 	auto& list = *mesh_render_context->list;
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
-	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
+	Slots::Frame::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	if (invisibleToo)
 	{
@@ -141,7 +141,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 
 	{
 
-		compute.set_pipeline<PSOS::GatherMeshes>(PSOS::GatherMeshes::Invisible.Use(invisibleToo));
+		compute.set_pipeline<PSOS::Meshes::GatherMeshes>(PSOS::Meshes::GatherMeshes::Invisible.Use(invisibleToo));
 		// Bound check must be the commands_boxes counter (what the indirect
 		// dispatch was sized from) — binding the scene's total mesh count lets
 		// the tail threads of the last group read stale BoxInfo entries past
@@ -155,7 +155,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 }
 
 
-void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count)
+void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count)
 {
 	PROFILE_GPU(L"generate_boxes");
 
@@ -163,7 +163,7 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& copy = mesh_render_context->list->get_copy();
 	auto& list = *mesh_render_context->list;
-	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
+	Slots::Frame::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 
 	{
@@ -181,7 +181,7 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 		compute.clear(render_args);
 
 
-		compute.set_pipeline<PSOS::GatherBoxes>();
+		compute.set_pipeline<PSOS::Meshes::GatherBoxes>();
 		compute.set(gather_boxes_compiled);
 		compute.set(gatherData);
 
@@ -214,7 +214,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	graphics.set_rtv(gbuffer->HalfBuffer.compiled);
 
-	graphics.set_pipeline<PSOS::RenderBoxes>();
+	graphics.set_pipeline<PSOS::Meshes::RenderBoxes>();
 	graphics.set_index_buffer(index_buffer.get_index_buffer_view());
 	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 
@@ -228,7 +228,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	graphics.set_rtv(gbuffer->compiled);
 }
-void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion)
+void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion)
 {
 	PROFILE_GPU(L"render_meshes");
 
@@ -239,14 +239,14 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 
-	Slots::GatherPipeline gather;
+	Slots::Meshes::GatherPipeline gather;
 
 	// Translucent pipelines are left out of every raster pass (GBuffer, depth,
 	// voxelization): the gather drops draws whose pipeline id isn't listed,
 	// and TranslucentRTX draws them instead.
 	std::vector<materials::Pipeline*> batch_pipelines;
 	for (auto& [id, pip] : pipelines)
-		if (pip->get_transparency_mode() != TransparencyMode::Translucent)
+		if (pip->get_transparency_mode() != Meshes::TransparencyMode::Translucent)
 			batch_pipelines.push_back(pip.get());
 
 	graphics.set_index_buffer(HAL::Views::IndexBuffer());// universal_index_manager::get().buffer->get_index_buffer_view(true));
@@ -284,7 +284,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		{
 			PROFILE_GPU(L"GatherMats");
 
-			compute.set_pipeline<PSOS::GatherPipeline>(PSOS::GatherPipeline::CheckFrustum.Use(needCulling));
+			compute.set_pipeline<PSOS::Meshes::GatherPipeline>(PSOS::Meshes::GatherPipeline::CheckFrustum.Use(needCulling));
 			compute.set(gatherData);
 			compute.set(gather);
 
@@ -344,12 +344,12 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 	UINT max_meshes = 1024 * 1024;
 
-	commands_boxes = std::make_shared<virtual_gpu_buffer<Table::BoxInfo>>(RenderSystem::get().device(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	commands_boxes = std::make_shared<virtual_gpu_buffer<Table::Meshes::BoxInfo>>(RenderSystem::get().device(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	visible_boxes = std::make_shared<virtual_gpu_buffer<UINT>>(RenderSystem::get().device(), max_meshes, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	meshes_ids = std::make_shared<virtual_gpu_buffer<UINT>>(RenderSystem::get().device(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	meshes_invisible_ids = std::make_shared<virtual_gpu_buffer<UINT>>(RenderSystem::get().device(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	for (int i = 0; i < 8; i++)
-		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<Table::CommandData>>(RenderSystem::get().device(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<Table::Meshes::CommandData>>(RenderSystem::get().device(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 
 		auto list = (RenderSystem::get().device().get_upload_list());
 			
@@ -404,7 +404,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		retest_args        = HAL::StructuredBufferView<DispatchArguments>(RenderSystem::get().device(), 1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	}
 	{
-		Slots::GatherPipelineGlobal gather;
+		Slots::Meshes::GatherPipelineGlobal gather;
 		gather.GetCommands() = meshes_ids->buffer.resource->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(RenderSystem::get().device().get_static_gpu_data()).buffer;
 
 		gather.GetMeshes_count() = meshes_ids->buffer.counter_view;
@@ -414,7 +414,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	}
 
 	{
-		Slots::GatherPipelineGlobal gather;
+		Slots::Meshes::GatherPipelineGlobal gather;
 		gather.GetCommands() = meshes_invisible_ids->buffer.resource->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(RenderSystem::get().device().get_static_gpu_data()).buffer;
 		gather.GetMeshes_count() = meshes_invisible_ids->buffer.counter_view;
 		gather_invisible = gather.compile(RenderSystem::get().device().get_static_gpu_data());
@@ -422,7 +422,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	}
 
 	{
-		Slots::GatherPipelineGlobal gather;
+		Slots::Meshes::GatherPipelineGlobal gather;
 		gather.GetMeshes_count() = commands_boxes->buffer.counter_view;
 
 		//gather.GetCommands() = // supposed to be null
@@ -431,7 +431,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	}
 
 	{
-		Slots::GatherMeshesBoxes gather_neshes_boxes;
+		Slots::Meshes::GatherMeshesBoxes gather_neshes_boxes;
 		gather_neshes_boxes.GetInput_meshes() = commands_boxes->buffer;
 		gather_neshes_boxes.GetVisible_boxes() = visible_boxes->buffer;
 
@@ -447,7 +447,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	}
 
 	{
-		Slots::DrawBoxes draw_boxes;
+		Slots::Meshes::DrawBoxes draw_boxes;
 		draw_boxes.GetInput_meshes() = commands_boxes->buffer;
 		draw_boxes.GetVisible_meshes() = visible_boxes->buffer;
 		draw_boxes.GetVertices() = vertex_buffer;
@@ -455,7 +455,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		draw_boxes_compiled = draw_boxes.compile(RenderSystem::get().device().get_static_gpu_data());
 	}
 	{
-		Slots::GatherBoxes gather;
+		Slots::Meshes::GatherBoxes gather;
 		gather.GetCulledMeshes() = commands_boxes->buffer;
 		gather.GetCulledCount() = commands_boxes->buffer.counter_view;
 		gather.GetVisible_boxes() = visible_boxes->buffer;

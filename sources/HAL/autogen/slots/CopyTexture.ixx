@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct CopyTexture :public DataHolder<CopyTexture, SlotID::CopyTexture, Table::CopyTexture, DefaultLayout::Instance0>
+	namespace Utility
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		CopyTexture() = default;
-	};
+		struct CopyTexture :public DataHolder<CopyTexture, SlotID::CopyTexture, Table::Utility::CopyTexture, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			CopyTexture() = default;
+		};
+	}
 }

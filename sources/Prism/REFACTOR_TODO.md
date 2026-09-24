@@ -456,6 +456,60 @@ named, the same shape item 3 already proposes for name collisions.
 
 ---
 
+## 11. Namespaces — stages 1-2 DONE
+
+`[options] namespace Name { ... }` groups declarations (grammar:
+`definition`, `namespace_definition`, `namespace_header`). Blocks nest and can
+be reopened across files.
+
+Stage 2: generated C++ and HLSL are scoped (Table::UI::Text::Glyph, HLSL
+UI::Text::Glyph), each definition followed by a flat `using` alias so existing
+code keeps compiling; names therefore stay globally unique. The wrapping text
+is precomputed per declaration (`set_namespace_text`, Main.cpp: ns_open,
+ns_close, ns_close_export, ns_braces) rather than built by a jinja callable:
+two more MakeCallables pushed Main.cpp past MSVC's compiler heap limit
+(C1060). Templates append the fields to the end of an existing line, so output
+without namespaces is byte-identical. Namespace names may not collide with a
+declaration or a scope generated code qualifies with (RESERVED in
+Validate.cpp). HLSL checked with DXC 1.10 -HV 2021 (13 shaders identical with
+and without namespaces).
+
+Each top-level declaration records its path in
+`have_name::ns` (set in `setup_elem` whenever the Parsed is on top of the
+listener stack); `Parsed::namespaces` holds every block. Validation: namespace
+options go through `KNOWN_OPTIONS["namespace"]` (empty for now), and reopened
+blocks must agree on options. The LSP nests the outline and shows the path in
+hover and workspace symbols. Checked: wrapping ui.prism in `namespace UI` and
+nesting font_render.prism in `UI::Text` gives byte-identical output.
+
+Stage 3: C++ has no flat aliases any more. Templates emit full names through
+each declaration's `qn` (tables Table::<qn>; enums/layouts/RTX structs anchored
+as ::<qn>, since an unanchored Shadows::VSM::X inside namespace Table would
+find Table::Shadows and stop). Main.cpp qualifies what it builds itself:
+field C++ types (qualify_field_types) and the owners in conditions/sizes/const
+values (render_expr). Engine C++ was rewritten mechanically to full names.
+HLSL keeps its aliases so shaders are untouched.
+
+All defs are wrapped (2026-09-24): Frame, Meshes, Raytrace, Shadows::{VSM,
+PSSM,Screen,Denoise}, GI::{DDGI,Voxel}, Reflections, Denoise::NRD,
+Environment, Post::{AA,Upscale}, Utility, UI::Text, Editor, Dev, with debug-only
+declarations in top-level Dev or a nested <feature>::Dev (ready for a
+[Build = Dev] gate). UI holds exactly the UI + font PSOs, for [Load = Startup].
+
+Next stages, each with its consumer:
+- `[Load = Startup]`: PSOs in a startup namespace build synchronously and the
+  rest in the background; needs per-PSO ready flags and a loading screen on
+  the engine side.
+- `[Build = Dev]`: `#if`-gate the generated C++/HLSL of what's inside (e.g.
+  DebugInfo), plus a check that nothing ungated references something gated.
+  The HLSL side needs a define passed to DXC and included in the shader cache
+  key.
+- Later, separately: move all Prism C++ output from HAL to RenderSystem (HAL
+  keeps the binding machinery; RenderSystem owns generated content, the PSO
+  registry and load order). Design discussed 2026-09-24, not started.
+
+---
+
 ## Suggested order
 
 Items 1, 2, 4, 6, 7, 9 and 10 are done, and most of 3. What remains:

@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct Test :public DataHolder<Test, SlotID::Test, Table::Test, DefaultLayout::Instance0>
+	namespace Dev
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		Test() = default;
-	};
+		struct Test :public DataHolder<Test, SlotID::Test, Table::Dev::Test, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			Test() = default;
+		};
+	}
 }

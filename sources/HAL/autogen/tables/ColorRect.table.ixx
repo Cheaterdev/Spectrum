@@ -14,34 +14,37 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct ColorRect
+	namespace UI
 	{
-		static constexpr SlotID ID = SlotID::ColorRect;
-		float4 pos[2];
-		float4 color[4];
-		float4* GetPos() { return pos; }
-		float4* GetColor() { return color; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct ColorRect
 		{
-			compiler.compile(pos, "ColorRect::pos");
-			compiler.compile(color, "ColorRect::color");
-		}
-		using Compiled = ColorRect;
+			static constexpr SlotID ID = SlotID::ColorRect;
+			float4 pos[2];
+			float4 color[4];
+			float4* GetPos() { return pos; }
+			float4* GetColor() { return color; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(pos, "ColorRect::pos");
+				compiler.compile(color, "ColorRect::color");
+			}
+			using Compiled = ColorRect;
 
-		static std::string get_typename()
-		{
-			return "Tables::ColorRect";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(pos);
-			ar& NVP(color);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::ColorRect";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(pos);
+				ar& NVP(color);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

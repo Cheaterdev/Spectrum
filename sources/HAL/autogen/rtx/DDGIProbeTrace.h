@@ -5,10 +5,16 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 #pragma once
-
-struct DDGIProbeTrace: public RaytraceRaygen<DDGIProbeTrace>
+namespace GI
 {
-	static const constexpr uint ID = 10;
-	static const constexpr std::string_view shader = "shaders\\ddgi/ddgi_probe_trace.hlsl";
-	static const constexpr std::wstring_view raygen = L"DDGIProbeTraceRaygenShader";
-};
+	namespace DDGI
+	{
+
+		struct DDGIProbeTrace: public RaytraceRaygen<DDGIProbeTrace>
+		{
+			static const constexpr uint ID = 10;
+			static const constexpr std::string_view shader = "shaders\\ddgi/ddgi_probe_trace.hlsl";
+			static const constexpr std::wstring_view raygen = L"DDGIProbeTraceRaygenShader";
+		};
+	}
+}

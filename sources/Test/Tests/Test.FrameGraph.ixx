@@ -69,7 +69,7 @@ export namespace Test
 
 		// ---- Drive the FrameGraph --------------------------------------------
 		FrameGraph::Graph graph;
-		Pipelines::UIPipeline pipeline;
+		Pipelines::UI::UIPipeline pipeline;
 
 		graph.start_new_frame();
 	

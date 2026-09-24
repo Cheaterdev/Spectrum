@@ -14,42 +14,45 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct mesh_vertex_input
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::mesh_vertex_input;
-		float3 pos;
-		float3 normal;
-		float2 tc;
-		float4 tangent;
-		float3& GetPos() { return pos; }
-		float3& GetNormal() { return normal; }
-		float2& GetTc() { return tc; }
-		float4& GetTangent() { return tangent; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct mesh_vertex_input
 		{
-			compiler.compile(pos, "mesh_vertex_input::pos");
-			compiler.compile(normal, "mesh_vertex_input::normal");
-			compiler.compile(tc, "mesh_vertex_input::tc");
-			compiler.compile(tangent, "mesh_vertex_input::tangent");
-		}
-		using Compiled = mesh_vertex_input;
+			static constexpr SlotID ID = SlotID::mesh_vertex_input;
+			float3 pos;
+			float3 normal;
+			float2 tc;
+			float4 tangent;
+			float3& GetPos() { return pos; }
+			float3& GetNormal() { return normal; }
+			float2& GetTc() { return tc; }
+			float4& GetTangent() { return tangent; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(pos, "mesh_vertex_input::pos");
+				compiler.compile(normal, "mesh_vertex_input::normal");
+				compiler.compile(tc, "mesh_vertex_input::tc");
+				compiler.compile(tangent, "mesh_vertex_input::tangent");
+			}
+			using Compiled = mesh_vertex_input;
 
-		static std::string get_typename()
-		{
-			return "Tables::mesh_vertex_input";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(pos);
-			ar& NVP(normal);
-			ar& NVP(tc);
-			ar& NVP(tangent);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::mesh_vertex_input";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(pos);
+				ar& NVP(normal);
+				ar& NVP(tc);
+				ar& NVP(tangent);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

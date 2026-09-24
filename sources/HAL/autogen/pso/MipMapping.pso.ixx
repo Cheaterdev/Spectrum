@@ -14,54 +14,57 @@ import :Types;
 
 export namespace PSOS
 {
-	struct MipMapping: public PSOBase
+	namespace Utility
 	{
-		struct Keys {
-			KeyValue<int, NonNullable, 0, 1, 2, 3> NonPowerOfTwo;
-			KeyValue<int, Nullable> Gamma;
-			KeyValue<int, Nullable> Slices;
-			GEN_DEF_COMP(Keys);
-		private:
+		struct MipMapping: public PSOBase
+		{
+			struct Keys {
+				KeyValue<int, NonNullable, 0, 1, 2, 3> NonPowerOfTwo;
+				KeyValue<int, Nullable> Gamma;
+				KeyValue<int, Nullable> Slices;
+				GEN_DEF_COMP(Keys);
+			private:
+				SERIALIZE()
+				{
+					ar&NVP(NonPowerOfTwo);
+					ar&NVP(Gamma);
+					ar&NVP(Slices);
+				}
+			};
+
+			GEN_COMPUTE_PSO(MipMapping, NonPowerOfTwo, Gamma, Slices)
+			GEN_KEY(NonPowerOfTwo, true);
+			GEN_KEY(Gamma, true);
+			GEN_KEY(Slices, true);
+
+
+			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+			{
+				static const ShaderDefine<&Keys::NonPowerOfTwo,&SimpleComputePSO::compute> NonPowerOfTwo = "NON_POWER_OF_TWO";
+				static const ShaderDefine<&Keys::Gamma,&SimpleComputePSO::compute> Gamma = "CONVERT_TO_SRGB";
+				static const ShaderDefine<&Keys::Slices,&SimpleComputePSO::compute> Slices = "ARRAY_SLICES";
+
+
+				SimplePSO mpso("MipMapping");
+				if(f) f(mpso,key);
+
+				mpso.root_signature = Layouts::DefaultLayout;
+
+				mpso.compute.file_name = "shaders/postprocess/generate_mips.hlsl";
+				mpso.compute.entry_point = "CS";
+				mpso.compute.flags = HAL::ShaderOptions::None;
+			
+				NonPowerOfTwo.Apply(mpso, key);
+				Gamma.Apply(mpso, key);
+				Slices.Apply(mpso, key);
+				return mpso;
+			}
+
+			private:
 			SERIALIZE()
 			{
-				ar&NVP(NonPowerOfTwo);
-				ar&NVP(Gamma);
-				ar&NVP(Slices);
+				ar&NVP(wrap(psos));
 			}
 		};
-
-		GEN_COMPUTE_PSO(MipMapping, NonPowerOfTwo, Gamma, Slices)
-		GEN_KEY(NonPowerOfTwo, true);
-		GEN_KEY(Gamma, true);
-		GEN_KEY(Slices, true);
-
-
-		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
-		{
-			static const ShaderDefine<&Keys::NonPowerOfTwo,&SimpleComputePSO::compute> NonPowerOfTwo = "NON_POWER_OF_TWO";
-			static const ShaderDefine<&Keys::Gamma,&SimpleComputePSO::compute> Gamma = "CONVERT_TO_SRGB";
-			static const ShaderDefine<&Keys::Slices,&SimpleComputePSO::compute> Slices = "ARRAY_SLICES";
-
-
-			SimplePSO mpso("MipMapping");
-			if(f) f(mpso,key);
-
-			mpso.root_signature = Layouts::DefaultLayout;
-
-			mpso.compute.file_name = "shaders/postprocess/generate_mips.hlsl";
-			mpso.compute.entry_point = "CS";
-			mpso.compute.flags = HAL::ShaderOptions::None;
-			
-			NonPowerOfTwo.Apply(mpso, key);
-			Gamma.Apply(mpso, key);
-			Slices.Apply(mpso, key);
-			return mpso;
-		}
-
-		private:
-		SERIALIZE()
-		{
-			ar&NVP(wrap(psos));
-		}
-	};
+	}
 }

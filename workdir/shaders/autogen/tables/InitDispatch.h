@@ -8,10 +8,14 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "DispatchArguments.h"
-struct InitDispatch
+namespace Meshes
 {
-	uint counter; // RWStructuredBuffer<uint>
-	uint dispatch_data; // RWStructuredBuffer<DispatchArguments>
-	RWStructuredBuffer<uint> GetCounter() { return ResourceDescriptorHeap[counter]; }
-	RWStructuredBuffer<DispatchArguments> GetDispatch_data() { return ResourceDescriptorHeap[dispatch_data]; }
-};
+	struct InitDispatch
+	{
+		uint counter; // RWStructuredBuffer<uint>
+		uint dispatch_data; // RWStructuredBuffer<DispatchArguments>
+		RWStructuredBuffer<uint> GetCounter() { return ResourceDescriptorHeap[counter]; }
+		RWStructuredBuffer<DispatchArguments> GetDispatch_data() { return ResourceDescriptorHeap[dispatch_data]; }
+	};
+}
+using Meshes::InitDispatch;

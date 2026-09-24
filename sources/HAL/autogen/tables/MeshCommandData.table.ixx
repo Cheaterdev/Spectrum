@@ -16,50 +16,53 @@ import :Autogen.Tables.MeshInstanceInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct MeshCommandData
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::MeshCommandData;
-		uint material_id;
-		uint node_offset;
-		Pointer<MeshInfo> mesh_cb;
-		Pointer<MeshInstanceInfo> meshinstance_cb;
-		uint meshlet_count;
-		DispatchMeshArguments draw_commands;
-		uint& GetMaterial_id() { return material_id; }
-		uint& GetNode_offset() { return node_offset; }
-		Pointer<MeshInfo>& GetMesh_cb() { return mesh_cb; }
-		Pointer<MeshInstanceInfo>& GetMeshinstance_cb() { return meshinstance_cb; }
-		uint& GetMeshlet_count() { return meshlet_count; }
-		DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct MeshCommandData
 		{
-			compiler.compile(material_id, "MeshCommandData::material_id");
-			compiler.compile(node_offset, "MeshCommandData::node_offset");
-			compiler.compile(mesh_cb, "MeshCommandData::mesh_cb");
-			compiler.compile(meshinstance_cb, "MeshCommandData::meshinstance_cb");
-			compiler.compile(meshlet_count, "MeshCommandData::meshlet_count");
-			compiler.compile(draw_commands, "MeshCommandData::draw_commands");
-		}
-		using Compiled = MeshCommandData;
+			static constexpr SlotID ID = SlotID::MeshCommandData;
+			uint material_id;
+			uint node_offset;
+			Pointer<Table::Meshes::MeshInfo> mesh_cb;
+			Pointer<Table::Meshes::MeshInstanceInfo> meshinstance_cb;
+			uint meshlet_count;
+			DispatchMeshArguments draw_commands;
+			uint& GetMaterial_id() { return material_id; }
+			uint& GetNode_offset() { return node_offset; }
+			Pointer<Table::Meshes::MeshInfo>& GetMesh_cb() { return mesh_cb; }
+			Pointer<Table::Meshes::MeshInstanceInfo>& GetMeshinstance_cb() { return meshinstance_cb; }
+			uint& GetMeshlet_count() { return meshlet_count; }
+			DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(material_id, "MeshCommandData::material_id");
+				compiler.compile(node_offset, "MeshCommandData::node_offset");
+				compiler.compile(mesh_cb, "MeshCommandData::mesh_cb");
+				compiler.compile(meshinstance_cb, "MeshCommandData::meshinstance_cb");
+				compiler.compile(meshlet_count, "MeshCommandData::meshlet_count");
+				compiler.compile(draw_commands, "MeshCommandData::draw_commands");
+			}
+			using Compiled = MeshCommandData;
 
-		static std::string get_typename()
-		{
-			return "Tables::MeshCommandData";
-		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(material_id);
-			ar& NVP(node_offset);
-			ar& NVP(mesh_cb);
-			ar& NVP(meshinstance_cb);
-			ar& NVP(draw_commands);
-			ar& NVP(meshlet_count);
-		}
+			static std::string get_typename()
+			{
+				return "Tables::MeshCommandData";
+			}
+			private:
+			SERIALIZE()
+			{
+				ar& NVP(material_id);
+				ar& NVP(node_offset);
+				ar& NVP(mesh_cb);
+				ar& NVP(meshinstance_cb);
+				ar& NVP(draw_commands);
+				ar& NVP(meshlet_count);
+			}
 
-	};
+		};
+	}
 	#pragma pack(pop)
 }
 

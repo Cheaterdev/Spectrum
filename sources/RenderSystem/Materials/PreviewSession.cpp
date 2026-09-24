@@ -33,8 +33,8 @@ void materials::MaterialPreviewSession::rebuild_pso()
 		auto header = EngineAssets::material_preview_3d_header.get_asset();
 		auto preview_source = src.uniforms + header->get_data() + src.text;
 
-		pso3d = std::make_shared<PSOS::MaterialPreview3D>();
-		PSOS::MaterialPreview3D::Keys key;
+		pso3d = std::make_shared<PSOS::Editor::MaterialPreview3D>();
+		PSOS::Editor::MaterialPreview3D::Keys key;
 		auto mpso = pso3d->init_pso(key, nullptr);
 		mpso.pixel = { preview_source, "PS_PREVIEW", HAL::ShaderOptions::None, src.macros, true };
 
@@ -53,8 +53,8 @@ void materials::MaterialPreviewSession::rebuild_pso()
 		auto header = EngineAssets::material_preview_header.get_asset();
 		auto preview_source = src.uniforms + header->get_data() + src.text;
 
-		pso = std::make_shared<PSOS::MaterialPreview>();
-		PSOS::MaterialPreview::Keys key;
+		pso = std::make_shared<PSOS::Editor::MaterialPreview>();
+		PSOS::Editor::MaterialPreview::Keys key;
 		auto mpso = pso->init_pso(key, nullptr);
 		mpso.compute = { preview_source, "CS", HAL::ShaderOptions::None, src.macros, true };
 		pso->psos[key] = mpso.create(RenderSystem::get().device());
@@ -175,7 +175,7 @@ void materials::MaterialPreviewSession::dispatch()
 		// mesh has nothing else to resolve visibility per pixel (no rtv,
 		// UAV-only PS -- see material_preview.prism).
 		{
-			RT::DepthOnly rt;
+			RT::Frame::DepthOnly rt;
 			rt.GetDepth() = preview_depth->texture_2d().depthStencil;
 			auto rtv = rt.compile(*list);
 			graphics.set_rtv(rtv, RTOptions::Default | RTOptions::ClearDepth);
@@ -186,7 +186,7 @@ void materials::MaterialPreviewSession::dispatch()
 
 		graphics.set(preview_scene->compiledScene);
 		{
-			Slots::FrameInfo frameInfo;
+			Slots::Frame::FrameInfo frameInfo;
 			frameInfo.GetCamera() = preview_cam.camera_cb.current;
 			graphics.set(frameInfo);
 		}

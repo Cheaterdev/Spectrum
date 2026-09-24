@@ -14,44 +14,50 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DenoiserShadow_FilterLast
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::DenoiserShadow_FilterLast;
-		HLSL::Texture2D<float16_t2> rqt2d_input;
-		HLSL::RWTexture2D<unorm float4> rwt2d_output;
-		HLSL::Texture2D<float16_t2>& GetRqt2d_input() { return rqt2d_input; }
-		HLSL::RWTexture2D<unorm float4>& GetRwt2d_output() { return rwt2d_output; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace Denoise
 		{
-			compiler.compile(rqt2d_input, "DenoiserShadow_FilterLast::rqt2d_input");
-			compiler.compile(rwt2d_output, "DenoiserShadow_FilterLast::rwt2d_output");
-		}
-		struct Compiled
-		{
-			uint rqt2d_input; // Texture2D<float16_t2>
-			uint rwt2d_output; // RWTexture2D<unorm float4>
+			struct DenoiserShadow_FilterLast
+			{
+				static constexpr SlotID ID = SlotID::DenoiserShadow_FilterLast;
+				HLSL::Texture2D<float16_t2> rqt2d_input;
+				HLSL::RWTexture2D<unorm float4> rwt2d_output;
+				HLSL::Texture2D<float16_t2>& GetRqt2d_input() { return rqt2d_input; }
+				HLSL::RWTexture2D<unorm float4>& GetRwt2d_output() { return rwt2d_output; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(rqt2d_input, "DenoiserShadow_FilterLast::rqt2d_input");
+					compiler.compile(rwt2d_output, "DenoiserShadow_FilterLast::rwt2d_output");
+				}
+				struct Compiled
+				{
+					uint rqt2d_input; // Texture2D<float16_t2>
+					uint rwt2d_output; // RWTexture2D<unorm float4>
 
 			
-			private:
-			SERIALIZE()
-			{
-			}
+					private:
+					SERIALIZE()
+					{
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::DenoiserShadow_FilterLast";
+				static std::string get_typename()
+				{
+					return "Tables::DenoiserShadow_FilterLast";
+				}
+				private:
+				SERIALIZE()
+				{
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

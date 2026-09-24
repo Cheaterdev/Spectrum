@@ -13,9 +13,9 @@ import Core;
 import :Autogen.Layouts.{{layout.parent.name}};
 {%- endif %}
 import :Types;
-import :Sampler;
+import :Sampler;{{ layout.ns_open }}
 {% if layout.parent is defined %}
-export struct {{layout.name}}: public {{layout.parent.name}}
+export struct {{layout.name}}: public ::{{parsed.layouts[layout.parent.name].qn}}
 {%else %}
 export struct {{layout.name}}
 {% endif-%}
@@ -41,4 +41,4 @@ export struct {{layout.name}}
 	{
 		processor.template process<{{slots | join(', ')}}>({ {{samplers | join(', ')}} });
 	}
-};
+};{{ layout.ns_braces }}

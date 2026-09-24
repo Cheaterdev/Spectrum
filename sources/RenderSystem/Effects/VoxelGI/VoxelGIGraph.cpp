@@ -190,7 +190,7 @@ void VoxelGI::update_frame(FrameGraph::Graph& graph)
 	// single test VoxelDebug makes -- DebugMode is a plain C++ enum, so a
 	// generated condition cannot name its enumerators.
 	{
-		auto& sel = graph.get_context<Table::VoxelGISelectors>();
+		auto& sel = graph.get_context<Table::GI::Voxel::VoxelGISelectors>();
 		sel.voxelize_scene     = voxelize_scene;
 		sel.light_scene        = light_scene;
 		sel.reflection_enabled = reflecton;
@@ -203,7 +203,7 @@ void VoxelGI::update_frame(FrameGraph::Graph& graph)
 	// only then returned false when voxelize_scene was off, and
 	// voxels_compiled/register_slot_setter are read by passes other than
 	// Voxelize.
-	Slots::VoxelInfo& voxel_info = this->scene->voxel_info;
+	Slots::GI::Voxel::VoxelInfo& voxel_info = this->scene->voxel_info;
 	min  = this->scene->get_min() - float3(1, 1, 1);
 	size = this->scene->get_max() + float3(1, 1, 1) - this->scene->get_min();
 
@@ -251,7 +251,7 @@ void VoxelGI::pass_data(FrameGraph::TaskBuilder& builder)
 // [Static] (see voxel.prism) -- this used to be a runtime-wired
 // add_library_pass with no call site left anywhere assigning it into a
 // pipeline (dead: never ran, before or after the compute rewrite). It is
-// fully stateless, so PassDefault<Passes::GBufferDownsampler> + a
+// fully stateless, so PassDefault<Passes::Meshes::GBufferDownsampler> + a
 // MainPipeline listing (test.prism) is the right shape, matching IndirectRTX.
 // setup() is fully generated (voxel.prism's own [RunAlways]).
 
@@ -275,8 +275,8 @@ namespace
 	Variable<float> g_metallic_threshold  = { 0.05f, "Reflection metallic threshold",  &tile_classify_context(), 0.0f, 1.0f };
 }
 
-void PassDefault<Passes::GBufferDownsampler>::render(
-	Passes::GBufferDownsampler::Context& data, FrameGraph::FrameContext& context)
+void PassDefault<Passes::Meshes::GBufferDownsampler>::render(
+	Passes::Meshes::GBufferDownsampler::Context& data, FrameGraph::FrameContext& context)
 {
 	auto& command_list = context.get_list();
 	auto tempColor = *data.GBuffer_TempColor;
@@ -306,7 +306,7 @@ void PassDefault<Passes::GBufferDownsampler>::render(
 		compute.clear_counter(*data.TileRoughnessLow);
 
 		{
-			Slots::TileClassifyData params;
+			Slots::Meshes::TileClassifyData params;
 			gbuffer.SetTable(params.GetGbuffer());
 			params.GetHalf_depth()   = data.GBuffer_HalfDepth->rwTexture2D;
 			params.GetHalf_normals() = data.GBuffer_HalfNormals->rwTexture2D;
@@ -323,7 +323,7 @@ void PassDefault<Passes::GBufferDownsampler>::render(
 			compute.set(params);
 		}
 
-		compute.set_pipeline<PSOS::GBufferDownsample>();
+		compute.set_pipeline<PSOS::Meshes::GBufferDownsample>();
 		compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 8, 8 });
 	}
 }
@@ -405,7 +405,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	// setup() is fully generated (voxel.prism's own [SetupCondition]); the voxel-
 	// bounds/VoxelInfo update it used to also do now runs in update_frame().
 
-	m_voxelize_render = [this](Passes::Voxelize::Context& data, FrameGraph::FrameContext& context)
+	m_voxelize_render = [this](Passes::GI::Voxel::Voxelize::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& command_list = context.get_list();
 		auto& cam          = context.graph->get_context<CameraInfo>();
@@ -434,7 +434,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
-	m_lighting_render = [this](Passes::Lighting::Context& data, FrameGraph::FrameContext& context)
+	m_lighting_render = [this](Passes::GI::Voxel::Lighting::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& command_list = context.get_list();
 		auto  sky_cubemap_filtered = *data.sky_cubemap_filtered;
@@ -449,10 +449,10 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		auto& list    = *mesh_ctx->list;
 		auto& compute = mesh_ctx->list->get_compute();
 
-		compute.set_pipeline<PSOS::Lighting>(
-			PSOS::Lighting::SecondBounce.Use((all_scene_regen_counter == 0) && multiple_bounces));
+		compute.set_pipeline<PSOS::GI::Voxel::Lighting>(
+			PSOS::GI::Voxel::Lighting::SecondBounce.Use((all_scene_regen_counter == 0) && multiple_bounces));
 
-		Slots::VoxelLighting ligthing;
+		Slots::GI::Voxel::VoxelLighting ligthing;
 		{
 			ligthing.GetAlbedo()  = albedo.tex_result->texture_3d().texture3D;
 			ligthing.GetNormals() = normal.tex_result->texture_3d().texture3D;
@@ -532,7 +532,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
-	m_mipmapping_render = [this](Passes::Mipmapping::Context& data, FrameGraph::FrameContext& context)
+	m_mipmapping_render = [this](Passes::GI::Voxel::Mipmapping::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& command_list = context.get_list();
 		auto  voxel_lighted = *data.VoxelLighted;
@@ -570,14 +570,14 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 			// (The old 3-mips-per-dispatch batches covered mips 2,3,5,6 only
 			// under loaded finer tiles, which is what the zero pass patched.)
 			PROFILE_GPU(L"EXEC");
-			compute.set_pipeline<PSOS::VoxelDownsample>(PSOS::VoxelDownsample::Count(1));
+			compute.set_pipeline<PSOS::GI::Voxel::VoxelDownsample>(PSOS::GI::Voxel::VoxelDownsample::Count(1));
 
 			for (uint mip = 1; mip < mip_levels; mip++)
 			{
 				if (mip >= gpu_tiles_buffer.size() || !gpu_tiles_buffer[mip]) break;
 
 				{
-					Slots::VoxelMipMap mipmapping;
+					Slots::GI::Voxel::VoxelMipMap mipmapping;
 					mipmapping.GetSrcMip() =
 						tex_lighting.tex_result->texture_3d().mips[mip - 1].texture3D;
 					mipmapping.GetOutMips()[0] =
@@ -612,13 +612,13 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// setup() is fully generated (UpscalingDLSSRR.prism's own [SetupCondition]).
 
-	m_normalroughnessrepack_render = [this](Passes::NormalRoughnessRepack::Context& data, FrameGraph::FrameContext& context)
+	m_normalroughnessrepack_render = [this](Passes::Post::Upscale::NormalRoughnessRepack::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& compute = context.get_list()->get_compute();
 		auto  sz      = context.graph->get_context<ViewportInfo>().frame_size;
 
-		compute.set_pipeline<PSOS::NormalRoughnessRepack>();
-		Slots::NormalRoughnessRepackParams params;
+		compute.set_pipeline<PSOS::Post::Upscale::NormalRoughnessRepack>();
+		Slots::Post::Upscale::NormalRoughnessRepackParams params;
 		params.GBuffer_Normals        = data.GBuffer_Normals->texture2D;
 		params.GBuffer_Albedo         = data.GBuffer_Albedo->texture2D;
 		params.Output                 = data.NormalRoughness->rwTexture2D;
@@ -636,7 +636,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
-	m_reflcombine_render = [this](Passes::ReflCombine::Context& data, FrameGraph::FrameContext& context)
+	m_reflcombine_render = [this](Passes::Reflections::ReflCombine::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& command_list = context.get_list();
 		auto  target_tex   = *data.ResultTexture;
@@ -647,10 +647,10 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		context.graph->set_slot(SlotID::FrameInfo, compute);
 		context.graph->set_slot(SlotID::SceneData, compute);
 
-		compute.set_pipeline<PSOS::ReflectionCombine>();
+		compute.set_pipeline<PSOS::Reflections::ReflectionCombine>();
 
 		{
-			Slots::ReflectionCombine combine;
+			Slots::Reflections::ReflectionCombine combine;
 			gbuffer.SetTable(combine.GetGbuffer());
 			combine.GetReflection() = data.RTXReflectionDenoised->texture2D;
 			combine.GetTarget()     = data.ResultTexture->rwTexture2D;
@@ -665,7 +665,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
-	m_voxeldebug_render = [this](Passes::VoxelDebug::Context& data, FrameGraph::FrameContext& context)
+	m_voxeldebug_render = [this](Passes::GI::Voxel::Dev::VoxelDebug::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& command_list = context.get_list();
 		auto  voxel_lighted = *data.VoxelLighted;
@@ -689,17 +689,17 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		graphics.set_scissor(target_tex.get_scissor());
 
 		{
-			RT::SingleColor rt;
+			RT::Frame::SingleColor rt;
 			rt.GetColor() = target_tex.renderTarget;
 			graphics.set_rtv(rt);
 		}
 
-		graphics.set_pipeline<PSOS::VoxelDebug>();
+		graphics.set_pipeline<PSOS::GI::Voxel::Dev::VoxelDebug>();
 		context.graph->set_slot(SlotID::VoxelInfo, graphics);
 		context.graph->set_slot(SlotID::FrameInfo, graphics);
 
 		{
-			Slots::VoxelDebug debug;
+			Slots::GI::Voxel::Dev::VoxelDebug debug;
 			debug.GetVolume() = voxel_lighted.texture3D;
 			gbuffer.SetTable(debug.GetGbuffer());
 			graphics.set(debug);
@@ -711,7 +711,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
-	m_voxelscreen_render = [this](Passes::VoxelScreen::Context& data, FrameGraph::FrameContext& context)
+	m_voxelscreen_render = [this](Passes::GI::Voxel::VoxelScreen::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& command_list = context.get_list();
 
@@ -730,7 +730,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		context.graph->set_slot(SlotID::VoxelInfo, compute);
 
 		{
-			Slots::VoxelScreen voxelScreen;
+			Slots::GI::Voxel::VoxelScreen voxelScreen;
 			gbuffer.SetTable(voxelScreen.GetGbuffer());
 			voxelScreen.GetVoxels() = voxel_lighted.texture3D;
 			compute.set(voxelScreen);
@@ -739,12 +739,12 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		{
 			PROFILE_GPU(L"voxel_screen_indirect");
 			{
-				Slots::VoxelOutput output;
+				Slots::GI::Voxel::VoxelOutput output;
 				output.GetNoiseRaw()  = noisy_output.rwTexture2D;
 				output.GetBlueNoise() = data.BlueNoise->texture2D;
 				compute.set(output);
 			}
-			RTX::get().render<Indirect>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
+			RTX::get().render<GI::Indirect>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
 		}
 	};
 
@@ -752,7 +752,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 	// setup() is fully generated (voxel.prism's own [SetupCondition]).
 
-	m_screenreflection_render = [this](Passes::ScreenReflection::Context& data, FrameGraph::FrameContext& context)
+	m_screenreflection_render = [this](Passes::Reflections::ScreenReflection::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& command_list = context.get_list();
 
@@ -771,7 +771,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		context.graph->set_slot(SlotID::VoxelInfo, compute);
 
 		{
-			Slots::VoxelScreen voxelScreen;
+			Slots::GI::Voxel::VoxelScreen voxelScreen;
 			gbuffer.SetTable(voxelScreen.GetGbuffer());
 			voxelScreen.GetVoxels() = voxel_lighted.texture3D;
 			compute.set(voxelScreen);
@@ -780,12 +780,12 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		{
 			PROFILE_GPU(L"screen_reflection");
 			{
-				Slots::VoxelOutput output;
+				Slots::GI::Voxel::VoxelOutput output;
 				output.GetNoiseRaw()  = noisy_output.rwTexture2D;
 				output.GetBlueNoise() = data.BlueNoise->texture2D;
 				compute.set(output);
 			}
-			RTX::get().render<Reflection>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
+			RTX::get().render<Reflections::Reflection>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
 		}
 	};
 
@@ -893,12 +893,12 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 		PROFILE_GPU(L"copy");
 
 		albedo_tiles->update(context->list);
-		compute.set_pipeline<PSOS::VoxelCopy>();
+		compute.set_pipeline<PSOS::GI::Voxel::VoxelCopy>();
 		graph.set_slot(SlotID::VoxelInfo, compute);
 		{
 
 			{
-				Slots::VoxelCopy utils;
+				Slots::GI::Voxel::VoxelCopy utils;
 				utils.GetTarget()[0] = albedo.tex_dynamic->texture_3d().mips[0].rwTexture3D;
 				utils.GetSource()[0] = albedo.tex_static->texture_3d().texture3D;
 
@@ -918,7 +918,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 	context->render_type = RENDER_TYPE::VOXEL;
 
-	Slots::Voxelization voxelization;
+	Slots::GI::Voxel::Voxelization voxelization;
 	voxelization.GetInfo().GetMin() = scene->voxel_info.GetMin();
 	voxelization.GetInfo().GetSize() = scene->voxel_info.GetSize();
 	voxelization.GetInfo().GetVoxel_tiles_count() = scene->voxel_info.GetVoxel_tiles_count();
@@ -951,7 +951,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	graphics.set_scissor({ 0, 0,  albedo.tex_dynamic->get_size().xy });
 
 				{
-				RT::NoOutput rt;
+				RT::Frame::NoOutput rt;
 				graphics.set_rtv(rt);
 				}
 

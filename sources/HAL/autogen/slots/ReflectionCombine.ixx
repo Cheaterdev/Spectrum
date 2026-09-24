@@ -15,9 +15,12 @@ import :Slots;
 
 export namespace Slots
 {
-	struct ReflectionCombine :public DataHolder<ReflectionCombine, SlotID::ReflectionCombine, Table::ReflectionCombine, DefaultLayout::Instance0>
+	namespace Reflections
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		ReflectionCombine() = default;
-	};
+		struct ReflectionCombine :public DataHolder<ReflectionCombine, SlotID::ReflectionCombine, Table::Reflections::ReflectionCombine, ::Frame::DefaultLayout::Instance0>
+		{
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+			ReflectionCombine() = default;
+		};
+	}
 }

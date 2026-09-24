@@ -29,7 +29,7 @@ SMAA::SMAA()
 
 	// setup() is fully generated (smaa.prism's own [SetupCondition]).
 
-	m_smaa_render = [this](Passes::SMAA::Context& data, FrameGraph::FrameContext& context)
+	m_smaa_render = [this](Passes::Post::AA::SMAA::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& frame   = context.graph->get_context<ViewportInfo>();
 		auto& compute = context.get_list()->get_compute();
@@ -40,9 +40,9 @@ SMAA::SMAA()
 		// referenced by all three shaders (SMAA_impl.hlsl reads it at global
 		// scope), and the same root-signature slot persists across the pipeline
 		// switches below since none of them rebind Instance0.
-		compute.set_pipeline<PSOS::EdgeDetectCompute>();
+		compute.set_pipeline<PSOS::Post::AA::EdgeDetectCompute>();
 		{
-			Slots::SMAA_Global slot_global;
+			Slots::Post::AA::SMAA_Global slot_global;
 			slot_global.GetColorTex()         = data.ResultTexture->texture2D;
 			slot_global.GetSubsampleIndices() = float4(0, 0, 0, 0);
 			slot_global.GetSMAA_RT_METRICS()  = float4(1.0f / size.x, 1.0f / size.y, size);
@@ -53,9 +53,9 @@ SMAA::SMAA()
 
 		// Instance1 is reused between SMAA_Weights and SMAA_Blend, same as the
 		// original code's two graphics.set() calls for the same slot.
-		compute.set_pipeline<PSOS::BlendWeightCompute>();
+		compute.set_pipeline<PSOS::Post::AA::BlendWeightCompute>();
 		{
-			Slots::SMAA_Weights slot_edges;
+			Slots::Post::AA::SMAA_Weights slot_edges;
 			slot_edges.GetSearchTex() = search_tex->texture_2d().texture2D;
 			slot_edges.GetAreaTex()   = area_tex->texture_2d().texture2D;
 			slot_edges.GetEdgesTex()  = data.SMAA_edges->texture2D;
@@ -64,9 +64,9 @@ SMAA::SMAA()
 		}
 		compute.dispatch(size, ivec2{ 16, 16 });
 
-		compute.set_pipeline<PSOS::BlendingCompute>();
+		compute.set_pipeline<PSOS::Post::AA::BlendingCompute>();
 		{
-			Slots::SMAA_Blend slot_blend;
+			Slots::Post::AA::SMAA_Blend slot_blend;
 			slot_blend.GetBlendTex()  = data.SMAA_blend->texture2D;
 			slot_blend.GetResultOut() = data.ResultTextureNew->rwTexture2D;
 			compute.set(slot_blend);

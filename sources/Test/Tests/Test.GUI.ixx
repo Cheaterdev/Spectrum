@@ -207,7 +207,7 @@ export namespace Test
 	}
 
 	// Tests colored_rect::draw through the full element dispatch path:
-	// user_interface layout → colored_rect::draw → Renderer::draw_color → PSOS::SimpleRect.
+	// user_interface layout → colored_rect::draw → Renderer::draw_color → PSOS::UI::SimpleRect.
 	TEST(Core.HAL, GUIElement_ColoredRect)
 	{
 			THREAD_SCOPE(GUI);
@@ -542,7 +542,7 @@ export namespace Test
 		// etc.) now happens in the UI_PreDraw FrameGraph pass's render(), which
 		// this test never invokes (it drives the GPU render manually instead of
 		// via Graph::setup()/render()) — so run it directly here, matching what
-		// PassDefault<Passes::UI_PreDraw>::render() does.
+		// PassDefault<Passes::UI::UI_PreDraw>::render() does.
 		FrameGraph::Graph graph;
 		ui.create_graph(graph);
 		device.get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();

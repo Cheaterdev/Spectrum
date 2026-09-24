@@ -16,56 +16,62 @@ import :Autogen.Tables.VSMLevelDispatchInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMGatherDispatchData
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMGatherDispatchData;
-		uint level_count;
-		float4x4 light_view;
-		HLSL::StructuredBuffer<VSMLevelDispatchInfo> levels;
-		HLSL::AppendStructuredBuffer<VSMDispatchCommandData> dispatch_commands;
-		HLSL::StructuredBuffer<VSMLevelDispatchInfo>& GetLevels() { return levels; }
-		uint& GetLevel_count() { return level_count; }
-		float4x4& GetLight_view() { return light_view; }
-		HLSL::AppendStructuredBuffer<VSMDispatchCommandData>& GetDispatch_commands() { return dispatch_commands; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(level_count, "VSMGatherDispatchData::level_count");
-			compiler.compile(light_view, "VSMGatherDispatchData::light_view");
-			compiler.compile(levels, "VSMGatherDispatchData::levels");
-			compiler.compile(dispatch_commands, "VSMGatherDispatchData::dispatch_commands");
-		}
-		struct Compiled
-		{
-			uint level_count; // uint
-			float4x4 light_view; // float4x4
-			uint levels; // StructuredBuffer<VSMLevelDispatchInfo>
-			uint dispatch_commands; // AppendStructuredBuffer<VSMDispatchCommandData>
+			struct VSMGatherDispatchData
+			{
+				static constexpr SlotID ID = SlotID::VSMGatherDispatchData;
+				uint level_count;
+				float4x4 light_view;
+				HLSL::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo> levels;
+				HLSL::AppendStructuredBuffer<Table::Shadows::VSM::VSMDispatchCommandData> dispatch_commands;
+				HLSL::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo>& GetLevels() { return levels; }
+				uint& GetLevel_count() { return level_count; }
+				float4x4& GetLight_view() { return light_view; }
+				HLSL::AppendStructuredBuffer<Table::Shadows::VSM::VSMDispatchCommandData>& GetDispatch_commands() { return dispatch_commands; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(level_count, "VSMGatherDispatchData::level_count");
+					compiler.compile(light_view, "VSMGatherDispatchData::light_view");
+					compiler.compile(levels, "VSMGatherDispatchData::levels");
+					compiler.compile(dispatch_commands, "VSMGatherDispatchData::dispatch_commands");
+				}
+				struct Compiled
+				{
+					uint level_count; // uint
+					float4x4 light_view; // float4x4
+					uint levels; // StructuredBuffer<VSMLevelDispatchInfo>
+					uint dispatch_commands; // AppendStructuredBuffer<VSMDispatchCommandData>
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(level_count);
-				ar& NVP(light_view);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(level_count);
+						ar& NVP(light_view);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMGatherDispatchData";
+				static std::string get_typename()
+				{
+					return "Tables::VSMGatherDispatchData";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(level_count);
+					ar& NVP(light_view);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(level_count);
-			ar& NVP(light_view);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

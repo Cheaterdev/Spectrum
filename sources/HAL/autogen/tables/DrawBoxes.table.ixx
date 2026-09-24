@@ -15,48 +15,51 @@ import :Autogen.Tables.BoxInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DrawBoxes
+	namespace Meshes
 	{
-		static constexpr SlotID ID = SlotID::DrawBoxes;
-		HLSL::StructuredBuffer<float4> vertices;
-		HLSL::StructuredBuffer<BoxInfo> input_meshes;
-		HLSL::RWStructuredBuffer<uint> visible_meshes;
-		HLSL::StructuredBuffer<float4>& GetVertices() { return vertices; }
-		HLSL::StructuredBuffer<BoxInfo>& GetInput_meshes() { return input_meshes; }
-		HLSL::RWStructuredBuffer<uint>& GetVisible_meshes() { return visible_meshes; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct DrawBoxes
 		{
-			compiler.compile(vertices, "DrawBoxes::vertices");
-			compiler.compile(input_meshes, "DrawBoxes::input_meshes");
-			compiler.compile(visible_meshes, "DrawBoxes::visible_meshes");
-		}
-		struct Compiled
-		{
-			uint vertices; // StructuredBuffer<float4>
-			uint input_meshes; // StructuredBuffer<BoxInfo>
-			uint visible_meshes; // RWStructuredBuffer<uint>
+			static constexpr SlotID ID = SlotID::DrawBoxes;
+			HLSL::StructuredBuffer<float4> vertices;
+			HLSL::StructuredBuffer<Table::Meshes::BoxInfo> input_meshes;
+			HLSL::RWStructuredBuffer<uint> visible_meshes;
+			HLSL::StructuredBuffer<float4>& GetVertices() { return vertices; }
+			HLSL::StructuredBuffer<Table::Meshes::BoxInfo>& GetInput_meshes() { return input_meshes; }
+			HLSL::RWStructuredBuffer<uint>& GetVisible_meshes() { return visible_meshes; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(vertices, "DrawBoxes::vertices");
+				compiler.compile(input_meshes, "DrawBoxes::input_meshes");
+				compiler.compile(visible_meshes, "DrawBoxes::visible_meshes");
+			}
+			struct Compiled
+			{
+				uint vertices; // StructuredBuffer<float4>
+				uint input_meshes; // StructuredBuffer<BoxInfo>
+				uint visible_meshes; // RWStructuredBuffer<uint>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::DrawBoxes";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::DrawBoxes";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

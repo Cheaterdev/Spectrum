@@ -14,54 +14,60 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct VSMDownsampleHiZBatch
+	namespace Shadows
 	{
-		static constexpr SlotID ID = SlotID::VSMDownsampleHiZBatch;
-		uint src_mip;
-		HLSL::StructuredBuffer<uint> dirty_slots;
-		HLSL::RWTexture2DArray<float2> src;
-		HLSL::RWTexture2DArray<float2> dst_mip;
-		HLSL::RWTexture2DArray<float2>& GetSrc() { return src; }
-		HLSL::RWTexture2DArray<float2>& GetDst_mip() { return dst_mip; }
-		HLSL::StructuredBuffer<uint>& GetDirty_slots() { return dirty_slots; }
-		uint& GetSrc_mip() { return src_mip; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		namespace VSM
 		{
-			compiler.compile(src_mip, "VSMDownsampleHiZBatch::src_mip");
-			compiler.compile(dirty_slots, "VSMDownsampleHiZBatch::dirty_slots");
-			compiler.compile_whole(src, "VSMDownsampleHiZBatch::src");
-			compiler.compile_whole(dst_mip, "VSMDownsampleHiZBatch::dst_mip");
-		}
-		struct Compiled
-		{
-			uint src_mip; // uint
-			uint dirty_slots; // StructuredBuffer<uint>
-			uint src; // RWTexture2DArray<float2>
-			uint dst_mip; // RWTexture2DArray<float2>
+			struct VSMDownsampleHiZBatch
+			{
+				static constexpr SlotID ID = SlotID::VSMDownsampleHiZBatch;
+				uint src_mip;
+				HLSL::StructuredBuffer<uint> dirty_slots;
+				HLSL::RWTexture2DArray<float2> src;
+				HLSL::RWTexture2DArray<float2> dst_mip;
+				HLSL::RWTexture2DArray<float2>& GetSrc() { return src; }
+				HLSL::RWTexture2DArray<float2>& GetDst_mip() { return dst_mip; }
+				HLSL::StructuredBuffer<uint>& GetDirty_slots() { return dirty_slots; }
+				uint& GetSrc_mip() { return src_mip; }
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+				template<class Compiler>
+				void compile(Compiler& compiler) const
+				{
+					compiler.compile(src_mip, "VSMDownsampleHiZBatch::src_mip");
+					compiler.compile(dirty_slots, "VSMDownsampleHiZBatch::dirty_slots");
+					compiler.compile_whole(src, "VSMDownsampleHiZBatch::src");
+					compiler.compile_whole(dst_mip, "VSMDownsampleHiZBatch::dst_mip");
+				}
+				struct Compiled
+				{
+					uint src_mip; // uint
+					uint dirty_slots; // StructuredBuffer<uint>
+					uint src; // RWTexture2DArray<float2>
+					uint dst_mip; // RWTexture2DArray<float2>
 
 			
-			private:
-			SERIALIZE()
-			{
-				ar& NVP(src_mip);
-			}
+					private:
+					SERIALIZE()
+					{
+						ar& NVP(src_mip);
+					}
 
 
-		};
+				};
 
-		static std::string get_typename()
-		{
-			return "Tables::VSMDownsampleHiZBatch";
+				static std::string get_typename()
+				{
+					return "Tables::VSMDownsampleHiZBatch";
+				}
+				private:
+				SERIALIZE()
+				{
+					ar& NVP(src_mip);
+				}
+
+			};
 		}
-		private:
-		SERIALIZE()
-		{
-			ar& NVP(src_mip);
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

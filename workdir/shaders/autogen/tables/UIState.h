@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct UIState
+namespace UI
 {
-	uint UI_Passes_needed; // uint
-	uint GetUI_Passes_needed() { return UI_Passes_needed; }
-};
+	struct UIState
+	{
+		uint UI_Passes_needed; // uint
+		uint GetUI_Passes_needed() { return UI_Passes_needed; }
+	};
+}
+using UI::UIState;

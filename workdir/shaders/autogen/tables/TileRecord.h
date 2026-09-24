@@ -8,8 +8,12 @@
 #include "enums.h"
 
 
-struct TileRecord
+namespace Dev
 {
-	uint2 tileXY;
-	uint2 GetTileXY() { return tileXY; }
-};
+	struct TileRecord
+	{
+		uint2 tileXY;
+		uint2 GetTileXY() { return tileXY; }
+	};
+}
+using Dev::TileRecord;

@@ -14,44 +14,47 @@ import :Enums;
 export namespace Table
 {
 	#pragma pack(push, 1)
-	struct DownsampleDepthMip
+	namespace Utility
 	{
-		static constexpr SlotID ID = SlotID::DownsampleDepthMip;
-		HLSL::Texture2D<float> srcMip;
-		HLSL::RWTexture2D<float> dstMip;
-		HLSL::Texture2D<float>& GetSrcMip() { return srcMip; }
-		HLSL::RWTexture2D<float>& GetDstMip() { return dstMip; }
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
-		template<class Compiler>
-		void compile(Compiler& compiler) const
+		struct DownsampleDepthMip
 		{
-			compiler.compile(srcMip, "DownsampleDepthMip::srcMip");
-			compiler.compile(dstMip, "DownsampleDepthMip::dstMip");
-		}
-		struct Compiled
-		{
-			uint srcMip; // Texture2D<float>
-			uint dstMip; // RWTexture2D<float>
+			static constexpr SlotID ID = SlotID::DownsampleDepthMip;
+			HLSL::Texture2D<float> srcMip;
+			HLSL::RWTexture2D<float> dstMip;
+			HLSL::Texture2D<float>& GetSrcMip() { return srcMip; }
+			HLSL::RWTexture2D<float>& GetDstMip() { return dstMip; }
+			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+			template<class Compiler>
+			void compile(Compiler& compiler) const
+			{
+				compiler.compile(srcMip, "DownsampleDepthMip::srcMip");
+				compiler.compile(dstMip, "DownsampleDepthMip::dstMip");
+			}
+			struct Compiled
+			{
+				uint srcMip; // Texture2D<float>
+				uint dstMip; // RWTexture2D<float>
 
 			
+				private:
+				SERIALIZE()
+				{
+				}
+
+
+			};
+
+			static std::string get_typename()
+			{
+				return "Tables::DownsampleDepthMip";
+			}
 			private:
 			SERIALIZE()
 			{
 			}
 
-
 		};
-
-		static std::string get_typename()
-		{
-			return "Tables::DownsampleDepthMip";
-		}
-		private:
-		SERIALIZE()
-		{
-		}
-
-	};
+	}
 	#pragma pack(pop)
 }
 

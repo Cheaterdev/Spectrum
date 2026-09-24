@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct DDGIInfo :public DataHolder<DDGIInfo, SlotID::DDGIInfo, Table::DDGIInfo, DefaultLayout::Instance0>
+	namespace GI
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		DDGIInfo() = default;
-	};
+		namespace DDGI
+		{
+			struct DDGIInfo :public DataHolder<DDGIInfo, SlotID::DDGIInfo, Table::GI::DDGI::DDGIInfo, ::Frame::DefaultLayout::Instance0>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				DDGIInfo() = default;
+			};
+		}
+	}
 }

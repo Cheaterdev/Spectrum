@@ -42,15 +42,15 @@ CEREAL_FORCE_REGISTER_RELATION(materials::Pipeline, materials::PipelineSimple);
 // PipelinePasses
 // ---------------------------------------------------------------------------
 
-materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, TransparencyMode mode) :Pipeline(id), transparency_mode(mode)
+materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, Meshes::TransparencyMode mode) :Pipeline(id), transparency_mode(mode)
 {
 	// clip() only in Masked PSOs: a discard anywhere in the pixel shader turns
 	// off early depth for every draw using it, even when opacity is always 1.
 	auto pixel_macros = context->get_pixel_result().macros;
-	if (mode == TransparencyMode::Masked)
+	if (mode == Meshes::TransparencyMode::Masked)
 		pixel_macros.emplace_back("ALPHA_CLIP", "1");
 
-	depth_draw = std::make_shared<PSOS::DepthDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::DepthDraw::Keys& )
+	depth_draw = std::make_shared<PSOS::Meshes::DepthDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::Meshes::DepthDraw::Keys& )
 	{
 		target.name += std::to_string(id);
 		target.pixel = { pixel, "PS", HAL::ShaderOptions::None, pixel_macros, true };
@@ -66,7 +66,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		}
 	});
 
-	gbuffer = std::make_shared<PSOS::GBufferDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::GBufferDraw::Keys& )
+	gbuffer = std::make_shared<PSOS::Meshes::GBufferDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::Meshes::GBufferDraw::Keys& )
 	{
 		target.name += std::to_string(id);
 		target.pixel = { pixel, "PS", HAL::ShaderOptions::None, pixel_macros, true };
@@ -82,7 +82,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		}
 	});
 
-	voxelization = std::make_shared<PSOS::Voxelization>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::Voxelization::Keys& )
+	voxelization = std::make_shared<PSOS::GI::Voxel::Voxelization>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::GI::Voxel::Voxelization::Keys& )
 	{
 		target.name += std::to_string(id);
 		target.pixel = { pixel, "PS_VOXEL", HAL::ShaderOptions::None ,context->get_pixel_result().macros, true };
@@ -105,9 +105,9 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 	// cutout material simply keeps its VSM shadow un-displaced, same
 	// limitation VSM already has for tessellated opaque materials via the
 	// plain VSMDepthDraw PSO.
-	if (mode == TransparencyMode::Masked)
+	if (mode == Meshes::TransparencyMode::Masked)
 	{
-		vsm_depth_draw = std::make_shared<PSOS::VSMDepthDrawMaterial>(RenderSystem::get().device(), [&](SimpleGraphicsPSO& target, PSOS::VSMDepthDrawMaterial::Keys&)
+		vsm_depth_draw = std::make_shared<PSOS::Shadows::VSM::VSMDepthDrawMaterial>(RenderSystem::get().device(), [&](SimpleGraphicsPSO& target, PSOS::Shadows::VSM::VSMDepthDrawMaterial::Keys&)
 		{
 			target.name += std::to_string(id);
 			// PS_VSM_DEPTH, not PS -- mesh_shader_vsm.hlsl's vertex output is
@@ -126,13 +126,13 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion)
 {
 	if (render_type == RENDER_TYPE::DEPTH)
-		graphics.set_pipeline(depth_draw->GetPSO(PSOS::DepthDraw::HiZOcclusion.Use(hiz_occlusion)));
+		graphics.set_pipeline(depth_draw->GetPSO(PSOS::Meshes::DepthDraw::HiZOcclusion.Use(hiz_occlusion)));
 	else
 		if (render_type == RENDER_TYPE::PIXEL)
-			graphics.set_pipeline(gbuffer->GetPSO(PSOS::GBufferDraw::HiZOcclusion.Use(hiz_occlusion)));
+			graphics.set_pipeline(gbuffer->GetPSO(PSOS::Meshes::GBufferDraw::HiZOcclusion.Use(hiz_occlusion)));
 		else
 		{
-			graphics.set_pipeline(voxelization->GetPSO(PSOS::Voxelization::Dynamic.Use(type == MESH_TYPE::DYNAMIC)));
+			graphics.set_pipeline(voxelization->GetPSO(PSOS::GI::Voxel::Voxelization::Dynamic.Use(type == MESH_TYPE::DYNAMIC)));
 		}
 }
 
@@ -152,7 +152,7 @@ materials::Pipeline::ptr materials::PipelineManager::get_pipeline(Pipeline::ptr 
 	return pip;
 }
 
-materials::Pipeline::ptr materials::PipelineManager::get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, TransparencyMode mode)
+materials::Pipeline::ptr materials::PipelineManager::get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, Meshes::TransparencyMode mode)
 {
 	std::lock_guard<std::mutex> g(m);
 	// The mode is part of the key: the GPU gather routes draws per pipeline,
@@ -423,7 +423,7 @@ void materials::universal_material::compile()
 	// that entirely -- ResourceDescriptorHeap[opacity_texture_index] is a
 	// plain Texture2D, unconditionally, from anywhere.
 	elem[0].opacity_texture_index = ~0u;
-	auto opacity_tex = transparency_mode == TransparencyMode::Masked ? find_opacity_texture(graph.get().get()) : nullptr;
+	auto opacity_tex = transparency_mode == Meshes::TransparencyMode::Masked ? find_opacity_texture(graph.get().get()) : nullptr;
 	if (opacity_tex)
 	{
 		auto srv_list = context->get_textures();
@@ -455,11 +455,11 @@ void materials::universal_material::resolve_transparency_mode()
 {
 	auto g = graph.get();
 	if (g && g->get_refraction()->has_input())
-		transparency_mode = TransparencyMode::Translucent;
+		transparency_mode = Meshes::TransparencyMode::Translucent;
 	else if (g && g->get_opacity()->has_input())
-		transparency_mode = TransparencyMode::Masked;
+		transparency_mode = Meshes::TransparencyMode::Masked;
 	else
-		transparency_mode = TransparencyMode::Opaque;
+		transparency_mode = Meshes::TransparencyMode::Opaque;
 }
 
 void materials::universal_material::generate_material()
@@ -486,9 +486,9 @@ void materials::universal_material::generate_material()
 	// Masked: any-hit alpha test + tinting ColorShadowPass closest-hit.
 	// Translucent: TranslucentPass closest-hit, transmission-tinted shadows.
 	resolve_transparency_mode();
-	if (transparency_mode == TransparencyMode::Masked)
+	if (transparency_mode == Meshes::TransparencyMode::Masked)
 		context->hit_shader.macros.emplace_back("TRANSPARENT", "1");
-	else if (transparency_mode == TransparencyMode::Translucent)
+	else if (transparency_mode == Meshes::TransparencyMode::Translucent)
 		context->hit_shader.macros.emplace_back("TRANSLUCENT", "1");
 
 
@@ -629,7 +629,7 @@ ShaderSource materials::universal_material::get_pixel_shader_source()
 	return context ? context->get_pixel_result() : ShaderSource();
 }
 
-void materials::universal_material::render_preview(HAL::ComputeContext& compute, PSOS::MaterialPreview::ptr preview_pso, HLSL::RWTexture2DArray<float4> results, ivec2 res)
+void materials::universal_material::render_preview(HAL::ComputeContext& compute, PSOS::Editor::MaterialPreview::ptr preview_pso, HLSL::RWTexture2DArray<float4> results, ivec2 res)
 {
 	if (!preview_pso)
 		return;
@@ -637,7 +637,7 @@ void materials::universal_material::render_preview(HAL::ComputeContext& compute,
 	compute.set_signature(Layouts::DefaultLayout);
 	compute.set_pipeline(preview_pso->GetPSO());
 
-	Slots::MaterialPreviewInfo data;
+	Slots::Editor::MaterialPreviewInfo data;
 	data.GetTextures() = texture_srvs;
 	data.GetData()     = pixel_data;
 	data.GetResults()  = results;
@@ -646,7 +646,7 @@ void materials::universal_material::render_preview(HAL::ComputeContext& compute,
 	compute.dispatch(res, ivec2(8, 8));
 }
 
-void materials::universal_material::render_preview_3d(HAL::GraphicsContext& graphics, PSOS::MaterialPreview3D::ptr preview_pso, HLSL::RWTexture2DArray<float4> results)
+void materials::universal_material::render_preview_3d(HAL::GraphicsContext& graphics, PSOS::Editor::MaterialPreview3D::ptr preview_pso, HLSL::RWTexture2DArray<float4> results)
 {
 	if (!preview_pso)
 		return;
@@ -654,14 +654,14 @@ void materials::universal_material::render_preview_3d(HAL::GraphicsContext& grap
 	graphics.set_signature(Layouts::DefaultLayout);
 	graphics.set_pipeline(preview_pso->GetPSO());
 
-	Slots::MaterialPreviewInfo data;
+	Slots::Editor::MaterialPreviewInfo data;
 	data.GetTextures() = texture_srvs;
 	data.GetData()     = pixel_data;
 	data.GetResults()  = results;
 	graphics.set(data);
 }
 
-Slots::MaterialInfo& materials::universal_material::get_render_info()
+Slots::Meshes::MaterialInfo& materials::universal_material::get_render_info()
 {
 	return material_info;
 }

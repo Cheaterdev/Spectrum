@@ -9,10 +9,17 @@
 #include "enums.h"
 #include "DDGIInfo.h"
 #include "DDGIProbes.h"
-struct DDGIProbeSelectData
+namespace GI
 {
-	DDGIInfo info; // DDGIInfo
-	DDGIProbes probes; // DDGIProbes
-	DDGIInfo GetInfo() { return info; }
-	DDGIProbes GetProbes() { return probes; }
-};
+	namespace DDGI
+	{
+		struct DDGIProbeSelectData
+		{
+			DDGIInfo info; // DDGIInfo
+			DDGIProbes probes; // DDGIProbes
+			DDGIInfo GetInfo() { return info; }
+			DDGIProbes GetProbes() { return probes; }
+		};
+	}
+}
+using GI::DDGI::DDGIProbeSelectData;

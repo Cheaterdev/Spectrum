@@ -7,8 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct DepthOnly
+namespace Frame
 {
-	uint depth; // DepthStencil<float>
-	Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
-};
+	struct DepthOnly
+	{
+		uint depth; // DepthStencil<float>
+		Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
+	};
+}
+using Frame::DepthOnly;

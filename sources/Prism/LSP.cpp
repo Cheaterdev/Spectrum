@@ -1122,9 +1122,29 @@ namespace
 			for (const auto& s : top_level_symbols())
 				if (s.name == w.text)
 				{
+					std::string ns;
+					for (const auto& d : declarations())
+						if (d.name == s.name && !d.ns.empty())
+							ns = "namespace " + d.ns + "\n";
 					std::string body = members_markdown(s.name);
-					return reply(std::format("```\n{} {}{}\n```\n{}", s.detail, s.name, body.empty() ? "" : "\n{" + body + "\n}", where(s.loc)));
+					return reply(std::format("```\n{}{} {}{}\n```\n{}", ns, s.detail, s.name, body.empty() ? "" : "\n{" + body + "\n}", where(s.loc)));
 				}
+
+			std::string blocks;
+			std::string path;
+			for (const auto& n : model.namespaces)
+				if (n.name == w.text)
+				{
+					path = n.path;
+					blocks += (blocks.empty() ? "" : ", ") + where(n.loc);
+				}
+			if (!blocks.empty())
+			{
+				size_t count = 0;
+				for (const auto& d : declarations())
+					count += d.ns == path || d.ns.starts_with(path + "::");
+				return reply(std::format("```\nnamespace {}\n```\n{} declarations; blocks at {}", path, count, blocks));
+			}
 			return "null";
 		}
 
@@ -1165,6 +1185,7 @@ namespace
 			std::string name, detail;
 			int kind; // LSP SymbolKind
 			SourceLocation start, name_loc;
+			std::string ns;
 		};
 
 		std::vector<Decl> declarations() const
@@ -1173,7 +1194,7 @@ namespace
 			auto add = [&](const auto& container, const char* detail, int kind)
 			{
 				for (const auto& item : container)
-					out.push_back({ item.name, detail, kind, item.loc, item.name_loc });
+					out.push_back({ item.name, detail, kind, item.loc, item.name_loc, item.ns });
 			};
 			add(model.tables, "struct", 23);
 			add(model.enums, "enum", 10);
@@ -1209,15 +1230,52 @@ namespace
 					mine.push_back(d);
 			std::sort(mine.begin(), mine.end(), [](const Decl& a, const Decl& b) { return a.start.line < b.start.line; });
 
+			// Namespace blocks of this file; a block's children are the nodes
+			// written inside it, found below by path and start line.
+			struct Node
+			{
+				std::string json_head, children, path, parent;
+				size_t l0 = 0, l1 = 0;
+				bool is_ns = false;
+			};
+			std::vector<Node> nodes;
+			std::vector<size_t> starts;
+			for (const auto& d : mine)
+				starts.push_back(d.start.line - 1);
+			for (const auto& n : model.namespaces)
+				if (n.name_loc.line && key_of(n.name_loc.file) == key)
+					starts.push_back(n.loc.line - 1);
+			std::sort(starts.begin(), starts.end());
+
 			size_t last_line = texts.count(key) ? (size_t)std::count(texts[key].begin(), texts[key].end(), '\n') : 0;
-			std::string list;
+			// The next declaration's start bounds this one; the grammar records
+			// no end positions.
+			auto end_of = [&](size_t l0)
+			{
+				auto next = std::upper_bound(starts.begin(), starts.end(), l0);
+				return next == starts.end() ? last_line : std::max(l0, *next - 1);
+			};
+
+			for (const auto& n : model.namespaces)
+			{
+				if (!n.name_loc.line || key_of(n.name_loc.file) != key)
+					continue;
+				size_t nl = n.name_loc.line - 1, nc = n.name_loc.column - 1;
+				Node node;
+				node.is_ns = true;
+				node.path = n.path;
+				node.parent = n.ns;
+				node.l0 = node.l1 = n.loc.line - 1;
+				node.json_head = std::format(R"("name":"{}","detail":"namespace","kind":3,"selectionRange":{})",
+					json_escape(n.name), range_json(nl, nc, nl, nc + n.name.size()));
+				nodes.push_back(std::move(node));
+			}
+
 			for (size_t i = 0; i < mine.size(); ++i)
 			{
 				const Decl& d = mine[i];
 				size_t l0 = d.start.line - 1;
-				// The next declaration's start bounds this one; the grammar
-				// records no end positions.
-				size_t l1 = i + 1 < mine.size() ? std::max(l0, mine[i + 1].start.line - 2) : last_line;
+				size_t l1 = end_of(l0);
 				size_t nl = d.name_loc.line - 1, nc = d.name_loc.column - 1;
 
 				std::vector<Symbol> members;
@@ -1233,9 +1291,47 @@ namespace
 						range_json(ml, mc, ml, mc + m.name.size()), range_json(ml, mc, ml, mc + m.name.size()));
 				}
 
-				list += (list.empty() ? "" : ",") + std::format(R"({{"name":"{}","detail":"{}","kind":{},"range":{},"selectionRange":{},"children":[{}]}})",
-					json_escape(d.name), d.detail, d.kind, range_json(l0, 0, l1, 0), range_json(nl, nc, nl, nc + d.name.size()), children);
+				Node node;
+				node.parent = d.ns;
+				node.l0 = l0;
+				node.l1 = l1;
+				node.children = children;
+				node.json_head = std::format(R"("name":"{}","detail":"{}","kind":{},"selectionRange":{})",
+					json_escape(d.name), d.detail, d.kind, range_json(nl, nc, nl, nc + d.name.size()));
+				nodes.push_back(std::move(node));
 			}
+
+			// Parent = the nearest block of the node's namespace that opens
+			// before it. Innermost first, so a nested block is complete (and its
+			// end line known) before it joins its own parent.
+			std::sort(nodes.begin(), nodes.end(), [](const Node& a, const Node& b) { return a.l0 < b.l0; });
+			std::vector<int> parent(nodes.size(), -1);
+			for (size_t i = 0; i < nodes.size(); ++i)
+				for (size_t j = i; j-- > 0;)
+					if (nodes[j].is_ns && nodes[j].path == nodes[i].parent && !nodes[i].parent.empty())
+					{
+						parent[i] = (int)j;
+						break;
+					}
+
+			std::function<std::string(size_t)> emit = [&](size_t i) -> std::string
+			{
+				Node& n = nodes[i];
+				std::string children = n.children;
+				for (size_t c = 0; c < nodes.size(); ++c)
+					if (parent[c] == (int)i)
+					{
+						std::string child = emit(c);
+						n.l1 = std::max(n.l1, nodes[c].l1);
+						children += (children.empty() ? "" : ",") + child;
+					}
+				return std::format(R"({{{},"range":{},"children":[{}]}})", n.json_head, range_json(n.l0, 0, n.l1, 0), children);
+			};
+
+			std::string list;
+			for (size_t i = 0; i < nodes.size(); ++i)
+				if (parent[i] == -1)
+					list += (list.empty() ? "" : ",") + emit(i);
 			return "[" + list + "]";
 		}
 
@@ -1255,7 +1351,7 @@ namespace
 				if (!d.name_loc.line || !lower.contains(query))
 					continue;
 				list += (list.empty() ? "" : ",") + std::format(R"({{"name":"{}","kind":{},"containerName":"{}","location":{}}})",
-					json_escape(d.name), d.kind, d.detail, location_json(d.name_loc, d.name.size()));
+					json_escape(d.name), d.kind, d.ns.empty() ? d.detail : d.ns + " " + d.detail, location_json(d.name_loc, d.name.size()));
 			}
 			return "[" + list + "]";
 		}

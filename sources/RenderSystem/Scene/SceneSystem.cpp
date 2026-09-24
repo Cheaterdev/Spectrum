@@ -13,8 +13,8 @@ using namespace FrameGraph;
 // GBuffer_* field (including the two *Prev-linked ones) is auto-created,
 // see scene.prism's own comment.
 
-void PassDefault<Passes::Scene>::render(
-    Passes::Scene::Context& data, FrameGraph::FrameContext& context)
+void PassDefault<Passes::Meshes::Scene>::render(
+    Passes::Meshes::Scene::Context& data, FrameGraph::FrameContext& context)
 {
     auto& scene_ctx    = context.graph->get_context<SceneInfo>();
     auto& camera_ctx   = context.graph->get_context<CameraInfo>();
@@ -41,7 +41,7 @@ void PassDefault<Passes::Scene>::render(
     // is disabled) so it's been removed along with the CopyPrev copies.
 
     {
-        RT::GBuffer rtv;
+        RT::Meshes::GBuffer rtv;
         rtv.GetAlbedo()   = gbuffer.albedo.renderTarget;
         rtv.GetNormals()  = gbuffer.normals.renderTarget;
         rtv.GetSpecular() = gbuffer.specular.renderTarget;
@@ -52,7 +52,7 @@ void PassDefault<Passes::Scene>::render(
     }
 
     {
-        RT::DepthOnly rtv;
+        RT::Frame::DepthOnly rtv;
         rtv.GetDepth()              = gbuffer.HalfBuffer.hiZ_depth.depthStencil;
         gbuffer.HalfBuffer.compiled = rtv.compile(*command_list);
     }

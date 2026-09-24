@@ -7,14 +7,21 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct VSMSelectors
+namespace Shadows
 {
-	bool use_vsm_penumbra; // bool
-	bool use_vsm_contact_shadow; // bool
-	VSMDebugView vsm_debug_view; // VSMDebugView
-	ShadowSource shadow_source; // ShadowSource
-	bool GetUse_vsm_penumbra() { return use_vsm_penumbra; }
-	bool GetUse_vsm_contact_shadow() { return use_vsm_contact_shadow; }
-	VSMDebugView GetVsm_debug_view() { return vsm_debug_view; }
-	ShadowSource GetShadow_source() { return shadow_source; }
-};
+	namespace VSM
+	{
+		struct VSMSelectors
+		{
+			bool use_vsm_penumbra; // bool
+			bool use_vsm_contact_shadow; // bool
+			VSMDebugView vsm_debug_view; // VSMDebugView
+			ShadowSource shadow_source; // ShadowSource
+			bool GetUse_vsm_penumbra() { return use_vsm_penumbra; }
+			bool GetUse_vsm_contact_shadow() { return use_vsm_contact_shadow; }
+			VSMDebugView GetVsm_debug_view() { return vsm_debug_view; }
+			ShadowSource GetShadow_source() { return shadow_source; }
+		};
+	}
+}
+using Shadows::VSM::VSMSelectors;

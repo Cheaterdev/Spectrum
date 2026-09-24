@@ -1023,21 +1023,21 @@ namespace GUI
         ui_ctx.draw_infos = std::move(draw_infos);
         ui_ctx.pre_draw_infos = std::move(pre_draw_infos);
 
-        // Mirrored into Table::UIState -- see its own comment (ui.prism) for
+        // Mirrored into Table::UI::UIState -- see its own comment (ui.prism) for
         // why this can't just be a UIContext read: UI_PreDraw's
         // [RenderCondition] reads it from autogen/pass_defaults.cpp, which
         // only sees Table:: contexts.
         // ::Table (not GUI::Elements::Table, a widget class) -- both named
         // Table, ambiguous by unqualified lookup inside module GUI.
-        graph.get_context<::Table::UIState>().UI_Passes_needed = (uint32_t)ui_ctx.pre_draw_infos.size();
+        graph.get_context<::Table::UI::UIState>().UI_Passes_needed = (uint32_t)ui_ctx.pre_draw_infos.size();
 
-        // Mirrored into Table::UIRenderState -- see its own comment (ui.prism)
+        // Mirrored into Table::UI::UIRenderState -- see its own comment (ui.prism)
         // for why: UI_Render's [Multiple=16] instances read passes_needed
         // via data.pass_index instead of the old ui_ctx.setup_counter++.
         {
             const uint32_t size     = (uint32_t)ui_ctx.draw_infos.size();
             const uint32_t per_pass = ui_per_thread(size);
-            auto& ui_render_ctx = graph.get_context<::Table::UIRenderState>();
+            auto& ui_render_ctx = graph.get_context<::Table::UI::UIRenderState>();
             ui_render_ctx.per_pass      = per_pass;
             ui_render_ctx.passes_needed = (size + per_pass - 1) / per_pass;
         }
@@ -1068,7 +1068,7 @@ namespace GUI
             // frame), not an error -- the handler just resolves to nothing.
             case DM::RTXIndirectDenoised:
             case DM::RTXIndirectDenoisedUnpacked:
-                return g_upscaler_type == UpscalerType::DLSSRR
+                return g_upscaler_type == Post::Upscale::UpscalerType::DLSSRR
                     ? FrameGraph::ResourceID::RTXIndirectNoise
                     : (mode == DM::RTXIndirectDenoised ? FrameGraph::ResourceID::RTXIndirectDenoised
                                                         : FrameGraph::ResourceID::RTXIndirectDenoisedPreview);
@@ -1737,7 +1737,7 @@ namespace GUI
 
 
 // ============================================================
-// PassDefault<Passes::UI_PreDraw>
+// PassDefault<Passes::UI::UI_PreDraw>
 // ============================================================
 
 // setup() is fully generated (ui.prism's own [RenderCondition]).
@@ -1748,8 +1748,8 @@ namespace GUI
 // field itself handles that create() unconditionally; [RenderCondition]
 // alone (no [SetupCondition]) just skips render() on empty frames.
 
-void PassDefault<Passes::UI_PreDraw>::render(
-    Passes::UI_PreDraw::Context& data, FrameGraph::FrameContext& context)
+void PassDefault<Passes::UI::UI_PreDraw>::render(
+    Passes::UI::UI_PreDraw::Context& data, FrameGraph::FrameContext& context)
 {
     auto& ui_ctx = context.graph->get_context<GUI::UIContext>();
     auto command_list = context.get_list();
@@ -1760,12 +1760,12 @@ void PassDefault<Passes::UI_PreDraw>::render(
 
 
 // ============================================================
-// PassDefault<Passes::UI_Render>
+// PassDefault<Passes::UI::UI_Render>
 // ============================================================
 
 static uint32_t ui_per_thread(uint32_t size)
 {
-	constexpr uint32_t max_threads = Passes::UI_Render::MaxCount;
+	constexpr uint32_t max_threads = Passes::UI::UI_Render::MaxCount;
 	constexpr uint32_t min_per_thread = 64;
 	const uint32_t per_thread = (size + max_threads - 1) / max_threads;
 	const uint32_t clamped_per_thread = std::max(min_per_thread, per_thread);
@@ -1777,21 +1777,21 @@ static uint32_t ui_per_thread(uint32_t size)
 // plus [NeedDynamic] for the debug-view source -- the one resource here whose
 // identity is picked at runtime).
 
-void PassDefault<Passes::UI_Render>::render(
-    Passes::UI_Render::Context& data, FrameGraph::FrameContext& context)
+void PassDefault<Passes::UI::UI_Render>::render(
+    Passes::UI::UI_Render::Context& data, FrameGraph::FrameContext& context)
 {
     // UI_Render reads cache state (label cache textures, etc.) that UI_PreDraw
     // writes. The FrameGraph's shared-resource dependency edge (see
-    // PassDefault<Passes::UI_PreDraw>::setup) only drives GPU barrier ordering,
+    // PassDefault<Passes::UI::UI_PreDraw>::setup) only drives GPU barrier ordering,
     // not CPU dispatch order — Graph::render() enqueues every pass's render()
     // without waiting on prev_passes. Wait on it explicitly here instead.
-    if (auto* pre_draw = context.graph->builder.get_pass(Passes::UI_PreDraw::Name))
+    if (auto* pre_draw = context.graph->builder.get_pass(Passes::UI::UI_PreDraw::Name))
         pre_draw->wait();
 
     auto& ui_ctx = context.graph->get_context<GUI::UIContext>();
 
     const uint32_t size      = (uint32_t)ui_ctx.draw_infos.size();
-    const uint32_t per_pass  = context.graph->get_context<::Table::UIRenderState>().per_pass;
+    const uint32_t per_pass  = context.graph->get_context<::Table::UI::UIRenderState>().per_pass;
     const uint32_t start     = data.pass_index * per_pass;
     const uint32_t end       = std::min(start + per_pass, size);
 
@@ -1800,7 +1800,7 @@ void PassDefault<Passes::UI_Render>::render(
 
     {
         PROFILE(L"setup_rt");
-        RT::SingleColor rt;
+        RT::Frame::SingleColor rt;
         rt.GetColor() = texture.renderTarget;
         const auto rt_options = (data.pass_index == 0)
             ? HAL::RTOptions::Default | HAL::RTOptions::ClearColor

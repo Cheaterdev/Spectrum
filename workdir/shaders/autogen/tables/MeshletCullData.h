@@ -7,12 +7,16 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct MeshletCullData
+namespace Meshes
 {
-	float4 BoundingSphere; // float4
-	uint NormalCone; // uint
-	float ApexOffset; // float
-	float4 GetBoundingSphere() { return BoundingSphere; }
-	uint GetNormalCone() { return NormalCone; }
-	float GetApexOffset() { return ApexOffset; }
-};
+	struct MeshletCullData
+	{
+		float4 BoundingSphere; // float4
+		uint NormalCone; // uint
+		float ApexOffset; // float
+		float4 GetBoundingSphere() { return BoundingSphere; }
+		uint GetNormalCone() { return NormalCone; }
+		float GetApexOffset() { return ApexOffset; }
+	};
+}
+using Meshes::MeshletCullData;

@@ -13,7 +13,7 @@ using namespace concurrency;
 void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::ptr>& signatures)
 {
 {% for l in parsed.layouts -%}
-	signatures[Layouts::{{l.name}}] = AutoGenSignatureDesc<{{l.name}}>().create_signature(device, Layouts::{{l.name}});
+	signatures[Layouts::{{l.name}}] = AutoGenSignatureDesc<::{{parsed.layouts[l.name].qn}}>().create_signature(device, Layouts::{{l.name}});
 {% endfor -%}
 }
 
@@ -25,7 +25,7 @@ void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HA
 {% if t.options.shader_only is defined -%}
 	commands[IndirectCommands::{{t.name}}] = AutoGenIndirectCommand<{{t.name}}>(device).create_command();
 {%else-%}
-	commands[IndirectCommands::{{t.name}}] = AutoGenIndirectCommand<Table::{{t.name}}>(device).create_command();	
+	commands[IndirectCommands::{{t.name}}] = AutoGenIndirectCommand<Table::{{t.qn}}>(device).create_command();	
 {%endif-%}
 {%endif-%}
 {%endfor -%}
@@ -43,14 +43,14 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {% for v in parsed.compute_pso -%}
 {%- set t = parsed.compute_pso[v] -%}
 {%- if t.options.ExcludeVulkan is undefined and t.options.Template is undefined %}
-	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
+	tasks.emplace_back(PSOBase::create<PSOS::{{t.qn}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
 
 {% for v in parsed.graphics_pso -%}
 {%- set t = parsed.graphics_pso[v] -%}
 {%- if t.options.ExcludeVulkan is undefined and t.options.Template is undefined %}
-	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
+	tasks.emplace_back(PSOBase::create<PSOS::{{t.qn}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
 
@@ -58,7 +58,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {%- set t = parsed.workgraph_pso[v] %}
 {%- if t.options.ExcludeVulkan is undefined and t.options.Template is undefined %}
 {%- for node_name in t.nodes %}
-	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}_{{node_name}}>(device, pso[PSO::{{t.name}}_{{node_name}}]));
+	tasks.emplace_back(PSOBase::create<PSOS::{{t.qn}}_{{node_name}}>(device, pso[PSO::{{t.name}}_{{node_name}}]));
 {%- endfor %}
 {%- endif %}
 {%- endfor %}
@@ -67,14 +67,14 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {% for v in parsed.compute_pso -%}
 {%- set t = parsed.compute_pso[v] -%}
 {%- if t.options.ExcludeVulkan is defined and t.options.Template is undefined %}
-	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
+	tasks.emplace_back(PSOBase::create<PSOS::{{t.qn}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
 
 {% for v in parsed.graphics_pso -%}
 {%- set t = parsed.graphics_pso[v] -%}
 {%- if t.options.ExcludeVulkan is defined and t.options.Template is undefined %}
-	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
+	tasks.emplace_back(PSOBase::create<PSOS::{{t.qn}}>(device, pso[PSO::{{t.name}}]));
 {%- endif %}
 {%- endfor %}
 
@@ -82,7 +82,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {%- set t = parsed.workgraph_pso[v] %}
 {%- if t.options.ExcludeVulkan is defined and t.options.Template is undefined %}
 {%- for node_name in t.nodes %}
-	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}_{{node_name}}>(device, pso[PSO::{{t.name}}_{{node_name}}]));
+	tasks.emplace_back(PSOBase::create<PSOS::{{t.qn}}_{{node_name}}>(device, pso[PSO::{{t.name}}_{{node_name}}]));
 {%- endfor %}
 {%- endif %}
 {%- endfor %}

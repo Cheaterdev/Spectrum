@@ -455,7 +455,7 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 
 	// ---- Pass function members -----------------------------------------------
 
-	m_render = [this](Passes::stencil_renderer::Context& data, FrameGraph::FrameContext& context)
+	m_render = [this](Passes::Editor::stencil_renderer::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& list     = *context.get_list();
 		auto& graphics = list.get_graphics();
@@ -496,17 +496,17 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 			graphics.set_viewport(data.ResultTexture->get_viewport());
 			graphics.set_scissor(data.ResultTexture->get_scissor());
 			{
-				RT::SingleColor rt;
+				RT::Frame::SingleColor rt;
 				rt.GetColor() = data.ResultTexture->renderTarget;
 				graphics.set_rtv(rt);
 			}
 
 			{
 				PROFILE(L"stencil_outline");
-				graphics.set_pipeline<PSOS::StencilerLast>();
+				graphics.set_pipeline<PSOS::Editor::StencilerLast>();
 				graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 				{
-					Slots::Countour contour;
+					Slots::Editor::Countour contour;
 					contour.GetColor()       = { 1, 0.5f, 0, 1 };
 					contour.GetObject_ids()  = *data.GBuffer_ObjectID;
 					contour.GetSelected_id() = object_id_of(selection);
@@ -519,7 +519,7 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 			// is done with it, so rebinding here is safe.
 			{
 				ivec2 size = data.ResultTexture->get_size();
-				Slots::PickerBuffer picker;
+				Slots::Editor::PickerBuffer picker;
 				picker.GetViewBuffer() = *data.axis_id_buffer;
 				picker.GetMouse_pos()  = mouse_inside ? uint2(uint(uv.x * size.x), uint(uv.y * size.y)) : uint2(~0u, ~0u);
 				graphics.set(picker);
@@ -543,11 +543,11 @@ void stencil_renderer::draw_gizmo(HAL::GraphicsContext& graphics)
 
 	if (draw_aabb)
 	{
-		graphics.set_pipeline<PSOS::DrawBox>();
+		graphics.set_pipeline<PSOS::Editor::DrawBox>();
 		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 		graphics.set_index_buffer(index_buffer.get_index_buffer_view());
 		{
-			Slots::DrawStencil draw;
+			Slots::Editor::DrawStencil draw;
 			draw.GetVertices() = vertex_buffer;
 			graphics.set(draw);
 		}
@@ -564,11 +564,11 @@ void stencil_renderer::draw_gizmo(HAL::GraphicsContext& graphics)
 	{
 		graphics.set_index_buffer(HAL::Views::IndexBuffer());
 		{
-			Slots::FrameInfo frameInfo;
+			Slots::Frame::FrameInfo frameInfo;
 			frameInfo.GetCamera() = axis_cam.camera_cb.current;
 			graphics.set(frameInfo);
 		}
-		graphics.set_pipeline<PSOS::DrawAxis>();
+		graphics.set_pipeline<PSOS::Editor::DrawAxis>();
 		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 
 		int i = 0;
@@ -576,12 +576,12 @@ void stencil_renderer::draw_gizmo(HAL::GraphicsContext& graphics)
 		{
 			float lighted = (mouse_on_axis == i) * 0.7f;
 			{
-				Slots::Color color;
+				Slots::Editor::Color color;
 				color.GetColor() = { i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted, 1 };
 				graphics.set(color);
 			}
 			{
-				Slots::Instance instance;
+				Slots::Editor::Instance instance;
 				instance.GetInstanceId() = i + 1;
 				graphics.set(instance);
 			}
@@ -595,11 +595,11 @@ void stencil_renderer::draw_gizmo(HAL::GraphicsContext& graphics)
 	// camera-facing half only; the back half is discarded in the PS
 	if (rings_sized)
 	{
-		graphics.set_pipeline<PSOS::DrawRing>();
+		graphics.set_pipeline<PSOS::Editor::DrawRing>();
 		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 		graphics.set_index_buffer(ring_index_buffer.get_index_buffer_view());
 		{
-			Slots::DrawStencil draw;
+			Slots::Editor::DrawStencil draw;
 			draw.GetVertices() = ring_vertex_buffer;
 			graphics.set(draw);
 		}
@@ -607,12 +607,12 @@ void stencil_renderer::draw_gizmo(HAL::GraphicsContext& graphics)
 		{
 			float lighted = (mouse_on_axis == 3 + a) * 0.7f;
 			{
-				Slots::Color color;
+				Slots::Editor::Color color;
 				color.GetColor() = { a == 0 ? 1.0f : lighted, a == 1 ? 1.0f : lighted, a == 2 ? 1.0f : lighted, 1 };
 				graphics.set(color);
 			}
 			{
-				Slots::Instance instance;
+				Slots::Editor::Instance instance;
 				instance.GetInstanceId() = 4 + a;
 				graphics.set(instance);
 			}
@@ -626,8 +626,8 @@ uint stencil_renderer::object_id_of(const std::pair<MeshAssetInstance::ptr, int>
 	return obj.first->rendering[obj.second].mesh_info.GetObject_id();
 }
 
-// Ids are contiguous per instance (meshpart slot + part index + 1, see
-// MeshAssetInstance::on_add), so only each instance's first id is checked.
+// Ids are contiguous per instance (see MeshAssetInstance::update_nodes), so
+// only each instance's first id is checked.
 std::pair<MeshAssetInstance::ptr, int> stencil_renderer::find_object(uint object_id)
 {
 	if (object_id == 0 || !scene)

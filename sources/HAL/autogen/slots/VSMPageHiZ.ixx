@@ -15,9 +15,15 @@ import :Slots;
 
 export namespace Slots
 {
-	struct VSMPageHiZ :public DataHolder<VSMPageHiZ, SlotID::VSMPageHiZ, Table::VSMPageHiZ, DefaultLayout::Instance4>
+	namespace Shadows
 	{
-		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
-		VSMPageHiZ() = default;
-	};
+		namespace VSM
+		{
+			struct VSMPageHiZ :public DataHolder<VSMPageHiZ, SlotID::VSMPageHiZ, Table::Shadows::VSM::VSMPageHiZ, ::Frame::DefaultLayout::Instance4>
+			{
+				static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+				VSMPageHiZ() = default;
+			};
+		}
+	}
 }

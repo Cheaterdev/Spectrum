@@ -7,11 +7,15 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-struct EnvFilter
+namespace Environment
 {
-	uint4 size; // uint4
-	uint targets[8]; // RWTexture2DArray<float4>
-	uint4 GetSize() { return size; }
-	RWTexture2DArray<float4> GetTargets(int i) { return ResourceDescriptorHeap[targets[i]]; }
+	struct EnvFilter
+	{
+		uint4 size; // uint4
+		uint targets[8]; // RWTexture2DArray<float4>
+		uint4 GetSize() { return size; }
+		RWTexture2DArray<float4> GetTargets(int i) { return ResourceDescriptorHeap[targets[i]]; }
 
-};
+	};
+}
+using Environment::EnvFilter;
